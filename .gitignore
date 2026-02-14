@@ -1,0 +1,9 @@
+bin/
+vendor/
+*.swp
+*.swo
+*~
+.env
+.vscode/
+.idea/
+*.iml
