@@ -3,6 +3,7 @@ package postgres
 import (
 	"database/sql"
 	"fmt"
+	"time"
 )
 
 // Connect establishes a PostgreSQL connection
@@ -11,6 +12,12 @@ func Connect(dsn string) (*sql.DB, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// Configure connection pool
+	// Higher MaxOpenConns to handle concurrent artifact creation during import
+	db.SetMaxOpenConns(50)
+	db.SetMaxIdleConns(10)
+	db.SetConnMaxLifetime(10 * time.Second) // 10 seconds
 
 	err = db.Ping()
 	if err != nil {
@@ -24,7 +31,7 @@ func Connect(dsn string) (*sql.DB, error) {
 func InitSchema(db *sql.DB) error {
 	schema := `
 	CREATE TABLE IF NOT EXISTS artifacts (
-		id UUID PRIMARY KEY,
+		id UUID NOT NULL,
 		project_id UUID NOT NULL,
 		parent_id UUID,
 		type VARCHAR(255) NOT NULL,
@@ -36,13 +43,15 @@ func InitSchema(db *sql.DB) error {
 		valid_from TIMESTAMP NOT NULL DEFAULT NOW(),
 		valid_to TIMESTAMP,
 		created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-		updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+		updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+		PRIMARY KEY (id, version)
 	);
 
 	CREATE INDEX IF NOT EXISTS idx_artifacts_project_id ON artifacts(project_id);
 	CREATE INDEX IF NOT EXISTS idx_artifacts_parent_id ON artifacts(parent_id);
 	CREATE INDEX IF NOT EXISTS idx_artifacts_type ON artifacts(type);
 	CREATE INDEX IF NOT EXISTS idx_artifacts_valid_to ON artifacts(valid_to);
+	CREATE UNIQUE INDEX IF NOT EXISTS idx_artifacts_id_active ON artifacts(id) WHERE valid_to IS NULL;
 
 	CREATE TABLE IF NOT EXISTS links (
 		id UUID PRIMARY KEY,
@@ -52,9 +61,7 @@ func InitSchema(db *sql.DB) error {
 		attributes JSONB DEFAULT '{}',
 		version INT NOT NULL DEFAULT 1,
 		created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-		updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
-		FOREIGN KEY (from_id) REFERENCES artifacts(id) ON DELETE CASCADE,
-		FOREIGN KEY (to_id) REFERENCES artifacts(id) ON DELETE CASCADE
+		updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 	);
 
 	CREATE INDEX IF NOT EXISTS idx_links_from_id ON links(from_id);
@@ -76,8 +83,7 @@ func InitSchema(db *sql.DB) error {
 		mime_type VARCHAR(128) NOT NULL,
 		file_path VARCHAR(1024) NOT NULL,
 		file_size INT NOT NULL,
-		created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-		FOREIGN KEY (artifact_id) REFERENCES artifacts(id) ON DELETE CASCADE
+		created_at TIMESTAMP NOT NULL DEFAULT NOW()
 	);
 
 	CREATE INDEX IF NOT EXISTS idx_attachments_artifact_id ON attachments(artifact_id);
@@ -87,8 +93,7 @@ func InitSchema(db *sql.DB) error {
 		project_id UUID NOT NULL,
 		name VARCHAR(512) NOT NULL,
 		snapshot JSONB NOT NULL,
-		created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-		FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+		created_at TIMESTAMP NOT NULL DEFAULT NOW()
 	);
 
 	CREATE INDEX IF NOT EXISTS idx_baselines_project_id ON baselines(project_id);
@@ -111,24 +116,27 @@ func InitSchema(db *sql.DB) error {
 		return fmt.Errorf("failed to create schema: %w", err)
 	}
 
-	// Add foreign key constraint for parent_id after table exists (for self-referential relationship)
+	// Add soft referential integrity checks via application logic
+	// We don't use traditional foreign keys for artifact references because of temporal versioning
+	// where we have composite keys (id, version) but need to reference by ID only
 	constraintSQL := `
 	DO $$ 
 	BEGIN
+		-- Only add the baselines->projects foreign key since projects don't use versioning
 		IF NOT EXISTS (
 			SELECT 1 FROM pg_constraint 
-			WHERE conname = 'artifacts_parent_id_fkey'
+			WHERE conname = 'baselines_project_id_fkey'
 		) THEN
-			ALTER TABLE artifacts 
-			ADD CONSTRAINT artifacts_parent_id_fkey 
-			FOREIGN KEY (parent_id) REFERENCES artifacts(id) ON DELETE CASCADE;
+			ALTER TABLE baselines 
+			ADD CONSTRAINT baselines_project_id_fkey 
+			FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE;
 		END IF;
 	END $$;
 	`
 
 	_, err = db.Exec(constraintSQL)
 	if err != nil {
-		return fmt.Errorf("failed to add parent_id constraint: %w", err)
+		return fmt.Errorf("failed to add constraints: %w", err)
 	}
 
 	const addSortOrderSQL = `

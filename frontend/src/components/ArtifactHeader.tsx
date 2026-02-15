@@ -6,6 +6,8 @@ interface ArtifactHeaderProps {
   onEdit: (artifact: Artifact) => void;
   onDelete: (artifactId: string) => void;
   onRestore?: (artifact: Artifact) => void;
+  previewVersion?: Artifact | null;
+  onPreviewChange?: (preview: Artifact | null) => void;
 }
 
 export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
@@ -13,10 +15,26 @@ export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
   onEdit,
   onDelete,
   onRestore,
+  onPreviewChange,
+  previewVersion,
 }) => {
   const [versions, setVersions] = useState<Artifact[]>([artifact]);
   const [showVersions, setShowVersions] = useState(false);
   const [loadingVersions, setLoadingVersions] = useState(false);
+  const [localPreviewVersion, setLocalPreviewVersion] = useState<Artifact | null>(previewVersion || null);
+
+  // Display either preview or current artifact in header
+  const displayArtifact = localPreviewVersion || artifact;
+
+  // Update local state when prop changes
+  useEffect(() => {
+    setLocalPreviewVersion(previewVersion || null);
+  }, [previewVersion]);
+
+  // Notify parent when preview changes
+  useEffect(() => {
+    onPreviewChange?.(localPreviewVersion);
+  }, [localPreviewVersion, onPreviewChange]);
 
   // Load versions when artifact changes
   useEffect(() => {
@@ -24,17 +42,22 @@ export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
       try {
         setLoadingVersions(true);
         const response = await artifactAPI.getVersions(artifact.id);
-        setVersions(response.data || [artifact]);
+        const loadedVersions = response.data || [];
+        console.log('Loaded versions:', loadedVersions);
+        setVersions(loadedVersions.length > 0 ? loadedVersions : [artifact]);
       } catch (error) {
         console.error('Failed to load artifact versions', error);
+        // If API fails, create a list with just the current artifact so at least History button shows
         setVersions([artifact]);
       } finally {
         setLoadingVersions(false);
       }
     };
 
-    loadVersions();
-  }, [artifact.id]);
+    if (artifact.version > 1) {
+      loadVersions();
+    }
+  }, [artifact.id, artifact.version]);
 
   const handleVersionRestore = async (version: number) => {
     if (version === artifact.version) {
@@ -51,6 +74,7 @@ export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
       const restored = response.data;
       onRestore?.(restored);
       setShowVersions(false);
+      setLocalPreviewVersion(null);
       // Reload versions
       const versionsResponse = await artifactAPI.getVersions(artifact.id);
       setVersions(versionsResponse.data || []);
@@ -71,7 +95,7 @@ export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
         }}
       >
         <div style={{ flex: 1 }}>
-          <h3 style={{ margin: '0 0 8px 0' }}>{artifact.title}</h3>
+          <h3 style={{ margin: '0 0 8px 0' }}>{displayArtifact.title}</h3>
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '8px' }}>
             <span
               style={{
@@ -83,12 +107,12 @@ export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
                 fontSize: '11px',
               }}
             >
-              {artifact.type}
+              {displayArtifact.type}
             </span>
             <span style={{ fontSize: '12px', color: '#7f8c8d' }}>
-              Version {artifact.version}
+              Version {displayArtifact.version}
             </span>
-            {versions.length > 1 && (
+            {displayArtifact.version > 1 && (
               <span style={{ fontSize: '12px', color: '#7f8c8d' }}>
                 • {versions.length} total
               </span>
@@ -96,41 +120,45 @@ export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
           </div>
           <p style={{ margin: 0, fontSize: '12px', color: '#7f8c8d' }}>
             UID: <code style={{ backgroundColor: '#ecf0f1', padding: '2px 6px', borderRadius: '3px' }}>
-              {artifact.id}
+              {displayArtifact.id}
             </code>
           </p>
         </div>
 
         <div style={{ display: 'flex', gap: '8px', flexDirection: 'column' }}>
           <button
-            onClick={() => onEdit(artifact)}
+            onClick={() => onEdit(displayArtifact)}
+            disabled={localPreviewVersion !== null}
             style={{
-              backgroundColor: '#3498db',
+              backgroundColor: localPreviewVersion ? '#bdc3c7' : '#3498db',
               color: 'white',
               border: 'none',
               padding: '6px 12px',
               borderRadius: '3px',
-              cursor: 'pointer',
+              cursor: localPreviewVersion ? 'not-allowed' : 'pointer',
               fontSize: '12px',
+              opacity: localPreviewVersion ? 0.6 : 1,
             }}
           >
             Edit
           </button>
           <button
-            onClick={() => onDelete(artifact.id)}
+            onClick={() => onDelete(displayArtifact.id)}
+            disabled={localPreviewVersion !== null}
             style={{
-              backgroundColor: '#e74c3c',
+              backgroundColor: localPreviewVersion ? '#bdc3c7' : '#e74c3c',
               color: 'white',
               border: 'none',
               padding: '6px 12px',
               borderRadius: '3px',
-              cursor: 'pointer',
+              cursor: localPreviewVersion ? 'not-allowed' : 'pointer',
               fontSize: '12px',
+              opacity: localPreviewVersion ? 0.6 : 1,
             }}
           >
             Delete
           </button>
-          {versions.length > 1 && (
+          {displayArtifact.version > 1 && (
             <button
               onClick={() => setShowVersions(!showVersions)}
               style={{
@@ -150,7 +178,7 @@ export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
       </div>
 
       {/* Version History */}
-      {showVersions && versions.length > 1 && (
+      {showVersions && artifact.version > 1 && (
         <div
           style={{
             marginTop: '16px',
@@ -199,20 +227,36 @@ export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
                     </div>
                   </div>
                   {v.version !== artifact.version && (
-                    <button
-                      onClick={() => handleVersionRestore(v.version)}
-                      style={{
-                        backgroundColor: '#27ae60',
-                        color: 'white',
-                        border: 'none',
-                        padding: '4px 8px',
-                        borderRadius: '3px',
-                        cursor: 'pointer',
-                        fontSize: '11px',
-                      }}
-                    >
-                      Restore
-                    </button>
+                    <div style={{ display: 'flex', gap: '4px' }}>
+                      <button
+                        onClick={() => setLocalPreviewVersion(v)}
+                        style={{
+                          backgroundColor: '#9b59b6',
+                          color: 'white',
+                          border: 'none',
+                          padding: '4px 8px',
+                          borderRadius: '3px',
+                          cursor: 'pointer',
+                          fontSize: '11px',
+                        }}
+                      >
+                        Preview
+                      </button>
+                      <button
+                        onClick={() => handleVersionRestore(v.version)}
+                        style={{
+                          backgroundColor: '#27ae60',
+                          color: 'white',
+                          border: 'none',
+                          padding: '4px 8px',
+                          borderRadius: '3px',
+                          cursor: 'pointer',
+                          fontSize: '11px',
+                        }}
+                      >
+                        Restore
+                      </button>
+                    </div>
                   )}
                 </div>
               ))

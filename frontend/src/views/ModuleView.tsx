@@ -36,6 +36,7 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
   const [baselineData, setBaselineData] = useState<ProjectExport | null>(null);
   const [collapseAllToken, setCollapseAllToken] = useState<number>(0);
   const [expandAllToken, setExpandAllToken] = useState<number>(0);
+  const [previewVersion, setPreviewVersion] = useState<Artifact | null>(null);
 
   const {
     projectId,
@@ -1004,6 +1005,8 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
                 updateArtifact(restored);
                 setSelectedArtifactId(restored.id);
               }}
+              previewVersion={previewVersion}
+              onPreviewChange={setPreviewVersion}
             />
             <ArtifactDetails 
               artifact={selectedArtifact} 
@@ -1012,6 +1015,8 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
               attachments={detailAttachments}
               onDeleteAttachment={isBaselineView ? undefined : handleDeleteAttachment}
               onSelectArtifact={setSelectedArtifactId}
+              previewVersion={previewVersion}
+              onClosePreview={() => setPreviewVersion(null)}
             />
           </>
         )}

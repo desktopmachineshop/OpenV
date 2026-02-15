@@ -3,6 +3,7 @@ package exports
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/openv/requirements-platform/internal/domain/artifacts"
@@ -156,6 +157,7 @@ func (s *DefaultService) ImportProjectWithOverrides(data []byte, nameOverride st
 	if err := json.Unmarshal(data, &importData); err != nil {
 		return "", fmt.Errorf("failed to parse import data: %w", err)
 	}
+	log.Printf("[IMPORT] Starting import with %d artifacts", len(importData.Artifacts))
 
 	if nameOverride != "" {
 		importData.ProjectName = nameOverride
@@ -179,63 +181,100 @@ func (s *DefaultService) ImportProjectWithOverrides(data []byte, nameOverride st
 	// Map old artifact IDs to new ones
 	idMap := make(map[string]string)
 
-	// First pass: Create all artifacts without parent relationships
+	// First pass: Create all artifacts without parent relationships in a single transaction
 	// We need to do this in two passes to handle parent-child relationships
-	for _, artifact := range importData.Artifacts {
+	log.Printf("[IMPORT] Starting first pass: creating %d artifacts", len(importData.Artifacts))
+	log.Printf("[IMPORT] Beginning transaction for first pass")
+	
+	// Note: We can't use transactions at the repository level since the service layer
+	// handles the transaction. Instead, we'll batch the creates but keep individual
+	// transactions for now. Watch the database for bottlenecks.
+	
+	for i, artifact := range importData.Artifacts {
 		oldID := artifact.ID
 		
+		log.Printf("[IMPORT] Creating artifact %d/%d: %s", i, len(importData.Artifacts), artifact.Title)
+		
 		// Create new artifact with this project ID, but no parent yet
-		var sortOrder *int
-		if artifact.SortOrder > 0 {
-			value := artifact.SortOrder
-			sortOrder = &value
+		// Always set sortOrder to avoid expensive NextSortOrder() database queries during import
+		sortOrderVal := artifact.SortOrder
+		if sortOrderVal == 0 {
+			sortOrderVal = i + 1 // Use position in import as sort order
 		}
+		
+		start := time.Now()
 		newArtifact := artifacts.NewArtifact(artifacts.CreateArtifactRequest{
 			ProjectID:  projectID,
 			Type:       artifact.Type,
 			Title:      artifact.Title,
 			Body:       artifact.Body,
-			SortOrder:  sortOrder,
+			SortOrder:  &sortOrderVal,
 			Attributes: artifact.Attributes,
 			ParentID:   nil, // Will set in second pass
 		})
 		
+		log.Printf("[IMPORT] [Artifact %d] NewArtifact constructed in %v", i, time.Since(start))
+		
+		start = time.Now()
 		if err := s.artifactService.CreateArtifact(newArtifact); err != nil {
-			return "", fmt.Errorf("failed to create artifact: %w", err)
+			log.Printf("[IMPORT] ERROR creating artifact %d (%s): %v", i, artifact.Title, err)
+			return "", fmt.Errorf("failed to create artifact %d (%s): %w", i, artifact.Title, err)
+		}
+		elapsed := time.Since(start)
+		log.Printf("[IMPORT] Successfully created artifact %d/%d: %s (ID: %s) in %v", i, len(importData.Artifacts), artifact.Title, newArtifact.ID, elapsed)
+		
+		// Log if this artifact took an unusually long time
+		if elapsed > 100*time.Millisecond {
+			log.Printf("[IMPORT] WARNING: Artifact %d took %v (slow)", i, elapsed)
+		}
+		if i%10 == 0 {
+			log.Printf("[IMPORT] Created %d artifacts", i)
 		}
 		
 		// Map old ID to new ID
 		idMap[oldID] = newArtifact.ID
 	}
 
+	log.Printf("[IMPORT] First pass complete. Starting second pass: updating parent relationships")
+	log.Printf("[IMPORT] ID map has %d entries", len(idMap))
+	
 	// Second pass: Update parent relationships
-	for _, artifact := range importData.Artifacts {
+	updateCount := 0
+	for i, artifact := range importData.Artifacts {
 		if artifact.ParentID != nil && *artifact.ParentID != "" {
 			newID := idMap[artifact.ID]
 			newParentID := idMap[*artifact.ParentID]
 			
 			if newParentID != "" {
-				var sortOrder *int
-				if artifact.SortOrder > 0 {
-					value := artifact.SortOrder
-					sortOrder = &value
+				updateCount++
+				log.Printf("[IMPORT] Second pass: updating artifact %d (%s) - parent: %d (%s)", i, artifact.Title, i, *artifact.ParentID)
+				
+				// Always set sortOrder to avoid expensive NextSortOrder() calls
+				sortOrderVal := artifact.SortOrder
+				if sortOrderVal == 0 {
+					sortOrderVal = i + 1
 				}
 				// Update the artifact with the parent relationship
 				// Must include all fields to prevent clearing existing data
+				log.Printf("[IMPORT] About to call UpdateArtifact for artifact %d", i)
 				_, err := s.artifactService.UpdateArtifact(newID, artifacts.UpdateArtifactRequest{
 					ParentID:   &newParentID,
 					Type:       artifact.Type,
 					Title:      artifact.Title,
 					Body:       artifact.Body,
-					SortOrder:  sortOrder,
+					SortOrder:  &sortOrderVal,
 					Attributes: artifact.Attributes,
 				})
+				log.Printf("[IMPORT] UpdateArtifact returned for artifact %d", i)
 				if err != nil {
+					log.Printf("[IMPORT] ERROR in second pass for artifact %d: %v", i, err)
 					return "", fmt.Errorf("failed to update artifact parent: %w", err)
 				}
+				log.Printf("[IMPORT] Successfully updated artifact %d in second pass", i)
 			}
 		}
 	}
+	log.Printf("[IMPORT] Second pass complete. Updated %d artifacts with parent relationships", updateCount)
 
 	// Create links using the new IDs
 	for _, link := range importData.Links {

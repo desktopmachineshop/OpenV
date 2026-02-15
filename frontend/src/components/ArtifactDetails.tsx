@@ -9,6 +9,8 @@ interface ArtifactDetailsProps {
   attachments?: Attachment[];
   onDeleteAttachment?: (attachmentId: string) => void;
   onSelectArtifact?: (artifactId: string) => void;
+  previewVersion?: Artifact | null;
+  onClosePreview?: () => void;
 }
 
 export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({ 
@@ -18,6 +20,8 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
   attachments = [],
   onDeleteAttachment,
   onSelectArtifact,
+  previewVersion,
+  onClosePreview,
 }) => {
   // Get the title of an artifact by ID
   const getArtifactTitle = (id: string): string => {
@@ -96,6 +100,156 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
 
   return (
     <div className="card">
+      {/* Preview Notification and Side-by-Side Comparison */}
+      {previewVersion && (
+        <div>
+          <div
+            style={{
+              backgroundColor: '#fff3cd',
+              border: '1px solid #ffc107',
+              color: '#856404',
+              padding: '10px 12px',
+              borderRadius: '3px',
+              marginBottom: '16px',
+              fontSize: '12px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+          >
+            <span>
+              <strong>Preview Mode:</strong> Comparing Version {previewVersion.version} with Current Version {artifact.version}
+            </span>
+            <button
+              onClick={() => onClosePreview?.()}
+              style={{
+                backgroundColor: 'transparent',
+                color: '#856404',
+                border: '1px solid #856404',
+                padding: '4px 8px',
+                borderRadius: '3px',
+                cursor: 'pointer',
+                fontSize: '11px',
+              }}
+            >
+              Close Preview
+            </button>
+          </div>
+
+          {/* Side-by-Side Columns */}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: '16px',
+              marginBottom: '16px',
+            }}
+          >
+            {/* Current Version Column */}
+            <div
+              style={{
+                backgroundColor: '#f8f9fa',
+                padding: '12px',
+                borderRadius: '3px',
+                border: '1px solid #e9ecef',
+              }}
+            >
+              <h4 style={{ margin: '0 0 12px 0', fontSize: '13px', color: '#27ae60' }}>
+                Current Version (v{artifact.version})
+              </h4>
+              <div style={{ fontSize: '12px' }}>
+                <div style={{ marginBottom: '12px' }}>
+                  <strong>Title:</strong>
+                  <p style={{ margin: '4px 0', color: '#2c3e50' }}>{artifact.title}</p>
+                </div>
+                <div style={{ marginBottom: '12px' }}>
+                  <strong>Type:</strong>
+                  <p style={{ margin: '4px 0', color: '#2c3e50' }}>{artifact.type}</p>
+                </div>
+                <div style={{ marginBottom: '12px' }}>
+                  <strong>Description:</strong>
+                  <p style={{ margin: '4px 0', color: '#2c3e50', whiteSpace: 'pre-wrap', wordBreak: 'break-word', minHeight: '60px' }}>
+                    {artifact.body || '(empty)'}
+                  </p>
+                </div>
+                {artifact.attributes && Object.keys(artifact.attributes).length > 0 && (
+                  <div style={{ marginBottom: '12px' }}>
+                    <strong>Attributes:</strong>
+                    <pre style={{ fontSize: '11px', backgroundColor: '#ecf0f1', padding: '8px', borderRadius: '3px', margin: '4px 0', overflow: 'auto' }}>
+                      {JSON.stringify(artifact.attributes, null, 2)}
+                    </pre>
+                  </div>
+                )}
+                <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #dcdde1', fontSize: '11px', color: '#7f8c8d' }}>
+                  <p style={{ margin: '0 0 4px 0' }}>
+                    <strong>Created:</strong> {new Date(artifact.created_at).toLocaleString()}
+                  </p>
+                  <p style={{ margin: '0 0 4px 0' }}>
+                    <strong>Updated:</strong> {new Date(artifact.updated_at).toLocaleString()}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Preview Version Column */}
+            <div
+              style={{
+                backgroundColor: '#f0f8f4',
+                padding: '12px',
+                borderRadius: '3px',
+                border: '1px solid #c8e6c9',
+              }}
+            >
+              <h4 style={{ margin: '0 0 12px 0', fontSize: '13px', color: '#2980b9' }}>
+                Preview Version (v{previewVersion.version})
+              </h4>
+              <div style={{ fontSize: '12px' }}>
+                <div style={{ marginBottom: '12px' }}>
+                  <strong>Title:</strong>
+                  <p style={{ margin: '4px 0', color: '#2c3e50' }}>{previewVersion.title}</p>
+                </div>
+                <div style={{ marginBottom: '12px' }}>
+                  <strong>Type:</strong>
+                  <p style={{ margin: '4px 0', color: '#2c3e50' }}>{previewVersion.type}</p>
+                </div>
+                <div style={{ marginBottom: '12px' }}>
+                  <strong>Description:</strong>
+                  <p style={{ margin: '4px 0', color: '#2c3e50', whiteSpace: 'pre-wrap', wordBreak: 'break-word', minHeight: '60px' }}>
+                    {previewVersion.body || '(empty)'}
+                  </p>
+                </div>
+                {previewVersion.attributes && Object.keys(previewVersion.attributes).length > 0 && (
+                  <div style={{ marginBottom: '12px' }}>
+                    <strong>Attributes:</strong>
+                    <pre style={{ fontSize: '11px', backgroundColor: '#ecf0f1', padding: '8px', borderRadius: '3px', margin: '4px 0', overflow: 'auto' }}>
+                      {JSON.stringify(previewVersion.attributes, null, 2)}
+                    </pre>
+                  </div>
+                )}
+                <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #dcdde1', fontSize: '11px', color: '#7f8c8d' }}>
+                  <p style={{ margin: '0 0 4px 0' }}>
+                    <strong>Created:</strong> {new Date(previewVersion.created_at).toLocaleString()}
+                  </p>
+                  <p style={{ margin: '0 0 4px 0' }}>
+                    <strong>Updated:</strong> {new Date(previewVersion.updated_at).toLocaleString()}
+                  </p>
+                  {previewVersion.valid_to && (
+                    <p style={{ margin: '4px 0 0 0' }}>
+                      <strong>Archived:</strong> {new Date(previewVersion.valid_to).toLocaleString()}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <hr style={{ margin: '16px 0', borderColor: '#ecf0f1' }} />
+        </div>
+      )}
+
+      {/* Only show standard artifact info if not in preview mode */}
+      {!previewVersion && (
+        <>
       <h3>{artifact.title}</h3>
       <div style={{ marginBottom: '15px' }}>
         <span
@@ -180,6 +334,8 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
         <p>Created: {new Date(artifact.created_at).toLocaleString()}</p>
         <p>Updated: {new Date(artifact.updated_at).toLocaleString()}</p>
       </div>
+        </>
+      )}
     </div>
   );
 };

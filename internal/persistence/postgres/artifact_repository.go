@@ -1,6 +1,7 @@
 package postgres
 
 import (
+    "context"
     "database/sql"
     "encoding/json"
     "errors"
@@ -31,7 +32,13 @@ func (r *ArtifactRepository) Save(artifact *artifacts.Artifact) error {
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
 	`
 
-	err = r.db.QueryRow(
+	// Use context with 5 second timeout for individual artifact inserts
+	// This prevents indefinite hangs and provides clear error reporting
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	err = r.db.QueryRowContext(
+		ctx,
 		query,
 		artifact.ID,
 		artifact.ProjectID,
@@ -201,21 +208,34 @@ func (r *ArtifactRepository) FindByProjectAndType(projectID string, artifactType
 	return artifactList, rows.Err()
 }
 
-// Update updates an artifact
+// Update updates an artifact by archiving the old version and creating a new one
 func (r *ArtifactRepository) Update(artifact *artifacts.Artifact) error {
 	attributesJSON, err := json.Marshal(artifact.Attributes)
 	if err != nil {
 		return err
 	}
 
-	query := `
-		UPDATE artifacts 
-		SET project_id = $1, parent_id = $2, type = $3, title = $4, body = $5, sort_order = $6, attributes = $7, version = $8, updated_at = $9
-		WHERE id = $10
-	`
+	tx, err := r.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
 
-	result, err := r.db.Exec(
-		query,
+	// Mark the current version as archived
+	archiveQuery := `UPDATE artifacts SET valid_to = $1 WHERE id = $2 AND valid_to IS NULL`
+	_, err = tx.Exec(archiveQuery, artifact.ValidFrom, artifact.ID)
+	if err != nil {
+		return err
+	}
+
+	// Insert the new version
+	insertQuery := `
+		INSERT INTO artifacts (id, project_id, parent_id, type, title, body, sort_order, attributes, version, valid_from, valid_to, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+	`
+	_, err = tx.Exec(
+		insertQuery,
+		artifact.ID,
 		artifact.ProjectID,
 		artifact.ParentID,
 		artifact.Type,
@@ -224,24 +244,16 @@ func (r *ArtifactRepository) Update(artifact *artifacts.Artifact) error {
 		artifact.SortOrder,
 		attributesJSON,
 		artifact.Version,
+		artifact.ValidFrom,
+		artifact.ValidTo,
+		artifact.CreatedAt,
 		artifact.UpdatedAt,
-		artifact.ID,
 	)
-
 	if err != nil {
 		return err
 	}
 
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return err
-	}
-
-	if rowsAffected == 0 {
-		return errors.New("artifact not found")
-	}
-
-	return nil
+	return tx.Commit()
 }
 
 // Delete soft-deletes an artifact
