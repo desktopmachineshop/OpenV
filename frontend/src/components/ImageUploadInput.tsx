@@ -70,6 +70,9 @@ export const ImageUploadInput: React.FC<ImageUploadInputProps> = ({
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
+      onClick={() => !isLoading && fileInputRef.current?.click()}
+      role="button"
+      tabIndex={0}
     >
       <input
         ref={fileInputRef}
@@ -81,7 +84,7 @@ export const ImageUploadInput: React.FC<ImageUploadInputProps> = ({
         aria-label="Upload image"
       />
 
-      <div className="upoad-content" onClick={() => !isLoading && fileInputRef.current?.click()}>
+      <div className="upload-content">
         <div className="upload-icon">📷</div>
         <p className="upload-text">
           {isLoading ? 'Uploading...' : 'Click to upload or drag and drop'}

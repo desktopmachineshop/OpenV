@@ -30,6 +30,7 @@ func InitSchema(db *sql.DB) error {
 		type VARCHAR(255) NOT NULL,
 		title VARCHAR(512) NOT NULL,
 		body TEXT,
+		sort_order INT NOT NULL DEFAULT 0,
 		attributes JSONB DEFAULT '{}',
 		version INT NOT NULL DEFAULT 1,
 		valid_from TIMESTAMP NOT NULL DEFAULT NOW(),
@@ -128,6 +129,28 @@ func InitSchema(db *sql.DB) error {
 	_, err = db.Exec(constraintSQL)
 	if err != nil {
 		return fmt.Errorf("failed to add parent_id constraint: %w", err)
+	}
+
+	const addSortOrderSQL = `
+	DO $$
+	BEGIN
+		IF NOT EXISTS (
+			SELECT 1 FROM information_schema.columns
+			WHERE table_name='artifacts' AND column_name='sort_order'
+		) THEN
+			ALTER TABLE artifacts ADD COLUMN sort_order INT NOT NULL DEFAULT 0;
+		END IF;
+	END $$;
+	`
+
+	_, err = db.Exec(addSortOrderSQL)
+	if err != nil {
+		return fmt.Errorf("failed to add sort_order column: %w", err)
+	}
+
+	_, err = db.Exec(`CREATE INDEX IF NOT EXISTS idx_artifacts_sort_order ON artifacts(sort_order);`)
+	if err != nil {
+		return fmt.Errorf("failed to add sort_order index: %w", err)
 	}
 
 	return nil

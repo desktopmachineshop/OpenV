@@ -8,6 +8,7 @@ interface ArtifactDetailsProps {
   artifacts?: Artifact[];
   attachments?: Attachment[];
   onDeleteAttachment?: (attachmentId: string) => void;
+  onSelectArtifact?: (artifactId: string) => void;
 }
 
 export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({ 
@@ -16,6 +17,7 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
   artifacts = [],
   attachments = [],
   onDeleteAttachment,
+  onSelectArtifact,
 }) => {
   // Get the title of an artifact by ID
   const getArtifactTitle = (id: string): string => {
@@ -53,26 +55,40 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
           {linkType} ({typeLinks.length})
         </strong>
         <div style={{ marginTop: '6px' }}>
-          {typeLinks.map((link) => (
-            <div
-              key={link.id}
-              style={{
-                padding: '8px',
-                marginBottom: '5px',
-                backgroundColor: colorScheme.bg,
-                borderLeft: `3px solid ${colorScheme.border}`,
-                borderRadius: '2px',
-                fontSize: '12px',
-              }}
-            >
-              <strong>
-                {direction === 'outgoing' ? getArtifactTitle(link.to_id) : getArtifactTitle(link.from_id)}
-              </strong>
-              <div style={{ marginTop: '3px', color: '#555', fontSize: '11px' }}>
-                ID: {(direction === 'outgoing' ? link.to_id : link.from_id).substring(0, 8)}...
+          {typeLinks.map((link) => {
+            const linkedArtifactId = direction === 'outgoing' ? link.to_id : link.from_id;
+            return (
+              <div
+                key={link.id}
+                style={{
+                  padding: '8px',
+                  marginBottom: '5px',
+                  backgroundColor: colorScheme.bg,
+                  borderLeft: `3px solid ${colorScheme.border}`,
+                  borderRadius: '2px',
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                  transition: 'background-color 0.2s ease',
+                }}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLElement).style.opacity = '0.8';
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLElement).style.opacity = '1';
+                }}
+                onClick={() => onSelectArtifact?.(linkedArtifactId)}
+              >
+                <strong>
+                  <span style={{ color: colorScheme.header, textDecoration: 'underline', cursor: 'pointer' }}>
+                    {direction === 'outgoing' ? getArtifactTitle(link.to_id) : getArtifactTitle(link.from_id)}
+                  </span>
+                </strong>
+                <div style={{ marginTop: '3px', color: '#555', fontSize: '11px' }}>
+                  ID: {linkedArtifactId.substring(0, 8)}...
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     ));

@@ -27,8 +27,8 @@ func (r *ArtifactRepository) Save(artifact *artifacts.Artifact) error {
 	}
 
 	query := `
-		INSERT INTO artifacts (id, project_id, parent_id, type, title, body, attributes, version, valid_from, valid_to, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+		INSERT INTO artifacts (id, project_id, parent_id, type, title, body, sort_order, attributes, version, valid_from, valid_to, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
 	`
 
 	err = r.db.QueryRow(
@@ -39,6 +39,7 @@ func (r *ArtifactRepository) Save(artifact *artifacts.Artifact) error {
 		artifact.Type,
 		artifact.Title,
 		artifact.Body,
+		artifact.SortOrder,
 		attributesJSON,
 		artifact.Version,
 		artifact.ValidFrom,
@@ -56,7 +57,7 @@ func (r *ArtifactRepository) FindByID(id string) (*artifacts.Artifact, error) {
 	var attributesJSON []byte
 
 	query := `
-		SELECT id, project_id, parent_id, type, title, body, attributes, version, valid_from, valid_to, created_at, updated_at
+		SELECT id, project_id, parent_id, type, title, body, sort_order, attributes, version, valid_from, valid_to, created_at, updated_at
 		FROM artifacts
 		WHERE id = $1 AND valid_to IS NULL
 	`
@@ -68,6 +69,7 @@ func (r *ArtifactRepository) FindByID(id string) (*artifacts.Artifact, error) {
 		&artifact.Type,
 		&artifact.Title,
 		&artifact.Body,
+		&artifact.SortOrder,
 		&attributesJSON,
 		&artifact.Version,
 		&artifact.ValidFrom,
@@ -96,10 +98,10 @@ func (r *ArtifactRepository) FindByID(id string) (*artifacts.Artifact, error) {
 // FindByProjectID retrieves all artifacts for a project
 func (r *ArtifactRepository) FindByProjectID(projectID string) ([]*artifacts.Artifact, error) {
 	query := `
-		SELECT id, project_id, parent_id, type, title, body, attributes, version, valid_from, valid_to, created_at, updated_at
+		SELECT id, project_id, parent_id, type, title, body, sort_order, attributes, version, valid_from, valid_to, created_at, updated_at
 		FROM artifacts
 		WHERE project_id = $1 AND valid_to IS NULL
-		ORDER BY created_at ASC
+		ORDER BY parent_id NULLS FIRST, sort_order ASC, created_at ASC
 	`
 
 	rows, err := r.db.Query(query, projectID)
@@ -120,6 +122,7 @@ func (r *ArtifactRepository) FindByProjectID(projectID string) ([]*artifacts.Art
 			&artifact.Type,
 			&artifact.Title,
 			&artifact.Body,
+			&artifact.SortOrder,
 			&attributesJSON,
 			&artifact.Version,
 			&artifact.ValidFrom,
@@ -148,10 +151,10 @@ func (r *ArtifactRepository) FindByProjectID(projectID string) ([]*artifacts.Art
 // FindByProjectAndType retrieves artifacts by project and type
 func (r *ArtifactRepository) FindByProjectAndType(projectID string, artifactType string) ([]*artifacts.Artifact, error) {
 	query := `
-		SELECT id, project_id, parent_id, type, title, body, attributes, version, valid_from, valid_to, created_at, updated_at
+		SELECT id, project_id, parent_id, type, title, body, sort_order, attributes, version, valid_from, valid_to, created_at, updated_at
 		FROM artifacts
 		WHERE project_id = $1 AND type = $2 AND valid_to IS NULL
-		ORDER BY created_at ASC
+		ORDER BY parent_id NULLS FIRST, sort_order ASC, created_at ASC
 	`
 
 	rows, err := r.db.Query(query, projectID, artifactType)
@@ -172,6 +175,7 @@ func (r *ArtifactRepository) FindByProjectAndType(projectID string, artifactType
 			&artifact.Type,
 			&artifact.Title,
 			&artifact.Body,
+			&artifact.SortOrder,
 			&attributesJSON,
 			&artifact.Version,
 			&artifact.ValidFrom,
@@ -206,8 +210,8 @@ func (r *ArtifactRepository) Update(artifact *artifacts.Artifact) error {
 
 	query := `
 		UPDATE artifacts 
-		SET project_id = $1, parent_id = $2, type = $3, title = $4, body = $5, attributes = $6, version = $7, updated_at = $8
-		WHERE id = $9
+		SET project_id = $1, parent_id = $2, type = $3, title = $4, body = $5, sort_order = $6, attributes = $7, version = $8, updated_at = $9
+		WHERE id = $10
 	`
 
 	result, err := r.db.Exec(
@@ -217,6 +221,7 @@ func (r *ArtifactRepository) Update(artifact *artifacts.Artifact) error {
 		artifact.Type,
 		artifact.Title,
 		artifact.Body,
+		artifact.SortOrder,
 		attributesJSON,
 		artifact.Version,
 		artifact.UpdatedAt,
@@ -244,4 +249,75 @@ func (r *ArtifactRepository) Delete(id string) error {
 	query := `UPDATE artifacts SET valid_to = $1 WHERE id = $2 AND valid_to IS NULL`
 	_, err := r.db.Exec(query, time.Now(), id)
 	return err
+}
+
+// NextSortOrder returns the next sort order value for a parent group.
+func (r *ArtifactRepository) NextSortOrder(projectID string, parentID *string) (int, error) {
+	query := `
+		SELECT COALESCE(MAX(sort_order), 0) + 1
+		FROM artifacts
+		WHERE project_id = $1 AND valid_to IS NULL
+		AND parent_id IS NOT DISTINCT FROM $2
+	`
+
+	var next int
+	err := r.db.QueryRow(query, projectID, parentID).Scan(&next)
+	if err != nil {
+		return 0, err
+	}
+
+	return next, nil
+}
+
+// FindVersionsByID retrieves all versions of an artifact (including historical ones)
+func (r *ArtifactRepository) FindVersionsByID(id string) ([]*artifacts.Artifact, error) {
+	query := `
+		SELECT id, project_id, parent_id, type, title, body, sort_order, attributes, version, valid_from, valid_to, created_at, updated_at
+		FROM artifacts
+		WHERE id = $1
+		ORDER BY version DESC
+	`
+
+	rows, err := r.db.Query(query, id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var artifactList []*artifacts.Artifact
+	for rows.Next() {
+		artifact := new(artifacts.Artifact)
+		var attributesJSON []byte
+
+		err := rows.Scan(
+			&artifact.ID,
+			&artifact.ProjectID,
+			&artifact.ParentID,
+			&artifact.Type,
+			&artifact.Title,
+			&artifact.Body,
+			&artifact.SortOrder,
+			&attributesJSON,
+			&artifact.Version,
+			&artifact.ValidFrom,
+			&artifact.ValidTo,
+			&artifact.CreatedAt,
+			&artifact.UpdatedAt,
+		)
+
+		if err != nil {
+			return nil, err
+		}
+
+		if attributesJSON != nil {
+			err = json.Unmarshal(attributesJSON, &artifact.Attributes)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		artifactList = append(artifactList, artifact)
+	}
+
+	return artifactList, rows.Err()
 }

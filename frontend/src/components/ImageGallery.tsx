@@ -94,6 +94,9 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
+            onClick={() => !isUploadLoading && fileInputRef.current?.click()}
+            role="button"
+            tabIndex={0}
           >
             <input
               ref={fileInputRef}
@@ -104,10 +107,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
               className="gallery-upload-input"
               aria-label="Upload image"
             />
-            <div
-              className="gallery-upload-content"
-              onClick={() => !isUploadLoading && fileInputRef.current?.click()}
-            >
+            <div className="gallery-upload-content">
               <div className="upload-icon">📷</div>
               <p className="upload-text">{isUploadLoading ? 'Uploading...' : 'Drag images here or click'}</p>
             </div>
@@ -154,6 +154,9 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
+              onClick={() => !isUploadLoading && fileInputRef.current?.click()}
+              role="button"
+              tabIndex={0}
             >
               <input
                 ref={fileInputRef}
@@ -164,10 +167,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
                 className="gallery-upload-input"
                 aria-label="Upload image"
               />
-              <div
-                className="gallery-upload-content"
-                onClick={() => !isUploadLoading && fileInputRef.current?.click()}
-              >
+              <div className="gallery-upload-content">
                 <div className="upload-icon">➕</div>
                 <p className="upload-text">{isUploadLoading ? 'Uploading...' : 'Click or drag'}</p>
               </div>

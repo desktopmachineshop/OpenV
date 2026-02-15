@@ -3,6 +3,7 @@ import { useAppStore } from '../state/store';
 import { artifactAPI, linkAPI, attachmentAPI, baselineAPI, projectAPI, Artifact, Link, Attachment, Baseline, ProjectExport } from '../api/client';
 import { ArtifactEditor } from '../components/ArtifactEditor';
 import { ArtifactList } from '../components/ArtifactList';
+import { ArtifactHeader } from '../components/ArtifactHeader';
 import { ArtifactDetails } from '../components/ArtifactDetails';
 import { LinkPanel } from '../components/LinkPanel';
 import { HelpSidebar } from '../components/HelpSidebar';
@@ -18,12 +19,23 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
   const [editingArtifact, setEditingArtifact] = useState<Artifact | undefined>();
   const [error, setError] = useState<string>('');
   const [allLinks, setAllLinks] = useState<Link[]>([]);
-  const [filterType, setFilterType] = useState<string>(''); // '' means show all
+  const [searchText, setSearchText] = useState<string>('');
+  const [searchExact, setSearchExact] = useState<boolean>(false);
+  const [filterLogic, setFilterLogic] = useState<'and' | 'or'>('and');
+  const [filterRows, setFilterRows] = useState<Array<{ id: string; field: string; value: string; comparator: string }>>([
+    { id: 'filter-1', field: 'type', value: '', comparator: 'contains' },
+  ]);
+  const [filterPresetName, setFilterPresetName] = useState<string>('');
+  const [filterPresets, setFilterPresets] = useState<Array<{ name: string; data: string }>>([]);
+  const [selectedPreset, setSelectedPreset] = useState<string>('');
+  const [showFilterPanel, setShowFilterPanel] = useState<boolean>(false);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [uploadingAttachmentId, setUploadingAttachmentId] = useState<string | null>(null);
   const [baselines, setBaselines] = useState<Baseline[]>([]);
   const [activeBaselineId, setActiveBaselineId] = useState<string>('live');
   const [baselineData, setBaselineData] = useState<ProjectExport | null>(null);
+  const [collapseAllToken, setCollapseAllToken] = useState<number>(0);
+  const [expandAllToken, setExpandAllToken] = useState<number>(0);
 
   const {
     projectId,
@@ -39,6 +51,25 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
   } = useAppStore();
 
   const isBaselineView = activeBaselineId !== 'live';
+
+  const normalizeParentId = (parentId?: string | null): string | null => parentId ?? null;
+
+  const compareArtifacts = (left: Artifact, right: Artifact): number => {
+    const leftOrder = left.sort_order ?? 0;
+    const rightOrder = right.sort_order ?? 0;
+    const leftHasOrder = leftOrder > 0;
+    const rightHasOrder = rightOrder > 0;
+
+    if (leftHasOrder && rightHasOrder) {
+      return leftOrder - rightOrder;
+    }
+
+    if (!leftHasOrder && !rightHasOrder) {
+      return new Date(left.created_at).getTime() - new Date(right.created_at).getTime();
+    }
+
+    return leftHasOrder ? -1 : 1;
+  };
 
   // Load artifacts on component mount
   useEffect(() => {
@@ -288,19 +319,264 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
     }
   };
 
+  const handleReorderArtifact = async (sourceId: string, targetId: string, mode: 'swap' | 'insert') => {
+    if (isBaselineView) return;
+
+    const source = artifacts.find((item) => item.id === sourceId);
+    const target = artifacts.find((item) => item.id === targetId);
+    if (!source || !target) return;
+
+    if (normalizeParentId(source.parent_id) !== normalizeParentId(target.parent_id)) {
+      return;
+    }
+
+    const siblings = artifacts
+      .filter((item) => normalizeParentId(item.parent_id) === normalizeParentId(source.parent_id))
+      .sort(compareArtifacts);
+
+    const sourceIndex = siblings.findIndex((item) => item.id === sourceId);
+    const targetIndex = siblings.findIndex((item) => item.id === targetId);
+    if (sourceIndex === -1 || targetIndex === -1) return;
+
+    const reordered = [...siblings];
+    if (mode === 'swap') {
+      const temp = reordered[sourceIndex];
+      reordered[sourceIndex] = reordered[targetIndex];
+      reordered[targetIndex] = temp;
+    } else {
+      const [moved] = reordered.splice(sourceIndex, 1);
+      const insertIndex = targetIndex > sourceIndex ? targetIndex - 1 : targetIndex;
+      reordered.splice(insertIndex, 0, moved);
+    }
+
+    const updates = reordered
+      .map((artifact, index) => ({
+        artifact,
+        newOrder: index + 1,
+      }))
+      .filter(({ artifact, newOrder }) => (artifact.sort_order ?? 0) !== newOrder);
+
+    if (updates.length === 0) {
+      return;
+    }
+
+    try {
+      const responses = await Promise.all(
+        updates.map(({ artifact, newOrder }) =>
+          artifactAPI.update(artifact.id, {
+            parent_id: artifact.parent_id ?? null,
+            type: artifact.type,
+            title: artifact.title,
+            body: artifact.body,
+            attributes: artifact.attributes,
+            sort_order: newOrder,
+          })
+        )
+      );
+
+      const updatedMap = new Map<string, Artifact>(
+        responses.map((response) => [response.data.id, response.data])
+      );
+
+      const nextArtifacts = artifacts.map((item) => updatedMap.get(item.id) || item);
+      setArtifacts(nextArtifacts);
+      setError('');
+    } catch (error: any) {
+      console.error('Failed to reorder artifacts:', error);
+      const errorMsg = error.response?.data || error.message || 'Unknown error';
+      setError(`Failed to reorder artifacts: ${errorMsg}`);
+    }
+  };
+
   const activeArtifacts = isBaselineView ? (baselineData?.artifacts || []) : artifacts;
   const activeLinks = isBaselineView ? (baselineData?.links || []) : allLinks;
 
-  // Get unique artifact types for filter dropdown
-  const getArtifactTypes = () => {
-    const types = new Set(activeArtifacts.map((a) => a.type));
-    return Array.from(types).sort();
+  const fieldOptions: Array<{ value: string; label: string }> = [
+    { value: 'id', label: 'ID' },
+    { value: 'project_id', label: 'Project ID' },
+    { value: 'parent_id', label: 'Parent ID' },
+    { value: 'type', label: 'Type' },
+    { value: 'title', label: 'Title' },
+    { value: 'body', label: 'Body' },
+    { value: 'attributes', label: 'Attributes' },
+    { value: 'version', label: 'Version' },
+    { value: 'created_at', label: 'Created At' },
+    { value: 'updated_at', label: 'Updated At' },
+  ];
+
+  const getFieldValue = (artifact: Artifact, field: string): string => {
+    switch (field) {
+      case 'id':
+        return artifact.id;
+      case 'project_id':
+        return artifact.project_id;
+      case 'parent_id':
+        return artifact.parent_id ?? '';
+      case 'type':
+        return artifact.type;
+      case 'title':
+        return artifact.title;
+      case 'body':
+        return artifact.body || '';
+      case 'attributes':
+        return JSON.stringify(artifact.attributes || {});
+      case 'version':
+        return String(artifact.version ?? '');
+      case 'created_at':
+        return artifact.created_at || '';
+      case 'updated_at':
+        return artifact.updated_at || '';
+      default:
+        return '';
+    }
   };
 
-  // Filter artifacts based on selected type
-  const filteredArtifacts = filterType
-    ? activeArtifacts.filter((a) => a.type === filterType)
-    : activeArtifacts;
+  const matchesSearch = (artifact: Artifact, query: string): boolean => {
+    const normalized = query.trim();
+    if (!normalized) return true;
+
+    const haystack = [
+      artifact.title,
+      artifact.body,
+      artifact.type,
+      artifact.id,
+      artifact.parent_id ?? '',
+      JSON.stringify(artifact.attributes || {}),
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase();
+
+    if (searchExact) {
+      return haystack.includes(normalized.toLowerCase());
+    }
+
+    return haystack.includes(normalized.toLowerCase());
+  };
+
+  const applyComparator = (fieldValue: string, comparator: string, compareValue: string): boolean => {
+    const normalizedField = fieldValue.toLowerCase();
+    const normalizedCompare = compareValue.toLowerCase();
+
+    if (comparator === 'equals') {
+      return normalizedField === normalizedCompare;
+    }
+
+    if (comparator === 'not-equals') {
+      return normalizedField !== normalizedCompare;
+    }
+
+    if (comparator === 'starts-with') {
+      return normalizedField.startsWith(normalizedCompare);
+    }
+
+    if (comparator === 'ends-with') {
+      return normalizedField.endsWith(normalizedCompare);
+    }
+
+    if (comparator === 'not-contains') {
+      return !normalizedField.includes(normalizedCompare);
+    }
+
+    if (comparator === 'gt' || comparator === 'lt') {
+      const fieldNumber = Number(fieldValue);
+      const compareNumber = Number(compareValue);
+      if (!Number.isNaN(fieldNumber) && !Number.isNaN(compareNumber)) {
+        return comparator === 'gt' ? fieldNumber > compareNumber : fieldNumber < compareNumber;
+      }
+
+      const fieldDate = Date.parse(fieldValue);
+      const compareDate = Date.parse(compareValue);
+      if (!Number.isNaN(fieldDate) && !Number.isNaN(compareDate)) {
+        return comparator === 'gt' ? fieldDate > compareDate : fieldDate < compareDate;
+      }
+
+      return comparator === 'gt'
+        ? normalizedField > normalizedCompare
+        : normalizedField < normalizedCompare;
+    }
+
+    return normalizedField.includes(normalizedCompare);
+  };
+
+  const matchesFieldFilters = (artifact: Artifact): boolean => {
+    const activeRows = filterRows.filter((row) => row.value.trim() !== '');
+    if (activeRows.length === 0) {
+      return true;
+    }
+
+    const evaluations = activeRows.map((row) => {
+      const value = row.value.trim().toLowerCase();
+      const fieldValue = getFieldValue(artifact, row.field);
+      return applyComparator(fieldValue, row.comparator, value);
+    });
+
+    return filterLogic === 'and'
+      ? evaluations.every(Boolean)
+      : evaluations.some(Boolean);
+  };
+
+  const filteredArtifacts = activeArtifacts.filter(
+    (artifact) => matchesSearch(artifact, searchText) && matchesFieldFilters(artifact)
+  );
+
+  const buildFilterSummary = (): string => {
+    const parts: string[] = [];
+
+    if (searchText.trim()) {
+      parts.push(searchExact ? `Exact search: "${searchText.trim()}"` : `Search: "${searchText.trim()}"`);
+    }
+
+    const activeRows = filterRows.filter((row) => row.value.trim() !== '');
+    if (activeRows.length > 0) {
+      const rowSummaries = activeRows.map((row) => `${row.field} ${row.comparator} "${row.value.trim()}"`);
+      parts.push(`Filters (${filterLogic.toUpperCase()}): ${rowSummaries.join(filterLogic === 'and' ? ' + ' : ' | ')}`);
+    }
+
+    if (parts.length === 0) {
+      return 'No filters applied';
+    }
+
+    return parts.join(' • ');
+  };
+
+  useEffect(() => {
+    const saved = window.localStorage.getItem('artifactFilterPresets');
+    if (!saved) return;
+    try {
+      const parsed = JSON.parse(saved) as Array<{ name: string; data: string }>;
+      setFilterPresets(parsed);
+    } catch (error) {
+      console.warn('Failed to load filter presets', error);
+    }
+  }, []);
+
+  const savePresets = (presets: Array<{ name: string; data: string }>) => {
+    setFilterPresets(presets);
+    window.localStorage.setItem('artifactFilterPresets', JSON.stringify(presets));
+  };
+
+  const applyPreset = (presetData: string) => {
+    try {
+      const parsed = JSON.parse(presetData) as {
+        searchText: string;
+        searchExact: boolean;
+        filterLogic: 'and' | 'or';
+        filterRows: Array<{ id: string; field: string; value: string; comparator: string }>;
+      };
+
+      setSearchText(parsed.searchText || '');
+      setSearchExact(Boolean(parsed.searchExact));
+      setFilterLogic(parsed.filterLogic || 'and');
+      setFilterRows(
+        parsed.filterRows && parsed.filterRows.length > 0
+          ? parsed.filterRows
+          : [{ id: `filter-${Date.now()}`, field: 'type', value: '', comparator: 'contains' }]
+      );
+    } catch (error) {
+      console.warn('Failed to apply preset', error);
+    }
+  };
 
   if (!projectId) {
     return (
@@ -340,7 +616,7 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
         onDeleteBaseline={handleDeleteBaseline}
         onGenerateReport={handleGenerateReport}
       />
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '20px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '20px', paddingLeft: '20px', paddingRight: '20px' }}>
       <div>
         {error && (
           <div
@@ -372,28 +648,296 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
 
         <div style={{ marginBottom: '20px' }}>
           <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: '#2c3e50' }}>
-            Filter by Type:
+            Filter and Search:
           </label>
-          <select
-            value={filterType}
-            onChange={(e) => setFilterType(e.target.value)}
-            style={{
-              width: '100%',
-              padding: '8px',
-              borderRadius: '4px',
-              border: '1px solid #bdc3c7',
-              fontSize: '14px',
-              backgroundColor: 'white',
-              cursor: 'pointer',
-            }}
-          >
-            <option value="">All Types ({activeArtifacts.length})</option>
-            {getArtifactTypes().map((type) => (
-              <option key={type} value={type}>
-                {type} ({activeArtifacts.filter((a) => a.type === type).length})
-              </option>
-            ))}
-          </select>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <div style={{ position: 'relative', flex: 1 }}>
+              <input
+                type="text"
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+                placeholder="Search..."
+                style={{
+                  width: '100%',
+                  padding: '8px 160px 8px 8px',
+                  borderRadius: '4px',
+                  border: '1px solid #bdc3c7',
+                  fontSize: '14px',
+                  backgroundColor: 'white',
+                }}
+              />
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '50%',
+                  right: '10px',
+                  transform: 'translateY(-50%)',
+                  fontSize: '11px',
+                  color: '#7f8c8d',
+                  maxWidth: '140px',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  pointerEvents: 'none',
+                }}
+                title={buildFilterSummary()}
+              >
+                {buildFilterSummary()}
+              </div>
+            </div>
+            <button
+              onClick={() => setShowFilterPanel((prev) => !prev)}
+              className="button-secondary"
+              style={{ padding: '6px 10px', fontSize: '14px' }}
+              title="Toggle filters"
+            >
+              ⚙
+            </button>
+          </div>
+          {showFilterPanel && (
+            <div style={{
+              marginTop: '12px',
+              border: '1px solid #e0e0e0',
+              borderRadius: '6px',
+              padding: '10px',
+              backgroundColor: '#fafafa',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '10px',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#2c3e50' }}>
+                  <input
+                    type="checkbox"
+                    checked={searchExact}
+                    onChange={(e) => setSearchExact(e.target.checked)}
+                  />
+                  Exact match
+                </label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ fontSize: '12px', color: '#2c3e50' }}>Filter logic</span>
+                  <select
+                    value={filterLogic}
+                    onChange={(e) => setFilterLogic(e.target.value === 'or' ? 'or' : 'and')}
+                    style={{
+                      padding: '6px',
+                      borderRadius: '4px',
+                      border: '1px solid #bdc3c7',
+                      fontSize: '12px',
+                    }}
+                  >
+                    <option value="and">AND</option>
+                    <option value="or">OR</option>
+                  </select>
+                </div>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {filterRows.map((row) => (
+                  <div key={row.id} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <select
+                      value={row.field}
+                      onChange={(e) => {
+                        const next = filterRows.map((item) =>
+                          item.id === row.id ? { ...item, field: e.target.value } : item
+                        );
+                        setFilterRows(next);
+                      }}
+                      style={{
+                        flex: '0 0 140px',
+                        padding: '6px',
+                        borderRadius: '4px',
+                        border: '1px solid #bdc3c7',
+                        fontSize: '12px',
+                      }}
+                    >
+                      {fieldOptions.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      value={row.comparator}
+                      onChange={(e) => {
+                        const next = filterRows.map((item) =>
+                          item.id === row.id ? { ...item, comparator: e.target.value } : item
+                        );
+                        setFilterRows(next);
+                      }}
+                      style={{
+                        flex: '0 0 140px',
+                        padding: '6px',
+                        borderRadius: '4px',
+                        border: '1px solid #bdc3c7',
+                        fontSize: '12px',
+                      }}
+                    >
+                      <option value="contains">Contains</option>
+                      <option value="not-contains">Not contains</option>
+                      <option value="equals">Equals</option>
+                      <option value="not-equals">Not equals</option>
+                      <option value="starts-with">Starts with</option>
+                      <option value="ends-with">Ends with</option>
+                      <option value="gt">Greater than</option>
+                      <option value="lt">Less than</option>
+                    </select>
+                    <input
+                      type="text"
+                      value={row.value}
+                      onChange={(e) => {
+                        const next = filterRows.map((item) =>
+                          item.id === row.id ? { ...item, value: e.target.value } : item
+                        );
+                        setFilterRows(next);
+                      }}
+                      placeholder="Contains..."
+                      style={{
+                        flex: 1,
+                        padding: '6px',
+                        borderRadius: '4px',
+                        border: '1px solid #bdc3c7',
+                        fontSize: '12px',
+                      }}
+                    />
+                    <button
+                      onClick={() => {
+                        const next = filterRows.filter((item) => item.id !== row.id);
+                        setFilterRows(
+                          next.length > 0
+                            ? next
+                            : [{ id: `filter-${Date.now()}`, field: 'type', value: '', comparator: 'contains' }]
+                        );
+                      }}
+                      className="button-secondary"
+                      style={{ padding: '5px 8px', fontSize: '12px' }}
+                      title="Remove filter"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  <button
+                    onClick={() => {
+                      setFilterRows((prev) => [
+                        ...prev,
+                        { id: `filter-${Date.now()}`, field: 'type', value: '', comparator: 'contains' },
+                      ]);
+                    }}
+                    className="button-secondary"
+                    style={{ padding: '6px 10px', fontSize: '12px' }}
+                  >
+                    + Add filter
+                  </button>
+                  <button
+                    onClick={() => {
+                      const name = filterPresetName.trim();
+                      if (!name) return;
+                      const data = JSON.stringify({
+                        searchText,
+                        searchExact,
+                        filterLogic,
+                        filterRows,
+                      });
+                      const next = filterPresets.filter((preset) => preset.name !== name);
+                      next.unshift({ name, data });
+                      setFilterPresetName('');
+                      setSelectedPreset(name);
+                      savePresets(next);
+                    }}
+                    className="button-secondary"
+                    style={{ padding: '6px 10px', fontSize: '12px' }}
+                  >
+                    Save preset
+                  </button>
+                  <button
+                    onClick={() => {
+                      setSearchText('');
+                      setSearchExact(false);
+                      setFilterLogic('and');
+                      setFilterRows([{ id: `filter-${Date.now()}`, field: 'type', value: '', comparator: 'contains' }]);
+                    }}
+                    className="button-secondary"
+                    style={{ padding: '6px 10px', fontSize: '12px' }}
+                  >
+                    Clear filters
+                  </button>
+                </div>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                  <input
+                    type="text"
+                    value={filterPresetName}
+                    onChange={(e) => setFilterPresetName(e.target.value)}
+                    placeholder="Preset name"
+                    style={{
+                      flex: '0 0 180px',
+                      padding: '6px',
+                      borderRadius: '4px',
+                      border: '1px solid #bdc3c7',
+                      fontSize: '12px',
+                    }}
+                  />
+                  <select
+                    value={selectedPreset}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setSelectedPreset(value);
+                      const preset = filterPresets.find((item) => item.name === value);
+                      if (preset) {
+                        applyPreset(preset.data);
+                      }
+                    }}
+                    style={{
+                      flex: '0 0 220px',
+                      padding: '6px',
+                      borderRadius: '4px',
+                      border: '1px solid #bdc3c7',
+                      fontSize: '12px',
+                    }}
+                  >
+                    <option value="">Saved presets</option>
+                    {filterPresets.map((preset) => (
+                      <option key={preset.name} value={preset.name}>
+                        {preset.name}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={() => {
+                      if (!selectedPreset) return;
+                      const next = filterPresets.filter((preset) => preset.name !== selectedPreset);
+                      setSelectedPreset('');
+                      savePresets(next);
+                    }}
+                    className="button-secondary"
+                    style={{ padding: '6px 10px', fontSize: '12px' }}
+                  >
+                    Delete preset
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+          <div style={{ marginTop: '10px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            <button
+              onClick={() => {
+                setCollapseAllToken((prev) => prev + 1);
+              }}
+              className="button-secondary"
+              style={{ padding: '6px 10px', fontSize: '12px' }}
+            >
+              Collapse all
+            </button>
+            <button
+              onClick={() => {
+                setExpandAllToken((prev) => prev + 1);
+              }}
+              className="button-secondary"
+              style={{ padding: '6px 10px', fontSize: '12px' }}
+            >
+              Expand all
+            </button>
+          </div>
         </div>
 
         {isCreating && !isBaselineView && (
@@ -409,10 +953,13 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
 
         <ArtifactList
           artifacts={filteredArtifacts}
+          allArtifacts={artifacts}
           selectedId={selectedArtifactId || undefined}
           onSelect={setSelectedArtifactId}
-          onEdit={handleEditArtifact}
-          onDelete={handleDeleteArtifact}
+          onReorder={handleReorderArtifact}
+          defaultCollapsed
+          collapseAllTrigger={collapseAllToken}
+          expandAllTrigger={expandAllToken}
           readOnly={isBaselineView}
         />
       </div>
@@ -439,18 +986,34 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
               onCreateLink={handleCreateLink}
               links={allLinks}
               title="Edit Artifact Links"
+              onSelectArtifact={(artifactId) => {
+                setIsEditing(false);
+                setSelectedArtifactId(artifactId);
+              }}
             />
           </>
         )}
 
         {selectedArtifact && !isEditing && (
-          <ArtifactDetails 
-            artifact={selectedArtifact} 
-            links={activeLinks} 
-            artifacts={activeArtifacts}
-            attachments={detailAttachments}
-            onDeleteAttachment={isBaselineView ? undefined : handleDeleteAttachment}
-          />
+          <>
+            <ArtifactHeader
+              artifact={selectedArtifact}
+              onEdit={handleEditArtifact}
+              onDelete={handleDeleteArtifact}
+              onRestore={(restored) => {
+                updateArtifact(restored);
+                setSelectedArtifactId(restored.id);
+              }}
+            />
+            <ArtifactDetails 
+              artifact={selectedArtifact} 
+              links={activeLinks} 
+              artifacts={activeArtifacts}
+              attachments={detailAttachments}
+              onDeleteAttachment={isBaselineView ? undefined : handleDeleteAttachment}
+              onSelectArtifact={setSelectedArtifactId}
+            />
+          </>
         )}
 
         {!selectedArtifact && !isEditing && (

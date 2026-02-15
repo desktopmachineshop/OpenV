@@ -34,6 +34,7 @@ export interface Artifact {
   type: string;
   title: string;
   body: string;
+  sort_order?: number;
   attributes: Record<string, any>;
   version: number;
   valid_from: string;
@@ -109,6 +110,10 @@ export const artifactAPI = {
     client.put<Artifact>(`/api/v1/artifacts/${id}`, payload),
   delete: (id: string) =>
     client.delete(`/api/v1/artifacts/${id}`),
+  getVersions: (id: string) =>
+    client.get<Artifact[]>(`/api/v1/artifacts/${id}/versions`),
+  restoreVersion: (id: string, version: number) =>
+    client.post<Artifact>(`/api/v1/artifacts/${id}/restore`, { version }),
 };
 
 export const linkAPI = {

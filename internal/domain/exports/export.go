@@ -185,11 +185,17 @@ func (s *DefaultService) ImportProjectWithOverrides(data []byte, nameOverride st
 		oldID := artifact.ID
 		
 		// Create new artifact with this project ID, but no parent yet
+		var sortOrder *int
+		if artifact.SortOrder > 0 {
+			value := artifact.SortOrder
+			sortOrder = &value
+		}
 		newArtifact := artifacts.NewArtifact(artifacts.CreateArtifactRequest{
 			ProjectID:  projectID,
 			Type:       artifact.Type,
 			Title:      artifact.Title,
 			Body:       artifact.Body,
+			SortOrder:  sortOrder,
 			Attributes: artifact.Attributes,
 			ParentID:   nil, // Will set in second pass
 		})
@@ -209,6 +215,11 @@ func (s *DefaultService) ImportProjectWithOverrides(data []byte, nameOverride st
 			newParentID := idMap[*artifact.ParentID]
 			
 			if newParentID != "" {
+				var sortOrder *int
+				if artifact.SortOrder > 0 {
+					value := artifact.SortOrder
+					sortOrder = &value
+				}
 				// Update the artifact with the parent relationship
 				// Must include all fields to prevent clearing existing data
 				_, err := s.artifactService.UpdateArtifact(newID, artifacts.UpdateArtifactRequest{
@@ -216,6 +227,7 @@ func (s *DefaultService) ImportProjectWithOverrides(data []byte, nameOverride st
 					Type:       artifact.Type,
 					Title:      artifact.Title,
 					Body:       artifact.Body,
+					SortOrder:  sortOrder,
 					Attributes: artifact.Attributes,
 				})
 				if err != nil {

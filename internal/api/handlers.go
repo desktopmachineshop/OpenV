@@ -75,6 +75,8 @@ func (h *Handler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/artifacts/{id}", h.GetArtifact).Methods("GET")
 	router.HandleFunc("/api/v1/artifacts/{id}", h.UpdateArtifact).Methods("PUT")
 	router.HandleFunc("/api/v1/artifacts/{id}", h.DeleteArtifact).Methods("DELETE")
+	router.HandleFunc("/api/v1/artifacts/{id}/versions", h.GetArtifactVersions).Methods("GET")
+	router.HandleFunc("/api/v1/artifacts/{id}/restore", h.RestoreArtifactVersion).Methods("POST")
 
 	// Link endpoints
 	router.HandleFunc("/api/v1/links", h.CreateLink).Methods("POST")
@@ -183,6 +185,42 @@ func (h *Handler) DeleteArtifact(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// GetArtifactVersions retrieves all versions of an artifact
+func (h *Handler) GetArtifactVersions(w http.ResponseWriter, r *http.Request) {
+	id := mux.Vars(r)["id"]
+
+	versions, err := h.artifactService.GetArtifactVersions(id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(versions)
+}
+
+// RestoreArtifactVersion restores a previous version of an artifact
+func (h *Handler) RestoreArtifactVersion(w http.ResponseWriter, r *http.Request) {
+	id := mux.Vars(r)["id"]
+
+	var req struct {
+		Version int `json:"version"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	artifact, err := h.artifactService.RestoreArtifactVersion(id, req.Version)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(artifact)
 }
 
 // CreateLink creates a new link
