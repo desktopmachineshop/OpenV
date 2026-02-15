@@ -110,6 +110,89 @@
   color: #c0392b;
 }
 
+.project-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.icon-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 4px 8px;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  border-radius: 4px;
+}
+
+.edit-btn {
+  color: #f39c12;
+}
+
+.edit-btn:hover {
+  background-color: rgba(243, 156, 18, 0.12);
+  color: #d68910;
+}
+
+.template-btn {
+  color: #8e44ad;
+}
+
+.template-btn:hover {
+  background-color: rgba(142, 68, 173, 0.12);
+  color: #6f2c91;
+}
+
+.export-btn {
+  color: #3498db;
+}
+
+.export-btn:hover {
+  background-color: rgba(52, 152, 219, 0.1);
+  color: #2980b9;
+}
+
+.delete-btn {
+  color: #e74c3c;
+}
+
+.delete-btn:hover {
+  background-color: rgba(231, 76, 60, 0.1);
+  color: #c0392b;
+}
+
+.create-import-placeholder {
+  grid-column: 1 / -1;
+  background: white;
+  border: 2px dashed #3498db;
+  border-radius: 8px;
+  padding: 40px;
+  text-align: center;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.create-import-placeholder h3 {
+  margin: 0 0 12px 0;
+  font-size: 22px;
+  color: #2c3e50;
+}
+
+.create-import-placeholder p {
+  margin: 0 0 24px 0;
+  color: #7f8c8d;
+  font-size: 14px;
+}
+
+.placeholder-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
 .project-description {
   margin: 0 0 12px 0;
   color: #555;
@@ -142,6 +225,10 @@
 .create-button-container {
   text-align: center;
   margin-bottom: 20px;
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
 }
 
 .create-project-form {

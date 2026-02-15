@@ -12,8 +12,12 @@ import (
 	"github.com/openv/requirements-platform/internal/api"
 	"github.com/openv/requirements-platform/internal/domain/artifacts"
 	"github.com/openv/requirements-platform/internal/domain/attachments"
+	"github.com/openv/requirements-platform/internal/domain/baselines"
+	"github.com/openv/requirements-platform/internal/domain/exports"
 	"github.com/openv/requirements-platform/internal/domain/links"
 	"github.com/openv/requirements-platform/internal/domain/projects"
+	"github.com/openv/requirements-platform/internal/domain/reports"
+	"github.com/openv/requirements-platform/internal/domain/templates"
 	"github.com/openv/requirements-platform/internal/persistence/postgres"
 )
 
@@ -80,15 +84,25 @@ func main() {
 	linkRepo := postgres.NewLinkRepository(db)
 	projectRepo := postgres.NewProjectRepository(db)
 	attachmentRepo := postgres.NewAttachmentRepository(db)
+	projectInfoRepo := postgres.NewProjectInfoRepository(db)
+	baselineRepo := postgres.NewBaselineRepository(db)
+	templateRepo := postgres.NewTemplateRepository(db)
 
 	// Create services
 	artifactService := artifacts.NewDefaultService(artifactRepo)
 	linkService := links.NewDefaultService(linkRepo)
 	projectService := projects.NewService(projectRepo)
 	attachmentService := attachments.NewDefaultService(attachmentRepo)
+	baselineService := baselines.NewService(baselineRepo)
+	exportService := exports.NewService(artifactService, linkService, attachmentService, projectInfoRepo, projectService)
+	reportService := reports.NewService(exportService, baselineService)
+	templateService := templates.NewService(templateRepo, exportService)
+	if err := templateService.SeedDefaults(); err != nil {
+		log.Printf("Failed to seed templates: %v", err)
+	}
 
 	// Create handler
-	handler := api.NewHandler(artifactService, linkService, projectService, attachmentService, uploadsDir)
+	handler := api.NewHandler(artifactService, linkService, projectService, attachmentService, exportService, baselineService, reportService, templateService, uploadsDir)
 
 	// Setup router
 	router := mux.NewRouter()

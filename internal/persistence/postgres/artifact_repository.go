@@ -27,14 +27,15 @@ func (r *ArtifactRepository) Save(artifact *artifacts.Artifact) error {
 	}
 
 	query := `
-		INSERT INTO artifacts (id, project_id, type, title, body, attributes, version, valid_from, valid_to, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+		INSERT INTO artifacts (id, project_id, parent_id, type, title, body, attributes, version, valid_from, valid_to, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 	`
 
 	err = r.db.QueryRow(
 		query,
 		artifact.ID,
 		artifact.ProjectID,
+		artifact.ParentID,
 		artifact.Type,
 		artifact.Title,
 		artifact.Body,
@@ -55,7 +56,7 @@ func (r *ArtifactRepository) FindByID(id string) (*artifacts.Artifact, error) {
 	var attributesJSON []byte
 
 	query := `
-		SELECT id, project_id, type, title, body, attributes, version, valid_from, valid_to, created_at, updated_at
+		SELECT id, project_id, parent_id, type, title, body, attributes, version, valid_from, valid_to, created_at, updated_at
 		FROM artifacts
 		WHERE id = $1 AND valid_to IS NULL
 	`
@@ -63,6 +64,7 @@ func (r *ArtifactRepository) FindByID(id string) (*artifacts.Artifact, error) {
 	err := r.db.QueryRow(query, id).Scan(
 		&artifact.ID,
 		&artifact.ProjectID,
+		&artifact.ParentID,
 		&artifact.Type,
 		&artifact.Title,
 		&artifact.Body,
@@ -94,10 +96,10 @@ func (r *ArtifactRepository) FindByID(id string) (*artifacts.Artifact, error) {
 // FindByProjectID retrieves all artifacts for a project
 func (r *ArtifactRepository) FindByProjectID(projectID string) ([]*artifacts.Artifact, error) {
 	query := `
-		SELECT id, project_id, type, title, body, attributes, version, valid_from, valid_to, created_at, updated_at
+		SELECT id, project_id, parent_id, type, title, body, attributes, version, valid_from, valid_to, created_at, updated_at
 		FROM artifacts
 		WHERE project_id = $1 AND valid_to IS NULL
-		ORDER BY created_at DESC
+		ORDER BY created_at ASC
 	`
 
 	rows, err := r.db.Query(query, projectID)
@@ -114,6 +116,7 @@ func (r *ArtifactRepository) FindByProjectID(projectID string) ([]*artifacts.Art
 		err := rows.Scan(
 			&artifact.ID,
 			&artifact.ProjectID,
+			&artifact.ParentID,
 			&artifact.Type,
 			&artifact.Title,
 			&artifact.Body,
@@ -145,10 +148,10 @@ func (r *ArtifactRepository) FindByProjectID(projectID string) ([]*artifacts.Art
 // FindByProjectAndType retrieves artifacts by project and type
 func (r *ArtifactRepository) FindByProjectAndType(projectID string, artifactType string) ([]*artifacts.Artifact, error) {
 	query := `
-		SELECT id, project_id, type, title, body, attributes, version, valid_from, valid_to, created_at, updated_at
+		SELECT id, project_id, parent_id, type, title, body, attributes, version, valid_from, valid_to, created_at, updated_at
 		FROM artifacts
 		WHERE project_id = $1 AND type = $2 AND valid_to IS NULL
-		ORDER BY created_at DESC
+		ORDER BY created_at ASC
 	`
 
 	rows, err := r.db.Query(query, projectID, artifactType)
@@ -165,6 +168,7 @@ func (r *ArtifactRepository) FindByProjectAndType(projectID string, artifactType
 		err := rows.Scan(
 			&artifact.ID,
 			&artifact.ProjectID,
+			&artifact.ParentID,
 			&artifact.Type,
 			&artifact.Title,
 			&artifact.Body,
@@ -202,13 +206,14 @@ func (r *ArtifactRepository) Update(artifact *artifacts.Artifact) error {
 
 	query := `
 		UPDATE artifacts 
-		SET project_id = $1, type = $2, title = $3, body = $4, attributes = $5, version = $6, updated_at = $7
-		WHERE id = $8
+		SET project_id = $1, parent_id = $2, type = $3, title = $4, body = $5, attributes = $6, version = $7, updated_at = $8
+		WHERE id = $9
 	`
 
 	result, err := r.db.Exec(
 		query,
 		artifact.ProjectID,
+		artifact.ParentID,
 		artifact.Type,
 		artifact.Title,
 		artifact.Body,

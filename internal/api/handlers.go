@@ -8,13 +8,18 @@ import (
     "os"
     "path/filepath"
     "strconv"
+	"time"
 
     "github.com/google/uuid"
     "github.com/gorilla/mux"
     "github.com/openv/requirements-platform/internal/domain/artifacts"
     "github.com/openv/requirements-platform/internal/domain/attachments"
+	"github.com/openv/requirements-platform/internal/domain/baselines"
+    "github.com/openv/requirements-platform/internal/domain/exports"
     "github.com/openv/requirements-platform/internal/domain/links"
     "github.com/openv/requirements-platform/internal/domain/projects"
+	"github.com/openv/requirements-platform/internal/domain/reports"
+	"github.com/openv/requirements-platform/internal/domain/templates"
 )
 
 // Handler holds references to domain services
@@ -23,16 +28,24 @@ type Handler struct {
 	linkService     links.Service
 	projectService  projects.Service
 	attachmentService attachments.Service
+	exportService   exports.Service
+	baselineService baselines.Service
+	reportService   reports.Service
+	templateService templates.Service
 	uploadsDir      string
 }
 
 // NewHandler creates a new API handler
-func NewHandler(artifactService artifacts.Service, linkService links.Service, projectService projects.Service, attachmentService attachments.Service, uploadsDir string) *Handler {
+func NewHandler(artifactService artifacts.Service, linkService links.Service, projectService projects.Service, attachmentService attachments.Service, exportService exports.Service, baselineService baselines.Service, reportService reports.Service, templateService templates.Service, uploadsDir string) *Handler {
 	return &Handler{
 		artifactService: artifactService,
 		linkService:     linkService,
 		projectService:  projectService,
 		attachmentService: attachmentService,
+		exportService:   exportService,
+		baselineService: baselineService,
+		reportService:   reportService,
+		templateService: templateService,
 		uploadsDir:      uploadsDir,
 	}
 }
@@ -45,6 +58,16 @@ func (h *Handler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/projects/{id}", h.GetProject).Methods("GET")
 	router.HandleFunc("/api/v1/projects/{id}", h.UpdateProject).Methods("PUT")
 	router.HandleFunc("/api/v1/projects/{id}", h.DeleteProject).Methods("DELETE")
+	router.HandleFunc("/api/v1/projects/{id}/export", h.ExportProject).Methods("GET")
+	router.HandleFunc("/api/v1/projects/import", h.ImportProject).Methods("POST")
+	router.HandleFunc("/api/v1/projects/{id}/report", h.GenerateReport).Methods("GET")
+	router.HandleFunc("/api/v1/projects/{id}/baselines", h.CreateBaseline).Methods("POST")
+	router.HandleFunc("/api/v1/projects/{id}/baselines", h.ListBaselines).Methods("GET")
+	router.HandleFunc("/api/v1/baselines/{id}", h.GetBaseline).Methods("GET")
+	router.HandleFunc("/api/v1/baselines/{id}", h.DeleteBaseline).Methods("DELETE")
+	router.HandleFunc("/api/v1/templates", h.ListTemplates).Methods("GET")
+	router.HandleFunc("/api/v1/templates", h.CreateTemplate).Methods("POST")
+	router.HandleFunc("/api/v1/templates/{id}/projects", h.CreateProjectFromTemplate).Methods("POST")
 
 	// Artifact endpoints
 	router.HandleFunc("/api/v1/artifacts", h.CreateArtifact).Methods("POST")
@@ -331,6 +354,225 @@ func (h *Handler) DeleteProject(w http.ResponseWriter, r *http.Request) {
 
 	err := h.projectService.DeleteProject(id)
 	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// ExportProject exports a project in the specified format
+func (h *Handler) ExportProject(w http.ResponseWriter, r *http.Request) {
+	id := mux.Vars(r)["id"]
+	
+	// Get format from query parameter (default to JSON)
+	format := r.URL.Query().Get("format")
+	if format == "" {
+		format = "json"
+	}
+
+	exportFormat := exports.ExportFormat(format)
+	
+	// Export project
+	data, filename, err := h.exportService.ExportProject(id, exportFormat)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Set appropriate headers
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", filename))
+	w.WriteHeader(http.StatusOK)
+	w.Write(data)
+}
+
+// ImportProject imports project data from uploaded JSON file and creates a new project
+func (h *Handler) ImportProject(w http.ResponseWriter, r *http.Request) {
+	// Read the uploaded file
+	data, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Failed to read request body", http.StatusBadRequest)
+		return
+	}
+	
+	// Import and create new project
+	projectID, err := h.exportService.ImportProject(data)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(map[string]string{
+		"status": "success",
+		"message": "Project imported successfully",
+		"project_id": projectID,
+	})
+}
+
+// GenerateReport generates a PDF report for a project or baseline.
+func (h *Handler) GenerateReport(w http.ResponseWriter, r *http.Request) {
+	projectID := mux.Vars(r)["id"]
+	baselineID := r.URL.Query().Get("baseline_id")
+
+	data, filename, err := h.reportService.GenerateProjectReport(projectID, baselineID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/pdf")
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", filename))
+	w.WriteHeader(http.StatusOK)
+	w.Write(data)
+}
+
+type createTemplateRequest struct {
+	ProjectID   string `json:"project_id"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+}
+
+// ListTemplates returns available templates.
+func (h *Handler) ListTemplates(w http.ResponseWriter, r *http.Request) {
+	templatesList, err := h.templateService.ListTemplates()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(templatesList)
+}
+
+// CreateTemplate saves a project as a template.
+func (h *Handler) CreateTemplate(w http.ResponseWriter, r *http.Request) {
+	var req createTemplateRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if req.ProjectID == "" {
+		http.Error(w, "project_id is required", http.StatusBadRequest)
+		return
+	}
+
+	created, err := h.templateService.CreateTemplateFromProject(req.ProjectID, req.Name, req.Description)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(created)
+}
+
+type createProjectFromTemplateRequest struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+}
+
+// CreateProjectFromTemplate creates a new project from a template.
+func (h *Handler) CreateProjectFromTemplate(w http.ResponseWriter, r *http.Request) {
+	templateID := mux.Vars(r)["id"]
+
+	var req createProjectFromTemplateRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	projectID, err := h.templateService.CreateProjectFromTemplate(templateID, req.Name, req.Description)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	project, err := h.projectService.GetProject(projectID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(project)
+}
+
+type createBaselineRequest struct {
+	Name string `json:"name"`
+}
+
+// CreateBaseline captures a baseline snapshot for a project.
+func (h *Handler) CreateBaseline(w http.ResponseWriter, r *http.Request) {
+	projectID := mux.Vars(r)["id"]
+
+	var req createBaselineRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil && err != io.EOF {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	name := req.Name
+	if name == "" {
+		name = fmt.Sprintf("Baseline %s", time.Now().Format("2006-01-02 15:04"))
+	}
+
+	data, _, err := h.exportService.ExportProject(projectID, exports.FormatJSON)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	baseline, err := h.baselineService.CreateBaseline(projectID, name, data)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(baseline)
+}
+
+// ListBaselines returns baselines for a project.
+func (h *Handler) ListBaselines(w http.ResponseWriter, r *http.Request) {
+	projectID := mux.Vars(r)["id"]
+
+	baselines, err := h.baselineService.ListBaselines(projectID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(baselines)
+}
+
+// GetBaseline returns the snapshot JSON for a baseline.
+func (h *Handler) GetBaseline(w http.ResponseWriter, r *http.Request) {
+	baselineID := mux.Vars(r)["id"]
+
+	baseline, err := h.baselineService.GetBaseline(baselineID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write(baseline.Snapshot)
+}
+
+// DeleteBaseline deletes a baseline by ID.
+func (h *Handler) DeleteBaseline(w http.ResponseWriter, r *http.Request) {
+	baselineID := mux.Vars(r)["id"]
+
+	if err := h.baselineService.DeleteBaseline(baselineID); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

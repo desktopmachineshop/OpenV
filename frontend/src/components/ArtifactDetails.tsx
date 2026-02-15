@@ -109,7 +109,7 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
         <strong>Description:</strong>
         <p style={{ marginTop: '8px', whiteSpace: 'pre-wrap' }}>{artifact.body}</p>
       </div>
-      {Object.keys(artifact.attributes).length > 0 && (
+      {artifact.attributes && Object.keys(artifact.attributes).length > 0 && (
         <div>
           <strong>Attributes:</strong>
           <pre style={{ 

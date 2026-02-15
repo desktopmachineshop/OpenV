@@ -10,7 +10,8 @@ import (
 type Artifact struct {
 	ID        string                 `json:"id"`
 	ProjectID string                 `json:"project_id"`
-	Type      string                 `json:"type"` // requirement, test-case, hazard, design-item, etc.
+	ParentID  *string                `json:"parent_id,omitempty"`
+	Type      string                 `json:"type"` // requirement, test-case, hazard, design-item, heading, description, etc.
 	Title     string                 `json:"title"`
 	Body      string                 `json:"body"` // markdown or rich text
 	Attributes map[string]interface{} `json:"attributes"`
@@ -24,6 +25,7 @@ type Artifact struct {
 // CreateArtifactRequest is the payload for creating a new artifact
 type CreateArtifactRequest struct {
 	ProjectID  string                 `json:"project_id"`
+	ParentID   *string                `json:"parent_id,omitempty"`
 	Type       string                 `json:"type"`
 	Title      string                 `json:"title"`
 	Body       string                 `json:"body"`
@@ -32,6 +34,7 @@ type CreateArtifactRequest struct {
 
 // UpdateArtifactRequest is the payload for updating an artifact
 type UpdateArtifactRequest struct {
+	ParentID   *string                `json:"parent_id,omitempty"`
 	Type       string                 `json:"type"`
 	Title      string                 `json:"title"`
 	Body       string                 `json:"body"`
@@ -41,13 +44,21 @@ type UpdateArtifactRequest struct {
 // NewArtifact creates a new artifact with generated ID
 func NewArtifact(req CreateArtifactRequest) *Artifact {
 	now := time.Now()
+	
+	// Ensure attributes is never nil
+	attributes := req.Attributes
+	if attributes == nil {
+		attributes = make(map[string]interface{})
+	}
+	
 	return &Artifact{
 		ID:         uuid.New().String(),
 		ProjectID:  req.ProjectID,
+		ParentID:   req.ParentID,
 		Type:       req.Type,
 		Title:      req.Title,
 		Body:       req.Body,
-		Attributes: req.Attributes,
+		Attributes: attributes,
 		Version:    1,
 		ValidFrom:  now,
 		ValidTo:    nil,
@@ -108,6 +119,7 @@ func (s *DefaultService) UpdateArtifact(id string, req UpdateArtifactRequest) (*
 		return nil, err
 	}
 
+	artifact.ParentID = req.ParentID
 	artifact.Type = req.Type
 	artifact.Title = req.Title
 	artifact.Body = req.Body

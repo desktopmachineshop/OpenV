@@ -1,15 +1,29 @@
 import React from 'react';
 
 interface NavbarProps {
-  title?: string;
+  title?: React.ReactNode;
   onSwitchProject?: () => void;
   showSwitchButton?: boolean;
+  baselineOptions?: { id: string; name: string }[];
+  selectedBaselineId?: string;
+  onBaselineChange?: (id: string) => void;
+  onCaptureBaseline?: () => void;
+  onDeleteBaseline?: (id: string) => void;
+  onGenerateReport?: () => void;
+  baselineDisabled?: boolean;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
   title,
   onSwitchProject,
   showSwitchButton = false,
+  baselineOptions = [],
+  selectedBaselineId = 'live',
+  onBaselineChange,
+  onCaptureBaseline,
+  onDeleteBaseline,
+  onGenerateReport,
+  baselineDisabled = false,
 }) => {
   return (
     <div
@@ -33,24 +47,105 @@ export const Navbar: React.FC<NavbarProps> = ({
 
       <div style={{ flex: 1, textAlign: 'center' }}>
         {title && (
-          <h2 style={{ margin: 0, color: '#2c3e50', fontSize: '18px' }}>
+          <div style={{ color: '#2c3e50' }}>
             {title}
-          </h2>
+          </div>
         )}
       </div>
 
-      <div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        {onBaselineChange && (
+          <select
+            value={selectedBaselineId}
+            onChange={(e) => onBaselineChange(e.target.value)}
+            disabled={baselineDisabled}
+            style={{
+              height: '36px',
+              padding: '0 10px',
+              borderRadius: '4px',
+              border: '1px solid #bdc3c7',
+              fontSize: '12px',
+              backgroundColor: baselineDisabled ? '#f5f5f5' : 'white',
+              cursor: baselineDisabled ? 'not-allowed' : 'pointer',
+              minWidth: '180px',
+            }}
+          >
+            <option value="live">Live Project</option>
+            {baselineOptions.map((baseline) => (
+              <option key={baseline.id} value={baseline.id}>
+                {baseline.name}
+              </option>
+            ))}
+          </select>
+        )}
+        {onDeleteBaseline && (
+          <button
+            onClick={() => onDeleteBaseline(selectedBaselineId)}
+            disabled={baselineDisabled || selectedBaselineId === 'live'}
+            style={{
+              height: '36px',
+              padding: '0 10px',
+              backgroundColor: (baselineDisabled || selectedBaselineId === 'live') ? '#bdc3c7' : '#e74c3c',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: (baselineDisabled || selectedBaselineId === 'live') ? 'not-allowed' : 'pointer',
+              fontSize: '12px',
+            }}
+            title="Delete selected baseline"
+          >
+            🗑
+          </button>
+        )}
+        {onCaptureBaseline && (
+          <button
+            onClick={onCaptureBaseline}
+            disabled={baselineDisabled}
+            style={{
+              height: '36px',
+              padding: '0 12px',
+              backgroundColor: baselineDisabled ? '#bdc3c7' : '#2ecc71',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: baselineDisabled ? 'not-allowed' : 'pointer',
+              fontSize: '12px',
+            }}
+          >
+            Capture Baseline
+          </button>
+        )}
+        {onGenerateReport && (
+          <button
+            onClick={onGenerateReport}
+            disabled={baselineDisabled}
+            style={{
+              height: '36px',
+              padding: '0 12px',
+              backgroundColor: baselineDisabled ? '#bdc3c7' : '#3b82f6',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: baselineDisabled ? 'not-allowed' : 'pointer',
+              fontSize: '12px',
+            }}
+          >
+            Generate Report
+          </button>
+        )}
         {showSwitchButton && onSwitchProject && (
           <button
             onClick={onSwitchProject}
             style={{
-              padding: '8px 16px',
+              height: '36px',
+              padding: '0 16px',
+              minWidth: '120px',
               backgroundColor: '#95a5a6',
               color: 'white',
               border: 'none',
               borderRadius: '4px',
               cursor: 'pointer',
-              fontSize: '14px',
+              fontSize: '12px',
             }}
           >
             ← Switch Project

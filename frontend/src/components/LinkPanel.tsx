@@ -7,6 +7,7 @@ interface LinkPanelProps {
   onCreateLink: (link: Partial<Link>) => void;
   links?: Link[];
   title?: string;
+  readOnly?: boolean;
 }
 
 export const LinkPanel: React.FC<LinkPanelProps> = ({
@@ -15,6 +16,7 @@ export const LinkPanel: React.FC<LinkPanelProps> = ({
   onCreateLink,
   links = [],
   title = 'Links',
+  readOnly = false,
 }) => {
   const [isCreating, setIsCreating] = useState(false);
   const [linkType, setLinkType] = useState('verifies');
@@ -136,98 +138,99 @@ export const LinkPanel: React.FC<LinkPanelProps> = ({
         </p>
       )}
 
-      {/* Create New Link - Inline */}
-      <div style={{ 
-        borderTop: '1px solid #ecf0f1', 
-        paddingTop: '15px',
-        display: 'flex',
-        gap: '10px',
-        alignItems: 'flex-end',
-        flexWrap: 'wrap'
-      }}>
-        {!isCreating && (
-          <button
-            onClick={() => setIsCreating(true)}
-            className="button"
-            style={{ marginTop: '10px' }}
-          >
-            + Add Link
-          </button>
-        )}
-
-        {isCreating && (
-          <>
-            <div style={{ flex: 1, minWidth: '150px' }}>
-              <label style={{ display: 'block', fontSize: '11px', marginBottom: '4px', color: '#555' }}>
-                Type
-              </label>
-              <select
-                value={linkType}
-                onChange={(e) => setLinkType(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '6px',
-                  borderRadius: '4px',
-                  border: '1px solid #bdc3c7',
-                  fontSize: '12px',
-                }}
-              >
-                <option value="verifies">Verifies</option>
-                <option value="satisfies">Satisfies</option>
-                <option value="mitigates">Mitigates</option>
-                <option value="relates-to">Relates To</option>
-                <option value="decomposes-to">Decomposes To</option>
-                <option value="impacts">Impacts</option>
-              </select>
-            </div>
-
-            <div style={{ flex: 2, minWidth: '200px' }}>
-              <label style={{ display: 'block', fontSize: '11px', marginBottom: '4px', color: '#555' }}>
-                Link To
-              </label>
-              <select
-                value={toArtifactId}
-                onChange={(e) => setToArtifactId(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '6px',
-                  borderRadius: '4px',
-                  border: '1px solid #bdc3c7',
-                  fontSize: '12px',
-                }}
-              >
-                <option value="">-- Select artifact --</option>
-                {artifacts
-                  .filter((a) => a.id !== selectedArtifactId)
-                  .map((artifact) => (
-                    <option key={artifact.id} value={artifact.id}>
-                      {artifact.title} ({artifact.type})
-                    </option>
-                  ))}
-              </select>
-            </div>
-
+      {!readOnly && (
+        <div style={{ 
+          borderTop: '1px solid #ecf0f1', 
+          paddingTop: '15px',
+          display: 'flex',
+          gap: '10px',
+          alignItems: 'flex-end',
+          flexWrap: 'wrap'
+        }}>
+          {!isCreating && (
             <button
-              onClick={handleCreateLink}
+              onClick={() => setIsCreating(true)}
               className="button"
-              style={{ marginBottom: 0 }}
+              style={{ marginTop: '10px' }}
             >
-              Create
+              + Add Link
             </button>
+          )}
 
-            <button
-              onClick={() => {
-                setIsCreating(false);
-                setToArtifactId('');
-              }}
-              className="button-secondary"
-              style={{ marginBottom: 0 }}
-            >
-              Cancel
-            </button>
-          </>
-        )}
-      </div>
+          {isCreating && (
+            <>
+              <div style={{ flex: 1, minWidth: '150px' }}>
+                <label style={{ display: 'block', fontSize: '11px', marginBottom: '4px', color: '#555' }}>
+                  Type
+                </label>
+                <select
+                  value={linkType}
+                  onChange={(e) => setLinkType(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '6px',
+                    borderRadius: '4px',
+                    border: '1px solid #bdc3c7',
+                    fontSize: '12px',
+                  }}
+                >
+                  <option value="verifies">Verifies</option>
+                  <option value="satisfies">Satisfies</option>
+                  <option value="mitigates">Mitigates</option>
+                  <option value="relates-to">Relates To</option>
+                  <option value="decomposes-to">Decomposes To</option>
+                  <option value="impacts">Impacts</option>
+                </select>
+              </div>
+
+              <div style={{ flex: 2, minWidth: '200px' }}>
+                <label style={{ display: 'block', fontSize: '11px', marginBottom: '4px', color: '#555' }}>
+                  Link To
+                </label>
+                <select
+                  value={toArtifactId}
+                  onChange={(e) => setToArtifactId(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '6px',
+                    borderRadius: '4px',
+                    border: '1px solid #bdc3c7',
+                    fontSize: '12px',
+                  }}
+                >
+                  <option value="">-- Select artifact --</option>
+                  {artifacts
+                    .filter((a) => a.id !== selectedArtifactId)
+                    .map((artifact) => (
+                      <option key={artifact.id} value={artifact.id}>
+                        {artifact.title} ({artifact.type})
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+              <button
+                onClick={handleCreateLink}
+                className="button"
+                style={{ marginBottom: 0 }}
+              >
+                Create
+              </button>
+
+              <button
+                onClick={() => {
+                  setIsCreating(false);
+                  setToArtifactId('');
+                }}
+                className="button-secondary"
+                style={{ marginBottom: 0 }}
+              >
+                Cancel
+              </button>
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 };

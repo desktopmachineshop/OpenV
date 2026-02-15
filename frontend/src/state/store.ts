@@ -7,6 +7,7 @@ interface AppState {
   projects: Project[];
   setProjects: (projects: Project[]) => void;
   addProject: (project: Project) => void;
+  updateProject: (project: Project) => void;
   removeProject: (id: string) => void;
   artifacts: Artifact[];
   setArtifacts: (artifacts: Artifact[]) => void;
@@ -30,6 +31,12 @@ export const useAppStore = create<AppState>((set) => ({
   setProjects: (projects: Project[]) => set({ projects: projects || [] }),
   addProject: (project: Project) =>
     set((state) => ({ projects: [...state.projects, project] })),
+  updateProject: (project: Project) =>
+    set((state) => ({
+      projects: state.projects.map((p) =>
+        p.id === project.id ? project : p
+      ),
+    })),
   removeProject: (id: string) =>
     set((state) => ({
       projects: state.projects.filter((p) => p.id !== id),

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAppStore } from '../state/store';
-import { artifactAPI, linkAPI, attachmentAPI, Artifact, Link, Attachment } from '../api/client';
+import { artifactAPI, linkAPI, attachmentAPI, baselineAPI, projectAPI, Artifact, Link, Attachment, Baseline, ProjectExport } from '../api/client';
 import { ArtifactEditor } from '../components/ArtifactEditor';
 import { ArtifactList } from '../components/ArtifactList';
 import { ArtifactDetails } from '../components/ArtifactDetails';
@@ -21,6 +21,9 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
   const [filterType, setFilterType] = useState<string>(''); // '' means show all
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [uploadingAttachmentId, setUploadingAttachmentId] = useState<string | null>(null);
+  const [baselines, setBaselines] = useState<Baseline[]>([]);
+  const [activeBaselineId, setActiveBaselineId] = useState<string>('live');
+  const [baselineData, setBaselineData] = useState<ProjectExport | null>(null);
 
   const {
     projectId,
@@ -35,23 +38,32 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
     projects,
   } = useAppStore();
 
+  const isBaselineView = activeBaselineId !== 'live';
+
   // Load artifacts on component mount
   useEffect(() => {
     if (projectId) {
       loadArtifacts();
       loadLinks();
+      loadBaselines();
+      setActiveBaselineId('live');
+      setBaselineData(null);
     }
   }, [projectId]);
 
   // Load attachments when artifact is selected or when editing
   useEffect(() => {
+    if (isBaselineView) {
+      setAttachments([]);
+      return;
+    }
     const artifactIdToLoad = editingArtifact?.id || selectedArtifactId;
     if (artifactIdToLoad) {
       loadAttachments(artifactIdToLoad);
     } else {
       setAttachments([]);
     }
-  }, [selectedArtifactId, editingArtifact?.id]);
+  }, [selectedArtifactId, editingArtifact?.id, isBaselineView]);
 
   const loadArtifacts = async () => {
     try {
@@ -72,6 +84,17 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
     } catch (error: any) {
       console.error('Failed to load links:', error);
       setAllLinks([]);
+    }
+  };
+
+  const loadBaselines = async () => {
+    if (!projectId) return;
+    try {
+      const response = await baselineAPI.list(projectId);
+      setBaselines(response.data || []);
+    } catch (error: any) {
+      console.error('Failed to load baselines:', error);
+      setBaselines([]);
     }
   };
 
@@ -192,16 +215,92 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
     }
   };
 
+  const handleBaselineChange = async (baselineId: string) => {
+    setActiveBaselineId(baselineId);
+    setSelectedArtifactId(null);
+    setIsEditing(false);
+    setIsCreating(false);
+    setEditingArtifact(undefined);
+
+    if (baselineId === 'live') {
+      setBaselineData(null);
+      return;
+    }
+
+    try {
+      const response = await baselineAPI.get(baselineId);
+      setBaselineData(response.data);
+      setError('');
+    } catch (error: any) {
+      console.error('Failed to load baseline:', error);
+      const errorMsg = error.response?.data || error.message || 'Unknown error';
+      setError(`Failed to load baseline: ${errorMsg}`);
+    }
+  };
+
+  const handleCaptureBaseline = async () => {
+    if (!projectId) return;
+    const name = window.prompt('Baseline name:', '') || '';
+    if (!name.trim()) {
+      setError('Baseline name is required');
+      return;
+    }
+
+    try {
+      await baselineAPI.create(projectId, name.trim());
+      await loadBaselines();
+      setError('');
+    } catch (error: any) {
+      console.error('Failed to capture baseline:', error);
+      const errorMsg = error.response?.data || error.message || 'Unknown error';
+      setError(`Failed to capture baseline: ${errorMsg}`);
+    }
+  };
+
+  const handleDeleteBaseline = async (baselineId: string) => {
+    if (baselineId === 'live') return;
+    if (!window.confirm('Delete this baseline? This cannot be undone.')) {
+      return;
+    }
+
+    try {
+      await baselineAPI.delete(baselineId);
+      await loadBaselines();
+      setActiveBaselineId('live');
+      setBaselineData(null);
+      setError('');
+    } catch (error: any) {
+      console.error('Failed to delete baseline:', error);
+      const errorMsg = error.response?.data || error.message || 'Unknown error';
+      setError(`Failed to delete baseline: ${errorMsg}`);
+    }
+  };
+
+  const handleGenerateReport = async () => {
+    if (!projectId) return;
+    try {
+      await projectAPI.report(projectId, activeBaselineId);
+      setError('');
+    } catch (error: any) {
+      console.error('Failed to generate report:', error);
+      const errorMsg = error.response?.data || error.message || 'Unknown error';
+      setError(`Failed to generate report: ${errorMsg}`);
+    }
+  };
+
+  const activeArtifacts = isBaselineView ? (baselineData?.artifacts || []) : artifacts;
+  const activeLinks = isBaselineView ? (baselineData?.links || []) : allLinks;
+
   // Get unique artifact types for filter dropdown
   const getArtifactTypes = () => {
-    const types = new Set(artifacts.map((a) => a.type));
+    const types = new Set(activeArtifacts.map((a) => a.type));
     return Array.from(types).sort();
   };
 
   // Filter artifacts based on selected type
   const filteredArtifacts = filterType
-    ? artifacts.filter((a) => a.type === filterType)
-    : artifacts;
+    ? activeArtifacts.filter((a) => a.type === filterType)
+    : activeArtifacts;
 
   if (!projectId) {
     return (
@@ -212,15 +311,34 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
     );
   }
 
-  const selectedArtifact = artifacts.find((a) => a.id === selectedArtifactId);
+  const selectedArtifact = activeArtifacts.find((a) => a.id === selectedArtifactId);
+  const detailAttachments = isBaselineView ? [] : attachments;
 
   return (
     <>
       <HelpSidebar />
       <Navbar
-        title={`Project: ${projects.find((p) => p.id === projectId)?.name || 'Unknown'}`}
+        title={(() => {
+          const project = projects.find((p) => p.id === projectId);
+          const name = project?.name || 'Unknown';
+          const description = project?.description || '';
+          return (
+            <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+              <div style={{ fontSize: '18px', fontWeight: 600 }}>{name}</div>
+              {description && (
+                <div style={{ fontSize: '11px', color: '#7f8c8d' }}>{description}</div>
+              )}
+            </div>
+          );
+        })()}
         onSwitchProject={onSwitchProject}
         showSwitchButton={true}
+        baselineOptions={baselines.map((b) => ({ id: b.id, name: b.name }))}
+        selectedBaselineId={activeBaselineId}
+        onBaselineChange={handleBaselineChange}
+        onCaptureBaseline={handleCaptureBaseline}
+        onDeleteBaseline={handleDeleteBaseline}
+        onGenerateReport={handleGenerateReport}
       />
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '20px' }}>
       <div>
@@ -239,16 +357,18 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
             {error}
           </div>
         )}
-        <button
-          onClick={() => {
-            setIsCreating(!isCreating);
-            setError('');
-          }}
-          className="button"
-          style={{ width: '100%', marginBottom: '20px' }}
-        >
-          {isCreating ? 'Cancel' : '+ New Artifact'}
-        </button>
+        {!isBaselineView && (
+          <button
+            onClick={() => {
+              setIsCreating(!isCreating);
+              setError('');
+            }}
+            className="button"
+            style={{ width: '100%', marginBottom: '20px' }}
+          >
+            {isCreating ? 'Cancel' : '+ New Artifact'}
+          </button>
+        )}
 
         <div style={{ marginBottom: '20px' }}>
           <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: '#2c3e50' }}>
@@ -267,17 +387,18 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
               cursor: 'pointer',
             }}
           >
-            <option value="">All Types ({artifacts.length})</option>
+            <option value="">All Types ({activeArtifacts.length})</option>
             {getArtifactTypes().map((type) => (
               <option key={type} value={type}>
-                {type} ({artifacts.filter((a) => a.type === type).length})
+                {type} ({activeArtifacts.filter((a) => a.type === type).length})
               </option>
             ))}
           </select>
         </div>
 
-        {isCreating && (
+        {isCreating && !isBaselineView && (
           <ArtifactEditor
+            artifacts={artifacts}
             onSave={handleCreateArtifact}
             onCancel={() => {
               setIsCreating(false);
@@ -292,14 +413,16 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
           onSelect={setSelectedArtifactId}
           onEdit={handleEditArtifact}
           onDelete={handleDeleteArtifact}
+          readOnly={isBaselineView}
         />
       </div>
 
       <div>
-        {isEditing && editingArtifact && (
+        {!isBaselineView && isEditing && editingArtifact && (
           <>
             <ArtifactEditor
               artifact={editingArtifact}
+              artifacts={artifacts}
               onSave={handleUpdateArtifact}
               onCancel={() => {
                 setIsEditing(false);
@@ -323,10 +446,10 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
         {selectedArtifact && !isEditing && (
           <ArtifactDetails 
             artifact={selectedArtifact} 
-            links={allLinks} 
-            artifacts={artifacts}
-            attachments={attachments}
-            onDeleteAttachment={handleDeleteAttachment}
+            links={activeLinks} 
+            artifacts={activeArtifacts}
+            attachments={detailAttachments}
+            onDeleteAttachment={isBaselineView ? undefined : handleDeleteAttachment}
           />
         )}
 

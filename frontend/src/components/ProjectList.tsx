@@ -1,20 +1,29 @@
 import React, { useState, useEffect } from 'react';
 import { useAppStore } from '../state/store';
-import { projectAPI, Project } from '../api/client';
+import { projectAPI, templateAPI, Project, Template } from '../api/client';
 import { Navbar } from './Navbar';
 import './ProjectList.css';
 
 export const ProjectList: React.FC = () => {
-  const { projectId, setProjectId, projects, setProjects, addProject, removeProject } = useAppStore();
+  const { projectId, setProjectId, projects, setProjects, addProject, updateProject, removeProject } = useAppStore();
   const [error, setError] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
   const [newProjectName, setNewProjectName] = useState<string>('');
   const [newProjectDesc, setNewProjectDesc] = useState<string>('');
   const [isCreating, setIsCreating] = useState<boolean>(false);
+  const [isEditingProject, setIsEditingProject] = useState<boolean>(false);
+  const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
+  const [editProjectName, setEditProjectName] = useState<string>('');
+  const [editProjectDesc, setEditProjectDesc] = useState<string>('');
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [createMode, setCreateMode] = useState<'blank' | 'example' | 'template'>('blank');
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   // Load projects on mount
   useEffect(() => {
     loadProjects();
+    loadTemplates();
   }, []);
 
   const loadProjects = async () => {
@@ -32,6 +41,16 @@ export const ProjectList: React.FC = () => {
     }
   };
 
+  const loadTemplates = async () => {
+    try {
+      const response = await templateAPI.list();
+      setTemplates(response.data || []);
+    } catch (err: any) {
+      console.error('Failed to load templates:', err);
+      setTemplates([]);
+    }
+  };
+
   const handleCreateProject = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -40,14 +59,32 @@ export const ProjectList: React.FC = () => {
       return;
     }
 
+    if (createMode !== 'blank' && !selectedTemplateId) {
+      setError('Please select a template');
+      return;
+    }
+
     try {
-      const response = await projectAPI.create({
-        name: newProjectName,
-        description: newProjectDesc,
-      });
-      addProject(response.data);
+      if (createMode === 'blank') {
+        const response = await projectAPI.create({
+          name: newProjectName,
+          description: newProjectDesc,
+        });
+        addProject(response.data);
+        setProjectId(response.data.id);
+      } else {
+        const response = await templateAPI.createProject(
+          selectedTemplateId,
+          newProjectName,
+          newProjectDesc
+        );
+        addProject(response.data);
+        setProjectId(response.data.id);
+      }
       setNewProjectName('');
       setNewProjectDesc('');
+      setSelectedTemplateId('');
+      setCreateMode('blank');
       setIsCreating(false);
       setError('');
     } catch (err: any) {
@@ -78,6 +115,108 @@ export const ProjectList: React.FC = () => {
     setProjectId(id);
   };
 
+  const handleEditProject = (project: Project, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsCreating(false);
+    setIsEditingProject(true);
+    setEditingProjectId(project.id);
+    setEditProjectName(project.name);
+    setEditProjectDesc(project.description || '');
+    setError('');
+  };
+
+  const handleUpdateProject = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingProjectId) return;
+    if (!editProjectName.trim()) {
+      setError('Project name is required');
+      return;
+    }
+
+    try {
+      const response = await projectAPI.update(editingProjectId, {
+        name: editProjectName,
+        description: editProjectDesc,
+      });
+      updateProject(response.data);
+      setIsEditingProject(false);
+      setEditingProjectId(null);
+      setEditProjectName('');
+      setEditProjectDesc('');
+      setError('');
+    } catch (err: any) {
+      console.error('Failed to update project:', err);
+      setError(`Failed to update project: ${err.response?.data || err.message}`);
+    }
+  };
+
+  const cancelEditProject = () => {
+    setIsEditingProject(false);
+    setEditingProjectId(null);
+    setEditProjectName('');
+    setEditProjectDesc('');
+  };
+
+  const handleExportProject = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await projectAPI.export(id, 'json');
+      setError('');
+    } catch (err: any) {
+      console.error('Failed to export project:', err);
+      setError(`Failed to export project: ${err.response?.data || err.message}`);
+    }
+  };
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleImportProject = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const response = await projectAPI.import(file);
+      const newProjectId = response.data.project_id;
+      
+      // Reload projects to include the new one
+      await loadProjects();
+      
+      // Select the newly imported project
+      setProjectId(newProjectId);
+      setError('');
+      
+      // Reset file input
+      e.target.value = '';
+    } catch (err: any) {
+      console.error('Failed to import project:', err);
+      setError(`Failed to import project: ${err.response?.data || err.message}`);
+      e.target.value = '';
+    }
+  };
+
+  const handleSaveTemplate = async (project: Project, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const name = window.prompt('Template name:', project.name) || '';
+    if (!name.trim()) {
+      setError('Template name is required');
+      return;
+    }
+    const description = window.prompt('Template description (optional):', project.description || '') || '';
+
+    try {
+      await templateAPI.create(project.id, name.trim(), description.trim());
+      await loadTemplates();
+      setError('');
+    } catch (err: any) {
+      console.error('Failed to save template:', err);
+      setError(`Failed to save template: ${err.response?.data || err.message}`);
+    }
+  };
+
+  const exampleTemplate = templates.find((t) => t.key === 'example-cnc-mill');
+
   return (
     <>
       <Navbar title="Projects" />
@@ -101,8 +240,33 @@ export const ProjectList: React.FC = () => {
         <>
           <div className="projects-grid">
             {projects.length === 0 ? (
-              <div className="no-projects">
-                <p>No projects yet. Create one to get started!</p>
+              <div className="create-import-placeholder">
+                <h3>Get Started</h3>
+                <p>Create a new project or import an existing one</p>
+                <div className="placeholder-actions">
+                  <button
+                    className="button button-primary"
+                    onClick={() => {
+                      setCreateMode('blank');
+                      setIsCreating(true);
+                    }}
+                  >
+                    + New Project
+                  </button>
+                  <button
+                    className="button button-secondary"
+                    onClick={handleImportClick}
+                  >
+                    ↑ Import Project
+                  </button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".json"
+                    style={{ display: 'none' }}
+                    onChange={handleImportProject}
+                  />
+                </div>
               </div>
             ) : (
               projects.map((project) => (
@@ -113,16 +277,39 @@ export const ProjectList: React.FC = () => {
                 >
                   <div className="project-card-header">
                     <h3>{project.name}</h3>
-                    <button
-                      className="delete-btn"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteProject(project.id);
-                      }}
-                      title="Delete project"
-                    >
-                      ✕
-                    </button>
+                    <div className="project-actions">
+                      <button
+                        className="icon-btn template-btn"
+                        onClick={(e) => handleSaveTemplate(project, e)}
+                        title="Save as template"
+                      >
+                        ⧉
+                      </button>
+                      <button
+                        className="icon-btn edit-btn"
+                        onClick={(e) => handleEditProject(project, e)}
+                        title="Edit project"
+                      >
+                        ✎
+                      </button>
+                      <button
+                        className="icon-btn export-btn"
+                        onClick={(e) => handleExportProject(project.id, e)}
+                        title="Export project"
+                      >
+                        ↓
+                      </button>
+                      <button
+                        className="icon-btn delete-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteProject(project.id);
+                        }}
+                        title="Delete project"
+                      >
+                        ✕
+                      </button>
+                    </div>
                   </div>
                   {project.description && (
                     <p className="project-description">{project.description}</p>
@@ -138,10 +325,101 @@ export const ProjectList: React.FC = () => {
             )}
           </div>
 
-          {isCreating ? (
+          {isEditingProject ? (
+            <div className="create-project-form">
+              <h3>Edit Project</h3>
+              <form onSubmit={handleUpdateProject}>
+                <div className="form-group">
+                  <label htmlFor="edit-name">Project Name *</label>
+                  <input
+                    id="edit-name"
+                    type="text"
+                    value={editProjectName}
+                    onChange={(e) => setEditProjectName(e.target.value)}
+                    placeholder="Enter project name"
+                    autoFocus
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="edit-desc">Description</label>
+                  <textarea
+                    id="edit-desc"
+                    value={editProjectDesc}
+                    onChange={(e) => setEditProjectDesc(e.target.value)}
+                    placeholder="Enter project description (optional)"
+                    rows={3}
+                  />
+                </div>
+                <div className="form-actions">
+                  <button type="submit" className="button button-primary">
+                    Update Project
+                  </button>
+                  <button
+                    type="button"
+                    className="button button-secondary"
+                    onClick={cancelEditProject}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          ) : isCreating ? (
             <div className="create-project-form">
               <h3>Create New Project</h3>
               <form onSubmit={handleCreateProject}>
+                <div className="form-group">
+                  <label htmlFor="mode">Project Type</label>
+                  <select
+                    id="mode"
+                    value={createMode}
+                    onChange={(e) => {
+                      const mode = e.target.value as 'blank' | 'example' | 'template';
+                      setCreateMode(mode);
+                      if (mode === 'example' && exampleTemplate) {
+                        setSelectedTemplateId(exampleTemplate.id);
+                        setNewProjectName(exampleTemplate.name);
+                        setNewProjectDesc(exampleTemplate.description || '');
+                      }
+                      if (mode === 'blank') {
+                        setSelectedTemplateId('');
+                      }
+                      if (mode === 'template') {
+                        setSelectedTemplateId('');
+                      }
+                    }}
+                  >
+                    <option value="blank">Blank Project</option>
+                    <option value="example" disabled={!exampleTemplate}>Example: Desktop CNC Mill</option>
+                    <option value="template" disabled={templates.length === 0}>Use Template</option>
+                  </select>
+                </div>
+
+                {createMode === 'template' && (
+                  <div className="form-group">
+                    <label htmlFor="template">Template</label>
+                    <select
+                      id="template"
+                      value={selectedTemplateId}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setSelectedTemplateId(value);
+                        const selected = templates.find((t) => t.id === value);
+                        if (selected) {
+                          setNewProjectName(selected.name);
+                          setNewProjectDesc(selected.description || '');
+                        }
+                      }}
+                    >
+                      <option value="">-- Select template --</option>
+                      {templates.map((template) => (
+                        <option key={template.id} value={template.id}>
+                          {template.is_default ? '[Default] ' : ''}{template.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
                 <div className="form-group">
                   <label htmlFor="name">Project Name *</label>
                   <input
@@ -172,6 +450,8 @@ export const ProjectList: React.FC = () => {
                     className="button button-secondary"
                     onClick={() => {
                       setIsCreating(false);
+                      setCreateMode('blank');
+                      setSelectedTemplateId('');
                       setNewProjectName('');
                       setNewProjectDesc('');
                     }}
@@ -185,10 +465,26 @@ export const ProjectList: React.FC = () => {
             <div className="create-button-container">
               <button
                 className="button button-primary"
-                onClick={() => setIsCreating(true)}
+                onClick={() => {
+                  setCreateMode('blank');
+                  setIsCreating(true);
+                }}
               >
                 + New Project
               </button>
+              <button
+                className="button button-secondary"
+                onClick={handleImportClick}
+              >
+                ↑ Import Project
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".json"
+                style={{ display: 'none' }}
+                onChange={handleImportProject}
+              />
             </div>
           )}
         </>

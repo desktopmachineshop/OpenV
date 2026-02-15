@@ -4,6 +4,7 @@ import { ImageGallery } from './ImageGallery';
 
 interface ArtifactEditorProps {
   artifact?: Artifact;
+  artifacts?: Artifact[];
   onSave: (artifact: Partial<Artifact>) => void;
   onCancel: () => void;
   attachments?: Attachment[];
@@ -14,6 +15,7 @@ interface ArtifactEditorProps {
 
 export const ArtifactEditor: React.FC<ArtifactEditorProps> = ({
   artifact,
+  artifacts = [],
   onSave,
   onCancel,
   attachments = [],
@@ -42,7 +44,14 @@ export const ArtifactEditor: React.FC<ArtifactEditorProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSave(formData);
+    
+    // Convert empty parent_id to null for proper UUID handling
+    const dataToSave = {
+      ...formData,
+      parent_id: formData.parent_id === '' ? null : formData.parent_id,
+    };
+    
+    onSave(dataToSave);
   };
 
   return (
@@ -83,6 +92,25 @@ export const ArtifactEditor: React.FC<ArtifactEditorProps> = ({
         <h3>{artifact ? 'Edit Artifact Details' : 'New Artifact'}</h3>
         <form onSubmit={handleSubmit}>
           <div className="form-group">
+            <label htmlFor="parent_id">Parent Artifact (Optional)</label>
+            <select
+              id="parent_id"
+              name="parent_id"
+              value={formData.parent_id || ''}
+              onChange={handleChange}
+            >
+              <option value="">None (Top Level)</option>
+              {artifacts
+                .filter((a) => a.id !== artifact?.id)
+                .map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.title || 'Untitled'} ({a.type})
+                  </option>
+                ))}
+            </select>
+          </div>
+
+          <div className="form-group">
             <label htmlFor="type">Type</label>
             <select
               id="type"
@@ -90,6 +118,8 @@ export const ArtifactEditor: React.FC<ArtifactEditorProps> = ({
               value={formData.type || ''}
               onChange={handleChange}
             >
+              <option value="heading">Heading</option>
+              <option value="description">Description</option>
               <option value="requirement">Requirement</option>
               <option value="test-case">Test Case</option>
               <option value="hazard">Hazard</option>
