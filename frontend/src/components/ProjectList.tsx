@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAppStore } from '../state/store';
 import { projectAPI, Project } from '../api/client';
+import { Navbar } from './Navbar';
 import './ProjectList.css';
 
 export const ProjectList: React.FC = () => {
@@ -78,11 +79,9 @@ export const ProjectList: React.FC = () => {
   };
 
   return (
-    <div className="project-list-container">
-      <div className="project-list-header">
-        <h1>Projects</h1>
-        <p>Select or create a project to get started</p>
-      </div>
+    <>
+      <Navbar title="Projects" />
+      <div className="project-list-container">
 
       {error && (
         <div className="error-message">
@@ -195,6 +194,7 @@ export const ProjectList: React.FC = () => {
         </>
       )}
     </div>
+    </>
   );
 };
 

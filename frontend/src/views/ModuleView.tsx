@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useAppStore } from '../state/store';
-import { artifactAPI, linkAPI, Artifact, Link } from '../api/client';
+import { artifactAPI, linkAPI, attachmentAPI, Artifact, Link, Attachment } from '../api/client';
 import { ArtifactEditor } from '../components/ArtifactEditor';
 import { ArtifactList } from '../components/ArtifactList';
 import { ArtifactDetails } from '../components/ArtifactDetails';
 import { LinkPanel } from '../components/LinkPanel';
+import { HelpSidebar } from '../components/HelpSidebar';
+import { Navbar } from '../components/Navbar';
 
 interface ModuleViewProps {
   onSwitchProject?: () => void;
@@ -16,6 +18,9 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
   const [editingArtifact, setEditingArtifact] = useState<Artifact | undefined>();
   const [error, setError] = useState<string>('');
   const [allLinks, setAllLinks] = useState<Link[]>([]);
+  const [filterType, setFilterType] = useState<string>(''); // '' means show all
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [uploadingAttachmentId, setUploadingAttachmentId] = useState<string | null>(null);
 
   const {
     projectId,
@@ -27,6 +32,7 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
     addLink,
     selectedArtifactId,
     setSelectedArtifactId,
+    projects,
   } = useAppStore();
 
   // Load artifacts on component mount
@@ -36,6 +42,16 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
       loadLinks();
     }
   }, [projectId]);
+
+  // Load attachments when artifact is selected or when editing
+  useEffect(() => {
+    const artifactIdToLoad = editingArtifact?.id || selectedArtifactId;
+    if (artifactIdToLoad) {
+      loadAttachments(artifactIdToLoad);
+    } else {
+      setAttachments([]);
+    }
+  }, [selectedArtifactId, editingArtifact?.id]);
 
   const loadArtifacts = async () => {
     try {
@@ -56,6 +72,48 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
     } catch (error: any) {
       console.error('Failed to load links:', error);
       setAllLinks([]);
+    }
+  };
+
+  const loadAttachments = async (artifactId: string) => {
+    try {
+      const response = await attachmentAPI.listByArtifact(artifactId);
+      setAttachments(response.data || []);
+    } catch (error: any) {
+      console.error('Failed to load attachments:', error);
+      setAttachments([]);
+    }
+  };
+
+  const handleUploadAttachment = async (file: File) => {
+    if (!selectedArtifactId) {
+      setError('No artifact selected');
+      return;
+    }
+
+    setUploadingAttachmentId(selectedArtifactId);
+    try {
+      const response = await attachmentAPI.upload(selectedArtifactId, file);
+      setAttachments([...attachments, response.data]);
+      setError('');
+    } catch (error: any) {
+      console.error('Failed to upload attachment:', error);
+      const errorMsg = error.response?.data || error.message || 'Unknown error';
+      setError(`Failed to upload image: ${errorMsg}`);
+    } finally {
+      setUploadingAttachmentId(null);
+    }
+  };
+
+  const handleDeleteAttachment = async (attachmentId: string) => {
+    try {
+      await attachmentAPI.delete(attachmentId);
+      setAttachments(attachments.filter((a) => a.id !== attachmentId));
+      setError('');
+    } catch (error: any) {
+      console.error('Failed to delete attachment:', error);
+      const errorMsg = error.response?.data || error.message || 'Unknown error';
+      setError(`Failed to delete image: ${errorMsg}`);
     }
   };
 
@@ -114,6 +172,7 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
   };
 
   const handleEditArtifact = (artifact: Artifact) => {
+    setSelectedArtifactId(artifact.id);
     setEditingArtifact(artifact);
     setIsEditing(true);
     setError('');
@@ -133,6 +192,17 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
     }
   };
 
+  // Get unique artifact types for filter dropdown
+  const getArtifactTypes = () => {
+    const types = new Set(artifacts.map((a) => a.type));
+    return Array.from(types).sort();
+  };
+
+  // Filter artifacts based on selected type
+  const filteredArtifacts = filterType
+    ? artifacts.filter((a) => a.type === filterType)
+    : artifacts;
+
   if (!projectId) {
     return (
       <div className="card">
@@ -145,24 +215,13 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
   const selectedArtifact = artifacts.find((a) => a.id === selectedArtifactId);
 
   return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <h2 style={{ margin: 0 }}>Artifacts</h2>
-        <button
-          onClick={onSwitchProject}
-          style={{
-            padding: '8px 16px',
-            backgroundColor: '#95a5a6',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer',
-            fontSize: '14px',
-          }}
-        >
-          ← Switch Project
-        </button>
-      </div>
+    <>
+      <HelpSidebar />
+      <Navbar
+        title={`Project: ${projects.find((p) => p.id === projectId)?.name || 'Unknown'}`}
+        onSwitchProject={onSwitchProject}
+        showSwitchButton={true}
+      />
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '20px' }}>
       <div>
         {error && (
@@ -191,6 +250,32 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
           {isCreating ? 'Cancel' : '+ New Artifact'}
         </button>
 
+        <div style={{ marginBottom: '20px' }}>
+          <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: '#2c3e50' }}>
+            Filter by Type:
+          </label>
+          <select
+            value={filterType}
+            onChange={(e) => setFilterType(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '8px',
+              borderRadius: '4px',
+              border: '1px solid #bdc3c7',
+              fontSize: '14px',
+              backgroundColor: 'white',
+              cursor: 'pointer',
+            }}
+          >
+            <option value="">All Types ({artifacts.length})</option>
+            {getArtifactTypes().map((type) => (
+              <option key={type} value={type}>
+                {type} ({artifacts.filter((a) => a.type === type).length})
+              </option>
+            ))}
+          </select>
+        </div>
+
         {isCreating && (
           <ArtifactEditor
             onSave={handleCreateArtifact}
@@ -202,7 +287,7 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
         )}
 
         <ArtifactList
-          artifacts={artifacts}
+          artifacts={filteredArtifacts}
           selectedId={selectedArtifactId || undefined}
           onSelect={setSelectedArtifactId}
           onEdit={handleEditArtifact}
@@ -212,25 +297,37 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
 
       <div>
         {isEditing && editingArtifact && (
-          <ArtifactEditor
-            artifact={editingArtifact}
-            onSave={handleUpdateArtifact}
-            onCancel={() => {
-              setIsEditing(false);
-              setEditingArtifact(undefined);
-            }}
-          />
+          <>
+            <ArtifactEditor
+              artifact={editingArtifact}
+              onSave={handleUpdateArtifact}
+              onCancel={() => {
+                setIsEditing(false);
+                setEditingArtifact(undefined);
+              }}
+              attachments={attachments}
+              onUploadAttachment={handleUploadAttachment}
+              onDeleteAttachment={handleDeleteAttachment}
+              isUploadLoading={uploadingAttachmentId === editingArtifact.id}
+            />
+            <LinkPanel
+              artifacts={artifacts}
+              selectedArtifactId={editingArtifact.id}
+              onCreateLink={handleCreateLink}
+              links={allLinks}
+              title="Edit Artifact Links"
+            />
+          </>
         )}
 
         {selectedArtifact && !isEditing && (
-          <>
-            <ArtifactDetails artifact={selectedArtifact} links={allLinks} artifacts={artifacts} />
-            <LinkPanel
-              artifacts={artifacts}
-              selectedArtifactId={selectedArtifactId || undefined}
-              onCreateLink={handleCreateLink}
-            />
-          </>
+          <ArtifactDetails 
+            artifact={selectedArtifact} 
+            links={allLinks} 
+            artifacts={artifacts}
+            attachments={attachments}
+            onDeleteAttachment={handleDeleteAttachment}
+          />
         )}
 
         {!selectedArtifact && !isEditing && (
@@ -240,8 +337,8 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
           </div>
         )}
       </div>
-    </div>
-    </div>
+      </div>
+    </>
   );
 };
 

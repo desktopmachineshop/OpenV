@@ -65,6 +65,19 @@ func InitSchema(db *sql.DB) error {
 		created_at TIMESTAMP NOT NULL DEFAULT NOW(),
 		updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 	);
+
+	CREATE TABLE IF NOT EXISTS attachments (
+		id UUID PRIMARY KEY,
+		artifact_id UUID NOT NULL,
+		filename VARCHAR(512) NOT NULL,
+		mime_type VARCHAR(128) NOT NULL,
+		file_path VARCHAR(1024) NOT NULL,
+		file_size INT NOT NULL,
+		created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+		FOREIGN KEY (artifact_id) REFERENCES artifacts(id) ON DELETE CASCADE
+	);
+
+	CREATE INDEX IF NOT EXISTS idx_attachments_artifact_id ON attachments(artifact_id);
 	`
 
 	_, err := db.Exec(schema)

@@ -1,13 +1,22 @@
 import React from 'react';
-import { Artifact, Link } from '../api/client';
+import { Artifact, Link, Attachment } from '../api/client';
+import { ImageGallery } from './ImageGallery';
 
 interface ArtifactDetailsProps {
   artifact: Artifact;
   links?: Link[];
   artifacts?: Artifact[];
+  attachments?: Attachment[];
+  onDeleteAttachment?: (attachmentId: string) => void;
 }
 
-export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({ artifact, links = [], artifacts = [] }) => {
+export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({ 
+  artifact, 
+  links = [], 
+  artifacts = [],
+  attachments = [],
+  onDeleteAttachment,
+}) => {
   // Get the title of an artifact by ID
   const getArtifactTitle = (id: string): string => {
     const art = artifacts.find((a) => a.id === id);
@@ -116,6 +125,16 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({ artifact, link
         </div>
       )}
       
+      {/* Images Gallery */}
+      {attachments && attachments.length > 0 && (
+        <ImageGallery 
+          artifactId={artifact.id} 
+          attachments={attachments}
+          onDelete={onDeleteAttachment || (() => {})}
+          showUpload={false}
+        />
+      )}
+
       {/* Links Section */}
       {(outgoingLinks.length > 0 || incomingLinks.length > 0) && (
         <div style={{ marginTop: '20px', paddingTop: '15px', borderTop: '1px solid #ddd' }}>

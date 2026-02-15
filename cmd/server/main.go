@@ -11,6 +11,7 @@ import (
 
 	"github.com/openv/requirements-platform/internal/api"
 	"github.com/openv/requirements-platform/internal/domain/artifacts"
+	"github.com/openv/requirements-platform/internal/domain/attachments"
 	"github.com/openv/requirements-platform/internal/domain/links"
 	"github.com/openv/requirements-platform/internal/domain/projects"
 	"github.com/openv/requirements-platform/internal/persistence/postgres"
@@ -48,6 +49,16 @@ func main() {
 		port = "8080"
 	}
 
+	uploadsDir := os.Getenv("UPLOADS_DIR")
+	if uploadsDir == "" {
+		uploadsDir = "./uploads"
+	}
+
+	// Create uploads directory if it doesn't exist
+	if err := os.MkdirAll(uploadsDir, 0755); err != nil {
+		log.Fatalf("Failed to create uploads directory: %v", err)
+	}
+
 	// Build DSN
 	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
 		dbHost, dbPort, dbUser, dbPassword, dbName)
@@ -68,14 +79,16 @@ func main() {
 	artifactRepo := postgres.NewArtifactRepository(db)
 	linkRepo := postgres.NewLinkRepository(db)
 	projectRepo := postgres.NewProjectRepository(db)
+	attachmentRepo := postgres.NewAttachmentRepository(db)
 
 	// Create services
 	artifactService := artifacts.NewDefaultService(artifactRepo)
 	linkService := links.NewDefaultService(linkRepo)
 	projectService := projects.NewService(projectRepo)
+	attachmentService := attachments.NewDefaultService(attachmentRepo)
 
 	// Create handler
-	handler := api.NewHandler(artifactService, linkService, projectService)
+	handler := api.NewHandler(artifactService, linkService, projectService, attachmentService, uploadsDir)
 
 	// Setup router
 	router := mux.NewRouter()

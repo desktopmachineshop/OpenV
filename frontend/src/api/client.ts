@@ -60,6 +60,16 @@ export interface Project {
   updated_at: string;
 }
 
+export interface Attachment {
+  id: string;
+  artifact_id: string;
+  filename: string;
+  mime_type: string;
+  file_path: string;
+  file_size: number;
+  created_at: string;
+}
+
 export const artifactAPI = {
   create: (payload: Partial<Artifact>) => 
     client.post<Artifact>('/api/v1/artifacts', payload),
@@ -97,6 +107,27 @@ export const projectAPI = {
     client.put<Project>(`/api/v1/projects/${id}`, payload),
   delete: (id: string) =>
     client.delete(`/api/v1/projects/${id}`),
+};
+
+export const attachmentAPI = {
+  upload: (artifactId: string, file: File) => {
+    const formData = new FormData();
+    formData.append('artifact_id', artifactId);
+    formData.append('file', file);
+    return client.post<Attachment>('/api/v1/attachments/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
+  getMeta: (id: string) =>
+    client.get<Attachment>(`/api/v1/attachments/${id}`),
+  getDownloadUrl: (id: string) =>
+    `${API_BASE_URL}/api/v1/attachments/${id}/download`,
+  delete: (id: string) =>
+    client.delete(`/api/v1/attachments/${id}`),
+  listByArtifact: (artifactId: string) =>
+    client.get<Attachment[]>(`/api/v1/artifacts/${artifactId}/attachments`),
 };
 
 export default client;

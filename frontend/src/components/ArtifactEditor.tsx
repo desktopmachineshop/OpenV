@@ -1,16 +1,25 @@
 import React, { useState } from 'react';
-import { Artifact } from '../api/client';
+import { Artifact, Attachment } from '../api/client';
+import { ImageGallery } from './ImageGallery';
 
 interface ArtifactEditorProps {
   artifact?: Artifact;
   onSave: (artifact: Partial<Artifact>) => void;
   onCancel: () => void;
+  attachments?: Attachment[];
+  onUploadAttachment?: (file: File) => void;
+  onDeleteAttachment?: (attachmentId: string) => void;
+  isUploadLoading?: boolean;
 }
 
 export const ArtifactEditor: React.FC<ArtifactEditorProps> = ({
   artifact,
   onSave,
   onCancel,
+  attachments = [],
+  onUploadAttachment,
+  onDeleteAttachment,
+  isUploadLoading,
 }) => {
   const [formData, setFormData] = useState<Partial<Artifact>>(
     artifact || {
@@ -37,62 +46,109 @@ export const ArtifactEditor: React.FC<ArtifactEditorProps> = ({
   };
 
   return (
-    <div className="card">
-      <h3>{artifact ? 'Edit Artifact' : 'New Artifact'}</h3>
-      <form onSubmit={handleSubmit}>
-        <div className="form-group">
-          <label htmlFor="type">Type</label>
-          <select
-            id="type"
-            name="type"
-            value={formData.type || ''}
-            onChange={handleChange}
-          >
-            <option value="requirement">Requirement</option>
-            <option value="test-case">Test Case</option>
-            <option value="hazard">Hazard</option>
-            <option value="design-item">Design Item</option>
-            <option value="other">Other</option>
-          </select>
+    <>
+      {artifact && (
+        <div className="card" style={{ marginBottom: '20px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <div>
+              <h3 style={{ margin: '0 0 8px 0' }}>{formData.title || 'Untitled Artifact'}</h3>
+              <p style={{ margin: 0, fontSize: '12px', color: '#7f8c8d' }}>
+                UID: <code style={{ backgroundColor: '#ecf0f1', padding: '2px 6px', borderRadius: '3px' }}>{artifact.id}</code>
+              </p>
+            </div>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button 
+                type="submit" 
+                className="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleSubmit(e as any);
+                }}
+              >
+                Update
+              </button>
+              <button
+                type="button"
+                className="button-secondary"
+                onClick={onCancel}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
         </div>
+      )}
 
-        <div className="form-group">
-          <label htmlFor="title">Title</label>
-          <input
-            id="title"
-            type="text"
-            name="title"
-            value={formData.title || ''}
-            onChange={handleChange}
-            required
-            placeholder="Enter artifact title"
-          />
-        </div>
+      <div className="card">
+        <h3>{artifact ? 'Edit Artifact Details' : 'New Artifact'}</h3>
+        <form onSubmit={handleSubmit}>
+          <div className="form-group">
+            <label htmlFor="type">Type</label>
+            <select
+              id="type"
+              name="type"
+              value={formData.type || ''}
+              onChange={handleChange}
+            >
+              <option value="requirement">Requirement</option>
+              <option value="test-case">Test Case</option>
+              <option value="hazard">Hazard</option>
+              <option value="design-item">Design Item</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
 
-        <div className="form-group">
-          <label htmlFor="body">Description</label>
-          <textarea
-            id="body"
-            name="body"
-            value={formData.body || ''}
-            onChange={handleChange}
-            placeholder="Enter artifact description (markdown supported)"
-          />
-        </div>
+          <div className="form-group">
+            <label htmlFor="title">Title</label>
+            <input
+              id="title"
+              type="text"
+              name="title"
+              value={formData.title || ''}
+              onChange={handleChange}
+              required
+              placeholder="Enter artifact title"
+            />
+          </div>
 
-        <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
-          <button type="submit" className="button">
-            {artifact ? 'Update' : 'Create'}
-          </button>
-          <button
-            type="button"
-            className="button-secondary"
-            onClick={onCancel}
-          >
-            Cancel
-          </button>
-        </div>
-      </form>
-    </div>
+          <div className="form-group">
+            <label htmlFor="body">Description</label>
+            <textarea
+              id="body"
+              name="body"
+              value={formData.body || ''}
+              onChange={handleChange}
+              placeholder="Enter artifact description (markdown supported)"
+            />
+          </div>
+
+          {artifact && (
+            <ImageGallery
+              artifactId={artifact.id}
+              attachments={attachments}
+              onUpload={onUploadAttachment || (() => {})}
+              onDelete={onDeleteAttachment || (() => {})}
+              isUploadLoading={isUploadLoading}
+              showUpload={true}
+            />
+          )}
+
+          {!artifact && (
+            <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+              <button type="submit" className="button">
+                Create
+              </button>
+              <button
+                type="button"
+                className="button-secondary"
+                onClick={onCancel}
+              >
+                Cancel
+              </button>
+            </div>
+          )}
+        </form>
+      </div>
+    </>
   );
 };

@@ -32,6 +32,7 @@ type CreateArtifactRequest struct {
 
 // UpdateArtifactRequest is the payload for updating an artifact
 type UpdateArtifactRequest struct {
+	Type       string                 `json:"type"`
 	Title      string                 `json:"title"`
 	Body       string                 `json:"body"`
 	Attributes map[string]interface{} `json:"attributes"`
@@ -107,6 +108,7 @@ func (s *DefaultService) UpdateArtifact(id string, req UpdateArtifactRequest) (*
 		return nil, err
 	}
 
+	artifact.Type = req.Type
 	artifact.Title = req.Title
 	artifact.Body = req.Body
 	artifact.Attributes = req.Attributes
