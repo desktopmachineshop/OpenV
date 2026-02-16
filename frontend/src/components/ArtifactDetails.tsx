@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Artifact, Link, Attachment } from '../api/client';
 import { linkAPI } from '../api/client';
 import { ImageGallery } from './ImageGallery';
+import { getLinkTypeLabel } from '../config/linkTypeRules';
 
 interface ArtifactDetailsProps {
   artifact: Artifact;
@@ -167,10 +168,13 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
       // Deduplicate within each type group by link ID
       const uniqueTypeLinks = Array.from(new Map(typeLinks.map(link => [link.id, link])).values());
       
+      // Get the appropriate label (with inverse for incoming links)
+      const displayLabel = getLinkTypeLabel(linkType, direction === 'incoming');
+      
       return (
         <div key={linkType} style={{ marginBottom: '12px' }}>
           <strong style={{ color: colorScheme.header, fontSize: '13px' }}>
-            {linkType} ({uniqueTypeLinks.length})
+            {displayLabel} ({uniqueTypeLinks.length})
           </strong>
           <div style={{ marginTop: '6px' }}>
             {uniqueTypeLinks.map((link) => {

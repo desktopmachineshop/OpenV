@@ -388,6 +388,25 @@ func (h *Handler) CreateLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Fetch the from and to artifacts to validate link type
+	fromArtifact, err := h.artifactService.GetArtifact(req.FromID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("source artifact not found: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	toArtifact, err := h.artifactService.GetArtifact(req.ToID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("target artifact not found: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	// Validate link type against artifact types
+	if err := links.ValidateLinkType(req.Type, fromArtifact.Type, toArtifact.Type); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
 	link := links.NewLink(req)
 	if err := h.linkService.CreateLink(link); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -1089,6 +1108,24 @@ func (h *Handler) processManagedLinkChanges(fromArtifactID string, toAdd, toRemo
 			attributes = make(map[string]interface{})
 		}
 
+		// Validate link type against artifact types
+		fromArtifact, err := h.artifactService.GetArtifact(fromID)
+		if err != nil {
+			fmt.Printf("Warning: failed to get source artifact for link validation: %v\n", err)
+			continue
+		}
+
+		toArtifact, err := h.artifactService.GetArtifact(toID)
+		if err != nil {
+			fmt.Printf("Warning: failed to get target artifact for link validation: %v\n", err)
+			continue
+		}
+
+		if err := links.ValidateLinkType(linkType, fromArtifact.Type, toArtifact.Type); err != nil {
+			fmt.Printf("Warning: invalid link type: %v\n", err)
+			continue
+		}
+
 		// Create the link
 		linkReq := links.CreateLinkRequest{
 			FromID:     fromID,
@@ -1097,7 +1134,7 @@ func (h *Handler) processManagedLinkChanges(fromArtifactID string, toAdd, toRemo
 			Attributes: attributes,
 		}
 		link := links.NewLink(linkReq)
-		err := h.linkService.CreateLink(link)
+		err = h.linkService.CreateLink(link)
 		if err != nil {
 			fmt.Printf("Warning: failed to create link: %v\n", err)
 			continue

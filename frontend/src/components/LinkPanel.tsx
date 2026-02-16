@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link, Artifact } from '../api/client';
+import { getAvailableLinkTypes, getAllowedTargetTypes, getLinkTypeLabel } from '../config/linkTypeRules';
 
 interface LinkPanelProps {
   artifacts: Artifact[];
@@ -23,8 +24,17 @@ export const LinkPanel: React.FC<LinkPanelProps> = ({
   onDeleteLink,
 }) => {
   const [isCreating, setIsCreating] = useState(false);
-  const [linkType, setLinkType] = useState('verifies');
+  const [linkType, setLinkType] = useState('');
   const [toArtifactId, setToArtifactId] = useState('');
+  const [artifactSearch, setArtifactSearch] = useState('');
+  const [showDropdown, setShowDropdown] = useState(false);
+
+  // Get the source artifact to determine available link types
+  const sourceArtifact = artifacts.find(a => a.id === selectedArtifactId);
+  const availableLinkTypes = sourceArtifact ? getAvailableLinkTypes(sourceArtifact.type) : [];
+  
+  // Get allowed target types for selected link type
+  const allowedTargetTypes = linkType ? getAllowedTargetTypes(linkType) : [];
 
   const getArtifactTitle = (id: string): string => {
     const art = artifacts.find((a) => a.id === id);
@@ -79,11 +89,15 @@ export const LinkPanel: React.FC<LinkPanelProps> = ({
       ? { header: '#27ae60', bg: '#f0f8f4', border: '#27ae60' }
       : { header: '#2980b9', bg: '#f0f4f8', border: '#2980b9' };
 
-    return Object.entries(linksByType).map(([linkType, typeLinks]) => (
-      <div key={linkType} style={{ marginBottom: '12px' }}>
-        <strong style={{ color: colorScheme.header, fontSize: '13px' }}>
-          {linkType} ({typeLinks.length})
-        </strong>
+    return Object.entries(linksByType).map(([linkType, typeLinks]) => {
+      // Get the appropriate label (with inverse for incoming links)
+      const displayLabel = getLinkTypeLabel(linkType, direction === 'incoming');
+      
+      return (
+        <div key={linkType} style={{ marginBottom: '12px' }}>
+          <strong style={{ color: colorScheme.header, fontSize: '13px' }}>
+            {displayLabel} ({typeLinks.length})
+          </strong>
         <div style={{ marginTop: '6px' }}>
           {typeLinks.map((link) => {
             const linkedArtifactId = direction === 'outgoing' ? link.to_id : link.from_id;
@@ -148,7 +162,7 @@ export const LinkPanel: React.FC<LinkPanelProps> = ({
           })}
         </div>
       </div>
-    ));
+    )});
   };
 
   return (
@@ -197,9 +211,20 @@ export const LinkPanel: React.FC<LinkPanelProps> = ({
         }}>
           {!isCreating && (
             <button
-              onClick={() => setIsCreating(true)}
+              onClick={() => {
+                setIsCreating(true);
+                setArtifactSearch('');
+                setToArtifactId('');
+                setShowDropdown(false);
+                // Set default link type to first available
+                if (availableLinkTypes.length > 0) {
+                  setLinkType(availableLinkTypes[0].type);
+                }
+              }}
               className="button"
               style={{ marginTop: '10px' }}
+              disabled={availableLinkTypes.length === 0}
+              title={availableLinkTypes.length === 0 ? 'No valid link types available for this artifact type' : ''}
             >
               + Add Link
             </button>
@@ -209,11 +234,14 @@ export const LinkPanel: React.FC<LinkPanelProps> = ({
             <>
               <div style={{ flex: 1, minWidth: '150px' }}>
                 <label style={{ display: 'block', fontSize: '11px', marginBottom: '4px', color: '#555' }}>
-                  Type
+                  Link Type
                 </label>
                 <select
                   value={linkType}
-                  onChange={(e) => setLinkType(e.target.value)}
+                  onChange={(e) => {
+                    setLinkType(e.target.value);
+                    setToArtifactId(''); // Reset target when link type changes
+                  }}
                   style={{
                     width: '100%',
                     padding: '6px',
@@ -222,22 +250,31 @@ export const LinkPanel: React.FC<LinkPanelProps> = ({
                     fontSize: '12px',
                   }}
                 >
-                  <option value="verifies">Verifies</option>
-                  <option value="satisfies">Satisfies</option>
-                  <option value="mitigates">Mitigates</option>
-                  <option value="relates-to">Relates To</option>
-                  <option value="decomposes-to">Decomposes To</option>
-                  <option value="impacts">Impacts</option>
+                  {availableLinkTypes.map(rule => (
+                    <option key={rule.type} value={rule.type} title={rule.description}>
+                      {rule.label}
+                    </option>
+                  ))}
                 </select>
               </div>
 
-              <div style={{ flex: 2, minWidth: '200px' }}>
+              <div style={{ flex: 2, minWidth: '200px', position: 'relative' }}>
                 <label style={{ display: 'block', fontSize: '11px', marginBottom: '4px', color: '#555' }}>
-                  Link To
+                  Link To {linkType && allowedTargetTypes.length > 0 && !allowedTargetTypes.includes('*') 
+                    ? `(${allowedTargetTypes.join(', ')})` 
+                    : ''}
                 </label>
-                <select
-                  value={toArtifactId}
-                  onChange={(e) => setToArtifactId(e.target.value)}
+                <input
+                  type="text"
+                  value={artifactSearch}
+                  onChange={(e) => {
+                    setArtifactSearch(e.target.value);
+                    setShowDropdown(true);
+                    setToArtifactId(''); // Clear selection when typing
+                  }}
+                  onFocus={() => setShowDropdown(true)}
+                  onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
+                  placeholder="Type to search by title or UID..."
                   style={{
                     width: '100%',
                     padding: '6px',
@@ -245,16 +282,91 @@ export const LinkPanel: React.FC<LinkPanelProps> = ({
                     border: '1px solid #bdc3c7',
                     fontSize: '12px',
                   }}
-                >
-                  <option value="">-- Select artifact --</option>
-                  {artifacts
-                    .filter((a) => a.id !== selectedArtifactId)
-                    .map((artifact) => (
-                      <option key={artifact.id} value={artifact.id}>
-                        {artifact.title} ({artifact.type})
-                      </option>
-                    ))}
-                </select>
+                />
+                {showDropdown && (() => {
+                  const filteredArtifacts = artifacts.filter((a) => {
+                    if (a.id === selectedArtifactId) return false;
+                    // Filter based on allowed target types for selected link type
+                    if (!allowedTargetTypes.includes('*') && !allowedTargetTypes.includes(a.type)) {
+                      return false;
+                    }
+                    // Filter based on search text (title or UID)
+                    if (artifactSearch.trim()) {
+                      const searchLower = artifactSearch.toLowerCase();
+                      const matchesTitle = a.title.toLowerCase().includes(searchLower);
+                      const matchesId = a.id.toLowerCase().includes(searchLower);
+                      return matchesTitle || matchesId;
+                    }
+                    return true;
+                  });
+
+                  return filteredArtifacts.length > 0 ? (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: '100%',
+                        left: 0,
+                        right: 0,
+                        maxHeight: '200px',
+                        overflowY: 'auto',
+                        backgroundColor: 'white',
+                        border: '1px solid #bdc3c7',
+                        borderRadius: '4px',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                        zIndex: 1000,
+                        marginTop: '2px',
+                      }}
+                    >
+                      {filteredArtifacts.map((artifact) => (
+                        <div
+                          key={artifact.id}
+                          onClick={() => {
+                            setToArtifactId(artifact.id);
+                            setArtifactSearch(artifact.title);
+                            setShowDropdown(false);
+                          }}
+                          style={{
+                            padding: '8px',
+                            cursor: 'pointer',
+                            fontSize: '12px',
+                            borderBottom: '1px solid #ecf0f1',
+                            backgroundColor: toArtifactId === artifact.id ? '#e8f4f8' : 'white',
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = '#f0f8ff';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = toArtifactId === artifact.id ? '#e8f4f8' : 'white';
+                          }}
+                        >
+                          <div style={{ fontWeight: 'bold' }}>{artifact.title}</div>
+                          <div style={{ fontSize: '10px', color: '#7f8c8d', marginTop: '2px' }}>
+                            {artifact.type} • {artifact.id.substring(0, 8)}...
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : artifactSearch.trim() ? (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: '100%',
+                        left: 0,
+                        right: 0,
+                        backgroundColor: 'white',
+                        border: '1px solid #bdc3c7',
+                        borderRadius: '4px',
+                        padding: '8px',
+                        fontSize: '12px',
+                        color: '#7f8c8d',
+                        zIndex: 1000,
+                        marginTop: '2px',
+                      }}
+                    >
+                      No matching artifacts found
+                    </div>
+                  ) : null;
+                })()}
               </div>
 
               <button
@@ -269,6 +381,8 @@ export const LinkPanel: React.FC<LinkPanelProps> = ({
                 onClick={() => {
                   setIsCreating(false);
                   setToArtifactId('');
+                  setArtifactSearch('');
+                  setShowDropdown(false);
                 }}
                 className="button-secondary"
                 style={{ marginBottom: 0 }}
