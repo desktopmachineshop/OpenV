@@ -1,6 +1,30 @@
 import axios, { AxiosInstance } from 'axios';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080';
+// Determine API base URL
+// Priority: env var > browser detection > default fallback
+const getAPIBaseURL = (): string => {
+  // Check for environment variable set at build time
+  if (process.env.REACT_APP_API_URL) {
+    console.log('Using REACT_APP_API_URL:', process.env.REACT_APP_API_URL);
+    return process.env.REACT_APP_API_URL;
+  }
+
+  // Fallback: detect from current browser location
+  // If frontend is on localhost:3000, API should be on localhost:8080
+  if (typeof window !== 'undefined' && window.location) {
+    const protocol = window.location.protocol; // http: or https:
+    const hostname = window.location.hostname; // localhost or IP
+    // Always use port 8080 for API
+    const apiUrl = `${protocol}//${hostname}:8080`;
+    console.log('Detected API URL:', apiUrl);
+    return apiUrl;
+  }
+
+  // Default fallback
+  return 'http://localhost:8080';
+};
+
+const API_BASE_URL = getAPIBaseURL();
 
 console.log('API_BASE_URL:', API_BASE_URL);
 
@@ -74,6 +98,7 @@ export interface Template {
   key?: string;
   name: string;
   description: string;
+  source?: string; // "database" or "file"
   is_default: boolean;
   created_at: string;
 }
@@ -123,6 +148,8 @@ export const linkAPI = {
     client.get<Link>(`/api/v1/links/${id}`),
   list: (projectId: string) =>
     client.get<Link[]>('/api/v1/links', { params: { project_id: projectId } }),
+  listForArtifactVersion: (artifactId: string, version: number) =>
+    client.get<Link[]>(`/api/v1/artifacts/${artifactId}/links`, { params: { version } }),
   update: (id: string, payload: Partial<Link>) =>
     client.put<Link>(`/api/v1/links/${id}`, payload),
   delete: (id: string) =>

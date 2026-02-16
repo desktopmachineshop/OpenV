@@ -29,6 +29,48 @@ type Artifact struct {
 	UpdatedAt time.Time              `json:"updated_at"`
 }
 
+// SetLinksSnapshot stores links snapshot in attributes
+func (a *Artifact) SetLinksSnapshot(links []interface{}) {
+	if a.Attributes == nil {
+		a.Attributes = make(map[string]interface{})
+	}
+	a.Attributes["links_snapshot"] = links
+}
+
+// GetLinksSnapshot retrieves links snapshot from attributes
+func (a *Artifact) GetLinksSnapshot() []interface{} {
+	if a.Attributes == nil {
+		return []interface{}{}
+	}
+	if snapshot, ok := a.Attributes["links_snapshot"]; ok {
+		if links, ok := snapshot.([]interface{}); ok {
+			return links
+		}
+	}
+	return []interface{}{}
+}
+
+// SetImagesSnapshot stores images snapshot in attributes
+func (a *Artifact) SetImagesSnapshot(images []interface{}) {
+	if a.Attributes == nil {
+		a.Attributes = make(map[string]interface{})
+	}
+	a.Attributes["images_snapshot"] = images
+}
+
+// GetImagesSnapshot retrieves images snapshot from attributes
+func (a *Artifact) GetImagesSnapshot() []interface{} {
+	if a.Attributes == nil {
+		return []interface{}{}
+	}
+	if snapshot, ok := a.Attributes["images_snapshot"]; ok {
+		if images, ok := snapshot.([]interface{}); ok {
+			return images
+		}
+	}
+	return []interface{}{}
+}
+
 // CreateArtifactRequest is the payload for creating a new artifact
 type CreateArtifactRequest struct {
 	ProjectID  string                 `json:"project_id"`
@@ -42,12 +84,15 @@ type CreateArtifactRequest struct {
 
 // UpdateArtifactRequest is the payload for updating an artifact
 type UpdateArtifactRequest struct {
-	ParentID   *string                `json:"parent_id,omitempty"`
-	Type       string                 `json:"type"`
-	Title      string                 `json:"title"`
-	Body       string                 `json:"body"`
-	SortOrder  *int                   `json:"sort_order,omitempty"`
-	Attributes map[string]interface{} `json:"attributes"`
+	ParentID         *string                `json:"parent_id,omitempty"`
+	Type             string                 `json:"type"`
+	Title            string                 `json:"title"`
+	Body             string                 `json:"body"`
+	SortOrder        *int                   `json:"sort_order,omitempty"`
+	Attributes       map[string]interface{} `json:"attributes"`
+	LinksSnapshot    []interface{}          `json:"linksSnapshot,omitempty"`
+	PendingLinkAdds  []interface{}          `json:"pendingLinkAdds,omitempty"`
+	PendingLinkRemoves []string             `json:"pendingLinkRemoves,omitempty"`
 }
 
 // NewArtifact creates a new artifact with generated ID

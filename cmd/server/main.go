@@ -91,6 +91,10 @@ func main() {
 	// Create services
 	artifactService := artifacts.NewDefaultService(artifactRepo)
 	linkService := links.NewDefaultService(linkRepo)
+	
+	// Wire link service to artifact service for versioning triggers
+	linkService.SetArtifactService(artifactService)
+	
 	projectService := projects.NewService(projectRepo)
 	attachmentService := attachments.NewDefaultService(attachmentRepo)
 	baselineService := baselines.NewService(baselineRepo)

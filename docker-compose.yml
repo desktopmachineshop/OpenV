@@ -43,6 +43,8 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        - REACT_APP_API_URL=http://localhost:8080
     container_name: openv-frontend
     environment:
       - REACT_APP_API_URL=http://localhost:8080

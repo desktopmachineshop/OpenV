@@ -12,6 +12,7 @@ RUN go mod download
 # Copy the rest of the source
 COPY cmd cmd
 COPY internal internal
+COPY examples examples
 
 # Build
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o server cmd/server/main.go
@@ -24,6 +25,7 @@ RUN apk --no-cache add ca-certificates
 WORKDIR /root/
 
 COPY --from=builder /app/server .
+COPY --from=builder /app/examples ./examples
 
 EXPOSE 8080
 

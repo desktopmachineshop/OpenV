@@ -277,6 +277,7 @@ func (s *DefaultService) ImportProjectWithOverrides(data []byte, nameOverride st
 	log.Printf("[IMPORT] Second pass complete. Updated %d artifacts with parent relationships", updateCount)
 
 	// Create links using the new IDs
+	log.Printf("[IMPORT] Starting link creation: %d links to import", len(importData.Links))
 	for _, link := range importData.Links {
 		newFromID, fromExists := idMap[link.FromID]
 		newToID, toExists := idMap[link.ToID]
@@ -291,13 +292,87 @@ func (s *DefaultService) ImportProjectWithOverrides(data []byte, nameOverride st
 			
 			if err := s.linkService.CreateLink(newLink); err != nil {
 				// Log error but continue with other links
-				fmt.Printf("Warning: failed to create link: %v\n", err)
+				log.Printf("[IMPORT] Warning: failed to create link: %v", err)
 			}
 		}
 	}
+	log.Printf("[IMPORT] Link creation complete")
+
+	// Populate link snapshots for all imported artifacts
+	log.Printf("[IMPORT] Starting link snapshot population for %d artifacts", len(idMap))
+	if err := s.populateLinksSnapshotsForImport(idMap); err != nil {
+		log.Printf("[IMPORT] Warning: failed to populate link snapshots: %v", err)
+		// Don't fail the import, but log the error
+	}
+	log.Printf("[IMPORT] Link snapshot population complete")
 
 	// Note: Attachments are not imported as the actual image files
 	// are not included in the JSON export. Only metadata was exported.
 
 	return projectID, nil
+}
+
+// populateLinksSnapshotsForImport populates link snapshots for all imported artifacts
+// This ensures links are visible when viewing artifact history/versions
+func (s *DefaultService) populateLinksSnapshotsForImport(idMap map[string]string) error {
+	// For each newly created artifact, fetch its links and store in snapshot
+	for _, newID := range idMap {
+		seenLinkIDs := make(map[string]bool)
+		allLinks := make([]interface{}, 0)
+		
+		// Get all incoming links
+		incomingLinks, err := s.linkService.GetLinksTo(newID)
+		if err == nil {
+			for _, link := range incomingLinks {
+				if !seenLinkIDs[link.ID] {
+					seenLinkIDs[link.ID] = true
+					allLinks = append(allLinks, link)
+				}
+			}
+		}
+		
+		// Get all outgoing links
+		outgoingLinks, err := s.linkService.GetLinksFrom(newID)
+		if err == nil {
+			for _, link := range outgoingLinks {
+				if !seenLinkIDs[link.ID] {
+					seenLinkIDs[link.ID] = true
+					allLinks = append(allLinks, link)
+				}
+			}
+		}
+		
+		// If artifact has links, update its snapshot
+		if len(allLinks) > 0 {
+			artifact, err := s.artifactService.GetArtifact(newID)
+			if err != nil {
+				log.Printf("[IMPORT] Warning: failed to get artifact %s for snapshot update: %v", newID, err)
+				continue
+			}
+			
+			// Update artifact to store links snapshot WITHOUT incrementing version
+			// We do this by directly updating the attributes
+			if artifact.Attributes == nil {
+				artifact.Attributes = make(map[string]interface{})
+			}
+			artifact.Attributes["links_snapshot"] = allLinks
+			
+			// Use UpdateArtifact with all existing fields to avoid clearing data
+			// The version will increment, but that's OK - this is part of import
+			_, err = s.artifactService.UpdateArtifact(newID, artifacts.UpdateArtifactRequest{
+				ParentID:   artifact.ParentID,
+				Type:       artifact.Type,
+				Title:      artifact.Title,
+				Body:       artifact.Body,
+				SortOrder:  &artifact.SortOrder,
+				Attributes: artifact.Attributes,
+			})
+			if err != nil {
+				log.Printf("[IMPORT] Warning: failed to update artifact %s with link snapshot: %v", newID, err)
+				continue
+			}
+		}
+	}
+	
+	return nil
 }

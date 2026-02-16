@@ -9,6 +9,7 @@ interface LinkPanelProps {
   title?: string;
   readOnly?: boolean;
   onSelectArtifact?: (artifactId: string) => void;
+  onDeleteLink?: (linkId: string) => void;
 }
 
 export const LinkPanel: React.FC<LinkPanelProps> = ({
@@ -19,6 +20,7 @@ export const LinkPanel: React.FC<LinkPanelProps> = ({
   title = 'Links',
   readOnly = false,
   onSelectArtifact,
+  onDeleteLink,
 }) => {
   const [isCreating, setIsCreating] = useState(false);
   const [linkType, setLinkType] = useState('verifies');
@@ -50,9 +52,12 @@ export const LinkPanel: React.FC<LinkPanelProps> = ({
     return null;
   }
 
-  // Filter links for the selected artifact
-  const outgoingLinks = links.filter((l) => l.from_id === selectedArtifactId);
-  const incomingLinks = links.filter((l) => l.to_id === selectedArtifactId);
+  // Filter links for the selected artifact and deduplicate by ID
+  const allFilteredLinks = links.filter((l) => l.from_id === selectedArtifactId || l.to_id === selectedArtifactId);
+  const uniqueLinks = Array.from(new Map(allFilteredLinks.map(link => [link.id, link])).values());
+  
+  const outgoingLinks = uniqueLinks.filter((l) => l.from_id === selectedArtifactId);
+  const incomingLinks = uniqueLinks.filter((l) => l.to_id === selectedArtifactId);
 
   // Group links by type
   const groupLinksByType = (linkList: Link[]): Record<string, Link[]> => {
@@ -94,6 +99,9 @@ export const LinkPanel: React.FC<LinkPanelProps> = ({
                   fontSize: '12px',
                   cursor: 'pointer',
                   transition: 'background-color 0.2s ease',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
                 }}
                 onMouseEnter={(e) => {
                   (e.currentTarget as HTMLElement).style.opacity = '0.8';
@@ -101,16 +109,40 @@ export const LinkPanel: React.FC<LinkPanelProps> = ({
                 onMouseLeave={(e) => {
                   (e.currentTarget as HTMLElement).style.opacity = '1';
                 }}
-                onClick={() => onSelectArtifact?.(linkedArtifactId)}
               >
-                <strong>
-                  <span style={{ color: colorScheme.header, textDecoration: 'underline', cursor: 'pointer' }}>
-                    {direction === 'outgoing' ? getArtifactTitle(link.to_id) : getArtifactTitle(link.from_id)}
-                  </span>
-                </strong>
-                <div style={{ marginTop: '3px', color: '#555', fontSize: '11px' }}>
-                  ID: {linkedArtifactId.substring(0, 8)}...
+                <div
+                  style={{
+                    flex: 1,
+                    cursor: 'pointer',
+                  }}
+                  onClick={() => onSelectArtifact?.(linkedArtifactId)}
+                >
+                  <strong>
+                    <span style={{ color: colorScheme.header, textDecoration: 'underline', cursor: 'pointer' }}>
+                      {direction === 'outgoing' ? getArtifactTitle(link.to_id) : getArtifactTitle(link.from_id)}
+                    </span>
+                  </strong>
+                  <div style={{ marginTop: '3px', color: '#555', fontSize: '11px' }}>
+                    ID: {linkedArtifactId.substring(0, 8)}...
+                  </div>
                 </div>
+                {!readOnly && onDeleteLink && (
+                  <button
+                    onClick={() => onDeleteLink(link.id)}
+                    style={{
+                      backgroundColor: '#e74c3c',
+                      color: 'white',
+                      border: 'none',
+                      padding: '4px 8px',
+                      borderRadius: '3px',
+                      cursor: 'pointer',
+                      fontSize: '11px',
+                      marginLeft: '8px',
+                    }}
+                  >
+                    Delete
+                  </button>
+                )}
               </div>
             );
           })}

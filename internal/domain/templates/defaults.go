@@ -3,6 +3,10 @@ package templates
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"log"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/google/uuid"
@@ -14,6 +18,48 @@ import (
 )
 
 const cncMillTemplateKey = "example-cnc-mill"
+
+// TemplateData wraps project export with metadata for file-based templates
+type TemplateData struct {
+	Key         string                    `json:"key"`
+	Name        string                    `json:"name"`
+	Description string                    `json:"description"`
+	Source      string                    `json:"source"`
+	ExportedAt  time.Time                 `json:"exported_at"`
+	Version     string                    `json:"version"`
+	Artifacts   []*artifacts.Artifact     `json:"artifacts"`
+	Links       []*linksdomain.Link       `json:"links"`
+	Attachments []*attachments.Attachment `json:"attachments"`
+}
+
+// GenerateCncMillExampleJSON generates the CNC mill example as JSON with metadata
+func GenerateCncMillExampleJSON() ([]byte, error) {
+	snapshot, err := buildCncMillExampleSnapshot()
+	if err != nil {
+		return nil, err
+	}
+
+	// Parse the snapshot to extract artifacts and links
+	var exportData exports.ProjectExport
+	if err := json.Unmarshal(snapshot, &exportData); err != nil {
+		return nil, fmt.Errorf("failed to parse snapshot: %w", err)
+	}
+
+	// Create template data with metadata
+	templateData := TemplateData{
+		Key:         cncMillTemplateKey,
+		Name:        "Desktop CNC Mill Example",
+		Description: "Example project with requirements for a desktop CNC mill.",
+		Source:      "file",
+		ExportedAt:  exportData.ExportedAt,
+		Version:     exportData.Version,
+		Artifacts:   exportData.Artifacts,
+		Links:       exportData.Links,
+		Attachments: exportData.Attachments,
+	}
+
+	return json.MarshalIndent(templateData, "", "  ")
+}
 
 // DefaultTemplates returns bundled templates.
 func DefaultTemplates() ([]*Template, error) {
@@ -231,4 +277,120 @@ func buildCncMillExampleSnapshot() ([]byte, error) {
 	}
 
 	return json.MarshalIndent(exportData, "", "  ")
+}
+
+// TemplateSummary represents template metadata without the full snapshot
+type TemplateSummary struct {
+	ID          string `json:"id"`
+	Key         string `json:"key"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Source      string `json:"source"` // "database" or "file"
+	IsDefault   bool   `json:"is_default"`
+}
+
+// LoadFileBasedTemplates discovers and returns all file-based templates from the examples directory
+func LoadFileBasedTemplates(examplesDir string) ([]*TemplateSummary, error) {
+	var templates []*TemplateSummary
+
+	// Check if examples directory exists
+	info, err := os.Stat(examplesDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			// Directory doesn't exist yet, return empty list
+			return templates, nil
+		}
+		return nil, fmt.Errorf("failed to stat examples directory: %w", err)
+	}
+
+	if !info.IsDir() {
+		return nil, fmt.Errorf("examples path is not a directory")
+	}
+
+	// List subdirectories in examples
+	entries, err := ioutil.ReadDir(examplesDir)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read examples directory: %w", err)
+	}
+
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+
+		projectFile := filepath.Join(examplesDir, entry.Name(), "project.json")
+		data, err := ioutil.ReadFile(projectFile)
+		if err != nil {
+			log.Printf("Warning: failed to read template %s: %v", entry.Name(), err)
+			continue
+		}
+
+		// Parse the template data
+		var templateData TemplateData
+		if err := json.Unmarshal(data, &templateData); err != nil {
+			log.Printf("Warning: failed to parse template %s: %v", entry.Name(), err)
+			continue
+		}
+
+		// Create summary (using a hash of key as ID for consistency)
+		summary := &TemplateSummary{
+			ID:          uuid.NewSHA1(uuid.NameSpaceOID, []byte(templateData.Key)).String(),
+			Key:         templateData.Key,
+			Name:        templateData.Name,
+			Description: templateData.Description,
+			Source:      "file",
+			IsDefault:   true, // File-based templates are considered defaults
+		}
+
+		templates = append(templates, summary)
+	}
+
+	return templates, nil
+}
+
+// GetFileBasedTemplateSnapshot loads the full snapshot for a file-based template
+// It accepts either the template key or the derived ID
+func GetFileBasedTemplateSnapshot(examplesDir string, keyOrID string) ([]byte, error) {
+	// Find the matching template directory by key or ID
+	entries, err := ioutil.ReadDir(examplesDir)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read examples directory: %w", err)
+	}
+
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+
+		projectFile := filepath.Join(examplesDir, entry.Name(), "project.json")
+		data, err := ioutil.ReadFile(projectFile)
+		if err != nil {
+			continue
+		}
+
+		var templateData TemplateData
+		if err := json.Unmarshal(data, &templateData); err != nil {
+			continue
+		}
+
+		// Check if this matches by key or by ID
+		derivedID := uuid.NewSHA1(uuid.NameSpaceOID, []byte(templateData.Key)).String()
+		if templateData.Key == keyOrID || derivedID == keyOrID {
+			// Convert TemplateData back to ProjectExport format for the snapshot
+			export := exports.ProjectExport{
+				ExportedAt:   templateData.ExportedAt,
+				Version:      templateData.Version,
+				ProjectID:    templateData.Key,
+				ProjectName:  templateData.Name,
+				ProjectDesc:  templateData.Description,
+				Artifacts:    templateData.Artifacts,
+				Links:        templateData.Links,
+				Attachments:  templateData.Attachments,
+			}
+
+			return json.MarshalIndent(export, "", "  ")
+		}
+	}
+
+	return nil, fmt.Errorf("template not found: %s", keyOrID)
 }

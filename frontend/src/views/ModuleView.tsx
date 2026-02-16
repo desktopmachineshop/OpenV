@@ -5,7 +5,6 @@ import { ArtifactEditor } from '../components/ArtifactEditor';
 import { ArtifactList } from '../components/ArtifactList';
 import { ArtifactHeader } from '../components/ArtifactHeader';
 import { ArtifactDetails } from '../components/ArtifactDetails';
-import { LinkPanel } from '../components/LinkPanel';
 import { HelpSidebar } from '../components/HelpSidebar';
 import { Navbar } from '../components/Navbar';
 
@@ -967,32 +966,25 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
 
       <div>
         {!isBaselineView && isEditing && editingArtifact && (
-          <>
-            <ArtifactEditor
-              artifact={editingArtifact}
-              artifacts={artifacts}
-              onSave={handleUpdateArtifact}
-              onCancel={() => {
-                setIsEditing(false);
-                setEditingArtifact(undefined);
-              }}
-              attachments={attachments}
-              onUploadAttachment={handleUploadAttachment}
-              onDeleteAttachment={handleDeleteAttachment}
-              isUploadLoading={uploadingAttachmentId === editingArtifact.id}
-            />
-            <LinkPanel
-              artifacts={artifacts}
-              selectedArtifactId={editingArtifact.id}
-              onCreateLink={handleCreateLink}
-              links={allLinks}
-              title="Edit Artifact Links"
-              onSelectArtifact={(artifactId) => {
-                setIsEditing(false);
-                setSelectedArtifactId(artifactId);
-              }}
-            />
-          </>
+          <ArtifactEditor
+            artifact={editingArtifact}
+            artifacts={artifacts}
+            onSave={handleUpdateArtifact}
+            onCancel={() => {
+              setIsEditing(false);
+              setEditingArtifact(undefined);
+            }}
+            attachments={attachments}
+            onUploadAttachment={handleUploadAttachment}
+            onDeleteAttachment={handleDeleteAttachment}
+            isUploadLoading={uploadingAttachmentId === editingArtifact.id}
+            links={allLinks}
+            onCreateLink={handleCreateLink}
+            onDeleteLink={(linkId) => {
+              // Link deletion is now handled in edit mode
+              // The backend will process actual link deletion
+            }}
+          />
         )}
 
         {selectedArtifact && !isEditing && (

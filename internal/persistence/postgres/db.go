@@ -161,5 +161,57 @@ func InitSchema(db *sql.DB) error {
 		return fmt.Errorf("failed to add sort_order index: %w", err)
 	}
 
+	// Add versioning columns to links table for temporal tracking
+	const addLinkVersioningSQL = `
+	DO $$
+	BEGIN
+		IF NOT EXISTS (
+			SELECT 1 FROM information_schema.columns
+			WHERE table_name='links' AND column_name='valid_from'
+		) THEN
+			ALTER TABLE links ADD COLUMN valid_from TIMESTAMP NOT NULL DEFAULT NOW();
+			ALTER TABLE links ADD COLUMN valid_to TIMESTAMP;
+		END IF;
+	END $$;
+	`
+
+	_, err = db.Exec(addLinkVersioningSQL)
+	if err != nil {
+		return fmt.Errorf("failed to add link versioning columns: %w", err)
+	}
+
+	// Create indexes for link versioning
+	_, err = db.Exec(`CREATE INDEX IF NOT EXISTS idx_links_valid_to ON links(valid_to);`)
+	if err != nil {
+		return fmt.Errorf("failed to add links valid_to index: %w", err)
+	}
+
+	_, err = db.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_links_active ON links(id) WHERE valid_to IS NULL;`)
+	if err != nil {
+		return fmt.Errorf("failed to add links active index: %w", err)
+	}
+
+	// Create link_artifacts mapping table if it doesn't exist
+	const createLinkArtifactsSQL = `
+	CREATE TABLE IF NOT EXISTS link_artifacts (
+		link_id UUID NOT NULL,
+		artifact_id UUID NOT NULL,
+		artifact_version INT NOT NULL,
+		active BOOLEAN DEFAULT true,
+		created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+		PRIMARY KEY (link_id, artifact_id, artifact_version)
+	);
+	`
+
+	_, err = db.Exec(createLinkArtifactsSQL)
+	if err != nil {
+		return fmt.Errorf("failed to create link_artifacts table: %w", err)
+	}
+
+	_, err = db.Exec(`CREATE INDEX IF NOT EXISTS idx_link_artifacts_artifact ON link_artifacts(artifact_id, artifact_version);`)
+	if err != nil {
+		return fmt.Errorf("failed to add link_artifacts index: %w", err)
+	}
+
 	return nil
 }

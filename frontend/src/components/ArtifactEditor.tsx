@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { Artifact, Attachment } from '../api/client';
+import React, { useState, useEffect } from 'react';
+import { Artifact, Attachment, Link } from '../api/client';
 import { ImageGallery } from './ImageGallery';
+import { LinkPanel } from './LinkPanel';
 
 interface ArtifactEditorProps {
   artifact?: Artifact;
@@ -11,6 +12,9 @@ interface ArtifactEditorProps {
   onUploadAttachment?: (file: File) => void;
   onDeleteAttachment?: (attachmentId: string) => void;
   isUploadLoading?: boolean;
+  links?: Link[];
+  onCreateLink?: (link: Partial<Link>) => void;
+  onDeleteLink?: (linkId: string) => void;
 }
 
 export const ArtifactEditor: React.FC<ArtifactEditorProps> = ({
@@ -22,6 +26,9 @@ export const ArtifactEditor: React.FC<ArtifactEditorProps> = ({
   onUploadAttachment,
   onDeleteAttachment,
   isUploadLoading,
+  links = [],
+  onCreateLink,
+  onDeleteLink,
 }) => {
   const [formData, setFormData] = useState<Partial<Artifact>>(
     artifact || {
@@ -31,6 +38,16 @@ export const ArtifactEditor: React.FC<ArtifactEditorProps> = ({
       attributes: {},
     }
   );
+
+  // Track pending link changes during edit
+  const [currentLinks, setCurrentLinks] = useState<Link[]>(links || []);
+  const [pendingLinkAdds, setPendingLinkAdds] = useState<Partial<Link>[]>([]);
+  const [pendingLinkRemoves, setPendingLinkRemoves] = useState<string[]>([]);
+
+  // Update currentLinks when links prop changes
+  useEffect(() => {
+    setCurrentLinks(links || []);
+  }, [links]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -42,6 +59,32 @@ export const ArtifactEditor: React.FC<ArtifactEditorProps> = ({
     }));
   };
 
+  const handleCreateLinkFromEditor = (link: Partial<Link>) => {
+    // Add to pending additions (will be saved when Update is clicked)
+    setPendingLinkAdds((prev) => [...prev, link]);
+    // Add to current display
+    setCurrentLinks((prev) => [...prev, link as Link]);
+    // DO NOT call onCreateLink here - links are only persisted on Update
+  };
+
+  const handleDeleteLinkFromEditor = (linkId: string) => {
+    // Check if it's a newly added link (not yet persisted)
+    const isNewlyAdded = pendingLinkAdds.some((l) => l.id === linkId || (l.from_id && l.to_id && l.type));
+    
+    if (isNewlyAdded) {
+      // Remove from pending additions
+      setPendingLinkAdds((prev) => prev.filter((l) => l.id !== linkId));
+    } else {
+      // Mark existing link for removal (will be deleted when Update is clicked)
+      setPendingLinkRemoves((prev) => [...prev, linkId]);
+    }
+    
+    // Remove from current display
+    setCurrentLinks((prev) => prev.filter((l) => l.id !== linkId));
+    
+    // DO NOT call onDeleteLink here - deletions only happen on Update
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -49,7 +92,10 @@ export const ArtifactEditor: React.FC<ArtifactEditorProps> = ({
     const dataToSave = {
       ...formData,
       parent_id: formData.parent_id === '' ? null : formData.parent_id,
-    };
+      // Include link change information for backend to process
+      pendingLinkAdds,
+      pendingLinkRemoves,
+    } as any;
     
     onSave(dataToSave);
   };
@@ -161,6 +207,21 @@ export const ArtifactEditor: React.FC<ArtifactEditorProps> = ({
               isUploadLoading={isUploadLoading}
               showUpload={true}
             />
+          )}
+
+          {artifact && (
+            <div style={{ marginTop: '30px' }}>
+              <LinkPanel
+                artifacts={artifacts}
+                selectedArtifactId={artifact.id}
+                onCreateLink={handleCreateLinkFromEditor}
+                links={currentLinks}
+                title="Manage Links (Edit Mode)"
+                readOnly={false}
+                onSelectArtifact={() => {}}
+                onDeleteLink={handleDeleteLinkFromEditor}
+              />
+            </div>
           )}
 
           {!artifact && (

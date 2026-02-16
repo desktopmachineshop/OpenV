@@ -8,9 +8,10 @@ RUN npm install --legacy-peer-deps
 
 COPY . .
 
-EXPOSE 3000
+# Accept API URL as build argument
+ARG REACT_APP_API_URL=http://localhost:8080
+ENV REACT_APP_API_URL=$REACT_APP_API_URL
 
-# Set default API URL, can be overridden by environment variable
-ENV REACT_APP_API_URL=http://localhost:8080
+EXPOSE 3000
 
 CMD ["sh", "-c", "npm start"]

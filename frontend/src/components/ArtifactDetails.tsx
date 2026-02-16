@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Artifact, Link, Attachment } from '../api/client';
+import { linkAPI } from '../api/client';
 import { ImageGallery } from './ImageGallery';
 
 interface ArtifactDetailsProps {
@@ -23,15 +24,118 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
   previewVersion,
   onClosePreview,
 }) => {
+  const [currentVersionLinks, setCurrentVersionLinks] = useState<Link[]>(links || []);
+  const [previewVersionLinks, setPreviewVersionLinks] = useState<Link[]>([]);
+  const [loadingLinks, setLoadingLinks] = useState(false);
+  const [deletingLinkId, setDeletingLinkId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  
+  // Attachment filtering for versions
+  const [currentVersionAttachments, setCurrentVersionAttachments] = useState<Attachment[]>(attachments || []);
+  const [previewVersionAttachments, setPreviewVersionAttachments] = useState<Attachment[]>([]);
+
+  // Filter attachments based on version timestamp
+  useEffect(() => {
+    if (previewVersion) {
+      // For preview version, show only attachments created before or at the version's time
+      const previewTime = new Date(previewVersion.updated_at).getTime();
+      const previewAtts = (attachments || []).filter(att => 
+        new Date(att.created_at).getTime() <= previewTime
+      );
+      setPreviewVersionAttachments(previewAtts);
+      
+      // For current version, show all current attachments
+      setCurrentVersionAttachments(attachments || []);
+    } else {
+      setCurrentVersionAttachments(attachments || []);
+      setPreviewVersionAttachments([]);
+    }
+  }, [previewVersion, attachments]);
+
+  // Load version-specific links when artifact versions change
+  useEffect(() => {
+    // Always fetch links for the current artifact version (real-time from API)
+    linkAPI.listForArtifactVersion(artifact.id, artifact.version)
+      .then(res => {
+        // Deduplicate links by ID
+        const links = res.data || [];
+        const uniqueLinks = Array.from(new Map(links.map(link => [link.id, link])).values());
+        setCurrentVersionLinks(uniqueLinks);
+      })
+      .catch(err => {
+        console.error('Failed to fetch current version links:', err);
+        setCurrentVersionLinks([]);
+      });
+
+    // If in preview mode, also fetch preview version links
+    if (previewVersion) {
+      setLoadingLinks(true);
+      linkAPI.listForArtifactVersion(previewVersion.id, previewVersion.version)
+        .then(res => {
+          // Deduplicate links by ID
+          const links = res.data || [];
+          const uniqueLinks = Array.from(new Map(links.map(link => [link.id, link])).values());
+          setPreviewVersionLinks(uniqueLinks);
+        })
+        .catch(() => setPreviewVersionLinks([]))
+        .finally(() => setLoadingLinks(false));
+    } else {
+      setPreviewVersionLinks([]);
+    }
+  }, [artifact.id, artifact.version, previewVersion]);
+  // Handle link deletion
+  const handleDeleteLink = async (linkId: string) => {
+    console.log('handleDeleteLink called with linkId:', linkId);
+    
+    if (!window.confirm('Are you sure you want to delete this link?')) {
+      console.log('User cancelled delete confirmation');
+      return;
+    }
+
+    console.log('User confirmed deletion, proceeding...');
+    setDeletingLinkId(linkId);
+    setDeleteError(null);
+    
+    try {
+      console.log('Calling linkAPI.delete...');
+      await linkAPI.delete(linkId);
+      console.log('Delete successful!');
+      
+      // Refetch links after deletion
+      const updatedCurrentLinks = currentVersionLinks.filter(l => l.id !== linkId);
+      const updatedPreviewLinks = previewVersionLinks.filter(l => l.id !== linkId);
+      
+      setCurrentVersionLinks(updatedCurrentLinks);
+      setPreviewVersionLinks(updatedPreviewLinks);
+      
+      // Also reload from props
+      const updatedPropsLinks = (links || []).filter(l => l.id !== linkId);
+      setCurrentVersionLinks(previewVersion ? updatedCurrentLinks : updatedPropsLinks);
+    } catch (error) {
+      console.error('Delete failed with error:', error);
+      setDeleteError(`Failed to delete link: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setDeletingLinkId(null);
+    }
+  };
+
   // Get the title of an artifact by ID
   const getArtifactTitle = (id: string): string => {
     const art = artifacts.find((a) => a.id === id);
     return art ? art.title : id.substring(0, 8);
   };
 
-  // Filter links related to this artifact
-  const outgoingLinks = links.filter((l) => l.from_id === artifact.id);
-  const incomingLinks = links.filter((l) => l.to_id === artifact.id);
+  // Filter links related to current version
+  const currentOutgoingLinks = (currentVersionLinks || []).filter((l) => l.from_id === artifact.id);
+  const currentIncomingLinks = (currentVersionLinks || []).filter((l) => l.to_id === artifact.id);
+
+  // Filter links related to preview version
+  const previewOutgoingLinks = (previewVersionLinks || []).filter((l) => l.from_id === previewVersion?.id);
+  const previewIncomingLinks = (previewVersionLinks || []).filter((l) => l.to_id === previewVersion?.id);
+
+  // Legacy: Filter links related to this artifact (for non-preview mode)
+  const outgoingLinks = (links || []).filter((l) => l.from_id === artifact.id);
+  const incomingLinks = (links || []).filter((l) => l.to_id === artifact.id);
 
   // Group links by type
   const groupLinksByType = (linkList: Link[]): Record<string, Link[]> => {
@@ -44,58 +148,98 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
     }, {} as Record<string, Link[]>);
   };
 
+  const currentOutgoingByType = groupLinksByType(currentOutgoingLinks);
+  const currentIncomingByType = groupLinksByType(currentIncomingLinks);
+  const previewOutgoingByType = groupLinksByType(previewOutgoingLinks);
+  const previewIncomingByType = groupLinksByType(previewIncomingLinks);
+
+  // Legacy: for non-preview mode
   const outgoingByType = groupLinksByType(outgoingLinks);
   const incomingByType = groupLinksByType(incomingLinks);
 
   // Render a group of links by type
-  const renderLinkGroup = (linksByType: Record<string, Link[]>, direction: 'outgoing' | 'incoming') => {
+  const renderLinkGroup = (linksByType: Record<string, Link[]>, direction: 'outgoing' | 'incoming', isPreview: boolean = false) => {
     const colorScheme = direction === 'outgoing' 
       ? { header: '#27ae60', bg: '#f0f8f4', border: '#27ae60' }
       : { header: '#2980b9', bg: '#f0f4f8', border: '#2980b9' };
 
-    return Object.entries(linksByType).map(([linkType, typeLinks]) => (
-      <div key={linkType} style={{ marginBottom: '12px' }}>
-        <strong style={{ color: colorScheme.header, fontSize: '13px' }}>
-          {linkType} ({typeLinks.length})
-        </strong>
-        <div style={{ marginTop: '6px' }}>
-          {typeLinks.map((link) => {
+    return Object.entries(linksByType).map(([linkType, typeLinks]) => {
+      // Deduplicate within each type group by link ID
+      const uniqueTypeLinks = Array.from(new Map(typeLinks.map(link => [link.id, link])).values());
+      
+      return (
+        <div key={linkType} style={{ marginBottom: '12px' }}>
+          <strong style={{ color: colorScheme.header, fontSize: '13px' }}>
+            {linkType} ({uniqueTypeLinks.length})
+          </strong>
+          <div style={{ marginTop: '6px' }}>
+            {uniqueTypeLinks.map((link) => {
             const linkedArtifactId = direction === 'outgoing' ? link.to_id : link.from_id;
-            return (
-              <div
-                key={link.id}
-                style={{
-                  padding: '8px',
-                  marginBottom: '5px',
-                  backgroundColor: colorScheme.bg,
-                  borderLeft: `3px solid ${colorScheme.border}`,
-                  borderRadius: '2px',
-                  fontSize: '12px',
-                  cursor: 'pointer',
-                  transition: 'background-color 0.2s ease',
-                }}
-                onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLElement).style.opacity = '0.8';
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLElement).style.opacity = '1';
-                }}
-                onClick={() => onSelectArtifact?.(linkedArtifactId)}
-              >
-                <strong>
-                  <span style={{ color: colorScheme.header, textDecoration: 'underline', cursor: 'pointer' }}>
-                    {direction === 'outgoing' ? getArtifactTitle(link.to_id) : getArtifactTitle(link.from_id)}
-                  </span>
-                </strong>
-                <div style={{ marginTop: '3px', color: '#555', fontSize: '11px' }}>
-                  ID: {linkedArtifactId.substring(0, 8)}...
+              return (
+                <div
+                  key={link.id}
+                  style={{
+                    padding: '8px',
+                    marginBottom: '5px',
+                    backgroundColor: colorScheme.bg,
+                    borderLeft: `3px solid ${colorScheme.border}`,
+                    borderRadius: '2px',
+                    fontSize: '12px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    transition: 'background-color 0.2s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    (e.currentTarget as HTMLElement).style.opacity = '0.8';
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLElement).style.opacity = '1';
+                  }}
+                >
+                  <div
+                    style={{
+                      flex: 1,
+                      cursor: 'pointer',
+                    }}
+                    onClick={() => onSelectArtifact?.(linkedArtifactId)}
+                  >
+                    <strong>
+                      <span style={{ color: colorScheme.header, textDecoration: 'underline', cursor: 'pointer' }}>
+                        {direction === 'outgoing' ? getArtifactTitle(link.to_id) : getArtifactTitle(link.from_id)}
+                      </span>
+                    </strong>
+                    <div style={{ marginTop: '3px', color: '#555', fontSize: '11px' }}>
+                      ID: {linkedArtifactId.substring(0, 8)}...
+                    </div>
+                  </div>
+                  {!isPreview && (
+                    <button
+                      onClick={() => handleDeleteLink(link.id)}
+                      disabled={deletingLinkId === link.id}
+                      style={{
+                        marginLeft: '8px',
+                        padding: '4px 8px',
+                        backgroundColor: '#e74c3c',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '3px',
+                        cursor: deletingLinkId === link.id ? 'not-allowed' : 'pointer',
+                        fontSize: '11px',
+                        opacity: deletingLinkId === link.id ? 0.6 : 1,
+                        transition: 'opacity 0.2s ease',
+                      }}
+                    >
+                      {deletingLinkId === link.id ? 'Deleting...' : 'Delete'}
+                    </button>
+                  )}
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
-      </div>
-    ));
+      );
+    });
   };
 
   return (
@@ -172,12 +316,51 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
                     {artifact.body || '(empty)'}
                   </p>
                 </div>
-                {artifact.attributes && Object.keys(artifact.attributes).length > 0 && (
+                {artifact.attributes && Object.keys(artifact.attributes).filter(k => !['links_snapshot', 'images_snapshot'].includes(k)).length > 0 && (
                   <div style={{ marginBottom: '12px' }}>
                     <strong>Attributes:</strong>
                     <pre style={{ fontSize: '11px', backgroundColor: '#ecf0f1', padding: '8px', borderRadius: '3px', margin: '4px 0', overflow: 'auto' }}>
-                      {JSON.stringify(artifact.attributes, null, 2)}
+                      {JSON.stringify(
+                        Object.fromEntries(
+                          Object.entries(artifact.attributes).filter(([k]) => !['links_snapshot', 'images_snapshot'].includes(k))
+                        ),
+                        null,
+                        2
+                      )}
                     </pre>
+                  </div>
+                )}                {currentVersionAttachments.length > 0 && (
+                  <div style={{ marginBottom: '12px' }}>
+                    <strong>Images:</strong>
+                    <div style={{ marginTop: '6px' }}>
+                      <ImageGallery 
+                        artifactId={artifact.id} 
+                        attachments={currentVersionAttachments}
+                        onDelete={() => {}}
+                        showUpload={false}
+                        thumbnailSize={60}
+                      />
+                    </div>
+                  </div>
+                )}                {(currentOutgoingLinks.length > 0 || currentIncomingLinks.length > 0) && (
+                  <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #dcdde1' }}>
+                    <strong style={{ fontSize: '12px', color: '#27ae60', marginBottom: '6px', display: 'block' }}>Links</strong>
+                    {currentOutgoingLinks.length > 0 && (
+                      <div style={{ marginBottom: '8px' }}>
+                        <span style={{ fontSize: '11px', color: '#27ae60', fontWeight: 'bold' }}>↓ From ({currentOutgoingLinks.length})</span>
+                        <div style={{ marginTop: '4px' }}>
+                          {renderLinkGroup(currentOutgoingByType, 'outgoing', true)}
+                        </div>
+                      </div>
+                    )}
+                    {currentIncomingLinks.length > 0 && (
+                      <div>
+                        <span style={{ fontSize: '11px', color: '#2980b9', fontWeight: 'bold' }}>↑ To ({currentIncomingLinks.length})</span>
+                        <div style={{ marginTop: '4px' }}>
+                          {renderLinkGroup(currentIncomingByType, 'incoming', true)}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
                 <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #dcdde1', fontSize: '11px', color: '#7f8c8d' }}>
@@ -218,12 +401,53 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
                     {previewVersion.body || '(empty)'}
                   </p>
                 </div>
-                {previewVersion.attributes && Object.keys(previewVersion.attributes).length > 0 && (
+                {previewVersion.attributes && Object.keys(previewVersion.attributes).filter(k => !['links_snapshot', 'images_snapshot'].includes(k)).length > 0 && (
                   <div style={{ marginBottom: '12px' }}>
                     <strong>Attributes:</strong>
                     <pre style={{ fontSize: '11px', backgroundColor: '#ecf0f1', padding: '8px', borderRadius: '3px', margin: '4px 0', overflow: 'auto' }}>
-                      {JSON.stringify(previewVersion.attributes, null, 2)}
+                      {JSON.stringify(
+                        Object.fromEntries(
+                          Object.entries(previewVersion.attributes).filter(([k]) => !['links_snapshot', 'images_snapshot'].includes(k))
+                        ),
+                        null,
+                        2
+                      )}
                     </pre>
+                  </div>
+                )}
+                {previewVersionAttachments.length > 0 && (
+                  <div style={{ marginBottom: '12px' }}>
+                    <strong>Images:</strong>
+                    <div style={{ marginTop: '6px' }}>
+                      <ImageGallery 
+                        artifactId={previewVersion.id} 
+                        attachments={previewVersionAttachments}
+                        onDelete={() => {}}
+                        showUpload={false}
+                        thumbnailSize={60}
+                      />
+                    </div>
+                  </div>
+                )}
+                {(previewOutgoingLinks.length > 0 || previewIncomingLinks.length > 0) && (
+                  <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #dcdde1' }}>
+                    <strong style={{ fontSize: '12px', color: '#2980b9', marginBottom: '6px', display: 'block' }}>Links</strong>
+                    {previewOutgoingLinks.length > 0 && (
+                      <div style={{ marginBottom: '8px' }}>
+                        <span style={{ fontSize: '11px', color: '#27ae60', fontWeight: 'bold' }}>↓ From ({previewOutgoingLinks.length})</span>
+                        <div style={{ marginTop: '4px' }}>
+                          {renderLinkGroup(previewOutgoingByType, 'outgoing', true)}
+                        </div>
+                      </div>
+                    )}
+                    {previewIncomingLinks.length > 0 && (
+                      <div>
+                        <span style={{ fontSize: '11px', color: '#2980b9', fontWeight: 'bold' }}>↑ To ({previewIncomingLinks.length})</span>
+                        <div style={{ marginTop: '4px' }}>
+                          {renderLinkGroup(previewIncomingByType, 'incoming', true)}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
                 <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #dcdde1', fontSize: '11px', color: '#7f8c8d' }}>
@@ -279,7 +503,7 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
         <strong>Description:</strong>
         <p style={{ marginTop: '8px', whiteSpace: 'pre-wrap' }}>{artifact.body}</p>
       </div>
-      {artifact.attributes && Object.keys(artifact.attributes).length > 0 && (
+      {artifact.attributes && Object.keys(artifact.attributes).filter(k => !['links_snapshot', 'images_snapshot'].includes(k)).length > 0 && (
         <div>
           <strong>Attributes:</strong>
           <pre style={{ 
@@ -290,40 +514,48 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
             overflow: 'auto',
             fontSize: '12px'
           }}>
-            {JSON.stringify(artifact.attributes, null, 2)}
+            {JSON.stringify(
+              Object.fromEntries(
+                Object.entries(artifact.attributes).filter(([k]) => !['links_snapshot', 'images_snapshot'].includes(k))
+              ),
+              null,
+              2
+            )}
           </pre>
         </div>
       )}
       
       {/* Images Gallery */}
       {attachments && attachments.length > 0 && (
-        <ImageGallery 
-          artifactId={artifact.id} 
-          attachments={attachments}
-          onDelete={onDeleteAttachment || (() => {})}
-          showUpload={false}
-        />
+        <div style={{ marginBottom: '15px' }}>
+          <ImageGallery 
+            artifactId={artifact.id} 
+            attachments={attachments}
+            onDelete={onDeleteAttachment || (() => {})}
+            showUpload={false}
+          />
+        </div>
       )}
 
       {/* Links Section */}
-      {(outgoingLinks.length > 0 || incomingLinks.length > 0) && (
-        <div style={{ marginTop: '20px', paddingTop: '15px', borderTop: '1px solid #ddd' }}>
+      {(currentOutgoingLinks.length > 0 || currentIncomingLinks.length > 0) && (
+        <div style={{ marginTop: '30px', paddingTop: '15px', borderTop: '1px solid #ddd' }}>
           <h4 style={{ marginTop: 0, marginBottom: '12px' }}>Traceability Links</h4>
           
-          {outgoingLinks.length > 0 && (
+          {currentOutgoingLinks.length > 0 && (
             <div style={{ marginBottom: '15px' }}>
-              <strong style={{ color: '#27ae60', fontSize: '13px' }}>↓ Links From This Artifact ({outgoingLinks.length})</strong>
+              <strong style={{ color: '#27ae60', fontSize: '13px' }}>↓ Links From This Artifact ({currentOutgoingLinks.length})</strong>
               <div style={{ marginTop: '8px' }}>
-                {renderLinkGroup(outgoingByType, 'outgoing')}
+                {renderLinkGroup(currentOutgoingByType, 'outgoing', true)}
               </div>
             </div>
           )}
           
-          {incomingLinks.length > 0 && (
+          {currentIncomingLinks.length > 0 && (
             <div>
-              <strong style={{ color: '#2980b9', fontSize: '13px' }}>↑ Links To This Artifact ({incomingLinks.length})</strong>
+              <strong style={{ color: '#2980b9', fontSize: '13px' }}>↑ Links To This Artifact ({currentIncomingLinks.length})</strong>
               <div style={{ marginTop: '8px' }}>
-                {renderLinkGroup(incomingByType, 'incoming')}
+                {renderLinkGroup(currentIncomingByType, 'incoming', true)}
               </div>
             </div>
           )}

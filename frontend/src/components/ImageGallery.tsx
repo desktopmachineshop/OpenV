@@ -10,6 +10,7 @@ interface ImageGalleryProps {
   onUpload?: (file: File) => void;
   isUploadLoading?: boolean;
   showUpload?: boolean; // Controls whether upload box is displayed
+  thumbnailSize?: number; // Custom thumbnail size in pixels (default 120)
 }
 
 export const ImageGallery: React.FC<ImageGalleryProps> = ({
@@ -19,6 +20,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
   onUpload,
   isUploadLoading = false,
   showUpload = false,
+  thumbnailSize = 120,
 }) => {
   const [selectedImage, setSelectedImage] = useState<Attachment | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -88,7 +90,12 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
     return (
       <div className="image-gallery">
         <h4 className="gallery-title">Images</h4>
-        <div className="gallery-grid">
+        <div 
+          className="gallery-grid"
+          style={{
+            gridTemplateColumns: `repeat(auto-fill, minmax(${thumbnailSize}px, 1fr))`,
+          }}
+        >
           <div
             className="gallery-upload-item"
             onDragOver={handleDragOver}
@@ -121,7 +128,12 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
     <>
       <div className="image-gallery">
         <h4 className="gallery-title">Images ({attachments.length})</h4>
-        <div className="gallery-grid">
+        <div 
+          className="gallery-grid"
+          style={{
+            gridTemplateColumns: `repeat(auto-fill, minmax(${ thumbnailSize}px, 1fr))`,
+          }}
+        >
           {attachments.map((attachment) => (
             <div
               key={attachment.id}

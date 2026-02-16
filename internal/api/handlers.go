@@ -77,6 +77,7 @@ func (h *Handler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/artifacts/{id}", h.DeleteArtifact).Methods("DELETE")
 	router.HandleFunc("/api/v1/artifacts/{id}/versions", h.GetArtifactVersions).Methods("GET")
 	router.HandleFunc("/api/v1/artifacts/{id}/restore", h.RestoreArtifactVersion).Methods("POST")
+	router.HandleFunc("/api/v1/artifacts/{id}/links", h.GetArtifactVersionLinks).Methods("GET")
 
 	// Link endpoints
 	router.HandleFunc("/api/v1/links", h.CreateLink).Methods("POST")
@@ -164,10 +165,71 @@ func (h *Handler) UpdateArtifact(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Ensure attributes is initialized
+	if req.Attributes == nil {
+		req.Attributes = make(map[string]interface{})
+	}
+
+	// Process link changes FIRST (add/remove from table)
+	var affectedArtifactIDs []string
+	if len(req.PendingLinkAdds) > 0 || len(req.PendingLinkRemoves) > 0 {
+		// Convert string array to interface array for removal IDs
+		removeInterfaceArray := make([]interface{}, len(req.PendingLinkRemoves))
+		for i, v := range req.PendingLinkRemoves {
+			removeInterfaceArray[i] = v
+		}
+		affected, err := h.processManagedLinkChanges(id, req.PendingLinkAdds, removeInterfaceArray)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Failed to process link changes: %v", err), http.StatusInternalServerError)
+			return
+		}
+		affectedArtifactIDs = affected
+
+		// After processing link changes, fetch current links and store in snapshot (deduplicated)
+		seenLinkIDs := make(map[string]bool)
+		allLinks := make([]interface{}, 0)
+		
+		incomingLinks, err := h.linkService.GetLinksTo(id)
+		if err == nil {
+			for _, link := range incomingLinks {
+				if !seenLinkIDs[link.ID] {
+					seenLinkIDs[link.ID] = true
+					allLinks = append(allLinks, link)
+				}
+			}
+		}
+		
+		outgoingLinks, err := h.linkService.GetLinksFrom(id)
+		if err == nil {
+			for _, link := range outgoingLinks {
+				if !seenLinkIDs[link.ID] {
+					seenLinkIDs[link.ID] = true
+					allLinks = append(allLinks, link)
+				}
+			}
+		}
+		
+		if len(allLinks) > 0 {
+			req.Attributes["links_snapshot"] = allLinks
+		}
+	}
+
+	// Update the artifact ONCE with all changes including link snapshot
+	// This single update will create ONE new version
 	artifact, err := h.artifactService.UpdateArtifact(id, req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
+	}
+
+	// Auto-version any artifacts that had link changes
+	// These are OTHER artifacts affected by link changes, not the one we just updated
+	if len(affectedArtifactIDs) > 0 {
+		err = h.autoVersionLinkedArtifacts(affectedArtifactIDs)
+		if err != nil {
+			// Log but don't fail the request
+			fmt.Printf("Warning: failed to auto-version linked artifacts: %v\n", err)
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -221,6 +283,101 @@ func (h *Handler) RestoreArtifactVersion(w http.ResponseWriter, r *http.Request)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(artifact)
+}
+
+// GetArtifactVersionLinks retrieves links for a specific artifact version
+func (h *Handler) GetArtifactVersionLinks(w http.ResponseWriter, r *http.Request) {
+	id := mux.Vars(r)["id"]
+	versionStr := r.URL.Query().Get("version")
+	
+	// If no version specified, return current links from link table
+	if versionStr == "" {
+		outgoingLinks, err := h.linkService.GetLinksFrom(id)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		incomingLinks, err := h.linkService.GetLinksTo(id)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		
+		// Combine both incoming and outgoing links and deduplicate by ID
+		seenLinkIDs := make(map[string]bool)
+		allLinks := make([]*links.Link, 0)
+		
+		// Add outgoing links
+		for _, link := range outgoingLinks {
+			if !seenLinkIDs[link.ID] {
+				seenLinkIDs[link.ID] = true
+				allLinks = append(allLinks, link)
+			}
+		}
+		
+		// Add incoming links (deduplicated)
+		for _, link := range incomingLinks {
+			if !seenLinkIDs[link.ID] {
+				seenLinkIDs[link.ID] = true
+				allLinks = append(allLinks, link)
+			}
+		}
+		
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(allLinks)
+		return
+	}
+	
+	// Parse version number
+	version := 0
+	if _, err := fmt.Sscanf(versionStr, "%d", &version); err != nil {
+		http.Error(w, "invalid version parameter", http.StatusBadRequest)
+		return
+	}
+	
+	// Get the artifact version from database
+	versions, err := h.artifactService.GetArtifactVersions(id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	
+	// Find the specific version
+	var artifactVersion *artifacts.Artifact
+	for _, v := range versions {
+		if v.Version == version {
+			artifactVersion = v
+			break
+		}
+	}
+	
+	if artifactVersion == nil {
+		http.Error(w, "artifact version not found", http.StatusNotFound)
+		return
+	}
+	
+	// Extract links_snapshot from artifact attributes
+	var linksSnapshot []*links.Link
+	if artifactVersion.Attributes != nil {
+		if snapshot, ok := artifactVersion.Attributes["links_snapshot"]; ok {
+			// Convert interface{} to []*links.Link
+			if snapshotData, ok := snapshot.([]interface{}); ok {
+				linksSnapshot = make([]*links.Link, 0, len(snapshotData))
+				for _, linkData := range snapshotData {
+					// Each linkData should be a map or already a Link struct
+					if linkBytes, err := json.Marshal(linkData); err == nil {
+						var link links.Link
+						if err := json.Unmarshal(linkBytes, &link); err == nil {
+							linksSnapshot = append(linksSnapshot, &link)
+						}
+					}
+				}
+			}
+		}
+	}
+	
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(linksSnapshot)
 }
 
 // CreateLink creates a new link
@@ -473,16 +630,82 @@ type createTemplateRequest struct {
 	Description string `json:"description"`
 }
 
-// ListTemplates returns available templates.
+// TemplateListResponse wraps template data with source information
+type TemplateListResponse struct {
+	ID          string    `json:"id"`
+	Key         string    `json:"key,omitempty"`
+	Name        string    `json:"name"`
+	Description string    `json:"description"`
+	Source      string    `json:"source"` // "database" or "file"
+	IsDefault   bool      `json:"is_default"`
+	CreatedAt   time.Time `json:"created_at"`
+}
+
+// ListTemplates returns available templates (both database and file-based).
 func (h *Handler) ListTemplates(w http.ResponseWriter, r *http.Request) {
-	templatesList, err := h.templateService.ListTemplates()
+	// Get database templates
+	dbTemplates, err := h.templateService.ListTemplates()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
+	// Convert DB templates to response format
+	var allTemplates []TemplateListResponse
+	for _, t := range dbTemplates {
+		allTemplates = append(allTemplates, TemplateListResponse{
+			ID:          t.ID,
+			Key:         t.Key,
+			Name:        t.Name,
+			Description: t.Description,
+			Source:      "database",
+			IsDefault:   t.IsDefault,
+			CreatedAt:   t.CreatedAt,
+		})
+	}
+
+	// Get file-based templates
+	// Try different locations where examples might be
+	var examplesDir string
+	possiblePaths := []string{
+		"examples",
+		"./examples",
+		"/root/examples",
+	}
+
+	for _, path := range possiblePaths {
+		if info, err := os.Stat(path); err == nil && info.IsDir() {
+			examplesDir = path
+			break
+		}
+	}
+
+	var fileTemplates []*templates.TemplateSummary
+	if examplesDir != "" {
+		var err error
+		fileTemplates, err = templates.LoadFileBasedTemplates(examplesDir)
+		if err != nil {
+			// Log the error but continue - file-based templates are optional
+			fmt.Printf("Warning: failed to load file-based templates from %s: %v\n", examplesDir, err)
+		}
+	}
+
+	if fileTemplates != nil {
+		for _, ft := range fileTemplates {
+			allTemplates = append(allTemplates, TemplateListResponse{
+				ID:          ft.ID,
+				Key:         ft.Key,
+				Name:        ft.Name,
+				Description: ft.Description,
+				Source:      ft.Source,
+				IsDefault:   ft.IsDefault,
+				CreatedAt:   time.Now(),
+			})
+		}
+	}
+
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(templatesList)
+	json.NewEncoder(w).Encode(allTemplates)
 }
 
 // CreateTemplate saves a project as a template.
@@ -524,7 +747,52 @@ func (h *Handler) CreateProjectFromTemplate(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	projectID, err := h.templateService.CreateProjectFromTemplate(templateID, req.Name, req.Description)
+	// Try to load file-based template first
+	// Check multiple possible locations
+	var examplesDir string
+	possiblePaths := []string{
+		"examples",
+		"./examples",
+		"/root/examples",
+	}
+
+	for _, path := range possiblePaths {
+		if info, err := os.Stat(path); err == nil && info.IsDir() {
+			examplesDir = path
+			break
+		}
+	}
+
+	var snapshot []byte
+	var err error
+	
+	if examplesDir != "" {
+		// Try to load file-based template first
+		snapshot, err = templates.GetFileBasedTemplateSnapshot(examplesDir, templateID)
+	}
+
+	if snapshot == nil || err != nil {
+		// Fall back to database template
+		projectID, dbErr := h.templateService.CreateProjectFromTemplate(templateID, req.Name, req.Description)
+		if dbErr != nil {
+			http.Error(w, dbErr.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		project, err := h.projectService.GetProject(projectID)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		json.NewEncoder(w).Encode(project)
+		return
+	}
+
+	// Use file-based template
+	projectID, err := h.exportService.ImportProjectWithOverrides(snapshot, req.Name, req.Description)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -762,4 +1030,163 @@ func isImageMimeType(mimeType string) bool {
 		"image/bmp":       true,
 	}
 	return validTypes[mimeType]
+}
+// processManagedLinkChanges handles link additions and removals
+// Returns list of artifact IDs that had links change (for auto-versioning)
+func (h *Handler) processManagedLinkChanges(fromArtifactID string, toAdd, toRemove []interface{}) ([]string, error) {
+	affectedArtifactIDs := make(map[string]bool) // Use map to avoid duplicates
+
+	// Process removals (hard delete from table)
+	for _, linkIDInterface := range toRemove {
+		linkID, ok := linkIDInterface.(string)
+		if !ok {
+			continue
+		}
+		
+		// Get the link before deleting to determine affected artifact
+		link, err := h.linkService.GetLink(linkID)
+		if err == nil && link != nil {
+			// Mark the 'to' artifact as affected (it had an incoming link removed)
+			if link.ToID == fromArtifactID {
+				affectedArtifactIDs[link.FromID] = true
+			} else {
+				affectedArtifactIDs[link.ToID] = true
+			}
+		}
+		
+		// Hard delete the link
+		err = h.linkService.DeleteLink(linkID)
+		if err != nil {
+			fmt.Printf("Warning: failed to delete link %s: %v\n", linkID, err)
+		}
+	}
+
+	// Process additions (create new links)
+	for _, linkDataInterface := range toAdd {
+		linkDataMap, ok := linkDataInterface.(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		fromID, ok := linkDataMap["from_id"].(string)
+		if !ok {
+			continue
+		}
+		toID, ok := linkDataMap["to_id"].(string)
+		if !ok {
+			continue
+		}
+		linkType, ok := linkDataMap["type"].(string)
+		if !ok {
+			continue
+		}
+
+		// Get or create attributes
+		var attributes map[string]interface{}
+		if attrs, ok := linkDataMap["attributes"].(map[string]interface{}); ok {
+			attributes = attrs
+		} else {
+			attributes = make(map[string]interface{})
+		}
+
+		// Create the link
+		linkReq := links.CreateLinkRequest{
+			FromID:     fromID,
+			ToID:       toID,
+			Type:       linkType,
+			Attributes: attributes,
+		}
+		link := links.NewLink(linkReq)
+		err := h.linkService.CreateLink(link)
+		if err != nil {
+			fmt.Printf("Warning: failed to create link: %v\n", err)
+			continue
+		}
+
+		// Mark both artifacts as affected
+		affectedArtifactIDs[fromID] = true
+		affectedArtifactIDs[toID] = true
+	}
+
+	// Convert map to slice
+	result := make([]string, 0, len(affectedArtifactIDs))
+	for id := range affectedArtifactIDs {
+		if id != fromArtifactID { // Don't include the artifact we're currently updating
+			result = append(result, id)
+		}
+	}
+
+	return result, nil
+}
+
+// autoVersionLinkedArtifacts creates new versions for artifacts that had link changes
+func (h *Handler) autoVersionLinkedArtifacts(affectedArtifactIDs []string) error {
+	fmt.Printf("DEBUG autoVersionLinkedArtifacts: Processing %d affected artifacts: %v\n", len(affectedArtifactIDs), affectedArtifactIDs)
+	
+	for _, artifactID := range affectedArtifactIDs {
+		artifact, err := h.artifactService.GetArtifact(artifactID)
+		if err != nil {
+			fmt.Printf("Warning: could not find artifact %s for auto-versioning: %v\n", artifactID, err)
+			continue
+		}
+
+		// Get current links for this artifact and deduplicate
+		seenLinkIDs := make(map[string]bool)
+		allLinks := make([]interface{}, 0)
+		
+		incomingLinks, err := h.linkService.GetLinksTo(artifactID)
+		if err != nil {
+			fmt.Printf("Warning: could not get incoming links for %s: %v\n", artifactID, err)
+			continue
+		}
+
+		outgoingLinks, err := h.linkService.GetLinksFrom(artifactID)
+		if err != nil {
+			fmt.Printf("Warning: could not get outgoing links for %s: %v\n", artifactID, err)
+			continue
+		}
+
+		// Combine all links with deduplication
+		for _, link := range incomingLinks {
+			if !seenLinkIDs[link.ID] {
+				seenLinkIDs[link.ID] = true
+				allLinks = append(allLinks, link)
+			}
+		}
+		for _, link := range outgoingLinks {
+			if !seenLinkIDs[link.ID] {
+				seenLinkIDs[link.ID] = true
+				allLinks = append(allLinks, link)
+			}
+		}
+
+		// Ensure attributes is initialized
+		attributes := artifact.Attributes
+		if attributes == nil {
+			attributes = make(map[string]interface{})
+		}
+
+		// Merge link snapshot into attributes
+		attributes["links_snapshot"] = allLinks
+
+		// Create a new version with updated link snapshot
+		updateReq := artifacts.UpdateArtifactRequest{
+			ParentID:   artifact.ParentID,
+			Type:       artifact.Type,
+			Title:      artifact.Title,
+			Body:       artifact.Body,
+			SortOrder:  &artifact.SortOrder,
+			Attributes: attributes,
+		}
+
+		_, err = h.artifactService.UpdateArtifact(artifactID, updateReq)
+		if err != nil {
+			fmt.Printf("Warning: failed to auto-version artifact %s: %v\n", artifactID, err)
+			continue
+		}
+
+		fmt.Printf("Auto-versioned artifact %s due to link changes; incoming links: %d, outgoing links: %d\n", artifactID, len(incomingLinks), len(outgoingLinks))
+	}
+
+	return nil
 }
