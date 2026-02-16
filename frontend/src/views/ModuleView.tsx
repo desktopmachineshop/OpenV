@@ -139,6 +139,24 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
     }
   };
 
+  // Handle artifact selection with automatic exit from edit/preview modes
+  const handleSelectArtifact = (artifactId: string | null) => {
+    // If selecting a different artifact than currently selected
+    if (artifactId !== selectedArtifactId) {
+      // Exit edit mode if active
+      if (isEditing) {
+        setIsEditing(false);
+        setEditingArtifact(undefined);
+      }
+      // Exit history/preview mode if active
+      if (previewVersion) {
+        setPreviewVersion(null);
+      }
+    }
+    // Set the new selected artifact
+    setSelectedArtifactId(artifactId);
+  };
+
   const handleUploadAttachment = async (file: File) => {
     if (!selectedArtifactId) {
       setError('No artifact selected');
@@ -215,7 +233,7 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
       await artifactAPI.delete(id);
       removeArtifact(id);
       if (selectedArtifactId === id) {
-        setSelectedArtifactId(null);
+        handleSelectArtifact(null);
       }
       setError('');
     } catch (error: any) {
@@ -226,6 +244,10 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
   };
 
   const handleEditArtifact = (artifact: Artifact) => {
+    // Clear preview mode when entering edit
+    if (previewVersion) {
+      setPreviewVersion(null);
+    }
     setSelectedArtifactId(artifact.id);
     setEditingArtifact(artifact);
     setIsEditing(true);
@@ -248,10 +270,11 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
 
   const handleBaselineChange = async (baselineId: string) => {
     setActiveBaselineId(baselineId);
-    setSelectedArtifactId(null);
+    handleSelectArtifact(null);
     setIsEditing(false);
     setIsCreating(false);
     setEditingArtifact(undefined);
+    setPreviewVersion(null);
 
     if (baselineId === 'live') {
       setBaselineData(null);
@@ -955,7 +978,7 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
           artifacts={filteredArtifacts}
           allArtifacts={artifacts}
           selectedId={selectedArtifactId || undefined}
-          onSelect={setSelectedArtifactId}
+          onSelect={handleSelectArtifact}
           onReorder={handleReorderArtifact}
           defaultCollapsed
           collapseAllTrigger={collapseAllToken}
@@ -995,7 +1018,7 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
               onDelete={handleDeleteArtifact}
               onRestore={(restored) => {
                 updateArtifact(restored);
-                setSelectedArtifactId(restored.id);
+                handleSelectArtifact(restored.id);
               }}
               previewVersion={previewVersion}
               onPreviewChange={setPreviewVersion}
@@ -1006,7 +1029,7 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
               artifacts={activeArtifacts}
               attachments={detailAttachments}
               onDeleteAttachment={isBaselineView ? undefined : handleDeleteAttachment}
-              onSelectArtifact={setSelectedArtifactId}
+              onSelectArtifact={handleSelectArtifact}
               previewVersion={previewVersion}
               onClosePreview={() => setPreviewVersion(null)}
             />
