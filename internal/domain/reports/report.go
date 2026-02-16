@@ -30,6 +30,13 @@ type linkGroups struct {
 	incoming map[string][]*linksdomain.Link
 }
 
+type linkTypeLabel struct {
+	label        string
+	inverseLabel string
+}
+
+var linkTypeLabels = buildLinkTypeLabels()
+
 // Service defines report generation behavior.
 type Service interface {
 	GenerateProjectReport(projectID string, baselineID string) ([]byte, string, error)
@@ -154,6 +161,34 @@ func buildReportPDF(data *exports.ProjectExport, baselineName string) ([]byte, e
 	return buf.Bytes(), nil
 }
 
+func buildLinkTypeLabels() map[string]linkTypeLabel {
+	labels := make(map[string]linkTypeLabel)
+	for _, rule := range linksdomain.GetLinkTypeRules() {
+		labels[rule.Type] = linkTypeLabel{
+			label:        rule.Label,
+			inverseLabel: rule.InverseLabel,
+		}
+	}
+	return labels
+}
+
+func linkTypeLabelForDirection(linkType string, isIncoming bool) string {
+	labels, ok := linkTypeLabels[linkType]
+	if !ok {
+		return linkType
+	}
+	if isIncoming {
+		if labels.inverseLabel != "" {
+			return labels.inverseLabel
+		}
+		return labels.label
+	}
+	if labels.label != "" {
+		return labels.label
+	}
+	return linkType
+}
+
 func renderArtifactNode(
 	pdf *gofpdf.Fpdf,
 	node *artifactNode,
@@ -176,40 +211,143 @@ func renderArtifactNode(
 		pdf.SetFont("Arial", "B", 11)
 	}
 
-	yStart := pdf.GetY()
-	pdf.SetX(xStart)
-	if linkID > 0 {
-		pdf.MultiCell(0, 6, node.artifact.Title, "", "L", false)
-		pdf.SetLink(linkID, yStart, -1)
-	} else {
-		pdf.MultiCell(0, 6, node.artifact.Title, "", "L", false)
-	}
-
-	if node.artifact.Type != "heading" {
-		pdf.SetFont("Arial", "", 9)
-		pdf.SetTextColor(120, 120, 120)
+	// Skip title for description artifacts, render only for headings and other types
+	if node.artifact.Type != "description" {
+		yStart := pdf.GetY()
 		pdf.SetX(xStart)
-		pdf.CellFormat(0, 4, fmt.Sprintf("%s - v%d", node.artifact.Type, node.artifact.Version), "", 1, "L", false, 0, "")
-		pdf.SetTextColor(0, 0, 0)
-	}
-
-	if node.artifact.Body != "" {
-		pdf.SetFont("Arial", "", 10)
-		pdf.SetX(xStart)
-		pdf.MultiCell(0, 5, node.artifact.Body, "", "L", false)
-	}
-
-	if len(node.artifact.Attributes) > 0 {
-		attributesJSON, err := json.MarshalIndent(node.artifact.Attributes, "", "  ")
-		if err == nil {
-			pdf.SetFont("Arial", "", 8)
-			pdf.SetTextColor(90, 90, 90)
-			pdf.SetX(xStart)
-			pdf.MultiCell(0, 4, string(attributesJSON), "", "L", false)
-			pdf.SetTextColor(0, 0, 0)
+		if linkID > 0 {
+			pdf.MultiCell(0, 6, node.artifact.Title, "", "L", false)
+			pdf.SetLink(linkID, yStart, -1)
+		} else {
+			pdf.MultiCell(0, 6, node.artifact.Title, "", "L", false)
 		}
 	}
 
+	// For headings and descriptions: just display body text and images (no table)
+	if node.artifact.Type == "heading" || node.artifact.Type == "description" {
+		if node.artifact.Body != "" {
+			pdf.SetFont("Arial", "", 10)
+			pdf.SetX(xStart)
+			pdf.MultiCell(0, 5, node.artifact.Body, "", "L", false)
+		}
+	} else {
+		// For other artifact types: render details in table format with embedded links and images
+		renderArtifactDetailsTable(pdf, node, xStart, indent, attachmentMap, linkGroupsByArtifact, artifactTitles, linkIDs)
+	}
+
+	// For headings and descriptions, render images below the title/description
+	if node.artifact.Type == "heading" || node.artifact.Type == "description" {
+		attachments := attachmentMap[node.artifact.ID]
+		for _, attachment := range attachments {
+			imageType := imageTypeFromMime(attachment.MimeType, attachment.FilePath)
+			if imageType == "" {
+				continue
+			}
+
+			imagePath, ok := resolveAttachmentPath(attachment.FilePath)
+			if !ok {
+				continue
+			}
+
+			options := gofpdf.ImageOptions{ImageType: imageType, ReadDpi: true}
+			info := pdf.RegisterImageOptions(imagePath, options)
+			if info == nil {
+				continue
+			}
+
+			maxWidth := 170.0 - indent
+			width := maxWidth
+			height := width * info.Height() / info.Width()
+			if height > 90 {
+				height = 90
+				width = height * info.Width() / info.Height()
+			}
+
+			ensureSpace(pdf, height+6)
+			pdf.SetX(xStart)
+			pdf.ImageOptions(imagePath, xStart, pdf.GetY(), width, height, false, options, 0, "")
+			pdf.Ln(height + 4)
+		}
+	}
+
+	pdf.Ln(2)
+
+	for _, child := range node.children {
+		renderArtifactNode(pdf, child, depth+1, attachmentMap, linkGroupsByArtifact, artifactTitles, linkIDs)
+	}
+}
+
+func renderArtifactDetailsTable(
+	pdf *gofpdf.Fpdf,
+	node *artifactNode,
+	xStart float64,
+	indent float64,
+	attachmentMap map[string][]*attachments.Attachment,
+	linkGroupsByArtifact map[string]linkGroups,
+	artifactTitles map[string]string,
+	linkIDs map[string]int,
+) {
+	ensureSpace(pdf, 20)
+
+	tableX := xStart
+	tableWidth := 170.0 - indent
+	labelColWidth := 50.0
+	valueColWidth := tableWidth - labelColWidth
+
+	// Table border color (light grey)
+	pdf.SetDrawColor(200, 200, 200)
+	pdf.SetTextColor(0, 0, 0)
+	pdf.SetFont("Arial", "B", 9)
+
+	tableStartY := pdf.GetY()
+	rowHeight := 5.0
+
+	// Calculate description row height based on wrapped lines
+	descriptionHeight := 0.0
+	if node.artifact.Body != "" {
+		pdf.SetFont("Arial", "", 9)
+		wrapped := pdf.SplitLines([]byte(node.artifact.Body), valueColWidth)
+		if len(wrapped) == 0 {
+			descriptionHeight = rowHeight
+		} else {
+			descriptionHeight = float64(len(wrapped)) * rowHeight
+		}
+	}
+
+	// Calculate total table height
+	var totalHeight float64
+	if node.artifact.Body != "" {
+		totalHeight += descriptionHeight
+	}
+	totalHeight += rowHeight * 2 // Type and Version
+
+	if len(node.artifact.Attributes) > 0 {
+		filteredAttributes := make(map[string]interface{})
+		for key, value := range node.artifact.Attributes {
+			if key != "links_snapshot" {
+				filteredAttributes[key] = value
+			}
+		}
+		if len(filteredAttributes) > 0 {
+			attributesJSON, _ := json.MarshalIndent(filteredAttributes, "", "  ")
+			lines := strings.Count(string(attributesJSON), "\n") + 1
+			totalHeight += float64(lines) * 4.0
+		}
+	}
+
+	// Add height for links if present
+	if groups, ok := linkGroupsByArtifact[node.artifact.ID]; ok {
+		if len(groups.incoming) > 0 {
+			incomingHeight := calculateLinkRowHeight(pdf, valueColWidth, groups.incoming, artifactTitles, true)
+			totalHeight += incomingHeight
+		}
+		if len(groups.outgoing) > 0 {
+			outgoingHeight := calculateLinkRowHeight(pdf, valueColWidth, groups.outgoing, artifactTitles, false)
+			totalHeight += outgoingHeight
+		}
+	}
+
+	// Add height for images
 	attachments := attachmentMap[node.artifact.ID]
 	for _, attachment := range attachments {
 		imageType := imageTypeFromMime(attachment.MimeType, attachment.FilePath)
@@ -227,36 +365,308 @@ func renderArtifactNode(
 		if info == nil {
 			continue
 		}
+		maxWidth := valueColWidth - 4 // Match render padding
+		_, height := calculateImageSize(info, maxWidth)
+		totalHeight += height + 4
+	}
 
-		maxWidth := 170.0 - indent
-		width := maxWidth
-		height := width * info.Height() / info.Width()
-		if height > 90 {
-			height = 90
-			width = height * info.Width() / info.Height()
+	// Draw outer border (thicker)
+	pdf.SetLineWidth(0.5)
+	pdf.Rect(tableX, tableStartY, tableWidth, totalHeight, "")
+	// Draw label/value column separator
+	pdf.SetLineWidth(0.2)
+	pdf.Line(tableX+labelColWidth, tableStartY, tableX+labelColWidth, tableStartY+totalHeight)
+
+	// Draw inner lines (thinner)
+	pdf.SetLineWidth(0.2)
+	currentY := tableStartY
+
+	// Body field
+	if node.artifact.Body != "" {
+		pdf.SetXY(tableX, currentY)
+		pdf.SetTextColor(60, 60, 60)
+		pdf.SetFont("Arial", "B", 9)
+		pdf.CellFormat(labelColWidth, descriptionHeight, "Description:", "", 0, "L", false, 0, "")
+		pdf.SetTextColor(0, 0, 0)
+		pdf.SetFont("Arial", "", 9)
+		pdf.SetX(tableX + labelColWidth)
+		pdf.MultiCell(valueColWidth, rowHeight, node.artifact.Body, "", "L", false)
+		currentY = currentY + descriptionHeight
+		pdf.SetDrawColor(200, 200, 200)
+		pdf.SetLineWidth(0.2)
+		pdf.Line(tableX, currentY, tableX+tableWidth, currentY)
+	}
+
+	// Type field
+	pdf.SetXY(tableX, currentY)
+	pdf.SetTextColor(60, 60, 60)
+	pdf.SetFont("Arial", "B", 9)
+	pdf.CellFormat(labelColWidth, rowHeight, "Type:", "", 0, "L", false, 0, "")
+	pdf.SetTextColor(0, 0, 0)
+	pdf.SetFont("Arial", "", 9)
+	pdf.SetX(tableX + labelColWidth)
+	pdf.CellFormat(valueColWidth, rowHeight, node.artifact.Type, "", 1, "L", false, 0, "")
+	currentY = pdf.GetY()
+	pdf.SetDrawColor(200, 200, 200)
+	pdf.SetLineWidth(0.2)
+	pdf.Line(tableX, currentY, tableX+tableWidth, currentY)
+
+	// Version field
+	pdf.SetXY(tableX, currentY)
+	pdf.SetTextColor(60, 60, 60)
+	pdf.SetFont("Arial", "B", 9)
+	pdf.CellFormat(labelColWidth, rowHeight, "Version:", "", 0, "L", false, 0, "")
+	pdf.SetTextColor(0, 0, 0)
+	pdf.SetFont("Arial", "", 9)
+	pdf.SetX(tableX + labelColWidth)
+	pdf.CellFormat(valueColWidth, rowHeight, fmt.Sprintf("v%d", node.artifact.Version), "", 1, "L", false, 0, "")
+	currentY = pdf.GetY()
+	pdf.SetDrawColor(200, 200, 200)
+	pdf.SetLineWidth(0.2)
+	pdf.Line(tableX, currentY, tableX+tableWidth, currentY)
+
+	// No idea what attributes are so what was this doing?
+	// // Attributes (excluding links_snapshot)
+	// if len(node.artifact.Attributes) > 0 {
+	// 	filteredAttributes := make(map[string]interface{})
+	// 	for key, value := range node.artifact.Attributes {
+	// 		if key != "links_snapshot" {
+	// 			filteredAttributes[key] = value
+	// 		}
+	// 	}
+
+	// 	if len(filteredAttributes) > 0 {
+	// 		attributesJSON, _ := json.MarshalIndent(filteredAttributes, "", "  ")
+	// 		pdf.SetXY(tableX, currentY)
+	// 		pdf.SetTextColor(60, 60, 60)
+	// 		pdf.CellFormat(labelColWidth, 4, "Attributes:", "", 0, "L", false, 0, "")
+	// 		pdf.SetTextColor(80, 80, 80)
+	// 		pdf.SetFont("Arial", "", 8)
+	// 		pdf.SetX(tableX + labelColWidth)
+	// 		pdf.MultiCell(valueColWidth, 4, string(attributesJSON), "", "L", false)
+	// 		currentY = pdf.GetY()
+	// 		pdf.SetDrawColor(200, 200, 200)
+	// 		pdf.SetLineWidth(0.2)
+	// 		pdf.Line(tableX, currentY, tableX+tableWidth, currentY)
+	// 	}
+	// }
+
+	// Incoming Links row
+	if groups, ok := linkGroupsByArtifact[node.artifact.ID]; ok {
+		if len(groups.incoming) > 0 {
+			incomingHeight := calculateLinkRowHeight(pdf, valueColWidth, groups.incoming, artifactTitles, true)
+			pdf.SetXY(tableX, currentY)
+			pdf.SetTextColor(60, 60, 60)
+			pdf.SetFont("Arial", "B", 9)
+			pdf.CellFormat(labelColWidth, incomingHeight, "Incoming Links:", "", 0, "TL", false, 0, "")
+			pdf.SetTextColor(0, 0, 0)
+			pdf.SetFont("Arial", "", 9)
+			renderLinksWithHyperlinks(pdf, tableX+labelColWidth, currentY, valueColWidth, groups.incoming, artifactTitles, linkIDs, true)
+			currentY = currentY + incomingHeight
+			pdf.SetDrawColor(200, 200, 200)
+			pdf.SetLineWidth(0.2)
+			pdf.Line(tableX, currentY, tableX+tableWidth, currentY)
 		}
 
-		ensureSpace(pdf, height+6)
-		pdf.SetX(xStart)
-		pdf.ImageOptions(imagePath, xStart, pdf.GetY(), width, height, false, options, 0, "")
-		pdf.Ln(height + 4)
+		// Outgoing Links row
+		if len(groups.outgoing) > 0 {
+			outgoingHeight := calculateLinkRowHeight(pdf, valueColWidth, groups.outgoing, artifactTitles, false)
+			pdf.SetXY(tableX, currentY)
+			pdf.SetTextColor(60, 60, 60)
+			pdf.SetFont("Arial", "B", 9)
+			pdf.CellFormat(labelColWidth, outgoingHeight, "Outgoing Links:", "", 0, "TL", false, 0, "")
+			pdf.SetTextColor(0, 0, 0)
+			pdf.SetFont("Arial", "", 9)
+			renderLinksWithHyperlinks(pdf, tableX+labelColWidth, currentY, valueColWidth, groups.outgoing, artifactTitles, linkIDs, false)
+			currentY = currentY + outgoingHeight
+			pdf.SetDrawColor(200, 200, 200)
+			pdf.SetLineWidth(0.2)
+			pdf.Line(tableX, currentY, tableX+tableWidth, currentY)
+		}
 	}
 
-	if groups, ok := linkGroupsByArtifact[node.artifact.ID]; ok {
-		renderLinkGroup(pdf, xStart, "Outgoing", groups.outgoing, artifactTitles, linkIDs)
-		renderLinkGroup(pdf, xStart, "Incoming", groups.incoming, artifactTitles, linkIDs)
+	// Images
+	for _, attachment := range attachments {
+		imageType := imageTypeFromMime(attachment.MimeType, attachment.FilePath)
+		if imageType == "" {
+			continue
+		}
+
+		imagePath, ok := resolveAttachmentPath(attachment.FilePath)
+		if !ok {
+			continue
+		}
+
+		options := gofpdf.ImageOptions{ImageType: imageType, ReadDpi: true}
+		info := pdf.RegisterImageOptions(imagePath, options)
+		if info == nil {
+			continue
+		}
+
+		// Calculate image size with constraints
+		maxWidth := valueColWidth - 4 // Leave 2mm padding on each side
+		width, height := calculateImageSize(info, maxWidth)
+
+		// Row height for image cell
+		imageRowHeight := height + 4 // 2mm padding top/bottom
+
+		pdf.SetXY(tableX, currentY)
+		pdf.SetTextColor(60, 60, 60)
+		pdf.SetFont("Arial", "B", 9)
+		pdf.CellFormat(labelColWidth, imageRowHeight, "Image:", "", 0, "TL", false, 0, "")
+
+		// Center image vertically in its cell with padding
+		imageY := currentY + 2.0
+		imageX := tableX + labelColWidth + 2.0
+		pdf.ImageOptions(imagePath, imageX, imageY, width, height, false, options, 0, "")
+
+		currentY = currentY + imageRowHeight
+		pdf.SetDrawColor(200, 200, 200)
+		pdf.SetLineWidth(0.2)
+		pdf.Line(tableX, currentY, tableX+tableWidth, currentY)
 	}
 
+	// Reset
+	pdf.SetDrawColor(0, 0, 0)
+	pdf.SetLineWidth(0.2)
+	pdf.SetTextColor(0, 0, 0)
+	pdf.SetFont("Arial", "", 10)
+	pdf.SetY(currentY)
 	pdf.Ln(2)
+}
 
-	for _, child := range node.children {
-		renderArtifactNode(pdf, child, depth+1, attachmentMap, linkGroupsByArtifact, artifactTitles, linkIDs)
+func renderLinksWithHyperlinks(pdf *gofpdf.Fpdf, xStart float64, yStart float64, width float64, linksByType map[string][]*linksdomain.Link, artifactTitles map[string]string, linkIDs map[string]int, isIncoming bool) {
+	currentY := yStart + linkRowPadding
+	lineHeight := linkLineHeight
+
+	lines := buildLinkLines(linksByType, artifactTitles, linkIDs, isIncoming)
+	for _, line := range lines {
+		if line.isHeader {
+			pdf.SetTextColor(60, 60, 60)
+			pdf.SetFont("Arial", "U", 9)
+		} else {
+			if line.linkID > 0 {
+				pdf.SetTextColor(0, 100, 200)
+			} else {
+				pdf.SetTextColor(0, 0, 0)
+			}
+			pdf.SetFont("Arial", "", 9)
+		}
+
+		wrapped := pdf.SplitLines([]byte(line.text), width)
+		for _, w := range wrapped {
+			pdf.SetXY(xStart, currentY)
+			pdf.CellFormat(width, lineHeight, string(w), "", 1, "L", false, line.linkID, "")
+			currentY += lineHeight
+		}
 	}
+
+	pdf.SetTextColor(0, 0, 0)
+	pdf.SetFont("Arial", "", 9)
+}
+
+type linkLine struct {
+	text     string
+	linkID   int
+	isHeader bool
+}
+
+func buildLinkLines(linksByType map[string][]*linksdomain.Link, artifactTitles map[string]string, linkIDs map[string]int, isIncoming bool) []linkLine {
+	var lines []linkLine
+	for linkType, items := range linksByType {
+		label := linkTypeLabelForDirection(linkType, isIncoming)
+		lines = append(lines, linkLine{
+			text:     fmt.Sprintf("%s (%d)", label, len(items)),
+			isHeader: true,
+		})
+		for _, link := range items {
+			targetID := link.ToID
+			if isIncoming {
+				targetID = link.FromID
+			}
+			title := artifactTitles[targetID]
+			if title == "" {
+				title = targetID
+			}
+			linkID := 0
+			if linkIDs != nil {
+				linkID = linkIDs[targetID]
+			}
+			lines = append(lines, linkLine{
+				text:   "  - " + title,
+				linkID: linkID,
+			})
+		}
+	}
+	return lines
+}
+
+func calculateLinkRowHeight(pdf *gofpdf.Fpdf, width float64, linksByType map[string][]*linksdomain.Link, artifactTitles map[string]string, isIncoming bool) float64 {
+	lines := buildLinkLines(linksByType, artifactTitles, nil, isIncoming)
+	if len(lines) == 0 {
+		return 0
+	}
+
+	// Use the same font metrics as the renderer to avoid undercounting.
+	pdf.SetFont("Arial", "", 9)
+	var lineCount float64
+	for _, line := range lines {
+		wrapped := pdf.SplitLines([]byte(line.text), width)
+		if len(wrapped) == 0 {
+			lineCount += 1
+			continue
+		}
+		lineCount += float64(len(wrapped))
+	}
+
+	return (lineCount * linkLineHeight) + (linkRowPadding * 2)
+}
+
+const (
+	linkLineHeight = 3.5
+	linkRowPadding = 1.0
+	imageMaxHeight = 35.0
+)
+
+func calculateImageSize(info *gofpdf.ImageInfoType, maxWidth float64) (float64, float64) {
+	width := maxWidth
+	height := width * info.Height() / info.Width()
+	if height > imageMaxHeight {
+		height = imageMaxHeight
+		width = height * info.Width() / info.Height()
+	}
+	if width > maxWidth {
+		width = maxWidth
+		height = width * info.Height() / info.Width()
+	}
+	return width, height
+}
+
+func formatLinksForTable(linksByType map[string][]*linksdomain.Link) string {
+	var result []string
+	for linkType, items := range linksByType {
+		result = append(result, fmt.Sprintf("%s (%d)", linkType, len(items)))
+	}
+	return strings.Join(result, ", ")
 }
 
 func buildLinkGroups(linkList []*linksdomain.Link) map[string]linkGroups {
 	groups := make(map[string]linkGroups)
+	
+	// Track unique link relationships to avoid duplicates
+	// Key format: "fromID:toID:type"
+	seenLinks := make(map[string]bool)
+	
 	for _, link := range linkList {
+		// Create unique key for this link relationship
+		linkKey := fmt.Sprintf("%s:%s:%s", link.FromID, link.ToID, link.Type)
+		
+		// Skip if we've already seen this exact relationship
+		if seenLinks[linkKey] {
+			continue
+		}
+		seenLinks[linkKey] = true
+		
 		outgoing, ok := groups[link.FromID]
 		if !ok {
 			outgoing = linkGroups{outgoing: map[string][]*linksdomain.Link{}, incoming: map[string][]*linksdomain.Link{}}
