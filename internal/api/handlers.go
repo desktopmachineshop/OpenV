@@ -15,6 +15,7 @@ import (
     "github.com/openv/requirements-platform/internal/domain/artifacts"
     "github.com/openv/requirements-platform/internal/domain/attachments"
 	"github.com/openv/requirements-platform/internal/domain/baselines"
+	"github.com/openv/requirements-platform/internal/domain/chatter"
     "github.com/openv/requirements-platform/internal/domain/exports"
     "github.com/openv/requirements-platform/internal/domain/links"
     "github.com/openv/requirements-platform/internal/domain/projects"
@@ -32,11 +33,12 @@ type Handler struct {
 	baselineService baselines.Service
 	reportService   reports.Service
 	templateService templates.Service
+	chatterService  chatter.Service
 	uploadsDir      string
 }
 
 // NewHandler creates a new API handler
-func NewHandler(artifactService artifacts.Service, linkService links.Service, projectService projects.Service, attachmentService attachments.Service, exportService exports.Service, baselineService baselines.Service, reportService reports.Service, templateService templates.Service, uploadsDir string) *Handler {
+func NewHandler(artifactService artifacts.Service, linkService links.Service, projectService projects.Service, attachmentService attachments.Service, exportService exports.Service, baselineService baselines.Service, reportService reports.Service, templateService templates.Service, chatterService chatter.Service, uploadsDir string) *Handler {
 	return &Handler{
 		artifactService: artifactService,
 		linkService:     linkService,
@@ -46,6 +48,7 @@ func NewHandler(artifactService artifacts.Service, linkService links.Service, pr
 		baselineService: baselineService,
 		reportService:   reportService,
 		templateService: templateService,
+		chatterService:  chatterService,
 		uploadsDir:      uploadsDir,
 	}
 }
@@ -92,6 +95,10 @@ func (h *Handler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/attachments/{id}/download", h.DownloadAttachment).Methods("GET")
 	router.HandleFunc("/api/v1/attachments/{id}", h.DeleteAttachment).Methods("DELETE")
 	router.HandleFunc("/api/v1/artifacts/{artifactID}/attachments", h.ListArtifactAttachments).Methods("GET")
+
+	// Chatter endpoints
+	router.HandleFunc("/api/v1/chatter", h.CreateChatterEntry).Methods("POST")
+	router.HandleFunc("/api/v1/chatter", h.ListChatterEntries).Methods("GET")
 
 	// Health check
 	router.HandleFunc("/health", h.Health).Methods("GET")
@@ -1238,4 +1245,43 @@ func (h *Handler) autoVersionLinkedArtifacts(affectedArtifactIDs []string) error
 	}
 
 	return nil
+}
+
+// CreateChatterEntry creates a new chatter entry
+func (h *Handler) CreateChatterEntry(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		ArtifactID string `json:"artifact_id"`
+		Message    string `json:"message"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	entry := chatter.NewChatterEntry(req.ArtifactID, req.Message, false, "comment")
+	if err := h.chatterService.CreateEntry(entry); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(entry)
+}
+
+// ListChatterEntries lists chatter entries for an artifact
+func (h *Handler) ListChatterEntries(w http.ResponseWriter, r *http.Request) {
+	artifactID := r.URL.Query().Get("artifact_id")
+	if artifactID == "" {
+		http.Error(w, "artifact_id is required", http.StatusBadRequest)
+		return
+	}
+
+	entries, err := h.chatterService.GetEntriesByArtifactID(artifactID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(entries)
 }

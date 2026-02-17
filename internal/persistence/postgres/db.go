@@ -109,6 +109,19 @@ func InitSchema(db *sql.DB) error {
 	);
 
 	CREATE UNIQUE INDEX IF NOT EXISTS idx_templates_key ON templates(template_key);
+
+	CREATE TABLE IF NOT EXISTS chatter (
+		id UUID PRIMARY KEY,
+		artifact_id UUID NOT NULL,
+		message TEXT NOT NULL,
+		is_auto_entry BOOLEAN NOT NULL DEFAULT FALSE,
+		entry_type VARCHAR(64) NOT NULL DEFAULT 'comment',
+		created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+		updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+	);
+
+	CREATE INDEX IF NOT EXISTS idx_chatter_artifact_id ON chatter(artifact_id);
+	CREATE INDEX IF NOT EXISTS idx_chatter_created_at ON chatter(created_at);
 	`
 
 	_, err := db.Exec(schema)

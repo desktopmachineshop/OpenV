@@ -277,4 +277,21 @@ export const attachmentAPI = {
     client.get<Attachment[]>(`/api/v1/artifacts/${artifactId}/attachments`),
 };
 
+export interface ChatterEntry {
+  id: string;
+  artifact_id: string;
+  message: string;
+  is_auto_entry: boolean;
+  entry_type: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export const chatterAPI = {
+  create: (payload: { artifact_id: string; message: string }) =>
+    client.post<ChatterEntry>('/api/v1/chatter', payload),
+  list: (artifactId: string) =>
+    client.get<ChatterEntry[]>('/api/v1/chatter', { params: { artifact_id: artifactId } }),
+};
+
 export default client;

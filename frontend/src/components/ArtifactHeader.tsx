@@ -8,6 +8,8 @@ interface ArtifactHeaderProps {
   onRestore?: (artifact: Artifact) => void;
   previewVersion?: Artifact | null;
   onPreviewChange?: (preview: Artifact | null) => void;
+  isChatterOpen?: boolean;
+  onToggleChatter?: () => void;
 }
 
 export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
@@ -17,6 +19,8 @@ export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
   onRestore,
   onPreviewChange,
   previewVersion,
+  isChatterOpen,
+  onToggleChatter,
 }) => {
   const [versions, setVersions] = useState<Artifact[]>([artifact]);
   const [showVersions, setShowVersions] = useState(false);
@@ -174,6 +178,20 @@ export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
               History
             </button>
           )}
+          <button
+            onClick={onToggleChatter}
+            style={{
+              backgroundColor: isChatterOpen ? '#2980b9' : '#3498db',
+              color: 'white',
+              border: 'none',
+              padding: '6px 12px',
+              borderRadius: '3px',
+              cursor: 'pointer',
+              fontSize: '12px',
+            }}
+          >
+            💬 Notes
+          </button>
         </div>
       </div>
 

@@ -13,6 +13,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/artifacts"
 	"github.com/openv/requirements-platform/internal/domain/attachments"
 	"github.com/openv/requirements-platform/internal/domain/baselines"
+	"github.com/openv/requirements-platform/internal/domain/chatter"
 	"github.com/openv/requirements-platform/internal/domain/exports"
 	"github.com/openv/requirements-platform/internal/domain/links"
 	"github.com/openv/requirements-platform/internal/domain/projects"
@@ -87,6 +88,7 @@ func main() {
 	projectInfoRepo := postgres.NewProjectInfoRepository(db)
 	baselineRepo := postgres.NewBaselineRepository(db)
 	templateRepo := postgres.NewTemplateRepository(db)
+	chatterRepo := postgres.NewChatterRepository(db)
 
 	// Create services
 	artifactService := artifacts.NewDefaultService(artifactRepo)
@@ -98,6 +100,7 @@ func main() {
 	projectService := projects.NewService(projectRepo)
 	attachmentService := attachments.NewDefaultService(attachmentRepo)
 	baselineService := baselines.NewService(baselineRepo)
+	chatterService := chatter.NewDefaultService(chatterRepo)
 	exportService := exports.NewService(artifactService, linkService, attachmentService, projectInfoRepo, projectService)
 	reportService := reports.NewService(exportService, baselineService)
 	templateService := templates.NewService(templateRepo, exportService)
@@ -106,7 +109,7 @@ func main() {
 	}
 
 	// Create handler
-	handler := api.NewHandler(artifactService, linkService, projectService, attachmentService, exportService, baselineService, reportService, templateService, uploadsDir)
+	handler := api.NewHandler(artifactService, linkService, projectService, attachmentService, exportService, baselineService, reportService, templateService, chatterService, uploadsDir)
 
 	// Setup router
 	router := mux.NewRouter()
