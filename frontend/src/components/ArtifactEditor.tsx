@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Artifact, Attachment, Link } from '../api/client';
 import { ImageGallery } from './ImageGallery';
 import { LinkPanel } from './LinkPanel';
-import { ChatterPanel } from './ChatterPanel';
 
 interface ArtifactEditorProps {
   artifact?: Artifact;
@@ -53,7 +52,6 @@ export const ArtifactEditor: React.FC<ArtifactEditorProps> = ({
   const [currentLinks, setCurrentLinks] = useState<Link[]>(links || []);
   const [pendingLinkAdds, setPendingLinkAdds] = useState<Partial<Link>[]>([]);
   const [pendingLinkRemoves, setPendingLinkRemoves] = useState<string[]>([]);
-  const [isChatterOpen, setIsChatterOpen] = useState(false);
 
   // Update currentLinks when links prop changes
   useEffect(() => {
@@ -251,14 +249,6 @@ export const ArtifactEditor: React.FC<ArtifactEditorProps> = ({
           )}
         </form>
       </div>
-      
-      {artifact && (
-        <ChatterPanel
-          artifactId={artifact.id}
-          isOpen={isChatterOpen}
-          onToggle={() => setIsChatterOpen(!isChatterOpen)}
-        />
-      )}
     </>
   );
 };

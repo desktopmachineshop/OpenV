@@ -8,7 +8,6 @@ import { ArtifactDetails } from '../components/ArtifactDetails';
 import { ChatterPanel } from '../components/ChatterPanel';
 import { HelpSidebar } from '../components/HelpSidebar';
 import { Navbar } from '../components/Navbar';
-import { chatterAPI } from '../api/client';
 
 interface ModuleViewProps {
   onSwitchProject?: () => void;
@@ -38,7 +37,6 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
   const [collapseAllToken, setCollapseAllToken] = useState<number>(0);
   const [expandAllToken, setExpandAllToken] = useState<number>(0);
   const [previewVersion, setPreviewVersion] = useState<Artifact | null>(null);
-  const [isChatterOpen, setIsChatterOpen] = useState<boolean>(false);
 
   const {
     projectId,
@@ -1074,7 +1072,7 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
       </div>
 
       <div style={{ display: 'flex', flex: 1, gap: '20px', minWidth: 0, overflow: 'hidden' }}>
-        <div style={{ flex: 1, minWidth: 0, overflow: 'auto', display: 'flex', flexDirection: 'column', borderRight: isChatterOpen ? '1px solid #e0e0e0' : undefined, paddingRight: isChatterOpen ? '10px' : '0' }}>
+        <div style={{ flex: 1, minWidth: 0, overflow: 'auto', display: 'flex', flexDirection: 'column', borderRight: selectedArtifact ? '1px solid #e0e0e0' : undefined, paddingRight: selectedArtifact ? '10px' : '0' }}>
         {!isBaselineView && isEditing && editingArtifact && (
           <ArtifactEditor
             artifact={editingArtifact}
@@ -1109,8 +1107,6 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
               }}
               previewVersion={previewVersion}
               onPreviewChange={setPreviewVersion}
-              isChatterOpen={isChatterOpen}
-              onToggleChatter={() => setIsChatterOpen(!isChatterOpen)}
             />
             <ArtifactDetails 
               artifact={selectedArtifact} 
@@ -1133,11 +1129,11 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
         )}
         </div>
 
-        {selectedArtifact && !isEditing && isChatterOpen && (
+        {selectedArtifact && (
           <ChatterPanel
             artifactId={selectedArtifact.id}
-            isOpen={isChatterOpen}
-            onToggle={() => setIsChatterOpen(!isChatterOpen)}
+            isOpen={true}
+            onToggle={() => {}}
           />
         )}
       </div>
