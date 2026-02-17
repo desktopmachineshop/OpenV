@@ -7,6 +7,7 @@ interface ArtifactListProps {
   selectedId?: string;
   onSelect: (id: string) => void;
   onReorder: (sourceId: string, targetId: string, mode: 'swap' | 'insert') => void;
+  onContextMenuAction?: (action: 'create-before' | 'create-after' | 'create-child', artifact: Artifact) => void;
   defaultCollapsed?: boolean;
   collapseAllTrigger?: number;
   expandAllTrigger?: number;
@@ -72,6 +73,7 @@ export const ArtifactList: React.FC<ArtifactListProps> = ({
   selectedId,
   onSelect,
   onReorder,
+  onContextMenuAction,
   defaultCollapsed = false,
   collapseAllTrigger = 0,
   expandAllTrigger = 0,
@@ -80,6 +82,7 @@ export const ArtifactList: React.FC<ArtifactListProps> = ({
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; artifactId: string } | null>(null);
   const hasInitialized = useRef(false);
 
   const hierarchy = useMemo(() => buildHierarchy(artifacts), [artifacts]);
@@ -165,6 +168,12 @@ export const ArtifactList: React.FC<ArtifactListProps> = ({
       <React.Fragment key={artifact.id}>
         <div
           onClick={() => onSelect(artifact.id)}
+          onContextMenu={(event) => {
+            event.preventDefault();
+            if (!readOnly) {
+              setContextMenu({ x: event.clientX, y: event.clientY, artifactId: artifact.id });
+            }
+          }}
           draggable={!readOnly}
           onDragStart={(event) => {
             if (readOnly) return;
@@ -338,6 +347,109 @@ export const ArtifactList: React.FC<ArtifactListProps> = ({
         <div style={{ overflowY: 'auto', maxHeight: '500px' }}>
           {hierarchy.map((node) => renderArtifact(node))}
         </div>
+      )}
+
+      {/* Context Menu */}
+      {contextMenu && (
+        <>
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              zIndex: 999,
+            }}
+            onClick={() => setContextMenu(null)}
+            onContextMenu={(e) => e.preventDefault()}
+          />
+          <div
+            style={{
+              position: 'fixed',
+              left: `${contextMenu.x}px`,
+              top: `${contextMenu.y}px`,
+              backgroundColor: 'white',
+              border: '1px solid #dcdde1',
+              borderRadius: '4px',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+              zIndex: 1000,
+              minWidth: '180px',
+            }}
+          >
+            <button
+              onClick={() => {
+                const artifact = allArtifacts.find(a => a.id === contextMenu.artifactId);
+                if (artifact && onContextMenuAction) {
+                  onContextMenuAction('create-before', artifact);
+                }
+                setContextMenu(null);
+              }}
+              style={{
+                display: 'block',
+                width: '100%',
+                padding: '8px 12px',
+                border: 'none',
+                backgroundColor: 'transparent',
+                textAlign: 'left',
+                cursor: 'pointer',
+                fontSize: '12px',
+                color: '#2c3e50',
+                borderBottom: '1px solid #ecf0f1',
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f0f8ff')}
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+            >
+              ➕ Create before
+            </button>
+            <button
+              onClick={() => {
+                const artifact = allArtifacts.find(a => a.id === contextMenu.artifactId);
+                if (artifact && onContextMenuAction) {
+                  onContextMenuAction('create-after', artifact);
+                }
+                setContextMenu(null);
+              }}
+              style={{
+                display: 'block',
+                width: '100%',
+                padding: '8px 12px',
+                border: 'none',
+                backgroundColor: 'transparent',
+                textAlign: 'left',
+                cursor: 'pointer',
+                fontSize: '12px',
+                color: '#2c3e50',
+                borderBottom: '1px solid #ecf0f1',
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f0f8ff')}
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+            >
+              ➕ Create after
+            </button>
+            <button
+              onClick={() => {
+                const artifact = allArtifacts.find(a => a.id === contextMenu.artifactId);
+                if (artifact && onContextMenuAction) {
+                  onContextMenuAction('create-child', artifact);
+                }
+                setContextMenu(null);
+              }}
+              style={{
+                display: 'block',
+                width: '100%',
+                padding: '8px 12px',
+                border: 'none',
+                backgroundColor: 'transparent',
+                textAlign: 'left',
+                cursor: 'pointer',
+                fontSize: '12px',
+                color: '#2c3e50',
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f0f8ff')}
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+            >
+              ➕ Create new child
+            </button>
+          </div>
+        </>
       )}
     </div>
   );

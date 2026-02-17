@@ -31,13 +31,22 @@ export const ArtifactEditor: React.FC<ArtifactEditorProps> = ({
   onDeleteLink,
 }) => {
   const [formData, setFormData] = useState<Partial<Artifact>>(
-    artifact || {
+    artifact || (window as any).__pendingArtifactData || {
       type: 'requirement',
       title: '',
       body: '',
       attributes: {},
     }
   );
+
+  // Clear pending artifact data after using it
+  useEffect(() => {
+    if (!artifact && (window as any).__pendingArtifactData) {
+      return () => {
+        delete (window as any).__pendingArtifactData;
+      };
+    }
+  }, [artifact]);
 
   // Track pending link changes during edit
   const [currentLinks, setCurrentLinks] = useState<Link[]>(links || []);

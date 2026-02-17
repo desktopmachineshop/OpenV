@@ -415,6 +415,38 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
     }
   };
 
+  const handleArtifactContextMenu = (action: 'create-before' | 'create-after' | 'create-child', artifact: Artifact) => {
+    // Auto-populate form based on action
+    if (action === 'create-before' || action === 'create-after') {
+      // New sibling - use same parent and type
+      const newArtifact: Partial<Artifact> = {
+        parent_id: artifact.parent_id ?? null,
+        type: artifact.type,
+        title: '',
+        body: '',
+        attributes: {},
+      };
+      // Store for later use when creating
+      (window as any).__pendingArtifactData = newArtifact;
+    } else if (action === 'create-child') {
+      // New child - this artifact is the parent, inherit type if appropriate
+      const newArtifact: Partial<Artifact> = {
+        parent_id: artifact.id,
+        type: artifact.type,
+        title: '',
+        body: '',
+        attributes: {},
+      };
+      (window as any).__pendingArtifactData = newArtifact;
+    }
+    
+    // Switch to create mode
+    setIsEditing(false);
+    setEditingArtifact(undefined);
+    setIsCreating(true);
+    setError('');
+  };
+
   const activeArtifacts = isBaselineView ? (baselineData?.artifacts || []) : artifacts;
   const activeLinks = isBaselineView ? (baselineData?.links || []) : allLinks;
 
@@ -1030,6 +1062,7 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
           selectedId={selectedArtifactId || undefined}
           onSelect={handleSelectArtifact}
           onReorder={handleReorderArtifact}
+          onContextMenuAction={handleArtifactContextMenu}
           defaultCollapsed
           collapseAllTrigger={collapseAllToken}
           expandAllTrigger={expandAllToken}

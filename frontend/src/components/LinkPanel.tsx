@@ -290,6 +290,10 @@ export const LinkPanel: React.FC<LinkPanelProps> = ({
                     if (!allowedTargetTypes.includes('*') && !allowedTargetTypes.includes(a.type)) {
                       return false;
                     }
+                    // Filter based on already existing links of this type
+                    if (linkType && outgoingLinks.some(link => link.type === linkType && link.to_id === a.id)) {
+                      return false;
+                    }
                     // Filter based on search text (title or UID)
                     if (artifactSearch.trim()) {
                       const searchLower = artifactSearch.toLowerCase();
