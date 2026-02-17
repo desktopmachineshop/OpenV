@@ -37,7 +37,7 @@ func (r *ArtifactRepository) Save(artifact *artifacts.Artifact) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	err = r.db.QueryRowContext(
+	_, err = r.db.ExecContext(
 		ctx,
 		query,
 		artifact.ID,
@@ -53,7 +53,7 @@ func (r *ArtifactRepository) Save(artifact *artifacts.Artifact) error {
 		artifact.ValidTo,
 		artifact.CreatedAt,
 		artifact.UpdatedAt,
-	).Err()
+	)
 
 	return err
 }

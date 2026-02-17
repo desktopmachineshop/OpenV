@@ -30,7 +30,7 @@ func (r *LinkRepository) Save(link *links.Link) error {
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 	`
 
-	err = r.db.QueryRow(
+	_, err = r.db.Exec(
 		query,
 		link.ID,
 		link.FromID,
@@ -42,7 +42,7 @@ func (r *LinkRepository) Save(link *links.Link) error {
 		link.ValidTo,
 		link.CreatedAt,
 		link.UpdatedAt,
-	).Err()
+	)
 
 	return err
 }

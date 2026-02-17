@@ -201,14 +201,14 @@ export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
                     justifyContent: 'space-between',
                     alignItems: 'center',
                     padding: '8px',
-                    backgroundColor: v.version === artifact.version ? '#ecf0f1' : '#f8f9fa',
+                    backgroundColor: !v.valid_to ? '#ecf0f1' : '#f8f9fa',
                     borderRadius: '3px',
                     border: '1px solid #dcdde1',
                   }}
                 >
                   <div style={{ fontSize: '12px' }}>
                     <strong>Version {v.version}</strong>
-                    {v.version === artifact.version && (
+                    {!v.valid_to && (
                       <span
                         style={{
                           marginLeft: '6px',
@@ -226,7 +226,7 @@ export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
                       Updated: {new Date(v.updated_at).toLocaleString()}
                     </div>
                   </div>
-                  {v.version !== artifact.version && (
+                  {v.valid_to && (
                     <div style={{ display: 'flex', gap: '4px' }}>
                       <button
                         onClick={() => setLocalPreviewVersion(v)}

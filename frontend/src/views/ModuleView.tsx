@@ -259,6 +259,10 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
       const response = await linkAPI.create(linkData);
       addLink(response.data);
       setAllLinks([...allLinks, response.data]);
+      
+      // Reload artifacts to get updated link snapshots for both fromID and toID
+      await loadArtifacts();
+      
       alert('Link created successfully');
       setError('');
     } catch (error: any) {
@@ -426,6 +430,19 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
     { value: 'created_at', label: 'Created At' },
     { value: 'updated_at', label: 'Updated At' },
   ];
+
+  // Fields with finite selection options
+  const finiteFields = ['type'];
+
+  // Get unique values for a field to populate selection dropdown
+  const getFieldUniqueValues = (fieldName: string): string[] => {
+    const values = new Set<string>();
+    activeArtifacts.forEach((artifact) => {
+      const val = getFieldValue(artifact, fieldName);
+      if (val) values.add(val);
+    });
+    return Array.from(values).sort();
+  };
 
   const getFieldValue = (artifact: Artifact, field: string): string => {
     switch (field) {
@@ -755,90 +772,123 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
                 </div>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {filterRows.map((row) => (
-                  <div key={row.id} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                    <select
-                      value={row.field}
-                      onChange={(e) => {
-                        const next = filterRows.map((item) =>
-                          item.id === row.id ? { ...item, field: e.target.value } : item
-                        );
-                        setFilterRows(next);
-                      }}
-                      style={{
-                        flex: '0 0 140px',
-                        padding: '6px',
-                        borderRadius: '4px',
-                        border: '1px solid #bdc3c7',
-                        fontSize: '12px',
-                      }}
-                    >
-                      {fieldOptions.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                    <select
-                      value={row.comparator}
-                      onChange={(e) => {
-                        const next = filterRows.map((item) =>
-                          item.id === row.id ? { ...item, comparator: e.target.value } : item
-                        );
-                        setFilterRows(next);
-                      }}
-                      style={{
-                        flex: '0 0 140px',
-                        padding: '6px',
-                        borderRadius: '4px',
-                        border: '1px solid #bdc3c7',
-                        fontSize: '12px',
-                      }}
-                    >
-                      <option value="contains">Contains</option>
-                      <option value="not-contains">Not contains</option>
-                      <option value="equals">Equals</option>
-                      <option value="not-equals">Not equals</option>
-                      <option value="starts-with">Starts with</option>
-                      <option value="ends-with">Ends with</option>
-                      <option value="gt">Greater than</option>
-                      <option value="lt">Less than</option>
-                    </select>
-                    <input
-                      type="text"
-                      value={row.value}
-                      onChange={(e) => {
-                        const next = filterRows.map((item) =>
-                          item.id === row.id ? { ...item, value: e.target.value } : item
-                        );
-                        setFilterRows(next);
-                      }}
-                      placeholder="Contains..."
-                      style={{
-                        flex: 1,
-                        padding: '6px',
-                        borderRadius: '4px',
-                        border: '1px solid #bdc3c7',
-                        fontSize: '12px',
-                      }}
-                    />
-                    <button
-                      onClick={() => {
-                        const next = filterRows.filter((item) => item.id !== row.id);
-                        setFilterRows(
-                          next.length > 0
-                            ? next
-                            : [{ id: `filter-${Date.now()}`, field: 'type', value: '', comparator: 'contains' }]
-                        );
-                      }}
-                      className="button-secondary"
-                      style={{ padding: '5px 8px', fontSize: '12px' }}
-                      title="Remove filter"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                ))}
+                {filterRows.map((row) => {
+                  const isFiniteField = finiteFields.includes(row.field);
+                  const comparatorIsFinite = ['equals', 'not-equals'].includes(row.comparator);
+                  const shouldUseSelect = isFiniteField && comparatorIsFinite;
+                  const fieldValues = shouldUseSelect ? getFieldUniqueValues(row.field) : [];
+
+                  return (
+                    <div key={row.id} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <select
+                        value={row.field}
+                        onChange={(e) => {
+                          const next = filterRows.map((item) =>
+                            item.id === row.id ? { ...item, field: e.target.value } : item
+                          );
+                          setFilterRows(next);
+                        }}
+                        style={{
+                          flex: '0 0 140px',
+                          padding: '6px',
+                          borderRadius: '4px',
+                          border: '1px solid #bdc3c7',
+                          fontSize: '12px',
+                        }}
+                      >
+                        {fieldOptions.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                      <select
+                        value={row.comparator}
+                        onChange={(e) => {
+                          const next = filterRows.map((item) =>
+                            item.id === row.id ? { ...item, comparator: e.target.value } : item
+                          );
+                          setFilterRows(next);
+                        }}
+                        style={{
+                          flex: '0 0 140px',
+                          padding: '6px',
+                          borderRadius: '4px',
+                          border: '1px solid #bdc3c7',
+                          fontSize: '12px',
+                        }}
+                      >
+                        <option value="contains">Contains</option>
+                        <option value="not-contains">Not contains</option>
+                        <option value="equals">Equals</option>
+                        <option value="not-equals">Not equals</option>
+                        <option value="starts-with">Starts with</option>
+                        <option value="ends-with">Ends with</option>
+                        <option value="gt">Greater than</option>
+                        <option value="lt">Less than</option>
+                      </select>
+                      {shouldUseSelect ? (
+                        <select
+                          value={row.value}
+                          onChange={(e) => {
+                            const next = filterRows.map((item) =>
+                              item.id === row.id ? { ...item, value: e.target.value } : item
+                            );
+                            setFilterRows(next);
+                          }}
+                          style={{
+                            flex: 1,
+                            padding: '6px',
+                            borderRadius: '4px',
+                            border: '1px solid #bdc3c7',
+                            fontSize: '12px',
+                          }}
+                        >
+                          <option value="">-- Select {row.field} --</option>
+                          {fieldValues.map((val) => (
+                            <option key={val} value={val}>
+                              {val}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input
+                          type="text"
+                          value={row.value}
+                          onChange={(e) => {
+                            const next = filterRows.map((item) =>
+                              item.id === row.id ? { ...item, value: e.target.value } : item
+                            );
+                            setFilterRows(next);
+                          }}
+                          placeholder="Contains..."
+                          style={{
+                            flex: 1,
+                            padding: '6px',
+                            borderRadius: '4px',
+                            border: '1px solid #bdc3c7',
+                            fontSize: '12px',
+                          }}
+                        />
+                      )}
+                      <button
+                        onClick={() => {
+                          const next = filterRows.filter((item) => item.id !== row.id);
+                          setFilterRows(
+                            next.length > 0
+                              ? next
+                              : [{ id: `filter-${Date.now()}`, field: 'type', value: '', comparator: 'contains' }]
+                          );
+                        }}
+                        className="button-secondary"
+                        style={{ padding: '5px 8px', fontSize: '12px' }}
+                        title="Remove filter"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  );
+                })}
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                   <button
                     onClick={() => {

@@ -413,6 +413,9 @@ func (h *Handler) CreateLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Refresh link snapshots for both artifacts touched by this link
+	_ = h.autoVersionLinkedArtifacts([]string{link.FromID, link.ToID})
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(link)
@@ -465,6 +468,9 @@ func (h *Handler) UpdateLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Refresh link snapshots for both artifacts touched by this link
+	_ = h.autoVersionLinkedArtifacts([]string{link.FromID, link.ToID})
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(link)
 }
@@ -472,11 +478,17 @@ func (h *Handler) UpdateLink(w http.ResponseWriter, r *http.Request) {
 // DeleteLink deletes a link
 func (h *Handler) DeleteLink(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
+	link, _ := h.linkService.GetLink(id)
 
 	err := h.linkService.DeleteLink(id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
+	}
+
+	if link != nil {
+		// Refresh link snapshots for both artifacts touched by this link
+		_ = h.autoVersionLinkedArtifacts([]string{link.FromID, link.ToID})
 	}
 
 	w.WriteHeader(http.StatusNoContent)

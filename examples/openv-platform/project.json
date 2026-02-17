@@ -1,0 +1,1450 @@
+{
+    "key":  "example-openv-platform",
+    "name":  "OpenV Platform Requirements",
+    "description":  "Comprehensive requirements, hazards, design items, and test protocol for OpenV as a competitive open-source alternative to IBM DOORS.",
+    "source":  "file",
+    "exported_at":  "2026-02-16T23:58:38.854520698Z",
+    "version":  "1.0",
+    "artifacts":  [
+                      {
+                          "id":  "2d781c09-2fcf-49d5-b08a-7bfeb13cce1c",
+                          "project_id":  "c99ce610-30dd-4215-9911-13ba7678cd36",
+                          "type":  "heading",
+                          "title":  "OpenV Requirements Management Platform",
+                          "body":  "Long-term requirements for OpenV to match and exceed IBM DOORS capabilities while remaining open-source and local-first.",
+                          "sort_order":  1,
+                          "attributes":  {
+
+                                         },
+                          "version":  1,
+                          "valid_from":  "2026-02-16T23:58:30.685804Z",
+                          "valid_to":  null,
+                          "created_at":  "2026-02-16T23:58:30.685804Z",
+                          "updated_at":  "2026-02-16T23:58:30.685804Z"
+                      },
+                      {
+                          "id":  "d2c0eb28-4217-4719-b3ae-24559df64fd1",
+                          "project_id":  "c99ce610-30dd-4215-9911-13ba7678cd36",
+                          "parent_id":  "14d5b5a6-d9c7-41fc-96b4-d072ab843328",
+                          "type":  "requirement",
+                          "title":  "Authentication",
+                          "body":  "The system shall support OIDC and local authentication with configurable policies.",
+                          "sort_order":  1,
+                          "attributes":  {
+
+                                         },
+                          "version":  1,
+                          "valid_from":  "2026-02-16T23:58:33.418995Z",
+                          "valid_to":  null,
+                          "created_at":  "2026-02-16T23:58:33.418995Z",
+                          "updated_at":  "2026-02-16T23:58:33.418995Z"
+                      },
+                      {
+                          "id":  "afd48dbd-a445-4ef9-9475-39296cd12160",
+                          "project_id":  "c99ce610-30dd-4215-9911-13ba7678cd36",
+                          "parent_id":  "14d5b5a6-d9c7-41fc-96b4-d072ab843328",
+                          "type":  "requirement",
+                          "title":  "Role-based access control",
+                          "body":  "The system shall enforce RBAC for project and artifact operations.",
+                          "sort_order":  1,
+                          "attributes":  {
+
+                                         },
+                          "version":  1,
+                          "valid_from":  "2026-02-16T23:58:33.43109Z",
+                          "valid_to":  null,
+                          "created_at":  "2026-02-16T23:58:33.43109Z",
+                          "updated_at":  "2026-02-16T23:58:33.43109Z"
+                      },
+                      {
+                          "id":  "ec86fa65-fa0a-4ed9-a88e-b6d542fc7e58",
+                          "project_id":  "c99ce610-30dd-4215-9911-13ba7678cd36",
+                          "parent_id":  "14d5b5a6-d9c7-41fc-96b4-d072ab843328",
+                          "type":  "requirement",
+                          "title":  "Audit logging",
+                          "body":  "The system shall log create, update, delete, link, and export operations.",
+                          "sort_order":  2,
+                          "attributes":  {
+
+                                         },
+                          "version":  1,
+                          "valid_from":  "2026-02-16T23:58:33.441791Z",
+                          "valid_to":  null,
+                          "created_at":  "2026-02-16T23:58:33.441791Z",
+                          "updated_at":  "2026-02-16T23:58:33.441791Z"
+                      },
+                      {
+                          "id":  "96fb0039-5d28-4094-b1cb-3ea4e6693e83",
+                          "project_id":  "c99ce610-30dd-4215-9911-13ba7678cd36",
+                          "parent_id":  "14d5b5a6-d9c7-41fc-96b4-d072ab843328",
+                          "type":  "requirement",
+                          "title":  "Encryption",
+                          "body":  "The system shall encrypt data in transit and at rest.",
+                          "sort_order":  3,
+                          "attributes":  {
+
+                                         },
+                          "version":  1,
+                          "valid_from":  "2026-02-16T23:58:33.451742Z",
+                          "valid_to":  null,
+                          "created_at":  "2026-02-16T23:58:33.451742Z",
+                          "updated_at":  "2026-02-16T23:58:33.451742Z"
+                      },
+                      {
+                          "id":  "74f52f04-3b48-4352-8734-1382822ce0ae",
+                          "project_id":  "c99ce610-30dd-4215-9911-13ba7678cd36",
+                          "parent_id":  "14d5b5a6-d9c7-41fc-96b4-d072ab843328",
+                          "type":  "requirement",
+                          "title":  "Backup and restore",
+                          "body":  "The system shall provide automated backups and restore workflows.",
+                          "sort_order":  4,
+                          "attributes":  {
+
+                                         },
+                          "version":  1,
+                          "valid_from":  "2026-02-16T23:58:33.465902Z",
+                          "valid_to":  null,
+                          "created_at":  "2026-02-16T23:58:33.465902Z",
+                          "updated_at":  "2026-02-16T23:58:33.465902Z"
+                      },
+                      {
+                          "id":  "576a773f-2c41-4db4-bdf6-9d0554d289db",
+                          "project_id":  "c99ce610-30dd-4215-9911-13ba7678cd36",
+                          "parent_id":  "1aaed67e-222b-482e-8cd5-8216bf55fb68",
+                          "type":  "requirement",
+                          "title":  "PDF reports",
+                          "body":  "The system shall generate PDF reports with traceability sections and attachments.",
+                          "sort_order":  1,
+                          "attributes":  {
+
+                                         },
+                          "version":  1,
+                          "valid_from":  "2026-02-16T23:58:35.077624Z",
+                          "valid_to":  null,
+                          "created_at":  "2026-02-16T23:58:35.077624Z",
+                          "updated_at":  "2026-02-16T23:58:35.077624Z"
+                      },
+                      {
+                          "id":  "0a41208f-1098-4307-a485-28111dd2af04",
+                          "project_id":  "c99ce610-30dd-4215-9911-13ba7678cd36",
+                          "parent_id":  "1aaed67e-222b-482e-8cd5-8216bf55fb68",
+                          "type":  "requirement",
+                          "title":  "JSON export",
+                          "body":  "The system shall export full project data to JSON.",
+                          "sort_order":  1,
+                          "attributes":  {
+
+                                         },
+                          "version":  1,
+                          "valid_from":  "2026-02-16T23:58:35.089689Z",
+                          "valid_to":  null,
+                          "created_at":  "2026-02-16T23:58:35.089689Z",
+                          "updated_at":  "2026-02-16T23:58:35.089689Z"
+                      },
+                      {
+                          "id":  "cf3960da-b5ec-46b4-b45b-a0afdbd87cd3",
+                          "project_id":  "c99ce610-30dd-4215-9911-13ba7678cd36",
+                          "parent_id":  "1aaed67e-222b-482e-8cd5-8216bf55fb68",
+                          "type":  "requirement",
+                          "title":  "Trace reports",
+                          "body":  "The system shall generate trace matrix reports for selected artifact types.",
+                          "sort_order":  2,
+                          "attributes":  {
+
+                                         },
+                          "version":  1,
+                          "valid_from":  "2026-02-16T23:58:35.099863Z",
+                          "valid_to":  null,
+                          "created_at":  "2026-02-16T23:58:35.099863Z",
+                          "updated_at":  "2026-02-16T23:58:35.099863Z"
+                      },
+                      {
+                          "id":  "60345780-312c-4a99-b4d7-2e4cb37566d1",
+                          "project_id":  "c99ce610-30dd-4215-9911-13ba7678cd36",
+                          "parent_id":  "21f98623-8839-435c-a4df-2aecfb578ca1",
+                          "type":  "requirement",
+                          "title":  "Accessibility",
+                          "body":  "The system shall meet WCAG 2.1 AA guidelines for all core workflows.",
+                          "sort_order":  1,
+                          "attributes":  {
+
+                                         },
+                          "version":  1,
+                          "valid_from":  "2026-02-16T23:58:34.449821Z",
+                          "valid_to":  null,
+                          "created_at":  "2026-02-16T23:58:34.449821Z",
+                          "updated_at":  "2026-02-16T23:58:34.449821Z"
+                      },
+                      {
+                          "id":  "50d42526-473a-4847-971f-c82c541ad837",
+                          "project_id":  "c99ce610-30dd-4215-9911-13ba7678cd36",
+                          "parent_id":  "21f98623-8839-435c-a4df-2aecfb578ca1",
+                          "type":  "requirement",
+                          "title":  "Keyboard efficiency",
+                          "body":  "The system shall support keyboard shortcuts for common actions.",
+                          "sort_order":  1,
+                          "attributes":  {
+
+                                         },
+                          "version":  1,
+                          "valid_from":  "2026-02-16T23:58:34.463732Z",
+                          "valid_to":  null,
+                          "created_at":  "2026-02-16T23:58:34.463732Z",
+                          "updated_at":  "2026-02-16T23:58:34.463732Z"
+                      },
+                      {
+                          "id":  "6b6d4b6c-6636-4194-ac4c-358e6a130ab2",
+                          "project_id":  "c99ce610-30dd-4215-9911-13ba7678cd36",
+                          "parent_id":  "2ac3cd3f-80af-4c72-9be5-a2ad45bf138a",
+                          "type":  "hazard",
+                          "title":  "Data loss",
+                          "body":  "Loss of artifact data due to corruption or operator error.",
+                          "sort_order":  1,
+                          "attributes":  {
+
+                                         },
+                          "version":  1,
+                          "valid_from":  "2026-02-16T23:58:35.412034Z",
+                          "valid_to":  null,
+                          "created_at":  "2026-02-16T23:58:35.412034Z",
+                          "updated_at":  "2026-02-16T23:58:35.412034Z"
+                      },
+                      {
+                          "id":  "0c4a09ae-6fcc-4a49-b58e-752907d8b916",
+                          "project_id":  "c99ce610-30dd-4215-9911-13ba7678cd36",
+                          "parent_id":  "2ac3cd3f-80af-4c72-9be5-a2ad45bf138a",
+                          "type":  "hazard",
+                          "title":  "Unauthorized access",
+                          "body":  "Access to artifacts by unauthorized users.",
+                          "sort_order":  1,
+                          "attributes":  {
+
+                                         },
+                          "version":  1,
+                          "valid_from":  "2026-02-16T23:58:35.522955Z",
+                          "valid_to":  null,
+                          "created_at":  "2026-02-16T23:58:35.522955Z",
+                          "updated_at":  "2026-02-16T23:58:35.522955Z"
+                      },
+                      {
+                          "id":  "c444ffe1-3ca7-470f-a036-c7835cb4c631",
+                          "project_id":  "c99ce610-30dd-4215-9911-13ba7678cd36",
+                          "parent_id":  "2ac3cd3f-80af-4c72-9be5-a2ad45bf138a",
+                          "type":  "hazard",
+                          "title":  "Traceability breakage",
+                          "body":  "Links become invalid or inconsistent over time.",
+                          "sort_order":  2,
+                          "attributes":  {
+
+                                         },
+                          "version":  1,
+                          "valid_from":  "2026-02-16T23:58:35.536067Z",
+                          "valid_to":  null,
+                          "created_at":  "2026-02-16T23:58:35.536067Z",
+                          "updated_at":  "2026-02-16T23:58:35.536067Z"
+                      },
+                      {
+                          "id":  "4722e3ca-4051-4fdf-93f4-e4476522447f",
+                          "project_id":  "c99ce610-30dd-4215-9911-13ba7678cd36",
+                          "parent_id":  "2d781c09-2fcf-49d5-b08a-7bfeb13cce1c",
+                          "type":  "heading",
+                          "title":  "Overview",
+                          "body":  "Scope, stakeholders, and guiding principles.",
+                          "sort_order":  1,
+                          "attributes":  {
+
+                                         },
+                          "version":  1,
+                          "valid_from":  "2026-02-16T23:58:31.309698Z",
+                          "valid_to":  null,
+                          "created_at":  "2026-02-16T23:58:31.309698Z",
+                          "updated_at":  "2026-02-16T23:58:31.309698Z"
+                      },
+                      {
+                          "id":  "e7585146-6f2f-4f82-aeb6-53435cc184c5",
+                          "project_id":  "c99ce610-30dd-4215-9911-13ba7678cd36",
+                          "parent_id":  "2d781c09-2fcf-49d5-b08a-7bfeb13cce1c",
+                          "type":  "heading",
+                          "title":  "Vision and Roadmap",
+                          "body":  "Long-term product strategy and competitiveness goals.",
+                          "sort_order":  1,
+                          "attributes":  {
+
+                                         },
+                          "version":  1,
+                          "valid_from":  "2026-02-16T23:58:31.354348Z",
+                          "valid_to":  null,
+                          "created_at":  "2026-02-16T23:58:31.354348Z",
+                          "updated_at":  "2026-02-16T23:58:31.354348Z"
+                      },
+                      {
+                          "id":  "496af1e8-8148-4ab3-a720-e54681cffe8a",
+                          "project_id":  "c99ce610-30dd-4215-9911-13ba7678cd36",
+                          "parent_id":  "2d781c09-2fcf-49d5-b08a-7bfeb13cce1c",
+                          "type":  "heading",
+                          "title":  "Core Product Functions",
+                          "body":  "Foundational features required for daily use.",
+                          "sort_order":  2,
+                          "attributes":  {
+
+                                         },
+                          "version":  1,
+                          "valid_from":  "2026-02-16T23:58:31.365663Z",
+                          "valid_to":  null,
+                          "created_at":  "2026-02-16T23:58:31.365663Z",
+                          "updated_at":  "2026-02-16T23:58:31.365663Z"
+                      },
+                      {
+                          "id":  "860f56fc-6771-47bf-a145-a8671a53f8c5",
+                          "project_id":  "c99ce610-30dd-4215-9911-13ba7678cd36",
+                          "parent_id":  "2d781c09-2fcf-49d5-b08a-7bfeb13cce1c",
+                          "type":  "heading",
+                          "title":  "Traceability and V\u0026V",
+                          "body":  "Linking, coverage, and validation.",
+                          "sort_order":  3,
+                          "attributes":  {
+
+                                         },
+                          "version":  1,
+                          "valid_from":  "2026-02-16T23:58:31.375198Z",
+                          "valid_to":  null,
+                          "created_at":  "2026-02-16T23:58:31.375198Z",
+                          "updated_at":  "2026-02-16T23:58:31.375198Z"
+                      },
+                      {
+                          "id":  "85783cce-63c5-4007-b6c1-6b4b1f08cb76",
+                          "project_id":  "c99ce610-30dd-4215-9911-13ba7678cd36",
+                          "parent_id":  "2d781c09-2fcf-49d5-b08a-7bfeb13cce1c",
+                          "type":  "heading",
+                          "title":  "Collaboration and Workflow",
+                          "body":  "Review, approvals, and team workflows.",
+                          "sort_order":  4,
+                          "attributes":  {
+
+                                         },
+                          "version":  1,
+                          "valid_from":  "2026-02-16T23:58:31.389123Z",
+                          "valid_to":  null,
+                          "created_at":  "2026-02-16T23:58:31.389123Z",
+                          "updated_at":  "2026-02-16T23:58:31.389123Z"
+                      },
+                      {
+                          "id":  "14d5b5a6-d9c7-41fc-96b4-d072ab843328",
+                          "project_id":  "c99ce610-30dd-4215-9911-13ba7678cd36",
+                          "parent_id":  "2d781c09-2fcf-49d5-b08a-7bfeb13cce1c",
+                          "type":  "heading",
+                          "title":  "Security and Compliance",
+                          "body":  "Authentication, authorization, audit, and data protection.",
+                          "sort_order":  5,
+                          "attributes":  {
+
+                                         },
+                          "version":  1,
+                          "valid_from":  "2026-02-16T23:58:31.400873Z",
+                          "valid_to":  null,
+                          "created_at":  "2026-02-16T23:58:31.400873Z",
+                          "updated_at":  "2026-02-16T23:58:31.400873Z"
+                      },
+                      {
+                          "id":  "3811f259-3897-4ac5-908e-7e4bfe582384",
+                          "project_id":  "c99ce610-30dd-4215-9911-13ba7678cd36",
+                          "parent_id":  "2d781c09-2fcf-49d5-b08a-7bfeb13cce1c",
+                          "type":  "heading",
+                          "title":  "Architecture and Data",
+                          "body":  "API, persistence, and platform constraints.",
+                          "sort_order":  6,
+                          "attributes":  {
+
+                                         },
+                          "version":  1,
+                          "valid_from":  "2026-02-16T23:58:31.413246Z",
+                          "valid_to":  null,
+                          "created_at":  "2026-02-16T23:58:31.413246Z",
+                          "updated_at":  "2026-02-16T23:58:31.413246Z"
+                      },
+                      {
+                          "id":  "cbe1a70e-4bef-426e-9643-396b2e6133a4",
+                          "project_id":  "c99ce610-30dd-4215-9911-13ba7678cd36",
+                          "parent_id":  "2d781c09-2fcf-49d5-b08a-7bfeb13cce1c",
+                          "type":  "heading",
+                          "title":  "Integrations and Extensibility",
+                          "body":  "APIs, plugins, and interoperability.",
+                          "sort_order":  7,
+                          "attributes":  {
+
+                                         },
+                          "version":  1,
+                          "valid_from":  "2026-02-16T23:58:31.441375Z",
+                          "valid_to":  null,
+                          "created_at":  "2026-02-16T23:58:31.441375Z",
+                          "updated_at":  "2026-02-16T23:58:31.441375Z"
+                      },
+                      {
+                          "id":  "21f98623-8839-435c-a4df-2aecfb578ca1",
+                          "project_id":  "c99ce610-30dd-4215-9911-13ba7678cd36",
+                          "parent_id":  "2d781c09-2fcf-49d5-b08a-7bfeb13cce1c",
+                          "type":  "heading",
+                          "title":  "Usability and Accessibility",
+                          "body":  "Human factors and accessibility requirements.",
+                          "sort_order":  8,
+                          "attributes":  {
+
+                                         },
+                          "version":  1,
+                          "valid_from":  "2026-02-16T23:58:31.451658Z",
+                          "valid_to":  null,
+                          "created_at":  "2026-02-16T23:58:31.451658Z",
+                          "updated_at":  "2026-02-16T23:58:31.451658Z"
+                      },
+                      {
+                          "id":  "dd2b898a-b001-401f-88cb-6bd173ff2e4b",
+                          "project_id":  "c99ce610-30dd-4215-9911-13ba7678cd36",
+                          "parent_id":  "2d781c09-2fcf-49d5-b08a-7bfeb13cce1c",
+                          "type":  "heading",
+                          "title":  "Performance and Reliability",
+                          "body":  "Scalability, stability, and operational targets.",
+                          "sort_order":  9,
+                          "attributes":  {
+
+                                         },
+                          "version":  1,
+                          "valid_from":  "2026-02-16T23:58:31.463432Z",
+                          "valid_to":  null,
+                          "created_at":  "2026-02-16T23:58:31.463432Z",
+                          "updated_at":  "2026-02-16T23:58:31.463432Z"
+                      },
+                      {
+                          "id":  "1aaed67e-222b-482e-8cd5-8216bf55fb68",
+                          "project_id":  "c99ce610-30dd-4215-9911-13ba7678cd36",
+                          "parent_id":  "2d781c09-2fcf-49d5-b08a-7bfeb13cce1c",
+                          "type":  "heading",
+                          "title":  "Reporting and Export",
+                          "body":  "Exports, reports, and trace matrices.",
+                          "sort_order":  10,
+                          "attributes":  {
+
+                                         },
+                          "version":  1,
+                          "valid_from":  "2026-02-16T23:58:31.473028Z",
+                          "valid_to":  null,
+                          "created_at":  "2026-02-16T23:58:31.473028Z",
+                          "updated_at":  "2026-02-16T23:58:31.473028Z"
+                      },
+                      {
+                          "id":  "ea7dfe5e-bfd9-4a91-b514-c7225aa08233",
+                          "project_id":  "c99ce610-30dd-4215-9911-13ba7678cd36",
+                          "parent_id":  "2d781c09-2fcf-49d5-b08a-7bfeb13cce1c",
+                          "type":  "heading",
+                          "title":  "Testing Protocol",
+                          "body":  "Verification and validation plan.",
+                          "sort_order":  11,
+                          "attributes":  {
+
+                                         },
+                          "version":  1,
+                          "valid_from":  "2026-02-16T23:58:31.481796Z",
+                          "valid_to":  null,
+                          "created_at":  "2026-02-16T23:58:31.481796Z",
+                          "updated_at":  "2026-02-16T23:58:31.481796Z"
+                      },
+                      {
+                          "id":  "2ac3cd3f-80af-4c72-9be5-a2ad45bf138a",
+                          "project_id":  "c99ce610-30dd-4215-9911-13ba7678cd36",
+                          "parent_id":  "2d781c09-2fcf-49d5-b08a-7bfeb13cce1c",
+                          "type":  "heading",
+                          "title":  "Risks and Hazards",
+                          "body":  "Hazards and mitigations for safety and data integrity.",
+                          "sort_order":  12,
+                          "attributes":  {
+
+                                         },
+                          "version":  1,
+                          "valid_from":  "2026-02-16T23:58:31.491851Z",
+                          "valid_to":  null,
+                          "created_at":  "2026-02-16T23:58:31.491851Z",
+                          "updated_at":  "2026-02-16T23:58:31.491851Z"
+                      },
+                      {
+                          "id":  "5cb3334f-6406-44ff-aa33-c2e2a3670596",
+                          "project_id":  "c99ce610-30dd-4215-9911-13ba7678cd36",
+                          "parent_id":  "3811f259-3897-4ac5-908e-7e4bfe582384",
+                          "type":  "requirement",
+                          "title":  "API consistency",
+                          "body":  "The system shall provide versioned REST APIs for all core operations.",
+                          "sort_order":  1,
+                          "attributes":  {
+
+                                         },
+                          "version":  1,
+                          "valid_from":  "2026-02-16T23:58:33.773582Z",
+                          "valid_to":  null,
+                          "created_at":  "2026-02-16T23:58:33.773582Z",
+                          "updated_at":  "2026-02-16T23:58:33.773582Z"
+                      },
+                      {
+                          "id":  "5aebc2f0-b45d-4d9b-9974-98a3da7d870a",
+                          "project_id":  "c99ce610-30dd-4215-9911-13ba7678cd36",
+                          "parent_id":  "3811f259-3897-4ac5-908e-7e4bfe582384",
+                          "type":  "requirement",
+                          "title":  "Repository pattern",
+                          "body":  "The system shall isolate persistence concerns via repository interfaces.",
+                          "sort_order":  1,
+                          "attributes":  {
+
+                                         },
+                          "version":  1,
+                          "valid_from":  "2026-02-16T23:58:33.785729Z",
+                          "valid_to":  null,
+                          "created_at":  "2026-02-16T23:58:33.785729Z",
+                          "updated_at":  "2026-02-16T23:58:33.785729Z"
+                      },
+                      {
+                          "id":  "973049eb-6813-4657-b881-9cd2f9d8d478",
+                          "project_id":  "c99ce610-30dd-4215-9911-13ba7678cd36",
+                          "parent_id":  "3811f259-3897-4ac5-908e-7e4bfe582384",
+                          "type":  "design-item",
+                          "title":  "RBAC enforcement",
+                          "body":  "Policy engine for role-based permissions.",
+                          "sort_order":  1,
+                          "attributes":  {
+
+                                         },
+                          "version":  1,
+                          "valid_from":  "2026-02-16T23:58:36.269726Z",
+                          "valid_to":  null,
+                          "created_at":  "2026-02-16T23:58:36.269726Z",
+                          "updated_at":  "2026-02-16T23:58:36.269726Z"
+                      },
+                      {
+                          "id":  "2119efc3-f2f8-410f-b332-ed384c3d3375",
+                          "project_id":  "c99ce610-30dd-4215-9911-13ba7678cd36",
+                          "parent_id":  "3811f259-3897-4ac5-908e-7e4bfe582384",
+                          "type":  "requirement",
+                          "title":  "Schema migrations",
+                          "body":  "The system shall support schema migrations without data loss.",
+                          "sort_order":  2,
+                          "attributes":  {
+
+                                         },
+                          "version":  1,
+                          "valid_from":  "2026-02-16T23:58:33.795631Z",
+                          "valid_to":  null,
+                          "created_at":  "2026-02-16T23:58:33.795631Z",
+                          "updated_at":  "2026-02-16T23:58:33.795631Z"
+                      },
+                      {
+                          "id":  "22844f14-c3f2-4b51-8bf8-da501ee8f9c6",
+                          "project_id":  "c99ce610-30dd-4215-9911-13ba7678cd36",
+                          "parent_id":  "3811f259-3897-4ac5-908e-7e4bfe582384",
+                          "type":  "design-item",
+                          "title":  "Audit log service",
+                          "body":  "Append-only audit log with export.",
+                          "sort_order":  2,
+                          "attributes":  {
+
+                                         },
+                          "version":  1,
+                          "valid_from":  "2026-02-16T23:58:36.383497Z",
+                          "valid_to":  null,
+                          "created_at":  "2026-02-16T23:58:36.383497Z",
+                          "updated_at":  "2026-02-16T23:58:36.383497Z"
+                      },
+                      {
+                          "id":  "f26aa3e8-9ee6-41fc-a123-91bddd5ec4cd",
+                          "project_id":  "c99ce610-30dd-4215-9911-13ba7678cd36",
+                          "parent_id":  "3811f259-3897-4ac5-908e-7e4bfe582384",
+                          "type":  "design-item",
+                          "title":  "Authentication service",
+                          "body":  "OIDC and local auth provider integration.",
+                          "sort_order":  3,
+                          "attributes":  {
+
+                                         },
+                          "version":  1,
+                          "valid_from":  "2026-02-16T23:58:36.122183Z",
+                          "valid_to":  null,
+                          "created_at":  "2026-02-16T23:58:36.122183Z",
+                          "updated_at":  "2026-02-16T23:58:36.122183Z"
+                      },
+                      {
+                          "id":  "c1a8e786-e77d-436c-8842-7590d05be9d8",
+                          "project_id":  "c99ce610-30dd-4215-9911-13ba7678cd36",
+                          "parent_id":  "3811f259-3897-4ac5-908e-7e4bfe582384",
+                          "type":  "design-item",
+                          "title":  "Backup scheduler",
+                          "body":  "Automated backup and restore workflows.",
+                          "sort_order":  3,
+                          "attributes":  {
+
+                                         },
+                          "version":  1,
+                          "valid_from":  "2026-02-16T23:58:36.488728Z",
+                          "valid_to":  null,
+                          "created_at":  "2026-02-16T23:58:36.488728Z",
+                          "updated_at":  "2026-02-16T23:58:36.488728Z"
+                      },
+                      {
+                          "id":  "0928f2de-041b-4398-89e4-4b3770214034",
+                          "project_id":  "c99ce610-30dd-4215-9911-13ba7678cd36",
+                          "parent_id":  "3811f259-3897-4ac5-908e-7e4bfe582384",
+                          "type":  "design-item",
+                          "title":  "Baseline engine",
+                          "body":  "Snapshot artifacts and links for immutable baselines.",
+                          "sort_order":  4,
+                          "attributes":  {
+
+                                         },
+                          "version":  1,
+                          "valid_from":  "2026-02-16T23:58:36.613585Z",
+                          "valid_to":  null,
+                          "created_at":  "2026-02-16T23:58:36.613585Z",
+                          "updated_at":  "2026-02-16T23:58:36.613585Z"
+                      },
+                      {
+                          "id":  "301bda41-48de-4291-b813-a3ebe11f8a92",
+                          "project_id":  "c99ce610-30dd-4215-9911-13ba7678cd36",
+                          "parent_id":  "3811f259-3897-4ac5-908e-7e4bfe582384",
+                          "type":  "design-item",
+                          "title":  "Link validation rules",
+                          "body":  "Rule engine for link type validation.",
+                          "sort_order":  5,
+                          "attributes":  {
+
+                                         },
+                          "version":  1,
+                          "valid_from":  "2026-02-16T23:58:36.763325Z",
+                          "valid_to":  null,
+                          "created_at":  "2026-02-16T23:58:36.763325Z",
+                          "updated_at":  "2026-02-16T23:58:36.763325Z"
+                      },
+                      {
+                          "id":  "05b5c9d2-f757-462e-8729-78fd4c429f3c",
+                          "project_id":  "c99ce610-30dd-4215-9911-13ba7678cd36",
+                          "parent_id":  "3811f259-3897-4ac5-908e-7e4bfe582384",
+                          "type":  "design-item",
+                          "title":  "Export pipeline",
+                          "body":  "Project export and report generation service.",
+                          "sort_order":  6,
+                          "attributes":  {
+
+                                         },
+                          "version":  1,
+                          "valid_from":  "2026-02-16T23:58:36.91473Z",
+                          "valid_to":  null,
+                          "created_at":  "2026-02-16T23:58:36.91473Z",
+                          "updated_at":  "2026-02-16T23:58:36.91473Z"
+                      },
+                      {
+                          "id":  "a48f13b2-c496-45c4-a35d-86333beb7f9b",
+                          "project_id":  "c99ce610-30dd-4215-9911-13ba7678cd36",
+                          "parent_id":  "3811f259-3897-4ac5-908e-7e4bfe582384",
+                          "type":  "design-item",
+                          "title":  "Search indexer",
+                          "body":  "Search index support for large projects.",
+                          "sort_order":  7,
+                          "attributes":  {
+
+                                         },
+                          "version":  1,
+                          "valid_from":  "2026-02-16T23:58:37.044273Z",
+                          "valid_to":  null,
+                          "created_at":  "2026-02-16T23:58:37.044273Z",
+                          "updated_at":  "2026-02-16T23:58:37.044273Z"
+                      },
+                      {
+                          "id":  "f6b82a5a-83cb-485f-be65-88ad730a726e",
+                          "project_id":  "c99ce610-30dd-4215-9911-13ba7678cd36",
+                          "parent_id":  "4722e3ca-4051-4fdf-93f4-e4476522447f",
+                          "type":  "description",
+                          "title":  "Scope",
+                          "body":  "OpenV shall support requirements authoring, versioning, baselines, and traceability across engineering disciplines.",
+                          "sort_order":  1,
+                          "attributes":  {
+
+                                         },
+                          "version":  1,
+                          "valid_from":  "2026-02-16T23:58:31.669193Z",
+                          "valid_to":  null,
+                          "created_at":  "2026-02-16T23:58:31.669193Z",
+                          "updated_at":  "2026-02-16T23:58:31.669193Z"
+                      },
+                      {
+                          "id":  "958a936a-2ec1-476a-97a9-686528e1576b",
+                          "project_id":  "c99ce610-30dd-4215-9911-13ba7678cd36",
+                          "parent_id":  "4722e3ca-4051-4fdf-93f4-e4476522447f",
+                          "type":  "description",
+                          "title":  "Stakeholders",
+                          "body":  "Primary users include systems engineers, verification engineers, and compliance leads in regulated industries.",
+                          "sort_order":  1,
+                          "attributes":  {
+
+                                         },
+                          "version":  1,
+                          "valid_from":  "2026-02-16T23:58:31.772653Z",
+                          "valid_to":  null,
+                          "created_at":  "2026-02-16T23:58:31.772653Z",
+                          "updated_at":  "2026-02-16T23:58:31.772653Z"
+                      },
+                      {
+                          "id":  "78234952-5b03-400b-8f36-0058dd9a3854",
+                          "project_id":  "c99ce610-30dd-4215-9911-13ba7678cd36",
+                          "parent_id":  "4722e3ca-4051-4fdf-93f4-e4476522447f",
+                          "type":  "description",
+                          "title":  "Guiding Principles",
+                          "body":  "Local-first, open-source, API-driven, and automation-friendly.",
+                          "sort_order":  2,
+                          "attributes":  {
+
+                                         },
+                          "version":  1,
+                          "valid_from":  "2026-02-16T23:58:31.870848Z",
+                          "valid_to":  null,
+                          "created_at":  "2026-02-16T23:58:31.870848Z",
+                          "updated_at":  "2026-02-16T23:58:31.870848Z"
+                      },
+                      {
+                          "id":  "7aeafa79-8ed1-47a5-94ac-edcbacd151ae",
+                          "project_id":  "c99ce610-30dd-4215-9911-13ba7678cd36",
+                          "parent_id":  "496af1e8-8148-4ab3-a720-e54681cffe8a",
+                          "type":  "requirement",
+                          "title":  "Artifact management",
+                          "body":  "The system shall create, edit, version, and archive artifacts with full history and audit metadata.",
+                          "sort_order":  1,
+                          "attributes":  {
+
+                                         },
+                          "version":  1,
+                          "valid_from":  "2026-02-16T23:58:32.310975Z",
+                          "valid_to":  null,
+                          "created_at":  "2026-02-16T23:58:32.310975Z",
+                          "updated_at":  "2026-02-16T23:58:32.310975Z"
+                      },
+                      {
+                          "id":  "783ae2b3-542c-45bf-8989-1bf9768c3d35",
+                          "project_id":  "c99ce610-30dd-4215-9911-13ba7678cd36",
+                          "parent_id":  "496af1e8-8148-4ab3-a720-e54681cffe8a",
+                          "type":  "requirement",
+                          "title":  "Module view",
+                          "body":  "The system shall provide a hierarchical module view with drag-and-drop ordering and filters.",
+                          "sort_order":  1,
+                          "attributes":  {
+
+                                         },
+                          "version":  1,
+                          "valid_from":  "2026-02-16T23:58:32.323067Z",
+                          "valid_to":  null,
+                          "created_at":  "2026-02-16T23:58:32.323067Z",
+                          "updated_at":  "2026-02-16T23:58:32.323067Z"
+                      },
+                      {
+                          "id":  "1d30686a-bd12-462a-94af-fd588680c407",
+                          "project_id":  "c99ce610-30dd-4215-9911-13ba7678cd36",
+                          "parent_id":  "496af1e8-8148-4ab3-a720-e54681cffe8a",
+                          "type":  "requirement",
+                          "title":  "Rich text and attachments",
+                          "body":  "The system shall support rich text descriptions and file attachments for artifacts.",
+                          "sort_order":  2,
+                          "attributes":  {
+
+                                         },
+                          "version":  1,
+                          "valid_from":  "2026-02-16T23:58:32.333327Z",
+                          "valid_to":  null,
+                          "created_at":  "2026-02-16T23:58:32.333327Z",
+                          "updated_at":  "2026-02-16T23:58:32.333327Z"
+                      },
+                      {
+                          "id":  "e1214ff2-abf7-41b8-b525-10e2ff962867",
+                          "project_id":  "c99ce610-30dd-4215-9911-13ba7678cd36",
+                          "parent_id":  "496af1e8-8148-4ab3-a720-e54681cffe8a",
+                          "type":  "requirement",
+                          "title":  "Baselines",
+                          "body":  "The system shall create immutable baselines that snapshot artifacts and links.",
+                          "sort_order":  3,
+                          "attributes":  {
+
+                                         },
+                          "version":  1,
+                          "valid_from":  "2026-02-16T23:58:32.343724Z",
+                          "valid_to":  null,
+                          "created_at":  "2026-02-16T23:58:32.343724Z",
+                          "updated_at":  "2026-02-16T23:58:32.343724Z"
+                      },
+                      {
+                          "id":  "bf46f5ea-3ce9-4963-b3dc-6f9f2c7c178f",
+                          "project_id":  "c99ce610-30dd-4215-9911-13ba7678cd36",
+                          "parent_id":  "496af1e8-8148-4ab3-a720-e54681cffe8a",
+                          "type":  "requirement",
+                          "title":  "Search and filters",
+                          "body":  "The system shall provide full-text search and multi-criteria filters across projects.",
+                          "sort_order":  4,
+                          "attributes":  {
+
+                                         },
+                          "version":  1,
+                          "valid_from":  "2026-02-16T23:58:32.354042Z",
+                          "valid_to":  null,
+                          "created_at":  "2026-02-16T23:58:32.354042Z",
+                          "updated_at":  "2026-02-16T23:58:32.354042Z"
+                      },
+                      {
+                          "id":  "52dbaa13-bdc0-4170-8138-ecb9d7360d6a",
+                          "project_id":  "c99ce610-30dd-4215-9911-13ba7678cd36",
+                          "parent_id":  "496af1e8-8148-4ab3-a720-e54681cffe8a",
+                          "type":  "requirement",
+                          "title":  "Bulk operations",
+                          "body":  "The system shall support bulk edits, imports, and deletion workflows with confirmations.",
+                          "sort_order":  5,
+                          "attributes":  {
+
+                                         },
+                          "version":  1,
+                          "valid_from":  "2026-02-16T23:58:32.366042Z",
+                          "valid_to":  null,
+                          "created_at":  "2026-02-16T23:58:32.366042Z",
+                          "updated_at":  "2026-02-16T23:58:32.366042Z"
+                      },
+                      {
+                          "id":  "961acd26-6be8-4f73-b911-1c05f7e99eda",
+                          "project_id":  "c99ce610-30dd-4215-9911-13ba7678cd36",
+                          "parent_id":  "85783cce-63c5-4007-b6c1-6b4b1f08cb76",
+                          "type":  "requirement",
+                          "title":  "Review workflow",
+                          "body":  "The system shall support review cycles with approvals, rejections, and comments.",
+                          "sort_order":  1,
+                          "attributes":  {
+
+                                         },
+                          "version":  1,
+                          "valid_from":  "2026-02-16T23:58:33.059138Z",
+                          "valid_to":  null,
+                          "created_at":  "2026-02-16T23:58:33.059138Z",
+                          "updated_at":  "2026-02-16T23:58:33.059138Z"
+                      },
+                      {
+                          "id":  "dda25de6-6184-488a-8cfb-7cacf4a7002e",
+                          "project_id":  "c99ce610-30dd-4215-9911-13ba7678cd36",
+                          "parent_id":  "85783cce-63c5-4007-b6c1-6b4b1f08cb76",
+                          "type":  "requirement",
+                          "title":  "Notifications",
+                          "body":  "The system shall notify users of changes and review actions.",
+                          "sort_order":  1,
+                          "attributes":  {
+
+                                         },
+                          "version":  1,
+                          "valid_from":  "2026-02-16T23:58:33.073366Z",
+                          "valid_to":  null,
+                          "created_at":  "2026-02-16T23:58:33.073366Z",
+                          "updated_at":  "2026-02-16T23:58:33.073366Z"
+                      },
+                      {
+                          "id":  "4457833b-6dbf-4d51-ac31-db7f1d6bbff1",
+                          "project_id":  "c99ce610-30dd-4215-9911-13ba7678cd36",
+                          "parent_id":  "860f56fc-6771-47bf-a145-a8671a53f8c5",
+                          "type":  "requirement",
+                          "title":  "Link type validation",
+                          "body":  "The system shall enforce link type rules, including inverse labels and allowed artifact types.",
+                          "sort_order":  1,
+                          "attributes":  {
+
+                                         },
+                          "version":  1,
+                          "valid_from":  "2026-02-16T23:58:32.71532Z",
+                          "valid_to":  null,
+                          "created_at":  "2026-02-16T23:58:32.71532Z",
+                          "updated_at":  "2026-02-16T23:58:32.71532Z"
+                      },
+                      {
+                          "id":  "d5afbb58-7d09-4fad-9693-ee0086419972",
+                          "project_id":  "c99ce610-30dd-4215-9911-13ba7678cd36",
+                          "parent_id":  "860f56fc-6771-47bf-a145-a8671a53f8c5",
+                          "type":  "requirement",
+                          "title":  "Coverage analysis",
+                          "body":  "The system shall calculate coverage of requirements by test cases and design items.",
+                          "sort_order":  1,
+                          "attributes":  {
+
+                                         },
+                          "version":  1,
+                          "valid_from":  "2026-02-16T23:58:32.750293Z",
+                          "valid_to":  null,
+                          "created_at":  "2026-02-16T23:58:32.750293Z",
+                          "updated_at":  "2026-02-16T23:58:32.750293Z"
+                      },
+                      {
+                          "id":  "7e9d27b0-732c-4721-affa-566dd17079c3",
+                          "project_id":  "c99ce610-30dd-4215-9911-13ba7678cd36",
+                          "parent_id":  "860f56fc-6771-47bf-a145-a8671a53f8c5",
+                          "type":  "requirement",
+                          "title":  "Impact analysis",
+                          "body":  "The system shall compute upstream and downstream impacts for any artifact.",
+                          "sort_order":  2,
+                          "attributes":  {
+
+                                         },
+                          "version":  1,
+                          "valid_from":  "2026-02-16T23:58:32.759745Z",
+                          "valid_to":  null,
+                          "created_at":  "2026-02-16T23:58:32.759745Z",
+                          "updated_at":  "2026-02-16T23:58:32.759745Z"
+                      },
+                      {
+                          "id":  "ac4a40e6-9aae-4a44-b246-ac06764986fe",
+                          "project_id":  "c99ce610-30dd-4215-9911-13ba7678cd36",
+                          "parent_id":  "860f56fc-6771-47bf-a145-a8671a53f8c5",
+                          "type":  "requirement",
+                          "title":  "Trace matrix",
+                          "body":  "The system shall generate trace matrices for selected artifact types.",
+                          "sort_order":  3,
+                          "attributes":  {
+
+                                         },
+                          "version":  1,
+                          "valid_from":  "2026-02-16T23:58:32.769287Z",
+                          "valid_to":  null,
+                          "created_at":  "2026-02-16T23:58:32.769287Z",
+                          "updated_at":  "2026-02-16T23:58:32.769287Z"
+                      },
+                      {
+                          "id":  "e07faf0c-d6b2-499f-a32f-30687130e6c8",
+                          "project_id":  "c99ce610-30dd-4215-9911-13ba7678cd36",
+                          "parent_id":  "cbe1a70e-4bef-426e-9643-396b2e6133a4",
+                          "type":  "requirement",
+                          "title":  "Webhooks",
+                          "body":  "The system shall emit webhooks for artifact and link changes.",
+                          "sort_order":  1,
+                          "attributes":  {
+
+                                         },
+                          "version":  1,
+                          "valid_from":  "2026-02-16T23:58:34.13526Z",
+                          "valid_to":  null,
+                          "created_at":  "2026-02-16T23:58:34.13526Z",
+                          "updated_at":  "2026-02-16T23:58:34.13526Z"
+                      },
+                      {
+                          "id":  "f0175e1c-5b00-4556-b06d-d2782771ae43",
+                          "project_id":  "c99ce610-30dd-4215-9911-13ba7678cd36",
+                          "parent_id":  "cbe1a70e-4bef-426e-9643-396b2e6133a4",
+                          "type":  "requirement",
+                          "title":  "Plugin framework",
+                          "body":  "The system shall provide a plugin framework for custom rules and integrations.",
+                          "sort_order":  1,
+                          "attributes":  {
+
+                                         },
+                          "version":  1,
+                          "valid_from":  "2026-02-16T23:58:34.147717Z",
+                          "valid_to":  null,
+                          "created_at":  "2026-02-16T23:58:34.147717Z",
+                          "updated_at":  "2026-02-16T23:58:34.147717Z"
+                      },
+                      {
+                          "id":  "ab47bf99-c760-4249-9077-0fbd77cd4dd4",
+                          "project_id":  "c99ce610-30dd-4215-9911-13ba7678cd36",
+                          "parent_id":  "cbe1a70e-4bef-426e-9643-396b2e6133a4",
+                          "type":  "requirement",
+                          "title":  "Import and export",
+                          "body":  "The system shall import and export data in JSON and CSV, with ReqIF planned.",
+                          "sort_order":  2,
+                          "attributes":  {
+
+                                         },
+                          "version":  1,
+                          "valid_from":  "2026-02-16T23:58:34.158967Z",
+                          "valid_to":  null,
+                          "created_at":  "2026-02-16T23:58:34.158967Z",
+                          "updated_at":  "2026-02-16T23:58:34.158967Z"
+                      },
+                      {
+                          "id":  "9d62c467-1791-4863-af2e-54f497fb8f34",
+                          "project_id":  "c99ce610-30dd-4215-9911-13ba7678cd36",
+                          "parent_id":  "dd2b898a-b001-401f-88cb-6bd173ff2e4b",
+                          "type":  "requirement",
+                          "title":  "Interactive performance",
+                          "body":  "The system shall respond to standard UI actions in under 250 ms for projects up to 10,000 artifacts.",
+                          "sort_order":  1,
+                          "attributes":  {
+
+                                         },
+                          "version":  1,
+                          "valid_from":  "2026-02-16T23:58:34.764776Z",
+                          "valid_to":  null,
+                          "created_at":  "2026-02-16T23:58:34.764776Z",
+                          "updated_at":  "2026-02-16T23:58:34.764776Z"
+                      },
+                      {
+                          "id":  "af5f9878-ea39-448d-ba8e-bb68868097a3",
+                          "project_id":  "c99ce610-30dd-4215-9911-13ba7678cd36",
+                          "parent_id":  "dd2b898a-b001-401f-88cb-6bd173ff2e4b",
+                          "type":  "requirement",
+                          "title":  "Reliability",
+                          "body":  "The system shall provide 99.5% uptime in supported deployments.",
+                          "sort_order":  1,
+                          "attributes":  {
+
+                                         },
+                          "version":  1,
+                          "valid_from":  "2026-02-16T23:58:34.779055Z",
+                          "valid_to":  null,
+                          "created_at":  "2026-02-16T23:58:34.779055Z",
+                          "updated_at":  "2026-02-16T23:58:34.779055Z"
+                      },
+                      {
+                          "id":  "803a6244-39b6-434c-9957-7ea42b5b0b51",
+                          "project_id":  "c99ce610-30dd-4215-9911-13ba7678cd36",
+                          "parent_id":  "ea7dfe5e-bfd9-4a91-b514-c7225aa08233",
+                          "type":  "test-case",
+                          "title":  "Artifact CRUD test",
+                          "body":  "Create, update, version, and delete artifacts and verify history.",
+                          "sort_order":  1,
+                          "attributes":  {
+
+                                         },
+                          "version":  1,
+                          "valid_from":  "2026-02-16T23:58:37.613176Z",
+                          "valid_to":  null,
+                          "created_at":  "2026-02-16T23:58:37.613176Z",
+                          "updated_at":  "2026-02-16T23:58:37.613176Z"
+                      },
+                      {
+                          "id":  "4057f3b2-d3f4-4e50-a12b-e63b870dad35",
+                          "project_id":  "c99ce610-30dd-4215-9911-13ba7678cd36",
+                          "parent_id":  "ea7dfe5e-bfd9-4a91-b514-c7225aa08233",
+                          "type":  "test-case",
+                          "title":  "Link validation test",
+                          "body":  "Attempt invalid links and verify validation errors.",
+                          "sort_order":  1,
+                          "attributes":  {
+
+                                         },
+                          "version":  1,
+                          "valid_from":  "2026-02-16T23:58:37.725568Z",
+                          "valid_to":  null,
+                          "created_at":  "2026-02-16T23:58:37.725568Z",
+                          "updated_at":  "2026-02-16T23:58:37.725568Z"
+                      },
+                      {
+                          "id":  "1b515b01-85ee-47ed-b124-690fd214c695",
+                          "project_id":  "c99ce610-30dd-4215-9911-13ba7678cd36",
+                          "parent_id":  "ea7dfe5e-bfd9-4a91-b514-c7225aa08233",
+                          "type":  "test-case",
+                          "title":  "Baseline snapshot test",
+                          "body":  "Create baseline and ensure artifacts and links are frozen.",
+                          "sort_order":  2,
+                          "attributes":  {
+
+                                         },
+                          "version":  1,
+                          "valid_from":  "2026-02-16T23:58:37.792645Z",
+                          "valid_to":  null,
+                          "created_at":  "2026-02-16T23:58:37.792645Z",
+                          "updated_at":  "2026-02-16T23:58:37.792645Z"
+                      },
+                      {
+                          "id":  "947954bc-3623-4f8c-b85a-657b1dd680c5",
+                          "project_id":  "c99ce610-30dd-4215-9911-13ba7678cd36",
+                          "parent_id":  "ea7dfe5e-bfd9-4a91-b514-c7225aa08233",
+                          "type":  "test-case",
+                          "title":  "Export and report test",
+                          "body":  "Export JSON and generate PDF with traceability sections.",
+                          "sort_order":  3,
+                          "attributes":  {
+
+                                         },
+                          "version":  1,
+                          "valid_from":  "2026-02-16T23:58:37.862284Z",
+                          "valid_to":  null,
+                          "created_at":  "2026-02-16T23:58:37.862284Z",
+                          "updated_at":  "2026-02-16T23:58:37.862284Z"
+                      },
+                      {
+                          "id":  "8e079a52-808e-4797-aa0c-28f8b835b559",
+                          "project_id":  "c99ce610-30dd-4215-9911-13ba7678cd36",
+                          "parent_id":  "ea7dfe5e-bfd9-4a91-b514-c7225aa08233",
+                          "type":  "test-case",
+                          "title":  "RBAC enforcement test",
+                          "body":  "Verify permission enforcement across roles.",
+                          "sort_order":  4,
+                          "attributes":  {
+
+                                         },
+                          "version":  1,
+                          "valid_from":  "2026-02-16T23:58:37.942137Z",
+                          "valid_to":  null,
+                          "created_at":  "2026-02-16T23:58:37.942137Z",
+                          "updated_at":  "2026-02-16T23:58:37.942137Z"
+                      },
+                      {
+                          "id":  "1e93c6f9-e886-47e4-be76-2b67fe36c538",
+                          "project_id":  "c99ce610-30dd-4215-9911-13ba7678cd36",
+                          "parent_id":  "ea7dfe5e-bfd9-4a91-b514-c7225aa08233",
+                          "type":  "test-case",
+                          "title":  "Performance test",
+                          "body":  "Load 10,000 artifacts and verify UI response time.",
+                          "sort_order":  5,
+                          "attributes":  {
+
+                                         },
+                          "version":  1,
+                          "valid_from":  "2026-02-16T23:58:38.009419Z",
+                          "valid_to":  null,
+                          "created_at":  "2026-02-16T23:58:38.009419Z",
+                          "updated_at":  "2026-02-16T23:58:38.009419Z"
+                      }
+                  ],
+    "links":  [
+                  {
+                      "id":  "1ffea988-17d9-4c26-814d-9f449ce1a84e",
+                      "from_id":  "ac4a40e6-9aae-4a44-b246-ac06764986fe",
+                      "to_id":  "0a41208f-1098-4307-a485-28111dd2af04",
+                      "type":  "impacts",
+                      "attributes":  {
+
+                                     },
+                      "version":  1,
+                      "valid_from":  "0001-01-01T00:00:00Z",
+                      "valid_to":  null,
+                      "created_at":  "2026-02-16T23:58:38.483932Z",
+                      "updated_at":  "2026-02-16T23:58:38.483932Z"
+                  },
+                  {
+                      "id":  "11116ded-93f1-4c90-b4b2-86398c3b1ccb",
+                      "from_id":  "7aeafa79-8ed1-47a5-94ac-edcbacd151ae",
+                      "to_id":  "1d30686a-bd12-462a-94af-fd588680c407",
+                      "type":  "decomposes-to",
+                      "attributes":  {
+
+                                     },
+                      "version":  1,
+                      "valid_from":  "0001-01-01T00:00:00Z",
+                      "valid_to":  null,
+                      "created_at":  "2026-02-16T23:58:38.353203Z",
+                      "updated_at":  "2026-02-16T23:58:38.353203Z"
+                  },
+                  {
+                      "id":  "bc35590a-7ac2-40df-ba4f-9e9094d67632",
+                      "from_id":  "7aeafa79-8ed1-47a5-94ac-edcbacd151ae",
+                      "to_id":  "783ae2b3-542c-45bf-8989-1bf9768c3d35",
+                      "type":  "decomposes-to",
+                      "attributes":  {
+
+                                     },
+                      "version":  1,
+                      "valid_from":  "0001-01-01T00:00:00Z",
+                      "valid_to":  null,
+                      "created_at":  "2026-02-16T23:58:38.230866Z",
+                      "updated_at":  "2026-02-16T23:58:38.230866Z"
+                  },
+                  {
+                      "id":  "c879b521-f4ba-43a1-b2fe-7bc42ea78eac",
+                      "from_id":  "1e93c6f9-e886-47e4-be76-2b67fe36c538",
+                      "to_id":  "9d62c467-1791-4863-af2e-54f497fb8f34",
+                      "type":  "verifies",
+                      "attributes":  {
+
+                                     },
+                      "version":  1,
+                      "valid_from":  "0001-01-01T00:00:00Z",
+                      "valid_to":  null,
+                      "created_at":  "2026-02-16T23:58:38.025039Z",
+                      "updated_at":  "2026-02-16T23:58:38.025039Z"
+                  },
+                  {
+                      "id":  "d8ceac51-8405-4e6e-a9bf-5a49cf09d4f0",
+                      "from_id":  "8e079a52-808e-4797-aa0c-28f8b835b559",
+                      "to_id":  "afd48dbd-a445-4ef9-9475-39296cd12160",
+                      "type":  "verifies",
+                      "attributes":  {
+
+                                     },
+                      "version":  1,
+                      "valid_from":  "0001-01-01T00:00:00Z",
+                      "valid_to":  null,
+                      "created_at":  "2026-02-16T23:58:37.956123Z",
+                      "updated_at":  "2026-02-16T23:58:37.956123Z"
+                  },
+                  {
+                      "id":  "743c18b9-4ccd-4811-846e-26fa8224bfa6",
+                      "from_id":  "947954bc-3623-4f8c-b85a-657b1dd680c5",
+                      "to_id":  "576a773f-2c41-4db4-bdf6-9d0554d289db",
+                      "type":  "verifies",
+                      "attributes":  {
+
+                                     },
+                      "version":  1,
+                      "valid_from":  "0001-01-01T00:00:00Z",
+                      "valid_to":  null,
+                      "created_at":  "2026-02-16T23:58:37.879477Z",
+                      "updated_at":  "2026-02-16T23:58:37.879477Z"
+                  },
+                  {
+                      "id":  "5237777b-61fe-46cb-abf6-a0e1c02b3a65",
+                      "from_id":  "1b515b01-85ee-47ed-b124-690fd214c695",
+                      "to_id":  "e1214ff2-abf7-41b8-b525-10e2ff962867",
+                      "type":  "verifies",
+                      "attributes":  {
+
+                                     },
+                      "version":  1,
+                      "valid_from":  "0001-01-01T00:00:00Z",
+                      "valid_to":  null,
+                      "created_at":  "2026-02-16T23:58:37.805318Z",
+                      "updated_at":  "2026-02-16T23:58:37.805318Z"
+                  },
+                  {
+                      "id":  "4ad41ca7-1a21-41ea-97bc-8ced52e7b448",
+                      "from_id":  "4057f3b2-d3f4-4e50-a12b-e63b870dad35",
+                      "to_id":  "4457833b-6dbf-4d51-ac31-db7f1d6bbff1",
+                      "type":  "verifies",
+                      "attributes":  {
+
+                                     },
+                      "version":  1,
+                      "valid_from":  "0001-01-01T00:00:00Z",
+                      "valid_to":  null,
+                      "created_at":  "2026-02-16T23:58:37.740457Z",
+                      "updated_at":  "2026-02-16T23:58:37.740457Z"
+                  },
+                  {
+                      "id":  "bbadd825-4661-4ee3-9aee-b35afc964710",
+                      "from_id":  "803a6244-39b6-434c-9957-7ea42b5b0b51",
+                      "to_id":  "7aeafa79-8ed1-47a5-94ac-edcbacd151ae",
+                      "type":  "verifies",
+                      "attributes":  {
+
+                                     },
+                      "version":  1,
+                      "valid_from":  "0001-01-01T00:00:00Z",
+                      "valid_to":  null,
+                      "created_at":  "2026-02-16T23:58:37.667225Z",
+                      "updated_at":  "2026-02-16T23:58:37.667225Z"
+                  },
+                  {
+                      "id":  "a5c89338-1440-4a16-9af1-4f74c35f358c",
+                      "from_id":  "a48f13b2-c496-45c4-a35d-86333beb7f9b",
+                      "to_id":  "c444ffe1-3ca7-470f-a036-c7835cb4c631",
+                      "type":  "mitigates",
+                      "attributes":  {
+
+                                     },
+                      "version":  1,
+                      "valid_from":  "0001-01-01T00:00:00Z",
+                      "valid_to":  null,
+                      "created_at":  "2026-02-16T23:58:37.114598Z",
+                      "updated_at":  "2026-02-16T23:58:37.114598Z"
+                  },
+                  {
+                      "id":  "858ce616-f9f5-412c-aec7-36565b29e080",
+                      "from_id":  "a48f13b2-c496-45c4-a35d-86333beb7f9b",
+                      "to_id":  "bf46f5ea-3ce9-4963-b3dc-6f9f2c7c178f",
+                      "type":  "satisfies",
+                      "attributes":  {
+
+                                     },
+                      "version":  1,
+                      "valid_from":  "0001-01-01T00:00:00Z",
+                      "valid_to":  null,
+                      "created_at":  "2026-02-16T23:58:37.057828Z",
+                      "updated_at":  "2026-02-16T23:58:37.057828Z"
+                  },
+                  {
+                      "id":  "057df73a-ae4a-4c0c-93d8-62fd7b9f1703",
+                      "from_id":  "05b5c9d2-f757-462e-8729-78fd4c429f3c",
+                      "to_id":  "6b6d4b6c-6636-4194-ac4c-358e6a130ab2",
+                      "type":  "mitigates",
+                      "attributes":  {
+
+                                     },
+                      "version":  1,
+                      "valid_from":  "0001-01-01T00:00:00Z",
+                      "valid_to":  null,
+                      "created_at":  "2026-02-16T23:58:36.990764Z",
+                      "updated_at":  "2026-02-16T23:58:36.990764Z"
+                  },
+                  {
+                      "id":  "ec3f7dc3-8a64-43a4-8178-c2a4706ca8ec",
+                      "from_id":  "05b5c9d2-f757-462e-8729-78fd4c429f3c",
+                      "to_id":  "576a773f-2c41-4db4-bdf6-9d0554d289db",
+                      "type":  "satisfies",
+                      "attributes":  {
+
+                                     },
+                      "version":  1,
+                      "valid_from":  "0001-01-01T00:00:00Z",
+                      "valid_to":  null,
+                      "created_at":  "2026-02-16T23:58:36.933298Z",
+                      "updated_at":  "2026-02-16T23:58:36.933298Z"
+                  },
+                  {
+                      "id":  "5952f65a-d20e-40ee-b05e-719ed3fdbdb3",
+                      "from_id":  "301bda41-48de-4291-b813-a3ebe11f8a92",
+                      "to_id":  "c444ffe1-3ca7-470f-a036-c7835cb4c631",
+                      "type":  "mitigates",
+                      "attributes":  {
+
+                                     },
+                      "version":  1,
+                      "valid_from":  "0001-01-01T00:00:00Z",
+                      "valid_to":  null,
+                      "created_at":  "2026-02-16T23:58:36.854454Z",
+                      "updated_at":  "2026-02-16T23:58:36.854454Z"
+                  },
+                  {
+                      "id":  "5af26cd0-2be9-4337-8e6e-0019926e5304",
+                      "from_id":  "301bda41-48de-4291-b813-a3ebe11f8a92",
+                      "to_id":  "4457833b-6dbf-4d51-ac31-db7f1d6bbff1",
+                      "type":  "satisfies",
+                      "attributes":  {
+
+                                     },
+                      "version":  1,
+                      "valid_from":  "0001-01-01T00:00:00Z",
+                      "valid_to":  null,
+                      "created_at":  "2026-02-16T23:58:36.780306Z",
+                      "updated_at":  "2026-02-16T23:58:36.780306Z"
+                  },
+                  {
+                      "id":  "15e1fc64-d515-42c7-8277-636fcb28dcf4",
+                      "from_id":  "0928f2de-041b-4398-89e4-4b3770214034",
+                      "to_id":  "c444ffe1-3ca7-470f-a036-c7835cb4c631",
+                      "type":  "mitigates",
+                      "attributes":  {
+
+                                     },
+                      "version":  1,
+                      "valid_from":  "0001-01-01T00:00:00Z",
+                      "valid_to":  null,
+                      "created_at":  "2026-02-16T23:58:36.691267Z",
+                      "updated_at":  "2026-02-16T23:58:36.691267Z"
+                  },
+                  {
+                      "id":  "0129776a-7dd9-4509-a486-9f985d4332f7",
+                      "from_id":  "0928f2de-041b-4398-89e4-4b3770214034",
+                      "to_id":  "e1214ff2-abf7-41b8-b525-10e2ff962867",
+                      "type":  "satisfies",
+                      "attributes":  {
+
+                                     },
+                      "version":  1,
+                      "valid_from":  "0001-01-01T00:00:00Z",
+                      "valid_to":  null,
+                      "created_at":  "2026-02-16T23:58:36.630742Z",
+                      "updated_at":  "2026-02-16T23:58:36.630742Z"
+                  },
+                  {
+                      "id":  "9aa82a0e-d268-4741-9299-b311d331bf63",
+                      "from_id":  "c1a8e786-e77d-436c-8842-7590d05be9d8",
+                      "to_id":  "6b6d4b6c-6636-4194-ac4c-358e6a130ab2",
+                      "type":  "mitigates",
+                      "attributes":  {
+
+                                     },
+                      "version":  1,
+                      "valid_from":  "0001-01-01T00:00:00Z",
+                      "valid_to":  null,
+                      "created_at":  "2026-02-16T23:58:36.552816Z",
+                      "updated_at":  "2026-02-16T23:58:36.552816Z"
+                  },
+                  {
+                      "id":  "61bf7809-0818-4b64-af31-9b76ef201638",
+                      "from_id":  "c1a8e786-e77d-436c-8842-7590d05be9d8",
+                      "to_id":  "74f52f04-3b48-4352-8734-1382822ce0ae",
+                      "type":  "satisfies",
+                      "attributes":  {
+
+                                     },
+                      "version":  1,
+                      "valid_from":  "0001-01-01T00:00:00Z",
+                      "valid_to":  null,
+                      "created_at":  "2026-02-16T23:58:36.501526Z",
+                      "updated_at":  "2026-02-16T23:58:36.501526Z"
+                  },
+                  {
+                      "id":  "827fc213-0348-4c5b-aff8-c67760fa2fd8",
+                      "from_id":  "22844f14-c3f2-4b51-8bf8-da501ee8f9c6",
+                      "to_id":  "c444ffe1-3ca7-470f-a036-c7835cb4c631",
+                      "type":  "mitigates",
+                      "attributes":  {
+
+                                     },
+                      "version":  1,
+                      "valid_from":  "0001-01-01T00:00:00Z",
+                      "valid_to":  null,
+                      "created_at":  "2026-02-16T23:58:36.44639Z",
+                      "updated_at":  "2026-02-16T23:58:36.44639Z"
+                  },
+                  {
+                      "id":  "c66fc3ea-fdf8-4a02-a2ea-97b8e2b47707",
+                      "from_id":  "22844f14-c3f2-4b51-8bf8-da501ee8f9c6",
+                      "to_id":  "ec86fa65-fa0a-4ed9-a88e-b6d542fc7e58",
+                      "type":  "satisfies",
+                      "attributes":  {
+
+                                     },
+                      "version":  1,
+                      "valid_from":  "0001-01-01T00:00:00Z",
+                      "valid_to":  null,
+                      "created_at":  "2026-02-16T23:58:36.398386Z",
+                      "updated_at":  "2026-02-16T23:58:36.398386Z"
+                  },
+                  {
+                      "id":  "07c849a6-9c59-45cb-8674-38d53ebf6a79",
+                      "from_id":  "973049eb-6813-4657-b881-9cd2f9d8d478",
+                      "to_id":  "0c4a09ae-6fcc-4a49-b58e-752907d8b916",
+                      "type":  "mitigates",
+                      "attributes":  {
+
+                                     },
+                      "version":  1,
+                      "valid_from":  "0001-01-01T00:00:00Z",
+                      "valid_to":  null,
+                      "created_at":  "2026-02-16T23:58:36.336436Z",
+                      "updated_at":  "2026-02-16T23:58:36.336436Z"
+                  },
+                  {
+                      "id":  "dc73ee87-7842-4c66-aa23-1f861d19e89b",
+                      "from_id":  "973049eb-6813-4657-b881-9cd2f9d8d478",
+                      "to_id":  "afd48dbd-a445-4ef9-9475-39296cd12160",
+                      "type":  "satisfies",
+                      "attributes":  {
+
+                                     },
+                      "version":  1,
+                      "valid_from":  "0001-01-01T00:00:00Z",
+                      "valid_to":  null,
+                      "created_at":  "2026-02-16T23:58:36.284263Z",
+                      "updated_at":  "2026-02-16T23:58:36.284263Z"
+                  },
+                  {
+                      "id":  "589deab7-2007-4c86-9e01-f0e52bdfa1f2",
+                      "from_id":  "f26aa3e8-9ee6-41fc-a123-91bddd5ec4cd",
+                      "to_id":  "0c4a09ae-6fcc-4a49-b58e-752907d8b916",
+                      "type":  "mitigates",
+                      "attributes":  {
+
+                                     },
+                      "version":  1,
+                      "valid_from":  "0001-01-01T00:00:00Z",
+                      "valid_to":  null,
+                      "created_at":  "2026-02-16T23:58:36.21398Z",
+                      "updated_at":  "2026-02-16T23:58:36.21398Z"
+                  },
+                  {
+                      "id":  "b8bbe44c-ca6f-4158-81c7-bd3fdee198d8",
+                      "from_id":  "f26aa3e8-9ee6-41fc-a123-91bddd5ec4cd",
+                      "to_id":  "d2c0eb28-4217-4719-b3ae-24559df64fd1",
+                      "type":  "satisfies",
+                      "attributes":  {
+
+                                     },
+                      "version":  1,
+                      "valid_from":  "0001-01-01T00:00:00Z",
+                      "valid_to":  null,
+                      "created_at":  "2026-02-16T23:58:36.154389Z",
+                      "updated_at":  "2026-02-16T23:58:36.154389Z"
+                  }
+              ],
+    "attachments":  null
+}

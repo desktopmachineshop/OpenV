@@ -16,7 +16,7 @@ export const ProjectList: React.FC = () => {
   const [editProjectName, setEditProjectName] = useState<string>('');
   const [editProjectDesc, setEditProjectDesc] = useState<string>('');
   const [templates, setTemplates] = useState<Template[]>([]);
-  const [createMode, setCreateMode] = useState<'blank' | 'example' | 'template'>('blank');
+  const [createMode, setCreateMode] = useState<'blank' | 'templates' | 'examples'>('blank');
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -60,7 +60,7 @@ export const ProjectList: React.FC = () => {
     }
 
     if (createMode !== 'blank' && !selectedTemplateId) {
-      setError('Please select a template');
+      setError('Please select a template or example');
       return;
     }
 
@@ -215,7 +215,9 @@ export const ProjectList: React.FC = () => {
     }
   };
 
-  const exampleTemplate = templates.find((t) => t.key === 'example-cnc-mill');
+  const templatesOnly = templates.filter((t) => t.source === 'database');
+  const exampleTemplates = templates.filter((t) => t.source === 'file');
+  const openvExampleTemplate = templates.find((t) => t.key === 'example-openv-platform');
 
   return (
     <>
@@ -374,28 +376,22 @@ export const ProjectList: React.FC = () => {
                     id="mode"
                     value={createMode}
                     onChange={(e) => {
-                      const mode = e.target.value as 'blank' | 'example' | 'template';
+                      const mode = e.target.value as 'blank' | 'templates' | 'examples';
                       setCreateMode(mode);
-                      if (mode === 'example' && exampleTemplate) {
-                        setSelectedTemplateId(exampleTemplate.id);
-                        setNewProjectName(exampleTemplate.name);
-                        setNewProjectDesc(exampleTemplate.description || '');
-                      }
+                      setSelectedTemplateId('');
                       if (mode === 'blank') {
-                        setSelectedTemplateId('');
-                      }
-                      if (mode === 'template') {
-                        setSelectedTemplateId('');
+                        setNewProjectName('');
+                        setNewProjectDesc('');
                       }
                     }}
                   >
                     <option value="blank">Blank Project</option>
-                    <option value="example" disabled={!exampleTemplate}>Example: Desktop CNC Mill</option>
-                    <option value="template" disabled={templates.length === 0}>Use Template</option>
+                    <option value="templates" disabled={templatesOnly.length === 0}>Templates</option>
+                    <option value="examples" disabled={exampleTemplates.length === 0}>Examples</option>
                   </select>
                 </div>
 
-                {createMode === 'template' && (
+                {createMode === 'templates' && (
                   <div className="form-group">
                     <label htmlFor="template">Template</label>
                     <select
@@ -404,7 +400,7 @@ export const ProjectList: React.FC = () => {
                       onChange={(e) => {
                         const value = e.target.value;
                         setSelectedTemplateId(value);
-                        const selected = templates.find((t) => t.id === value);
+                        const selected = templatesOnly.find((t) => t.id === value);
                         if (selected) {
                           setNewProjectName(selected.name);
                           setNewProjectDesc(selected.description || '');
@@ -412,9 +408,35 @@ export const ProjectList: React.FC = () => {
                       }}
                     >
                       <option value="">-- Select template --</option>
-                      {templates.map((template) => (
+                      {templatesOnly.map((template) => (
                         <option key={template.id} value={template.id}>
                           {template.is_default ? '[Default] ' : ''}{template.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {createMode === 'examples' && (
+                  <div className="form-group">
+                    <label htmlFor="example">Example</label>
+                    <select
+                      id="example"
+                      value={selectedTemplateId}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setSelectedTemplateId(value);
+                        const selected = exampleTemplates.find((t) => t.id === value);
+                        if (selected) {
+                          setNewProjectName(selected.name);
+                          setNewProjectDesc(selected.description || '');
+                        }
+                      }}
+                    >
+                      <option value="">-- Select example --</option>
+                      {exampleTemplates.map((template) => (
+                        <option key={template.id} value={template.id}>
+                          {template.name}
                         </option>
                       ))}
                     </select>
