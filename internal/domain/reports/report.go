@@ -203,7 +203,8 @@ func renderArtifactNode(
 
 	linkID := linkIDs[node.artifact.ID]
 
-	ensureSpace(pdf, 18)
+	sectionHeight := calculateArtifactSectionHeight(pdf, node, xStart, indent, attachmentMap, linkGroupsByArtifact, artifactTitles)
+	ensureSpace(pdf, sectionHeight+6)
 
 	if node.artifact.Type == "heading" {
 		pdf.SetFont("Arial", "B", 13)
@@ -301,74 +302,9 @@ func renderArtifactDetailsTable(
 
 	tableStartY := pdf.GetY()
 	rowHeight := 5.0
-
-	// Calculate description row height based on wrapped lines
-	descriptionHeight := 0.0
-	if node.artifact.Body != "" {
-		pdf.SetFont("Arial", "", 9)
-		wrapped := pdf.SplitLines([]byte(node.artifact.Body), valueColWidth)
-		if len(wrapped) == 0 {
-			descriptionHeight = rowHeight
-		} else {
-			descriptionHeight = float64(len(wrapped)) * rowHeight
-		}
-	}
-
-	// Calculate total table height
-	var totalHeight float64
-	if node.artifact.Body != "" {
-		totalHeight += descriptionHeight
-	}
-	totalHeight += rowHeight * 2 // Type and Version
-
-	if len(node.artifact.Attributes) > 0 {
-		filteredAttributes := make(map[string]interface{})
-		for key, value := range node.artifact.Attributes {
-			if key != "links_snapshot" {
-				filteredAttributes[key] = value
-			}
-		}
-		if len(filteredAttributes) > 0 {
-			attributesJSON, _ := json.MarshalIndent(filteredAttributes, "", "  ")
-			lines := strings.Count(string(attributesJSON), "\n") + 1
-			totalHeight += float64(lines) * 4.0
-		}
-	}
-
-	// Add height for links if present
-	if groups, ok := linkGroupsByArtifact[node.artifact.ID]; ok {
-		if len(groups.incoming) > 0 {
-			incomingHeight := calculateLinkRowHeight(pdf, valueColWidth, groups.incoming, artifactTitles, true)
-			totalHeight += incomingHeight
-		}
-		if len(groups.outgoing) > 0 {
-			outgoingHeight := calculateLinkRowHeight(pdf, valueColWidth, groups.outgoing, artifactTitles, false)
-			totalHeight += outgoingHeight
-		}
-	}
-
-	// Add height for images
 	attachments := attachmentMap[node.artifact.ID]
-	for _, attachment := range attachments {
-		imageType := imageTypeFromMime(attachment.MimeType, attachment.FilePath)
-		if imageType == "" {
-			continue
-		}
 
-		imagePath, ok := resolveAttachmentPath(attachment.FilePath)
-		if !ok {
-			continue
-		}
-
-		options := gofpdf.ImageOptions{ImageType: imageType, ReadDpi: true}
-		info := pdf.RegisterImageOptions(imagePath, options)
-		if info == nil {
-			continue
-		}
-		maxWidth := valueColWidth - 4 // Match render padding
-		_, height := calculateImageSize(info, maxWidth)
-		totalHeight += height + 4
-	}
+	totalHeight, descriptionHeight := calculateArtifactDetailsTableHeight(pdf, node.artifact, valueColWidth, attachmentMap, linkGroupsByArtifact, artifactTitles)
 
 	// Draw outer border (thicker)
 	pdf.SetLineWidth(0.5)
@@ -533,6 +469,136 @@ func renderArtifactDetailsTable(
 	pdf.SetFont("Arial", "", 10)
 	pdf.SetY(currentY)
 	pdf.Ln(2)
+}
+
+func calculateArtifactSectionHeight(
+	pdf *gofpdf.Fpdf,
+	node *artifactNode,
+	xStart float64,
+	indent float64,
+	attachmentMap map[string][]*attachments.Attachment,
+	linkGroupsByArtifact map[string]linkGroups,
+	artifactTitles map[string]string,
+) float64 {
+	sectionHeight := 0.0
+	pageW, _ := pdf.GetPageSize()
+	_, _, rightMargin, _ := pdf.GetMargins()
+	contentWidth := pageW - rightMargin - xStart
+	if contentWidth <= 0 {
+		contentWidth = 170.0 - indent
+	}
+
+	if node.artifact.Type != "description" && node.artifact.Title != "" {
+		lineHeight := 6.0
+		fontSize := 11.0
+		if node.artifact.Type == "heading" {
+			fontSize = 13.0
+		}
+		pdf.SetFont("Arial", "B", fontSize)
+		sectionHeight += estimateWrappedTextHeight(pdf, node.artifact.Title, contentWidth, lineHeight)
+	}
+
+	if node.artifact.Type == "heading" || node.artifact.Type == "description" {
+		if node.artifact.Body != "" {
+			pdf.SetFont("Arial", "", 10)
+			sectionHeight += estimateWrappedTextHeight(pdf, node.artifact.Body, contentWidth, 5.0)
+		}
+	} else {
+		tableWidth := 170.0 - indent
+		labelColWidth := 50.0
+		valueColWidth := tableWidth - labelColWidth
+		tableHeight, _ := calculateArtifactDetailsTableHeight(pdf, node.artifact, valueColWidth, attachmentMap, linkGroupsByArtifact, artifactTitles)
+		sectionHeight += tableHeight
+	}
+
+	return sectionHeight
+}
+
+func calculateArtifactDetailsTableHeight(
+	pdf *gofpdf.Fpdf,
+	artifact *artifacts.Artifact,
+	valueColWidth float64,
+	attachmentMap map[string][]*attachments.Attachment,
+	linkGroupsByArtifact map[string]linkGroups,
+	artifactTitles map[string]string,
+) (float64, float64) {
+	rowHeight := 5.0
+	descriptionHeight := 0.0
+	if artifact.Body != "" {
+		pdf.SetFont("Arial", "", 9)
+		wrapped := pdf.SplitLines([]byte(artifact.Body), valueColWidth)
+		if len(wrapped) == 0 {
+			descriptionHeight = rowHeight
+		} else {
+			descriptionHeight = float64(len(wrapped)) * rowHeight
+		}
+	}
+
+	var totalHeight float64
+	if artifact.Body != "" {
+		totalHeight += descriptionHeight
+	}
+	totalHeight += rowHeight * 2 // Type and Version
+
+	if len(artifact.Attributes) > 0 {
+		filteredAttributes := make(map[string]interface{})
+		for key, value := range artifact.Attributes {
+			if key != "links_snapshot" {
+				filteredAttributes[key] = value
+			}
+		}
+		if len(filteredAttributes) > 0 {
+			attributesJSON, _ := json.MarshalIndent(filteredAttributes, "", "  ")
+			lines := strings.Count(string(attributesJSON), "\n") + 1
+			totalHeight += float64(lines) * 4.0
+		}
+	}
+
+	if groups, ok := linkGroupsByArtifact[artifact.ID]; ok {
+		if len(groups.incoming) > 0 {
+			incomingHeight := calculateLinkRowHeight(pdf, valueColWidth, groups.incoming, artifactTitles, true)
+			totalHeight += incomingHeight
+		}
+		if len(groups.outgoing) > 0 {
+			outgoingHeight := calculateLinkRowHeight(pdf, valueColWidth, groups.outgoing, artifactTitles, false)
+			totalHeight += outgoingHeight
+		}
+	}
+
+	attachments := attachmentMap[artifact.ID]
+	for _, attachment := range attachments {
+		imageType := imageTypeFromMime(attachment.MimeType, attachment.FilePath)
+		if imageType == "" {
+			continue
+		}
+
+		imagePath, ok := resolveAttachmentPath(attachment.FilePath)
+		if !ok {
+			continue
+		}
+
+		options := gofpdf.ImageOptions{ImageType: imageType, ReadDpi: true}
+		info := pdf.RegisterImageOptions(imagePath, options)
+		if info == nil {
+			continue
+		}
+		maxWidth := valueColWidth - 4
+		_, height := calculateImageSize(info, maxWidth)
+		totalHeight += height + 4
+	}
+
+	return totalHeight, descriptionHeight
+}
+
+func estimateWrappedTextHeight(pdf *gofpdf.Fpdf, text string, width float64, lineHeight float64) float64 {
+	if text == "" {
+		return 0
+	}
+	wrapped := pdf.SplitLines([]byte(text), width)
+	if len(wrapped) == 0 {
+		return lineHeight
+	}
+	return float64(len(wrapped)) * lineHeight
 }
 
 func renderLinksWithHyperlinks(pdf *gofpdf.Fpdf, xStart float64, yStart float64, width float64, linksByType map[string][]*linksdomain.Link, artifactTitles map[string]string, linkIDs map[string]int, isIncoming bool) {

@@ -193,6 +193,9 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
                     justifyContent: 'space-between',
                     alignItems: 'center',
                     transition: 'background-color 0.2s ease',
+                    overflow: 'hidden',
+                    width: '100%',
+                    boxSizing: 'border-box',
                   }}
                   onMouseEnter={(e) => {
                     (e.currentTarget as HTMLElement).style.opacity = '0.8';
@@ -205,15 +208,17 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
                     style={{
                       flex: 1,
                       cursor: 'pointer',
+                      overflow: 'hidden',
+                      minWidth: 0,
                     }}
                     onClick={() => onSelectArtifact?.(linkedArtifactId)}
                   >
                     <strong>
-                      <span style={{ color: colorScheme.header, textDecoration: 'underline', cursor: 'pointer' }}>
+                      <span style={{ color: colorScheme.header, textDecoration: 'underline', cursor: 'pointer', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {direction === 'outgoing' ? getArtifactTitle(link.to_id) : getArtifactTitle(link.from_id)}
                       </span>
                     </strong>
-                    <div style={{ marginTop: '3px', color: '#555', fontSize: '11px' }}>
+                    <div style={{ marginTop: '3px', color: '#555', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       ID: {linkedArtifactId.substring(0, 8)}...
                     </div>
                   </div>
