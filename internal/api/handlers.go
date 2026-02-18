@@ -8,6 +8,7 @@ import (
     "os"
     "path/filepath"
     "strconv"
+    "strings"
 	"time"
 
     "github.com/google/uuid"
@@ -172,6 +173,13 @@ func (h *Handler) UpdateArtifact(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Fetch the old artifact BEFORE updating to track changes
+	oldArtifact, err := h.artifactService.GetArtifact(id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	// Ensure attributes is initialized
 	if req.Attributes == nil {
 		req.Attributes = make(map[string]interface{})
@@ -179,12 +187,30 @@ func (h *Handler) UpdateArtifact(w http.ResponseWriter, r *http.Request) {
 
 	// Process link changes FIRST (add/remove from table)
 	var affectedArtifactIDs []string
+	var addedLinks, removedLinks []*links.Link
 	if len(req.PendingLinkAdds) > 0 || len(req.PendingLinkRemoves) > 0 {
 		// Convert string array to interface array for removal IDs
 		removeInterfaceArray := make([]interface{}, len(req.PendingLinkRemoves))
 		for i, v := range req.PendingLinkRemoves {
 			removeInterfaceArray[i] = v
 		}
+		
+		// Fetch link details BEFORE removing them (for chatter)
+		for _, linkID := range req.PendingLinkRemoves {
+			if link, err := h.linkService.GetLink(linkID); err == nil {
+				removedLinks = append(removedLinks, link)
+			}
+		}
+		
+		// Fetch link details for adds (they already exist)
+		for _, linkIDInterface := range req.PendingLinkAdds {
+			if linkID, ok := linkIDInterface.(string); ok {
+				if link, err := h.linkService.GetLink(linkID); err == nil {
+					addedLinks = append(addedLinks, link)
+				}
+			}
+		}
+		
 		affected, err := h.processManagedLinkChanges(id, req.PendingLinkAdds, removeInterfaceArray)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("Failed to process link changes: %v", err), http.StatusInternalServerError)
@@ -227,6 +253,14 @@ func (h *Handler) UpdateArtifact(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
+	}
+
+	// Build a detailed change summary for chatter
+	chatterMessage := h.buildChangesSummary(oldArtifact, artifact, addedLinks, removedLinks)
+	chatterEntry := chatter.NewChatterEntry(id, chatterMessage, true, "version-change")
+	if err := h.chatterService.CreateEntry(chatterEntry); err != nil {
+		// Log but don't fail the request
+		fmt.Printf("Warning: failed to create chatter entry for version change: %v\n", err)
 	}
 
 	// Auto-version any artifacts that had link changes
@@ -282,14 +316,166 @@ func (h *Handler) RestoreArtifactVersion(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	// Fetch the current artifact BEFORE restoring (to track changes)
+	oldArtifact, err := h.artifactService.GetArtifact(id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	artifact, err := h.artifactService.RestoreArtifactVersion(id, req.Version)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
+	// Create a chatter entry for the restore
+	restoredFromVersion := req.Version
+	chatterMessage := h.buildRestoreMessage(oldArtifact, artifact, restoredFromVersion)
+	chatterEntry := chatter.NewChatterEntry(id, chatterMessage, true, "restore")
+	if err := h.chatterService.CreateEntry(chatterEntry); err != nil {
+		// Log but don't fail the request
+		fmt.Printf("Warning: failed to create chatter entry for restore: %v\n", err)
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(artifact)
+}
+
+// buildRestoreMessage creates a message describing what version was restored
+func (h *Handler) buildRestoreMessage(oldArtifact, newArtifact *artifacts.Artifact, restoredFromVersion int) string {
+	message := fmt.Sprintf("Restored to version %d (from version %d)", newArtifact.Version, restoredFromVersion)
+	
+	// Reuse the changes summary logic to show what changed
+	var addedLinks, removedLinks []*links.Link
+	changes := h.buildChangesList(oldArtifact, newArtifact, addedLinks, removedLinks)
+	
+	if len(changes) > 0 {
+		message += "\n\nChanges:\n"
+		for _, change := range changes {
+			if strings.HasPrefix(change, "  -") || strings.HasPrefix(change, "  +") {
+				// Diff lines - include as-is (indented)
+				message += change + "\n"
+			} else if strings.HasPrefix(change, "    ") {
+				// Indented lines
+				message += change + "\n"
+			} else if strings.HasPrefix(change, "Links:") || strings.HasPrefix(change, "Description modified:") {
+				// Headers
+				message += "- " + change + "\n"
+			} else {
+				// Regular changes
+				message += "- " + change + "\n"
+			}
+		}
+	}
+	
+	return message
+}
+
+// buildChangesList creates the list of changes without wrapping in a message
+func (h *Handler) buildChangesList(oldArtifact, newArtifact *artifacts.Artifact, addedLinks, removedLinks []*links.Link) []string {
+	var changes []string
+	
+	// Check for field changes
+	if oldArtifact.Title != newArtifact.Title {
+		if oldArtifact.Title == "" {
+			changes = append(changes, fmt.Sprintf("Title: → \"%s\"", newArtifact.Title))
+		} else {
+			changes = append(changes, fmt.Sprintf("Title: \"%s\" → \"%s\"", oldArtifact.Title, newArtifact.Title))
+		}
+	}
+	
+	if oldArtifact.Body != newArtifact.Body {
+		// For multiline content, show a git-style diff
+		if strings.Contains(oldArtifact.Body, "\n") || strings.Contains(newArtifact.Body, "\n") {
+			changes = append(changes, "Description modified:")
+			oldLines := strings.Split(oldArtifact.Body, "\n")
+			newLines := strings.Split(newArtifact.Body, "\n")
+			
+			// Simple diff: show removed lines starting with -, added lines starting with +
+			maxLines := len(oldLines)
+			if len(newLines) > maxLines {
+				maxLines = len(newLines)
+			}
+			
+			var diffLines []string
+			for i := 0; i < maxLines; i++ {
+				if i < len(oldLines) && i < len(newLines) {
+					if oldLines[i] != newLines[i] {
+						diffLines = append(diffLines, fmt.Sprintf("  - %s", oldLines[i]))
+						diffLines = append(diffLines, fmt.Sprintf("  + %s", newLines[i]))
+					}
+				} else if i < len(oldLines) {
+					diffLines = append(diffLines, fmt.Sprintf("  - %s", oldLines[i]))
+				} else if i < len(newLines) {
+					diffLines = append(diffLines, fmt.Sprintf("  + %s", newLines[i]))
+				}
+			}
+			
+			changes = append(changes, strings.Join(diffLines, "\n"))
+		} else {
+			// For single-line content, use the short format
+			if oldArtifact.Body == "" {
+				changes = append(changes, fmt.Sprintf("Body: → \"%s\"", newArtifact.Body))
+			} else {
+				changes = append(changes, fmt.Sprintf("Body: \"%s\" → \"%s\"", oldArtifact.Body, newArtifact.Body))
+			}
+		}
+	}
+	
+	if oldArtifact.Type != newArtifact.Type {
+		changes = append(changes, fmt.Sprintf("Type: \"%s\" → \"%s\"", oldArtifact.Type, newArtifact.Type))
+	}
+	
+	// Check for image changes
+	oldImages := oldArtifact.GetImagesSnapshot()
+	newImages := newArtifact.GetImagesSnapshot()
+	
+	oldImageMap := make(map[string]bool)
+	newImageMap := make(map[string]bool)
+	
+	// Build maps of filenames
+	for _, img := range oldImages {
+		if imgData, ok := img.(map[string]interface{}); ok {
+			if filename, ok := imgData["filename"].(string); ok {
+				oldImageMap[filename] = true
+			}
+		}
+	}
+	
+	for _, img := range newImages {
+		if imgData, ok := img.(map[string]interface{}); ok {
+			if filename, ok := imgData["filename"].(string); ok {
+				newImageMap[filename] = true
+			}
+		}
+	}
+	
+	// Find added images
+	addedImages := 0
+	for filename := range newImageMap {
+		if !oldImageMap[filename] {
+			addedImages++
+		}
+	}
+	
+	// Find removed images
+	removedImages := 0
+	for filename := range oldImageMap {
+		if !newImageMap[filename] {
+			removedImages++
+		}
+	}
+	
+	if addedImages > 0 {
+		changes = append(changes, fmt.Sprintf("Images: Added %d image(s)", addedImages))
+	}
+	
+	if removedImages > 0 {
+		changes = append(changes, fmt.Sprintf("Images: Removed %d image(s)", removedImages))
+	}
+	
+	return changes
 }
 
 // GetArtifactVersionLinks retrieves links for a specific artifact version
@@ -1069,6 +1255,99 @@ func isImageMimeType(mimeType string) bool {
 	}
 	return validTypes[mimeType]
 }
+
+// buildChangesSummary creates a detailed summary of what changed in the artifact
+func (h *Handler) buildChangesSummary(oldArtifact, newArtifact *artifacts.Artifact, addedLinks, removedLinks []*links.Link) string {
+	// Get basic field changes
+	changes := h.buildChangesList(oldArtifact, newArtifact, addedLinks, removedLinks)
+	
+	// Add detailed link changes
+	if len(addedLinks) > 0 {
+		changes = append(changes, fmt.Sprintf("Links:"))
+		for _, link := range addedLinks {
+			var otherArtifactID string
+			var linkDirection string
+			
+			// Determine if this artifact is the source or target
+			if link.FromID == newArtifact.ID {
+				otherArtifactID = link.ToID
+				linkDirection = link.Type
+			} else {
+				otherArtifactID = link.FromID
+				linkDirection = link.Type
+			}
+			
+			// Try to get the other artifact's title
+			otherArtifact, err := h.artifactService.GetArtifact(otherArtifactID)
+			var artifactTitle string
+			if err == nil {
+				artifactTitle = otherArtifact.Title
+			} else {
+				artifactTitle = otherArtifactID
+			}
+			
+			changes = append(changes, fmt.Sprintf("    - %s: %s (added)", linkDirection, artifactTitle))
+		}
+	}
+	
+	if len(removedLinks) > 0 {
+		if len(addedLinks) == 0 {
+			changes = append(changes, fmt.Sprintf("Links:"))
+		}
+		for _, link := range removedLinks {
+			var otherArtifactID string
+			var linkDirection string
+			
+			// Determine if this artifact is the source or target
+			if link.FromID == newArtifact.ID {
+				otherArtifactID = link.ToID
+				linkDirection = link.Type
+			} else {
+				otherArtifactID = link.FromID
+				linkDirection = link.Type
+			}
+			
+			// Try to get the other artifact's title
+			otherArtifact, err := h.artifactService.GetArtifact(otherArtifactID)
+			var artifactTitle string
+			if err == nil {
+				artifactTitle = otherArtifact.Title
+			} else {
+				artifactTitle = otherArtifactID
+			}
+			
+			changes = append(changes, fmt.Sprintf("    - %s: %s (removed)", linkDirection, artifactTitle))
+		}
+	}
+	
+	// Build message
+	message := fmt.Sprintf("Updated to version %d", newArtifact.Version)
+	
+	if len(changes) > 0 {
+		message += "\n\nChanges:\n"
+		for _, change := range changes {
+			if strings.HasPrefix(change, "  -") || strings.HasPrefix(change, "  +") {
+				// Diff lines - include as-is (indented)
+				message += change + "\n"
+			} else if strings.HasPrefix(change, "    ") {
+				// Indented lines (link details)
+				message += change + "\n"
+			} else if strings.HasPrefix(change, "Links:") {
+				// Links header
+				message += "- " + change + "\n"
+			} else if strings.HasPrefix(change, "Description modified:") {
+				// Description header
+				message += "- " + change + "\n"
+			} else {
+				// Regular changes
+				message += "- " + change + "\n"
+			}
+		}
+	}
+	
+	return message
+}
+
 // processManagedLinkChanges handles link additions and removals
 // Returns list of artifact IDs that had links change (for auto-versioning)
 func (h *Handler) processManagedLinkChanges(fromArtifactID string, toAdd, toRemove []interface{}) ([]string, error) {
@@ -1239,6 +1518,14 @@ func (h *Handler) autoVersionLinkedArtifacts(affectedArtifactIDs []string) error
 		if err != nil {
 			fmt.Printf("Warning: failed to auto-version artifact %s: %v\n", artifactID, err)
 			continue
+		}
+
+		// Create chatter entry for this auto-version
+		newVersion := artifact.Version + 1
+		chatterMessage := fmt.Sprintf("Auto-updated to version %d due to link changes", newVersion)
+		chatterEntry := chatter.NewChatterEntry(artifactID, chatterMessage, true, "link-change")
+		if err := h.chatterService.CreateEntry(chatterEntry); err != nil {
+			fmt.Printf("Warning: failed to create chatter entry for auto-versioned artifact %s: %v\n", artifactID, err)
 		}
 
 		fmt.Printf("Auto-versioned artifact %s due to link changes; incoming links: %d, outgoing links: %d\n", artifactID, len(incomingLinks), len(outgoingLinks))

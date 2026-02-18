@@ -70,9 +70,7 @@ export const ChatterPanel: React.FC<ChatterPanelProps> = ({
       style={{
         display: 'flex',
         flexDirection: 'column',
-        width: '320px',
-        minWidth: '320px',
-        maxWidth: '320px',
+        width: '100%',
         backgroundColor: '#ffffff',
         border: '1px solid #ddd',
         borderRadius: '4px',

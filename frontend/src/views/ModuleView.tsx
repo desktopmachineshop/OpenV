@@ -37,6 +37,17 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
   const [collapseAllToken, setCollapseAllToken] = useState<number>(0);
   const [expandAllToken, setExpandAllToken] = useState<number>(0);
   const [previewVersion, setPreviewVersion] = useState<Artifact | null>(null);
+  
+  // Resizable columns state
+  const [leftColumnWidth, setLeftColumnWidth] = useState<number>(() => {
+    const saved = localStorage.getItem('openv-leftColumnWidth');
+    return saved ? parseInt(saved) : 400;
+  });
+  const [rightColumnWidth, setRightColumnWidth] = useState<number>(() => {
+    const saved = localStorage.getItem('openv-rightColumnWidth');
+    return saved ? parseInt(saved) : 320;
+  });
+  const [isResizing, setIsResizing] = useState<'left' | 'right' | null>(null);
 
   const {
     projectId,
@@ -71,6 +82,46 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
 
     return leftHasOrder ? -1 : 1;
   };
+
+  // Handle column resizing
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizing) return;
+      
+      if (isResizing === 'left') {
+        const newWidth = Math.max(200, Math.min(800, e.clientX - 20));
+        setLeftColumnWidth(newWidth);
+      } else if (isResizing === 'right') {
+        const newWidth = Math.max(250, Math.min(600, window.innerWidth - e.clientX - 20));
+        setRightColumnWidth(newWidth);
+      }
+    };
+
+    const handleMouseUp = () => {
+      if (isResizing) {
+        if (isResizing === 'left') {
+          localStorage.setItem('openv-leftColumnWidth', leftColumnWidth.toString());
+        } else {
+          localStorage.setItem('openv-rightColumnWidth', rightColumnWidth.toString());
+        }
+        setIsResizing(null);
+      }
+    };
+
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+  }, [isResizing, leftColumnWidth, rightColumnWidth]);
 
   // Load artifacts on component mount
   useEffect(() => {
@@ -689,8 +740,8 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
         onDeleteBaseline={handleDeleteBaseline}
         onGenerateReport={handleGenerateReport}
       />
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '20px', paddingLeft: '20px', paddingRight: '20px' }}>
-      <div>
+      <div style={{ display: 'flex', gap: '0', paddingLeft: '20px', paddingRight: '20px', height: 'calc(100vh - 160px)', overflow: 'hidden' }}>
+      <div style={{ width: `${leftColumnWidth}px`, minWidth: '200px', maxWidth: '800px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         {error && (
           <div
             style={{
@@ -1068,11 +1119,34 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
           collapseAllTrigger={collapseAllToken}
           expandAllTrigger={expandAllToken}
           readOnly={isBaselineView}
-        />
-      </div>
+        />      </div>
 
-      <div style={{ display: 'flex', flex: 1, gap: '20px', minWidth: 0, overflow: 'hidden' }}>
-        <div style={{ flex: 1, minWidth: 0, overflow: 'auto', display: 'flex', flexDirection: 'column', borderRight: selectedArtifact ? '1px solid #e0e0e0' : undefined, paddingRight: selectedArtifact ? '10px' : '0' }}>
+      {/* Resize handle for left column */}
+      <div
+        onMouseDown={() => setIsResizing('left')}
+        style={{
+          width: '10px',
+          cursor: 'col-resize',
+          backgroundColor: isResizing === 'left' ? '#3498db' : 'transparent',
+          borderLeft: '1px solid #e0e0e0',
+          borderRight: '1px solid #e0e0e0',
+          transition: 'background-color 0.2s',
+          flexShrink: 0,
+        }}
+        onMouseEnter={(e) => {
+          if (!isResizing) {
+            e.currentTarget.style.backgroundColor = '#ecf0f1';
+          }
+        }}
+        onMouseLeave={(e) => {
+          if (!isResizing) {
+            e.currentTarget.style.backgroundColor = 'transparent';
+          }
+        }}
+      />
+
+      <div style={{ display: 'flex', flex: 1, gap: '0', minWidth: 0, overflow: 'hidden' }}>
+        <div style={{ flex: 1, minWidth: 0, overflow: 'auto', display: 'flex', flexDirection: 'column', paddingLeft: '10px', paddingRight: selectedArtifact ? '5px' : '10px' }}>
         {!isBaselineView && isEditing && editingArtifact && (
           <ArtifactEditor
             artifact={editingArtifact}
@@ -1130,11 +1204,39 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
         </div>
 
         {selectedArtifact && (
-          <ChatterPanel
-            artifactId={selectedArtifact.id}
-            isOpen={true}
-            onToggle={() => {}}
-          />
+          <>
+            {/* Resize handle for right column */}
+            <div
+              onMouseDown={() => setIsResizing('right')}
+              style={{
+                width: '10px',
+                cursor: 'col-resize',
+                backgroundColor: isResizing === 'right' ? '#3498db' : 'transparent',
+                borderLeft: '1px solid #e0e0e0',
+                borderRight: '1px solid #e0e0e0',
+                transition: 'background-color 0.2s',
+                flexShrink: 0,
+              }}
+              onMouseEnter={(e) => {
+                if (!isResizing) {
+                  e.currentTarget.style.backgroundColor = '#ecf0f1';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isResizing) {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }
+              }}
+            />
+            <div style={{ width: `${rightColumnWidth}px`, minWidth: '250px', maxWidth: '600px', overflow: 'hidden' }}>
+              <ChatterPanel
+                key={`chatter-${selectedArtifact.id}-v${selectedArtifact.version}`}
+                artifactId={selectedArtifact.id}
+                isOpen={true}
+                onToggle={() => {}}
+              />
+            </div>
+          </>
         )}
       </div>
       </div>
