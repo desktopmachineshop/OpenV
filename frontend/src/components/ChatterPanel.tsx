@@ -161,6 +161,12 @@ export const ChatterPanel: React.FC<ChatterPanelProps> = ({
         <textarea
           value={newMessage}
           onChange={(e) => setNewMessage(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && e.ctrlKey) {
+              e.preventDefault();
+              handleAddMessage();
+            }
+          }}
           placeholder="Add a note..."
           style={{
             width: '100%',
@@ -177,6 +183,7 @@ export const ChatterPanel: React.FC<ChatterPanelProps> = ({
         <button
           onClick={handleAddMessage}
           disabled={!newMessage.trim()}
+          title="Add note (Ctrl+Enter)"
           style={{
             width: '100%',
             marginTop: '8px',
