@@ -9,14 +9,22 @@ const getAPIBaseURL = (): string => {
     return process.env.REACT_APP_API_URL;
   }
 
-  // Fallback: detect from current browser location
-  // If frontend is on localhost:3000, API should be on localhost:8080
+  // Railway.app detection: frontend and api have similar URLs
   if (typeof window !== 'undefined' && window.location) {
     const protocol = window.location.protocol; // http: or https:
     const hostname = window.location.hostname; // localhost or IP
-    // Always use port 8080 for API
+    
+    // If on Railway (*.railway.app), replace 'frontend' with 'api' in the hostname
+    if (hostname.includes('railway.app')) {
+      const apiHostname = hostname.replace('frontend', 'api');
+      const apiUrl = `${protocol}//${apiHostname}`;
+      console.log('Detected Railway API URL:', apiUrl);
+      return apiUrl;
+    }
+    
+    // Local development: use port 8080
     const apiUrl = `${protocol}//${hostname}:8080`;
-    console.log('Detected API URL:', apiUrl);
+    console.log('Detected local API URL:', apiUrl);
     return apiUrl;
   }
 
