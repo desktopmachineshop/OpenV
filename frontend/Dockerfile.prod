@@ -12,8 +12,8 @@ RUN npm ci --legacy-peer-deps
 # Copy source files
 COPY . .
 
-# Accept API URL as build argument with default
-ARG REACT_APP_API_URL=https://openv-api-production.up.railway.app
+# Accept API URL from Railway Variables (or use empty default for local build)
+ARG REACT_APP_API_URL=""
 ENV REACT_APP_API_URL=$REACT_APP_API_URL
 
 # Build the React app

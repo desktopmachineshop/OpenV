@@ -3,24 +3,16 @@ import axios, { AxiosInstance } from 'axios';
 // Determine API base URL
 // Priority: env var > browser detection > default fallback
 const getAPIBaseURL = (): string => {
-  // Check for environment variable set at build time
+  // Check for environment variable set at build time (Railway Variables)
   if (process.env.REACT_APP_API_URL) {
     console.log('Using REACT_APP_API_URL:', process.env.REACT_APP_API_URL);
     return process.env.REACT_APP_API_URL;
   }
 
-  // Railway.app detection: frontend and api have similar URLs
+  // Runtime detection for local development
   if (typeof window !== 'undefined' && window.location) {
     const protocol = window.location.protocol; // http: or https:
     const hostname = window.location.hostname; // localhost or IP
-    
-    // If on Railway (*.railway.app), replace 'frontend' with 'api' in the hostname
-    if (hostname.includes('railway.app')) {
-      const apiHostname = hostname.replace('frontend', 'api');
-      const apiUrl = `${protocol}//${apiHostname}`;
-      console.log('Detected Railway API URL:', apiUrl);
-      return apiUrl;
-    }
     
     // Local development: use port 8080
     const apiUrl = `${protocol}//${hostname}:8080`;
