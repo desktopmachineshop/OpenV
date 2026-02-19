@@ -24,29 +24,47 @@ import (
 
 func main() {
 	// Load configuration from environment
-	dbHost := os.Getenv("DB_HOST")
-	if dbHost == "" {
-		dbHost = "localhost"
-	}
+	// Build database connection string
+	// Support Railway.app style (DATABASE_URL) and local development style
+	var dsn string
+	
+	databaseURL := os.Getenv("DATABASE_URL")
+	if databaseURL != "" {
+		// Railway.app uses DATABASE_URL
+		log.Println("Using DATABASE_URL (Railway.app mode)")
+		dsn = databaseURL
+	} else {
+		// Local development: build from individual env vars
+		log.Println("Using individual environment variables (local development mode)")
+		
+		dbHost := os.Getenv("DB_HOST")
+		if dbHost == "" {
+			dbHost = "localhost"
+		}
 
-	dbPort := os.Getenv("DB_PORT")
-	if dbPort == "" {
-		dbPort = "5432"
-	}
+		dbPort := os.Getenv("DB_PORT")
+		if dbPort == "" {
+			dbPort = "5432"
+		}
 
-	dbUser := os.Getenv("DB_USER")
-	if dbUser == "" {
-		dbUser = "postgres"
-	}
+		dbUser := os.Getenv("DB_USER")
+		if dbUser == "" {
+			dbUser = "postgres"
+		}
 
-	dbPassword := os.Getenv("DB_PASSWORD")
-	if dbPassword == "" {
-		dbPassword = "postgres"
-	}
+		dbPassword := os.Getenv("DB_PASSWORD")
+		if dbPassword == "" {
+			dbPassword = "postgres"
+		}
 
-	dbName := os.Getenv("DB_NAME")
-	if dbName == "" {
-		dbName = "openv"
+		dbName := os.Getenv("DB_NAME")
+		if dbName == "" {
+			dbName = "openv"
+		}
+
+		// Build DSN for local development
+		dsn = fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+			dbHost, dbPort, dbUser, dbPassword, dbName)
 	}
 
 	port := os.Getenv("PORT")
@@ -63,10 +81,6 @@ func main() {
 	if err := os.MkdirAll(uploadsDir, 0755); err != nil {
 		log.Fatalf("Failed to create uploads directory: %v", err)
 	}
-
-	// Build DSN
-	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-		dbHost, dbPort, dbUser, dbPassword, dbName)
 
 	// Connect to database
 	db, err := postgres.Connect(dsn)
