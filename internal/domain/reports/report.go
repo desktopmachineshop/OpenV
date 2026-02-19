@@ -33,7 +33,7 @@ type linkGroups struct {
 // stripMarkdown converts markdown text to plain text for PDF rendering
 // Handles common markdown syntax: headers, bold, italic, code, lists, links
 func stripMarkdown(text string) string {
-	// Remove code blocks (```...```)
+	// Remove code blocks (```...```) - preserve the content inside
 	codeBlockRe := regexp.MustCompile("(?s)```[a-zA-Z]*\n?(.*?)\n?```")
 	text = codeBlockRe.ReplaceAllString(text, "$1")
 	
@@ -45,13 +45,17 @@ func stripMarkdown(text string) string {
 	hrRe := regexp.MustCompile(`(?m)^\s*[-_*]{3,}\s*$`)
 	text = hrRe.ReplaceAllString(text, "")
 	
-	// Convert headers (# ## ###) to text with spacing - handle headers without space after #
+	// Convert headers (# ## ###) to text - handle headers without space after #
 	headerRe := regexp.MustCompile(`(?m)^#{1,6}\s*(.+?)\s*$`)
 	text = headerRe.ReplaceAllString(text, "$1")
 	
 	// Remove blockquotes (> or >>)
 	blockquoteRe := regexp.MustCompile(`(?m)^>+\s*`)
 	text = blockquoteRe.ReplaceAllString(text, "")
+	
+	// Remove task list markers [x] and [ ]
+	taskListRe := regexp.MustCompile(`(?m)^(\s*)[-*+]\s+\[[ xX]\]\s+`)
+	text = taskListRe.ReplaceAllString(text, "$1- ")
 	
 	// Convert bold+italic (***text*** or ___text___) first
 	boldItalicRe := regexp.MustCompile(`\*\*\*(.+?)\*\*\*|___(.+?)___`)
@@ -61,8 +65,8 @@ func stripMarkdown(text string) string {
 	boldRe := regexp.MustCompile(`\*\*(.+?)\*\*|__(.+?)__`)
 	text = boldRe.ReplaceAllString(text, "$1$2")
 	
-	// Convert italic (*text* or _text_) to plain text
-	italicRe := regexp.MustCompile(`\*(.+?)\*|_(.+?)_`)
+	// Convert italic (*text* or _text_) to plain text - be careful not to affect list markers
+	italicRe := regexp.MustCompile(`\*([^*\s][^*]*?)\*|_([^_\s][^_]*?)_`)
 	text = italicRe.ReplaceAllString(text, "$1$2")
 	
 	// Convert inline code (`code`) to plain text
@@ -77,20 +81,33 @@ func stripMarkdown(text string) string {
 	linkRe := regexp.MustCompile(`\[([^\]]+)\]\(([^)]+)\)`)
 	text = linkRe.ReplaceAllString(text, "$1")
 	
-	// Convert list markers (- or * or 1.) to simple bullets
-	listRe := regexp.MustCompile(`(?m)^[\s]*[-*+]\s+`)
-	text = listRe.ReplaceAllString(text, "- ")
+	// Convert list markers (- or * or +) to simple dashes
+	listRe := regexp.MustCompile(`(?m)^([\s]*)[-*+]\s+`)
+	text = listRe.ReplaceAllString(text, "$1- ")
 	
-	numberedListRe := regexp.MustCompile(`(?m)^[\s]*\d+\.\s+`)
-	text = numberedListRe.ReplaceAllString(text, "  ")
+	// Convert numbered lists (1. 2. etc) to simple indented text
+	numberedListRe := regexp.MustCompile(`(?m)^([\s]*)\d+\.\s+`)
+	text = numberedListRe.ReplaceAllString(text, "$1  ")
 	
 	// Convert strikethrough ~~text~~ to plain text
 	strikeRe := regexp.MustCompile(`~~(.+?)~~`)
 	text = strikeRe.ReplaceAllString(text, "$1")
 	
+	// Replace em dashes and special Unicode characters that may not be in Arial font
+	text = strings.ReplaceAll(text, "\u2014", "-") // em dash
+	text = strings.ReplaceAll(text, "\u2013", "-") // en dash
+	text = strings.ReplaceAll(text, "\u201C", "\"") // left double quote
+	text = strings.ReplaceAll(text, "\u201D", "\"") // right double quote
+	text = strings.ReplaceAll(text, "\u2018", "'") // left single quote
+	text = strings.ReplaceAll(text, "\u2019", "'") // right single quote
+	
 	// Clean up excessive newlines (more than 2 in a row)
 	multiNewlineRe := regexp.MustCompile(`\n{3,}`)
 	text = multiNewlineRe.ReplaceAllString(text, "\n\n")
+	
+	// Clean up excessive spaces
+	multiSpaceRe := regexp.MustCompile(` {2,}`)
+	text = multiSpaceRe.ReplaceAllString(text, " ")
 	
 	return strings.TrimSpace(text)
 }
