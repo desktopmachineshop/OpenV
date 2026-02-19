@@ -323,7 +323,12 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
                 </div>
                 <div style={{ marginBottom: '12px' }}>
                   <strong>Description:</strong>
-                  <div style={{ margin: '4px 0', color: '#2c3e50', minHeight: '60px' }}>
+                  <div style={{ 
+                    margin: '4px 0', 
+                    color: '#2c3e50', 
+                    minHeight: '60px',
+                    lineHeight: '1.6'
+                  }} className="markdown-content">
                     {artifact.body ? (
                       <ReactMarkdown remarkPlugins={[remarkGfm]}>{artifact.body}</ReactMarkdown>
                     ) : (
