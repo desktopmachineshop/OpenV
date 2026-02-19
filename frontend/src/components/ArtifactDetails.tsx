@@ -3,6 +3,8 @@ import { Artifact, Link, Attachment } from '../api/client';
 import { linkAPI } from '../api/client';
 import { ImageGallery } from './ImageGallery';
 import { getLinkTypeLabel } from '../config/linkTypeRules';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface ArtifactDetailsProps {
   artifact: Artifact;
@@ -321,9 +323,13 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
                 </div>
                 <div style={{ marginBottom: '12px' }}>
                   <strong>Description:</strong>
-                  <p style={{ margin: '4px 0', color: '#2c3e50', whiteSpace: 'pre-wrap', wordBreak: 'break-word', minHeight: '60px' }}>
-                    {artifact.body || '(empty)'}
-                  </p>
+                  <div style={{ margin: '4px 0', color: '#2c3e50', minHeight: '60px' }}>
+                    {artifact.body ? (
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{artifact.body}</ReactMarkdown>
+                    ) : (
+                      <p style={{ fontStyle: 'italic', color: '#999' }}>(empty)</p>
+                    )}
+                  </div>
                 </div>
                 {artifact.attributes && Object.keys(artifact.attributes).filter(k => !['links_snapshot', 'images_snapshot'].includes(k)).length > 0 && (
                   <div style={{ marginBottom: '12px' }}>
@@ -510,7 +516,13 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
       </div>
       <div style={{ marginBottom: '15px' }}>
         <strong>Description:</strong>
-        <p style={{ marginTop: '8px', whiteSpace: 'pre-wrap' }}>{artifact.body}</p>
+        <div style={{ marginTop: '8px' }}>
+          {artifact.body ? (
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>{artifact.body}</ReactMarkdown>
+          ) : (
+            <p style={{ fontStyle: 'italic', color: '#999' }}>(empty)</p>
+          )}
+        </div>
       </div>
       {artifact.attributes && Object.keys(artifact.attributes).filter(k => !['links_snapshot', 'images_snapshot'].includes(k)).length > 0 && (
         <div>
