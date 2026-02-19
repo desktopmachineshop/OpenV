@@ -34,12 +34,28 @@ type linkGroups struct {
 // Handles common markdown syntax: headers, bold, italic, code, lists, links
 func stripMarkdown(text string) string {
 	// Remove code blocks (```...```)
-	codeBlockRe := regexp.MustCompile("(?s)```[a-zA-Z]*\n(.*?)\n```")
+	codeBlockRe := regexp.MustCompile("(?s)```[a-zA-Z]*\n?(.*?)\n?```")
 	text = codeBlockRe.ReplaceAllString(text, "$1")
 	
-	// Convert headers (# ## ###) to text with spacing
-	headerRe := regexp.MustCompile(`(?m)^#{1,6}\s+(.+)$`)
-	text = headerRe.ReplaceAllString(text, "\n$1\n")
+	// Remove HTML tags (including sup, sub, etc.)
+	htmlTagRe := regexp.MustCompile(`<[^>]+>`)
+	text = htmlTagRe.ReplaceAllString(text, "")
+	
+	// Remove horizontal rules (---, ___, ***)
+	hrRe := regexp.MustCompile(`(?m)^\s*[-_*]{3,}\s*$`)
+	text = hrRe.ReplaceAllString(text, "")
+	
+	// Convert headers (# ## ###) to text with spacing - handle headers without space after #
+	headerRe := regexp.MustCompile(`(?m)^#{1,6}\s*(.+?)\s*$`)
+	text = headerRe.ReplaceAllString(text, "$1")
+	
+	// Remove blockquotes (> or >>)
+	blockquoteRe := regexp.MustCompile(`(?m)^>+\s*`)
+	text = blockquoteRe.ReplaceAllString(text, "")
+	
+	// Convert bold+italic (***text*** or ___text___) first
+	boldItalicRe := regexp.MustCompile(`\*\*\*(.+?)\*\*\*|___(.+?)___`)
+	text = boldItalicRe.ReplaceAllString(text, "$1$2")
 	
 	// Convert bold (**text** or __text__) to plain text
 	boldRe := regexp.MustCompile(`\*\*(.+?)\*\*|__(.+?)__`)
@@ -53,13 +69,13 @@ func stripMarkdown(text string) string {
 	inlineCodeRe := regexp.MustCompile("`([^`]+)`")
 	text = inlineCodeRe.ReplaceAllString(text, "$1")
 	
-	// Convert links [text](url) to "text (url)"
+	// Convert links [text](url) to just text
 	linkRe := regexp.MustCompile(`\[([^\]]+)\]\(([^)]+)\)`)
 	text = linkRe.ReplaceAllString(text, "$1")
 	
 	// Convert list markers (- or * or 1.) to simple bullets
 	listRe := regexp.MustCompile(`(?m)^[\s]*[-*+]\s+`)
-	text = listRe.ReplaceAllString(text, "• ")
+	text = listRe.ReplaceAllString(text, "- ")
 	
 	numberedListRe := regexp.MustCompile(`(?m)^[\s]*\d+\.\s+`)
 	text = numberedListRe.ReplaceAllString(text, "  ")
@@ -144,12 +160,17 @@ func buildReportPDF(data *exports.ProjectExport, baselineName string) ([]byte, e
 	pdf.SetAutoPageBreak(true, 15)
 	pdf.AddPage()
 
+	// Use UTF-8 encoding translator for special characters
+	tr := pdf.UnicodeTranslatorFromDescriptor("")
+	
 	pdf.SetFont("Arial", "B", 16)
-	pdf.CellFormat(0, 8, data.ProjectName, "", 1, "C", false, 0, "")
+	pdf.CellFormat(0, 8, tr(data.ProjectName), "", 1, "C", false, 0, "")
 
 	if data.ProjectDesc != "" {
 		pdf.SetFont("Arial", "", 10)
-		pdf.MultiCell(0, 5, data.ProjectDesc, "", "C", false)
+		plainDesc := stripMarkdown(data.ProjectDesc)
+		pdf.MultiCell(0, 5, tr(plainDesc), "", "C", false)
+		pdf.Ln(2)
 	}
 
 	pdf.SetFont("Arial", "", 9)
@@ -195,7 +216,7 @@ func buildReportPDF(data *exports.ProjectExport, baselineName string) ([]byte, e
 	}
 
 	for _, node := range roots {
-		renderArtifactNode(pdf, node, 0, attachmentMap, linkGroupsByArtifact, artifactTitles, linkIDs)
+		renderArtifactNode(pdf, tr, node, 0, attachmentMap, linkGroupsByArtifact, artifactTitles, linkIDs)
 	}
 
 	var buf bytes.Buffer
@@ -236,6 +257,7 @@ func linkTypeLabelForDirection(linkType string, isIncoming bool) string {
 
 func renderArtifactNode(
 	pdf *gofpdf.Fpdf,
+	tr func(string) string,
 	node *artifactNode,
 	depth int,
 	attachmentMap map[string][]*attachments.Attachment,
@@ -262,10 +284,10 @@ func renderArtifactNode(
 		yStart := pdf.GetY()
 		pdf.SetX(xStart)
 		if linkID > 0 {
-			pdf.MultiCell(0, 6, node.artifact.Title, "", "L", false)
+			pdf.MultiCell(0, 6, tr(node.artifact.Title), "", "L", false)
 			pdf.SetLink(linkID, yStart, -1)
 		} else {
-			pdf.MultiCell(0, 6, node.artifact.Title, "", "L", false)
+			pdf.MultiCell(0, 6, tr(node.artifact.Title), "", "L", false)
 		}
 	}
 
@@ -276,11 +298,11 @@ func renderArtifactNode(
 			pdf.SetX(xStart)
 			// Convert markdown to plain text for PDF rendering
 			plainText := stripMarkdown(node.artifact.Body)
-			pdf.MultiCell(0, 5, plainText, "", "L", false)
+			pdf.MultiCell(0, 5, tr(plainText), "", "L", false)
 		}
 	} else {
 		// For other artifact types: render details in table format with embedded links and images
-		renderArtifactDetailsTable(pdf, node, xStart, indent, attachmentMap, linkGroupsByArtifact, artifactTitles, linkIDs)
+		renderArtifactDetailsTable(pdf, tr, node, xStart, indent, attachmentMap, linkGroupsByArtifact, artifactTitles, linkIDs)
 	}
 
 	// For headings and descriptions, render images below the title/description
@@ -321,12 +343,13 @@ func renderArtifactNode(
 	pdf.Ln(2)
 
 	for _, child := range node.children {
-		renderArtifactNode(pdf, child, depth+1, attachmentMap, linkGroupsByArtifact, artifactTitles, linkIDs)
+		renderArtifactNode(pdf, tr, child, depth+1, attachmentMap, linkGroupsByArtifact, artifactTitles, linkIDs)
 	}
 }
 
 func renderArtifactDetailsTable(
 	pdf *gofpdf.Fpdf,
+	tr func(string) string,
 	node *artifactNode,
 	xStart float64,
 	indent float64,
@@ -375,7 +398,7 @@ func renderArtifactDetailsTable(
 		pdf.SetX(tableX + labelColWidth)
 		// Convert markdown to plain text for PDF rendering
 		plainText := stripMarkdown(node.artifact.Body)
-		pdf.MultiCell(valueColWidth, rowHeight, plainText, "", "L", false)
+		pdf.MultiCell(valueColWidth, rowHeight, tr(plainText), "", "L", false)
 		currentY = currentY + descriptionHeight
 		pdf.SetDrawColor(200, 200, 200)
 		pdf.SetLineWidth(0.2)
@@ -390,7 +413,7 @@ func renderArtifactDetailsTable(
 	pdf.SetTextColor(0, 0, 0)
 	pdf.SetFont("Arial", "", 9)
 	pdf.SetX(tableX + labelColWidth)
-	pdf.CellFormat(valueColWidth, rowHeight, node.artifact.Type, "", 1, "L", false, 0, "")
+	pdf.CellFormat(valueColWidth, rowHeight, tr(node.artifact.Type), "", 1, "L", false, 0, "")
 	currentY = pdf.GetY()
 	pdf.SetDrawColor(200, 200, 200)
 	pdf.SetLineWidth(0.2)
