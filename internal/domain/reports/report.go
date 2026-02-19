@@ -69,6 +69,10 @@ func stripMarkdown(text string) string {
 	inlineCodeRe := regexp.MustCompile("`([^`]+)`")
 	text = inlineCodeRe.ReplaceAllString(text, "$1")
 	
+	// Remove image syntax ![alt](url) - images are handled separately in PDF
+	imageRe := regexp.MustCompile(`!\[([^\]]*)\]\(([^)]+)\)`)
+	text = imageRe.ReplaceAllString(text, "")
+	
 	// Convert links [text](url) to just text
 	linkRe := regexp.MustCompile(`\[([^\]]+)\]\(([^)]+)\)`)
 	text = linkRe.ReplaceAllString(text, "$1")
