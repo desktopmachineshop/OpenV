@@ -30,6 +30,51 @@ type linkGroups struct {
 	incoming map[string][]*linksdomain.Link
 }
 
+// stripMarkdown converts markdown text to plain text for PDF rendering
+// Handles common markdown syntax: headers, bold, italic, code, lists, links
+func stripMarkdown(text string) string {
+	// Remove code blocks (```...```)
+	codeBlockRe := regexp.MustCompile("(?s)```[a-zA-Z]*\n(.*?)\n```")
+	text = codeBlockRe.ReplaceAllString(text, "$1")
+	
+	// Convert headers (# ## ###) to text with spacing
+	headerRe := regexp.MustCompile(`(?m)^#{1,6}\s+(.+)$`)
+	text = headerRe.ReplaceAllString(text, "\n$1\n")
+	
+	// Convert bold (**text** or __text__) to plain text
+	boldRe := regexp.MustCompile(`\*\*(.+?)\*\*|__(.+?)__`)
+	text = boldRe.ReplaceAllString(text, "$1$2")
+	
+	// Convert italic (*text* or _text_) to plain text
+	italicRe := regexp.MustCompile(`\*(.+?)\*|_(.+?)_`)
+	text = italicRe.ReplaceAllString(text, "$1$2")
+	
+	// Convert inline code (`code`) to plain text
+	inlineCodeRe := regexp.MustCompile("`([^`]+)`")
+	text = inlineCodeRe.ReplaceAllString(text, "$1")
+	
+	// Convert links [text](url) to "text (url)"
+	linkRe := regexp.MustCompile(`\[([^\]]+)\]\(([^)]+)\)`)
+	text = linkRe.ReplaceAllString(text, "$1")
+	
+	// Convert list markers (- or * or 1.) to simple bullets
+	listRe := regexp.MustCompile(`(?m)^[\s]*[-*+]\s+`)
+	text = listRe.ReplaceAllString(text, "• ")
+	
+	numberedListRe := regexp.MustCompile(`(?m)^[\s]*\d+\.\s+`)
+	text = numberedListRe.ReplaceAllString(text, "  ")
+	
+	// Convert strikethrough ~~text~~ to plain text
+	strikeRe := regexp.MustCompile(`~~(.+?)~~`)
+	text = strikeRe.ReplaceAllString(text, "$1")
+	
+	// Clean up excessive newlines (more than 2 in a row)
+	multiNewlineRe := regexp.MustCompile(`\n{3,}`)
+	text = multiNewlineRe.ReplaceAllString(text, "\n\n")
+	
+	return strings.TrimSpace(text)
+}
+
 type linkTypeLabel struct {
 	label        string
 	inverseLabel string
@@ -229,7 +274,9 @@ func renderArtifactNode(
 		if node.artifact.Body != "" {
 			pdf.SetFont("Arial", "", 10)
 			pdf.SetX(xStart)
-			pdf.MultiCell(0, 5, node.artifact.Body, "", "L", false)
+			// Convert markdown to plain text for PDF rendering
+			plainText := stripMarkdown(node.artifact.Body)
+			pdf.MultiCell(0, 5, plainText, "", "L", false)
 		}
 	} else {
 		// For other artifact types: render details in table format with embedded links and images
@@ -326,7 +373,9 @@ func renderArtifactDetailsTable(
 		pdf.SetTextColor(0, 0, 0)
 		pdf.SetFont("Arial", "", 9)
 		pdf.SetX(tableX + labelColWidth)
-		pdf.MultiCell(valueColWidth, rowHeight, node.artifact.Body, "", "L", false)
+		// Convert markdown to plain text for PDF rendering
+		plainText := stripMarkdown(node.artifact.Body)
+		pdf.MultiCell(valueColWidth, rowHeight, plainText, "", "L", false)
 		currentY = currentY + descriptionHeight
 		pdf.SetDrawColor(200, 200, 200)
 		pdf.SetLineWidth(0.2)
@@ -501,7 +550,9 @@ func calculateArtifactSectionHeight(
 	if node.artifact.Type == "heading" || node.artifact.Type == "description" {
 		if node.artifact.Body != "" {
 			pdf.SetFont("Arial", "", 10)
-			sectionHeight += estimateWrappedTextHeight(pdf, node.artifact.Body, contentWidth, 5.0)
+			// Convert markdown to plain text before estimating height
+			plainText := stripMarkdown(node.artifact.Body)
+			sectionHeight += estimateWrappedTextHeight(pdf, plainText, contentWidth, 5.0)
 		}
 	} else {
 		tableWidth := 170.0 - indent
@@ -526,7 +577,9 @@ func calculateArtifactDetailsTableHeight(
 	descriptionHeight := 0.0
 	if artifact.Body != "" {
 		pdf.SetFont("Arial", "", 9)
-		wrapped := pdf.SplitLines([]byte(artifact.Body), valueColWidth)
+		// Convert markdown to plain text before calculating height
+		plainText := stripMarkdown(artifact.Body)
+		wrapped := pdf.SplitLines([]byte(plainText), valueColWidth)
 		if len(wrapped) == 0 {
 			descriptionHeight = rowHeight
 		} else {
