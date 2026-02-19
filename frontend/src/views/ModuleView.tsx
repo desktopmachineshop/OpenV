@@ -741,7 +741,7 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
         onGenerateReport={handleGenerateReport}
       />
       <div style={{ display: 'flex', gap: '0', paddingLeft: '20px', paddingRight: '20px', height: 'calc(100vh - 120px)', overflow: 'hidden' }}>
-      <div style={{ width: `${leftColumnWidth}px`, minWidth: '200px', maxWidth: '800px', display: 'flex', flexDirection: 'column', overflowX: 'hidden', overflowY: 'auto', minHeight: 0 }}>
+      <div style={{ width: `${leftColumnWidth}px`, minWidth: '200px', maxWidth: '800px', display: 'flex', flexDirection: 'column', overflowX: 'hidden', overflowY: 'auto', minHeight: 0, paddingRight: '10px' }}>
         {error && (
           <div
             style={{
