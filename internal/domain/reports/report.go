@@ -475,63 +475,54 @@ func renderSingleTextField(pdf *gofpdf.Fpdf, tableX, tableWidth, labelColWidth, 
 
 // renderSplitTextField renders a text field that spans multiple pages
 func renderSplitTextField(pdf *gofpdf.Fpdf, tableX, tableWidth, labelColWidth, valueColWidth, rowHeight float64, label, text string, pageHeight, safeMargin float64) {
+	currentY := pdf.GetY()
+	availableHeight := pageHeight - currentY - safeMargin
+	
 	// Split text into lines
 	pdf.SetFont("Arial", "", 9)
 	lines := pdf.SplitLines([]byte(text), valueColWidth)
-	if len(lines) == 0 {
+	
+	// Calculate how many lines fit on current page
+	linesPerPage := int(availableHeight / rowHeight)
+	if linesPerPage < 1 {
+		// Not enough space, move to next page
+		pdf.AddPage()
 		renderSingleTextField(pdf, tableX, tableWidth, labelColWidth, valueColWidth, rowHeight, label, text)
 		return
 	}
-
-	remaining := lines
-	isFirst := true
-	for len(remaining) > 0 {
-		currentY := pdf.GetY()
-		availableHeight := pageHeight - currentY - safeMargin
-		maxLines := int((availableHeight - 2) / rowHeight)
-		if maxLines < 1 {
-			pdf.AddPage()
-			continue
-		}
-
-		if maxLines > len(remaining) {
-			maxLines = len(remaining)
-		}
-
-		partLines := remaining[:maxLines]
-		partText := strings.Join(convertBytesToStrings(partLines), "\n")
-		cellHeight := float64(len(partLines))*rowHeight + 2
-
-		labelText := label
-		if !isFirst {
-			labelText = label + " [continued]"
-		}
-
-		pdf.SetXY(tableX, currentY)
-		pdf.SetDrawColor(200, 200, 200)
-		pdf.SetLineWidth(0.5)
-		pdf.Rect(tableX, currentY, tableWidth, cellHeight, "")
-		pdf.SetLineWidth(0.2)
-		pdf.Line(tableX+labelColWidth, currentY, tableX+labelColWidth, currentY+cellHeight)
-
-		pdf.SetTextColor(60, 60, 60)
-		pdf.SetFont("Arial", "B", 9)
-		pdf.CellFormat(labelColWidth, cellHeight, labelText, "", 0, "TL", false, 0, "")
-		pdf.SetTextColor(0, 0, 0)
-		pdf.SetFont("Arial", "", 9)
-		pdf.SetX(tableX + labelColWidth)
-		pdf.MultiCell(valueColWidth, rowHeight, partText, "", "L", false)
-
-		pdf.SetY(currentY + cellHeight)
-		pdf.SetDrawColor(200, 200, 200)
-		pdf.SetLineWidth(0.2)
-		pdf.Line(tableX, pdf.GetY(), tableX+tableWidth, pdf.GetY())
-
-		remaining = remaining[maxLines:]
-		isFirst = false
-		if len(remaining) > 0 {
-			pdf.AddPage()
-		}
+	
+	// First part - on current page
+	firstPartLines := lines[:linesPerPage]
+	firstPartText := strings.Join(convertBytesToStrings(firstPartLines), "\n")
+	firstPartHeight := float64(len(firstPartLines)) * rowHeight
+	
+	// Draw first part (no [continued] tag on first part)
+	pdf.SetXY(tableX, currentY)
+	pdf.SetDrawColor(200, 200, 200)
+	pdf.SetLineWidth(0.5)
+	pdf.Rect(tableX, currentY, tableWidth, firstPartHeight+2, "")
+	pdf.SetLineWidth(0.2)
+	pdf.Line(tableX+labelColWidth, currentY, tableX+labelColWidth, currentY+firstPartHeight+2)
+	
+	pdf.SetTextColor(60, 60, 60)
+	pdf.SetFont("Arial", "B", 9)
+	pdf.CellFormat(labelColWidth, firstPartHeight, label, "", 0, "TL", false, 0, "")
+	pdf.SetTextColor(0, 0, 0)
+	pdf.SetFont("Arial", "", 9)
+	pdf.SetX(tableX + labelColWidth)
+	pdf.MultiCell(valueColWidth, rowHeight, firstPartText, "", "L", false)
+	
+	currentY = pdf.GetY()
+	pdf.SetDrawColor(200, 200, 200)
+	pdf.SetLineWidth(0.2)
+	pdf.Line(tableX, currentY, tableX+tableWidth, currentY)
+	
+	// Second part - on next page
+	if len(lines) > linesPerPage {
+		pdf.AddPage()
+		remainingLines := lines[linesPerPage:]
+		remainingText := strings.Join(convertBytesToStrings(remainingLines), "\n")
+		renderSingleTextField(pdf, tableX, tableWidth, labelColWidth, valueColWidth, rowHeight, label+" [continued]", remainingText)
 	}
 }
 
@@ -570,16 +561,8 @@ func renderArtifactDetailsTableWithSplitting(
 		text := tr(plainText)
 		descriptionHeight := calculateTextHeight(pdf, text, valueColWidth, 9)
 		availableHeight := pageHeight - pdf.GetY() - safeMargin
-		_, topMargin, _, _ := pdf.GetMargins()
-		fullPageHeight := pageHeight - topMargin - safeMargin
 		
-		if descriptionHeight > availableHeight && descriptionHeight > fullPageHeight {
-			if availableHeight < 15 {
-				pdf.AddPage()
-			}
-			renderSplitTextField(pdf, tableX, tableWidth, labelColWidth, valueColWidth, rowHeight,
-				"Description:", text, pageHeight, safeMargin)
-		} else if descriptionHeight > availableHeight && availableHeight > 15 {
+		if descriptionHeight > availableHeight && availableHeight > 15 {
 			// Text is too long for current page - split it
 			renderSplitTextField(pdf, tableX, tableWidth, labelColWidth, valueColWidth, rowHeight, 
 				"Description:", text, pageHeight, safeMargin)

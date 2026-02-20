@@ -2,6 +2,8 @@
 
 A modern, open-source Verification & Validation (V&V) requirements management system inspired by IBM DOORS, with full traceability, baselines, and a clean web UI.
 
+Public demo: https://openv-frontend-production.up.railway.app/
+
 ## Features
 
 ### MVP (v0.1.0)
