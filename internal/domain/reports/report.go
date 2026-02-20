@@ -292,8 +292,48 @@ func renderArtifactNode(
 	linkID := linkIDs[node.artifact.ID]
 
 	sectionHeight := calculateArtifactSectionHeight(pdf, node, xStart, indent, attachmentMap, linkGroupsByArtifact, artifactTitles)
-	ensureSpace(pdf, sectionHeight+6)
+	_, pageHeight := pdf.GetPageSize()
+	safeMargin := 20.0 // minimum margin from bottom before forcing new page
+	
+	// Check if artifact fits on current page
+	availableSpace := pageHeight - pdf.GetY() - 15 // 15mm bottom margin
+	
+	// If artifact is small (fits on one page), keep it together
+	if sectionHeight+6 < availableSpace {
+		// Fits on current page - render normally
+		renderArtifactContent(pdf, tr, node, xStart, indent, attachmentMap, linkGroupsByArtifact, artifactTitles, linkIDs, linkID)
+	} else if sectionHeight+6 < pageHeight-30 {
+		// Artifact is medium-sized (fits on one page if started at top)
+		// Force to new page
+		pdf.AddPage()
+		renderArtifactContent(pdf, tr, node, xStart, indent, attachmentMap, linkGroupsByArtifact, artifactTitles, linkIDs, linkID)
+	} else {
+		// Artifact is too large for one page - need to split
+		// Start on new page with split-rendering logic
+		pdf.AddPage()
+		renderArtifactContentWithSplitting(pdf, tr, node, xStart, indent, attachmentMap, linkGroupsByArtifact, artifactTitles, linkIDs, linkID, pageHeight, safeMargin)
+	}
 
+	pdf.Ln(2)
+
+	for _, child := range node.children {
+		renderArtifactNode(pdf, tr, child, depth+1, attachmentMap, linkGroupsByArtifact, artifactTitles, linkIDs)
+	}
+}
+
+// renderArtifactContent renders the core content of an artifact (title, body, table, images)
+func renderArtifactContent(
+	pdf *gofpdf.Fpdf,
+	tr func(string) string,
+	node *artifactNode,
+	xStart float64,
+	indent float64,
+	attachmentMap map[string][]*attachments.Attachment,
+	linkGroupsByArtifact map[string]linkGroups,
+	artifactTitles map[string]string,
+	linkIDs map[string]int,
+	linkID int,
+) {
 	if node.artifact.Type == "heading" {
 		pdf.SetFont("Arial", "B", 13)
 	} else {
@@ -360,12 +400,341 @@ func renderArtifactNode(
 			pdf.Ln(height + 4)
 		}
 	}
+}
 
-	pdf.Ln(2)
-
-	for _, child := range node.children {
-		renderArtifactNode(pdf, tr, child, depth+1, attachmentMap, linkGroupsByArtifact, artifactTitles, linkIDs)
+// renderArtifactContentWithSplitting handles artifacts too large for one page
+func renderArtifactContentWithSplitting(
+	pdf *gofpdf.Fpdf,
+	tr func(string) string,
+	node *artifactNode,
+	xStart float64,
+	indent float64,
+	attachmentMap map[string][]*attachments.Attachment,
+	linkGroupsByArtifact map[string]linkGroups,
+	artifactTitles map[string]string,
+	linkIDs map[string]int,
+	linkID int,
+	pageHeight float64,
+	safeMargin float64,
+) {
+	// For split content, we still render the title and basic content
+	// but mark continuation sections properly
+	if node.artifact.Type == "heading" {
+		pdf.SetFont("Arial", "B", 13)
+	} else {
+		pdf.SetFont("Arial", "B", 11)
 	}
+
+	// Skip title for description artifacts
+	if node.artifact.Type != "description" {
+		yStart := pdf.GetY()
+		pdf.SetX(xStart)
+		if linkID > 0 {
+			pdf.MultiCell(0, 6, tr(node.artifact.Title), "", "L", false)
+			pdf.SetLink(linkID, yStart, -1)
+		} else {
+			pdf.MultiCell(0, 6, tr(node.artifact.Title), "", "L", false)
+		}
+	}
+
+	// For split rendering, call the table renderer with split flag
+	if node.artifact.Type != "heading" && node.artifact.Type != "description" {
+		renderArtifactDetailsTableWithSplitting(pdf, tr, node, xStart, indent, attachmentMap, linkGroupsByArtifact, artifactTitles, linkIDs, pageHeight, safeMargin)
+	}
+}
+
+// renderSingleTextField renders a text field that fits on one page
+func renderSingleTextField(pdf *gofpdf.Fpdf, tableX, tableWidth, labelColWidth, valueColWidth, rowHeight float64, label, text string) {
+	startY := pdf.GetY()
+	
+	pdf.SetFont("Arial", "", 9)
+	textHeight := calculateTextHeight(pdf, text, valueColWidth, 9)
+	cellHeight := textHeight + 2
+	
+	// Draw complete box border
+	pdf.SetDrawColor(200, 200, 200)
+	pdf.SetLineWidth(0.5)
+	pdf.Rect(tableX, startY, tableWidth, cellHeight, "")
+	
+	// Draw vertical column separator
+	pdf.SetLineWidth(0.2)
+	pdf.Line(tableX+labelColWidth, startY, tableX+labelColWidth, startY+cellHeight)
+	
+	// Label cell
+	pdf.SetXY(tableX, startY)
+	pdf.SetTextColor(60, 60, 60)
+	pdf.SetFont("Arial", "B", 9)
+	pdf.CellFormat(labelColWidth, cellHeight, label, "", 0, "TL", false, 0, "")
+	
+	// Text value cell
+	pdf.SetXY(tableX+labelColWidth, startY)
+	pdf.SetTextColor(0, 0, 0)
+	pdf.SetFont("Arial", "", 9)
+	pdf.MultiCell(valueColWidth, rowHeight, text, "", "L", false)
+}
+
+// renderSplitTextField renders a text field that spans multiple pages
+func renderSplitTextField(pdf *gofpdf.Fpdf, tableX, tableWidth, labelColWidth, valueColWidth, rowHeight float64, label, text string, pageHeight, safeMargin float64) {
+	// Split text into lines
+	pdf.SetFont("Arial", "", 9)
+	lines := pdf.SplitLines([]byte(text), valueColWidth)
+	if len(lines) == 0 {
+		renderSingleTextField(pdf, tableX, tableWidth, labelColWidth, valueColWidth, rowHeight, label, text)
+		return
+	}
+
+	remaining := lines
+	isFirst := true
+	for len(remaining) > 0 {
+		currentY := pdf.GetY()
+		availableHeight := pageHeight - currentY - safeMargin
+		maxLines := int((availableHeight - 2) / rowHeight)
+		if maxLines < 1 {
+			pdf.AddPage()
+			continue
+		}
+
+		if maxLines > len(remaining) {
+			maxLines = len(remaining)
+		}
+
+		partLines := remaining[:maxLines]
+		partText := strings.Join(convertBytesToStrings(partLines), "\n")
+		cellHeight := float64(len(partLines))*rowHeight + 2
+
+		labelText := label
+		if !isFirst {
+			labelText = label + " [continued]"
+		}
+
+		pdf.SetXY(tableX, currentY)
+		pdf.SetDrawColor(200, 200, 200)
+		pdf.SetLineWidth(0.5)
+		pdf.Rect(tableX, currentY, tableWidth, cellHeight, "")
+		pdf.SetLineWidth(0.2)
+		pdf.Line(tableX+labelColWidth, currentY, tableX+labelColWidth, currentY+cellHeight)
+
+		pdf.SetTextColor(60, 60, 60)
+		pdf.SetFont("Arial", "B", 9)
+		pdf.CellFormat(labelColWidth, cellHeight, labelText, "", 0, "TL", false, 0, "")
+		pdf.SetTextColor(0, 0, 0)
+		pdf.SetFont("Arial", "", 9)
+		pdf.SetX(tableX + labelColWidth)
+		pdf.MultiCell(valueColWidth, rowHeight, partText, "", "L", false)
+
+		pdf.SetY(currentY + cellHeight)
+		pdf.SetDrawColor(200, 200, 200)
+		pdf.SetLineWidth(0.2)
+		pdf.Line(tableX, pdf.GetY(), tableX+tableWidth, pdf.GetY())
+
+		remaining = remaining[maxLines:]
+		isFirst = false
+		if len(remaining) > 0 {
+			pdf.AddPage()
+		}
+	}
+}
+
+// convertBytesToStrings converts [][]byte to []string
+func convertBytesToStrings(lines [][]byte) []string {
+	result := make([]string, len(lines))
+	for i, line := range lines {
+		result[i] = string(line)
+	}
+	return result
+}
+
+func renderArtifactDetailsTableWithSplitting(
+	pdf *gofpdf.Fpdf,
+	tr func(string) string,
+	node *artifactNode,
+	xStart float64,
+	indent float64,
+	attachmentMap map[string][]*attachments.Attachment,
+	linkGroupsByArtifact map[string]linkGroups,
+	artifactTitles map[string]string,
+	linkIDs map[string]int,
+	pageHeight float64,
+	safeMargin float64,
+) {
+	// Render the table row by row, checking for page breaks
+	tableX := xStart
+	tableWidth := 170.0 - indent
+	labelColWidth := 50.0
+	valueColWidth := tableWidth - labelColWidth
+	rowHeight := 5.0
+	
+	// Description field
+	if node.artifact.Body != "" {
+		plainText := stripMarkdown(node.artifact.Body)
+		text := tr(plainText)
+		descriptionHeight := calculateTextHeight(pdf, text, valueColWidth, 9)
+		availableHeight := pageHeight - pdf.GetY() - safeMargin
+		_, topMargin, _, _ := pdf.GetMargins()
+		fullPageHeight := pageHeight - topMargin - safeMargin
+		
+		if descriptionHeight > availableHeight && descriptionHeight > fullPageHeight {
+			if availableHeight < 15 {
+				pdf.AddPage()
+			}
+			renderSplitTextField(pdf, tableX, tableWidth, labelColWidth, valueColWidth, rowHeight,
+				"Description:", text, pageHeight, safeMargin)
+		} else if descriptionHeight > availableHeight && availableHeight > 15 {
+			// Text is too long for current page - split it
+			renderSplitTextField(pdf, tableX, tableWidth, labelColWidth, valueColWidth, rowHeight, 
+				"Description:", text, pageHeight, safeMargin)
+		} else if descriptionHeight > availableHeight {
+			// Not enough space on current page - move to next page
+			pdf.AddPage()
+			renderSingleTextField(pdf, tableX, tableWidth, labelColWidth, valueColWidth, rowHeight, 
+				"Description:", text)
+		} else {
+			// Fits on current page
+			renderSingleTextField(pdf, tableX, tableWidth, labelColWidth, valueColWidth, rowHeight, 
+				"Description:", text)
+		}
+	}
+	
+	// Type and Version rows
+	for _, fieldLabel := range []string{"Type:", "Version:"} {
+		if pdf.GetY()+4 > pageHeight-safeMargin {
+			pdf.AddPage()
+		}
+		
+		startY := pdf.GetY()
+		rowHeight := 5.0
+		
+		// Draw borders
+		pdf.SetDrawColor(200, 200, 200)
+		pdf.SetLineWidth(0.5)
+		pdf.Rect(tableX, startY, tableWidth, rowHeight, "")
+		pdf.SetLineWidth(0.2)
+		pdf.Line(tableX+labelColWidth, startY, tableX+labelColWidth, startY+rowHeight)
+		
+		// Draw label
+		pdf.SetXY(tableX, startY)
+		pdf.SetTextColor(60, 60, 60)
+		pdf.SetFont("Arial", "B", 9)
+		pdf.CellFormat(labelColWidth, rowHeight, fieldLabel, "", 0, "CM", false, 0, "")
+		
+		// Draw value
+		pdf.SetXY(tableX+labelColWidth, startY)
+		pdf.SetTextColor(0, 0, 0)
+		pdf.SetFont("Arial", "", 9)
+		
+		var fieldValue string
+		if fieldLabel == "Type:" {
+			fieldValue = tr(node.artifact.Type)
+		} else {
+			fieldValue = fmt.Sprintf("v%d", node.artifact.Version)
+		}
+		pdf.CellFormat(valueColWidth, rowHeight, fieldValue, "", 0, "CM", false, 0, "")
+		
+		// Draw bottom border
+		pdf.SetDrawColor(200, 200, 200)
+		pdf.SetLineWidth(0.2)
+		pdf.Line(tableX, startY+rowHeight, tableX+tableWidth, startY+rowHeight)
+		
+		pdf.SetY(startY + rowHeight)
+	}
+	
+	// Links section
+	if groups, ok := linkGroupsByArtifact[node.artifact.ID]; ok {
+		if len(groups.incoming) > 0 {
+			incomingHeight := calculateLinkRowHeight(pdf, valueColWidth, groups.incoming, artifactTitles, true)
+			
+			if pdf.GetY()+incomingHeight > pageHeight-safeMargin {
+				pdf.AddPage()
+			}
+			
+			pdf.SetXY(tableX, pdf.GetY())
+			pdf.SetTextColor(60, 60, 60)
+			pdf.SetFont("Arial", "B", 9)
+			pdf.CellFormat(labelColWidth, incomingHeight, "Incoming Links:", "", 0, "TL", false, 0, "")
+			pdf.SetTextColor(0, 0, 0)
+			pdf.SetFont("Arial", "", 9)
+			renderLinksWithHyperlinks(pdf, tableX+labelColWidth, pdf.GetY(), valueColWidth, groups.incoming, artifactTitles, linkIDs, true)
+			currentY := pdf.GetY()
+			pdf.SetDrawColor(200, 200, 200)
+			pdf.SetLineWidth(0.2)
+			pdf.Line(tableX, currentY, tableX+tableWidth, currentY)
+		}
+		
+		if len(groups.outgoing) > 0 {
+			outgoingHeight := calculateLinkRowHeight(pdf, valueColWidth, groups.outgoing, artifactTitles, false)
+			
+			if pdf.GetY()+outgoingHeight > pageHeight-safeMargin {
+				pdf.AddPage()
+			}
+			
+			pdf.SetXY(tableX, pdf.GetY())
+			pdf.SetTextColor(60, 60, 60)
+			pdf.SetFont("Arial", "B", 9)
+			pdf.CellFormat(labelColWidth, outgoingHeight, "Outgoing Links:", "", 0, "TL", false, 0, "")
+			pdf.SetTextColor(0, 0, 0)
+			pdf.SetFont("Arial", "", 9)
+			renderLinksWithHyperlinks(pdf, tableX+labelColWidth, pdf.GetY(), valueColWidth, groups.outgoing, artifactTitles, linkIDs, false)
+			currentY := pdf.GetY()
+			pdf.SetDrawColor(200, 200, 200)
+			pdf.SetLineWidth(0.2)
+			pdf.Line(tableX, currentY, tableX+tableWidth, currentY)
+		}
+	}
+	
+	// Images
+	for _, attachment := range attachmentMap[node.artifact.ID] {
+		imageType := imageTypeFromMime(attachment.MimeType, attachment.FilePath)
+		if imageType == "" {
+			continue
+		}
+		
+		imagePath, ok := resolveAttachmentPath(attachment.FilePath)
+		if !ok {
+			continue
+		}
+		
+		options := gofpdf.ImageOptions{ImageType: imageType, ReadDpi: true}
+		info := pdf.RegisterImageOptions(imagePath, options)
+		if info == nil {
+			continue
+		}
+		
+		maxWidth := valueColWidth - 4
+		width, height := calculateImageSize(info, maxWidth)
+		imageRowHeight := height + 4
+		
+		if pdf.GetY()+imageRowHeight > pageHeight-safeMargin {
+			pdf.AddPage()
+		}
+		
+		pdf.SetXY(tableX, pdf.GetY())
+		pdf.SetTextColor(60, 60, 60)
+		pdf.SetFont("Arial", "B", 9)
+		pdf.CellFormat(labelColWidth, imageRowHeight, "Image:", "", 0, "TL", false, 0, "")
+		
+		imageY := pdf.GetY() + 2.0
+		imageX := tableX + labelColWidth + 2.0
+		pdf.ImageOptions(imagePath, imageX, imageY, width, height, false, options, 0, "")
+		
+		pdf.SetY(pdf.GetY() + imageRowHeight)
+		pdf.SetDrawColor(200, 200, 200)
+		pdf.SetLineWidth(0.2)
+		pdf.Line(tableX, pdf.GetY(), tableX+tableWidth, pdf.GetY())
+	}
+	
+	// Reset
+	pdf.SetDrawColor(0, 0, 0)
+	pdf.SetLineWidth(0.2)
+	pdf.SetTextColor(0, 0, 0)
+	pdf.SetFont("Arial", "", 10)
+	pdf.Ln(2)
+}
+
+// calculateTextHeight estimates the height needed to render text with wrapping
+func calculateTextHeight(pdf *gofpdf.Fpdf, text string, width float64, fontSize float64) float64 {
+	pdf.SetFont("Arial", "", fontSize)
+	lines := pdf.SplitLines([]byte(text), width)
+	return float64(len(lines)) * 5.0 // 5mm per line
 }
 
 func renderArtifactDetailsTable(
