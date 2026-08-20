@@ -226,5 +226,21 @@ func InitSchema(db *sql.DB) error {
 		return fmt.Errorf("failed to add link_artifacts index: %w", err)
 	}
 
+	if err := InitUserSchema(db); err != nil {
+		return err
+	}
+
+	if err := InitSuiteSchema(db); err != nil {
+		return err
+	}
+
+	if err := InitAgentSchema(db); err != nil {
+		return err
+	}
+
+	if err := InitOrgSchema(db); err != nil {
+		return err
+	}
+
 	return nil
 }

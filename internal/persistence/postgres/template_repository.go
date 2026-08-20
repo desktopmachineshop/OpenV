@@ -17,15 +17,16 @@ func NewTemplateRepository(db *sql.DB) *TemplateRepository {
 	return &TemplateRepository{db: db}
 }
 
-// Create inserts a new template.
+// Create inserts a new template. An empty OrgID stores NULL (global built-in).
 func (r *TemplateRepository) Create(template *templates.Template) error {
 	query := `
-		INSERT INTO templates (id, template_key, name, description, snapshot, is_default, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		INSERT INTO templates (id, org_id, template_key, name, description, snapshot, is_default, created_at)
+		VALUES ($1, NULLIF($2, '')::uuid, $3, $4, $5, $6, $7, $8)
 	`
 
 	_, err := r.db.Exec(query,
 		template.ID,
+		template.OrgID,
 		template.Key,
 		template.Name,
 		template.Description,
@@ -37,15 +38,16 @@ func (r *TemplateRepository) Create(template *templates.Template) error {
 	return err
 }
 
-// List returns all templates.
-func (r *TemplateRepository) List() ([]*templates.Template, error) {
+// List returns an org's templates plus the global built-ins (org_id NULL).
+func (r *TemplateRepository) List(orgID string) ([]*templates.Template, error) {
 	query := `
-		SELECT id, template_key, name, description, is_default, created_at
+		SELECT id, COALESCE(org_id::text, ''), template_key, name, description, is_default, created_at
 		FROM templates
+		WHERE org_id IS NULL OR org_id = NULLIF($1, '')::uuid
 		ORDER BY is_default DESC, created_at DESC
 	`
 
-	rows, err := r.db.Query(query)
+	rows, err := r.db.Query(query, orgID)
 	if err != nil {
 		return nil, err
 	}
@@ -56,6 +58,7 @@ func (r *TemplateRepository) List() ([]*templates.Template, error) {
 		item := &templates.Template{}
 		if err := rows.Scan(
 			&item.ID,
+			&item.OrgID,
 			&item.Key,
 			&item.Name,
 			&item.Description,
@@ -73,7 +76,7 @@ func (r *TemplateRepository) List() ([]*templates.Template, error) {
 // GetByID returns a template by ID.
 func (r *TemplateRepository) GetByID(id string) (*templates.Template, error) {
 	query := `
-		SELECT id, template_key, name, description, snapshot, is_default, created_at
+		SELECT id, COALESCE(org_id::text, ''), template_key, name, description, snapshot, is_default, created_at
 		FROM templates
 		WHERE id = $1
 	`
@@ -81,6 +84,7 @@ func (r *TemplateRepository) GetByID(id string) (*templates.Template, error) {
 	item := &templates.Template{}
 	if err := r.db.QueryRow(query, id).Scan(
 		&item.ID,
+		&item.OrgID,
 		&item.Key,
 		&item.Name,
 		&item.Description,
@@ -100,7 +104,7 @@ func (r *TemplateRepository) GetByID(id string) (*templates.Template, error) {
 // GetByKey returns a template by key.
 func (r *TemplateRepository) GetByKey(key string) (*templates.Template, error) {
 	query := `
-		SELECT id, template_key, name, description, snapshot, is_default, created_at
+		SELECT id, COALESCE(org_id::text, ''), template_key, name, description, snapshot, is_default, created_at
 		FROM templates
 		WHERE template_key = $1
 	`
@@ -108,6 +112,7 @@ func (r *TemplateRepository) GetByKey(key string) (*templates.Template, error) {
 	item := &templates.Template{}
 	if err := r.db.QueryRow(query, key).Scan(
 		&item.ID,
+		&item.OrgID,
 		&item.Key,
 		&item.Name,
 		&item.Description,

@@ -189,7 +189,7 @@ func (r *LinkRepository) FindAll(projectID string) ([]*links.Link, error) {
 	query := `
 		SELECT l.id, l.from_id, l.to_id, l.type, l.attributes, l.version, l.created_at, l.updated_at
 		FROM links l
-		INNER JOIN artifacts a ON l.from_id = a.id
+		INNER JOIN artifacts a ON l.from_id = a.id AND a.valid_to IS NULL
 		WHERE a.project_id = $1 AND l.valid_to IS NULL
 		ORDER BY l.created_at DESC
 	`

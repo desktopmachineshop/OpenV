@@ -18,6 +18,8 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/baselines"
 	"github.com/openv/requirements-platform/internal/domain/exports"
 	linksdomain "github.com/openv/requirements-platform/internal/domain/links"
+	"github.com/openv/requirements-platform/internal/domain/products"
+	"github.com/openv/requirements-platform/internal/domain/vv"
 )
 
 type artifactNode struct {
@@ -122,6 +124,7 @@ var linkTypeLabels = buildLinkTypeLabels()
 // Service defines report generation behavior.
 type Service interface {
 	GenerateProjectReport(projectID string, baselineID string) ([]byte, string, error)
+	GenerateVVReport(projectID string, baselineID string, latest map[string]*vv.TestResult, runs []*vv.TestRun) ([]byte, string, error)
 }
 
 // DefaultService generates PDF reports from project snapshots.
@@ -203,6 +206,8 @@ func buildReportPDF(data *exports.ProjectExport, baselineName string) ([]byte, e
 	pdf.SetTextColor(0, 0, 0)
 	pdf.Ln(4)
 
+	renderProductDefinition(pdf, tr, data.ProductProfile)
+
 	attachmentMap := map[string][]*attachments.Attachment{}
 	for _, attachment := range data.Attachments {
 		attachmentMap[attachment.ArtifactID] = append(attachmentMap[attachment.ArtifactID], attachment)
@@ -246,6 +251,106 @@ func buildReportPDF(data *exports.ProjectExport, baselineName string) ([]byte, e
 	}
 
 	return buf.Bytes(), nil
+}
+
+// mapStringValue reads a string value from a generic map, "" if absent.
+func mapStringValue(m map[string]interface{}, keys ...string) string {
+	for _, key := range keys {
+		if v, ok := m[key]; ok {
+			if s, ok := v.(string); ok && s != "" {
+				return s
+			}
+		}
+	}
+	return ""
+}
+
+// productProfileHasContent reports whether any renderable field is non-empty.
+func productProfileHasContent(profile *products.ProductProfile) bool {
+	if profile == nil {
+		return false
+	}
+	return profile.Vision != "" || profile.ProblemStatement != "" || profile.TargetUsers != "" ||
+		len(profile.SuccessMetrics) > 0 || len(profile.Constraints) > 0
+}
+
+// renderProductDefinition renders the "Product Definition" section from the
+// export's product profile snapshot. No-op when the profile is empty.
+func renderProductDefinition(pdf *gofpdf.Fpdf, tr func(string) string, profile *products.ProductProfile) {
+	if !productProfileHasContent(profile) {
+		return
+	}
+
+	ensureSpace(pdf, 20)
+	pdf.SetFont("Arial", "B", 13)
+	pdf.SetTextColor(0, 0, 0)
+	pdf.CellFormat(0, 8, "Product Definition", "", 1, "L", false, 0, "")
+
+	renderProfileParagraph := func(label, text string) {
+		if text == "" {
+			return
+		}
+		ensureSpace(pdf, 12)
+		pdf.SetFont("Arial", "B", 10)
+		pdf.SetTextColor(60, 60, 60)
+		pdf.CellFormat(0, 5, label, "", 1, "L", false, 0, "")
+		pdf.SetFont("Arial", "", 10)
+		pdf.SetTextColor(0, 0, 0)
+		pdf.MultiCell(0, 5, tr(stripMarkdown(text)), "", "L", false)
+		pdf.Ln(1)
+	}
+
+	renderProfileParagraph("Vision", profile.Vision)
+	renderProfileParagraph("Problem Statement", profile.ProblemStatement)
+	renderProfileParagraph("Target Users", profile.TargetUsers)
+
+	if len(profile.SuccessMetrics) > 0 {
+		ensureSpace(pdf, 12)
+		pdf.SetFont("Arial", "B", 10)
+		pdf.SetTextColor(60, 60, 60)
+		pdf.CellFormat(0, 5, "Success Metrics", "", 1, "L", false, 0, "")
+		pdf.SetFont("Arial", "", 10)
+		pdf.SetTextColor(0, 0, 0)
+		for _, metric := range profile.SuccessMetrics {
+			name := mapStringValue(metric, "name", "title", "metric")
+			if name == "" {
+				name = "(unnamed metric)"
+			}
+			line := name
+			if target := mapStringValue(metric, "target"); target != "" {
+				line += ": " + target
+			}
+			if current := mapStringValue(metric, "current"); current != "" {
+				line += fmt.Sprintf(" (%s)", current)
+			}
+			ensureSpace(pdf, 5)
+			pdf.SetX(19)
+			pdf.MultiCell(0, 5, tr(stripMarkdown(line)), "", "L", false)
+		}
+		pdf.Ln(1)
+	}
+
+	if len(profile.Constraints) > 0 {
+		ensureSpace(pdf, 12)
+		pdf.SetFont("Arial", "B", 10)
+		pdf.SetTextColor(60, 60, 60)
+		pdf.CellFormat(0, 5, "Constraints", "", 1, "L", false, 0, "")
+		pdf.SetFont("Arial", "", 10)
+		pdf.SetTextColor(0, 0, 0)
+		for _, constraint := range profile.Constraints {
+			text := mapStringValue(constraint, "text", "description", "name", "title")
+			if text == "" {
+				continue
+			}
+			ensureSpace(pdf, 5)
+			pdf.SetX(19)
+			pdf.MultiCell(0, 5, tr("- "+stripMarkdown(text)), "", "L", false)
+		}
+		pdf.Ln(1)
+	}
+
+	pdf.SetTextColor(0, 0, 0)
+	pdf.Ln(3)
 }
 
 func buildLinkTypeLabels() map[string]linkTypeLabel {

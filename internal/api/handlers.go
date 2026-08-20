@@ -1,57 +1,199 @@
 package api
 
 import (
-    "encoding/json"
-    "fmt"
-    "io"
-    "net/http"
-    "os"
-    "path/filepath"
-    "strconv"
-    "strings"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"os"
+	"path/filepath"
+	"strconv"
+	"strings"
 	"time"
 
-    "github.com/google/uuid"
-    "github.com/gorilla/mux"
-    "github.com/openv/requirements-platform/internal/domain/artifacts"
-    "github.com/openv/requirements-platform/internal/domain/attachments"
+	"github.com/google/uuid"
+	"github.com/gorilla/mux"
+	"github.com/openv/requirements-platform/internal/domain/artifacts"
+	"github.com/openv/requirements-platform/internal/domain/attachments"
 	"github.com/openv/requirements-platform/internal/domain/baselines"
 	"github.com/openv/requirements-platform/internal/domain/chatter"
-    "github.com/openv/requirements-platform/internal/domain/exports"
-    "github.com/openv/requirements-platform/internal/domain/links"
-    "github.com/openv/requirements-platform/internal/domain/projects"
+	"github.com/openv/requirements-platform/internal/domain/exports"
+	"github.com/openv/requirements-platform/internal/domain/links"
+	"github.com/openv/requirements-platform/internal/domain/projects"
 	"github.com/openv/requirements-platform/internal/domain/reports"
 	"github.com/openv/requirements-platform/internal/domain/templates"
+
+	"github.com/openv/requirements-platform/internal/domain/agentruns"
+	"github.com/openv/requirements-platform/internal/domain/agents"
+	"github.com/openv/requirements-platform/internal/domain/automations"
+	"github.com/openv/requirements-platform/internal/domain/events"
+	"github.com/openv/requirements-platform/internal/domain/guided"
+	"github.com/openv/requirements-platform/internal/domain/hostedworkers"
+	"github.com/openv/requirements-platform/internal/domain/interviews"
+	"github.com/openv/requirements-platform/internal/domain/members"
+	"github.com/openv/requirements-platform/internal/domain/orgs"
+	"github.com/openv/requirements-platform/internal/domain/products"
+	"github.com/openv/requirements-platform/internal/domain/proposals"
+	"github.com/openv/requirements-platform/internal/domain/providers"
+	"github.com/openv/requirements-platform/internal/domain/repoconns"
+	"github.com/openv/requirements-platform/internal/domain/teams"
+	"github.com/openv/requirements-platform/internal/domain/users"
+	"github.com/openv/requirements-platform/internal/domain/vv"
+	"github.com/openv/requirements-platform/internal/domain/workerkeys"
+	"github.com/openv/requirements-platform/internal/domain/workitems"
+	"github.com/openv/requirements-platform/internal/hosting"
 )
+
+// HandlerDeps carries every service the API layer depends on.
+type HandlerDeps struct {
+	ArtifactService   artifacts.Service
+	LinkService       links.Service
+	ProjectService    projects.Service
+	AttachmentService attachments.Service
+	ExportService     exports.Service
+	BaselineService   baselines.Service
+	ReportService     reports.Service
+	TemplateService   templates.Service
+	ChatterService    chatter.Service
+	UploadsDir        string
+
+	UserService         users.Service
+	MemberService       members.Service
+	ProductService      products.Service
+	VVService           vv.Service
+	WorkItemService     workitems.Service
+	GuidedService       guided.Service
+	InterviewService    interviews.Service
+	AgentService        agents.Service
+	RunService          agentruns.Service
+	AutomationService   automations.Service
+	ProposalService     proposals.Service
+	RepoConnService     repoconns.Service
+	ProviderService     providers.Service
+	LoginService        providers.LoginService
+	TeamService         teams.Service
+	OrgService          orgs.Service
+	OrgTeamService      orgs.TeamService
+	WorkerKeyService    workerkeys.Service
+	HostedWorkerService hostedworkers.Service
+	Provisioner         hosting.Provisioner
+	// OrgSeeder provisions default agents/crew for a new workspace.
+	OrgSeeder func(orgID string) error
+	// PublicAPIURL is the externally-reachable API base (connector config).
+	PublicAPIURL string
+	// ConnectorDistDir holds downloadable Agent Connector bundles.
+	ConnectorDistDir string
+	Bus              events.Bus
+	EventRepo     events.Repository
+	SSEHub        *SSEHub
+	GoogleOAuth   *GoogleOAuthConfig
+	SecureCookies bool
+}
 
 // Handler holds references to domain services
 type Handler struct {
-	artifactService artifacts.Service
-	linkService     links.Service
-	projectService  projects.Service
+	artifactService   artifacts.Service
+	linkService       links.Service
+	projectService    projects.Service
 	attachmentService attachments.Service
-	exportService   exports.Service
-	baselineService baselines.Service
-	reportService   reports.Service
-	templateService templates.Service
-	chatterService  chatter.Service
-	uploadsDir      string
+	exportService     exports.Service
+	baselineService   baselines.Service
+	reportService     reports.Service
+	templateService   templates.Service
+	chatterService    chatter.Service
+	uploadsDir        string
+
+	userService         users.Service
+	memberService       members.Service
+	productService      products.Service
+	vvService           vv.Service
+	workItemService     workitems.Service
+	guidedService       guided.Service
+	interviewService    interviews.Service
+	agentService        agents.Service
+	runService          agentruns.Service
+	automationService   automations.Service
+	proposalService     proposals.Service
+	repoConnService     repoconns.Service
+	providerService     providers.Service
+	loginService        providers.LoginService
+	teamService         teams.Service
+	orgService          orgs.Service
+	orgTeamService      orgs.TeamService
+	workerKeyService    workerkeys.Service
+	hostedWorkerService hostedworkers.Service
+	provisioner         hosting.Provisioner
+	orgSeeder           func(orgID string) error
+	publicAPIURL        string
+	connectorDistDir    string
+	bus                 events.Bus
+	eventRepo           events.Repository
+	sseHub              *SSEHub
+	googleOAuth         *GoogleOAuthConfig
+	secureCookies       bool
 }
 
 // NewHandler creates a new API handler
-func NewHandler(artifactService artifacts.Service, linkService links.Service, projectService projects.Service, attachmentService attachments.Service, exportService exports.Service, baselineService baselines.Service, reportService reports.Service, templateService templates.Service, chatterService chatter.Service, uploadsDir string) *Handler {
+func NewHandler(deps HandlerDeps) *Handler {
 	return &Handler{
-		artifactService: artifactService,
-		linkService:     linkService,
-		projectService:  projectService,
-		attachmentService: attachmentService,
-		exportService:   exportService,
-		baselineService: baselineService,
-		reportService:   reportService,
-		templateService: templateService,
-		chatterService:  chatterService,
-		uploadsDir:      uploadsDir,
+		artifactService:     deps.ArtifactService,
+		linkService:         deps.LinkService,
+		projectService:      deps.ProjectService,
+		attachmentService:   deps.AttachmentService,
+		exportService:       deps.ExportService,
+		baselineService:     deps.BaselineService,
+		reportService:       deps.ReportService,
+		templateService:     deps.TemplateService,
+		chatterService:      deps.ChatterService,
+		uploadsDir:          deps.UploadsDir,
+		userService:         deps.UserService,
+		memberService:       deps.MemberService,
+		productService:      deps.ProductService,
+		vvService:           deps.VVService,
+		workItemService:     deps.WorkItemService,
+		guidedService:       deps.GuidedService,
+		interviewService:    deps.InterviewService,
+		agentService:        deps.AgentService,
+		runService:          deps.RunService,
+		automationService:   deps.AutomationService,
+		proposalService:     deps.ProposalService,
+		repoConnService:     deps.RepoConnService,
+		providerService:     deps.ProviderService,
+		loginService:        deps.LoginService,
+		teamService:         deps.TeamService,
+		orgService:          deps.OrgService,
+		orgTeamService:      deps.OrgTeamService,
+		workerKeyService:    deps.WorkerKeyService,
+		hostedWorkerService: deps.HostedWorkerService,
+		provisioner:         deps.Provisioner,
+		orgSeeder:           deps.OrgSeeder,
+		publicAPIURL:        deps.PublicAPIURL,
+		connectorDistDir:    deps.ConnectorDistDir,
+		bus:                 deps.Bus,
+		eventRepo:           deps.EventRepo,
+		sseHub:              deps.SSEHub,
+		googleOAuth:         deps.GoogleOAuth,
+		secureCookies:       deps.SecureCookies,
 	}
+}
+
+// publish emits a domain event when a bus is wired (nil-safe), stamped with
+// the owning org (the project's org when project-scoped, else the caller's
+// active workspace).
+func (h *Handler) publish(r *http.Request, eventType, projectID, entityID string, payload map[string]interface{}) {
+	if h.bus == nil {
+		return
+	}
+	orgID := ""
+	if projectID != "" && h.projectService != nil {
+		if project, err := h.projectService.GetProject(projectID); err == nil && project != nil {
+			orgID = project.OrgID
+		}
+	}
+	if orgID == "" {
+		orgID = ActiveOrg(r)
+	}
+	h.bus.Publish(events.New(eventType, projectID, entityID, Actor(r), payload).WithOrg(orgID))
 }
 
 // RegisterRoutes registers all API routes
@@ -101,6 +243,13 @@ func (h *Handler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/chatter", h.CreateChatterEntry).Methods("POST")
 	router.HandleFunc("/api/v1/chatter", h.ListChatterEntries).Methods("GET")
 
+	// Extended route groups (auth, meta, suite, agents, orgs) live in their own files.
+	h.registerAuthRoutes(router)
+	h.registerMetaRoutes(router)
+	h.registerSuiteRoutes(router)
+	h.registerAgentRoutes(router)
+	h.registerOrgRoutes(router)
+
 	// Health check
 	router.HandleFunc("/health", h.Health).Methods("GET")
 }
@@ -119,11 +268,35 @@ func (h *Handler) CreateArtifact(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if !h.requireProjectRole(w, r, req.ProjectID, members.RoleEditor) {
+		return
+	}
+
+	// Interviewer-created artifacts always land as interview-tagged drafts,
+	// regardless of what attributes the model supplied.
+	if run := CurrentRun(r); run != nil && run.InterviewSessionID != nil {
+		if req.Attributes == nil {
+			req.Attributes = map[string]interface{}{}
+		}
+		req.Attributes["status"] = "draft"
+		req.Attributes["origin"] = "interview"
+		req.Attributes["interview_session_id"] = *run.InterviewSessionID
+	}
+
+	if h.maybePropose(w, r, req.ProjectID, proposals.OpCreateArtifact, nil, req) {
+		return
+	}
+
 	artifact := artifacts.NewArtifact(req)
 	if err := h.artifactService.CreateArtifact(artifact); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	h.publish(r, events.ArtifactCreated, artifact.ProjectID, artifact.ID, map[string]interface{}{
+		"artifact_type": artifact.Type,
+		"title":         artifact.Title,
+	})
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
@@ -139,6 +312,10 @@ func (h *Handler) GetArtifact(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if !h.requireProjectRole(w, r, artifact.ProjectID, members.RoleViewer) {
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(artifact)
 }
@@ -150,6 +327,10 @@ func (h *Handler) ListArtifacts(w http.ResponseWriter, r *http.Request) {
 
 	if projectID == "" {
 		http.Error(w, "project_id is required", http.StatusBadRequest)
+		return
+	}
+
+	if !h.requireProjectRole(w, r, projectID, members.RoleViewer) {
 		return
 	}
 
@@ -180,6 +361,13 @@ func (h *Handler) UpdateArtifact(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if !h.requireProjectRole(w, r, oldArtifact.ProjectID, members.RoleEditor) {
+		return
+	}
+	if h.maybePropose(w, r, oldArtifact.ProjectID, proposals.OpUpdateArtifact, &id, req) {
+		return
+	}
+
 	// Ensure attributes is initialized
 	if req.Attributes == nil {
 		req.Attributes = make(map[string]interface{})
@@ -194,14 +382,14 @@ func (h *Handler) UpdateArtifact(w http.ResponseWriter, r *http.Request) {
 		for i, v := range req.PendingLinkRemoves {
 			removeInterfaceArray[i] = v
 		}
-		
+
 		// Fetch link details BEFORE removing them (for chatter)
 		for _, linkID := range req.PendingLinkRemoves {
 			if link, err := h.linkService.GetLink(linkID); err == nil {
 				removedLinks = append(removedLinks, link)
 			}
 		}
-		
+
 		// Fetch link details for adds (they already exist)
 		for _, linkIDInterface := range req.PendingLinkAdds {
 			if linkID, ok := linkIDInterface.(string); ok {
@@ -210,7 +398,7 @@ func (h *Handler) UpdateArtifact(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		}
-		
+
 		affected, err := h.processManagedLinkChanges(id, req.PendingLinkAdds, removeInterfaceArray)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("Failed to process link changes: %v", err), http.StatusInternalServerError)
@@ -221,7 +409,7 @@ func (h *Handler) UpdateArtifact(w http.ResponseWriter, r *http.Request) {
 		// After processing link changes, fetch current links and store in snapshot (deduplicated)
 		seenLinkIDs := make(map[string]bool)
 		allLinks := make([]interface{}, 0)
-		
+
 		incomingLinks, err := h.linkService.GetLinksTo(id)
 		if err == nil {
 			for _, link := range incomingLinks {
@@ -231,7 +419,7 @@ func (h *Handler) UpdateArtifact(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		}
-		
+
 		outgoingLinks, err := h.linkService.GetLinksFrom(id)
 		if err == nil {
 			for _, link := range outgoingLinks {
@@ -241,7 +429,7 @@ func (h *Handler) UpdateArtifact(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		}
-		
+
 		if len(allLinks) > 0 {
 			req.Attributes["links_snapshot"] = allLinks
 		}
@@ -273,6 +461,12 @@ func (h *Handler) UpdateArtifact(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	h.publish(r, events.ArtifactUpdated, artifact.ProjectID, artifact.ID, map[string]interface{}{
+		"artifact_type": artifact.Type,
+		"title":         artifact.Title,
+		"version":       artifact.Version,
+	})
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(artifact)
 }
@@ -281,11 +475,21 @@ func (h *Handler) UpdateArtifact(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) DeleteArtifact(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 
+	projectID := h.projectIDForArtifact(id)
+	if !h.requireProjectRole(w, r, projectID, members.RoleEditor) {
+		return
+	}
+	if h.maybePropose(w, r, projectID, proposals.OpDeleteArtifact, &id, nil) {
+		return
+	}
+
 	err := h.artifactService.DeleteArtifact(id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	h.publish(r, events.ArtifactDeleted, projectID, id, nil)
 
 	w.WriteHeader(http.StatusNoContent)
 }
@@ -293,6 +497,10 @@ func (h *Handler) DeleteArtifact(w http.ResponseWriter, r *http.Request) {
 // GetArtifactVersions retrieves all versions of an artifact
 func (h *Handler) GetArtifactVersions(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
+
+	if !h.requireProjectRole(w, r, h.projectIDForArtifact(id), members.RoleViewer) {
+		return
+	}
 
 	versions, err := h.artifactService.GetArtifactVersions(id)
 	if err != nil {
@@ -323,6 +531,10 @@ func (h *Handler) RestoreArtifactVersion(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	if !h.requireProjectRole(w, r, oldArtifact.ProjectID, members.RoleEditor) {
+		return
+	}
+
 	artifact, err := h.artifactService.RestoreArtifactVersion(id, req.Version)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -345,11 +557,11 @@ func (h *Handler) RestoreArtifactVersion(w http.ResponseWriter, r *http.Request)
 // buildRestoreMessage creates a message describing what version was restored
 func (h *Handler) buildRestoreMessage(oldArtifact, newArtifact *artifacts.Artifact, restoredFromVersion int) string {
 	message := fmt.Sprintf("Restored to version %d (from version %d)", newArtifact.Version, restoredFromVersion)
-	
+
 	// Reuse the changes summary logic to show what changed
 	var addedLinks, removedLinks []*links.Link
 	changes := h.buildChangesList(oldArtifact, newArtifact, addedLinks, removedLinks)
-	
+
 	if len(changes) > 0 {
 		message += "\n\nChanges:\n"
 		for _, change := range changes {
@@ -368,14 +580,14 @@ func (h *Handler) buildRestoreMessage(oldArtifact, newArtifact *artifacts.Artifa
 			}
 		}
 	}
-	
+
 	return message
 }
 
 // buildChangesList creates the list of changes without wrapping in a message
 func (h *Handler) buildChangesList(oldArtifact, newArtifact *artifacts.Artifact, addedLinks, removedLinks []*links.Link) []string {
 	var changes []string
-	
+
 	// Check for field changes
 	if oldArtifact.Title != newArtifact.Title {
 		if oldArtifact.Title == "" {
@@ -384,20 +596,20 @@ func (h *Handler) buildChangesList(oldArtifact, newArtifact *artifacts.Artifact,
 			changes = append(changes, fmt.Sprintf("Title: \"%s\" → \"%s\"", oldArtifact.Title, newArtifact.Title))
 		}
 	}
-	
+
 	if oldArtifact.Body != newArtifact.Body {
 		// For multiline content, show a git-style diff
 		if strings.Contains(oldArtifact.Body, "\n") || strings.Contains(newArtifact.Body, "\n") {
 			changes = append(changes, "Description modified:")
 			oldLines := strings.Split(oldArtifact.Body, "\n")
 			newLines := strings.Split(newArtifact.Body, "\n")
-			
+
 			// Simple diff: show removed lines starting with -, added lines starting with +
 			maxLines := len(oldLines)
 			if len(newLines) > maxLines {
 				maxLines = len(newLines)
 			}
-			
+
 			var diffLines []string
 			for i := 0; i < maxLines; i++ {
 				if i < len(oldLines) && i < len(newLines) {
@@ -411,7 +623,7 @@ func (h *Handler) buildChangesList(oldArtifact, newArtifact *artifacts.Artifact,
 					diffLines = append(diffLines, fmt.Sprintf("  + %s", newLines[i]))
 				}
 			}
-			
+
 			changes = append(changes, strings.Join(diffLines, "\n"))
 		} else {
 			// For single-line content, use the short format
@@ -422,18 +634,18 @@ func (h *Handler) buildChangesList(oldArtifact, newArtifact *artifacts.Artifact,
 			}
 		}
 	}
-	
+
 	if oldArtifact.Type != newArtifact.Type {
 		changes = append(changes, fmt.Sprintf("Type: \"%s\" → \"%s\"", oldArtifact.Type, newArtifact.Type))
 	}
-	
+
 	// Check for image changes
 	oldImages := oldArtifact.GetImagesSnapshot()
 	newImages := newArtifact.GetImagesSnapshot()
-	
+
 	oldImageMap := make(map[string]bool)
 	newImageMap := make(map[string]bool)
-	
+
 	// Build maps of filenames
 	for _, img := range oldImages {
 		if imgData, ok := img.(map[string]interface{}); ok {
@@ -442,7 +654,7 @@ func (h *Handler) buildChangesList(oldArtifact, newArtifact *artifacts.Artifact,
 			}
 		}
 	}
-	
+
 	for _, img := range newImages {
 		if imgData, ok := img.(map[string]interface{}); ok {
 			if filename, ok := imgData["filename"].(string); ok {
@@ -450,7 +662,7 @@ func (h *Handler) buildChangesList(oldArtifact, newArtifact *artifacts.Artifact,
 			}
 		}
 	}
-	
+
 	// Find added images
 	addedImages := 0
 	for filename := range newImageMap {
@@ -458,7 +670,7 @@ func (h *Handler) buildChangesList(oldArtifact, newArtifact *artifacts.Artifact,
 			addedImages++
 		}
 	}
-	
+
 	// Find removed images
 	removedImages := 0
 	for filename := range oldImageMap {
@@ -466,23 +678,28 @@ func (h *Handler) buildChangesList(oldArtifact, newArtifact *artifacts.Artifact,
 			removedImages++
 		}
 	}
-	
+
 	if addedImages > 0 {
 		changes = append(changes, fmt.Sprintf("Images: Added %d image(s)", addedImages))
 	}
-	
+
 	if removedImages > 0 {
 		changes = append(changes, fmt.Sprintf("Images: Removed %d image(s)", removedImages))
 	}
-	
+
 	return changes
 }
 
 // GetArtifactVersionLinks retrieves links for a specific artifact version
 func (h *Handler) GetArtifactVersionLinks(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
+
+	if !h.requireProjectRole(w, r, h.projectIDForArtifact(id), members.RoleViewer) {
+		return
+	}
+
 	versionStr := r.URL.Query().Get("version")
-	
+
 	// If no version specified, return current links from link table
 	if versionStr == "" {
 		outgoingLinks, err := h.linkService.GetLinksFrom(id)
@@ -495,11 +712,11 @@ func (h *Handler) GetArtifactVersionLinks(w http.ResponseWriter, r *http.Request
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		
+
 		// Combine both incoming and outgoing links and deduplicate by ID
 		seenLinkIDs := make(map[string]bool)
 		allLinks := make([]*links.Link, 0)
-		
+
 		// Add outgoing links
 		for _, link := range outgoingLinks {
 			if !seenLinkIDs[link.ID] {
@@ -507,7 +724,7 @@ func (h *Handler) GetArtifactVersionLinks(w http.ResponseWriter, r *http.Request
 				allLinks = append(allLinks, link)
 			}
 		}
-		
+
 		// Add incoming links (deduplicated)
 		for _, link := range incomingLinks {
 			if !seenLinkIDs[link.ID] {
@@ -515,26 +732,26 @@ func (h *Handler) GetArtifactVersionLinks(w http.ResponseWriter, r *http.Request
 				allLinks = append(allLinks, link)
 			}
 		}
-		
+
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(allLinks)
 		return
 	}
-	
+
 	// Parse version number
 	version := 0
 	if _, err := fmt.Sscanf(versionStr, "%d", &version); err != nil {
 		http.Error(w, "invalid version parameter", http.StatusBadRequest)
 		return
 	}
-	
+
 	// Get the artifact version from database
 	versions, err := h.artifactService.GetArtifactVersions(id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	
+
 	// Find the specific version
 	var artifactVersion *artifacts.Artifact
 	for _, v := range versions {
@@ -543,12 +760,12 @@ func (h *Handler) GetArtifactVersionLinks(w http.ResponseWriter, r *http.Request
 			break
 		}
 	}
-	
+
 	if artifactVersion == nil {
 		http.Error(w, "artifact version not found", http.StatusNotFound)
 		return
 	}
-	
+
 	// Extract links_snapshot from artifact attributes
 	var linksSnapshot []*links.Link
 	if artifactVersion.Attributes != nil {
@@ -568,7 +785,7 @@ func (h *Handler) GetArtifactVersionLinks(w http.ResponseWriter, r *http.Request
 			}
 		}
 	}
-	
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(linksSnapshot)
 }
@@ -600,6 +817,13 @@ func (h *Handler) CreateLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if !h.requireProjectRole(w, r, fromArtifact.ProjectID, members.RoleEditor) {
+		return
+	}
+	if h.maybePropose(w, r, fromArtifact.ProjectID, proposals.OpCreateLink, nil, req) {
+		return
+	}
+
 	link := links.NewLink(req)
 	if err := h.linkService.CreateLink(link); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -608,6 +832,12 @@ func (h *Handler) CreateLink(w http.ResponseWriter, r *http.Request) {
 
 	// Refresh link snapshots for both artifacts touched by this link
 	_ = h.autoVersionLinkedArtifacts([]string{link.FromID, link.ToID})
+
+	h.publish(r, events.LinkCreated, fromArtifact.ProjectID, link.ID, map[string]interface{}{
+		"link_type": link.Type,
+		"from_id":   link.FromID,
+		"to_id":     link.ToID,
+	})
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
@@ -623,6 +853,10 @@ func (h *Handler) GetLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if !h.requireProjectRole(w, r, h.projectIDForArtifact(link.FromID), members.RoleViewer) {
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(link)
 }
@@ -632,6 +866,10 @@ func (h *Handler) ListLinks(w http.ResponseWriter, r *http.Request) {
 	projectID := r.URL.Query().Get("project_id")
 	if projectID == "" {
 		http.Error(w, "project_id is required", http.StatusBadRequest)
+		return
+	}
+
+	if !h.requireProjectRole(w, r, projectID, members.RoleViewer) {
 		return
 	}
 
@@ -655,6 +893,15 @@ func (h *Handler) UpdateLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	existing, err := h.linkService.GetLink(id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+	if !h.requireProjectRole(w, r, h.projectIDForArtifact(existing.FromID), members.RoleEditor) {
+		return
+	}
+
 	link, err := h.linkService.UpdateLink(id, req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -673,6 +920,17 @@ func (h *Handler) DeleteLink(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 	link, _ := h.linkService.GetLink(id)
 
+	projectID := ""
+	if link != nil {
+		projectID = h.projectIDForArtifact(link.FromID)
+	}
+	if !h.requireProjectRole(w, r, projectID, members.RoleEditor) {
+		return
+	}
+	if h.maybePropose(w, r, projectID, proposals.OpDeleteLink, &id, nil) {
+		return
+	}
+
 	err := h.linkService.DeleteLink(id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -682,23 +940,24 @@ func (h *Handler) DeleteLink(w http.ResponseWriter, r *http.Request) {
 	if link != nil {
 		// Refresh link snapshots for both artifacts touched by this link
 		_ = h.autoVersionLinkedArtifacts([]string{link.FromID, link.ToID})
+		h.publish(r, events.LinkDeleted, projectID, link.ID, map[string]interface{}{
+			"link_type": link.Type,
+			"from_id":   link.FromID,
+			"to_id":     link.ToID,
+		})
 	}
 
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// ContentTypeMiddleware adds CORS and content type headers
+// ContentTypeMiddleware is kept as a router-level hook; CORS now lives in
+// the credential-aware wrapper in cmd/server/main.go.
 func ContentTypeMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-
 		if r.Method == "OPTIONS" {
 			w.WriteHeader(http.StatusOK)
 			return
 		}
-
 		next.ServeHTTP(w, r)
 	})
 }
@@ -711,10 +970,24 @@ func (h *Handler) CreateProject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	orgID := ActiveOrg(r)
+	if orgID == "" {
+		http.Error(w, "no active workspace for this request", http.StatusBadRequest)
+		return
+	}
+
 	project := projects.NewProject(req)
+	project.OrgID = orgID
 	if err := h.projectService.CreateProject(project); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
+	}
+
+	// Creator becomes the project owner.
+	if user := CurrentUser(r); user != nil && h.memberService != nil {
+		if err := h.memberService.AddMember(project.ID, user.ID, members.RoleOwner); err != nil {
+			fmt.Printf("Warning: failed to add creator as project owner: %v\n", err)
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -731,16 +1004,63 @@ func (h *Handler) GetProject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if !h.requireProjectRole(w, r, id, members.RoleViewer) {
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(project)
 }
 
-// ListProjects lists all projects
+// ListProjects lists the projects visible to the caller within the active
+// workspace: all of the org's projects for platform admins and org admins,
+// membership-filtered otherwise.
 func (h *Handler) ListProjects(w http.ResponseWriter, r *http.Request) {
 	projectList, err := h.projectService.ListProjects()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
+	}
+
+	// Scope to the active workspace.
+	if activeOrg := ActiveOrg(r); activeOrg != "" {
+		inOrg := projectList[:0]
+		for _, p := range projectList {
+			if p.OrgID == activeOrg {
+				inOrg = append(inOrg, p)
+			}
+		}
+		projectList = inOrg
+	}
+
+	if user := CurrentUser(r); user != nil && !user.IsAdmin && h.memberService != nil {
+		// Org admins of the active workspace see all of its projects.
+		isOrgAdmin := false
+		if h.orgService != nil {
+			if activeOrg := ActiveOrg(r); activeOrg != "" {
+				if role, err := h.orgService.RoleInOrg(activeOrg, user.ID); err == nil && role == orgs.RoleAdmin {
+					isOrgAdmin = true
+				}
+			}
+		}
+		if !isOrgAdmin {
+			ids, err := h.memberService.ProjectIDsForUser(user.ID)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			allowed := map[string]bool{}
+			for _, id := range ids {
+				allowed[id] = true
+			}
+			filtered := projectList[:0]
+			for _, p := range projectList {
+				if allowed[p.ID] {
+					filtered = append(filtered, p)
+				}
+			}
+			projectList = filtered
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -750,6 +1070,10 @@ func (h *Handler) ListProjects(w http.ResponseWriter, r *http.Request) {
 // UpdateProject updates a project
 func (h *Handler) UpdateProject(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
+
+	if !h.requireProjectRole(w, r, id, members.RoleEditor) {
+		return
+	}
 
 	var req projects.UpdateProjectRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -771,6 +1095,10 @@ func (h *Handler) UpdateProject(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) DeleteProject(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 
+	if !h.requireProjectRole(w, r, id, members.RoleOwner) {
+		return
+	}
+
 	err := h.projectService.DeleteProject(id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -783,7 +1111,11 @@ func (h *Handler) DeleteProject(w http.ResponseWriter, r *http.Request) {
 // ExportProject exports a project in the specified format
 func (h *Handler) ExportProject(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
-	
+
+	if !h.requireProjectRole(w, r, id, members.RoleViewer) {
+		return
+	}
+
 	// Get format from query parameter (default to JSON)
 	format := r.URL.Query().Get("format")
 	if format == "" {
@@ -791,7 +1123,7 @@ func (h *Handler) ExportProject(w http.ResponseWriter, r *http.Request) {
 	}
 
 	exportFormat := exports.ExportFormat(format)
-	
+
 	// Export project
 	data, filename, err := h.exportService.ExportProject(id, exportFormat)
 	if err != nil {
@@ -808,25 +1140,43 @@ func (h *Handler) ExportProject(w http.ResponseWriter, r *http.Request) {
 
 // ImportProject imports project data from uploaded JSON file and creates a new project
 func (h *Handler) ImportProject(w http.ResponseWriter, r *http.Request) {
+	if CurrentUser(r) == nil {
+		http.Error(w, "authentication required", http.StatusUnauthorized)
+		return
+	}
+
+	orgID := ActiveOrg(r)
+	if orgID == "" {
+		http.Error(w, "no active workspace for this request", http.StatusBadRequest)
+		return
+	}
+
 	// Read the uploaded file
 	data, err := io.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, "Failed to read request body", http.StatusBadRequest)
 		return
 	}
-	
+
 	// Import and create new project
-	projectID, err := h.exportService.ImportProject(data)
+	projectID, err := h.exportService.ImportProject(data, orgID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
+	// Creator becomes the project owner (mirrors CreateProject).
+	if user := CurrentUser(r); user != nil && h.memberService != nil {
+		if err := h.memberService.AddMember(projectID, user.ID, members.RoleOwner); err != nil {
+			fmt.Printf("Warning: failed to add creator as project owner: %v\n", err)
+		}
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(map[string]string{
-		"status": "success",
-		"message": "Project imported successfully",
+		"status":     "success",
+		"message":    "Project imported successfully",
 		"project_id": projectID,
 	})
 }
@@ -834,6 +1184,11 @@ func (h *Handler) ImportProject(w http.ResponseWriter, r *http.Request) {
 // GenerateReport generates a PDF report for a project or baseline.
 func (h *Handler) GenerateReport(w http.ResponseWriter, r *http.Request) {
 	projectID := mux.Vars(r)["id"]
+
+	if !h.requireProjectRole(w, r, projectID, members.RoleViewer) {
+		return
+	}
+
 	baselineID := r.URL.Query().Get("baseline_id")
 
 	data, filename, err := h.reportService.GenerateProjectReport(projectID, baselineID)
@@ -867,8 +1222,8 @@ type TemplateListResponse struct {
 
 // ListTemplates returns available templates (both database and file-based).
 func (h *Handler) ListTemplates(w http.ResponseWriter, r *http.Request) {
-	// Get database templates
-	dbTemplates, err := h.templateService.ListTemplates()
+	// Get database templates (the workspace's own plus global built-ins).
+	dbTemplates, err := h.templateService.ListTemplates(ActiveOrg(r))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -945,7 +1300,11 @@ func (h *Handler) CreateTemplate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	created, err := h.templateService.CreateTemplateFromProject(req.ProjectID, req.Name, req.Description)
+	if !h.requireProjectRole(w, r, req.ProjectID, members.RoleEditor) {
+		return
+	}
+
+	created, err := h.templateService.CreateTemplateFromProject(req.ProjectID, req.Name, req.Description, ActiveOrg(r))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -964,6 +1323,17 @@ type createProjectFromTemplateRequest struct {
 // CreateProjectFromTemplate creates a new project from a template.
 func (h *Handler) CreateProjectFromTemplate(w http.ResponseWriter, r *http.Request) {
 	templateID := mux.Vars(r)["id"]
+
+	if CurrentUser(r) == nil {
+		http.Error(w, "authentication required", http.StatusUnauthorized)
+		return
+	}
+
+	orgID := ActiveOrg(r)
+	if orgID == "" {
+		http.Error(w, "no active workspace for this request", http.StatusBadRequest)
+		return
+	}
 
 	var req createProjectFromTemplateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -989,7 +1359,7 @@ func (h *Handler) CreateProjectFromTemplate(w http.ResponseWriter, r *http.Reque
 
 	var snapshot []byte
 	var err error
-	
+
 	if examplesDir != "" {
 		// Try to load file-based template first
 		snapshot, err = templates.GetFileBasedTemplateSnapshot(examplesDir, templateID)
@@ -997,11 +1367,13 @@ func (h *Handler) CreateProjectFromTemplate(w http.ResponseWriter, r *http.Reque
 
 	if snapshot == nil || err != nil {
 		// Fall back to database template
-		projectID, dbErr := h.templateService.CreateProjectFromTemplate(templateID, req.Name, req.Description)
+		projectID, dbErr := h.templateService.CreateProjectFromTemplate(templateID, req.Name, req.Description, orgID)
 		if dbErr != nil {
 			http.Error(w, dbErr.Error(), http.StatusInternalServerError)
 			return
 		}
+
+		h.addProjectCreatorAsOwner(r, projectID)
 
 		project, err := h.projectService.GetProject(projectID)
 		if err != nil {
@@ -1016,11 +1388,13 @@ func (h *Handler) CreateProjectFromTemplate(w http.ResponseWriter, r *http.Reque
 	}
 
 	// Use file-based template
-	projectID, err := h.exportService.ImportProjectWithOverrides(snapshot, req.Name, req.Description)
+	projectID, err := h.exportService.ImportProjectWithOverrides(snapshot, req.Name, req.Description, orgID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	h.addProjectCreatorAsOwner(r, projectID)
 
 	project, err := h.projectService.GetProject(projectID)
 	if err != nil {
@@ -1033,6 +1407,16 @@ func (h *Handler) CreateProjectFromTemplate(w http.ResponseWriter, r *http.Reque
 	json.NewEncoder(w).Encode(project)
 }
 
+// addProjectCreatorAsOwner grants the requesting user owner membership on a
+// freshly created project (mirrors CreateProject).
+func (h *Handler) addProjectCreatorAsOwner(r *http.Request, projectID string) {
+	if user := CurrentUser(r); user != nil && h.memberService != nil {
+		if err := h.memberService.AddMember(projectID, user.ID, members.RoleOwner); err != nil {
+			fmt.Printf("Warning: failed to add creator as project owner: %v\n", err)
+		}
+	}
+}
+
 type createBaselineRequest struct {
 	Name string `json:"name"`
 }
@@ -1040,6 +1424,10 @@ type createBaselineRequest struct {
 // CreateBaseline captures a baseline snapshot for a project.
 func (h *Handler) CreateBaseline(w http.ResponseWriter, r *http.Request) {
 	projectID := mux.Vars(r)["id"]
+
+	if !h.requireProjectRole(w, r, projectID, members.RoleEditor) {
+		return
+	}
 
 	var req createBaselineRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil && err != io.EOF {
@@ -1064,6 +1452,10 @@ func (h *Handler) CreateBaseline(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	h.publish(r, events.BaselineCaptured, projectID, baseline.ID, map[string]interface{}{
+		"name": name,
+	})
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(baseline)
@@ -1072,6 +1464,10 @@ func (h *Handler) CreateBaseline(w http.ResponseWriter, r *http.Request) {
 // ListBaselines returns baselines for a project.
 func (h *Handler) ListBaselines(w http.ResponseWriter, r *http.Request) {
 	projectID := mux.Vars(r)["id"]
+
+	if !h.requireProjectRole(w, r, projectID, members.RoleViewer) {
+		return
+	}
 
 	baselines, err := h.baselineService.ListBaselines(projectID)
 	if err != nil {
@@ -1093,6 +1489,10 @@ func (h *Handler) GetBaseline(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if !h.requireProjectRole(w, r, baseline.ProjectID, members.RoleViewer) {
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write(baseline.Snapshot)
@@ -1101,6 +1501,15 @@ func (h *Handler) GetBaseline(w http.ResponseWriter, r *http.Request) {
 // DeleteBaseline deletes a baseline by ID.
 func (h *Handler) DeleteBaseline(w http.ResponseWriter, r *http.Request) {
 	baselineID := mux.Vars(r)["id"]
+
+	baseline, err := h.baselineService.GetBaseline(baselineID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+	if !h.requireProjectRole(w, r, baseline.ProjectID, members.RoleOwner) {
+		return
+	}
 
 	if err := h.baselineService.DeleteBaseline(baselineID); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -1115,6 +1524,10 @@ func (h *Handler) UploadAttachment(w http.ResponseWriter, r *http.Request) {
 	artifactID := r.FormValue("artifact_id")
 	if artifactID == "" {
 		http.Error(w, "artifact_id is required", http.StatusBadRequest)
+		return
+	}
+
+	if !h.requireProjectRole(w, r, h.projectIDForArtifact(artifactID), members.RoleEditor) {
 		return
 	}
 
@@ -1180,6 +1593,10 @@ func (h *Handler) GetAttachmentMeta(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if !h.requireProjectRole(w, r, h.projectIDForArtifact(attachment.ArtifactID), members.RoleViewer) {
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(attachment)
 }
@@ -1191,6 +1608,11 @@ func (h *Handler) DownloadAttachment(w http.ResponseWriter, r *http.Request) {
 	attachment, err := h.attachmentService.GetAttachment(id)
 	if err != nil || attachment == nil {
 		http.Error(w, "Attachment not found", http.StatusNotFound)
+		return
+	}
+
+	// Session-cookie auth works here too, so <img> tags keep rendering.
+	if !h.requireProjectRole(w, r, h.projectIDForArtifact(attachment.ArtifactID), members.RoleViewer) {
 		return
 	}
 
@@ -1213,6 +1635,10 @@ func (h *Handler) DeleteAttachment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if !h.requireProjectRole(w, r, h.projectIDForArtifact(attachment.ArtifactID), members.RoleEditor) {
+		return
+	}
+
 	// Delete file from disk
 	if err := os.Remove(attachment.FilePath); err != nil && !os.IsNotExist(err) {
 		http.Error(w, "Failed to delete file", http.StatusInternalServerError)
@@ -1232,6 +1658,10 @@ func (h *Handler) DeleteAttachment(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) ListArtifactAttachments(w http.ResponseWriter, r *http.Request) {
 	artifactID := mux.Vars(r)["artifactID"]
 
+	if !h.requireProjectRole(w, r, h.projectIDForArtifact(artifactID), members.RoleViewer) {
+		return
+	}
+
 	attachmentList, err := h.attachmentService.GetAttachmentsByArtifact(artifactID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -1245,13 +1675,13 @@ func (h *Handler) ListArtifactAttachments(w http.ResponseWriter, r *http.Request
 // isImageMimeType checks if the mime type is a valid image type
 func isImageMimeType(mimeType string) bool {
 	validTypes := map[string]bool{
-		"image/jpeg":      true,
-		"image/png":       true,
-		"image/gif":       true,
-		"image/webp":      true,
-		"image/svg+xml":   true,
-		"image/tiff":      true,
-		"image/bmp":       true,
+		"image/jpeg":    true,
+		"image/png":     true,
+		"image/gif":     true,
+		"image/webp":    true,
+		"image/svg+xml": true,
+		"image/tiff":    true,
+		"image/bmp":     true,
 	}
 	return validTypes[mimeType]
 }
@@ -1260,14 +1690,14 @@ func isImageMimeType(mimeType string) bool {
 func (h *Handler) buildChangesSummary(oldArtifact, newArtifact *artifacts.Artifact, addedLinks, removedLinks []*links.Link) string {
 	// Get basic field changes
 	changes := h.buildChangesList(oldArtifact, newArtifact, addedLinks, removedLinks)
-	
+
 	// Add detailed link changes
 	if len(addedLinks) > 0 {
 		changes = append(changes, fmt.Sprintf("Links:"))
 		for _, link := range addedLinks {
 			var otherArtifactID string
 			var linkDirection string
-			
+
 			// Determine if this artifact is the source or target
 			if link.FromID == newArtifact.ID {
 				otherArtifactID = link.ToID
@@ -1276,7 +1706,7 @@ func (h *Handler) buildChangesSummary(oldArtifact, newArtifact *artifacts.Artifa
 				otherArtifactID = link.FromID
 				linkDirection = link.Type
 			}
-			
+
 			// Try to get the other artifact's title
 			otherArtifact, err := h.artifactService.GetArtifact(otherArtifactID)
 			var artifactTitle string
@@ -1285,11 +1715,11 @@ func (h *Handler) buildChangesSummary(oldArtifact, newArtifact *artifacts.Artifa
 			} else {
 				artifactTitle = otherArtifactID
 			}
-			
+
 			changes = append(changes, fmt.Sprintf("    - %s: %s (added)", linkDirection, artifactTitle))
 		}
 	}
-	
+
 	if len(removedLinks) > 0 {
 		if len(addedLinks) == 0 {
 			changes = append(changes, fmt.Sprintf("Links:"))
@@ -1297,7 +1727,7 @@ func (h *Handler) buildChangesSummary(oldArtifact, newArtifact *artifacts.Artifa
 		for _, link := range removedLinks {
 			var otherArtifactID string
 			var linkDirection string
-			
+
 			// Determine if this artifact is the source or target
 			if link.FromID == newArtifact.ID {
 				otherArtifactID = link.ToID
@@ -1306,7 +1736,7 @@ func (h *Handler) buildChangesSummary(oldArtifact, newArtifact *artifacts.Artifa
 				otherArtifactID = link.FromID
 				linkDirection = link.Type
 			}
-			
+
 			// Try to get the other artifact's title
 			otherArtifact, err := h.artifactService.GetArtifact(otherArtifactID)
 			var artifactTitle string
@@ -1315,14 +1745,14 @@ func (h *Handler) buildChangesSummary(oldArtifact, newArtifact *artifacts.Artifa
 			} else {
 				artifactTitle = otherArtifactID
 			}
-			
+
 			changes = append(changes, fmt.Sprintf("    - %s: %s (removed)", linkDirection, artifactTitle))
 		}
 	}
-	
+
 	// Build message
 	message := fmt.Sprintf("Updated to version %d", newArtifact.Version)
-	
+
 	if len(changes) > 0 {
 		message += "\n\nChanges:\n"
 		for _, change := range changes {
@@ -1344,7 +1774,7 @@ func (h *Handler) buildChangesSummary(oldArtifact, newArtifact *artifacts.Artifa
 			}
 		}
 	}
-	
+
 	return message
 }
 
@@ -1359,7 +1789,7 @@ func (h *Handler) processManagedLinkChanges(fromArtifactID string, toAdd, toRemo
 		if !ok {
 			continue
 		}
-		
+
 		// Get the link before deleting to determine affected artifact
 		link, err := h.linkService.GetLink(linkID)
 		if err == nil && link != nil {
@@ -1370,7 +1800,7 @@ func (h *Handler) processManagedLinkChanges(fromArtifactID string, toAdd, toRemo
 				affectedArtifactIDs[link.ToID] = true
 			}
 		}
-		
+
 		// Hard delete the link
 		err = h.linkService.DeleteLink(linkID)
 		if err != nil {
@@ -1457,7 +1887,7 @@ func (h *Handler) processManagedLinkChanges(fromArtifactID string, toAdd, toRemo
 // autoVersionLinkedArtifacts creates new versions for artifacts that had link changes
 func (h *Handler) autoVersionLinkedArtifacts(affectedArtifactIDs []string) error {
 	fmt.Printf("DEBUG autoVersionLinkedArtifacts: Processing %d affected artifacts: %v\n", len(affectedArtifactIDs), affectedArtifactIDs)
-	
+
 	for _, artifactID := range affectedArtifactIDs {
 		artifact, err := h.artifactService.GetArtifact(artifactID)
 		if err != nil {
@@ -1468,7 +1898,7 @@ func (h *Handler) autoVersionLinkedArtifacts(affectedArtifactIDs []string) error
 		// Get current links for this artifact and deduplicate
 		seenLinkIDs := make(map[string]bool)
 		allLinks := make([]interface{}, 0)
-		
+
 		incomingLinks, err := h.linkService.GetLinksTo(artifactID)
 		if err != nil {
 			fmt.Printf("Warning: could not get incoming links for %s: %v\n", artifactID, err)
@@ -1545,11 +1975,26 @@ func (h *Handler) CreateChatterEntry(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if !h.requireProjectRole(w, r, h.projectIDForArtifact(req.ArtifactID), members.RoleEditor) {
+		return
+	}
+
+	// Agent-authored comments are marked as auto entries with the agent type
+	// so the feed renders them distinctly.
 	entry := chatter.NewChatterEntry(req.ArtifactID, req.Message, false, "comment")
+	if CurrentRun(r) != nil {
+		entry.IsAutoEntry = true
+		entry.EntryType = "agent"
+	}
 	if err := h.chatterService.CreateEntry(entry); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	h.publish(r, events.ChatterCreated, h.projectIDForArtifact(req.ArtifactID), entry.ID, map[string]interface{}{
+		"artifact_id": req.ArtifactID,
+		"entry_type":  entry.EntryType,
+	})
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(entry)
@@ -1560,6 +2005,10 @@ func (h *Handler) ListChatterEntries(w http.ResponseWriter, r *http.Request) {
 	artifactID := r.URL.Query().Get("artifact_id")
 	if artifactID == "" {
 		http.Error(w, "artifact_id is required", http.StatusBadRequest)
+		return
+	}
+
+	if !h.requireProjectRole(w, r, h.projectIDForArtifact(artifactID), members.RoleViewer) {
 		return
 	}
 

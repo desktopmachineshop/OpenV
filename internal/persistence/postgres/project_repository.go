@@ -20,10 +20,10 @@ func NewProjectRepository(db *sql.DB) projects.Repository {
 // Create inserts a new project
 func (r *ProjectRepository) Create(project *projects.Project) error {
 	query := `
-		INSERT INTO projects (id, name, description, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5)
+		INSERT INTO projects (id, org_id, name, description, created_at, updated_at)
+		VALUES ($1, NULLIF($2, '')::uuid, $3, $4, $5, $6)
 	`
-	_, err := r.db.Exec(query, project.ID, project.Name, project.Description, project.CreatedAt, project.UpdatedAt)
+	_, err := r.db.Exec(query, project.ID, project.OrgID, project.Name, project.Description, project.CreatedAt, project.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("failed to create project: %w", err)
 	}
@@ -32,11 +32,11 @@ func (r *ProjectRepository) Create(project *projects.Project) error {
 
 // GetByID retrieves a project by ID
 func (r *ProjectRepository) GetByID(id string) (*projects.Project, error) {
-	query := `SELECT id, name, description, created_at, updated_at FROM projects WHERE id = $1`
+	query := `SELECT id, COALESCE(org_id::text, ''), name, description, created_at, updated_at FROM projects WHERE id = $1`
 	row := r.db.QueryRow(query, id)
 
 	project := &projects.Project{}
-	err := row.Scan(&project.ID, &project.Name, &project.Description, &project.CreatedAt, &project.UpdatedAt)
+	err := row.Scan(&project.ID, &project.OrgID, &project.Name, &project.Description, &project.CreatedAt, &project.UpdatedAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("project not found")
@@ -49,7 +49,7 @@ func (r *ProjectRepository) GetByID(id string) (*projects.Project, error) {
 
 // GetAll retrieves all projects
 func (r *ProjectRepository) GetAll() ([]*projects.Project, error) {
-	query := `SELECT id, name, description, created_at, updated_at FROM projects ORDER BY created_at DESC`
+	query := `SELECT id, COALESCE(org_id::text, ''), name, description, created_at, updated_at FROM projects ORDER BY created_at DESC`
 	rows, err := r.db.Query(query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query projects: %w", err)
@@ -59,7 +59,7 @@ func (r *ProjectRepository) GetAll() ([]*projects.Project, error) {
 	projectList := make([]*projects.Project, 0)
 	for rows.Next() {
 		project := &projects.Project{}
-		err := rows.Scan(&project.ID, &project.Name, &project.Description, &project.CreatedAt, &project.UpdatedAt)
+		err := rows.Scan(&project.ID, &project.OrgID, &project.Name, &project.Description, &project.CreatedAt, &project.UpdatedAt)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan project: %w", err)
 		}

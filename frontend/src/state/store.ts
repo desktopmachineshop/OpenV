@@ -1,7 +1,28 @@
 import { create } from 'zustand';
-import { Artifact, Link, Project } from '../api/client';
+import { Artifact, ArtifactTypeDef, Link, LinkTypeRule, Org, Project, User } from '../api/client';
+
+interface MetaState {
+  artifactTypes: ArtifactTypeDef[];
+  linkTypeRules: LinkTypeRule[];
+  loaded: boolean;
+}
 
 interface AppState {
+  currentUser: User | null;
+  setCurrentUser: (user: User | null) => void;
+  meta: MetaState;
+  setMeta: (meta: Partial<MetaState>) => void;
+  orgs: Org[];
+  setOrgs: (orgs: Org[]) => void;
+  activeOrgId: string;
+  /**
+   * Set the active workspace. Persists to session+local storage and clears the
+   * loaded project list (a workspace switch invalidates it). Pass
+   * `{ clearProjects: false }` for the initial boot assignment.
+   */
+  setActiveOrgId: (id: string, opts?: { clearProjects?: boolean }) => void;
+  orgsLoaded: boolean;
+  setOrgsLoaded: (loaded: boolean) => void;
   projectId: string;
   setProjectId: (id: string) => void;
   projects: Project[];
@@ -24,6 +45,32 @@ interface AppState {
 }
 
 export const useAppStore = create<AppState>((set) => ({
+  currentUser: null,
+  setCurrentUser: (user: User | null) => set({ currentUser: user }),
+
+  meta: { artifactTypes: [], linkTypeRules: [], loaded: false },
+  setMeta: (meta: Partial<MetaState>) =>
+    set((state) => ({ meta: { ...state.meta, ...meta } })),
+
+  orgs: [],
+  setOrgs: (orgs: Org[]) => set({ orgs: orgs || [] }),
+  activeOrgId: '',
+  setActiveOrgId: (id: string, opts?: { clearProjects?: boolean }) => {
+    try {
+      sessionStorage.setItem('openv_active_org', id);
+      localStorage.setItem('openv_active_org', id);
+    } catch {
+      // storage unavailable — in-memory state still works
+    }
+    const clearProjects = opts?.clearProjects !== false;
+    set((state) => ({
+      activeOrgId: id,
+      projects: clearProjects ? [] : state.projects,
+    }));
+  },
+  orgsLoaded: false,
+  setOrgsLoaded: (loaded: boolean) => set({ orgsLoaded: loaded }),
+
   projectId: '',
   setProjectId: (id: string) => set({ projectId: id }),
   

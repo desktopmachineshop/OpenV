@@ -1,0 +1,53 @@
+# Hosted runner image: agentd + openv-mcp + vendor CLIs in one container.
+# Built with `make worker-image`; the API server provisions one container per
+# workspace from this image (see internal/hosting and docs/agents.md).
+
+# Stage 1: build the worker binaries.
+FROM golang:1.25 AS build
+
+WORKDIR /src
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY cmd cmd
+COPY internal internal
+
+RUN GOOS=linux CGO_ENABLED=0 go build -o /out/agentd ./cmd/agentd && \
+    GOOS=linux CGO_ENABLED=0 go build -o /out/openv-mcp ./cmd/openv-mcp
+
+# Stage 2: node runtime with the vendor CLIs.
+FROM node:20-bookworm-slim
+
+# git is included for future use; hosted runners refuse repo-access runs, so
+# no repository is ever cloned in this container today.
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends git ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN npm install -g @anthropic-ai/claude-code
+# Additional vendor CLIs (uncomment to bake in):
+# RUN npm install -g @openai/codex
+# RUN npm install -g @google/gemini-cli
+
+# Dedicated non-root user with HOME on the /data volume so CLI state
+# (credentials, caches) survives container replacement. The base image's
+# "node" user holds uid 1000; replace it.
+RUN userdel -r node 2>/dev/null || true && \
+    useradd --uid 1000 --user-group --create-home --home-dir /data/home worker && \
+    mkdir -p /data/workspaces && \
+    chown -R worker:worker /data
+
+COPY --from=build /out/agentd /out/openv-mcp /usr/local/bin/
+
+ENV HOME=/data/home \
+    OPENV_HOSTED=true
+
+VOLUME /data
+
+USER worker
+
+# agentd reads OPENV_API_URL, WORKER_API_KEY, and OPENV_HOSTED from the
+# environment (injected at provision time by internal/hosting).
+ENTRYPOINT ["/usr/local/bin/agentd"]
+CMD ["--workspaces", "/data/workspaces"]

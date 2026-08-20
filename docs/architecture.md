@@ -351,3 +351,51 @@ func TestCreateArtifact(t *testing.T) {
 - Custom link types
 - Custom validation rules
 - Import/export formats
+
+---
+
+## Multi-agent suite
+
+OpenV's agent suite turns the platform into a queue-and-review system for
+AI-assisted requirements work. The moving parts:
+
+### Event bus
+A lightweight in-process bus (`internal/events`) persists domain events
+(artifact changes, test results, work-item moves, chatter) and fans them out to
+subscribers: the SSE hub for live UI updates, orchestration hooks, and the
+automation trigger matcher.
+
+### agent_runs as a queue + host worker topology
+Agent work is expressed as rows in `agent_runs` (status, priority, prompt,
+heartbeat). The server never executes model calls itself. A host-side worker
+(`cmd/agentd`) polls the queue over HTTP, launches the operator's vendor CLI
+(claude/codex/gemini) for each run, and heartbeats progress back; a reaper
+fails runs whose heartbeat goes stale. This keeps subscriptions and credentials
+on the operator's machine.
+
+### MCP tool surface
+`cmd/openv-mcp` is an MCP server the vendor CLI attaches to. It exposes typed
+tools for reading projects/artifacts/links, drafting artifacts, creating links,
+recording test results, and recording candidate needs during interviews. Run
+prompts carry identifiers only (lean-context rule); the agent pulls content
+through these tools at run time, so authorization is enforced per call.
+
+### Proposal review
+Agents with `write_mode: proposal` (the default) never write directly. Each
+intended write becomes a proposal row; approved proposals are applied through
+the real domain services via appliers wired in `cmd/server/main.go`, so
+validation and eventing behave exactly as for human edits.
+
+### Teams graph
+Agents can be arranged in teams with an org-chart edge set. Orchestration
+hooks route follow-up runs along the graph (lead delegates to members),
+enabling multi-step flows like draft-then-review.
+
+### Auth model
+Three credential classes, resolved by a single auth middleware:
+- **User sessions** (cookie-based, optional Google OAuth) for people.
+- **Run tokens** minted per agent run, scoping a worker's callbacks to that run.
+- **Worker key** (`WORKER_API_KEY`) authenticating the host worker's queue
+  polling.
+Project access is governed by membership roles (viewer/editor/admin) checked
+per request; public interview pages use separate invite tokens.
