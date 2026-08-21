@@ -17,9 +17,11 @@ root.render(
 
 // Register the minimal service worker so browsers offer "Install app"
 // (manifest + icons + service worker + HTTPS/localhost are the criteria).
-// Production only: a service worker on the dev server interferes with
-// hot reloading.
-if (process.env.NODE_ENV === 'production' && 'serviceWorker' in navigator) {
+// Registered in development too: docker-compose serves the frontend with
+// `npm start`, so gating on NODE_ENV would leave the default localhost:3000
+// deployment non-installable. Safe because sw.js caches nothing — a caching
+// worker is what breaks dev hot-reload, not the registration itself.
+if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker
       .register(`${process.env.PUBLIC_URL || ''}/sw.js`)
