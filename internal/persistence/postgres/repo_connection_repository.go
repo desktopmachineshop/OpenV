@@ -102,3 +102,48 @@ func (r *RepoConnectionRepository) Delete(id string) error {
 	_, err := r.db.Exec(`DELETE FROM repo_connections WHERE id = $1`, id)
 	return err
 }
+
+// SetUserPath stores a user's local-path override for a connection; an empty
+// path removes the override.
+func (r *RepoConnectionRepository) SetUserPath(userID, connID, path string) error {
+	if path == "" {
+		_, err := r.db.Exec(
+			`DELETE FROM user_repo_paths WHERE user_id = $1 AND repo_connection_id = $2`,
+			userID, connID,
+		)
+		return err
+	}
+	_, err := r.db.Exec(`
+		INSERT INTO user_repo_paths (user_id, repo_connection_id, local_path, updated_at)
+		VALUES ($1, $2, $3, NOW())
+		ON CONFLICT (user_id, repo_connection_id) DO UPDATE SET
+			local_path = EXCLUDED.local_path,
+			updated_at = NOW()
+	`, userID, connID, path)
+	return err
+}
+
+// UserPaths returns a user's overrides for a project's connections, keyed by
+// connection id.
+func (r *RepoConnectionRepository) UserPaths(userID, projectID string) (map[string]string, error) {
+	rows, err := r.db.Query(`
+		SELECT p.repo_connection_id, p.local_path
+		FROM user_repo_paths p
+		JOIN repo_connections c ON c.id = p.repo_connection_id
+		WHERE p.user_id = $1 AND c.project_id = $2
+	`, userID, projectID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	result := map[string]string{}
+	for rows.Next() {
+		var connID, path string
+		if err := rows.Scan(&connID, &path); err != nil {
+			return nil, err
+		}
+		result[connID] = path
+	}
+	return result, rows.Err()
+}

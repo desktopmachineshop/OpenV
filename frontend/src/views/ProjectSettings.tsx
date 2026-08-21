@@ -7,17 +7,19 @@ import {
   projectTeamAccessAPI,
   repoConnectionsAPI,
   OrgTeam,
+  Project,
   ProjectMember,
   RepoConnection,
   TeamGrant,
 } from '../api/client';
 import { useAppStore } from '../state/store';
 
-type Tab = 'members' | 'repos' | 'danger';
+type Tab = 'members' | 'repos' | 'agents' | 'danger';
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'members', label: 'Access' },
   { key: 'repos', label: 'Repositories' },
+  { key: 'agents', label: 'Agents' },
   { key: 'danger', label: 'Danger Zone' },
 ];
 
@@ -79,6 +81,13 @@ export const ProjectSettings: React.FC = () => {
   const [repoForm, setRepoForm] = useState<RepoForm>(emptyRepoForm);
   const [showRepoForm, setShowRepoForm] = useState(false);
   const [savingRepo, setSavingRepo] = useState(false);
+  // Per-user local path drafts, keyed by repo connection id.
+  const [myPaths, setMyPaths] = useState<Record<string, string>>({});
+  const [savingMyPath, setSavingMyPath] = useState('');
+
+  // Agents (per-project agent auth)
+  const [project, setProject] = useState<Project | null>(null);
+  const [savingAuth, setSavingAuth] = useState(false);
 
   // Danger
   const [deleting, setDeleting] = useState(false);
@@ -106,11 +115,23 @@ export const ProjectSettings: React.FC = () => {
     setReposLoading(true);
     try {
       const res = await repoConnectionsAPI.list(projectId);
-      setRepos(res.data || []);
+      const list = res.data || [];
+      setRepos(list);
+      setMyPaths(Object.fromEntries(list.map((r) => [r.id, r.my_local_path || ''])));
     } catch (err: any) {
       setError(`Failed to load repositories: ${err.response?.data || err.message}`);
     } finally {
       setReposLoading(false);
+    }
+  }, [projectId]);
+
+  const loadProject = useCallback(async () => {
+    if (!projectId) return;
+    try {
+      const res = await projectAPI.get(projectId);
+      setProject(res.data);
+    } catch {
+      // Non-fatal: the Agents tab just shows a loading state.
     }
   }, [projectId]);
 
@@ -146,7 +167,8 @@ export const ProjectSettings: React.FC = () => {
     loadRepos();
     loadTeamAccess();
     loadOrgTeams();
-  }, [loadMembers, loadRepos, loadTeamAccess, loadOrgTeams]);
+    loadProject();
+  }, [loadMembers, loadRepos, loadTeamAccess, loadOrgTeams, loadProject]);
 
   // -------------------------------------------------------------------------
   // Members handlers
@@ -240,6 +262,35 @@ export const ProjectSettings: React.FC = () => {
       setError('');
     } catch (err: any) {
       setError(`Failed to remove repository: ${err.response?.data || err.message}`);
+    }
+  };
+
+  const handleSaveMyPath = async (repo: RepoConnection) => {
+    setSavingMyPath(repo.id);
+    setError('');
+    try {
+      const res = await repoConnectionsAPI.setMyPath(repo.id, (myPaths[repo.id] || '').trim());
+      setRepos(repos.map((r) => (r.id === repo.id ? { ...r, my_local_path: res.data.my_local_path } : r)));
+      flash(res.data.my_local_path ? 'Your local path saved.' : 'Your local path cleared.');
+    } catch (err: any) {
+      setError(`Failed to save your local path: ${err.response?.data || err.message}`);
+    } finally {
+      setSavingMyPath('');
+    }
+  };
+
+  const handleSetAgentAuth = async (mode: 'user-account' | 'api-key') => {
+    if (!projectId || !project) return;
+    setSavingAuth(true);
+    setError('');
+    try {
+      const res = await projectAPI.update(projectId, { agent_auth: mode });
+      setProject(res.data);
+      flash('Agent authentication updated.');
+    } catch (err: any) {
+      setError(`Failed to update agent authentication: ${err.response?.data || err.message}`);
+    } finally {
+      setSavingAuth(false);
     }
   };
 
@@ -658,46 +709,71 @@ export const ProjectSettings: React.FC = () => {
                 <div
                   key={r.id}
                   style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 12,
                     border: '1px solid #eee',
                     borderRadius: 4,
                     padding: '10px 12px',
                     marginBottom: 8,
                   }}
                 >
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 600, fontSize: 14, color: '#2c3e50' }}>{r.name}</div>
-                    <div style={{ fontSize: 12, color: '#7f8c8d', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {r.local_path || r.remote_url || 'no location set'}
-                      {r.default_branch ? ` · ${r.default_branch}` : ''}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 600, fontSize: 14, color: '#2c3e50' }}>{r.name}</div>
+                      <div style={{ fontSize: 12, color: '#7f8c8d', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {r.local_path || r.remote_url || 'no location set'}
+                        {r.default_branch ? ` · ${r.default_branch}` : ''}
+                      </div>
                     </div>
+                    <button
+                      className="button-secondary"
+                      style={{ padding: '5px 12px', fontSize: 12 }}
+                      onClick={() => {
+                        setRepoForm({
+                          id: r.id,
+                          name: r.name,
+                          remote_url: r.remote_url,
+                          local_path: r.local_path,
+                          default_branch: r.default_branch || 'main',
+                        });
+                        setShowRepoForm(true);
+                      }}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDeleteRepo(r)}
+                      style={{ background: 'none', border: 'none', color: '#e74c3c', cursor: 'pointer', fontSize: 12, width: 'auto', padding: 2 }}
+                    >
+                      Remove
+                    </button>
                   </div>
-                  <button
-                    className="button-secondary"
-                    style={{ padding: '5px 12px', fontSize: 12 }}
-                    onClick={() => {
-                      setRepoForm({
-                        id: r.id,
-                        name: r.name,
-                        remote_url: r.remote_url,
-                        local_path: r.local_path,
-                        default_branch: r.default_branch || 'main',
-                      });
-                      setShowRepoForm(true);
-                    }}
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleDeleteRepo(r)}
-                    style={{ background: 'none', border: 'none', color: '#e74c3c', cursor: 'pointer', fontSize: 12, width: 'auto', padding: 2 }}
-                  >
-                    Remove
-                  </button>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
+                    <label style={{ fontSize: 12, color: '#7f8c8d', whiteSpace: 'nowrap', marginBottom: 0 }}>
+                      Your local path
+                    </label>
+                    <input
+                      value={myPaths[r.id] ?? ''}
+                      onChange={(e) => setMyPaths({ ...myPaths, [r.id]: e.target.value })}
+                      placeholder="where this repo lives on YOUR machine (falls back to the shared path)"
+                      style={{ flex: 1, padding: '5px 8px', fontSize: 12 }}
+                    />
+                    <button
+                      className="button-secondary"
+                      style={{ padding: '5px 12px', fontSize: 12, width: 'auto' }}
+                      onClick={() => handleSaveMyPath(r)}
+                      disabled={savingMyPath === r.id || (myPaths[r.id] ?? '') === (r.my_local_path || '')}
+                    >
+                      {savingMyPath === r.id ? 'Saving…' : 'Save'}
+                    </button>
+                  </div>
                 </div>
               ))
+            )}
+            {!reposLoading && repos.length > 0 && (
+              <p style={{ fontSize: 12, color: '#7f8c8d', marginTop: 10, marginBottom: 0 }}>
+                Agents run on each member's own machine, so “your local path” tells your runner
+                where this repo lives for <b>you</b>. Members without one set fall back to the
+                connection's shared path.
+              </p>
             )}
           </div>
 
@@ -709,6 +785,88 @@ export const ProjectSettings: React.FC = () => {
             </p>
           </div>
         </>
+      )}
+
+      {tab === 'agents' && (
+        <div className="card">
+          <h3>Agent authentication</h3>
+          <p style={{ fontSize: 13, color: '#7f8c8d' }}>
+            How agent runs in this project authenticate with their AI provider. This only picks the
+            credential and routing — sign-ins themselves live in each member's user settings (the
+            user menu, bottom left).
+          </p>
+          {!project ? (
+            <div style={{ color: '#7f8c8d', fontSize: 13 }}>Loading project…</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <label
+                style={{
+                  display: 'flex',
+                  gap: 10,
+                  alignItems: 'flex-start',
+                  border: '1px solid',
+                  borderColor: project.agent_auth !== 'api-key' ? '#3498db' : '#eee',
+                  borderRadius: 4,
+                  padding: '10px 12px',
+                  cursor: 'pointer',
+                  marginBottom: 0,
+                  fontWeight: 400,
+                }}
+              >
+                <input
+                  type="radio"
+                  name="agent-auth"
+                  style={{ width: 'auto', marginTop: 3 }}
+                  checked={project.agent_auth !== 'api-key'}
+                  disabled={savingAuth}
+                  onChange={() => handleSetAgentAuth('user-account')}
+                />
+                <span style={{ fontSize: 13, color: '#2c3e50' }}>
+                  <b>User account</b>
+                  <br />
+                  <span style={{ color: '#7f8c8d', fontSize: 12 }}>
+                    Runs use each member's own CLI sign-in on their machine (set up in user
+                    settings). No sign-in happens here — this just routes runs to the launcher's
+                    local login.
+                  </span>
+                </span>
+              </label>
+              <label
+                style={{
+                  display: 'flex',
+                  gap: 10,
+                  alignItems: 'flex-start',
+                  border: '1px solid',
+                  borderColor: project.agent_auth === 'api-key' ? '#3498db' : '#eee',
+                  borderRadius: 4,
+                  padding: '10px 12px',
+                  cursor: 'pointer',
+                  marginBottom: 0,
+                  fontWeight: 400,
+                }}
+              >
+                <input
+                  type="radio"
+                  name="agent-auth"
+                  style={{ width: 'auto', marginTop: 3 }}
+                  checked={project.agent_auth === 'api-key'}
+                  disabled={savingAuth}
+                  onChange={() => handleSetAgentAuth('api-key')}
+                />
+                <span style={{ fontSize: 13, color: '#2c3e50' }}>
+                  <b>API key</b>
+                  <br />
+                  <span style={{ color: '#7f8c8d', fontSize: 12 }}>
+                    Overrides members' local sign-ins: runs use the workspace's API key (the
+                    provider's key environment variable, configured in Workspace settings → AI
+                    providers, set on the runner host). For now runs still execute through each
+                    member's OpenV connector.
+                  </span>
+                </span>
+              </label>
+            </div>
+          )}
+        </div>
       )}
 
       {tab === 'danger' && (

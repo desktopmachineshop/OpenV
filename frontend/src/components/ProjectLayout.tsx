@@ -3,6 +3,7 @@ import { NavLink, Outlet, useNavigate, useParams } from 'react-router-dom';
 import { authAPI, projectAPI, Project } from '../api/client';
 import { useAppStore } from '../state/store';
 import { OrgSwitcher } from './OrgSwitcher';
+import { UserSettingsPanel } from './UserSettingsPanel';
 
 const navItems: { to: string; label: string; end?: boolean }[] = [
   { to: '', label: 'Overview', end: true },
@@ -27,6 +28,7 @@ export const ProjectLayout: React.FC = () => {
     useAppStore();
   const [project, setProject] = useState<Project | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
 
   useEffect(() => {
     if (!projectId) return;
@@ -151,6 +153,25 @@ export const ProjectLayout: React.FC = () => {
               }}
             >
               <button
+                onClick={() => {
+                  setMenuOpen(false);
+                  setShowSettings(true);
+                }}
+                style={{
+                  display: 'block',
+                  width: '100%',
+                  padding: '10px 14px',
+                  background: 'none',
+                  border: 'none',
+                  color: '#ecf0f1',
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  fontSize: 13,
+                }}
+              >
+                Settings
+              </button>
+              <button
                 onClick={handleLogout}
                 style={{
                   display: 'block',
@@ -173,6 +194,7 @@ export const ProjectLayout: React.FC = () => {
       <main style={{ flex: 1, overflow: 'auto', background: '#f5f6fa' }}>
         <Outlet />
       </main>
+      {showSettings && <UserSettingsPanel onClose={() => setShowSettings(false)} />}
     </div>
   );
 };

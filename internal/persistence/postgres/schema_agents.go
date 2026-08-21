@@ -135,6 +135,16 @@ func InitAgentSchema(db *sql.DB) error {
 
 	CREATE INDEX IF NOT EXISTS idx_repo_connections_project ON repo_connections(project_id);
 
+	-- Per-user override of a repo connection's local path: agents run on each
+	-- member's own machine, so the checkout lives somewhere different per user.
+	CREATE TABLE IF NOT EXISTS user_repo_paths (
+		user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+		repo_connection_id UUID NOT NULL REFERENCES repo_connections(id) ON DELETE CASCADE,
+		local_path VARCHAR(1024) NOT NULL,
+		updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+		PRIMARY KEY (user_id, repo_connection_id)
+	);
+
 	CREATE TABLE IF NOT EXISTS provider_settings (
 		id UUID PRIMARY KEY,
 		provider VARCHAR(64) NOT NULL,
@@ -171,6 +181,7 @@ func InitAgentSchema(db *sql.DB) error {
 	CREATE TABLE IF NOT EXISTS provider_logins (
 		id UUID PRIMARY KEY,
 		provider VARCHAR(64) NOT NULL,
+		target VARCHAR(32) NOT NULL DEFAULT 'workspace',
 		status VARCHAR(32) NOT NULL DEFAULT 'pending',
 		auth_url TEXT NOT NULL DEFAULT '',
 		code TEXT NOT NULL DEFAULT '',
@@ -238,6 +249,23 @@ func InitAgentSchema(db *sql.DB) error {
 	`
 	if _, err := db.Exec(alterSQL); err != nil {
 		return fmt.Errorf("failed to add team node department column: %w", err)
+	}
+
+	// Login targeting (added with the per-user settings panel): existing rows
+	// keep the historical workspace behavior.
+	targetSQL := `
+	DO $$
+	BEGIN
+		IF NOT EXISTS (
+			SELECT 1 FROM information_schema.columns
+			WHERE table_name='provider_logins' AND column_name='target'
+		) THEN
+			ALTER TABLE provider_logins ADD COLUMN target VARCHAR(32) NOT NULL DEFAULT 'workspace';
+		END IF;
+	END $$;
+	`
+	if _, err := db.Exec(targetSQL); err != nil {
+		return fmt.Errorf("failed to add provider login target column: %w", err)
 	}
 
 	return nil

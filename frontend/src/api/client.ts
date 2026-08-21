@@ -111,6 +111,11 @@ export interface Project {
   org_id: string;
   name: string;
   description: string;
+  // How agent runs in this project authenticate with their AI provider:
+  // 'user-account' (each member's local CLI sign-in) or 'api-key'
+  // (workspace API key; overrides local sign-ins but still runs via the
+  // member's OpenV connector/runner).
+  agent_auth: 'user-account' | 'api-key';
   created_at: string;
   updated_at: string;
 }
@@ -575,6 +580,9 @@ export interface RepoConnection {
   local_path: string;
   default_branch: string;
   credential_strategy: string;
+  // The calling user's per-user override of local_path (runs on their own
+  // machine use this checkout location).
+  my_local_path?: string;
 }
 
 export interface ProviderSetting {
@@ -1022,6 +1030,9 @@ export const repoConnectionsAPI = {
   update: (id: string, payload: Partial<RepoConnection>) =>
     client.put<RepoConnection>(`/api/v1/repo-connections/${id}`, payload),
   remove: (id: string) => client.delete(`/api/v1/repo-connections/${id}`),
+  // Set (or clear, with '') the caller's own local path for this connection.
+  setMyPath: (id: string, localPath: string) =>
+    client.put<RepoConnection>(`/api/v1/repo-connections/${id}/my-path`, { local_path: localPath }),
 };
 
 export const providerSettingsAPI = {
@@ -1033,6 +1044,9 @@ export const providerSettingsAPI = {
 export interface ProviderLogin {
   id: string;
   provider: string;
+  // 'workspace' runs on any shared worker; 'user' only on the requester's
+  // personal runner (the credential lands on their own machine).
+  target: 'workspace' | 'user';
   status: 'pending' | 'claimed' | 'url_ready' | 'awaiting_code' | 'completed' | 'failed' | 'cancelled';
   auth_url: string;
   detail: string;
@@ -1041,8 +1055,8 @@ export interface ProviderLogin {
 }
 
 export const providerLoginsAPI = {
-  start: (provider: string) =>
-    client.post<ProviderLogin>('/api/v1/provider-logins', { provider }),
+  start: (provider: string, target: 'workspace' | 'user' = 'workspace') =>
+    client.post<ProviderLogin>('/api/v1/provider-logins', { provider, target }),
   get: (id: string) => client.get<ProviderLogin>(`/api/v1/provider-logins/${id}`),
   submitCode: (id: string, code: string) =>
     client.post<ProviderLogin>(`/api/v1/provider-logins/${id}/code`, { code }),

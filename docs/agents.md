@@ -78,17 +78,43 @@ API-billed: they use the org's provider API keys under the vendor's API terms.
 
 You can sign the CLIs in either way (personal runners only):
 
-- **From the UI (recommended):** Settings → AI Providers → **Connect** on the
-  provider's card. The running worker launches the CLI's own sign-in flow on
-  the host and relays it back to the browser: the card shows an "Open sign-in
-  page" link, and — for CLIs that use a paste-back flow (Claude Code, Gemini) —
-  a field to paste the authorization code you receive. Codex opens a browser
-  window directly on the worker machine and completes there. Credentials are
-  stored by the CLI on the host; OpenV only brokers the URL and one-time code.
-  The worker (`agentd`) must be running for Connect to work.
+- **From the UI (recommended):** your **user settings** (click your user info
+  in the bottom-left of the sidebar → Settings) → **Agent sign-ins**. This
+  starts a *user-targeted* sign-in that only your own personal runner picks
+  up, so the credential lands on your machine. The card relays the CLI's own
+  flow: an "Open sign-in page" link, and — for CLIs that use a paste-back flow
+  (Claude Code, Gemini) — a field to paste the authorization code. Codex opens
+  a browser window directly on the runner machine and completes there.
+  Credentials are stored by the CLI on the host; OpenV only brokers the URL
+  and one-time code. Your runner (Agent Connector / `agentd`) must be running.
+  Workspace admins can still run *workspace-targeted* sign-ins from
+  Workspace settings → AI Providers → **Connect** — those are picked up by any
+  of the workspace's shared workers.
 - **From a terminal:** run `claude login` / `codex login` / `gemini` on the
   host yourself, then hit "Sync"/reload — the worker's next detection report
   updates the provider status.
+
+## Per-project agent auth
+
+Each project chooses how its runs authenticate (Project settings → Agents):
+
+- **User account** (default): runs use the launcher's own local CLI sign-in.
+  The project page has no sign-in UI — it only routes runs to the member's
+  local login (set up in user settings, above).
+- **API key**: overrides members' local sign-ins. At claim time the API tells
+  the runner which environment variable holds the workspace's key (the
+  provider setting's `api_key_env`, defaulting to the provider's native
+  variable, e.g. `ANTHROPIC_API_KEY`); the runner reads it from its own host
+  environment and injects it into the CLI. For now these runs still execute
+  through each member's OpenV connector/runner.
+
+## Per-user repo locations
+
+Repo connections carry a shared default local path, but each member can set
+**their own** local path per repository (Project settings → Repositories →
+"your local path") since the checkout lives somewhere different on every
+machine. Personal runners automatically receive the claiming member's path;
+members without one fall back to the shared default.
 
 ## Configure a runner key
 

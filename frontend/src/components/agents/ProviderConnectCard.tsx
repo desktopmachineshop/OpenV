@@ -5,13 +5,25 @@ interface Props {
   provider: string;
   loggedIn: boolean;
   onComplete: () => void;
+  // Where the sign-in executes: 'workspace' (shared worker, default) or
+  // 'user' (only the caller's personal runner — credential lands on their
+  // own machine).
+  target?: 'workspace' | 'user';
+  // Optional heading override (default "Subscription sign-in").
+  title?: string;
 }
 
 // ProviderConnectCard drives a CLI provider sign-in from the UI: it creates
 // a login request, the host worker runs the vendor CLI's own login flow, and
 // this component relays the auth URL (and paste-back code where the CLI
 // needs one). Credentials are stored by the CLI on the host, never in OpenV.
-export const ProviderConnectCard: React.FC<Props> = ({ provider, loggedIn, onComplete }) => {
+export const ProviderConnectCard: React.FC<Props> = ({
+  provider,
+  loggedIn,
+  onComplete,
+  target = 'workspace',
+  title = 'Subscription sign-in',
+}) => {
   const [login, setLogin] = useState<ProviderLogin | null>(null);
   const [code, setCode] = useState('');
   const [codeSent, setCodeSent] = useState(false);
@@ -51,7 +63,7 @@ export const ProviderConnectCard: React.FC<Props> = ({ provider, loggedIn, onCom
     setCode('');
     setCodeSent(false);
     try {
-      const res = await providerLoginsAPI.start(provider);
+      const res = await providerLoginsAPI.start(provider, target);
       setLogin(res.data);
       poll(res.data.id);
     } catch (err: any) {
@@ -85,7 +97,9 @@ export const ProviderConnectCard: React.FC<Props> = ({ provider, loggedIn, onCom
     if (!login) return null;
     switch (login.status) {
       case 'pending':
-        return 'Waiting for the worker (agentd) to pick this up…';
+        return target === 'user'
+          ? 'Waiting for your personal runner to pick this up…'
+          : 'Waiting for the worker (agentd) to pick this up…';
       case 'claimed':
         return 'Starting the CLI sign-in on the worker host…';
       case 'url_ready':
@@ -113,7 +127,7 @@ export const ProviderConnectCard: React.FC<Props> = ({ provider, loggedIn, onCom
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-        <span style={{ fontSize: 13, fontWeight: 600, color: '#2c3e50' }}>Subscription sign-in</span>
+        <span style={{ fontSize: 13, fontWeight: 600, color: '#2c3e50' }}>{title}</span>
         {loggedIn && !active && (
           <span style={{ fontSize: 12, color: '#27ae60', fontWeight: 600 }}>● connected</span>
         )}
@@ -188,8 +202,9 @@ export const ProviderConnectCard: React.FC<Props> = ({ provider, loggedIn, onCom
       )}
       {!login && !loggedIn && (
         <div style={{ fontSize: 12, color: '#7f8c8d', marginTop: 6 }}>
-          Signs into the vendor CLI on the machine running agentd, using your own subscription.
-          The worker must be running.
+          {target === 'user'
+            ? 'Signs into the vendor CLI on your own machine, using your own subscription. Your personal runner (Agent Connector) must be running.'
+            : 'Signs into the vendor CLI on the machine running agentd, using your own subscription. The worker must be running.'}
         </div>
       )}
     </div>
