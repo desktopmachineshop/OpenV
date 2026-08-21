@@ -72,6 +72,7 @@ func InitSchema(db *sql.DB) error {
 		id UUID PRIMARY KEY,
 		name VARCHAR(512) NOT NULL,
 		description TEXT,
+		agent_auth VARCHAR(32) NOT NULL DEFAULT 'user-account',
 		created_at TIMESTAMP NOT NULL DEFAULT NOW(),
 		updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 	);
@@ -167,6 +168,24 @@ func InitSchema(db *sql.DB) error {
 	_, err = db.Exec(addSortOrderSQL)
 	if err != nil {
 		return fmt.Errorf("failed to add sort_order column: %w", err)
+	}
+
+	// Per-project agent auth mode (added with the user settings panel).
+	const addAgentAuthSQL = `
+	DO $$
+	BEGIN
+		IF NOT EXISTS (
+			SELECT 1 FROM information_schema.columns
+			WHERE table_name='projects' AND column_name='agent_auth'
+		) THEN
+			ALTER TABLE projects ADD COLUMN agent_auth VARCHAR(32) NOT NULL DEFAULT 'user-account';
+		END IF;
+	END $$;
+	`
+
+	_, err = db.Exec(addAgentAuthSQL)
+	if err != nil {
+		return fmt.Errorf("failed to add projects agent_auth column: %w", err)
 	}
 
 	_, err = db.Exec(`CREATE INDEX IF NOT EXISTS idx_artifacts_sort_order ON artifacts(sort_order);`)

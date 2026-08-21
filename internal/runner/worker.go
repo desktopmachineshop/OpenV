@@ -4,10 +4,12 @@ import (
 	"context"
 	"errors"
 	"log"
+	"os"
 	"runtime/debug"
 	"time"
 
 	"github.com/openv/requirements-platform/internal/domain/agentruns"
+	"github.com/openv/requirements-platform/internal/domain/providers"
 	"github.com/openv/requirements-platform/internal/domain/repoconns"
 )
 
@@ -206,6 +208,29 @@ func (w *Worker) execute(ctx context.Context, claim *ClaimResponse) {
 	env := map[string]string{
 		"OPENV_API_URL":   w.apiURL,
 		"OPENV_RUN_TOKEN": claim.RunToken,
+	}
+	// A project on api-key auth overrides the host's CLI sign-in: inject the
+	// configured key from the runner host's environment into the variable the
+	// provider CLI natively reads. The run still executes on this runner.
+	if claim.Auth != nil && claim.Auth.Mode == "api-key" {
+		keyEnv := claim.Auth.APIKeyEnv
+		if keyEnv == "" {
+			keyEnv = providers.DefaultAPIKeyEnv(claim.Agent.Provider)
+		}
+		key := os.Getenv(keyEnv)
+		if key == "" {
+			w.finish(run.ID, agentruns.FinishRequest{
+				Status: agentruns.StatusFailed,
+				Error: "this project uses API-key auth, but " + keyEnv +
+					" is not set on the runner host — set it (or switch the project back to user-account auth)",
+			})
+			return
+		}
+		if native := providers.DefaultAPIKeyEnv(claim.Agent.Provider); native != "" {
+			env[native] = key
+		} else {
+			env[keyEnv] = key
+		}
 	}
 	spec := RunSpec{
 		RunID:        run.ID,

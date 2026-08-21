@@ -14,6 +14,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/automations"
 	"github.com/openv/requirements-platform/internal/domain/members"
 	"github.com/openv/requirements-platform/internal/domain/orgs"
+	"github.com/openv/requirements-platform/internal/domain/projects"
 	"github.com/openv/requirements-platform/internal/domain/providers"
 	"github.com/openv/requirements-platform/internal/domain/repoconns"
 	"github.com/openv/requirements-platform/internal/domain/teams"
@@ -64,6 +65,7 @@ func (h *Handler) registerAgentRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/projects/{id}/repo-connections", h.CreateRepoConnection).Methods("POST")
 	router.HandleFunc("/api/v1/repo-connections/{id}", h.UpdateRepoConnection).Methods("PUT")
 	router.HandleFunc("/api/v1/repo-connections/{id}", h.DeleteRepoConnection).Methods("DELETE")
+	router.HandleFunc("/api/v1/repo-connections/{id}/my-path", h.SetMyRepoPath).Methods("PUT")
 
 	// Provider settings.
 	router.HandleFunc("/api/v1/provider-settings", h.ListProviderSettings).Methods("GET")
@@ -509,7 +511,38 @@ func (h *Handler) ClaimAgentRun(w http.ResponseWriter, r *http.Request) {
 		"run":       run,
 		"agent":     agent,
 		"run_token": token,
+		"auth":      h.resolveRunAuth(run, agent),
 	})
+}
+
+// resolveRunAuth picks the provider credential mode for a claimed run. A
+// project set to api-key overrides the member's local CLI sign-in: the worker
+// injects the key named by api_key_env (org provider setting, or the
+// provider's native variable) from its host environment. Everything else —
+// including non-project runs — uses the runner's local sign-in.
+func (h *Handler) resolveRunAuth(run *agentruns.Run, agent *agents.Agent) map[string]string {
+	auth := map[string]string{"mode": projects.AgentAuthUserAccount}
+	if run.ProjectID == nil || *run.ProjectID == "" {
+		return auth
+	}
+	project, err := h.projectService.GetProject(*run.ProjectID)
+	if err != nil || project == nil || project.AgentAuth != projects.AgentAuthAPIKey {
+		return auth
+	}
+	auth["mode"] = projects.AgentAuthAPIKey
+	keyEnv := providers.DefaultAPIKeyEnv(agent.Provider)
+	if h.providerService != nil {
+		if settings, err := h.providerService.List(run.OrgID); err == nil {
+			for _, s := range settings {
+				if s.Provider == agent.Provider && s.APIKeyEnv != "" {
+					keyEnv = s.APIKeyEnv
+					break
+				}
+			}
+		}
+	}
+	auth["api_key_env"] = keyEnv
+	return auth
 }
 
 func (h *Handler) StartAgentRun(w http.ResponseWriter, r *http.Request) {
@@ -877,12 +910,73 @@ func (h *Handler) ListRepoConnections(w http.ResponseWriter, r *http.Request) {
 	if !h.requireProjectRole(w, r, projectID, members.RoleViewer) {
 		return
 	}
+
+	// Personal runners get the claiming user's per-user local paths applied
+	// directly: the checkout location differs per member's machine.
+	if workerUser := WorkerUser(r); workerUser != "" {
+		list, err := h.repoConnService.ListByProjectForUser(projectID, workerUser)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		for _, c := range list {
+			if c.MyLocalPath != "" {
+				c.LocalPath = c.MyLocalPath
+			}
+		}
+		json.NewEncoder(w).Encode(list)
+		return
+	}
+
+	// Users see the shared connection plus their own my_local_path.
+	if user := CurrentUser(r); user != nil {
+		list, err := h.repoConnService.ListByProjectForUser(projectID, user.ID)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		json.NewEncoder(w).Encode(list)
+		return
+	}
+
 	list, err := h.repoConnService.ListByProject(projectID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	json.NewEncoder(w).Encode(list)
+}
+
+// SetMyRepoPath stores the caller's per-user local path for a repo
+// connection (empty local_path clears it). Any project member may set their
+// own path — it only affects runs on their own machine.
+func (h *Handler) SetMyRepoPath(w http.ResponseWriter, r *http.Request) {
+	if !requireUser(w, r) {
+		return
+	}
+	id := mux.Vars(r)["id"]
+	conn, err := h.repoConnService.Get(id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+	if !h.requireProjectRole(w, r, conn.ProjectID, members.RoleViewer) {
+		return
+	}
+	var req struct {
+		LocalPath string `json:"local_path"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+	user := CurrentUser(r)
+	if err := h.repoConnService.SetMyPath(user.ID, id, strings.TrimSpace(req.LocalPath)); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	conn.MyLocalPath = strings.TrimSpace(req.LocalPath)
+	json.NewEncoder(w).Encode(conn)
 }
 
 func (h *Handler) CreateRepoConnection(w http.ResponseWriter, r *http.Request) {
@@ -997,24 +1091,34 @@ func (h *Handler) RecordProviderDetection(w http.ResponseWriter, r *http.Request
 
 // --- Provider CLI login broker ---
 
-// StartProviderLogin creates (or resumes) a CLI sign-in request for the
-// worker to execute on the host. Workspace admins only.
+// StartProviderLogin creates (or resumes) a CLI sign-in request for a worker
+// to execute on a host. Workspace-targeted sign-ins (shared workers) need a
+// workspace admin; user-targeted sign-ins run only on the requester's own
+// personal runner, so any workspace member may start one.
 func (h *Handler) StartProviderLogin(w http.ResponseWriter, r *http.Request) {
 	if CurrentUser(r) == nil {
 		http.Error(w, "authentication required", http.StatusUnauthorized)
 		return
 	}
-	if !h.requireOrgRole(w, r, ActiveOrg(r), orgs.RoleAdmin) {
-		return
-	}
 	var req struct {
 		Provider string `json:"provider"`
+		Target   string `json:"target"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "invalid request body", http.StatusBadRequest)
 		return
 	}
-	login, err := h.loginService.StartLogin(ActiveOrg(r), req.Provider, CurrentUserID(r))
+	if req.Target == "" {
+		req.Target = providers.LoginTargetWorkspace
+	}
+	minRole := orgs.RoleAdmin
+	if req.Target == providers.LoginTargetUser {
+		minRole = orgs.RoleMember
+	}
+	if !h.requireOrgRole(w, r, ActiveOrg(r), minRole) {
+		return
+	}
+	login, err := h.loginService.StartLogin(ActiveOrg(r), req.Provider, req.Target, CurrentUserID(r))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -1024,7 +1128,9 @@ func (h *Handler) StartProviderLogin(w http.ResponseWriter, r *http.Request) {
 }
 
 // userLoginChecked loads a login request and verifies it belongs to the
-// caller's active workspace. Writes the error response on failure.
+// caller's active workspace; user-targeted requests are additionally private
+// to their requester (org admins excepted). Writes the error response on
+// failure.
 func (h *Handler) userLoginChecked(w http.ResponseWriter, r *http.Request) *providers.LoginRequest {
 	login, err := h.loginService.Get(mux.Vars(r)["id"])
 	if err != nil {
@@ -1034,6 +1140,13 @@ func (h *Handler) userLoginChecked(w http.ResponseWriter, r *http.Request) *prov
 	if login.OrgID != ActiveOrg(r) {
 		http.Error(w, "login request not found", http.StatusNotFound)
 		return nil
+	}
+	if login.Target == providers.LoginTargetUser && !h.isOrgAdmin(r, login.OrgID) {
+		user := CurrentUser(r)
+		if user == nil || login.RequestedBy == nil || *login.RequestedBy != user.ID {
+			http.Error(w, "login request not found", http.StatusNotFound)
+			return nil
+		}
 	}
 	return login
 }
@@ -1092,12 +1205,14 @@ func (h *Handler) CancelProviderLogin(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(login.Sanitized())
 }
 
-// ClaimProviderLogin hands the org's oldest pending login request to the worker.
+// ClaimProviderLogin hands the oldest pending login request this worker may
+// execute to the worker: workspace-targeted requests for any worker, plus
+// the owner's user-targeted requests for personal runners.
 func (h *Handler) ClaimProviderLogin(w http.ResponseWriter, r *http.Request) {
 	if !requireWorker(w, r) {
 		return
 	}
-	login, err := h.loginService.Claim(WorkerOrg(r))
+	login, err := h.loginService.Claim(WorkerOrg(r), WorkerUser(r))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

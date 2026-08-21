@@ -31,6 +31,16 @@ var activeLoginStatuses = map[string]bool{
 // before StartLogin abandons it and creates a fresh one (covers dead workers).
 const LoginStaleAfter = 15 * time.Minute
 
+// Login targets: which machine should execute the CLI sign-in.
+const (
+	// LoginTargetWorkspace runs on any of the workspace's shared workers
+	// (admin-managed hosts). Historical default.
+	LoginTargetWorkspace = "workspace"
+	// LoginTargetUser runs only on the requesting user's personal runner —
+	// the credential lands on their own machine.
+	LoginTargetUser = "user"
+)
+
 // LoginRequest brokers a CLI provider sign-in between the UI and the host
 // worker. The OAuth code passes through briefly; the CLI stores the actual
 // credentials on the host — OpenV never sees tokens.
@@ -38,6 +48,9 @@ type LoginRequest struct {
 	ID          string     `json:"id"`
 	OrgID       string     `json:"org_id"`
 	Provider    string     `json:"provider"`
+	// Target is where the sign-in executes: "workspace" (any shared worker)
+	// or "user" (only the requester's personal runner).
+	Target      string     `json:"target"`
 	Status      string     `json:"status"`
 	AuthURL     string     `json:"auth_url"`
 	Code        string     `json:"code,omitempty"`
@@ -65,23 +78,31 @@ type LoginRepository interface {
 	SaveLogin(l *LoginRequest) error
 	UpdateLogin(l *LoginRequest) error
 	FindLoginByID(id string) (*LoginRequest, error)
-	FindActiveLoginByProvider(orgID, provider string) (*LoginRequest, error)
-	// ClaimPendingLogin atomically moves the org's oldest pending request to
-	// claimed and returns it.
-	ClaimPendingLogin(orgID string) (*LoginRequest, error)
+	// FindActiveLogin returns the most recent in-flight request for a
+	// provider, scoped by target: user-targeted requests match per requester
+	// (userID), workspace-targeted requests match org-wide.
+	FindActiveLogin(orgID, provider, target string, userID *string) (*LoginRequest, error)
+	// ClaimPendingLogin atomically claims the org's oldest pending request a
+	// worker may execute: workspace-targeted requests for any worker, plus
+	// user-targeted requests when workerUserID matches the requester
+	// (personal runners).
+	ClaimPendingLogin(orgID, workerUserID string) (*LoginRequest, error)
 }
 
 // LoginService defines the login broker logic.
 type LoginService interface {
 	// StartLogin creates (or returns the existing active) login request for
-	// a CLI provider in an org.
-	StartLogin(orgID, provider string, requestedBy *string) (*LoginRequest, error)
+	// a CLI provider in an org. target picks the executing machine:
+	// "workspace" (shared workers) or "user" (the requester's own runner).
+	StartLogin(orgID, provider, target string, requestedBy *string) (*LoginRequest, error)
 	Get(id string) (*LoginRequest, error)
 	// SubmitCode records the user's pasted authorization code.
 	SubmitCode(id, code string) (*LoginRequest, error)
 	Cancel(id string) (*LoginRequest, error)
-	// Claim hands the org's oldest pending request to a worker (nil when none).
-	Claim(orgID string) (*LoginRequest, error)
+	// Claim hands the org's oldest matching pending request to a worker (nil
+	// when none). workerUserID is the personal runner's owner ("" for
+	// workspace workers).
+	Claim(orgID, workerUserID string) (*LoginRequest, error)
 	// Progress records worker-side state updates.
 	Progress(id, status, authURL, detail string) (*LoginRequest, error)
 }
@@ -105,15 +126,24 @@ func cliProvider(name string) bool {
 }
 
 // StartLogin creates a login request, reusing a fresh active one if present.
-func (s *DefaultLoginService) StartLogin(orgID, provider string, requestedBy *string) (*LoginRequest, error) {
+func (s *DefaultLoginService) StartLogin(orgID, provider, target string, requestedBy *string) (*LoginRequest, error) {
 	if orgID == "" {
 		return nil, errors.New("organization id is required")
 	}
 	if !cliProvider(provider) {
 		return nil, fmt.Errorf("provider %q does not use CLI subscription login", provider)
 	}
+	if target == "" {
+		target = LoginTargetWorkspace
+	}
+	if target != LoginTargetWorkspace && target != LoginTargetUser {
+		return nil, fmt.Errorf("invalid login target %q", target)
+	}
+	if target == LoginTargetUser && requestedBy == nil {
+		return nil, errors.New("a user-targeted login needs a requesting user")
+	}
 
-	existing, err := s.repo.FindActiveLoginByProvider(orgID, provider)
+	existing, err := s.repo.FindActiveLogin(orgID, provider, target, requestedBy)
 	if err != nil {
 		return nil, err
 	}
@@ -129,13 +159,18 @@ func (s *DefaultLoginService) StartLogin(orgID, provider string, requestedBy *st
 		}
 	}
 
+	detail := "Waiting for the worker (agentd) to pick this up. Make sure agentd is running on the host."
+	if target == LoginTargetUser {
+		detail = "Waiting for your personal runner to pick this up. Make sure your Agent Connector (or agentd) is running."
+	}
 	now := time.Now()
 	login := &LoginRequest{
 		ID:          uuid.New().String(),
 		OrgID:       orgID,
 		Provider:    provider,
+		Target:      target,
 		Status:      LoginPending,
-		Detail:      "Waiting for the worker (agentd) to pick this up. Make sure agentd is running on the host.",
+		Detail:      detail,
 		RequestedBy: requestedBy,
 		CreatedAt:   now,
 		UpdatedAt:   now,
@@ -192,9 +227,9 @@ func (s *DefaultLoginService) Cancel(id string) (*LoginRequest, error) {
 	return login, nil
 }
 
-// Claim hands the org's oldest pending request to a worker.
-func (s *DefaultLoginService) Claim(orgID string) (*LoginRequest, error) {
-	return s.repo.ClaimPendingLogin(orgID)
+// Claim hands the org's oldest matching pending request to a worker.
+func (s *DefaultLoginService) Claim(orgID, workerUserID string) (*LoginRequest, error) {
+	return s.repo.ClaimPendingLogin(orgID, workerUserID)
 }
 
 // Progress applies a worker-side status update.

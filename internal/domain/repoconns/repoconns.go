@@ -18,6 +18,11 @@ type RepoConnection struct {
 	CredentialStrategy string    `json:"credential_strategy"` // always "host": agents use the host's git credentials
 	CreatedAt          time.Time `json:"created_at"`
 	UpdatedAt          time.Time `json:"updated_at"`
+
+	// MyLocalPath is the calling user's per-user override of LocalPath —
+	// runs on each member's own machine use their own checkout location.
+	// Populated on user-scoped reads only; never stored on this row.
+	MyLocalPath string `json:"my_local_path,omitempty"`
 }
 
 // CreateRequest is the payload for creating a repo connection.
@@ -45,6 +50,12 @@ type Repository interface {
 	FindByID(id string) (*RepoConnection, error)
 	ListByProject(projectID string) ([]*RepoConnection, error)
 	Delete(id string) error
+	// SetUserPath stores a user's local-path override for a connection
+	// (empty path removes the override).
+	SetUserPath(userID, connID, path string) error
+	// UserPaths returns a user's overrides for a project's connections,
+	// keyed by connection id.
+	UserPaths(userID, projectID string) (map[string]string, error)
 }
 
 // Service defines repo connection domain logic.
@@ -52,7 +63,13 @@ type Service interface {
 	Create(req CreateRequest) (*RepoConnection, error)
 	Get(id string) (*RepoConnection, error)
 	ListByProject(projectID string) ([]*RepoConnection, error)
+	// ListByProjectForUser returns a project's connections with the user's
+	// per-user local paths attached (MyLocalPath).
+	ListByProjectForUser(projectID, userID string) ([]*RepoConnection, error)
 	Update(id string, req UpdateRequest) (*RepoConnection, error)
+	// SetMyPath stores (or clears, with an empty path) a user's local-path
+	// override for a connection.
+	SetMyPath(userID, connID, path string) error
 	Delete(id string) error
 }
 
@@ -117,6 +134,39 @@ func (s *DefaultService) Get(id string) (*RepoConnection, error) {
 // ListByProject returns a project's repo connections.
 func (s *DefaultService) ListByProject(projectID string) ([]*RepoConnection, error) {
 	return s.repo.ListByProject(projectID)
+}
+
+// ListByProjectForUser returns a project's connections with the user's
+// per-user local paths attached.
+func (s *DefaultService) ListByProjectForUser(projectID, userID string) ([]*RepoConnection, error) {
+	conns, err := s.repo.ListByProject(projectID)
+	if err != nil {
+		return nil, err
+	}
+	if userID == "" || len(conns) == 0 {
+		return conns, nil
+	}
+	paths, err := s.repo.UserPaths(userID, projectID)
+	if err != nil {
+		return nil, err
+	}
+	for _, c := range conns {
+		c.MyLocalPath = paths[c.ID]
+	}
+	return conns, nil
+}
+
+// SetMyPath stores (or clears) a user's local-path override for a connection.
+func (s *DefaultService) SetMyPath(userID, connID, path string) error {
+	if userID == "" {
+		return errors.New("user id is required")
+	}
+	if c, err := s.repo.FindByID(connID); err != nil {
+		return err
+	} else if c == nil {
+		return errors.New("repo connection not found")
+	}
+	return s.repo.SetUserPath(userID, connID, path)
 }
 
 // Update applies the non-nil fields of req.

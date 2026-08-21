@@ -8,10 +8,27 @@ interface RunnerConnectPromptProps {
   reason?: string;
 }
 
+type ConnectorOS = 'windows' | 'linux' | 'darwin';
+
+const detectOS = (): ConnectorOS => {
+  const ua = navigator.userAgent;
+  if (/Mac/i.test(ua)) return 'darwin';
+  if (/Linux|X11/i.test(ua) && !/Android/i.test(ua)) return 'linux';
+  return 'windows';
+};
+
+const OS_LABEL: Record<ConnectorOS, string> = {
+  windows: 'Windows',
+  linux: 'Linux',
+  darwin: 'macOS',
+};
+
 // Shown when an agent run can't find an active runner. Tries to open the
 // locally installed OpenV Agent Connector via its openv-connector:// link;
-// if nothing answers, offers pairing (one-time code) and download. Polls the
-// member's runner status until it comes online.
+// the browser gives no signal when the handler isn't registered, so if no
+// runner comes online in time we fall back: auto-download the connector for
+// first-time setups (no runner key yet), or hint that it may not be installed
+// on this machine. Polls the member's runner status until it comes online.
 export const RunnerConnectPrompt: React.FC<RunnerConnectPromptProps> = ({
   orgId,
   onClose,
@@ -19,8 +36,16 @@ export const RunnerConnectPrompt: React.FC<RunnerConnectPromptProps> = ({
 }) => {
   const [phase, setPhase] = useState<'opening' | 'waiting' | 'connected'>('opening');
   const [pairing, setPairing] = useState<ConnectorPairing | null>(null);
+  const [download, setDownload] = useState<'idle' | 'checking' | 'started' | 'unavailable'>('idle');
   const [error, setError] = useState('');
   const frameRef = useRef<HTMLIFrameElement | null>(null);
+  // null until the first runner-key fetch resolves; then whether a key exists.
+  const hasKeyRef = useRef<boolean | null>(null);
+  const autoDownloadedRef = useRef(false);
+
+  const os = detectOS();
+  const osLabel = OS_LABEL[os];
+  const binName = os === 'windows' ? 'openv-connector.exe' : './openv-connector';
 
   // Fire the protocol link through a hidden iframe: no navigation, and
   // browsers without a handler fail silently instead of showing an error page.
@@ -31,6 +56,22 @@ export const RunnerConnectPrompt: React.FC<RunnerConnectPromptProps> = ({
       window.location.href = link;
     }
   }, []);
+
+  // Preflight the bundle, then trigger the browser download. Keeps a missing
+  // bundle (dist not built on the server) as an inline message, not a 404 page.
+  const startDownload = useCallback(async () => {
+    setDownload('checking');
+    if (!(await connectorAPI.downloadAvailable(os))) {
+      setDownload('unavailable');
+      return;
+    }
+    const a = document.createElement('a');
+    a.href = connectorAPI.downloadURL(os);
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setDownload('started');
+  }, [os]);
 
   useEffect(() => {
     const t = window.setTimeout(() => openConnector(connectorAPI.startLink), 300);
@@ -50,6 +91,7 @@ export const RunnerConnectPrompt: React.FC<RunnerConnectPromptProps> = ({
     const poll = window.setInterval(async () => {
       try {
         const res = await myRunnerKeyAPI.get(orgId);
+        hasKeyRef.current = !!res.data.key_record;
         if (res.data.online) setPhase('connected');
       } catch {
         // Transient — keep polling.
@@ -57,6 +99,20 @@ export const RunnerConnectPrompt: React.FC<RunnerConnectPromptProps> = ({
     }, 3000);
     return () => window.clearInterval(poll);
   }, [orgId, phase]);
+
+  // If the protocol launch produced no runner, the connector likely isn't
+  // installed. With no runner key yet (first-time setup) start the download
+  // automatically; with an existing key it's probably installed but not
+  // running, so the waiting hint below is enough.
+  useEffect(() => {
+    if (phase !== 'waiting' || autoDownloadedRef.current) return;
+    const t = window.setTimeout(() => {
+      if (autoDownloadedRef.current || hasKeyRef.current !== false) return;
+      autoDownloadedRef.current = true;
+      startDownload();
+    }, 4000);
+    return () => window.clearTimeout(t);
+  }, [phase, startDownload]);
 
   const createPairing = async () => {
     setError('');
@@ -66,6 +122,28 @@ export const RunnerConnectPrompt: React.FC<RunnerConnectPromptProps> = ({
       openConnector(res.data.deep_link);
     } catch (err: any) {
       setError(`Failed to create a pairing code: ${err.response?.data || err.message}`);
+    }
+  };
+
+  const waitingStatus = () => {
+    switch (download) {
+      case 'started':
+        return (
+          <>
+            The connector didn&apos;t respond, so the download has started — check your browser
+            downloads for <code>openv-connector-{os}.zip</code>. Unzip it somewhere permanent, run{' '}
+            <code>{binName}</code> once to register it, then click “Pair connector” below.
+          </>
+        );
+      case 'checking':
+        return <>Checking for a connector download…</>;
+      default:
+        return (
+          <>
+            Waiting for a runner to come online. If nothing happened, the connector probably
+            isn&apos;t installed (or isn&apos;t paired) on this machine yet — use the options below.
+          </>
+        );
     }
   };
 
@@ -140,12 +218,26 @@ export const RunnerConnectPrompt: React.FC<RunnerConnectPromptProps> = ({
               {phase === 'opening' ? (
                 <>Opening your OpenV Agent Connector… allow the browser prompt if one appears.</>
               ) : (
-                <>
-                  Waiting for a runner to come online. If the connector didn&apos;t open, it may not
-                  be installed or paired yet — use the options below.
-                </>
+                waitingStatus()
               )}
             </div>
+
+            {download === 'unavailable' && (
+              <div
+                style={{
+                  background: '#fdecea',
+                  border: '1px solid #e74c3c',
+                  color: '#c0392b',
+                  padding: '10px 14px',
+                  borderRadius: 4,
+                  marginBottom: 14,
+                  fontSize: 13,
+                }}
+              >
+                No connector bundle for {osLabel} is available on this server. An operator needs to
+                build the download bundles with <code>make connector-dist</code>.
+              </div>
+            )}
 
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
               <button
@@ -158,13 +250,14 @@ export const RunnerConnectPrompt: React.FC<RunnerConnectPromptProps> = ({
               <button className="button-secondary button" style={{ width: 'auto' }} onClick={createPairing}>
                 Pair connector
               </button>
-              <a
+              <button
                 className="button-secondary button"
-                style={{ width: 'auto', textDecoration: 'none', display: 'inline-block' }}
-                href={connectorAPI.downloadURL('windows')}
+                style={{ width: 'auto' }}
+                onClick={startDownload}
+                disabled={download === 'checking'}
               >
-                Download for Windows
-              </a>
+                {download === 'checking' ? 'Checking…' : `Download for ${osLabel}`}
+              </button>
             </div>
 
             {pairing && (
@@ -196,15 +289,15 @@ export const RunnerConnectPrompt: React.FC<RunnerConnectPromptProps> = ({
                     margin: 0,
                   }}
                 >
-                  {`openv-connector.exe "${pairing.deep_link}"`}
+                  {`${binName} "${pairing.deep_link}"`}
                 </pre>
               </div>
             )}
 
             <div style={{ fontSize: 12, color: '#7f8c8d', marginBottom: 16 }}>
               First time? Download the connector, unzip it somewhere permanent, double-click{' '}
-              <code>openv-connector.exe</code> once to register it, then click “Pair connector”
-              here. Your CLI sign-ins never leave your machine.
+              <code>{binName}</code> once to register it, then click “Pair connector” here. Your
+              CLI sign-ins never leave your machine.
             </div>
 
             <div style={{ textAlign: 'right' }}>

@@ -24,6 +24,21 @@ const (
 	AuthAPIKey          = "api-key"
 )
 
+// DefaultAPIKeyEnv returns the environment variable a provider's CLI/SDK
+// natively reads its API key from. Used both as the default for a blank
+// api_key_env setting and as the variable the runner injects the key into.
+func DefaultAPIKeyEnv(provider string) string {
+	switch provider {
+	case ProviderClaudeCode, ProviderAnthropicAPI:
+		return "ANTHROPIC_API_KEY"
+	case ProviderCodexCLI, ProviderOpenAIAPI:
+		return "OPENAI_API_KEY"
+	case ProviderGeminiCLI, ProviderGoogleAPI:
+		return "GEMINI_API_KEY"
+	}
+	return ""
+}
+
 // KnownProviders returns the supported provider names in display order.
 func KnownProviders() []string {
 	return []string{

@@ -33,11 +33,20 @@ func NewClient(baseURL, workerKey string) *Client {
 	}
 }
 
+// RunAuth is the credential mode the API resolved for a claimed run.
+type RunAuth struct {
+	// Mode is "user-account" (use the host's CLI sign-in, the default) or
+	// "api-key" (inject the key named by APIKeyEnv from the host env).
+	Mode      string `json:"mode"`
+	APIKeyEnv string `json:"api_key_env,omitempty"`
+}
+
 // ClaimResponse is the payload returned when a run is claimed.
 type ClaimResponse struct {
 	Run      *agentruns.Run `json:"run"`
 	Agent    *agents.Agent  `json:"agent"`
 	RunToken string         `json:"run_token"`
+	Auth     *RunAuth       `json:"auth,omitempty"`
 }
 
 func (c *Client) do(client *http.Client, method, path string, body interface{}) (*http.Response, error) {
