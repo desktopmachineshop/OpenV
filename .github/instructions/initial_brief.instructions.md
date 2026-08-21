@@ -275,7 +275,11 @@ The system must **not** attempt to:
 - Become a multi‑tenant SaaS  
 - Replace Jira or Git  
 - Execute tests or CI pipelines  
-- Provide AI‑generated requirements  
+
+> **Superseded (agent suite):** the original non-goal "Provide AI‑generated
+> requirements" no longer applies. AI-assisted requirements generation is now a
+> core feature via the multi-agent suite, with mandatory human review through
+> proposals and draft-status artifacts (see `docs/agents.md`).
 
 These may be future plugins, not core features.
 

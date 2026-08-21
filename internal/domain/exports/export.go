@@ -9,6 +9,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/artifacts"
 	"github.com/openv/requirements-platform/internal/domain/links"
 	"github.com/openv/requirements-platform/internal/domain/attachments"
+	"github.com/openv/requirements-platform/internal/domain/products"
 	"github.com/openv/requirements-platform/internal/domain/projects"
 )
 
@@ -31,13 +32,15 @@ type ProjectExport struct {
 	Artifacts    []*artifacts.Artifact    `json:"artifacts"`
 	Links        []*links.Link            `json:"links"`
 	Attachments  []*attachments.Attachment `json:"attachments"`
+	ProductProfile *products.ProductProfile `json:"product_profile,omitempty"`
 }
 
 // Service defines the export/import service interface
 type Service interface {
 	ExportProject(projectID string, format ExportFormat) ([]byte, string, error)
-	ImportProject(data []byte) (string, error)
-	ImportProjectWithOverrides(data []byte, nameOverride string, descOverride string) (string, error)
+	ImportProject(data []byte, orgID string) (string, error)
+	ImportProjectWithOverrides(data []byte, nameOverride string, descOverride string, orgID string) (string, error)
+	ImportArtifactsIntoProject(projectID string, data []byte, markDraft bool) ([]string, error)
 }
 
 // DefaultService implements the export service
@@ -47,6 +50,13 @@ type DefaultService struct {
 	attachmentService attachments.Service
 	projectRepo       ProjectRepository
 	projectService    projects.Service
+	productService    products.Service
+}
+
+// SetProductService wires an optional product profile service. When set,
+// exports include the project's product profile and imports restore it.
+func (s *DefaultService) SetProductService(ps products.Service) {
+	s.productService = ps
 }
 
 // ProjectRepository defines methods for retrieving project info
@@ -121,6 +131,14 @@ func (s *DefaultService) ExportProject(projectID string, format ExportFormat) ([
 		Attachments:  allAttachments,
 	}
 
+	// Attach the product profile when a product service is wired.
+	// Errors are ignored: the profile is optional data.
+	if s.productService != nil {
+		if profile, err := s.productService.GetProfile(projectID); err == nil && profile != nil {
+			exportData.ProductProfile = profile
+		}
+	}
+
 	// Export based on format
 	switch format {
 	case FormatJSON:
@@ -146,12 +164,14 @@ func (s *DefaultService) exportJSON(data *ProjectExport) ([]byte, string, error)
 }
 
 // ImportProject imports project data from JSON and creates a new project
-func (s *DefaultService) ImportProject(data []byte) (string, error) {
-	return s.ImportProjectWithOverrides(data, "", "")
+// owned by the given org.
+func (s *DefaultService) ImportProject(data []byte, orgID string) (string, error) {
+	return s.ImportProjectWithOverrides(data, "", "", orgID)
 }
 
-// ImportProjectWithOverrides imports project data and overrides name/description when provided.
-func (s *DefaultService) ImportProjectWithOverrides(data []byte, nameOverride string, descOverride string) (string, error) {
+// ImportProjectWithOverrides imports project data into a new project owned
+// by the given org, overriding name/description when provided.
+func (s *DefaultService) ImportProjectWithOverrides(data []byte, nameOverride string, descOverride string, orgID string) (string, error) {
 	// Parse the JSON
 	var importData ProjectExport
 	if err := json.Unmarshal(data, &importData); err != nil {
@@ -171,26 +191,85 @@ func (s *DefaultService) ImportProjectWithOverrides(data []byte, nameOverride st
 		Name:        importData.ProjectName,
 		Description: importData.ProjectDesc,
 	})
-	
+	newProject.OrgID = orgID
+
 	if err := s.projectService.CreateProject(newProject); err != nil {
 		return "", fmt.Errorf("failed to create project: %w", err)
 	}
-	
+
 	projectID := newProject.ID
 
+	// Restore the product profile when one was exported and a product service
+	// is wired. Failure to restore it does not fail the import.
+	if importData.ProductProfile != nil && s.productService != nil {
+		profile := importData.ProductProfile
+		if _, err := s.productService.UpdateProfile(projectID, products.UpdateProfileRequest{
+			Vision:           profile.Vision,
+			ProblemStatement: profile.ProblemStatement,
+			TargetUsers:      profile.TargetUsers,
+			Constraints:      profile.Constraints,
+			SuccessMetrics:   profile.SuccessMetrics,
+			Settings:         profile.Settings,
+		}); err != nil {
+			log.Printf("[IMPORT] Warning: failed to restore product profile: %v", err)
+		}
+	}
+
+	if _, err := s.importArtifactsAndLinks(projectID, &importData, false); err != nil {
+		return "", err
+	}
+
+	// Note: Attachments are not imported as the actual image files
+	// are not included in the JSON export. Only metadata was exported.
+
+	return projectID, nil
+}
+
+// ImportArtifactsIntoProject imports the artifacts and links contained in an
+// export payload into an existing project. When markDraft is true, each
+// created artifact is stamped with Attributes["status"]="draft" and
+// Attributes["origin"] defaulting to "import" when absent. It returns the IDs
+// of the created artifacts in import order.
+func (s *DefaultService) ImportArtifactsIntoProject(projectID string, data []byte, markDraft bool) ([]string, error) {
+	if projectID == "" {
+		return nil, fmt.Errorf("project id is required")
+	}
+
+	var importData ProjectExport
+	if err := json.Unmarshal(data, &importData); err != nil {
+		return nil, fmt.Errorf("failed to parse import data: %w", err)
+	}
+
+	return s.importArtifactsAndLinks(projectID, &importData, markDraft)
+}
+
+// importArtifactsAndLinks performs the shared two-pass artifact import, link
+// creation, and link snapshot population for an already existing project.
+// It returns the created artifact IDs in import order.
+func (s *DefaultService) importArtifactsAndLinks(projectID string, importData *ProjectExport, markDraft bool) ([]string, error) {
 	// Map old artifact IDs to new ones
 	idMap := make(map[string]string)
+	createdIDs := make([]string, 0, len(importData.Artifacts))
 
 	// First pass: Create all artifacts without parent relationships in a single transaction
 	// We need to do this in two passes to handle parent-child relationships
 	log.Printf("[IMPORT] Starting first pass: creating %d artifacts", len(importData.Artifacts))
 	log.Printf("[IMPORT] Beginning transaction for first pass")
-	
+
 	// Note: We can't use transactions at the repository level since the service layer
 	// handles the transaction. Instead, we'll batch the creates but keep individual
 	// transactions for now. Watch the database for bottlenecks.
-	
+
 	for i, artifact := range importData.Artifacts {
+		if markDraft {
+			if artifact.Attributes == nil {
+				artifact.Attributes = map[string]interface{}{}
+			}
+			artifact.Attributes["status"] = "draft"
+			if _, ok := artifact.Attributes["origin"]; !ok {
+				artifact.Attributes["origin"] = "import"
+			}
+		}
 		oldID := artifact.ID
 		
 		log.Printf("[IMPORT] Creating artifact %d/%d: %s", i, len(importData.Artifacts), artifact.Title)
@@ -218,7 +297,7 @@ func (s *DefaultService) ImportProjectWithOverrides(data []byte, nameOverride st
 		start = time.Now()
 		if err := s.artifactService.CreateArtifact(newArtifact); err != nil {
 			log.Printf("[IMPORT] ERROR creating artifact %d (%s): %v", i, artifact.Title, err)
-			return "", fmt.Errorf("failed to create artifact %d (%s): %w", i, artifact.Title, err)
+			return nil, fmt.Errorf("failed to create artifact %d (%s): %w", i, artifact.Title, err)
 		}
 		elapsed := time.Since(start)
 		log.Printf("[IMPORT] Successfully created artifact %d/%d: %s (ID: %s) in %v", i, len(importData.Artifacts), artifact.Title, newArtifact.ID, elapsed)
@@ -233,6 +312,7 @@ func (s *DefaultService) ImportProjectWithOverrides(data []byte, nameOverride st
 		
 		// Map old ID to new ID
 		idMap[oldID] = newArtifact.ID
+		createdIDs = append(createdIDs, newArtifact.ID)
 	}
 
 	log.Printf("[IMPORT] First pass complete. Starting second pass: updating parent relationships")
@@ -268,7 +348,7 @@ func (s *DefaultService) ImportProjectWithOverrides(data []byte, nameOverride st
 				log.Printf("[IMPORT] UpdateArtifact returned for artifact %d", i)
 				if err != nil {
 					log.Printf("[IMPORT] ERROR in second pass for artifact %d: %v", i, err)
-					return "", fmt.Errorf("failed to update artifact parent: %w", err)
+					return nil, fmt.Errorf("failed to update artifact parent: %w", err)
 				}
 				log.Printf("[IMPORT] Successfully updated artifact %d in second pass", i)
 			}
@@ -306,10 +386,7 @@ func (s *DefaultService) ImportProjectWithOverrides(data []byte, nameOverride st
 	}
 	log.Printf("[IMPORT] Link snapshot population complete")
 
-	// Note: Attachments are not imported as the actual image files
-	// are not included in the JSON export. Only metadata was exported.
-
-	return projectID, nil
+	return createdIDs, nil
 }
 
 // populateLinksSnapshotsForImport populates link snapshots for all imported artifacts

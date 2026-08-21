@@ -14,6 +14,20 @@ Public demo: https://openv-frontend-production.up.railway.app/
 - **RESTful API**: Full-featured REST API for all operations
 - **Local-first**: Runs entirely on your machine with Docker Compose
 
+### Multi-Agent Suite
+AI agents that work inside your projects, powered by your own vendor CLI
+subscription (Claude Code / Codex / Gemini) running on your machine:
+
+- **Agent workers**: host-side `agentd` worker pulls queued runs from the server; no API keys stored server-side
+- **MCP tool surface**: agents read and propose changes through typed tools (`openv-mcp`), fetching requirement content at run time
+- **Human review**: agent writes land as proposals or draft artifacts for approval — nothing merges unreviewed
+- **Product discovery**: personas, user needs, `derives-from`/`validates` traceability, and guided product definition
+- **Interviews**: shareable links where stakeholders chat with an interviewer agent that records candidate needs
+- **Automations**: manual, cron, and event-triggered agent runs; kanban cards can drive runs
+- **V&V reporting**: coverage rollups, gap analysis, and a downloadable V&V status PDF
+
+Setup guide: [docs/agents.md](docs/agents.md)
+
 ### Planned Features
 - Graph-based traceability visualization
 - V&V coverage reporting and dashboards

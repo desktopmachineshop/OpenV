@@ -1,11 +1,22 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../state/store';
 import { projectAPI, templateAPI, Project, Template } from '../api/client';
 import { Navbar } from './Navbar';
+import { OrgSwitcher } from './OrgSwitcher';
+import { CreateOrgModal } from './CreateOrgModal';
 import './ProjectList.css';
 
 export const ProjectList: React.FC = () => {
-  const { projectId, setProjectId, projects, setProjects, addProject, updateProject, removeProject } = useAppStore();
+  const navigate = useNavigate();
+  const { projectId, setProjectId, projects, setProjects, addProject, updateProject, removeProject, orgs, activeOrgId } = useAppStore();
+  const activeOrg = orgs.find((o) => o.id === activeOrgId) || null;
+  const [showCreateOrg, setShowCreateOrg] = useState<boolean>(false);
+
+  const openProject = (id: string) => {
+    setProjectId(id);
+    navigate(`/projects/${id}`);
+  };
   const [error, setError] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
   const [newProjectName, setNewProjectName] = useState<string>('');
@@ -20,11 +31,12 @@ export const ProjectList: React.FC = () => {
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
-  // Load projects on mount
+  // Load projects on mount and whenever the active workspace changes.
   useEffect(() => {
     loadProjects();
     loadTemplates();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeOrgId]);
 
   const loadProjects = async () => {
     try {
@@ -71,7 +83,7 @@ export const ProjectList: React.FC = () => {
           description: newProjectDesc,
         });
         addProject(response.data);
-        setProjectId(response.data.id);
+        openProject(response.data.id);
       } else {
         const response = await templateAPI.createProject(
           selectedTemplateId,
@@ -79,7 +91,7 @@ export const ProjectList: React.FC = () => {
           newProjectDesc
         );
         addProject(response.data);
-        setProjectId(response.data.id);
+        openProject(response.data.id);
       }
       setNewProjectName('');
       setNewProjectDesc('');
@@ -112,7 +124,7 @@ export const ProjectList: React.FC = () => {
   };
 
   const handleSelectProject = (id: string) => {
-    setProjectId(id);
+    openProject(id);
   };
 
   const handleEditProject = (project: Project, e: React.MouseEvent) => {
@@ -184,7 +196,7 @@ export const ProjectList: React.FC = () => {
       await loadProjects();
       
       // Select the newly imported project
-      setProjectId(newProjectId);
+      openProject(newProjectId);
       setError('');
       
       // Reset file input
@@ -224,6 +236,23 @@ export const ProjectList: React.FC = () => {
       <Navbar title="Projects" />
       <div className="project-list-container">
 
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            background: '#fff',
+            border: '1px solid #ecf0f1',
+            borderRadius: 6,
+            padding: '8px 14px',
+          }}
+        >
+          <span style={{ fontSize: 12, color: '#7f8c8d' }}>Workspace:</span>
+          <OrgSwitcher variant="light" />
+        </div>
+      </div>
+
       {error && (
         <div className="error-message">
           {error}
@@ -261,6 +290,15 @@ export const ProjectList: React.FC = () => {
                   >
                     ↑ Import Project
                   </button>
+                  {activeOrg?.type === 'personal' && (
+                    <button
+                      className="button button-secondary"
+                      onClick={() => setShowCreateOrg(true)}
+                      title="Set up a shared workspace for your company"
+                    >
+                      Create a company workspace
+                    </button>
+                  )}
                   <input
                     ref={fileInputRef}
                     type="file"
@@ -512,6 +550,12 @@ export const ProjectList: React.FC = () => {
         </>
       )}
     </div>
+    {showCreateOrg && (
+      <CreateOrgModal
+        onClose={() => setShowCreateOrg(false)}
+        onCreated={() => navigate('/projects')}
+      />
+    )}
     </>
   );
 };

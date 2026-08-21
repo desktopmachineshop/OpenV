@@ -30,10 +30,32 @@ services:
       DB_NAME: openv
       PORT: 8080
       UPLOADS_DIR: /uploads
+      OPENV_DATA_DIR: /data
+      WORKER_API_KEY: ${WORKER_API_KEY:-dev-worker-key}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
+      # Google sign-in: set these (e.g. in a .env file) to show the button.
+      # Authorized redirect URI: ${PUBLIC_URL}/api/v1/auth/google/callback
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      PUBLIC_URL: ${PUBLIC_URL:-http://localhost:8080}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      # Hosted runners: the API provisions per-workspace runner containers on
+      # the local docker daemon. Requires the docker socket volume below and
+      # the openv-worker image (`make worker-image`). Set HOSTED_RUNNERS=off
+      # to disable the feature entirely.
+      HOSTED_RUNNERS: ${HOSTED_RUNNERS:-}
+      RUNNER_IMAGE: ${RUNNER_IMAGE:-openv-worker:latest}
+      RUNNER_NETWORK: ${RUNNER_NETWORK:-}
+      RUNNER_API_URL: ${RUNNER_API_URL:-http://api:8080}
+      # Agent Connector download bundles (`make connector-dist` fills ./dist).
+      CONNECTOR_DIST_DIR: /connector-dist
     ports:
       - "8080:8080"
     volumes:
       - uploads_data:/uploads
+      - openv-data:/data
+      - ./dist:/connector-dist:ro
+      # - /var/run/docker.sock:/var/run/docker.sock  # enable hosted runners (Linux hosts)
     depends_on:
       postgres:
         condition: service_healthy
@@ -57,3 +79,4 @@ services:
 volumes:
   postgres_data:
   uploads_data:
+  openv-data:

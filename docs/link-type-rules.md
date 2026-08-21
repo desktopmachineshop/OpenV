@@ -1,5 +1,7 @@
 # Link Type Rules and Constraints
 
+> Generated from internal/domain/links/validation.go — edit there and mirror here.
+
 This document describes the link type constraints enforced in the OpenV requirements management platform.
 
 ## Link Type Definitions
@@ -32,14 +34,28 @@ This document describes the link type constraints enforced in the OpenV requirem
 - **Description**: A high-level requirement is broken down into more specific sub-requirements
 - **Example**: REQ-001 decomposes to REQ-001.1, REQ-001.2
 
-### 5. impacts
+### 5. derives-from
+- **Label**: "derives from"
+- **Inverse Label**: "gives rise to"
+- **Direction**: Requirement → User Need
+- **Description**: A requirement is derived from a user need
+- **Example**: REQ-042 derives from NEED-007
+
+### 6. validates
+- **Label**: "validates"
+- **Inverse Label**: "validated by"
+- **Direction**: Test Case → User Need
+- **Description**: A test case confirms that a user need is met
+- **Example**: Test-014 validates NEED-007
+
+### 7. impacts
 - **Label**: "impacts"
 - **Inverse Label**: "impacted by"
 - **Direction**: Any Artifact Type → Any Artifact Type
 - **Description**: A change to one artifact affects another
 - **Example**: REQ-042 impacts Design-XYZ
 
-### 6. relates-to
+### 8. relates-to
 - **Label**: "relates-to"
 - **Inverse Label**: "relates-to" (bidirectional)
 - **Direction**: Any Artifact Type ↔ Any Artifact Type

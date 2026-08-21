@@ -17,7 +17,10 @@ import (
 	linksdomain "github.com/openv/requirements-platform/internal/domain/links"
 )
 
-const cncMillTemplateKey = "example-cnc-mill"
+const (
+	cncMillTemplateKey        = "example-cnc-mill"
+	guidedSkeletonTemplateKey = "guided-product-skeleton"
+)
 
 // TemplateData wraps project export with metadata for file-based templates
 type TemplateData struct {
@@ -68,6 +71,11 @@ func DefaultTemplates() ([]*Template, error) {
 		return nil, err
 	}
 
+	guidedSnapshot, err := buildGuidedProductSkeletonSnapshot()
+	if err != nil {
+		return nil, err
+	}
+
 	return []*Template{
 		{
 			ID:          uuid.New().String(),
@@ -78,7 +86,135 @@ func DefaultTemplates() ([]*Template, error) {
 			IsDefault:   true,
 			CreatedAt:   time.Now(),
 		},
+		{
+			ID:          uuid.New().String(),
+			Key:         guidedSkeletonTemplateKey,
+			Name:        "Guided Product Skeleton",
+			Description: "Starter structure showing personas, user needs, derived requirements, and validating test cases.",
+			Snapshot:    json.RawMessage(guidedSnapshot),
+			IsDefault:   true,
+			CreatedAt:   time.Now(),
+		},
 	}, nil
+}
+
+// buildGuidedProductSkeletonSnapshot builds a small starter project that
+// demonstrates the product-discovery vocabulary: personas, user needs,
+// requirements derived from needs ("derives-from"), and test cases that both
+// verify requirements and validate user needs ("validates").
+func buildGuidedProductSkeletonSnapshot() ([]byte, error) {
+	now := time.Now()
+	artifactsList := make([]*artifacts.Artifact, 0)
+	linksList := make([]*linksdomain.Link, 0)
+
+	newArtifact := func(id, parentID, artType, title, body string, attrs map[string]interface{}) *artifacts.Artifact {
+		var parent *string
+		if parentID != "" {
+			parent = &parentID
+		}
+		if attrs == nil {
+			attrs = map[string]interface{}{}
+		}
+		return &artifacts.Artifact{
+			ID:         id,
+			ProjectID:  "guided-skeleton",
+			ParentID:   parent,
+			Type:       artType,
+			Title:      title,
+			Body:       body,
+			Attributes: attrs,
+			Version:    1,
+			ValidFrom:  now,
+			ValidTo:    nil,
+			CreatedAt:  now,
+			UpdatedAt:  now,
+		}
+	}
+
+	newLink := func(fromID, toID, linkType string) *linksdomain.Link {
+		return &linksdomain.Link{
+			ID:         uuid.New().String(),
+			FromID:     fromID,
+			ToID:       toID,
+			Type:       linkType,
+			Attributes: map[string]interface{}{},
+			Version:    1,
+			CreatedAt:  now,
+			UpdatedAt:  now,
+		}
+	}
+
+	root := uuid.New().String()
+	artifactsList = append(artifactsList, newArtifact(root, "", "heading", "Guided Product Skeleton",
+		"Starter structure produced by guided product discovery: who the product serves, what they need, and how those needs are met and validated.", nil))
+
+	// Personas.
+	personasHeading := uuid.New().String()
+	artifactsList = append(artifactsList, newArtifact(personasHeading, root, "heading", "Personas",
+		"Who the product serves.", nil))
+	workshopLead := uuid.New().String()
+	artifactsList = append(artifactsList, newArtifact(workshopLead, personasHeading, "persona", "Workshop Lead",
+		"Runs a small prototyping workshop. Comfortable with tools, short on time; wants predictable results without babysitting equipment.", nil))
+
+	// User needs.
+	needsHeading := uuid.New().String()
+	artifactsList = append(artifactsList, newArtifact(needsHeading, root, "heading", "User Needs",
+		"Problems and outcomes the personas care about, in their own words.", nil))
+	needUnattended := uuid.New().String()
+	artifactsList = append(artifactsList, newArtifact(needUnattended, needsHeading, "user-need", "Run jobs unattended",
+		"As a workshop lead, I need long jobs to run safely without supervision so I can work on other tasks.", nil))
+	needQuickSetup := uuid.New().String()
+	artifactsList = append(artifactsList, newArtifact(needQuickSetup, needsHeading, "user-need", "Set up a job quickly",
+		"As a workshop lead, I need to go from design file to running job in minutes, not hours.", nil))
+
+	// Requirements derived from user needs.
+	requirementsHeading := uuid.New().String()
+	artifactsList = append(artifactsList, newArtifact(requirementsHeading, root, "heading", "Requirements",
+		"System requirements derived from the user needs above.", nil))
+	reqAutoShutdown := uuid.New().String()
+	artifactsList = append(artifactsList, newArtifact(reqAutoShutdown, requirementsHeading, "requirement", "Automatic fault shutdown",
+		"The system shall detect fault conditions and shut down safely within 2 seconds without operator intervention.",
+		map[string]interface{}{
+			"verification_method": "test",
+			"verification_status": "unverified",
+		}))
+
+	// Verification & validation.
+	verificationHeading := uuid.New().String()
+	artifactsList = append(artifactsList, newArtifact(verificationHeading, root, "heading", "Verification",
+		"Test cases that verify requirements and validate user needs.", nil))
+	testFaultShutdown := uuid.New().String()
+	artifactsList = append(artifactsList, newArtifact(testFaultShutdown, verificationHeading, "test-case", "Fault shutdown test",
+		"Inject a simulated fault during an unattended job and verify the system shuts down safely within 2 seconds.",
+		map[string]interface{}{
+			"verification_method": "test",
+		}))
+
+	linksList = append(linksList,
+		// Requirement derives from a user need.
+		newLink(reqAutoShutdown, needUnattended, "derives-from"),
+		// Test case verifies the requirement...
+		newLink(testFaultShutdown, reqAutoShutdown, "verifies"),
+		// ...and validates the originating user need.
+		newLink(testFaultShutdown, needUnattended, "validates"),
+	)
+
+	// needQuickSetup is intentionally left without a derived requirement so the
+	// gap analysis view has something to show out of the box.
+	_ = needQuickSetup
+
+	exportData := exports.ProjectExport{
+		ExportedAt:  now,
+		Version:     "1.0",
+		ProjectID:   "guided-skeleton",
+		ProjectName: "Guided Product Skeleton",
+		ProjectDesc: "Starter structure with personas, user needs, derived requirements, and validating test cases.",
+		Artifacts:   artifactsList,
+		Links:       linksList,
+		Attachments: []*attachments.Attachment{},
+	}
+
+	return json.MarshalIndent(exportData, "", "  ")
 }
 
 func buildCncMillExampleSnapshot() ([]byte, error) {

@@ -48,6 +48,22 @@ var linkTypeRules = []LinkTypeRule{
 		Description:      "A high-level requirement is broken down into more specific sub-requirements",
 	},
 	{
+		Type:             "derives-from",
+		Label:            "derives from",
+		InverseLabel:     "gives rise to",
+		AllowedFromTypes: []string{"requirement"},
+		AllowedToTypes:   []string{"user-need"},
+		Description:      "A requirement is derived from a user need",
+	},
+	{
+		Type:             "validates",
+		Label:            "validates",
+		InverseLabel:     "validated by",
+		AllowedFromTypes: []string{"test-case"},
+		AllowedToTypes:   []string{"user-need"},
+		Description:      "A test case confirms that a user need is met",
+	},
+	{
 		Type:             "impacts",
 		Label:            "impacts",
 		InverseLabel:     "impacted by",

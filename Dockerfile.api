@@ -1,5 +1,5 @@
 # Build stage
-FROM golang:1.21-alpine AS builder
+FROM golang:1.25-alpine AS builder
 
 WORKDIR /app
 
@@ -14,7 +14,9 @@ COPY cmd cmd
 COPY internal internal
 COPY examples examples
 
-# Build
+# Build the API server. The host worker binaries (cmd/agentd, cmd/openv-mcp)
+# are NOT built here: they run on the operator's machine next to the vendor
+# CLIs (claude/codex/gemini) — build them with `make worker` instead.
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o server cmd/server/main.go
 
 # Final stage
@@ -29,4 +31,11 @@ COPY --from=builder /app/examples ./examples
 
 EXPOSE 8080
 
+# Runtime environment (see docker-compose.yml / docs/agents.md):
+#   DATABASE_URL or DB_HOST/DB_PORT/DB_USER/DB_PASSWORD/DB_NAME  - Postgres connection
+#   PORT             - HTTP port (default 8080)
+#   UPLOADS_DIR      - attachment storage directory
+#   OPENV_DATA_DIR   - data volume root; agent definitions live in $OPENV_DATA_DIR/agents
+#   WORKER_API_KEY   - shared key the host agent worker uses to authenticate
+#   CORS_ORIGIN      - allowed frontend origin
 CMD ["./server"]
