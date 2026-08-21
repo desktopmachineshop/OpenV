@@ -112,10 +112,13 @@ connector, and offers install + pairing if it isn't set up yet.
 
 Flow:
 
-1. **Download** the bundle from the prompt (or
+1. **Download** the bundle from the prompt — on a first-time setup (no runner
+   key yet) the download starts automatically when the `openv-connector://`
+   link gets no response. Also available at
    `GET /api/v1/public/connector/download?os=windows|linux`; operators build
    the bundles with `make connector-dist` — served from `CONNECTOR_DIST_DIR`,
-   default `./dist`, mounted into the api container by compose).
+   default `./dist`, mounted into the api container by compose. If the bundles
+   haven't been built, the prompt says so inline instead of erroring.
 2. Unzip somewhere permanent and double-click `openv-connector.exe` once —
    it self-registers the `openv-connector://` link handler (HKCU, no admin).
 3. Click **Pair connector** in OpenV. The browser opens the connector with a

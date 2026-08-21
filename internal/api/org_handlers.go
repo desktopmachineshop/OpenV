@@ -48,7 +48,7 @@ func (h *Handler) registerOrgRoutes(router *mux.Router) {
 	// connector exchanges it (public route — the code is the credential).
 	router.HandleFunc("/api/v1/orgs/{id}/connector-pairing", h.CreateConnectorPairing).Methods("POST")
 	router.HandleFunc("/api/v1/public/connector/pair", h.ExchangeConnectorPairing).Methods("POST")
-	router.HandleFunc("/api/v1/public/connector/download", h.DownloadConnector).Methods("GET")
+	router.HandleFunc("/api/v1/public/connector/download", h.DownloadConnector).Methods("GET", "HEAD")
 
 	// Hosted runner: one platform-managed container per workspace (admin).
 	router.HandleFunc("/api/v1/orgs/{id}/hosted-runner", h.GetHostedRunner).Methods("GET")

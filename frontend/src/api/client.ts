@@ -806,6 +806,16 @@ export const connectorAPI = {
     client.post<ConnectorPairing>(`/api/v1/orgs/${orgId}/connector-pairing`),
   downloadURL: (os: string) =>
     `${client.defaults.baseURL || ''}/api/v1/public/connector/download?os=${os}`,
+  // Preflight so the UI can show an inline message instead of navigating to a
+  // 404 page when the dist bundles haven't been built on this deployment.
+  downloadAvailable: async (os: string): Promise<boolean> => {
+    try {
+      await client.head(`/api/v1/public/connector/download?os=${os}`);
+      return true;
+    } catch {
+      return false;
+    }
+  },
   startLink: 'openv-connector://start',
 };
 
