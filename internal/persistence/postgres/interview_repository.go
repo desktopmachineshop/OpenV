@@ -19,8 +19,8 @@ func NewInterviewRepository(db *sql.DB) *InterviewRepository {
 // SaveInterview inserts a new interview
 func (r *InterviewRepository) SaveInterview(i *interviews.Interview) error {
 	query := `
-		INSERT INTO interviews (id, project_id, guided_session_id, name, brief, agent_id, status, expires_at, created_by, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+		INSERT INTO interviews (id, project_id, guided_session_id, persona_artifact_id, name, brief, agent_id, status, expires_at, created_by, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 	`
 
 	_, err := r.db.Exec(
@@ -28,6 +28,7 @@ func (r *InterviewRepository) SaveInterview(i *interviews.Interview) error {
 		i.ID,
 		i.ProjectID,
 		i.GuidedSessionID,
+		i.PersonaArtifactID,
 		i.Name,
 		i.Brief,
 		i.AgentID,
@@ -45,7 +46,7 @@ func (r *InterviewRepository) SaveInterview(i *interviews.Interview) error {
 func (r *InterviewRepository) UpdateInterview(i *interviews.Interview) error {
 	query := `
 		UPDATE interviews
-		SET guided_session_id = $2, name = $3, brief = $4, agent_id = $5, status = $6, expires_at = $7, updated_at = $8
+		SET guided_session_id = $2, persona_artifact_id = $3, name = $4, brief = $5, agent_id = $6, status = $7, expires_at = $8, updated_at = $9
 		WHERE id = $1
 	`
 
@@ -53,6 +54,7 @@ func (r *InterviewRepository) UpdateInterview(i *interviews.Interview) error {
 		query,
 		i.ID,
 		i.GuidedSessionID,
+		i.PersonaArtifactID,
 		i.Name,
 		i.Brief,
 		i.AgentID,
@@ -71,6 +73,7 @@ func scanInterview(scan func(dest ...interface{}) error) (*interviews.Interview,
 		&interview.ID,
 		&interview.ProjectID,
 		&interview.GuidedSessionID,
+		&interview.PersonaArtifactID,
 		&interview.Name,
 		&interview.Brief,
 		&interview.AgentID,
@@ -89,7 +92,7 @@ func scanInterview(scan func(dest ...interface{}) error) (*interviews.Interview,
 // FindInterviewByID retrieves an interview by ID
 func (r *InterviewRepository) FindInterviewByID(id string) (*interviews.Interview, error) {
 	query := `
-		SELECT id, project_id, guided_session_id, name, brief, agent_id, status, expires_at, created_by, created_at, updated_at
+		SELECT id, project_id, guided_session_id, persona_artifact_id, name, brief, agent_id, status, expires_at, created_by, created_at, updated_at
 		FROM interviews
 		WHERE id = $1
 	`
@@ -109,7 +112,7 @@ func (r *InterviewRepository) FindInterviewByID(id string) (*interviews.Intervie
 // ListInterviewsByProject retrieves all interviews for a project, newest first
 func (r *InterviewRepository) ListInterviewsByProject(projectID string) ([]*interviews.Interview, error) {
 	query := `
-		SELECT id, project_id, guided_session_id, name, brief, agent_id, status, expires_at, created_by, created_at, updated_at
+		SELECT id, project_id, guided_session_id, persona_artifact_id, name, brief, agent_id, status, expires_at, created_by, created_at, updated_at
 		FROM interviews
 		WHERE project_id = $1
 		ORDER BY created_at DESC

@@ -105,6 +105,7 @@ func InitSuiteSchema(db *sql.DB) error {
 		id UUID PRIMARY KEY,
 		project_id UUID NOT NULL,
 		guided_session_id UUID,
+		persona_artifact_id UUID,
 		name VARCHAR(512) NOT NULL,
 		brief TEXT NOT NULL DEFAULT '',
 		agent_id UUID,
@@ -178,6 +179,27 @@ func InitSuiteSchema(db *sql.DB) error {
 
 	if _, err := db.Exec(`CREATE INDEX IF NOT EXISTS idx_attachments_test_result_id ON attachments(test_result_id);`); err != nil {
 		return fmt.Errorf("failed to add attachments test_result_id index: %w", err)
+	}
+
+	// Interviews may be linked (many to one) to a persona artifact.
+	personaSQL := `
+	DO $$
+	BEGIN
+		IF NOT EXISTS (
+			SELECT 1 FROM information_schema.columns
+			WHERE table_name='interviews' AND column_name='persona_artifact_id'
+		) THEN
+			ALTER TABLE interviews ADD COLUMN persona_artifact_id UUID;
+		END IF;
+	END $$;
+	`
+
+	if _, err := db.Exec(personaSQL); err != nil {
+		return fmt.Errorf("failed to add interviews persona_artifact_id column: %w", err)
+	}
+
+	if _, err := db.Exec(`CREATE INDEX IF NOT EXISTS idx_interviews_persona ON interviews(persona_artifact_id);`); err != nil {
+		return fmt.Errorf("failed to add interviews persona index: %w", err)
 	}
 
 	return nil

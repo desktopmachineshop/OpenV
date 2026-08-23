@@ -267,6 +267,13 @@ agent records candidate user needs as it learns them. Sessions, transcripts,
 and invites are managed from the project's Interviews tab; invites can expire
 or be revoked at any time.
 
+Interviews can optionally be linked to a **persona** artifact (many interviews
+to one persona), so you can see how, say, a team of design engineers each
+describe slightly different requirements for the same role. The linked persona
+is shown on the interview list, can be used to filter interviews, and its
+title and description are included in the interviewer agent's context so it
+can probe persona-specific needs.
+
 ## Quick checklist
 
 - [ ] `make up` — stack is running
