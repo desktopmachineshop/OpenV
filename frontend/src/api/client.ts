@@ -398,7 +398,30 @@ export interface TestResult {
   notes: string;
   evidence: string[];
   executed_at?: string | null;
+  // Set when an agent run produced this result, so reviewers can tell
+  // agent-executed evidence from human-executed.
+  executed_by_agent_run_id?: string | null;
 }
+
+// How a test case can be carried out. Only 'automated' cases may be executed
+// by an agent; 'manual' needs a person and 'physical' needs hardware or a rig.
+// Stored on the test-case artifact's `execution_method` attribute; an unset
+// value means 'automated'.
+export type ExecutionMethod = 'automated' | 'manual' | 'physical';
+
+export const EXECUTION_METHODS: { value: ExecutionMethod; label: string; hint: string }[] = [
+  { value: 'automated', label: 'Automated', hint: 'An agent or CI job can run this end to end.' },
+  { value: 'manual', label: 'Manual (human)', hint: 'Needs a person: inspection, judgement, usability.' },
+  { value: 'physical', label: 'Physical test', hint: 'Needs hardware, a rig, or lab measurement.' },
+];
+
+// Reads a test case artifact's execution method, defaulting to automated.
+export const executionMethodOf = (artifact?: { attributes?: Record<string, any> } | null): ExecutionMethod => {
+  const raw = artifact?.attributes?.execution_method;
+  if (typeof raw !== 'string') return 'automated';
+  const v = raw.trim().toLowerCase();
+  return v === 'manual' || v === 'physical' ? v : 'automated';
+};
 
 export interface CoverageEntry {
   requirement_id: string;
@@ -891,6 +914,14 @@ export const vvAPI = {
     client.post<TestResult>(`/api/v1/test-runs/${runId}/results`, payload),
   listResults: (runId: string) =>
     client.get<TestResult[]>(`/api/v1/test-runs/${runId}/results`),
+  // Launch an agent run that executes this test run's agent-executable cases.
+  // Manual/physical cases are excluded server-side and returned as `skipped`.
+  launchAgentRun: (runId: string, payload: { agent_slug: string; test_case_ids?: string[] }) =>
+    client.post<{
+      run: AgentRun;
+      executing: number;
+      skipped: { id: string; title: string; execution_method: ExecutionMethod }[];
+    }>(`/api/v1/test-runs/${runId}/agent-run`, payload),
   coverage: (projectId: string, baselineId?: string) =>
     client.get<CoverageReport>(`/api/v1/projects/${projectId}/vv/coverage`, {
       params: baselineId ? { baseline_id: baselineId } : {},

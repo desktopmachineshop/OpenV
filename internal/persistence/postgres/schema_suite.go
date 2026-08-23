@@ -62,6 +62,7 @@ func InitSuiteSchema(db *sql.DB) error {
 		evidence JSONB NOT NULL DEFAULT '[]',
 		executed_at TIMESTAMP,
 		executed_by UUID,
+		executed_by_agent_run_id UUID,
 		created_at TIMESTAMP NOT NULL DEFAULT NOW(),
 		updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 	);
@@ -178,6 +179,24 @@ func InitSuiteSchema(db *sql.DB) error {
 
 	if _, err := db.Exec(`CREATE INDEX IF NOT EXISTS idx_attachments_test_result_id ON attachments(test_result_id);`); err != nil {
 		return fmt.Errorf("failed to add attachments test_result_id index: %w", err)
+	}
+
+	// Agent-executed results carry the run that produced them (added with
+	// agent test execution), so reviewers can tell them from human results.
+	agentRunSQL := `
+	DO $$
+	BEGIN
+		IF NOT EXISTS (
+			SELECT 1 FROM information_schema.columns
+			WHERE table_name='test_results' AND column_name='executed_by_agent_run_id'
+		) THEN
+			ALTER TABLE test_results ADD COLUMN executed_by_agent_run_id UUID;
+		END IF;
+	END $$;
+	`
+
+	if _, err := db.Exec(agentRunSQL); err != nil {
+		return fmt.Errorf("failed to add test_results executed_by_agent_run_id column: %w", err)
 	}
 
 	return nil

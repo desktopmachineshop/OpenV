@@ -305,7 +305,9 @@ func main() {
 			if err := decodePayload(payload, &req); err != nil {
 				return "", err
 			}
-			result, err := vvService.UpsertResult(runID, req, nil, "system")
+			// Applying an approved proposal: a human signed off on this
+			// result, so it is not stamped as agent-executed.
+			result, err := vvService.UpsertResult(runID, req, nil, "system", "")
 			if err != nil {
 				return "", err
 			}
