@@ -422,6 +422,55 @@ func Tools() []Tool {
 			},
 		},
 		{
+			Name:        "list_work_items",
+			Description: "List a project's kanban board cards sorted by column and position (no descriptions or activity — use get_work_item for a card's detail). Optionally filter by board column and/or assignee ID.",
+			InputSchema: schema([]string{"project_id"}, map[string]interface{}{
+				"project_id":  str("Project ID"),
+				"column":      str("Optional board column filter: backlog, todo, in-progress, review or done"),
+				"assignee_id": str("Optional assignee ID filter (agent, user or team ID)"),
+			}),
+			Handler: func(c *Client, args map[string]interface{}) (string, error) {
+				column := strings.ToLower(strings.TrimSpace(strArg(args, "column")))
+				// Mirrors the board columns in internal/domain/workitems; kept
+				// local so the stdio binary stays dependency-free.
+				switch column {
+				case "", "backlog", "todo", "in-progress", "review", "done":
+				default:
+					return "", fmt.Errorf("unknown column %q: valid columns are backlog, todo, in-progress, review, done", column)
+				}
+				out, _, err := c.request("GET", "/api/v1/projects/"+strArg(args, "project_id")+"/work-items", nil, nil)
+				if err != nil {
+					return out, err
+				}
+				list, err := decodeList(out)
+				if err != nil {
+					return "", err
+				}
+				assignee := strArg(args, "assignee_id")
+				cards := make([]map[string]interface{}, 0, len(list))
+				for _, item := range list {
+					if column != "" && item["column"] != column {
+						continue
+					}
+					if assignee != "" && item["assignee_id"] != assignee {
+						continue
+					}
+					cards = append(cards, map[string]interface{}{
+						"id":            item["id"],
+						"title":         item["title"],
+						"column":        item["column"],
+						"sort_order":    item["sort_order"],
+						"assignee_type": item["assignee_type"],
+						"assignee_id":   item["assignee_id"],
+						"agent_run_id":  item["agent_run_id"],
+						"artifact_ids":  item["artifact_ids"],
+						"due_date":      item["due_date"],
+					})
+				}
+				return toJSON(cards)
+			},
+		},
+		{
 			Name:        "get_work_item",
 			Description: "Get a kanban work item with its activity.",
 			InputSchema: schema([]string{"id"}, map[string]interface{}{

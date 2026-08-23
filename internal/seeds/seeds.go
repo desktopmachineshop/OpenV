@@ -18,7 +18,7 @@ const leanContextRule = `
 
 Ground rules (always follow):
 - Requirements live in the OpenV database. Fetch each artifact you rely on via your OpenV tools (get_artifact, list_links_for_artifact, search_artifacts) before acting — never assume content and never work from pasted requirement dumps.
-- When working a kanban card, call get_work_item and get_work_item_history first; the card history is your working memory.
+- Find kanban cards with list_work_items (filter by column, e.g. "todo", or assignee) — never guess at card IDs. When working a card, call get_work_item and get_work_item_history first; the card history is your working memory.
 - Cite requirement IDs in every proposal, comment, and commit message.
 - If the task lacks the requirements you need, say so and stop.`
 
