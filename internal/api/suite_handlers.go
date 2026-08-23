@@ -10,6 +10,7 @@ import (
 	"github.com/gorilla/mux"
 
 	"github.com/openv/requirements-platform/internal/domain/agentruns"
+	"github.com/openv/requirements-platform/internal/domain/artifacts"
 	"github.com/openv/requirements-platform/internal/domain/events"
 	"github.com/openv/requirements-platform/internal/domain/exports"
 	"github.com/openv/requirements-platform/internal/domain/guided"
@@ -60,6 +61,7 @@ func (h *Handler) registerSuiteRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/projects/{id}/interviews", h.CreateInterview).Methods("POST")
 	router.HandleFunc("/api/v1/projects/{id}/interviews", h.ListInterviews).Methods("GET")
 	router.HandleFunc("/api/v1/interviews/{id}/close", h.CloseInterview).Methods("POST")
+	router.HandleFunc("/api/v1/interviews/{id}/persona", h.SetInterviewPersona).Methods("PUT")
 	router.HandleFunc("/api/v1/interviews/{id}/invites", h.CreateInterviewInvite).Methods("POST")
 	router.HandleFunc("/api/v1/interviews/{id}/invites", h.ListInterviewInvites).Methods("GET")
 	router.HandleFunc("/api/v1/interview-invites/{id}/revoke", h.RevokeInterviewInvite).Methods("POST")
@@ -602,13 +604,17 @@ func (h *Handler) CreateInterview(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req struct {
-		Name            string  `json:"name"`
-		Brief           string  `json:"brief"`
-		AgentSlug       string  `json:"agent_slug"`
-		GuidedSessionID *string `json:"guided_session_id"`
+		Name              string  `json:"name"`
+		Brief             string  `json:"brief"`
+		AgentSlug         string  `json:"agent_slug"`
+		GuidedSessionID   *string `json:"guided_session_id"`
+		PersonaArtifactID *string `json:"persona_artifact_id"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+	if !h.validPersonaForProject(w, req.PersonaArtifactID, projectID) {
 		return
 	}
 	var agentID *string
@@ -624,7 +630,7 @@ func (h *Handler) CreateInterview(w http.ResponseWriter, r *http.Request) {
 	if agent, err := h.agentService.GetBySlug(interviewOrg, slug); err == nil && agent != nil {
 		agentID = &agent.ID
 	}
-	interview, err := h.interviewService.CreateInterview(projectID, req.Name, req.Brief, agentID, req.GuidedSessionID, CurrentUserID(r))
+	interview, err := h.interviewService.CreateInterview(projectID, req.Name, req.Brief, agentID, req.GuidedSessionID, req.PersonaArtifactID, CurrentUserID(r))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -656,6 +662,54 @@ func (h *Handler) getInterviewChecked(w http.ResponseWriter, r *http.Request, mi
 		return nil
 	}
 	return interview
+}
+
+// validPersonaForProject checks that a persona artifact reference points at a
+// persona-type artifact in the given project. A nil reference is valid (the
+// link is optional). Writes an HTTP error and returns false when invalid.
+func (h *Handler) validPersonaForProject(w http.ResponseWriter, personaArtifactID *string, projectID string) bool {
+	if personaArtifactID == nil {
+		return true
+	}
+	artifact, err := h.artifactService.GetArtifact(*personaArtifactID)
+	if err != nil || artifact == nil {
+		http.Error(w, "persona artifact not found", http.StatusBadRequest)
+		return false
+	}
+	if artifact.ProjectID != projectID {
+		http.Error(w, "persona artifact belongs to a different project", http.StatusBadRequest)
+		return false
+	}
+	if artifact.Type != artifacts.TypePersona {
+		http.Error(w, "artifact is not a persona", http.StatusBadRequest)
+		return false
+	}
+	return true
+}
+
+// SetInterviewPersona links an interview to a persona artifact (or clears the
+// link when persona_artifact_id is null).
+func (h *Handler) SetInterviewPersona(w http.ResponseWriter, r *http.Request) {
+	interview := h.getInterviewChecked(w, r, members.RoleEditor)
+	if interview == nil {
+		return
+	}
+	var req struct {
+		PersonaArtifactID *string `json:"persona_artifact_id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+	if !h.validPersonaForProject(w, req.PersonaArtifactID, interview.ProjectID) {
+		return
+	}
+	updated, err := h.interviewService.SetInterviewPersona(interview.ID, req.PersonaArtifactID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	json.NewEncoder(w).Encode(updated)
 }
 
 func (h *Handler) CloseInterview(w http.ResponseWriter, r *http.Request) {
@@ -853,6 +907,14 @@ func (h *Handler) launchInterviewTurn(interview *interviews.Interview, session *
 	var b strings.Builder
 	b.WriteString("You are conducting a requirements-elicitation interview.\n\n")
 	b.WriteString("Interview brief: " + interview.Brief + "\n")
+	if interview.PersonaArtifactID != nil {
+		if persona, err := h.artifactService.GetArtifact(*interview.PersonaArtifactID); err == nil && persona != nil {
+			b.WriteString("Target persona: " + persona.Title + "\n")
+			if persona.Body != "" {
+				b.WriteString("Persona description: " + persona.Body + "\n")
+			}
+		}
+	}
 	if profile != nil {
 		if profile.Vision != "" {
 			b.WriteString("Product vision: " + profile.Vision + "\n")

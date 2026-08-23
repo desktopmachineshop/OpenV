@@ -465,6 +465,7 @@ export interface GuidedSession {
 export interface Interview {
   id: string;
   project_id: string;
+  persona_artifact_id?: string | null;
   name: string;
   brief: string;
   status: string;
@@ -941,11 +942,15 @@ export const guidedAPI = {
 };
 
 export const interviewsAPI = {
-  create: (projectId: string, payload: { name: string; brief: string; agent_slug?: string }) =>
-    client.post<Interview>(`/api/v1/projects/${projectId}/interviews`, payload),
+  create: (
+    projectId: string,
+    payload: { name: string; brief: string; agent_slug?: string; persona_artifact_id?: string | null }
+  ) => client.post<Interview>(`/api/v1/projects/${projectId}/interviews`, payload),
   list: (projectId: string) =>
     client.get<Interview[]>(`/api/v1/projects/${projectId}/interviews`),
   close: (id: string) => client.post<Interview>(`/api/v1/interviews/${id}/close`),
+  setPersona: (id: string, personaArtifactId: string | null) =>
+    client.put<Interview>(`/api/v1/interviews/${id}/persona`, { persona_artifact_id: personaArtifactId }),
   createInvite: (interviewId: string, inviteeLabel?: string) =>
     client.post<{ invite: any; token: string; path: string }>(
       `/api/v1/interviews/${interviewId}/invites`,
