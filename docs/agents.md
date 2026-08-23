@@ -55,9 +55,14 @@ environment only and are **never stored** by the platform.
 When you launch a run and your personal runner is online, the run is
 **reserved for your runner** for a grace period (default **60 seconds**,
 org-tunable via the workspace limit `runner_grace_seconds`). If your runner
-does not claim it in time, the hosted/workspace runners take over. Runs
-launched by automations, or by members with no online personal runner, are
-claimable by the hosted runner immediately.
+does not claim it in time, the hosted/workspace runners take over.
+
+**Ownerless runs** — launched by the system rather than a member: board
+triggers, automations, delegations between agents — are claimable by **any
+live runner** in the workspace (personal, workspace, or hosted) immediately,
+first come first served, so the load spreads across every runner that is
+online. Runs another member launched are never routed to your personal
+runner; they stay with that member's runner or the workspace/hosted pool.
 
 ### Compliance note
 
