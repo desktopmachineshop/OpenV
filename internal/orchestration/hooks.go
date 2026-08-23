@@ -126,11 +126,7 @@ func (h *Hooks) syncWorkItem(run *agentruns.Run) {
 	case agentruns.StatusRunning:
 		_ = h.workItemService.RecordRunActivity(*run.WorkItemID, workitems.KindRunStarted, "Run started", actor, map[string]interface{}{"run_id": run.ID})
 	case agentruns.StatusSucceeded, agentruns.StatusAwaitingApproval:
-		summary := run.FinalText
-		if len(summary) > 500 {
-			summary = summary[:500] + "…"
-		}
-		_ = h.workItemService.RecordRunActivity(*run.WorkItemID, workitems.KindRunFinished, summary, actor, map[string]interface{}{"run_id": run.ID, "status": run.Status})
+		_ = h.workItemService.RecordRunActivity(*run.WorkItemID, workitems.KindRunFinished, agentruns.TruncateAnswer(run.FinalText), actor, map[string]interface{}{"run_id": run.ID, "status": run.Status})
 	case agentruns.StatusFailed, agentruns.StatusCancelled, agentruns.StatusTimedOut:
 		_ = h.workItemService.RecordRunActivity(*run.WorkItemID, workitems.KindRunFailed, run.Error, actor, map[string]interface{}{"run_id": run.ID, "status": run.Status})
 	}
@@ -177,10 +173,7 @@ func (h *Hooks) launchSuccessor(run *agentruns.Run, edge *teams.Edge, edgeType s
 		return
 	}
 
-	output := run.FinalText
-	if len(output) > 4000 {
-		output = output[:4000] + "…"
-	}
+	output := agentruns.TruncateAnswer(run.FinalText)
 
 	var prompt string
 	if template, ok := edge.Config["prompt_template"].(string); ok && strings.TrimSpace(template) != "" {
