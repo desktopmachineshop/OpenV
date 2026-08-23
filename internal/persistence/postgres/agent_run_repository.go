@@ -201,7 +201,11 @@ func (rep *AgentRunRepository) Claim(workerID string, orgID string, workerUserID
 			  AND a.provider = ANY($2)
 			  AND r.priority >= $3
 			  AND (
-			    ($5 <> '' AND r.launched_by = $5::uuid)
+			    -- Personal runners take their owner's runs plus ownerless
+			    -- (system-launched) ones, so board/automation work load-shares
+			    -- across every live runner. Runs another member launched stay
+			    -- reserved for that member's runner or the workspace pool.
+			    ($5 <> '' AND (r.launched_by = $5::uuid OR r.launched_by IS NULL))
 			    OR
 			    ($5 = '' AND (r.preferred_user_id IS NULL OR r.hosted_after <= NOW()))
 			  )

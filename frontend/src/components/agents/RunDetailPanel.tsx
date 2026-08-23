@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { AgentRun, agentRunsAPI, RunLogEntry } from '../../api/client';
+import { ExpandableText } from '../ExpandableText';
 
 const TERMINAL_STATUSES = ['succeeded', 'failed', 'timed_out', 'cancelled'];
 
@@ -42,13 +43,12 @@ const logLine = (entry: RunLogEntry, idx: number): React.ReactNode => {
       } catch {
         argsText = String(args);
       }
-      if (argsText.length > 300) argsText = argsText.slice(0, 300) + '…';
       return (
         <div
           key={`${entry.seq}-${idx}`}
-          style={{ fontFamily: 'monospace', fontSize: 12, color: '#3498db', margin: '3px 0' }}
+          style={{ fontFamily: 'monospace', fontSize: 12, color: '#3498db', margin: '3px 0', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
         >
-          → tool: {name}({argsText})
+          → tool: {name}(<ExpandableText text={argsText} limit={300} />)
         </div>
       );
     }
@@ -61,13 +61,12 @@ const logLine = (entry: RunLogEntry, idx: number): React.ReactNode => {
           text = String(text);
         }
       }
-      if (text.length > 400) text = text.slice(0, 400) + '…';
       return (
         <div
           key={`${entry.seq}-${idx}`}
-          style={{ fontFamily: 'monospace', fontSize: 12, color: '#95a5a6', margin: '3px 0', whiteSpace: 'pre-wrap' }}
+          style={{ fontFamily: 'monospace', fontSize: 12, color: '#95a5a6', margin: '3px 0', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
         >
-          {text}
+          <ExpandableText text={text} limit={400} />
         </div>
       );
     }
@@ -84,9 +83,9 @@ const logLine = (entry: RunLogEntry, idx: number): React.ReactNode => {
       return (
         <div
           key={`${entry.seq}-${idx}`}
-          style={{ fontSize: 13, color: '#2c3e50', margin: '4px 0', whiteSpace: 'pre-wrap' }}
+          style={{ fontSize: 13, color: '#2c3e50', margin: '4px 0', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
         >
-          {typeof p.text === 'string' ? p.text : JSON.stringify(p)}
+          <ExpandableText text={typeof p.text === 'string' ? p.text : JSON.stringify(p)} limit={1500} />
         </div>
       );
   }

@@ -6,6 +6,7 @@ import {
   WorkItemActivity,
   workItemsAPI,
 } from '../../api/client';
+import { ExpandableText } from '../ExpandableText';
 
 interface WorkItemDrawerProps {
   workItemId: string;
@@ -253,7 +254,7 @@ export const WorkItemDrawer: React.FC<WorkItemDrawerProps> = ({
                 {new Date(a.created_at).toLocaleString()}
               </div>
               <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', color: '#2c3e50' }}>
-                {a.content}
+                <ExpandableText text={a.content || ''} limit={600} />
               </div>
             </div>
           ))}
