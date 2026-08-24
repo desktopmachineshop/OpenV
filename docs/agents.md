@@ -115,11 +115,13 @@ Each project chooses how its runs authenticate (Project settings → Agents):
 
 ## Per-user repo locations
 
-Repo connections carry a shared default local path, but each member can set
-**their own** local path per repository (Project settings → Repositories →
-"your local path") since the checkout lives somewhere different on every
-machine. Personal runners automatically receive the claiming member's path;
-members without one fall back to the shared default.
+A repo connection identifies the repository itself — name, repository URL
+(required, e.g. a GitHub remote), default branch. The checkout location is
+always per-member, since the clone lives somewhere different on every
+machine, so each member sets **their own** local path per repository (Project
+settings → Repositories → "your local path"). Personal runners automatically
+receive the claiming member's path; runs for a member without one clone the
+repository URL instead.
 
 ## Configure a runner key
 

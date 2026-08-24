@@ -8,20 +8,21 @@ import (
 )
 
 // RepoConnection links a project to a git repository agents may work in.
+// RemoteURL identifies the repository; every member works from their own
+// clone of it (MyLocalPath).
 type RepoConnection struct {
 	ID                 string    `json:"id"`
 	ProjectID          string    `json:"project_id"`
 	Name               string    `json:"name"`
 	RemoteURL          string    `json:"remote_url"`
-	LocalPath          string    `json:"local_path"`
 	DefaultBranch      string    `json:"default_branch"`
 	CredentialStrategy string    `json:"credential_strategy"` // always "host": agents use the host's git credentials
 	CreatedAt          time.Time `json:"created_at"`
 	UpdatedAt          time.Time `json:"updated_at"`
 
-	// MyLocalPath is the calling user's per-user override of LocalPath —
-	// runs on each member's own machine use their own checkout location.
-	// Populated on user-scoped reads only; never stored on this row.
+	// MyLocalPath is where this repo lives on the calling user's machine.
+	// Checkout locations are per-user because runs happen on each member's
+	// own machine. Populated on user-scoped reads only; stored separately.
 	MyLocalPath string `json:"my_local_path,omitempty"`
 }
 
@@ -30,7 +31,6 @@ type CreateRequest struct {
 	ProjectID     string `json:"project_id"`
 	Name          string `json:"name"`
 	RemoteURL     string `json:"remote_url"`
-	LocalPath     string `json:"local_path"`
 	DefaultBranch string `json:"default_branch"`
 }
 
@@ -38,7 +38,6 @@ type CreateRequest struct {
 type UpdateRequest struct {
 	Name          *string `json:"name,omitempty"`
 	RemoteURL     *string `json:"remote_url,omitempty"`
-	LocalPath     *string `json:"local_path,omitempty"`
 	DefaultBranch *string `json:"default_branch,omitempty"`
 }
 
@@ -50,10 +49,10 @@ type Repository interface {
 	FindByID(id string) (*RepoConnection, error)
 	ListByProject(projectID string) ([]*RepoConnection, error)
 	Delete(id string) error
-	// SetUserPath stores a user's local-path override for a connection
-	// (empty path removes the override).
+	// SetUserPath stores a user's local path for a connection (an empty
+	// path removes it).
 	SetUserPath(userID, connID, path string) error
-	// UserPaths returns a user's overrides for a project's connections,
+	// UserPaths returns a user's local paths for a project's connections,
 	// keyed by connection id.
 	UserPaths(userID, projectID string) (map[string]string, error)
 }
@@ -67,8 +66,8 @@ type Service interface {
 	// per-user local paths attached (MyLocalPath).
 	ListByProjectForUser(projectID, userID string) ([]*RepoConnection, error)
 	Update(id string, req UpdateRequest) (*RepoConnection, error)
-	// SetMyPath stores (or clears, with an empty path) a user's local-path
-	// override for a connection.
+	// SetMyPath stores (or clears, with an empty path) a user's local path
+	// for a connection.
 	SetMyPath(userID, connID, path string) error
 	Delete(id string) error
 }
@@ -91,8 +90,8 @@ func (s *DefaultService) Create(req CreateRequest) (*RepoConnection, error) {
 	if req.Name == "" {
 		return nil, errors.New("name is required")
 	}
-	if req.RemoteURL == "" && req.LocalPath == "" {
-		return nil, errors.New("at least one of remote_url or local_path is required")
+	if req.RemoteURL == "" {
+		return nil, errors.New("remote_url is required")
 	}
 
 	branch := req.DefaultBranch
@@ -106,7 +105,6 @@ func (s *DefaultService) Create(req CreateRequest) (*RepoConnection, error) {
 		ProjectID:          req.ProjectID,
 		Name:               req.Name,
 		RemoteURL:          req.RemoteURL,
-		LocalPath:          req.LocalPath,
 		DefaultBranch:      branch,
 		CredentialStrategy: "host",
 		CreatedAt:          now,
@@ -186,19 +184,16 @@ func (s *DefaultService) Update(id string, req UpdateRequest) (*RepoConnection, 
 		c.Name = *req.Name
 	}
 	if req.RemoteURL != nil {
+		if *req.RemoteURL == "" {
+			return nil, errors.New("remote_url is required")
+		}
 		c.RemoteURL = *req.RemoteURL
-	}
-	if req.LocalPath != nil {
-		c.LocalPath = *req.LocalPath
 	}
 	if req.DefaultBranch != nil {
 		c.DefaultBranch = *req.DefaultBranch
 		if c.DefaultBranch == "" {
 			c.DefaultBranch = "main"
 		}
-	}
-	if c.RemoteURL == "" && c.LocalPath == "" {
-		return nil, errors.New("at least one of remote_url or local_path is required")
 	}
 	c.CredentialStrategy = "host"
 

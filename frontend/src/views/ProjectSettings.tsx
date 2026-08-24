@@ -42,11 +42,10 @@ interface RepoForm {
   id: string;
   name: string;
   remote_url: string;
-  local_path: string;
   default_branch: string;
 }
 
-const emptyRepoForm: RepoForm = { id: '', name: '', remote_url: '', local_path: '', default_branch: 'main' };
+const emptyRepoForm: RepoForm = { id: '', name: '', remote_url: '', default_branch: 'main' };
 
 export const ProjectSettings: React.FC = () => {
   const params = useParams<{ projectId: string }>();
@@ -227,14 +226,13 @@ export const ProjectSettings: React.FC = () => {
 
   const handleSaveRepo = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!projectId || !repoForm.name.trim()) return;
+    if (!projectId || !repoForm.name.trim() || !repoForm.remote_url.trim()) return;
     setSavingRepo(true);
     setError('');
     try {
       const payload = {
         name: repoForm.name.trim(),
         remote_url: repoForm.remote_url.trim(),
-        local_path: repoForm.local_path.trim(),
         default_branch: repoForm.default_branch.trim() || 'main',
       };
       if (repoForm.id) {
@@ -655,8 +653,9 @@ export const ProjectSettings: React.FC = () => {
               </button>
             </div>
             <p style={{ fontSize: 13, color: '#7f8c8d' }}>
-              Repositories give coding agents somewhere to work. A local path is preferred for the
-              local-first setup; credentials come from the host machine's git configuration.
+              Repositories give coding agents somewhere to work. The connection identifies the
+              GitHub repository; each member points it at their own clone below. Credentials come
+              from the host machine's git configuration.
             </p>
 
             {showRepoForm && (
@@ -671,15 +670,7 @@ export const ProjectSettings: React.FC = () => {
                   />
                 </div>
                 <div className="form-group">
-                  <label>Local path</label>
-                  <input
-                    value={repoForm.local_path}
-                    onChange={(e) => setRepoForm({ ...repoForm, local_path: e.target.value })}
-                    placeholder="C:\\path\\to\\repo (preferred for local-first)"
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Remote URL</label>
+                  <label>Repository URL *</label>
                   <input
                     value={repoForm.remote_url}
                     onChange={(e) => setRepoForm({ ...repoForm, remote_url: e.target.value })}
@@ -694,7 +685,11 @@ export const ProjectSettings: React.FC = () => {
                     placeholder="main"
                   />
                 </div>
-                <button type="submit" className="button" disabled={savingRepo || !repoForm.name.trim()}>
+                <button
+                  type="submit"
+                  className="button"
+                  disabled={savingRepo || !repoForm.name.trim() || !repoForm.remote_url.trim()}
+                >
                   {savingRepo ? 'Saving…' : repoForm.id ? 'Update repository' : 'Connect repository'}
                 </button>
               </form>
@@ -719,7 +714,7 @@ export const ProjectSettings: React.FC = () => {
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontWeight: 600, fontSize: 14, color: '#2c3e50' }}>{r.name}</div>
                       <div style={{ fontSize: 12, color: '#7f8c8d', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {r.local_path || r.remote_url || 'no location set'}
+                        {r.remote_url || 'no repository URL — edit to add one'}
                         {r.default_branch ? ` · ${r.default_branch}` : ''}
                       </div>
                     </div>
@@ -731,7 +726,6 @@ export const ProjectSettings: React.FC = () => {
                           id: r.id,
                           name: r.name,
                           remote_url: r.remote_url,
-                          local_path: r.local_path,
                           default_branch: r.default_branch || 'main',
                         });
                         setShowRepoForm(true);
@@ -753,7 +747,7 @@ export const ProjectSettings: React.FC = () => {
                     <input
                       value={myPaths[r.id] ?? ''}
                       onChange={(e) => setMyPaths({ ...myPaths, [r.id]: e.target.value })}
-                      placeholder="where this repo lives on YOUR machine (falls back to the shared path)"
+                      placeholder="where this repo lives on YOUR machine"
                       style={{ flex: 1, padding: '5px 8px', fontSize: 12 }}
                     />
                     <button
@@ -771,8 +765,8 @@ export const ProjectSettings: React.FC = () => {
             {!reposLoading && repos.length > 0 && (
               <p style={{ fontSize: 12, color: '#7f8c8d', marginTop: 10, marginBottom: 0 }}>
                 Agents run on each member's own machine, so “your local path” tells your runner
-                where this repo lives for <b>you</b>. Members without one set fall back to the
-                connection's shared path.
+                where this repo lives for <b>you</b>. Without one set, your runs clone the remote
+                URL instead.
               </p>
             )}
           </div>
