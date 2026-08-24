@@ -245,6 +245,7 @@ func (s *FileService) syncOne(orgID string, def *Definition, path, content strin
 		existing.Description = def.Description
 		existing.Provider = def.Provider
 		existing.Model = def.Model
+		existing.Effort = def.Effort
 		existing.AllowedTools = def.AllowedTools
 		existing.WriteMode = def.WriteMode
 		existing.RepoAccess = def.RepoAccess
@@ -270,6 +271,7 @@ func (s *FileService) syncOne(orgID string, def *Definition, path, content strin
 		Description:    def.Description,
 		Provider:       def.Provider,
 		Model:          def.Model,
+		Effort:         def.Effort,
 		AllowedTools:   def.AllowedTools,
 		WriteMode:      def.WriteMode,
 		RepoAccess:     def.RepoAccess,

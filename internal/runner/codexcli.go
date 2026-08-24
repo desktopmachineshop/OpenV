@@ -57,6 +57,14 @@ func (a *CodexCLIAdapter) Start(ctx context.Context, spec RunSpec) (RunHandle, e
 	if spec.Model != "" {
 		args = append(args, "--model", spec.Model)
 	}
+	if spec.Effort != "" {
+		// Codex tops out at "high"; map the taller Claude tiers down.
+		effort := spec.Effort
+		if effort == "xhigh" || effort == "max" {
+			effort = "high"
+		}
+		args = append(args, "-c", "model_reasoning_effort="+effort)
+	}
 	args = append(args, "--sandbox", "workspace-write", "--skip-git-repo-check")
 
 	prompt := spec.Prompt

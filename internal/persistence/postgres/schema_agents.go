@@ -16,6 +16,7 @@ func InitAgentSchema(db *sql.DB) error {
 		description TEXT NOT NULL DEFAULT '',
 		provider VARCHAR(64) NOT NULL,
 		model VARCHAR(128) NOT NULL DEFAULT '',
+		effort VARCHAR(16) NOT NULL DEFAULT '',
 		allowed_tools JSONB NOT NULL DEFAULT '[]',
 		write_mode VARCHAR(32) NOT NULL DEFAULT 'proposal',
 		repo_access BOOLEAN NOT NULL DEFAULT FALSE,
@@ -309,6 +310,22 @@ func InitAgentSchema(db *sql.DB) error {
 	`
 	if _, err := db.Exec(guidedSQL); err != nil {
 		return fmt.Errorf("failed to add agent run guided_session_id column: %w", err)
+	}
+
+	// Per-agent reasoning effort (added with the agent-settings effort field).
+	effortSQL := `
+	DO $$
+	BEGIN
+		IF NOT EXISTS (
+			SELECT 1 FROM information_schema.columns
+			WHERE table_name='agents' AND column_name='effort'
+		) THEN
+			ALTER TABLE agents ADD COLUMN effort VARCHAR(16) NOT NULL DEFAULT '';
+		END IF;
+	END $$;
+	`
+	if _, err := db.Exec(effortSQL); err != nil {
+		return fmt.Errorf("failed to add agent effort column: %w", err)
 	}
 
 	return nil

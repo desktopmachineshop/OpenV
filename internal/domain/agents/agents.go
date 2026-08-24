@@ -11,6 +11,24 @@ const (
 	WriteModeDirect   = "direct"
 )
 
+// Reasoning effort levels ("" = provider default). Providers that support
+// fewer tiers map the higher ones down; providers with no effort control
+// ignore the setting.
+var EffortLevels = []string{"low", "medium", "high", "xhigh", "max"}
+
+// ValidEffort reports whether v is an allowed effort value.
+func ValidEffort(v string) bool {
+	if v == "" {
+		return true
+	}
+	for _, e := range EffortLevels {
+		if v == e {
+			return true
+		}
+	}
+	return false
+}
+
 // ErrNotFound is returned when an agent doesn't exist.
 var ErrNotFound = errors.New("agent not found")
 
@@ -25,6 +43,7 @@ type Agent struct {
 	Description    string                 `json:"description"`
 	Provider       string                 `json:"provider"`
 	Model          string                 `json:"model"`
+	Effort         string                 `json:"effort"`
 	AllowedTools   []string               `json:"allowed_tools"`
 	WriteMode      string                 `json:"write_mode"`
 	RepoAccess     bool                   `json:"repo_access"`
@@ -47,6 +66,7 @@ type Definition struct {
 	Description    string                 `json:"description" yaml:"description,omitempty"`
 	Provider       string                 `json:"provider" yaml:"provider"`
 	Model          string                 `json:"model" yaml:"model,omitempty"`
+	Effort         string                 `json:"effort" yaml:"effort,omitempty"`
 	AllowedTools   []string               `json:"allowed_tools" yaml:"allowed_tools,omitempty"`
 	WriteMode      string                 `json:"write_mode" yaml:"write_mode,omitempty"`
 	RepoAccess     bool                   `json:"repo_access" yaml:"repo_access,omitempty"`
@@ -73,6 +93,9 @@ func (d *Definition) Validate() error {
 	case WriteModeProposal, WriteModeDirect:
 	default:
 		return errors.New("write_mode must be 'proposal' or 'direct'")
+	}
+	if !ValidEffort(d.Effort) {
+		return errors.New("effort must be one of low, medium, high, xhigh, max (or empty for the provider default)")
 	}
 	if d.MaxTurns <= 0 {
 		d.MaxTurns = 50

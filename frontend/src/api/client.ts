@@ -505,6 +505,7 @@ export interface AgentDef {
   description: string;
   provider: string;
   model: string;
+  effort: string;
   allowed_tools: string[];
   write_mode: 'proposal' | 'direct';
   repo_access: boolean;

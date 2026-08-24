@@ -241,6 +241,7 @@ func (w *Worker) execute(ctx context.Context, claim *ClaimResponse) {
 		// stay inside the budget the log windows are sized for.
 		SystemPrompt: strings.TrimSpace(claim.Agent.SystemPrompt + agentruns.AnswerLengthRule),
 		Model:        claim.Agent.Model,
+		Effort:       claim.Agent.Effort,
 		MCP: MCPServerConfig{
 			Command: w.mcpBinary,
 			Env:     env,

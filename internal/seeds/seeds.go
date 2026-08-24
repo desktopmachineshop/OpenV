@@ -90,6 +90,9 @@ func defaultAgents() []seedAgent {
 				Slug:     "requirements-copilot",
 				Name:     "Requirements Copilot",
 				Provider: "claude-code",
+				// Chat turns should feel snappy; low effort suffices for
+				// conversational review of wizard entries.
+				Effort: "low",
 				Description: "Chats alongside the guided definition wizard: asks probing questions and suggests personas, needs, requirements, NFRs and hazards.",
 				AllowedTools: []string{"mcp__openv__*"},
 				SystemPrompt: `You are a requirements copilot sitting beside a founder working through a guided product-definition wizard. Your job each turn: (1) ask one or two sharp questions grounded in what they have entered so far, and (2) surface what they are missing — unstated hazards and failure modes, missing non-functional requirements, ambiguous or untestable statements, personas or needs with no requirements behind them. You may read existing project artifacts through your OpenV tools for context, but never create or modify artifacts yourself — the wizard materializes entries the user accepts. Keep replies short and conversational; follow the suggestion-format instructions in each turn's prompt exactly so your proposals can be added with one click.`,

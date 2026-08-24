@@ -108,6 +108,9 @@ func (a *ClaudeCodeAdapter) Start(ctx context.Context, spec RunSpec) (RunHandle,
 	if spec.Model != "" {
 		args = append(args, "--model", spec.Model)
 	}
+	if spec.Effort != "" {
+		args = append(args, "--effort", spec.Effort)
+	}
 	if len(spec.AllowedTools) > 0 {
 		args = append(args, "--allowedTools", strings.Join(spec.AllowedTools, ","))
 	}
