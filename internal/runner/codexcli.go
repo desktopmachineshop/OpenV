@@ -63,13 +63,16 @@ func (a *CodexCLIAdapter) Start(ctx context.Context, spec RunSpec) (RunHandle, e
 	if spec.SystemPrompt != "" {
 		prompt = "System instructions:\n" + spec.SystemPrompt + "\n\nTask:\n" + spec.Prompt
 	}
-	args = append(args, prompt)
+	// "-" makes codex exec read the prompt from stdin — prompts can exceed
+	// the ~32K Windows command-line limit.
+	args = append(args, "-")
 
 	return startProc(ctx, procConfig{
 		Command:    "codex",
 		Args:       args,
 		Dir:        spec.WorkDir,
 		Env:        spec.Env,
+		Stdin:      prompt,
 		TimeoutSec: spec.TimeoutSec,
 	}, &codexParser{})
 }

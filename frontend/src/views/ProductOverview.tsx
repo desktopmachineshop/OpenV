@@ -2,9 +2,11 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import {
   artifactAPI,
+  guidedAPI,
   interviewsAPI,
   productProfileAPI,
   Artifact,
+  GuidedSession,
   Interview,
   InterviewMessage,
   InterviewSession,
@@ -66,6 +68,9 @@ export const ProductOverview: React.FC = () => {
   const [savingMetrics, setSavingMetrics] = useState(false);
   const [savingConstraints, setSavingConstraints] = useState(false);
 
+  // Guided definition sessions (drives the guided CTA label)
+  const [guidedSessions, setGuidedSessions] = useState<GuidedSession[]>([]);
+
   // Interviews
   const [interviews, setInterviews] = useState<Interview[]>([]);
   const [showNewInterview, setShowNewInterview] = useState(false);
@@ -85,10 +90,11 @@ export const ProductOverview: React.FC = () => {
     if (!projectId) return;
     setLoading(true);
     try {
-      const [profileRes, artifactsRes, interviewsRes] = await Promise.all([
+      const [profileRes, artifactsRes, interviewsRes, guidedRes] = await Promise.all([
         productProfileAPI.get(projectId),
         artifactAPI.list(projectId),
         interviewsAPI.list(projectId).catch(() => ({ data: [] as Interview[] })),
+        guidedAPI.list(projectId).catch(() => ({ data: [] as GuidedSession[] })),
       ]);
       const p = profileRes.data;
       setProfile(p);
@@ -111,6 +117,7 @@ export const ProductOverview: React.FC = () => {
       );
       setArtifacts(artifactsRes.data || []);
       setInterviews(interviewsRes.data || []);
+      setGuidedSessions(guidedRes.data || []);
       setError('');
     } catch (err: any) {
       setError(`Failed to load product overview: ${err.response?.data || err.message}`);
@@ -292,6 +299,18 @@ export const ProductOverview: React.FC = () => {
     return <div style={{ padding: 32, color: '#7f8c8d' }}>Loading product overview…</div>;
   }
 
+  // Label the guided CTA by where the project actually is: a session in
+  // progress resumes, a committed one reopens for modification.
+  const guidedInProgress = guidedSessions.some(
+    (s) => s.status === 'in-progress' || s.status === 'in_progress'
+  );
+  const guidedCommitted = guidedSessions.some((s) => s.status === 'committed');
+  const guidedCtaLabel = guidedInProgress
+    ? 'Resume guided definition'
+    : guidedCommitted
+    ? 'Modify guided definition'
+    : 'Start guided definition';
+
   return (
     <div style={{ padding: 24, maxWidth: 1100, margin: '0 auto' }}>
       <h2 style={{ color: '#2c3e50', marginBottom: 4 }}>Product Overview</h2>
@@ -324,7 +343,7 @@ export const ProductOverview: React.FC = () => {
       {/* Quick links */}
       <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
         <Link to="guided" className="button" style={{ background: '#3498db', textDecoration: 'none' }}>
-          Start guided definition
+          {guidedCtaLabel}
         </Link>
         <Link to="vv" className="button-secondary" style={{ textDecoration: 'none' }}>
           V&amp;V dashboard

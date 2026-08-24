@@ -36,6 +36,16 @@ func InitSuiteSchema(db *sql.DB) error {
 
 	CREATE INDEX IF NOT EXISTS idx_guided_sessions_project_id ON guided_sessions(project_id);
 
+	CREATE TABLE IF NOT EXISTS guided_session_messages (
+		id UUID PRIMARY KEY,
+		session_id UUID NOT NULL REFERENCES guided_sessions(id) ON DELETE CASCADE,
+		role VARCHAR(32) NOT NULL,
+		content TEXT NOT NULL,
+		created_at TIMESTAMP NOT NULL DEFAULT NOW()
+	);
+
+	CREATE INDEX IF NOT EXISTS idx_guided_session_messages_session ON guided_session_messages(session_id, created_at);
+
 	CREATE TABLE IF NOT EXISTS test_runs (
 		id UUID PRIMARY KEY,
 		project_id UUID NOT NULL,

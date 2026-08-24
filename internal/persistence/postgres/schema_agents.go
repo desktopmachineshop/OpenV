@@ -44,6 +44,7 @@ func InitAgentSchema(db *sql.DB) error {
 		parent_run_id UUID,
 		work_item_id UUID,
 		interview_session_id UUID,
+		guided_session_id UUID,
 		status VARCHAR(32) NOT NULL DEFAULT 'queued',
 		cancel_requested BOOLEAN NOT NULL DEFAULT FALSE,
 		priority INT NOT NULL DEFAULT 0,
@@ -291,6 +292,23 @@ func InitAgentSchema(db *sql.DB) error {
 	`
 	if _, err := db.Exec(dropSharedPathSQL); err != nil {
 		return fmt.Errorf("failed to drop shared repo connection local_path: %w", err)
+	}
+
+	// Guided-copilot turn runs link back to their guided session (added with
+	// the in-wizard AI chat).
+	guidedSQL := `
+	DO $$
+	BEGIN
+		IF NOT EXISTS (
+			SELECT 1 FROM information_schema.columns
+			WHERE table_name='agent_runs' AND column_name='guided_session_id'
+		) THEN
+			ALTER TABLE agent_runs ADD COLUMN guided_session_id UUID;
+		END IF;
+	END $$;
+	`
+	if _, err := db.Exec(guidedSQL); err != nil {
+		return fmt.Errorf("failed to add agent run guided_session_id column: %w", err)
 	}
 
 	return nil

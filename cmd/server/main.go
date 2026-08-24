@@ -327,7 +327,7 @@ func main() {
 	// SSE hub + orchestration hooks.
 	sseHub := api.NewSSEHub()
 	runService.AddSubscriber(sseHub)
-	hooks := orchestration.NewHooks(runService, teamService, workItemService, interviewService, projectService, sseHub)
+	hooks := orchestration.NewHooks(runService, teamService, workItemService, interviewService, guidedService, projectService, sseHub)
 	runService.AddSubscriber(hooks)
 	hooks.SubscribeBus(bus)
 

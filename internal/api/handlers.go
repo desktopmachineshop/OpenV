@@ -283,6 +283,17 @@ func (h *Handler) CreateArtifact(w http.ResponseWriter, r *http.Request) {
 		req.Attributes["interview_session_id"] = *run.InterviewSessionID
 	}
 
+	// Likewise for guided-copilot turn runs: anything they create is a
+	// guided-flow-tagged draft.
+	if run := CurrentRun(r); run != nil && run.GuidedSessionID != nil {
+		if req.Attributes == nil {
+			req.Attributes = map[string]interface{}{}
+		}
+		req.Attributes["status"] = "draft"
+		req.Attributes["origin"] = "guided-flow"
+		req.Attributes["guided_session_id"] = *run.GuidedSessionID
+	}
+
 	if h.maybePropose(w, r, req.ProjectID, proposals.OpCreateArtifact, nil, req) {
 		return
 	}

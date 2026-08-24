@@ -85,6 +85,7 @@ type Run struct {
 	ParentRunID        *string                  `json:"parent_run_id,omitempty"`
 	WorkItemID         *string                  `json:"work_item_id,omitempty"`
 	InterviewSessionID *string                  `json:"interview_session_id,omitempty"`
+	GuidedSessionID    *string                  `json:"guided_session_id,omitempty"`
 	Status             string                   `json:"status"`
 	CancelRequested    bool                     `json:"cancel_requested"`
 	Priority           int                      `json:"priority"`
@@ -134,6 +135,7 @@ type LaunchRequest struct {
 	ParentRunID        *string
 	WorkItemID         *string
 	InterviewSessionID *string
+	GuidedSessionID    *string
 	Priority           int
 	Prompt             string
 	LaunchedBy         *string
@@ -301,6 +303,7 @@ func (s *DefaultService) Launch(req LaunchRequest) (*Run, string, error) {
 		ParentRunID:        req.ParentRunID,
 		WorkItemID:         req.WorkItemID,
 		InterviewSessionID: req.InterviewSessionID,
+		GuidedSessionID:    req.GuidedSessionID,
 		Status:             StatusQueued,
 		Priority:           req.Priority,
 		Prompt:             req.Prompt,

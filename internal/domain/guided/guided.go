@@ -21,10 +21,18 @@ const (
 	StatusAbandoned  = "abandoned"
 )
 
+// Chat message roles for the in-wizard copilot conversation.
+const (
+	ChatRoleAssistant = "assistant"
+	ChatRoleUser      = "user"
+	ChatRoleSystem    = "system"
+)
+
 // Error definitions
 var (
 	ErrSessionNotFound   = errors.New("guided session not found")
 	ErrSessionNotEditable = errors.New("guided session is not in progress")
+	ErrInvalidChatRole   = errors.New("invalid chat message role")
 )
 
 // Session is one pass through the guided product definition flow.
@@ -39,6 +47,15 @@ type Session struct {
 	CreatedBy        *string                `json:"created_by,omitempty"`
 	CreatedAt        time.Time              `json:"created_at"`
 	UpdatedAt        time.Time              `json:"updated_at"`
+}
+
+// ChatMessage is one turn in a session's copilot conversation.
+type ChatMessage struct {
+	ID        string    `json:"id"`
+	SessionID string    `json:"session_id"`
+	Role      string    `json:"role"`
+	Content   string    `json:"content"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 // DraftLink describes a link to create from a draft artifact.
@@ -63,6 +80,9 @@ type Repository interface {
 	Update(s *Session) error
 	FindByID(id string) (*Session, error)
 	ListByProject(projectID string) ([]*Session, error)
+
+	SaveChatMessage(m *ChatMessage) error
+	ListChatMessages(sessionID string) ([]*ChatMessage, error)
 }
 
 // Service defines guided flow domain logic.
@@ -74,6 +94,10 @@ type Service interface {
 	MaterializeDrafts(sessionID string, drafts []DraftSpec) ([]string, error)
 	Commit(sessionID string) (*Session, error)
 	Abandon(sessionID string) (*Session, error)
+
+	AppendChatMessage(sessionID, role, content string) (*ChatMessage, error)
+	GetChatTranscript(sessionID string) ([]*ChatMessage, error)
+	AttachAgentRun(sessionID, runID string) error
 }
 
 // DefaultService implements the Service interface.
@@ -282,6 +306,49 @@ func (s *DefaultService) Commit(sessionID string) (*Session, error) {
 	}
 
 	return session, nil
+}
+
+// AppendChatMessage adds a message to a session's copilot conversation.
+func (s *DefaultService) AppendChatMessage(sessionID, role, content string) (*ChatMessage, error) {
+	switch role {
+	case ChatRoleAssistant, ChatRoleUser, ChatRoleSystem:
+	default:
+		return nil, ErrInvalidChatRole
+	}
+
+	if _, err := s.repo.FindByID(sessionID); err != nil {
+		return nil, err
+	}
+
+	message := &ChatMessage{
+		ID:        uuid.New().String(),
+		SessionID: sessionID,
+		Role:      role,
+		Content:   content,
+		CreatedAt: time.Now(),
+	}
+
+	if err := s.repo.SaveChatMessage(message); err != nil {
+		return nil, err
+	}
+
+	return message, nil
+}
+
+// GetChatTranscript retrieves the copilot conversation for a session.
+func (s *DefaultService) GetChatTranscript(sessionID string) ([]*ChatMessage, error) {
+	return s.repo.ListChatMessages(sessionID)
+}
+
+// AttachAgentRun records the latest copilot turn run launched for a session.
+func (s *DefaultService) AttachAgentRun(sessionID, runID string) error {
+	session, err := s.repo.FindByID(sessionID)
+	if err != nil {
+		return err
+	}
+	session.AgentRunID = &runID
+	session.UpdatedAt = time.Now()
+	return s.repo.Update(session)
 }
 
 // Abandon marks a session abandoned, leaving any drafts in place.

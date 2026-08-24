@@ -24,10 +24,15 @@ type streamParser interface {
 
 // procConfig describes the subprocess to launch.
 type procConfig struct {
-	Command    string
-	Args       []string
-	Dir        string
-	Env        map[string]string
+	Command string
+	Args    []string
+	Dir     string
+	Env     map[string]string
+	// Stdin, when non-empty, is piped to the process. Large payloads (like
+	// run prompts) must travel this way: Windows caps a command line at
+	// ~32K characters, so big argv values fail with "filename or extension
+	// is too long".
+	Stdin      string
 	TimeoutSec int
 }
 
@@ -55,6 +60,9 @@ func startProc(ctx context.Context, cfg procConfig, parser streamParser) (*procH
 		env = append(env, k+"="+v)
 	}
 	cmd.Env = env
+	if cfg.Stdin != "" {
+		cmd.Stdin = strings.NewReader(cfg.Stdin)
+	}
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
