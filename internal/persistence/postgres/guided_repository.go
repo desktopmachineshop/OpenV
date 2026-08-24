@@ -161,6 +161,40 @@ func (r *GuidedRepository) FindByID(id string) (*guided.Session, error) {
 	return session, nil
 }
 
+// SaveChatMessage inserts one copilot chat message
+func (r *GuidedRepository) SaveChatMessage(m *guided.ChatMessage) error {
+	_, err := r.db.Exec(`
+		INSERT INTO guided_session_messages (id, session_id, role, content, created_at)
+		VALUES ($1, $2, $3, $4, $5)
+	`, m.ID, m.SessionID, m.Role, m.Content, m.CreatedAt)
+	return err
+}
+
+// ListChatMessages retrieves a session's copilot messages, oldest first
+func (r *GuidedRepository) ListChatMessages(sessionID string) ([]*guided.ChatMessage, error) {
+	rows, err := r.db.Query(`
+		SELECT id, session_id, role, content, created_at
+		FROM guided_session_messages
+		WHERE session_id = $1
+		ORDER BY created_at
+	`, sessionID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	messages := []*guided.ChatMessage{}
+	for rows.Next() {
+		m := &guided.ChatMessage{}
+		if err := rows.Scan(&m.ID, &m.SessionID, &m.Role, &m.Content, &m.CreatedAt); err != nil {
+			return nil, err
+		}
+		messages = append(messages, m)
+	}
+
+	return messages, rows.Err()
+}
+
 // ListByProject retrieves all guided sessions for a project, newest first
 func (r *GuidedRepository) ListByProject(projectID string) ([]*guided.Session, error) {
 	query := `

@@ -19,12 +19,17 @@ interface AgentEditorProps {
   onCancel: () => void;
 }
 
+// Reasoning effort tiers (Claude Code passes them through; Codex maps
+// xhigh/max down to high; Gemini has no headless effort control yet).
+const EFFORT_LEVELS = ['low', 'medium', 'high', 'xhigh', 'max'];
+
 interface FormState {
   slug: string;
   name: string;
   description: string;
   provider: string;
   model: string;
+  effort: string;
   write_mode: 'proposal' | 'direct';
   repo_access: boolean;
   max_turns: number;
@@ -39,6 +44,7 @@ const toForm = (agent: AgentDef | null): FormState => ({
   description: agent?.description || '',
   provider: agent?.provider || 'claude-code',
   model: agent?.model || '',
+  effort: agent?.effort || '',
   write_mode: agent?.write_mode || 'proposal',
   repo_access: agent?.repo_access || false,
   max_turns: agent?.max_turns ?? 30,
@@ -102,6 +108,7 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({ agent, onSaved, onCanc
       description: form.description,
       provider: form.provider,
       model: form.model,
+      effort: form.effort,
       write_mode: form.write_mode,
       repo_access: form.repo_access,
       max_turns: Number(form.max_turns) || 0,
@@ -256,6 +263,22 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({ agent, onSaved, onCanc
                 }
                 style={{ fontSize: 13 }}
               />
+            </div>
+            <div className="form-group">
+              <label>Effort</label>
+              <select
+                value={form.effort}
+                onChange={(e) => set({ effort: e.target.value })}
+                title="Reasoning effort per run. Applies to claude-code (low…max) and codex-cli (capped at high); gemini-cli ignores it."
+                style={{ fontSize: 13 }}
+              >
+                <option value="">provider default</option>
+                {EFFORT_LEVELS.map((v) => (
+                  <option key={v} value={v}>
+                    {v}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="form-group">
               <label>Write mode</label>

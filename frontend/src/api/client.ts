@@ -462,6 +462,14 @@ export interface GuidedSession {
   agent_run_id?: string | null;
 }
 
+export interface GuidedChatMessage {
+  id: string;
+  session_id: string;
+  role: 'assistant' | 'user' | 'system';
+  content: string;
+  created_at: string;
+}
+
 export interface Interview {
   id: string;
   project_id: string;
@@ -497,6 +505,7 @@ export interface AgentDef {
   description: string;
   provider: string;
   model: string;
+  effort: string;
   allowed_tools: string[];
   write_mode: 'proposal' | 'direct';
   repo_access: boolean;
@@ -947,6 +956,24 @@ export const guidedAPI = {
     client.post<{ artifact_ids: string[] }>(`/api/v1/guided-sessions/${id}/drafts`, { drafts }),
   commit: (id: string) => client.post<GuidedSession>(`/api/v1/guided-sessions/${id}/commit`),
   abandon: (id: string) => client.post<GuidedSession>(`/api/v1/guided-sessions/${id}/abandon`),
+  listMessages: (id: string) =>
+    client.get<GuidedChatMessage[]>(`/api/v1/guided-sessions/${id}/messages`),
+  sendMessage: (id: string, content: string, step: number, state: Record<string, any>) =>
+    client.post<{ message: GuidedChatMessage; runner_online?: boolean }>(
+      `/api/v1/guided-sessions/${id}/messages`,
+      { content, step, state }
+    ),
+  kickoffChat: (id: string, step: number, state: Record<string, any>) =>
+    client.post<{ status: 'launched' | 'pending' | 'skipped' | 'unavailable'; runner_online?: boolean }>(
+      `/api/v1/guided-sessions/${id}/chat/kickoff`,
+      { step, state }
+    ),
+  nudgeChat: (id: string, step: number, state: Record<string, any>, event: string) =>
+    client.post<{ status: 'launched' | 'pending' | 'unavailable'; runner_online?: boolean }>(
+      `/api/v1/guided-sessions/${id}/chat/nudge`,
+      { step, state, event }
+    ),
+  chatStreamUrl: (id: string) => `${API_BASE_URL}/api/v1/guided-sessions/${id}/chat/stream`,
 };
 
 export const interviewsAPI = {
