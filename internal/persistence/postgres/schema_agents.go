@@ -126,7 +126,6 @@ func InitAgentSchema(db *sql.DB) error {
 		project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
 		name VARCHAR(512) NOT NULL,
 		remote_url VARCHAR(1024) NOT NULL DEFAULT '',
-		local_path VARCHAR(1024) NOT NULL DEFAULT '',
 		default_branch VARCHAR(128) NOT NULL DEFAULT 'main',
 		credential_strategy VARCHAR(32) NOT NULL DEFAULT 'host',
 		created_at TIMESTAMP NOT NULL DEFAULT NOW(),
@@ -135,8 +134,8 @@ func InitAgentSchema(db *sql.DB) error {
 
 	CREATE INDEX IF NOT EXISTS idx_repo_connections_project ON repo_connections(project_id);
 
-	-- Per-user override of a repo connection's local path: agents run on each
-	-- member's own machine, so the checkout lives somewhere different per user.
+	-- Where a repo connection is checked out on a given member's machine:
+	-- agents run locally, so the location differs for every user.
 	CREATE TABLE IF NOT EXISTS user_repo_paths (
 		user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
 		repo_connection_id UUID NOT NULL REFERENCES repo_connections(id) ON DELETE CASCADE,
@@ -266,6 +265,32 @@ func InitAgentSchema(db *sql.DB) error {
 	`
 	if _, err := db.Exec(targetSQL); err != nil {
 		return fmt.Errorf("failed to add provider login target column: %w", err)
+	}
+
+	// Repo connections used to carry a shared local_path that members without
+	// their own path fell back to. Since every run happens on a member's own
+	// machine, hand the old shared value to each member as their own path and
+	// drop the column.
+	dropSharedPathSQL := `
+	DO $$
+	BEGIN
+		IF EXISTS (
+			SELECT 1 FROM information_schema.columns
+			WHERE table_name='repo_connections' AND column_name='local_path'
+		) THEN
+			INSERT INTO user_repo_paths (user_id, repo_connection_id, local_path, updated_at)
+			SELECT m.user_id, c.id, c.local_path, NOW()
+			FROM repo_connections c
+			JOIN project_members m ON m.project_id = c.project_id
+			WHERE c.local_path <> ''
+			ON CONFLICT (user_id, repo_connection_id) DO NOTHING;
+
+			ALTER TABLE repo_connections DROP COLUMN local_path;
+		END IF;
+	END $$;
+	`
+	if _, err := db.Exec(dropSharedPathSQL); err != nil {
+		return fmt.Errorf("failed to drop shared repo connection local_path: %w", err)
 	}
 
 	return nil

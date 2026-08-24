@@ -578,11 +578,10 @@ export interface RepoConnection {
   project_id: string;
   name: string;
   remote_url: string;
-  local_path: string;
   default_branch: string;
   credential_strategy: string;
-  // The calling user's per-user override of local_path (runs on their own
-  // machine use this checkout location).
+  // Where this repo lives on the calling user's machine — their runs check
+  // out from here.
   my_local_path?: string;
 }
 

@@ -53,18 +53,18 @@ func PrepareWorkspace(baseDir string, run *agentruns.Run, agent *agents.Agent, c
 	agentBranch := "openv/agent-" + shortID
 
 	switch {
-	case conn.LocalPath != "":
-		if _, err := runGit(conn.LocalPath, "worktree", "add", repoDir, "-b", agentBranch, branch); err != nil {
+	case conn.MyLocalPath != "":
+		if _, err := runGit(conn.MyLocalPath, "worktree", "add", repoDir, "-b", agentBranch, branch); err != nil {
 			// Fall back to a plain clone of the local repo.
-			if _, cerr := runGit("", "clone", "--branch", branch, "--single-branch", conn.LocalPath, repoDir); cerr != nil {
+			if _, cerr := runGit("", "clone", "--branch", branch, "--single-branch", conn.MyLocalPath, repoDir); cerr != nil {
 				return "", "", fmt.Errorf("worktree add failed (%v) and clone failed: %w", err, cerr)
 			}
 			if _, berr := runGit(repoDir, "checkout", "-b", agentBranch); berr != nil {
 				return "", "", berr
 			}
-			return repoDir, "cloned local repo " + conn.LocalPath + " on branch " + agentBranch, nil
+			return repoDir, "cloned local repo " + conn.MyLocalPath + " on branch " + agentBranch, nil
 		}
-		return repoDir, "worktree of " + conn.LocalPath + " on branch " + agentBranch, nil
+		return repoDir, "worktree of " + conn.MyLocalPath + " on branch " + agentBranch, nil
 	case conn.RemoteURL != "":
 		if _, err := runGit("", "clone", "--branch", branch, "--single-branch", conn.RemoteURL, repoDir); err != nil {
 			return "", "", err
