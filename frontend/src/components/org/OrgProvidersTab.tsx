@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { ProviderSetting, providerSettingsAPI } from '../../api/client';
+import { ModelSelect } from '../agents/ModelSelect';
 import { ProviderConnectCard } from '../agents/ProviderConnectCard';
 
 const chipStyle = (bg: string, color = '#fff'): React.CSSProperties => ({
@@ -168,10 +169,11 @@ export const OrgProvidersTab: React.FC<OrgProvidersTabProps> = ({ isAdmin }) => 
               </div>
               <div style={{ flex: 1, minWidth: 180 }}>
                 <label style={{ fontSize: 12 }}>Default model</label>
-                <input
+                <ModelSelect
                   value={p.default_model}
-                  onChange={(e) => updateProviderLocal(i, { default_model: e.target.value })}
-                  placeholder="e.g. claude-sonnet-4-5"
+                  models={p.available_models || []}
+                  onChange={(model) => updateProviderLocal(i, { default_model: model })}
+                  emptyLabel="let the provider choose"
                   style={{ padding: '6px 8px', fontSize: 13 }}
                 />
               </div>

@@ -221,6 +221,17 @@ files into the database at startup, so editing a file and restarting (or
 re-syncing) updates the agent. Seed agents (e.g. `requirements-interviewer`)
 are created on first boot.
 
+### Choosing a model
+
+The **Model** field in the agent editor (and **Default model** in Workspace
+settings → AI Providers) is a dropdown of the selected provider's known
+models, served by the API from a built-in catalog. Leave it on *provider
+default* to inherit the provider setting, or pick **Custom…** to type any
+model id the vendor's CLI accepts — vendors ship new models faster than OpenV
+releases, so the catalog is a convenience, not a whitelist. A worker may also
+report the models it found on the host (`models` in its detection payload);
+anything it reports is listed ahead of the catalog.
+
 ### write_mode: proposal vs direct
 
 - `write_mode: proposal` (default) — every write the agent makes (create/update

@@ -585,6 +585,12 @@ export interface RepoConnection {
   my_local_path?: string;
 }
 
+// One selectable model for a provider. `id` is what the CLI/SDK receives.
+export interface ProviderModel {
+  id: string;
+  label: string;
+}
+
 export interface ProviderSetting {
   id: string;
   provider: string;
@@ -593,6 +599,9 @@ export interface ProviderSetting {
   default_model: string;
   enabled: boolean;
   last_detected: Record<string, any>;
+  // Server-derived: the built-in catalog plus anything a worker detected.
+  // Read-only — it is ignored on upsert.
+  available_models: ProviderModel[];
 }
 
 export interface Crew {
