@@ -55,9 +55,14 @@ environment only and are **never stored** by the platform.
 When you launch a run and your personal runner is online, the run is
 **reserved for your runner** for a grace period (default **60 seconds**,
 org-tunable via the workspace limit `runner_grace_seconds`). If your runner
-does not claim it in time, the hosted/workspace runners take over. Runs
-launched by automations, or by members with no online personal runner, are
-claimable by the hosted runner immediately.
+does not claim it in time, the hosted/workspace runners take over.
+
+**Ownerless runs** — launched by the system rather than a member: board
+triggers, automations, delegations between agents — are claimable by **any
+live runner** in the workspace (personal, workspace, or hosted) immediately,
+first come first served, so the load spreads across every runner that is
+online. Runs another member launched are never routed to your personal
+runner; they stay with that member's runner or the workspace/hosted pool.
 
 ### Compliance note
 
@@ -110,11 +115,13 @@ Each project chooses how its runs authenticate (Project settings → Agents):
 
 ## Per-user repo locations
 
-Repo connections carry a shared default local path, but each member can set
-**their own** local path per repository (Project settings → Repositories →
-"your local path") since the checkout lives somewhere different on every
-machine. Personal runners automatically receive the claiming member's path;
-members without one fall back to the shared default.
+A repo connection identifies the repository itself — name, repository URL
+(required, e.g. a GitHub remote), default branch. The checkout location is
+always per-member, since the clone lives somewhere different on every
+machine, so each member sets **their own** local path per repository (Project
+settings → Repositories → "your local path"). Personal runners automatically
+receive the claiming member's path; runs for a member without one clone the
+repository URL instead.
 
 ## Configure a runner key
 
@@ -214,6 +221,17 @@ files into the database at startup, so editing a file and restarting (or
 re-syncing) updates the agent. Seed agents (e.g. `requirements-interviewer`)
 are created on first boot.
 
+### Choosing a model
+
+The **Model** field in the agent editor (and **Default model** in Workspace
+settings → AI Providers) is a dropdown of the selected provider's known
+models, served by the API from a built-in catalog. Leave it on *provider
+default* to inherit the provider setting, or pick **Custom…** to type any
+model id the vendor's CLI accepts — vendors ship new models faster than OpenV
+releases, so the catalog is a convenience, not a whitelist. A worker may also
+report the models it found on the host (`models` in its detection payload);
+anything it reports is listed ahead of the catalog.
+
 ### write_mode: proposal vs direct
 
 - `write_mode: proposal` (default) — every write the agent makes (create/update
@@ -295,6 +313,13 @@ stakeholder chats with an interviewer agent; answers stream in live, and the
 agent records candidate user needs as it learns them. Sessions, transcripts,
 and invites are managed from the project's Interviews tab; invites can expire
 or be revoked at any time.
+
+Interviews can optionally be linked to a **persona** artifact (many interviews
+to one persona), so you can see how, say, a team of design engineers each
+describe slightly different requirements for the same role. The linked persona
+is shown on the interview list, can be used to filter interviews, and its
+title and description are included in the interviewer agent's context so it
+can probe persona-specific needs.
 
 ## Quick checklist
 

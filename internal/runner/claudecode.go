@@ -90,8 +90,11 @@ func (a *ClaudeCodeAdapter) Start(ctx context.Context, spec RunSpec) (RunHandle,
 		return nil, fmt.Errorf("write mcp config: %w", err)
 	}
 
+	// The prompt travels over stdin (`... | claude -p`), never argv: prompts
+	// carry transcripts and wizard state, and Windows caps a command line at
+	// ~32K characters.
 	args := []string{
-		"-p", spec.Prompt,
+		"-p",
 		"--output-format", "stream-json",
 		"--verbose",
 		"--mcp-config", mcpPath,
@@ -105,6 +108,9 @@ func (a *ClaudeCodeAdapter) Start(ctx context.Context, spec RunSpec) (RunHandle,
 	if spec.Model != "" {
 		args = append(args, "--model", spec.Model)
 	}
+	if spec.Effort != "" {
+		args = append(args, "--effort", spec.Effort)
+	}
 	if len(spec.AllowedTools) > 0 {
 		args = append(args, "--allowedTools", strings.Join(spec.AllowedTools, ","))
 	}
@@ -114,6 +120,7 @@ func (a *ClaudeCodeAdapter) Start(ctx context.Context, spec RunSpec) (RunHandle,
 		Args:       args,
 		Dir:        spec.WorkDir,
 		Env:        spec.Env,
+		Stdin:      spec.Prompt,
 		TimeoutSec: spec.TimeoutSec,
 	}, &claudeParser{})
 }

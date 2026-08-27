@@ -50,8 +50,11 @@ func (a *GeminiCLIAdapter) Start(ctx context.Context, spec RunSpec) (RunHandle, 
 		prompt = "System instructions:\n" + spec.SystemPrompt + "\n\nTask:\n" + spec.Prompt
 	}
 
+	// spec.Effort is ignored: the gemini CLI has no headless reasoning-effort
+	// control (settings.json only).
+	// The prompt travels over stdin (piped input is the headless prompt) —
+	// prompts can exceed the ~32K Windows command-line limit.
 	args := []string{
-		"-p", prompt,
 		"--output-format", "json",
 		"--approval-mode", "yolo",
 	}
@@ -64,6 +67,7 @@ func (a *GeminiCLIAdapter) Start(ctx context.Context, spec RunSpec) (RunHandle, 
 		Args:       args,
 		Dir:        spec.WorkDir,
 		Env:        spec.Env,
+		Stdin:      prompt,
 		TimeoutSec: spec.TimeoutSec,
 	}, &geminiParser{})
 }

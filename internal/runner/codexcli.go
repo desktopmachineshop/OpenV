@@ -57,19 +57,30 @@ func (a *CodexCLIAdapter) Start(ctx context.Context, spec RunSpec) (RunHandle, e
 	if spec.Model != "" {
 		args = append(args, "--model", spec.Model)
 	}
+	if spec.Effort != "" {
+		// Codex tops out at "high"; map the taller Claude tiers down.
+		effort := spec.Effort
+		if effort == "xhigh" || effort == "max" {
+			effort = "high"
+		}
+		args = append(args, "-c", "model_reasoning_effort="+effort)
+	}
 	args = append(args, "--sandbox", "workspace-write", "--skip-git-repo-check")
 
 	prompt := spec.Prompt
 	if spec.SystemPrompt != "" {
 		prompt = "System instructions:\n" + spec.SystemPrompt + "\n\nTask:\n" + spec.Prompt
 	}
-	args = append(args, prompt)
+	// "-" makes codex exec read the prompt from stdin — prompts can exceed
+	// the ~32K Windows command-line limit.
+	args = append(args, "-")
 
 	return startProc(ctx, procConfig{
 		Command:    "codex",
 		Args:       args,
 		Dir:        spec.WorkDir,
 		Env:        spec.Env,
+		Stdin:      prompt,
 		TimeoutSec: spec.TimeoutSec,
 	}, &codexParser{})
 }

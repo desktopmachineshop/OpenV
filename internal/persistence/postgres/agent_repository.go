@@ -17,13 +17,13 @@ func NewAgentRepository(db *sql.DB) *AgentRepository {
 	return &AgentRepository{db: db}
 }
 
-const agentColumns = `id, COALESCE(org_id::text, ''), slug, name, description, provider, model, allowed_tools, write_mode, repo_access, max_turns, timeout_seconds, config, system_prompt, file_path, content_hash, synced_at, created_at, updated_at`
+const agentColumns = `id, COALESCE(org_id::text, ''), slug, name, description, provider, model, effort, allowed_tools, write_mode, repo_access, max_turns, timeout_seconds, config, system_prompt, file_path, content_hash, synced_at, created_at, updated_at`
 
 func scanAgent(row interface{ Scan(...interface{}) error }) (*agents.Agent, error) {
 	a := new(agents.Agent)
 	var tools, config []byte
 	var syncedAt sql.NullTime
-	err := row.Scan(&a.ID, &a.OrgID, &a.Slug, &a.Name, &a.Description, &a.Provider, &a.Model, &tools, &a.WriteMode, &a.RepoAccess, &a.MaxTurns, &a.TimeoutSeconds, &config, &a.SystemPrompt, &a.FilePath, &a.ContentHash, &syncedAt, &a.CreatedAt, &a.UpdatedAt)
+	err := row.Scan(&a.ID, &a.OrgID, &a.Slug, &a.Name, &a.Description, &a.Provider, &a.Model, &a.Effort, &tools, &a.WriteMode, &a.RepoAccess, &a.MaxTurns, &a.TimeoutSeconds, &config, &a.SystemPrompt, &a.FilePath, &a.ContentHash, &syncedAt, &a.CreatedAt, &a.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -67,9 +67,9 @@ func (r *AgentRepository) Save(a *agents.Agent) error {
 		return err
 	}
 	_, err = r.db.Exec(`
-		INSERT INTO agents (id, org_id, slug, name, description, provider, model, allowed_tools, write_mode, repo_access, max_turns, timeout_seconds, config, system_prompt, file_path, content_hash, synced_at, created_at, updated_at)
-		VALUES ($1, NULLIF($2, '')::uuid, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
-	`, a.ID, a.OrgID, a.Slug, a.Name, a.Description, a.Provider, a.Model, toolsJSON, a.WriteMode, a.RepoAccess, a.MaxTurns, a.TimeoutSeconds, configJSON, a.SystemPrompt, a.FilePath, a.ContentHash, a.SyncedAt, a.CreatedAt, a.UpdatedAt)
+		INSERT INTO agents (id, org_id, slug, name, description, provider, model, effort, allowed_tools, write_mode, repo_access, max_turns, timeout_seconds, config, system_prompt, file_path, content_hash, synced_at, created_at, updated_at)
+		VALUES ($1, NULLIF($2, '')::uuid, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+	`, a.ID, a.OrgID, a.Slug, a.Name, a.Description, a.Provider, a.Model, a.Effort, toolsJSON, a.WriteMode, a.RepoAccess, a.MaxTurns, a.TimeoutSeconds, configJSON, a.SystemPrompt, a.FilePath, a.ContentHash, a.SyncedAt, a.CreatedAt, a.UpdatedAt)
 	return err
 }
 
@@ -80,9 +80,9 @@ func (r *AgentRepository) Update(a *agents.Agent) error {
 		return err
 	}
 	_, err = r.db.Exec(`
-		UPDATE agents SET name = $2, description = $3, provider = $4, model = $5, allowed_tools = $6, write_mode = $7, repo_access = $8, max_turns = $9, timeout_seconds = $10, config = $11, system_prompt = $12, file_path = $13, content_hash = $14, synced_at = $15, updated_at = $16
+		UPDATE agents SET name = $2, description = $3, provider = $4, model = $5, effort = $6, allowed_tools = $7, write_mode = $8, repo_access = $9, max_turns = $10, timeout_seconds = $11, config = $12, system_prompt = $13, file_path = $14, content_hash = $15, synced_at = $16, updated_at = $17
 		WHERE id = $1
-	`, a.ID, a.Name, a.Description, a.Provider, a.Model, toolsJSON, a.WriteMode, a.RepoAccess, a.MaxTurns, a.TimeoutSeconds, configJSON, a.SystemPrompt, a.FilePath, a.ContentHash, a.SyncedAt, a.UpdatedAt)
+	`, a.ID, a.Name, a.Description, a.Provider, a.Model, a.Effort, toolsJSON, a.WriteMode, a.RepoAccess, a.MaxTurns, a.TimeoutSeconds, configJSON, a.SystemPrompt, a.FilePath, a.ContentHash, a.SyncedAt, a.UpdatedAt)
 	return err
 }
 

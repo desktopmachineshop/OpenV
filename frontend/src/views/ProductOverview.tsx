@@ -2,9 +2,11 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import {
   artifactAPI,
+  guidedAPI,
   interviewsAPI,
   productProfileAPI,
   Artifact,
+  GuidedSession,
   Interview,
   InterviewMessage,
   InterviewSession,
@@ -66,11 +68,16 @@ export const ProductOverview: React.FC = () => {
   const [savingMetrics, setSavingMetrics] = useState(false);
   const [savingConstraints, setSavingConstraints] = useState(false);
 
+  // Guided definition sessions (drives the guided CTA label)
+  const [guidedSessions, setGuidedSessions] = useState<GuidedSession[]>([]);
+
   // Interviews
   const [interviews, setInterviews] = useState<Interview[]>([]);
   const [showNewInterview, setShowNewInterview] = useState(false);
   const [newInterviewName, setNewInterviewName] = useState('');
   const [newInterviewBrief, setNewInterviewBrief] = useState('');
+  const [newInterviewPersonaId, setNewInterviewPersonaId] = useState('');
+  const [personaFilter, setPersonaFilter] = useState('');
   const [copiedInterviewId, setCopiedInterviewId] = useState('');
   const [expandedInterviewId, setExpandedInterviewId] = useState('');
   const [sessions, setSessions] = useState<InterviewSession[]>([]);
@@ -83,10 +90,11 @@ export const ProductOverview: React.FC = () => {
     if (!projectId) return;
     setLoading(true);
     try {
-      const [profileRes, artifactsRes, interviewsRes] = await Promise.all([
+      const [profileRes, artifactsRes, interviewsRes, guidedRes] = await Promise.all([
         productProfileAPI.get(projectId),
         artifactAPI.list(projectId),
         interviewsAPI.list(projectId).catch(() => ({ data: [] as Interview[] })),
+        guidedAPI.list(projectId).catch(() => ({ data: [] as GuidedSession[] })),
       ]);
       const p = profileRes.data;
       setProfile(p);
@@ -109,6 +117,7 @@ export const ProductOverview: React.FC = () => {
       );
       setArtifacts(artifactsRes.data || []);
       setInterviews(interviewsRes.data || []);
+      setGuidedSessions(guidedRes.data || []);
       setError('');
     } catch (err: any) {
       setError(`Failed to load product overview: ${err.response?.data || err.message}`);
@@ -179,10 +188,12 @@ export const ProductOverview: React.FC = () => {
       const res = await interviewsAPI.create(projectId, {
         name: newInterviewName.trim(),
         brief: newInterviewBrief.trim(),
+        persona_artifact_id: newInterviewPersonaId || undefined,
       });
       setInterviews([res.data, ...interviews]);
       setNewInterviewName('');
       setNewInterviewBrief('');
+      setNewInterviewPersonaId('');
       setShowNewInterview(false);
       setError('');
     } catch (err: any) {
@@ -259,12 +270,46 @@ export const ProductOverview: React.FC = () => {
     }
   };
 
+  const setInterviewPersona = async (interview: Interview, personaArtifactId: string) => {
+    try {
+      const res = await interviewsAPI.setPersona(interview.id, personaArtifactId || null);
+      setInterviews(interviews.map((iv) => (iv.id === interview.id ? res.data : iv)));
+      setError('');
+    } catch (err: any) {
+      setError(`Failed to update persona link: ${err.response?.data || err.message}`);
+    }
+  };
+
   const personas = artifacts.filter((a) => a.type === 'persona');
   const userNeeds = artifacts.filter((a) => a.type === 'user-need');
+
+  const personaTitle = (id?: string | null) => {
+    if (!id) return '';
+    const persona = artifacts.find((a) => a.id === id);
+    return persona ? persona.title : 'Unknown persona';
+  };
+
+  const filteredInterviews = interviews.filter((iv) => {
+    if (!personaFilter) return true;
+    if (personaFilter === 'none') return !iv.persona_artifact_id;
+    return iv.persona_artifact_id === personaFilter;
+  });
 
   if (loading) {
     return <div style={{ padding: 32, color: '#7f8c8d' }}>Loading product overview…</div>;
   }
+
+  // Label the guided CTA by where the project actually is: a session in
+  // progress resumes, a committed one reopens for modification.
+  const guidedInProgress = guidedSessions.some(
+    (s) => s.status === 'in-progress' || s.status === 'in_progress'
+  );
+  const guidedCommitted = guidedSessions.some((s) => s.status === 'committed');
+  const guidedCtaLabel = guidedInProgress
+    ? 'Resume guided definition'
+    : guidedCommitted
+    ? 'Modify guided definition'
+    : 'Start guided definition';
 
   return (
     <div style={{ padding: 24, maxWidth: 1100, margin: '0 auto' }}>
@@ -298,7 +343,7 @@ export const ProductOverview: React.FC = () => {
       {/* Quick links */}
       <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
         <Link to="guided" className="button" style={{ background: '#3498db', textDecoration: 'none' }}>
-          Start guided definition
+          {guidedCtaLabel}
         </Link>
         <Link to="vv" className="button-secondary" style={{ textDecoration: 'none' }}>
           V&amp;V dashboard
@@ -512,15 +557,33 @@ export const ProductOverview: React.FC = () => {
 
       {/* Interviews */}
       <div className="card">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, gap: 10 }}>
           <div style={{ ...sectionTitle, marginBottom: 0 }}>User interviews</div>
-          <button
-            className="button-secondary"
-            style={{ padding: '6px 14px', background: '#3498db' }}
-            onClick={() => setShowNewInterview(!showNewInterview)}
-          >
-            {showNewInterview ? 'Cancel' : '+ New interview'}
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {personas.length > 0 && interviews.length > 0 && (
+              <select
+                value={personaFilter}
+                onChange={(e) => setPersonaFilter(e.target.value)}
+                style={{ ...smallInput, width: 'auto' }}
+                title="Filter interviews by linked persona"
+              >
+                <option value="">All personas</option>
+                {personas.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.title}
+                  </option>
+                ))}
+                <option value="none">No persona</option>
+              </select>
+            )}
+            <button
+              className="button-secondary"
+              style={{ padding: '6px 14px', background: '#3498db' }}
+              onClick={() => setShowNewInterview(!showNewInterview)}
+            >
+              {showNewInterview ? 'Cancel' : '+ New interview'}
+            </button>
+          </div>
         </div>
 
         {showNewInterview && (
@@ -543,6 +606,21 @@ export const ProductOverview: React.FC = () => {
                 placeholder="What should the interview find out? Topics, tone, questions to cover…"
               />
             </div>
+            <div className="form-group">
+              <label>Persona</label>
+              <select value={newInterviewPersonaId} onChange={(e) => setNewInterviewPersonaId(e.target.value)}>
+                <option value="">No persona</option>
+                {personas.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.title}
+                  </option>
+                ))}
+              </select>
+              <div style={{ fontSize: 12, color: '#95a5a6', marginTop: 4 }}>
+                Link this interview to the persona the participant represents. Several interviews can share one
+                persona, so you can compare how e.g. different design engineers describe the same needs.
+              </div>
+            </div>
             <button type="submit" className="button">
               Create interview
             </button>
@@ -553,8 +631,10 @@ export const ProductOverview: React.FC = () => {
           <div style={{ color: '#95a5a6', fontSize: 13 }}>
             No interviews yet. Create one and share the invite link — an AI interviewer collects feedback for you.
           </div>
+        ) : filteredInterviews.length === 0 ? (
+          <div style={{ color: '#95a5a6', fontSize: 13 }}>No interviews match this persona filter.</div>
         ) : (
-          interviews.map((iv) => (
+          filteredInterviews.map((iv) => (
             <div key={iv.id} style={{ border: '1px solid #eee', borderRadius: 4, marginBottom: 8 }}>
               <div
                 style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', cursor: 'pointer' }}
@@ -562,6 +642,11 @@ export const ProductOverview: React.FC = () => {
               >
                 <span style={{ fontSize: 12, color: '#7f8c8d' }}>{expandedInterviewId === iv.id ? '▾' : '▸'}</span>
                 <div style={{ flex: 1, fontSize: 14, fontWeight: 600, color: '#2c3e50' }}>{iv.name}</div>
+                {iv.persona_artifact_id && (
+                  <span style={chip('#8e44ad')} title="Linked persona">
+                    {personaTitle(iv.persona_artifact_id)}
+                  </span>
+                )}
                 <span style={chip(iv.status === 'open' ? '#27ae60' : '#95a5a6')}>{iv.status}</span>
                 <button
                   className="button-secondary"
@@ -590,6 +675,24 @@ export const ProductOverview: React.FC = () => {
                 <div style={{ borderTop: '1px solid #eee', padding: '10px 12px' }}>
                   {iv.brief && (
                     <div style={{ fontSize: 12, color: '#7f8c8d', marginBottom: 8, whiteSpace: 'pre-wrap' }}>{iv.brief}</div>
+                  )}
+                  {personas.length > 0 && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: '#7f8c8d' }}>Persona:</span>
+                      <select
+                        value={iv.persona_artifact_id || ''}
+                        onChange={(e) => setInterviewPersona(iv, e.target.value)}
+                        onClick={(e) => e.stopPropagation()}
+                        style={{ ...smallInput, width: 'auto' }}
+                      >
+                        <option value="">No persona</option>
+                        {personas.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.title}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   )}
                   {sessionsLoading ? (
                     <div style={{ color: '#7f8c8d', fontSize: 13 }}>Loading sessions…</div>

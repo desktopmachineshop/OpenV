@@ -62,6 +62,9 @@ type ProviderSetting struct {
 	Enabled      bool                   `json:"enabled"`
 	LastDetected map[string]interface{} `json:"last_detected"`
 	UpdatedAt    time.Time              `json:"updated_at"`
+	// AvailableModels is derived on read (catalog + detection), never
+	// stored; the UI populates its model pickers from it.
+	AvailableModels []Model `json:"available_models"`
 }
 
 // Repository defines persistence operations for provider settings.
@@ -133,11 +136,12 @@ func (s *DefaultService) List(orgID string) ([]*ProviderSetting, error) {
 
 	result := make([]*ProviderSetting, 0, len(KnownProviders()))
 	for _, name := range KnownProviders() {
-		if p, ok := byProvider[name]; ok {
-			result = append(result, p)
-			continue
+		p, ok := byProvider[name]
+		if !ok {
+			p = defaultSetting(orgID, name)
 		}
-		result = append(result, defaultSetting(orgID, name))
+		p.AvailableModels = AvailableModels(p)
+		result = append(result, p)
 	}
 	return result, nil
 }
@@ -163,7 +167,12 @@ func (s *DefaultService) Upsert(setting *ProviderSetting) error {
 		setting.LastDetected = map[string]interface{}{}
 	}
 	setting.UpdatedAt = time.Now()
-	return s.repo.Upsert(setting)
+	if err := s.repo.Upsert(setting); err != nil {
+		return err
+	}
+	// Refresh the derived list so the caller's echoed row stays usable.
+	setting.AvailableModels = AvailableModels(setting)
+	return nil
 }
 
 // RecordDetection merges detection results into a provider's last_detected

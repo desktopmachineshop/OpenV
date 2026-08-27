@@ -58,11 +58,17 @@ func (h *Handler) registerSuiteRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/guided-sessions/{id}/drafts", h.MaterializeGuidedDrafts).Methods("POST")
 	router.HandleFunc("/api/v1/guided-sessions/{id}/commit", h.CommitGuidedSession).Methods("POST")
 	router.HandleFunc("/api/v1/guided-sessions/{id}/abandon", h.AbandonGuidedSession).Methods("POST")
+	router.HandleFunc("/api/v1/guided-sessions/{id}/messages", h.ListGuidedChatMessages).Methods("GET")
+	router.HandleFunc("/api/v1/guided-sessions/{id}/messages", h.PostGuidedChatMessage).Methods("POST")
+	router.HandleFunc("/api/v1/guided-sessions/{id}/chat/kickoff", h.KickoffGuidedChat).Methods("POST")
+	router.HandleFunc("/api/v1/guided-sessions/{id}/chat/nudge", h.NudgeGuidedChat).Methods("POST")
+	router.HandleFunc("/api/v1/guided-sessions/{id}/chat/stream", h.StreamGuidedChat).Methods("GET")
 
 	// Interviews (internal management).
 	router.HandleFunc("/api/v1/projects/{id}/interviews", h.CreateInterview).Methods("POST")
 	router.HandleFunc("/api/v1/projects/{id}/interviews", h.ListInterviews).Methods("GET")
 	router.HandleFunc("/api/v1/interviews/{id}/close", h.CloseInterview).Methods("POST")
+	router.HandleFunc("/api/v1/interviews/{id}/persona", h.SetInterviewPersona).Methods("PUT")
 	router.HandleFunc("/api/v1/interviews/{id}/invites", h.CreateInterviewInvite).Methods("POST")
 	router.HandleFunc("/api/v1/interviews/{id}/invites", h.ListInterviewInvites).Methods("GET")
 	router.HandleFunc("/api/v1/interview-invites/{id}/revoke", h.RevokeInterviewInvite).Methods("POST")
@@ -729,6 +735,324 @@ func (h *Handler) AbandonGuidedSession(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(abandoned)
 }
 
+// --- Guided copilot chat ---
+
+// guidedRunnerOnline reports whether any runner is currently polling for the
+// session project's workspace — without one, copilot turns queue unanswered
+// and the chat panel should say "not connected" instead of "thinking".
+func (h *Handler) guidedRunnerOnline(session *guided.Session) bool {
+	project, err := h.projectService.GetProject(session.ProjectID)
+	if err != nil || project == nil {
+		return false
+	}
+	keys, err := h.workerKeyService.List(project.OrgID)
+	if err != nil {
+		return false
+	}
+	for _, key := range keys {
+		if !key.Revoked && key.LastUsedAt != nil && time.Since(*key.LastUsedAt) < workerOnlineWindow {
+			return true
+		}
+	}
+	return false
+}
+
+// guidedStepLabels mirrors the wizard's step names for prompt context.
+var guidedStepLabels = []string{
+	"Product framing", "Personas", "User needs", "Requirements",
+	"NFRs & constraints", "Hazards", "Verification stubs", "Review & commit",
+}
+
+func (h *Handler) ListGuidedChatMessages(w http.ResponseWriter, r *http.Request) {
+	session := h.getGuidedSessionChecked(w, r, members.RoleViewer)
+	if session == nil {
+		return
+	}
+	transcript, err := h.guidedService.GetChatTranscript(session.ID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	json.NewEncoder(w).Encode(transcript)
+}
+
+func (h *Handler) PostGuidedChatMessage(w http.ResponseWriter, r *http.Request) {
+	session := h.getGuidedSessionChecked(w, r, members.RoleEditor)
+	if session == nil {
+		return
+	}
+	var req struct {
+		Content string                 `json:"content"`
+		Step    int                    `json:"step"`
+		State   map[string]interface{} `json:"state"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+	if strings.TrimSpace(req.Content) == "" {
+		http.Error(w, "message content is required", http.StatusBadRequest)
+		return
+	}
+	message, err := h.guidedService.AppendChatMessage(session.ID, guided.ChatRoleUser, req.Content)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	h.sseHub.BroadcastSession("guided:"+session.ID, "message", message)
+
+	if err := h.launchGuidedTurn(r, session, req.Step, req.State, ""); err != nil {
+		note, _ := h.guidedService.AppendChatMessage(session.ID, guided.ChatRoleSystem,
+			"The copilot is unavailable right now ("+err.Error()+"). Your message was saved — please try again shortly.")
+		if note != nil {
+			h.sseHub.BroadcastSession("guided:"+session.ID, "message", note)
+		}
+	}
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"message":       message,
+		"runner_online": h.guidedRunnerOnline(session),
+	})
+}
+
+// KickoffGuidedChat launches an opening copilot turn for a session whose chat
+// is still empty, so the AI speaks first. No-op when messages exist or a turn
+// is already pending.
+func (h *Handler) KickoffGuidedChat(w http.ResponseWriter, r *http.Request) {
+	session := h.getGuidedSessionChecked(w, r, members.RoleEditor)
+	if session == nil {
+		return
+	}
+	var req struct {
+		Step  int                    `json:"step"`
+		State map[string]interface{} `json:"state"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+	runnerOnline := h.guidedRunnerOnline(session)
+	reply := func(status string) {
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status":        status,
+			"runner_online": runnerOnline,
+		})
+	}
+	transcript, err := h.guidedService.GetChatTranscript(session.ID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if len(transcript) > 0 {
+		reply("skipped")
+		return
+	}
+	if session.AgentRunID != nil {
+		if run, err := h.runService.Get(*session.AgentRunID); err == nil && run != nil {
+			switch run.Status {
+			case agentruns.StatusQueued, agentruns.StatusClaimed, agentruns.StatusRunning:
+				reply("pending")
+				return
+			}
+		}
+	}
+	if err := h.launchGuidedTurn(r, session, req.Step, req.State, ""); err != nil {
+		note, _ := h.guidedService.AppendChatMessage(session.ID, guided.ChatRoleSystem,
+			"The copilot is unavailable right now ("+err.Error()+"). You can keep filling in the wizard and try the chat again shortly.")
+		if note != nil {
+			h.sseHub.BroadcastSession("guided:"+session.ID, "message", note)
+		}
+		reply("unavailable")
+		return
+	}
+	reply("launched")
+}
+
+// NudgeGuidedChat launches a copilot turn in reaction to a wizard action
+// (saving or skipping a step) without a chat message from the user, so the
+// copilot comments on newly entered data as the user progresses. Silently
+// skipped while a turn is already pending.
+func (h *Handler) NudgeGuidedChat(w http.ResponseWriter, r *http.Request) {
+	session := h.getGuidedSessionChecked(w, r, members.RoleEditor)
+	if session == nil {
+		return
+	}
+	var req struct {
+		Step  int                    `json:"step"`
+		State map[string]interface{} `json:"state"`
+		Event string                 `json:"event"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+	// The response tells the chat panel whether a reply is coming, so it can
+	// show (or clear) its thinking indicator: "launched" and "pending" both
+	// mean a copilot message will arrive; "unavailable" means none will; and
+	// runner_online=false means turns are queuing with nobody to answer.
+	runnerOnline := h.guidedRunnerOnline(session)
+	reply := func(status string) {
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status":        status,
+			"runner_online": runnerOnline,
+		})
+	}
+	if session.AgentRunID != nil {
+		if run, err := h.runService.Get(*session.AgentRunID); err == nil && run != nil {
+			switch run.Status {
+			case agentruns.StatusQueued, agentruns.StatusClaimed, agentruns.StatusRunning:
+				reply("pending")
+				return
+			}
+		}
+	}
+	event := strings.TrimSpace(req.Event)
+	if event == "" {
+		event = "updated the wizard"
+	}
+	// Nudges are best-effort commentary: no system note on failure.
+	if err := h.launchGuidedTurn(r, session, req.Step, req.State, event); err != nil {
+		reply("unavailable")
+		return
+	}
+	reply("launched")
+}
+
+// StreamGuidedChat is the wizard's copilot SSE channel.
+func (h *Handler) StreamGuidedChat(w http.ResponseWriter, r *http.Request) {
+	session := h.getGuidedSessionChecked(w, r, members.RoleViewer)
+	if session == nil {
+		return
+	}
+	h.sseHub.ServeStream(w, r, "guided:"+session.ID, func(emit func(event string, data interface{})) error {
+		transcript, err := h.guidedService.GetChatTranscript(session.ID)
+		if err != nil {
+			return err
+		}
+		for _, m := range transcript {
+			emit("message", m)
+		}
+		return nil
+	})
+}
+
+// launchGuidedTurn enqueues one copilot response as a priority run. event,
+// when non-empty, describes a wizard action the user took without chatting
+// (e.g. saving a step) for the copilot to react to.
+func (h *Handler) launchGuidedTurn(r *http.Request, session *guided.Session, step int, state map[string]interface{}, event string) error {
+	// The copilot agent lives in the project's workspace.
+	orgID := ""
+	if project, err := h.projectService.GetProject(session.ProjectID); err == nil && project != nil {
+		orgID = project.OrgID
+	}
+	if orgID == "" {
+		return fmt.Errorf("could not resolve workspace for guided session project %s", session.ProjectID)
+	}
+	agent, err := h.agentService.GetBySlug(orgID, "requirements-copilot")
+	if err != nil || agent == nil {
+		return fmt.Errorf("requirements-copilot agent is not available in this workspace")
+	}
+
+	transcript, err := h.guidedService.GetChatTranscript(session.ID)
+	if err != nil {
+		return err
+	}
+	profile, _ := h.productService.GetProfile(session.ProjectID)
+
+	stepLabel := ""
+	if step >= 1 && step <= len(guidedStepLabels) {
+		stepLabel = guidedStepLabels[step-1]
+	}
+
+	var b strings.Builder
+	b.WriteString("You are the requirements copilot inside the guided product-definition wizard. The user fills in manual entry sections step by step; you chat alongside, ask sharp questions grounded in what they have entered, and surface gaps: hazards, missing NFRs, ambiguous or untestable requirements, personas or needs without requirements.\n\n")
+	if profile != nil {
+		if profile.Vision != "" {
+			b.WriteString("Product vision: " + profile.Vision + "\n")
+		}
+		if profile.ProblemStatement != "" {
+			b.WriteString("Problem statement: " + profile.ProblemStatement + "\n")
+		}
+		if profile.TargetUsers != "" {
+			b.WriteString("Target users: " + profile.TargetUsers + "\n")
+		}
+	}
+	if stepLabel != "" {
+		fmt.Fprintf(&b, "\nThe user is on wizard step %d of %d: %q.\n", step, len(guidedStepLabels), stepLabel)
+	}
+	if state == nil {
+		state = session.Answers
+	}
+	if state != nil {
+		if stateJSON, err := json.Marshal(state); err == nil {
+			s := string(stateJSON)
+			if len(s) > 12000 {
+				s = s[:12000] + "…(truncated)"
+			}
+			b.WriteString("\nCurrent wizard state (everything entered so far):\n" + s + "\n")
+			b.WriteString("State key legend: step_1 {vision, problem_statement, target_users} = Product framing; step_2.personas; step_3.needs (persona_index indexes step_2.personas); step_4.requirements (need_index indexes step_3.needs); step_5.nfrs; step_6.hazards; step_7 = test stubs; step 8 = review & commit.\n")
+		}
+	}
+	b.WriteString("\nConversation so far:\n")
+	if len(transcript) == 0 {
+		b.WriteString("(none — this is your opening message; greet in one sentence, no more. If the state above already contains content, react to it specifically — name what stands out and what is missing. If it is empty, ask what the product is and who it is for. Never open with suggestion blocks.)\n")
+	}
+	start := 0
+	if len(transcript) > 40 {
+		start = len(transcript) - 40
+	}
+	for _, m := range transcript[start:] {
+		fmt.Fprintf(&b, "[%s] %s\n", m.Role, m.Content)
+	}
+	if event != "" {
+		b.WriteString("\n[Event] The user just " + event + " — they did not send a chat message. React to the newly entered content in the state above: acknowledge specifics in their own words, flag the most important gap, risk, or hazard you notice in what they wrote, and ask one focused question or offer suggestion blocks where clearly valuable. Do not greet again and do not repeat earlier feedback.\n")
+	}
+	b.WriteString(`
+Respond with your next chat message to the user.
+
+How to respond:
+- Be a conversation partner first. Ground every reply in what the user actually entered — quote or reference their own wording — before offering anything new. Never give generic requirements-engineering advice untethered from their content.
+- Understand before you suggest: do not emit suggestion blocks until the conversation or wizard state gives you real grounding, and never lead with one. When the user asks you to draft, fill in, or improve something, answer with suggestion blocks (several at once is fine) instead of telling them what to type.
+- Never invent facts about the product; ask when you need information. Keep replies short; ask at most two questions.
+- Exception: when the user asks for a review, gap analysis, or conflict check, be systematic instead of brief — cover every relevant entry, cite each by its own wording, organize findings as a compact list, and attach replace suggestions for entries worth fixing.
+
+When you propose a concrete entry for the wizard, put each one in its own fenced code block tagged openv-suggestion containing exactly one JSON object, using one of these shapes:
+- {"kind":"framing","field":"vision|problem_statement|target_users","text":"..."} — full replacement text for that Product framing field (step 1); the user clicks Apply to fill the field with it
+- {"kind":"persona","name":"","role":"","goals":"","pains":""}
+- {"kind":"need","persona":"<existing persona name>","capability":"","outcome":""}
+- {"kind":"requirement","need":"<capability of the user need it derives from>","text":"The system shall ...","fit_criterion":"","verification_method":"inspection|analysis|demonstration|test"}
+- {"kind":"nfr","category":"Performance|Reliability|Usability|Security|Maintainability|Regulatory","text":"The system shall ...","fit_criterion":"","verification_method":"inspection|analysis|demonstration|test"}
+- {"kind":"hazard","hazard":"","harm":"","severity":"minor|moderate|serious|critical"}
+
+To improve or correct an entry the user already has, add "replaces":"<exact current value>" to the object — matched against the persona name, need capability, requirement text, NFR text, or hazard text respectively. The user then gets a Replace button that overwrites that entry in place instead of adding a duplicate. Entries already locked to artifacts (they show a green dot) cannot be replaced — propose a new entry instead. Omit "replaces" for brand-new entries. Framing suggestions always replace their field.
+
+Example (new entry):
+` + "```openv-suggestion\n" + `{"kind":"hazard","hazard":"Spindle starts while guard is open","harm":"Operator hand injury","severity":"critical"}` + "\n```" + `
+
+Example (revision of an existing requirement):
+` + "```openv-suggestion\n" + `{"kind":"requirement","replaces":"The system shall be fast","text":"The system shall render the requirements list within 500 ms for projects of up to 5,000 artifacts.","fit_criterion":"P95 list render time ≤ 500 ms at 5,000 artifacts","verification_method":"test"}` + "\n```" + `
+
+The user clicks Add/Apply/Replace on a suggestion to put it into the wizard, so suggestions must be self-contained and match the shapes exactly. Never assume a suggestion was accepted until it appears in the wizard state. Do not create or modify OpenV artifacts yourself.`)
+
+	sessionID := session.ID
+	projectID := session.ProjectID
+	run, _, err := h.runService.Launch(agentruns.LaunchRequest{
+		OrgID:           orgID,
+		AgentID:         agent.ID,
+		ProjectID:       &projectID,
+		GuidedSessionID: &sessionID,
+		Priority:        agentruns.PriorityInterview,
+		Prompt:          b.String(),
+		LaunchedBy:      CurrentUserID(r),
+	})
+	if err != nil {
+		return err
+	}
+	if err := h.guidedService.AttachAgentRun(session.ID, run.ID); err != nil {
+		fmt.Printf("Warning: failed to attach copilot run %s to guided session %s: %v\n", run.ID, session.ID, err)
+	}
+	return nil
+}
+
 // --- Interviews (internal) ---
 
 func (h *Handler) CreateInterview(w http.ResponseWriter, r *http.Request) {
@@ -737,13 +1061,17 @@ func (h *Handler) CreateInterview(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req struct {
-		Name            string  `json:"name"`
-		Brief           string  `json:"brief"`
-		AgentSlug       string  `json:"agent_slug"`
-		GuidedSessionID *string `json:"guided_session_id"`
+		Name              string  `json:"name"`
+		Brief             string  `json:"brief"`
+		AgentSlug         string  `json:"agent_slug"`
+		GuidedSessionID   *string `json:"guided_session_id"`
+		PersonaArtifactID *string `json:"persona_artifact_id"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+	if !h.validPersonaForProject(w, req.PersonaArtifactID, projectID) {
 		return
 	}
 	var agentID *string
@@ -759,7 +1087,7 @@ func (h *Handler) CreateInterview(w http.ResponseWriter, r *http.Request) {
 	if agent, err := h.agentService.GetBySlug(interviewOrg, slug); err == nil && agent != nil {
 		agentID = &agent.ID
 	}
-	interview, err := h.interviewService.CreateInterview(projectID, req.Name, req.Brief, agentID, req.GuidedSessionID, CurrentUserID(r))
+	interview, err := h.interviewService.CreateInterview(projectID, req.Name, req.Brief, agentID, req.GuidedSessionID, req.PersonaArtifactID, CurrentUserID(r))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -791,6 +1119,54 @@ func (h *Handler) getInterviewChecked(w http.ResponseWriter, r *http.Request, mi
 		return nil
 	}
 	return interview
+}
+
+// validPersonaForProject checks that a persona artifact reference points at a
+// persona-type artifact in the given project. A nil reference is valid (the
+// link is optional). Writes an HTTP error and returns false when invalid.
+func (h *Handler) validPersonaForProject(w http.ResponseWriter, personaArtifactID *string, projectID string) bool {
+	if personaArtifactID == nil {
+		return true
+	}
+	artifact, err := h.artifactService.GetArtifact(*personaArtifactID)
+	if err != nil || artifact == nil {
+		http.Error(w, "persona artifact not found", http.StatusBadRequest)
+		return false
+	}
+	if artifact.ProjectID != projectID {
+		http.Error(w, "persona artifact belongs to a different project", http.StatusBadRequest)
+		return false
+	}
+	if artifact.Type != artifacts.TypePersona {
+		http.Error(w, "artifact is not a persona", http.StatusBadRequest)
+		return false
+	}
+	return true
+}
+
+// SetInterviewPersona links an interview to a persona artifact (or clears the
+// link when persona_artifact_id is null).
+func (h *Handler) SetInterviewPersona(w http.ResponseWriter, r *http.Request) {
+	interview := h.getInterviewChecked(w, r, members.RoleEditor)
+	if interview == nil {
+		return
+	}
+	var req struct {
+		PersonaArtifactID *string `json:"persona_artifact_id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+	if !h.validPersonaForProject(w, req.PersonaArtifactID, interview.ProjectID) {
+		return
+	}
+	updated, err := h.interviewService.SetInterviewPersona(interview.ID, req.PersonaArtifactID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	json.NewEncoder(w).Encode(updated)
 }
 
 func (h *Handler) CloseInterview(w http.ResponseWriter, r *http.Request) {
@@ -988,6 +1364,14 @@ func (h *Handler) launchInterviewTurn(interview *interviews.Interview, session *
 	var b strings.Builder
 	b.WriteString("You are conducting a requirements-elicitation interview.\n\n")
 	b.WriteString("Interview brief: " + interview.Brief + "\n")
+	if interview.PersonaArtifactID != nil {
+		if persona, err := h.artifactService.GetArtifact(*interview.PersonaArtifactID); err == nil && persona != nil {
+			b.WriteString("Target persona: " + persona.Title + "\n")
+			if persona.Body != "" {
+				b.WriteString("Persona description: " + persona.Body + "\n")
+			}
+		}
+	}
 	if profile != nil {
 		if profile.Vision != "" {
 			b.WriteString("Product vision: " + profile.Vision + "\n")

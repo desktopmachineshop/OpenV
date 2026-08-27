@@ -41,19 +41,22 @@ var (
 	ErrInvalidRole       = errors.New("invalid message role")
 )
 
-// Interview is an agent-led stakeholder interview campaign.
+// Interview is an agent-led stakeholder interview campaign. Many interviews
+// may link to the same persona artifact, so the interviews for one persona
+// (e.g. a team of design engineers) can be compared side by side.
 type Interview struct {
-	ID              string     `json:"id"`
-	ProjectID       string     `json:"project_id"`
-	GuidedSessionID *string    `json:"guided_session_id,omitempty"`
-	Name            string     `json:"name"`
-	Brief           string     `json:"brief"`
-	AgentID         *string    `json:"agent_id,omitempty"`
-	Status          string     `json:"status"`
-	ExpiresAt       *time.Time `json:"expires_at,omitempty"`
-	CreatedBy       *string    `json:"created_by,omitempty"`
-	CreatedAt       time.Time  `json:"created_at"`
-	UpdatedAt       time.Time  `json:"updated_at"`
+	ID                string     `json:"id"`
+	ProjectID         string     `json:"project_id"`
+	GuidedSessionID   *string    `json:"guided_session_id,omitempty"`
+	PersonaArtifactID *string    `json:"persona_artifact_id,omitempty"`
+	Name              string     `json:"name"`
+	Brief             string     `json:"brief"`
+	AgentID           *string    `json:"agent_id,omitempty"`
+	Status            string     `json:"status"`
+	ExpiresAt         *time.Time `json:"expires_at,omitempty"`
+	CreatedBy         *string    `json:"created_by,omitempty"`
+	CreatedAt         time.Time  `json:"created_at"`
+	UpdatedAt         time.Time  `json:"updated_at"`
 }
 
 // Invite is a tokenized invitation to join an interview. Only the SHA-256
@@ -115,10 +118,11 @@ type Repository interface {
 // Service defines interview domain logic. Turn-by-turn agent orchestration
 // lives outside this package.
 type Service interface {
-	CreateInterview(projectID, name, brief string, agentID *string, guidedSessionID *string, createdBy *string) (*Interview, error)
+	CreateInterview(projectID, name, brief string, agentID *string, guidedSessionID *string, personaArtifactID *string, createdBy *string) (*Interview, error)
 	GetInterview(id string) (*Interview, error)
 	ListInterviews(projectID string) ([]*Interview, error)
 	CloseInterview(id string) (*Interview, error)
+	SetInterviewPersona(id string, personaArtifactID *string) (*Interview, error)
 
 	CreateInvite(interviewID, inviteeLabel string, expiresAt *time.Time) (*Invite, string, error)
 	GetInvite(id string) (*Invite, error)
@@ -160,7 +164,7 @@ func hashToken(rawToken string) string {
 }
 
 // CreateInterview creates a new open interview.
-func (s *DefaultService) CreateInterview(projectID, name, brief string, agentID *string, guidedSessionID *string, createdBy *string) (*Interview, error) {
+func (s *DefaultService) CreateInterview(projectID, name, brief string, agentID *string, guidedSessionID *string, personaArtifactID *string, createdBy *string) (*Interview, error) {
 	if projectID == "" {
 		return nil, errors.New("project id is required")
 	}
@@ -170,16 +174,17 @@ func (s *DefaultService) CreateInterview(projectID, name, brief string, agentID 
 
 	now := time.Now()
 	interview := &Interview{
-		ID:              uuid.New().String(),
-		ProjectID:       projectID,
-		GuidedSessionID: guidedSessionID,
-		Name:            name,
-		Brief:           brief,
-		AgentID:         agentID,
-		Status:          InterviewStatusOpen,
-		CreatedBy:       createdBy,
-		CreatedAt:       now,
-		UpdatedAt:       now,
+		ID:                uuid.New().String(),
+		ProjectID:         projectID,
+		GuidedSessionID:   guidedSessionID,
+		PersonaArtifactID: personaArtifactID,
+		Name:              name,
+		Brief:             brief,
+		AgentID:           agentID,
+		Status:            InterviewStatusOpen,
+		CreatedBy:         createdBy,
+		CreatedAt:         now,
+		UpdatedAt:         now,
 	}
 
 	if err := s.repo.SaveInterview(interview); err != nil {
@@ -207,6 +212,25 @@ func (s *DefaultService) CloseInterview(id string) (*Interview, error) {
 	}
 
 	interview.Status = InterviewStatusClosed
+	interview.UpdatedAt = time.Now()
+
+	if err := s.repo.UpdateInterview(interview); err != nil {
+		return nil, err
+	}
+
+	return interview, nil
+}
+
+// SetInterviewPersona links an interview to a persona artifact, or clears
+// the link when personaArtifactID is nil. Callers are responsible for
+// validating that the artifact is a persona in the interview's project.
+func (s *DefaultService) SetInterviewPersona(id string, personaArtifactID *string) (*Interview, error) {
+	interview, err := s.repo.FindInterviewByID(id)
+	if err != nil {
+		return nil, err
+	}
+
+	interview.PersonaArtifactID = personaArtifactID
 	interview.UpdatedAt = time.Now()
 
 	if err := s.repo.UpdateInterview(interview); err != nil {

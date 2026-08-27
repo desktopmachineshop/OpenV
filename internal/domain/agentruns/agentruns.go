@@ -41,6 +41,32 @@ const (
 	LogError      = "error"
 )
 
+// MaxAnswerChars is the answer budget every agent is told about (see
+// AnswerLengthRule) and the size everything that stores or forwards a run's
+// final text — card activity, handoff prompts — must accept without cutting
+// it off. Raise it here and both sides move together.
+const MaxAnswerChars = 8000
+
+// AnswerLengthRule is appended to every run's system prompt by the runner so
+// agents keep final answers inside the budget the log windows are sized for.
+var AnswerLengthRule = fmt.Sprintf(
+	"\n\nAnswer length: keep your final answer under %d characters — it is logged to the run and its kanban card in full up to that limit and cut off beyond it. Put full detail into artifacts or card comments and keep the final answer a summary that fits the budget.",
+	MaxAnswerChars,
+)
+
+// TruncateAnswer caps text at MaxAnswerChars without splitting a UTF-8
+// character, marking the cut with an ellipsis.
+func TruncateAnswer(text string) string {
+	if len(text) <= MaxAnswerChars {
+		return text
+	}
+	cut := MaxAnswerChars
+	for cut > 0 && text[cut]&0xC0 == 0x80 {
+		cut--
+	}
+	return text[:cut] + "…"
+}
+
 var (
 	ErrNotFound          = errors.New("agent run not found")
 	ErrInvalidTransition = errors.New("invalid run status transition")
@@ -59,6 +85,7 @@ type Run struct {
 	ParentRunID        *string                  `json:"parent_run_id,omitempty"`
 	WorkItemID         *string                  `json:"work_item_id,omitempty"`
 	InterviewSessionID *string                  `json:"interview_session_id,omitempty"`
+	GuidedSessionID    *string                  `json:"guided_session_id,omitempty"`
 	Status             string                   `json:"status"`
 	CancelRequested    bool                     `json:"cancel_requested"`
 	Priority           int                      `json:"priority"`
@@ -108,6 +135,7 @@ type LaunchRequest struct {
 	ParentRunID        *string
 	WorkItemID         *string
 	InterviewSessionID *string
+	GuidedSessionID    *string
 	Priority           int
 	Prompt             string
 	LaunchedBy         *string
@@ -275,6 +303,7 @@ func (s *DefaultService) Launch(req LaunchRequest) (*Run, string, error) {
 		ParentRunID:        req.ParentRunID,
 		WorkItemID:         req.WorkItemID,
 		InterviewSessionID: req.InterviewSessionID,
+		GuidedSessionID:    req.GuidedSessionID,
 		Status:             StatusQueued,
 		Priority:           req.Priority,
 		Prompt:             req.Prompt,

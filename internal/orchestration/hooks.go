@@ -8,6 +8,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/agentruns"
 	"github.com/openv/requirements-platform/internal/domain/automations"
 	domainevents "github.com/openv/requirements-platform/internal/domain/events"
+	"github.com/openv/requirements-platform/internal/domain/guided"
 	"github.com/openv/requirements-platform/internal/domain/interviews"
 	"github.com/openv/requirements-platform/internal/domain/projects"
 	"github.com/openv/requirements-platform/internal/domain/teams"
@@ -27,17 +28,19 @@ type Hooks struct {
 	teamService      teams.Service
 	workItemService  workitems.Service
 	interviewService interviews.Service
+	guidedService    guided.Service
 	projectService   projects.Service
 	broadcaster      SessionBroadcaster
 }
 
 // NewHooks creates the orchestration hooks.
-func NewHooks(runService agentruns.Service, teamService teams.Service, workItemService workitems.Service, interviewService interviews.Service, projectService projects.Service, broadcaster SessionBroadcaster) *Hooks {
+func NewHooks(runService agentruns.Service, teamService teams.Service, workItemService workitems.Service, interviewService interviews.Service, guidedService guided.Service, projectService projects.Service, broadcaster SessionBroadcaster) *Hooks {
 	return &Hooks{
 		runService:       runService,
 		teamService:      teamService,
 		workItemService:  workItemService,
 		interviewService: interviewService,
+		guidedService:    guidedService,
 		projectService:   projectService,
 		broadcaster:      broadcaster,
 	}
@@ -60,8 +63,10 @@ func (h *Hooks) RunStatusChanged(run *agentruns.Run) {
 	case agentruns.StatusSucceeded, agentruns.StatusAwaitingApproval:
 		h.enqueueSuccessors(run)
 		h.deliverInterviewReply(run)
+		h.deliverGuidedReply(run)
 	case agentruns.StatusFailed, agentruns.StatusTimedOut:
 		h.deliverInterviewFailure(run)
+		h.deliverGuidedFailure(run)
 	}
 }
 
@@ -83,7 +88,7 @@ func (h *Hooks) syncWorkItem(run *agentruns.Run) {
 
 	// Auto-create a tracking card for root, non-interview, project-scoped runs.
 	if run.WorkItemID == nil {
-		if run.Status != agentruns.StatusQueued || run.ParentRunID != nil || run.InterviewSessionID != nil || run.ProjectID == nil {
+		if run.Status != agentruns.StatusQueued || run.ParentRunID != nil || run.InterviewSessionID != nil || run.GuidedSessionID != nil || run.ProjectID == nil {
 			return
 		}
 		title := "Agent run: " + run.AgentName
@@ -126,11 +131,7 @@ func (h *Hooks) syncWorkItem(run *agentruns.Run) {
 	case agentruns.StatusRunning:
 		_ = h.workItemService.RecordRunActivity(*run.WorkItemID, workitems.KindRunStarted, "Run started", actor, map[string]interface{}{"run_id": run.ID})
 	case agentruns.StatusSucceeded, agentruns.StatusAwaitingApproval:
-		summary := run.FinalText
-		if len(summary) > 500 {
-			summary = summary[:500] + "…"
-		}
-		_ = h.workItemService.RecordRunActivity(*run.WorkItemID, workitems.KindRunFinished, summary, actor, map[string]interface{}{"run_id": run.ID, "status": run.Status})
+		_ = h.workItemService.RecordRunActivity(*run.WorkItemID, workitems.KindRunFinished, agentruns.TruncateAnswer(run.FinalText), actor, map[string]interface{}{"run_id": run.ID, "status": run.Status})
 	case agentruns.StatusFailed, agentruns.StatusCancelled, agentruns.StatusTimedOut:
 		_ = h.workItemService.RecordRunActivity(*run.WorkItemID, workitems.KindRunFailed, run.Error, actor, map[string]interface{}{"run_id": run.ID, "status": run.Status})
 	}
@@ -177,10 +178,7 @@ func (h *Hooks) launchSuccessor(run *agentruns.Run, edge *teams.Edge, edgeType s
 		return
 	}
 
-	output := run.FinalText
-	if len(output) > 4000 {
-		output = output[:4000] + "…"
-	}
+	output := agentruns.TruncateAnswer(run.FinalText)
 
 	var prompt string
 	if template, ok := edge.Config["prompt_template"].(string); ok && strings.TrimSpace(template) != "" {
@@ -294,6 +292,40 @@ func (h *Hooks) deliverInterviewFailure(run *agentruns.Run) {
 	}
 	if h.broadcaster != nil {
 		h.broadcaster.BroadcastSession("interview:"+*run.InterviewSessionID, "message", message)
+	}
+}
+
+// --- Guided copilot turns ---
+
+func (h *Hooks) deliverGuidedReply(run *agentruns.Run) {
+	if run.GuidedSessionID == nil {
+		return
+	}
+	reply := strings.TrimSpace(run.FinalText)
+	if reply == "" {
+		reply = "(the copilot had nothing further to add)"
+	}
+	message, err := h.guidedService.AppendChatMessage(*run.GuidedSessionID, guided.ChatRoleAssistant, reply)
+	if err != nil {
+		log.Printf("orchestration: failed to append guided copilot reply for session %s: %v", *run.GuidedSessionID, err)
+		return
+	}
+	if h.broadcaster != nil {
+		h.broadcaster.BroadcastSession("guided:"+*run.GuidedSessionID, "message", message)
+	}
+}
+
+func (h *Hooks) deliverGuidedFailure(run *agentruns.Run) {
+	if run.GuidedSessionID == nil {
+		return
+	}
+	message, err := h.guidedService.AppendChatMessage(*run.GuidedSessionID, guided.ChatRoleSystem,
+		"The copilot hit a technical problem answering. Your messages are saved — please try again in a moment.")
+	if err != nil {
+		return
+	}
+	if h.broadcaster != nil {
+		h.broadcaster.BroadcastSession("guided:"+*run.GuidedSessionID, "message", message)
 	}
 }
 

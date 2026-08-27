@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"runtime/debug"
+	"strings"
 	"time"
 
 	"github.com/openv/requirements-platform/internal/domain/agentruns"
@@ -233,11 +234,14 @@ func (w *Worker) execute(ctx context.Context, claim *ClaimResponse) {
 		}
 	}
 	spec := RunSpec{
-		RunID:        run.ID,
-		WorkDir:      workDir,
-		Prompt:       run.Prompt,
-		SystemPrompt: claim.Agent.SystemPrompt,
+		RunID:   run.ID,
+		WorkDir: workDir,
+		Prompt:  run.Prompt,
+		// Every agent gets the standing answer-length rule so final answers
+		// stay inside the budget the log windows are sized for.
+		SystemPrompt: strings.TrimSpace(claim.Agent.SystemPrompt + agentruns.AnswerLengthRule),
 		Model:        claim.Agent.Model,
+		Effort:       claim.Agent.Effort,
 		MCP: MCPServerConfig{
 			Command: w.mcpBinary,
 			Env:     env,

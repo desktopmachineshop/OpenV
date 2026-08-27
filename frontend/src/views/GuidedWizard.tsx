@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import {
   artifactAPI,
@@ -11,6 +11,7 @@ import {
 import { useAppStore } from '../state/store';
 import { StepShell } from '../components/wizard/StepShell';
 import { RepeatingCardList } from '../components/wizard/RepeatingCardList';
+import { GuidedChatPanel, GuidedChatPanelHandle, CopilotSuggestion } from '../components/wizard/GuidedChatPanel';
 
 // ---------------------------------------------------------------------------
 // Types for wizard answers
@@ -88,6 +89,8 @@ export const GuidedWizard: React.FC = () => {
   const projectId = params.projectId || storeProjectId;
 
   const [session, setSession] = useState<GuidedSession | null>(null);
+  const [latestCommitted, setLatestCommitted] = useState<GuidedSession | null>(null);
+  const chatRef = useRef<GuidedChatPanelHandle>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -142,6 +145,8 @@ export const GuidedWizard: React.FC = () => {
         if (cancelled) return;
         const sessions = res.data || [];
         const active = sessions.find((s) => s.status === 'in-progress' || s.status === 'in_progress');
+        // Sessions arrive newest first, so this is the most recent commit.
+        setLatestCommitted(sessions.find((s) => s.status === 'committed') || null);
         if (active) {
           setSession(active);
           const current = Math.min(Math.max(active.current_step || 1, 1), 8);
@@ -187,6 +192,248 @@ export const GuidedWizard: React.FC = () => {
     } finally {
       setBusy(false);
     }
+  };
+
+  // Reopen a committed definition: a new in-progress session seeded with the
+  // committed answers. Entries that already materialized keep their artifact
+  // links (shown locked); anything added becomes a fresh draft to commit.
+  const modifySession = async (from: GuidedSession) => {
+    if (!projectId) return;
+    setBusy(true);
+    try {
+      const res = await guidedAPI.start(projectId);
+      const seeded = await guidedAPI.saveStep(res.data.id, 1, from.answers || {});
+      setSession(seeded.data);
+      hydrateFromAnswers(seeded.data.answers || {});
+      setStep(1);
+      setMaxReached(STEP_LABELS.length);
+      setError('');
+    } catch (err: any) {
+      setError(`Failed to reopen definition: ${err.response?.data || err.message}`);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // Fuzzy-match a suggestion's "replaces" target against existing entries:
+  // exact (case-insensitive) first, then substring either way.
+  const matchEntry = <T,>(items: T[], key: (t: T) => string, target: string): number => {
+    const t = target.trim().toLowerCase();
+    if (!t) return -1;
+    const exact = items.findIndex((it) => key(it).trim().toLowerCase() === t);
+    if (exact >= 0) return exact;
+    return items.findIndex((it) => {
+      const k = key(it).trim().toLowerCase();
+      return !!k && (k.includes(t) || t.includes(k));
+    });
+  };
+
+  // Working copy of every suggestion-editable wizard section, so a batch of
+  // suggestions applies in order against ONE snapshot (later entries can
+  // reference earlier ones) and commits with a single state update per list.
+  interface SuggestionDraft {
+    vision: string;
+    problem: string;
+    targetUsers: string;
+    personas: PersonaEntry[];
+    needs: NeedEntry[];
+    requirements: ReqEntry[];
+    nfrs: NfrEntry[];
+    hazards: HazardEntry[];
+    openNfr: Record<string, boolean>;
+  }
+
+  // Insert or replace one copilot suggestion in the draft. Returns null on
+  // success, or a human-readable reason it could not apply.
+  const applySuggestionToDraft = (d: SuggestionDraft, s: CopilotSuggestion): string | null => {
+    const verificationMethod = (v: any, fallback: string) =>
+      VERIFICATION_METHODS.includes(String(v)) ? String(v) : fallback;
+
+    switch (s.kind) {
+      case 'framing': {
+        const text = String(s.text || '').trim();
+        if (!text) return 'The suggestion has no text.';
+        switch (s.field) {
+          case 'vision':
+            d.vision = text;
+            return null;
+          case 'problem_statement':
+            d.problem = text;
+            return null;
+          case 'target_users':
+            d.targetUsers = text;
+            return null;
+          default:
+            return `Unknown framing field "${s.field}".`;
+        }
+      }
+      case 'persona': {
+        const name = String(s.name || '').trim();
+        if (!name) return 'The persona suggestion has no name.';
+        if (s.replaces) {
+          const i = matchEntry(d.personas, (p) => p.name, String(s.replaces));
+          if (i < 0) return `No persona matching "${s.replaces}" to replace.`;
+          if (d.personas[i].artifact_id) return 'That persona is already saved as an artifact and cannot be replaced here.';
+          d.personas[i] = {
+            ...d.personas[i],
+            name,
+            role: s.role !== undefined ? String(s.role) : d.personas[i].role,
+            goals: s.goals !== undefined ? String(s.goals) : d.personas[i].goals,
+            pains: s.pains !== undefined ? String(s.pains) : d.personas[i].pains,
+          };
+          return null;
+        }
+        d.personas.push({ name, role: String(s.role || ''), goals: String(s.goals || ''), pains: String(s.pains || '') });
+        return null;
+      }
+      case 'need': {
+        if (s.replaces) {
+          const i = matchEntry(d.needs, (n) => n.capability, String(s.replaces));
+          if (i < 0) return `No user need matching "${s.replaces}" to replace.`;
+          if (d.needs[i].artifact_id) return 'That need is already saved as an artifact and cannot be replaced here.';
+          let personaIndex = d.needs[i].persona_index;
+          if (s.persona) {
+            const hit = matchEntry(d.personas, (p) => p.name, String(s.persona));
+            if (hit >= 0) personaIndex = hit;
+          }
+          d.needs[i] = {
+            ...d.needs[i],
+            persona_index: personaIndex,
+            capability: s.capability !== undefined ? String(s.capability) : d.needs[i].capability,
+            outcome: s.outcome !== undefined ? String(s.outcome) : d.needs[i].outcome,
+          };
+          return null;
+        }
+        const usable = d.personas.map((p, i) => ({ p, i })).filter(({ p }) => p.name.trim());
+        if (usable.length === 0) return 'Add a persona first — user needs attach to a persona.';
+        const wanted = String(s.persona || '').trim().toLowerCase();
+        const hit = usable.find(({ p }) => p.name.trim().toLowerCase() === wanted);
+        d.needs.push({
+          persona_index: (hit || usable[0]).i,
+          capability: String(s.capability || ''),
+          outcome: String(s.outcome || ''),
+        });
+        return null;
+      }
+      case 'requirement': {
+        if (s.replaces) {
+          const i = matchEntry(d.requirements, (r) => r.text, String(s.replaces));
+          if (i < 0) return `No requirement matching "${s.replaces}" to replace.`;
+          if (d.requirements[i].artifact_id) return 'That requirement is already saved as an artifact and cannot be replaced here.';
+          let needIndex = d.requirements[i].need_index;
+          if (s.need) {
+            const hit = matchEntry(d.needs, (n) => n.capability, String(s.need));
+            if (hit >= 0) needIndex = hit;
+          }
+          d.requirements[i] = {
+            ...d.requirements[i],
+            need_index: needIndex,
+            text: s.text !== undefined ? String(s.text) : d.requirements[i].text,
+            fit_criterion: s.fit_criterion !== undefined ? String(s.fit_criterion) : d.requirements[i].fit_criterion,
+            verification_method: verificationMethod(s.verification_method, d.requirements[i].verification_method),
+          };
+          return null;
+        }
+        const usable = d.needs.map((n, i) => ({ n, i })).filter(({ n }) => n.capability.trim());
+        if (usable.length === 0) return 'Add a user need first — requirements derive from needs.';
+        const wanted = String(s.need || '').trim().toLowerCase();
+        let needIndex = usable[0].i;
+        if (wanted) {
+          const hit = usable.find(({ n }) => {
+            const cap = n.capability.trim().toLowerCase();
+            return cap === wanted || cap.includes(wanted) || wanted.includes(cap);
+          });
+          if (hit) needIndex = hit.i;
+        }
+        d.requirements.push({
+          need_index: needIndex,
+          text: String(s.text || 'The system shall '),
+          fit_criterion: String(s.fit_criterion || ''),
+          verification_method: verificationMethod(s.verification_method, 'test'),
+        });
+        return null;
+      }
+      case 'nfr': {
+        const category =
+          NFR_CATEGORIES.find((c) => c.toLowerCase() === String(s.category || '').trim().toLowerCase()) ||
+          NFR_CATEGORIES[0];
+        if (s.replaces) {
+          const i = matchEntry(d.nfrs, (n) => n.text, String(s.replaces));
+          if (i < 0) return `No NFR matching "${s.replaces}" to replace.`;
+          if (d.nfrs[i].artifact_id) return 'That NFR is already saved as an artifact and cannot be replaced here.';
+          const nextCategory = s.category !== undefined ? category : d.nfrs[i].category;
+          d.nfrs[i] = {
+            ...d.nfrs[i],
+            category: nextCategory,
+            text: s.text !== undefined ? String(s.text) : d.nfrs[i].text,
+            fit_criterion: s.fit_criterion !== undefined ? String(s.fit_criterion) : d.nfrs[i].fit_criterion,
+            verification_method: verificationMethod(s.verification_method, d.nfrs[i].verification_method),
+          };
+          d.openNfr[nextCategory] = true;
+          return null;
+        }
+        if (!String(s.text || '').trim()) return 'The NFR suggestion has no text.';
+        d.nfrs.push({
+          category,
+          text: String(s.text),
+          fit_criterion: String(s.fit_criterion || ''),
+          verification_method: verificationMethod(s.verification_method, 'test'),
+        });
+        d.openNfr[category] = true;
+        return null;
+      }
+      case 'hazard': {
+        if (s.replaces) {
+          const i = matchEntry(d.hazards, (h) => h.hazard, String(s.replaces));
+          if (i < 0) return `No hazard matching "${s.replaces}" to replace.`;
+          if (d.hazards[i].artifact_id) return 'That hazard is already saved as an artifact and cannot be replaced here.';
+          d.hazards[i] = {
+            ...d.hazards[i],
+            hazard: s.hazard !== undefined ? String(s.hazard) : d.hazards[i].hazard,
+            harm: s.harm !== undefined ? String(s.harm) : d.hazards[i].harm,
+            severity: SEVERITIES.includes(String(s.severity)) ? String(s.severity) : d.hazards[i].severity,
+          };
+          return null;
+        }
+        if (!String(s.hazard || '').trim()) return 'The hazard suggestion has no description.';
+        d.hazards.push({
+          hazard: String(s.hazard),
+          harm: String(s.harm || ''),
+          severity: SEVERITIES.includes(String(s.severity)) ? String(s.severity) : 'moderate',
+        });
+        return null;
+      }
+      default:
+        return `Unknown suggestion kind "${s.kind}".`;
+    }
+  };
+
+  // Apply a batch of suggestions in order against one working copy, then
+  // commit every touched section in a single pass. Returns one result per
+  // suggestion (null = applied, string = reason it was skipped).
+  const handleAddSuggestions = (list: CopilotSuggestion[]): (string | null)[] => {
+    const d: SuggestionDraft = {
+      vision,
+      problem,
+      targetUsers,
+      personas: personas.map((p) => ({ ...p })),
+      needs: needs.map((n) => ({ ...n })),
+      requirements: requirements.map((r) => ({ ...r })),
+      nfrs: nfrs.map((n) => ({ ...n })),
+      hazards: hazards.map((h) => ({ ...h })),
+      openNfr: { ...openNfrCategories },
+    };
+    const results = list.map((s) => applySuggestionToDraft(d, s));
+    setVision(d.vision);
+    setProblem(d.problem);
+    setTargetUsers(d.targetUsers);
+    setPersonas(d.personas);
+    setNeeds(d.needs);
+    setRequirements(d.requirements);
+    setNfrs(d.nfrs);
+    setHazards(d.hazards);
+    setOpenNfrCategories(d.openNfr);
+    return results;
   };
 
   const buildAnswers = (): Record<string, any> => ({
@@ -241,6 +488,14 @@ export const GuidedWizard: React.FC = () => {
     if (!session || !projectId) return;
     setBusy(true);
     setError('');
+    // Nudge the copilot immediately — before the save round-trips — so its
+    // thinking indicator appears the moment the user advances.
+    if (step <= 7) {
+      chatRef.current?.nudge(
+        step + 1,
+        `saved step ${step} ("${STEP_LABELS[step - 1]}") and moved on to step ${step + 1} ("${STEP_LABELS[step]}")`
+      );
+    }
     try {
       if (step === 1) {
         await productProfileAPI.update(projectId, {
@@ -423,6 +678,10 @@ export const GuidedWizard: React.FC = () => {
     if (!session) return;
     setBusy(true);
     setError('');
+    chatRef.current?.nudge(
+      step + 1,
+      `skipped step ${step} ("${STEP_LABELS[step - 1]}") and moved on to step ${step + 1} ("${STEP_LABELS[step]}")`
+    );
     try {
       await persist(step + 1);
       goTo(step + 1);
@@ -435,6 +694,30 @@ export const GuidedWizard: React.FC = () => {
 
   const handleBack = () => {
     if (step > 1) setStep(step - 1);
+  };
+
+  // Escape hatch: drop the current in-progress session and return to the
+  // Start/Modify landing. Materialized drafts stay in the project.
+  const handleAbandon = async () => {
+    if (!session) return;
+    if (
+      !window.confirm(
+        'Abandon this guided session? Draft artifacts already created are kept, but unsaved entries are discarded.'
+      )
+    )
+      return;
+    setBusy(true);
+    try {
+      await guidedAPI.abandon(session.id);
+      setSession(null);
+      setStep(1);
+      setMaxReached(1);
+      setError('');
+    } catch (err: any) {
+      setError(`Failed to abandon session: ${err.response?.data || err.message}`);
+    } finally {
+      setBusy(false);
+    }
   };
 
   const handleCommit = async () => {
@@ -503,15 +786,39 @@ export const GuidedWizard: React.FC = () => {
       <div style={{ padding: 24, maxWidth: 700, margin: '0 auto' }}>
         <div className="card" style={{ textAlign: 'center', padding: 40 }}>
           <h2 style={{ color: '#2c3e50', marginBottom: 12 }}>Guided requirements definition</h2>
-          <p style={{ color: '#7f8c8d', marginBottom: 24, lineHeight: 1.6 }}>
-            A step-by-step flow that walks you from product framing through personas, user needs,
-            requirements, hazards and verification stubs — creating traceable draft artifacts as you go.
-            You review and commit everything at the end.
-          </p>
+          {latestCommitted ? (
+            <p style={{ color: '#7f8c8d', marginBottom: 24, lineHeight: 1.6 }}>
+              A guided definition has already been completed for this project. Reopen it to refine or
+              extend the committed set — existing entries stay linked to their artifacts, and anything
+              you add becomes new draft artifacts to review and commit.
+            </p>
+          ) : (
+            <p style={{ color: '#7f8c8d', marginBottom: 24, lineHeight: 1.6 }}>
+              A step-by-step flow that walks you from product framing through personas, user needs,
+              requirements, hazards and verification stubs — creating traceable draft artifacts as you go.
+              You review and commit everything at the end.
+            </p>
+          )}
           {error && <div style={{ color: '#e74c3c', marginBottom: 16, fontSize: 13 }}>{error}</div>}
-          <button className="button" style={{ background: '#3498db' }} onClick={startSession} disabled={busy}>
-            {busy ? 'Starting…' : 'Start guided definition'}
-          </button>
+          {latestCommitted ? (
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+              <button
+                className="button"
+                style={{ background: '#3498db' }}
+                onClick={() => modifySession(latestCommitted)}
+                disabled={busy}
+              >
+                {busy ? 'Opening…' : 'Modify guided definition'}
+              </button>
+              <button className="button-secondary" onClick={startSession} disabled={busy}>
+                Start over from scratch
+              </button>
+            </div>
+          ) : (
+            <button className="button" style={{ background: '#3498db' }} onClick={startSession} disabled={busy}>
+              {busy ? 'Starting…' : 'Start guided definition'}
+            </button>
+          )}
         </div>
       </div>
     );
@@ -541,6 +848,19 @@ export const GuidedWizard: React.FC = () => {
             <Link to="../requirements" className="button-secondary" style={{ textDecoration: 'none' }}>
               Go to Requirements
             </Link>
+            <button
+              className="button-secondary"
+              onClick={() => {
+                const committedSession = session;
+                setCommitted(false);
+                setLatestCommitted(committedSession);
+                setSession(null);
+                if (committedSession) modifySession(committedSession);
+              }}
+              disabled={busy}
+            >
+              Modify guided definition
+            </button>
           </div>
         </div>
       </div>
@@ -1000,8 +1320,28 @@ export const GuidedWizard: React.FC = () => {
   };
 
   return (
-    <div style={{ padding: 24, maxWidth: 1200, margin: '0 auto' }}>
-      <h2 style={{ color: '#2c3e50', marginBottom: 16 }}>Guided requirements definition</h2>
+    <div style={{ padding: 24, maxWidth: 1560, margin: '0 auto' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+        <h2 style={{ color: '#2c3e50', margin: 0 }}>Guided requirements definition</h2>
+        <button
+          onClick={handleAbandon}
+          disabled={busy}
+          title="Drop this session and return to the start page (created drafts are kept)"
+          style={{
+            background: 'none',
+            border: '1px solid #e74c3c',
+            color: '#e74c3c',
+            borderRadius: 4,
+            padding: '6px 12px',
+            fontSize: 12,
+            cursor: 'pointer',
+            width: 'auto',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          Abandon session
+        </button>
+      </div>
       {error && (
         <div
           style={{
@@ -1017,26 +1357,37 @@ export const GuidedWizard: React.FC = () => {
           {error}
         </div>
       )}
-      <StepShell
-        steps={STEP_LABELS}
-        current={step}
-        maxReached={maxReached}
-        onSelectStep={(s) => setStep(s)}
-        onBack={handleBack}
-        onNext={handleNext}
-        backDisabled={step === 1}
-        busy={busy}
-        hideNav={step === 8}
-        extraAction={
-          step === 6 || step === 7 ? (
-            <button className="button-secondary" onClick={handleSkip} disabled={busy}>
-              Skip
-            </button>
-          ) : undefined
-        }
-      >
-        {renderStepContent()}
-      </StepShell>
+      <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start' }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <StepShell
+            steps={STEP_LABELS}
+            current={step}
+            maxReached={maxReached}
+            onSelectStep={(s) => setStep(s)}
+            onBack={handleBack}
+            onNext={handleNext}
+            backDisabled={step === 1}
+            busy={busy}
+            hideNav={step === 8}
+            extraAction={
+              step === 6 || step === 7 ? (
+                <button className="button-secondary" onClick={handleSkip} disabled={busy}>
+                  Skip
+                </button>
+              ) : undefined
+            }
+          >
+            {renderStepContent()}
+          </StepShell>
+        </div>
+        <GuidedChatPanel
+          ref={chatRef}
+          sessionId={session.id}
+          step={step}
+          getState={buildAnswers}
+          onAddSuggestions={handleAddSuggestions}
+        />
+      </div>
     </div>
   );
 };

@@ -20,19 +20,19 @@ func NewAgentRunRepository(db *sql.DB) *AgentRunRepository {
 	return &AgentRunRepository{db: db}
 }
 
-const runColumns = `r.id, COALESCE(r.org_id::text, ''), r.agent_id, r.project_id, r.automation_id, r.trigger_event_id, r.team_id, r.team_node_id, r.parent_run_id, r.work_item_id, r.interview_session_id,
+const runColumns = `r.id, COALESCE(r.org_id::text, ''), r.agent_id, r.project_id, r.automation_id, r.trigger_event_id, r.team_id, r.team_node_id, r.parent_run_id, r.work_item_id, r.interview_session_id, r.guided_session_id,
 	r.status, r.cancel_requested, r.priority, r.prompt, r.run_token_hash, r.worker_id, r.heartbeat_at, r.started_at, r.finished_at, r.exit_code,
 	r.final_text, r.error, r.tokens_in, r.tokens_out, r.cost_usd, r.artifacts_touched, r.launched_by, r.created_at, a.name, a.provider`
 
 func scanRun(row interface{ Scan(...interface{}) error }) (*agentruns.Run, error) {
 	r := new(agentruns.Run)
-	var projectID, automationID, triggerEventID, teamID, teamNodeID, parentRunID, workItemID, interviewSessionID, launchedBy sql.NullString
+	var projectID, automationID, triggerEventID, teamID, teamNodeID, parentRunID, workItemID, interviewSessionID, guidedSessionID, launchedBy sql.NullString
 	var heartbeatAt, startedAt, finishedAt sql.NullTime
 	var exitCode sql.NullInt64
 	var costUSD sql.NullFloat64
 	var touched []byte
 
-	err := row.Scan(&r.ID, &r.OrgID, &r.AgentID, &projectID, &automationID, &triggerEventID, &teamID, &teamNodeID, &parentRunID, &workItemID, &interviewSessionID,
+	err := row.Scan(&r.ID, &r.OrgID, &r.AgentID, &projectID, &automationID, &triggerEventID, &teamID, &teamNodeID, &parentRunID, &workItemID, &interviewSessionID, &guidedSessionID,
 		&r.Status, &r.CancelRequested, &r.Priority, &r.Prompt, &r.RunTokenHash, &r.WorkerID, &heartbeatAt, &startedAt, &finishedAt, &exitCode,
 		&r.FinalText, &r.Error, &r.TokensIn, &r.TokensOut, &costUSD, &touched, &launchedBy, &r.CreatedAt, &r.AgentName, &r.AgentProvider)
 	if err != nil {
@@ -62,6 +62,7 @@ func scanRun(row interface{ Scan(...interface{}) error }) (*agentruns.Run, error
 	r.ParentRunID = setStr(parentRunID)
 	r.WorkItemID = setStr(workItemID)
 	r.InterviewSessionID = setStr(interviewSessionID)
+	r.GuidedSessionID = setStr(guidedSessionID)
 	r.LaunchedBy = setStr(launchedBy)
 	r.HeartbeatAt = setTime(heartbeatAt)
 	r.StartedAt = setTime(startedAt)
@@ -87,11 +88,11 @@ func (rep *AgentRunRepository) Save(r *agentruns.Run) error {
 		return err
 	}
 	_, err = rep.db.Exec(`
-		INSERT INTO agent_runs (id, org_id, agent_id, project_id, automation_id, trigger_event_id, team_id, team_node_id, parent_run_id, work_item_id, interview_session_id,
+		INSERT INTO agent_runs (id, org_id, agent_id, project_id, automation_id, trigger_event_id, team_id, team_node_id, parent_run_id, work_item_id, interview_session_id, guided_session_id,
 			status, cancel_requested, priority, prompt, run_token_hash, worker_id, heartbeat_at, started_at, finished_at, exit_code,
 			final_text, error, tokens_in, tokens_out, cost_usd, artifacts_touched, launched_by, created_at)
-		VALUES ($1, NULLIF($2, '')::uuid, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29)
-	`, r.ID, r.OrgID, r.AgentID, r.ProjectID, r.AutomationID, r.TriggerEventID, r.TeamID, r.TeamNodeID, r.ParentRunID, r.WorkItemID, r.InterviewSessionID,
+		VALUES ($1, NULLIF($2, '')::uuid, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30)
+	`, r.ID, r.OrgID, r.AgentID, r.ProjectID, r.AutomationID, r.TriggerEventID, r.TeamID, r.TeamNodeID, r.ParentRunID, r.WorkItemID, r.InterviewSessionID, r.GuidedSessionID,
 		r.Status, r.CancelRequested, r.Priority, r.Prompt, r.RunTokenHash, r.WorkerID, r.HeartbeatAt, r.StartedAt, r.FinishedAt, r.ExitCode,
 		r.FinalText, r.Error, r.TokensIn, r.TokensOut, r.CostUSD, touched, r.LaunchedBy, r.CreatedAt)
 	if err != nil {
@@ -201,7 +202,11 @@ func (rep *AgentRunRepository) Claim(workerID string, orgID string, workerUserID
 			  AND a.provider = ANY($2)
 			  AND r.priority >= $3
 			  AND (
-			    ($5 <> '' AND r.launched_by = $5::uuid)
+			    -- Personal runners take their owner's runs plus ownerless
+			    -- (system-launched) ones, so board/automation work load-shares
+			    -- across every live runner. Runs another member launched stay
+			    -- reserved for that member's runner or the workspace pool.
+			    ($5 <> '' AND (r.launched_by = $5::uuid OR r.launched_by IS NULL))
 			    OR
 			    ($5 = '' AND (r.preferred_user_id IS NULL OR r.hosted_after <= NOW()))
 			  )

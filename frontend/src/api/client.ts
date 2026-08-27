@@ -485,9 +485,18 @@ export interface GuidedSession {
   agent_run_id?: string | null;
 }
 
+export interface GuidedChatMessage {
+  id: string;
+  session_id: string;
+  role: 'assistant' | 'user' | 'system';
+  content: string;
+  created_at: string;
+}
+
 export interface Interview {
   id: string;
   project_id: string;
+  persona_artifact_id?: string | null;
   name: string;
   brief: string;
   status: string;
@@ -519,6 +528,7 @@ export interface AgentDef {
   description: string;
   provider: string;
   model: string;
+  effort: string;
   allowed_tools: string[];
   write_mode: 'proposal' | 'direct';
   repo_access: boolean;
@@ -600,12 +610,17 @@ export interface RepoConnection {
   project_id: string;
   name: string;
   remote_url: string;
-  local_path: string;
   default_branch: string;
   credential_strategy: string;
-  // The calling user's per-user override of local_path (runs on their own
-  // machine use this checkout location).
+  // Where this repo lives on the calling user's machine — their runs check
+  // out from here.
   my_local_path?: string;
+}
+
+// One selectable model for a provider. `id` is what the CLI/SDK receives.
+export interface ProviderModel {
+  id: string;
+  label: string;
 }
 
 export interface ProviderSetting {
@@ -616,6 +631,9 @@ export interface ProviderSetting {
   default_model: string;
   enabled: boolean;
   last_detected: Record<string, any>;
+  // Server-derived: the built-in catalog plus anything a worker detected.
+  // Read-only — it is ignored on upsert.
+  available_models: ProviderModel[];
 }
 
 export interface Crew {
@@ -969,14 +987,36 @@ export const guidedAPI = {
     client.post<{ artifact_ids: string[] }>(`/api/v1/guided-sessions/${id}/drafts`, { drafts }),
   commit: (id: string) => client.post<GuidedSession>(`/api/v1/guided-sessions/${id}/commit`),
   abandon: (id: string) => client.post<GuidedSession>(`/api/v1/guided-sessions/${id}/abandon`),
+  listMessages: (id: string) =>
+    client.get<GuidedChatMessage[]>(`/api/v1/guided-sessions/${id}/messages`),
+  sendMessage: (id: string, content: string, step: number, state: Record<string, any>) =>
+    client.post<{ message: GuidedChatMessage; runner_online?: boolean }>(
+      `/api/v1/guided-sessions/${id}/messages`,
+      { content, step, state }
+    ),
+  kickoffChat: (id: string, step: number, state: Record<string, any>) =>
+    client.post<{ status: 'launched' | 'pending' | 'skipped' | 'unavailable'; runner_online?: boolean }>(
+      `/api/v1/guided-sessions/${id}/chat/kickoff`,
+      { step, state }
+    ),
+  nudgeChat: (id: string, step: number, state: Record<string, any>, event: string) =>
+    client.post<{ status: 'launched' | 'pending' | 'unavailable'; runner_online?: boolean }>(
+      `/api/v1/guided-sessions/${id}/chat/nudge`,
+      { step, state, event }
+    ),
+  chatStreamUrl: (id: string) => `${API_BASE_URL}/api/v1/guided-sessions/${id}/chat/stream`,
 };
 
 export const interviewsAPI = {
-  create: (projectId: string, payload: { name: string; brief: string; agent_slug?: string }) =>
-    client.post<Interview>(`/api/v1/projects/${projectId}/interviews`, payload),
+  create: (
+    projectId: string,
+    payload: { name: string; brief: string; agent_slug?: string; persona_artifact_id?: string | null }
+  ) => client.post<Interview>(`/api/v1/projects/${projectId}/interviews`, payload),
   list: (projectId: string) =>
     client.get<Interview[]>(`/api/v1/projects/${projectId}/interviews`),
   close: (id: string) => client.post<Interview>(`/api/v1/interviews/${id}/close`),
+  setPersona: (id: string, personaArtifactId: string | null) =>
+    client.put<Interview>(`/api/v1/interviews/${id}/persona`, { persona_artifact_id: personaArtifactId }),
   createInvite: (interviewId: string, inviteeLabel?: string) =>
     client.post<{ invite: any; token: string; path: string }>(
       `/api/v1/interviews/${interviewId}/invites`,

@@ -1,7 +1,10 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { AgentDef, agentsAPI } from '../../api/client';
+import { AgentDef, agentsAPI, ProviderSetting, providerSettingsAPI } from '../../api/client';
+import { ModelSelect } from './ModelSelect';
 
-const PROVIDERS = [
+// Used until the provider settings load (or if they fail to) — the server
+// returns the same list, in the same order, with each provider's models.
+const FALLBACK_PROVIDERS = [
   'claude-code',
   'codex-cli',
   'gemini-cli',
@@ -16,12 +19,17 @@ interface AgentEditorProps {
   onCancel: () => void;
 }
 
+// Reasoning effort tiers (Claude Code passes them through; Codex maps
+// xhigh/max down to high; Gemini has no headless effort control yet).
+const EFFORT_LEVELS = ['low', 'medium', 'high', 'xhigh', 'max'];
+
 interface FormState {
   slug: string;
   name: string;
   description: string;
   provider: string;
   model: string;
+  effort: string;
   write_mode: 'proposal' | 'direct';
   repo_access: boolean;
   max_turns: number;
@@ -36,6 +44,7 @@ const toForm = (agent: AgentDef | null): FormState => ({
   description: agent?.description || '',
   provider: agent?.provider || 'claude-code',
   model: agent?.model || '',
+  effort: agent?.effort || '',
   write_mode: agent?.write_mode || 'proposal',
   repo_access: agent?.repo_access || false,
   max_turns: agent?.max_turns ?? 30,
@@ -52,6 +61,16 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({ agent, onSaved, onCanc
   const [rawLoaded, setRawLoaded] = useState(false);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [providerSettings, setProviderSettings] = useState<ProviderSetting[]>([]);
+
+  // Provider settings carry each provider's available models; a failure here
+  // is not worth an error banner — the form falls back to free-text entry.
+  useEffect(() => {
+    providerSettingsAPI
+      .list()
+      .then((res) => setProviderSettings(res.data || []))
+      .catch(() => setProviderSettings([]));
+  }, []);
 
   useEffect(() => {
     setForm(toForm(agent));
@@ -89,6 +108,7 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({ agent, onSaved, onCanc
       description: form.description,
       provider: form.provider,
       model: form.model,
+      effort: form.effort,
       write_mode: form.write_mode,
       repo_access: form.repo_access,
       max_turns: Number(form.max_turns) || 0,
@@ -130,6 +150,11 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({ agent, onSaved, onCanc
       setSaving(false);
     }
   };
+
+  const activeProvider = providerSettings.find((p) => p.provider === form.provider);
+  const providerNames = providerSettings.length
+    ? providerSettings.map((p) => p.provider)
+    : FALLBACK_PROVIDERS;
 
   return (
     <div className="card" style={{ marginBottom: 0 }}>
@@ -218,7 +243,7 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({ agent, onSaved, onCanc
                 onChange={(e) => set({ provider: e.target.value })}
                 style={{ fontSize: 13 }}
               >
-                {PROVIDERS.map((p) => (
+                {providerNames.map((p) => (
                   <option key={p} value={p}>
                     {p}
                   </option>
@@ -227,12 +252,33 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({ agent, onSaved, onCanc
             </div>
             <div className="form-group">
               <label>Model</label>
-              <input
+              <ModelSelect
                 value={form.model}
-                onChange={(e) => set({ model: e.target.value })}
-                placeholder="provider default"
+                models={activeProvider?.available_models || []}
+                onChange={(model) => set({ model })}
+                emptyLabel={
+                  activeProvider?.default_model
+                    ? `provider default (${activeProvider.default_model})`
+                    : 'provider default'
+                }
                 style={{ fontSize: 13 }}
               />
+            </div>
+            <div className="form-group">
+              <label>Effort</label>
+              <select
+                value={form.effort}
+                onChange={(e) => set({ effort: e.target.value })}
+                title="Reasoning effort per run. Applies to claude-code (low…max) and codex-cli (capped at high); gemini-cli ignores it."
+                style={{ fontSize: 13 }}
+              >
+                <option value="">provider default</option>
+                {EFFORT_LEVELS.map((v) => (
+                  <option key={v} value={v}>
+                    {v}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="form-group">
               <label>Write mode</label>

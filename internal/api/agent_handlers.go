@@ -911,24 +911,19 @@ func (h *Handler) ListRepoConnections(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Personal runners get the claiming user's per-user local paths applied
-	// directly: the checkout location differs per member's machine.
+	// Personal runners get the claiming user's local paths: the checkout
+	// lives somewhere different on every member's machine.
 	if workerUser := WorkerUser(r); workerUser != "" {
 		list, err := h.repoConnService.ListByProjectForUser(projectID, workerUser)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		for _, c := range list {
-			if c.MyLocalPath != "" {
-				c.LocalPath = c.MyLocalPath
-			}
-		}
 		json.NewEncoder(w).Encode(list)
 		return
 	}
 
-	// Users see the shared connection plus their own my_local_path.
+	// Users see the project's connections plus their own my_local_path.
 	if user := CurrentUser(r); user != nil {
 		list, err := h.repoConnService.ListByProjectForUser(projectID, user.ID)
 		if err != nil {

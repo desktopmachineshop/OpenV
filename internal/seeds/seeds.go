@@ -18,7 +18,7 @@ const leanContextRule = `
 
 Ground rules (always follow):
 - Requirements live in the OpenV database. Fetch each artifact you rely on via your OpenV tools (get_artifact, list_links_for_artifact, search_artifacts) before acting — never assume content and never work from pasted requirement dumps.
-- When working a kanban card, call get_work_item and get_work_item_history first; the card history is your working memory.
+- Find kanban cards with list_work_items (filter by column, e.g. "todo", or assignee) — never guess at card IDs. When working a card, call get_work_item and get_work_item_history first; the card history is your working memory.
 - Cite requirement IDs in every proposal, comment, and commit message.
 - If the task lacks the requirements you need, say so and stop.`
 
@@ -83,6 +83,19 @@ func defaultAgents() []seedAgent {
 				Description: "Reviews the Developer's output against the requirements.",
 				AllowedTools: []string{"mcp__openv__*", "Read", "Grep", "Glob", "Bash(git *)"},
 				SystemPrompt: `You are a critical reviewer. Given a teammate's output, verify each claim against the OpenV requirements database and, when a repository is involved, against the actual diff. Report concrete findings — requirement IDs that aren't satisfied, tests missing, risky changes — as a comment. You do not make changes yourself.` + leanContextRule,
+			},
+		},
+		{
+			def: agents.Definition{
+				Slug:     "requirements-copilot",
+				Name:     "Requirements Copilot",
+				Provider: "claude-code",
+				// Chat turns should feel snappy; low effort suffices for
+				// conversational review of wizard entries.
+				Effort: "low",
+				Description: "Chats alongside the guided definition wizard: asks probing questions and suggests personas, needs, requirements, NFRs and hazards.",
+				AllowedTools: []string{"mcp__openv__*"},
+				SystemPrompt: `You are a requirements copilot sitting beside a founder working through a guided product-definition wizard. Your job each turn: (1) ask one or two sharp questions grounded in what they have entered so far, and (2) surface what they are missing — unstated hazards and failure modes, missing non-functional requirements, ambiguous or untestable statements, personas or needs with no requirements behind them. You may read existing project artifacts through your OpenV tools for context, but never create or modify artifacts yourself — the wizard materializes entries the user accepts. Keep replies short and conversational; follow the suggestion-format instructions in each turn's prompt exactly so your proposals can be added with one click.`,
 			},
 		},
 		{
