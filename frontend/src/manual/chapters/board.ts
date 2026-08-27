@@ -3,8 +3,8 @@ const content = `
 # Kanban board
 
 The **Board** is a kanban view of the project's work items. Its special trick:
-cards can be assigned to AI agents or crews, and moving such a card kicks off
-an agent run.
+cards can be assigned to AI agents or crews, and dragging an agent's card to
+**To Do** kicks off an agent run.
 
 ## Columns
 
@@ -25,8 +25,11 @@ The composer takes:
 > Tip shown on the board itself: *assign a card to an agent and drag it to
 > To Do to launch the agent.*
 
-- Moving a card assigned to an agent or crew into an agent-owned column
-  enqueues an **agent run** for that card.
+- When **you** move a card assigned to an **agent** into **To Do**, an
+  **agent run** is enqueued for that card (skipped if a live run is already
+  attached). Only human moves trigger this — the automatic card moves that
+  track run progress don't. Crew-assigned cards don't launch from the board;
+  launch crews from the Crew page or an automation.
 - A **pulsing blue dot** on a card means a run is live (queued, claimed, or
   running). While a run is live the card is **locked** — it can't be dragged
   until the run finishes.

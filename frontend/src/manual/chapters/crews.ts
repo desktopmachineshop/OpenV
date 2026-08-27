@@ -61,8 +61,9 @@ show up on the kanban board.
 
 ## Crews elsewhere in the app
 
-- Board cards can be **assigned to a crew** (👥) — moving the card launches
-  the crew on it.
+- Board cards can be **assigned to a crew** (👥) to track crew work — but
+  moving the card doesn't launch the crew; launch it from the Crew page or
+  through an automation.
 - **Automations** can target a crew instead of a single agent.
 - Runs launched through a crew are tagged *(crew)* on the Runs page, and
   delegation between agents shows up as follow-up runs.

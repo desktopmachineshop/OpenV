@@ -12,11 +12,12 @@ method and linked test results:
 
 | Rollup | Meaning |
 | --- | --- |
-| pass | Latest results for its verifying tests all pass |
-| fail | At least one verifying test failed |
-| blocked | A verifying test is blocked |
-| unrun | Tests exist but haven't been run |
-| uncovered | No test case verifies the requirement |
+| pass | Method is *test* and the latest results for all verifying tests pass |
+| fail | At least one verifying test's latest result is a fail |
+| blocked | No fails, but a verifying test is blocked |
+| unrun | No fails or blocks, but a verifying test has no recorded result yet |
+| verified-manually | A non-test method (inspection, analysis, demonstration) marked verified on the requirement |
+| uncovered | Method is *test* but no test case verifies the requirement, or a non-test method not yet marked verified |
 | method-missing | The requirement has no verification method set |
 
 The dashboard shows summary cards and a stacked bar for the distribution, plus

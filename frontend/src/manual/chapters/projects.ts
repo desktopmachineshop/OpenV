@@ -68,8 +68,9 @@ Project membership is managed in **Settings → Access** inside the project:
 - **Add a member by email.** The person must already have an OpenV account —
   if no account exists for that email you'll see a message asking them to sign
   up first.
-- Each member has a **role** (for example viewer or editor) you can change from
-  the members table, and members can be removed.
+- Each member has a **role** — **viewer**, **editor**, or **owner** (the add
+  form defaults to editor; whoever creates a project becomes its owner) — you
+  can change it from the members table, and members can be removed.
 - **Team access** grants a whole workspace team access to the project at once,
   with a role per grant. Teams themselves are defined in Workspace settings —
   see *Workspace settings & teams*.

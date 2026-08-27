@@ -52,8 +52,9 @@ blue dot). Wait for the run to finish, or cancel it from the Runs page.
 
 ## An interview link stopped working
 
-The interview was **closed** — closing revokes its invite links. Create a new
-interview (or reopen by creating a fresh invite from an open interview).
+The interview was **closed** — closing revokes its invite links, and a closed
+interview can't issue new ones. Create a new interview if you need more
+sessions.
 
 ## I abandoned a guided session — where did my work go?
 

@@ -86,9 +86,11 @@ whole workspace.
 Personal runners use your own CLI sign-ins:
 
 - Open your user settings (bottom-left of the sidebar) → **Agent sign-ins**.
-  Each provider card relays the CLI's own sign-in flow — an "Open sign-in
-  page" link plus, for CLIs that use a paste-back code (Claude Code, Gemini),
-  a field for the authorization code. Credentials stay on your machine.
+  Each provider card relays the CLI's own sign-in flow, and each CLI does it
+  differently: **Gemini** shows an "Open sign-in page" link plus a field to
+  paste the authorization code back; **Codex** opens its sign-in page in a
+  browser on the runner machine itself; **Claude Code** opens its sign-in in
+  a terminal window on the runner machine. Credentials stay on your machine.
 - Alternatively sign in from a terminal on the runner machine.
 - Workspace admins can run workspace-targeted sign-ins from **Workspace
   settings → AI Providers → Connect** for shared workers.

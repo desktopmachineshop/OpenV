@@ -32,6 +32,8 @@ URL. The link opens a public, mobile-friendly chat page:
 
 Invite links are token-authenticated and can be revoked: **Close** an
 interview and its invite links stop working (you'll be asked to confirm).
+Closing is permanent — a closed interview can't issue new invites, so create
+a new interview if you need more sessions.
 
 The interviewer agent needs a runner online to reply — automations-style
 ownerless routing applies, so a hosted runner keeps interviews responsive even
@@ -48,8 +50,10 @@ status, and start time.
 - Use the **persona filter** above the interview list to focus on interviews
   linked to one persona (or those with none).
 
-Candidate user needs recorded by the interviewer arrive as draft artifacts /
-proposals for review — nothing enters the requirement set unreviewed.
+Candidate user needs recorded by the interviewer land in the project as
+**draft** user-need artifacts, tagged with the interview session they came
+from — review them in the Requirements view. Generated content never
+masquerades as reviewed work.
 `;
 
 export default content;

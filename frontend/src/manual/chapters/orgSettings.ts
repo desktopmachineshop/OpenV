@@ -14,8 +14,10 @@ are admin-only; other members see read-only or explanatory views.
 
 ## Members
 
-The people in the workspace. Admins can invite/add members and manage their
-workspace role (member or admin). Note the distinction:
+The people in the workspace. Admins can add members by email — the person
+must already have an OpenV account (no invite emails are sent) — and manage
+each member's workspace role (**member** or **admin**; new members default to
+member). Note the distinction:
 
 - **Workspace membership** gets someone into the workspace.
 - **Project access** is granted per project (Project Settings → Access) —
