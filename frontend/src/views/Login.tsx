@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authAPI } from '../api/client';
+import { apiErrorMessage } from '../api/errors';
 import { useAppStore } from '../state/store';
 
 // Login renders email/password sign-in plus optional Google SSO, and a
@@ -43,7 +44,7 @@ export const Login: React.FC = () => {
       setCurrentUser(res.data);
       navigate('/projects');
     } catch (err: any) {
-      setError(err.response?.data || err.message || 'Sign-in failed');
+      setError(apiErrorMessage(err, 'Sign-in failed'));
     } finally {
       setBusy(false);
     }

@@ -162,7 +162,7 @@ export const RunDetailPanel: React.FC<RunDetailPanelProps> = ({ runId, onSelectR
     };
 
     try {
-      es = new EventSource(agentRunsAPI.streamUrl(runId));
+      es = new EventSource(agentRunsAPI.streamUrl(runId), { withCredentials: true });
       es.addEventListener('log', (evt: MessageEvent) => {
         try {
           const entry: RunLogEntry = JSON.parse(evt.data);
