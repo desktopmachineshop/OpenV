@@ -97,19 +97,19 @@ func (h *Handler) registerAgentRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/crew-edges/{id}", h.RemoveTeamEdge).Methods("DELETE")
 
 	// Teams (deprecated aliases for the crews routes above).
-	router.HandleFunc("/api/v1/teams", h.ListTeams).Methods("GET")                    // deprecated: use /api/v1/crews
-	router.HandleFunc("/api/v1/teams", h.CreateTeam).Methods("POST")                  // deprecated: use /api/v1/crews
-	router.HandleFunc("/api/v1/teams/{id}", h.GetTeam).Methods("GET")                 // deprecated: use /api/v1/crews/{id}
-	router.HandleFunc("/api/v1/teams/{id}", h.UpdateTeam).Methods("PUT")              // deprecated: use /api/v1/crews/{id}
-	router.HandleFunc("/api/v1/teams/{id}", h.DeleteTeam).Methods("DELETE")           // deprecated: use /api/v1/crews/{id}
-	router.HandleFunc("/api/v1/teams/{id}/clone", h.CloneTeam).Methods("POST")        // deprecated: use /api/v1/crews/{id}/clone
-	router.HandleFunc("/api/v1/teams/{id}/nodes", h.AddTeamNode).Methods("POST")      // deprecated: use /api/v1/crews/{id}/nodes
-	router.HandleFunc("/api/v1/teams/{id}/runs", h.LaunchTeamRun).Methods("POST")     // deprecated: use /api/v1/crews/{id}/runs
-	router.HandleFunc("/api/v1/team-nodes/{id}", h.UpdateTeamNode).Methods("PUT")     // deprecated: use /api/v1/crew-nodes/{id}
-	router.HandleFunc("/api/v1/team-nodes/{id}", h.RemoveTeamNode).Methods("DELETE")  // deprecated: use /api/v1/crew-nodes/{id}
-	router.HandleFunc("/api/v1/teams/{id}/edges", h.AddTeamEdge).Methods("POST")      // deprecated: use /api/v1/crews/{id}/edges
-	router.HandleFunc("/api/v1/team-edges/{id}", h.UpdateTeamEdge).Methods("PUT")     // deprecated: use /api/v1/crew-edges/{id}
-	router.HandleFunc("/api/v1/team-edges/{id}", h.RemoveTeamEdge).Methods("DELETE")  // deprecated: use /api/v1/crew-edges/{id}
+	router.HandleFunc("/api/v1/teams", h.ListTeams).Methods("GET")                   // deprecated: use /api/v1/crews
+	router.HandleFunc("/api/v1/teams", h.CreateTeam).Methods("POST")                 // deprecated: use /api/v1/crews
+	router.HandleFunc("/api/v1/teams/{id}", h.GetTeam).Methods("GET")                // deprecated: use /api/v1/crews/{id}
+	router.HandleFunc("/api/v1/teams/{id}", h.UpdateTeam).Methods("PUT")             // deprecated: use /api/v1/crews/{id}
+	router.HandleFunc("/api/v1/teams/{id}", h.DeleteTeam).Methods("DELETE")          // deprecated: use /api/v1/crews/{id}
+	router.HandleFunc("/api/v1/teams/{id}/clone", h.CloneTeam).Methods("POST")       // deprecated: use /api/v1/crews/{id}/clone
+	router.HandleFunc("/api/v1/teams/{id}/nodes", h.AddTeamNode).Methods("POST")     // deprecated: use /api/v1/crews/{id}/nodes
+	router.HandleFunc("/api/v1/teams/{id}/runs", h.LaunchTeamRun).Methods("POST")    // deprecated: use /api/v1/crews/{id}/runs
+	router.HandleFunc("/api/v1/team-nodes/{id}", h.UpdateTeamNode).Methods("PUT")    // deprecated: use /api/v1/crew-nodes/{id}
+	router.HandleFunc("/api/v1/team-nodes/{id}", h.RemoveTeamNode).Methods("DELETE") // deprecated: use /api/v1/crew-nodes/{id}
+	router.HandleFunc("/api/v1/teams/{id}/edges", h.AddTeamEdge).Methods("POST")     // deprecated: use /api/v1/crews/{id}/edges
+	router.HandleFunc("/api/v1/team-edges/{id}", h.UpdateTeamEdge).Methods("PUT")    // deprecated: use /api/v1/crew-edges/{id}
+	router.HandleFunc("/api/v1/team-edges/{id}", h.RemoveTeamEdge).Methods("DELETE") // deprecated: use /api/v1/crew-edges/{id}
 
 	// Domain event audit.
 	router.HandleFunc("/api/v1/events", h.ListDomainEvents).Methods("GET")
@@ -545,11 +545,34 @@ func (h *Handler) resolveRunAuth(run *agentruns.Run, agent *agents.Agent) map[st
 	return auth
 }
 
+// requireWorkerRun resolves the {id} run for a worker lifecycle call and
+// verifies the worker credential may act on it: the run must belong to the
+// worker's org, and a personal runner key may only touch runs its user could
+// have claimed (their own or ownerless — mirrors Claim). Cross-org and
+// unknown run IDs both answer 404 so a foreign worker cannot probe whether a
+// run exists. Returns nil after writing the response when access is denied.
+func (h *Handler) requireWorkerRun(w http.ResponseWriter, r *http.Request) *agentruns.Run {
+	run, err := h.runService.Get(mux.Vars(r)["id"])
+	if err != nil || run == nil || run.OrgID != WorkerOrg(r) {
+		http.Error(w, "agent run not found", http.StatusNotFound)
+		return nil
+	}
+	if workerUser := WorkerUser(r); workerUser != "" && run.LaunchedBy != nil && *run.LaunchedBy != workerUser {
+		http.Error(w, "agent run not found", http.StatusNotFound)
+		return nil
+	}
+	return run
+}
+
 func (h *Handler) StartAgentRun(w http.ResponseWriter, r *http.Request) {
 	if !requireWorker(w, r) {
 		return
 	}
-	if err := h.runService.MarkRunning(mux.Vars(r)["id"]); err != nil {
+	run := h.requireWorkerRun(w, r)
+	if run == nil {
+		return
+	}
+	if err := h.runService.MarkRunning(run.ID); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -558,6 +581,9 @@ func (h *Handler) StartAgentRun(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) AppendAgentRunLogs(w http.ResponseWriter, r *http.Request) {
 	if !requireWorker(w, r) {
+		return
+	}
+	if h.requireWorkerRun(w, r) == nil {
 		return
 	}
 	var entries []agentruns.LogEntry
@@ -578,6 +604,9 @@ func (h *Handler) AppendAgentRunLogs(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) FinishAgentRun(w http.ResponseWriter, r *http.Request) {
 	if !requireWorker(w, r) {
+		return
+	}
+	if h.requireWorkerRun(w, r) == nil {
 		return
 	}
 	var req agentruns.FinishRequest
@@ -1660,16 +1689,39 @@ func (h *Handler) ListDomainEvents(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	q := r.URL.Query()
-	if projectID := q.Get("project_id"); projectID != "" {
-		if !h.requireProjectRole(w, r, projectID, members.RoleViewer) {
-			return
-		}
+	projectID := q.Get("project_id")
+	if projectID != "" && !h.requireProjectRole(w, r, projectID, members.RoleViewer) {
+		return
 	}
 	limit, _ := strconv.Atoi(q.Get("limit"))
-	list, err := h.eventRepo.List(ActiveOrg(r), q.Get("project_id"), q.Get("event_type"), limit)
+	list, err := h.eventRepo.List(ActiveOrg(r), projectID, q.Get("event_type"), limit)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
+	}
+	// Without a project filter, org admins see the whole workspace audit;
+	// plain members only see events for projects they can access (mirrors
+	// ListAgentRuns).
+	if projectID == "" && !h.isOrgAdmin(r, ActiveOrg(r)) {
+		user := CurrentUser(r)
+		allowed := map[string]bool{}
+		if h.memberService != nil {
+			ids, err := h.memberService.ProjectIDsForUser(user.ID)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			for _, id := range ids {
+				allowed[id] = true
+			}
+		}
+		visible := list[:0]
+		for _, e := range list {
+			if e.ProjectID != "" && allowed[e.ProjectID] {
+				visible = append(visible, e)
+			}
+		}
+		list = visible
 	}
 	json.NewEncoder(w).Encode(list)
 }
