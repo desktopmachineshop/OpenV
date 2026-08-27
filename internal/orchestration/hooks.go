@@ -95,10 +95,7 @@ func (h *Hooks) syncWorkItem(run *agentruns.Run) {
 		if run.AgentName == "" {
 			title = "Agent run"
 		}
-		description := run.Prompt
-		if len(description) > 300 {
-			description = description[:300] + "…"
-		}
+		description := agentruns.Truncate(run.Prompt, 300)
 		item, err := h.workItemService.Create(workitems.CreateWorkItemRequest{
 			ProjectID:    *run.ProjectID,
 			Title:        title,
@@ -235,10 +232,7 @@ func (h *Hooks) handOffToHuman(run *agentruns.Run, graph *teams.TeamGraph, edge 
 	if edgeType == teams.EdgeReviews {
 		title = "Review request: " + sourceLabel
 	}
-	description := run.FinalText
-	if len(description) > 500 {
-		description = description[:500] + "…"
-	}
+	description := agentruns.Truncate(run.FinalText, 500)
 	description += "\n\n(from agent run " + run.ID + ")"
 
 	actor := "agent:" + run.ID

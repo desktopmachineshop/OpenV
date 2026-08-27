@@ -54,17 +54,23 @@ var AnswerLengthRule = fmt.Sprintf(
 	MaxAnswerChars,
 )
 
-// TruncateAnswer caps text at MaxAnswerChars without splitting a UTF-8
-// character, marking the cut with an ellipsis.
-func TruncateAnswer(text string) string {
-	if len(text) <= MaxAnswerChars {
+// Truncate caps text at max bytes without splitting a UTF-8 character,
+// marking the cut with an ellipsis.
+func Truncate(text string, max int) string {
+	if len(text) <= max {
 		return text
 	}
-	cut := MaxAnswerChars
+	cut := max
 	for cut > 0 && text[cut]&0xC0 == 0x80 {
 		cut--
 	}
 	return text[:cut] + "…"
+}
+
+// TruncateAnswer caps text at MaxAnswerChars without splitting a UTF-8
+// character, marking the cut with an ellipsis.
+func TruncateAnswer(text string) string {
+	return Truncate(text, MaxAnswerChars)
 }
 
 var (
@@ -159,13 +165,17 @@ type QueueStats struct {
 	QueuedRepoAccess    int `json:"queued_repo_access"`
 }
 
-// ListFilter filters run listings.
+// ListFilter filters run listings. OrgID and LaunchedBy scope the listing in
+// SQL (before LIMIT applies) so one workspace's traffic can never starve
+// another's page.
 type ListFilter struct {
+	OrgID      string
 	AgentID    string
 	ProjectID  string
 	Status     string
 	ParentID   string
 	WorkItemID string
+	LaunchedBy string
 	Limit      int
 }
 
@@ -185,6 +195,21 @@ type Repository interface {
 	// work: runs whose personal reservation is absent or expired.
 	// excludeRepoAccess skips runs whose agent needs repo access.
 	Claim(workerID string, orgID string, workerUserID string, providers []string, minPriority int, excludeRepoAccess bool) (*Run, error)
+	// ReleaseClaim conditionally returns a claimed run to the queue, but only
+	// while it is still claimed by workerID (claim handshake failed); reports
+	// whether the release was applied.
+	ReleaseClaim(runID, workerID string) (bool, error)
+	// CancelQueued conditionally cancels a run only while it is still queued
+	// (and revokes its token), so a concurrent worker claim is never stomped;
+	// reports whether the cancel was applied.
+	CancelQueued(id string) (bool, error)
+	// SetCancelRequested flags a claimed/running run for cooperative
+	// cancellation; reports whether the flag was applied.
+	SetCancelRequested(id string) (bool, error)
+	// UpdateTerminal writes a run's terminal result fields and revokes its run
+	// token, but only while the stored status is still non-terminal; reports
+	// whether the transition was applied.
+	UpdateTerminal(r *Run) (bool, error)
 	Heartbeat(runID string, at time.Time) error
 	// FailStale marks claimed/running runs failed when their heartbeat is
 	// older than cutoff; returns the affected run IDs.
@@ -207,6 +232,11 @@ type Service interface {
 	List(filter ListFilter) ([]*Run, error)
 	Tree(rootID string) ([]*Run, error)
 	Claim(workerID string, orgID string, workerUserID string, providers []string, minPriority int, excludeRepoAccess bool) (*Run, error)
+	// ReleaseClaim returns a just-claimed run to the queue when the claim
+	// handshake fails after Claim (agent lookup or token mint), so the run is
+	// not stranded until the stale reaper. Only applies while the run is
+	// still claimed by workerID.
+	ReleaseClaim(runID, workerID string) error
 	// AttachWorkItem links a run to the kanban card tracking it.
 	AttachWorkItem(runID, workItemID string) error
 	// ReissueToken mints a fresh run token (returned raw; hash stored).
@@ -415,6 +445,24 @@ func (s *DefaultService) Claim(workerID string, orgID string, workerUserID strin
 	return run, nil
 }
 
+// ReleaseClaim returns a just-claimed run to the queue when the claim
+// handshake fails, so the run isn't stranded until the stale reaper. The
+// release is conditional (still claimed, same worker) so it can never undo a
+// state another actor moved the run into meanwhile.
+func (s *DefaultService) ReleaseClaim(runID, workerID string) error {
+	released, err := s.repo.ReleaseClaim(runID, workerID)
+	if err != nil {
+		return err
+	}
+	if !released {
+		return nil
+	}
+	if run, err := s.Get(runID); err == nil {
+		s.notifyStatus(run)
+	}
+	return nil
+}
+
 // ReissueToken mints a fresh token for a run and stores its hash.
 func (s *DefaultService) ReissueToken(runID string) (string, error) {
 	run, err := s.Get(runID)
@@ -528,9 +576,22 @@ func (s *DefaultService) Finish(id string, req FinishRequest) (*Run, error) {
 		}
 	}
 
-	if err := s.repo.Update(run); err != nil {
+	// The terminal write is conditional so a concurrent finisher (the stale
+	// reaper, a duplicate worker report) can never overwrite an
+	// already-terminal status; it also revokes the run token, so a finished
+	// run's credential stops authenticating.
+	applied, err := s.repo.UpdateTerminal(run)
+	if err != nil {
 		return nil, err
 	}
+	if !applied {
+		current, err := s.Get(id)
+		if err != nil {
+			return nil, fmt.Errorf("%w: run already finished", ErrInvalidTransition)
+		}
+		return nil, fmt.Errorf("%w: run already %s", ErrInvalidTransition, current.Status)
+	}
+	run.RunTokenHash = ""
 	s.notifyStatus(run)
 	if s.bus != nil {
 		projectID := ""
@@ -546,6 +607,10 @@ func (s *DefaultService) Finish(id string, req FinishRequest) (*Run, error) {
 }
 
 // RequestCancel flags a run for cancellation (immediate if still queued).
+// Both paths are conditional state transitions in the repository, so a
+// concurrent worker claim is never overwritten: a queued run cancels only
+// while still queued, otherwise the cancel-requested flag is set only while
+// the run is live (claimed/running).
 func (s *DefaultService) RequestCancel(id string) (*Run, error) {
 	run, err := s.Get(id)
 	if err != nil {
@@ -554,16 +619,33 @@ func (s *DefaultService) RequestCancel(id string) (*Run, error) {
 	if terminalStatuses[run.Status] || run.Status == StatusAwaitingApproval {
 		return run, nil
 	}
-	run.CancelRequested = true
 	if run.Status == StatusQueued {
-		now := time.Now()
-		run.Status = StatusCancelled
-		run.FinishedAt = &now
+		cancelled, err := s.repo.CancelQueued(id)
+		if err != nil {
+			return nil, err
+		}
+		if cancelled {
+			run, err = s.Get(id)
+			if err != nil {
+				return nil, err
+			}
+			s.notifyStatus(run)
+			return run, nil
+		}
+		// Lost the race to a worker claim (or a finish): fall through to the
+		// cooperative flag path against the run's current state.
 	}
-	if err := s.repo.Update(run); err != nil {
+	flagged, err := s.repo.SetCancelRequested(id)
+	if err != nil {
 		return nil, err
 	}
-	s.notifyStatus(run)
+	run, err = s.Get(id)
+	if err != nil {
+		return nil, err
+	}
+	if flagged {
+		s.notifyStatus(run)
+	}
 	return run, nil
 }
 
