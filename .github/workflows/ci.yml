@@ -26,6 +26,8 @@ jobs:
     env:
       # Available for integration tests; current tests do not require a live DB.
       DATABASE_URL: postgres://openv:openv@localhost:5432/openv_test?sslmode=disable
+      # Postgres-backed integration tests (PR #77) gate on this var and t.Skip when unset.
+      OPENV_TEST_DATABASE_URL: postgres://openv:openv@localhost:5432/openv_test?sslmode=disable
     steps:
       - uses: actions/checkout@v4
 
