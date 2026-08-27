@@ -1,73 +1,118 @@
-## Development Setup
+# Development Guide
 
-For local development without Docker:
+## Toolchain
 
-### Backend Development
-1. **Install Go 1.21+**
-   - Download from [golang.org](https://golang.org)
-   - Verify: `go version`
+The project targets **Go 1.25** (`go.mod`) and **Node 20** (frontend,
+Create React App). The standard development toolchain is **Docker only** —
+neither Go nor Node needs to be installed on the host. Every build target in
+the `Makefile` runs inside `golang:1.25`, and the frontend image builds on
+`node:20-alpine`.
 
-2. **Install PostgreSQL 15+**
-   - Download from [postgresql.org](https://postgresql.org)
-   - Create database: `createdb openv`
-   - Verify: `psql -U postgres -d openv`
+If you do have a local Go 1.25+ / Node 20+ install, the commands below work
+directly on the host too, but Docker is the supported path.
 
-3. **Run Backend**
-   ```bash
-   export DB_HOST=localhost DB_PORT=5432 DB_USER=postgres DB_PASSWORD=postgres DB_NAME=openv
-   go run cmd/server/main.go
-   ```
+## Running the stack
 
-### Frontend Development
-1. **Install Node.js 20+**
-   - Download from [nodejs.org](https://nodejs.org)
-   - Verify: `node --version` and `npm --version`
-
-2. **Install Dependencies**
-   ```bash
-   cd frontend
-   npm install
-   ```
-
-3. **Run Frontend**
-   ```bash
-   npm start
-   ```
-
-### Database Management
 ```bash
-# Connect to database
-psql -U postgres -d openv
-
-# View tables
-\dt
-
-# View artifact schema
-\d artifacts
-
-# View links schema
-\d links
-
-# Exit psql
-\q
+make up          # docker compose up -d  (Postgres, API, frontend)
+make down        # stop the stack
+make build       # rebuild the images
 ```
 
-## Build for Production
+- **Frontend**: http://localhost:3000
+- **API**: http://localhost:8080
+- **Postgres**: localhost:5432 (postgres/postgres, db `openv`)
 
-### Build Backend Binary
+The API applies its schema on startup (idempotent `CREATE TABLE IF NOT
+EXISTS` migrations in `internal/persistence/postgres/`), so there is no
+separate migration step.
+
+## Backend development
+
+Compile-check or build via the Go container:
+
 ```bash
-CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bin/server cmd/server/main.go
+# Compile everything
+docker run --rm -v "$(pwd):/app" -w /app golang:1.25 go build ./...
+
+# Run the test suite (also available as `make test`)
+docker run --rm -v "$(pwd):/app" -w /app golang:1.25 go test ./...
 ```
 
-### Build Frontend
+To run a changed API server, rebuild the image and restart the service:
+
 ```bash
-cd frontend
-npm run build
-# Output in frontend/build/
+docker compose build api && docker compose up -d api
 ```
 
-### Build Docker Images
+Key environment variables (see `cmd/server/main.go` and
+`docker-compose.yml`): `DATABASE_URL` (or `DB_HOST`/`DB_PORT`/`DB_USER`/
+`DB_PASSWORD`/`DB_NAME`), `PORT`, `UPLOADS_DIR`, `OPENV_DATA_DIR`,
+`AGENTS_DIR`, `WORKER_API_KEY` (legacy bootstrap worker key),
+`GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`/`PUBLIC_URL` (Google sign-in),
+`FRONTEND_URL`, `CORS_ORIGIN`, `SECURE_COOKIES`, and the hosted-runner
+settings (`HOSTED_RUNNERS`, `RUNNER_IMAGE`, `RUNNER_NETWORK`,
+`RUNNER_API_URL`, `CONNECTOR_DIST_DIR`).
+
+## Frontend development
+
+The frontend is a CRA app in `frontend/`. Its dependencies have peer-dep
+conflicts under npm's default resolver, so **`--legacy-peer-deps` is
+required** (the `frontend/Dockerfile` already does this):
+
+```bash
+docker run --rm -v "$(pwd)/frontend:/app" -w /app node:20 \
+  npm install --legacy-peer-deps
+
+docker run --rm -v "$(pwd)/frontend:/app" -w /app -p 3000:3000 \
+  -e REACT_APP_API_URL=http://localhost:8080 node:20 npm start
+```
+
+In the composed stack the frontend container runs `npm start` itself; for
+quick iteration, `docker compose build frontend && docker compose up -d
+frontend` picks up changes.
+
+## Worker binaries and connector bundles
+
+The agent worker binaries run on the **host** (next to your vendor CLIs), but
+they are cross-compiled through Docker as well:
+
+```bash
+make worker          # Windows binaries -> bin/agentd.exe, bin/openv-mcp.exe
+make worker-unix     # Linux/macOS binaries -> bin/agentd, bin/openv-mcp
+make worker-image    # hosted-runner image (openv-worker:latest, Dockerfile.worker)
+make connector-dist  # Agent Connector download bundles -> dist/*.zip
+                     # (served at /api/v1/public/connector/download)
+```
+
+See `docs/agents.md` for how the runners are used.
+
+## Tests and CI
+
+```bash
+make test   # go test ./... inside golang:1.25
+```
+
+There is currently **no GitHub Actions workflow** in the repository (no
+`.github/workflows/`); run `make test` (and a `go build ./...`) locally
+before pushing.
+
+## Database inspection
+
+```bash
+docker exec -it openv-postgres psql -U postgres -d openv
+
+\dt                 -- list tables
+\d artifacts        -- inspect a table
+SELECT * FROM agent_runs ORDER BY created_at DESC LIMIT 10;
+```
+
+See `docs/data-model.md` for a table-by-table overview.
+
+## Production builds
+
 ```bash
 docker build -f Dockerfile.api -t openv-api:latest .
 docker build -f frontend/Dockerfile -t openv-frontend:latest frontend
+docker build -f Dockerfile.worker -t openv-worker:latest .   # hosted runner
 ```
