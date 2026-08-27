@@ -31,9 +31,10 @@ COPY nginx.conf /etc/nginx/nginx.conf
 # Copy built assets from builder stage
 COPY --from=builder /app/build /usr/share/nginx/html
 
-# Create a non-root user
-RUN addgroup -g 101 -S nginx-user && \
-    adduser -S -D -H -u 101 -h /var/cache/nginx -s /sbin/nologin -G nginx-user -g nginx-user nginx-user
+# Create a non-root user. Do not hardcode uid/gid: current nginx:alpine
+# images already ship a group with gid 101, which made `addgroup -g 101` fail.
+RUN addgroup -S nginx-user && \
+    adduser -S -D -H -h /var/cache/nginx -s /sbin/nologin -G nginx-user -g nginx-user nginx-user
 
 # Change ownership of necessary directories
 RUN chown -R nginx-user:nginx-user /usr/share/nginx/html && \
