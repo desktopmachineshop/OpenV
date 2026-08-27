@@ -6,8 +6,11 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -57,6 +60,11 @@ func envOr(key, fallback string) string {
 }
 
 func main() {
+	// Root context: canceled on SIGINT/SIGTERM so background loops and the
+	// HTTP server can shut down gracefully.
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
 	// Database connection: Railway-style DATABASE_URL or individual vars.
 	var dsn string
 	if databaseURL := os.Getenv("DATABASE_URL"); databaseURL != "" {
@@ -331,17 +339,23 @@ func main() {
 	runService.AddSubscriber(hooks)
 	hooks.SubscribeBus(bus)
 
-	// Trigger matcher + scheduler + reaper.
+	// Trigger matcher + scheduler + reaper. The scheduler and reaper loops
+	// stop when the signal context is canceled.
 	automation.NewTriggerMatcher(automationRepo, runService, teamService).Start(bus)
-	scheduler.New(automationRepo, runService, teamService).Start(context.Background())
+	scheduler.New(automationRepo, runService, teamService).Start(ctx)
 	go func() {
 		ticker := time.NewTicker(30 * time.Second)
 		defer ticker.Stop()
-		for range ticker.C {
-			if ids, err := runService.FailStale(2 * time.Minute); err == nil && len(ids) > 0 {
-				log.Printf("Reaper failed %d stale runs", len(ids))
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				if ids, err := runService.FailStale(2 * time.Minute); err == nil && len(ids) > 0 {
+					log.Printf("Reaper failed %d stale runs", len(ids))
+				}
+				_ = userRepo.DeleteExpiredSessions(time.Now())
 			}
-			_ = userRepo.DeleteExpiredSessions(time.Now())
 		}
 	}()
 
@@ -427,9 +441,53 @@ func main() {
 		protected.ServeHTTP(w, r)
 	})
 
-	log.Printf("Starting server on port %s", port)
-	if err := http.ListenAndServe(":"+port, corsHandler); err != nil {
-		log.Fatalf("Failed to start server: %v", err)
+	// HTTP server. ReadHeaderTimeout defends against slowloris-style clients
+	// holding connections open while trickling headers; IdleTimeout reclaims
+	// idle keep-alive connections. ReadTimeout and WriteTimeout deliberately
+	// stay 0 (unlimited): the API serves long-lived SSE streams (e.g.
+	// /api/v1/agent-runs/{id}/stream, guided chat and interview streams)
+	// that hold a response open indefinitely, and a nonzero WriteTimeout
+	// is an absolute
+	// deadline that would sever every stream after it elapsed. Slow-client
+	// abuse on the read side is already bounded by ReadHeaderTimeout plus
+	// per-handler request parsing.
+	srv := &http.Server{
+		Addr:              ":" + port,
+		Handler:           corsHandler,
+		ReadHeaderTimeout: 10 * time.Second,
+		IdleTimeout:       120 * time.Second,
+		// Derive request contexts from the signal context so long-lived SSE
+		// handlers (which select on r.Context().Done()) exit promptly on
+		// shutdown instead of pinning the drain for its full timeout.
+		BaseContext: func(net.Listener) context.Context { return ctx },
+	}
+
+	errCh := make(chan error, 1)
+	go func() {
+		log.Printf("Starting server on port %s", port)
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			errCh <- err
+			return
+		}
+		errCh <- nil
+	}()
+
+	select {
+	case err := <-errCh:
+		if err != nil {
+			log.Fatalf("Failed to start server: %v", err)
+		}
+	case <-ctx.Done():
+		stop() // restore default signal behavior: a second Ctrl-C kills immediately
+		log.Println("Shutdown signal received; draining connections...")
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		defer cancel()
+		if err := srv.Shutdown(shutdownCtx); err != nil {
+			log.Printf("Graceful shutdown incomplete: %v", err)
+			_ = srv.Close()
+		}
+		<-errCh // wait for ListenAndServe to return
+		log.Println("Server stopped")
 	}
 }
 
