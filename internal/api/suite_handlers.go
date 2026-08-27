@@ -855,7 +855,7 @@ func (h *Handler) launchGuidedTurn(r *http.Request, session *guided.Session, ste
 				s = s[:12000] + "…(truncated)"
 			}
 			b.WriteString("\nCurrent wizard state (everything entered so far):\n" + s + "\n")
-			b.WriteString("State key legend: step_1 {vision, problem_statement, target_users} = Product framing; step_2.personas; step_3.needs (persona_index indexes step_2.personas); step_4.requirements (need_index indexes step_3.needs); step_5.nfrs; step_6.hazards; step_7 = test stubs; step 8 = review & commit.\n")
+			b.WriteString("State key legend: step_1 {vision, problem_statement, target_users} = Product framing; step_2.personas (each has a stable id); step_3.needs (persona_id references a step_2 persona's id); step_4.requirements (need_id references a step_3 need's id); step_5.nfrs; step_6.hazards; step_7 = test stubs; step 8 = review & commit; copilot_applied = keys of your suggestions already applied.\n")
 		}
 	}
 	b.WriteString("\nConversation so far:\n")
