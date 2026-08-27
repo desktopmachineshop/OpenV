@@ -12,7 +12,8 @@ RUN npm ci --legacy-peer-deps
 # Copy source files
 COPY . .
 
-# Accept API URL from Railway Variables (or use empty default for local build)
+# API base URL baked into the static bundle at build time.
+# Pass --build-arg REACT_APP_API_URL=https://your-host:8080 (see docker-compose.prod.yml).
 ARG REACT_APP_API_URL=""
 ENV REACT_APP_API_URL=$REACT_APP_API_URL
 
@@ -31,22 +32,17 @@ COPY nginx.conf /etc/nginx/nginx.conf
 # Copy built assets from builder stage
 COPY --from=builder /app/build /usr/share/nginx/html
 
-# Create a non-root user
-RUN addgroup -g 101 -S nginx-user && \
-    adduser -S -D -H -u 101 -h /var/cache/nginx -s /sbin/nologin -G nginx-user -g nginx-user nginx-user
-
-# Change ownership of necessary directories
-RUN chown -R nginx-user:nginx-user /usr/share/nginx/html && \
-    chown -R nginx-user:nginx-user /var/cache/nginx && \
-    chown -R nginx-user:nginx-user /var/log/nginx && \
+# Run as the unprivileged nginx user that ships with the base image
+# (uid/gid 101). Give it ownership of the paths nginx writes to.
+RUN chown -R nginx:nginx /usr/share/nginx/html /var/cache/nginx /var/log/nginx && \
     touch /var/run/nginx.pid && \
-    chown -R nginx-user:nginx-user /var/run/nginx.pid
+    chown nginx:nginx /var/run/nginx.pid
 
-# Cloud Run requires the container to listen on port 8080
+# nginx listens on 8080 (see nginx.conf) so it can bind without root
 EXPOSE 8080
 
 # Switch to non-root user
-USER nginx-user
+USER nginx
 
 # Start nginx
 CMD ["nginx", "-g", "daemon off;"]
