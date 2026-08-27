@@ -12,6 +12,7 @@ import (
 	"github.com/gorilla/mux"
 
 	"github.com/openv/requirements-platform/internal/domain/agentruns"
+	"github.com/openv/requirements-platform/internal/domain/agents"
 	"github.com/openv/requirements-platform/internal/domain/artifacts"
 	"github.com/openv/requirements-platform/internal/domain/chatter"
 	"github.com/openv/requirements-platform/internal/domain/events"
@@ -73,6 +74,13 @@ type fakeRunService struct {
 	started  []string
 	appended []string
 	finished []string
+
+	listFilters []agentruns.ListFilter
+
+	claimRun   *agentruns.Run
+	reissueErr error
+	reissued   []string
+	released   [][2]string
 }
 
 func (f *fakeRunService) Get(id string) (*agentruns.Run, error) {
@@ -95,6 +103,28 @@ func (f *fakeRunService) AppendLogs(id string, entries []agentruns.LogEntry) (*a
 func (f *fakeRunService) Finish(id string, req agentruns.FinishRequest) (*agentruns.Run, error) {
 	f.finished = append(f.finished, id)
 	return f.byID[id], nil
+}
+
+func (f *fakeRunService) List(filter agentruns.ListFilter) ([]*agentruns.Run, error) {
+	f.listFilters = append(f.listFilters, filter)
+	return []*agentruns.Run{}, nil
+}
+
+func (f *fakeRunService) Claim(workerID, orgID, workerUserID string, providers []string, minPriority int, excludeRepoAccess bool) (*agentruns.Run, error) {
+	return f.claimRun, nil
+}
+
+func (f *fakeRunService) ReissueToken(runID string) (string, error) {
+	f.reissued = append(f.reissued, runID)
+	if f.reissueErr != nil {
+		return "", f.reissueErr
+	}
+	return "fresh-token", nil
+}
+
+func (f *fakeRunService) ReleaseClaim(runID, workerID string) error {
+	f.released = append(f.released, [2]string{runID, workerID})
+	return nil
 }
 
 type fakeArtifactService struct {
@@ -535,6 +565,152 @@ func TestListDomainEventsScoping(t *testing.T) {
 		list := listEvents(t, newHandler(), "member")
 		if len(list) != 1 || list[0].ProjectID != "proj-1" {
 			t.Fatalf("member saw %+v, want only the proj-1 event", list)
+		}
+	})
+}
+
+// TestListAgentRunsScoping locks in that the run listing pushes workspace and
+// launcher scoping into the repository filter (so predicates apply before the
+// SQL LIMIT) instead of post-filtering a page that a busy sibling workspace
+// could starve: org admins get the whole workspace, plain members without a
+// project filter only their own runs.
+func TestListAgentRunsScoping(t *testing.T) {
+	const orgID = "org-1"
+	newFixture := func() (*Handler, *fakeRunService) {
+		runSvc := &fakeRunService{}
+		h := &Handler{
+			runService: runSvc,
+			orgService: &fakeOrgService{roles: map[string]map[string]string{
+				orgID: {"admin": orgs.RoleAdmin, "member": orgs.RoleMember},
+			}},
+			projectService: &fakeProjectService{byID: map[string]*projects.Project{
+				"proj-1": {ID: "proj-1", OrgID: orgID},
+			}},
+			memberService: &fakeMemberService{roles: map[string]map[string]string{
+				"proj-1": {"member": members.RoleViewer},
+			}},
+		}
+		return h, runSvc
+	}
+
+	listRuns := func(t *testing.T, h *Handler, userID, query string) {
+		t.Helper()
+		r := httptest.NewRequest(http.MethodGet, "/api/v1/agent-runs"+query, nil)
+		ctx := context.WithValue(r.Context(), ctxUser, &users.User{ID: userID})
+		ctx = context.WithValue(ctx, ctxActiveOrg, orgID)
+		w := httptest.NewRecorder()
+		h.ListAgentRuns(w, r.WithContext(ctx))
+		if w.Code != http.StatusOK {
+			t.Fatalf("status = %d, want 200 (body %q)", w.Code, w.Body.String())
+		}
+	}
+
+	t.Run("member without project filter is scoped to own runs in own org", func(t *testing.T) {
+		h, runSvc := newFixture()
+		listRuns(t, h, "member", "")
+		if len(runSvc.listFilters) != 1 {
+			t.Fatalf("List called %d times, want 1", len(runSvc.listFilters))
+		}
+		filter := runSvc.listFilters[0]
+		if filter.OrgID != orgID {
+			t.Errorf("filter.OrgID = %q, want %q", filter.OrgID, orgID)
+		}
+		if filter.LaunchedBy != "member" {
+			t.Errorf("filter.LaunchedBy = %q, want the member's own id", filter.LaunchedBy)
+		}
+	})
+
+	t.Run("org admin without project filter sees whole workspace", func(t *testing.T) {
+		h, runSvc := newFixture()
+		listRuns(t, h, "admin", "")
+		filter := runSvc.listFilters[0]
+		if filter.OrgID != orgID {
+			t.Errorf("filter.OrgID = %q, want %q", filter.OrgID, orgID)
+		}
+		if filter.LaunchedBy != "" {
+			t.Errorf("filter.LaunchedBy = %q, want unset for an admin", filter.LaunchedBy)
+		}
+	})
+
+	t.Run("member with project filter sees the whole project", func(t *testing.T) {
+		h, runSvc := newFixture()
+		listRuns(t, h, "member", "?project_id=proj-1")
+		filter := runSvc.listFilters[0]
+		if filter.ProjectID != "proj-1" || filter.OrgID != orgID {
+			t.Errorf("filter = %+v, want proj-1 scoped to %s", filter, orgID)
+		}
+		if filter.LaunchedBy != "" {
+			t.Errorf("filter.LaunchedBy = %q, want unset when a project filter passed the role check", filter.LaunchedBy)
+		}
+	})
+}
+
+type fakeAgentService struct {
+	agents.Service
+	byID map[string]*agents.Agent
+}
+
+func (f *fakeAgentService) Get(id string) (*agents.Agent, error) {
+	return f.byID[id], nil
+}
+
+// TestClaimHandshakeFailureReleasesRun locks in that when the claim handshake
+// fails after a successful Claim (agent lookup or token mint), the handler
+// rolls the claim back to queued instead of stranding the run until the
+// stale reaper.
+func TestClaimHandshakeFailureReleasesRun(t *testing.T) {
+	newClaim := func(agentKnown bool, reissueErr error) (*Handler, *fakeRunService) {
+		runSvc := &fakeRunService{
+			claimRun:   &agentruns.Run{ID: "run-1", OrgID: "org-1", AgentID: "agent-1", Status: agentruns.StatusClaimed, WorkerID: "w-1"},
+			reissueErr: reissueErr,
+		}
+		agentSvc := &fakeAgentService{byID: map[string]*agents.Agent{}}
+		if agentKnown {
+			agentSvc.byID["agent-1"] = &agents.Agent{ID: "agent-1", Name: "Agent", Provider: "claude"}
+		}
+		return &Handler{runService: runSvc, agentService: agentSvc}, runSvc
+	}
+
+	claim := func(t *testing.T, h *Handler) *httptest.ResponseRecorder {
+		t.Helper()
+		r := httptest.NewRequest(http.MethodPost, "/api/v1/agent-runs/claim", strings.NewReader(`{"worker_id":"w-1"}`))
+		r = r.WithContext(context.WithValue(r.Context(), ctxWorkerOrg, "org-1"))
+		w := httptest.NewRecorder()
+		h.ClaimAgentRun(w, r)
+		return w
+	}
+
+	t.Run("missing agent releases the claim", func(t *testing.T) {
+		h, runSvc := newClaim(false, nil)
+		if w := claim(t, h); w.Code != http.StatusInternalServerError {
+			t.Fatalf("status = %d, want 500 (body %q)", w.Code, w.Body.String())
+		}
+		if len(runSvc.released) != 1 || runSvc.released[0] != [2]string{"run-1", "w-1"} {
+			t.Fatalf("released = %v, want the claimed run handed back for worker w-1", runSvc.released)
+		}
+	})
+
+	t.Run("token mint failure releases the claim", func(t *testing.T) {
+		h, runSvc := newClaim(true, errors.New("token store down"))
+		if w := claim(t, h); w.Code != http.StatusInternalServerError {
+			t.Fatalf("status = %d, want 500 (body %q)", w.Code, w.Body.String())
+		}
+		if len(runSvc.released) != 1 {
+			t.Fatalf("released = %v, want exactly one release", runSvc.released)
+		}
+	})
+
+	t.Run("successful handshake keeps the claim", func(t *testing.T) {
+		h, runSvc := newClaim(true, nil)
+		w := claim(t, h)
+		if w.Code != http.StatusOK {
+			t.Fatalf("status = %d, want 200 (body %q)", w.Code, w.Body.String())
+		}
+		if len(runSvc.released) != 0 {
+			t.Fatalf("released = %v, want no release on success", runSvc.released)
+		}
+		if !strings.Contains(w.Body.String(), "fresh-token") {
+			t.Fatalf("response should carry the reissued run token: %q", w.Body.String())
 		}
 	})
 }

@@ -122,9 +122,16 @@ func (rep *AgentRunRepository) FindByID(id string) (*agentruns.Run, error) {
 	return r, err
 }
 
-// FindByTokenHash returns the run holding the token, or nil.
+// FindByTokenHash returns the run holding the token, or nil. Runs that have
+// reached a terminal state (or handed their result to proposal review) no
+// longer authenticate: their token is revoked at finish time, and this lookup
+// refuses them regardless as defense in depth.
 func (rep *AgentRunRepository) FindByTokenHash(hash string) (*agentruns.Run, error) {
-	r, err := scanRun(rep.db.QueryRow(`SELECT `+runColumns+` FROM agent_runs r JOIN agents a ON a.id = r.agent_id WHERE r.run_token_hash = $1`, hash))
+	r, err := scanRun(rep.db.QueryRow(`
+		SELECT `+runColumns+` FROM agent_runs r JOIN agents a ON a.id = r.agent_id
+		WHERE r.run_token_hash = $1 AND r.run_token_hash <> ''
+		  AND r.status NOT IN ('succeeded', 'failed', 'cancelled', 'timed_out', 'awaiting_approval')
+	`, hash))
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -144,9 +151,11 @@ func (rep *AgentRunRepository) List(filter agentruns.ListFilter) ([]*agentruns.R
 		  AND ($3 = '' OR r.status = $3)
 		  AND ($4 = '' OR r.parent_run_id = $4::uuid)
 		  AND ($5 = '' OR r.work_item_id = $5::uuid)
+		  AND ($6 = '' OR r.org_id = $6::uuid)
+		  AND ($7 = '' OR r.launched_by = $7::uuid)
 		ORDER BY r.created_at DESC
-		LIMIT $6
-	`, filter.AgentID, filter.ProjectID, filter.Status, filter.ParentID, filter.WorkItemID, limit)
+		LIMIT $8
+	`, filter.AgentID, filter.ProjectID, filter.Status, filter.ParentID, filter.WorkItemID, filter.OrgID, filter.LaunchedBy, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -221,6 +230,70 @@ func (rep *AgentRunRepository) Claim(workerID string, orgID string, workerUserID
 	return rep.FindByID(id)
 }
 
+// ReleaseClaim conditionally returns a claimed run to the queue, but only
+// while it is still claimed by workerID; reports whether it was applied.
+func (rep *AgentRunRepository) ReleaseClaim(runID, workerID string) (bool, error) {
+	res, err := rep.db.Exec(`
+		UPDATE agent_runs SET status = 'queued', worker_id = '', heartbeat_at = NULL
+		WHERE id = $1 AND status = 'claimed' AND worker_id = $2
+	`, runID, workerID)
+	if err != nil {
+		return false, err
+	}
+	n, err := res.RowsAffected()
+	return n > 0, err
+}
+
+// CancelQueued conditionally cancels a run only while it is still queued,
+// revoking its token; reports whether it was applied.
+func (rep *AgentRunRepository) CancelQueued(id string) (bool, error) {
+	res, err := rep.db.Exec(`
+		UPDATE agent_runs SET status = 'cancelled', cancel_requested = TRUE, finished_at = NOW(), run_token_hash = ''
+		WHERE id = $1 AND status = 'queued'
+	`, id)
+	if err != nil {
+		return false, err
+	}
+	n, err := res.RowsAffected()
+	return n > 0, err
+}
+
+// SetCancelRequested flags a claimed/running run for cooperative
+// cancellation; reports whether the flag was applied.
+func (rep *AgentRunRepository) SetCancelRequested(id string) (bool, error) {
+	res, err := rep.db.Exec(`
+		UPDATE agent_runs SET cancel_requested = TRUE
+		WHERE id = $1 AND status IN ('claimed', 'running')
+	`, id)
+	if err != nil {
+		return false, err
+	}
+	n, err := res.RowsAffected()
+	return n > 0, err
+}
+
+// UpdateTerminal writes a run's terminal result fields and revokes its run
+// token, but only while the stored status is still non-terminal; reports
+// whether the transition was applied.
+func (rep *AgentRunRepository) UpdateTerminal(r *agentruns.Run) (bool, error) {
+	touched, err := json.Marshal(r.ArtifactsTouched)
+	if err != nil {
+		return false, err
+	}
+	res, err := rep.db.Exec(`
+		UPDATE agent_runs SET status = $2, cancel_requested = $3, worker_id = $4, heartbeat_at = $5, started_at = $6, finished_at = $7,
+			exit_code = $8, final_text = $9, error = $10, tokens_in = $11, tokens_out = $12, cost_usd = $13, artifacts_touched = $14,
+			run_token_hash = ''
+		WHERE id = $1 AND status NOT IN ('succeeded', 'failed', 'cancelled', 'timed_out', 'awaiting_approval')
+	`, r.ID, r.Status, r.CancelRequested, r.WorkerID, r.HeartbeatAt, r.StartedAt, r.FinishedAt,
+		r.ExitCode, r.FinalText, r.Error, r.TokensIn, r.TokensOut, r.CostUSD, touched)
+	if err != nil {
+		return false, err
+	}
+	n, err := res.RowsAffected()
+	return n > 0, err
+}
+
 // UpdateWorkItemID links a run to its kanban card.
 func (rep *AgentRunRepository) UpdateWorkItemID(runID, workItemID string) error {
 	_, err := rep.db.Exec(`UPDATE agent_runs SET work_item_id = $2 WHERE id = $1`, runID, workItemID)
@@ -239,10 +312,11 @@ func (rep *AgentRunRepository) Heartbeat(runID string, at time.Time) error {
 	return err
 }
 
-// FailStale fails claimed/running runs whose heartbeat predates cutoff.
+// FailStale fails claimed/running runs whose heartbeat predates cutoff,
+// revoking their run tokens along with the terminal transition.
 func (rep *AgentRunRepository) FailStale(cutoff time.Time) ([]string, error) {
 	rows, err := rep.db.Query(`
-		UPDATE agent_runs SET status = 'failed', error = 'worker lost (heartbeat timeout)', finished_at = NOW()
+		UPDATE agent_runs SET status = 'failed', error = 'worker lost (heartbeat timeout)', finished_at = NOW(), run_token_hash = ''
 		WHERE status IN ('claimed', 'running') AND heartbeat_at < $1
 		RETURNING id
 	`, cutoff)
