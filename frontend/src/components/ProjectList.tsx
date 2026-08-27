@@ -236,7 +236,15 @@ export const ProjectList: React.FC = () => {
       <Navbar title="Projects" />
       <div className="project-list-container">
 
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+        <button
+          className="button-secondary"
+          style={{ padding: '8px 14px', fontSize: 13 }}
+          onClick={() => navigate('/manual')}
+          title="Open the user manual"
+        >
+          ? Help
+        </button>
         <div
           style={{
             display: 'flex',
