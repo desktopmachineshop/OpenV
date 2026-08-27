@@ -210,7 +210,18 @@ type Repository interface {
 	// token, but only while the stored status is still non-terminal; reports
 	// whether the transition was applied.
 	UpdateTerminal(r *Run) (bool, error)
-	Heartbeat(runID string, at time.Time) error
+	// MarkRunning conditionally transitions a run from claimed to running,
+	// stamping started_at/heartbeat_at, so a run another actor moved on
+	// (reaper failure, cancel) is never resurrected; reports whether the
+	// transition was applied.
+	MarkRunning(runID string, at time.Time) (bool, error)
+	// Heartbeat refreshes liveness, but only while the run is still live
+	// (claimed/running), so a late worker report can never refresh a terminal
+	// run; reports whether the refresh was applied.
+	Heartbeat(runID string, at time.Time) (bool, error)
+	// UpdateWorkItemID links a run to its kanban card without touching any
+	// other column (in particular status).
+	UpdateWorkItemID(runID, workItemID string) error
 	// FailStale marks claimed/running runs failed when their heartbeat is
 	// older than cutoff; returns the affected run IDs.
 	FailStale(cutoff time.Time) ([]string, error)
@@ -365,20 +376,11 @@ func (s *DefaultService) Launch(req LaunchRequest) (*Run, string, error) {
 	return run, token, nil
 }
 
-// AttachWorkItem links a run to the kanban card tracking it.
+// AttachWorkItem links a run to the kanban card tracking it. The write is a
+// targeted single-column update so it can never resurrect a status (or any
+// other field) from a stale read.
 func (s *DefaultService) AttachWorkItem(runID, workItemID string) error {
-	type workItemUpdater interface {
-		UpdateWorkItemID(runID, workItemID string) error
-	}
-	if wu, ok := s.repo.(workItemUpdater); ok {
-		return wu.UpdateWorkItemID(runID, workItemID)
-	}
-	run, err := s.Get(runID)
-	if err != nil {
-		return err
-	}
-	run.WorkItemID = &workItemID
-	return s.repo.Update(run)
+	return s.repo.UpdateWorkItemID(runID, workItemID)
 }
 
 // Get returns a run by id.
@@ -490,35 +492,40 @@ func (s *DefaultService) updateTokenHash(run *Run) error {
 	return s.repo.Update(run)
 }
 
-// MarkRunning transitions a claimed run to running.
+// MarkRunning transitions a claimed run to running. The transition is a
+// conditional write (claimed -> running) so a run that a concurrent actor
+// already moved — the stale reaper failing it, a cancel — is never
+// resurrected to running from a stale read.
 func (s *DefaultService) MarkRunning(id string) error {
-	run, err := s.Get(id)
+	applied, err := s.repo.MarkRunning(id, time.Now())
 	if err != nil {
 		return err
 	}
-	if run.Status != StatusClaimed {
+	if !applied {
+		run, err := s.Get(id)
+		if err != nil {
+			return err
+		}
 		return fmt.Errorf("%w: %s -> running", ErrInvalidTransition, run.Status)
 	}
-	now := time.Now()
-	run.Status = StatusRunning
-	run.StartedAt = &now
-	run.HeartbeatAt = &now
-	if err := s.repo.Update(run); err != nil {
-		return err
+	if run, err := s.Get(id); err == nil {
+		s.notifyStatus(run)
 	}
-	s.notifyStatus(run)
 	return nil
 }
 
 // AppendLogs persists a log batch, refreshes the heartbeat, and returns the
-// current run so the worker sees cancel_requested.
+// current run so the worker sees cancel_requested. The heartbeat refresh is
+// conditional on the run still being live, so a late log batch from a worker
+// whose run was already failed (or cancelled) never refreshes heartbeat_at
+// on a terminal run; the logs themselves are still kept.
 func (s *DefaultService) AppendLogs(runID string, entries []LogEntry) (*Run, error) {
 	if len(entries) > 0 {
 		if err := s.repo.AppendLogs(runID, entries); err != nil {
 			return nil, err
 		}
 	}
-	if err := s.repo.Heartbeat(runID, time.Now()); err != nil {
+	if _, err := s.repo.Heartbeat(runID, time.Now()); err != nil {
 		return nil, err
 	}
 	run, err := s.Get(runID)
@@ -649,9 +656,11 @@ func (s *DefaultService) RequestCancel(id string) (*Run, error) {
 	return run, nil
 }
 
-// Heartbeat refreshes a run's liveness timestamp.
+// Heartbeat refreshes a run's liveness timestamp. A heartbeat for a run that
+// is no longer live (already terminal) is silently dropped.
 func (s *DefaultService) Heartbeat(id string) error {
-	return s.repo.Heartbeat(id, time.Now())
+	_, err := s.repo.Heartbeat(id, time.Now())
+	return err
 }
 
 // FailStale fails runs whose worker went silent.

@@ -401,14 +401,11 @@ func (h *Handler) UpdateArtifact(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		// Fetch link details for adds (they already exist)
-		for _, linkIDInterface := range req.PendingLinkAdds {
-			if linkID, ok := linkIDInterface.(string); ok {
-				if link, err := h.linkService.GetLink(linkID); err == nil {
-					addedLinks = append(addedLinks, link)
-				}
-			}
-		}
+		// Build link details for adds. Unlike removals, adds are not IDs of
+		// existing links: each entry is the link object about to be created
+		// ({from_id,to_id,type,...}), so read those fields for the chatter
+		// summary.
+		addedLinks = linksFromPendingAdds(req.PendingLinkAdds)
 
 		affected, err := h.processManagedLinkChanges(r, oldArtifact.ProjectID, id, req.PendingLinkAdds, removeInterfaceArray)
 		if err != nil {
@@ -1793,6 +1790,29 @@ func (h *Handler) buildChangesSummary(oldArtifact, newArtifact *artifacts.Artifa
 	}
 
 	return message
+}
+
+// linksFromPendingAdds converts the pending link-add payloads of an artifact
+// update ({from_id,to_id,type,...} objects, mirroring what
+// processManagedLinkChanges creates) into Link values for the chatter
+// summary. Entries missing any of the three required fields are skipped,
+// matching the create path's behavior.
+func linksFromPendingAdds(toAdd []interface{}) []*links.Link {
+	var added []*links.Link
+	for _, linkDataInterface := range toAdd {
+		linkData, ok := linkDataInterface.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		fromID, _ := linkData["from_id"].(string)
+		toID, _ := linkData["to_id"].(string)
+		linkType, _ := linkData["type"].(string)
+		if fromID == "" || toID == "" || linkType == "" {
+			continue
+		}
+		added = append(added, &links.Link{FromID: fromID, ToID: toID, Type: linkType})
+	}
+	return added
 }
 
 // processManagedLinkChanges handles link additions and removals

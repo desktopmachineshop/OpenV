@@ -313,10 +313,35 @@ func (rep *AgentRunRepository) UpdateTokenHash(runID, hash string) error {
 	return err
 }
 
-// Heartbeat refreshes liveness.
-func (rep *AgentRunRepository) Heartbeat(runID string, at time.Time) error {
-	_, err := rep.db.Exec(`UPDATE agent_runs SET heartbeat_at = $2 WHERE id = $1`, runID, at)
-	return err
+// MarkRunning conditionally transitions a run from claimed to running,
+// stamping started_at/heartbeat_at; reports whether the transition was
+// applied. A run the reaper failed (or that was cancelled) in the meantime
+// is left untouched.
+func (rep *AgentRunRepository) MarkRunning(runID string, at time.Time) (bool, error) {
+	res, err := rep.db.Exec(`
+		UPDATE agent_runs SET status = 'running', started_at = $2, heartbeat_at = $2
+		WHERE id = $1 AND status = 'claimed'
+	`, runID, at)
+	if err != nil {
+		return false, err
+	}
+	n, err := res.RowsAffected()
+	return n > 0, err
+}
+
+// Heartbeat refreshes liveness while the run is still live; a heartbeat
+// arriving after a terminal transition is a no-op so it can never make a
+// finished run look alive again. Reports whether the refresh was applied.
+func (rep *AgentRunRepository) Heartbeat(runID string, at time.Time) (bool, error) {
+	res, err := rep.db.Exec(`
+		UPDATE agent_runs SET heartbeat_at = $2
+		WHERE id = $1 AND status IN ('claimed', 'running')
+	`, runID, at)
+	if err != nil {
+		return false, err
+	}
+	n, err := res.RowsAffected()
+	return n > 0, err
 }
 
 // FailStale fails claimed/running runs whose heartbeat predates cutoff,
