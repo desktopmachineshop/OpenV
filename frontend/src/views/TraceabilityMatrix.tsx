@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { AgGridReact } from 'ag-grid-react';
 import { ColDef, ColGroupDef, ICellRendererParams } from 'ag-grid-community';
 import 'ag-grid-community/styles/ag-grid.css';
@@ -100,14 +100,23 @@ export const TraceabilityMatrix: React.FC = () => {
       return (
         <div style={{ lineHeight: '20px', whiteSpace: 'normal', padding: '4px 0' }}>
           {ids.map((id) => (
-            <span key={id} style={chip(titleOf(id), 'var(--neutral-soft)', 'var(--text)')}>
+            <Link
+              key={id}
+              to={`/projects/${projectId}/requirements?artifact=${id}`}
+              title="Open in Requirements"
+              style={{
+                ...chip(titleOf(id), 'var(--neutral-soft)', 'var(--text)'),
+                textDecoration: 'none',
+                cursor: 'pointer',
+              }}
+            >
               {titleOf(id)}
-            </span>
+            </Link>
           ))}
         </div>
       );
     },
-    [titleOf]
+    [titleOf, projectId]
   );
 
   const TestCaseRenderer = useCallback(

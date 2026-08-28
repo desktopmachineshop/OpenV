@@ -18,6 +18,12 @@ import {
 interface ArtifactEditorProps {
   artifact?: Artifact;
   artifacts?: Artifact[];
+  /**
+   * Pre-filled values for the create form (e.g. parent/type chosen via an
+   * artifact's context menu). Applied whenever a new object is passed, so a
+   * later context-menu choice still lands when the form is already open.
+   */
+  initialData?: Partial<Artifact>;
   onSave: (artifact: Partial<Artifact>) => void;
   onCancel: () => void;
   attachments?: Attachment[];
@@ -32,6 +38,7 @@ interface ArtifactEditorProps {
 export const ArtifactEditor: React.FC<ArtifactEditorProps> = ({
   artifact,
   artifacts = [],
+  initialData,
   onSave,
   onCancel,
   attachments = [],
@@ -43,22 +50,28 @@ export const ArtifactEditor: React.FC<ArtifactEditorProps> = ({
   onDeleteLink,
 }) => {
   const [formData, setFormData] = useState<Partial<Artifact>>(
-    artifact || (window as any).__pendingArtifactData || {
-      type: 'requirement',
-      title: '',
-      body: '',
-      attributes: {},
-    }
+    artifact ||
+      initialData || {
+        type: 'requirement',
+        title: '',
+        body: '',
+        attributes: {},
+      }
   );
 
-  // Clear pending artifact data after using it
+  // Re-apply create-form context when it changes after mount (the form may
+  // already be open when the user picks "create child/sibling" again).
   useEffect(() => {
-    if (!artifact && (window as any).__pendingArtifactData) {
-      return () => {
-        delete (window as any).__pendingArtifactData;
-      };
+    if (!artifact && initialData) {
+      setFormData({
+        type: 'requirement',
+        title: '',
+        body: '',
+        attributes: {},
+        ...initialData,
+      });
     }
-  }, [artifact]);
+  }, [artifact, initialData]);
 
   // Track pending link changes during edit
   const [pendingLinkAdds, setPendingLinkAdds] = useState<Partial<Link>[]>([]);

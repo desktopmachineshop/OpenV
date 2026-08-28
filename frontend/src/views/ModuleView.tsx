@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { useAppStore } from '../state/store';
 import { artifactAPI, linkAPI, attachmentAPI, baselineAPI, projectAPI, Artifact, Link, Attachment, Baseline, ProjectExport } from '../api/client';
 import { ArtifactEditor } from '../components/ArtifactEditor';
@@ -7,13 +8,8 @@ import { ArtifactHeader } from '../components/ArtifactHeader';
 import { ArtifactDetails } from '../components/ArtifactDetails';
 import { ChatterPanel } from '../components/ChatterPanel';
 import { HelpSidebar } from '../components/HelpSidebar';
-import { Navbar } from '../components/Navbar';
 
-interface ModuleViewProps {
-  onSwitchProject?: () => void;
-}
-
-export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
+export const ModuleView: React.FC = () => {
   const [isCreating, setIsCreating] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editingArtifact, setEditingArtifact] = useState<Artifact | undefined>();
@@ -37,6 +33,10 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
   const [collapseAllToken, setCollapseAllToken] = useState<number>(0);
   const [expandAllToken, setExpandAllToken] = useState<number>(0);
   const [previewVersion, setPreviewVersion] = useState<Artifact | null>(null);
+  // Pre-filled values for the create form when it is opened from an
+  // artifact's context menu (create before/after/child). Explicit state —
+  // ArtifactEditor applies it via an effect whenever it changes (issue #26).
+  const [pendingCreateContext, setPendingCreateContext] = useState<Partial<Artifact> | null>(null);
   
   // Resizable columns state
   const [leftColumnWidth, setLeftColumnWidth] = useState<number>(() => {
@@ -49,8 +49,14 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
   });
   const [isResizing, setIsResizing] = useState<'left' | 'right' | null>(null);
 
+  // Read the project from the URL first so a hard refresh doesn't flash
+  // "No Project Selected" while ProjectLayout syncs the store.
+  const params = useParams<{ projectId: string }>();
+  const storeProjectId = useAppStore((s) => s.projectId);
+  const projectId = params.projectId || storeProjectId;
+  const [searchParams, setSearchParams] = useSearchParams();
+
   const {
-    projectId,
     artifacts,
     setArtifacts,
     addArtifact,
@@ -59,8 +65,11 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
     addLink,
     selectedArtifactId,
     setSelectedArtifactId,
-    projects,
   } = useAppStore();
+
+  // The ?artifact= search param is the shareable source of truth for the
+  // selection (mirrors AgentRunsPage's ?run= pattern).
+  const urlArtifactId = searchParams.get('artifact');
 
   const isBaselineView = activeBaselineId !== 'live';
 
@@ -123,7 +132,50 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
     };
   }, [isResizing, leftColumnWidth, rightColumnWidth]);
 
-  // Load artifacts on component mount
+  const loadArtifacts = useCallback(async () => {
+    try {
+      const response = await artifactAPI.list(projectId);
+      setArtifacts(response.data || []);
+      setError('');
+    } catch (error: any) {
+      console.error('Failed to load artifacts:', error);
+      setArtifacts([]);
+      setError(`Failed to load artifacts: ${error.response?.data || error.message}`);
+    }
+  }, [projectId, setArtifacts]);
+
+  const loadLinks = useCallback(async () => {
+    try {
+      const response = await linkAPI.list(projectId);
+      setAllLinks(response.data || []);
+    } catch (error: any) {
+      console.error('Failed to load links:', error);
+      setAllLinks([]);
+    }
+  }, [projectId]);
+
+  const loadBaselines = useCallback(async () => {
+    if (!projectId) return;
+    try {
+      const response = await baselineAPI.list(projectId);
+      setBaselines(response.data || []);
+    } catch (error: any) {
+      console.error('Failed to load baselines:', error);
+      setBaselines([]);
+    }
+  }, [projectId]);
+
+  const loadAttachments = useCallback(async (artifactId: string) => {
+    try {
+      const response = await attachmentAPI.listByArtifact(artifactId);
+      setAttachments(response.data || []);
+    } catch (error: any) {
+      console.error('Failed to load attachments:', error);
+      setAttachments([]);
+    }
+  }, []);
+
+  // Load project data on mount and whenever the project changes
   useEffect(() => {
     if (projectId) {
       loadArtifacts();
@@ -132,7 +184,7 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
       setActiveBaselineId('live');
       setBaselineData(null);
     }
-  }, [projectId]);
+  }, [projectId, loadArtifacts, loadLinks, loadBaselines]);
 
   // Load attachments when artifact is selected or when editing
   useEffect(() => {
@@ -146,52 +198,22 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
     } else {
       setAttachments([]);
     }
-  }, [selectedArtifactId, editingArtifact?.id, isBaselineView]);
+  }, [selectedArtifactId, editingArtifact?.id, isBaselineView, loadAttachments]);
 
-  const loadArtifacts = async () => {
-    try {
-      const response = await artifactAPI.list(projectId);
-      setArtifacts(response.data || []);
-      setError('');
-    } catch (error: any) {
-      console.error('Failed to load artifacts:', error);
-      setArtifacts([]);
-      setError(`Failed to load artifacts: ${error.response?.data || error.message}`);
-    }
-  };
+  // Sync the ?artifact= param into the store selection. This covers deep
+  // links, browser back/forward, and in-app links from other views; the URL
+  // wins whenever the two disagree.
+  useEffect(() => {
+    if (urlArtifactId === selectedArtifactId) return;
+    setSelectedArtifactId(urlArtifactId);
+    setIsEditing(false);
+    setEditingArtifact(undefined);
+    setPreviewVersion(null);
+  }, [urlArtifactId, selectedArtifactId, setSelectedArtifactId]);
 
-  const loadLinks = async () => {
-    try {
-      const response = await linkAPI.list(projectId);
-      setAllLinks(response.data || []);
-    } catch (error: any) {
-      console.error('Failed to load links:', error);
-      setAllLinks([]);
-    }
-  };
-
-  const loadBaselines = async () => {
-    if (!projectId) return;
-    try {
-      const response = await baselineAPI.list(projectId);
-      setBaselines(response.data || []);
-    } catch (error: any) {
-      console.error('Failed to load baselines:', error);
-      setBaselines([]);
-    }
-  };
-
-  const loadAttachments = async (artifactId: string) => {
-    try {
-      const response = await attachmentAPI.listByArtifact(artifactId);
-      setAttachments(response.data || []);
-    } catch (error: any) {
-      console.error('Failed to load attachments:', error);
-      setAttachments([]);
-    }
-  };
-
-  // Handle artifact selection with automatic exit from edit/preview modes
+  // Handle artifact selection with automatic exit from edit/preview modes.
+  // Updates the store and the ?artifact= param together so the URL always
+  // reflects (and can restore) the current selection.
   const handleSelectArtifact = (artifactId: string | null) => {
     // If selecting a different artifact than currently selected
     if (artifactId !== selectedArtifactId) {
@@ -207,6 +229,12 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
     }
     // Set the new selected artifact
     setSelectedArtifactId(artifactId);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (artifactId) next.set('artifact', artifactId);
+      else next.delete('artifact');
+      return next;
+    });
   };
 
   const handleUploadAttachment = async (file: File) => {
@@ -249,6 +277,7 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
       });
       addArtifact(response.data);
       setIsCreating(false);
+      setPendingCreateContext(null);
       setError('');
     } catch (error: any) {
       console.error('Failed to create artifact:', error);
@@ -300,7 +329,9 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
     if (previewVersion) {
       setPreviewVersion(null);
     }
-    setSelectedArtifactId(artifact.id);
+    // Route through handleSelectArtifact so the ?artifact= param stays in
+    // sync; the edit flags below win over the reset it performs on change.
+    handleSelectArtifact(artifact.id);
     setEditingArtifact(artifact);
     setIsEditing(true);
     setError('');
@@ -468,30 +499,18 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
   };
 
   const handleArtifactContextMenu = (action: 'create-before' | 'create-after' | 'create-child', artifact: Artifact) => {
-    // Auto-populate form based on action
-    if (action === 'create-before' || action === 'create-after') {
-      // New sibling - use same parent and type
-      const newArtifact: Partial<Artifact> = {
-        parent_id: artifact.parent_id ?? null,
-        type: artifact.type,
-        title: '',
-        body: '',
-        attributes: {},
-      };
-      // Store for later use when creating
-      (window as any).__pendingArtifactData = newArtifact;
-    } else if (action === 'create-child') {
-      // New child - this artifact is the parent, inherit type if appropriate
-      const newArtifact: Partial<Artifact> = {
-        parent_id: artifact.id,
-        type: artifact.type,
-        title: '',
-        body: '',
-        attributes: {},
-      };
-      (window as any).__pendingArtifactData = newArtifact;
-    }
-    
+    // Auto-populate the create form based on the action. A sibling shares the
+    // clicked artifact's parent; a child uses the clicked artifact as parent.
+    // Both inherit its type. The fresh object identity re-applies the context
+    // even when the create form is already open.
+    setPendingCreateContext({
+      parent_id: action === 'create-child' ? artifact.id : artifact.parent_id ?? null,
+      type: artifact.type,
+      title: '',
+      body: '',
+      attributes: {},
+    });
+
     // Switch to create mode
     setIsEditing(false);
     setEditingArtifact(undefined);
@@ -720,30 +739,80 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
   return (
     <>
       <HelpSidebar />
-      <Navbar
-        title={(() => {
-          const project = projects.find((p) => p.id === projectId);
-          const name = project?.name || 'Unknown';
-          const description = project?.description || '';
-          return (
-            <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
-              <div style={{ fontSize: '18px', fontWeight: 600 }}>{name}</div>
-              {description && (
-                <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{description}</div>
-              )}
-            </div>
-          );
-        })()}
-        onSwitchProject={onSwitchProject}
-        showSwitchButton={true}
-        baselineOptions={baselines.map((b) => ({ id: b.id, name: b.name }))}
-        selectedBaselineId={activeBaselineId}
-        onBaselineChange={handleBaselineChange}
-        onCaptureBaseline={handleCaptureBaseline}
-        onDeleteBaseline={handleDeleteBaseline}
-        onGenerateReport={handleGenerateReport}
-      />
-      <div style={{ display: 'flex', gap: '0', paddingLeft: '20px', paddingRight: '20px', height: 'calc(100vh - 120px)', overflow: 'hidden' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '16px 20px 12px', flexWrap: 'wrap' }}>
+        <h2 style={{ color: 'var(--text)', margin: 0 }}>Requirements</h2>
+        <div style={{ flex: 1 }} />
+        <select
+          value={activeBaselineId}
+          onChange={(e) => handleBaselineChange(e.target.value)}
+          title="Select baseline"
+          style={{
+            height: '36px',
+            padding: '0 10px',
+            borderRadius: '4px',
+            border: '1px solid var(--neutral-mid)',
+            fontSize: '12px',
+            backgroundColor: 'var(--surface)',
+            cursor: 'pointer',
+            minWidth: '180px',
+          }}
+        >
+          <option value="live">Live Project</option>
+          {baselines.map((baseline) => (
+            <option key={baseline.id} value={baseline.id}>
+              {baseline.name}
+            </option>
+          ))}
+        </select>
+        <button
+          onClick={() => handleDeleteBaseline(activeBaselineId)}
+          disabled={activeBaselineId === 'live'}
+          style={{
+            height: '36px',
+            padding: '0 10px',
+            backgroundColor: activeBaselineId === 'live' ? 'var(--neutral-mid)' : 'var(--danger)',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: activeBaselineId === 'live' ? 'not-allowed' : 'pointer',
+            fontSize: '12px',
+          }}
+          title="Delete selected baseline"
+        >
+          🗑
+        </button>
+        <button
+          onClick={handleCaptureBaseline}
+          style={{
+            height: '36px',
+            padding: '0 12px',
+            backgroundColor: 'var(--success-bright)',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontSize: '12px',
+          }}
+        >
+          Capture Baseline
+        </button>
+        <button
+          onClick={handleGenerateReport}
+          style={{
+            height: '36px',
+            padding: '0 12px',
+            backgroundColor: 'var(--accent-alt)',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontSize: '12px',
+          }}
+        >
+          Generate Report
+        </button>
+      </div>
+      <div style={{ display: 'flex', gap: '0', paddingLeft: '20px', paddingRight: '20px', height: 'calc(100vh - 72px)', overflow: 'hidden' }}>
       <div style={{ width: `${leftColumnWidth}px`, minWidth: '200px', maxWidth: '800px', display: 'flex', flexDirection: 'column', overflowX: 'hidden', overflowY: 'auto', minHeight: 0, paddingRight: '10px' }}>
         {error && (
           <div
@@ -764,6 +833,8 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
           <button
             onClick={() => {
               setIsCreating(!isCreating);
+              // A manual open (or cancel) always starts from a blank form.
+              setPendingCreateContext(null);
               setError('');
             }}
             className="button"
@@ -1103,9 +1174,11 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
         {isCreating && !isBaselineView && (
           <ArtifactEditor
             artifacts={artifacts}
+            initialData={pendingCreateContext ?? undefined}
             onSave={handleCreateArtifact}
             onCancel={() => {
               setIsCreating(false);
+              setPendingCreateContext(null);
               setError('');
             }}
           />
