@@ -30,6 +30,24 @@ func pairingNeedsConfirmation(apiURL string) bool {
 	return true
 }
 
+// warnCleartextStart prints a warning to w when starting against apiURL would
+// send the worker key in cleartext — the same decision pairing uses
+// (pairingNeedsConfirmation). Unlike pairing, start may be non-interactive
+// (protocol handler, scripts), so it only warns and never prompts. It reports
+// whether a warning was printed.
+func warnCleartextStart(apiURL string, w io.Writer) bool {
+	if !pairingNeedsConfirmation(apiURL) {
+		return false
+	}
+	fmt.Fprintln(w)
+	fmt.Fprintf(w, "  WARNING: the stored API address %s is not HTTPS.\n", strings.TrimSpace(apiURL))
+	fmt.Fprintln(w, "  Your worker key travels unencrypted on every run and could be read or")
+	fmt.Fprintln(w, "  altered by anyone on the network path. Re-pair from the OpenV Runners")
+	fmt.Fprintln(w, "  page using an https:// address to fix this.")
+	fmt.Fprintln(w)
+	return true
+}
+
 // confirmInsecurePairing warns that apiURL is not HTTPS and asks for an
 // explicit y/N answer on in (stdin in real use). Only "y"/"yes" — any case —
 // counts as consent; anything else, including EOF, declines.
