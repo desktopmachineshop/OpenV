@@ -65,6 +65,10 @@ sleep 30
 # PostgreSQL: localhost:5432
 ```
 
+For production deployment (nginx static frontend, healthchecks, memory
+limits, secrets from `.env`) and backup/restore, see
+[docs/operations.md](docs/operations.md).
+
 ### Local Development
 
 **Backend (Go)**

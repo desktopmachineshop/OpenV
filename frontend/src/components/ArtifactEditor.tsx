@@ -1,5 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Artifact, Attachment, Link } from '../api/client';
+import {
+  Artifact,
+  Attachment,
+  EXECUTION_METHODS,
+  ExecutionMethod,
+  Link,
+  executionMethodOf,
+} from '../api/client';
 import { ImageGallery } from './ImageGallery';
 import { LinkPanel } from './LinkPanel';
 import {
@@ -185,6 +192,37 @@ export const ArtifactEditor: React.FC<ArtifactEditorProps> = ({
               <option value="other">Other</option>
             </select>
           </div>
+
+          {formData.type === 'test-case' && (
+            <div className="form-group">
+              <label htmlFor="execution_method">How is this verified?</label>
+              <select
+                id="execution_method"
+                name="execution_method"
+                value={executionMethodOf(formData)}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    attributes: {
+                      ...(formData.attributes || {}),
+                      execution_method: e.target.value as ExecutionMethod,
+                    },
+                  })
+                }
+              >
+                {EXECUTION_METHODS.map((m) => (
+                  <option key={m.value} value={m.value}>
+                    {m.label}
+                  </option>
+                ))}
+              </select>
+              <small style={{ color: '#7f8c8d', fontSize: 12 }}>
+                {EXECUTION_METHODS.find((m) => m.value === executionMethodOf(formData))?.hint}
+                {executionMethodOf(formData) !== 'automated' &&
+                  ' Agents are never asked to run this case, and cannot record its result.'}
+              </small>
+            </div>
+          )}
 
           <div className="form-group">
             <label htmlFor="title">Title</label>

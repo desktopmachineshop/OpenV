@@ -157,8 +157,8 @@ func (r *VVRepository) UpsertResult(result *vv.TestResult) error {
 	}
 
 	query := `
-		INSERT INTO test_results (id, run_id, test_case_id, test_case_version, status, notes, evidence, executed_at, executed_by, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+		INSERT INTO test_results (id, run_id, test_case_id, test_case_version, status, notes, evidence, executed_at, executed_by, executed_by_agent_run_id, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 		ON CONFLICT (run_id, test_case_id) DO UPDATE SET
 			test_case_version = EXCLUDED.test_case_version,
 			status = EXCLUDED.status,
@@ -166,6 +166,7 @@ func (r *VVRepository) UpsertResult(result *vv.TestResult) error {
 			evidence = EXCLUDED.evidence,
 			executed_at = EXCLUDED.executed_at,
 			executed_by = EXCLUDED.executed_by,
+			executed_by_agent_run_id = EXCLUDED.executed_by_agent_run_id,
 			updated_at = EXCLUDED.updated_at
 		RETURNING id, created_at
 	`
@@ -181,6 +182,7 @@ func (r *VVRepository) UpsertResult(result *vv.TestResult) error {
 		evidenceJSON,
 		result.ExecutedAt,
 		result.ExecutedBy,
+		result.ExecutedByAgentRunID,
 		result.CreatedAt,
 		result.UpdatedAt,
 	).Scan(&result.ID, &result.CreatedAt)
@@ -201,6 +203,7 @@ func scanResult(rows *sql.Rows) (*vv.TestResult, error) {
 		&evidenceJSON,
 		&result.ExecutedAt,
 		&result.ExecutedBy,
+		&result.ExecutedByAgentRunID,
 		&result.CreatedAt,
 		&result.UpdatedAt,
 	)
@@ -221,7 +224,7 @@ func scanResult(rows *sql.Rows) (*vv.TestResult, error) {
 // ListResultsByRun retrieves all results recorded in a run
 func (r *VVRepository) ListResultsByRun(runID string) ([]*vv.TestResult, error) {
 	query := `
-		SELECT id, run_id, test_case_id, test_case_version, status, notes, evidence, executed_at, executed_by, created_at, updated_at
+		SELECT id, run_id, test_case_id, test_case_version, status, notes, evidence, executed_at, executed_by, executed_by_agent_run_id, created_at, updated_at
 		FROM test_results
 		WHERE run_id = $1
 		ORDER BY updated_at DESC
@@ -250,7 +253,7 @@ func (r *VVRepository) ListResultsByRun(runID string) ([]*vv.TestResult, error) 
 func (r *VVRepository) LatestResultPerCase(projectID string) (map[string]*vv.TestResult, error) {
 	query := `
 		SELECT DISTINCT ON (tr.test_case_id)
-			tr.id, tr.run_id, tr.test_case_id, tr.test_case_version, tr.status, tr.notes, tr.evidence, tr.executed_at, tr.executed_by, tr.created_at, tr.updated_at
+			tr.id, tr.run_id, tr.test_case_id, tr.test_case_version, tr.status, tr.notes, tr.evidence, tr.executed_at, tr.executed_by, tr.executed_by_agent_run_id, tr.created_at, tr.updated_at
 		FROM test_results tr
 		JOIN test_runs runs ON runs.id = tr.run_id
 		WHERE runs.project_id = $1 AND runs.status IN ('in-progress', 'completed')
