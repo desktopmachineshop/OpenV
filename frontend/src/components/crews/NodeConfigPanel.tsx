@@ -88,7 +88,7 @@ export const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
             <span
               style={{
                 fontSize: 11,
-                background: '#8e44ad',
+                background: 'var(--purple)',
                 color: '#fff',
                 borderRadius: 10,
                 padding: '2px 8px',
@@ -102,7 +102,7 @@ export const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
             <span
               style={{
                 fontSize: 11,
-                background: '#3498db',
+                background: 'var(--accent)',
                 color: '#fff',
                 borderRadius: 10,
                 padding: '2px 8px',
@@ -115,12 +115,12 @@ export const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
         </h3>
         <button
           onClick={onClose}
-          style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: '#7f8c8d' }}
+          style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: 'var(--text-muted)' }}
         >
           ×
         </button>
       </div>
-      {error && <div style={{ color: '#e74c3c', fontSize: 12, marginBottom: 8 }}>{error}</div>}
+      {error && <div style={{ color: 'var(--danger)', fontSize: 12, marginBottom: 8 }}>{error}</div>}
       <div className="form-group">
         <label>Label</label>
         <input value={label} onChange={(e) => setLabel(e.target.value)} style={{ fontSize: 13 }} />
@@ -170,9 +170,9 @@ export const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
         <div
           style={{
             fontSize: 12,
-            color: '#7f8c8d',
-            background: '#f5eef8',
-            border: '1px solid #e8daef',
+            color: 'var(--text-muted)',
+            background: 'var(--tint-purple)',
+            border: '1px solid var(--tint-purple-border)',
             borderRadius: 4,
             padding: '8px 10px',
             marginBottom: 12,
@@ -197,7 +197,7 @@ export const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
         <button
           onClick={remove}
           style={{
-            background: '#e74c3c',
+            background: 'var(--danger)',
             color: '#fff',
             border: 'none',
             padding: '6px 14px',

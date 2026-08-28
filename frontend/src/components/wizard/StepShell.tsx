@@ -42,8 +42,8 @@ export const StepShell: React.FC<StepShellProps> = ({
         style={{
           width: 220,
           minWidth: 220,
-          background: '#fff',
-          border: '1px solid #ddd',
+          background: 'var(--surface)',
+          border: '1px solid var(--border)',
           borderRadius: 4,
           padding: '12px 0',
           position: 'sticky',
@@ -65,8 +65,8 @@ export const StepShell: React.FC<StepShellProps> = ({
                 gap: 10,
                 padding: '8px 14px',
                 cursor: clickable ? 'pointer' : 'default',
-                background: isCurrent ? '#eaf4fc' : 'transparent',
-                borderLeft: isCurrent ? '3px solid #3498db' : '3px solid transparent',
+                background: isCurrent ? 'var(--tint-blue)' : 'transparent',
+                borderLeft: isCurrent ? '3px solid var(--accent)' : '3px solid transparent',
               }}
             >
               <div
@@ -80,8 +80,8 @@ export const StepShell: React.FC<StepShellProps> = ({
                   justifyContent: 'center',
                   fontSize: 12,
                   fontWeight: 700,
-                  color: isCurrent || isDone ? '#fff' : '#7f8c8d',
-                  background: isDone ? '#27ae60' : isCurrent ? '#3498db' : '#ecf0f1',
+                  color: isCurrent || isDone ? '#fff' : 'var(--text-muted)',
+                  background: isDone ? 'var(--success)' : isCurrent ? 'var(--accent)' : 'var(--neutral-soft)',
                 }}
               >
                 {isDone ? '✓' : stepNum}
@@ -89,7 +89,7 @@ export const StepShell: React.FC<StepShellProps> = ({
               <div
                 style={{
                   fontSize: 13,
-                  color: isCurrent ? '#2c3e50' : isDone ? '#2c3e50' : '#7f8c8d',
+                  color: isCurrent ? 'var(--text)' : isDone ? 'var(--text)' : 'var(--text-muted)',
                   fontWeight: isCurrent ? 600 : 400,
                 }}
               >
@@ -126,7 +126,7 @@ export const StepShell: React.FC<StepShellProps> = ({
                 onClick={onNext}
                 disabled={nextDisabled || busy}
                 style={{
-                  background: '#3498db',
+                  background: 'var(--accent)',
                   opacity: nextDisabled || busy ? 0.5 : 1,
                 }}
               >

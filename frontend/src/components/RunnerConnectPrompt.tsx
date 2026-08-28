@@ -153,7 +153,7 @@ export const RunnerConnectPrompt: React.FC<RunnerConnectPromptProps> = ({
       style={{
         position: 'fixed',
         inset: 0,
-        background: 'rgba(44, 62, 80, 0.55)',
+        background: 'var(--overlay)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -164,18 +164,18 @@ export const RunnerConnectPrompt: React.FC<RunnerConnectPromptProps> = ({
       <div
         className="card"
         onClick={(e) => e.stopPropagation()}
-        style={{ width: 620, maxWidth: '92vw', background: '#fff', borderRadius: 8, padding: 24, margin: 0 }}
+        style={{ width: 620, maxWidth: '92vw', background: 'var(--surface)', borderRadius: 8, padding: 24, margin: 0 }}
       >
-        <h3 style={{ marginTop: 0, color: '#2c3e50' }}>
+        <h3 style={{ marginTop: 0, color: 'var(--text)' }}>
           {phase === 'connected' ? 'Runner connected' : 'No runner is online'}
         </h3>
 
         {error && (
           <div
             style={{
-              background: '#fdecea',
-              border: '1px solid #e74c3c',
-              color: '#c0392b',
+              background: 'var(--tint-red)',
+              border: '1px solid var(--danger)',
+              color: 'var(--danger-strong)',
               padding: '10px 14px',
               borderRadius: 4,
               marginBottom: 12,
@@ -188,7 +188,7 @@ export const RunnerConnectPrompt: React.FC<RunnerConnectPromptProps> = ({
 
         {phase === 'connected' ? (
           <>
-            <p style={{ fontSize: 13, color: '#27ae60', fontWeight: 600 }}>
+            <p style={{ fontSize: 13, color: 'var(--success)', fontWeight: 600 }}>
               ✓ Your personal runner is online — queued runs will start now.
             </p>
             <div style={{ textAlign: 'right' }}>
@@ -199,19 +199,19 @@ export const RunnerConnectPrompt: React.FC<RunnerConnectPromptProps> = ({
           </>
         ) : (
           <>
-            <p style={{ fontSize: 13, color: '#7f8c8d', marginBottom: 14 }}>
+            <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 14 }}>
               {reason || 'This run needs a runner.'} Agents execute on your own machine with your
               own AI subscription via the OpenV Agent Connector.
             </p>
 
             <div
               style={{
-                background: '#f8f9fa',
-                border: '1px solid #eee',
+                background: 'var(--surface-alt)',
+                border: '1px solid var(--border-soft)',
                 borderRadius: 4,
                 padding: '10px 14px',
                 fontSize: 13,
-                color: '#2c3e50',
+                color: 'var(--text)',
                 marginBottom: 14,
               }}
             >
@@ -225,9 +225,9 @@ export const RunnerConnectPrompt: React.FC<RunnerConnectPromptProps> = ({
             {download === 'unavailable' && (
               <div
                 style={{
-                  background: '#fdecea',
-                  border: '1px solid #e74c3c',
-                  color: '#c0392b',
+                  background: 'var(--tint-red)',
+                  border: '1px solid var(--danger)',
+                  color: 'var(--danger-strong)',
                   padding: '10px 14px',
                   borderRadius: 4,
                   marginBottom: 14,
@@ -263,12 +263,12 @@ export const RunnerConnectPrompt: React.FC<RunnerConnectPromptProps> = ({
             {pairing && (
               <div
                 style={{
-                  background: '#eaf4fd',
-                  border: '1px solid #3498db',
+                  background: 'var(--tint-blue)',
+                  border: '1px solid var(--accent)',
                   borderRadius: 4,
                   padding: '12px 14px',
                   fontSize: 13,
-                  color: '#2c3e50',
+                  color: 'var(--text)',
                   marginBottom: 16,
                 }}
               >
@@ -280,8 +280,8 @@ export const RunnerConnectPrompt: React.FC<RunnerConnectPromptProps> = ({
                 </div>
                 <pre
                   style={{
-                    background: '#2c3e50',
-                    color: '#ecf0f1',
+                    background: 'var(--code-block-bg)',
+                    color: 'var(--code-block-text)',
                     borderRadius: 4,
                     padding: '8px 12px',
                     fontSize: 12,
@@ -294,7 +294,7 @@ export const RunnerConnectPrompt: React.FC<RunnerConnectPromptProps> = ({
               </div>
             )}
 
-            <div style={{ fontSize: 12, color: '#7f8c8d', marginBottom: 16 }}>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 16 }}>
               First time? Download the connector, unzip it somewhere permanent, double-click{' '}
               <code>{binName}</code> once to register it, then click “Pair connector” here. Your
               CLI sign-ins never leave your machine.

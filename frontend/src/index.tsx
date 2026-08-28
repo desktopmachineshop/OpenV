@@ -1,8 +1,14 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
+import './theme.css';
 import './index.css';
 import App from './App';
+import { applyThemePreference, getThemePreference } from './theme';
+
+// Re-apply the stored theme before render. public/index.html applies it with an
+// inline script before first paint; this covers any entry path that misses it.
+applyThemePreference(getThemePreference());
 
 const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement

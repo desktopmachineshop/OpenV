@@ -64,18 +64,18 @@ export const ProjectLayout: React.FC = () => {
         style={{
           width: 200,
           minWidth: 200,
-          background: '#2c3e50',
-          color: '#ecf0f1',
+          background: 'var(--sidebar-bg)',
+          color: 'var(--sidebar-text)',
           display: 'flex',
           flexDirection: 'column',
         }}
       >
-        <div style={{ padding: '16px 14px', borderBottom: '1px solid #34495e' }}>
+        <div style={{ padding: '16px 14px', borderBottom: '1px solid var(--sidebar-border)' }}>
           <OrgSwitcher variant="dark" />
           <div
             style={{
               fontSize: 12,
-              color: '#95a5a6',
+              color: 'var(--sidebar-text-faint)',
               marginTop: 6,
               overflow: 'hidden',
               textOverflow: 'ellipsis',
@@ -97,8 +97,8 @@ export const ProjectLayout: React.FC = () => {
               style={({ isActive }) => ({
                 display: 'block',
                 padding: '9px 16px',
-                color: isActive ? '#fff' : '#bdc3c7',
-                background: isActive ? '#3498db' : 'transparent',
+                color: isActive ? '#fff' : 'var(--sidebar-text-dim)',
+                background: isActive ? 'var(--accent)' : 'transparent',
                 textDecoration: 'none',
                 fontSize: 14,
               })}
@@ -107,7 +107,7 @@ export const ProjectLayout: React.FC = () => {
             </NavLink>
           ))}
         </nav>
-        <div style={{ borderTop: '1px solid #34495e', padding: 12, position: 'relative' }}>
+        <div style={{ borderTop: '1px solid var(--sidebar-border)', padding: 12, position: 'relative' }}>
           <div
             style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}
             onClick={() => setMenuOpen(!menuOpen)}
@@ -124,7 +124,7 @@ export const ProjectLayout: React.FC = () => {
                   width: 28,
                   height: 28,
                   borderRadius: '50%',
-                  background: '#3498db',
+                  background: 'var(--accent)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -146,7 +146,7 @@ export const ProjectLayout: React.FC = () => {
                 bottom: 52,
                 left: 12,
                 right: 12,
-                background: '#34495e',
+                background: 'var(--sidebar-menu-bg)',
                 borderRadius: 6,
                 overflow: 'hidden',
                 boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
@@ -163,7 +163,7 @@ export const ProjectLayout: React.FC = () => {
                   padding: '10px 14px',
                   background: 'none',
                   border: 'none',
-                  color: '#ecf0f1',
+                  color: 'var(--sidebar-text)',
                   textAlign: 'left',
                   cursor: 'pointer',
                   fontSize: 13,
@@ -179,7 +179,7 @@ export const ProjectLayout: React.FC = () => {
                   padding: '10px 14px',
                   background: 'none',
                   border: 'none',
-                  color: '#ecf0f1',
+                  color: 'var(--sidebar-text)',
                   textAlign: 'left',
                   cursor: 'pointer',
                   fontSize: 13,
@@ -191,7 +191,7 @@ export const ProjectLayout: React.FC = () => {
           )}
         </div>
       </aside>
-      <main style={{ flex: 1, overflow: 'auto', background: '#f5f6fa' }}>
+      <main style={{ flex: 1, overflow: 'auto', background: 'var(--bg-app)' }}>
         <Outlet />
       </main>
       {showSettings && <UserSettingsPanel onClose={() => setShowSettings(false)} />}

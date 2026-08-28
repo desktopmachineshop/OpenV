@@ -9,6 +9,19 @@
     <link rel="apple-touch-icon" href="%PUBLIC_URL%/apple-touch-icon.png" />
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
     <title>OpenV</title>
+    <script>
+        // Apply the stored theme preference before first paint to avoid a
+        // flash of the wrong theme. Keep the storage key in sync with
+        // src/theme.ts (THEME_STORAGE_KEY).
+        (function () {
+            try {
+                var t = localStorage.getItem('openv-theme');
+                if (t === 'light' || t === 'dark') {
+                    document.documentElement.setAttribute('data-theme', t);
+                }
+            } catch (e) { /* localStorage unavailable — system theme applies */ }
+        })();
+    </script>
 </head>
 <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>

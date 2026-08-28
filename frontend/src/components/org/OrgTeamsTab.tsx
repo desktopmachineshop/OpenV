@@ -117,9 +117,9 @@ export const OrgTeamsTab: React.FC<OrgTeamsTabProps> = ({ org, isAdmin }) => {
       {error && (
         <div
           style={{
-            background: '#fdecea',
-            border: '1px solid #e74c3c',
-            color: '#c0392b',
+            background: 'var(--tint-red)',
+            border: '1px solid var(--danger)',
+            color: 'var(--danger-strong)',
             padding: '10px 14px',
             borderRadius: 4,
             marginBottom: 16,
@@ -129,7 +129,7 @@ export const OrgTeamsTab: React.FC<OrgTeamsTabProps> = ({ org, isAdmin }) => {
           {error}{' '}
           <button
             onClick={() => setError('')}
-            style={{ background: 'none', border: 'none', color: '#c0392b', cursor: 'pointer', width: 'auto', padding: 0 }}
+            style={{ background: 'none', border: 'none', color: 'var(--danger-strong)', cursor: 'pointer', width: 'auto', padding: 0 }}
           >
             ✕
           </button>
@@ -142,20 +142,20 @@ export const OrgTeamsTab: React.FC<OrgTeamsTabProps> = ({ org, isAdmin }) => {
           {isAdmin && (
             <button
               className="button-secondary"
-              style={{ padding: '6px 14px', background: '#3498db' }}
+              style={{ padding: '6px 14px', background: 'var(--accent)' }}
               onClick={() => setShowCreate(!showCreate)}
             >
               {showCreate ? 'Cancel' : '+ New team'}
             </button>
           )}
         </div>
-        <p style={{ fontSize: 13, color: '#7f8c8d' }}>
+        <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
           Teams group workspace members so you can grant project access to everyone at once from a
           project's Access settings.
         </p>
 
         {isAdmin && showCreate && (
-          <form onSubmit={handleCreate} style={{ background: '#f8f9fa', borderRadius: 4, padding: 14, marginBottom: 14 }}>
+          <form onSubmit={handleCreate} style={{ background: 'var(--surface-alt)', borderRadius: 4, padding: 14, marginBottom: 14 }}>
             <div className="form-group">
               <label>Name *</label>
               <input
@@ -180,9 +180,9 @@ export const OrgTeamsTab: React.FC<OrgTeamsTabProps> = ({ org, isAdmin }) => {
         )}
 
         {loading ? (
-          <div style={{ color: '#7f8c8d', fontSize: 13 }}>Loading teams…</div>
+          <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Loading teams…</div>
         ) : teams.length === 0 ? (
-          <div style={{ color: '#95a5a6', fontSize: 13 }}>No teams yet.</div>
+          <div style={{ color: 'var(--neutral)', fontSize: 13 }}>No teams yet.</div>
         ) : (
           teams.map((team) => {
             const isOpen = !!expanded[team.id];
@@ -190,7 +190,7 @@ export const OrgTeamsTab: React.FC<OrgTeamsTabProps> = ({ org, isAdmin }) => {
             return (
               <div
                 key={team.id}
-                style={{ border: '1px solid #eee', borderRadius: 4, marginBottom: 8, overflow: 'hidden' }}
+                style={{ border: '1px solid var(--border-soft)', borderRadius: 4, marginBottom: 8, overflow: 'hidden' }}
               >
                 <div
                   style={{
@@ -199,18 +199,18 @@ export const OrgTeamsTab: React.FC<OrgTeamsTabProps> = ({ org, isAdmin }) => {
                     gap: 10,
                     padding: '10px 12px',
                     cursor: 'pointer',
-                    background: isOpen ? '#f8f9fa' : '#fff',
+                    background: isOpen ? 'var(--surface-alt)' : 'var(--surface)',
                   }}
                   onClick={() => setExpanded({ ...expanded, [team.id]: !isOpen })}
                 >
-                  <span style={{ fontSize: 11, color: '#7f8c8d', width: 12 }}>{isOpen ? '▼' : '▶'}</span>
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)', width: 12 }}>{isOpen ? '▼' : '▶'}</span>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <span style={{ fontWeight: 600, fontSize: 14, color: '#2c3e50' }}>{team.name}</span>
+                    <span style={{ fontWeight: 600, fontSize: 14, color: 'var(--text)' }}>{team.name}</span>
                     {team.description && (
-                      <span style={{ fontSize: 12, color: '#7f8c8d', marginLeft: 10 }}>{team.description}</span>
+                      <span style={{ fontSize: 12, color: 'var(--text-muted)', marginLeft: 10 }}>{team.description}</span>
                     )}
                   </div>
-                  <span style={{ fontSize: 12, color: '#7f8c8d' }}>
+                  <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
                     {(team.members || []).length} member{(team.members || []).length === 1 ? '' : 's'}
                   </span>
                   {isAdmin && (
@@ -220,7 +220,7 @@ export const OrgTeamsTab: React.FC<OrgTeamsTabProps> = ({ org, isAdmin }) => {
                           e.stopPropagation();
                           handleRename(team);
                         }}
-                        style={{ background: 'none', border: 'none', color: '#3498db', cursor: 'pointer', fontSize: 12, width: 'auto', padding: 2 }}
+                        style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontSize: 12, width: 'auto', padding: 2 }}
                       >
                         Rename
                       </button>
@@ -229,7 +229,7 @@ export const OrgTeamsTab: React.FC<OrgTeamsTabProps> = ({ org, isAdmin }) => {
                           e.stopPropagation();
                           handleDelete(team);
                         }}
-                        style={{ background: 'none', border: 'none', color: '#e74c3c', cursor: 'pointer', fontSize: 12, width: 'auto', padding: 2 }}
+                        style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontSize: 12, width: 'auto', padding: 2 }}
                       >
                         Delete
                       </button>
@@ -237,10 +237,10 @@ export const OrgTeamsTab: React.FC<OrgTeamsTabProps> = ({ org, isAdmin }) => {
                   )}
                 </div>
                 {isOpen && (
-                  <div style={{ padding: '10px 12px', borderTop: '1px solid #eee' }}>
+                  <div style={{ padding: '10px 12px', borderTop: '1px solid var(--border-soft)' }}>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: isAdmin ? 12 : 0 }}>
                       {(team.members || []).length === 0 && (
-                        <span style={{ fontSize: 13, color: '#95a5a6' }}>No members in this team.</span>
+                        <span style={{ fontSize: 13, color: 'var(--neutral)' }}>No members in this team.</span>
                       )}
                       {(team.members || []).map((m) => (
                         <span
@@ -251,9 +251,9 @@ export const OrgTeamsTab: React.FC<OrgTeamsTabProps> = ({ org, isAdmin }) => {
                             gap: 6,
                             padding: '3px 10px',
                             borderRadius: 12,
-                            background: '#ecf0f1',
+                            background: 'var(--neutral-soft)',
                             fontSize: 12,
-                            color: '#2c3e50',
+                            color: 'var(--text)',
                           }}
                         >
                           {m.user_name || m.user_email}
@@ -261,7 +261,7 @@ export const OrgTeamsTab: React.FC<OrgTeamsTabProps> = ({ org, isAdmin }) => {
                             <button
                               onClick={() => handleRemoveMember(team, m)}
                               title="Remove from team"
-                              style={{ background: 'none', border: 'none', color: '#e74c3c', cursor: 'pointer', fontSize: 11, width: 'auto', padding: 0 }}
+                              style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontSize: 11, width: 'auto', padding: 0 }}
                             >
                               ✕
                             </button>

@@ -163,8 +163,8 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
   // Render a group of links by type
   const renderLinkGroup = (linksByType: Record<string, Link[]>, direction: 'outgoing' | 'incoming', isPreview: boolean = false) => {
     const colorScheme = direction === 'outgoing' 
-      ? { header: '#27ae60', bg: '#f0f8f4', border: '#27ae60' }
-      : { header: '#2980b9', bg: '#f0f4f8', border: '#2980b9' };
+      ? { header: 'var(--success)', bg: 'var(--tint-green)', border: 'var(--success)' }
+      : { header: 'var(--accent-strong)', bg: 'var(--surface-alt)', border: 'var(--accent-strong)' };
 
     return Object.entries(linksByType).map(([linkType, typeLinks]) => {
       // Deduplicate within each type group by link ID
@@ -220,7 +220,7 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
                         {direction === 'outgoing' ? getArtifactTitle(link.to_id) : getArtifactTitle(link.from_id)}
                       </span>
                     </strong>
-                    <div style={{ marginTop: '3px', color: '#555', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <div style={{ marginTop: '3px', color: 'var(--text-body)', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       ID: {linkedArtifactId.substring(0, 8)}...
                     </div>
                   </div>
@@ -231,7 +231,7 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
                       style={{
                         marginLeft: '8px',
                         padding: '4px 8px',
-                        backgroundColor: '#e74c3c',
+                        backgroundColor: 'var(--danger)',
                         color: 'white',
                         border: 'none',
                         borderRadius: '3px',
@@ -260,9 +260,9 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
         <div>
           <div
             style={{
-              backgroundColor: '#fff3cd',
-              border: '1px solid #ffc107',
-              color: '#856404',
+              backgroundColor: 'var(--tint-yellow)',
+              border: '1px solid var(--warning-bright)',
+              color: 'var(--warning-text)',
               padding: '10px 12px',
               borderRadius: '3px',
               marginBottom: '16px',
@@ -279,8 +279,8 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
               onClick={() => onClosePreview?.()}
               style={{
                 backgroundColor: 'transparent',
-                color: '#856404',
-                border: '1px solid #856404',
+                color: 'var(--warning-text)',
+                border: '1px solid var(--warning-text)',
                 padding: '4px 8px',
                 borderRadius: '3px',
                 cursor: 'pointer',
@@ -303,43 +303,43 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
             {/* Current Version Column */}
             <div
               style={{
-                backgroundColor: '#f8f9fa',
+                backgroundColor: 'var(--surface-alt)',
                 padding: '12px',
                 borderRadius: '3px',
-                border: '1px solid #e9ecef',
+                border: '1px solid var(--surface-alt)',
               }}
             >
-              <h4 style={{ margin: '0 0 12px 0', fontSize: '13px', color: '#27ae60' }}>
+              <h4 style={{ margin: '0 0 12px 0', fontSize: '13px', color: 'var(--success)' }}>
                 Current Version (v{artifact.version})
               </h4>
               <div style={{ fontSize: '12px' }}>
                 <div style={{ marginBottom: '12px' }}>
                   <strong>Title:</strong>
-                  <p style={{ margin: '4px 0', color: '#2c3e50' }}>{artifact.title}</p>
+                  <p style={{ margin: '4px 0', color: 'var(--text)' }}>{artifact.title}</p>
                 </div>
                 <div style={{ marginBottom: '12px' }}>
                   <strong>Type:</strong>
-                  <p style={{ margin: '4px 0', color: '#2c3e50' }}>{artifact.type}</p>
+                  <p style={{ margin: '4px 0', color: 'var(--text)' }}>{artifact.type}</p>
                 </div>
                 <div style={{ marginBottom: '12px' }}>
                   <strong>Description:</strong>
                   <div style={{ 
                     margin: '4px 0', 
-                    color: '#2c3e50', 
+                    color: 'var(--text)', 
                     minHeight: '60px',
                     lineHeight: '1.6'
                   }} className="markdown-content">
                     {artifact.body ? (
                       <ReactMarkdown remarkPlugins={[remarkGfm]}>{artifact.body}</ReactMarkdown>
                     ) : (
-                      <p style={{ fontStyle: 'italic', color: '#999' }}>(empty)</p>
+                      <p style={{ fontStyle: 'italic', color: 'var(--text-muted)' }}>(empty)</p>
                     )}
                   </div>
                 </div>
                 {artifact.attributes && Object.keys(artifact.attributes).filter(k => !['links_snapshot', 'images_snapshot'].includes(k)).length > 0 && (
                   <div style={{ marginBottom: '12px' }}>
                     <strong>Attributes:</strong>
-                    <pre style={{ fontSize: '11px', backgroundColor: '#ecf0f1', padding: '8px', borderRadius: '3px', margin: '4px 0', overflow: 'auto' }}>
+                    <pre style={{ fontSize: '11px', backgroundColor: 'var(--neutral-soft)', padding: '8px', borderRadius: '3px', margin: '4px 0', overflow: 'auto' }}>
                       {JSON.stringify(
                         Object.fromEntries(
                           Object.entries(artifact.attributes).filter(([k]) => !['links_snapshot', 'images_snapshot'].includes(k))
@@ -363,11 +363,11 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
                     </div>
                   </div>
                 )}                {(currentOutgoingLinks.length > 0 || currentIncomingLinks.length > 0) && (
-                  <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #dcdde1' }}>
-                    <strong style={{ fontSize: '12px', color: '#27ae60', marginBottom: '6px', display: 'block' }}>Links</strong>
+                  <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--border)' }}>
+                    <strong style={{ fontSize: '12px', color: 'var(--success)', marginBottom: '6px', display: 'block' }}>Links</strong>
                     {currentOutgoingLinks.length > 0 && (
                       <div style={{ marginBottom: '8px' }}>
-                        <span style={{ fontSize: '11px', color: '#27ae60', fontWeight: 'bold' }}>↓ From ({currentOutgoingLinks.length})</span>
+                        <span style={{ fontSize: '11px', color: 'var(--success)', fontWeight: 'bold' }}>↓ From ({currentOutgoingLinks.length})</span>
                         <div style={{ marginTop: '4px' }}>
                           {renderLinkGroup(currentOutgoingByType, 'outgoing', true)}
                         </div>
@@ -375,7 +375,7 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
                     )}
                     {currentIncomingLinks.length > 0 && (
                       <div>
-                        <span style={{ fontSize: '11px', color: '#2980b9', fontWeight: 'bold' }}>↑ To ({currentIncomingLinks.length})</span>
+                        <span style={{ fontSize: '11px', color: 'var(--accent-strong)', fontWeight: 'bold' }}>↑ To ({currentIncomingLinks.length})</span>
                         <div style={{ marginTop: '4px' }}>
                           {renderLinkGroup(currentIncomingByType, 'incoming', true)}
                         </div>
@@ -383,7 +383,7 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
                     )}
                   </div>
                 )}
-                <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #dcdde1', fontSize: '11px', color: '#7f8c8d' }}>
+                <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--border)', fontSize: '11px', color: 'var(--text-muted)' }}>
                   <p style={{ margin: '0 0 4px 0' }}>
                     <strong>Created:</strong> {new Date(artifact.created_at).toLocaleString()}
                   </p>
@@ -397,34 +397,34 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
             {/* Preview Version Column */}
             <div
               style={{
-                backgroundColor: '#f0f8f4',
+                backgroundColor: 'var(--tint-green)',
                 padding: '12px',
                 borderRadius: '3px',
-                border: '1px solid #c8e6c9',
+                border: '1px solid var(--tint-green-border)',
               }}
             >
-              <h4 style={{ margin: '0 0 12px 0', fontSize: '13px', color: '#2980b9' }}>
+              <h4 style={{ margin: '0 0 12px 0', fontSize: '13px', color: 'var(--accent-strong)' }}>
                 Preview Version (v{previewVersion.version})
               </h4>
               <div style={{ fontSize: '12px' }}>
                 <div style={{ marginBottom: '12px' }}>
                   <strong>Title:</strong>
-                  <p style={{ margin: '4px 0', color: '#2c3e50' }}>{previewVersion.title}</p>
+                  <p style={{ margin: '4px 0', color: 'var(--text)' }}>{previewVersion.title}</p>
                 </div>
                 <div style={{ marginBottom: '12px' }}>
                   <strong>Type:</strong>
-                  <p style={{ margin: '4px 0', color: '#2c3e50' }}>{previewVersion.type}</p>
+                  <p style={{ margin: '4px 0', color: 'var(--text)' }}>{previewVersion.type}</p>
                 </div>
                 <div style={{ marginBottom: '12px' }}>
                   <strong>Description:</strong>
-                  <p style={{ margin: '4px 0', color: '#2c3e50', whiteSpace: 'pre-wrap', wordBreak: 'break-word', minHeight: '60px' }}>
+                  <p style={{ margin: '4px 0', color: 'var(--text)', whiteSpace: 'pre-wrap', wordBreak: 'break-word', minHeight: '60px' }}>
                     {previewVersion.body || '(empty)'}
                   </p>
                 </div>
                 {previewVersion.attributes && Object.keys(previewVersion.attributes).filter(k => !['links_snapshot', 'images_snapshot'].includes(k)).length > 0 && (
                   <div style={{ marginBottom: '12px' }}>
                     <strong>Attributes:</strong>
-                    <pre style={{ fontSize: '11px', backgroundColor: '#ecf0f1', padding: '8px', borderRadius: '3px', margin: '4px 0', overflow: 'auto' }}>
+                    <pre style={{ fontSize: '11px', backgroundColor: 'var(--neutral-soft)', padding: '8px', borderRadius: '3px', margin: '4px 0', overflow: 'auto' }}>
                       {JSON.stringify(
                         Object.fromEntries(
                           Object.entries(previewVersion.attributes).filter(([k]) => !['links_snapshot', 'images_snapshot'].includes(k))
@@ -450,11 +450,11 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
                   </div>
                 )}
                 {(previewOutgoingLinks.length > 0 || previewIncomingLinks.length > 0) && (
-                  <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #dcdde1' }}>
-                    <strong style={{ fontSize: '12px', color: '#2980b9', marginBottom: '6px', display: 'block' }}>Links</strong>
+                  <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--border)' }}>
+                    <strong style={{ fontSize: '12px', color: 'var(--accent-strong)', marginBottom: '6px', display: 'block' }}>Links</strong>
                     {previewOutgoingLinks.length > 0 && (
                       <div style={{ marginBottom: '8px' }}>
-                        <span style={{ fontSize: '11px', color: '#27ae60', fontWeight: 'bold' }}>↓ From ({previewOutgoingLinks.length})</span>
+                        <span style={{ fontSize: '11px', color: 'var(--success)', fontWeight: 'bold' }}>↓ From ({previewOutgoingLinks.length})</span>
                         <div style={{ marginTop: '4px' }}>
                           {renderLinkGroup(previewOutgoingByType, 'outgoing', true)}
                         </div>
@@ -462,7 +462,7 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
                     )}
                     {previewIncomingLinks.length > 0 && (
                       <div>
-                        <span style={{ fontSize: '11px', color: '#2980b9', fontWeight: 'bold' }}>↑ To ({previewIncomingLinks.length})</span>
+                        <span style={{ fontSize: '11px', color: 'var(--accent-strong)', fontWeight: 'bold' }}>↑ To ({previewIncomingLinks.length})</span>
                         <div style={{ marginTop: '4px' }}>
                           {renderLinkGroup(previewIncomingByType, 'incoming', true)}
                         </div>
@@ -470,7 +470,7 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
                     )}
                   </div>
                 )}
-                <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #dcdde1', fontSize: '11px', color: '#7f8c8d' }}>
+                <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--border)', fontSize: '11px', color: 'var(--text-muted)' }}>
                   <p style={{ margin: '0 0 4px 0' }}>
                     <strong>Created:</strong> {new Date(previewVersion.created_at).toLocaleString()}
                   </p>
@@ -487,7 +487,7 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
             </div>
           </div>
 
-          <hr style={{ margin: '16px 0', borderColor: '#ecf0f1' }} />
+          <hr style={{ margin: '16px 0', borderColor: 'var(--neutral-soft)' }} />
         </div>
       )}
 
@@ -499,7 +499,7 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
         <span
           style={{
             display: 'inline-block',
-            backgroundColor: '#3498db',
+            backgroundColor: 'var(--accent)',
             color: 'white',
             padding: '4px 8px',
             borderRadius: '3px',
@@ -509,13 +509,13 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
         >
           {artifact.type}
         </span>
-        <span style={{ fontSize: '12px', color: '#7f8c8d' }}>
+        <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
           Version {artifact.version}
         </span>
       </div>
       <div style={{ marginBottom: '15px' }}>
         <strong>ID:</strong>
-        <code style={{ marginLeft: '10px', fontSize: '12px', backgroundColor: '#f5f5f5', padding: '2px 6px' }}>
+        <code style={{ marginLeft: '10px', fontSize: '12px', backgroundColor: 'var(--surface-inset)', padding: '2px 6px' }}>
           {artifact.id}
         </code>
       </div>
@@ -525,7 +525,7 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
           {artifact.body ? (
             <ReactMarkdown remarkPlugins={[remarkGfm]}>{artifact.body}</ReactMarkdown>
           ) : (
-            <p style={{ fontStyle: 'italic', color: '#999' }}>(empty)</p>
+            <p style={{ fontStyle: 'italic', color: 'var(--text-muted)' }}>(empty)</p>
           )}
         </div>
       </div>
@@ -534,7 +534,7 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
           <strong>Attributes:</strong>
           <pre style={{ 
             marginTop: '8px', 
-            backgroundColor: '#f5f5f5', 
+            backgroundColor: 'var(--surface-inset)', 
             padding: '10px', 
             borderRadius: '4px',
             overflow: 'auto',
@@ -565,12 +565,12 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
 
       {/* Links Section */}
       {(currentOutgoingLinks.length > 0 || currentIncomingLinks.length > 0) && (
-        <div style={{ marginTop: '30px', paddingTop: '15px', borderTop: '1px solid #ddd' }}>
+        <div style={{ marginTop: '30px', paddingTop: '15px', borderTop: '1px solid var(--border)' }}>
           <h4 style={{ marginTop: 0, marginBottom: '12px' }}>Traceability Links</h4>
           
           {currentOutgoingLinks.length > 0 && (
             <div style={{ marginBottom: '15px' }}>
-              <strong style={{ color: '#27ae60', fontSize: '13px' }}>↓ Links From This Artifact ({currentOutgoingLinks.length})</strong>
+              <strong style={{ color: 'var(--success)', fontSize: '13px' }}>↓ Links From This Artifact ({currentOutgoingLinks.length})</strong>
               <div style={{ marginTop: '8px' }}>
                 {renderLinkGroup(currentOutgoingByType, 'outgoing', true)}
               </div>
@@ -579,7 +579,7 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
           
           {currentIncomingLinks.length > 0 && (
             <div>
-              <strong style={{ color: '#2980b9', fontSize: '13px' }}>↑ Links To This Artifact ({currentIncomingLinks.length})</strong>
+              <strong style={{ color: 'var(--accent-strong)', fontSize: '13px' }}>↑ Links To This Artifact ({currentIncomingLinks.length})</strong>
               <div style={{ marginTop: '8px' }}>
                 {renderLinkGroup(currentIncomingByType, 'incoming', true)}
               </div>
@@ -588,7 +588,7 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
         </div>
       )}
       
-      <div style={{ marginTop: '15px', fontSize: '12px', color: '#7f8c8d' }}>
+      <div style={{ marginTop: '15px', fontSize: '12px', color: 'var(--text-muted)' }}>
         <p>Created: {new Date(artifact.created_at).toLocaleString()}</p>
         <p>Updated: {new Date(artifact.updated_at).toLocaleString()}</p>
       </div>

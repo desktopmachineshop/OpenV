@@ -11,16 +11,16 @@ const opBadgeColor = (op: string): string => {
     case 'create':
     case 'create_artifact':
     case 'create_link':
-      return '#27ae60';
+      return 'var(--success)';
     case 'update':
     case 'update_artifact':
-      return '#3498db';
+      return 'var(--accent)';
     case 'delete':
     case 'delete_artifact':
     case 'delete_link':
-      return '#e74c3c';
+      return 'var(--danger)';
     default:
-      return '#95a5a6';
+      return 'var(--neutral)';
   }
 };
 
@@ -76,12 +76,12 @@ export const ProposalReviewPanel: React.FC<ProposalReviewPanelProps> = ({
 
   return (
     <div style={{ marginBottom: 16 }}>
-      {error && <div style={{ color: '#e74c3c', fontSize: 13, marginBottom: 8 }}>{error}</div>}
+      {error && <div style={{ color: 'var(--danger)', fontSize: 13, marginBottom: 8 }}>{error}</div>}
       {proposals.map((p) => (
         <div
           key={p.id}
           className="card"
-          style={{ marginBottom: 10, borderLeft: '4px solid #f39c12', padding: 16 }}
+          style={{ marginBottom: 10, borderLeft: '4px solid var(--warning)', padding: 16 }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, flexWrap: 'wrap' }}>
             <span
@@ -97,17 +97,17 @@ export const ProposalReviewPanel: React.FC<ProposalReviewPanelProps> = ({
             >
               {p.op}
             </span>
-            <span style={{ fontSize: 13, color: '#2c3e50' }}>
+            <span style={{ fontSize: 13, color: 'var(--text)' }}>
               Target: <strong>{p.target_id || 'new'}</strong>
             </span>
-            <span style={{ fontSize: 12, color: '#7f8c8d' }}>
+            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
               {new Date(p.created_at).toLocaleString()}
             </span>
           </div>
           <pre
             style={{
-              background: '#fafbfc',
-              border: '1px solid #ecf0f1',
+              background: 'var(--surface-alt)',
+              border: '1px solid var(--neutral-soft)',
               borderRadius: 4,
               padding: 10,
               fontSize: 12,
@@ -136,7 +136,7 @@ export const ProposalReviewPanel: React.FC<ProposalReviewPanelProps> = ({
             </button>
             <button
               style={{
-                background: '#e74c3c',
+                background: 'var(--danger)',
                 color: '#fff',
                 border: 'none',
                 padding: '7px 16px',

@@ -43,11 +43,11 @@ const kindLabel = (kind: string): string => KIND_LABELS[kind] || kind;
 const kindColor = (kind: string): string => {
   switch (kind) {
     case 'scheduled':
-      return '#3498db';
+      return 'var(--accent)';
     case 'triggered':
-      return '#f39c12';
+      return 'var(--warning)';
     default:
-      return '#95a5a6';
+      return 'var(--neutral)';
   }
 };
 
@@ -231,13 +231,13 @@ export const AutomationsPage: React.FC = () => {
   return (
     <div style={{ padding: 24 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-        <h2 style={{ color: '#2c3e50', margin: 0, flex: 1 }}>Automations</h2>
+        <h2 style={{ color: 'var(--text)', margin: 0, flex: 1 }}>Automations</h2>
         <button className="button" onClick={() => setForm(emptyForm())}>
           New automation
         </button>
       </div>
 
-      {error && <div style={{ color: '#e74c3c', fontSize: 13, marginBottom: 10 }}>{error}</div>}
+      {error && <div style={{ color: 'var(--danger)', fontSize: 13, marginBottom: 10 }}>{error}</div>}
 
       <div className="table-container" style={{ marginBottom: 20 }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
@@ -249,11 +249,11 @@ export const AutomationsPage: React.FC = () => {
                     key={i}
                     style={{
                       textAlign: 'left',
-                      borderBottom: '2px solid #ecf0f1',
+                      borderBottom: '2px solid var(--neutral-soft)',
                       padding: '10px 12px',
-                      color: '#7f8c8d',
+                      color: 'var(--text-muted)',
                       fontWeight: 600,
-                      background: '#fff',
+                      background: 'var(--surface)',
                     }}
                   >
                     {h}
@@ -264,16 +264,16 @@ export const AutomationsPage: React.FC = () => {
           </thead>
           <tbody>
             {automations.map((a) => (
-              <tr key={a.id} style={{ background: '#fff' }}>
-                <td style={{ padding: '9px 12px', borderBottom: '1px solid #ecf0f1' }}>
+              <tr key={a.id} style={{ background: 'var(--surface)' }}>
+                <td style={{ padding: '9px 12px', borderBottom: '1px solid var(--neutral-soft)' }}>
                   <span
-                    style={{ color: '#3498db', cursor: 'pointer', fontWeight: 600 }}
+                    style={{ color: 'var(--accent)', cursor: 'pointer', fontWeight: 600 }}
                     onClick={() => setForm(toForm(a))}
                   >
                     {a.name}
                   </span>
                 </td>
-                <td style={{ padding: '9px 12px', borderBottom: '1px solid #ecf0f1' }}>
+                <td style={{ padding: '9px 12px', borderBottom: '1px solid var(--neutral-soft)' }}>
                   <span
                     style={{
                       display: 'inline-block',
@@ -288,20 +288,20 @@ export const AutomationsPage: React.FC = () => {
                     {kindLabel(a.kind)}
                   </span>
                 </td>
-                <td style={{ padding: '9px 12px', borderBottom: '1px solid #ecf0f1', color: '#2c3e50' }}>
+                <td style={{ padding: '9px 12px', borderBottom: '1px solid var(--neutral-soft)', color: 'var(--text)' }}>
                   {targetLabel(a)}
                 </td>
                 <td
                   style={{
                     padding: '9px 12px',
-                    borderBottom: '1px solid #ecf0f1',
-                    color: '#555',
+                    borderBottom: '1px solid var(--neutral-soft)',
+                    color: 'var(--text-body)',
                     fontFamily: a.kind === 'scheduled' ? 'monospace' : undefined,
                   }}
                 >
                   {scheduleLabel(a)}
                 </td>
-                <td style={{ padding: '9px 12px', borderBottom: '1px solid #ecf0f1' }}>
+                <td style={{ padding: '9px 12px', borderBottom: '1px solid var(--neutral-soft)' }}>
                   <label
                     style={{
                       display: 'inline-flex',
@@ -318,18 +318,18 @@ export const AutomationsPage: React.FC = () => {
                       onChange={() => toggleEnabled(a)}
                       style={{ width: 'auto' }}
                     />
-                    <span style={{ fontSize: 12, color: a.enabled ? '#27ae60' : '#7f8c8d' }}>
+                    <span style={{ fontSize: 12, color: a.enabled ? 'var(--success)' : 'var(--text-muted)' }}>
                       {a.enabled ? 'on' : 'off'}
                     </span>
                   </label>
                 </td>
-                <td style={{ padding: '9px 12px', borderBottom: '1px solid #ecf0f1', color: '#555' }}>
+                <td style={{ padding: '9px 12px', borderBottom: '1px solid var(--neutral-soft)', color: 'var(--text-body)' }}>
                   {a.last_run_at ? new Date(a.last_run_at).toLocaleString() : '—'}
                 </td>
-                <td style={{ padding: '9px 12px', borderBottom: '1px solid #ecf0f1', color: '#555' }}>
+                <td style={{ padding: '9px 12px', borderBottom: '1px solid var(--neutral-soft)', color: 'var(--text-body)' }}>
                   {a.next_run_at ? new Date(a.next_run_at).toLocaleString() : '—'}
                 </td>
-                <td style={{ padding: '9px 12px', borderBottom: '1px solid #ecf0f1', whiteSpace: 'nowrap' }}>
+                <td style={{ padding: '9px 12px', borderBottom: '1px solid var(--neutral-soft)', whiteSpace: 'nowrap' }}>
                   <button
                     className="button"
                     style={{ padding: '4px 10px', fontSize: 12, marginRight: 6 }}
@@ -341,7 +341,7 @@ export const AutomationsPage: React.FC = () => {
                     style={{
                       padding: '4px 10px',
                       fontSize: 12,
-                      background: '#e74c3c',
+                      background: 'var(--danger)',
                       color: '#fff',
                       border: 'none',
                       borderRadius: 4,
@@ -356,7 +356,7 @@ export const AutomationsPage: React.FC = () => {
             ))}
             {automations.length === 0 && (
               <tr>
-                <td colSpan={8} style={{ padding: 16, color: '#7f8c8d', background: '#fff' }}>
+                <td colSpan={8} style={{ padding: 16, color: 'var(--text-muted)', background: 'var(--surface)' }}>
                   No automations yet.
                 </td>
               </tr>
@@ -456,7 +456,7 @@ export const AutomationsPage: React.FC = () => {
                   ))}
                 </select>
               </div>
-              <div style={{ fontSize: 12, color: '#7f8c8d', marginTop: 4 }}>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
                 Standard 5-field cron: minute hour day-of-month month day-of-week (e.g. "0 9 * * *"
                 = daily at 9am).
               </div>
@@ -547,7 +547,7 @@ export const AutomationsPage: React.FC = () => {
               style={{ minHeight: 110, fontFamily: 'monospace', fontSize: 12.5 }}
               placeholder={'e.g. A {{event.type}} event occurred on {{event.entity_id}} — review it.'}
             />
-            <div style={{ fontSize: 12, color: '#7f8c8d', marginTop: 4 }}>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
               Placeholders: {'{{event.type}}'}, {'{{event.entity_id}}'}, {'{{project.id}}'},{' '}
               {'{{automation.name}}'}. Keep prompts lean — the agent fetches project context itself
               via its OpenV tools.

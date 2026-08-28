@@ -88,9 +88,9 @@ export const MyRunnerCard: React.FC<MyRunnerCardProps> = ({ orgId, onKeysChanged
       {error && (
         <div
           style={{
-            background: '#fdecea',
-            border: '1px solid #e74c3c',
-            color: '#c0392b',
+            background: 'var(--tint-red)',
+            border: '1px solid var(--danger)',
+            color: 'var(--danger-strong)',
             padding: '10px 14px',
             borderRadius: 4,
             marginBottom: 12,
@@ -102,10 +102,10 @@ export const MyRunnerCard: React.FC<MyRunnerCardProps> = ({ orgId, onKeysChanged
       )}
 
       {loading ? (
-        <div style={{ color: '#7f8c8d', fontSize: 13 }}>Loading your runner key…</div>
+        <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Loading your runner key…</div>
       ) : !keyRecord ? (
         <>
-          <p style={{ fontSize: 13, color: '#7f8c8d' }}>
+          <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
             Run agents on your own machine with your own AI subscription. Runs you launch prefer
             your personal runner for the first minute. The easiest setup is the Agent Connector —
             it pairs, stores your key, and starts the runner on demand.
@@ -131,15 +131,15 @@ export const MyRunnerCard: React.FC<MyRunnerCardProps> = ({ orgId, onKeysChanged
         </>
       ) : (
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 13, color: '#2c3e50', fontWeight: 600 }}>
+          <span style={{ fontSize: 13, color: 'var(--text)', fontWeight: 600 }}>
             <span
-              style={{ color: online ? '#27ae60' : '#95a5a6', marginRight: 4, fontSize: 11 }}
+              style={{ color: online ? 'var(--success)' : 'var(--neutral)', marginRight: 4, fontSize: 11 }}
             >
               ●
             </span>
             {online ? 'online' : 'offline'}
           </span>
-          <span style={{ fontSize: 13, color: '#7f8c8d' }}>
+          <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>
             created {keyRecord.created_at ? new Date(keyRecord.created_at).toLocaleDateString() : '—'}
           </span>
           <div style={{ flex: 1 }} />
@@ -165,8 +165,8 @@ export const MyRunnerCard: React.FC<MyRunnerCardProps> = ({ orgId, onKeysChanged
             disabled={busy}
             style={{
               background: 'none',
-              border: '1px solid #e74c3c',
-              color: '#e74c3c',
+              border: '1px solid var(--danger)',
+              color: 'var(--danger)',
               cursor: 'pointer',
               fontSize: 13,
               width: 'auto',

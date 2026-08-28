@@ -79,7 +79,7 @@ const VERIFICATION_METHODS = ['inspection', 'analysis', 'demonstration', 'test']
 const NFR_CATEGORIES = ['Performance', 'Reliability', 'Usability', 'Security', 'Maintainability', 'Regulatory'];
 const SEVERITIES = ['minor', 'moderate', 'serious', 'critical'];
 
-const helpText: React.CSSProperties = { fontSize: 13, color: '#7f8c8d', marginBottom: 16, lineHeight: 1.5 };
+const helpText: React.CSSProperties = { fontSize: 13, color: 'var(--text-muted)', marginBottom: 16, lineHeight: 1.5 };
 
 // ---------------------------------------------------------------------------
 
@@ -778,33 +778,33 @@ export const GuidedWizard: React.FC = () => {
   // -------------------------------------------------------------------------
 
   if (loading) {
-    return <div style={{ padding: 32, color: '#7f8c8d' }}>Loading guided definition…</div>;
+    return <div style={{ padding: 32, color: 'var(--text-muted)' }}>Loading guided definition…</div>;
   }
 
   if (!session) {
     return (
       <div style={{ padding: 24, maxWidth: 700, margin: '0 auto' }}>
         <div className="card" style={{ textAlign: 'center', padding: 40 }}>
-          <h2 style={{ color: '#2c3e50', marginBottom: 12 }}>Guided requirements definition</h2>
+          <h2 style={{ color: 'var(--text)', marginBottom: 12 }}>Guided requirements definition</h2>
           {latestCommitted ? (
-            <p style={{ color: '#7f8c8d', marginBottom: 24, lineHeight: 1.6 }}>
+            <p style={{ color: 'var(--text-muted)', marginBottom: 24, lineHeight: 1.6 }}>
               A guided definition has already been completed for this project. Reopen it to refine or
               extend the committed set — existing entries stay linked to their artifacts, and anything
               you add becomes new draft artifacts to review and commit.
             </p>
           ) : (
-            <p style={{ color: '#7f8c8d', marginBottom: 24, lineHeight: 1.6 }}>
+            <p style={{ color: 'var(--text-muted)', marginBottom: 24, lineHeight: 1.6 }}>
               A step-by-step flow that walks you from product framing through personas, user needs,
               requirements, hazards and verification stubs — creating traceable draft artifacts as you go.
               You review and commit everything at the end.
             </p>
           )}
-          {error && <div style={{ color: '#e74c3c', marginBottom: 16, fontSize: 13 }}>{error}</div>}
+          {error && <div style={{ color: 'var(--danger)', marginBottom: 16, fontSize: 13 }}>{error}</div>}
           {latestCommitted ? (
             <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
               <button
                 className="button"
-                style={{ background: '#3498db' }}
+                style={{ background: 'var(--accent)' }}
                 onClick={() => modifySession(latestCommitted)}
                 disabled={busy}
               >
@@ -815,7 +815,7 @@ export const GuidedWizard: React.FC = () => {
               </button>
             </div>
           ) : (
-            <button className="button" style={{ background: '#3498db' }} onClick={startSession} disabled={busy}>
+            <button className="button" style={{ background: 'var(--accent)' }} onClick={startSession} disabled={busy}>
               {busy ? 'Starting…' : 'Start guided definition'}
             </button>
           )}
@@ -829,15 +829,15 @@ export const GuidedWizard: React.FC = () => {
       <div style={{ padding: 24, maxWidth: 700, margin: '0 auto' }}>
         <div className="card" style={{ textAlign: 'center', padding: 40 }}>
           <div style={{ fontSize: 40, marginBottom: 10 }}>✓</div>
-          <h2 style={{ color: '#27ae60', marginBottom: 12 }}>Requirements committed</h2>
-          <p style={{ color: '#7f8c8d', marginBottom: 24 }}>
+          <h2 style={{ color: 'var(--success)', marginBottom: 12 }}>Requirements committed</h2>
+          <p style={{ color: 'var(--text-muted)', marginBottom: 24 }}>
             All draft artifacts are now live. You can baseline this initial set to keep an immutable
             snapshot for traceability.
           </p>
-          {error && <div style={{ color: '#e74c3c', marginBottom: 16, fontSize: 13 }}>{error}</div>}
+          {error && <div style={{ color: 'var(--danger)', marginBottom: 16, fontSize: 13 }}>{error}</div>}
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
             {baselineCreated ? (
-              <span style={{ color: '#27ae60', fontSize: 14, alignSelf: 'center' }}>
+              <span style={{ color: 'var(--success)', fontSize: 14, alignSelf: 'center' }}>
                 ✓ Baseline "Initial requirements" created
               </span>
             ) : (
@@ -910,7 +910,7 @@ export const GuidedWizard: React.FC = () => {
               renderItem={(p, i, update) => (
                 <div>
                   <div style={{ display: 'flex', gap: 10, marginBottom: 10, alignItems: 'center' }}>
-                    {p.artifact_id && <span title="Draft created" style={{ color: '#27ae60' }}>●</span>}
+                    {p.artifact_id && <span title="Draft created" style={{ color: 'var(--success)' }}>●</span>}
                     <input
                       value={p.name}
                       onChange={(e) => update({ name: e.target.value })}
@@ -949,20 +949,20 @@ export const GuidedWizard: React.FC = () => {
               </div>
             </div>
             {usablePersonas.length === 0 && (
-              <div style={{ color: '#e74c3c', fontSize: 13, marginBottom: 12 }}>
+              <div style={{ color: 'var(--danger)', fontSize: 13, marginBottom: 12 }}>
                 No personas defined — go back to step 2 to add at least one persona.
               </div>
             )}
             {personas.map((p, pi) =>
               p.name.trim() ? (
                 <div key={pi} className="card" style={{ marginBottom: 12 }}>
-                  <div style={{ fontWeight: 600, color: '#2c3e50', marginBottom: 10 }}>{p.name}</div>
+                  <div style={{ fontWeight: 600, color: 'var(--text)', marginBottom: 10 }}>{p.name}</div>
                   {needs.map((n, ni) =>
                     n.persona_index === pi ? (
-                      <div key={ni} style={{ border: '1px solid #eee', borderRadius: 4, padding: 10, marginBottom: 8 }}>
+                      <div key={ni} style={{ border: '1px solid var(--border-soft)', borderRadius: 4, padding: 10, marginBottom: 8 }}>
                         <div style={{ display: 'flex', gap: 8, marginBottom: 6, alignItems: 'center' }}>
-                          {n.artifact_id && <span title="Draft created" style={{ color: '#27ae60' }}>●</span>}
-                          <span style={{ fontSize: 13, color: '#7f8c8d', whiteSpace: 'nowrap' }}>I need</span>
+                          {n.artifact_id && <span title="Draft created" style={{ color: 'var(--success)' }}>●</span>}
+                          <span style={{ fontSize: 13, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>I need</span>
                           <input
                             value={n.capability}
                             onChange={(e) => setNeeds(needs.map((x, j) => (j === ni ? { ...x, capability: e.target.value } : x)))}
@@ -970,7 +970,7 @@ export const GuidedWizard: React.FC = () => {
                             style={{ padding: '6px 8px', fontSize: 13 }}
                             disabled={!!n.artifact_id}
                           />
-                          <span style={{ fontSize: 13, color: '#7f8c8d', whiteSpace: 'nowrap' }}>so that</span>
+                          <span style={{ fontSize: 13, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>so that</span>
                           <input
                             value={n.outcome}
                             onChange={(e) => setNeeds(needs.map((x, j) => (j === ni ? { ...x, outcome: e.target.value } : x)))}
@@ -981,14 +981,14 @@ export const GuidedWizard: React.FC = () => {
                           {!n.artifact_id && (
                             <button
                               onClick={() => setNeeds(needs.filter((_, j) => j !== ni))}
-                              style={{ background: 'none', border: 'none', color: '#e74c3c', cursor: 'pointer', width: 'auto', padding: 4 }}
+                              style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', width: 'auto', padding: 4 }}
                               title="Remove need"
                             >
                               ✕
                             </button>
                           )}
                         </div>
-                        <div style={{ fontSize: 12, color: '#95a5a6', fontStyle: 'italic' }}>
+                        <div style={{ fontSize: 12, color: 'var(--neutral)', fontStyle: 'italic' }}>
                           As {p.name}, I need {n.capability || '…'} so that {n.outcome || '…'}
                         </div>
                       </div>
@@ -1019,7 +1019,7 @@ export const GuidedWizard: React.FC = () => {
               </div>
             </div>
             {usableNeeds.length === 0 && (
-              <div style={{ color: '#e74c3c', fontSize: 13, marginBottom: 12 }}>
+              <div style={{ color: 'var(--danger)', fontSize: 13, marginBottom: 12 }}>
                 No user needs defined — go back to step 3.
               </div>
             )}
@@ -1028,14 +1028,14 @@ export const GuidedWizard: React.FC = () => {
               const personaName = personas[n.persona_index]?.name || 'a user';
               return (
                 <div key={ni} className="card" style={{ marginBottom: 12 }}>
-                  <div style={{ fontSize: 13, color: '#7f8c8d', marginBottom: 10 }}>
+                  <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 10 }}>
                     Need: <em>As {personaName}, I need {n.capability} so that {n.outcome || '…'}</em>
                   </div>
                   {requirements.map((r, ri) =>
                     r.need_index === ni ? (
-                      <div key={ri} style={{ border: '1px solid #eee', borderRadius: 4, padding: 10, marginBottom: 8 }}>
+                      <div key={ri} style={{ border: '1px solid var(--border-soft)', borderRadius: 4, padding: 10, marginBottom: 8 }}>
                         <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
-                          {r.artifact_id && <span title="Draft created" style={{ color: '#27ae60' }}>●</span>}
+                          {r.artifact_id && <span title="Draft created" style={{ color: 'var(--success)' }}>●</span>}
                           <input
                             value={r.text}
                             onChange={(e) => setRequirements(requirements.map((x, j) => (j === ri ? { ...x, text: e.target.value } : x)))}
@@ -1046,7 +1046,7 @@ export const GuidedWizard: React.FC = () => {
                           {!r.artifact_id && (
                             <button
                               onClick={() => setRequirements(requirements.filter((_, j) => j !== ri))}
-                              style={{ background: 'none', border: 'none', color: '#e74c3c', cursor: 'pointer', width: 'auto', padding: 4 }}
+                              style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', width: 'auto', padding: 4 }}
                               title="Remove requirement"
                             >
                               ✕
@@ -1063,7 +1063,7 @@ export const GuidedWizard: React.FC = () => {
                             disabled={!!r.artifact_id}
                           />
                           <div style={{ width: 170 }}>
-                            <label style={{ fontSize: 11, color: '#7f8c8d' }}>Verification method</label>
+                            <label style={{ fontSize: 11, color: 'var(--text-muted)' }}>Verification method</label>
                             <select
                               value={r.verification_method}
                               onChange={(e) => setRequirements(requirements.map((x, j) => (j === ri ? { ...x, verification_method: e.target.value } : x)))}
@@ -1124,8 +1124,8 @@ export const GuidedWizard: React.FC = () => {
                       style={{ width: 'auto' }}
                       onClick={(e) => e.stopPropagation()}
                     />
-                    <span style={{ fontWeight: 600, color: '#2c3e50', flex: 1 }}>{cat}</span>
-                    <span style={{ fontSize: 12, color: '#7f8c8d' }}>
+                    <span style={{ fontWeight: 600, color: 'var(--text)', flex: 1 }}>{cat}</span>
+                    <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
                       {catEntries.length > 0 ? `${catEntries.length} requirement${catEntries.length > 1 ? 's' : ''}` : ''}
                     </span>
                   </div>
@@ -1133,7 +1133,7 @@ export const GuidedWizard: React.FC = () => {
                     <div style={{ marginTop: 10 }}>
                       {catEntries.map(({ n, i }) => (
                         <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
-                          {n.artifact_id && <span title="Draft created" style={{ color: '#27ae60' }}>●</span>}
+                          {n.artifact_id && <span title="Draft created" style={{ color: 'var(--success)' }}>●</span>}
                           <input
                             value={n.text}
                             onChange={(e) => setNfrs(nfrs.map((x, j) => (j === i ? { ...x, text: e.target.value } : x)))}
@@ -1154,7 +1154,7 @@ export const GuidedWizard: React.FC = () => {
                           {!n.artifact_id && (
                             <button
                               onClick={() => setNfrs(nfrs.filter((_, j) => j !== i))}
-                              style={{ background: 'none', border: 'none', color: '#e74c3c', cursor: 'pointer', width: 'auto', padding: 4 }}
+                              style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', width: 'auto', padding: 4 }}
                               title="Remove"
                             >
                               ✕
@@ -1196,7 +1196,7 @@ export const GuidedWizard: React.FC = () => {
               emptyText="No hazards recorded — use Skip if not applicable."
               renderItem={(h, i, update) => (
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center', paddingRight: 24 }}>
-                  {h.artifact_id && <span title="Draft created" style={{ color: '#27ae60' }}>●</span>}
+                  {h.artifact_id && <span title="Draft created" style={{ color: 'var(--success)' }}>●</span>}
                   <input value={h.hazard} onChange={(e) => update({ hazard: e.target.value })} placeholder="Hazard (what could go wrong)" style={{ padding: '6px 8px', fontSize: 13 }} disabled={!!h.artifact_id} />
                   <input value={h.harm} onChange={(e) => update({ harm: e.target.value })} placeholder="Potential harm" style={{ padding: '6px 8px', fontSize: 13 }} disabled={!!h.artifact_id} />
                   <select
@@ -1225,7 +1225,7 @@ export const GuidedWizard: React.FC = () => {
               requirements get a draft test case ("Verify: …") linked with a <em>verifies</em> relationship.
             </div>
             {candidates.length === 0 ? (
-              <div style={{ color: '#95a5a6', fontSize: 13 }}>
+              <div style={{ color: 'var(--neutral)', fontSize: 13 }}>
                 No requirements with method "test" were created — nothing to stub. Use Skip or Next.
               </div>
             ) : (
@@ -1237,7 +1237,7 @@ export const GuidedWizard: React.FC = () => {
                     alignItems: 'center',
                     gap: 10,
                     padding: '8px 10px',
-                    border: '1px solid #eee',
+                    border: '1px solid var(--border-soft)',
                     borderRadius: 4,
                     marginBottom: 6,
                     cursor: stubCreated[c.id] ? 'default' : 'pointer',
@@ -1251,8 +1251,8 @@ export const GuidedWizard: React.FC = () => {
                     disabled={!!stubCreated[c.id]}
                     onChange={(e) => setStubSelected({ ...stubSelected, [c.id]: e.target.checked })}
                   />
-                  <span style={{ flex: 1, fontSize: 13, color: '#2c3e50' }}>{c.title}</span>
-                  {stubCreated[c.id] && <span style={{ fontSize: 12, color: '#27ae60' }}>✓ stub created</span>}
+                  <span style={{ flex: 1, fontSize: 13, color: 'var(--text)' }}>{c.title}</span>
+                  {stubCreated[c.id] && <span style={{ fontSize: 12, color: 'var(--success)' }}>✓ stub created</span>}
                 </label>
               ))
             )}
@@ -1272,26 +1272,26 @@ export const GuidedWizard: React.FC = () => {
               to make them all live.
             </div>
             {draftsLoading ? (
-              <div style={{ color: '#7f8c8d', fontSize: 13 }}>Loading drafts…</div>
+              <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Loading drafts…</div>
             ) : draftArtifacts.length === 0 ? (
-              <div style={{ color: '#95a5a6', fontSize: 13, marginBottom: 12 }}>No draft artifacts found.</div>
+              <div style={{ color: 'var(--neutral)', fontSize: 13, marginBottom: 12 }}>No draft artifacts found.</div>
             ) : (
               Object.keys(grouped)
                 .sort()
                 .map((type) => (
                   <div key={type} style={{ marginBottom: 16 }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: '#7f8c8d', textTransform: 'uppercase', marginBottom: 6 }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 6 }}>
                       {type} ({grouped[type].length})
                     </div>
                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                       <tbody>
                         {grouped[type].map((a) => (
-                          <tr key={a.id} style={{ borderBottom: '1px solid #f0f0f0' }}>
-                            <td style={{ padding: '6px 8px', fontSize: 13, color: '#2c3e50' }}>{a.title}</td>
+                          <tr key={a.id} style={{ borderBottom: '1px solid var(--surface-hover)' }}>
+                            <td style={{ padding: '6px 8px', fontSize: 13, color: 'var(--text)' }}>{a.title}</td>
                             <td style={{ padding: '6px 8px', width: 80, textAlign: 'right' }}>
                               <button
                                 onClick={() => discardDraft(a)}
-                                style={{ background: 'none', border: 'none', color: '#e74c3c', cursor: 'pointer', width: 'auto', fontSize: 12, padding: 2 }}
+                                style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', width: 'auto', fontSize: 12, padding: 2 }}
                               >
                                 Discard
                               </button>
@@ -1322,15 +1322,15 @@ export const GuidedWizard: React.FC = () => {
   return (
     <div style={{ padding: 24, maxWidth: 1560, margin: '0 auto' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-        <h2 style={{ color: '#2c3e50', margin: 0 }}>Guided requirements definition</h2>
+        <h2 style={{ color: 'var(--text)', margin: 0 }}>Guided requirements definition</h2>
         <button
           onClick={handleAbandon}
           disabled={busy}
           title="Drop this session and return to the start page (created drafts are kept)"
           style={{
             background: 'none',
-            border: '1px solid #e74c3c',
-            color: '#e74c3c',
+            border: '1px solid var(--danger)',
+            color: 'var(--danger)',
             borderRadius: 4,
             padding: '6px 12px',
             fontSize: 12,
@@ -1345,9 +1345,9 @@ export const GuidedWizard: React.FC = () => {
       {error && (
         <div
           style={{
-            background: '#fdecea',
-            border: '1px solid #e74c3c',
-            color: '#c0392b',
+            background: 'var(--tint-red)',
+            border: '1px solid var(--danger)',
+            color: 'var(--danger-strong)',
             padding: '10px 14px',
             borderRadius: 4,
             marginBottom: 16,

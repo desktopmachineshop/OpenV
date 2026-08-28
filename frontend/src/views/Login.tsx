@@ -56,12 +56,12 @@ export const Login: React.FC = () => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: '#2c3e50',
+        background: 'var(--sidebar-bg)',
       }}
     >
-      <div className="card" style={{ width: 380, padding: 32, background: '#fff', borderRadius: 8 }}>
-        <h1 style={{ margin: 0, fontSize: 26, color: '#2c3e50' }}>OpenV</h1>
-        <p style={{ color: '#7f8c8d', marginTop: 4, marginBottom: 24, fontSize: 14 }}>
+      <div className="card" style={{ width: 380, padding: 32, background: 'var(--surface)', borderRadius: 8 }}>
+        <h1 style={{ margin: 0, fontSize: 26, color: 'var(--text)' }}>OpenV</h1>
+        <p style={{ color: 'var(--text-muted)', marginTop: 4, marginBottom: 24, fontSize: 14 }}>
           {mode === 'login' ? 'Sign in to your workspace' : 'Create your account'}
         </p>
         <form onSubmit={submit}>
@@ -97,7 +97,7 @@ export const Login: React.FC = () => {
             />
           </div>
           {error && (
-            <div style={{ color: '#e74c3c', fontSize: 13, marginBottom: 12 }}>{String(error)}</div>
+            <div style={{ color: 'var(--danger)', fontSize: 13, marginBottom: 12 }}>{String(error)}</div>
           )}
           <button className="button" type="submit" disabled={busy} style={{ width: '100%' }}>
             {busy ? 'Please wait…' : mode === 'login' ? 'Sign in' : 'Create account'}
@@ -113,13 +113,13 @@ export const Login: React.FC = () => {
           </a>
         ) : (
           mode === 'login' && (
-            <div style={{ marginTop: 12, fontSize: 11, textAlign: 'center', color: '#bdc3c7' }}>
+            <div style={{ marginTop: 12, fontSize: 11, textAlign: 'center', color: 'var(--neutral-mid)' }}>
               Google sign-in is available once the server is configured with a Google OAuth
               client (see docs/agents.md).
             </div>
           )
         )}
-        <div style={{ margin: '20px 0 0', borderTop: '1px solid #ecf0f1', paddingTop: 16 }}>
+        <div style={{ margin: '20px 0 0', borderTop: '1px solid var(--neutral-soft)', paddingTop: 16 }}>
           {mode === 'login' ? (
             <button
               onClick={() => setMode('register')}

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import cytoscape, { Core } from 'cytoscape';
 import { AgentDef, CrewGraph } from '../../api/client';
+import { cssVar, useThemeVersion } from '../../theme';
 
 export type CrewFilter = 'employees' | 'agents' | 'all';
 
@@ -18,10 +19,12 @@ export interface CrewCanvasProps {
   onConnect: (fromNodeId: string, toNodeId: string) => void;
 }
 
+// Claude-provider nodes keep the Anthropic brand terracotta in both themes;
+// everything else uses the themed neutral (read at render time, see below).
 const providerColor = (provider: string | undefined): string =>
   provider === 'claude-code' || provider === 'anthropic-api' || (provider || '').startsWith('claude')
     ? '#d97757'
-    : '#95a5a6';
+    : cssVar('--neutral');
 
 export const CrewCanvas: React.FC<CrewCanvasProps> = ({
   graph,
@@ -44,9 +47,28 @@ export const CrewCanvas: React.FC<CrewCanvasProps> = ({
   const callbacksRef = useRef({ onSelectNode, onSelectEdge, onMoveNode, onConnect, connectMode });
   callbacksRef.current = { onSelectNode, onSelectEdge, onMoveNode, onConnect, connectMode };
 
-  // Build / rebuild the cytoscape instance when the graph, view, or filter changes.
+  // Cytoscape paints to a canvas, so CSS variables aren't resolved live: read
+  // the current token values at build time and rebuild when the theme changes.
+  const themeVersion = useThemeVersion();
+
+  // Build / rebuild the cytoscape instance when the graph, view, filter, or
+  // theme changes.
   useEffect(() => {
     if (!containerRef.current) return;
+
+    const theme = {
+      text: cssVar('--text'),
+      textMuted: cssVar('--text-muted'),
+      surface: cssVar('--surface'),
+      surfaceAlt: cssVar('--surface-alt'),
+      neutral: cssVar('--neutral'),
+      accent: cssVar('--accent'),
+      success: cssVar('--success'),
+      warning: cssVar('--warning'),
+      purple: cssVar('--purple'),
+      tintBlue: cssVar('--tint-blue'),
+      tintPurple: cssVar('--tint-purple'),
+    };
 
     const agentById: Record<string, AgentDef> = {};
     agents.forEach((a) => {
@@ -117,7 +139,7 @@ export const CrewCanvas: React.FC<CrewCanvasProps> = ({
             nodeType: n.node_type,
             borderColor:
               n.node_type === 'human'
-                ? '#8e44ad'
+                ? theme.purple
                 : providerColor(n.agent_id ? agentById[n.agent_id]?.provider : undefined),
             ...(view === 'org' && (n.department || '').trim()
               ? { parent: `dept:${(n.department || '').trim()}` }
@@ -157,20 +179,20 @@ export const CrewCanvas: React.FC<CrewCanvasProps> = ({
             'text-valign': 'center',
             'text-halign': 'center',
             'font-size': 12,
-            color: '#2c3e50',
-            'background-color': '#ffffff',
+            color: theme.text,
+            'background-color': theme.surface,
             'border-width': 2,
-            'border-color': view === 'org' ? '#2c3e50' : 'data(borderColor)',
+            'border-color': view === 'org' ? theme.text : 'data(borderColor)',
           },
         },
         {
           selector: 'node.department',
           style: {
             shape: 'round-rectangle',
-            'background-color': '#f4f6f7',
+            'background-color': theme.surfaceAlt,
             'background-opacity': 0.6,
             'border-width': 1.5,
-            'border-color': '#95a5a6',
+            'border-color': theme.neutral,
             'border-style': 'solid',
             label: 'data(label)',
             'text-valign': 'top',
@@ -178,7 +200,7 @@ export const CrewCanvas: React.FC<CrewCanvasProps> = ({
             'text-margin-y': -8,
             'font-size': 13,
             'font-weight': 'bold',
-            color: '#7f8c8d',
+            color: theme.textMuted,
             'text-transform': 'uppercase',
             padding: '24px',
           },
@@ -192,13 +214,13 @@ export const CrewCanvas: React.FC<CrewCanvasProps> = ({
               ? {
                   shape: 'round-rectangle',
                   'corner-radius': 14,
-                  'background-color': '#f5eef8',
-                  'border-color': '#8e44ad',
+                  'background-color': theme.tintPurple,
+                  'border-color': theme.purple,
                 }
               : {
                   shape: 'ellipse',
-                  'background-color': '#f5eef8',
-                  'border-color': '#8e44ad',
+                  'background-color': theme.tintPurple,
+                  'border-color': theme.purple,
                 },
         },
         {
@@ -211,7 +233,7 @@ export const CrewCanvas: React.FC<CrewCanvasProps> = ({
         {
           selector: 'node.active',
           style: {
-            'underlay-color': '#3498db',
+            'underlay-color': theme.accent,
             'underlay-opacity': 0.35,
             'underlay-padding': 6,
           },
@@ -219,15 +241,15 @@ export const CrewCanvas: React.FC<CrewCanvasProps> = ({
         {
           selector: 'node.connect-source',
           style: {
-            'background-color': '#eaf2f8',
-            'border-color': '#3498db',
+            'background-color': theme.tintBlue,
+            'border-color': theme.accent,
             'border-width': 3,
           },
         },
         {
           selector: 'node:selected',
           style: {
-            'background-color': '#eaf2f8',
+            'background-color': theme.tintBlue,
           },
         },
         {
@@ -247,24 +269,24 @@ export const CrewCanvas: React.FC<CrewCanvasProps> = ({
           selector: 'edge[type="delegates-to"]',
           style: {
             'line-style': 'solid',
-            'line-color': '#3498db',
-            'target-arrow-color': '#3498db',
+            'line-color': theme.accent,
+            'target-arrow-color': theme.accent,
           },
         },
         {
           selector: 'edge[type="hands-off-to"]',
           style: {
             'line-style': 'dashed',
-            'line-color': '#27ae60',
-            'target-arrow-color': '#27ae60',
+            'line-color': theme.success,
+            'target-arrow-color': theme.success,
           },
         },
         {
           selector: 'edge[type="reviews"]',
           style: {
             'line-style': 'dotted',
-            'line-color': '#f39c12',
-            'target-arrow-color': '#f39c12',
+            'line-color': theme.warning,
+            'target-arrow-color': theme.warning,
           },
         },
         {
@@ -331,7 +353,7 @@ export const CrewCanvas: React.FC<CrewCanvasProps> = ({
       cyRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [graph, view, filter, agents, members]);
+  }, [graph, view, filter, agents, members, themeVersion]);
 
   // Reflect active runs without rebuilding. Live-status dots apply to agent
   // nodes only — human crew members never run.
@@ -360,9 +382,9 @@ export const CrewCanvas: React.FC<CrewCanvasProps> = ({
         width: '100%',
         height: '100%',
         minHeight: 420,
-        background: '#fff',
+        background: 'var(--surface)',
         borderRadius: 4,
-        border: '1px solid #ddd',
+        border: '1px solid var(--border)',
         cursor: connectMode ? 'crosshair' : 'default',
       }}
     />

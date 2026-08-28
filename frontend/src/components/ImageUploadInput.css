@@ -1,23 +1,23 @@
 .image-upload-container {
   position: relative;
-  border: 2px dashed #bdc3c7;
+  border: 2px dashed var(--neutral-mid);
   border-radius: 4px;
   padding: 20px;
   text-align: center;
   cursor: pointer;
   transition: all 0.2s ease;
-  background: #f8f9fa;
+  background: var(--surface-alt);
   margin: 16px 0;
 }
 
 .image-upload-container:hover {
-  border-color: #3498db;
-  background: #ecf0f1;
+  border-color: var(--accent);
+  background: var(--neutral-soft);
 }
 
 .image-upload-container.drag-over {
-  border-color: #3498db;
-  background: #e3f2fd;
+  border-color: var(--accent);
+  background: var(--tint-blue);
 }
 
 .image-upload-input {
@@ -38,14 +38,14 @@
 .upload-text {
   margin: 0;
   font-size: 14px;
-  color: #2c3e50;
+  color: var(--text);
   font-weight: 500;
 }
 
 .upload-hint {
   margin: 0;
   font-size: 12px;
-  color: #7f8c8d;
+  color: var(--text-muted);
 }
 
 .image-upload-container:disabled,

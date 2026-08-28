@@ -68,7 +68,7 @@ export const OrgProvidersTab: React.FC<OrgProvidersTabProps> = ({ isAdmin }) => 
   const detectionChip = (p: ProviderSetting) => {
     const ld = p.last_detected || {};
     if (!ld || Object.keys(ld).length === 0) {
-      return <span style={chipStyle('#ecf0f1', '#7f8c8d')}>never detected</span>;
+      return <span style={chipStyle('var(--neutral-soft)', 'var(--text-muted)')}>never detected</span>;
     }
     const parts: string[] = [];
     if (ld.installed) parts.push('installed');
@@ -76,14 +76,14 @@ export const OrgProvidersTab: React.FC<OrgProvidersTabProps> = ({ isAdmin }) => 
     if (ld.version) parts.push(`v${String(ld.version).replace(/^v/, '')}`);
     if (parts.length === 0) parts.push('detected');
     const ok = !!ld.installed || !!ld.logged_in;
-    return <span style={chipStyle(ok ? '#27ae60' : '#f39c12')}>{parts.join(' · ')}</span>;
+    return <span style={chipStyle(ok ? 'var(--success)' : 'var(--warning)')}>{parts.join(' · ')}</span>;
   };
 
   if (!isAdmin) {
     return (
       <div className="card">
         <h3>AI providers</h3>
-        <p style={{ fontSize: 13, color: '#7f8c8d', marginBottom: 0 }}>
+        <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 0 }}>
           Only workspace admins can view and change AI provider settings. Ask a workspace admin if a
           provider needs to be connected or reconfigured.
         </p>
@@ -96,9 +96,9 @@ export const OrgProvidersTab: React.FC<OrgProvidersTabProps> = ({ isAdmin }) => 
       {error && (
         <div
           style={{
-            background: '#fdecea',
-            border: '1px solid #e74c3c',
-            color: '#c0392b',
+            background: 'var(--tint-red)',
+            border: '1px solid var(--danger)',
+            color: 'var(--danger-strong)',
             padding: '10px 14px',
             borderRadius: 4,
             marginBottom: 16,
@@ -108,7 +108,7 @@ export const OrgProvidersTab: React.FC<OrgProvidersTabProps> = ({ isAdmin }) => 
           {error}{' '}
           <button
             onClick={() => setError('')}
-            style={{ background: 'none', border: 'none', color: '#c0392b', cursor: 'pointer', width: 'auto', padding: 0 }}
+            style={{ background: 'none', border: 'none', color: 'var(--danger-strong)', cursor: 'pointer', width: 'auto', padding: 0 }}
           >
             ✕
           </button>
@@ -117,9 +117,9 @@ export const OrgProvidersTab: React.FC<OrgProvidersTabProps> = ({ isAdmin }) => 
       {notice && (
         <div
           style={{
-            background: '#eafaf1',
-            border: '1px solid #27ae60',
-            color: '#1e8449',
+            background: 'var(--tint-green)',
+            border: '1px solid var(--success)',
+            color: 'var(--success-text)',
             padding: '10px 14px',
             borderRadius: 4,
             marginBottom: 16,
@@ -131,10 +131,10 @@ export const OrgProvidersTab: React.FC<OrgProvidersTabProps> = ({ isAdmin }) => 
       )}
 
       {providersLoading ? (
-        <div style={{ color: '#7f8c8d', fontSize: 13 }}>Loading provider settings…</div>
+        <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Loading provider settings…</div>
       ) : providers.length === 0 ? (
         <div className="card">
-          <div style={{ color: '#95a5a6', fontSize: 13 }}>
+          <div style={{ color: 'var(--neutral)', fontSize: 13 }}>
             No AI providers configured on this server yet.
           </div>
         </div>
@@ -198,7 +198,7 @@ export const OrgProvidersTab: React.FC<OrgProvidersTabProps> = ({ isAdmin }) => 
               </button>
             </div>
             {p.auth_mode === 'api-key' && (
-              <div style={{ fontSize: 12, color: '#7f8c8d', marginTop: 8 }}>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 8 }}>
                 The key itself is never stored here — set the environment variable on the server
                 running OpenV.
               </div>
@@ -214,9 +214,9 @@ export const OrgProvidersTab: React.FC<OrgProvidersTabProps> = ({ isAdmin }) => 
         ))
       )}
 
-      <div className="card" style={{ background: '#eaf4fc', border: '1px solid #3498db' }}>
-        <h3 style={{ color: '#2c3e50' }}>Agent definitions</h3>
-        <p style={{ fontSize: 13, color: '#2c3e50', marginBottom: 0 }}>
+      <div className="card" style={{ background: 'var(--tint-blue)', border: '1px solid var(--accent)' }}>
+        <h3 style={{ color: 'var(--text)' }}>Agent definitions</h3>
+        <p style={{ fontSize: 13, color: 'var(--text)', marginBottom: 0 }}>
           Agents are defined as markdown files with frontmatter (model, tools, write mode) stored on
           the server. Edit them on a project's Agents page — changes to the files on disk are picked
           up with a sync.

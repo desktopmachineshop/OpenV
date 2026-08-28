@@ -18,11 +18,11 @@ import { useAppStore } from '../state/store';
 import { WorkItemDrawer } from '../components/kanban/WorkItemDrawer';
 
 const COLUMNS: { key: string; label: string; color: string }[] = [
-  { key: 'backlog', label: 'Backlog', color: '#95a5a6' },
-  { key: 'todo', label: 'To Do', color: '#3498db' },
-  { key: 'in-progress', label: 'In Progress', color: '#f39c12' },
-  { key: 'review', label: 'Review', color: '#9b59b6' },
-  { key: 'done', label: 'Done', color: '#27ae60' },
+  { key: 'backlog', label: 'Backlog', color: 'var(--neutral)' },
+  { key: 'todo', label: 'To Do', color: 'var(--accent)' },
+  { key: 'in-progress', label: 'In Progress', color: 'var(--warning)' },
+  { key: 'review', label: 'Review', color: 'var(--purple-soft)' },
+  { key: 'done', label: 'Done', color: 'var(--success)' },
 ];
 
 const LIVE_STATUSES = ['queued', 'claimed', 'running'];
@@ -243,11 +243,11 @@ export const KanbanBoard: React.FC = () => {
             alignItems: 'center',
             gap: 4,
             fontSize: 11,
-            background: '#f0eefc',
-            border: '1px solid #d5d0f0',
+            background: 'var(--tint-purple)',
+            border: '1px solid var(--tint-purple-border)',
             borderRadius: 10,
             padding: '2px 8px',
-            color: '#2c3e50',
+            color: 'var(--text)',
           }}
         >
           <span role="img" aria-label="agent">🤖</span>
@@ -266,11 +266,11 @@ export const KanbanBoard: React.FC = () => {
             alignItems: 'center',
             gap: 4,
             fontSize: 11,
-            background: '#eef6fc',
-            border: '1px solid #cfe5f5',
+            background: 'var(--tint-blue)',
+            border: '1px solid var(--tint-blue-border)',
             borderRadius: 10,
             padding: '2px 8px',
-            color: '#2c3e50',
+            color: 'var(--text)',
           }}
         >
           <span role="img" aria-label="crew">👥</span>
@@ -287,7 +287,7 @@ export const KanbanBoard: React.FC = () => {
           width: 22,
           height: 22,
           borderRadius: '50%',
-          background: '#3498db',
+          background: 'var(--accent)',
           color: '#fff',
           display: 'inline-flex',
           alignItems: 'center',
@@ -307,12 +307,12 @@ export const KanbanBoard: React.FC = () => {
         {`@keyframes ovPulse { 0% { opacity: 1; } 50% { opacity: 0.25; } 100% { opacity: 1; } }`}
       </style>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 14, marginBottom: 6 }}>
-        <h2 style={{ color: '#2c3e50', margin: 0 }}>Board</h2>
-        <span style={{ color: '#7f8c8d', fontSize: 13 }}>
+        <h2 style={{ color: 'var(--text)', margin: 0 }}>Board</h2>
+        <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>
           Tip: assign a card to an agent and drag it to To Do to launch the agent.
         </span>
       </div>
-      {error && <div style={{ color: '#e74c3c', fontSize: 13, marginBottom: 8 }}>{error}</div>}
+      {error && <div style={{ color: 'var(--danger)', fontSize: 13, marginBottom: 8 }}>{error}</div>}
 
       <div style={{ display: 'flex', gap: 12, flex: 1, overflowX: 'auto', alignItems: 'flex-start' }}>
         {COLUMNS.map((col) => {
@@ -331,12 +331,12 @@ export const KanbanBoard: React.FC = () => {
               }}
               style={{
                 flex: '0 0 260px',
-                background: dragOverColumn === col.key ? '#eaf2f8' : '#eef1f4',
+                background: dragOverColumn === col.key ? 'var(--tint-blue)' : 'var(--surface-alt)',
                 borderRadius: 6,
                 padding: 10,
                 maxHeight: '100%',
                 overflowY: 'auto',
-                border: dragOverColumn === col.key ? '2px dashed #3498db' : '2px solid transparent',
+                border: dragOverColumn === col.key ? '2px dashed var(--accent)' : '2px solid transparent',
               }}
             >
               <div
@@ -351,8 +351,8 @@ export const KanbanBoard: React.FC = () => {
                 <span
                   style={{ width: 10, height: 10, borderRadius: '50%', background: col.color }}
                 />
-                <strong style={{ fontSize: 13, color: '#2c3e50' }}>{col.label}</strong>
-                <span style={{ fontSize: 12, color: '#7f8c8d' }}>
+                <strong style={{ fontSize: 13, color: 'var(--text)' }}>{col.label}</strong>
+                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
                   {(itemsByColumn[col.key] || []).length}
                 </span>
               </div>
@@ -370,18 +370,18 @@ export const KanbanBoard: React.FC = () => {
                     onClick={() => setSelectedId(item.id)}
                     title={disabled ? 'Agent run in progress — card is locked' : undefined}
                     style={{
-                      background: '#fff',
+                      background: 'var(--surface)',
                       borderRadius: 4,
                       boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
                       padding: '10px 12px',
                       marginBottom: 8,
                       cursor: disabled ? 'not-allowed' : 'grab',
                       opacity: disabled ? 0.85 : 1,
-                      border: '1px solid #e5e8e8',
+                      border: '1px solid var(--surface-alt)',
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
-                      <div style={{ flex: 1, fontSize: 13, color: '#2c3e50', fontWeight: 600 }}>
+                      <div style={{ flex: 1, fontSize: 13, color: 'var(--text)', fontWeight: 600 }}>
                         {item.title}
                       </div>
                       {live && (
@@ -391,7 +391,7 @@ export const KanbanBoard: React.FC = () => {
                             width: 9,
                             height: 9,
                             borderRadius: '50%',
-                            background: '#3498db',
+                            background: 'var(--accent)',
                             animation: 'ovPulse 1.2s ease-in-out infinite',
                             marginTop: 3,
                             flexShrink: 0,
@@ -410,7 +410,7 @@ export const KanbanBoard: React.FC = () => {
                     >
                       {renderAssigneeBadge(item)}
                       {item.artifact_ids && item.artifact_ids.length > 0 && (
-                        <span style={{ fontSize: 11, color: '#7f8c8d' }}>
+                        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
                           🔗 {item.artifact_ids.length}
                         </span>
                       )}
@@ -423,10 +423,10 @@ export const KanbanBoard: React.FC = () => {
               {composer.expanded ? (
                 <div
                   style={{
-                    background: '#fff',
+                    background: 'var(--surface)',
                     borderRadius: 4,
                     padding: 10,
-                    border: '1px solid #d5dbdb',
+                    border: '1px solid var(--border)',
                   }}
                 >
                   <input
@@ -495,7 +495,7 @@ export const KanbanBoard: React.FC = () => {
                     width: '100%',
                     background: 'none',
                     border: 'none',
-                    color: '#7f8c8d',
+                    color: 'var(--text-muted)',
                     fontSize: 13,
                     padding: '6px 4px',
                     textAlign: 'left',

@@ -18,14 +18,14 @@ import { useAppStore } from '../state/store';
 export const rollupColor = (status: string): string => {
   switch ((status || '').toLowerCase()) {
     case 'pass':
-      return '#27ae60';
+      return 'var(--success)';
     case 'fail':
-      return '#e74c3c';
+      return 'var(--danger)';
     case 'blocked':
-      return '#f39c12';
+      return 'var(--warning)';
     default:
       // uncovered / unrun / method-missing / not-run
-      return '#95a5a6';
+      return 'var(--neutral)';
   }
 };
 
@@ -43,13 +43,13 @@ const chipStyle = (color: string): React.CSSProperties => ({
 const runStatusColor = (status: string): string => {
   switch (status) {
     case 'in-progress':
-      return '#3498db';
+      return 'var(--accent)';
     case 'completed':
-      return '#27ae60';
+      return 'var(--success)';
     case 'aborted':
-      return '#e74c3c';
+      return 'var(--danger)';
     default:
-      return '#95a5a6';
+      return 'var(--neutral)';
   }
 };
 
@@ -170,9 +170,9 @@ export const VVDashboard: React.FC = () => {
   return (
     <div style={{ padding: 24 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 16, flexWrap: 'wrap' }}>
-        <h2 style={{ color: '#2c3e50', margin: 0 }}>Verification &amp; Validation</h2>
+        <h2 style={{ color: 'var(--text)', margin: 0 }}>Verification &amp; Validation</h2>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <label style={{ margin: 0, fontSize: 13, color: '#7f8c8d' }}>Baseline</label>
+          <label style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)' }}>Baseline</label>
           <select
             value={baselineId}
             onChange={(e) => setBaselineId(e.target.value)}
@@ -198,9 +198,9 @@ export const VVDashboard: React.FC = () => {
       {baselineId !== 'live' && (
         <div
           style={{
-            background: '#fef5e7',
-            border: '1px solid #f39c12',
-            color: '#9c6408',
+            background: 'var(--tint-yellow)',
+            border: '1px solid var(--warning)',
+            color: 'var(--warning-text)',
             borderRadius: 4,
             padding: '10px 14px',
             marginBottom: 16,
@@ -213,9 +213,9 @@ export const VVDashboard: React.FC = () => {
       )}
 
       {error && (
-        <div style={{ color: '#e74c3c', marginBottom: 12, fontSize: 13 }}>{error}</div>
+        <div style={{ color: 'var(--danger)', marginBottom: 12, fontSize: 13 }}>{error}</div>
       )}
-      {loading && <div style={{ color: '#7f8c8d', marginBottom: 12 }}>Loading…</div>}
+      {loading && <div style={{ color: 'var(--text-muted)', marginBottom: 12 }}>Loading…</div>}
 
       {/* Summary cards */}
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
@@ -228,11 +228,11 @@ export const VVDashboard: React.FC = () => {
             <div style={{ fontSize: 26, fontWeight: 700, color: rollupColor(key) }}>
               {summary[key]}
             </div>
-            <div style={{ fontSize: 12, color: '#7f8c8d', textTransform: 'capitalize' }}>{key}</div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', textTransform: 'capitalize' }}>{key}</div>
           </div>
         ))}
         {summaryKeys.length === 0 && !loading && (
-          <div style={{ color: '#7f8c8d', fontSize: 13 }}>No coverage data yet.</div>
+          <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>No coverage data yet.</div>
         )}
       </div>
 
@@ -246,7 +246,7 @@ export const VVDashboard: React.FC = () => {
             overflow: 'hidden',
             marginBottom: 24,
             maxWidth: 720,
-            border: '1px solid #ddd',
+            border: '1px solid var(--border)',
           }}
         >
           {summaryKeys.map((key) =>
@@ -276,9 +276,9 @@ export const VVDashboard: React.FC = () => {
                     key={h}
                     style={{
                       textAlign: 'left',
-                      borderBottom: '2px solid #ecf0f1',
+                      borderBottom: '2px solid var(--neutral-soft)',
                       padding: '8px 10px',
-                      color: '#7f8c8d',
+                      color: 'var(--text-muted)',
                       fontWeight: 600,
                     }}
                   >
@@ -290,20 +290,20 @@ export const VVDashboard: React.FC = () => {
             <tbody>
               {(coverage?.entries || []).map((entry) => (
                 <tr key={entry.requirement_id}>
-                  <td style={{ padding: '8px 10px', borderBottom: '1px solid #ecf0f1' }}>
+                  <td style={{ padding: '8px 10px', borderBottom: '1px solid var(--neutral-soft)' }}>
                     {entry.title || artifactTitle(entry.requirement_id)}
                   </td>
-                  <td style={{ padding: '8px 10px', borderBottom: '1px solid #ecf0f1', color: '#555' }}>
-                    {entry.verification_method || <span style={{ color: '#e74c3c' }}>missing</span>}
+                  <td style={{ padding: '8px 10px', borderBottom: '1px solid var(--neutral-soft)', color: 'var(--text-body)' }}>
+                    {entry.verification_method || <span style={{ color: 'var(--danger)' }}>missing</span>}
                   </td>
-                  <td style={{ padding: '8px 10px', borderBottom: '1px solid #ecf0f1' }}>
+                  <td style={{ padding: '8px 10px', borderBottom: '1px solid var(--neutral-soft)' }}>
                     <span style={chipStyle(rollupColor(entry.rollup))}>{entry.rollup}</span>
                   </td>
                 </tr>
               ))}
               {(coverage?.entries || []).length === 0 && !loading && (
                 <tr>
-                  <td colSpan={3} style={{ padding: 12, color: '#7f8c8d' }}>
+                  <td colSpan={3} style={{ padding: 12, color: 'var(--text-muted)' }}>
                     No requirements found.
                   </td>
                 </tr>
@@ -314,9 +314,9 @@ export const VVDashboard: React.FC = () => {
       </div>
 
       {/* Gaps */}
-      <h3 style={{ color: '#2c3e50', marginBottom: 10 }}>Gaps</h3>
+      <h3 style={{ color: 'var(--text)', marginBottom: 10 }}>Gaps</h3>
       {gapEntries.length === 0 && !loading && (
-        <div style={{ color: '#27ae60', fontSize: 13, marginBottom: 20 }}>
+        <div style={{ color: 'var(--success)', fontSize: 13, marginBottom: 20 }}>
           No gaps detected — nice work.
         </div>
       )}
@@ -325,9 +325,9 @@ export const VVDashboard: React.FC = () => {
           <div key={label} className="card" style={{ flex: '1 1 260px', marginBottom: 12 }}>
             <h3 style={{ fontSize: 14, textTransform: 'capitalize' }}>
               {label.replace(/[-_]/g, ' ')}{' '}
-              <span style={{ color: '#e74c3c', fontWeight: 700 }}>({ids.length})</span>
+              <span style={{ color: 'var(--danger)', fontWeight: 700 }}>({ids.length})</span>
             </h3>
-            <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, color: '#555' }}>
+            <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, color: 'var(--text-body)' }}>
               {ids.map((id) => (
                 <li key={id} style={{ marginBottom: 3 }}>
                   {artifactTitle(id)}
@@ -350,11 +350,11 @@ export const VVDashboard: React.FC = () => {
         {showNewRun && (
           <div
             style={{
-              border: '1px solid #ecf0f1',
+              border: '1px solid var(--neutral-soft)',
               borderRadius: 4,
               padding: 16,
               marginBottom: 16,
-              background: '#fafbfc',
+              background: 'var(--surface-alt)',
             }}
           >
             <div className="form-group">
@@ -398,9 +398,9 @@ export const VVDashboard: React.FC = () => {
                   key={i}
                   style={{
                     textAlign: 'left',
-                    borderBottom: '2px solid #ecf0f1',
+                    borderBottom: '2px solid var(--neutral-soft)',
                     padding: '8px 10px',
-                    color: '#7f8c8d',
+                    color: 'var(--text-muted)',
                     fontWeight: 600,
                   }}
                 >
@@ -412,29 +412,29 @@ export const VVDashboard: React.FC = () => {
           <tbody>
             {runs.map((run) => (
               <tr key={run.id}>
-                <td style={{ padding: '8px 10px', borderBottom: '1px solid #ecf0f1' }}>
+                <td style={{ padding: '8px 10px', borderBottom: '1px solid var(--neutral-soft)' }}>
                   <Link
                     to={`/projects/${projectId}/vv/runs/${run.id}`}
-                    style={{ color: '#3498db', textDecoration: 'none', fontWeight: 600 }}
+                    style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 600 }}
                   >
                     {run.name}
                   </Link>
                   {run.description && (
-                    <div style={{ color: '#7f8c8d', fontSize: 12 }}>{run.description}</div>
+                    <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>{run.description}</div>
                   )}
                 </td>
-                <td style={{ padding: '8px 10px', borderBottom: '1px solid #ecf0f1' }}>
+                <td style={{ padding: '8px 10px', borderBottom: '1px solid var(--neutral-soft)' }}>
                   <span style={chipStyle(runStatusColor(run.status))}>{run.status}</span>
                 </td>
-                <td style={{ padding: '8px 10px', borderBottom: '1px solid #ecf0f1', color: '#555' }}>
+                <td style={{ padding: '8px 10px', borderBottom: '1px solid var(--neutral-soft)', color: 'var(--text-body)' }}>
                   {run.started_at ? new Date(run.started_at).toLocaleString() : '—'}
                 </td>
-                <td style={{ padding: '8px 10px', borderBottom: '1px solid #ecf0f1', color: '#555' }}>
+                <td style={{ padding: '8px 10px', borderBottom: '1px solid var(--neutral-soft)', color: 'var(--text-body)' }}>
                   {run.baseline_id
                     ? baselines.find((b) => b.id === run.baseline_id)?.name || run.baseline_id
                     : 'Live'}
                 </td>
-                <td style={{ padding: '8px 10px', borderBottom: '1px solid #ecf0f1', whiteSpace: 'nowrap' }}>
+                <td style={{ padding: '8px 10px', borderBottom: '1px solid var(--neutral-soft)', whiteSpace: 'nowrap' }}>
                   {run.status === 'in-progress' && (
                     <>
                       <button
@@ -448,7 +448,7 @@ export const VVDashboard: React.FC = () => {
                         style={{
                           padding: '4px 10px',
                           fontSize: 12,
-                          background: '#e74c3c',
+                          background: 'var(--danger)',
                           color: '#fff',
                           border: 'none',
                           borderRadius: 4,
@@ -465,7 +465,7 @@ export const VVDashboard: React.FC = () => {
             ))}
             {runs.length === 0 && !loading && (
               <tr>
-                <td colSpan={5} style={{ padding: 12, color: '#7f8c8d' }}>
+                <td colSpan={5} style={{ padding: 12, color: 'var(--text-muted)' }}>
                   No test runs yet. Create one to start recording results.
                 </td>
               </tr>

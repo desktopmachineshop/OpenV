@@ -5,16 +5,16 @@ import { Org, OrgMember, User, orgsAPI } from '../../api/client';
 const th: React.CSSProperties = {
   textAlign: 'left',
   fontSize: 12,
-  color: '#7f8c8d',
+  color: 'var(--text-muted)',
   padding: '8px 10px',
-  borderBottom: '1px solid #eee',
+  borderBottom: '1px solid var(--border-soft)',
 };
 
 const td: React.CSSProperties = {
   padding: '8px 10px',
   fontSize: 13,
-  color: '#2c3e50',
-  borderBottom: '1px solid #f5f5f5',
+  color: 'var(--text)',
+  borderBottom: '1px solid var(--surface-inset)',
 };
 
 interface OrgMembersTabProps {
@@ -116,9 +116,9 @@ export const OrgMembersTab: React.FC<OrgMembersTabProps> = ({ org, isAdmin, curr
       {error && (
         <div
           style={{
-            background: '#fdecea',
-            border: '1px solid #e74c3c',
-            color: '#c0392b',
+            background: 'var(--tint-red)',
+            border: '1px solid var(--danger)',
+            color: 'var(--danger-strong)',
             padding: '10px 14px',
             borderRadius: 4,
             marginBottom: 16,
@@ -128,7 +128,7 @@ export const OrgMembersTab: React.FC<OrgMembersTabProps> = ({ org, isAdmin, curr
           {error}{' '}
           <button
             onClick={() => setError('')}
-            style={{ background: 'none', border: 'none', color: '#c0392b', cursor: 'pointer', width: 'auto', padding: 0 }}
+            style={{ background: 'none', border: 'none', color: 'var(--danger-strong)', cursor: 'pointer', width: 'auto', padding: 0 }}
           >
             ✕
           </button>
@@ -137,9 +137,9 @@ export const OrgMembersTab: React.FC<OrgMembersTabProps> = ({ org, isAdmin, curr
       {notice && (
         <div
           style={{
-            background: '#eafaf1',
-            border: '1px solid #27ae60',
-            color: '#1e8449',
+            background: 'var(--tint-green)',
+            border: '1px solid var(--success)',
+            color: 'var(--success-text)',
             padding: '10px 14px',
             borderRadius: 4,
             marginBottom: 16,
@@ -153,7 +153,7 @@ export const OrgMembersTab: React.FC<OrgMembersTabProps> = ({ org, isAdmin, curr
       <div className="card">
         <h3>Workspace members</h3>
         {loading ? (
-          <div style={{ color: '#7f8c8d', fontSize: 13 }}>Loading members…</div>
+          <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Loading members…</div>
         ) : (
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
@@ -179,7 +179,7 @@ export const OrgMembersTab: React.FC<OrgMembersTabProps> = ({ org, isAdmin, curr
                               width: 28,
                               height: 28,
                               borderRadius: '50%',
-                              background: '#3498db',
+                              background: 'var(--accent)',
                               color: '#fff',
                               display: 'flex',
                               alignItems: 'center',
@@ -193,7 +193,7 @@ export const OrgMembersTab: React.FC<OrgMembersTabProps> = ({ org, isAdmin, curr
                         )}
                         <span>
                           {m.user_name || '—'}
-                          {isSelf && <span style={{ color: '#7f8c8d', fontSize: 12 }}> (you)</span>}
+                          {isSelf && <span style={{ color: 'var(--text-muted)', fontSize: 12 }}> (you)</span>}
                         </span>
                       </div>
                     </td>
@@ -216,7 +216,7 @@ export const OrgMembersTab: React.FC<OrgMembersTabProps> = ({ org, isAdmin, curr
                       {(isAdmin || isSelf) && (
                         <button
                           onClick={() => handleRemove(m)}
-                          style={{ background: 'none', border: 'none', color: '#e74c3c', cursor: 'pointer', fontSize: 12, width: 'auto', padding: 2 }}
+                          style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontSize: 12, width: 'auto', padding: 2 }}
                         >
                           {isSelf ? 'Leave' : 'Remove'}
                         </button>
@@ -227,7 +227,7 @@ export const OrgMembersTab: React.FC<OrgMembersTabProps> = ({ org, isAdmin, curr
               })}
               {members.length === 0 && (
                 <tr>
-                  <td style={{ ...td, color: '#95a5a6' }} colSpan={4}>
+                  <td style={{ ...td, color: 'var(--neutral)' }} colSpan={4}>
                     No members found.
                   </td>
                 </tr>
@@ -240,7 +240,7 @@ export const OrgMembersTab: React.FC<OrgMembersTabProps> = ({ org, isAdmin, curr
       {isAdmin && (
         <div className="card">
           <h3>Add member</h3>
-          <p style={{ fontSize: 13, color: '#7f8c8d' }}>
+          <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
             The person must already have an OpenV account — invite them to sign up first, then add
             their email here.
           </p>

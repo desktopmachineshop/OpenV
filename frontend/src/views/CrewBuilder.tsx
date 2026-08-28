@@ -17,9 +17,9 @@ import { EdgeConfigPanel } from '../components/crews/EdgeConfigPanel';
 
 const LIVE_STATUSES = ['queued', 'claimed', 'running'];
 const EDGE_TYPES: { value: string; label: string; color: string }[] = [
-  { value: 'delegates-to', label: 'Delegates to', color: '#3498db' },
-  { value: 'hands-off-to', label: 'Hands off to', color: '#27ae60' },
-  { value: 'reviews', label: 'Reviews', color: '#f39c12' },
+  { value: 'delegates-to', label: 'Delegates to', color: 'var(--accent)' },
+  { value: 'hands-off-to', label: 'Hands off to', color: 'var(--success)' },
+  { value: 'reviews', label: 'Reviews', color: 'var(--warning)' },
 ];
 // Human targets can't be delegated to — hand-offs and reviews instead create
 // a Board card assigned to that person.
@@ -27,12 +27,12 @@ const HUMAN_TARGET_EDGE_TYPES: { value: string; label: string; color: string }[]
   {
     value: 'hands-off-to',
     label: 'Hands off to (creates a Board card for this person)',
-    color: '#27ae60',
+    color: 'var(--success)',
   },
   {
     value: 'reviews',
     label: 'Reviews (creates a Board card for this person)',
-    color: '#f39c12',
+    color: 'var(--warning)',
   },
 ];
 
@@ -318,7 +318,7 @@ export const CrewBuilder: React.FC = () => {
     <div style={{ padding: 20, height: '100%', display: 'flex', flexDirection: 'column' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
-        <h2 style={{ color: '#2c3e50', margin: 0 }}>Crew Builder</h2>
+        <h2 style={{ color: 'var(--text)', margin: 0 }}>Crew Builder</h2>
         <select
           value={crewId}
           onChange={(e) => setCrewId(e.target.value)}
@@ -336,7 +336,7 @@ export const CrewBuilder: React.FC = () => {
           <span
             style={{
               fontSize: 11,
-              background: '#3498db',
+              background: 'var(--accent)',
               color: '#fff',
               borderRadius: 10,
               padding: '2px 8px',
@@ -359,7 +359,7 @@ export const CrewBuilder: React.FC = () => {
         {selectedCrew && !selectedCrew.is_default && (
           <button
             style={{
-              background: '#e74c3c',
+              background: 'var(--danger)',
               color: '#fff',
               border: 'none',
               padding: '6px 12px',
@@ -380,7 +380,7 @@ export const CrewBuilder: React.FC = () => {
 
       {/* Toolbar */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
-        <div style={{ display: 'inline-flex', border: '1px solid #ddd', borderRadius: 4, overflow: 'hidden' }}>
+        <div style={{ display: 'inline-flex', border: '1px solid var(--border)', borderRadius: 4, overflow: 'hidden' }}>
           {(['org', 'network'] as const).map((v) => (
             <button
               key={v}
@@ -390,15 +390,15 @@ export const CrewBuilder: React.FC = () => {
                 border: 'none',
                 cursor: 'pointer',
                 fontSize: 13,
-                background: view === v ? '#3498db' : '#fff',
-                color: view === v ? '#fff' : '#2c3e50',
+                background: view === v ? 'var(--accent)' : 'var(--surface)',
+                color: view === v ? '#fff' : 'var(--text)',
               }}
             >
               {v === 'org' ? 'Org Chart' : 'Network'}
             </button>
           ))}
         </div>
-        <div style={{ display: 'inline-flex', border: '1px solid #ddd', borderRadius: 4, overflow: 'hidden' }}>
+        <div style={{ display: 'inline-flex', border: '1px solid var(--border)', borderRadius: 4, overflow: 'hidden' }}>
           {FILTERS.map((f) => (
             <button
               key={f.value}
@@ -408,8 +408,8 @@ export const CrewBuilder: React.FC = () => {
                 border: 'none',
                 cursor: 'pointer',
                 fontSize: 13,
-                background: filter === f.value ? '#8e44ad' : '#fff',
-                color: filter === f.value ? '#fff' : '#2c3e50',
+                background: filter === f.value ? 'var(--purple)' : 'var(--surface)',
+                color: filter === f.value ? '#fff' : 'var(--text)',
               }}
             >
               {f.label}
@@ -421,11 +421,11 @@ export const CrewBuilder: React.FC = () => {
           style={{
             padding: '6px 14px',
             borderRadius: 4,
-            border: '1px solid ' + (connectMode ? '#3498db' : '#ddd'),
+            border: '1px solid ' + (connectMode ? 'var(--accent)' : 'var(--border)'),
             cursor: 'pointer',
             fontSize: 13,
-            background: connectMode ? '#3498db' : '#fff',
-            color: connectMode ? '#fff' : '#2c3e50',
+            background: connectMode ? 'var(--accent)' : 'var(--surface)',
+            color: connectMode ? '#fff' : 'var(--text)',
           }}
         >
           {connectMode ? 'Connecting: click source, then target' : 'Connect'}
@@ -439,7 +439,7 @@ export const CrewBuilder: React.FC = () => {
         </button>
         {showAddNode && (
           <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-            <span style={{ display: 'inline-flex', border: '1px solid #ddd', borderRadius: 4, overflow: 'hidden' }}>
+            <span style={{ display: 'inline-flex', border: '1px solid var(--border)', borderRadius: 4, overflow: 'hidden' }}>
               {(['agent', 'person'] as const).map((k) => (
                 <button
                   key={k}
@@ -449,8 +449,8 @@ export const CrewBuilder: React.FC = () => {
                     border: 'none',
                     cursor: 'pointer',
                     fontSize: 13,
-                    background: newNodeKind === k ? (k === 'person' ? '#8e44ad' : '#3498db') : '#fff',
-                    color: newNodeKind === k ? '#fff' : '#2c3e50',
+                    background: newNodeKind === k ? (k === 'person' ? 'var(--purple)' : 'var(--accent)') : 'var(--surface)',
+                    color: newNodeKind === k ? '#fff' : 'var(--text)',
                   }}
                 >
                   {k === 'agent' ? 'Agent' : 'Person'}
@@ -530,9 +530,9 @@ export const CrewBuilder: React.FC = () => {
       {error && (
         <div
           style={{
-            background: '#fdedec',
-            border: '1px solid #e74c3c',
-            color: '#c0392b',
+            background: 'var(--tint-red)',
+            border: '1px solid var(--danger)',
+            color: 'var(--danger-strong)',
             borderRadius: 4,
             padding: '8px 12px',
             marginBottom: 10,
@@ -542,7 +542,7 @@ export const CrewBuilder: React.FC = () => {
           {error}
           <button
             onClick={() => setError('')}
-            style={{ background: 'none', border: 'none', float: 'right', cursor: 'pointer', color: '#c0392b' }}
+            style={{ background: 'none', border: 'none', float: 'right', cursor: 'pointer', color: 'var(--danger-strong)' }}
           >
             ×
           </button>
@@ -573,7 +573,7 @@ export const CrewBuilder: React.FC = () => {
               onConnect={handleConnect}
             />
           ) : (
-            <div style={{ color: '#7f8c8d', padding: 40 }}>
+            <div style={{ color: 'var(--text-muted)', padding: 40 }}>
               {crews.length === 0 ? 'Create a crew to get started.' : 'Loading crew…'}
             </div>
           )}
@@ -626,7 +626,7 @@ export const CrewBuilder: React.FC = () => {
               <strong>{nodeLabel(pendingEdge.from)}</strong> → <strong>{nodeLabel(pendingEdge.to)}</strong>
             </p>
             {pendingTargetIsHuman && (
-              <p style={{ fontSize: 12, color: '#7f8c8d' }}>
+              <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>
                 The target is a person — work sent to them appears as a Board card assigned to
                 them. Delegation to people isn't supported.
               </p>

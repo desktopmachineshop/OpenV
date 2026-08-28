@@ -82,7 +82,7 @@ function App() {
   }, [currentUser, orgsLoaded, setMeta]);
 
   if (!authChecked) {
-    return <div style={{ padding: 40, textAlign: 'center', color: '#7f8c8d' }}>Loading…</div>;
+    return <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>Loading…</div>;
   }
 
   return (

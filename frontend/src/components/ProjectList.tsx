@@ -242,13 +242,13 @@ export const ProjectList: React.FC = () => {
             display: 'flex',
             alignItems: 'center',
             gap: 8,
-            background: '#fff',
-            border: '1px solid #ecf0f1',
+            background: 'var(--surface)',
+            border: '1px solid var(--neutral-soft)',
             borderRadius: 6,
             padding: '8px 14px',
           }}
         >
-          <span style={{ fontSize: 12, color: '#7f8c8d' }}>Workspace:</span>
+          <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Workspace:</span>
           <OrgSwitcher variant="light" />
         </div>
       </div>
@@ -258,7 +258,7 @@ export const ProjectList: React.FC = () => {
           {error}
           <button 
             onClick={() => setError('')}
-            style={{ marginLeft: '10px', background: 'none', border: 'none', color: '#e74c3c', cursor: 'pointer' }}
+            style={{ marginLeft: '10px', background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer' }}
           >
             ✕
           </button>

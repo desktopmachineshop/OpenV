@@ -11,26 +11,26 @@ const STATUS_OPTIONS = ['pass', 'fail', 'blocked', 'not-run'];
 const statusColor = (status: string): string => {
   switch (status) {
     case 'pass':
-      return '#27ae60';
+      return 'var(--success)';
     case 'fail':
-      return '#e74c3c';
+      return 'var(--danger)';
     case 'blocked':
-      return '#f39c12';
+      return 'var(--warning)';
     default:
-      return '#95a5a6';
+      return 'var(--neutral)';
   }
 };
 
 const runStatusColor = (status: string): string => {
   switch (status) {
     case 'in-progress':
-      return '#3498db';
+      return 'var(--accent)';
     case 'completed':
-      return '#27ae60';
+      return 'var(--success)';
     case 'aborted':
-      return '#e74c3c';
+      return 'var(--danger)';
     default:
-      return '#95a5a6';
+      return 'var(--neutral)';
   }
 };
 
@@ -143,7 +143,7 @@ export const TestRunView: React.FC = () => {
           }}
         >
           {STATUS_OPTIONS.map((s) => (
-            <option key={s} value={s} style={{ background: '#fff', color: '#2c3e50' }}>
+            <option key={s} value={s} style={{ background: 'var(--surface)', color: 'var(--text)' }}>
               {s}
             </option>
           ))}
@@ -206,11 +206,11 @@ export const TestRunView: React.FC = () => {
       <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16, flexWrap: 'wrap' }}>
         <Link
           to={`/projects/${projectId}/vv`}
-          style={{ color: '#3498db', textDecoration: 'none', fontSize: 13 }}
+          style={{ color: 'var(--accent)', textDecoration: 'none', fontSize: 13 }}
         >
           ← Back to V&amp;V
         </Link>
-        <h2 style={{ color: '#2c3e50', margin: 0 }}>{run?.name || 'Test run'}</h2>
+        <h2 style={{ color: 'var(--text)', margin: 0 }}>{run?.name || 'Test run'}</h2>
         {run && (
           <span
             style={{
@@ -233,7 +233,7 @@ export const TestRunView: React.FC = () => {
             </button>
             <button
               style={{
-                background: '#e74c3c',
+                background: 'var(--danger)',
                 color: '#fff',
                 border: 'none',
                 padding: '10px 20px',
@@ -250,14 +250,14 @@ export const TestRunView: React.FC = () => {
       </div>
 
       {run?.description && (
-        <div style={{ color: '#7f8c8d', fontSize: 13, marginBottom: 12 }}>{run.description}</div>
+        <div style={{ color: 'var(--text-muted)', fontSize: 13, marginBottom: 12 }}>{run.description}</div>
       )}
       {readOnly && run && (
         <div
           style={{
-            background: '#fef5e7',
-            border: '1px solid #f39c12',
-            color: '#9c6408',
+            background: 'var(--tint-yellow)',
+            border: '1px solid var(--warning)',
+            color: 'var(--warning-text)',
             borderRadius: 4,
             padding: '8px 12px',
             marginBottom: 12,
@@ -267,8 +267,8 @@ export const TestRunView: React.FC = () => {
           This run is {run.status}; results are read-only.
         </div>
       )}
-      {error && <div style={{ color: '#e74c3c', marginBottom: 10, fontSize: 13 }}>{error}</div>}
-      {loading && <div style={{ color: '#7f8c8d', marginBottom: 10 }}>Loading…</div>}
+      {error && <div style={{ color: 'var(--danger)', marginBottom: 10, fontSize: 13 }}>{error}</div>}
+      {loading && <div style={{ color: 'var(--text-muted)', marginBottom: 10 }}>Loading…</div>}
 
       <div className="ag-theme-quartz" style={{ flex: 1, minHeight: 420 }}>
         <AgGridReact<ResultRow>

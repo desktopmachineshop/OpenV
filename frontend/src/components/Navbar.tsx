@@ -32,8 +32,8 @@ export const Navbar: React.FC<NavbarProps> = ({
         justifyContent: 'space-between',
         alignItems: 'center',
         padding: '16px 24px',
-        backgroundColor: '#ffffff',
-        borderBottom: '1px solid #ecf0f1',
+        backgroundColor: 'var(--surface)',
+        borderBottom: '1px solid var(--neutral-soft)',
         marginBottom: '24px',
       }}
     >
@@ -41,13 +41,14 @@ export const Navbar: React.FC<NavbarProps> = ({
         <img
           src="/Images/logo.png"
           alt="OpenV Logo"
+          className="app-logo"
           style={{ height: '56px', width: 'auto' }}
         />
       </div>
 
       <div style={{ flex: 1, textAlign: 'center' }}>
         {title && (
-          <div style={{ color: '#2c3e50' }}>
+          <div style={{ color: 'var(--text)' }}>
             {title}
           </div>
         )}
@@ -63,9 +64,9 @@ export const Navbar: React.FC<NavbarProps> = ({
               height: '36px',
               padding: '0 10px',
               borderRadius: '4px',
-              border: '1px solid #bdc3c7',
+              border: '1px solid var(--neutral-mid)',
               fontSize: '12px',
-              backgroundColor: baselineDisabled ? '#f5f5f5' : 'white',
+              backgroundColor: baselineDisabled ? 'var(--surface-inset)' : 'var(--surface)',
               cursor: baselineDisabled ? 'not-allowed' : 'pointer',
               minWidth: '180px',
             }}
@@ -85,7 +86,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             style={{
               height: '36px',
               padding: '0 10px',
-              backgroundColor: (baselineDisabled || selectedBaselineId === 'live') ? '#bdc3c7' : '#e74c3c',
+              backgroundColor: (baselineDisabled || selectedBaselineId === 'live') ? 'var(--neutral-mid)' : 'var(--danger)',
               color: 'white',
               border: 'none',
               borderRadius: '4px',
@@ -104,7 +105,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             style={{
               height: '36px',
               padding: '0 12px',
-              backgroundColor: baselineDisabled ? '#bdc3c7' : '#2ecc71',
+              backgroundColor: baselineDisabled ? 'var(--neutral-mid)' : 'var(--success-bright)',
               color: 'white',
               border: 'none',
               borderRadius: '4px',
@@ -122,7 +123,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             style={{
               height: '36px',
               padding: '0 12px',
-              backgroundColor: baselineDisabled ? '#bdc3c7' : '#3b82f6',
+              backgroundColor: baselineDisabled ? 'var(--neutral-mid)' : 'var(--accent-alt)',
               color: 'white',
               border: 'none',
               borderRadius: '4px',
@@ -140,7 +141,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               height: '36px',
               padding: '0 16px',
               minWidth: '120px',
-              backgroundColor: '#95a5a6',
+              backgroundColor: 'var(--neutral)',
               color: 'white',
               border: 'none',
               borderRadius: '4px',

@@ -116,8 +116,8 @@ export const ArtifactEditor: React.FC<ArtifactEditorProps> = ({
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <div>
               <h3 style={{ margin: '0 0 8px 0' }}>{formData.title || 'Untitled Artifact'}</h3>
-              <p style={{ margin: 0, fontSize: '12px', color: '#7f8c8d' }}>
-                UID: <code style={{ backgroundColor: '#ecf0f1', padding: '2px 6px', borderRadius: '3px' }}>{artifact.id}</code>
+              <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-muted)' }}>
+                UID: <code style={{ backgroundColor: 'var(--neutral-soft)', padding: '2px 6px', borderRadius: '3px' }}>{artifact.id}</code>
               </p>
             </div>
             <div style={{ display: 'flex', gap: '10px' }}>

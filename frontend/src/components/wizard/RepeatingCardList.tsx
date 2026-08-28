@@ -35,14 +35,14 @@ export function RepeatingCardList<T>({
   return (
     <div>
       {items.length === 0 && emptyText && (
-        <div style={{ color: '#7f8c8d', fontSize: 13, marginBottom: 12 }}>{emptyText}</div>
+        <div style={{ color: 'var(--text-muted)', fontSize: 13, marginBottom: 12 }}>{emptyText}</div>
       )}
       {items.map((item, index) => (
         <div
           key={index}
           style={{
-            background: '#fff',
-            border: '1px solid #ddd',
+            background: 'var(--surface)',
+            border: '1px solid var(--border)',
             borderRadius: 4,
             padding: 16,
             marginBottom: 12,
@@ -59,7 +59,7 @@ export function RepeatingCardList<T>({
                 right: 8,
                 background: 'none',
                 border: 'none',
-                color: '#e74c3c',
+                color: 'var(--danger)',
                 cursor: 'pointer',
                 fontSize: 16,
                 width: 'auto',
@@ -75,7 +75,7 @@ export function RepeatingCardList<T>({
       <button
         className="button-secondary"
         onClick={() => onChange([...items, makeNew()])}
-        style={{ background: '#3498db' }}
+        style={{ background: 'var(--accent)' }}
       >
         + {addLabel}
       </button>

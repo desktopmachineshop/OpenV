@@ -1,0 +1,209 @@
+/*
+ * OpenV theme tokens.
+ *
+ * Three states:
+ *  - System (default): no data-theme attribute; @media (prefers-color-scheme)
+ *    decides between the :root light palette and the dark overrides.
+ *  - Light: <html data-theme="light"> pins the :root light palette.
+ *  - Dark:  <html data-theme="dark"> pins the dark palette.
+ *
+ * The dark override block is intentionally duplicated (media-query guard +
+ * attribute guard) so the explicit choice always wins in both directions.
+ * Keep the two dark blocks identical when editing.
+ */
+
+:root {
+  color-scheme: light;
+
+  /* App shell */
+  --bg-app: #f5f6fa;
+  --surface: #ffffff;
+  --surface-alt: #f8f9fa;
+  --surface-inset: #f5f5f5;
+  --surface-hover: #f0f0f0;
+
+  /* Borders / neutral fills */
+  --border: #dcdde1;
+  --border-soft: #eeeeee;
+  --neutral-soft: #ecf0f1; /* chip + light fill + hairline borders */
+  --neutral-mid: #bdc3c7;  /* strong borders, disabled fills, faint text */
+  --neutral: #95a5a6;      /* grey buttons, faint text */
+
+  /* Text */
+  --text: #2c3e50;
+  --text-secondary: #34495e;
+  --text-body: #555555;
+  --text-muted: #7f8c8d;
+
+  /* Accent (blue) */
+  --accent: #3498db;
+  --accent-strong: #2980b9; /* hover / emphasis */
+  --accent-alt: #3b82f6;
+  --accent-text: #21618c;   /* readable blue text on tinted panels */
+
+  /* Semantic colors */
+  --success: #27ae60;
+  --success-bright: #2ecc71;
+  --success-strong: #229954;
+  --success-text: #1e8449;
+  --danger: #e74c3c;
+  --danger-strong: #c0392b;
+  --warning: #f39c12;
+  --warning-bright: #ffc107;
+  --warning-strong: #d68910;
+  --warning-text: #8a6d3b;
+  --purple: #8e44ad;
+  --purple-soft: #9b59b6;
+  --purple-strong: #6f2c91;
+
+  /* Tinted info/status panels */
+  --tint-blue: #eaf4fc;
+  --tint-blue-border: #cfe5f5;
+  --tint-green: #eafaf1;
+  --tint-green-border: #a9dfbf;
+  --tint-red: #fdecea;
+  --tint-red-border: #f5b7b1;
+  --tint-yellow: #fef5e7;
+  --tint-yellow-border: #f0c36d;
+  --tint-purple: #f5eef8;
+  --tint-purple-border: #d5d0f0;
+
+  /* Modal overlay */
+  --overlay: rgba(44, 62, 80, 0.55);
+
+  /* App chrome that is dark in BOTH themes (sidebar, login backdrop, header) */
+  --sidebar-bg: #2c3e50;
+  --sidebar-border: #34495e;
+  --sidebar-menu-bg: #34495e;
+  --sidebar-text: #ecf0f1;
+  --sidebar-text-dim: #bdc3c7;
+  --sidebar-text-faint: #95a5a6;
+
+  /* Terminal-style code blocks (dark in both themes) */
+  --code-block-bg: #2c3e50;
+  --code-block-text: #ecf0f1;
+}
+
+/* System dark: applies unless the user explicitly chose Light. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+
+    --bg-app: #131a24;
+    --surface: #1c2532;
+    --surface-alt: #232e3d;
+    --surface-inset: #10161e;
+    --surface-hover: #2a3646;
+
+    --border: #364354;
+    --border-soft: #2b3646;
+    --neutral-soft: #2c3846;
+    --neutral-mid: #4c5c70;
+    --neutral: #64788c;
+
+    --text: #e6ecf3;
+    --text-secondary: #c9d4df;
+    --text-body: #b9c4cf;
+    --text-muted: #8fa0b0;
+
+    --accent: #4aa2df;
+    --accent-strong: #63b3ea;
+    --accent-alt: #5b93f7;
+    --accent-text: #9ccdf2;
+
+    --success: #2fbe6e;
+    --success-bright: #43d283;
+    --success-strong: #4ecb87;
+    --success-text: #7ad9a5;
+    --danger: #e0584a;
+    --danger-strong: #f08a7d;
+    --warning: #f5ab35;
+    --warning-bright: #f7c948;
+    --warning-strong: #f7bd60;
+    --warning-text: #e5c078;
+    --purple: #a15fc4;
+    --purple-soft: #b07cc6;
+    --purple-strong: #c795de;
+
+    --tint-blue: #1e3450;
+    --tint-blue-border: #2c4a6b;
+    --tint-green: #1c3b2b;
+    --tint-green-border: #2e5c43;
+    --tint-red: #442420;
+    --tint-red-border: #6e392f;
+    --tint-yellow: #403319;
+    --tint-yellow-border: #6b5626;
+    --tint-purple: #342a44;
+    --tint-purple-border: #4c3f6b;
+
+    --overlay: rgba(8, 12, 18, 0.65);
+
+    --sidebar-bg: #161d28;
+    --sidebar-border: #222c3a;
+    --sidebar-menu-bg: #222c3a;
+
+    --code-block-bg: #10161e;
+    --code-block-text: #d5dde5;
+  }
+}
+
+/* Explicit dark choice: identical to the block above. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg-app: #131a24;
+  --surface: #1c2532;
+  --surface-alt: #232e3d;
+  --surface-inset: #10161e;
+  --surface-hover: #2a3646;
+
+  --border: #364354;
+  --border-soft: #2b3646;
+  --neutral-soft: #2c3846;
+  --neutral-mid: #4c5c70;
+  --neutral: #64788c;
+
+  --text: #e6ecf3;
+  --text-secondary: #c9d4df;
+  --text-body: #b9c4cf;
+  --text-muted: #8fa0b0;
+
+  --accent: #4aa2df;
+  --accent-strong: #63b3ea;
+  --accent-alt: #5b93f7;
+  --accent-text: #9ccdf2;
+
+  --success: #2fbe6e;
+  --success-bright: #43d283;
+  --success-strong: #4ecb87;
+  --success-text: #7ad9a5;
+  --danger: #e0584a;
+  --danger-strong: #f08a7d;
+  --warning: #f5ab35;
+  --warning-bright: #f7c948;
+  --warning-strong: #f7bd60;
+  --warning-text: #e5c078;
+  --purple: #a15fc4;
+  --purple-soft: #b07cc6;
+  --purple-strong: #c795de;
+
+  --tint-blue: #1e3450;
+  --tint-blue-border: #2c4a6b;
+  --tint-green: #1c3b2b;
+  --tint-green-border: #2e5c43;
+  --tint-red: #442420;
+  --tint-red-border: #6e392f;
+  --tint-yellow: #403319;
+  --tint-yellow-border: #6b5626;
+  --tint-purple: #342a44;
+  --tint-purple-border: #4c3f6b;
+
+  --overlay: rgba(8, 12, 18, 0.65);
+
+  --sidebar-bg: #161d28;
+  --sidebar-border: #222c3a;
+  --sidebar-menu-bg: #222c3a;
+
+  --code-block-bg: #10161e;
+  --code-block-text: #d5dde5;
+}

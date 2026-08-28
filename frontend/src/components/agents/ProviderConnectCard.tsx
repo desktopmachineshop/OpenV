@@ -121,15 +121,15 @@ export const ProviderConnectCard: React.FC<Props> = ({
       style={{
         marginTop: 10,
         padding: '10px 12px',
-        background: '#f8f9fa',
-        border: '1px solid #ecf0f1',
+        background: 'var(--surface-alt)',
+        border: '1px solid var(--neutral-soft)',
         borderRadius: 6,
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-        <span style={{ fontSize: 13, fontWeight: 600, color: '#2c3e50' }}>{title}</span>
+        <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{title}</span>
         {loggedIn && !active && (
-          <span style={{ fontSize: 12, color: '#27ae60', fontWeight: 600 }}>● connected</span>
+          <span style={{ fontSize: 12, color: 'var(--success)', fontWeight: 600 }}>● connected</span>
         )}
         <div style={{ flex: 1 }} />
         {!active ? (
@@ -139,7 +139,7 @@ export const ProviderConnectCard: React.FC<Props> = ({
         ) : (
           <button
             onClick={cancel}
-            style={{ background: 'none', border: 'none', color: '#e74c3c', cursor: 'pointer', fontSize: 12, width: 'auto' }}
+            style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontSize: 12, width: 'auto' }}
           >
             Cancel
           </button>
@@ -148,12 +148,12 @@ export const ProviderConnectCard: React.FC<Props> = ({
 
       {(login || error) && (
         <div style={{ marginTop: 8 }}>
-          {error && <div style={{ color: '#e74c3c', fontSize: 12 }}>{error}</div>}
+          {error && <div style={{ color: 'var(--danger)', fontSize: 12 }}>{error}</div>}
           {login && (
             <div
               style={{
                 fontSize: 12,
-                color: login.status === 'failed' ? '#e74c3c' : login.status === 'completed' ? '#27ae60' : '#7f8c8d',
+                color: login.status === 'failed' ? 'var(--danger)' : login.status === 'completed' ? 'var(--success)' : 'var(--text-muted)',
               }}
             >
               {statusLine()}
@@ -201,7 +201,7 @@ export const ProviderConnectCard: React.FC<Props> = ({
         </div>
       )}
       {!login && !loggedIn && (
-        <div style={{ fontSize: 12, color: '#7f8c8d', marginTop: 6 }}>
+        <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6 }}>
           {target === 'user'
             ? 'Signs into the vendor CLI on your own machine, using your own subscription. Your personal runner (Agent Connector) must be running.'
             : 'Signs into the vendor CLI on the machine running agentd, using your own subscription. The worker must be running.'}
