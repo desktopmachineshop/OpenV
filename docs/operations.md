@@ -52,12 +52,16 @@ REACT_APP_API_URL=https://openv.example.com:8080
 
 # Public origin the frontend is served from (CORS allow-origin).
 CORS_ORIGIN=https://openv.example.com
+
+# Shared key agent workers use to authenticate with the API (replaces the
+# dev default "dev-worker-key"). Generate a long random string, e.g.:
+#   openssl rand -hex 32
+WORKER_API_KEY=generate-a-long-random-string
 ```
 
 Recommended in production (see `docker-compose.yml` for the full list):
 
 ```dotenv
-WORKER_API_KEY=generate-a-long-random-string
 FRONTEND_PORT=80
 
 # Google sign-in + correct redirect URLs:

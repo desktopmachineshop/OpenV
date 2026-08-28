@@ -106,6 +106,20 @@ export const ProjectLayout: React.FC = () => {
               {item.label}
             </NavLink>
           ))}
+          <div style={{ borderTop: '1px solid #34495e', margin: '8px 0' }} />
+          <NavLink
+            to="/manual"
+            title="Open the user manual"
+            style={{
+              display: 'block',
+              padding: '9px 16px',
+              color: '#bdc3c7',
+              textDecoration: 'none',
+              fontSize: 14,
+            }}
+          >
+            Help
+          </NavLink>
         </nav>
         <div style={{ borderTop: '1px solid #34495e', padding: 12, position: 'relative' }}>
           <div

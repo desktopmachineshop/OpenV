@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   membersAPI,
   orgTeamsAPI,
@@ -56,7 +56,19 @@ export const ProjectSettings: React.FC = () => {
   const currentUser = useAppStore((s) => s.currentUser);
   const activeOrgId = useAppStore((s) => s.activeOrgId);
 
-  const [tab, setTab] = useState<Tab>('members');
+  // The active tab lives in the URL (?tab=…) so refreshes and deep links keep
+  // it; unknown values fall back to the first tab.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get('tab');
+  const tab: Tab = TABS.some((t) => t.key === tabParam) ? (tabParam as Tab) : TABS[0].key;
+  const setTab = (next: Tab) =>
+    setSearchParams(
+      (prev) => {
+        prev.set('tab', next);
+        return prev;
+      },
+      { replace: true }
+    );
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
 

@@ -2,8 +2,12 @@
 # Built with `make worker-image`; the API server provisions one container per
 # workspace from this image (see internal/hosting and docs/agents.md).
 
+# Base image policy: pin to specific minor-version tags (not `latest` or
+# bare-major tags, not sha digests). Pinned tags still receive OS-package
+# security rebuilds from upstream; bump versions here deliberately.
+
 # Stage 1: build the worker binaries.
-FROM golang:1.25 AS build
+FROM golang:1.25.14 AS build
 
 WORKDIR /src
 
@@ -17,7 +21,8 @@ RUN GOOS=linux CGO_ENABLED=0 go build -o /out/agentd ./cmd/agentd && \
     GOOS=linux CGO_ENABLED=0 go build -o /out/openv-mcp ./cmd/openv-mcp
 
 # Stage 2: node runtime with the vendor CLIs.
-FROM node:20-bookworm-slim
+# (node:20.20-* floats only across 20.20.x patch releases)
+FROM node:20.20-bookworm-slim
 
 # git is included for future use; hosted runners refuse repo-access runs, so
 # no repository is ever cloned in this container today.
