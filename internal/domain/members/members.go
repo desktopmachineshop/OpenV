@@ -2,6 +2,7 @@ package members
 
 import (
 	"errors"
+	"fmt"
 	"time"
 )
 
@@ -20,6 +21,11 @@ var roleRank = map[string]int{
 
 // ErrForbidden is returned when a user lacks the required project role.
 var ErrForbidden = errors.New("you do not have access to this project")
+
+// ErrInvalidRole flags an unknown role name in a membership write. API
+// handlers use it to tell user-facing validation failures (400) apart from
+// repository failures (500), so wrap it with %w when adding new validations.
+var ErrInvalidRole = errors.New("invalid role")
 
 // ValidRole reports whether the given role name exists.
 func ValidRole(role string) bool {
@@ -102,7 +108,7 @@ func NewDefaultService(repo Repository) *DefaultService {
 // AddMember adds or updates a membership.
 func (s *DefaultService) AddMember(projectID, userID, role string) error {
 	if !ValidRole(role) {
-		return errors.New("invalid role: " + role)
+		return fmt.Errorf("%w: %q", ErrInvalidRole, role)
 	}
 	return s.repo.Upsert(&Member{ProjectID: projectID, UserID: userID, Role: role, CreatedAt: time.Now()})
 }
@@ -157,7 +163,7 @@ func (s *DefaultService) EffectiveRole(projectID, userID string) (string, error)
 // GrantTeam grants a project role to a people-team.
 func (s *DefaultService) GrantTeam(projectID, orgTeamID, role string) error {
 	if !ValidRole(role) {
-		return errors.New("invalid role: " + role)
+		return fmt.Errorf("%w: %q", ErrInvalidRole, role)
 	}
 	return s.repo.UpsertTeamGrant(&TeamGrant{ProjectID: projectID, OrgTeamID: orgTeamID, Role: role, CreatedAt: time.Now()})
 }

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -73,6 +74,7 @@ func (h *Handler) registerSuiteRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/interviews/{id}/invites", h.ListInterviewInvites).Methods("GET")
 	router.HandleFunc("/api/v1/interview-invites/{id}/revoke", h.RevokeInterviewInvite).Methods("POST")
 	router.HandleFunc("/api/v1/interviews/{id}/sessions", h.ListInterviewSessions).Methods("GET")
+	router.HandleFunc("/api/v1/projects/{id}/interview-sessions", h.ListProjectInterviewSessions).Methods("GET")
 	router.HandleFunc("/api/v1/interview-sessions/{id}/transcript", h.GetInterviewTranscript).Methods("GET")
 
 	// Interviews (public, token-authenticated).
@@ -1254,6 +1256,35 @@ func (h *Handler) ListInterviewSessions(w http.ResponseWriter, r *http.Request) 
 	if err != nil {
 		respondInternal(w, r, "failed to list interview sessions", err)
 		return
+	}
+	json.NewEncoder(w).Encode(list)
+}
+
+// ListProjectInterviewSessions returns the most recent sessions across every
+// interview in a project, newest first — one call for summary cards instead
+// of a listSessions fan-out per interview. ?limit=N bounds the page; the
+// domain service applies the default and cap.
+func (h *Handler) ListProjectInterviewSessions(w http.ResponseWriter, r *http.Request) {
+	projectID := mux.Vars(r)["id"]
+	if !h.requireProjectRole(w, r, projectID, members.RoleViewer) {
+		return
+	}
+	limit := 0
+	if raw := r.URL.Query().Get("limit"); raw != "" {
+		n, err := strconv.Atoi(raw)
+		if err != nil {
+			writeJSONError(w, http.StatusBadRequest, "limit must be an integer")
+			return
+		}
+		limit = n
+	}
+	list, err := h.interviewService.ListProjectSessions(projectID, limit)
+	if err != nil {
+		respondInternal(w, r, "failed to list interview sessions", err)
+		return
+	}
+	if list == nil {
+		list = []*interviews.Session{}
 	}
 	json.NewEncoder(w).Encode(list)
 }

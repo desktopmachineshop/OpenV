@@ -379,6 +379,36 @@ func (r *InterviewRepository) ListSessionsByInterview(interviewID string) ([]*in
 	return sessions, rows.Err()
 }
 
+// ListSessionsByProject retrieves the most recent sessions across every
+// interview in a project, newest first, at most limit rows.
+func (r *InterviewRepository) ListSessionsByProject(projectID string, limit int) ([]*interviews.Session, error) {
+	query := `
+		SELECT s.id, s.interview_id, s.invite_id, s.participant_name, s.status, s.summary, s.started_at, s.ended_at
+		FROM interview_sessions s
+		JOIN interviews i ON i.id = s.interview_id
+		WHERE i.project_id = $1
+		ORDER BY s.started_at DESC
+		LIMIT $2
+	`
+
+	rows, err := r.db.Query(query, projectID, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var sessions []*interviews.Session
+	for rows.Next() {
+		session, err := scanInterviewSession(rows.Scan)
+		if err != nil {
+			return nil, err
+		}
+		sessions = append(sessions, session)
+	}
+
+	return sessions, rows.Err()
+}
+
 // SaveMessage inserts a new interview message
 func (r *InterviewRepository) SaveMessage(m *interviews.Message) error {
 	query := `

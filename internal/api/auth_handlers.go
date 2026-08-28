@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
 	"time"
@@ -320,7 +321,11 @@ func (h *Handler) AddProjectMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.memberService.AddMember(projectID, user.ID, req.Role); err != nil {
-		writeJSONError(w, http.StatusBadRequest, err.Error())
+		if errors.Is(err, members.ErrInvalidRole) {
+			writeJSONError(w, http.StatusBadRequest, err.Error())
+		} else {
+			respondInternal(w, r, "failed to add member", err)
+		}
 		return
 	}
 	w.WriteHeader(http.StatusCreated)
@@ -341,7 +346,11 @@ func (h *Handler) UpdateProjectMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.memberService.SetRole(projectID, vars["userId"], req.Role); err != nil {
-		writeJSONError(w, http.StatusBadRequest, err.Error())
+		if errors.Is(err, members.ErrInvalidRole) {
+			writeJSONError(w, http.StatusBadRequest, err.Error())
+		} else {
+			respondInternal(w, r, "failed to update member role", err)
+		}
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)

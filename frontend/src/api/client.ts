@@ -1014,6 +1014,10 @@ export const interviewsAPI = {
     client.post(`/api/v1/interview-invites/${inviteId}/revoke`),
   listSessions: (interviewId: string) =>
     client.get<InterviewSession[]>(`/api/v1/interviews/${interviewId}/sessions`),
+  listProjectSessions: (projectId: string, limit?: number) =>
+    client.get<InterviewSession[]>(`/api/v1/projects/${projectId}/interview-sessions`, {
+      params: limit ? { limit } : {},
+    }),
   transcript: (sessionId: string) =>
     client.get<InterviewMessage[]>(`/api/v1/interview-sessions/${sessionId}/transcript`),
 };

@@ -3,7 +3,7 @@ package exports
 import (
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"time"
 
 	"github.com/openv/requirements-platform/internal/domain/artifacts"
@@ -177,7 +177,7 @@ func (s *DefaultService) ImportProjectWithOverrides(data []byte, nameOverride st
 	if err := json.Unmarshal(data, &importData); err != nil {
 		return "", fmt.Errorf("failed to parse import data: %w", err)
 	}
-	log.Printf("[IMPORT] Starting import with %d artifacts", len(importData.Artifacts))
+	slog.Debug("import: starting", slog.Int("artifacts", len(importData.Artifacts)))
 
 	if nameOverride != "" {
 		importData.ProjectName = nameOverride
@@ -211,7 +211,7 @@ func (s *DefaultService) ImportProjectWithOverrides(data []byte, nameOverride st
 			SuccessMetrics:   profile.SuccessMetrics,
 			Settings:         profile.Settings,
 		}); err != nil {
-			log.Printf("[IMPORT] Warning: failed to restore product profile: %v", err)
+			slog.Warn("import: failed to restore product profile", slog.Any("error", err))
 		}
 	}
 
@@ -253,8 +253,7 @@ func (s *DefaultService) importArtifactsAndLinks(projectID string, importData *P
 
 	// First pass: Create all artifacts without parent relationships in a single transaction
 	// We need to do this in two passes to handle parent-child relationships
-	log.Printf("[IMPORT] Starting first pass: creating %d artifacts", len(importData.Artifacts))
-	log.Printf("[IMPORT] Beginning transaction for first pass")
+	slog.Debug("import: starting first pass", slog.Int("artifacts", len(importData.Artifacts)))
 
 	// Note: We can't use transactions at the repository level since the service layer
 	// handles the transaction. Instead, we'll batch the creates but keep individual
@@ -271,9 +270,12 @@ func (s *DefaultService) importArtifactsAndLinks(projectID string, importData *P
 			}
 		}
 		oldID := artifact.ID
-		
-		log.Printf("[IMPORT] Creating artifact %d/%d: %s", i, len(importData.Artifacts), artifact.Title)
-		
+
+		slog.Debug("import: creating artifact",
+			slog.Int("index", i),
+			slog.Int("total", len(importData.Artifacts)),
+			slog.String("title", artifact.Title))
+
 		// Create new artifact with this project ID, but no parent yet
 		// Always set sortOrder to avoid expensive NextSortOrder() database queries during import
 		sortOrderVal := artifact.SortOrder
@@ -281,7 +283,6 @@ func (s *DefaultService) importArtifactsAndLinks(projectID string, importData *P
 			sortOrderVal = i + 1 // Use position in import as sort order
 		}
 		
-		start := time.Now()
 		newArtifact := artifacts.NewArtifact(artifacts.CreateArtifactRequest{
 			ProjectID:  projectID,
 			Type:       artifact.Type,
@@ -291,33 +292,38 @@ func (s *DefaultService) importArtifactsAndLinks(projectID string, importData *P
 			Attributes: artifact.Attributes,
 			ParentID:   nil, // Will set in second pass
 		})
-		
-		log.Printf("[IMPORT] [Artifact %d] NewArtifact constructed in %v", i, time.Since(start))
-		
-		start = time.Now()
+
+		start := time.Now()
 		if err := s.artifactService.CreateArtifact(newArtifact); err != nil {
-			log.Printf("[IMPORT] ERROR creating artifact %d (%s): %v", i, artifact.Title, err)
+			slog.Error("import: failed to create artifact",
+				slog.Int("index", i),
+				slog.String("title", artifact.Title),
+				slog.Any("error", err))
 			return nil, fmt.Errorf("failed to create artifact %d (%s): %w", i, artifact.Title, err)
 		}
 		elapsed := time.Since(start)
-		log.Printf("[IMPORT] Successfully created artifact %d/%d: %s (ID: %s) in %v", i, len(importData.Artifacts), artifact.Title, newArtifact.ID, elapsed)
-		
+		slog.Debug("import: created artifact",
+			slog.Int("index", i),
+			slog.Int("total", len(importData.Artifacts)),
+			slog.String("title", artifact.Title),
+			slog.String("id", newArtifact.ID),
+			slog.Duration("elapsed", elapsed))
+
 		// Log if this artifact took an unusually long time
 		if elapsed > 100*time.Millisecond {
-			log.Printf("[IMPORT] WARNING: Artifact %d took %v (slow)", i, elapsed)
+			slog.Warn("import: artifact creation was slow",
+				slog.Int("index", i),
+				slog.Duration("elapsed", elapsed))
 		}
-		if i%10 == 0 {
-			log.Printf("[IMPORT] Created %d artifacts", i)
-		}
-		
+
 		// Map old ID to new ID
 		idMap[oldID] = newArtifact.ID
 		createdIDs = append(createdIDs, newArtifact.ID)
 	}
 
-	log.Printf("[IMPORT] First pass complete. Starting second pass: updating parent relationships")
-	log.Printf("[IMPORT] ID map has %d entries", len(idMap))
-	
+	slog.Debug("import: first pass complete, starting second pass",
+		slog.Int("id_map_entries", len(idMap)))
+
 	// Second pass: Update parent relationships
 	updateCount := 0
 	for i, artifact := range importData.Artifacts {
@@ -327,8 +333,11 @@ func (s *DefaultService) importArtifactsAndLinks(projectID string, importData *P
 			
 			if newParentID != "" {
 				updateCount++
-				log.Printf("[IMPORT] Second pass: updating artifact %d (%s) - parent: %d (%s)", i, artifact.Title, i, *artifact.ParentID)
-				
+				slog.Debug("import: second pass updating artifact parent",
+					slog.Int("index", i),
+					slog.String("title", artifact.Title),
+					slog.String("old_parent_id", *artifact.ParentID))
+
 				// Always set sortOrder to avoid expensive NextSortOrder() calls
 				sortOrderVal := artifact.SortOrder
 				if sortOrderVal == 0 {
@@ -336,7 +345,6 @@ func (s *DefaultService) importArtifactsAndLinks(projectID string, importData *P
 				}
 				// Update the artifact with the parent relationship
 				// Must include all fields to prevent clearing existing data
-				log.Printf("[IMPORT] About to call UpdateArtifact for artifact %d", i)
 				_, err := s.artifactService.UpdateArtifact(newID, artifacts.UpdateArtifactRequest{
 					ParentID:   &newParentID,
 					Type:       artifact.Type,
@@ -345,19 +353,20 @@ func (s *DefaultService) importArtifactsAndLinks(projectID string, importData *P
 					SortOrder:  &sortOrderVal,
 					Attributes: artifact.Attributes,
 				})
-				log.Printf("[IMPORT] UpdateArtifact returned for artifact %d", i)
 				if err != nil {
-					log.Printf("[IMPORT] ERROR in second pass for artifact %d: %v", i, err)
+					slog.Error("import: second pass failed to update artifact parent",
+						slog.Int("index", i),
+						slog.Any("error", err))
 					return nil, fmt.Errorf("failed to update artifact parent: %w", err)
 				}
-				log.Printf("[IMPORT] Successfully updated artifact %d in second pass", i)
 			}
 		}
 	}
-	log.Printf("[IMPORT] Second pass complete. Updated %d artifacts with parent relationships", updateCount)
+	slog.Debug("import: second pass complete",
+		slog.Int("parent_updates", updateCount))
 
 	// Create links using the new IDs
-	log.Printf("[IMPORT] Starting link creation: %d links to import", len(importData.Links))
+	slog.Debug("import: starting link creation", slog.Int("links", len(importData.Links)))
 	for _, link := range importData.Links {
 		newFromID, fromExists := idMap[link.FromID]
 		newToID, toExists := idMap[link.ToID]
@@ -372,19 +381,19 @@ func (s *DefaultService) importArtifactsAndLinks(projectID string, importData *P
 			
 			if err := s.linkService.CreateLink(newLink); err != nil {
 				// Log error but continue with other links
-				log.Printf("[IMPORT] Warning: failed to create link: %v", err)
+				slog.Warn("import: failed to create link", slog.Any("error", err))
 			}
 		}
 	}
-	log.Printf("[IMPORT] Link creation complete")
+	slog.Debug("import: link creation complete")
 
 	// Populate link snapshots for all imported artifacts
-	log.Printf("[IMPORT] Starting link snapshot population for %d artifacts", len(idMap))
+	slog.Debug("import: starting link snapshot population", slog.Int("artifacts", len(idMap)))
 	if err := s.populateLinksSnapshotsForImport(idMap); err != nil {
-		log.Printf("[IMPORT] Warning: failed to populate link snapshots: %v", err)
+		slog.Warn("import: failed to populate link snapshots", slog.Any("error", err))
 		// Don't fail the import, but log the error
 	}
-	log.Printf("[IMPORT] Link snapshot population complete")
+	slog.Debug("import: link snapshot population complete")
 
 	return createdIDs, nil
 }
@@ -423,7 +432,9 @@ func (s *DefaultService) populateLinksSnapshotsForImport(idMap map[string]string
 		if len(allLinks) > 0 {
 			artifact, err := s.artifactService.GetArtifact(newID)
 			if err != nil {
-				log.Printf("[IMPORT] Warning: failed to get artifact %s for snapshot update: %v", newID, err)
+				slog.Warn("import: failed to get artifact for snapshot update",
+					slog.String("artifact_id", newID),
+					slog.Any("error", err))
 				continue
 			}
 			
@@ -445,7 +456,9 @@ func (s *DefaultService) populateLinksSnapshotsForImport(idMap map[string]string
 				Attributes: artifact.Attributes,
 			})
 			if err != nil {
-				log.Printf("[IMPORT] Warning: failed to update artifact %s with link snapshot: %v", newID, err)
+				slog.Warn("import: failed to update artifact with link snapshot",
+					slog.String("artifact_id", newID),
+					slog.Any("error", err))
 				continue
 			}
 		}
