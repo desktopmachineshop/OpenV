@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { HostedRunnerStatus, hostedRunnerAPI } from '../../api/client';
+import { apiErrorMessage } from '../../api/errors';
 
 interface HostedRunnerCardProps {
   orgId: string;
@@ -45,7 +46,7 @@ export const HostedRunnerCard: React.FC<HostedRunnerCardProps> = ({ orgId, isAdm
       setStatus(res.data);
       setError('');
     } catch (err: any) {
-      setError(`Failed to load hosted runner status: ${err.response?.data || err.message}`);
+      setError(`Failed to load hosted runner status: ${apiErrorMessage(err)}`);
     } finally {
       setLoading(false);
     }
@@ -74,7 +75,7 @@ export const HostedRunnerCard: React.FC<HostedRunnerCardProps> = ({ orgId, isAdm
       setGeminiKey('');
       await load();
     } catch (err: any) {
-      setError(`Failed to enable the hosted runner: ${err.response?.data || err.message}`);
+      setError(`Failed to enable the hosted runner: ${apiErrorMessage(err)}`);
     } finally {
       setBusy(false);
     }
@@ -87,7 +88,7 @@ export const HostedRunnerCard: React.FC<HostedRunnerCardProps> = ({ orgId, isAdm
       await load();
       setError('');
     } catch (err: any) {
-      setError(`Failed to stop the hosted runner: ${err.response?.data || err.message}`);
+      setError(`Failed to stop the hosted runner: ${apiErrorMessage(err)}`);
     } finally {
       setBusy(false);
     }
@@ -100,7 +101,7 @@ export const HostedRunnerCard: React.FC<HostedRunnerCardProps> = ({ orgId, isAdm
       await load();
       setError('');
     } catch (err: any) {
-      setError(`Failed to start the hosted runner: ${err.response?.data || err.message}`);
+      setError(`Failed to start the hosted runner: ${apiErrorMessage(err)}`);
     } finally {
       setBusy(false);
     }
@@ -115,7 +116,7 @@ export const HostedRunnerCard: React.FC<HostedRunnerCardProps> = ({ orgId, isAdm
       await load();
       setError('');
     } catch (err: any) {
-      setError(`Failed to remove the hosted runner: ${err.response?.data || err.message}`);
+      setError(`Failed to remove the hosted runner: ${apiErrorMessage(err)}`);
     } finally {
       setBusy(false);
     }

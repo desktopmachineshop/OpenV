@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   membersAPI,
   orgTeamsAPI,
@@ -12,6 +12,7 @@ import {
   RepoConnection,
   TeamGrant,
 } from '../api/client';
+import { apiErrorMessage } from '../api/errors';
 import { useAppStore } from '../state/store';
 
 type Tab = 'members' | 'repos' | 'agents' | 'danger';
@@ -55,7 +56,19 @@ export const ProjectSettings: React.FC = () => {
   const currentUser = useAppStore((s) => s.currentUser);
   const activeOrgId = useAppStore((s) => s.activeOrgId);
 
-  const [tab, setTab] = useState<Tab>('members');
+  // The active tab lives in the URL (?tab=…) so refreshes and deep links keep
+  // it; unknown values fall back to the first tab.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get('tab');
+  const tab: Tab = TABS.some((t) => t.key === tabParam) ? (tabParam as Tab) : TABS[0].key;
+  const setTab = (next: Tab) =>
+    setSearchParams(
+      (prev) => {
+        prev.set('tab', next);
+        return prev;
+      },
+      { replace: true }
+    );
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
 
@@ -103,7 +116,7 @@ export const ProjectSettings: React.FC = () => {
       const res = await membersAPI.list(projectId);
       setMembers(res.data || []);
     } catch (err: any) {
-      setError(`Failed to load members: ${err.response?.data || err.message}`);
+      setError(`Failed to load members: ${apiErrorMessage(err)}`);
     } finally {
       setMembersLoading(false);
     }
@@ -118,7 +131,7 @@ export const ProjectSettings: React.FC = () => {
       setRepos(list);
       setMyPaths(Object.fromEntries(list.map((r) => [r.id, r.my_local_path || ''])));
     } catch (err: any) {
-      setError(`Failed to load repositories: ${err.response?.data || err.message}`);
+      setError(`Failed to load repositories: ${apiErrorMessage(err)}`);
     } finally {
       setReposLoading(false);
     }
@@ -141,7 +154,7 @@ export const ProjectSettings: React.FC = () => {
       const res = await projectTeamAccessAPI.list(projectId);
       setTeamGrants(res.data || []);
     } catch (err: any) {
-      setError(`Failed to load team access: ${err.response?.data || err.message}`);
+      setError(`Failed to load team access: ${apiErrorMessage(err)}`);
     } finally {
       setTeamGrantsLoading(false);
     }
@@ -189,7 +202,7 @@ export const ProjectSettings: React.FC = () => {
           `No account exists for "${addEmail.trim()}". They need to sign up first — once they have an account, add them here by the same email.`
         );
       } else {
-        setError(`Failed to add member: ${err.response?.data || err.message}`);
+        setError(`Failed to add member: ${apiErrorMessage(err)}`);
       }
     } finally {
       setAddingMember(false);
@@ -203,7 +216,7 @@ export const ProjectSettings: React.FC = () => {
       setMembers(members.map((m) => (m.user_id === member.user_id ? { ...m, role: role as ProjectMember['role'] } : m)));
       setError('');
     } catch (err: any) {
-      setError(`Failed to change role: ${err.response?.data || err.message}`);
+      setError(`Failed to change role: ${apiErrorMessage(err)}`);
     }
   };
 
@@ -216,7 +229,7 @@ export const ProjectSettings: React.FC = () => {
       setMembers(members.filter((m) => m.user_id !== member.user_id));
       setError('');
     } catch (err: any) {
-      setError(`Failed to remove member: ${err.response?.data || err.message}`);
+      setError(`Failed to remove member: ${apiErrorMessage(err)}`);
     }
   };
 
@@ -246,7 +259,7 @@ export const ProjectSettings: React.FC = () => {
       setShowRepoForm(false);
       await loadRepos();
     } catch (err: any) {
-      setError(`Failed to save repository: ${err.response?.data || err.message}`);
+      setError(`Failed to save repository: ${apiErrorMessage(err)}`);
     } finally {
       setSavingRepo(false);
     }
@@ -259,7 +272,7 @@ export const ProjectSettings: React.FC = () => {
       setRepos(repos.filter((r) => r.id !== repo.id));
       setError('');
     } catch (err: any) {
-      setError(`Failed to remove repository: ${err.response?.data || err.message}`);
+      setError(`Failed to remove repository: ${apiErrorMessage(err)}`);
     }
   };
 
@@ -271,7 +284,7 @@ export const ProjectSettings: React.FC = () => {
       setRepos(repos.map((r) => (r.id === repo.id ? { ...r, my_local_path: res.data.my_local_path } : r)));
       flash(res.data.my_local_path ? 'Your local path saved.' : 'Your local path cleared.');
     } catch (err: any) {
-      setError(`Failed to save your local path: ${err.response?.data || err.message}`);
+      setError(`Failed to save your local path: ${apiErrorMessage(err)}`);
     } finally {
       setSavingMyPath('');
     }
@@ -286,7 +299,7 @@ export const ProjectSettings: React.FC = () => {
       setProject(res.data);
       flash('Agent authentication updated.');
     } catch (err: any) {
-      setError(`Failed to update agent authentication: ${err.response?.data || err.message}`);
+      setError(`Failed to update agent authentication: ${apiErrorMessage(err)}`);
     } finally {
       setSavingAuth(false);
     }
@@ -307,7 +320,7 @@ export const ProjectSettings: React.FC = () => {
       flash('Team access granted.');
       await loadTeamAccess();
     } catch (err: any) {
-      setError(`Failed to grant team access: ${err.response?.data || err.message}`);
+      setError(`Failed to grant team access: ${apiErrorMessage(err)}`);
     } finally {
       setGranting(false);
     }
@@ -322,7 +335,7 @@ export const ProjectSettings: React.FC = () => {
       );
       setError('');
     } catch (err: any) {
-      setError(`Failed to change team role: ${err.response?.data || err.message}`);
+      setError(`Failed to change team role: ${apiErrorMessage(err)}`);
     }
   };
 
@@ -334,7 +347,7 @@ export const ProjectSettings: React.FC = () => {
       setTeamGrants(teamGrants.filter((g) => g.org_team_id !== grant.org_team_id));
       setError('');
     } catch (err: any) {
-      setError(`Failed to revoke team access: ${err.response?.data || err.message}`);
+      setError(`Failed to revoke team access: ${apiErrorMessage(err)}`);
     }
   };
 
@@ -355,7 +368,7 @@ export const ProjectSettings: React.FC = () => {
       await projectAPI.delete(projectId);
       navigate('/projects');
     } catch (err: any) {
-      setError(`Failed to delete project: ${err.response?.data || err.message}`);
+      setError(`Failed to delete project: ${apiErrorMessage(err)}`);
       setDeleting(false);
     }
   };

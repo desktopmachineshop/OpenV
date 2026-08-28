@@ -631,6 +631,12 @@ type rpcResponse struct {
 
 // ServeStdio runs the MCP server over stdin/stdout until EOF.
 func ServeStdio(client *Client, tools []Tool) error {
+	return serve(os.Stdin, os.Stdout, client, tools)
+}
+
+// serve is the transport-agnostic JSON-RPC loop behind ServeStdio; split out
+// so tests can drive it over an in-memory pipe.
+func serve(in io.Reader, w io.Writer, client *Client, tools []Tool) error {
 	byName := make(map[string]Tool, len(tools))
 	toolList := make([]map[string]interface{}, 0, len(tools))
 	for _, t := range tools {
@@ -643,7 +649,7 @@ func ServeStdio(client *Client, tools []Tool) error {
 	}
 
 	var writeMu sync.Mutex
-	out := json.NewEncoder(os.Stdout)
+	out := json.NewEncoder(w)
 	respond := func(resp rpcResponse) {
 		resp.JSONRPC = "2.0"
 		writeMu.Lock()
@@ -651,7 +657,7 @@ func ServeStdio(client *Client, tools []Tool) error {
 		_ = out.Encode(resp)
 	}
 
-	reader := bufio.NewReaderSize(os.Stdin, 1024*1024)
+	reader := bufio.NewReaderSize(in, 1024*1024)
 	for {
 		line, err := reader.ReadString('\n')
 		if err != nil {

@@ -54,17 +54,23 @@ var AnswerLengthRule = fmt.Sprintf(
 	MaxAnswerChars,
 )
 
-// TruncateAnswer caps text at MaxAnswerChars without splitting a UTF-8
-// character, marking the cut with an ellipsis.
-func TruncateAnswer(text string) string {
-	if len(text) <= MaxAnswerChars {
+// Truncate caps text at max bytes without splitting a UTF-8 character,
+// marking the cut with an ellipsis.
+func Truncate(text string, max int) string {
+	if len(text) <= max {
 		return text
 	}
-	cut := MaxAnswerChars
+	cut := max
 	for cut > 0 && text[cut]&0xC0 == 0x80 {
 		cut--
 	}
 	return text[:cut] + "…"
+}
+
+// TruncateAnswer caps text at MaxAnswerChars without splitting a UTF-8
+// character, marking the cut with an ellipsis.
+func TruncateAnswer(text string) string {
+	return Truncate(text, MaxAnswerChars)
 }
 
 var (
@@ -159,20 +165,23 @@ type QueueStats struct {
 	QueuedRepoAccess    int `json:"queued_repo_access"`
 }
 
-// ListFilter filters run listings.
+// ListFilter filters run listings. OrgID and LaunchedBy scope the listing in
+// SQL (before LIMIT applies) so one workspace's traffic can never starve
+// another's page.
 type ListFilter struct {
+	OrgID      string
 	AgentID    string
 	ProjectID  string
 	Status     string
 	ParentID   string
 	WorkItemID string
+	LaunchedBy string
 	Limit      int
 }
 
 // Repository defines persistence for runs and their logs.
 type Repository interface {
 	Save(r *Run) error
-	Update(r *Run) error
 	FindByID(id string) (*Run, error)
 	FindByTokenHash(hash string) (*Run, error)
 	List(filter ListFilter) ([]*Run, error)
@@ -185,7 +194,36 @@ type Repository interface {
 	// work: runs whose personal reservation is absent or expired.
 	// excludeRepoAccess skips runs whose agent needs repo access.
 	Claim(workerID string, orgID string, workerUserID string, providers []string, minPriority int, excludeRepoAccess bool) (*Run, error)
-	Heartbeat(runID string, at time.Time) error
+	// ReleaseClaim conditionally returns a claimed run to the queue, but only
+	// while it is still claimed by workerID (claim handshake failed); reports
+	// whether the release was applied.
+	ReleaseClaim(runID, workerID string) (bool, error)
+	// CancelQueued conditionally cancels a run only while it is still queued
+	// (and revokes its token), so a concurrent worker claim is never stomped;
+	// reports whether the cancel was applied.
+	CancelQueued(id string) (bool, error)
+	// SetCancelRequested flags a claimed/running run for cooperative
+	// cancellation; reports whether the flag was applied.
+	SetCancelRequested(id string) (bool, error)
+	// UpdateTerminal writes a run's terminal result fields and revokes its run
+	// token, but only while the stored status is still non-terminal; reports
+	// whether the transition was applied.
+	UpdateTerminal(r *Run) (bool, error)
+	// MarkRunning conditionally transitions a run from claimed to running,
+	// stamping started_at/heartbeat_at, so a run another actor moved on
+	// (reaper failure, cancel) is never resurrected; reports whether the
+	// transition was applied.
+	MarkRunning(runID string, at time.Time) (bool, error)
+	// Heartbeat refreshes liveness, but only while the run is still live
+	// (claimed/running), so a late worker report can never refresh a terminal
+	// run; reports whether the refresh was applied.
+	Heartbeat(runID string, at time.Time) (bool, error)
+	// UpdateWorkItemID links a run to its kanban card without touching any
+	// other column (in particular status).
+	UpdateWorkItemID(runID, workItemID string) error
+	// UpdateTokenHash rotates a run's token hash without touching any other
+	// column (in particular status).
+	UpdateTokenHash(runID, hash string) error
 	// FailStale marks claimed/running runs failed when their heartbeat is
 	// older than cutoff; returns the affected run IDs.
 	FailStale(cutoff time.Time) ([]string, error)
@@ -207,6 +245,11 @@ type Service interface {
 	List(filter ListFilter) ([]*Run, error)
 	Tree(rootID string) ([]*Run, error)
 	Claim(workerID string, orgID string, workerUserID string, providers []string, minPriority int, excludeRepoAccess bool) (*Run, error)
+	// ReleaseClaim returns a just-claimed run to the queue when the claim
+	// handshake fails after Claim (agent lookup or token mint), so the run is
+	// not stranded until the stale reaper. Only applies while the run is
+	// still claimed by workerID.
+	ReleaseClaim(runID, workerID string) error
 	// AttachWorkItem links a run to the kanban card tracking it.
 	AttachWorkItem(runID, workItemID string) error
 	// ReissueToken mints a fresh run token (returned raw; hash stored).
@@ -335,20 +378,11 @@ func (s *DefaultService) Launch(req LaunchRequest) (*Run, string, error) {
 	return run, token, nil
 }
 
-// AttachWorkItem links a run to the kanban card tracking it.
+// AttachWorkItem links a run to the kanban card tracking it. The write is a
+// targeted single-column update so it can never resurrect a status (or any
+// other field) from a stale read.
 func (s *DefaultService) AttachWorkItem(runID, workItemID string) error {
-	type workItemUpdater interface {
-		UpdateWorkItemID(runID, workItemID string) error
-	}
-	if wu, ok := s.repo.(workItemUpdater); ok {
-		return wu.UpdateWorkItemID(runID, workItemID)
-	}
-	run, err := s.Get(runID)
-	if err != nil {
-		return err
-	}
-	run.WorkItemID = &workItemID
-	return s.repo.Update(run)
+	return s.repo.UpdateWorkItemID(runID, workItemID)
 }
 
 // Get returns a run by id.
@@ -415,6 +449,24 @@ func (s *DefaultService) Claim(workerID string, orgID string, workerUserID strin
 	return run, nil
 }
 
+// ReleaseClaim returns a just-claimed run to the queue when the claim
+// handshake fails, so the run isn't stranded until the stale reaper. The
+// release is conditional (still claimed, same worker) so it can never undo a
+// state another actor moved the run into meanwhile.
+func (s *DefaultService) ReleaseClaim(runID, workerID string) error {
+	released, err := s.repo.ReleaseClaim(runID, workerID)
+	if err != nil {
+		return err
+	}
+	if !released {
+		return nil
+	}
+	if run, err := s.Get(runID); err == nil {
+		s.notifyStatus(run)
+	}
+	return nil
+}
+
 // ReissueToken mints a fresh token for a run and stores its hash.
 func (s *DefaultService) ReissueToken(runID string) (string, error) {
 	run, err := s.Get(runID)
@@ -426,51 +478,46 @@ func (s *DefaultService) ReissueToken(runID string) (string, error) {
 		return "", err
 	}
 	run.RunTokenHash = users.HashToken(token)
-	if err := s.updateTokenHash(run); err != nil {
+	if err := s.repo.UpdateTokenHash(run.ID, run.RunTokenHash); err != nil {
 		return "", err
 	}
 	return token, nil
 }
 
-func (s *DefaultService) updateTokenHash(run *Run) error {
-	type tokenUpdater interface {
-		UpdateTokenHash(runID, hash string) error
-	}
-	if tu, ok := s.repo.(tokenUpdater); ok {
-		return tu.UpdateTokenHash(run.ID, run.RunTokenHash)
-	}
-	return s.repo.Update(run)
-}
-
-// MarkRunning transitions a claimed run to running.
+// MarkRunning transitions a claimed run to running. The transition is a
+// conditional write (claimed -> running) so a run that a concurrent actor
+// already moved — the stale reaper failing it, a cancel — is never
+// resurrected to running from a stale read.
 func (s *DefaultService) MarkRunning(id string) error {
-	run, err := s.Get(id)
+	applied, err := s.repo.MarkRunning(id, time.Now())
 	if err != nil {
 		return err
 	}
-	if run.Status != StatusClaimed {
+	if !applied {
+		run, err := s.Get(id)
+		if err != nil {
+			return err
+		}
 		return fmt.Errorf("%w: %s -> running", ErrInvalidTransition, run.Status)
 	}
-	now := time.Now()
-	run.Status = StatusRunning
-	run.StartedAt = &now
-	run.HeartbeatAt = &now
-	if err := s.repo.Update(run); err != nil {
-		return err
+	if run, err := s.Get(id); err == nil {
+		s.notifyStatus(run)
 	}
-	s.notifyStatus(run)
 	return nil
 }
 
 // AppendLogs persists a log batch, refreshes the heartbeat, and returns the
-// current run so the worker sees cancel_requested.
+// current run so the worker sees cancel_requested. The heartbeat refresh is
+// conditional on the run still being live, so a late log batch from a worker
+// whose run was already failed (or cancelled) never refreshes heartbeat_at
+// on a terminal run; the logs themselves are still kept.
 func (s *DefaultService) AppendLogs(runID string, entries []LogEntry) (*Run, error) {
 	if len(entries) > 0 {
 		if err := s.repo.AppendLogs(runID, entries); err != nil {
 			return nil, err
 		}
 	}
-	if err := s.repo.Heartbeat(runID, time.Now()); err != nil {
+	if _, err := s.repo.Heartbeat(runID, time.Now()); err != nil {
 		return nil, err
 	}
 	run, err := s.Get(runID)
@@ -528,9 +575,22 @@ func (s *DefaultService) Finish(id string, req FinishRequest) (*Run, error) {
 		}
 	}
 
-	if err := s.repo.Update(run); err != nil {
+	// The terminal write is conditional so a concurrent finisher (the stale
+	// reaper, a duplicate worker report) can never overwrite an
+	// already-terminal status; it also revokes the run token, so a finished
+	// run's credential stops authenticating.
+	applied, err := s.repo.UpdateTerminal(run)
+	if err != nil {
 		return nil, err
 	}
+	if !applied {
+		current, err := s.Get(id)
+		if err != nil {
+			return nil, fmt.Errorf("%w: run already finished", ErrInvalidTransition)
+		}
+		return nil, fmt.Errorf("%w: run already %s", ErrInvalidTransition, current.Status)
+	}
+	run.RunTokenHash = ""
 	s.notifyStatus(run)
 	if s.bus != nil {
 		projectID := ""
@@ -546,6 +606,10 @@ func (s *DefaultService) Finish(id string, req FinishRequest) (*Run, error) {
 }
 
 // RequestCancel flags a run for cancellation (immediate if still queued).
+// Both paths are conditional state transitions in the repository, so a
+// concurrent worker claim is never overwritten: a queued run cancels only
+// while still queued, otherwise the cancel-requested flag is set only while
+// the run is live (claimed/running).
 func (s *DefaultService) RequestCancel(id string) (*Run, error) {
 	run, err := s.Get(id)
 	if err != nil {
@@ -554,22 +618,41 @@ func (s *DefaultService) RequestCancel(id string) (*Run, error) {
 	if terminalStatuses[run.Status] || run.Status == StatusAwaitingApproval {
 		return run, nil
 	}
-	run.CancelRequested = true
 	if run.Status == StatusQueued {
-		now := time.Now()
-		run.Status = StatusCancelled
-		run.FinishedAt = &now
+		cancelled, err := s.repo.CancelQueued(id)
+		if err != nil {
+			return nil, err
+		}
+		if cancelled {
+			run, err = s.Get(id)
+			if err != nil {
+				return nil, err
+			}
+			s.notifyStatus(run)
+			return run, nil
+		}
+		// Lost the race to a worker claim (or a finish): fall through to the
+		// cooperative flag path against the run's current state.
 	}
-	if err := s.repo.Update(run); err != nil {
+	flagged, err := s.repo.SetCancelRequested(id)
+	if err != nil {
 		return nil, err
 	}
-	s.notifyStatus(run)
+	run, err = s.Get(id)
+	if err != nil {
+		return nil, err
+	}
+	if flagged {
+		s.notifyStatus(run)
+	}
 	return run, nil
 }
 
-// Heartbeat refreshes a run's liveness timestamp.
+// Heartbeat refreshes a run's liveness timestamp. A heartbeat for a run that
+// is no longer live (already terminal) is silently dropped.
 func (s *DefaultService) Heartbeat(id string) error {
-	return s.repo.Heartbeat(id, time.Now())
+	_, err := s.repo.Heartbeat(id, time.Now())
+	return err
 }
 
 // FailStale fails runs whose worker went silent.

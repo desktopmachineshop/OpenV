@@ -15,11 +15,18 @@ interface GuidedChatPanelProps {
   /** Snapshot of everything entered in the wizard so far. */
   getState: () => Record<string, any>;
   /**
-   * Insert or replace a batch of suggestions in the wizard, applied in order
-   * against one snapshot. Returns one result per suggestion: null on
-   * success, or a reason it could not be applied.
+   * "<messageId>:<segmentIndex>" keys of suggestions already applied. Owned
+   * by the wizard and persisted in the session answers, so the applied state
+   * survives navigating away and remounting this panel.
    */
-  onAddSuggestions: (suggestions: CopilotSuggestion[]) => (string | null)[];
+  applied: Record<string, boolean>;
+  /**
+   * Insert or replace a batch of suggestions in the wizard, applied in order
+   * against one snapshot. Each item carries its suggestion key so the wizard
+   * can record (and persist) what was applied. Returns one result per
+   * suggestion: null on success, or a reason it could not be applied.
+   */
+  onApplySuggestions: (items: { suggestion: CopilotSuggestion; key: string }[]) => (string | null)[];
 }
 
 type Segment =
@@ -131,7 +138,8 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
   sessionId,
   step,
   getState,
-  onAddSuggestions,
+  applied,
+  onApplySuggestions,
 }, ref) => {
   const [messages, setMessages] = useState<GuidedChatMessage[]>([]);
   const [composerText, setComposerText] = useState('');
@@ -141,8 +149,9 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
   // True when the API reports no runner online: turns queue unanswered, so
   // the panel shows connect instructions instead of a thinking indicator.
   const [runnerOffline, setRunnerOffline] = useState(false);
-  // "<messageId>:<segmentIndex>" keys of suggestions already added.
-  const [added, setAdded] = useState<Record<string, boolean>>({});
+  // Which suggestions were applied lives in `applied` (persisted by the
+  // wizard in the session answers) — NOT local state, so a remount cannot
+  // re-arm Apply buttons and duplicate entries.
 
   const scrollerRef = useRef<HTMLDivElement>(null);
   const lastMessageRef = useRef<HTMLDivElement>(null);
@@ -318,15 +327,10 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
   };
 
   // Apply every not-yet-applied suggestion of one reply in a single batch.
+  // The wizard records and persists which keys applied successfully.
   const applyAll = (pending: { suggestion: CopilotSuggestion; key: string }[]) => {
-    const results = onAddSuggestions(pending.map((p) => p.suggestion));
-    const newlyAdded: Record<string, boolean> = {};
-    const errors: string[] = [];
-    results.forEach((r, i) => {
-      if (r === null) newlyAdded[pending[i].key] = true;
-      else errors.push(r);
-    });
-    if (Object.keys(newlyAdded).length > 0) setAdded((prev) => ({ ...prev, ...newlyAdded }));
+    const results = onApplySuggestions(pending);
+    const errors = results.filter((r): r is string => r !== null);
     setSendError(
       errors.length > 0
         ? `${errors.length} suggestion${errors.length > 1 ? 's' : ''} could not be applied — ${errors[0]}`
@@ -344,7 +348,7 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
     }
     const s = seg.suggestion;
     const { title, detail } = suggestionSummary(s);
-    const isAdded = !!added[key];
+    const isAdded = !!applied[key];
     // A suggestion replaces existing content when it targets an entry
     // ("replaces") or rewrites a framing field that already has text.
     let isReplace = !!s.replaces;
@@ -386,13 +390,8 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
             className="button-secondary"
             style={{ padding: '4px 10px', fontSize: 12 }}
             onClick={() => {
-              const reason = onAddSuggestions([s])[0];
-              if (reason === null) {
-                setSendError('');
-                setAdded((prev) => ({ ...prev, [key]: true }));
-              } else {
-                setSendError(reason);
-              }
+              const reason = onApplySuggestions([{ suggestion: s, key }])[0];
+              setSendError(reason === null ? '' : reason);
             }}
           >
             {buttonLabel}
@@ -468,7 +467,7 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
                         .map((seg, i) => ({ seg, key: `${m.id}:${i}` }))
                         .filter(
                           (x): x is { seg: Segment & { type: 'suggestion' }; key: string } =>
-                            x.seg.type === 'suggestion' && !!x.seg.suggestion && !added[x.key]
+                            x.seg.type === 'suggestion' && !!x.seg.suggestion && !applied[x.key]
                         )
                         .map((x) => ({ suggestion: x.seg.suggestion as CopilotSuggestion, key: x.key }));
                       return (

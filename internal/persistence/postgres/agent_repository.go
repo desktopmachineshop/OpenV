@@ -3,6 +3,9 @@ package postgres
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
+
+	"github.com/lib/pq"
 
 	"github.com/openv/requirements-platform/internal/domain/agents"
 )
@@ -60,7 +63,10 @@ func agentJSONFields(a *agents.Agent) ([]byte, []byte, error) {
 	return toolsJSON, configJSON, nil
 }
 
-// Save inserts an agent registry row.
+// Save inserts an agent registry row. A unique-index violation on
+// (org_id, slug) — the loser of a concurrent create race — is reported as
+// agents.ErrSlugExists so callers can answer with a conflict instead of a
+// raw database error.
 func (r *AgentRepository) Save(a *agents.Agent) error {
 	toolsJSON, configJSON, err := agentJSONFields(a)
 	if err != nil {
@@ -70,6 +76,10 @@ func (r *AgentRepository) Save(a *agents.Agent) error {
 		INSERT INTO agents (id, org_id, slug, name, description, provider, model, effort, allowed_tools, write_mode, repo_access, max_turns, timeout_seconds, config, system_prompt, file_path, content_hash, synced_at, created_at, updated_at)
 		VALUES ($1, NULLIF($2, '')::uuid, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
 	`, a.ID, a.OrgID, a.Slug, a.Name, a.Description, a.Provider, a.Model, a.Effort, toolsJSON, a.WriteMode, a.RepoAccess, a.MaxTurns, a.TimeoutSeconds, configJSON, a.SystemPrompt, a.FilePath, a.ContentHash, a.SyncedAt, a.CreatedAt, a.UpdatedAt)
+	var pqErr *pq.Error
+	if errors.As(err, &pqErr) && pqErr.Code == "23505" && pqErr.Constraint == "idx_agents_org_slug" {
+		return agents.ErrSlugExists
+	}
 	return err
 }
 

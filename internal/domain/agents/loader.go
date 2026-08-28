@@ -77,8 +77,18 @@ func (s *FileService) orgDir(orgID string) string {
 	return filepath.Join(s.dir, orgID)
 }
 
-func (s *FileService) filePath(orgID, slug string) string {
-	return filepath.Join(s.orgDir(orgID), slug+".md")
+// filePath resolves the markdown file for a slug, refusing anything that
+// could escape the org directory (defense in depth on top of Validate).
+func (s *FileService) filePath(orgID, slug string) (string, error) {
+	if !ValidSlug(slug) {
+		return "", fmt.Errorf("invalid agent slug %q", slug)
+	}
+	dir := s.orgDir(orgID)
+	path := filepath.Join(dir, slug+".md")
+	if filepath.Dir(path) != filepath.Clean(dir) {
+		return "", fmt.Errorf("invalid agent slug %q", slug)
+	}
+	return path, nil
 }
 
 // List returns all registered agents in an org.
@@ -104,7 +114,10 @@ func (s *FileService) SaveDefinition(orgID string, def *Definition) (*Agent, err
 	if err := os.MkdirAll(s.orgDir(orgID), 0o755); err != nil {
 		return nil, fmt.Errorf("failed to create org agents directory: %w", err)
 	}
-	path := s.filePath(orgID, def.Slug)
+	path, err := s.filePath(orgID, def.Slug)
+	if err != nil {
+		return nil, err
+	}
 	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		return nil, fmt.Errorf("failed to write agent file: %w", err)
 	}
@@ -113,7 +126,11 @@ func (s *FileService) SaveDefinition(orgID string, def *Definition) (*Agent, err
 
 // RawFile returns the markdown content for a slug.
 func (s *FileService) RawFile(orgID, slug string) (string, error) {
-	data, err := os.ReadFile(s.filePath(orgID, slug))
+	path, err := s.filePath(orgID, slug)
+	if err != nil {
+		return "", err
+	}
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return "", fmt.Errorf("failed to read agent file for %s: %w", slug, err)
 	}
@@ -135,7 +152,10 @@ func (s *FileService) SaveRawFile(orgID, slug string, content string) (*Agent, e
 	if err := os.MkdirAll(s.orgDir(orgID), 0o755); err != nil {
 		return nil, fmt.Errorf("failed to create org agents directory: %w", err)
 	}
-	path := s.filePath(orgID, slug)
+	path, err := s.filePath(orgID, slug)
+	if err != nil {
+		return nil, err
+	}
 	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		return nil, fmt.Errorf("failed to write agent file: %w", err)
 	}
@@ -156,7 +176,10 @@ func (s *FileService) Delete(orgID, slug string) error {
 	if err := os.MkdirAll(trashDir, 0o755); err != nil {
 		return err
 	}
-	src := s.filePath(orgID, slug)
+	src, err := s.filePath(orgID, slug)
+	if err != nil {
+		return err
+	}
 	if _, err := os.Stat(src); err == nil {
 		dst := filepath.Join(trashDir, fmt.Sprintf("%s-%d.md", slug, time.Now().Unix()))
 		if err := os.Rename(src, dst); err != nil {

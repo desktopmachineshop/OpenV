@@ -90,7 +90,7 @@ func (h *SSEHub) unsubscribe(key string, ch chan sseEvent) {
 func (h *SSEHub) ServeStream(w http.ResponseWriter, r *http.Request, key string, replay func(emit func(event string, data interface{})) error) {
 	flusher, ok := w.(http.Flusher)
 	if !ok {
-		http.Error(w, "streaming unsupported", http.StatusInternalServerError)
+		writeJSONError(w, http.StatusInternalServerError, "streaming unsupported")
 		return
 	}
 

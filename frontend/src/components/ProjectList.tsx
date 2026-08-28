@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../state/store';
 import { projectAPI, templateAPI, Project, Template } from '../api/client';
+import { apiErrorMessage } from '../api/errors';
 import { Navbar } from './Navbar';
 import { CreateOrgModal } from './CreateOrgModal';
 import './ProjectList.css';
@@ -45,7 +46,7 @@ export const ProjectList: React.FC = () => {
       setError('');
     } catch (err: any) {
       console.error('Failed to load projects:', err);
-      setError(`Failed to load projects: ${err.response?.data || err.message}`);
+      setError(`Failed to load projects: ${apiErrorMessage(err)}`);
       setProjects([]);
     } finally {
       setLoading(false);
@@ -100,7 +101,7 @@ export const ProjectList: React.FC = () => {
       setError('');
     } catch (err: any) {
       console.error('Failed to create project:', err);
-      setError(`Failed to create project: ${err.response?.data || err.message}`);
+      setError(`Failed to create project: ${apiErrorMessage(err)}`);
     }
   };
 
@@ -118,7 +119,7 @@ export const ProjectList: React.FC = () => {
       setError('');
     } catch (err: any) {
       console.error('Failed to delete project:', err);
-      setError(`Failed to delete project: ${err.response?.data || err.message}`);
+      setError(`Failed to delete project: ${apiErrorMessage(err)}`);
     }
   };
 
@@ -157,7 +158,7 @@ export const ProjectList: React.FC = () => {
       setError('');
     } catch (err: any) {
       console.error('Failed to update project:', err);
-      setError(`Failed to update project: ${err.response?.data || err.message}`);
+      setError(`Failed to update project: ${apiErrorMessage(err)}`);
     }
   };
 
@@ -175,7 +176,7 @@ export const ProjectList: React.FC = () => {
       setError('');
     } catch (err: any) {
       console.error('Failed to export project:', err);
-      setError(`Failed to export project: ${err.response?.data || err.message}`);
+      setError(`Failed to export project: ${apiErrorMessage(err)}`);
     }
   };
 
@@ -202,7 +203,7 @@ export const ProjectList: React.FC = () => {
       e.target.value = '';
     } catch (err: any) {
       console.error('Failed to import project:', err);
-      setError(`Failed to import project: ${err.response?.data || err.message}`);
+      setError(`Failed to import project: ${apiErrorMessage(err)}`);
       e.target.value = '';
     }
   };
@@ -222,7 +223,7 @@ export const ProjectList: React.FC = () => {
       setError('');
     } catch (err: any) {
       console.error('Failed to save template:', err);
-      setError(`Failed to save template: ${err.response?.data || err.message}`);
+      setError(`Failed to save template: ${apiErrorMessage(err)}`);
     }
   };
 
@@ -234,6 +235,18 @@ export const ProjectList: React.FC = () => {
     <>
       <Navbar title="Projects" showWorkspaceControls />
       <div className="project-list-container">
+
+      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+        <button
+          className="button-secondary"
+          style={{ padding: '8px 14px', fontSize: 13 }}
+          onClick={() => navigate('/manual')}
+          title="Open the user manual"
+        >
+          ? Help
+        </button>
+      </div>
+
 
       {error && (
         <div className="error-message">
