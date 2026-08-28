@@ -121,7 +121,11 @@ export const VVDashboard: React.FC = () => {
     loadVV();
   }, [loadVV]);
 
-  const summary = coverage?.summary || {};
+  // Memoized so the object identity is stable between renders — a bare
+  // `coverage?.summary || {}` would be a fresh object every render and make
+  // the summaryKeys useMemo below recompute unnecessarily (and trips
+  // react-hooks/exhaustive-deps).
+  const summary = useMemo(() => coverage?.summary || {}, [coverage]);
   const summaryKeys = useMemo(() => {
     const keys = Object.keys(summary);
     keys.sort((a, b) => {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { ChatterEntry, chatterAPI } from '../api/client';
 
 interface ChatterPanelProps {
@@ -17,13 +17,7 @@ export const ChatterPanel: React.FC<ChatterPanelProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    if (artifactId && isOpen) {
-      loadChatterEntries();
-    }
-  }, [artifactId, isOpen]);
-
-  const loadChatterEntries = async () => {
+  const loadChatterEntries = useCallback(async () => {
     if (!artifactId) return;
 
     setIsLoading(true);
@@ -38,7 +32,13 @@ export const ChatterPanel: React.FC<ChatterPanelProps> = ({
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [artifactId]);
+
+  useEffect(() => {
+    if (artifactId && isOpen) {
+      loadChatterEntries();
+    }
+  }, [artifactId, isOpen, loadChatterEntries]);
 
   const handleAddMessage = async () => {
     if (!newMessage.trim() || !artifactId) {
