@@ -32,8 +32,10 @@ COPY nginx.conf /etc/nginx/nginx.conf
 # Copy built assets from builder stage
 COPY --from=builder /app/build /usr/share/nginx/html
 
-# Run as the unprivileged nginx user that ships with the base image
-# (uid/gid 101). Give it ownership of the paths nginx writes to.
+# Run as the unprivileged nginx user that ships with the base image.
+# Give it ownership of the paths nginx writes to. (Do not add a custom
+# user with a hardcoded uid/gid: current nginx:alpine images already
+# ship gid 101, which made `addgroup -g 101` fail — see PR #50/#75.)
 RUN chown -R nginx:nginx /usr/share/nginx/html /var/cache/nginx /var/log/nginx && \
     touch /var/run/nginx.pid && \
     chown nginx:nginx /var/run/nginx.pid

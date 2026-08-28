@@ -106,6 +106,20 @@ func (h *Handler) requireOrgRole(w http.ResponseWriter, r *http.Request, orgID s
 	return true
 }
 
+// discardResponse swallows the error responses the require* helpers write,
+// for call sites that need the access decision without answering the request.
+type discardResponse struct{}
+
+func (discardResponse) Header() http.Header         { return http.Header{} }
+func (discardResponse) Write(b []byte) (int, error) { return len(b), nil }
+func (discardResponse) WriteHeader(int)             {}
+
+// hasProjectRole reports whether the request would pass requireProjectRole.
+// Unlike the require* helpers it writes no response.
+func (h *Handler) hasProjectRole(r *http.Request, projectID, minRole string) bool {
+	return h.requireProjectRole(discardResponse{}, r, projectID, minRole)
+}
+
 // isOrgAdmin reports whether the current user is a platform admin or an
 // admin of the given org. Unlike the require* helpers it writes no response.
 func (h *Handler) isOrgAdmin(r *http.Request, orgID string) bool {

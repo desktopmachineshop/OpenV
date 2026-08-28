@@ -84,10 +84,10 @@ type HandlerDeps struct {
 	// ConnectorDistDir holds downloadable Agent Connector bundles.
 	ConnectorDistDir string
 	Bus              events.Bus
-	EventRepo     events.Repository
-	SSEHub        *SSEHub
-	GoogleOAuth   *GoogleOAuthConfig
-	SecureCookies bool
+	EventRepo        events.Repository
+	SSEHub           *SSEHub
+	GoogleOAuth      *GoogleOAuthConfig
+	SecureCookies    bool
 }
 
 // Handler holds references to domain services
@@ -410,7 +410,7 @@ func (h *Handler) UpdateArtifact(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		affected, err := h.processManagedLinkChanges(id, req.PendingLinkAdds, removeInterfaceArray)
+		affected, err := h.processManagedLinkChanges(r, oldArtifact.ProjectID, id, req.PendingLinkAdds, removeInterfaceArray)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("Failed to process link changes: %v", err), http.StatusInternalServerError)
 			return
@@ -829,6 +829,12 @@ func (h *Handler) CreateLink(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if !h.requireProjectRole(w, r, fromArtifact.ProjectID, members.RoleEditor) {
+		return
+	}
+	// A link also writes to the target artifact (version bump + chatter via
+	// autoVersionLinkedArtifacts) and exposes its title, so a cross-project
+	// link needs editor rights on the target's project too.
+	if toArtifact.ProjectID != fromArtifact.ProjectID && !h.requireProjectRole(w, r, toArtifact.ProjectID, members.RoleEditor) {
 		return
 	}
 	if h.maybePropose(w, r, fromArtifact.ProjectID, proposals.OpCreateLink, nil, req) {
@@ -1791,8 +1797,21 @@ func (h *Handler) buildChangesSummary(oldArtifact, newArtifact *artifacts.Artifa
 
 // processManagedLinkChanges handles link additions and removals
 // Returns list of artifact IDs that had links change (for auto-versioning)
-func (h *Handler) processManagedLinkChanges(fromArtifactID string, toAdd, toRemove []interface{}) ([]string, error) {
+// baseProjectID is the project of the artifact being updated; the caller has
+// already verified editor rights on it. Entries touching artifacts in other
+// projects are skipped unless the caller has editor rights there too.
+func (h *Handler) processManagedLinkChanges(r *http.Request, baseProjectID, fromArtifactID string, toAdd, toRemove []interface{}) ([]string, error) {
 	affectedArtifactIDs := make(map[string]bool) // Use map to avoid duplicates
+
+	// canEditLinkedArtifact reports whether the caller may edit the project
+	// the given artifact belongs to (the base project is already authorized).
+	canEditLinkedArtifact := func(artifactID string) bool {
+		artifact, err := h.artifactService.GetArtifact(artifactID)
+		if err != nil || artifact == nil {
+			return false
+		}
+		return artifact.ProjectID == baseProjectID || h.hasProjectRole(r, artifact.ProjectID, members.RoleEditor)
+	}
 
 	// Process removals (hard delete from table)
 	for _, linkIDInterface := range toRemove {
@@ -1804,6 +1823,12 @@ func (h *Handler) processManagedLinkChanges(fromArtifactID string, toAdd, toRemo
 		// Get the link before deleting to determine affected artifact
 		link, err := h.linkService.GetLink(linkID)
 		if err == nil && link != nil {
+			// Both endpoints may live outside the base project; the caller
+			// needs editor rights on their projects to remove the link.
+			if !canEditLinkedArtifact(link.FromID) || !canEditLinkedArtifact(link.ToID) {
+				fmt.Printf("Warning: skipping removal of link %s: no editor access to a linked artifact's project\n", linkID)
+				continue
+			}
 			// Mark the 'to' artifact as affected (it had an incoming link removed)
 			if link.ToID == fromArtifactID {
 				affectedArtifactIDs[link.FromID] = true
@@ -1865,6 +1890,17 @@ func (h *Handler) processManagedLinkChanges(fromArtifactID string, toAdd, toRemo
 			continue
 		}
 
+		// Both endpoints get a version bump + chatter; a cross-project link
+		// needs editor rights on the other project too.
+		if fromArtifact.ProjectID != baseProjectID && !h.hasProjectRole(r, fromArtifact.ProjectID, members.RoleEditor) {
+			fmt.Printf("Warning: skipping link add %s -> %s: no editor access to the source artifact's project\n", fromID, toID)
+			continue
+		}
+		if toArtifact.ProjectID != baseProjectID && !h.hasProjectRole(r, toArtifact.ProjectID, members.RoleEditor) {
+			fmt.Printf("Warning: skipping link add %s -> %s: no editor access to the target artifact's project\n", fromID, toID)
+			continue
+		}
+
 		// Create the link
 		linkReq := links.CreateLinkRequest{
 			FromID:     fromID,
@@ -1897,8 +1933,6 @@ func (h *Handler) processManagedLinkChanges(fromArtifactID string, toAdd, toRemo
 
 // autoVersionLinkedArtifacts creates new versions for artifacts that had link changes
 func (h *Handler) autoVersionLinkedArtifacts(affectedArtifactIDs []string) error {
-	fmt.Printf("DEBUG autoVersionLinkedArtifacts: Processing %d affected artifacts: %v\n", len(affectedArtifactIDs), affectedArtifactIDs)
-
 	for _, artifactID := range affectedArtifactIDs {
 		artifact, err := h.artifactService.GetArtifact(artifactID)
 		if err != nil {

@@ -178,9 +178,13 @@ func pair(apiURL, code string) *connectorConfig {
 	}
 	// Prefer the address the browser actually used when the server's idea
 	// of its public URL isn't reachable from here.
-	if cfg.APIURL == "" {
-		cfg.APIURL = apiURL
+	chosen, reason := resolveAPIURL(cfg.APIURL, apiURL, func(candidate string) bool {
+		return probeHealth(candidate, healthProbeTimeout)
+	})
+	if reason != "" {
+		fmt.Printf("  Note: %s (%s).\n", reason, chosen)
 	}
+	cfg.APIURL = chosen
 	if err := saveConfig(cfg); err != nil {
 		fail("could not save connector config: %v", err)
 	}
@@ -211,7 +215,12 @@ func start(cfg *connectorConfig) {
 	fmt.Println("  Close this window (or press Ctrl+C) to stop it.")
 	fmt.Println()
 
-	cmd := exec.Command(agentd, "--api", cfg.APIURL, "--worker-key", cfg.WorkerKey, "--mcp-binary", mcp)
+	// The worker key goes through the environment, not argv: command lines
+	// are visible to every process on the machine (ps, Task Manager), the
+	// environment of a child we spawn is not. agentd reads WORKER_API_KEY as
+	// the default for its --worker-key flag.
+	cmd := exec.Command(agentd, "--api", cfg.APIURL, "--mcp-binary", mcp)
+	cmd.Env = append(os.Environ(), "WORKER_API_KEY="+cfg.WorkerKey)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = os.Stdin
