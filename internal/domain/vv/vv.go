@@ -36,6 +36,54 @@ const (
 	MethodTest          = "test"
 )
 
+// Execution methods for test cases, stored on the test-case artifact's
+// "execution_method" attribute. They record who can actually carry the test
+// out — only Automated cases may be executed by an agent.
+const (
+	// ExecutionAutomated is software-verifiable: an agent (or a CI job) can
+	// run it end to end. This is the default when the attribute is unset.
+	ExecutionAutomated = "automated"
+	// ExecutionManual needs a person: visual inspection, judgement calls,
+	// usability, anything an agent cannot honestly attest to.
+	ExecutionManual = "manual"
+	// ExecutionPhysical needs hardware, a rig, or lab measurement.
+	ExecutionPhysical = "physical"
+)
+
+// ExecutionMethodAttr is the test-case attribute holding the execution method.
+const ExecutionMethodAttr = "execution_method"
+
+// ErrNotAgentExecutable is returned when an agent tries to record a result
+// for a test case that a human or a physical test must verify.
+var ErrNotAgentExecutable = errors.New("this test case is flagged as human- or physically-verified; an agent may not record its result")
+
+// ExecutionMethod reads the execution method from a test case's attributes,
+// defaulting to automated when unset or unrecognized.
+func ExecutionMethod(attributes map[string]interface{}) string {
+	raw, ok := attributes[ExecutionMethodAttr]
+	if !ok {
+		return ExecutionAutomated
+	}
+	s, ok := raw.(string)
+	if !ok {
+		return ExecutionAutomated
+	}
+	switch strings.ToLower(strings.TrimSpace(s)) {
+	case ExecutionManual:
+		return ExecutionManual
+	case ExecutionPhysical:
+		return ExecutionPhysical
+	default:
+		return ExecutionAutomated
+	}
+}
+
+// AgentExecutable reports whether an agent may execute a test case with these
+// attributes. Manual and physical cases stay with people.
+func AgentExecutable(attributes map[string]interface{}) bool {
+	return ExecutionMethod(attributes) == ExecutionAutomated
+}
+
 // Error definitions
 var (
 	ErrRunNotFound       = errors.New("test run not found")
@@ -71,8 +119,11 @@ type TestResult struct {
 	Evidence        []string   `json:"evidence"` // attachment IDs
 	ExecutedAt      *time.Time `json:"executed_at,omitempty"`
 	ExecutedBy      *string    `json:"executed_by,omitempty"`
-	CreatedAt       time.Time  `json:"created_at"`
-	UpdatedAt       time.Time  `json:"updated_at"`
+	// ExecutedByAgentRunID records the agent run that produced this result,
+	// so a reviewer can tell agent-executed evidence from human-executed.
+	ExecutedByAgentRunID *string   `json:"executed_by_agent_run_id,omitempty"`
+	CreatedAt            time.Time `json:"created_at"`
+	UpdatedAt            time.Time `json:"updated_at"`
 }
 
 // CreateRunRequest is the payload for creating a test run.
@@ -110,9 +161,15 @@ type Service interface {
 	ListRuns(projectID string) ([]*TestRun, error)
 	UpdateRunStatus(id, status string) (*TestRun, error)
 	DeleteRun(id string) error
-	UpsertResult(runID string, req UpsertResultRequest, executedBy *string, actor string) (*TestResult, error)
+	// UpsertResult records a result. agentRunID is the executing agent run
+	// ("" when a person records it); agent-recorded results are refused for
+	// test cases flagged manual or physical.
+	UpsertResult(runID string, req UpsertResultRequest, executedBy *string, actor, agentRunID string) (*TestResult, error)
 	ListResults(runID string) ([]*TestResult, error)
 	LatestResults(projectID string) (map[string]*TestResult, error)
+	// AgentExecutableCases returns the project's test cases an agent may
+	// execute, plus those skipped because they need a human or a rig.
+	AgentExecutableCases(projectID string, only []string) (runnable, skipped []*artifacts.Artifact, err error)
 }
 
 // DefaultService implements the Service interface.
@@ -208,7 +265,7 @@ func (s *DefaultService) DeleteRun(id string) error {
 // UpsertResult records or updates a test result within a run. The test case
 // artifact must exist and be of type "test-case"; its current version is
 // captured on the result. actor is the event actor ("" for system).
-func (s *DefaultService) UpsertResult(runID string, req UpsertResultRequest, executedBy *string, actor string) (*TestResult, error) {
+func (s *DefaultService) UpsertResult(runID string, req UpsertResultRequest, executedBy *string, actor, agentRunID string) (*TestResult, error) {
 	switch req.Status {
 	case ResultPass, ResultFail, ResultBlocked, ResultNotRun:
 	default:
@@ -226,6 +283,11 @@ func (s *DefaultService) UpsertResult(runID string, req UpsertResultRequest, exe
 	}
 	if testCase.Type != "test-case" {
 		return nil, ErrNotTestCase
+	}
+	// A test case a person or a rig has to verify stays with them: an agent
+	// must not be able to attest to an outcome it cannot actually observe.
+	if agentRunID != "" && !AgentExecutable(testCase.Attributes) {
+		return nil, fmt.Errorf("%w (%s: %s)", ErrNotAgentExecutable, testCase.Title, ExecutionMethod(testCase.Attributes))
 	}
 
 	evidence := req.Evidence
@@ -247,6 +309,10 @@ func (s *DefaultService) UpsertResult(runID string, req UpsertResultRequest, exe
 		CreatedAt:       now,
 		UpdatedAt:       now,
 	}
+	if agentRunID != "" {
+		id := agentRunID
+		result.ExecutedByAgentRunID = &id
+	}
 
 	if err := s.repo.UpsertResult(result); err != nil {
 		return nil, err
@@ -254,6 +320,9 @@ func (s *DefaultService) UpsertResult(runID string, req UpsertResultRequest, exe
 
 	// Auto-entry on the test case's chatter feed.
 	message := fmt.Sprintf("Test result recorded: %s in run '%s'", strings.ToUpper(req.Status), run.Name)
+	if agentRunID != "" {
+		message += " (executed by agent)"
+	}
 	entry := chatter.NewChatterEntry(req.TestCaseID, message, true, "test-result")
 	if err := s.chatterService.CreateEntry(entry); err != nil {
 		// Non-fatal: the result itself was persisted.
@@ -280,4 +349,37 @@ func (s *DefaultService) ListResults(runID string) ([]*TestResult, error) {
 // project's in-progress and completed runs.
 func (s *DefaultService) LatestResults(projectID string) (map[string]*TestResult, error) {
 	return s.repo.LatestResultPerCase(projectID)
+}
+
+// AgentExecutableCases splits a project's test cases into those an agent may
+// execute and those reserved for a human or a physical test. When only is
+// non-empty the selection is restricted to those test case IDs, preserving
+// the project's artifact order.
+func (s *DefaultService) AgentExecutableCases(projectID string, only []string) ([]*artifacts.Artifact, []*artifacts.Artifact, error) {
+	cases, err := s.artifactService.ListArtifacts(projectID, "test-case")
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var wanted map[string]bool
+	if len(only) > 0 {
+		wanted = make(map[string]bool, len(only))
+		for _, id := range only {
+			wanted[id] = true
+		}
+	}
+
+	runnable := []*artifacts.Artifact{}
+	skipped := []*artifacts.Artifact{}
+	for _, tc := range cases {
+		if wanted != nil && !wanted[tc.ID] {
+			continue
+		}
+		if AgentExecutable(tc.Attributes) {
+			runnable = append(runnable, tc)
+		} else {
+			skipped = append(skipped, tc)
+		}
+	}
+	return runnable, skipped, nil
 }

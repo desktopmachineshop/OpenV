@@ -131,6 +131,11 @@ type Handler struct {
 	sseHub              *SSEHub
 	googleOAuth         *GoogleOAuthConfig
 	secureCookies       bool
+
+	// Rate limiters for the public (invite-token) interview endpoints; see
+	// ratelimit.go for defaults and environment overrides.
+	interviewMsgLimiter *rateLimiter // per-invite participant messages
+	interviewIPLimiter  *rateLimiter // per-IP intro/stream GETs
 }
 
 // NewHandler creates a new API handler
@@ -174,6 +179,8 @@ func NewHandler(deps HandlerDeps) *Handler {
 		sseHub:              deps.SSEHub,
 		googleOAuth:         deps.GoogleOAuth,
 		secureCookies:       deps.SecureCookies,
+		interviewMsgLimiter: newRateLimiterFromEnv(envInterviewMsgBurst, envInterviewMsgRefill, defaultInterviewMsgBurst, defaultInterviewMsgRefill),
+		interviewIPLimiter:  newRateLimiterFromEnv(envInterviewIPBurst, envInterviewIPRefill, defaultInterviewIPBurst, defaultInterviewIPRefill),
 	}
 }
 

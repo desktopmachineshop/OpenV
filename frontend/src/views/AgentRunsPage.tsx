@@ -169,7 +169,7 @@ export const AgentRunsPage: React.FC = () => {
             >
               Open Agent Connector
             </button>
-            <Link to="/org/settings" style={{ color: '#9c6a0b', fontWeight: 600 }}>
+            <Link to="/org/settings?tab=worker-keys" style={{ color: '#9c6a0b', fontWeight: 600 }}>
               Runner settings
             </Link>
           </div>

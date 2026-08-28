@@ -17,7 +17,7 @@ func Connect(dsn string) (*sql.DB, error) {
 	// Higher MaxOpenConns to handle concurrent artifact creation during import
 	db.SetMaxOpenConns(50)
 	db.SetMaxIdleConns(10)
-	db.SetConnMaxLifetime(10 * time.Second) // 10 seconds
+	db.SetConnMaxLifetime(30 * time.Minute)
 
 	err = db.Ping()
 	if err != nil {

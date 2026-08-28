@@ -10,6 +10,11 @@
 //	openv-connector openv-connector://pair?code=..&api=..   pair + start
 //	openv-connector openv-connector://start                  start
 //	openv-connector                          start (default)
+//
+// Flags:
+//
+//	--insecure   skip the confirmation prompt when the pairing link uses
+//	             cleartext http to a non-localhost host (for scripted use)
 package main
 
 import (
@@ -88,9 +93,18 @@ func main() {
 	fmt.Println("  OpenV Agent Connector")
 	fmt.Println("  ---------------------")
 
+	insecure := false
+	args := make([]string, 0, len(os.Args)-1)
+	for _, a := range os.Args[1:] {
+		if a == "--insecure" {
+			insecure = true
+			continue
+		}
+		args = append(args, a)
+	}
 	arg := ""
-	if len(os.Args) > 1 {
-		arg = os.Args[1]
+	if len(args) > 0 {
+		arg = args[0]
 	}
 
 	// Best-effort self-registration on every launch (HKCU, idempotent), so a
@@ -113,14 +127,14 @@ func main() {
 		fmt.Println("  Protocol handler removed.")
 		return
 	case strings.HasPrefix(arg, "openv-connector://"):
-		handleDeepLink(arg)
+		handleDeepLink(arg, insecure)
 		return
 	default:
 		start(nil)
 	}
 }
 
-func handleDeepLink(link string) {
+func handleDeepLink(link string, insecure bool) {
 	u, err := url.Parse(link)
 	if err != nil {
 		fail("invalid link: %v", err)
@@ -136,7 +150,7 @@ func handleDeepLink(link string) {
 		if code == "" || api == "" {
 			fail("pairing link is missing its code — create a fresh one from the OpenV Runners page")
 		}
-		cfg := pair(api, code)
+		cfg := pair(api, code, insecure)
 		start(cfg)
 	case "start":
 		start(nil)
@@ -146,7 +160,14 @@ func handleDeepLink(link string) {
 }
 
 // pair exchanges a one-time code for this member's personal runner key.
-func pair(apiURL, code string) *connectorConfig {
+func pair(apiURL, code string, insecure bool) *connectorConfig {
+	if pairingNeedsConfirmation(apiURL) {
+		if insecure {
+			fmt.Printf("  Warning: pairing with %s over cleartext http (--insecure given, continuing).\n", apiURL)
+		} else if !confirmInsecurePairing(apiURL, os.Stdin) {
+			fail("pairing cancelled — the link does not use HTTPS.\n  Use an https:// OpenV address, or re-run with --insecure to accept the risk.")
+		}
+	}
 	fmt.Printf("  Pairing with %s ...\n", apiURL)
 	body, _ := json.Marshal(map[string]string{"code": code})
 	resp, err := http.Post(strings.TrimRight(apiURL, "/")+"/api/v1/public/connector/pair", "application/json", bytes.NewReader(body))
@@ -178,9 +199,13 @@ func pair(apiURL, code string) *connectorConfig {
 	}
 	// Prefer the address the browser actually used when the server's idea
 	// of its public URL isn't reachable from here.
-	if cfg.APIURL == "" {
-		cfg.APIURL = apiURL
+	chosen, reason := resolveAPIURL(cfg.APIURL, apiURL, func(candidate string) bool {
+		return probeHealth(candidate, healthProbeTimeout)
+	})
+	if reason != "" {
+		fmt.Printf("  Note: %s (%s).\n", reason, chosen)
 	}
+	cfg.APIURL = chosen
 	if err := saveConfig(cfg); err != nil {
 		fail("could not save connector config: %v", err)
 	}
@@ -211,7 +236,12 @@ func start(cfg *connectorConfig) {
 	fmt.Println("  Close this window (or press Ctrl+C) to stop it.")
 	fmt.Println()
 
-	cmd := exec.Command(agentd, "--api", cfg.APIURL, "--worker-key", cfg.WorkerKey, "--mcp-binary", mcp)
+	// The worker key goes through the environment, not argv: command lines
+	// are visible to every process on the machine (ps, Task Manager), the
+	// environment of a child we spawn is not. agentd reads WORKER_API_KEY as
+	// the default for its --worker-key flag.
+	cmd := exec.Command(agentd, "--api", cfg.APIURL, "--mcp-binary", mcp)
+	cmd.Env = append(os.Environ(), "WORKER_API_KEY="+cfg.WorkerKey)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = os.Stdin

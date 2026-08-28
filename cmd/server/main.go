@@ -6,9 +6,12 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -86,6 +89,11 @@ func fatal(msg string, err error) {
 
 func main() {
 	initLogging()
+
+	// Root context: canceled on SIGINT/SIGTERM so background loops and the
+	// HTTP server can shut down gracefully.
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
 
 	// Database connection: Railway-style DATABASE_URL or individual vars.
 	var dsn string
@@ -335,7 +343,9 @@ func main() {
 			if err := decodePayload(payload, &req); err != nil {
 				return "", err
 			}
-			result, err := vvService.UpsertResult(runID, req, nil, "system")
+			// Applying an approved proposal: a human signed off on this
+			// result, so it is not stamped as agent-executed.
+			result, err := vvService.UpsertResult(runID, req, nil, "system", "")
 			if err != nil {
 				return "", err
 			}
@@ -361,17 +371,23 @@ func main() {
 	runService.AddSubscriber(hooks)
 	hooks.SubscribeBus(bus)
 
-	// Trigger matcher + scheduler + reaper.
+	// Trigger matcher + scheduler + reaper. The scheduler and reaper loops
+	// stop when the signal context is canceled.
 	automation.NewTriggerMatcher(automationRepo, runService, teamService).Start(bus)
-	scheduler.New(automationRepo, runService, teamService).Start(context.Background())
+	scheduler.New(automationRepo, runService, teamService).Start(ctx)
 	go func() {
 		ticker := time.NewTicker(30 * time.Second)
 		defer ticker.Stop()
-		for range ticker.C {
-			if ids, err := runService.FailStale(2 * time.Minute); err == nil && len(ids) > 0 {
-				slog.Warn("reaper failed stale runs", "count", len(ids))
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				if ids, err := runService.FailStale(2 * time.Minute); err == nil && len(ids) > 0 {
+					slog.Warn("reaper failed stale runs", "count", len(ids))
+				}
+				_ = userRepo.DeleteExpiredSessions(time.Now())
 			}
-			_ = userRepo.DeleteExpiredSessions(time.Now())
 		}
 	}()
 
@@ -459,9 +475,53 @@ func main() {
 		protected.ServeHTTP(w, r)
 	})
 
-	slog.Info("starting server", "port", port)
-	if err := http.ListenAndServe(":"+port, corsHandler); err != nil {
-		fatal("server exited", err)
+	// HTTP server. ReadHeaderTimeout defends against slowloris-style clients
+	// holding connections open while trickling headers; IdleTimeout reclaims
+	// idle keep-alive connections. ReadTimeout and WriteTimeout deliberately
+	// stay 0 (unlimited): the API serves long-lived SSE streams (e.g.
+	// /api/v1/agent-runs/{id}/stream, guided chat and interview streams)
+	// that hold a response open indefinitely, and a nonzero WriteTimeout
+	// is an absolute
+	// deadline that would sever every stream after it elapsed. Slow-client
+	// abuse on the read side is already bounded by ReadHeaderTimeout plus
+	// per-handler request parsing.
+	srv := &http.Server{
+		Addr:              ":" + port,
+		Handler:           corsHandler,
+		ReadHeaderTimeout: 10 * time.Second,
+		IdleTimeout:       120 * time.Second,
+		// Derive request contexts from the signal context so long-lived SSE
+		// handlers (which select on r.Context().Done()) exit promptly on
+		// shutdown instead of pinning the drain for its full timeout.
+		BaseContext: func(net.Listener) context.Context { return ctx },
+	}
+
+	errCh := make(chan error, 1)
+	go func() {
+		slog.Info("starting server", "port", port)
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			errCh <- err
+			return
+		}
+		errCh <- nil
+	}()
+
+	select {
+	case err := <-errCh:
+		if err != nil {
+			fatal("failed to start server", err)
+		}
+	case <-ctx.Done():
+		stop() // restore default signal behavior: a second Ctrl-C kills immediately
+		slog.Info("shutdown signal received; draining connections")
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		defer cancel()
+		if err := srv.Shutdown(shutdownCtx); err != nil {
+			slog.Warn("graceful shutdown incomplete", "error", err)
+			_ = srv.Close()
+		}
+		<-errCh // wait for ListenAndServe to return
+		slog.Info("server stopped")
 	}
 }
 

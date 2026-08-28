@@ -1,361 +1,139 @@
 # Quick Start Guide
 
-## Overview
-
-OpenV v0.1.0 (MVP) includes:
-- ✅ Full artifact CRUD (requirements, test cases, hazards, design items)
-- ✅ Traceability linking between artifacts
-- ✅ RESTful API with all endpoints
-- ✅ Interactive React UI with module view
-- ✅ Local PostgreSQL database
-- ✅ Docker Compose for one-command setup
-- ✅ Comprehensive documentation
+OpenV is a requirements and V&V platform with a built-in multi-agent suite:
+projects hold versioned artifacts (requirements, test cases, hazards, design
+items) with traceability links, and AI agents — running on **your own
+machine** through vendor CLIs — can draft, review, and interview for you.
 
 ## Prerequisites
 
-### Minimum Requirements
-- **Docker & Docker Compose** (or Go 1.21+, Node.js 20+, PostgreSQL 15+)
-- **4GB RAM**
-- **2GB Disk Space**
+- **Docker Desktop** (Docker + Docker Compose). That's it — no Go, Node, or
+  PostgreSQL needed on the host; everything builds and runs in containers.
+- For agent runs later: at least one vendor CLI on your machine
+  (Claude Code, Codex CLI, or Gemini CLI) with your own subscription login.
 
-### Recommended Setup
-- **Docker Desktop** (includes Docker & Docker Compose)
-- **VS Code** with Docker and REST Client extensions
-- **UUID Generator** (uuidgenerator.net)
-
-## Installation
-
-### Option 1: Docker Compose (Recommended - 1 command)
+## 1. Start the stack
 
 ```bash
-# Clone or navigate to the project
-cd openv
-
-# Start all services
-docker-compose up -d
-
-# Wait for services to start
-sleep 30
-
-# Verify services are running
-docker ps
+git clone https://github.com/desktopmachineshop/OpenV
+cd OpenV
+docker compose up -d        # or: make up
 ```
 
-**Services:**
-- **Frontend**: http://localhost:3000
-- **API**: http://localhost:8080
-- **Database**: localhost:5432
+- **App**: http://localhost:3000
+- **API**: http://localhost:8080 (health: `GET /health`)
+- **Postgres**: localhost:5432
 
-### Option 2: Local Development
+The API creates and migrates its schema automatically on first boot.
 
-#### Backend Setup
+## 2. Register your first user
+
+Open http://localhost:3000 and register with email + password.
+
+- The **first user registered becomes the platform admin**.
+- A **personal workspace** (organization) is created for you automatically,
+  seeded with default agents and a starter crew.
+- Optional: enable **Sign in with Google** by setting `GOOGLE_CLIENT_ID` and
+  `GOOGLE_CLIENT_SECRET` (e.g. in a `.env` file next to
+  `docker-compose.yml`); the authorized redirect URI is
+  `${PUBLIC_URL}/api/v1/auth/google/callback`.
+
+You can create additional **company workspaces** and invite members from the
+workspace switcher; each API request runs in your active workspace (the
+`X-Org-ID` header, handled by the UI).
+
+## 3. Create a project
+
+Click **New Project** (optionally from a template). You become the project's
+owner; teammates get access via project members or workspace people-teams.
+
+## 4. Run the guided wizard
+
+The fastest way to seed a project is the **guided requirements wizard**
+(Start guided setup on the project page):
+
+- Step through vision, users/personas, needs, requirements, NFRs, and
+  hazards; answers are saved per step.
+- A **copilot chat** sits beside the wizard — when a runner is online it
+  suggests personas, needs, and requirements as one-click "Add to wizard"
+  cards.
+- Finish with **Commit**: drafts become real, linked artifacts. You can
+  resume an in-progress session or start a "modify" session later without
+  losing artifact links.
+
+You can of course also create artifacts and traceability links by hand from
+the project views, record test runs, and watch the V&V coverage dashboards.
+
+## 5. Connect a personal runner (for AI agents)
+
+Agent runs execute on runners you control. The easiest setup is the **Agent
+Connector**:
+
+1. Launch any agent action in the UI (or open Settings → My Runner). If no
+   runner is online, OpenV prompts you to set one up.
+2. **Download** the connector bundle from the prompt (served at
+   `GET /api/v1/public/connector/download?os=windows|linux`). Operators must
+   build the bundles once with `make connector-dist` (they land in `./dist`,
+   which compose mounts into the API container).
+3. Unzip, run `openv-connector` once (it registers the `openv-connector://`
+   link handler), then click **Pair connector** in OpenV. The pairing code is
+   one-time and short-lived; the connector exchanges it for your personal
+   runner key and starts the runner in its console window.
+4. Sign your vendor CLIs in from **user settings → Agent sign-ins** (or run
+   `claude login` etc. in a terminal yourself).
+
+Your personal runner only claims runs **you** launched, using your own CLI
+subscription on your own machine. See `docs/agents.md` for the manual
+`agentd` setup, workspace worker keys, and the always-on hosted runner tier.
+
+## Using the API directly
+
+All non-auth endpoints require credentials — a browser session cookie, or a
+Bearer worker key / run token (see `docs/api-spec.md`). A quick session-based
+smoke test:
+
 ```bash
-# Navigate to project root
-cd openv
-
-# Download dependencies
-go mod download
-
-# Set environment variables (Linux/Mac)
-export DB_HOST=localhost
-export DB_PORT=5432
-export DB_USER=postgres
-export DB_PASSWORD=postgres
-export DB_NAME=openv
-export PORT=8080
-
-# Or on Windows PowerShell:
-$env:DB_HOST="localhost"
-$env:DB_PORT="5432"
-$env:DB_USER="postgres"
-$env:DB_PASSWORD="postgres"
-$env:DB_NAME="openv"
-$env:PORT="8080"
-
-# Start PostgreSQL (must be running separately)
-# Then run the server
-go run cmd/server/main.go
-```
-
-#### Frontend Setup
-```bash
-# In another terminal
-cd frontend
-
-# Install dependencies
-npm install
-
-# Start development server
-npm start
-
-# Opens http://localhost:3000 automatically
-```
-
-## First Steps
-
-### 1. Generate a Project ID
-Visit [uuidgenerator.net](https://uuidgenerator.net) and copy a UUID.
-
-### 2. Set Project in UI
-- Open http://localhost:3000
-- Paste the UUID in the "Project ID" field
-- Click "Set Project"
-
-### 3. Create Your First Artifact
-- Click "+ New Artifact"
-- Fill in the form:
-  - **Type**: "requirement"
-  - **Title**: "System shall respond within 100ms"
-  - **Description**: "All API responses must complete within 100 milliseconds"
-- Click "Create"
-
-### 4. Create a Test Case
-- Click "+ New Artifact"
-- **Type**: "test-case"
-- **Title**: "Test API response time"
-- **Description**: "Measure response time of API endpoints"
-- Click "Create"
-
-### 5. Create a Link
-- Select your requirement from the list
-- In the right panel, fill "Create Link"
-- **Link Type**: "verifies"
-- **Link To**: Select your test case
-- Click "Create Link"
-
-### 6. View Artifacts
-- Click on any artifact in the list to see full details
-- See all attributes and relationships
-- Edit or delete using the action buttons
-
-## Testing with curl
-
-### Create an Artifact
-```bash
-curl -X POST http://localhost:8080/api/v1/artifacts \
+# Register (first user = admin) and keep the session cookie
+curl -c cookies.txt -X POST http://localhost:8080/api/v1/auth/register \
   -H "Content-Type: application/json" \
-  -d '{
-    "project_id": "YOUR-PROJECT-UUID",
-    "type": "requirement",
-    "title": "System shall respond within 100ms",
-    "body": "All API responses must complete within 100 milliseconds",
-    "attributes": {"priority": "high"}
-  }'
-```
+  -d '{"email":"you@example.com","password":"a-strong-password","name":"You"}'
 
-### List Artifacts
-```bash
-curl -X GET "http://localhost:8080/api/v1/artifacts?project_id=YOUR-PROJECT-UUID"
-```
-
-### Get Specific Artifact
-```bash
-curl -X GET http://localhost:8080/api/v1/artifacts/ARTIFACT-ID
-```
-
-### Create a Link
-```bash
-curl -X POST http://localhost:8080/api/v1/links \
+# Create a project (server assigns the UUID)
+curl -b cookies.txt -X POST http://localhost:8080/api/v1/projects \
   -H "Content-Type: application/json" \
-  -d '{
-    "from_id": "TEST-CASE-ID",
-    "to_id": "REQUIREMENT-ID",
-    "type": "verifies",
-    "attributes": {}
-  }'
+  -d '{"name":"Demo project","description":"First project"}'
+
+# Create an artifact in it
+curl -b cookies.txt -X POST http://localhost:8080/api/v1/artifacts \
+  -H "Content-Type: application/json" \
+  -d '{"project_id":"<project-id-from-above>","type":"requirement",
+       "title":"System shall respond within 100ms","body":"..."}'
 ```
 
-### List Links
+## Stopping and resetting
+
 ```bash
-curl -X GET "http://localhost:8080/api/v1/links?project_id=YOUR-PROJECT-UUID"
-```
-
-## Stopping Services
-
-### Docker Compose
-```bash
-# Stop all containers
-docker-compose down
-
-# Stop and remove volumes (deletes database)
-docker-compose down -v
-```
-
-### Local Development
-```bash
-# Press Ctrl+C in each terminal
-# Or kill the processes
-kill $(lsof -t -i :8080)  # Backend
-kill $(lsof -t -i :3000)  # Frontend
+docker compose down        # stop
+docker compose down -v     # stop and DELETE all data (database, uploads)
 ```
 
 ## Troubleshooting
 
-### "Connection refused" on http://localhost:3000
-- **Cause**: Frontend not running
-- **Solution**: Run `cd frontend && npm start`
+- **Frontend can't reach the API** — check `docker compose ps`; the API waits
+  for Postgres's healthcheck, so give it ~30s on first boot. Logs:
+  `docker compose logs api`.
+- **"authentication required" from the API** — every non-`/auth`,
+  non-`/public` endpoint needs a session cookie or Bearer token; log in
+  first.
+- **Agent runs stay queued** — no runner is online. Open the connector (or
+  start `agentd`), and check Settings for provider status.
+- **Connector download says bundles aren't built** — run
+  `make connector-dist` on the host serving the API.
 
-### "Connection refused" when creating artifacts
-- **Cause**: API server not running
-- **Solution**: Run `go run cmd/server/main.go`
+## Where to go next
 
-### Database connection error
-- **Cause**: PostgreSQL not accessible
-- **Solution**: 
-  - Check PostgreSQL is running: `docker ps`
-  - Wait 30 seconds after `docker-compose up` for DB to initialize
-  - Test connection: `psql -h localhost -U postgres -d openv`
-
-### npm dependencies not found
-- **Cause**: node_modules not installed
-- **Solution**: 
-  ```bash
-  cd frontend
-  npm install
-  npm start
-  ```
-
-### Go module issues
-- **Cause**: go.mod/go.sum out of sync
-- **Solution**:
-  ```bash
-  go mod tidy
-  go mod download
-  ```
-
-## Next Steps
-
-### Learn the Architecture
-Read `/docs/architecture.md` for deep dive into system design.
-
-### Explore the API
-See `/docs/api-spec.md` for complete API reference.
-
-### Review Data Model
-Check `/docs/data-model.md` for database schema details.
-
-### Try Advanced Features (Future)
-- Graph-based visualization (coming in v0.2)
-- V&V coverage dashboards (coming in v0.2)
-- Baseline snapshots (coming in v0.3)
-- Plugin system (coming in v0.4)
-
-## File Structure Reference
-
-```
-openv/
-├── cmd/server/              # Backend entry point
-├── internal/
-│   ├── api/                 # HTTP handlers
-│   ├── domain/
-│   │   ├── artifacts/       # Artifact entities & service
-│   │   └── links/           # Link entities & service
-│   └── persistence/
-│       └── postgres/        # Database repositories
-├── frontend/
-│   ├── src/
-│   │   ├── components/      # React components
-│   │   ├── views/           # Page views
-│   │   ├── state/           # Zustand store
-│   │   └── api/             # API client
-│   └── package.json
-├── deploy/
-│   └── docker/              # Docker configs
-├── docs/                    # Documentation
-├── docker-compose.yml       # Local stack
-├── Dockerfile.api           # Backend Docker image
-└── README.md               # Main readme
-```
-
-## Development Workflow
-
-### Making Changes to Backend
-```bash
-# Edit Go files
-vim internal/domain/artifacts/artifact.go
-
-# Rebuild and run
-go run cmd/server/main.go
-```
-
-### Making Changes to Frontend
-```bash
-# Edit React files
-vim frontend/src/components/ArtifactEditor.tsx
-
-# React auto-reloads in dev mode
-# Check browser at http://localhost:3000
-```
-
-### Database Inspection
-```bash
-# Connect to database
-docker exec -it openv-postgres psql -U postgres -d openv
-
-# List tables
-\dt
-
-# Inspect schema
-\d artifacts
-\d links
-
-# Query data
-SELECT * FROM artifacts LIMIT 10;
-```
-
-## Performance Tips
-
-- The MVP is optimized for projects with <100k artifacts
-- Queries are indexed for common patterns
-- JSONB attributes support fast queries
-- For larger projects, consider Neo4j in v0.2+
-
-## Security Note
-
-⚠️ **This is MVP code for internal use.**
-
-- No authentication is enabled
-- No HTTPS/TLS enforcement
-- All CORS origins are allowed
-- Not suitable for public internet exposure
-
-For production use, implement:
-- OIDC authentication
-- RBAC (role-based access control)
-- HTTPS/TLS
-- Input validation and sanitization
-- Audit logging
-
-See roadmap for security features in v0.2+.
-
-## Getting Help
-
-- 📖 Read docs in `/docs` folder
-- 🔍 Check existing issues on GitHub
-- 💬 Ask in discussions
-- 🐛 Report bugs with full stack trace
-
-## Next Milestones
-
-### v0.2.0 (Next)
-- Graph visualization (Cytoscape integration)
-- Advanced search and filtering
-- V&V coverage dashboard
-- Pagination for large projects
-- Enhanced error messages
-
-### v0.3.0
-- Baseline management
-- Diff viewer
-- Bulk import/export
-- Custom attributes in UI
-
-### v0.4.0
-- Plugin system
-- OIDC authentication
-- Cloud deployment (Helm charts)
-- Advanced rules engine
-
----
-
-**Ready to manage your requirements? Start with Docker Compose now! 🚀**
+- `docs/architecture.md` — system design and the multi-agent topology
+- `docs/api-spec.md` — auth model and full route inventory
+- `docs/data-model.md` — database schema overview
+- `docs/agents.md` — runners, crews, automations, interviews
+- `docs/DEVELOPMENT.md` — Docker-based development workflow

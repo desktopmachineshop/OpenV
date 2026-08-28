@@ -35,6 +35,7 @@ func (h *Handler) registerSuiteRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/test-runs/{id}", h.DeleteTestRun).Methods("DELETE")
 	router.HandleFunc("/api/v1/test-runs/{id}/results", h.UpsertTestResult).Methods("POST")
 	router.HandleFunc("/api/v1/test-runs/{id}/results", h.ListTestResults).Methods("GET")
+	router.HandleFunc("/api/v1/test-runs/{id}/agent-run", h.LaunchTestRunAgent).Methods("POST")
 	router.HandleFunc("/api/v1/projects/{id}/vv/coverage", h.GetCoverage).Methods("GET")
 	router.HandleFunc("/api/v1/projects/{id}/vv/matrix", h.GetMatrix).Methods("GET")
 	router.HandleFunc("/api/v1/projects/{id}/vv/gaps", h.GetGaps).Methods("GET")
@@ -242,9 +243,19 @@ func (h *Handler) UpsertTestResult(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	result, err := h.vvService.UpsertResult(runID, req, CurrentUserID(r), Actor(r))
+	// An agent run recording a result is stamped with its run id, which also
+	// gates test cases flagged as human- or physically-verified.
+	agentRunID := ""
+	if run := CurrentRun(r); run != nil {
+		agentRunID = run.ID
+	}
+	result, err := h.vvService.UpsertResult(runID, req, CurrentUserID(r), Actor(r), agentRunID)
 	if err != nil {
-		writeJSONError(w, http.StatusBadRequest, err.Error())
+		status := http.StatusBadRequest
+		if errors.Is(err, vv.ErrNotAgentExecutable) {
+			status = http.StatusForbidden
+		}
+		writeJSONError(w, status, err.Error())
 		return
 	}
 	json.NewEncoder(w).Encode(result)
@@ -266,6 +277,128 @@ func (h *Handler) ListTestResults(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	json.NewEncoder(w).Encode(results)
+}
+
+// LaunchTestRunAgent starts an agent run that executes a test run's
+// agent-executable test cases and records their results. Test cases flagged
+// manual or physical are never handed to the agent — they stay with people,
+// and are reported back as skipped so the UI can show what still needs doing.
+func (h *Handler) LaunchTestRunAgent(w http.ResponseWriter, r *http.Request) {
+	runID := mux.Vars(r)["id"]
+	testRun, err := h.vvService.GetRun(runID)
+	if err != nil {
+		respondError(w, r, http.StatusNotFound, "test run not found", err)
+		return
+	}
+	if !h.requireProjectRole(w, r, testRun.ProjectID, members.RoleEditor) {
+		return
+	}
+	if testRun.Status != vv.RunStatusInProgress {
+		writeJSONError(w, http.StatusBadRequest, "this test run is "+testRun.Status+"; only in-progress runs accept new results")
+		return
+	}
+
+	var req struct {
+		AgentSlug   string   `json:"agent_slug"`
+		TestCaseIDs []string `json:"test_case_ids"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if strings.TrimSpace(req.AgentSlug) == "" {
+		writeJSONError(w, http.StatusBadRequest, "agent_slug is required")
+		return
+	}
+
+	orgID := ActiveOrg(r)
+	if project, err := h.projectService.GetProject(testRun.ProjectID); err == nil && project != nil && project.OrgID != "" {
+		orgID = project.OrgID
+	}
+	agent, err := h.agentService.GetBySlug(orgID, req.AgentSlug)
+	if err != nil || agent == nil {
+		writeJSONError(w, http.StatusNotFound, "agent not found")
+		return
+	}
+
+	runnable, skipped, err := h.vvService.AgentExecutableCases(testRun.ProjectID, req.TestCaseIDs)
+	if err != nil {
+		respondInternal(w, r, "failed to select agent-executable test cases", err)
+		return
+	}
+	if len(runnable) == 0 {
+		msg := "no agent-executable test cases in this run"
+		if len(skipped) > 0 {
+			msg += fmt.Sprintf(" — all %d selected case(s) are flagged as human- or physically-verified", len(skipped))
+		}
+		writeJSONError(w, http.StatusBadRequest, msg)
+		return
+	}
+
+	agentRun, _, err := h.runService.Launch(agentruns.LaunchRequest{
+		OrgID:      orgID,
+		AgentID:    agent.ID,
+		ProjectID:  &testRun.ProjectID,
+		Prompt:     testRunAgentPrompt(testRun, runnable, skipped),
+		LaunchedBy: CurrentUserID(r),
+	})
+	if err != nil {
+		writeJSONError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	skippedOut := make([]map[string]string, 0, len(skipped))
+	for _, tc := range skipped {
+		skippedOut = append(skippedOut, map[string]string{
+			"id":               tc.ID,
+			"title":            tc.Title,
+			"execution_method": vv.ExecutionMethod(tc.Attributes),
+		})
+	}
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"run":       agentRun,
+		"executing": len(runnable),
+		"skipped":   skippedOut,
+	})
+}
+
+// testRunAgentPrompt builds the instruction an agent receives to execute a
+// test run. It names the exact cases to execute so the agent neither invents
+// work nor wanders into cases reserved for a human.
+func testRunAgentPrompt(testRun *vv.TestRun, runnable, skipped []*artifacts.Artifact) string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "Execute the test cases below for the OpenV test run %q and record a result for each one.\n\n", testRun.Name)
+	fmt.Fprintf(&b, "project_id: %s\ntest run id: %s\n\n", testRun.ProjectID, testRun.ID)
+
+	b.WriteString("Test cases to execute:\n")
+	for _, tc := range runnable {
+		fmt.Fprintf(&b, "- %s (test case id: %s)\n", tc.Title, tc.ID)
+	}
+
+	b.WriteString("\nHow to proceed:\n")
+	b.WriteString("1. Read each test case with get_artifact to get its steps and expected results.\n")
+	b.WriteString("2. Carry out the test as written, using the project's repository and tooling where relevant.\n")
+	b.WriteString("3. Record the outcome with record_test_result, passing the run id above, the test case id, ")
+	b.WriteString("and a status of \"pass\", \"fail\", or \"blocked\".\n")
+	b.WriteString("4. In the notes, state exactly what you did and what you observed — the command you ran, ")
+	b.WriteString("the output, or the reason it could not be run. This is verification evidence: a reviewer must be ")
+	b.WriteString("able to judge your result without rerunning it.\n\n")
+
+	b.WriteString("Rules:\n")
+	b.WriteString("- Only report \"pass\" for behaviour you actually observed. If you could not execute a case ")
+	b.WriteString("(missing environment, unclear steps, needs hardware), record it as \"blocked\" and explain why.\n")
+	b.WriteString("- Never guess an outcome, and never edit a test case to make it pass.\n")
+	b.WriteString("- Record a result for every test case listed above, and for no others.\n")
+
+	if len(skipped) > 0 {
+		fmt.Fprintf(&b, "\n%d further test case(s) in this run are flagged as human- or physically-verified and are ", len(skipped))
+		b.WriteString("deliberately excluded — do not attempt them or record results for them:\n")
+		for _, tc := range skipped {
+			fmt.Fprintf(&b, "- %s (%s)\n", tc.Title, vv.ExecutionMethod(tc.Attributes))
+		}
+	}
+	return b.String()
 }
 
 func (h *Handler) vvReportData(w http.ResponseWriter, r *http.Request) (*exports.ProjectExport, map[string]*vv.TestResult, bool) {
@@ -1168,12 +1301,18 @@ func respondInviteError(w http.ResponseWriter, r *http.Request, err error) {
 }
 
 func (h *Handler) PublicInterviewIntro(w http.ResponseWriter, r *http.Request) {
+	if !h.allowInterviewRead(w, r) {
+		return
+	}
 	interview, invite, err := h.interviewService.ResolveInviteToken(mux.Vars(r)["token"])
 	if err != nil {
 		respondInviteError(w, r, err)
 		return
 	}
-	session, _ := h.interviewService.StartOrResumeSession(invite.ID, interview.ID, "")
+	// Read-only: a page view must not write. A first visit simply has no
+	// session yet (the UI shows the name prompt); the session is created by
+	// the first message (or the stream, which needs one for its channel).
+	session, _ := h.interviewService.FindActiveSession(invite.ID)
 	var transcript []*interviews.Message
 	if session != nil {
 		transcript, _ = h.interviewService.GetTranscript(session.ID)
@@ -1203,6 +1342,14 @@ func (h *Handler) PublicInterviewMessage(w http.ResponseWriter, r *http.Request)
 	}
 	if strings.TrimSpace(req.Content) == "" {
 		writeJSONError(w, http.StatusBadRequest, "message content is required")
+		return
+	}
+	// Every message enqueues a priority LLM run, so throttle per invite:
+	// a leaked link cannot rack up unbounded provider cost.
+	if ok, retryAfter := h.interviewMsgLimiter.allow(invite.ID); !ok {
+		writeRateLimited(w,
+			"You're sending messages a little too quickly. Please wait a moment and try again.",
+			retryAfter)
 		return
 	}
 	session, err := h.interviewService.StartOrResumeSession(invite.ID, interview.ID, req.ParticipantName)
@@ -1293,13 +1440,31 @@ func (h *Handler) launchInterviewTurn(interview *interviews.Interview, session *
 	return err
 }
 
+// allowInterviewRead applies the coarse per-IP bucket shared by the
+// unauthenticated interview GETs (intro + stream). Returns false after
+// writing the 429 when the caller is over budget.
+func (h *Handler) allowInterviewRead(w http.ResponseWriter, r *http.Request) bool {
+	if ok, retryAfter := h.interviewIPLimiter.allow(clientIP(r)); !ok {
+		writeRateLimited(w,
+			"Too many requests from your network. Please wait a moment and reload the page.",
+			retryAfter)
+		return false
+	}
+	return true
+}
+
 // PublicInterviewStream is the participant's SSE channel.
 func (h *Handler) PublicInterviewStream(w http.ResponseWriter, r *http.Request) {
+	if !h.allowInterviewRead(w, r) {
+		return
+	}
 	interview, invite, err := h.interviewService.ResolveInviteToken(mux.Vars(r)["token"])
 	if err != nil {
 		respondInviteError(w, r, err)
 		return
 	}
+	// The SSE channel is keyed by session, so the stream genuinely needs
+	// one; StartOrResumeSession reuses the active session when it exists.
 	session, err := h.interviewService.StartOrResumeSession(invite.ID, interview.ID, "")
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
@@ -1324,9 +1489,15 @@ func (h *Handler) PublicInterviewFinish(w http.ResponseWriter, r *http.Request) 
 		respondInviteError(w, r, err)
 		return
 	}
-	session, err := h.interviewService.StartOrResumeSession(invite.ID, interview.ID, "")
+	// Nothing to finish when no session was ever started — don't create an
+	// empty session just to complete it.
+	session, err := h.interviewService.FindActiveSession(invite.ID)
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	if session == nil {
+		w.WriteHeader(http.StatusNoContent)
 		return
 	}
 	if err := h.interviewService.CompleteSession(session.ID, ""); err != nil {
