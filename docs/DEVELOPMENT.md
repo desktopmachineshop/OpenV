@@ -93,9 +93,10 @@ See `docs/agents.md` for how the runners are used.
 make test   # go test ./... inside golang:1.25
 ```
 
-There is currently **no GitHub Actions workflow** in the repository (no
-`.github/workflows/`); run `make test` (and a `go build ./...`) locally
-before pushing.
+CI runs on GitHub Actions (`.github/workflows/ci.yml`): Go vet/test scoped
+to `./cmd/... ./internal/...` with a Postgres service (`OPENV_TEST_DATABASE_URL`
+enables the integration tests), a frontend `npm ci` + `tsc` + build, and Docker
+image builds. Still run `make test` locally before pushing.
 
 ## Database inspection
 
