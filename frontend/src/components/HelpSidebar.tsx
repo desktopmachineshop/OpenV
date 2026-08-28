@@ -1,5 +1,41 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import './HelpSidebar.css';
+
+// Quick links into the in-app manual. Slugs must match
+// MANUAL_CHAPTERS in src/manual/index.ts (deep-linked as /manual/<slug>).
+const MANUAL_QUICK_LINKS: { slug: string; title: string; blurb: string }[] = [
+  {
+    slug: 'artifacts',
+    title: 'Requirements & artifacts',
+    blurb: 'Artifact types (user needs, requirements, test cases, hazards, design items), versioning, and editing.',
+  },
+  {
+    slug: 'links',
+    title: 'Traceability links',
+    blurb: 'Every link type — verifies, validates, satisfies, mitigates, derives-from, decomposes-to, impacts, relates-to — and the direction rules between artifact types.',
+  },
+  {
+    slug: 'guided-wizard',
+    title: 'Guided definition & copilot',
+    blurb: 'The step-by-step wizard for building out a project definition with the copilot chat.',
+  },
+  {
+    slug: 'vv',
+    title: 'V&V & test runs',
+    blurb: 'Coverage rollups, gap reports, baselines, and running test campaigns.',
+  },
+  {
+    slug: 'board',
+    title: 'Kanban board',
+    blurb: 'Tracking work items and agent-driven cards.',
+  },
+  {
+    slug: 'troubleshooting',
+    title: 'Troubleshooting & FAQ',
+    blurb: 'Common errors and how to resolve them.',
+  },
+];
 
 export const HelpSidebar: React.FC = () => {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -16,68 +52,39 @@ export const HelpSidebar: React.FC = () => {
 
       {isExpanded && (
         <div className="help-content">
-          <h3>Help & Wiki</h3>
+          <h3>Help</h3>
 
           <section className="help-section">
-            <h4>Artifact Types</h4>
-            <div className="help-item">
-              <strong>Requirement</strong>
-              <p>A formal specification or specification of what the system must do. Requirements define functional and non-functional needs.</p>
-            </div>
-            <div className="help-item">
-              <strong>Test Case</strong>
-              <p>A set of conditions or variables under which a tester will determine if a system works as intended. Maps to requirements to verify they are met.</p>
-            </div>
-            <div className="help-item">
-              <strong>Hazard</strong>
-              <p>A potential source of harm or danger. Used in safety-critical systems to identify and mitigate risks.</p>
-            </div>
-            <div className="help-item">
-              <strong>Design Item</strong>
-              <p>A design decision, architecture component, or implementation detail that realizes one or more requirements.</p>
-            </div>
-            <div className="help-item">
-              <strong>Other</strong>
-              <p>A catch-all category for artifacts that don't fit the standard types, such as assumptions, constraints, or notes.</p>
-            </div>
+            <p className="help-intro">
+              OpenV organizes a project as typed <strong>artifacts</strong> (user
+              needs, requirements, test cases, hazards, design items) connected
+              by directional <strong>traceability links</strong> — for example a
+              test case <em>verifies</em> a requirement, a requirement{' '}
+              <em>derives from</em> a user need, and a test case{' '}
+              <em>validates</em> that need. The full reference for every type
+              and rule lives in the in-app manual.
+            </p>
+            <Link to="/manual" className="help-manual-link">
+              Open the full manual →
+            </Link>
           </section>
 
           <section className="help-section">
-            <h4>Link Types</h4>
-            <div className="help-item">
-              <strong>verifies</strong>
-              <p>A test case or verification item that proves a requirement is met. Direction: test → requirement.</p>
-            </div>
-            <div className="help-item">
-              <strong>satisfies</strong>
-              <p>A design item or implementation that fulfills a requirement. Direction: design → requirement.</p>
-            </div>
-            <div className="help-item">
-              <strong>mitigates</strong>
-              <p>A safety feature or design element that reduces or eliminates a hazard. Direction: design → hazard.</p>
-            </div>
-            <div className="help-item">
-              <strong>relates-to</strong>
-              <p>A general relationship between artifacts that don't fit other categories. Used for loose associations.</p>
-            </div>
-            <div className="help-item">
-              <strong>decomposes-to</strong>
-              <p>A requirement that breaks down into more specific sub-requirements. Direction: parent → child.</p>
-            </div>
-            <div className="help-item">
-              <strong>impacts</strong>
-              <p>A change to one artifact that affects another. Used to track dependencies and change propagation.</p>
-            </div>
+            <h4>Manual chapters</h4>
+            {MANUAL_QUICK_LINKS.map((entry) => (
+              <div className="help-item" key={entry.slug}>
+                <Link to={`/manual/${entry.slug}`}>{entry.title}</Link>
+                <p>{entry.blurb}</p>
+              </div>
+            ))}
           </section>
 
           <section className="help-section">
             <h4>Tips</h4>
             <ul>
-              <li>Click "↓ Links From This Artifact" to see what this artifact traces to</li>
-              <li>Click "↑ Links To This Artifact" to see what traces back to this artifact</li>
-              <li>Use the Switch Project button to manage multiple projects</li>
-              <li>Create links to establish traceability between artifacts</li>
-              <li>Links are grouped by type for easier navigation</li>
+              <li>Links on an artifact are grouped by type, split into outgoing ("Links From") and incoming ("Links To").</li>
+              <li>Use the Requirements view's link panel to create traceability; direction rules are enforced per link type.</li>
+              <li>Manual chapters are deep-linkable — share a /manual/&lt;chapter&gt; URL with teammates.</li>
             </ul>
           </section>
         </div>

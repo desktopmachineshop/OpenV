@@ -229,7 +229,6 @@ export const ProjectList: React.FC = () => {
 
   const templatesOnly = templates.filter((t) => t.source === 'database');
   const exampleTemplates = templates.filter((t) => t.source === 'file');
-  const openvExampleTemplate = templates.find((t) => t.key === 'example-openv-platform');
 
   return (
     <>

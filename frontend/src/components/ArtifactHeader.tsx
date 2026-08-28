@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Artifact, artifactAPI } from '../api/client';
 
 interface ArtifactHeaderProps {
@@ -36,6 +36,13 @@ export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
     onPreviewChange?.(localPreviewVersion);
   }, [localPreviewVersion, onPreviewChange]);
 
+  // The effect below should only re-run when the artifact id/version change,
+  // but its fallback needs the full artifact object. Read it through a ref so
+  // the dep array can stay [artifact.id, artifact.version] without capturing a
+  // stale object.
+  const artifactRef = useRef(artifact);
+  artifactRef.current = artifact;
+
   // Load versions when artifact changes
   useEffect(() => {
     const loadVersions = async () => {
@@ -43,12 +50,11 @@ export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
         setLoadingVersions(true);
         const response = await artifactAPI.getVersions(artifact.id);
         const loadedVersions = response.data || [];
-        console.log('Loaded versions:', loadedVersions);
-        setVersions(loadedVersions.length > 0 ? loadedVersions : [artifact]);
+        setVersions(loadedVersions.length > 0 ? loadedVersions : [artifactRef.current]);
       } catch (error) {
         console.error('Failed to load artifact versions', error);
         // If API fails, create a list with just the current artifact so at least History button shows
-        setVersions([artifact]);
+        setVersions([artifactRef.current]);
       } finally {
         setLoadingVersions(false);
       }

@@ -58,13 +58,19 @@ export const WorkItemDrawer: React.FC<WorkItemDrawerProps> = ({
   const descriptionDirtyRef = useRef(descriptionDirty);
   descriptionDirtyRef.current = descriptionDirty;
 
+  // Same stale-closure guard for the title: while the user is editing it, a
+  // reload (e.g. after adding a comment) must not clobber their in-progress
+  // edit with the server value.
+  const editingTitleRef = useRef(editingTitle);
+  editingTitleRef.current = editingTitle;
+
   const load = useCallback(() => {
     workItemsAPI
       .get(workItemId)
       .then((res) => {
         setItem(res.data.item);
         setActivity(res.data.activity || []);
-        setTitle(res.data.item.title);
+        if (!editingTitleRef.current) setTitle(res.data.item.title);
         if (!descriptionDirtyRef.current) setDescription(res.data.item.description || '');
         setError('');
       })

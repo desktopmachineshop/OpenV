@@ -4,6 +4,11 @@ import { ExpandableText } from '../ExpandableText';
 
 const TERMINAL_STATUSES = ['succeeded', 'failed', 'timed_out', 'cancelled'];
 
+// After an SSE drop we retry the stream this many times (with exponential
+// backoff) before settling on the 3s polling fallback for good.
+const MAX_SSE_RECONNECT_ATTEMPTS = 3;
+const SSE_RECONNECT_BASE_DELAY_MS = 1000;
+
 export const runStatusColor = (status: string): string => {
   switch (status) {
     case 'queued':
@@ -161,48 +166,74 @@ export const RunDetailPanel: React.FC<RunDetailPanelProps> = ({ runId, onSelectR
       pollTimer = window.setInterval(poll, 3000);
     };
 
-    try {
-      es = new EventSource(agentRunsAPI.streamUrl(runId), { withCredentials: true });
-      es.addEventListener('log', (evt: MessageEvent) => {
-        try {
-          const entry: RunLogEntry = JSON.parse(evt.data);
-          appendLogs([entry]);
-        } catch {
-          // ignore malformed events
-        }
-      });
-      es.addEventListener('status', (evt: MessageEvent) => {
-        let status = '';
-        try {
-          const data = JSON.parse(evt.data);
-          status = typeof data === 'string' ? data : data.status || '';
-          setRun((prev) => (prev ? { ...prev, ...((typeof data === 'object' && data) || {}), status } : prev));
-        } catch {
-          status = evt.data;
-          setRun((prev) => (prev ? { ...prev, status } : prev));
-        }
-        statusRef.current = status;
-        if (TERMINAL_STATUSES.includes(status)) {
+    let reconnectAttempts = 0;
+    let reconnectTimer: number | null = null;
+
+    const connectStream = () => {
+      if (closed) return;
+      try {
+        // Resume from the last seq we saw so nothing is lost across drops.
+        es = new EventSource(agentRunsAPI.streamUrl(runId, lastSeqRef.current), {
+          withCredentials: true,
+        });
+        es.addEventListener('log', (evt: MessageEvent) => {
+          // A live event proves the stream is healthy again — reset the budget
+          // so the next drop gets a fresh set of reconnect attempts.
+          reconnectAttempts = 0;
+          try {
+            const entry: RunLogEntry = JSON.parse(evt.data);
+            appendLogs([entry]);
+          } catch {
+            // ignore malformed events
+          }
+        });
+        es.addEventListener('status', (evt: MessageEvent) => {
+          reconnectAttempts = 0;
+          let status = '';
+          try {
+            const data = JSON.parse(evt.data);
+            status = typeof data === 'string' ? data : data.status || '';
+            setRun((prev) => (prev ? { ...prev, ...((typeof data === 'object' && data) || {}), status } : prev));
+          } catch {
+            status = evt.data;
+            setRun((prev) => (prev ? { ...prev, status } : prev));
+          }
+          statusRef.current = status;
+          if (TERMINAL_STATUSES.includes(status)) {
+            es?.close();
+            // Refresh once for final text / tokens.
+            loadRun();
+          }
+        });
+        es.onerror = () => {
           es?.close();
-          // Refresh once for final text / tokens.
-          loadRun();
-        }
-      });
-      es.onerror = () => {
-        if (!TERMINAL_STATUSES.includes(statusRef.current)) {
-          es?.close();
-          startPolling();
-        } else {
-          es?.close();
-        }
-      };
-    } catch {
-      startPolling();
-    }
+          es = null;
+          if (closed || TERMINAL_STATUSES.includes(statusRef.current)) return;
+          if (reconnectAttempts < MAX_SSE_RECONNECT_ATTEMPTS) {
+            const delay = SSE_RECONNECT_BASE_DELAY_MS * 2 ** reconnectAttempts;
+            reconnectAttempts += 1;
+            // Catch up on anything missed while disconnected, then retry SSE.
+            agentRunsAPI
+              .logs(runId, lastSeqRef.current)
+              .then((res) => appendLogs(res.data || []))
+              .catch(() => undefined);
+            reconnectTimer = window.setTimeout(connectStream, delay);
+          } else {
+            // Reconnect budget exhausted — settle on polling.
+            startPolling();
+          }
+        };
+      } catch {
+        startPolling();
+      }
+    };
+
+    connectStream();
 
     return () => {
       closed = true;
       es?.close();
+      if (reconnectTimer !== null) window.clearTimeout(reconnectTimer);
       if (pollTimer !== null) window.clearInterval(pollTimer);
     };
   }, [runId, loadRun]);
