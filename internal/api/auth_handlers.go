@@ -3,7 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -59,12 +59,12 @@ func (h *Handler) provisionPersonalWorkspace(userID, displayName string) {
 	}
 	org, created, err := h.orgService.EnsurePersonalOrg(userID, displayName)
 	if err != nil {
-		fmt.Printf("Warning: failed to provision personal workspace: %v\n", err)
+		slog.Warn("failed to provision personal workspace", slog.String("user_id", userID), slog.Any("error", err))
 		return
 	}
 	if created && h.orgSeeder != nil {
 		if err := h.orgSeeder(org.ID); err != nil {
-			fmt.Printf("Warning: failed to seed personal workspace: %v\n", err)
+			slog.Warn("failed to seed personal workspace", slog.String("org_id", org.ID), slog.Any("error", err))
 		}
 	}
 }
@@ -108,18 +108,18 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		Name     string `json:"name"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 	user, err := h.userService.Register(req.Email, req.Password, req.Name)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	h.provisionPersonalWorkspace(user.ID, user.Name)
 	_, token, err := h.userService.Login(req.Email, req.Password)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to sign in after registration", err)
 		return
 	}
 	h.setSessionCookie(w, token)
@@ -133,12 +133,12 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		Password string `json:"password"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 	user, token, err := h.userService.Login(req.Email, req.Password)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
+		writeJSONError(w, http.StatusUnauthorized, err.Error())
 		return
 	}
 	h.setSessionCookie(w, token)
@@ -158,12 +158,12 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie(SessionCookieName)
 	if err != nil || cookie.Value == "" {
-		http.Error(w, "not authenticated", http.StatusUnauthorized)
+		writeJSONError(w, http.StatusUnauthorized, "not authenticated")
 		return
 	}
 	user, err := h.userService.GetBySessionToken(cookie.Value)
 	if err != nil || user == nil {
-		http.Error(w, "not authenticated", http.StatusUnauthorized)
+		writeJSONError(w, http.StatusUnauthorized, "not authenticated")
 		return
 	}
 	json.NewEncoder(w).Encode(user)
@@ -172,12 +172,12 @@ func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
 // GoogleLogin redirects to Google's consent screen.
 func (h *Handler) GoogleLogin(w http.ResponseWriter, r *http.Request) {
 	if h.googleOAuth == nil || h.googleOAuth.ClientID == "" {
-		http.Error(w, "google sign-in is not configured", http.StatusNotFound)
+		writeJSONError(w, http.StatusNotFound, "google sign-in is not configured")
 		return
 	}
 	state, err := users.NewToken()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to start google sign-in", err)
 		return
 	}
 	http.SetCookie(w, &http.Cookie{
@@ -195,17 +195,17 @@ func (h *Handler) GoogleLogin(w http.ResponseWriter, r *http.Request) {
 // GoogleCallback completes the OIDC code flow.
 func (h *Handler) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 	if h.googleOAuth == nil || h.googleOAuth.ClientID == "" {
-		http.Error(w, "google sign-in is not configured", http.StatusNotFound)
+		writeJSONError(w, http.StatusNotFound, "google sign-in is not configured")
 		return
 	}
 	stateCookie, err := r.Cookie("openv_oauth_state")
 	if err != nil || stateCookie.Value == "" || stateCookie.Value != r.URL.Query().Get("state") {
-		http.Error(w, "invalid oauth state", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "invalid oauth state")
 		return
 	}
 	code := r.URL.Query().Get("code")
 	if code == "" {
-		http.Error(w, "missing authorization code", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "missing authorization code")
 		return
 	}
 
@@ -214,14 +214,14 @@ func (h *Handler) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 	conf := h.googleOAuth.oauthConfig()
 	oauthToken, err := conf.Exchange(ctx, code)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("token exchange failed: %v", err), http.StatusBadGateway)
+		respondError(w, r, http.StatusBadGateway, "google token exchange failed", err)
 		return
 	}
 
 	client := conf.Client(ctx, oauthToken)
 	resp, err := client.Get("https://www.googleapis.com/oauth2/v3/userinfo")
 	if err != nil {
-		http.Error(w, fmt.Sprintf("userinfo fetch failed: %v", err), http.StatusBadGateway)
+		respondError(w, r, http.StatusBadGateway, "google userinfo fetch failed", err)
 		return
 	}
 	defer resp.Body.Close()
@@ -233,17 +233,17 @@ func (h *Handler) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 		Picture       string `json:"picture"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&info); err != nil {
-		http.Error(w, "invalid userinfo response", http.StatusBadGateway)
+		writeJSONError(w, http.StatusBadGateway, "invalid userinfo response")
 		return
 	}
 	if info.Email == "" || !info.EmailVerified {
-		http.Error(w, "google account email is missing or unverified", http.StatusForbidden)
+		writeJSONError(w, http.StatusForbidden, "google account email is missing or unverified")
 		return
 	}
 
 	googleUser, token, err := h.userService.LoginWithGoogle(info.Email, info.Name, info.Picture)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to sign in with google", err)
 		return
 	}
 	h.provisionPersonalWorkspace(googleUser.ID, googleUser.Name)
@@ -260,14 +260,14 @@ func (h *Handler) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 // the global user directory is never exposed.
 func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 	if CurrentUser(r) == nil {
-		http.Error(w, "authentication required", http.StatusUnauthorized)
+		writeJSONError(w, http.StatusUnauthorized, "authentication required")
 		return
 	}
 	out := []map[string]string{}
 	if orgID := ActiveOrg(r); orgID != "" {
 		list, err := h.orgService.ListMembers(orgID)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			respondInternal(w, r, "failed to list workspace members", err)
 			return
 		}
 		for _, m := range list {
@@ -290,7 +290,7 @@ func (h *Handler) ListProjectMembers(w http.ResponseWriter, r *http.Request) {
 	}
 	list, err := h.memberService.ListMembers(projectID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to list project members", err)
 		return
 	}
 	json.NewEncoder(w).Encode(list)
@@ -307,20 +307,20 @@ func (h *Handler) AddProjectMember(w http.ResponseWriter, r *http.Request) {
 		Role  string `json:"role"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 	user, err := h.userService.FindByEmail(req.Email)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to look up user", err)
 		return
 	}
 	if user == nil {
-		http.Error(w, "no user with that email — they must sign up first", http.StatusNotFound)
+		writeJSONError(w, http.StatusNotFound, "no user with that email — they must sign up first")
 		return
 	}
 	if err := h.memberService.AddMember(projectID, user.ID, req.Role); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	w.WriteHeader(http.StatusCreated)
@@ -337,11 +337,11 @@ func (h *Handler) UpdateProjectMember(w http.ResponseWriter, r *http.Request) {
 		Role string `json:"role"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 	if err := h.memberService.SetRole(projectID, vars["userId"], req.Role); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -355,7 +355,7 @@ func (h *Handler) RemoveProjectMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.memberService.RemoveMember(projectID, vars["userId"]); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to remove member", err)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)

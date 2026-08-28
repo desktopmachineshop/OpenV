@@ -5,9 +5,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
+	"net"
 	"net/http"
 	"os"
+	"os/signal"
+	"strings"
+	"syscall"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -56,14 +60,48 @@ func envOr(key, fallback string) string {
 	return fallback
 }
 
+// initLogging installs the process-wide slog default: a text handler on
+// stderr with the level taken from OPENV_LOG_LEVEL (debug|info|warn|error,
+// default info).
+func initLogging() {
+	level := slog.LevelInfo
+	switch strings.ToLower(strings.TrimSpace(os.Getenv("OPENV_LOG_LEVEL"))) {
+	case "debug":
+		level = slog.LevelDebug
+	case "warn", "warning":
+		level = slog.LevelWarn
+	case "error":
+		level = slog.LevelError
+	case "", "info":
+		// default
+	default:
+		// Unknown value: keep info, but say so once.
+		defer slog.Warn("unrecognized OPENV_LOG_LEVEL, using info", "value", os.Getenv("OPENV_LOG_LEVEL"))
+	}
+	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: level})))
+}
+
+// fatal logs a boot-blocking error and exits.
+func fatal(msg string, err error) {
+	slog.Error(msg, "error", err)
+	os.Exit(1)
+}
+
 func main() {
+	initLogging()
+
+	// Root context: canceled on SIGINT/SIGTERM so background loops and the
+	// HTTP server can shut down gracefully.
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
 	// Database connection: Railway-style DATABASE_URL or individual vars.
 	var dsn string
 	if databaseURL := os.Getenv("DATABASE_URL"); databaseURL != "" {
-		log.Println("Using DATABASE_URL (Railway.app mode)")
+		slog.Info("using DATABASE_URL (Railway.app mode)")
 		dsn = databaseURL
 	} else {
-		log.Println("Using individual environment variables (local development mode)")
+		slog.Info("using individual environment variables (local development mode)")
 		dsn = fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
 			envOr("DB_HOST", "localhost"), envOr("DB_PORT", "5432"), envOr("DB_USER", "postgres"),
 			envOr("DB_PASSWORD", "postgres"), envOr("DB_NAME", "openv"))
@@ -78,20 +116,20 @@ func main() {
 	workerKey := os.Getenv("WORKER_API_KEY")
 
 	if err := os.MkdirAll(uploadsDir, 0o755); err != nil {
-		log.Fatalf("Failed to create uploads directory: %v", err)
+		fatal("failed to create uploads directory", err)
 	}
 
 	// Connect and migrate.
 	db, err := postgres.Connect(dsn)
 	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
+		fatal("failed to connect to database", err)
 	}
 	defer db.Close()
 	if err := postgres.InitSchema(db); err != nil {
-		log.Fatalf("Failed to initialize schema: %v", err)
+		fatal("failed to initialize schema", err)
 	}
 	if err := postgres.BackfillOrgs(db, agentsDir); err != nil {
-		log.Fatalf("Failed to backfill organizations: %v", err)
+		fatal("failed to backfill organizations", err)
 	}
 
 	// Repositories.
@@ -144,7 +182,7 @@ func main() {
 	reportService := reports.NewService(exportService, baselineService)
 	templateService := templates.NewService(templateRepo, exportService)
 	if err := templateService.SeedDefaults(); err != nil {
-		log.Printf("Failed to seed templates: %v", err)
+		slog.Warn("failed to seed templates", "error", err)
 	}
 
 	// Suite services.
@@ -162,12 +200,12 @@ func main() {
 	provisioner := hosting.NewProvisioner()
 	if provisioner.Enabled() {
 		if hostedList, err := hostedWorkerService.ListAll(); err != nil {
-			log.Printf("Failed to list hosted workers for reconcile: %v", err)
+			slog.Warn("failed to list hosted workers for reconcile", "error", err)
 		} else {
 			for _, hw := range hostedList {
 				state, err := provisioner.ContainerState(hw.ContainerName)
 				if err != nil {
-					log.Printf("Failed to inspect hosted runner %s: %v", hw.ContainerName, err)
+					slog.Warn("failed to inspect hosted runner", "container", hw.ContainerName, "error", err)
 					continue
 				}
 				status, detail := hw.Status, hw.Detail
@@ -181,7 +219,7 @@ func main() {
 				}
 				if status != hw.Status || detail != hw.Detail {
 					if _, err := hostedWorkerService.SetStatus(hw.ID, status, detail); err != nil {
-						log.Printf("Failed to reconcile hosted runner %s: %v", hw.ContainerName, err)
+						slog.Warn("failed to reconcile hosted runner", "container", hw.ContainerName, "error", err)
 					}
 				}
 			}
@@ -207,7 +245,7 @@ func main() {
 	if workerKey != "" {
 		if orgID := bootstrapOrgID(); orgID != "" {
 			if err := workerKeyService.EnsureBootstrapKey(orgID, workerKey, "env-bootstrap"); err != nil {
-				log.Printf("Failed to register WORKER_API_KEY as an org key: %v", err)
+				slog.Warn("failed to register WORKER_API_KEY as an org key", "error", err)
 			}
 		}
 	}
@@ -221,10 +259,10 @@ func main() {
 	// Agent engine services.
 	agentService, err := agents.NewFileService(agentsDir, agentRepo)
 	if err != nil {
-		log.Fatalf("Failed to initialize agent service: %v", err)
+		fatal("failed to initialize agent service", err)
 	}
 	if err := agentService.SyncAllFromDisk(); err != nil {
-		log.Printf("Agent sync completed with warnings: %v", err)
+		slog.Warn("agent sync completed with warnings", "error", err)
 	}
 	runService := agentruns.NewDefaultService(agentRunRepo, agentService, bus)
 	// First-refusal routing: runs launched by a user with an online personal
@@ -305,7 +343,9 @@ func main() {
 			if err := decodePayload(payload, &req); err != nil {
 				return "", err
 			}
-			result, err := vvService.UpsertResult(runID, req, nil, "system")
+			// Applying an approved proposal: a human signed off on this
+			// result, so it is not stamped as agent-executed.
+			result, err := vvService.UpsertResult(runID, req, nil, "system", "")
 			if err != nil {
 				return "", err
 			}
@@ -315,11 +355,11 @@ func main() {
 
 	// Seed default agents + crew into every workspace missing them.
 	if orgIDs, err := orgService.ListAll(); err != nil {
-		log.Printf("Failed to list organizations for seeding: %v", err)
+		slog.Warn("failed to list organizations for seeding", "error", err)
 	} else {
 		for _, orgID := range orgIDs {
 			if err := seeds.EnsureOrgDefaults(orgID, agentService, teamService); err != nil {
-				log.Printf("Failed to seed default agents/team for org %s: %v", orgID, err)
+				slog.Warn("failed to seed default agents/team", "org_id", orgID, "error", err)
 			}
 		}
 	}
@@ -331,17 +371,23 @@ func main() {
 	runService.AddSubscriber(hooks)
 	hooks.SubscribeBus(bus)
 
-	// Trigger matcher + scheduler + reaper.
+	// Trigger matcher + scheduler + reaper. The scheduler and reaper loops
+	// stop when the signal context is canceled.
 	automation.NewTriggerMatcher(automationRepo, runService, teamService).Start(bus)
-	scheduler.New(automationRepo, runService, teamService).Start(context.Background())
+	scheduler.New(automationRepo, runService, teamService).Start(ctx)
 	go func() {
 		ticker := time.NewTicker(30 * time.Second)
 		defer ticker.Stop()
-		for range ticker.C {
-			if ids, err := runService.FailStale(2 * time.Minute); err == nil && len(ids) > 0 {
-				log.Printf("Reaper failed %d stale runs", len(ids))
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				if ids, err := runService.FailStale(2 * time.Minute); err == nil && len(ids) > 0 {
+					slog.Warn("reaper failed stale runs", "count", len(ids))
+				}
+				_ = userRepo.DeleteExpiredSessions(time.Now())
 			}
-			_ = userRepo.DeleteExpiredSessions(time.Now())
 		}
 	}()
 
@@ -407,7 +453,9 @@ func main() {
 	handler.RegisterRoutes(router)
 
 	authMiddleware := api.NewAuthMiddleware(userService, runService, orgService, workerKeyService, workerKey, bootstrapOrgID)
-	protected := authMiddleware.Wrap(router)
+	// Request logging wraps outside auth so rejected requests are logged too;
+	// auth annotates the log line with the resolved org/user.
+	protected := api.RequestLogMiddleware(authMiddleware.Wrap(router))
 
 	// CORS: restricted to the configured frontend origin, with credentials.
 	corsOrigin := envOr("CORS_ORIGIN", "http://localhost:3000")
@@ -427,9 +475,53 @@ func main() {
 		protected.ServeHTTP(w, r)
 	})
 
-	log.Printf("Starting server on port %s", port)
-	if err := http.ListenAndServe(":"+port, corsHandler); err != nil {
-		log.Fatalf("Failed to start server: %v", err)
+	// HTTP server. ReadHeaderTimeout defends against slowloris-style clients
+	// holding connections open while trickling headers; IdleTimeout reclaims
+	// idle keep-alive connections. ReadTimeout and WriteTimeout deliberately
+	// stay 0 (unlimited): the API serves long-lived SSE streams (e.g.
+	// /api/v1/agent-runs/{id}/stream, guided chat and interview streams)
+	// that hold a response open indefinitely, and a nonzero WriteTimeout
+	// is an absolute
+	// deadline that would sever every stream after it elapsed. Slow-client
+	// abuse on the read side is already bounded by ReadHeaderTimeout plus
+	// per-handler request parsing.
+	srv := &http.Server{
+		Addr:              ":" + port,
+		Handler:           corsHandler,
+		ReadHeaderTimeout: 10 * time.Second,
+		IdleTimeout:       120 * time.Second,
+		// Derive request contexts from the signal context so long-lived SSE
+		// handlers (which select on r.Context().Done()) exit promptly on
+		// shutdown instead of pinning the drain for its full timeout.
+		BaseContext: func(net.Listener) context.Context { return ctx },
+	}
+
+	errCh := make(chan error, 1)
+	go func() {
+		slog.Info("starting server", "port", port)
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			errCh <- err
+			return
+		}
+		errCh <- nil
+	}()
+
+	select {
+	case err := <-errCh:
+		if err != nil {
+			fatal("failed to start server", err)
+		}
+	case <-ctx.Done():
+		stop() // restore default signal behavior: a second Ctrl-C kills immediately
+		slog.Info("shutdown signal received; draining connections")
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		defer cancel()
+		if err := srv.Shutdown(shutdownCtx); err != nil {
+			slog.Warn("graceful shutdown incomplete", "error", err)
+			_ = srv.Close()
+		}
+		<-errCh // wait for ListenAndServe to return
+		slog.Info("server stopped")
 	}
 }
 

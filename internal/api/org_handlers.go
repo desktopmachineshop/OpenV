@@ -71,12 +71,12 @@ func (h *Handler) registerOrgRoutes(router *mux.Router) {
 func (h *Handler) ListOrgs(w http.ResponseWriter, r *http.Request) {
 	user := CurrentUser(r)
 	if user == nil {
-		http.Error(w, "authentication required", http.StatusUnauthorized)
+		writeJSONError(w, http.StatusUnauthorized, "authentication required")
 		return
 	}
 	list, err := h.orgService.ListForUser(user.ID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to list workspaces", err)
 		return
 	}
 	json.NewEncoder(w).Encode(map[string]interface{}{
@@ -89,25 +89,25 @@ func (h *Handler) ListOrgs(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) CreateOrg(w http.ResponseWriter, r *http.Request) {
 	user := CurrentUser(r)
 	if user == nil {
-		http.Error(w, "authentication required", http.StatusUnauthorized)
+		writeJSONError(w, http.StatusUnauthorized, "authentication required")
 		return
 	}
 	var req struct {
 		Name string `json:"name"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 	org, err := h.orgService.CreateOrg(req.Name, orgs.TypeCompany, user.ID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	if h.orgSeeder != nil {
 		if err := h.orgSeeder(org.ID); err != nil {
 			// Non-fatal: the workspace exists; defaults can be re-seeded.
-			http.Error(w, "workspace created but seeding defaults failed: "+err.Error(), http.StatusInternalServerError)
+			respondInternal(w, r, "workspace created but seeding defaults failed", err)
 			return
 		}
 	}
@@ -123,7 +123,7 @@ func (h *Handler) GetOrg(w http.ResponseWriter, r *http.Request) {
 	}
 	org, err := h.orgService.Get(orgID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		respondError(w, r, http.StatusNotFound, "workspace not found", err)
 		return
 	}
 	json.NewEncoder(w).Encode(org)
@@ -139,12 +139,12 @@ func (h *Handler) UpdateOrg(w http.ResponseWriter, r *http.Request) {
 		Name *string `json:"name"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 	org, err := h.orgService.UpdateOrg(orgID, req.Name)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	json.NewEncoder(w).Encode(org)
@@ -158,11 +158,11 @@ func (h *Handler) ActivateOrg(w http.ResponseWriter, r *http.Request) {
 	}
 	cookie, err := r.Cookie(SessionCookieName)
 	if err != nil || cookie.Value == "" {
-		http.Error(w, "session required", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "session required")
 		return
 	}
 	if err := h.userService.SetActiveOrg(cookie.Value, orgID); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to switch workspace", err)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -177,7 +177,7 @@ func (h *Handler) ListOrgMembers(w http.ResponseWriter, r *http.Request) {
 	}
 	list, err := h.orgService.ListMembers(orgID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to list workspace members", err)
 		return
 	}
 	json.NewEncoder(w).Encode(list)
@@ -194,7 +194,7 @@ func (h *Handler) AddOrgMember(w http.ResponseWriter, r *http.Request) {
 		Role  string `json:"role"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 	if req.Role == "" {
@@ -202,15 +202,15 @@ func (h *Handler) AddOrgMember(w http.ResponseWriter, r *http.Request) {
 	}
 	user, err := h.userService.FindByEmail(req.Email)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to look up user", err)
 		return
 	}
 	if user == nil {
-		http.Error(w, "no user with that email — they must sign up first", http.StatusNotFound)
+		writeJSONError(w, http.StatusNotFound, "no user with that email — they must sign up first")
 		return
 	}
 	if err := h.orgService.AddMember(orgID, user.ID, req.Role); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	w.WriteHeader(http.StatusCreated)
@@ -225,11 +225,11 @@ func (h *Handler) UpdateOrgMember(w http.ResponseWriter, r *http.Request) {
 		Role string `json:"role"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 	if err := h.orgService.SetMemberRole(vars["id"], vars["userId"], req.Role); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -239,7 +239,7 @@ func (h *Handler) RemoveOrgMember(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	user := CurrentUser(r)
 	if user == nil {
-		http.Error(w, "authentication required", http.StatusUnauthorized)
+		writeJSONError(w, http.StatusUnauthorized, "authentication required")
 		return
 	}
 	// Members may remove themselves (leave); removing others requires admin.
@@ -251,7 +251,7 @@ func (h *Handler) RemoveOrgMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.orgService.RemoveMember(vars["id"], vars["userId"]); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -266,7 +266,7 @@ func (h *Handler) ListOrgTeams(w http.ResponseWriter, r *http.Request) {
 	}
 	list, err := h.orgTeamService.ListTeams(orgID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to list teams", err)
 		return
 	}
 	json.NewEncoder(w).Encode(list)
@@ -282,12 +282,12 @@ func (h *Handler) CreateOrgTeam(w http.ResponseWriter, r *http.Request) {
 		Description string `json:"description"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 	team, err := h.orgTeamService.CreateTeam(orgID, req.Name, req.Description, CurrentUserID(r))
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	w.WriteHeader(http.StatusCreated)
@@ -298,7 +298,7 @@ func (h *Handler) CreateOrgTeam(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) orgTeamChecked(w http.ResponseWriter, r *http.Request, minRole string) *orgs.OrgTeam {
 	team, err := h.orgTeamService.GetTeam(mux.Vars(r)["id"])
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		respondError(w, r, http.StatusNotFound, "team not found", err)
 		return nil
 	}
 	if !h.requireOrgRole(w, r, team.OrgID, minRole) {
@@ -317,12 +317,12 @@ func (h *Handler) UpdateOrgTeam(w http.ResponseWriter, r *http.Request) {
 		Description *string `json:"description"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 	updated, err := h.orgTeamService.UpdateTeam(team.ID, req.Name, req.Description)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	json.NewEncoder(w).Encode(updated)
@@ -334,7 +334,7 @@ func (h *Handler) DeleteOrgTeam(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.orgTeamService.DeleteTeam(team.ID); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to delete team", err)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -346,7 +346,7 @@ func (h *Handler) AddOrgTeamMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.orgTeamService.AddTeamMember(team.ID, mux.Vars(r)["userId"]); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	w.WriteHeader(http.StatusCreated)
@@ -358,7 +358,7 @@ func (h *Handler) RemoveOrgTeamMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.orgTeamService.RemoveTeamMember(team.ID, mux.Vars(r)["userId"]); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to remove team member", err)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -373,7 +373,7 @@ func (h *Handler) ListWorkerKeys(w http.ResponseWriter, r *http.Request) {
 	}
 	list, err := h.workerKeyService.List(orgID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to list worker keys", err)
 		return
 	}
 	json.NewEncoder(w).Encode(list)
@@ -389,12 +389,12 @@ func (h *Handler) CreateWorkerKey(w http.ResponseWriter, r *http.Request) {
 		Name string `json:"name"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 	key, plaintext, err := h.workerKeyService.Create(orgID, req.Name, CurrentUserID(r), nil)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	w.WriteHeader(http.StatusCreated)
@@ -410,7 +410,7 @@ func (h *Handler) RevokeWorkerKey(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.workerKeyService.Revoke(vars["id"], vars["keyId"]); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -428,7 +428,7 @@ func (h *Handler) GetMyRunnerKey(w http.ResponseWriter, r *http.Request) {
 	user := CurrentUser(r)
 	key, err := h.workerKeyService.PersonalKey(orgID, user.ID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to load personal runner key", err)
 		return
 	}
 	if key == nil {
@@ -453,7 +453,7 @@ func (h *Handler) CreateMyRunnerKey(w http.ResponseWriter, r *http.Request) {
 	}
 	key, plaintext, err := h.workerKeyService.Create(orgID, name, &userID, &userID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	w.WriteHeader(http.StatusCreated)
@@ -472,7 +472,7 @@ func (h *Handler) RevokeMyRunnerKey(w http.ResponseWriter, r *http.Request) {
 	user := CurrentUser(r)
 	key, err := h.workerKeyService.PersonalKey(orgID, user.ID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to load personal runner key", err)
 		return
 	}
 	if key == nil {
@@ -480,7 +480,7 @@ func (h *Handler) RevokeMyRunnerKey(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.workerKeyService.Revoke(orgID, key.ID); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -537,7 +537,7 @@ func (h *Handler) GetHostedRunner(w http.ResponseWriter, r *http.Request) {
 	}
 	record, err := h.hostedWorkerService.Get(orgID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to load hosted runner", err)
 		return
 	}
 	containerState := ""
@@ -567,23 +567,23 @@ func (h *Handler) CreateHostedRunner(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !h.hostedRunnersEnabled() {
-		http.Error(w, "hosted runners are not enabled on this deployment", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "hosted runners are not enabled on this deployment")
 		return
 	}
 	var req struct {
 		ProviderKeys map[string]string `json:"provider_keys"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 	existing, err := h.hostedWorkerService.Get(orgID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to load hosted runner", err)
 		return
 	}
 	if existing != nil {
-		http.Error(w, "a hosted runner already exists for this workspace", http.StatusConflict)
+		writeJSONError(w, http.StatusConflict, "a hosted runner already exists for this workspace")
 		return
 	}
 
@@ -591,7 +591,7 @@ func (h *Handler) CreateHostedRunner(w http.ResponseWriter, r *http.Request) {
 	// container env only).
 	key, plaintext, err := h.workerKeyService.Create(orgID, hostedRunnerKeyName, CurrentUserID(r), nil)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to create worker key", err)
 		return
 	}
 
@@ -606,7 +606,7 @@ func (h *Handler) CreateHostedRunner(w http.ResponseWriter, r *http.Request) {
 	record, err := h.hostedWorkerService.Create(orgID, hostedContainerName(orgID), &keyID, CurrentUserID(r))
 	if err != nil {
 		_ = h.workerKeyService.Revoke(orgID, key.ID)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to create hosted runner", err)
 		return
 	}
 
@@ -616,7 +616,7 @@ func (h *Handler) CreateHostedRunner(w http.ResponseWriter, r *http.Request) {
 	}
 	record, err = h.hostedWorkerService.SetStatus(record.ID, status, detail)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to update hosted runner status", err)
 		return
 	}
 
@@ -632,11 +632,11 @@ func (h *Handler) hostedRunnerChecked(w http.ResponseWriter, r *http.Request, or
 	}
 	record, err := h.hostedWorkerService.Get(orgID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to load hosted runner", err)
 		return nil
 	}
 	if record == nil {
-		http.Error(w, "no hosted runner for this workspace", http.StatusNotFound)
+		writeJSONError(w, http.StatusNotFound, "no hosted runner for this workspace")
 		return nil
 	}
 	return record
@@ -650,12 +650,12 @@ func (h *Handler) StartHostedRunner(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.provisioner.Start(record.ContainerName); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to start hosted runner", err)
 		return
 	}
 	updated, err := h.hostedWorkerService.SetStatus(record.ID, hostedworkers.StatusRunning, "")
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to update hosted runner status", err)
 		return
 	}
 	json.NewEncoder(w).Encode(updated)
@@ -669,12 +669,12 @@ func (h *Handler) StopHostedRunner(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.provisioner.Stop(record.ContainerName); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to stop hosted runner", err)
 		return
 	}
 	updated, err := h.hostedWorkerService.SetStatus(record.ID, hostedworkers.StatusStopped, "")
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to update hosted runner status", err)
 		return
 	}
 	json.NewEncoder(w).Encode(updated)
@@ -692,7 +692,7 @@ func (h *Handler) DeleteHostedRunner(w http.ResponseWriter, r *http.Request) {
 	purge := r.URL.Query().Get("purge") == "true"
 	if h.hostedRunnersEnabled() {
 		if err := h.provisioner.Remove(record.ContainerName, purge, orgID); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			respondInternal(w, r, "failed to remove hosted runner", err)
 			return
 		}
 	}
@@ -700,7 +700,7 @@ func (h *Handler) DeleteHostedRunner(w http.ResponseWriter, r *http.Request) {
 		_ = h.workerKeyService.Revoke(orgID, *record.WorkerKeyID)
 	}
 	if err := h.hostedWorkerService.Delete(record.ID); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to delete hosted runner", err)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -717,7 +717,7 @@ func (h *Handler) GetWorkerStatus(w http.ResponseWriter, r *http.Request) {
 	}
 	keys, err := h.workerKeyService.List(orgID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to list worker keys", err)
 		return
 	}
 	hostedKeyID := ""
@@ -742,7 +742,7 @@ func (h *Handler) GetWorkerStatus(w http.ResponseWriter, r *http.Request) {
 	}
 	queue, err := h.runService.QueueStats(orgID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to load queue stats", err)
 		return
 	}
 	json.NewEncoder(w).Encode(map[string]interface{}{
@@ -763,7 +763,7 @@ func (h *Handler) CreateConnectorPairing(w http.ResponseWriter, r *http.Request)
 	user := CurrentUser(r)
 	code, expires, err := h.workerKeyService.CreatePairing(orgID, user.ID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to create pairing code", err)
 		return
 	}
 	apiURL := h.publicAPIURL
@@ -786,12 +786,12 @@ func (h *Handler) ExchangeConnectorPairing(w http.ResponseWriter, r *http.Reques
 		Code string `json:"code"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Code == "" {
-		http.Error(w, "pairing code is required", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "pairing code is required")
 		return
 	}
 	key, plaintext, err := h.workerKeyService.ExchangePairing(req.Code, "")
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusForbidden)
+		writeJSONError(w, http.StatusForbidden, err.Error())
 		return
 	}
 	orgName := ""
@@ -824,17 +824,17 @@ func (h *Handler) DownloadConnector(w http.ResponseWriter, r *http.Request) {
 		osName = "windows"
 	}
 	if osName != "windows" && osName != "linux" && osName != "darwin" {
-		http.Error(w, "unknown os", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "unknown os")
 		return
 	}
 	if h.connectorDistDir == "" {
-		http.Error(w, "connector downloads are not configured on this deployment", http.StatusNotFound)
+		writeJSONError(w, http.StatusNotFound, "connector downloads are not configured on this deployment")
 		return
 	}
 	filename := "openv-connector-" + osName + ".zip"
 	path := filepath.Join(h.connectorDistDir, filename)
 	if _, err := os.Stat(path); err != nil {
-		http.Error(w, "connector bundle not available for "+osName+" — build it with `make connector-dist`", http.StatusNotFound)
+		writeJSONError(w, http.StatusNotFound, "connector bundle not available for "+osName+" — build it with `make connector-dist`")
 		return
 	}
 	w.Header().Set("Content-Type", "application/zip")
@@ -851,7 +851,7 @@ func (h *Handler) ListProjectTeamAccess(w http.ResponseWriter, r *http.Request) 
 	}
 	list, err := h.memberService.ListTeamGrants(projectID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to list team grants", err)
 		return
 	}
 	json.NewEncoder(w).Encode(list)
@@ -868,26 +868,26 @@ func (h *Handler) GrantProjectTeamAccess(w http.ResponseWriter, r *http.Request)
 		Role      string `json:"role"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 	// The team must live in the project's org.
 	team, err := h.orgTeamService.GetTeam(req.OrgTeamID)
 	if err != nil {
-		http.Error(w, "team not found", http.StatusNotFound)
+		writeJSONError(w, http.StatusNotFound, "team not found")
 		return
 	}
 	project, err := h.projectService.GetProject(projectID)
 	if err != nil || project == nil {
-		http.Error(w, "project not found", http.StatusNotFound)
+		writeJSONError(w, http.StatusNotFound, "project not found")
 		return
 	}
 	if project.OrgID != "" && team.OrgID != project.OrgID {
-		http.Error(w, "team belongs to a different workspace", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "team belongs to a different workspace")
 		return
 	}
 	if err := h.memberService.GrantTeam(projectID, req.OrgTeamID, req.Role); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	w.WriteHeader(http.StatusCreated)
@@ -899,7 +899,7 @@ func (h *Handler) RevokeProjectTeamAccess(w http.ResponseWriter, r *http.Request
 		return
 	}
 	if err := h.memberService.RevokeTeam(vars["id"], vars["teamId"]); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to revoke team grant", err)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)

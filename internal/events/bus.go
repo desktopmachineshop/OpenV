@@ -1,11 +1,17 @@
 package events
 
 import (
-	"log"
+	"log/slog"
 	"sync"
+	"sync/atomic"
+	"time"
 
 	domain "github.com/openv/requirements-platform/internal/domain/events"
 )
+
+// dropLogInterval rate-limits the queue-full warning so a sustained stall
+// doesn't flood the log — the counter still records every drop.
+const dropLogInterval = 10 * time.Second
 
 // DefaultBus persists events synchronously and dispatches to subscribers
 // asynchronously so a slow subscriber can never block a request handler.
@@ -18,6 +24,13 @@ type DefaultBus struct {
 	mu          sync.RWMutex
 	subscribers []func(domain.Event)
 	queue       chan domain.Event
+
+	// dropped counts events discarded because the dispatch queue was full.
+	// A dropped event was still persisted, but subscribers (SSE, automation
+	// triggers, orchestration hooks) never saw it — e.g. a dropped
+	// WorkItemMoved means automations silently never fire for that move.
+	dropped     atomic.Uint64
+	lastDropLog atomic.Int64 // unix nanos of the last drop warning
 }
 
 // NewBus creates and starts a bus. repo may be nil (dispatch-only mode);
@@ -39,14 +52,30 @@ func (b *DefaultBus) Publish(e domain.Event) {
 	}
 	if b.repo != nil {
 		if err := b.repo.Save(e); err != nil {
-			log.Printf("events: failed to persist event %s: %v", e.EventType, err)
+			slog.Error("events: failed to persist event",
+				"event_type", e.EventType, "org_id", e.OrgID, "error", err)
 		}
 	}
 	select {
 	case b.queue <- e:
 	default:
-		log.Printf("events: dispatch queue full, dropping event %s", e.EventType)
+		total := b.dropped.Add(1)
+		now := time.Now().UnixNano()
+		last := b.lastDropLog.Load()
+		if now-last >= int64(dropLogInterval) && b.lastDropLog.CompareAndSwap(last, now) {
+			slog.Warn("events: dispatch queue full, dropping event",
+				"event_type", e.EventType,
+				"org_id", e.OrgID,
+				"dropped_total", total,
+				"queue_capacity", cap(b.queue))
+		}
 	}
+}
+
+// Dropped reports how many events have been discarded because the dispatch
+// queue was full.
+func (b *DefaultBus) Dropped() uint64 {
+	return b.dropped.Load()
 }
 
 // Subscribe registers a handler called for every published event.
@@ -66,7 +95,8 @@ func (b *DefaultBus) dispatchLoop() {
 			func() {
 				defer func() {
 					if r := recover(); r != nil {
-						log.Printf("events: subscriber panic on %s: %v", e.EventType, r)
+						slog.Error("events: subscriber panic",
+							"event_type", e.EventType, "panic", r)
 					}
 				}()
 				fn(e)

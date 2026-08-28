@@ -1,0 +1,38 @@
+# Normalize line endings: text files use LF in the repository.
+# NOTE: added without renormalizing existing files (no `git add --renormalize`);
+# files re-committed after edits will pick up LF as they change.
+* text=auto
+
+# Go tooling (gofmt) expects LF; Windows checkouts with core.autocrlf=true
+# were producing CRLF churn that made gofmt flag every file.
+*.go text eol=lf
+
+# Other source/text formats we want stable across platforms
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.json text eol=lf
+*.ts text eol=lf
+*.tsx text eol=lf
+*.js text eol=lf
+*.css text eol=lf
+*.html text eol=lf
+*.sql text eol=lf
+*.sh text eol=lf
+Makefile text eol=lf
+Dockerfile* text eol=lf
+
+# Windows scripts keep CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Binary assets
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.woff binary
+*.woff2 binary

@@ -2,6 +2,7 @@ package agents
 
 import (
 	"errors"
+	"regexp"
 	"time"
 )
 
@@ -31,6 +32,25 @@ func ValidEffort(v string) bool {
 
 // ErrNotFound is returned when an agent doesn't exist.
 var ErrNotFound = errors.New("agent not found")
+
+// ErrSlugExists is returned when creating an agent whose slug is already
+// taken in the org. The database's unique index on (org_id, slug) is the
+// authority, so a lost check-then-create race still surfaces as this error.
+var ErrSlugExists = errors.New("an agent with this slug already exists")
+
+// slugPattern matches the slug convention used by seeded agents
+// (e.g. "requirements-copilot"): lowercase letters, digits and hyphens,
+// starting with a letter or digit. Slugs become file names on disk, so
+// this also keeps path separators and dot segments out.
+var slugPattern = regexp.MustCompile(`^[a-z0-9][a-z0-9-]*$`)
+
+// maxSlugLength caps slug size to keep file names sane.
+const maxSlugLength = 128
+
+// ValidSlug reports whether s is an acceptable agent slug.
+func ValidSlug(s string) bool {
+	return len(s) <= maxSlugLength && slugPattern.MatchString(s)
+}
 
 // Agent is the registry row mirroring a file-backed agent definition.
 // The markdown file is the source of truth; this row exists for FK
@@ -80,6 +100,9 @@ type Definition struct {
 func (d *Definition) Validate() error {
 	if d.Slug == "" {
 		return errors.New("agent definition requires a slug")
+	}
+	if !ValidSlug(d.Slug) {
+		return errors.New("agent slug must be lowercase letters, digits and hyphens (e.g. requirements-copilot)")
 	}
 	if d.Name == "" {
 		return errors.New("agent definition requires a name")
