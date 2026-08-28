@@ -8,6 +8,7 @@ import {
   Artifact,
   GuidedSession,
 } from '../api/client';
+import { apiErrorMessage } from '../api/errors';
 import { useAppStore } from '../state/store';
 import { StepShell } from '../components/wizard/StepShell';
 import { RepeatingCardList } from '../components/wizard/RepeatingCardList';
@@ -142,7 +143,7 @@ export const GuidedWizard: React.FC = () => {
         }
         setError('');
       } catch (err: any) {
-        if (!cancelled) setError(`Failed to load guided sessions: ${err.response?.data || err.message}`);
+        if (!cancelled) setError(`Failed to load guided sessions: ${apiErrorMessage(err)}`);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -174,7 +175,7 @@ export const GuidedWizard: React.FC = () => {
       }
       setError('');
     } catch (err: any) {
-      setError(`Failed to start session: ${err.response?.data || err.message}`);
+      setError(`Failed to start session: ${apiErrorMessage(err)}`);
     } finally {
       setBusy(false);
     }
@@ -209,23 +210,28 @@ export const GuidedWizard: React.FC = () => {
       setMaxReached(STEP_LABELS.length);
       setError('');
     } catch (err: any) {
-      setError(`Failed to reopen definition: ${err.response?.data || err.message}`);
+      setError(`Failed to reopen definition: ${apiErrorMessage(err)}`);
     } finally {
       setBusy(false);
     }
   };
 
-  // Fuzzy-match a suggestion's "replaces" target against existing entries:
-  // exact (case-insensitive) first, then substring either way.
-  const matchEntry = <T,>(items: T[], key: (t: T) => string, target: string): number => {
-    const t = target.trim().toLowerCase();
-    if (!t) return -1;
-    const exact = items.findIndex((it) => key(it).trim().toLowerCase() === t);
-    if (exact >= 0) return exact;
-    return items.findIndex((it) => {
-      const k = key(it).trim().toLowerCase();
-      return !!k && (k.includes(t) || t.includes(k));
+  // Resolve a suggestion's target against existing entries. Entries carry
+  // stable ids (visible to the copilot in the wizard state), so an exact id
+  // match wins outright; otherwise fall back to an exact case-insensitive
+  // title match. Several entries sharing the title is ambiguous — return -1
+  // rather than guess, so callers append instead of replacing the wrong one.
+  const matchEntry = <T extends { id: string },>(items: T[], key: (t: T) => string, target: string): number => {
+    const raw = target.trim();
+    if (!raw) return -1;
+    const byId = items.findIndex((it) => it.id === raw);
+    if (byId >= 0) return byId;
+    const t = raw.toLowerCase();
+    const hits: number[] = [];
+    items.forEach((it, i) => {
+      if (key(it).trim().toLowerCase() === t) hits.push(i);
     });
+    return hits.length === 1 ? hits[0] : -1;
   };
 
   // Working copy of every suggestion-editable wizard section, so a batch of
@@ -271,17 +277,20 @@ export const GuidedWizard: React.FC = () => {
         const name = String(s.name || '').trim();
         if (!name) return 'The persona suggestion has no name.';
         if (s.replaces) {
+          // No unambiguous match falls through to append below — adding a new
+          // entry beats overwriting the wrong one.
           const i = matchEntry(d.personas, (p) => p.name, String(s.replaces));
-          if (i < 0) return `No persona matching "${s.replaces}" to replace.`;
-          if (d.personas[i].artifact_id) return 'That persona is already saved as an artifact and cannot be replaced here.';
-          d.personas[i] = {
-            ...d.personas[i],
-            name,
-            role: s.role !== undefined ? String(s.role) : d.personas[i].role,
-            goals: s.goals !== undefined ? String(s.goals) : d.personas[i].goals,
-            pains: s.pains !== undefined ? String(s.pains) : d.personas[i].pains,
-          };
-          return null;
+          if (i >= 0) {
+            if (d.personas[i].artifact_id) return 'That persona is already saved as an artifact and cannot be replaced here.';
+            d.personas[i] = {
+              ...d.personas[i],
+              name,
+              role: s.role !== undefined ? String(s.role) : d.personas[i].role,
+              goals: s.goals !== undefined ? String(s.goals) : d.personas[i].goals,
+              pains: s.pains !== undefined ? String(s.pains) : d.personas[i].pains,
+            };
+            return null;
+          }
         }
         d.personas.push({
           id: newEntryId(),
@@ -295,20 +304,21 @@ export const GuidedWizard: React.FC = () => {
       case 'need': {
         if (s.replaces) {
           const i = matchEntry(d.needs, (n) => n.capability, String(s.replaces));
-          if (i < 0) return `No user need matching "${s.replaces}" to replace.`;
-          if (d.needs[i].artifact_id) return 'That need is already saved as an artifact and cannot be replaced here.';
-          let personaId = d.needs[i].persona_id;
-          if (s.persona) {
-            const hit = matchEntry(d.personas, (p) => p.name, String(s.persona));
-            if (hit >= 0) personaId = d.personas[hit].id;
+          if (i >= 0) {
+            if (d.needs[i].artifact_id) return 'That need is already saved as an artifact and cannot be replaced here.';
+            let personaId = d.needs[i].persona_id;
+            if (s.persona) {
+              const hit = matchEntry(d.personas, (p) => p.name, String(s.persona));
+              if (hit >= 0) personaId = d.personas[hit].id;
+            }
+            d.needs[i] = {
+              ...d.needs[i],
+              persona_id: personaId,
+              capability: s.capability !== undefined ? String(s.capability) : d.needs[i].capability,
+              outcome: s.outcome !== undefined ? String(s.outcome) : d.needs[i].outcome,
+            };
+            return null;
           }
-          d.needs[i] = {
-            ...d.needs[i],
-            persona_id: personaId,
-            capability: s.capability !== undefined ? String(s.capability) : d.needs[i].capability,
-            outcome: s.outcome !== undefined ? String(s.outcome) : d.needs[i].outcome,
-          };
-          return null;
         }
         const usable = d.personas.filter((p) => p.name.trim());
         if (usable.length === 0) return 'Add a persona first — user needs attach to a persona.';
@@ -325,21 +335,22 @@ export const GuidedWizard: React.FC = () => {
       case 'requirement': {
         if (s.replaces) {
           const i = matchEntry(d.requirements, (r) => r.text, String(s.replaces));
-          if (i < 0) return `No requirement matching "${s.replaces}" to replace.`;
-          if (d.requirements[i].artifact_id) return 'That requirement is already saved as an artifact and cannot be replaced here.';
-          let needId = d.requirements[i].need_id;
-          if (s.need) {
-            const hit = matchEntry(d.needs, (n) => n.capability, String(s.need));
-            if (hit >= 0) needId = d.needs[hit].id;
+          if (i >= 0) {
+            if (d.requirements[i].artifact_id) return 'That requirement is already saved as an artifact and cannot be replaced here.';
+            let needId = d.requirements[i].need_id;
+            if (s.need) {
+              const hit = matchEntry(d.needs, (n) => n.capability, String(s.need));
+              if (hit >= 0) needId = d.needs[hit].id;
+            }
+            d.requirements[i] = {
+              ...d.requirements[i],
+              need_id: needId,
+              text: s.text !== undefined ? String(s.text) : d.requirements[i].text,
+              fit_criterion: s.fit_criterion !== undefined ? String(s.fit_criterion) : d.requirements[i].fit_criterion,
+              verification_method: verificationMethod(s.verification_method, d.requirements[i].verification_method),
+            };
+            return null;
           }
-          d.requirements[i] = {
-            ...d.requirements[i],
-            need_id: needId,
-            text: s.text !== undefined ? String(s.text) : d.requirements[i].text,
-            fit_criterion: s.fit_criterion !== undefined ? String(s.fit_criterion) : d.requirements[i].fit_criterion,
-            verification_method: verificationMethod(s.verification_method, d.requirements[i].verification_method),
-          };
-          return null;
         }
         const usable = d.needs.filter((n) => n.capability.trim());
         if (usable.length === 0) return 'Add a user need first — requirements derive from needs.';
@@ -367,18 +378,19 @@ export const GuidedWizard: React.FC = () => {
           NFR_CATEGORIES[0];
         if (s.replaces) {
           const i = matchEntry(d.nfrs, (n) => n.text, String(s.replaces));
-          if (i < 0) return `No NFR matching "${s.replaces}" to replace.`;
-          if (d.nfrs[i].artifact_id) return 'That NFR is already saved as an artifact and cannot be replaced here.';
-          const nextCategory = s.category !== undefined ? category : d.nfrs[i].category;
-          d.nfrs[i] = {
-            ...d.nfrs[i],
-            category: nextCategory,
-            text: s.text !== undefined ? String(s.text) : d.nfrs[i].text,
-            fit_criterion: s.fit_criterion !== undefined ? String(s.fit_criterion) : d.nfrs[i].fit_criterion,
-            verification_method: verificationMethod(s.verification_method, d.nfrs[i].verification_method),
-          };
-          d.openNfr[nextCategory] = true;
-          return null;
+          if (i >= 0) {
+            if (d.nfrs[i].artifact_id) return 'That NFR is already saved as an artifact and cannot be replaced here.';
+            const nextCategory = s.category !== undefined ? category : d.nfrs[i].category;
+            d.nfrs[i] = {
+              ...d.nfrs[i],
+              category: nextCategory,
+              text: s.text !== undefined ? String(s.text) : d.nfrs[i].text,
+              fit_criterion: s.fit_criterion !== undefined ? String(s.fit_criterion) : d.nfrs[i].fit_criterion,
+              verification_method: verificationMethod(s.verification_method, d.nfrs[i].verification_method),
+            };
+            d.openNfr[nextCategory] = true;
+            return null;
+          }
         }
         if (!String(s.text || '').trim()) return 'The NFR suggestion has no text.';
         d.nfrs.push({
@@ -394,15 +406,16 @@ export const GuidedWizard: React.FC = () => {
       case 'hazard': {
         if (s.replaces) {
           const i = matchEntry(d.hazards, (h) => h.hazard, String(s.replaces));
-          if (i < 0) return `No hazard matching "${s.replaces}" to replace.`;
-          if (d.hazards[i].artifact_id) return 'That hazard is already saved as an artifact and cannot be replaced here.';
-          d.hazards[i] = {
-            ...d.hazards[i],
-            hazard: s.hazard !== undefined ? String(s.hazard) : d.hazards[i].hazard,
-            harm: s.harm !== undefined ? String(s.harm) : d.hazards[i].harm,
-            severity: SEVERITIES.includes(String(s.severity)) ? String(s.severity) : d.hazards[i].severity,
-          };
-          return null;
+          if (i >= 0) {
+            if (d.hazards[i].artifact_id) return 'That hazard is already saved as an artifact and cannot be replaced here.';
+            d.hazards[i] = {
+              ...d.hazards[i],
+              hazard: s.hazard !== undefined ? String(s.hazard) : d.hazards[i].hazard,
+              harm: s.harm !== undefined ? String(s.harm) : d.hazards[i].harm,
+              severity: SEVERITIES.includes(String(s.severity)) ? String(s.severity) : d.hazards[i].severity,
+            };
+            return null;
+          }
         }
         if (!String(s.hazard || '').trim()) return 'The hazard suggestion has no description.';
         d.hazards.push({
@@ -504,7 +517,11 @@ export const GuidedWizard: React.FC = () => {
   const persist = async (nextStep: number, answersOverride?: Record<string, any>) => {
     if (!session) return;
     const answers = answersOverride || buildAnswers();
-    const res = await guidedAPI.saveStep(session.id, nextStep, answers);
+    // Never regress the session's saved step: clicking Next while revisiting
+    // an earlier step must not lose reload progress (mirrors the
+    // copilot-apply path above).
+    const stepToSave = Math.max(session.current_step || 0, nextStep) || 1;
+    const res = await guidedAPI.saveStep(session.id, stepToSave, answers);
     setSession(res.data);
   };
 
@@ -515,7 +532,7 @@ export const GuidedWizard: React.FC = () => {
       const res = await artifactAPI.list(projectId);
       setDraftArtifacts((res.data || []).filter((a) => a.attributes?.status === 'draft'));
     } catch (err: any) {
-      setError(`Failed to load draft artifacts: ${err.response?.data || err.message}`);
+      setError(`Failed to load draft artifacts: ${apiErrorMessage(err)}`);
     } finally {
       setDraftsLoading(false);
     }
@@ -718,7 +735,7 @@ export const GuidedWizard: React.FC = () => {
         goTo(8);
       }
     } catch (err: any) {
-      setError(`Failed to save step: ${err.response?.data || err.message}`);
+      setError(`Failed to save step: ${apiErrorMessage(err)}`);
     } finally {
       setBusy(false);
     }
@@ -736,7 +753,7 @@ export const GuidedWizard: React.FC = () => {
       await persist(step + 1);
       goTo(step + 1);
     } catch (err: any) {
-      setError(`Failed to skip step: ${err.response?.data || err.message}`);
+      setError(`Failed to skip step: ${apiErrorMessage(err)}`);
     } finally {
       setBusy(false);
     }
@@ -764,7 +781,7 @@ export const GuidedWizard: React.FC = () => {
       setMaxReached(1);
       setError('');
     } catch (err: any) {
-      setError(`Failed to abandon session: ${err.response?.data || err.message}`);
+      setError(`Failed to abandon session: ${apiErrorMessage(err)}`);
     } finally {
       setBusy(false);
     }
@@ -778,7 +795,7 @@ export const GuidedWizard: React.FC = () => {
       await guidedAPI.commit(session.id);
       setCommitted(true);
     } catch (err: any) {
-      setError(`Failed to commit: ${err.response?.data || err.message}`);
+      setError(`Failed to commit: ${apiErrorMessage(err)}`);
     } finally {
       setBusy(false);
     }
@@ -792,7 +809,7 @@ export const GuidedWizard: React.FC = () => {
       setBaselineCreated(true);
       setError('');
     } catch (err: any) {
-      setError(`Failed to create baseline: ${err.response?.data || err.message}`);
+      setError(`Failed to create baseline: ${apiErrorMessage(err)}`);
     } finally {
       setBusy(false);
     }
@@ -803,7 +820,7 @@ export const GuidedWizard: React.FC = () => {
       await artifactAPI.delete(artifact.id);
       setDraftArtifacts(draftArtifacts.filter((a) => a.id !== artifact.id));
     } catch (err: any) {
-      setError(`Failed to discard draft: ${err.response?.data || err.message}`);
+      setError(`Failed to discard draft: ${apiErrorMessage(err)}`);
     }
   };
 

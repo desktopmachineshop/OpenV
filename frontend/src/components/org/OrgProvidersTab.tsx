@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { ProviderSetting, providerSettingsAPI } from '../../api/client';
+import { apiErrorMessage } from '../../api/errors';
 import { ModelSelect } from '../agents/ModelSelect';
 import { ProviderConnectCard } from '../agents/ProviderConnectCard';
 
@@ -37,7 +38,7 @@ export const OrgProvidersTab: React.FC<OrgProvidersTabProps> = ({ isAdmin }) => 
       const res = await providerSettingsAPI.list();
       setProviders(res.data || []);
     } catch (err: any) {
-      setError(`Failed to load provider settings: ${err.response?.data || err.message}`);
+      setError(`Failed to load provider settings: ${apiErrorMessage(err)}`);
     } finally {
       setProvidersLoading(false);
     }
@@ -59,7 +60,7 @@ export const OrgProvidersTab: React.FC<OrgProvidersTabProps> = ({ isAdmin }) => 
       setProviders(providers.map((p) => (p.provider === setting.provider ? res.data : p)));
       flash(`${setting.provider} settings saved.`);
     } catch (err: any) {
-      setError(`Failed to save provider settings: ${err.response?.data || err.message}`);
+      setError(`Failed to save provider settings: ${apiErrorMessage(err)}`);
     } finally {
       setSavingProvider('');
     }

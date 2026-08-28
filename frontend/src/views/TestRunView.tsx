@@ -15,6 +15,7 @@ import {
   executionMethodOf,
   vvAPI,
 } from '../api/client';
+import { apiErrorMessage } from '../api/errors';
 
 const STATUS_OPTIONS = ['pass', 'fail', 'blocked', 'not-run'];
 
@@ -300,7 +301,7 @@ export const TestRunView: React.FC = () => {
         </>
       );
     } catch (err: any) {
-      setError(err.response?.data?.error || err.response?.data || err.message || 'Failed to start agent run');
+      setError(apiErrorMessage(err, 'Failed to start agent run'));
     } finally {
       setLaunching(false);
     }

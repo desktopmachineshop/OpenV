@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { providerLoginsAPI, ProviderLogin } from '../../api/client';
+import { apiErrorMessage } from '../../api/errors';
 
 interface Props {
   provider: string;
@@ -67,7 +68,7 @@ export const ProviderConnectCard: React.FC<Props> = ({
       setLogin(res.data);
       poll(res.data.id);
     } catch (err: any) {
-      setError(String(err.response?.data || err.message));
+      setError(apiErrorMessage(err));
     }
   };
 
@@ -77,7 +78,7 @@ export const ProviderConnectCard: React.FC<Props> = ({
       await providerLoginsAPI.submitCode(login.id, code.trim());
       setCodeSent(true);
     } catch (err: any) {
-      setError(String(err.response?.data || err.message));
+      setError(apiErrorMessage(err));
     }
   };
 

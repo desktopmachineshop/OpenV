@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { WorkerKey, myRunnerKeyAPI } from '../../api/client';
+import { apiErrorMessage } from '../../api/errors';
 import { RunnerKeyModal } from './RunnerKeyModal';
 import { RunnerConnectPrompt } from '../RunnerConnectPrompt';
 
@@ -27,7 +28,7 @@ export const MyRunnerCard: React.FC<MyRunnerCardProps> = ({ orgId, onKeysChanged
       setOnline(res.data.online);
       setError('');
     } catch (err: any) {
-      setError(`Failed to load your runner key: ${err.response?.data || err.message}`);
+      setError(`Failed to load your runner key: ${apiErrorMessage(err)}`);
     } finally {
       setLoading(false);
     }
@@ -54,7 +55,7 @@ export const MyRunnerCard: React.FC<MyRunnerCardProps> = ({ orgId, onKeysChanged
       onKeysChanged?.();
       setError('');
     } catch (err: any) {
-      setError(`Failed to create your runner key: ${err.response?.data || err.message}`);
+      setError(`Failed to create your runner key: ${apiErrorMessage(err)}`);
     } finally {
       setBusy(false);
     }
@@ -75,7 +76,7 @@ export const MyRunnerCard: React.FC<MyRunnerCardProps> = ({ orgId, onKeysChanged
       onKeysChanged?.();
       setError('');
     } catch (err: any) {
-      setError(`Failed to revoke your runner key: ${err.response?.data || err.message}`);
+      setError(`Failed to revoke your runner key: ${apiErrorMessage(err)}`);
     } finally {
       setBusy(false);
     }
