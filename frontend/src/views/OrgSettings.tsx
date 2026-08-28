@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { orgsAPI } from '../api/client';
+import { apiErrorMessage } from '../api/errors';
 import { useAppStore } from '../state/store';
 import { OrgMembersTab } from '../components/org/OrgMembersTab';
 import { OrgTeamsTab } from '../components/org/OrgTeamsTab';
@@ -61,7 +62,7 @@ export const OrgSettings: React.FC = () => {
       setOrgs(orgs.map((o) => (o.id === org.id ? { ...o, ...res.data } : o)));
       flash('Workspace name updated.');
     } catch (err: any) {
-      setError(`Failed to update workspace: ${err.response?.data || err.message}`);
+      setError(`Failed to update workspace: ${apiErrorMessage(err)}`);
     } finally {
       setSavingName(false);
     }

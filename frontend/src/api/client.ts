@@ -1,4 +1,5 @@
 import axios, { AxiosInstance } from 'axios';
+import { filenameFromContentDisposition } from './contentDisposition';
 
 // Determine API base URL
 // Priority: env var > browser detection > default fallback
@@ -207,16 +208,10 @@ export const projectAPI = {
     });
     
     // Extract filename from Content-Disposition header or use default
-    const contentDisposition = response.headers['content-disposition'];
-    let filename = `project_export_${new Date().toISOString().slice(0, 10)}.json`;
-    
-    if (contentDisposition) {
-      const filenameMatch = contentDisposition.match(/filename=(.+)/);
-      if (filenameMatch) {
-        filename = filenameMatch[1].replace(/['"]/g, '');
-      }
-    }
-    
+    const filename =
+      filenameFromContentDisposition(response.headers['content-disposition']) ||
+      `project_export_${new Date().toISOString().slice(0, 10)}.json`;
+
     // Create a download link and trigger it
     const url = window.URL.createObjectURL(new Blob([response.data]));
     const link = document.createElement('a');
@@ -235,14 +230,9 @@ export const projectAPI = {
       responseType: 'blob',
     });
 
-    const contentDisposition = response.headers['content-disposition'];
-    let filename = `project_report_${new Date().toISOString().slice(0, 10)}.pdf`;
-    if (contentDisposition) {
-      const filenameMatch = contentDisposition.match(/filename=(.+)/);
-      if (filenameMatch) {
-        filename = filenameMatch[1].replace(/['"]/g, '');
-      }
-    }
+    const filename =
+      filenameFromContentDisposition(response.headers['content-disposition']) ||
+      `project_report_${new Date().toISOString().slice(0, 10)}.pdf`;
 
     const url = window.URL.createObjectURL(new Blob([response.data]));
     const link = document.createElement('a');
@@ -902,12 +892,8 @@ export const productProfileAPI = {
 
 const downloadBlob = async (url: string, fallbackName: string) => {
   const response = await client.get(url, { responseType: 'blob' });
-  const contentDisposition = response.headers['content-disposition'];
-  let filename = fallbackName;
-  if (contentDisposition) {
-    const match = contentDisposition.match(/filename=(.+)/);
-    if (match) filename = match[1].replace(/['"]/g, '');
-  }
+  const filename =
+    filenameFromContentDisposition(response.headers['content-disposition']) || fallbackName;
   const objectUrl = window.URL.createObjectURL(new Blob([response.data]));
   const anchor = document.createElement('a');
   anchor.href = objectUrl;
