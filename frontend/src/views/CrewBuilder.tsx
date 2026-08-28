@@ -104,7 +104,12 @@ export const CrewBuilder: React.FC = () => {
       .catch((err: any) =>
         setError(err.response?.data?.error || err.message || 'Failed to load crews')
       );
-  }, [projectId]);
+    // activeOrgId: the list is scoped by the X-Org-ID header the API client
+    // injects, so refetch when the active workspace changes (e.g.
+    // ProjectLayout's cross-org deep-link sync, issue #99). The effect below
+    // also re-runs via this callback, refreshing the agents list too.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId, activeOrgId]);
 
   useEffect(() => {
     loadCrews();
