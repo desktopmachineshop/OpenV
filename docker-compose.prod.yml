@@ -1,0 +1,78 @@
+# Production overrides for docker-compose.yml. Never used alone — always
+# layered on top of the dev file:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+#
+# Required variables (put them in a .env file next to the compose files —
+# docker compose reads it automatically; see docs/operations.md):
+#
+#   POSTGRES_PASSWORD   database password (replaces the dev default)
+#   REACT_APP_API_URL   public URL browsers use to reach the API,
+#                       e.g. https://openv.example.com:8080
+#   CORS_ORIGIN         public origin the frontend is served from,
+#                       e.g. https://openv.example.com
+#
+# Optional:
+#   FRONTEND_PORT       host port for the frontend (default 80)
+#   PUBLIC_URL / FRONTEND_URL / GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET
+#                       for Google sign-in (see docker-compose.yml)
+#
+# Memory limits below use mem_limit, which plain (non-swarm) docker compose
+# enforces. Note: hosted-runner containers provisioned by the API
+# (internal/hosting/docker.go) are created outside compose and currently get
+# no resource caps — see docs/operations.md.
+
+services:
+  postgres:
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    # Keep Postgres reachable only from the compose network in production;
+    # backups go through `make backup`, which execs into the container.
+    ports: !override []
+    mem_limit: 1g
+
+  api:
+    restart: unless-stopped
+    environment:
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      CORS_ORIGIN: ${CORS_ORIGIN:?set CORS_ORIGIN in .env (e.g. https://openv.example.com)}
+    healthcheck:
+      # /health is unauthenticated (internal/api/authmiddleware.go); the API
+      # image is alpine-based, so busybox wget is available.
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8080/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    mem_limit: 1g
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+      args:
+        # Baked into the static bundle at build time — changing it requires
+        # a rebuild (`up -d --build`).
+        - REACT_APP_API_URL=${REACT_APP_API_URL:?set REACT_APP_API_URL in .env (the public API URL, e.g. https://openv.example.com:8080)}
+    # Dockerfile.prod serves the static build with nginx on container port
+    # 8080; !override replaces the dev "3000:3000" mapping instead of
+    # merging with it.
+    ports: !override
+      - "${FRONTEND_PORT:-80}:8080"
+    # Runtime env is irrelevant for the static nginx build (the value is
+    # baked in at build time); overridden here only so `docker inspect`
+    # doesn't show a misleading dev value.
+    environment:
+      - REACT_APP_API_URL=${REACT_APP_API_URL}
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    mem_limit: 256m
