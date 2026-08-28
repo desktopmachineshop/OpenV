@@ -1,5 +1,9 @@
+# Base image policy: pin to specific minor-version tags (not `latest` or
+# bare-major tags, not sha digests). Pinned tags still receive OS-package
+# security rebuilds from upstream; bump versions here deliberately.
+
 # Build stage
-FROM node:20-alpine AS builder
+FROM node:20.20-alpine AS builder
 
 WORKDIR /app
 
@@ -20,8 +24,9 @@ ENV REACT_APP_API_URL=$REACT_APP_API_URL
 # Build the React app
 RUN npm run build
 
-# Production stage
-FROM nginx:alpine
+# Production stage (nginx 1.30 = current stable branch; the tag floats only
+# across 1.30.x patch releases)
+FROM nginx:1.30-alpine
 
 # Install curl for health checks
 RUN apk --no-cache add curl
