@@ -1194,6 +1194,7 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
               onSelectArtifact={handleSelectArtifact}
               previewVersion={previewVersion}
               onClosePreview={() => setPreviewVersion(null)}
+              allowLinkDelete={!isBaselineView}
             />
           </>
         )}
