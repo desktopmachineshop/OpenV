@@ -10,6 +10,11 @@
 //	openv-connector openv-connector://pair?code=..&api=..   pair + start
 //	openv-connector openv-connector://start                  start
 //	openv-connector                          start (default)
+//
+// Flags:
+//
+//	--insecure   skip the confirmation prompt when the pairing link uses
+//	             cleartext http to a non-localhost host (for scripted use)
 package main
 
 import (
@@ -88,9 +93,18 @@ func main() {
 	fmt.Println("  OpenV Agent Connector")
 	fmt.Println("  ---------------------")
 
+	insecure := false
+	args := make([]string, 0, len(os.Args)-1)
+	for _, a := range os.Args[1:] {
+		if a == "--insecure" {
+			insecure = true
+			continue
+		}
+		args = append(args, a)
+	}
 	arg := ""
-	if len(os.Args) > 1 {
-		arg = os.Args[1]
+	if len(args) > 0 {
+		arg = args[0]
 	}
 
 	// Best-effort self-registration on every launch (HKCU, idempotent), so a
@@ -113,14 +127,14 @@ func main() {
 		fmt.Println("  Protocol handler removed.")
 		return
 	case strings.HasPrefix(arg, "openv-connector://"):
-		handleDeepLink(arg)
+		handleDeepLink(arg, insecure)
 		return
 	default:
 		start(nil)
 	}
 }
 
-func handleDeepLink(link string) {
+func handleDeepLink(link string, insecure bool) {
 	u, err := url.Parse(link)
 	if err != nil {
 		fail("invalid link: %v", err)
@@ -136,7 +150,7 @@ func handleDeepLink(link string) {
 		if code == "" || api == "" {
 			fail("pairing link is missing its code — create a fresh one from the OpenV Runners page")
 		}
-		cfg := pair(api, code)
+		cfg := pair(api, code, insecure)
 		start(cfg)
 	case "start":
 		start(nil)
@@ -146,7 +160,14 @@ func handleDeepLink(link string) {
 }
 
 // pair exchanges a one-time code for this member's personal runner key.
-func pair(apiURL, code string) *connectorConfig {
+func pair(apiURL, code string, insecure bool) *connectorConfig {
+	if pairingNeedsConfirmation(apiURL) {
+		if insecure {
+			fmt.Printf("  Warning: pairing with %s over cleartext http (--insecure given, continuing).\n", apiURL)
+		} else if !confirmInsecurePairing(apiURL, os.Stdin) {
+			fail("pairing cancelled — the link does not use HTTPS.\n  Use an https:// OpenV address, or re-run with --insecure to accept the risk.")
+		}
+	}
 	fmt.Printf("  Pairing with %s ...\n", apiURL)
 	body, _ := json.Marshal(map[string]string{"code": code})
 	resp, err := http.Post(strings.TrimRight(apiURL, "/")+"/api/v1/public/connector/pair", "application/json", bytes.NewReader(body))
