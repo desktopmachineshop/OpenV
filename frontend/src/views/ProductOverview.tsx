@@ -79,11 +79,16 @@ export const ProductOverview: React.FC = () => {
     if (!projectId) return;
     setLoading(true);
     try {
-      const [profileRes, artifactsRes, interviewsRes, guidedRes] = await Promise.all([
+      const [profileRes, artifactsRes, interviewsRes, guidedRes, sessionsRes] = await Promise.all([
         productProfileAPI.get(projectId),
         artifactAPI.list(projectId),
         interviewsAPI.list(projectId).catch(() => ({ data: [] as Interview[] })),
         guidedAPI.list(projectId).catch(() => ({ data: [] as GuidedSession[] })),
+        // Best-effort peek at the latest sessions across all interviews —
+        // purely informational, so failures are swallowed.
+        interviewsAPI
+          .listProjectSessions(projectId, 3)
+          .catch(() => ({ data: [] as InterviewSession[] })),
       ]);
       const p = profileRes.data;
       setProfile(p);
@@ -105,24 +110,10 @@ export const ProductOverview: React.FC = () => {
         }))
       );
       setArtifacts(artifactsRes.data || []);
-      const ivs = interviewsRes.data || [];
-      setInterviews(ivs);
+      setInterviews(interviewsRes.data || []);
       setGuidedSessions(guidedRes.data || []);
+      setRecentSessions(sessionsRes.data || []);
       setError('');
-      // Best-effort peek at the latest sessions across the most recent
-      // interviews — purely informational, so failures are swallowed.
-      const sessionLists = await Promise.all(
-        ivs.slice(0, 5).map((iv) =>
-          interviewsAPI
-            .listSessions(iv.id)
-            .then((r) => r.data || [])
-            .catch(() => [] as InterviewSession[])
-        )
-      );
-      const allSessions = ([] as InterviewSession[])
-        .concat(...sessionLists)
-        .sort((a, b) => (b.started_at || '').localeCompare(a.started_at || ''));
-      setRecentSessions(allSessions.slice(0, 3));
     } catch (err: any) {
       setError(`Failed to load product overview: ${apiErrorMessage(err)}`);
     } finally {

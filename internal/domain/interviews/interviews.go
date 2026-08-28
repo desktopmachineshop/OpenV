@@ -110,6 +110,9 @@ type Repository interface {
 	FindSessionByID(id string) (*Session, error)
 	FindActiveSessionByInvite(inviteID string) (*Session, error) // nil, nil when none
 	ListSessionsByInterview(interviewID string) ([]*Session, error)
+	// ListSessionsByProject returns the most recent sessions across every
+	// interview in a project, newest first, at most limit rows.
+	ListSessionsByProject(projectID string, limit int) ([]*Session, error)
 
 	SaveMessage(m *Message) error
 	ListMessagesBySession(sessionID string) ([]*Message, error)
@@ -134,6 +137,7 @@ type Service interface {
 	FindActiveSession(inviteID string) (*Session, error) // nil, nil when none
 	GetSession(id string) (*Session, error)
 	ListSessions(interviewID string) ([]*Session, error)
+	ListProjectSessions(projectID string, limit int) ([]*Session, error)
 	AppendMessage(sessionID, role, content string) (*Message, error)
 	GetTranscript(sessionID string) ([]*Message, error)
 	CompleteSession(sessionID, summary string) error
@@ -371,6 +375,25 @@ func (s *DefaultService) GetSession(id string) (*Session, error) {
 // ListSessions retrieves all sessions for an interview.
 func (s *DefaultService) ListSessions(interviewID string) ([]*Session, error) {
 	return s.repo.ListSessionsByInterview(interviewID)
+}
+
+// Page-size bounds for project-wide session listings.
+const (
+	DefaultProjectSessionLimit = 20
+	MaxProjectSessionLimit     = 100
+)
+
+// ListProjectSessions retrieves the most recent sessions across all of a
+// project's interviews, newest first. A non-positive limit falls back to
+// DefaultProjectSessionLimit; limits above MaxProjectSessionLimit are capped.
+func (s *DefaultService) ListProjectSessions(projectID string, limit int) ([]*Session, error) {
+	if limit <= 0 {
+		limit = DefaultProjectSessionLimit
+	}
+	if limit > MaxProjectSessionLimit {
+		limit = MaxProjectSessionLimit
+	}
+	return s.repo.ListSessionsByProject(projectID, limit)
 }
 
 // AppendMessage adds a message to a session transcript.

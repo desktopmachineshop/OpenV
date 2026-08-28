@@ -1098,7 +1098,11 @@ func (h *Handler) UpsertProviderSetting(w http.ResponseWriter, r *http.Request) 
 	}
 	setting.OrgID = ActiveOrg(r)
 	if err := h.providerService.Upsert(&setting); err != nil {
-		writeJSONError(w, http.StatusBadRequest, err.Error())
+		if errors.Is(err, providers.ErrInvalidSetting) {
+			writeJSONError(w, http.StatusBadRequest, err.Error())
+		} else {
+			respondInternal(w, r, "failed to save provider setting", err)
+		}
 		return
 	}
 	json.NewEncoder(w).Encode(setting)
@@ -1116,7 +1120,11 @@ func (h *Handler) RecordProviderDetection(w http.ResponseWriter, r *http.Request
 	}
 	for provider, detected := range req {
 		if err := h.providerService.RecordDetection(WorkerOrg(r), provider, detected); err != nil {
-			writeJSONError(w, http.StatusBadRequest, err.Error())
+			if errors.Is(err, providers.ErrInvalidSetting) {
+				writeJSONError(w, http.StatusBadRequest, err.Error())
+			} else {
+				respondInternal(w, r, "failed to record provider detection", err)
+			}
 			return
 		}
 	}

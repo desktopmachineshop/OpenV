@@ -2,7 +2,7 @@ package automation
 
 import (
 	"fmt"
-	"log"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -34,7 +34,9 @@ func (m *TriggerMatcher) Start(bus domainevents.Bus) {
 func (m *TriggerMatcher) handle(e domainevents.Event) {
 	list, err := m.repo.ListEnabledTriggered(e.EventType)
 	if err != nil {
-		log.Printf("triggers: query failed for %s: %v", e.EventType, err)
+		slog.Error("triggers: automation query failed",
+			slog.String("event_type", e.EventType),
+			slog.Any("error", err))
 		return
 	}
 	for _, a := range list {
@@ -84,7 +86,9 @@ func (m *TriggerMatcher) passesGuards(a *automations.Automation, e domainevents.
 	if a.MaxRunsPerHour > 0 {
 		count, err := m.runService.CountRunsSince(a.ID, time.Now().Add(-time.Hour))
 		if err == nil && count >= a.MaxRunsPerHour {
-			log.Printf("triggers: automation %s hit max_runs_per_hour (%d)", a.ID, a.MaxRunsPerHour)
+			slog.Info("triggers: automation hit max_runs_per_hour",
+				slog.String("automation_id", a.ID),
+				slog.Int("max_runs_per_hour", a.MaxRunsPerHour))
 			return false
 		}
 	}
@@ -94,7 +98,9 @@ func (m *TriggerMatcher) passesGuards(a *automations.Automation, e domainevents.
 func (m *TriggerMatcher) fire(a *automations.Automation, e domainevents.Event) {
 	agentID, teamID, teamNodeID, err := scheduler.ResolveTarget(a, m.teamService)
 	if err != nil {
-		log.Printf("triggers: automation %s target unresolvable: %v", a.ID, err)
+		slog.Warn("triggers: automation target unresolvable",
+			slog.String("automation_id", a.ID),
+			slog.Any("error", err))
 		return
 	}
 
@@ -140,10 +146,14 @@ func (m *TriggerMatcher) fire(a *automations.Automation, e domainevents.Event) {
 		Prompt:         prompt,
 	}
 	if _, _, err := m.runService.Launch(req); err != nil {
-		log.Printf("triggers: failed to launch run for automation %s: %v", a.ID, err)
+		slog.Error("triggers: failed to launch run for automation",
+			slog.String("automation_id", a.ID),
+			slog.Any("error", err))
 		return
 	}
 	if err := m.repo.MarkRun(a.ID, time.Now(), a.NextRunAt); err != nil {
-		log.Printf("triggers: failed to stamp last_run_at for %s: %v", a.ID, err)
+		slog.Warn("triggers: failed to stamp last_run_at",
+			slog.String("automation_id", a.ID),
+			slog.Any("error", err))
 	}
 }

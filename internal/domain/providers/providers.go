@@ -24,6 +24,12 @@ const (
 	AuthAPIKey          = "api-key"
 )
 
+// ErrInvalidSetting flags a caller mistake in a provider-setting write
+// (missing org, unknown provider, bad auth mode). API handlers use it to
+// tell user-facing validation failures (400) apart from storage failures
+// (500), so wrap it with %w when adding new validations.
+var ErrInvalidSetting = errors.New("invalid provider setting")
+
 // DefaultAPIKeyEnv returns the environment variable a provider's CLI/SDK
 // natively reads its API key from. Used both as the default for a blank
 // api_key_env setting and as the variable the runner injects the key into.
@@ -149,16 +155,16 @@ func (s *DefaultService) List(orgID string) ([]*ProviderSetting, error) {
 // Upsert validates and persists a provider setting.
 func (s *DefaultService) Upsert(setting *ProviderSetting) error {
 	if setting == nil {
-		return errors.New("setting is required")
+		return fmt.Errorf("%w: setting is required", ErrInvalidSetting)
 	}
 	if setting.OrgID == "" {
-		return errors.New("organization id is required")
+		return fmt.Errorf("%w: organization id is required", ErrInvalidSetting)
 	}
 	if !isKnownProvider(setting.Provider) {
-		return fmt.Errorf("unknown provider %q", setting.Provider)
+		return fmt.Errorf("%w: unknown provider %q", ErrInvalidSetting, setting.Provider)
 	}
 	if setting.AuthMode != AuthSubscriptionCLI && setting.AuthMode != AuthAPIKey {
-		return fmt.Errorf("invalid auth_mode %q", setting.AuthMode)
+		return fmt.Errorf("%w: invalid auth_mode %q", ErrInvalidSetting, setting.AuthMode)
 	}
 	if setting.ID == "" {
 		setting.ID = uuid.New().String()
@@ -179,10 +185,10 @@ func (s *DefaultService) Upsert(setting *ProviderSetting) error {
 // blob, stamping checked_at, and persists it.
 func (s *DefaultService) RecordDetection(orgID, provider string, detected map[string]interface{}) error {
 	if orgID == "" {
-		return errors.New("organization id is required")
+		return fmt.Errorf("%w: organization id is required", ErrInvalidSetting)
 	}
 	if !isKnownProvider(provider) {
-		return fmt.Errorf("unknown provider %q", provider)
+		return fmt.Errorf("%w: unknown provider %q", ErrInvalidSetting, provider)
 	}
 
 	setting, err := s.repo.FindByProvider(orgID, provider)

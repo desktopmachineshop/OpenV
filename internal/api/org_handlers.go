@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/url"
 	"os"
@@ -887,7 +888,11 @@ func (h *Handler) GrantProjectTeamAccess(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	if err := h.memberService.GrantTeam(projectID, req.OrgTeamID, req.Role); err != nil {
-		writeJSONError(w, http.StatusBadRequest, err.Error())
+		if errors.Is(err, members.ErrInvalidRole) {
+			writeJSONError(w, http.StatusBadRequest, err.Error())
+		} else {
+			respondInternal(w, r, "failed to grant team access", err)
+		}
 		return
 	}
 	w.WriteHeader(http.StatusCreated)
