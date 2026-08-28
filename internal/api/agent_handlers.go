@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -326,37 +327,26 @@ func (h *Handler) ListAgentRuns(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	limit, _ := strconv.Atoi(q.Get("limit"))
-	runs, err := h.runService.List(agentruns.ListFilter{
+	// Scope the listing to the active workspace in SQL (so a busy sibling
+	// workspace can never starve the page before LIMIT applies); without a
+	// project filter, non-admin members only see the runs they launched
+	// themselves.
+	activeOrg := ActiveOrg(r)
+	filter := agentruns.ListFilter{
+		OrgID:     activeOrg,
 		AgentID:   q.Get("agent_id"),
 		ProjectID: projectID,
 		Status:    q.Get("status"),
 		ParentID:  q.Get("parent_id"),
 		Limit:     limit,
-	})
+	}
+	if projectID == "" && !h.isOrgAdmin(r, activeOrg) {
+		filter.LaunchedBy = CurrentUser(r).ID
+	}
+	runs, err := h.runService.List(filter)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
-	}
-	// Scope the listing to the active workspace; without a project filter,
-	// non-admin members only see the runs they launched themselves.
-	activeOrg := ActiveOrg(r)
-	inOrg := runs[:0]
-	for _, run := range runs {
-		if activeOrg != "" && run.OrgID != activeOrg {
-			continue
-		}
-		inOrg = append(inOrg, run)
-	}
-	runs = inOrg
-	if projectID == "" && !h.isOrgAdmin(r, activeOrg) {
-		user := CurrentUser(r)
-		own := runs[:0]
-		for _, run := range runs {
-			if run.LaunchedBy != nil && *run.LaunchedBy == user.ID {
-				own = append(own, run)
-			}
-		}
-		runs = own
 	}
 	json.NewEncoder(w).Encode(runs)
 }
@@ -496,14 +486,18 @@ func (h *Handler) ClaimAgentRun(w http.ResponseWriter, r *http.Request) {
 	}
 	// The worker needs the agent definition and the run token context; the
 	// token itself was minted at enqueue and is returned only here, derived
-	// fresh so the worker can hand it to the MCP server.
+	// fresh so the worker can hand it to the MCP server. If the handshake
+	// fails after the claim, release the run back to the queue so it isn't
+	// stranded in 'claimed' until the stale reaper.
 	agent, err := h.agentService.Get(run.AgentID)
 	if err != nil || agent == nil {
+		h.releaseFailedClaim(run.ID, req.WorkerID)
 		http.Error(w, "agent not found for claimed run", http.StatusInternalServerError)
 		return
 	}
 	token, err := h.runService.ReissueToken(run.ID)
 	if err != nil {
+		h.releaseFailedClaim(run.ID, req.WorkerID)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -513,6 +507,14 @@ func (h *Handler) ClaimAgentRun(w http.ResponseWriter, r *http.Request) {
 		"run_token": token,
 		"auth":      h.resolveRunAuth(run, agent),
 	})
+}
+
+// releaseFailedClaim rolls a claim back to queued after a failed claim
+// handshake (best effort — the stale reaper remains the backstop).
+func (h *Handler) releaseFailedClaim(runID, workerID string) {
+	if err := h.runService.ReleaseClaim(runID, workerID); err != nil {
+		log.Printf("api: failed to release claim on run %s for worker %s: %v", runID, workerID, err)
+	}
 }
 
 // resolveRunAuth picks the provider credential mode for a claimed run. A
