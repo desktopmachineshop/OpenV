@@ -7,6 +7,7 @@ import { ProjectLayout } from './components/ProjectLayout';
 import { ModuleView } from './views/ModuleView';
 import { Login } from './views/Login';
 import { ProductOverview } from './views/ProductOverview';
+import { InterviewsPage } from './views/InterviewsPage';
 import { GuidedWizard } from './views/GuidedWizard';
 import { VVDashboard } from './views/VVDashboard';
 import { TestRunView } from './views/TestRunView';
@@ -97,6 +98,7 @@ function App() {
           <Route index element={<ProductOverview />} />
           <Route path="requirements" element={<ModuleView />} />
           <Route path="guided" element={<GuidedWizard />} />
+          <Route path="interviews" element={<InterviewsPage />} />
           <Route path="vv" element={<VVDashboard />} />
           <Route path="vv/runs/:runId" element={<TestRunView />} />
           <Route path="matrix" element={<TraceabilityMatrix />} />

@@ -5,18 +5,47 @@ import { useAppStore } from '../state/store';
 import { OrgSwitcher } from './OrgSwitcher';
 import { UserSettingsPanel } from './UserSettingsPanel';
 
-const navItems: { to: string; label: string; end?: boolean }[] = [
-  { to: '', label: 'Overview', end: true },
-  { to: 'requirements', label: 'Requirements' },
-  { to: 'guided', label: 'Guided Definition' },
-  { to: 'vv', label: 'V&V' },
-  { to: 'matrix', label: 'Matrix' },
-  { to: 'board', label: 'Board' },
-  { to: 'crew', label: 'Crew' },
-  { to: 'agents', label: 'Agents' },
-  { to: 'automations', label: 'Automations' },
-  { to: 'agent-runs', label: 'Runs' },
-  { to: 'settings', label: 'Settings' },
+interface NavItem {
+  to: string;
+  label: string;
+  end?: boolean;
+}
+
+// The sidebar is grouped by what the user is doing: defining the product,
+// verifying it, planning the work, and running agents (issue #97).
+const navSections: { label?: string; items: NavItem[] }[] = [
+  {
+    label: 'Define',
+    items: [
+      { to: '', label: 'Overview', end: true },
+      { to: 'guided', label: 'Guided Definition' },
+      { to: 'requirements', label: 'Requirements' },
+      { to: 'interviews', label: 'Interviews' },
+    ],
+  },
+  {
+    label: 'Verify',
+    items: [
+      { to: 'vv', label: 'V&V' },
+      { to: 'matrix', label: 'Traceability' },
+    ],
+  },
+  {
+    label: 'Plan',
+    items: [{ to: 'board', label: 'Board' }],
+  },
+  {
+    label: 'Agents',
+    items: [
+      { to: 'agents', label: 'Agents' },
+      { to: 'crew', label: 'Crew' },
+      { to: 'automations', label: 'Automations' },
+      { to: 'agent-runs', label: 'Runs' },
+    ],
+  },
+  {
+    items: [{ to: 'settings', label: 'Settings' }],
+  },
 ];
 
 // ProjectLayout syncs the URL param into the store and renders the app
@@ -89,22 +118,40 @@ export const ProjectLayout: React.FC = () => {
           </div>
         </div>
         <nav style={{ flex: 1, overflowY: 'auto', padding: '8px 0' }}>
-          {navItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.end}
-              style={({ isActive }) => ({
-                display: 'block',
-                padding: '9px 16px',
-                color: isActive ? '#fff' : '#bdc3c7',
-                background: isActive ? '#3498db' : 'transparent',
-                textDecoration: 'none',
-                fontSize: 14,
-              })}
-            >
-              {item.label}
-            </NavLink>
+          {navSections.map((section, i) => (
+            <div key={section.label || `section-${i}`} style={{ marginTop: i === 0 ? 0 : 10 }}>
+              {section.label && (
+                <div
+                  style={{
+                    padding: '4px 16px',
+                    fontSize: 10,
+                    fontWeight: 700,
+                    letterSpacing: 1,
+                    textTransform: 'uppercase',
+                    color: '#7f8c8d',
+                  }}
+                >
+                  {section.label}
+                </div>
+              )}
+              {section.items.map((item) => (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  end={item.end}
+                  style={({ isActive }) => ({
+                    display: 'block',
+                    padding: '9px 16px',
+                    color: isActive ? '#fff' : '#bdc3c7',
+                    background: isActive ? '#3498db' : 'transparent',
+                    textDecoration: 'none',
+                    fontSize: 14,
+                  })}
+                >
+                  {item.label}
+                </NavLink>
+              ))}
+            </div>
           ))}
         </nav>
         <div style={{ borderTop: '1px solid #34495e', padding: 12, position: 'relative' }}>

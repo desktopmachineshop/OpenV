@@ -104,7 +104,7 @@ export const AgentRunsPage: React.FC = () => {
         {`@keyframes ovPulseRun { 0% { opacity: 1; } 50% { opacity: 0.45; } 100% { opacity: 1; } }`}
       </style>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
-        <h2 style={{ color: '#2c3e50', margin: 0 }}>Agent Runs</h2>
+        <h2 style={{ color: '#2c3e50', margin: 0 }}>Runs</h2>
         <button
           onClick={() => setShowProposals(!showProposals)}
           style={{
