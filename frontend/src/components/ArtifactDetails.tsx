@@ -15,6 +15,12 @@ interface ArtifactDetailsProps {
   onSelectArtifact?: (artifactId: string) => void;
   previewVersion?: Artifact | null;
   onClosePreview?: () => void;
+  /**
+   * When true, the main Traceability Links section offers a Delete button
+   * (backend still enforces editor rights). Version-preview/diff renderings
+   * are always read-only regardless of this flag.
+   */
+  allowLinkDelete?: boolean;
 }
 
 export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({ 
@@ -26,10 +32,10 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
   onSelectArtifact,
   previewVersion,
   onClosePreview,
+  allowLinkDelete = false,
 }) => {
   const [currentVersionLinks, setCurrentVersionLinks] = useState<Link[]>(links || []);
   const [previewVersionLinks, setPreviewVersionLinks] = useState<Link[]>([]);
-  const [loadingLinks, setLoadingLinks] = useState(false);
   const [deletingLinkId, setDeletingLinkId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   
@@ -72,7 +78,6 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
 
     // If in preview mode, also fetch preview version links
     if (previewVersion) {
-      setLoadingLinks(true);
       linkAPI.listForArtifactVersion(previewVersion.id, previewVersion.version)
         .then(res => {
           // Deduplicate links by ID
@@ -80,42 +85,30 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
           const uniqueLinks = Array.from(new Map(links.map(link => [link.id, link])).values());
           setPreviewVersionLinks(uniqueLinks);
         })
-        .catch(() => setPreviewVersionLinks([]))
-        .finally(() => setLoadingLinks(false));
+        .catch(() => setPreviewVersionLinks([]));
     } else {
       setPreviewVersionLinks([]);
     }
   }, [artifact.id, artifact.version, previewVersion]);
-  // Handle link deletion
+  // Handle link deletion (DELETE /api/v1/links/{id}; backend enforces
+  // editor rights and refreshes link snapshots on both artifacts).
   const handleDeleteLink = async (linkId: string) => {
-    console.log('handleDeleteLink called with linkId:', linkId);
-    
     if (!window.confirm('Are you sure you want to delete this link?')) {
-      console.log('User cancelled delete confirmation');
       return;
     }
 
-    console.log('User confirmed deletion, proceeding...');
     setDeletingLinkId(linkId);
     setDeleteError(null);
-    
+
     try {
-      console.log('Calling linkAPI.delete...');
       await linkAPI.delete(linkId);
-      console.log('Delete successful!');
-      
-      // Refetch links after deletion
-      const updatedCurrentLinks = currentVersionLinks.filter(l => l.id !== linkId);
-      const updatedPreviewLinks = previewVersionLinks.filter(l => l.id !== linkId);
-      
-      setCurrentVersionLinks(updatedCurrentLinks);
-      setPreviewVersionLinks(updatedPreviewLinks);
-      
-      // Also reload from props
-      const updatedPropsLinks = (links || []).filter(l => l.id !== linkId);
-      setCurrentVersionLinks(previewVersion ? updatedCurrentLinks : updatedPropsLinks);
+
+      // Drop the link from the displayed lists immediately; the
+      // authoritative lists are refetched whenever the artifact refreshes.
+      setCurrentVersionLinks((prev) => prev.filter((l) => l.id !== linkId));
+      setPreviewVersionLinks((prev) => prev.filter((l) => l.id !== linkId));
     } catch (error) {
-      console.error('Delete failed with error:', error);
+      console.error('Failed to delete link:', error);
       setDeleteError(`Failed to delete link: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setDeletingLinkId(null);
@@ -136,10 +129,6 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
   const previewOutgoingLinks = (previewVersionLinks || []).filter((l) => l.from_id === previewVersion?.id);
   const previewIncomingLinks = (previewVersionLinks || []).filter((l) => l.to_id === previewVersion?.id);
 
-  // Legacy: Filter links related to this artifact (for non-preview mode)
-  const outgoingLinks = (links || []).filter((l) => l.from_id === artifact.id);
-  const incomingLinks = (links || []).filter((l) => l.to_id === artifact.id);
-
   // Group links by type
   const groupLinksByType = (linkList: Link[]): Record<string, Link[]> => {
     return linkList.reduce((acc, link) => {
@@ -155,10 +144,6 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
   const currentIncomingByType = groupLinksByType(currentIncomingLinks);
   const previewOutgoingByType = groupLinksByType(previewOutgoingLinks);
   const previewIncomingByType = groupLinksByType(previewIncomingLinks);
-
-  // Legacy: for non-preview mode
-  const outgoingByType = groupLinksByType(outgoingLinks);
-  const incomingByType = groupLinksByType(incomingLinks);
 
   // Render a group of links by type
   const renderLinkGroup = (linksByType: Record<string, Link[]>, direction: 'outgoing' | 'incoming', isPreview: boolean = false) => {
@@ -567,21 +552,37 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
       {(currentOutgoingLinks.length > 0 || currentIncomingLinks.length > 0) && (
         <div style={{ marginTop: '30px', paddingTop: '15px', borderTop: '1px solid #ddd' }}>
           <h4 style={{ marginTop: 0, marginBottom: '12px' }}>Traceability Links</h4>
-          
+
+          {deleteError && (
+            <div
+              style={{
+                backgroundColor: '#fdecea',
+                border: '1px solid #e74c3c',
+                color: '#c0392b',
+                padding: '8px 10px',
+                borderRadius: '3px',
+                marginBottom: '12px',
+                fontSize: '12px',
+              }}
+            >
+              {deleteError}
+            </div>
+          )}
+
           {currentOutgoingLinks.length > 0 && (
             <div style={{ marginBottom: '15px' }}>
               <strong style={{ color: '#27ae60', fontSize: '13px' }}>↓ Links From This Artifact ({currentOutgoingLinks.length})</strong>
               <div style={{ marginTop: '8px' }}>
-                {renderLinkGroup(currentOutgoingByType, 'outgoing', true)}
+                {renderLinkGroup(currentOutgoingByType, 'outgoing', !allowLinkDelete)}
               </div>
             </div>
           )}
-          
+
           {currentIncomingLinks.length > 0 && (
             <div>
               <strong style={{ color: '#2980b9', fontSize: '13px' }}>↑ Links To This Artifact ({currentIncomingLinks.length})</strong>
               <div style={{ marginTop: '8px' }}>
-                {renderLinkGroup(currentIncomingByType, 'incoming', true)}
+                {renderLinkGroup(currentIncomingByType, 'incoming', !allowLinkDelete)}
               </div>
             </div>
           )}

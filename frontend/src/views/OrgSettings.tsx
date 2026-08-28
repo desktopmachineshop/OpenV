@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { orgsAPI } from '../api/client';
+import { apiErrorMessage } from '../api/errors';
 import { useAppStore } from '../state/store';
+import { Navbar } from '../components/Navbar';
 import { OrgMembersTab } from '../components/org/OrgMembersTab';
 import { OrgTeamsTab } from '../components/org/OrgTeamsTab';
 import { OrgProvidersTab } from '../components/org/OrgProvidersTab';
@@ -25,7 +27,19 @@ export const OrgSettings: React.FC = () => {
   const org = orgs.find((o) => o.id === activeOrgId) || null;
   const isAdmin = Boolean(org && (org.role === 'admin' || currentUser?.is_admin));
 
-  const [tab, setTab] = useState<Tab>('general');
+  // The active tab lives in the URL (?tab=…) so refreshes and deep links keep
+  // it; unknown values fall back to the first tab.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get('tab');
+  const tab: Tab = TABS.some((t) => t.key === tabParam) ? (tabParam as Tab) : TABS[0].key;
+  const setTab = (next: Tab) =>
+    setSearchParams(
+      (prev) => {
+        prev.set('tab', next);
+        return prev;
+      },
+      { replace: true }
+    );
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
 
@@ -61,7 +75,7 @@ export const OrgSettings: React.FC = () => {
       setOrgs(orgs.map((o) => (o.id === org.id ? { ...o, ...res.data } : o)));
       flash('Workspace name updated.');
     } catch (err: any) {
-      setError(`Failed to update workspace: ${err.response?.data || err.message}`);
+      setError(`Failed to update workspace: ${apiErrorMessage(err)}`);
     } finally {
       setSavingName(false);
     }
@@ -69,6 +83,7 @@ export const OrgSettings: React.FC = () => {
 
   return (
     <div style={{ minHeight: '100vh', background: '#f5f6fa' }}>
+      <Navbar title="Workspace Settings" showWorkspaceControls />
       <div style={{ padding: 24, maxWidth: 900, margin: '0 auto' }}>
         <Link to="/projects" style={{ fontSize: 13, color: '#3498db', textDecoration: 'none' }}>
           ← Back to projects

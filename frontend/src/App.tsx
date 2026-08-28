@@ -20,6 +20,7 @@ import { AgentsPage } from './views/AgentsPage';
 import { ProjectSettings } from './views/ProjectSettings';
 import { OrgSettings } from './views/OrgSettings';
 import { InterviewChat } from './views/InterviewChat';
+import { ManualView } from './views/ManualView';
 import './index.css';
 
 function App() {
@@ -94,6 +95,8 @@ function App() {
         <Route path="/" element={<Navigate to="/projects" replace />} />
         <Route path="/projects" element={<ProjectList />} />
         <Route path="/org/settings" element={<OrgSettings />} />
+        <Route path="/manual" element={<ManualView />} />
+        <Route path="/manual/:chapterSlug" element={<ManualView />} />
         <Route path="/projects/:projectId" element={<ProjectLayout />}>
           <Route index element={<ProductOverview />} />
           <Route path="requirements" element={<ModuleView />} />

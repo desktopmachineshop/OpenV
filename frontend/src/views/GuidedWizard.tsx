@@ -12,10 +12,22 @@ import { useAppStore } from '../state/store';
 import { StepShell } from '../components/wizard/StepShell';
 import { RepeatingCardList } from '../components/wizard/RepeatingCardList';
 import { GuidedChatPanel, GuidedChatPanelHandle, CopilotSuggestion } from '../components/wizard/GuidedChatPanel';
+import {
+  PersonaEntry,
+  NeedEntry,
+  ReqEntry,
+  NfrEntry,
+  HazardEntry,
+  newEntryId,
+  normalizeWizardAnswers,
+} from '../components/wizard/wizardEntries';
 
 // ---------------------------------------------------------------------------
 // Types for wizard answers
 // ---------------------------------------------------------------------------
+// Entry types (PersonaEntry, NeedEntry, ...) live in wizardEntries.ts. Every
+// entry carries a stable client-generated id, and cross-references (need ->
+// persona, requirement -> need) are by id, never by array index.
 
 interface DraftSpec {
   type: string;
@@ -24,44 +36,6 @@ interface DraftSpec {
   parent_id?: string;
   attributes?: Record<string, any>;
   links?: { type: string; to_id: string }[];
-}
-
-interface PersonaEntry {
-  name: string;
-  role: string;
-  goals: string;
-  pains: string;
-  artifact_id?: string;
-}
-
-interface NeedEntry {
-  persona_index: number;
-  capability: string;
-  outcome: string;
-  artifact_id?: string;
-}
-
-interface ReqEntry {
-  need_index: number;
-  text: string;
-  fit_criterion: string;
-  verification_method: string;
-  artifact_id?: string;
-}
-
-interface NfrEntry {
-  category: string;
-  text: string;
-  fit_criterion: string;
-  verification_method: string;
-  artifact_id?: string;
-}
-
-interface HazardEntry {
-  hazard: string;
-  harm: string;
-  severity: string;
-  artifact_id?: string;
 }
 
 const STEP_LABELS = [
@@ -120,17 +94,29 @@ export const GuidedWizard: React.FC = () => {
   // Step 8
   const [draftArtifacts, setDraftArtifacts] = useState<Artifact[]>([]);
   const [draftsLoading, setDraftsLoading] = useState(false);
+  // Copilot suggestions already applied ("<messageId>:<segmentIndex>" keys),
+  // persisted in the session answers so Apply buttons stay disabled after a
+  // remount and a re-click can never duplicate entries.
+  const [appliedSuggestions, setAppliedSuggestions] = useState<Record<string, boolean>>({});
 
   const hydrateFromAnswers = useCallback((answers: Record<string, any>) => {
     const s1 = answers.step_1 || {};
     setVision(s1.vision || '');
     setProblem(s1.problem_statement || '');
     setTargetUsers(s1.target_users || '');
-    setPersonas((answers.step_2?.personas as PersonaEntry[]) || []);
-    setNeeds((answers.step_3?.needs as NeedEntry[]) || []);
-    setRequirements((answers.step_4?.requirements as ReqEntry[]) || []);
-    setNfrs((answers.step_5?.nfrs as NfrEntry[]) || []);
-    setHazards((answers.step_6?.hazards as HazardEntry[]) || []);
+    // Normalize to id-based entries; sessions saved before stable ids existed
+    // (index-based persona_index/need_index references) are migrated here.
+    const norm = normalizeWizardAnswers(answers);
+    setPersonas(norm.personas);
+    setNeeds(norm.needs);
+    setRequirements(norm.requirements);
+    setNfrs(norm.nfrs);
+    setHazards(norm.hazards);
+    const applied: Record<string, boolean> = {};
+    norm.appliedSuggestionKeys.forEach((k) => {
+      applied[k] = true;
+    });
+    setAppliedSuggestions(applied);
     setStubSelected((answers.step_7?.selected as Record<string, boolean>) || {});
     setStubCreated((answers.step_7?.created as Record<string, string>) || {});
   }, []);
@@ -202,7 +188,21 @@ export const GuidedWizard: React.FC = () => {
     setBusy(true);
     try {
       const res = await guidedAPI.start(projectId);
-      const seeded = await guidedAPI.saveStep(res.data.id, 1, from.answers || {});
+      // Seed with the id-normalized form of the committed answers, so old
+      // index-based sessions are migrated once, at reopen time. Applied
+      // copilot suggestion keys refer to the old session's transcript, so
+      // they are reset for the new one.
+      const norm = normalizeWizardAnswers(from.answers || {});
+      const seededAnswers: Record<string, any> = {
+        ...(from.answers || {}),
+        step_2: { personas: norm.personas },
+        step_3: { needs: norm.needs },
+        step_4: { requirements: norm.requirements },
+        step_5: { nfrs: norm.nfrs },
+        step_6: { hazards: norm.hazards },
+        copilot_applied: [],
+      };
+      const seeded = await guidedAPI.saveStep(res.data.id, 1, seededAnswers);
       setSession(seeded.data);
       hydrateFromAnswers(seeded.data.answers || {});
       setStep(1);
@@ -283,7 +283,13 @@ export const GuidedWizard: React.FC = () => {
           };
           return null;
         }
-        d.personas.push({ name, role: String(s.role || ''), goals: String(s.goals || ''), pains: String(s.pains || '') });
+        d.personas.push({
+          id: newEntryId(),
+          name,
+          role: String(s.role || ''),
+          goals: String(s.goals || ''),
+          pains: String(s.pains || ''),
+        });
         return null;
       }
       case 'need': {
@@ -291,25 +297,26 @@ export const GuidedWizard: React.FC = () => {
           const i = matchEntry(d.needs, (n) => n.capability, String(s.replaces));
           if (i < 0) return `No user need matching "${s.replaces}" to replace.`;
           if (d.needs[i].artifact_id) return 'That need is already saved as an artifact and cannot be replaced here.';
-          let personaIndex = d.needs[i].persona_index;
+          let personaId = d.needs[i].persona_id;
           if (s.persona) {
             const hit = matchEntry(d.personas, (p) => p.name, String(s.persona));
-            if (hit >= 0) personaIndex = hit;
+            if (hit >= 0) personaId = d.personas[hit].id;
           }
           d.needs[i] = {
             ...d.needs[i],
-            persona_index: personaIndex,
+            persona_id: personaId,
             capability: s.capability !== undefined ? String(s.capability) : d.needs[i].capability,
             outcome: s.outcome !== undefined ? String(s.outcome) : d.needs[i].outcome,
           };
           return null;
         }
-        const usable = d.personas.map((p, i) => ({ p, i })).filter(({ p }) => p.name.trim());
+        const usable = d.personas.filter((p) => p.name.trim());
         if (usable.length === 0) return 'Add a persona first — user needs attach to a persona.';
         const wanted = String(s.persona || '').trim().toLowerCase();
-        const hit = usable.find(({ p }) => p.name.trim().toLowerCase() === wanted);
+        const hit = usable.find((p) => p.name.trim().toLowerCase() === wanted);
         d.needs.push({
-          persona_index: (hit || usable[0]).i,
+          id: newEntryId(),
+          persona_id: (hit || usable[0]).id,
           capability: String(s.capability || ''),
           outcome: String(s.outcome || ''),
         });
@@ -320,33 +327,34 @@ export const GuidedWizard: React.FC = () => {
           const i = matchEntry(d.requirements, (r) => r.text, String(s.replaces));
           if (i < 0) return `No requirement matching "${s.replaces}" to replace.`;
           if (d.requirements[i].artifact_id) return 'That requirement is already saved as an artifact and cannot be replaced here.';
-          let needIndex = d.requirements[i].need_index;
+          let needId = d.requirements[i].need_id;
           if (s.need) {
             const hit = matchEntry(d.needs, (n) => n.capability, String(s.need));
-            if (hit >= 0) needIndex = hit;
+            if (hit >= 0) needId = d.needs[hit].id;
           }
           d.requirements[i] = {
             ...d.requirements[i],
-            need_index: needIndex,
+            need_id: needId,
             text: s.text !== undefined ? String(s.text) : d.requirements[i].text,
             fit_criterion: s.fit_criterion !== undefined ? String(s.fit_criterion) : d.requirements[i].fit_criterion,
             verification_method: verificationMethod(s.verification_method, d.requirements[i].verification_method),
           };
           return null;
         }
-        const usable = d.needs.map((n, i) => ({ n, i })).filter(({ n }) => n.capability.trim());
+        const usable = d.needs.filter((n) => n.capability.trim());
         if (usable.length === 0) return 'Add a user need first — requirements derive from needs.';
         const wanted = String(s.need || '').trim().toLowerCase();
-        let needIndex = usable[0].i;
+        let needId = usable[0].id;
         if (wanted) {
-          const hit = usable.find(({ n }) => {
+          const hit = usable.find((n) => {
             const cap = n.capability.trim().toLowerCase();
             return cap === wanted || cap.includes(wanted) || wanted.includes(cap);
           });
-          if (hit) needIndex = hit.i;
+          if (hit) needId = hit.id;
         }
         d.requirements.push({
-          need_index: needIndex,
+          id: newEntryId(),
+          need_id: needId,
           text: String(s.text || 'The system shall '),
           fit_criterion: String(s.fit_criterion || ''),
           verification_method: verificationMethod(s.verification_method, 'test'),
@@ -374,6 +382,7 @@ export const GuidedWizard: React.FC = () => {
         }
         if (!String(s.text || '').trim()) return 'The NFR suggestion has no text.';
         d.nfrs.push({
+          id: newEntryId(),
           category,
           text: String(s.text),
           fit_criterion: String(s.fit_criterion || ''),
@@ -397,6 +406,7 @@ export const GuidedWizard: React.FC = () => {
         }
         if (!String(s.hazard || '').trim()) return 'The hazard suggestion has no description.';
         d.hazards.push({
+          id: newEntryId(),
           hazard: String(s.hazard),
           harm: String(s.harm || ''),
           severity: SEVERITIES.includes(String(s.severity)) ? String(s.severity) : 'moderate',
@@ -408,10 +418,38 @@ export const GuidedWizard: React.FC = () => {
     }
   };
 
+  // Answers payload built from an explicit snapshot (used right after a
+  // suggestion batch, before React state has re-rendered).
+  const buildAnswersFrom = (d: SuggestionDraft, applied: Record<string, boolean>): Record<string, any> => ({
+    ...(session?.answers || {}),
+    step_1: { vision: d.vision, problem_statement: d.problem, target_users: d.targetUsers },
+    step_2: { personas: d.personas },
+    step_2_ids: d.personas.map((p) => p.artifact_id).filter(Boolean),
+    step_3: { needs: d.needs },
+    step_3_ids: d.needs.map((n) => n.artifact_id).filter(Boolean),
+    step_4: { requirements: d.requirements },
+    step_4_ids: d.requirements.map((r) => r.artifact_id).filter(Boolean),
+    step_5: { nfrs: d.nfrs },
+    step_5_ids: d.nfrs.map((n) => n.artifact_id).filter(Boolean),
+    step_6: { hazards: d.hazards },
+    step_7: { selected: stubSelected, created: stubCreated },
+    copilot_applied: Object.keys(applied).filter((k) => applied[k]),
+  });
+
+  const buildAnswers = (): Record<string, any> =>
+    buildAnswersFrom(
+      { vision, problem, targetUsers, personas, needs, requirements, nfrs, hazards, openNfr: openNfrCategories },
+      appliedSuggestions
+    );
+
   // Apply a batch of suggestions in order against one working copy, then
-  // commit every touched section in a single pass. Returns one result per
-  // suggestion (null = applied, string = reason it was skipped).
-  const handleAddSuggestions = (list: CopilotSuggestion[]): (string | null)[] => {
+  // commit every touched section in a single pass and persist the result
+  // (entries + applied-suggestion keys) to the session, so applied state
+  // survives navigating away and back. Returns one result per suggestion
+  // (null = applied, string = reason it was skipped).
+  const handleApplySuggestions = (
+    items: { suggestion: CopilotSuggestion; key: string }[]
+  ): (string | null)[] => {
     const d: SuggestionDraft = {
       vision,
       problem,
@@ -423,7 +461,11 @@ export const GuidedWizard: React.FC = () => {
       hazards: hazards.map((h) => ({ ...h })),
       openNfr: { ...openNfrCategories },
     };
-    const results = list.map((s) => applySuggestionToDraft(d, s));
+    // A suggestion already applied in this session is a no-op success —
+    // re-clicking (or a stale button after a remount) can never duplicate.
+    const results = items.map(({ suggestion, key }) =>
+      appliedSuggestions[key] ? null : applySuggestionToDraft(d, suggestion)
+    );
     setVision(d.vision);
     setProblem(d.problem);
     setTargetUsers(d.targetUsers);
@@ -433,23 +475,31 @@ export const GuidedWizard: React.FC = () => {
     setNfrs(d.nfrs);
     setHazards(d.hazards);
     setOpenNfrCategories(d.openNfr);
+    const nextApplied = { ...appliedSuggestions };
+    let newlyApplied = false;
+    results.forEach((r, i) => {
+      if (r === null && !nextApplied[items[i].key]) {
+        nextApplied[items[i].key] = true;
+        newlyApplied = true;
+      }
+    });
+    if (newlyApplied) {
+      setAppliedSuggestions(nextApplied);
+      if (session) {
+        const answers = buildAnswersFrom(d, nextApplied);
+        // Keep the session's saved step: don't regress current_step when a
+        // suggestion is applied while revisiting an earlier step.
+        const stepToSave = Math.max(session.current_step || 0, step) || 1;
+        guidedAPI
+          .saveStep(session.id, stepToSave, answers)
+          .then((res) => setSession(res.data))
+          .catch(() => {
+            setError('Suggestion applied in the wizard, but saving the session failed — it may not survive a reload.');
+          });
+      }
+    }
     return results;
   };
-
-  const buildAnswers = (): Record<string, any> => ({
-    ...(session?.answers || {}),
-    step_1: { vision, problem_statement: problem, target_users: targetUsers },
-    step_2: { personas },
-    step_2_ids: personas.map((p) => p.artifact_id).filter(Boolean),
-    step_3: { needs },
-    step_3_ids: needs.map((n) => n.artifact_id).filter(Boolean),
-    step_4: { requirements },
-    step_4_ids: requirements.map((r) => r.artifact_id).filter(Boolean),
-    step_5: { nfrs },
-    step_5_ids: nfrs.map((n) => n.artifact_id).filter(Boolean),
-    step_6: { hazards },
-    step_7: { selected: stubSelected, created: stubCreated },
-  });
 
   const persist = async (nextStep: number, answersOverride?: Record<string, any>) => {
     if (!session) return;
@@ -537,7 +587,7 @@ export const GuidedWizard: React.FC = () => {
         const drafts: DraftSpec[] = [];
         updated.forEach((n, i) => {
           if (!n.artifact_id && n.capability.trim()) {
-            const persona = personas[n.persona_index];
+            const persona = personas.find((p) => p.id === n.persona_id);
             const personaName = persona?.name || 'a user';
             const sentence = `As ${personaName}, I need ${n.capability.trim()} so that ${n.outcome.trim() || '…'}`;
             newIdx.push(i);
@@ -567,7 +617,7 @@ export const GuidedWizard: React.FC = () => {
         const drafts: DraftSpec[] = [];
         updated.forEach((r, i) => {
           if (!r.artifact_id && r.text.trim()) {
-            const need = needs[r.need_index];
+            const need = needs.find((nd) => nd.id === r.need_id);
             newIdx.push(i);
             drafts.push({
               type: 'requirement',
@@ -904,7 +954,8 @@ export const GuidedWizard: React.FC = () => {
             <RepeatingCardList<PersonaEntry>
               items={personas}
               onChange={setPersonas}
-              makeNew={() => ({ name: '', role: '', goals: '', pains: '' })}
+              makeNew={() => ({ id: newEntryId(), name: '', role: '', goals: '', pains: '' })}
+              itemKey={(p) => p.id}
               addLabel="Add persona"
               emptyText="No personas yet — add the first one."
               renderItem={(p, i, update) => (
@@ -939,6 +990,7 @@ export const GuidedWizard: React.FC = () => {
         );
       case 3: {
         const usablePersonas = personas.filter((p) => p.name.trim());
+        const orphanNeeds = needs.filter((n) => !personas.some((p) => p.id === n.persona_id && p.name.trim()));
         return (
           <div>
             <div className="card" style={{ marginBottom: 12 }}>
@@ -953,19 +1005,19 @@ export const GuidedWizard: React.FC = () => {
                 No personas defined — go back to step 2 to add at least one persona.
               </div>
             )}
-            {personas.map((p, pi) =>
+            {personas.map((p) =>
               p.name.trim() ? (
-                <div key={pi} className="card" style={{ marginBottom: 12 }}>
+                <div key={p.id} className="card" style={{ marginBottom: 12 }}>
                   <div style={{ fontWeight: 600, color: '#2c3e50', marginBottom: 10 }}>{p.name}</div>
-                  {needs.map((n, ni) =>
-                    n.persona_index === pi ? (
-                      <div key={ni} style={{ border: '1px solid #eee', borderRadius: 4, padding: 10, marginBottom: 8 }}>
+                  {needs.map((n) =>
+                    n.persona_id === p.id ? (
+                      <div key={n.id} style={{ border: '1px solid #eee', borderRadius: 4, padding: 10, marginBottom: 8 }}>
                         <div style={{ display: 'flex', gap: 8, marginBottom: 6, alignItems: 'center' }}>
                           {n.artifact_id && <span title="Draft created" style={{ color: '#27ae60' }}>●</span>}
                           <span style={{ fontSize: 13, color: '#7f8c8d', whiteSpace: 'nowrap' }}>I need</span>
                           <input
                             value={n.capability}
-                            onChange={(e) => setNeeds(needs.map((x, j) => (j === ni ? { ...x, capability: e.target.value } : x)))}
+                            onChange={(e) => setNeeds(needs.map((x) => (x.id === n.id ? { ...x, capability: e.target.value } : x)))}
                             placeholder="capability"
                             style={{ padding: '6px 8px', fontSize: 13 }}
                             disabled={!!n.artifact_id}
@@ -973,14 +1025,14 @@ export const GuidedWizard: React.FC = () => {
                           <span style={{ fontSize: 13, color: '#7f8c8d', whiteSpace: 'nowrap' }}>so that</span>
                           <input
                             value={n.outcome}
-                            onChange={(e) => setNeeds(needs.map((x, j) => (j === ni ? { ...x, outcome: e.target.value } : x)))}
+                            onChange={(e) => setNeeds(needs.map((x) => (x.id === n.id ? { ...x, outcome: e.target.value } : x)))}
                             placeholder="outcome"
                             style={{ padding: '6px 8px', fontSize: 13 }}
                             disabled={!!n.artifact_id}
                           />
                           {!n.artifact_id && (
                             <button
-                              onClick={() => setNeeds(needs.filter((_, j) => j !== ni))}
+                              onClick={() => setNeeds(needs.filter((x) => x.id !== n.id))}
                               style={{ background: 'none', border: 'none', color: '#e74c3c', cursor: 'pointer', width: 'auto', padding: 4 }}
                               title="Remove need"
                             >
@@ -997,18 +1049,59 @@ export const GuidedWizard: React.FC = () => {
                   <button
                     className="button-secondary"
                     style={{ padding: '6px 12px', fontSize: 13 }}
-                    onClick={() => setNeeds([...needs, { persona_index: pi, capability: '', outcome: '' }])}
+                    onClick={() => setNeeds([...needs, { id: newEntryId(), persona_id: p.id, capability: '', outcome: '' }])}
                   >
                     + Add need for {p.name}
                   </button>
                 </div>
               ) : null
             )}
+            {orphanNeeds.length > 0 && (
+              <div className="card" style={{ marginBottom: 12, border: '1px solid #f0c36d', background: '#fdf6e3' }}>
+                <div style={{ fontWeight: 600, color: '#8a6d3b', marginBottom: 4 }}>Needs without a persona</div>
+                <div style={{ fontSize: 12, color: '#8a6d3b', marginBottom: 10 }}>
+                  The persona these needs belonged to was removed or unnamed. Reassign each need to a
+                  persona, or remove it.
+                </div>
+                {orphanNeeds.map((n) => (
+                  <div key={n.id} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
+                    {n.artifact_id && <span title="Draft created" style={{ color: '#27ae60' }}>●</span>}
+                    <span style={{ flex: 1, fontSize: 13, color: '#2c3e50' }}>
+                      I need {n.capability || '…'} so that {n.outcome || '…'}
+                    </span>
+                    <select
+                      value=""
+                      onChange={(e) => {
+                        const personaId = e.target.value;
+                        if (personaId) setNeeds(needs.map((x) => (x.id === n.id ? { ...x, persona_id: personaId } : x)));
+                      }}
+                      style={{ padding: '6px 8px', fontSize: 13, width: 200 }}
+                      disabled={usablePersonas.length === 0}
+                    >
+                      <option value="">Assign to persona…</option>
+                      {usablePersonas.map((p) => (
+                        <option key={p.id} value={p.id}>{p.name}</option>
+                      ))}
+                    </select>
+                    {!n.artifact_id && (
+                      <button
+                        onClick={() => setNeeds(needs.filter((x) => x.id !== n.id))}
+                        style={{ background: 'none', border: 'none', color: '#e74c3c', cursor: 'pointer', width: 'auto', padding: 4 }}
+                        title="Remove need"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         );
       }
       case 4: {
         const usableNeeds = needs.filter((n) => n.capability.trim());
+        const orphanReqs = requirements.filter((r) => !needs.some((n) => n.id === r.need_id && n.capability.trim()));
         return (
           <div>
             <div className="card" style={{ marginBottom: 12 }}>
@@ -1023,29 +1116,29 @@ export const GuidedWizard: React.FC = () => {
                 No user needs defined — go back to step 3.
               </div>
             )}
-            {needs.map((n, ni) => {
+            {needs.map((n) => {
               if (!n.capability.trim()) return null;
-              const personaName = personas[n.persona_index]?.name || 'a user';
+              const personaName = personas.find((p) => p.id === n.persona_id)?.name || 'a user';
               return (
-                <div key={ni} className="card" style={{ marginBottom: 12 }}>
+                <div key={n.id} className="card" style={{ marginBottom: 12 }}>
                   <div style={{ fontSize: 13, color: '#7f8c8d', marginBottom: 10 }}>
                     Need: <em>As {personaName}, I need {n.capability} so that {n.outcome || '…'}</em>
                   </div>
-                  {requirements.map((r, ri) =>
-                    r.need_index === ni ? (
-                      <div key={ri} style={{ border: '1px solid #eee', borderRadius: 4, padding: 10, marginBottom: 8 }}>
+                  {requirements.map((r) =>
+                    r.need_id === n.id ? (
+                      <div key={r.id} style={{ border: '1px solid #eee', borderRadius: 4, padding: 10, marginBottom: 8 }}>
                         <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
                           {r.artifact_id && <span title="Draft created" style={{ color: '#27ae60' }}>●</span>}
                           <input
                             value={r.text}
-                            onChange={(e) => setRequirements(requirements.map((x, j) => (j === ri ? { ...x, text: e.target.value } : x)))}
+                            onChange={(e) => setRequirements(requirements.map((x) => (x.id === r.id ? { ...x, text: e.target.value } : x)))}
                             placeholder="The system shall …"
                             style={{ padding: '6px 8px', fontSize: 13 }}
                             disabled={!!r.artifact_id}
                           />
                           {!r.artifact_id && (
                             <button
-                              onClick={() => setRequirements(requirements.filter((_, j) => j !== ri))}
+                              onClick={() => setRequirements(requirements.filter((x) => x.id !== r.id))}
                               style={{ background: 'none', border: 'none', color: '#e74c3c', cursor: 'pointer', width: 'auto', padding: 4 }}
                               title="Remove requirement"
                             >
@@ -1057,7 +1150,7 @@ export const GuidedWizard: React.FC = () => {
                           <textarea
                             rows={2}
                             value={r.fit_criterion}
-                            onChange={(e) => setRequirements(requirements.map((x, j) => (j === ri ? { ...x, fit_criterion: e.target.value } : x)))}
+                            onChange={(e) => setRequirements(requirements.map((x) => (x.id === r.id ? { ...x, fit_criterion: e.target.value } : x)))}
                             placeholder="Fit criterion — how do we know it is met?"
                             style={{ fontSize: 13, minHeight: 50, flex: 1 }}
                             disabled={!!r.artifact_id}
@@ -1066,7 +1159,7 @@ export const GuidedWizard: React.FC = () => {
                             <label style={{ fontSize: 11, color: '#7f8c8d' }}>Verification method</label>
                             <select
                               value={r.verification_method}
-                              onChange={(e) => setRequirements(requirements.map((x, j) => (j === ri ? { ...x, verification_method: e.target.value } : x)))}
+                              onChange={(e) => setRequirements(requirements.map((x) => (x.id === r.id ? { ...x, verification_method: e.target.value } : x)))}
                               style={{ padding: '6px 8px', fontSize: 13 }}
                               disabled={!!r.artifact_id}
                             >
@@ -1085,7 +1178,7 @@ export const GuidedWizard: React.FC = () => {
                     onClick={() =>
                       setRequirements([
                         ...requirements,
-                        { need_index: ni, text: 'The system shall ', fit_criterion: '', verification_method: 'test' },
+                        { id: newEntryId(), need_id: n.id, text: 'The system shall ', fit_criterion: '', verification_method: 'test' },
                       ])
                     }
                   >
@@ -1094,6 +1187,44 @@ export const GuidedWizard: React.FC = () => {
                 </div>
               );
             })}
+            {orphanReqs.length > 0 && (
+              <div className="card" style={{ marginBottom: 12, border: '1px solid #f0c36d', background: '#fdf6e3' }}>
+                <div style={{ fontWeight: 600, color: '#8a6d3b', marginBottom: 4 }}>Requirements without a user need</div>
+                <div style={{ fontSize: 12, color: '#8a6d3b', marginBottom: 10 }}>
+                  The need these requirements derived from was removed or left empty. Reattach each
+                  requirement to a need, or remove it.
+                </div>
+                {orphanReqs.map((r) => (
+                  <div key={r.id} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
+                    {r.artifact_id && <span title="Draft created" style={{ color: '#27ae60' }}>●</span>}
+                    <span style={{ flex: 1, fontSize: 13, color: '#2c3e50' }}>{r.text || '…'}</span>
+                    <select
+                      value=""
+                      onChange={(e) => {
+                        const needId = e.target.value;
+                        if (needId) setRequirements(requirements.map((x) => (x.id === r.id ? { ...x, need_id: needId } : x)));
+                      }}
+                      style={{ padding: '6px 8px', fontSize: 13, width: 220 }}
+                      disabled={usableNeeds.length === 0}
+                    >
+                      <option value="">Attach to need…</option>
+                      {usableNeeds.map((n) => (
+                        <option key={n.id} value={n.id}>{n.capability}</option>
+                      ))}
+                    </select>
+                    {!r.artifact_id && (
+                      <button
+                        onClick={() => setRequirements(requirements.filter((x) => x.id !== r.id))}
+                        style={{ background: 'none', border: 'none', color: '#e74c3c', cursor: 'pointer', width: 'auto', padding: 4 }}
+                        title="Remove requirement"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         );
       }
@@ -1107,9 +1238,7 @@ export const GuidedWizard: React.FC = () => {
               </div>
             </div>
             {NFR_CATEGORIES.map((cat) => {
-              const catEntries = nfrs
-                .map((n, i) => ({ n, i }))
-                .filter(({ n }) => n.category === cat);
+              const catEntries = nfrs.filter((n) => n.category === cat);
               const open = openNfrCategories[cat] ?? catEntries.length > 0;
               return (
                 <div key={cat} className="card" style={{ marginBottom: 10, padding: 14 }}>
@@ -1131,19 +1260,19 @@ export const GuidedWizard: React.FC = () => {
                   </div>
                   {open && (
                     <div style={{ marginTop: 10 }}>
-                      {catEntries.map(({ n, i }) => (
-                        <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
+                      {catEntries.map((n) => (
+                        <div key={n.id} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
                           {n.artifact_id && <span title="Draft created" style={{ color: '#27ae60' }}>●</span>}
                           <input
                             value={n.text}
-                            onChange={(e) => setNfrs(nfrs.map((x, j) => (j === i ? { ...x, text: e.target.value } : x)))}
+                            onChange={(e) => setNfrs(nfrs.map((x) => (x.id === n.id ? { ...x, text: e.target.value } : x)))}
                             placeholder={`The system shall … (${cat.toLowerCase()})`}
                             style={{ padding: '6px 8px', fontSize: 13 }}
                             disabled={!!n.artifact_id}
                           />
                           <select
                             value={n.verification_method}
-                            onChange={(e) => setNfrs(nfrs.map((x, j) => (j === i ? { ...x, verification_method: e.target.value } : x)))}
+                            onChange={(e) => setNfrs(nfrs.map((x) => (x.id === n.id ? { ...x, verification_method: e.target.value } : x)))}
                             style={{ padding: '6px 8px', fontSize: 13, width: 150 }}
                             disabled={!!n.artifact_id}
                           >
@@ -1153,7 +1282,7 @@ export const GuidedWizard: React.FC = () => {
                           </select>
                           {!n.artifact_id && (
                             <button
-                              onClick={() => setNfrs(nfrs.filter((_, j) => j !== i))}
+                              onClick={() => setNfrs(nfrs.filter((x) => x.id !== n.id))}
                               style={{ background: 'none', border: 'none', color: '#e74c3c', cursor: 'pointer', width: 'auto', padding: 4 }}
                               title="Remove"
                             >
@@ -1166,7 +1295,7 @@ export const GuidedWizard: React.FC = () => {
                         className="button-secondary"
                         style={{ padding: '5px 10px', fontSize: 12 }}
                         onClick={() =>
-                          setNfrs([...nfrs, { category: cat, text: '', fit_criterion: '', verification_method: 'test' }])
+                          setNfrs([...nfrs, { id: newEntryId(), category: cat, text: '', fit_criterion: '', verification_method: 'test' }])
                         }
                       >
                         + Add {cat.toLowerCase()} requirement
@@ -1191,7 +1320,8 @@ export const GuidedWizard: React.FC = () => {
             <RepeatingCardList<HazardEntry>
               items={hazards}
               onChange={setHazards}
-              makeNew={() => ({ hazard: '', harm: '', severity: 'moderate' })}
+              makeNew={() => ({ id: newEntryId(), hazard: '', harm: '', severity: 'moderate' })}
+              itemKey={(h) => h.id}
               addLabel="Add hazard"
               emptyText="No hazards recorded — use Skip if not applicable."
               renderItem={(h, i, update) => (
@@ -1385,7 +1515,8 @@ export const GuidedWizard: React.FC = () => {
           sessionId={session.id}
           step={step}
           getState={buildAnswers}
-          onAddSuggestions={handleAddSuggestions}
+          applied={appliedSuggestions}
+          onApplySuggestions={handleApplySuggestions}
         />
       </div>
     </div>

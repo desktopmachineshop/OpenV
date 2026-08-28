@@ -11,6 +11,8 @@
 #                       e.g. https://openv.example.com:8080
 #   CORS_ORIGIN         public origin the frontend is served from,
 #                       e.g. https://openv.example.com
+#   WORKER_API_KEY      shared key host/hosted agent workers use to
+#                       authenticate (replaces the dev "dev-worker-key")
 #
 # Optional:
 #   FRONTEND_PORT       host port for the frontend (default 80)
@@ -37,6 +39,9 @@ services:
     environment:
       DB_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
       CORS_ORIGIN: ${CORS_ORIGIN:?set CORS_ORIGIN in .env (e.g. https://openv.example.com)}
+      # Without this, docker-compose.yml falls back to "dev-worker-key" —
+      # never acceptable in production, so make it required here.
+      WORKER_API_KEY: ${WORKER_API_KEY:?set WORKER_API_KEY in .env (long random string; workers authenticate with it)}
     healthcheck:
       # /health is unauthenticated (internal/api/authmiddleware.go); the API
       # image is alpine-based, so busybox wget is available.

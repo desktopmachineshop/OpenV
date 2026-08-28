@@ -1,237 +1,230 @@
-# Data Model Specification
+# Data Model Overview
 
-## Core Entities
+The schema is created and migrated idempotently at API startup by
+`internal/persistence/postgres/` — `db.go` (core), `schema_users.go`,
+`schema_suite.go`, `schema_agents.go`, and `schema_orgs.go` (multi-tenancy,
+which also `ALTER`s earlier tables and backfills org ids via
+`BackfillOrgs`/`PromoteOrgColumns`). This overview is generated from those
+files as of commit `2d6cd72`; the code is authoritative.
 
-### Project
-Represents a collection of artifacts, links, and baselines.
+## Core requirements data (`db.go`)
 
-```
-id: UUID (primary key)
-name: string
-description: text
-created_at: timestamp
-updated_at: timestamp
-```
+### projects
+`id`, `org_id` (owning workspace), `name`, `description`,
+`agent_auth` (`user-account` | `api-key` — how agent runs authenticate to
+providers), timestamps.
 
-### Artifact
-Represents a single requirement, test case, hazard, design item, or other typed item.
+### artifacts
+Temporally versioned: **primary key `(id, version)`**; each update inserts a
+new row and closes the old one (`valid_to`). Current version = `valid_to IS
+NULL` (unique partial index). Columns: `project_id`, `parent_id` (hierarchy),
+`type`, `title`, `body`, `sort_order`, `attributes` JSONB, `version`,
+`valid_from`/`valid_to`, `created_by`, timestamps. Types and link types are
+extensible catalogs served at `/api/v1/meta/*`.
 
-```
-id: UUID (primary key)
-project_id: UUID (foreign key)
-type: string
-  - requirement
-  - test-case
-  - hazard
-  - design-item
-  - other
-title: string (max 512 chars)
-body: text (markdown or rich text)
-attributes: JSONB (extensible key-value storage)
-version: integer (incremented on each update)
-valid_from: timestamp (when this version became active)
-valid_to: timestamp (null for current version)
-created_at: timestamp
-updated_at: timestamp
-```
+### links
+Traceability edges (`from_id` → `to_id`, `type`, `attributes` JSONB). Links
+are temporally versioned like artifacts (`valid_from`/`valid_to` with a
+unique active-row index).
 
-**Indexes:**
-- idx_project_id (project_id)
-- idx_type (type)
-- idx_valid_to (valid_to) - for efficient current version queries
+### link_artifacts
+Maps each link to the specific artifact **versions** it was created against
+(`link_id`, `artifact_id`, `artifact_version`, `active`) so history and
+baselines can reconstruct exact link states.
 
-**Relationships:**
-- Has many Links (via from_id or to_id)
+### attachments
+Uploaded files: `artifact_id` (nullable) **or** `test_result_id` (test
+evidence), `filename`, `mime_type`, `file_path` (under `UPLOADS_DIR`),
+`file_size`.
 
-### Link
-Represents a traceability relationship between two artifacts.
+### chatter
+Per-artifact activity feed: `artifact_id`, `message`, `is_auto_entry`
+(system-generated change summaries), `entry_type`, `created_by`,
+`author_name`.
 
-```
-id: UUID (primary key)
-from_id: UUID (foreign key -> Artifact.id)
-to_id: UUID (foreign key -> Artifact.id)
-type: string
-  - verifies (test verifies requirement)
-  - satisfies (design satisfies requirement)
-  - mitigates (control mitigates hazard)
-  - implements (component implements design)
-  - depends-on (generic dependency)
-attributes: JSONB (extensible storage for link metadata)
-version: integer
-created_at: timestamp
-updated_at: timestamp
-```
+### baselines
+Implemented (not "future"): `project_id`, `name`, full project `snapshot`
+JSONB, `created_by`.
 
-**Indexes:**
-- idx_from_id (from_id)
-- idx_to_id (to_id)
-- idx_type (type)
+### templates
+Project templates: `template_key` (unique; built-ins), `name`, `snapshot`
+JSONB, `is_default`, `org_id` (NULL = global built-in).
 
-**Constraints:**
-- Foreign key: from_id references Artifact(id) on delete cascade
-- Foreign key: to_id references Artifact(id) on delete cascade
+## Users, sessions, membership (`schema_users.go`)
 
-### Baseline (Future)
-Represents a snapshot of the project at a specific point in time.
+### users
+`email` (unique, case-insensitive), `name`, `avatar_url`, `auth_provider`
+(`password` | `google`), `password_hash`, `is_admin` (the first registered
+user), timestamps.
 
-```
-id: UUID (primary key)
-project_id: UUID (foreign key)
-name: string
-description: text
-created_at: timestamp
-artifact_versions: array<{artifact_id, version}>
-link_versions: array<{link_id, version}>
-```
+### sessions
+Cookie sessions: `user_id`, `token_hash` (unique), `expires_at`,
+`last_seen_at`, plus `active_org_id` (the stored active workspace).
 
----
+### project_members
+`(project_id, user_id)` → `role` (`owner` | `editor` | `viewer`). A user's
+effective project role is the max of this and any people-team grant.
 
-## Versioning Strategy
+## Multi-tenancy (`schema_orgs.go`)
 
-### Artifact Versioning
-- **Temporal Versioning**: Each update creates a new row with incremented version
-- **Valid From/To**: Tracks when each version was active
-- **Current Version**: WHERE valid_to IS NULL
-- **History**: All rows are retained for audit trails
+### organizations
+Workspaces: `name`, `slug` (unique), `org_type` (`company` | `personal` —
+personal orgs are auto-created at signup), `plan` and `limits` JSONB
+(billing placeholders; `limits.runner_grace_seconds` tunes run routing),
+`created_by`.
 
-Example:
-```
-Row 1: artifact_1, v1, valid_from: 2024-01-01, valid_to: 2024-01-05
-Row 2: artifact_1, v2, valid_from: 2024-01-05, valid_to: null (current)
-```
+### org_members
+`(org_id, user_id)` → `role` (`admin` | `member`). Org admins act as owners
+of every project in the org.
 
-### Link Versioning
-- **Update in Place**: Links are updated in place (no temporal versioning yet)
-- **Version Counter**: Incremented on each update
-- **Future**: May implement temporal versioning in v0.2.0
+### org_teams / org_team_members
+People-teams within a workspace (these are *human* teams; agent graphs are
+"crews", below): team `name`/`description`, and its user membership.
 
----
+### project_team_access
+`(project_id, org_team_id)` → `role`. Grants a whole people-team a project
+role; combined with direct membership by taking the highest role.
+
+### worker_keys
+Org-scoped runner credentials: `org_id`, `name`, `key_hash` (unique),
+`user_id` (NULL = shared workspace key; set = a member's **personal runner
+key**, one active per member), `revoked`, `last_used_at`. The legacy
+`WORKER_API_KEY` env value is registered as a workspace key for the
+bootstrap org at startup.
+
+### connector_pairings
+One-time Agent Connector pairing codes: `org_id`, `user_id`, `code_hash`
+(unique), `expires_at` (10 min), `used`.
+
+### hosted_workers
+At most one platform-managed runner container per org (`org_id` unique):
+`container_name`, `worker_key_id`, `status`
+(`provisioning|running|stopped|error`), `detail`. Provider API keys are
+injected into the container environment at provision time and never stored.
+
+`schema_orgs.go` also adds `org_id` to `projects`, `agents`, `agent_teams`,
+`automations`, `agent_runs`, `guided_sessions`, `domain_events`,
+`provider_settings`, `provider_logins`, and `templates`, then promotes the
+columns to NOT NULL once the backfill leaves no NULLs.
+
+## Agent suite (`schema_agents.go`)
+
+### agents
+Registry mirroring the file-backed agent definitions
+(`$AGENTS_DIR/<org-id>/<slug>.md` is the source of truth): `org_id` + `slug`
+(unique per org), `name`, `description`, `provider`, `model`, `effort`
+(`low|medium|high|xhigh|max`, empty = provider default), `allowed_tools`
+JSONB, `write_mode` (`proposal` | `direct`), `repo_access`, `max_turns`,
+`timeout_seconds`, `config` JSONB, `system_prompt`, `file_path`,
+`content_hash`, `synced_at`.
+
+### agent_runs
+**This table is the job queue** (workers claim with
+`FOR UPDATE SKIP LOCKED`). Scope/links: `agent_id`, `project_id`,
+`automation_id`, `trigger_event_id`, `team_id`/`team_node_id` (crew),
+`parent_run_id` (delegation tree), `work_item_id`, `interview_session_id`,
+`guided_session_id`. Lifecycle: `status` (`queued` → `claimed` → `running` →
+`succeeded`/`failed`/`cancelled`/`timed_out`, plus `awaiting_approval`),
+`cancel_requested`, `priority` (child/interview turns jump the
+queue), `run_token_hash` (the run's own API credential), `worker_id`,
+`heartbeat_at` (stale runs are reaped), `started_at`/`finished_at`,
+`exit_code`, `final_text`, `error`, `tokens_in`/`tokens_out`, `cost_usd`,
+`artifacts_touched` JSONB, `launched_by`. Routing: `preferred_user_id` +
+`hosted_after` give the launcher's personal runner first refusal before the
+hosted/workspace pool takes over.
+
+### agent_run_logs
+Append-only run output: `(run_id, seq)` unique, `kind`, `payload` JSONB.
+Feeds the SSE live stream.
+
+### agent_proposals
+Writes diverted from `write_mode: proposal` runs: `run_id`, `project_id`,
+`op`, `target_id`, `payload` JSONB, `status` (pending/approved/rejected),
+`review_note`, `applied_entity_id`, `reviewed_by`/`reviewed_at`.
+
+### automations
+Unattended launch rules: `agent_id` or `team_id`, optional `project_id`,
+`kind` (`manual` | `scheduled` | `triggered`), `enabled`, `prompt_template`,
+cron fields (`cron_expr`, `catch_up`, `next_run_at`, `last_run_at`), event
+fields (`event_type`, `event_filter` JSONB), rate limits
+(`cooldown_seconds`, `max_runs_per_hour`).
+
+### domain_events
+The event bus's persistent log: `event_type`, `project_id`, `entity_id`,
+`actor` (`user:<id>` | `agent:<run>` | `worker:<org>` | `system`), `payload`
+JSONB, `org_id`. Triggered automations match against this stream.
+
+### repo_connections / user_repo_paths
+A repo connection identifies a repository per project (`name`, `remote_url`,
+`default_branch`, `credential_strategy`). Checkout locations are
+**per-member**: `user_repo_paths` maps `(user_id, repo_connection_id)` →
+`local_path` (a legacy shared `local_path` column was migrated into this
+table and dropped).
+
+### provider_settings / provider_logins
+Per-org AI provider config: `provider`, `auth_mode`, `api_key_env`,
+`default_model`, `enabled`, `last_detected` JSONB (worker detection reports,
+including discovered models that are merged ahead of the built-in model
+catalog). `provider_logins` relays CLI sign-in flows to runners: `provider`,
+`target` (`workspace` | `user`), `status`, `auth_url`, `code`, `detail`,
+`requested_by`.
+
+### agent_teams / agent_team_nodes / agent_team_edges (crews)
+Agent org charts (API name: **crews**; table names keep the historical
+`agent_team*` prefix). `agent_teams`: `org_id`, `name`, optional
+`project_id` (pinned), `entry_node_id`, `is_default`. Nodes: `node_type`
+(`agent` | `human`) with a CHECK constraint tying `agent_id` xor `user_id`
+to the type, `label`, `department`, `position` JSONB. Edges: `edge_type`
+(`delegates-to` | `hands-off-to` | `reviews`) with per-graph validation
+(delegation subgraph acyclic; no delegates-to humans).
+
+## Product suite (`schema_suite.go`)
+
+### product_profiles
+One row per project: `vision`, `problem_statement`, `target_users`,
+`constraints` and `success_metrics` JSONB, `settings` JSONB.
+
+### guided_sessions / guided_session_messages
+Guided wizard state: `project_id`, `org_id`, `status`, `current_step`,
+`answers` JSONB, `draft_artifact_ids` JSONB, `agent_run_id`, `created_by`.
+Messages are the copilot chat transcript (`session_id`, `role`, `content`);
+copilot turns run as agent runs linked via `agent_runs.guided_session_id`.
+
+### test_runs / test_results
+Test execution: runs (`project_id`, `name`, optional `baseline_id`,
+`status`, `started_at`/`completed_at`) and one result per
+`(run_id, test_case_id)`: `test_case_version`, `status`, `notes`, `evidence`
+JSONB, `executed_at`/`executed_by`. Evidence files attach via
+`attachments.test_result_id`.
+
+### work_items / work_item_activity
+Kanban cards: `project_id`, `title`, `description`, `board_column`,
+`sort_order`, `assignee_type` (`user` | `agent`) + `assignee_id`,
+`agent_run_id` (moving a card into an agent column enqueues a run),
+`artifact_ids` JSONB, `due_date`. Activity is the card's feed (`kind`,
+`actor`, `content`, `payload`).
+
+### interviews / interview_invites / interview_sessions / interview_messages
+Stakeholder elicitation: an interview (`project_id`, optional
+`guided_session_id` and `persona_artifact_id`, `name`, `brief`, `agent_id`,
+`status`, `expires_at`) has token-authenticated invites (`token_hash`
+unique, `invitee_label`, `expires_at`, `revoked`), participant sessions
+(`invite_id`, `participant_name`, `status`, `summary`), and per-session
+chat messages.
+
+## Versioning strategy
+
+- **Artifacts and links** use temporal versioning: every update inserts a
+  new row (`version` incremented) and stamps the old row's `valid_to`.
+  Current state is the `valid_to IS NULL` row; full history is retained for
+  audit and baseline diffs, and old artifact versions can be restored.
+- `link_artifacts` pins links to artifact versions so a baseline snapshot
+  reproduces exactly what was linked to what, at which version.
 
 ## Extensibility
 
-### Custom Attributes
-All entities support custom attributes via JSONB:
-
-```json
-{
-  "priority": "high",
-  "status": "active",
-  "tags": ["safety-critical", "performance"],
-  "owner": "user@example.com"
-}
-```
-
-### Plugin-Supplied Fields (Future)
-Plugins can:
-- Add new artifact types
-- Add new link types
-- Inject custom attributes into JSONB
-
----
-
-## Query Patterns
-
-### Get Current Version of Artifact
-```sql
-SELECT * FROM artifacts 
-WHERE id = $1 AND valid_to IS NULL
-```
-
-### Get All Artifacts in Project
-```sql
-SELECT * FROM artifacts 
-WHERE project_id = $1 AND valid_to IS NULL
-ORDER BY created_at DESC
-```
-
-### Get Artifact History
-```sql
-SELECT * FROM artifacts 
-WHERE id = $1
-ORDER BY version DESC
-```
-
-### Get Outgoing Links
-```sql
-SELECT * FROM links 
-WHERE from_id = $1
-ORDER BY created_at DESC
-```
-
-### Get Incoming Links
-```sql
-SELECT * FROM links 
-WHERE to_id = $1
-ORDER BY created_at DESC
-```
-
-### Get Trace Path
-```sql
--- Recursively trace from requirement to test coverage
-WITH RECURSIVE trace AS (
-  SELECT from_id, to_id, type, 1 as depth
-  FROM links
-  WHERE from_id = $1
-  
-  UNION ALL
-  
-  SELECT l.from_id, l.to_id, l.type, t.depth + 1
-  FROM links l
-  INNER JOIN trace t ON l.from_id = t.to_id
-  WHERE t.depth < 5  -- limit recursion depth
-)
-SELECT * FROM trace
-```
-
----
-
-## Storage Considerations
-
-### Artifact Body Field
-- Stored as TEXT in PostgreSQL
-- Supports markdown, HTML, or plain text
-- Can be indexed for full-text search (future)
-- Max size: ~2GB (PostgreSQL text limit)
-
-### Attributes JSONB Field
-- Index using `GIN` for fast queries: `CREATE INDEX idx_artifacts_attributes ON artifacts USING GIN (attributes)`
-- Supports queries like: `WHERE attributes->>'priority' = 'high'`
-- Max size: ~1GB
-
-### Links Storage
-- Simple row-per-link model
-- No document embedding
-- Supports both directed and undirected semantics via link type
-
----
-
-## Scaling Considerations
-
-### Phase 1 (v0.1 - v0.3)
-- Single PostgreSQL database
-- All data in one database
-- Suitable for projects with <100k artifacts
-
-### Phase 2 (v0.4+)
-- Optional graph database (Neo4j/Dgraph) for complex traceability
-- Artifact search index (Elasticsearch optional)
-- Attachment storage in S3/MinIO
-
-### Phase 3 (v1.0+)
-- Sharding by project_id
-- Distributed traceability queries
-- Multi-region replication
-
----
-
-## Audit Trail
-
-All entities include:
-- `created_at`: Initial creation timestamp
-- `updated_at`: Last modification timestamp
-- `version`: Version counter
-
-Future versions will add:
-- `created_by`: User who created the entity
-- `updated_by`: User who last modified the entity
-- `changelog`: Per-field modification history
+Artifacts and links carry an `attributes` JSONB column for custom
+key-value data (priority, status, tags, `origin: interview`,
+`status: draft` for agent-drafted content, …). Artifact and link *types* are
+data, not schema — see `/api/v1/meta/artifact-types`,
+`/api/v1/meta/link-types`, and `docs/link-type-rules.md`.

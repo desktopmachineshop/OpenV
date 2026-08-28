@@ -11,6 +11,7 @@ import {
   InterviewSession,
   ProductProfile,
 } from '../api/client';
+import { apiErrorMessage } from '../api/errors';
 import { useAppStore } from '../state/store';
 
 interface MetricRow {
@@ -123,7 +124,7 @@ export const ProductOverview: React.FC = () => {
         .sort((a, b) => (b.started_at || '').localeCompare(a.started_at || ''));
       setRecentSessions(allSessions.slice(0, 3));
     } catch (err: any) {
-      setError(`Failed to load product overview: ${err.response?.data || err.message}`);
+      setError(`Failed to load product overview: ${apiErrorMessage(err)}`);
     } finally {
       setLoading(false);
     }
@@ -146,7 +147,7 @@ export const ProductOverview: React.FC = () => {
       setEditingDef(false);
       setError('');
     } catch (err: any) {
-      setError(`Failed to save product definition: ${err.response?.data || err.message}`);
+      setError(`Failed to save product definition: ${apiErrorMessage(err)}`);
     } finally {
       setSavingDef(false);
     }
@@ -162,7 +163,7 @@ export const ProductOverview: React.FC = () => {
       setProfile(res.data);
       setError('');
     } catch (err: any) {
-      setError(`Failed to save metrics: ${err.response?.data || err.message}`);
+      setError(`Failed to save metrics: ${apiErrorMessage(err)}`);
     } finally {
       setSavingMetrics(false);
     }
@@ -178,7 +179,7 @@ export const ProductOverview: React.FC = () => {
       setProfile(res.data);
       setError('');
     } catch (err: any) {
-      setError(`Failed to save constraints: ${err.response?.data || err.message}`);
+      setError(`Failed to save constraints: ${apiErrorMessage(err)}`);
     } finally {
       setSavingConstraints(false);
     }
