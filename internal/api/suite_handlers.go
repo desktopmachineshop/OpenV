@@ -1286,12 +1286,18 @@ func (h *Handler) GetInterviewTranscript(w http.ResponseWriter, r *http.Request)
 // --- Interviews (public token flow) ---
 
 func (h *Handler) PublicInterviewIntro(w http.ResponseWriter, r *http.Request) {
+	if !h.allowInterviewRead(w, r) {
+		return
+	}
 	interview, invite, err := h.interviewService.ResolveInviteToken(mux.Vars(r)["token"])
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
-	session, _ := h.interviewService.StartOrResumeSession(invite.ID, interview.ID, "")
+	// Read-only: a page view must not write. A first visit simply has no
+	// session yet (the UI shows the name prompt); the session is created by
+	// the first message (or the stream, which needs one for its channel).
+	session, _ := h.interviewService.FindActiveSession(invite.ID)
 	var transcript []*interviews.Message
 	if session != nil {
 		transcript, _ = h.interviewService.GetTranscript(session.ID)
@@ -1321,6 +1327,14 @@ func (h *Handler) PublicInterviewMessage(w http.ResponseWriter, r *http.Request)
 	}
 	if strings.TrimSpace(req.Content) == "" {
 		http.Error(w, "message content is required", http.StatusBadRequest)
+		return
+	}
+	// Every message enqueues a priority LLM run, so throttle per invite:
+	// a leaked link cannot rack up unbounded provider cost.
+	if ok, retryAfter := h.interviewMsgLimiter.allow(invite.ID); !ok {
+		writeRateLimited(w,
+			"You're sending messages a little too quickly. Please wait a moment and try again.",
+			retryAfter)
 		return
 	}
 	session, err := h.interviewService.StartOrResumeSession(invite.ID, interview.ID, req.ParticipantName)
@@ -1411,13 +1425,31 @@ func (h *Handler) launchInterviewTurn(interview *interviews.Interview, session *
 	return err
 }
 
+// allowInterviewRead applies the coarse per-IP bucket shared by the
+// unauthenticated interview GETs (intro + stream). Returns false after
+// writing the 429 when the caller is over budget.
+func (h *Handler) allowInterviewRead(w http.ResponseWriter, r *http.Request) bool {
+	if ok, retryAfter := h.interviewIPLimiter.allow(clientIP(r)); !ok {
+		writeRateLimited(w,
+			"Too many requests from your network. Please wait a moment and reload the page.",
+			retryAfter)
+		return false
+	}
+	return true
+}
+
 // PublicInterviewStream is the participant's SSE channel.
 func (h *Handler) PublicInterviewStream(w http.ResponseWriter, r *http.Request) {
+	if !h.allowInterviewRead(w, r) {
+		return
+	}
 	interview, invite, err := h.interviewService.ResolveInviteToken(mux.Vars(r)["token"])
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
+	// The SSE channel is keyed by session, so the stream genuinely needs
+	// one; StartOrResumeSession reuses the active session when it exists.
 	session, err := h.interviewService.StartOrResumeSession(invite.ID, interview.ID, "")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -1442,9 +1474,15 @@ func (h *Handler) PublicInterviewFinish(w http.ResponseWriter, r *http.Request) 
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
-	session, err := h.interviewService.StartOrResumeSession(invite.ID, interview.ID, "")
+	// Nothing to finish when no session was ever started — don't create an
+	// empty session just to complete it.
+	session, err := h.interviewService.FindActiveSession(invite.ID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if session == nil {
+		w.WriteHeader(http.StatusNoContent)
 		return
 	}
 	if err := h.interviewService.CompleteSession(session.ID, ""); err != nil {

@@ -131,6 +131,7 @@ type Service interface {
 	ResolveInviteToken(rawToken string) (*Interview, *Invite, error)
 
 	StartOrResumeSession(inviteID, interviewID, participantName string) (*Session, error)
+	FindActiveSession(inviteID string) (*Session, error) // nil, nil when none
 	GetSession(id string) (*Session, error)
 	ListSessions(interviewID string) ([]*Session, error)
 	AppendMessage(sessionID, role, content string) (*Message, error)
@@ -353,6 +354,13 @@ func (s *DefaultService) StartOrResumeSession(inviteID, interviewID, participant
 	}
 
 	return session, nil
+}
+
+// FindActiveSession returns the active session for an invite without
+// creating one; nil, nil when the invite has no active session. Used by
+// read-only public endpoints so an unauthenticated page view never writes.
+func (s *DefaultService) FindActiveSession(inviteID string) (*Session, error) {
+	return s.repo.FindActiveSessionByInvite(inviteID)
 }
 
 // GetSession retrieves a session by ID.
