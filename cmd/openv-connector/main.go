@@ -232,6 +232,7 @@ func start(cfg *connectorConfig) {
 
 	fmt.Printf("  Workspace: %s\n", cfg.OrgName)
 	fmt.Printf("  API:       %s\n", cfg.APIURL)
+	warnCleartextStart(cfg.APIURL, os.Stdout)
 	fmt.Println("  Your personal runner is starting — leave this window open while agents work.")
 	fmt.Println("  Close this window (or press Ctrl+C) to stop it.")
 	fmt.Println()

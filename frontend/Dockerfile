@@ -7,7 +7,9 @@ WORKDIR /app
 
 COPY package*.json ./
 
-RUN npm install --legacy-peer-deps
+# npm ci installs exactly what package-lock.json pins (and fails on drift),
+# so every dev image build resolves the same dependency tree.
+RUN npm ci --legacy-peer-deps
 
 COPY . .
 

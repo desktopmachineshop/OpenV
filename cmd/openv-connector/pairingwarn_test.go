@@ -47,6 +47,35 @@ func TestPairingNeedsConfirmation(t *testing.T) {
 	}
 }
 
+func TestWarnCleartextStart(t *testing.T) {
+	t.Run("warns on cleartext non-localhost", func(t *testing.T) {
+		var buf strings.Builder
+		if !warnCleartextStart("http://openv.example.com", &buf) {
+			t.Fatal("warnCleartextStart(http://openv.example.com) = false, want true")
+		}
+		out := buf.String()
+		for _, want := range []string{"WARNING", "http://openv.example.com", "not HTTPS", "Re-pair"} {
+			if !strings.Contains(out, want) {
+				t.Errorf("warning output missing %q; got:\n%s", want, out)
+			}
+		}
+		if strings.Contains(out, "[y/N]") {
+			t.Errorf("start warning must not prompt; got:\n%s", out)
+		}
+	})
+	t.Run("silent when safe", func(t *testing.T) {
+		for _, apiURL := range []string{"https://openv.example.com", "http://localhost:8080", "http://127.0.0.1:8080"} {
+			var buf strings.Builder
+			if warnCleartextStart(apiURL, &buf) {
+				t.Errorf("warnCleartextStart(%q) = true, want false", apiURL)
+			}
+			if buf.Len() != 0 {
+				t.Errorf("warnCleartextStart(%q) wrote output: %q", apiURL, buf.String())
+			}
+		}
+	})
+}
+
 func TestConfirmInsecurePairing(t *testing.T) {
 	tests := []struct {
 		name  string
