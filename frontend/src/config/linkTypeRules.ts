@@ -42,6 +42,22 @@ export const linkTypeRules: LinkTypeRule[] = [
     description: 'A high-level requirement is broken down into more specific sub-requirements',
   },
   {
+    type: 'derives-from',
+    label: 'derives from',
+    inverseLabel: 'gives rise to',
+    allowedFromTypes: ['requirement'],
+    allowedToTypes: ['user-need'],
+    description: 'A requirement is derived from a user need',
+  },
+  {
+    type: 'validates',
+    label: 'validates',
+    inverseLabel: 'validated by',
+    allowedFromTypes: ['test-case'],
+    allowedToTypes: ['user-need'],
+    description: 'A test case confirms that a user need is met',
+  },
+  {
     type: 'impacts',
     label: 'impacts',
     inverseLabel: 'impacted by',
