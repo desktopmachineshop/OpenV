@@ -431,7 +431,14 @@ export const ProductOverview: React.FC = () => {
               <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
                 {group.items.slice(0, 5).map((a) => (
                   <li key={a.id} style={{ fontSize: 13, color: 'var(--text)', padding: '3px 0' }}>
-                    • {a.title}
+                    •{' '}
+                    <Link
+                      to={`requirements?artifact=${a.id}`}
+                      title="Open in Requirements"
+                      style={{ color: 'var(--accent)', textDecoration: 'none' }}
+                    >
+                      {a.title}
+                    </Link>
                   </li>
                 ))}
                 {group.items.length > 5 && (
