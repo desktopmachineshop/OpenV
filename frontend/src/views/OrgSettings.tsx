@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { orgsAPI } from '../api/client';
+import { apiErrorMessage } from '../api/errors';
 import { useAppStore } from '../state/store';
 import { OrgMembersTab } from '../components/org/OrgMembersTab';
 import { OrgTeamsTab } from '../components/org/OrgTeamsTab';
@@ -25,7 +26,19 @@ export const OrgSettings: React.FC = () => {
   const org = orgs.find((o) => o.id === activeOrgId) || null;
   const isAdmin = Boolean(org && (org.role === 'admin' || currentUser?.is_admin));
 
-  const [tab, setTab] = useState<Tab>('general');
+  // The active tab lives in the URL (?tab=…) so refreshes and deep links keep
+  // it; unknown values fall back to the first tab.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get('tab');
+  const tab: Tab = TABS.some((t) => t.key === tabParam) ? (tabParam as Tab) : TABS[0].key;
+  const setTab = (next: Tab) =>
+    setSearchParams(
+      (prev) => {
+        prev.set('tab', next);
+        return prev;
+      },
+      { replace: true }
+    );
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
 
@@ -61,7 +74,7 @@ export const OrgSettings: React.FC = () => {
       setOrgs(orgs.map((o) => (o.id === org.id ? { ...o, ...res.data } : o)));
       flash('Workspace name updated.');
     } catch (err: any) {
-      setError(`Failed to update workspace: ${err.response?.data || err.message}`);
+      setError(`Failed to update workspace: ${apiErrorMessage(err)}`);
     } finally {
       setSavingName(false);
     }

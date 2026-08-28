@@ -1,4 +1,5 @@
 import axios, { AxiosInstance } from 'axios';
+import { filenameFromContentDisposition } from './contentDisposition';
 
 // Determine API base URL
 // Priority: env var > browser detection > default fallback
@@ -207,16 +208,10 @@ export const projectAPI = {
     });
     
     // Extract filename from Content-Disposition header or use default
-    const contentDisposition = response.headers['content-disposition'];
-    let filename = `project_export_${new Date().toISOString().slice(0, 10)}.json`;
-    
-    if (contentDisposition) {
-      const filenameMatch = contentDisposition.match(/filename=(.+)/);
-      if (filenameMatch) {
-        filename = filenameMatch[1].replace(/['"]/g, '');
-      }
-    }
-    
+    const filename =
+      filenameFromContentDisposition(response.headers['content-disposition']) ||
+      `project_export_${new Date().toISOString().slice(0, 10)}.json`;
+
     // Create a download link and trigger it
     const url = window.URL.createObjectURL(new Blob([response.data]));
     const link = document.createElement('a');
@@ -235,14 +230,9 @@ export const projectAPI = {
       responseType: 'blob',
     });
 
-    const contentDisposition = response.headers['content-disposition'];
-    let filename = `project_report_${new Date().toISOString().slice(0, 10)}.pdf`;
-    if (contentDisposition) {
-      const filenameMatch = contentDisposition.match(/filename=(.+)/);
-      if (filenameMatch) {
-        filename = filenameMatch[1].replace(/['"]/g, '');
-      }
-    }
+    const filename =
+      filenameFromContentDisposition(response.headers['content-disposition']) ||
+      `project_report_${new Date().toISOString().slice(0, 10)}.pdf`;
 
     const url = window.URL.createObjectURL(new Blob([response.data]));
     const link = document.createElement('a');
@@ -398,7 +388,30 @@ export interface TestResult {
   notes: string;
   evidence: string[];
   executed_at?: string | null;
+  // Set when an agent run produced this result, so reviewers can tell
+  // agent-executed evidence from human-executed.
+  executed_by_agent_run_id?: string | null;
 }
+
+// How a test case can be carried out. Only 'automated' cases may be executed
+// by an agent; 'manual' needs a person and 'physical' needs hardware or a rig.
+// Stored on the test-case artifact's `execution_method` attribute; an unset
+// value means 'automated'.
+export type ExecutionMethod = 'automated' | 'manual' | 'physical';
+
+export const EXECUTION_METHODS: { value: ExecutionMethod; label: string; hint: string }[] = [
+  { value: 'automated', label: 'Automated', hint: 'An agent or CI job can run this end to end.' },
+  { value: 'manual', label: 'Manual (human)', hint: 'Needs a person: inspection, judgement, usability.' },
+  { value: 'physical', label: 'Physical test', hint: 'Needs hardware, a rig, or lab measurement.' },
+];
+
+// Reads a test case artifact's execution method, defaulting to automated.
+export const executionMethodOf = (artifact?: { attributes?: Record<string, any> } | null): ExecutionMethod => {
+  const raw = artifact?.attributes?.execution_method;
+  if (typeof raw !== 'string') return 'automated';
+  const v = raw.trim().toLowerCase();
+  return v === 'manual' || v === 'physical' ? v : 'automated';
+};
 
 export interface CoverageEntry {
   requirement_id: string;
@@ -879,12 +892,8 @@ export const productProfileAPI = {
 
 const downloadBlob = async (url: string, fallbackName: string) => {
   const response = await client.get(url, { responseType: 'blob' });
-  const contentDisposition = response.headers['content-disposition'];
-  let filename = fallbackName;
-  if (contentDisposition) {
-    const match = contentDisposition.match(/filename=(.+)/);
-    if (match) filename = match[1].replace(/['"]/g, '');
-  }
+  const filename =
+    filenameFromContentDisposition(response.headers['content-disposition']) || fallbackName;
   const objectUrl = window.URL.createObjectURL(new Blob([response.data]));
   const anchor = document.createElement('a');
   anchor.href = objectUrl;
@@ -909,6 +918,14 @@ export const vvAPI = {
     client.post<TestResult>(`/api/v1/test-runs/${runId}/results`, payload),
   listResults: (runId: string) =>
     client.get<TestResult[]>(`/api/v1/test-runs/${runId}/results`),
+  // Launch an agent run that executes this test run's agent-executable cases.
+  // Manual/physical cases are excluded server-side and returned as `skipped`.
+  launchAgentRun: (runId: string, payload: { agent_slug: string; test_case_ids?: string[] }) =>
+    client.post<{
+      run: AgentRun;
+      executing: number;
+      skipped: { id: string; title: string; execution_method: ExecutionMethod }[];
+    }>(`/api/v1/test-runs/${runId}/agent-run`, payload),
   coverage: (projectId: string, baselineId?: string) =>
     client.get<CoverageReport>(`/api/v1/projects/${projectId}/vv/coverage`, {
       params: baselineId ? { baseline_id: baselineId } : {},

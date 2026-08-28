@@ -29,6 +29,17 @@ const CRON_PRESETS: { label: string; value: string }[] = [
   { label: 'Every 15 minutes', value: '*/15 * * * *' },
 ];
 
+// Display copy for automation kinds. The domain constant is 'scheduled'
+// (DB index + backend code) — never 'cron'; the cron expression is only the
+// schedule field of a Scheduled automation.
+const KIND_LABELS: Record<string, string> = {
+  manual: 'Manual',
+  scheduled: 'Scheduled',
+  triggered: 'Triggered',
+};
+
+const kindLabel = (kind: string): string => KIND_LABELS[kind] || kind;
+
 const kindColor = (kind: string): string => {
   switch (kind) {
     case 'scheduled':
@@ -274,7 +285,7 @@ export const AutomationsPage: React.FC = () => {
                       fontWeight: 600,
                     }}
                   >
-                    {a.kind}
+                    {kindLabel(a.kind)}
                   </span>
                 </td>
                 <td style={{ padding: '9px 12px', borderBottom: '1px solid #ecf0f1', color: '#2c3e50' }}>
@@ -415,7 +426,7 @@ export const AutomationsPage: React.FC = () => {
                     onChange={() => set({ kind: k })}
                     style={{ width: 'auto' }}
                   />
-                  {k}
+                  {kindLabel(k)}
                 </label>
               ))}
             </div>

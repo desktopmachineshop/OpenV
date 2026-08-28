@@ -90,18 +90,11 @@ func (rep *AgentRunRepository) Save(r *agentruns.Run) error {
 	_, err = rep.db.Exec(`
 		INSERT INTO agent_runs (id, org_id, agent_id, project_id, automation_id, trigger_event_id, team_id, team_node_id, parent_run_id, work_item_id, interview_session_id, guided_session_id,
 			status, cancel_requested, priority, prompt, run_token_hash, worker_id, heartbeat_at, started_at, finished_at, exit_code,
-			final_text, error, tokens_in, tokens_out, cost_usd, artifacts_touched, launched_by, created_at)
-		VALUES ($1, NULLIF($2, '')::uuid, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30)
+			final_text, error, tokens_in, tokens_out, cost_usd, artifacts_touched, launched_by, created_at, preferred_user_id, hosted_after)
+		VALUES ($1, NULLIF($2, '')::uuid, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32)
 	`, r.ID, r.OrgID, r.AgentID, r.ProjectID, r.AutomationID, r.TriggerEventID, r.TeamID, r.TeamNodeID, r.ParentRunID, r.WorkItemID, r.InterviewSessionID, r.GuidedSessionID,
 		r.Status, r.CancelRequested, r.Priority, r.Prompt, r.RunTokenHash, r.WorkerID, r.HeartbeatAt, r.StartedAt, r.FinishedAt, r.ExitCode,
-		r.FinalText, r.Error, r.TokensIn, r.TokensOut, r.CostUSD, touched, r.LaunchedBy, r.CreatedAt)
-	if err != nil {
-		return err
-	}
-	if r.PreferredUserID != nil {
-		_, err = rep.db.Exec(`UPDATE agent_runs SET preferred_user_id = $2, hosted_after = $3 WHERE id = $1`,
-			r.ID, r.PreferredUserID, r.HostedAfter)
-	}
+		r.FinalText, r.Error, r.TokensIn, r.TokensOut, r.CostUSD, touched, r.LaunchedBy, r.CreatedAt, r.PreferredUserID, r.HostedAfter)
 	return err
 }
 
