@@ -14,6 +14,7 @@ import (
 type fakeRunRepo struct {
 	Repository
 	runs map[string]*Run
+	logs map[string][]LogEntry
 
 	// pendingProposals is returned by CountPendingProposals.
 	pendingProposals int
@@ -22,6 +23,7 @@ type fakeRunRepo struct {
 	// simulate a concurrent actor winning the race.
 	onCancelQueued   func()
 	onUpdateTerminal func()
+	onMarkRunning    func()
 }
 
 // FindByID returns a copy, like a real repository row scan, so service-side
@@ -85,12 +87,47 @@ func (f *fakeRunRepo) ReleaseClaim(runID, workerID string) (bool, error) {
 	return true, nil
 }
 
+func (f *fakeRunRepo) MarkRunning(id string, at time.Time) (bool, error) {
+	if f.onMarkRunning != nil {
+		f.onMarkRunning()
+	}
+	r, ok := f.runs[id]
+	if !ok || r.Status != StatusClaimed {
+		return false, nil
+	}
+	r.Status = StatusRunning
+	r.StartedAt = &at
+	r.HeartbeatAt = &at
+	return true, nil
+}
+
+func (f *fakeRunRepo) Heartbeat(id string, at time.Time) (bool, error) {
+	r, ok := f.runs[id]
+	if !ok || (r.Status != StatusClaimed && r.Status != StatusRunning) {
+		return false, nil
+	}
+	r.HeartbeatAt = &at
+	return true, nil
+}
+
+func (f *fakeRunRepo) AppendLogs(runID string, entries []LogEntry) error {
+	f.logs[runID] = append(f.logs[runID], entries...)
+	return nil
+}
+
+func (f *fakeRunRepo) UpdateWorkItemID(runID, workItemID string) error {
+	if r, ok := f.runs[runID]; ok {
+		r.WorkItemID = &workItemID
+	}
+	return nil
+}
+
 func (f *fakeRunRepo) CountPendingProposals(string) (int, error) {
 	return f.pendingProposals, nil
 }
 
 func newFakeService(runs ...*Run) (*DefaultService, *fakeRunRepo) {
-	repo := &fakeRunRepo{runs: map[string]*Run{}}
+	repo := &fakeRunRepo{runs: map[string]*Run{}, logs: map[string][]LogEntry{}}
 	for _, r := range runs {
 		repo.runs[r.ID] = r
 	}
@@ -277,6 +314,118 @@ func TestReleaseClaimIsConditional(t *testing.T) {
 				t.Errorf("run was mutated: %+v, want %+v", stored, before)
 			}
 		})
+	}
+}
+
+func TestMarkRunningTransitionsClaimedRun(t *testing.T) {
+	svc, repo := newFakeService(&Run{ID: "r1", Status: StatusClaimed, WorkerID: "w-1"})
+
+	if err := svc.MarkRunning("r1"); err != nil {
+		t.Fatalf("MarkRunning: %v", err)
+	}
+	stored := repo.runs["r1"]
+	if stored.Status != StatusRunning || stored.StartedAt == nil || stored.HeartbeatAt == nil {
+		t.Errorf("stored run = %+v, want running with started_at/heartbeat_at set", stored)
+	}
+}
+
+func TestMarkRunningRefusesNonClaimedRun(t *testing.T) {
+	for _, status := range []string{StatusQueued, StatusRunning, StatusSucceeded, StatusFailed, StatusCancelled, StatusTimedOut, StatusAwaitingApproval} {
+		svc, repo := newFakeService(&Run{ID: "r1", Status: status})
+		err := svc.MarkRunning("r1")
+		if !errors.Is(err, ErrInvalidTransition) {
+			t.Fatalf("MarkRunning(%s) err = %v, want ErrInvalidTransition", status, err)
+		}
+		if repo.runs["r1"].Status != status {
+			t.Errorf("stored %s run was mutated to %s", status, repo.runs["r1"].Status)
+		}
+	}
+}
+
+func TestMarkRunningLosesRaceToReaper(t *testing.T) {
+	svc, repo := newFakeService(&Run{ID: "r1", Status: StatusClaimed, WorkerID: "w-1"})
+	// The stale reaper fails the run between the worker's start report and the
+	// conditional write: the failure must stand instead of being resurrected
+	// to running.
+	repo.onMarkRunning = func() {
+		repo.runs["r1"].Status = StatusFailed
+		repo.runs["r1"].Error = "worker lost (heartbeat timeout)"
+	}
+
+	err := svc.MarkRunning("r1")
+	if !errors.Is(err, ErrInvalidTransition) {
+		t.Fatalf("MarkRunning err = %v, want ErrInvalidTransition", err)
+	}
+	stored := repo.runs["r1"]
+	if stored.Status != StatusFailed || stored.Error == "" {
+		t.Errorf("reaper's terminal state was overwritten: %+v", stored)
+	}
+}
+
+func TestAppendLogsRefreshesHeartbeatOnLiveRun(t *testing.T) {
+	svc, repo := newFakeService(&Run{ID: "r1", Status: StatusRunning})
+
+	run, err := svc.AppendLogs("r1", []LogEntry{{RunID: "r1", Seq: 1, Kind: LogText}})
+	if err != nil {
+		t.Fatalf("AppendLogs: %v", err)
+	}
+	if run.Status != StatusRunning {
+		t.Errorf("returned status = %q, want running", run.Status)
+	}
+	if repo.runs["r1"].HeartbeatAt == nil {
+		t.Error("heartbeat_at should be refreshed for a live run")
+	}
+	if len(repo.logs["r1"]) != 1 {
+		t.Errorf("stored %d log entries, want 1", len(repo.logs["r1"]))
+	}
+}
+
+func TestAppendLogsKeepsLogsButNotHeartbeatOnTerminalRun(t *testing.T) {
+	// A late log batch from a worker whose run the reaper already failed:
+	// the logs are kept for the audit trail, but heartbeat_at must not be
+	// refreshed — the run is not alive.
+	svc, repo := newFakeService(&Run{ID: "r1", Status: StatusFailed, Error: "worker lost (heartbeat timeout)"})
+
+	run, err := svc.AppendLogs("r1", []LogEntry{{RunID: "r1", Seq: 7, Kind: LogText}})
+	if err != nil {
+		t.Fatalf("AppendLogs: %v", err)
+	}
+	if run.Status != StatusFailed {
+		t.Errorf("returned status = %q, want failed so the worker sees the verdict", run.Status)
+	}
+	if repo.runs["r1"].HeartbeatAt != nil {
+		t.Error("heartbeat_at was refreshed on a terminal run")
+	}
+	if len(repo.logs["r1"]) != 1 {
+		t.Errorf("stored %d log entries, want the late batch kept", len(repo.logs["r1"]))
+	}
+}
+
+func TestHeartbeatIgnoresTerminalRun(t *testing.T) {
+	svc, repo := newFakeService(&Run{ID: "r1", Status: StatusCancelled})
+
+	if err := svc.Heartbeat("r1"); err != nil {
+		t.Fatalf("Heartbeat: %v", err)
+	}
+	if repo.runs["r1"].HeartbeatAt != nil {
+		t.Error("heartbeat_at was set on a terminal run")
+	}
+}
+
+func TestAttachWorkItemNeverTouchesStatus(t *testing.T) {
+	// AttachWorkItem must be a targeted work_item_id write: attaching a card
+	// to a run that finished meanwhile must not resurrect its old status.
+	svc, repo := newFakeService(&Run{ID: "r1", Status: StatusFailed, Error: "boom"})
+
+	if err := svc.AttachWorkItem("r1", "card-1"); err != nil {
+		t.Fatalf("AttachWorkItem: %v", err)
+	}
+	stored := repo.runs["r1"]
+	if stored.WorkItemID == nil || *stored.WorkItemID != "card-1" {
+		t.Errorf("work_item_id = %v, want card-1", stored.WorkItemID)
+	}
+	if stored.Status != StatusFailed || stored.Error != "boom" {
+		t.Errorf("run state was mutated beyond work_item_id: %+v", stored)
 	}
 }
 

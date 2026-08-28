@@ -158,9 +158,13 @@ func (f *fakeLinkService) GetLinksTo(artifactID string) ([]*links.Link, error)  
 
 type fakeChatterService struct {
 	chatter.Service
+	entries []*chatter.ChatterEntry
 }
 
-func (f *fakeChatterService) CreateEntry(entry *chatter.ChatterEntry) error { return nil }
+func (f *fakeChatterService) CreateEntry(entry *chatter.ChatterEntry) error {
+	f.entries = append(f.entries, entry)
+	return nil
+}
 
 type fakeEventRepo struct {
 	events.Repository
@@ -512,6 +516,58 @@ func TestManagedLinkChangesCrossProject(t *testing.T) {
 			t.Fatalf("created %d links, want 1", len(linkSvc.created))
 		}
 	})
+}
+
+// TestUpdateArtifactAddedLinkChatter locks in that the version-change chatter
+// entry written by UpdateArtifact describes added links. PendingLinkAdds
+// entries are link objects ({from_id,to_id,type}), not link IDs — the old
+// code type-asserted them to string, never matched, and added-link details
+// were silently empty.
+func TestUpdateArtifactAddedLinkChatter(t *testing.T) {
+	linkSvc := &fakeLinkService{}
+	chatterSvc := &fakeChatterService{}
+	h := &Handler{
+		projectService: &fakeProjectService{byID: map[string]*projects.Project{
+			"proj-a": {ID: "proj-a", OrgID: "org-1"},
+		}},
+		orgService: &fakeOrgService{roles: map[string]map[string]string{"org-1": {}}},
+		memberService: &fakeMemberService{roles: map[string]map[string]string{
+			"proj-a": {"editor-a": members.RoleEditor},
+		}},
+		artifactService: &fakeArtifactService{byID: map[string]*artifacts.Artifact{
+			"art-a": {ID: "art-a", ProjectID: "proj-a", Type: "requirement", Title: "Login required"},
+			"art-b": {ID: "art-b", ProjectID: "proj-a", Type: "requirement", Title: "Password policy"},
+		}},
+		linkService:    linkSvc,
+		chatterService: chatterSvc,
+	}
+
+	body := `{"pendingLinkAdds":[{"from_id":"art-a","to_id":"art-b","type":"relates-to"}]}`
+	r := httptest.NewRequest(http.MethodPut, "/api/v1/artifacts/art-a", strings.NewReader(body))
+	r = r.WithContext(context.WithValue(r.Context(), ctxUser, &users.User{ID: "editor-a"}))
+	r = mux.SetURLVars(r, map[string]string{"id": "art-a"})
+	w := httptest.NewRecorder()
+	h.UpdateArtifact(w, r)
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200 (body %q)", w.Code, w.Body.String())
+	}
+	if len(linkSvc.created) != 1 {
+		t.Fatalf("created %d links, want 1", len(linkSvc.created))
+	}
+	// The updated artifact gets a version-change entry (the linked artifact
+	// gets its own auto-version entry, not under test here).
+	var msg string
+	for _, entry := range chatterSvc.entries {
+		if entry.ArtifactID == "art-a" && entry.EntryType == "version-change" {
+			msg = entry.Message
+		}
+	}
+	if msg == "" {
+		t.Fatalf("no version-change chatter entry written for art-a (entries: %+v)", chatterSvc.entries)
+	}
+	if !strings.Contains(msg, "relates-to: Password policy (added)") {
+		t.Fatalf("chatter message %q is missing the added-link detail", msg)
+	}
 }
 
 // TestListDomainEventsScoping locks in that, without a project_id filter, org

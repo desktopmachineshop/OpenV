@@ -33,6 +33,11 @@ func ValidEffort(v string) bool {
 // ErrNotFound is returned when an agent doesn't exist.
 var ErrNotFound = errors.New("agent not found")
 
+// ErrSlugExists is returned when creating an agent whose slug is already
+// taken in the org. The database's unique index on (org_id, slug) is the
+// authority, so a lost check-then-create race still surfaces as this error.
+var ErrSlugExists = errors.New("an agent with this slug already exists")
+
 // slugPattern matches the slug convention used by seeded agents
 // (e.g. "requirements-copilot"): lowercase letters, digits and hyphens,
 // starting with a letter or digit. Slugs become file names on disk, so

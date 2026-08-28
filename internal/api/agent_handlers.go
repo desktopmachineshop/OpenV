@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -155,12 +156,18 @@ func (h *Handler) CreateAgent(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid request body", http.StatusBadRequest)
 		return
 	}
+	// Friendly pre-check; the (org_id, slug) unique index is the real guard,
+	// so a concurrent create that slips past this still conflicts below.
 	if existing, _ := h.agentService.GetBySlug(ActiveOrg(r), def.Slug); existing != nil {
 		http.Error(w, "an agent with this slug already exists", http.StatusConflict)
 		return
 	}
 	agent, err := h.agentService.SaveDefinition(ActiveOrg(r), &def)
 	if err != nil {
+		if errors.Is(err, agents.ErrSlugExists) {
+			http.Error(w, "an agent with this slug already exists", http.StatusConflict)
+			return
+		}
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
