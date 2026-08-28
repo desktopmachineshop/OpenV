@@ -27,7 +27,11 @@ func Connect(dsn string) (*sql.DB, error) {
 	return db, nil
 }
 
-// InitSchema creates the database schema
+// InitSchema creates the database schema. It is the frozen 0001 "baseline"
+// migration (see migrations.go): together with the schema_*.go init
+// functions it is idempotent and re-run on every boot, but it must not grow
+// anymore — new schema changes are written as numbered migrations appended
+// to the registry in migrations.go.
 func InitSchema(db *sql.DB) error {
 	schema := `
 	CREATE TABLE IF NOT EXISTS artifacts (

@@ -69,10 +69,12 @@ func testDB(t *testing.T) *sql.DB {
 	return db
 }
 
-// initTestSchema runs the full production schema init against the test DB.
+// initTestSchema runs the full production schema migration (ledger +
+// baseline + numbered migrations) against the test DB, exactly as the
+// server does at boot.
 func initTestSchema(t *testing.T, db *sql.DB) {
 	t.Helper()
-	if err := InitSchema(db); err != nil {
-		t.Fatalf("InitSchema: %v", err)
+	if err := Migrate(db); err != nil {
+		t.Fatalf("Migrate: %v", err)
 	}
 }

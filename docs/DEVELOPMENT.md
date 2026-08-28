@@ -23,9 +23,9 @@ make build       # rebuild the images
 - **API**: http://localhost:8080
 - **Postgres**: localhost:5432 (postgres/postgres, db `openv`)
 
-The API applies its schema on startup (idempotent `CREATE TABLE IF NOT
-EXISTS` migrations in `internal/persistence/postgres/`), so there is no
-separate migration step.
+The API migrates its schema on startup (`postgres.Migrate` in
+`internal/persistence/postgres/migrations.go`), so there is no separate
+migration step. See "Adding a schema migration" below.
 
 ## Backend development
 
@@ -53,6 +53,44 @@ Key environment variables (see `cmd/server/main.go` and
 `FRONTEND_URL`, `CORS_ORIGIN`, `SECURE_COOKIES`, and the hosted-runner
 settings (`HOSTED_RUNNERS`, `RUNNER_IMAGE`, `RUNNER_NETWORK`,
 `RUNNER_API_URL`, `CONNECTOR_DIST_DIR`).
+
+## Adding a schema migration
+
+Schema changes are numbered migrations tracked in the `schema_migrations`
+ledger (`version`, `name`, `applied_at`). At boot, `postgres.Migrate`:
+
+1. creates the ledger table if missing,
+2. re-runs the idempotent **0001 baseline** — the frozen legacy init chain
+   (`InitSchema` + `schema_users/suite/agents/orgs.go`) — which keeps
+   pre-ledger databases upgradeable and costs only milliseconds, then
+3. applies any unapplied numbered migrations in order, each **exactly once,
+   in its own transaction**, recording it in the ledger. A failed migration
+   rolls back completely and is not recorded; concurrent boots are
+   serialized by an advisory lock.
+
+To add a schema change, do **not** touch `InitSchema` or the `schema_*.go`
+files (the baseline is frozen). Instead append an entry to the `migrations`
+registry in `internal/persistence/postgres/migrations.go` with the next
+version number:
+
+```go
+{Version: 2, Name: "add_widgets_table", Run: func(tx *sql.Tx) error {
+    _, err := tx.Exec(`CREATE TABLE widgets (
+        id UUID PRIMARY KEY,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW()
+    )`)
+    return err
+}},
+```
+
+Rules: never renumber, reorder, or edit a migration that has shipped —
+follow up with a new one. Plain DDL is fine (no `IF NOT EXISTS` guards
+needed; the ledger guarantees single execution). Avoid statements that
+cannot run inside a transaction (e.g. `CREATE INDEX CONCURRENTLY`).
+
+`BackfillOrgs`/`PromoteOrgColumns` remain boot-time idempotent data-migration
+steps outside the ledger (they guard themselves and touch the agents
+directory on disk).
 
 ## Frontend development
 
