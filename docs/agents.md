@@ -87,9 +87,10 @@ You can sign the CLIs in either way (personal runners only):
   in the bottom-left of the sidebar → Settings) → **Agent sign-ins**. This
   starts a *user-targeted* sign-in that only your own personal runner picks
   up, so the credential lands on your machine. The card relays the CLI's own
-  flow: an "Open sign-in page" link, and — for CLIs that use a paste-back flow
-  (Claude Code, Gemini) — a field to paste the authorization code. Codex opens
-  a browser window directly on the runner machine and completes there.
+  flow: an "Open sign-in page" link, and — for Gemini, which uses a paste-back
+  flow — a field to paste the authorization code. Codex opens a browser window
+  directly on the runner machine and completes there. Claude Code runs an
+  interactive `claude setup-token` in a terminal window on the worker host.
   Credentials are stored by the CLI on the host; OpenV only brokers the URL
   and one-time code. Your runner (Agent Connector / `agentd`) must be running.
   Workspace admins can still run *workspace-targeted* sign-ins from
@@ -212,14 +213,19 @@ not on the worker's PATH or has not been logged in.
 Agents are plain markdown files under the data volume:
 
 ```
-$OPENV_DATA_DIR/agents/*.md      (default: /data/agents in the api container)
+$AGENTS_DIR/<org-id>/<slug>.md   (default: $OPENV_DATA_DIR/agents,
+                                  i.e. /data/agents in the api container)
 ```
 
-Each file has YAML frontmatter (slug, name, provider, `write_mode`, tools) and
-a markdown body that becomes the agent's system prompt. The server syncs these
+Each file has YAML frontmatter — `slug`, `name`, `description`, `provider`,
+`model`, `effort`, `allowed_tools`, `write_mode`, `repo_access`, `max_turns`,
+`timeout_seconds`, `config` (see `internal/domain/agents/agents.go`) — and a
+markdown body that becomes the agent's system prompt. The server syncs these
 files into the database at startup, so editing a file and restarting (or
-re-syncing) updates the agent. Seed agents (e.g. `requirements-interviewer`)
-are created on first boot.
+re-syncing via `POST /api/v1/agents/sync`) updates the agent. Agent files are
+per-workspace (`$AGENTS_DIR/<org-id>/<slug>.md`); seed agents (e.g.
+`requirements-interviewer`, `requirements-copilot`) are created when a
+workspace is first provisioned.
 
 ### Choosing a model
 
@@ -231,6 +237,18 @@ model id the vendor's CLI accepts — vendors ship new models faster than OpenV
 releases, so the catalog is a convenience, not a whitelist. A worker may also
 report the models it found on the host (`models` in its detection payload);
 anything it reports is listed ahead of the catalog.
+
+### Reasoning effort
+
+Each agent has an optional **Effort** setting (frontmatter `effort`,
+`agents.effort` column): one of `low`, `medium`, `high`, `xhigh`, `max`, or
+empty for the provider default. It is passed through to the vendor CLI by the
+runner adapters (`internal/runner`):
+
+- **Claude Code** — passed verbatim as `--effort <level>`.
+- **Codex CLI** — set via `-c model_reasoning_effort=<level>`; `xhigh` and
+  `max` are mapped down to `high` (the CLI's top tier).
+- **Gemini CLI** — ignored (no headless reasoning-effort control).
 
 ### write_mode: proposal vs direct
 
@@ -251,20 +269,29 @@ actual requirement text at run time via MCP tools. This keeps prompts small,
 avoids stale copies of requirements, and means access control is enforced by
 the API on every read — not by whatever happened to be pasted into a prompt.
 
-## Teams and the org chart
+## Crews and the org chart
 
-Agents can be grouped into **teams** with a simple org-chart graph: a lead
-agent can hand work to member agents, and orchestration hooks route follow-up
-runs along the graph. Use teams when a task naturally splits (e.g. one agent
+Agents can be grouped into **crews** (formerly "teams") with a simple
+org-chart graph: a lead agent can delegate work to member agents, and
+orchestration hooks route follow-up runs along the graph's edges
+(`delegates-to`, `hands-off-to`, `reviews`). Crews can also contain **human
+members** — hand-offs to a human create a card on the project board instead
+of launching a run. Use crews when a task naturally splits (e.g. one agent
 drafts requirements, another reviews for testability).
+
+The canonical API is `/api/v1/crews` (with `/crew-nodes`, `/crew-edges`); the
+old `/api/v1/teams` (and `/team-nodes`, `/team-edges`) paths remain as
+deprecated aliases of the same handlers (`internal/api/agent_handlers.go`).
+Crews pinned to a project require project editor rights to modify;
+workspace-wide crews require workspace admin.
 
 ## Automations
 
 Automations launch runs without a human clicking a button. Three trigger kinds:
 
 - **manual** — run on demand from the UI.
-- **cron** — the scheduler launches the run on a schedule (e.g. nightly
-  gap-analysis review).
+- **scheduled** — the cron scheduler launches the run on a schedule (e.g.
+  nightly gap-analysis review).
 - **triggered** — the trigger matcher listens to the event bus (artifact
   created, test result recorded, work item moved, ...) and launches matching
   automations.
@@ -325,10 +352,12 @@ can probe persona-specific needs.
 
 - [ ] `make up` — stack is running
 - [ ] Vendor CLI installed and logged in on the host
-- [ ] `WORKER_API_KEY` matches between server and worker
-- [ ] `make worker` (or `make worker-unix`) built `bin/`
+- [ ] A runner key: personal key from Settings → My Runner (or the Agent
+      Connector pairing flow), or a workspace key from Settings → Worker Keys
+- [ ] `make worker` (or `make worker-unix`) built `bin/` — or use the
+      connector bundle
 - [ ] `agentd` running and provider shows green in Settings
-- [ ] Agent definitions present under `$OPENV_DATA_DIR/agents`
+- [ ] Agent definitions present under `$OPENV_DATA_DIR/agents/<org-id>/`
 
 See also: `docs/architecture.md` (Multi-agent suite section) for the internal
 topology, and `docs/link-type-rules.md` for the traceability vocabulary agents
