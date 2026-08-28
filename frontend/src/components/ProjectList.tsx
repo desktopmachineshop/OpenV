@@ -4,7 +4,6 @@ import { useAppStore } from '../state/store';
 import { projectAPI, templateAPI, Project, Template } from '../api/client';
 import { apiErrorMessage } from '../api/errors';
 import { Navbar } from './Navbar';
-import { OrgSwitcher } from './OrgSwitcher';
 import { CreateOrgModal } from './CreateOrgModal';
 import './ProjectList.css';
 
@@ -234,7 +233,7 @@ export const ProjectList: React.FC = () => {
 
   return (
     <>
-      <Navbar title="Projects" />
+      <Navbar title="Projects" showWorkspaceControls />
       <div className="project-list-container">
 
       <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 10, marginBottom: 16 }}>
@@ -246,21 +245,8 @@ export const ProjectList: React.FC = () => {
         >
           ? Help
         </button>
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            background: '#fff',
-            border: '1px solid #ecf0f1',
-            borderRadius: 6,
-            padding: '8px 14px',
-          }}
-        >
-          <span style={{ fontSize: 12, color: '#7f8c8d' }}>Workspace:</span>
-          <OrgSwitcher variant="light" />
-        </div>
       </div>
+
 
       {error && (
         <div className="error-message">

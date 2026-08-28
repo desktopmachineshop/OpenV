@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { orgsAPI } from '../api/client';
 import { apiErrorMessage } from '../api/errors';
 import { useAppStore } from '../state/store';
+import { Navbar } from '../components/Navbar';
 import { OrgMembersTab } from '../components/org/OrgMembersTab';
 import { OrgTeamsTab } from '../components/org/OrgTeamsTab';
 import { OrgProvidersTab } from '../components/org/OrgProvidersTab';
@@ -82,6 +83,7 @@ export const OrgSettings: React.FC = () => {
 
   return (
     <div style={{ minHeight: '100vh', background: '#f5f6fa' }}>
+      <Navbar title="Workspace Settings" showWorkspaceControls />
       <div style={{ padding: 24, maxWidth: 900, margin: '0 auto' }}>
         <Link to="/projects" style={{ fontSize: 13, color: '#3498db', textDecoration: 'none' }}>
           ← Back to projects
