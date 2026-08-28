@@ -1,22 +1,51 @@
 import React, { useEffect, useState } from 'react';
 import { NavLink, Outlet, useNavigate, useParams } from 'react-router-dom';
-import { authAPI, projectAPI, Project } from '../api/client';
+import { projectAPI, Project } from '../api/client';
 import { useAppStore } from '../state/store';
 import { OrgSwitcher } from './OrgSwitcher';
-import { UserSettingsPanel } from './UserSettingsPanel';
+import { UserMenu } from './UserMenu';
 
-const navItems: { to: string; label: string; end?: boolean }[] = [
-  { to: '', label: 'Overview', end: true },
-  { to: 'requirements', label: 'Requirements' },
-  { to: 'guided', label: 'Guided Definition' },
-  { to: 'vv', label: 'V&V' },
-  { to: 'matrix', label: 'Matrix' },
-  { to: 'board', label: 'Board' },
-  { to: 'crew', label: 'Crew' },
-  { to: 'agents', label: 'Agents' },
-  { to: 'automations', label: 'Automations' },
-  { to: 'agent-runs', label: 'Runs' },
-  { to: 'settings', label: 'Settings' },
+interface NavItem {
+  to: string;
+  label: string;
+  end?: boolean;
+}
+
+// The sidebar is grouped by what the user is doing: defining the product,
+// verifying it, planning the work, and running agents (issue #97).
+const navSections: { label?: string; items: NavItem[] }[] = [
+  {
+    label: 'Define',
+    items: [
+      { to: '', label: 'Overview', end: true },
+      { to: 'guided', label: 'Guided Definition' },
+      { to: 'requirements', label: 'Requirements' },
+      { to: 'interviews', label: 'Interviews' },
+    ],
+  },
+  {
+    label: 'Verify',
+    items: [
+      { to: 'vv', label: 'V&V' },
+      { to: 'matrix', label: 'Traceability' },
+    ],
+  },
+  {
+    label: 'Plan',
+    items: [{ to: 'board', label: 'Board' }],
+  },
+  {
+    label: 'Agents',
+    items: [
+      { to: 'agents', label: 'Agents' },
+      { to: 'crew', label: 'Crew' },
+      { to: 'automations', label: 'Automations' },
+      { to: 'agent-runs', label: 'Runs' },
+    ],
+  },
+  {
+    items: [{ to: 'settings', label: 'Settings' }],
+  },
 ];
 
 // ProjectLayout syncs the URL param into the store and renders the app
@@ -24,11 +53,8 @@ const navItems: { to: string; label: string; end?: boolean }[] = [
 export const ProjectLayout: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
-  const { setProjectId, currentUser, setCurrentUser, orgs, activeOrgId, setActiveOrgId } =
-    useAppStore();
+  const { setProjectId, orgs, activeOrgId, setActiveOrgId } = useAppStore();
   const [project, setProject] = useState<Project | null>(null);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
 
   useEffect(() => {
     if (!projectId) return;
@@ -48,15 +74,6 @@ export const ProjectLayout: React.FC = () => {
       setActiveOrgId(project.org_id, { clearProjects: false });
     }
   }, [project, orgs, activeOrgId, setActiveOrgId]);
-
-  const handleLogout = async () => {
-    try {
-      await authAPI.logout();
-    } finally {
-      setCurrentUser(null);
-      navigate('/login');
-    }
-  };
 
   return (
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
@@ -89,112 +106,63 @@ export const ProjectLayout: React.FC = () => {
           </div>
         </div>
         <nav style={{ flex: 1, overflowY: 'auto', padding: '8px 0' }}>
-          {navItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.end}
-              style={({ isActive }) => ({
-                display: 'block',
-                padding: '9px 16px',
-                color: isActive ? '#fff' : 'var(--sidebar-text-dim)',
-                background: isActive ? 'var(--accent)' : 'transparent',
-                textDecoration: 'none',
-                fontSize: 14,
-              })}
-            >
-              {item.label}
-            </NavLink>
+          {navSections.map((section, i) => (
+            <div key={section.label || `section-${i}`} style={{ marginTop: i === 0 ? 0 : 10 }}>
+              {section.label && (
+                <div
+                  style={{
+                    padding: '4px 16px',
+                    fontSize: 10,
+                    fontWeight: 700,
+                    letterSpacing: 1,
+                    textTransform: 'uppercase',
+                    color: 'var(--sidebar-text-faint)',
+                  }}
+                >
+                  {section.label}
+                </div>
+              )}
+              {section.items.map((item) => (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  end={item.end}
+                  style={({ isActive }) => ({
+                    display: 'block',
+                    padding: '9px 16px',
+                    color: isActive ? '#fff' : 'var(--sidebar-text-dim)',
+                    background: isActive ? 'var(--accent)' : 'transparent',
+                    textDecoration: 'none',
+                    fontSize: 14,
+                  })}
+                >
+                  {item.label}
+                </NavLink>
+              ))}
+            </div>
           ))}
-        </nav>
-        <div style={{ borderTop: '1px solid var(--sidebar-border)', padding: 12, position: 'relative' }}>
-          <div
-            style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}
-            onClick={() => setMenuOpen(!menuOpen)}
+          <div style={{ borderTop: '1px solid var(--sidebar-border)', margin: '8px 0' }} />
+          <NavLink
+            to="/manual"
+            title="Open the user manual"
+            style={{
+              display: 'block',
+              padding: '9px 16px',
+              color: 'var(--sidebar-text-dim)',
+              textDecoration: 'none',
+              fontSize: 14,
+            }}
           >
-            {currentUser?.avatar_url ? (
-              <img
-                src={currentUser.avatar_url}
-                alt=""
-                style={{ width: 28, height: 28, borderRadius: '50%' }}
-              />
-            ) : (
-              <div
-                style={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: '50%',
-                  background: 'var(--accent)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: 13,
-                  fontWeight: 700,
-                }}
-              >
-                {(currentUser?.name || currentUser?.email || '?').charAt(0).toUpperCase()}
-              </div>
-            )}
-            <div style={{ fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {currentUser?.name || currentUser?.email || 'Not signed in'}
-            </div>
-          </div>
-          {menuOpen && (
-            <div
-              style={{
-                position: 'absolute',
-                bottom: 52,
-                left: 12,
-                right: 12,
-                background: 'var(--sidebar-menu-bg)',
-                borderRadius: 6,
-                overflow: 'hidden',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-              }}
-            >
-              <button
-                onClick={() => {
-                  setMenuOpen(false);
-                  setShowSettings(true);
-                }}
-                style={{
-                  display: 'block',
-                  width: '100%',
-                  padding: '10px 14px',
-                  background: 'none',
-                  border: 'none',
-                  color: 'var(--sidebar-text)',
-                  textAlign: 'left',
-                  cursor: 'pointer',
-                  fontSize: 13,
-                }}
-              >
-                Settings
-              </button>
-              <button
-                onClick={handleLogout}
-                style={{
-                  display: 'block',
-                  width: '100%',
-                  padding: '10px 14px',
-                  background: 'none',
-                  border: 'none',
-                  color: 'var(--sidebar-text)',
-                  textAlign: 'left',
-                  cursor: 'pointer',
-                  fontSize: 13,
-                }}
-              >
-                Sign out
-              </button>
-            </div>
-          )}
+            Help
+          </NavLink>
+        </nav>
+        <div style={{ borderTop: '1px solid var(--sidebar-border)', padding: 12 }}>
+          <UserMenu variant="dark" />
         </div>
       </aside>
       <main style={{ flex: 1, overflow: 'auto', background: 'var(--bg-app)' }}>
         <Outlet />
       </main>
-      {showSettings && <UserSettingsPanel onClose={() => setShowSettings(false)} />}
     </div>
   );
 };

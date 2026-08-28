@@ -129,7 +129,13 @@ export const InterviewChat: React.FC = () => {
       setComposerText('');
     } catch (err: any) {
       setTyping(false);
-      setSendError('Message failed to send — please try again.');
+      // Surface server-provided messages (e.g. the rate-limit notice) verbatim.
+      const serverMsg = err?.response?.data?.error;
+      setSendError(
+        typeof serverMsg === 'string' && serverMsg
+          ? serverMsg
+          : 'Message failed to send — please try again.'
+      );
     } finally {
       setSending(false);
     }

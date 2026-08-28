@@ -1,0 +1,80 @@
+// User manual chapter: Guided requirements wizard + copilot chat.
+const content = `
+# Guided definition & copilot
+
+**Guided Definition** walks you from a blank product to a committed, traceable
+requirement set in eight steps — with an AI copilot alongside that suggests
+entries you can add with one click.
+
+## Starting, resuming, modifying
+
+Open **Guided Definition** from the project sidebar (the Overview page also
+has a shortcut whose label reflects where you are: *Start*, *Resume*, or
+*Modify guided definition*).
+
+- **Start guided definition** — begins a fresh session.
+- If a session is **in progress**, it resumes exactly where you left off.
+- If a definition was already **committed**, you can **Modify guided
+  definition**: the wizard reopens seeded with the committed answers. Entries
+  that already became artifacts are shown locked (green dot); anything you add
+  becomes new drafts to review and commit. **Start over from scratch** is also
+  offered.
+- **Abandon session** (top right) drops the current in-progress session and
+  returns to the start page. Draft artifacts already created are **kept** —
+  only unsaved entries are discarded.
+
+## The eight steps
+
+1. **Product framing** — vision, problem statement, target users. Saved to the
+   product profile and shown on the Overview page.
+2. **Personas** — the key people who will use the product (name, role, goals,
+   pain points). Each becomes a draft *persona* artifact.
+3. **User needs** — per persona, "As *persona*, I need *capability* so that
+   *outcome*". Each becomes a draft *user-need* linked to its persona.
+4. **Requirements** — turn each need into testable "The system shall …"
+   statements with a **fit criterion** and a **verification method**
+   (inspection, analysis, demonstration, or test). Each becomes a draft
+   *requirement* linked *derives-from* its need.
+5. **NFRs & constraints** — quality-attribute requirements grouped by category
+   (Performance, Reliability, Usability, Security, Maintainability,
+   Regulatory).
+6. **Hazards** (optional) — what could go wrong, the potential harm, and a
+   severity. Skip if not applicable.
+7. **Verification stubs** (optional) — every requirement with method **test**
+   is listed; checked ones get a draft test case ("Verify: …") linked with
+   *verifies*.
+8. **Review & commit** — all draft artifacts created during the flow, grouped
+   by type. **Discard** any you don't want, then **Commit** to make them all
+   live.
+
+Moving **Next** from a step saves it and materializes any new entries as
+**draft artifacts** — you'll see a green dot appear next to each one, and its
+fields lock (it's now a real artifact; edit it later in Requirements). You can
+jump back to any step you've reached from the step header.
+
+After committing you're offered **Create baseline** — a snapshot named
+"Initial requirements" — plus shortcuts to the Requirements view or straight
+back into *Modify guided definition*.
+
+## The copilot chat
+
+The panel on the right is a chat copilot that sees your current step and
+everything you've entered so far.
+
+- Ask it anything — brainstorming personas, tightening a requirement,
+  challenging your framing.
+- Its replies can include **suggestion cards** (persona, need, requirement,
+  NFR, hazard, or framing text). Click a card's add button to insert it into
+  the wizard — replacement suggestions update an existing entry in place.
+  Entries already materialized as artifacts can't be replaced from chat.
+- **Quick actions** (like *Review step*) send canned prompts, e.g. a
+  quality-check of the current step's entries for clarity and testability.
+- The copilot is nudged automatically when you advance or skip a step, so it
+  follows along with context.
+
+Copilot turns execute on an agent runner like any other agent work. If no
+runner is online the panel says so and pauses replies — messages you send are
+saved and answered as soon as a runner connects (see *Runs & runners*).
+`;
+
+export default content;

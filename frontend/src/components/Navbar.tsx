@@ -1,9 +1,13 @@
 import React from 'react';
+import { OrgSwitcher } from './OrgSwitcher';
+import { UserMenu } from './UserMenu';
 
 interface NavbarProps {
   title?: React.ReactNode;
   onSwitchProject?: () => void;
   showSwitchButton?: boolean;
+  /** Show the workspace switcher (next to the logo) and the user menu (far right). */
+  showWorkspaceControls?: boolean;
   baselineOptions?: { id: string; name: string }[];
   selectedBaselineId?: string;
   onBaselineChange?: (id: string) => void;
@@ -17,6 +21,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   title,
   onSwitchProject,
   showSwitchButton = false,
+  showWorkspaceControls = false,
   baselineOptions = [],
   selectedBaselineId = 'live',
   onBaselineChange,
@@ -44,6 +49,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           className="app-logo"
           style={{ height: '56px', width: 'auto' }}
         />
+        {showWorkspaceControls && <OrgSwitcher variant="light" />}
       </div>
 
       <div style={{ flex: 1, textAlign: 'center' }}>
@@ -152,6 +158,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             ← Switch Project
           </button>
         )}
+        {showWorkspaceControls && <UserMenu variant="light" />}
       </div>
     </div>
   );

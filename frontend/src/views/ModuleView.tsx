@@ -572,7 +572,10 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
       .toLowerCase();
 
     if (searchExact) {
-      return haystack.includes(normalized.toLowerCase());
+      // "Exact match": the query must appear as a whole word/phrase, i.e. not
+      // as a substring of a longer word ("log" no longer matches "catalog").
+      const escaped = normalized.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      return new RegExp(`(^|[^a-z0-9_])${escaped}($|[^a-z0-9_])`).test(haystack);
     }
 
     return haystack.includes(normalized.toLowerCase());
@@ -1191,6 +1194,7 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
               onSelectArtifact={handleSelectArtifact}
               previewVersion={previewVersion}
               onClosePreview={() => setPreviewVersion(null)}
+              allowLinkDelete={!isBaselineView}
             />
           </>
         )}

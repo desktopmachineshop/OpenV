@@ -131,6 +131,11 @@ type Handler struct {
 	sseHub              *SSEHub
 	googleOAuth         *GoogleOAuthConfig
 	secureCookies       bool
+
+	// Rate limiters for the public (invite-token) interview endpoints; see
+	// ratelimit.go for defaults and environment overrides.
+	interviewMsgLimiter *rateLimiter // per-invite participant messages
+	interviewIPLimiter  *rateLimiter // per-IP intro/stream GETs
 }
 
 // NewHandler creates a new API handler
@@ -174,6 +179,8 @@ func NewHandler(deps HandlerDeps) *Handler {
 		sseHub:              deps.SSEHub,
 		googleOAuth:         deps.GoogleOAuth,
 		secureCookies:       deps.SecureCookies,
+		interviewMsgLimiter: newRateLimiterFromEnv(envInterviewMsgBurst, envInterviewMsgRefill, defaultInterviewMsgBurst, defaultInterviewMsgRefill),
+		interviewIPLimiter:  newRateLimiterFromEnv(envInterviewIPBurst, envInterviewIPRefill, defaultInterviewIPBurst, defaultInterviewIPRefill),
 	}
 }
 
@@ -264,7 +271,7 @@ func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) CreateArtifact(w http.ResponseWriter, r *http.Request) {
 	var req artifacts.CreateArtifactRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
@@ -300,7 +307,7 @@ func (h *Handler) CreateArtifact(w http.ResponseWriter, r *http.Request) {
 
 	artifact := artifacts.NewArtifact(req)
 	if err := h.artifactService.CreateArtifact(artifact); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to create artifact", err)
 		return
 	}
 
@@ -319,7 +326,7 @@ func (h *Handler) GetArtifact(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 	artifact, err := h.artifactService.GetArtifact(id)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		respondError(w, r, http.StatusNotFound, "artifact not found", err)
 		return
 	}
 
@@ -337,7 +344,7 @@ func (h *Handler) ListArtifacts(w http.ResponseWriter, r *http.Request) {
 	artifactType := r.URL.Query().Get("type")
 
 	if projectID == "" {
-		http.Error(w, "project_id is required", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "project_id is required")
 		return
 	}
 
@@ -347,7 +354,7 @@ func (h *Handler) ListArtifacts(w http.ResponseWriter, r *http.Request) {
 
 	artifacts, err := h.artifactService.ListArtifacts(projectID, artifactType)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to list artifacts", err)
 		return
 	}
 
@@ -361,14 +368,14 @@ func (h *Handler) UpdateArtifact(w http.ResponseWriter, r *http.Request) {
 
 	var req artifacts.UpdateArtifactRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	// Fetch the old artifact BEFORE updating to track changes
 	oldArtifact, err := h.artifactService.GetArtifact(id)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to load artifact", err)
 		return
 	}
 
@@ -401,18 +408,15 @@ func (h *Handler) UpdateArtifact(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		// Fetch link details for adds (they already exist)
-		for _, linkIDInterface := range req.PendingLinkAdds {
-			if linkID, ok := linkIDInterface.(string); ok {
-				if link, err := h.linkService.GetLink(linkID); err == nil {
-					addedLinks = append(addedLinks, link)
-				}
-			}
-		}
+		// Build link details for adds. Unlike removals, adds are not IDs of
+		// existing links: each entry is the link object about to be created
+		// ({from_id,to_id,type,...}), so read those fields for the chatter
+		// summary.
+		addedLinks = linksFromPendingAdds(req.PendingLinkAdds)
 
 		affected, err := h.processManagedLinkChanges(r, oldArtifact.ProjectID, id, req.PendingLinkAdds, removeInterfaceArray)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("Failed to process link changes: %v", err), http.StatusInternalServerError)
+			respondInternal(w, r, "failed to process link changes", err)
 			return
 		}
 		affectedArtifactIDs = affected
@@ -450,7 +454,7 @@ func (h *Handler) UpdateArtifact(w http.ResponseWriter, r *http.Request) {
 	// This single update will create ONE new version
 	artifact, err := h.artifactService.UpdateArtifact(id, req)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to update artifact", err)
 		return
 	}
 
@@ -496,7 +500,7 @@ func (h *Handler) DeleteArtifact(w http.ResponseWriter, r *http.Request) {
 
 	err := h.artifactService.DeleteArtifact(id)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to delete artifact", err)
 		return
 	}
 
@@ -515,7 +519,7 @@ func (h *Handler) GetArtifactVersions(w http.ResponseWriter, r *http.Request) {
 
 	versions, err := h.artifactService.GetArtifactVersions(id)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to load artifact versions", err)
 		return
 	}
 
@@ -531,14 +535,14 @@ func (h *Handler) RestoreArtifactVersion(w http.ResponseWriter, r *http.Request)
 		Version int `json:"version"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	// Fetch the current artifact BEFORE restoring (to track changes)
 	oldArtifact, err := h.artifactService.GetArtifact(id)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to load artifact", err)
 		return
 	}
 
@@ -548,7 +552,7 @@ func (h *Handler) RestoreArtifactVersion(w http.ResponseWriter, r *http.Request)
 
 	artifact, err := h.artifactService.RestoreArtifactVersion(id, req.Version)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to restore artifact version", err)
 		return
 	}
 
@@ -715,12 +719,12 @@ func (h *Handler) GetArtifactVersionLinks(w http.ResponseWriter, r *http.Request
 	if versionStr == "" {
 		outgoingLinks, err := h.linkService.GetLinksFrom(id)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			respondInternal(w, r, "failed to load links", err)
 			return
 		}
 		incomingLinks, err := h.linkService.GetLinksTo(id)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			respondInternal(w, r, "failed to load links", err)
 			return
 		}
 
@@ -752,14 +756,14 @@ func (h *Handler) GetArtifactVersionLinks(w http.ResponseWriter, r *http.Request
 	// Parse version number
 	version := 0
 	if _, err := fmt.Sscanf(versionStr, "%d", &version); err != nil {
-		http.Error(w, "invalid version parameter", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "invalid version parameter")
 		return
 	}
 
 	// Get the artifact version from database
 	versions, err := h.artifactService.GetArtifactVersions(id)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to load artifact versions", err)
 		return
 	}
 
@@ -773,7 +777,7 @@ func (h *Handler) GetArtifactVersionLinks(w http.ResponseWriter, r *http.Request
 	}
 
 	if artifactVersion == nil {
-		http.Error(w, "artifact version not found", http.StatusNotFound)
+		writeJSONError(w, http.StatusNotFound, "artifact version not found")
 		return
 	}
 
@@ -805,26 +809,26 @@ func (h *Handler) GetArtifactVersionLinks(w http.ResponseWriter, r *http.Request
 func (h *Handler) CreateLink(w http.ResponseWriter, r *http.Request) {
 	var req links.CreateLinkRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	// Fetch the from and to artifacts to validate link type
 	fromArtifact, err := h.artifactService.GetArtifact(req.FromID)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("source artifact not found: %v", err), http.StatusBadRequest)
+		respondError(w, r, http.StatusBadRequest, "source artifact not found", err)
 		return
 	}
 
 	toArtifact, err := h.artifactService.GetArtifact(req.ToID)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("target artifact not found: %v", err), http.StatusBadRequest)
+		respondError(w, r, http.StatusBadRequest, "target artifact not found", err)
 		return
 	}
 
 	// Validate link type against artifact types
 	if err := links.ValidateLinkType(req.Type, fromArtifact.Type, toArtifact.Type); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -843,7 +847,7 @@ func (h *Handler) CreateLink(w http.ResponseWriter, r *http.Request) {
 
 	link := links.NewLink(req)
 	if err := h.linkService.CreateLink(link); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to create link", err)
 		return
 	}
 
@@ -866,7 +870,7 @@ func (h *Handler) GetLink(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 	link, err := h.linkService.GetLink(id)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		respondError(w, r, http.StatusNotFound, "link not found", err)
 		return
 	}
 
@@ -882,7 +886,7 @@ func (h *Handler) GetLink(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) ListLinks(w http.ResponseWriter, r *http.Request) {
 	projectID := r.URL.Query().Get("project_id")
 	if projectID == "" {
-		http.Error(w, "project_id is required", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "project_id is required")
 		return
 	}
 
@@ -892,7 +896,7 @@ func (h *Handler) ListLinks(w http.ResponseWriter, r *http.Request) {
 
 	links, err := h.linkService.GetAllLinks(projectID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to list links", err)
 		return
 	}
 
@@ -906,13 +910,13 @@ func (h *Handler) UpdateLink(w http.ResponseWriter, r *http.Request) {
 
 	var req links.UpdateLinkRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	existing, err := h.linkService.GetLink(id)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		respondError(w, r, http.StatusNotFound, "link not found", err)
 		return
 	}
 	if !h.requireProjectRole(w, r, h.projectIDForArtifact(existing.FromID), members.RoleEditor) {
@@ -921,7 +925,7 @@ func (h *Handler) UpdateLink(w http.ResponseWriter, r *http.Request) {
 
 	link, err := h.linkService.UpdateLink(id, req)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to update link", err)
 		return
 	}
 
@@ -950,7 +954,7 @@ func (h *Handler) DeleteLink(w http.ResponseWriter, r *http.Request) {
 
 	err := h.linkService.DeleteLink(id)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to delete link", err)
 		return
 	}
 
@@ -983,20 +987,20 @@ func ContentTypeMiddleware(next http.Handler) http.Handler {
 func (h *Handler) CreateProject(w http.ResponseWriter, r *http.Request) {
 	var req projects.CreateProjectRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	orgID := ActiveOrg(r)
 	if orgID == "" {
-		http.Error(w, "no active workspace for this request", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "no active workspace for this request")
 		return
 	}
 
 	project := projects.NewProject(req)
 	project.OrgID = orgID
 	if err := h.projectService.CreateProject(project); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to create project", err)
 		return
 	}
 
@@ -1017,7 +1021,7 @@ func (h *Handler) GetProject(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 	project, err := h.projectService.GetProject(id)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		respondError(w, r, http.StatusNotFound, "project not found", err)
 		return
 	}
 
@@ -1035,7 +1039,7 @@ func (h *Handler) GetProject(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) ListProjects(w http.ResponseWriter, r *http.Request) {
 	projectList, err := h.projectService.ListProjects()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to list projects", err)
 		return
 	}
 
@@ -1063,7 +1067,7 @@ func (h *Handler) ListProjects(w http.ResponseWriter, r *http.Request) {
 		if !isOrgAdmin {
 			ids, err := h.memberService.ProjectIDsForUser(user.ID)
 			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
+				respondInternal(w, r, "failed to list projects", err)
 				return
 			}
 			allowed := map[string]bool{}
@@ -1094,13 +1098,13 @@ func (h *Handler) UpdateProject(w http.ResponseWriter, r *http.Request) {
 
 	var req projects.UpdateProjectRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	project, err := h.projectService.UpdateProject(id, req)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to update project", err)
 		return
 	}
 
@@ -1118,7 +1122,7 @@ func (h *Handler) DeleteProject(w http.ResponseWriter, r *http.Request) {
 
 	err := h.projectService.DeleteProject(id)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to delete project", err)
 		return
 	}
 
@@ -1144,7 +1148,7 @@ func (h *Handler) ExportProject(w http.ResponseWriter, r *http.Request) {
 	// Export project
 	data, filename, err := h.exportService.ExportProject(id, exportFormat)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to export project", err)
 		return
 	}
 
@@ -1158,27 +1162,27 @@ func (h *Handler) ExportProject(w http.ResponseWriter, r *http.Request) {
 // ImportProject imports project data from uploaded JSON file and creates a new project
 func (h *Handler) ImportProject(w http.ResponseWriter, r *http.Request) {
 	if CurrentUser(r) == nil {
-		http.Error(w, "authentication required", http.StatusUnauthorized)
+		writeJSONError(w, http.StatusUnauthorized, "authentication required")
 		return
 	}
 
 	orgID := ActiveOrg(r)
 	if orgID == "" {
-		http.Error(w, "no active workspace for this request", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "no active workspace for this request")
 		return
 	}
 
 	// Read the uploaded file
 	data, err := io.ReadAll(r.Body)
 	if err != nil {
-		http.Error(w, "Failed to read request body", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "Failed to read request body")
 		return
 	}
 
 	// Import and create new project
 	projectID, err := h.exportService.ImportProject(data, orgID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to import project", err)
 		return
 	}
 
@@ -1210,7 +1214,7 @@ func (h *Handler) GenerateReport(w http.ResponseWriter, r *http.Request) {
 
 	data, filename, err := h.reportService.GenerateProjectReport(projectID, baselineID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to generate project report", err)
 		return
 	}
 
@@ -1242,7 +1246,7 @@ func (h *Handler) ListTemplates(w http.ResponseWriter, r *http.Request) {
 	// Get database templates (the workspace's own plus global built-ins).
 	dbTemplates, err := h.templateService.ListTemplates(ActiveOrg(r))
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to list templates", err)
 		return
 	}
 
@@ -1308,12 +1312,12 @@ func (h *Handler) ListTemplates(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) CreateTemplate(w http.ResponseWriter, r *http.Request) {
 	var req createTemplateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.ProjectID == "" {
-		http.Error(w, "project_id is required", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "project_id is required")
 		return
 	}
 
@@ -1323,7 +1327,7 @@ func (h *Handler) CreateTemplate(w http.ResponseWriter, r *http.Request) {
 
 	created, err := h.templateService.CreateTemplateFromProject(req.ProjectID, req.Name, req.Description, ActiveOrg(r))
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to create template", err)
 		return
 	}
 
@@ -1342,19 +1346,19 @@ func (h *Handler) CreateProjectFromTemplate(w http.ResponseWriter, r *http.Reque
 	templateID := mux.Vars(r)["id"]
 
 	if CurrentUser(r) == nil {
-		http.Error(w, "authentication required", http.StatusUnauthorized)
+		writeJSONError(w, http.StatusUnauthorized, "authentication required")
 		return
 	}
 
 	orgID := ActiveOrg(r)
 	if orgID == "" {
-		http.Error(w, "no active workspace for this request", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "no active workspace for this request")
 		return
 	}
 
 	var req createProjectFromTemplateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
@@ -1386,7 +1390,7 @@ func (h *Handler) CreateProjectFromTemplate(w http.ResponseWriter, r *http.Reque
 		// Fall back to database template
 		projectID, dbErr := h.templateService.CreateProjectFromTemplate(templateID, req.Name, req.Description, orgID)
 		if dbErr != nil {
-			http.Error(w, dbErr.Error(), http.StatusInternalServerError)
+			respondInternal(w, r, "failed to create project from template", dbErr)
 			return
 		}
 
@@ -1394,7 +1398,7 @@ func (h *Handler) CreateProjectFromTemplate(w http.ResponseWriter, r *http.Reque
 
 		project, err := h.projectService.GetProject(projectID)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			respondInternal(w, r, "failed to load project", err)
 			return
 		}
 
@@ -1407,7 +1411,7 @@ func (h *Handler) CreateProjectFromTemplate(w http.ResponseWriter, r *http.Reque
 	// Use file-based template
 	projectID, err := h.exportService.ImportProjectWithOverrides(snapshot, req.Name, req.Description, orgID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to create project from template", err)
 		return
 	}
 
@@ -1415,7 +1419,7 @@ func (h *Handler) CreateProjectFromTemplate(w http.ResponseWriter, r *http.Reque
 
 	project, err := h.projectService.GetProject(projectID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to load project", err)
 		return
 	}
 
@@ -1448,7 +1452,7 @@ func (h *Handler) CreateBaseline(w http.ResponseWriter, r *http.Request) {
 
 	var req createBaselineRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil && err != io.EOF {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
@@ -1459,13 +1463,13 @@ func (h *Handler) CreateBaseline(w http.ResponseWriter, r *http.Request) {
 
 	data, _, err := h.exportService.ExportProject(projectID, exports.FormatJSON)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to export project", err)
 		return
 	}
 
 	baseline, err := h.baselineService.CreateBaseline(projectID, name, data)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to create baseline", err)
 		return
 	}
 
@@ -1488,7 +1492,7 @@ func (h *Handler) ListBaselines(w http.ResponseWriter, r *http.Request) {
 
 	baselines, err := h.baselineService.ListBaselines(projectID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to list baselines", err)
 		return
 	}
 
@@ -1502,7 +1506,7 @@ func (h *Handler) GetBaseline(w http.ResponseWriter, r *http.Request) {
 
 	baseline, err := h.baselineService.GetBaseline(baselineID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		respondError(w, r, http.StatusNotFound, "baseline not found", err)
 		return
 	}
 
@@ -1521,7 +1525,7 @@ func (h *Handler) DeleteBaseline(w http.ResponseWriter, r *http.Request) {
 
 	baseline, err := h.baselineService.GetBaseline(baselineID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		respondError(w, r, http.StatusNotFound, "baseline not found", err)
 		return
 	}
 	if !h.requireProjectRole(w, r, baseline.ProjectID, members.RoleOwner) {
@@ -1529,7 +1533,7 @@ func (h *Handler) DeleteBaseline(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.baselineService.DeleteBaseline(baselineID); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to delete baseline", err)
 		return
 	}
 
@@ -1540,7 +1544,7 @@ func (h *Handler) DeleteBaseline(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) UploadAttachment(w http.ResponseWriter, r *http.Request) {
 	artifactID := r.FormValue("artifact_id")
 	if artifactID == "" {
-		http.Error(w, "artifact_id is required", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "artifact_id is required")
 		return
 	}
 
@@ -1550,7 +1554,7 @@ func (h *Handler) UploadAttachment(w http.ResponseWriter, r *http.Request) {
 
 	file, header, err := r.FormFile("file")
 	if err != nil {
-		http.Error(w, "Failed to get file from request", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "Failed to get file from request")
 		return
 	}
 	defer file.Close()
@@ -1558,14 +1562,14 @@ func (h *Handler) UploadAttachment(w http.ResponseWriter, r *http.Request) {
 	// Validate file is an image
 	mimeType := header.Header.Get("Content-Type")
 	if !isImageMimeType(mimeType) {
-		http.Error(w, "File must be an image", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "File must be an image")
 		return
 	}
 
 	// Read file content
 	fileData, err := io.ReadAll(file)
 	if err != nil {
-		http.Error(w, "Failed to read file", http.StatusInternalServerError)
+		respondInternal(w, r, "Failed to read file", err)
 		return
 	}
 
@@ -1575,7 +1579,7 @@ func (h *Handler) UploadAttachment(w http.ResponseWriter, r *http.Request) {
 
 	// Write file to disk
 	if err := os.WriteFile(filepath, fileData, 0644); err != nil {
-		http.Error(w, "Failed to save file", http.StatusInternalServerError)
+		respondInternal(w, r, "Failed to save file", err)
 		return
 	}
 
@@ -1591,7 +1595,7 @@ func (h *Handler) UploadAttachment(w http.ResponseWriter, r *http.Request) {
 	if err := h.attachmentService.CreateAttachment(attachment); err != nil {
 		// Clean up file if database save fails
 		_ = os.Remove(filepath)
-		http.Error(w, "Failed to save attachment metadata", http.StatusInternalServerError)
+		respondInternal(w, r, "Failed to save attachment metadata", err)
 		return
 	}
 
@@ -1606,7 +1610,7 @@ func (h *Handler) GetAttachmentMeta(w http.ResponseWriter, r *http.Request) {
 
 	attachment, err := h.attachmentService.GetAttachment(id)
 	if err != nil || attachment == nil {
-		http.Error(w, "Attachment not found", http.StatusNotFound)
+		writeJSONError(w, http.StatusNotFound, "Attachment not found")
 		return
 	}
 
@@ -1624,7 +1628,7 @@ func (h *Handler) DownloadAttachment(w http.ResponseWriter, r *http.Request) {
 
 	attachment, err := h.attachmentService.GetAttachment(id)
 	if err != nil || attachment == nil {
-		http.Error(w, "Attachment not found", http.StatusNotFound)
+		writeJSONError(w, http.StatusNotFound, "Attachment not found")
 		return
 	}
 
@@ -1648,7 +1652,7 @@ func (h *Handler) DeleteAttachment(w http.ResponseWriter, r *http.Request) {
 
 	attachment, err := h.attachmentService.GetAttachment(id)
 	if err != nil || attachment == nil {
-		http.Error(w, "Attachment not found", http.StatusNotFound)
+		writeJSONError(w, http.StatusNotFound, "Attachment not found")
 		return
 	}
 
@@ -1658,13 +1662,13 @@ func (h *Handler) DeleteAttachment(w http.ResponseWriter, r *http.Request) {
 
 	// Delete file from disk
 	if err := os.Remove(attachment.FilePath); err != nil && !os.IsNotExist(err) {
-		http.Error(w, "Failed to delete file", http.StatusInternalServerError)
+		respondInternal(w, r, "Failed to delete file", err)
 		return
 	}
 
 	// Delete database record
 	if err := h.attachmentService.DeleteAttachment(id); err != nil {
-		http.Error(w, "Failed to delete attachment", http.StatusInternalServerError)
+		respondInternal(w, r, "Failed to delete attachment", err)
 		return
 	}
 
@@ -1681,7 +1685,7 @@ func (h *Handler) ListArtifactAttachments(w http.ResponseWriter, r *http.Request
 
 	attachmentList, err := h.attachmentService.GetAttachmentsByArtifact(artifactID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to list attachments", err)
 		return
 	}
 
@@ -1793,6 +1797,29 @@ func (h *Handler) buildChangesSummary(oldArtifact, newArtifact *artifacts.Artifa
 	}
 
 	return message
+}
+
+// linksFromPendingAdds converts the pending link-add payloads of an artifact
+// update ({from_id,to_id,type,...} objects, mirroring what
+// processManagedLinkChanges creates) into Link values for the chatter
+// summary. Entries missing any of the three required fields are skipped,
+// matching the create path's behavior.
+func linksFromPendingAdds(toAdd []interface{}) []*links.Link {
+	var added []*links.Link
+	for _, linkDataInterface := range toAdd {
+		linkData, ok := linkDataInterface.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		fromID, _ := linkData["from_id"].(string)
+		toID, _ := linkData["to_id"].(string)
+		linkType, _ := linkData["type"].(string)
+		if fromID == "" || toID == "" || linkType == "" {
+			continue
+		}
+		added = append(added, &links.Link{FromID: fromID, ToID: toID, Type: linkType})
+	}
+	return added
 }
 
 // processManagedLinkChanges handles link additions and removals
@@ -2016,7 +2043,7 @@ func (h *Handler) CreateChatterEntry(w http.ResponseWriter, r *http.Request) {
 		Message    string `json:"message"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
@@ -2032,7 +2059,7 @@ func (h *Handler) CreateChatterEntry(w http.ResponseWriter, r *http.Request) {
 		entry.EntryType = "agent"
 	}
 	if err := h.chatterService.CreateEntry(entry); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to create chatter entry", err)
 		return
 	}
 
@@ -2049,7 +2076,7 @@ func (h *Handler) CreateChatterEntry(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) ListChatterEntries(w http.ResponseWriter, r *http.Request) {
 	artifactID := r.URL.Query().Get("artifact_id")
 	if artifactID == "" {
-		http.Error(w, "artifact_id is required", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "artifact_id is required")
 		return
 	}
 
@@ -2059,7 +2086,7 @@ func (h *Handler) ListChatterEntries(w http.ResponseWriter, r *http.Request) {
 
 	entries, err := h.chatterService.GetEntriesByArtifactID(artifactID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to load chatter entries", err)
 		return
 	}
 

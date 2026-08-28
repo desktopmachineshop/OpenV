@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { orgsAPI } from '../api/client';
 import { useAppStore } from '../state/store';
 import { CreateOrgModal } from './CreateOrgModal';
@@ -13,6 +13,7 @@ interface OrgSwitcherProps {
 // workspaces, open workspace settings or create a company workspace.
 export const OrgSwitcher: React.FC<OrgSwitcherProps> = ({ variant = 'light' }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { orgs, activeOrgId, setActiveOrgId } = useAppStore();
   const [open, setOpen] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
@@ -38,7 +39,11 @@ export const OrgSwitcher: React.FC<OrgSwitcherProps> = ({ variant = 'light' }) =
     // Persist the session default server-side; fire and forget.
     orgsAPI.activate(orgId).catch(() => {});
     setActiveOrgId(orgId);
-    navigate('/projects');
+    // Already on workspace settings: stay there for the new workspace
+    // (OrgSettings itself bounces to /projects if the org isn't available).
+    if (location.pathname !== '/org/settings') {
+      navigate('/projects');
+    }
   };
 
   const pill = (text: string, bg: string, color = '#fff'): React.ReactNode => (

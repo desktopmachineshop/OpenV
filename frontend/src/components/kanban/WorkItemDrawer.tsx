@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Artifact,
@@ -51,6 +51,13 @@ export const WorkItemDrawer: React.FC<WorkItemDrawerProps> = ({
   const [descriptionDirty, setDescriptionDirty] = useState(false);
   const [comment, setComment] = useState('');
 
+  // `load` is memoized on [workItemId] only, so reading `descriptionDirty`
+  // directly inside it would capture a stale value (frozen at false) and a
+  // reload (e.g. after adding a comment) could clobber unsaved edits. The ref
+  // always reflects the latest dirty flag.
+  const descriptionDirtyRef = useRef(descriptionDirty);
+  descriptionDirtyRef.current = descriptionDirty;
+
   const load = useCallback(() => {
     workItemsAPI
       .get(workItemId)
@@ -58,13 +65,12 @@ export const WorkItemDrawer: React.FC<WorkItemDrawerProps> = ({
         setItem(res.data.item);
         setActivity(res.data.activity || []);
         setTitle(res.data.item.title);
-        if (!descriptionDirty) setDescription(res.data.item.description || '');
+        if (!descriptionDirtyRef.current) setDescription(res.data.item.description || '');
         setError('');
       })
       .catch((err: any) => {
         setError(err.response?.data?.error || err.message || 'Failed to load card');
       });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workItemId]);
 
   useEffect(() => {

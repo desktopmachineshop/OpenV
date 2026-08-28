@@ -1,7 +1,19 @@
-import React, { useState, useEffect } from 'react';
-import { Artifact, Attachment, Link } from '../api/client';
+import React, { useState, useEffect, useMemo } from 'react';
+import {
+  Artifact,
+  Attachment,
+  EXECUTION_METHODS,
+  ExecutionMethod,
+  Link,
+  executionMethodOf,
+} from '../api/client';
 import { ImageGallery } from './ImageGallery';
 import { LinkPanel } from './LinkPanel';
+import {
+  applyLinkDeletion,
+  createPendingLinkId,
+  serializePendingAdds,
+} from '../utils/pendingLinks';
 
 interface ArtifactEditorProps {
   artifact?: Artifact;
@@ -49,14 +61,15 @@ export const ArtifactEditor: React.FC<ArtifactEditorProps> = ({
   }, [artifact]);
 
   // Track pending link changes during edit
-  const [currentLinks, setCurrentLinks] = useState<Link[]>(links || []);
   const [pendingLinkAdds, setPendingLinkAdds] = useState<Partial<Link>[]>([]);
   const [pendingLinkRemoves, setPendingLinkRemoves] = useState<string[]>([]);
 
-  // Update currentLinks when links prop changes
-  useEffect(() => {
-    setCurrentLinks(links || []);
-  }, [links]);
+  // Displayed links = persisted links minus pending removals, plus pending
+  // adds. Derived so a refresh of the links prop can't clobber pending edits.
+  const currentLinks = useMemo<Link[]>(() => {
+    const base = (links || []).filter((l) => !pendingLinkRemoves.includes(l.id));
+    return [...base, ...(pendingLinkAdds as Link[])];
+  }, [links, pendingLinkAdds, pendingLinkRemoves]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -69,28 +82,24 @@ export const ArtifactEditor: React.FC<ArtifactEditorProps> = ({
   };
 
   const handleCreateLinkFromEditor = (link: Partial<Link>) => {
-    // Add to pending additions (will be saved when Update is clicked)
-    setPendingLinkAdds((prev) => [...prev, link]);
-    // Add to current display
-    setCurrentLinks((prev) => [...prev, link as Link]);
+    // Give the unsaved link a stable client-side temp id so it can be
+    // individually identified (and deleted) before it is persisted.
+    const pendingLink: Partial<Link> = { ...link, id: createPendingLinkId() };
+    // Add to pending additions (will be saved when Update is clicked);
+    // it appears in the displayed links via the derived currentLinks.
+    setPendingLinkAdds((prev) => [...prev, pendingLink]);
     // DO NOT call onCreateLink here - links are only persisted on Update
   };
 
   const handleDeleteLinkFromEditor = (linkId: string) => {
-    // Check if it's a newly added link (not yet persisted)
-    const isNewlyAdded = pendingLinkAdds.some((l) => l.id === linkId || (l.from_id && l.to_id && l.type));
-    
-    if (isNewlyAdded) {
-      // Remove from pending additions
-      setPendingLinkAdds((prev) => prev.filter((l) => l.id !== linkId));
-    } else {
-      // Mark existing link for removal (will be deleted when Update is clicked)
-      setPendingLinkRemoves((prev) => [...prev, linkId]);
-    }
-    
-    // Remove from current display
-    setCurrentLinks((prev) => prev.filter((l) => l.id !== linkId));
-    
+    // Classify by id: a pending (unsaved) add carries a temp id and is
+    // simply dropped from the pending list; a persisted link id is recorded
+    // in pendingLinkRemoves so the Update request deletes it server-side.
+    const next = applyLinkDeletion({ pendingLinkAdds, pendingLinkRemoves }, linkId);
+    setPendingLinkAdds(next.pendingLinkAdds);
+    setPendingLinkRemoves(next.pendingLinkRemoves);
+    // The displayed links update via the derived currentLinks.
+
     // DO NOT call onDeleteLink here - deletions only happen on Update
   };
 
@@ -101,8 +110,9 @@ export const ArtifactEditor: React.FC<ArtifactEditorProps> = ({
     const dataToSave = {
       ...formData,
       parent_id: formData.parent_id === '' ? null : formData.parent_id,
-      // Include link change information for backend to process
-      pendingLinkAdds,
+      // Include link change information for backend to process.
+      // Temp ids are client-side only — strip them before sending.
+      pendingLinkAdds: serializePendingAdds(pendingLinkAdds),
       pendingLinkRemoves,
     } as any;
     
@@ -182,6 +192,37 @@ export const ArtifactEditor: React.FC<ArtifactEditorProps> = ({
               <option value="other">Other</option>
             </select>
           </div>
+
+          {formData.type === 'test-case' && (
+            <div className="form-group">
+              <label htmlFor="execution_method">How is this verified?</label>
+              <select
+                id="execution_method"
+                name="execution_method"
+                value={executionMethodOf(formData)}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    attributes: {
+                      ...(formData.attributes || {}),
+                      execution_method: e.target.value as ExecutionMethod,
+                    },
+                  })
+                }
+              >
+                {EXECUTION_METHODS.map((m) => (
+                  <option key={m.value} value={m.value}>
+                    {m.label}
+                  </option>
+                ))}
+              </select>
+              <small style={{ color: 'var(--text-muted)', fontSize: 12 }}>
+                {EXECUTION_METHODS.find((m) => m.value === executionMethodOf(formData))?.hint}
+                {executionMethodOf(formData) !== 'automated' &&
+                  ' Agents are never asked to run this case, and cannot record its result.'}
+              </small>
+            </div>
+          )}
 
           <div className="form-group">
             <label htmlFor="title">Title</label>

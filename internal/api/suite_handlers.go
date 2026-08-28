@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -34,6 +35,7 @@ func (h *Handler) registerSuiteRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/test-runs/{id}", h.DeleteTestRun).Methods("DELETE")
 	router.HandleFunc("/api/v1/test-runs/{id}/results", h.UpsertTestResult).Methods("POST")
 	router.HandleFunc("/api/v1/test-runs/{id}/results", h.ListTestResults).Methods("GET")
+	router.HandleFunc("/api/v1/test-runs/{id}/agent-run", h.LaunchTestRunAgent).Methods("POST")
 	router.HandleFunc("/api/v1/projects/{id}/vv/coverage", h.GetCoverage).Methods("GET")
 	router.HandleFunc("/api/v1/projects/{id}/vv/matrix", h.GetMatrix).Methods("GET")
 	router.HandleFunc("/api/v1/projects/{id}/vv/gaps", h.GetGaps).Methods("GET")
@@ -113,7 +115,7 @@ func (h *Handler) GetProductProfile(w http.ResponseWriter, r *http.Request) {
 	}
 	profile, err := h.productService.GetProfile(projectID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to load product profile", err)
 		return
 	}
 	json.NewEncoder(w).Encode(profile)
@@ -126,12 +128,12 @@ func (h *Handler) UpdateProductProfile(w http.ResponseWriter, r *http.Request) {
 	}
 	var req products.UpdateProfileRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 	profile, err := h.productService.UpdateProfile(projectID, req)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	json.NewEncoder(w).Encode(profile)
@@ -146,13 +148,13 @@ func (h *Handler) CreateTestRun(w http.ResponseWriter, r *http.Request) {
 	}
 	var req vv.CreateRunRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 	req.ProjectID = projectID
 	run, err := h.vvService.CreateRun(req, CurrentUserID(r))
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	w.WriteHeader(http.StatusCreated)
@@ -166,7 +168,7 @@ func (h *Handler) ListTestRuns(w http.ResponseWriter, r *http.Request) {
 	}
 	runs, err := h.vvService.ListRuns(projectID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to list test runs", err)
 		return
 	}
 	json.NewEncoder(w).Encode(runs)
@@ -175,7 +177,7 @@ func (h *Handler) ListTestRuns(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) GetTestRun(w http.ResponseWriter, r *http.Request) {
 	run, err := h.vvService.GetRun(mux.Vars(r)["id"])
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		respondError(w, r, http.StatusNotFound, "test run not found", err)
 		return
 	}
 	if !h.requireProjectRole(w, r, run.ProjectID, members.RoleViewer) {
@@ -188,7 +190,7 @@ func (h *Handler) UpdateTestRun(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 	run, err := h.vvService.GetRun(id)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		respondError(w, r, http.StatusNotFound, "test run not found", err)
 		return
 	}
 	if !h.requireProjectRole(w, r, run.ProjectID, members.RoleEditor) {
@@ -198,12 +200,12 @@ func (h *Handler) UpdateTestRun(w http.ResponseWriter, r *http.Request) {
 		Status string `json:"status"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 	updated, err := h.vvService.UpdateRunStatus(id, req.Status)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	json.NewEncoder(w).Encode(updated)
@@ -213,14 +215,14 @@ func (h *Handler) DeleteTestRun(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 	run, err := h.vvService.GetRun(id)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		respondError(w, r, http.StatusNotFound, "test run not found", err)
 		return
 	}
 	if !h.requireProjectRole(w, r, run.ProjectID, members.RoleEditor) {
 		return
 	}
 	if err := h.vvService.DeleteRun(id); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to delete test run", err)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -230,7 +232,7 @@ func (h *Handler) UpsertTestResult(w http.ResponseWriter, r *http.Request) {
 	runID := mux.Vars(r)["id"]
 	run, err := h.vvService.GetRun(runID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		respondError(w, r, http.StatusNotFound, "test run not found", err)
 		return
 	}
 	if !h.requireProjectRole(w, r, run.ProjectID, members.RoleEditor) {
@@ -238,12 +240,22 @@ func (h *Handler) UpsertTestResult(w http.ResponseWriter, r *http.Request) {
 	}
 	var req vv.UpsertResultRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	result, err := h.vvService.UpsertResult(runID, req, CurrentUserID(r), Actor(r))
+	// An agent run recording a result is stamped with its run id, which also
+	// gates test cases flagged as human- or physically-verified.
+	agentRunID := ""
+	if run := CurrentRun(r); run != nil {
+		agentRunID = run.ID
+	}
+	result, err := h.vvService.UpsertResult(runID, req, CurrentUserID(r), Actor(r), agentRunID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		status := http.StatusBadRequest
+		if errors.Is(err, vv.ErrNotAgentExecutable) {
+			status = http.StatusForbidden
+		}
+		writeJSONError(w, status, err.Error())
 		return
 	}
 	json.NewEncoder(w).Encode(result)
@@ -253,7 +265,7 @@ func (h *Handler) ListTestResults(w http.ResponseWriter, r *http.Request) {
 	runID := mux.Vars(r)["id"]
 	run, err := h.vvService.GetRun(runID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		respondError(w, r, http.StatusNotFound, "test run not found", err)
 		return
 	}
 	if !h.requireProjectRole(w, r, run.ProjectID, members.RoleViewer) {
@@ -261,10 +273,132 @@ func (h *Handler) ListTestResults(w http.ResponseWriter, r *http.Request) {
 	}
 	results, err := h.vvService.ListResults(runID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to list test results", err)
 		return
 	}
 	json.NewEncoder(w).Encode(results)
+}
+
+// LaunchTestRunAgent starts an agent run that executes a test run's
+// agent-executable test cases and records their results. Test cases flagged
+// manual or physical are never handed to the agent — they stay with people,
+// and are reported back as skipped so the UI can show what still needs doing.
+func (h *Handler) LaunchTestRunAgent(w http.ResponseWriter, r *http.Request) {
+	runID := mux.Vars(r)["id"]
+	testRun, err := h.vvService.GetRun(runID)
+	if err != nil {
+		respondError(w, r, http.StatusNotFound, "test run not found", err)
+		return
+	}
+	if !h.requireProjectRole(w, r, testRun.ProjectID, members.RoleEditor) {
+		return
+	}
+	if testRun.Status != vv.RunStatusInProgress {
+		writeJSONError(w, http.StatusBadRequest, "this test run is "+testRun.Status+"; only in-progress runs accept new results")
+		return
+	}
+
+	var req struct {
+		AgentSlug   string   `json:"agent_slug"`
+		TestCaseIDs []string `json:"test_case_ids"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if strings.TrimSpace(req.AgentSlug) == "" {
+		writeJSONError(w, http.StatusBadRequest, "agent_slug is required")
+		return
+	}
+
+	orgID := ActiveOrg(r)
+	if project, err := h.projectService.GetProject(testRun.ProjectID); err == nil && project != nil && project.OrgID != "" {
+		orgID = project.OrgID
+	}
+	agent, err := h.agentService.GetBySlug(orgID, req.AgentSlug)
+	if err != nil || agent == nil {
+		writeJSONError(w, http.StatusNotFound, "agent not found")
+		return
+	}
+
+	runnable, skipped, err := h.vvService.AgentExecutableCases(testRun.ProjectID, req.TestCaseIDs)
+	if err != nil {
+		respondInternal(w, r, "failed to select agent-executable test cases", err)
+		return
+	}
+	if len(runnable) == 0 {
+		msg := "no agent-executable test cases in this run"
+		if len(skipped) > 0 {
+			msg += fmt.Sprintf(" — all %d selected case(s) are flagged as human- or physically-verified", len(skipped))
+		}
+		writeJSONError(w, http.StatusBadRequest, msg)
+		return
+	}
+
+	agentRun, _, err := h.runService.Launch(agentruns.LaunchRequest{
+		OrgID:      orgID,
+		AgentID:    agent.ID,
+		ProjectID:  &testRun.ProjectID,
+		Prompt:     testRunAgentPrompt(testRun, runnable, skipped),
+		LaunchedBy: CurrentUserID(r),
+	})
+	if err != nil {
+		writeJSONError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	skippedOut := make([]map[string]string, 0, len(skipped))
+	for _, tc := range skipped {
+		skippedOut = append(skippedOut, map[string]string{
+			"id":               tc.ID,
+			"title":            tc.Title,
+			"execution_method": vv.ExecutionMethod(tc.Attributes),
+		})
+	}
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"run":       agentRun,
+		"executing": len(runnable),
+		"skipped":   skippedOut,
+	})
+}
+
+// testRunAgentPrompt builds the instruction an agent receives to execute a
+// test run. It names the exact cases to execute so the agent neither invents
+// work nor wanders into cases reserved for a human.
+func testRunAgentPrompt(testRun *vv.TestRun, runnable, skipped []*artifacts.Artifact) string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "Execute the test cases below for the OpenV test run %q and record a result for each one.\n\n", testRun.Name)
+	fmt.Fprintf(&b, "project_id: %s\ntest run id: %s\n\n", testRun.ProjectID, testRun.ID)
+
+	b.WriteString("Test cases to execute:\n")
+	for _, tc := range runnable {
+		fmt.Fprintf(&b, "- %s (test case id: %s)\n", tc.Title, tc.ID)
+	}
+
+	b.WriteString("\nHow to proceed:\n")
+	b.WriteString("1. Read each test case with get_artifact to get its steps and expected results.\n")
+	b.WriteString("2. Carry out the test as written, using the project's repository and tooling where relevant.\n")
+	b.WriteString("3. Record the outcome with record_test_result, passing the run id above, the test case id, ")
+	b.WriteString("and a status of \"pass\", \"fail\", or \"blocked\".\n")
+	b.WriteString("4. In the notes, state exactly what you did and what you observed — the command you ran, ")
+	b.WriteString("the output, or the reason it could not be run. This is verification evidence: a reviewer must be ")
+	b.WriteString("able to judge your result without rerunning it.\n\n")
+
+	b.WriteString("Rules:\n")
+	b.WriteString("- Only report \"pass\" for behaviour you actually observed. If you could not execute a case ")
+	b.WriteString("(missing environment, unclear steps, needs hardware), record it as \"blocked\" and explain why.\n")
+	b.WriteString("- Never guess an outcome, and never edit a test case to make it pass.\n")
+	b.WriteString("- Record a result for every test case listed above, and for no others.\n")
+
+	if len(skipped) > 0 {
+		fmt.Fprintf(&b, "\n%d further test case(s) in this run are flagged as human- or physically-verified and are ", len(skipped))
+		b.WriteString("deliberately excluded — do not attempt them or record results for them:\n")
+		for _, tc := range skipped {
+			fmt.Fprintf(&b, "- %s (%s)\n", tc.Title, vv.ExecutionMethod(tc.Attributes))
+		}
+	}
+	return b.String()
 }
 
 func (h *Handler) vvReportData(w http.ResponseWriter, r *http.Request) (*exports.ProjectExport, map[string]*vv.TestResult, bool) {
@@ -274,12 +408,12 @@ func (h *Handler) vvReportData(w http.ResponseWriter, r *http.Request) (*exports
 	}
 	export, err := h.projectExport(projectID, r.URL.Query().Get("baseline_id"))
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to export project", err)
 		return nil, nil, false
 	}
 	latest, err := h.vvService.LatestResults(projectID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to load latest test results", err)
 		return nil, nil, false
 	}
 	return export, latest, true
@@ -319,18 +453,18 @@ func (h *Handler) GetVVReport(w http.ResponseWriter, r *http.Request) {
 
 	latest, err := h.vvService.LatestResults(projectID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to load latest test results", err)
 		return
 	}
 	runs, err := h.vvService.ListRuns(projectID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to list test runs", err)
 		return
 	}
 
 	data, filename, err := h.reportService.GenerateVVReport(projectID, r.URL.Query().Get("baseline_id"), latest, runs)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to generate V&V report", err)
 		return
 	}
 
@@ -349,13 +483,13 @@ func (h *Handler) CreateWorkItem(w http.ResponseWriter, r *http.Request) {
 	}
 	var req workitems.CreateWorkItemRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 	req.ProjectID = projectID
 	item, err := h.workItemService.Create(req, CurrentUserID(r), Actor(r))
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	w.WriteHeader(http.StatusCreated)
@@ -369,7 +503,7 @@ func (h *Handler) ListWorkItems(w http.ResponseWriter, r *http.Request) {
 	}
 	items, err := h.workItemService.ListByProject(projectID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to list work items", err)
 		return
 	}
 	json.NewEncoder(w).Encode(items)
@@ -378,7 +512,7 @@ func (h *Handler) ListWorkItems(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) GetWorkItem(w http.ResponseWriter, r *http.Request) {
 	item, activity, err := h.workItemService.GetWithActivity(mux.Vars(r)["id"])
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		respondError(w, r, http.StatusNotFound, "work item not found", err)
 		return
 	}
 	if !h.requireProjectRole(w, r, item.ProjectID, members.RoleViewer) {
@@ -394,7 +528,7 @@ func (h *Handler) UpdateWorkItem(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 	item, err := h.workItemService.Get(id)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		respondError(w, r, http.StatusNotFound, "work item not found", err)
 		return
 	}
 	if !h.requireProjectRole(w, r, item.ProjectID, members.RoleEditor) {
@@ -402,12 +536,12 @@ func (h *Handler) UpdateWorkItem(w http.ResponseWriter, r *http.Request) {
 	}
 	var req workitems.UpdateWorkItemRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 	updated, err := h.workItemService.Update(id, req, Actor(r))
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	json.NewEncoder(w).Encode(updated)
@@ -417,14 +551,14 @@ func (h *Handler) DeleteWorkItem(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 	item, err := h.workItemService.Get(id)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		respondError(w, r, http.StatusNotFound, "work item not found", err)
 		return
 	}
 	if !h.requireProjectRole(w, r, item.ProjectID, members.RoleEditor) {
 		return
 	}
 	if err := h.workItemService.Delete(id); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to delete work item", err)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -434,7 +568,7 @@ func (h *Handler) MoveWorkItem(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 	item, err := h.workItemService.Get(id)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		respondError(w, r, http.StatusNotFound, "work item not found", err)
 		return
 	}
 	if !h.requireProjectRole(w, r, item.ProjectID, members.RoleEditor) {
@@ -442,12 +576,12 @@ func (h *Handler) MoveWorkItem(w http.ResponseWriter, r *http.Request) {
 	}
 	var req workitems.MoveRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 	moved, err := h.workItemService.Move(id, req, Actor(r))
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	json.NewEncoder(w).Encode(moved)
@@ -457,7 +591,7 @@ func (h *Handler) CommentWorkItem(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 	item, err := h.workItemService.Get(id)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		respondError(w, r, http.StatusNotFound, "work item not found", err)
 		return
 	}
 	if !h.requireProjectRole(w, r, item.ProjectID, members.RoleViewer) {
@@ -467,12 +601,12 @@ func (h *Handler) CommentWorkItem(w http.ResponseWriter, r *http.Request) {
 		Content string `json:"content"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 	activity, err := h.workItemService.AddComment(id, req.Content, Actor(r))
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	w.WriteHeader(http.StatusCreated)
@@ -486,7 +620,7 @@ func (h *Handler) StartGuidedSession(w http.ResponseWriter, r *http.Request) {
 		ProjectID string `json:"project_id"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 	if !h.requireProjectRole(w, r, req.ProjectID, members.RoleEditor) {
@@ -494,7 +628,7 @@ func (h *Handler) StartGuidedSession(w http.ResponseWriter, r *http.Request) {
 	}
 	session, err := h.guidedService.StartSession(req.ProjectID, CurrentUserID(r))
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	w.WriteHeader(http.StatusCreated)
@@ -508,7 +642,7 @@ func (h *Handler) ListGuidedSessions(w http.ResponseWriter, r *http.Request) {
 	}
 	sessions, err := h.guidedService.ListSessions(projectID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to list guided sessions", err)
 		return
 	}
 	json.NewEncoder(w).Encode(sessions)
@@ -517,7 +651,7 @@ func (h *Handler) ListGuidedSessions(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) getGuidedSessionChecked(w http.ResponseWriter, r *http.Request, minRole string) *guided.Session {
 	session, err := h.guidedService.GetSession(mux.Vars(r)["id"])
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		respondError(w, r, http.StatusNotFound, "guided session not found", err)
 		return nil
 	}
 	if !h.requireProjectRole(w, r, session.ProjectID, minRole) {
@@ -544,12 +678,12 @@ func (h *Handler) SaveGuidedStep(w http.ResponseWriter, r *http.Request) {
 		Answers map[string]interface{} `json:"answers"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 	updated, err := h.guidedService.SaveStep(session.ID, req.Step, req.Answers)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	json.NewEncoder(w).Encode(updated)
@@ -564,12 +698,12 @@ func (h *Handler) MaterializeGuidedDrafts(w http.ResponseWriter, r *http.Request
 		Drafts []guided.DraftSpec `json:"drafts"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 	ids, err := h.guidedService.MaterializeDrafts(session.ID, req.Drafts)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	json.NewEncoder(w).Encode(map[string]interface{}{"artifact_ids": ids})
@@ -582,7 +716,7 @@ func (h *Handler) CommitGuidedSession(w http.ResponseWriter, r *http.Request) {
 	}
 	committed, err := h.guidedService.Commit(session.ID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	json.NewEncoder(w).Encode(committed)
@@ -595,7 +729,7 @@ func (h *Handler) AbandonGuidedSession(w http.ResponseWriter, r *http.Request) {
 	}
 	abandoned, err := h.guidedService.Abandon(session.ID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	json.NewEncoder(w).Encode(abandoned)
@@ -636,7 +770,7 @@ func (h *Handler) ListGuidedChatMessages(w http.ResponseWriter, r *http.Request)
 	}
 	transcript, err := h.guidedService.GetChatTranscript(session.ID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to load chat transcript", err)
 		return
 	}
 	json.NewEncoder(w).Encode(transcript)
@@ -653,16 +787,16 @@ func (h *Handler) PostGuidedChatMessage(w http.ResponseWriter, r *http.Request) 
 		State   map[string]interface{} `json:"state"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 	if strings.TrimSpace(req.Content) == "" {
-		http.Error(w, "message content is required", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "message content is required")
 		return
 	}
 	message, err := h.guidedService.AppendChatMessage(session.ID, guided.ChatRoleUser, req.Content)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to append chat message", err)
 		return
 	}
 	h.sseHub.BroadcastSession("guided:"+session.ID, "message", message)
@@ -693,7 +827,7 @@ func (h *Handler) KickoffGuidedChat(w http.ResponseWriter, r *http.Request) {
 		State map[string]interface{} `json:"state"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 	runnerOnline := h.guidedRunnerOnline(session)
@@ -705,7 +839,7 @@ func (h *Handler) KickoffGuidedChat(w http.ResponseWriter, r *http.Request) {
 	}
 	transcript, err := h.guidedService.GetChatTranscript(session.ID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to load chat transcript", err)
 		return
 	}
 	if len(transcript) > 0 {
@@ -748,7 +882,7 @@ func (h *Handler) NudgeGuidedChat(w http.ResponseWriter, r *http.Request) {
 		Event string                 `json:"event"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 	// The response tells the chat panel whether a reply is coming, so it can
@@ -855,7 +989,7 @@ func (h *Handler) launchGuidedTurn(r *http.Request, session *guided.Session, ste
 				s = s[:12000] + "…(truncated)"
 			}
 			b.WriteString("\nCurrent wizard state (everything entered so far):\n" + s + "\n")
-			b.WriteString("State key legend: step_1 {vision, problem_statement, target_users} = Product framing; step_2.personas; step_3.needs (persona_index indexes step_2.personas); step_4.requirements (need_index indexes step_3.needs); step_5.nfrs; step_6.hazards; step_7 = test stubs; step 8 = review & commit.\n")
+			b.WriteString("State key legend: step_1 {vision, problem_statement, target_users} = Product framing; step_2.personas (each has a stable id); step_3.needs (persona_id references a step_2 persona's id); step_4.requirements (need_id references a step_3 need's id); step_5.nfrs; step_6.hazards; step_7 = test stubs; step 8 = review & commit; copilot_applied = keys of your suggestions already applied.\n")
 		}
 	}
 	b.WriteString("\nConversation so far:\n")
@@ -934,7 +1068,7 @@ func (h *Handler) CreateInterview(w http.ResponseWriter, r *http.Request) {
 		PersonaArtifactID *string `json:"persona_artifact_id"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 	if !h.validPersonaForProject(w, req.PersonaArtifactID, projectID) {
@@ -955,7 +1089,7 @@ func (h *Handler) CreateInterview(w http.ResponseWriter, r *http.Request) {
 	}
 	interview, err := h.interviewService.CreateInterview(projectID, req.Name, req.Brief, agentID, req.GuidedSessionID, req.PersonaArtifactID, CurrentUserID(r))
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	w.WriteHeader(http.StatusCreated)
@@ -969,7 +1103,7 @@ func (h *Handler) ListInterviews(w http.ResponseWriter, r *http.Request) {
 	}
 	list, err := h.interviewService.ListInterviews(projectID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to list interviews", err)
 		return
 	}
 	json.NewEncoder(w).Encode(list)
@@ -978,7 +1112,7 @@ func (h *Handler) ListInterviews(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) getInterviewChecked(w http.ResponseWriter, r *http.Request, minRole string) *interviews.Interview {
 	interview, err := h.interviewService.GetInterview(mux.Vars(r)["id"])
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		respondError(w, r, http.StatusNotFound, "interview not found", err)
 		return nil
 	}
 	if !h.requireProjectRole(w, r, interview.ProjectID, minRole) {
@@ -996,15 +1130,15 @@ func (h *Handler) validPersonaForProject(w http.ResponseWriter, personaArtifactI
 	}
 	artifact, err := h.artifactService.GetArtifact(*personaArtifactID)
 	if err != nil || artifact == nil {
-		http.Error(w, "persona artifact not found", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "persona artifact not found")
 		return false
 	}
 	if artifact.ProjectID != projectID {
-		http.Error(w, "persona artifact belongs to a different project", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "persona artifact belongs to a different project")
 		return false
 	}
 	if artifact.Type != artifacts.TypePersona {
-		http.Error(w, "artifact is not a persona", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "artifact is not a persona")
 		return false
 	}
 	return true
@@ -1021,7 +1155,7 @@ func (h *Handler) SetInterviewPersona(w http.ResponseWriter, r *http.Request) {
 		PersonaArtifactID *string `json:"persona_artifact_id"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 	if !h.validPersonaForProject(w, req.PersonaArtifactID, interview.ProjectID) {
@@ -1029,7 +1163,7 @@ func (h *Handler) SetInterviewPersona(w http.ResponseWriter, r *http.Request) {
 	}
 	updated, err := h.interviewService.SetInterviewPersona(interview.ID, req.PersonaArtifactID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	json.NewEncoder(w).Encode(updated)
@@ -1042,7 +1176,7 @@ func (h *Handler) CloseInterview(w http.ResponseWriter, r *http.Request) {
 	}
 	closed, err := h.interviewService.CloseInterview(interview.ID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	json.NewEncoder(w).Encode(closed)
@@ -1058,12 +1192,12 @@ func (h *Handler) CreateInterviewInvite(w http.ResponseWriter, r *http.Request) 
 		ExpiresAt    *time.Time `json:"expires_at"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 	invite, token, err := h.interviewService.CreateInvite(interview.ID, req.InviteeLabel, req.ExpiresAt)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	w.WriteHeader(http.StatusCreated)
@@ -1081,7 +1215,7 @@ func (h *Handler) ListInterviewInvites(w http.ResponseWriter, r *http.Request) {
 	}
 	list, err := h.interviewService.ListInvites(interview.ID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to list invites", err)
 		return
 	}
 	json.NewEncoder(w).Encode(list)
@@ -1093,19 +1227,19 @@ func (h *Handler) RevokeInterviewInvite(w http.ResponseWriter, r *http.Request) 
 	}
 	invite, err := h.interviewService.GetInvite(mux.Vars(r)["id"])
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		respondError(w, r, http.StatusNotFound, "invite not found", err)
 		return
 	}
 	interview, err := h.interviewService.GetInterview(invite.InterviewID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		respondError(w, r, http.StatusNotFound, "interview not found", err)
 		return
 	}
 	if !h.requireProjectRole(w, r, interview.ProjectID, members.RoleEditor) {
 		return
 	}
 	if err := h.interviewService.RevokeInvite(invite.ID); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -1118,7 +1252,7 @@ func (h *Handler) ListInterviewSessions(w http.ResponseWriter, r *http.Request) 
 	}
 	list, err := h.interviewService.ListSessions(interview.ID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to list interview sessions", err)
 		return
 	}
 	json.NewEncoder(w).Encode(list)
@@ -1130,12 +1264,12 @@ func (h *Handler) GetInterviewTranscript(w http.ResponseWriter, r *http.Request)
 	}
 	session, err := h.interviewService.GetSession(mux.Vars(r)["id"])
 	if err != nil || session == nil {
-		http.Error(w, "interview session not found", http.StatusNotFound)
+		writeJSONError(w, http.StatusNotFound, "interview session not found")
 		return
 	}
 	interview, err := h.interviewService.GetInterview(session.InterviewID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		respondError(w, r, http.StatusNotFound, "interview not found", err)
 		return
 	}
 	if !h.requireProjectRole(w, r, interview.ProjectID, members.RoleViewer) {
@@ -1143,7 +1277,7 @@ func (h *Handler) GetInterviewTranscript(w http.ResponseWriter, r *http.Request)
 	}
 	transcript, err := h.interviewService.GetTranscript(session.ID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		respondInternal(w, r, "failed to load transcript", err)
 		return
 	}
 	json.NewEncoder(w).Encode(transcript)
@@ -1151,13 +1285,34 @@ func (h *Handler) GetInterviewTranscript(w http.ResponseWriter, r *http.Request)
 
 // --- Interviews (public token flow) ---
 
+// respondInviteError answers a failed invite-token resolution: the
+// participant-facing verdicts (unknown, revoked, expired, interview closed)
+// pass through as 404s, anything else is an internal failure.
+func respondInviteError(w http.ResponseWriter, r *http.Request, err error) {
+	switch {
+	case errors.Is(err, interviews.ErrInviteNotFound),
+		errors.Is(err, interviews.ErrInviteRevoked),
+		errors.Is(err, interviews.ErrInviteExpired),
+		errors.Is(err, interviews.ErrInterviewClosed):
+		writeJSONError(w, http.StatusNotFound, err.Error())
+	default:
+		respondInternal(w, r, "failed to resolve invite", err)
+	}
+}
+
 func (h *Handler) PublicInterviewIntro(w http.ResponseWriter, r *http.Request) {
-	interview, invite, err := h.interviewService.ResolveInviteToken(mux.Vars(r)["token"])
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+	if !h.allowInterviewRead(w, r) {
 		return
 	}
-	session, _ := h.interviewService.StartOrResumeSession(invite.ID, interview.ID, "")
+	interview, invite, err := h.interviewService.ResolveInviteToken(mux.Vars(r)["token"])
+	if err != nil {
+		respondInviteError(w, r, err)
+		return
+	}
+	// Read-only: a page view must not write. A first visit simply has no
+	// session yet (the UI shows the name prompt); the session is created by
+	// the first message (or the stream, which needs one for its channel).
+	session, _ := h.interviewService.FindActiveSession(invite.ID)
 	var transcript []*interviews.Message
 	if session != nil {
 		transcript, _ = h.interviewService.GetTranscript(session.ID)
@@ -1174,7 +1329,7 @@ func (h *Handler) PublicInterviewIntro(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) PublicInterviewMessage(w http.ResponseWriter, r *http.Request) {
 	interview, invite, err := h.interviewService.ResolveInviteToken(mux.Vars(r)["token"])
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		respondInviteError(w, r, err)
 		return
 	}
 	var req struct {
@@ -1182,21 +1337,29 @@ func (h *Handler) PublicInterviewMessage(w http.ResponseWriter, r *http.Request)
 		Content         string `json:"content"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 	if strings.TrimSpace(req.Content) == "" {
-		http.Error(w, "message content is required", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "message content is required")
+		return
+	}
+	// Every message enqueues a priority LLM run, so throttle per invite:
+	// a leaked link cannot rack up unbounded provider cost.
+	if ok, retryAfter := h.interviewMsgLimiter.allow(invite.ID); !ok {
+		writeRateLimited(w,
+			"You're sending messages a little too quickly. Please wait a moment and try again.",
+			retryAfter)
 		return
 	}
 	session, err := h.interviewService.StartOrResumeSession(invite.ID, interview.ID, req.ParticipantName)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	message, err := h.interviewService.AppendMessage(session.ID, interviews.RoleParticipant, req.Content)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to append message", err)
 		return
 	}
 	h.sseHub.BroadcastSession("interview:"+session.ID, "message", message)
@@ -1277,16 +1440,34 @@ func (h *Handler) launchInterviewTurn(interview *interviews.Interview, session *
 	return err
 }
 
+// allowInterviewRead applies the coarse per-IP bucket shared by the
+// unauthenticated interview GETs (intro + stream). Returns false after
+// writing the 429 when the caller is over budget.
+func (h *Handler) allowInterviewRead(w http.ResponseWriter, r *http.Request) bool {
+	if ok, retryAfter := h.interviewIPLimiter.allow(clientIP(r)); !ok {
+		writeRateLimited(w,
+			"Too many requests from your network. Please wait a moment and reload the page.",
+			retryAfter)
+		return false
+	}
+	return true
+}
+
 // PublicInterviewStream is the participant's SSE channel.
 func (h *Handler) PublicInterviewStream(w http.ResponseWriter, r *http.Request) {
-	interview, invite, err := h.interviewService.ResolveInviteToken(mux.Vars(r)["token"])
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+	if !h.allowInterviewRead(w, r) {
 		return
 	}
+	interview, invite, err := h.interviewService.ResolveInviteToken(mux.Vars(r)["token"])
+	if err != nil {
+		respondInviteError(w, r, err)
+		return
+	}
+	// The SSE channel is keyed by session, so the stream genuinely needs
+	// one; StartOrResumeSession reuses the active session when it exists.
 	session, err := h.interviewService.StartOrResumeSession(invite.ID, interview.ID, "")
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	h.sseHub.ServeStream(w, r, "interview:"+session.ID, func(emit func(event string, data interface{})) error {
@@ -1305,16 +1486,22 @@ func (h *Handler) PublicInterviewStream(w http.ResponseWriter, r *http.Request) 
 func (h *Handler) PublicInterviewFinish(w http.ResponseWriter, r *http.Request) {
 	interview, invite, err := h.interviewService.ResolveInviteToken(mux.Vars(r)["token"])
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		respondInviteError(w, r, err)
 		return
 	}
-	session, err := h.interviewService.StartOrResumeSession(invite.ID, interview.ID, "")
+	// Nothing to finish when no session was ever started — don't create an
+	// empty session just to complete it.
+	session, err := h.interviewService.FindActiveSession(invite.ID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	if session == nil {
+		w.WriteHeader(http.StatusNoContent)
 		return
 	}
 	if err := h.interviewService.CompleteSession(session.ID, ""); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	h.publish(r, events.ChatterCreated, interview.ProjectID, session.ID, map[string]interface{}{

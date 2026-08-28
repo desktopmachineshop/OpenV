@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
   AgentDef,
   agentRunsAPI,
@@ -48,13 +48,26 @@ export const CrewBuilder: React.FC = () => {
   const projectId = params.projectId || storeProjectId;
   const activeOrgId = useAppStore((s) => s.activeOrgId);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // The view is derived from the route (/crew ↔ org chart, /crew/network ↔
+  // network) so deep links and refreshes land on the right view.
+  const view: 'org' | 'network' = location.pathname.replace(/\/+$/, '').endsWith('/network')
+    ? 'network'
+    : 'org';
+  const setView = useCallback(
+    (v: 'org' | 'network') => {
+      if (!projectId) return;
+      navigate(`/projects/${projectId}/crew${v === 'network' ? '/network' : ''}`);
+    },
+    [navigate, projectId]
+  );
 
   const [crews, setCrews] = useState<Crew[]>([]);
   const [crewId, setCrewId] = useState<string>('');
   const [graph, setGraph] = useState<CrewGraph | null>(null);
   const [agents, setAgents] = useState<AgentDef[]>([]);
   const [members, setMembers] = useState<OrgMember[]>([]);
-  const [view, setView] = useState<'org' | 'network'>('org');
   const [filter, setFilter] = useState<CrewFilter>('all');
   const [connectMode, setConnectMode] = useState(false);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
