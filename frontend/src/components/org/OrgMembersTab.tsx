@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Org, OrgMember, User, orgsAPI } from '../../api/client';
+import { apiErrorMessage } from '../../api/errors';
 
 const th: React.CSSProperties = {
   textAlign: 'left',
@@ -44,7 +45,7 @@ export const OrgMembersTab: React.FC<OrgMembersTabProps> = ({ org, isAdmin, curr
       const res = await orgsAPI.members.list(org.id);
       setMembers(res.data || []);
     } catch (err: any) {
-      setError(`Failed to load members: ${err.response?.data || err.message}`);
+      setError(`Failed to load members: ${apiErrorMessage(err)}`);
     } finally {
       setLoading(false);
     }
@@ -70,7 +71,7 @@ export const OrgMembersTab: React.FC<OrgMembersTabProps> = ({ org, isAdmin, curr
           `No account exists for "${inviteEmail.trim()}". They need to sign up first — once they have an account, add them here by the same email.`
         );
       } else {
-        setError(`Failed to add member: ${err.response?.data || err.message}`);
+        setError(`Failed to add member: ${apiErrorMessage(err)}`);
       }
     } finally {
       setInviting(false);
@@ -87,7 +88,7 @@ export const OrgMembersTab: React.FC<OrgMembersTabProps> = ({ org, isAdmin, curr
       );
       setError('');
     } catch (err: any) {
-      setError(`Failed to change role: ${err.response?.data || err.message}`);
+      setError(`Failed to change role: ${apiErrorMessage(err)}`);
     }
   };
 
@@ -107,7 +108,7 @@ export const OrgMembersTab: React.FC<OrgMembersTabProps> = ({ org, isAdmin, curr
       setMembers(members.filter((m) => m.user_id !== member.user_id));
       setError('');
     } catch (err: any) {
-      setError(`Failed to remove member: ${err.response?.data || err.message}`);
+      setError(`Failed to remove member: ${apiErrorMessage(err)}`);
     }
   };
 

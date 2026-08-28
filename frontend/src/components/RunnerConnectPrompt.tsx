@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ConnectorPairing, connectorAPI, myRunnerKeyAPI } from '../api/client';
+import { apiErrorMessage } from '../api/errors';
 
 interface RunnerConnectPromptProps {
   orgId: string;
@@ -121,7 +122,7 @@ export const RunnerConnectPrompt: React.FC<RunnerConnectPromptProps> = ({
       setPairing(res.data);
       openConnector(res.data.deep_link);
     } catch (err: any) {
-      setError(`Failed to create a pairing code: ${err.response?.data || err.message}`);
+      setError(`Failed to create a pairing code: ${apiErrorMessage(err)}`);
     }
   };
 

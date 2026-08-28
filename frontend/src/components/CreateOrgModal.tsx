@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { orgsAPI } from '../api/client';
+import { apiErrorMessage } from '../api/errors';
 import { useAppStore } from '../state/store';
 
 interface CreateOrgModalProps {
@@ -40,7 +41,7 @@ export const CreateOrgModal: React.FC<CreateOrgModalProps> = ({ onClose, onCreat
       onCreated?.(newOrgId);
       onClose();
     } catch (err: any) {
-      setError(`Failed to create workspace: ${err.response?.data || err.message}`);
+      setError(`Failed to create workspace: ${apiErrorMessage(err)}`);
       setBusy(false);
     }
   };

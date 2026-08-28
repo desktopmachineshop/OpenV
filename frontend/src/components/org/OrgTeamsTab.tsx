@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Org, OrgMember, OrgTeam, orgTeamsAPI, orgsAPI } from '../../api/client';
+import { apiErrorMessage } from '../../api/errors';
 
 interface OrgTeamsTabProps {
   org: Org;
@@ -34,7 +35,7 @@ export const OrgTeamsTab: React.FC<OrgTeamsTabProps> = ({ org, isAdmin }) => {
       setTeams(teamsRes.data || []);
       setOrgMembers(membersRes.data || []);
     } catch (err: any) {
-      setError(`Failed to load teams: ${err.response?.data || err.message}`);
+      setError(`Failed to load teams: ${apiErrorMessage(err)}`);
     } finally {
       setLoading(false);
     }
@@ -56,7 +57,7 @@ export const OrgTeamsTab: React.FC<OrgTeamsTabProps> = ({ org, isAdmin }) => {
       setShowCreate(false);
       await load();
     } catch (err: any) {
-      setError(`Failed to create team: ${err.response?.data || err.message}`);
+      setError(`Failed to create team: ${apiErrorMessage(err)}`);
     } finally {
       setCreating(false);
     }
@@ -69,7 +70,7 @@ export const OrgTeamsTab: React.FC<OrgTeamsTabProps> = ({ org, isAdmin }) => {
       await orgTeamsAPI.update(team.id, { name: name.trim() });
       await load();
     } catch (err: any) {
-      setError(`Failed to rename team: ${err.response?.data || err.message}`);
+      setError(`Failed to rename team: ${apiErrorMessage(err)}`);
     }
   };
 
@@ -80,7 +81,7 @@ export const OrgTeamsTab: React.FC<OrgTeamsTabProps> = ({ org, isAdmin }) => {
       setTeams(teams.filter((t) => t.id !== team.id));
       setError('');
     } catch (err: any) {
-      setError(`Failed to delete team: ${err.response?.data || err.message}`);
+      setError(`Failed to delete team: ${apiErrorMessage(err)}`);
     }
   };
 
@@ -92,7 +93,7 @@ export const OrgTeamsTab: React.FC<OrgTeamsTabProps> = ({ org, isAdmin }) => {
       setAddSelection({ ...addSelection, [team.id]: '' });
       await load();
     } catch (err: any) {
-      setError(`Failed to add member to team: ${err.response?.data || err.message}`);
+      setError(`Failed to add member to team: ${apiErrorMessage(err)}`);
     }
   };
 
@@ -103,7 +104,7 @@ export const OrgTeamsTab: React.FC<OrgTeamsTabProps> = ({ org, isAdmin }) => {
       await orgTeamsAPI.removeMember(team.id, member.user_id);
       await load();
     } catch (err: any) {
-      setError(`Failed to remove member from team: ${err.response?.data || err.message}`);
+      setError(`Failed to remove member from team: ${apiErrorMessage(err)}`);
     }
   };
 

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Org, WorkerKey, workerKeysAPI } from '../../api/client';
+import { apiErrorMessage } from '../../api/errors';
 import { HostedRunnerCard } from './HostedRunnerCard';
 import { MyRunnerCard } from './MyRunnerCard';
 import { RunnerKeyModal } from './RunnerKeyModal';
@@ -51,7 +52,7 @@ export const WorkerKeysTab: React.FC<WorkerKeysTabProps> = ({ org, isAdmin }) =>
       const res = await workerKeysAPI.list(org.id);
       setKeys(res.data || []);
     } catch (err: any) {
-      setError(`Failed to load worker keys: ${err.response?.data || err.message}`);
+      setError(`Failed to load worker keys: ${apiErrorMessage(err)}`);
     } finally {
       setLoading(false);
     }
@@ -71,7 +72,7 @@ export const WorkerKeysTab: React.FC<WorkerKeysTabProps> = ({ org, isAdmin }) =>
       setNewKey({ record: res.data.key_record, plaintext: res.data.key });
       await load();
     } catch (err: any) {
-      setError(`Failed to create worker key: ${err.response?.data || err.message}`);
+      setError(`Failed to create worker key: ${apiErrorMessage(err)}`);
     } finally {
       setCreating(false);
     }
@@ -84,7 +85,7 @@ export const WorkerKeysTab: React.FC<WorkerKeysTabProps> = ({ org, isAdmin }) =>
       await load();
       setError('');
     } catch (err: any) {
-      setError(`Failed to revoke worker key: ${err.response?.data || err.message}`);
+      setError(`Failed to revoke worker key: ${apiErrorMessage(err)}`);
     }
   };
 

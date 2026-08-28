@@ -8,6 +8,7 @@ import {
   InterviewMessage,
   InterviewSession,
 } from '../api/client';
+import { apiErrorMessage } from '../api/errors';
 import { useAppStore } from '../state/store';
 
 const sectionTitle: React.CSSProperties = {
@@ -67,7 +68,7 @@ export const InterviewsPage: React.FC = () => {
       setArtifacts(artifactsRes.data || []);
       setError('');
     } catch (err: any) {
-      setError(`Failed to load interviews: ${err.response?.data || err.message}`);
+      setError(`Failed to load interviews: ${apiErrorMessage(err)}`);
     } finally {
       setLoading(false);
     }
@@ -93,7 +94,7 @@ export const InterviewsPage: React.FC = () => {
       setShowNewInterview(false);
       setError('');
     } catch (err: any) {
-      setError(`Failed to create interview: ${err.response?.data || err.message}`);
+      setError(`Failed to create interview: ${apiErrorMessage(err)}`);
     }
   };
 
@@ -110,7 +111,7 @@ export const InterviewsPage: React.FC = () => {
       setCopiedInterviewId(interview.id);
       setTimeout(() => setCopiedInterviewId(''), 2500);
     } catch (err: any) {
-      setError(`Failed to create invite: ${err.response?.data || err.message}`);
+      setError(`Failed to create invite: ${apiErrorMessage(err)}`);
     }
   };
 
@@ -130,7 +131,7 @@ export const InterviewsPage: React.FC = () => {
       const res = await interviewsAPI.listSessions(interview.id);
       setSessions(res.data || []);
     } catch (err: any) {
-      setError(`Failed to load sessions: ${err.response?.data || err.message}`);
+      setError(`Failed to load sessions: ${apiErrorMessage(err)}`);
       setSessions([]);
     } finally {
       setSessionsLoading(false);
@@ -149,7 +150,7 @@ export const InterviewsPage: React.FC = () => {
       const res = await interviewsAPI.transcript(session.id);
       setTranscript(res.data || []);
     } catch (err: any) {
-      setError(`Failed to load transcript: ${err.response?.data || err.message}`);
+      setError(`Failed to load transcript: ${apiErrorMessage(err)}`);
       setTranscript([]);
     } finally {
       setTranscriptLoading(false);
@@ -162,7 +163,7 @@ export const InterviewsPage: React.FC = () => {
       const res = await interviewsAPI.close(interview.id);
       setInterviews(interviews.map((iv) => (iv.id === interview.id ? res.data : iv)));
     } catch (err: any) {
-      setError(`Failed to close interview: ${err.response?.data || err.message}`);
+      setError(`Failed to close interview: ${apiErrorMessage(err)}`);
     }
   };
 
@@ -172,7 +173,7 @@ export const InterviewsPage: React.FC = () => {
       setInterviews(interviews.map((iv) => (iv.id === interview.id ? res.data : iv)));
       setError('');
     } catch (err: any) {
-      setError(`Failed to update persona link: ${err.response?.data || err.message}`);
+      setError(`Failed to update persona link: ${apiErrorMessage(err)}`);
     }
   };
 
