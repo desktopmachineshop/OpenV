@@ -87,9 +87,10 @@ You can sign the CLIs in either way (personal runners only):
   in the bottom-left of the sidebar → Settings) → **Agent sign-ins**. This
   starts a *user-targeted* sign-in that only your own personal runner picks
   up, so the credential lands on your machine. The card relays the CLI's own
-  flow: an "Open sign-in page" link, and — for CLIs that use a paste-back flow
-  (Claude Code, Gemini) — a field to paste the authorization code. Codex opens
-  a browser window directly on the runner machine and completes there.
+  flow: an "Open sign-in page" link, and — for Gemini, which uses a paste-back
+  flow — a field to paste the authorization code. Codex opens a browser window
+  directly on the runner machine and completes there. Claude Code runs an
+  interactive `claude setup-token` in a terminal window on the worker host.
   Credentials are stored by the CLI on the host; OpenV only brokers the URL
   and one-time code. Your runner (Agent Connector / `agentd`) must be running.
   Workspace admins can still run *workspace-targeted* sign-ins from
