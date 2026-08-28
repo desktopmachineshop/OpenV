@@ -106,7 +106,7 @@ func (m *AuthMiddleware) Wrap(next http.Handler) http.Handler {
 				next.ServeHTTP(w, r.WithContext(ctx))
 				return
 			}
-			http.Error(w, "invalid token", http.StatusUnauthorized)
+			writeJSONError(w, http.StatusUnauthorized, "invalid token")
 			return
 		}
 
@@ -122,7 +122,7 @@ func (m *AuthMiddleware) Wrap(next http.Handler) http.Handler {
 			}
 		}
 
-		http.Error(w, "authentication required", http.StatusUnauthorized)
+		writeJSONError(w, http.StatusUnauthorized, "authentication required")
 	})
 }
 
