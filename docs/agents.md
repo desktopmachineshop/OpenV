@@ -276,6 +276,35 @@ agent-owned column enqueues a run for that item, and the agent's progress and
 comments land back on the card's activity feed. This makes "give this ticket to
 the agent" a drag-and-drop action.
 
+## Agent-executed V&V test runs
+
+A test run's automated test cases can be handed to an agent: open the run and
+press **Run N with agent**. The server builds the instruction, naming exactly
+which test cases to execute and their IDs, and the agent records each outcome
+with the `record_test_result` MCP tool. Results it records are stamped with the
+agent run that produced them, and show a `⚙ agent` marker next to the execution
+time so a reviewer can tell agent-executed evidence from human-executed.
+
+Agents are told to record `blocked` (with a reason) rather than guess when they
+cannot actually execute a case, and never to edit a test case to make it pass.
+
+### Human- and physically-verified test cases
+
+Not every test can honestly be run by software. Each test case carries an
+`execution_method` attribute, set in its editor under **How is this verified?**:
+
+| Value | Meaning |
+| --- | --- |
+| `automated` (default) | An agent or CI job can run it end to end. |
+| `manual` | Needs a person: inspection, judgement, usability. |
+| `physical` | Needs hardware, a rig, or lab measurement. |
+
+`manual` and `physical` cases are excluded from the agent's instruction
+entirely — their IDs are never given to it — and the API refuses any result an
+agent run tries to record for one (`403`). They stay in the run for a person to
+execute by hand in the same grid. A result applied from an approved *proposal*
+is not treated as agent-executed, since a human signed off on it.
+
 ## Interview links
 
 For requirements elicitation, create an **interview** in a project and generate
