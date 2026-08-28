@@ -87,6 +87,7 @@ func (m *AuthMiddleware) Wrap(next http.Handler) http.Handler {
 				if resolved.UserID != "" {
 					ctx = context.WithValue(ctx, ctxWorkerUser, resolved.UserID)
 				}
+				annotateRequestLog(ctx, resolved.OrgID, resolved.UserID, "worker")
 				next.ServeHTTP(w, r.WithContext(ctx))
 				return
 			}
@@ -94,12 +95,14 @@ func (m *AuthMiddleware) Wrap(next http.Handler) http.Handler {
 			if m.legacyWorkerKey != "" && subtle.ConstantTimeCompare([]byte(token), []byte(m.legacyWorkerKey)) == 1 {
 				if orgID := m.legacyOrgID(); orgID != "" {
 					ctx := context.WithValue(r.Context(), ctxWorkerOrg, orgID)
+					annotateRequestLog(ctx, orgID, "", "worker")
 					next.ServeHTTP(w, r.WithContext(ctx))
 					return
 				}
 			}
 			if run, err := m.runService.GetByToken(token); err == nil && run != nil {
 				ctx := context.WithValue(r.Context(), ctxRun, run)
+				annotateRequestLog(ctx, run.OrgID, "", "run")
 				next.ServeHTTP(w, r.WithContext(ctx))
 				return
 			}
@@ -110,8 +113,10 @@ func (m *AuthMiddleware) Wrap(next http.Handler) http.Handler {
 		// Session cookie.
 		if cookie, err := r.Cookie(SessionCookieName); err == nil && cookie.Value != "" {
 			if user, err := m.userService.GetBySessionToken(cookie.Value); err == nil && user != nil {
+				activeOrg := m.resolveActiveOrg(r, cookie.Value, user)
 				ctx := context.WithValue(r.Context(), ctxUser, user)
-				ctx = context.WithValue(ctx, ctxActiveOrg, m.resolveActiveOrg(r, cookie.Value, user))
+				ctx = context.WithValue(ctx, ctxActiveOrg, activeOrg)
+				annotateRequestLog(ctx, activeOrg, user.ID, "user")
 				next.ServeHTTP(w, r.WithContext(ctx))
 				return
 			}
@@ -119,6 +124,16 @@ func (m *AuthMiddleware) Wrap(next http.Handler) http.Handler {
 
 		http.Error(w, "authentication required", http.StatusUnauthorized)
 	})
+}
+
+// annotateRequestLog records the resolved identity on the request-log meta
+// holder (a no-op when the logging middleware isn't wired, e.g. in tests).
+func annotateRequestLog(ctx context.Context, orgID, userID, actor string) {
+	if meta := metaFrom(ctx); meta != nil {
+		meta.orgID = orgID
+		meta.userID = userID
+		meta.actor = actor
+	}
 }
 
 // resolveActiveOrg picks the request's workspace: validated X-Org-ID header,

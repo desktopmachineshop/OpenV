@@ -3,7 +3,7 @@ package api
 import (
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
@@ -140,7 +140,7 @@ func (h *Handler) ListAgents(w http.ResponseWriter, r *http.Request) {
 	}
 	list, err := h.agentService.List(ActiveOrg(r))
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to list agents", err)
 		return
 	}
 	json.NewEncoder(w).Encode(list)
@@ -174,7 +174,7 @@ func (h *Handler) GetAgent(w http.ResponseWriter, r *http.Request) {
 	}
 	agent, err := h.agentService.GetBySlug(ActiveOrg(r), mux.Vars(r)["slug"])
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to load agent", err)
 		return
 	}
 	if agent == nil {
@@ -214,7 +214,7 @@ func (h *Handler) DeleteAgent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.agentService.Delete(ActiveOrg(r), mux.Vars(r)["slug"]); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to delete agent", err)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -261,7 +261,7 @@ func (h *Handler) SyncAgents(w http.ResponseWriter, r *http.Request) {
 	}
 	list, err := h.agentService.List(ActiveOrg(r))
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to list agents", err)
 		return
 	}
 	json.NewEncoder(w).Encode(list)
@@ -345,7 +345,7 @@ func (h *Handler) ListAgentRuns(w http.ResponseWriter, r *http.Request) {
 	}
 	runs, err := h.runService.List(filter)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to list agent runs", err)
 		return
 	}
 	json.NewEncoder(w).Encode(runs)
@@ -401,7 +401,7 @@ func (h *Handler) GetAgentRunLogs(w http.ResponseWriter, r *http.Request) {
 	afterSeq, _ := strconv.Atoi(r.URL.Query().Get("after_seq"))
 	logs, err := h.runService.Logs(run.ID, afterSeq)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to load run logs", err)
 		return
 	}
 	if logs == nil {
@@ -452,7 +452,7 @@ func (h *Handler) CancelAgentRun(w http.ResponseWriter, r *http.Request) {
 	}
 	cancelled, err := h.runService.RequestCancel(run.ID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to cancel run", err)
 		return
 	}
 	json.NewEncoder(w).Encode(cancelled)
@@ -477,7 +477,7 @@ func (h *Handler) ClaimAgentRun(w http.ResponseWriter, r *http.Request) {
 	// Hosted runners never execute repo-access agents.
 	run, err := h.runService.Claim(req.WorkerID, WorkerOrg(r), WorkerUser(r), req.Providers, req.MinPriority, req.Hosted)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to claim a run", err)
 		return
 	}
 	if run == nil {
@@ -492,13 +492,13 @@ func (h *Handler) ClaimAgentRun(w http.ResponseWriter, r *http.Request) {
 	agent, err := h.agentService.Get(run.AgentID)
 	if err != nil || agent == nil {
 		h.releaseFailedClaim(run.ID, req.WorkerID)
-		http.Error(w, "agent not found for claimed run", http.StatusInternalServerError)
+		respondInternal(w, r, "agent not found for claimed run", err)
 		return
 	}
 	token, err := h.runService.ReissueToken(run.ID)
 	if err != nil {
 		h.releaseFailedClaim(run.ID, req.WorkerID)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to issue run token", err)
 		return
 	}
 	json.NewEncoder(w).Encode(map[string]interface{}{
@@ -513,7 +513,8 @@ func (h *Handler) ClaimAgentRun(w http.ResponseWriter, r *http.Request) {
 // handshake (best effort — the stale reaper remains the backstop).
 func (h *Handler) releaseFailedClaim(runID, workerID string) {
 	if err := h.runService.ReleaseClaim(runID, workerID); err != nil {
-		log.Printf("api: failed to release claim on run %s for worker %s: %v", runID, workerID, err)
+		slog.Error("api: failed to release claim after failed handshake",
+			"run_id", runID, "worker_id", workerID, "error", err)
 	}
 }
 
@@ -595,7 +596,7 @@ func (h *Handler) AppendAgentRunLogs(w http.ResponseWriter, r *http.Request) {
 	}
 	run, err := h.runService.AppendLogs(mux.Vars(r)["id"], entries)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to append run logs", err)
 		return
 	}
 	json.NewEncoder(w).Encode(map[string]interface{}{
@@ -648,7 +649,7 @@ func (h *Handler) DelegateRun(w http.ResponseWriter, r *http.Request) {
 
 	children, err := h.teamService.ResolveDelegates(*run.TeamNodeID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to resolve delegates", err)
 		return
 	}
 	var target *teamNodeRef
@@ -724,7 +725,7 @@ func (h *Handler) ListAutomations(w http.ResponseWriter, r *http.Request) {
 	}
 	list, err := h.automationService.List(ActiveOrg(r), r.URL.Query().Get("project_id"))
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to list automations", err)
 		return
 	}
 	json.NewEncoder(w).Encode(list)
@@ -805,7 +806,7 @@ func (h *Handler) DeleteAutomation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.automationService.Delete(automation.ID); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to delete automation", err)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -874,7 +875,7 @@ func (h *Handler) ListProposals(w http.ResponseWriter, r *http.Request) {
 	}
 	list, err := h.proposalService.List(projectID, q.Get("status"), q.Get("run_id"))
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to list proposals", err)
 		return
 	}
 	if projectID == "" {
@@ -947,7 +948,7 @@ func (h *Handler) ListRepoConnections(w http.ResponseWriter, r *http.Request) {
 	if workerUser := WorkerUser(r); workerUser != "" {
 		list, err := h.repoConnService.ListByProjectForUser(projectID, workerUser)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			respondInternal(w, r, "failed to list repo connections", err)
 			return
 		}
 		json.NewEncoder(w).Encode(list)
@@ -958,7 +959,7 @@ func (h *Handler) ListRepoConnections(w http.ResponseWriter, r *http.Request) {
 	if user := CurrentUser(r); user != nil {
 		list, err := h.repoConnService.ListByProjectForUser(projectID, user.ID)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			respondInternal(w, r, "failed to list repo connections", err)
 			return
 		}
 		json.NewEncoder(w).Encode(list)
@@ -967,7 +968,7 @@ func (h *Handler) ListRepoConnections(w http.ResponseWriter, r *http.Request) {
 
 	list, err := h.repoConnService.ListByProject(projectID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to list repo connections", err)
 		return
 	}
 	json.NewEncoder(w).Encode(list)
@@ -1059,7 +1060,7 @@ func (h *Handler) DeleteRepoConnection(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.repoConnService.Delete(id); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to delete repo connection", err)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -1073,7 +1074,7 @@ func (h *Handler) ListProviderSettings(w http.ResponseWriter, r *http.Request) {
 	}
 	list, err := h.providerService.List(ActiveOrg(r))
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to list provider settings", err)
 		return
 	}
 	json.NewEncoder(w).Encode(list)
@@ -1240,7 +1241,7 @@ func (h *Handler) ClaimProviderLogin(w http.ResponseWriter, r *http.Request) {
 	}
 	login, err := h.loginService.Claim(WorkerOrg(r), WorkerUser(r))
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to claim login request", err)
 		return
 	}
 	if login == nil {
@@ -1311,7 +1312,7 @@ func (h *Handler) ListTeams(w http.ResponseWriter, r *http.Request) {
 	}
 	list, err := h.teamService.ListTeams(ActiveOrg(r), r.URL.Query().Get("project_id"))
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to list crews", err)
 		return
 	}
 	json.NewEncoder(w).Encode(list)
@@ -1417,7 +1418,7 @@ func (h *Handler) DeleteTeam(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.teamService.DeleteTeam(mux.Vars(r)["id"]); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to delete crew", err)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -1526,7 +1527,7 @@ func (h *Handler) RemoveTeamNode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.teamService.RemoveNode(mux.Vars(r)["id"]); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to remove crew node", err)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -1598,7 +1599,7 @@ func (h *Handler) RemoveTeamEdge(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.teamService.RemoveEdge(mux.Vars(r)["id"]); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to remove crew edge", err)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -1698,7 +1699,7 @@ func (h *Handler) ListDomainEvents(w http.ResponseWriter, r *http.Request) {
 	limit, _ := strconv.Atoi(q.Get("limit"))
 	list, err := h.eventRepo.List(ActiveOrg(r), projectID, q.Get("event_type"), limit)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to list events", err)
 		return
 	}
 	// Without a project filter, org admins see the whole workspace audit;
@@ -1710,7 +1711,7 @@ func (h *Handler) ListDomainEvents(w http.ResponseWriter, r *http.Request) {
 		if h.memberService != nil {
 			ids, err := h.memberService.ProjectIDsForUser(user.ID)
 			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
+				respondInternal(w, r, "failed to resolve project memberships", err)
 				return
 			}
 			for _, id := range ids {
