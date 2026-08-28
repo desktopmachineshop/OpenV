@@ -131,7 +131,7 @@ volumes, replays the SQL dump into the `openv` database (the dump's
 `DROP ... IF EXISTS` statements clear existing objects first), and starts the
 API again. The Postgres container must be running. Restoring a backup from an
 older schema version onto a newer server is fine at the Postgres level, but
-the API re-applies its schema initialization (`postgres.InitSchema`) on top at
+the API re-applies its schema migrations (`postgres.Migrate`) on top at
 startup.
 
 ## Windows notes

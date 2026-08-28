@@ -125,9 +125,11 @@ func main() {
 		fatal("failed to connect to database", err)
 	}
 	defer db.Close()
-	if err := postgres.InitSchema(db); err != nil {
-		fatal("failed to initialize schema", err)
+	if err := postgres.Migrate(db); err != nil {
+		fatal("failed to migrate schema", err)
 	}
+	// Boot-time idempotent data migration; stays outside the numbered
+	// ledger because it guards itself and touches the agents directory.
 	if err := postgres.BackfillOrgs(db, agentsDir); err != nil {
 		fatal("failed to backfill organizations", err)
 	}
