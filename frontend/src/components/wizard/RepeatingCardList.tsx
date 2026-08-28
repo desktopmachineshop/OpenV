@@ -10,6 +10,8 @@ interface RepeatingCardListProps<T> {
   renderItem: (item: T, index: number, update: (patch: Partial<T>) => void) => React.ReactNode;
   /** Optional guard — return false to hide the remove button for an item. */
   canRemove?: (item: T, index: number) => boolean;
+  /** Stable React key for an item (e.g. its id). Falls back to the index. */
+  itemKey?: (item: T, index: number) => React.Key;
 }
 
 // Generic add/remove card list used by wizard steps (personas, hazards, ...).
@@ -21,6 +23,7 @@ export function RepeatingCardList<T>({
   emptyText,
   renderItem,
   canRemove,
+  itemKey,
 }: RepeatingCardListProps<T>): React.ReactElement {
   const update = (index: number, patch: Partial<T>) => {
     const next = items.slice();
@@ -39,7 +42,7 @@ export function RepeatingCardList<T>({
       )}
       {items.map((item, index) => (
         <div
-          key={index}
+          key={itemKey ? itemKey(item, index) : index}
           style={{
             background: '#fff',
             border: '1px solid #ddd',
