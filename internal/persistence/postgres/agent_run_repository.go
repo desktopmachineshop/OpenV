@@ -98,21 +98,6 @@ func (rep *AgentRunRepository) Save(r *agentruns.Run) error {
 	return err
 }
 
-// Update rewrites a run's mutable fields.
-func (rep *AgentRunRepository) Update(r *agentruns.Run) error {
-	touched, err := json.Marshal(r.ArtifactsTouched)
-	if err != nil {
-		return err
-	}
-	_, err = rep.db.Exec(`
-		UPDATE agent_runs SET status = $2, cancel_requested = $3, worker_id = $4, heartbeat_at = $5, started_at = $6, finished_at = $7,
-			exit_code = $8, final_text = $9, error = $10, tokens_in = $11, tokens_out = $12, cost_usd = $13, artifacts_touched = $14
-		WHERE id = $1
-	`, r.ID, r.Status, r.CancelRequested, r.WorkerID, r.HeartbeatAt, r.StartedAt, r.FinishedAt,
-		r.ExitCode, r.FinalText, r.Error, r.TokensIn, r.TokensOut, r.CostUSD, touched)
-	return err
-}
-
 // FindByID returns a run, or nil.
 func (rep *AgentRunRepository) FindByID(id string) (*agentruns.Run, error) {
 	r, err := scanRun(rep.db.QueryRow(`SELECT `+runColumns+` FROM agent_runs r JOIN agents a ON a.id = r.agent_id WHERE r.id = $1`, id))

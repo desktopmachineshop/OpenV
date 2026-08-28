@@ -182,7 +182,6 @@ type ListFilter struct {
 // Repository defines persistence for runs and their logs.
 type Repository interface {
 	Save(r *Run) error
-	Update(r *Run) error
 	FindByID(id string) (*Run, error)
 	FindByTokenHash(hash string) (*Run, error)
 	List(filter ListFilter) ([]*Run, error)
@@ -222,6 +221,9 @@ type Repository interface {
 	// UpdateWorkItemID links a run to its kanban card without touching any
 	// other column (in particular status).
 	UpdateWorkItemID(runID, workItemID string) error
+	// UpdateTokenHash rotates a run's token hash without touching any other
+	// column (in particular status).
+	UpdateTokenHash(runID, hash string) error
 	// FailStale marks claimed/running runs failed when their heartbeat is
 	// older than cutoff; returns the affected run IDs.
 	FailStale(cutoff time.Time) ([]string, error)
@@ -476,20 +478,10 @@ func (s *DefaultService) ReissueToken(runID string) (string, error) {
 		return "", err
 	}
 	run.RunTokenHash = users.HashToken(token)
-	if err := s.updateTokenHash(run); err != nil {
+	if err := s.repo.UpdateTokenHash(run.ID, run.RunTokenHash); err != nil {
 		return "", err
 	}
 	return token, nil
-}
-
-func (s *DefaultService) updateTokenHash(run *Run) error {
-	type tokenUpdater interface {
-		UpdateTokenHash(runID, hash string) error
-	}
-	if tu, ok := s.repo.(tokenUpdater); ok {
-		return tu.UpdateTokenHash(run.ID, run.RunTokenHash)
-	}
-	return s.repo.Update(run)
 }
 
 // MarkRunning transitions a claimed run to running. The transition is a

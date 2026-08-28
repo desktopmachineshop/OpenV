@@ -38,66 +38,6 @@ func (f *claimFixture) mustFind(t *testing.T, runID string) *agentruns.Run {
 
 func ptr[T any](v T) *T { return &v }
 
-func TestUpdateRewritesMutableFieldsAndKeepsToken(t *testing.T) {
-	f := newClaimFixture(t)
-	id := f.queueRun(t, runSpec{})
-	f.setRunState(t, id, agentruns.StatusRunning, "keep-me")
-
-	started := time.Now().UTC().Truncate(time.Millisecond).Add(-time.Minute)
-	finished := started.Add(30 * time.Second)
-	heartbeat := finished.Add(-5 * time.Second)
-
-	run := f.mustFind(t, id)
-	run.Status = agentruns.StatusRunning
-	run.CancelRequested = true
-	run.WorkerID = "w-9"
-	run.HeartbeatAt = &heartbeat
-	run.StartedAt = &started
-	run.FinishedAt = &finished
-	run.ExitCode = ptr(3)
-	run.FinalText = "done"
-	run.Error = "warning: flaky"
-	run.TokensIn = 111
-	run.TokensOut = 222
-	run.CostUSD = ptr(1.25)
-	run.ArtifactsTouched = []map[string]interface{}{{"id": "a1", "op": "update"}}
-
-	if err := f.repo.Update(run); err != nil {
-		t.Fatalf("Update: %v", err)
-	}
-
-	got := f.mustFind(t, id)
-	if got.Status != agentruns.StatusRunning || !got.CancelRequested || got.WorkerID != "w-9" {
-		t.Errorf("status/cancel/worker = %s/%v/%q", got.Status, got.CancelRequested, got.WorkerID)
-	}
-	if got.HeartbeatAt == nil || !got.HeartbeatAt.Equal(heartbeat) {
-		t.Errorf("heartbeat = %v, want %v", got.HeartbeatAt, heartbeat)
-	}
-	if got.StartedAt == nil || !got.StartedAt.Equal(started) || got.FinishedAt == nil || !got.FinishedAt.Equal(finished) {
-		t.Errorf("started/finished = %v/%v, want %v/%v", got.StartedAt, got.FinishedAt, started, finished)
-	}
-	if got.ExitCode == nil || *got.ExitCode != 3 {
-		t.Errorf("exit code = %v, want 3", got.ExitCode)
-	}
-	if got.FinalText != "done" || got.Error != "warning: flaky" {
-		t.Errorf("final/error = %q/%q", got.FinalText, got.Error)
-	}
-	if got.TokensIn != 111 || got.TokensOut != 222 || got.CostUSD == nil || *got.CostUSD != 1.25 {
-		t.Errorf("usage = %d/%d/%v", got.TokensIn, got.TokensOut, got.CostUSD)
-	}
-	if len(got.ArtifactsTouched) != 1 || got.ArtifactsTouched[0]["id"] != "a1" {
-		t.Errorf("artifacts touched = %v", got.ArtifactsTouched)
-	}
-	// Update must not revoke the run token (that is UpdateTerminal's job)
-	// and must not touch identity/queue fields.
-	if hash := f.tokenHash(t, id); hash != "keep-me" {
-		t.Errorf("token hash after Update = %q, want keep-me", hash)
-	}
-	if got.Prompt != "do work" {
-		t.Errorf("prompt = %q, want untouched", got.Prompt)
-	}
-}
-
 func TestFindByTokenHash(t *testing.T) {
 	f := newClaimFixture(t)
 
@@ -481,8 +421,9 @@ func TestHeartbeatRefreshesLiveness(t *testing.T) {
 	f.setRunState(t, id, agentruns.StatusRunning, "tok")
 
 	at := time.Now().UTC().Truncate(time.Millisecond)
-	if err := f.repo.Heartbeat(id, at); err != nil {
-		t.Fatalf("Heartbeat: %v", err)
+	applied, err := f.repo.Heartbeat(id, at)
+	if err != nil || !applied {
+		t.Fatalf("Heartbeat = %v, %v, want applied", applied, err)
 	}
 	run := f.mustFind(t, id)
 	if run.HeartbeatAt == nil || !run.HeartbeatAt.Equal(at) {
@@ -498,8 +439,8 @@ func TestHeartbeatRefreshesLiveness(t *testing.T) {
 		t.Errorf("FailStale after heartbeat = %v, want empty", ids)
 	}
 
-	// Unknown run: no-op, no error.
-	if err := f.repo.Heartbeat(uuid.New().String(), at); err != nil {
-		t.Errorf("Heartbeat(unknown) = %v, want nil", err)
+	// Unknown run: not applied, no error.
+	if applied, err := f.repo.Heartbeat(uuid.New().String(), at); err != nil || applied {
+		t.Errorf("Heartbeat(unknown) = %v, %v, want false, nil", applied, err)
 	}
 }

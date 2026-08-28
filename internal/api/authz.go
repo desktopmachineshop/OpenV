@@ -2,11 +2,13 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"github.com/openv/requirements-platform/internal/domain/agentruns"
 	"github.com/openv/requirements-platform/internal/domain/members"
 	"github.com/openv/requirements-platform/internal/domain/orgs"
+	"github.com/openv/requirements-platform/internal/domain/proposals"
 	"github.com/openv/requirements-platform/internal/domain/teams"
 )
 
@@ -20,20 +22,20 @@ import (
 // projects belonging to their own org.
 func (h *Handler) requireProjectRole(w http.ResponseWriter, r *http.Request, projectID string, minRole string) bool {
 	if projectID == "" {
-		http.Error(w, "project not found", http.StatusNotFound)
+		writeJSONError(w, http.StatusNotFound, "project not found")
 		return false
 	}
 
 	if workerOrg := WorkerOrg(r); workerOrg != "" {
 		project, err := h.projectService.GetProject(projectID)
 		if err != nil || project == nil {
-			http.Error(w, "project not found", http.StatusNotFound)
+			writeJSONError(w, http.StatusNotFound, "project not found")
 			return false
 		}
 		if project.OrgID == workerOrg {
 			return true
 		}
-		http.Error(w, "worker key does not belong to this project's workspace", http.StatusForbidden)
+		writeJSONError(w, http.StatusForbidden, "worker key does not belong to this project's workspace")
 		return false
 	}
 
@@ -41,13 +43,13 @@ func (h *Handler) requireProjectRole(w http.ResponseWriter, r *http.Request, pro
 		if run.ProjectID != nil && *run.ProjectID == projectID && members.RoleAtLeast(members.RoleEditor, minRole) {
 			return true
 		}
-		http.Error(w, "agent run is not scoped to this project", http.StatusForbidden)
+		writeJSONError(w, http.StatusForbidden, "agent run is not scoped to this project")
 		return false
 	}
 
 	user := CurrentUser(r)
 	if user == nil {
-		http.Error(w, "authentication required", http.StatusUnauthorized)
+		writeJSONError(w, http.StatusUnauthorized, "authentication required")
 		return false
 	}
 	if user.IsAdmin {
@@ -65,11 +67,11 @@ func (h *Handler) requireProjectRole(w http.ResponseWriter, r *http.Request, pro
 
 	role, err := h.memberService.EffectiveRole(projectID, user.ID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to resolve project access", err)
 		return false
 	}
 	if role == "" || !members.RoleAtLeast(role, minRole) {
-		http.Error(w, "you do not have access to this project", http.StatusForbidden)
+		writeJSONError(w, http.StatusForbidden, "you do not have access to this project")
 		return false
 	}
 	return true
@@ -79,12 +81,12 @@ func (h *Handler) requireProjectRole(w http.ResponseWriter, r *http.Request, pro
 // satisfy any minRole; members satisfy "member". Writes 401/403 on failure.
 func (h *Handler) requireOrgRole(w http.ResponseWriter, r *http.Request, orgID string, minRole string) bool {
 	if orgID == "" {
-		http.Error(w, "workspace not found", http.StatusNotFound)
+		writeJSONError(w, http.StatusNotFound, "workspace not found")
 		return false
 	}
 	user := CurrentUser(r)
 	if user == nil {
-		http.Error(w, "authentication required", http.StatusUnauthorized)
+		writeJSONError(w, http.StatusUnauthorized, "authentication required")
 		return false
 	}
 	if user.IsAdmin {
@@ -92,15 +94,15 @@ func (h *Handler) requireOrgRole(w http.ResponseWriter, r *http.Request, orgID s
 	}
 	role, err := h.orgService.RoleInOrg(orgID, user.ID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondInternal(w, r, "failed to resolve workspace access", err)
 		return false
 	}
 	if role == "" {
-		http.Error(w, "you are not a member of this workspace", http.StatusForbidden)
+		writeJSONError(w, http.StatusForbidden, "you are not a member of this workspace")
 		return false
 	}
 	if minRole == orgs.RoleAdmin && role != orgs.RoleAdmin {
-		http.Error(w, "workspace admin access required", http.StatusForbidden)
+		writeJSONError(w, http.StatusForbidden, "workspace admin access required")
 		return false
 	}
 	return true
@@ -189,7 +191,7 @@ func (h *Handler) maybePropose(w http.ResponseWriter, r *http.Request, projectID
 	}
 	agent, err := h.agentService.Get(run.AgentID)
 	if err != nil || agent == nil {
-		http.Error(w, "agent not found for run", http.StatusInternalServerError)
+		respondInternal(w, r, "agent not found for run", err)
 		return true
 	}
 	if agent.WriteMode != "proposal" {
@@ -205,7 +207,11 @@ func (h *Handler) maybePropose(w http.ResponseWriter, r *http.Request, projectID
 	}
 	proposal, err := h.proposalService.Propose(run.ID, projectID, op, targetID, payload)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		if errors.Is(err, proposals.ErrUnsupportedOp) || errors.Is(err, proposals.ErrRunWriteCap) {
+			writeJSONError(w, http.StatusBadRequest, err.Error())
+		} else {
+			respondInternal(w, r, "failed to record proposal", err)
+		}
 		return true
 	}
 	w.Header().Set("Content-Type", "application/json")

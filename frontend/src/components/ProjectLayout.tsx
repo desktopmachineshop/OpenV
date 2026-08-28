@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { NavLink, Outlet, useNavigate, useParams } from 'react-router-dom';
-import { authAPI, projectAPI, Project } from '../api/client';
+import { projectAPI, Project } from '../api/client';
 import { useAppStore } from '../state/store';
 import { OrgSwitcher } from './OrgSwitcher';
-import { UserSettingsPanel } from './UserSettingsPanel';
+import { UserMenu } from './UserMenu';
 
 const navItems: { to: string; label: string; end?: boolean }[] = [
   { to: '', label: 'Overview', end: true },
@@ -24,11 +24,8 @@ const navItems: { to: string; label: string; end?: boolean }[] = [
 export const ProjectLayout: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
-  const { setProjectId, currentUser, setCurrentUser, orgs, activeOrgId, setActiveOrgId } =
-    useAppStore();
+  const { setProjectId, orgs, activeOrgId, setActiveOrgId } = useAppStore();
   const [project, setProject] = useState<Project | null>(null);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
 
   useEffect(() => {
     if (!projectId) return;
@@ -48,15 +45,6 @@ export const ProjectLayout: React.FC = () => {
       setActiveOrgId(project.org_id, { clearProjects: false });
     }
   }, [project, orgs, activeOrgId, setActiveOrgId]);
-
-  const handleLogout = async () => {
-    try {
-      await authAPI.logout();
-    } finally {
-      setCurrentUser(null);
-      navigate('/login');
-    }
-  };
 
   return (
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
@@ -121,94 +109,13 @@ export const ProjectLayout: React.FC = () => {
             Help
           </NavLink>
         </nav>
-        <div style={{ borderTop: '1px solid #34495e', padding: 12, position: 'relative' }}>
-          <div
-            style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}
-            onClick={() => setMenuOpen(!menuOpen)}
-          >
-            {currentUser?.avatar_url ? (
-              <img
-                src={currentUser.avatar_url}
-                alt=""
-                style={{ width: 28, height: 28, borderRadius: '50%' }}
-              />
-            ) : (
-              <div
-                style={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: '50%',
-                  background: '#3498db',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: 13,
-                  fontWeight: 700,
-                }}
-              >
-                {(currentUser?.name || currentUser?.email || '?').charAt(0).toUpperCase()}
-              </div>
-            )}
-            <div style={{ fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {currentUser?.name || currentUser?.email || 'Not signed in'}
-            </div>
-          </div>
-          {menuOpen && (
-            <div
-              style={{
-                position: 'absolute',
-                bottom: 52,
-                left: 12,
-                right: 12,
-                background: '#34495e',
-                borderRadius: 6,
-                overflow: 'hidden',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-              }}
-            >
-              <button
-                onClick={() => {
-                  setMenuOpen(false);
-                  setShowSettings(true);
-                }}
-                style={{
-                  display: 'block',
-                  width: '100%',
-                  padding: '10px 14px',
-                  background: 'none',
-                  border: 'none',
-                  color: '#ecf0f1',
-                  textAlign: 'left',
-                  cursor: 'pointer',
-                  fontSize: 13,
-                }}
-              >
-                Settings
-              </button>
-              <button
-                onClick={handleLogout}
-                style={{
-                  display: 'block',
-                  width: '100%',
-                  padding: '10px 14px',
-                  background: 'none',
-                  border: 'none',
-                  color: '#ecf0f1',
-                  textAlign: 'left',
-                  cursor: 'pointer',
-                  fontSize: 13,
-                }}
-              >
-                Sign out
-              </button>
-            </div>
-          )}
+        <div style={{ borderTop: '1px solid #34495e', padding: 12 }}>
+          <UserMenu variant="dark" />
         </div>
       </aside>
       <main style={{ flex: 1, overflow: 'auto', background: '#f5f6fa' }}>
         <Outlet />
       </main>
-      {showSettings && <UserSettingsPanel onClose={() => setShowSettings(false)} />}
     </div>
   );
 };
