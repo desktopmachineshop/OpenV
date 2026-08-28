@@ -161,7 +161,7 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({ agent, onSaved, onCanc
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
         <h3 style={{ margin: 0, flex: 1 }}>{isNew ? 'New agent' : `Edit: ${agent?.name}`}</h3>
         {!isNew && (
-          <div style={{ display: 'inline-flex', border: '1px solid #ddd', borderRadius: 4, overflow: 'hidden' }}>
+          <div style={{ display: 'inline-flex', border: '1px solid var(--border)', borderRadius: 4, overflow: 'hidden' }}>
             {(['form', 'raw'] as const).map((m) => (
               <button
                 key={m}
@@ -171,8 +171,8 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({ agent, onSaved, onCanc
                   border: 'none',
                   cursor: 'pointer',
                   fontSize: 12,
-                  background: mode === m ? '#3498db' : '#fff',
-                  color: mode === m ? '#fff' : '#2c3e50',
+                  background: mode === m ? 'var(--accent)' : 'var(--surface)',
+                  color: mode === m ? '#fff' : 'var(--text)',
                 }}
               >
                 {m === 'form' ? 'Form' : 'Raw markdown'}
@@ -182,7 +182,7 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({ agent, onSaved, onCanc
         )}
         <button
           onClick={onCancel}
-          style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: '#7f8c8d' }}
+          style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: 'var(--text-muted)' }}
           title="Close editor"
         >
           ×
@@ -192,9 +192,9 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({ agent, onSaved, onCanc
       {error && (
         <pre
           style={{
-            background: '#fdedec',
-            border: '1px solid #e74c3c',
-            color: '#c0392b',
+            background: 'var(--tint-red)',
+            border: '1px solid var(--danger)',
+            color: 'var(--danger-strong)',
             borderRadius: 4,
             padding: '8px 12px',
             marginBottom: 12,
@@ -217,7 +217,7 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({ agent, onSaved, onCanc
                 disabled={!isNew}
                 onChange={(e) => set({ slug: e.target.value })}
                 placeholder="my-agent"
-                style={{ fontSize: 13, background: isNew ? undefined : '#f4f6f6' }}
+                style={{ fontSize: 13, background: isNew ? undefined : 'var(--surface-alt)' }}
               />
             </div>
             <div className="form-group">

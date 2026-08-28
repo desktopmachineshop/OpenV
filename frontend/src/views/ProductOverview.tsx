@@ -29,7 +29,7 @@ interface ConstraintRow {
 const sectionTitle: React.CSSProperties = {
   fontSize: 16,
   fontWeight: 600,
-  color: '#2c3e50',
+  color: 'var(--text)',
   marginBottom: 12,
 };
 
@@ -191,7 +191,7 @@ export const ProductOverview: React.FC = () => {
   const interviewName = (id: string) => interviews.find((iv) => iv.id === id)?.name || 'Interview';
 
   if (loading) {
-    return <div style={{ padding: 32, color: '#7f8c8d' }}>Loading product overview…</div>;
+    return <div style={{ padding: 32, color: 'var(--text-muted)' }}>Loading product overview…</div>;
   }
 
   // Label the guided CTA by where the project actually is: a session in
@@ -208,17 +208,17 @@ export const ProductOverview: React.FC = () => {
 
   return (
     <div style={{ padding: 24, maxWidth: 1100, margin: '0 auto' }}>
-      <h2 style={{ color: '#2c3e50', marginBottom: 4 }}>Product Overview</h2>
-      <p style={{ color: '#7f8c8d', fontSize: 13, marginBottom: 20 }}>
+      <h2 style={{ color: 'var(--text)', marginBottom: 4 }}>Product Overview</h2>
+      <p style={{ color: 'var(--text-muted)', fontSize: 13, marginBottom: 20 }}>
         The single source of truth for what this product is and how success is measured.
       </p>
 
       {error && (
         <div
           style={{
-            background: '#fdecea',
-            border: '1px solid #e74c3c',
-            color: '#c0392b',
+            background: 'var(--tint-red)',
+            border: '1px solid var(--danger)',
+            color: 'var(--danger-strong)',
             padding: '10px 14px',
             borderRadius: 4,
             marginBottom: 16,
@@ -228,7 +228,7 @@ export const ProductOverview: React.FC = () => {
           {error}{' '}
           <button
             onClick={() => setError('')}
-            style={{ background: 'none', border: 'none', color: '#c0392b', cursor: 'pointer', width: 'auto', padding: 0 }}
+            style={{ background: 'none', border: 'none', color: 'var(--danger-strong)', cursor: 'pointer', width: 'auto', padding: 0 }}
           >
             ✕
           </button>
@@ -237,7 +237,7 @@ export const ProductOverview: React.FC = () => {
 
       {/* Quick links */}
       <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
-        <Link to="guided" className="button" style={{ background: '#3498db', textDecoration: 'none' }}>
+        <Link to="guided" className="button" style={{ background: 'var(--accent)', textDecoration: 'none' }}>
           {guidedCtaLabel}
         </Link>
         <Link to="vv" className="button-secondary" style={{ textDecoration: 'none' }}>
@@ -297,10 +297,10 @@ export const ProductOverview: React.FC = () => {
               { label: 'Target users', value: profile?.target_users },
             ].map((f) => (
               <div key={f.label}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: '#7f8c8d', textTransform: 'uppercase', marginBottom: 4 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 4 }}>
                   {f.label}
                 </div>
-                <div style={{ fontSize: 14, color: f.value ? '#2c3e50' : '#95a5a6', whiteSpace: 'pre-wrap' }}>
+                <div style={{ fontSize: 14, color: f.value ? 'var(--text)' : 'var(--neutral)', whiteSpace: 'pre-wrap' }}>
                   {f.value || 'Not defined yet — click Edit or run the guided definition.'}
                 </div>
               </div>
@@ -313,14 +313,14 @@ export const ProductOverview: React.FC = () => {
       <div className="card">
         <div style={sectionTitle}>Success metrics</div>
         {metrics.length === 0 && (
-          <div style={{ color: '#95a5a6', fontSize: 13, marginBottom: 10 }}>No success metrics defined yet.</div>
+          <div style={{ color: 'var(--neutral)', fontSize: 13, marginBottom: 10 }}>No success metrics defined yet.</div>
         )}
         {metrics.length > 0 && (
           <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 10 }}>
             <thead>
               <tr>
                 {['Metric', 'Target', 'Current', 'Unit', ''].map((h) => (
-                  <th key={h} style={{ textAlign: 'left', fontSize: 12, color: '#7f8c8d', padding: '4px 6px' }}>
+                  <th key={h} style={{ textAlign: 'left', fontSize: 12, color: 'var(--text-muted)', padding: '4px 6px' }}>
                     {h}
                   </th>
                 ))}
@@ -344,7 +344,7 @@ export const ProductOverview: React.FC = () => {
                   <td style={{ padding: 4, width: 30 }}>
                     <button
                       onClick={() => setMetrics(metrics.filter((_, j) => j !== i))}
-                      style={{ background: 'none', border: 'none', color: '#e74c3c', cursor: 'pointer', width: 'auto', padding: 4 }}
+                      style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', width: 'auto', padding: 4 }}
                       title="Remove metric"
                     >
                       ✕
@@ -373,7 +373,7 @@ export const ProductOverview: React.FC = () => {
       <div className="card">
         <div style={sectionTitle}>Constraints</div>
         {constraints.length === 0 && (
-          <div style={{ color: '#95a5a6', fontSize: 13, marginBottom: 10 }}>No constraints recorded yet.</div>
+          <div style={{ color: 'var(--neutral)', fontSize: 13, marginBottom: 10 }}>No constraints recorded yet.</div>
         )}
         {constraints.map((c, i) => (
           <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'flex-start' }}>
@@ -391,7 +391,7 @@ export const ProductOverview: React.FC = () => {
             />
             <button
               onClick={() => setConstraints(constraints.filter((_, j) => j !== i))}
-              style={{ background: 'none', border: 'none', color: '#e74c3c', cursor: 'pointer', width: 'auto', padding: 4 }}
+              style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', width: 'auto', padding: 4 }}
               title="Remove constraint"
             >
               ✕
@@ -421,28 +421,28 @@ export const ProductOverview: React.FC = () => {
           <div key={group.label} className="card" style={{ marginBottom: 20 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
               <div style={{ ...sectionTitle, marginBottom: 0 }}>{group.label}</div>
-              <span style={chip(group.items.length > 0 ? '#3498db' : '#95a5a6')}>{group.items.length}</span>
+              <span style={chip(group.items.length > 0 ? 'var(--accent)' : 'var(--neutral)')}>{group.items.length}</span>
             </div>
             {group.items.length === 0 ? (
-              <div style={{ color: '#95a5a6', fontSize: 13 }}>
+              <div style={{ color: 'var(--neutral)', fontSize: 13 }}>
                 None yet — the <Link to="guided">guided definition</Link> creates these.
               </div>
             ) : (
               <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
                 {group.items.slice(0, 5).map((a) => (
-                  <li key={a.id} style={{ fontSize: 13, color: '#2c3e50', padding: '3px 0' }}>
+                  <li key={a.id} style={{ fontSize: 13, color: 'var(--text)', padding: '3px 0' }}>
                     • {a.title}
                   </li>
                 ))}
                 {group.items.length > 5 && (
-                  <li style={{ fontSize: 12, color: '#7f8c8d', padding: '3px 0' }}>
+                  <li style={{ fontSize: 12, color: 'var(--text-muted)', padding: '3px 0' }}>
                     …and {group.items.length - 5} more
                   </li>
                 )}
               </ul>
             )}
             <div style={{ marginTop: 10 }}>
-              <Link to="requirements" style={{ fontSize: 13, color: '#3498db' }}>
+              <Link to="requirements" style={{ fontSize: 13, color: 'var(--accent)' }}>
                 View in Requirements →
               </Link>
             </div>
@@ -454,14 +454,14 @@ export const ProductOverview: React.FC = () => {
       <div className="card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
           <div style={{ ...sectionTitle, marginBottom: 0 }}>User interviews</div>
-          <span style={chip(interviews.length > 0 ? '#3498db' : '#95a5a6')}>{interviews.length}</span>
+          <span style={chip(interviews.length > 0 ? 'var(--accent)' : 'var(--neutral)')}>{interviews.length}</span>
         </div>
         {interviews.length === 0 ? (
-          <div style={{ color: '#95a5a6', fontSize: 13 }}>
+          <div style={{ color: 'var(--neutral)', fontSize: 13 }}>
             No interviews yet. Create one and share the invite link — an AI interviewer collects feedback for you.
           </div>
         ) : recentSessions.length === 0 ? (
-          <div style={{ color: '#95a5a6', fontSize: 13 }}>
+          <div style={{ color: 'var(--neutral)', fontSize: 13 }}>
             {interviews.length} interview{interviews.length === 1 ? '' : 's'} — no sessions recorded yet.
           </div>
         ) : (
@@ -469,13 +469,13 @@ export const ProductOverview: React.FC = () => {
             {recentSessions.map((s) => (
               <li
                 key={s.id}
-                style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, color: '#2c3e50', padding: '3px 0' }}
+                style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, color: 'var(--text)', padding: '3px 0' }}
               >
                 <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {s.participant_name || 'Anonymous participant'} · {interviewName(s.interview_id)}
                 </span>
-                <span style={chip(s.status === 'active' ? '#f39c12' : '#95a5a6')}>{s.status}</span>
-                <span style={{ color: '#95a5a6', fontSize: 11 }}>
+                <span style={chip(s.status === 'active' ? 'var(--warning)' : 'var(--neutral)')}>{s.status}</span>
+                <span style={{ color: 'var(--neutral)', fontSize: 11 }}>
                   {s.started_at ? new Date(s.started_at).toLocaleString() : ''}
                 </span>
               </li>
@@ -483,7 +483,7 @@ export const ProductOverview: React.FC = () => {
           </ul>
         )}
         <div style={{ marginTop: 10 }}>
-          <Link to="interviews" style={{ fontSize: 13, color: '#3498db' }}>
+          <Link to="interviews" style={{ fontSize: 13, color: 'var(--accent)' }}>
             Open Interviews →
           </Link>
         </div>

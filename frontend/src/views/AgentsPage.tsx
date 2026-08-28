@@ -16,7 +16,7 @@ const providerBadgeColor = (provider: string): string => {
     case 'google-api':
       return '#4285f4';
     default:
-      return '#95a5a6';
+      return 'var(--neutral)';
   }
 };
 
@@ -97,7 +97,7 @@ export const AgentsPage: React.FC = () => {
   return (
     <div style={{ padding: 20, height: '100%', display: 'flex', flexDirection: 'column' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
-        <h2 style={{ color: '#2c3e50', margin: 0 }}>Agents</h2>
+        <h2 style={{ color: 'var(--text)', margin: 0 }}>Agents</h2>
         <div style={{ flex: 1 }} />
         <button
           className="button-secondary"
@@ -118,13 +118,13 @@ export const AgentsPage: React.FC = () => {
         </button>
       </div>
 
-      {error && <div style={{ color: '#e74c3c', fontSize: 13, marginBottom: 10 }}>{error}</div>}
+      {error && <div style={{ color: 'var(--danger)', fontSize: 13, marginBottom: 10 }}>{error}</div>}
 
       <div style={{ display: 'flex', gap: 16, flex: 1, minHeight: 0 }}>
         {/* Agent list */}
         <div style={{ width: 320, flexShrink: 0, overflowY: 'auto' }}>
           {agents.length === 0 && (
-            <div style={{ color: '#7f8c8d', fontSize: 13 }}>
+            <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>
               No agents defined yet. Create one or sync from disk.
             </div>
           )}
@@ -136,9 +136,9 @@ export const AgentsPage: React.FC = () => {
                 setCreating(false);
               }}
               style={{
-                background: '#fff',
+                background: 'var(--surface)',
                 border:
-                  selectedSlug === agent.slug ? '2px solid #3498db' : '1px solid #ddd',
+                  selectedSlug === agent.slug ? '2px solid var(--accent)' : '1px solid var(--border)',
                 borderRadius: 4,
                 padding: '12px 14px',
                 marginBottom: 10,
@@ -147,7 +147,7 @@ export const AgentsPage: React.FC = () => {
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <strong style={{ flex: 1, fontSize: 14, color: '#2c3e50' }}>
+                <strong style={{ flex: 1, fontSize: 14, color: 'var(--text)' }}>
                   🤖 {agent.name}
                 </strong>
                 {agent.repo_access && (
@@ -172,7 +172,7 @@ export const AgentsPage: React.FC = () => {
                 <span
                   style={{
                     fontSize: 11,
-                    background: agent.write_mode === 'direct' ? '#e74c3c' : '#f39c12',
+                    background: agent.write_mode === 'direct' ? 'var(--danger)' : 'var(--warning)',
                     color: '#fff',
                     borderRadius: 10,
                     padding: '2px 8px',
@@ -188,7 +188,7 @@ export const AgentsPage: React.FC = () => {
                 </span>
               </div>
               {agent.description && (
-                <div style={{ fontSize: 12, color: '#7f8c8d', marginTop: 6 }}>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6 }}>
                   {agent.description}
                 </div>
               )}
@@ -208,7 +208,7 @@ export const AgentsPage: React.FC = () => {
                   style={{
                     padding: '4px 10px',
                     fontSize: 12,
-                    background: '#e74c3c',
+                    background: 'var(--danger)',
                     color: '#fff',
                     border: 'none',
                     borderRadius: 4,
@@ -241,7 +241,7 @@ export const AgentsPage: React.FC = () => {
               }}
             />
           ) : (
-            <div style={{ color: '#7f8c8d', padding: 40, textAlign: 'center' }}>
+            <div style={{ color: 'var(--text-muted)', padding: 40, textAlign: 'center' }}>
               Select an agent to edit it, or create a new one.
             </div>
           )}
@@ -277,7 +277,7 @@ export const AgentsPage: React.FC = () => {
                 style={{ minHeight: 110, fontSize: 13 }}
                 autoFocus
               />
-              <div style={{ fontSize: 12, color: '#7f8c8d', marginTop: 6 }}>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6 }}>
                 Keep prompts lean — the agent fetches requirements itself via its OpenV tools.
               </div>
             </div>

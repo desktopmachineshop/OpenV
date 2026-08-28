@@ -17,17 +17,17 @@ import { useAppStore } from '../state/store';
 const resultColor = (status: string): string => {
   switch ((status || '').toLowerCase()) {
     case 'pass':
-      return '#27ae60';
+      return 'var(--success)';
     case 'fail':
-      return '#e74c3c';
+      return 'var(--danger)';
     case 'blocked':
-      return '#f39c12';
+      return 'var(--warning)';
     default:
-      return '#95a5a6';
+      return 'var(--neutral)';
   }
 };
 
-const chip = (text: string, background: string, color = '#fff'): React.CSSProperties => ({
+const chip = (text: string, background: string, color = 'var(--surface)'): React.CSSProperties => ({
   display: 'inline-block',
   padding: '2px 8px',
   borderRadius: 10,
@@ -96,11 +96,11 @@ export const TraceabilityMatrix: React.FC = () => {
   const ChipListRenderer = useCallback(
     (params: ICellRendererParams<MatrixRow>) => {
       const ids: string[] = params.value || [];
-      if (ids.length === 0) return <span style={{ color: '#bdc3c7' }}>—</span>;
+      if (ids.length === 0) return <span style={{ color: 'var(--neutral-mid)' }}>—</span>;
       return (
         <div style={{ lineHeight: '20px', whiteSpace: 'normal', padding: '4px 0' }}>
           {ids.map((id) => (
-            <span key={id} style={chip(titleOf(id), '#ecf0f1', '#2c3e50')}>
+            <span key={id} style={chip(titleOf(id), 'var(--neutral-soft)', 'var(--text)')}>
               {titleOf(id)}
             </span>
           ))}
@@ -114,7 +114,7 @@ export const TraceabilityMatrix: React.FC = () => {
     (params: ICellRendererParams<MatrixRow>) => {
       const row = params.data;
       const ids: string[] = params.value || [];
-      if (ids.length === 0) return <span style={{ color: '#bdc3c7' }}>—</span>;
+      if (ids.length === 0) return <span style={{ color: 'var(--neutral-mid)' }}>—</span>;
       return (
         <div style={{ lineHeight: '20px', whiteSpace: 'normal', padding: '4px 0' }}>
           {ids.map((id) => {
@@ -126,13 +126,13 @@ export const TraceabilityMatrix: React.FC = () => {
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: 5,
-                  border: '1px solid #ecf0f1',
+                  border: '1px solid var(--neutral-soft)',
                   borderRadius: 10,
                   padding: '2px 8px',
                   fontSize: 11,
                   margin: '2px 4px 2px 0',
-                  background: '#fff',
-                  color: '#2c3e50',
+                  background: 'var(--surface)',
+                  color: 'var(--text)',
                   whiteSpace: 'nowrap',
                 }}
               >
@@ -251,9 +251,9 @@ export const TraceabilityMatrix: React.FC = () => {
   return (
     <div style={{ padding: 24, display: 'flex', flexDirection: 'column', height: '100%' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16, flexWrap: 'wrap' }}>
-        <h2 style={{ color: '#2c3e50', margin: 0 }}>Traceability Matrix</h2>
+        <h2 style={{ color: 'var(--text)', margin: 0 }}>Traceability Matrix</h2>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <label style={{ margin: 0, fontSize: 13, color: '#7f8c8d' }}>Baseline</label>
+          <label style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)' }}>Baseline</label>
           <select
             value={baselineId}
             onChange={(e) => setBaselineId(e.target.value)}
@@ -282,9 +282,9 @@ export const TraceabilityMatrix: React.FC = () => {
       {baselineId !== 'live' && (
         <div
           style={{
-            background: '#fef5e7',
-            border: '1px solid #f39c12',
-            color: '#9c6408',
+            background: 'var(--tint-yellow)',
+            border: '1px solid var(--warning)',
+            color: 'var(--warning-text)',
             borderRadius: 4,
             padding: '8px 12px',
             marginBottom: 12,
@@ -295,8 +295,8 @@ export const TraceabilityMatrix: React.FC = () => {
           is a read-only historical snapshot.
         </div>
       )}
-      {error && <div style={{ color: '#e74c3c', marginBottom: 10, fontSize: 13 }}>{error}</div>}
-      {loading && <div style={{ color: '#7f8c8d', marginBottom: 10 }}>Loading…</div>}
+      {error && <div style={{ color: 'var(--danger)', marginBottom: 10, fontSize: 13 }}>{error}</div>}
+      {loading && <div style={{ color: 'var(--text-muted)', marginBottom: 10 }}>Loading…</div>}
 
       <div className="ag-theme-quartz" style={{ flex: 1, minHeight: 480 }}>
         <AgGridReact<MatrixRow>

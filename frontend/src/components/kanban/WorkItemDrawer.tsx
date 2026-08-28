@@ -20,17 +20,17 @@ interface WorkItemDrawerProps {
 const activityStyle = (kind: string): React.CSSProperties => {
   switch (kind) {
     case 'comment':
-      return { background: '#fff9e6', border: '1px solid #f1e0a8' };
+      return { background: 'var(--tint-yellow)', border: '1px solid var(--tint-yellow-border)' };
     case 'status':
     case 'moved':
-      return { background: '#eef6fc', border: '1px solid #cfe5f5' };
+      return { background: 'var(--tint-blue)', border: '1px solid var(--tint-blue-border)' };
     case 'agent':
     case 'agent_run':
-      return { background: '#f0eefc', border: '1px solid #d5d0f0' };
+      return { background: 'var(--tint-purple)', border: '1px solid var(--tint-purple-border)' };
     case 'error':
-      return { background: '#fdedec', border: '1px solid #f5b7b1' };
+      return { background: 'var(--tint-red)', border: '1px solid var(--tint-red-border)' };
     default:
-      return { background: '#f8f9f9', border: '1px solid #e5e8e8' };
+      return { background: 'var(--surface-alt)', border: '1px solid var(--surface-alt)' };
   }
 };
 
@@ -134,7 +134,7 @@ export const WorkItemDrawer: React.FC<WorkItemDrawerProps> = ({
         right: 0,
         bottom: 0,
         width: 420,
-        background: '#fff',
+        background: 'var(--surface)',
         boxShadow: '-4px 0 16px rgba(0,0,0,0.15)',
         zIndex: 100,
         display: 'flex',
@@ -144,7 +144,7 @@ export const WorkItemDrawer: React.FC<WorkItemDrawerProps> = ({
       <div
         style={{
           padding: '14px 18px',
-          borderBottom: '1px solid #ecf0f1',
+          borderBottom: '1px solid var(--neutral-soft)',
           display: 'flex',
           alignItems: 'flex-start',
           gap: 8,
@@ -161,7 +161,7 @@ export const WorkItemDrawer: React.FC<WorkItemDrawerProps> = ({
           />
         ) : (
           <h3
-            style={{ margin: 0, flex: 1, fontSize: 16, color: '#2c3e50', cursor: 'text' }}
+            style={{ margin: 0, flex: 1, fontSize: 16, color: 'var(--text)', cursor: 'text' }}
             title="Click to edit title"
             onClick={() => setEditingTitle(true)}
           >
@@ -175,7 +175,7 @@ export const WorkItemDrawer: React.FC<WorkItemDrawerProps> = ({
             border: 'none',
             fontSize: 20,
             cursor: 'pointer',
-            color: '#7f8c8d',
+            color: 'var(--text-muted)',
             lineHeight: 1,
           }}
           title="Close"
@@ -185,7 +185,7 @@ export const WorkItemDrawer: React.FC<WorkItemDrawerProps> = ({
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', padding: 18 }}>
-        {error && <div style={{ color: '#e74c3c', fontSize: 13, marginBottom: 10 }}>{error}</div>}
+        {error && <div style={{ color: 'var(--danger)', fontSize: 13, marginBottom: 10 }}>{error}</div>}
 
         <div className="form-group">
           <label>Description</label>
@@ -213,10 +213,10 @@ export const WorkItemDrawer: React.FC<WorkItemDrawerProps> = ({
                     display: 'inline-block',
                     margin: '2px 6px 2px 0',
                     padding: '3px 10px',
-                    background: '#ecf0f1',
+                    background: 'var(--neutral-soft)',
                     borderRadius: 10,
                     fontSize: 12,
-                    color: '#2c3e50',
+                    color: 'var(--text)',
                     textDecoration: 'none',
                   }}
                 >
@@ -242,7 +242,7 @@ export const WorkItemDrawer: React.FC<WorkItemDrawerProps> = ({
         <label>Activity</label>
         <div style={{ marginBottom: 12 }}>
           {activity.length === 0 && (
-            <div style={{ color: '#7f8c8d', fontSize: 13 }}>No activity yet.</div>
+            <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>No activity yet.</div>
           )}
           {activity.map((a) => (
             <div
@@ -255,11 +255,11 @@ export const WorkItemDrawer: React.FC<WorkItemDrawerProps> = ({
                 fontSize: 13,
               }}
             >
-              <div style={{ fontSize: 11, color: '#7f8c8d', marginBottom: 3 }}>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 3 }}>
                 <strong>{a.actor || 'system'}</strong> · {a.kind} ·{' '}
                 {new Date(a.created_at).toLocaleString()}
               </div>
-              <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', color: '#2c3e50' }}>
+              <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', color: 'var(--text)' }}>
                 <ExpandableText text={a.content || ''} limit={600} />
               </div>
             </div>
@@ -290,11 +290,11 @@ export const WorkItemDrawer: React.FC<WorkItemDrawerProps> = ({
         </div>
       </div>
 
-      <div style={{ borderTop: '1px solid #ecf0f1', padding: 14, textAlign: 'right' }}>
+      <div style={{ borderTop: '1px solid var(--neutral-soft)', padding: 14, textAlign: 'right' }}>
         <button
           onClick={remove}
           style={{
-            background: '#e74c3c',
+            background: 'var(--danger)',
             color: '#fff',
             border: 'none',
             padding: '8px 16px',

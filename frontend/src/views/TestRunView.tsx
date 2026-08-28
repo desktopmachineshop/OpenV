@@ -25,31 +25,31 @@ const executionLabel: Record<ExecutionMethod, string> = {
 };
 
 const executionColor = (method: ExecutionMethod): string =>
-  method === 'automated' ? '#7f8c8d' : '#8e44ad';
+  method === 'automated' ? 'var(--text-muted)' : 'var(--purple)';
 
 const statusColor = (status: string): string => {
   switch (status) {
     case 'pass':
-      return '#27ae60';
+      return 'var(--success)';
     case 'fail':
-      return '#e74c3c';
+      return 'var(--danger)';
     case 'blocked':
-      return '#f39c12';
+      return 'var(--warning)';
     default:
-      return '#95a5a6';
+      return 'var(--neutral)';
   }
 };
 
 const runStatusColor = (status: string): string => {
   switch (status) {
     case 'in-progress':
-      return '#3498db';
+      return 'var(--accent)';
     case 'completed':
-      return '#27ae60';
+      return 'var(--success)';
     case 'aborted':
-      return '#e74c3c';
+      return 'var(--danger)';
     default:
-      return '#95a5a6';
+      return 'var(--neutral)';
   }
 };
 
@@ -183,7 +183,7 @@ export const TestRunView: React.FC = () => {
           }}
         >
           {STATUS_OPTIONS.map((s) => (
-            <option key={s} value={s} style={{ background: '#fff', color: '#2c3e50' }}>
+            <option key={s} value={s} style={{ background: 'var(--surface)', color: 'var(--text)' }}>
               {s}
             </option>
           ))}
@@ -263,7 +263,7 @@ export const TestRunView: React.FC = () => {
             {p.data?.byAgent && (
               <span
                 title="Recorded by an agent run"
-                style={{ marginLeft: 6, color: '#8e44ad', fontSize: 11, fontWeight: 600 }}
+                style={{ marginLeft: 6, color: 'var(--purple)', fontSize: 11, fontWeight: 600 }}
               >
                 ⚙ agent
               </span>
@@ -293,7 +293,7 @@ export const TestRunView: React.FC = () => {
             <> — {skipped.length} left for a person ({skipped.map((sc) => sc.title).join(', ')})</>
           )}
           .{' '}
-          <Link to={`/projects/${projectId}/agent-runs`} style={{ color: '#1e8449', fontWeight: 600 }}>
+          <Link to={`/projects/${projectId}/agent-runs`} style={{ color: 'var(--success-text)', fontWeight: 600 }}>
             Watch run {agentRun.id.slice(0, 8)} →
           </Link>{' '}
           Results appear here as it records them; use Refresh.
@@ -321,11 +321,11 @@ export const TestRunView: React.FC = () => {
       <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16, flexWrap: 'wrap' }}>
         <Link
           to={`/projects/${projectId}/vv`}
-          style={{ color: '#3498db', textDecoration: 'none', fontSize: 13 }}
+          style={{ color: 'var(--accent)', textDecoration: 'none', fontSize: 13 }}
         >
           ← Back to V&amp;V
         </Link>
-        <h2 style={{ color: '#2c3e50', margin: 0 }}>{run?.name || 'Test run'}</h2>
+        <h2 style={{ color: 'var(--text)', margin: 0 }}>{run?.name || 'Test run'}</h2>
         {run && (
           <span
             style={{
@@ -383,7 +383,7 @@ export const TestRunView: React.FC = () => {
             </button>
             <button
               style={{
-                background: '#e74c3c',
+                background: 'var(--danger)',
                 color: '#fff',
                 border: 'none',
                 padding: '10px 20px',
@@ -400,14 +400,14 @@ export const TestRunView: React.FC = () => {
       </div>
 
       {run?.description && (
-        <div style={{ color: '#7f8c8d', fontSize: 13, marginBottom: 12 }}>{run.description}</div>
+        <div style={{ color: 'var(--text-muted)', fontSize: 13, marginBottom: 12 }}>{run.description}</div>
       )}
       {readOnly && run && (
         <div
           style={{
-            background: '#fef5e7',
-            border: '1px solid #f39c12',
-            color: '#9c6408',
+            background: 'var(--tint-yellow)',
+            border: '1px solid var(--warning)',
+            color: 'var(--warning-text)',
             borderRadius: 4,
             padding: '8px 12px',
             marginBottom: 12,
@@ -420,9 +420,9 @@ export const TestRunView: React.FC = () => {
       {launchNotice && (
         <div
           style={{
-            background: '#eafaf1',
-            border: '1px solid #27ae60',
-            color: '#1e8449',
+            background: 'var(--tint-green)',
+            border: '1px solid var(--success)',
+            color: 'var(--success-text)',
             borderRadius: 4,
             padding: '8px 12px',
             marginBottom: 12,
@@ -433,15 +433,15 @@ export const TestRunView: React.FC = () => {
         </div>
       )}
       {!readOnly && humanOnly > 0 && (
-        <div style={{ color: '#7f8c8d', fontSize: 12, marginBottom: 10 }}>
+        <div style={{ color: 'var(--text-muted)', fontSize: 12, marginBottom: 10 }}>
           {humanOnly} of {rows.length} test case{rows.length === 1 ? '' : 's'}{' '}
           {humanOnly === 1 ? 'is' : 'are'} flagged for human or physical verification — agents skip{' '}
           {humanOnly === 1 ? 'it' : 'them'} and cannot record {humanOnly === 1 ? 'its' : 'their'} result.
           Set this per test case in its editor.
         </div>
       )}
-      {error && <div style={{ color: '#e74c3c', marginBottom: 10, fontSize: 13 }}>{error}</div>}
-      {loading && <div style={{ color: '#7f8c8d', marginBottom: 10 }}>Loading…</div>}
+      {error && <div style={{ color: 'var(--danger)', marginBottom: 10, fontSize: 13 }}>{error}</div>}
+      {loading && <div style={{ color: 'var(--text-muted)', marginBottom: 10 }}>Loading…</div>}
 
       <div className="ag-theme-quartz" style={{ flex: 1, minHeight: 420 }}>
         <AgGridReact<ResultRow>

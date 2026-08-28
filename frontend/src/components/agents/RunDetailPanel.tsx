@@ -8,20 +8,20 @@ export const runStatusColor = (status: string): string => {
   switch (status) {
     case 'queued':
     case 'claimed':
-      return '#95a5a6';
+      return 'var(--neutral)';
     case 'running':
-      return '#3498db';
+      return 'var(--accent)';
     case 'awaiting_approval':
-      return '#f39c12';
+      return 'var(--warning)';
     case 'succeeded':
-      return '#27ae60';
+      return 'var(--success)';
     case 'failed':
     case 'timed_out':
-      return '#e74c3c';
+      return 'var(--danger)';
     case 'cancelled':
-      return '#95a5a6';
+      return 'var(--neutral)';
     default:
-      return '#95a5a6';
+      return 'var(--neutral)';
   }
 };
 
@@ -46,7 +46,7 @@ const logLine = (entry: RunLogEntry, idx: number): React.ReactNode => {
       return (
         <div
           key={`${entry.seq}-${idx}`}
-          style={{ fontFamily: 'monospace', fontSize: 12, color: '#3498db', margin: '3px 0', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
+          style={{ fontFamily: 'monospace', fontSize: 12, color: 'var(--accent)', margin: '3px 0', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
         >
           → tool: {name}(<ExpandableText text={argsText} limit={300} />)
         </div>
@@ -64,7 +64,7 @@ const logLine = (entry: RunLogEntry, idx: number): React.ReactNode => {
       return (
         <div
           key={`${entry.seq}-${idx}`}
-          style={{ fontFamily: 'monospace', fontSize: 12, color: '#95a5a6', margin: '3px 0', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
+          style={{ fontFamily: 'monospace', fontSize: 12, color: 'var(--neutral)', margin: '3px 0', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
         >
           <ExpandableText text={text} limit={400} />
         </div>
@@ -74,7 +74,7 @@ const logLine = (entry: RunLogEntry, idx: number): React.ReactNode => {
       return (
         <div
           key={`${entry.seq}-${idx}`}
-          style={{ fontSize: 12.5, color: '#e74c3c', margin: '3px 0', whiteSpace: 'pre-wrap' }}
+          style={{ fontSize: 12.5, color: 'var(--danger)', margin: '3px 0', whiteSpace: 'pre-wrap' }}
         >
           {p.text || p.error || p.message || JSON.stringify(p)}
         </div>
@@ -83,7 +83,7 @@ const logLine = (entry: RunLogEntry, idx: number): React.ReactNode => {
       return (
         <div
           key={`${entry.seq}-${idx}`}
-          style={{ fontSize: 13, color: '#2c3e50', margin: '4px 0', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
+          style={{ fontSize: 13, color: 'var(--text)', margin: '4px 0', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
         >
           <ExpandableText text={typeof p.text === 'string' ? p.text : JSON.stringify(p)} limit={1500} />
         </div>
@@ -232,14 +232,14 @@ export const RunDetailPanel: React.FC<RunDetailPanelProps> = ({ runId, onSelectR
               padding: `4px 6px 4px ${6 + depth * 18}px`,
               cursor: 'pointer',
               fontSize: 13,
-              background: n.id === runId ? '#eaf2f8' : 'transparent',
+              background: n.id === runId ? 'var(--tint-blue)' : 'transparent',
               borderRadius: 3,
               display: 'flex',
               alignItems: 'center',
               gap: 8,
             }}
           >
-            <span style={{ color: '#2c3e50' }}>{n.agent_name || n.agent_id}</span>
+            <span style={{ color: 'var(--text)' }}>{n.agent_name || n.agent_id}</span>
             <span
               style={{
                 fontSize: 10.5,
@@ -265,8 +265,8 @@ export const RunDetailPanel: React.FC<RunDetailPanelProps> = ({ runId, onSelectR
         display: 'flex',
         flexDirection: 'column',
         height: '100%',
-        background: '#fff',
-        border: '1px solid #ddd',
+        background: 'var(--surface)',
+        border: '1px solid var(--border)',
         borderRadius: 4,
         overflow: 'hidden',
       }}
@@ -274,13 +274,13 @@ export const RunDetailPanel: React.FC<RunDetailPanelProps> = ({ runId, onSelectR
       <div
         style={{
           padding: '12px 16px',
-          borderBottom: '1px solid #ecf0f1',
+          borderBottom: '1px solid var(--neutral-soft)',
           display: 'flex',
           alignItems: 'center',
           gap: 10,
         }}
       >
-        <strong style={{ flex: 1, fontSize: 14, color: '#2c3e50' }}>
+        <strong style={{ flex: 1, fontSize: 14, color: 'var(--text)' }}>
           {run?.agent_name || 'Run'}{' '}
           {run && (
             <span
@@ -302,7 +302,7 @@ export const RunDetailPanel: React.FC<RunDetailPanelProps> = ({ runId, onSelectR
           <button
             onClick={cancel}
             style={{
-              background: '#e74c3c',
+              background: 'var(--danger)',
               color: '#fff',
               border: 'none',
               padding: '5px 12px',
@@ -316,46 +316,46 @@ export const RunDetailPanel: React.FC<RunDetailPanelProps> = ({ runId, onSelectR
         )}
         <button
           onClick={onClose}
-          style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: '#7f8c8d' }}
+          style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: 'var(--text-muted)' }}
         >
           ×
         </button>
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', padding: 16 }}>
-        {error && <div style={{ color: '#e74c3c', fontSize: 12, marginBottom: 8 }}>{error}</div>}
+        {error && <div style={{ color: 'var(--danger)', fontSize: 12, marginBottom: 8 }}>{error}</div>}
 
         {run && (
-          <div style={{ fontSize: 12, color: '#7f8c8d', marginBottom: 10, lineHeight: 1.7 }}>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 10, lineHeight: 1.7 }}>
             <div>
               Started: {run.started_at ? new Date(run.started_at).toLocaleString() : '—'} · Tokens:{' '}
               {run.tokens_in + run.tokens_out}
               {run.cost_usd != null && ` · Cost: $${run.cost_usd.toFixed(4)}`}
             </div>
-            <div style={{ whiteSpace: 'pre-wrap', color: '#555' }}>Prompt: {run.prompt}</div>
+            <div style={{ whiteSpace: 'pre-wrap', color: 'var(--text-body)' }}>Prompt: {run.prompt}</div>
           </div>
         )}
 
         {tree.length > 1 && (
           <div style={{ marginBottom: 12 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: '#7f8c8d', marginBottom: 4 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4 }}>
               Run tree
             </div>
             {renderTree(tree, null, 0)}
           </div>
         )}
 
-        <div style={{ fontSize: 12, fontWeight: 600, color: '#7f8c8d', marginBottom: 4 }}>Log</div>
+        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4 }}>Log</div>
         <div
           style={{
-            background: '#fafbfc',
-            border: '1px solid #ecf0f1',
+            background: 'var(--surface-alt)',
+            border: '1px solid var(--neutral-soft)',
             borderRadius: 4,
             padding: 10,
             minHeight: 120,
           }}
         >
-          {logs.length === 0 && <div style={{ color: '#bdc3c7', fontSize: 12 }}>No log output yet…</div>}
+          {logs.length === 0 && <div style={{ color: 'var(--neutral-mid)', fontSize: 12 }}>No log output yet…</div>}
           {logs.map((entry, idx) => logLine(entry, idx))}
           <div ref={logsEndRef} />
         </div>
@@ -364,9 +364,9 @@ export const RunDetailPanel: React.FC<RunDetailPanelProps> = ({ runId, onSelectR
           <div
             style={{
               marginTop: 12,
-              background: '#fdedec',
-              border: '1px solid #e74c3c',
-              color: '#c0392b',
+              background: 'var(--tint-red)',
+              border: '1px solid var(--danger)',
+              color: 'var(--danger-strong)',
               borderRadius: 4,
               padding: '8px 12px',
               fontSize: 12.5,
@@ -379,18 +379,18 @@ export const RunDetailPanel: React.FC<RunDetailPanelProps> = ({ runId, onSelectR
 
         {run?.final_text && (
           <div style={{ marginTop: 12 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: '#7f8c8d', marginBottom: 4 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4 }}>
               Final output
             </div>
             <div
               style={{
-                background: '#eafaf1',
-                border: '1px solid #a9dfbf',
+                background: 'var(--tint-green)',
+                border: '1px solid var(--tint-green-border)',
                 borderRadius: 4,
                 padding: '10px 12px',
                 fontSize: 13,
                 whiteSpace: 'pre-wrap',
-                color: '#2c3e50',
+                color: 'var(--text)',
               }}
             >
               {run.final_text}

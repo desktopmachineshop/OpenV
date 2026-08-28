@@ -12,12 +12,12 @@
 .project-list-header h1 {
   font-size: 32px;
   margin: 0 0 10px 0;
-  color: #2c3e50;
+  color: var(--text);
 }
 
 .project-list-header p {
   font-size: 16px;
-  color: #7f8c8d;
+  color: var(--text-muted);
   margin: 0;
 }
 
@@ -25,9 +25,9 @@
   padding: 12px;
   margin-bottom: 20px;
   background-color: rgba(231, 76, 60, 0.2);
-  border: 1px solid #e74c3c;
+  border: 1px solid var(--danger);
   border-radius: 4px;
-  color: #e74c3c;
+  color: var(--danger);
   font-size: 14px;
   display: flex;
   justify-content: space-between;
@@ -38,7 +38,7 @@
   text-align: center;
   padding: 40px;
   font-size: 16px;
-  color: #7f8c8d;
+  color: var(--text-muted);
 }
 
 .projects-grid {
@@ -52,14 +52,14 @@
   grid-column: 1 / -1;
   text-align: center;
   padding: 40px;
-  background-color: #f8f9fa;
+  background-color: var(--surface-alt);
   border-radius: 8px;
-  color: #7f8c8d;
+  color: var(--text-muted);
 }
 
 .project-card {
-  background: white;
-  border: 2px solid #ecf0f1;
+  background: var(--surface);
+  border: 2px solid var(--neutral-soft);
   border-radius: 8px;
   padding: 20px;
   cursor: pointer;
@@ -69,13 +69,13 @@
 }
 
 .project-card:hover {
-  border-color: #3498db;
+  border-color: var(--accent);
   box-shadow: 0 2px 8px rgba(52, 152, 219, 0.2);
 }
 
 .project-card.selected {
-  border-color: #27ae60;
-  background-color: #f0f8f4;
+  border-color: var(--success);
+  background-color: var(--tint-green);
   box-shadow: 0 2px 8px rgba(39, 174, 96, 0.2);
 }
 
@@ -89,7 +89,7 @@
 .project-card-header h3 {
   margin: 0;
   font-size: 18px;
-  color: #2c3e50;
+  color: var(--text);
   flex: 1;
   word-break: break-word;
 }
@@ -97,7 +97,7 @@
 .delete-btn {
   background: none;
   border: none;
-  color: #e74c3c;
+  color: var(--danger);
   cursor: pointer;
   font-size: 18px;
   padding: 0;
@@ -107,7 +107,7 @@
 }
 
 .delete-btn:hover {
-  color: #c0392b;
+  color: var(--danger-strong);
 }
 
 .project-actions {
@@ -128,45 +128,45 @@
 }
 
 .edit-btn {
-  color: #f39c12;
+  color: var(--warning);
 }
 
 .edit-btn:hover {
   background-color: rgba(243, 156, 18, 0.12);
-  color: #d68910;
+  color: var(--warning-strong);
 }
 
 .template-btn {
-  color: #8e44ad;
+  color: var(--purple);
 }
 
 .template-btn:hover {
   background-color: rgba(142, 68, 173, 0.12);
-  color: #6f2c91;
+  color: var(--purple-strong);
 }
 
 .export-btn {
-  color: #3498db;
+  color: var(--accent);
 }
 
 .export-btn:hover {
   background-color: rgba(52, 152, 219, 0.1);
-  color: #2980b9;
+  color: var(--accent-strong);
 }
 
 .delete-btn {
-  color: #e74c3c;
+  color: var(--danger);
 }
 
 .delete-btn:hover {
   background-color: rgba(231, 76, 60, 0.1);
-  color: #c0392b;
+  color: var(--danger-strong);
 }
 
 .create-import-placeholder {
   grid-column: 1 / -1;
-  background: white;
-  border: 2px dashed #3498db;
+  background: var(--surface);
+  border: 2px dashed var(--accent);
   border-radius: 8px;
   padding: 40px;
   text-align: center;
@@ -177,12 +177,12 @@
 .create-import-placeholder h3 {
   margin: 0 0 12px 0;
   font-size: 22px;
-  color: #2c3e50;
+  color: var(--text);
 }
 
 .create-import-placeholder p {
   margin: 0 0 24px 0;
-  color: #7f8c8d;
+  color: var(--text-muted);
   font-size: 14px;
 }
 
@@ -195,7 +195,7 @@
 
 .project-description {
   margin: 0 0 12px 0;
-  color: #555;
+  color: var(--text-body);
   font-size: 14px;
   line-height: 1.4;
 }
@@ -205,13 +205,13 @@
   justify-content: space-between;
   align-items: center;
   padding-top: 12px;
-  border-top: 1px solid #ecf0f1;
+  border-top: 1px solid var(--neutral-soft);
   font-size: 12px;
-  color: #95a5a6;
+  color: var(--neutral);
 }
 
 .project-id {
-  background-color: #f5f5f5;
+  background-color: var(--surface-inset);
   padding: 3px 6px;
   border-radius: 3px;
   font-family: monospace;
@@ -232,8 +232,8 @@
 }
 
 .create-project-form {
-  background: white;
-  border: 2px solid #3498db;
+  background: var(--surface);
+  border: 2px solid var(--accent);
   border-radius: 8px;
   padding: 30px;
   margin-bottom: 20px;
@@ -245,7 +245,7 @@
 .create-project-form h3 {
   margin: 0 0 20px 0;
   font-size: 18px;
-  color: #2c3e50;
+  color: var(--text);
 }
 
 .form-group {
@@ -256,7 +256,7 @@
   display: block;
   margin-bottom: 8px;
   font-weight: 500;
-  color: #2c3e50;
+  color: var(--text);
   font-size: 14px;
 }
 
@@ -264,7 +264,7 @@
 .form-group textarea {
   width: 100%;
   padding: 10px;
-  border: 1px solid #bdc3c7;
+  border: 1px solid var(--neutral-mid);
   border-radius: 4px;
   font-size: 14px;
   font-family: inherit;
@@ -274,7 +274,7 @@
 .form-group input:focus,
 .form-group textarea:focus {
   outline: none;
-  border-color: #3498db;
+  border-color: var(--accent);
   box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.1);
 }
 
@@ -295,21 +295,21 @@
 }
 
 .button-primary {
-  background-color: #3498db;
+  background-color: var(--accent);
   color: white;
 }
 
 .button-primary:hover {
-  background-color: #2980b9;
+  background-color: var(--accent-strong);
 }
 
 .button-secondary {
-  background-color: #ecf0f1;
-  color: #2c3e50;
+  background-color: var(--neutral-soft);
+  color: var(--text);
 }
 
 .button-secondary:hover {
-  background-color: #bdc3c7;
+  background-color: var(--neutral-mid);
 }
 
 @media (max-width: 768px) {

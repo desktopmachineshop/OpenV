@@ -99,7 +99,7 @@ const Highlighted: React.FC<{ text: string; query: string }> = ({ text, query })
     }
     if (at > 0) parts.push(rest.slice(0, at));
     parts.push(
-      <mark key={key++} style={{ background: '#fdebd0', padding: '0 1px' }}>
+      <mark key={key++} style={{ background: 'var(--tint-yellow)', padding: '0 1px' }}>
         {rest.slice(at, at + q.length)}
       </mark>
     );
@@ -167,22 +167,22 @@ export const ManualView: React.FC = () => {
         style={{
           width: 260,
           minWidth: 260,
-          background: '#2c3e50',
-          color: '#ecf0f1',
+          background: 'var(--sidebar-bg)',
+          color: 'var(--sidebar-text)',
           display: 'flex',
           flexDirection: 'column',
         }}
       >
-        <div style={{ padding: '16px 14px', borderBottom: '1px solid #34495e' }}>
+        <div style={{ padding: '16px 14px', borderBottom: '1px solid var(--sidebar-border)' }}>
           <div style={{ fontWeight: 700, fontSize: 16 }}>OpenV Manual</div>
           <Link
             to="/projects"
-            style={{ fontSize: 12, color: '#95a5a6', textDecoration: 'none' }}
+            style={{ fontSize: 12, color: 'var(--sidebar-text-faint)', textDecoration: 'none' }}
           >
             ← Back to projects
           </Link>
         </div>
-        <div style={{ padding: '10px 14px', borderBottom: '1px solid #34495e' }}>
+        <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--sidebar-border)' }}>
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -191,9 +191,9 @@ export const ManualView: React.FC = () => {
               width: '100%',
               padding: '7px 10px',
               borderRadius: 4,
-              border: '1px solid #34495e',
-              background: '#233544',
-              color: '#ecf0f1',
+              border: '1px solid var(--sidebar-border)',
+              background: 'var(--sidebar-menu-bg)',
+              color: 'var(--sidebar-text)',
               fontSize: 13,
             }}
           />
@@ -208,13 +208,13 @@ export const ManualView: React.FC = () => {
                   style={{
                     display: 'block',
                     padding: '8px 16px',
-                    color: active ? '#fff' : '#bdc3c7',
-                    background: active ? '#3498db' : 'transparent',
+                    color: active ? '#fff' : 'var(--sidebar-text-dim)',
+                    background: active ? 'var(--accent)' : 'transparent',
                     textDecoration: 'none',
                     fontSize: 13.5,
                   }}
                 >
-                  <span style={{ color: active ? '#d6eaf8' : '#7f8c8d', marginRight: 8 }}>
+                  <span style={{ color: active ? '#d6eaf8' : 'var(--sidebar-text-faint)', marginRight: 8 }}>
                     {i + 1}.
                   </span>
                   {c.title}
@@ -228,7 +228,7 @@ export const ManualView: React.FC = () => {
                         style={{
                           display: 'block',
                           padding: '4px 16px 4px 38px',
-                          color: '#95a5a6',
+                          color: 'var(--sidebar-text-faint)',
                           textDecoration: 'none',
                           fontSize: 12,
                         }}
@@ -247,7 +247,7 @@ export const ManualView: React.FC = () => {
       {/* Content */}
       <main
         id="manual-scroll"
-        style={{ flex: 1, overflowY: 'auto', background: '#f5f6fa' }}
+        style={{ flex: 1, overflowY: 'auto', background: 'var(--bg-app)' }}
       >
         <div style={{ maxWidth: 860, margin: '0 auto', padding: 24 }}>
           {searching ? (
@@ -258,7 +258,7 @@ export const ManualView: React.FC = () => {
                   : `${results.length} result${results.length === 1 ? '' : 's'}`}{' '}
                 for "{query.trim()}"
               </h3>
-              <p style={{ fontSize: 13, color: '#7f8c8d' }}>
+              <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
                 Click a result to open its chapter.
               </p>
               {results.map((hit, i) => (
@@ -266,21 +266,21 @@ export const ManualView: React.FC = () => {
                   key={i}
                   onClick={() => openHit(hit)}
                   style={{
-                    border: '1px solid #eee',
+                    border: '1px solid var(--border-soft)',
                     borderRadius: 4,
                     padding: '10px 12px',
                     marginBottom: 8,
                     cursor: 'pointer',
-                    background: '#fff',
+                    background: 'var(--surface)',
                   }}
                 >
-                  <div style={{ fontSize: 13, fontWeight: 600, color: '#2c3e50' }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>
                     {hit.chapter.title}
                     {hit.section && (
-                      <span style={{ color: '#7f8c8d', fontWeight: 400 }}> › {hit.section}</span>
+                      <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}> › {hit.section}</span>
                     )}
                   </div>
-                  <div style={{ fontSize: 12.5, color: '#555', marginTop: 4, lineHeight: 1.5 }}>
+                  <div style={{ fontSize: 12.5, color: 'var(--text-body)', marginTop: 4, lineHeight: 1.5 }}>
                     <Highlighted text={hit.snippet} query={query} />
                   </div>
                 </div>
@@ -327,7 +327,7 @@ export const ManualView: React.FC = () => {
                       style={{
                         textDecoration: 'none',
                         display: 'inline-block',
-                        background: '#3498db',
+                        background: 'var(--accent)',
                       }}
                     >
                       {next.title} →

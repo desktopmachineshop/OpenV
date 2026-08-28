@@ -2,6 +2,7 @@ import React from 'react';
 import { useAppStore } from '../state/store';
 import { MyRunnerCard } from './org/MyRunnerCard';
 import { ProviderConnectCard } from './agents/ProviderConnectCard';
+import { ThemeSwitcher } from './ThemeSwitcher';
 
 interface UserSettingsPanelProps {
   onClose: () => void;
@@ -30,7 +31,7 @@ export const UserSettingsPanel: React.FC<UserSettingsPanelProps> = ({ onClose })
       style={{
         position: 'fixed',
         inset: 0,
-        background: 'rgba(44, 62, 80, 0.55)',
+        background: 'var(--overlay)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -44,7 +45,7 @@ export const UserSettingsPanel: React.FC<UserSettingsPanelProps> = ({ onClose })
           maxWidth: '94vw',
           maxHeight: '88vh',
           overflowY: 'auto',
-          background: '#f5f6fa',
+          background: 'var(--bg-app)',
           borderRadius: 8,
           padding: 24,
         }}
@@ -58,7 +59,7 @@ export const UserSettingsPanel: React.FC<UserSettingsPanelProps> = ({ onClose })
                 width: 40,
                 height: 40,
                 borderRadius: '50%',
-                background: '#3498db',
+                background: 'var(--accent)',
                 color: '#fff',
                 display: 'flex',
                 alignItems: 'center',
@@ -71,25 +72,37 @@ export const UserSettingsPanel: React.FC<UserSettingsPanelProps> = ({ onClose })
             </div>
           )}
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 16, fontWeight: 700, color: '#2c3e50' }}>
+            <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>
               {currentUser?.name || currentUser?.email || 'My settings'}
             </div>
-            <div style={{ fontSize: 12, color: '#7f8c8d' }}>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
               Personal settings{activeOrg ? ` · ${activeOrg.name}` : ''}
             </div>
           </div>
           <button
             onClick={onClose}
-            style={{ background: 'none', border: 'none', color: '#7f8c8d', cursor: 'pointer', fontSize: 18, width: 'auto' }}
+            style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 18, width: 'auto' }}
             title="Close"
           >
             ✕
           </button>
         </div>
 
+        <div className="card">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+            <div>
+              <h3 style={{ marginBottom: 4 }}>Appearance</h3>
+              <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 0 }}>
+                Theme for this browser. “System” follows your OS setting.
+              </p>
+            </div>
+            <ThemeSwitcher />
+          </div>
+        </div>
+
         {!activeOrgId ? (
           <div className="card">
-            <p style={{ fontSize: 13, color: '#7f8c8d', marginBottom: 0 }}>
+            <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 0 }}>
               Select a workspace to manage your runner and agent sign-ins.
             </p>
           </div>
@@ -99,7 +112,7 @@ export const UserSettingsPanel: React.FC<UserSettingsPanelProps> = ({ onClose })
 
             <div className="card">
               <h3 style={{ marginBottom: 6 }}>Agent sign-ins</h3>
-              <p style={{ fontSize: 13, color: '#7f8c8d' }}>
+              <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
                 Sign the vendor CLIs on <b>your machine</b> into your own subscriptions. The flow
                 runs through your personal runner (Agent Connector), and credentials never leave
                 your machine. Projects set to “API key” auth override these sign-ins for their runs.
@@ -116,8 +129,8 @@ export const UserSettingsPanel: React.FC<UserSettingsPanelProps> = ({ onClose })
               ))}
             </div>
 
-            <div className="card" style={{ background: '#eaf4fc', border: '1px solid #3498db' }}>
-              <p style={{ fontSize: 13, color: '#2c3e50', marginBottom: 0 }}>
+            <div className="card" style={{ background: 'var(--tint-blue)', border: '1px solid var(--accent)' }}>
+              <p style={{ fontSize: 13, color: 'var(--text)', marginBottom: 0 }}>
                 Looking for repository locations? Your per-project local paths are set on each
                 project's Settings → Repositories tab (“your local path”), since they differ per
                 project.

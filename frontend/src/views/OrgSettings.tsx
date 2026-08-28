@@ -56,7 +56,7 @@ export const OrgSettings: React.FC = () => {
   }, [orgsLoaded, org, navigate]);
 
   if (!orgsLoaded) {
-    return <div style={{ padding: 40, textAlign: 'center', color: '#7f8c8d' }}>Loading…</div>;
+    return <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>Loading…</div>;
   }
   if (!org) return null;
 
@@ -82,14 +82,14 @@ export const OrgSettings: React.FC = () => {
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f5f6fa' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg-app)' }}>
       <Navbar title="Workspace Settings" showWorkspaceControls />
       <div style={{ padding: 24, maxWidth: 900, margin: '0 auto' }}>
-        <Link to="/projects" style={{ fontSize: 13, color: '#3498db', textDecoration: 'none' }}>
+        <Link to="/projects" style={{ fontSize: 13, color: 'var(--accent)', textDecoration: 'none' }}>
           ← Back to projects
         </Link>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, margin: '10px 0 16px' }}>
-          <h2 style={{ color: '#2c3e50', margin: 0 }}>{org.name}</h2>
+          <h2 style={{ color: 'var(--text)', margin: 0 }}>{org.name}</h2>
           <span
             style={{
               display: 'inline-block',
@@ -97,15 +97,15 @@ export const OrgSettings: React.FC = () => {
               borderRadius: 10,
               fontSize: 11,
               fontWeight: 600,
-              color: org.type === 'personal' ? '#7f8c8d' : '#fff',
-              background: org.type === 'personal' ? '#ecf0f1' : '#3498db',
+              color: org.type === 'personal' ? 'var(--text-muted)' : '#fff',
+              background: org.type === 'personal' ? 'var(--neutral-soft)' : 'var(--accent)',
             }}
           >
             {org.type === 'personal' ? 'personal workspace' : 'company workspace'}
           </span>
         </div>
 
-        <div style={{ display: 'flex', gap: 4, borderBottom: '2px solid #ddd', marginBottom: 20 }}>
+        <div style={{ display: 'flex', gap: 4, borderBottom: '2px solid var(--border)', marginBottom: 20 }}>
           {TABS.map((t) => (
             <button
               key={t.key}
@@ -113,12 +113,12 @@ export const OrgSettings: React.FC = () => {
               style={{
                 background: 'none',
                 border: 'none',
-                borderBottom: tab === t.key ? '2px solid #3498db' : '2px solid transparent',
+                borderBottom: tab === t.key ? '2px solid var(--accent)' : '2px solid transparent',
                 marginBottom: -2,
                 padding: '10px 16px',
                 fontSize: 14,
                 fontWeight: tab === t.key ? 600 : 400,
-                color: tab === t.key ? '#2c3e50' : '#7f8c8d',
+                color: tab === t.key ? 'var(--text)' : 'var(--text-muted)',
                 cursor: 'pointer',
                 width: 'auto',
               }}
@@ -131,9 +131,9 @@ export const OrgSettings: React.FC = () => {
         {error && (
           <div
             style={{
-              background: '#fdecea',
-              border: '1px solid #e74c3c',
-              color: '#c0392b',
+              background: 'var(--tint-red)',
+              border: '1px solid var(--danger)',
+              color: 'var(--danger-strong)',
               padding: '10px 14px',
               borderRadius: 4,
               marginBottom: 16,
@@ -143,7 +143,7 @@ export const OrgSettings: React.FC = () => {
             {error}{' '}
             <button
               onClick={() => setError('')}
-              style={{ background: 'none', border: 'none', color: '#c0392b', cursor: 'pointer', width: 'auto', padding: 0 }}
+              style={{ background: 'none', border: 'none', color: 'var(--danger-strong)', cursor: 'pointer', width: 'auto', padding: 0 }}
             >
               ✕
             </button>
@@ -152,9 +152,9 @@ export const OrgSettings: React.FC = () => {
         {notice && (
           <div
             style={{
-              background: '#eafaf1',
-              border: '1px solid #27ae60',
-              color: '#1e8449',
+              background: 'var(--tint-green)',
+              border: '1px solid var(--success)',
+              color: 'var(--success-text)',
               padding: '10px 14px',
               borderRadius: 4,
               marginBottom: 16,
@@ -184,7 +184,7 @@ export const OrgSettings: React.FC = () => {
                   </button>
                 </form>
               ) : (
-                <p style={{ fontSize: 13, color: '#7f8c8d', marginBottom: 0 }}>
+                <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 0 }}>
                   Only workspace admins can rename the workspace.
                 </p>
               )}
@@ -192,19 +192,19 @@ export const OrgSettings: React.FC = () => {
 
             <div className="card">
               <h3>Plan</h3>
-              <p style={{ fontSize: 13, color: '#2c3e50', marginBottom: 0 }}>
+              <p style={{ fontSize: 13, color: 'var(--text)', marginBottom: 0 }}>
                 Plan: <strong>{org.plan || 'Free'}</strong> — billing coming soon.
               </p>
             </div>
 
             <div className="card">
               <h3>Details</h3>
-              <div style={{ fontSize: 13, color: '#2c3e50', display: 'grid', gridTemplateColumns: '110px 1fr', rowGap: 8 }}>
-                <span style={{ color: '#7f8c8d' }}>Workspace ID</span>
+              <div style={{ fontSize: 13, color: 'var(--text)', display: 'grid', gridTemplateColumns: '110px 1fr', rowGap: 8 }}>
+                <span style={{ color: 'var(--text-muted)' }}>Workspace ID</span>
                 <code style={{ fontSize: 12 }}>{org.id}</code>
-                <span style={{ color: '#7f8c8d' }}>Slug</span>
+                <span style={{ color: 'var(--text-muted)' }}>Slug</span>
                 <code style={{ fontSize: 12 }}>{org.slug || '—'}</code>
-                <span style={{ color: '#7f8c8d' }}>Created</span>
+                <span style={{ color: 'var(--text-muted)' }}>Created</span>
                 <span>{org.created_at ? new Date(org.created_at).toLocaleDateString() : '—'}</span>
               </div>
             </div>

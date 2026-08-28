@@ -7,16 +7,16 @@ import { RunnerKeyModal } from './RunnerKeyModal';
 const th: React.CSSProperties = {
   textAlign: 'left',
   fontSize: 12,
-  color: '#7f8c8d',
+  color: 'var(--text-muted)',
   padding: '8px 10px',
-  borderBottom: '1px solid #eee',
+  borderBottom: '1px solid var(--border-soft)',
 };
 
 const td: React.CSSProperties = {
   padding: '8px 10px',
   fontSize: 13,
-  color: '#2c3e50',
-  borderBottom: '1px solid #f5f5f5',
+  color: 'var(--text)',
+  borderBottom: '1px solid var(--surface-inset)',
 };
 
 const chip = (bg: string): React.CSSProperties => ({
@@ -96,9 +96,9 @@ export const WorkerKeysTab: React.FC<WorkerKeysTabProps> = ({ org, isAdmin }) =>
       {error && (
         <div
           style={{
-            background: '#fdecea',
-            border: '1px solid #e74c3c',
-            color: '#c0392b',
+            background: 'var(--tint-red)',
+            border: '1px solid var(--danger)',
+            color: 'var(--danger-strong)',
             padding: '10px 14px',
             borderRadius: 4,
             marginBottom: 16,
@@ -108,7 +108,7 @@ export const WorkerKeysTab: React.FC<WorkerKeysTabProps> = ({ org, isAdmin }) =>
           {error}{' '}
           <button
             onClick={() => setError('')}
-            style={{ background: 'none', border: 'none', color: '#c0392b', cursor: 'pointer', width: 'auto', padding: 0 }}
+            style={{ background: 'none', border: 'none', color: 'var(--danger-strong)', cursor: 'pointer', width: 'auto', padding: 0 }}
           >
             ✕
           </button>
@@ -133,15 +133,15 @@ export const WorkerKeysTab: React.FC<WorkerKeysTabProps> = ({ org, isAdmin }) =>
             </button>
           )}
         </div>
-        <p style={{ fontSize: 13, color: '#7f8c8d' }}>
+        <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
           Worker keys authenticate agent runner machines (agentd) against this workspace. Each key
           is scoped to this workspace only.
         </p>
 
         {loading ? (
-          <div style={{ color: '#7f8c8d', fontSize: 13 }}>Loading worker keys…</div>
+          <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Loading worker keys…</div>
         ) : keys.length === 0 ? (
-          <div style={{ color: '#95a5a6', fontSize: 13 }}>No worker keys yet.</div>
+          <div style={{ color: 'var(--neutral)', fontSize: 13 }}>No worker keys yet.</div>
         ) : (
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
@@ -160,32 +160,32 @@ export const WorkerKeysTab: React.FC<WorkerKeysTabProps> = ({ org, isAdmin }) =>
                   <td style={{ ...td, fontWeight: 600 }}>
                     {k.name}
                     {k.name === 'hosted-runner' && (
-                      <span style={{ ...chip('#3498db'), marginLeft: 6 }}>hosted</span>
+                      <span style={{ ...chip('var(--accent)'), marginLeft: 6 }}>hosted</span>
                     )}
                   </td>
                   <td style={td}>
                     {k.user_id ? (
-                      <span style={chip('#8e44ad')} title={k.user_name || undefined}>
+                      <span style={chip('var(--purple)')} title={k.user_name || undefined}>
                         Personal{k.user_name ? ` · ${k.user_name}` : ''}
                       </span>
                     ) : (
-                      <span style={chip('#7f8c8d')}>Workspace</span>
+                      <span style={chip('var(--text-muted)')}>Workspace</span>
                     )}
                   </td>
                   <td style={td}>{fmtDate(k.created_at)}</td>
                   <td style={td}>{fmtDate(k.last_used_at)}</td>
                   <td style={td}>
                     {k.revoked ? (
-                      <span style={chip('#e74c3c')}>revoked</span>
+                      <span style={chip('var(--danger)')}>revoked</span>
                     ) : (
-                      <span style={chip('#27ae60')}>active</span>
+                      <span style={chip('var(--success)')}>active</span>
                     )}
                   </td>
                   <td style={{ ...td, textAlign: 'right' }}>
                     {isAdmin && !k.revoked && (
                       <button
                         onClick={() => handleRevoke(k)}
-                        style={{ background: 'none', border: 'none', color: '#e74c3c', cursor: 'pointer', fontSize: 12, width: 'auto', padding: 2 }}
+                        style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontSize: 12, width: 'auto', padding: 2 }}
                       >
                         Revoke
                       </button>

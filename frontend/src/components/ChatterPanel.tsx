@@ -71,8 +71,8 @@ export const ChatterPanel: React.FC<ChatterPanelProps> = ({
         display: 'flex',
         flexDirection: 'column',
         width: '100%',
-        backgroundColor: '#ffffff',
-        border: '1px solid #ddd',
+        backgroundColor: 'var(--surface)',
+        border: '1px solid var(--border)',
         borderRadius: '4px',
         height: '100%',
         boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
@@ -82,11 +82,11 @@ export const ChatterPanel: React.FC<ChatterPanelProps> = ({
       <div
         style={{
           padding: '15px',
-          borderBottom: '1px solid #ecf0f1',
+          borderBottom: '1px solid var(--neutral-soft)',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          backgroundColor: '#f9f9f9',
+          backgroundColor: 'var(--surface-alt)',
         }}
       >
         <h3 style={{ margin: 0, fontSize: '14px', fontWeight: 'bold' }}>
@@ -120,20 +120,20 @@ export const ChatterPanel: React.FC<ChatterPanelProps> = ({
           padding: '10px',
         }}
       >
-        {isLoading && <p style={{ fontSize: '12px', color: '#666' }}>Loading notes...</p>}
-        {error && <p style={{ fontSize: '12px', color: '#e74c3c' }}>{error}</p>}
+        {isLoading && <p style={{ fontSize: '12px', color: 'var(--text-body)' }}>Loading notes...</p>}
+        {error && <p style={{ fontSize: '12px', color: 'var(--danger)' }}>{error}</p>}
         {entries.map((entry) => (
           <div
             key={entry.id}
             style={{
               marginBottom: '12px',
               padding: '8px',
-              backgroundColor: entry.is_auto_entry ? '#f0f8ff' : '#fff9e6',
-              border: '1px solid #e0e0e0',
+              backgroundColor: entry.is_auto_entry ? 'var(--tint-blue)' : 'var(--tint-yellow)',
+              border: '1px solid var(--border)',
               borderRadius: '4px',
             }}
           >
-            <div style={{ fontSize: '11px', color: '#666', marginBottom: '4px' }}>
+            <div style={{ fontSize: '11px', color: 'var(--text-body)', marginBottom: '4px' }}>
               {entry.is_auto_entry ? '🔄' : '✏️'} {new Date(entry.created_at).toLocaleString()}
             </div>
             <div
@@ -141,7 +141,7 @@ export const ChatterPanel: React.FC<ChatterPanelProps> = ({
                 whiteSpace: 'pre-wrap',
                 wordBreak: 'break-word',
                 lineHeight: '1.4',
-                color: '#333',
+                color: 'var(--text)',
               }}
             >
               {entry.message}
@@ -154,8 +154,8 @@ export const ChatterPanel: React.FC<ChatterPanelProps> = ({
       <div
         style={{
           padding: '10px',
-          borderTop: '1px solid #ecf0f1',
-          backgroundColor: '#f9f9f9',
+          borderTop: '1px solid var(--neutral-soft)',
+          backgroundColor: 'var(--surface-alt)',
         }}
       >
         <textarea
@@ -172,7 +172,7 @@ export const ChatterPanel: React.FC<ChatterPanelProps> = ({
             width: '100%',
             minHeight: '60px',
             padding: '8px',
-            border: '1px solid #bdc3c7',
+            border: '1px solid var(--neutral-mid)',
             borderRadius: '4px',
             fontFamily: 'inherit',
             fontSize: '12px',
@@ -188,7 +188,7 @@ export const ChatterPanel: React.FC<ChatterPanelProps> = ({
             width: '100%',
             marginTop: '8px',
             padding: '8px',
-            backgroundColor: newMessage.trim() ? '#3498db' : '#bdc3c7',
+            backgroundColor: newMessage.trim() ? 'var(--accent)' : 'var(--neutral-mid)',
             color: 'white',
             border: 'none',
             borderRadius: '4px',

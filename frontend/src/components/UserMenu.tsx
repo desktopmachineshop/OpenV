@@ -58,8 +58,8 @@ export const UserMenu: React.FC<UserMenuProps> = ({ variant = 'light' }) => {
         width: 28,
         height: 28,
         borderRadius: '50%',
-        background: '#3498db',
-        color: '#ecf0f1',
+        background: 'var(--accent)',
+        color: '#fff',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -78,7 +78,7 @@ export const UserMenu: React.FC<UserMenuProps> = ({ variant = 'light' }) => {
     padding: '10px 14px',
     background: 'none',
     border: 'none',
-    color: dark ? '#ecf0f1' : '#2c3e50',
+    color: dark ? 'var(--sidebar-text)' : 'var(--text)',
     textAlign: 'left',
     cursor: 'pointer',
     fontSize: 13,
@@ -90,7 +90,7 @@ export const UserMenu: React.FC<UserMenuProps> = ({ variant = 'light' }) => {
         bottom: 'calc(100% + 12px)',
         left: 0,
         right: 0,
-        background: '#34495e',
+        background: 'var(--sidebar-menu-bg)',
         borderRadius: 6,
         overflow: 'hidden',
         boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
@@ -100,9 +100,9 @@ export const UserMenu: React.FC<UserMenuProps> = ({ variant = 'light' }) => {
         top: 'calc(100% + 6px)',
         right: 0,
         minWidth: 200,
-        background: '#fff',
+        background: 'var(--surface)',
         borderRadius: 6,
-        border: '1px solid #e0e0e0',
+        border: '1px solid var(--border)',
         boxShadow: '0 6px 18px rgba(0,0,0,0.18)',
         zIndex: 1500,
         overflow: 'hidden',
@@ -128,7 +128,7 @@ export const UserMenu: React.FC<UserMenuProps> = ({ variant = 'light' }) => {
             {displayName}
           </div>
         ) : (
-          <span style={{ fontSize: 10, color: '#7f8c8d' }}>▼</span>
+          <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>▼</span>
         )}
       </div>
       {menuOpen && (
@@ -137,9 +137,9 @@ export const UserMenu: React.FC<UserMenuProps> = ({ variant = 'light' }) => {
             <div
               style={{
                 padding: '8px 14px',
-                borderBottom: '1px solid #eee',
+                borderBottom: '1px solid var(--border-soft)',
                 fontSize: 12,
-                color: '#7f8c8d',
+                color: 'var(--text-muted)',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
                 whiteSpace: 'nowrap',

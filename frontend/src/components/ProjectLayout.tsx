@@ -81,18 +81,18 @@ export const ProjectLayout: React.FC = () => {
         style={{
           width: 200,
           minWidth: 200,
-          background: '#2c3e50',
-          color: '#ecf0f1',
+          background: 'var(--sidebar-bg)',
+          color: 'var(--sidebar-text)',
           display: 'flex',
           flexDirection: 'column',
         }}
       >
-        <div style={{ padding: '16px 14px', borderBottom: '1px solid #34495e' }}>
+        <div style={{ padding: '16px 14px', borderBottom: '1px solid var(--sidebar-border)' }}>
           <OrgSwitcher variant="dark" />
           <div
             style={{
               fontSize: 12,
-              color: '#95a5a6',
+              color: 'var(--sidebar-text-faint)',
               marginTop: 6,
               overflow: 'hidden',
               textOverflow: 'ellipsis',
@@ -116,7 +116,7 @@ export const ProjectLayout: React.FC = () => {
                     fontWeight: 700,
                     letterSpacing: 1,
                     textTransform: 'uppercase',
-                    color: '#7f8c8d',
+                    color: 'var(--sidebar-text-faint)',
                   }}
                 >
                   {section.label}
@@ -130,8 +130,8 @@ export const ProjectLayout: React.FC = () => {
                   style={({ isActive }) => ({
                     display: 'block',
                     padding: '9px 16px',
-                    color: isActive ? '#fff' : '#bdc3c7',
-                    background: isActive ? '#3498db' : 'transparent',
+                    color: isActive ? '#fff' : 'var(--sidebar-text-dim)',
+                    background: isActive ? 'var(--accent)' : 'transparent',
                     textDecoration: 'none',
                     fontSize: 14,
                   })}
@@ -141,14 +141,14 @@ export const ProjectLayout: React.FC = () => {
               ))}
             </div>
           ))}
-          <div style={{ borderTop: '1px solid #34495e', margin: '8px 0' }} />
+          <div style={{ borderTop: '1px solid var(--sidebar-border)', margin: '8px 0' }} />
           <NavLink
             to="/manual"
             title="Open the user manual"
             style={{
               display: 'block',
               padding: '9px 16px',
-              color: '#bdc3c7',
+              color: 'var(--sidebar-text-dim)',
               textDecoration: 'none',
               fontSize: 14,
             }}
@@ -156,11 +156,11 @@ export const ProjectLayout: React.FC = () => {
             Help
           </NavLink>
         </nav>
-        <div style={{ borderTop: '1px solid #34495e', padding: 12 }}>
+        <div style={{ borderTop: '1px solid var(--sidebar-border)', padding: 12 }}>
           <UserMenu variant="dark" />
         </div>
       </aside>
-      <main style={{ flex: 1, overflow: 'auto', background: '#f5f6fa' }}>
+      <main style={{ flex: 1, overflow: 'auto', background: 'var(--bg-app)' }}>
         <Outlet />
       </main>
     </div>

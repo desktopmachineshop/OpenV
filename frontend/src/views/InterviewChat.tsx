@@ -161,7 +161,7 @@ export const InterviewChat: React.FC = () => {
     <div
       style={{
         minHeight: '100vh',
-        background: '#f5f6fa',
+        background: 'var(--bg-app)',
         display: 'flex',
         justifyContent: 'center',
       }}
@@ -182,7 +182,7 @@ export const InterviewChat: React.FC = () => {
 
   if (phase === 'loading') {
     return page(
-      <div style={{ margin: 'auto', color: '#7f8c8d', fontSize: 15 }}>Loading interview…</div>
+      <div style={{ margin: 'auto', color: 'var(--text-muted)', fontSize: 15 }}>Loading interview…</div>
     );
   }
 
@@ -190,8 +190,8 @@ export const InterviewChat: React.FC = () => {
     return page(
       <div style={{ margin: 'auto', textAlign: 'center', padding: 24 }}>
         <div style={{ fontSize: 44, marginBottom: 12 }}>🔗</div>
-        <h2 style={{ color: '#2c3e50', marginBottom: 10 }}>This link isn't working</h2>
-        <p style={{ color: '#7f8c8d', lineHeight: 1.6 }}>
+        <h2 style={{ color: 'var(--text)', marginBottom: 10 }}>This link isn't working</h2>
+        <p style={{ color: 'var(--text-muted)', lineHeight: 1.6 }}>
           The interview invite may have expired or been revoked. Please ask the person who sent it to
           you for a new link.
         </p>
@@ -203,8 +203,8 @@ export const InterviewChat: React.FC = () => {
     return page(
       <div style={{ margin: 'auto', textAlign: 'center', padding: 24 }}>
         <div style={{ fontSize: 44, marginBottom: 12 }}>🙏</div>
-        <h2 style={{ color: '#27ae60', marginBottom: 10 }}>Thank you!</h2>
-        <p style={{ color: '#7f8c8d', lineHeight: 1.6 }}>
+        <h2 style={{ color: 'var(--success)', marginBottom: 10 }}>Thank you!</h2>
+        <p style={{ color: 'var(--text-muted)', lineHeight: 1.6 }}>
           Your feedback has been recorded. You can close this page now.
         </p>
       </div>
@@ -216,15 +216,15 @@ export const InterviewChat: React.FC = () => {
       <div style={{ margin: 'auto', width: '100%', padding: 24 }}>
         <div
           style={{
-            background: '#fff',
-            border: '1px solid #ddd',
+            background: 'var(--surface)',
+            border: '1px solid var(--border)',
             borderRadius: 8,
             padding: 28,
             textAlign: 'center',
           }}
         >
-          <h2 style={{ color: '#2c3e50', marginBottom: 8 }}>{interviewName}</h2>
-          <p style={{ color: '#7f8c8d', fontSize: 14, marginBottom: 20, lineHeight: 1.6 }}>
+          <h2 style={{ color: 'var(--text)', marginBottom: 8 }}>{interviewName}</h2>
+          <p style={{ color: 'var(--text-muted)', fontSize: 14, marginBottom: 20, lineHeight: 1.6 }}>
             You've been invited to a short interview. Before we begin, what should we call you?
           </p>
           <form onSubmit={submitName}>
@@ -238,7 +238,7 @@ export const InterviewChat: React.FC = () => {
             <button
               type="submit"
               className="button"
-              style={{ background: '#3498db', width: '100%' }}
+              style={{ background: 'var(--accent)', width: '100%' }}
               disabled={!nameInput.trim()}
             >
               Start interview
@@ -255,8 +255,8 @@ export const InterviewChat: React.FC = () => {
       <header
         style={{
           padding: '14px 16px',
-          background: '#fff',
-          borderBottom: '1px solid #e0e0e0',
+          background: 'var(--surface)',
+          borderBottom: '1px solid var(--border)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -264,19 +264,19 @@ export const InterviewChat: React.FC = () => {
         }}
       >
         <div style={{ minWidth: 0 }}>
-          <div style={{ fontWeight: 700, color: '#2c3e50', fontSize: 15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <div style={{ fontWeight: 700, color: 'var(--text)', fontSize: 15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {interviewName}
           </div>
           {participantName && (
-            <div style={{ fontSize: 12, color: '#7f8c8d' }}>Interviewing {participantName}</div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Interviewing {participantName}</div>
           )}
         </div>
         <button
           onClick={endInterview}
           style={{
             background: 'none',
-            border: '1px solid #e74c3c',
-            color: '#e74c3c',
+            border: '1px solid var(--danger)',
+            color: 'var(--danger)',
             borderRadius: 4,
             padding: '6px 12px',
             fontSize: 12,
@@ -291,7 +291,7 @@ export const InterviewChat: React.FC = () => {
 
       <div style={{ flex: 1, overflowY: 'auto', padding: 16 }}>
         {messages.length === 0 && !typing && (
-          <div style={{ textAlign: 'center', color: '#95a5a6', fontSize: 13, marginTop: 30 }}>
+          <div style={{ textAlign: 'center', color: 'var(--neutral)', fontSize: 13, marginTop: 30 }}>
             Say hello to get started — the interviewer will guide the conversation.
           </div>
         )}
@@ -306,7 +306,7 @@ export const InterviewChat: React.FC = () => {
             }}
           >
             {m.role === 'system' ? (
-              <div style={{ fontSize: 12, fontStyle: 'italic', color: '#95a5a6', textAlign: 'center' }}>
+              <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--neutral)', textAlign: 'center' }}>
                 {m.content}
               </div>
             ) : (
@@ -319,8 +319,8 @@ export const InterviewChat: React.FC = () => {
                   lineHeight: 1.5,
                   whiteSpace: 'pre-wrap',
                   wordBreak: 'break-word',
-                  background: m.role === 'participant' ? '#3498db' : '#e8eaed',
-                  color: m.role === 'participant' ? '#fff' : '#2c3e50',
+                  background: m.role === 'participant' ? 'var(--accent)' : 'var(--surface-alt)',
+                  color: m.role === 'participant' ? '#fff' : 'var(--text)',
                   borderBottomRightRadius: m.role === 'participant' ? 4 : 14,
                   borderBottomLeftRadius: m.role === 'assistant' ? 4 : 14,
                 }}
@@ -338,8 +338,8 @@ export const InterviewChat: React.FC = () => {
                 borderRadius: 14,
                 fontSize: 13,
                 fontStyle: 'italic',
-                background: '#e8eaed',
-                color: '#7f8c8d',
+                background: 'var(--surface-alt)',
+                color: 'var(--text-muted)',
               }}
             >
               The interviewer is thinking…
@@ -349,9 +349,9 @@ export const InterviewChat: React.FC = () => {
         <div ref={bottomRef} />
       </div>
 
-      <div style={{ background: '#fff', borderTop: '1px solid #e0e0e0', padding: 12 }}>
+      <div style={{ background: 'var(--surface)', borderTop: '1px solid var(--border)', padding: 12 }}>
         {sendError && (
-          <div style={{ color: '#e74c3c', fontSize: 12, marginBottom: 6 }}>{sendError}</div>
+          <div style={{ color: 'var(--danger)', fontSize: 12, marginBottom: 6 }}>{sendError}</div>
         )}
         <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
           <textarea
@@ -372,7 +372,7 @@ export const InterviewChat: React.FC = () => {
             onClick={send}
             disabled={sending || !composerText.trim()}
             style={{
-              background: '#3498db',
+              background: 'var(--accent)',
               opacity: sending || !composerText.trim() ? 0.5 : 1,
               whiteSpace: 'nowrap',
             }}

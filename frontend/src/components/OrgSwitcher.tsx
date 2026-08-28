@@ -5,7 +5,7 @@ import { useAppStore } from '../state/store';
 import { CreateOrgModal } from './CreateOrgModal';
 
 interface OrgSwitcherProps {
-  /** 'dark' fits the sidebar (#2c3e50); 'light' fits white page headers. */
+  /** 'dark' fits the sidebar (var(--text)); 'light' fits white page headers. */
   variant?: 'dark' | 'light';
 }
 
@@ -75,13 +75,13 @@ export const OrgSwitcher: React.FC<OrgSwitcherProps> = ({ variant = 'light' }) =
     textAlign: 'left',
     cursor: 'pointer',
     fontSize: 13,
-    color: '#2c3e50',
+    color: 'var(--text)',
   };
 
   if (orgs.length === 0) {
     // Orgs not loaded (or server predates orgs) — keep the plain brand mark.
     return (
-      <div style={{ fontWeight: 700, fontSize: 18, color: dark ? '#ecf0f1' : '#2c3e50' }}>OpenV</div>
+      <div style={{ fontWeight: 700, fontSize: 18, color: dark ? 'var(--sidebar-text)' : 'var(--text)' }}>OpenV</div>
     );
   }
 
@@ -99,7 +99,7 @@ export const OrgSwitcher: React.FC<OrgSwitcherProps> = ({ variant = 'light' }) =
           border: 'none',
           padding: 0,
           cursor: 'pointer',
-          color: dark ? '#ecf0f1' : '#2c3e50',
+          color: dark ? 'var(--sidebar-text)' : 'var(--text)',
         }}
       >
         <span
@@ -114,9 +114,9 @@ export const OrgSwitcher: React.FC<OrgSwitcherProps> = ({ variant = 'light' }) =
         >
           {activeOrg ? activeOrg.name : 'OpenV'}
         </span>
-        {activeOrg?.type === 'personal' && pill('personal', dark ? '#34495e' : '#ecf0f1', dark ? '#bdc3c7' : '#7f8c8d')}
-        {activeOrg?.type === 'company' && activeOrg.role === 'admin' && pill('admin', '#3498db')}
-        <span style={{ fontSize: 10, color: dark ? '#95a5a6' : '#7f8c8d' }}>▼</span>
+        {activeOrg?.type === 'personal' && pill('personal', dark ? 'var(--sidebar-menu-bg)' : 'var(--neutral-soft)', dark ? 'var(--sidebar-text-dim)' : 'var(--text-muted)')}
+        {activeOrg?.type === 'company' && activeOrg.role === 'admin' && pill('admin', 'var(--accent)')}
+        <span style={{ fontSize: 10, color: dark ? 'var(--sidebar-text-faint)' : 'var(--text-muted)' }}>▼</span>
       </button>
 
       {open && (
@@ -126,30 +126,30 @@ export const OrgSwitcher: React.FC<OrgSwitcherProps> = ({ variant = 'light' }) =
             top: 'calc(100% + 6px)',
             left: 0,
             minWidth: 240,
-            background: '#fff',
+            background: 'var(--surface)',
             borderRadius: 6,
-            border: '1px solid #e0e0e0',
+            border: '1px solid var(--border)',
             boxShadow: '0 6px 18px rgba(0,0,0,0.18)',
             zIndex: 1500,
             overflow: 'hidden',
           }}
         >
-          <div style={{ padding: '8px 14px 4px', fontSize: 11, color: '#7f8c8d', fontWeight: 600, textTransform: 'uppercase' }}>
+          <div style={{ padding: '8px 14px 4px', fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>
             Workspaces
           </div>
           {orgs.map((org) => (
             <button key={org.id} style={menuItemStyle} onClick={() => selectOrg(org.id)}>
-              <span style={{ width: 14, color: '#27ae60', fontWeight: 700 }}>
+              <span style={{ width: 14, color: 'var(--success)', fontWeight: 700 }}>
                 {org.id === activeOrgId ? '✓' : ''}
               </span>
               <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {org.name}
               </span>
-              {org.type === 'personal' && pill('personal', '#ecf0f1', '#7f8c8d')}
-              {org.type === 'company' && org.role === 'admin' && pill('admin', '#3498db')}
+              {org.type === 'personal' && pill('personal', 'var(--neutral-soft)', 'var(--text-muted)')}
+              {org.type === 'company' && org.role === 'admin' && pill('admin', 'var(--accent)')}
             </button>
           ))}
-          <div style={{ borderTop: '1px solid #eee', margin: '4px 0' }} />
+          <div style={{ borderTop: '1px solid var(--border-soft)', margin: '4px 0' }} />
           <button
             style={menuItemStyle}
             onClick={() => {
@@ -161,7 +161,7 @@ export const OrgSwitcher: React.FC<OrgSwitcherProps> = ({ variant = 'light' }) =
             Workspace settings
           </button>
           <button
-            style={{ ...menuItemStyle, color: '#3498db', fontWeight: 600 }}
+            style={{ ...menuItemStyle, color: 'var(--accent)', fontWeight: 600 }}
             onClick={() => {
               setOpen(false);
               setShowCreate(true);

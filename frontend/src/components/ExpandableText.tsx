@@ -27,7 +27,7 @@ export const ExpandableText: React.FC<ExpandableTextProps> = ({ text, limit, sty
           border: 'none',
           padding: 0,
           marginTop: 2,
-          color: '#2980b9',
+          color: 'var(--accent-strong)',
           cursor: 'pointer',
           fontSize: 11.5,
           fontFamily: 'inherit',

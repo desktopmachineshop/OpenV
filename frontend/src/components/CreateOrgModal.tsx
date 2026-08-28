@@ -51,7 +51,7 @@ export const CreateOrgModal: React.FC<CreateOrgModalProps> = ({ onClose, onCreat
       style={{
         position: 'fixed',
         inset: 0,
-        background: 'rgba(44, 62, 80, 0.55)',
+        background: 'var(--overlay)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -61,10 +61,10 @@ export const CreateOrgModal: React.FC<CreateOrgModalProps> = ({ onClose, onCreat
       <div
         className="card"
         onClick={(e) => e.stopPropagation()}
-        style={{ width: 400, background: '#fff', borderRadius: 8, padding: 24, margin: 0 }}
+        style={{ width: 400, background: 'var(--surface)', borderRadius: 8, padding: 24, margin: 0 }}
       >
-        <h3 style={{ marginTop: 0, color: '#2c3e50' }}>Create a company workspace</h3>
-        <p style={{ fontSize: 13, color: '#7f8c8d' }}>
+        <h3 style={{ marginTop: 0, color: 'var(--text)' }}>Create a company workspace</h3>
+        <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
           A company workspace has its own projects, members, teams, AI providers and worker keys.
           You will be its admin.
         </p>
@@ -79,7 +79,7 @@ export const CreateOrgModal: React.FC<CreateOrgModalProps> = ({ onClose, onCreat
             />
           </div>
           {error && (
-            <div style={{ color: '#e74c3c', fontSize: 13, marginBottom: 12 }}>{String(error)}</div>
+            <div style={{ color: 'var(--danger)', fontSize: 13, marginBottom: 12 }}>{String(error)}</div>
           )}
           <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
             <button

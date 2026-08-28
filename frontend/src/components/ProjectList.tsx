@@ -253,7 +253,7 @@ export const ProjectList: React.FC = () => {
           {error}
           <button 
             onClick={() => setError('')}
-            style={{ marginLeft: '10px', background: 'none', border: 'none', color: '#e74c3c', cursor: 'pointer' }}
+            style={{ marginLeft: '10px', background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer' }}
           >
             ✕
           </button>

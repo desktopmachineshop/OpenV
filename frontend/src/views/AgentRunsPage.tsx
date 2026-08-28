@@ -104,12 +104,12 @@ export const AgentRunsPage: React.FC = () => {
         {`@keyframes ovPulseRun { 0% { opacity: 1; } 50% { opacity: 0.45; } 100% { opacity: 1; } }`}
       </style>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
-        <h2 style={{ color: '#2c3e50', margin: 0 }}>Runs</h2>
+        <h2 style={{ color: 'var(--text)', margin: 0 }}>Runs</h2>
         <button
           onClick={() => setShowProposals(!showProposals)}
           style={{
-            background: pendingCount > 0 ? '#f39c12' : '#ecf0f1',
-            color: pendingCount > 0 ? '#fff' : '#7f8c8d',
+            background: pendingCount > 0 ? 'var(--warning)' : 'var(--neutral-soft)',
+            color: pendingCount > 0 ? '#fff' : 'var(--text-muted)',
             border: 'none',
             padding: '6px 14px',
             borderRadius: 14,
@@ -121,7 +121,7 @@ export const AgentRunsPage: React.FC = () => {
           Pending approvals ({pendingCount})
         </button>
         <div style={{ flex: 1 }} />
-        <label style={{ margin: 0, fontSize: 13, color: '#7f8c8d' }}>Status</label>
+        <label style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)' }}>Status</label>
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
@@ -135,16 +135,16 @@ export const AgentRunsPage: React.FC = () => {
         </select>
       </div>
 
-      {error && <div style={{ color: '#e74c3c', fontSize: 13, marginBottom: 8 }}>{error}</div>}
+      {error && <div style={{ color: 'var(--danger)', fontSize: 13, marginBottom: 8 }}>{error}</div>}
 
       {workerStatus &&
         workerStatus.queue.queued > 0 &&
         !workerStatus.workers.some((w) => w.online) && (
           <div
             style={{
-              background: '#fef5e7',
-              border: '1px solid #f39c12',
-              color: '#9c6a0b',
+              background: 'var(--tint-yellow)',
+              border: '1px solid var(--warning)',
+              color: 'var(--warning-text)',
               padding: '10px 14px',
               borderRadius: 4,
               marginBottom: 10,
@@ -156,7 +156,7 @@ export const AgentRunsPage: React.FC = () => {
             <button
               onClick={() => setShowConnect(true)}
               style={{
-                background: '#f39c12',
+                background: 'var(--warning)',
                 color: '#fff',
                 border: 'none',
                 padding: '4px 12px',
@@ -169,7 +169,7 @@ export const AgentRunsPage: React.FC = () => {
             >
               Open Agent Connector
             </button>
-            <Link to="/org/settings?tab=worker-keys" style={{ color: '#9c6a0b', fontWeight: 600 }}>
+            <Link to="/org/settings?tab=worker-keys" style={{ color: 'var(--warning-text)', fontWeight: 600 }}>
               Runner settings
             </Link>
           </div>
@@ -191,9 +191,9 @@ export const AgentRunsPage: React.FC = () => {
         workerStatus.workers.filter((w) => w.online).every((w) => w.hosted) && (
           <div
             style={{
-              background: '#eaf2f8',
-              border: '1px solid #3498db',
-              color: '#21618c',
+              background: 'var(--tint-blue)',
+              border: '1px solid var(--accent)',
+              color: 'var(--accent-text)',
               padding: '10px 14px',
               borderRadius: 4,
               marginBottom: 10,
@@ -219,11 +219,11 @@ export const AgentRunsPage: React.FC = () => {
                       key={h}
                       style={{
                         textAlign: 'left',
-                        borderBottom: '2px solid #ecf0f1',
+                        borderBottom: '2px solid var(--neutral-soft)',
                         padding: '10px 12px',
-                        color: '#7f8c8d',
+                        color: 'var(--text-muted)',
                         fontWeight: 600,
-                        background: '#fff',
+                        background: 'var(--surface)',
                       }}
                     >
                       {h}
@@ -239,16 +239,16 @@ export const AgentRunsPage: React.FC = () => {
                     title={run.worker_id ? `executed by ${run.worker_id}` : undefined}
                     style={{
                       cursor: 'pointer',
-                      background: selectedRunId === run.id ? '#eaf2f8' : '#fff',
+                      background: selectedRunId === run.id ? 'var(--tint-blue)' : 'var(--surface)',
                     }}
                   >
-                    <td style={{ padding: '9px 12px', borderBottom: '1px solid #ecf0f1' }}>
+                    <td style={{ padding: '9px 12px', borderBottom: '1px solid var(--neutral-soft)' }}>
                       🤖 {run.agent_name || run.agent_id}
                       {run.team_id && (
-                        <span style={{ fontSize: 11, color: '#7f8c8d', marginLeft: 6 }}>(crew)</span>
+                        <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 6 }}>(crew)</span>
                       )}
                     </td>
-                    <td style={{ padding: '9px 12px', borderBottom: '1px solid #ecf0f1' }}>
+                    <td style={{ padding: '9px 12px', borderBottom: '1px solid var(--neutral-soft)' }}>
                       <span
                         style={{
                           display: 'inline-block',
@@ -277,8 +277,8 @@ export const AgentRunsPage: React.FC = () => {
                               marginLeft: 6,
                               padding: '2px 8px',
                               borderRadius: 12,
-                              background: '#f4ecf7',
-                              color: '#8e44ad',
+                              background: 'var(--tint-purple)',
+                              color: 'var(--purple)',
                               fontSize: 10.5,
                               fontWeight: 600,
                             }}
@@ -287,25 +287,25 @@ export const AgentRunsPage: React.FC = () => {
                           </span>
                         )}
                     </td>
-                    <td style={{ padding: '9px 12px', borderBottom: '1px solid #ecf0f1', color: '#555' }}>
+                    <td style={{ padding: '9px 12px', borderBottom: '1px solid var(--neutral-soft)', color: 'var(--text-body)' }}>
                       {run.started_at ? new Date(run.started_at).toLocaleString() : '—'}
                     </td>
-                    <td style={{ padding: '9px 12px', borderBottom: '1px solid #ecf0f1', color: '#555' }}>
+                    <td style={{ padding: '9px 12px', borderBottom: '1px solid var(--neutral-soft)', color: 'var(--text-body)' }}>
                       {formatDuration(run)}
                     </td>
-                    <td style={{ padding: '9px 12px', borderBottom: '1px solid #ecf0f1', color: '#555' }}>
+                    <td style={{ padding: '9px 12px', borderBottom: '1px solid var(--neutral-soft)', color: 'var(--text-body)' }}>
                       {run.tokens_in + run.tokens_out > 0
                         ? (run.tokens_in + run.tokens_out).toLocaleString()
                         : '—'}
                     </td>
-                    <td style={{ padding: '9px 12px', borderBottom: '1px solid #ecf0f1', color: '#555' }}>
+                    <td style={{ padding: '9px 12px', borderBottom: '1px solid var(--neutral-soft)', color: 'var(--text-body)' }}>
                       {run.cost_usd != null ? `$${run.cost_usd.toFixed(4)}` : '—'}
                     </td>
                   </tr>
                 ))}
                 {runs.length === 0 && (
                   <tr>
-                    <td colSpan={6} style={{ padding: 16, color: '#7f8c8d', background: '#fff' }}>
+                    <td colSpan={6} style={{ padding: 16, color: 'var(--text-muted)', background: 'var(--surface)' }}>
                       No runs yet. Launch an agent from the Agents page or the board.
                     </td>
                   </tr>

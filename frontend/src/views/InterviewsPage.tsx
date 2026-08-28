@@ -13,7 +13,7 @@ import { useAppStore } from '../state/store';
 const sectionTitle: React.CSSProperties = {
   fontSize: 16,
   fontWeight: 600,
-  color: '#2c3e50',
+  color: 'var(--text)',
   marginBottom: 12,
 };
 
@@ -191,22 +191,22 @@ export const InterviewsPage: React.FC = () => {
   });
 
   if (loading) {
-    return <div style={{ padding: 32, color: '#7f8c8d' }}>Loading interviews…</div>;
+    return <div style={{ padding: 32, color: 'var(--text-muted)' }}>Loading interviews…</div>;
   }
 
   return (
     <div style={{ padding: 24, maxWidth: 1100, margin: '0 auto' }}>
-      <h2 style={{ color: '#2c3e50', marginBottom: 4 }}>Interviews</h2>
-      <p style={{ color: '#7f8c8d', fontSize: 13, marginBottom: 20 }}>
+      <h2 style={{ color: 'var(--text)', marginBottom: 4 }}>Interviews</h2>
+      <p style={{ color: 'var(--text-muted)', fontSize: 13, marginBottom: 20 }}>
         Create user interviews, share invite links, and review what an AI interviewer learned.
       </p>
 
       {error && (
         <div
           style={{
-            background: '#fdecea',
-            border: '1px solid #e74c3c',
-            color: '#c0392b',
+            background: 'var(--tint-red)',
+            border: '1px solid var(--danger)',
+            color: 'var(--danger-strong)',
             padding: '10px 14px',
             borderRadius: 4,
             marginBottom: 16,
@@ -216,7 +216,7 @@ export const InterviewsPage: React.FC = () => {
           {error}{' '}
           <button
             onClick={() => setError('')}
-            style={{ background: 'none', border: 'none', color: '#c0392b', cursor: 'pointer', width: 'auto', padding: 0 }}
+            style={{ background: 'none', border: 'none', color: 'var(--danger-strong)', cursor: 'pointer', width: 'auto', padding: 0 }}
           >
             ✕
           </button>
@@ -245,7 +245,7 @@ export const InterviewsPage: React.FC = () => {
             )}
             <button
               className="button-secondary"
-              style={{ padding: '6px 14px', background: '#3498db' }}
+              style={{ padding: '6px 14px', background: 'var(--accent)' }}
               onClick={() => setShowNewInterview(!showNewInterview)}
             >
               {showNewInterview ? 'Cancel' : '+ New interview'}
@@ -254,7 +254,7 @@ export const InterviewsPage: React.FC = () => {
         </div>
 
         {showNewInterview && (
-          <form onSubmit={createInterview} style={{ background: '#f8f9fa', borderRadius: 4, padding: 14, marginBottom: 14 }}>
+          <form onSubmit={createInterview} style={{ background: 'var(--surface-alt)', borderRadius: 4, padding: 14, marginBottom: 14 }}>
             <div className="form-group">
               <label>Interview name *</label>
               <input
@@ -283,7 +283,7 @@ export const InterviewsPage: React.FC = () => {
                   </option>
                 ))}
               </select>
-              <div style={{ fontSize: 12, color: '#95a5a6', marginTop: 4 }}>
+              <div style={{ fontSize: 12, color: 'var(--neutral)', marginTop: 4 }}>
                 Link this interview to the persona the participant represents. Several interviews can share one
                 persona, so you can compare how e.g. different design engineers describe the same needs.
               </div>
@@ -295,26 +295,26 @@ export const InterviewsPage: React.FC = () => {
         )}
 
         {interviews.length === 0 ? (
-          <div style={{ color: '#95a5a6', fontSize: 13 }}>
+          <div style={{ color: 'var(--neutral)', fontSize: 13 }}>
             No interviews yet. Create one and share the invite link — an AI interviewer collects feedback for you.
           </div>
         ) : filteredInterviews.length === 0 ? (
-          <div style={{ color: '#95a5a6', fontSize: 13 }}>No interviews match this persona filter.</div>
+          <div style={{ color: 'var(--neutral)', fontSize: 13 }}>No interviews match this persona filter.</div>
         ) : (
           filteredInterviews.map((iv) => (
-            <div key={iv.id} style={{ border: '1px solid #eee', borderRadius: 4, marginBottom: 8 }}>
+            <div key={iv.id} style={{ border: '1px solid var(--border-soft)', borderRadius: 4, marginBottom: 8 }}>
               <div
                 style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', cursor: 'pointer' }}
                 onClick={() => toggleInterview(iv)}
               >
-                <span style={{ fontSize: 12, color: '#7f8c8d' }}>{expandedInterviewId === iv.id ? '▾' : '▸'}</span>
-                <div style={{ flex: 1, fontSize: 14, fontWeight: 600, color: '#2c3e50' }}>{iv.name}</div>
+                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{expandedInterviewId === iv.id ? '▾' : '▸'}</span>
+                <div style={{ flex: 1, fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>{iv.name}</div>
                 {iv.persona_artifact_id && (
-                  <span style={chip('#8e44ad')} title="Linked persona">
+                  <span style={chip('var(--purple)')} title="Linked persona">
                     {personaTitle(iv.persona_artifact_id)}
                   </span>
                 )}
-                <span style={chip(iv.status === 'open' ? '#27ae60' : '#95a5a6')}>{iv.status}</span>
+                <span style={chip(iv.status === 'open' ? 'var(--success)' : 'var(--neutral)')}>{iv.status}</span>
                 <button
                   className="button-secondary"
                   style={{ padding: '5px 10px', fontSize: 12 }}
@@ -328,7 +328,7 @@ export const InterviewsPage: React.FC = () => {
                 {iv.status !== 'closed' && (
                   <button
                     className="button-secondary"
-                    style={{ padding: '5px 10px', fontSize: 12, background: '#e74c3c' }}
+                    style={{ padding: '5px 10px', fontSize: 12, background: 'var(--danger)' }}
                     onClick={(e) => {
                       e.stopPropagation();
                       closeInterview(iv);
@@ -339,13 +339,13 @@ export const InterviewsPage: React.FC = () => {
                 )}
               </div>
               {expandedInterviewId === iv.id && (
-                <div style={{ borderTop: '1px solid #eee', padding: '10px 12px' }}>
+                <div style={{ borderTop: '1px solid var(--border-soft)', padding: '10px 12px' }}>
                   {iv.brief && (
-                    <div style={{ fontSize: 12, color: '#7f8c8d', marginBottom: 8, whiteSpace: 'pre-wrap' }}>{iv.brief}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 8, whiteSpace: 'pre-wrap' }}>{iv.brief}</div>
                   )}
                   {personas.length > 0 && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                      <span style={{ fontSize: 12, fontWeight: 600, color: '#7f8c8d' }}>Persona:</span>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)' }}>Persona:</span>
                       <select
                         value={iv.persona_artifact_id || ''}
                         onChange={(e) => setInterviewPersona(iv, e.target.value)}
@@ -362,9 +362,9 @@ export const InterviewsPage: React.FC = () => {
                     </div>
                   )}
                   {sessionsLoading ? (
-                    <div style={{ color: '#7f8c8d', fontSize: 13 }}>Loading sessions…</div>
+                    <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Loading sessions…</div>
                   ) : sessions.length === 0 ? (
-                    <div style={{ color: '#95a5a6', fontSize: 13 }}>No sessions yet — share the invite link to start.</div>
+                    <div style={{ color: 'var(--neutral)', fontSize: 13 }}>No sessions yet — share the invite link to start.</div>
                   ) : (
                     sessions.map((s) => (
                       <div key={s.id} style={{ marginBottom: 6 }}>
@@ -374,19 +374,19 @@ export const InterviewsPage: React.FC = () => {
                             alignItems: 'center',
                             gap: 10,
                             padding: '6px 8px',
-                            background: '#f8f9fa',
+                            background: 'var(--surface-alt)',
                             borderRadius: 4,
                             cursor: 'pointer',
                             fontSize: 13,
                           }}
                           onClick={() => openTranscript(s)}
                         >
-                          <span style={{ color: '#7f8c8d', fontSize: 11 }}>{openSessionId === s.id ? '▾' : '▸'}</span>
-                          <span style={{ flex: 1, color: '#2c3e50' }}>
+                          <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>{openSessionId === s.id ? '▾' : '▸'}</span>
+                          <span style={{ flex: 1, color: 'var(--text)' }}>
                             {s.participant_name || 'Anonymous participant'}
                           </span>
-                          <span style={chip(s.status === 'active' ? '#f39c12' : '#95a5a6')}>{s.status}</span>
-                          <span style={{ color: '#95a5a6', fontSize: 11 }}>
+                          <span style={chip(s.status === 'active' ? 'var(--warning)' : 'var(--neutral)')}>{s.status}</span>
+                          <span style={{ color: 'var(--neutral)', fontSize: 11 }}>
                             {s.started_at ? new Date(s.started_at).toLocaleString() : ''}
                           </span>
                         </div>
@@ -396,9 +396,9 @@ export const InterviewsPage: React.FC = () => {
                               <div
                                 style={{
                                   fontSize: 12,
-                                  color: '#2c3e50',
-                                  background: '#fef9e7',
-                                  border: '1px solid #f39c12',
+                                  color: 'var(--text)',
+                                  background: 'var(--tint-yellow)',
+                                  border: '1px solid var(--warning)',
                                   borderRadius: 4,
                                   padding: 8,
                                   marginBottom: 10,
@@ -409,9 +409,9 @@ export const InterviewsPage: React.FC = () => {
                               </div>
                             )}
                             {transcriptLoading ? (
-                              <div style={{ color: '#7f8c8d', fontSize: 13 }}>Loading transcript…</div>
+                              <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Loading transcript…</div>
                             ) : transcript.length === 0 ? (
-                              <div style={{ color: '#95a5a6', fontSize: 13 }}>No messages in this session.</div>
+                              <div style={{ color: 'var(--neutral)', fontSize: 13 }}>No messages in this session.</div>
                             ) : (
                               transcript.map((m) => (
                                 <div
@@ -424,7 +424,7 @@ export const InterviewsPage: React.FC = () => {
                                   }}
                                 >
                                   {m.role === 'system' ? (
-                                    <div style={{ fontSize: 11, fontStyle: 'italic', color: '#95a5a6' }}>{m.content}</div>
+                                    <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--neutral)' }}>{m.content}</div>
                                   ) : (
                                     <div
                                       style={{
@@ -433,8 +433,8 @@ export const InterviewsPage: React.FC = () => {
                                         borderRadius: 10,
                                         fontSize: 13,
                                         whiteSpace: 'pre-wrap',
-                                        background: m.role === 'participant' ? '#3498db' : '#ecf0f1',
-                                        color: m.role === 'participant' ? '#fff' : '#2c3e50',
+                                        background: m.role === 'participant' ? 'var(--accent)' : 'var(--neutral-soft)',
+                                        color: m.role === 'participant' ? '#fff' : 'var(--text)',
                                       }}
                                     >
                                       {m.content}

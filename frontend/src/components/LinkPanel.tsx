@@ -86,8 +86,8 @@ export const LinkPanel: React.FC<LinkPanelProps> = ({
   // Render a group of links by type
   const renderLinkGroup = (linksByType: Record<string, Link[]>, direction: 'outgoing' | 'incoming') => {
     const colorScheme = direction === 'outgoing' 
-      ? { header: '#27ae60', bg: '#f0f8f4', border: '#27ae60' }
-      : { header: '#2980b9', bg: '#f0f4f8', border: '#2980b9' };
+      ? { header: 'var(--success)', bg: 'var(--tint-green)', border: 'var(--success)' }
+      : { header: 'var(--accent-strong)', bg: 'var(--surface-alt)', border: 'var(--accent-strong)' };
 
     return Object.entries(linksByType).map(([linkType, typeLinks]) => {
       // Get the appropriate label (with inverse for incoming links)
@@ -141,7 +141,7 @@ export const LinkPanel: React.FC<LinkPanelProps> = ({
                       {direction === 'outgoing' ? getArtifactTitle(link.to_id) : getArtifactTitle(link.from_id)}
                     </span>
                   </strong>
-                  <div style={{ marginTop: '3px', color: '#555', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <div style={{ marginTop: '3px', color: 'var(--text-body)', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     ID: {linkedArtifactId.substring(0, 8)}...
                   </div>
                 </div>
@@ -149,7 +149,7 @@ export const LinkPanel: React.FC<LinkPanelProps> = ({
                   <button
                     onClick={() => onDeleteLink(link.id)}
                     style={{
-                      backgroundColor: '#e74c3c',
+                      backgroundColor: 'var(--danger)',
                       color: 'white',
                       border: 'none',
                       padding: '4px 8px',
@@ -179,7 +179,7 @@ export const LinkPanel: React.FC<LinkPanelProps> = ({
         <div style={{ marginBottom: '20px' }}>
           {outgoingLinks.length > 0 && (
             <div style={{ marginBottom: '15px' }}>
-              <strong style={{ color: '#27ae60', fontSize: '13px' }}>
+              <strong style={{ color: 'var(--success)', fontSize: '13px' }}>
                 ↓ Links From This Artifact ({outgoingLinks.length})
               </strong>
               <div style={{ marginTop: '8px' }}>
@@ -190,7 +190,7 @@ export const LinkPanel: React.FC<LinkPanelProps> = ({
 
           {incomingLinks.length > 0 && (
             <div>
-              <strong style={{ color: '#2980b9', fontSize: '13px' }}>
+              <strong style={{ color: 'var(--accent-strong)', fontSize: '13px' }}>
                 ↑ Links To This Artifact ({incomingLinks.length})
               </strong>
               <div style={{ marginTop: '8px' }}>
@@ -200,14 +200,14 @@ export const LinkPanel: React.FC<LinkPanelProps> = ({
           )}
         </div>
       ) : (
-        <p style={{ color: '#7f8c8d', fontSize: '12px', marginBottom: '15px' }}>
+        <p style={{ color: 'var(--text-muted)', fontSize: '12px', marginBottom: '15px' }}>
           No links yet.
         </p>
       )}
 
       {!readOnly && (
         <div style={{ 
-          borderTop: '1px solid #ecf0f1', 
+          borderTop: '1px solid var(--neutral-soft)', 
           paddingTop: '15px',
           display: 'flex',
           gap: '10px',
@@ -238,7 +238,7 @@ export const LinkPanel: React.FC<LinkPanelProps> = ({
           {isCreating && (
             <>
               <div style={{ flex: 1, minWidth: '150px' }}>
-                <label style={{ display: 'block', fontSize: '11px', marginBottom: '4px', color: '#555' }}>
+                <label style={{ display: 'block', fontSize: '11px', marginBottom: '4px', color: 'var(--text-body)' }}>
                   Link Type
                 </label>
                 <select
@@ -251,7 +251,7 @@ export const LinkPanel: React.FC<LinkPanelProps> = ({
                     width: '100%',
                     padding: '6px',
                     borderRadius: '4px',
-                    border: '1px solid #bdc3c7',
+                    border: '1px solid var(--neutral-mid)',
                     fontSize: '12px',
                   }}
                 >
@@ -264,7 +264,7 @@ export const LinkPanel: React.FC<LinkPanelProps> = ({
               </div>
 
               <div style={{ flex: 2, minWidth: '200px', position: 'relative' }}>
-                <label style={{ display: 'block', fontSize: '11px', marginBottom: '4px', color: '#555' }}>
+                <label style={{ display: 'block', fontSize: '11px', marginBottom: '4px', color: 'var(--text-body)' }}>
                   Link To {linkType && allowedTargetTypes.length > 0 && !allowedTargetTypes.includes('*') 
                     ? `(${allowedTargetTypes.join(', ')})` 
                     : ''}
@@ -284,7 +284,7 @@ export const LinkPanel: React.FC<LinkPanelProps> = ({
                     width: '100%',
                     padding: '6px',
                     borderRadius: '4px',
-                    border: '1px solid #bdc3c7',
+                    border: '1px solid var(--neutral-mid)',
                     fontSize: '12px',
                   }}
                 />
@@ -318,8 +318,8 @@ export const LinkPanel: React.FC<LinkPanelProps> = ({
                         right: 0,
                         maxHeight: '200px',
                         overflowY: 'auto',
-                        backgroundColor: 'white',
-                        border: '1px solid #bdc3c7',
+                        backgroundColor: 'var(--surface)',
+                        border: '1px solid var(--neutral-mid)',
                         borderRadius: '4px',
                         boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
                         zIndex: 1000,
@@ -338,18 +338,18 @@ export const LinkPanel: React.FC<LinkPanelProps> = ({
                             padding: '8px',
                             cursor: 'pointer',
                             fontSize: '12px',
-                            borderBottom: '1px solid #ecf0f1',
-                            backgroundColor: toArtifactId === artifact.id ? '#e8f4f8' : 'white',
+                            borderBottom: '1px solid var(--neutral-soft)',
+                            backgroundColor: toArtifactId === artifact.id ? 'var(--tint-blue)' : 'var(--surface)',
                           }}
                           onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = '#f0f8ff';
+                            e.currentTarget.style.backgroundColor = 'var(--tint-blue)';
                           }}
                           onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = toArtifactId === artifact.id ? '#e8f4f8' : 'white';
+                            e.currentTarget.style.backgroundColor = toArtifactId === artifact.id ? 'var(--tint-blue)' : 'var(--surface)';
                           }}
                         >
                           <div style={{ fontWeight: 'bold' }}>{artifact.title}</div>
-                          <div style={{ fontSize: '10px', color: '#7f8c8d', marginTop: '2px' }}>
+                          <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>
                             {artifact.type} • {artifact.id.substring(0, 8)}...
                           </div>
                         </div>
@@ -362,12 +362,12 @@ export const LinkPanel: React.FC<LinkPanelProps> = ({
                         top: '100%',
                         left: 0,
                         right: 0,
-                        backgroundColor: 'white',
-                        border: '1px solid #bdc3c7',
+                        backgroundColor: 'var(--surface)',
+                        border: '1px solid var(--neutral-mid)',
                         borderRadius: '4px',
                         padding: '8px',
                         fontSize: '12px',
-                        color: '#7f8c8d',
+                        color: 'var(--text-muted)',
                         zIndex: 1000,
                         marginTop: '2px',
                       }}

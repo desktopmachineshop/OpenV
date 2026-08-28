@@ -18,9 +18,9 @@ const chipStyle = (bg: string): React.CSSProperties => ({
 });
 
 const statusColor = (status: string): string => {
-  if (status === 'running') return '#27ae60';
-  if (status === 'error') return '#e74c3c';
-  return '#7f8c8d';
+  if (status === 'running') return 'var(--success)';
+  if (status === 'error') return 'var(--danger)';
+  return 'var(--text-muted)';
 };
 
 // Admin-managed hosted runner container. Non-admins get read-only status.
@@ -127,7 +127,7 @@ export const HostedRunnerCard: React.FC<HostedRunnerCardProps> = ({ orgId, isAdm
   return (
     <div className="card">
       <h3 style={{ marginBottom: 6 }}>Hosted runner</h3>
-      <p style={{ fontSize: 13, color: '#7f8c8d' }}>
+      <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
         A managed runner container operated by this deployment. It executes runs when no personal
         or workspace runner claims them.
       </p>
@@ -135,9 +135,9 @@ export const HostedRunnerCard: React.FC<HostedRunnerCardProps> = ({ orgId, isAdm
       {error && (
         <div
           style={{
-            background: '#fdecea',
-            border: '1px solid #e74c3c',
-            color: '#c0392b',
+            background: 'var(--tint-red)',
+            border: '1px solid var(--danger)',
+            color: 'var(--danger-strong)',
             padding: '10px 14px',
             borderRadius: 4,
             marginBottom: 12,
@@ -149,13 +149,13 @@ export const HostedRunnerCard: React.FC<HostedRunnerCardProps> = ({ orgId, isAdm
       )}
 
       {loading ? (
-        <div style={{ color: '#7f8c8d', fontSize: 13 }}>Loading hosted runner status…</div>
+        <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Loading hosted runner status…</div>
       ) : !status ? null : !status.enabled ? (
         <div
           style={{
-            background: '#eaf2f8',
-            border: '1px solid #3498db',
-            color: '#21618c',
+            background: 'var(--tint-blue)',
+            border: '1px solid var(--accent)',
+            color: 'var(--accent-text)',
             padding: '10px 14px',
             borderRadius: 4,
             fontSize: 13,
@@ -167,7 +167,7 @@ export const HostedRunnerCard: React.FC<HostedRunnerCardProps> = ({ orgId, isAdm
       ) : !record ? (
         isAdmin ? (
           <form onSubmit={handleEnable}>
-            <div style={{ fontSize: 13, color: '#2c3e50', marginBottom: 10 }}>
+            <div style={{ fontSize: 13, color: 'var(--text)', marginBottom: 10 }}>
               Enable a hosted runner for this workspace. Provide at least one provider API key for
               the runner to use.
             </div>
@@ -204,9 +204,9 @@ export const HostedRunnerCard: React.FC<HostedRunnerCardProps> = ({ orgId, isAdm
               </div>
             </div>
             {formError && (
-              <div style={{ color: '#e74c3c', fontSize: 12, marginBottom: 8 }}>{formError}</div>
+              <div style={{ color: 'var(--danger)', fontSize: 12, marginBottom: 8 }}>{formError}</div>
             )}
-            <div style={{ fontSize: 12, color: '#7f8c8d', marginBottom: 12 }}>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12 }}>
               Keys are sent to the runner container once and never stored by OpenV.
             </div>
             <button type="submit" className="button" style={{ width: 'auto' }} disabled={busy}>
@@ -214,7 +214,7 @@ export const HostedRunnerCard: React.FC<HostedRunnerCardProps> = ({ orgId, isAdm
             </button>
           </form>
         ) : (
-          <div style={{ color: '#95a5a6', fontSize: 13 }}>
+          <div style={{ color: 'var(--neutral)', fontSize: 13 }}>
             No hosted runner is set up for this workspace. A workspace admin can enable one.
           </div>
         )
@@ -222,10 +222,10 @@ export const HostedRunnerCard: React.FC<HostedRunnerCardProps> = ({ orgId, isAdm
         <>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
             <span style={chipStyle(statusColor(record.status))}>{record.status || 'unknown'}</span>
-            <span style={{ fontSize: 13, color: '#2c3e50' }}>
+            <span style={{ fontSize: 13, color: 'var(--text)' }}>
               <span
                 style={{
-                  color: status.online ? '#27ae60' : '#95a5a6',
+                  color: status.online ? 'var(--success)' : 'var(--neutral)',
                   marginRight: 4,
                   fontSize: 11,
                 }}
@@ -234,7 +234,7 @@ export const HostedRunnerCard: React.FC<HostedRunnerCardProps> = ({ orgId, isAdm
               </span>
               {status.online ? 'online' : 'offline'}
             </span>
-            <span style={{ fontSize: 12, color: '#7f8c8d' }}>
+            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
               container: <code style={{ fontSize: 12 }}>{record.container_name}</code>
               {status.container_state ? ` (${status.container_state})` : ''}
             </span>
@@ -265,8 +265,8 @@ export const HostedRunnerCard: React.FC<HostedRunnerCardProps> = ({ orgId, isAdm
                   disabled={busy}
                   style={{
                     background: 'none',
-                    border: '1px solid #e74c3c',
-                    color: '#e74c3c',
+                    border: '1px solid var(--danger)',
+                    color: 'var(--danger)',
                     cursor: 'pointer',
                     fontSize: 13,
                     width: 'auto',
@@ -280,18 +280,18 @@ export const HostedRunnerCard: React.FC<HostedRunnerCardProps> = ({ orgId, isAdm
             )}
           </div>
           {record.detail && (
-            <div style={{ fontSize: 12, color: '#7f8c8d', marginTop: 8 }}>{record.detail}</div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 8 }}>{record.detail}</div>
           )}
           {isAdmin && confirmingRemove && (
             <div
               style={{
                 marginTop: 12,
-                border: '1px solid #e74c3c',
-                background: '#fdecea',
+                border: '1px solid var(--danger)',
+                background: 'var(--tint-red)',
                 borderRadius: 4,
                 padding: '10px 14px',
                 fontSize: 13,
-                color: '#c0392b',
+                color: 'var(--danger-strong)',
               }}
             >
               <div style={{ marginBottom: 8 }}>
@@ -304,7 +304,7 @@ export const HostedRunnerCard: React.FC<HostedRunnerCardProps> = ({ orgId, isAdm
                   alignItems: 'center',
                   gap: 6,
                   fontSize: 13,
-                  color: '#c0392b',
+                  color: 'var(--danger-strong)',
                   marginBottom: 10,
                 }}
               >
@@ -321,7 +321,7 @@ export const HostedRunnerCard: React.FC<HostedRunnerCardProps> = ({ orgId, isAdm
                   onClick={handleRemove}
                   disabled={busy}
                   style={{
-                    background: '#e74c3c',
+                    background: 'var(--danger)',
                     border: 'none',
                     color: '#fff',
                     cursor: 'pointer',

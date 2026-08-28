@@ -729,7 +729,7 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
             <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
               <div style={{ fontSize: '18px', fontWeight: 600 }}>{name}</div>
               {description && (
-                <div style={{ fontSize: '11px', color: '#7f8c8d' }}>{description}</div>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{description}</div>
               )}
             </div>
           );
@@ -751,9 +751,9 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
               padding: '12px',
               marginBottom: '15px',
               backgroundColor: 'rgba(231, 76, 60, 0.2)',
-              border: '1px solid #e74c3c',
+              border: '1px solid var(--danger)',
               borderRadius: '4px',
-              color: '#e74c3c',
+              color: 'var(--danger)',
               fontSize: '12px',
             }}
           >
@@ -774,7 +774,7 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
         )}
 
         <div style={{ marginBottom: '20px' }}>
-          <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: '#2c3e50' }}>
+          <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--text)' }}>
             Filter and Search:
           </label>
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -788,9 +788,9 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
                   width: '100%',
                   padding: '8px 160px 8px 8px',
                   borderRadius: '4px',
-                  border: '1px solid #bdc3c7',
+                  border: '1px solid var(--neutral-mid)',
                   fontSize: '14px',
-                  backgroundColor: 'white',
+                  backgroundColor: 'var(--surface)',
                 }}
               />
               <div
@@ -800,7 +800,7 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
                   right: '10px',
                   transform: 'translateY(-50%)',
                   fontSize: '11px',
-                  color: '#7f8c8d',
+                  color: 'var(--text-muted)',
                   maxWidth: '140px',
                   whiteSpace: 'nowrap',
                   overflow: 'hidden',
@@ -824,16 +824,16 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
           {showFilterPanel && (
             <div style={{
               marginTop: '12px',
-              border: '1px solid #e0e0e0',
+              border: '1px solid var(--border)',
               borderRadius: '6px',
               padding: '10px',
-              backgroundColor: '#fafafa',
+              backgroundColor: 'var(--surface-alt)',
               display: 'flex',
               flexDirection: 'column',
               gap: '10px',
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#2c3e50' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--text)' }}>
                   <input
                     type="checkbox"
                     checked={searchExact}
@@ -842,14 +842,14 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
                   Exact match
                 </label>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <span style={{ fontSize: '12px', color: '#2c3e50' }}>Filter logic</span>
+                  <span style={{ fontSize: '12px', color: 'var(--text)' }}>Filter logic</span>
                   <select
                     value={filterLogic}
                     onChange={(e) => setFilterLogic(e.target.value === 'or' ? 'or' : 'and')}
                     style={{
                       padding: '6px',
                       borderRadius: '4px',
-                      border: '1px solid #bdc3c7',
+                      border: '1px solid var(--neutral-mid)',
                       fontSize: '12px',
                     }}
                   >
@@ -879,7 +879,7 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
                           flex: '0 0 140px',
                           padding: '6px',
                           borderRadius: '4px',
-                          border: '1px solid #bdc3c7',
+                          border: '1px solid var(--neutral-mid)',
                           fontSize: '12px',
                         }}
                       >
@@ -901,7 +901,7 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
                           flex: '0 0 140px',
                           padding: '6px',
                           borderRadius: '4px',
-                          border: '1px solid #bdc3c7',
+                          border: '1px solid var(--neutral-mid)',
                           fontSize: '12px',
                         }}
                       >
@@ -927,7 +927,7 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
                             flex: 1,
                             padding: '6px',
                             borderRadius: '4px',
-                            border: '1px solid #bdc3c7',
+                            border: '1px solid var(--neutral-mid)',
                             fontSize: '12px',
                           }}
                         >
@@ -953,7 +953,7 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
                             flex: 1,
                             padding: '6px',
                             borderRadius: '4px',
-                            border: '1px solid #bdc3c7',
+                            border: '1px solid var(--neutral-mid)',
                             fontSize: '12px',
                           }}
                         />
@@ -1033,7 +1033,7 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
                       flex: '0 0 180px',
                       padding: '6px',
                       borderRadius: '4px',
-                      border: '1px solid #bdc3c7',
+                      border: '1px solid var(--neutral-mid)',
                       fontSize: '12px',
                     }}
                   />
@@ -1051,7 +1051,7 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
                       flex: '0 0 220px',
                       padding: '6px',
                       borderRadius: '4px',
-                      border: '1px solid #bdc3c7',
+                      border: '1px solid var(--neutral-mid)',
                       fontSize: '12px',
                     }}
                   >
@@ -1130,15 +1130,15 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
         style={{
           width: '10px',
           cursor: 'col-resize',
-          backgroundColor: isResizing === 'left' ? '#3498db' : 'transparent',
-          borderLeft: '1px solid #e0e0e0',
-          borderRight: '1px solid #e0e0e0',
+          backgroundColor: isResizing === 'left' ? 'var(--accent)' : 'transparent',
+          borderLeft: '1px solid var(--border)',
+          borderRight: '1px solid var(--border)',
           transition: 'background-color 0.2s',
           flexShrink: 0,
         }}
         onMouseEnter={(e) => {
           if (!isResizing) {
-            e.currentTarget.style.backgroundColor = '#ecf0f1';
+            e.currentTarget.style.backgroundColor = 'var(--neutral-soft)';
           }
         }}
         onMouseLeave={(e) => {
@@ -1215,15 +1215,15 @@ export const ModuleView: React.FC<ModuleViewProps> = ({ onSwitchProject }) => {
               style={{
                 width: '10px',
                 cursor: 'col-resize',
-                backgroundColor: isResizing === 'right' ? '#3498db' : 'transparent',
-                borderLeft: '1px solid #e0e0e0',
-                borderRight: '1px solid #e0e0e0',
+                backgroundColor: isResizing === 'right' ? 'var(--accent)' : 'transparent',
+                borderLeft: '1px solid var(--border)',
+                borderRight: '1px solid var(--border)',
                 transition: 'background-color 0.2s',
                 flexShrink: 0,
               }}
               onMouseEnter={(e) => {
                 if (!isResizing) {
-                  e.currentTarget.style.backgroundColor = '#ecf0f1';
+                  e.currentTarget.style.backgroundColor = 'var(--neutral-soft)';
                 }
               }}
               onMouseLeave={(e) => {

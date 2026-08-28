@@ -10,12 +10,27 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #f5f5f5;
+  background-color: var(--bg-app);
+  color: var(--text);
 }
 
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
+}
+
+/* The wordmark is dark charcoal art: keep it on a white chip in dark mode. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .app-logo {
+    background: #ffffff;
+    border-radius: 6px;
+    padding: 4px 10px;
+  }
+}
+:root[data-theme="dark"] .app-logo {
+  background: #ffffff;
+  border-radius: 6px;
+  padding: 4px 10px;
 }
 
 .container {
@@ -25,7 +40,7 @@ code {
 }
 
 .header {
-  background-color: #2c3e50;
+  background-color: var(--sidebar-bg);
   color: white;
   padding: 20px 0;
   margin-bottom: 30px;
@@ -44,7 +59,7 @@ code {
 }
 
 .nav button {
-  background-color: #3498db;
+  background-color: var(--accent);
   color: white;
   border: none;
   padding: 10px 20px;
@@ -55,11 +70,11 @@ code {
 }
 
 .nav button:hover {
-  background-color: #2980b9;
+  background-color: var(--accent-strong);
 }
 
 .button {
-  background-color: #27ae60;
+  background-color: var(--success);
   color: white;
   border: none;
   padding: 10px 20px;
@@ -70,11 +85,11 @@ code {
 }
 
 .button:hover {
-  background-color: #229954;
+  background-color: var(--success-strong);
 }
 
 .button-secondary {
-  background-color: #95a5a6;
+  background-color: var(--neutral);
   color: white;
   border: none;
   padding: 10px 20px;
@@ -85,7 +100,7 @@ code {
 }
 
 .button-secondary:hover {
-  background-color: #7f8c8d;
+  background-color: var(--text-muted);
 }
 
 .form-group {
@@ -101,15 +116,21 @@ label {
 input, textarea, select {
   width: 100%;
   padding: 10px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--border);
   border-radius: 4px;
   font-size: 14px;
   font-family: inherit;
+  background-color: var(--surface);
+  color: var(--text);
+}
+
+input::placeholder, textarea::placeholder {
+  color: var(--text-muted);
 }
 
 input:focus, textarea:focus, select:focus {
   outline: none;
-  border-color: #3498db;
+  border-color: var(--accent);
   box-shadow: 0 0 4px rgba(52, 152, 219, 0.3);
 }
 
@@ -119,8 +140,8 @@ textarea {
 }
 
 .card {
-  background-color: white;
-  border: 1px solid #ddd;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 4px;
   padding: 20px;
   margin-bottom: 20px;
@@ -129,11 +150,11 @@ textarea {
 
 .card h3 {
   margin-bottom: 10px;
-  color: #2c3e50;
+  color: var(--text);
 }
 
 .card p {
-  color: #555;
+  color: var(--text-body);
   line-height: 1.6;
   margin-bottom: 10px;
 }
@@ -147,16 +168,23 @@ textarea {
 
 .table-container {
   overflow-x: auto;
-  background-color: white;
+  background-color: var(--surface);
   border-radius: 4px;
   box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
 
 .ag-theme-quartz {
-  --ag-background-color: #fff;
-  --ag-border-color: #ddd;
-  --ag-header-background-color: #f5f5f5;
-  --ag-row-hover-color: #f9f9f9;
+  --ag-background-color: var(--surface);
+  --ag-border-color: var(--border);
+  --ag-header-background-color: var(--surface-inset);
+  --ag-row-hover-color: var(--surface-alt);
+  --ag-foreground-color: var(--text);
+  --ag-header-foreground-color: var(--text);
+  --ag-secondary-foreground-color: var(--text-muted);
+  --ag-odd-row-background-color: var(--surface);
+  --ag-control-panel-background-color: var(--surface-alt);
+  --ag-tooltip-background-color: var(--surface-alt);
+  --ag-input-background-color: var(--surface);
 }
 
 /* Markdown Content Styling */
@@ -164,21 +192,21 @@ textarea {
   font-size: 2em;
   font-weight: bold;
   margin: 0.5em 0;
-  color: #2c3e50;
+  color: var(--text);
 }
 
 .markdown-content h2 {
   font-size: 1.5em;
   font-weight: bold;
   margin: 0.5em 0;
-  color: #34495e;
+  color: var(--text-secondary);
 }
 
 .markdown-content h3 {
   font-size: 1.17em;
   font-weight: bold;
   margin: 0.5em 0;
-  color: #34495e;
+  color: var(--text-secondary);
 }
 
 .markdown-content p {
@@ -195,7 +223,7 @@ textarea {
 }
 
 .markdown-content code {
-  background-color: #f5f5f5;
+  background-color: var(--surface-inset);
   padding: 2px 6px;
   border-radius: 3px;
   font-family: 'Courier New', monospace;
@@ -203,7 +231,7 @@ textarea {
 }
 
 .markdown-content pre {
-  background-color: #f5f5f5;
+  background-color: var(--surface-inset);
   padding: 12px;
   border-radius: 4px;
   overflow-x: auto;
@@ -225,7 +253,7 @@ textarea {
 }
 
 .markdown-content a {
-  color: #3498db;
+  color: var(--accent);
   text-decoration: none;
 }
 
@@ -234,10 +262,10 @@ textarea {
 }
 
 .markdown-content blockquote {
-  border-left: 4px solid #ddd;
+  border-left: 4px solid var(--border);
   padding-left: 1em;
   margin: 0.5em 0;
-  color: #666;
+  color: var(--text-body);
 }
 
 .markdown-content table {
@@ -248,13 +276,13 @@ textarea {
 
 .markdown-content table th,
 .markdown-content table td {
-  border: 1px solid #ddd;
+  border: 1px solid var(--border);
   padding: 8px;
   text-align: left;
 }
 
 .markdown-content table th {
-  background-color: #f5f5f5;
+  background-color: var(--surface-inset);
   font-weight: bold;
 }
 

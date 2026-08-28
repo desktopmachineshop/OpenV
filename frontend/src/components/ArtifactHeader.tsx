@@ -100,7 +100,7 @@ export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
             <span
               style={{
                 display: 'inline-block',
-                backgroundColor: '#3498db',
+                backgroundColor: 'var(--accent)',
                 color: 'white',
                 padding: '4px 8px',
                 borderRadius: '3px',
@@ -109,17 +109,17 @@ export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
             >
               {displayArtifact.type}
             </span>
-            <span style={{ fontSize: '12px', color: '#7f8c8d' }}>
+            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
               Version {displayArtifact.version}
             </span>
             {displayArtifact.version > 1 && (
-              <span style={{ fontSize: '12px', color: '#7f8c8d' }}>
+              <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
                 • {versions.length} total
               </span>
             )}
           </div>
-          <p style={{ margin: 0, fontSize: '12px', color: '#7f8c8d' }}>
-            UID: <code style={{ backgroundColor: '#ecf0f1', padding: '2px 6px', borderRadius: '3px' }}>
+          <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-muted)' }}>
+            UID: <code style={{ backgroundColor: 'var(--neutral-soft)', padding: '2px 6px', borderRadius: '3px' }}>
               {displayArtifact.id}
             </code>
           </p>
@@ -130,7 +130,7 @@ export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
             onClick={() => onEdit(displayArtifact)}
             disabled={localPreviewVersion !== null}
             style={{
-              backgroundColor: localPreviewVersion ? '#bdc3c7' : '#3498db',
+              backgroundColor: localPreviewVersion ? 'var(--neutral-mid)' : 'var(--accent)',
               color: 'white',
               border: 'none',
               padding: '6px 12px',
@@ -146,7 +146,7 @@ export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
             onClick={() => onDelete(displayArtifact.id)}
             disabled={localPreviewVersion !== null}
             style={{
-              backgroundColor: localPreviewVersion ? '#bdc3c7' : '#e74c3c',
+              backgroundColor: localPreviewVersion ? 'var(--neutral-mid)' : 'var(--danger)',
               color: 'white',
               border: 'none',
               padding: '6px 12px',
@@ -162,7 +162,7 @@ export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
             <button
               onClick={() => setShowVersions(!showVersions)}
               style={{
-                backgroundColor: '#27ae60',
+                backgroundColor: 'var(--success)',
                 color: 'white',
                 border: 'none',
                 padding: '6px 12px',
@@ -183,15 +183,15 @@ export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
           style={{
             marginTop: '16px',
             paddingTop: '16px',
-            borderTop: '1px solid #ecf0f1',
+            borderTop: '1px solid var(--neutral-soft)',
           }}
         >
-          <h4 style={{ margin: '0 0 12px 0', fontSize: '13px', color: '#2c3e50' }}>
+          <h4 style={{ margin: '0 0 12px 0', fontSize: '13px', color: 'var(--text)' }}>
             Version History
           </h4>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {loadingVersions ? (
-              <p style={{ color: '#7f8c8d', fontSize: '12px' }}>Loading versions...</p>
+              <p style={{ color: 'var(--text-muted)', fontSize: '12px' }}>Loading versions...</p>
             ) : (
               versions.map((v) => (
                 <div
@@ -201,9 +201,9 @@ export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
                     justifyContent: 'space-between',
                     alignItems: 'center',
                     padding: '8px',
-                    backgroundColor: !v.valid_to ? '#ecf0f1' : '#f8f9fa',
+                    backgroundColor: !v.valid_to ? 'var(--neutral-soft)' : 'var(--surface-alt)',
                     borderRadius: '3px',
-                    border: '1px solid #dcdde1',
+                    border: '1px solid var(--border)',
                   }}
                 >
                   <div style={{ fontSize: '12px' }}>
@@ -212,7 +212,7 @@ export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
                       <span
                         style={{
                           marginLeft: '6px',
-                          backgroundColor: '#27ae60',
+                          backgroundColor: 'var(--success)',
                           color: 'white',
                           padding: '2px 6px',
                           borderRadius: '3px',
@@ -222,7 +222,7 @@ export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
                         Current
                       </span>
                     )}
-                    <div style={{ color: '#7f8c8d', fontSize: '11px', marginTop: '2px' }}>
+                    <div style={{ color: 'var(--text-muted)', fontSize: '11px', marginTop: '2px' }}>
                       Updated: {new Date(v.updated_at).toLocaleString()}
                     </div>
                   </div>
@@ -231,7 +231,7 @@ export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
                       <button
                         onClick={() => setLocalPreviewVersion(v)}
                         style={{
-                          backgroundColor: '#9b59b6',
+                          backgroundColor: 'var(--purple-soft)',
                           color: 'white',
                           border: 'none',
                           padding: '4px 8px',
@@ -245,7 +245,7 @@ export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
                       <button
                         onClick={() => handleVersionRestore(v.version)}
                         style={{
-                          backgroundColor: '#27ae60',
+                          backgroundColor: 'var(--success)',
                           color: 'white',
                           border: 'none',
                           padding: '4px 8px',

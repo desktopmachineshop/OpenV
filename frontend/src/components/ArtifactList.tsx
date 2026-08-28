@@ -223,17 +223,17 @@ export const ArtifactList: React.FC<ArtifactListProps> = ({
           style={{
             padding: '12px',
             paddingLeft: `${12 + indentPx}px`,
-            borderBottom: '1px solid #eee',
+            borderBottom: '1px solid var(--border-soft)',
             cursor: 'pointer',
             backgroundColor:
-              selectedId === artifact.id ? '#e8f4f8' : 'transparent',
+              selectedId === artifact.id ? 'var(--tint-blue)' : 'transparent',
             transition: 'background-color 0.2s',
-            outline: dragOverId === artifact.id ? '2px dashed #7f8c8d' : 'none',
+            outline: dragOverId === artifact.id ? '2px dashed var(--text-muted)' : 'none',
             opacity: draggingId === artifact.id ? 0.6 : 1,
           }}
           onMouseOver={(e) => {
             if (selectedId !== artifact.id) {
-              e.currentTarget.style.backgroundColor = '#f9f9f9';
+              e.currentTarget.style.backgroundColor = 'var(--surface-alt)';
             }
           }}
           onMouseOut={(e) => {
@@ -244,9 +244,9 @@ export const ArtifactList: React.FC<ArtifactListProps> = ({
         >
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
             <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 600, color: '#2c3e50', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{ fontWeight: 600, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 {depth > 0 && (
-                  <span style={{ color: '#95a5a6', fontSize: '10px' }}>└</span>
+                  <span style={{ color: 'var(--neutral)', fontSize: '10px' }}>└</span>
                 )}
                 {hasChildren && (
                   <button
@@ -260,7 +260,7 @@ export const ArtifactList: React.FC<ArtifactListProps> = ({
                       background: 'transparent',
                       padding: 0,
                       cursor: 'pointer',
-                      color: '#7f8c8d',
+                      color: 'var(--text-muted)',
                       fontSize: '12px',
                       width: '14px',
                       textAlign: 'center',
@@ -272,10 +272,10 @@ export const ArtifactList: React.FC<ArtifactListProps> = ({
                 )}
                 {artifact.title}
               </div>
-              <div style={{ fontSize: '12px', color: '#7f8c8d', marginTop: '4px' }}>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>
                 {artifact.type} • v{artifact.version}
                 {hasChildren && (
-                  <span style={{ marginLeft: '6px', color: '#95a5a6' }}>
+                  <span style={{ marginLeft: '6px', color: 'var(--neutral)' }}>
                     {collapsed ? `(collapsed · ${descendantCount})` : `(${node.children.length})`}
                   </span>
                 )}
@@ -294,9 +294,9 @@ export const ArtifactList: React.FC<ArtifactListProps> = ({
                     disabled={!neighborIds.up}
                     title="Move up"
                     style={{
-                      backgroundColor: neighborIds.up ? '#ecf0f1' : '#f5f5f5',
-                      color: '#2c3e50',
-                      border: '1px solid #dcdde1',
+                      backgroundColor: neighborIds.up ? 'var(--neutral-soft)' : 'var(--surface-inset)',
+                      color: 'var(--text)',
+                      border: '1px solid var(--border)',
                       padding: '2px 6px',
                       borderRadius: '3px',
                       cursor: neighborIds.up ? 'pointer' : 'not-allowed',
@@ -316,9 +316,9 @@ export const ArtifactList: React.FC<ArtifactListProps> = ({
                     disabled={!neighborIds.down}
                     title="Move down"
                     style={{
-                      backgroundColor: neighborIds.down ? '#ecf0f1' : '#f5f5f5',
-                      color: '#2c3e50',
-                      border: '1px solid #dcdde1',
+                      backgroundColor: neighborIds.down ? 'var(--neutral-soft)' : 'var(--surface-inset)',
+                      color: 'var(--text)',
+                      border: '1px solid var(--border)',
                       padding: '2px 6px',
                       borderRadius: '3px',
                       cursor: neighborIds.down ? 'pointer' : 'not-allowed',
@@ -366,8 +366,8 @@ export const ArtifactList: React.FC<ArtifactListProps> = ({
               position: 'fixed',
               left: `${contextMenu.x}px`,
               top: `${contextMenu.y}px`,
-              backgroundColor: 'white',
-              border: '1px solid #dcdde1',
+              backgroundColor: 'var(--surface)',
+              border: '1px solid var(--border)',
               borderRadius: '4px',
               boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
               zIndex: 1000,
@@ -391,10 +391,10 @@ export const ArtifactList: React.FC<ArtifactListProps> = ({
                 textAlign: 'left',
                 cursor: 'pointer',
                 fontSize: '12px',
-                color: '#2c3e50',
-                borderBottom: '1px solid #ecf0f1',
+                color: 'var(--text)',
+                borderBottom: '1px solid var(--neutral-soft)',
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f0f8ff')}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--tint-blue)')}
               onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
             >
               ➕ Create before
@@ -416,10 +416,10 @@ export const ArtifactList: React.FC<ArtifactListProps> = ({
                 textAlign: 'left',
                 cursor: 'pointer',
                 fontSize: '12px',
-                color: '#2c3e50',
-                borderBottom: '1px solid #ecf0f1',
+                color: 'var(--text)',
+                borderBottom: '1px solid var(--neutral-soft)',
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f0f8ff')}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--tint-blue)')}
               onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
             >
               ➕ Create after
@@ -441,9 +441,9 @@ export const ArtifactList: React.FC<ArtifactListProps> = ({
                 textAlign: 'left',
                 cursor: 'pointer',
                 fontSize: '12px',
-                color: '#2c3e50',
+                color: 'var(--text)',
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f0f8ff')}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--tint-blue)')}
               onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
             >
               ➕ Create new child

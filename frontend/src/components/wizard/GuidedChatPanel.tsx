@@ -341,7 +341,7 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
   const renderSuggestion = (seg: Segment & { type: 'suggestion' }, key: string) => {
     if (!seg.suggestion) {
       return (
-        <pre key={key} style={{ fontSize: 11, background: '#f4f6f7', padding: 8, borderRadius: 4, overflowX: 'auto' }}>
+        <pre key={key} style={{ fontSize: 11, background: 'var(--surface-alt)', padding: 8, borderRadius: 4, overflowX: 'auto' }}>
           {seg.raw}
         </pre>
       );
@@ -366,25 +366,25 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
       <div
         key={key}
         style={{
-          border: '1px solid #d6e4f0',
-          background: '#f4f9fd',
+          border: '1px solid var(--tint-blue-border)',
+          background: 'var(--tint-blue)',
           borderRadius: 6,
           padding: '8px 10px',
           margin: '6px 0',
         }}
       >
-        <div style={{ fontSize: 10, fontWeight: 700, color: '#3498db', textTransform: 'uppercase', marginBottom: 3 }}>
+        <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', marginBottom: 3 }}>
           {KIND_LABELS[s.kind] || s.kind}
         </div>
-        <div style={{ fontSize: 13, color: '#2c3e50', marginBottom: detail ? 2 : 6 }}>{title}</div>
-        {detail && <div style={{ fontSize: 12, color: '#7f8c8d', marginBottom: 6 }}>{detail}</div>}
+        <div style={{ fontSize: 13, color: 'var(--text)', marginBottom: detail ? 2 : 6 }}>{title}</div>
+        {detail && <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 6 }}>{detail}</div>}
         {s.replaces && (
-          <div style={{ fontSize: 11, color: '#95a5a6', fontStyle: 'italic', marginBottom: 6 }}>
+          <div style={{ fontSize: 11, color: 'var(--neutral)', fontStyle: 'italic', marginBottom: 6 }}>
             Replaces: {String(s.replaces)}
           </div>
         )}
         {isAdded ? (
-          <span style={{ fontSize: 12, color: '#27ae60' }}>{doneLabel}</span>
+          <span style={{ fontSize: 12, color: 'var(--success)' }}>{doneLabel}</span>
         ) : (
           <button
             className="button-secondary"
@@ -408,8 +408,8 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
         minWidth: 340,
         display: 'flex',
         flexDirection: 'column',
-        background: '#fff',
-        border: '1px solid #ddd',
+        background: 'var(--surface)',
+        border: '1px solid var(--border)',
         borderRadius: 4,
         position: 'sticky',
         top: 20,
@@ -417,16 +417,16 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
         minHeight: 420,
       }}
     >
-      <div style={{ padding: '10px 14px', borderBottom: '1px solid #e0e0e0' }}>
-        <div style={{ fontWeight: 700, color: '#2c3e50', fontSize: 14 }}>Requirements Copilot</div>
-        <div style={{ fontSize: 11, color: '#7f8c8d' }}>
+      <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--border)' }}>
+        <div style={{ fontWeight: 700, color: 'var(--text)', fontSize: 14 }}>Requirements Copilot</div>
+        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
           Asks questions and suggests entries you can add with one click.
         </div>
       </div>
 
       <div ref={scrollerRef} style={{ flex: 1, overflowY: 'auto', padding: 12 }}>
         {messages.length === 0 && !typing && (
-          <div style={{ textAlign: 'center', color: '#95a5a6', fontSize: 12, marginTop: 24 }}>
+          <div style={{ textAlign: 'center', color: 'var(--neutral)', fontSize: 12, marginTop: 24 }}>
             The copilot will join in a moment — or ask it anything about your requirements.
           </div>
         )}
@@ -441,7 +441,7 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
             }}
           >
             {m.role === 'system' ? (
-              <div style={{ fontSize: 11, fontStyle: 'italic', color: '#95a5a6', textAlign: 'center' }}>
+              <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--neutral)', textAlign: 'center' }}>
                 {m.content}
               </div>
             ) : (
@@ -454,8 +454,8 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
                   lineHeight: 1.5,
                   whiteSpace: 'pre-wrap',
                   wordBreak: 'break-word',
-                  background: m.role === 'user' ? '#3498db' : '#eef1f4',
-                  color: m.role === 'user' ? '#fff' : '#2c3e50',
+                  background: m.role === 'user' ? 'var(--accent)' : 'var(--surface-alt)',
+                  color: m.role === 'user' ? '#fff' : 'var(--text)',
                   borderBottomRightRadius: m.role === 'user' ? 4 : 12,
                   borderBottomLeftRadius: m.role === 'assistant' ? 4 : 12,
                 }}
@@ -485,7 +485,7 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
                                 className="button"
                                 onClick={() => applyAll(pending)}
                                 style={{
-                                  background: '#3498db',
+                                  background: 'var(--accent)',
                                   padding: '5px 12px',
                                   fontSize: 12,
                                   width: 'auto',
@@ -506,19 +506,19 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
         {runnerOffline && (
           <div
             style={{
-              border: '1px solid #f0c36d',
-              background: '#fdf6e3',
+              border: '1px solid var(--tint-yellow-border)',
+              background: 'var(--tint-yellow)',
               borderRadius: 6,
               padding: '10px 12px',
               marginBottom: 8,
               fontSize: 12,
-              color: '#8a6d3b',
+              color: 'var(--warning-text)',
               lineHeight: 1.5,
             }}
           >
             <div style={{ fontWeight: 700, marginBottom: 4 }}>⚠ Copilot agent not connected</div>
             No runner is online to answer, so copilot replies are paused. To connect one, open{' '}
-            <Link to="/org/settings" style={{ color: '#8a6d3b', fontWeight: 600 }}>
+            <Link to="/org/settings" style={{ color: 'var(--warning-text)', fontWeight: 600 }}>
               Workspace Settings → Runners
             </Link>{' '}
             and launch the Agent Connector on your machine — or restart it if it was already running.
@@ -533,8 +533,8 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
                 borderRadius: 12,
                 fontSize: 12,
                 fontStyle: 'italic',
-                background: '#eef1f4',
-                color: '#7f8c8d',
+                background: 'var(--surface-alt)',
+                color: 'var(--text-muted)',
               }}
             >
               The copilot is thinking…
@@ -543,7 +543,7 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
         )}
       </div>
 
-      <div style={{ borderTop: '1px solid #e0e0e0', padding: 10 }}>
+      <div style={{ borderTop: '1px solid var(--border)', padding: 10 }}>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
           {QUICK_ACTIONS.map((qa) => (
             <button
@@ -552,9 +552,9 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
               disabled={sending}
               title={qa.title}
               style={{
-                background: '#f4f9fd',
-                border: '1px solid #d6e4f0',
-                color: '#2980b9',
+                background: 'var(--tint-blue)',
+                border: '1px solid var(--tint-blue-border)',
+                color: 'var(--accent-strong)',
                 borderRadius: 12,
                 padding: '4px 10px',
                 fontSize: 11,
@@ -568,7 +568,7 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
             </button>
           ))}
         </div>
-        {sendError && <div style={{ color: '#e74c3c', fontSize: 11, marginBottom: 6 }}>{sendError}</div>}
+        {sendError && <div style={{ color: 'var(--danger)', fontSize: 11, marginBottom: 6 }}>{sendError}</div>}
         <div style={{ display: 'flex', gap: 6, alignItems: 'flex-end' }}>
           <textarea
             value={composerText}
@@ -588,7 +588,7 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
             onClick={() => send()}
             disabled={sending || !composerText.trim()}
             style={{
-              background: '#3498db',
+              background: 'var(--accent)',
               opacity: sending || !composerText.trim() ? 0.5 : 1,
               whiteSpace: 'nowrap',
               padding: '8px 12px',

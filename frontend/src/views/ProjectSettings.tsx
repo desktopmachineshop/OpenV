@@ -27,16 +27,16 @@ const TABS: { key: Tab; label: string }[] = [
 const th: React.CSSProperties = {
   textAlign: 'left',
   fontSize: 12,
-  color: '#7f8c8d',
+  color: 'var(--text-muted)',
   padding: '8px 10px',
-  borderBottom: '1px solid #eee',
+  borderBottom: '1px solid var(--border-soft)',
 };
 
 const td: React.CSSProperties = {
   padding: '8px 10px',
   fontSize: 13,
-  color: '#2c3e50',
-  borderBottom: '1px solid #f5f5f5',
+  color: 'var(--text)',
+  borderBottom: '1px solid var(--surface-inset)',
 };
 
 interface RepoForm {
@@ -377,9 +377,9 @@ export const ProjectSettings: React.FC = () => {
 
   return (
     <div style={{ padding: 24, maxWidth: 900, margin: '0 auto' }}>
-      <h2 style={{ color: '#2c3e50', marginBottom: 16 }}>Project settings</h2>
+      <h2 style={{ color: 'var(--text)', marginBottom: 16 }}>Project settings</h2>
 
-      <div style={{ display: 'flex', gap: 4, borderBottom: '2px solid #ddd', marginBottom: 20 }}>
+      <div style={{ display: 'flex', gap: 4, borderBottom: '2px solid var(--border)', marginBottom: 20 }}>
         {TABS.map((t) => (
           <button
             key={t.key}
@@ -387,12 +387,12 @@ export const ProjectSettings: React.FC = () => {
             style={{
               background: 'none',
               border: 'none',
-              borderBottom: tab === t.key ? '2px solid #3498db' : '2px solid transparent',
+              borderBottom: tab === t.key ? '2px solid var(--accent)' : '2px solid transparent',
               marginBottom: -2,
               padding: '10px 16px',
               fontSize: 14,
               fontWeight: tab === t.key ? 600 : 400,
-              color: tab === t.key ? '#2c3e50' : t.key === 'danger' ? '#e74c3c' : '#7f8c8d',
+              color: tab === t.key ? 'var(--text)' : t.key === 'danger' ? 'var(--danger)' : 'var(--text-muted)',
               cursor: 'pointer',
               width: 'auto',
             }}
@@ -405,9 +405,9 @@ export const ProjectSettings: React.FC = () => {
       {error && (
         <div
           style={{
-            background: '#fdecea',
-            border: '1px solid #e74c3c',
-            color: '#c0392b',
+            background: 'var(--tint-red)',
+            border: '1px solid var(--danger)',
+            color: 'var(--danger-strong)',
             padding: '10px 14px',
             borderRadius: 4,
             marginBottom: 16,
@@ -417,7 +417,7 @@ export const ProjectSettings: React.FC = () => {
           {error}{' '}
           <button
             onClick={() => setError('')}
-            style={{ background: 'none', border: 'none', color: '#c0392b', cursor: 'pointer', width: 'auto', padding: 0 }}
+            style={{ background: 'none', border: 'none', color: 'var(--danger-strong)', cursor: 'pointer', width: 'auto', padding: 0 }}
           >
             ✕
           </button>
@@ -426,9 +426,9 @@ export const ProjectSettings: React.FC = () => {
       {notice && (
         <div
           style={{
-            background: '#eafaf1',
-            border: '1px solid #27ae60',
-            color: '#1e8449',
+            background: 'var(--tint-green)',
+            border: '1px solid var(--success)',
+            color: 'var(--success-text)',
             padding: '10px 14px',
             borderRadius: 4,
             marginBottom: 16,
@@ -444,7 +444,7 @@ export const ProjectSettings: React.FC = () => {
           <div className="card">
             <h3>People</h3>
             {membersLoading ? (
-              <div style={{ color: '#7f8c8d', fontSize: 13 }}>Loading members…</div>
+              <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Loading members…</div>
             ) : (
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
@@ -468,7 +468,7 @@ export const ProjectSettings: React.FC = () => {
                                 width: 28,
                                 height: 28,
                                 borderRadius: '50%',
-                                background: '#3498db',
+                                background: 'var(--accent)',
                                 color: '#fff',
                                 display: 'flex',
                                 alignItems: 'center',
@@ -483,7 +483,7 @@ export const ProjectSettings: React.FC = () => {
                           <span>
                             {m.user_name || '—'}
                             {currentUser && m.user_id === currentUser.id && (
-                              <span style={{ color: '#7f8c8d', fontSize: 12 }}> (you)</span>
+                              <span style={{ color: 'var(--text-muted)', fontSize: 12 }}> (you)</span>
                             )}
                           </span>
                         </div>
@@ -503,7 +503,7 @@ export const ProjectSettings: React.FC = () => {
                       <td style={{ ...td, textAlign: 'right' }}>
                         <button
                           onClick={() => handleRemoveMember(m)}
-                          style={{ background: 'none', border: 'none', color: '#e74c3c', cursor: 'pointer', fontSize: 12, width: 'auto', padding: 2 }}
+                          style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontSize: 12, width: 'auto', padding: 2 }}
                         >
                           Remove
                         </button>
@@ -512,7 +512,7 @@ export const ProjectSettings: React.FC = () => {
                   ))}
                   {members.length === 0 && (
                     <tr>
-                      <td style={{ ...td, color: '#95a5a6' }} colSpan={4}>
+                      <td style={{ ...td, color: 'var(--neutral)' }} colSpan={4}>
                         No members found.
                       </td>
                     </tr>
@@ -524,7 +524,7 @@ export const ProjectSettings: React.FC = () => {
 
           <div className="card">
             <h3>Add member</h3>
-            <p style={{ fontSize: 13, color: '#7f8c8d' }}>
+            <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
               The person must already have an OpenV account — invite them to sign up first, then add
               their email here.
             </p>
@@ -554,12 +554,12 @@ export const ProjectSettings: React.FC = () => {
 
           <div className="card">
             <h3>Teams</h3>
-            <p style={{ fontSize: 13, color: '#7f8c8d' }}>
+            <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
               Grant a workspace team access to this project. Manage teams themselves in{' '}
               <Link to="/org/settings">Workspace settings</Link>.
             </p>
             {teamGrantsLoading ? (
-              <div style={{ color: '#7f8c8d', fontSize: 13 }}>Loading team access…</div>
+              <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Loading team access…</div>
             ) : (
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
@@ -587,7 +587,7 @@ export const ProjectSettings: React.FC = () => {
                       <td style={{ ...td, textAlign: 'right' }}>
                         <button
                           onClick={() => handleRevokeTeam(g)}
-                          style={{ background: 'none', border: 'none', color: '#e74c3c', cursor: 'pointer', fontSize: 12, width: 'auto', padding: 2 }}
+                          style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontSize: 12, width: 'auto', padding: 2 }}
                         >
                           Revoke
                         </button>
@@ -596,7 +596,7 @@ export const ProjectSettings: React.FC = () => {
                   ))}
                   {teamGrants.length === 0 && (
                     <tr>
-                      <td style={{ ...td, color: '#95a5a6' }} colSpan={3}>
+                      <td style={{ ...td, color: 'var(--neutral)' }} colSpan={3}>
                         No teams have access to this project yet.
                       </td>
                     </tr>
@@ -641,7 +641,7 @@ export const ProjectSettings: React.FC = () => {
               </button>
             </form>
 
-            <p style={{ fontSize: 12, color: '#7f8c8d', marginTop: 14, marginBottom: 0 }}>
+            <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 14, marginBottom: 0 }}>
               Workspace admins always have owner access. A person's effective role is the highest of
               their direct grant and any team grants.
             </p>
@@ -656,7 +656,7 @@ export const ProjectSettings: React.FC = () => {
               <h3 style={{ marginBottom: 0 }}>Repository connections</h3>
               <button
                 className="button-secondary"
-                style={{ padding: '6px 14px', background: '#3498db' }}
+                style={{ padding: '6px 14px', background: 'var(--accent)' }}
                 onClick={() => {
                   setRepoForm(emptyRepoForm);
                   setShowRepoForm(!showRepoForm);
@@ -665,14 +665,14 @@ export const ProjectSettings: React.FC = () => {
                 {showRepoForm ? 'Cancel' : '+ Connect repository'}
               </button>
             </div>
-            <p style={{ fontSize: 13, color: '#7f8c8d' }}>
+            <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
               Repositories give coding agents somewhere to work. The connection identifies the
               GitHub repository; each member points it at their own clone below. Credentials come
               from the host machine's git configuration.
             </p>
 
             {showRepoForm && (
-              <form onSubmit={handleSaveRepo} style={{ background: '#f8f9fa', borderRadius: 4, padding: 14, marginBottom: 14 }}>
+              <form onSubmit={handleSaveRepo} style={{ background: 'var(--surface-alt)', borderRadius: 4, padding: 14, marginBottom: 14 }}>
                 <div className="form-group">
                   <label>Name *</label>
                   <input
@@ -709,15 +709,15 @@ export const ProjectSettings: React.FC = () => {
             )}
 
             {reposLoading ? (
-              <div style={{ color: '#7f8c8d', fontSize: 13 }}>Loading repositories…</div>
+              <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Loading repositories…</div>
             ) : repos.length === 0 ? (
-              <div style={{ color: '#95a5a6', fontSize: 13 }}>No repositories connected yet.</div>
+              <div style={{ color: 'var(--neutral)', fontSize: 13 }}>No repositories connected yet.</div>
             ) : (
               repos.map((r) => (
                 <div
                   key={r.id}
                   style={{
-                    border: '1px solid #eee',
+                    border: '1px solid var(--border-soft)',
                     borderRadius: 4,
                     padding: '10px 12px',
                     marginBottom: 8,
@@ -725,8 +725,8 @@ export const ProjectSettings: React.FC = () => {
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 600, fontSize: 14, color: '#2c3e50' }}>{r.name}</div>
-                      <div style={{ fontSize: 12, color: '#7f8c8d', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--text)' }}>{r.name}</div>
+                      <div style={{ fontSize: 12, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {r.remote_url || 'no repository URL — edit to add one'}
                         {r.default_branch ? ` · ${r.default_branch}` : ''}
                       </div>
@@ -748,13 +748,13 @@ export const ProjectSettings: React.FC = () => {
                     </button>
                     <button
                       onClick={() => handleDeleteRepo(r)}
-                      style={{ background: 'none', border: 'none', color: '#e74c3c', cursor: 'pointer', fontSize: 12, width: 'auto', padding: 2 }}
+                      style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontSize: 12, width: 'auto', padding: 2 }}
                     >
                       Remove
                     </button>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
-                    <label style={{ fontSize: 12, color: '#7f8c8d', whiteSpace: 'nowrap', marginBottom: 0 }}>
+                    <label style={{ fontSize: 12, color: 'var(--text-muted)', whiteSpace: 'nowrap', marginBottom: 0 }}>
                       Your local path
                     </label>
                     <input
@@ -776,7 +776,7 @@ export const ProjectSettings: React.FC = () => {
               ))
             )}
             {!reposLoading && repos.length > 0 && (
-              <p style={{ fontSize: 12, color: '#7f8c8d', marginTop: 10, marginBottom: 0 }}>
+              <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 10, marginBottom: 0 }}>
                 Agents run on each member's own machine, so “your local path” tells your runner
                 where this repo lives for <b>you</b>. Without one set, your runs clone the remote
                 URL instead.
@@ -784,8 +784,8 @@ export const ProjectSettings: React.FC = () => {
             )}
           </div>
 
-          <div className="card" style={{ background: '#eaf4fc', border: '1px solid #3498db' }}>
-            <p style={{ fontSize: 13, color: '#2c3e50', marginBottom: 0 }}>
+          <div className="card" style={{ background: 'var(--tint-blue)', border: '1px solid var(--accent)' }}>
+            <p style={{ fontSize: 13, color: 'var(--text)', marginBottom: 0 }}>
               AI providers &amp; worker keys moved →{' '}
               <Link to="/org/settings">Workspace settings</Link>. They now apply to the whole
               workspace, not a single project.
@@ -797,13 +797,13 @@ export const ProjectSettings: React.FC = () => {
       {tab === 'agents' && (
         <div className="card">
           <h3>Agent authentication</h3>
-          <p style={{ fontSize: 13, color: '#7f8c8d' }}>
+          <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
             How agent runs in this project authenticate with their AI provider. This only picks the
             credential and routing — sign-ins themselves live in each member's user settings (the
             user menu, bottom left).
           </p>
           {!project ? (
-            <div style={{ color: '#7f8c8d', fontSize: 13 }}>Loading project…</div>
+            <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Loading project…</div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <label
@@ -812,7 +812,7 @@ export const ProjectSettings: React.FC = () => {
                   gap: 10,
                   alignItems: 'flex-start',
                   border: '1px solid',
-                  borderColor: project.agent_auth !== 'api-key' ? '#3498db' : '#eee',
+                  borderColor: project.agent_auth !== 'api-key' ? 'var(--accent)' : 'var(--border-soft)',
                   borderRadius: 4,
                   padding: '10px 12px',
                   cursor: 'pointer',
@@ -828,10 +828,10 @@ export const ProjectSettings: React.FC = () => {
                   disabled={savingAuth}
                   onChange={() => handleSetAgentAuth('user-account')}
                 />
-                <span style={{ fontSize: 13, color: '#2c3e50' }}>
+                <span style={{ fontSize: 13, color: 'var(--text)' }}>
                   <b>User account</b>
                   <br />
-                  <span style={{ color: '#7f8c8d', fontSize: 12 }}>
+                  <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>
                     Runs use each member's own CLI sign-in on their machine (set up in user
                     settings). No sign-in happens here — this just routes runs to the launcher's
                     local login.
@@ -844,7 +844,7 @@ export const ProjectSettings: React.FC = () => {
                   gap: 10,
                   alignItems: 'flex-start',
                   border: '1px solid',
-                  borderColor: project.agent_auth === 'api-key' ? '#3498db' : '#eee',
+                  borderColor: project.agent_auth === 'api-key' ? 'var(--accent)' : 'var(--border-soft)',
                   borderRadius: 4,
                   padding: '10px 12px',
                   cursor: 'pointer',
@@ -860,10 +860,10 @@ export const ProjectSettings: React.FC = () => {
                   disabled={savingAuth}
                   onChange={() => handleSetAgentAuth('api-key')}
                 />
-                <span style={{ fontSize: 13, color: '#2c3e50' }}>
+                <span style={{ fontSize: 13, color: 'var(--text)' }}>
                   <b>API key</b>
                   <br />
-                  <span style={{ color: '#7f8c8d', fontSize: 12 }}>
+                  <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>
                     Overrides members' local sign-ins: runs use the workspace's API key (the
                     provider's key environment variable, configured in Workspace settings → AI
                     providers, set on the runner host). For now runs still execute through each
@@ -877,9 +877,9 @@ export const ProjectSettings: React.FC = () => {
       )}
 
       {tab === 'danger' && (
-        <div className="card" style={{ border: '1px solid #e74c3c' }}>
-          <h3 style={{ color: '#e74c3c' }}>Danger zone</h3>
-          <p style={{ fontSize: 13, color: '#7f8c8d' }}>
+        <div className="card" style={{ border: '1px solid var(--danger)' }}>
+          <h3 style={{ color: 'var(--danger)' }}>Danger zone</h3>
+          <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
             Deleting the project permanently removes all artifacts, links, baselines, test runs, work
             items and interview data. This cannot be undone.
           </p>
@@ -887,7 +887,7 @@ export const ProjectSettings: React.FC = () => {
             onClick={handleDeleteProject}
             disabled={deleting}
             style={{
-              background: '#e74c3c',
+              background: 'var(--danger)',
               color: '#fff',
               border: 'none',
               padding: '10px 20px',

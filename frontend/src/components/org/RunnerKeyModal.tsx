@@ -29,7 +29,7 @@ export const RunnerKeyModal: React.FC<RunnerKeyModalProps> = ({ title, plaintext
       style={{
         position: 'fixed',
         inset: 0,
-        background: 'rgba(44, 62, 80, 0.55)',
+        background: 'var(--overlay)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -39,14 +39,14 @@ export const RunnerKeyModal: React.FC<RunnerKeyModalProps> = ({ title, plaintext
       <div
         className="card"
         onClick={(e) => e.stopPropagation()}
-        style={{ width: 560, maxWidth: '90vw', background: '#fff', borderRadius: 8, padding: 24, margin: 0 }}
+        style={{ width: 560, maxWidth: '90vw', background: 'var(--surface)', borderRadius: 8, padding: 24, margin: 0 }}
       >
-        <h3 style={{ marginTop: 0, color: '#2c3e50' }}>{title}</h3>
+        <h3 style={{ marginTop: 0, color: 'var(--text)' }}>{title}</h3>
         <div
           style={{
-            background: '#fef5e7',
-            border: '1px solid #f39c12',
-            color: '#9c6a0b',
+            background: 'var(--tint-yellow)',
+            border: '1px solid var(--warning)',
+            color: 'var(--warning-text)',
             padding: '10px 14px',
             borderRadius: 4,
             fontSize: 13,
@@ -59,8 +59,8 @@ export const RunnerKeyModal: React.FC<RunnerKeyModalProps> = ({ title, plaintext
           <code
             style={{
               flex: 1,
-              background: '#2c3e50',
-              color: '#ecf0f1',
+              background: 'var(--code-block-bg)',
+              color: 'var(--code-block-text)',
               padding: '10px 12px',
               borderRadius: 4,
               fontSize: 13,
@@ -74,13 +74,13 @@ export const RunnerKeyModal: React.FC<RunnerKeyModalProps> = ({ title, plaintext
             {copied ? 'Copied!' : 'Copy'}
           </button>
         </div>
-        <div style={{ fontSize: 13, color: '#2c3e50', marginBottom: 6, fontWeight: 600 }}>
+        <div style={{ fontSize: 13, color: 'var(--text)', marginBottom: 6, fontWeight: 600 }}>
           Runner setup
         </div>
         <pre
           style={{
-            background: '#f8f9fa',
-            border: '1px solid #eee',
+            background: 'var(--surface-alt)',
+            border: '1px solid var(--border-soft)',
             borderRadius: 4,
             padding: '10px 12px',
             fontSize: 12,
@@ -90,7 +90,7 @@ export const RunnerKeyModal: React.FC<RunnerKeyModalProps> = ({ title, plaintext
         >
           {setupSnippet}
         </pre>
-        <div style={{ fontSize: 12, color: '#7f8c8d', marginBottom: 16 }}>
+        <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 16 }}>
           Replace http://localhost:8080 with the address of the OpenV server the runner should
           connect to.
         </div>
