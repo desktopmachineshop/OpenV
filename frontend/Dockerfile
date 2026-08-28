@@ -1,4 +1,7 @@
-FROM node:20-alpine
+# Base image policy: pin to specific minor-version tags (not `latest` or
+# bare-major tags, not sha digests). Pinned tags still receive OS-package
+# security rebuilds from upstream; bump versions here deliberately.
+FROM node:20.20-alpine
 
 WORKDIR /app
 

@@ -1,5 +1,9 @@
+# Base image policy: pin to specific minor-version tags (not `latest` or
+# bare-major tags, not sha digests). Pinned tags still receive OS-package
+# security rebuilds from upstream; bump versions here deliberately.
+
 # Build stage
-FROM golang:1.25-alpine AS builder
+FROM golang:1.25.14-alpine AS builder
 
 WORKDIR /app
 
@@ -19,8 +23,8 @@ COPY examples examples
 # CLIs (claude/codex/gemini) — build them with `make worker` instead.
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o server cmd/server/main.go
 
-# Final stage
-FROM alpine:latest
+# Final stage (alpine:3.24 floats only across 3.24.x patch releases)
+FROM alpine:3.24
 
 RUN apk --no-cache add ca-certificates
 
