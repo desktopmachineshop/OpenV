@@ -108,6 +108,7 @@ export const AutomationsPage: React.FC = () => {
   const params = useParams<{ projectId: string }>();
   const storeProjectId = useAppStore((s) => s.projectId);
   const projectId = params.projectId || storeProjectId;
+  const activeOrgId = useAppStore((s) => s.activeOrgId);
   const navigate = useNavigate();
 
   const [automations, setAutomations] = useState<Automation[]>([]);
@@ -124,7 +125,12 @@ export const AutomationsPage: React.FC = () => {
       .catch((err: any) =>
         setError(err.response?.data?.error || err.message || 'Failed to load automations')
       );
-  }, [projectId]);
+    // activeOrgId: the list is scoped by the X-Org-ID header the API client
+    // injects, so refetch when the active workspace changes (e.g.
+    // ProjectLayout's cross-org deep-link sync, issue #99). The effect below
+    // also re-runs via this callback, refreshing agents and crews too.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId, activeOrgId]);
 
   useEffect(() => {
     load();

@@ -48,6 +48,7 @@ export const KanbanBoard: React.FC = () => {
   const storeProjectId = useAppStore((s) => s.projectId);
   const currentUser = useAppStore((s) => s.currentUser);
   const projectId = params.projectId || storeProjectId;
+  const activeOrgId = useAppStore((s) => s.activeOrgId);
 
   const [items, setItems] = useState<WorkItem[]>([]);
   const [agents, setAgents] = useState<AgentDef[]>([]);
@@ -69,7 +70,11 @@ export const KanbanBoard: React.FC = () => {
       .catch((err: any) =>
         setError(err.response?.data?.error || err.message || 'Failed to load board')
       );
-  }, [projectId]);
+    // activeOrgId: requests are scoped by the X-Org-ID header the API client
+    // injects, so refetch when the active workspace changes (e.g.
+    // ProjectLayout's cross-org deep-link sync, issue #99).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId, activeOrgId]);
 
   useEffect(() => {
     loadItems();
@@ -92,7 +97,9 @@ export const KanbanBoard: React.FC = () => {
         })
         .catch(() => setArtifactMap({}));
     }
-  }, [projectId]);
+    // activeOrgId: same X-Org-ID refetch rationale as loadItems (issue #99).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId, activeOrgId]);
 
   // Poll agent runs every 5s to show live indicators
   useEffect(() => {
@@ -121,7 +128,9 @@ export const KanbanBoard: React.FC = () => {
       cancelled = true;
       window.clearInterval(timer);
     };
-  }, [projectId]);
+    // activeOrgId: same X-Org-ID refetch rationale as loadItems (issue #99).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId, activeOrgId]);
 
   const agentById = useMemo(() => {
     const m: Record<string, AgentDef> = {};
