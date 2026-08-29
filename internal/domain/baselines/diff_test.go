@@ -124,6 +124,66 @@ func TestDiffModifiedFieldFlags(t *testing.T) {
 	}
 }
 
+// TestDiffStatusColumnFirstAndNormalized covers issue #174: the diff must read
+// status the way the CSV export does — first-class column with legacy-mirror
+// fallback — and normalize it, so that snapshot-refresh auto-versions (which
+// populate the Status column) and legacy "in-review" spellings do not diff as a
+// false status_changed against an unchanged attribute mirror.
+func TestDiffStatusColumnFirstAndNormalized(t *testing.T) {
+	// withColumn builds an artifact whose first-class Status column is set,
+	// optionally with a diverging legacy mirror in Attributes.
+	withColumn := func(id, column, mirror string) *artifacts.Artifact {
+		a := &artifacts.Artifact{ID: id, Type: "requirement", Title: "T", Body: "b", Status: column}
+		if mirror != "" {
+			a.Attributes = map[string]interface{}{"status": mirror}
+		}
+		return a
+	}
+
+	t.Run("column read in preference to stale mirror", func(t *testing.T) {
+		// Base carries only the legacy mirror ("approved"); target is a
+		// snapshot-refresh version that populated the Status column with the
+		// same value while carrying a stale/empty mirror. Same status: no diff.
+		base := export([]*artifacts.Artifact{artifact("a1", "requirement", "T", "b", nil, "approved")}, nil)
+		target := export([]*artifacts.Artifact{withColumn("a1", "approved", "")}, nil)
+
+		result := Diff(base, target)
+		if len(result.Modified) != 0 {
+			t.Fatalf("column-vs-mirror same status must not diff, got %+v", result.Modified)
+		}
+	})
+
+	t.Run("legacy in-review mirror equals normalized column", func(t *testing.T) {
+		base := export([]*artifacts.Artifact{artifact("a1", "requirement", "T", "b", nil, "in-review")}, nil)
+		target := export([]*artifacts.Artifact{withColumn("a1", "in_review", "")}, nil)
+
+		result := Diff(base, target)
+		if len(result.Modified) != 0 {
+			t.Fatalf("legacy in-review mirror must normalize equal to in_review column, got %+v", result.Modified)
+		}
+	})
+
+	t.Run("empty and draft are equal after normalization", func(t *testing.T) {
+		base := export([]*artifacts.Artifact{artifact("a1", "requirement", "T", "b", nil, "")}, nil)
+		target := export([]*artifacts.Artifact{artifact("a1", "requirement", "T", "b", nil, "draft")}, nil)
+
+		result := Diff(base, target)
+		if len(result.Modified) != 0 {
+			t.Fatalf("empty status must normalize equal to draft, got %+v", result.Modified)
+		}
+	})
+
+	t.Run("genuine status change still flagged", func(t *testing.T) {
+		base := export([]*artifacts.Artifact{withColumn("a1", "draft", "")}, nil)
+		target := export([]*artifacts.Artifact{withColumn("a1", "approved", "")}, nil)
+
+		result := Diff(base, target)
+		if len(result.Modified) != 1 || !result.Modified[0].StatusChanged {
+			t.Fatalf("draft->approved must flag status_changed, got %+v", result.Modified)
+		}
+	})
+}
+
 func TestDiffParentNilVsEmptyEqual(t *testing.T) {
 	base := export([]*artifacts.Artifact{
 		artifact("a1", "requirement", "T", "b", nil, ""),

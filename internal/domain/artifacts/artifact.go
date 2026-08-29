@@ -377,13 +377,18 @@ func (s *DefaultService) UpdateArtifact(id string, req UpdateArtifactRequest) (*
 	}
 
 	// Status policy for content edits: the new version keeps the current
-	// status, except that editing an APPROVED artifact demotes the new
-	// version to draft — the approved snapshot survives untouched in the
-	// temporal history (issue #127). The status column is authoritative;
-	// any Attributes["status"] in the request is overwritten by the mirror,
-	// so a plain update can never smuggle in an approval.
+	// status, except that editing an APPROVED artifact's CONTENT demotes the
+	// new version to draft — the approved snapshot survives untouched in the
+	// temporal history (issue #127). Only genuine content edits demote, using
+	// the SAME contentChanged signal that flags links suspect (issue #174):
+	// attribute-only writes (e.g. the links_snapshot refresh in
+	// autoVersionLinkedArtifacts) and structural moves (parent/sort order) do
+	// not change what the artifact says, so they must NOT demote an approved
+	// requirement. The status column is authoritative; any Attributes["status"]
+	// in the request is overwritten by the mirror, so a plain update can never
+	// smuggle in an approval.
 	artifact.Status = NormalizeStatus(artifact.Status)
-	if artifact.Status == StatusApproved {
+	if contentChanged && artifact.Status == StatusApproved {
 		artifact.Status = StatusDraft
 	}
 	artifact.syncStatusAttribute()
