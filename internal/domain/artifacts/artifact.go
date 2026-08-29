@@ -2,6 +2,7 @@ package artifacts
 
 import (
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -136,6 +137,9 @@ type Service interface {
 	ListArtifacts(projectID string, artifactType string) ([]*Artifact, error)
 	GetArtifactVersions(id string) ([]*Artifact, error)
 	RestoreArtifactVersion(id string, version int) (*Artifact, error)
+	// SearchArtifacts finds current artifacts whose title or body contains
+	// query (case-insensitive) within the given projects, title matches first.
+	SearchArtifacts(projectIDs []string, query string, limit int) ([]*SearchHit, error)
 }
 
 // Repository defines persistence operations for artifacts
@@ -148,6 +152,9 @@ type Repository interface {
 	Delete(id string) error
 	NextSortOrder(projectID string, parentID *string) (int, error)
 	FindVersionsByID(id string) ([]*Artifact, error)
+	// SearchInProjects performs the title/body substring search behind
+	// Service.SearchArtifacts (SearchHit.ProjectName is left empty).
+	SearchInProjects(projectIDs []string, query string, limit int) ([]*SearchHit, error)
 }
 
 // DefaultService implements the Service interface
@@ -232,6 +239,14 @@ func (s *DefaultService) ListArtifacts(projectID string, artifactType string) ([
 		return s.repo.FindByProjectID(projectID)
 	}
 	return s.repo.FindByProjectAndType(projectID, artifactType)
+}
+
+// SearchArtifacts finds current artifacts matching query in the given projects.
+func (s *DefaultService) SearchArtifacts(projectIDs []string, query string, limit int) ([]*SearchHit, error) {
+	if len(projectIDs) == 0 || strings.TrimSpace(query) == "" {
+		return []*SearchHit{}, nil
+	}
+	return s.repo.SearchInProjects(projectIDs, query, limit)
 }
 
 // GetArtifactVersions retrieves all versions of an artifact

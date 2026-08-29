@@ -251,6 +251,9 @@ func (h *Handler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/chatter", h.CreateChatterEntry).Methods("POST")
 	router.HandleFunc("/api/v1/chatter", h.ListChatterEntries).Methods("GET")
 
+	// Global artifact search (see search_handlers.go)
+	router.HandleFunc("/api/v1/search", h.GlobalSearch).Methods("GET")
+
 	// Extended route groups (auth, meta, suite, agents, orgs) live in their own files.
 	h.registerAuthRoutes(router)
 	h.registerMetaRoutes(router)
