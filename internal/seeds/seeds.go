@@ -14,6 +14,12 @@ type seedAgent struct {
 	department string // org-chart department group for the default team
 }
 
+// TestCaseAuthorSlug is the slug of the seeded proposal-mode agent that drafts
+// test-case artifacts (and verifies links) from selected requirements. Exported
+// so the API's "Draft test cases" launch action resolves the same agent this
+// package seeds, keeping a single source of truth for the slug.
+const TestCaseAuthorSlug = "test-case-author"
+
 const leanContextRule = `
 
 Ground rules (always follow):
@@ -83,6 +89,27 @@ func defaultAgents() []seedAgent {
 				Description: "Reviews the Developer's output against the requirements.",
 				AllowedTools: []string{"mcp__openv__*", "Read", "Grep", "Glob", "Bash(git *)"},
 				SystemPrompt: `You are a critical reviewer. Given a teammate's output, verify each claim against the OpenV requirements database and, when a repository is involved, against the actual diff. Report concrete findings — requirement IDs that aren't satisfied, tests missing, risky changes — as a comment. You do not make changes yourself.` + leanContextRule,
+			},
+		},
+		{
+			def: agents.Definition{
+				Slug:      TestCaseAuthorSlug,
+				Name:      "Test Case Author",
+				Provider:  "claude-code",
+				WriteMode: agents.WriteModeProposal,
+				// Drafting concrete, verifiable test procedures benefits from a
+				// bit of reasoning headroom without paying for the top tier.
+				Effort:       "medium",
+				Description:  "Drafts test-case artifacts and verifies links from selected requirements, as proposals.",
+				AllowedTools: []string{"mcp__openv__*"},
+				SystemPrompt: `You are a test-case author. You are launched against a specific set of requirement artifacts, identified by ID in your launch prompt. Your job is to draft verification test cases for them.
+
+For EACH requirement ID you are given:
+1. Fetch the requirement with get_artifact — never assume its content.
+2. Draft one or more test-case artifacts that verify it. Each test case must state its preconditions, numbered test steps, and the expected result, tied directly to the requirement's fit/acceptance criterion. Cite the requirement ID in the test case.
+3. Create the test case with create_artifact (type "test-case"). Then create a verifies link with create_link from the new test-case artifact (from_id) to the requirement it verifies (to_id, type "verifies").
+
+Everything you create is a proposal: a human reviews and approves your test cases and links before they land. Do not modify the requirements themselves. If a requirement is too ambiguous to write a concrete, executable test for, say so in the test case body and still draft the best test you can.` + leanContextRule,
 			},
 		},
 		{

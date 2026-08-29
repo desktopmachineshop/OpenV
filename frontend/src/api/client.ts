@@ -1382,6 +1382,13 @@ export const agentsAPI = {
   sync: () => client.post<AgentDef[]>('/api/v1/agents/sync'),
   launchRun: (slug: string, payload: { project_id?: string; prompt: string; work_item_id?: string }) =>
     client.post<AgentRun>(`/api/v1/agents/${slug}/runs`, payload),
+  // Launch the seeded test-case-author agent to draft test cases (and verifies
+  // links) for the given requirement artifacts, as proposals. The agent fetches
+  // the requirement content itself via its OpenV tools — only the IDs travel.
+  draftTestCases: (projectId: string, requirementIds: string[]) =>
+    client.post<AgentRun>(`/api/v1/projects/${projectId}/draft-test-cases`, {
+      requirement_ids: requirementIds,
+    }),
 };
 
 export const agentRunsAPI = {

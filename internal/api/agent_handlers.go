@@ -23,6 +23,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/repoconns"
 	"github.com/openv/requirements-platform/internal/domain/teams"
 	"github.com/openv/requirements-platform/internal/scheduler"
+	"github.com/openv/requirements-platform/internal/seeds"
 )
 
 func (h *Handler) registerAgentRoutes(router *mux.Router) {
@@ -36,6 +37,7 @@ func (h *Handler) registerAgentRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/agents/{slug}/raw", h.GetAgentRaw).Methods("GET")
 	router.HandleFunc("/api/v1/agents/{slug}/raw", h.SaveAgentRaw).Methods("PUT")
 	router.HandleFunc("/api/v1/agents/{slug}/runs", h.LaunchAgentRun).Methods("POST")
+	router.HandleFunc("/api/v1/projects/{id}/draft-test-cases", h.DraftTestCases).Methods("POST")
 
 	// Runs.
 	router.HandleFunc("/api/v1/agent-runs", h.ListAgentRuns).Methods("GET")
@@ -324,6 +326,85 @@ func (h *Handler) LaunchAgentRun(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		// Over-budget soft-block (enforcement on) is a distinct, expected
 		// refusal — surface it as 402 so the UI can message it clearly.
+		if errors.Is(err, agentruns.ErrBudgetExceeded) {
+			writeJSONError(w, http.StatusPaymentRequired, err.Error())
+			return
+		}
+		writeJSONError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(run)
+}
+
+// DraftTestCases launches the seeded test-case-author agent scoped to a set of
+// requirement artifacts in a project. It is the "Draft test cases" action: the
+// caller passes the requirement IDs to cover, and the requirement content is
+// NOT inlined — per the lean-context rule the agent fetches each requirement
+// through its OpenV tools at run time. The IDs are conveyed in the launch
+// prompt the handler builds. The agent runs in proposal mode, so its drafted
+// test-case artifacts and verifies links flow through the normal proposal
+// review path before they land.
+func (h *Handler) DraftTestCases(w http.ResponseWriter, r *http.Request) {
+	projectID := mux.Vars(r)["id"]
+	if !h.requireProjectRole(w, r, projectID, members.RoleEditor) {
+		return
+	}
+	var req struct {
+		RequirementIDs []string `json:"requirement_ids"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	// Normalize: drop blanks/dupes so a sloppy client can't launch a run with
+	// an empty or padded ID list.
+	ids := make([]string, 0, len(req.RequirementIDs))
+	seen := map[string]bool{}
+	for _, id := range req.RequirementIDs {
+		id = strings.TrimSpace(id)
+		if id == "" || seen[id] {
+			continue
+		}
+		seen[id] = true
+		ids = append(ids, id)
+	}
+	if len(ids) == 0 {
+		writeJSONError(w, http.StatusBadRequest, "requirement_ids is required")
+		return
+	}
+
+	// The run belongs to the project's org.
+	orgID := ActiveOrg(r)
+	if project, err := h.projectService.GetProject(projectID); err == nil && project != nil && project.OrgID != "" {
+		orgID = project.OrgID
+	}
+
+	agent, err := h.agentService.GetBySlug(orgID, seeds.TestCaseAuthorSlug)
+	if err != nil {
+		respondInternal(w, r, "failed to load the test-case author agent", err)
+		return
+	}
+	if agent == nil {
+		writeJSONError(w, http.StatusNotFound, "the test-case author agent is not available in this workspace; sync agents from disk to seed it")
+		return
+	}
+
+	prompt := fmt.Sprintf(
+		"Draft verification test cases for the following requirement artifacts in project %s: %s.\n\n"+
+			"For each requirement: fetch it with get_artifact, draft one or more test-case artifacts (preconditions, numbered steps, expected result tied to its fit criterion) via create_artifact, then create a verifies link from each new test case to the requirement via create_link. Everything you create is a proposal for human review.",
+		projectID, strings.Join(ids, ", "))
+
+	launch := agentruns.LaunchRequest{
+		OrgID:      orgID,
+		AgentID:    agent.ID,
+		ProjectID:  &projectID,
+		Prompt:     prompt,
+		LaunchedBy: CurrentUserID(r),
+	}
+	run, _, err := h.runService.Launch(launch)
+	if err != nil {
+		// Mirror LaunchAgentRun: an over-budget soft-block is a distinct 402.
 		if errors.Is(err, agentruns.ErrBudgetExceeded) {
 			writeJSONError(w, http.StatusPaymentRequired, err.Error())
 			return
