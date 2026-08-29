@@ -1166,9 +1166,24 @@ export const crewsAPI = {
     client.post<AgentRun>(`/api/v1/crews/${crewId}/runs`, payload),
 };
 
+// Domain audit event (see internal/domain/events). Actors are "system",
+// "user:<id>" or "agent:<run_id>".
+export interface DomainEvent {
+  id: string;
+  org_id?: string;
+  event_type: string;
+  project_id?: string;
+  entity_id?: string;
+  actor: string;
+  payload: Record<string, any>;
+  created_at: string;
+}
+
 export const eventsAPI = {
+  // The backend clamps limit to (0, 500], defaulting to 100; there is no
+  // offset — "load more" refetches with a larger limit.
   list: (params: { project_id?: string; event_type?: string; limit?: number }) =>
-    client.get<any[]>('/api/v1/events', { params }),
+    client.get<DomainEvent[]>('/api/v1/events', { params }),
 };
 
 export default client;

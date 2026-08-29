@@ -1,0 +1,307 @@
+import React, { useCallback, useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom';
+import { DomainEvent, eventsAPI } from '../api/client';
+import { apiErrorMessage } from '../api/errors';
+import { useAppStore } from '../state/store';
+import { ErrorBanner } from '../components/ui';
+
+// Event types emitted by the backend (internal/domain/events/events.go).
+const EVENT_TYPES = [
+  'artifact.created',
+  'artifact.updated',
+  'artifact.deleted',
+  'link.created',
+  'link.updated',
+  'link.deleted',
+  'baseline.captured',
+  'chatter.created',
+  'testrun.recorded',
+  'workitem.created',
+  'workitem.moved',
+  'workitem.updated',
+  'agentrun.finished',
+];
+
+// The backend clamps limit to (0, 500] with no offset param, so pagination
+// is "refetch with a larger limit" up to the hard cap.
+const PAGE_SIZE = 100;
+const MAX_LIMIT = 500;
+
+// Tint the type badge by entity family so the list scans visually.
+const typeBadgeStyle = (eventType: string): React.CSSProperties => {
+  const family = eventType.split('.')[0];
+  const palette: Record<string, { bg: string; border: string; text: string }> = {
+    artifact: { bg: 'var(--tint-blue)', border: 'var(--tint-blue-border)', text: 'var(--accent-text)' },
+    link: { bg: 'var(--tint-purple)', border: 'var(--tint-purple-border)', text: 'var(--purple)' },
+    baseline: { bg: 'var(--tint-green)', border: 'var(--tint-green-border)', text: 'var(--success-text)' },
+    testrun: { bg: 'var(--tint-green)', border: 'var(--tint-green-border)', text: 'var(--success-text)' },
+    workitem: { bg: 'var(--tint-yellow)', border: 'var(--tint-yellow-border)', text: 'var(--warning-text)' },
+    agentrun: { bg: 'var(--tint-purple)', border: 'var(--tint-purple-border)', text: 'var(--purple)' },
+  };
+  const c = palette[family] || {
+    bg: 'var(--neutral-soft)',
+    border: 'var(--border)',
+    text: 'var(--text-muted)',
+  };
+  return {
+    display: 'inline-block',
+    padding: '2px 10px',
+    borderRadius: 12,
+    background: c.bg,
+    border: `1px solid ${c.border}`,
+    color: c.text,
+    fontSize: 11.5,
+    fontWeight: 600,
+    whiteSpace: 'nowrap',
+  };
+};
+
+// "user:<id>" / "agent:<run_id>" / "system" → a friendly label + detail.
+const formatActor = (actor: string): { label: string; detail?: string } => {
+  if (actor === 'system' || !actor) return { label: 'System' };
+  const sep = actor.indexOf(':');
+  if (sep > 0) {
+    const kind = actor.slice(0, sep);
+    const id = actor.slice(sep + 1);
+    if (kind === 'user') return { label: 'User', detail: id };
+    if (kind === 'agent') return { label: 'Agent run', detail: id };
+  }
+  return { label: actor };
+};
+
+const shortId = (id?: string) => (id ? `${id.slice(0, 8)}…` : '—');
+
+const cellStyle: React.CSSProperties = {
+  padding: '9px 12px',
+  borderBottom: '1px solid var(--neutral-soft)',
+  color: 'var(--text-body)',
+  verticalAlign: 'top',
+};
+
+export const ActivityLog: React.FC = () => {
+  const params = useParams<{ projectId: string }>();
+  const storeProjectId = useAppStore((s) => s.projectId);
+  const projectId = params.projectId || storeProjectId;
+  // Events are org-scoped on the backend; refetch once a deep-link workspace
+  // switch lands (see the ProjectLayout comment about issues #99/#111/#112).
+  const activeOrgId = useAppStore((s) => s.activeOrgId);
+
+  const [events, setEvents] = useState<DomainEvent[]>([]);
+  const [typeFilter, setTypeFilter] = useState('all');
+  const [limit, setLimit] = useState(PAGE_SIZE);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+
+  const load = useCallback(() => {
+    if (!projectId) return;
+    setLoading(true);
+    const query: { project_id: string; event_type?: string; limit: number } = {
+      project_id: projectId,
+      limit,
+    };
+    if (typeFilter !== 'all') query.event_type = typeFilter;
+    eventsAPI
+      .list(query)
+      .then((res) => {
+        setEvents(res.data || []);
+        setError('');
+      })
+      .catch((err) => setError(`Failed to load activity: ${apiErrorMessage(err)}`))
+      .finally(() => setLoading(false));
+    // activeOrgId: events are scoped by the X-Org-ID header the API client
+    // injects, so refetch when the active workspace changes (e.g.
+    // ProjectLayout's cross-org deep-link sync, issues #99/#111/#112).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId, typeFilter, limit, activeOrgId]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  // Reset pagination and open rows when the filter changes.
+  useEffect(() => {
+    setLimit(PAGE_SIZE);
+    setExpanded(new Set());
+  }, [typeFilter, projectId]);
+
+  const toggleExpanded = (id: string) => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  // The API returns at most `limit` rows; a full page means there may be more.
+  const maybeMore = events.length >= limit && limit < MAX_LIMIT;
+  const atCap = events.length >= MAX_LIMIT;
+
+  return (
+    <div style={{ padding: 20, height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
+        <h2 style={{ color: 'var(--text)', margin: 0 }}>Activity</h2>
+        <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+          {loading ? 'Loading…' : `${events.length} event${events.length === 1 ? '' : 's'}`}
+        </span>
+        <div style={{ flex: 1 }} />
+        <label style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)' }}>Type</label>
+        <select
+          value={typeFilter}
+          onChange={(e) => setTypeFilter(e.target.value)}
+          aria-label="Filter by event type"
+          style={{ width: 200, padding: '6px 10px' }}
+        >
+          <option value="all">all</option>
+          {EVENT_TYPES.map((t) => (
+            <option key={t} value={t}>
+              {t}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <ErrorBanner message={error} onDismiss={() => setError('')} style={{ marginBottom: 8 }} />
+
+      <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
+        <div className="table-container">
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+            <thead>
+              <tr>
+                {['Time', 'Type', 'Actor', 'Entity', ''].map((h, i) => (
+                  <th
+                    key={h || `col-${i}`}
+                    style={{
+                      textAlign: 'left',
+                      borderBottom: '2px solid var(--neutral-soft)',
+                      padding: '10px 12px',
+                      color: 'var(--text-muted)',
+                      fontWeight: 600,
+                      background: 'var(--surface)',
+                    }}
+                  >
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {events.map((event) => {
+                const actor = formatActor(event.actor);
+                const isOpen = expanded.has(event.id);
+                const hasPayload = event.payload && Object.keys(event.payload).length > 0;
+                return (
+                  <React.Fragment key={event.id}>
+                    <tr
+                      onClick={() => toggleExpanded(event.id)}
+                      style={{ cursor: 'pointer', background: isOpen ? 'var(--tint-blue)' : 'var(--surface)' }}
+                    >
+                      <td style={{ ...cellStyle, whiteSpace: 'nowrap' }}>
+                        {new Date(event.created_at).toLocaleString()}
+                      </td>
+                      <td style={cellStyle}>
+                        <span style={typeBadgeStyle(event.event_type)}>{event.event_type}</span>
+                      </td>
+                      <td style={cellStyle}>
+                        {actor.label}
+                        {actor.detail && (
+                          <span
+                            title={actor.detail}
+                            style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 6, fontFamily: 'monospace' }}
+                          >
+                            {shortId(actor.detail)}
+                          </span>
+                        )}
+                      </td>
+                      <td style={cellStyle}>
+                        {event.entity_id ? (
+                          <span title={event.entity_id} style={{ fontFamily: 'monospace', fontSize: 12 }}>
+                            {shortId(event.entity_id)}
+                          </span>
+                        ) : (
+                          '—'
+                        )}
+                      </td>
+                      <td style={{ ...cellStyle, textAlign: 'right', color: 'var(--text-muted)', width: 32 }}>
+                        <span aria-hidden="true">{isOpen ? '▾' : '▸'}</span>
+                      </td>
+                    </tr>
+                    {isOpen && (
+                      <tr>
+                        <td colSpan={5} style={{ ...cellStyle, background: 'var(--surface)' }}>
+                          <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 6 }}>
+                            Event <span style={{ fontFamily: 'monospace' }}>{event.id}</span>
+                            {event.entity_id && (
+                              <>
+                                {' · '}entity <span style={{ fontFamily: 'monospace' }}>{event.entity_id}</span>
+                              </>
+                            )}
+                          </div>
+                          {hasPayload ? (
+                            <pre
+                              style={{
+                                margin: 0,
+                                padding: '8px 10px',
+                                background: 'var(--bg-app)',
+                                border: '1px solid var(--border)',
+                                borderRadius: 4,
+                                fontSize: 12,
+                                overflowX: 'auto',
+                                whiteSpace: 'pre-wrap',
+                                overflowWrap: 'anywhere',
+                                color: 'var(--text-body)',
+                              }}
+                            >
+                              {JSON.stringify(event.payload, null, 2)}
+                            </pre>
+                          ) : (
+                            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>No payload.</span>
+                          )}
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                );
+              })}
+              {events.length === 0 && !loading && (
+                <tr>
+                  <td colSpan={5} style={{ padding: 16, color: 'var(--text-muted)', background: 'var(--surface)' }}>
+                    {typeFilter === 'all'
+                      ? 'No activity yet. Events appear here as artifacts, links, work items, test runs and agent runs change.'
+                      : `No ${typeFilter} events yet.`}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {maybeMore && (
+          <div style={{ padding: '12px 0', textAlign: 'center' }}>
+            <button
+              onClick={() => setLimit((l) => Math.min(l + PAGE_SIZE, MAX_LIMIT))}
+              disabled={loading}
+              style={{
+                background: 'var(--surface)',
+                color: 'var(--text)',
+                border: '1px solid var(--border)',
+                padding: '7px 18px',
+                borderRadius: 4,
+                cursor: loading ? 'default' : 'pointer',
+                fontSize: 13,
+              }}
+            >
+              {loading ? 'Loading…' : 'Load more'}
+            </button>
+          </div>
+        )}
+        {atCap && (
+          <div style={{ padding: '10px 0', textAlign: 'center', fontSize: 12, color: 'var(--text-muted)' }}>
+            Showing the most recent {MAX_LIMIT} events (API limit). Narrow by type to see older activity.
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
