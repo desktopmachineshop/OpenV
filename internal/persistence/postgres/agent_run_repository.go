@@ -535,6 +535,20 @@ func (rep *AgentRunRepository) Usage(orgID string, since time.Time) ([]agentruns
 	return byAgent, byDay, dayRows.Err()
 }
 
+// MonthlySpend sums an org's cost_usd over runs created at/after monthStart —
+// the workspace's month-to-date spend. NULL costs (runs not yet finished)
+// count as zero. It scopes on created_at, matching the Usage rollup's
+// bucketing, so the budget figure agrees with what the usage tab shows.
+func (rep *AgentRunRepository) MonthlySpend(orgID string, monthStart time.Time) (float64, error) {
+	var spend float64
+	err := rep.db.QueryRow(`
+		SELECT COALESCE(SUM(cost_usd), 0)::float8
+		FROM agent_runs
+		WHERE org_id = $1::uuid AND created_at >= $2
+	`, orgID, monthStart).Scan(&spend)
+	return spend, err
+}
+
 // CountPendingProposals counts a run's unreviewed proposals.
 func (rep *AgentRunRepository) CountPendingProposals(runID string) (int, error) {
 	var count int

@@ -1435,7 +1435,29 @@ func (h *Handler) GenerateReport(w http.ResponseWriter, r *http.Request) {
 
 	baselineID := r.URL.Query().Get("baseline_id")
 
-	data, filename, err := h.reportService.GenerateProjectReport(projectID, baselineID)
+	format := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("format")))
+	if format == "" {
+		format = "pdf"
+	}
+
+	var (
+		data        []byte
+		filename    string
+		contentType string
+		err         error
+	)
+	switch format {
+	case "pdf":
+		contentType = "application/pdf"
+		data, filename, err = h.reportService.GenerateProjectReport(projectID, baselineID)
+	case "docx":
+		contentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+		data, filename, err = h.reportService.GenerateProjectReportDOCX(projectID, baselineID)
+	default:
+		respondError(w, r, http.StatusBadRequest, "unsupported report format", fmt.Errorf("unsupported report format: %q", format))
+		return
+	}
+
 	if err != nil {
 		if errors.Is(err, baselines.ErrNotFound) {
 			respondError(w, r, http.StatusNotFound, "baseline not found", err)
@@ -1445,8 +1467,8 @@ func (h *Handler) GenerateReport(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/pdf")
-	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", filename))
+	w.Header().Set("Content-Type", contentType)
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%q", filename))
 	w.WriteHeader(http.StatusOK)
 	w.Write(data)
 }

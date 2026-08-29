@@ -58,10 +58,35 @@ type fakeOrgService struct {
 	orgs.Service
 	// roles maps orgID -> userID -> role
 	roles map[string]map[string]string
+
+	// Budget CRUD recording (issue #186).
+	updatedNames []*string
+	budgetCalls  []*float64
+	budgetErr    error
 }
 
 func (f *fakeOrgService) RoleInOrg(orgID, userID string) (string, error) {
 	return f.roles[orgID][userID], nil
+}
+
+// Budget CRUD recording (issue #186). updatedNames captures UpdateOrg's name
+// arg; budgetCalls captures each SetMonthlyBudget budget (nil = cleared);
+// budgetErr, when set, is returned by SetMonthlyBudget after recording.
+func (f *fakeOrgService) UpdateOrg(id string, name *string) (*orgs.Org, error) {
+	o := &orgs.Org{ID: id}
+	if name != nil {
+		o.Name = *name
+	}
+	f.updatedNames = append(f.updatedNames, name)
+	return o, nil
+}
+
+func (f *fakeOrgService) SetMonthlyBudget(id string, budget *float64) (*orgs.Org, error) {
+	f.budgetCalls = append(f.budgetCalls, budget)
+	if f.budgetErr != nil {
+		return nil, f.budgetErr
+	}
+	return &orgs.Org{ID: id, MonthlyBudgetUSD: budget}, nil
 }
 
 type fakeMemberService struct {
@@ -109,6 +134,9 @@ type fakeRunService struct {
 	usageSince  []time.Time
 	usageResult *agentruns.UsageSummary
 	usageErr    error
+
+	monthSpend    float64
+	monthSpendErr error
 }
 
 func (f *fakeRunService) Get(id string) (*agentruns.Run, error) {
@@ -181,6 +209,10 @@ func (f *fakeRunService) Usage(orgID string, since time.Time) (*agentruns.UsageS
 		return f.usageResult, nil
 	}
 	return &agentruns.UsageSummary{ByAgent: []agentruns.AgentUsage{}, ByDay: []agentruns.DailyUsage{}}, nil
+}
+
+func (f *fakeRunService) MonthlySpend(orgID string, monthStart time.Time) (float64, error) {
+	return f.monthSpend, f.monthSpendErr
 }
 
 type fakeArtifactService struct {

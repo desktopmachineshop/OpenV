@@ -443,10 +443,10 @@ export const ModuleView: React.FC = () => {
     }
   };
 
-  const handleGenerateReport = async () => {
+  const handleGenerateReport = async (format: 'pdf' | 'docx' = 'pdf') => {
     if (!projectId) return;
     try {
-      await projectAPI.report(projectId, activeBaselineId);
+      await projectAPI.report(projectId, activeBaselineId, format);
       setError('');
     } catch (error: any) {
       console.error('Failed to generate report:', error);
@@ -845,7 +845,7 @@ export const ModuleView: React.FC = () => {
           Capture Baseline
         </button>
         <button
-          onClick={handleGenerateReport}
+          onClick={() => handleGenerateReport('pdf')}
           style={{
             height: '36px',
             padding: '0 12px',
@@ -857,7 +857,22 @@ export const ModuleView: React.FC = () => {
             fontSize: '12px',
           }}
         >
-          Generate Report
+          Report (PDF)
+        </button>
+        <button
+          onClick={() => handleGenerateReport('docx')}
+          style={{
+            height: '36px',
+            padding: '0 12px',
+            backgroundColor: 'var(--accent-alt)',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontSize: '12px',
+          }}
+        >
+          Report (DOCX)
         </button>
       </div>
       <div style={{ display: 'flex', gap: '0', paddingLeft: '20px', paddingRight: '20px', height: 'calc(100vh - 72px)', overflow: 'hidden' }}>

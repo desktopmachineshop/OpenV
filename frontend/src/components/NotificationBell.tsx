@@ -23,6 +23,9 @@ const timeAgo = (iso: string): string => {
 // back to the project overview (or the projects list without a project).
 const pathForNotification = (n: AppNotification): string => {
   const ref = n.entity_ref || {};
+  // Workspace budget alerts are not project-scoped — deep-link to the
+  // workspace usage tab where the budget lives.
+  if (ref.kind === 'org_usage') return '/org/settings?tab=usage';
   const projectId = ref.project_id;
   if (!projectId) return '/projects';
   switch (ref.kind) {

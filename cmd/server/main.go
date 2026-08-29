@@ -48,6 +48,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/workitems"
 	eventbus "github.com/openv/requirements-platform/internal/events"
 	"github.com/openv/requirements-platform/internal/hosting"
+	"github.com/openv/requirements-platform/internal/metrics"
 	"github.com/openv/requirements-platform/internal/notify"
 	"github.com/openv/requirements-platform/internal/orchestration"
 	"github.com/openv/requirements-platform/internal/persistence/postgres"
@@ -340,9 +341,16 @@ func main() {
 		}
 	}
 
+	// Prometheus metrics. The collector subscribes to run lifecycle events so
+	// the run counter and queued/running gauges track transitions, and reports
+	// live SSE connection counts on scrape. Wired below at /metrics.
+	metricsCollector := metrics.New()
+	runService.AddSubscriber(metricsCollector)
+
 	// SSE hub + orchestration hooks.
 	sseHub := api.NewSSEHub()
 	runService.AddSubscriber(sseHub)
+	metricsCollector.WatchSSEConnections(sseHub.ActiveConnections)
 	hooks := orchestration.NewHooks(runService, teamService, workItemService, interviewService, guidedService, projectService, sseHub)
 	runService.AddSubscriber(hooks)
 	hooks.SubscribeBus(bus)
@@ -351,6 +359,32 @@ func main() {
 	// SSE pushes on notify:<user_id> (issue #132).
 	notificationService := notifications.NewDefaultService(notificationRepo)
 	notify.NewNotifier(notificationService, memberService, sseHub).Start(bus)
+
+	// Workspace budget alerts (issue #186): a finishing run's cost can push
+	// month-to-date spend across 80%/100% of the org's monthly budget; the
+	// monitor alerts org admins once per threshold per month. Warn-only.
+	notify.NewBudgetMonitor(orgService, runService, notificationService, sseHub).Start(bus)
+
+	// Optional over-budget soft-block (default OFF — warn-only). When
+	// OPENV_BUDGET_ENFORCE=true, new launches are refused once a workspace has
+	// hit 100% of its monthly budget. Fails open on lookup errors so a budget
+	// hiccup never blocks work.
+	if os.Getenv("OPENV_BUDGET_ENFORCE") == "true" {
+		runService.SetBudgetGuard(func(orgID string) (bool, string) {
+			org, err := orgService.Get(orgID)
+			if err != nil || org == nil || org.MonthlyBudgetUSD == nil || *org.MonthlyBudgetUSD <= 0 {
+				return false, ""
+			}
+			now := time.Now().UTC()
+			monthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
+			spend, err := runService.MonthlySpend(orgID, monthStart)
+			if err != nil || spend < *org.MonthlyBudgetUSD {
+				return false, ""
+			}
+			return true, fmt.Sprintf("this workspace has reached its $%.2f monthly budget ($%.2f spent); new runs are blocked until next month or the budget is raised", *org.MonthlyBudgetUSD, spend)
+		})
+		slog.Info("workspace budget enforcement enabled: launches soft-block at 100% of budget")
+	}
 
 	// Trigger matcher + scheduler + reaper. The scheduler and reaper loops
 	// stop when the signal context is canceled.
@@ -441,10 +475,21 @@ func main() {
 	router.Use(api.ContentTypeMiddleware)
 	handler.RegisterRoutes(router)
 
+	// Prometheus scrape endpoint. Unauthenticated by default (firewall it to an
+	// internal network in production); set OPENV_METRICS_TOKEN to require an
+	// "Authorization: Bearer <token>" header. Registered as an open path in the
+	// auth middleware so scraping is never blocked by session auth.
+	router.Handle("/metrics", metricsCollector.Handler(os.Getenv("OPENV_METRICS_TOKEN"))).Methods("GET")
+
 	authMiddleware := api.NewAuthMiddleware(userService, runService, orgService, workerKeyService, workerKey, bootstrapOrgID)
 	// Request logging wraps outside auth so rejected requests are logged too;
-	// auth annotates the log line with the resolved org/user.
-	protected := api.RequestLogMiddleware(authMiddleware.Wrap(router))
+	// auth annotates the log line with the resolved org/user. The metrics HTTP
+	// middleware sits between them, recording every request (including rejected
+	// ones) labelled by mux route template; it is a distinct concern from the
+	// access log and does not double-count.
+	protected := api.RequestLogMiddleware(
+		metricsCollector.HTTPMiddleware(router)(authMiddleware.Wrap(router)),
+	)
 
 	// CORS: restricted to the configured frontend origin, with credentials.
 	corsOrigin := envOr("CORS_ORIGIN", "http://localhost:3000")
