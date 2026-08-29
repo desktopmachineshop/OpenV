@@ -44,6 +44,10 @@ const TraceabilityMatrix = lazy(() =>
 const ActivityLog = lazy(() =>
   import('./views/ActivityLog').then((m) => ({ default: m.ActivityLog }))
 );
+// BaselineCompare is a low-traffic review view, so keep it out of the main bundle.
+const BaselineCompare = lazy(() =>
+  import('./views/BaselineCompare').then((m) => ({ default: m.BaselineCompare }))
+);
 
 function RouteFallback() {
   return (
@@ -130,6 +134,7 @@ function App() {
         <Route path="/projects/:projectId" element={<ProjectLayout />}>
           <Route index element={<ProductOverview />} />
           <Route path="requirements" element={<ModuleView />} />
+          <Route path="baselines/:baselineId/compare" element={<BaselineCompare />} />
           <Route path="guided" element={<GuidedWizard />} />
           <Route path="interviews" element={<InterviewsPage />} />
           <Route path="vv" element={<VVDashboard />} />
