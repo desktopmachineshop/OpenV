@@ -6,38 +6,44 @@
 ┌──────────────────────────────────────────────────────────┐
 │                    Frontend (React/TS)                   │
 │  ┌─────────────────────────────────────────────────────┐ │
-│  │ Module View │ Artifact Editor │ Link Panel │ Graph  │ │
+│  │ Module View │ Editor │ Suite (agents/crews/kanban) │ │
 │  └─────────────────────────────────────────────────────┘ │
 └──────────────────────┬───────────────────────────────────┘
-                       │ HTTP/REST
+                       │ HTTP/REST (session cookie + X-Org-ID)
 ┌──────────────────────▼───────────────────────────────────┐
 │               API Layer (REST Gateway)                   │
 │  ┌─────────────────────────────────────────────────────┐ │
-│  │ Routes │ Middleware │ Content Negotiation │ CORS    │ │
+│  │ Routes │ Auth middleware │ Org/project RBAC │ CORS  │ │
+│  │ Request logging (slog) │ Prometheus │ Rate limiting │ │
 │  └─────────────────────────────────────────────────────┘ │
 └──────────────────────┬───────────────────────────────────┘
-                       │ Domain Services
+                       │ Domain Services (org-scoped)
 ┌──────────────────────▼───────────────────────────────────┐
 │          Core Domain Services (Go)                       │
 │  ┌────────────────────────────────────────────────────┐ │
-│  │ Artifacts Service  │ Links Service │ V&V Service  │ │
-│  │ (CRUD + Logic)     │ (Traceability) │ (Coverage)  │ │
+│  │ Artifacts │ Links │ V&V │ Orgs/RBAC │ Agent suite  │ │
+│  │ (temporal versioning, proposals, event bus)        │ │
 │  └────────────────────────────────────────────────────┘ │
 └──────────────────────┬───────────────────────────────────┘
                        │ Repository Pattern
 ┌──────────────────────▼───────────────────────────────────┐
 │       Persistence Layer (Repository Pattern)             │
 │  ┌─────────────────────────────────────────────────────┐ │
-│  │ PostgreSQL Repositories │ S3 File Storage (future) │ │
+│  │ PostgreSQL Repositories │ Local filesystem uploads  │ │
 │  └─────────────────────────────────────────────────────┘ │
 └──────────────────────┬───────────────────────────────────┘
-                       │ SQL
+                       │ SQL (numbered migration ledger)
 ┌──────────────────────▼───────────────────────────────────┐
 │                  Data Layer                              │
 │  ┌───────────────────────────────────────────────────┐  │
-│  │  PostgreSQL Database │ Local Filesystem Storage  │  │
+│  │  PostgreSQL Database │ UPLOADS_DIR (attachments)  │  │
 │  └───────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────┘
+
+        ▲ Agent runs are rows in the agent_runs queue. The server
+        │ never calls model providers itself: a host-side worker
+        └─ (cmd/agentd) polls the queue over HTTP and runs the
+           operator's vendor CLI. See "Multi-agent suite" below.
 ```
 
 ## Layered Architecture
@@ -70,8 +76,11 @@ Frontend/
 - No business logic
 - Thin adapter between frontend and domain
 - Content negotiation (JSON)
-- CORS handling
-- HTTP middleware (logging, error handling)
+- CORS restricted to the configured frontend origin (`CORS_ORIGIN`), with credentials
+- HTTP middleware: authentication (`authmiddleware.go`), org/project RBAC
+  (`authz.go`), request logging (`slog`), Prometheus metrics, sanitized error
+  responses (`httperr.go`), and per-IP/per-invite rate limiting on the public
+  interview endpoints
 
 ```go
 // Example handler structure
@@ -138,8 +147,67 @@ type Repository interface {
 **Technologies:**
 - **PostgreSQL**: Primary relational database
 - **JSONB**: Flexible attribute storage
-- **Full-text Search**: Future enhancement
-- **S3/MinIO**: File attachments (future)
+- **Trigram search** (`pg_trgm`): index-assisted cross-project artifact search,
+  with a sequential-scan fallback when the extension is unavailable
+- **Local filesystem** (`UPLOADS_DIR`): file attachments (S3/MinIO remains a
+  future option)
+
+The schema is owned by `internal/persistence/postgres/`. See
+[data-model.md](data-model.md) for the full table reference.
+
+---
+
+## Multi-tenancy
+
+Every tenant is an **organization** ("workspace"). Data is scoped to an org via
+an `org_id` column on `projects`, `agents`, `agent_teams`, `automations`,
+`agent_runs`, `guided_sessions`, `domain_events`, `provider_settings`,
+`provider_logins`, and `templates` (`schema_orgs.go`).
+
+- **Organizations** — `company` or `personal` (a personal org is auto-created
+  at signup). Carry a `plan`, a `limits` JSONB, and an optional
+  `monthly_budget_usd` spend cap (warn-only by default; soft-blocks launches at
+  100% when `OPENV_BUDGET_ENFORCE=true`).
+- **org_members** — `admin` / `member` roles.
+- **org_teams / org_team_members** — people-teams within a workspace (distinct
+  from agent "crews").
+- **project_members** and **project_team_access** — direct and people-team
+  grants of the project role ladder (`owner`/`editor`/`viewer`); a user's
+  effective role is the highest of the two.
+- **worker_keys** — org-scoped runner credentials (workspace or per-member).
+
+A boot-time idempotent backfill (`BackfillOrgs` → `PromoteOrgColumns`) creates
+personal orgs and promotes the `org_id` columns to `NOT NULL` on databases that
+predate multi-tenancy.
+
+---
+
+## Observability
+
+- **Structured logging** — the process installs a `slog` text handler
+  (`OPENV_LOG_LEVEL` sets the level). `RequestLogMiddleware` logs one line per
+  request, annotated by the auth middleware with the resolved org/user/actor.
+- **Metrics** — a Prometheus registry (`internal/metrics`) is exposed at
+  `/metrics` (optionally gated by `OPENV_METRICS_TOKEN`, never behind session
+  auth). It records HTTP request counts/latency by method + route template +
+  status, agent-run lifecycle counters/gauges (subscribing to run events), and
+  live SSE connection counts. Cardinality is deliberately bounded — no
+  per-project/user/agent labels.
+- **Error responses** are sanitized (`httperr.go`): internals reach the log,
+  not the client.
+
+---
+
+## Schema migration ledger
+
+At startup `cmd/server/main.go` calls `postgres.MigrateAndBackfill`
+(`migrations.go`), which advances the database through a numbered migration
+ledger (`schema_migrations` table) under a boot advisory lock. Migration 0001 —
+the frozen "baseline" — wraps the legacy idempotent init chain and re-runs on
+every boot; every schema change since is an append-only numbered migration
+(0002+) applied exactly once inside its own transaction (DDL and ledger row
+commit together). New schema changes are **never** added to `InitSchema` or the
+`schema_*.go` files — only appended to the registry in `migrations.go`.
 
 ---
 
@@ -249,9 +317,13 @@ interface AppState {
 ```
 
 ### Backend In-Memory State
-- No application-level caching (v0.1)
-- Each request queries database
+- No application-level caching; each request queries the database
 - Database provides consistency guarantees
+- One in-process component keeps live state: the event bus + SSE hub
+  (`internal/events`, `internal/api/sse.go`) fans domain events out to
+  connected clients. This is the single-instance assumption today (the
+  interview rate limiter's token buckets are also in-process; see
+  `docs/operations.md`)
 
 ---
 
@@ -260,21 +332,26 @@ interface AppState {
 ### Development (Docker Compose)
 ```
 Your Machine
-├── Frontend (React, port 3000)
+├── Frontend (React dev server, port 3000)
 ├── API (Go, port 8080)
-├── PostgreSQL (port 5432)
-└── pgAdmin (port 5050) [optional]
+└── PostgreSQL (port 5432)
 ```
 
-### Production (Kubernetes - future)
+### Production (Docker Compose overlay)
+Production runs the same stack with `docker-compose.prod.yml` layered on top
+(`make prod-up`): the frontend is a static nginx build, healthchecks and
+memory limits are added, secrets come from `.env`, and Postgres stops
+publishing its port. Full runbook — including backup/restore — in
+[operations.md](operations.md).
 ```
-Kubernetes Cluster
-├── Frontend Pod (replicated)
-├── API Pod (replicated)
-├── PostgreSQL StatefulSet (primary + replicas)
-├── Redis Cache (optional)
-└── S3 Gateway (object storage)
+Host
+├── Frontend (nginx static build, host port 80)
+├── API (Go, port 8080, X-Forwarded-For aware behind a proxy)
+├── PostgreSQL (internal only)
+└── (optional) agentd worker(s) + hosted-runner containers
 ```
+Put a reverse proxy (Caddy, Traefik, nginx) in front for TLS. Kubernetes/Helm
+remains a roadmap item.
 
 ---
 
@@ -312,23 +389,59 @@ func TestCreateArtifact(t *testing.T) {
 
 ## Security Considerations
 
-### v0.1 (Current)
-- No authentication
-- No authorization
-- CORS enabled for all origins
-- Suitable for local/internal use only
+Authentication and authorization are enforced on every request; the details
+below are generated from `internal/api/authmiddleware.go` and
+`internal/api/authz.go`. See `docs/api-spec.md` for the per-route matrix.
 
-### v0.2 (Future)
-- OIDC authentication
-- Role-based access control (RBAC)
-- Project-level permissions
-- Audit logging
+### Authentication (`authmiddleware.go`)
+Every API request authenticates as one of four principals; only `/health`,
+`/metrics`, `/api/v1/auth/*`, and `/api/v1/public/*` are open:
 
-### v1.0 (Long-term)
-- Multi-tenant isolation
+- **Human users** — an `openv_session` HttpOnly cookie (SameSite=Lax, `Secure`
+  when `SECURE_COOKIES=true`). Sign-in is email/password by default, with
+  optional **Google OIDC** when `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` are
+  set. The first user ever registered becomes the platform admin.
+- **Active workspace (`X-Org-ID`)** — each session request runs in one
+  organization ("workspace"). The header selects it; the middleware validates
+  membership and falls back to the session's stored active org, then the
+  user's personal org. An invalid header degrades to the fallback rather than
+  failing the request.
+- **Agent runs** — a single-run Bearer token (stored hashed), minted per run,
+  scoping a worker's callbacks to that run and its own project.
+- **Workers** — org-scoped Bearer worker keys (`worker_keys`, stored hashed):
+  workspace keys minted by org admins, or per-member personal runner keys. The
+  legacy `WORKER_API_KEY` env value is registered as the bootstrap org's
+  workspace key at startup and still accepted directly.
+
+### Authorization (`authz.go`)
+- **Platform admin** (`users.is_admin`, the first user) passes every check.
+- **Org roles** — `admin` and `member` (`org_members`). Org admins act as
+  owners of every project in their org.
+- **Project roles** — `owner` > `editor` > `viewer`. A member's effective role
+  is the highest of their direct grant (`project_members`) and any people-team
+  grant (`org_teams` via `project_team_access`).
+- Agent runs count as editor within their own project; workers pass for any
+  project in their org.
+
+### Transport & hardening
+- **CORS** is restricted to the configured frontend origin (`CORS_ORIGIN`),
+  not "all origins", and allows credentials.
+- **Rate limiting** on the public (token-only) interview endpoints: in-memory
+  per-invite and per-IP token buckets bound provider spend from a leaked
+  invite token (`internal/api/ratelimit.go`). Behind a proxy, set
+  `OPENV_TRUST_PROXY=1` so limits key on the real client IP.
+- **Sanitized error responses** (`internal/api/httperr.go`): clients get a
+  stable public message while SQL text, file paths, and upstream details go
+  only to the server log.
+- **TLS in transit** is terminated by a reverse proxy in front of the stack
+  (see operations.md); the compose overlay itself serves plain HTTP.
+
+### Roadmap
 - Encryption at rest
-- TLS in transit
-- OAuth2 integration
+- Audit-log export and retention policy
+- SSO/SAML beyond Google OIDC
+- Multi-region / multi-instance isolation (today's deployment assumes a single
+  API instance for the in-process event bus and rate limiter)
 
 ---
 
@@ -386,16 +499,37 @@ intended write becomes a proposal row; approved proposals are applied through
 the real domain services via appliers wired in `cmd/server/main.go`, so
 validation and eventing behave exactly as for human edits.
 
-### Teams graph
-Agents can be arranged in teams with an org-chart edge set. Orchestration
-hooks route follow-up runs along the graph (lead delegates to members),
-enabling multi-step flows like draft-then-review.
+### Crews (agent org charts)
+Agents can be arranged in **crews** — org charts with a typed edge set
+(`delegates-to`, `hands-off-to`, `reviews`; the DB tables keep the historical
+`agent_team*` prefix, and `/api/v1/teams*` routes remain as deprecated
+aliases). Orchestration hooks route follow-up runs along the graph (a lead
+delegates to members), enabling multi-step flows like draft-then-review. Crews
+are either project-pinned or workspace-wide.
+
+### Automations
+Unattended launch rules (`automations`) fire a run of an agent or crew. Three
+kinds: `manual` (run-now), `scheduled` (cron, with catch-up), and `triggered`
+(matched against the persisted `domain_events` stream, with per-rule cooldown
+and hourly caps). Kanban cards can also enqueue runs by moving into an agent
+column.
+
+### Interviews
+Stakeholder elicitation via shareable links. An interview has
+token-authenticated invites; each participant chats with an interviewer agent
+over public (token-only) endpoints, and the agent records candidate needs
+through the MCP tools. These public endpoints are the ones the rate limiter
+guards.
+
+### Guided wizard + copilot
+A guided requirements session (`guided_sessions`) walks a user through product
+definition step by step, materializing draft artifacts that become real on
+commit. A copilot chat runs alongside it: each message launches a short agent
+run (linked via `agent_runs.guided_session_id`) whose reply streams back over
+SSE.
 
 ### Auth model
-Three credential classes, resolved by a single auth middleware:
-- **User sessions** (cookie-based, optional Google OAuth) for people.
-- **Run tokens** minted per agent run, scoping a worker's callbacks to that run.
-- **Worker key** (`WORKER_API_KEY`) authenticating the host worker's queue
-  polling.
-Project access is governed by membership roles (viewer/editor/admin) checked
-per request; public interview pages use separate invite tokens.
+Runs, workers, and users are resolved by a single auth middleware; see
+[Security Considerations](#security-considerations) above for the full model
+(session cookies + optional Google OIDC, org/project RBAC, org-scoped worker
+keys, per-run tokens, and public interview invite tokens).

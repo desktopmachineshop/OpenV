@@ -14,9 +14,9 @@ upload/download, connector bundle download, SSE streams).
 ## Authentication
 
 Every request is authenticated by the middleware in
-`internal/api/authmiddleware.go` as one of four principals. Only three path
-groups are open (no credentials): `/health`, `/api/v1/auth/*`, and
-`/api/v1/public/*`.
+`internal/api/authmiddleware.go` as one of four principals. Only these paths are
+open (no credentials): `/health`, `/metrics` (carries its own optional
+`OPENV_METRICS_TOKEN` bearer gate), `/api/v1/auth/*`, and `/api/v1/public/*`.
 
 ### 1. Human users — session cookie
 
@@ -122,7 +122,7 @@ their own project, workers pass within their org) · `org member`/`org admin`
 | GET | `/api/v1/orgs` | List the caller's orgs | user |
 | POST | `/api/v1/orgs` | Create a company workspace | user |
 | GET | `/api/v1/orgs/{id}` | Workspace details | org member |
-| PUT | `/api/v1/orgs/{id}` | Update name/settings/limits | org admin |
+| PUT | `/api/v1/orgs/{id}` | Update name/settings/limits/`monthly_budget_usd` | org admin |
 | POST | `/api/v1/orgs/{id}/activate` | Set the session's active workspace | org member |
 | GET | `/api/v1/orgs/{id}/members` | List workspace members | org member |
 | POST | `/api/v1/orgs/{id}/members` | Add member | org admin |
@@ -178,6 +178,15 @@ their own project, workers pass within their org) · `org member`/`org admin`
 | POST | `/api/v1/templates` | Save a project as a template | editor |
 | POST | `/api/v1/templates/{id}/projects` | Create project from template | user |
 
+**Export/import caveats** (`internal/domain/exports/export.go`):
+
+- The `?format=` on export accepts `json` (default) and `csv`. **`excel` is a
+  stub** — the service returns `ErrUnsupportedFormat` ("excel export not yet
+  implemented"), so the API rejects it.
+- Exports include **attachment metadata only**, not the file bytes.
+  Consequently attachments are **dropped on import** — a re-imported project has
+  its artifacts, links, and product profile, but no attachment files.
+
 ### Artifacts, links, attachments, chatter
 
 | Method | Path | Purpose | Auth |
@@ -202,6 +211,26 @@ their own project, workers pass within their org) · `org member`/`org admin`
 | GET | `/api/v1/artifacts/{artifactID}/attachments` | List an artifact's attachments | viewer |
 | POST | `/api/v1/chatter` | Comment on an artifact | editor |
 | GET | `/api/v1/chatter` | List an artifact's activity feed | viewer |
+
+### Review queue
+
+| Method | Path | Purpose | Auth |
+|---|---|---|---|
+| GET | `/api/v1/projects/{id}/review-queue` | Suspect links + `in_review` artifacts awaiting review | viewer |
+
+### Notifications
+
+Per-user, in-app (plus optional email — see `docs/operations.md`). SSE stream
+pushes new items live.
+
+| Method | Path | Purpose | Auth |
+|---|---|---|---|
+| GET | `/api/v1/notifications` | List the caller's notifications (`?unread=true&limit=`) | user |
+| POST | `/api/v1/notifications/read` | Mark specific notifications read | user |
+| POST | `/api/v1/notifications/read-all` | Mark all read | user |
+| GET | `/api/v1/notifications/stream` | SSE stream of new notifications | user |
+| GET | `/api/v1/me/notification-prefs` | Get email-notification opt-out | user |
+| PUT | `/api/v1/me/notification-prefs` | Update email-notification opt-out | user |
 
 ### Meta
 
