@@ -1527,11 +1527,22 @@ func (h *Handler) ImportProject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Import and create new project
-	projectID, err := h.exportService.ImportProject(data, orgID)
-	if err != nil {
-		respondInternal(w, r, "failed to import project", err)
-		return
+	// Import and create new project. The default format is JSON; ReqIF is
+	// selected by ?format=reqif or sniffed from an XML/ReqIF payload (issue
+	// #238). A malformed ReqIF is a client error (400), not a 500.
+	var projectID string
+	if isReqIFImport(r, data) {
+		projectID, err = h.exportService.ImportProjectReqIF(data, orgID)
+		if err != nil {
+			writeJSONError(w, http.StatusBadRequest, fmt.Sprintf("failed to import ReqIF: %v", err))
+			return
+		}
+	} else {
+		projectID, err = h.exportService.ImportProject(data, orgID)
+		if err != nil {
+			respondInternal(w, r, "failed to import project", err)
+			return
+		}
 	}
 
 	// Creator becomes the project owner (mirrors CreateProject).
@@ -1548,6 +1559,26 @@ func (h *Handler) ImportProject(w http.ResponseWriter, r *http.Request) {
 		"message":    "Project imported successfully",
 		"project_id": projectID,
 	})
+}
+
+// isReqIFImport reports whether an import request carries a ReqIF document
+// rather than the default JSON. It honours an explicit ?format=reqif (or an
+// XML/ReqIF Content-Type) and otherwise sniffs the payload: JSON exports start
+// with '{', ReqIF is XML whose root (after any declaration/BOM) is <REQ-IF>.
+func isReqIFImport(r *http.Request, data []byte) bool {
+	if strings.EqualFold(r.URL.Query().Get("format"), "reqif") {
+		return true
+	}
+	ct := strings.ToLower(r.Header.Get("Content-Type"))
+	if strings.Contains(ct, "reqif") {
+		return true
+	}
+	trimmed := strings.TrimSpace(strings.TrimPrefix(string(data), "\xef\xbb\xbf"))
+	if strings.HasPrefix(trimmed, "{") {
+		return false // JSON export
+	}
+	upper := strings.ToUpper(trimmed)
+	return strings.Contains(upper, "<REQ-IF")
 }
 
 // GenerateReport generates a PDF report for a project or baseline.

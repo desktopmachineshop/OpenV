@@ -29,7 +29,7 @@ func reqifFixture() *ProjectExport {
 				ID:      "a1",
 				Type:    artifacts.TypeRequirement,
 				Title:   `Pump shall stop on "overheat" <=90C & hold`,
-				Body:    `Body & <b>bold</b> with "quotes" and café`,
+				Body:    "Body & <b>bold</b> with \"quotes\" and café\nSecond line after a hard break",
 				Status:  "approved",
 				Version: 3,
 				Attributes: map[string]interface{}{
@@ -191,8 +191,23 @@ func TestBuildReqIFStructure(t *testing.T) {
 	if got := values["AD-requirement-std-title"]; got != `Pump shall stop on "overheat" <=90C & hold` {
 		t.Errorf("title did not round-trip: %q", got)
 	}
-	if got := values["AD-requirement-std-text"]; got != `Body & <b>bold</b> with "quotes" and café` {
-		t.Errorf("body did not round-trip: %q", got)
+	// Body is now an XHTML-typed value (issue #238): the hard line break is
+	// carried as <xhtml:br/> and recovers to a newline via xhtmlToPlainText.
+	bodyXHTML := ""
+	for _, v := range reqObj.XHTMLValues {
+		if v.DefRef == "AD-requirement-std-text" {
+			bodyXHTML = v.TheValue.Inner
+		}
+	}
+	if bodyXHTML == "" {
+		t.Fatalf("requirement has no XHTML body value")
+	}
+	if !strings.Contains(bodyXHTML, "<xhtml:br/>") {
+		t.Errorf("XHTML body did not encode the newline as <xhtml:br/>: %q", bodyXHTML)
+	}
+	wantBody := "Body & <b>bold</b> with \"quotes\" and café\nSecond line after a hard break"
+	if got := xhtmlToPlainText(bodyXHTML); got != wantBody {
+		t.Errorf("body did not round-trip through XHTML: got %q want %q", got, wantBody)
 	}
 	if got := values["AD-requirement-std-status"]; got != "approved" {
 		t.Errorf("status = %q, want approved", got)

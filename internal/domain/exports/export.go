@@ -60,6 +60,10 @@ type Service interface {
 	ExportProject(projectID string, format ExportFormat) ([]byte, string, error)
 	ImportProject(data []byte, orgID string) (string, error)
 	ImportProjectWithOverrides(data []byte, nameOverride string, descOverride string, orgID string) (string, error)
+	// ImportProjectReqIF imports a ReqIF 1.x document into a new project owned by
+	// the given org (issue #238). Malformed ReqIF yields an error the handler
+	// maps to 400.
+	ImportProjectReqIF(data []byte, orgID string) (string, error)
 	ImportArtifactsIntoProject(projectID string, data []byte, markDraft bool) ([]string, error)
 }
 
@@ -341,6 +345,27 @@ func (s *DefaultService) ImportProjectWithOverrides(data []byte, nameOverride st
 		importData.ProjectDesc = descOverride
 	}
 
+	return s.createProjectFromExport(&importData, orgID)
+}
+
+// ImportProjectReqIF parses a ReqIF 1.x document into a ProjectExport and
+// imports it into a new project through the same machinery as the JSON import
+// (id remapping, parent reconstruction, link creation, version=1). See
+// reqif_import.go for the mapping and fidelity notes.
+func (s *DefaultService) ImportProjectReqIF(data []byte, orgID string) (string, error) {
+	importData, err := parseReqIF(data)
+	if err != nil {
+		return "", err
+	}
+	slog.Debug("import: starting reqif", slog.Int("artifacts", len(importData.Artifacts)))
+	return s.createProjectFromExport(importData, orgID)
+}
+
+// createProjectFromExport creates a new project owned by orgID and populates it
+// from a fully-parsed ProjectExport. It is the shared tail of the JSON and
+// ReqIF import paths: project creation, optional product-profile restore, and
+// the single-pass artifact/link import.
+func (s *DefaultService) createProjectFromExport(importData *ProjectExport, orgID string) (string, error) {
 	// Create a new project with the imported name and description
 	newProject := projects.NewProject(projects.CreateProjectRequest{
 		Name:        importData.ProjectName,
@@ -370,12 +395,12 @@ func (s *DefaultService) ImportProjectWithOverrides(data []byte, nameOverride st
 		}
 	}
 
-	if _, err := s.importArtifactsAndLinks(projectID, &importData, false); err != nil {
+	if _, err := s.importArtifactsAndLinks(projectID, importData, false); err != nil {
 		return "", err
 	}
 
 	// Note: Attachments are not imported as the actual image files
-	// are not included in the JSON export. Only metadata was exported.
+	// are not included in the JSON/ReqIF export. Only metadata was exported.
 
 	return projectID, nil
 }
