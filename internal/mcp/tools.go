@@ -152,13 +152,45 @@ func Tools() []Tool {
 		},
 		{
 			Name:        "get_artifact",
-			Description: "Get a single artifact by ID, including its body.",
+			Description: "Get a single artifact by ID, including its body. Accepts a stable ref (e.g. \"REQ-12\") instead of a UUID when project_id is also given.",
 			InputSchema: schema([]string{"id"}, map[string]interface{}{
-				"id": str("Artifact ID"),
+				"id":         str("Artifact ID (UUID), or a stable ref like REQ-12 (requires project_id)"),
+				"project_id": str("Project ID; required only when id is a stable ref"),
 			}),
 			Handler: func(c *Client, args map[string]interface{}) (string, error) {
-				out, _, err := c.request("GET", "/api/v1/artifacts/"+strArg(args, "id"), nil, nil)
+				id, err := resolveArtifactID(c, strArg(args, "project_id"), strArg(args, "id"))
+				if err != nil {
+					return "", err
+				}
+				out, _, err := c.request("GET", "/api/v1/artifacts/"+id, nil, nil)
 				return out, err
+			},
+		},
+		{
+			Name:        "get_project_map",
+			Description: "The project's AI map: every artifact as one outline line — stable ref, title, status, hierarchy, and inline link annotations, no bodies. Roughly 10x fewer tokens than list_artifacts; use it to orient, then pull bodies for specific artifacts with get_artifact or get_context. Pass baseline_id for the map as of a baseline/release.",
+			InputSchema: schema([]string{"project_id"}, map[string]interface{}{
+				"project_id":  str("Project ID"),
+				"baseline_id": str("Optional baseline ID to render the map from that snapshot"),
+			}),
+			Handler: func(c *Client, args map[string]interface{}) (string, error) {
+				var q url.Values
+				if b := strArg(args, "baseline_id"); b != "" {
+					q = url.Values{"baseline_id": {b}}
+				}
+				out, _, err := c.request("GET", "/api/v1/projects/"+strArg(args, "project_id")+"/ai-map", q, nil)
+				return out, err
+			},
+		},
+		{
+			Name:        "get_context",
+			Description: "One-call context bundle for an artifact: full body, ancestor path, children, and every linked artifact with a short excerpt — addressed by stable ref (REQ-12) or UUID. Replaces a get_artifact + list_links_for_artifact + N more get_artifact round trip.",
+			InputSchema: schema([]string{"project_id", "id"}, map[string]interface{}{
+				"project_id": str("Project ID"),
+				"id":         str("Artifact stable ref (e.g. REQ-12) or UUID"),
+			}),
+			Handler: func(c *Client, args map[string]interface{}) (string, error) {
+				return buildContextBundle(c, strArg(args, "project_id"), strArg(args, "id"))
 			},
 		},
 		{
@@ -181,6 +213,7 @@ func Tools() []Tool {
 				for _, a := range list {
 					tree = append(tree, map[string]interface{}{
 						"id":         a["id"],
+						"ref":        a["ref"],
 						"type":       a["type"],
 						"title":      a["title"],
 						"parent_id":  a["parent_id"],
@@ -216,6 +249,7 @@ func Tools() []Tool {
 						strings.Contains(strings.ToLower(body), needle) {
 						matches = append(matches, map[string]interface{}{
 							"id":    a["id"],
+							"ref":   a["ref"],
 							"type":  a["type"],
 							"title": a["title"],
 						})

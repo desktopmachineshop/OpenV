@@ -395,7 +395,7 @@ func (s *DefaultService) createProjectFromExport(importData *ProjectExport, orgI
 		}
 	}
 
-	if _, err := s.importArtifactsAndLinks(projectID, importData, false); err != nil {
+	if _, err := s.importArtifactsAndLinks(projectID, importData, false, true); err != nil {
 		return "", err
 	}
 
@@ -420,7 +420,10 @@ func (s *DefaultService) ImportArtifactsIntoProject(projectID string, data []byt
 		return nil, fmt.Errorf("failed to parse import data: %w", err)
 	}
 
-	return s.importArtifactsAndLinks(projectID, &importData, markDraft)
+	// Refs are never preserved when importing into an existing project: the
+	// payload's refs may collide with artifacts already there, so these
+	// imports draw fresh refs from the project's counters instead.
+	return s.importArtifactsAndLinks(projectID, &importData, markDraft, false)
 }
 
 // importArtifactsAndLinks imports an export payload's artifacts and links
@@ -435,7 +438,7 @@ func (s *DefaultService) ImportArtifactsIntoProject(projectID string, data []byt
 // UpdateArtifact, and then ran a per-artifact read-links/read-artifact/update
 // N+1 sweep to fill snapshots, bumping every imported artifact to version 2+;
 // issue #124.)
-func (s *DefaultService) importArtifactsAndLinks(projectID string, importData *ProjectExport, markDraft bool) ([]string, error) {
+func (s *DefaultService) importArtifactsAndLinks(projectID string, importData *ProjectExport, markDraft bool, preserveRefs bool) ([]string, error) {
 	total := len(importData.Artifacts)
 	slog.Debug("import: starting", slog.Int("artifacts", total), slog.Int("links", len(importData.Links)))
 
@@ -526,6 +529,15 @@ func (s *DefaultService) importArtifactsAndLinks(projectID string, importData *P
 		})
 		// Adopt the pre-generated ID so links and children agree with it.
 		newArtifact.ID = newIDs[i]
+		// Into a NEW project the exported stable refs (REQ-12, ...) carry
+		// over, so external references to them survive a round-trip; the
+		// repository advances the ref counters past each one. Junk that
+		// doesn't parse as PREFIX-NUM is dropped and reassigned.
+		if preserveRefs {
+			if _, _, ok := artifacts.ParseRef(artifact.Ref); ok {
+				newArtifact.Ref = artifact.Ref
+			}
+		}
 
 		start := time.Now()
 		if err := s.artifactService.CreateArtifact(newArtifact); err != nil {

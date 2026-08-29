@@ -1,0 +1,182 @@
+{
+  "exported_at": "2026-08-29T18:00:00Z",
+  "version": "1.0",
+  "project_id": "d4271c70-b970-418e-bd15-32a30dd8d722",
+  "project_name": "OpenV AI Context Surface",
+  "project_description": "Dogfood project: the requirements and verification for OpenV's AI context release — stable refs, the AI map, and context bundles — authored in OpenV itself. Import this project and run get_project_map against it to see the feature describe itself.",
+  "artifacts": [
+    {
+      "id": "ab5f5bb5-99c2-487c-8812-c547ff571de5",
+      "project_id": "d4271c70-b970-418e-bd15-32a30dd8d722",
+      "type": "heading",
+      "ref": "HDG-1",
+      "title": "AI Context Surface",
+      "body": "Make OpenV the most token-efficient requirements source for any coding agent: short stable addresses, a compact whole-project map, and one-call context bundles.",
+      "sort_order": 1,
+      "attributes": {},
+      "version": 1
+    },
+    {
+      "id": "11dab71d-3c3a-4a06-9a29-21bbb65a7e7d",
+      "project_id": "d4271c70-b970-418e-bd15-32a30dd8d722",
+      "parent_id": "ab5f5bb5-99c2-487c-8812-c547ff571de5",
+      "type": "description",
+      "ref": "DSC-1",
+      "title": "Why token efficiency is a feature",
+      "body": "Agents pay for context in tokens and latency. A UUID is ~10 meaningless tokens; a full artifact listing repeats keys and metadata the agent never uses. The AI context surface exists so an agent can orient on a whole project for a few thousand tokens and then fetch only the bodies it needs.",
+      "sort_order": 1,
+      "attributes": {},
+      "version": 1
+    },
+    {
+      "id": "8b742015-1374-4296-bbee-722b29ee5790",
+      "project_id": "d4271c70-b970-418e-bd15-32a30dd8d722",
+      "parent_id": "ab5f5bb5-99c2-487c-8812-c547ff571de5",
+      "type": "requirement",
+      "ref": "REQ-1",
+      "title": "Stable short refs",
+      "body": "Every artifact shall carry a stable short ref of the form PREFIX-NUMBER (e.g. REQ-12), assigned on creation, unique among a project's current artifacts, and constant across the artifact's versions.",
+      "sort_order": 2,
+      "attributes": {"status": "approved"},
+      "version": 1
+    },
+    {
+      "id": "2b3cfd8e-184a-452f-b6a2-a826a475e819",
+      "project_id": "d4271c70-b970-418e-bd15-32a30dd8d722",
+      "parent_id": "ab5f5bb5-99c2-487c-8812-c547ff571de5",
+      "type": "requirement",
+      "ref": "REQ-2",
+      "title": "Refs survive export/import round-trips",
+      "body": "Importing an exported project into a new project shall preserve each artifact's ref, so external references (documents, commit messages, code trace markers) stay valid. Imports into an existing project shall assign fresh refs to avoid collisions.",
+      "sort_order": 3,
+      "attributes": {"status": "approved"},
+      "version": 1
+    },
+    {
+      "id": "729652f2-4c87-462d-8a40-86ab8dd196e2",
+      "project_id": "d4271c70-b970-418e-bd15-32a30dd8d722",
+      "parent_id": "ab5f5bb5-99c2-487c-8812-c547ff571de5",
+      "type": "requirement",
+      "ref": "REQ-3",
+      "title": "AI map",
+      "body": "The system shall render a whole project as a compact outline — one line per artifact with ref, title, non-draft status, hierarchy by indentation, and inline link annotations in both directions — with no artifact bodies, via API endpoint and agent tool.",
+      "sort_order": 4,
+      "attributes": {"status": "approved"},
+      "version": 1
+    },
+    {
+      "id": "1e0c0f2f-219e-4d54-8e96-212b2e3d7234",
+      "project_id": "d4271c70-b970-418e-bd15-32a30dd8d722",
+      "parent_id": "ab5f5bb5-99c2-487c-8812-c547ff571de5",
+      "type": "requirement",
+      "ref": "REQ-4",
+      "title": "Release-stamped maps",
+      "body": "The AI map shall be renderable from any baseline's snapshot, stamped with the baseline's name, id, and capture time, so every release version produces a versioned map suitable for committing into a code repository (e.g. .openv/requirements.md).",
+      "sort_order": 5,
+      "attributes": {"status": "approved"},
+      "version": 1
+    },
+    {
+      "id": "204946c9-f8b8-4309-a985-91287fef61cf",
+      "project_id": "d4271c70-b970-418e-bd15-32a30dd8d722",
+      "parent_id": "ab5f5bb5-99c2-487c-8812-c547ff571de5",
+      "type": "requirement",
+      "ref": "REQ-5",
+      "title": "One-call context bundles",
+      "body": "An agent shall be able to fetch, in a single tool call addressed by ref or id: an artifact's full body, its ancestor path, its children, and every linked artifact with link type, direction, suspect flag, and a short excerpt.",
+      "sort_order": 6,
+      "attributes": {"status": "approved"},
+      "version": 1
+    },
+    {
+      "id": "87edf8ab-627c-4205-b781-1a25bb5f4b7d",
+      "project_id": "d4271c70-b970-418e-bd15-32a30dd8d722",
+      "parent_id": "ab5f5bb5-99c2-487c-8812-c547ff571de5",
+      "type": "requirement",
+      "ref": "REQ-6",
+      "title": "Ref addressing in agent tools",
+      "body": "Agent tools that accept an artifact id shall also accept a stable ref (with a project id for scoping), and trimmed tool outputs (tree, search) shall include refs.",
+      "sort_order": 7,
+      "attributes": {"status": "approved"},
+      "version": 1
+    },
+    {
+      "id": "7618bcc4-8c94-4fbb-9edd-f35ff18d1750",
+      "project_id": "d4271c70-b970-418e-bd15-32a30dd8d722",
+      "parent_id": "ab5f5bb5-99c2-487c-8812-c547ff571de5",
+      "type": "requirement",
+      "ref": "REQ-7",
+      "title": "Repo export of the map",
+      "body": "PLANNED: a one-command export shall write the release-stamped AI map into a code repository as .openv/requirements.md, so any coding agent has requirements context with zero round trips.",
+      "sort_order": 8,
+      "attributes": {},
+      "version": 1
+    },
+    {
+      "id": "5e9b50c7-840b-4b08-abeb-3bd8f27dc671",
+      "project_id": "d4271c70-b970-418e-bd15-32a30dd8d722",
+      "parent_id": "ab5f5bb5-99c2-487c-8812-c547ff571de5",
+      "type": "requirement",
+      "ref": "REQ-8",
+      "title": "Code trace markers",
+      "body": "PLANNED: source comments of the form 'Implements: REQ-12' shall be scannable into proposed implements-links, giving coverage-from-code.",
+      "sort_order": 9,
+      "attributes": {},
+      "version": 1
+    },
+    {
+      "id": "ce7fe185-77b5-4c68-afec-952e81c5e910",
+      "project_id": "d4271c70-b970-418e-bd15-32a30dd8d722",
+      "type": "test-case",
+      "ref": "TC-1",
+      "title": "Ref assignment, versioning, and counters",
+      "body": "Automated: TestArtifactRefAssignment (internal/persistence/postgres) — sequential per-project/per-prefix assignment, refs constant across versions, preset refs preserved with counters advanced past them.",
+      "sort_order": 10,
+      "attributes": {"status": "approved"},
+      "version": 1
+    },
+    {
+      "id": "10831697-8317-464a-b7de-e86de62ddc02",
+      "project_id": "d4271c70-b970-418e-bd15-32a30dd8d722",
+      "type": "test-case",
+      "ref": "TC-2",
+      "title": "Backfill of pre-ref databases",
+      "body": "Automated: TestArtifactRefBackfill — migration 0018 stamps existing artifacts in stable tree order and seeds counters so numbering continues.",
+      "sort_order": 11,
+      "attributes": {"status": "approved"},
+      "version": 1
+    },
+    {
+      "id": "fa02b045-02a1-481d-b621-d9d45a82087f",
+      "project_id": "d4271c70-b970-418e-bd15-32a30dd8d722",
+      "type": "test-case",
+      "ref": "TC-3",
+      "title": "AI map rendering",
+      "body": "Automated: TestBuildAIMap and TestProjectAIMapHandler (internal/api) — hierarchy, refs, draft-status omission, bidirectional link annotations, suspect marks, pre-ref fallback, live and baseline sources, provenance stamping, foreign-baseline 404.",
+      "sort_order": 12,
+      "attributes": {"status": "approved"},
+      "version": 1
+    },
+    {
+      "id": "a9f792ef-75ec-437d-b950-0490e600f33c",
+      "project_id": "d4271c70-b970-418e-bd15-32a30dd8d722",
+      "type": "test-case",
+      "ref": "TC-4",
+      "title": "Context bundle and ref addressing",
+      "body": "Automated: TestGetContext, TestGetArtifactByRef, TestGetProjectMap (internal/mcp) — bundle contents, neighbor excerpt truncation, suspect marks, ref resolution with and without project_id, map proxying with baseline_id.",
+      "sort_order": 13,
+      "attributes": {"status": "approved"},
+      "version": 1
+    }
+  ],
+  "links": [
+    {"id": "169064b0-5765-4efa-99cf-c3abaa89a612", "from_id": "ce7fe185-77b5-4c68-afec-952e81c5e910", "to_id": "8b742015-1374-4296-bbee-722b29ee5790", "type": "verifies", "version": 1},
+    {"id": "5bc16ca9-d901-428e-bb30-07540ab74e4d", "from_id": "10831697-8317-464a-b7de-e86de62ddc02", "to_id": "8b742015-1374-4296-bbee-722b29ee5790", "type": "verifies", "version": 1},
+    {"id": "71b4a7f4-df0d-46d1-90fc-20717dbfd5c2", "from_id": "ce7fe185-77b5-4c68-afec-952e81c5e910", "to_id": "2b3cfd8e-184a-452f-b6a2-a826a475e819", "type": "verifies", "version": 1},
+    {"id": "ff7072f2-80f8-4f06-aefe-21d3b073d1ad", "from_id": "fa02b045-02a1-481d-b621-d9d45a82087f", "to_id": "729652f2-4c87-462d-8a40-86ab8dd196e2", "type": "verifies", "version": 1},
+    {"id": "563a793e-3361-45fb-9d80-4d0c46c1882e", "from_id": "fa02b045-02a1-481d-b621-d9d45a82087f", "to_id": "1e0c0f2f-219e-4d54-8e96-212b2e3d7234", "type": "verifies", "version": 1},
+    {"id": "e39a4d1c-6b6f-4a4e-9df2-5b8f3a7c2d10", "from_id": "a9f792ef-75ec-437d-b950-0490e600f33c", "to_id": "204946c9-f8b8-4309-a985-91287fef61cf", "type": "verifies", "version": 1},
+    {"id": "f4b8c2e7-1d3a-4f6b-8c9e-2a5d7e9b1c34", "from_id": "a9f792ef-75ec-437d-b950-0490e600f33c", "to_id": "87edf8ab-627c-4205-b781-1a25bb5f4b7d", "type": "verifies", "version": 1}
+  ],
+  "attachments": []
+}
