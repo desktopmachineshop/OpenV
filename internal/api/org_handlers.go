@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -60,6 +61,9 @@ func (h *Handler) registerOrgRoutes(router *mux.Router) {
 
 	// Worker status: runner fleet + queue depth for the workspace (member).
 	router.HandleFunc("/api/v1/orgs/{id}/worker-status", h.GetWorkerStatus).Methods("GET")
+
+	// Usage rollup: run counts, tokens and cost by agent and by day (member).
+	router.HandleFunc("/api/v1/orgs/{id}/usage", h.GetOrgUsage).Methods("GET")
 
 	router.HandleFunc("/api/v1/projects/{id}/team-access", h.ListProjectTeamAccess).Methods("GET")
 	router.HandleFunc("/api/v1/projects/{id}/team-access", h.GrantProjectTeamAccess).Methods("PUT")
@@ -758,6 +762,46 @@ func (h *Handler) GetWorkerStatus(w http.ResponseWriter, r *http.Request) {
 		"workers": workers,
 		"queue":   queue,
 	})
+}
+
+// Usage-window bounds: ?days= is clamped to [1, maxUsageDays]; 0/absent
+// falls back to defaultUsageDays.
+const (
+	defaultUsageDays = 30
+	maxUsageDays     = 365
+)
+
+// GetOrgUsage rolls up the workspace's agent-run usage (runs, tokens, cost)
+// by agent and by day over a trailing window (?days=30 by default).
+// Access decision: every workspace member gets the org-wide read — the
+// workspace is their shared context and the rollup carries no run content,
+// only counts and spend. Admin-only gating was considered and rejected as
+// needless friction; revisit if orgs ever want per-member spend privacy.
+func (h *Handler) GetOrgUsage(w http.ResponseWriter, r *http.Request) {
+	orgID := mux.Vars(r)["id"]
+	if !h.requireOrgRole(w, r, orgID, orgs.RoleMember) {
+		return
+	}
+	days := defaultUsageDays
+	if raw := r.URL.Query().Get("days"); raw != "" {
+		parsed, err := strconv.Atoi(raw)
+		if err != nil || parsed < 1 {
+			writeJSONError(w, http.StatusBadRequest, "days must be a positive integer")
+			return
+		}
+		days = parsed
+		if days > maxUsageDays {
+			days = maxUsageDays
+		}
+	}
+	since := time.Now().UTC().AddDate(0, 0, -days)
+	summary, err := h.runService.Usage(orgID, since)
+	if err != nil {
+		respondInternal(w, r, "failed to load usage", err)
+		return
+	}
+	summary.Days = days
+	json.NewEncoder(w).Encode(summary)
 }
 
 // --- Agent Connector pairing ---

@@ -8,9 +8,10 @@ import { OrgMembersTab } from '../components/org/OrgMembersTab';
 import { OrgTeamsTab } from '../components/org/OrgTeamsTab';
 import { OrgProvidersTab } from '../components/org/OrgProvidersTab';
 import { WorkerKeysTab } from '../components/org/WorkerKeysTab';
+import { OrgUsageTab } from '../components/org/OrgUsageTab';
 import { ErrorBanner } from '../components/ui';
 
-type Tab = 'general' | 'members' | 'teams' | 'providers' | 'worker-keys';
+type Tab = 'general' | 'members' | 'teams' | 'providers' | 'worker-keys' | 'usage';
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'general', label: 'General' },
@@ -18,6 +19,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'teams', label: 'Teams' },
   { key: 'providers', label: 'AI Providers' },
   { key: 'worker-keys', label: 'Runners' },
+  { key: 'usage', label: 'Usage' },
 ];
 
 // Workspace (org) settings: general info, members, people-teams, AI providers
@@ -196,6 +198,7 @@ export const OrgSettings: React.FC = () => {
         {tab === 'teams' && <OrgTeamsTab org={org} isAdmin={isAdmin} />}
         {tab === 'providers' && <OrgProvidersTab isAdmin={isAdmin} />}
         {tab === 'worker-keys' && <WorkerKeysTab org={org} isAdmin={isAdmin} />}
+        {tab === 'usage' && <OrgUsageTab org={org} />}
       </div>
     </div>
   );

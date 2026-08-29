@@ -46,6 +46,7 @@ func (h *Handler) registerAgentRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/agent-runs/{id}/logs", h.AppendAgentRunLogs).Methods("POST")
 	router.HandleFunc("/api/v1/agent-runs/{id}/stream", h.StreamAgentRun).Methods("GET")
 	router.HandleFunc("/api/v1/agent-runs/{id}/cancel", h.CancelAgentRun).Methods("POST")
+	router.HandleFunc("/api/v1/agent-runs/{id}/retry", h.RetryAgentRun).Methods("POST")
 	router.HandleFunc("/api/v1/agent-runs/{id}/start", h.StartAgentRun).Methods("POST")
 	router.HandleFunc("/api/v1/agent-runs/{id}/finish", h.FinishAgentRun).Methods("POST")
 
@@ -463,6 +464,38 @@ func (h *Handler) CancelAgentRun(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	json.NewEncoder(w).Encode(cancelled)
+}
+
+// RetryAgentRun re-enqueues a terminal run as a NEW run with the same org,
+// agent, project and prompt, launched by the retrying user (so their
+// personal-runner reservation applies) with provenance in
+// retried_from_run_id. Access mirrors launching/cancelling: the original
+// launcher, project editors, or workspace admins for unscoped runs. Only
+// failed, cancelled, and timed_out runs are retryable — a status conflict
+// answers 409 with the sentinel text, like the worker lifecycle endpoints.
+func (h *Handler) RetryAgentRun(w http.ResponseWriter, r *http.Request) {
+	if !requireUser(w, r) {
+		return
+	}
+	run, err := h.runService.Get(mux.Vars(r)["id"])
+	if err != nil {
+		respondError(w, r, http.StatusNotFound, "agent run not found", err)
+		return
+	}
+	if !h.requireRunAccess(w, r, run, members.RoleEditor) {
+		return
+	}
+	retried, err := h.runService.Retry(run.ID, CurrentUserID(r))
+	if err != nil {
+		if errors.Is(err, agentruns.ErrNotRetryable) {
+			writeJSONError(w, http.StatusConflict, err.Error())
+			return
+		}
+		respondInternal(w, r, "failed to retry run", err)
+		return
+	}
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(retried)
 }
 
 // --- Worker endpoints ---

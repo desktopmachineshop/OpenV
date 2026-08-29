@@ -4,6 +4,10 @@ import { ExpandableText } from '../ExpandableText';
 
 const TERMINAL_STATUSES = ['succeeded', 'failed', 'timed_out', 'cancelled'];
 
+// Statuses the backend accepts on POST /agent-runs/{id}/retry (succeeded is
+// deliberately excluded — retrying success invites duplicate side effects).
+const RETRYABLE_STATUSES = ['failed', 'timed_out', 'cancelled'];
+
 // After an SSE drop we retry the stream this many times (with exponential
 // backoff) before settling on the 3s polling fallback for good.
 const MAX_SSE_RECONNECT_ATTEMPTS = 3;
@@ -101,6 +105,7 @@ export const RunDetailPanel: React.FC<RunDetailPanelProps> = ({ runId, onSelectR
   const [logs, setLogs] = useState<RunLogEntry[]>([]);
   const [tree, setTree] = useState<AgentRun[]>([]);
   const [error, setError] = useState('');
+  const [retrying, setRetrying] = useState(false);
   const logsEndRef = useRef<HTMLDivElement>(null);
   const lastSeqRef = useRef(0);
   const statusRef = useRef('');
@@ -251,6 +256,21 @@ export const RunDetailPanel: React.FC<RunDetailPanelProps> = ({ runId, onSelectR
     }
   };
 
+  const retry = async () => {
+    setRetrying(true);
+    setError('');
+    try {
+      // The backend enqueues a NEW run (same agent/prompt/project, launched
+      // by the current user); jump the panel to it.
+      const res = await agentRunsAPI.retry(runId);
+      onSelectRun(res.data.id);
+    } catch (err: any) {
+      setError(err.response?.data?.error || err.message || 'Failed to retry run');
+    } finally {
+      setRetrying(false);
+    }
+  };
+
   const renderTree = (nodes: AgentRun[], parentId: string | null, depth: number): React.ReactNode =>
     nodes
       .filter((n) => (n.parent_run_id || null) === parentId)
@@ -289,6 +309,7 @@ export const RunDetailPanel: React.FC<RunDetailPanelProps> = ({ runId, onSelectR
       ));
 
   const isLive = run && !TERMINAL_STATUSES.includes(run.status);
+  const isRetryable = run && RETRYABLE_STATUSES.includes(run.status);
 
   return (
     <div
@@ -345,6 +366,25 @@ export const RunDetailPanel: React.FC<RunDetailPanelProps> = ({ runId, onSelectR
             Cancel
           </button>
         )}
+        {isRetryable && (
+          <button
+            onClick={retry}
+            disabled={retrying}
+            title="Re-run this prompt as a new run with the same agent and project"
+            style={{
+              background: 'var(--accent)',
+              color: '#fff',
+              border: 'none',
+              padding: '5px 12px',
+              borderRadius: 4,
+              cursor: retrying ? 'default' : 'pointer',
+              fontSize: 12,
+              opacity: retrying ? 0.6 : 1,
+            }}
+          >
+            {retrying ? 'Retrying…' : 'Retry'}
+          </button>
+        )}
         <button
           onClick={onClose}
           style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: 'var(--text-muted)' }}
@@ -363,6 +403,17 @@ export const RunDetailPanel: React.FC<RunDetailPanelProps> = ({ runId, onSelectR
               {run.tokens_in + run.tokens_out}
               {run.cost_usd != null && ` · Cost: $${run.cost_usd.toFixed(4)}`}
             </div>
+            {run.retried_from_run_id && (
+              <div>
+                Retry of{' '}
+                <span
+                  onClick={() => onSelectRun(run.retried_from_run_id!)}
+                  style={{ color: 'var(--accent)', cursor: 'pointer', textDecoration: 'underline' }}
+                >
+                  an earlier run
+                </span>
+              </div>
+            )}
             <div style={{ whiteSpace: 'pre-wrap', color: 'var(--text-body)' }}>Prompt: {run.prompt}</div>
           </div>
         )}

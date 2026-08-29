@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/gorilla/mux"
 
@@ -84,6 +85,15 @@ type fakeRunService struct {
 	reissueErr error
 	reissued   []string
 	released   [][2]string
+
+	retryRun    *agentruns.Run // returned by Retry on success
+	retryErr    error
+	retryCalls  []string // source run IDs
+	retryUsers  []string // launchedBy (deref'd, "" for nil)
+	usageArgs   []string // orgIDs Usage was called with
+	usageSince  []time.Time
+	usageResult *agentruns.UsageSummary
+	usageErr    error
 }
 
 func (f *fakeRunService) Get(id string) (*agentruns.Run, error) {
@@ -131,6 +141,31 @@ func (f *fakeRunService) ReissueToken(runID string) (string, error) {
 func (f *fakeRunService) ReleaseClaim(runID, workerID string) error {
 	f.released = append(f.released, [2]string{runID, workerID})
 	return nil
+}
+
+func (f *fakeRunService) Retry(sourceRunID string, launchedBy *string) (*agentruns.Run, error) {
+	f.retryCalls = append(f.retryCalls, sourceRunID)
+	user := ""
+	if launchedBy != nil {
+		user = *launchedBy
+	}
+	f.retryUsers = append(f.retryUsers, user)
+	if f.retryErr != nil {
+		return nil, f.retryErr
+	}
+	return f.retryRun, nil
+}
+
+func (f *fakeRunService) Usage(orgID string, since time.Time) (*agentruns.UsageSummary, error) {
+	f.usageArgs = append(f.usageArgs, orgID)
+	f.usageSince = append(f.usageSince, since)
+	if f.usageErr != nil {
+		return nil, f.usageErr
+	}
+	if f.usageResult != nil {
+		return f.usageResult, nil
+	}
+	return &agentruns.UsageSummary{ByAgent: []agentruns.AgentUsage{}, ByDay: []agentruns.DailyUsage{}}, nil
 }
 
 type fakeArtifactService struct {

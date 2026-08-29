@@ -20,19 +20,19 @@ func NewAgentRunRepository(db *sql.DB) *AgentRunRepository {
 	return &AgentRunRepository{db: db}
 }
 
-const runColumns = `r.id, COALESCE(r.org_id::text, ''), r.agent_id, r.project_id, r.automation_id, r.trigger_event_id, r.team_id, r.team_node_id, r.parent_run_id, r.work_item_id, r.interview_session_id, r.guided_session_id,
+const runColumns = `r.id, COALESCE(r.org_id::text, ''), r.agent_id, r.project_id, r.automation_id, r.trigger_event_id, r.team_id, r.team_node_id, r.parent_run_id, r.work_item_id, r.interview_session_id, r.guided_session_id, r.retried_from_run_id,
 	r.status, r.cancel_requested, r.priority, r.prompt, r.run_token_hash, r.worker_id, r.heartbeat_at, r.started_at, r.finished_at, r.exit_code,
 	r.final_text, r.error, r.tokens_in, r.tokens_out, r.cost_usd, r.artifacts_touched, r.launched_by, r.created_at, a.name, a.provider`
 
 func scanRun(row interface{ Scan(...interface{}) error }) (*agentruns.Run, error) {
 	r := new(agentruns.Run)
-	var projectID, automationID, triggerEventID, teamID, teamNodeID, parentRunID, workItemID, interviewSessionID, guidedSessionID, launchedBy sql.NullString
+	var projectID, automationID, triggerEventID, teamID, teamNodeID, parentRunID, workItemID, interviewSessionID, guidedSessionID, retriedFromRunID, launchedBy sql.NullString
 	var heartbeatAt, startedAt, finishedAt sql.NullTime
 	var exitCode sql.NullInt64
 	var costUSD sql.NullFloat64
 	var touched []byte
 
-	err := row.Scan(&r.ID, &r.OrgID, &r.AgentID, &projectID, &automationID, &triggerEventID, &teamID, &teamNodeID, &parentRunID, &workItemID, &interviewSessionID, &guidedSessionID,
+	err := row.Scan(&r.ID, &r.OrgID, &r.AgentID, &projectID, &automationID, &triggerEventID, &teamID, &teamNodeID, &parentRunID, &workItemID, &interviewSessionID, &guidedSessionID, &retriedFromRunID,
 		&r.Status, &r.CancelRequested, &r.Priority, &r.Prompt, &r.RunTokenHash, &r.WorkerID, &heartbeatAt, &startedAt, &finishedAt, &exitCode,
 		&r.FinalText, &r.Error, &r.TokensIn, &r.TokensOut, &costUSD, &touched, &launchedBy, &r.CreatedAt, &r.AgentName, &r.AgentProvider)
 	if err != nil {
@@ -63,6 +63,7 @@ func scanRun(row interface{ Scan(...interface{}) error }) (*agentruns.Run, error
 	r.WorkItemID = setStr(workItemID)
 	r.InterviewSessionID = setStr(interviewSessionID)
 	r.GuidedSessionID = setStr(guidedSessionID)
+	r.RetriedFromRunID = setStr(retriedFromRunID)
 	r.LaunchedBy = setStr(launchedBy)
 	r.HeartbeatAt = setTime(heartbeatAt)
 	r.StartedAt = setTime(startedAt)
@@ -88,11 +89,11 @@ func (rep *AgentRunRepository) Save(r *agentruns.Run) error {
 		return err
 	}
 	_, err = rep.db.Exec(`
-		INSERT INTO agent_runs (id, org_id, agent_id, project_id, automation_id, trigger_event_id, team_id, team_node_id, parent_run_id, work_item_id, interview_session_id, guided_session_id,
+		INSERT INTO agent_runs (id, org_id, agent_id, project_id, automation_id, trigger_event_id, team_id, team_node_id, parent_run_id, work_item_id, interview_session_id, guided_session_id, retried_from_run_id,
 			status, cancel_requested, priority, prompt, run_token_hash, worker_id, heartbeat_at, started_at, finished_at, exit_code,
 			final_text, error, tokens_in, tokens_out, cost_usd, artifacts_touched, launched_by, created_at, preferred_user_id, hosted_after)
-		VALUES ($1, NULLIF($2, '')::uuid, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32)
-	`, r.ID, r.OrgID, r.AgentID, r.ProjectID, r.AutomationID, r.TriggerEventID, r.TeamID, r.TeamNodeID, r.ParentRunID, r.WorkItemID, r.InterviewSessionID, r.GuidedSessionID,
+		VALUES ($1, NULLIF($2, '')::uuid, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33)
+	`, r.ID, r.OrgID, r.AgentID, r.ProjectID, r.AutomationID, r.TriggerEventID, r.TeamID, r.TeamNodeID, r.ParentRunID, r.WorkItemID, r.InterviewSessionID, r.GuidedSessionID, r.RetriedFromRunID,
 		r.Status, r.CancelRequested, r.Priority, r.Prompt, r.RunTokenHash, r.WorkerID, r.HeartbeatAt, r.StartedAt, r.FinishedAt, r.ExitCode,
 		r.FinalText, r.Error, r.TokensIn, r.TokensOut, r.CostUSD, touched, r.LaunchedBy, r.CreatedAt, r.PreferredUserID, r.HostedAfter)
 	return err
@@ -430,6 +431,62 @@ func (rep *AgentRunRepository) QueueStats(orgID string) (agentruns.QueueStats, e
 	}
 	stats.OldestQueuedSeconds = int(oldest)
 	return stats, nil
+}
+
+// Usage aggregates an org's runs created at/after since: once grouped by
+// agent slug (biggest token consumers first) and once by calendar day (UTC,
+// ascending). Runs of every status count; token/cost columns are zero until
+// the worker's terminal report lands, so live runs add runs but no spend.
+func (rep *AgentRunRepository) Usage(orgID string, since time.Time) ([]agentruns.AgentUsage, []agentruns.DailyUsage, error) {
+	agentRows, err := rep.db.Query(`
+		SELECT a.slug, a.name, COUNT(*),
+			COALESCE(SUM(r.tokens_in), 0), COALESCE(SUM(r.tokens_out), 0),
+			COALESCE(SUM(r.cost_usd), 0)::float8
+		FROM agent_runs r JOIN agents a ON a.id = r.agent_id
+		WHERE r.org_id = $1::uuid AND r.created_at >= $2
+		GROUP BY a.slug, a.name
+		ORDER BY SUM(r.tokens_in) + SUM(r.tokens_out) DESC, a.slug
+	`, orgID, since)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer agentRows.Close()
+
+	var byAgent []agentruns.AgentUsage
+	for agentRows.Next() {
+		var u agentruns.AgentUsage
+		if err := agentRows.Scan(&u.AgentSlug, &u.AgentName, &u.Runs, &u.TokensIn, &u.TokensOut, &u.CostUSD); err != nil {
+			return nil, nil, err
+		}
+		byAgent = append(byAgent, u)
+	}
+	if err := agentRows.Err(); err != nil {
+		return nil, nil, err
+	}
+
+	dayRows, err := rep.db.Query(`
+		SELECT TO_CHAR(r.created_at::date, 'YYYY-MM-DD'), COUNT(*),
+			COALESCE(SUM(r.tokens_in), 0), COALESCE(SUM(r.tokens_out), 0),
+			COALESCE(SUM(r.cost_usd), 0)::float8
+		FROM agent_runs r
+		WHERE r.org_id = $1::uuid AND r.created_at >= $2
+		GROUP BY r.created_at::date
+		ORDER BY r.created_at::date
+	`, orgID, since)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer dayRows.Close()
+
+	var byDay []agentruns.DailyUsage
+	for dayRows.Next() {
+		var u agentruns.DailyUsage
+		if err := dayRows.Scan(&u.Day, &u.Runs, &u.TokensIn, &u.TokensOut, &u.CostUSD); err != nil {
+			return nil, nil, err
+		}
+		byDay = append(byDay, u)
+	}
+	return byAgent, byDay, dayRows.Err()
 }
 
 // CountPendingProposals counts a run's unreviewed proposals.
