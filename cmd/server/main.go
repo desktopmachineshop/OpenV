@@ -276,6 +276,8 @@ func main() {
 	// Typed attribute definitions (issue #219). The artifacts catalog validates
 	// a definition's applies_to_type at create/update time.
 	attributeService := attributes.NewDefaultService(attributeDefRepo, artifacts.ValidType)
+	// Let the ReqIF export type enum attributes as ReqIF enumerations.
+	exportService.SetAttributeService(attributeService)
 	vvService := vv.NewDefaultService(vvRepo, artifactService, chatterService, bus)
 	workItemService := workitems.NewDefaultService(workItemRepo, bus)
 	guidedService := guided.NewDefaultService(guidedRepo, artifactService, linkService, chatterService, productService, bus)

@@ -1416,6 +1416,10 @@ func (h *Handler) ExportProject(w http.ResponseWriter, r *http.Request) {
 		contentType = "application/json"
 	case exports.FormatCSV:
 		contentType = "text/csv; charset=utf-8"
+	case exports.FormatReqIF:
+		// ReqIF is an XML dialect; application/xml is the widely accepted media
+		// type for it (the registered application/reqif+xml is not universal).
+		contentType = "application/xml; charset=utf-8"
 	default:
 		writeJSONError(w, http.StatusBadRequest, fmt.Sprintf("unsupported export format: %s", format))
 		return

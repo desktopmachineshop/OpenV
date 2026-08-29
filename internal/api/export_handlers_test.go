@@ -111,6 +111,28 @@ func TestExportProjectCSVHeaders(t *testing.T) {
 	}
 }
 
+func TestExportProjectReqIFHeaders(t *testing.T) {
+	fake := &fakeExportService{data: []byte(`<?xml version="1.0"?><REQ-IF/>`), filename: "project_Demo_20260101_000000.reqif"}
+	h := &Handler{exportService: fake}
+
+	w := httptest.NewRecorder()
+	h.ExportProject(w, exportRequest(t, "reqif"))
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200 (body: %s)", w.Code, w.Body.String())
+	}
+	if got := w.Header().Get("Content-Type"); got != "application/xml; charset=utf-8" {
+		t.Errorf("Content-Type = %q, want application/xml; charset=utf-8", got)
+	}
+	want := `attachment; filename="project_Demo_20260101_000000.reqif"`
+	if got := w.Header().Get("Content-Disposition"); got != want {
+		t.Errorf("Content-Disposition = %q, want %q", got, want)
+	}
+	if len(fake.requested) != 1 || fake.requested[0] != exports.FormatReqIF {
+		t.Errorf("service formats requested = %v, want [reqif]", fake.requested)
+	}
+}
+
 func TestExportProjectDomainUnsupportedErrorReturns400(t *testing.T) {
 	// Defense in depth: if the service itself reports an unsupported format,
 	// the handler still answers 400, not 500.

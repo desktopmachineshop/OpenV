@@ -16,6 +16,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/artifacts"
 	"github.com/openv/requirements-platform/internal/domain/links"
 	"github.com/openv/requirements-platform/internal/domain/attachments"
+	"github.com/openv/requirements-platform/internal/domain/attributes"
 	"github.com/openv/requirements-platform/internal/domain/products"
 	"github.com/openv/requirements-platform/internal/domain/projects"
 )
@@ -31,6 +32,9 @@ const (
 	FormatJSON  ExportFormat = "json"
 	FormatCSV   ExportFormat = "csv"
 	FormatExcel ExportFormat = "excel"
+	// FormatReqIF is the OMG ReqIF 1.x interchange format read by DOORS and
+	// Polarion (issue #224). Export only for now; import is a fast-follow.
+	FormatReqIF ExportFormat = "reqif"
 )
 
 // ProjectExport contains all project data for export
@@ -44,6 +48,11 @@ type ProjectExport struct {
 	Links        []*links.Link            `json:"links"`
 	Attachments  []*attachments.Attachment `json:"attachments"`
 	ProductProfile *products.ProductProfile `json:"product_profile,omitempty"`
+	// AttributeDefs carries the org/project attribute definitions effective for
+	// the project. It is populated only for the ReqIF export (to type enum
+	// attributes as ReqIF enumerations); JSON/CSV exports leave it nil so their
+	// output is unchanged.
+	AttributeDefs []*attributes.Definition `json:"attribute_definitions,omitempty"`
 }
 
 // Service defines the export/import service interface
@@ -62,12 +71,21 @@ type DefaultService struct {
 	projectRepo       ProjectRepository
 	projectService    projects.Service
 	productService    products.Service
+	attributeService  attributes.Service
 }
 
 // SetProductService wires an optional product profile service. When set,
 // exports include the project's product profile and imports restore it.
 func (s *DefaultService) SetProductService(ps products.Service) {
 	s.productService = ps
+}
+
+// SetAttributeService wires an optional attribute-definition service. When set,
+// the ReqIF export types enum attributes as ReqIF enumerations using the
+// project's effective definitions. Optional: nil degrades gracefully to
+// free-form string attributes.
+func (s *DefaultService) SetAttributeService(as attributes.Service) {
+	s.attributeService = as
 }
 
 // ProjectRepository defines methods for retrieving project info
@@ -169,6 +187,23 @@ func (s *DefaultService) ExportProject(projectID string, format ExportFormat) ([
 		return s.exportJSON(exportData)
 	case FormatCSV:
 		return s.exportCSV(exportData)
+	case FormatReqIF:
+		// Attach the effective attribute definitions so enum attributes export
+		// as ReqIF enumerations. Best-effort: definitions are optional fidelity,
+		// so failures degrade to free-form string attributes rather than fail
+		// the export.
+		if s.attributeService != nil {
+			orgID := ""
+			if s.projectService != nil {
+				if p, err := s.projectService.GetProject(projectID); err == nil && p != nil {
+					orgID = p.OrgID
+				}
+			}
+			if defs, err := s.attributeService.EffectiveForProject(orgID, projectID); err == nil {
+				exportData.AttributeDefs = defs
+			}
+		}
+		return s.exportReqIF(exportData)
 	case FormatExcel:
 		return nil, "", fmt.Errorf("%w: excel export not yet implemented", ErrUnsupportedFormat)
 	default:
