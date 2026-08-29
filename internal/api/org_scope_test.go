@@ -105,12 +105,15 @@ func TestGlobalSearchFailsClosedOnEmptyActiveOrg(t *testing.T) {
 	if w.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200 (body %q)", w.Code, w.Body.String())
 	}
-	var hits []artifacts.SearchHit
-	if err := json.Unmarshal(w.Body.Bytes(), &hits); err != nil {
+	var resp struct {
+		ModeUsed string                `json:"mode_used"`
+		Hits     []artifacts.SearchHit `json:"hits"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
 		t.Fatalf("decoding response: %v", err)
 	}
-	if len(hits) != 0 {
-		t.Fatalf("empty active org returned %d hits, want 0 (fail closed)", len(hits))
+	if len(resp.Hits) != 0 {
+		t.Fatalf("empty active org returned %d hits, want 0 (fail closed)", len(resp.Hits))
 	}
 	if artifactSvc.calls != 0 {
 		t.Fatalf("artifact search called %d times with no active org, want 0", artifactSvc.calls)

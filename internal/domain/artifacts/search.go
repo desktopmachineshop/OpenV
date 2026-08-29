@@ -14,6 +14,10 @@ type SearchHit struct {
 	Type        string `json:"type"`
 	Title       string `json:"title"`
 	Snippet     string `json:"snippet"`
+	// Score is the semantic-similarity score (0..1, higher is closer) for hits
+	// from the semantic/hybrid modes. It is omitted for pure keyword hits,
+	// which have no vector distance.
+	Score float64 `json:"score,omitempty"`
 }
 
 // snippetRadius is how many runes of context Snippet keeps on each side of
