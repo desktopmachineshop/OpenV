@@ -111,7 +111,7 @@ export const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
               style={{
                 fontSize: 11,
                 background: 'var(--accent)',
-                color: '#fff',
+                color: 'var(--accent-fg)',
                 borderRadius: 10,
                 padding: '2px 8px',
                 marginLeft: 6,

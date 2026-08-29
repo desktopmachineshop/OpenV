@@ -193,7 +193,7 @@ export const ChatterPanel: React.FC<ChatterPanelProps> = ({
             marginTop: '8px',
             padding: '8px',
             backgroundColor: newMessage.trim() ? 'var(--accent)' : 'var(--neutral-mid)',
-            color: 'white',
+            color: 'var(--accent-fg)',
             border: 'none',
             borderRadius: '4px',
             cursor: newMessage.trim() ? 'pointer' : 'not-allowed',

@@ -100,7 +100,7 @@ export const OrgSettings: React.FC = () => {
               borderRadius: 10,
               fontSize: 11,
               fontWeight: 600,
-              color: org.type === 'personal' ? 'var(--text-muted)' : '#fff',
+              color: org.type === 'personal' ? 'var(--text-muted)' : 'var(--accent-fg)',
               background: org.type === 'personal' ? 'var(--neutral-soft)' : 'var(--accent)',
             }}
           >

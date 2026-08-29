@@ -328,7 +328,7 @@ export const InterviewChat: React.FC = () => {
                   whiteSpace: 'pre-wrap',
                   wordBreak: 'break-word',
                   background: m.role === 'participant' ? 'var(--accent)' : 'var(--surface-alt)',
-                  color: m.role === 'participant' ? '#fff' : 'var(--text)',
+                  color: m.role === 'participant' ? 'var(--accent-fg)' : 'var(--text)',
                   borderBottomRightRadius: m.role === 'participant' ? 4 : 14,
                   borderBottomLeftRadius: m.role === 'assistant' ? 4 : 14,
                 }}

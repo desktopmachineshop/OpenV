@@ -802,7 +802,7 @@ export const ModuleView: React.FC = () => {
             height: '36px',
             padding: '0 12px',
             backgroundColor: baselines.length === 0 ? 'var(--neutral-mid)' : 'var(--accent)',
-            color: 'white',
+            color: 'var(--accent-fg)',
             border: 'none',
             borderRadius: '4px',
             cursor: baselines.length === 0 ? 'not-allowed' : 'pointer',

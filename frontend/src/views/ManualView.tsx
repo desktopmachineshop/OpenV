@@ -208,7 +208,7 @@ export const ManualView: React.FC = () => {
                   style={{
                     display: 'block',
                     padding: '8px 16px',
-                    color: active ? '#fff' : 'var(--sidebar-text-dim)',
+                    color: active ? 'var(--accent-fg)' : 'var(--sidebar-text-dim)',
                     background: active ? 'var(--accent)' : 'transparent',
                     textDecoration: 'none',
                     fontSize: 13.5,
