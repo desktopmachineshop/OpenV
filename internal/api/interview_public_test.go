@@ -1,7 +1,9 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -20,7 +22,8 @@ type fakeInterviewService struct {
 	invite    *interviews.Invite
 	session   *interviews.Session // active session, nil for a first visit
 	messages  []*interviews.Message
-	starts    int // StartOrResumeSession call count
+	starts    int   // StartOrResumeSession call count
+	startErr  error // returned by StartOrResumeSession after counting the call
 }
 
 func (f *fakeInterviewService) ResolveInviteToken(rawToken string) (*interviews.Interview, *interviews.Invite, error) {
@@ -36,6 +39,9 @@ func (f *fakeInterviewService) FindActiveSession(inviteID string) (*interviews.S
 
 func (f *fakeInterviewService) StartOrResumeSession(inviteID, interviewID, participantName string) (*interviews.Session, error) {
 	f.starts++
+	if f.startErr != nil {
+		return nil, f.startErr
+	}
 	if f.session == nil {
 		f.session = &interviews.Session{
 			ID:              "sess-1",
@@ -68,10 +74,11 @@ func newInterviewTestHandler() (*Handler, *fakeInterviewService) {
 		invite:    &interviews.Invite{ID: "inv-1", InterviewID: "int-1"},
 	}
 	h := &Handler{
-		interviewService:    fake,
-		sseHub:              NewSSEHub(),
-		interviewMsgLimiter: newRateLimiter(defaultInterviewMsgBurst, defaultInterviewMsgRefill),
-		interviewIPLimiter:  newRateLimiter(defaultInterviewIPBurst, defaultInterviewIPRefill),
+		interviewService:       fake,
+		sseHub:                 NewSSEHub(),
+		interviewMsgLimiter:    newRateLimiter(defaultInterviewMsgBurst, defaultInterviewMsgRefill),
+		interviewIPLimiter:     newRateLimiter(defaultInterviewIPBurst, defaultInterviewIPRefill),
+		interviewStreamLimiter: newRateLimiter(defaultInterviewStreamBurst, defaultInterviewStreamRefill),
 	}
 	return h, fake
 }
@@ -190,5 +197,77 @@ func TestPublicInterviewIntroPerIPRateLimited(t *testing.T) {
 	h.PublicInterviewIntro(w, r)
 	if w.Code != http.StatusOK {
 		t.Fatalf("intro from second IP: status = %d, want 200", w.Code)
+	}
+}
+
+// streamRequest builds a stream GET whose context is already canceled so
+// ServeStream returns right after the replay phase.
+func streamRequest(ip string) *http.Request {
+	r := httptest.NewRequest(http.MethodGet, "/api/v1/public/interviews/good-token/stream", nil)
+	r.RemoteAddr = ip
+	ctx, cancel := context.WithCancel(r.Context())
+	cancel()
+	return mux.SetURLVars(r.WithContext(ctx), map[string]string{"token": "good-token"})
+}
+
+// TestPublicInterviewStreamUsesOwnBucket locks in that SSE stream connects
+// are charged to their own, more generous per-IP bucket: an EventSource
+// client that reconnects through network hiccups must neither be locked out
+// by intro page loads nor eat the intro budget.
+func TestPublicInterviewStreamUsesOwnBucket(t *testing.T) {
+	h, _ := newInterviewTestHandler()
+	const ip = "203.0.113.5:4444"
+
+	// Exhaust the intro bucket for this IP.
+	for i := 0; i < defaultInterviewIPBurst; i++ {
+		r := httptest.NewRequest(http.MethodGet, "/api/v1/public/interviews/good-token", nil)
+		r.RemoteAddr = ip
+		r = mux.SetURLVars(r, map[string]string{"token": "good-token"})
+		w := httptest.NewRecorder()
+		h.PublicInterviewIntro(w, r)
+		if w.Code != http.StatusOK {
+			t.Fatalf("intro %d: status = %d", i+1, w.Code)
+		}
+	}
+
+	// The stream still connects: it draws from its own bucket.
+	w := httptest.NewRecorder()
+	h.PublicInterviewStream(w, streamRequest(ip))
+	if w.Code != http.StatusOK {
+		t.Fatalf("stream after intro bucket exhausted: status = %d, want 200 (body %q)", w.Code, w.Body.String())
+	}
+	if ct := w.Header().Get("Content-Type"); ct != "text/event-stream" {
+		t.Fatalf("stream Content-Type = %q, want text/event-stream", ct)
+	}
+
+	// The stream bucket itself still bounds connection floods.
+	for i := 0; i < defaultInterviewStreamBurst; i++ {
+		w := httptest.NewRecorder()
+		h.PublicInterviewStream(w, streamRequest(ip))
+		if w.Code == http.StatusTooManyRequests && i < defaultInterviewStreamBurst-1 {
+			t.Fatalf("stream connect %d throttled too early", i+2)
+		}
+	}
+	w = httptest.NewRecorder()
+	h.PublicInterviewStream(w, streamRequest(ip))
+	if w.Code != http.StatusTooManyRequests {
+		t.Fatalf("stream past burst: status = %d, want 429", w.Code)
+	}
+}
+
+// TestPublicInterviewMessageInternalErrorIsSanitized locks in that a storage
+// failure on this unauthenticated endpoint answers 500 with a generic message
+// — internal error text must never reach the public.
+func TestPublicInterviewMessageInternalErrorIsSanitized(t *testing.T) {
+	const internalDetail = "pq: connection refused host=db.internal"
+	h, fake := newInterviewTestHandler()
+	fake.startErr = errors.New(internalDetail)
+
+	w := postMessage(h, "good-token")
+	if w.Code != http.StatusInternalServerError {
+		t.Fatalf("status = %d, want 500 (body %q)", w.Code, w.Body.String())
+	}
+	if strings.Contains(w.Body.String(), "db.internal") {
+		t.Fatalf("500 body %q leaks the internal error text", w.Body.String())
 	}
 }

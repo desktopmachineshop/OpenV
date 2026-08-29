@@ -2,7 +2,7 @@ package orchestration
 
 import (
 	"fmt"
-	"log"
+	"log/slog"
 	"strings"
 
 	"github.com/openv/requirements-platform/internal/domain/agentruns"
@@ -105,11 +105,11 @@ func (h *Hooks) syncWorkItem(run *agentruns.Run) {
 			AssigneeID:   &run.AgentID,
 		}, nil, actor)
 		if err != nil {
-			log.Printf("orchestration: failed to create tracking card for run %s: %v", run.ID, err)
+			slog.Error("orchestration: failed to create tracking card for run", "run_id", run.ID, "error", err)
 			return
 		}
 		if err := h.runService.AttachWorkItem(run.ID, item.ID); err != nil {
-			log.Printf("orchestration: failed to attach card %s to run %s: %v", item.ID, run.ID, err)
+			slog.Error("orchestration: failed to attach card to run", "work_item_id", item.ID, "run_id", run.ID, "error", err)
 		}
 		run.WorkItemID = &item.ID
 		_ = h.workItemService.RecordRunActivity(item.ID, workitems.KindRunStarted, "Run queued", actor, map[string]interface{}{"run_id": run.ID})
@@ -121,7 +121,7 @@ func (h *Hooks) syncWorkItem(run *agentruns.Run) {
 		return
 	}
 	if _, err := h.workItemService.Move(*run.WorkItemID, workitems.MoveRequest{Column: column, SortOrder: 0}, actor); err != nil {
-		log.Printf("orchestration: failed to move card %s: %v", *run.WorkItemID, err)
+		slog.Error("orchestration: failed to move card", "work_item_id", *run.WorkItemID, "error", err)
 	}
 
 	switch run.Status {
@@ -143,7 +143,7 @@ func (h *Hooks) enqueueSuccessors(run *agentruns.Run) {
 	for _, edgeType := range []string{teams.EdgeHandsOff, teams.EdgeReviews} {
 		edges, err := h.teamService.SuccessorEdges(*run.TeamNodeID, edgeType)
 		if err != nil {
-			log.Printf("orchestration: successor lookup failed for node %s: %v", *run.TeamNodeID, err)
+			slog.Error("orchestration: successor lookup failed for node", "team_node_id", *run.TeamNodeID, "edge_type", edgeType, "error", err)
 			continue
 		}
 		for _, edge := range edges {
@@ -155,7 +155,7 @@ func (h *Hooks) enqueueSuccessors(run *agentruns.Run) {
 func (h *Hooks) launchSuccessor(run *agentruns.Run, edge *teams.Edge, edgeType string) {
 	graph, err := h.teamService.GetTeam(edge.TeamID)
 	if err != nil {
-		log.Printf("orchestration: team %s lookup failed: %v", edge.TeamID, err)
+		slog.Error("orchestration: team lookup failed", "team_id", edge.TeamID, "error", err)
 		return
 	}
 	var target *teams.Node
@@ -202,7 +202,7 @@ func (h *Hooks) launchSuccessor(run *agentruns.Run, edge *teams.Edge, edgeType s
 		Prompt:      prompt,
 	})
 	if err != nil {
-		log.Printf("orchestration: failed to launch %s successor for run %s: %v", edgeType, run.ID, err)
+		slog.Error("orchestration: failed to launch successor for run", "edge_type", edgeType, "run_id", run.ID, "error", err)
 	}
 }
 
@@ -210,11 +210,11 @@ func (h *Hooks) launchSuccessor(run *agentruns.Run, edge *teams.Edge, edgeType s
 // kanban card assigned to that person in the run's project.
 func (h *Hooks) handOffToHuman(run *agentruns.Run, graph *teams.TeamGraph, edge *teams.Edge, edgeType string, target *teams.Node) {
 	if run.ProjectID == nil {
-		log.Printf("orchestration: run %s hands off to human node %s but has no project; skipping work item", run.ID, target.ID)
+		slog.Warn("orchestration: run hands off to human node but has no project; skipping work item", "run_id", run.ID, "team_node_id", target.ID)
 		return
 	}
 	if target.UserID == nil {
-		log.Printf("orchestration: human node %s has no user; skipping work item for run %s", target.ID, run.ID)
+		slog.Warn("orchestration: human node has no user; skipping work item", "team_node_id", target.ID, "run_id", run.ID)
 		return
 	}
 
@@ -245,7 +245,7 @@ func (h *Hooks) handOffToHuman(run *agentruns.Run, graph *teams.TeamGraph, edge 
 		AssigneeID:   target.UserID,
 	}, nil, actor)
 	if err != nil {
-		log.Printf("orchestration: failed to create %s card for human node %s from run %s: %v", edgeType, target.ID, run.ID, err)
+		slog.Error("orchestration: failed to create handoff card for human node", "edge_type", edgeType, "team_node_id", target.ID, "run_id", run.ID, "error", err)
 		return
 	}
 	if run.WorkItemID != nil {
@@ -267,7 +267,7 @@ func (h *Hooks) deliverInterviewReply(run *agentruns.Run) {
 	}
 	message, err := h.interviewService.AppendMessage(*run.InterviewSessionID, interviews.RoleAssistant, reply)
 	if err != nil {
-		log.Printf("orchestration: failed to append interview reply for session %s: %v", *run.InterviewSessionID, err)
+		slog.Error("orchestration: failed to append interview reply", "session_id", *run.InterviewSessionID, "error", err)
 		return
 	}
 	if h.broadcaster != nil {
@@ -301,7 +301,7 @@ func (h *Hooks) deliverGuidedReply(run *agentruns.Run) {
 	}
 	message, err := h.guidedService.AppendChatMessage(*run.GuidedSessionID, guided.ChatRoleAssistant, reply)
 	if err != nil {
-		log.Printf("orchestration: failed to append guided copilot reply for session %s: %v", *run.GuidedSessionID, err)
+		slog.Error("orchestration: failed to append guided copilot reply", "session_id", *run.GuidedSessionID, "error", err)
 		return
 	}
 	if h.broadcaster != nil {
@@ -376,7 +376,7 @@ func (h *Hooks) onEvent(e domainevents.Event) {
 		}
 	}
 	if orgID == "" {
-		log.Printf("orchestration: board trigger could not resolve org for project %s; skipping card %s", item.ProjectID, item.ID)
+		slog.Warn("orchestration: board trigger could not resolve org for project; skipping card", "project_id", item.ProjectID, "work_item_id", item.ID)
 		return
 	}
 
@@ -390,7 +390,7 @@ func (h *Hooks) onEvent(e domainevents.Event) {
 		Prompt:     b.String(),
 	})
 	if err != nil {
-		log.Printf("orchestration: board trigger failed to launch run for card %s: %v", item.ID, err)
+		slog.Error("orchestration: board trigger failed to launch run for card", "work_item_id", item.ID, "error", err)
 		_ = h.workItemService.RecordRunActivity(item.ID, workitems.KindRunFailed, "Failed to launch agent: "+err.Error(), "system", nil)
 		return
 	}

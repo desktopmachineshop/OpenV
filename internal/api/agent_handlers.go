@@ -583,7 +583,15 @@ func (h *Handler) StartAgentRun(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.runService.MarkRunning(run.ID); err != nil {
-		writeJSONError(w, http.StatusBadRequest, err.Error())
+		// A conflicting status (e.g. the run was cancelled or reaped while
+		// the worker was starting) is the worker's problem: 409 with the
+		// domain sentinel. Anything else is ours — answer 5xx so the worker
+		// knows to retry rather than abandon the run.
+		if errors.Is(err, agentruns.ErrInvalidTransition) {
+			writeJSONError(w, http.StatusConflict, err.Error())
+			return
+		}
+		respondInternal(w, r, "failed to start run", err)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -626,7 +634,15 @@ func (h *Handler) FinishAgentRun(w http.ResponseWriter, r *http.Request) {
 	}
 	run, err := h.runService.Finish(mux.Vars(r)["id"], req)
 	if err != nil {
-		writeJSONError(w, http.StatusBadRequest, err.Error())
+		// Already-finished / bad-status transitions are 409 with the domain
+		// sentinel. Every other failure (a DB blip, say) must be a 5xx: the
+		// worker retries on 5xx, and a run's final result must not be lost
+		// because we mislabeled an internal error as the worker's fault.
+		if errors.Is(err, agentruns.ErrInvalidTransition) {
+			writeJSONError(w, http.StatusConflict, err.Error())
+			return
+		}
+		respondInternal(w, r, "failed to record run result", err)
 		return
 	}
 	json.NewEncoder(w).Encode(run)
@@ -651,6 +667,13 @@ func (h *Handler) DelegateRun(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	// Validate the one caller-supplied Launch input up front so the only
+	// Launch failures left are internal ones (org/agent/team are resolved
+	// server-side).
+	if strings.TrimSpace(req.Prompt) == "" {
+		writeJSONError(w, http.StatusBadRequest, "prompt is required")
 		return
 	}
 
@@ -688,7 +711,11 @@ func (h *Handler) DelegateRun(w http.ResponseWriter, r *http.Request) {
 		Prompt:      req.Prompt,
 	})
 	if err != nil {
-		writeJSONError(w, http.StatusBadRequest, err.Error())
+		if errors.Is(err, agentruns.ErrInvalidTransition) {
+			writeJSONError(w, http.StatusConflict, err.Error())
+			return
+		}
+		respondInternal(w, r, "failed to launch delegated run", err)
 		return
 	}
 	w.WriteHeader(http.StatusCreated)

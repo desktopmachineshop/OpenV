@@ -135,8 +135,9 @@ type Handler struct {
 
 	// Rate limiters for the public (invite-token) interview endpoints; see
 	// ratelimit.go for defaults and environment overrides.
-	interviewMsgLimiter *rateLimiter // per-invite participant messages
-	interviewIPLimiter  *rateLimiter // per-IP intro/stream GETs
+	interviewMsgLimiter    *rateLimiter // per-invite participant messages
+	interviewIPLimiter     *rateLimiter // per-IP intro GETs
+	interviewStreamLimiter *rateLimiter // per-IP SSE stream connects (more generous: reconnects are routine)
 }
 
 // NewHandler creates a new API handler
@@ -180,8 +181,9 @@ func NewHandler(deps HandlerDeps) *Handler {
 		sseHub:              deps.SSEHub,
 		googleOAuth:         deps.GoogleOAuth,
 		secureCookies:       deps.SecureCookies,
-		interviewMsgLimiter: newRateLimiterFromEnv(envInterviewMsgBurst, envInterviewMsgRefill, defaultInterviewMsgBurst, defaultInterviewMsgRefill),
-		interviewIPLimiter:  newRateLimiterFromEnv(envInterviewIPBurst, envInterviewIPRefill, defaultInterviewIPBurst, defaultInterviewIPRefill),
+		interviewMsgLimiter:    newRateLimiterFromEnv(envInterviewMsgBurst, envInterviewMsgRefill, defaultInterviewMsgBurst, defaultInterviewMsgRefill),
+		interviewIPLimiter:     newRateLimiterFromEnv(envInterviewIPBurst, envInterviewIPRefill, defaultInterviewIPBurst, defaultInterviewIPRefill),
+		interviewStreamLimiter: newRateLimiterFromEnv(envInterviewStreamBurst, envInterviewStreamRefill, defaultInterviewStreamBurst, defaultInterviewStreamRefill),
 	}
 }
 

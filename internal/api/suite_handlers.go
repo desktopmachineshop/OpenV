@@ -208,7 +208,16 @@ func (h *Handler) UpdateTestRun(w http.ResponseWriter, r *http.Request) {
 	}
 	updated, err := h.vvService.UpdateRunStatus(id, req.Status)
 	if err != nil {
-		writeJSONError(w, http.StatusBadRequest, err.Error())
+		switch {
+		case errors.Is(err, vv.ErrInvalidStatus):
+			writeJSONError(w, http.StatusBadRequest, err.Error())
+		case errors.Is(err, vv.ErrInvalidTransition):
+			writeJSONError(w, http.StatusConflict, err.Error())
+		case errors.Is(err, vv.ErrRunNotFound):
+			writeJSONError(w, http.StatusNotFound, err.Error())
+		default:
+			respondInternal(w, r, "failed to update test run status", err)
+		}
 		return
 	}
 	json.NewEncoder(w).Encode(updated)
@@ -254,11 +263,22 @@ func (h *Handler) UpsertTestResult(w http.ResponseWriter, r *http.Request) {
 	}
 	result, err := h.vvService.UpsertResult(runID, req, CurrentUserID(r), Actor(r), agentRunID)
 	if err != nil {
-		status := http.StatusBadRequest
-		if errors.Is(err, vv.ErrNotAgentExecutable) {
-			status = http.StatusForbidden
+		// Domain sentinels are the caller's problem and keep their text; any
+		// other failure is ours and must answer 5xx — a test-executing agent
+		// retries on 5xx, and its recorded outcome must not be lost to a DB
+		// blip mislabeled as a 4xx.
+		switch {
+		case errors.Is(err, vv.ErrNotAgentExecutable):
+			writeJSONError(w, http.StatusForbidden, err.Error())
+		case errors.Is(err, vv.ErrInvalidStatus), errors.Is(err, vv.ErrNotTestCase):
+			writeJSONError(w, http.StatusBadRequest, err.Error())
+		case errors.Is(err, vv.ErrRunNotFound), errors.Is(err, artifacts.ErrNotFound):
+			// The run exists (checked above); ErrNotFound here means the
+			// referenced test case id does not resolve to an artifact.
+			writeJSONError(w, http.StatusNotFound, err.Error())
+		default:
+			respondInternal(w, r, "failed to record test result", err)
 		}
-		writeJSONError(w, status, err.Error())
 		return
 	}
 	json.NewEncoder(w).Encode(result)
@@ -1387,7 +1407,10 @@ func (h *Handler) PublicInterviewMessage(w http.ResponseWriter, r *http.Request)
 	}
 	session, err := h.interviewService.StartOrResumeSession(invite.ID, interview.ID, req.ParticipantName)
 	if err != nil {
-		writeJSONError(w, http.StatusBadRequest, err.Error())
+		// Unauthenticated endpoint: StartOrResumeSession only fails on
+		// storage errors, whose text must never reach the public. The real
+		// error goes to the server log.
+		respondInternal(w, r, "we could not start your interview session; please try again in a moment", err)
 		return
 	}
 	message, err := h.interviewService.AppendMessage(session.ID, interviews.RoleParticipant, req.Content)
@@ -1473,9 +1496,9 @@ func (h *Handler) launchInterviewTurn(interview *interviews.Interview, session *
 	return err
 }
 
-// allowInterviewRead applies the coarse per-IP bucket shared by the
-// unauthenticated interview GETs (intro + stream). Returns false after
-// writing the 429 when the caller is over budget.
+// allowInterviewRead applies the coarse per-IP bucket for the
+// unauthenticated interview intro GET. Returns false after writing the 429
+// when the caller is over budget.
 func (h *Handler) allowInterviewRead(w http.ResponseWriter, r *http.Request) bool {
 	if ok, retryAfter := h.interviewIPLimiter.allow(clientIP(r)); !ok {
 		writeRateLimited(w,
@@ -1486,9 +1509,16 @@ func (h *Handler) allowInterviewRead(w http.ResponseWriter, r *http.Request) boo
 	return true
 }
 
-// PublicInterviewStream is the participant's SSE channel.
+// PublicInterviewStream is the participant's SSE channel. Stream connects are
+// charged to their own, more generous per-IP bucket rather than the intro
+// bucket: EventSource clients auto-reconnect after every network hiccup or
+// NAT timeout, so reconnects are routine and must stay cheaper than intro
+// page loads (see ratelimit.go for the rationale and knobs).
 func (h *Handler) PublicInterviewStream(w http.ResponseWriter, r *http.Request) {
-	if !h.allowInterviewRead(w, r) {
+	if ok, retryAfter := h.interviewStreamLimiter.allow(clientIP(r)); !ok {
+		writeRateLimited(w,
+			"Too many stream connections from your network. Please wait a moment and reload the page.",
+			retryAfter)
 		return
 	}
 	interview, invite, err := h.interviewService.ResolveInviteToken(mux.Vars(r)["token"])
@@ -1500,7 +1530,8 @@ func (h *Handler) PublicInterviewStream(w http.ResponseWriter, r *http.Request) 
 	// one; StartOrResumeSession reuses the active session when it exists.
 	session, err := h.interviewService.StartOrResumeSession(invite.ID, interview.ID, "")
 	if err != nil {
-		writeJSONError(w, http.StatusBadRequest, err.Error())
+		// Unauthenticated endpoint: storage-error text must never leak.
+		respondInternal(w, r, "we could not open your interview stream; please reload the page", err)
 		return
 	}
 	h.sseHub.ServeStream(w, r, "interview:"+session.ID, func(emit func(event string, data interface{})) error {
@@ -1526,7 +1557,9 @@ func (h *Handler) PublicInterviewFinish(w http.ResponseWriter, r *http.Request) 
 	// empty session just to complete it.
 	session, err := h.interviewService.FindActiveSession(invite.ID)
 	if err != nil {
-		writeJSONError(w, http.StatusBadRequest, err.Error())
+		// Unauthenticated endpoint: only storage errors land here, and
+		// their text must never leak to the public.
+		respondInternal(w, r, "we could not look up your interview session; please try again in a moment", err)
 		return
 	}
 	if session == nil {
@@ -1534,7 +1567,14 @@ func (h *Handler) PublicInterviewFinish(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	if err := h.interviewService.CompleteSession(session.ID, ""); err != nil {
-		writeJSONError(w, http.StatusBadRequest, err.Error())
+		// The session vanishing between lookup and completion is a benign
+		// race with the domain sentinel's safe text; anything else is
+		// internal and stays out of the public response.
+		if errors.Is(err, interviews.ErrSessionNotFound) {
+			writeJSONError(w, http.StatusNotFound, err.Error())
+			return
+		}
+		respondInternal(w, r, "we could not finish your interview session; please try again in a moment", err)
 		return
 	}
 	h.publish(r, events.ChatterCreated, interview.ProjectID, session.ID, map[string]interface{}{
