@@ -52,11 +52,11 @@ test('creates an interview and mints a public invite link', async () => {
   await expect(page.getByRole('heading', { name: 'Interviews' })).toBeVisible();
 
   await page.getByRole('button', { name: '+ New interview' }).click();
-  // The create form's labels are not associated to their inputs, so target by
-  // placeholder.
-  await page.getByPlaceholder('e.g. Machinist onboarding feedback').fill(interviewName);
+  // The create form's labels are associated to their inputs (issue #206), so
+  // getByLabel resolves them — exercising the a11y fix directly.
+  await page.getByLabel('Interview name *').fill(interviewName);
   await page
-    .getByPlaceholder('What should the interview find out? Topics, tone, questions to cover…')
+    .getByLabel('Brief for the interviewer agent')
     .fill('Find out how the participant uses the product.');
   await page.getByRole('button', { name: 'Create interview' }).click();
   await expect(page.getByText(interviewName, { exact: true })).toBeVisible();
@@ -111,26 +111,18 @@ test('the reviewer sees the session and the participant message', async () => {
   await expect(page.getByRole('heading', { name: 'Interviews' })).toBeVisible();
   await page.getByText(interviewName, { exact: true }).click();
 
-  // A session for the participant now exists under the interview. It is
-  // located by its "active" status chip rather than by the participant name:
-  // the typed name is NOT currently persisted onto the session (see the
-  // known-bug annotation below), so the row reads "Anonymous participant".
-  const sessionRow = page.getByText('active', { exact: true });
+  // A session for the participant now exists under the interview, and the name
+  // typed at the gate is persisted onto it (issue #205): the first message's
+  // StartOrResumeSession backfills the name onto the still-anonymous session
+  // the SSE stream created, so the reviewer sees the real name — never
+  // "Anonymous participant".
+  const sessionRow = page.getByText(participantName, { exact: true });
   await expect(sessionRow).toBeVisible();
+  await expect(page.getByText('Anonymous participant')).toHaveCount(0);
 
   // Open the session transcript and confirm the participant message is recorded
   // — the durable signal the journey verifies. .first(): a message can briefly
   // render twice before SSE-dedup settles.
   await sessionRow.click();
   await expect(page.getByText(participantMessage, { exact: true }).first()).toBeVisible();
-
-  test.info().annotations.push({
-    type: 'known-bug',
-    description:
-      'Participant name from the interview name-gate is not stored on the session. ' +
-      'PublicInterviewStream (internal/api/suite_handlers.go) opens the session with an ' +
-      'empty name when the SSE stream connects — before the name gate is submitted — so ' +
-      'the first message’s StartOrResumeSession resumes the anonymous session and the ' +
-      'real name is dropped. Every session shows "Anonymous participant".',
-  });
 });

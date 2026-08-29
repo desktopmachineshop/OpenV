@@ -27,11 +27,6 @@ const reqTitle = `E2E REQ ${runId}`;
 const needTitle = `E2E NEED ${runId}`;
 const baselineName = `E2E Baseline ${runId}`;
 
-// The API origin the frontend itself talks to (dev stack default). Only used
-// by the legacy-UI fallback in the artifact-creation step and for response
-// assertions; all traffic otherwise flows through the UI.
-const apiURL = process.env.API_URL || 'http://localhost:8080';
-
 test.describe.configure({ mode: 'serial' });
 
 let page: Page;
@@ -88,41 +83,15 @@ test('creates a requirement and a user need', async () => {
   await page.getByRole('button', { name: 'Create', exact: true }).click();
   await expect(page.getByText(reqTitle, { exact: true })).toBeVisible();
 
-  // User need. Newer frontends offer "user-need" in the type dropdown (added
-  // alongside this suite — the option was missing even though the backend
-  // catalog and the derives-from link rule both require the type). Against an
-  // older, already-running frontend the option is absent, so fall back to the
-  // app's own API with the browser session — still additive, same backend
-  // write path the UI uses.
+  // User need via the same New Artifact form: the type dropdown carries a
+  // "user-need" option (the backend catalog and the derives-from/validates
+  // link rules require the type), so it is created through the UI like the
+  // requirement above.
   await page.getByRole('button', { name: '+ New Artifact' }).click();
-  const typeSelect = page.locator('#type');
-  await expect(typeSelect).toBeVisible();
-  const hasUserNeedOption = (await typeSelect.locator('option[value="user-need"]').count()) > 0;
-  if (hasUserNeedOption) {
-    await typeSelect.selectOption('user-need');
-    await page.locator('#title').fill(needTitle);
-    await page.locator('#body').fill('As a maintainer, I need an E2E smoke pack so that regressions surface early.');
-    await page.getByRole('button', { name: 'Create', exact: true }).click();
-  } else {
-    test.info().annotations.push({
-      type: 'fallback',
-      description: 'Type dropdown has no user-need option (older frontend); created the user need via the API.',
-    });
-    // The form's own Cancel — the "+ New Artifact" toggle also reads
-    // "Cancel" while the create form is open.
-    await page.locator('form').getByRole('button', { name: 'Cancel' }).click();
-    const res = await page.request.post(`${apiURL}/api/v1/artifacts`, {
-      data: {
-        project_id: projectId,
-        type: 'user-need',
-        title: needTitle,
-        body: 'As a maintainer, I need an E2E smoke pack so that regressions surface early.',
-        attributes: {},
-      },
-    });
-    expect(res.status(), 'user-need creation via API').toBe(201);
-    await page.reload();
-  }
+  await page.locator('#type').selectOption('user-need');
+  await page.locator('#title').fill(needTitle);
+  await page.locator('#body').fill('As a maintainer, I need an E2E smoke pack so that regressions surface early.');
+  await page.getByRole('button', { name: 'Create', exact: true }).click();
   await expect(page.getByText(needTitle, { exact: true })).toBeVisible();
 });
 
