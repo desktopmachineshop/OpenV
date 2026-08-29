@@ -260,6 +260,52 @@ export const projectAPI = {
   },
 };
 
+/** One side of a baseline comparison: a baseline, or the live project (id "live"). */
+export interface BaselineDiffRef {
+  id: string;
+  name: string;
+}
+
+/** An artifact present on only one side of a baseline comparison. */
+export interface BaselineDiffArtifact {
+  id: string;
+  type: string;
+  title: string;
+}
+
+/** An artifact present on both sides with at least one tracked field changed. */
+export interface BaselineDiffModified {
+  id: string;
+  type: string;
+  old_title: string;
+  new_title: string;
+  title_changed: boolean;
+  body_changed: boolean;
+  type_changed: boolean;
+  status_changed: boolean;
+  parent_changed: boolean;
+}
+
+/** A link present on only one side of a baseline comparison. */
+export interface BaselineDiffLink {
+  from_id: string;
+  to_id: string;
+  type: string;
+  from_title: string;
+  to_title: string;
+}
+
+/** Changes in the direction base → target (added = present only in target). */
+export interface BaselineDiff {
+  base: BaselineDiffRef;
+  target: BaselineDiffRef;
+  added: BaselineDiffArtifact[];
+  removed: BaselineDiffArtifact[];
+  modified: BaselineDiffModified[];
+  links_added: BaselineDiffLink[];
+  links_removed: BaselineDiffLink[];
+}
+
 export const baselineAPI = {
   create: (projectId: string, name: string) =>
     client.post<Baseline>(`/api/v1/projects/${projectId}/baselines`, { name }),
@@ -267,6 +313,8 @@ export const baselineAPI = {
     client.get<Baseline[]>(`/api/v1/projects/${projectId}/baselines`),
   get: (baselineId: string) =>
     client.get<ProjectExport>(`/api/v1/baselines/${baselineId}`),
+  diff: (baselineId: string, against: string) =>
+    client.get<BaselineDiff>(`/api/v1/baselines/${baselineId}/diff`, { params: { against } }),
   delete: (baselineId: string) =>
     client.delete(`/api/v1/baselines/${baselineId}`),
 };
