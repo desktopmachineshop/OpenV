@@ -222,10 +222,11 @@ func InitSchema(db *sql.DB) error {
 		return fmt.Errorf("failed to add links valid_to index: %w", err)
 	}
 
-	_, err = db.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_links_active ON links(id) WHERE valid_to IS NULL;`)
-	if err != nil {
-		return fmt.Errorf("failed to add links active index: %w", err)
-	}
+	// NOTE: idx_links_active (a partial UNIQUE index on links(id) WHERE
+	// valid_to IS NULL) used to be created here. It is redundant — id is the
+	// table's PRIMARY KEY, so it is already globally unique and at most one row
+	// per id can ever be active. Fresh databases no longer create it; existing
+	// databases drop it in migration 0007.
 
 	// Create link_artifacts mapping table if it doesn't exist
 	const createLinkArtifactsSQL = `

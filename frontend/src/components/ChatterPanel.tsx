@@ -134,7 +134,11 @@ export const ChatterPanel: React.FC<ChatterPanelProps> = ({
             }}
           >
             <div style={{ fontSize: '11px', color: 'var(--text-body)', marginBottom: '4px' }}>
-              {entry.is_auto_entry ? '🔄' : '✏️'} {new Date(entry.created_at).toLocaleString()}
+              {entry.is_auto_entry ? '🔄' : '✏️'}{' '}
+              <span style={{ fontWeight: 'bold' }}>
+                {entry.author_name || (entry.is_auto_entry ? 'System' : 'Unknown')}
+              </span>{' '}
+              · {new Date(entry.created_at).toLocaleString()}
             </div>
             <div
               style={{

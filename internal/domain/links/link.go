@@ -2,7 +2,6 @@ package links
 
 import (
 	"encoding/json"
-	"log"
 	"reflect"
 	"time"
 
@@ -194,85 +193,6 @@ func (s *DefaultService) recordLinkForCurrentArtifactVersions(link *Link) {
 				s.repo.RecordLinkForArtifactVersion(link.ID, link.ToID, artifactData.Version)
 			}
 		}
-	}
-}
-
-// triggerArtifactVersioning creates a new version of an artifact  
-// when a link is created/updated/deleted
-func (s *DefaultService) triggerArtifactVersioning(artifactID string) {
-	if s.artifactService == nil {
-		return
-	}
-
-	// Try to call UpdateArtifact with empty fields to preserve current state and bump version
-	// Use reflection to call the method dynamically
-	type ArtifactDTO struct {
-		ID        string
-		Version   int
-		Type      string
-		Title     string
-		Body      string
-		ParentID  *string
-		SortOrder *int
-		Attributes map[string]interface{}
-		UpdatedAt time.Time
-	}
-	
-	type UpdateRequest struct {
-		Type       string
-		Title      string
-		Body       string
-		ParentID   *string
-		SortOrder  *int
-		Attributes map[string]interface{}
-	}
-
-	// Get current artifact
-	getMethod := reflect.ValueOf(s.artifactService).MethodByName("GetArtifact")
-	if !getMethod.IsValid() {
-		return
-	}
-
-	results := getMethod.Call([]reflect.Value{reflect.ValueOf(artifactID)})
-	if len(results) < 2 || !results[1].IsNil() {
-		return // Error getting artifact
-	}
-
-	artifact := results[0].Interface()
-	if artifact == nil {
-		return
-	}
-
-	// Marshal and unmarshal to extract fields
-	data, err := json.Marshal(artifact)
-	if err != nil {
-		log.Printf("Error marshaling artifact: %v", err)
-		return
-	}
-
-	var artifactData ArtifactDTO
-	if err := json.Unmarshal(data, &artifactData); err != nil {
-		log.Printf("Error unmarshaling artifact: %v", err)
-		return
-	}
-
-	// Build update request with current state
-	updateReq := UpdateRequest{
-		Type:       artifactData.Type,
-		Title:      artifactData.Title,
-		Body:       artifactData.Body,
-		ParentID:   artifactData.ParentID,
-		SortOrder:  artifactData.SortOrder,
-		Attributes: artifactData.Attributes,
-	}
-
-	// Call UpdateArtifact
-	updateMethod := reflect.ValueOf(s.artifactService).MethodByName("UpdateArtifact")
-	if updateMethod.IsValid() {
-		updateMethod.Call([]reflect.Value{
-			reflect.ValueOf(artifactID),
-			reflect.ValueOf(updateReq),
-		})
 	}
 }
 

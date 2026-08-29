@@ -3,7 +3,6 @@ package templates
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -444,7 +443,7 @@ func LoadFileBasedTemplates(examplesDir string) ([]*TemplateSummary, error) {
 	}
 
 	// List subdirectories in examples
-	entries, err := ioutil.ReadDir(examplesDir)
+	entries, err := os.ReadDir(examplesDir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read examples directory: %w", err)
 	}
@@ -455,7 +454,7 @@ func LoadFileBasedTemplates(examplesDir string) ([]*TemplateSummary, error) {
 		}
 
 		projectFile := filepath.Join(examplesDir, entry.Name(), "project.json")
-		data, err := ioutil.ReadFile(projectFile)
+		data, err := os.ReadFile(projectFile)
 		if err != nil {
 			log.Printf("Warning: failed to read template %s: %v", entry.Name(), err)
 			continue
@@ -488,7 +487,7 @@ func LoadFileBasedTemplates(examplesDir string) ([]*TemplateSummary, error) {
 // It accepts either the template key or the derived ID
 func GetFileBasedTemplateSnapshot(examplesDir string, keyOrID string) ([]byte, error) {
 	// Find the matching template directory by key or ID
-	entries, err := ioutil.ReadDir(examplesDir)
+	entries, err := os.ReadDir(examplesDir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read examples directory: %w", err)
 	}
@@ -499,7 +498,7 @@ func GetFileBasedTemplateSnapshot(examplesDir string, keyOrID string) ([]byte, e
 		}
 
 		projectFile := filepath.Join(examplesDir, entry.Name(), "project.json")
-		data, err := ioutil.ReadFile(projectFile)
+		data, err := os.ReadFile(projectFile)
 		if err != nil {
 			continue
 		}

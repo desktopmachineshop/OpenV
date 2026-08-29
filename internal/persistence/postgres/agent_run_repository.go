@@ -90,6 +90,12 @@ func (rep *AgentRunRepository) Save(r *agentruns.Run) error {
 	if err != nil {
 		return err
 	}
+	// created_at is a naive TIMESTAMP column: Postgres stores whatever
+	// wall-clock the driver sends and discards the offset. Normalize to UTC so
+	// the stored wall-clock is the UTC instant regardless of the server
+	// process's local timezone; the Usage day-bucketing (and every reader,
+	// which labels naive timestamps UTC) then reflects true UTC days.
+	createdAt := r.CreatedAt.UTC()
 	_, err = rep.db.Exec(`
 		INSERT INTO agent_runs (id, org_id, agent_id, project_id, automation_id, trigger_event_id, team_id, team_node_id, parent_run_id, work_item_id, interview_session_id, guided_session_id, retried_from_run_id,
 			status, cancel_requested, priority, prompt, run_token_hash, worker_id, heartbeat_at, started_at, finished_at, exit_code,
@@ -97,7 +103,7 @@ func (rep *AgentRunRepository) Save(r *agentruns.Run) error {
 		VALUES ($1, NULLIF($2, '')::uuid, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33)
 	`, r.ID, r.OrgID, r.AgentID, r.ProjectID, r.AutomationID, r.TriggerEventID, r.TeamID, r.TeamNodeID, r.ParentRunID, r.WorkItemID, r.InterviewSessionID, r.GuidedSessionID, r.RetriedFromRunID,
 		r.Status, r.CancelRequested, r.Priority, r.Prompt, r.RunTokenHash, r.WorkerID, r.HeartbeatAt, r.StartedAt, r.FinishedAt, r.ExitCode,
-		r.FinalText, r.Error, r.TokensIn, r.TokensOut, r.CostUSD, touched, r.LaunchedBy, r.CreatedAt, r.PreferredUserID, r.HostedAfter)
+		r.FinalText, r.Error, r.TokensIn, r.TokensOut, r.CostUSD, touched, r.LaunchedBy, createdAt, r.PreferredUserID, r.HostedAfter)
 	return err
 }
 
@@ -489,6 +495,17 @@ func (rep *AgentRunRepository) Usage(orgID string, since time.Time) ([]agentruns
 		return nil, nil, err
 	}
 
+	// Bucket by true UTC calendar day (issue #190). created_at is a naive
+	// TIMESTAMP that stores the UTC wall-clock of each run (Save normalizes it
+	// with .UTC() before persisting). Casting a naive timestamp to ::date takes
+	// its date part with NO timezone conversion, so the bucket is that UTC day
+	// regardless of the query session's TimeZone.
+	//
+	// Do NOT rewrite this as `(created_at AT TIME ZONE 'UTC')::date`: on a naive
+	// column AT TIME ZONE 'UTC' yields a timestamptz whose ::date THEN folds
+	// through the session TimeZone, so under a non-UTC session it reports the
+	// wrong day — the opposite of the intent. That form is only correct for a
+	// timestamptz column, which this is not.
 	dayRows, err := rep.db.Query(`
 		SELECT TO_CHAR(r.created_at::date, 'YYYY-MM-DD'), COUNT(*),
 			COALESCE(SUM(r.tokens_in), 0), COALESCE(SUM(r.tokens_out), 0),

@@ -20,9 +20,9 @@
 #                       for Google sign-in (see docker-compose.yml)
 #
 # Memory limits below use mem_limit, which plain (non-swarm) docker compose
-# enforces. Note: hosted-runner containers provisioned by the API
-# (internal/hosting/docker.go) are created outside compose and currently get
-# no resource caps — see docs/operations.md.
+# enforces. Hosted-runner containers provisioned by the API
+# (internal/hosting/docker.go) are created outside compose but do get their own
+# Memory / NanoCPUs caps applied from the runner limits — see docs/operations.md.
 
 services:
   postgres:

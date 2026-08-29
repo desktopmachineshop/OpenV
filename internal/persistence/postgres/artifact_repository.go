@@ -12,6 +12,17 @@ import (
     "github.com/openv/requirements-platform/internal/domain/artifacts"
 )
 
+// stmtTimeout bounds a single database statement so a stuck query cannot hang
+// a request indefinitely. Save originally set this only for itself; the whole
+// repository now shares it so no method is unbounded.
+const stmtTimeout = 5 * time.Second
+
+// stmtCtx returns a context bounded by stmtTimeout for one statement. Callers
+// must defer the returned cancel.
+func stmtCtx() (context.Context, context.CancelFunc) {
+	return context.WithTimeout(context.Background(), stmtTimeout)
+}
+
 // ArtifactRepository implements artifacts.Repository using PostgreSQL
 type ArtifactRepository struct {
 	db *sql.DB
@@ -34,9 +45,8 @@ func (r *ArtifactRepository) Save(artifact *artifacts.Artifact) error {
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
 	`
 
-	// Use context with 5 second timeout for individual artifact inserts
-	// This prevents indefinite hangs and provides clear error reporting
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	// Bound the insert so a stuck query can't hang the request indefinitely.
+	ctx, cancel := stmtCtx()
 	defer cancel()
 
 	_, err = r.db.ExecContext(
@@ -72,7 +82,10 @@ func (r *ArtifactRepository) FindByID(id string) (*artifacts.Artifact, error) {
 		WHERE id = $1 AND valid_to IS NULL
 	`
 
-	err := r.db.QueryRow(query, id).Scan(
+	ctx, cancel := stmtCtx()
+	defer cancel()
+
+	err := r.db.QueryRowContext(ctx, query, id).Scan(
 		&artifact.ID,
 		&artifact.ProjectID,
 		&artifact.ParentID,
@@ -115,7 +128,10 @@ func (r *ArtifactRepository) FindByProjectID(projectID string) ([]*artifacts.Art
 		ORDER BY parent_id NULLS FIRST, sort_order ASC, created_at ASC
 	`
 
-	rows, err := r.db.Query(query, projectID)
+	ctx, cancel := stmtCtx()
+	defer cancel()
+
+	rows, err := r.db.QueryContext(ctx, query, projectID)
 	if err != nil {
 		return nil, err
 	}
@@ -133,7 +149,10 @@ func (r *ArtifactRepository) FindByProjectAndType(projectID string, artifactType
 		ORDER BY parent_id NULLS FIRST, sort_order ASC, created_at ASC
 	`
 
-	rows, err := r.db.Query(query, projectID, artifactType)
+	ctx, cancel := stmtCtx()
+	defer cancel()
+
+	rows, err := r.db.QueryContext(ctx, query, projectID, artifactType)
 	if err != nil {
 		return nil, err
 	}
@@ -177,7 +196,10 @@ func (r *ArtifactRepository) FindPageByProject(projectID string, artifactType st
 		LIMIT $3 OFFSET $4
 	`
 
-	rows, err := r.db.Query(query, projectID, artifactType, limit, offset)
+	ctx, cancel := stmtCtx()
+	defer cancel()
+
+	rows, err := r.db.QueryContext(ctx, query, projectID, artifactType, limit, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -188,8 +210,11 @@ func (r *ArtifactRepository) FindPageByProject(projectID string, artifactType st
 
 // CountByProject counts a project's current artifacts (type "" = all).
 func (r *ArtifactRepository) CountByProject(projectID string, artifactType string) (int, error) {
+	ctx, cancel := stmtCtx()
+	defer cancel()
+
 	var count int
-	err := r.db.QueryRow(`
+	err := r.db.QueryRowContext(ctx, `
 		SELECT COUNT(*) FROM artifacts
 		WHERE project_id = $1 AND valid_to IS NULL
 		AND ($2 = '' OR type = $2)
@@ -246,7 +271,10 @@ func (r *ArtifactRepository) Update(artifact *artifacts.Artifact) error {
 		return err
 	}
 
-	tx, err := r.db.Begin()
+	ctx, cancel := stmtCtx()
+	defer cancel()
+
+	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
@@ -254,7 +282,7 @@ func (r *ArtifactRepository) Update(artifact *artifacts.Artifact) error {
 
 	// Mark the current version as archived
 	archiveQuery := `UPDATE artifacts SET valid_to = $1 WHERE id = $2 AND valid_to IS NULL`
-	_, err = tx.Exec(archiveQuery, artifact.ValidFrom, artifact.ID)
+	_, err = tx.ExecContext(ctx, archiveQuery, artifact.ValidFrom, artifact.ID)
 	if err != nil {
 		return err
 	}
@@ -264,7 +292,8 @@ func (r *ArtifactRepository) Update(artifact *artifacts.Artifact) error {
 		INSERT INTO artifacts (id, project_id, parent_id, type, title, body, sort_order, status, attributes, version, valid_from, valid_to, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
 	`
-	_, err = tx.Exec(
+	_, err = tx.ExecContext(
+		ctx,
 		insertQuery,
 		artifact.ID,
 		artifact.ProjectID,
@@ -290,8 +319,11 @@ func (r *ArtifactRepository) Update(artifact *artifacts.Artifact) error {
 
 // Delete soft-deletes an artifact
 func (r *ArtifactRepository) Delete(id string) error {
+	ctx, cancel := stmtCtx()
+	defer cancel()
+
 	query := `UPDATE artifacts SET valid_to = $1 WHERE id = $2 AND valid_to IS NULL`
-	_, err := r.db.Exec(query, time.Now(), id)
+	_, err := r.db.ExecContext(ctx, query, time.Now(), id)
 	return err
 }
 
@@ -304,8 +336,11 @@ func (r *ArtifactRepository) NextSortOrder(projectID string, parentID *string) (
 		AND parent_id IS NOT DISTINCT FROM $2
 	`
 
+	ctx, cancel := stmtCtx()
+	defer cancel()
+
 	var next int
-	err := r.db.QueryRow(query, projectID, parentID).Scan(&next)
+	err := r.db.QueryRowContext(ctx, query, projectID, parentID).Scan(&next)
 	if err != nil {
 		return 0, err
 	}
@@ -339,7 +374,10 @@ func (r *ArtifactRepository) SearchInProjects(projectIDs []string, query string,
 		LIMIT $3
 	`
 
-	rows, err := r.db.Query(sqlQuery, pq.Array(projectIDs), pattern, limit)
+	ctx, cancel := stmtCtx()
+	defer cancel()
+
+	rows, err := r.db.QueryContext(ctx, sqlQuery, pq.Array(projectIDs), pattern, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -368,7 +406,10 @@ func (r *ArtifactRepository) FindVersionsByID(id string) ([]*artifacts.Artifact,
 		ORDER BY version DESC
 	`
 
-	rows, err := r.db.Query(query, id)
+	ctx, cancel := stmtCtx()
+	defer cancel()
+
+	rows, err := r.db.QueryContext(ctx, query, id)
 	if err != nil {
 		return nil, err
 	}

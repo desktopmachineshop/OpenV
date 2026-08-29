@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 
 	"github.com/openv/requirements-platform/internal/domain/agentruns"
@@ -1916,8 +1917,17 @@ func (h *Handler) ListDomainEvents(w http.ResponseWriter, r *http.Request) {
 	}
 	// "before" is a keyset cursor (an event ID from a previous page): the
 	// repo returns only events strictly older than it, so "load more" pages
-	// stay stable while new events keep arriving.
-	list, err := h.eventRepo.List(ActiveOrg(r), projectID, q.Get("event_type"), q.Get("before"), limit)
+	// stay stable while new events keep arriving. It is cast to uuid in SQL,
+	// so a malformed value would otherwise surface as a 500 — validate it here
+	// and reject bad input with 400 instead.
+	before := q.Get("before")
+	if before != "" {
+		if _, err := uuid.Parse(before); err != nil {
+			writeJSONError(w, http.StatusBadRequest, "invalid before cursor")
+			return
+		}
+	}
+	list, err := h.eventRepo.List(ActiveOrg(r), projectID, q.Get("event_type"), before, limit)
 	if err != nil {
 		respondInternal(w, r, "failed to list events", err)
 		return

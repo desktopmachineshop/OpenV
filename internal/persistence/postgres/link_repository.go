@@ -293,10 +293,12 @@ func (r *LinkRepository) Update(link *links.Link) error {
 		return err
 	}
 
+	// Guard on valid_to IS NULL so an update never resurrects or mutates a
+	// soft-deleted link (Delete tombstones by setting valid_to).
 	query := `
 		UPDATE links
 		SET type = $1, suspect = $2, attributes = $3, version = $4, updated_at = $5
-		WHERE id = $6
+		WHERE id = $6 AND valid_to IS NULL
 	`
 
 	_, err = r.db.Exec(
@@ -331,9 +333,14 @@ func (r *LinkRepository) SetSuspectByArtifact(artifactID string, suspect bool) e
 	return err
 }
 
-// Delete deletes a link
+// Delete soft-deletes a link by closing its validity interval, mirroring the
+// artifact soft-delete. A hard DELETE would orphan link_artifacts rows (there
+// are no FKs), and every read path already filters valid_to IS NULL, so a
+// tombstoned link disappears from all queries while its history and any
+// link_artifacts references stay intact. Only currently-live links are
+// tombstoned; deleting an already-deleted link is a no-op.
 func (r *LinkRepository) Delete(id string) error {
-	query := `DELETE FROM links WHERE id = $1`
+	query := `UPDATE links SET valid_to = NOW() WHERE id = $1 AND valid_to IS NULL`
 	_, err := r.db.Exec(query, id)
 	return err
 }
