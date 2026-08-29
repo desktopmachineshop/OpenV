@@ -3,6 +3,7 @@ package artifacts
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 )
 
@@ -115,5 +116,16 @@ func (s *DefaultService) ChangeStatus(id string, to string) (*Artifact, error) {
 	if err := s.repo.Update(artifact); err != nil {
 		return nil, err
 	}
+
+	// Approval implies reconfirmation of traceability (issue #131): the
+	// reviewer signed off on the artifact's current content, links included,
+	// so any suspicion on its live links is cleared. Failure is logged, not
+	// returned — the status change itself already committed.
+	if to == StatusApproved && s.linkSuspector != nil {
+		if err := s.linkSuspector.ClearArtifactLinksSuspicion(id); err != nil {
+			slog.Warn("artifacts: failed to clear link suspicion on approval", "artifact_id", id, "error", err)
+		}
+	}
+
 	return artifact, nil
 }

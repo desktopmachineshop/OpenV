@@ -9,6 +9,7 @@ import {
   artifactAPI,
   Baseline,
   baselineAPI,
+  linkAPI,
   MatrixRow,
   vvAPI,
 } from '../api/client';
@@ -39,6 +40,11 @@ const chip = (text: string, background: string, color = 'var(--surface)'): React
   whiteSpace: 'nowrap',
 });
 
+// Unordered pair key for a link's endpoints: a suspect link between the
+// requirement and a chip's artifact flags that chip whichever way the link
+// points.
+const pairKey = (a: string, b: string): string => (a < b ? `${a}|${b}` : `${b}|${a}`);
+
 export const TraceabilityMatrix: React.FC = () => {
   const params = useParams<{ projectId: string }>();
   const storeProjectId = useAppStore((s) => s.projectId);
@@ -49,6 +55,8 @@ export const TraceabilityMatrix: React.FC = () => {
   const [baselineId, setBaselineId] = useState('live');
   const [rows, setRows] = useState<MatrixRow[]>([]);
   const [artifactMap, setArtifactMap] = useState<Record<string, Artifact>>({});
+  // Endpoint pairs of live links currently flagged suspect (issue #131).
+  const [suspectPairs, setSuspectPairs] = useState<Set<string>>(new Set());
   const [quickFilter, setQuickFilter] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
@@ -71,6 +79,18 @@ export const TraceabilityMatrix: React.FC = () => {
         setArtifactMap(map);
       })
       .catch(() => setArtifactMap({}));
+    linkAPI
+      .list(projectId)
+      .then((res) => {
+        const pairs = new Set<string>();
+        (res.data || []).forEach((l) => {
+          if (l.suspect) {
+            pairs.add(pairKey(l.from_id, l.to_id));
+          }
+        });
+        setSuspectPairs(pairs);
+      })
+      .catch(() => setSuspectPairs(new Set()));
   }, [projectId]);
 
   useEffect(() => {
@@ -93,30 +113,48 @@ export const TraceabilityMatrix: React.FC = () => {
     [artifactMap]
   );
 
+  // A chip is suspect when the live link between the row's requirement and
+  // the chip's artifact is flagged (either direction). Suspicion is a
+  // property of live links, so baseline snapshots don't show it.
+  const isSuspectPair = useCallback(
+    (requirementId: string | undefined, otherId: string): boolean =>
+      baselineId === 'live' && !!requirementId && suspectPairs.has(pairKey(requirementId, otherId)),
+    [baselineId, suspectPairs]
+  );
+
   const ChipListRenderer = useCallback(
     (params: ICellRendererParams<MatrixRow>) => {
       const ids: string[] = params.value || [];
       if (ids.length === 0) return <span style={{ color: 'var(--neutral-mid)' }}>—</span>;
       return (
         <div style={{ lineHeight: '20px', whiteSpace: 'normal', padding: '4px 0' }}>
-          {ids.map((id) => (
-            <Link
-              key={id}
-              to={`/projects/${projectId}/requirements?artifact=${id}`}
-              title="Open in Requirements"
-              style={{
-                ...chip(titleOf(id), 'var(--neutral-soft)', 'var(--text)'),
-                textDecoration: 'none',
-                cursor: 'pointer',
-              }}
-            >
-              {titleOf(id)}
-            </Link>
-          ))}
+          {ids.map((id) => {
+            const suspect = isSuspectPair(params.data?.requirement_id, id);
+            return (
+              <Link
+                key={id}
+                to={`/projects/${projectId}/requirements?artifact=${id}`}
+                title={
+                  suspect
+                    ? 'Suspect link: content changed after this link was made — confirm it in the artifact editor or re-approve the artifact'
+                    : 'Open in Requirements'
+                }
+                style={{
+                  ...chip(titleOf(id), suspect ? 'var(--tint-yellow)' : 'var(--neutral-soft)', suspect ? 'var(--warning-text)' : 'var(--text)'),
+                  ...(suspect ? { border: '1px solid var(--warning)' } : {}),
+                  textDecoration: 'none',
+                  cursor: 'pointer',
+                }}
+              >
+                {suspect ? '⚠ ' : ''}
+                {titleOf(id)}
+              </Link>
+            );
+          })}
         </div>
       );
     },
-    [titleOf, projectId]
+    [titleOf, projectId, isSuspectPair]
   );
 
   const TestCaseRenderer = useCallback(
@@ -128,23 +166,30 @@ export const TraceabilityMatrix: React.FC = () => {
         <div style={{ lineHeight: '20px', whiteSpace: 'normal', padding: '4px 0' }}>
           {ids.map((id) => {
             const result = row?.latest_results?.[id] || 'not-run';
+            const suspect = isSuspectPair(row?.requirement_id, id);
             return (
               <span
                 key={id}
+                title={
+                  suspect
+                    ? 'Suspect link: content changed after this link was made — confirm it in the artifact editor or re-approve the artifact'
+                    : undefined
+                }
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: 5,
-                  border: '1px solid var(--neutral-soft)',
+                  border: suspect ? '1px solid var(--warning)' : '1px solid var(--neutral-soft)',
                   borderRadius: 10,
                   padding: '2px 8px',
                   fontSize: 11,
                   margin: '2px 4px 2px 0',
-                  background: 'var(--surface)',
-                  color: 'var(--text)',
+                  background: suspect ? 'var(--tint-yellow)' : 'var(--surface)',
+                  color: suspect ? 'var(--warning-text)' : 'var(--text)',
                   whiteSpace: 'nowrap',
                 }}
               >
+                {suspect ? '⚠ ' : ''}
                 {titleOf(id)}
                 <span
                   title={result}
@@ -164,7 +209,7 @@ export const TraceabilityMatrix: React.FC = () => {
         </div>
       );
     },
-    [titleOf]
+    [titleOf, isSuspectPair]
   );
 
   const joinTitles = useCallback(

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, Artifact } from '../api/client';
+import { Link, Artifact, linkAPI } from '../api/client';
 import { getAvailableLinkTypes, getAllowedTargetTypes, getLinkTypeLabel } from '../config/linkTypeRules';
 import { useAlert } from './ui';
 
@@ -30,6 +30,28 @@ export const LinkPanel: React.FC<LinkPanelProps> = ({
   const [toArtifactId, setToArtifactId] = useState('');
   const [artifactSearch, setArtifactSearch] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
+  // Links confirmed in this panel session: hides the suspect badge
+  // immediately without requiring the parent to refetch (the server has
+  // already cleared the flag when an id lands here).
+  const [confirmedIds, setConfirmedIds] = useState<Set<string>>(new Set());
+
+  const isSuspect = (link: Link): boolean => !!link.suspect && !confirmedIds.has(link.id);
+
+  const handleConfirmLink = async (linkId: string) => {
+    try {
+      await linkAPI.confirm(linkId);
+      setConfirmedIds((prev) => {
+        const next = new Set(prev);
+        next.add(linkId);
+        return next;
+      });
+    } catch (error: any) {
+      void alertDialog({
+        title: 'Confirm link',
+        message: error.response?.data?.error || error.message || 'Failed to confirm link',
+      });
+    }
+  };
 
   // Get the source artifact to determine available link types
   const sourceArtifact = artifacts.find(a => a.id === selectedArtifactId);
@@ -145,8 +167,42 @@ export const LinkPanel: React.FC<LinkPanelProps> = ({
                   </strong>
                   <div style={{ marginTop: '3px', color: 'var(--text-body)', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     ID: {linkedArtifactId.substring(0, 8)}...
+                    {isSuspect(link) && (
+                      <span
+                        title="A linked artifact's content changed after this link was made. Confirm the link still holds, or re-approve the artifact."
+                        style={{
+                          marginLeft: '6px',
+                          padding: '1px 6px',
+                          borderRadius: '8px',
+                          backgroundColor: 'var(--warning)',
+                          color: '#fff',
+                          fontWeight: 600,
+                          fontSize: '10px',
+                        }}
+                      >
+                        suspect
+                      </span>
+                    )}
                   </div>
                 </div>
+                {!readOnly && isSuspect(link) && (
+                  <button
+                    onClick={() => handleConfirmLink(link.id)}
+                    title="Mark this link as still valid despite the artifact's content change"
+                    style={{
+                      backgroundColor: 'var(--warning)',
+                      color: '#fff',
+                      border: 'none',
+                      padding: '4px 8px',
+                      borderRadius: '3px',
+                      cursor: 'pointer',
+                      fontSize: '11px',
+                      marginLeft: '8px',
+                    }}
+                  >
+                    Confirm
+                  </button>
+                )}
                 {!readOnly && onDeleteLink && (
                   <button
                     onClick={() => onDeleteLink(link.id)}

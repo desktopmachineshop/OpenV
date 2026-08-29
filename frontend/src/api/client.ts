@@ -106,6 +106,10 @@ export interface Link {
   from_id: string;
   to_id: string;
   type: string;
+  // True when the content of a linked artifact changed after the link was
+  // made; cleared by an explicit confirm or by re-approving the artifact.
+  // Optional: absent on legacy links_snapshot copies.
+  suspect?: boolean;
   attributes: Record<string, any>;
   version: number;
   created_at: string;
@@ -196,6 +200,10 @@ export const linkAPI = {
     client.get<Link[]>(`/api/v1/artifacts/${artifactId}/links`, { params: { version } }),
   update: (id: string, payload: Partial<Link>) =>
     client.put<Link>(`/api/v1/links/${id}`, payload),
+  // Clears the suspect flag: the caller vouches the link still holds after
+  // the linked artifact's content changed. Editor role required.
+  confirm: (id: string) =>
+    client.put<Link>(`/api/v1/links/${id}/confirm`),
   delete: (id: string) =>
     client.delete(`/api/v1/links/${id}`),
 };

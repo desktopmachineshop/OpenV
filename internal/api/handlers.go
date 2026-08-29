@@ -243,6 +243,7 @@ func (h *Handler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/links", h.ListLinks).Methods("GET")
 	router.HandleFunc("/api/v1/links/{id}", h.GetLink).Methods("GET")
 	router.HandleFunc("/api/v1/links/{id}", h.UpdateLink).Methods("PUT")
+	router.HandleFunc("/api/v1/links/{id}/confirm", h.ConfirmLink).Methods("PUT")
 	router.HandleFunc("/api/v1/links/{id}", h.DeleteLink).Methods("DELETE")
 
 	// Attachment endpoints
@@ -395,10 +396,12 @@ func (h *Handler) UpdateArtifact(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Ensure attributes is initialized
-	if req.Attributes == nil {
-		req.Attributes = make(map[string]interface{})
-	}
+	// Attributes contract (issue #125): a request that OMITS attributes
+	// (nil after decode) means "leave them unchanged" — the domain layer
+	// carries the current attributes forward. An explicit map — even an
+	// empty {} — replaces them wholesale. Do NOT normalize nil to an empty
+	// map here: that would turn every attribute-less update (e.g. the MCP
+	// update_artifact tool) into a wipe.
 
 	// Process link changes FIRST (add/remove from table)
 	var affectedArtifactIDs []string
@@ -455,6 +458,15 @@ func (h *Handler) UpdateArtifact(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if len(allLinks) > 0 {
+			// Storing the snapshot needs a concrete attributes map. If the
+			// request left attributes untouched (nil), seed a copy of the
+			// current ones so the snapshot write doesn't clear the rest.
+			if req.Attributes == nil {
+				req.Attributes = make(map[string]interface{}, len(oldArtifact.Attributes)+1)
+				for k, v := range oldArtifact.Attributes {
+					req.Attributes[k] = v
+				}
+			}
 			req.Attributes["links_snapshot"] = allLinks
 		}
 	}
@@ -1011,6 +1023,33 @@ func (h *Handler) UpdateLink(w http.ResponseWriter, r *http.Request) {
 
 	// Refresh link snapshots for both artifacts touched by this link
 	_ = h.autoVersionLinkedArtifacts([]string{link.FromID, link.ToID})
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(link)
+}
+
+// ConfirmLink handles PUT /api/v1/links/{id}/confirm: an editor vouches
+// that a suspect link still holds after the linked artifact's content
+// changed, clearing the suspect flag (issue #131). Authorization mirrors
+// UpdateLink: editor on the source artifact's project. Confirming an
+// already-trusted link is a harmless no-op, so the endpoint is idempotent.
+func (h *Handler) ConfirmLink(w http.ResponseWriter, r *http.Request) {
+	id := mux.Vars(r)["id"]
+
+	existing, err := h.linkService.GetLink(id)
+	if err != nil {
+		respondError(w, r, http.StatusNotFound, "link not found", err)
+		return
+	}
+	if !h.requireProjectRole(w, r, h.projectIDForArtifact(existing.FromID), members.RoleEditor) {
+		return
+	}
+
+	link, err := h.linkService.ConfirmLink(id)
+	if err != nil {
+		respondInternal(w, r, "failed to confirm link", err)
+		return
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(link)
