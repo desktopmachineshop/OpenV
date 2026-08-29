@@ -307,23 +307,36 @@ var migrations = []Migration{
 	}},
 
 	// 0011: workspace spend budgets and threshold alerts (issue #186). A
-	// nullable monthly_budget_usd (NULL = no budget, warn-only default) plus
-	// the two dedupe columns the budget-alert subscriber claims atomically:
-	// budget_alert_month (YYYY-MM of the last alert) and
-	// budget_alert_threshold (the highest percent threshold — 80 or 100 —
-	// already alerted for that month). A conditional UPDATE over these two
-	// guarantees "exactly once per threshold per month" even across replicas.
-	//
-	// MIGRATION NUMBER NOTE: a concurrent failure-taxonomy branch may also be
-	// adding a migration; if it landed on 0011 first, bump this entry (and its
-	// test) to the next free number on merge — the registry only requires
-	// unique, ascending versions, so the reorder is mechanical.
+	// nullable monthly_budget_usd (NULL = no budget, warn-only default) plus the
+	// two dedupe columns the budget-alert subscriber claims atomically:
+	// budget_alert_month (YYYY-MM of the last alert) and budget_alert_threshold
+	// (the highest percent threshold — 80 or 100 — already alerted that month).
 	{Version: 11, Name: "org_monthly_budget", Run: func(tx *sql.Tx) error {
 		_, err := tx.Exec(`
 			ALTER TABLE organizations
 				ADD COLUMN IF NOT EXISTS monthly_budget_usd NUMERIC,
 				ADD COLUMN IF NOT EXISTS budget_alert_month VARCHAR(7),
 				ADD COLUMN IF NOT EXISTS budget_alert_threshold INT NOT NULL DEFAULT 0
+		`)
+		return err
+	}},
+
+	// 0012: structured failure taxonomy + bounded auto-retry (issue #184).
+	//   - error_class buckets a terminal failure (provider_unavailable | auth |
+	//     workspace | timeout | agent_error | worker_error; empty for a run that
+	//     succeeded or was cancelled).
+	//   - attempt_count / max_attempts bound a run's auto-retry chain. Existing
+	//     rows backfill to attempt 1 of 1 (max_attempts DEFAULT 1) so history is
+	//     never retroactively retried; new runs carry the service's cap.
+	//   - next_attempt_at gates a backed-off retry's claim eligibility (NULL =
+	//     claimable immediately); the queued-claim path honours it.
+	{Version: 12, Name: "agent_run_failure_taxonomy", Run: func(tx *sql.Tx) error {
+		_, err := tx.Exec(`
+			ALTER TABLE agent_runs
+				ADD COLUMN IF NOT EXISTS error_class VARCHAR(32) NOT NULL DEFAULT '',
+				ADD COLUMN IF NOT EXISTS attempt_count INT NOT NULL DEFAULT 1,
+				ADD COLUMN IF NOT EXISTS max_attempts INT NOT NULL DEFAULT 1,
+				ADD COLUMN IF NOT EXISTS next_attempt_at TIMESTAMP
 		`)
 		return err
 	}},

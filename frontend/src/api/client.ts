@@ -688,6 +688,13 @@ export interface AgentRun {
   prompt: string;
   final_text: string;
   error: string;
+  // Structured failure taxonomy (issue #184): a class for a terminal failure
+  // (provider_unavailable | auth | workspace | timeout | agent_error |
+  // worker_error), empty for a succeeded or cancelled run. attempt_count /
+  // max_attempts track the bounded auto-retry chain.
+  error_class?: string;
+  attempt_count?: number;
+  max_attempts?: number;
   tokens_in: number;
   tokens_out: number;
   cost_usd?: number | null;

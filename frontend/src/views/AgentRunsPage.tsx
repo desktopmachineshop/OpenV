@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { AgentRun, WorkerStatus, agentRunsAPI, workerStatusAPI } from '../api/client';
 import { useAppStore } from '../state/store';
-import { RunDetailPanel, runStatusColor } from '../components/agents/RunDetailPanel';
+import { RunDetailPanel, runStatusColor, ErrorClassChip } from '../components/agents/RunDetailPanel';
 import { ProposalReviewPanel } from '../components/agents/ProposalReviewPanel';
 import { RunnerConnectPrompt } from '../components/RunnerConnectPrompt';
 import { ErrorBanner } from '../components/ui';
@@ -276,6 +276,7 @@ export const AgentRunsPage: React.FC = () => {
                       >
                         {run.status}
                       </span>
+                      <ErrorClassChip errorClass={run.error_class} />
                       {run.status === 'queued' &&
                         run.preferred_user_id &&
                         run.hosted_after &&
