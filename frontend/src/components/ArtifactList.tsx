@@ -1,5 +1,13 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Artifact } from '../api/client';
+import { QualityBadge } from './QualityBadge';
+
+/** Per-artifact quality summary keyed by artifact id (issue #217). */
+export interface QualityRowInfo {
+  score: number;
+  band: string;
+  findingCount: number;
+}
 
 interface ArtifactListProps {
   artifacts: Artifact[];
@@ -12,6 +20,8 @@ interface ArtifactListProps {
   collapseAllTrigger?: number;
   expandAllTrigger?: number;
   readOnly?: boolean;
+  /** Quality scores by artifact id; a badge is shown on rows present here. */
+  qualityScores?: Record<string, QualityRowInfo>;
 }
 
 interface ArtifactTreeNode {
@@ -78,6 +88,7 @@ export const ArtifactList: React.FC<ArtifactListProps> = ({
   collapseAllTrigger = 0,
   expandAllTrigger = 0,
   readOnly = false,
+  qualityScores,
 }) => {
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
@@ -272,12 +283,21 @@ export const ArtifactList: React.FC<ArtifactListProps> = ({
                 )}
                 {artifact.title}
               </div>
-              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>
-                {artifact.type} • v{artifact.version}
-                {hasChildren && (
-                  <span style={{ marginLeft: '6px', color: 'var(--neutral)' }}>
-                    {collapsed ? `(collapsed · ${descendantCount})` : `(${node.children.length})`}
-                  </span>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                <span>
+                  {artifact.type} • v{artifact.version}
+                  {hasChildren && (
+                    <span style={{ marginLeft: '6px', color: 'var(--neutral)' }}>
+                      {collapsed ? `(collapsed · ${descendantCount})` : `(${node.children.length})`}
+                    </span>
+                  )}
+                </span>
+                {qualityScores?.[artifact.id] && (
+                  <QualityBadge
+                    score={qualityScores[artifact.id].score}
+                    band={qualityScores[artifact.id].band}
+                    findingCount={qualityScores[artifact.id].findingCount}
+                  />
                 )}
               </div>
             </div>

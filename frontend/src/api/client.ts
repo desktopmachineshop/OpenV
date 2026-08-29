@@ -608,6 +608,32 @@ export interface MatrixRow {
   hazard_ids: string[];
 }
 
+// --- Requirement quality linting (issue #217) ---
+
+export interface QualityFinding {
+  rule: string;
+  severity: 'error' | 'warning' | 'info';
+  message: string;
+  start: number;
+  end: number;
+  match?: string;
+}
+
+export interface QualityScore {
+  artifact_id: string;
+  title: string;
+  type: string;
+  score: number; // 0-100, higher is better
+  band: 'good' | 'fair' | 'poor';
+  findings: QualityFinding[];
+}
+
+export interface QualityReport {
+  project_id: string;
+  entries: QualityScore[];
+  summary: Record<string, number>; // band -> count
+}
+
 export type ImpactDirection = 'downstream' | 'upstream' | 'both';
 
 export interface ImpactNode {
@@ -1239,6 +1265,17 @@ export const vvAPI = {
         ...(baselineId ? { baseline_id: baselineId } : {}),
       },
     }),
+};
+
+export const qualityAPI = {
+  // Per-requirement quality scores + findings for a project (viewer role).
+  project: (projectId: string, baselineId?: string) =>
+    client.get<QualityReport>(`/api/v1/projects/${projectId}/quality`, {
+      params: baselineId ? { baseline_id: baselineId } : {},
+    }),
+  // Single-artifact lint (400 for non-requirement types).
+  artifact: (artifactId: string) =>
+    client.get<QualityScore>(`/api/v1/artifacts/${artifactId}/quality`),
 };
 
 export const workItemsAPI = {

@@ -1,7 +1,8 @@
 import React, { useCallback, useState, useEffect } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useAppStore } from '../state/store';
-import { artifactAPI, linkAPI, attachmentAPI, baselineAPI, projectAPI, Artifact, Link, Attachment, Baseline, ProjectExport } from '../api/client';
+import { artifactAPI, linkAPI, attachmentAPI, baselineAPI, projectAPI, qualityAPI, Artifact, Link, Attachment, Baseline, ProjectExport } from '../api/client';
+import type { QualityRowInfo } from '../components/ArtifactList';
 import { ArtifactEditor } from '../components/ArtifactEditor';
 import { ArtifactList } from '../components/ArtifactList';
 import { ArtifactHeader } from '../components/ArtifactHeader';
@@ -34,6 +35,9 @@ export const ModuleView: React.FC = () => {
   const [baselines, setBaselines] = useState<Baseline[]>([]);
   const [activeBaselineId, setActiveBaselineId] = useState<string>('live');
   const [baselineData, setBaselineData] = useState<ProjectExport | null>(null);
+  // Per-requirement quality scores keyed by artifact id (issue #217); drives
+  // the score badge on requirement rows.
+  const [qualityScores, setQualityScores] = useState<Record<string, QualityRowInfo>>({});
   const [collapseAllToken, setCollapseAllToken] = useState<number>(0);
   const [expandAllToken, setExpandAllToken] = useState<number>(0);
   const [previewVersion, setPreviewVersion] = useState<Artifact | null>(null);
@@ -163,6 +167,27 @@ export const ModuleView: React.FC = () => {
     }
   }, [projectId]);
 
+  // Load rule-based quality scores for the project's requirements. Best-effort:
+  // a failure just leaves the badges absent, so it never blocks the tree.
+  const loadQuality = useCallback(async () => {
+    if (!projectId) return;
+    try {
+      const response = await qualityAPI.project(projectId);
+      const map: Record<string, QualityRowInfo> = {};
+      (response.data.entries || []).forEach((entry) => {
+        map[entry.artifact_id] = {
+          score: entry.score,
+          band: entry.band,
+          findingCount: entry.findings.length,
+        };
+      });
+      setQualityScores(map);
+    } catch (error: any) {
+      console.error('Failed to load quality scores:', error);
+      setQualityScores({});
+    }
+  }, [projectId]);
+
   const loadBaselines = useCallback(async () => {
     if (!projectId) return;
     try {
@@ -190,10 +215,11 @@ export const ModuleView: React.FC = () => {
       loadArtifacts();
       loadLinks();
       loadBaselines();
+      loadQuality();
       setActiveBaselineId('live');
       setBaselineData(null);
     }
-  }, [projectId, loadArtifacts, loadLinks, loadBaselines]);
+  }, [projectId, loadArtifacts, loadLinks, loadBaselines, loadQuality]);
 
   // Load attachments when artifact is selected or when editing
   useEffect(() => {
@@ -287,6 +313,7 @@ export const ModuleView: React.FC = () => {
       addArtifact(response.data);
       setIsCreating(false);
       setPendingCreateContext(null);
+      loadQuality();
       setError('');
     } catch (error: any) {
       console.error('Failed to create artifact:', error);
@@ -305,6 +332,8 @@ export const ModuleView: React.FC = () => {
       // then auto-versions the counterpart artifacts (issue #169). Refetch
       // artifacts and links so no client-held version goes stale.
       await Promise.all([loadArtifacts(), loadLinks()]);
+      // Content changed — refresh quality badges for the edited requirement.
+      loadQuality();
       setError('');
     } catch (error: any) {
       console.error('Failed to update artifact:', error);
@@ -1245,7 +1274,8 @@ export const ModuleView: React.FC = () => {
           collapseAllTrigger={collapseAllToken}
           expandAllTrigger={expandAllToken}
           readOnly={isBaselineView}
-        />      </div>
+          qualityScores={isBaselineView ? undefined : qualityScores}
+        /></div>
 
       {/* Resize handle for left column */}
       <div
