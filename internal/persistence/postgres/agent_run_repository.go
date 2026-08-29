@@ -497,3 +497,27 @@ func (rep *AgentRunRepository) CountPendingProposals(runID string) (int, error) 
 	err := rep.db.QueryRow(`SELECT COUNT(*) FROM agent_proposals WHERE run_id = $1 AND status = 'pending'`, runID).Scan(&count)
 	return count, err
 }
+
+// CountApplyFailedProposals counts a run's approved proposals whose write
+// failed to apply.
+func (rep *AgentRunRepository) CountApplyFailedProposals(runID string) (int, error) {
+	var count int
+	err := rep.db.QueryRow(`SELECT COUNT(*) FROM agent_proposals WHERE run_id = $1 AND status = 'apply_failed'`, runID).Scan(&count)
+	return count, err
+}
+
+// FinalizeApproval transitions an awaiting_approval run to a terminal status
+// once its proposals are resolved, revoking its run token. The write is
+// conditional on the run still being awaiting_approval so a concurrent
+// resolver can never double-finalize; reports whether it was applied.
+func (rep *AgentRunRepository) FinalizeApproval(runID, status string, at time.Time) (bool, error) {
+	res, err := rep.db.Exec(`
+		UPDATE agent_runs SET status = $2, finished_at = $3, run_token_hash = ''
+		WHERE id = $1 AND status = 'awaiting_approval'
+	`, runID, status, at)
+	if err != nil {
+		return false, err
+	}
+	n, err := res.RowsAffected()
+	return n > 0, err
+}

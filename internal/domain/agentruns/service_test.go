@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/openv/requirements-platform/internal/domain/agents"
+	"github.com/openv/requirements-platform/internal/domain/events"
 )
 
 // fakeRunRepo embeds the interface so only the methods the lifecycle paths
@@ -18,8 +19,10 @@ type fakeRunRepo struct {
 	runs map[string]*Run
 	logs map[string][]LogEntry
 
-	// pendingProposals is returned by CountPendingProposals.
-	pendingProposals int
+	// pendingProposals is returned by CountPendingProposals;
+	// applyFailedProposals by CountApplyFailedProposals.
+	pendingProposals     int
+	applyFailedProposals int
 
 	// Interleaving hooks: run just before the conditional check, so tests can
 	// simulate a concurrent actor winning the race.
@@ -133,6 +136,73 @@ func (f *fakeRunRepo) UpdateWorkItemID(runID, workItemID string) error {
 
 func (f *fakeRunRepo) CountPendingProposals(string) (int, error) {
 	return f.pendingProposals, nil
+}
+
+func (f *fakeRunRepo) CountApplyFailedProposals(string) (int, error) {
+	return f.applyFailedProposals, nil
+}
+
+// FinalizeApproval mirrors the SQL: it transitions the STORED run only while
+// it is still awaiting_approval, so a concurrent resolver can never
+// double-finalize; reports whether it was applied.
+func (f *fakeRunRepo) FinalizeApproval(runID, status string, at time.Time) (bool, error) {
+	r, ok := f.runs[runID]
+	if !ok || r.Status != StatusAwaitingApproval {
+		return false, nil
+	}
+	r.Status = status
+	r.FinishedAt = &at
+	r.RunTokenHash = ""
+	return true, nil
+}
+
+// FailStale mirrors the SQL reaper: claimed/running runs whose heartbeat
+// predates cutoff (a nil heartbeat counts as stale) are failed and their ids
+// returned.
+func (f *fakeRunRepo) FailStale(cutoff time.Time) ([]string, error) {
+	var ids []string
+	for id, r := range f.runs {
+		if r.Status != StatusClaimed && r.Status != StatusRunning {
+			continue
+		}
+		if r.HeartbeatAt != nil && !r.HeartbeatAt.Before(cutoff) {
+			continue
+		}
+		now := time.Now()
+		r.Status = StatusFailed
+		r.Error = "worker lost (heartbeat timeout)"
+		r.FinishedAt = &now
+		r.RunTokenHash = ""
+		ids = append(ids, id)
+	}
+	return ids, nil
+}
+
+// fakeBus records published events so lifecycle tests can assert the run
+// service emits RunFinished on every terminal transition.
+type fakeBus struct {
+	published []events.Event
+}
+
+func (b *fakeBus) Publish(e events.Event) { b.published = append(b.published, e) }
+func (b *fakeBus) Subscribe(func(events.Event)) {}
+
+func (b *fakeBus) finished() []events.Event {
+	var out []events.Event
+	for _, e := range b.published {
+		if e.EventType == events.RunFinished {
+			out = append(out, e)
+		}
+	}
+	return out
+}
+
+func newFakeServiceWithBus(bus events.Bus, runs ...*Run) (*DefaultService, *fakeRunRepo) {
+	repo := &fakeRunRepo{runs: map[string]*Run{}, logs: map[string][]LogEntry{}}
+	for _, r := range runs {
+		repo.runs[r.ID] = r
+	}
+	return NewDefaultService(repo, nil, bus), repo
 }
 
 func newFakeService(runs ...*Run) (*DefaultService, *fakeRunRepo) {
@@ -554,6 +624,147 @@ func TestAttachWorkItemNeverTouchesStatus(t *testing.T) {
 	}
 	if stored.Status != StatusFailed || stored.Error != "boom" {
 		t.Errorf("run state was mutated beyond work_item_id: %+v", stored)
+	}
+}
+
+// TestFailStalePublishesRunFinished locks in the reaper fix: failing a
+// silent worker's run must publish RunFinished (status failed) on the bus, or
+// the notifier and automation triggers miss the most common failure — a
+// crashed worker — entirely.
+func TestFailStalePublishesRunFinished(t *testing.T) {
+	bus := &fakeBus{}
+	project := "proj-1"
+	stale := time.Now().Add(-10 * time.Minute)
+	svc, repo := newFakeServiceWithBus(bus, &Run{
+		ID:          "r1",
+		OrgID:       "org-1",
+		AgentID:     "agent-1",
+		ProjectID:   &project,
+		Status:      StatusRunning,
+		HeartbeatAt: &stale,
+		LaunchedBy:  strptr("user-9"),
+	})
+
+	ids, err := svc.FailStale(2 * time.Minute)
+	if err != nil {
+		t.Fatalf("FailStale: %v", err)
+	}
+	if len(ids) != 1 || ids[0] != "r1" {
+		t.Fatalf("reaped ids = %v, want [r1]", ids)
+	}
+	if repo.runs["r1"].Status != StatusFailed {
+		t.Fatalf("stored status = %q, want failed", repo.runs["r1"].Status)
+	}
+
+	finished := bus.finished()
+	if len(finished) != 1 {
+		t.Fatalf("RunFinished events = %d, want 1", len(finished))
+	}
+	e := finished[0]
+	if e.Payload["status"] != StatusFailed {
+		t.Errorf("event status = %v, want failed", e.Payload["status"])
+	}
+	if e.EntityID != "r1" {
+		t.Errorf("event entity = %q, want r1", e.EntityID)
+	}
+	if e.Payload["launched_by"] != "user-9" {
+		t.Errorf("event launched_by = %v, want user-9 (so the notifier can alert the launcher)", e.Payload["launched_by"])
+	}
+	if e.OrgID != "org-1" {
+		t.Errorf("event org = %q, want org-1", e.OrgID)
+	}
+}
+
+// TestFinalizeIfResolvedSucceedsWhenProposalsResolved is the awaiting_approval
+// exit: with no pending proposals and none apply-failed, the run leaves the
+// absorbing state for succeeded and publishes RunFinished.
+func TestFinalizeIfResolvedSucceedsWhenProposalsResolved(t *testing.T) {
+	bus := &fakeBus{}
+	svc, repo := newFakeServiceWithBus(bus, &Run{ID: "r1", OrgID: "org-1", AgentID: "a1", Status: StatusAwaitingApproval, LaunchedBy: strptr("user-9")})
+	repo.pendingProposals = 0
+	repo.applyFailedProposals = 0
+
+	run, err := svc.FinalizeIfResolved("r1")
+	if err != nil {
+		t.Fatalf("FinalizeIfResolved: %v", err)
+	}
+	if run.Status != StatusSucceeded {
+		t.Errorf("returned status = %q, want succeeded", run.Status)
+	}
+	if repo.runs["r1"].Status != StatusSucceeded || repo.runs["r1"].FinishedAt == nil {
+		t.Errorf("stored run = %+v, want succeeded with finished_at", repo.runs["r1"])
+	}
+	finished := bus.finished()
+	if len(finished) != 1 || finished[0].Payload["status"] != StatusSucceeded {
+		t.Fatalf("RunFinished events = %+v, want one succeeded", finished)
+	}
+}
+
+// TestFinalizeIfResolvedFailsWhenApplyFailed resolves to failed when any
+// approved write failed to apply.
+func TestFinalizeIfResolvedFailsWhenApplyFailed(t *testing.T) {
+	bus := &fakeBus{}
+	svc, repo := newFakeServiceWithBus(bus, &Run{ID: "r1", OrgID: "org-1", AgentID: "a1", Status: StatusAwaitingApproval})
+	repo.pendingProposals = 0
+	repo.applyFailedProposals = 1
+
+	run, err := svc.FinalizeIfResolved("r1")
+	if err != nil {
+		t.Fatalf("FinalizeIfResolved: %v", err)
+	}
+	if run.Status != StatusFailed {
+		t.Errorf("returned status = %q, want failed", run.Status)
+	}
+	if run.Error == "" {
+		t.Error("failed finalize should carry an error explaining the apply failure")
+	}
+	finished := bus.finished()
+	if len(finished) != 1 || finished[0].Payload["status"] != StatusFailed {
+		t.Fatalf("RunFinished events = %+v, want one failed", finished)
+	}
+}
+
+// TestFinalizeIfResolvedNoopWhilePending leaves the run in awaiting_approval
+// (and publishes nothing) while any proposal is still pending review.
+func TestFinalizeIfResolvedNoopWhilePending(t *testing.T) {
+	bus := &fakeBus{}
+	svc, repo := newFakeServiceWithBus(bus, &Run{ID: "r1", Status: StatusAwaitingApproval})
+	repo.pendingProposals = 2
+
+	run, err := svc.FinalizeIfResolved("r1")
+	if err != nil {
+		t.Fatalf("FinalizeIfResolved: %v", err)
+	}
+	if run.Status != StatusAwaitingApproval {
+		t.Errorf("status = %q, want awaiting_approval preserved", run.Status)
+	}
+	if repo.runs["r1"].Status != StatusAwaitingApproval {
+		t.Errorf("stored status = %q, want awaiting_approval preserved", repo.runs["r1"].Status)
+	}
+	if len(bus.finished()) != 0 {
+		t.Errorf("no RunFinished should publish while proposals are pending: %+v", bus.finished())
+	}
+}
+
+// TestFinalizeIfResolvedIgnoresNonAwaitingRun is a no-op for any run that is
+// not awaiting approval, so a proposal resolved against an already-terminal
+// run never re-publishes or mutates it.
+func TestFinalizeIfResolvedIgnoresNonAwaitingRun(t *testing.T) {
+	for _, status := range []string{StatusRunning, StatusSucceeded, StatusFailed, StatusQueued} {
+		bus := &fakeBus{}
+		svc, repo := newFakeServiceWithBus(bus, &Run{ID: "r1", Status: status})
+		repo.pendingProposals = 0
+
+		run, err := svc.FinalizeIfResolved("r1")
+		if err != nil {
+			t.Fatalf("FinalizeIfResolved(%s): %v", status, err)
+		}
+		if run.Status != status {
+			t.Errorf("status = %q, want %q untouched", run.Status, status)
+		}
+		if len(bus.finished()) != 0 {
+			t.Errorf("FinalizeIfResolved(%s) published %+v, want nothing", status, bus.finished())
+		}
 	}
 }
 

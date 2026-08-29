@@ -360,6 +360,17 @@ func main() {
 		},
 	})
 
+	// When a run's last proposal is reviewed, finalize the run: an
+	// awaiting_approval run leaves that absorbing state for succeeded (or
+	// failed if any approved write failed to apply), publishing RunFinished so
+	// crew successors, the notifier and automation triggers fire on the real
+	// outcome. Covers single + bulk review and the applier path alike.
+	proposalService.OnResolved(func(runID string) {
+		if _, err := runService.FinalizeIfResolved(runID); err != nil {
+			slog.Error("proposal resolution: failed to finalize run", "run_id", runID, "error", err)
+		}
+	})
+
 	// Seed default agents + crew into every workspace missing them.
 	if orgIDs, err := orgService.ListAll(); err != nil {
 		slog.Warn("failed to list organizations for seeding", "error", err)
