@@ -67,7 +67,8 @@ sleep 30
 
 For production deployment (nginx static frontend, healthchecks, memory
 limits, secrets from `.env`) and backup/restore, see
-[docs/operations.md](docs/operations.md).
+[docs/operations.md](docs/operations.md). To deploy on Railway (how the
+public demo runs), see [docs/railway.md](docs/railway.md).
 
 ### Local Development
 
