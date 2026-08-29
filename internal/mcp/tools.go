@@ -266,6 +266,7 @@ func Tools() []Tool {
 				"type":       str("Optional artifact type (omit to keep current)"),
 				"title":      str("Optional title (omit to keep current)"),
 				"body":       str("Optional markdown body (omit to keep current; pass \"\" to clear)"),
+				"parent_id":  str("Optional new parent artifact ID (omit to keep current; pass \"\" to move to the top level)"),
 				"attributes": obj("Optional attributes object (omit to keep current)"),
 			}),
 			Handler: func(c *Client, args map[string]interface{}) (string, error) {
@@ -278,6 +279,17 @@ func Tools() []Tool {
 				for _, key := range []string{"type", "title", "body"} {
 					if _, present := args[key]; present {
 						body[key] = strArg(args, key)
+					}
+				}
+				// parent_id is presence-aware server-side (issue #172):
+				// absent = keep the current parent, JSON null = move to the
+				// top level, an ID = reparent. Map the tool's "" (and an
+				// explicit null arg) to JSON null.
+				if _, present := args["parent_id"]; present {
+					if p := strArg(args, "parent_id"); p != "" {
+						body["parent_id"] = p
+					} else {
+						body["parent_id"] = nil
 					}
 				}
 				if attrs, ok := args["attributes"].(map[string]interface{}); ok {

@@ -1,6 +1,7 @@
 package artifacts
 
 import (
+	"encoding/json"
 	"errors"
 	"log/slog"
 	"strings"
@@ -88,6 +89,46 @@ type CreateArtifactRequest struct {
 	Attributes map[string]interface{} `json:"attributes"`
 }
 
+// OptionalString is a JSON field that distinguishes all three payload
+// states: OMITTED (Present false — the key never appeared), explicit NULL
+// (Present true, Value nil), and a SET string (Present true, Value non-nil).
+// A plain *string cannot tell the first two apart, which is exactly the
+// issue-#172 hazard: an update that omits parent_id must not be read as
+// "move to root".
+//
+// encoding/json only calls UnmarshalJSON for keys present in the payload,
+// so decoding stamps Present for free. Tag the field `omitzero` (Go 1.24+)
+// so a non-present value stays omitted on re-marshal — the proposal queue
+// round-trips requests through JSON before applying them, and null/omitted
+// must survive that round trip unchanged.
+type OptionalString struct {
+	Present bool
+	Value   *string
+}
+
+// PresentString returns an OptionalString that explicitly carries v
+// (v == nil is an explicit null). For internal callers building requests
+// in Go; the zero value OptionalString{} means "field omitted".
+func PresentString(v *string) OptionalString {
+	return OptionalString{Present: true, Value: v}
+}
+
+// UnmarshalJSON records that the field appeared, then decodes null/string
+// into Value.
+func (o *OptionalString) UnmarshalJSON(data []byte) error {
+	o.Present = true
+	return json.Unmarshal(data, &o.Value)
+}
+
+// MarshalJSON emits the carried value (null when Value is nil). Pair with
+// the `omitzero` tag so omitted fields are not serialized as null.
+func (o OptionalString) MarshalJSON() ([]byte, error) {
+	return json.Marshal(o.Value)
+}
+
+// IsZero reports whether the field was omitted; it drives `omitzero`.
+func (o OptionalString) IsZero() bool { return !o.Present }
+
 // UpdateArtifactRequest is the payload for updating an artifact
 // UpdateArtifactRequest's content fields (Type, Title, Body) are pointers so
 // callers can distinguish "omitted" from "explicitly empty": a nil pointer
@@ -97,8 +138,17 @@ type CreateArtifactRequest struct {
 // update_artifact tool wiped bodies by sending "" for an omitted argument.
 // JSON decoding gives callers this for free: omitted/null fields unmarshal
 // to nil.
+//
+// ParentID needs a third state — "move to root" is a legitimate explicit
+// value (JSON null) distinct from "omitted" — so it is an OptionalString
+// (issue #172): omitted = keep the current parent, null = move to root,
+// a string = reparent under that artifact.
+//
+// SortOrder deliberately stays a plain *int: nil (omitted or null) means
+// "keep the current order" (or auto-assign when the parent changed), and
+// there is no meaningful explicit-null semantic for it.
 type UpdateArtifactRequest struct {
-	ParentID         *string                `json:"parent_id,omitempty"`
+	ParentID         OptionalString         `json:"parent_id,omitzero"`
 	Type             *string                `json:"type,omitempty"`
 	Title            *string                `json:"title,omitempty"`
 	Body             *string                `json:"body,omitempty"`
@@ -275,6 +325,11 @@ func (s *DefaultService) GetArtifactsByProject(projectID string) ([]*Artifact, e
 // replaces. This keeps clients that update a single field (e.g. the MCP
 // update_artifact tool) from silently wiping the others.
 //
+// Parent contract (issue #172): ParentID is presence-aware. An omitted
+// parent_id keeps the current parent; an explicit JSON null moves the
+// artifact to the root; a set ID reparents it (auto-assigning sort order
+// when SortOrder is not also given).
+//
 // Suspect links (issue #131): when the update changes the artifact's
 // CONTENT — type, title, or body — every live link touching it is flagged
 // suspect until confirmed or the artifact is approved again. Structural
@@ -287,18 +342,27 @@ func (s *DefaultService) UpdateArtifact(id string, req UpdateArtifactRequest) (*
 		return nil, err
 	}
 
+	// Parent contract (issue #172): only a PRESENT parent_id touches the
+	// tree. Omitted keeps the current parent; explicit null moves to root;
+	// a set ID reparents. An omitted field previously decoded to the same
+	// nil as explicit null, so every parent-less update (e.g. the MCP
+	// update_artifact tool) silently reparented the artifact to root.
 	parentChanged := false
-	if (artifact.ParentID == nil) != (req.ParentID == nil) {
-		parentChanged = true
-	} else if artifact.ParentID != nil && req.ParentID != nil && *artifact.ParentID != *req.ParentID {
-		parentChanged = true
+	if req.ParentID.Present {
+		if (artifact.ParentID == nil) != (req.ParentID.Value == nil) {
+			parentChanged = true
+		} else if artifact.ParentID != nil && req.ParentID.Value != nil && *artifact.ParentID != *req.ParentID.Value {
+			parentChanged = true
+		}
 	}
 
 	contentChanged := (req.Type != nil && artifact.Type != *req.Type) ||
 		(req.Title != nil && artifact.Title != *req.Title) ||
 		(req.Body != nil && artifact.Body != *req.Body)
 
-	artifact.ParentID = req.ParentID
+	if req.ParentID.Present {
+		artifact.ParentID = req.ParentID.Value
+	}
 	if req.Type != nil {
 		artifact.Type = *req.Type
 	}

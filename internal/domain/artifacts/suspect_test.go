@@ -1,6 +1,7 @@
 package artifacts
 
 import (
+	"encoding/json"
 	"testing"
 	"time"
 )
@@ -9,9 +10,17 @@ import (
 // restore test.
 type fakeSuspectRepo struct {
 	Repository
-	byID     map[string]*Artifact
-	updated  *Artifact
-	versions []*Artifact
+	byID               map[string]*Artifact
+	updated            *Artifact
+	versions           []*Artifact
+	nextSortOrderCalls int
+}
+
+// NextSortOrder returns a sentinel order so tests can tell when a parent
+// change triggered auto-assignment.
+func (f *fakeSuspectRepo) NextSortOrder(projectID string, parentID *string) (int, error) {
+	f.nextSortOrderCalls++
+	return 99, nil
 }
 
 func (f *fakeSuspectRepo) FindByID(id string) (*Artifact, error) {
@@ -83,7 +92,7 @@ func strPtr(s string) *string { return &s }
 // treats identically).
 func sameContentReq(a *Artifact) UpdateArtifactRequest {
 	return UpdateArtifactRequest{
-		ParentID:   a.ParentID,
+		ParentID:   PresentString(a.ParentID),
 		Type:       strPtr(a.Type),
 		Title:      strPtr(a.Title),
 		Body:       strPtr(a.Body),
@@ -244,7 +253,6 @@ func TestUpdateArtifactContentFieldsContract(t *testing.T) {
 		svc, _, suspector, base := newUpdateFixture(t)
 
 		updated, err := svc.UpdateArtifact(base.ID, UpdateArtifactRequest{
-			ParentID:   base.ParentID,
 			Attributes: map[string]interface{}{"status": base.Status, "touched": true},
 		})
 		if err != nil {
@@ -273,6 +281,172 @@ func TestUpdateArtifactContentFieldsContract(t *testing.T) {
 		}
 		if len(suspector.marked) != 1 {
 			t.Errorf("marked = %v, want the artifact flagged for an explicit body wipe", suspector.marked)
+		}
+	})
+}
+
+// TestUpdateArtifactParentContract locks in the issue-#172 contract:
+// parent_id is presence-aware. Omitted = keep the current parent (the old
+// *string field decoded omitted and explicit null to the same nil, so every
+// parent-less update silently reparented the artifact to root). Explicit
+// null = move to root. A set ID = reparent (with sort order auto-assigned
+// unless the request also carries one). Parent moves are structural, never
+// content changes, so they must not flag links suspect.
+func TestUpdateArtifactParentContract(t *testing.T) {
+	parented := func(t *testing.T) (*DefaultService, *fakeSuspectRepo, *fakeSuspector, *Artifact) {
+		svc, repo, suspector, base := newUpdateFixture(t)
+		base.ParentID = strPtr("par-1")
+		return svc, repo, suspector, base
+	}
+
+	t.Run("omitted parent keeps the current parent", func(t *testing.T) {
+		svc, repo, _, base := parented(t)
+
+		updated, err := svc.UpdateArtifact(base.ID, UpdateArtifactRequest{
+			Title: strPtr("New title"),
+		})
+		if err != nil {
+			t.Fatalf("UpdateArtifact: %v", err)
+		}
+		if updated.ParentID == nil || *updated.ParentID != "par-1" {
+			t.Errorf("ParentID = %v, want par-1 carried forward on an omitted parent_id", updated.ParentID)
+		}
+		if repo.nextSortOrderCalls != 0 {
+			t.Errorf("NextSortOrder calls = %d, want 0 (no parent change)", repo.nextSortOrderCalls)
+		}
+	})
+
+	t.Run("explicit null moves to root", func(t *testing.T) {
+		svc, repo, suspector, base := parented(t)
+
+		updated, err := svc.UpdateArtifact(base.ID, UpdateArtifactRequest{
+			ParentID: PresentString(nil),
+		})
+		if err != nil {
+			t.Fatalf("UpdateArtifact: %v", err)
+		}
+		if updated.ParentID != nil {
+			t.Errorf("ParentID = %v, want nil (moved to root)", *updated.ParentID)
+		}
+		if repo.nextSortOrderCalls != 1 || updated.SortOrder != 99 {
+			t.Errorf("NextSortOrder calls = %d, SortOrder = %d; want auto-assigned order 99 after the move",
+				repo.nextSortOrderCalls, updated.SortOrder)
+		}
+		if len(suspector.marked) != 0 {
+			t.Errorf("marked = %v, want none: a structural move is not a content change", suspector.marked)
+		}
+	})
+
+	t.Run("set ID reparents", func(t *testing.T) {
+		svc, repo, suspector, base := parented(t)
+
+		updated, err := svc.UpdateArtifact(base.ID, UpdateArtifactRequest{
+			ParentID: PresentString(strPtr("par-2")),
+		})
+		if err != nil {
+			t.Fatalf("UpdateArtifact: %v", err)
+		}
+		if updated.ParentID == nil || *updated.ParentID != "par-2" {
+			t.Errorf("ParentID = %v, want par-2", updated.ParentID)
+		}
+		if repo.nextSortOrderCalls != 1 {
+			t.Errorf("NextSortOrder calls = %d, want 1 (reparent auto-assigns order)", repo.nextSortOrderCalls)
+		}
+		if len(suspector.marked) != 0 {
+			t.Errorf("marked = %v, want none for a reparent", suspector.marked)
+		}
+	})
+
+	t.Run("present same parent is a no-op move", func(t *testing.T) {
+		svc, repo, _, base := parented(t)
+
+		updated, err := svc.UpdateArtifact(base.ID, UpdateArtifactRequest{
+			ParentID: PresentString(strPtr("par-1")),
+		})
+		if err != nil {
+			t.Fatalf("UpdateArtifact: %v", err)
+		}
+		if updated.ParentID == nil || *updated.ParentID != "par-1" {
+			t.Errorf("ParentID = %v, want par-1 unchanged", updated.ParentID)
+		}
+		if repo.nextSortOrderCalls != 0 {
+			t.Errorf("NextSortOrder calls = %d, want 0 (same parent, no reorder)", repo.nextSortOrderCalls)
+		}
+	})
+}
+
+// TestUpdateArtifactRequestParentJSON pins the wire contract for parent_id
+// and its survival of the proposal queue's JSON round trip (the request is
+// marshaled into a payload map at propose time and re-decoded on approval;
+// an omitted field must stay omitted, not degrade into null = move-to-root).
+func TestUpdateArtifactRequestParentJSON(t *testing.T) {
+	decode := func(t *testing.T, raw string) UpdateArtifactRequest {
+		t.Helper()
+		var req UpdateArtifactRequest
+		if err := json.Unmarshal([]byte(raw), &req); err != nil {
+			t.Fatalf("unmarshal %s: %v", raw, err)
+		}
+		return req
+	}
+
+	t.Run("omitted decodes as not present", func(t *testing.T) {
+		req := decode(t, `{"title":"T"}`)
+		if req.ParentID.Present {
+			t.Error("omitted parent_id must decode as Present=false")
+		}
+	})
+
+	t.Run("null decodes as present with nil value", func(t *testing.T) {
+		req := decode(t, `{"parent_id":null}`)
+		if !req.ParentID.Present || req.ParentID.Value != nil {
+			t.Errorf("parent_id:null = %+v, want Present with nil Value", req.ParentID)
+		}
+	})
+
+	t.Run("set decodes as present with value", func(t *testing.T) {
+		req := decode(t, `{"parent_id":"abc"}`)
+		if !req.ParentID.Present || req.ParentID.Value == nil || *req.ParentID.Value != "abc" {
+			t.Errorf("parent_id:\"abc\" = %+v, want Present with value abc", req.ParentID)
+		}
+	})
+
+	// roundTrip mimics maybePropose + the proposal applier: struct -> JSON
+	// -> generic map -> JSON -> struct.
+	roundTrip := func(t *testing.T, req UpdateArtifactRequest) UpdateArtifactRequest {
+		t.Helper()
+		raw, err := json.Marshal(req)
+		if err != nil {
+			t.Fatalf("marshal: %v", err)
+		}
+		var payload map[string]interface{}
+		if err := json.Unmarshal(raw, &payload); err != nil {
+			t.Fatalf("to map: %v", err)
+		}
+		raw2, err := json.Marshal(payload)
+		if err != nil {
+			t.Fatalf("re-marshal: %v", err)
+		}
+		return decode(t, string(raw2))
+	}
+
+	t.Run("omitted survives the proposal round trip", func(t *testing.T) {
+		out := roundTrip(t, UpdateArtifactRequest{Title: strPtr("T")})
+		if out.ParentID.Present {
+			t.Error("omitted parent_id came back present after the round trip (omitzero tag lost?)")
+		}
+	})
+
+	t.Run("null survives the proposal round trip", func(t *testing.T) {
+		out := roundTrip(t, UpdateArtifactRequest{ParentID: PresentString(nil)})
+		if !out.ParentID.Present || out.ParentID.Value != nil {
+			t.Errorf("explicit null came back as %+v, want Present with nil Value", out.ParentID)
+		}
+	})
+
+	t.Run("set value survives the proposal round trip", func(t *testing.T) {
+		out := roundTrip(t, UpdateArtifactRequest{ParentID: PresentString(strPtr("par-9"))})
+		if !out.ParentID.Present || out.ParentID.Value == nil || *out.ParentID.Value != "par-9" {
+			t.Errorf("set parent came back as %+v, want par-9", out.ParentID)
 		}
 	})
 }

@@ -170,7 +170,8 @@ func (f *fakeRunService) Usage(orgID string, since time.Time) (*agentruns.UsageS
 
 type fakeArtifactService struct {
 	artifacts.Service
-	byID map[string]*artifacts.Artifact
+	byID       map[string]*artifacts.Artifact
+	updateReqs []artifacts.UpdateArtifactRequest
 }
 
 func (f *fakeArtifactService) GetArtifact(id string) (*artifacts.Artifact, error) {
@@ -181,6 +182,7 @@ func (f *fakeArtifactService) GetArtifact(id string) (*artifacts.Artifact, error
 }
 
 func (f *fakeArtifactService) UpdateArtifact(id string, req artifacts.UpdateArtifactRequest) (*artifacts.Artifact, error) {
+	f.updateReqs = append(f.updateReqs, req)
 	return f.byID[id], nil
 }
 
@@ -609,6 +611,76 @@ func TestUpdateArtifactAddedLinkChatter(t *testing.T) {
 	if !strings.Contains(msg, "relates-to: Password policy (added)") {
 		t.Fatalf("chatter message %q is missing the added-link detail", msg)
 	}
+}
+
+// TestUpdateArtifactHandlerParentPresence is the HTTP half of the issue-#172
+// contract: the handler's JSON decode must hand the domain layer a
+// presence-aware parent_id — absent stays not-present (keep parent), null
+// arrives present-and-nil (move to root), a string arrives present-and-set.
+// Before the fix, a parent-less PUT (e.g. from the MCP update_artifact tool)
+// decoded to the same nil as explicit null and reparented the artifact to
+// the root.
+func TestUpdateArtifactHandlerParentPresence(t *testing.T) {
+	newFixture := func() (*Handler, *fakeArtifactService) {
+		parent := "art-parent"
+		artifactSvc := &fakeArtifactService{byID: map[string]*artifacts.Artifact{
+			"art-a": {ID: "art-a", ProjectID: "proj-a", ParentID: &parent, Type: "requirement", Title: "Child"},
+		}}
+		h := &Handler{
+			projectService: &fakeProjectService{byID: map[string]*projects.Project{
+				"proj-a": {ID: "proj-a", OrgID: "org-1"},
+			}},
+			orgService: &fakeOrgService{roles: map[string]map[string]string{"org-1": {}}},
+			memberService: &fakeMemberService{roles: map[string]map[string]string{
+				"proj-a": {"editor-a": members.RoleEditor},
+			}},
+			artifactService: artifactSvc,
+			linkService:     &fakeLinkService{},
+			chatterService:  &fakeChatterService{},
+		}
+		return h, artifactSvc
+	}
+
+	put := func(t *testing.T, h *Handler, body string) {
+		t.Helper()
+		r := httptest.NewRequest(http.MethodPut, "/api/v1/artifacts/art-a", strings.NewReader(body))
+		r = r.WithContext(context.WithValue(r.Context(), ctxUser, &users.User{ID: "editor-a"}))
+		r = mux.SetURLVars(r, map[string]string{"id": "art-a"})
+		w := httptest.NewRecorder()
+		h.UpdateArtifact(w, r)
+		if w.Code != http.StatusOK {
+			t.Fatalf("status = %d, want 200 (body %q)", w.Code, w.Body.String())
+		}
+	}
+
+	t.Run("omitted parent_id decodes as not present", func(t *testing.T) {
+		h, svc := newFixture()
+		put(t, h, `{"title":"Renamed"}`)
+		if len(svc.updateReqs) != 1 {
+			t.Fatalf("UpdateArtifact calls = %d, want 1", len(svc.updateReqs))
+		}
+		if svc.updateReqs[0].ParentID.Present {
+			t.Error("omitted parent_id reached the domain as present (would reparent to root)")
+		}
+	})
+
+	t.Run("null parent_id decodes as present nil", func(t *testing.T) {
+		h, svc := newFixture()
+		put(t, h, `{"parent_id":null}`)
+		req := svc.updateReqs[0]
+		if !req.ParentID.Present || req.ParentID.Value != nil {
+			t.Errorf("parent_id:null decoded as %+v, want present with nil value (move to root)", req.ParentID)
+		}
+	})
+
+	t.Run("set parent_id decodes as present value", func(t *testing.T) {
+		h, svc := newFixture()
+		put(t, h, `{"parent_id":"art-new-parent"}`)
+		req := svc.updateReqs[0]
+		if !req.ParentID.Present || req.ParentID.Value == nil || *req.ParentID.Value != "art-new-parent" {
+			t.Errorf("parent_id decoded as %+v, want present art-new-parent", req.ParentID)
+		}
+	})
 }
 
 // TestListDomainEventsScoping locks in that, without a project_id filter, org
