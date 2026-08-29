@@ -404,14 +404,24 @@ func TestReleaseClaimRequiresOwningWorker(t *testing.T) {
 		t.Errorf("released run = %s/%q/%v, want queued with no worker or heartbeat", run.Status, run.WorkerID, run.HeartbeatAt)
 	}
 
-	// A running run is past the release window.
+	// A running run can still be released by its owning worker: this is the
+	// worker-shutdown path (SIGINT releases in-flight runs back to the queue
+	// rather than failing them). ReleaseClaim covers status IN ('claimed','running').
 	f.setRunState(t, id, agentruns.StatusRunning, "")
 	if _, err := f.db.Exec(`UPDATE agent_runs SET worker_id = 'w-1' WHERE id = $1`, id); err != nil {
 		t.Fatal(err)
 	}
+	// The wrong worker still cannot release it.
+	if ok, err := f.repo.ReleaseClaim(id, "w-2"); err != nil || ok {
+		t.Errorf("ReleaseClaim(running, wrong worker) = %v, %v, want false", ok, err)
+	}
+	// The owning worker returns it to the queue.
 	ok, err = f.repo.ReleaseClaim(id, "w-1")
-	if err != nil || ok {
-		t.Errorf("ReleaseClaim(running) = %v, %v, want false", ok, err)
+	if err != nil || !ok {
+		t.Errorf("ReleaseClaim(running, owner) = %v, %v, want applied", ok, err)
+	}
+	if got := f.status(t, id); got != agentruns.StatusQueued {
+		t.Errorf("run = %s, want queued after owner release", got)
 	}
 }
 
