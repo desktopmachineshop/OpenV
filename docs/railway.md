@@ -61,6 +61,16 @@ WORKER_API_KEY=<long random string>
 # be provisioned there. Run agent workers (agentd) on your own machine
 # instead, pointed at the API domain — see docs/agents.md.
 HOSTED_RUNNERS=off
+
+# The frontend and API live on two different *.up.railway.app domains, which
+# browsers treat as different SITES (up.railway.app is on the Public Suffix
+# List). Without these, the session cookie is SameSite=Lax and is never sent
+# on the frontend's cross-site API calls — register/login appear to succeed
+# but every request after them is 401. CROSS_SITE_COOKIES issues cookies with
+# SameSite=None and implies Secure. Not needed when both services sit behind
+# one domain.
+SECURE_COOKIES=true
+CROSS_SITE_COOKIES=true
 ```
 
 Optional — Google sign-in (see `docker-compose.yml` for details):

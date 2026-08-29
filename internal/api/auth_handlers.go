@@ -78,7 +78,7 @@ func (h *Handler) setSessionCookie(w http.ResponseWriter, token string) {
 		Path:     "/",
 		HttpOnly: true,
 		Secure:   h.secureCookies,
-		SameSite: http.SameSiteLaxMode,
+		SameSite: h.cookieSameSite,
 		Expires:  time.Now().Add(users.SessionDuration),
 	})
 }
@@ -90,7 +90,7 @@ func (h *Handler) clearSessionCookie(w http.ResponseWriter) {
 		Path:     "/",
 		HttpOnly: true,
 		Secure:   h.secureCookies,
-		SameSite: http.SameSiteLaxMode,
+		SameSite: h.cookieSameSite,
 		MaxAge:   -1,
 	})
 }
@@ -194,7 +194,7 @@ func (h *Handler) GoogleLogin(w http.ResponseWriter, r *http.Request) {
 		Path:     "/",
 		HttpOnly: true,
 		Secure:   h.secureCookies,
-		SameSite: http.SameSiteLaxMode,
+		SameSite: h.cookieSameSite,
 		MaxAge:   600,
 	})
 	http.Redirect(w, r, h.googleOAuth.oauthConfig().AuthCodeURL(state), http.StatusFound)
