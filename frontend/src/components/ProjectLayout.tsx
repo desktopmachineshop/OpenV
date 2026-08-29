@@ -3,6 +3,7 @@ import { NavLink, Outlet, useNavigate, useParams } from 'react-router-dom';
 import { projectAPI, Project } from '../api/client';
 import { useAppStore } from '../state/store';
 import { GlobalSearch } from './GlobalSearch';
+import { NotificationBell } from './NotificationBell';
 import { OrgSwitcher } from './OrgSwitcher';
 import { UserMenu } from './UserMenu';
 
@@ -116,8 +117,11 @@ export const ProjectLayout: React.FC = () => {
           >
             {project?.name || '…'}
           </div>
-          <div style={{ marginTop: 8 }}>
-            <GlobalSearch />
+          <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <GlobalSearch />
+            </div>
+            <NotificationBell variant="dark" />
           </div>
         </div>
         <nav style={{ flex: 1, overflowY: 'auto', padding: '8px 0' }}>
