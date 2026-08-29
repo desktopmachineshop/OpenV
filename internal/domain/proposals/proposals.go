@@ -31,10 +31,14 @@ const (
 const MaxProposalsPerRun = 100
 
 var (
-	ErrNotFound     = errors.New("proposal not found")
-	ErrNotPending   = errors.New("proposal has already been reviewed")
-	ErrRunWriteCap  = errors.New("run has reached its proposal limit")
+	ErrNotFound      = errors.New("proposal not found")
+	ErrNotPending    = errors.New("proposal has already been reviewed")
+	ErrRunWriteCap   = errors.New("run has reached its proposal limit")
 	ErrUnsupportedOp = errors.New("unsupported proposal operation")
+	// ErrDuplicateRef is returned when a proposal claims a temporary ref token
+	// already taken by another proposal in the same run. Refs must be unique per
+	// run so a create_link's endpoint resolves to exactly one artifact.
+	ErrDuplicateRef = errors.New("proposal ref already used by another proposal in this run")
 )
 
 // Proposal is a pending agent write awaiting human review.
@@ -165,6 +169,18 @@ func (s *DefaultService) Propose(runID, projectID, op string, targetID *string, 
 		ref = raw
 		delete(payload, "ref")
 	}
+	// Refs must be unique within a run: a create_link proposal resolves an
+	// endpoint ref to the one sibling that minted it (resolveLinkPayload builds
+	// a ref -> proposal map keyed by ref). If two create_artifact proposals in a
+	// run claimed the same ref, that map would silently keep whichever the
+	// repository listed last, so a link naming the ref could bind to the wrong
+	// artifact. Reject the duplicate at propose time rather than accept an
+	// ambiguous run (issue #250 adjacent finding).
+	if ref != "" {
+		if err := s.assertRefAvailable(runID, ref); err != nil {
+			return nil, err
+		}
+	}
 	p := &Proposal{
 		ID:        uuid.New().String(),
 		RunID:     runID,
@@ -180,6 +196,22 @@ func (s *DefaultService) Propose(runID, projectID, op string, targetID *string, 
 		return nil, err
 	}
 	return p, nil
+}
+
+// assertRefAvailable fails if another proposal in the run already carries ref.
+// Refs are compared exactly; only proposals that actually minted a ref (i.e.
+// create_artifact proposals) participate, since empty refs are never indexed.
+func (s *DefaultService) assertRefAvailable(runID, ref string) error {
+	siblings, err := s.repo.List("", "", runID)
+	if err != nil {
+		return err
+	}
+	for _, sib := range siblings {
+		if sib.Ref == ref {
+			return fmt.Errorf("%w: ref %q (already held by proposal %s)", ErrDuplicateRef, ref, sib.ID)
+		}
+	}
+	return nil
 }
 
 // Get returns a proposal by id.

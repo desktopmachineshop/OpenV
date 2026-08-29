@@ -17,7 +17,7 @@ type recordingBus struct {
 	published []events.Event
 }
 
-func (b *recordingBus) Publish(e events.Event) { b.published = append(b.published, e) }
+func (b *recordingBus) Publish(e events.Event)       { b.published = append(b.published, e) }
 func (b *recordingBus) Subscribe(func(events.Event)) {}
 
 func (b *recordingBus) types() []string {
@@ -152,6 +152,54 @@ func TestApplyUpdateArtifactRejectsLinkOps(t *testing.T) {
 	}
 }
 
+// TestApplyCreateLinkValidatesLinkType is the #250 guarantee: when a create_link
+// proposal's resolved endpoints violate the link-type rule, the applier must
+// reject (surfacing as apply_failed) and create no link, rather than write an
+// invalid edge that only a human reviewer would have caught. With a pending-ref
+// endpoint the propose-time ValidateLinkType is skipped, so this is the only
+// guard.
+func TestApplyCreateLinkValidatesLinkType(t *testing.T) {
+	bus := &recordingBus{}
+	artSvc := &applierArtifactService{byID: map[string]*artifacts.Artifact{
+		// "verifies" requires from=test-case, to=requirement. Here both
+		// endpoints are requirements, so from-type is wrong.
+		"art-1": {ID: "art-1", ProjectID: "proj-1", Type: "requirement", Title: "From", Version: 1},
+		"art-2": {ID: "art-2", ProjectID: "proj-1", Type: "requirement", Title: "To", Version: 1},
+	}}
+	linkSvc := &applierLinkService{}
+	h := newApplierHandler(bus, artSvc, linkSvc)
+
+	_, err := h.applyCreateLink(map[string]interface{}{"from_id": "art-1", "to_id": "art-2", "type": "verifies"})
+	if err == nil {
+		t.Fatal("applyCreateLink accepted a link whose endpoints violate the link-type rule; want rejection")
+	}
+	if len(linkSvc.created) != 0 {
+		t.Errorf("an invalid link was created despite the validation failure: %v", linkSvc.created)
+	}
+	if len(artSvc.updated) != 0 {
+		t.Errorf("endpoints were auto-versioned for a rejected link apply: %v", artSvc.updated)
+	}
+	if len(bus.published) != 0 {
+		t.Errorf("an event was published for a rejected link apply: %v", bus.types())
+	}
+
+	// An unknown link type is also rejected.
+	if _, err := h.applyCreateLink(map[string]interface{}{"from_id": "art-1", "to_id": "art-2", "type": "no-such-type"}); err == nil {
+		t.Fatal("applyCreateLink accepted an unknown link type; want rejection")
+	}
+	if len(linkSvc.created) != 0 {
+		t.Errorf("a link was created for an unknown link type: %v", linkSvc.created)
+	}
+
+	// A valid link (impacts allows any-to-any) still applies cleanly.
+	if _, err := h.applyCreateLink(map[string]interface{}{"from_id": "art-1", "to_id": "art-2", "type": "impacts"}); err != nil {
+		t.Fatalf("applyCreateLink rejected a valid link: %v", err)
+	}
+	if len(linkSvc.created) != 1 {
+		t.Fatalf("valid link was not created: %v", linkSvc.created)
+	}
+}
+
 // TestApplyArtifactAppliersPublishEvents locks in that approved artifact
 // writes emit the same domain events the HTTP handlers do, so the activity
 // log, SSE refresh, and automations see agent-applied writes.
@@ -211,8 +259,11 @@ func TestApplyArtifactAppliersPublishEvents(t *testing.T) {
 func TestApplyLinkAppliersPublishAndAutoVersion(t *testing.T) {
 	bus := &recordingBus{}
 	artSvc := &applierArtifactService{byID: map[string]*artifacts.Artifact{
-		"art-1": {ID: "art-1", ProjectID: "proj-1", Type: "requirement", Title: "From", Version: 1},
-		"art-2": {ID: "art-2", ProjectID: "proj-1", Type: "test_case", Title: "To", Version: 1},
+		// A "verifies" link runs from a test-case to a requirement, so the
+		// endpoint types must satisfy that rule for the apply-time validation
+		// added for issue #250.
+		"art-1": {ID: "art-1", ProjectID: "proj-1", Type: "test-case", Title: "From", Version: 1},
+		"art-2": {ID: "art-2", ProjectID: "proj-1", Type: "requirement", Title: "To", Version: 1},
 	}}
 	linkSvc := &applierLinkService{byID: map[string]*links.Link{
 		"link-1": {ID: "link-1", FromID: "art-1", ToID: "art-2", Type: "verifies"},

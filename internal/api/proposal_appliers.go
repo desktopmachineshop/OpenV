@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 
 	"github.com/openv/requirements-platform/internal/domain/artifacts"
 	"github.com/openv/requirements-platform/internal/domain/events"
@@ -121,6 +122,27 @@ func (h *Handler) applyCreateLink(payload map[string]interface{}) (string, error
 	var req links.CreateLinkRequest
 	if err := decodeProposalPayload(payload, &req); err != nil {
 		return "", err
+	}
+	// The payload reaching here has already had any pending-proposal refs
+	// resolved to real artifact ids (see proposals.DefaultService.resolveLinkPayload),
+	// so both endpoints now exist and their types are knowable. Re-run the same
+	// link-type validation the HTTP CreateLink handler applies at propose time
+	// for non-ref links (issue #250): with a pending-ref endpoint the propose-time
+	// check was skipped, so this apply-time check is the only guard before an
+	// invalid edge is written. Fetch the real endpoint types and validate the
+	// link type exists and its from/to constraints hold; on failure return an
+	// error so the proposal resolves to apply_failed with a clear message and no
+	// link is created.
+	fromArtifact, err := h.artifactService.GetArtifact(req.FromID)
+	if err != nil {
+		return "", fmt.Errorf("cannot apply create_link: source artifact %q not found: %w", req.FromID, err)
+	}
+	toArtifact, err := h.artifactService.GetArtifact(req.ToID)
+	if err != nil {
+		return "", fmt.Errorf("cannot apply create_link: target artifact %q not found: %w", req.ToID, err)
+	}
+	if err := links.ValidateLinkType(req.Type, fromArtifact.Type, toArtifact.Type); err != nil {
+		return "", fmt.Errorf("cannot apply create_link: %w", err)
 	}
 	link := links.NewLink(req)
 	if err := h.linkService.CreateLink(link); err != nil {
