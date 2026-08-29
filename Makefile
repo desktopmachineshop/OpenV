@@ -30,21 +30,13 @@ prod-down:
 	docker compose -f docker-compose.yml -f docker-compose.prod.yml down
 
 ## Back up the openv database plus the openv-data and uploads volumes into a
-## single timestamped bundle: backups/openv-backup-<stamp>.tar.gz.
-## Everything runs in containers; the stack must be up. See docs/operations.md.
+## single timestamped bundle: backups/openv-backup-<stamp>.tar.gz, then prune
+## bundles older than BACKUP_RETENTION_DAYS (default 7). Runs the shared
+## scripts/backup.sh recipe in a one-shot sidecar container — the same recipe
+## the opt-in backup sidecar loops on (docker-compose.backup.yml). The stack
+## must be up. See docs/operations.md.
 backup:
-	mkdir -p backups
-	docker exec openv-postgres sh -c 'pg_dump -U postgres -d openv --clean --if-exists -f /tmp/openv-db.sql'
-	docker cp openv-postgres:/tmp/openv-db.sql backups/.openv-db.sql
-	docker exec openv-postgres sh -c 'rm -f /tmp/openv-db.sql'
-	docker run --rm --volumes-from openv-api -v "$(CURDIR)/backups:/backup" alpine sh -c '\
-		set -e && \
-		rm -rf /backup/.stage && mkdir -p /backup/.stage && \
-		mv /backup/.openv-db.sql /backup/.stage/openv-db.sql && \
-		tar czf /backup/.stage/openv-data.tar.gz -C /data . && \
-		tar czf /backup/.stage/uploads-data.tar.gz -C /uploads . && \
-		tar czf "/backup/openv-backup-$$(date +%Y%m%d-%H%M%S).tar.gz" -C /backup/.stage . && \
-		rm -rf /backup/.stage'
+	docker compose -f docker-compose.yml -f docker-compose.backup.yml run --rm --no-deps backup --once
 	@echo "Backup written to backups/ (newest openv-backup-*.tar.gz)"
 
 ## Restore a backup made by `make backup`. The bundle must live in backups/.
