@@ -355,6 +355,52 @@ var migrations = []Migration{
 		`)
 		return err
 	}},
+
+	// 0015: org- and project-configurable typed attribute definitions
+	// (issue #219, phase-4 substrate). A definition names an extra typed
+	// field an org wants on its artifacts; values keep living in the
+	// existing artifacts.attributes JSONB, so this is a vocabulary +
+	// validator with NO data migration. Scope is exactly one of org_id
+	// (org-wide) or project_id (project-scoped override / project-only
+	// field); enum_values holds the allowed set for enum types.
+	//
+	// NOTE: 0014 is intentionally skipped here — it is claimed by the
+	// concurrent run-reproducibility branch. The registry only requires
+	// unique, ascending versions, so the two branches merge cleanly in
+	// either order. If numbering shifts on merge, bump this entry to the
+	// next free number (the registry fails fast on a collision at boot).
+	{Version: 15, Name: "attribute_definitions", Run: func(tx *sql.Tx) error {
+		if _, err := tx.Exec(`
+			CREATE TABLE IF NOT EXISTS attribute_definitions (
+				id UUID PRIMARY KEY,
+				org_id UUID,
+				project_id UUID,
+				key VARCHAR(64) NOT NULL,
+				label TEXT NOT NULL DEFAULT '',
+				data_type VARCHAR(16) NOT NULL,
+				enum_values JSONB NOT NULL DEFAULT '[]',
+				applies_to_type VARCHAR(64) NOT NULL DEFAULT '',
+				required BOOLEAN NOT NULL DEFAULT FALSE,
+				sort_order INT NOT NULL DEFAULT 0,
+				created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+			)
+		`); err != nil {
+			return err
+		}
+		// Read paths: the effective-set resolver lists org-wide definitions
+		// (project_id NULL) and a project's own.
+		if _, err := tx.Exec(`
+			CREATE INDEX IF NOT EXISTS idx_attribute_definitions_org
+			ON attribute_definitions(org_id) WHERE project_id IS NULL
+		`); err != nil {
+			return err
+		}
+		_, err := tx.Exec(`
+			CREATE INDEX IF NOT EXISTS idx_attribute_definitions_project
+			ON attribute_definitions(project_id) WHERE project_id IS NOT NULL
+		`)
+		return err
+	}},
 }
 
 // migrationLockKey is the pg_advisory_xact_lock key that serializes

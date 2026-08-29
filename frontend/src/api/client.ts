@@ -506,6 +506,26 @@ export interface LinkTypeRule {
   description: string;
 }
 
+export type AttributeDataType = 'text' | 'number' | 'date' | 'enum' | 'boolean';
+
+// A configurable typed attribute definition (issue #219). Exactly one of
+// org_id (org-wide) or project_id (project-scoped) is set. Values live in the
+// artifact's attributes map under `key`.
+export interface AttributeDefinition {
+  id: string;
+  org_id: string | null;
+  project_id: string | null;
+  key: string;
+  label: string;
+  data_type: AttributeDataType;
+  enum_values: string[];
+  // Artifact type key this applies to, or '' for all types.
+  applies_to_type: string;
+  required: boolean;
+  sort_order: number;
+  created_at: string;
+}
+
 export interface ProductProfile {
   project_id: string;
   vision: string;
@@ -1083,6 +1103,30 @@ export const membersAPI = {
 export const metaAPI = {
   artifactTypes: () => client.get<ArtifactTypeDef[]>('/api/v1/meta/artifact-types'),
   linkTypes: () => client.get<LinkTypeRule[]>('/api/v1/meta/link-types'),
+  // Effective (org-wide + project override) attribute definitions for a
+  // project — used to render typed inputs in the artifact editor.
+  attributeDefinitions: (projectId: string) =>
+    client.get<AttributeDefinition[]>('/api/v1/meta/attribute-definitions', {
+      params: { project_id: projectId },
+    }),
+};
+
+// Attribute definition management (issue #219). Org-wide definitions require
+// org admin; project-scoped require project editor (enforced server-side).
+export const attributeDefinitionAPI = {
+  listByProject: (projectId: string) =>
+    client.get<AttributeDefinition[]>('/api/v1/attribute-definitions', {
+      params: { project_id: projectId },
+    }),
+  listByOrg: (orgId: string) =>
+    client.get<AttributeDefinition[]>('/api/v1/attribute-definitions', {
+      params: { org_id: orgId },
+    }),
+  create: (payload: Partial<AttributeDefinition>) =>
+    client.post<AttributeDefinition>('/api/v1/attribute-definitions', payload),
+  update: (id: string, payload: Partial<AttributeDefinition>) =>
+    client.put<AttributeDefinition>(`/api/v1/attribute-definitions/${id}`, payload),
+  remove: (id: string) => client.delete(`/api/v1/attribute-definitions/${id}`),
 };
 
 export const productProfileAPI = {
