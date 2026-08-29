@@ -49,6 +49,18 @@ func (h *SSEHub) RunStatusChanged(run *agentruns.Run) {
 	}})
 }
 
+// ActiveConnections returns the total number of connected SSE listener
+// channels across all streams. Used by the metrics collector.
+func (h *SSEHub) ActiveConnections() int {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	n := 0
+	for _, listeners := range h.streams {
+		n += len(listeners)
+	}
+	return n
+}
+
 // BroadcastSession sends an event on an arbitrary stream key (used for
 // interview sessions, which reuse the same SSE plumbing).
 func (h *SSEHub) BroadcastSession(key string, event string, data interface{}) {
