@@ -21,9 +21,14 @@ type Artifact struct {
 	ProjectID string  `json:"project_id"`
 	ParentID  *string `json:"parent_id,omitempty"`
 	Type      string  `json:"type"` // requirement, test-case, hazard, design-item, heading, description, etc.
-	Title     string  `json:"title"`
-	Body      string  `json:"body"` // markdown or rich text
-	SortOrder int     `json:"sort_order"`
+	// Ref is the stable short address ("REQ-12"), unique among a project's
+	// current artifacts and constant across versions. Assigned server-side
+	// on create (see ref.go); distinct from CreateArtifactRequest.Ref, the
+	// proposal-mode temporary token.
+	Ref       string `json:"ref,omitempty"`
+	Title     string `json:"title"`
+	Body      string `json:"body"` // markdown or rich text
+	SortOrder int    `json:"sort_order"`
 	// Status is the review state (draft, in_review, approved, superseded);
 	// see status.go. It is a real column; Attributes["status"] is only a
 	// deprecated read-compat mirror kept in sync on every write.

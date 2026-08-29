@@ -275,6 +275,47 @@ actual requirement text at run time via MCP tools. This keeps prompts small,
 avoids stale copies of requirements, and means access control is enforced by
 the API on every read — not by whatever happened to be pasted into a prompt.
 
+## The AI context surface
+
+Reading a whole project through `list_artifacts` costs tens of thousands of
+tokens, most of them UUIDs, timestamps, and repeated JSON keys. The AI
+context surface is the token-optimal read path:
+
+- **Stable refs.** Every artifact has a short address like `REQ-12` or
+  `TC-3` — unique within its project, assigned on create, constant across
+  versions, preserved when a project export is imported as a new project.
+  Prefixes come from the type (`REQ`, `TC`, `HAZ`, `DES`, `NEED`, `PER`,
+  `HDG`, `DSC`, `ART`). Tools that take an artifact id also take a ref
+  (plus `project_id` for scoping).
+- **`get_project_map`** — the whole project as an indented outline: one
+  line per artifact with ref, title, non-draft status, and inline link
+  annotations (`→verifies TC-3`, `←refines REQ-2`, trailing `?` = suspect).
+  Roughly 10× fewer tokens than the full listing; use it to orient. Also
+  served raw at `GET /api/v1/projects/{id}/ai-map`.
+- **Release-stamped maps.** Pass `baseline_id` and the map renders from
+  that baseline's snapshot, stamped with its name and capture time — so
+  every baseline/release produces a versioned map. Committing it into a
+  code repo (e.g. `.openv/requirements.md`) gives any coding agent
+  requirements context with zero round trips:
+
+  ```sh
+  curl -H "Authorization: Bearer $KEY" \
+    "$OPENV_URL/api/v1/projects/$PROJECT/ai-map?baseline_id=$BASELINE" \
+    > .openv/requirements.md
+  ```
+
+- **`get_context`** — one call, addressed by ref or id, returning the
+  artifact's full body, its ancestor path, children, and every linked
+  artifact with direction, link type, suspect flag, and a short excerpt.
+  Replaces a `get_artifact` + `list_links_for_artifact` + N×`get_artifact`
+  round trip.
+
+The recommended agent read pattern is: `get_project_map` once, then
+`get_context` on the handful of refs the task touches. The dogfood example
+in `examples/openv-ai-context/project.json` specifies this feature in
+OpenV's own terms — import it and run `get_project_map` to watch the
+feature describe itself.
+
 ## Crews and the org chart
 
 Agents can be grouped into **crews** (formerly "teams") with a simple
