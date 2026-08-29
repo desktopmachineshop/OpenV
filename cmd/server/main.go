@@ -518,6 +518,7 @@ func main() {
 		GoogleOAuth:      googleOAuth,
 		OIDC:             oidcConfig,
 		SecureCookies:    os.Getenv("SECURE_COOKIES") == "true",
+		CrossSiteCookies: os.Getenv("CROSS_SITE_COOKIES") == "true",
 		PublicAPIURL:     envOr("PUBLIC_URL", "http://localhost:"+port),
 		ConnectorDistDir: envOr("CONNECTOR_DIST_DIR", "./dist"),
 	})

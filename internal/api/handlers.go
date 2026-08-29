@@ -97,6 +97,11 @@ type HandlerDeps struct {
 	GoogleOAuth      *GoogleOAuthConfig
 	OIDC             *OIDCConfig
 	SecureCookies    bool
+	// CrossSiteCookies marks deployments where the frontend and API are served
+	// from different sites (e.g. two *.up.railway.app domains): auth cookies are
+	// issued with SameSite=None, and Secure is forced on since browsers reject
+	// SameSite=None cookies without it.
+	CrossSiteCookies bool
 }
 
 // Handler holds references to domain services
@@ -144,6 +149,7 @@ type Handler struct {
 	googleOAuth         *GoogleOAuthConfig
 	oidc                *OIDCConfig
 	secureCookies       bool
+	cookieSameSite      http.SameSite
 
 	// Rate limiters for the public (invite-token) interview endpoints; see
 	// ratelimit.go for defaults and environment overrides.
@@ -154,6 +160,12 @@ type Handler struct {
 
 // NewHandler creates a new API handler
 func NewHandler(deps HandlerDeps) *Handler {
+	cookieSameSite := http.SameSiteLaxMode
+	secureCookies := deps.SecureCookies
+	if deps.CrossSiteCookies {
+		cookieSameSite = http.SameSiteNoneMode
+		secureCookies = true
+	}
 	return &Handler{
 		artifactService:        deps.ArtifactService,
 		linkService:            deps.LinkService,
@@ -196,7 +208,8 @@ func NewHandler(deps HandlerDeps) *Handler {
 		sseHub:                 deps.SSEHub,
 		googleOAuth:            deps.GoogleOAuth,
 		oidc:                   deps.OIDC,
-		secureCookies:          deps.SecureCookies,
+		secureCookies:          secureCookies,
+		cookieSameSite:         cookieSameSite,
 		interviewMsgLimiter:    newRateLimiterFromEnv(envInterviewMsgBurst, envInterviewMsgRefill, defaultInterviewMsgBurst, defaultInterviewMsgRefill),
 		interviewIPLimiter:     newRateLimiterFromEnv(envInterviewIPBurst, envInterviewIPRefill, defaultInterviewIPBurst, defaultInterviewIPRefill),
 		interviewStreamLimiter: newRateLimiterFromEnv(envInterviewStreamBurst, envInterviewStreamRefill, defaultInterviewStreamBurst, defaultInterviewStreamRefill),

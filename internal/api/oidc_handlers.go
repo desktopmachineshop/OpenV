@@ -244,7 +244,7 @@ func (h *Handler) setOIDCFlowCookie(w http.ResponseWriter, name, value string) {
 		Path:     "/",
 		HttpOnly: true,
 		Secure:   h.secureCookies,
-		SameSite: http.SameSiteLaxMode,
+		SameSite: h.cookieSameSite,
 		MaxAge:   600,
 	})
 }
@@ -256,7 +256,7 @@ func (h *Handler) clearOIDCFlowCookie(w http.ResponseWriter, name string) {
 		Path:     "/",
 		HttpOnly: true,
 		Secure:   h.secureCookies,
-		SameSite: http.SameSiteLaxMode,
+		SameSite: h.cookieSameSite,
 		MaxAge:   -1,
 	})
 }
