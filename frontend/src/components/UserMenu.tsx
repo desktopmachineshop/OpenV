@@ -59,7 +59,7 @@ export const UserMenu: React.FC<UserMenuProps> = ({ variant = 'light' }) => {
         height: 28,
         borderRadius: '50%',
         background: 'var(--accent)',
-        color: '#fff',
+        color: 'var(--accent-fg)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',

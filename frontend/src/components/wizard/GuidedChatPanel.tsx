@@ -483,7 +483,7 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
                   whiteSpace: 'pre-wrap',
                   wordBreak: 'break-word',
                   background: m.role === 'user' ? 'var(--accent)' : 'var(--surface-alt)',
-                  color: m.role === 'user' ? '#fff' : 'var(--text)',
+                  color: m.role === 'user' ? 'var(--accent-fg)' : 'var(--text)',
                   borderBottomRightRadius: m.role === 'user' ? 4 : 12,
                   borderBottomLeftRadius: m.role === 'assistant' ? 4 : 12,
                 }}

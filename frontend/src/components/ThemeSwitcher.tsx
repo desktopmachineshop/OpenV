@@ -41,7 +41,7 @@ export const ThemeSwitcher: React.FC = () => {
               border: 'none',
               cursor: 'pointer',
               background: active ? 'var(--accent)' : 'var(--surface)',
-              color: active ? '#fff' : 'var(--text)',
+              color: active ? 'var(--accent-fg)' : 'var(--text)',
             }}
           >
             {opt.label}

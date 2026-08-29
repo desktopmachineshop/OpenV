@@ -420,7 +420,7 @@ export const RunDetailPanel: React.FC<RunDetailPanelProps> = ({ runId, onSelectR
             title="Re-run this prompt as a new run with the same agent and project"
             style={{
               background: 'var(--accent)',
-              color: '#fff',
+              color: 'var(--accent-fg)',
               border: 'none',
               padding: '5px 12px',
               borderRadius: 4,
@@ -450,6 +450,15 @@ export const RunDetailPanel: React.FC<RunDetailPanelProps> = ({ runId, onSelectR
               {run.tokens_in + run.tokens_out}
               {run.cost_usd != null && ` · Cost: $${run.cost_usd.toFixed(4)}`}
             </div>
+            {(run.agent_model || run.agent_effort || run.agent_content_hash) && (
+              <div
+                title="The agent identity this run was launched with, snapshotted at launch so it stays fixed even if the agent is edited later."
+              >
+                Executed with: {run.agent_model || 'default model'}
+                {run.agent_effort && ` · effort ${run.agent_effort}`}
+                {run.agent_content_hash && ` · agent ${run.agent_content_hash.slice(0, 12)}`}
+              </div>
+            )}
             {run.retried_from_run_id && (
               <div>
                 Retry of{' '}

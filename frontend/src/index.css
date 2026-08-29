@@ -60,7 +60,7 @@ code {
 
 .nav button {
   background-color: var(--accent);
-  color: white;
+  color: var(--accent-fg);
   border: none;
   padding: 10px 20px;
   border-radius: 4px;

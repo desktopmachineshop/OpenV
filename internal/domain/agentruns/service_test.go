@@ -238,6 +238,57 @@ func newRetryService(runs ...*Run) (*DefaultService, *fakeRunRepo) {
 
 func strptr(s string) *string { return &s }
 
+// TestLaunchCapturesReproducibilitySnapshot locks in issue #216: a run records
+// the agent's content_hash, model and effort as they are at launch, and a later
+// edit to the agent definition does not rewrite an already-launched run's
+// snapshot (that is the whole point — the snapshot pins what actually executed).
+func TestLaunchCapturesReproducibilitySnapshot(t *testing.T) {
+	agent := &agents.Agent{
+		ID:          "agent-1",
+		Name:        "Reviewer",
+		Provider:    "claude",
+		Model:       "claude-opus-4-1",
+		Effort:      "high",
+		ContentHash: "hash-v1",
+	}
+	catalog := &fakeAgentCatalog{byID: map[string]*agents.Agent{"agent-1": agent}}
+	repo := &fakeRunRepo{runs: map[string]*Run{}, logs: map[string][]LogEntry{}}
+	svc := NewDefaultService(repo, catalog, nil)
+
+	run, _, err := svc.Launch(LaunchRequest{OrgID: "org-1", AgentID: "agent-1", Prompt: "review the spec"})
+	if err != nil {
+		t.Fatalf("Launch: %v", err)
+	}
+	if run.AgentContentHash != "hash-v1" || run.AgentModel != "claude-opus-4-1" || run.AgentEffort != "high" {
+		t.Fatalf("snapshot = %q/%q/%q, want hash-v1/claude-opus-4-1/high",
+			run.AgentContentHash, run.AgentModel, run.AgentEffort)
+	}
+
+	// Edit the agent after launch: a fresh launch captures the NEW identity...
+	agent.Model = "claude-opus-4-2"
+	agent.Effort = "max"
+	agent.ContentHash = "hash-v2"
+
+	run2, _, err := svc.Launch(LaunchRequest{OrgID: "org-1", AgentID: "agent-1", Prompt: "again"})
+	if err != nil {
+		t.Fatalf("Launch 2: %v", err)
+	}
+	if run2.AgentContentHash != "hash-v2" || run2.AgentModel != "claude-opus-4-2" || run2.AgentEffort != "max" {
+		t.Errorf("second run snapshot = %q/%q/%q, want hash-v2/claude-opus-4-2/max",
+			run2.AgentContentHash, run2.AgentModel, run2.AgentEffort)
+	}
+
+	// ...while the first run's stored snapshot still pins the original identity.
+	stored, err := repo.FindByID(run.ID)
+	if err != nil || stored == nil {
+		t.Fatalf("FindByID(%s) = %v, %v", run.ID, stored, err)
+	}
+	if stored.AgentContentHash != "hash-v1" || stored.AgentModel != "claude-opus-4-1" || stored.AgentEffort != "high" {
+		t.Errorf("first run snapshot after agent edit = %q/%q/%q, want hash-v1/claude-opus-4-1/high (must not change)",
+			stored.AgentContentHash, stored.AgentModel, stored.AgentEffort)
+	}
+}
+
 // TestRetryEnqueuesFreshRunWithProvenance locks in the retry contract: a NEW
 // queued run copying org/agent/project/prompt, launched by the retrying user
 // (not the original launcher), with retried_from_run_id set — and none of the

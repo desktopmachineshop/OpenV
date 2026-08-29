@@ -151,7 +151,7 @@ export const ProjectLayout: React.FC = () => {
                   style={({ isActive }) => ({
                     display: 'block',
                     padding: '9px 16px',
-                    color: isActive ? '#fff' : 'var(--sidebar-text-dim)',
+                    color: isActive ? 'var(--accent-fg)' : 'var(--sidebar-text-dim)',
                     background: isActive ? 'var(--accent)' : 'transparent',
                     textDecoration: 'none',
                     fontSize: 14,

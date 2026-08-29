@@ -356,19 +356,27 @@ var migrations = []Migration{
 		return err
 	}},
 
-	// 0015: org- and project-configurable typed attribute definitions
-	// (issue #219, phase-4 substrate). A definition names an extra typed
-	// field an org wants on its artifacts; values keep living in the
-	// existing artifacts.attributes JSONB, so this is a vocabulary +
-	// validator with NO data migration. Scope is exactly one of org_id
-	// (org-wide) or project_id (project-scoped override / project-only
-	// field); enum_values holds the allowed set for enum types.
-	//
-	// NOTE: 0014 is intentionally skipped here — it is claimed by the
-	// concurrent run-reproducibility branch. The registry only requires
-	// unique, ascending versions, so the two branches merge cleanly in
-	// either order. If numbering shifts on merge, bump this entry to the
-	// next free number (the registry fails fast on a collision at boot).
+	// 0014: run reproducibility snapshot (issue #216, phase-4 foundation).
+	// A run records the agent identity it was launched with — the agent's
+	// content_hash (a SHA-256 of the whole markdown definition, pinning the
+	// exact prompt+config), model, and reasoning effort — captured once at
+	// launch (agentruns.Launch), never retro-filled (existing rows read '').
+	{Version: 14, Name: "agent_run_reproducibility_snapshot", Run: func(tx *sql.Tx) error {
+		_, err := tx.Exec(`
+			ALTER TABLE agent_runs
+				ADD COLUMN IF NOT EXISTS agent_content_hash VARCHAR NOT NULL DEFAULT '',
+				ADD COLUMN IF NOT EXISTS agent_model VARCHAR NOT NULL DEFAULT '',
+				ADD COLUMN IF NOT EXISTS agent_effort VARCHAR NOT NULL DEFAULT ''
+		`)
+		return err
+	}},
+
+	// 0015: org- and project-configurable typed attribute definitions (issue
+	// #219, phase-4 substrate). A definition names an extra typed field an org
+	// wants on its artifacts; values keep living in the existing
+	// artifacts.attributes JSONB, so this is a vocabulary + validator with NO
+	// data migration. Scope is exactly one of org_id (org-wide) or project_id
+	// (project-scoped override); enum_values holds the allowed set for enums.
 	{Version: 15, Name: "attribute_definitions", Run: func(tx *sql.Tx) error {
 		if _, err := tx.Exec(`
 			CREATE TABLE IF NOT EXISTS attribute_definitions (
@@ -387,8 +395,6 @@ var migrations = []Migration{
 		`); err != nil {
 			return err
 		}
-		// Read paths: the effective-set resolver lists org-wide definitions
-		// (project_id NULL) and a project's own.
 		if _, err := tx.Exec(`
 			CREATE INDEX IF NOT EXISTS idx_attribute_definitions_org
 			ON attribute_definitions(org_id) WHERE project_id IS NULL
