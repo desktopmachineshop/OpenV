@@ -1,8 +1,10 @@
 package embeddings
 
 import (
+	"fmt"
 	"log/slog"
 	"strings"
+	"sync/atomic"
 
 	"github.com/openv/requirements-platform/internal/domain/artifacts"
 )
@@ -22,19 +24,46 @@ type Service struct {
 	provider  Provider
 	store     Store
 	artifacts ArtifactReader
+
+	// sem bounds the fire-and-forget IndexArtifact fan-out (issue #244). It is a
+	// buffered channel used as a counting semaphore: a write burst can occupy at
+	// most cap(sem) concurrent embedding goroutines, and further calls are
+	// dropped (never blocked) so the artifact write path is never delayed by a
+	// slow provider. A dropped index is harmless — the content is re-embedded on
+	// the next edit or an admin reindex.
+	sem chan struct{}
+
+	// dimMismatch latches true when the provider returns a vector whose width
+	// does not match the store's fixed Dimensions (issue #247). The store column
+	// is vector(Dimensions), so a wrong-width vector makes every Upsert fail on
+	// the same constraint forever; instead we detect it once, disable embedding
+	// (Enabled() then reports false), and log a clear, actionable error so an
+	// operator fixes the model/config rather than staring at repeated failures.
+	dimMismatch atomic.Bool
 }
+
+// indexWorkerCap is the maximum number of concurrent background IndexArtifact
+// embeddings. Small on purpose: embedding is best-effort and off the write
+// path, so a handful of workers absorbs a normal burst while a pathological
+// burst is shed rather than spawning unbounded goroutines.
+const indexWorkerCap = 4
 
 // NewService wires the backfill. Any of provider/store/artifacts may be nil in
 // tests or a stripped-down deployment; the methods stay safe no-ops when the
 // pieces they need are absent or the provider is disabled.
 func NewService(provider Provider, store Store, reader ArtifactReader) *Service {
-	return &Service{provider: provider, store: store, artifacts: reader}
+	return &Service{
+		provider:  provider,
+		store:     store,
+		artifacts: reader,
+		sem:       make(chan struct{}, indexWorkerCap),
+	}
 }
 
 // Enabled reports whether embedding can actually run (a configured provider
-// and a store).
+// and a store, and no latched dimension mismatch — see dimMismatch).
 func (s *Service) Enabled() bool {
-	return s != nil && s.store != nil && s.provider != nil && s.provider.Enabled()
+	return s != nil && s.store != nil && s.provider != nil && s.provider.Enabled() && !s.dimMismatch.Load()
 }
 
 // IndexArtifact satisfies artifacts.EmbeddingIndexer. It is the hook the
@@ -44,7 +73,20 @@ func (s *Service) IndexArtifact(id string, version int, title, body string) {
 	if !s.Enabled() {
 		return
 	}
+	// Bound the fan-out: acquire a worker slot without blocking. If all
+	// indexWorkerCap slots are busy (a write burst), drop this index rather than
+	// spawning another goroutine or stalling the caller — the content is
+	// re-embedded on the next edit or an admin reindex. (A nil sem — a Service
+	// built without NewService — makes the send never ready, so every index is
+	// dropped; NewService always allocates it.)
+	select {
+	case s.sem <- struct{}{}:
+	default:
+		slog.Debug("embeddings: index fan-out saturated; dropping best-effort index", "artifact_id", id)
+		return
+	}
 	go func() {
+		defer func() { <-s.sem }()
 		if err := s.embed(id, version, title, body); err != nil {
 			slog.Warn("embeddings: failed to index artifact", "artifact_id", id, "error", err)
 		}
@@ -92,6 +134,19 @@ func (s *Service) embed(id string, version int, title, body string) error {
 	}
 	if len(vectors) != 1 {
 		return nil // disabled provider or empty result; nothing to store
+	}
+
+	// Validate the vector width against the store's fixed Dimensions before the
+	// Upsert (issue #247). The embedding column is vector(Dimensions); a
+	// wrong-width vector — a misconfigured model, or a provider whose default
+	// dimensions differ — would otherwise fail every Upsert on the same
+	// constraint indefinitely. Latch the service disabled on the first mismatch
+	// and surface a clear, actionable error instead.
+	if got := len(vectors[0]); got != Dimensions {
+		s.dimMismatch.Store(true)
+		err := fmt.Errorf("embeddings: provider returned %d-dimension vectors but the store expects %d; disabling embedding until the model/config is corrected (set OPENV_EMBEDDING_MODEL to a %d-dim model, or update the schema)", got, Dimensions, Dimensions)
+		slog.Error(err.Error(), "provider_model", model)
+		return err
 	}
 
 	return s.store.Upsert(&Embedding{

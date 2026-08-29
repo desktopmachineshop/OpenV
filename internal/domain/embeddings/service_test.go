@@ -2,8 +2,12 @@ package embeddings
 
 import (
 	"errors"
+	"fmt"
+	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/openv/requirements-platform/internal/domain/artifacts"
 )
@@ -101,7 +105,7 @@ func TestServiceDisabledWhenProviderOff(t *testing.T) {
 }
 
 func TestServiceDisabledWithoutStore(t *testing.T) {
-	prov := &fakeProvider{enabled: true, model: "m", vec: []float32{1, 2, 3}}
+	prov := &fakeProvider{enabled: true, model: "m", vec: make([]float32, Dimensions)}
 	svc := NewService(prov, nil, nil)
 	if svc.Enabled() {
 		t.Fatal("service should be disabled without a store")
@@ -116,7 +120,7 @@ func TestServiceDisabledWithoutStore(t *testing.T) {
 
 func TestEmbedArtifactStoresWhenNew(t *testing.T) {
 	store := newFakeStore()
-	prov := &fakeProvider{enabled: true, model: "text-embedding-3-small", vec: []float32{0.1, 0.2}}
+	prov := &fakeProvider{enabled: true, model: "text-embedding-3-small", vec: make([]float32, Dimensions)}
 	svc := NewService(prov, store, nil)
 
 	a := &artifacts.Artifact{ID: "a1", Version: 3, Title: "Login", Body: "authenticate"}
@@ -143,7 +147,7 @@ func TestEmbedArtifactStoresWhenNew(t *testing.T) {
 
 func TestEmbedArtifactSkipsWhenContentUnchanged(t *testing.T) {
 	store := newFakeStore()
-	prov := &fakeProvider{enabled: true, model: "m", vec: []float32{1}}
+	prov := &fakeProvider{enabled: true, model: "m", vec: make([]float32, Dimensions)}
 	svc := NewService(prov, store, nil)
 
 	// Pre-seed a matching embedding (same content hash + model).
@@ -167,7 +171,7 @@ func TestEmbedArtifactSkipsWhenContentUnchanged(t *testing.T) {
 
 func TestEmbedArtifactReembedsOnContentChange(t *testing.T) {
 	store := newFakeStore()
-	prov := &fakeProvider{enabled: true, model: "m", vec: []float32{1}}
+	prov := &fakeProvider{enabled: true, model: "m", vec: make([]float32, Dimensions)}
 	svc := NewService(prov, store, nil)
 
 	store.byID["a1"] = &Embedding{
@@ -190,7 +194,7 @@ func TestEmbedArtifactReembedsOnContentChange(t *testing.T) {
 
 func TestEmbedArtifactReembedsOnModelChange(t *testing.T) {
 	store := newFakeStore()
-	prov := &fakeProvider{enabled: true, model: "new-model", vec: []float32{1}}
+	prov := &fakeProvider{enabled: true, model: "new-model", vec: make([]float32, Dimensions)}
 	svc := NewService(prov, store, nil)
 
 	// Same content, but stored under a different model.
@@ -210,7 +214,7 @@ func TestEmbedArtifactReembedsOnModelChange(t *testing.T) {
 
 func TestEmbedArtifactEmptyContentNoop(t *testing.T) {
 	store := newFakeStore()
-	prov := &fakeProvider{enabled: true, model: "m", vec: []float32{1}}
+	prov := &fakeProvider{enabled: true, model: "m", vec: make([]float32, Dimensions)}
 	svc := NewService(prov, store, nil)
 
 	if err := svc.EmbedArtifact(&artifacts.Artifact{ID: "a1", Title: "", Body: "   "}); err != nil {
@@ -218,6 +222,117 @@ func TestEmbedArtifactEmptyContentNoop(t *testing.T) {
 	}
 	if prov.calls != 0 || store.upserts != 0 {
 		t.Errorf("blank artifact should not be embedded (calls=%d upserts=%d)", prov.calls, store.upserts)
+	}
+}
+
+// blockingProvider blocks inside Embed until release is closed, signalling each
+// entry on entered. It lets the fan-out test hold worker slots open.
+type blockingProvider struct {
+	enabled bool
+	model   string
+	vec     []float32
+	entered chan struct{}
+	release chan struct{}
+	total   int64
+}
+
+func (p *blockingProvider) Enabled() bool { return p.enabled }
+func (p *blockingProvider) Model() string { return p.model }
+func (p *blockingProvider) Embed(texts []string) ([][]float32, error) {
+	atomic.AddInt64(&p.total, 1)
+	p.entered <- struct{}{}
+	<-p.release
+	out := make([][]float32, len(texts))
+	for i := range texts {
+		out[i] = p.vec
+	}
+	return out, nil
+}
+
+// TestIndexArtifactBoundsFanOut covers issue #244: a burst of IndexArtifact
+// calls spawns at most indexWorkerCap concurrent embedding goroutines; the rest
+// are dropped rather than blocking the write path or spawning unbounded
+// goroutines.
+func TestIndexArtifactBoundsFanOut(t *testing.T) {
+	entered := make(chan struct{}, 64)
+	release := make(chan struct{})
+	prov := &blockingProvider{
+		enabled: true,
+		model:   "m",
+		vec:     make([]float32, Dimensions),
+		entered: entered,
+		release: release,
+	}
+	svc := NewService(prov, newFakeStore(), nil)
+
+	// Fire far more than the cap. The first indexWorkerCap acquire a slot and
+	// block in the provider; the rest find the semaphore full and are dropped
+	// synchronously (the write path is never blocked).
+	const burst = indexWorkerCap * 4
+	for i := 0; i < burst; i++ {
+		svc.IndexArtifact(fmt.Sprintf("a%d", i), 1, "Title", "Body")
+	}
+
+	// Exactly indexWorkerCap workers reach the (blocked) provider.
+	for i := 0; i < indexWorkerCap; i++ {
+		select {
+		case <-entered:
+		case <-time.After(2 * time.Second):
+			t.Fatalf("only %d workers started, expected %d", i, indexWorkerCap)
+		}
+	}
+	// No further worker may start while the cap is saturated.
+	select {
+	case <-entered:
+		t.Fatalf("more than %d concurrent workers ran; fan-out not bounded", indexWorkerCap)
+	case <-time.After(150 * time.Millisecond):
+	}
+
+	close(release) // let the in-flight workers finish
+	deadline := time.Now().Add(2 * time.Second)
+	for atomic.LoadInt64(&prov.total) < int64(indexWorkerCap) && time.Now().Before(deadline) {
+		time.Sleep(5 * time.Millisecond)
+	}
+	if got := atomic.LoadInt64(&prov.total); got != int64(indexWorkerCap) {
+		t.Errorf("provider Embed calls = %d, want exactly %d (extras dropped)", got, indexWorkerCap)
+	}
+}
+
+// TestEmbedDimensionMismatchDisables covers issue #247: a provider that returns
+// a vector of the wrong width triggers a clear error once and disables the
+// service, so subsequent writes are silent no-ops rather than repeated failures.
+func TestEmbedDimensionMismatchDisables(t *testing.T) {
+	store := newFakeStore()
+	// Wrong width: one element too many.
+	prov := &fakeProvider{enabled: true, model: "m", vec: make([]float32, Dimensions+1)}
+	svc := NewService(prov, store, nil)
+
+	err := svc.EmbedArtifact(&artifacts.Artifact{ID: "a1", Title: "T", Body: "B"})
+	if err == nil {
+		t.Fatal("expected a dimension-mismatch error")
+	}
+	if !strings.Contains(err.Error(), "dimension") {
+		t.Errorf("error should explain the dimension mismatch: %v", err)
+	}
+	if store.upserts != 0 {
+		t.Error("nothing should be stored on a dimension mismatch")
+	}
+	// The service latches disabled.
+	if svc.Enabled() {
+		t.Error("service should report disabled after a dimension mismatch")
+	}
+	// A subsequent embed is a silent no-op: the provider is not called again.
+	before := prov.calls
+	if err := svc.EmbedArtifact(&artifacts.Artifact{ID: "a2", Title: "T2", Body: "B2"}); err != nil {
+		t.Errorf("post-disable embed should be a no-op, got %v", err)
+	}
+	if prov.calls != before {
+		t.Errorf("provider was called again after disable (%d -> %d)", before, prov.calls)
+	}
+	// IndexArtifact is also a no-op once disabled.
+	svc.IndexArtifact("a3", 1, "T3", "B3")
+	if prov.calls != before {
+		t.Errorf("IndexArtifact drove the provider after disable (%d -> %d)", before, prov.calls)
 	}
 }
 
@@ -250,7 +365,7 @@ func (r *fakeReader) GetArtifactsByProject(projectID string) ([]*artifacts.Artif
 
 func TestReindexProjectEmbedsAll(t *testing.T) {
 	store := newFakeStore()
-	prov := &fakeProvider{enabled: true, model: "m", vec: []float32{1}}
+	prov := &fakeProvider{enabled: true, model: "m", vec: make([]float32, Dimensions)}
 	reader := &fakeReader{byProject: map[string][]*artifacts.Artifact{
 		"p1": {
 			{ID: "a1", Title: "One", Body: "b1"},

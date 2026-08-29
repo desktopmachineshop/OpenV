@@ -583,7 +583,105 @@ func migrateLocked(db *sql.DB) error {
 	if _, err := db.Exec(createLedgerSQL); err != nil {
 		return fmt.Errorf("failed to create schema_migrations table: %w", err)
 	}
-	return runMigrations(db, migrations)
+	if err := runMigrations(db, migrations); err != nil {
+		return err
+	}
+	// After the ledger is up to date, repair anything the extension-guarded
+	// migrations skipped because their extension was absent at migration time
+	// (issue #241). Runs under the same boot advisory lock as the migrations.
+	return reconcileGuardedExtensions(db)
+}
+
+// reconcileGuardedExtensions repairs the objects that the extension-guarded
+// migrations (0009 pg_trgm, 0016 vector) skip when their extension is absent at
+// migration time. Because those migrations still record themselves in the
+// ledger when they skip the guarded DDL (boot must never brick on a managed
+// Postgres that forbids CREATE EXTENSION), simply enabling the extension later
+// never re-runs them — so the trigram indexes / embeddings table would never
+// get created. This boot-time reconcile closes that gap: once the extension is
+// present it creates the missing objects idempotently (IF NOT EXISTS, still
+// guarded by an extension probe), and it is a clean no-op while the extension
+// is still absent.
+//
+// It is deliberately best-effort and never fails boot: an extension probe
+// error is surfaced (it signals a broken connection the migrations would also
+// have hit), but a failure to create a guarded object is logged and swallowed,
+// leaving search degraded exactly as it was before rather than bricking boot.
+func reconcileGuardedExtensions(db *sql.DB) error {
+	if err := reconcileTrgmIndexes(db); err != nil {
+		return err
+	}
+	return reconcileVectorEmbeddings(db)
+}
+
+// extensionPresent reports whether the named extension is installed.
+func extensionPresent(db *sql.DB, name string) (bool, error) {
+	var present bool
+	err := db.QueryRow(
+		`SELECT EXISTS (SELECT 1 FROM pg_extension WHERE extname = $1)`, name,
+	).Scan(&present)
+	return present, err
+}
+
+// reconcileTrgmIndexes creates the migration-0009 trigram indexes when pg_trgm
+// is present but they are missing (e.g. the extension was enabled after 0009
+// skipped its DDL). No-op when pg_trgm is absent.
+func reconcileTrgmIndexes(db *sql.DB) error {
+	present, err := extensionPresent(db, "pg_trgm")
+	if err != nil {
+		return err
+	}
+	if !present {
+		return nil
+	}
+	for _, stmt := range []string{
+		`CREATE INDEX IF NOT EXISTS idx_artifacts_title_trgm
+			ON artifacts USING gin (title gin_trgm_ops)`,
+		`CREATE INDEX IF NOT EXISTS idx_artifacts_body_trgm
+			ON artifacts USING gin (body gin_trgm_ops)`,
+	} {
+		if _, err := db.Exec(stmt); err != nil {
+			slog.Warn("reconcile: pg_trgm is present but creating a trigram search index failed; cross-project search stays on the sequential-scan fallback",
+				slog.Any("error", err))
+		}
+	}
+	return nil
+}
+
+// reconcileVectorEmbeddings creates the migration-0016 artifact_embeddings
+// table and its HNSW index when the vector extension is present but they are
+// missing (e.g. the extension was enabled after 0016 skipped its DDL). No-op
+// when the vector extension is absent.
+func reconcileVectorEmbeddings(db *sql.DB) error {
+	present, err := extensionPresent(db, "vector")
+	if err != nil {
+		return err
+	}
+	if !present {
+		return nil
+	}
+	if _, err := db.Exec(fmt.Sprintf(`
+		CREATE TABLE IF NOT EXISTS artifact_embeddings (
+			artifact_id UUID PRIMARY KEY,
+			artifact_version INT NOT NULL,
+			embedding vector(%d) NOT NULL,
+			model VARCHAR NOT NULL,
+			content_hash VARCHAR NOT NULL,
+			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+		)
+	`, embeddingDimensions)); err != nil {
+		slog.Warn("reconcile: vector extension is present but creating artifact_embeddings failed; semantic search stays unavailable",
+			slog.Any("error", err))
+		return nil
+	}
+	if _, err := db.Exec(`
+		CREATE INDEX IF NOT EXISTS idx_artifact_embeddings_hnsw
+		ON artifact_embeddings USING hnsw (embedding vector_cosine_ops)
+	`); err != nil {
+		slog.Warn("reconcile: created artifact_embeddings but building its HNSW index failed; semantic search stays unavailable",
+			slog.Any("error", err))
+	}
+	return nil
 }
 
 // runMigrations applies the given registry in order. Split from Migrate so

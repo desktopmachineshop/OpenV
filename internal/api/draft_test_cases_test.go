@@ -19,6 +19,13 @@ import (
 	"github.com/openv/requirements-platform/internal/seeds"
 )
 
+// Valid requirement UUIDs for the draft tests: DraftTestCases now rejects any
+// requirement_id that is not a UUID (issue #245), so the ids must be well-formed.
+const (
+	draftReqUUID1 = "11111111-1111-4111-8111-111111111111"
+	draftReqUUID2 = "22222222-2222-4222-8222-222222222222"
+)
+
 // draftReq builds an authenticated "Draft test cases" request for a project.
 func draftReq(userID, projectID, body string) *http.Request {
 	r := httptest.NewRequest(http.MethodPost, "/api/v1/projects/"+projectID+"/draft-test-cases", strings.NewReader(body))
@@ -65,7 +72,7 @@ func TestDraftTestCasesAuthz(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			h, runSvc := newDraftFixture()
 			w := httptest.NewRecorder()
-			h.DraftTestCases(w, draftReq(tc.userID, "proj-1", `{"requirement_ids":["req-1"]}`))
+			h.DraftTestCases(w, draftReq(tc.userID, "proj-1", `{"requirement_ids":["`+draftReqUUID1+`"]}`))
 			if tc.wantCode == 0 {
 				if w.Code != http.StatusCreated {
 					t.Fatalf("status = %d, want 201 (body %q)", w.Code, w.Body.String())
@@ -88,7 +95,7 @@ func TestDraftTestCasesRoundTrip(t *testing.T) {
 	h, runSvc := newDraftFixture()
 	w := httptest.NewRecorder()
 	// Includes a blank and a duplicate to prove normalization.
-	h.DraftTestCases(w, draftReq("editor", "proj-1", `{"requirement_ids":["req-1"," ","req-2","req-1"]}`))
+	h.DraftTestCases(w, draftReq("editor", "proj-1", `{"requirement_ids":["`+draftReqUUID1+`"," ","`+draftReqUUID2+`","`+draftReqUUID1+`"]}`))
 
 	if w.Code != http.StatusCreated {
 		t.Fatalf("status = %d, want 201 (body %q)", w.Code, w.Body.String())
@@ -109,12 +116,12 @@ func TestDraftTestCasesRoundTrip(t *testing.T) {
 	if got.LaunchedBy == nil || *got.LaunchedBy != "editor" {
 		t.Errorf("LaunchedBy = %v, want editor", got.LaunchedBy)
 	}
-	if !strings.Contains(got.Prompt, "req-1") || !strings.Contains(got.Prompt, "req-2") {
+	if !strings.Contains(got.Prompt, draftReqUUID1) || !strings.Contains(got.Prompt, draftReqUUID2) {
 		t.Errorf("prompt %q must carry both requirement IDs", got.Prompt)
 	}
 	// The blank must not survive normalization: no ", ," and no doubled ID.
-	if strings.Count(got.Prompt, "req-1") != 1 {
-		t.Errorf("prompt %q should list req-1 exactly once (deduped)", got.Prompt)
+	if strings.Count(got.Prompt, draftReqUUID1) != 1 {
+		t.Errorf("prompt %q should list the first requirement exactly once (deduped)", got.Prompt)
 	}
 
 	var run agentruns.Run
@@ -138,11 +145,25 @@ func TestDraftTestCasesValidation(t *testing.T) {
 		}
 	})
 
+	t.Run("non-uuid id answers 400 before launch", func(t *testing.T) {
+		h, runSvc := newDraftFixture()
+		w := httptest.NewRecorder()
+		// One valid UUID and one malformed id: the whole request is rejected
+		// before the prompt is built (issue #245).
+		h.DraftTestCases(w, draftReq("editor", "proj-1", `{"requirement_ids":["`+draftReqUUID1+`","not-a-uuid"]}`))
+		if w.Code != http.StatusBadRequest {
+			t.Fatalf("status = %d, want 400 (body %q)", w.Code, w.Body.String())
+		}
+		if len(runSvc.launchReqs) != 0 {
+			t.Fatal("must not launch a run when any requirement id is not a UUID")
+		}
+	})
+
 	t.Run("missing seeded agent answers 404", func(t *testing.T) {
 		h, runSvc := newDraftFixture()
 		h.agentService = &fakeAgentService{byID: map[string]*agents.Agent{}} // agent not seeded
 		w := httptest.NewRecorder()
-		h.DraftTestCases(w, draftReq("editor", "proj-1", `{"requirement_ids":["req-1"]}`))
+		h.DraftTestCases(w, draftReq("editor", "proj-1", `{"requirement_ids":["`+draftReqUUID1+`"]}`))
 		if w.Code != http.StatusNotFound {
 			t.Fatalf("status = %d, want 404 (body %q)", w.Code, w.Body.String())
 		}

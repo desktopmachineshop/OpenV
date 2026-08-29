@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -180,6 +181,87 @@ func TestGlobalSearchModes(t *testing.T) {
 		}
 		if ids["sem-x"] {
 			t.Fatalf("hybrid leaked an out-of-scope semantic hit: %+v", hits)
+		}
+	})
+}
+
+// errEmbedProvider is an enabled provider whose Embed always fails with a
+// non-sentinel error — the "provider is down / query failed" case for #243.
+type errEmbedProvider struct{}
+
+func (errEmbedProvider) Enabled() bool { return true }
+func (errEmbedProvider) Model() string { return "test-model" }
+func (errEmbedProvider) Embed([]string) ([][]float32, error) {
+	return nil, errors.New("embedding provider unavailable")
+}
+
+// TestGlobalSearchProviderErrorFallsBack covers issue #243: when the embedding
+// query fails with a plain provider/query error (not ErrDisabled /
+// ErrVectorUnavailable), both semantic and hybrid degrade to keyword with
+// mode_used=keyword instead of 500ing.
+func TestGlobalSearchProviderErrorFallsBack(t *testing.T) {
+	const orgID = "org-1"
+
+	newHandler := func() *Handler {
+		artifactSvc := &searchArtifactService{hits: []*artifacts.SearchHit{
+			{ArtifactID: "art-1", ProjectID: "proj-1", Type: "requirement", Title: "Login flow", Snippet: "the login flow shall"},
+		}}
+		// Enabled service, but the provider errors on Embed and the store also
+		// satisfies Searcher (so the failure is the provider's, not "no vector
+		// path").
+		svc := embeddings.NewService(errEmbedProvider{}, &fakeEmbedStore{}, nil)
+		return &Handler{
+			artifactService:  artifactSvc,
+			embeddingService: svc,
+			projectService: &searchProjectService{list: []*projects.Project{
+				{ID: "proj-1", OrgID: orgID, Name: "Alpha"},
+			}},
+			orgService: &fakeOrgService{roles: map[string]map[string]string{
+				orgID: {"admin": orgs.RoleAdmin},
+			}},
+			memberService: &fakeMemberService{roles: map[string]map[string]string{}},
+		}
+	}
+
+	do := func(t *testing.T, urlSuffix string) (int, string, []artifacts.SearchHit) {
+		t.Helper()
+		h := newHandler()
+		r := httptest.NewRequest(http.MethodGet, "/api/v1/search"+urlSuffix, nil)
+		ctx := context.WithValue(r.Context(), ctxUser, &users.User{ID: "admin"})
+		ctx = context.WithValue(ctx, ctxActiveOrg, orgID)
+		w := httptest.NewRecorder()
+		h.GlobalSearch(w, r.WithContext(ctx))
+		var resp struct {
+			ModeUsed string                `json:"mode_used"`
+			Hits     []artifacts.SearchHit `json:"hits"`
+		}
+		_ = json.Unmarshal(w.Body.Bytes(), &resp)
+		return w.Code, resp.ModeUsed, resp.Hits
+	}
+
+	t.Run("semantic provider error falls back to keyword", func(t *testing.T) {
+		code, mode, hits := do(t, "?q=login&mode=semantic")
+		if code != http.StatusOK {
+			t.Fatalf("status = %d, want 200 (no 500 on provider error)", code)
+		}
+		if mode != "keyword" {
+			t.Fatalf("mode_used = %q, want keyword (fallback)", mode)
+		}
+		if len(hits) != 1 || hits[0].ArtifactID != "art-1" {
+			t.Fatalf("hits = %+v, want the keyword hit", hits)
+		}
+	})
+
+	t.Run("hybrid provider error returns keyword hits", func(t *testing.T) {
+		code, mode, hits := do(t, "?q=login&mode=hybrid")
+		if code != http.StatusOK {
+			t.Fatalf("status = %d, want 200 (no 500 on provider error)", code)
+		}
+		if mode != "keyword" {
+			t.Fatalf("mode_used = %q, want keyword (hybrid degrades)", mode)
+		}
+		if len(hits) != 1 || hits[0].ArtifactID != "art-1" {
+			t.Fatalf("hits = %+v, want the keyword hit", hits)
 		}
 	})
 }

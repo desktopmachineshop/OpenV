@@ -28,6 +28,14 @@ var (
 	ErrInvalidCredentials = errors.New("invalid email or password")
 	ErrEmailTaken         = errors.New("an account with this email already exists")
 	ErrSessionInvalid     = errors.New("session is invalid or expired")
+	// ErrProviderMismatch is returned by LoginWithSSO when an account already
+	// exists for the email but was created with a different auth_provider (e.g.
+	// a password or Google account, when an OIDC login arrives). We refuse to
+	// silently sign the caller into that account: proving control of the same
+	// email string at a second IdP is not proof it is the same person, so
+	// auto-linking would be an account-takeover vector. Explicit verified
+	// account linking is a documented follow-up (issue #242).
+	ErrProviderMismatch = errors.New("an account with this email already exists with a different sign-in method")
 )
 
 // User is a platform account.
@@ -188,9 +196,12 @@ func (s *DefaultService) LoginWithGoogle(email, name, avatarURL string) (*User, 
 }
 
 // LoginWithSSO upserts a user from a verified external (OIDC) identity and
-// creates a session. New accounts record the given provider as auth_provider;
-// existing accounts keep their original provider (an email that first signed up
-// with a password is not silently re-labelled) but refresh name/avatar.
+// creates a session. New accounts record the given provider as auth_provider.
+// An existing account is entered only when it was created with the SAME
+// provider (its name/avatar are refreshed); an account created with a different
+// provider is rejected with ErrProviderMismatch rather than silently
+// auto-linked (issue #242) — proving control of the same email at a second IdP
+// is not proof of the same person.
 func (s *DefaultService) LoginWithSSO(provider, email, name, avatarURL string) (*User, string, error) {
 	email = strings.ToLower(strings.TrimSpace(email))
 	if email == "" {
@@ -225,6 +236,15 @@ func (s *DefaultService) LoginWithSSO(provider, email, name, avatarURL string) (
 			return nil, "", err
 		}
 	} else {
+		// Guard against cross-provider account takeover (issue #242). An account
+		// that first signed up with a different method (password, Google, another
+		// OIDC provider) must not be silently entered through this provider just
+		// because the two share an email string. Same-provider logins proceed and
+		// refresh profile fields; a mismatch is rejected for the caller to resolve
+		// (explicit verified linking is a follow-up).
+		if user.AuthProvider != "" && user.AuthProvider != provider {
+			return nil, "", ErrProviderMismatch
+		}
 		user.Name = name
 		user.AvatarURL = avatarURL
 		user.UpdatedAt = time.Now()
