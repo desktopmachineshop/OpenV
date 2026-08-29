@@ -2,6 +2,7 @@ import React, { act } from 'react';
 import { createRoot, Root } from 'react-dom/client';
 import { ConfirmDialog } from './ConfirmDialog';
 import { PromptDialog } from './PromptDialog';
+import { DialogProvider, useConfirm, ConfirmOptions } from './DialogProvider';
 
 // React 18 requires this flag when driving createRoot through act().
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
@@ -92,6 +93,30 @@ describe('ConfirmDialog', () => {
     expect(onConfirm).toHaveBeenCalledTimes(1);
   });
 
+  it('does not confirm when Enter is pressed with the Cancel button focused', () => {
+    // Regression (#142): the overlay used to intercept Enter and call
+    // onConfirm unconditionally, so a keyboard user who tabbed to Cancel and
+    // pressed Enter fired the destructive action.
+    const onConfirm = jest.fn();
+    const onCancel = jest.fn();
+    render(
+      <ConfirmDialog
+        message="Really delete?"
+        confirmLabel="Delete"
+        danger
+        onConfirm={onConfirm}
+        onCancel={onCancel}
+      />
+    );
+    const cancelBtn = buttonByText('Cancel');
+    act(() => {
+      cancelBtn.focus();
+    });
+    keyDown(cancelBtn, 'Enter');
+    expect(onConfirm).not.toHaveBeenCalled();
+    expect(onCancel).toHaveBeenCalledTimes(1);
+  });
+
   it('hides the cancel button in alert mode', () => {
     render(
       <ConfirmDialog
@@ -147,5 +172,73 @@ describe('PromptDialog', () => {
     expect(document.activeElement).toBe(input);
     keyDown(input as Element, 'Escape');
     expect(onCancel).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('DialogProvider', () => {
+  // Captures the confirm() function from inside the provider tree.
+  let confirmFn: ((options: ConfirmOptions | string) => Promise<boolean>) | null = null;
+
+  const CaptureConfirm: React.FC = () => {
+    confirmFn = useConfirm();
+    return null;
+  };
+
+  const renderProvider = () => {
+    confirmFn = null;
+    // StrictMode is essential here: it double-invokes state updaters, which
+    // is exactly what made the old enqueue-inside-updater push queued
+    // dialogs twice (#142 ghost dialog).
+    render(
+      <React.StrictMode>
+        <DialogProvider>
+          <CaptureConfirm />
+        </DialogProvider>
+      </React.StrictMode>
+    );
+  };
+
+  it('resolves false when Enter is pressed with Cancel focused (regression #142)', async () => {
+    renderProvider();
+    let result: Promise<boolean>;
+    act(() => {
+      result = confirmFn!({ message: 'Delete it?', confirmLabel: 'Delete', danger: true });
+    });
+    const cancelBtn = buttonByText('Cancel');
+    act(() => {
+      cancelBtn.focus();
+    });
+    keyDown(cancelBtn, 'Enter');
+    await expect(result!).resolves.toBe(false);
+    expect(container.querySelector('[role="alertdialog"]')).toBeNull();
+  });
+
+  it('shows a dialog requested while another is open exactly once (StrictMode queue regression #142)', async () => {
+    renderProvider();
+    let first: Promise<boolean>;
+    let second: Promise<boolean>;
+    act(() => {
+      first = confirmFn!({ message: 'first dialog', confirmLabel: 'YesOne' });
+      second = confirmFn!({ message: 'second dialog', confirmLabel: 'YesTwo' });
+    });
+
+    // Only the first dialog is visible; the second is queued.
+    expect(container.textContent).toContain('first dialog');
+    expect(container.textContent).not.toContain('second dialog');
+
+    click(buttonByText('YesOne'));
+    await expect(first!).resolves.toBe(true);
+
+    // The queued dialog now shows (once).
+    expect(container.textContent).not.toContain('first dialog');
+    expect(container.textContent).toContain('second dialog');
+    expect(container.querySelectorAll('[role="alertdialog"]')).toHaveLength(1);
+
+    click(buttonByText('YesTwo'));
+    await expect(second!).resolves.toBe(true);
+
+    // No ghost copy of either dialog reopens after both are resolved.
+    expect(container.querySelector('[role="alertdialog"]')).toBeNull();
+    expect(container.textContent).not.toContain('second dialog');
   });
 });

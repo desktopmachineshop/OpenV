@@ -59,19 +59,25 @@ export const DialogProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [pending, setPending] = useState<Pending | null>(null);
   // Queue so overlapping requests (rare) are shown one after another.
   const queueRef = useRef<Pending[]>([]);
+  // Mirror of `pending` so enqueue/finish can decide queue-vs-show without
+  // side effects inside a state updater — React StrictMode double-invokes
+  // updaters, which previously pushed each queued entry twice and made a
+  // ghost dialog reopen after the queued one was dismissed.
+  const pendingRef = useRef<Pending | null>(null);
 
   const enqueue = useCallback((entry: Pending) => {
-    setPending((current) => {
-      if (current) {
-        queueRef.current.push(entry);
-        return current;
-      }
-      return entry;
-    });
+    if (pendingRef.current) {
+      queueRef.current.push(entry);
+      return;
+    }
+    pendingRef.current = entry;
+    setPending(entry);
   }, []);
 
   const finish = useCallback(() => {
-    setPending(queueRef.current.shift() || null);
+    const next = queueRef.current.shift() || null;
+    pendingRef.current = next;
+    setPending(next);
   }, []);
 
   const confirm = useCallback<ConfirmFn>(

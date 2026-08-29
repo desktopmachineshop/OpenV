@@ -15,7 +15,8 @@ export interface ConfirmDialogProps {
 
 /**
  * Token-styled replacement for window.confirm / alert. Render it
- * conditionally — mounting the component opens it. Enter confirms, Escape
+ * conditionally — mounting the component opens it. Enter activates the
+ * focused button (and confirms when focus is not on a button), Escape
  * cancels, Tab cycles between the buttons, and focus starts on the
  * confirm button.
  */
@@ -42,7 +43,17 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
       onCancel();
     } else if (e.key === 'Enter') {
       e.preventDefault();
-      onConfirm();
+      // Enter must activate the *focused* button, not blindly confirm — a
+      // keyboard user who tabbed to Cancel and pressed Enter would otherwise
+      // fire the (possibly destructive) confirm action. When focus is on a
+      // button we replicate native button activation deterministically;
+      // Enter anywhere else in the dialog still confirms.
+      const target = e.target instanceof HTMLElement ? e.target.closest('button') : null;
+      if (target) {
+        target.click();
+      } else {
+        onConfirm();
+      }
     } else if (e.key === 'Tab') {
       // Keep focus inside the dialog (there are at most two buttons).
       const focusable = boxRef.current?.querySelectorAll<HTMLButtonElement>('button');
