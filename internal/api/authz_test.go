@@ -126,6 +126,10 @@ type fakeRunService struct {
 	reissued   []string
 	released   [][2]string
 
+	launchReqs []agentruns.LaunchRequest // every Launch call, in order
+	launchRun  *agentruns.Run            // returned by Launch on success
+	launchErr  error                     // returned by Launch after recording
+
 	retryRun    *agentruns.Run // returned by Retry on success
 	retryErr    error
 	retryCalls  []string // source run IDs
@@ -137,6 +141,18 @@ type fakeRunService struct {
 
 	monthSpend    float64
 	monthSpendErr error
+}
+
+func (f *fakeRunService) Launch(req agentruns.LaunchRequest) (*agentruns.Run, string, error) {
+	f.launchReqs = append(f.launchReqs, req)
+	if f.launchErr != nil {
+		return nil, "", f.launchErr
+	}
+	run := f.launchRun
+	if run == nil {
+		run = &agentruns.Run{ID: "run-new", OrgID: req.OrgID, AgentID: req.AgentID, Status: agentruns.StatusQueued}
+	}
+	return run, "run-token", nil
 }
 
 func (f *fakeRunService) Get(id string) (*agentruns.Run, error) {
@@ -868,6 +884,15 @@ type fakeAgentService struct {
 
 func (f *fakeAgentService) Get(id string) (*agents.Agent, error) {
 	return f.byID[id], nil
+}
+
+func (f *fakeAgentService) GetBySlug(orgID, slug string) (*agents.Agent, error) {
+	for _, a := range f.byID {
+		if a.Slug == slug {
+			return a, nil
+		}
+	}
+	return nil, nil
 }
 
 // TestClaimHandshakeFailureReleasesRun locks in that when the claim handshake

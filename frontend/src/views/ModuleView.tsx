@@ -1,7 +1,7 @@
 import React, { useCallback, useState, useEffect } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useAppStore } from '../state/store';
-import { artifactAPI, linkAPI, attachmentAPI, baselineAPI, projectAPI, qualityAPI, Artifact, Link, Attachment, Baseline, ProjectExport } from '../api/client';
+import { artifactAPI, linkAPI, attachmentAPI, baselineAPI, projectAPI, qualityAPI, agentsAPI, Artifact, Link, Attachment, Baseline, ProjectExport } from '../api/client';
 import type { QualityRowInfo } from '../components/ArtifactList';
 import { ArtifactEditor } from '../components/ArtifactEditor';
 import { ArtifactList } from '../components/ArtifactList';
@@ -45,7 +45,10 @@ export const ModuleView: React.FC = () => {
   // artifact's context menu (create before/after/child). Explicit state —
   // ArtifactEditor applies it via an effect whenever it changes (issue #26).
   const [pendingCreateContext, setPendingCreateContext] = useState<Partial<Artifact> | null>(null);
-  
+  // "Draft test cases" launch guard: disables the button while the run is being
+  // enqueued so a double-click can't launch two runs (issue #218).
+  const [draftingTests, setDraftingTests] = useState(false);
+
   // Resizable columns state
   const [leftColumnWidth, setLeftColumnWidth] = useState<number>(() => {
     const saved = localStorage.getItem('openv-leftColumnWidth');
@@ -791,6 +794,31 @@ export const ModuleView: React.FC = () => {
   const selectedArtifact = activeArtifacts.find((a) => a.id === selectedArtifactId);
   const detailAttachments = isBaselineView ? [] : attachments;
 
+  // Requirements the "Draft test cases" action will cover: the selected
+  // requirement if one is selected, otherwise every requirement in view. Only
+  // the IDs are sent — the agent fetches each requirement's content itself.
+  const requirementTargets =
+    selectedArtifact && selectedArtifact.type === 'requirement'
+      ? [selectedArtifact]
+      : activeArtifacts.filter((a) => a.type === 'requirement');
+
+  const handleDraftTestCases = async () => {
+    if (!projectId || requirementTargets.length === 0 || draftingTests) return;
+    setDraftingTests(true);
+    try {
+      await agentsAPI.draftTestCases(
+        projectId,
+        requirementTargets.map((a) => a.id)
+      );
+      setError('');
+      navigate(`/projects/${projectId}/agent-runs`);
+    } catch (error: any) {
+      setError(`Failed to launch test-case drafting: ${apiErrorMessage(error, 'Unknown error')}`);
+    } finally {
+      setDraftingTests(false);
+    }
+  };
+
   return (
     <>
       {/* The floating help panel is mounted once in ProjectLayout now. */}
@@ -872,6 +900,31 @@ export const ModuleView: React.FC = () => {
           }}
         >
           Capture Baseline
+        </button>
+        <button
+          onClick={handleDraftTestCases}
+          disabled={isBaselineView || draftingTests || requirementTargets.length === 0}
+          style={{
+            height: '36px',
+            padding: '0 12px',
+            backgroundColor:
+              isBaselineView || requirementTargets.length === 0 ? 'var(--neutral-mid)' : 'var(--success-bright)',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor:
+              isBaselineView || draftingTests || requirementTargets.length === 0 ? 'not-allowed' : 'pointer',
+            fontSize: '12px',
+          }}
+          title={
+            requirementTargets.length === 0
+              ? 'No requirements to draft test cases for'
+              : selectedArtifact && selectedArtifact.type === 'requirement'
+                ? 'Draft test cases for the selected requirement (as proposals)'
+                : `Draft test cases for all ${requirementTargets.length} requirements in view (as proposals)`
+          }
+        >
+          {draftingTests ? 'Drafting…' : '🧪 Draft test cases'}
         </button>
         <button
           onClick={() => handleGenerateReport('pdf')}
