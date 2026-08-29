@@ -1,28 +1,51 @@
-import React, { useEffect, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { authAPI, metaAPI, orgsAPI } from './api/client';
 import { useAppStore } from './state/store';
 import { ProjectList } from './components/ProjectList';
 import { ProjectLayout } from './components/ProjectLayout';
-import { ModuleView } from './views/ModuleView';
 import { Login } from './views/Login';
 import { ProductOverview } from './views/ProductOverview';
 import { InterviewsPage } from './views/InterviewsPage';
 import { GuidedWizard } from './views/GuidedWizard';
 import { VVDashboard } from './views/VVDashboard';
-import { TestRunView } from './views/TestRunView';
-import { TraceabilityMatrix } from './views/TraceabilityMatrix';
 import { KanbanBoard } from './views/KanbanBoard';
-import { CrewBuilder } from './views/CrewBuilder';
 import { AutomationsPage } from './views/AutomationsPage';
 import { AgentRunsPage } from './views/AgentRunsPage';
 import { AgentsPage } from './views/AgentsPage';
 import { ProjectSettings } from './views/ProjectSettings';
 import { OrgSettings } from './views/OrgSettings';
 import { InterviewChat } from './views/InterviewChat';
-import { ManualView } from './views/ManualView';
 import { DialogProvider } from './components/ui';
 import './index.css';
+
+// Route-level code splitting for the heavyweight views so their large
+// dependencies stay out of the main bundle:
+//   - ModuleView pulls in react-markdown/remark-gfm (via ArtifactDetails)
+//   - ManualView pulls in react-markdown/remark-gfm
+//   - CrewBuilder pulls in cytoscape (via CrewCanvas)
+//   - TestRunView and TraceabilityMatrix pull in ag-grid
+const ModuleView = lazy(() =>
+  import('./views/ModuleView').then((m) => ({ default: m.ModuleView }))
+);
+const ManualView = lazy(() =>
+  import('./views/ManualView').then((m) => ({ default: m.ManualView }))
+);
+const CrewBuilder = lazy(() =>
+  import('./views/CrewBuilder').then((m) => ({ default: m.CrewBuilder }))
+);
+const TestRunView = lazy(() =>
+  import('./views/TestRunView').then((m) => ({ default: m.TestRunView }))
+);
+const TraceabilityMatrix = lazy(() =>
+  import('./views/TraceabilityMatrix').then((m) => ({ default: m.TraceabilityMatrix }))
+);
+
+function RouteFallback() {
+  return (
+    <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>Loading…</div>
+  );
+}
 
 function App() {
   const { currentUser, setCurrentUser, setMeta, orgsLoaded, setOrgs, setActiveOrgId, setOrgsLoaded } =
@@ -91,6 +114,7 @@ function App() {
   return (
     <div className="app-container">
       <DialogProvider>
+        <Suspense fallback={<RouteFallback />}>
         <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/interview/:token" element={<InterviewChat />} />
@@ -120,6 +144,7 @@ function App() {
         </Route>
           <Route path="*" element={<Navigate to="/projects" replace />} />
         </Routes>
+        </Suspense>
       </DialogProvider>
     </div>
   );
