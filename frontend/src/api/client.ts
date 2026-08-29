@@ -1305,4 +1305,38 @@ export const searchAPI = {
     client.get<SearchHit[]>('/api/v1/search', { params: limit ? { q, limit } : { q } }),
 };
 
+// In-app notification (issue #132). entity_ref carries {kind, ...ids} so the
+// bell can navigate to the subject; see NotificationBell.
+export interface AppNotification {
+  id: string;
+  org_id?: string;
+  user_id: string;
+  type: 'proposal_pending' | 'run_failed' | 'interview_completed' | 'mention' | string;
+  title: string;
+  body?: string;
+  entity_ref: Record<string, any>;
+  read: boolean;
+  created_at: string;
+}
+
+export interface NotificationList {
+  notifications: AppNotification[] | null;
+  unread_count: number;
+}
+
+export const notificationsAPI = {
+  list: (params?: { unread?: boolean; limit?: number }) =>
+    client.get<NotificationList>('/api/v1/notifications', {
+      params: {
+        ...(params?.unread ? { unread: 'true' } : {}),
+        ...(params?.limit ? { limit: params.limit } : {}),
+      },
+    }),
+  markRead: (ids: string[]) =>
+    client.post<{ updated: number; unread_count: number }>('/api/v1/notifications/read', { ids }),
+  markAllRead: () =>
+    client.post<{ updated: number; unread_count: number }>('/api/v1/notifications/read-all'),
+  streamUrl: () => `${API_BASE_URL}/api/v1/notifications/stream`,
+};
+
 export default client;

@@ -692,9 +692,14 @@ func (s *DefaultService) Finish(id string, req FinishRequest) (*Run, error) {
 		if run.ProjectID != nil {
 			projectID = *run.ProjectID
 		}
+		launchedBy := ""
+		if run.LaunchedBy != nil {
+			launchedBy = *run.LaunchedBy
+		}
 		s.bus.Publish(events.New(events.RunFinished, projectID, run.ID, "agent:"+run.ID, map[string]interface{}{
-			"status":   run.Status,
-			"agent_id": run.AgentID,
+			"status":      run.Status,
+			"agent_id":    run.AgentID,
+			"launched_by": launchedBy,
 		}).WithOrg(run.OrgID))
 	}
 	return run, nil

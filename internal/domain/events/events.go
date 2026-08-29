@@ -25,6 +25,9 @@ const (
 	WorkItemMoved    = "workitem.moved"
 	WorkItemUpdated  = "workitem.updated"
 	RunFinished      = "agentrun.finished"
+	// ProposalCreated fires when a proposal-mode agent write is diverted
+	// into the review queue; payload carries {op, run_id}.
+	ProposalCreated = "proposal.created"
 )
 
 // Actor constants; user actors are "user:<id>", agent actors "agent:<run_id>".

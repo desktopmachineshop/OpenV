@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/openv/requirements-platform/internal/domain/agentruns"
+	"github.com/openv/requirements-platform/internal/domain/events"
 	"github.com/openv/requirements-platform/internal/domain/members"
 	"github.com/openv/requirements-platform/internal/domain/orgs"
 	"github.com/openv/requirements-platform/internal/domain/proposals"
@@ -214,6 +215,10 @@ func (h *Handler) maybePropose(w http.ResponseWriter, r *http.Request, projectID
 		}
 		return true
 	}
+	h.publish(r, events.ProposalCreated, projectID, proposal.ID, map[string]interface{}{
+		"op":     op,
+		"run_id": run.ID,
+	})
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
 	json.NewEncoder(w).Encode(map[string]interface{}{
