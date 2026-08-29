@@ -3,11 +3,13 @@ package api
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
+	"github.com/openv/requirements-platform/internal/domain/agentruns"
 	"github.com/openv/requirements-platform/internal/domain/agents"
 	"github.com/openv/requirements-platform/internal/domain/users"
 )
@@ -85,4 +87,60 @@ func TestCreateAgentDuplicateSlug(t *testing.T) {
 			t.Fatalf("saved = %v, want the reviewer definition", svc.saved)
 		}
 	})
+}
+
+// TestWorkerLifecycleErrorContract locks in the 409-vs-500 split on the
+// worker lifecycle endpoints: a status-transition conflict is the worker's
+// problem (409, sentinel text preserved), while any other failure — e.g. a DB
+// blip — must answer 5xx so the worker retries instead of abandoning the run,
+// and must not leak internal error text.
+func TestWorkerLifecycleErrorContract(t *testing.T) {
+	const internalDetail = "pq: connection reset by peer"
+	transitionErr := fmt.Errorf("%w: run already succeeded", agentruns.ErrInvalidTransition)
+
+	newRunSvc := func(startErr, finishErr error) *fakeRunService {
+		return &fakeRunService{
+			byID: map[string]*agentruns.Run{
+				"run-1": {ID: "run-1", OrgID: "org-1", Status: agentruns.StatusClaimed},
+			},
+			startErr:  startErr,
+			finishErr: finishErr,
+		}
+	}
+
+	endpoints := []struct {
+		name string
+		call func(h *Handler, w http.ResponseWriter, r *http.Request)
+		body string
+		svc  func(err error) *fakeRunService
+	}{
+		{"start", (*Handler).StartAgentRun, "", func(err error) *fakeRunService { return newRunSvc(err, nil) }},
+		{"finish", (*Handler).FinishAgentRun, `{"status":"succeeded"}`, func(err error) *fakeRunService { return newRunSvc(nil, err) }},
+	}
+
+	for _, ep := range endpoints {
+		t.Run(ep.name+"/invalid transition answers 409 with sentinel", func(t *testing.T) {
+			h := &Handler{runService: ep.svc(transitionErr)}
+			w := httptest.NewRecorder()
+			ep.call(h, w, workerRunReq(ep.body, "org-1", "", "run-1"))
+			if w.Code != http.StatusConflict {
+				t.Fatalf("status = %d, want 409 (body %q)", w.Code, w.Body.String())
+			}
+			if !strings.Contains(w.Body.String(), agentruns.ErrInvalidTransition.Error()) {
+				t.Fatalf("409 body %q should carry the sentinel text", w.Body.String())
+			}
+		})
+
+		t.Run(ep.name+"/internal error answers 500 without leaking", func(t *testing.T) {
+			h := &Handler{runService: ep.svc(errors.New(internalDetail))}
+			w := httptest.NewRecorder()
+			ep.call(h, w, workerRunReq(ep.body, "org-1", "", "run-1"))
+			if w.Code != http.StatusInternalServerError {
+				t.Fatalf("status = %d, want 500 (body %q)", w.Code, w.Body.String())
+			}
+			if strings.Contains(w.Body.String(), internalDetail) {
+				t.Fatalf("500 body %q leaks the internal error text", w.Body.String())
+			}
+		})
+	}
 }

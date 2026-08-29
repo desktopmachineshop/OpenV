@@ -75,6 +75,9 @@ type fakeRunService struct {
 	appended []string
 	finished []string
 
+	startErr  error // returned by MarkRunning after recording the call
+	finishErr error // returned by Finish after recording the call
+
 	listFilters []agentruns.ListFilter
 
 	claimRun   *agentruns.Run
@@ -92,7 +95,7 @@ func (f *fakeRunService) Get(id string) (*agentruns.Run, error) {
 
 func (f *fakeRunService) MarkRunning(id string) error {
 	f.started = append(f.started, id)
-	return nil
+	return f.startErr
 }
 
 func (f *fakeRunService) AppendLogs(id string, entries []agentruns.LogEntry) (*agentruns.Run, error) {
@@ -102,6 +105,9 @@ func (f *fakeRunService) AppendLogs(id string, entries []agentruns.LogEntry) (*a
 
 func (f *fakeRunService) Finish(id string, req agentruns.FinishRequest) (*agentruns.Run, error) {
 	f.finished = append(f.finished, id)
+	if f.finishErr != nil {
+		return nil, f.finishErr
+	}
 	return f.byID[id], nil
 }
 

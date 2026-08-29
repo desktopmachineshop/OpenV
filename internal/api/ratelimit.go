@@ -21,20 +21,34 @@ import (
 //
 // Defaults (overridable via environment variables):
 //
-//	OPENV_INTERVIEW_MSG_BURST            = 5   messages instantly per invite
-//	OPENV_INTERVIEW_MSG_REFILL_PER_HOUR  = 20  messages/hour steady state
-//	OPENV_INTERVIEW_IP_BURST             = 20  intro/stream GETs instantly per IP
-//	OPENV_INTERVIEW_IP_REFILL_PER_HOUR   = 60  intro/stream GETs/hour steady state
+//	OPENV_INTERVIEW_MSG_BURST               = 5   messages instantly per invite
+//	OPENV_INTERVIEW_MSG_REFILL_PER_HOUR     = 20  messages/hour steady state
+//	OPENV_INTERVIEW_IP_BURST                = 20  intro GETs instantly per IP
+//	OPENV_INTERVIEW_IP_REFILL_PER_HOUR      = 60  intro GETs/hour steady state
+//	OPENV_INTERVIEW_STREAM_BURST            = 30  SSE connects instantly per IP
+//	OPENV_INTERVIEW_STREAM_REFILL_PER_HOUR  = 120 SSE connects/hour steady state
+//
+// SSE stream connects get their own, more generous per-IP bucket:
+// EventSource clients auto-reconnect after every network hiccup, NAT timeout,
+// or laptop sleep, so a legitimate participant reconnects far more often than
+// they load the intro page. Charging reconnects against the intro bucket
+// would lock a flaky-network participant out of the whole interview; the
+// separate bucket still bounds connection floods without letting stream
+// churn consume the intro budget.
 const (
-	envInterviewMsgBurst  = "OPENV_INTERVIEW_MSG_BURST"
-	envInterviewMsgRefill = "OPENV_INTERVIEW_MSG_REFILL_PER_HOUR"
-	envInterviewIPBurst   = "OPENV_INTERVIEW_IP_BURST"
-	envInterviewIPRefill  = "OPENV_INTERVIEW_IP_REFILL_PER_HOUR"
+	envInterviewMsgBurst     = "OPENV_INTERVIEW_MSG_BURST"
+	envInterviewMsgRefill    = "OPENV_INTERVIEW_MSG_REFILL_PER_HOUR"
+	envInterviewIPBurst      = "OPENV_INTERVIEW_IP_BURST"
+	envInterviewIPRefill     = "OPENV_INTERVIEW_IP_REFILL_PER_HOUR"
+	envInterviewStreamBurst  = "OPENV_INTERVIEW_STREAM_BURST"
+	envInterviewStreamRefill = "OPENV_INTERVIEW_STREAM_REFILL_PER_HOUR"
 
-	defaultInterviewMsgBurst  = 5
-	defaultInterviewMsgRefill = 20.0
-	defaultInterviewIPBurst   = 20
-	defaultInterviewIPRefill  = 60.0
+	defaultInterviewMsgBurst     = 5
+	defaultInterviewMsgRefill    = 20.0
+	defaultInterviewIPBurst      = 20
+	defaultInterviewIPRefill     = 60.0
+	defaultInterviewStreamBurst  = 30
+	defaultInterviewStreamRefill = 120.0
 )
 
 // cleanupEvery bounds how often a limiter sweeps stale buckets, and

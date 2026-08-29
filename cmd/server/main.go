@@ -385,7 +385,9 @@ func main() {
 			case <-ctx.Done():
 				return
 			case <-ticker.C:
-				if ids, err := runService.FailStale(2 * time.Minute); err == nil && len(ids) > 0 {
+				if ids, err := runService.FailStale(2 * time.Minute); err != nil {
+					slog.Error("reaper FailStale failed", "error", err)
+				} else if len(ids) > 0 {
 					slog.Warn("reaper failed stale runs", "count", len(ids))
 				}
 				_ = userRepo.DeleteExpiredSessions(time.Now())

@@ -3,7 +3,7 @@ package postgres
 import (
 	"database/sql"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -79,7 +79,7 @@ func BackfillOrgs(db *sql.DB, agentsDir string) error {
 		`, orgID, p.id); err != nil {
 			return err
 		}
-		log.Printf("backfill: created personal org for %s", p.email)
+		slog.Info("backfill: created personal org", "email", p.email)
 	}
 
 	// 2. Bootstrap org = earliest user's personal org. Fresh DB → done.
@@ -147,11 +147,11 @@ func BackfillOrgs(db *sql.DB, agentsDir string) error {
 				src := filepath.Join(agentsDir, entry.Name())
 				dst := filepath.Join(orgDir, entry.Name())
 				if err := os.Rename(src, dst); err != nil {
-					log.Printf("backfill: could not move agent file %s: %v", entry.Name(), err)
+					slog.Warn("backfill: could not move agent file", "file", entry.Name(), "error", err)
 					continue
 				}
 				if _, err := db.Exec(`UPDATE agents SET file_path = $2 WHERE file_path = $1`, src, dst); err != nil {
-					log.Printf("backfill: could not update agent file path for %s: %v", entry.Name(), err)
+					slog.Warn("backfill: could not update agent file path", "file", entry.Name(), "error", err)
 				}
 			}
 			// Legacy trash follows along.

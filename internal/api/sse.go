@@ -3,11 +3,18 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/openv/requirements-platform/internal/domain/agentruns"
 )
+
+// sseKeepaliveInterval is how often an idle SSE stream emits a comment line
+// so NATs and load balancers don't drop the connection as dead. A var (not a
+// const) so tests can shrink it.
+var sseKeepaliveInterval = 25 * time.Second
 
 // sseEvent is one server-sent event frame.
 type sseEvent struct {
@@ -113,15 +120,27 @@ func (h *SSEHub) ServeStream(w http.ResponseWriter, r *http.Request, key string,
 
 	if replay != nil {
 		if err := replay(write); err != nil {
-			write("error", map[string]string{"error": err.Error()})
+			// The real error may carry internals (SQL text, file paths) and
+			// some streams are public — log it, send a generic event.
+			slog.Error("sse replay failed", "key", key, "error", err)
+			write("error", map[string]string{"error": "stream unavailable"})
 		}
 	}
 	flusher.Flush()
+
+	// Periodic SSE comment lines keep idle streams (e.g. an interview waiting
+	// on a slow participant) alive through NATs/LBs; comments are ignored by
+	// EventSource clients. The ticker stops with the connection.
+	keepalive := time.NewTicker(sseKeepaliveInterval)
+	defer keepalive.Stop()
 
 	for {
 		select {
 		case <-r.Context().Done():
 			return
+		case <-keepalive.C:
+			fmt.Fprint(w, ": keepalive\n\n")
+			flusher.Flush()
 		case e := <-ch:
 			write(e.Event, e.Data)
 			flusher.Flush()
