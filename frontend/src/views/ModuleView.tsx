@@ -1223,6 +1223,7 @@ export const ModuleView: React.FC = () => {
         {isCreating && !isBaselineView && (
           <ArtifactEditor
             artifacts={artifacts}
+            projectId={projectId}
             initialData={pendingCreateContext ?? undefined}
             onSave={handleCreateArtifact}
             onCancel={() => {
@@ -1276,6 +1277,7 @@ export const ModuleView: React.FC = () => {
           <ArtifactEditor
             artifact={editingArtifact}
             artifacts={artifacts}
+            projectId={projectId}
             onSave={handleUpdateArtifact}
             onCancel={() => {
               setIsEditing(false);

@@ -17,6 +17,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/openv/requirements-platform/internal/domain/artifacts"
 	"github.com/openv/requirements-platform/internal/domain/attachments"
+	"github.com/openv/requirements-platform/internal/domain/attributes"
 	"github.com/openv/requirements-platform/internal/domain/baselines"
 	"github.com/openv/requirements-platform/internal/domain/chatter"
 	"github.com/openv/requirements-platform/internal/domain/exports"
@@ -58,6 +59,7 @@ type HandlerDeps struct {
 	ReportService     reports.Service
 	TemplateService   templates.Service
 	ChatterService    chatter.Service
+	AttributeService  attributes.Service
 	UploadsDir        string
 
 	UserService         users.Service
@@ -105,6 +107,7 @@ type Handler struct {
 	reportService     reports.Service
 	templateService   templates.Service
 	chatterService    chatter.Service
+	attributeService  attributes.Service
 	uploadsDir        string
 
 	userService         users.Service
@@ -147,45 +150,46 @@ type Handler struct {
 // NewHandler creates a new API handler
 func NewHandler(deps HandlerDeps) *Handler {
 	return &Handler{
-		artifactService:     deps.ArtifactService,
-		linkService:         deps.LinkService,
-		projectService:      deps.ProjectService,
-		attachmentService:   deps.AttachmentService,
-		exportService:       deps.ExportService,
-		baselineService:     deps.BaselineService,
-		reportService:       deps.ReportService,
-		templateService:     deps.TemplateService,
-		chatterService:      deps.ChatterService,
-		uploadsDir:          deps.UploadsDir,
-		userService:         deps.UserService,
-		memberService:       deps.MemberService,
-		productService:      deps.ProductService,
-		vvService:           deps.VVService,
-		workItemService:     deps.WorkItemService,
-		guidedService:       deps.GuidedService,
-		interviewService:    deps.InterviewService,
-		agentService:        deps.AgentService,
-		runService:          deps.RunService,
-		automationService:   deps.AutomationService,
-		proposalService:     deps.ProposalService,
-		repoConnService:     deps.RepoConnService,
-		providerService:     deps.ProviderService,
-		loginService:        deps.LoginService,
-		teamService:         deps.TeamService,
-		orgService:          deps.OrgService,
-		orgTeamService:      deps.OrgTeamService,
-		workerKeyService:    deps.WorkerKeyService,
-		hostedWorkerService: deps.HostedWorkerService,
-		notificationService: deps.NotificationService,
-		provisioner:         deps.Provisioner,
-		orgSeeder:           deps.OrgSeeder,
-		publicAPIURL:        deps.PublicAPIURL,
-		connectorDistDir:    deps.ConnectorDistDir,
-		bus:                 deps.Bus,
-		eventRepo:           deps.EventRepo,
-		sseHub:              deps.SSEHub,
-		googleOAuth:         deps.GoogleOAuth,
-		secureCookies:       deps.SecureCookies,
+		artifactService:        deps.ArtifactService,
+		linkService:            deps.LinkService,
+		projectService:         deps.ProjectService,
+		attachmentService:      deps.AttachmentService,
+		exportService:          deps.ExportService,
+		baselineService:        deps.BaselineService,
+		reportService:          deps.ReportService,
+		templateService:        deps.TemplateService,
+		chatterService:         deps.ChatterService,
+		attributeService:       deps.AttributeService,
+		uploadsDir:             deps.UploadsDir,
+		userService:            deps.UserService,
+		memberService:          deps.MemberService,
+		productService:         deps.ProductService,
+		vvService:              deps.VVService,
+		workItemService:        deps.WorkItemService,
+		guidedService:          deps.GuidedService,
+		interviewService:       deps.InterviewService,
+		agentService:           deps.AgentService,
+		runService:             deps.RunService,
+		automationService:      deps.AutomationService,
+		proposalService:        deps.ProposalService,
+		repoConnService:        deps.RepoConnService,
+		providerService:        deps.ProviderService,
+		loginService:           deps.LoginService,
+		teamService:            deps.TeamService,
+		orgService:             deps.OrgService,
+		orgTeamService:         deps.OrgTeamService,
+		workerKeyService:       deps.WorkerKeyService,
+		hostedWorkerService:    deps.HostedWorkerService,
+		notificationService:    deps.NotificationService,
+		provisioner:            deps.Provisioner,
+		orgSeeder:              deps.OrgSeeder,
+		publicAPIURL:           deps.PublicAPIURL,
+		connectorDistDir:       deps.ConnectorDistDir,
+		bus:                    deps.Bus,
+		eventRepo:              deps.EventRepo,
+		sseHub:                 deps.SSEHub,
+		googleOAuth:            deps.GoogleOAuth,
+		secureCookies:          deps.SecureCookies,
 		interviewMsgLimiter:    newRateLimiterFromEnv(envInterviewMsgBurst, envInterviewMsgRefill, defaultInterviewMsgBurst, defaultInterviewMsgRefill),
 		interviewIPLimiter:     newRateLimiterFromEnv(envInterviewIPBurst, envInterviewIPRefill, defaultInterviewIPBurst, defaultInterviewIPRefill),
 		interviewStreamLimiter: newRateLimiterFromEnv(envInterviewStreamBurst, envInterviewStreamRefill, defaultInterviewStreamBurst, defaultInterviewStreamRefill),
@@ -272,6 +276,7 @@ func (h *Handler) RegisterRoutes(router *mux.Router) {
 	h.registerNotificationRoutes(router)
 	h.registerAgentRoutes(router)
 	h.registerOrgRoutes(router)
+	h.registerAttributeDefinitionRoutes(router)
 
 	// Health check
 	router.HandleFunc("/health", h.Health).Methods("GET")
@@ -317,6 +322,15 @@ func (h *Handler) CreateArtifact(w http.ResponseWriter, r *http.Request) {
 		req.Attributes["guided_session_id"] = *run.GuidedSessionID
 	}
 
+	// Validate typed attributes against the effective definitions for this
+	// project + type (issue #219). Create enforces required attributes; an
+	// artifact with no matching definitions is unaffected (the check is a
+	// no-op when the org/project has defined none).
+	if err := h.validateArtifactAttributes(req.ProjectID, req.Type, req.Attributes, true); err != nil {
+		writeJSONError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
 	if h.maybePropose(w, r, req.ProjectID, proposals.OpCreateArtifact, nil, req) {
 		return
 	}
@@ -335,6 +349,25 @@ func (h *Handler) CreateArtifact(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(artifact)
+}
+
+// validateArtifactAttributes checks a submitted attributes map against the
+// effective attribute definitions for the artifact's project + type (issue
+// #219). It is a no-op when no attribute service is wired (e.g. unit tests) or
+// when attrs is nil. enforceRequired is true on create and false on update
+// (see the callers). Definition-lookup failures fail open (logged, not
+// rejected): a transient catalog read must not block a legitimate edit.
+func (h *Handler) validateArtifactAttributes(projectID, artifactType string, attrs map[string]interface{}, enforceRequired bool) error {
+	if h.attributeService == nil || attrs == nil {
+		return nil
+	}
+	orgID := h.orgForProject(projectID)
+	defs, err := h.attributeService.EffectiveForProject(orgID, projectID)
+	if err != nil {
+		slog.Warn("api: failed to load attribute definitions for validation", "project_id", projectID, "error", err)
+		return nil
+	}
+	return attributes.ValidateAttributes(defs, artifactType, attrs, enforceRequired)
 }
 
 // GetArtifact retrieves an artifact by ID
@@ -426,6 +459,26 @@ func (h *Handler) UpdateArtifact(w http.ResponseWriter, r *http.Request) {
 	if !h.requireProjectRole(w, r, oldArtifact.ProjectID, members.RoleEditor) {
 		return
 	}
+
+	// Validate typed attributes against the effective definitions (issue
+	// #219). Only a PRESENT attributes map is checked, so the nil=no-change
+	// contract is preserved: an update that omits attributes skips validation
+	// entirely and carries the current attributes forward untouched. Required
+	// attributes are NOT enforced on update (a partial or field-only edit must
+	// not be rejected for an attribute it never intended to touch). The
+	// effective type is the incoming type when the update changes it, else the
+	// current one.
+	if req.Attributes != nil {
+		effectiveType := oldArtifact.Type
+		if req.Type != nil {
+			effectiveType = *req.Type
+		}
+		if err := h.validateArtifactAttributes(oldArtifact.ProjectID, effectiveType, req.Attributes, false); err != nil {
+			writeJSONError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+	}
+
 	if h.maybePropose(w, r, oldArtifact.ProjectID, proposals.OpUpdateArtifact, &id, req) {
 		return
 	}
