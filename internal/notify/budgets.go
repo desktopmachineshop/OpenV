@@ -44,6 +44,9 @@ type BudgetMonitor struct {
 	spend       BudgetSpendReader
 	store       notifications.Service
 	broadcaster Broadcaster
+	// email is an optional best-effort email side channel (issue #187); nil
+	// means email is off. Dispatch is nil-safe.
+	email *EmailDispatcher
 	// now is injectable so tests can pin the month; defaults to time.Now.
 	now func() time.Time
 }
@@ -52,6 +55,13 @@ type BudgetMonitor struct {
 // (store-only mode, used in tests).
 func NewBudgetMonitor(orgSvc BudgetOrgService, spend BudgetSpendReader, store notifications.Service, broadcaster Broadcaster) *BudgetMonitor {
 	return &BudgetMonitor{orgs: orgSvc, spend: spend, store: store, broadcaster: broadcaster, now: time.Now}
+}
+
+// SetEmailDispatcher attaches an email side channel. Passing nil (or never
+// calling this) leaves email off.
+func (m *BudgetMonitor) SetEmailDispatcher(d *EmailDispatcher) *BudgetMonitor {
+	m.email = d
+	return m
 }
 
 // Start subscribes to the bus.
@@ -145,6 +155,9 @@ func (m *BudgetMonitor) alertAdmins(orgID, month string, threshold int, spend, b
 		if m.broadcaster != nil {
 			m.broadcaster.BroadcastSession(StreamKey(mem.UserID), "notification", n)
 		}
+		// Best-effort email side channel; no-op unless SMTP is configured and
+		// the admin is opted in.
+		m.email.Dispatch(n)
 	}
 }
 

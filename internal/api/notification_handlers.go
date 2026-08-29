@@ -23,6 +23,47 @@ func (h *Handler) registerNotificationRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/notifications/read", h.MarkNotificationsRead).Methods("POST")
 	router.HandleFunc("/api/v1/notifications/read-all", h.MarkAllNotificationsRead).Methods("POST")
 	router.HandleFunc("/api/v1/notifications/stream", h.StreamNotifications).Methods("GET")
+	router.HandleFunc("/api/v1/me/notification-prefs", h.GetNotificationPrefs).Methods("GET")
+	router.HandleFunc("/api/v1/me/notification-prefs", h.UpdateNotificationPrefs).Methods("PUT")
+}
+
+// notificationPrefs is the wire shape for a user's own notification
+// preferences (issue #187). Minimal by design: a single email opt-out.
+type notificationPrefs struct {
+	EmailNotifications bool `json:"email_notifications"`
+}
+
+// GetNotificationPrefs returns the caller's own notification preferences.
+func (h *Handler) GetNotificationPrefs(w http.ResponseWriter, r *http.Request) {
+	user := CurrentUser(r)
+	if user == nil {
+		writeJSONError(w, http.StatusUnauthorized, "authentication required")
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(notificationPrefs{EmailNotifications: user.EmailNotifications})
+}
+
+// UpdateNotificationPrefs updates the caller's own notification preferences.
+// Own-user only: the update is keyed on the authenticated user id, so a caller
+// can never change another user's preferences.
+func (h *Handler) UpdateNotificationPrefs(w http.ResponseWriter, r *http.Request) {
+	user := CurrentUser(r)
+	if user == nil {
+		writeJSONError(w, http.StatusUnauthorized, "authentication required")
+		return
+	}
+	var req notificationPrefs
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if err := h.userService.SetEmailNotifications(user.ID, req.EmailNotifications); err != nil {
+		respondInternal(w, r, "failed to update notification preferences", err)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(notificationPrefs{EmailNotifications: req.EmailNotifications})
 }
 
 // requireHumanUser answers the current user or writes a 401. Notifications

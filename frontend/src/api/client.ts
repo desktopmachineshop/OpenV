@@ -471,7 +471,14 @@ export interface User {
   avatar_url: string;
   auth_provider: string;
   is_admin: boolean;
+  // Per-user email-notification opt-out (issue #187). Only has an effect when
+  // the server has SMTP configured.
+  email_notifications?: boolean;
   created_at: string;
+}
+
+export interface NotificationPrefs {
+  email_notifications: boolean;
 }
 
 export interface ProjectMember {
@@ -827,6 +834,13 @@ export const authAPI = {
   me: () => client.get<User>('/api/v1/auth/me'),
   googleLoginUrl: () => `${API_BASE_URL}/api/v1/auth/google`,
   listUsers: () => client.get<User[]>('/api/v1/users'),
+};
+
+// Per-user notification preferences (issue #187): the email opt-out toggle.
+export const notificationPrefsAPI = {
+  get: () => client.get<NotificationPrefs>('/api/v1/me/notification-prefs'),
+  update: (email_notifications: boolean) =>
+    client.put<NotificationPrefs>('/api/v1/me/notification-prefs', { email_notifications }),
 };
 
 // ---------------------------------------------------------------------------

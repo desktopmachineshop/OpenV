@@ -355,15 +355,28 @@ func main() {
 	runService.AddSubscriber(hooks)
 	hooks.SubscribeBus(bus)
 
+	// Optional email side channel for high-signal notifications (issue #187).
+	// Strictly opt-in: with OPENV_SMTP_HOST unset the mailer is a no-op, so
+	// in-app + SSE delivery (and dev/compose) are unaffected. Deep links point
+	// at the frontend (FRONTEND_URL), falling back to PUBLIC_URL.
+	emailMailer := notify.MailerFromEnv()
+	emailLinkBase := envOr("FRONTEND_URL", envOr("PUBLIC_URL", "http://localhost:"+port))
+	emailDispatcher := notify.NewEmailDispatcher(emailMailer, userService, emailLinkBase, notify.EmailTypesFromEnv())
+
 	// Notification fan-out: bus events become per-user inbox rows plus live
-	// SSE pushes on notify:<user_id> (issue #132).
+	// SSE pushes on notify:<user_id> (issue #132), plus a best-effort email
+	// for eligible types when the recipient is opted in and SMTP is on (#187).
 	notificationService := notifications.NewDefaultService(notificationRepo)
-	notify.NewNotifier(notificationService, memberService, sseHub).Start(bus)
+	notify.NewNotifier(notificationService, memberService, sseHub).
+		SetEmailDispatcher(emailDispatcher).
+		Start(bus)
 
 	// Workspace budget alerts (issue #186): a finishing run's cost can push
 	// month-to-date spend across 80%/100% of the org's monthly budget; the
 	// monitor alerts org admins once per threshold per month. Warn-only.
-	notify.NewBudgetMonitor(orgService, runService, notificationService, sseHub).Start(bus)
+	notify.NewBudgetMonitor(orgService, runService, notificationService, sseHub).
+		SetEmailDispatcher(emailDispatcher).
+		Start(bus)
 
 	// Optional over-budget soft-block (default OFF — warn-only). When
 	// OPENV_BUDGET_ENFORCE=true, new launches are refused once a workspace has
