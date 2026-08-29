@@ -120,18 +120,27 @@ func TestBulkReviewProposalsValidation(t *testing.T) {
 // TestBulkReviewProposalsPartialFailure locks in the partial-failure
 // contract: the batch answers 200 with one outcome per requested id, in
 // request order — applied, unknown id, and apply-failed rows side by side.
+// An applier failure (a non-sentinel error) is sanitized in the outcome per
+// the #146 contract: the client sees a stable message, not the internal
+// detail, while a genuine proposal-domain validation sentinel passes through.
 func TestBulkReviewProposalsPartialFailure(t *testing.T) {
 	svc := &fakeProposalService{
 		byID: map[string]*proposals.Proposal{
-			"p-ok":   {ID: "p-ok", ProjectID: "proj-1", Status: proposals.StatusPending},
-			"p-boom": {ID: "p-boom", ProjectID: "proj-1", Status: proposals.StatusPending},
+			"p-ok":    {ID: "p-ok", ProjectID: "proj-1", Status: proposals.StatusPending},
+			"p-boom":  {ID: "p-boom", ProjectID: "proj-1", Status: proposals.StatusPending},
+			"p-stale": {ID: "p-stale", ProjectID: "proj-1", Status: proposals.StatusApplied},
 		},
-		approveErr: map[string]error{"p-boom": errors.New("apply failed: artifact vanished")},
+		approveErr: map[string]error{
+			// A raw applier error carrying an internal detail: must be sanitized.
+			"p-boom": errors.New("apply failed: pq: relation \"artifacts\" does not exist"),
+			// A genuine validation sentinel: safe to surface verbatim.
+			"p-stale": proposals.ErrNotPending,
+		},
 	}
 	h := &Handler{proposalService: svc}
 
 	w := httptest.NewRecorder()
-	body := `{"ids":["p-ok","p-missing","p-boom"],"action":"approve","note":"batch"}`
+	body := `{"ids":["p-ok","p-missing","p-boom","p-stale"],"action":"approve","note":"batch"}`
 	h.BulkReviewProposals(w, bulkReq(t, body, &users.User{ID: "root", IsAdmin: true}))
 
 	if w.Code != http.StatusOK {
@@ -141,7 +150,8 @@ func TestBulkReviewProposalsPartialFailure(t *testing.T) {
 	want := []bulkOutcome{
 		{ID: "p-ok", OK: true},
 		{ID: "p-missing", Error: "proposal not found"},
-		{ID: "p-boom", Error: "apply failed: artifact vanished"},
+		{ID: "p-boom", Error: "failed to apply approved proposal"},
+		{ID: "p-stale", Error: proposals.ErrNotPending.Error()},
 	}
 	if len(resp.Results) != len(want) {
 		t.Fatalf("results = %+v, want %d rows", resp.Results, len(want))
@@ -151,8 +161,12 @@ func TestBulkReviewProposalsPartialFailure(t *testing.T) {
 			t.Fatalf("results[%d] = %+v, want %+v", i, resp.Results[i], wantRow)
 		}
 	}
-	if len(svc.approved) != 2 || svc.approved[0] != "p-ok" || svc.approved[1] != "p-boom" {
-		t.Fatalf("approved = %v, want [p-ok p-boom] in request order", svc.approved)
+	// The sanitized outcome must not leak the internal error text.
+	if strings.Contains(w.Body.String(), "pq:") {
+		t.Errorf("bulk response leaked internal error detail: %q", w.Body.String())
+	}
+	if len(svc.approved) != 3 {
+		t.Fatalf("approved = %v, want three attempted approvals in request order", svc.approved)
 	}
 }
 

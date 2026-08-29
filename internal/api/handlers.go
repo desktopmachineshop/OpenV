@@ -1066,6 +1066,14 @@ func (h *Handler) UpdateLink(w http.ResponseWriter, r *http.Request) {
 // changed, clearing the suspect flag (issue #131). Authorization mirrors
 // UpdateLink: editor on the source artifact's project. Confirming an
 // already-trusted link is a harmless no-op, so the endpoint is idempotent.
+//
+// Proposal-mode agent runs are refused outright (issue #176). Clearing the
+// suspect flag is a human review action — it asserts that a link still holds
+// after content changed — and the proposal vocabulary has no op for it.
+// Letting a review-gated agent clear suspect directly would defeat the very
+// review the flag exists to trigger. Refusal (not diversion to a proposal)
+// mirrors ChangeArtifactStatus: both are human sign-off gates with no
+// proposal representation.
 func (h *Handler) ConfirmLink(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 
@@ -1076,6 +1084,12 @@ func (h *Handler) ConfirmLink(w http.ResponseWriter, r *http.Request) {
 	}
 	if !h.requireProjectRole(w, r, h.projectIDForArtifact(existing.FromID), members.RoleEditor) {
 		return
+	}
+	if run := CurrentRun(r); run != nil && h.agentService != nil {
+		if agent, err := h.agentService.Get(run.AgentID); err == nil && agent != nil && agent.WriteMode == agents.WriteModeProposal {
+			writeJSONError(w, http.StatusForbidden, "proposal-mode agent runs cannot clear a suspect link")
+			return
+		}
 	}
 
 	link, err := h.linkService.ConfirmLink(id)

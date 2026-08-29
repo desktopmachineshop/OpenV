@@ -97,6 +97,15 @@ func NewDefaultService(repo Repository, appliers Appliers) *DefaultService {
 	return &DefaultService{repo: repo, appliers: appliers}
 }
 
+// SetAppliers wires (or rewires) the callbacks that execute approved
+// proposals. It exists so the composition root can construct the service
+// before the HTTP handler that supplies the appliers, then inject them once
+// the handler is built — breaking the construction cycle (the handler needs
+// the proposal service, the appliers need the handler).
+func (s *DefaultService) SetAppliers(appliers Appliers) {
+	s.appliers = appliers
+}
+
 // OnResolved registers a callback fired after any of a run's proposals is
 // resolved — approved (whether the write applied or apply-failed) or rejected.
 // The run service uses it to finalize a run that is awaiting approval once its

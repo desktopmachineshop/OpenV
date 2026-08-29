@@ -10,6 +10,8 @@ import (
 
 	"github.com/gorilla/mux"
 
+	"github.com/openv/requirements-platform/internal/domain/agentruns"
+	"github.com/openv/requirements-platform/internal/domain/agents"
 	"github.com/openv/requirements-platform/internal/domain/artifacts"
 	"github.com/openv/requirements-platform/internal/domain/links"
 	"github.com/openv/requirements-platform/internal/domain/members"
@@ -69,6 +71,10 @@ func TestConfirmLink(t *testing.T) {
 					"editor": members.RoleEditor,
 					"viewer": members.RoleViewer,
 				},
+			}},
+			agentService: &fakeAgentService{byID: map[string]*agents.Agent{
+				"agent-direct":   {ID: "agent-direct", WriteMode: agents.WriteModeDirect},
+				"agent-proposal": {ID: "agent-proposal", WriteMode: agents.WriteModeProposal},
 			}},
 		}
 		return h, linkSvc
@@ -134,6 +140,41 @@ func TestConfirmLink(t *testing.T) {
 		}
 		if len(linkSvc.confirms) != 0 {
 			t.Errorf("ConfirmLink was called despite 404: %v", linkSvc.confirms)
+		}
+	})
+
+	// Clearing suspect is a human review action; a proposal-mode agent run
+	// must not do it directly (issue #176). Refusal mirrors the status gate.
+	doRun := func(t *testing.T, h *Handler, agentID, target string) *httptest.ResponseRecorder {
+		t.Helper()
+		r := httptest.NewRequest(http.MethodPut, "/api/v1/links/"+target+"/confirm", nil)
+		r = mux.SetURLVars(r, map[string]string{"id": target})
+		pid := projectID
+		r = r.WithContext(context.WithValue(r.Context(), ctxRun, &agentruns.Run{ID: "run-1", AgentID: agentID, ProjectID: &pid}))
+		w := httptest.NewRecorder()
+		h.ConfirmLink(w, r)
+		return w
+	}
+
+	t.Run("proposal-mode agent run is refused", func(t *testing.T) {
+		h, linkSvc := newFixture()
+		w := doRun(t, h, "agent-proposal", linkID)
+		if w.Code != http.StatusForbidden {
+			t.Fatalf("status = %d, want 403 (body %q)", w.Code, w.Body.String())
+		}
+		if len(linkSvc.confirms) != 0 {
+			t.Errorf("ConfirmLink cleared suspect for a proposal-mode run: %v", linkSvc.confirms)
+		}
+	})
+
+	t.Run("direct-mode agent run may confirm", func(t *testing.T) {
+		h, linkSvc := newFixture()
+		w := doRun(t, h, "agent-direct", linkID)
+		if w.Code != http.StatusOK {
+			t.Fatalf("status = %d, want 200 (body %q)", w.Code, w.Body.String())
+		}
+		if len(linkSvc.confirms) != 1 {
+			t.Errorf("ConfirmLink calls = %v, want exactly [%s]", linkSvc.confirms, linkID)
 		}
 	})
 }
