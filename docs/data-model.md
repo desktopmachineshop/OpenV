@@ -1,9 +1,10 @@
 # Data Model Overview
 
 The schema is owned by `internal/persistence/postgres/`. At API startup
-`cmd/server/main.go` calls `postgres.Migrate` (`migrations.go`), which
-brings the database to the current version through a numbered migration
-ledger (see "Schema migrations" below). Migration 0001 — the frozen
+`cmd/server/main.go` calls `postgres.MigrateAndBackfill` (`migrations.go`),
+which runs `postgres.Migrate` — bringing the database to the current version
+through a numbered migration ledger (see "Schema migrations" below) — and
+then the idempotent org backfill (`BackfillOrgs`). Migration 0001 — the frozen
 "baseline" — wraps the legacy idempotent init chain and is re-run on every
 boot: `db.go` (core `InitSchema`), `schema_users.go`, `schema_suite.go`,
 `schema_agents.go`, and `schema_orgs.go` (multi-tenancy, which also
@@ -90,8 +91,11 @@ effective project role is the max of this and any people-team grant.
 ### organizations
 Workspaces: `name`, `slug` (unique), `org_type` (`company` | `personal` —
 personal orgs are auto-created at signup), `plan` and `limits` JSONB
-(billing placeholders; `limits.runner_grace_seconds` tunes run routing),
-`created_by`.
+(`limits.runner_grace_seconds` tunes run routing;
+`limits.runner_memory_mb` / `limits.runner_cpus` cap the hosted runner
+container, falling back to the plan's defaults — `orgs.PlanDefaults` — when
+unset; there is no API for editing `limits` yet, operators set keys directly
+in the database), `created_by`.
 
 ### org_members
 `(org_id, user_id)` → `role` (`admin` | `member`). Org admins act as owners

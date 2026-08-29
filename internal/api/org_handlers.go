@@ -16,6 +16,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/hostedworkers"
 	"github.com/openv/requirements-platform/internal/domain/members"
 	"github.com/openv/requirements-platform/internal/domain/orgs"
+	"github.com/openv/requirements-platform/internal/hosting"
 )
 
 func (h *Handler) registerOrgRoutes(router *mux.Router) {
@@ -600,6 +601,15 @@ func (h *Handler) CreateHostedRunner(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// The container is capped at the org's effective limits (explicit
+	// org limits merged over its plan's defaults).
+	org, err := h.orgService.Get(orgID)
+	if err != nil {
+		respondInternal(w, r, "failed to load workspace", err)
+		return
+	}
+	limits := hosting.ResourceLimitsForOrg(org)
+
 	// Mint a workspace worker key for the container (plaintext shown to the
 	// container env only).
 	key, plaintext, err := h.workerKeyService.Create(orgID, hostedRunnerKeyName, CurrentUserID(r), nil)
@@ -624,7 +634,7 @@ func (h *Handler) CreateHostedRunner(w http.ResponseWriter, r *http.Request) {
 	}
 
 	status, detail := hostedworkers.StatusRunning, ""
-	if err := h.provisioner.Provision(orgID, record.ContainerName, plaintext, extraEnv); err != nil {
+	if err := h.provisioner.Provision(orgID, record.ContainerName, plaintext, extraEnv, limits); err != nil {
 		status, detail = hostedworkers.StatusError, err.Error()
 	}
 	record, err = h.hostedWorkerService.SetStatus(record.ID, status, detail)

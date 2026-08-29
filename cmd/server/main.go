@@ -32,6 +32,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/interviews"
 	"github.com/openv/requirements-platform/internal/domain/links"
 	"github.com/openv/requirements-platform/internal/domain/members"
+	"github.com/openv/requirements-platform/internal/domain/notifications"
 	"github.com/openv/requirements-platform/internal/domain/orgs"
 	"github.com/openv/requirements-platform/internal/domain/products"
 	"github.com/openv/requirements-platform/internal/domain/projects"
@@ -47,6 +48,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/workitems"
 	eventbus "github.com/openv/requirements-platform/internal/events"
 	"github.com/openv/requirements-platform/internal/hosting"
+	"github.com/openv/requirements-platform/internal/notify"
 	"github.com/openv/requirements-platform/internal/orchestration"
 	"github.com/openv/requirements-platform/internal/persistence/postgres"
 	"github.com/openv/requirements-platform/internal/scheduler"
@@ -160,6 +162,7 @@ func main() {
 	orgRepo := postgres.NewOrgRepository(db)
 	workerKeyRepo := postgres.NewWorkerKeyRepository(db)
 	hostedWorkerRepo := postgres.NewHostedWorkerRepository(db)
+	notificationRepo := postgres.NewNotificationRepository(db)
 
 	// Event bus. The org resolver backfills tenant attribution for events
 	// published by services that only know their project.
@@ -372,6 +375,11 @@ func main() {
 	runService.AddSubscriber(hooks)
 	hooks.SubscribeBus(bus)
 
+	// Notification fan-out: bus events become per-user inbox rows plus live
+	// SSE pushes on notify:<user_id> (issue #132).
+	notificationService := notifications.NewDefaultService(notificationRepo)
+	notify.NewNotifier(notificationService, memberService, sseHub).Start(bus)
+
 	// Trigger matcher + scheduler + reaper. The scheduler and reaper loops
 	// stop when the signal context is canceled.
 	automation.NewTriggerMatcher(automationRepo, runService, teamService).Start(bus)
@@ -436,6 +444,7 @@ func main() {
 		OrgTeamService:      orgTeamService,
 		WorkerKeyService:    workerKeyService,
 		HostedWorkerService: hostedWorkerService,
+		NotificationService: notificationService,
 		Provisioner:         provisioner,
 		OrgSeeder: func(orgID string) error {
 			return seeds.EnsureOrgDefaults(orgID, agentService, teamService)
