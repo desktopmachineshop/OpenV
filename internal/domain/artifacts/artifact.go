@@ -213,6 +213,10 @@ type Service interface {
 	ChangeStatus(id string, status string) (*Artifact, error)
 	DeleteArtifact(id string) error
 	ListArtifacts(projectID string, artifactType string) ([]*Artifact, error)
+	// ListByStatus returns a project's current artifacts in the given review
+	// status (e.g. in_review for the review queue, issue #183), newest change
+	// first.
+	ListByStatus(projectID string, status string) ([]*Artifact, error)
 	// ListArtifactsPage returns one page of a project's current artifacts in
 	// stable tree order plus the total count of matching artifacts. Artifacts
 	// form a parent_id tree that the UI reassembles client-side, so
@@ -233,6 +237,9 @@ type Repository interface {
 	FindByID(id string) (*Artifact, error)
 	FindByProjectID(projectID string) ([]*Artifact, error)
 	FindByProjectAndType(projectID string, artifactType string) ([]*Artifact, error)
+	// FindByProjectAndStatus returns a project's current artifacts in the
+	// given review status (issue #183).
+	FindByProjectAndStatus(projectID string, status string) ([]*Artifact, error)
 	// FindPageByProject returns one page of a project's current artifacts in
 	// stable tree order (parent_id NULLS FIRST, sort_order, created_at, id);
 	// artifactType "" means all types.
@@ -436,6 +443,11 @@ func (s *DefaultService) ListArtifacts(projectID string, artifactType string) ([
 		return s.repo.FindByProjectID(projectID)
 	}
 	return s.repo.FindByProjectAndType(projectID, artifactType)
+}
+
+// ListByStatus lists a project's current artifacts in the given review status.
+func (s *DefaultService) ListByStatus(projectID string, status string) ([]*Artifact, error) {
+	return s.repo.FindByProjectAndStatus(projectID, status)
 }
 
 // ListArtifactsPage returns one page of a project's artifacts plus the total
