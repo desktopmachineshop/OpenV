@@ -341,6 +341,19 @@ func (s *DefaultService) StartOrResumeSession(inviteID, interviewID, participant
 		return nil, err
 	}
 	if existing != nil {
+		// Backfill the participant name onto a still-anonymous session. The
+		// SSE stream connects (and creates the session) before the name gate
+		// submits, so the active session is usually created anonymously; the
+		// first message then carries the real name and must persist it, or the
+		// reviewer only ever sees "Anonymous participant". Only fill a blank —
+		// never overwrite a name already recorded. (#205)
+		name := strings.TrimSpace(participantName)
+		if name != "" && strings.TrimSpace(existing.ParticipantName) == "" {
+			existing.ParticipantName = name
+			if err := s.repo.UpdateSession(existing); err != nil {
+				return nil, err
+			}
+		}
 		return existing, nil
 	}
 

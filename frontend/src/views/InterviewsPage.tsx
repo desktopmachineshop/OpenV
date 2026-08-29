@@ -251,8 +251,9 @@ export const InterviewsPage: React.FC = () => {
         {showNewInterview && (
           <form onSubmit={createInterview} style={{ background: 'var(--surface-alt)', borderRadius: 4, padding: 14, marginBottom: 14 }}>
             <div className="form-group">
-              <label>Interview name *</label>
+              <label htmlFor="new-interview-name">Interview name *</label>
               <input
+                id="new-interview-name"
                 value={newInterviewName}
                 onChange={(e) => setNewInterviewName(e.target.value)}
                 placeholder="e.g. Machinist onboarding feedback"
@@ -260,8 +261,9 @@ export const InterviewsPage: React.FC = () => {
               />
             </div>
             <div className="form-group">
-              <label>Brief for the interviewer agent</label>
+              <label htmlFor="new-interview-brief">Brief for the interviewer agent</label>
               <textarea
+                id="new-interview-brief"
                 rows={3}
                 value={newInterviewBrief}
                 onChange={(e) => setNewInterviewBrief(e.target.value)}
@@ -269,8 +271,8 @@ export const InterviewsPage: React.FC = () => {
               />
             </div>
             <div className="form-group">
-              <label>Persona</label>
-              <select value={newInterviewPersonaId} onChange={(e) => setNewInterviewPersonaId(e.target.value)}>
+              <label htmlFor="new-interview-persona">Persona</label>
+              <select id="new-interview-persona" value={newInterviewPersonaId} onChange={(e) => setNewInterviewPersonaId(e.target.value)}>
                 <option value="">No persona</option>
                 {personas.map((p) => (
                   <option key={p.id} value={p.id}>
