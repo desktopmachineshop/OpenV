@@ -7,6 +7,8 @@ import (
     "errors"
     "time"
 
+    "github.com/lib/pq"
+
     "github.com/openv/requirements-platform/internal/domain/artifacts"
 )
 
@@ -279,6 +281,46 @@ func (r *ArtifactRepository) NextSortOrder(projectID string, parentID *string) (
 	}
 
 	return next, nil
+}
+
+// SearchInProjects finds current artifacts whose title or body contains the
+// query (case-insensitive) within the given projects. Title matches rank
+// before body-only matches; ties break on most recently updated. ProjectName
+// is left empty — the API layer resolves it.
+func (r *ArtifactRepository) SearchInProjects(projectIDs []string, query string, limit int) ([]*artifacts.SearchHit, error) {
+	if len(projectIDs) == 0 {
+		return []*artifacts.SearchHit{}, nil
+	}
+
+	pattern := artifacts.LikePattern(query)
+	sqlQuery := `
+		SELECT id, project_id, type, title, body
+		FROM artifacts
+		WHERE valid_to IS NULL
+		AND project_id = ANY($1)
+		AND (title ILIKE $2 OR body ILIKE $2)
+		ORDER BY (title ILIKE $2) DESC, updated_at DESC
+		LIMIT $3
+	`
+
+	rows, err := r.db.Query(sqlQuery, pq.Array(projectIDs), pattern, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	hits := []*artifacts.SearchHit{}
+	for rows.Next() {
+		hit := new(artifacts.SearchHit)
+		var body string
+		if err := rows.Scan(&hit.ArtifactID, &hit.ProjectID, &hit.Type, &hit.Title, &body); err != nil {
+			return nil, err
+		}
+		hit.Snippet = artifacts.Snippet(body, query)
+		hits = append(hits, hit)
+	}
+
+	return hits, rows.Err()
 }
 
 // FindVersionsByID retrieves all versions of an artifact (including historical ones)

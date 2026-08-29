@@ -1186,4 +1186,20 @@ export const eventsAPI = {
     client.get<DomainEvent[]>('/api/v1/events', { params }),
 };
 
+// One row of the global artifact search (GET /api/v1/search). Results are
+// already scoped server-side to projects the caller can access.
+export interface SearchHit {
+  artifact_id: string;
+  project_id: string;
+  project_name: string;
+  type: string;
+  title: string;
+  snippet: string;
+}
+
+export const searchAPI = {
+  global: (q: string, limit?: number) =>
+    client.get<SearchHit[]>('/api/v1/search', { params: limit ? { q, limit } : { q } }),
+};
+
 export default client;

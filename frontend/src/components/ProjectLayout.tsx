@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { NavLink, Outlet, useNavigate, useParams } from 'react-router-dom';
 import { projectAPI, Project } from '../api/client';
 import { useAppStore } from '../state/store';
+import { GlobalSearch } from './GlobalSearch';
 import { OrgSwitcher } from './OrgSwitcher';
 import { UserMenu } from './UserMenu';
 
@@ -114,6 +115,9 @@ export const ProjectLayout: React.FC = () => {
             onClick={() => navigate('/projects')}
           >
             {project?.name || '…'}
+          </div>
+          <div style={{ marginTop: 8 }}>
+            <GlobalSearch />
           </div>
         </div>
         <nav style={{ flex: 1, overflowY: 'auto', padding: '8px 0' }}>
