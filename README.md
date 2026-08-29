@@ -269,7 +269,15 @@ Contributions are welcome! Please follow these guidelines:
 
 ## Licensing
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+OpenV is licensed under the [GNU AGPL-3.0](LICENSE).
+
+In practice: you can use, self-host, modify, and redistribute OpenV freely —
+solo, as a team, commercially, whatever. The AGPL asks only that if you run a
+*modified* version for others over a network, you offer those users the
+modified source. Just using OpenV obligates you to nothing.
+
+Contributions are accepted under the Developer Certificate of Origin — see
+[CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Support
 
