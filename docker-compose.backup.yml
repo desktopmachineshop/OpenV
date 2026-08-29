@@ -1,0 +1,64 @@
+# Opt-in scheduled-backup overlay for docker-compose.yml.
+#
+# It is NEVER used alone — always layer it on top of the base file (and the
+# prod overlay, if you run prod):
+#
+#   docker compose -f docker-compose.yml -f docker-compose.backup.yml up -d
+#   # prod:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml \
+#                  -f docker-compose.backup.yml up -d
+#
+# It adds a single `backup` sidecar that, on a fixed interval, runs the same
+# scripts/backup.sh recipe the manual `make backup` uses (pg_dump over the
+# compose network + tar of the openv-data and uploads volumes) and prunes old
+# bundles. The default stack is unchanged unless you include this file.
+#
+# The sidecar is just the stock postgres:15-alpine image (already pulled for
+# Postgres, so it ships a version-matched pg_dump plus busybox tar/find) with
+# the backup script bind-mounted in — no image to build.
+#
+# Configuration (put these in the same .env the rest of the stack reads):
+#   BACKUP_HOST_DIR         host path (or named volume) bundles land in
+#                           (default ./backups — same dir make backup uses)
+#   BACKUP_RETENTION_DAYS   prune bundles older than N days (default 7; 0 = keep all)
+#   BACKUP_INTERVAL_SECONDS seconds between runs (default 86400 = daily)
+#   POSTGRES_PASSWORD       DB password (defaults to the dev "postgres")
+
+services:
+  backup:
+    image: postgres:15-alpine
+    container_name: openv-backup
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    environment:
+      # pg_dump reads PGPASSWORD; matches the API/postgres services.
+      PGPASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_USER: postgres
+      DB_NAME: openv
+      DATA_DIR: /data
+      UPLOADS_DIR: /uploads
+      BACKUP_DIR: /backups
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-7}
+      BACKUP_INTERVAL_SECONDS: ${BACKUP_INTERVAL_SECONDS:-86400}
+    volumes:
+      # Same data the API sees, read-only — the sidecar only reads it.
+      - openv-data:/data:ro
+      - uploads_data:/uploads:ro
+      # Where bundles are written; defaults to the same ./backups dir the
+      # manual make targets use, so make restore finds automated bundles too.
+      - ${BACKUP_HOST_DIR:-./backups}:/backups
+      # The shared recipe. Bind-mounted (not baked) so no image build is
+      # needed and edits to the script take effect on restart.
+      - ./scripts/backup.sh:/usr/local/bin/backup.sh:ro
+    # Bypass the postgres image's own entrypoint; just run our script.
+    entrypoint: ["sh", "/usr/local/bin/backup.sh"]
+    command: ["--loop"]
+
+volumes:
+  # Re-declared so this overlay attaches to the SAME named volumes the base
+  # file defines (compose merges them; the project prefix keeps them identical).
+  openv-data:
+  uploads_data:
