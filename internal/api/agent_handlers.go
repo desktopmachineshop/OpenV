@@ -17,6 +17,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/members"
 	"github.com/openv/requirements-platform/internal/domain/orgs"
 	"github.com/openv/requirements-platform/internal/domain/projects"
+	"github.com/openv/requirements-platform/internal/domain/proposals"
 	"github.com/openv/requirements-platform/internal/domain/providers"
 	"github.com/openv/requirements-platform/internal/domain/repoconns"
 	"github.com/openv/requirements-platform/internal/domain/teams"
@@ -46,6 +47,7 @@ func (h *Handler) registerAgentRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/agent-runs/{id}/logs", h.AppendAgentRunLogs).Methods("POST")
 	router.HandleFunc("/api/v1/agent-runs/{id}/stream", h.StreamAgentRun).Methods("GET")
 	router.HandleFunc("/api/v1/agent-runs/{id}/cancel", h.CancelAgentRun).Methods("POST")
+	router.HandleFunc("/api/v1/agent-runs/{id}/retry", h.RetryAgentRun).Methods("POST")
 	router.HandleFunc("/api/v1/agent-runs/{id}/start", h.StartAgentRun).Methods("POST")
 	router.HandleFunc("/api/v1/agent-runs/{id}/finish", h.FinishAgentRun).Methods("POST")
 
@@ -59,6 +61,7 @@ func (h *Handler) registerAgentRoutes(router *mux.Router) {
 
 	// Proposals.
 	router.HandleFunc("/api/v1/proposals", h.ListProposals).Methods("GET")
+	router.HandleFunc("/api/v1/proposals/bulk", h.BulkReviewProposals).Methods("POST")
 	router.HandleFunc("/api/v1/proposals/{id}/approve", h.ApproveProposal).Methods("POST")
 	router.HandleFunc("/api/v1/proposals/{id}/reject", h.RejectProposal).Methods("POST")
 
@@ -463,6 +466,38 @@ func (h *Handler) CancelAgentRun(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	json.NewEncoder(w).Encode(cancelled)
+}
+
+// RetryAgentRun re-enqueues a terminal run as a NEW run with the same org,
+// agent, project and prompt, launched by the retrying user (so their
+// personal-runner reservation applies) with provenance in
+// retried_from_run_id. Access mirrors launching/cancelling: the original
+// launcher, project editors, or workspace admins for unscoped runs. Only
+// failed, cancelled, and timed_out runs are retryable — a status conflict
+// answers 409 with the sentinel text, like the worker lifecycle endpoints.
+func (h *Handler) RetryAgentRun(w http.ResponseWriter, r *http.Request) {
+	if !requireUser(w, r) {
+		return
+	}
+	run, err := h.runService.Get(mux.Vars(r)["id"])
+	if err != nil {
+		respondError(w, r, http.StatusNotFound, "agent run not found", err)
+		return
+	}
+	if !h.requireRunAccess(w, r, run, members.RoleEditor) {
+		return
+	}
+	retried, err := h.runService.Retry(run.ID, CurrentUserID(r))
+	if err != nil {
+		if errors.Is(err, agentruns.ErrNotRetryable) {
+			writeJSONError(w, http.StatusConflict, err.Error())
+			return
+		}
+		respondInternal(w, r, "failed to retry run", err)
+		return
+	}
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(retried)
 }
 
 // --- Worker endpoints ---
@@ -963,6 +998,72 @@ func (h *Handler) reviewProposal(w http.ResponseWriter, r *http.Request, approve
 
 func (h *Handler) ApproveProposal(w http.ResponseWriter, r *http.Request) {
 	h.reviewProposal(w, r, true)
+}
+
+// bulkOutcome reports one proposal's fate inside a bulk review request.
+type bulkOutcome struct {
+	ID    string `json:"id"`
+	OK    bool   `json:"ok"`
+	Error string `json:"error,omitempty"`
+}
+
+// BulkReviewProposals approves or rejects up to MaxProposalsPerRun proposals
+// in one request. Proposals are processed sequentially and each one goes
+// through exactly the same ladder as a single review: load, project-editor
+// authz, then the same Approve/Reject service methods (approvals apply real
+// writes via the wired appliers). The response is 200 even on partial
+// failure — the client renders the per-id outcomes.
+func (h *Handler) BulkReviewProposals(w http.ResponseWriter, r *http.Request) {
+	if !requireUser(w, r) {
+		return
+	}
+	var req struct {
+		IDs    []string `json:"ids"`
+		Action string   `json:"action"`
+		Note   string   `json:"note"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if req.Action != "approve" && req.Action != "reject" {
+		writeJSONError(w, http.StatusBadRequest, `action must be "approve" or "reject"`)
+		return
+	}
+	if len(req.IDs) == 0 {
+		writeJSONError(w, http.StatusBadRequest, "ids is required")
+		return
+	}
+	if len(req.IDs) > proposals.MaxProposalsPerRun {
+		writeJSONError(w, http.StatusBadRequest,
+			fmt.Sprintf("at most %d proposals per bulk request", proposals.MaxProposalsPerRun))
+		return
+	}
+
+	reviewer := CurrentUserID(r)
+	results := make([]bulkOutcome, 0, len(req.IDs))
+	for _, id := range req.IDs {
+		proposal, err := h.proposalService.Get(id)
+		if err != nil {
+			results = append(results, bulkOutcome{ID: id, Error: "proposal not found"})
+			continue
+		}
+		if !h.hasProjectRole(r, proposal.ProjectID, members.RoleEditor) {
+			results = append(results, bulkOutcome{ID: id, Error: "you do not have access to this project"})
+			continue
+		}
+		if req.Action == "approve" {
+			_, err = h.proposalService.Approve(id, reviewer, req.Note)
+		} else {
+			_, err = h.proposalService.Reject(id, reviewer, req.Note)
+		}
+		if err != nil {
+			results = append(results, bulkOutcome{ID: id, Error: err.Error()})
+			continue
+		}
+		results = append(results, bulkOutcome{ID: id, OK: true})
+	}
+	json.NewEncoder(w).Encode(map[string]interface{}{"results": results})
 }
 
 func (h *Handler) RejectProposal(w http.ResponseWriter, r *http.Request) {

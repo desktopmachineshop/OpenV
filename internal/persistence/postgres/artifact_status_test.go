@@ -59,8 +59,8 @@ func TestArtifactStatusBackfill(t *testing.T) {
 	if err := Migrate(db); err != nil {
 		t.Fatalf("Migrate: %v", err)
 	}
-	if _, ok := ledgerRows(t, db)[3]; !ok {
-		t.Fatal("expected migration 0003 in the ledger")
+	if _, ok := ledgerRows(t, db)[4]; !ok {
+		t.Fatal("expected migration 0004 in the ledger")
 	}
 
 	statusOf := func(id string) string {

@@ -1,5 +1,5 @@
 import React, { useCallback, useState, useEffect } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useAppStore } from '../state/store';
 import { artifactAPI, linkAPI, attachmentAPI, baselineAPI, projectAPI, Artifact, Link, Attachment, Baseline, ProjectExport } from '../api/client';
 import { ArtifactEditor } from '../components/ArtifactEditor';
@@ -60,6 +60,7 @@ export const ModuleView: React.FC = () => {
   const storeProjectId = useAppStore((s) => s.projectId);
   const projectId = params.projectId || storeProjectId;
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
 
   const {
     artifacts,
@@ -780,6 +781,28 @@ export const ModuleView: React.FC = () => {
             </option>
           ))}
         </select>
+        <button
+          onClick={() => {
+            // Compare the selected baseline (or the newest one when viewing
+            // live) against the live project by default.
+            const base = activeBaselineId !== 'live' ? activeBaselineId : baselines[0]?.id;
+            if (base) navigate(`/projects/${projectId}/baselines/${base}/compare`);
+          }}
+          disabled={baselines.length === 0}
+          style={{
+            height: '36px',
+            padding: '0 12px',
+            backgroundColor: baselines.length === 0 ? 'var(--neutral-mid)' : 'var(--accent)',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: baselines.length === 0 ? 'not-allowed' : 'pointer',
+            fontSize: '12px',
+          }}
+          title="Compare this baseline against another baseline or the live project"
+        >
+          Compare
+        </button>
         <button
           onClick={() => handleDeleteBaseline(activeBaselineId)}
           disabled={activeBaselineId === 'live'}

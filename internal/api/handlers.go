@@ -221,6 +221,7 @@ func (h *Handler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/projects/{id}/baselines", h.CreateBaseline).Methods("POST")
 	router.HandleFunc("/api/v1/projects/{id}/baselines", h.ListBaselines).Methods("GET")
 	router.HandleFunc("/api/v1/baselines/{id}", h.GetBaseline).Methods("GET")
+	router.HandleFunc("/api/v1/baselines/{id}/diff", h.DiffBaseline).Methods("GET")
 	router.HandleFunc("/api/v1/baselines/{id}", h.DeleteBaseline).Methods("DELETE")
 	router.HandleFunc("/api/v1/templates", h.ListTemplates).Methods("GET")
 	router.HandleFunc("/api/v1/templates", h.CreateTemplate).Methods("POST")

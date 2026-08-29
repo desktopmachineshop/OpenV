@@ -269,6 +269,52 @@ export const projectAPI = {
   },
 };
 
+/** One side of a baseline comparison: a baseline, or the live project (id "live"). */
+export interface BaselineDiffRef {
+  id: string;
+  name: string;
+}
+
+/** An artifact present on only one side of a baseline comparison. */
+export interface BaselineDiffArtifact {
+  id: string;
+  type: string;
+  title: string;
+}
+
+/** An artifact present on both sides with at least one tracked field changed. */
+export interface BaselineDiffModified {
+  id: string;
+  type: string;
+  old_title: string;
+  new_title: string;
+  title_changed: boolean;
+  body_changed: boolean;
+  type_changed: boolean;
+  status_changed: boolean;
+  parent_changed: boolean;
+}
+
+/** A link present on only one side of a baseline comparison. */
+export interface BaselineDiffLink {
+  from_id: string;
+  to_id: string;
+  type: string;
+  from_title: string;
+  to_title: string;
+}
+
+/** Changes in the direction base → target (added = present only in target). */
+export interface BaselineDiff {
+  base: BaselineDiffRef;
+  target: BaselineDiffRef;
+  added: BaselineDiffArtifact[];
+  removed: BaselineDiffArtifact[];
+  modified: BaselineDiffModified[];
+  links_added: BaselineDiffLink[];
+  links_removed: BaselineDiffLink[];
+}
+
 export const baselineAPI = {
   create: (projectId: string, name: string) =>
     client.post<Baseline>(`/api/v1/projects/${projectId}/baselines`, { name }),
@@ -276,6 +322,8 @@ export const baselineAPI = {
     client.get<Baseline[]>(`/api/v1/projects/${projectId}/baselines`),
   get: (baselineId: string) =>
     client.get<ProjectExport>(`/api/v1/baselines/${baselineId}`),
+  diff: (baselineId: string, against: string) =>
+    client.get<BaselineDiff>(`/api/v1/baselines/${baselineId}/diff`, { params: { against } }),
   delete: (baselineId: string) =>
     client.delete(`/api/v1/baselines/${baselineId}`),
 };
@@ -548,6 +596,9 @@ export interface AgentRun {
   team_node_id?: string | null;
   parent_run_id?: string | null;
   work_item_id?: string | null;
+  // Provenance: set when this run was re-enqueued from a terminal run via
+  // the retry endpoint (no run-tree semantics, unlike parent_run_id).
+  retried_from_run_id?: string | null;
   status: string;
   prompt: string;
   final_text: string;
@@ -776,8 +827,36 @@ export interface TeamGrant {
   team_name: string;
 }
 
+// Workspace usage rollup: the same runs aggregated by agent and by day.
+export interface OrgUsageTotals {
+  runs: number;
+  tokens_in: number;
+  tokens_out: number;
+  cost_usd: number;
+}
+
+export interface OrgAgentUsage extends OrgUsageTotals {
+  agent_slug: string;
+  agent_name: string;
+}
+
+export interface OrgDailyUsage extends OrgUsageTotals {
+  day: string; // YYYY-MM-DD (UTC)
+}
+
+export interface OrgUsageSummary {
+  days: number;
+  totals: OrgUsageTotals;
+  by_agent: OrgAgentUsage[];
+  by_day: OrgDailyUsage[];
+}
+
 export const orgsAPI = {
   list: () => client.get<{ orgs: Org[]; active_org: string }>('/api/v1/orgs'),
+  usage: (orgId: string, days?: number) =>
+    client.get<OrgUsageSummary>(`/api/v1/orgs/${orgId}/usage`, {
+      params: days ? { days } : {},
+    }),
   create: (name: string) => client.post<Org>('/api/v1/orgs', { name }),
   get: (id: string) => client.get<Org>(`/api/v1/orgs/${id}`),
   update: (id: string, payload: Partial<Org>) => client.put<Org>(`/api/v1/orgs/${id}`, payload),
@@ -1070,6 +1149,9 @@ export const agentRunsAPI = {
   streamUrl: (id: string, afterSeq = 0) =>
     `${API_BASE_URL}/api/v1/agent-runs/${id}/stream?after_seq=${afterSeq}`,
   cancel: (id: string) => client.post<AgentRun>(`/api/v1/agent-runs/${id}/cancel`),
+  // Re-enqueue a terminal (failed/cancelled/timed_out) run as a NEW run with
+  // the same agent/prompt/project, launched by the caller.
+  retry: (id: string) => client.post<AgentRun>(`/api/v1/agent-runs/${id}/retry`),
 };
 
 export const automationsAPI = {
@@ -1083,6 +1165,12 @@ export const automationsAPI = {
   runNow: (id: string) => client.post<AgentRun>(`/api/v1/automations/${id}/run-now`),
 };
 
+export interface BulkProposalOutcome {
+  id: string;
+  ok: boolean;
+  error?: string;
+}
+
 export const proposalsAPI = {
   list: (params: { project_id?: string; status?: string; run_id?: string }) =>
     client.get<Proposal[]>('/api/v1/proposals', { params }),
@@ -1090,6 +1178,12 @@ export const proposalsAPI = {
     client.post<Proposal>(`/api/v1/proposals/${id}/approve`, { note: note || '' }),
   reject: (id: string, note?: string) =>
     client.post<Proposal>(`/api/v1/proposals/${id}/reject`, { note: note || '' }),
+  bulkReview: (ids: string[], action: 'approve' | 'reject', note?: string) =>
+    client.post<{ results: BulkProposalOutcome[] }>('/api/v1/proposals/bulk', {
+      ids,
+      action,
+      note: note || '',
+    }),
 };
 
 export const repoConnectionsAPI = {

@@ -76,6 +76,10 @@ func TruncateAnswer(text string) string {
 var (
 	ErrNotFound          = errors.New("agent run not found")
 	ErrInvalidTransition = errors.New("invalid run status transition")
+	// ErrNotRetryable rejects retrying a run that is not in a retryable
+	// terminal state (only failed, cancelled, and timed_out runs re-enqueue;
+	// retrying a succeeded run would just invite duplicate side effects).
+	ErrNotRetryable = errors.New("run is not retryable")
 )
 
 // Run is one agent execution; the agent_runs table doubles as the job queue.
@@ -92,7 +96,11 @@ type Run struct {
 	WorkItemID         *string                  `json:"work_item_id,omitempty"`
 	InterviewSessionID *string                  `json:"interview_session_id,omitempty"`
 	GuidedSessionID    *string                  `json:"guided_session_id,omitempty"`
-	Status             string                   `json:"status"`
+	// RetriedFromRunID records provenance: the terminal run this run was
+	// re-enqueued from via Retry. Unlike ParentRunID it carries no queue or
+	// run-tree semantics — a retry is a sibling, not a child.
+	RetriedFromRunID *string `json:"retried_from_run_id,omitempty"`
+	Status           string  `json:"status"`
 	CancelRequested    bool                     `json:"cancel_requested"`
 	Priority           int                      `json:"priority"`
 	Prompt             string                   `json:"prompt"`
@@ -142,6 +150,7 @@ type LaunchRequest struct {
 	WorkItemID         *string
 	InterviewSessionID *string
 	GuidedSessionID    *string
+	RetriedFromRunID   *string
 	Priority           int
 	Prompt             string
 	LaunchedBy         *string
@@ -163,6 +172,44 @@ type QueueStats struct {
 	Queued              int `json:"queued"`
 	OldestQueuedSeconds int `json:"oldest_queued_seconds"`
 	QueuedRepoAccess    int `json:"queued_repo_access"`
+}
+
+// AgentUsage aggregates one agent's runs in a usage window.
+type AgentUsage struct {
+	AgentSlug string  `json:"agent_slug"`
+	AgentName string  `json:"agent_name"`
+	Runs      int     `json:"runs"`
+	TokensIn  int64   `json:"tokens_in"`
+	TokensOut int64   `json:"tokens_out"`
+	CostUSD   float64 `json:"cost_usd"`
+}
+
+// DailyUsage aggregates one calendar day's runs in a usage window.
+type DailyUsage struct {
+	Day       string  `json:"day"` // YYYY-MM-DD (UTC)
+	Runs      int     `json:"runs"`
+	TokensIn  int64   `json:"tokens_in"`
+	TokensOut int64   `json:"tokens_out"`
+	CostUSD   float64 `json:"cost_usd"`
+}
+
+// UsageTotals sums a usage window.
+type UsageTotals struct {
+	Runs      int     `json:"runs"`
+	TokensIn  int64   `json:"tokens_in"`
+	TokensOut int64   `json:"tokens_out"`
+	CostUSD   float64 `json:"cost_usd"`
+}
+
+// UsageSummary is an org's run usage over a window: the same runs rolled up
+// by agent and by day, plus grand totals. Runs are bucketed by created_at;
+// token/cost columns are zero until a run finishes, so live runs count toward
+// run totals but not spend.
+type UsageSummary struct {
+	Days    int          `json:"days"`
+	Totals  UsageTotals  `json:"totals"`
+	ByAgent []AgentUsage `json:"by_agent"`
+	ByDay   []DailyUsage `json:"by_day"`
 }
 
 // ListFilter filters run listings. OrgID and LaunchedBy scope the listing in
@@ -233,6 +280,10 @@ type Repository interface {
 	CountPendingProposals(runID string) (int, error)
 	// QueueStats summarizes the org's queued runs.
 	QueueStats(orgID string) (QueueStats, error)
+	// Usage aggregates an org's runs created at/after since, grouped by
+	// agent slug and by day (see UsageSummary; Days/Totals are the
+	// service's concern).
+	Usage(orgID string, since time.Time) ([]AgentUsage, []DailyUsage, error)
 }
 
 // Service defines run lifecycle logic.
@@ -240,6 +291,13 @@ type Service interface {
 	// Launch enqueues a run and returns it plus the raw run token
 	// (shown once; only its hash is stored).
 	Launch(req LaunchRequest) (*Run, string, error)
+	// Retry re-enqueues a NEW run with the source run's org, agent, project
+	// and prompt, recording provenance in RetriedFromRunID. Only runs in a
+	// retryable terminal state (failed, cancelled, timed_out) can be
+	// retried; anything else answers ErrNotRetryable. launchedBy is the
+	// retrying user (their personal-runner reservation applies), not the
+	// source run's launcher.
+	Retry(sourceRunID string, launchedBy *string) (*Run, error)
 	Get(id string) (*Run, error)
 	GetByToken(token string) (*Run, error)
 	List(filter ListFilter) ([]*Run, error)
@@ -265,6 +323,8 @@ type Service interface {
 	CountRunsSince(automationID string, since time.Time) (int, error)
 	// QueueStats summarizes the org's queued runs.
 	QueueStats(orgID string) (QueueStats, error)
+	// Usage rolls up the org's run usage over the window starting at since.
+	Usage(orgID string, since time.Time) (*UsageSummary, error)
 }
 
 // Subscriber is notified on run lifecycle changes and appended logs
@@ -347,6 +407,7 @@ func (s *DefaultService) Launch(req LaunchRequest) (*Run, string, error) {
 		WorkItemID:         req.WorkItemID,
 		InterviewSessionID: req.InterviewSessionID,
 		GuidedSessionID:    req.GuidedSessionID,
+		RetriedFromRunID:   req.RetriedFromRunID,
 		Status:             StatusQueued,
 		Priority:           req.Priority,
 		Prompt:             req.Prompt,
@@ -376,6 +437,40 @@ func (s *DefaultService) Launch(req LaunchRequest) (*Run, string, error) {
 	run.AgentProvider = agent.Provider
 	s.notifyStatus(run)
 	return run, token, nil
+}
+
+// retryableStatuses are the terminal states Retry accepts. Succeeded (and
+// awaiting_approval) runs are deliberately excluded: re-running work that
+// already landed invites duplicate side effects.
+var retryableStatuses = map[string]bool{
+	StatusFailed:    true,
+	StatusCancelled: true,
+	StatusTimedOut:  true,
+}
+
+// Retry enqueues a fresh run copying the source run's org, agent, project and
+// prompt. The new run is a plain manual launch: normal priority, launched by
+// the retrying user (so their personal-runner reservation applies), with
+// provenance recorded in RetriedFromRunID. Automation, crew, delegation,
+// interview and kanban links are NOT copied — those flows own their own
+// retry/follow-up semantics.
+func (s *DefaultService) Retry(sourceRunID string, launchedBy *string) (*Run, error) {
+	source, err := s.Get(sourceRunID)
+	if err != nil {
+		return nil, err
+	}
+	if !retryableStatuses[source.Status] {
+		return nil, fmt.Errorf("%w: run is %s (only failed, cancelled, or timed_out runs can be retried)", ErrNotRetryable, source.Status)
+	}
+	run, _, err := s.Launch(LaunchRequest{
+		OrgID:            source.OrgID,
+		AgentID:          source.AgentID,
+		ProjectID:        source.ProjectID,
+		Prompt:           source.Prompt,
+		LaunchedBy:       launchedBy,
+		RetriedFromRunID: &source.ID,
+	})
+	return run, err
 }
 
 // AttachWorkItem links a run to the kanban card tracking it. The write is a
@@ -677,6 +772,29 @@ func (s *DefaultService) CountRunsSince(automationID string, since time.Time) (i
 // QueueStats summarizes the org's queued runs.
 func (s *DefaultService) QueueStats(orgID string) (QueueStats, error) {
 	return s.repo.QueueStats(orgID)
+}
+
+// Usage rolls up the org's run usage since the given time. Totals are summed
+// from the per-agent rollup (both groupings cover the same runs).
+func (s *DefaultService) Usage(orgID string, since time.Time) (*UsageSummary, error) {
+	byAgent, byDay, err := s.repo.Usage(orgID, since)
+	if err != nil {
+		return nil, err
+	}
+	summary := &UsageSummary{ByAgent: byAgent, ByDay: byDay}
+	if summary.ByAgent == nil {
+		summary.ByAgent = []AgentUsage{}
+	}
+	if summary.ByDay == nil {
+		summary.ByDay = []DailyUsage{}
+	}
+	for _, a := range summary.ByAgent {
+		summary.Totals.Runs += a.Runs
+		summary.Totals.TokensIn += a.TokensIn
+		summary.Totals.TokensOut += a.TokensOut
+		summary.Totals.CostUSD += a.CostUSD
+	}
+	return summary, nil
 }
 
 func (s *DefaultService) notifyStatus(run *Run) {
