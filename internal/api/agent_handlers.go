@@ -437,12 +437,22 @@ func (h *Handler) StreamAgentRun(w http.ResponseWriter, r *http.Request) {
 	}
 	afterSeq, _ := strconv.Atoi(r.URL.Query().Get("after_seq"))
 	h.sseHub.ServeStream(w, r, runID, func(emit func(event string, data interface{})) error {
-		logs, err := h.runService.Logs(runID, afterSeq)
-		if err != nil {
-			return err
-		}
-		for _, entry := range logs {
-			emit("log", entry)
+		// Logs is paged (bounded per call), so drain every page before the live
+		// tail takes over: keep advancing the cursor to the last seq seen until
+		// a page comes back empty. seq strictly increases, so this terminates.
+		cursor := afterSeq
+		for {
+			logs, err := h.runService.Logs(runID, cursor)
+			if err != nil {
+				return err
+			}
+			if len(logs) == 0 {
+				break
+			}
+			for _, entry := range logs {
+				emit("log", entry)
+				cursor = entry.Seq
+			}
 		}
 		emit("status", map[string]interface{}{"run_id": run.ID, "status": run.Status})
 		return nil

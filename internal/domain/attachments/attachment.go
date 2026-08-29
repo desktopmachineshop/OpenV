@@ -44,6 +44,11 @@ type Repository interface {
 	Save(attachment *Attachment) error
 	FindByID(id string) (*Attachment, error)
 	FindByArtifactID(artifactID string) ([]*Attachment, error)
+	// FindByArtifactIDs fetches the attachments for many artifacts in a single
+	// query, grouped by artifact ID. Artifacts with no attachments are simply
+	// absent from the map. It exists to kill the per-artifact N+1 in bulk
+	// readers such as project export.
+	FindByArtifactIDs(artifactIDs []string) (map[string][]*Attachment, error)
 	Delete(id string) error
 }
 
@@ -52,6 +57,9 @@ type Service interface {
 	CreateAttachment(attachment *Attachment) error
 	GetAttachment(id string) (*Attachment, error)
 	GetAttachmentsByArtifact(artifactID string) ([]*Attachment, error)
+	// GetAttachmentsByArtifacts returns the attachments for many artifacts in a
+	// single query, grouped by artifact ID (see Repository.FindByArtifactIDs).
+	GetAttachmentsByArtifacts(artifactIDs []string) (map[string][]*Attachment, error)
 	DeleteAttachment(id string) error
 }
 
@@ -78,6 +86,12 @@ func (s *DefaultService) GetAttachment(id string) (*Attachment, error) {
 // GetAttachmentsByArtifact retrieves all attachments for an artifact
 func (s *DefaultService) GetAttachmentsByArtifact(artifactID string) ([]*Attachment, error) {
 	return s.repository.FindByArtifactID(artifactID)
+}
+
+// GetAttachmentsByArtifacts retrieves attachments for many artifacts in one
+// query, grouped by artifact ID.
+func (s *DefaultService) GetAttachmentsByArtifacts(artifactIDs []string) (map[string][]*Attachment, error) {
+	return s.repository.FindByArtifactIDs(artifactIDs)
 }
 
 // DeleteAttachment deletes an attachment

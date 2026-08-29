@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"fmt"
 
+	"github.com/lib/pq"
+
 	"github.com/openv/requirements-platform/internal/domain/attachments"
 )
 
@@ -101,6 +103,51 @@ func (r *AttachmentRepository) FindByArtifactID(artifactID string) ([]*attachmen
 	}
 
 	return attachmentList, nil
+}
+
+// FindByArtifactIDs retrieves attachments for many artifacts in a single
+// query, grouped by artifact ID. Within each artifact the ordering matches
+// FindByArtifactID (newest first); artifacts with no attachments are absent
+// from the returned map.
+func (r *AttachmentRepository) FindByArtifactIDs(artifactIDs []string) (map[string][]*attachments.Attachment, error) {
+	result := make(map[string][]*attachments.Attachment, len(artifactIDs))
+	if len(artifactIDs) == 0 {
+		return result, nil
+	}
+
+	query := `
+		SELECT id, artifact_id, filename, mime_type, file_path, file_size, created_at
+		FROM attachments
+		WHERE artifact_id = ANY($1)
+		ORDER BY artifact_id, created_at DESC
+	`
+	rows, err := r.db.Query(query, pq.Array(artifactIDs))
+	if err != nil {
+		return nil, fmt.Errorf("failed to find attachments: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		attachment := new(attachments.Attachment)
+		if err := rows.Scan(
+			&attachment.ID,
+			&attachment.ArtifactID,
+			&attachment.Filename,
+			&attachment.MimeType,
+			&attachment.FilePath,
+			&attachment.FileSize,
+			&attachment.CreatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("failed to scan attachment: %w", err)
+		}
+		result[attachment.ArtifactID] = append(result[attachment.ArtifactID], attachment)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("attachment rows error: %w", err)
+	}
+
+	return result, nil
 }
 
 // Delete removes an attachment

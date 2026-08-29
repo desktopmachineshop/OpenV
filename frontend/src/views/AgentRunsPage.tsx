@@ -7,6 +7,12 @@ import { ProposalReviewPanel } from '../components/agents/ProposalReviewPanel';
 import { RunnerConnectPrompt } from '../components/RunnerConnectPrompt';
 import { ErrorBanner } from '../components/ui';
 
+// Cap the 5s poll: this page re-fetches every run in the project on a timer,
+// which is unbounded as run history grows. 200 covers the visible table; the
+// server also clamps the limit. UI follow-up: paginate / infinite-scroll the
+// run list and drop this hard cap.
+const RUNS_POLL_LIMIT = 200;
+
 const STATUS_FILTERS = [
   'all',
   'queued',
@@ -48,7 +54,10 @@ export const AgentRunsPage: React.FC = () => {
 
   const load = useCallback(() => {
     if (!projectId) return;
-    const query: { project_id: string; status?: string } = { project_id: projectId };
+    const query: { project_id: string; status?: string; limit: number } = {
+      project_id: projectId,
+      limit: RUNS_POLL_LIMIT,
+    };
     if (statusFilter !== 'all') query.status = statusFilter;
     agentRunsAPI
       .list(query)

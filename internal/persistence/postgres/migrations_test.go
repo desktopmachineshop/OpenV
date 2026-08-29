@@ -101,6 +101,78 @@ func TestMigrateFreshDatabase(t *testing.T) {
 	}
 }
 
+// hotPathIndexes are the non-trigram indexes added by migration 0007. Every
+// one must exist after Migrate and survive a second boot unchanged.
+var hotPathIndexes = []string{
+	"idx_artifacts_project_active",
+	"idx_agent_runs_automation",
+	"idx_agent_runs_queued_claim",
+	"idx_agent_team_edges_from",
+	"idx_agent_proposals_project",
+	"idx_agent_runs_launched_by",
+	"idx_interview_sessions_invite",
+	"idx_notifications_user_unread_created",
+	"idx_links_from_active",
+	"idx_links_to_active",
+	"idx_agent_team_nodes_agent",
+}
+
+func extensionExists(t *testing.T, db *sql.DB, name string) bool {
+	t.Helper()
+	var exists bool
+	if err := db.QueryRow(
+		`SELECT EXISTS (SELECT 1 FROM pg_extension WHERE extname = $1)`, name,
+	).Scan(&exists); err != nil {
+		t.Fatalf("check extension %s: %v", name, err)
+	}
+	return exists
+}
+
+// TestHotPathIndexesCreated: migration 0007 creates every hot-path index, and
+// re-running Migrate (idempotent IF NOT EXISTS) neither errors nor drops them.
+// The 0008 trigram indexes are asserted only when pg_trgm is present (the
+// migration is designed to skip them, without bricking boot, where the role
+// cannot create the extension).
+func TestHotPathIndexesCreated(t *testing.T) {
+	db := testDB(t)
+
+	if err := Migrate(db); err != nil {
+		t.Fatalf("first Migrate: %v", err)
+	}
+	for _, idx := range hotPathIndexes {
+		if !indexExists(t, db, idx) {
+			t.Errorf("expected index %s after Migrate", idx)
+		}
+	}
+
+	trgmAvailable := extensionExists(t, db, "pg_trgm")
+	for _, idx := range []string{"idx_artifacts_title_trgm", "idx_artifacts_body_trgm"} {
+		got := indexExists(t, db, idx)
+		if trgmAvailable && !got {
+			t.Errorf("pg_trgm present but %s missing after Migrate", idx)
+		}
+		if !trgmAvailable && got {
+			t.Errorf("%s exists without pg_trgm extension", idx)
+		}
+	}
+	// The 0008 ledger row must be recorded regardless of whether the extension
+	// (and therefore the trigram indexes) could be created — boot must not
+	// brick on a managed Postgres that forbids CREATE EXTENSION.
+	if _, ok := ledgerRows(t, db)[8]; !ok {
+		t.Error("migration 0008 was not recorded in the ledger")
+	}
+
+	// Second boot: still clean, indexes intact.
+	if err := Migrate(db); err != nil {
+		t.Fatalf("second Migrate: %v", err)
+	}
+	for _, idx := range hotPathIndexes {
+		if !indexExists(t, db, idx) {
+			t.Errorf("index %s missing after second Migrate", idx)
+		}
+	}
+}
+
 // TestMigrateSecondBootNoop: a second Migrate on the same database succeeds
 // and does not add or rewrite ledger rows.
 func TestMigrateSecondBootNoop(t *testing.T) {

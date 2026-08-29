@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log/slog"
 	"strings"
 )
 
@@ -199,13 +200,9 @@ var migrations = []Migration{
 	}},
 
 	// 0007: review-queue read paths (issue #183). Two partial indexes over
-	// live rows only, matching the queue's two queries: suspect links touching
-	// a project, and a project's in_review artifacts. Both use IF NOT EXISTS —
-	// a concurrent scale-pass branch may already have added the suspect-links
-	// index under the same name, and re-applying this migration must not fail.
-	// NOTE: 0007 is claimed here but a concurrent scale-pass / chatter branch
-	// may also take 0007; the registry only requires ascending, unique
-	// versions, so the final number may need a bump on merge.
+	// live rows only: suspect links touching a project, and a project's
+	// in_review artifacts. IF NOT EXISTS so re-applying never fails and it
+	// coexists with the scale-pass suspect index of the same name.
 	{Version: 7, Name: "review_queue_indexes", Run: func(tx *sql.Tx) error {
 		if _, err := tx.Exec(`
 			CREATE INDEX IF NOT EXISTS idx_links_suspect
@@ -216,6 +213,85 @@ var migrations = []Migration{
 		_, err := tx.Exec(`
 			CREATE INDEX IF NOT EXISTS idx_artifacts_project_status
 			ON artifacts(project_id, status) WHERE valid_to IS NULL
+		`)
+		return err
+	}},
+
+	// 0008: hot-path indexes (issue #182, the data-volume pass). Every index
+	// serves a query that currently seq-scans or scans a broader index than it
+	// needs at scale; all are IF NOT EXISTS so the migration is a no-op on any
+	// database that already grew them by hand.
+	{Version: 8, Name: "hot_path_indexes", Run: func(tx *sql.Tx) error {
+		stmts := []string{
+			`CREATE INDEX IF NOT EXISTS idx_artifacts_project_active
+				ON artifacts(project_id) WHERE valid_to IS NULL`,
+			`CREATE INDEX IF NOT EXISTS idx_agent_runs_automation
+				ON agent_runs(automation_id, created_at)`,
+			`CREATE INDEX IF NOT EXISTS idx_agent_runs_queued_claim
+				ON agent_runs(org_id, priority DESC, created_at) WHERE status = 'queued'`,
+			`CREATE INDEX IF NOT EXISTS idx_agent_team_edges_from
+				ON agent_team_edges(from_node_id, edge_type)`,
+			`CREATE INDEX IF NOT EXISTS idx_agent_proposals_project
+				ON agent_proposals(project_id)`,
+			`CREATE INDEX IF NOT EXISTS idx_agent_runs_launched_by
+				ON agent_runs(launched_by)`,
+			`CREATE INDEX IF NOT EXISTS idx_interview_sessions_invite
+				ON interview_sessions(invite_id)`,
+			`CREATE INDEX IF NOT EXISTS idx_notifications_user_unread_created
+				ON notifications(user_id, created_at DESC) WHERE NOT read`,
+			`CREATE INDEX IF NOT EXISTS idx_links_from_active
+				ON links(from_id) WHERE valid_to IS NULL`,
+			`CREATE INDEX IF NOT EXISTS idx_links_to_active
+				ON links(to_id) WHERE valid_to IS NULL`,
+			`CREATE INDEX IF NOT EXISTS idx_agent_team_nodes_agent
+				ON agent_team_nodes(agent_id)`,
+		}
+		for _, st := range stmts {
+			if _, err := tx.Exec(st); err != nil {
+				return err
+			}
+		}
+		return nil
+	}},
+
+	// 0009: trigram search index for cross-project artifact search (issue
+	// #182). gin_trgm_ops makes the ILIKE predicate index-assisted. CREATE
+	// EXTENSION needs privilege some managed roles lack, so we probe and, when
+	// it is absent and uncreatable, roll back to a savepoint and skip the
+	// indexes (search keeps working via the seq-scan fallback) rather than
+	// bricking boot.
+	{Version: 9, Name: "artifact_trgm_search", Run: func(tx *sql.Tx) error {
+		var haveTrgm bool
+		if err := tx.QueryRow(
+			`SELECT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_trgm')`,
+		).Scan(&haveTrgm); err != nil {
+			return err
+		}
+		if !haveTrgm {
+			if _, err := tx.Exec(`SAVEPOINT trgm_ext`); err != nil {
+				return err
+			}
+			if _, err := tx.Exec(`CREATE EXTENSION IF NOT EXISTS pg_trgm`); err != nil {
+				if _, rbErr := tx.Exec(`ROLLBACK TO SAVEPOINT trgm_ext`); rbErr != nil {
+					return rbErr
+				}
+				slog.Warn("pg_trgm extension unavailable; skipping artifact trigram search indexes (cross-project search falls back to a sequential scan)",
+					slog.Any("error", err))
+				return nil
+			}
+			if _, err := tx.Exec(`RELEASE SAVEPOINT trgm_ext`); err != nil {
+				return err
+			}
+		}
+		if _, err := tx.Exec(`
+			CREATE INDEX IF NOT EXISTS idx_artifacts_title_trgm
+			ON artifacts USING gin (title gin_trgm_ops)
+		`); err != nil {
+			return err
+		}
+		_, err := tx.Exec(`
+			CREATE INDEX IF NOT EXISTS idx_artifacts_body_trgm
+			ON artifacts USING gin (body gin_trgm_ops)
 		`)
 		return err
 	}},
