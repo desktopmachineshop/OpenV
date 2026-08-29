@@ -151,7 +151,10 @@ func (s *DefaultService) GenerateProjectReport(projectID string, baselineID stri
 	var baselineName string
 
 	if baselineID != "" && baselineID != "live" {
-		baseline, err := s.baselineService.GetBaseline(baselineID)
+		// Scoped load: a baseline from another project is baselines.ErrNotFound,
+		// so a foreign baseline ID cannot pull another project's snapshot into
+		// this project's report.
+		baseline, err := s.baselineService.GetProjectBaseline(projectID, baselineID)
 		if err != nil {
 			return nil, "", err
 		}

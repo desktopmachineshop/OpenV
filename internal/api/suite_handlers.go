@@ -14,6 +14,7 @@ import (
 
 	"github.com/openv/requirements-platform/internal/domain/agentruns"
 	"github.com/openv/requirements-platform/internal/domain/artifacts"
+	"github.com/openv/requirements-platform/internal/domain/baselines"
 	"github.com/openv/requirements-platform/internal/domain/events"
 	"github.com/openv/requirements-platform/internal/domain/exports"
 	"github.com/openv/requirements-platform/internal/domain/guided"
@@ -85,10 +86,13 @@ func (h *Handler) registerSuiteRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/public/interviews/{token}/finish", h.PublicInterviewFinish).Methods("POST")
 }
 
-// projectExport loads the live export or a baseline snapshot as a DTO.
+// projectExport loads the live export or a baseline snapshot as a DTO. The
+// baseline load is scoped to the project the caller was authorized for: a
+// baseline from another project is indistinguishable from a missing one
+// (baselines.ErrNotFound), so IDs cannot be probed across projects.
 func (h *Handler) projectExport(projectID, baselineID string) (*exports.ProjectExport, error) {
 	if baselineID != "" && baselineID != "live" {
-		baseline, err := h.baselineService.GetBaseline(baselineID)
+		baseline, err := h.baselineService.GetProjectBaseline(projectID, baselineID)
 		if err != nil {
 			return nil, err
 		}
@@ -431,6 +435,10 @@ func (h *Handler) vvReportData(w http.ResponseWriter, r *http.Request) (*exports
 	}
 	export, err := h.projectExport(projectID, r.URL.Query().Get("baseline_id"))
 	if err != nil {
+		if errors.Is(err, baselines.ErrNotFound) {
+			respondError(w, r, http.StatusNotFound, "baseline not found", err)
+			return nil, nil, false
+		}
 		respondInternal(w, r, "failed to export project", err)
 		return nil, nil, false
 	}
@@ -487,6 +495,10 @@ func (h *Handler) GetVVReport(w http.ResponseWriter, r *http.Request) {
 
 	data, filename, err := h.reportService.GenerateVVReport(projectID, r.URL.Query().Get("baseline_id"), latest, runs)
 	if err != nil {
+		if errors.Is(err, baselines.ErrNotFound) {
+			respondError(w, r, http.StatusNotFound, "baseline not found", err)
+			return
+		}
 		respondInternal(w, r, "failed to generate V&V report", err)
 		return
 	}

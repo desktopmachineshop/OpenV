@@ -8,6 +8,12 @@ import (
 	"github.com/google/uuid"
 )
 
+// ErrNotFound is returned when a baseline does not exist — or, from
+// GetProjectBaseline, when it exists but belongs to a different project. The
+// two cases are deliberately indistinguishable so baseline IDs cannot be
+// probed across project (and thus org) boundaries.
+var ErrNotFound = errors.New("baseline not found")
+
 // Baseline represents a snapshot of a project at a point in time.
 type Baseline struct {
 	ID        string          `json:"id"`
@@ -30,6 +36,9 @@ type Service interface {
 	CreateBaseline(projectID string, name string, snapshot []byte) (*Baseline, error)
 	ListBaselines(projectID string) ([]*Baseline, error)
 	GetBaseline(id string) (*Baseline, error)
+	// GetProjectBaseline loads a baseline by ID, scoped to a project: a
+	// baseline that is missing or belongs to another project is ErrNotFound.
+	GetProjectBaseline(projectID, id string) (*Baseline, error)
 	DeleteBaseline(id string) error
 }
 
@@ -78,6 +87,17 @@ func (s *DefaultService) ListBaselines(projectID string) ([]*Baseline, error) {
 // GetBaseline retrieves a baseline by ID.
 func (s *DefaultService) GetBaseline(id string) (*Baseline, error) {
 	return s.repo.GetByID(id)
+}
+
+// GetProjectBaseline retrieves a baseline by ID, verifying it belongs to the
+// given project. Any load failure or ownership mismatch collapses into
+// ErrNotFound so callers cannot tell a foreign baseline from a missing one.
+func (s *DefaultService) GetProjectBaseline(projectID, id string) (*Baseline, error) {
+	baseline, err := s.repo.GetByID(id)
+	if err != nil || baseline == nil || baseline.ProjectID != projectID {
+		return nil, ErrNotFound
+	}
+	return baseline, nil
 }
 
 // DeleteBaseline removes a baseline by ID.
