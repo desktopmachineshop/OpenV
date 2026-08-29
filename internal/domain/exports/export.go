@@ -119,15 +119,28 @@ func (s *DefaultService) ExportProject(projectID string, format ExportFormat) ([
 		return nil, "", fmt.Errorf("failed to get links: %w", err)
 	}
 
-	// Get all attachments for all artifacts
-	var allAttachments []*attachments.Attachment
+	// Get all attachments for every artifact in one batched query (was a
+	// per-artifact N+1 — the worst offender on the export/baseline/diff/report
+	// substrate). Group in Go and flatten in artifact order so the export's
+	// attachment ordering is unchanged.
+	artifactIDs := make([]string, 0, len(artifactList))
 	for _, artifact := range artifactList {
-		attachmentList, err := s.attachmentService.GetAttachmentsByArtifact(artifact.ID)
-		if err != nil {
-			// Log error but continue
-			continue
+		if artifact != nil {
+			artifactIDs = append(artifactIDs, artifact.ID)
 		}
-		allAttachments = append(allAttachments, attachmentList...)
+	}
+	var allAttachments []*attachments.Attachment
+	if len(artifactIDs) > 0 {
+		byArtifact, err := s.attachmentService.GetAttachmentsByArtifacts(artifactIDs)
+		if err != nil {
+			return nil, "", fmt.Errorf("failed to get attachments: %w", err)
+		}
+		for _, artifact := range artifactList {
+			if artifact == nil {
+				continue
+			}
+			allAttachments = append(allAttachments, byArtifact[artifact.ID]...)
+		}
 	}
 
 	// Create export data structure

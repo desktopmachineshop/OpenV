@@ -302,6 +302,12 @@ func (r *ArtifactRepository) SearchInProjects(projectIDs []string, query string,
 	}
 
 	pattern := artifacts.LikePattern(query)
+	// The two ILIKE predicates are backed by the pg_trgm GIN indexes
+	// idx_artifacts_{title,body}_trgm (migration 0008): gin_trgm_ops supports
+	// ILIKE directly, so the planner bitmap-ORs the two index scans instead of
+	// sequentially scanning artifacts. Queries shorter than a trigram, or a
+	// database where the pg_trgm extension could not be created, fall back to a
+	// sequential scan — the query stays correct either way.
 	sqlQuery := `
 		SELECT id, project_id, type, title, body
 		FROM artifacts

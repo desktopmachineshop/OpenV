@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log/slog"
 	"strings"
 )
 
@@ -194,6 +195,129 @@ var migrations = []Migration{
 		_, err = tx.Exec(`
 			CREATE INDEX idx_notifications_user_unread
 			ON notifications(user_id) WHERE NOT read
+		`)
+		return err
+	}},
+
+	// 0007: hot-path indexes (issue #182, the data-volume pass). Every index
+	// serves a query that currently seq-scans or scans a broader index than it
+	// needs at scale; all are IF NOT EXISTS so the migration is a no-op on any
+	// database that already grew them by hand. Verified against the baseline
+	// schema (db.go / schema_*.go) so none duplicates an existing index.
+	{Version: 7, Name: "hot_path_indexes", Run: func(tx *sql.Tx) error {
+		stmts := []string{
+			// Every "current artifacts in a project" read (export, baseline,
+			// diff, report, VV, module views) filters project_id + valid_to IS
+			// NULL; the plain idx_artifacts_project_id can't skip the tombstoned
+			// versions this partial index excludes outright.
+			`CREATE INDEX IF NOT EXISTS idx_artifacts_project_active
+				ON artifacts(project_id) WHERE valid_to IS NULL`,
+
+			// CountRunsSince (per-automation rate limiting) filters
+			// automation_id + created_at; no index covered automation_id before.
+			`CREATE INDEX IF NOT EXISTS idx_agent_runs_automation
+				ON agent_runs(automation_id, created_at)`,
+
+			// The claim hot path selects the best queued run per org ordered by
+			// priority DESC, created_at. A partial index over just the queued
+			// rows keeps the scan proportional to the queue depth, not the whole
+			// (mostly terminal) run history.
+			`CREATE INDEX IF NOT EXISTS idx_agent_runs_queued_claim
+				ON agent_runs(org_id, priority DESC, created_at) WHERE status = 'queued'`,
+
+			// Team-graph edge lookups walk out of a node by edge_type; only a
+			// team-scoped index existed.
+			`CREATE INDEX IF NOT EXISTS idx_agent_team_edges_from
+				ON agent_team_edges(from_node_id, edge_type)`,
+
+			// Proposal listings filter by project_id alone; the existing
+			// (status, project_id) index can't serve a project-only predicate.
+			`CREATE INDEX IF NOT EXISTS idx_agent_proposals_project
+				ON agent_proposals(project_id)`,
+
+			// "Runs I launched" listings (ListFilter.LaunchedBy) had no index.
+			`CREATE INDEX IF NOT EXISTS idx_agent_runs_launched_by
+				ON agent_runs(launched_by)`,
+
+			// Interview sessions are looked up by the invite that created them.
+			`CREATE INDEX IF NOT EXISTS idx_interview_sessions_invite
+				ON interview_sessions(invite_id)`,
+
+			// The unread-first notification listing orders by created_at DESC
+			// within a user's unread rows; the badge-count-only partial index
+			// (idx_notifications_user_unread) lacks the ordering column.
+			`CREATE INDEX IF NOT EXISTS idx_notifications_user_unread_created
+				ON notifications(user_id, created_at DESC) WHERE NOT read`,
+
+			// Link traversal from/to a current artifact filters valid_to IS
+			// NULL; the plain from_id/to_id indexes include every historical
+			// link version.
+			`CREATE INDEX IF NOT EXISTS idx_links_from_active
+				ON links(from_id) WHERE valid_to IS NULL`,
+			`CREATE INDEX IF NOT EXISTS idx_links_to_active
+				ON links(to_id) WHERE valid_to IS NULL`,
+
+			// FK-backing index for the team-node -> agent reference (cheap; the
+			// user_id column the issue also mentions does not exist on this
+			// table, so only agent_id is added).
+			`CREATE INDEX IF NOT EXISTS idx_agent_team_nodes_agent
+				ON agent_team_nodes(agent_id)`,
+		}
+		for _, s := range stmts {
+			if _, err := tx.Exec(s); err != nil {
+				return err
+			}
+		}
+		return nil
+	}},
+
+	// 0008: trigram search index for cross-project artifact search (issue
+	// #182). SearchInProjects runs `title ILIKE '%q%' OR body ILIKE '%q%'`,
+	// which seq-scans without trigram support. A pg_trgm GIN index over each
+	// column makes the ILIKE predicate index-assisted (gin_trgm_ops supports
+	// ILIKE directly, so the existing query needs no rewrite).
+	//
+	// CREATE EXTENSION needs elevated privilege that some managed Postgres
+	// roles lack. Rather than brick boot, we probe for the extension and, when
+	// it is absent and we cannot create it, roll back to a savepoint and skip
+	// the indexes — the migration still records as applied (search keeps
+	// working via the seq-scan fallback). A managed instance that later grants
+	// the extension would need a follow-up migration to add the indexes.
+	{Version: 8, Name: "artifact_trgm_search", Run: func(tx *sql.Tx) error {
+		var haveTrgm bool
+		if err := tx.QueryRow(
+			`SELECT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_trgm')`,
+		).Scan(&haveTrgm); err != nil {
+			return err
+		}
+		if !haveTrgm {
+			if _, err := tx.Exec(`SAVEPOINT trgm_ext`); err != nil {
+				return err
+			}
+			if _, err := tx.Exec(`CREATE EXTENSION IF NOT EXISTS pg_trgm`); err != nil {
+				// Almost always insufficient_privilege on managed PG. Undo the
+				// aborted statement so the transaction (and the ledger insert)
+				// can still commit, and leave search on its seq-scan fallback.
+				if _, rbErr := tx.Exec(`ROLLBACK TO SAVEPOINT trgm_ext`); rbErr != nil {
+					return rbErr
+				}
+				slog.Warn("pg_trgm extension unavailable; skipping artifact trigram search indexes (cross-project search falls back to a sequential scan)",
+					slog.Any("error", err))
+				return nil
+			}
+			if _, err := tx.Exec(`RELEASE SAVEPOINT trgm_ext`); err != nil {
+				return err
+			}
+		}
+		if _, err := tx.Exec(`
+			CREATE INDEX IF NOT EXISTS idx_artifacts_title_trgm
+			ON artifacts USING gin (title gin_trgm_ops)
+		`); err != nil {
+			return err
+		}
+		_, err := tx.Exec(`
+			CREATE INDEX IF NOT EXISTS idx_artifacts_body_trgm
+			ON artifacts USING gin (body gin_trgm_ops)
 		`)
 		return err
 	}},
