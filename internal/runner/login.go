@@ -284,12 +284,7 @@ func (w *Worker) redetect(ctx context.Context, provider string) {
 		log.Printf("post-login detection report failed: %v", err)
 	}
 	if av.Installed {
-		for _, p := range w.providers {
-			if p == provider {
-				return
-			}
-		}
-		w.providers = append(w.providers, provider)
+		w.addProvider(provider)
 	}
 }
 

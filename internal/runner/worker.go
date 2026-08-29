@@ -27,6 +27,10 @@ type Options struct {
 	// Hosted marks a platform-run token-mode worker: no interactive CLI
 	// sign-in, and repo-access runs are never claimed.
 	Hosted bool
+	// WorkspaceRetention is how long a run's workspace directory is kept
+	// before the periodic cleanup sweep removes it. Defaults to
+	// defaultWorkspaceRetention when unset.
+	WorkspaceRetention time.Duration
 }
 
 // Worker claims runs from the queue and executes them through provider
@@ -41,7 +45,50 @@ type Worker struct {
 	mcpBinary        string
 	apiURL           string
 	hosted           bool
-	providers        []string
+
+	workspaceRetention time.Duration
+
+	// runsWG tracks in-flight run goroutines so shutdown can wait for them to
+	// release their claims.
+	runsWG sync.WaitGroup
+
+	// providersMu guards providers, which is read by the claim loop while the
+	// login loop's post-sign-in redetect can append to it concurrently.
+	providersMu sync.RWMutex
+	providers   []string
+}
+
+// defaultWorkspaceRetention is how long run workspaces are kept before the
+// periodic sweep removes them when Options.WorkspaceRetention is unset.
+const defaultWorkspaceRetention = 24 * time.Hour
+
+// workspaceCleanupInterval is how often the worker sweeps old workspaces.
+const workspaceCleanupInterval = time.Hour
+
+// addProvider records a provider as available, de-duplicating. Safe for
+// concurrent use.
+func (w *Worker) addProvider(name string) {
+	w.providersMu.Lock()
+	defer w.providersMu.Unlock()
+	for _, p := range w.providers {
+		if p == name {
+			return
+		}
+	}
+	w.providers = append(w.providers, name)
+}
+
+// snapshotProviders returns a copy of the available providers, safe to read
+// without holding the lock.
+func (w *Worker) snapshotProviders() []string {
+	w.providersMu.RLock()
+	defer w.providersMu.RUnlock()
+	if len(w.providers) == 0 {
+		return nil
+	}
+	out := make([]string, len(w.providers))
+	copy(out, w.providers)
+	return out
 }
 
 // NewWorker wires a worker from a client and the adapter registry.
@@ -59,16 +106,20 @@ func NewWorker(client *Client, opts Options) *Worker {
 	if opts.WorkerID == "" {
 		opts.WorkerID = "worker"
 	}
+	if opts.WorkspaceRetention <= 0 {
+		opts.WorkspaceRetention = defaultWorkspaceRetention
+	}
 	return &Worker{
-		client:           client,
-		adapters:         adapters,
-		workerID:         opts.WorkerID,
-		concurrency:      opts.Concurrency,
-		childConcurrency: opts.ChildConcurrency,
-		workspaceBase:    opts.WorkspaceBase,
-		mcpBinary:        opts.MCPBinary,
-		apiURL:           opts.APIURL,
-		hosted:           opts.Hosted,
+		client:             client,
+		adapters:           adapters,
+		workerID:           opts.WorkerID,
+		concurrency:        opts.Concurrency,
+		childConcurrency:   opts.ChildConcurrency,
+		workspaceBase:      opts.WorkspaceBase,
+		mcpBinary:          opts.MCPBinary,
+		apiURL:             opts.APIURL,
+		hosted:             opts.Hosted,
+		workspaceRetention: opts.WorkspaceRetention,
 	}
 }
 
@@ -84,7 +135,7 @@ func (w *Worker) Run(ctx context.Context) error {
 			"detail":    av.Detail,
 		}
 		if av.Installed {
-			w.providers = append(w.providers, name)
+			w.addProvider(name)
 			log.Printf("provider %s: installed (version %s, logged_in=%v)", name, av.Version, av.LoggedIn)
 		} else {
 			log.Printf("provider %s: unavailable (%s)", name, av.Detail)
@@ -93,8 +144,16 @@ func (w *Worker) Run(ctx context.Context) error {
 	if err := w.client.ReportDetection(report); err != nil {
 		log.Printf("report detection failed: %v", err)
 	}
-	if len(w.providers) == 0 {
+	if len(w.snapshotProviders()) == 0 {
 		log.Printf("no providers available; worker will idle")
+	}
+
+	// Reclaim disk from prior runs: sweep once at startup, then periodically.
+	// (worker.go historically claimed this happened but never wired it up, so
+	// clones accumulated forever.)
+	if w.workspaceBase != "" {
+		CleanupOld(w.workspaceBase, w.workspaceRetention)
+		go w.cleanupLoop(ctx)
 	}
 
 	// Provider sign-in requests from the UI are handled alongside runs
@@ -119,9 +178,13 @@ func (w *Worker) Run(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
+			// Give in-flight runs a moment to release their claims (see
+			// execute) before returning, so a Ctrl-C actually hands runs back
+			// to the queue instead of leaving them stranded until the reaper.
+			w.drainRuns()
 			return ctx.Err()
 		case <-ticker.C:
-			if len(w.providers) == 0 {
+			if len(w.snapshotProviders()) == 0 {
 				continue
 			}
 			w.tryClaim(ctx, normalSlots, 0)
@@ -130,15 +193,48 @@ func (w *Worker) Run(ctx context.Context) error {
 	}
 }
 
+// shutdownGrace bounds how long Run waits for in-flight runs to release their
+// claims on shutdown before returning regardless.
+const shutdownGrace = 30 * time.Second
+
+// drainRuns waits for in-flight run goroutines to finish (each releasing its
+// claim on shutdown), bounded by shutdownGrace so a wedged run can't hang the
+// process forever.
+func (w *Worker) drainRuns() {
+	done := make(chan struct{})
+	go func() { w.runsWG.Wait(); close(done) }()
+	select {
+	case <-done:
+	case <-time.After(shutdownGrace):
+		log.Printf("shutdown: gave up waiting for in-flight runs after %s", shutdownGrace)
+	}
+}
+
+// cleanupLoop periodically removes run workspaces older than the retention
+// window until the context ends.
+func (w *Worker) cleanupLoop(ctx context.Context) {
+	ticker := time.NewTicker(workspaceCleanupInterval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			CleanupOld(w.workspaceBase, w.workspaceRetention)
+		}
+	}
+}
+
 // tryClaim fills as many free slots in the pool as the queue can satisfy.
 func (w *Worker) tryClaim(ctx context.Context, slots chan struct{}, minPriority int) {
+	provs := w.snapshotProviders()
 	for {
 		select {
 		case <-slots:
 		default:
 			return
 		}
-		claim, err := w.client.Claim(w.workerID, w.providers, minPriority, w.hosted)
+		claim, err := w.client.Claim(w.workerID, provs, minPriority, w.hosted)
 		if err != nil {
 			log.Printf("claim failed: %v", err)
 			slots <- struct{}{}
@@ -148,7 +244,9 @@ func (w *Worker) tryClaim(ctx context.Context, slots chan struct{}, minPriority 
 			slots <- struct{}{}
 			return
 		}
+		w.runsWG.Add(1)
 		go func() {
+			defer w.runsWG.Done()
 			defer func() { slots <- struct{}{} }()
 			w.execute(ctx, claim)
 		}()
@@ -318,9 +416,27 @@ func (w *Worker) execute(ctx context.Context, claim *ClaimResponse) {
 	switch {
 	case cancelled:
 		req.Status = agentruns.StatusCancelled
+	case ctx.Err() != nil:
+		// The worker itself is shutting down (Ctrl-C / SIGINT), which killed
+		// this run's subprocess mid-flight. That's not the run's fault, so
+		// release the claim back to the queue for another (or a restarted)
+		// worker to pick up rather than burning it as failed.
+		if err := w.client.Release(run.ID, w.workerID); err != nil {
+			log.Printf("run %s: release on shutdown failed: %v", run.ID, err)
+		} else {
+			log.Printf("run %s: released back to queue on shutdown", run.ID)
+		}
+		return
 	case errors.Is(waitErr, context.DeadlineExceeded):
 		req.Status = agentruns.StatusTimedOut
 		req.Error = "run exceeded its timeout"
+		// Preserve the parser's real error alongside the timeout verdict
+		// instead of discarding it — the underlying detail is often the only
+		// clue to what the run was stuck on.
+		var te *timeoutError
+		if errors.As(waitErr, &te) && te.detail != nil {
+			req.Error += " (" + te.detail.Error() + ")"
+		}
 	case waitErr != nil:
 		req.Status = agentruns.StatusFailed
 		req.Error = waitErr.Error()

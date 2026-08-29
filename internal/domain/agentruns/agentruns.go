@@ -39,6 +39,10 @@ const (
 	LogUsage      = "usage"
 	LogSystem     = "system"
 	LogError      = "error"
+	// LogMarker flags an operational marker injected by the worker itself
+	// (e.g. a notice that streamed events were dropped), as opposed to
+	// output parsed from the agent CLI.
+	LogMarker = "marker"
 )
 
 // MaxAnswerChars is the answer budget every agent is told about (see

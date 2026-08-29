@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
+	"time"
 
 	"github.com/openv/requirements-platform/internal/runner"
 )
@@ -24,6 +25,15 @@ func envIntOr(key string, fallback int) int {
 	if v := os.Getenv(key); v != "" {
 		if n, err := strconv.Atoi(v); err == nil {
 			return n
+		}
+	}
+	return fallback
+}
+
+func envDurationOr(key string, fallback time.Duration) time.Duration {
+	if v := os.Getenv(key); v != "" {
+		if d, err := time.ParseDuration(v); err == nil {
+			return d
 		}
 	}
 	return fallback
@@ -57,6 +67,7 @@ func main() {
 	workspaces := flag.String("workspaces", defaultWorkspaces(), "base directory for run workspaces")
 	mcpBinary := flag.String("mcp-binary", defaultMCPBinary(), "path to the openv-mcp binary")
 	hosted := flag.Bool("hosted", envOr("OPENV_HOSTED", "") == "true", "token-mode hosted runner: no CLI sign-in, no repo-access runs")
+	workspaceRetention := flag.Duration("workspace-retention", envDurationOr("AGENT_WORKSPACE_RETENTION", 24*time.Hour), "how long finished run workspaces are kept before cleanup")
 	flag.Parse()
 
 	if *workerKey == "" {
@@ -74,13 +85,14 @@ func main() {
 
 	client := runner.NewClient(*apiURL, *workerKey)
 	worker := runner.NewWorker(client, runner.Options{
-		WorkerID:         workerID,
-		Concurrency:      *concurrency,
-		ChildConcurrency: *childConcurrency,
-		WorkspaceBase:    *workspaces,
-		MCPBinary:        *mcpBinary,
-		APIURL:           *apiURL,
-		Hosted:           *hosted,
+		WorkerID:           workerID,
+		Concurrency:        *concurrency,
+		ChildConcurrency:   *childConcurrency,
+		WorkspaceBase:      *workspaces,
+		MCPBinary:          *mcpBinary,
+		APIURL:             *apiURL,
+		Hosted:             *hosted,
+		WorkspaceRetention: *workspaceRetention,
 	})
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
