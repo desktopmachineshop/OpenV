@@ -990,10 +990,42 @@ func (h *Handler) reviewProposal(w http.ResponseWriter, r *http.Request, approve
 		proposal, err = h.proposalService.Reject(id, CurrentUserID(r), req.Note)
 	}
 	if err != nil {
-		writeJSONError(w, http.StatusBadRequest, err.Error())
+		// Genuine proposal-domain validation errors are safe to surface; an
+		// applier failure may carry internal details, so route it through the
+		// sanitized 500 path per the #146 contract (the proposal is still
+		// persisted as apply_failed with the real error in its review note).
+		if isProposalValidationError(err) {
+			writeJSONError(w, http.StatusBadRequest, err.Error())
+		} else {
+			respondInternal(w, r, "failed to apply approved proposal", err)
+		}
 		return
 	}
 	json.NewEncoder(w).Encode(proposal)
+}
+
+// isProposalValidationError reports whether err is a proposal-domain
+// validation sentinel whose message is safe to show a client. Everything
+// else from Approve/Reject is an applier failure to be sanitized (#146).
+func isProposalValidationError(err error) bool {
+	return errors.Is(err, proposals.ErrNotPending) ||
+		errors.Is(err, proposals.ErrNotFound) ||
+		errors.Is(err, proposals.ErrUnsupportedOp) ||
+		errors.Is(err, proposals.ErrRunWriteCap)
+}
+
+// proposalReviewErrorMessage returns a client-safe message for a review
+// error inside a bulk outcome: validation sentinels pass through, applier
+// failures are logged with context and replaced with a stable message.
+func proposalReviewErrorMessage(r *http.Request, id string, err error) string {
+	if isProposalValidationError(err) {
+		return err.Error()
+	}
+	slog.Error("failed to apply approved proposal",
+		slog.String("proposal_id", id),
+		slog.String("path", r.URL.Path),
+		slog.Any("error", err))
+	return "failed to apply approved proposal"
 }
 
 func (h *Handler) ApproveProposal(w http.ResponseWriter, r *http.Request) {
@@ -1058,7 +1090,7 @@ func (h *Handler) BulkReviewProposals(w http.ResponseWriter, r *http.Request) {
 			_, err = h.proposalService.Reject(id, reviewer, req.Note)
 		}
 		if err != nil {
-			results = append(results, bulkOutcome{ID: id, Error: err.Error()})
+			results = append(results, bulkOutcome{ID: id, Error: proposalReviewErrorMessage(r, id, err)})
 			continue
 		}
 		results = append(results, bulkOutcome{ID: id, OK: true})

@@ -96,6 +96,15 @@ func NewDefaultService(repo Repository, appliers Appliers) *DefaultService {
 	return &DefaultService{repo: repo, appliers: appliers}
 }
 
+// SetAppliers wires (or rewires) the callbacks that execute approved
+// proposals. It exists so the composition root can construct the service
+// before the HTTP handler that supplies the appliers, then inject them once
+// the handler is built — breaking the construction cycle (the handler needs
+// the proposal service, the appliers need the handler).
+func (s *DefaultService) SetAppliers(appliers Appliers) {
+	s.appliers = appliers
+}
+
 var validOps = map[string]bool{
 	OpCreateArtifact:   true,
 	OpUpdateArtifact:   true,

@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -301,64 +300,11 @@ func main() {
 	})
 
 	// Proposal appliers execute approved agent writes via the real services.
-	proposalService := proposals.NewDefaultService(proposalRepo, proposals.Appliers{
-		CreateArtifact: func(payload map[string]interface{}) (string, error) {
-			var req artifacts.CreateArtifactRequest
-			if err := decodePayload(payload, &req); err != nil {
-				return "", err
-			}
-			artifact := artifacts.NewArtifact(req)
-			if err := artifactService.CreateArtifact(artifact); err != nil {
-				return "", err
-			}
-			return artifact.ID, nil
-		},
-		UpdateArtifact: func(targetID string, payload map[string]interface{}) (string, error) {
-			var req artifacts.UpdateArtifactRequest
-			if err := decodePayload(payload, &req); err != nil {
-				return "", err
-			}
-			updated, err := artifactService.UpdateArtifact(targetID, req)
-			if err != nil {
-				return "", err
-			}
-			return updated.ID, nil
-		},
-		DeleteArtifact: func(targetID string) error {
-			return artifactService.DeleteArtifact(targetID)
-		},
-		CreateLink: func(payload map[string]interface{}) (string, error) {
-			var req links.CreateLinkRequest
-			if err := decodePayload(payload, &req); err != nil {
-				return "", err
-			}
-			link := links.NewLink(req)
-			if err := linkService.CreateLink(link); err != nil {
-				return "", err
-			}
-			return link.ID, nil
-		},
-		DeleteLink: func(targetID string) error {
-			return linkService.DeleteLink(targetID)
-		},
-		RecordTestResult: func(payload map[string]interface{}) (string, error) {
-			runID, _ := payload["run_id"].(string)
-			if runID == "" {
-				return "", errors.New("record_test_result payload requires run_id")
-			}
-			var req vv.UpsertResultRequest
-			if err := decodePayload(payload, &req); err != nil {
-				return "", err
-			}
-			// Applying an approved proposal: a human signed off on this
-			// result, so it is not stamped as agent-executed.
-			result, err := vvService.UpsertResult(runID, req, nil, "system", "")
-			if err != nil {
-				return "", err
-			}
-			return result.ID, nil
-		},
-	})
+	// They are wired after the HTTP handler is built (handler.ProposalAppliers
+	// below): the appliers run the handler's own domain writes — events,
+	// link-snapshot auto-versioning — but the handler needs this service, so
+	// the callbacks are injected once the cycle can be closed.
+	proposalService := proposals.NewDefaultService(proposalRepo, proposals.Appliers{})
 
 	// Seed default agents + crew into every workspace missing them.
 	if orgIDs, err := orgService.ListAll(); err != nil {
@@ -462,6 +408,11 @@ func main() {
 		ConnectorDistDir: envOr("CONNECTOR_DIST_DIR", "./dist"),
 	})
 
+	// Close the construction cycle: the proposal appliers run the handler's
+	// own domain writes (events, link-snapshot auto-versioning) when a human
+	// approves a proposal. Done before the server starts serving.
+	proposalService.SetAppliers(handler.ProposalAppliers())
+
 	// Router + middleware.
 	router := mux.NewRouter()
 	router.Use(api.ContentTypeMiddleware)
@@ -542,13 +493,4 @@ func main() {
 		<-errCh // wait for ListenAndServe to return
 		slog.Info("server stopped")
 	}
-}
-
-// decodePayload converts a generic JSON payload into a typed request.
-func decodePayload(payload map[string]interface{}, out interface{}) error {
-	raw, err := json.Marshal(payload)
-	if err != nil {
-		return err
-	}
-	return json.Unmarshal(raw, out)
 }
