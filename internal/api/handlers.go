@@ -222,6 +222,7 @@ func (h *Handler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/projects/{id}/export", h.ExportProject).Methods("GET")
 	router.HandleFunc("/api/v1/projects/import", h.ImportProject).Methods("POST")
 	router.HandleFunc("/api/v1/projects/{id}/report", h.GenerateReport).Methods("GET")
+	router.HandleFunc("/api/v1/projects/{id}/review-queue", h.ReviewQueue).Methods("GET")
 	router.HandleFunc("/api/v1/projects/{id}/baselines", h.CreateBaseline).Methods("POST")
 	router.HandleFunc("/api/v1/projects/{id}/baselines", h.ListBaselines).Methods("GET")
 	router.HandleFunc("/api/v1/baselines/{id}", h.GetBaseline).Methods("GET")
@@ -1007,6 +1008,47 @@ func (h *Handler) GetLink(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(link)
 }
 
+// ReviewQueue handles GET /api/v1/projects/{id}/review-queue: the reviewer's
+// daily driver (issue #183). It returns the two things awaiting a reviewer's
+// attention in one round trip — the live suspect links touching the project
+// (each enriched with its endpoints' titles/types so a reviewer can judge it
+// without opening both artifacts) and the artifacts sitting in the in_review
+// state. Read-only, so project viewer role suffices; the per-row actions the
+// UI offers (confirm a link, open an artifact) carry their own editor gates.
+func (h *Handler) ReviewQueue(w http.ResponseWriter, r *http.Request) {
+	projectID := mux.Vars(r)["id"]
+
+	if !h.requireProjectRole(w, r, projectID, members.RoleViewer) {
+		return
+	}
+
+	suspectLinks, err := h.linkService.ListSuspectByProject(projectID)
+	if err != nil {
+		respondInternal(w, r, "failed to load suspect links", err)
+		return
+	}
+	inReview, err := h.artifactService.ListByStatus(projectID, artifacts.StatusInReview)
+	if err != nil {
+		respondInternal(w, r, "failed to load in-review artifacts", err)
+		return
+	}
+
+	// Normalize nil slices to [] so the JSON body always has array-typed
+	// fields the frontend can map over unconditionally.
+	if suspectLinks == nil {
+		suspectLinks = []*links.SuspectLink{}
+	}
+	if inReview == nil {
+		inReview = []*artifacts.Artifact{}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"suspect_links":       suspectLinks,
+		"in_review_artifacts": inReview,
+	})
+}
+
 // ListLinks lists links by project
 func (h *Handler) ListLinks(w http.ResponseWriter, r *http.Request) {
 	projectID := r.URL.Query().Get("project_id")
@@ -1203,31 +1245,29 @@ func (h *Handler) GetProject(w http.ResponseWriter, r *http.Request) {
 // workspace: all of the org's projects for platform admins and org admins,
 // membership-filtered otherwise.
 func (h *Handler) ListProjects(w http.ResponseWriter, r *http.Request) {
-	projectList, err := h.projectService.ListProjects()
-	if err != nil {
-		respondInternal(w, r, "failed to list projects", err)
+	// Scope to the active workspace in SQL, and fail closed: a caller whose
+	// active org could not be resolved (empty) sees no projects rather than
+	// every tenant's. resolveActiveOrg already falls back to the user's
+	// personal org, so "" here means even that failed.
+	activeOrg := ActiveOrg(r)
+	if activeOrg == "" {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode([]*projects.Project{})
 		return
 	}
 
-	// Scope to the active workspace.
-	if activeOrg := ActiveOrg(r); activeOrg != "" {
-		inOrg := projectList[:0]
-		for _, p := range projectList {
-			if p.OrgID == activeOrg {
-				inOrg = append(inOrg, p)
-			}
-		}
-		projectList = inOrg
+	projectList, err := h.projectService.ListProjectsByOrg(activeOrg)
+	if err != nil {
+		respondInternal(w, r, "failed to list projects", err)
+		return
 	}
 
 	if user := CurrentUser(r); user != nil && !user.IsAdmin && h.memberService != nil {
 		// Org admins of the active workspace see all of its projects.
 		isOrgAdmin := false
 		if h.orgService != nil {
-			if activeOrg := ActiveOrg(r); activeOrg != "" {
-				if role, err := h.orgService.RoleInOrg(activeOrg, user.ID); err == nil && role == orgs.RoleAdmin {
-					isOrgAdmin = true
-				}
+			if role, err := h.orgService.RoleInOrg(activeOrg, user.ID); err == nil && role == orgs.RoleAdmin {
+				isOrgAdmin = true
 			}
 		}
 		if !isOrgAdmin {

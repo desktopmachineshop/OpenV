@@ -218,7 +218,8 @@ type UsageSummary struct {
 
 // ListFilter filters run listings. OrgID and LaunchedBy scope the listing in
 // SQL (before LIMIT applies) so one workspace's traffic can never starve
-// another's page.
+// another's page. OrgID is MANDATORY and fails closed: an empty OrgID matches
+// no rows, so every caller must supply the workspace being listed.
 type ListFilter struct {
 	OrgID      string
 	AgentID    string

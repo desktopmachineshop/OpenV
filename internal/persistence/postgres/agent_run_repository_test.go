@@ -404,14 +404,24 @@ func TestReleaseClaimRequiresOwningWorker(t *testing.T) {
 		t.Errorf("released run = %s/%q/%v, want queued with no worker or heartbeat", run.Status, run.WorkerID, run.HeartbeatAt)
 	}
 
-	// A running run is past the release window.
+	// A running run can still be released by its owning worker: this is the
+	// worker-shutdown path (SIGINT releases in-flight runs back to the queue
+	// rather than failing them). ReleaseClaim covers status IN ('claimed','running').
 	f.setRunState(t, id, agentruns.StatusRunning, "")
 	if _, err := f.db.Exec(`UPDATE agent_runs SET worker_id = 'w-1' WHERE id = $1`, id); err != nil {
 		t.Fatal(err)
 	}
+	// The wrong worker still cannot release it.
+	if ok, err := f.repo.ReleaseClaim(id, "w-2"); err != nil || ok {
+		t.Errorf("ReleaseClaim(running, wrong worker) = %v, %v, want false", ok, err)
+	}
+	// The owning worker returns it to the queue.
 	ok, err = f.repo.ReleaseClaim(id, "w-1")
-	if err != nil || ok {
-		t.Errorf("ReleaseClaim(running) = %v, %v, want false", ok, err)
+	if err != nil || !ok {
+		t.Errorf("ReleaseClaim(running, owner) = %v, %v, want applied", ok, err)
+	}
+	if got := f.status(t, id); got != agentruns.StatusQueued {
+		t.Errorf("run = %s, want queued after owner release", got)
 	}
 }
 
@@ -487,4 +497,68 @@ func TestRunRoundTripsRoutingColumns(t *testing.T) {
 	if !found {
 		t.Fatal("reserved run missing from List")
 	}
+}
+
+// TestListFailsClosedOnOrg locks in the issue-#180 fix: the run listing's org
+// predicate is mandatory. A run in another workspace never appears in this
+// org's listing, and an empty OrgID (an unresolved active workspace) returns
+// nothing rather than every tenant's runs.
+func TestListFailsClosedOnOrg(t *testing.T) {
+	f := newClaimFixture(t)
+	mine := f.queueRun(t, runSpec{})
+
+	// A second workspace with its own agent and queued run.
+	otherOrg := uuid.New().String()
+	otherAgent := uuid.New().String()
+	if _, err := f.db.Exec(`INSERT INTO organizations (id, name, slug) VALUES ($1, 'Other Org', 'other-org')`, otherOrg); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.db.Exec(`INSERT INTO agents (id, org_id, slug, name, provider) VALUES ($1, $2, 'worker', 'Worker', 'claude')`, otherAgent, otherOrg); err != nil {
+		t.Fatal(err)
+	}
+	otherRun := uuid.New().String()
+	if err := f.repo.Save(&agentruns.Run{
+		ID: otherRun, OrgID: otherOrg, AgentID: otherAgent,
+		Status: agentruns.StatusQueued, Prompt: "elsewhere",
+		ArtifactsTouched: []map[string]interface{}{}, CreatedAt: time.Now(),
+	}); err != nil {
+		t.Fatalf("save other-org run: %v", err)
+	}
+
+	t.Run("org listing excludes other workspaces", func(t *testing.T) {
+		list, err := f.repo.List(agentruns.ListFilter{OrgID: f.orgID})
+		if err != nil {
+			t.Fatalf("List: %v", err)
+		}
+		for _, run := range list {
+			if run.OrgID != f.orgID {
+				t.Fatalf("listing for %s leaked a run from %s", f.orgID, run.OrgID)
+			}
+		}
+		if !containsRun(list, mine) {
+			t.Errorf("own-org run %s missing from listing", mine)
+		}
+		if containsRun(list, otherRun) {
+			t.Errorf("other-org run %s leaked into listing", otherRun)
+		}
+	})
+
+	t.Run("empty org returns nothing", func(t *testing.T) {
+		list, err := f.repo.List(agentruns.ListFilter{OrgID: ""})
+		if err != nil {
+			t.Fatalf("List: %v", err)
+		}
+		if len(list) != 0 {
+			t.Fatalf("empty-org listing returned %d runs, want 0 (fail closed)", len(list))
+		}
+	})
+}
+
+func containsRun(list []*agentruns.Run, id string) bool {
+	for _, r := range list {
+		if r.ID == id {
+			return true
+		}
+	}
+	return false
 }

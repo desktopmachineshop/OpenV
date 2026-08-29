@@ -238,6 +238,54 @@ func (r *LinkRepository) FindAll(projectID string) ([]*links.Link, error) {
 	return linkList, rows.Err()
 }
 
+// FindSuspectByProject returns the live suspect links whose from or to
+// artifact belongs to the project, joined with those artifacts' current
+// titles and types (issue #183). Both endpoints are inner-joined against the
+// live artifact rows: a suspect link needs both endpoints to still exist for
+// a reviewer to act on it, and the join supplies the human-readable labels
+// the review queue shows. Newest-changed first so freshly invalidated links
+// surface at the top.
+func (r *LinkRepository) FindSuspectByProject(projectID string) ([]*links.SuspectLink, error) {
+	query := `
+		SELECT l.id, l.type, l.updated_at,
+		       fa.id, fa.title, fa.type,
+		       ta.id, ta.title, ta.type
+		FROM links l
+		INNER JOIN artifacts fa ON fa.id = l.from_id AND fa.valid_to IS NULL
+		INNER JOIN artifacts ta ON ta.id = l.to_id AND ta.valid_to IS NULL
+		WHERE l.valid_to IS NULL AND l.suspect
+		  AND (fa.project_id = $1 OR ta.project_id = $1)
+		ORDER BY l.updated_at DESC
+	`
+
+	rows, err := r.db.Query(query, projectID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	list := []*links.SuspectLink{}
+	for rows.Next() {
+		sl := new(links.SuspectLink)
+		if err := rows.Scan(
+			&sl.ID,
+			&sl.Type,
+			&sl.UpdatedAt,
+			&sl.FromID,
+			&sl.FromTitle,
+			&sl.FromType,
+			&sl.ToID,
+			&sl.ToTitle,
+			&sl.ToType,
+		); err != nil {
+			return nil, err
+		}
+		list = append(list, sl)
+	}
+
+	return list, rows.Err()
+}
+
 // Update updates a link
 func (r *LinkRepository) Update(link *links.Link) error {
 	attributesJSON, err := json.Marshal(link.Attributes)

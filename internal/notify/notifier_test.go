@@ -185,6 +185,75 @@ func TestInterviewCompletedNotifiesEditors(t *testing.T) {
 	}
 }
 
+// TestArtifactInReviewNotifiesEditors locks in the review-queue rule (issue
+// #183): an artifact.status_changed event whose target is in_review fans out
+// to editors and owners (the reviewers), viewers get nothing, and every other
+// transition is silent.
+func TestArtifactInReviewNotifiesEditors(t *testing.T) {
+	newNotifier := func(store *fakeStore, bc *fakeBroadcaster) *Notifier {
+		return NewNotifier(store, &fakeMembers{list: []*members.Member{
+			member("u-owner", members.RoleOwner, "Olive Owner", "olive@example.com"),
+			member("u-editor", members.RoleEditor, "Ed Editor", "ed@example.com"),
+			member("u-viewer", members.RoleViewer, "Vi Viewer", "vi@example.com"),
+		}}, bc)
+	}
+
+	t.Run("entering review fans out to reviewers", func(t *testing.T) {
+		store := &fakeStore{}
+		bc := &fakeBroadcaster{}
+		n := newNotifier(store, bc)
+		n.Handle(domainevents.Event{
+			EventType: domainevents.ArtifactStatusChanged,
+			OrgID:     "org-1",
+			ProjectID: "p-1",
+			EntityID:  "art-7",
+			Actor:     "user:u-owner",
+			Payload: map[string]interface{}{
+				"from":  "draft",
+				"to":    "in_review",
+				"title": "Payload isolation",
+			},
+		})
+
+		// The owner acted, so only the editor is notified (actor is skipped).
+		want := []string{"u-editor"}
+		got := recipients(t, store)
+		if len(got) != len(want) || got[0] != want[0] {
+			t.Fatalf("recipients = %v, want %v (owner is actor, viewer excluded)", got, want)
+		}
+		created := store.created[0]
+		if created.Type != notifications.TypeReviewRequested {
+			t.Errorf("type = %q, want %q", created.Type, notifications.TypeReviewRequested)
+		}
+		if created.EntityRef["kind"] != "artifact" || created.EntityRef["artifact_id"] != "art-7" {
+			t.Errorf("entity_ref = %v, want kind=artifact artifact_id=art-7", created.EntityRef)
+		}
+		if created.EntityRef["project_id"] != "p-1" {
+			t.Errorf("entity_ref project_id = %v, want p-1", created.EntityRef["project_id"])
+		}
+		if created.OrgID != "org-1" {
+			t.Errorf("org_id = %q, want org-1", created.OrgID)
+		}
+	})
+
+	t.Run("non-review transitions are silent", func(t *testing.T) {
+		for _, to := range []string{"draft", "approved", "superseded", ""} {
+			store := &fakeStore{}
+			n := newNotifier(store, nil)
+			n.Handle(domainevents.Event{
+				EventType: domainevents.ArtifactStatusChanged,
+				ProjectID: "p-1",
+				EntityID:  "art-7",
+				Actor:     "system",
+				Payload:   map[string]interface{}{"to": to},
+			})
+			if len(store.created) != 0 {
+				t.Errorf("to=%q created %d notifications, want 0", to, len(store.created))
+			}
+		}
+	})
+}
+
 // TestMentionsNotifyMatchedMembers locks in mention matching: first name,
 // full name without spaces, and email local part all match; the comment
 // author never notifies themselves; unrelated members stay silent.

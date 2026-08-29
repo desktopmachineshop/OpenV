@@ -86,7 +86,15 @@ type Repository interface {
 	// List returns an org's automations; projectID "" lists all in the org.
 	List(orgID, projectID string) ([]*Automation, error)
 	Delete(id string) error
+	// ListDueScheduled returns due scheduled automations as firing candidates
+	// only; callers must claim each with ClaimDueScheduled before firing.
 	ListDueScheduled(now time.Time) ([]*Automation, error)
+	// ClaimDueScheduled atomically claims one due scheduled automation and
+	// advances its next_run_at (nil disables it) in a single statement,
+	// reporting whether the caller won the claim. Concurrent callers across
+	// replicas partition the due set with no overlap, so no automation
+	// double-fires.
+	ClaimDueScheduled(id string, lastRun time.Time, nextRun *time.Time) (bool, error)
 	ListEnabledTriggered(eventType string) ([]*Automation, error)
 	MarkRun(id string, lastRun time.Time, nextRun *time.Time) error
 }

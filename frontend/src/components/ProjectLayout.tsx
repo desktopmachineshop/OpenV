@@ -31,6 +31,7 @@ const navSections: { label?: string; items: NavItem[] }[] = [
     items: [
       { to: 'vv', label: 'V&V' },
       { to: 'matrix', label: 'Traceability' },
+      { to: 'review', label: 'Review Queue' },
     ],
   },
   {

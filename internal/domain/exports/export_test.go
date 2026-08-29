@@ -3,6 +3,7 @@ package exports
 import (
 	"bytes"
 	"encoding/csv"
+	"encoding/json"
 	"errors"
 	"strings"
 	"testing"
@@ -36,10 +37,29 @@ func (f *fakeLinkService) GetAllLinks(projectID string) ([]*links.Link, error) {
 
 type fakeAttachmentService struct {
 	attachments.Service
+	// byArtifact seeds the batched response; calls counts how many batched
+	// queries ExportProject issued (must be exactly one for a project of any
+	// size — the N+1 guard).
+	byArtifact map[string][]*attachments.Attachment
+	calls      int
+	lastIDs    []string
 }
 
 func (f *fakeAttachmentService) GetAttachmentsByArtifact(artifactID string) ([]*attachments.Attachment, error) {
-	return nil, nil
+	// The N+1 offender: exports must NOT call this anymore. Fail loudly if they do.
+	panic("export must use GetAttachmentsByArtifacts, not the per-artifact GetAttachmentsByArtifact")
+}
+
+func (f *fakeAttachmentService) GetAttachmentsByArtifacts(artifactIDs []string) (map[string][]*attachments.Attachment, error) {
+	f.calls++
+	f.lastIDs = artifactIDs
+	out := make(map[string][]*attachments.Attachment, len(artifactIDs))
+	for _, id := range artifactIDs {
+		if att, ok := f.byArtifact[id]; ok {
+			out[id] = att
+		}
+	}
+	return out, nil
 }
 
 type fakeProjectRepo struct {
@@ -227,6 +247,62 @@ func TestExportFilenameSanitization(t *testing.T) {
 		}
 		if strings.ContainsAny(filename, "\"\\/\x07") {
 			t.Errorf("filename %q still contains unsafe characters", filename)
+		}
+	}
+}
+
+// TestExportAttachmentsSingleBatchedQuery pins the N+1 fix: a project with
+// many artifacts must fetch attachments in exactly one batched call, passing
+// every artifact ID, and the attachments must land in the export grouped by
+// their artifact (in artifact order).
+func TestExportAttachmentsSingleBatchedQuery(t *testing.T) {
+	artifactList := []*artifacts.Artifact{
+		{ID: "a1", Type: "requirement", Title: "One"},
+		{ID: "a2", Type: "requirement", Title: "Two"},
+		{ID: "a3", Type: "requirement", Title: "Three"},
+	}
+	att := &fakeAttachmentService{
+		byArtifact: map[string][]*attachments.Attachment{
+			"a1": {{ID: "att1", ArtifactID: "a1", Filename: "a1.png"}},
+			// a2 has none.
+			"a3": {
+				{ID: "att3a", ArtifactID: "a3", Filename: "a3a.png"},
+				{ID: "att3b", ArtifactID: "a3", Filename: "a3b.png"},
+			},
+		},
+	}
+	svc := NewService(
+		&fakeArtifactService{byProject: map[string][]*artifacts.Artifact{"p1": artifactList}},
+		&fakeLinkService{byProject: map[string][]*links.Link{"p1": nil}},
+		att,
+		&fakeProjectRepo{byID: map[string]*ProjectInfo{"p1": {ID: "p1", Name: "Batched"}}},
+		nil,
+	)
+
+	data, _, err := svc.ExportProject("p1", FormatJSON)
+	if err != nil {
+		t.Fatalf("ExportProject(json) returned error: %v", err)
+	}
+
+	if att.calls != 1 {
+		t.Errorf("attachment queries = %d, want exactly 1 (N+1 regression)", att.calls)
+	}
+	if len(att.lastIDs) != 3 {
+		t.Errorf("batched query received %d artifact IDs, want 3: %v", len(att.lastIDs), att.lastIDs)
+	}
+
+	var out ProjectExport
+	if err := json.Unmarshal(data, &out); err != nil {
+		t.Fatalf("export JSON does not parse: %v", err)
+	}
+	if len(out.Attachments) != 3 {
+		t.Fatalf("exported %d attachments, want 3", len(out.Attachments))
+	}
+	// Flattened in artifact order: a1's, then a3's (a2 contributes none).
+	wantIDs := []string{"att1", "att3a", "att3b"}
+	for i, want := range wantIDs {
+		if out.Attachments[i].ID != want {
+			t.Errorf("attachment[%d].ID = %q, want %q", i, out.Attachments[i].ID, want)
 		}
 	}
 }

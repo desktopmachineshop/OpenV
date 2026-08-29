@@ -132,7 +132,11 @@ func (rep *AgentRunRepository) FindByTokenHash(hash string) (*agentruns.Run, err
 	return r, err
 }
 
-// List returns runs matching the filter, newest first.
+// List returns runs matching the filter, newest first. The org filter is
+// mandatory and fails closed (like EventRepository.List): an empty OrgID
+// matches no rows, so a caller that could not resolve an active workspace can
+// never page across tenants. Every caller must supply the run's org — the
+// board trigger derives it from the work item's project.
 func (rep *AgentRunRepository) List(filter agentruns.ListFilter) ([]*agentruns.Run, error) {
 	limit := filter.Limit
 	if limit <= 0 || limit > 500 {
@@ -140,12 +144,12 @@ func (rep *AgentRunRepository) List(filter agentruns.ListFilter) ([]*agentruns.R
 	}
 	rows, err := rep.db.Query(`
 		SELECT `+runColumns+` FROM agent_runs r JOIN agents a ON a.id = r.agent_id
-		WHERE ($1 = '' OR r.agent_id = $1::uuid)
+		WHERE r.org_id = NULLIF($6, '')::uuid
+		  AND ($1 = '' OR r.agent_id = $1::uuid)
 		  AND ($2 = '' OR r.project_id = $2::uuid)
 		  AND ($3 = '' OR r.status = $3)
 		  AND ($4 = '' OR r.parent_run_id = $4::uuid)
 		  AND ($5 = '' OR r.work_item_id = $5::uuid)
-		  AND ($6 = '' OR r.org_id = $6::uuid)
 		  AND ($7 = '' OR r.launched_by = $7::uuid)
 		ORDER BY r.created_at DESC
 		LIMIT $8
@@ -157,12 +161,19 @@ func (rep *AgentRunRepository) List(filter agentruns.ListFilter) ([]*agentruns.R
 	return collectRuns(rows)
 }
 
-// ListChildren returns direct child runs, oldest first.
+// listChildrenLimit bounds a single node's direct children. Run trees are
+// normally small (retries are siblings, not children), so this only caps a
+// pathological fan-out; the Tree walk would otherwise pull an unbounded set
+// per node.
+const listChildrenLimit = 1000
+
+// ListChildren returns direct child runs, oldest first (bounded).
 func (rep *AgentRunRepository) ListChildren(parentRunID string) ([]*agentruns.Run, error) {
 	rows, err := rep.db.Query(`
 		SELECT `+runColumns+` FROM agent_runs r JOIN agents a ON a.id = r.agent_id
 		WHERE r.parent_run_id = $1 ORDER BY r.created_at
-	`, parentRunID)
+		LIMIT $2
+	`, parentRunID, listChildrenLimit)
 	if err != nil {
 		return nil, err
 	}
@@ -391,12 +402,22 @@ func (rep *AgentRunRepository) AppendLogs(runID string, entries []agentruns.LogE
 	return tx.Commit()
 }
 
-// ListLogs returns log entries after a sequence number.
+// listLogsPageLimit bounds a single ListLogs read. A busy run can accumulate
+// tens of thousands of log rows; callers page with afterSeq (the last seq they
+// saw), so a bounded page keeps each round-trip cheap while staying replayable
+// — the caller re-requests from the new high-water mark to drain the rest.
+const listLogsPageLimit = 2000
+
+// ListLogs returns up to listLogsPageLimit log entries after a sequence
+// number, ordered by seq. Because entries are ordered and afterSeq is the
+// cursor, a caller that keeps calling with the last returned seq walks every
+// entry across pages without gaps or repeats.
 func (rep *AgentRunRepository) ListLogs(runID string, afterSeq int) ([]agentruns.LogEntry, error) {
 	rows, err := rep.db.Query(`
 		SELECT run_id, seq, kind, payload, created_at
 		FROM agent_run_logs WHERE run_id = $1 AND seq > $2 ORDER BY seq
-	`, runID, afterSeq)
+		LIMIT $3
+	`, runID, afterSeq, listLogsPageLimit)
 	if err != nil {
 		return nil, err
 	}

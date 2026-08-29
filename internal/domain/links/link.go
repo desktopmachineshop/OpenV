@@ -28,6 +28,23 @@ type Link struct {
 	UpdatedAt  time.Time              `json:"updated_at"`
 }
 
+// SuspectLink is a suspect link enriched with the titles and types of the
+// two artifacts it connects, for the review queue (issue #183). It is a
+// read-only projection assembled by a join in the repository — the plain
+// Link carries only endpoint ids, and the queue needs human-readable labels
+// so a reviewer can judge a link without opening both artifacts.
+type SuspectLink struct {
+	ID        string    `json:"id"`
+	Type      string    `json:"type"`
+	FromID    string    `json:"from_id"`
+	FromTitle string    `json:"from_title"`
+	FromType  string    `json:"from_type"`
+	ToID      string    `json:"to_id"`
+	ToTitle   string    `json:"to_title"`
+	ToType    string    `json:"to_type"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
 // CreateLinkRequest is the payload for creating a new link
 type CreateLinkRequest struct {
 	FromID     string                 `json:"from_id"`
@@ -69,6 +86,10 @@ type Service interface {
 	UpdateLink(id string, req UpdateLinkRequest) (*Link, error)
 	DeleteLink(id string) error
 	GetAllLinks(projectID string) ([]*Link, error)
+	// ListSuspectByProject returns the live suspect links touching a project
+	// (either endpoint), enriched with artifact titles/types, for the review
+	// queue (issue #183).
+	ListSuspectByProject(projectID string) ([]*SuspectLink, error)
 	SetArtifactService(artifactService interface{}) // Allows link service to trigger artifact versioning
 	// ConfirmLink clears the suspect flag on one link: a human has re-read
 	// the changed artifact and vouches that the link still holds.
@@ -90,6 +111,10 @@ type Repository interface {
 	FindByFromIDForVersion(fromID string, version int) ([]*Link, error)
 	FindByToIDForVersion(toID string, version int) ([]*Link, error)
 	FindAll(projectID string) ([]*Link, error)
+	// FindSuspectByProject returns the live suspect links whose from or to
+	// artifact belongs to the project, joined with those artifacts' titles
+	// and types (issue #183).
+	FindSuspectByProject(projectID string) ([]*SuspectLink, error)
 	Update(link *Link) error
 	Delete(id string) error
 	RecordLinkForArtifactVersion(linkID string, artifactID string, artifactVersion int) error
@@ -232,6 +257,11 @@ func (s *DefaultService) DeleteLink(id string) error {
 // GetAllLinks retrieves all links in a project
 func (s *DefaultService) GetAllLinks(projectID string) ([]*Link, error) {
 	return s.repo.FindAll(projectID)
+}
+
+// ListSuspectByProject returns the enriched suspect links touching a project.
+func (s *DefaultService) ListSuspectByProject(projectID string) ([]*SuspectLink, error) {
+	return s.repo.FindSuspectByProject(projectID)
 }
 
 // ConfirmLink clears the suspect flag on one link and returns it.
