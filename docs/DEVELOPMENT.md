@@ -23,9 +23,11 @@ make build       # rebuild the images
 - **API**: http://localhost:8080
 - **Postgres**: localhost:5432 (postgres/postgres, db `openv`)
 
-The API migrates its schema on startup (`postgres.Migrate` in
-`internal/persistence/postgres/migrations.go`), so there is no separate
-migration step. See "Adding a schema migration" below.
+The API migrates its schema on startup (boot calls
+`postgres.MigrateAndBackfill` in
+`internal/persistence/postgres/migrations.go`, which runs `postgres.Migrate`
+plus the idempotent org backfill), so there is no separate migration step. See
+"Adding a schema migration" below.
 
 ## Backend development
 
