@@ -1,6 +1,7 @@
 package proposals
 
 import (
+	"errors"
 	"strings"
 	"testing"
 )
@@ -184,5 +185,35 @@ func TestProposeLiftsRefFromPayload(t *testing.T) {
 	}
 	if _, present := p.Payload["ref"]; present {
 		t.Fatalf("ref should be stripped from payload, got: %v", p.Payload)
+	}
+}
+
+// TestProposeRejectsDuplicateRefInRun locks in ref uniqueness within a run
+// (issue #250 adjacent finding): a second proposal claiming a ref already taken
+// by a sibling in the same run is rejected, so a create_link endpoint can never
+// resolve ambiguously. The ref stays bound to exactly one artifact proposal.
+func TestProposeRejectsDuplicateRefInRun(t *testing.T) {
+	repo := &fakeProposalRepo{items: map[string]*Proposal{}}
+	svc := NewDefaultService(repo, Appliers{})
+
+	if _, err := svc.Propose("r1", "proj1", OpCreateArtifact, nil, map[string]interface{}{"title": "A", "ref": "t1"}); err != nil {
+		t.Fatalf("first propose: %v", err)
+	}
+	_, err := svc.Propose("r1", "proj1", OpCreateArtifact, nil, map[string]interface{}{"title": "B", "ref": "t1"})
+	if err == nil {
+		t.Fatal("second propose reused ref t1 in the same run; want rejection")
+	}
+	if !errors.Is(err, ErrDuplicateRef) {
+		t.Fatalf("error = %v, want ErrDuplicateRef", err)
+	}
+	// Only the first proposal was stored.
+	all, _ := repo.List("", "", "r1")
+	if len(all) != 1 {
+		t.Fatalf("duplicate-ref proposal was still saved: run has %d proposals, want 1", len(all))
+	}
+
+	// The same ref in a different run is fine — uniqueness is per-run.
+	if _, err := svc.Propose("r2", "proj1", OpCreateArtifact, nil, map[string]interface{}{"title": "C", "ref": "t1"}); err != nil {
+		t.Fatalf("same ref in a different run should be allowed: %v", err)
 	}
 }

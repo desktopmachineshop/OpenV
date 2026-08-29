@@ -209,7 +209,7 @@ func (h *Handler) maybePropose(w http.ResponseWriter, r *http.Request, projectID
 	}
 	proposal, err := h.proposalService.Propose(run.ID, projectID, op, targetID, payload)
 	if err != nil {
-		if errors.Is(err, proposals.ErrUnsupportedOp) || errors.Is(err, proposals.ErrRunWriteCap) {
+		if errors.Is(err, proposals.ErrUnsupportedOp) || errors.Is(err, proposals.ErrRunWriteCap) || errors.Is(err, proposals.ErrDuplicateRef) {
 			writeJSONError(w, http.StatusBadRequest, err.Error())
 		} else {
 			respondInternal(w, r, "failed to record proposal", err)
