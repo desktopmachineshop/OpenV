@@ -450,6 +450,28 @@ func main() {
 		}
 	}
 
+	// Generic OIDC single sign-on (optional, issue #225). One IdP per
+	// deployment; strictly opt-in — with OPENV_OIDC_ISSUER unset the endpoints
+	// report "not configured" and the default deployment is unaffected.
+	var oidcConfig *api.OIDCConfig
+	if issuer := os.Getenv("OPENV_OIDC_ISSUER"); issuer != "" {
+		publicURL := envOr("PUBLIC_URL", "http://localhost:"+port)
+		redirectURL := envOr("OPENV_OIDC_REDIRECT_URL", publicURL+"/api/v1/auth/oidc/callback")
+		var scopes []string
+		if raw := os.Getenv("OPENV_OIDC_SCOPES"); raw != "" {
+			scopes = strings.Fields(raw)
+		}
+		oidcConfig = &api.OIDCConfig{
+			Issuer:       issuer,
+			ClientID:     os.Getenv("OPENV_OIDC_CLIENT_ID"),
+			ClientSecret: os.Getenv("OPENV_OIDC_CLIENT_SECRET"),
+			RedirectURL:  redirectURL,
+			Scopes:       scopes,
+			ProviderName: envOr("OPENV_OIDC_NAME", "SSO"),
+			FrontendURL:  envOr("FRONTEND_URL", "http://localhost:3000"),
+		}
+	}
+
 	// Handler.
 	handler := api.NewHandler(api.HandlerDeps{
 		ArtifactService:     artifactService,
@@ -492,6 +514,7 @@ func main() {
 		EventRepo:        eventRepo,
 		SSEHub:           sseHub,
 		GoogleOAuth:      googleOAuth,
+		OIDC:             oidcConfig,
 		SecureCookies:    os.Getenv("SECURE_COOKIES") == "true",
 		PublicAPIURL:     envOr("PUBLIC_URL", "http://localhost:"+port),
 		ConnectorDistDir: envOr("CONNECTOR_DIST_DIR", "./dist"),

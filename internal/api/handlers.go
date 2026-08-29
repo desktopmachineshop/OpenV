@@ -95,6 +95,7 @@ type HandlerDeps struct {
 	EventRepo        events.Repository
 	SSEHub           *SSEHub
 	GoogleOAuth      *GoogleOAuthConfig
+	OIDC             *OIDCConfig
 	SecureCookies    bool
 }
 
@@ -141,6 +142,7 @@ type Handler struct {
 	eventRepo           events.Repository
 	sseHub              *SSEHub
 	googleOAuth         *GoogleOAuthConfig
+	oidc                *OIDCConfig
 	secureCookies       bool
 
 	// Rate limiters for the public (invite-token) interview endpoints; see
@@ -193,6 +195,7 @@ func NewHandler(deps HandlerDeps) *Handler {
 		eventRepo:              deps.EventRepo,
 		sseHub:                 deps.SSEHub,
 		googleOAuth:            deps.GoogleOAuth,
+		oidc:                   deps.OIDC,
 		secureCookies:          deps.SecureCookies,
 		interviewMsgLimiter:    newRateLimiterFromEnv(envInterviewMsgBurst, envInterviewMsgRefill, defaultInterviewMsgBurst, defaultInterviewMsgRefill),
 		interviewIPLimiter:     newRateLimiterFromEnv(envInterviewIPBurst, envInterviewIPRefill, defaultInterviewIPBurst, defaultInterviewIPRefill),

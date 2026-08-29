@@ -16,6 +16,9 @@ import (
 const (
 	ProviderPassword = "password"
 	ProviderGoogle   = "google"
+	// ProviderOIDC marks accounts provisioned through the generic OIDC
+	// single-sign-on flow (issue #225). One IdP per deployment for the MVP.
+	ProviderOIDC = "oidc"
 )
 
 // SessionDuration is how long a login session stays valid.
@@ -80,6 +83,9 @@ type Service interface {
 	Register(email, password, name string) (*User, error)
 	Login(email, password string) (*User, string, error)
 	LoginWithGoogle(email, name, avatarURL string) (*User, string, error)
+	// LoginWithSSO upserts a user from a verified external identity (any OIDC
+	// provider) and creates a session. provider is stored as auth_provider.
+	LoginWithSSO(provider, email, name, avatarURL string) (*User, string, error)
 	Logout(token string) error
 	GetBySessionToken(token string) (*User, error)
 	// SessionByToken returns the session record itself (for org context).
@@ -178,9 +184,20 @@ func (s *DefaultService) Login(email, password string) (*User, string, error) {
 
 // LoginWithGoogle upserts a user from a verified Google identity and creates a session.
 func (s *DefaultService) LoginWithGoogle(email, name, avatarURL string) (*User, string, error) {
+	return s.LoginWithSSO(ProviderGoogle, email, name, avatarURL)
+}
+
+// LoginWithSSO upserts a user from a verified external (OIDC) identity and
+// creates a session. New accounts record the given provider as auth_provider;
+// existing accounts keep their original provider (an email that first signed up
+// with a password is not silently re-labelled) but refresh name/avatar.
+func (s *DefaultService) LoginWithSSO(provider, email, name, avatarURL string) (*User, string, error) {
 	email = strings.ToLower(strings.TrimSpace(email))
 	if email == "" {
-		return nil, "", errors.New("google identity has no email")
+		return nil, "", errors.New("sso identity has no email")
+	}
+	if provider == "" {
+		provider = ProviderOIDC
 	}
 
 	user, err := s.repo.FindUserByEmail(email)
@@ -198,7 +215,7 @@ func (s *DefaultService) LoginWithGoogle(email, name, avatarURL string) (*User, 
 			Email:              email,
 			Name:               name,
 			AvatarURL:          avatarURL,
-			AuthProvider:       ProviderGoogle,
+			AuthProvider:       provider,
 			IsAdmin:            count == 0,
 			EmailNotifications: true,
 			CreatedAt:          now,
