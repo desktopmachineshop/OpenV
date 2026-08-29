@@ -26,7 +26,7 @@ type RunSpec struct {
 	Model        string
 	// Effort is the reasoning effort level ("", low, medium, high, xhigh,
 	// max). Adapters map it to their CLI's nearest equivalent or ignore it.
-	Effort string
+	Effort       string
 	MCP          MCPServerConfig
 	AllowedTools []string
 	MaxTurns     int

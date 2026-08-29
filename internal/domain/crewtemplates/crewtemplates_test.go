@@ -66,7 +66,7 @@ func (r *memRepo) ListNodesByTeam(teamID string) ([]*teams.Node, error) {
 	}
 	return out, nil
 }
-func (r *memRepo) DeleteNode(id string) error { delete(r.nodes, id); return nil }
+func (r *memRepo) DeleteNode(id string) error     { delete(r.nodes, id); return nil }
 func (r *memRepo) SaveEdge(e *teams.Edge) error   { r.edges[e.ID] = e; return nil }
 func (r *memRepo) UpdateEdge(e *teams.Edge) error { r.edges[e.ID] = e; return nil }
 func (r *memRepo) FindEdgeByID(id string) (*teams.Edge, error) {

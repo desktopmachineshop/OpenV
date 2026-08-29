@@ -106,12 +106,12 @@ func ValidateLinkType(linkType, fromArtifactType, toArtifactType string) error {
 	}
 
 	if !contains(rule.AllowedFromTypes, fromArtifactType) {
-		return fmt.Errorf("link type '%s' cannot originate from artifact type '%s' (allowed: %v)", 
+		return fmt.Errorf("link type '%s' cannot originate from artifact type '%s' (allowed: %v)",
 			linkType, fromArtifactType, rule.AllowedFromTypes)
 	}
 
 	if !contains(rule.AllowedToTypes, toArtifactType) {
-		return fmt.Errorf("link type '%s' cannot target artifact type '%s' (allowed: %v)", 
+		return fmt.Errorf("link type '%s' cannot target artifact type '%s' (allowed: %v)",
 			linkType, toArtifactType, rule.AllowedToTypes)
 	}
 

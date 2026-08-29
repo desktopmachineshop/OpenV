@@ -54,12 +54,12 @@ func TestParseFileDefaults(t *testing.T) {
 
 func TestParseFileErrors(t *testing.T) {
 	cases := map[string]string{
-		"no frontmatter":     "just a prompt",
-		"unclosed":           "---\nslug: x\nname: y\nprovider: z\n",
-		"missing slug":       "---\nname: y\nprovider: z\n---\nbody",
-		"missing provider":   "---\nslug: x\nname: y\n---\nbody",
-		"bad write mode":     "---\nslug: x\nname: y\nprovider: z\nwrite_mode: yolo\n---\nbody",
-		"invalid yaml":       "---\nslug: [unterminated\n---\nbody",
+		"no frontmatter":   "just a prompt",
+		"unclosed":         "---\nslug: x\nname: y\nprovider: z\n",
+		"missing slug":     "---\nname: y\nprovider: z\n---\nbody",
+		"missing provider": "---\nslug: x\nname: y\n---\nbody",
+		"bad write mode":   "---\nslug: x\nname: y\nprovider: z\nwrite_mode: yolo\n---\nbody",
+		"invalid yaml":     "---\nslug: [unterminated\n---\nbody",
 	}
 	for label, content := range cases {
 		if _, err := ParseFile(content); err == nil {

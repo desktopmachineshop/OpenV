@@ -4,7 +4,7 @@ import "github.com/openv/requirements-platform/internal/domain/teams"
 
 // Built-in crew preset keys.
 const (
-	founderDevTeamKey = "founders-dev-team"
+	founderDevTeamKey   = "founders-dev-team"
 	requirementsPairKey = "requirements-vv-pair"
 )
 

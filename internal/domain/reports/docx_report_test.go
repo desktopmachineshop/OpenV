@@ -8,8 +8,8 @@ import (
 	"testing"
 
 	"github.com/openv/requirements-platform/internal/domain/artifacts"
-	linksdomain "github.com/openv/requirements-platform/internal/domain/links"
 	"github.com/openv/requirements-platform/internal/domain/exports"
+	linksdomain "github.com/openv/requirements-platform/internal/domain/links"
 )
 
 // readZipPart returns the decompressed contents of a named file inside a zip

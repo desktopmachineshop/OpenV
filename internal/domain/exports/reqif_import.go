@@ -44,7 +44,7 @@ func parseReqIF(data []byte) (*ProjectExport, error) {
 
 	// 1. Enum value ids -> their text, and each enum datatype -> its declared
 	//    value set (for validating incoming enum attributes).
-	enumValueText := map[string]string{}       // ENUM-VALUE id -> value text
+	enumValueText := map[string]string{}        // ENUM-VALUE id -> value text
 	enumDatatypeValues := map[string][]string{} // datatype id -> allowed values
 	for _, dt := range content.Datatypes.Enums {
 		vals := make([]string, 0, len(dt.SpecifiedValues))

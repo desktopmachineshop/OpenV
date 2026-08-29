@@ -49,11 +49,11 @@ func TestSetParticipantNamePreservesCompletion(t *testing.T) {
 	// A concurrent CompleteSession wins the race and finalizes the session.
 	ended := time.Now().Truncate(time.Millisecond)
 	completed := &interviews.Session{
-		ID:          sessionID,
-		Status:      interviews.SessionStatusCompleted,
-		Summary:     "the reviewer's summary",
+		ID:              sessionID,
+		Status:          interviews.SessionStatusCompleted,
+		Summary:         "the reviewer's summary",
 		ParticipantName: "", // completion does not know the name
-		EndedAt:     &ended,
+		EndedAt:         &ended,
 	}
 	if err := repo.UpdateSession(completed); err != nil {
 		t.Fatalf("UpdateSession (simulated CompleteSession): %v", err)

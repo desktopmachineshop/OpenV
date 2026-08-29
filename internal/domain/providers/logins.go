@@ -45,19 +45,19 @@ const (
 // worker. The OAuth code passes through briefly; the CLI stores the actual
 // credentials on the host — OpenV never sees tokens.
 type LoginRequest struct {
-	ID          string     `json:"id"`
-	OrgID       string     `json:"org_id"`
-	Provider    string     `json:"provider"`
+	ID       string `json:"id"`
+	OrgID    string `json:"org_id"`
+	Provider string `json:"provider"`
 	// Target is where the sign-in executes: "workspace" (any shared worker)
 	// or "user" (only the requester's personal runner).
-	Target      string     `json:"target"`
-	Status      string     `json:"status"`
-	AuthURL     string     `json:"auth_url"`
-	Code        string     `json:"code,omitempty"`
-	Detail      string     `json:"detail"`
-	RequestedBy *string    `json:"requested_by,omitempty"`
-	CreatedAt   time.Time  `json:"created_at"`
-	UpdatedAt   time.Time  `json:"updated_at"`
+	Target      string    `json:"target"`
+	Status      string    `json:"status"`
+	AuthURL     string    `json:"auth_url"`
+	Code        string    `json:"code,omitempty"`
+	Detail      string    `json:"detail"`
+	RequestedBy *string   `json:"requested_by,omitempty"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
 }
 
 // Active reports whether the request is still in flight.

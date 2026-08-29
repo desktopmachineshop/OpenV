@@ -36,6 +36,20 @@ jobs:
           go-version-file: go.mod # go 1.25 — keep in sync automatically
           cache: true
 
+      # Fail if any Go source is not gofmt-clean. Scoped to ./cmd ./internal
+      # (gofmt takes directory paths, not the ./... pattern) so we never flag
+      # the vendored Go package inside frontend/node_modules. Prints the
+      # offending files before failing.
+      - name: gofmt
+        run: |
+          unformatted="$(gofmt -l ./cmd ./internal)"
+          if [ -n "$unformatted" ]; then
+            echo "The following files are not gofmt-formatted:"
+            echo "$unformatted"
+            echo "Run 'gofmt -w ./cmd ./internal' to fix."
+            exit 1
+          fi
+
       # Scope to ./cmd/... ./internal/... — plain ./... would also sweep
       # frontend/node_modules/flatted/golang (a Go package that ships inside
       # an npm dependency) and fail.

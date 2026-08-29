@@ -1,15 +1,15 @@
 package postgres
 
 import (
-    "context"
-    "database/sql"
-    "encoding/json"
-    "errors"
-    "time"
+	"context"
+	"database/sql"
+	"encoding/json"
+	"errors"
+	"time"
 
-    "github.com/lib/pq"
+	"github.com/lib/pq"
 
-    "github.com/openv/requirements-platform/internal/domain/artifacts"
+	"github.com/openv/requirements-platform/internal/domain/artifacts"
 )
 
 // stmtTimeout bounds a single database statement so a stuck query cannot hang

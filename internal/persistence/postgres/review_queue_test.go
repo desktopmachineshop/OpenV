@@ -46,8 +46,8 @@ func TestFindSuspectByProject(t *testing.T) {
 		return l
 	}
 
-	suspectLink := mkLink(req.ID, tc.ID)     // both endpoints in project A
-	trustedLink := mkLink(req.ID, tc.ID)     // stays trusted -> excluded
+	suspectLink := mkLink(req.ID, tc.ID)      // both endpoints in project A
+	trustedLink := mkLink(req.ID, tc.ID)      // stays trusted -> excluded
 	foreignLink := mkLink(other.ID, other.ID) // project B only -> excluded
 
 	if err := linkRepo.SetSuspect(suspectLink.ID, true); err != nil {

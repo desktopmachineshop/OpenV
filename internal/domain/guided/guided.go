@@ -30,9 +30,9 @@ const (
 
 // Error definitions
 var (
-	ErrSessionNotFound   = errors.New("guided session not found")
+	ErrSessionNotFound    = errors.New("guided session not found")
 	ErrSessionNotEditable = errors.New("guided session is not in progress")
-	ErrInvalidChatRole   = errors.New("invalid chat message role")
+	ErrInvalidChatRole    = errors.New("invalid chat message role")
 )
 
 // Session is one pass through the guided product definition flow.

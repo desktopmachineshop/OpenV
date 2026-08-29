@@ -17,23 +17,23 @@ var (
 
 // Artifact represents a single requirement, test case, hazard, or other typed item
 type Artifact struct {
-	ID        string                 `json:"id"`
-	ProjectID string                 `json:"project_id"`
-	ParentID  *string                `json:"parent_id,omitempty"`
-	Type      string                 `json:"type"` // requirement, test-case, hazard, design-item, heading, description, etc.
-	Title     string                 `json:"title"`
-	Body      string                 `json:"body"` // markdown or rich text
-	SortOrder int                    `json:"sort_order"`
+	ID        string  `json:"id"`
+	ProjectID string  `json:"project_id"`
+	ParentID  *string `json:"parent_id,omitempty"`
+	Type      string  `json:"type"` // requirement, test-case, hazard, design-item, heading, description, etc.
+	Title     string  `json:"title"`
+	Body      string  `json:"body"` // markdown or rich text
+	SortOrder int     `json:"sort_order"`
 	// Status is the review state (draft, in_review, approved, superseded);
 	// see status.go. It is a real column; Attributes["status"] is only a
 	// deprecated read-compat mirror kept in sync on every write.
-	Status    string                 `json:"status"`
+	Status     string                 `json:"status"`
 	Attributes map[string]interface{} `json:"attributes"`
-	Version   int                    `json:"version"`
-	ValidFrom time.Time              `json:"valid_from"`
-	ValidTo   *time.Time             `json:"valid_to"`
-	CreatedAt time.Time              `json:"created_at"`
-	UpdatedAt time.Time              `json:"updated_at"`
+	Version    int                    `json:"version"`
+	ValidFrom  time.Time              `json:"valid_from"`
+	ValidTo    *time.Time             `json:"valid_to"`
+	CreatedAt  time.Time              `json:"created_at"`
+	UpdatedAt  time.Time              `json:"updated_at"`
 }
 
 // SetLinksSnapshot stores links snapshot in attributes
@@ -155,15 +155,15 @@ func (o OptionalString) IsZero() bool { return !o.Present }
 // "keep the current order" (or auto-assign when the parent changed), and
 // there is no meaningful explicit-null semantic for it.
 type UpdateArtifactRequest struct {
-	ParentID         OptionalString         `json:"parent_id,omitzero"`
-	Type             *string                `json:"type,omitempty"`
-	Title            *string                `json:"title,omitempty"`
-	Body             *string                `json:"body,omitempty"`
-	SortOrder        *int                   `json:"sort_order,omitempty"`
-	Attributes       map[string]interface{} `json:"attributes"`
-	LinksSnapshot    []interface{}          `json:"linksSnapshot,omitempty"`
-	PendingLinkAdds  []interface{}          `json:"pendingLinkAdds,omitempty"`
-	PendingLinkRemoves []string             `json:"pendingLinkRemoves,omitempty"`
+	ParentID           OptionalString         `json:"parent_id,omitzero"`
+	Type               *string                `json:"type,omitempty"`
+	Title              *string                `json:"title,omitempty"`
+	Body               *string                `json:"body,omitempty"`
+	SortOrder          *int                   `json:"sort_order,omitempty"`
+	Attributes         map[string]interface{} `json:"attributes"`
+	LinksSnapshot      []interface{}          `json:"linksSnapshot,omitempty"`
+	PendingLinkAdds    []interface{}          `json:"pendingLinkAdds,omitempty"`
+	PendingLinkRemoves []string               `json:"pendingLinkRemoves,omitempty"`
 }
 
 // NewArtifact creates a new artifact with generated ID
@@ -173,7 +173,7 @@ func NewArtifact(req CreateArtifactRequest) *Artifact {
 	if req.SortOrder != nil {
 		order = *req.SortOrder
 	}
-	
+
 	// Ensure attributes is never nil
 	attributes := req.Attributes
 	if attributes == nil {

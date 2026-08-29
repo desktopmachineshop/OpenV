@@ -1,11 +1,11 @@
 package postgres
 
 import (
-    "database/sql"
-    "encoding/json"
-    "errors"
+	"database/sql"
+	"encoding/json"
+	"errors"
 
-    "github.com/openv/requirements-platform/internal/domain/links"
+	"github.com/openv/requirements-platform/internal/domain/links"
 )
 
 // LinkRepository implements links.Repository using PostgreSQL
