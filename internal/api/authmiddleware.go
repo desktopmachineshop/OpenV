@@ -60,6 +60,12 @@ func isOpenPath(path string) bool {
 	if path == "/health" {
 		return true
 	}
+	// The Prometheus scrape endpoint carries its own optional bearer-token gate
+	// (OPENV_METRICS_TOKEN) and must never sit behind session auth, which would
+	// break scraping.
+	if path == "/metrics" {
+		return true
+	}
 	if strings.HasPrefix(path, "/api/v1/auth/") {
 		return true
 	}

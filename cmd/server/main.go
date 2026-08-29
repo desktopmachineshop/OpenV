@@ -47,6 +47,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/workitems"
 	eventbus "github.com/openv/requirements-platform/internal/events"
 	"github.com/openv/requirements-platform/internal/hosting"
+	"github.com/openv/requirements-platform/internal/metrics"
 	"github.com/openv/requirements-platform/internal/notify"
 	"github.com/openv/requirements-platform/internal/orchestration"
 	"github.com/openv/requirements-platform/internal/persistence/postgres"
@@ -328,9 +329,16 @@ func main() {
 		}
 	}
 
+	// Prometheus metrics. The collector subscribes to run lifecycle events so
+	// the run counter and queued/running gauges track transitions, and reports
+	// live SSE connection counts on scrape. Wired below at /metrics.
+	metricsCollector := metrics.New()
+	runService.AddSubscriber(metricsCollector)
+
 	// SSE hub + orchestration hooks.
 	sseHub := api.NewSSEHub()
 	runService.AddSubscriber(sseHub)
+	metricsCollector.WatchSSEConnections(sseHub.ActiveConnections)
 	hooks := orchestration.NewHooks(runService, teamService, workItemService, interviewService, guidedService, projectService, sseHub)
 	runService.AddSubscriber(hooks)
 	hooks.SubscribeBus(bus)
@@ -429,10 +437,21 @@ func main() {
 	router.Use(api.ContentTypeMiddleware)
 	handler.RegisterRoutes(router)
 
+	// Prometheus scrape endpoint. Unauthenticated by default (firewall it to an
+	// internal network in production); set OPENV_METRICS_TOKEN to require an
+	// "Authorization: Bearer <token>" header. Registered as an open path in the
+	// auth middleware so scraping is never blocked by session auth.
+	router.Handle("/metrics", metricsCollector.Handler(os.Getenv("OPENV_METRICS_TOKEN"))).Methods("GET")
+
 	authMiddleware := api.NewAuthMiddleware(userService, runService, orgService, workerKeyService, workerKey, bootstrapOrgID)
 	// Request logging wraps outside auth so rejected requests are logged too;
-	// auth annotates the log line with the resolved org/user.
-	protected := api.RequestLogMiddleware(authMiddleware.Wrap(router))
+	// auth annotates the log line with the resolved org/user. The metrics HTTP
+	// middleware sits between them, recording every request (including rejected
+	// ones) labelled by mux route template; it is a distinct concern from the
+	// access log and does not double-count.
+	protected := api.RequestLogMiddleware(
+		metricsCollector.HTTPMiddleware(router)(authMiddleware.Wrap(router)),
+	)
 
 	// CORS: restricted to the configured frontend origin, with credentials.
 	corsOrigin := envOr("CORS_ORIGIN", "http://localhost:3000")
