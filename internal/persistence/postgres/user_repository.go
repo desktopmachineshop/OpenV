@@ -17,11 +17,11 @@ func NewUserRepository(db *sql.DB) *UserRepository {
 	return &UserRepository{db: db}
 }
 
-const userColumns = `id, email, name, avatar_url, auth_provider, COALESCE(password_hash, ''), is_admin, created_at, updated_at`
+const userColumns = `id, email, name, avatar_url, auth_provider, COALESCE(password_hash, ''), is_admin, COALESCE(email_notifications, TRUE), created_at, updated_at`
 
 func scanUser(row interface{ Scan(...interface{}) error }) (*users.User, error) {
 	u := new(users.User)
-	err := row.Scan(&u.ID, &u.Email, &u.Name, &u.AvatarURL, &u.AuthProvider, &u.PasswordHash, &u.IsAdmin, &u.CreatedAt, &u.UpdatedAt)
+	err := row.Scan(&u.ID, &u.Email, &u.Name, &u.AvatarURL, &u.AuthProvider, &u.PasswordHash, &u.IsAdmin, &u.EmailNotifications, &u.CreatedAt, &u.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -83,6 +83,14 @@ func (r *UserRepository) ListUsers() ([]*users.User, error) {
 		result = append(result, u)
 	}
 	return result, rows.Err()
+}
+
+// SetEmailNotifications flips one user's email-notification opt-out.
+func (r *UserRepository) SetEmailNotifications(userID string, enabled bool) error {
+	_, err := r.db.Exec(
+		`UPDATE users SET email_notifications = $2, updated_at = NOW() WHERE id = $1`,
+		userID, enabled)
+	return err
 }
 
 // CountUsers returns the total number of users.

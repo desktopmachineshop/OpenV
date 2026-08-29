@@ -71,6 +71,32 @@ GOOGLE_CLIENT_ID=...
 GOOGLE_CLIENT_SECRET=...
 ```
 
+Optional — email notifications (issue #187). Strictly opt-in: with
+`OPENV_SMTP_HOST` unset the mailer is a no-op and only in-app + live (SSE)
+notifications are delivered, so dev and existing deployments are unaffected.
+Set these to turn on email delivery of the higher-signal notification types:
+
+```dotenv
+# SMTP transport (stdlib net/smtp; PLAIN auth when USER is set).
+OPENV_SMTP_HOST=smtp.example.com
+OPENV_SMTP_PORT=587                 # default 587
+OPENV_SMTP_USER=notifications@example.com
+OPENV_SMTP_PASSWORD=...
+OPENV_SMTP_FROM=notifications@example.com   # default: OPENV_SMTP_USER
+
+# Which notification types email (comma-separated). Default:
+#   run_failed,proposal_pending,review_requested,budget_threshold
+# Chatter @mentions and interview_completed are intentionally in-app only.
+OPENV_EMAIL_NOTIFICATION_TYPES=run_failed,proposal_pending,review_requested,budget_threshold
+```
+
+Deep links in emails point at the app UI using `FRONTEND_URL` (falling back to
+`PUBLIC_URL`), so set `FRONTEND_URL` to the externally reachable frontend base.
+Delivery is best-effort: a send failure is logged and the run/notification
+still succeeds. Each user can opt out under Settings → Notifications (stored as
+`users.email_notifications`, default on); the opt-out only matters once SMTP is
+configured.
+
 If a required variable is missing, `docker compose ... up`/`config` fails with
 an error naming the variable rather than starting with dev defaults.
 

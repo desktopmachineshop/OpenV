@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useAppStore } from '../state/store';
-import { ProviderSetting, providerSettingsAPI } from '../api/client';
+import { ProviderSetting, providerSettingsAPI, notificationPrefsAPI } from '../api/client';
 import { MyRunnerCard } from './org/MyRunnerCard';
 import { ProviderConnectCard } from './agents/ProviderConnectCard';
 import { ThemeSwitcher } from './ThemeSwitcher';
@@ -26,6 +26,39 @@ export const UserSettingsPanel: React.FC<UserSettingsPanelProps> = ({ onClose })
   const { currentUser, activeOrgId, orgs } = useAppStore();
   const activeOrg = orgs.find((o) => o.id === activeOrgId);
   const [providers, setProviders] = useState<ProviderSetting[]>([]);
+
+  // Email-notification opt-out (issue #187). Loaded from the server so the
+  // toggle reflects the stored preference, not just the initial /me payload.
+  const [emailNotifications, setEmailNotifications] = useState<boolean>(true);
+  const [emailPrefSaving, setEmailPrefSaving] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    notificationPrefsAPI
+      .get()
+      .then((res) => {
+        if (!cancelled) setEmailNotifications(res.data.email_notifications);
+      })
+      .catch(() => {
+        // Non-fatal: leave the default (on) if the prefs endpoint is unreachable.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const toggleEmailNotifications = useCallback(async () => {
+    const next = !emailNotifications;
+    setEmailNotifications(next); // optimistic
+    setEmailPrefSaving(true);
+    try {
+      await notificationPrefsAPI.update(next);
+    } catch {
+      setEmailNotifications(!next); // revert on failure
+    } finally {
+      setEmailPrefSaving(false);
+    }
+  }, [emailNotifications]);
 
   // Load provider settings so each per-user card reflects the real detected
   // sign-in state (mirrors OrgProvidersTab): a connected CLI shows "Re-connect"
@@ -122,6 +155,29 @@ export const UserSettingsPanel: React.FC<UserSettingsPanelProps> = ({ onClose })
               </p>
             </div>
             <ThemeSwitcher />
+          </div>
+        </div>
+
+        <div className="card">
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <h3 style={{ marginBottom: 4 }}>Notifications</h3>
+              <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 0 }}>
+                Email me about high-signal events (failed runs, proposals awaiting review, review
+                requests, and workspace budget alerts). In-app notifications are always on.
+                Email requires the server to have SMTP configured.
+              </p>
+            </div>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+              <input
+                type="checkbox"
+                checked={emailNotifications}
+                disabled={emailPrefSaving}
+                onChange={toggleEmailNotifications}
+                style={{ width: 'auto' }}
+              />
+              <span style={{ fontSize: 13, color: 'var(--text)' }}>Email me</span>
+            </label>
           </div>
         </div>
 

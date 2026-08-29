@@ -35,12 +35,22 @@ type Notifier struct {
 	store       notifications.Service
 	memberSvc   MemberLister
 	broadcaster Broadcaster
+	// email is an optional best-effort email side channel (issue #187); nil
+	// means email is off. Dispatch is nil-safe.
+	email *EmailDispatcher
 }
 
 // NewNotifier creates a notifier. broadcaster may be nil (store-only mode,
 // used in tests).
 func NewNotifier(store notifications.Service, memberSvc MemberLister, broadcaster Broadcaster) *Notifier {
 	return &Notifier{store: store, memberSvc: memberSvc, broadcaster: broadcaster}
+}
+
+// SetEmailDispatcher attaches an email side channel. Passing nil (or never
+// calling this) leaves email off.
+func (n *Notifier) SetEmailDispatcher(d *EmailDispatcher) *Notifier {
+	n.email = d
+	return n
 }
 
 // Start subscribes to the bus.
@@ -222,6 +232,9 @@ func (n *Notifier) deliver(e domainevents.Event, userID, ntype, title, body stri
 	if n.broadcaster != nil {
 		n.broadcaster.BroadcastSession(StreamKey(userID), "notification", notification)
 	}
+	// Best-effort email side channel; a no-op unless SMTP is configured, the
+	// type is eligible, and the recipient is opted in.
+	n.email.Dispatch(notification)
 }
 
 func payloadString(e domainevents.Event, key string) string {

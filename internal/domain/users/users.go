@@ -29,15 +29,19 @@ var (
 
 // User is a platform account.
 type User struct {
-	ID           string    `json:"id"`
-	Email        string    `json:"email"`
-	Name         string    `json:"name"`
-	AvatarURL    string    `json:"avatar_url"`
-	AuthProvider string    `json:"auth_provider"`
-	PasswordHash string    `json:"-"`
-	IsAdmin      bool      `json:"is_admin"`
-	CreatedAt    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at"`
+	ID           string `json:"id"`
+	Email        string `json:"email"`
+	Name         string `json:"name"`
+	AvatarURL    string `json:"avatar_url"`
+	AuthProvider string `json:"auth_provider"`
+	PasswordHash string `json:"-"`
+	IsAdmin      bool   `json:"is_admin"`
+	// EmailNotifications is the per-user opt-out for email delivery of
+	// higher-signal notifications (issue #187). Defaults TRUE; only has any
+	// effect when the server has SMTP configured (email is opt-in infra).
+	EmailNotifications bool      `json:"email_notifications"`
+	CreatedAt          time.Time `json:"created_at"`
+	UpdatedAt          time.Time `json:"updated_at"`
 }
 
 // Session is a logged-in browser session. Token is only present at creation.
@@ -59,6 +63,9 @@ type Repository interface {
 	FindUserByID(id string) (*User, error)
 	ListUsers() ([]*User, error)
 	CountUsers() (int, error)
+	// SetEmailNotifications flips one user's email opt-out. Scoped by id so it
+	// can only ever touch that user's own row.
+	SetEmailNotifications(userID string, enabled bool) error
 
 	SaveSession(s *Session) error
 	FindSessionByTokenHash(hash string) (*Session, error)
@@ -82,6 +89,8 @@ type Service interface {
 	GetByID(id string) (*User, error)
 	FindByEmail(email string) (*User, error)
 	ListUsers() ([]*User, error)
+	// SetEmailNotifications updates the caller's own email opt-out (issue #187).
+	SetEmailNotifications(userID string, enabled bool) error
 }
 
 // DefaultService implements Service.
@@ -134,14 +143,15 @@ func (s *DefaultService) Register(email, password, name string) (*User, error) {
 
 	now := time.Now()
 	user := &User{
-		ID:           uuid.New().String(),
-		Email:        email,
-		Name:         strings.TrimSpace(name),
-		AuthProvider: ProviderPassword,
-		PasswordHash: string(hash),
-		IsAdmin:      count == 0,
-		CreatedAt:    now,
-		UpdatedAt:    now,
+		ID:                 uuid.New().String(),
+		Email:              email,
+		Name:               strings.TrimSpace(name),
+		AuthProvider:       ProviderPassword,
+		PasswordHash:       string(hash),
+		IsAdmin:            count == 0,
+		EmailNotifications: true,
+		CreatedAt:          now,
+		UpdatedAt:          now,
 	}
 	if err := s.repo.SaveUser(user); err != nil {
 		return nil, err
@@ -184,14 +194,15 @@ func (s *DefaultService) LoginWithGoogle(email, name, avatarURL string) (*User, 
 		}
 		now := time.Now()
 		user = &User{
-			ID:           uuid.New().String(),
-			Email:        email,
-			Name:         name,
-			AvatarURL:    avatarURL,
-			AuthProvider: ProviderGoogle,
-			IsAdmin:      count == 0,
-			CreatedAt:    now,
-			UpdatedAt:    now,
+			ID:                 uuid.New().String(),
+			Email:              email,
+			Name:               name,
+			AvatarURL:          avatarURL,
+			AuthProvider:       ProviderGoogle,
+			IsAdmin:            count == 0,
+			EmailNotifications: true,
+			CreatedAt:          now,
+			UpdatedAt:          now,
 		}
 		if err := s.repo.SaveUser(user); err != nil {
 			return nil, "", err
@@ -289,4 +300,9 @@ func (s *DefaultService) FindByEmail(email string) (*User, error) {
 // ListUsers returns all users.
 func (s *DefaultService) ListUsers() ([]*User, error) {
 	return s.repo.ListUsers()
+}
+
+// SetEmailNotifications updates a user's email-notification opt-out.
+func (s *DefaultService) SetEmailNotifications(userID string, enabled bool) error {
+	return s.repo.SetEmailNotifications(userID, enabled)
 }
