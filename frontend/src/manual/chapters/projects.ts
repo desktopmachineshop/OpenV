@@ -9,13 +9,14 @@ artifacts, traceability links, board, agents, runs, interviews, and V&V data.
 
 After signing in you land on the Projects page for the active workspace. Each
 project appears as a card showing its name, description, short ID, and creation
-date. Hovering a card reveals four icon buttons:
+date. Hovering a card reveals its action buttons:
 
 | Icon | Action |
 | --- | --- |
 | ⧉ | **Save as template** — snapshot this project as a reusable template |
 | ✎ | **Edit project** — rename it or change the description |
-| ↓ | **Export project** — download the whole project as a JSON file |
+| ↓ JSON | **Export project as JSON** — download the whole project (re-importable) |
+| ↓ CSV | **Export artifacts as CSV** — download the artifacts as flat spreadsheet rows |
 | ✕ | **Delete project** — removes the project and all its artifacts |
 
 Click anywhere else on the card to open the project.
@@ -35,9 +36,12 @@ change both before creating.
 ## Import & export
 
 - **↑ Import Project** takes a JSON file previously produced by
-  **Export project** and creates a new project from it.
+  **Export project as JSON** and creates a new project from it.
 - Export/import is a simple way to move a project between servers or keep an
   offline copy.
+- The CSV export is a one-way snapshot for spreadsheets and reports: one row
+  per artifact with its status, version, parent, and outgoing links. It cannot
+  be re-imported.
 
 ## Inside a project
 

@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -1146,16 +1147,33 @@ func (h *Handler) ExportProject(w http.ResponseWriter, r *http.Request) {
 
 	exportFormat := exports.ExportFormat(format)
 
+	// Reject formats the export service cannot produce before doing any work.
+	var contentType string
+	switch exportFormat {
+	case exports.FormatJSON:
+		contentType = "application/json"
+	case exports.FormatCSV:
+		contentType = "text/csv; charset=utf-8"
+	default:
+		writeJSONError(w, http.StatusBadRequest, fmt.Sprintf("unsupported export format: %s", format))
+		return
+	}
+
 	// Export project
 	data, filename, err := h.exportService.ExportProject(id, exportFormat)
 	if err != nil {
+		if errors.Is(err, exports.ErrUnsupportedFormat) {
+			writeJSONError(w, http.StatusBadRequest, err.Error())
+			return
+		}
 		respondInternal(w, r, "failed to export project", err)
 		return
 	}
 
-	// Set appropriate headers
-	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", filename))
+	// Set appropriate headers. The filename is quoted; the export service
+	// sanitizes it (no quotes, backslashes, or control characters).
+	w.Header().Set("Content-Type", contentType)
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%q", filename))
 	w.WriteHeader(http.StatusOK)
 	w.Write(data)
 }

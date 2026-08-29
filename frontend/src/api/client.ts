@@ -202,15 +202,15 @@ export const projectAPI = {
     client.put<Project>(`/api/v1/projects/${id}`, payload),
   delete: (id: string) =>
     client.delete(`/api/v1/projects/${id}`),
-  export: async (id: string, format: string = 'json') => {
+  export: async (id: string, format: 'json' | 'csv' = 'json') => {
     const response = await client.get(`/api/v1/projects/${id}/export?format=${format}`, {
       responseType: 'blob',
     });
-    
+
     // Extract filename from Content-Disposition header or use default
     const filename =
       filenameFromContentDisposition(response.headers['content-disposition']) ||
-      `project_export_${new Date().toISOString().slice(0, 10)}.json`;
+      `project_export_${new Date().toISOString().slice(0, 10)}.${format}`;
 
     // Create a download link and trigger it
     const url = window.URL.createObjectURL(new Blob([response.data]));
