@@ -196,8 +196,14 @@ export const ArtifactEditor: React.FC<ArtifactEditorProps> = ({
               value={formData.type || ''}
               onChange={handleChange}
             >
+              {/* Mirrors the backend type catalog (internal/domain/artifacts/
+                  types.go). persona/user-need were missing here even though
+                  the derives-from and validates link rules target user-need,
+                  which made those links impossible to create through this UI. */}
               <option value="heading">Heading</option>
               <option value="description">Description</option>
+              <option value="persona">Persona</option>
+              <option value="user-need">User Need</option>
               <option value="requirement">Requirement</option>
               <option value="test-case">Test Case</option>
               <option value="hazard">Hazard</option>
