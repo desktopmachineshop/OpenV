@@ -1074,6 +1074,12 @@ export const automationsAPI = {
   runNow: (id: string) => client.post<AgentRun>(`/api/v1/automations/${id}/run-now`),
 };
 
+export interface BulkProposalOutcome {
+  id: string;
+  ok: boolean;
+  error?: string;
+}
+
 export const proposalsAPI = {
   list: (params: { project_id?: string; status?: string; run_id?: string }) =>
     client.get<Proposal[]>('/api/v1/proposals', { params }),
@@ -1081,6 +1087,12 @@ export const proposalsAPI = {
     client.post<Proposal>(`/api/v1/proposals/${id}/approve`, { note: note || '' }),
   reject: (id: string, note?: string) =>
     client.post<Proposal>(`/api/v1/proposals/${id}/reject`, { note: note || '' }),
+  bulkReview: (ids: string[], action: 'approve' | 'reject', note?: string) =>
+    client.post<{ results: BulkProposalOutcome[] }>('/api/v1/proposals/bulk', {
+      ids,
+      action,
+      note: note || '',
+    }),
 };
 
 export const repoConnectionsAPI = {
