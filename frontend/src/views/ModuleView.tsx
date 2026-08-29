@@ -7,7 +7,6 @@ import { ArtifactList } from '../components/ArtifactList';
 import { ArtifactHeader } from '../components/ArtifactHeader';
 import { ArtifactDetails } from '../components/ArtifactDetails';
 import { ChatterPanel } from '../components/ChatterPanel';
-import { HelpSidebar } from '../components/HelpSidebar';
 import { ErrorBanner, useAlert, useConfirm, usePrompt } from '../components/ui';
 import { apiErrorMessage } from '../api/errors';
 
@@ -755,7 +754,7 @@ export const ModuleView: React.FC = () => {
 
   return (
     <>
-      <HelpSidebar />
+      {/* The floating help panel is mounted once in ProjectLayout now. */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '16px 20px 12px', flexWrap: 'wrap' }}>
         <h2 style={{ color: 'var(--text)', margin: 0 }}>Requirements</h2>
         <div style={{ flex: 1 }} />

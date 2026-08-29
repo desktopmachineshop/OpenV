@@ -258,14 +258,18 @@ export const ProjectList: React.FC = () => {
       <div className="project-list-container">
 
       <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-        <button
+        {/* Plain anchor styled like the button: the manual opens in a new
+            tab so it doesn't navigate away from the projects list. */}
+        <a
           className="button-secondary"
-          style={{ padding: '8px 14px', fontSize: 13 }}
-          onClick={() => navigate('/manual')}
-          title="Open the user manual"
+          href="/manual"
+          target="_blank"
+          rel="noopener"
+          style={{ padding: '8px 14px', fontSize: 13, textDecoration: 'none', display: 'inline-block' }}
+          title="Open the user manual in a new tab"
         >
           ? Help
-        </button>
+        </a>
       </div>
 
 
