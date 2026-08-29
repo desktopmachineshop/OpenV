@@ -124,29 +124,67 @@ var linkTypeLabels = buildLinkTypeLabels()
 // Service defines report generation behavior.
 type Service interface {
 	GenerateProjectReport(projectID string, baselineID string) ([]byte, string, error)
+	GenerateProjectReportDOCX(projectID string, baselineID string) ([]byte, string, error)
 	GenerateVVReport(projectID string, baselineID string, latest map[string]*vv.TestResult, runs []*vv.TestRun) ([]byte, string, error)
 }
 
-// DefaultService generates PDF reports from project snapshots.
-type DefaultService struct {
-	exportService   exports.Service
-	baselineService baselines.Service
+// reportModel is the rendered-report data model shared by every renderer
+// (PDF, DOCX). It is built once from a project export snapshot so that no
+// renderer duplicates the tree/link-group construction.
+type reportModel struct {
+	data                 *exports.ProjectExport
+	baselineName         string
+	roots                []*artifactNode
+	attachmentMap        map[string][]*attachments.Attachment
+	artifactTitles       map[string]string
+	linkGroupsByArtifact map[string]linkGroups
 }
 
-// NewService creates a new report service.
-func NewService(exportService exports.Service, baselineService baselines.Service) *DefaultService {
-	return &DefaultService{
-		exportService:   exportService,
-		baselineService: baselineService,
+// buildReportModel assembles the shared artifact tree, attachment index,
+// title lookup, and traceability link groups from an export snapshot. Both the
+// PDF and DOCX renderers consume the result.
+func buildReportModel(data *exports.ProjectExport, baselineName string) *reportModel {
+	attachmentMap := map[string][]*attachments.Attachment{}
+	for _, attachment := range data.Attachments {
+		attachmentMap[attachment.ArtifactID] = append(attachmentMap[attachment.ArtifactID], attachment)
+	}
+
+	artifactTitles := map[string]string{}
+	for _, artifact := range data.Artifacts {
+		artifactTitles[artifact.ID] = artifact.Title
+	}
+
+	linkGroupsByArtifact := buildLinkGroups(data.Links)
+
+	nodes := make(map[string]*artifactNode)
+	var roots []*artifactNode
+	for _, artifact := range data.Artifacts {
+		nodes[artifact.ID] = &artifactNode{artifact: artifact}
+	}
+	for _, artifact := range data.Artifacts {
+		node := nodes[artifact.ID]
+		if artifact.ParentID != nil && *artifact.ParentID != "" {
+			if parent := nodes[*artifact.ParentID]; parent != nil {
+				parent.children = append(parent.children, node)
+				continue
+			}
+		}
+		roots = append(roots, node)
+	}
+
+	return &reportModel{
+		data:                 data,
+		baselineName:         baselineName,
+		roots:                roots,
+		attachmentMap:        attachmentMap,
+		artifactTitles:       artifactTitles,
+		linkGroupsByArtifact: linkGroupsByArtifact,
 	}
 }
 
-// GenerateProjectReport builds a PDF report for a project or baseline.
-func (s *DefaultService) GenerateProjectReport(projectID string, baselineID string) ([]byte, string, error) {
-	if projectID == "" {
-		return nil, "", errors.New("project_id is required")
-	}
-
+// loadReportExport resolves the project export snapshot for a report, either
+// from a captured baseline or the live project. Shared by every report format.
+func (s *DefaultService) loadReportExport(projectID string, baselineID string) (*exports.ProjectExport, string, error) {
 	var data exports.ProjectExport
 	var baselineName string
 
@@ -172,13 +210,62 @@ func (s *DefaultService) GenerateProjectReport(projectID string, baselineID stri
 		}
 	}
 
-	pdf, err := buildReportPDF(&data, baselineName)
+	return &data, baselineName, nil
+}
+
+// DefaultService generates PDF reports from project snapshots.
+type DefaultService struct {
+	exportService   exports.Service
+	baselineService baselines.Service
+}
+
+// NewService creates a new report service.
+func NewService(exportService exports.Service, baselineService baselines.Service) *DefaultService {
+	return &DefaultService{
+		exportService:   exportService,
+		baselineService: baselineService,
+	}
+}
+
+// GenerateProjectReport builds a PDF report for a project or baseline.
+func (s *DefaultService) GenerateProjectReport(projectID string, baselineID string) ([]byte, string, error) {
+	if projectID == "" {
+		return nil, "", errors.New("project_id is required")
+	}
+
+	data, baselineName, err := s.loadReportExport(projectID, baselineID)
 	if err != nil {
 		return nil, "", err
 	}
 
-	filename := reportFilename(data.ProjectName, baselineName)
+	pdf, err := buildReportPDF(data, baselineName)
+	if err != nil {
+		return nil, "", err
+	}
+
+	filename := reportFilename(data.ProjectName, baselineName, "pdf")
 	return pdf, filename, nil
+}
+
+// GenerateProjectReportDOCX builds a Word (.docx) spec document for a project
+// or baseline over the same report model the PDF path uses.
+func (s *DefaultService) GenerateProjectReportDOCX(projectID string, baselineID string) ([]byte, string, error) {
+	if projectID == "" {
+		return nil, "", errors.New("project_id is required")
+	}
+
+	data, baselineName, err := s.loadReportExport(projectID, baselineID)
+	if err != nil {
+		return nil, "", err
+	}
+
+	docx, err := buildReportDOCX(data, baselineName)
+	if err != nil {
+		return nil, "", err
+	}
+
+	filename := reportFilename(data.ProjectName, baselineName, "docx")
+	return docx, filename, nil
 }
 
 func buildReportPDF(data *exports.ProjectExport, baselineName string) ([]byte, error) {
@@ -211,40 +298,17 @@ func buildReportPDF(data *exports.ProjectExport, baselineName string) ([]byte, e
 
 	renderProductDefinition(pdf, tr, data.ProductProfile)
 
-	attachmentMap := map[string][]*attachments.Attachment{}
-	for _, attachment := range data.Attachments {
-		attachmentMap[attachment.ArtifactID] = append(attachmentMap[attachment.ArtifactID], attachment)
-	}
-
-	artifactTitles := map[string]string{}
-	for _, artifact := range data.Artifacts {
-		artifactTitles[artifact.ID] = artifact.Title
-	}
-
-	linkGroupsByArtifact := buildLinkGroups(data.Links)
+	model := buildReportModel(data, baselineName)
+	attachmentMap := model.attachmentMap
+	artifactTitles := model.artifactTitles
+	linkGroupsByArtifact := model.linkGroupsByArtifact
 
 	linkIDs := map[string]int{}
 	for _, artifact := range data.Artifacts {
 		linkIDs[artifact.ID] = pdf.AddLink()
 	}
 
-	nodes := make(map[string]*artifactNode)
-	var roots []*artifactNode
-	for _, artifact := range data.Artifacts {
-		nodes[artifact.ID] = &artifactNode{artifact: artifact}
-	}
-	for _, artifact := range data.Artifacts {
-		node := nodes[artifact.ID]
-		if artifact.ParentID != nil && *artifact.ParentID != "" {
-			if parent := nodes[*artifact.ParentID]; parent != nil {
-				parent.children = append(parent.children, node)
-				continue
-			}
-		}
-		roots = append(roots, node)
-	}
-
-	for _, node := range roots {
+	for _, node := range model.roots {
 		renderArtifactNode(pdf, tr, node, 0, attachmentMap, linkGroupsByArtifact, artifactTitles, linkIDs)
 	}
 
@@ -1359,14 +1423,14 @@ func ensureSpace(pdf *gofpdf.Fpdf, needed float64) {
 	}
 }
 
-func reportFilename(projectName string, baselineName string) string {
+func reportFilename(projectName string, baselineName string, ext string) string {
 	sanitizedProject := sanitizeFilename(projectName)
 	timestamp := time.Now().Format("20060102_150405")
 	if baselineName == "" {
-		return fmt.Sprintf("project_report_%s_%s.pdf", sanitizedProject, timestamp)
+		return fmt.Sprintf("project_report_%s_%s.%s", sanitizedProject, timestamp, ext)
 	}
 	sanitizedBaseline := sanitizeFilename(baselineName)
-	return fmt.Sprintf("project_report_%s_%s_%s.pdf", sanitizedProject, sanitizedBaseline, timestamp)
+	return fmt.Sprintf("project_report_%s_%s_%s.%s", sanitizedProject, sanitizedBaseline, timestamp, ext)
 }
 
 func sanitizeFilename(value string) string {

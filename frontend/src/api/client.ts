@@ -306,15 +306,22 @@ export const projectAPI = {
     
     return response;
   },
-  report: async (id: string, baselineId?: string) => {
-    const params = baselineId && baselineId !== 'live' ? `?baseline_id=${baselineId}` : '';
+  report: async (id: string, baselineId?: string, format: 'pdf' | 'docx' = 'pdf') => {
+    const query = new URLSearchParams();
+    if (baselineId && baselineId !== 'live') {
+      query.set('baseline_id', baselineId);
+    }
+    if (format && format !== 'pdf') {
+      query.set('format', format);
+    }
+    const params = query.toString() ? `?${query.toString()}` : '';
     const response = await client.get(`/api/v1/projects/${id}/report${params}`, {
       responseType: 'blob',
     });
 
     const filename =
       filenameFromContentDisposition(response.headers['content-disposition']) ||
-      `project_report_${new Date().toISOString().slice(0, 10)}.pdf`;
+      `project_report_${new Date().toISOString().slice(0, 10)}.${format}`;
 
     const url = window.URL.createObjectURL(new Blob([response.data]));
     const link = document.createElement('a');
