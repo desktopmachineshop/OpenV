@@ -38,79 +38,79 @@ func stripMarkdown(text string) string {
 	// Remove code blocks (```...```) - preserve the content inside
 	codeBlockRe := regexp.MustCompile("(?s)```[a-zA-Z]*\n?(.*?)\n?```")
 	text = codeBlockRe.ReplaceAllString(text, "$1")
-	
+
 	// Remove HTML tags (including sup, sub, etc.)
 	htmlTagRe := regexp.MustCompile(`<[^>]+>`)
 	text = htmlTagRe.ReplaceAllString(text, "")
-	
+
 	// Remove horizontal rules (---, ___, ***)
 	hrRe := regexp.MustCompile(`(?m)^\s*[-_*]{3,}\s*$`)
 	text = hrRe.ReplaceAllString(text, "")
-	
+
 	// Convert headers (# ## ###) to text - handle headers without space after #
 	headerRe := regexp.MustCompile(`(?m)^#{1,6}\s*(.+?)\s*$`)
 	text = headerRe.ReplaceAllString(text, "$1")
-	
+
 	// Remove blockquotes (> or >>)
 	blockquoteRe := regexp.MustCompile(`(?m)^>+\s*`)
 	text = blockquoteRe.ReplaceAllString(text, "")
-	
+
 	// Remove task list markers [x] and [ ]
 	taskListRe := regexp.MustCompile(`(?m)^(\s*)[-*+]\s+\[[ xX]\]\s+`)
 	text = taskListRe.ReplaceAllString(text, "$1- ")
-	
+
 	// Convert bold+italic (***text*** or ___text___) first
 	boldItalicRe := regexp.MustCompile(`\*\*\*(.+?)\*\*\*|___(.+?)___`)
 	text = boldItalicRe.ReplaceAllString(text, "$1$2")
-	
+
 	// Convert bold (**text** or __text__) to plain text
 	boldRe := regexp.MustCompile(`\*\*(.+?)\*\*|__(.+?)__`)
 	text = boldRe.ReplaceAllString(text, "$1$2")
-	
+
 	// Convert italic (*text* or _text_) to plain text - be careful not to affect list markers
 	italicRe := regexp.MustCompile(`\*([^*\s][^*]*?)\*|_([^_\s][^_]*?)_`)
 	text = italicRe.ReplaceAllString(text, "$1$2")
-	
+
 	// Convert inline code (`code`) to plain text
 	inlineCodeRe := regexp.MustCompile("`([^`]+)`")
 	text = inlineCodeRe.ReplaceAllString(text, "$1")
-	
+
 	// Remove image syntax ![alt](url) - images are handled separately in PDF
 	imageRe := regexp.MustCompile(`!\[([^\]]*)\]\(([^)]+)\)`)
 	text = imageRe.ReplaceAllString(text, "")
-	
+
 	// Convert links [text](url) to just text
 	linkRe := regexp.MustCompile(`\[([^\]]+)\]\(([^)]+)\)`)
 	text = linkRe.ReplaceAllString(text, "$1")
-	
+
 	// Convert list markers (- or * or +) to simple dashes
 	listRe := regexp.MustCompile(`(?m)^([\s]*)[-*+]\s+`)
 	text = listRe.ReplaceAllString(text, "$1- ")
-	
+
 	// Convert numbered lists (1. 2. etc) to simple indented text
 	numberedListRe := regexp.MustCompile(`(?m)^([\s]*)\d+\.\s+`)
 	text = numberedListRe.ReplaceAllString(text, "$1  ")
-	
+
 	// Convert strikethrough ~~text~~ to plain text
 	strikeRe := regexp.MustCompile(`~~(.+?)~~`)
 	text = strikeRe.ReplaceAllString(text, "$1")
-	
+
 	// Replace em dashes and special Unicode characters that may not be in Arial font
-	text = strings.ReplaceAll(text, "\u2014", "-") // em dash
-	text = strings.ReplaceAll(text, "\u2013", "-") // en dash
+	text = strings.ReplaceAll(text, "\u2014", "-")  // em dash
+	text = strings.ReplaceAll(text, "\u2013", "-")  // en dash
 	text = strings.ReplaceAll(text, "\u201C", "\"") // left double quote
 	text = strings.ReplaceAll(text, "\u201D", "\"") // right double quote
-	text = strings.ReplaceAll(text, "\u2018", "'") // left single quote
-	text = strings.ReplaceAll(text, "\u2019", "'") // right single quote
-	
+	text = strings.ReplaceAll(text, "\u2018", "'")  // left single quote
+	text = strings.ReplaceAll(text, "\u2019", "'")  // right single quote
+
 	// Clean up excessive newlines (more than 2 in a row)
 	multiNewlineRe := regexp.MustCompile(`\n{3,}`)
 	text = multiNewlineRe.ReplaceAllString(text, "\n\n")
-	
+
 	// Clean up excessive spaces
 	multiSpaceRe := regexp.MustCompile(` {2,}`)
 	text = multiSpaceRe.ReplaceAllString(text, " ")
-	
+
 	return strings.TrimSpace(text)
 }
 
@@ -276,7 +276,7 @@ func buildReportPDF(data *exports.ProjectExport, baselineName string) ([]byte, e
 
 	// Use UTF-8 encoding translator for special characters
 	tr := pdf.UnicodeTranslatorFromDescriptor("")
-	
+
 	pdf.SetFont("Arial", "B", 16)
 	pdf.CellFormat(0, 8, tr(data.ProjectName), "", 1, "C", false, 0, "")
 
@@ -466,10 +466,10 @@ func renderArtifactNode(
 	sectionHeight := calculateArtifactSectionHeight(pdf, node, xStart, indent, attachmentMap, linkGroupsByArtifact, artifactTitles)
 	_, pageHeight := pdf.GetPageSize()
 	safeMargin := 20.0 // minimum margin from bottom before forcing new page
-	
+
 	// Check if artifact fits on current page
 	availableSpace := pageHeight - pdf.GetY() - 15 // 15mm bottom margin
-	
+
 	// If artifact is small (fits on one page), keep it together
 	if sectionHeight+6 < availableSpace {
 		// Fits on current page - render normally
@@ -618,26 +618,26 @@ func renderArtifactContentWithSplitting(
 // renderSingleTextField renders a text field that fits on one page
 func renderSingleTextField(pdf *gofpdf.Fpdf, tableX, tableWidth, labelColWidth, valueColWidth, rowHeight float64, label, text string) {
 	startY := pdf.GetY()
-	
+
 	pdf.SetFont("Arial", "", 9)
 	textHeight := calculateTextHeight(pdf, text, valueColWidth, 9)
 	cellHeight := textHeight + 2
-	
+
 	// Draw complete box border
 	pdf.SetDrawColor(200, 200, 200)
 	pdf.SetLineWidth(0.5)
 	pdf.Rect(tableX, startY, tableWidth, cellHeight, "")
-	
+
 	// Draw vertical column separator
 	pdf.SetLineWidth(0.2)
 	pdf.Line(tableX+labelColWidth, startY, tableX+labelColWidth, startY+cellHeight)
-	
+
 	// Label cell
 	pdf.SetXY(tableX, startY)
 	pdf.SetTextColor(60, 60, 60)
 	pdf.SetFont("Arial", "B", 9)
 	pdf.CellFormat(labelColWidth, cellHeight, label, "", 0, "TL", false, 0, "")
-	
+
 	// Text value cell
 	pdf.SetXY(tableX+labelColWidth, startY)
 	pdf.SetTextColor(0, 0, 0)
@@ -649,11 +649,11 @@ func renderSingleTextField(pdf *gofpdf.Fpdf, tableX, tableWidth, labelColWidth, 
 func renderSplitTextField(pdf *gofpdf.Fpdf, tableX, tableWidth, labelColWidth, valueColWidth, rowHeight float64, label, text string, pageHeight, safeMargin float64) {
 	currentY := pdf.GetY()
 	availableHeight := pageHeight - currentY - safeMargin
-	
+
 	// Split text into lines
 	pdf.SetFont("Arial", "", 9)
 	lines := pdf.SplitLines([]byte(text), valueColWidth)
-	
+
 	// Calculate how many lines fit on current page
 	linesPerPage := int(availableHeight / rowHeight)
 	if linesPerPage < 1 {
@@ -662,12 +662,12 @@ func renderSplitTextField(pdf *gofpdf.Fpdf, tableX, tableWidth, labelColWidth, v
 		renderSingleTextField(pdf, tableX, tableWidth, labelColWidth, valueColWidth, rowHeight, label, text)
 		return
 	}
-	
+
 	// First part - on current page
 	firstPartLines := lines[:linesPerPage]
 	firstPartText := strings.Join(convertBytesToStrings(firstPartLines), "\n")
 	firstPartHeight := float64(len(firstPartLines)) * rowHeight
-	
+
 	// Draw first part (no [continued] tag on first part)
 	pdf.SetXY(tableX, currentY)
 	pdf.SetDrawColor(200, 200, 200)
@@ -675,7 +675,7 @@ func renderSplitTextField(pdf *gofpdf.Fpdf, tableX, tableWidth, labelColWidth, v
 	pdf.Rect(tableX, currentY, tableWidth, firstPartHeight+2, "")
 	pdf.SetLineWidth(0.2)
 	pdf.Line(tableX+labelColWidth, currentY, tableX+labelColWidth, currentY+firstPartHeight+2)
-	
+
 	pdf.SetTextColor(60, 60, 60)
 	pdf.SetFont("Arial", "B", 9)
 	pdf.CellFormat(labelColWidth, firstPartHeight, label, "", 0, "TL", false, 0, "")
@@ -683,12 +683,12 @@ func renderSplitTextField(pdf *gofpdf.Fpdf, tableX, tableWidth, labelColWidth, v
 	pdf.SetFont("Arial", "", 9)
 	pdf.SetX(tableX + labelColWidth)
 	pdf.MultiCell(valueColWidth, rowHeight, firstPartText, "", "L", false)
-	
+
 	currentY = pdf.GetY()
 	pdf.SetDrawColor(200, 200, 200)
 	pdf.SetLineWidth(0.2)
 	pdf.Line(tableX, currentY, tableX+tableWidth, currentY)
-	
+
 	// Second part - on next page
 	if len(lines) > linesPerPage {
 		pdf.AddPage()
@@ -726,57 +726,57 @@ func renderArtifactDetailsTableWithSplitting(
 	labelColWidth := 50.0
 	valueColWidth := tableWidth - labelColWidth
 	rowHeight := 5.0
-	
+
 	// Description field
 	if node.artifact.Body != "" {
 		plainText := stripMarkdown(node.artifact.Body)
 		text := tr(plainText)
 		descriptionHeight := calculateTextHeight(pdf, text, valueColWidth, 9)
 		availableHeight := pageHeight - pdf.GetY() - safeMargin
-		
+
 		if descriptionHeight > availableHeight && availableHeight > 15 {
 			// Text is too long for current page - split it
-			renderSplitTextField(pdf, tableX, tableWidth, labelColWidth, valueColWidth, rowHeight, 
+			renderSplitTextField(pdf, tableX, tableWidth, labelColWidth, valueColWidth, rowHeight,
 				"Description:", text, pageHeight, safeMargin)
 		} else if descriptionHeight > availableHeight {
 			// Not enough space on current page - move to next page
 			pdf.AddPage()
-			renderSingleTextField(pdf, tableX, tableWidth, labelColWidth, valueColWidth, rowHeight, 
+			renderSingleTextField(pdf, tableX, tableWidth, labelColWidth, valueColWidth, rowHeight,
 				"Description:", text)
 		} else {
 			// Fits on current page
-			renderSingleTextField(pdf, tableX, tableWidth, labelColWidth, valueColWidth, rowHeight, 
+			renderSingleTextField(pdf, tableX, tableWidth, labelColWidth, valueColWidth, rowHeight,
 				"Description:", text)
 		}
 	}
-	
+
 	// Type and Version rows
 	for _, fieldLabel := range []string{"Type:", "Version:"} {
 		if pdf.GetY()+4 > pageHeight-safeMargin {
 			pdf.AddPage()
 		}
-		
+
 		startY := pdf.GetY()
 		rowHeight := 5.0
-		
+
 		// Draw borders
 		pdf.SetDrawColor(200, 200, 200)
 		pdf.SetLineWidth(0.5)
 		pdf.Rect(tableX, startY, tableWidth, rowHeight, "")
 		pdf.SetLineWidth(0.2)
 		pdf.Line(tableX+labelColWidth, startY, tableX+labelColWidth, startY+rowHeight)
-		
+
 		// Draw label
 		pdf.SetXY(tableX, startY)
 		pdf.SetTextColor(60, 60, 60)
 		pdf.SetFont("Arial", "B", 9)
 		pdf.CellFormat(labelColWidth, rowHeight, fieldLabel, "", 0, "CM", false, 0, "")
-		
+
 		// Draw value
 		pdf.SetXY(tableX+labelColWidth, startY)
 		pdf.SetTextColor(0, 0, 0)
 		pdf.SetFont("Arial", "", 9)
-		
+
 		var fieldValue string
 		if fieldLabel == "Type:" {
 			fieldValue = tr(node.artifact.Type)
@@ -784,24 +784,24 @@ func renderArtifactDetailsTableWithSplitting(
 			fieldValue = fmt.Sprintf("v%d", node.artifact.Version)
 		}
 		pdf.CellFormat(valueColWidth, rowHeight, fieldValue, "", 0, "CM", false, 0, "")
-		
+
 		// Draw bottom border
 		pdf.SetDrawColor(200, 200, 200)
 		pdf.SetLineWidth(0.2)
 		pdf.Line(tableX, startY+rowHeight, tableX+tableWidth, startY+rowHeight)
-		
+
 		pdf.SetY(startY + rowHeight)
 	}
-	
+
 	// Links section
 	if groups, ok := linkGroupsByArtifact[node.artifact.ID]; ok {
 		if len(groups.incoming) > 0 {
 			incomingHeight := calculateLinkRowHeight(pdf, valueColWidth, groups.incoming, artifactTitles, true)
-			
+
 			if pdf.GetY()+incomingHeight > pageHeight-safeMargin {
 				pdf.AddPage()
 			}
-			
+
 			pdf.SetXY(tableX, pdf.GetY())
 			pdf.SetTextColor(60, 60, 60)
 			pdf.SetFont("Arial", "B", 9)
@@ -814,14 +814,14 @@ func renderArtifactDetailsTableWithSplitting(
 			pdf.SetLineWidth(0.2)
 			pdf.Line(tableX, currentY, tableX+tableWidth, currentY)
 		}
-		
+
 		if len(groups.outgoing) > 0 {
 			outgoingHeight := calculateLinkRowHeight(pdf, valueColWidth, groups.outgoing, artifactTitles, false)
-			
+
 			if pdf.GetY()+outgoingHeight > pageHeight-safeMargin {
 				pdf.AddPage()
 			}
-			
+
 			pdf.SetXY(tableX, pdf.GetY())
 			pdf.SetTextColor(60, 60, 60)
 			pdf.SetFont("Arial", "B", 9)
@@ -835,48 +835,48 @@ func renderArtifactDetailsTableWithSplitting(
 			pdf.Line(tableX, currentY, tableX+tableWidth, currentY)
 		}
 	}
-	
+
 	// Images
 	for _, attachment := range attachmentMap[node.artifact.ID] {
 		imageType := imageTypeFromMime(attachment.MimeType, attachment.FilePath)
 		if imageType == "" {
 			continue
 		}
-		
+
 		imagePath, ok := resolveAttachmentPath(attachment.FilePath)
 		if !ok {
 			continue
 		}
-		
+
 		options := gofpdf.ImageOptions{ImageType: imageType, ReadDpi: true}
 		info := pdf.RegisterImageOptions(imagePath, options)
 		if info == nil {
 			continue
 		}
-		
+
 		maxWidth := valueColWidth - 4
 		width, height := calculateImageSize(info, maxWidth)
 		imageRowHeight := height + 4
-		
+
 		if pdf.GetY()+imageRowHeight > pageHeight-safeMargin {
 			pdf.AddPage()
 		}
-		
+
 		pdf.SetXY(tableX, pdf.GetY())
 		pdf.SetTextColor(60, 60, 60)
 		pdf.SetFont("Arial", "B", 9)
 		pdf.CellFormat(labelColWidth, imageRowHeight, "Image:", "", 0, "TL", false, 0, "")
-		
+
 		imageY := pdf.GetY() + 2.0
 		imageX := tableX + labelColWidth + 2.0
 		pdf.ImageOptions(imagePath, imageX, imageY, width, height, false, options, 0, "")
-		
+
 		pdf.SetY(pdf.GetY() + imageRowHeight)
 		pdf.SetDrawColor(200, 200, 200)
 		pdf.SetLineWidth(0.2)
 		pdf.Line(tableX, pdf.GetY(), tableX+tableWidth, pdf.GetY())
 	}
-	
+
 	// Reset
 	pdf.SetDrawColor(0, 0, 0)
 	pdf.SetLineWidth(0.2)
@@ -1339,21 +1339,21 @@ func formatLinksForTable(linksByType map[string][]*linksdomain.Link) string {
 
 func buildLinkGroups(linkList []*linksdomain.Link) map[string]linkGroups {
 	groups := make(map[string]linkGroups)
-	
+
 	// Track unique link relationships to avoid duplicates
 	// Key format: "fromID:toID:type"
 	seenLinks := make(map[string]bool)
-	
+
 	for _, link := range linkList {
 		// Create unique key for this link relationship
 		linkKey := fmt.Sprintf("%s:%s:%s", link.FromID, link.ToID, link.Type)
-		
+
 		// Skip if we've already seen this exact relationship
 		if seenLinks[linkKey] {
 			continue
 		}
 		seenLinks[linkKey] = true
-		
+
 		outgoing, ok := groups[link.FromID]
 		if !ok {
 			outgoing = linkGroups{outgoing: map[string][]*linksdomain.Link{}, incoming: map[string][]*linksdomain.Link{}}
@@ -1388,7 +1388,7 @@ func renderLinkGroup(
 	pdf.SetTextColor(60, 60, 60)
 	pdf.SetX(xStart)
 	pdf.CellFormat(0, 5, fmt.Sprintf("%s Links", label), "", 1, "L", false, 0, "")
-	
+
 	for linkType, items := range linksByType {
 		pdf.SetFont("Arial", "", 8)
 		pdf.SetTextColor(90, 90, 90)

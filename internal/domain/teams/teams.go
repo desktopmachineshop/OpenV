@@ -26,15 +26,15 @@ const (
 
 // Team is a named graph of agents.
 type Team struct {
-	ID          string     `json:"id"`
-	OrgID       string     `json:"org_id"`
-	Name        string     `json:"name"`
-	Description string     `json:"description"`
-	ProjectID   *string    `json:"project_id,omitempty"` // nil = global
-	EntryNodeID *string    `json:"entry_node_id,omitempty"`
-	IsDefault   bool       `json:"is_default"`
-	CreatedAt   time.Time  `json:"created_at"`
-	UpdatedAt   time.Time  `json:"updated_at"`
+	ID          string    `json:"id"`
+	OrgID       string    `json:"org_id"`
+	Name        string    `json:"name"`
+	Description string    `json:"description"`
+	ProjectID   *string   `json:"project_id,omitempty"` // nil = global
+	EntryNodeID *string   `json:"entry_node_id,omitempty"`
+	IsDefault   bool      `json:"is_default"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
 }
 
 // Node places an agent or a human on a crew. Position stores per-layout

@@ -8,13 +8,13 @@ import (
 
 // Attachment represents an image or file attachment to an artifact
 type Attachment struct {
-	ID        string    `json:"id"`
+	ID         string    `json:"id"`
 	ArtifactID string    `json:"artifact_id"`
-	Filename  string    `json:"filename"`
-	MimeType  string    `json:"mime_type"`
-	FilePath  string    `json:"file_path"`
-	FileSize  int       `json:"file_size"`
-	CreatedAt time.Time `json:"created_at"`
+	Filename   string    `json:"filename"`
+	MimeType   string    `json:"mime_type"`
+	FilePath   string    `json:"file_path"`
+	FileSize   int       `json:"file_size"`
+	CreatedAt  time.Time `json:"created_at"`
 }
 
 // CreateAttachmentRequest is the payload for creating an attachment

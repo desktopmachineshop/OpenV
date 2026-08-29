@@ -46,11 +46,11 @@ func newOIDCStub(t *testing.T, clientID string) *oidcStub {
 	mux.HandleFunc("/.well-known/openid-configuration", func(w http.ResponseWriter, r *http.Request) {
 		base := stub.server.URL
 		_ = json.NewEncoder(w).Encode(map[string]any{
-			"issuer":                 base,
-			"authorization_endpoint": base + "/authorize",
-			"token_endpoint":         base + "/token",
-			"userinfo_endpoint":      base + "/userinfo",
-			"jwks_uri":               base + "/jwks",
+			"issuer":                                base,
+			"authorization_endpoint":                base + "/authorize",
+			"token_endpoint":                        base + "/token",
+			"userinfo_endpoint":                     base + "/userinfo",
+			"jwks_uri":                              base + "/jwks",
 			"id_token_signing_alg_values_supported": []string{"RS256"},
 		})
 	})
@@ -154,10 +154,10 @@ func (m *memUserRepo) FindSessionByTokenHash(hash string) (*users.Session, error
 	}
 	return nil, nil
 }
-func (m *memUserRepo) TouchSession(string, time.Time) error       { return nil }
-func (m *memUserRepo) SetSessionActiveOrg(string, string) error   { return nil }
-func (m *memUserRepo) DeleteSession(id string) error              { delete(m.sessions, id); return nil }
-func (m *memUserRepo) DeleteExpiredSessions(time.Time) error      { return nil }
+func (m *memUserRepo) TouchSession(string, time.Time) error     { return nil }
+func (m *memUserRepo) SetSessionActiveOrg(string, string) error { return nil }
+func (m *memUserRepo) DeleteSession(id string) error            { delete(m.sessions, id); return nil }
+func (m *memUserRepo) DeleteExpiredSessions(time.Time) error    { return nil }
 
 // --- tests -----------------------------------------------------------------
 

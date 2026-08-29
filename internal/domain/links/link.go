@@ -127,8 +127,8 @@ type Repository interface {
 
 // DefaultService implements the Service interface
 type DefaultService struct {
-	repo              Repository
-	artifactService   interface{} // Will be set to avoid circular imports
+	repo            Repository
+	artifactService interface{} // Will be set to avoid circular imports
 }
 
 // NewDefaultService creates a new link service

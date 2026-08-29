@@ -14,9 +14,9 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/openv/requirements-platform/internal/domain/artifacts"
-	"github.com/openv/requirements-platform/internal/domain/links"
 	"github.com/openv/requirements-platform/internal/domain/attachments"
 	"github.com/openv/requirements-platform/internal/domain/attributes"
+	"github.com/openv/requirements-platform/internal/domain/links"
 	"github.com/openv/requirements-platform/internal/domain/products"
 	"github.com/openv/requirements-platform/internal/domain/projects"
 )
@@ -39,15 +39,15 @@ const (
 
 // ProjectExport contains all project data for export
 type ProjectExport struct {
-	ExportedAt   time.Time                `json:"exported_at"`
-	Version      string                   `json:"version"`
-	ProjectID    string                   `json:"project_id"`
-	ProjectName  string                   `json:"project_name"`
-	ProjectDesc  string                   `json:"project_description"`
-	Artifacts    []*artifacts.Artifact    `json:"artifacts"`
-	Links        []*links.Link            `json:"links"`
-	Attachments  []*attachments.Attachment `json:"attachments"`
-	ProductProfile *products.ProductProfile `json:"product_profile,omitempty"`
+	ExportedAt     time.Time                 `json:"exported_at"`
+	Version        string                    `json:"version"`
+	ProjectID      string                    `json:"project_id"`
+	ProjectName    string                    `json:"project_name"`
+	ProjectDesc    string                    `json:"project_description"`
+	Artifacts      []*artifacts.Artifact     `json:"artifacts"`
+	Links          []*links.Link             `json:"links"`
+	Attachments    []*attachments.Attachment `json:"attachments"`
+	ProductProfile *products.ProductProfile  `json:"product_profile,omitempty"`
 	// AttributeDefs carries the org/project attribute definitions effective for
 	// the project. It is populated only for the ReqIF export (to type enum
 	// attributes as ReqIF enumerations); JSON/CSV exports leave it nil so their
@@ -167,14 +167,14 @@ func (s *DefaultService) ExportProject(projectID string, format ExportFormat) ([
 
 	// Create export data structure
 	exportData := &ProjectExport{
-		ExportedAt:   time.Now(),
-		Version:      "1.0",
-		ProjectID:    project.ID,
-		ProjectName:  project.Name,
-		ProjectDesc:  project.Description,
-		Artifacts:    artifactList,
-		Links:        linkList,
-		Attachments:  allAttachments,
+		ExportedAt:  time.Now(),
+		Version:     "1.0",
+		ProjectID:   project.ID,
+		ProjectName: project.Name,
+		ProjectDesc: project.Description,
+		Artifacts:   artifactList,
+		Links:       linkList,
+		Attachments: allAttachments,
 	}
 
 	// Attach the product profile when a product service is wired.

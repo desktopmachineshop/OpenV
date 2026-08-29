@@ -513,14 +513,14 @@ func GetFileBasedTemplateSnapshot(examplesDir string, keyOrID string) ([]byte, e
 		if templateData.Key == keyOrID || derivedID == keyOrID {
 			// Convert TemplateData back to ProjectExport format for the snapshot
 			export := exports.ProjectExport{
-				ExportedAt:   templateData.ExportedAt,
-				Version:      templateData.Version,
-				ProjectID:    templateData.Key,
-				ProjectName:  templateData.Name,
-				ProjectDesc:  templateData.Description,
-				Artifacts:    templateData.Artifacts,
-				Links:        templateData.Links,
-				Attachments:  templateData.Attachments,
+				ExportedAt:  templateData.ExportedAt,
+				Version:     templateData.Version,
+				ProjectID:   templateData.Key,
+				ProjectName: templateData.Name,
+				ProjectDesc: templateData.Description,
+				Artifacts:   templateData.Artifacts,
+				Links:       templateData.Links,
+				Attachments: templateData.Attachments,
 			}
 
 			return json.MarshalIndent(export, "", "  ")

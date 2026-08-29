@@ -39,11 +39,11 @@ func TestStatusTransitionTable(t *testing.T) {
 		{StatusInReview, StatusApproved, true},
 		{StatusApproved, StatusSuperseded, true},
 
-		{StatusDraft, StatusApproved, false},   // no self-approval shortcut
+		{StatusDraft, StatusApproved, false}, // no self-approval shortcut
 		{StatusDraft, StatusSuperseded, false},
 		{StatusDraft, StatusDraft, false},
 		{StatusInReview, StatusSuperseded, false},
-		{StatusApproved, StatusDraft, false},    // demotion only via content edit
+		{StatusApproved, StatusDraft, false}, // demotion only via content edit
 		{StatusApproved, StatusInReview, false},
 		{StatusApproved, StatusApproved, false},
 		{StatusSuperseded, StatusDraft, false}, // terminal
@@ -60,13 +60,13 @@ func TestStatusTransitionTable(t *testing.T) {
 
 func TestNormalizeStatus(t *testing.T) {
 	cases := map[string]string{
-		"":            StatusDraft,
-		"bogus":       StatusDraft,
-		"draft":       StatusDraft,
-		"in-review":   StatusInReview, // legacy issue-#127 spelling
-		"in_review":   StatusInReview,
-		"approved":    StatusApproved,
-		"superseded":  StatusSuperseded,
+		"":           StatusDraft,
+		"bogus":      StatusDraft,
+		"draft":      StatusDraft,
+		"in-review":  StatusInReview, // legacy issue-#127 spelling
+		"in_review":  StatusInReview,
+		"approved":   StatusApproved,
+		"superseded": StatusSuperseded,
 	}
 	for in, want := range cases {
 		if got := NormalizeStatus(in); got != want {

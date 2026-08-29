@@ -324,8 +324,8 @@ func buildReqIF(data *ProjectExport) ([]byte, error) {
 	// 1. Enum datatypes, one per enum attribute definition (dedup by key,
 	//    first definition wins). enumValueID[key][value] -> ENUM-VALUE ref.
 	var enumDatatypes []xDatatypeEnum
-	enumDatatypeID := map[string]string{}          // key -> DATATYPE-DEFINITION-ENUMERATION id
-	enumValueID := map[string]map[string]string{}  // key -> value -> ENUM-VALUE id
+	enumDatatypeID := map[string]string{}         // key -> DATATYPE-DEFINITION-ENUMERATION id
+	enumValueID := map[string]map[string]string{} // key -> value -> ENUM-VALUE id
 	for _, def := range data.AttributeDefs {
 		if def == nil || def.DataType != attributes.DataTypeEnum {
 			continue
