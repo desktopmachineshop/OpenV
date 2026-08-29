@@ -178,10 +178,10 @@ export const ProjectList: React.FC = () => {
     setEditProjectDesc('');
   };
 
-  const handleExportProject = async (id: string, e: React.MouseEvent) => {
+  const handleExportProject = async (id: string, format: 'json' | 'csv', e: React.MouseEvent) => {
     e.stopPropagation();
     try {
-      await projectAPI.export(id, 'json');
+      await projectAPI.export(id, format);
       setError('');
     } catch (err: any) {
       console.error('Failed to export project:', err);
@@ -349,11 +349,18 @@ export const ProjectList: React.FC = () => {
                         ✎
                       </button>
                       <button
-                        className="icon-btn export-btn"
-                        onClick={(e) => handleExportProject(project.id, e)}
-                        title="Export project"
+                        className="icon-btn export-btn export-format-btn"
+                        onClick={(e) => handleExportProject(project.id, 'json', e)}
+                        title="Export project as JSON (full project, re-importable)"
                       >
-                        ↓
+                        ↓ JSON
+                      </button>
+                      <button
+                        className="icon-btn export-btn export-format-btn"
+                        onClick={(e) => handleExportProject(project.id, 'csv', e)}
+                        title="Export artifacts as CSV (flat spreadsheet rows)"
+                      >
+                        ↓ CSV
                       </button>
                       <button
                         className="icon-btn delete-btn"

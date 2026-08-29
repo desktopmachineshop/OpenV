@@ -78,8 +78,9 @@ an agent's output, check there first.
 
 ## How do I back up a project?
 
-Use **↓ Export project** on the Projects page — it downloads the full project
-as JSON, which **↑ Import Project** can restore on any server.
+Use **↓ JSON** (Export project as JSON) on the Projects page — it downloads the
+full project as JSON, which **↑ Import Project** can restore on any server.
+(**↓ CSV** is a flat, one-way spreadsheet export and cannot be re-imported.)
 `;
 
 export default content;

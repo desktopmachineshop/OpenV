@@ -1,9 +1,14 @@
 package exports
 
 import (
+	"bytes"
+	"encoding/csv"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/openv/requirements-platform/internal/domain/artifacts"
@@ -12,6 +17,10 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/products"
 	"github.com/openv/requirements-platform/internal/domain/projects"
 )
+
+// ErrUnsupportedFormat is returned when a project export is requested in a
+// format the service cannot produce. Handlers should map it to a 400.
+var ErrUnsupportedFormat = errors.New("unsupported export format")
 
 // ExportFormat represents the export file format
 type ExportFormat string
@@ -144,11 +153,11 @@ func (s *DefaultService) ExportProject(projectID string, format ExportFormat) ([
 	case FormatJSON:
 		return s.exportJSON(exportData)
 	case FormatCSV:
-		return nil, "", fmt.Errorf("CSV export not yet implemented")
+		return s.exportCSV(exportData)
 	case FormatExcel:
-		return nil, "", fmt.Errorf("Excel export not yet implemented")
+		return nil, "", fmt.Errorf("%w: excel export not yet implemented", ErrUnsupportedFormat)
 	default:
-		return nil, "", fmt.Errorf("unsupported export format: %s", format)
+		return nil, "", fmt.Errorf("%w: %s", ErrUnsupportedFormat, format)
 	}
 }
 
@@ -159,8 +168,102 @@ func (s *DefaultService) exportJSON(data *ProjectExport) ([]byte, string, error)
 		return nil, "", fmt.Errorf("failed to marshal JSON: %w", err)
 	}
 
-	filename := fmt.Sprintf("project_%s_%s.json", data.ProjectName, time.Now().Format("20060102_150405"))
-	return jsonData, filename, nil
+	return jsonData, exportFilename(data.ProjectName, "json"), nil
+}
+
+// csvHeader is the column layout of a CSV project export: one flat row per
+// artifact, with outgoing links folded into a single semicolon-separated
+// "type:targetId" column.
+var csvHeader = []string{
+	"id", "type", "title", "body", "status", "version",
+	"parent_id", "links", "created_at", "updated_at",
+}
+
+// exportCSV exports project data as RFC 4180 CSV, one row per artifact.
+func (s *DefaultService) exportCSV(data *ProjectExport) ([]byte, string, error) {
+	// Fold links into per-artifact "type:targetId" pairs, keyed by source.
+	linksByFrom := make(map[string][]string, len(data.Links))
+	for _, link := range data.Links {
+		if link == nil {
+			continue
+		}
+		linksByFrom[link.FromID] = append(linksByFrom[link.FromID], link.Type+":"+link.ToID)
+	}
+
+	var buf bytes.Buffer
+	writer := csv.NewWriter(&buf)
+
+	if err := writer.Write(csvHeader); err != nil {
+		return nil, "", fmt.Errorf("failed to write CSV header: %w", err)
+	}
+
+	for _, artifact := range data.Artifacts {
+		if artifact == nil {
+			continue
+		}
+
+		status := ""
+		if artifact.Attributes != nil {
+			if v, ok := artifact.Attributes["status"].(string); ok {
+				status = v
+			}
+		}
+
+		parentID := ""
+		if artifact.ParentID != nil {
+			parentID = *artifact.ParentID
+		}
+
+		row := []string{
+			artifact.ID,
+			artifact.Type,
+			artifact.Title,
+			artifact.Body,
+			status,
+			strconv.Itoa(artifact.Version),
+			parentID,
+			strings.Join(linksByFrom[artifact.ID], ";"),
+			artifact.CreatedAt.UTC().Format(time.RFC3339),
+			artifact.UpdatedAt.UTC().Format(time.RFC3339),
+		}
+		if err := writer.Write(row); err != nil {
+			return nil, "", fmt.Errorf("failed to write CSV row: %w", err)
+		}
+	}
+
+	writer.Flush()
+	if err := writer.Error(); err != nil {
+		return nil, "", fmt.Errorf("failed to write CSV: %w", err)
+	}
+
+	return buf.Bytes(), exportFilename(data.ProjectName, "csv"), nil
+}
+
+// exportFilename builds the download filename for an export, sanitizing the
+// project name so the value is safe inside a quoted Content-Disposition
+// filename: quotes, backslashes, path separators, and control characters are
+// stripped.
+func exportFilename(projectName, extension string) string {
+	name := sanitizeFilenameComponent(projectName)
+	if name == "" {
+		name = "export"
+	}
+	return fmt.Sprintf("project_%s_%s.%s", name, time.Now().Format("20060102_150405"), extension)
+}
+
+// sanitizeFilenameComponent strips characters that are unsafe in a quoted
+// Content-Disposition filename or in filesystem names.
+func sanitizeFilenameComponent(name string) string {
+	var b strings.Builder
+	for _, r := range name {
+		switch {
+		case r < 0x20 || r == 0x7f: // control characters
+		case r == '"' || r == '\\' || r == '/': // header/path breakers
+		default:
+			b.WriteRune(r)
+		}
+	}
+	return strings.TrimSpace(b.String())
 }
 
 // ImportProject imports project data from JSON and creates a new project
