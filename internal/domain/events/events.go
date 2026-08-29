@@ -11,6 +11,10 @@ const (
 	ArtifactCreated  = "artifact.created"
 	ArtifactUpdated  = "artifact.updated"
 	ArtifactDeleted  = "artifact.deleted"
+	// ArtifactStatusChanged carries {from, to} in its payload; the event
+	// stream is the sign-off history (issue #127 keeps approval audit in
+	// events rather than a dedicated table).
+	ArtifactStatusChanged = "artifact.status_changed"
 	LinkCreated      = "link.created"
 	LinkUpdated      = "link.updated"
 	LinkDeleted      = "link.deleted"

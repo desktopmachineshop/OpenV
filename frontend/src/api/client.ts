@@ -80,6 +80,8 @@ client.interceptors.response.use(
   }
 );
 
+export type ArtifactStatus = 'draft' | 'in_review' | 'approved' | 'superseded';
+
 export interface Artifact {
   id: string;
   project_id: string;
@@ -88,6 +90,9 @@ export interface Artifact {
   title: string;
   body: string;
   sort_order?: number;
+  // Review state: draft | in_review | approved | superseded.
+  // First-class column; attributes.status is only a deprecated mirror.
+  status?: ArtifactStatus;
   attributes: Record<string, any>;
   version: number;
   valid_from: string;
@@ -168,6 +173,10 @@ export const artifactAPI = {
     client.get<Artifact[]>('/api/v1/artifacts', { params: { project_id: projectId, type } }),
   update: (id: string, payload: Partial<Artifact>) =>
     client.put<Artifact>(`/api/v1/artifacts/${id}`, payload),
+  // One review state-machine transition; the server enforces legality
+  // (400 unknown status, 409 illegal transition, 403 insufficient role).
+  changeStatus: (id: string, status: ArtifactStatus) =>
+    client.put<Artifact>(`/api/v1/artifacts/${id}/status`, { status }),
   delete: (id: string) =>
     client.delete(`/api/v1/artifacts/${id}`),
   getVersions: (id: string) =>
