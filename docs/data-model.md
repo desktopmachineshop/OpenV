@@ -1,11 +1,31 @@
 # Data Model Overview
 
-The schema is created and migrated idempotently at API startup by
-`internal/persistence/postgres/` — `db.go` (core), `schema_users.go`,
-`schema_suite.go`, `schema_agents.go`, and `schema_orgs.go` (multi-tenancy,
-which also `ALTER`s earlier tables and backfills org ids via
-`BackfillOrgs`/`PromoteOrgColumns`). This overview is generated from those
-files as of commit `2d6cd72`; the code is authoritative.
+The schema is owned by `internal/persistence/postgres/`. At API startup
+`cmd/server/main.go` calls `postgres.Migrate` (`migrations.go`), which
+brings the database to the current version through a numbered migration
+ledger (see "Schema migrations" below). Migration 0001 — the frozen
+"baseline" — wraps the legacy idempotent init chain and is re-run on every
+boot: `db.go` (core `InitSchema`), `schema_users.go`, `schema_suite.go`,
+`schema_agents.go`, and `schema_orgs.go` (multi-tenancy, which also
+`ALTER`s earlier tables). `BackfillOrgs` (which finishes by calling
+`PromoteOrgColumns`) stays outside the ledger as a boot-time idempotent
+data migration: it backfills org ids, then promotes the `org_id` columns
+to NOT NULL. This overview is generated from those files as of commit
+`200cf4f`; the code is authoritative.
+
+## Schema migrations (`migrations.go`)
+
+### schema_migrations
+The migration ledger: `version` (INT primary key), `name`, `applied_at`.
+`postgres.Migrate` creates this table if missing, re-runs the idempotent
+0001 baseline (recording it in the ledger once), then applies any
+unapplied numbered migrations (0002+) in ascending order. Each numbered
+migration runs exactly once: its DDL and its ledger row commit in the same
+transaction (so a failed migration leaves neither behind), and concurrent
+booting replicas are serialized by a `pg_advisory_xact_lock`. The baseline
+is frozen — new schema changes are appended to the registry in
+`migrations.go` as numbered migrations, never added to `InitSchema` or the
+`schema_*.go` files.
 
 ## Core requirements data (`db.go`)
 
@@ -194,8 +214,12 @@ copilot turns run as agent runs linked via `agent_runs.guided_session_id`.
 Test execution: runs (`project_id`, `name`, optional `baseline_id`,
 `status`, `started_at`/`completed_at`) and one result per
 `(run_id, test_case_id)`: `test_case_version`, `status`, `notes`, `evidence`
-JSONB, `executed_at`/`executed_by`. Evidence files attach via
-`attachments.test_result_id`.
+JSONB, `executed_at`/`executed_by`, `executed_by_agent_run_id` (set when an
+agent run recorded the result, so reviewers can tell agent evidence from
+human evidence). Test cases carry an `execution_method` attribute
+(`automated` — the default — | `manual` | `physical`); only automated cases
+may have agent-recorded results (`internal/domain/vv`). Evidence files
+attach via `attachments.test_result_id`.
 
 ### work_items / work_item_activity
 Kanban cards: `project_id`, `title`, `description`, `board_column`,
@@ -210,7 +234,10 @@ Stakeholder elicitation: an interview (`project_id`, optional
 `status`, `expires_at`) has token-authenticated invites (`token_hash`
 unique, `invitee_label`, `expires_at`, `revoked`), participant sessions
 (`invite_id`, `participant_name`, `status`, `summary`), and per-session
-chat messages.
+chat messages. Sessions are listed per interview, and also project-wide
+(most recent across all of a project's interviews, joined through
+`interview_sessions.interview_id`) via
+`GET /api/v1/projects/{id}/interview-sessions?limit=N`.
 
 ## Versioning strategy
 

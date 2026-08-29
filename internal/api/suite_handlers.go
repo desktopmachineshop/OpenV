@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
@@ -991,7 +992,7 @@ func (h *Handler) launchGuidedTurn(r *http.Request, session *guided.Session, ste
 				s = s[:12000] + "…(truncated)"
 			}
 			b.WriteString("\nCurrent wizard state (everything entered so far):\n" + s + "\n")
-			b.WriteString("State key legend: step_1 {vision, problem_statement, target_users} = Product framing; step_2.personas (each has a stable id); step_3.needs (persona_id references a step_2 persona's id); step_4.requirements (need_id references a step_3 need's id); step_5.nfrs; step_6.hazards; step_7 = test stubs; step 8 = review & commit; copilot_applied = keys of your suggestions already applied.\n")
+			b.WriteString("State key legend: step_1 {vision, problem_statement, target_users} = Product framing; step_2.personas; step_3.needs (persona_id references a step_2 persona's id); step_4.requirements (need_id references a step_3 need's id); step_5.nfrs; step_6.hazards — every entry in these five lists carries a stable \"id\", which is what \"replaces\" should reference; step_7 = test stubs; step 8 = review & commit; copilot_applied = keys of your suggestions already applied.\n")
 		}
 	}
 	b.WriteString("\nConversation so far:\n")
@@ -1025,13 +1026,13 @@ When you propose a concrete entry for the wizard, put each one in its own fenced
 - {"kind":"nfr","category":"Performance|Reliability|Usability|Security|Maintainability|Regulatory","text":"The system shall ...","fit_criterion":"","verification_method":"inspection|analysis|demonstration|test"}
 - {"kind":"hazard","hazard":"","harm":"","severity":"minor|moderate|serious|critical"}
 
-To improve or correct an entry the user already has, add "replaces":"<exact current value>" to the object — matched against the persona name, need capability, requirement text, NFR text, or hazard text respectively. The user then gets a Replace button that overwrites that entry in place instead of adding a duplicate. Entries already locked to artifacts (they show a green dot) cannot be replaced — propose a new entry instead. Omit "replaces" for brand-new entries. Framing suggestions always replace their field.
+To improve or correct an entry the user already has, add "replaces":"<the entry's id>" to the object — always prefer the entry's stable "id" exactly as it appears in the wizard state above; it is unambiguous. Only if you cannot see the id, fall back to the entry's exact current value (persona name, need capability, requirement text, NFR text, or hazard text respectively). The user then gets a Replace button that overwrites that entry in place instead of adding a duplicate. Entries already locked to artifacts (they show a green dot) cannot be replaced — propose a new entry instead. Omit "replaces" for brand-new entries. Framing suggestions always replace their field.
 
 Example (new entry):
 ` + "```openv-suggestion\n" + `{"kind":"hazard","hazard":"Spindle starts while guard is open","harm":"Operator hand injury","severity":"critical"}` + "\n```" + `
 
-Example (revision of an existing requirement):
-` + "```openv-suggestion\n" + `{"kind":"requirement","replaces":"The system shall be fast","text":"The system shall render the requirements list within 500 ms for projects of up to 5,000 artifacts.","fit_criterion":"P95 list render time ≤ 500 ms at 5,000 artifacts","verification_method":"test"}` + "\n```" + `
+Example (revision of an existing requirement whose state entry is {"id":"9f6c1a2e-...","text":"The system shall be fast",...}):
+` + "```openv-suggestion\n" + `{"kind":"requirement","replaces":"9f6c1a2e-...","text":"The system shall render the requirements list within 500 ms for projects of up to 5,000 artifacts.","fit_criterion":"P95 list render time ≤ 500 ms at 5,000 artifacts","verification_method":"test"}` + "\n```" + `
 
 The user clicks Add/Apply/Replace on a suggestion to put it into the wizard, so suggestions must be self-contained and match the shapes exactly. Never assume a suggestion was accepted until it appears in the wizard state. Do not create or modify OpenV artifacts yourself.`)
 
@@ -1050,7 +1051,8 @@ The user clicks Add/Apply/Replace on a suggestion to put it into the wizard, so 
 		return err
 	}
 	if err := h.guidedService.AttachAgentRun(session.ID, run.ID); err != nil {
-		fmt.Printf("Warning: failed to attach copilot run %s to guided session %s: %v\n", run.ID, session.ID, err)
+		slog.Warn("api: failed to attach copilot run to guided session",
+			"run_id", run.ID, "session_id", session.ID, "error", err)
 	}
 	return nil
 }

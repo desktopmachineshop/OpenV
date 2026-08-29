@@ -338,6 +338,34 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
     );
   };
 
+  // Human-readable label for a suggestion's "replaces" target: when it is an
+  // entry's stable id, show that entry's title from the wizard state instead
+  // of the raw UUID; otherwise show the value as-is (it is already the title).
+  const replacesLabel = (s: CopilotSuggestion): string => {
+    const target = String(s.replaces || '').trim();
+    if (!target) return '';
+    try {
+      const state = getStateRef.current() || {};
+      const lists: Record<string, { items: any[]; title: (e: any) => any }> = {
+        persona: { items: state.step_2?.personas, title: (e) => e.name },
+        need: { items: state.step_3?.needs, title: (e) => e.capability },
+        requirement: { items: state.step_4?.requirements, title: (e) => e.text },
+        nfr: { items: state.step_5?.nfrs, title: (e) => e.text },
+        hazard: { items: state.step_6?.hazards, title: (e) => e.hazard },
+      };
+      const cfg = lists[s.kind];
+      const items = Array.isArray(cfg?.items) ? cfg.items : [];
+      const hit = items.find((e) => e && e.id === target);
+      if (hit) {
+        const title = String(cfg.title(hit) || '').trim();
+        if (title) return title;
+      }
+    } catch {
+      // fall through to the raw value
+    }
+    return target;
+  };
+
   const renderSuggestion = (seg: Segment & { type: 'suggestion' }, key: string) => {
     if (!seg.suggestion) {
       return (
@@ -380,7 +408,7 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
         {detail && <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 6 }}>{detail}</div>}
         {s.replaces && (
           <div style={{ fontSize: 11, color: 'var(--neutral)', fontStyle: 'italic', marginBottom: 6 }}>
-            Replaces: {String(s.replaces)}
+            Replaces: {replacesLabel(s)}
           </div>
         )}
         {isAdded ? (

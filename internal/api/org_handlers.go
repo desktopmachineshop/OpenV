@@ -211,7 +211,11 @@ func (h *Handler) AddOrgMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.orgService.AddMember(orgID, user.ID, req.Role); err != nil {
-		writeJSONError(w, http.StatusBadRequest, err.Error())
+		if errors.Is(err, orgs.ErrInvalidRole) || errors.Is(err, orgs.ErrPersonalOrgMembers) {
+			writeJSONError(w, http.StatusBadRequest, err.Error())
+		} else {
+			respondInternal(w, r, "failed to add workspace member", err)
+		}
 		return
 	}
 	w.WriteHeader(http.StatusCreated)
@@ -230,7 +234,11 @@ func (h *Handler) UpdateOrgMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.orgService.SetMemberRole(vars["id"], vars["userId"], req.Role); err != nil {
-		writeJSONError(w, http.StatusBadRequest, err.Error())
+		if errors.Is(err, orgs.ErrInvalidRole) || errors.Is(err, orgs.ErrNotMember) {
+			writeJSONError(w, http.StatusBadRequest, err.Error())
+		} else {
+			respondInternal(w, r, "failed to update workspace member", err)
+		}
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -463,7 +464,7 @@ func (h *Handler) UpdateArtifact(w http.ResponseWriter, r *http.Request) {
 	chatterEntry := chatter.NewChatterEntry(id, chatterMessage, true, "version-change")
 	if err := h.chatterService.CreateEntry(chatterEntry); err != nil {
 		// Log but don't fail the request
-		fmt.Printf("Warning: failed to create chatter entry for version change: %v\n", err)
+		slog.Warn("api: failed to create chatter entry for version change", "artifact_id", id, "error", err)
 	}
 
 	// Auto-version any artifacts that had link changes
@@ -472,7 +473,7 @@ func (h *Handler) UpdateArtifact(w http.ResponseWriter, r *http.Request) {
 		err = h.autoVersionLinkedArtifacts(affectedArtifactIDs)
 		if err != nil {
 			// Log but don't fail the request
-			fmt.Printf("Warning: failed to auto-version linked artifacts: %v\n", err)
+			slog.Warn("api: failed to auto-version linked artifacts", "error", err)
 		}
 	}
 
@@ -562,7 +563,7 @@ func (h *Handler) RestoreArtifactVersion(w http.ResponseWriter, r *http.Request)
 	chatterEntry := chatter.NewChatterEntry(id, chatterMessage, true, "restore")
 	if err := h.chatterService.CreateEntry(chatterEntry); err != nil {
 		// Log but don't fail the request
-		fmt.Printf("Warning: failed to create chatter entry for restore: %v\n", err)
+		slog.Warn("api: failed to create chatter entry for restore", "artifact_id", id, "error", err)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -1007,7 +1008,7 @@ func (h *Handler) CreateProject(w http.ResponseWriter, r *http.Request) {
 	// Creator becomes the project owner.
 	if user := CurrentUser(r); user != nil && h.memberService != nil {
 		if err := h.memberService.AddMember(project.ID, user.ID, members.RoleOwner); err != nil {
-			fmt.Printf("Warning: failed to add creator as project owner: %v\n", err)
+			slog.Warn("api: failed to add creator as project owner", "project_id", project.ID, "error", err)
 		}
 	}
 
@@ -1189,7 +1190,7 @@ func (h *Handler) ImportProject(w http.ResponseWriter, r *http.Request) {
 	// Creator becomes the project owner (mirrors CreateProject).
 	if user := CurrentUser(r); user != nil && h.memberService != nil {
 		if err := h.memberService.AddMember(projectID, user.ID, members.RoleOwner); err != nil {
-			fmt.Printf("Warning: failed to add creator as project owner: %v\n", err)
+			slog.Warn("api: failed to add creator as project owner", "project_id", projectID, "error", err)
 		}
 	}
 
@@ -1286,7 +1287,7 @@ func (h *Handler) ListTemplates(w http.ResponseWriter, r *http.Request) {
 		fileTemplates, err = templates.LoadFileBasedTemplates(examplesDir)
 		if err != nil {
 			// Log the error but continue - file-based templates are optional
-			fmt.Printf("Warning: failed to load file-based templates from %s: %v\n", examplesDir, err)
+			slog.Warn("api: failed to load file-based templates", "dir", examplesDir, "error", err)
 		}
 	}
 
@@ -1433,7 +1434,7 @@ func (h *Handler) CreateProjectFromTemplate(w http.ResponseWriter, r *http.Reque
 func (h *Handler) addProjectCreatorAsOwner(r *http.Request, projectID string) {
 	if user := CurrentUser(r); user != nil && h.memberService != nil {
 		if err := h.memberService.AddMember(projectID, user.ID, members.RoleOwner); err != nil {
-			fmt.Printf("Warning: failed to add creator as project owner: %v\n", err)
+			slog.Warn("api: failed to add creator as project owner", "project_id", projectID, "error", err)
 		}
 	}
 }
@@ -1853,7 +1854,7 @@ func (h *Handler) processManagedLinkChanges(r *http.Request, baseProjectID, from
 			// Both endpoints may live outside the base project; the caller
 			// needs editor rights on their projects to remove the link.
 			if !canEditLinkedArtifact(link.FromID) || !canEditLinkedArtifact(link.ToID) {
-				fmt.Printf("Warning: skipping removal of link %s: no editor access to a linked artifact's project\n", linkID)
+				slog.Warn("api: skipping link removal, no editor access to a linked artifact's project", "link_id", linkID)
 				continue
 			}
 			// Mark the 'to' artifact as affected (it had an incoming link removed)
@@ -1867,7 +1868,7 @@ func (h *Handler) processManagedLinkChanges(r *http.Request, baseProjectID, from
 		// Hard delete the link
 		err = h.linkService.DeleteLink(linkID)
 		if err != nil {
-			fmt.Printf("Warning: failed to delete link %s: %v\n", linkID, err)
+			slog.Warn("api: failed to delete link", "link_id", linkID, "error", err)
 		}
 	}
 
@@ -1902,29 +1903,29 @@ func (h *Handler) processManagedLinkChanges(r *http.Request, baseProjectID, from
 		// Validate link type against artifact types
 		fromArtifact, err := h.artifactService.GetArtifact(fromID)
 		if err != nil {
-			fmt.Printf("Warning: failed to get source artifact for link validation: %v\n", err)
+			slog.Warn("api: failed to get source artifact for link validation", "artifact_id", fromID, "error", err)
 			continue
 		}
 
 		toArtifact, err := h.artifactService.GetArtifact(toID)
 		if err != nil {
-			fmt.Printf("Warning: failed to get target artifact for link validation: %v\n", err)
+			slog.Warn("api: failed to get target artifact for link validation", "artifact_id", toID, "error", err)
 			continue
 		}
 
 		if err := links.ValidateLinkType(linkType, fromArtifact.Type, toArtifact.Type); err != nil {
-			fmt.Printf("Warning: invalid link type: %v\n", err)
+			slog.Warn("api: invalid link type", "error", err)
 			continue
 		}
 
 		// Both endpoints get a version bump + chatter; a cross-project link
 		// needs editor rights on the other project too.
 		if fromArtifact.ProjectID != baseProjectID && !h.hasProjectRole(r, fromArtifact.ProjectID, members.RoleEditor) {
-			fmt.Printf("Warning: skipping link add %s -> %s: no editor access to the source artifact's project\n", fromID, toID)
+			slog.Warn("api: skipping link add, no editor access to the source artifact's project", "from_id", fromID, "to_id", toID)
 			continue
 		}
 		if toArtifact.ProjectID != baseProjectID && !h.hasProjectRole(r, toArtifact.ProjectID, members.RoleEditor) {
-			fmt.Printf("Warning: skipping link add %s -> %s: no editor access to the target artifact's project\n", fromID, toID)
+			slog.Warn("api: skipping link add, no editor access to the target artifact's project", "from_id", fromID, "to_id", toID)
 			continue
 		}
 
@@ -1938,7 +1939,7 @@ func (h *Handler) processManagedLinkChanges(r *http.Request, baseProjectID, from
 		link := links.NewLink(linkReq)
 		err = h.linkService.CreateLink(link)
 		if err != nil {
-			fmt.Printf("Warning: failed to create link: %v\n", err)
+			slog.Warn("api: failed to create link", "from_id", fromID, "to_id", toID, "error", err)
 			continue
 		}
 
@@ -1963,7 +1964,7 @@ func (h *Handler) autoVersionLinkedArtifacts(affectedArtifactIDs []string) error
 	for _, artifactID := range affectedArtifactIDs {
 		artifact, err := h.artifactService.GetArtifact(artifactID)
 		if err != nil {
-			fmt.Printf("Warning: could not find artifact %s for auto-versioning: %v\n", artifactID, err)
+			slog.Warn("api: could not find artifact for auto-versioning", "artifact_id", artifactID, "error", err)
 			continue
 		}
 
@@ -1973,13 +1974,13 @@ func (h *Handler) autoVersionLinkedArtifacts(affectedArtifactIDs []string) error
 
 		incomingLinks, err := h.linkService.GetLinksTo(artifactID)
 		if err != nil {
-			fmt.Printf("Warning: could not get incoming links for %s: %v\n", artifactID, err)
+			slog.Warn("api: could not get incoming links", "artifact_id", artifactID, "error", err)
 			continue
 		}
 
 		outgoingLinks, err := h.linkService.GetLinksFrom(artifactID)
 		if err != nil {
-			fmt.Printf("Warning: could not get outgoing links for %s: %v\n", artifactID, err)
+			slog.Warn("api: could not get outgoing links", "artifact_id", artifactID, "error", err)
 			continue
 		}
 
@@ -2018,7 +2019,7 @@ func (h *Handler) autoVersionLinkedArtifacts(affectedArtifactIDs []string) error
 
 		_, err = h.artifactService.UpdateArtifact(artifactID, updateReq)
 		if err != nil {
-			fmt.Printf("Warning: failed to auto-version artifact %s: %v\n", artifactID, err)
+			slog.Warn("api: failed to auto-version artifact", "artifact_id", artifactID, "error", err)
 			continue
 		}
 
@@ -2027,10 +2028,11 @@ func (h *Handler) autoVersionLinkedArtifacts(affectedArtifactIDs []string) error
 		chatterMessage := fmt.Sprintf("Auto-updated to version %d due to link changes", newVersion)
 		chatterEntry := chatter.NewChatterEntry(artifactID, chatterMessage, true, "link-change")
 		if err := h.chatterService.CreateEntry(chatterEntry); err != nil {
-			fmt.Printf("Warning: failed to create chatter entry for auto-versioned artifact %s: %v\n", artifactID, err)
+			slog.Warn("api: failed to create chatter entry for auto-versioned artifact", "artifact_id", artifactID, "error", err)
 		}
 
-		fmt.Printf("Auto-versioned artifact %s due to link changes; incoming links: %d, outgoing links: %d\n", artifactID, len(incomingLinks), len(outgoingLinks))
+		slog.Debug("api: auto-versioned artifact due to link changes",
+			"artifact_id", artifactID, "incoming_links", len(incomingLinks), "outgoing_links", len(outgoingLinks))
 	}
 
 	return nil

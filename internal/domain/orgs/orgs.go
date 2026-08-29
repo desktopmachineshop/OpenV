@@ -25,6 +25,16 @@ const (
 var (
 	ErrNotFound  = errors.New("organization not found")
 	ErrNotMember = errors.New("you are not a member of this organization")
+
+	// ErrInvalidRole flags an unknown role name in a membership write. API
+	// handlers use it to tell user-facing validation failures (400) apart
+	// from repository failures (500), so wrap it with %w when adding new
+	// validations.
+	ErrInvalidRole = errors.New("invalid org role")
+
+	// ErrPersonalOrgMembers flags an attempt to add members to a personal
+	// workspace — user-facing validation, like ErrInvalidRole.
+	ErrPersonalOrgMembers = errors.New("personal workspaces cannot have additional members")
 )
 
 // Org is a tenant: a personal space or a company workspace.
@@ -211,14 +221,14 @@ func validOrgRole(role string) bool {
 // AddMember adds or updates a membership.
 func (s *DefaultService) AddMember(orgID, userID, role string) error {
 	if !validOrgRole(role) {
-		return fmt.Errorf("invalid org role %q", role)
+		return fmt.Errorf("%w: %q", ErrInvalidRole, role)
 	}
 	org, err := s.Get(orgID)
 	if err != nil {
 		return err
 	}
 	if org.OrgType == TypePersonal {
-		return errors.New("personal workspaces cannot have additional members")
+		return ErrPersonalOrgMembers
 	}
 	return s.repo.UpsertMember(orgID, userID, role)
 }
@@ -244,7 +254,7 @@ func (s *DefaultService) RemoveMember(orgID, userID string) error {
 // SetMemberRole changes a member's role, refusing to demote the last admin.
 func (s *DefaultService) SetMemberRole(orgID, userID, role string) error {
 	if !validOrgRole(role) {
-		return fmt.Errorf("invalid org role %q", role)
+		return fmt.Errorf("%w: %q", ErrInvalidRole, role)
 	}
 	current, err := s.repo.MemberRole(orgID, userID)
 	if err != nil {
