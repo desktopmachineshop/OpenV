@@ -188,7 +188,7 @@ export const OrgUsageTab: React.FC<OrgUsageTabProps> = ({ org }) => {
               disabled={saving}
               style={{
                 background: 'var(--accent)',
-                color: '#fff',
+                color: 'var(--accent-fg)',
                 border: 'none',
                 borderRadius: 4,
                 padding: '5px 12px',
@@ -268,7 +268,7 @@ export const OrgUsageTab: React.FC<OrgUsageTabProps> = ({ org }) => {
               onClick={() => setDays(w)}
               style={{
                 background: days === w ? 'var(--accent)' : 'var(--surface-alt)',
-                color: days === w ? '#fff' : 'var(--text)',
+                color: days === w ? 'var(--accent-fg)' : 'var(--text)',
                 border: '1px solid var(--border)',
                 borderRadius: 4,
                 padding: '4px 10px',

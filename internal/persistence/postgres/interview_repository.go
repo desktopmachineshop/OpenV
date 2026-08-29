@@ -291,6 +291,22 @@ func (r *InterviewRepository) UpdateSession(s *interviews.Session) error {
 	return err
 }
 
+// SetParticipantName fills the participant name on a still-anonymous session
+// with a single-column write. The WHERE guard restricts it to sessions whose
+// stored name is NULL or empty, so it can never overwrite a name already
+// recorded and — crucially — never touches status/summary/ended_at, letting a
+// name backfill run concurrently with CompleteSession without reverting it. (#212)
+func (r *InterviewRepository) SetParticipantName(sessionID, name string) error {
+	query := `
+		UPDATE interview_sessions
+		SET participant_name = $2
+		WHERE id = $1 AND (participant_name IS NULL OR participant_name = '')
+	`
+
+	_, err := r.db.Exec(query, sessionID, name)
+	return err
+}
+
 // scanInterviewSession scans one interview session row
 func scanInterviewSession(scan func(dest ...interface{}) error) (*interviews.Session, error) {
 	session := &interviews.Session{}

@@ -897,6 +897,18 @@ func (s *DefaultService) maybeAutoRetry(run *Run) {
 	if run.Status != StatusFailed && run.Status != StatusTimedOut {
 		return
 	}
+	// Orchestrated runs never auto-retry. A run carrying a parent/interview/
+	// automation/guided linkage is owned by that orchestrator: its failure is
+	// already delivered (via RunFinished) to the parent run, interview session,
+	// automation, or guided session, which owns the retry/follow-up decision.
+	// A blind auto-retry here would (a) strip those links — Launch copies only
+	// the fields listed below, orphaning the new run from its tree/session — and
+	// (b) keep the elevated child/interview Priority, so the orphan jumps the
+	// queue and then has its result discarded because nothing is listening for
+	// it. Only top-level, user-launched runs auto-retry.
+	if run.ParentRunID != nil || run.InterviewSessionID != nil || run.AutomationID != nil || run.GuidedSessionID != nil {
+		return
+	}
 	if !IsRetryableClass(run.ErrorClass) {
 		return
 	}
