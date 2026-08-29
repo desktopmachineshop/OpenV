@@ -3,6 +3,7 @@
 Running OpenV in production and keeping its data safe.
 
 - [Production deployment (compose overlay)](#production-deployment)
+- [Railway deployment](railway.md) — managed hosting, separate guide
 - [Backup and restore](#backup-and-restore)
 - [Windows notes](#windows-notes)
 
