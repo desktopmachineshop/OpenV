@@ -903,6 +903,51 @@ export interface CrewGraph {
   edges: CrewEdge[];
 }
 
+// Portable, org-independent crew document. Nodes reference agents by slug so
+// the importing workspace resolves them to its own agents. See
+// internal/domain/crewtemplates.
+export interface PortableCrewNode {
+  key: string;
+  agent_slug: string;
+  label: string;
+  department?: string;
+  position?: Record<string, any>;
+}
+
+export interface PortableCrewEdge {
+  from: string;
+  to: string;
+  edge_type: string;
+  config?: Record<string, any>;
+}
+
+export interface PortableCrew {
+  kind: string;
+  version: string;
+  name: string;
+  description?: string;
+  entry_node_key?: string;
+  nodes: PortableCrewNode[];
+  edges: PortableCrewEdge[];
+  exported_at?: string;
+}
+
+// Built-in crew preset served by GET /api/v1/crew-templates.
+export interface CrewTemplate {
+  key: string;
+  name: string;
+  description: string;
+  is_builtin: boolean;
+  crew: PortableCrew;
+}
+
+// Result of importing a crew: the created crew plus any non-fatal warnings
+// (e.g. agent slugs missing in the target workspace).
+export interface CrewImportResult {
+  team: Crew;
+  warnings?: string[];
+}
+
 export const authAPI = {
   config: () => client.get<{ google_enabled: boolean }>('/api/v1/auth/config'),
   register: (email: string, password: string, name: string) =>
@@ -1519,6 +1564,22 @@ export const crewsAPI = {
   removeEdge: (edgeId: string) => client.delete(`/api/v1/crew-edges/${edgeId}`),
   launchRun: (crewId: string, payload: { project_id?: string; prompt: string }) =>
     client.post<AgentRun>(`/api/v1/crews/${crewId}/runs`, payload),
+  // Downloads the crew as a portable JSON document (agents referenced by slug).
+  exportDownload: (id: string, name?: string) =>
+    downloadBlob(`/api/v1/crews/${id}/export`, `${name || 'crew'}.crew.json`),
+  // Creates a crew in the active workspace from a portable document. Pin it to
+  // a project by passing projectId.
+  import: (doc: PortableCrew, projectId?: string | null) =>
+    client.post<CrewImportResult>(
+      `/api/v1/crews/import${projectId ? `?project_id=${encodeURIComponent(projectId)}` : ''}`,
+      doc
+    ),
+};
+
+// Built-in crew presets (GET /api/v1/crew-templates). Import a chosen preset's
+// `crew` through crewsAPI.import.
+export const crewTemplatesAPI = {
+  list: () => client.get<CrewTemplate[]>('/api/v1/crew-templates'),
 };
 
 // Domain audit event (see internal/domain/events). Actors are "system",
