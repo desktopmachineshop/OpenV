@@ -251,6 +251,12 @@ func (h *Handler) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 
 	googleUser, token, err := h.userService.LoginWithGoogle(info.Email, info.Name, info.Picture)
 	if err != nil {
+		// An email already registered via a different sign-in method is a
+		// client-visible 409, not a 500 (issue #242): we refuse to auto-link.
+		if errors.Is(err, users.ErrProviderMismatch) {
+			writeJSONError(w, http.StatusConflict, err.Error())
+			return
+		}
 		respondInternal(w, r, "failed to sign in with google", err)
 		return
 	}

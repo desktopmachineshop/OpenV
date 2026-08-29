@@ -272,6 +272,129 @@ func TestOIDCCallbackCreatesUserAndSession(t *testing.T) {
 	}
 }
 
+// TestOIDCCallbackRequiresVerifiedEmail: a positively-verified email is
+// required (issue #242). An absent or false email_verified claim is rejected
+// with 403 and provisions no account, closing the address-takeover vector.
+func TestOIDCCallbackRequiresVerifiedEmail(t *testing.T) {
+	cases := []struct {
+		name         string
+		emailClaims  map[string]any
+		wantRejected bool
+	}{
+		{
+			name:         "verified true is accepted",
+			emailClaims:  map[string]any{"email_verified": true},
+			wantRejected: false,
+		},
+		{
+			name:         "verified false is rejected",
+			emailClaims:  map[string]any{"email_verified": false},
+			wantRejected: true,
+		},
+		{
+			name:         "verified absent is rejected",
+			emailClaims:  map[string]any{}, // no email_verified claim at all
+			wantRejected: true,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			stub := newOIDCStub(t, "client-abc")
+			cfg := stub.config("client-abc", "https://app/api/v1/auth/oidc/callback")
+			h, repo := newOIDCTestHandler(cfg)
+
+			const nonce = "the-nonce"
+			claims := map[string]any{
+				"email": "verify@example.com",
+				"name":  "Verify Me",
+				"nonce": nonce,
+			}
+			for k, v := range tc.emailClaims {
+				claims[k] = v
+			}
+			stub.idToken = stub.signIDToken(t, claims)
+
+			req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/oidc/callback?code=authcode&state=xyz", nil)
+			req.AddCookie(&http.Cookie{Name: oidcStateCookie, Value: "xyz"})
+			req.AddCookie(&http.Cookie{Name: oidcNonceCookie, Value: nonce})
+			rec := httptest.NewRecorder()
+			h.OIDCCallback(rec, req)
+
+			if tc.wantRejected {
+				if rec.Code != http.StatusForbidden {
+					t.Fatalf("expected 403 for unverified email, got %d (%s)", rec.Code, rec.Body.String())
+				}
+				if u, _ := repo.FindUserByEmail("verify@example.com"); u != nil {
+					t.Error("no account should be provisioned for an unverified email")
+				}
+				if !strings.Contains(rec.Body.String(), "verif") {
+					t.Errorf("error should mention verification: %s", rec.Body.String())
+				}
+			} else {
+				if rec.Code != http.StatusFound {
+					t.Fatalf("expected 302 for verified email, got %d (%s)", rec.Code, rec.Body.String())
+				}
+				if u, _ := repo.FindUserByEmail("verify@example.com"); u == nil {
+					t.Error("verified email should provision an account")
+				}
+			}
+		})
+	}
+}
+
+// TestOIDCCallbackRejectsCrossProviderAccount: an OIDC login whose email
+// already belongs to an account created with a DIFFERENT provider is rejected
+// with 409 and does not log in or re-label the account (issue #242).
+func TestOIDCCallbackRejectsCrossProviderAccount(t *testing.T) {
+	stub := newOIDCStub(t, "client-abc")
+	cfg := stub.config("client-abc", "https://app/api/v1/auth/oidc/callback")
+	h, repo := newOIDCTestHandler(cfg)
+
+	// Pre-existing password account with the same email.
+	existing, err := h.userService.Register("collide@example.com", "hunter2pw", "Pw User")
+	if err != nil {
+		t.Fatalf("seed password account: %v", err)
+	}
+	if existing.AuthProvider != users.ProviderPassword {
+		t.Fatalf("precondition: seeded account provider = %q", existing.AuthProvider)
+	}
+
+	const nonce = "n"
+	stub.idToken = stub.signIDToken(t, map[string]any{
+		"email":          "collide@example.com",
+		"email_verified": true,
+		"name":           "Impersonator",
+		"nonce":          nonce,
+	})
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/oidc/callback?code=authcode&state=xyz", nil)
+	req.AddCookie(&http.Cookie{Name: oidcStateCookie, Value: "xyz"})
+	req.AddCookie(&http.Cookie{Name: oidcNonceCookie, Value: nonce})
+	rec := httptest.NewRecorder()
+	h.OIDCCallback(rec, req)
+
+	if rec.Code != http.StatusConflict {
+		t.Fatalf("expected 409 for cross-provider collision, got %d (%s)", rec.Code, rec.Body.String())
+	}
+	// No session cookie was issued.
+	for _, c := range rec.Result().Cookies() {
+		if c.Name == SessionCookieName && c.Value != "" {
+			t.Error("a session cookie was issued despite the provider collision")
+		}
+	}
+	// The existing account is untouched: still a password account, name not
+	// overwritten by the OIDC claim.
+	after, _ := repo.FindUserByEmail("collide@example.com")
+	if after == nil {
+		t.Fatal("existing account vanished")
+	}
+	if after.AuthProvider != users.ProviderPassword {
+		t.Errorf("account was re-labelled to %q; must keep %q", after.AuthProvider, users.ProviderPassword)
+	}
+	if after.Name != "Pw User" {
+		t.Errorf("account name overwritten to %q by rejected login", after.Name)
+	}
+}
+
 func TestOIDCCallbackRejectsBadNonce(t *testing.T) {
 	stub := newOIDCStub(t, "client-abc")
 	cfg := stub.config("client-abc", "https://app/api/v1/auth/oidc/callback")

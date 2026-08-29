@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"sync"
 	"time"
@@ -205,16 +206,24 @@ func (h *Handler) OIDCCallback(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusForbidden, "sso account has no email claim")
 		return
 	}
-	// Reject only an explicitly-unverified email. Some IdPs (e.g. Okta, Entra)
-	// omit email_verified entirely; absence is treated as trusted because the
-	// code was exchanged server-to-server over TLS with the configured IdP.
-	if claims.EmailVerified != nil && !*claims.EmailVerified {
-		writeJSONError(w, http.StatusForbidden, "sso account email is unverified")
+	// Require a positively-verified email (issue #242). An account is provisioned
+	// and matched by this email, so an unverified — or absent — email_verified
+	// claim would let anyone who can make the IdP mint a token for an
+	// address-they-do-not-own take over that address's account. Reject unless the
+	// IdP asserts email_verified == true.
+	if claims.EmailVerified == nil || !*claims.EmailVerified {
+		writeJSONError(w, http.StatusForbidden, "sso account email is not verified by the identity provider")
 		return
 	}
 
 	user, token, err := h.userService.LoginWithSSO(users.ProviderOIDC, claims.Email, claims.Name, claims.Picture)
 	if err != nil {
+		// A cross-provider collision (an account with this email that signed up
+		// via a different method) is a client-visible 409, not a 500.
+		if errors.Is(err, users.ErrProviderMismatch) {
+			writeJSONError(w, http.StatusConflict, err.Error())
+			return
+		}
 		respondInternal(w, r, "failed to sign in with sso", err)
 		return
 	}

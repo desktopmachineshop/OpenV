@@ -336,6 +336,13 @@ func (h *Handler) CreateArtifact(w http.ResponseWriter, r *http.Request) {
 	// artifact with no matching definitions is unaffected (the check is a
 	// no-op when the org/project has defined none).
 	if err := h.validateArtifactAttributes(req.ProjectID, req.Type, req.Attributes, true); err != nil {
+		// A definition-lookup failure fails closed on create: sanitized 500,
+		// real error already logged (issue #246). A genuine validation error is
+		// the client's to fix: 400.
+		if errors.Is(err, errAttributeDefinitionsUnavailable) {
+			respondError(w, r, http.StatusInternalServerError, "could not validate artifact attributes; please retry", nil)
+			return
+		}
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
@@ -360,12 +367,25 @@ func (h *Handler) CreateArtifact(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(artifact)
 }
 
+// errAttributeDefinitionsUnavailable marks a definition-lookup failure on the
+// create path, where enforcement matters (issue #246). The create caller maps
+// it to a sanitized 500 rather than letting a would-be-required attribute slip
+// through; update fails open and never returns it.
+var errAttributeDefinitionsUnavailable = errors.New("attribute definitions are temporarily unavailable")
+
 // validateArtifactAttributes checks a submitted attributes map against the
 // effective attribute definitions for the artifact's project + type (issue
 // #219). It is a no-op when no attribute service is wired (e.g. unit tests) or
 // when attrs is nil. enforceRequired is true on create and false on update
-// (see the callers). Definition-lookup failures fail open (logged, not
-// rejected): a transient catalog read must not block a legitimate edit.
+// (see the callers).
+//
+// Definition-lookup failures are handled by direction (issue #246):
+//   - update (enforceRequired=false) FAILS OPEN — a transient catalog read must
+//     not block a legitimate edit, and update does not enforce required-ness.
+//   - create (enforceRequired=true) FAILS CLOSED — required-attribute
+//     enforcement is the point on create, so a lookup error returns
+//     errAttributeDefinitionsUnavailable (mapped to a sanitized 500) rather than
+//     silently admitting an artifact that may be missing a required attribute.
 func (h *Handler) validateArtifactAttributes(projectID, artifactType string, attrs map[string]interface{}, enforceRequired bool) error {
 	if h.attributeService == nil || attrs == nil {
 		return nil
@@ -373,7 +393,12 @@ func (h *Handler) validateArtifactAttributes(projectID, artifactType string, att
 	orgID := h.orgForProject(projectID)
 	defs, err := h.attributeService.EffectiveForProject(orgID, projectID)
 	if err != nil {
-		slog.Warn("api: failed to load attribute definitions for validation", "project_id", projectID, "error", err)
+		if enforceRequired {
+			// Log the real error; the caller surfaces a sanitized message.
+			slog.Error("api: failed to load attribute definitions; rejecting create (fail-closed)", "project_id", projectID, "error", err)
+			return errAttributeDefinitionsUnavailable
+		}
+		slog.Warn("api: failed to load attribute definitions for validation; allowing update (fail-open)", "project_id", projectID, "error", err)
 		return nil
 	}
 	return attributes.ValidateAttributes(defs, artifactType, attrs, enforceRequired)

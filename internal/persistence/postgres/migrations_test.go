@@ -400,6 +400,110 @@ func TestMigrateAndBackfillConcurrentBoots(t *testing.T) {
 	}
 }
 
+// TestVectorReconcileNoopWhenExtensionAbsent covers issue #241, the skip side:
+// on a plain Postgres without the vector extension, migration 0016 skips the
+// artifact_embeddings table but is still recorded in the ledger (boot must not
+// brick), and the boot-time reconcile is a clean no-op — the table stays absent
+// and re-running Migrate never errors.
+func TestVectorReconcileNoopWhenExtensionAbsent(t *testing.T) {
+	db := testDB(t)
+	if err := Migrate(db); err != nil {
+		t.Fatalf("Migrate: %v", err)
+	}
+	if extensionExists(t, db, "vector") {
+		t.Skip("vector extension is present on this server; the extension-absent case does not apply (run against plain postgres:16)")
+	}
+
+	// 0016 skipped its DDL but is recorded, and reconcile did not resurrect it.
+	if tableExists(t, db, "artifact_embeddings") {
+		t.Error("artifact_embeddings exists without the vector extension")
+	}
+	if _, ok := ledgerRows(t, db)[16]; !ok {
+		t.Error("migration 0016 was not recorded in the ledger (boot must not brick on a vector-less database)")
+	}
+
+	// A second boot's reconcile is still a clean no-op.
+	if err := Migrate(db); err != nil {
+		t.Fatalf("second Migrate: %v", err)
+	}
+	if tableExists(t, db, "artifact_embeddings") {
+		t.Error("reconcile created artifact_embeddings while the vector extension is absent")
+	}
+}
+
+// TestVectorReconcileCreatesWhenExtensionAppears covers issue #241, the repair
+// side: once the vector extension is present, the reconcile creates the
+// artifact_embeddings table + HNSW index that migration 0016 skipped — even
+// though 0016 is already recorded in the ledger and never re-runs. We simulate
+// the "extension present but guarded objects missing" state (the exact state a
+// managed database is left in after 0016 skipped and the operator later enables
+// pgvector) by dropping the table, then assert the next boot's reconcile
+// recreates it. Requires the vector extension (run against pgvector/pgvector:pg16).
+func TestVectorReconcileCreatesWhenExtensionAppears(t *testing.T) {
+	db := testDB(t)
+	if err := Migrate(db); err != nil {
+		t.Fatalf("Migrate: %v", err)
+	}
+	if !extensionExists(t, db, "vector") {
+		if _, err := db.Exec(`CREATE EXTENSION IF NOT EXISTS vector`); err != nil {
+			t.Skipf("vector extension unavailable on this server: %v (run against pgvector/pgvector:pg16)", err)
+		}
+	}
+
+	// Simulate the post-skip state: extension present, guarded objects missing.
+	if _, err := db.Exec(`DROP TABLE IF EXISTS artifact_embeddings`); err != nil {
+		t.Fatalf("drop artifact_embeddings: %v", err)
+	}
+	if tableExists(t, db, "artifact_embeddings") {
+		t.Fatal("precondition failed: table should be dropped")
+	}
+
+	// Migration 0016 is already in the ledger, so only the reconcile can recreate
+	// the table.
+	if err := Migrate(db); err != nil {
+		t.Fatalf("Migrate (reconcile): %v", err)
+	}
+	if !tableExists(t, db, "artifact_embeddings") {
+		t.Fatal("reconcile did not create artifact_embeddings after the vector extension became available")
+	}
+	if !indexExists(t, db, "idx_artifact_embeddings_hnsw") {
+		t.Error("reconcile did not build the HNSW index on artifact_embeddings")
+	}
+}
+
+// TestTrgmReconcileCreatesWhenIndexesMissing covers issue #241 for the pg_trgm
+// side: when the extension is present but the migration-0009 trigram indexes are
+// missing (the state after 0009 skipped and pg_trgm was enabled later), the
+// reconcile recreates them even though 0009 is already recorded in the ledger.
+func TestTrgmReconcileCreatesWhenIndexesMissing(t *testing.T) {
+	db := testDB(t)
+	if err := Migrate(db); err != nil {
+		t.Fatalf("Migrate: %v", err)
+	}
+	if !extensionExists(t, db, "pg_trgm") {
+		if _, err := db.Exec(`CREATE EXTENSION IF NOT EXISTS pg_trgm`); err != nil {
+			t.Skipf("pg_trgm unavailable on this server: %v", err)
+		}
+	}
+
+	// Simulate the post-skip state: extension present, indexes missing.
+	for _, idx := range []string{"idx_artifacts_title_trgm", "idx_artifacts_body_trgm"} {
+		if _, err := db.Exec(`DROP INDEX IF EXISTS ` + idx); err != nil {
+			t.Fatalf("drop %s: %v", idx, err)
+		}
+	}
+
+	// 0009 is already in the ledger, so only the reconcile can recreate them.
+	if err := Migrate(db); err != nil {
+		t.Fatalf("Migrate (reconcile): %v", err)
+	}
+	for _, idx := range []string{"idx_artifacts_title_trgm", "idx_artifacts_body_trgm"} {
+		if !indexExists(t, db, idx) {
+			t.Errorf("reconcile did not recreate %s once pg_trgm was present", idx)
+		}
+	}
+}
+
 // TestPersonalOrgUniqueIndex: the 0002 partial unique index rejects a second
 // personal org for the same user while leaving company orgs and NULL
 // creators unconstrained.

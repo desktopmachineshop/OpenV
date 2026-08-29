@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"net/http"
 	"sort"
 	"strconv"
@@ -181,11 +182,17 @@ func (h *Handler) semanticSearch(projectIDs []string, query string, limit int) (
 	}
 	near, err := h.embeddingService.SemanticSearch(projectIDs, query, limit)
 	if err != nil {
-		if errors.Is(err, embeddings.ErrDisabled) || errors.Is(err, embeddings.ErrVectorUnavailable) {
-			hits, kerr := h.keywordSearch(projectIDs, query, limit)
-			return hits, modeKeyword, kerr
+		// Any semantic failure degrades to keyword rather than failing the
+		// search (issue #243). ErrDisabled/ErrVectorUnavailable are the expected
+		// "no vector path" signals; a provider/query error (embedding API down,
+		// timeout, bad response) is logged and treated the same way — semantic
+		// search is best-effort and must never 500 a request the keyword path
+		// can still serve.
+		if !errors.Is(err, embeddings.ErrDisabled) && !errors.Is(err, embeddings.ErrVectorUnavailable) {
+			slog.Warn("search: semantic query failed; falling back to keyword", "error", err)
 		}
-		return nil, "", err
+		hits, kerr := h.keywordSearch(projectIDs, query, limit)
+		return hits, modeKeyword, kerr
 	}
 	return nearestToHits(near, query), modeSemantic, nil
 }
@@ -204,10 +211,13 @@ func (h *Handler) hybridSearch(projectIDs []string, query string, limit int) ([]
 	}
 	near, err := h.embeddingService.SemanticSearch(projectIDs, query, limit)
 	if err != nil {
-		if errors.Is(err, embeddings.ErrDisabled) || errors.Is(err, embeddings.ErrVectorUnavailable) {
-			return keywordHits, modeKeyword, nil
+		// On any semantic failure, return the keyword hits already computed above
+		// rather than 500 (issue #243). Expected "no vector path" signals stay
+		// quiet; a real provider/query error is logged.
+		if !errors.Is(err, embeddings.ErrDisabled) && !errors.Is(err, embeddings.ErrVectorUnavailable) {
+			slog.Warn("search: semantic query failed in hybrid mode; returning keyword results", "error", err)
 		}
-		return nil, "", err
+		return keywordHits, modeKeyword, nil
 	}
 
 	return blendHits(keywordHits, nearestToHits(near, query), limit), modeHybrid, nil

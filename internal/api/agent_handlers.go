@@ -372,6 +372,14 @@ func (h *Handler) DraftTestCases(w http.ResponseWriter, r *http.Request) {
 		if id == "" || seen[id] {
 			continue
 		}
+		// Reject a malformed id before it reaches the launch prompt (issue #245):
+		// the requirement ids are interpolated verbatim into the agent prompt, so
+		// a non-UUID would send the agent chasing a bogus artifact instead of
+		// failing fast.
+		if _, err := uuid.Parse(id); err != nil {
+			writeJSONError(w, http.StatusBadRequest, "requirement_ids must be valid artifact ids")
+			return
+		}
 		seen[id] = true
 		ids = append(ids, id)
 	}
