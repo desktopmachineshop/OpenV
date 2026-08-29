@@ -48,6 +48,10 @@ const ActivityLog = lazy(() =>
 const BaselineCompare = lazy(() =>
   import('./views/BaselineCompare').then((m) => ({ default: m.BaselineCompare }))
 );
+// ReviewQueue is a focused reviewer view, split out of the main bundle.
+const ReviewQueue = lazy(() =>
+  import('./views/ReviewQueue').then((m) => ({ default: m.ReviewQueue }))
+);
 
 function RouteFallback() {
   return (
@@ -140,6 +144,7 @@ function App() {
           <Route path="vv" element={<VVDashboard />} />
           <Route path="vv/runs/:runId" element={<TestRunView />} />
           <Route path="matrix" element={<TraceabilityMatrix />} />
+          <Route path="review" element={<ReviewQueue />} />
           <Route path="board" element={<KanbanBoard />} />
           <Route path="crew" element={<CrewBuilder />} />
           <Route path="crew/network" element={<CrewBuilder />} />

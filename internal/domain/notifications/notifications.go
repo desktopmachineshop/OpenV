@@ -17,6 +17,10 @@ const (
 	TypeRunFailed          = "run_failed"
 	TypeInterviewCompleted = "interview_completed"
 	TypeMention            = "mention"
+	// TypeReviewRequested fires when an artifact enters the in_review state,
+	// telling project reviewers (editors+) it is waiting in the review queue
+	// (issue #183).
+	TypeReviewRequested = "review_requested"
 )
 
 // Notification is one inbox entry for one user. EntityRef points the

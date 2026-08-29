@@ -142,6 +142,27 @@ func (r *ArtifactRepository) FindByProjectAndType(projectID string, artifactType
 	return collectArtifacts(rows)
 }
 
+// FindByProjectAndStatus retrieves a project's current artifacts in the given
+// review status, newest change first (issue #183: the review queue lists
+// in_review artifacts). Served by the idx_artifacts_project_status partial
+// index over live rows.
+func (r *ArtifactRepository) FindByProjectAndStatus(projectID string, status string) ([]*artifacts.Artifact, error) {
+	query := `
+		SELECT id, project_id, parent_id, type, title, body, sort_order, status, attributes, version, valid_from, valid_to, created_at, updated_at
+		FROM artifacts
+		WHERE project_id = $1 AND status = $2 AND valid_to IS NULL
+		ORDER BY updated_at DESC, id ASC
+	`
+
+	rows, err := r.db.Query(query, projectID, status)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	return collectArtifacts(rows)
+}
+
 // FindPageByProject returns one page of a project's current artifacts;
 // artifactType "" means all types. The ordering matches FindByProjectID with
 // id as a final tiebreaker so offset pages are stable even when sibling
