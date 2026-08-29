@@ -191,6 +191,16 @@ type Run struct {
 	HostedAfter     *time.Time `json:"hosted_after,omitempty"`
 	CreatedAt       time.Time  `json:"created_at"`
 
+	// Reproducibility snapshot (issue #216): the agent identity this run was
+	// launched with, captured once at Launch and never retro-filled. Because
+	// the agent definition is mutable, these pin what actually executed — the
+	// definition's content hash (a SHA-256 of the whole markdown file, so it
+	// covers the exact prompt+config), the model, and the reasoning effort.
+	// Blank on pre-feature rows, which were never snapshotted.
+	AgentContentHash string `json:"agent_content_hash,omitempty"`
+	AgentModel       string `json:"agent_model,omitempty"`
+	AgentEffort      string `json:"agent_effort,omitempty"`
+
 	// Denormalized for display.
 	AgentName     string `json:"agent_name,omitempty"`
 	AgentProvider string `json:"agent_provider,omitempty"`
@@ -567,6 +577,12 @@ func (s *DefaultService) Launch(req LaunchRequest) (*Run, string, error) {
 		MaxAttempts:        req.MaxAttempts,
 		NextAttemptAt:      req.NextAttemptAt,
 		CreatedAt:          time.Now(),
+		// Reproducibility snapshot (issue #216): pin the agent identity as it is
+		// right now. A later edit to the agent definition (or a retry, which is a
+		// fresh Launch) does not rewrite an existing run's snapshot.
+		AgentContentHash: agent.ContentHash,
+		AgentModel:       agent.Model,
+		AgentEffort:      agent.Effort,
 	}
 	// Seed the attempt chain: the original launch is attempt 1, capped at the
 	// service's configured maximum unless the caller (an auto-retry) supplied

@@ -499,6 +499,59 @@ func TestRunRoundTripsRoutingColumns(t *testing.T) {
 	}
 }
 
+// TestRunRoundTripsReproducibilitySnapshot locks in issue #216: the launch-time
+// agent snapshot (content hash, model, effort) round-trips through Save and the
+// shared runColumns/scanRun read path, and a run saved without a snapshot reads
+// back blank (the pre-feature / migration-0014 default), never NULL.
+func TestRunRoundTripsReproducibilitySnapshot(t *testing.T) {
+	f := newClaimFixture(t)
+
+	snapshotted := &agentruns.Run{
+		ID:               uuid.New().String(),
+		OrgID:            f.orgID,
+		AgentID:          f.agentID,
+		Status:           agentruns.StatusQueued,
+		Prompt:           "do work",
+		ArtifactsTouched: []map[string]interface{}{},
+		CreatedAt:        time.Now(),
+		AgentContentHash: "abc123def456",
+		AgentModel:       "claude-opus-4-1",
+		AgentEffort:      "high",
+	}
+	if err := f.repo.Save(snapshotted); err != nil {
+		t.Fatalf("save snapshotted run: %v", err)
+	}
+	blank := f.queueRun(t, runSpec{}) // queueRun sets no snapshot fields
+
+	got := f.mustFind(t, snapshotted.ID)
+	if got.AgentContentHash != "abc123def456" || got.AgentModel != "claude-opus-4-1" || got.AgentEffort != "high" {
+		t.Errorf("FindByID snapshot = %q/%q/%q, want abc123def456/claude-opus-4-1/high",
+			got.AgentContentHash, got.AgentModel, got.AgentEffort)
+	}
+	if b := f.mustFind(t, blank); b.AgentContentHash != "" || b.AgentModel != "" || b.AgentEffort != "" {
+		t.Errorf("un-snapshotted run = %q/%q/%q, want all blank", b.AgentContentHash, b.AgentModel, b.AgentEffort)
+	}
+
+	list, err := f.repo.List(agentruns.ListFilter{OrgID: f.orgID})
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	found := false
+	for _, run := range list {
+		if run.ID != snapshotted.ID {
+			continue
+		}
+		found = true
+		if run.AgentContentHash != "abc123def456" || run.AgentModel != "claude-opus-4-1" || run.AgentEffort != "high" {
+			t.Errorf("List snapshot = %q/%q/%q, want abc123def456/claude-opus-4-1/high",
+				run.AgentContentHash, run.AgentModel, run.AgentEffort)
+		}
+	}
+	if !found {
+		t.Fatal("snapshotted run missing from List")
+	}
+}
+
 // TestListFailsClosedOnOrg locks in the issue-#180 fix: the run listing's org
 // predicate is mandatory. A run in another workspace never appears in this
 // org's listing, and an empty OrgID (an unresolved active workspace) returns

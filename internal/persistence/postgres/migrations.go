@@ -355,6 +355,32 @@ var migrations = []Migration{
 		`)
 		return err
 	}},
+
+	// 0014: run reproducibility snapshot (issue #216, phase-4 foundation).
+	// A run now records the agent identity it was launched with — the agent's
+	// content_hash (a SHA-256 of the whole markdown definition, so it pins the
+	// exact prompt+config the run executed), model, and reasoning effort — so a
+	// finished run stays self-describing even after the agent is later edited.
+	// Captured once at launch (agentruns.Launch) and never retro-filled:
+	// existing rows backfill to '' because their true launch-time snapshot was
+	// never recorded, and a blank snapshot reads as "unknown / pre-feature".
+	//
+	// No separate system_prompt_hash column: agent_content_hash already hashes
+	// the full definition file (frontmatter + system-prompt body), so it pins
+	// the prompt too. The runner-resolved prompt (definition body plus a
+	// constant answer-length rule and any per-run context) is assembled inside
+	// the worker, not at the Launch call site, so a launch-time hash of it is
+	// not available cheaply here — left as a follow-up if per-run prompt
+	// hashing is ever needed.
+	{Version: 14, Name: "agent_run_reproducibility_snapshot", Run: func(tx *sql.Tx) error {
+		_, err := tx.Exec(`
+			ALTER TABLE agent_runs
+				ADD COLUMN IF NOT EXISTS agent_content_hash VARCHAR NOT NULL DEFAULT '',
+				ADD COLUMN IF NOT EXISTS agent_model VARCHAR NOT NULL DEFAULT '',
+				ADD COLUMN IF NOT EXISTS agent_effort VARCHAR NOT NULL DEFAULT ''
+		`)
+		return err
+	}},
 }
 
 // migrationLockKey is the pg_advisory_xact_lock key that serializes
