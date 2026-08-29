@@ -158,3 +158,115 @@ func TestExportProjectServiceErrorReturns500(t *testing.T) {
 		t.Errorf("status = %d, want 500 (body: %s)", w.Code, w.Body.String())
 	}
 }
+
+// fakeImportService records which import method the handler routed to and
+// returns a canned project id (or error). Embedding the interface leaves
+// unrelated methods loudly unimplemented.
+type fakeImportService struct {
+	exports.Service
+	jsonCalls  int
+	reqifCalls int
+	reqifErr   error
+}
+
+func (f *fakeImportService) ImportProject(data []byte, orgID string) (string, error) {
+	f.jsonCalls++
+	return "proj-json", nil
+}
+
+func (f *fakeImportService) ImportProjectReqIF(data []byte, orgID string) (string, error) {
+	f.reqifCalls++
+	if f.reqifErr != nil {
+		return "", f.reqifErr
+	}
+	return "proj-reqif", nil
+}
+
+func importRequest(t *testing.T, body, query string, authed bool) *http.Request {
+	t.Helper()
+	url := "/api/v1/projects/import"
+	if query != "" {
+		url += "?" + query
+	}
+	r := httptest.NewRequest(http.MethodPost, url, strings.NewReader(body))
+	if authed {
+		ctx := context.WithValue(r.Context(), ctxUser, &users.User{ID: "u1"})
+		ctx = context.WithValue(ctx, ctxActiveOrg, "org-1")
+		r = r.WithContext(ctx)
+	}
+	return r
+}
+
+func TestImportProjectRequiresAuth(t *testing.T) {
+	fake := &fakeImportService{}
+	h := &Handler{exportService: fake}
+
+	w := httptest.NewRecorder()
+	// No user in context -> unauthenticated.
+	h.ImportProject(w, importRequest(t, `{"artifacts":[]}`, "", false))
+
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("status = %d, want 401 (body: %s)", w.Code, w.Body.String())
+	}
+	if fake.jsonCalls != 0 || fake.reqifCalls != 0 {
+		t.Errorf("import service called despite failed auth")
+	}
+}
+
+func TestImportProjectRoutesJSON(t *testing.T) {
+	fake := &fakeImportService{}
+	h := &Handler{exportService: fake}
+
+	w := httptest.NewRecorder()
+	h.ImportProject(w, importRequest(t, `{"artifacts":[]}`, "", true))
+
+	if w.Code != http.StatusCreated {
+		t.Fatalf("status = %d, want 201 (body: %s)", w.Code, w.Body.String())
+	}
+	if fake.jsonCalls != 1 || fake.reqifCalls != 0 {
+		t.Errorf("routed to json=%d reqif=%d, want json=1 reqif=0", fake.jsonCalls, fake.reqifCalls)
+	}
+}
+
+func TestImportProjectRoutesReqIFByFormat(t *testing.T) {
+	fake := &fakeImportService{}
+	h := &Handler{exportService: fake}
+
+	w := httptest.NewRecorder()
+	h.ImportProject(w, importRequest(t, `<?xml version="1.0"?><REQ-IF/>`, "format=reqif", true))
+
+	if w.Code != http.StatusCreated {
+		t.Fatalf("status = %d, want 201 (body: %s)", w.Code, w.Body.String())
+	}
+	if fake.reqifCalls != 1 || fake.jsonCalls != 0 {
+		t.Errorf("routed to json=%d reqif=%d, want json=0 reqif=1", fake.jsonCalls, fake.reqifCalls)
+	}
+}
+
+func TestImportProjectRoutesReqIFBySniff(t *testing.T) {
+	fake := &fakeImportService{}
+	h := &Handler{exportService: fake}
+
+	w := httptest.NewRecorder()
+	// No format hint: sniffed from the <REQ-IF root.
+	h.ImportProject(w, importRequest(t, `<?xml version="1.0"?>`+"\n"+`<REQ-IF xmlns="x"></REQ-IF>`, "", true))
+
+	if w.Code != http.StatusCreated {
+		t.Fatalf("status = %d, want 201 (body: %s)", w.Code, w.Body.String())
+	}
+	if fake.reqifCalls != 1 {
+		t.Errorf("sniff routed reqif=%d, want 1", fake.reqifCalls)
+	}
+}
+
+func TestImportProjectReqIFMalformedReturns400(t *testing.T) {
+	fake := &fakeImportService{reqifErr: fmt.Errorf("malformed ReqIF: unexpected EOF")}
+	h := &Handler{exportService: fake}
+
+	w := httptest.NewRecorder()
+	h.ImportProject(w, importRequest(t, `<REQ-IF>broken`, "format=reqif", true))
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("status = %d, want 400 (body: %s)", w.Code, w.Body.String())
+	}
+}

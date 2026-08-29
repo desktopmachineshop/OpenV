@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/openv/requirements-platform/internal/domain/artifacts"
@@ -15,21 +16,22 @@ import (
 
 // ReqIF export (issue #224). Produces a ReqIF 1.x document — the OMG
 // interchange format DOORS and Polarion read — from a ProjectExport, using
-// only encoding/xml (no new dependency). EXPORT ONLY; import is a fast-follow.
+// only encoding/xml (no new dependency). The inverse import is reqif_import.go
+// (issue #238).
 //
 // Fidelity notes:
-//   - Attachments are NOT round-tripped. ReqIF can carry embedded/referenced
-//     objects, but per issue #224 attachment payloads are out of scope for this
-//     pass; only artifact attribute/text content is exported. The import
-//     fast-follow will need to decide how attachments map to ReqIF external
-//     objects.
-//   - Body/text is exported as a ReqIF STRING attribute (THE-VALUE). ReqIF
-//     STRING values are XML attributes, so a parser applies attribute-value
-//     normalization: literal newlines in a body collapse to spaces on the
-//     consumer side. Titles, angle brackets, ampersands, quotes and Unicode
-//     round-trip exactly; multi-line bodies keep their words but lose hard line
-//     breaks. High-fidelity multi-line would require XHTML-typed values, which
-//     is deferred with import.
+//   - Attachments are NOT round-tripped in either direction. ReqIF can carry
+//     embedded/referenced objects, but per issues #224/#238 attachment payloads
+//     are out of scope; only artifact attribute/text content crosses. A ReqIF
+//     produced elsewhere that carries external objects imports its text/attribute
+//     content and silently drops the attachments.
+//   - Body/text is exported as an XHTML-typed value (ATTRIBUTE-VALUE-XHTML,
+//     issue #238) so hard line breaks survive: each source newline becomes an
+//     <xhtml:br/> inside the THE-VALUE div, and special characters are XML-escaped
+//     per line. This replaces the earlier STRING (THE-VALUE attribute) encoding,
+//     whose attribute-value normalization collapsed literal newlines to spaces.
+//     Title/status/version stay STRING (single-line, no break semantics).
+//     Angle brackets, ampersands, quotes and Unicode round-trip exactly.
 
 const (
 	// reqIFNamespace is the ReqIF 1.x schema namespace. Consumers key off this
@@ -40,6 +42,15 @@ const (
 	// reqIFStringMaxLength is the declared MAX-LENGTH for the shared STRING
 	// datatype. Generous so long bodies are never rejected by strict consumers.
 	reqIFStringMaxLength = "1000000"
+
+	// reqIFXHTMLDatatypeID is the shared DATATYPE-DEFINITION-XHTML that the body
+	// (text) attribute definition of every SPEC-OBJECT-TYPE points at. Bodies are
+	// XHTML-typed so multi-line content keeps its hard line breaks (issue #238).
+	reqIFXHTMLDatatypeID = "DT-XHTML"
+	// reqIFXHTMLNamespace is the XHTML namespace bound to the xhtml: prefix used
+	// inside a THE-VALUE div. Declared inline on the div so the fragment is
+	// namespace-well-formed on its own.
+	reqIFXHTMLNamespace = "http://www.w3.org/1999/xhtml"
 
 	// Attribute-definition identifier prefixes. Standard fields and org/project
 	// attributes are namespaced apart so an org attribute keyed "title" can never
@@ -95,6 +106,7 @@ type xReqIFContent struct {
 
 type xDatatypes struct {
 	Strings []xDatatypeString `xml:"DATATYPE-DEFINITION-STRING"`
+	XHTMLs  []xDatatypeXHTML  `xml:"DATATYPE-DEFINITION-XHTML"`
 	Enums   []xDatatypeEnum   `xml:"DATATYPE-DEFINITION-ENUMERATION"`
 }
 
@@ -103,6 +115,14 @@ type xDatatypeString struct {
 	LongName   string `xml:"LONG-NAME,attr"`
 	LastChange string `xml:"LAST-CHANGE,attr"`
 	MaxLength  string `xml:"MAX-LENGTH,attr"`
+}
+
+// xDatatypeXHTML is the DATATYPE-DEFINITION-XHTML the body attribute references
+// so multi-line text keeps its line breaks (issue #238).
+type xDatatypeXHTML struct {
+	Identifier string `xml:"IDENTIFIER,attr"`
+	LongName   string `xml:"LONG-NAME,attr"`
+	LastChange string `xml:"LAST-CHANGE,attr"`
 }
 
 type xDatatypeEnum struct {
@@ -139,6 +159,7 @@ type xSpecObjectType struct {
 	LongName    string           `xml:"LONG-NAME,attr"`
 	LastChange  string           `xml:"LAST-CHANGE,attr"`
 	StringAttrs []xAttrDefString `xml:"SPEC-ATTRIBUTES>ATTRIBUTE-DEFINITION-STRING"`
+	XHTMLAttrs  []xAttrDefXHTML  `xml:"SPEC-ATTRIBUTES>ATTRIBUTE-DEFINITION-XHTML"`
 	EnumAttrs   []xAttrDefEnum   `xml:"SPEC-ATTRIBUTES>ATTRIBUTE-DEFINITION-ENUMERATION"`
 }
 
@@ -147,6 +168,15 @@ type xAttrDefString struct {
 	LongName   string `xml:"LONG-NAME,attr"`
 	LastChange string `xml:"LAST-CHANGE,attr"`
 	TypeRef    string `xml:"TYPE>DATATYPE-DEFINITION-STRING-REF"`
+}
+
+// xAttrDefXHTML defines the body (text) attribute as XHTML-typed on a
+// SPEC-OBJECT-TYPE (issue #238).
+type xAttrDefXHTML struct {
+	Identifier string `xml:"IDENTIFIER,attr"`
+	LongName   string `xml:"LONG-NAME,attr"`
+	LastChange string `xml:"LAST-CHANGE,attr"`
+	TypeRef    string `xml:"TYPE>DATATYPE-DEFINITION-XHTML-REF"`
 }
 
 type xAttrDefEnum struct {
@@ -177,6 +207,7 @@ type xSpecObject struct {
 	Identifier   string           `xml:"IDENTIFIER,attr"`
 	LastChange   string           `xml:"LAST-CHANGE,attr"`
 	StringValues []xAttrValString `xml:"VALUES>ATTRIBUTE-VALUE-STRING"`
+	XHTMLValues  []xAttrValXHTML  `xml:"VALUES>ATTRIBUTE-VALUE-XHTML"`
 	EnumValues   []xAttrValEnum   `xml:"VALUES>ATTRIBUTE-VALUE-ENUMERATION"`
 	TypeRef      string           `xml:"TYPE>SPEC-OBJECT-TYPE-REF"`
 }
@@ -184,6 +215,18 @@ type xSpecObject struct {
 type xAttrValString struct {
 	TheValue string `xml:"THE-VALUE,attr"`
 	DefRef   string `xml:"DEFINITION>ATTRIBUTE-DEFINITION-STRING-REF"`
+}
+
+// xAttrValXHTML is a body value: THE-VALUE holds inline XHTML content (a div of
+// escaped text with <xhtml:br/> per newline). Inner is captured verbatim on the
+// way out (raw pre-built markup) and on the way back in (for xhtmlToPlainText).
+type xAttrValXHTML struct {
+	TheValue xXHTMLContent `xml:"THE-VALUE"`
+	DefRef   string        `xml:"DEFINITION>ATTRIBUTE-DEFINITION-XHTML-REF"`
+}
+
+type xXHTMLContent struct {
+	Inner string `xml:",innerxml"`
 }
 
 type xAttrValEnum struct {
@@ -242,6 +285,9 @@ type typeAttrInfo struct {
 	// enumDefs pairs an ATTRIBUTE-DEFINITION-ENUMERATION identifier with the
 	// attribute-map key and the definition's enum value id lookup.
 	enumDefs []enumDefRef
+	// textDefID is the ATTRIBUTE-DEFINITION-XHTML identifier the body value is
+	// emitted against for this type (issue #238).
+	textDefID string
 }
 
 type attrDefRef struct {
@@ -370,10 +416,11 @@ func buildReqIF(data *ProjectExport) ([]byte, error) {
 
 	// 4. SPEC-OBJECT-TYPEs with their attribute definitions, remembering how
 	//    each type's SPEC-OBJECTs should emit values.
+	// Standard string fields. "text" (the body) is handled separately as an
+	// XHTML-typed attribute so multi-line content keeps its line breaks.
 	stdFields := []struct{ key, label string }{
 		{"identifier", "Identifier"},
 		{"title", "Title"},
-		{"text", "Text"},
 		{"status", "Status"},
 		{"version", "Version"},
 	}
@@ -382,6 +429,7 @@ func buildReqIF(data *ProjectExport) ([]byte, error) {
 	for _, t := range typeOrder {
 		var info typeAttrInfo
 		var stringAttrDefs []xAttrDefString
+		var xhtmlAttrDefs []xAttrDefXHTML
 		var enumAttrDefs []xAttrDefEnum
 
 		// Standard string fields.
@@ -395,6 +443,15 @@ func buildReqIF(data *ProjectExport) ([]byte, error) {
 			})
 			info.stringDefs = append(info.stringDefs, attrDefRef{id: id, key: f.key, std: true})
 		}
+
+		// Body/text field: XHTML-typed (issue #238).
+		info.textDefID = adID(t, adStdPrefix, "text")
+		xhtmlAttrDefs = append(xhtmlAttrDefs, xAttrDefXHTML{
+			Identifier: info.textDefID,
+			LongName:   "Text",
+			LastChange: lastChange,
+			TypeRef:    reqIFXHTMLDatatypeID,
+		})
 
 		// Org/project attribute definitions applicable to this type.
 		for _, def := range data.AttributeDefs {
@@ -442,6 +499,7 @@ func buildReqIF(data *ProjectExport) ([]byte, error) {
 			LongName:    typeLabel[t],
 			LastChange:  lastChange,
 			StringAttrs: stringAttrDefs,
+			XHTMLAttrs:  xhtmlAttrDefs,
 			EnumAttrs:   enumAttrDefs,
 		})
 		attrInfoByType[t] = info
@@ -493,6 +551,15 @@ func buildReqIF(data *ProjectExport) ([]byte, error) {
 			}
 			stringVals = append(stringVals, xAttrValString{TheValue: val, DefRef: ref.id})
 		}
+		// Body as an XHTML value (issue #238). Only emitted when non-empty so an
+		// empty body leaves no value, and import reads its absence back as "".
+		var xhtmlVals []xAttrValXHTML
+		if a.Body != "" && info.textDefID != "" {
+			xhtmlVals = append(xhtmlVals, xAttrValXHTML{
+				TheValue: xXHTMLContent{Inner: bodyToXHTML(a.Body)},
+				DefRef:   info.textDefID,
+			})
+		}
 		var enumVals []xAttrValEnum
 		for _, ref := range info.enumDefs {
 			raw, ok := a.Attributes[ref.key]
@@ -513,6 +580,7 @@ func buildReqIF(data *ProjectExport) ([]byte, error) {
 			Identifier:   a.ID,
 			LastChange:   lastChange,
 			StringValues: stringVals,
+			XHTMLValues:  xhtmlVals,
 			EnumValues:   enumVals,
 			TypeRef:      "SOT-" + reqifSanitizeID(a.Type),
 		})
@@ -563,6 +631,11 @@ func buildReqIF(data *ProjectExport) ([]byte, error) {
 					LongName:   "String",
 					LastChange: lastChange,
 					MaxLength:  reqIFStringMaxLength,
+				}},
+				XHTMLs: []xDatatypeXHTML{{
+					Identifier: reqIFXHTMLDatatypeID,
+					LongName:   "XHTML",
+					LastChange: lastChange,
 				}},
 				Enums: enumDatatypes,
 			},
@@ -718,6 +791,38 @@ func attrValueToString(v interface{}) (string, bool) {
 	default:
 		return "", false
 	}
+}
+
+// bodyToXHTML renders an artifact body as the inline XHTML fragment that goes
+// inside a THE-VALUE element (issue #238). Each source newline becomes an
+// <xhtml:br/> so hard line breaks survive the round trip; every text run is
+// XML-escaped so angle brackets, ampersands and quotes stay literal. The xhtml
+// namespace is declared inline so the fragment is self-contained. xhtmlToPlainText
+// in reqif_import.go is the inverse.
+func bodyToXHTML(body string) string {
+	normalized := strings.ReplaceAll(body, "\r\n", "\n")
+	normalized = strings.ReplaceAll(normalized, "\r", "\n")
+	lines := strings.Split(normalized, "\n")
+	var b strings.Builder
+	b.WriteString(`<xhtml:div xmlns:xhtml="`)
+	b.WriteString(reqIFXHTMLNamespace)
+	b.WriteString(`">`)
+	for i, line := range lines {
+		if i > 0 {
+			b.WriteString("<xhtml:br/>")
+		}
+		b.WriteString(escapeXHTMLText(line))
+	}
+	b.WriteString("</xhtml:div>")
+	return b.String()
+}
+
+// escapeXHTMLText XML-escapes one line of body text (no newlines: the caller
+// splits on them first).
+func escapeXHTMLText(s string) string {
+	var buf bytes.Buffer
+	_ = xml.EscapeText(&buf, []byte(s))
+	return buf.String()
 }
 
 // adID builds a stable, collision-free ATTRIBUTE-DEFINITION identifier scoped to

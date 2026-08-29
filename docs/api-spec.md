@@ -168,7 +168,7 @@ their own project, workers pass within their org) · `org member`/`org admin`
 | PUT | `/api/v1/projects/{id}` | Update project | editor |
 | DELETE | `/api/v1/projects/{id}` | Delete project | owner |
 | GET | `/api/v1/projects/{id}/export` | Export project JSON | viewer |
-| POST | `/api/v1/projects/import` | Import a project export | user |
+| POST | `/api/v1/projects/import` | Import a project export (JSON or ReqIF) | user |
 | GET | `/api/v1/projects/{id}/report` | Generate PDF report | viewer |
 | POST | `/api/v1/projects/{id}/baselines` | Snapshot a baseline | editor |
 | GET | `/api/v1/projects/{id}/baselines` | List baselines | viewer |
@@ -180,12 +180,22 @@ their own project, workers pass within their org) · `org member`/`org admin`
 
 **Export/import caveats** (`internal/domain/exports/export.go`):
 
-- The `?format=` on export accepts `json` (default) and `csv`. **`excel` is a
-  stub** — the service returns `ErrUnsupportedFormat` ("excel export not yet
-  implemented"), so the API rejects it.
+- The `?format=` on export accepts `json` (default), `csv`, and `reqif` (OMG
+  ReqIF 1.x, read by DOORS/Polarion). **`excel` is a stub** — the service
+  returns `ErrUnsupportedFormat` ("excel export not yet implemented"), so the
+  API rejects it.
+- **ReqIF import** (`internal/domain/exports/reqif_import.go`): `POST
+  /api/v1/projects/import` accepts a ReqIF document as well as JSON. ReqIF is
+  selected by `?format=reqif`, an XML/ReqIF `Content-Type`, or sniffed from a
+  `<REQ-IF` root; anything else is treated as JSON. A malformed ReqIF (or an
+  enum attribute whose value is not among its datatype's declared values) is a
+  **400**. Imported artifacts are remapped to fresh ids at version 1, with
+  parent hierarchy, links, status, and attributes reconstructed. Bodies are
+  carried as XHTML-typed values so hard line breaks survive the round trip.
 - Exports include **attachment metadata only**, not the file bytes.
-  Consequently attachments are **dropped on import** — a re-imported project has
-  its artifacts, links, and product profile, but no attachment files.
+  Consequently attachments are **dropped on import** (JSON and ReqIF alike) — a
+  re-imported project has its artifacts, links, and product profile, but no
+  attachment files.
 
 ### Artifacts, links, attachments, chatter
 
