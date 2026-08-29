@@ -40,6 +40,10 @@ const TestRunView = lazy(() =>
 const TraceabilityMatrix = lazy(() =>
   import('./views/TraceabilityMatrix').then((m) => ({ default: m.TraceabilityMatrix }))
 );
+// ActivityLog is a low-traffic audit view, so keep it out of the main bundle.
+const ActivityLog = lazy(() =>
+  import('./views/ActivityLog').then((m) => ({ default: m.ActivityLog }))
+);
 
 function RouteFallback() {
   return (
@@ -140,6 +144,7 @@ function App() {
           <Route path="automations" element={<AutomationsPage />} />
           <Route path="agent-runs" element={<AgentRunsPage />} />
           <Route path="agents" element={<AgentsPage />} />
+          <Route path="activity" element={<ActivityLog />} />
           <Route path="settings" element={<ProjectSettings />} />
         </Route>
           <Route path="*" element={<Navigate to="/projects" replace />} />

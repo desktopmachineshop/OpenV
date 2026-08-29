@@ -44,7 +44,10 @@ const navSections: { label?: string; items: NavItem[] }[] = [
     ],
   },
   {
-    items: [{ to: 'settings', label: 'Settings' }],
+    items: [
+      { to: 'activity', label: 'Activity' },
+      { to: 'settings', label: 'Settings' },
+    ],
   },
 ];
 
