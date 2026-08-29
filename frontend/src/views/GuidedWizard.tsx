@@ -352,6 +352,9 @@ export const GuidedWizard: React.FC = () => {
             return null;
           }
         }
+        // A replace miss (or a plain add) with no text would only append the
+        // empty "The system shall " stub — refuse instead of adding noise.
+        if (!String(s.text || '').trim()) return 'The requirement suggestion has no text.';
         const usable = d.needs.filter((n) => n.capability.trim());
         if (usable.length === 0) return 'Add a user need first — requirements derive from needs.';
         const wanted = String(s.need || '').trim().toLowerCase();
@@ -366,7 +369,7 @@ export const GuidedWizard: React.FC = () => {
         d.requirements.push({
           id: newEntryId(),
           need_id: needId,
-          text: String(s.text || 'The system shall '),
+          text: String(s.text),
           fit_criterion: String(s.fit_criterion || ''),
           verification_method: verificationMethod(s.verification_method, 'test'),
         });
