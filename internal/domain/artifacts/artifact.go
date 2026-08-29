@@ -154,6 +154,13 @@ type Service interface {
 	ChangeStatus(id string, status string) (*Artifact, error)
 	DeleteArtifact(id string) error
 	ListArtifacts(projectID string, artifactType string) ([]*Artifact, error)
+	// ListArtifactsPage returns one page of a project's current artifacts in
+	// stable tree order plus the total count of matching artifacts. Artifacts
+	// form a parent_id tree that the UI reassembles client-side, so
+	// exhaustive callers (export, V&V, the module tree) should keep paging
+	// until they have `total` rows; ListArtifacts remains the
+	// fetch-everything path for in-process callers.
+	ListArtifactsPage(projectID string, artifactType string, limit, offset int) ([]*Artifact, int, error)
 	GetArtifactVersions(id string) ([]*Artifact, error)
 	RestoreArtifactVersion(id string, version int) (*Artifact, error)
 	// SearchArtifacts finds current artifacts whose title or body contains
@@ -167,6 +174,12 @@ type Repository interface {
 	FindByID(id string) (*Artifact, error)
 	FindByProjectID(projectID string) ([]*Artifact, error)
 	FindByProjectAndType(projectID string, artifactType string) ([]*Artifact, error)
+	// FindPageByProject returns one page of a project's current artifacts in
+	// stable tree order (parent_id NULLS FIRST, sort_order, created_at, id);
+	// artifactType "" means all types.
+	FindPageByProject(projectID string, artifactType string, limit, offset int) ([]*Artifact, error)
+	// CountByProject counts a project's current artifacts (type "" = all).
+	CountByProject(projectID string, artifactType string) (int, error)
 	Update(artifact *Artifact) error
 	Delete(id string) error
 	NextSortOrder(projectID string, parentID *string) (int, error)
@@ -271,6 +284,20 @@ func (s *DefaultService) ListArtifacts(projectID string, artifactType string) ([
 		return s.repo.FindByProjectID(projectID)
 	}
 	return s.repo.FindByProjectAndType(projectID, artifactType)
+}
+
+// ListArtifactsPage returns one page of a project's artifacts plus the total
+// count of artifacts matching the filter.
+func (s *DefaultService) ListArtifactsPage(projectID string, artifactType string, limit, offset int) ([]*Artifact, int, error) {
+	total, err := s.repo.CountByProject(projectID, artifactType)
+	if err != nil {
+		return nil, 0, err
+	}
+	page, err := s.repo.FindPageByProject(projectID, artifactType, limit, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	return page, total, nil
 }
 
 // SearchArtifacts finds current artifacts matching query in the given projects.

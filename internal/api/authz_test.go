@@ -212,7 +212,7 @@ type fakeEventRepo struct {
 	byOrg map[string][]events.Event
 }
 
-func (f *fakeEventRepo) List(orgID, projectID, eventType string, limit int) ([]events.Event, error) {
+func (f *fakeEventRepo) List(orgID, projectID, eventType, beforeID string, limit int) ([]events.Event, error) {
 	var out []events.Event
 	for _, e := range f.byOrg[orgID] {
 		if projectID != "" && e.ProjectID != projectID {

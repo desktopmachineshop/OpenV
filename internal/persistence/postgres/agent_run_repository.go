@@ -22,19 +22,19 @@ func NewAgentRunRepository(db *sql.DB) *AgentRunRepository {
 
 const runColumns = `r.id, COALESCE(r.org_id::text, ''), r.agent_id, r.project_id, r.automation_id, r.trigger_event_id, r.team_id, r.team_node_id, r.parent_run_id, r.work_item_id, r.interview_session_id, r.guided_session_id, r.retried_from_run_id,
 	r.status, r.cancel_requested, r.priority, r.prompt, r.run_token_hash, r.worker_id, r.heartbeat_at, r.started_at, r.finished_at, r.exit_code,
-	r.final_text, r.error, r.tokens_in, r.tokens_out, r.cost_usd, r.artifacts_touched, r.launched_by, r.created_at, a.name, a.provider`
+	r.final_text, r.error, r.tokens_in, r.tokens_out, r.cost_usd, r.artifacts_touched, r.launched_by, r.created_at, r.preferred_user_id, r.hosted_after, a.name, a.provider`
 
 func scanRun(row interface{ Scan(...interface{}) error }) (*agentruns.Run, error) {
 	r := new(agentruns.Run)
-	var projectID, automationID, triggerEventID, teamID, teamNodeID, parentRunID, workItemID, interviewSessionID, guidedSessionID, retriedFromRunID, launchedBy sql.NullString
-	var heartbeatAt, startedAt, finishedAt sql.NullTime
+	var projectID, automationID, triggerEventID, teamID, teamNodeID, parentRunID, workItemID, interviewSessionID, guidedSessionID, retriedFromRunID, launchedBy, preferredUserID sql.NullString
+	var heartbeatAt, startedAt, finishedAt, hostedAfter sql.NullTime
 	var exitCode sql.NullInt64
 	var costUSD sql.NullFloat64
 	var touched []byte
 
 	err := row.Scan(&r.ID, &r.OrgID, &r.AgentID, &projectID, &automationID, &triggerEventID, &teamID, &teamNodeID, &parentRunID, &workItemID, &interviewSessionID, &guidedSessionID, &retriedFromRunID,
 		&r.Status, &r.CancelRequested, &r.Priority, &r.Prompt, &r.RunTokenHash, &r.WorkerID, &heartbeatAt, &startedAt, &finishedAt, &exitCode,
-		&r.FinalText, &r.Error, &r.TokensIn, &r.TokensOut, &costUSD, &touched, &launchedBy, &r.CreatedAt, &r.AgentName, &r.AgentProvider)
+		&r.FinalText, &r.Error, &r.TokensIn, &r.TokensOut, &costUSD, &touched, &launchedBy, &r.CreatedAt, &preferredUserID, &hostedAfter, &r.AgentName, &r.AgentProvider)
 	if err != nil {
 		return nil, err
 	}
@@ -65,6 +65,8 @@ func scanRun(row interface{ Scan(...interface{}) error }) (*agentruns.Run, error
 	r.GuidedSessionID = setStr(guidedSessionID)
 	r.RetriedFromRunID = setStr(retriedFromRunID)
 	r.LaunchedBy = setStr(launchedBy)
+	r.PreferredUserID = setStr(preferredUserID)
+	r.HostedAfter = setTime(hostedAfter)
 	r.HeartbeatAt = setTime(heartbeatAt)
 	r.StartedAt = setTime(startedAt)
 	r.FinishedAt = setTime(finishedAt)

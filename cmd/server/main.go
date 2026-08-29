@@ -469,6 +469,10 @@ func main() {
 			w.Header().Set("Access-Control-Allow-Credentials", "true")
 			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Org-ID")
+			// Pagination metadata (artifact totals, event cursors) and export
+			// filenames ride on response headers; without this the browser
+			// hides them from cross-origin scripts.
+			w.Header().Set("Access-Control-Expose-Headers", "X-Total-Count, X-Next-Cursor, Content-Disposition")
 			w.Header().Set("Access-Control-Max-Age", "3600")
 		}
 		if r.Method == "OPTIONS" {

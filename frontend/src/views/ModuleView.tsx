@@ -140,6 +140,10 @@ export const ModuleView: React.FC = () => {
 
   const loadArtifacts = useCallback(async () => {
     try {
+      // The module tree is assembled client-side from parent_id, so it needs
+      // the complete artifact set; artifactAPI.list pages through the
+      // limit/offset API (1000 per request) until it has everything. UI
+      // follow-up for issue #136: lazy-load subtrees instead.
       const response = await artifactAPI.list(projectId);
       setArtifacts(response.data || []);
       setError('');

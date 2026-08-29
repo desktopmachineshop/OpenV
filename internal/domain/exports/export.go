@@ -11,6 +11,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/openv/requirements-platform/internal/domain/artifacts"
 	"github.com/openv/requirements-platform/internal/domain/links"
 	"github.com/openv/requirements-platform/internal/domain/attachments"
@@ -348,22 +350,69 @@ func (s *DefaultService) ImportArtifactsIntoProject(projectID string, data []byt
 	return s.importArtifactsAndLinks(projectID, &importData, markDraft)
 }
 
-// importArtifactsAndLinks performs the shared two-pass artifact import, link
-// creation, and link snapshot population for an already existing project.
-// It returns the created artifact IDs in import order.
+// importArtifactsAndLinks imports an export payload's artifacts and links
+// into an already existing project and returns the created artifact IDs in
+// import order.
+//
+// New artifact IDs are pre-generated up front so that parent references and
+// link endpoints can be remapped BEFORE anything is written: each artifact is
+// then inserted exactly once — with its parent and its links_snapshot
+// attribute already in place — and stays at version 1. (The previous
+// implementation created artifacts parentless, re-parented them via
+// UpdateArtifact, and then ran a per-artifact read-links/read-artifact/update
+// N+1 sweep to fill snapshots, bumping every imported artifact to version 2+;
+// issue #124.)
 func (s *DefaultService) importArtifactsAndLinks(projectID string, importData *ProjectExport, markDraft bool) ([]string, error) {
-	// Map old artifact IDs to new ones
-	idMap := make(map[string]string)
-	createdIDs := make([]string, 0, len(importData.Artifacts))
+	total := len(importData.Artifacts)
+	slog.Debug("import: starting", slog.Int("artifacts", total), slog.Int("links", len(importData.Links)))
 
-	// First pass: Create all artifacts without parent relationships in a single transaction
-	// We need to do this in two passes to handle parent-child relationships
-	slog.Debug("import: starting first pass", slog.Int("artifacts", len(importData.Artifacts)))
+	// Pre-generate the old->new ID map. newIDs is positional so duplicate old
+	// IDs in a malformed payload still create distinct artifacts (the map's
+	// last entry wins for parent/link remapping, as before).
+	idMap := make(map[string]string, total)
+	newIDs := make([]string, total)
+	for i, artifact := range importData.Artifacts {
+		newIDs[i] = uuid.New().String()
+		idMap[artifact.ID] = newIDs[i]
+	}
 
-	// Note: We can't use transactions at the repository level since the service layer
-	// handles the transaction. Instead, we'll batch the creates but keep individual
-	// transactions for now. Watch the database for bottlenecks.
+	// Build the new-ID link objects before any insert. Link rows are written
+	// after the artifacts, but their content is fully known now, which lets
+	// each artifact carry its links_snapshot from birth. Links referencing
+	// artifacts outside the payload are skipped, as before.
+	var newLinks []*links.Link
+	snapshotByArtifact := make(map[string][]interface{})
+	seenPerArtifact := make(map[string]map[string]bool)
+	addToSnapshot := func(artifactID string, link *links.Link) {
+		if seenPerArtifact[artifactID] == nil {
+			seenPerArtifact[artifactID] = make(map[string]bool)
+		}
+		if seenPerArtifact[artifactID][link.ID] {
+			return
+		}
+		seenPerArtifact[artifactID][link.ID] = true
+		snapshotByArtifact[artifactID] = append(snapshotByArtifact[artifactID], link)
+	}
+	for _, link := range importData.Links {
+		newFromID, fromExists := idMap[link.FromID]
+		newToID, toExists := idMap[link.ToID]
+		if !fromExists || !toExists {
+			continue
+		}
+		newLink := links.NewLink(links.CreateLinkRequest{
+			FromID: newFromID,
+			ToID:   newToID,
+			Type:   link.Type,
+		})
+		newLinks = append(newLinks, newLink)
+		addToSnapshot(newFromID, newLink)
+		addToSnapshot(newToID, newLink)
+	}
 
+	// Single creation pass: parent already remapped, snapshot already
+	// attached, sort order always explicit (avoids per-row NextSortOrder
+	// queries). parent_id has no FK, so insert order is free.
+	createdIDs := make([]string, 0, total)
 	for i, artifact := range importData.Artifacts {
 		if markDraft {
 			if artifact.Attributes == nil {
@@ -374,29 +423,36 @@ func (s *DefaultService) importArtifactsAndLinks(projectID string, importData *P
 				artifact.Attributes["origin"] = "import"
 			}
 		}
-		oldID := artifact.ID
+		if snapshot := snapshotByArtifact[newIDs[i]]; len(snapshot) > 0 {
+			if artifact.Attributes == nil {
+				artifact.Attributes = map[string]interface{}{}
+			}
+			artifact.Attributes["links_snapshot"] = snapshot
+		}
 
-		slog.Debug("import: creating artifact",
-			slog.Int("index", i),
-			slog.Int("total", len(importData.Artifacts)),
-			slog.String("title", artifact.Title))
+		var parentID *string
+		if artifact.ParentID != nil && *artifact.ParentID != "" {
+			if newParentID, ok := idMap[*artifact.ParentID]; ok {
+				parentID = &newParentID
+			}
+		}
 
-		// Create new artifact with this project ID, but no parent yet
-		// Always set sortOrder to avoid expensive NextSortOrder() database queries during import
 		sortOrderVal := artifact.SortOrder
 		if sortOrderVal == 0 {
 			sortOrderVal = i + 1 // Use position in import as sort order
 		}
-		
+
 		newArtifact := artifacts.NewArtifact(artifacts.CreateArtifactRequest{
 			ProjectID:  projectID,
+			ParentID:   parentID,
 			Type:       artifact.Type,
 			Title:      artifact.Title,
 			Body:       artifact.Body,
 			SortOrder:  &sortOrderVal,
 			Attributes: artifact.Attributes,
-			ParentID:   nil, // Will set in second pass
 		})
+		// Adopt the pre-generated ID so links and children agree with it.
+		newArtifact.ID = newIDs[i]
 
 		start := time.Now()
 		if err := s.artifactService.CreateArtifact(newArtifact); err != nil {
@@ -406,168 +462,24 @@ func (s *DefaultService) importArtifactsAndLinks(projectID string, importData *P
 				slog.Any("error", err))
 			return nil, fmt.Errorf("failed to create artifact %d (%s): %w", i, artifact.Title, err)
 		}
-		elapsed := time.Since(start)
-		slog.Debug("import: created artifact",
-			slog.Int("index", i),
-			slog.Int("total", len(importData.Artifacts)),
-			slog.String("title", artifact.Title),
-			slog.String("id", newArtifact.ID),
-			slog.Duration("elapsed", elapsed))
-
-		// Log if this artifact took an unusually long time
-		if elapsed > 100*time.Millisecond {
+		if elapsed := time.Since(start); elapsed > 100*time.Millisecond {
 			slog.Warn("import: artifact creation was slow",
 				slog.Int("index", i),
 				slog.Duration("elapsed", elapsed))
 		}
-
-		// Map old ID to new ID
-		idMap[oldID] = newArtifact.ID
 		createdIDs = append(createdIDs, newArtifact.ID)
 	}
 
-	slog.Debug("import: first pass complete, starting second pass",
-		slog.Int("id_map_entries", len(idMap)))
-
-	// Second pass: Update parent relationships
-	updateCount := 0
-	for i, artifact := range importData.Artifacts {
-		if artifact.ParentID != nil && *artifact.ParentID != "" {
-			newID := idMap[artifact.ID]
-			newParentID := idMap[*artifact.ParentID]
-			
-			if newParentID != "" {
-				updateCount++
-				slog.Debug("import: second pass updating artifact parent",
-					slog.Int("index", i),
-					slog.String("title", artifact.Title),
-					slog.String("old_parent_id", *artifact.ParentID))
-
-				// Always set sortOrder to avoid expensive NextSortOrder() calls
-				sortOrderVal := artifact.SortOrder
-				if sortOrderVal == 0 {
-					sortOrderVal = i + 1
-				}
-				// Update the artifact with the parent relationship
-				// Must include all fields to prevent clearing existing data
-				_, err := s.artifactService.UpdateArtifact(newID, artifacts.UpdateArtifactRequest{
-					ParentID:   &newParentID,
-					Type:       artifact.Type,
-					Title:      artifact.Title,
-					Body:       artifact.Body,
-					SortOrder:  &sortOrderVal,
-					Attributes: artifact.Attributes,
-				})
-				if err != nil {
-					slog.Error("import: second pass failed to update artifact parent",
-						slog.Int("index", i),
-						slog.Any("error", err))
-					return nil, fmt.Errorf("failed to update artifact parent: %w", err)
-				}
-			}
+	// Persist the links. A failed link is logged and skipped (as before); its
+	// snapshot entry then over-reports, which matches the old tolerance for
+	// partially failed link imports.
+	slog.Debug("import: starting link creation", slog.Int("links", len(newLinks)))
+	for _, link := range newLinks {
+		if err := s.linkService.CreateLink(link); err != nil {
+			slog.Warn("import: failed to create link", slog.Any("error", err))
 		}
 	}
-	slog.Debug("import: second pass complete",
-		slog.Int("parent_updates", updateCount))
-
-	// Create links using the new IDs
-	slog.Debug("import: starting link creation", slog.Int("links", len(importData.Links)))
-	for _, link := range importData.Links {
-		newFromID, fromExists := idMap[link.FromID]
-		newToID, toExists := idMap[link.ToID]
-		
-		// Only create link if both artifacts were imported
-		if fromExists && toExists {
-			newLink := links.NewLink(links.CreateLinkRequest{
-				FromID: newFromID,
-				ToID:   newToID,
-				Type:   link.Type,
-			})
-			
-			if err := s.linkService.CreateLink(newLink); err != nil {
-				// Log error but continue with other links
-				slog.Warn("import: failed to create link", slog.Any("error", err))
-			}
-		}
-	}
-	slog.Debug("import: link creation complete")
-
-	// Populate link snapshots for all imported artifacts
-	slog.Debug("import: starting link snapshot population", slog.Int("artifacts", len(idMap)))
-	if err := s.populateLinksSnapshotsForImport(idMap); err != nil {
-		slog.Warn("import: failed to populate link snapshots", slog.Any("error", err))
-		// Don't fail the import, but log the error
-	}
-	slog.Debug("import: link snapshot population complete")
+	slog.Debug("import: complete", slog.Int("artifacts", len(createdIDs)), slog.Int("links", len(newLinks)))
 
 	return createdIDs, nil
-}
-
-// populateLinksSnapshotsForImport populates link snapshots for all imported artifacts
-// This ensures links are visible when viewing artifact history/versions
-func (s *DefaultService) populateLinksSnapshotsForImport(idMap map[string]string) error {
-	// For each newly created artifact, fetch its links and store in snapshot
-	for _, newID := range idMap {
-		seenLinkIDs := make(map[string]bool)
-		allLinks := make([]interface{}, 0)
-		
-		// Get all incoming links
-		incomingLinks, err := s.linkService.GetLinksTo(newID)
-		if err == nil {
-			for _, link := range incomingLinks {
-				if !seenLinkIDs[link.ID] {
-					seenLinkIDs[link.ID] = true
-					allLinks = append(allLinks, link)
-				}
-			}
-		}
-		
-		// Get all outgoing links
-		outgoingLinks, err := s.linkService.GetLinksFrom(newID)
-		if err == nil {
-			for _, link := range outgoingLinks {
-				if !seenLinkIDs[link.ID] {
-					seenLinkIDs[link.ID] = true
-					allLinks = append(allLinks, link)
-				}
-			}
-		}
-		
-		// If artifact has links, update its snapshot
-		if len(allLinks) > 0 {
-			artifact, err := s.artifactService.GetArtifact(newID)
-			if err != nil {
-				slog.Warn("import: failed to get artifact for snapshot update",
-					slog.String("artifact_id", newID),
-					slog.Any("error", err))
-				continue
-			}
-			
-			// Update artifact to store links snapshot WITHOUT incrementing version
-			// We do this by directly updating the attributes
-			if artifact.Attributes == nil {
-				artifact.Attributes = make(map[string]interface{})
-			}
-			artifact.Attributes["links_snapshot"] = allLinks
-			
-			// Use UpdateArtifact with all existing fields to avoid clearing data
-			// The version will increment, but that's OK - this is part of import
-			_, err = s.artifactService.UpdateArtifact(newID, artifacts.UpdateArtifactRequest{
-				ParentID:   artifact.ParentID,
-				Type:       artifact.Type,
-				Title:      artifact.Title,
-				Body:       artifact.Body,
-				SortOrder:  &artifact.SortOrder,
-				Attributes: artifact.Attributes,
-			})
-			if err != nil {
-				slog.Warn("import: failed to update artifact with link snapshot",
-					slog.String("artifact_id", newID),
-					slog.Any("error", err))
-				continue
-			}
-		}
-	}
-	
-	return nil
 }

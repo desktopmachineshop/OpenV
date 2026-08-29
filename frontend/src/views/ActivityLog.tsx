@@ -22,10 +22,10 @@ const EVENT_TYPES = [
   'agentrun.finished',
 ];
 
-// The backend clamps limit to (0, 500] with no offset param, so pagination
-// is "refetch with a larger limit" up to the hard cap.
+// Cursor pagination: each page asks for PAGE_SIZE events older than the
+// cursor from the previous page's X-Next-Cursor header (absent header means
+// the log is exhausted).
 const PAGE_SIZE = 100;
-const MAX_LIMIT = 500;
 
 // Tint the type badge by entity family so the list scans visually.
 const typeBadgeStyle = (eventType: string): React.CSSProperties => {
@@ -88,40 +88,56 @@ export const ActivityLog: React.FC = () => {
 
   const [events, setEvents] = useState<DomainEvent[]>([]);
   const [typeFilter, setTypeFilter] = useState('all');
-  const [limit, setLimit] = useState(PAGE_SIZE);
+  // Cursor for the next (older) page, from the X-Next-Cursor response header;
+  // null means there is nothing older to load.
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
-  const load = useCallback(() => {
-    if (!projectId) return;
-    setLoading(true);
-    const query: { project_id: string; event_type?: string; limit: number } = {
-      project_id: projectId,
-      limit,
-    };
-    if (typeFilter !== 'all') query.event_type = typeFilter;
-    eventsAPI
-      .list(query)
-      .then((res) => {
-        setEvents(res.data || []);
-        setError('');
-      })
-      .catch((err) => setError(`Failed to load activity: ${apiErrorMessage(err)}`))
-      .finally(() => setLoading(false));
+  // Fetch one page. Without `before` this (re)loads the newest page and
+  // replaces the list; with `before` it appends the older page.
+  const loadPage = useCallback(
+    (before?: string) => {
+      if (!projectId) return;
+      setLoading(true);
+      const query: { project_id: string; event_type?: string; limit: number; before?: string } = {
+        project_id: projectId,
+        limit: PAGE_SIZE,
+      };
+      if (typeFilter !== 'all') query.event_type = typeFilter;
+      if (before) query.before = before;
+      eventsAPI
+        .list(query)
+        .then((res) => {
+          const page = res.data || [];
+          setEvents((prev) => {
+            if (!before) return page;
+            // Guard against duplicates if a refresh raced the append.
+            const seen = new Set(prev.map((e) => e.id));
+            return [...prev, ...page.filter((e) => !seen.has(e.id))];
+          });
+          setNextCursor(res.headers?.['x-next-cursor'] || null);
+          setError('');
+        })
+        .catch((err) => setError(`Failed to load activity: ${apiErrorMessage(err)}`))
+        .finally(() => setLoading(false));
+    },
     // activeOrgId: events are scoped by the X-Org-ID header the API client
     // injects, so refetch when the active workspace changes (e.g.
     // ProjectLayout's cross-org deep-link sync, issues #99/#111/#112).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectId, typeFilter, limit, activeOrgId]);
+    [projectId, typeFilter, activeOrgId]
+  );
 
+  // (Re)load the newest page whenever the scope changes.
   useEffect(() => {
-    load();
-  }, [load]);
+    loadPage();
+  }, [loadPage]);
 
-  // Reset pagination and open rows when the filter changes.
+  // Reset open rows when the filter or project changes (the list itself is
+  // replaced by the reload above).
   useEffect(() => {
-    setLimit(PAGE_SIZE);
     setExpanded(new Set());
   }, [typeFilter, projectId]);
 
@@ -134,9 +150,9 @@ export const ActivityLog: React.FC = () => {
     });
   };
 
-  // The API returns at most `limit` rows; a full page means there may be more.
-  const maybeMore = events.length >= limit && limit < MAX_LIMIT;
-  const atCap = events.length >= MAX_LIMIT;
+  // The server advertises the cursor for the next (older) page only when one
+  // may exist.
+  const maybeMore = nextCursor !== null;
 
   return (
     <div style={{ padding: 20, height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -280,7 +296,7 @@ export const ActivityLog: React.FC = () => {
         {maybeMore && (
           <div style={{ padding: '12px 0', textAlign: 'center' }}>
             <button
-              onClick={() => setLimit((l) => Math.min(l + PAGE_SIZE, MAX_LIMIT))}
+              onClick={() => nextCursor && loadPage(nextCursor)}
               disabled={loading}
               style={{
                 background: 'var(--surface)',
@@ -294,11 +310,6 @@ export const ActivityLog: React.FC = () => {
             >
               {loading ? 'Loading…' : 'Load more'}
             </button>
-          </div>
-        )}
-        {atCap && (
-          <div style={{ padding: '10px 0', textAlign: 'center', fontSize: 12, color: 'var(--text-muted)' }}>
-            Showing the most recent {MAX_LIMIT} events (API limit). Narrow by type to see older activity.
           </div>
         )}
       </div>
