@@ -122,10 +122,11 @@ openv/
 │   │   ├── api/             # API client
 │   │   └── App.tsx          # Main App component
 │   └── package.json
-├── deploy/
-│   └── docker/              # Docker configuration
-├── docs/                    # Documentation
+├── docs/                    # Documentation (deployment: docs/operations.md)
+├── Dockerfile.api           # API server image
+├── Dockerfile.worker        # Agent worker image
 ├── docker-compose.yml       # Local development stack
+├── docker-compose.prod.yml  # Production overlay (see docs/operations.md)
 └── go.mod                   # Go module definition
 ```
 
