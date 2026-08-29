@@ -249,6 +249,22 @@ export const ProposalReviewPanel: React.FC<ProposalReviewPanelProps> = ({
             <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
               {new Date(p.created_at).toLocaleString()}
             </span>
+            {p.ref && (
+              <span
+                title="Other proposals in this run can link to this artifact using this reference token."
+                style={{
+                  fontSize: 11,
+                  fontFamily: 'monospace',
+                  color: 'var(--text-muted)',
+                  background: 'var(--surface-alt)',
+                  border: '1px solid var(--neutral-soft)',
+                  borderRadius: 4,
+                  padding: '1px 6px',
+                }}
+              >
+                ref: {p.ref}
+              </span>
+            )}
           </div>
           {rowResults[p.id] && !rowResults[p.id].ok && (
             <div style={{ color: 'var(--danger)', fontSize: 12.5, marginBottom: 8 }}>

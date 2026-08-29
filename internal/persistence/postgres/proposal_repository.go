@@ -17,14 +17,14 @@ func NewProposalRepository(db *sql.DB) *ProposalRepository {
 	return &ProposalRepository{db: db}
 }
 
-const proposalColumns = `id, run_id, project_id, op, target_id, payload, status, review_note, applied_entity_id, reviewed_by, created_at, reviewed_at`
+const proposalColumns = `id, run_id, project_id, op, target_id, payload, ref, status, review_note, applied_entity_id, reviewed_by, created_at, reviewed_at`
 
 func scanProposal(row interface{ Scan(...interface{}) error }) (*proposals.Proposal, error) {
 	p := new(proposals.Proposal)
 	var targetID, appliedEntityID, reviewedBy sql.NullString
 	var reviewedAt sql.NullTime
 	var payload []byte
-	err := row.Scan(&p.ID, &p.RunID, &p.ProjectID, &p.Op, &targetID, &payload, &p.Status, &p.ReviewNote, &appliedEntityID, &reviewedBy, &p.CreatedAt, &reviewedAt)
+	err := row.Scan(&p.ID, &p.RunID, &p.ProjectID, &p.Op, &targetID, &payload, &p.Ref, &p.Status, &p.ReviewNote, &appliedEntityID, &reviewedBy, &p.CreatedAt, &reviewedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -57,9 +57,9 @@ func (r *ProposalRepository) Save(p *proposals.Proposal) error {
 		return err
 	}
 	_, err = r.db.Exec(`
-		INSERT INTO agent_proposals (id, run_id, project_id, op, target_id, payload, status, review_note, applied_entity_id, reviewed_by, created_at, reviewed_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-	`, p.ID, p.RunID, p.ProjectID, p.Op, p.TargetID, payload, p.Status, p.ReviewNote, p.AppliedEntityID, p.ReviewedBy, p.CreatedAt, p.ReviewedAt)
+		INSERT INTO agent_proposals (id, run_id, project_id, op, target_id, payload, ref, status, review_note, applied_entity_id, reviewed_by, created_at, reviewed_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+	`, p.ID, p.RunID, p.ProjectID, p.Op, p.TargetID, payload, p.Ref, p.Status, p.ReviewNote, p.AppliedEntityID, p.ReviewedBy, p.CreatedAt, p.ReviewedAt)
 	return err
 }
 

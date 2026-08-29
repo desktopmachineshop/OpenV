@@ -1001,35 +1001,69 @@ func (h *Handler) CreateLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Fetch the from and to artifacts to validate link type
-	fromArtifact, err := h.artifactService.GetArtifact(req.FromID)
-	if err != nil {
-		respondError(w, r, http.StatusBadRequest, "source artifact not found", err)
+	// A proposal-mode run may name a sibling create_artifact proposal's
+	// temporary ref token in from_id/to_id — an artifact that does not exist
+	// yet (issue #235). For such an endpoint the artifact fetch, link-type
+	// validation, and its project's authz are deferred to apply time (the ref
+	// resolves to the real id then). Endpoints that are real ids are validated
+	// here exactly as before; a non-proposal run has no refs, so its behaviour
+	// is unchanged.
+	proposalRunID, isProposalRun := h.proposalRunID(r)
+
+	fromArtifact, fromErr := h.artifactService.GetArtifact(req.FromID)
+	fromIsRef := fromErr != nil && isProposalRun && h.pendingArtifactRef(proposalRunID, req.FromID) != nil
+	if fromErr != nil && !fromIsRef {
+		respondError(w, r, http.StatusBadRequest, "source artifact not found", fromErr)
 		return
 	}
 
-	toArtifact, err := h.artifactService.GetArtifact(req.ToID)
-	if err != nil {
-		respondError(w, r, http.StatusBadRequest, "target artifact not found", err)
+	toArtifact, toErr := h.artifactService.GetArtifact(req.ToID)
+	toIsRef := toErr != nil && isProposalRun && h.pendingArtifactRef(proposalRunID, req.ToID) != nil
+	if toErr != nil && !toIsRef {
+		respondError(w, r, http.StatusBadRequest, "target artifact not found", toErr)
 		return
 	}
 
-	// Validate link type against artifact types
-	if err := links.ValidateLinkType(req.Type, fromArtifact.Type, toArtifact.Type); err != nil {
-		writeJSONError(w, http.StatusBadRequest, err.Error())
-		return
+	// Validate link type only when both endpoint types are known. When an
+	// endpoint is a pending ref its type is not yet knowable; the human review
+	// of the paired proposals is the check in that case.
+	if fromArtifact != nil && toArtifact != nil {
+		if err := links.ValidateLinkType(req.Type, fromArtifact.Type, toArtifact.Type); err != nil {
+			writeJSONError(w, http.StatusBadRequest, err.Error())
+			return
+		}
 	}
 
-	if !h.requireProjectRole(w, r, fromArtifact.ProjectID, members.RoleEditor) {
+	// Determine the project to authorize and to file the proposal under. Prefer
+	// a known real endpoint; fall back to the referenced sibling proposal's
+	// project when both endpoints are refs.
+	projectID := ""
+	switch {
+	case fromArtifact != nil:
+		projectID = fromArtifact.ProjectID
+	case toArtifact != nil:
+		projectID = toArtifact.ProjectID
+	default:
+		if ref := h.pendingArtifactRef(proposalRunID, req.FromID); ref != nil {
+			projectID = ref.ProjectID
+		} else if ref := h.pendingArtifactRef(proposalRunID, req.ToID); ref != nil {
+			projectID = ref.ProjectID
+		}
+	}
+	if !h.requireProjectRole(w, r, projectID, members.RoleEditor) {
 		return
 	}
 	// A link also writes to the target artifact (version bump + chatter via
 	// autoVersionLinkedArtifacts) and exposes its title, so a cross-project
-	// link needs editor rights on the target's project too.
-	if toArtifact.ProjectID != fromArtifact.ProjectID && !h.requireProjectRole(w, r, toArtifact.ProjectID, members.RoleEditor) {
+	// link needs editor rights on the target's project too. Only checkable for
+	// a known (non-ref) endpoint.
+	if toArtifact != nil && toArtifact.ProjectID != projectID && !h.requireProjectRole(w, r, toArtifact.ProjectID, members.RoleEditor) {
 		return
 	}
-	if h.maybePropose(w, r, fromArtifact.ProjectID, proposals.OpCreateLink, nil, req) {
+	if fromArtifact != nil && fromArtifact.ProjectID != projectID && !h.requireProjectRole(w, r, fromArtifact.ProjectID, members.RoleEditor) {
+		return
+	}
+	if h.maybePropose(w, r, projectID, proposals.OpCreateLink, nil, req) {
 		return
 	}
 

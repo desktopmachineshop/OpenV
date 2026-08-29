@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -1205,6 +1206,16 @@ func (h *Handler) BulkReviewProposals(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Approvals apply real writes, and a create_link proposal may reference a
+	// sibling create_artifact proposal's temporary ref token (issue #235). That
+	// ref only resolves once the artifact proposal has been applied, so order
+	// the approvals to run create_artifact proposals before create_link ones,
+	// regardless of the order the client listed them. Rejections apply nothing,
+	// so their order is left untouched.
+	if req.Action == "approve" {
+		h.orderProposalsForApply(req.IDs)
+	}
+
 	reviewer := CurrentUserID(r)
 	results := make([]bulkOutcome, 0, len(req.IDs))
 	for _, id := range req.IDs {
@@ -1233,6 +1244,28 @@ func (h *Handler) BulkReviewProposals(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) RejectProposal(w http.ResponseWriter, r *http.Request) {
 	h.reviewProposal(w, r, false)
+}
+
+// orderProposalsForApply stably reorders proposal ids in place so create_artifact
+// proposals are approved before create_link proposals in one bulk request. A
+// link may name a sibling artifact proposal's temporary ref (issue #235), which
+// only resolves after that artifact proposal is applied. Ids that fail to load
+// keep a neutral middle priority and their relative position; the review loop
+// then reports them as not-found.
+func (h *Handler) orderProposalsForApply(ids []string) {
+	prio := make(map[string]int, len(ids))
+	for _, id := range ids {
+		prio[id] = 1
+		if p, err := h.proposalService.Get(id); err == nil && p != nil {
+			switch p.Op {
+			case proposals.OpCreateArtifact:
+				prio[id] = 0
+			case proposals.OpCreateLink:
+				prio[id] = 2
+			}
+		}
+	}
+	sort.SliceStable(ids, func(i, j int) bool { return prio[ids[i]] < prio[ids[j]] })
 }
 
 // --- Repo connections ---

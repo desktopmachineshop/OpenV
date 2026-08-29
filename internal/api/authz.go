@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/openv/requirements-platform/internal/domain/agentruns"
+	"github.com/openv/requirements-platform/internal/domain/agents"
 	"github.com/openv/requirements-platform/internal/domain/events"
 	"github.com/openv/requirements-platform/internal/domain/members"
 	"github.com/openv/requirements-platform/internal/domain/orgs"
@@ -227,4 +228,41 @@ func (h *Handler) maybePropose(w http.ResponseWriter, r *http.Request, projectID
 		"note":        "This write is pending human review and has not been applied yet.",
 	})
 	return true
+}
+
+// proposalRunID reports the current run's id and whether its writes are
+// diverted to the proposal queue (a proposal-mode agent). It mirrors the run +
+// agent lookup maybePropose performs, exposed so the link handler can tell an
+// unknown-artifact endpoint apart from a legitimate pending-proposal reference
+// token (issue #235) before it decides whether the endpoint is an error.
+func (h *Handler) proposalRunID(r *http.Request) (string, bool) {
+	run := CurrentRun(r)
+	if run == nil {
+		return "", false
+	}
+	agent, err := h.agentService.Get(run.AgentID)
+	if err != nil || agent == nil || agent.WriteMode != agents.WriteModeProposal {
+		return "", false
+	}
+	return run.ID, true
+}
+
+// pendingArtifactRef returns the pending create_artifact proposal in runID that
+// minted the temporary token ref, or nil. It is how a create_link proposal
+// validates that a ref-shaped endpoint really points at a sibling artifact
+// proposal in the same run rather than a typo (issue #235).
+func (h *Handler) pendingArtifactRef(runID, ref string) *proposals.Proposal {
+	if runID == "" || ref == "" {
+		return nil
+	}
+	list, err := h.proposalService.List("", "", runID)
+	if err != nil {
+		return nil
+	}
+	for _, p := range list {
+		if p.Ref == ref && p.Op == proposals.OpCreateArtifact && p.Status == proposals.StatusPending {
+			return p
+		}
+	}
+	return nil
 }

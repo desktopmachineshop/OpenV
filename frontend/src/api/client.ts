@@ -828,6 +828,11 @@ export interface Proposal {
   op: string;
   target_id?: string | null;
   payload: Record<string, any>;
+  // Temporary reference token an agent attached to a create_artifact proposal
+  // so a sibling create_link proposal in the same run can point at the
+  // not-yet-created artifact via from_id/to_id (issue #235). Empty/absent for
+  // proposals that mint no reference.
+  ref?: string;
   status: string;
   review_note: string;
   created_at: string;
