@@ -468,15 +468,37 @@ func TestSucceededRunLaunchesHandsOffAndReviewSuccessors(t *testing.T) {
 	}
 }
 
-func TestAwaitingApprovalAlsoLaunchesSuccessors(t *testing.T) {
+// TestAwaitingApprovalHoldsSuccessors locks in the approval gate: a run whose
+// writes are still pending review must NOT launch crew successors/handoffs —
+// a teammate would otherwise build on writes that may yet be rejected. The
+// successors fire later, when the resolved run transitions to succeeded.
+func TestAwaitingApprovalHoldsSuccessors(t *testing.T) {
 	f := newFixture()
 	f.teams.graph = &teams.TeamGraph{Nodes: []*teams.Node{agentNode("n1", "agent-1", "Planner"), agentNode("n2", "agent-2", "Builder")}}
 	f.teams.edges = map[string][]*teams.Edge{
 		"n1|" + teams.EdgeHandsOff: {{ID: "e1", TeamID: "t1", FromNodeID: "n1", ToNodeID: "n2", EdgeType: teams.EdgeHandsOff, Config: map[string]interface{}{}}},
 	}
 	f.hooks.RunStatusChanged(teamRun(agentruns.StatusAwaitingApproval))
+	if len(f.runs.launches) != 0 {
+		t.Fatalf("launches = %d, want 0 while proposals are unapproved", len(f.runs.launches))
+	}
+
+	// Once approval resolves the run to succeeded, the successor launches.
+	f.hooks.RunStatusChanged(teamRun(agentruns.StatusSucceeded))
 	if len(f.runs.launches) != 1 {
-		t.Fatalf("launches = %d, want 1", len(f.runs.launches))
+		t.Fatalf("launches after approval = %d, want 1", len(f.runs.launches))
+	}
+}
+
+// TestAwaitingApprovalStillDeliversConversationalReply keeps interview/guided
+// sessions unblocked: the reply is delivered when the answer is ready even
+// though the run's writes are still awaiting review.
+func TestAwaitingApprovalStillDeliversConversationalReply(t *testing.T) {
+	f := newFixture()
+	run := &agentruns.Run{ID: "r1", Status: agentruns.StatusAwaitingApproval, GuidedSessionID: strptr("g1"), FinalText: "here is the draft"}
+	f.hooks.RunStatusChanged(run)
+	if len(f.guided.appends) != 1 || f.guided.appends[0].content != "here is the draft" {
+		t.Fatalf("guided reply not delivered on awaiting_approval: %+v", f.guided.appends)
 	}
 }
 

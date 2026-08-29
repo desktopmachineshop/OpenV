@@ -39,6 +39,10 @@ const (
 	LogUsage      = "usage"
 	LogSystem     = "system"
 	LogError      = "error"
+	// LogMarker flags an operational marker injected by the worker itself
+	// (e.g. a notice that streamed events were dropped), as opposed to
+	// output parsed from the agent CLI.
+	LogMarker = "marker"
 )
 
 // MaxAnswerChars is the answer budget every agent is told about (see
@@ -278,6 +282,15 @@ type Repository interface {
 	ListLogs(runID string, afterSeq int) ([]LogEntry, error)
 	CountRunsSince(automationID string, since time.Time) (int, error)
 	CountPendingProposals(runID string) (int, error)
+	// CountApplyFailedProposals counts a run's approved proposals whose write
+	// failed to apply, so an awaiting_approval run can resolve to failed when
+	// any of its writes did not land.
+	CountApplyFailedProposals(runID string) (int, error)
+	// FinalizeApproval transitions an awaiting_approval run to a terminal
+	// status (succeeded/failed) once its proposals are resolved, but only
+	// while it is still awaiting approval so a concurrent resolver can never
+	// double-finalize; reports whether the transition was applied.
+	FinalizeApproval(runID, status string, at time.Time) (bool, error)
 	// QueueStats summarizes the org's queued runs.
 	QueueStats(orgID string) (QueueStats, error)
 	// Usage aggregates an org's runs created at/after since, grouped by
@@ -320,6 +333,11 @@ type Service interface {
 	RequestCancel(id string) (*Run, error)
 	Heartbeat(id string) error
 	FailStale(maxSilence time.Duration) ([]string, error)
+	// FinalizeIfResolved completes an awaiting_approval run once every proposal
+	// it produced has been reviewed, publishing RunFinished on the transition.
+	// A no-op for runs that are not awaiting approval or still have pending
+	// proposals. Called wherever a proposal is resolved.
+	FinalizeIfResolved(runID string) (*Run, error)
 	CountRunsSince(automationID string, since time.Time) (int, error)
 	// QueueStats summarizes the org's queued runs.
 	QueueStats(orgID string) (QueueStats, error)
@@ -687,22 +705,33 @@ func (s *DefaultService) Finish(id string, req FinishRequest) (*Run, error) {
 	}
 	run.RunTokenHash = ""
 	s.notifyStatus(run)
-	if s.bus != nil {
-		projectID := ""
-		if run.ProjectID != nil {
-			projectID = *run.ProjectID
-		}
-		launchedBy := ""
-		if run.LaunchedBy != nil {
-			launchedBy = *run.LaunchedBy
-		}
-		s.bus.Publish(events.New(events.RunFinished, projectID, run.ID, "agent:"+run.ID, map[string]interface{}{
-			"status":      run.Status,
-			"agent_id":    run.AgentID,
-			"launched_by": launchedBy,
-		}).WithOrg(run.OrgID))
-	}
+	s.publishRunFinished(run)
 	return run, nil
+}
+
+// publishRunFinished emits the RunFinished event for a run's terminal status.
+// The notifier turns a failed status into an inbox alert for the launcher and
+// the automation trigger matcher fires run-finished automations, so every
+// terminal transition — the worker's Finish, the stale reaper, and the
+// awaiting_approval resolution — must funnel through here or those consumers
+// silently miss the run.
+func (s *DefaultService) publishRunFinished(run *Run) {
+	if s.bus == nil {
+		return
+	}
+	projectID := ""
+	if run.ProjectID != nil {
+		projectID = *run.ProjectID
+	}
+	launchedBy := ""
+	if run.LaunchedBy != nil {
+		launchedBy = *run.LaunchedBy
+	}
+	s.bus.Publish(events.New(events.RunFinished, projectID, run.ID, "agent:"+run.ID, map[string]interface{}{
+		"status":      run.Status,
+		"agent_id":    run.AgentID,
+		"launched_by": launchedBy,
+	}).WithOrg(run.OrgID))
 }
 
 // RequestCancel flags a run for cancellation (immediate if still queued).
@@ -764,9 +793,68 @@ func (s *DefaultService) FailStale(maxSilence time.Duration) ([]string, error) {
 	for _, id := range ids {
 		if run, err := s.Get(id); err == nil {
 			s.notifyStatus(run)
+			// The reaper's terminal write bypasses Finish, so publish
+			// RunFinished here too — otherwise the notifier and automation
+			// triggers miss reaper-failed runs (the common worker-crash case).
+			s.publishRunFinished(run)
 		}
 	}
 	return ids, nil
+}
+
+// FinalizeIfResolved completes an awaiting_approval run once every proposal it
+// produced has been reviewed. It is a no-op unless the run is awaiting approval
+// and no proposal is still pending; otherwise it moves the run to a terminal
+// state — failed if any approved proposal failed to apply, succeeded when they
+// all landed (or were rejected) cleanly — and publishes RunFinished so crew
+// successors, the notifier and automation triggers fire on the real outcome
+// instead of the run stalling forever in awaiting_approval. Wired to every
+// proposal-resolution path (approve/reject, single or bulk, including the
+// applier path where an approval's write fails).
+func (s *DefaultService) FinalizeIfResolved(runID string) (*Run, error) {
+	run, err := s.Get(runID)
+	if err != nil {
+		return nil, err
+	}
+	if run.Status != StatusAwaitingApproval {
+		return run, nil
+	}
+	pending, err := s.repo.CountPendingProposals(runID)
+	if err != nil {
+		return nil, err
+	}
+	if pending > 0 {
+		return run, nil
+	}
+
+	status := StatusSucceeded
+	failed, err := s.repo.CountApplyFailedProposals(runID)
+	if err != nil {
+		return nil, err
+	}
+	if failed > 0 {
+		status = StatusFailed
+	}
+
+	now := time.Now()
+	applied, err := s.repo.FinalizeApproval(runID, status, now)
+	if err != nil {
+		return nil, err
+	}
+	if !applied {
+		// Lost the race: a concurrent resolver already finalized the run.
+		// Return its current state without re-notifying or re-publishing.
+		return s.Get(runID)
+	}
+	run.Status = status
+	run.FinishedAt = &now
+	run.RunTokenHash = ""
+	if status == StatusFailed && run.Error == "" {
+		run.Error = "one or more approved proposals failed to apply"
+	}
+	s.notifyStatus(run)
+	s.publishRunFinished(run)
+	return run, nil
 }
 
 // CountRunsSince counts an automation's runs in a window (rate guard).

@@ -49,6 +49,7 @@ func (h *Handler) registerAgentRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/agent-runs/{id}/cancel", h.CancelAgentRun).Methods("POST")
 	router.HandleFunc("/api/v1/agent-runs/{id}/retry", h.RetryAgentRun).Methods("POST")
 	router.HandleFunc("/api/v1/agent-runs/{id}/start", h.StartAgentRun).Methods("POST")
+	router.HandleFunc("/api/v1/agent-runs/{id}/release", h.ReleaseAgentRun).Methods("POST")
 	router.HandleFunc("/api/v1/agent-runs/{id}/finish", h.FinishAgentRun).Methods("POST")
 
 	// Automations.
@@ -627,6 +628,34 @@ func (h *Handler) StartAgentRun(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		respondInternal(w, r, "failed to start run", err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// ReleaseAgentRun hands a claimed/running run back to the queue at the
+// worker's request — used when the worker is shutting down (SIGINT) mid-run,
+// so the run is reclaimable by another (or a restarted) worker instead of
+// being burned as failed. The release is conditional (still owned by this
+// worker, not terminal), so it can never resurrect a run another actor already
+// moved; a no-op is reported as success.
+func (h *Handler) ReleaseAgentRun(w http.ResponseWriter, r *http.Request) {
+	if !requireWorker(w, r) {
+		return
+	}
+	run := h.requireWorkerRun(w, r)
+	if run == nil {
+		return
+	}
+	var req struct {
+		WorkerID string `json:"worker_id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if err := h.runService.ReleaseClaim(run.ID, req.WorkerID); err != nil {
+		respondInternal(w, r, "failed to release run", err)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)

@@ -149,6 +149,23 @@ func (c *Client) Finish(runID string, req agentruns.FinishRequest) error {
 	return nil
 }
 
+// Release hands a claimed/running run back to the queue (best effort) so it
+// can be reclaimed — used when the worker is shutting down mid-run rather than
+// failing the run.
+func (c *Client) Release(runID, workerID string) error {
+	resp, err := c.do(c.http, "POST", "/api/v1/agent-runs/"+runID+"/release", map[string]string{
+		"worker_id": workerID,
+	})
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode >= 300 {
+		return httpError(resp)
+	}
+	return nil
+}
+
 // ReportDetection uploads provider availability results.
 func (c *Client) ReportDetection(report map[string]map[string]interface{}) error {
 	resp, err := c.do(c.http, "POST", "/api/v1/provider-settings/detect", report)

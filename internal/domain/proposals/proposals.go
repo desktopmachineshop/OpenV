@@ -87,8 +87,9 @@ type Service interface {
 
 // DefaultService implements Service.
 type DefaultService struct {
-	repo     Repository
-	appliers Appliers
+	repo       Repository
+	appliers   Appliers
+	onResolved func(runID string)
 }
 
 // NewDefaultService creates a proposal service.
@@ -103,6 +104,23 @@ func NewDefaultService(repo Repository, appliers Appliers) *DefaultService {
 // the proposal service, the appliers need the handler).
 func (s *DefaultService) SetAppliers(appliers Appliers) {
 	s.appliers = appliers
+}
+
+// OnResolved registers a callback fired after any of a run's proposals is
+// resolved — approved (whether the write applied or apply-failed) or rejected.
+// The run service uses it to finalize a run that is awaiting approval once its
+// last proposal is reviewed. Routing every resolution through the service
+// (rather than the HTTP handlers) also covers the applier path: an approval
+// whose write fails still resolves the proposal to apply_failed, and the
+// finalize check must run for it too. Call during wiring only.
+func (s *DefaultService) OnResolved(fn func(runID string)) {
+	s.onResolved = fn
+}
+
+func (s *DefaultService) notifyResolved(runID string) {
+	if s.onResolved != nil {
+		s.onResolved(runID)
+	}
 }
 
 var validOps = map[string]bool{
@@ -190,6 +208,7 @@ func (s *DefaultService) Approve(id string, reviewedBy *string, note string) (*P
 	if err := s.repo.Update(p); err != nil {
 		return nil, err
 	}
+	s.notifyResolved(p.RunID)
 	if applyErr != nil {
 		return p, applyErr
 	}
@@ -213,6 +232,7 @@ func (s *DefaultService) Reject(id string, reviewedBy *string, note string) (*Pr
 	if err := s.repo.Update(p); err != nil {
 		return nil, err
 	}
+	s.notifyResolved(p.RunID)
 	return p, nil
 }
 

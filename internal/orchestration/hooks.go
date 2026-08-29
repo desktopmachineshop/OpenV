@@ -60,8 +60,21 @@ func (h *Hooks) RunStatusChanged(run *agentruns.Run) {
 	h.syncWorkItem(run)
 
 	switch run.Status {
-	case agentruns.StatusSucceeded, agentruns.StatusAwaitingApproval:
+	case agentruns.StatusSucceeded:
+		// Genuine success: launch crew successors/handoffs and deliver the
+		// conversational reply. A run that went through approval reaches this
+		// case only once its proposals are resolved (awaiting_approval ->
+		// succeeded), so successors fire on the real outcome, not on unapproved
+		// writes.
 		h.enqueueSuccessors(run)
+		h.deliverInterviewReply(run)
+		h.deliverGuidedReply(run)
+	case agentruns.StatusAwaitingApproval:
+		// The answer is ready but its writes await human review. Deliver the
+		// conversational reply so interview/guided sessions aren't left
+		// hanging, but hold successors/handoffs until the approval resolves the
+		// run to succeeded — otherwise a teammate would build on writes that
+		// may still be rejected.
 		h.deliverInterviewReply(run)
 		h.deliverGuidedReply(run)
 	case agentruns.StatusFailed, agentruns.StatusTimedOut:
