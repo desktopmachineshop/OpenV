@@ -39,6 +39,21 @@ func (f *fakeProjectService) GetProject(id string) (*projects.Project, error) {
 	return nil, errors.New("project not found")
 }
 
+// ListProjectsByOrg mirrors the SQL fail-closed contract: an empty orgID
+// returns nothing, otherwise only the projects in that workspace.
+func (f *fakeProjectService) ListProjectsByOrg(orgID string) ([]*projects.Project, error) {
+	if orgID == "" {
+		return nil, nil
+	}
+	var out []*projects.Project
+	for _, p := range f.byID {
+		if p.OrgID == orgID {
+			out = append(out, p)
+		}
+	}
+	return out, nil
+}
+
 type fakeOrgService struct {
 	orgs.Service
 	// roles maps orgID -> userID -> role

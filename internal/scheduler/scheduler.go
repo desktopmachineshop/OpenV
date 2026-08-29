@@ -44,6 +44,8 @@ func (s *Scheduler) Start(ctx context.Context) {
 
 // catchUp handles automations whose next_run_at passed while the API was
 // down: catch_up=true gets exactly one run; otherwise just advance the clock.
+// Both paths go through the atomic claim so a multi-replica deployment never
+// double-fires (or double-advances) a due automation.
 func (s *Scheduler) catchUp() {
 	due, err := s.repo.ListDueScheduled(time.Now())
 	if err != nil {
@@ -54,7 +56,9 @@ func (s *Scheduler) catchUp() {
 		if a.CatchUp {
 			s.fire(a)
 		} else {
-			s.advance(a)
+			// Skip the missed run, but still claim the row so the clock
+			// advances exactly once across replicas.
+			s.claim(a)
 		}
 	}
 }
@@ -70,12 +74,19 @@ func (s *Scheduler) tick() {
 	}
 }
 
-// fire enqueues one run for the automation and advances next_run_at.
+// fire atomically claims the automation for this replica and, only if the
+// claim is won, enqueues exactly one run. Claiming advances next_run_at in the
+// same statement, so a peer replica that lost the race for this row simply
+// finds it no longer due and never fires it too.
 func (s *Scheduler) fire(a *automations.Automation) {
+	if !s.claim(a) {
+		return
+	}
+
 	agentID, teamID, teamNodeID, err := ResolveTarget(a, s.teamService)
 	if err != nil {
+		// Already advanced by the claim; just skip this occurrence.
 		log.Printf("scheduler: automation %s (%s) target unresolvable: %v", a.Name, a.ID, err)
-		s.advance(a)
 		return
 	}
 
@@ -99,21 +110,29 @@ func (s *Scheduler) fire(a *automations.Automation) {
 	if _, _, err := s.runService.Launch(req); err != nil {
 		log.Printf("scheduler: failed to launch run for automation %s: %v", a.ID, err)
 	}
-	s.advance(a)
 }
 
-func (s *Scheduler) advance(a *automations.Automation) {
-	next, err := automations.NextAfter(a.CronExpr, time.Now())
+// claim atomically claims the automation for this replica, advancing its
+// next_run_at to the next cron occurrence (an invalid cron disables it by
+// advancing to NULL). It reports whether THIS replica won the claim; only the
+// winner should fire. A lost claim means a peer replica already took the row.
+func (s *Scheduler) claim(a *automations.Automation) bool {
+	now := time.Now()
+	next, err := automations.NextAfter(a.CronExpr, now)
 	if err != nil {
 		log.Printf("scheduler: automation %s has invalid cron %q: %v", a.ID, a.CronExpr, err)
-		if err := s.repo.MarkRun(a.ID, time.Now(), nil); err != nil {
-			log.Printf("scheduler: failed to mark run for %s: %v", a.ID, err)
+		claimed, cerr := s.repo.ClaimDueScheduled(a.ID, now, nil)
+		if cerr != nil {
+			log.Printf("scheduler: failed to claim %s: %v", a.ID, cerr)
 		}
-		return
+		return claimed
 	}
-	if err := s.repo.MarkRun(a.ID, time.Now(), &next); err != nil {
-		log.Printf("scheduler: failed to mark run for %s: %v", a.ID, err)
+	claimed, err := s.repo.ClaimDueScheduled(a.ID, now, &next)
+	if err != nil {
+		log.Printf("scheduler: failed to claim %s: %v", a.ID, err)
+		return false
 	}
+	return claimed
 }
 
 // ResolveTarget resolves an automation's agent target. Team automations

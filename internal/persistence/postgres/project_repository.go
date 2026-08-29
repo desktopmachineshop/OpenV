@@ -73,6 +73,36 @@ func (r *ProjectRepository) GetAll() ([]*projects.Project, error) {
 	return projectList, nil
 }
 
+// ListByOrg retrieves the projects in one org. It fails closed: an empty
+// orgID becomes org_id = NULL, which matches no rows, so a caller without a
+// resolved active workspace gets an empty list instead of every tenant's
+// projects. Mirrors EventRepository.List's org predicate.
+func (r *ProjectRepository) ListByOrg(orgID string) ([]*projects.Project, error) {
+	query := `SELECT id, COALESCE(org_id::text, ''), name, description, agent_auth, created_at, updated_at
+		FROM projects WHERE org_id = NULLIF($1, '')::uuid ORDER BY created_at DESC`
+	rows, err := r.db.Query(query, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query projects: %w", err)
+	}
+	defer rows.Close()
+
+	projectList := make([]*projects.Project, 0)
+	for rows.Next() {
+		project := &projects.Project{}
+		err := rows.Scan(&project.ID, &project.OrgID, &project.Name, &project.Description, &project.AgentAuth, &project.CreatedAt, &project.UpdatedAt)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan project: %w", err)
+		}
+		projectList = append(projectList, project)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating projects: %w", err)
+	}
+
+	return projectList, nil
+}
+
 // Update updates an existing project
 func (r *ProjectRepository) Update(project *projects.Project) error {
 	query := `

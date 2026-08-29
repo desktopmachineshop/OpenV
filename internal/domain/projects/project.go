@@ -71,6 +71,9 @@ type Service interface {
 	CreateProject(project *Project) error
 	GetProject(id string) (*Project, error)
 	ListProjects() ([]*Project, error)
+	// ListProjectsByOrg returns the projects in one workspace, scoped in SQL.
+	// It fails closed: an empty orgID yields no projects.
+	ListProjectsByOrg(orgID string) ([]*Project, error)
 	UpdateProject(id string, req UpdateProjectRequest) (*Project, error)
 	DeleteProject(id string) error
 }
@@ -106,6 +109,12 @@ func (s *DefaultService) GetProject(id string) (*Project, error) {
 // ListProjects retrieves all projects
 func (s *DefaultService) ListProjects() ([]*Project, error) {
 	return s.repository.GetAll()
+}
+
+// ListProjectsByOrg retrieves the projects in one workspace. It fails closed:
+// an empty orgID yields no projects.
+func (s *DefaultService) ListProjectsByOrg(orgID string) ([]*Project, error) {
+	return s.repository.ListByOrg(orgID)
 }
 
 // UpdateProject updates a project. Empty request fields keep their current

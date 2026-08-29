@@ -357,8 +357,22 @@ func (h *Hooks) onEvent(e domainevents.Event) {
 		return
 	}
 
+	// The run belongs to (and is listed within) the card's project's org.
+	// Resolve it up front: the run listing fails closed on org, and a card
+	// whose workspace can't be resolved can neither be checked nor launched.
+	orgID := ""
+	if h.projectService != nil {
+		if project, err := h.projectService.GetProject(item.ProjectID); err == nil && project != nil {
+			orgID = project.OrgID
+		}
+	}
+	if orgID == "" {
+		slog.Warn("orchestration: board trigger could not resolve org for project; skipping card", "project_id", item.ProjectID, "work_item_id", item.ID)
+		return
+	}
+
 	// Skip when a live run is already attached to this card.
-	active, err := h.runService.List(agentruns.ListFilter{WorkItemID: item.ID, Limit: 5})
+	active, err := h.runService.List(agentruns.ListFilter{OrgID: orgID, WorkItemID: item.ID, Limit: 5})
 	if err == nil {
 		for _, r := range active {
 			switch r.Status {
@@ -380,18 +394,6 @@ func (h *Hooks) onEvent(e domainevents.Event) {
 		fmt.Fprintf(&b, "Linked artifact ids: %s\n", strings.Join(item.ArtifactIDs, ", "))
 	}
 	b.WriteString("\nUse get_work_item and get_work_item_history for full card context, and fetch each linked artifact via your OpenV tools before acting. If the card lacks the requirements you need, say so and stop.")
-
-	// The run belongs to the card's project's org.
-	orgID := ""
-	if h.projectService != nil {
-		if project, err := h.projectService.GetProject(item.ProjectID); err == nil && project != nil {
-			orgID = project.OrgID
-		}
-	}
-	if orgID == "" {
-		slog.Warn("orchestration: board trigger could not resolve org for project; skipping card", "project_id", item.ProjectID, "work_item_id", item.ID)
-		return
-	}
 
 	projectID := item.ProjectID
 	workItemID := item.ID

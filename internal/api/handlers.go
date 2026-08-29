@@ -1245,31 +1245,29 @@ func (h *Handler) GetProject(w http.ResponseWriter, r *http.Request) {
 // workspace: all of the org's projects for platform admins and org admins,
 // membership-filtered otherwise.
 func (h *Handler) ListProjects(w http.ResponseWriter, r *http.Request) {
-	projectList, err := h.projectService.ListProjects()
-	if err != nil {
-		respondInternal(w, r, "failed to list projects", err)
+	// Scope to the active workspace in SQL, and fail closed: a caller whose
+	// active org could not be resolved (empty) sees no projects rather than
+	// every tenant's. resolveActiveOrg already falls back to the user's
+	// personal org, so "" here means even that failed.
+	activeOrg := ActiveOrg(r)
+	if activeOrg == "" {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode([]*projects.Project{})
 		return
 	}
 
-	// Scope to the active workspace.
-	if activeOrg := ActiveOrg(r); activeOrg != "" {
-		inOrg := projectList[:0]
-		for _, p := range projectList {
-			if p.OrgID == activeOrg {
-				inOrg = append(inOrg, p)
-			}
-		}
-		projectList = inOrg
+	projectList, err := h.projectService.ListProjectsByOrg(activeOrg)
+	if err != nil {
+		respondInternal(w, r, "failed to list projects", err)
+		return
 	}
 
 	if user := CurrentUser(r); user != nil && !user.IsAdmin && h.memberService != nil {
 		// Org admins of the active workspace see all of its projects.
 		isOrgAdmin := false
 		if h.orgService != nil {
-			if activeOrg := ActiveOrg(r); activeOrg != "" {
-				if role, err := h.orgService.RoleInOrg(activeOrg, user.ID); err == nil && role == orgs.RoleAdmin {
-					isOrgAdmin = true
-				}
+			if role, err := h.orgService.RoleInOrg(activeOrg, user.ID); err == nil && role == orgs.RoleAdmin {
+				isOrgAdmin = true
 			}
 		}
 		if !isOrgAdmin {

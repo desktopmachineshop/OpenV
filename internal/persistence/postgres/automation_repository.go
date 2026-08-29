@@ -186,15 +186,17 @@ func (r *AutomationRepository) Delete(id string) error {
 	return err
 }
 
-// ListDueScheduled returns enabled scheduled automations whose next_run_at is due,
-// locking the rows so concurrent schedulers skip each other's claims.
+// ListDueScheduled returns enabled scheduled automations whose next_run_at is
+// due. This is only a candidate read: it does NOT claim the rows (a bare
+// SELECT ... FOR UPDATE on a pooled connection releases its locks the instant
+// the statement completes, so it can't gate firing across replicas). Each
+// candidate must be claimed with ClaimDueScheduled before firing.
 func (r *AutomationRepository) ListDueScheduled(now time.Time) ([]*automations.Automation, error) {
 	rows, err := r.db.Query(`
 		SELECT `+automationColumns+`
 		FROM automations
 		WHERE enabled AND kind = 'scheduled' AND next_run_at IS NOT NULL AND next_run_at <= $1
 		ORDER BY next_run_at
-		FOR UPDATE SKIP LOCKED
 	`, now)
 	if err != nil {
 		return nil, err
@@ -210,6 +212,36 @@ func (r *AutomationRepository) ListDueScheduled(now time.Time) ([]*automations.A
 		result = append(result, a)
 	}
 	return result, rows.Err()
+}
+
+// ClaimDueScheduled atomically claims a due scheduled automation for the
+// caller and advances its schedule in a single statement: it locks the row
+// (SKIP LOCKED so a peer replica's concurrent claim never blocks) only while
+// it is still enabled, scheduled, and due as of lastRun, then advances
+// next_run_at to nextRun (NULL disables the automation, e.g. on an invalid
+// cron) and stamps last_run_at. It reports whether the caller won the claim.
+//
+// A false return means another replica already advanced the row (its
+// next_run_at is now in the future, so the due predicate no longer matches) or
+// currently holds the lock — either way the caller must NOT fire. Because the
+// claim and the advance are the same statement, two concurrent callers
+// partition the due set with zero overlap, so replicated schedulers never
+// double-fire an automation. Mirrors AgentRunRepository.Claim.
+func (r *AutomationRepository) ClaimDueScheduled(id string, lastRun time.Time, nextRun *time.Time) (bool, error) {
+	res, err := r.db.Exec(`
+		UPDATE automations SET next_run_at = $3, last_run_at = $2, updated_at = NOW()
+		WHERE id = (
+			SELECT id FROM automations
+			WHERE id = $1 AND enabled AND kind = 'scheduled'
+			  AND next_run_at IS NOT NULL AND next_run_at <= $2
+			FOR UPDATE SKIP LOCKED
+		)
+	`, id, lastRun, nextRun)
+	if err != nil {
+		return false, err
+	}
+	n, err := res.RowsAffected()
+	return n > 0, err
 }
 
 // ListEnabledTriggered returns enabled triggered automations for an event type.
