@@ -164,10 +164,7 @@ var migrations = []Migration{
 	// event; entity_ref is an opaque jsonb pointer the frontend uses to
 	// navigate ({"kind":"run","run_id":...}). The partial index serves the
 	// two hot queries (bell badge count, unread-first listing) without
-	// paying for read rows. NOTE: 0005 is deliberately skipped here — it is
-	// being claimed by the concurrent suspect-links branch; the registry
-	// only requires ascending, unique versions, so both branches merge
-	// cleanly in either order.
+	// paying for read rows.
 	{Version: 6, Name: "notifications", Run: func(tx *sql.Tx) error {
 		if _, err := tx.Exec(`
 			CREATE TABLE notifications (
@@ -195,6 +192,16 @@ var migrations = []Migration{
 			CREATE INDEX idx_notifications_user_unread
 			ON notifications(user_id) WHERE NOT read
 		`)
+		return err
+	}},
+
+	// 0007: drop the redundant idx_links_active partial UNIQUE index (issue
+	// #190/#191). links.id is the PRIMARY KEY, so it is already globally
+	// unique and at most one row per id can be active — the partial unique
+	// index enforced nothing the PK did not. Fresh databases no longer create
+	// it (see InitSchema); this drops it on databases that already have it.
+	{Version: 7, Name: "drop_redundant_idx_links_active", Run: func(tx *sql.Tx) error {
+		_, err := tx.Exec(`DROP INDEX IF EXISTS idx_links_active`)
 		return err
 	}},
 }

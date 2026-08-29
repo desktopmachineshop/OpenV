@@ -2241,11 +2241,26 @@ func (h *Handler) CreateChatterEntry(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Agent-authored comments are marked as auto entries with the agent type
-	// so the feed renders them distinctly.
+	// so the feed renders them distinctly. Authorship is stamped at write time:
+	// a run-authored comment is attributed to the agent, otherwise to the
+	// authenticated user (created_by carries the user id; author_name is the
+	// display label the feed shows without a follow-up lookup).
 	entry := chatter.NewChatterEntry(req.ArtifactID, req.Message, false, "comment")
-	if CurrentRun(r) != nil {
+	if run := CurrentRun(r); run != nil {
 		entry.IsAutoEntry = true
 		entry.EntryType = "agent"
+		if run.AgentName != "" {
+			entry.AuthorName = run.AgentName
+		} else {
+			entry.AuthorName = "Agent"
+		}
+	} else if user := CurrentUser(r); user != nil {
+		entry.CreatedBy = &user.ID
+		if user.Name != "" {
+			entry.AuthorName = user.Name
+		} else {
+			entry.AuthorName = user.Email
+		}
 	}
 	if err := h.chatterService.CreateEntry(entry); err != nil {
 		respondInternal(w, r, "failed to create chatter entry", err)

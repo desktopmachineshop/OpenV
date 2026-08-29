@@ -409,6 +409,11 @@ export interface ChatterEntry {
   message: string;
   is_auto_entry: boolean;
   entry_type: string;
+  // created_by is the authoring user's id (omitted for agent/system entries);
+  // author_name is the display label resolved at write time (user name/email
+  // or agent name), blank on pre-authorship rows.
+  created_by?: string;
+  author_name?: string;
   created_at: string;
   updated_at: string;
 }

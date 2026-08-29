@@ -20,8 +20,8 @@ func NewChatterRepository(db *sql.DB) *ChatterRepository {
 // Save saves a chatter entry to the database
 func (r *ChatterRepository) Save(entry *chatter.ChatterEntry) error {
 	query := `
-		INSERT INTO chatter (id, artifact_id, message, is_auto_entry, entry_type, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		INSERT INTO chatter (id, artifact_id, message, is_auto_entry, entry_type, created_by, author_name, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 	`
 
 	_, err := r.db.Exec(
@@ -31,6 +31,8 @@ func (r *ChatterRepository) Save(entry *chatter.ChatterEntry) error {
 		entry.Message,
 		entry.IsAutoEntry,
 		entry.EntryType,
+		entry.CreatedBy,
+		entry.AuthorName,
 		entry.CreatedAt,
 		entry.UpdatedAt,
 	)
@@ -46,7 +48,7 @@ func (r *ChatterRepository) Save(entry *chatter.ChatterEntry) error {
 // FindByArtifactID retrieves all chatter entries for an artifact, ordered by creation date
 func (r *ChatterRepository) FindByArtifactID(artifactID string) ([]*chatter.ChatterEntry, error) {
 	query := `
-		SELECT id, artifact_id, message, is_auto_entry, entry_type, created_at, updated_at
+		SELECT id, artifact_id, message, is_auto_entry, entry_type, created_by, author_name, created_at, updated_at
 		FROM chatter
 		WHERE artifact_id = $1
 		ORDER BY created_at DESC
@@ -68,6 +70,8 @@ func (r *ChatterRepository) FindByArtifactID(artifactID string) ([]*chatter.Chat
 			&entry.Message,
 			&entry.IsAutoEntry,
 			&entry.EntryType,
+			&entry.CreatedBy,
+			&entry.AuthorName,
 			&entry.CreatedAt,
 			&entry.UpdatedAt,
 		)
