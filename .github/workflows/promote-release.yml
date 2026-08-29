@@ -32,17 +32,21 @@ jobs:
       - name: Verify master CI is green
         env:
           GH_TOKEN: ${{ github.token }}
+          # This promote job itself appears as a check run on the master head
+          # (in progress now; failed/succeeded from earlier attempts), so it
+          # must be excluded from the gate or promotion can never pass.
+          SELF: Fast-forward release to master
         run: |
           sha=$(git rev-parse HEAD)
           echo "Promoting master commit $sha"
           runs=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${sha}/check-runs" \
-            --jq '.check_runs | length')
+            --jq '[.check_runs[] | select(.name != env.SELF)] | length')
           if [ "$runs" = "0" ]; then
             echo "No check runs found on master head — refusing to promote." >&2
             exit 1
           fi
           not_green=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${sha}/check-runs" \
-            --jq '[.check_runs[] | select(.conclusion != "success" and .conclusion != "neutral" and .conclusion != "skipped")] | map(.name) | join(", ")')
+            --jq '[.check_runs[] | select(.name != env.SELF) | select(.conclusion != "success" and .conclusion != "neutral" and .conclusion != "skipped")] | map(.name) | join(", ")')
           if [ -n "$not_green" ]; then
             echo "Checks not green on master head: $not_green" >&2
             exit 1
