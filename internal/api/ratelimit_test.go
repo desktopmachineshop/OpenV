@@ -133,15 +133,57 @@ func TestNilRateLimiterAllowsEverything(t *testing.T) {
 	}
 }
 
-func TestClientIP(t *testing.T) {
+func TestClientIPUntrustedIgnoresProxyHeaders(t *testing.T) {
 	r := httptest.NewRequest("GET", "/", nil)
 	r.RemoteAddr = "192.0.2.7:5511"
-	if got := clientIP(r); got != "192.0.2.7" {
+	if got := clientIPTrusting(r, false); got != "192.0.2.7" {
 		t.Fatalf("clientIP from RemoteAddr = %q, want 192.0.2.7", got)
 	}
 
+	// Spoofed headers from a direct client must not shift the key.
 	r.Header.Set("X-Forwarded-For", "203.0.113.9, 10.0.0.1")
-	if got := clientIP(r); got != "203.0.113.9" {
+	r.Header.Set("X-Real-IP", "203.0.113.10")
+	if got := clientIPTrusting(r, false); got != "192.0.2.7" {
+		t.Fatalf("untrusted clientIP honored a spoofable header: %q, want 192.0.2.7", got)
+	}
+}
+
+func TestClientIPTrustedHonorsProxyHeaders(t *testing.T) {
+	r := httptest.NewRequest("GET", "/", nil)
+	r.RemoteAddr = "10.0.0.5:5511" // the proxy's address
+
+	// No headers: falls back to the remote address even when trusting.
+	if got := clientIPTrusting(r, true); got != "10.0.0.5" {
+		t.Fatalf("trusted clientIP without headers = %q, want 10.0.0.5", got)
+	}
+
+	r.Header.Set("X-Real-IP", "203.0.113.10")
+	if got := clientIPTrusting(r, true); got != "203.0.113.10" {
+		t.Fatalf("clientIP from X-Real-IP = %q, want 203.0.113.10", got)
+	}
+
+	// X-Forwarded-For wins over X-Real-IP; first hop is the client.
+	r.Header.Set("X-Forwarded-For", "203.0.113.9, 10.0.0.1")
+	if got := clientIPTrusting(r, true); got != "203.0.113.9" {
 		t.Fatalf("clientIP from X-Forwarded-For = %q, want 203.0.113.9", got)
+	}
+}
+
+func TestClientIPTrustFromEnv(t *testing.T) {
+	r := httptest.NewRequest("GET", "/", nil)
+	r.RemoteAddr = "192.0.2.7:5511"
+	r.Header.Set("X-Forwarded-For", "203.0.113.9")
+
+	t.Setenv(envTrustProxy, "")
+	if got := clientIP(r); got != "192.0.2.7" {
+		t.Fatalf("clientIP with %s unset = %q, want 192.0.2.7", envTrustProxy, got)
+	}
+	t.Setenv(envTrustProxy, "0")
+	if got := clientIP(r); got != "192.0.2.7" {
+		t.Fatalf("clientIP with %s=0 = %q, want 192.0.2.7", envTrustProxy, got)
+	}
+	t.Setenv(envTrustProxy, "1")
+	if got := clientIP(r); got != "203.0.113.9" {
+		t.Fatalf("clientIP with %s=1 = %q, want 203.0.113.9", envTrustProxy, got)
 	}
 }

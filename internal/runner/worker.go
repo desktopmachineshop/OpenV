@@ -7,6 +7,7 @@ import (
 	"os"
 	"runtime/debug"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/openv/requirements-platform/internal/domain/agentruns"
@@ -168,6 +169,22 @@ func (w *Worker) execute(ctx context.Context, claim *ClaimResponse) {
 	}()
 	log.Printf("run %s: claimed (agent %s, provider %s)", run.ID, claim.Agent.Name, claim.Agent.Provider)
 
+	// heartbeat_at is stamped at claim time, but the next refresh would
+	// otherwise come from the log pump, which only starts after the adapter
+	// does. Everything in between — PrepareWorkspace in particular clones
+	// real repositories — can outlast the server reaper's stale window on a
+	// slow network or a large repo, deterministically failing the run before
+	// it ever starts. Beat explicitly until the pump takes over: an empty
+	// log push is exactly the heartbeat call the pump itself makes.
+	stopHeartbeat := startHeartbeat(prepHeartbeatInterval, func() {
+		if _, _, err := w.client.PushLogs(run.ID, nil); err != nil {
+			log.Printf("run %s: heartbeat failed: %v", run.ID, err)
+		}
+	})
+	// Covers every early-return failure path (and the panic recovery above);
+	// stopHeartbeat is idempotent, so the explicit hand-off below is fine.
+	defer stopHeartbeat()
+
 	adapter, ok := w.adapters[claim.Agent.Provider]
 	if !ok {
 		w.finish(run.ID, agentruns.FinishRequest{
@@ -261,6 +278,10 @@ func (w *Worker) execute(ctx context.Context, claim *ClaimResponse) {
 		return
 	}
 
+	// Hand liveness over to the log pump: it flushes (and thereby heartbeats)
+	// every 750ms. stopHeartbeat blocks until any in-flight beat has
+	// finished, so the pump never races a straggler push.
+	stopHeartbeat()
 	cancelled := w.pump(run.ID, handle)
 	result, waitErr := handle.Wait()
 	FinishWorkspace(workDir, repoUsed)
@@ -287,6 +308,40 @@ func (w *Worker) execute(ctx context.Context, claim *ClaimResponse) {
 	}
 	w.finish(run.ID, req)
 	log.Printf("run %s: finished (%s)", run.ID, req.Status)
+}
+
+// prepHeartbeatInterval is how often the pre-pump heartbeat refreshes a
+// claimed run's liveness. Comfortably inside the server reaper's 2-minute
+// stale window (cmd/server/main.go).
+const prepHeartbeatInterval = 30 * time.Second
+
+// startHeartbeat invokes beat every interval on a background goroutine until
+// the returned stop function is called. stop is idempotent and blocks until
+// the goroutine has fully exited — including any beat in flight — so a caller
+// can hand heartbeating over to another mechanism without two writers racing.
+func startHeartbeat(interval time.Duration, beat func()) (stop func()) {
+	stopCh := make(chan struct{})
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-stopCh:
+				return
+			case <-ticker.C:
+				beat()
+			}
+		}
+	}()
+	var once sync.Once
+	return func() {
+		once.Do(func() {
+			close(stopCh)
+			<-done
+		})
+	}
 }
 
 // pump batches run events into log pushes every 750ms until the event

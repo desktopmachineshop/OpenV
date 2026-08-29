@@ -161,18 +161,35 @@ func (l *rateLimiter) maybeCleanupLocked(now time.Time) {
 	}
 }
 
-// clientIP extracts the requesting client's IP, honoring the usual proxy
-// headers before falling back to the connection's remote address.
+// envTrustProxy gates whether clientIP honors proxy-supplied headers.
+// X-Forwarded-For / X-Real-IP are ordinary request headers any direct client
+// can set, so trusting them unconditionally would let a caller evade the
+// per-IP limits (or pollute another client's bucket) by spoofing a header.
+// Set OPENV_TRUST_PROXY=1 only when the API is deployed behind a reverse
+// proxy that overwrites these headers (see docs/operations.md); any other
+// value — including unset — keys limits on the TCP peer address.
+const envTrustProxy = "OPENV_TRUST_PROXY"
+
+// clientIP extracts the requesting client's IP: the usual proxy headers when
+// the operator has declared them trustworthy (OPENV_TRUST_PROXY=1), otherwise
+// the connection's remote address.
 func clientIP(r *http.Request) string {
-	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-		// First hop is the original client.
-		if first, _, ok := strings.Cut(xff, ","); ok {
-			return strings.TrimSpace(first)
+	return clientIPTrusting(r, os.Getenv(envTrustProxy) == "1")
+}
+
+// clientIPTrusting is clientIP with the trust decision injected for tests.
+func clientIPTrusting(r *http.Request, trustProxy bool) string {
+	if trustProxy {
+		if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+			// First hop is the original client.
+			if first, _, ok := strings.Cut(xff, ","); ok {
+				return strings.TrimSpace(first)
+			}
+			return strings.TrimSpace(xff)
 		}
-		return strings.TrimSpace(xff)
-	}
-	if rip := r.Header.Get("X-Real-IP"); rip != "" {
-		return strings.TrimSpace(rip)
+		if rip := r.Header.Get("X-Real-IP"); rip != "" {
+			return strings.TrimSpace(rip)
+		}
 	}
 	if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
 		return host
