@@ -9,6 +9,7 @@ import { ArtifactDetails } from '../components/ArtifactDetails';
 import { ChatterPanel } from '../components/ChatterPanel';
 import { HelpSidebar } from '../components/HelpSidebar';
 import { ErrorBanner, useAlert, useConfirm, usePrompt } from '../components/ui';
+import { apiErrorMessage } from '../api/errors';
 
 export const ModuleView: React.FC = () => {
   const confirm = useConfirm();
@@ -144,7 +145,7 @@ export const ModuleView: React.FC = () => {
     } catch (error: any) {
       console.error('Failed to load artifacts:', error);
       setArtifacts([]);
-      setError(`Failed to load artifacts: ${error.response?.data || error.message}`);
+      setError(`Failed to load artifacts: ${apiErrorMessage(error)}`);
     }
   }, [projectId, setArtifacts]);
 
@@ -254,7 +255,7 @@ export const ModuleView: React.FC = () => {
       setError('');
     } catch (error: any) {
       console.error('Failed to upload attachment:', error);
-      const errorMsg = error.response?.data || error.message || 'Unknown error';
+      const errorMsg = apiErrorMessage(error, 'Unknown error');
       setError(`Failed to upload image: ${errorMsg}`);
     } finally {
       setUploadingAttachmentId(null);
@@ -268,7 +269,7 @@ export const ModuleView: React.FC = () => {
       setError('');
     } catch (error: any) {
       console.error('Failed to delete attachment:', error);
-      const errorMsg = error.response?.data || error.message || 'Unknown error';
+      const errorMsg = apiErrorMessage(error, 'Unknown error');
       setError(`Failed to delete image: ${errorMsg}`);
     }
   };
@@ -285,13 +286,7 @@ export const ModuleView: React.FC = () => {
       setError('');
     } catch (error: any) {
       console.error('Failed to create artifact:', error);
-      let errorMsg = 'Unknown error';
-      if (error.response?.data) {
-        errorMsg = typeof error.response.data === 'string' ? error.response.data : JSON.stringify(error.response.data);
-      } else if (error.message) {
-        errorMsg = error.message;
-      }
-      setError(`Failed to create artifact: ${errorMsg}`);
+      setError(`Failed to create artifact: ${apiErrorMessage(error, 'Unknown error')}`);
     }
   };
 
@@ -305,7 +300,7 @@ export const ModuleView: React.FC = () => {
       setError('');
     } catch (error: any) {
       console.error('Failed to update artifact:', error);
-      const errorMsg = error.response?.data || error.message || 'Unknown error';
+      const errorMsg = apiErrorMessage(error, 'Unknown error');
       setError(`Failed to update artifact: ${errorMsg}`);
     }
   };
@@ -329,7 +324,7 @@ export const ModuleView: React.FC = () => {
       setError('');
     } catch (error: any) {
       console.error('Failed to delete artifact:', error);
-      const errorMsg = error.response?.data || error.message || 'Unknown error';
+      const errorMsg = apiErrorMessage(error, 'Unknown error');
       setError(`Failed to delete artifact: ${errorMsg}`);
     }
   };
@@ -360,7 +355,7 @@ export const ModuleView: React.FC = () => {
       await alertDialog({ title: 'Link created', message: 'Link created successfully.' });
     } catch (error: any) {
       console.error('Failed to create link:', error);
-      const errorMsg = error.response?.data || error.message || 'Unknown error';
+      const errorMsg = apiErrorMessage(error, 'Unknown error');
       setError(`Failed to create link: ${errorMsg}`);
     }
   };
@@ -384,7 +379,7 @@ export const ModuleView: React.FC = () => {
       setError('');
     } catch (error: any) {
       console.error('Failed to load baseline:', error);
-      const errorMsg = error.response?.data || error.message || 'Unknown error';
+      const errorMsg = apiErrorMessage(error, 'Unknown error');
       setError(`Failed to load baseline: ${errorMsg}`);
     }
   };
@@ -408,7 +403,7 @@ export const ModuleView: React.FC = () => {
       setError('');
     } catch (error: any) {
       console.error('Failed to capture baseline:', error);
-      const errorMsg = error.response?.data || error.message || 'Unknown error';
+      const errorMsg = apiErrorMessage(error, 'Unknown error');
       setError(`Failed to capture baseline: ${errorMsg}`);
     }
   };
@@ -433,7 +428,7 @@ export const ModuleView: React.FC = () => {
       setError('');
     } catch (error: any) {
       console.error('Failed to delete baseline:', error);
-      const errorMsg = error.response?.data || error.message || 'Unknown error';
+      const errorMsg = apiErrorMessage(error, 'Unknown error');
       setError(`Failed to delete baseline: ${errorMsg}`);
     }
   };
@@ -445,7 +440,7 @@ export const ModuleView: React.FC = () => {
       setError('');
     } catch (error: any) {
       console.error('Failed to generate report:', error);
-      const errorMsg = error.response?.data || error.message || 'Unknown error';
+      const errorMsg = apiErrorMessage(error, 'Unknown error');
       setError(`Failed to generate report: ${errorMsg}`);
     }
   };
@@ -514,7 +509,7 @@ export const ModuleView: React.FC = () => {
       setError('');
     } catch (error: any) {
       console.error('Failed to reorder artifacts:', error);
-      const errorMsg = error.response?.data || error.message || 'Unknown error';
+      const errorMsg = apiErrorMessage(error, 'Unknown error');
       setError(`Failed to reorder artifacts: ${errorMsg}`);
     }
   };
