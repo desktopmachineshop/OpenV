@@ -73,14 +73,20 @@ func newUpdateFixture(t *testing.T) (*DefaultService, *fakeSuspectRepo, *fakeSus
 	return svc, repo, suspector, base
 }
 
+// strPtr returns a pointer to s (UpdateArtifactRequest content fields are
+// pointers: nil = no change, pointer-to-value = replace; issue #170).
+func strPtr(s string) *string { return &s }
+
 // sameContentReq builds an update request that repeats the artifact's
-// current content (the shape autoVersionLinkedArtifacts sends).
+// current content (the shape autoVersionLinkedArtifacts used to send;
+// it now omits content fields entirely, which the nil-pointer contract
+// treats identically).
 func sameContentReq(a *Artifact) UpdateArtifactRequest {
 	return UpdateArtifactRequest{
 		ParentID:   a.ParentID,
-		Type:       a.Type,
-		Title:      a.Title,
-		Body:       a.Body,
+		Type:       strPtr(a.Type),
+		Title:      strPtr(a.Title),
+		Body:       strPtr(a.Body),
 		Attributes: a.Attributes,
 	}
 }
@@ -91,7 +97,7 @@ func TestUpdateArtifactMarksLinksSuspectOnContentChange(t *testing.T) {
 	svc, _, suspector, base := newUpdateFixture(t)
 
 	req := sameContentReq(base)
-	req.Body = "Changed body"
+	req.Body = strPtr("Changed body")
 	if _, err := svc.UpdateArtifact(base.ID, req); err != nil {
 		t.Fatalf("UpdateArtifact: %v", err)
 	}
@@ -135,7 +141,7 @@ func TestUpdateArtifactNilSuspectorIsSafe(t *testing.T) {
 	svc.SetLinkSuspector(nil)
 
 	req := sameContentReq(base)
-	req.Title = "New title"
+	req.Title = strPtr("New title")
 	if _, err := svc.UpdateArtifact(base.ID, req); err != nil {
 		t.Fatalf("UpdateArtifact with nil suspector: %v", err)
 	}
@@ -172,7 +178,7 @@ func TestRestoreMarksLinksSuspect(t *testing.T) {
 
 	// Change the body so version 4 differs from version 3, then restore v3.
 	req := sameContentReq(base)
-	req.Body = "Edited body"
+	req.Body = strPtr("Edited body")
 	if _, err := svc.UpdateArtifact(base.ID, req); err != nil {
 		t.Fatalf("UpdateArtifact: %v", err)
 	}
@@ -195,7 +201,7 @@ func TestUpdateArtifactAttributesContract(t *testing.T) {
 	t.Run("nil preserves existing attributes", func(t *testing.T) {
 		svc, repo, _, base := newUpdateFixture(t)
 		req := sameContentReq(base)
-		req.Body = "Changed"
+		req.Body = strPtr("Changed")
 		req.Attributes = nil
 
 		updated, err := svc.UpdateArtifact(base.ID, req)
@@ -229,6 +235,48 @@ func TestUpdateArtifactAttributesContract(t *testing.T) {
 	})
 }
 
+// TestUpdateArtifactContentFieldsContract locks in the issue-#170 contract:
+// nil Type/Title/Body = "no change" (values carry forward, no suspect-link
+// flagging), while an explicit pointer — even to "" — replaces the value
+// and counts as a content change.
+func TestUpdateArtifactContentFieldsContract(t *testing.T) {
+	t.Run("nil content fields carry current values forward", func(t *testing.T) {
+		svc, _, suspector, base := newUpdateFixture(t)
+
+		updated, err := svc.UpdateArtifact(base.ID, UpdateArtifactRequest{
+			ParentID:   base.ParentID,
+			Attributes: map[string]interface{}{"status": base.Status, "touched": true},
+		})
+		if err != nil {
+			t.Fatalf("UpdateArtifact: %v", err)
+		}
+		if updated.Type != "requirement" || updated.Title != "Original title" || updated.Body != "Original body" {
+			t.Errorf("content = %q/%q/%q, want carried forward unchanged",
+				updated.Type, updated.Title, updated.Body)
+		}
+		if len(suspector.marked) != 0 {
+			t.Errorf("marked = %v, want none for a nil-content update", suspector.marked)
+		}
+	})
+
+	t.Run("explicit empty body replaces and is a content change", func(t *testing.T) {
+		svc, _, suspector, base := newUpdateFixture(t)
+
+		req := sameContentReq(base)
+		req.Body = strPtr("")
+		updated, err := svc.UpdateArtifact(base.ID, req)
+		if err != nil {
+			t.Fatalf("UpdateArtifact: %v", err)
+		}
+		if updated.Body != "" {
+			t.Errorf("body = %q, want cleared by explicit empty pointer", updated.Body)
+		}
+		if len(suspector.marked) != 1 {
+			t.Errorf("marked = %v, want the artifact flagged for an explicit body wipe", suspector.marked)
+		}
+	})
+}
+
 // TestUpdateArtifactStampsValidFrom is the domain half of the issue-#161
 // regression: every update opens a fresh validity interval, so the new
 // version's ValidFrom must move forward (the repository archives the old
@@ -238,7 +286,7 @@ func TestUpdateArtifactStampsValidFrom(t *testing.T) {
 	oldValidFrom := base.ValidFrom
 
 	req := sameContentReq(base)
-	req.Body = "Changed"
+	req.Body = strPtr("Changed")
 	updated, err := svc.UpdateArtifact(base.ID, req)
 	if err != nil {
 		t.Fatalf("UpdateArtifact: %v", err)

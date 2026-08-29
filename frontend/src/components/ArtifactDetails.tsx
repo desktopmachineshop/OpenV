@@ -22,6 +22,22 @@ interface ArtifactDetailsProps {
    * are always read-only regardless of this flag.
    */
   allowLinkDelete?: boolean;
+  /**
+   * When true (default), the links for the displayed artifact are fetched
+   * LIVE from the link table instead of from the version-scoped snapshot.
+   * Link writes version-bump the counterpart artifact server-side, so the
+   * client-held version number can be stale — a version-scoped fetch would
+   * then miss fresh incoming links until a full reload (issue #169).
+   * Baseline/historical renderings pass false to keep the snapshot view.
+   * Preview-version links are always fetched version-scoped.
+   */
+  liveLinks?: boolean;
+  /**
+   * Called after this component mutates links (e.g. a delete succeeded) so
+   * the parent can refresh artifact versions and its own link list — the
+   * backend auto-versions both linked artifacts on every link change.
+   */
+  onLinksChanged?: () => void;
 }
 
 export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({ 
@@ -34,6 +50,8 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
   previewVersion,
   onClosePreview,
   allowLinkDelete = false,
+  liveLinks = true,
+  onLinksChanged,
 }) => {
   const confirm = useConfirm();
   const [currentVersionLinks, setCurrentVersionLinks] = useState<Link[]>(links || []);
@@ -63,10 +81,16 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
     }
   }, [previewVersion, attachments]);
 
-  // Load version-specific links when artifact versions change
+  // Load the displayed artifact's links whenever it (or its version) changes.
   useEffect(() => {
-    // Always fetch links for the current artifact version (real-time from API)
-    linkAPI.listForArtifactVersion(artifact.id, artifact.version)
+    // Live view: fetch straight from the link table so a stale client-held
+    // version number can never hide fresh links (issue #169 — link writes
+    // version-bump the counterpart artifact server-side). Historical views
+    // (baselines) keep the version-scoped snapshot fetch.
+    const fetchLinks = liveLinks
+      ? linkAPI.listForArtifact(artifact.id)
+      : linkAPI.listForArtifactVersion(artifact.id, artifact.version);
+    fetchLinks
       .then(res => {
         // Deduplicate links by ID
         const links = res.data || [];
@@ -91,7 +115,7 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
     } else {
       setPreviewVersionLinks([]);
     }
-  }, [artifact.id, artifact.version, previewVersion]);
+  }, [artifact.id, artifact.version, previewVersion, liveLinks]);
   // Handle link deletion (DELETE /api/v1/links/{id}; backend enforces
   // editor rights and refreshes link snapshots on both artifacts).
   const handleDeleteLink = async (linkId: string) => {
@@ -115,6 +139,10 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
       // authoritative lists are refetched whenever the artifact refreshes.
       setCurrentVersionLinks((prev) => prev.filter((l) => l.id !== linkId));
       setPreviewVersionLinks((prev) => prev.filter((l) => l.id !== linkId));
+
+      // The backend auto-versions both artifacts touched by the deleted
+      // link — let the parent refetch so displayed versions stay current.
+      onLinksChanged?.();
     } catch (error) {
       console.error('Failed to delete link:', error);
       setDeleteError(`Failed to delete link: ${error instanceof Error ? error.message : 'Unknown error'}`);

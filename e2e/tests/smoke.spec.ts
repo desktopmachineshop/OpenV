@@ -152,18 +152,14 @@ test('links the requirement to the user need (derives-from)', async () => {
   await expect(page.getByRole('heading', { name: reqTitle }).first()).toBeVisible();
   await expect(page.getByText('derives from (1)')).toBeVisible();
 
-  // …and the inverse label shows on the user need. Creating the link bumps
-  // the need's version server-side, but the client still holds the stale
-  // version and ArtifactDetails fetches links per version — so without a
-  // refresh the incoming link can be invisible (see the PR notes; surfaced
-  // by this suite). Assert what a user sees after a reload, with retries to
-  // absorb the server-side version bump landing.
-  await expect(async () => {
-    await page.reload();
-    await page.getByText(needTitle, { exact: true }).first().click();
-    await expect(page.getByRole('heading', { name: needTitle }).first()).toBeVisible({ timeout: 5000 });
-    await expect(page.getByText('gives rise to (1)')).toBeVisible({ timeout: 5000 });
-  }).toPass({ timeout: 45_000 });
+  // …and the inverse label shows on the user need WITHOUT any reload:
+  // ArtifactDetails fetches live links for the on-screen artifact, so the
+  // server-side version bump on the counterpart can no longer hide the
+  // fresh incoming link (issue #169 — this used to need a reload-retry
+  // workaround here; its absence pins the fix).
+  await page.getByText(needTitle, { exact: true }).first().click();
+  await expect(page.getByRole('heading', { name: needTitle }).first()).toBeVisible();
+  await expect(page.getByText('gives rise to (1)')).toBeVisible();
 });
 
 test('captures a baseline via the prompt dialog', async () => {

@@ -190,7 +190,7 @@ func TestUpdateArtifactStatusPolicy(t *testing.T) {
 	t.Run("approved demotes to draft on edit", func(t *testing.T) {
 		svc := newSvc(StatusApproved)
 		updated, err := svc.UpdateArtifact("a1", UpdateArtifactRequest{
-			Type: TypeRequirement, Title: "edited",
+			Type: strPtr(TypeRequirement), Title: strPtr("edited"),
 			Attributes: map[string]interface{}{},
 		})
 		if err != nil {
@@ -207,7 +207,7 @@ func TestUpdateArtifactStatusPolicy(t *testing.T) {
 	t.Run("in_review carries forward on edit", func(t *testing.T) {
 		svc := newSvc(StatusInReview)
 		updated, err := svc.UpdateArtifact("a1", UpdateArtifactRequest{
-			Type: TypeRequirement, Title: "edited",
+			Type: strPtr(TypeRequirement), Title: strPtr("edited"),
 			Attributes: map[string]interface{}{},
 		})
 		if err != nil {
@@ -221,7 +221,7 @@ func TestUpdateArtifactStatusPolicy(t *testing.T) {
 	t.Run("attributes cannot smuggle an approval", func(t *testing.T) {
 		svc := newSvc(StatusDraft)
 		updated, err := svc.UpdateArtifact("a1", UpdateArtifactRequest{
-			Type: TypeRequirement, Title: "edited",
+			Type: strPtr(TypeRequirement), Title: strPtr("edited"),
 			Attributes: map[string]interface{}{"status": StatusApproved},
 		})
 		if err != nil {

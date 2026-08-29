@@ -432,6 +432,54 @@ func TestCreateArtifactOmitsEmptyOptionalFields(t *testing.T) {
 	}
 }
 
+// TestUpdateArtifactOmittedVsEmptyFields locks in the issue-#170 contract:
+// an omitted optional arg must be ABSENT from the PUT payload (the API
+// treats absent as "no change"), while an explicitly empty string must be
+// sent as "" (an intentional clear). The old behavior — always sending
+// body:"" — silently wiped artifact bodies on every body-less update.
+func TestUpdateArtifactOmittedVsEmptyFields(t *testing.T) {
+	t.Run("omitted body, title and type stay out of the payload", func(t *testing.T) {
+		server, requests := captureServer(t, 200, `{"id":"a1"}`)
+		client := NewClient(server.URL, "test-token")
+		tool := toolByName(t, "update_artifact")
+
+		if _, err := tool.Handler(client, map[string]interface{}{"id": "a1", "title": "T2"}); err != nil {
+			t.Fatal(err)
+		}
+		body := requests()[0].Body
+		if _, ok := body["body"]; ok {
+			t.Error("omitted body arg must not appear in the payload (it would wipe the artifact body)")
+		}
+		if _, ok := body["type"]; ok {
+			t.Error("omitted type arg must not appear in the payload")
+		}
+		if got := body["title"]; got != "T2" {
+			t.Errorf("title = %v, want T2", got)
+		}
+		if _, ok := body["attributes"]; ok {
+			t.Error("absent attributes must be omitted")
+		}
+	})
+
+	t.Run("explicit empty body is sent as an intentional clear", func(t *testing.T) {
+		server, requests := captureServer(t, 200, `{"id":"a1"}`)
+		client := NewClient(server.URL, "test-token")
+		tool := toolByName(t, "update_artifact")
+
+		if _, err := tool.Handler(client, map[string]interface{}{"id": "a1", "body": ""}); err != nil {
+			t.Fatal(err)
+		}
+		body := requests()[0].Body
+		got, ok := body["body"]
+		if !ok {
+			t.Fatal("explicit empty body must be present in the payload")
+		}
+		if got != "" {
+			t.Errorf("body = %v, want empty string", got)
+		}
+	})
+}
+
 // TestToolsMapAPIErrors verifies every direct-request tool surfaces an API
 // error status as a Go error containing the status and server detail.
 func TestToolsMapAPIErrors(t *testing.T) {

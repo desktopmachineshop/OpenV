@@ -260,19 +260,25 @@ func Tools() []Tool {
 		},
 		{
 			Name:        "update_artifact",
-			Description: "Update an artifact. A 202 response means the change was diverted to a proposal pending human review.",
-			InputSchema: schema([]string{"id", "type", "title"}, map[string]interface{}{
+			Description: "Update an artifact. Omitted optional fields are left unchanged. A 202 response means the change was diverted to a proposal pending human review.",
+			InputSchema: schema([]string{"id"}, map[string]interface{}{
 				"id":         str("Artifact ID"),
-				"type":       str("Artifact type"),
-				"title":      str("Title"),
-				"body":       str("Optional markdown body"),
-				"attributes": obj("Optional attributes object"),
+				"type":       str("Optional artifact type (omit to keep current)"),
+				"title":      str("Optional title (omit to keep current)"),
+				"body":       str("Optional markdown body (omit to keep current; pass \"\" to clear)"),
+				"attributes": obj("Optional attributes object (omit to keep current)"),
 			}),
 			Handler: func(c *Client, args map[string]interface{}) (string, error) {
-				body := map[string]interface{}{
-					"type":  strArg(args, "type"),
-					"title": strArg(args, "title"),
-					"body":  strArg(args, "body"),
+				// Only fields the caller actually passed reach the payload:
+				// the API treats an absent type/title/body (nil after
+				// decode) as "no change", the same contract attributes
+				// gained in issue #125. Sending "" for an omitted arg used
+				// to wipe the artifact's body/title (issue #170).
+				body := map[string]interface{}{}
+				for _, key := range []string{"type", "title", "body"} {
+					if _, present := args[key]; present {
+						body[key] = strArg(args, key)
+					}
 				}
 				if attrs, ok := args["attributes"].(map[string]interface{}); ok {
 					body["attributes"] = attrs

@@ -2179,12 +2179,12 @@ func (h *Handler) autoVersionLinkedArtifacts(affectedArtifactIDs []string) error
 		// Merge link snapshot into attributes
 		attributes["links_snapshot"] = allLinks
 
-		// Create a new version with updated link snapshot
+		// Create a new version with updated link snapshot. Content fields
+		// (type/title/body) are left nil — "no change" per the issue-#170
+		// contract — so this attribute-only write carries them forward and
+		// never counts as a content edit (no suspect-link flagging).
 		updateReq := artifacts.UpdateArtifactRequest{
 			ParentID:   artifact.ParentID,
-			Type:       artifact.Type,
-			Title:      artifact.Title,
-			Body:       artifact.Body,
 			SortOrder:  &artifact.SortOrder,
 			Attributes: attributes,
 		}

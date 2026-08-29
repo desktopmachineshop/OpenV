@@ -155,10 +155,9 @@ func TestUpdateArtifactTemporalIntervals(t *testing.T) {
 	// Ensure the clock moves past the stored (microsecond-truncated) stamp.
 	time.Sleep(10 * time.Millisecond)
 
+	body := "v2"
 	if _, err := svc.UpdateArtifact(created.ID, artifacts.UpdateArtifactRequest{
-		Type:  "requirement",
-		Title: "Temporal",
-		Body:  "v2",
+		Body: &body,
 	}); err != nil {
 		t.Fatalf("UpdateArtifact: %v", err)
 	}
