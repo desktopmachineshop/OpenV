@@ -84,6 +84,11 @@ var (
 	// terminal state (only failed, cancelled, and timed_out runs re-enqueue;
 	// retrying a succeeded run would just invite duplicate side effects).
 	ErrNotRetryable = errors.New("run is not retryable")
+	// ErrBudgetExceeded rejects a launch when the workspace is over its
+	// monthly spend budget AND soft-block enforcement is enabled (issue #186;
+	// off by default — the shipped default is warn-only). API launch handlers
+	// map it to a user-facing 402.
+	ErrBudgetExceeded = errors.New("workspace monthly budget exceeded")
 )
 
 // Run is one agent execution; the agent_runs table doubles as the job queue.
@@ -214,6 +219,10 @@ type UsageSummary struct {
 	Totals  UsageTotals  `json:"totals"`
 	ByAgent []AgentUsage `json:"by_agent"`
 	ByDay   []DailyUsage `json:"by_day"`
+	// MonthToDateCostUSD is the current calendar month's spend (UTC),
+	// independent of the trailing window above. It is what budget alerts and
+	// the budget progress bar measure against the org's monthly budget.
+	MonthToDateCostUSD float64 `json:"month_to_date_cost_usd"`
 }
 
 // ListFilter filters run listings. OrgID and LaunchedBy scope the listing in
@@ -298,6 +307,11 @@ type Repository interface {
 	// agent slug and by day (see UsageSummary; Days/Totals are the
 	// service's concern).
 	Usage(orgID string, since time.Time) ([]AgentUsage, []DailyUsage, error)
+	// MonthlySpend sums an org's cost_usd over runs created at/after
+	// monthStart (the current-month total; NULL costs count as zero). It
+	// shares the usage rollup's created_at bucketing so the figure matches
+	// what the usage tab shows.
+	MonthlySpend(orgID string, monthStart time.Time) (float64, error)
 }
 
 // Service defines run lifecycle logic.
@@ -344,6 +358,9 @@ type Service interface {
 	QueueStats(orgID string) (QueueStats, error)
 	// Usage rolls up the org's run usage over the window starting at since.
 	Usage(orgID string, since time.Time) (*UsageSummary, error)
+	// MonthlySpend returns the org's month-to-date spend (SUM of cost_usd for
+	// runs created at/after monthStart).
+	MonthlySpend(orgID string, monthStart time.Time) (float64, error)
 }
 
 // Subscriber is notified on run lifecycle changes and appended logs
@@ -369,6 +386,12 @@ type DefaultService struct {
 	// org's reservation window.
 	hasPersonalRunner func(orgID, userID string) bool
 	graceSeconds      func(orgID string) int
+
+	// budgetGuard (optional) soft-blocks a launch when the workspace is over
+	// its monthly budget: it returns (true, reason) to reject. nil means no
+	// enforcement (the warn-only default); wired only when budget enforcement
+	// is enabled (issue #186).
+	budgetGuard func(orgID string) (bool, string)
 }
 
 // NewDefaultService creates a run service.
@@ -381,6 +404,13 @@ func NewDefaultService(repo Repository, agentService agents.Service, bus events.
 func (s *DefaultService) SetRoutingPolicy(hasPersonalRunner func(orgID, userID string) bool, graceSeconds func(orgID string) int) {
 	s.hasPersonalRunner = hasPersonalRunner
 	s.graceSeconds = graceSeconds
+}
+
+// SetBudgetGuard wires the optional over-budget soft-block (call during wiring
+// only). When set, Launch rejects a run whose workspace is over budget with
+// ErrBudgetExceeded. Leaving it unset keeps the warn-only default.
+func (s *DefaultService) SetBudgetGuard(guard func(orgID string) (bool, string)) {
+	s.budgetGuard = guard
 }
 
 // AddSubscriber registers a lifecycle subscriber (not concurrency-safe;
@@ -399,6 +429,13 @@ func (s *DefaultService) Launch(req LaunchRequest) (*Run, string, error) {
 	}
 	if req.Prompt == "" {
 		return nil, "", errors.New("prompt is required")
+	}
+	// Optional over-budget soft-block (off by default). Checked before any
+	// side effect so a rejected launch mints no token and enqueues no run.
+	if s.budgetGuard != nil {
+		if blocked, reason := s.budgetGuard(req.OrgID); blocked {
+			return nil, "", fmt.Errorf("%w: %s", ErrBudgetExceeded, reason)
+		}
 	}
 	agent, err := s.agentService.Get(req.AgentID)
 	if err != nil {
@@ -889,6 +926,11 @@ func (s *DefaultService) Usage(orgID string, since time.Time) (*UsageSummary, er
 		summary.Totals.CostUSD += a.CostUSD
 	}
 	return summary, nil
+}
+
+// MonthlySpend returns the org's month-to-date spend since monthStart.
+func (s *DefaultService) MonthlySpend(orgID string, monthStart time.Time) (float64, error) {
+	return s.repo.MonthlySpend(orgID, monthStart)
 }
 
 func (s *DefaultService) notifyStatus(run *Run) {

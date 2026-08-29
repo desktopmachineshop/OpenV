@@ -21,6 +21,10 @@ const (
 	// telling project reviewers (editors+) it is waiting in the review queue
 	// (issue #183).
 	TypeReviewRequested = "review_requested"
+	// TypeBudgetThreshold fires when a workspace's month-to-date agent spend
+	// crosses 80% or 100% of its monthly budget, alerting org admins (issue
+	// #186). One row per admin, deduped to once per threshold per month.
+	TypeBudgetThreshold = "budget_threshold"
 )
 
 // Notification is one inbox entry for one user. EntityRef points the

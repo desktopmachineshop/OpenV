@@ -340,6 +340,32 @@ func main() {
 	notificationService := notifications.NewDefaultService(notificationRepo)
 	notify.NewNotifier(notificationService, memberService, sseHub).Start(bus)
 
+	// Workspace budget alerts (issue #186): a finishing run's cost can push
+	// month-to-date spend across 80%/100% of the org's monthly budget; the
+	// monitor alerts org admins once per threshold per month. Warn-only.
+	notify.NewBudgetMonitor(orgService, runService, notificationService, sseHub).Start(bus)
+
+	// Optional over-budget soft-block (default OFF — warn-only). When
+	// OPENV_BUDGET_ENFORCE=true, new launches are refused once a workspace has
+	// hit 100% of its monthly budget. Fails open on lookup errors so a budget
+	// hiccup never blocks work.
+	if os.Getenv("OPENV_BUDGET_ENFORCE") == "true" {
+		runService.SetBudgetGuard(func(orgID string) (bool, string) {
+			org, err := orgService.Get(orgID)
+			if err != nil || org == nil || org.MonthlyBudgetUSD == nil || *org.MonthlyBudgetUSD <= 0 {
+				return false, ""
+			}
+			now := time.Now().UTC()
+			monthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
+			spend, err := runService.MonthlySpend(orgID, monthStart)
+			if err != nil || spend < *org.MonthlyBudgetUSD {
+				return false, ""
+			}
+			return true, fmt.Sprintf("this workspace has reached its $%.2f monthly budget ($%.2f spent); new runs are blocked until next month or the budget is raised", *org.MonthlyBudgetUSD, spend)
+		})
+		slog.Info("workspace budget enforcement enabled: launches soft-block at 100% of budget")
+	}
+
 	// Trigger matcher + scheduler + reaper. The scheduler and reaper loops
 	// stop when the signal context is canceled.
 	automation.NewTriggerMatcher(automationRepo, runService, teamService).Start(bus)

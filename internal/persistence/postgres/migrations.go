@@ -305,6 +305,28 @@ var migrations = []Migration{
 		_, err := tx.Exec(`DROP INDEX IF EXISTS idx_links_active`)
 		return err
 	}},
+
+	// 0011: workspace spend budgets and threshold alerts (issue #186). A
+	// nullable monthly_budget_usd (NULL = no budget, warn-only default) plus
+	// the two dedupe columns the budget-alert subscriber claims atomically:
+	// budget_alert_month (YYYY-MM of the last alert) and
+	// budget_alert_threshold (the highest percent threshold — 80 or 100 —
+	// already alerted for that month). A conditional UPDATE over these two
+	// guarantees "exactly once per threshold per month" even across replicas.
+	//
+	// MIGRATION NUMBER NOTE: a concurrent failure-taxonomy branch may also be
+	// adding a migration; if it landed on 0011 first, bump this entry (and its
+	// test) to the next free number on merge — the registry only requires
+	// unique, ascending versions, so the reorder is mechanical.
+	{Version: 11, Name: "org_monthly_budget", Run: func(tx *sql.Tx) error {
+		_, err := tx.Exec(`
+			ALTER TABLE organizations
+				ADD COLUMN IF NOT EXISTS monthly_budget_usd NUMERIC,
+				ADD COLUMN IF NOT EXISTS budget_alert_month VARCHAR(7),
+				ADD COLUMN IF NOT EXISTS budget_alert_threshold INT NOT NULL DEFAULT 0
+		`)
+		return err
+	}},
 }
 
 // migrationLockKey is the pg_advisory_xact_lock key that serializes

@@ -97,6 +97,23 @@ container, falling back to the plan's defaults — `orgs.PlanDefaults` — when
 unset; there is no API for editing `limits` yet, operators set keys directly
 in the database), `created_by`.
 
+Spend budgets (issue #186, migration 0011): `monthly_budget_usd` (NUMERIC,
+nullable — NULL means no budget, the default) is the workspace's monthly agent
+spend cap, editable by org admins via `PUT /api/v1/orgs/{id}` (send
+`monthly_budget_usd` as a number to set, `null` to clear; an absent key leaves
+it unchanged). A real column was chosen over a `limits` key for clarity and so
+alerting can query it directly. `budget_alert_month` (YYYY-MM) and
+`budget_alert_threshold` (0/80/100) are the alert-dedupe state: the
+budget-alert subscriber claims them with a single conditional UPDATE (a new
+month or a strictly higher threshold wins), so an admin alert fires exactly
+once per threshold per month even across replicas. Month-to-date spend is
+`SUM(cost_usd)` over the org's runs created since the month start (same
+`created_at` bucketing as the usage rollup). By default budgets are
+**warn-only** — crossing 80%/100% notifies admins but never blocks work.
+Setting `OPENV_BUDGET_ENFORCE=true` additionally soft-blocks new launches once
+a workspace is at 100% of budget (the launch API answers 402); it fails open on
+any lookup error so a budget hiccup never wedges launches.
+
 ### org_members
 `(org_id, user_id)` → `role` (`admin` | `member`). Org admins act as owners
 of every project in the org.

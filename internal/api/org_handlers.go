@@ -135,24 +135,49 @@ func (h *Handler) GetOrg(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(org)
 }
 
-// UpdateOrg renames a workspace (admin).
+// UpdateOrg renames a workspace and/or sets its monthly spend budget (admin).
+// monthly_budget_usd is honored only when present in the body: a JSON number
+// sets the budget, JSON null clears it, and an omitted key leaves it
+// unchanged (so a plain rename never disturbs the budget).
 func (h *Handler) UpdateOrg(w http.ResponseWriter, r *http.Request) {
 	orgID := mux.Vars(r)["id"]
 	if !h.requireOrgRole(w, r, orgID, orgs.RoleAdmin) {
 		return
 	}
 	var req struct {
-		Name *string `json:"name"`
+		Name             *string         `json:"name"`
+		MonthlyBudgetUSD json.RawMessage `json:"monthly_budget_usd"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
+
 	org, err := h.orgService.UpdateOrg(orgID, req.Name)
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
+
+	// Budget is only touched when the key is present. json.RawMessage is nil
+	// for an absent key; "null" clears the budget, a number sets it.
+	if len(req.MonthlyBudgetUSD) > 0 {
+		var budget *float64
+		if err := json.Unmarshal(req.MonthlyBudgetUSD, &budget); err != nil {
+			writeJSONError(w, http.StatusBadRequest, "monthly_budget_usd must be a number or null")
+			return
+		}
+		org, err = h.orgService.SetMonthlyBudget(orgID, budget)
+		if err != nil {
+			if errors.Is(err, orgs.ErrInvalidBudget) {
+				writeJSONError(w, http.StatusBadRequest, err.Error())
+			} else {
+				respondInternal(w, r, "failed to update budget", err)
+			}
+			return
+		}
+	}
+
 	json.NewEncoder(w).Encode(org)
 }
 
@@ -811,6 +836,13 @@ func (h *Handler) GetOrgUsage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	summary.Days = days
+	// Month-to-date spend for the budget bar — independent of the trailing
+	// window, and the same figure budget alerts fire against.
+	now := time.Now().UTC()
+	monthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
+	if spend, err := h.runService.MonthlySpend(orgID, monthStart); err == nil {
+		summary.MonthToDateCostUSD = spend
+	}
 	json.NewEncoder(w).Encode(summary)
 }
 
