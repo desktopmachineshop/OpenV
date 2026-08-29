@@ -39,18 +39,26 @@ var (
 
 // Proposal is a pending agent write awaiting human review.
 type Proposal struct {
-	ID              string                 `json:"id"`
-	RunID           string                 `json:"run_id"`
-	ProjectID       string                 `json:"project_id"`
-	Op              string                 `json:"op"`
-	TargetID        *string                `json:"target_id,omitempty"`
-	Payload         map[string]interface{} `json:"payload"`
-	Status          string                 `json:"status"`
-	ReviewNote      string                 `json:"review_note"`
-	AppliedEntityID *string                `json:"applied_entity_id,omitempty"`
-	ReviewedBy      *string                `json:"reviewed_by,omitempty"`
-	CreatedAt       time.Time              `json:"created_at"`
-	ReviewedAt      *time.Time             `json:"reviewed_at,omitempty"`
+	ID        string                 `json:"id"`
+	RunID     string                 `json:"run_id"`
+	ProjectID string                 `json:"project_id"`
+	Op        string                 `json:"op"`
+	TargetID  *string                `json:"target_id,omitempty"`
+	Payload   map[string]interface{} `json:"payload"`
+	// Ref is a caller-chosen temporary token an agent may attach to a
+	// create_artifact proposal so that a sibling create_link proposal in the
+	// same run can point at the not-yet-created artifact (issue #235). It is
+	// unique within a run and never collides with a real artifact UUID. Only
+	// create_artifact proposals carry one; it is resolved to the real artifact
+	// id at apply time (see DefaultService.resolveLinkPayload). Empty for
+	// proposals that mint no reference.
+	Ref             string     `json:"ref,omitempty"`
+	Status          string     `json:"status"`
+	ReviewNote      string     `json:"review_note"`
+	AppliedEntityID *string    `json:"applied_entity_id,omitempty"`
+	ReviewedBy      *string    `json:"reviewed_by,omitempty"`
+	CreatedAt       time.Time  `json:"created_at"`
+	ReviewedAt      *time.Time `json:"reviewed_at,omitempty"`
 }
 
 // Repository defines proposal persistence.
@@ -147,6 +155,16 @@ func (s *DefaultService) Propose(runID, projectID, op string, targetID *string, 
 	if payload == nil {
 		payload = map[string]interface{}{}
 	}
+	// Lift a caller-supplied temporary reference token out of the payload into
+	// its own column (issue #235). Keeping it out of the payload means the
+	// artifact applier's payload stays a clean CreateArtifactRequest, and a
+	// sibling create_link proposal can find the ref with a plain column read
+	// rather than digging through JSON.
+	ref := ""
+	if raw, ok := payload["ref"].(string); ok && raw != "" {
+		ref = raw
+		delete(payload, "ref")
+	}
 	p := &Proposal{
 		ID:        uuid.New().String(),
 		RunID:     runID,
@@ -154,6 +172,7 @@ func (s *DefaultService) Propose(runID, projectID, op string, targetID *string, 
 		Op:        op,
 		TargetID:  targetID,
 		Payload:   payload,
+		Ref:       ref,
 		Status:    StatusPending,
 		CreatedAt: time.Now(),
 	}
@@ -261,7 +280,11 @@ func (s *DefaultService) apply(p *Proposal) (string, error) {
 		if s.appliers.CreateLink == nil {
 			return "", ErrUnsupportedOp
 		}
-		return s.appliers.CreateLink(p.Payload)
+		payload, err := s.resolveLinkPayload(p)
+		if err != nil {
+			return "", err
+		}
+		return s.appliers.CreateLink(payload)
 	case OpDeleteLink:
 		if s.appliers.DeleteLink == nil {
 			return "", ErrUnsupportedOp
@@ -274,6 +297,69 @@ func (s *DefaultService) apply(p *Proposal) (string, error) {
 		return s.appliers.RecordTestResult(p.Payload)
 	}
 	return "", ErrUnsupportedOp
+}
+
+// resolveLinkPayload returns a copy of a create_link proposal's payload with
+// any from_id/to_id that names a sibling proposal's temporary ref replaced by
+// the real artifact id that resulted from applying that sibling (issue #235).
+//
+// A from_id/to_id that matches no sibling ref is treated as a literal artifact
+// id and passed through untouched — refs are caller-chosen tokens that never
+// collide with a real UUID. When an endpoint IS a ref, the referenced artifact
+// proposal must already be applied: if it is still pending, or was rejected or
+// apply-failed, the link cannot resolve and this returns an error so the link
+// proposal fails cleanly (apply_failed) instead of creating a dangling edge.
+// This is why bulk-approve must order artifact proposals before the link
+// proposals that reference them (see BulkReviewProposals).
+func (s *DefaultService) resolveLinkPayload(p *Proposal) (map[string]interface{}, error) {
+	fromID, _ := p.Payload["from_id"].(string)
+	toID, _ := p.Payload["to_id"].(string)
+
+	// Build the ref -> proposal index only from this run's siblings.
+	siblings, err := s.repo.List("", "", p.RunID)
+	if err != nil {
+		return nil, err
+	}
+	refIndex := make(map[string]*Proposal, len(siblings))
+	for _, sib := range siblings {
+		if sib.Ref != "" {
+			refIndex[sib.Ref] = sib
+		}
+	}
+
+	resolvedFrom, err := resolveRef(fromID, refIndex)
+	if err != nil {
+		return nil, err
+	}
+	resolvedTo, err := resolveRef(toID, refIndex)
+	if err != nil {
+		return nil, err
+	}
+	if resolvedFrom == fromID && resolvedTo == toID {
+		return p.Payload, nil // no refs in play; nothing to rewrite
+	}
+
+	out := make(map[string]interface{}, len(p.Payload))
+	for k, v := range p.Payload {
+		out[k] = v
+	}
+	out["from_id"] = resolvedFrom
+	out["to_id"] = resolvedTo
+	return out, nil
+}
+
+// resolveRef maps one link endpoint to a real artifact id. If id matches no
+// sibling ref it is a literal id and returned unchanged; if it matches a ref
+// the referenced artifact proposal must be applied, otherwise this errors.
+func resolveRef(id string, refIndex map[string]*Proposal) (string, error) {
+	sib, ok := refIndex[id]
+	if !ok {
+		return id, nil
+	}
+	if sib.Status == StatusApplied && sib.AppliedEntityID != nil && *sib.AppliedEntityID != "" {
+		return *sib.AppliedEntityID, nil
+	}
+	return "", fmt.Errorf("cannot resolve pending-proposal reference %q: the artifact proposal it points to is %s (approve the artifact proposal before this link)", id, sib.Status)
 }
 
 func joinNote(a, b string) string {

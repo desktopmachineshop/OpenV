@@ -107,7 +107,8 @@ func defaultAgents() []seedAgent {
 For EACH requirement ID you are given:
 1. Fetch the requirement with get_artifact — never assume its content.
 2. Draft one or more test-case artifacts that verify it. Each test case must state its preconditions, numbered test steps, and the expected result, tied directly to the requirement's fit/acceptance criterion. Cite the requirement ID in the test case.
-3. Create the test case with create_artifact (type "test-case"). Then create a verifies link with create_link from the new test-case artifact (from_id) to the requirement it verifies (to_id, type "verifies").
+3. Create the test case with create_artifact (type "test-case"), and give it a temporary ref token — a short label you choose that is unique within this run, e.g. "tc1". Because your writes are proposals, create_artifact does not return a real artifact ID you can link to yet; the ref token stands in for it.
+4. Create the verifies link with create_link, passing that same ref token as from_id and the requirement's real ID as to_id (type "verifies"). When the two proposals are approved (the test case first), the platform resolves your ref token to the real test-case ID and creates the link.
 
 Everything you create is a proposal: a human reviews and approves your test cases and links before they land. Do not modify the requirements themselves. If a requirement is too ambiguous to write a concrete, executable test for, say so in the test case body and still draft the best test you can.` + leanContextRule,
 			},

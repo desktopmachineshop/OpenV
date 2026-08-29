@@ -226,7 +226,7 @@ func Tools() []Tool {
 		},
 		{
 			Name:        "create_artifact",
-			Description: "Create an artifact. A 202 response means the change was diverted to a proposal pending human review.",
+			Description: "Create an artifact. A 202 response means the change was diverted to a proposal pending human review. In proposal mode you may pass a `ref`: a temporary token you choose (e.g. \"t1\") that names this not-yet-created artifact so a create_link in the SAME run can point at it via from_id/to_id. The token resolves to the real artifact id when the artifact proposal is approved.",
 			InputSchema: schema([]string{"project_id", "type", "title"}, map[string]interface{}{
 				"project_id": str("Project ID"),
 				"type":       str("Artifact type"),
@@ -234,6 +234,7 @@ func Tools() []Tool {
 				"body":       str("Optional markdown body"),
 				"parent_id":  str("Optional parent artifact ID"),
 				"attributes": obj("Optional attributes object"),
+				"ref":        str("Optional temporary reference token (proposal mode only) to name this artifact for a sibling create_link in the same run"),
 			}),
 			Handler: func(c *Client, args map[string]interface{}) (string, error) {
 				body := map[string]interface{}{
@@ -248,12 +249,20 @@ func Tools() []Tool {
 				if attrs, ok := args["attributes"].(map[string]interface{}); ok {
 					body["attributes"] = attrs
 				}
+				ref := strArg(args, "ref")
+				if ref != "" {
+					body["ref"] = ref
+				}
 				out, status, err := c.request("POST", "/api/v1/artifacts", nil, body)
 				if err != nil {
 					return out, err
 				}
 				if status == http.StatusAccepted {
-					return "Proposal created (pending human review, not yet applied): " + out, nil
+					msg := "Proposal created (pending human review, not yet applied): " + out
+					if ref != "" {
+						msg += "\nReference this artifact from a create_link in this run by passing from_id or to_id = \"" + ref + "\"."
+					}
+					return msg, nil
 				}
 				return out, nil
 			},
@@ -307,19 +316,25 @@ func Tools() []Tool {
 		},
 		{
 			Name:        "create_link",
-			Description: "Create a typed link between two artifacts.",
+			Description: "Create a typed link between two artifacts. In proposal mode from_id and/or to_id may be a temporary ref token that a create_artifact in the SAME run assigned via its `ref` argument, letting you link to an artifact whose own proposal is not yet approved; the token resolves to the real id when both proposals are approved (the artifact one first). A 202 response means the link was diverted to a proposal pending human review.",
 			InputSchema: schema([]string{"from_id", "to_id", "type"}, map[string]interface{}{
-				"from_id": str("Source artifact ID"),
-				"to_id":   str("Target artifact ID"),
+				"from_id": str("Source artifact ID, or a ref token from a create_artifact in this run"),
+				"to_id":   str("Target artifact ID, or a ref token from a create_artifact in this run"),
 				"type":    str("Link type"),
 			}),
 			Handler: func(c *Client, args map[string]interface{}) (string, error) {
-				out, _, err := c.request("POST", "/api/v1/links", nil, map[string]interface{}{
+				out, status, err := c.request("POST", "/api/v1/links", nil, map[string]interface{}{
 					"from_id": strArg(args, "from_id"),
 					"to_id":   strArg(args, "to_id"),
 					"type":    strArg(args, "type"),
 				})
-				return out, err
+				if err != nil {
+					return out, err
+				}
+				if status == http.StatusAccepted {
+					return "Proposal created (pending human review, not yet applied): " + out, nil
+				}
+				return out, nil
 			},
 		},
 		{

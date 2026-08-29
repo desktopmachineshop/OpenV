@@ -87,6 +87,13 @@ type CreateArtifactRequest struct {
 	Body       string                 `json:"body"`
 	SortOrder  *int                   `json:"sort_order,omitempty"`
 	Attributes map[string]interface{} `json:"attributes"`
+	// Ref is a proposal-only field: a caller-chosen temporary token that lets a
+	// proposal-mode agent reference this not-yet-created artifact from a sibling
+	// create_link proposal in the same run (issue #235). It is ignored on the
+	// direct (non-proposal) write path — NewArtifact never reads it — and is
+	// lifted out of the payload into its own column when the write is diverted
+	// to the proposal queue (see proposals.DefaultService.Propose).
+	Ref string `json:"ref,omitempty"`
 }
 
 // OptionalString is a JSON field that distinguishes all three payload

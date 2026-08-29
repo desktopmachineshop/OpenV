@@ -170,6 +170,33 @@ func TestBulkReviewProposalsPartialFailure(t *testing.T) {
 	}
 }
 
+// TestBulkReviewProposalsAppliesArtifactsBeforeLinks locks in the dependency
+// ordering for issue #235: a create_link proposal may reference a sibling
+// create_artifact proposal's temporary ref, which only resolves after the
+// artifact is applied. Even when the client lists the link first, the batch
+// must approve the artifact proposal before the link proposal.
+func TestBulkReviewProposalsAppliesArtifactsBeforeLinks(t *testing.T) {
+	svc := &fakeProposalService{
+		byID: map[string]*proposals.Proposal{
+			"p-link": {ID: "p-link", ProjectID: "proj-1", Op: proposals.OpCreateLink, Status: proposals.StatusPending},
+			"p-art":  {ID: "p-art", ProjectID: "proj-1", Op: proposals.OpCreateArtifact, Status: proposals.StatusPending},
+		},
+	}
+	h := &Handler{proposalService: svc}
+
+	w := httptest.NewRecorder()
+	// Client lists the link before the artifact on purpose.
+	body := `{"ids":["p-link","p-art"],"action":"approve"}`
+	h.BulkReviewProposals(w, bulkReq(t, body, &users.User{ID: "root", IsAdmin: true}))
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200 (body %q)", w.Code, w.Body.String())
+	}
+	if len(svc.approved) != 2 || svc.approved[0] != "p-art" || svc.approved[1] != "p-link" {
+		t.Fatalf("approve order = %v, want [p-art p-link] (artifact before its dependent link)", svc.approved)
+	}
+}
+
 // TestBulkReviewProposalsAuthz locks in that each id is authorized against
 // its own project with the same editor bar as a single review: rows the
 // user cannot edit fail per-row without touching the service, while rows
