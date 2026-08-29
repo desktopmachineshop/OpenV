@@ -57,10 +57,10 @@ func (h *Handler) DiffBaseline(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	} else {
-		other, err := h.baselineService.GetBaseline(against)
 		// A baseline from another project (or another org's project) is
 		// indistinguishable from a missing one: 404 either way.
-		if err != nil || other == nil || other.ProjectID != baseline.ProjectID {
+		other, err := h.baselineService.GetProjectBaseline(baseline.ProjectID, against)
+		if err != nil {
 			respondError(w, r, http.StatusNotFound, "comparison baseline not found", err)
 			return
 		}

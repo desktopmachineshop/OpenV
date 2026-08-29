@@ -1239,6 +1239,10 @@ func (h *Handler) GenerateReport(w http.ResponseWriter, r *http.Request) {
 
 	data, filename, err := h.reportService.GenerateProjectReport(projectID, baselineID)
 	if err != nil {
+		if errors.Is(err, baselines.ErrNotFound) {
+			respondError(w, r, http.StatusNotFound, "baseline not found", err)
+			return
+		}
 		respondInternal(w, r, "failed to generate project report", err)
 		return
 	}
