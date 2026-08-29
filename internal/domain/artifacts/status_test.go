@@ -178,7 +178,9 @@ func TestChangeStatus(t *testing.T) {
 // TestUpdateArtifactStatusPolicy: content edits carry the status forward,
 // except approved demotes to draft (the approved snapshot stays in history),
 // and a smuggled Attributes["status"] never changes the column (issue #125
-// wholesale-attributes trap).
+// wholesale-attributes trap). Attribute-only updates (no content change) must
+// leave an approved artifact approved (issue #174 — link snapshots on both
+// link endpoints were silently demoting approved requirements).
 func TestUpdateArtifactStatusPolicy(t *testing.T) {
 	newSvc := func(status string) *DefaultService {
 		return NewDefaultService(&fakeStatusRepo{byID: map[string]*Artifact{
@@ -201,6 +203,41 @@ func TestUpdateArtifactStatusPolicy(t *testing.T) {
 		}
 		if updated.Attributes["status"] != StatusDraft {
 			t.Errorf("attribute mirror = %v, want draft", updated.Attributes["status"])
+		}
+	})
+
+	t.Run("attribute-only update keeps approved", func(t *testing.T) {
+		// The links_snapshot refresh in autoVersionLinkedArtifacts sends an
+		// attribute-only update (no type/title/body). That does not change what
+		// the artifact says, so an approved artifact must stay approved.
+		svc := newSvc(StatusApproved)
+		updated, err := svc.UpdateArtifact("a1", UpdateArtifactRequest{
+			Attributes: map[string]interface{}{"links_snapshot": []string{"l1"}},
+		})
+		if err != nil {
+			t.Fatalf("UpdateArtifact: %v", err)
+		}
+		if updated.Status != StatusApproved {
+			t.Errorf("status after attribute-only update = %q, want approved (no content change must not demote)", updated.Status)
+		}
+		if updated.Attributes["status"] != StatusApproved {
+			t.Errorf("attribute mirror = %v, want approved", updated.Attributes["status"])
+		}
+	})
+
+	t.Run("structural-only update keeps approved", func(t *testing.T) {
+		// A sort-order move is a structural change, not a content edit, so it
+		// must not demote an approved artifact either.
+		svc := newSvc(StatusApproved)
+		order := 5
+		updated, err := svc.UpdateArtifact("a1", UpdateArtifactRequest{
+			SortOrder: &order,
+		})
+		if err != nil {
+			t.Fatalf("UpdateArtifact: %v", err)
+		}
+		if updated.Status != StatusApproved {
+			t.Errorf("status after structural-only update = %q, want approved", updated.Status)
 		}
 	})
 

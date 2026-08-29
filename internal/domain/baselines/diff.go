@@ -158,14 +158,20 @@ func compareArtifacts(base, target *artifacts.Artifact) (ModifiedArtifact, bool)
 	return change, changed
 }
 
-// artifactStatus reads the conventional Attributes["status"] string ("" when
-// unset or not a string).
+// artifactStatus reads an artifact's review status the same way the CSV export
+// does (issue #174): prefer the first-class Status column, fall back to the
+// legacy Attributes["status"] mirror for snapshots captured before the column
+// existed, then normalize. Normalization collapses the legacy "in-review"
+// spelling onto in_review and empty/unknown onto draft, so snapshot-refresh
+// auto-versions and legacy mirrors don't diff as a false status_changed.
 func artifactStatus(a *artifacts.Artifact) string {
-	if a.Attributes == nil {
-		return ""
+	status := a.Status
+	if status == "" && a.Attributes != nil {
+		if v, ok := a.Attributes["status"].(string); ok {
+			status = v
+		}
 	}
-	status, _ := a.Attributes["status"].(string)
-	return status
+	return artifacts.NormalizeStatus(status)
 }
 
 // parentID normalizes the parent pointer: nil and "" both mean "no parent".
