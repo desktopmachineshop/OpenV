@@ -130,8 +130,9 @@ func TestArtifactStatusRoundTrip(t *testing.T) {
 
 	// A content edit of the approved artifact demotes the NEW version to
 	// draft; the archived approved version keeps its status.
+	editedTitle := "Round trip (edited)"
 	if _, err := svc.UpdateArtifact(a.ID, artifacts.UpdateArtifactRequest{
-		Type: "requirement", Title: "Round trip (edited)",
+		Title:      &editedTitle,
 		Attributes: map[string]interface{}{},
 	}); err != nil {
 		t.Fatalf("edit approved artifact: %v", err)

@@ -89,11 +89,19 @@ type CreateArtifactRequest struct {
 }
 
 // UpdateArtifactRequest is the payload for updating an artifact
+// UpdateArtifactRequest's content fields (Type, Title, Body) are pointers so
+// callers can distinguish "omitted" from "explicitly empty": a nil pointer
+// means "no change" (the current value carries forward to the new version),
+// while a non-nil pointer — even to "" — replaces the value. This mirrors the
+// Attributes contract from issue #125 and closes issue #170, where the MCP
+// update_artifact tool wiped bodies by sending "" for an omitted argument.
+// JSON decoding gives callers this for free: omitted/null fields unmarshal
+// to nil.
 type UpdateArtifactRequest struct {
 	ParentID         *string                `json:"parent_id,omitempty"`
-	Type             string                 `json:"type"`
-	Title            string                 `json:"title"`
-	Body             string                 `json:"body"`
+	Type             *string                `json:"type,omitempty"`
+	Title            *string                `json:"title,omitempty"`
+	Body             *string                `json:"body,omitempty"`
 	SortOrder        *int                   `json:"sort_order,omitempty"`
 	Attributes       map[string]interface{} `json:"attributes"`
 	LinksSnapshot    []interface{}          `json:"linksSnapshot,omitempty"`
@@ -262,6 +270,11 @@ func (s *DefaultService) GetArtifactsByProject(projectID string) ([]*Artifact, e
 // wholesale. Callers that decode JSON get this for free: an omitted or null
 // "attributes" field unmarshals to nil, {} to an empty map.
 //
+// Content fields contract (issue #170): Type, Title, and Body follow the
+// same rule — nil means "no change", a non-nil pointer (even to "")
+// replaces. This keeps clients that update a single field (e.g. the MCP
+// update_artifact tool) from silently wiping the others.
+//
 // Suspect links (issue #131): when the update changes the artifact's
 // CONTENT — type, title, or body — every live link touching it is flagged
 // suspect until confirmed or the artifact is approved again. Structural
@@ -281,14 +294,20 @@ func (s *DefaultService) UpdateArtifact(id string, req UpdateArtifactRequest) (*
 		parentChanged = true
 	}
 
-	contentChanged := artifact.Type != req.Type ||
-		artifact.Title != req.Title ||
-		artifact.Body != req.Body
+	contentChanged := (req.Type != nil && artifact.Type != *req.Type) ||
+		(req.Title != nil && artifact.Title != *req.Title) ||
+		(req.Body != nil && artifact.Body != *req.Body)
 
 	artifact.ParentID = req.ParentID
-	artifact.Type = req.Type
-	artifact.Title = req.Title
-	artifact.Body = req.Body
+	if req.Type != nil {
+		artifact.Type = *req.Type
+	}
+	if req.Title != nil {
+		artifact.Title = *req.Title
+	}
+	if req.Body != nil {
+		artifact.Body = *req.Body
+	}
 	if req.Attributes != nil {
 		artifact.Attributes = req.Attributes
 	}

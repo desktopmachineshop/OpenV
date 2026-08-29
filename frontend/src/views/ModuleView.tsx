@@ -301,6 +301,10 @@ export const ModuleView: React.FC = () => {
       updateArtifact(response.data);
       setIsEditing(false);
       setEditingArtifact(undefined);
+      // An update can carry pendingLinkAdds/pendingLinkRemoves; the backend
+      // then auto-versions the counterpart artifacts (issue #169). Refetch
+      // artifacts and links so no client-held version goes stale.
+      await Promise.all([loadArtifacts(), loadLinks()]);
       setError('');
     } catch (error: any) {
       console.error('Failed to update artifact:', error);
@@ -351,10 +355,12 @@ export const ModuleView: React.FC = () => {
       const response = await linkAPI.create(linkData);
       addLink(response.data);
       setAllLinks([...allLinks, response.data]);
-      
-      // Reload artifacts to get updated link snapshots for both fromID and toID
-      await loadArtifacts();
-      
+
+      // The backend auto-versions BOTH linked artifacts (link snapshot
+      // refresh), so refetch artifacts and the authoritative link list —
+      // otherwise the client keeps stale versions (issue #169).
+      await Promise.all([loadArtifacts(), loadLinks()]);
+
       setError('');
       await alertDialog({ title: 'Link created', message: 'Link created successfully.' });
     } catch (error: any) {
@@ -1296,6 +1302,13 @@ export const ModuleView: React.FC = () => {
               previewVersion={previewVersion}
               onClosePreview={() => setPreviewVersion(null)}
               allowLinkDelete={!isBaselineView}
+              liveLinks={!isBaselineView}
+              onLinksChanged={() => {
+                // Link writes auto-version both artifacts server-side;
+                // refetch so displayed versions and link lists stay current.
+                loadArtifacts();
+                loadLinks();
+              }}
             />
           </>
         )}

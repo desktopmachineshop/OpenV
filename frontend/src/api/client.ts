@@ -229,6 +229,12 @@ export const linkAPI = {
     client.get<Link[]>('/api/v1/links', { params: { project_id: projectId } }),
   listForArtifactVersion: (artifactId: string, version: number) =>
     client.get<Link[]>(`/api/v1/artifacts/${artifactId}/links`, { params: { version } }),
+  // Live links straight from the link table (no version snapshot involved).
+  // Use this for the artifact currently on screen: link writes version-bump
+  // the counterpart artifact server-side, so a client-held version number can
+  // be stale and a version-scoped fetch would miss fresh links (issue #169).
+  listForArtifact: (artifactId: string) =>
+    client.get<Link[]>(`/api/v1/artifacts/${artifactId}/links`),
   update: (id: string, payload: Partial<Link>) =>
     client.put<Link>(`/api/v1/links/${id}`, payload),
   // Clears the suspect flag: the caller vouches the link still holds after

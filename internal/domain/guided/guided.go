@@ -280,11 +280,10 @@ func (s *DefaultService) Commit(sessionID string) (*Session, error) {
 		}
 		attrs["status"] = "approved"
 
+		// Attribute-only write: nil content fields mean "no change"
+		// (issue-#170 contract), the current type/title/body carry forward.
 		_, err = s.artifactService.UpdateArtifact(artifactID, artifacts.UpdateArtifactRequest{
 			ParentID:   artifact.ParentID,
-			Type:       artifact.Type,
-			Title:      artifact.Title,
-			Body:       artifact.Body,
 			SortOrder:  &artifact.SortOrder,
 			Attributes: attrs,
 		})
