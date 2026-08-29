@@ -15,6 +15,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/agentruns"
 	"github.com/openv/requirements-platform/internal/domain/agents"
 	"github.com/openv/requirements-platform/internal/domain/automations"
+	"github.com/openv/requirements-platform/internal/domain/crewtemplates"
 	"github.com/openv/requirements-platform/internal/domain/members"
 	"github.com/openv/requirements-platform/internal/domain/orgs"
 	"github.com/openv/requirements-platform/internal/domain/projects"
@@ -95,6 +96,9 @@ func (h *Handler) registerAgentRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/crews/{id}", h.UpdateTeam).Methods("PUT")
 	router.HandleFunc("/api/v1/crews/{id}", h.DeleteTeam).Methods("DELETE")
 	router.HandleFunc("/api/v1/crews/{id}/clone", h.CloneTeam).Methods("POST")
+	router.HandleFunc("/api/v1/crews/{id}/export", h.ExportCrew).Methods("GET")
+	router.HandleFunc("/api/v1/crews/import", h.ImportCrew).Methods("POST")
+	router.HandleFunc("/api/v1/crew-templates", h.ListCrewTemplates).Methods("GET")
 	router.HandleFunc("/api/v1/crews/{id}/nodes", h.AddTeamNode).Methods("POST")
 	router.HandleFunc("/api/v1/crews/{id}/runs", h.LaunchTeamRun).Methods("POST")
 	router.HandleFunc("/api/v1/crew-nodes/{id}", h.UpdateTeamNode).Methods("PUT")
@@ -110,6 +114,8 @@ func (h *Handler) registerAgentRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/teams/{id}", h.UpdateTeam).Methods("PUT")             // deprecated: use /api/v1/crews/{id}
 	router.HandleFunc("/api/v1/teams/{id}", h.DeleteTeam).Methods("DELETE")          // deprecated: use /api/v1/crews/{id}
 	router.HandleFunc("/api/v1/teams/{id}/clone", h.CloneTeam).Methods("POST")       // deprecated: use /api/v1/crews/{id}/clone
+	router.HandleFunc("/api/v1/teams/{id}/export", h.ExportCrew).Methods("GET")      // deprecated: use /api/v1/crews/{id}/export
+	router.HandleFunc("/api/v1/teams/import", h.ImportCrew).Methods("POST")          // deprecated: use /api/v1/crews/import
 	router.HandleFunc("/api/v1/teams/{id}/nodes", h.AddTeamNode).Methods("POST")     // deprecated: use /api/v1/crews/{id}/nodes
 	router.HandleFunc("/api/v1/teams/{id}/runs", h.LaunchTeamRun).Methods("POST")    // deprecated: use /api/v1/crews/{id}/runs
 	router.HandleFunc("/api/v1/team-nodes/{id}", h.UpdateTeamNode).Methods("PUT")    // deprecated: use /api/v1/crew-nodes/{id}
@@ -1667,6 +1673,111 @@ func (h *Handler) CloneTeam(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(team)
+}
+
+// ExportCrew returns a crew as a portable, org-independent JSON document whose
+// nodes reference agents by slug. Any member of the crew's workspace may
+// export. Human nodes are omitted (their identities aren't portable).
+func (h *Handler) ExportCrew(w http.ResponseWriter, r *http.Request) {
+	if !requireUser(w, r) {
+		return
+	}
+	graph, err := h.teamService.GetTeam(mux.Vars(r)["id"])
+	if err != nil {
+		respondError(w, r, http.StatusNotFound, "crew not found", err)
+		return
+	}
+	if !h.requireOrgRole(w, r, graph.Team.OrgID, orgs.RoleMember) {
+		return
+	}
+	portable, err := crewtemplates.Serialize(graph, h.agentService)
+	if err != nil {
+		respondInternal(w, r, "failed to export crew", err)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%q", crewExportFilename(graph.Team.Name)))
+	json.NewEncoder(w).Encode(portable)
+}
+
+// ImportCrew creates a crew in the active workspace from a portable crew
+// document, resolving each node's agent slug to this workspace's agents.
+// Missing slugs are skipped with a warning (returned in the response) rather
+// than failing the import. Authz mirrors CreateTeam: a project-pinned import
+// (?project_id=) needs project editor rights, a workspace-wide one needs
+// workspace admin rights.
+func (h *Handler) ImportCrew(w http.ResponseWriter, r *http.Request) {
+	if !requireUser(w, r) {
+		return
+	}
+	orgID := ActiveOrg(r)
+	projectID := optionalProjectID(r)
+	if projectID != nil {
+		project, err := h.projectService.GetProject(*projectID)
+		if err != nil || project == nil {
+			writeJSONError(w, http.StatusBadRequest, "project not found")
+			return
+		}
+		if project.OrgID != orgID {
+			writeJSONError(w, http.StatusBadRequest, "project does not belong to this workspace")
+			return
+		}
+		if !h.requireProjectRole(w, r, *projectID, members.RoleEditor) {
+			return
+		}
+	} else if !h.requireOrgRole(w, r, orgID, orgs.RoleAdmin) {
+		return
+	}
+
+	var doc crewtemplates.PortableCrew
+	if err := json.NewDecoder(r.Body).Decode(&doc); err != nil {
+		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	result, err := crewtemplates.Import(&doc, orgID, projectID, h.agentService, h.teamService)
+	if err != nil {
+		writeJSONError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(result)
+}
+
+// ListCrewTemplates returns the built-in crew presets. Each carries its full
+// portable document so the client can hand a chosen preset straight to the
+// import endpoint.
+func (h *Handler) ListCrewTemplates(w http.ResponseWriter, r *http.Request) {
+	if !requireUser(w, r) {
+		return
+	}
+	json.NewEncoder(w).Encode(crewtemplates.BuiltinCrewTemplates())
+}
+
+// optionalProjectID reads an optional ?project_id= pin from the request.
+func optionalProjectID(r *http.Request) *string {
+	v := strings.TrimSpace(r.URL.Query().Get("project_id"))
+	if v == "" {
+		return nil
+	}
+	return &v
+}
+
+// crewExportFilename derives a safe download name from a crew name.
+func crewExportFilename(name string) string {
+	var b strings.Builder
+	for _, ch := range strings.ToLower(strings.TrimSpace(name)) {
+		switch {
+		case ch >= 'a' && ch <= 'z', ch >= '0' && ch <= '9':
+			b.WriteRune(ch)
+		case ch == ' ' || ch == '-' || ch == '_':
+			b.WriteByte('-')
+		}
+	}
+	slug := strings.Trim(b.String(), "-")
+	if slug == "" {
+		slug = "crew"
+	}
+	return slug + ".crew.json"
 }
 
 func (h *Handler) AddTeamNode(w http.ResponseWriter, r *http.Request) {

@@ -7,8 +7,11 @@ import {
   Crew,
   CrewGraph,
   crewsAPI,
+  CrewTemplate,
+  crewTemplatesAPI,
   OrgMember,
   orgsAPI,
+  PortableCrew,
 } from '../api/client';
 import { useAppStore } from '../state/store';
 import { CrewCanvas, CrewFilter } from '../components/crews/CrewCanvas';
@@ -91,6 +94,13 @@ export const CrewBuilder: React.FC = () => {
   const [showRunModal, setShowRunModal] = useState(false);
   const [runPrompt, setRunPrompt] = useState('');
   const [launching, setLaunching] = useState(false);
+
+  // Import modal (built-in presets + upload) and post-import warnings.
+  const [showImport, setShowImport] = useState(false);
+  const [templates, setTemplates] = useState<CrewTemplate[]>([]);
+  const [importing, setImporting] = useState(false);
+  const [importNotice, setImportNotice] = useState('');
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const loadCrews = useCallback(() => {
     crewsAPI
@@ -209,6 +219,59 @@ export const CrewBuilder: React.FC = () => {
       setCrewId(res.data.id);
     } catch (err: any) {
       setError(err.response?.data?.error || err.message || 'Failed to clone crew');
+    }
+  };
+
+  const handleExport = async () => {
+    if (!selectedCrew) return;
+    try {
+      await crewsAPI.exportDownload(selectedCrew.id, selectedCrew.name);
+    } catch (err: any) {
+      setError(err.response?.data?.error || err.message || 'Failed to export crew');
+    }
+  };
+
+  const openImport = () => {
+    setImportNotice('');
+    setShowImport(true);
+    if (templates.length === 0) {
+      crewTemplatesAPI
+        .list()
+        .then((res) => setTemplates(res.data || []))
+        .catch(() => setTemplates([]));
+    }
+  };
+
+  const runImport = async (doc: PortableCrew) => {
+    setImporting(true);
+    setError('');
+    try {
+      const res = await crewsAPI.import(doc, projectId || null);
+      loadCrews();
+      setCrewId(res.data.team.id);
+      setShowImport(false);
+      const warnings = res.data.warnings || [];
+      setImportNotice(
+        warnings.length ? `Imported with ${warnings.length} warning(s): ${warnings.join('; ')}` : ''
+      );
+    } catch (err: any) {
+      setError(err.response?.data?.error || err.message || 'Failed to import crew');
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const handleImportFile = async (file: File) => {
+    try {
+      const text = await file.text();
+      const doc = JSON.parse(text) as PortableCrew;
+      if (!doc || !Array.isArray(doc.nodes)) {
+        setError('That file is not a crew export.');
+        return;
+      }
+      await runImport(doc);
+    } catch (err: any) {
+      setError(err.message || 'Could not read that file as a crew export.');
     }
   };
 
@@ -387,6 +450,23 @@ export const CrewBuilder: React.FC = () => {
         >
           Start from default crew
         </button>
+        <button
+          className="button-secondary"
+          style={{ padding: '6px 12px', fontSize: 13 }}
+          onClick={handleExport}
+          disabled={!selectedCrew}
+          title="Download this crew as a portable JSON file"
+        >
+          Export
+        </button>
+        <button
+          className="button-secondary"
+          style={{ padding: '6px 12px', fontSize: 13 }}
+          onClick={openImport}
+          title="Import a crew from a file or a built-in template"
+        >
+          Import
+        </button>
         {selectedCrew && !selectedCrew.is_default && (
           <button
             style={{
@@ -530,6 +610,31 @@ export const CrewBuilder: React.FC = () => {
       </div>
 
       <ErrorBanner message={error} onDismiss={() => setError('')} />
+      {importNotice && (
+        <div
+          style={{
+            background: 'var(--warning-bg, rgba(255,196,0,0.12))',
+            border: '1px solid var(--warning)',
+            color: 'var(--text)',
+            borderRadius: 4,
+            padding: '8px 12px',
+            marginBottom: 12,
+            fontSize: 13,
+            display: 'flex',
+            justifyContent: 'space-between',
+            gap: 12,
+          }}
+        >
+          <span>{importNotice}</span>
+          <button
+            className="button-secondary"
+            style={{ padding: '2px 8px', fontSize: 12 }}
+            onClick={() => setImportNotice('')}
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
 
       {/* Canvas + side panel */}
       <div style={{ display: 'flex', gap: 14, flex: 1, minHeight: 0 }}>
@@ -652,6 +757,73 @@ export const CrewBuilder: React.FC = () => {
                 {launching ? 'Launching…' : 'Launch'}
               </button>
             </div>
+        </Modal>
+      )}
+
+      {/* Import crew modal */}
+      {showImport && (
+        <Modal title="Import a crew" width={520} onClose={() => setShowImport(false)}>
+          <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 0 }}>
+            Crews reference their agents by slug, so an imported crew resolves to this
+            workspace's own agents. Any agent this workspace is missing is skipped with a
+            warning.
+          </p>
+
+          <div className="form-group">
+            <label>Start from a built-in template</label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {templates.length === 0 && (
+                <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+                  No built-in templates available.
+                </span>
+              )}
+              {templates.map((t) => (
+                <button
+                  key={t.key}
+                  className="button-secondary"
+                  style={{ padding: '10px 12px', fontSize: 13, textAlign: 'left' }}
+                  disabled={importing}
+                  onClick={() => runImport(t.crew)}
+                >
+                  <strong>{t.name}</strong>
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
+                    {t.description}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="form-group" style={{ marginTop: 12 }}>
+            <label>Or upload a crew file</label>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="application/json,.json"
+              style={{ display: 'none' }}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                e.target.value = '';
+                if (file) handleImportFile(file);
+              }}
+            />
+            <div>
+              <button
+                className="button-secondary"
+                style={{ padding: '8px 14px', fontSize: 13 }}
+                disabled={importing}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                {importing ? 'Importing…' : 'Choose JSON file…'}
+              </button>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>
+            <button className="button-secondary" onClick={() => setShowImport(false)}>
+              Cancel
+            </button>
+          </div>
         </Modal>
       )}
     </div>
