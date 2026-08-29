@@ -21,6 +21,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/interviews"
 	"github.com/openv/requirements-platform/internal/domain/members"
 	"github.com/openv/requirements-platform/internal/domain/products"
+	"github.com/openv/requirements-platform/internal/domain/quality"
 	"github.com/openv/requirements-platform/internal/domain/vv"
 	"github.com/openv/requirements-platform/internal/domain/workitems"
 )
@@ -43,6 +44,10 @@ func (h *Handler) registerSuiteRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/projects/{id}/vv/matrix", h.GetMatrix).Methods("GET")
 	router.HandleFunc("/api/v1/projects/{id}/vv/gaps", h.GetGaps).Methods("GET")
 	router.HandleFunc("/api/v1/projects/{id}/vv/report", h.GetVVReport).Methods("GET")
+
+	// Requirement quality linting (issue #217).
+	router.HandleFunc("/api/v1/projects/{id}/quality", h.GetProjectQuality).Methods("GET")
+	router.HandleFunc("/api/v1/artifacts/{id}/quality", h.GetArtifactQuality).Methods("GET")
 
 	// Work items (kanban).
 	router.HandleFunc("/api/v1/projects/{id}/work-items", h.CreateWorkItem).Methods("POST")
@@ -507,6 +512,49 @@ func (h *Handler) GetVVReport(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", filename))
 	w.WriteHeader(http.StatusOK)
 	w.Write(data)
+}
+
+// --- Requirement quality linting (issue #217) ---
+
+// GetProjectQuality lints every requirement-type artifact in the project's
+// live export (or a ?baseline_id= snapshot) and returns per-artifact scores and
+// findings. Viewer role, mirroring the V&V coverage endpoint.
+func (h *Handler) GetProjectQuality(w http.ResponseWriter, r *http.Request) {
+	projectID := mux.Vars(r)["id"]
+	if !h.requireProjectRole(w, r, projectID, members.RoleViewer) {
+		return
+	}
+	export, err := h.projectExport(projectID, r.URL.Query().Get("baseline_id"))
+	if err != nil {
+		if errors.Is(err, baselines.ErrNotFound) {
+			respondError(w, r, http.StatusNotFound, "baseline not found", err)
+			return
+		}
+		respondInternal(w, r, "failed to export project", err)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(quality.LintProject(export))
+}
+
+// GetArtifactQuality lints a single artifact. It returns 400 for a type the
+// linter does not judge (headings, test cases, etc.) so the caller gets a clear
+// signal rather than an empty score.
+func (h *Handler) GetArtifactQuality(w http.ResponseWriter, r *http.Request) {
+	artifact, err := h.artifactService.GetArtifact(mux.Vars(r)["id"])
+	if err != nil {
+		respondError(w, r, http.StatusNotFound, "artifact not found", err)
+		return
+	}
+	if !h.requireProjectRole(w, r, artifact.ProjectID, members.RoleViewer) {
+		return
+	}
+	if !quality.IsRequirementType(artifact.Type) {
+		writeJSONError(w, http.StatusBadRequest, "artifact type "+artifact.Type+" is not quality-linted")
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(quality.LintArtifact(artifact))
 }
 
 // --- Work items ---

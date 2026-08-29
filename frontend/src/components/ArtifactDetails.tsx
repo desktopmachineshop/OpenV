@@ -1,11 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { Artifact, Link, Attachment } from '../api/client';
-import { linkAPI } from '../api/client';
+import { Artifact, Link, Attachment, QualityScore } from '../api/client';
+import { linkAPI, qualityAPI } from '../api/client';
 import { ImageGallery } from './ImageGallery';
+import { QualityFindingsPanel } from './QualityBadge';
 import { useConfirm } from './ui';
+import { apiErrorMessage } from '../api/errors';
 import { getLinkTypeLabel } from '../config/linkTypeRules';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+
+// Artifact types the quality linter scores (mirrors the backend catalog in
+// internal/domain/quality). Only these fetch a quality panel.
+const QUALITY_LINTED_TYPES = new Set(['requirement', 'user-need']);
 
 interface ArtifactDetailsProps {
   artifact: Artifact;
@@ -62,6 +68,44 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
   // Attachment filtering for versions
   const [currentVersionAttachments, setCurrentVersionAttachments] = useState<Attachment[]>(attachments || []);
   const [previewVersionAttachments, setPreviewVersionAttachments] = useState<Attachment[]>([]);
+
+  // Rule-based quality lint for the selected requirement (issue #217).
+  const [qualityScore, setQualityScore] = useState<QualityScore | null>(null);
+  const [qualityLoading, setQualityLoading] = useState(false);
+  const [qualityError, setQualityError] = useState('');
+
+  const isQualityLinted = QUALITY_LINTED_TYPES.has(artifact.type);
+
+  // Fetch the lint result whenever the displayed requirement (or its version)
+  // changes. Skipped for non-requirement types and while previewing history.
+  useEffect(() => {
+    if (!isQualityLinted || previewVersion) {
+      setQualityScore(null);
+      setQualityError('');
+      setQualityLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setQualityLoading(true);
+    setQualityError('');
+    qualityAPI
+      .artifact(artifact.id)
+      .then((res) => {
+        if (!cancelled) setQualityScore(res.data);
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setQualityScore(null);
+          setQualityError(`Quality check unavailable: ${apiErrorMessage(err)}`);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setQualityLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [artifact.id, artifact.version, isQualityLinted, previewVersion]);
 
   // Filter attachments based on version timestamp
   useEffect(() => {
@@ -625,6 +669,11 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
         </div>
       )}
       
+      {/* Requirement quality findings (issue #217) */}
+      {isQualityLinted && (
+        <QualityFindingsPanel score={qualityScore} loading={qualityLoading} error={qualityError} />
+      )}
+
       <div style={{ marginTop: '15px', fontSize: '12px', color: 'var(--text-muted)' }}>
         <p>Created: {new Date(artifact.created_at).toLocaleString()}</p>
         <p>Updated: {new Date(artifact.updated_at).toLocaleString()}</p>
