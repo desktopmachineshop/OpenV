@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link as RouterLink } from 'react-router-dom';
 import { Artifact, Link, Attachment } from '../api/client';
 import { linkAPI } from '../api/client';
 import { ImageGallery } from './ImageGallery';
@@ -533,6 +534,15 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
         <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
           Version {artifact.version}
         </span>
+        {artifact.project_id && (
+          <RouterLink
+            to={`/projects/${artifact.project_id}/impact?artifact=${artifact.id}`}
+            title="Trace what a change to this artifact would affect"
+            style={{ marginLeft: '10px', fontSize: '12px', color: 'var(--accent-strong)', textDecoration: 'none' }}
+          >
+            Show impact →
+          </RouterLink>
+        )}
       </div>
       <div style={{ marginBottom: '15px' }}>
         <strong>ID:</strong>

@@ -608,6 +608,32 @@ export interface MatrixRow {
   hazard_ids: string[];
 }
 
+export type ImpactDirection = 'downstream' | 'upstream' | 'both';
+
+export interface ImpactNode {
+  artifact_id: string;
+  title: string;
+  type: string;
+  distance: number;
+  via: string;
+  path: string[];
+}
+
+export interface ImpactGroup {
+  type: string;
+  count: number;
+  nodes: ImpactNode[];
+}
+
+export interface ImpactReport {
+  project_id: string;
+  artifact_id: string;
+  direction: ImpactDirection;
+  downstream: ImpactGroup[];
+  upstream: ImpactGroup[];
+  total: number;
+}
+
 export interface WorkItem {
   id: string;
   project_id: string;
@@ -1196,6 +1222,23 @@ export const vvAPI = {
       `/api/v1/projects/${projectId}/vv/report${baselineId ? `?baseline_id=${baselineId}` : ''}`,
       `vv_report_${new Date().toISOString().slice(0, 10)}.pdf`
     ),
+  // Change-impact analysis: the artifacts reachable from `artifactId` through
+  // the traceability link graph, grouped by type. `direction` selects
+  // downstream (things that depend on it), upstream (what it depends on), or
+  // both (default).
+  impact: (
+    projectId: string,
+    artifactId: string,
+    direction?: ImpactDirection,
+    baselineId?: string
+  ) =>
+    client.get<ImpactReport>(`/api/v1/projects/${projectId}/impact`, {
+      params: {
+        artifact: artifactId,
+        ...(direction ? { direction } : {}),
+        ...(baselineId ? { baseline_id: baselineId } : {}),
+      },
+    }),
 };
 
 export const workItemsAPI = {
