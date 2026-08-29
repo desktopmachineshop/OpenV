@@ -322,6 +322,12 @@ func (h *Handler) LaunchAgentRun(w http.ResponseWriter, r *http.Request) {
 	}
 	run, _, err := h.runService.Launch(launch)
 	if err != nil {
+		// Over-budget soft-block (enforcement on) is a distinct, expected
+		// refusal — surface it as 402 so the UI can message it clearly.
+		if errors.Is(err, agentruns.ErrBudgetExceeded) {
+			writeJSONError(w, http.StatusPaymentRequired, err.Error())
+			return
+		}
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}

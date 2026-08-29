@@ -17,16 +17,18 @@ func NewOrgRepository(db *sql.DB) *OrgRepository {
 	return &OrgRepository{db: db}
 }
 
-const orgColumns = `id, name, slug, org_type, plan, limits, created_by, created_at, updated_at`
+const orgColumns = `id, name, slug, org_type, plan, limits, created_by, created_at, updated_at, monthly_budget_usd, budget_alert_month, budget_alert_threshold`
 
 // orgColumnsQualified disambiguates joined queries (org_members also has created_at).
-const orgColumnsQualified = `o.id, o.name, o.slug, o.org_type, o.plan, o.limits, o.created_by, o.created_at, o.updated_at`
+const orgColumnsQualified = `o.id, o.name, o.slug, o.org_type, o.plan, o.limits, o.created_by, o.created_at, o.updated_at, o.monthly_budget_usd, o.budget_alert_month, o.budget_alert_threshold`
 
 func scanOrg(row interface{ Scan(...interface{}) error }, extra ...interface{}) (*orgs.Org, error) {
 	o := new(orgs.Org)
 	var limits []byte
 	var createdBy sql.NullString
-	dest := []interface{}{&o.ID, &o.Name, &o.Slug, &o.OrgType, &o.Plan, &limits, &createdBy, &o.CreatedAt, &o.UpdatedAt}
+	var budget sql.NullFloat64
+	var alertMonth sql.NullString
+	dest := []interface{}{&o.ID, &o.Name, &o.Slug, &o.OrgType, &o.Plan, &limits, &createdBy, &o.CreatedAt, &o.UpdatedAt, &budget, &alertMonth, &o.BudgetAlertThreshold}
 	dest = append(dest, extra...)
 	if err := row.Scan(dest...); err != nil {
 		return nil, err
@@ -34,6 +36,13 @@ func scanOrg(row interface{ Scan(...interface{}) error }, extra ...interface{}) 
 	if createdBy.Valid {
 		v := createdBy.String
 		o.CreatedBy = &v
+	}
+	if budget.Valid {
+		v := budget.Float64
+		o.MonthlyBudgetUSD = &v
+	}
+	if alertMonth.Valid {
+		o.BudgetAlertMonth = alertMonth.String
 	}
 	if err := json.Unmarshal(limits, &o.Limits); err != nil || o.Limits == nil {
 		o.Limits = map[string]interface{}{}
@@ -64,6 +73,38 @@ func (r *OrgRepository) UpdateOrg(o *orgs.Org) error {
 		UPDATE organizations SET name = $2, plan = $3, limits = $4, updated_at = $5 WHERE id = $1
 	`, o.ID, o.Name, o.Plan, limits, o.UpdatedAt)
 	return err
+}
+
+// SetBudget writes only monthly_budget_usd (a nil budget clears it), leaving
+// the alert-dedupe columns untouched so this can never race the alert claim.
+func (r *OrgRepository) SetBudget(orgID string, budget *float64) error {
+	_, err := r.db.Exec(`
+		UPDATE organizations SET monthly_budget_usd = $2, updated_at = NOW() WHERE id = $1
+	`, orgID, budget)
+	return err
+}
+
+// ClaimBudgetAlert atomically records that an alert for (month, threshold) is
+// being sent and reports whether this caller won the claim. The conditional
+// WHERE — a different recorded month OR a strictly higher threshold — makes the
+// write fire exactly once per threshold per month, monotonically, even under
+// concurrent finishers or multiple API replicas. A new month resets the
+// recorded threshold to the crossed value.
+func (r *OrgRepository) ClaimBudgetAlert(orgID, month string, threshold int) (bool, error) {
+	res, err := r.db.Exec(`
+		UPDATE organizations
+		SET budget_alert_month = $2, budget_alert_threshold = $3, updated_at = NOW()
+		WHERE id = $1
+		  AND (COALESCE(budget_alert_month, '') <> $2 OR $3 > budget_alert_threshold)
+	`, orgID, month, threshold)
+	if err != nil {
+		return false, err
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return false, err
+	}
+	return n > 0, nil
 }
 
 // FindOrgByID returns an org, or nil.

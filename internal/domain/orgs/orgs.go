@@ -35,6 +35,10 @@ var (
 	// ErrPersonalOrgMembers flags an attempt to add members to a personal
 	// workspace — user-facing validation, like ErrInvalidRole.
 	ErrPersonalOrgMembers = errors.New("personal workspaces cannot have additional members")
+
+	// ErrInvalidBudget flags a negative monthly budget — user-facing
+	// validation (400), like ErrInvalidRole.
+	ErrInvalidBudget = errors.New("monthly budget must not be negative")
 )
 
 // Org is a tenant: a personal space or a company workspace.
@@ -48,6 +52,18 @@ type Org struct {
 	CreatedBy *string                `json:"created_by,omitempty"`
 	CreatedAt time.Time              `json:"created_at"`
 	UpdatedAt time.Time              `json:"updated_at"`
+
+	// MonthlyBudgetUSD is the workspace's monthly spend budget (issue #186).
+	// nil means no budget is set — the default, which leaves budget alerting
+	// and any soft-block disabled. Editable by org admins only.
+	MonthlyBudgetUSD *float64 `json:"monthly_budget_usd,omitempty"`
+	// BudgetAlertMonth (YYYY-MM, UTC) and BudgetAlertThreshold (0/80/100) are
+	// the dedupe state the budget-alert subscriber claims atomically: the last
+	// month an alert fired and the highest percent threshold already alerted
+	// that month. Surfaced so the UI can show the current alert state.
+	BudgetAlertMonth     string `json:"budget_alert_month,omitempty"`
+	BudgetAlertThreshold int    `json:"budget_alert_threshold,omitempty"`
+
 	// Role is the requesting user's role, populated by ListForUser.
 	Role string `json:"role,omitempty"`
 }
@@ -68,6 +84,15 @@ type Member struct {
 type Repository interface {
 	SaveOrg(o *Org) error
 	UpdateOrg(o *Org) error
+	// SetBudget writes only monthly_budget_usd (nil clears it), leaving the
+	// alert-dedupe columns untouched so it never races the alert claim.
+	SetBudget(orgID string, budget *float64) error
+	// ClaimBudgetAlert atomically records that an alert for (month, threshold)
+	// is being sent, and reports whether THIS caller won the claim. It writes
+	// only when the row's recorded month differs or the new threshold is
+	// higher than the recorded one, so an alert fires exactly once per
+	// threshold per month even under concurrent finishers or replicas.
+	ClaimBudgetAlert(orgID, month string, threshold int) (bool, error)
 	FindOrgByID(id string) (*Org, error)
 	ListOrgsForUser(userID string) ([]*Org, error)
 	FindPersonalOrgForUser(userID string) (*Org, error)
@@ -92,6 +117,12 @@ type Service interface {
 	// ListAll returns every organization id (trusted boot-time callers only).
 	ListAll() ([]string, error)
 	UpdateOrg(id string, name *string) (*Org, error)
+	// SetMonthlyBudget sets (or clears, with nil) the workspace's monthly
+	// spend budget. Rejects a negative amount with ErrInvalidBudget.
+	SetMonthlyBudget(id string, budget *float64) (*Org, error)
+	// ClaimBudgetAlert is the atomic dedupe claim used by the budget-alert
+	// subscriber; see Repository.ClaimBudgetAlert.
+	ClaimBudgetAlert(orgID, month string, threshold int) (bool, error)
 
 	AddMember(orgID, userID, role string) error
 	RemoveMember(orgID, userID string) error
@@ -212,6 +243,31 @@ func (s *DefaultService) UpdateOrg(id string, name *string) (*Org, error) {
 		return nil, err
 	}
 	return org, nil
+}
+
+// SetMonthlyBudget sets or clears (nil) the workspace's monthly spend budget.
+// The write only touches monthly_budget_usd; the alert-dedupe columns are left
+// to the atomic ClaimBudgetAlert path. A negative amount is rejected.
+func (s *DefaultService) SetMonthlyBudget(id string, budget *float64) (*Org, error) {
+	if budget != nil && *budget < 0 {
+		return nil, ErrInvalidBudget
+	}
+	org, err := s.Get(id)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.repo.SetBudget(id, budget); err != nil {
+		return nil, err
+	}
+	org.MonthlyBudgetUSD = budget
+	org.UpdatedAt = time.Now()
+	return org, nil
+}
+
+// ClaimBudgetAlert delegates the atomic per-threshold-per-month dedupe claim
+// to the repository (see Repository.ClaimBudgetAlert).
+func (s *DefaultService) ClaimBudgetAlert(orgID, month string, threshold int) (bool, error) {
+	return s.repo.ClaimBudgetAlert(orgID, month, threshold)
 }
 
 func validOrgRole(role string) bool {

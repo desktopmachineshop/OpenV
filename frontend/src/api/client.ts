@@ -834,6 +834,12 @@ export interface Org {
   plan: string;
   role: 'admin' | 'member';
   created_at: string;
+  // Monthly spend budget (issue #186). null/undefined = no budget set.
+  monthly_budget_usd?: number | null;
+  // Last budget-alert dedupe state (YYYY-MM and the highest % threshold
+  // already alerted that month); present only once an alert has fired.
+  budget_alert_month?: string;
+  budget_alert_threshold?: number;
 }
 
 export interface OrgMember {
@@ -934,6 +940,8 @@ export interface OrgUsageSummary {
   totals: OrgUsageTotals;
   by_agent: OrgAgentUsage[];
   by_day: OrgDailyUsage[];
+  // Current calendar month spend (UTC), what the budget bar measures against.
+  month_to_date_cost_usd: number;
 }
 
 export const orgsAPI = {
