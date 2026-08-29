@@ -106,6 +106,30 @@ in the variables, then let both services deploy.
   the browser console means `CORS_ORIGIN` does not exactly match the
   frontend origin.
 
+## Release pipeline
+
+Railway auto-deploys every push to the branch each service is connected to.
+Connected to `master`, that means every merged PR rebuilds the live product.
+To decouple shipping from merging, both services connect to the **`release`**
+branch instead:
+
+- `release` only ever fast-forwards to `master` — it carries no commits of
+  its own.
+- Merges to `master` run CI as usual but deploy nothing.
+- To ship: run the **Promote to release** workflow from the GitHub Actions
+  tab (`.github/workflows/promote-release.yml`). It refuses to promote while
+  any check on the master head is failing or still running, then
+  fast-forwards `release`, and Railway deploys that push.
+- Rollback: `git push origin <known-good-sha>:release --force-with-lease`
+  redeploys an earlier build (the API's schema migrations are forward-only,
+  so only roll back across releases without new migrations), or use
+  Railway's per-service deployment history to redeploy a previous image.
+
+Set each Railway service's **Settings → Source → Branch** to `release`
+(create the branch first: `git push origin master:release`). The
+promotion workflow needs no Railway-side configuration — Railway just sees
+a normal push to the connected branch.
+
 ## Notes and limitations on Railway
 
 - **Hosted runners are unavailable** (`HOSTED_RUNNERS=off`): the API

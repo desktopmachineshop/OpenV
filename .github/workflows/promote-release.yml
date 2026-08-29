@@ -1,0 +1,52 @@
+# Release pipeline: Railway deploys the `release` branch, not master
+# (docs/railway.md#release-pipeline). Merges to master therefore never touch
+# the live product. To ship what's on master, run this workflow from the
+# Actions tab — it fast-forwards `release` to master, and Railway's GitHub
+# integration picks up the push and deploys.
+#
+# Guard rails:
+# - refuses to promote if any check run on the master head is failing or
+#   still in progress (master's own CI gates every promotion)
+# - the push is a plain fast-forward; if `release` somehow has commits that
+#   master lacks, the push is rejected instead of overwriting them
+
+name: Promote to release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  checks: read
+
+jobs:
+  promote:
+    name: Fast-forward release to master
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: master
+          fetch-depth: 0
+
+      - name: Verify master CI is green
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          sha=$(git rev-parse HEAD)
+          echo "Promoting master commit $sha"
+          runs=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${sha}/check-runs" \
+            --jq '.check_runs | length')
+          if [ "$runs" = "0" ]; then
+            echo "No check runs found on master head — refusing to promote." >&2
+            exit 1
+          fi
+          not_green=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${sha}/check-runs" \
+            --jq '[.check_runs[] | select(.conclusion != "success" and .conclusion != "neutral" and .conclusion != "skipped")] | map(.name) | join(", ")')
+          if [ -n "$not_green" ]; then
+            echo "Checks not green on master head: $not_green" >&2
+            exit 1
+          fi
+
+      - name: Push release
+        run: git push origin HEAD:release
