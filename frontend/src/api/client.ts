@@ -705,6 +705,13 @@ export interface AgentRun {
   tokens_in: number;
   tokens_out: number;
   cost_usd?: number | null;
+  // Reproducibility snapshot (issue #216): the agent identity captured at
+  // launch — the definition's content hash, model, and reasoning effort — so a
+  // finished run stays self-describing even after the agent is later edited.
+  // Blank on runs launched before the feature existed.
+  agent_content_hash?: string;
+  agent_model?: string;
+  agent_effort?: string;
   started_at?: string | null;
   finished_at?: string | null;
   created_at: string;
