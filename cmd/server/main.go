@@ -125,13 +125,12 @@ func main() {
 		fatal("failed to connect to database", err)
 	}
 	defer db.Close()
-	if err := postgres.Migrate(db); err != nil {
-		fatal("failed to migrate schema", err)
-	}
-	// Boot-time idempotent data migration; stays outside the numbered
-	// ledger because it guards itself and touches the agents directory.
-	if err := postgres.BackfillOrgs(db, agentsDir); err != nil {
-		fatal("failed to backfill organizations", err)
+	// Schema migration plus the idempotent org backfill, serialized across
+	// concurrently booting processes by one session-level advisory lock. The
+	// backfill stays outside the numbered ledger because it guards itself
+	// and touches the agents directory.
+	if err := postgres.MigrateAndBackfill(db, agentsDir); err != nil {
+		fatal("failed to migrate database", err)
 	}
 
 	// Repositories.

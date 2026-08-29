@@ -1,8 +1,10 @@
 package postgres
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
+	"strings"
 )
 
 // This file implements the numbered schema-migration ledger (issue #38).
@@ -28,8 +30,9 @@ import (
 //
 // BackfillOrgs / PromoteOrgColumns intentionally stay outside the ledger as
 // boot-time idempotent data-migration steps (they guard themselves and
-// depend on runtime state such as the agents directory); see
-// cmd/server/main.go.
+// depend on runtime state such as the agents directory), but they run under
+// the same boot advisory lock via MigrateAndBackfill so concurrent boots
+// cannot interleave with them.
 
 // Migration is one numbered schema change.
 type Migration struct {
@@ -58,16 +61,91 @@ type Migration struct {
 // reorder, or edit an entry that has shipped.
 var migrations = []Migration{
 	{Version: 1, Name: "baseline", RunDB: InitSchema},
-	// {Version: 2, Name: "add_widgets_table", Run: func(tx *sql.Tx) error {
-	//     _, err := tx.Exec(`CREATE TABLE widgets (...)`)
-	//     return err
-	// }},
+
+	// 0002: at most one personal organization per user. Personal orgs are
+	// always created with created_by = the owning user (signup's
+	// EnsurePersonalOrg and the boot backfill both do), so a partial unique
+	// index on created_by closes the check-then-insert races in both paths.
+	// NULL created_by rows (possible on hand-edited data) are not
+	// constrained — Postgres treats NULLs as distinct — which is the safe
+	// direction. Existing duplicates would make CREATE INDEX fail with an
+	// opaque error, so the migration checks first and fails with an
+	// actionable message; the transaction rolls back and the ledger stays
+	// unapplied, so a fixed database retries cleanly on the next boot.
+	{Version: 2, Name: "unique_personal_org_per_user", Run: func(tx *sql.Tx) error {
+		rows, err := tx.Query(`
+			SELECT created_by::text FROM organizations
+			WHERE org_type = 'personal' AND created_by IS NOT NULL
+			GROUP BY created_by HAVING COUNT(*) > 1
+		`)
+		if err != nil {
+			return err
+		}
+		var dupes []string
+		for rows.Next() {
+			var userID string
+			if err := rows.Scan(&userID); err != nil {
+				rows.Close()
+				return err
+			}
+			dupes = append(dupes, userID)
+		}
+		rows.Close()
+		if err := rows.Err(); err != nil {
+			return err
+		}
+		if len(dupes) > 0 {
+			return fmt.Errorf(
+				"cannot enforce one personal organization per user: user(s) %s own multiple personal organizations; merge or delete the duplicates, then restart",
+				strings.Join(dupes, ", "))
+		}
+		_, err = tx.Exec(`
+			CREATE UNIQUE INDEX idx_organizations_personal_owner
+			ON organizations(created_by) WHERE org_type = 'personal'
+		`)
+		return err
+	}},
 }
 
 // migrationLockKey is the pg_advisory_xact_lock key that serializes
 // concurrent migration attempts (e.g. two API replicas booting at once).
 // Arbitrary but stable: ASCII "openv" as an int64.
 const migrationLockKey int64 = 0x6f70656e76
+
+// bootLockKey is the session-level advisory lock key that serializes the
+// ENTIRE boot sequence — ledger creation, the re-run baseline, numbered
+// migrations, and the org backfill (see withBootLock). Two processes booting
+// at once otherwise race the non-transactional parts: concurrent
+// CREATE TABLE IF NOT EXISTS can fail on catalog uniqueness, and the
+// backfill's check-then-insert can mint duplicate personal orgs.
+//
+// The key MUST differ from migrationLockKey: session- and transaction-level
+// advisory locks share one lock space, so if applyOnce requested the same
+// key the boot holds at session level (on a different pooled connection), it
+// would deadlock against itself.
+const bootLockKey int64 = 0x6f70656e7601 // "openv" + 0x01
+
+// withBootLock takes bootLockKey as a session-level advisory lock on a
+// dedicated connection, runs fn (whose statements may use any pooled
+// connection — the lock serializes processes, not statements), and unlocks.
+// pg_advisory_lock blocks until the lock is free, so concurrent booters
+// simply queue.
+func withBootLock(db *sql.DB, fn func() error) error {
+	ctx := context.Background()
+	conn, err := db.Conn(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to acquire boot-lock connection: %w", err)
+	}
+	defer conn.Close()
+	if _, err := conn.ExecContext(ctx, `SELECT pg_advisory_lock($1)`, bootLockKey); err != nil {
+		return fmt.Errorf("failed to take boot advisory lock: %w", err)
+	}
+	defer func() {
+		// Best effort: closing the connection also releases session locks.
+		_, _ = conn.ExecContext(ctx, `SELECT pg_advisory_unlock($1)`, bootLockKey)
+	}()
+	return fn()
+}
 
 const createLedgerSQL = `
 CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -80,8 +158,32 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
 // Migrate brings the database to the current schema version: it creates the
 // ledger table if needed, re-runs the idempotent 0001 baseline, and applies
 // any unapplied numbered migrations in order, each exactly once in its own
-// transaction. It is the boot-time entry point (cmd/server/main.go).
+// transaction. The whole sequence runs under the boot advisory lock so
+// concurrent booting processes serialize instead of racing the
+// non-transactional baseline.
 func Migrate(db *sql.DB) error {
+	return withBootLock(db, func() error { return migrateLocked(db) })
+}
+
+// MigrateAndBackfill is the boot-time entry point (cmd/server/main.go): the
+// schema migration plus the idempotent org backfill, all under one hold of
+// the boot advisory lock so a concurrently booting process cannot interleave
+// with any part of the sequence (issue #144: BackfillOrgs's personal-org
+// check-then-insert raced under concurrent boots).
+func MigrateAndBackfill(db *sql.DB, agentsDir string) error {
+	return withBootLock(db, func() error {
+		if err := migrateLocked(db); err != nil {
+			return err
+		}
+		if err := BackfillOrgs(db, agentsDir); err != nil {
+			return fmt.Errorf("org backfill: %w", err)
+		}
+		return nil
+	})
+}
+
+// migrateLocked is Migrate's body; callers hold the boot advisory lock.
+func migrateLocked(db *sql.DB) error {
 	if _, err := db.Exec(createLedgerSQL); err != nil {
 		return fmt.Errorf("failed to create schema_migrations table: %w", err)
 	}

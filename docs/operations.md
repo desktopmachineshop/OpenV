@@ -78,6 +78,13 @@ Notes:
 
 - The overlay terminates plain HTTP. For TLS put a reverse proxy (Caddy,
   Traefik, nginx) in front of the frontend and API ports.
+- When the API does sit behind a reverse proxy, also set `OPENV_TRUST_PROXY=1`
+  on the api service so per-IP rate limiting on the public interview endpoints
+  keys on the real client address from `X-Forwarded-For`/`X-Real-IP` (make
+  sure the proxy overwrites those headers). Leave it unset when clients reach
+  the API directly: the headers are client-supplied, and trusting them would
+  let anyone dodge per-IP limits — or exhaust another client's bucket — by
+  spoofing a header.
 - `REACT_APP_API_URL` is a build argument: the React bundle is static, so the
   frontend image must be rebuilt when it changes.
 - If you switch an existing deployment from the dev Postgres password, the
