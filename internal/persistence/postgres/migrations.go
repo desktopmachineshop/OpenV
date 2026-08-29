@@ -145,6 +145,21 @@ var migrations = []Migration{
 		return err
 	}},
 
+	// 0005: suspect links (issue #131). When an artifact's content changes,
+	// the links touching it can no longer be trusted to still describe a
+	// valid relationship, so they are flagged suspect until a human either
+	// confirms each link explicitly or the artifact is approved again
+	// (review implies reconfirmation). Existing rows backfill to FALSE:
+	// pre-feature links were never invalidated by a tracked content change,
+	// so treating them as trusted is the only defensible default.
+	{Version: 5, Name: "links_suspect", Run: func(tx *sql.Tx) error {
+		_, err := tx.Exec(`
+			ALTER TABLE links
+			ADD COLUMN suspect BOOLEAN NOT NULL DEFAULT FALSE
+		`)
+		return err
+	}},
+
 	// 0006: in-app notifications (issue #132). One row per recipient per
 	// event; entity_ref is an opaque jsonb pointer the frontend uses to
 	// navigate ({"kind":"run","run_id":...}). The partial index serves the

@@ -2,6 +2,7 @@ package artifacts
 
 import (
 	"errors"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -176,14 +177,46 @@ type Repository interface {
 	SearchInProjects(projectIDs []string, query string, limit int) ([]*SearchHit, error)
 }
 
+// LinkSuspector flags and clears link suspicion for an artifact (issue
+// #131). Implemented by links.DefaultService; declared here so the artifact
+// service can drive suspicion from its update path without importing the
+// links package.
+type LinkSuspector interface {
+	// MarkArtifactLinksSuspect flags every live link touching the artifact.
+	MarkArtifactLinksSuspect(artifactID string) error
+	// ClearArtifactLinksSuspicion clears the flag on those links.
+	ClearArtifactLinksSuspicion(artifactID string) error
+}
+
 // DefaultService implements the Service interface
 type DefaultService struct {
 	repo Repository
+	// linkSuspector, when set, is notified of content changes (mark) and
+	// approvals (clear). Optional: nil disables suspicion tracking.
+	linkSuspector LinkSuspector
 }
 
 // NewDefaultService creates a new artifact service
 func NewDefaultService(repo Repository) *DefaultService {
 	return &DefaultService{repo: repo}
+}
+
+// SetLinkSuspector wires the link service in after construction (both
+// services need each other; links already back-references artifacts).
+func (s *DefaultService) SetLinkSuspector(ls LinkSuspector) {
+	s.linkSuspector = ls
+}
+
+// markLinksSuspect flags the artifact's live links after a content change.
+// Failure is logged, not returned: the artifact write already committed,
+// and suspicion is advisory review metadata, not part of the write itself.
+func (s *DefaultService) markLinksSuspect(artifactID string) {
+	if s.linkSuspector == nil {
+		return
+	}
+	if err := s.linkSuspector.MarkArtifactLinksSuspect(artifactID); err != nil {
+		slog.Warn("artifacts: failed to mark links suspect", "artifact_id", artifactID, "error", err)
+	}
 }
 
 // CreateArtifact creates a new artifact
@@ -208,7 +241,20 @@ func (s *DefaultService) GetArtifactsByProject(projectID string) ([]*Artifact, e
 	return s.repo.FindByProjectID(projectID)
 }
 
-// UpdateArtifact updates an artifact
+// UpdateArtifact updates an artifact.
+//
+// Attributes contract (issue #125): a nil req.Attributes means "no change" —
+// the current attributes carry over to the new version untouched. An
+// explicit non-nil map (including an empty one) REPLACES the attributes
+// wholesale. Callers that decode JSON get this for free: an omitted or null
+// "attributes" field unmarshals to nil, {} to an empty map.
+//
+// Suspect links (issue #131): when the update changes the artifact's
+// CONTENT — type, title, or body — every live link touching it is flagged
+// suspect until confirmed or the artifact is approved again. Structural
+// moves (parent/sort order) and attribute-only writes (e.g. the
+// links_snapshot refresh in autoVersionLinkedArtifacts) do not change what
+// the artifact says, so they leave link suspicion alone.
 func (s *DefaultService) UpdateArtifact(id string, req UpdateArtifactRequest) (*Artifact, error) {
 	artifact, err := s.repo.FindByID(id)
 	if err != nil {
@@ -222,11 +268,17 @@ func (s *DefaultService) UpdateArtifact(id string, req UpdateArtifactRequest) (*
 		parentChanged = true
 	}
 
+	contentChanged := artifact.Type != req.Type ||
+		artifact.Title != req.Title ||
+		artifact.Body != req.Body
+
 	artifact.ParentID = req.ParentID
 	artifact.Type = req.Type
 	artifact.Title = req.Title
 	artifact.Body = req.Body
-	artifact.Attributes = req.Attributes
+	if req.Attributes != nil {
+		artifact.Attributes = req.Attributes
+	}
 
 	// Status policy for content edits: the new version keeps the current
 	// status, except that editing an APPROVED artifact demotes the new
@@ -249,12 +301,24 @@ func (s *DefaultService) UpdateArtifact(id string, req UpdateArtifactRequest) (*
 		}
 		artifact.SortOrder = order
 	}
+	// Every update is a new temporal version: stamp ValidFrom = now so the
+	// archived row's validity interval closes exactly where the new row's
+	// opens (issue #161 — the repository archives the old row with
+	// valid_to = this ValidFrom; carrying the stale ValidFrom forward gave
+	// the archived row a zero-length interval and the new row a validity
+	// window reaching back before it existed).
+	now := time.Now()
 	artifact.Version++
-	artifact.UpdatedAt = time.Now()
+	artifact.ValidFrom = now
+	artifact.UpdatedAt = now
 
 	err = s.repo.Update(artifact)
 	if err != nil {
 		return nil, err
+	}
+
+	if contentChanged {
+		s.markLinksSuspect(id)
 	}
 
 	return artifact, nil
@@ -342,6 +406,12 @@ func (s *DefaultService) RestoreArtifactVersion(id string, version int) (*Artifa
 	err = s.repo.Update(restored)
 	if err != nil {
 		return nil, err
+	}
+
+	// A restore is a content edit like any other: if it changed what the
+	// artifact says, its links become suspect (issue #131).
+	if current.Type != restored.Type || current.Title != restored.Title || current.Body != restored.Body {
+		s.markLinksSuspect(id)
 	}
 
 	return restored, nil

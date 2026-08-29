@@ -26,8 +26,8 @@ func (r *LinkRepository) Save(link *links.Link) error {
 	}
 
 	query := `
-		INSERT INTO links (id, from_id, to_id, type, attributes, version, valid_from, valid_to, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		INSERT INTO links (id, from_id, to_id, type, suspect, attributes, version, valid_from, valid_to, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 	`
 
 	_, err = r.db.Exec(
@@ -36,6 +36,7 @@ func (r *LinkRepository) Save(link *links.Link) error {
 		link.FromID,
 		link.ToID,
 		link.Type,
+		link.Suspect,
 		attributesJSON,
 		link.Version,
 		link.ValidFrom,
@@ -53,7 +54,7 @@ func (r *LinkRepository) FindByID(id string) (*links.Link, error) {
 	var attributesJSON []byte
 
 	query := `
-		SELECT id, from_id, to_id, type, attributes, version, valid_from, valid_to, created_at, updated_at
+		SELECT id, from_id, to_id, type, suspect, attributes, version, valid_from, valid_to, created_at, updated_at
 		FROM links
 		WHERE id = $1 AND valid_to IS NULL
 	`
@@ -63,6 +64,7 @@ func (r *LinkRepository) FindByID(id string) (*links.Link, error) {
 		&link.FromID,
 		&link.ToID,
 		&link.Type,
+		&link.Suspect,
 		&attributesJSON,
 		&link.Version,
 		&link.ValidFrom,
@@ -91,7 +93,7 @@ func (r *LinkRepository) FindByID(id string) (*links.Link, error) {
 // FindByFromID retrieves all current links from an artifact (valid_to IS NULL)
 func (r *LinkRepository) FindByFromID(fromID string) ([]*links.Link, error) {
 	query := `
-		SELECT id, from_id, to_id, type, attributes, version, created_at, updated_at
+		SELECT id, from_id, to_id, type, suspect, attributes, version, created_at, updated_at
 		FROM links
 		WHERE from_id = $1 AND valid_to IS NULL
 		ORDER BY created_at DESC
@@ -113,6 +115,7 @@ func (r *LinkRepository) FindByFromID(fromID string) ([]*links.Link, error) {
 			&link.FromID,
 			&link.ToID,
 			&link.Type,
+			&link.Suspect,
 			&attributesJSON,
 			&link.Version,
 			&link.CreatedAt,
@@ -139,7 +142,7 @@ func (r *LinkRepository) FindByFromID(fromID string) ([]*links.Link, error) {
 // FindByToID retrieves all current links to an artifact (valid_to IS NULL)
 func (r *LinkRepository) FindByToID(toID string) ([]*links.Link, error) {
 	query := `
-		SELECT id, from_id, to_id, type, attributes, version, created_at, updated_at
+		SELECT id, from_id, to_id, type, suspect, attributes, version, created_at, updated_at
 		FROM links
 		WHERE to_id = $1 AND valid_to IS NULL
 		ORDER BY created_at DESC
@@ -161,6 +164,7 @@ func (r *LinkRepository) FindByToID(toID string) ([]*links.Link, error) {
 			&link.FromID,
 			&link.ToID,
 			&link.Type,
+			&link.Suspect,
 			&attributesJSON,
 			&link.Version,
 			&link.CreatedAt,
@@ -187,7 +191,7 @@ func (r *LinkRepository) FindByToID(toID string) ([]*links.Link, error) {
 // FindAll retrieves all current links in a project
 func (r *LinkRepository) FindAll(projectID string) ([]*links.Link, error) {
 	query := `
-		SELECT l.id, l.from_id, l.to_id, l.type, l.attributes, l.version, l.created_at, l.updated_at
+		SELECT l.id, l.from_id, l.to_id, l.type, l.suspect, l.attributes, l.version, l.created_at, l.updated_at
 		FROM links l
 		INNER JOIN artifacts a ON l.from_id = a.id AND a.valid_to IS NULL
 		WHERE a.project_id = $1 AND l.valid_to IS NULL
@@ -210,6 +214,7 @@ func (r *LinkRepository) FindAll(projectID string) ([]*links.Link, error) {
 			&link.FromID,
 			&link.ToID,
 			&link.Type,
+			&link.Suspect,
 			&attributesJSON,
 			&link.Version,
 			&link.CreatedAt,
@@ -242,19 +247,39 @@ func (r *LinkRepository) Update(link *links.Link) error {
 
 	query := `
 		UPDATE links
-		SET type = $1, attributes = $2, version = $3, updated_at = $4
-		WHERE id = $5
+		SET type = $1, suspect = $2, attributes = $3, version = $4, updated_at = $5
+		WHERE id = $6
 	`
 
 	_, err = r.db.Exec(
 		query,
 		link.Type,
+		link.Suspect,
 		attributesJSON,
 		link.Version,
 		link.UpdatedAt,
 		link.ID,
 	)
 
+	return err
+}
+
+// SetSuspect sets the suspect flag on one live link.
+func (r *LinkRepository) SetSuspect(id string, suspect bool) error {
+	query := `UPDATE links SET suspect = $1, updated_at = NOW() WHERE id = $2 AND valid_to IS NULL`
+	_, err := r.db.Exec(query, suspect, id)
+	return err
+}
+
+// SetSuspectByArtifact sets the suspect flag on every live link touching
+// the given artifact (either endpoint). updated_at is deliberately left
+// untouched: suspicion is derived review metadata, not a link edit.
+func (r *LinkRepository) SetSuspectByArtifact(artifactID string, suspect bool) error {
+	query := `
+		UPDATE links SET suspect = $1
+		WHERE (from_id = $2 OR to_id = $2) AND valid_to IS NULL AND suspect <> $1
+	`
+	_, err := r.db.Exec(query, suspect, artifactID)
 	return err
 }
 
@@ -268,7 +293,7 @@ func (r *LinkRepository) Delete(id string) error {
 // FindByFromIDForVersion retrieves links from an artifact at a specific version
 func (r *LinkRepository) FindByFromIDForVersion(fromID string, version int) ([]*links.Link, error) {
 	query := `
-		SELECT DISTINCT l.id, l.from_id, l.to_id, l.type, l.attributes, l.version, l.created_at, l.updated_at
+		SELECT DISTINCT l.id, l.from_id, l.to_id, l.type, l.suspect, l.attributes, l.version, l.created_at, l.updated_at
 		FROM links l
 		WHERE l.from_id = $1
 		AND EXISTS (
@@ -296,6 +321,7 @@ func (r *LinkRepository) FindByFromIDForVersion(fromID string, version int) ([]*
 			&link.FromID,
 			&link.ToID,
 			&link.Type,
+			&link.Suspect,
 			&attributesJSON,
 			&link.Version,
 			&link.CreatedAt,
@@ -323,7 +349,7 @@ func (r *LinkRepository) FindByFromIDForVersion(fromID string, version int) ([]*
 // FindByToIDForVersion retrieves links to an artifact at a specific version
 func (r *LinkRepository) FindByToIDForVersion(toID string, version int) ([]*links.Link, error) {
 	query := `
-		SELECT DISTINCT l.id, l.from_id, l.to_id, l.type, l.attributes, l.version, l.created_at, l.updated_at
+		SELECT DISTINCT l.id, l.from_id, l.to_id, l.type, l.suspect, l.attributes, l.version, l.created_at, l.updated_at
 		FROM links l
 		WHERE l.to_id = $1
 		AND EXISTS (
@@ -351,6 +377,7 @@ func (r *LinkRepository) FindByToIDForVersion(toID string, version int) ([]*link
 			&link.FromID,
 			&link.ToID,
 			&link.Type,
+			&link.Suspect,
 			&attributesJSON,
 			&link.Version,
 			&link.CreatedAt,

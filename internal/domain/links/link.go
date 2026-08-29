@@ -11,10 +11,16 @@ import (
 
 // Link represents a traceability link between two artifacts
 type Link struct {
-	ID         string                 `json:"id"`
-	FromID     string                 `json:"from_id"`
-	ToID       string                 `json:"to_id"`
-	Type       string                 `json:"type"` // verifies, satisfies, mitigates, implements, etc.
+	ID     string `json:"id"`
+	FromID string `json:"from_id"`
+	ToID   string `json:"to_id"`
+	Type   string `json:"type"` // verifies, satisfies, mitigates, implements, etc.
+	// Suspect marks a link whose meaning may no longer hold because the
+	// content of an artifact it touches changed after the link was made
+	// (issue #131). It is cleared by an explicit per-link confirmation
+	// (PUT /api/v1/links/{id}/confirm) or automatically when the artifact
+	// is approved again — review implies reconfirming its traceability.
+	Suspect    bool                   `json:"suspect"`
 	Attributes map[string]interface{} `json:"attributes"`
 	Version    int                    `json:"version"`
 	ValidFrom  time.Time              `json:"valid_from"`
@@ -65,6 +71,15 @@ type Service interface {
 	DeleteLink(id string) error
 	GetAllLinks(projectID string) ([]*Link, error)
 	SetArtifactService(artifactService interface{}) // Allows link service to trigger artifact versioning
+	// ConfirmLink clears the suspect flag on one link: a human has re-read
+	// the changed artifact and vouches that the link still holds.
+	ConfirmLink(id string) (*Link, error)
+	// MarkArtifactLinksSuspect flags every live link touching the artifact
+	// as suspect (called when the artifact's content changes).
+	MarkArtifactLinksSuspect(artifactID string) error
+	// ClearArtifactLinksSuspicion clears the suspect flag on every live
+	// link touching the artifact (called when the artifact is approved).
+	ClearArtifactLinksSuspicion(artifactID string) error
 }
 
 // Repository defines persistence operations for links
@@ -79,6 +94,11 @@ type Repository interface {
 	Update(link *Link) error
 	Delete(id string) error
 	RecordLinkForArtifactVersion(linkID string, artifactID string, artifactVersion int) error
+	// SetSuspect sets the suspect flag on one live link.
+	SetSuspect(id string, suspect bool) error
+	// SetSuspectByArtifact sets the suspect flag on every live link whose
+	// from_id or to_id is the given artifact.
+	SetSuspectByArtifact(artifactID string, suspect bool) error
 }
 
 // DefaultService implements the Service interface
@@ -292,4 +312,32 @@ func (s *DefaultService) DeleteLink(id string) error {
 // GetAllLinks retrieves all links in a project
 func (s *DefaultService) GetAllLinks(projectID string) ([]*Link, error) {
 	return s.repo.FindAll(projectID)
+}
+
+// ConfirmLink clears the suspect flag on one link and returns it.
+func (s *DefaultService) ConfirmLink(id string) (*Link, error) {
+	link, err := s.repo.FindByID(id)
+	if err != nil {
+		return nil, err
+	}
+	if link.Suspect {
+		if err := s.repo.SetSuspect(id, false); err != nil {
+			return nil, err
+		}
+		link.Suspect = false
+	}
+	return link, nil
+}
+
+// MarkArtifactLinksSuspect flags every live link touching the artifact.
+// Also satisfies artifacts.LinkSuspector so the artifact service can mark
+// links suspect on content changes without an import cycle.
+func (s *DefaultService) MarkArtifactLinksSuspect(artifactID string) error {
+	return s.repo.SetSuspectByArtifact(artifactID, true)
+}
+
+// ClearArtifactLinksSuspicion clears the suspect flag on every live link
+// touching the artifact (approval implies reconfirmation, issue #131).
+func (s *DefaultService) ClearArtifactLinksSuspicion(artifactID string) error {
+	return s.repo.SetSuspectByArtifact(artifactID, false)
 }

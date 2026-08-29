@@ -178,6 +178,9 @@ func main() {
 	artifactService := artifacts.NewDefaultService(artifactRepo)
 	linkService := links.NewDefaultService(linkRepo)
 	linkService.SetArtifactService(artifactService)
+	// Content changes mark an artifact's links suspect; approval clears
+	// them (issue #131).
+	artifactService.SetLinkSuspector(linkService)
 	projectService := projects.NewService(projectRepo)
 	attachmentService := attachments.NewDefaultService(attachmentRepo)
 	baselineService := baselines.NewService(baselineRepo)
