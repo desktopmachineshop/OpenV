@@ -22,8 +22,19 @@ type searchProjectService struct {
 	list []*projects.Project
 }
 
-func (f *searchProjectService) ListProjects() ([]*projects.Project, error) {
-	return f.list, nil
+// ListProjectsByOrg mirrors the SQL fail-closed contract: an empty orgID
+// returns nothing, otherwise only the projects in that workspace.
+func (f *searchProjectService) ListProjectsByOrg(orgID string) ([]*projects.Project, error) {
+	if orgID == "" {
+		return nil, nil
+	}
+	var out []*projects.Project
+	for _, p := range f.list {
+		if p.OrgID == orgID {
+			out = append(out, p)
+		}
+	}
+	return out, nil
 }
 
 type searchArtifactService struct {

@@ -40,22 +40,18 @@ func (h *Handler) GlobalSearch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	projectList, err := h.projectService.ListProjects()
-	if err != nil {
-		respondInternal(w, r, "failed to resolve searchable projects", err)
+	// Scope to the active workspace in SQL, and fail closed: an unresolved
+	// active org (empty) searches nothing rather than every tenant's projects.
+	activeOrg := ActiveOrg(r)
+	if activeOrg == "" {
+		json.NewEncoder(w).Encode([]*artifacts.SearchHit{})
 		return
 	}
 
-	// Scope to the active workspace.
-	activeOrg := ActiveOrg(r)
-	if activeOrg != "" {
-		inOrg := projectList[:0]
-		for _, p := range projectList {
-			if p.OrgID == activeOrg {
-				inOrg = append(inOrg, p)
-			}
-		}
-		projectList = inOrg
+	projectList, err := h.projectService.ListProjectsByOrg(activeOrg)
+	if err != nil {
+		respondInternal(w, r, "failed to resolve searchable projects", err)
+		return
 	}
 
 	// Plain members only search projects they can access.
