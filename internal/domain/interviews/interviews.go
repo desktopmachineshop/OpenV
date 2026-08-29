@@ -107,6 +107,11 @@ type Repository interface {
 
 	SaveSession(s *Session) error
 	UpdateSession(s *Session) error
+	// SetParticipantName fills the participant name on a still-anonymous
+	// session with a targeted single-column write (only when the stored name is
+	// NULL or empty), so a name backfill can never resurrect a stale
+	// status/summary/ended_at over a concurrent CompleteSession.
+	SetParticipantName(sessionID, name string) error
 	FindSessionByID(id string) (*Session, error)
 	FindActiveSessionByInvite(inviteID string) (*Session, error) // nil, nil when none
 	ListSessionsByInterview(interviewID string) ([]*Session, error)
@@ -349,10 +354,14 @@ func (s *DefaultService) StartOrResumeSession(inviteID, interviewID, participant
 		// never overwrite a name already recorded. (#205)
 		name := strings.TrimSpace(participantName)
 		if name != "" && strings.TrimSpace(existing.ParticipantName) == "" {
-			existing.ParticipantName = name
-			if err := s.repo.UpdateSession(existing); err != nil {
+			// Targeted single-column write, not a full-row UpdateSession from
+			// this (possibly stale) read: a concurrent CompleteSession may have
+			// set status/summary/ended_at since we loaded `existing`, and a
+			// full-row update would revert them. (#212)
+			if err := s.repo.SetParticipantName(existing.ID, name); err != nil {
 				return nil, err
 			}
+			existing.ParticipantName = name
 		}
 		return existing, nil
 	}

@@ -40,6 +40,7 @@
   --accent-strong: #2980b9; /* hover / emphasis */
   --accent-alt: #3b82f6;
   --accent-text: #21618c;   /* readable blue text on tinted panels */
+  --accent-fg: #ffffff;     /* text/icons on an accent fill */
 
   /* Semantic colors */
   --success: #27ae60;
@@ -110,6 +111,7 @@
     --accent-strong: #63b3ea;
     --accent-alt: #5b93f7;
     --accent-text: #9ccdf2;
+    --accent-fg: #ffffff;
 
     --success: #2fbe6e;
     --success-bright: #43d283;
@@ -172,6 +174,7 @@
   --accent-strong: #63b3ea;
   --accent-alt: #5b93f7;
   --accent-text: #9ccdf2;
+  --accent-fg: #ffffff;
 
   --success: #2fbe6e;
   --success-bright: #43d283;

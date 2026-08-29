@@ -7,10 +7,10 @@ import "testing"
 // only the session methods StartOrResumeSession touches need bodies.
 type sessionRepo struct {
 	Repository
-	active  *Session
-	saved   *Session
-	updated *Session
-	updates int
+	active      *Session
+	saved       *Session
+	updatedName string
+	updates     int
 }
 
 func (r *sessionRepo) FindActiveSessionByInvite(inviteID string) (*Session, error) {
@@ -23,10 +23,15 @@ func (r *sessionRepo) SaveSession(s *Session) error {
 	return nil
 }
 
-func (r *sessionRepo) UpdateSession(s *Session) error {
+// SetParticipantName is the targeted single-column backfill write (#212). The
+// backfill uses this rather than a full-row UpdateSession so a concurrent
+// CompleteSession's status/summary/ended_at cannot be reverted.
+func (r *sessionRepo) SetParticipantName(sessionID, name string) error {
 	r.updates++
-	r.updated = s
-	r.active = s
+	r.updatedName = name
+	if r.active != nil {
+		r.active.ParticipantName = name
+	}
 	return nil
 }
 
@@ -46,8 +51,8 @@ func TestStartOrResumeSessionBackfillsParticipantName(t *testing.T) {
 		if got.ParticipantName != "Ada" {
 			t.Fatalf("participant name = %q, want %q (trimmed)", got.ParticipantName, "Ada")
 		}
-		if repo.updates != 1 || repo.updated == nil || repo.updated.ParticipantName != "Ada" {
-			t.Fatalf("name not persisted via UpdateSession (updates=%d, updated=%+v)", repo.updates, repo.updated)
+		if repo.updates != 1 || repo.updatedName != "Ada" {
+			t.Fatalf("name not persisted via SetParticipantName (updates=%d, updatedName=%q)", repo.updates, repo.updatedName)
 		}
 	})
 
@@ -63,7 +68,7 @@ func TestStartOrResumeSessionBackfillsParticipantName(t *testing.T) {
 			t.Fatalf("participant name = %q, want it left as %q", got.ParticipantName, "Grace")
 		}
 		if repo.updates != 0 {
-			t.Fatalf("UpdateSession called %d times; must not touch a named session", repo.updates)
+			t.Fatalf("SetParticipantName called %d times; must not touch a named session", repo.updates)
 		}
 	})
 
@@ -75,7 +80,7 @@ func TestStartOrResumeSessionBackfillsParticipantName(t *testing.T) {
 			t.Fatalf("StartOrResumeSession: %v", err)
 		}
 		if repo.updates != 0 {
-			t.Fatalf("UpdateSession called %d times for a blank name", repo.updates)
+			t.Fatalf("SetParticipantName called %d times for a blank name", repo.updates)
 		}
 	})
 

@@ -421,6 +421,54 @@ func TestFinishDoesNotRetryNonRetryableClass(t *testing.T) {
 	}
 }
 
+// TestFinishDoesNotAutoRetryOrchestratedRuns: a run carrying a parent /
+// interview / automation / guided linkage is owned by that orchestrator, whose
+// RunFinished hook routes the failure. Auto-retrying here would orphan the new
+// run from its tree/session and let its elevated priority jump the queue only
+// to have the result discarded — so orchestrated runs never auto-retry even on
+// a retryable class.
+func TestFinishDoesNotAutoRetryOrchestratedRuns(t *testing.T) {
+	cases := []struct {
+		name  string
+		apply func(*Run)
+	}{
+		{"child", func(r *Run) { r.ParentRunID = strptr("parent-1"); r.Priority = PriorityChild }},
+		{"interview", func(r *Run) { r.InterviewSessionID = strptr("sess-1"); r.Priority = PriorityInterview }},
+		{"automation", func(r *Run) { r.AutomationID = strptr("auto-1") }},
+		{"guided", func(r *Run) { r.GuidedSessionID = strptr("guided-1") }},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			run := runningRun("r1", 1, 3)
+			tc.apply(run)
+			svc, repo := newRetryService(run)
+			// A retryable class that WOULD retry a top-level run.
+			if _, err := svc.Finish("r1", FinishRequest{Status: StatusFailed, ErrorClass: ErrorClassWorkerError}); err != nil {
+				t.Fatalf("Finish: %v", err)
+			}
+			if r := findRetryOf(repo, "r1"); r != nil {
+				t.Errorf("orchestrated run auto-retried: %+v", r)
+			}
+			if len(repo.runs) != 1 {
+				t.Errorf("orchestrated run produced %d runs, want 1 (no retry)", len(repo.runs))
+			}
+		})
+	}
+}
+
+// TestFinishAutoRetriesTopLevelRun: a plain user-launched run (no orchestration
+// linkage) with a retryable class still auto-retries — the guard added for
+// orchestrated runs must not suppress the ordinary case.
+func TestFinishAutoRetriesTopLevelRun(t *testing.T) {
+	svc, repo := newRetryService(runningRun("r1", 1, 3))
+	if _, err := svc.Finish("r1", FinishRequest{Status: StatusFailed, ErrorClass: ErrorClassWorkerError}); err != nil {
+		t.Fatalf("Finish: %v", err)
+	}
+	if findRetryOf(repo, "r1") == nil {
+		t.Error("top-level run with a retryable class did not auto-retry")
+	}
+}
+
 // TestFinishRespectsAutoRetryOptOut: with auto-retry disabled, even a
 // retryable failure simply stands.
 func TestFinishRespectsAutoRetryOptOut(t *testing.T) {
