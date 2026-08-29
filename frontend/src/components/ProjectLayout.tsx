@@ -68,6 +68,14 @@ export const ProjectLayout: React.FC = () => {
   // Deep link into a project from another workspace: silently switch the
   // active workspace when the project belongs to an org the user is in.
   // (If they aren't a member, the project fetch 403s and redirects above.)
+  //
+  // Child views can render (and fetch) before this switch resolves, so their
+  // first requests may still carry the previous workspace's X-Org-ID header.
+  // That is harmless for project-keyed endpoints — the backend authorizes
+  // those against the project itself and ignores the header — but any fetch
+  // of an org-scoped resource (agents, agent runs, automations, crews, org
+  // teams, events) must include activeOrgId in its effect deps so it refetches
+  // once the switch lands (issues #99/#111/#112).
   useEffect(() => {
     if (!project?.org_id || orgs.length === 0) return;
     if (project.org_id !== activeOrgId && orgs.some((o) => o.id === project.org_id)) {

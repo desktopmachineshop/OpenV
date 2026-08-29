@@ -16,6 +16,7 @@ import {
   vvAPI,
 } from '../api/client';
 import { apiErrorMessage } from '../api/errors';
+import { useAppStore } from '../state/store';
 
 const STATUS_OPTIONS = ['pass', 'fail', 'blocked', 'not-run'];
 
@@ -67,6 +68,7 @@ interface ResultRow {
 
 export const TestRunView: React.FC = () => {
   const { projectId, runId } = useParams<{ projectId: string; runId: string }>();
+  const activeOrgId = useAppStore((s) => s.activeOrgId);
   const [run, setRun] = useState<TestRun | null>(null);
   const [testCases, setTestCases] = useState<Artifact[]>([]);
   const [results, setResults] = useState<TestResult[]>([]);
@@ -109,10 +111,15 @@ export const TestRunView: React.FC = () => {
       .then((res) => {
         const list = res.data || [];
         setAgents(list);
-        setAgentSlug((prev) => prev || list[0]?.slug || '');
+        setAgentSlug((prev) => (prev && list.some((a) => a.slug === prev) ? prev : list[0]?.slug || ''));
       })
       .catch(() => setAgents([]));
-  }, []);
+    // activeOrgId: the agent roster is scoped by the X-Org-ID header the API
+    // client sends. On a cross-org deep link ProjectLayout switches the active
+    // workspace after this first fetch fired, so refetch when it changes —
+    // otherwise the "run with agent" picker offers the wrong workspace's
+    // agents (issue #112, same pattern as #111).
+  }, [activeOrgId]);
 
   const upsert = useCallback(
     async (testCaseId: string, status: string, notes: string) => {
