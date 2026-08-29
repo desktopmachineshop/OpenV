@@ -353,10 +353,25 @@ func (h *Handler) GetArtifact(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(artifact)
 }
 
-// ListArtifacts lists artifacts by project and optional type filter
+// Artifact listing pagination bounds. Artifacts render as a parent_id tree in
+// the module view, so the UI still needs the complete set to build structure;
+// the generous default keeps single-request behavior for typical projects
+// while bounding worst-case response size. Clients page with limit/offset and
+// the X-Total-Count header until they have everything.
+const (
+	defaultArtifactPageLimit = 1000
+	maxArtifactPageLimit     = 1000
+)
+
+// ListArtifacts lists artifacts by project and optional type filter, one page
+// at a time. Query params: project_id (required), type, limit (default and
+// cap 1000), offset. The response body stays a plain JSON array for
+// compatibility; the total number of matching artifacts rides on the
+// X-Total-Count header so clients can page until exhaustion.
 func (h *Handler) ListArtifacts(w http.ResponseWriter, r *http.Request) {
-	projectID := r.URL.Query().Get("project_id")
-	artifactType := r.URL.Query().Get("type")
+	q := r.URL.Query()
+	projectID := q.Get("project_id")
+	artifactType := q.Get("type")
 
 	if projectID == "" {
 		writeJSONError(w, http.StatusBadRequest, "project_id is required")
@@ -367,14 +382,27 @@ func (h *Handler) ListArtifacts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	artifacts, err := h.artifactService.ListArtifacts(projectID, artifactType)
+	limit, _ := strconv.Atoi(q.Get("limit"))
+	if limit <= 0 || limit > maxArtifactPageLimit {
+		limit = defaultArtifactPageLimit
+	}
+	offset, _ := strconv.Atoi(q.Get("offset"))
+	if offset < 0 {
+		offset = 0
+	}
+
+	page, total, err := h.artifactService.ListArtifactsPage(projectID, artifactType, limit, offset)
 	if err != nil {
 		respondInternal(w, r, "failed to list artifacts", err)
 		return
 	}
+	if page == nil {
+		page = []*artifacts.Artifact{}
+	}
 
+	w.Header().Set("X-Total-Count", strconv.Itoa(total))
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(artifacts)
+	json.NewEncoder(w).Encode(page)
 }
 
 // UpdateArtifact updates an artifact

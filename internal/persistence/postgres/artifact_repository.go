@@ -121,43 +121,7 @@ func (r *ArtifactRepository) FindByProjectID(projectID string) ([]*artifacts.Art
 	}
 	defer rows.Close()
 
-	var artifactList []*artifacts.Artifact
-	for rows.Next() {
-		artifact := new(artifacts.Artifact)
-		var attributesJSON []byte
-
-		err := rows.Scan(
-			&artifact.ID,
-			&artifact.ProjectID,
-			&artifact.ParentID,
-			&artifact.Type,
-			&artifact.Title,
-			&artifact.Body,
-			&artifact.SortOrder,
-			&artifact.Status,
-			&attributesJSON,
-			&artifact.Version,
-			&artifact.ValidFrom,
-			&artifact.ValidTo,
-			&artifact.CreatedAt,
-			&artifact.UpdatedAt,
-		)
-
-		if err != nil {
-			return nil, err
-		}
-
-		if attributesJSON != nil {
-			err = json.Unmarshal(attributesJSON, &artifact.Attributes)
-			if err != nil {
-				return nil, err
-			}
-		}
-
-		artifactList = append(artifactList, artifact)
-	}
-
-	return artifactList, rows.Err()
+	return collectArtifacts(rows)
 }
 
 // FindByProjectAndType retrieves artifacts by project and type
@@ -175,6 +139,46 @@ func (r *ArtifactRepository) FindByProjectAndType(projectID string, artifactType
 	}
 	defer rows.Close()
 
+	return collectArtifacts(rows)
+}
+
+// FindPageByProject returns one page of a project's current artifacts;
+// artifactType "" means all types. The ordering matches FindByProjectID with
+// id as a final tiebreaker so offset pages are stable even when sibling
+// sort_order/created_at values collide.
+func (r *ArtifactRepository) FindPageByProject(projectID string, artifactType string, limit, offset int) ([]*artifacts.Artifact, error) {
+	query := `
+		SELECT id, project_id, parent_id, type, title, body, sort_order, status, attributes, version, valid_from, valid_to, created_at, updated_at
+		FROM artifacts
+		WHERE project_id = $1 AND valid_to IS NULL
+		AND ($2 = '' OR type = $2)
+		ORDER BY parent_id NULLS FIRST, sort_order ASC, created_at ASC, id ASC
+		LIMIT $3 OFFSET $4
+	`
+
+	rows, err := r.db.Query(query, projectID, artifactType, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	return collectArtifacts(rows)
+}
+
+// CountByProject counts a project's current artifacts (type "" = all).
+func (r *ArtifactRepository) CountByProject(projectID string, artifactType string) (int, error) {
+	var count int
+	err := r.db.QueryRow(`
+		SELECT COUNT(*) FROM artifacts
+		WHERE project_id = $1 AND valid_to IS NULL
+		AND ($2 = '' OR type = $2)
+	`, projectID, artifactType).Scan(&count)
+	return count, err
+}
+
+// collectArtifacts scans rows produced by the standard 14-column artifact
+// SELECT into a slice.
+func collectArtifacts(rows *sql.Rows) ([]*artifacts.Artifact, error) {
 	var artifactList []*artifacts.Artifact
 	for rows.Next() {
 		artifact := new(artifacts.Artifact)
@@ -343,41 +347,5 @@ func (r *ArtifactRepository) FindVersionsByID(id string) ([]*artifacts.Artifact,
 	}
 	defer rows.Close()
 
-	var artifactList []*artifacts.Artifact
-	for rows.Next() {
-		artifact := new(artifacts.Artifact)
-		var attributesJSON []byte
-
-		err := rows.Scan(
-			&artifact.ID,
-			&artifact.ProjectID,
-			&artifact.ParentID,
-			&artifact.Type,
-			&artifact.Title,
-			&artifact.Body,
-			&artifact.SortOrder,
-			&artifact.Status,
-			&attributesJSON,
-			&artifact.Version,
-			&artifact.ValidFrom,
-			&artifact.ValidTo,
-			&artifact.CreatedAt,
-			&artifact.UpdatedAt,
-		)
-
-		if err != nil {
-			return nil, err
-		}
-
-		if attributesJSON != nil {
-			err = json.Unmarshal(attributesJSON, &artifact.Attributes)
-			if err != nil {
-				return nil, err
-			}
-		}
-
-		artifactList = append(artifactList, artifact)
-	}
-
-	return artifactList, rows.Err()
+	return collectArtifacts(rows)
 }

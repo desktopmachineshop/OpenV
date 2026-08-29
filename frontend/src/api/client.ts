@@ -168,13 +168,44 @@ export interface Attachment {
   created_at: string;
 }
 
+// Server-side page size for artifact listings (the backend defaults to and
+// caps at 1000 per request; the total rides on the X-Total-Count header).
+const ARTIFACT_PAGE_LIMIT = 1000;
+
 export const artifactAPI = {
-  create: (payload: Partial<Artifact>) => 
+  create: (payload: Partial<Artifact>) =>
     client.post<Artifact>('/api/v1/artifacts', payload),
-  get: (id: string) => 
+  get: (id: string) =>
     client.get<Artifact>(`/api/v1/artifacts/${id}`),
-  list: (projectId: string, type?: string) => 
-    client.get<Artifact[]>('/api/v1/artifacts', { params: { project_id: projectId, type } }),
+  // One page of a project's artifacts in stable tree order. The response body
+  // is a plain array; res.headers['x-total-count'] carries the total so
+  // callers can page until exhaustion.
+  listPage: (projectId: string, opts?: { type?: string; limit?: number; offset?: number }) =>
+    client.get<Artifact[]>('/api/v1/artifacts', {
+      params: { project_id: projectId, type: opts?.type, limit: opts?.limit, offset: opts?.offset },
+    }),
+  // All of a project's artifacts, fetched through the paged API. The module
+  // view renders artifacts as a parent_id tree, so it structurally needs the
+  // full set to build hierarchy; most projects fit in one page. UI follow-up
+  // (issue #136): render the tree incrementally (lazy-load subtrees) so huge
+  // projects don't need this loop at all.
+  list: async (projectId: string, type?: string): Promise<{ data: Artifact[] }> => {
+    const all: Artifact[] = [];
+    for (;;) {
+      const res = await client.get<Artifact[]>('/api/v1/artifacts', {
+        params: { project_id: projectId, type, limit: ARTIFACT_PAGE_LIMIT, offset: all.length },
+      });
+      const page = res.data || [];
+      all.push(...page);
+      const total = parseInt(res.headers?.['x-total-count'] ?? '', 10);
+      // Stop on a short page, or once we have everything the server counted.
+      // A server that doesn't send the header (older API) implies short-page
+      // termination only.
+      if (page.length < ARTIFACT_PAGE_LIMIT || (Number.isFinite(total) && all.length >= total)) {
+        return { data: all };
+      }
+    }
+  },
   update: (id: string, payload: Partial<Artifact>) =>
     client.put<Artifact>(`/api/v1/artifacts/${id}`, payload),
   // One review state-machine transition; the server enforces legality
@@ -1291,9 +1322,11 @@ export interface DomainEvent {
 }
 
 export const eventsAPI = {
-  // The backend clamps limit to (0, 500], defaulting to 100; there is no
-  // offset — "load more" refetches with a larger limit.
-  list: (params: { project_id?: string; event_type?: string; limit?: number }) =>
+  // The backend clamps limit to (0, 500], defaulting to 100. `before` is a
+  // keyset cursor (an event ID from a previous page): the server returns only
+  // events strictly older than it. When another (older) page may exist, the
+  // response carries an X-Next-Cursor header with the cursor for it.
+  list: (params: { project_id?: string; event_type?: string; limit?: number; before?: string }) =>
     client.get<DomainEvent[]>('/api/v1/events', { params }),
 };
 

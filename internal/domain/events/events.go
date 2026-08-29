@@ -84,6 +84,8 @@ type Bus interface {
 type Repository interface {
 	Save(e Event) error
 	// List returns an org's recent events, newest first; the org filter is
-	// mandatory, projectID/eventType are optional narrows.
-	List(orgID, projectID, eventType string, limit int) ([]Event, error)
+	// mandatory, projectID/eventType are optional narrows. beforeID is a
+	// cursor: when non-empty, only events strictly older than the event with
+	// that ID are returned (an unknown cursor yields an empty page).
+	List(orgID, projectID, eventType, beforeID string, limit int) ([]Event, error)
 }

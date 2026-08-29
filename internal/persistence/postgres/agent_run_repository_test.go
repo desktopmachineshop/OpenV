@@ -444,3 +444,47 @@ func TestHeartbeatRefreshesLiveness(t *testing.T) {
 		t.Errorf("Heartbeat(unknown) = %v, %v, want false, nil", applied, err)
 	}
 }
+
+// TestRunRoundTripsRoutingColumns locks in the issue-#158 fix: FindByID and
+// List (which share runColumns/scanRun) return preferred_user_id and
+// hosted_after, so run JSON matches the frontend's Run type and the
+// AgentRunsPage "reserved for personal runner" badge can render.
+func TestRunRoundTripsRoutingColumns(t *testing.T) {
+	f := newClaimFixture(t)
+	hostedAfter := time.Now().UTC().Add(30 * time.Second).Truncate(time.Millisecond)
+	reserved := f.queueRun(t, runSpec{launchedBy: &f.userA, preferred: &f.userA, hostedAfter: hostedAfter})
+	plain := f.queueRun(t, runSpec{})
+
+	got := f.mustFind(t, reserved)
+	if got.PreferredUserID == nil || *got.PreferredUserID != f.userA {
+		t.Errorf("FindByID preferred_user_id = %v, want %s", got.PreferredUserID, f.userA)
+	}
+	if got.HostedAfter == nil || !got.HostedAfter.Equal(hostedAfter) {
+		t.Errorf("FindByID hosted_after = %v, want %v", got.HostedAfter, hostedAfter)
+	}
+
+	if got := f.mustFind(t, plain); got.PreferredUserID != nil || got.HostedAfter != nil {
+		t.Errorf("unreserved run routing columns = %v/%v, want nil/nil", got.PreferredUserID, got.HostedAfter)
+	}
+
+	list, err := f.repo.List(agentruns.ListFilter{OrgID: f.orgID})
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	found := false
+	for _, run := range list {
+		if run.ID != reserved {
+			continue
+		}
+		found = true
+		if run.PreferredUserID == nil || *run.PreferredUserID != f.userA {
+			t.Errorf("List preferred_user_id = %v, want %s", run.PreferredUserID, f.userA)
+		}
+		if run.HostedAfter == nil || !run.HostedAfter.Equal(hostedAfter) {
+			t.Errorf("List hosted_after = %v, want %v", run.HostedAfter, hostedAfter)
+		}
+	}
+	if !found {
+		t.Fatal("reserved run missing from List")
+	}
+}

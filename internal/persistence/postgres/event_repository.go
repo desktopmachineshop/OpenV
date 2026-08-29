@@ -31,8 +31,11 @@ func (r *EventRepository) Save(e events.Event) error {
 }
 
 // List returns an org's recent events, newest first, optionally filtered by
-// project and event type. The org filter is mandatory.
-func (r *EventRepository) List(orgID, projectID, eventType string, limit int) ([]events.Event, error) {
+// project and event type. The org filter is mandatory. beforeID is a keyset
+// cursor: when non-empty, only events strictly older than the event with that
+// ID (ordered by created_at, id) are returned. An unknown cursor matches no
+// rows, so a stale cursor degrades to an empty page rather than an error.
+func (r *EventRepository) List(orgID, projectID, eventType, beforeID string, limit int) ([]events.Event, error) {
 	if limit <= 0 || limit > 500 {
 		limit = 100
 	}
@@ -42,10 +45,12 @@ func (r *EventRepository) List(orgID, projectID, eventType string, limit int) ([
 		WHERE org_id = NULLIF($1, '')::uuid
 		  AND ($2 = '' OR project_id = $2::uuid)
 		  AND ($3 = '' OR event_type = $3)
-		ORDER BY created_at DESC
-		LIMIT $4
+		  AND ($4 = '' OR (created_at, id) < (
+		      SELECT created_at, id FROM domain_events WHERE id = $4::uuid))
+		ORDER BY created_at DESC, id DESC
+		LIMIT $5
 	`
-	rows, err := r.db.Query(query, orgID, projectID, eventType, limit)
+	rows, err := r.db.Query(query, orgID, projectID, eventType, beforeID, limit)
 	if err != nil {
 		return nil, err
 	}

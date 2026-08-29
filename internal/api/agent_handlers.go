@@ -1840,10 +1840,23 @@ func (h *Handler) ListDomainEvents(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	limit, _ := strconv.Atoi(q.Get("limit"))
-	list, err := h.eventRepo.List(ActiveOrg(r), projectID, q.Get("event_type"), limit)
+	if limit <= 0 || limit > 500 {
+		limit = 100
+	}
+	// "before" is a keyset cursor (an event ID from a previous page): the
+	// repo returns only events strictly older than it, so "load more" pages
+	// stay stable while new events keep arriving.
+	list, err := h.eventRepo.List(ActiveOrg(r), projectID, q.Get("event_type"), q.Get("before"), limit)
 	if err != nil {
 		respondInternal(w, r, "failed to list events", err)
 		return
+	}
+	// Advertise the next cursor from the RAW page (before membership
+	// filtering below): a full page means there may be older events. Using
+	// the raw tail keeps the cursor monotonic even when the visibility filter
+	// drops the trailing rows for non-admin members.
+	if len(list) >= limit {
+		w.Header().Set("X-Next-Cursor", list[len(list)-1].ID)
 	}
 	// Without a project filter, org admins see the whole workspace audit;
 	// plain members only see events for projects they can access (mirrors
