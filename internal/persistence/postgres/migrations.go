@@ -197,6 +197,28 @@ var migrations = []Migration{
 		`)
 		return err
 	}},
+
+	// 0007: review-queue read paths (issue #183). Two partial indexes over
+	// live rows only, matching the queue's two queries: suspect links touching
+	// a project, and a project's in_review artifacts. Both use IF NOT EXISTS —
+	// a concurrent scale-pass branch may already have added the suspect-links
+	// index under the same name, and re-applying this migration must not fail.
+	// NOTE: 0007 is claimed here but a concurrent scale-pass / chatter branch
+	// may also take 0007; the registry only requires ascending, unique
+	// versions, so the final number may need a bump on merge.
+	{Version: 7, Name: "review_queue_indexes", Run: func(tx *sql.Tx) error {
+		if _, err := tx.Exec(`
+			CREATE INDEX IF NOT EXISTS idx_links_suspect
+			ON links(suspect) WHERE valid_to IS NULL AND suspect
+		`); err != nil {
+			return err
+		}
+		_, err := tx.Exec(`
+			CREATE INDEX IF NOT EXISTS idx_artifacts_project_status
+			ON artifacts(project_id, status) WHERE valid_to IS NULL
+		`)
+		return err
+	}},
 }
 
 // migrationLockKey is the pg_advisory_xact_lock key that serializes

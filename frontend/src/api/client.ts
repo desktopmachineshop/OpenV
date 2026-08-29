@@ -245,6 +245,34 @@ export const linkAPI = {
     client.delete(`/api/v1/links/${id}`),
 };
 
+// A suspect link enriched with its endpoints' titles/types, as returned by
+// the review-queue endpoint (issue #183). Distinct from Link: it is a
+// read-only projection joined against both artifacts server-side.
+export interface SuspectLink {
+  id: string;
+  type: string;
+  from_id: string;
+  from_title: string;
+  from_type: string;
+  to_id: string;
+  to_title: string;
+  to_type: string;
+  updated_at: string;
+}
+
+// The review-queue payload: the two things awaiting a reviewer's attention.
+export interface ReviewQueue {
+  suspect_links: SuspectLink[];
+  in_review_artifacts: Artifact[];
+}
+
+export const reviewAPI = {
+  // The reviewer's daily driver: suspect links + in-review artifacts for one
+  // project, in a single round trip. Viewer role suffices to read it.
+  get: (projectId: string) =>
+    client.get<ReviewQueue>(`/api/v1/projects/${projectId}/review-queue`),
+};
+
 export const projectAPI = {
   create: (payload: Partial<Project>) =>
     client.post<Project>('/api/v1/projects', payload),

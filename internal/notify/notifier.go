@@ -11,6 +11,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/openv/requirements-platform/internal/domain/artifacts"
 	domainevents "github.com/openv/requirements-platform/internal/domain/events"
 	"github.com/openv/requirements-platform/internal/domain/members"
 	"github.com/openv/requirements-platform/internal/domain/notifications"
@@ -52,6 +53,7 @@ func (n *Notifier) Start(bus domainevents.Bus) {
 // Fan-out rules:
 //   - proposal.created            -> project editors and owners
 //   - agentrun.finished (failed)  -> the user who launched the run
+//   - artifact.status_changed to in_review -> project editors and owners (reviewers)
 //   - chatter.created with kind "interview-completed" -> project editors and owners
 //   - chatter.created comments containing @mentions   -> mentioned project members
 //
@@ -85,6 +87,26 @@ func (n *Notifier) Handle(e domainevents.Event) {
 				"kind":       "run",
 				"run_id":     e.EntityID,
 				"project_id": e.ProjectID,
+			})
+
+	case domainevents.ArtifactStatusChanged:
+		// Only entering review is worth a reviewer's attention; every other
+		// transition (draft, approved, superseded) is not a review request.
+		if payloadString(e, "to") != artifacts.StatusInReview {
+			return
+		}
+		title := payloadString(e, "title")
+		body := "An artifact is waiting in the review queue."
+		if title != "" {
+			body = fmt.Sprintf("%q is waiting in the review queue.", title)
+		}
+		n.fanOutToEditors(e, notifications.TypeReviewRequested,
+			"Artifact ready for review",
+			body,
+			map[string]interface{}{
+				"kind":        "artifact",
+				"artifact_id": e.EntityID,
+				"project_id":  e.ProjectID,
 			})
 
 	case domainevents.ChatterCreated:
