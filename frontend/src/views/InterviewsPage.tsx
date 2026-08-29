@@ -10,6 +10,7 @@ import {
 } from '../api/client';
 import { apiErrorMessage } from '../api/errors';
 import { useAppStore } from '../state/store';
+import { ErrorBanner, useConfirm, usePrompt } from '../components/ui';
 
 const sectionTitle: React.CSSProperties = {
   fontSize: 16,
@@ -37,6 +38,8 @@ export const InterviewsPage: React.FC = () => {
   const params = useParams<{ projectId: string }>();
   const storeProjectId = useAppStore((s) => s.projectId);
   const projectId = params.projectId || storeProjectId;
+  const confirm = useConfirm();
+  const prompt = usePrompt();
 
   const [artifacts, setArtifacts] = useState<Artifact[]>([]);
   const [loading, setLoading] = useState(true);
@@ -105,8 +108,13 @@ export const InterviewsPage: React.FC = () => {
       try {
         await navigator.clipboard.writeText(url);
       } catch {
-        // Fallback for non-secure contexts
-        window.prompt('Copy this invite link:', url);
+        // Fallback for non-secure contexts: show the link in a dialog so the
+        // user can copy it manually (the input opens with its text selected).
+        await prompt({
+          title: 'Copy this invite link',
+          defaultValue: url,
+          confirmLabel: 'Done',
+        });
       }
       setCopiedInterviewId(interview.id);
       setTimeout(() => setCopiedInterviewId(''), 2500);
@@ -158,7 +166,13 @@ export const InterviewsPage: React.FC = () => {
   };
 
   const closeInterview = async (interview: Interview) => {
-    if (!window.confirm(`Close interview "${interview.name}"? Invite links will stop working.`)) return;
+    const ok = await confirm({
+      title: 'Close interview',
+      message: `Close interview "${interview.name}"? Invite links will stop working.`,
+      confirmLabel: 'Close interview',
+      danger: true,
+    });
+    if (!ok) return;
     try {
       const res = await interviewsAPI.close(interview.id);
       setInterviews(interviews.map((iv) => (iv.id === interview.id ? res.data : iv)));
@@ -202,27 +216,7 @@ export const InterviewsPage: React.FC = () => {
         Create user interviews, share invite links, and review what an AI interviewer learned.
       </p>
 
-      {error && (
-        <div
-          style={{
-            background: 'var(--tint-red)',
-            border: '1px solid var(--danger)',
-            color: 'var(--danger-strong)',
-            padding: '10px 14px',
-            borderRadius: 4,
-            marginBottom: 16,
-            fontSize: 13,
-          }}
-        >
-          {error}{' '}
-          <button
-            onClick={() => setError('')}
-            style={{ background: 'none', border: 'none', color: 'var(--danger-strong)', cursor: 'pointer', width: 'auto', padding: 0 }}
-          >
-            ✕
-          </button>
-        </div>
-      )}
+      <ErrorBanner message={error} onDismiss={() => setError('')} style={{ marginBottom: 16 }} />
 
       <div className="card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, gap: 10 }}>

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { CrewEdge, CrewGraph, crewsAPI } from '../../api/client';
+import { useConfirm } from '../ui';
 
 interface EdgeConfigPanelProps {
   edge: CrewEdge;
@@ -27,6 +28,7 @@ export const EdgeConfigPanel: React.FC<EdgeConfigPanelProps> = ({
   onChanged,
   onClose,
 }) => {
+  const confirm = useConfirm();
   const [promptTemplate, setPromptTemplate] = useState<string>(
     (edge.config?.prompt_template as string) || ''
   );
@@ -56,7 +58,13 @@ export const EdgeConfigPanel: React.FC<EdgeConfigPanelProps> = ({
   };
 
   const remove = async () => {
-    if (!window.confirm('Remove this connection?')) return;
+    const ok = await confirm({
+      title: 'Remove connection',
+      message: 'Remove this connection?',
+      confirmLabel: 'Remove',
+      danger: true,
+    });
+    if (!ok) return;
     setError('');
     try {
       await crewsAPI.removeEdge(edge.id);

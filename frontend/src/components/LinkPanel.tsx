@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, Artifact } from '../api/client';
 import { getAvailableLinkTypes, getAllowedTargetTypes, getLinkTypeLabel } from '../config/linkTypeRules';
+import { useAlert } from './ui';
 
 interface LinkPanelProps {
   artifacts: Artifact[];
@@ -23,6 +24,7 @@ export const LinkPanel: React.FC<LinkPanelProps> = ({
   onSelectArtifact,
   onDeleteLink,
 }) => {
+  const alertDialog = useAlert();
   const [isCreating, setIsCreating] = useState(false);
   const [linkType, setLinkType] = useState('');
   const [toArtifactId, setToArtifactId] = useState('');
@@ -43,7 +45,7 @@ export const LinkPanel: React.FC<LinkPanelProps> = ({
 
   const handleCreateLink = () => {
     if (!selectedArtifactId || !toArtifactId) {
-      alert('Please select an artifact');
+      void alertDialog({ title: 'Create link', message: 'Please select an artifact.' });
       return;
     }
 

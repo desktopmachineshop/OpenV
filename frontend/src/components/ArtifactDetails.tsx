@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Artifact, Link, Attachment } from '../api/client';
 import { linkAPI } from '../api/client';
 import { ImageGallery } from './ImageGallery';
+import { useConfirm } from './ui';
 import { getLinkTypeLabel } from '../config/linkTypeRules';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -34,6 +35,7 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
   onClosePreview,
   allowLinkDelete = false,
 }) => {
+  const confirm = useConfirm();
   const [currentVersionLinks, setCurrentVersionLinks] = useState<Link[]>(links || []);
   const [previewVersionLinks, setPreviewVersionLinks] = useState<Link[]>([]);
   const [deletingLinkId, setDeletingLinkId] = useState<string | null>(null);
@@ -93,7 +95,13 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
   // Handle link deletion (DELETE /api/v1/links/{id}; backend enforces
   // editor rights and refreshes link snapshots on both artifacts).
   const handleDeleteLink = async (linkId: string) => {
-    if (!window.confirm('Are you sure you want to delete this link?')) {
+    const ok = await confirm({
+      title: 'Delete link',
+      message: 'Are you sure you want to delete this link?',
+      confirmLabel: 'Delete',
+      danger: true,
+    });
+    if (!ok) {
       return;
     }
 

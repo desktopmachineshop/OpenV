@@ -1,4 +1,5 @@
 import React, { useRef } from 'react';
+import { useAlert } from './ui';
 import './ImageUploadInput.css';
 
 interface ImageUploadInputProps {
@@ -10,6 +11,7 @@ export const ImageUploadInput: React.FC<ImageUploadInputProps> = ({
   onUpload,
   isLoading = false,
 }) => {
+  const alertDialog = useAlert();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -17,14 +19,14 @@ export const ImageUploadInput: React.FC<ImageUploadInputProps> = ({
     if (file) {
       // Validate file is an image
       if (!file.type.startsWith('image/')) {
-        alert('Please select an image file');
+        void alertDialog({ title: 'Upload image', message: 'Please select an image file.' });
         return;
       }
 
       // Validate file size (max 10MB)
       const maxSize = 10 * 1024 * 1024; // 10MB
       if (file.size > maxSize) {
-        alert('File size must be less than 10MB');
+        void alertDialog({ title: 'Upload image', message: 'File size must be less than 10MB.' });
         return;
       }
 
@@ -50,13 +52,13 @@ export const ImageUploadInput: React.FC<ImageUploadInputProps> = ({
     const file = e.dataTransfer.files?.[0];
     if (file) {
       if (!file.type.startsWith('image/')) {
-        alert('Please drop an image file');
+        void alertDialog({ title: 'Upload image', message: 'Please drop an image file.' });
         return;
       }
 
       const maxSize = 10 * 1024 * 1024;
       if (file.size > maxSize) {
-        alert('File size must be less than 10MB');
+        void alertDialog({ title: 'Upload image', message: 'File size must be less than 10MB.' });
         return;
       }
 

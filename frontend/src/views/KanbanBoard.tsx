@@ -16,6 +16,7 @@ import {
 } from '../api/client';
 import { useAppStore } from '../state/store';
 import { WorkItemDrawer } from '../components/kanban/WorkItemDrawer';
+import { ArtifactPicker, ErrorBanner } from '../components/ui';
 
 const COLUMNS: { key: string; label: string; color: string }[] = [
   { key: 'backlog', label: 'Backlog', color: 'var(--neutral)' },
@@ -31,7 +32,7 @@ interface ComposerState {
   title: string;
   description: string;
   assignee: string; // '', 'me', 'agent:<id>', 'team:<id>'
-  artifactIds: string;
+  artifactIds: string[];
   expanded: boolean;
 }
 
@@ -39,7 +40,7 @@ const emptyComposer = (): ComposerState => ({
   title: '',
   description: '',
   assignee: '',
-  artifactIds: '',
+  artifactIds: [],
   expanded: false,
 });
 
@@ -220,10 +221,8 @@ export const KanbanBoard: React.FC = () => {
       assignee_type = 'team';
       assignee_id = c.assignee.slice(5);
     }
-    const artifact_ids = c.artifactIds
-      .split(',')
-      .map((s) => s.trim())
-      .filter(Boolean);
+    // Wire format unchanged: artifact_ids stays a string[] of artifact ids.
+    const artifact_ids = c.artifactIds;
     try {
       await workItemsAPI.create(projectId, {
         title: c.title.trim(),
@@ -321,7 +320,7 @@ export const KanbanBoard: React.FC = () => {
           Tip: assign a card to an agent and drag it to To Do to launch the agent.
         </span>
       </div>
-      {error && <div style={{ color: 'var(--danger)', fontSize: 13, marginBottom: 8 }}>{error}</div>}
+      <ErrorBanner message={error} onDismiss={() => setError('')} style={{ marginBottom: 8 }} />
 
       <div style={{ display: 'flex', gap: 12, flex: 1, overflowX: 'auto', alignItems: 'flex-start' }}>
         {COLUMNS.map((col) => {
@@ -473,12 +472,14 @@ export const KanbanBoard: React.FC = () => {
                       ))}
                     </optgroup>
                   </select>
-                  <input
-                    value={composer.artifactIds}
-                    onChange={(e) => setComposer(col.key, { artifactIds: e.target.value })}
-                    placeholder="Artifact IDs, comma-separated (optional)"
-                    style={{ fontSize: 12, marginBottom: 8 }}
-                  />
+                  <div style={{ marginBottom: 8 }}>
+                    <ArtifactPicker
+                      artifacts={Object.values(artifactMap)}
+                      value={composer.artifactIds}
+                      onChange={(ids) => setComposer(col.key, { artifactIds: ids })}
+                      placeholder="Link artifacts (optional) — search…"
+                    />
+                  </div>
                   <div style={{ display: 'flex', gap: 6 }}>
                     <button
                       className="button"

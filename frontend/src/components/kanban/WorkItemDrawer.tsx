@@ -7,6 +7,7 @@ import {
   workItemsAPI,
 } from '../../api/client';
 import { ExpandableText } from '../ExpandableText';
+import { ErrorBanner, useConfirm } from '../ui';
 
 interface WorkItemDrawerProps {
   workItemId: string;
@@ -42,6 +43,7 @@ export const WorkItemDrawer: React.FC<WorkItemDrawerProps> = ({
   onChanged,
   onDeleted,
 }) => {
+  const confirm = useConfirm();
   const [item, setItem] = useState<WorkItem | null>(null);
   const [activity, setActivity] = useState<WorkItemActivity[]>([]);
   const [error, setError] = useState('');
@@ -123,7 +125,13 @@ export const WorkItemDrawer: React.FC<WorkItemDrawerProps> = ({
 
   const remove = async () => {
     if (!item) return;
-    if (!window.confirm(`Delete card "${item.title}"?`)) return;
+    const ok = await confirm({
+      title: 'Delete card',
+      message: `Delete card "${item.title}"?`,
+      confirmLabel: 'Delete',
+      danger: true,
+    });
+    if (!ok) return;
     try {
       await workItemsAPI.remove(item.id);
       onDeleted();
@@ -191,7 +199,7 @@ export const WorkItemDrawer: React.FC<WorkItemDrawerProps> = ({
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', padding: 18 }}>
-        {error && <div style={{ color: 'var(--danger)', fontSize: 13, marginBottom: 10 }}>{error}</div>}
+        <ErrorBanner message={error} onDismiss={() => setError('')} />
 
         <div className="form-group">
           <label>Description</label>

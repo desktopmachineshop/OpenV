@@ -14,6 +14,7 @@ import { useAppStore } from '../state/store';
 import { CrewCanvas, CrewFilter } from '../components/crews/CrewCanvas';
 import { NodeConfigPanel } from '../components/crews/NodeConfigPanel';
 import { EdgeConfigPanel } from '../components/crews/EdgeConfigPanel';
+import { ErrorBanner, Modal, SegmentedControl, useConfirm, usePrompt } from '../components/ui';
 
 const LIVE_STATUSES = ['queued', 'claimed', 'running'];
 const EDGE_TYPES: { value: string; label: string; color: string }[] = [
@@ -49,6 +50,8 @@ export const CrewBuilder: React.FC = () => {
   const activeOrgId = useAppStore((s) => s.activeOrgId);
   const navigate = useNavigate();
   const location = useLocation();
+  const confirm = useConfirm();
+  const prompt = usePrompt();
 
   // The view is derived from the route (/crew ↔ org chart, /crew/network ↔
   // network) so deep links and refreshes land on the right view.
@@ -178,7 +181,7 @@ export const CrewBuilder: React.FC = () => {
   const selectedEdge = graph?.edges.find((e) => e.id === selectedEdgeId) || null;
 
   const handleNewCrew = async () => {
-    const name = window.prompt('New crew name');
+    const name = await prompt({ title: 'New crew', label: 'Crew name' });
     if (!name || !name.trim()) return;
     try {
       const res = await crewsAPI.create({ name: name.trim(), project_id: projectId || null });
@@ -194,7 +197,11 @@ export const CrewBuilder: React.FC = () => {
       setError('No default crew available to clone.');
       return;
     }
-    const name = window.prompt('Name for the new crew', `${defaultCrew.name} (copy)`);
+    const name = await prompt({
+      title: 'Start from default crew',
+      label: 'Name for the new crew',
+      defaultValue: `${defaultCrew.name} (copy)`,
+    });
     if (!name || !name.trim()) return;
     try {
       const res = await crewsAPI.clone(defaultCrew.id, name.trim(), projectId || null);
@@ -207,7 +214,13 @@ export const CrewBuilder: React.FC = () => {
 
   const handleDeleteCrew = async () => {
     if (!selectedCrew) return;
-    if (!window.confirm(`Delete crew "${selectedCrew.name}"?`)) return;
+    const ok = await confirm({
+      title: 'Delete crew',
+      message: `Delete crew "${selectedCrew.name}"?`,
+      confirmLabel: 'Delete',
+      danger: true,
+    });
+    if (!ok) return;
     try {
       await crewsAPI.remove(selectedCrew.id);
       setCrewId('');
@@ -398,42 +411,22 @@ export const CrewBuilder: React.FC = () => {
 
       {/* Toolbar */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
-        <div style={{ display: 'inline-flex', border: '1px solid var(--border)', borderRadius: 4, overflow: 'hidden' }}>
-          {(['org', 'network'] as const).map((v) => (
-            <button
-              key={v}
-              onClick={() => setView(v)}
-              style={{
-                padding: '6px 14px',
-                border: 'none',
-                cursor: 'pointer',
-                fontSize: 13,
-                background: view === v ? 'var(--accent)' : 'var(--surface)',
-                color: view === v ? '#fff' : 'var(--text)',
-              }}
-            >
-              {v === 'org' ? 'Org Chart' : 'Network'}
-            </button>
-          ))}
-        </div>
-        <div style={{ display: 'inline-flex', border: '1px solid var(--border)', borderRadius: 4, overflow: 'hidden' }}>
-          {FILTERS.map((f) => (
-            <button
-              key={f.value}
-              onClick={() => setFilter(f.value)}
-              style={{
-                padding: '6px 14px',
-                border: 'none',
-                cursor: 'pointer',
-                fontSize: 13,
-                background: filter === f.value ? 'var(--purple)' : 'var(--surface)',
-                color: filter === f.value ? '#fff' : 'var(--text)',
-              }}
-            >
-              {f.label}
-            </button>
-          ))}
-        </div>
+        <SegmentedControl
+          aria-label="Crew view"
+          options={[
+            { value: 'org', label: 'Org Chart' },
+            { value: 'network', label: 'Network' },
+          ]}
+          value={view}
+          onChange={setView}
+        />
+        <SegmentedControl
+          aria-label="Crew filter"
+          options={FILTERS}
+          value={filter}
+          onChange={setFilter}
+          activeColor="var(--purple)"
+        />
         <button
           onClick={() => setConnectMode(!connectMode)}
           style={{
@@ -457,24 +450,15 @@ export const CrewBuilder: React.FC = () => {
         </button>
         {showAddNode && (
           <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-            <span style={{ display: 'inline-flex', border: '1px solid var(--border)', borderRadius: 4, overflow: 'hidden' }}>
-              {(['agent', 'person'] as const).map((k) => (
-                <button
-                  key={k}
-                  onClick={() => setNewNodeKind(k)}
-                  style={{
-                    padding: '6px 12px',
-                    border: 'none',
-                    cursor: 'pointer',
-                    fontSize: 13,
-                    background: newNodeKind === k ? (k === 'person' ? 'var(--purple)' : 'var(--accent)') : 'var(--surface)',
-                    color: newNodeKind === k ? '#fff' : 'var(--text)',
-                  }}
-                >
-                  {k === 'agent' ? 'Agent' : 'Person'}
-                </button>
-              ))}
-            </span>
+            <SegmentedControl
+              aria-label="New node kind"
+              options={[
+                { value: 'agent', label: 'Agent' },
+                { value: 'person', label: 'Person', activeColor: 'var(--purple)' },
+              ]}
+              value={newNodeKind}
+              onChange={setNewNodeKind}
+            />
             {newNodeKind === 'agent' ? (
               <select
                 value={newNodeAgent}
@@ -545,27 +529,7 @@ export const CrewBuilder: React.FC = () => {
         )}
       </div>
 
-      {error && (
-        <div
-          style={{
-            background: 'var(--tint-red)',
-            border: '1px solid var(--danger)',
-            color: 'var(--danger-strong)',
-            borderRadius: 4,
-            padding: '8px 12px',
-            marginBottom: 10,
-            fontSize: 13,
-          }}
-        >
-          {error}
-          <button
-            onClick={() => setError('')}
-            style={{ background: 'none', border: 'none', float: 'right', cursor: 'pointer', color: 'var(--danger-strong)' }}
-          >
-            ×
-          </button>
-        </div>
-      )}
+      <ErrorBanner message={error} onDismiss={() => setError('')} />
 
       {/* Canvas + side panel */}
       <div style={{ display: 'flex', gap: 14, flex: 1, minHeight: 0 }}>
@@ -622,25 +586,8 @@ export const CrewBuilder: React.FC = () => {
 
       {/* Edge-type picker popup */}
       {pendingEdge && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0,0,0,0.35)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 200,
-          }}
-          onClick={() => setPendingEdge(null)}
-        >
-          <div
-            className="card"
-            style={{ width: 360, marginBottom: 0 }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 style={{ fontSize: 15 }}>Connection type</h3>
-            <p style={{ fontSize: 13 }}>
+        <Modal title="Connection type" width={360} onClose={() => setPendingEdge(null)}>
+          <p style={{ fontSize: 13 }}>
               <strong>{nodeLabel(pendingEdge.from)}</strong> → <strong>{nodeLabel(pendingEdge.to)}</strong>
             </p>
             {pendingTargetIsHuman && (
@@ -677,30 +624,16 @@ export const CrewBuilder: React.FC = () => {
                 Cancel
               </button>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
 
       {/* Run crew modal */}
       {showRunModal && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0,0,0,0.35)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 200,
-          }}
-          onClick={() => setShowRunModal(false)}
+        <Modal
+          title={`Run crew: ${selectedCrew?.name || ''}`}
+          width={520}
+          onClose={() => setShowRunModal(false)}
         >
-          <div
-            className="card"
-            style={{ width: 520, marginBottom: 0 }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 style={{ fontSize: 15 }}>Run crew: {selectedCrew?.name}</h3>
             <div className="form-group">
               <label>Prompt</label>
               <textarea
@@ -719,8 +652,7 @@ export const CrewBuilder: React.FC = () => {
                 {launching ? 'Launching…' : 'Launch'}
               </button>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
     </div>
   );

@@ -11,6 +11,7 @@ import {
 import { apiErrorMessage } from '../api/errors';
 import { useAppStore } from '../state/store';
 import { StepShell } from '../components/wizard/StepShell';
+import { ErrorBanner, useConfirm } from '../components/ui';
 import { RepeatingCardList } from '../components/wizard/RepeatingCardList';
 import { GuidedChatPanel, GuidedChatPanelHandle, CopilotSuggestion } from '../components/wizard/GuidedChatPanel';
 import {
@@ -62,6 +63,7 @@ export const GuidedWizard: React.FC = () => {
   const params = useParams<{ projectId: string }>();
   const storeProjectId = useAppStore((s) => s.projectId);
   const projectId = params.projectId || storeProjectId;
+  const confirm = useConfirm();
 
   const [session, setSession] = useState<GuidedSession | null>(null);
   const [latestCommitted, setLatestCommitted] = useState<GuidedSession | null>(null);
@@ -767,12 +769,14 @@ export const GuidedWizard: React.FC = () => {
   // Start/Modify landing. Materialized drafts stay in the project.
   const handleAbandon = async () => {
     if (!session) return;
-    if (
-      !window.confirm(
-        'Abandon this guided session? Draft artifacts already created are kept, but unsaved entries are discarded.'
-      )
-    )
-      return;
+    const ok = await confirm({
+      title: 'Abandon guided session',
+      message:
+        'Abandon this guided session? Draft artifacts already created are kept, but unsaved entries are discarded.',
+      confirmLabel: 'Abandon',
+      danger: true,
+    });
+    if (!ok) return;
     setBusy(true);
     try {
       await guidedAPI.abandon(session.id);
@@ -866,7 +870,7 @@ export const GuidedWizard: React.FC = () => {
               You review and commit everything at the end.
             </p>
           )}
-          {error && <div style={{ color: 'var(--danger)', marginBottom: 16, fontSize: 13 }}>{error}</div>}
+          <ErrorBanner message={error} onDismiss={() => setError('')} style={{ marginBottom: 16 }} />
           {latestCommitted ? (
             <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
               <button
@@ -901,7 +905,7 @@ export const GuidedWizard: React.FC = () => {
             All draft artifacts are now live. You can baseline this initial set to keep an immutable
             snapshot for traceability.
           </p>
-          {error && <div style={{ color: 'var(--danger)', marginBottom: 16, fontSize: 13 }}>{error}</div>}
+          <ErrorBanner message={error} onDismiss={() => setError('')} style={{ marginBottom: 16 }} />
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
             {baselineCreated ? (
               <span style={{ color: 'var(--success)', fontSize: 14, alignSelf: 'center' }}>
@@ -1489,21 +1493,7 @@ export const GuidedWizard: React.FC = () => {
           Abandon session
         </button>
       </div>
-      {error && (
-        <div
-          style={{
-            background: 'var(--tint-red)',
-            border: '1px solid var(--danger)',
-            color: 'var(--danger-strong)',
-            padding: '10px 14px',
-            borderRadius: 4,
-            marginBottom: 16,
-            fontSize: 13,
-          }}
-        >
-          {error}
-        </div>
-      )}
+      <ErrorBanner message={error} onDismiss={() => setError('')} style={{ marginBottom: 16 }} />
       <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start' }}>
         <div style={{ flex: 1, minWidth: 0 }}>
           <StepShell

@@ -8,8 +8,12 @@ import { ArtifactHeader } from '../components/ArtifactHeader';
 import { ArtifactDetails } from '../components/ArtifactDetails';
 import { ChatterPanel } from '../components/ChatterPanel';
 import { HelpSidebar } from '../components/HelpSidebar';
+import { ErrorBanner, useAlert, useConfirm, usePrompt } from '../components/ui';
 
 export const ModuleView: React.FC = () => {
+  const confirm = useConfirm();
+  const prompt = usePrompt();
+  const alertDialog = useAlert();
   const [isCreating, setIsCreating] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editingArtifact, setEditingArtifact] = useState<Artifact | undefined>();
@@ -307,7 +311,13 @@ export const ModuleView: React.FC = () => {
   };
 
   const handleDeleteArtifact = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this artifact?')) {
+    const ok = await confirm({
+      title: 'Delete artifact',
+      message: 'Are you sure you want to delete this artifact?',
+      confirmLabel: 'Delete',
+      danger: true,
+    });
+    if (!ok) {
       return;
     }
     try {
@@ -346,8 +356,8 @@ export const ModuleView: React.FC = () => {
       // Reload artifacts to get updated link snapshots for both fromID and toID
       await loadArtifacts();
       
-      alert('Link created successfully');
       setError('');
+      await alertDialog({ title: 'Link created', message: 'Link created successfully.' });
     } catch (error: any) {
       console.error('Failed to create link:', error);
       const errorMsg = error.response?.data || error.message || 'Unknown error';
@@ -381,7 +391,12 @@ export const ModuleView: React.FC = () => {
 
   const handleCaptureBaseline = async () => {
     if (!projectId) return;
-    const name = window.prompt('Baseline name:', '') || '';
+    const name = await prompt({
+      title: 'Capture baseline',
+      label: 'Baseline name',
+      placeholder: 'e.g. Design freeze — rev A',
+    });
+    if (name === null) return;
     if (!name.trim()) {
       setError('Baseline name is required');
       return;
@@ -400,7 +415,13 @@ export const ModuleView: React.FC = () => {
 
   const handleDeleteBaseline = async (baselineId: string) => {
     if (baselineId === 'live') return;
-    if (!window.confirm('Delete this baseline? This cannot be undone.')) {
+    const ok = await confirm({
+      title: 'Delete baseline',
+      message: 'Delete this baseline? This cannot be undone.',
+      confirmLabel: 'Delete',
+      danger: true,
+    });
+    if (!ok) {
       return;
     }
 
@@ -814,21 +835,7 @@ export const ModuleView: React.FC = () => {
       </div>
       <div style={{ display: 'flex', gap: '0', paddingLeft: '20px', paddingRight: '20px', height: 'calc(100vh - 72px)', overflow: 'hidden' }}>
       <div style={{ width: `${leftColumnWidth}px`, minWidth: '200px', maxWidth: '800px', display: 'flex', flexDirection: 'column', overflowX: 'hidden', overflowY: 'auto', minHeight: 0, paddingRight: '10px' }}>
-        {error && (
-          <div
-            style={{
-              padding: '12px',
-              marginBottom: '15px',
-              backgroundColor: 'rgba(231, 76, 60, 0.2)',
-              border: '1px solid var(--danger)',
-              borderRadius: '4px',
-              color: 'var(--danger)',
-              fontSize: '12px',
-            }}
-          >
-            {error}
-          </div>
-        )}
+        <ErrorBanner message={error} onDismiss={() => setError('')} style={{ marginBottom: 15 }} />
         {!isBaselineView && (
           <button
             onClick={() => {

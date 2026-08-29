@@ -21,6 +21,7 @@ import { ProjectSettings } from './views/ProjectSettings';
 import { OrgSettings } from './views/OrgSettings';
 import { InterviewChat } from './views/InterviewChat';
 import { ManualView } from './views/ManualView';
+import { DialogProvider } from './components/ui';
 import './index.css';
 
 function App() {
@@ -89,7 +90,8 @@ function App() {
 
   return (
     <div className="app-container">
-      <Routes>
+      <DialogProvider>
+        <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/interview/:token" element={<InterviewChat />} />
         <Route path="/" element={<Navigate to="/projects" replace />} />
@@ -116,8 +118,9 @@ function App() {
           <Route path="agents" element={<AgentsPage />} />
           <Route path="settings" element={<ProjectSettings />} />
         </Route>
-        <Route path="*" element={<Navigate to="/projects" replace />} />
-      </Routes>
+          <Route path="*" element={<Navigate to="/projects" replace />} />
+        </Routes>
+      </DialogProvider>
     </div>
   );
 }

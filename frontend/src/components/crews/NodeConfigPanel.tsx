@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { AgentDef, CrewGraph, CrewNode, crewsAPI, OrgMember } from '../../api/client';
+import { useConfirm } from '../ui';
 
 interface NodeConfigPanelProps {
   node: CrewNode;
@@ -18,6 +19,7 @@ export const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
   onChanged,
   onClose,
 }) => {
+  const confirm = useConfirm();
   const isHuman = node.node_type === 'human';
   const [label, setLabel] = useState(node.label);
   const [agentId, setAgentId] = useState(node.agent_id || '');
@@ -68,7 +70,13 @@ export const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
   };
 
   const remove = async () => {
-    if (!window.confirm(`Remove node "${node.label}" from the crew?`)) return;
+    const ok = await confirm({
+      title: 'Remove node',
+      message: `Remove node "${node.label}" from the crew?`,
+      confirmLabel: 'Remove',
+      danger: true,
+    });
+    if (!ok) return;
     setError('');
     try {
       await crewsAPI.removeNode(node.id);

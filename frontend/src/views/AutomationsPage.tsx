@@ -9,6 +9,7 @@ import {
   crewsAPI,
 } from '../api/client';
 import { useAppStore } from '../state/store';
+import { ErrorBanner, Modal, SegmentedControl, useConfirm } from '../components/ui';
 
 const EVENT_TYPES = [
   'artifact.created',
@@ -110,6 +111,7 @@ export const AutomationsPage: React.FC = () => {
   const projectId = params.projectId || storeProjectId;
   const activeOrgId = useAppStore((s) => s.activeOrgId);
   const navigate = useNavigate();
+  const confirm = useConfirm();
 
   const [automations, setAutomations] = useState<Automation[]>([]);
   const [agents, setAgents] = useState<AgentDef[]>([]);
@@ -212,7 +214,13 @@ export const AutomationsPage: React.FC = () => {
   };
 
   const remove = async (a: Automation) => {
-    if (!window.confirm(`Delete automation "${a.name}"?`)) return;
+    const ok = await confirm({
+      title: 'Delete automation',
+      message: `Delete automation "${a.name}"?`,
+      confirmLabel: 'Delete',
+      danger: true,
+    });
+    if (!ok) return;
     try {
       await automationsAPI.remove(a.id);
       if (form?.id === a.id) setForm(null);
@@ -243,7 +251,7 @@ export const AutomationsPage: React.FC = () => {
         </button>
       </div>
 
-      {error && <div style={{ color: 'var(--danger)', fontSize: 13, marginBottom: 10 }}>{error}</div>}
+      <ErrorBanner message={error} onDismiss={() => setError('')} />
 
       <div className="table-container" style={{ marginBottom: 20 }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
@@ -372,8 +380,11 @@ export const AutomationsPage: React.FC = () => {
       </div>
 
       {form && (
-        <div className="card" style={{ maxWidth: 720 }}>
-          <h3>{form.id ? 'Edit automation' : 'New automation'}</h3>
+        <Modal
+          title={form.id ? 'Edit automation' : 'New automation'}
+          width={720}
+          onClose={() => setForm(null)}
+        >
           <div className="form-group">
             <label>Name</label>
             <input value={form.name} onChange={(e) => set({ name: e.target.value })} />
@@ -381,21 +392,16 @@ export const AutomationsPage: React.FC = () => {
 
           <div className="form-group">
             <label>Target</label>
-            <div style={{ display: 'flex', gap: 16, marginBottom: 8 }}>
-              {(['agent', 'team'] as const).map((tk) => (
-                <label
-                  key={tk}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, margin: 0, fontWeight: 400 }}
-                >
-                  <input
-                    type="radio"
-                    checked={form.targetKind === tk}
-                    onChange={() => set({ targetKind: tk })}
-                    style={{ width: 'auto' }}
-                  />
-                  {tk === 'agent' ? 'Agent' : 'Crew'}
-                </label>
-              ))}
+            <div style={{ marginBottom: 8 }}>
+              <SegmentedControl
+                aria-label="Automation target"
+                options={[
+                  { value: 'agent', label: 'Agent' },
+                  { value: 'team', label: 'Crew' },
+                ]}
+                value={form.targetKind}
+                onChange={(targetKind) => set({ targetKind })}
+              />
             </div>
             {form.targetKind === 'agent' ? (
               <select value={form.agent_id} onChange={(e) => set({ agent_id: e.target.value })}>
@@ -420,22 +426,15 @@ export const AutomationsPage: React.FC = () => {
 
           <div className="form-group">
             <label>Kind</label>
-            <div style={{ display: 'flex', gap: 16 }}>
-              {(['manual', 'scheduled', 'triggered'] as const).map((k) => (
-                <label
-                  key={k}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, margin: 0, fontWeight: 400 }}
-                >
-                  <input
-                    type="radio"
-                    checked={form.kind === k}
-                    onChange={() => set({ kind: k })}
-                    style={{ width: 'auto' }}
-                  />
-                  {kindLabel(k)}
-                </label>
-              ))}
-            </div>
+            <SegmentedControl
+              aria-label="Automation kind"
+              options={(['manual', 'scheduled', 'triggered'] as const).map((k) => ({
+                value: k,
+                label: kindLabel(k),
+              }))}
+              value={form.kind}
+              onChange={(kind) => set({ kind })}
+            />
           </div>
 
           {form.kind === 'scheduled' && (
@@ -560,15 +559,15 @@ export const AutomationsPage: React.FC = () => {
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button className="button" onClick={save} disabled={saving || !form.name.trim()}>
-              {saving ? 'Saving…' : form.id ? 'Save changes' : 'Create automation'}
-            </button>
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
             <button className="button-secondary" onClick={() => setForm(null)}>
               Cancel
             </button>
+            <button className="button" onClick={save} disabled={saving || !form.name.trim()}>
+              {saving ? 'Saving…' : form.id ? 'Save changes' : 'Create automation'}
+            </button>
           </div>
-        </div>
+        </Modal>
       )}
     </div>
   );

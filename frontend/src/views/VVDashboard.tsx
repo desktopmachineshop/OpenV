@@ -10,6 +10,7 @@ import {
   vvAPI,
 } from '../api/client';
 import { useAppStore } from '../state/store';
+import { ErrorBanner, useConfirm } from '../components/ui';
 
 // ---------------------------------------------------------------------------
 // Shared color helpers for V&V rollup statuses
@@ -59,6 +60,7 @@ export const VVDashboard: React.FC = () => {
   const params = useParams<{ projectId: string }>();
   const storeProjectId = useAppStore((s) => s.projectId);
   const projectId = params.projectId || storeProjectId;
+  const confirm = useConfirm();
 
   const [baselines, setBaselines] = useState<Baseline[]>([]);
   const [baselineId, setBaselineId] = useState<string>('live');
@@ -161,6 +163,15 @@ export const VVDashboard: React.FC = () => {
   };
 
   const handleRunStatus = async (runId: string, status: string) => {
+    if (status === 'aborted') {
+      const ok = await confirm({
+        title: 'Abort test run',
+        message: 'Abort this test run? Its recorded results are kept, but the run ends.',
+        confirmLabel: 'Abort run',
+        danger: true,
+      });
+      if (!ok) return;
+    }
     try {
       await vvAPI.updateRun(runId, status);
       loadVV();
@@ -216,9 +227,7 @@ export const VVDashboard: React.FC = () => {
         </div>
       )}
 
-      {error && (
-        <div style={{ color: 'var(--danger)', marginBottom: 12, fontSize: 13 }}>{error}</div>
-      )}
+      <ErrorBanner message={error} onDismiss={() => setError('')} style={{ marginBottom: 12 }} />
       {loading && <div style={{ color: 'var(--text-muted)', marginBottom: 12 }}>Loading…</div>}
 
       {/* Summary cards */}
