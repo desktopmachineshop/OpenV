@@ -54,9 +54,11 @@ func (a *ClaudeCodeAdapter) Detect(ctx context.Context) Availability {
 	return av
 }
 
-// writeMCPConfig writes the standard mcpServers JSON config file.
+// writeMCPConfig writes the standard mcpServers JSON config file. The file
+// carries the run token in its env block, so it is written 0600 (dir 0700):
+// only the same user's CLI child needs to read it.
 func writeMCPConfig(path string, mcp MCPServerConfig) error {
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return err
 	}
 	env := mcp.Env
@@ -80,7 +82,7 @@ func writeMCPConfig(path string, mcp MCPServerConfig) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(path, buf, 0o644)
+	return os.WriteFile(path, buf, 0o600)
 }
 
 // Start launches a headless Claude Code run.

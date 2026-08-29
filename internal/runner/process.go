@@ -11,6 +11,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/openv/requirements-platform/internal/domain/agentruns"
 )
 
 // streamParser turns a subprocess's stdout lines into run events and, once
@@ -34,6 +36,11 @@ type procConfig struct {
 	// is too long".
 	Stdin      string
 	TimeoutSec int
+	// EmitStderr, when true, also surfaces each non-empty stderr line as a log
+	// event (in addition to keeping the diagnostic tail). Adapters whose stdout
+	// streams nothing until the end (gemini) use this so a run isn't silent and
+	// failures stay visible in the live log.
+	EmitStderr bool
 }
 
 // procHandle is the shared RunHandle implementation for CLI adapters.
@@ -92,12 +99,24 @@ func startProc(ctx context.Context, cfg procConfig, parser streamParser) (*procH
 		sc := bufio.NewScanner(stderr)
 		sc.Buffer(make([]byte, 64*1024), 1024*1024)
 		for sc.Scan() {
+			line := sc.Text()
 			stderrMu.Lock()
-			stderrLines = append(stderrLines, sc.Text())
+			stderrLines = append(stderrLines, line)
 			if len(stderrLines) > 40 {
 				stderrLines = stderrLines[len(stderrLines)-40:]
 			}
 			stderrMu.Unlock()
+			if cfg.EmitStderr && strings.TrimSpace(line) != "" {
+				ev := RunEvent{Kind: agentruns.LogText, Payload: map[string]interface{}{
+					"text":   line,
+					"stderr": true,
+				}}
+				select {
+				case h.events <- ev:
+				case <-time.After(5 * time.Second):
+					// Drop rather than deadlock if nobody is draining.
+				}
+			}
 		}
 	}()
 

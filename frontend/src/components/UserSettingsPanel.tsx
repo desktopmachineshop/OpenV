@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useAppStore } from '../state/store';
+import { ProviderSetting, providerSettingsAPI } from '../api/client';
 import { MyRunnerCard } from './org/MyRunnerCard';
 import { ProviderConnectCard } from './agents/ProviderConnectCard';
 import { ThemeSwitcher } from './ThemeSwitcher';
@@ -24,6 +25,30 @@ const CLI_PROVIDERS: { key: string; label: string }[] = [
 export const UserSettingsPanel: React.FC<UserSettingsPanelProps> = ({ onClose }) => {
   const { currentUser, activeOrgId, orgs } = useAppStore();
   const activeOrg = orgs.find((o) => o.id === activeOrgId);
+  const [providers, setProviders] = useState<ProviderSetting[]>([]);
+
+  // Load provider settings so each per-user card reflects the real detected
+  // sign-in state (mirrors OrgProvidersTab): a connected CLI shows "Re-connect"
+  // instead of a first-time "Connect".
+  const loadProviders = useCallback(async () => {
+    if (!activeOrgId) return;
+    try {
+      const res = await providerSettingsAPI.list();
+      setProviders(res.data || []);
+    } catch {
+      // Non-fatal: fall back to showing "Connect" for every provider.
+      setProviders([]);
+    }
+  }, [activeOrgId]);
+
+  useEffect(() => {
+    loadProviders();
+  }, [loadProviders]);
+
+  const loggedInFor = (provider: string): boolean => {
+    const p = providers.find((s) => s.provider === provider);
+    return Boolean((p?.last_detected || {})['logged_in']);
+  };
 
   return (
     <div
@@ -121,10 +146,10 @@ export const UserSettingsPanel: React.FC<UserSettingsPanelProps> = ({ onClose })
                 <ProviderConnectCard
                   key={p.key}
                   provider={p.key}
-                  loggedIn={false}
+                  loggedIn={loggedInFor(p.key)}
                   target="user"
                   title={p.label}
-                  onComplete={() => {}}
+                  onComplete={loadProviders}
                 />
               ))}
             </div>

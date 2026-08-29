@@ -57,10 +57,53 @@ type RunHandle interface {
 }
 
 // Adapter drives one agent provider.
+//
+// Per-adapter capability matrix (RunSpec fields honoured vs. rejected):
+//
+//	Capability     claude-code   codex-cli            gemini-cli
+//	-----------    -----------   ------------------   ------------------
+//	Model          yes           yes                  yes
+//	Effort         yes           yes (capped "high")  no (ignored*)
+//	SystemPrompt   yes           yes (prefixed)       yes (prefixed)
+//	MaxTurns       yes           error if set         error if set
+//	AllowedTools   yes           error if set         error if set
+//	MCP env token  file (0600)   process env (byname) process env ($VAR)
+//
+// *gemini's headless CLI exposes no reasoning-effort control, so Effort is a
+// documented no-op there rather than an error (it never runs unconstrained on
+// account of it). MaxTurns/AllowedTools, by contrast, are safety limits: an
+// adapter that cannot enforce a requested limit fails the run at Start instead
+// of silently running without it.
 type Adapter interface {
 	Name() string
 	Detect(ctx context.Context) Availability
 	Start(ctx context.Context, spec RunSpec) (RunHandle, error)
+}
+
+// mergedProcEnv builds the environment for a CLI subprocess, overlaying the
+// MCP server's env (which carries the run token) on top of the run env. The
+// codex and gemini adapters both forward the token from this process
+// environment to the MCP server they spawn — by variable name or $VAR
+// reference — so the secret never appears in argv or a world-readable file.
+func mergedProcEnv(spec RunSpec) map[string]string {
+	env := make(map[string]string, len(spec.Env)+len(spec.MCP.Env))
+	for k, v := range spec.Env {
+		env[k] = v
+	}
+	for k, v := range spec.MCP.Env {
+		env[k] = v
+	}
+	return env
+}
+
+// firstNonEmpty returns the first argument that is not the empty string.
+func firstNonEmpty(vals ...string) string {
+	for _, v := range vals {
+		if v != "" {
+			return v
+		}
+	}
+	return ""
 }
 
 // Registry returns all built-in adapters.
