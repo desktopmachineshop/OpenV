@@ -229,6 +229,16 @@ func TestToolRequests(t *testing.T) {
 		},
 		{
 			tool:       "update_artifact",
+			args:       map[string]interface{}{"id": "a1", "parent_id": "par-1"},
+			status:     200,
+			response:   `{"id":"a1"}`,
+			wantMethod: "PUT",
+			wantPath:   "/api/v1/artifacts/a1",
+			wantBody:   map[string]interface{}{"parent_id": "par-1"},
+			wantOut:    `{"id":"a1"}`,
+		},
+		{
+			tool:       "update_artifact",
 			args:       map[string]interface{}{"id": "a1", "type": "requirement", "title": "T2"},
 			status:     202,
 			response:   `{"proposal_id":"prop-2"}`,
@@ -458,6 +468,55 @@ func TestUpdateArtifactOmittedVsEmptyFields(t *testing.T) {
 		}
 		if _, ok := body["attributes"]; ok {
 			t.Error("absent attributes must be omitted")
+		}
+	})
+
+	t.Run("omitted parent_id stays out of the payload", func(t *testing.T) {
+		// Issue #172: the server reads an ABSENT parent_id as "keep the
+		// current parent" and an explicit null as "move to root", so a
+		// parent-less update must not include the key at all.
+		server, requests := captureServer(t, 200, `{"id":"a1"}`)
+		client := NewClient(server.URL, "test-token")
+		tool := toolByName(t, "update_artifact")
+
+		if _, err := tool.Handler(client, map[string]interface{}{"id": "a1", "title": "T2"}); err != nil {
+			t.Fatal(err)
+		}
+		if _, ok := requests()[0].Body["parent_id"]; ok {
+			t.Error("omitted parent_id arg must not appear in the payload (it would reparent the artifact)")
+		}
+	})
+
+	t.Run("empty parent_id is sent as JSON null to move to top level", func(t *testing.T) {
+		server, requests := captureServer(t, 200, `{"id":"a1"}`)
+		client := NewClient(server.URL, "test-token")
+		tool := toolByName(t, "update_artifact")
+
+		if _, err := tool.Handler(client, map[string]interface{}{"id": "a1", "parent_id": ""}); err != nil {
+			t.Fatal(err)
+		}
+		body := requests()[0].Body
+		got, ok := body["parent_id"]
+		if !ok {
+			t.Fatal("explicit empty parent_id must be present in the payload as null")
+		}
+		if got != nil {
+			t.Errorf("parent_id = %v, want JSON null", got)
+		}
+	})
+
+	t.Run("explicit null parent_id arg also maps to JSON null", func(t *testing.T) {
+		server, requests := captureServer(t, 200, `{"id":"a1"}`)
+		client := NewClient(server.URL, "test-token")
+		tool := toolByName(t, "update_artifact")
+
+		if _, err := tool.Handler(client, map[string]interface{}{"id": "a1", "parent_id": nil}); err != nil {
+			t.Fatal(err)
+		}
+		body := requests()[0].Body
+		got, ok := body["parent_id"]
+		if !ok || got != nil {
+			t.Errorf("parent_id = (%v, present=%v), want present JSON null", got, ok)
 		}
 	})
 

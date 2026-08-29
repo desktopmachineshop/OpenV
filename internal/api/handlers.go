@@ -2183,9 +2183,10 @@ func (h *Handler) autoVersionLinkedArtifacts(affectedArtifactIDs []string) error
 		// (type/title/body) are left nil — "no change" per the issue-#170
 		// contract — so this attribute-only write carries them forward and
 		// never counts as a content edit (no suspect-link flagging).
+		// Structural fields are omitted entirely: an absent ParentID
+		// (issue-#172 contract) and nil SortOrder both mean "no change",
+		// so the artifact keeps its place in the tree.
 		updateReq := artifacts.UpdateArtifactRequest{
-			ParentID:   artifact.ParentID,
-			SortOrder:  &artifact.SortOrder,
 			Attributes: attributes,
 		}
 
