@@ -43,6 +43,7 @@ func (h *Handler) registerAuthRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/auth/config", h.AuthConfig).Methods("GET")
 	router.HandleFunc("/api/v1/auth/google", h.GoogleLogin).Methods("GET")
 	router.HandleFunc("/api/v1/auth/google/callback", h.GoogleCallback).Methods("GET")
+	h.registerOIDCRoutes(router)
 
 	router.HandleFunc("/api/v1/users", h.ListUsers).Methods("GET")
 	router.HandleFunc("/api/v1/projects/{id}/members", h.ListProjectMembers).Methods("GET")
@@ -96,9 +97,15 @@ func (h *Handler) clearSessionCookie(w http.ResponseWriter) {
 
 // AuthConfig tells the login page which sign-in methods are available.
 func (h *Handler) AuthConfig(w http.ResponseWriter, r *http.Request) {
-	json.NewEncoder(w).Encode(map[string]bool{
-		"google_enabled": h.googleOAuth != nil && h.googleOAuth.ClientID != "",
-	})
+	resp := map[string]any{
+		"google_enabled":     h.googleOAuth != nil && h.googleOAuth.ClientID != "",
+		"oidc_enabled":       h.oidc.Enabled(),
+		"oidc_provider_name": "",
+	}
+	if h.oidc.Enabled() {
+		resp["oidc_provider_name"] = h.oidc.displayName()
+	}
+	json.NewEncoder(w).Encode(resp)
 }
 
 // Register creates a password account and logs it in.

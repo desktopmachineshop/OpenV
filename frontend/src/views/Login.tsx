@@ -16,12 +16,21 @@ export const Login: React.FC = () => {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [googleEnabled, setGoogleEnabled] = useState(false);
+  const [oidcEnabled, setOidcEnabled] = useState(false);
+  const [oidcName, setOidcName] = useState('SSO');
 
   useEffect(() => {
     authAPI
       .config()
-      .then((res) => setGoogleEnabled(res.data.google_enabled))
-      .catch(() => setGoogleEnabled(false));
+      .then((res) => {
+        setGoogleEnabled(res.data.google_enabled);
+        setOidcEnabled(res.data.oidc_enabled);
+        if (res.data.oidc_provider_name) setOidcName(res.data.oidc_provider_name);
+      })
+      .catch(() => {
+        setGoogleEnabled(false);
+        setOidcEnabled(false);
+      });
     // Already signed in? Go straight to projects.
     authAPI
       .me()
@@ -104,6 +113,15 @@ export const Login: React.FC = () => {
             {busy ? 'Please wait…' : mode === 'login' ? 'Sign in' : 'Create account'}
           </button>
         </form>
+        {oidcEnabled && (
+          <a
+            href={authAPI.oidcLoginUrl()}
+            className="button-secondary button"
+            style={{ display: 'block', textAlign: 'center', marginTop: 12, textDecoration: 'none' }}
+          >
+            Sign in with {oidcName}
+          </a>
+        )}
         {googleEnabled ? (
           <a
             href={authAPI.googleLoginUrl()}
@@ -113,6 +131,7 @@ export const Login: React.FC = () => {
             Sign in with Google
           </a>
         ) : (
+          !oidcEnabled &&
           mode === 'login' && (
             <div style={{ marginTop: 12, fontSize: 11, textAlign: 'center', color: 'var(--neutral-mid)' }}>
               Google sign-in is available once the server is configured with a Google OAuth

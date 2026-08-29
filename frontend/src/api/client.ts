@@ -949,7 +949,10 @@ export interface CrewImportResult {
 }
 
 export const authAPI = {
-  config: () => client.get<{ google_enabled: boolean }>('/api/v1/auth/config'),
+  config: () =>
+    client.get<{ google_enabled: boolean; oidc_enabled: boolean; oidc_provider_name: string }>(
+      '/api/v1/auth/config'
+    ),
   register: (email: string, password: string, name: string) =>
     client.post<User>('/api/v1/auth/register', { email, password, name }),
   login: (email: string, password: string) =>
@@ -957,6 +960,7 @@ export const authAPI = {
   logout: () => client.post('/api/v1/auth/logout'),
   me: () => client.get<User>('/api/v1/auth/me'),
   googleLoginUrl: () => `${API_BASE_URL}/api/v1/auth/google`,
+  oidcLoginUrl: () => `${API_BASE_URL}/api/v1/auth/oidc/login`,
   listUsers: () => client.get<User[]>('/api/v1/users'),
 };
 
