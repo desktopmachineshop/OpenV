@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Org, OrgMember, OrgTeam, orgTeamsAPI, orgsAPI } from '../../api/client';
 import { apiErrorMessage } from '../../api/errors';
+import { ErrorBanner, useConfirm, usePrompt } from '../ui';
 
 interface OrgTeamsTabProps {
   org: Org;
@@ -10,6 +11,8 @@ interface OrgTeamsTabProps {
 // People-teams within a workspace: groups of workspace members that can be
 // granted access to projects as a unit.
 export const OrgTeamsTab: React.FC<OrgTeamsTabProps> = ({ org, isAdmin }) => {
+  const confirm = useConfirm();
+  const prompt = usePrompt();
   const [teams, setTeams] = useState<OrgTeam[]>([]);
   const [orgMembers, setOrgMembers] = useState<OrgMember[]>([]);
   const [loading, setLoading] = useState(true);
@@ -64,7 +67,11 @@ export const OrgTeamsTab: React.FC<OrgTeamsTabProps> = ({ org, isAdmin }) => {
   };
 
   const handleRename = async (team: OrgTeam) => {
-    const name = window.prompt('Team name:', team.name);
+    const name = await prompt({
+      title: 'Rename team',
+      label: 'Team name',
+      defaultValue: team.name,
+    });
     if (!name || !name.trim() || name.trim() === team.name) return;
     try {
       await orgTeamsAPI.update(team.id, { name: name.trim() });
@@ -75,7 +82,13 @@ export const OrgTeamsTab: React.FC<OrgTeamsTabProps> = ({ org, isAdmin }) => {
   };
 
   const handleDelete = async (team: OrgTeam) => {
-    if (!window.confirm(`Delete the team "${team.name}"? Its project access grants are removed too.`)) return;
+    const ok = await confirm({
+      title: 'Delete team',
+      message: `Delete the team "${team.name}"? Its project access grants are removed too.`,
+      confirmLabel: 'Delete',
+      danger: true,
+    });
+    if (!ok) return;
     try {
       await orgTeamsAPI.remove(team.id);
       setTeams(teams.filter((t) => t.id !== team.id));
@@ -99,7 +112,13 @@ export const OrgTeamsTab: React.FC<OrgTeamsTabProps> = ({ org, isAdmin }) => {
 
   const handleRemoveMember = async (team: OrgTeam, member: OrgMember) => {
     const label = member.user_name || member.user_email || 'this member';
-    if (!window.confirm(`Remove ${label} from "${team.name}"?`)) return;
+    const ok = await confirm({
+      title: 'Remove team member',
+      message: `Remove ${label} from "${team.name}"?`,
+      confirmLabel: 'Remove',
+      danger: true,
+    });
+    if (!ok) return;
     try {
       await orgTeamsAPI.removeMember(team.id, member.user_id);
       await load();
@@ -115,27 +134,7 @@ export const OrgTeamsTab: React.FC<OrgTeamsTabProps> = ({ org, isAdmin }) => {
 
   return (
     <>
-      {error && (
-        <div
-          style={{
-            background: 'var(--tint-red)',
-            border: '1px solid var(--danger)',
-            color: 'var(--danger-strong)',
-            padding: '10px 14px',
-            borderRadius: 4,
-            marginBottom: 16,
-            fontSize: 13,
-          }}
-        >
-          {error}{' '}
-          <button
-            onClick={() => setError('')}
-            style={{ background: 'none', border: 'none', color: 'var(--danger-strong)', cursor: 'pointer', width: 'auto', padding: 0 }}
-          >
-            ✕
-          </button>
-        </div>
-      )}
+      <ErrorBanner message={error} onDismiss={() => setError('')} style={{ marginBottom: 16 }} />
 
       <div className="card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>

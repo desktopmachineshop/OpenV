@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { AgentDef, agentsAPI } from '../api/client';
 import { useAppStore } from '../state/store';
 import { AgentEditor } from '../components/agents/AgentEditor';
+import { ErrorBanner, Modal, useConfirm } from '../components/ui';
 
 const providerBadgeColor = (provider: string): string => {
   switch (provider) {
@@ -26,6 +27,7 @@ export const AgentsPage: React.FC = () => {
   const projectId = params.projectId || storeProjectId;
   const activeOrgId = useAppStore((s) => s.activeOrgId);
   const navigate = useNavigate();
+  const confirm = useConfirm();
 
   const [agents, setAgents] = useState<AgentDef[]>([]);
   const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
@@ -71,7 +73,13 @@ export const AgentsPage: React.FC = () => {
   };
 
   const handleDelete = async (agent: AgentDef) => {
-    if (!window.confirm(`Delete agent "${agent.name}"? This removes its definition file.`)) return;
+    const ok = await confirm({
+      title: 'Delete agent',
+      message: `Delete agent "${agent.name}"? This removes its definition file.`,
+      confirmLabel: 'Delete',
+      danger: true,
+    });
+    if (!ok) return;
     try {
       await agentsAPI.remove(agent.slug);
       if (selectedSlug === agent.slug) setSelectedSlug(null);
@@ -123,7 +131,7 @@ export const AgentsPage: React.FC = () => {
         </button>
       </div>
 
-      {error && <div style={{ color: 'var(--danger)', fontSize: 13, marginBottom: 10 }}>{error}</div>}
+      <ErrorBanner message={error} onDismiss={() => setError('')} />
 
       <div style={{ display: 'flex', gap: 16, flex: 1, minHeight: 0 }}>
         {/* Agent list */}
@@ -255,24 +263,11 @@ export const AgentsPage: React.FC = () => {
 
       {/* Launch modal */}
       {launchAgent && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0,0,0,0.35)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 200,
-          }}
-          onClick={() => setLaunchAgent(null)}
+        <Modal
+          title={`Launch run: ${launchAgent.name}`}
+          width={520}
+          onClose={() => setLaunchAgent(null)}
         >
-          <div
-            className="card"
-            style={{ width: 520, marginBottom: 0 }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 style={{ fontSize: 15 }}>Launch run: {launchAgent.name}</h3>
             <div className="form-group">
               <label>Prompt</label>
               <textarea
@@ -298,8 +293,7 @@ export const AgentsPage: React.FC = () => {
                 {launching ? 'Launching…' : 'Launch'}
               </button>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
     </div>
   );

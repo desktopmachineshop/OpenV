@@ -5,12 +5,15 @@ import { projectAPI, templateAPI, Project, Template } from '../api/client';
 import { apiErrorMessage } from '../api/errors';
 import { Navbar } from './Navbar';
 import { CreateOrgModal } from './CreateOrgModal';
+import { useConfirm, usePrompt } from './ui';
 import './ProjectList.css';
 
 export const ProjectList: React.FC = () => {
   const navigate = useNavigate();
   const { projectId, setProjectId, projects, setProjects, addProject, updateProject, removeProject, orgs, activeOrgId } = useAppStore();
   const activeOrg = orgs.find((o) => o.id === activeOrgId) || null;
+  const confirm = useConfirm();
+  const prompt = usePrompt();
   const [showCreateOrg, setShowCreateOrg] = useState<boolean>(false);
 
   const openProject = (id: string) => {
@@ -106,7 +109,13 @@ export const ProjectList: React.FC = () => {
   };
 
   const handleDeleteProject = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this project and all its artifacts?')) {
+    const ok = await confirm({
+      title: 'Delete project',
+      message: 'Are you sure you want to delete this project and all its artifacts?',
+      confirmLabel: 'Delete',
+      danger: true,
+    });
+    if (!ok) {
       return;
     }
 
@@ -210,12 +219,25 @@ export const ProjectList: React.FC = () => {
 
   const handleSaveTemplate = async (project: Project, e: React.MouseEvent) => {
     e.stopPropagation();
-    const name = window.prompt('Template name:', project.name) || '';
+    const nameInput = await prompt({
+      title: 'Save as template',
+      label: 'Template name',
+      defaultValue: project.name,
+    });
+    if (nameInput === null) return;
+    const name = nameInput;
     if (!name.trim()) {
       setError('Template name is required');
       return;
     }
-    const description = window.prompt('Template description (optional):', project.description || '') || '';
+    const descriptionInput = await prompt({
+      title: 'Save as template',
+      label: 'Template description (optional)',
+      defaultValue: project.description || '',
+      allowEmpty: true,
+    });
+    if (descriptionInput === null) return;
+    const description = descriptionInput;
 
     try {
       await templateAPI.create(project.id, name.trim(), description.trim());

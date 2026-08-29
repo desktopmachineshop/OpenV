@@ -3,6 +3,7 @@ import { WorkerKey, myRunnerKeyAPI } from '../../api/client';
 import { apiErrorMessage } from '../../api/errors';
 import { RunnerKeyModal } from './RunnerKeyModal';
 import { RunnerConnectPrompt } from '../RunnerConnectPrompt';
+import { ErrorBanner, useConfirm } from '../ui';
 
 interface MyRunnerCardProps {
   orgId: string;
@@ -13,6 +14,7 @@ interface MyRunnerCardProps {
 // machine with their own AI subscription. Runs they launch prefer their
 // personal runner during the grace window.
 export const MyRunnerCard: React.FC<MyRunnerCardProps> = ({ orgId, onKeysChanged }) => {
+  const confirm = useConfirm();
   const [keyRecord, setKeyRecord] = useState<WorkerKey | null>(null);
   const [online, setOnline] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -39,13 +41,15 @@ export const MyRunnerCard: React.FC<MyRunnerCardProps> = ({ orgId, onKeysChanged
   }, [load]);
 
   const createKey = async (rotating: boolean) => {
-    if (
-      rotating &&
-      !window.confirm(
-        'Rotate your runner key? The old key is invalidated immediately — any runner using it will stop authenticating.'
-      )
-    ) {
-      return;
+    if (rotating) {
+      const ok = await confirm({
+        title: 'Rotate runner key',
+        message:
+          'Rotate your runner key? The old key is invalidated immediately — any runner using it will stop authenticating.',
+        confirmLabel: 'Rotate key',
+        danger: true,
+      });
+      if (!ok) return;
     }
     setBusy(true);
     try {
@@ -62,11 +66,14 @@ export const MyRunnerCard: React.FC<MyRunnerCardProps> = ({ orgId, onKeysChanged
   };
 
   const handleRevoke = async () => {
-    if (
-      !window.confirm(
-        'Revoke your personal runner key? Your runner will stop authenticating and runs you launch will use workspace or hosted runners.'
-      )
-    ) {
+    const ok = await confirm({
+      title: 'Revoke runner key',
+      message:
+        'Revoke your personal runner key? Your runner will stop authenticating and runs you launch will use workspace or hosted runners.',
+      confirmLabel: 'Revoke',
+      danger: true,
+    });
+    if (!ok) {
       return;
     }
     setBusy(true);
@@ -86,21 +93,7 @@ export const MyRunnerCard: React.FC<MyRunnerCardProps> = ({ orgId, onKeysChanged
     <div className="card">
       <h3 style={{ marginBottom: 6 }}>My personal runner</h3>
 
-      {error && (
-        <div
-          style={{
-            background: 'var(--tint-red)',
-            border: '1px solid var(--danger)',
-            color: 'var(--danger-strong)',
-            padding: '10px 14px',
-            borderRadius: 4,
-            marginBottom: 12,
-            fontSize: 13,
-          }}
-        >
-          {error}
-        </div>
-      )}
+      <ErrorBanner message={error} onDismiss={() => setError('')} style={{ marginBottom: 12 }} />
 
       {loading ? (
         <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Loading your runner key…</div>

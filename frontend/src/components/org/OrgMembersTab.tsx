@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Org, OrgMember, User, orgsAPI } from '../../api/client';
 import { apiErrorMessage } from '../../api/errors';
+import { ErrorBanner, useConfirm } from '../ui';
 
 const th: React.CSSProperties = {
   textAlign: 'left',
@@ -26,6 +27,7 @@ interface OrgMembersTabProps {
 
 export const OrgMembersTab: React.FC<OrgMembersTabProps> = ({ org, isAdmin, currentUser }) => {
   const navigate = useNavigate();
+  const confirm = useConfirm();
   const [members, setMembers] = useState<OrgMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -98,7 +100,13 @@ export const OrgMembersTab: React.FC<OrgMembersTabProps> = ({ org, isAdmin, curr
     const question = isSelf
       ? `Leave the workspace "${org.name}"? You will lose access to its projects.`
       : `Remove ${label} from the workspace?`;
-    if (!window.confirm(question)) return;
+    const ok = await confirm({
+      title: isSelf ? 'Leave workspace' : 'Remove member',
+      message: question,
+      confirmLabel: isSelf ? 'Leave' : 'Remove',
+      danger: true,
+    });
+    if (!ok) return;
     try {
       await orgsAPI.members.remove(org.id, member.user_id);
       if (isSelf) {
@@ -114,27 +122,7 @@ export const OrgMembersTab: React.FC<OrgMembersTabProps> = ({ org, isAdmin, curr
 
   return (
     <>
-      {error && (
-        <div
-          style={{
-            background: 'var(--tint-red)',
-            border: '1px solid var(--danger)',
-            color: 'var(--danger-strong)',
-            padding: '10px 14px',
-            borderRadius: 4,
-            marginBottom: 16,
-            fontSize: 13,
-          }}
-        >
-          {error}{' '}
-          <button
-            onClick={() => setError('')}
-            style={{ background: 'none', border: 'none', color: 'var(--danger-strong)', cursor: 'pointer', width: 'auto', padding: 0 }}
-          >
-            ✕
-          </button>
-        </div>
-      )}
+      <ErrorBanner message={error} onDismiss={() => setError('')} style={{ marginBottom: 16 }} />
       {notice && (
         <div
           style={{

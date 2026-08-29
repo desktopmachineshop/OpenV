@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Attachment, attachmentAPI } from '../api/client';
 import { ImageLightbox } from './ImageLightbox';
+import { useAlert, useConfirm } from './ui';
 import './ImageGallery.css';
 
 interface ImageGalleryProps {
@@ -22,12 +23,20 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
   showUpload = false,
   thumbnailSize = 120,
 }) => {
+  const confirm = useConfirm();
+  const alertDialog = useAlert();
   const [selectedImage, setSelectedImage] = useState<Attachment | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleDelete = (e: React.MouseEvent, attachmentId: string) => {
+  const handleDelete = async (e: React.MouseEvent, attachmentId: string) => {
     e.stopPropagation();
-    if (window.confirm('Are you sure you want to delete this image?')) {
+    const ok = await confirm({
+      title: 'Delete image',
+      message: 'Are you sure you want to delete this image?',
+      confirmLabel: 'Delete',
+      danger: true,
+    });
+    if (ok) {
       onDelete(attachmentId);
     }
   };
@@ -36,13 +45,13 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
     const file = e.target.files?.[0];
     if (file) {
       if (!file.type.startsWith('image/')) {
-        alert('Please select an image file');
+        void alertDialog({ title: 'Upload image', message: 'Please select an image file.' });
         return;
       }
 
       const maxSize = 10 * 1024 * 1024;
       if (file.size > maxSize) {
-        alert('File size must be less than 10MB');
+        void alertDialog({ title: 'Upload image', message: 'File size must be less than 10MB.' });
         return;
       }
 
@@ -67,13 +76,13 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
     const file = e.dataTransfer.files?.[0];
     if (file) {
       if (!file.type.startsWith('image/')) {
-        alert('Please drop an image file');
+        void alertDialog({ title: 'Upload image', message: 'Please drop an image file.' });
         return;
       }
 
       const maxSize = 10 * 1024 * 1024;
       if (file.size > maxSize) {
-        alert('File size must be less than 10MB');
+        void alertDialog({ title: 'Upload image', message: 'File size must be less than 10MB.' });
         return;
       }
 

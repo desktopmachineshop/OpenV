@@ -13,6 +13,7 @@ import {
 } from '../api/client';
 import { apiErrorMessage } from '../api/errors';
 import { useAppStore } from '../state/store';
+import { ErrorBanner } from '../components/ui';
 
 interface MetricRow {
   name: string;
@@ -204,27 +205,7 @@ export const ProductOverview: React.FC = () => {
         The single source of truth for what this product is and how success is measured.
       </p>
 
-      {error && (
-        <div
-          style={{
-            background: 'var(--tint-red)',
-            border: '1px solid var(--danger)',
-            color: 'var(--danger-strong)',
-            padding: '10px 14px',
-            borderRadius: 4,
-            marginBottom: 16,
-            fontSize: 13,
-          }}
-        >
-          {error}{' '}
-          <button
-            onClick={() => setError('')}
-            style={{ background: 'none', border: 'none', color: 'var(--danger-strong)', cursor: 'pointer', width: 'auto', padding: 0 }}
-          >
-            ✕
-          </button>
-        </div>
-      )}
+      <ErrorBanner message={error} onDismiss={() => setError('')} style={{ marginBottom: 16 }} />
 
       {/* Quick links */}
       <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>

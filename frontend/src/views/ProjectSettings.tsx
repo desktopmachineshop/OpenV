@@ -14,6 +14,7 @@ import {
 } from '../api/client';
 import { apiErrorMessage } from '../api/errors';
 import { useAppStore } from '../state/store';
+import { ErrorBanner, useConfirm } from '../components/ui';
 
 type Tab = 'members' | 'repos' | 'agents' | 'danger';
 
@@ -55,6 +56,7 @@ export const ProjectSettings: React.FC = () => {
   const navigate = useNavigate();
   const currentUser = useAppStore((s) => s.currentUser);
   const activeOrgId = useAppStore((s) => s.activeOrgId);
+  const confirm = useConfirm();
 
   // The active tab lives in the URL (?tab=…) so refreshes and deep links keep
   // it; unknown values fall back to the first tab.
@@ -223,7 +225,13 @@ export const ProjectSettings: React.FC = () => {
   const handleRemoveMember = async (member: ProjectMember) => {
     if (!projectId) return;
     const label = member.user_name || member.user_email || 'this member';
-    if (!window.confirm(`Remove ${label} from the project?`)) return;
+    const ok = await confirm({
+      title: 'Remove member',
+      message: `Remove ${label} from the project?`,
+      confirmLabel: 'Remove',
+      danger: true,
+    });
+    if (!ok) return;
     try {
       await membersAPI.remove(projectId, member.user_id);
       setMembers(members.filter((m) => m.user_id !== member.user_id));
@@ -266,7 +274,13 @@ export const ProjectSettings: React.FC = () => {
   };
 
   const handleDeleteRepo = async (repo: RepoConnection) => {
-    if (!window.confirm(`Remove repository connection "${repo.name}"?`)) return;
+    const ok = await confirm({
+      title: 'Remove repository',
+      message: `Remove repository connection "${repo.name}"?`,
+      confirmLabel: 'Remove',
+      danger: true,
+    });
+    if (!ok) return;
     try {
       await repoConnectionsAPI.remove(repo.id);
       setRepos(repos.filter((r) => r.id !== repo.id));
@@ -341,7 +355,13 @@ export const ProjectSettings: React.FC = () => {
 
   const handleRevokeTeam = async (grant: TeamGrant) => {
     if (!projectId) return;
-    if (!window.confirm(`Revoke "${grant.team_name}" access to this project?`)) return;
+    const ok = await confirm({
+      title: 'Revoke team access',
+      message: `Revoke "${grant.team_name}" access to this project?`,
+      confirmLabel: 'Revoke',
+      danger: true,
+    });
+    if (!ok) return;
     try {
       await projectTeamAccessAPI.revoke(projectId, grant.org_team_id);
       setTeamGrants(teamGrants.filter((g) => g.org_team_id !== grant.org_team_id));
@@ -361,8 +381,20 @@ export const ProjectSettings: React.FC = () => {
 
   const handleDeleteProject = async () => {
     if (!projectId) return;
-    if (!window.confirm('Delete this project and ALL of its artifacts, links and history? This cannot be undone.')) return;
-    if (!window.confirm('Really delete? This is permanent.')) return;
+    const first = await confirm({
+      title: 'Delete project',
+      message: 'Delete this project and ALL of its artifacts, links and history? This cannot be undone.',
+      confirmLabel: 'Delete project',
+      danger: true,
+    });
+    if (!first) return;
+    const second = await confirm({
+      title: 'Delete project',
+      message: 'Really delete? This is permanent.',
+      confirmLabel: 'Yes, delete permanently',
+      danger: true,
+    });
+    if (!second) return;
     setDeleting(true);
     try {
       await projectAPI.delete(projectId);
@@ -402,27 +434,7 @@ export const ProjectSettings: React.FC = () => {
         ))}
       </div>
 
-      {error && (
-        <div
-          style={{
-            background: 'var(--tint-red)',
-            border: '1px solid var(--danger)',
-            color: 'var(--danger-strong)',
-            padding: '10px 14px',
-            borderRadius: 4,
-            marginBottom: 16,
-            fontSize: 13,
-          }}
-        >
-          {error}{' '}
-          <button
-            onClick={() => setError('')}
-            style={{ background: 'none', border: 'none', color: 'var(--danger-strong)', cursor: 'pointer', width: 'auto', padding: 0 }}
-          >
-            ✕
-          </button>
-        </div>
-      )}
+      <ErrorBanner message={error} onDismiss={() => setError('')} style={{ marginBottom: 16 }} />
       {notice && (
         <div
           style={{

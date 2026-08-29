@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Artifact, artifactAPI } from '../api/client';
+import { useAlert, useConfirm } from './ui';
 
 interface ArtifactHeaderProps {
   artifact: Artifact;
@@ -18,6 +19,8 @@ export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
   onPreviewChange,
   previewVersion,
 }) => {
+  const confirm = useConfirm();
+  const alertDialog = useAlert();
   const [versions, setVersions] = useState<Artifact[]>([artifact]);
   const [showVersions, setShowVersions] = useState(false);
   const [loadingVersions, setLoadingVersions] = useState(false);
@@ -67,11 +70,16 @@ export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
 
   const handleVersionRestore = async (version: number) => {
     if (version === artifact.version) {
-      alert('This is the current version');
+      await alertDialog({ title: 'Restore version', message: 'This is the current version.' });
       return;
     }
 
-    if (!window.confirm(`Restore version ${version}?`)) {
+    const ok = await confirm({
+      title: 'Restore version',
+      message: `Restore version ${version}? The current content is preserved in the history.`,
+      confirmLabel: 'Restore',
+    });
+    if (!ok) {
       return;
     }
 
@@ -86,7 +94,7 @@ export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
       setVersions(versionsResponse.data || []);
     } catch (error) {
       console.error('Failed to restore version', error);
-      alert('Failed to restore version');
+      await alertDialog({ title: 'Restore version', message: 'Failed to restore version.' });
     }
   };
 

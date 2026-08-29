@@ -5,6 +5,7 @@ import { useAppStore } from '../state/store';
 import { RunDetailPanel, runStatusColor } from '../components/agents/RunDetailPanel';
 import { ProposalReviewPanel } from '../components/agents/ProposalReviewPanel';
 import { RunnerConnectPrompt } from '../components/RunnerConnectPrompt';
+import { ErrorBanner } from '../components/ui';
 
 const STATUS_FILTERS = [
   'all',
@@ -135,7 +136,7 @@ export const AgentRunsPage: React.FC = () => {
         </select>
       </div>
 
-      {error && <div style={{ color: 'var(--danger)', fontSize: 13, marginBottom: 8 }}>{error}</div>}
+      <ErrorBanner message={error} onDismiss={() => setError('')} style={{ marginBottom: 8 }} />
 
       {workerStatus &&
         workerStatus.queue.queued > 0 &&

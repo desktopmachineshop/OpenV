@@ -8,6 +8,7 @@ import { OrgMembersTab } from '../components/org/OrgMembersTab';
 import { OrgTeamsTab } from '../components/org/OrgTeamsTab';
 import { OrgProvidersTab } from '../components/org/OrgProvidersTab';
 import { WorkerKeysTab } from '../components/org/WorkerKeysTab';
+import { ErrorBanner } from '../components/ui';
 
 type Tab = 'general' | 'members' | 'teams' | 'providers' | 'worker-keys';
 
@@ -128,27 +129,7 @@ export const OrgSettings: React.FC = () => {
           ))}
         </div>
 
-        {error && (
-          <div
-            style={{
-              background: 'var(--tint-red)',
-              border: '1px solid var(--danger)',
-              color: 'var(--danger-strong)',
-              padding: '10px 14px',
-              borderRadius: 4,
-              marginBottom: 16,
-              fontSize: 13,
-            }}
-          >
-            {error}{' '}
-            <button
-              onClick={() => setError('')}
-              style={{ background: 'none', border: 'none', color: 'var(--danger-strong)', cursor: 'pointer', width: 'auto', padding: 0 }}
-            >
-              ✕
-            </button>
-          </div>
-        )}
+        <ErrorBanner message={error} onDismiss={() => setError('')} style={{ marginBottom: 16 }} />
         {notice && (
           <div
             style={{

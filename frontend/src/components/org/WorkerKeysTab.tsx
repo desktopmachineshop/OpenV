@@ -4,6 +4,7 @@ import { apiErrorMessage } from '../../api/errors';
 import { HostedRunnerCard } from './HostedRunnerCard';
 import { MyRunnerCard } from './MyRunnerCard';
 import { RunnerKeyModal } from './RunnerKeyModal';
+import { ErrorBanner, useConfirm, usePrompt } from '../ui';
 
 const th: React.CSSProperties = {
   textAlign: 'left',
@@ -40,6 +41,8 @@ interface WorkerKeysTabProps {
 // (agentd) authenticate against this workspace; the plaintext key is only
 // ever shown once, right after creation.
 export const WorkerKeysTab: React.FC<WorkerKeysTabProps> = ({ org, isAdmin }) => {
+  const confirm = useConfirm();
+  const prompt = usePrompt();
   const [keys, setKeys] = useState<WorkerKey[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -63,7 +66,11 @@ export const WorkerKeysTab: React.FC<WorkerKeysTabProps> = ({ org, isAdmin }) =>
   }, [load]);
 
   const handleCreate = async () => {
-    const name = window.prompt('Name for the new worker key (e.g. "shop-floor-pc"):');
+    const name = await prompt({
+      title: 'New worker key',
+      label: 'Name for the new worker key',
+      placeholder: 'e.g. "shop-floor-pc"',
+    });
     if (!name || !name.trim()) return;
     setCreating(true);
     setError('');
@@ -79,7 +86,13 @@ export const WorkerKeysTab: React.FC<WorkerKeysTabProps> = ({ org, isAdmin }) =>
   };
 
   const handleRevoke = async (key: WorkerKey) => {
-    if (!window.confirm(`Revoke the worker key "${key.name}"? Workers using it will stop authenticating.`)) return;
+    const ok = await confirm({
+      title: 'Revoke worker key',
+      message: `Revoke the worker key "${key.name}"? Workers using it will stop authenticating.`,
+      confirmLabel: 'Revoke',
+      danger: true,
+    });
+    if (!ok) return;
     try {
       await workerKeysAPI.revoke(org.id, key.id);
       await load();
@@ -94,27 +107,7 @@ export const WorkerKeysTab: React.FC<WorkerKeysTabProps> = ({ org, isAdmin }) =>
 
   return (
     <>
-      {error && (
-        <div
-          style={{
-            background: 'var(--tint-red)',
-            border: '1px solid var(--danger)',
-            color: 'var(--danger-strong)',
-            padding: '10px 14px',
-            borderRadius: 4,
-            marginBottom: 16,
-            fontSize: 13,
-          }}
-        >
-          {error}{' '}
-          <button
-            onClick={() => setError('')}
-            style={{ background: 'none', border: 'none', color: 'var(--danger-strong)', cursor: 'pointer', width: 'auto', padding: 0 }}
-          >
-            ✕
-          </button>
-        </div>
-      )}
+      <ErrorBanner message={error} onDismiss={() => setError('')} style={{ marginBottom: 16 }} />
 
       <HostedRunnerCard orgId={org.id} isAdmin={isAdmin} />
 

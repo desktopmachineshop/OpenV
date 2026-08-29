@@ -3,6 +3,7 @@ import { ProviderSetting, providerSettingsAPI } from '../../api/client';
 import { apiErrorMessage } from '../../api/errors';
 import { ModelSelect } from '../agents/ModelSelect';
 import { ProviderConnectCard } from '../agents/ProviderConnectCard';
+import { ErrorBanner } from '../ui';
 
 const chipStyle = (bg: string, color = '#fff'): React.CSSProperties => ({
   display: 'inline-block',
@@ -94,27 +95,7 @@ export const OrgProvidersTab: React.FC<OrgProvidersTabProps> = ({ isAdmin }) => 
 
   return (
     <>
-      {error && (
-        <div
-          style={{
-            background: 'var(--tint-red)',
-            border: '1px solid var(--danger)',
-            color: 'var(--danger-strong)',
-            padding: '10px 14px',
-            borderRadius: 4,
-            marginBottom: 16,
-            fontSize: 13,
-          }}
-        >
-          {error}{' '}
-          <button
-            onClick={() => setError('')}
-            style={{ background: 'none', border: 'none', color: 'var(--danger-strong)', cursor: 'pointer', width: 'auto', padding: 0 }}
-          >
-            ✕
-          </button>
-        </div>
-      )}
+      <ErrorBanner message={error} onDismiss={() => setError('')} style={{ marginBottom: 16 }} />
       {notice && (
         <div
           style={{

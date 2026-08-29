@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { publicInterviewAPI, InterviewMessage } from '../api/client';
+import { useConfirm } from '../components/ui';
 
 type Phase = 'loading' | 'error' | 'name' | 'chat' | 'done';
 
@@ -8,6 +9,7 @@ type Phase = 'loading' | 'error' | 'name' | 'chat' | 'done';
 // full-height chat reached via /interview/:token invite links.
 export const InterviewChat: React.FC = () => {
   const { token } = useParams<{ token: string }>();
+  const confirm = useConfirm();
 
   const [phase, setPhase] = useState<Phase>('loading');
   const [interviewName, setInterviewName] = useState('');
@@ -143,7 +145,13 @@ export const InterviewChat: React.FC = () => {
 
   const endInterview = async () => {
     if (!token) return;
-    if (!window.confirm('End the interview? You will not be able to continue afterwards.')) return;
+    const ok = await confirm({
+      title: 'End interview',
+      message: 'End the interview? You will not be able to continue afterwards.',
+      confirmLabel: 'End interview',
+      danger: true,
+    });
+    if (!ok) return;
     try {
       await publicInterviewAPI.finish(token);
     } catch {
