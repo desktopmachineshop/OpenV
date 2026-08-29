@@ -227,6 +227,21 @@ export const TraceabilityMatrix: React.FC = () => {
         flex: 1,
         wrapText: true,
         autoHeight: true,
+        getQuickFilterText: (p) => p.value || '',
+        cellRenderer: (p: ICellRendererParams<MatrixRow>) => (
+          <div style={{ padding: '4px 0', lineHeight: '20px', whiteSpace: 'normal' }}>
+            <div>{p.value}</div>
+            {p.data?.requirement_id && (
+              <Link
+                to={`/projects/${projectId}/impact?artifact=${p.data.requirement_id}`}
+                title="Trace what a change to this requirement would affect"
+                style={{ fontSize: 11, color: 'var(--accent-strong)', textDecoration: 'none' }}
+              >
+                Show impact →
+              </Link>
+            )}
+          </div>
+        ),
       },
       {
         headerName: 'User Needs',
@@ -293,7 +308,7 @@ export const TraceabilityMatrix: React.FC = () => {
         ],
       },
     ],
-    [ChipListRenderer, TestCaseRenderer, joinTitles]
+    [ChipListRenderer, TestCaseRenderer, joinTitles, projectId]
   );
 
   const exportCsv = () => {
