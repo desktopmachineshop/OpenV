@@ -74,6 +74,44 @@ func httpError(resp *http.Response) error {
 	return fmt.Errorf("api returned %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
 }
 
+// transientRetries bounds how many extra attempts a transient failure (a
+// network error or a 5xx response) gets before the call gives up. Applied to
+// the calls whose loss corrupts run state — Start, PushLogs, and above all
+// Finish, where a dropped terminal report would strand the run until the
+// reaper.
+const transientRetries = 3
+
+// retryBackoff is the pause before the n-th retry (n starts at 1). Short and
+// linear: the goal is to ride out a brief blip or an API restart, not to wait
+// out a real outage.
+func retryBackoff(n int) time.Duration { return time.Duration(n) * 250 * time.Millisecond }
+
+// doWithRetry issues the request and retries it on transient failures. A
+// network error or a 5xx is retried (the body is drained and closed first); a
+// non-5xx response — including 4xx like a 409 already-finished conflict — is
+// returned to the caller as-is, retries or not. On exhaustion the last error
+// is returned so the caller reports a real failure rather than a nil response.
+func (c *Client) doWithRetry(client *http.Client, method, path string, body interface{}) (*http.Response, error) {
+	var lastErr error
+	for attempt := 0; ; attempt++ {
+		if attempt > 0 {
+			time.Sleep(retryBackoff(attempt))
+		}
+		resp, err := c.do(client, method, path, body)
+		if err != nil {
+			lastErr = err
+		} else if resp.StatusCode >= 500 {
+			lastErr = httpError(resp) // reads the body...
+			resp.Body.Close()         // ...so close it before the next attempt
+		} else {
+			return resp, nil
+		}
+		if attempt >= transientRetries {
+			return nil, lastErr
+		}
+	}
+}
+
 // Claim asks the queue for a run. Returns (nil, nil) when the queue is empty.
 func (c *Client) Claim(workerID string, providers []string, minPriority int, hosted bool) (*ClaimResponse, error) {
 	resp, err := c.do(c.http, "POST", "/api/v1/agent-runs/claim", map[string]interface{}{
@@ -101,7 +139,7 @@ func (c *Client) Claim(workerID string, providers []string, minPriority int, hos
 
 // Start transitions a claimed run to running.
 func (c *Client) Start(runID string) error {
-	resp, err := c.do(c.http, "POST", "/api/v1/agent-runs/"+runID+"/start", nil)
+	resp, err := c.doWithRetry(c.http, "POST", "/api/v1/agent-runs/"+runID+"/start", nil)
 	if err != nil {
 		return err
 	}
@@ -118,7 +156,7 @@ func (c *Client) PushLogs(runID string, entries []agentruns.LogEntry) (bool, str
 	if entries == nil {
 		entries = []agentruns.LogEntry{}
 	}
-	resp, err := c.do(c.logHTTP, "POST", "/api/v1/agent-runs/"+runID+"/logs", entries)
+	resp, err := c.doWithRetry(c.logHTTP, "POST", "/api/v1/agent-runs/"+runID+"/logs", entries)
 	if err != nil {
 		return false, "", err
 	}
@@ -136,9 +174,10 @@ func (c *Client) PushLogs(runID string, entries []agentruns.LogEntry) (bool, str
 	return out.CancelRequested, out.Status, nil
 }
 
-// Finish reports a run's terminal state.
+// Finish reports a run's terminal state. Retried on transient failures so a
+// blip talking to the API doesn't drop the run's terminal report.
 func (c *Client) Finish(runID string, req agentruns.FinishRequest) error {
-	resp, err := c.do(c.http, "POST", "/api/v1/agent-runs/"+runID+"/finish", req)
+	resp, err := c.doWithRetry(c.http, "POST", "/api/v1/agent-runs/"+runID+"/finish", req)
 	if err != nil {
 		return err
 	}

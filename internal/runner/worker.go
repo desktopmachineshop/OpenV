@@ -261,8 +261,9 @@ func (w *Worker) execute(ctx context.Context, claim *ClaimResponse) {
 		if r := recover(); r != nil {
 			log.Printf("run %s: panic: %v\n%s", run.ID, r, debug.Stack())
 			_ = w.client.Finish(run.ID, agentruns.FinishRequest{
-				Status: agentruns.StatusFailed,
-				Error:  "worker panic during run execution",
+				Status:     agentruns.StatusFailed,
+				Error:      "worker panic during run execution",
+				ErrorClass: classifySite(sitePanic, nil),
 			})
 		}
 	}()
@@ -300,8 +301,9 @@ func (w *Worker) execute(ctx context.Context, claim *ClaimResponse) {
 	adapter, ok := w.adapters[claim.Agent.Provider]
 	if !ok {
 		w.finish(run.ID, agentruns.FinishRequest{
-			Status: agentruns.StatusFailed,
-			Error:  "no adapter for provider " + claim.Agent.Provider,
+			Status:     agentruns.StatusFailed,
+			Error:      "no adapter for provider " + claim.Agent.Provider,
+			ErrorClass: classifySite(siteNoAdapter, nil),
 		})
 		return
 	}
@@ -324,8 +326,9 @@ func (w *Worker) execute(ctx context.Context, claim *ClaimResponse) {
 	}
 	if err != nil {
 		w.finish(run.ID, agentruns.FinishRequest{
-			Status: agentruns.StatusFailed,
-			Error:  "workspace preparation failed: " + err.Error(),
+			Status:     agentruns.StatusFailed,
+			Error:      "workspace preparation failed: " + err.Error(),
+			ErrorClass: classifySite(siteWorkspacePrep, nil),
 		})
 		return
 	}
@@ -336,8 +339,9 @@ func (w *Worker) execute(ctx context.Context, claim *ClaimResponse) {
 
 	if err := w.client.Start(run.ID); err != nil {
 		w.finish(run.ID, agentruns.FinishRequest{
-			Status: agentruns.StatusFailed,
-			Error:  "start transition failed: " + err.Error(),
+			Status:     agentruns.StatusFailed,
+			Error:      "start transition failed: " + err.Error(),
+			ErrorClass: classifySite(siteStartTransition, nil),
 		})
 		return
 	}
@@ -360,6 +364,7 @@ func (w *Worker) execute(ctx context.Context, claim *ClaimResponse) {
 				Status: agentruns.StatusFailed,
 				Error: "this project uses API-key auth, but " + keyEnv +
 					" is not set on the runner host — set it (or switch the project back to user-account auth)",
+				ErrorClass: classifySite(siteAPIKeyMissing, nil),
 			})
 			return
 		}
@@ -391,8 +396,9 @@ func (w *Worker) execute(ctx context.Context, claim *ClaimResponse) {
 	handle, err := adapter.Start(ctx, spec)
 	if err != nil {
 		w.finish(run.ID, agentruns.FinishRequest{
-			Status: agentruns.StatusFailed,
-			Error:  "adapter start failed: " + err.Error(),
+			Status:     agentruns.StatusFailed,
+			Error:      "adapter start failed: " + err.Error(),
+			ErrorClass: classifySite(siteAdapterStart, nil),
 		})
 		return
 	}
@@ -430,6 +436,7 @@ func (w *Worker) execute(ctx context.Context, claim *ClaimResponse) {
 	case errors.Is(waitErr, context.DeadlineExceeded):
 		req.Status = agentruns.StatusTimedOut
 		req.Error = "run exceeded its timeout"
+		req.ErrorClass = classifySite(siteTimeout, waitErr)
 		// Preserve the parser's real error alongside the timeout verdict
 		// instead of discarding it — the underlying detail is often the only
 		// clue to what the run was stuck on.
@@ -440,6 +447,9 @@ func (w *Worker) execute(ctx context.Context, claim *ClaimResponse) {
 	case waitErr != nil:
 		req.Status = agentruns.StatusFailed
 		req.Error = waitErr.Error()
+		// Classify from the CLI's failure text: an auth/provider problem the
+		// agent surfaced vs. a genuine agent error (see classifyAgentError).
+		req.ErrorClass = classifySite(siteAgentResult, waitErr)
 	default:
 		req.Status = agentruns.StatusSucceeded
 	}

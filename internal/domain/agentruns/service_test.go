@@ -171,6 +171,7 @@ func (f *fakeRunRepo) FailStale(cutoff time.Time) ([]string, error) {
 		now := time.Now()
 		r.Status = StatusFailed
 		r.Error = "worker lost (heartbeat timeout)"
+		r.ErrorClass = ErrorClassWorkerError
 		r.FinishedAt = &now
 		r.RunTokenHash = ""
 		ids = append(ids, id)
@@ -184,7 +185,7 @@ type fakeBus struct {
 	published []events.Event
 }
 
-func (b *fakeBus) Publish(e events.Event) { b.published = append(b.published, e) }
+func (b *fakeBus) Publish(e events.Event)       { b.published = append(b.published, e) }
 func (b *fakeBus) Subscribe(func(events.Event)) {}
 
 func (b *fakeBus) finished() []events.Event {
@@ -329,6 +330,128 @@ func TestRetryUnknownRun(t *testing.T) {
 	svc, _ := newRetryService()
 	if _, err := svc.Retry("missing", strptr("u")); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("Retry(unknown) err = %v, want ErrNotFound", err)
+	}
+}
+
+// findRetryOf returns the queued run the repo holds whose provenance points at
+// sourceID (the auto-retry re-enqueue), or nil.
+func findRetryOf(repo *fakeRunRepo, sourceID string) *Run {
+	for _, r := range repo.runs {
+		if r.RetriedFromRunID != nil && *r.RetriedFromRunID == sourceID {
+			return r
+		}
+	}
+	return nil
+}
+
+func runningRun(id string, attempt, max int) *Run {
+	now := time.Now()
+	return &Run{
+		ID:           id,
+		OrgID:        "org-1",
+		AgentID:      "agent-1",
+		Status:       StatusRunning,
+		Prompt:       "do work",
+		LaunchedBy:   strptr("u"),
+		AttemptCount: attempt,
+		MaxAttempts:  max,
+		HeartbeatAt:  &now,
+	}
+}
+
+// TestFinishAutoRetriesRetryableFailureUntilExhausted: a retryable terminal
+// failure re-enqueues a fresh attempt (with provenance + backoff) while the
+// attempt budget lasts, and stops once it is spent.
+func TestFinishAutoRetriesRetryableFailureUntilExhausted(t *testing.T) {
+	svc, repo := newRetryService(runningRun("r1", 1, 3))
+
+	// Attempt 1 fails with a retryable class -> attempt 2 is enqueued.
+	if _, err := svc.Finish("r1", FinishRequest{Status: StatusFailed, ErrorClass: ErrorClassWorkerError, Error: "worker died"}); err != nil {
+		t.Fatalf("Finish attempt 1: %v", err)
+	}
+	retry2 := findRetryOf(repo, "r1")
+	if retry2 == nil {
+		t.Fatal("attempt 1 failure did not enqueue a retry")
+	}
+	if retry2.Status != StatusQueued {
+		t.Errorf("retry status = %q, want queued", retry2.Status)
+	}
+	if retry2.AttemptCount != 2 || retry2.MaxAttempts != 3 {
+		t.Errorf("retry attempt tracking = %d/%d, want 2/3", retry2.AttemptCount, retry2.MaxAttempts)
+	}
+	if retry2.NextAttemptAt == nil || !retry2.NextAttemptAt.After(time.Now()) {
+		t.Error("retry must carry a future next_attempt_at (backoff)")
+	}
+	if retry2.LaunchedBy == nil || *retry2.LaunchedBy != "u" {
+		t.Error("retry must preserve the launcher for personal-runner routing")
+	}
+
+	// Attempt 2 fails the same way -> attempt 3 (the last) is enqueued.
+	if _, err := svc.Finish(retry2.ID, FinishRequest{Status: StatusTimedOut, ErrorClass: ErrorClassTimeout}); err != nil {
+		t.Fatalf("Finish attempt 2: %v", err)
+	}
+	retry3 := findRetryOf(repo, retry2.ID)
+	if retry3 == nil || retry3.AttemptCount != 3 {
+		t.Fatalf("attempt 2 failure did not enqueue attempt 3 (got %+v)", retry3)
+	}
+
+	// Attempt 3 exhausts the budget -> no further retry.
+	if _, err := svc.Finish(retry3.ID, FinishRequest{Status: StatusFailed, ErrorClass: ErrorClassProviderUnavailable}); err != nil {
+		t.Fatalf("Finish attempt 3: %v", err)
+	}
+	if r := findRetryOf(repo, retry3.ID); r != nil {
+		t.Errorf("budget exhausted but a 4th attempt was enqueued: %+v", r)
+	}
+	if len(repo.runs) != 3 {
+		t.Errorf("attempt chain produced %d runs, want 3", len(repo.runs))
+	}
+}
+
+// TestFinishDoesNotRetryNonRetryableClass: auth / agent_error / workspace
+// failures stand — retrying cannot fix them.
+func TestFinishDoesNotRetryNonRetryableClass(t *testing.T) {
+	for _, class := range []string{ErrorClassAuth, ErrorClassAgentError, ErrorClassWorkspace} {
+		svc, repo := newRetryService(runningRun("r1", 1, 3))
+		if _, err := svc.Finish("r1", FinishRequest{Status: StatusFailed, ErrorClass: class}); err != nil {
+			t.Fatalf("Finish(%s): %v", class, err)
+		}
+		if len(repo.runs) != 1 {
+			t.Errorf("class %q enqueued a retry (%d runs), want none", class, len(repo.runs))
+		}
+	}
+}
+
+// TestFinishRespectsAutoRetryOptOut: with auto-retry disabled, even a
+// retryable failure simply stands.
+func TestFinishRespectsAutoRetryOptOut(t *testing.T) {
+	svc, repo := newRetryService(runningRun("r1", 1, 3))
+	svc.SetRetryPolicy(3, false)
+	if _, err := svc.Finish("r1", FinishRequest{Status: StatusFailed, ErrorClass: ErrorClassWorkerError}); err != nil {
+		t.Fatalf("Finish: %v", err)
+	}
+	if len(repo.runs) != 1 {
+		t.Errorf("auto-retry disabled but %d runs exist, want 1", len(repo.runs))
+	}
+}
+
+// TestFailStaleAutoRetries: a run whose worker went silent is a worker_error
+// (retryable), so the reaper's failure re-enqueues a fresh attempt.
+func TestFailStaleAutoRetries(t *testing.T) {
+	stale := runningRun("r1", 1, 3)
+	old := time.Now().Add(-time.Hour)
+	stale.HeartbeatAt = &old
+	svc, repo := newRetryService(stale)
+
+	ids, err := svc.FailStale(2 * time.Minute)
+	if err != nil {
+		t.Fatalf("FailStale: %v", err)
+	}
+	if len(ids) != 1 {
+		t.Fatalf("FailStale returned %d ids, want 1", len(ids))
+	}
+	retry := findRetryOf(repo, "r1")
+	if retry == nil || retry.AttemptCount != 2 || retry.Status != StatusQueued {
+		t.Fatalf("reaper failure did not enqueue a retry (got %+v)", retry)
 	}
 }
 

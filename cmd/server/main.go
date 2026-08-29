@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -288,6 +289,17 @@ func main() {
 			}
 			return 0
 		})
+	// Bounded auto-retry (issue #184): a retryable terminal failure
+	// (provider_unavailable | timeout | worker_error) re-enqueues a fresh
+	// attempt with backoff while attempts remain. OPENV_RUN_MAX_ATTEMPTS caps
+	// the chain (default 3); OPENV_RUN_AUTO_RETRY=false (or a cap of 1) opts
+	// out and the failure simply stands.
+	maxAttempts := agentruns.DefaultMaxAttempts
+	if v, err := strconv.Atoi(strings.TrimSpace(os.Getenv("OPENV_RUN_MAX_ATTEMPTS"))); err == nil && v > 0 {
+		maxAttempts = v
+	}
+	autoRetry := !strings.EqualFold(strings.TrimSpace(os.Getenv("OPENV_RUN_AUTO_RETRY")), "false")
+	runService.SetRetryPolicy(maxAttempts, autoRetry)
 	automationService := automations.NewDefaultService(automationRepo)
 	repoConnService := repoconns.NewDefaultService(repoConnRepo)
 	providerService := providers.NewDefaultService(providerRepo)
@@ -409,10 +421,10 @@ func main() {
 		OrgSeeder: func(orgID string) error {
 			return seeds.EnsureOrgDefaults(orgID, agentService, teamService)
 		},
-		TeamService:   teamService,
-		Bus:           bus,
-		EventRepo:     eventRepo,
-		SSEHub:        sseHub,
+		TeamService:      teamService,
+		Bus:              bus,
+		EventRepo:        eventRepo,
+		SSEHub:           sseHub,
 		GoogleOAuth:      googleOAuth,
 		SecureCookies:    os.Getenv("SECURE_COOKIES") == "true",
 		PublicAPIURL:     envOr("PUBLIC_URL", "http://localhost:"+port),

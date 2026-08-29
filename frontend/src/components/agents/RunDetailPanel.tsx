@@ -13,6 +13,52 @@ const RETRYABLE_STATUSES = ['failed', 'timed_out', 'cancelled'];
 const MAX_SSE_RECONNECT_ATTEMPTS = 3;
 const SSE_RECONNECT_BASE_DELAY_MS = 1000;
 
+// Human-readable label + color for a run's structured failure class (issue
+// #184). Retryable classes (provider_unavailable, timeout, worker_error) read
+// amber; terminal-by-design ones (auth, agent_error, workspace) read red.
+const ERROR_CLASS_META: Record<string, { label: string; color: string; retryable: boolean }> = {
+  provider_unavailable: { label: 'provider unavailable', color: 'var(--warning)', retryable: true },
+  timeout: { label: 'timeout', color: 'var(--warning)', retryable: true },
+  worker_error: { label: 'worker error', color: 'var(--warning)', retryable: true },
+  auth: { label: 'auth', color: 'var(--danger)', retryable: false },
+  workspace: { label: 'workspace', color: 'var(--danger)', retryable: false },
+  agent_error: { label: 'agent error', color: 'var(--danger)', retryable: false },
+};
+
+export const errorClassMeta = (
+  errorClass?: string | null
+): { label: string; color: string; retryable: boolean } | null => {
+  if (!errorClass) return null;
+  return ERROR_CLASS_META[errorClass] || { label: errorClass, color: 'var(--danger)', retryable: false };
+};
+
+// ErrorClassChip renders a run's failure class as a small pill (nothing for a
+// run that succeeded or was cancelled — those carry no class).
+export const ErrorClassChip: React.FC<{ errorClass?: string | null; title?: string }> = ({
+  errorClass,
+  title,
+}) => {
+  const meta = errorClassMeta(errorClass);
+  if (!meta) return null;
+  return (
+    <span
+      title={title || `failure class: ${meta.label}${meta.retryable ? ' (retryable)' : ''}`}
+      style={{
+        display: 'inline-block',
+        padding: '2px 8px',
+        borderRadius: 12,
+        background: meta.color,
+        color: '#fff',
+        fontSize: 10.5,
+        fontWeight: 600,
+        marginLeft: 6,
+      }}
+    >
+      {meta.label}
+    </span>
+  );
+};
+
 export const runStatusColor = (status: string): string => {
   switch (status) {
     case 'queued':
@@ -349,6 +395,7 @@ export const RunDetailPanel: React.FC<RunDetailPanelProps> = ({ runId, onSelectR
               {run.status}
             </span>
           )}
+          {run && <ErrorClassChip errorClass={run.error_class} />}
         </strong>
         {isLive && (
           <button
@@ -412,6 +459,11 @@ export const RunDetailPanel: React.FC<RunDetailPanelProps> = ({ runId, onSelectR
                 >
                   an earlier run
                 </span>
+              </div>
+            )}
+            {run.max_attempts != null && run.max_attempts > 1 && run.attempt_count != null && (
+              <div title="Bounded auto-retry: a retryable failure re-enqueues a fresh attempt until this budget is spent.">
+                Attempt {run.attempt_count} of {run.max_attempts}
               </div>
             )}
             <div style={{ whiteSpace: 'pre-wrap', color: 'var(--text-body)' }}>Prompt: {run.prompt}</div>

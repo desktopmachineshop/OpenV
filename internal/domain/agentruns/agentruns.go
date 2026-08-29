@@ -31,6 +31,55 @@ const (
 	PriorityInterview = 20
 )
 
+// Error classes (issue #184): a structured taxonomy for terminal run
+// failures, stored in agent_runs.error_class. The empty string means "no
+// failure" (a succeeded or cancelled run). The runner classifies at every
+// finish site; the reaper classifies heartbeat-timeout failures as
+// worker_error.
+const (
+	// ErrorClassProviderUnavailable: the provider CLI/back end could not be
+	// reached or refused for a transient reason (rate limit, overload, no
+	// adapter, the CLI failing to launch). Retryable.
+	ErrorClassProviderUnavailable = "provider_unavailable"
+	// ErrorClassAuth: a credential problem (missing API key, sign-in expired,
+	// 401/403 from the provider). NOT retryable — retrying cannot fix bad
+	// credentials.
+	ErrorClassAuth = "auth"
+	// ErrorClassWorkspace: preparing the run's workspace failed (clone, disk).
+	// NOT retryable by default — the same prep tends to fail the same way.
+	ErrorClassWorkspace = "workspace"
+	// ErrorClassTimeout: the run exceeded its deadline (adapter watchdog or
+	// heartbeat timeout). Retryable.
+	ErrorClassTimeout = "timeout"
+	// ErrorClassAgentError: the agent itself failed — a non-zero CLI exit or an
+	// error result the agent produced. NOT retryable — a deterministic agent
+	// failure recurs.
+	ErrorClassAgentError = "agent_error"
+	// ErrorClassWorkerError: the runner/worker faulted (panic, lost worker,
+	// an API transition the run could not complete through no fault of its
+	// own). Retryable.
+	ErrorClassWorkerError = "worker_error"
+)
+
+// retryableErrorClasses are the failure classes an auto-retry re-enqueues: a
+// transient provider outage, a timeout, or a worker fault. auth, workspace and
+// agent_error are deliberately excluded — retrying does not fix bad
+// credentials, a broken workspace, or a deterministic agent failure.
+var retryableErrorClasses = map[string]bool{
+	ErrorClassProviderUnavailable: true,
+	ErrorClassTimeout:             true,
+	ErrorClassWorkerError:         true,
+}
+
+// IsRetryableClass reports whether a terminal failure of the given error class
+// is eligible for a bounded auto-retry.
+func IsRetryableClass(class string) bool { return retryableErrorClasses[class] }
+
+// DefaultMaxAttempts is the default cap on how many times a run (the original
+// plus auto-retries) is attempted before the failure stands. A value of 1
+// disables auto-retry.
+const DefaultMaxAttempts = 3
+
 // Log entry kinds.
 const (
 	LogText       = "text"
@@ -88,39 +137,49 @@ var (
 
 // Run is one agent execution; the agent_runs table doubles as the job queue.
 type Run struct {
-	ID                 string                   `json:"id"`
-	OrgID              string                   `json:"org_id"`
-	AgentID            string                   `json:"agent_id"`
-	ProjectID          *string                  `json:"project_id,omitempty"`
-	AutomationID       *string                  `json:"automation_id,omitempty"`
-	TriggerEventID     *string                  `json:"trigger_event_id,omitempty"`
-	TeamID             *string                  `json:"team_id,omitempty"`
-	TeamNodeID         *string                  `json:"team_node_id,omitempty"`
-	ParentRunID        *string                  `json:"parent_run_id,omitempty"`
-	WorkItemID         *string                  `json:"work_item_id,omitempty"`
-	InterviewSessionID *string                  `json:"interview_session_id,omitempty"`
-	GuidedSessionID    *string                  `json:"guided_session_id,omitempty"`
+	ID                 string  `json:"id"`
+	OrgID              string  `json:"org_id"`
+	AgentID            string  `json:"agent_id"`
+	ProjectID          *string `json:"project_id,omitempty"`
+	AutomationID       *string `json:"automation_id,omitempty"`
+	TriggerEventID     *string `json:"trigger_event_id,omitempty"`
+	TeamID             *string `json:"team_id,omitempty"`
+	TeamNodeID         *string `json:"team_node_id,omitempty"`
+	ParentRunID        *string `json:"parent_run_id,omitempty"`
+	WorkItemID         *string `json:"work_item_id,omitempty"`
+	InterviewSessionID *string `json:"interview_session_id,omitempty"`
+	GuidedSessionID    *string `json:"guided_session_id,omitempty"`
 	// RetriedFromRunID records provenance: the terminal run this run was
 	// re-enqueued from via Retry. Unlike ParentRunID it carries no queue or
 	// run-tree semantics — a retry is a sibling, not a child.
-	RetriedFromRunID *string `json:"retried_from_run_id,omitempty"`
-	Status           string  `json:"status"`
-	CancelRequested    bool                     `json:"cancel_requested"`
-	Priority           int                      `json:"priority"`
-	Prompt             string                   `json:"prompt"`
-	RunTokenHash       string                   `json:"-"`
-	WorkerID           string                   `json:"worker_id,omitempty"`
-	HeartbeatAt        *time.Time               `json:"heartbeat_at,omitempty"`
-	StartedAt          *time.Time               `json:"started_at,omitempty"`
-	FinishedAt         *time.Time               `json:"finished_at,omitempty"`
-	ExitCode           *int                     `json:"exit_code,omitempty"`
-	FinalText          string                   `json:"final_text"`
-	Error              string                   `json:"error"`
-	TokensIn           int64                    `json:"tokens_in"`
-	TokensOut          int64                    `json:"tokens_out"`
-	CostUSD            *float64                 `json:"cost_usd,omitempty"`
-	ArtifactsTouched   []map[string]interface{} `json:"artifacts_touched"`
-	LaunchedBy         *string                  `json:"launched_by,omitempty"`
+	RetriedFromRunID *string    `json:"retried_from_run_id,omitempty"`
+	Status           string     `json:"status"`
+	CancelRequested  bool       `json:"cancel_requested"`
+	Priority         int        `json:"priority"`
+	Prompt           string     `json:"prompt"`
+	RunTokenHash     string     `json:"-"`
+	WorkerID         string     `json:"worker_id,omitempty"`
+	HeartbeatAt      *time.Time `json:"heartbeat_at,omitempty"`
+	StartedAt        *time.Time `json:"started_at,omitempty"`
+	FinishedAt       *time.Time `json:"finished_at,omitempty"`
+	ExitCode         *int       `json:"exit_code,omitempty"`
+	FinalText        string     `json:"final_text"`
+	Error            string     `json:"error"`
+	// ErrorClass is the structured failure taxonomy bucket for a terminal
+	// failure (see the ErrorClass* constants); empty for a run that succeeded
+	// or was cancelled.
+	ErrorClass string `json:"error_class,omitempty"`
+	// AttemptCount is this run's position in its attempt chain (1 for the
+	// original launch, 2 for the first auto-retry, ...). MaxAttempts caps the
+	// chain. NextAttemptAt gates when a backed-off retry becomes claimable.
+	AttemptCount     int                      `json:"attempt_count,omitempty"`
+	MaxAttempts      int                      `json:"max_attempts,omitempty"`
+	NextAttemptAt    *time.Time               `json:"next_attempt_at,omitempty"`
+	TokensIn         int64                    `json:"tokens_in"`
+	TokensOut        int64                    `json:"tokens_out"`
+	CostUSD          *float64                 `json:"cost_usd,omitempty"`
+	ArtifactsTouched []map[string]interface{} `json:"artifacts_touched"`
+	LaunchedBy       *string                  `json:"launched_by,omitempty"`
 	// PreferredUserID reserves the run for the launcher's personal runner
 	// until HostedAfter, when workspace/hosted runners may claim it.
 	PreferredUserID *string    `json:"preferred_user_id,omitempty"`
@@ -158,17 +217,28 @@ type LaunchRequest struct {
 	Priority           int
 	Prompt             string
 	LaunchedBy         *string
+	// AttemptCount / MaxAttempts seed the new run's attempt chain. Both default
+	// (1 and the service's configured cap) when left zero — a plain manual
+	// launch. Auto-retry sets AttemptCount to the source's + 1 and carries the
+	// same MaxAttempts. NextAttemptAt, when set, delays the run's claim
+	// eligibility (retry backoff).
+	AttemptCount  int
+	MaxAttempts   int
+	NextAttemptAt *time.Time
 }
 
 // FinishRequest is the worker's terminal report for a run.
 type FinishRequest struct {
-	Status    string   `json:"status"` // succeeded | failed | cancelled | timed_out
-	ExitCode  *int     `json:"exit_code,omitempty"`
-	FinalText string   `json:"final_text"`
-	Error     string   `json:"error"`
-	TokensIn  int64    `json:"tokens_in"`
-	TokensOut int64    `json:"tokens_out"`
-	CostUSD   *float64 `json:"cost_usd,omitempty"`
+	Status    string `json:"status"` // succeeded | failed | cancelled | timed_out
+	ExitCode  *int   `json:"exit_code,omitempty"`
+	FinalText string `json:"final_text"`
+	Error     string `json:"error"`
+	// ErrorClass is the runner's classification of a terminal failure (one of
+	// the ErrorClass* constants); empty for a succeeded or cancelled run.
+	ErrorClass string   `json:"error_class,omitempty"`
+	TokensIn   int64    `json:"tokens_in"`
+	TokensOut  int64    `json:"tokens_out"`
+	CostUSD    *float64 `json:"cost_usd,omitempty"`
 }
 
 // QueueStats summarizes an org's queued runs (worker-status endpoint).
@@ -369,11 +439,35 @@ type DefaultService struct {
 	// org's reservation window.
 	hasPersonalRunner func(orgID, userID string) bool
 	graceSeconds      func(orgID string) int
+
+	// Auto-retry policy: maxAttempts caps a run's attempt chain (original +
+	// retries); autoRetry toggles the whole feature. A retryable terminal
+	// failure re-enqueues a fresh attempt with backoff while attempts remain.
+	maxAttempts int
+	autoRetry   bool
 }
 
-// NewDefaultService creates a run service.
+// NewDefaultService creates a run service with auto-retry enabled at the
+// default attempt cap. Override with SetRetryPolicy.
 func NewDefaultService(repo Repository, agentService agents.Service, bus events.Bus) *DefaultService {
-	return &DefaultService{repo: repo, agentService: agentService, bus: bus}
+	return &DefaultService{
+		repo:         repo,
+		agentService: agentService,
+		bus:          bus,
+		maxAttempts:  DefaultMaxAttempts,
+		autoRetry:    true,
+	}
+}
+
+// SetRetryPolicy configures bounded auto-retry (call during wiring only).
+// maxAttempts <= 0 falls back to DefaultMaxAttempts; a maxAttempts of 1 (or
+// autoRetry=false) disables auto-retry — the terminal failure simply stands.
+func (s *DefaultService) SetRetryPolicy(maxAttempts int, autoRetry bool) {
+	if maxAttempts <= 0 {
+		maxAttempts = DefaultMaxAttempts
+	}
+	s.maxAttempts = maxAttempts
+	s.autoRetry = autoRetry
 }
 
 // SetRoutingPolicy wires personal-runner first-refusal routing (call during
@@ -433,7 +527,22 @@ func (s *DefaultService) Launch(req LaunchRequest) (*Run, string, error) {
 		RunTokenHash:       users.HashToken(token),
 		ArtifactsTouched:   []map[string]interface{}{},
 		LaunchedBy:         req.LaunchedBy,
+		AttemptCount:       req.AttemptCount,
+		MaxAttempts:        req.MaxAttempts,
+		NextAttemptAt:      req.NextAttemptAt,
 		CreatedAt:          time.Now(),
+	}
+	// Seed the attempt chain: the original launch is attempt 1, capped at the
+	// service's configured maximum unless the caller (an auto-retry) supplied
+	// its own values.
+	if run.AttemptCount <= 0 {
+		run.AttemptCount = 1
+	}
+	if run.MaxAttempts <= 0 {
+		run.MaxAttempts = s.maxAttempts
+		if run.MaxAttempts <= 0 {
+			run.MaxAttempts = DefaultMaxAttempts
+		}
 	}
 	// First refusal: reserve the run for the launcher's personal runner
 	// when one is online, with a grace window before hosted takeover.
@@ -677,6 +786,7 @@ func (s *DefaultService) Finish(id string, req FinishRequest) (*Run, error) {
 	run.ExitCode = req.ExitCode
 	run.FinalText = req.FinalText
 	run.Error = req.Error
+	run.ErrorClass = req.ErrorClass
 	run.TokensIn = req.TokensIn
 	run.TokensOut = req.TokensOut
 	run.CostUSD = req.CostUSD
@@ -707,7 +817,69 @@ func (s *DefaultService) Finish(id string, req FinishRequest) (*Run, error) {
 	run.RunTokenHash = ""
 	s.notifyStatus(run)
 	s.publishRunFinished(run)
+	s.maybeAutoRetry(run)
 	return run, nil
+}
+
+// retryBackoffBase is the first retry's delay; each further attempt doubles it
+// (attempt 2 waits base, attempt 3 waits 2*base, ...), capped at
+// retryBackoffMax. The delay is written to next_attempt_at so the re-enqueued
+// run is not claimable until it elapses.
+const (
+	retryBackoffBase = 30 * time.Second
+	retryBackoffMax  = 10 * time.Minute
+)
+
+// retryBackoff returns the delay before the given attempt number becomes
+// claimable (attempt is the NEW run's AttemptCount, i.e. 2 for the first
+// retry).
+func retryBackoff(attempt int) time.Duration {
+	// attempt 2 -> base, 3 -> 2*base, 4 -> 4*base, ...
+	shift := attempt - 2
+	if shift < 0 {
+		shift = 0
+	}
+	d := retryBackoffBase
+	for i := 0; i < shift && d < retryBackoffMax; i++ {
+		d *= 2
+	}
+	if d > retryBackoffMax {
+		d = retryBackoffMax
+	}
+	return d
+}
+
+// maybeAutoRetry re-enqueues a fresh attempt when a terminal failure is
+// retryable and the run's attempt budget is not exhausted. Best effort: a
+// re-enqueue failure is logged-by-return only (the caller's terminal report
+// already succeeded), never surfaced as a Finish error.
+func (s *DefaultService) maybeAutoRetry(run *Run) {
+	if !s.autoRetry || s.agentService == nil {
+		return
+	}
+	// Only genuine failures retry; succeeded/cancelled/awaiting_approval do not.
+	if run.Status != StatusFailed && run.Status != StatusTimedOut {
+		return
+	}
+	if !IsRetryableClass(run.ErrorClass) {
+		return
+	}
+	if run.AttemptCount >= run.MaxAttempts {
+		return
+	}
+	next := time.Now().Add(retryBackoff(run.AttemptCount + 1))
+	_, _, _ = s.Launch(LaunchRequest{
+		OrgID:            run.OrgID,
+		AgentID:          run.AgentID,
+		ProjectID:        run.ProjectID,
+		Prompt:           run.Prompt,
+		LaunchedBy:       run.LaunchedBy,
+		RetriedFromRunID: &run.ID,
+		Priority:         run.Priority,
+		AttemptCount:     run.AttemptCount + 1,
+		MaxAttempts:      run.MaxAttempts,
+		NextAttemptAt:    &next,
+	})
 }
 
 // publishRunFinished emits the RunFinished event for a run's terminal status.
@@ -798,6 +970,9 @@ func (s *DefaultService) FailStale(maxSilence time.Duration) ([]string, error) {
 			// RunFinished here too — otherwise the notifier and automation
 			// triggers miss reaper-failed runs (the common worker-crash case).
 			s.publishRunFinished(run)
+			// A lost worker is a worker_error (retryable): re-enqueue a fresh
+			// attempt so a run isn't lost just because its runner crashed.
+			s.maybeAutoRetry(run)
 		}
 	}
 	return ids, nil
