@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"runtime"
@@ -11,7 +12,38 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/openv/requirements-platform/internal/domain/agentruns"
 )
+
+// timeoutError marks a run the watchdog killed for exceeding its deadline
+// while preserving the stream parser's underlying error for diagnostics. It
+// unwraps to context.DeadlineExceeded so callers can still errors.Is on the
+// timeout, and exposes detail for the human-readable reason.
+type timeoutError struct{ detail error }
+
+func (e *timeoutError) Error() string {
+	if e.detail != nil {
+		return "run timed out: " + e.detail.Error()
+	}
+	return "run timed out"
+}
+
+func (e *timeoutError) Unwrap() error { return context.DeadlineExceeded }
+
+// eventsDroppedMarker is a synthetic event surfacing that the stdout pump
+// stalled and dropped n parsed events, so the truncation is visible in the
+// run log instead of silently vanishing.
+func eventsDroppedMarker(n int) RunEvent {
+	return RunEvent{
+		Kind: agentruns.LogMarker,
+		Payload: map[string]interface{}{
+			"marker":  "events_dropped",
+			"dropped": n,
+			"message": fmt.Sprintf("%d log event(s) dropped: the worker's stdout pump stalled", n),
+		},
+	}
+}
 
 // streamParser turns a subprocess's stdout lines into run events and, once
 // the process exits, into a Result.
@@ -107,18 +139,40 @@ func startProc(ctx context.Context, cfg procConfig, parser streamParser) (*procH
 		defer close(stdoutDone)
 		sc := bufio.NewScanner(stdout)
 		sc.Buffer(make([]byte, 64*1024), 16*1024*1024)
+		dropped := 0
+		emit := func(ev RunEvent) {
+			// If earlier events were dropped, surface a marker as soon as the
+			// channel drains again so the gap is visible downstream.
+			if dropped > 0 {
+				select {
+				case h.events <- eventsDroppedMarker(dropped):
+					dropped = 0
+				default:
+				}
+			}
+			select {
+			case h.events <- ev:
+			case <-time.After(5 * time.Second):
+				// Drop rather than deadlock if nobody is draining, but count
+				// it so the truncation is reported, not silent.
+				dropped++
+				log.Printf("stdout pump stalled, dropped event (kind=%s, dropped so far=%d)", ev.Kind, dropped)
+			}
+		}
 		for sc.Scan() {
 			line := sc.Text()
 			if strings.TrimSpace(line) == "" {
 				continue
 			}
-			parser.ParseLine(line, func(ev RunEvent) {
-				select {
-				case h.events <- ev:
-				case <-time.After(5 * time.Second):
-					// Drop rather than deadlock if nobody is draining.
-				}
-			})
+			parser.ParseLine(line, emit)
+		}
+		// Stream ended while still behind: try once more to record the gap.
+		if dropped > 0 {
+			select {
+			case h.events <- eventsDroppedMarker(dropped):
+			case <-time.After(5 * time.Second):
+				log.Printf("%d dropped event(s) could not be reported", dropped)
+			}
 		}
 	}()
 
@@ -170,7 +224,10 @@ func startProc(ctx context.Context, cfg procConfig, parser streamParser) (*procH
 
 		h.mu.Lock()
 		if h.timedOut {
-			resErr = context.DeadlineExceeded
+			// Wrap rather than replace: the run timed out, but keep the
+			// parser's underlying error (if any) for diagnostics. timeoutError
+			// still unwraps to context.DeadlineExceeded.
+			resErr = &timeoutError{detail: resErr}
 		}
 		h.result = result
 		h.err = resErr

@@ -218,12 +218,14 @@ func (rep *AgentRunRepository) Claim(workerID string, orgID string, workerUserID
 	return rep.FindByID(id)
 }
 
-// ReleaseClaim conditionally returns a claimed run to the queue, but only
-// while it is still claimed by workerID; reports whether it was applied.
+// ReleaseClaim conditionally returns a run to the queue, but only while it is
+// still owned by workerID and non-terminal (claimed or running); reports
+// whether it was applied. Running is included so a worker shutting down
+// mid-run can hand the run back instead of failing it.
 func (rep *AgentRunRepository) ReleaseClaim(runID, workerID string) (bool, error) {
 	res, err := rep.db.Exec(`
-		UPDATE agent_runs SET status = 'queued', worker_id = '', heartbeat_at = NULL
-		WHERE id = $1 AND status = 'claimed' AND worker_id = $2
+		UPDATE agent_runs SET status = 'queued', worker_id = '', heartbeat_at = NULL, started_at = NULL
+		WHERE id = $1 AND status IN ('claimed', 'running') AND worker_id = $2
 	`, runID, workerID)
 	if err != nil {
 		return false, err
