@@ -58,10 +58,10 @@ func volumeName(orgID string) string {
 	return "openv-runner-" + orgID
 }
 
-// Provision creates the org volume and runs the runner container. The image
-// is assumed to be present on the docker host (built via `make worker-image`);
-// no pull is attempted.
-func (p *dockerProvisioner) Provision(orgID, containerName, workerKey string, extraEnv map[string]string) error {
+// Provision creates the org volume and runs the runner container, capped at
+// the org's resource limits. The image is assumed to be present on the docker
+// host (built via `make worker-image`); no pull is attempted.
+func (p *dockerProvisioner) Provision(orgID, containerName, workerKey string, extraEnv map[string]string, limits ResourceLimits) error {
 	ctx := context.Background()
 
 	volName := volumeName(orgID)
@@ -89,6 +89,11 @@ func (p *dockerProvisioner) Provision(orgID, containerName, workerKey string, ex
 	hostCfg := &container.HostConfig{
 		RestartPolicy: container.RestartPolicy{Name: container.RestartPolicyUnlessStopped},
 		Binds:         []string{volName + ":/data"},
+		Resources: container.Resources{
+			// Zero values mean "no cap" to docker, matching ResourceLimits.
+			Memory:   limits.MemoryMB * 1024 * 1024,
+			NanoCPUs: limits.NanoCPUs,
+		},
 	}
 	var netCfg *network.NetworkingConfig
 	if p.network != "" {

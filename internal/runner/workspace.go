@@ -1,6 +1,7 @@
 package runner
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -15,13 +16,21 @@ import (
 )
 
 func runGit(dir string, args ...string) (string, error) {
-	cmd := exec.Command("git", args...)
+	return runGitCtx(context.Background(), dir, args...)
+}
+
+func runGitCtx(ctx context.Context, dir string, args ...string) (string, error) {
+	cmd := exec.CommandContext(ctx, "git", args...)
 	if dir != "" {
 		cmd.Dir = dir
 	}
 	out, err := cmd.CombinedOutput()
 	text := strings.TrimSpace(string(out))
 	if err != nil {
+		// Surface the cancellation itself so callers can errors.Is on it.
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			return text, fmt.Errorf("git %s: %w", strings.Join(args, " "), ctxErr)
+		}
 		return text, fmt.Errorf("git %s: %v: %s", strings.Join(args, " "), err, text)
 	}
 	return text, nil
@@ -29,8 +38,13 @@ func runGit(dir string, args ...string) (string, error) {
 
 // PrepareWorkspace creates the run's working directory, checking out the
 // project's repo when the agent has repo access. The returned workDir is the
-// directory the agent should run in.
-func PrepareWorkspace(baseDir string, run *agentruns.Run, agent *agents.Agent, conns []*repoconns.RepoConnection) (string, string, error) {
+// directory the agent should run in. Cancelling ctx aborts any in-flight git
+// operation (a clone of a large repo can run for minutes); the run's
+// cancel-during-prep path in worker.go relies on this.
+func PrepareWorkspace(ctx context.Context, baseDir string, run *agentruns.Run, agent *agents.Agent, conns []*repoconns.RepoConnection) (string, string, error) {
+	if err := ctx.Err(); err != nil {
+		return "", "", err
+	}
 	workDir := filepath.Join(baseDir, run.ID)
 	if err := os.MkdirAll(workDir, 0o755); err != nil {
 		return "", "", err
@@ -54,22 +68,25 @@ func PrepareWorkspace(baseDir string, run *agentruns.Run, agent *agents.Agent, c
 
 	switch {
 	case conn.MyLocalPath != "":
-		if _, err := runGit(conn.MyLocalPath, "worktree", "add", repoDir, "-b", agentBranch, branch); err != nil {
+		if _, err := runGitCtx(ctx, conn.MyLocalPath, "worktree", "add", repoDir, "-b", agentBranch, branch); err != nil {
+			if ctx.Err() != nil {
+				return "", "", err
+			}
 			// Fall back to a plain clone of the local repo.
-			if _, cerr := runGit("", "clone", "--branch", branch, "--single-branch", conn.MyLocalPath, repoDir); cerr != nil {
+			if _, cerr := runGitCtx(ctx, "", "clone", "--branch", branch, "--single-branch", conn.MyLocalPath, repoDir); cerr != nil {
 				return "", "", fmt.Errorf("worktree add failed (%v) and clone failed: %w", err, cerr)
 			}
-			if _, berr := runGit(repoDir, "checkout", "-b", agentBranch); berr != nil {
+			if _, berr := runGitCtx(ctx, repoDir, "checkout", "-b", agentBranch); berr != nil {
 				return "", "", berr
 			}
 			return repoDir, "cloned local repo " + conn.MyLocalPath + " on branch " + agentBranch, nil
 		}
 		return repoDir, "worktree of " + conn.MyLocalPath + " on branch " + agentBranch, nil
 	case conn.RemoteURL != "":
-		if _, err := runGit("", "clone", "--branch", branch, "--single-branch", conn.RemoteURL, repoDir); err != nil {
+		if _, err := runGitCtx(ctx, "", "clone", "--branch", branch, "--single-branch", conn.RemoteURL, repoDir); err != nil {
 			return "", "", err
 		}
-		if _, err := runGit(repoDir, "checkout", "-b", agentBranch); err != nil {
+		if _, err := runGitCtx(ctx, repoDir, "checkout", "-b", agentBranch); err != nil {
 			return "", "", err
 		}
 		return repoDir, "cloned " + conn.RemoteURL + " on branch " + agentBranch, nil

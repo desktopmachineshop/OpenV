@@ -8,6 +8,7 @@ import (
 	"runtime/debug"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/openv/requirements-platform/internal/domain/agentruns"
@@ -176,9 +177,22 @@ func (w *Worker) execute(ctx context.Context, claim *ClaimResponse) {
 	// slow network or a large repo, deterministically failing the run before
 	// it ever starts. Beat explicitly until the pump takes over: an empty
 	// log push is exactly the heartbeat call the pump itself makes.
+	//
+	// The heartbeat response also carries cancel_requested, so a run
+	// cancelled during workspace prep aborts the prep (prepCtx cancels any
+	// in-flight git clone) instead of running to completion anyway.
+	prepCtx, cancelPrep := context.WithCancel(ctx)
+	defer cancelPrep()
+	var prepCancelled atomic.Bool
 	stopHeartbeat := startHeartbeat(prepHeartbeatInterval, func() {
-		if _, _, err := w.client.PushLogs(run.ID, nil); err != nil {
+		cancelRequested, _, err := w.client.PushLogs(run.ID, nil)
+		if err != nil {
 			log.Printf("run %s: heartbeat failed: %v", run.ID, err)
+			return
+		}
+		if cancelRequested && !prepCancelled.Swap(true) {
+			log.Printf("run %s: cancel requested during workspace prep", run.ID)
+			cancelPrep()
 		}
 	})
 	// Covers every early-return failure path (and the panic recovery above);
@@ -202,7 +216,14 @@ func (w *Worker) execute(ctx context.Context, claim *ClaimResponse) {
 			log.Printf("run %s: listing repo connections failed: %v", run.ID, err)
 		}
 	}
-	workDir, note, err := PrepareWorkspace(w.workspaceBase, run, claim.Agent, conns)
+	workDir, note, err := PrepareWorkspace(prepCtx, w.workspaceBase, run, claim.Agent, conns)
+	if prepCancelled.Load() {
+		// Cancelled mid-prep: the abandoned workspace directory is reaped by
+		// the periodic CleanupOld sweep, like any failed run's.
+		w.finish(run.ID, agentruns.FinishRequest{Status: agentruns.StatusCancelled})
+		log.Printf("run %s: cancelled during workspace prep", run.ID)
+		return
+	}
 	if err != nil {
 		w.finish(run.ID, agentruns.FinishRequest{
 			Status: agentruns.StatusFailed,
