@@ -30,8 +30,8 @@ func (r *ArtifactRepository) Save(artifact *artifacts.Artifact) error {
 	}
 
 	query := `
-		INSERT INTO artifacts (id, project_id, parent_id, type, title, body, sort_order, attributes, version, valid_from, valid_to, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+		INSERT INTO artifacts (id, project_id, parent_id, type, title, body, sort_order, status, attributes, version, valid_from, valid_to, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
 	`
 
 	// Use context with 5 second timeout for individual artifact inserts
@@ -49,6 +49,7 @@ func (r *ArtifactRepository) Save(artifact *artifacts.Artifact) error {
 		artifact.Title,
 		artifact.Body,
 		artifact.SortOrder,
+		artifact.Status,
 		attributesJSON,
 		artifact.Version,
 		artifact.ValidFrom,
@@ -66,7 +67,7 @@ func (r *ArtifactRepository) FindByID(id string) (*artifacts.Artifact, error) {
 	var attributesJSON []byte
 
 	query := `
-		SELECT id, project_id, parent_id, type, title, body, sort_order, attributes, version, valid_from, valid_to, created_at, updated_at
+		SELECT id, project_id, parent_id, type, title, body, sort_order, status, attributes, version, valid_from, valid_to, created_at, updated_at
 		FROM artifacts
 		WHERE id = $1 AND valid_to IS NULL
 	`
@@ -79,6 +80,7 @@ func (r *ArtifactRepository) FindByID(id string) (*artifacts.Artifact, error) {
 		&artifact.Title,
 		&artifact.Body,
 		&artifact.SortOrder,
+		&artifact.Status,
 		&attributesJSON,
 		&artifact.Version,
 		&artifact.ValidFrom,
@@ -107,7 +109,7 @@ func (r *ArtifactRepository) FindByID(id string) (*artifacts.Artifact, error) {
 // FindByProjectID retrieves all artifacts for a project
 func (r *ArtifactRepository) FindByProjectID(projectID string) ([]*artifacts.Artifact, error) {
 	query := `
-		SELECT id, project_id, parent_id, type, title, body, sort_order, attributes, version, valid_from, valid_to, created_at, updated_at
+		SELECT id, project_id, parent_id, type, title, body, sort_order, status, attributes, version, valid_from, valid_to, created_at, updated_at
 		FROM artifacts
 		WHERE project_id = $1 AND valid_to IS NULL
 		ORDER BY parent_id NULLS FIRST, sort_order ASC, created_at ASC
@@ -132,6 +134,7 @@ func (r *ArtifactRepository) FindByProjectID(projectID string) ([]*artifacts.Art
 			&artifact.Title,
 			&artifact.Body,
 			&artifact.SortOrder,
+			&artifact.Status,
 			&attributesJSON,
 			&artifact.Version,
 			&artifact.ValidFrom,
@@ -160,7 +163,7 @@ func (r *ArtifactRepository) FindByProjectID(projectID string) ([]*artifacts.Art
 // FindByProjectAndType retrieves artifacts by project and type
 func (r *ArtifactRepository) FindByProjectAndType(projectID string, artifactType string) ([]*artifacts.Artifact, error) {
 	query := `
-		SELECT id, project_id, parent_id, type, title, body, sort_order, attributes, version, valid_from, valid_to, created_at, updated_at
+		SELECT id, project_id, parent_id, type, title, body, sort_order, status, attributes, version, valid_from, valid_to, created_at, updated_at
 		FROM artifacts
 		WHERE project_id = $1 AND type = $2 AND valid_to IS NULL
 		ORDER BY parent_id NULLS FIRST, sort_order ASC, created_at ASC
@@ -185,6 +188,7 @@ func (r *ArtifactRepository) FindByProjectAndType(projectID string, artifactType
 			&artifact.Title,
 			&artifact.Body,
 			&artifact.SortOrder,
+			&artifact.Status,
 			&attributesJSON,
 			&artifact.Version,
 			&artifact.ValidFrom,
@@ -232,8 +236,8 @@ func (r *ArtifactRepository) Update(artifact *artifacts.Artifact) error {
 
 	// Insert the new version
 	insertQuery := `
-		INSERT INTO artifacts (id, project_id, parent_id, type, title, body, sort_order, attributes, version, valid_from, valid_to, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+		INSERT INTO artifacts (id, project_id, parent_id, type, title, body, sort_order, status, attributes, version, valid_from, valid_to, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
 	`
 	_, err = tx.Exec(
 		insertQuery,
@@ -244,6 +248,7 @@ func (r *ArtifactRepository) Update(artifact *artifacts.Artifact) error {
 		artifact.Title,
 		artifact.Body,
 		artifact.SortOrder,
+		artifact.Status,
 		attributesJSON,
 		artifact.Version,
 		artifact.ValidFrom,
@@ -326,7 +331,7 @@ func (r *ArtifactRepository) SearchInProjects(projectIDs []string, query string,
 // FindVersionsByID retrieves all versions of an artifact (including historical ones)
 func (r *ArtifactRepository) FindVersionsByID(id string) ([]*artifacts.Artifact, error) {
 	query := `
-		SELECT id, project_id, parent_id, type, title, body, sort_order, attributes, version, valid_from, valid_to, created_at, updated_at
+		SELECT id, project_id, parent_id, type, title, body, sort_order, status, attributes, version, valid_from, valid_to, created_at, updated_at
 		FROM artifacts
 		WHERE id = $1
 		ORDER BY version DESC
@@ -351,6 +356,7 @@ func (r *ArtifactRepository) FindVersionsByID(id string) ([]*artifacts.Artifact,
 			&artifact.Title,
 			&artifact.Body,
 			&artifact.SortOrder,
+			&artifact.Status,
 			&attributesJSON,
 			&artifact.Version,
 			&artifact.ValidFrom,

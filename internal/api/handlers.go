@@ -231,6 +231,7 @@ func (h *Handler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/artifacts", h.ListArtifacts).Methods("GET")
 	router.HandleFunc("/api/v1/artifacts/{id}", h.GetArtifact).Methods("GET")
 	router.HandleFunc("/api/v1/artifacts/{id}", h.UpdateArtifact).Methods("PUT")
+	router.HandleFunc("/api/v1/artifacts/{id}/status", h.ChangeArtifactStatus).Methods("PUT")
 	router.HandleFunc("/api/v1/artifacts/{id}", h.DeleteArtifact).Methods("DELETE")
 	router.HandleFunc("/api/v1/artifacts/{id}/versions", h.GetArtifactVersions).Methods("GET")
 	router.HandleFunc("/api/v1/artifacts/{id}/restore", h.RestoreArtifactVersion).Methods("POST")
@@ -491,6 +492,77 @@ func (h *Handler) UpdateArtifact(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(artifact)
+}
+
+// ChangeArtifactStatus handles PUT /api/v1/artifacts/{id}/status: one review
+// state-machine transition (draft <-> in_review -> approved -> superseded).
+//
+// Authorization: every transition — approval included — requires project
+// editor or better. Owner-only approval would be tighter, but project
+// membership has no granularity between editor and owner beyond the role
+// ladder, so editor-approval is the documented choice (see
+// artifacts.DefaultService.ChangeStatus). Proposal-mode agent runs are
+// refused outright: the proposal vocabulary has no status op, and silently
+// letting a review-gated agent flip review states would defeat the gate.
+func (h *Handler) ChangeArtifactStatus(w http.ResponseWriter, r *http.Request) {
+	id := mux.Vars(r)["id"]
+
+	var req struct {
+		Status string `json:"status"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	artifact, err := h.artifactService.GetArtifact(id)
+	if err != nil {
+		respondError(w, r, http.StatusNotFound, "artifact not found", err)
+		return
+	}
+
+	if !h.requireProjectRole(w, r, artifact.ProjectID, members.RoleEditor) {
+		return
+	}
+	if run := CurrentRun(r); run != nil && h.agentService != nil {
+		if agent, err := h.agentService.Get(run.AgentID); err == nil && agent != nil && agent.WriteMode == agents.WriteModeProposal {
+			writeJSONError(w, http.StatusForbidden, "proposal-mode agent runs cannot change artifact status")
+			return
+		}
+	}
+
+	from := artifacts.NormalizeStatus(artifact.Status)
+	updated, err := h.artifactService.ChangeStatus(id, req.Status)
+	if err != nil {
+		switch {
+		case errors.Is(err, artifacts.ErrInvalidStatus):
+			respondError(w, r, http.StatusBadRequest, err.Error(), nil)
+		case errors.Is(err, artifacts.ErrInvalidStatusTransition):
+			respondError(w, r, http.StatusConflict, err.Error(), nil)
+		case errors.Is(err, artifacts.ErrNotFound):
+			respondError(w, r, http.StatusNotFound, "artifact not found", err)
+		default:
+			respondInternal(w, r, "failed to change artifact status", err)
+		}
+		return
+	}
+
+	// Sign-off history lives in the event stream (issue #127).
+	h.publish(r, events.ArtifactStatusChanged, updated.ProjectID, updated.ID, map[string]interface{}{
+		"artifact_type": updated.Type,
+		"title":         updated.Title,
+		"from":          from,
+		"to":            updated.Status,
+		"version":       updated.Version,
+	})
+
+	entry := chatter.NewChatterEntry(id, fmt.Sprintf("Status changed: %s → %s", from, updated.Status), true, "status-change")
+	if err := h.chatterService.CreateEntry(entry); err != nil {
+		slog.Warn("api: failed to create chatter entry for status change", "artifact_id", id, "error", err)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(updated)
 }
 
 // DeleteArtifact deletes an artifact

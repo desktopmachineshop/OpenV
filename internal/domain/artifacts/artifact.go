@@ -22,6 +22,10 @@ type Artifact struct {
 	Title     string                 `json:"title"`
 	Body      string                 `json:"body"` // markdown or rich text
 	SortOrder int                    `json:"sort_order"`
+	// Status is the review state (draft, in_review, approved, superseded);
+	// see status.go. It is a real column; Attributes["status"] is only a
+	// deprecated read-compat mirror kept in sync on every write.
+	Status    string                 `json:"status"`
 	Attributes map[string]interface{} `json:"attributes"`
 	Version   int                    `json:"version"`
 	ValidFrom time.Time              `json:"valid_from"`
@@ -109,8 +113,15 @@ func NewArtifact(req CreateArtifactRequest) *Artifact {
 	if attributes == nil {
 		attributes = make(map[string]interface{})
 	}
-	
-	return &Artifact{
+
+	// New artifacts start as drafts; a legacy Attributes["status"] value
+	// (interview/guided/import paths still stamp one) seeds the column.
+	status := StatusDraft
+	if v, ok := attributes["status"].(string); ok {
+		status = NormalizeStatus(v)
+	}
+
+	a := &Artifact{
 		ID:         uuid.New().String(),
 		ProjectID:  req.ProjectID,
 		ParentID:   req.ParentID,
@@ -118,6 +129,7 @@ func NewArtifact(req CreateArtifactRequest) *Artifact {
 		Title:      req.Title,
 		Body:       req.Body,
 		SortOrder:  order,
+		Status:     status,
 		Attributes: attributes,
 		Version:    1,
 		ValidFrom:  now,
@@ -125,6 +137,8 @@ func NewArtifact(req CreateArtifactRequest) *Artifact {
 		CreatedAt:  now,
 		UpdatedAt:  now,
 	}
+	a.syncStatusAttribute()
+	return a
 }
 
 // Service defines the artifact domain logic
@@ -133,6 +147,11 @@ type Service interface {
 	GetArtifact(id string) (*Artifact, error)
 	GetArtifactsByProject(projectID string) ([]*Artifact, error)
 	UpdateArtifact(id string, req UpdateArtifactRequest) (*Artifact, error)
+	// ChangeStatus applies one review-state transition (see status.go) and
+	// persists it as a new temporal version. Returns ErrInvalidStatus for an
+	// unknown target and ErrInvalidStatusTransition for a move the state
+	// machine forbids.
+	ChangeStatus(id string, status string) (*Artifact, error)
 	DeleteArtifact(id string) error
 	ListArtifacts(projectID string, artifactType string) ([]*Artifact, error)
 	GetArtifactVersions(id string) ([]*Artifact, error)
@@ -208,6 +227,19 @@ func (s *DefaultService) UpdateArtifact(id string, req UpdateArtifactRequest) (*
 	artifact.Title = req.Title
 	artifact.Body = req.Body
 	artifact.Attributes = req.Attributes
+
+	// Status policy for content edits: the new version keeps the current
+	// status, except that editing an APPROVED artifact demotes the new
+	// version to draft — the approved snapshot survives untouched in the
+	// temporal history (issue #127). The status column is authoritative;
+	// any Attributes["status"] in the request is overwritten by the mirror,
+	// so a plain update can never smuggle in an approval.
+	artifact.Status = NormalizeStatus(artifact.Status)
+	if artifact.Status == StatusApproved {
+		artifact.Status = StatusDraft
+	}
+	artifact.syncStatusAttribute()
+
 	if req.SortOrder != nil {
 		artifact.SortOrder = *req.SortOrder
 	} else if parentChanged {
@@ -280,6 +312,14 @@ func (s *DefaultService) RestoreArtifactVersion(id string, version int) (*Artifa
 		return nil, err
 	}
 
+	// A restore is a content edit, so the same status policy as
+	// UpdateArtifact applies: carry the CURRENT status forward (not the
+	// restored snapshot's stale one), demoting approved to draft.
+	restoredStatus := NormalizeStatus(current.Status)
+	if restoredStatus == StatusApproved {
+		restoredStatus = StatusDraft
+	}
+
 	// Create a new version based on the old version
 	restored := &Artifact{
 		ID:         current.ID,
@@ -289,6 +329,7 @@ func (s *DefaultService) RestoreArtifactVersion(id string, version int) (*Artifa
 		Title:      versionToRestore.Title,
 		Body:       versionToRestore.Body,
 		SortOrder:  current.SortOrder, // Keep current sort order
+		Status:     restoredStatus,
 		Attributes: versionToRestore.Attributes,
 		Version:    current.Version + 1,
 		ValidFrom:  time.Now(),
@@ -296,6 +337,7 @@ func (s *DefaultService) RestoreArtifactVersion(id string, version int) (*Artifa
 		CreatedAt:  current.CreatedAt,
 		UpdatedAt:  time.Now(),
 	}
+	restored.syncStatusAttribute()
 
 	err = s.repo.Update(restored)
 	if err != nil {

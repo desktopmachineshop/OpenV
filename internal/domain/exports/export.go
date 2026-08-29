@@ -202,8 +202,10 @@ func (s *DefaultService) exportCSV(data *ProjectExport) ([]byte, string, error) 
 			continue
 		}
 
-		status := ""
-		if artifact.Attributes != nil {
+		// Prefer the first-class status column; fall back to the legacy
+		// attribute mirror for exports captured before the column existed.
+		status := artifact.Status
+		if status == "" && artifact.Attributes != nil {
 			if v, ok := artifact.Attributes["status"].(string); ok {
 				status = v
 			}
