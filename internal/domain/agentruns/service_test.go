@@ -4,6 +4,8 @@ import (
 	"errors"
 	"testing"
 	"time"
+
+	"github.com/openv/requirements-platform/internal/domain/agents"
 )
 
 // fakeRunRepo embeds the interface so only the methods the lifecycle paths
@@ -35,6 +37,13 @@ func (f *fakeRunRepo) FindByID(id string) (*Run, error) {
 	}
 	cp := *r
 	return &cp, nil
+}
+
+// Save stores a copy, like a real repository insert.
+func (f *fakeRunRepo) Save(r *Run) error {
+	cp := *r
+	f.runs[r.ID] = &cp
+	return nil
 }
 
 func (f *fakeRunRepo) CancelQueued(id string) (bool, error) {
@@ -132,6 +141,125 @@ func newFakeService(runs ...*Run) (*DefaultService, *fakeRunRepo) {
 		repo.runs[r.ID] = r
 	}
 	return NewDefaultService(repo, nil, nil), repo
+}
+
+// fakeAgentCatalog answers Launch's agent lookup (Retry goes through Launch).
+type fakeAgentCatalog struct {
+	agents.Service
+	byID map[string]*agents.Agent
+}
+
+func (f *fakeAgentCatalog) Get(id string) (*agents.Agent, error) {
+	return f.byID[id], nil
+}
+
+// newRetryService wires a service whose agent catalog knows "agent-1".
+func newRetryService(runs ...*Run) (*DefaultService, *fakeRunRepo) {
+	repo := &fakeRunRepo{runs: map[string]*Run{}, logs: map[string][]LogEntry{}}
+	for _, r := range runs {
+		repo.runs[r.ID] = r
+	}
+	catalog := &fakeAgentCatalog{byID: map[string]*agents.Agent{
+		"agent-1": {ID: "agent-1", Name: "Reviewer", Provider: "claude"},
+	}}
+	return NewDefaultService(repo, catalog, nil), repo
+}
+
+func strptr(s string) *string { return &s }
+
+// TestRetryEnqueuesFreshRunWithProvenance locks in the retry contract: a NEW
+// queued run copying org/agent/project/prompt, launched by the retrying user
+// (not the original launcher), with retried_from_run_id set — and none of the
+// source's automation/crew/delegation/kanban links or terminal state.
+func TestRetryEnqueuesFreshRunWithProvenance(t *testing.T) {
+	project := "proj-1"
+	source := &Run{
+		ID:           "r1",
+		OrgID:        "org-1",
+		AgentID:      "agent-1",
+		ProjectID:    &project,
+		AutomationID: strptr("auto-1"),
+		TeamID:       strptr("team-1"),
+		ParentRunID:  strptr("parent-1"),
+		WorkItemID:   strptr("card-1"),
+		Status:       StatusFailed,
+		Priority:     PriorityChild,
+		Prompt:       "review the spec",
+		Error:        "boom",
+		LaunchedBy:   strptr("original-user"),
+	}
+	svc, repo := newRetryService(source)
+
+	run, err := svc.Retry("r1", strptr("retrying-user"))
+	if err != nil {
+		t.Fatalf("Retry: %v", err)
+	}
+	if run.ID == "r1" {
+		t.Fatal("Retry must enqueue a NEW run, not reuse the source")
+	}
+	if run.Status != StatusQueued {
+		t.Errorf("status = %q, want queued", run.Status)
+	}
+	if run.OrgID != "org-1" || run.AgentID != "agent-1" || run.Prompt != "review the spec" {
+		t.Errorf("org/agent/prompt not copied: %+v", run)
+	}
+	if run.ProjectID == nil || *run.ProjectID != project {
+		t.Errorf("project_id = %v, want %q", run.ProjectID, project)
+	}
+	if run.RetriedFromRunID == nil || *run.RetriedFromRunID != "r1" {
+		t.Errorf("retried_from_run_id = %v, want r1", run.RetriedFromRunID)
+	}
+	if run.LaunchedBy == nil || *run.LaunchedBy != "retrying-user" {
+		t.Errorf("launched_by = %v, want the retrying user", run.LaunchedBy)
+	}
+	if run.AutomationID != nil || run.TeamID != nil || run.ParentRunID != nil || run.WorkItemID != nil {
+		t.Errorf("automation/crew/delegation/kanban links must not be copied: %+v", run)
+	}
+	if run.Priority != PriorityNormal {
+		t.Errorf("priority = %d, want normal for a manual retry", run.Priority)
+	}
+	if run.Error != "" {
+		t.Errorf("error = %q, want empty on the fresh run", run.Error)
+	}
+	stored := repo.runs[run.ID]
+	if stored == nil || stored.Status != StatusQueued {
+		t.Fatalf("retried run not persisted as queued: %+v", stored)
+	}
+	if repo.runs["r1"].Status != StatusFailed {
+		t.Errorf("source run status mutated to %s", repo.runs["r1"].Status)
+	}
+}
+
+// TestRetryOnlyTerminalFailures locks in the status gate: failed, cancelled
+// and timed_out retry; queued/claimed/running/succeeded/awaiting_approval
+// answer ErrNotRetryable (retrying success invites duplicate side effects).
+func TestRetryOnlyTerminalFailures(t *testing.T) {
+	retryable := []string{StatusFailed, StatusCancelled, StatusTimedOut}
+	for _, status := range retryable {
+		svc, _ := newRetryService(&Run{ID: "r1", OrgID: "org-1", AgentID: "agent-1", Status: status, Prompt: "p"})
+		if _, err := svc.Retry("r1", strptr("u")); err != nil {
+			t.Errorf("Retry(%s) = %v, want success", status, err)
+		}
+	}
+
+	refused := []string{StatusQueued, StatusClaimed, StatusRunning, StatusSucceeded, StatusAwaitingApproval}
+	for _, status := range refused {
+		svc, repo := newRetryService(&Run{ID: "r1", OrgID: "org-1", AgentID: "agent-1", Status: status, Prompt: "p"})
+		_, err := svc.Retry("r1", strptr("u"))
+		if !errors.Is(err, ErrNotRetryable) {
+			t.Errorf("Retry(%s) err = %v, want ErrNotRetryable", status, err)
+		}
+		if len(repo.runs) != 1 {
+			t.Errorf("Retry(%s) enqueued a run despite the refusal", status)
+		}
+	}
+}
+
+func TestRetryUnknownRun(t *testing.T) {
+	svc, _ := newRetryService()
+	if _, err := svc.Retry("missing", strptr("u")); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("Retry(unknown) err = %v, want ErrNotFound", err)
+	}
 }
 
 func TestRequestCancelQueuedCancelsAtomically(t *testing.T) {

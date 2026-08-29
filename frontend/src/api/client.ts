@@ -587,6 +587,9 @@ export interface AgentRun {
   team_node_id?: string | null;
   parent_run_id?: string | null;
   work_item_id?: string | null;
+  // Provenance: set when this run was re-enqueued from a terminal run via
+  // the retry endpoint (no run-tree semantics, unlike parent_run_id).
+  retried_from_run_id?: string | null;
   status: string;
   prompt: string;
   final_text: string;
@@ -815,8 +818,36 @@ export interface TeamGrant {
   team_name: string;
 }
 
+// Workspace usage rollup: the same runs aggregated by agent and by day.
+export interface OrgUsageTotals {
+  runs: number;
+  tokens_in: number;
+  tokens_out: number;
+  cost_usd: number;
+}
+
+export interface OrgAgentUsage extends OrgUsageTotals {
+  agent_slug: string;
+  agent_name: string;
+}
+
+export interface OrgDailyUsage extends OrgUsageTotals {
+  day: string; // YYYY-MM-DD (UTC)
+}
+
+export interface OrgUsageSummary {
+  days: number;
+  totals: OrgUsageTotals;
+  by_agent: OrgAgentUsage[];
+  by_day: OrgDailyUsage[];
+}
+
 export const orgsAPI = {
   list: () => client.get<{ orgs: Org[]; active_org: string }>('/api/v1/orgs'),
+  usage: (orgId: string, days?: number) =>
+    client.get<OrgUsageSummary>(`/api/v1/orgs/${orgId}/usage`, {
+      params: days ? { days } : {},
+    }),
   create: (name: string) => client.post<Org>('/api/v1/orgs', { name }),
   get: (id: string) => client.get<Org>(`/api/v1/orgs/${id}`),
   update: (id: string, payload: Partial<Org>) => client.put<Org>(`/api/v1/orgs/${id}`, payload),
@@ -1109,6 +1140,9 @@ export const agentRunsAPI = {
   streamUrl: (id: string, afterSeq = 0) =>
     `${API_BASE_URL}/api/v1/agent-runs/${id}/stream?after_seq=${afterSeq}`,
   cancel: (id: string) => client.post<AgentRun>(`/api/v1/agent-runs/${id}/cancel`),
+  // Re-enqueue a terminal (failed/cancelled/timed_out) run as a NEW run with
+  // the same agent/prompt/project, launched by the caller.
+  retry: (id: string) => client.post<AgentRun>(`/api/v1/agent-runs/${id}/retry`),
 };
 
 export const automationsAPI = {
