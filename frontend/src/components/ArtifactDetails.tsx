@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link as RouterLink } from 'react-router-dom';
 import { Artifact, Link, Attachment, QualityScore } from '../api/client';
 import { linkAPI, qualityAPI } from '../api/client';
 import { ImageGallery } from './ImageGallery';
@@ -565,7 +566,7 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
           style={{
             display: 'inline-block',
             backgroundColor: 'var(--accent)',
-            color: 'white',
+            color: 'var(--accent-fg)',
             padding: '4px 8px',
             borderRadius: '3px',
             fontSize: '12px',
@@ -577,6 +578,15 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
         <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
           Version {artifact.version}
         </span>
+        {artifact.project_id && (
+          <RouterLink
+            to={`/projects/${artifact.project_id}/impact?artifact=${artifact.id}`}
+            title="Trace what a change to this artifact would affect"
+            style={{ marginLeft: '10px', fontSize: '12px', color: 'var(--accent-strong)', textDecoration: 'none' }}
+          >
+            Show impact →
+          </RouterLink>
+        )}
       </div>
       <div style={{ marginBottom: '15px' }}>
         <strong>ID:</strong>

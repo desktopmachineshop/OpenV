@@ -831,7 +831,7 @@ export const ModuleView: React.FC = () => {
             height: '36px',
             padding: '0 12px',
             backgroundColor: baselines.length === 0 ? 'var(--neutral-mid)' : 'var(--accent)',
-            color: 'white',
+            color: 'var(--accent-fg)',
             border: 'none',
             borderRadius: '4px',
             cursor: baselines.length === 0 ? 'not-allowed' : 'pointer',
@@ -1252,6 +1252,7 @@ export const ModuleView: React.FC = () => {
         {isCreating && !isBaselineView && (
           <ArtifactEditor
             artifacts={artifacts}
+            projectId={projectId}
             initialData={pendingCreateContext ?? undefined}
             onSave={handleCreateArtifact}
             onCancel={() => {
@@ -1306,6 +1307,7 @@ export const ModuleView: React.FC = () => {
           <ArtifactEditor
             artifact={editingArtifact}
             artifacts={artifacts}
+            projectId={projectId}
             onSave={handleUpdateArtifact}
             onCancel={() => {
               setIsEditing(false);

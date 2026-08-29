@@ -40,6 +40,11 @@ const TestRunView = lazy(() =>
 const TraceabilityMatrix = lazy(() =>
   import('./views/TraceabilityMatrix').then((m) => ({ default: m.TraceabilityMatrix }))
 );
+// ImpactView traces the affected set from one artifact; a focused analysis
+// view kept out of the main bundle.
+const ImpactView = lazy(() =>
+  import('./views/ImpactView').then((m) => ({ default: m.ImpactView }))
+);
 // ActivityLog is a low-traffic audit view, so keep it out of the main bundle.
 const ActivityLog = lazy(() =>
   import('./views/ActivityLog').then((m) => ({ default: m.ActivityLog }))
@@ -144,6 +149,7 @@ function App() {
           <Route path="vv" element={<VVDashboard />} />
           <Route path="vv/runs/:runId" element={<TestRunView />} />
           <Route path="matrix" element={<TraceabilityMatrix />} />
+          <Route path="impact" element={<ImpactView />} />
           <Route path="review" element={<ReviewQueue />} />
           <Route path="board" element={<KanbanBoard />} />
           <Route path="crew" element={<CrewBuilder />} />

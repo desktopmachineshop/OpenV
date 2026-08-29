@@ -296,7 +296,7 @@ export const KanbanBoard: React.FC = () => {
           height: 22,
           borderRadius: '50%',
           background: 'var(--accent)',
-          color: '#fff',
+          color: 'var(--accent-fg)',
           display: 'inline-flex',
           alignItems: 'center',
           justifyContent: 'center',

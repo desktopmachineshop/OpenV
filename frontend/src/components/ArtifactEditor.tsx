@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   Artifact,
+  AttributeDefinition,
   Attachment,
   EXECUTION_METHODS,
   ExecutionMethod,
   Link,
   executionMethodOf,
+  metaAPI,
 } from '../api/client';
 import { ImageGallery } from './ImageGallery';
 import { LinkPanel } from './LinkPanel';
@@ -18,6 +20,11 @@ import {
 interface ArtifactEditorProps {
   artifact?: Artifact;
   artifacts?: Artifact[];
+  /**
+   * Project the artifact belongs to. Drives the org/project-configurable
+   * typed attribute definitions rendered as extra inputs (issue #219).
+   */
+  projectId?: string;
   /**
    * Pre-filled values for the create form (e.g. parent/type chosen via an
    * artifact's context menu). Applied whenever a new object is passed, so a
@@ -38,6 +45,7 @@ interface ArtifactEditorProps {
 export const ArtifactEditor: React.FC<ArtifactEditorProps> = ({
   artifact,
   artifacts = [],
+  projectId,
   initialData,
   onSave,
   onCancel,
@@ -72,6 +80,46 @@ export const ArtifactEditor: React.FC<ArtifactEditorProps> = ({
       });
     }
   }, [artifact, initialData]);
+
+  // Org/project-configurable typed attribute definitions (issue #219). Fetched
+  // for the project and filtered per artifact type when rendering.
+  const [attributeDefs, setAttributeDefs] = useState<AttributeDefinition[]>([]);
+  const effectiveProjectId = projectId || artifact?.project_id;
+  useEffect(() => {
+    if (!effectiveProjectId) {
+      setAttributeDefs([]);
+      return;
+    }
+    let cancelled = false;
+    metaAPI
+      .attributeDefinitions(effectiveProjectId)
+      .then((res) => {
+        if (!cancelled) setAttributeDefs(res.data || []);
+      })
+      .catch(() => {
+        // No definitions / no access: render the editor without custom fields.
+        if (!cancelled) setAttributeDefs([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [effectiveProjectId]);
+
+  // Definitions that apply to the currently selected type (or all types).
+  const applicableDefs = useMemo(
+    () =>
+      attributeDefs.filter(
+        (d) => d.applies_to_type === '' || d.applies_to_type === formData.type
+      ),
+    [attributeDefs, formData.type]
+  );
+
+  const setAttribute = (key: string, value: unknown) => {
+    setFormData((prev) => ({
+      ...prev,
+      attributes: { ...(prev.attributes || {}), [key]: value },
+    }));
+  };
 
   // Track pending link changes during edit
   const [pendingLinkAdds, setPendingLinkAdds] = useState<Partial<Link>[]>([]);
@@ -267,6 +315,19 @@ export const ArtifactEditor: React.FC<ArtifactEditorProps> = ({
             />
           </div>
 
+          {applicableDefs.length > 0 && (
+            <div style={{ marginTop: 8 }}>
+              {applicableDefs.map((def) => (
+                <AttributeField
+                  key={def.id}
+                  def={def}
+                  value={(formData.attributes || {})[def.key]}
+                  onChange={(v) => setAttribute(def.key, v)}
+                />
+              ))}
+            </div>
+          )}
+
           {artifact && (
             <ImageGallery
               artifactId={artifact.id}
@@ -310,5 +371,76 @@ export const ArtifactEditor: React.FC<ArtifactEditorProps> = ({
         </form>
       </div>
     </>
+  );
+};
+
+// AttributeField renders one configurable typed attribute as the matching
+// input for its data type (issue #219). Values are stored on the artifact's
+// attributes map under the definition's key.
+const AttributeField: React.FC<{
+  def: AttributeDefinition;
+  value: unknown;
+  onChange: (value: unknown) => void;
+}> = ({ def, value, onChange }) => {
+  const label = (
+    <label htmlFor={`attr-${def.key}`}>
+      {def.label || def.key}
+      {def.required && <span style={{ color: 'var(--danger)' }}> *</span>}
+    </label>
+  );
+
+  if (def.data_type === 'boolean') {
+    return (
+      <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <input
+          id={`attr-${def.key}`}
+          type="checkbox"
+          checked={value === true}
+          onChange={(e) => onChange(e.target.checked)}
+          style={{ width: 'auto' }}
+        />
+        {label}
+      </div>
+    );
+  }
+
+  if (def.data_type === 'enum') {
+    return (
+      <div className="form-group">
+        {label}
+        <select
+          id={`attr-${def.key}`}
+          value={typeof value === 'string' ? value : ''}
+          onChange={(e) => onChange(e.target.value)}
+        >
+          <option value="">— Select —</option>
+          {def.enum_values.map((opt) => (
+            <option key={opt} value={opt}>
+              {opt}
+            </option>
+          ))}
+        </select>
+      </div>
+    );
+  }
+
+  const inputType = def.data_type === 'number' ? 'number' : def.data_type === 'date' ? 'date' : 'text';
+  return (
+    <div className="form-group">
+      {label}
+      <input
+        id={`attr-${def.key}`}
+        type={inputType}
+        value={value === undefined || value === null ? '' : String(value)}
+        onChange={(e) => {
+          const raw = e.target.value;
+          if (def.data_type === 'number') {
+            onChange(raw === '' ? '' : Number(raw));
+          } else {
+            onChange(raw);
+          }
+        }}
+      />
+    </div>
   );
 };

@@ -506,6 +506,26 @@ export interface LinkTypeRule {
   description: string;
 }
 
+export type AttributeDataType = 'text' | 'number' | 'date' | 'enum' | 'boolean';
+
+// A configurable typed attribute definition (issue #219). Exactly one of
+// org_id (org-wide) or project_id (project-scoped) is set. Values live in the
+// artifact's attributes map under `key`.
+export interface AttributeDefinition {
+  id: string;
+  org_id: string | null;
+  project_id: string | null;
+  key: string;
+  label: string;
+  data_type: AttributeDataType;
+  enum_values: string[];
+  // Artifact type key this applies to, or '' for all types.
+  applies_to_type: string;
+  required: boolean;
+  sort_order: number;
+  created_at: string;
+}
+
 export interface ProductProfile {
   project_id: string;
   vision: string;
@@ -612,6 +632,32 @@ export interface QualityReport {
   project_id: string;
   entries: QualityScore[];
   summary: Record<string, number>; // band -> count
+}
+
+export type ImpactDirection = 'downstream' | 'upstream' | 'both';
+
+export interface ImpactNode {
+  artifact_id: string;
+  title: string;
+  type: string;
+  distance: number;
+  via: string;
+  path: string[];
+}
+
+export interface ImpactGroup {
+  type: string;
+  count: number;
+  nodes: ImpactNode[];
+}
+
+export interface ImpactReport {
+  project_id: string;
+  artifact_id: string;
+  direction: ImpactDirection;
+  downstream: ImpactGroup[];
+  upstream: ImpactGroup[];
+  total: number;
 }
 
 export interface WorkItem {
@@ -731,6 +777,13 @@ export interface AgentRun {
   tokens_in: number;
   tokens_out: number;
   cost_usd?: number | null;
+  // Reproducibility snapshot (issue #216): the agent identity captured at
+  // launch — the definition's content hash, model, and reasoning effort — so a
+  // finished run stays self-describing even after the agent is later edited.
+  // Blank on runs launched before the feature existed.
+  agent_content_hash?: string;
+  agent_model?: string;
+  agent_effort?: string;
   started_at?: string | null;
   finished_at?: string | null;
   created_at: string;
@@ -1109,6 +1162,30 @@ export const membersAPI = {
 export const metaAPI = {
   artifactTypes: () => client.get<ArtifactTypeDef[]>('/api/v1/meta/artifact-types'),
   linkTypes: () => client.get<LinkTypeRule[]>('/api/v1/meta/link-types'),
+  // Effective (org-wide + project override) attribute definitions for a
+  // project — used to render typed inputs in the artifact editor.
+  attributeDefinitions: (projectId: string) =>
+    client.get<AttributeDefinition[]>('/api/v1/meta/attribute-definitions', {
+      params: { project_id: projectId },
+    }),
+};
+
+// Attribute definition management (issue #219). Org-wide definitions require
+// org admin; project-scoped require project editor (enforced server-side).
+export const attributeDefinitionAPI = {
+  listByProject: (projectId: string) =>
+    client.get<AttributeDefinition[]>('/api/v1/attribute-definitions', {
+      params: { project_id: projectId },
+    }),
+  listByOrg: (orgId: string) =>
+    client.get<AttributeDefinition[]>('/api/v1/attribute-definitions', {
+      params: { org_id: orgId },
+    }),
+  create: (payload: Partial<AttributeDefinition>) =>
+    client.post<AttributeDefinition>('/api/v1/attribute-definitions', payload),
+  update: (id: string, payload: Partial<AttributeDefinition>) =>
+    client.put<AttributeDefinition>(`/api/v1/attribute-definitions/${id}`, payload),
+  remove: (id: string) => client.delete(`/api/v1/attribute-definitions/${id}`),
 };
 
 export const productProfileAPI = {
@@ -1171,6 +1248,23 @@ export const vvAPI = {
       `/api/v1/projects/${projectId}/vv/report${baselineId ? `?baseline_id=${baselineId}` : ''}`,
       `vv_report_${new Date().toISOString().slice(0, 10)}.pdf`
     ),
+  // Change-impact analysis: the artifacts reachable from `artifactId` through
+  // the traceability link graph, grouped by type. `direction` selects
+  // downstream (things that depend on it), upstream (what it depends on), or
+  // both (default).
+  impact: (
+    projectId: string,
+    artifactId: string,
+    direction?: ImpactDirection,
+    baselineId?: string
+  ) =>
+    client.get<ImpactReport>(`/api/v1/projects/${projectId}/impact`, {
+      params: {
+        artifact: artifactId,
+        ...(direction ? { direction } : {}),
+        ...(baselineId ? { baseline_id: baselineId } : {}),
+      },
+    }),
 };
 
 export const qualityAPI = {

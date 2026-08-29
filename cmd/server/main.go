@@ -23,6 +23,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/agents"
 	"github.com/openv/requirements-platform/internal/domain/artifacts"
 	"github.com/openv/requirements-platform/internal/domain/attachments"
+	"github.com/openv/requirements-platform/internal/domain/attributes"
 	"github.com/openv/requirements-platform/internal/domain/automations"
 	"github.com/openv/requirements-platform/internal/domain/baselines"
 	"github.com/openv/requirements-platform/internal/domain/chatter"
@@ -164,6 +165,7 @@ func main() {
 	workerKeyRepo := postgres.NewWorkerKeyRepository(db)
 	hostedWorkerRepo := postgres.NewHostedWorkerRepository(db)
 	notificationRepo := postgres.NewNotificationRepository(db)
+	attributeDefRepo := postgres.NewAttributeDefinitionRepository(db)
 
 	// Event bus. The org resolver backfills tenant attribution for events
 	// published by services that only know their project.
@@ -259,6 +261,9 @@ func main() {
 	}
 	productService := products.NewDefaultService(productProfileRepo)
 	exportService.SetProductService(productService)
+	// Typed attribute definitions (issue #219). The artifacts catalog validates
+	// a definition's applies_to_type at create/update time.
+	attributeService := attributes.NewDefaultService(attributeDefRepo, artifacts.ValidType)
 	vvService := vv.NewDefaultService(vvRepo, artifactService, chatterService, bus)
 	workItemService := workitems.NewDefaultService(workItemRepo, bus)
 	guidedService := guided.NewDefaultService(guidedRepo, artifactService, linkService, chatterService, productService, bus)
@@ -444,6 +449,7 @@ func main() {
 		ReportService:       reportService,
 		TemplateService:     templateService,
 		ChatterService:      chatterService,
+		AttributeService:    attributeService,
 		UploadsDir:          uploadsDir,
 		UserService:         userService,
 		MemberService:       memberService,

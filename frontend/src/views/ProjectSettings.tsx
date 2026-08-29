@@ -1,11 +1,16 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
+  attributeDefinitionAPI,
   membersAPI,
+  metaAPI,
   orgTeamsAPI,
   projectAPI,
   projectTeamAccessAPI,
   repoConnectionsAPI,
+  ArtifactTypeDef,
+  AttributeDataType,
+  AttributeDefinition,
   OrgTeam,
   Project,
   ProjectMember,
@@ -16,14 +21,35 @@ import { apiErrorMessage } from '../api/errors';
 import { useAppStore } from '../state/store';
 import { ErrorBanner, useConfirm } from '../components/ui';
 
-type Tab = 'members' | 'repos' | 'agents' | 'danger';
+type Tab = 'members' | 'repos' | 'agents' | 'attributes' | 'danger';
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'members', label: 'Access' },
   { key: 'repos', label: 'Repositories' },
   { key: 'agents', label: 'Agents' },
+  { key: 'attributes', label: 'Attributes' },
   { key: 'danger', label: 'Danger Zone' },
 ];
+
+const ATTRIBUTE_DATA_TYPES: AttributeDataType[] = ['text', 'number', 'date', 'enum', 'boolean'];
+
+interface AttributeForm {
+  key: string;
+  label: string;
+  data_type: AttributeDataType;
+  enum_values: string;
+  applies_to_type: string;
+  required: boolean;
+}
+
+const emptyAttributeForm: AttributeForm = {
+  key: '',
+  label: '',
+  data_type: 'text',
+  enum_values: '',
+  applies_to_type: '',
+  required: false,
+};
 
 const th: React.CSSProperties = {
   textAlign: 'left',
@@ -103,6 +129,13 @@ export const ProjectSettings: React.FC = () => {
   const [project, setProject] = useState<Project | null>(null);
   const [savingAuth, setSavingAuth] = useState(false);
 
+  // Attribute definitions (issue #219): project-scoped typed attributes.
+  const [attrDefs, setAttrDefs] = useState<AttributeDefinition[]>([]);
+  const [attrDefsLoading, setAttrDefsLoading] = useState(true);
+  const [attrForm, setAttrForm] = useState<AttributeForm>(emptyAttributeForm);
+  const [savingAttr, setSavingAttr] = useState(false);
+  const [artifactTypes, setArtifactTypes] = useState<ArtifactTypeDef[]>([]);
+
   // Danger
   const [deleting, setDeleting] = useState(false);
 
@@ -176,13 +209,31 @@ export const ProjectSettings: React.FC = () => {
     }
   }, [activeOrgId]);
 
+  const loadAttrDefs = useCallback(async () => {
+    if (!projectId) return;
+    setAttrDefsLoading(true);
+    try {
+      const res = await attributeDefinitionAPI.listByProject(projectId);
+      setAttrDefs(res.data || []);
+    } catch (err: any) {
+      setError(`Failed to load attribute definitions: ${apiErrorMessage(err)}`);
+    } finally {
+      setAttrDefsLoading(false);
+    }
+  }, [projectId]);
+
   useEffect(() => {
     loadMembers();
     loadRepos();
     loadTeamAccess();
     loadOrgTeams();
     loadProject();
-  }, [loadMembers, loadRepos, loadTeamAccess, loadOrgTeams, loadProject]);
+    loadAttrDefs();
+    metaAPI
+      .artifactTypes()
+      .then((res) => setArtifactTypes(res.data || []))
+      .catch(() => setArtifactTypes([]));
+  }, [loadMembers, loadRepos, loadTeamAccess, loadOrgTeams, loadProject, loadAttrDefs]);
 
   // -------------------------------------------------------------------------
   // Members handlers
@@ -316,6 +367,59 @@ export const ProjectSettings: React.FC = () => {
       setError(`Failed to update agent authentication: ${apiErrorMessage(err)}`);
     } finally {
       setSavingAuth(false);
+    }
+  };
+
+  // -------------------------------------------------------------------------
+  // Attribute definition handlers (issue #219)
+  // -------------------------------------------------------------------------
+
+  const handleAddAttribute = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!projectId || !attrForm.key.trim()) return;
+    setSavingAttr(true);
+    setError('');
+    try {
+      await attributeDefinitionAPI.create({
+        project_id: projectId,
+        key: attrForm.key.trim(),
+        label: attrForm.label.trim() || attrForm.key.trim(),
+        data_type: attrForm.data_type,
+        enum_values:
+          attrForm.data_type === 'enum'
+            ? attrForm.enum_values
+                .split(',')
+                .map((v) => v.trim())
+                .filter(Boolean)
+            : [],
+        applies_to_type: attrForm.applies_to_type,
+        required: attrForm.required,
+      });
+      setAttrForm(emptyAttributeForm);
+      await loadAttrDefs();
+      flash('Attribute added.');
+    } catch (err: any) {
+      setError(`Failed to add attribute: ${apiErrorMessage(err)}`);
+    } finally {
+      setSavingAttr(false);
+    }
+  };
+
+  const handleDeleteAttribute = async (def: AttributeDefinition) => {
+    const ok = await confirm({
+      title: 'Delete attribute',
+      message: `Delete the "${def.label || def.key}" attribute definition? Values already stored on artifacts are left untouched.`,
+      confirmLabel: 'Delete',
+      danger: true,
+    });
+    if (!ok) return;
+    setError('');
+    try {
+      await attributeDefinitionAPI.remove(def.id);
+      await loadAttrDefs();
+      flash('Attribute deleted.');
+    } catch (err: any) {
+      setError(`Failed to delete attribute: ${apiErrorMessage(err)}`);
     }
   };
 
@@ -481,7 +585,7 @@ export const ProjectSettings: React.FC = () => {
                                 height: 28,
                                 borderRadius: '50%',
                                 background: 'var(--accent)',
-                                color: '#fff',
+                                color: 'var(--accent-fg)',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
@@ -885,6 +989,145 @@ export const ProjectSettings: React.FC = () => {
               </label>
             </div>
           )}
+        </div>
+      )}
+
+      {tab === 'attributes' && (
+        <div className="card">
+          <h3>Custom attributes</h3>
+          <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+            Define extra typed fields for this project's artifacts. They appear as inputs in the
+            artifact editor and are validated on save. Project attributes override a workspace-wide
+            attribute with the same key and type.
+          </p>
+
+          {attrDefsLoading ? (
+            <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Loading…</div>
+          ) : attrDefs.length === 0 ? (
+            <div style={{ color: 'var(--text-muted)', fontSize: 13, marginBottom: 12 }}>
+              No project attributes defined yet.
+            </div>
+          ) : (
+            <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 16 }}>
+              <thead>
+                <tr>
+                  <th style={th}>Key</th>
+                  <th style={th}>Label</th>
+                  <th style={th}>Type</th>
+                  <th style={th}>Applies to</th>
+                  <th style={th}>Required</th>
+                  <th style={th}></th>
+                </tr>
+              </thead>
+              <tbody>
+                {attrDefs.map((def) => (
+                  <tr key={def.id}>
+                    <td style={td}>
+                      <code>{def.key}</code>
+                    </td>
+                    <td style={td}>{def.label}</td>
+                    <td style={td}>
+                      {def.data_type}
+                      {def.data_type === 'enum' && def.enum_values.length > 0 && (
+                        <span style={{ color: 'var(--text-muted)' }}> ({def.enum_values.join(', ')})</span>
+                      )}
+                    </td>
+                    <td style={td}>{def.applies_to_type || 'All types'}</td>
+                    <td style={td}>{def.required ? 'Yes' : 'No'}</td>
+                    <td style={{ ...td, textAlign: 'right' }}>
+                      <button
+                        className="button-secondary"
+                        style={{ padding: '4px 8px', fontSize: 12, color: 'var(--danger)' }}
+                        onClick={() => handleDeleteAttribute(def)}
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+
+          <form onSubmit={handleAddAttribute} style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-end' }}>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label htmlFor="attr-key">Key</label>
+              <input
+                id="attr-key"
+                type="text"
+                value={attrForm.key}
+                onChange={(e) => setAttrForm((f) => ({ ...f, key: e.target.value }))}
+                placeholder="priority"
+                required
+              />
+            </div>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label htmlFor="attr-label">Label</label>
+              <input
+                id="attr-label"
+                type="text"
+                value={attrForm.label}
+                onChange={(e) => setAttrForm((f) => ({ ...f, label: e.target.value }))}
+                placeholder="Priority"
+              />
+            </div>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label htmlFor="attr-type">Type</label>
+              <select
+                id="attr-type"
+                value={attrForm.data_type}
+                onChange={(e) => setAttrForm((f) => ({ ...f, data_type: e.target.value as AttributeDataType }))}
+              >
+                {ATTRIBUTE_DATA_TYPES.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {attrForm.data_type === 'enum' && (
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label htmlFor="attr-enum">Options (comma-separated)</label>
+                <input
+                  id="attr-enum"
+                  type="text"
+                  value={attrForm.enum_values}
+                  onChange={(e) => setAttrForm((f) => ({ ...f, enum_values: e.target.value }))}
+                  placeholder="low, medium, high"
+                />
+              </div>
+            )}
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label htmlFor="attr-applies">Applies to</label>
+              <select
+                id="attr-applies"
+                value={attrForm.applies_to_type}
+                onChange={(e) => setAttrForm((f) => ({ ...f, applies_to_type: e.target.value }))}
+              >
+                <option value="">All types</option>
+                {artifactTypes.map((t) => (
+                  <option key={t.value} value={t.value}>
+                    {t.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="form-group" style={{ marginBottom: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <input
+                id="attr-required"
+                type="checkbox"
+                checked={attrForm.required}
+                onChange={(e) => setAttrForm((f) => ({ ...f, required: e.target.checked }))}
+                style={{ width: 'auto' }}
+              />
+              <label htmlFor="attr-required" style={{ marginBottom: 0 }}>
+                Required
+              </label>
+            </div>
+            <button type="submit" className="button" disabled={savingAttr || !attrForm.key.trim()}>
+              {savingAttr ? 'Adding…' : 'Add attribute'}
+            </button>
+          </form>
         </div>
       )}
 

@@ -188,7 +188,7 @@ export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
               style={{
                 display: 'inline-block',
                 backgroundColor: 'var(--accent)',
-                color: 'white',
+                color: 'var(--accent-fg)',
                 padding: '4px 8px',
                 borderRadius: '3px',
                 fontSize: '11px',
@@ -254,7 +254,7 @@ export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
             disabled={localPreviewVersion !== null}
             style={{
               backgroundColor: localPreviewVersion ? 'var(--neutral-mid)' : 'var(--accent)',
-              color: 'white',
+              color: 'var(--accent-fg)',
               border: 'none',
               padding: '6px 12px',
               borderRadius: '3px',

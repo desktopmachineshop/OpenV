@@ -44,6 +44,7 @@ func (h *Handler) registerSuiteRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/projects/{id}/vv/matrix", h.GetMatrix).Methods("GET")
 	router.HandleFunc("/api/v1/projects/{id}/vv/gaps", h.GetGaps).Methods("GET")
 	router.HandleFunc("/api/v1/projects/{id}/vv/report", h.GetVVReport).Methods("GET")
+	router.HandleFunc("/api/v1/projects/{id}/impact", h.GetImpact).Methods("GET")
 
 	// Requirement quality linting (issue #217).
 	router.HandleFunc("/api/v1/projects/{id}/quality", h.GetProjectQuality).Methods("GET")
@@ -478,6 +479,46 @@ func (h *Handler) GetGaps(w http.ResponseWriter, r *http.Request) {
 	}
 	coverage := vv.ComputeCoverage(export, latest)
 	json.NewEncoder(w).Encode(vv.GapAnalysis(export, coverage))
+}
+
+// GetImpact returns the change-impact set for one artifact: the artifacts
+// reachable through the traceability link graph, grouped by type, in the
+// requested direction. downstream = artifacts that depend on the seed (what a
+// change to it could break); upstream = the artifacts the seed itself depends
+// on. It reuses the same project export (live or baseline) the matrix loads.
+func (h *Handler) GetImpact(w http.ResponseWriter, r *http.Request) {
+	projectID := mux.Vars(r)["id"]
+	if !h.requireProjectRole(w, r, projectID, members.RoleViewer) {
+		return
+	}
+	artifactID := strings.TrimSpace(r.URL.Query().Get("artifact"))
+	if artifactID == "" {
+		writeJSONError(w, http.StatusBadRequest, "artifact query parameter is required")
+		return
+	}
+	export, err := h.projectExport(projectID, r.URL.Query().Get("baseline_id"))
+	if err != nil {
+		if errors.Is(err, baselines.ErrNotFound) {
+			respondError(w, r, http.StatusNotFound, "baseline not found", err)
+			return
+		}
+		respondInternal(w, r, "failed to export project", err)
+		return
+	}
+	// The seed must belong to the authorized project (or baseline snapshot);
+	// this also stops IDs from other projects being probed.
+	found := false
+	for _, a := range export.Artifacts {
+		if a != nil && a.ID == artifactID {
+			found = true
+			break
+		}
+	}
+	if !found {
+		writeJSONError(w, http.StatusNotFound, "artifact not found in project")
+		return
+	}
+	json.NewEncoder(w).Encode(vv.ComputeImpact(export, artifactID, r.URL.Query().Get("direction")))
 }
 
 // GetVVReport generates the V&V status PDF for a project or baseline.
