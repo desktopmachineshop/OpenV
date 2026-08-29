@@ -368,7 +368,7 @@ export const CrewBuilder: React.FC = () => {
             style={{
               fontSize: 11,
               background: 'var(--accent)',
-              color: '#fff',
+              color: 'var(--accent-fg)',
               borderRadius: 10,
               padding: '2px 8px',
             }}
@@ -436,7 +436,7 @@ export const CrewBuilder: React.FC = () => {
             cursor: 'pointer',
             fontSize: 13,
             background: connectMode ? 'var(--accent)' : 'var(--surface)',
-            color: connectMode ? '#fff' : 'var(--text)',
+            color: connectMode ? 'var(--accent-fg)' : 'var(--text)',
           }}
         >
           {connectMode ? 'Connecting: click source, then target' : 'Connect'}

@@ -118,7 +118,7 @@ export const UserSettingsPanel: React.FC<UserSettingsPanelProps> = ({ onClose })
                 height: 40,
                 borderRadius: '50%',
                 background: 'var(--accent)',
-                color: '#fff',
+                color: 'var(--accent-fg)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',

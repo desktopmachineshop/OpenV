@@ -521,7 +521,7 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
           style={{
             display: 'inline-block',
             backgroundColor: 'var(--accent)',
-            color: 'white',
+            color: 'var(--accent-fg)',
             padding: '4px 8px',
             borderRadius: '3px',
             fontSize: '12px',

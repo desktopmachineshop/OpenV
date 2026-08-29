@@ -431,7 +431,7 @@ export const InterviewsPage: React.FC = () => {
                                         fontSize: 13,
                                         whiteSpace: 'pre-wrap',
                                         background: m.role === 'participant' ? 'var(--accent)' : 'var(--neutral-soft)',
-                                        color: m.role === 'participant' ? '#fff' : 'var(--text)',
+                                        color: m.role === 'participant' ? 'var(--accent-fg)' : 'var(--text)',
                                       }}
                                     >
                                       {m.content}

@@ -420,7 +420,7 @@ export const RunDetailPanel: React.FC<RunDetailPanelProps> = ({ runId, onSelectR
             title="Re-run this prompt as a new run with the same agent and project"
             style={{
               background: 'var(--accent)',
-              color: '#fff',
+              color: 'var(--accent-fg)',
               border: 'none',
               padding: '5px 12px',
               borderRadius: 4,

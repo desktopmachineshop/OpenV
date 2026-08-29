@@ -172,7 +172,7 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({ agent, onSaved, onCanc
                   cursor: 'pointer',
                   fontSize: 12,
                   background: mode === m ? 'var(--accent)' : 'var(--surface)',
-                  color: mode === m ? '#fff' : 'var(--text)',
+                  color: mode === m ? 'var(--accent-fg)' : 'var(--text)',
                 }}
               >
                 {m === 'form' ? 'Form' : 'Raw markdown'}
