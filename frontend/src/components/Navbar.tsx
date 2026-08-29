@@ -1,4 +1,5 @@
 import React from 'react';
+import { NotificationBell } from './NotificationBell';
 import { OrgSwitcher } from './OrgSwitcher';
 import { UserMenu } from './UserMenu';
 
@@ -43,6 +44,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        {showWorkspaceControls && <NotificationBell variant="light" />}
         {showWorkspaceControls && <UserMenu variant="light" />}
       </div>
     </div>

@@ -49,6 +49,12 @@ environment only and are **never stored** by the platform.
   bill against the org's API keys, not anyone's subscription.
 - Managed via the API/UI: provision, stop/start, delete (optionally purging
   the container's data volume).
+- **Resource-capped**: the container is created with memory and CPU limits
+  from the org's `limits` (`runner_memory_mb`, `runner_cpus`), falling back
+  per key to the org plan's defaults (free: 2048 MB / 1 CPU; team: 4096 MB /
+  2 CPUs). There is no UI/API for editing org limits yet — operators set the
+  keys directly on the `organizations.limits` JSONB column; changes apply the
+  next time the runner is provisioned.
 
 ### Routing and the first-refusal grace window
 

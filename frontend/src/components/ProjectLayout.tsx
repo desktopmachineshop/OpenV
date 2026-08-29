@@ -3,6 +3,8 @@ import { NavLink, Outlet, useNavigate, useParams } from 'react-router-dom';
 import { projectAPI, Project } from '../api/client';
 import { useAppStore } from '../state/store';
 import { GlobalSearch } from './GlobalSearch';
+import { HelpSidebar } from './HelpSidebar';
+import { NotificationBell } from './NotificationBell';
 import { OrgSwitcher } from './OrgSwitcher';
 import { UserMenu } from './UserMenu';
 
@@ -116,8 +118,11 @@ export const ProjectLayout: React.FC = () => {
           >
             {project?.name || '…'}
           </div>
-          <div style={{ marginTop: 8 }}>
-            <GlobalSearch />
+          <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <GlobalSearch />
+            </div>
+            <NotificationBell variant="dark" />
           </div>
         </div>
         <nav style={{ flex: 1, overflowY: 'auto', padding: '8px 0' }}>
@@ -157,9 +162,13 @@ export const ProjectLayout: React.FC = () => {
             </div>
           ))}
           <div style={{ borderTop: '1px solid var(--sidebar-border)', margin: '8px 0' }} />
-          <NavLink
-            to="/manual"
-            title="Open the user manual"
+          {/* Plain anchor (not NavLink): the manual opens in a new tab so it
+              doesn't navigate the user away from their work (issue #162). */}
+          <a
+            href="/manual"
+            target="_blank"
+            rel="noopener"
+            title="Open the user manual in a new tab"
             style={{
               display: 'block',
               padding: '9px 16px',
@@ -169,7 +178,7 @@ export const ProjectLayout: React.FC = () => {
             }}
           >
             Help
-          </NavLink>
+          </a>
         </nav>
         <div style={{ borderTop: '1px solid var(--sidebar-border)', padding: 12 }}>
           <UserMenu variant="dark" />
@@ -178,6 +187,9 @@ export const ProjectLayout: React.FC = () => {
       <main style={{ flex: 1, overflow: 'auto', background: 'var(--bg-app)' }}>
         <Outlet />
       </main>
+      {/* Floating context-aware help — mounted once here so the ? button is
+          available on every project page (issue #162). */}
+      <HelpSidebar />
     </div>
   );
 };

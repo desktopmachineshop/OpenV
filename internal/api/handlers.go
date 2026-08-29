@@ -33,6 +33,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/hostedworkers"
 	"github.com/openv/requirements-platform/internal/domain/interviews"
 	"github.com/openv/requirements-platform/internal/domain/members"
+	"github.com/openv/requirements-platform/internal/domain/notifications"
 	"github.com/openv/requirements-platform/internal/domain/orgs"
 	"github.com/openv/requirements-platform/internal/domain/products"
 	"github.com/openv/requirements-platform/internal/domain/proposals"
@@ -78,6 +79,7 @@ type HandlerDeps struct {
 	OrgTeamService      orgs.TeamService
 	WorkerKeyService    workerkeys.Service
 	HostedWorkerService hostedworkers.Service
+	NotificationService notifications.Service
 	Provisioner         hosting.Provisioner
 	// OrgSeeder provisions default agents/crew for a new workspace.
 	OrgSeeder func(orgID string) error
@@ -124,6 +126,7 @@ type Handler struct {
 	orgTeamService      orgs.TeamService
 	workerKeyService    workerkeys.Service
 	hostedWorkerService hostedworkers.Service
+	notificationService notifications.Service
 	provisioner         hosting.Provisioner
 	orgSeeder           func(orgID string) error
 	publicAPIURL        string
@@ -173,6 +176,7 @@ func NewHandler(deps HandlerDeps) *Handler {
 		orgTeamService:      deps.OrgTeamService,
 		workerKeyService:    deps.WorkerKeyService,
 		hostedWorkerService: deps.HostedWorkerService,
+		notificationService: deps.NotificationService,
 		provisioner:         deps.Provisioner,
 		orgSeeder:           deps.OrgSeeder,
 		publicAPIURL:        deps.PublicAPIURL,
@@ -264,6 +268,7 @@ func (h *Handler) RegisterRoutes(router *mux.Router) {
 	h.registerAuthRoutes(router)
 	h.registerMetaRoutes(router)
 	h.registerSuiteRoutes(router)
+	h.registerNotificationRoutes(router)
 	h.registerAgentRoutes(router)
 	h.registerOrgRoutes(router)
 
@@ -2207,6 +2212,9 @@ func (h *Handler) CreateChatterEntry(w http.ResponseWriter, r *http.Request) {
 	h.publish(r, events.ChatterCreated, h.projectIDForArtifact(req.ArtifactID), entry.ID, map[string]interface{}{
 		"artifact_id": req.ArtifactID,
 		"entry_type":  entry.EntryType,
+		// The message text rides along so the notification fan-out can scan
+		// for @mentions without a chatter lookup.
+		"message": entry.Message,
 	})
 
 	w.Header().Set("Content-Type", "application/json")

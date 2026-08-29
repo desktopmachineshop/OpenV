@@ -139,7 +139,7 @@ func (s *DefaultService) CreateOrg(name, orgType string, createdBy string) (*Org
 		ID:        uuid.New().String(),
 		Name:      name,
 		OrgType:   orgType,
-		Plan:      "free",
+		Plan:      PlanFree,
 		Limits:    map[string]interface{}{},
 		CreatedBy: &createdBy,
 		CreatedAt: now,
