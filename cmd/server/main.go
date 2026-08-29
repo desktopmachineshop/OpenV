@@ -27,6 +27,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/automations"
 	"github.com/openv/requirements-platform/internal/domain/baselines"
 	"github.com/openv/requirements-platform/internal/domain/chatter"
+	"github.com/openv/requirements-platform/internal/domain/embeddings"
 	"github.com/openv/requirements-platform/internal/domain/exports"
 	"github.com/openv/requirements-platform/internal/domain/guided"
 	"github.com/openv/requirements-platform/internal/domain/hostedworkers"
@@ -184,6 +185,17 @@ func main() {
 	// Content changes mark an artifact's links suspect; approval clears
 	// them (issue #131).
 	artifactService.SetLinkSuspector(linkService)
+	// Semantic-search embeddings (issue #220). Env-gated and DISABLED by
+	// default: with OPENV_EMBEDDING_API_KEY unset the provider is a no-op, so
+	// this adds nothing to a default deployment. When configured, artifact
+	// create/update best-effort (re)embeds content asynchronously, and the
+	// admin reindex endpoint backfills a project on demand. The store no-ops
+	// gracefully on a database where the vector extension was unavailable at
+	// migration time (see migration 0016).
+	embeddingProvider := embeddings.ProviderFromEnv()
+	embeddingStore := postgres.NewEmbeddingRepository(db)
+	embeddingService := embeddings.NewService(embeddingProvider, embeddingStore, artifactService)
+	artifactService.SetEmbeddingIndexer(embeddingService)
 	projectService := projects.NewService(projectRepo)
 	attachmentService := attachments.NewDefaultService(attachmentRepo)
 	baselineService := baselines.NewService(baselineRepo)
@@ -450,6 +462,7 @@ func main() {
 		TemplateService:     templateService,
 		ChatterService:      chatterService,
 		AttributeService:    attributeService,
+		EmbeddingService:    embeddingService,
 		UploadsDir:          uploadsDir,
 		UserService:         userService,
 		MemberService:       memberService,

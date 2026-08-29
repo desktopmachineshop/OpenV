@@ -20,6 +20,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/attributes"
 	"github.com/openv/requirements-platform/internal/domain/baselines"
 	"github.com/openv/requirements-platform/internal/domain/chatter"
+	"github.com/openv/requirements-platform/internal/domain/embeddings"
 	"github.com/openv/requirements-platform/internal/domain/exports"
 	"github.com/openv/requirements-platform/internal/domain/links"
 	"github.com/openv/requirements-platform/internal/domain/projects"
@@ -60,6 +61,7 @@ type HandlerDeps struct {
 	TemplateService   templates.Service
 	ChatterService    chatter.Service
 	AttributeService  attributes.Service
+	EmbeddingService  *embeddings.Service
 	UploadsDir        string
 
 	UserService         users.Service
@@ -108,6 +110,7 @@ type Handler struct {
 	templateService   templates.Service
 	chatterService    chatter.Service
 	attributeService  attributes.Service
+	embeddingService  *embeddings.Service
 	uploadsDir        string
 
 	userService         users.Service
@@ -160,6 +163,7 @@ func NewHandler(deps HandlerDeps) *Handler {
 		templateService:        deps.TemplateService,
 		chatterService:         deps.ChatterService,
 		attributeService:       deps.AttributeService,
+		embeddingService:       deps.EmbeddingService,
 		uploadsDir:             deps.UploadsDir,
 		userService:            deps.UserService,
 		memberService:          deps.MemberService,
@@ -227,6 +231,7 @@ func (h *Handler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/projects/import", h.ImportProject).Methods("POST")
 	router.HandleFunc("/api/v1/projects/{id}/report", h.GenerateReport).Methods("GET")
 	router.HandleFunc("/api/v1/projects/{id}/review-queue", h.ReviewQueue).Methods("GET")
+	router.HandleFunc("/api/v1/projects/{id}/reindex-embeddings", h.ReindexEmbeddings).Methods("POST")
 	router.HandleFunc("/api/v1/projects/{id}/baselines", h.CreateBaseline).Methods("POST")
 	router.HandleFunc("/api/v1/projects/{id}/baselines", h.ListBaselines).Methods("GET")
 	router.HandleFunc("/api/v1/baselines/{id}", h.GetBaseline).Methods("GET")

@@ -266,12 +266,27 @@ type LinkSuspector interface {
 	ClearArtifactLinksSuspicion(artifactID string) error
 }
 
+// EmbeddingIndexer receives an artifact's current content after a create or
+// update so a semantic-search embedding can be (re)computed for it (issue
+// #220). Implemented by embeddings.Service; declared here with primitive
+// arguments so the artifact service can drive indexing without importing the
+// embeddings package (which itself reads artifacts). Implementations MUST be
+// best-effort and non-blocking — the artifact write has already committed, and
+// embedding is advisory search infrastructure, never part of the write.
+type EmbeddingIndexer interface {
+	IndexArtifact(id string, version int, title, body string)
+}
+
 // DefaultService implements the Service interface
 type DefaultService struct {
 	repo Repository
 	// linkSuspector, when set, is notified of content changes (mark) and
 	// approvals (clear). Optional: nil disables suspicion tracking.
 	linkSuspector LinkSuspector
+	// embeddingIndexer, when set, is handed the artifact's content after a
+	// create/update to (re)compute its search embedding. Optional: nil
+	// disables embedding entirely (the default deployment).
+	embeddingIndexer EmbeddingIndexer
 }
 
 // NewDefaultService creates a new artifact service
@@ -283,6 +298,23 @@ func NewDefaultService(repo Repository) *DefaultService {
 // services need each other; links already back-references artifacts).
 func (s *DefaultService) SetLinkSuspector(ls LinkSuspector) {
 	s.linkSuspector = ls
+}
+
+// SetEmbeddingIndexer wires the semantic-search indexer in after construction
+// (the indexer reads artifacts, so it is built after this service). nil leaves
+// embedding disabled.
+func (s *DefaultService) SetEmbeddingIndexer(ix EmbeddingIndexer) {
+	s.embeddingIndexer = ix
+}
+
+// indexEmbedding hands the artifact's current content to the embedding indexer
+// (best-effort, nil-safe). The indexer is responsible for doing the work
+// off the request path and swallowing its own errors.
+func (s *DefaultService) indexEmbedding(a *Artifact) {
+	if s.embeddingIndexer == nil || a == nil {
+		return
+	}
+	s.embeddingIndexer.IndexArtifact(a.ID, a.Version, a.Title, a.Body)
 }
 
 // markLinksSuspect flags the artifact's live links after a content change.
@@ -306,7 +338,11 @@ func (s *DefaultService) CreateArtifact(artifact *Artifact) error {
 		}
 		artifact.SortOrder = order
 	}
-	return s.repo.Save(artifact)
+	if err := s.repo.Save(artifact); err != nil {
+		return err
+	}
+	s.indexEmbedding(artifact)
+	return nil
 }
 
 // GetArtifact retrieves an artifact by ID
@@ -428,6 +464,7 @@ func (s *DefaultService) UpdateArtifact(id string, req UpdateArtifactRequest) (*
 	if contentChanged {
 		s.markLinksSuspect(id)
 	}
+	s.indexEmbedding(artifact)
 
 	return artifact, nil
 }
@@ -540,6 +577,7 @@ func (s *DefaultService) RestoreArtifactVersion(id string, version int) (*Artifa
 	if current.Type != restored.Type || current.Title != restored.Title || current.Body != restored.Body {
 		s.markLinksSuspect(id)
 	}
+	s.indexEmbedding(restored)
 
 	return restored, nil
 }
