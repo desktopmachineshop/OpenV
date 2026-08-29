@@ -1617,11 +1617,54 @@ export interface SearchHit {
   type: string;
   title: string;
   snippet: string;
+  // Semantic-similarity score (0..1); present only for semantic/hybrid hits.
+  score?: number;
+}
+
+// Ranking path for GET /api/v1/search. 'keyword' is the original trigram match;
+// 'semantic' and 'hybrid' use artifact embeddings and fall back to keyword when
+// embeddings are not configured (see mode_used in the response).
+export type SearchMode = 'keyword' | 'semantic' | 'hybrid';
+
+// Envelope returned by GET /api/v1/search. mode_used reports which path
+// actually ran — it differs from the requested mode when a semantic/hybrid
+// request degraded to keyword because embeddings are unavailable.
+export interface SearchResponse {
+  mode_used: SearchMode;
+  hits: SearchHit[];
 }
 
 export const searchAPI = {
-  global: (q: string, limit?: number) =>
-    client.get<SearchHit[]>('/api/v1/search', { params: limit ? { q, limit } : { q } }),
+  global: (q: string, opts?: { limit?: number; mode?: SearchMode }) =>
+    client.get<SearchResponse>('/api/v1/search', {
+      params: {
+        q,
+        ...(opts?.limit ? { limit: opts.limit } : {}),
+        ...(opts?.mode ? { mode: opts.mode } : {}),
+      },
+    }),
+};
+
+// One candidate-duplicate pairing from GET /api/v1/projects/{id}/duplicates.
+export interface DuplicatePair {
+  artifact_id: string;
+  artifact_title: string;
+  artifact_type: string;
+  other_id: string;
+  other_title: string;
+  other_type: string;
+  similarity: number;
+}
+
+export interface DuplicatesResponse {
+  enabled: boolean;
+  note?: string;
+  pairs: DuplicatePair[];
+}
+
+export const duplicatesAPI = {
+  forProject: (projectId: string) =>
+    client.get<DuplicatesResponse>(`/api/v1/projects/${projectId}/duplicates`),
 };
 
 // In-app notification (issue #132). entity_ref carries {kind, ...ids} so the

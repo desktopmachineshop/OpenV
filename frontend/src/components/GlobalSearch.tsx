@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { searchAPI, SearchHit } from '../api/client';
+import { searchAPI, SearchHit, SearchMode } from '../api/client';
 
 // GlobalSearch is the workspace-wide artifact search box (issue #128). It
 // lives in the project sidebar header, queries GET /api/v1/search (debounced),
@@ -11,6 +11,11 @@ export const GlobalSearch: React.FC = () => {
   const navigate = useNavigate();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchHit[]>([]);
+  const [mode, setMode] = useState<SearchMode>('keyword');
+  // The path the server actually ran. When it differs from the requested mode
+  // (e.g. 'semantic' requested but embeddings are unconfigured), we surface a
+  // small note so the user knows the results are keyword matches.
+  const [modeUsed, setModeUsed] = useState<SearchMode>('keyword');
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -18,7 +23,7 @@ export const GlobalSearch: React.FC = () => {
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Debounced fetch (300ms). The cancelled flag drops responses that land
-  // after the query has moved on.
+  // after the query has moved on. Re-runs when the mode toggle changes too.
   useEffect(() => {
     const q = query.trim();
     if (!q) {
@@ -30,10 +35,12 @@ export const GlobalSearch: React.FC = () => {
     setLoading(true);
     const timer = window.setTimeout(() => {
       searchAPI
-        .global(q)
+        .global(q, { mode })
         .then((res) => {
           if (cancelled) return;
-          setResults(Array.isArray(res.data) ? res.data : []);
+          const data = res.data;
+          setResults(Array.isArray(data?.hits) ? data.hits : []);
+          setModeUsed(data?.mode_used || 'keyword');
           setActiveIndex(0);
           setLoading(false);
         })
@@ -47,7 +54,7 @@ export const GlobalSearch: React.FC = () => {
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [query]);
+  }, [query, mode]);
 
   // Close when clicking anywhere outside the search box.
   useEffect(() => {
@@ -154,6 +161,55 @@ export const GlobalSearch: React.FC = () => {
             zIndex: 1200,
           }}
         >
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '8px 10px',
+              borderBottom: '1px solid var(--border-soft)',
+            }}
+          >
+            {(['keyword', 'semantic'] as SearchMode[]).map((m) => {
+              const isSelected = mode === m;
+              return (
+                <button
+                  key={m}
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => setMode(m)}
+                  aria-pressed={isSelected}
+                  style={{
+                    flex: 1,
+                    padding: '4px 8px',
+                    fontSize: 11,
+                    fontWeight: 600,
+                    textTransform: 'capitalize',
+                    cursor: 'pointer',
+                    borderRadius: 6,
+                    border: '1px solid var(--border)',
+                    background: isSelected ? 'var(--surface-hover)' : 'transparent',
+                    color: isSelected ? 'var(--text)' : 'var(--text-muted)',
+                  }}
+                >
+                  {m}
+                </button>
+              );
+            })}
+          </div>
+          {!loading && mode === 'semantic' && modeUsed !== 'semantic' && (
+            <div
+              style={{
+                padding: '6px 12px',
+                fontSize: 11,
+                color: 'var(--text-muted)',
+                background: 'var(--surface-alt)',
+                borderBottom: '1px solid var(--border-soft)',
+              }}
+            >
+              Semantic search is not configured — showing keyword matches.
+            </div>
+          )}
           {loading && (
             <div style={{ padding: '10px 12px', fontSize: 12, color: 'var(--text-muted)' }}>
               Searching…

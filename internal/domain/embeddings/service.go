@@ -103,6 +103,61 @@ func (s *Service) embed(id string, version int, title, body string) error {
 	})
 }
 
+// SemanticSearch embeds the query and returns the nearest artifacts within the
+// given projects. It is the read path issue #221 adds on top of the #220 infra.
+//
+// Failure modes are distinguished so the API layer can degrade rather than
+// error the whole search:
+//
+//   - ErrDisabled          — embeddings not configured; use keyword search.
+//   - ErrVectorUnavailable — configured, but the vector table is absent or the
+//     store has no read path; use keyword search.
+//
+// A real provider or query error is returned as-is.
+func (s *Service) SemanticSearch(projectIDs []string, query string, limit int) ([]NearestHit, error) {
+	if !s.Enabled() {
+		return nil, ErrDisabled
+	}
+	searcher, ok := s.store.(Searcher)
+	if !ok {
+		return nil, ErrVectorUnavailable
+	}
+	if len(projectIDs) == 0 || strings.TrimSpace(query) == "" {
+		return []NearestHit{}, nil
+	}
+
+	vectors, err := s.provider.Embed([]string{query})
+	if err != nil {
+		return nil, err
+	}
+	if len(vectors) != 1 || len(vectors[0]) == 0 {
+		// A disabled or empty provider result: treat as "no semantic path"
+		// so the caller falls back to keyword rather than returning nothing.
+		return nil, ErrVectorUnavailable
+	}
+	return searcher.NearestByEmbedding(projectIDs, vectors[0], limit)
+}
+
+// DuplicatePairs returns candidate-duplicate requirement pairs for a project:
+// each requirement paired with its nearest other requirement above the
+// similarity threshold. It is a no-op-shaped ErrDisabled/ErrVectorUnavailable
+// when embeddings are off or the vector table is absent, so the endpoint can
+// answer "not available" rather than fail.
+func (s *Service) DuplicatePairs(projectID string, limit int) ([]DuplicatePair, error) {
+	if !s.Enabled() {
+		return nil, ErrDisabled
+	}
+	searcher, ok := s.store.(Searcher)
+	if !ok {
+		return nil, ErrVectorUnavailable
+	}
+	if limit <= 0 || limit > MaxDuplicatePairs {
+		limit = MaxDuplicatePairs
+	}
+	maxDistance := 1 - DefaultDuplicateSimilarity
+	return searcher.DuplicateCandidates(projectID, maxDistance, limit)
+}
+
 // ReindexProject re-embeds every current artifact in a project whose stored
 // embedding is missing or stale (content-hash / model mismatch). It returns
 // the number of artifacts examined. A per-artifact failure is logged and
