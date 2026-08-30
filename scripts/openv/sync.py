@@ -77,15 +77,24 @@ class Client:
     def login(self, email, password):
         self.call("POST", "/api/v1/auth/login", {"email": email, "password": password})
 
-    def ensure_workspace(self, name):
+    def ensure_workspace(self, name, create=False):
+        """Select the named workspace; only bootstrap may create it (create=True).
+
+        Every other command fails loudly when the account can't see the
+        workspace — silently creating one here once produced a duplicate
+        empty workspace when the account had been removed from the real one.
+        """
         orgs = (self.call("GET", "/api/v1/orgs") or {}).get("orgs") or []
         org = next((o for o in orgs if o.get("name") == name), None)
-        if org is None:
+        if org is None and create:
             self.call("POST", "/api/v1/orgs", {"name": name})
             orgs = (self.call("GET", "/api/v1/orgs") or {}).get("orgs") or []
             org = next((o for o in orgs if o.get("name") == name), None)
         if org is None:
-            raise SystemExit(f"workspace {name!r} not found after create")
+            raise SystemExit(
+                f"workspace {name!r} is not visible to {getattr(self, 'email', 'this account')} — "
+                "check OPENV_WORKSPACE, make sure the account is a member, or run bootstrap to create it"
+            )
         self.org_id = org["id"]
         return org
 
@@ -120,7 +129,7 @@ def cmd_bootstrap(args):
     definition = load_def(args.def_file)
     c = Client(args.api)
     c.login(args.email, args.password)
-    org = c.ensure_workspace(args.workspace)
+    org = c.ensure_workspace(args.workspace, create=True)
     print(f"workspace {args.workspace}: {org['id']}")
 
     if args.invite_admin:
