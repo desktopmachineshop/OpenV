@@ -91,7 +91,7 @@ export const RunnerConnectPrompt: React.FC<RunnerConnectPromptProps> = ({
       window.clearTimeout(t);
       window.clearTimeout(fallback);
     };
-  }, [openConnector]);
+  }, [openConnector, orgId]);
 
   // Poll until this member's personal runner shows up online.
   useEffect(() => {

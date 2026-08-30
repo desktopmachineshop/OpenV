@@ -9,6 +9,7 @@ import { apiErrorMessage } from '../api/errors';
 import { getLinkTypeLabel } from '../config/linkTypeRules';
 import ReactMarkdown from 'react-markdown';
 
+import remarkGfm from 'remark-gfm';
 // Attribute keys not shown in the Attributes section: internal snapshots, and
 // status, which the header already presents as a badge.
 const HIDDEN_ATTRIBUTE_KEYS = ['links_snapshot', 'images_snapshot', 'status'];
@@ -46,7 +47,7 @@ const ArtifactAttributes: React.FC<{ attributes?: Record<string, unknown> | null
     </div>
   );
 };
-import remarkGfm from 'remark-gfm';
+
 
 // Artifact types the quality linter scores (mirrors the backend catalog in
 // internal/domain/quality). Only these fetch a quality panel.
