@@ -20,6 +20,8 @@ import {
   ReqEntry,
   NfrEntry,
   HazardEntry,
+  HAZARD_CATEGORIES,
+  canonicalHazardCategory,
   newEntryId,
   normalizeWizardAnswers,
 } from '../components/wizard/wizardEntries';
@@ -36,9 +38,21 @@ interface DraftSpec {
   title: string;
   body: string;
   parent_id?: string;
+  sort_order?: number;
   attributes?: Record<string, any>;
   links?: { type: string; to_id: string }[];
 }
+
+// Section headings the wizard materializes artifacts under, in module order.
+// Hazard categories become sub-headings under the Hazards section.
+const SECTION_SPECS: Record<string, { title: string; sort: number }> = {
+  personas: { title: 'Personas', sort: 10 },
+  needs: { title: 'User Needs', sort: 20 },
+  requirements: { title: 'Requirements', sort: 30 },
+  nfrs: { title: 'Non-Functional Requirements & Constraints', sort: 40 },
+  hazards: { title: 'Hazards & Risks', sort: 50 },
+  tests: { title: 'Verification Tests', sort: 60 },
+};
 
 const STEP_LABELS = [
   'Product framing',
@@ -91,6 +105,11 @@ export const GuidedWizard: React.FC = () => {
   const [openNfrCategories, setOpenNfrCategories] = useState<Record<string, boolean>>({});
   // Step 6
   const [hazards, setHazards] = useState<HazardEntry[]>([]);
+  const [openHazardCategories, setOpenHazardCategories] = useState<Record<string, boolean>>({});
+  // Heading artifacts materialized entries live under, keyed by section
+  // ("personas", …) or hazard sub-section ("hazards:Safety"). Persisted in
+  // the session answers so re-runs reuse the same headings.
+  const [sectionIds, setSectionIds] = useState<Record<string, string>>({});
   // Step 7 — keyed by requirement artifact id
   const [stubSelected, setStubSelected] = useState<Record<string, boolean>>({});
   const [stubCreated, setStubCreated] = useState<Record<string, string>>({});
@@ -122,6 +141,7 @@ export const GuidedWizard: React.FC = () => {
     setAppliedSuggestions(applied);
     setStubSelected((answers.step_7?.selected as Record<string, boolean>) || {});
     setStubCreated((answers.step_7?.created as Record<string, string>) || {});
+    setSectionIds((answers.section_ids as Record<string, string>) || {});
   }, []);
 
   useEffect(() => {
@@ -249,6 +269,7 @@ export const GuidedWizard: React.FC = () => {
     nfrs: NfrEntry[];
     hazards: HazardEntry[];
     openNfr: Record<string, boolean>;
+    openHazard: Record<string, boolean>;
   }
 
   // Insert or replace one copilot suggestion in the draft. Returns null on
@@ -415,20 +436,25 @@ export const GuidedWizard: React.FC = () => {
             if (d.hazards[i].artifact_id) return 'That hazard is already saved as an artifact and cannot be replaced here.';
             d.hazards[i] = {
               ...d.hazards[i],
+              category: canonicalHazardCategory((s as any).category) || d.hazards[i].category,
               hazard: s.hazard !== undefined ? String(s.hazard) : d.hazards[i].hazard,
               harm: s.harm !== undefined ? String(s.harm) : d.hazards[i].harm,
               severity: SEVERITIES.includes(String(s.severity)) ? String(s.severity) : d.hazards[i].severity,
             };
+            d.openHazard[d.hazards[i].category] = true;
             return null;
           }
         }
         if (!String(s.hazard || '').trim()) return 'The hazard suggestion has no description.';
+        const category = canonicalHazardCategory((s as any).category) || 'Safety';
         d.hazards.push({
           id: newEntryId(),
+          category,
           hazard: String(s.hazard),
           harm: String(s.harm || ''),
           severity: SEVERITIES.includes(String(s.severity)) ? String(s.severity) : 'moderate',
         });
+        d.openHazard[category] = true;
         return null;
       }
       default:
@@ -456,7 +482,18 @@ export const GuidedWizard: React.FC = () => {
 
   const buildAnswers = (): Record<string, any> =>
     buildAnswersFrom(
-      { vision, problem, targetUsers, personas, needs, requirements, nfrs, hazards, openNfr: openNfrCategories },
+      {
+        vision,
+        problem,
+        targetUsers,
+        personas,
+        needs,
+        requirements,
+        nfrs,
+        hazards,
+        openNfr: openNfrCategories,
+        openHazard: openHazardCategories,
+      },
       appliedSuggestions
     );
 
@@ -478,6 +515,7 @@ export const GuidedWizard: React.FC = () => {
       nfrs: nfrs.map((n) => ({ ...n })),
       hazards: hazards.map((h) => ({ ...h })),
       openNfr: { ...openNfrCategories },
+      openHazard: { ...openHazardCategories },
     };
     // A suggestion already applied in this session is a no-op success —
     // re-clicking (or a stale button after a remount) can never duplicate.
@@ -493,6 +531,7 @@ export const GuidedWizard: React.FC = () => {
     setNfrs(d.nfrs);
     setHazards(d.hazards);
     setOpenNfrCategories(d.openNfr);
+    setOpenHazardCategories(d.openHazard);
     const nextApplied = { ...appliedSuggestions };
     let newlyApplied = false;
     results.forEach((r, i) => {
@@ -556,6 +595,34 @@ export const GuidedWizard: React.FC = () => {
     setMaxReached((m) => Math.max(m, nextStep));
   };
 
+  // Create any missing section headings and return the updated key→artifact
+  // map. Hazard sub-sections ("hazards:Safety") nest under the Hazards
+  // heading, which is created on demand too.
+  const ensureSections = async (keys: string[]): Promise<Record<string, string>> => {
+    const map = { ...sectionIds };
+    if (!session) return map;
+    const create = async (title: string, sort: number, parentId?: string): Promise<string> => {
+      const res = await guidedAPI.materializeDrafts(session.id, [
+        { type: 'heading', title, body: '', sort_order: sort, ...(parentId ? { parent_id: parentId } : {}) },
+      ]);
+      return (res.data.artifact_ids || [])[0];
+    };
+    for (const key of keys) {
+      if (map[key]) continue;
+      if (key.startsWith('hazards:')) {
+        const cat = key.slice('hazards:'.length);
+        if (!map.hazards) {
+          map.hazards = await create(SECTION_SPECS.hazards.title, SECTION_SPECS.hazards.sort);
+        }
+        map[key] = await create(`${cat} Hazards`, 10 * (HAZARD_CATEGORIES.indexOf(cat) + 1), map.hazards);
+      } else if (SECTION_SPECS[key]) {
+        map[key] = await create(SECTION_SPECS[key].title, SECTION_SPECS[key].sort);
+      }
+    }
+    setSectionIds(map);
+    return map;
+  };
+
   const handleNext = async () => {
     if (!session || !projectId) return;
     setBusy(true);
@@ -591,7 +658,10 @@ export const GuidedWizard: React.FC = () => {
             });
           }
         });
+        let sections = sectionIds;
         if (drafts.length > 0) {
+          sections = await ensureSections(['personas']);
+          drafts.forEach((d) => (d.parent_id = sections.personas));
           const res = await guidedAPI.materializeDrafts(session.id, drafts);
           (res.data.artifact_ids || []).forEach((id, j) => {
             if (newIdx[j] !== undefined) updated[newIdx[j]] = { ...updated[newIdx[j]], artifact_id: id };
@@ -599,6 +669,7 @@ export const GuidedWizard: React.FC = () => {
           setPersonas(updated);
         }
         const answers = buildAnswers();
+        answers.section_ids = sections;
         answers.step_2 = { personas: updated };
         answers.step_2_ids = updated.map((p) => p.artifact_id).filter(Boolean);
         await persist(3, answers);
@@ -621,7 +692,10 @@ export const GuidedWizard: React.FC = () => {
             });
           }
         });
+        let sections = sectionIds;
         if (drafts.length > 0) {
+          sections = await ensureSections(['needs']);
+          drafts.forEach((d) => (d.parent_id = sections.needs));
           const res = await guidedAPI.materializeDrafts(session.id, drafts);
           (res.data.artifact_ids || []).forEach((id, j) => {
             if (newIdx[j] !== undefined) updated[newIdx[j]] = { ...updated[newIdx[j]], artifact_id: id };
@@ -629,6 +703,7 @@ export const GuidedWizard: React.FC = () => {
           setNeeds(updated);
         }
         const answers = buildAnswers();
+        answers.section_ids = sections;
         answers.step_3 = { needs: updated };
         answers.step_3_ids = updated.map((n) => n.artifact_id).filter(Boolean);
         await persist(4, answers);
@@ -650,7 +725,10 @@ export const GuidedWizard: React.FC = () => {
             });
           }
         });
+        let sections = sectionIds;
         if (drafts.length > 0) {
+          sections = await ensureSections(['requirements']);
+          drafts.forEach((d) => (d.parent_id = sections.requirements));
           const res = await guidedAPI.materializeDrafts(session.id, drafts);
           (res.data.artifact_ids || []).forEach((id, j) => {
             if (newIdx[j] !== undefined) updated[newIdx[j]] = { ...updated[newIdx[j]], artifact_id: id };
@@ -658,6 +736,7 @@ export const GuidedWizard: React.FC = () => {
           setRequirements(updated);
         }
         const answers = buildAnswers();
+        answers.section_ids = sections;
         answers.step_4 = { requirements: updated };
         answers.step_4_ids = updated.map((r) => r.artifact_id).filter(Boolean);
         await persist(5, answers);
@@ -677,7 +756,10 @@ export const GuidedWizard: React.FC = () => {
             });
           }
         });
+        let sections = sectionIds;
         if (drafts.length > 0) {
+          sections = await ensureSections(['nfrs']);
+          drafts.forEach((d) => (d.parent_id = sections.nfrs));
           const res = await guidedAPI.materializeDrafts(session.id, drafts);
           (res.data.artifact_ids || []).forEach((id, j) => {
             if (newIdx[j] !== undefined) updated[newIdx[j]] = { ...updated[newIdx[j]], artifact_id: id };
@@ -685,6 +767,7 @@ export const GuidedWizard: React.FC = () => {
           setNfrs(updated);
         }
         const answers = buildAnswers();
+        answers.section_ids = sections;
         answers.step_5 = { nfrs: updated };
         answers.step_5_ids = updated.map((n) => n.artifact_id).filter(Boolean);
         await persist(6, answers);
@@ -693,18 +776,24 @@ export const GuidedWizard: React.FC = () => {
         const updated = hazards.slice();
         const newIdx: number[] = [];
         const drafts: DraftSpec[] = [];
+        const draftCategories: string[] = [];
         updated.forEach((h, i) => {
           if (!h.artifact_id && h.hazard.trim()) {
             newIdx.push(i);
+            draftCategories.push(h.category);
             drafts.push({
               type: 'hazard',
               title: h.hazard.trim(),
-              body: `**Potential harm:** ${h.harm}\n\n**Severity:** ${h.severity}`,
-              attributes: { severity: h.severity },
+              body: `**Category:** ${h.category}\n\n**Potential harm:** ${h.harm}\n\n**Severity:** ${h.severity}`,
+              attributes: { severity: h.severity, category: h.category },
             });
           }
         });
+        let sections = sectionIds;
         if (drafts.length > 0) {
+          const keys = Array.from(new Set(draftCategories)).map((c) => `hazards:${c}`);
+          sections = await ensureSections(keys);
+          drafts.forEach((d, j) => (d.parent_id = sections[`hazards:${draftCategories[j]}`]));
           const res = await guidedAPI.materializeDrafts(session.id, drafts);
           (res.data.artifact_ids || []).forEach((id, j) => {
             if (newIdx[j] !== undefined) updated[newIdx[j]] = { ...updated[newIdx[j]], artifact_id: id };
@@ -712,6 +801,7 @@ export const GuidedWizard: React.FC = () => {
           setHazards(updated);
         }
         const answers = buildAnswers();
+        answers.section_ids = sections;
         answers.step_6 = { hazards: updated };
         await persist(7, answers);
         goTo(7);
@@ -721,11 +811,14 @@ export const GuidedWizard: React.FC = () => {
           (c) => (stubSelected[c.id] ?? true) && !stubCreated[c.id]
         );
         let createdMap = { ...stubCreated };
+        let sections = sectionIds;
         if (toCreate.length > 0) {
+          sections = await ensureSections(['tests']);
           const drafts: DraftSpec[] = toCreate.map((c) => ({
             type: 'test-case',
             title: `Verify: ${c.title}`,
             body: `Test case stub for requirement: ${c.title}\n\nDefine steps, preconditions and expected results.`,
+            parent_id: sections.tests,
             links: [{ type: 'verifies', to_id: c.id }],
           }));
           const res = await guidedAPI.materializeDrafts(session.id, drafts);
@@ -735,6 +828,7 @@ export const GuidedWizard: React.FC = () => {
           setStubCreated(createdMap);
         }
         const answers = buildAnswers();
+        answers.section_ids = sections;
         answers.step_7 = { selected: stubSelected, created: createdMap };
         await persist(8, answers);
         goTo(8);
@@ -1331,44 +1425,102 @@ export const GuidedWizard: React.FC = () => {
             })}
           </div>
         );
-      case 6:
+      case 6: {
+        const hazardHints: Record<string, string> = {
+          Safety: 'harm to people when the product fails or is misused',
+          Technical: 'design or implementation risks that threaten the product working at all',
+          Security: 'malicious use, data exposure, or abuse of the product',
+          Programme: 'schedule, cost, dependency, or resourcing risks to delivery',
+          Operational: 'in-service risks — environment, wear, support, or user error',
+        };
         return (
           <div>
             <div className="card" style={{ marginBottom: 12 }}>
-              <h3>Hazards (optional)</h3>
+              <h3>Hazards &amp; risks (optional)</h3>
               <div style={{ ...helpText, marginBottom: 0 }}>
-                If this product could cause harm when it fails or is misused, capture hazards here. Skip
-                this step if it does not apply.
+                Work through the risk categories that apply — each becomes its own section in the
+                requirements module. Skip this step if none apply.
               </div>
             </div>
-            <RepeatingCardList<HazardEntry>
-              items={hazards}
-              onChange={setHazards}
-              makeNew={() => ({ id: newEntryId(), hazard: '', harm: '', severity: 'moderate' })}
-              itemKey={(h) => h.id}
-              addLabel="Add hazard"
-              emptyText="No hazards recorded — use Skip if not applicable."
-              renderItem={(h, i, update) => (
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center', paddingRight: 24 }}>
-                  {h.artifact_id && <span title="Draft created" style={{ color: 'var(--success)' }}>●</span>}
-                  <input value={h.hazard} onChange={(e) => update({ hazard: e.target.value })} placeholder="Hazard (what could go wrong)" style={{ padding: '6px 8px', fontSize: 13 }} disabled={!!h.artifact_id} />
-                  <input value={h.harm} onChange={(e) => update({ harm: e.target.value })} placeholder="Potential harm" style={{ padding: '6px 8px', fontSize: 13 }} disabled={!!h.artifact_id} />
-                  <select
-                    value={h.severity}
-                    onChange={(e) => update({ severity: e.target.value })}
-                    style={{ padding: '6px 8px', fontSize: 13, width: 130 }}
-                    disabled={!!h.artifact_id}
+            {HAZARD_CATEGORIES.map((cat) => {
+              const catEntries = hazards.filter((h) => h.category === cat);
+              const open = openHazardCategories[cat] ?? catEntries.length > 0;
+              return (
+                <div key={cat} className="card" style={{ marginBottom: 10, padding: 14 }}>
+                  <div
+                    style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}
+                    onClick={() => setOpenHazardCategories({ ...openHazardCategories, [cat]: !open })}
                   >
-                    {SEVERITIES.map((s) => (
-                      <option key={s} value={s}>{s}</option>
-                    ))}
-                  </select>
+                    <input
+                      type="checkbox"
+                      checked={open}
+                      onChange={() => setOpenHazardCategories({ ...openHazardCategories, [cat]: !open })}
+                      style={{ width: 'auto' }}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                    <span style={{ fontWeight: 600, color: 'var(--text)' }}>{cat}</span>
+                    <span style={{ fontSize: 12, color: 'var(--text-muted)', flex: 1 }}>{hazardHints[cat]}</span>
+                    <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                      {catEntries.length > 0 ? `${catEntries.length} hazard${catEntries.length > 1 ? 's' : ''}` : ''}
+                    </span>
+                  </div>
+                  {open && (
+                    <div style={{ marginTop: 10 }}>
+                      {catEntries.map((h) => (
+                        <div key={h.id} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
+                          {h.artifact_id && <span title="Draft created" style={{ color: 'var(--success)' }}>●</span>}
+                          <input
+                            value={h.hazard}
+                            onChange={(e) => setHazards(hazards.map((x) => (x.id === h.id ? { ...x, hazard: e.target.value } : x)))}
+                            placeholder={`${cat} hazard (what could go wrong)`}
+                            style={{ padding: '6px 8px', fontSize: 13 }}
+                            disabled={!!h.artifact_id}
+                          />
+                          <input
+                            value={h.harm}
+                            onChange={(e) => setHazards(hazards.map((x) => (x.id === h.id ? { ...x, harm: e.target.value } : x)))}
+                            placeholder="Potential harm / impact"
+                            style={{ padding: '6px 8px', fontSize: 13 }}
+                            disabled={!!h.artifact_id}
+                          />
+                          <select
+                            value={h.severity}
+                            onChange={(e) => setHazards(hazards.map((x) => (x.id === h.id ? { ...x, severity: e.target.value } : x)))}
+                            style={{ padding: '6px 8px', fontSize: 13, width: 130 }}
+                            disabled={!!h.artifact_id}
+                          >
+                            {SEVERITIES.map((s) => (
+                              <option key={s} value={s}>{s}</option>
+                            ))}
+                          </select>
+                          {!h.artifact_id && (
+                            <button
+                              onClick={() => setHazards(hazards.filter((x) => x.id !== h.id))}
+                              style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', width: 'auto', padding: 4 }}
+                              title="Remove"
+                            >
+                              ✕
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                      <button
+                        className="button-secondary"
+                        style={{ padding: '5px 10px', fontSize: 12 }}
+                        onClick={() =>
+                          setHazards([...hazards, { id: newEntryId(), category: cat, hazard: '', harm: '', severity: 'moderate' }])
+                        }
+                      >
+                        + Add {cat.toLowerCase()} hazard
+                      </button>
+                    </div>
+                  )}
                 </div>
-              )}
-              canRemove={(h) => !h.artifact_id}
-            />
+              );
+            })}
           </div>
         );
+      }
       case 7: {
         const candidates = testCandidates();
         return (

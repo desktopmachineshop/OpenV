@@ -1145,12 +1145,12 @@ When you propose a concrete entry for the wizard, put each one in its own fenced
 - {"kind":"need","persona":"<existing persona name>","capability":"","outcome":""}
 - {"kind":"requirement","need":"<capability of the user need it derives from>","text":"The system shall ...","fit_criterion":"","verification_method":"inspection|analysis|demonstration|test"}
 - {"kind":"nfr","category":"Performance|Reliability|Usability|Security|Maintainability|Regulatory","text":"The system shall ...","fit_criterion":"","verification_method":"inspection|analysis|demonstration|test"}
-- {"kind":"hazard","hazard":"","harm":"","severity":"minor|moderate|serious|critical"}
+- {"kind":"hazard","category":"Safety|Technical|Security|Programme|Operational","hazard":"","harm":"","severity":"minor|moderate|serious|critical"} — Safety = harm to people; Technical = design/implementation risk; Security = malicious use or data exposure; Programme = schedule/cost/dependency risk; Operational = in-service risks (environment, wear, user error)
 
 To improve or correct an entry the user already has, add "replaces":"<the entry's id>" to the object — always prefer the entry's stable "id" exactly as it appears in the wizard state above; it is unambiguous. Only if you cannot see the id, fall back to the entry's exact current value (persona name, need capability, requirement text, NFR text, or hazard text respectively). The user then gets a Replace button that overwrites that entry in place instead of adding a duplicate. Entries already locked to artifacts (they show a green dot) cannot be replaced — propose a new entry instead. Omit "replaces" for brand-new entries. Framing suggestions always replace their field.
 
 Example (new entry):
-` + "```openv-suggestion\n" + `{"kind":"hazard","hazard":"Spindle starts while guard is open","harm":"Operator hand injury","severity":"critical"}` + "\n```" + `
+` + "```openv-suggestion\n" + `{"kind":"hazard","category":"Safety","hazard":"Spindle starts while guard is open","harm":"Operator hand injury","severity":"critical"}` + "\n```" + `
 
 Example (revision of an existing requirement whose state entry is {"id":"9f6c1a2e-...","text":"The system shall be fast",...}):
 ` + "```openv-suggestion\n" + `{"kind":"requirement","replaces":"9f6c1a2e-...","text":"The system shall render the requirements list within 500 ms for projects of up to 5,000 artifacts.","fit_criterion":"P95 list render time ≤ 500 ms at 5,000 artifacts","verification_method":"test"}` + "\n```" + `
