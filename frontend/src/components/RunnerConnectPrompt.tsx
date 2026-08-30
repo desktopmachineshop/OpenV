@@ -132,7 +132,7 @@ export const RunnerConnectPrompt: React.FC<RunnerConnectPromptProps> = ({
         return (
           <>
             The connector didn&apos;t respond, so the download has started — check your browser
-            downloads for <code>openv-connector-{os}.zip</code>. Unzip it somewhere permanent, run{' '}
+            downloads for <code>{binName.replace('./', '')}</code>. Move it somewhere permanent, run{' '}
             <code>{binName}</code> once to register it, then click “Pair connector” below.
           </>
         );
@@ -296,9 +296,9 @@ export const RunnerConnectPrompt: React.FC<RunnerConnectPromptProps> = ({
             )}
 
             <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 16 }}>
-              First time? Download the connector, unzip it somewhere permanent, double-click{' '}
-              <code>{binName}</code> once to register it, then click “Pair connector” here. Your
-              CLI sign-ins never leave your machine.
+              First time? Download the connector — a single <code>{binName.replace('./', '')}</code>{' '}
+              — move it somewhere permanent and double-click it once to register it, then click
+              “Pair connector” here. Your CLI sign-ins never leave your machine.
             </div>
 
             <div style={{ textAlign: 'right' }}>

@@ -981,7 +981,10 @@ func (h *Handler) ExchangeConnectorPairing(w http.ResponseWriter, r *http.Reques
 	})
 }
 
-// DownloadConnector serves a prebuilt Agent Connector bundle when present.
+// DownloadConnector serves a prebuilt Agent Connector when present:
+// preferably the single self-contained executable (agentd and openv-mcp
+// embedded — see cmd/openv-connector payload_embed.go), falling back to the
+// legacy zip bundle for dist directories built before the single-file era.
 func (h *Handler) DownloadConnector(w http.ResponseWriter, r *http.Request) {
 	osName := r.URL.Query().Get("os")
 	if osName == "" {
@@ -995,15 +998,33 @@ func (h *Handler) DownloadConnector(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusNotFound, "connector downloads are not configured on this deployment")
 		return
 	}
-	filename := "openv-connector-" + osName + ".zip"
-	path := filepath.Join(h.connectorDistDir, filename)
-	if _, err := os.Stat(path); err != nil {
-		writeJSONError(w, http.StatusNotFound, "connector bundle not available for "+osName+" — build it with `make connector-dist`")
+
+	single := "openv-connector-" + osName
+	serveAs := "openv-connector"
+	if osName == "windows" {
+		single += ".exe"
+		serveAs += ".exe"
+	}
+	if path := filepath.Join(h.connectorDistDir, single); fileExists(path) {
+		w.Header().Set("Content-Type", "application/octet-stream")
+		w.Header().Set("Content-Disposition", "attachment; filename="+serveAs)
+		http.ServeFile(w, r, path)
 		return
 	}
-	w.Header().Set("Content-Type", "application/zip")
-	w.Header().Set("Content-Disposition", "attachment; filename="+filename)
-	http.ServeFile(w, r, path)
+
+	zipName := "openv-connector-" + osName + ".zip"
+	if path := filepath.Join(h.connectorDistDir, zipName); fileExists(path) {
+		w.Header().Set("Content-Type", "application/zip")
+		w.Header().Set("Content-Disposition", "attachment; filename="+zipName)
+		http.ServeFile(w, r, path)
+		return
+	}
+	writeJSONError(w, http.StatusNotFound, "connector download not available for "+osName+" — build it with `make connector-dist`")
+}
+
+func fileExists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
 }
 
 // --- Project team grants ---

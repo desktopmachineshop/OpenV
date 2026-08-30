@@ -107,6 +107,11 @@ func main() {
 		arg = args[0]
 	}
 
+	// Release builds carry agentd and openv-mcp inside this executable;
+	// unpack (or refresh) them next to it before anything might start them.
+	// A no-op in plain `go build` builds.
+	extractPayload()
+
 	// Best-effort self-registration on every launch (HKCU, idempotent), so a
 	// first double-click is enough to make openv-connector:// links work.
 	if arg != "uninstall" {
