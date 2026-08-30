@@ -10,3 +10,4 @@ vendor/
 .idea/
 *.iml
 temp_helpers/
+cmd/openv-connector/payload/
