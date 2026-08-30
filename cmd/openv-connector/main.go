@@ -244,6 +244,22 @@ func handleDeepLink(link string, insecure bool) {
 		// The start link may name the workspace the browser was in, so the
 		// runner comes up against the right pairing without re-pairing.
 		start(nil, u.Query().Get("org"))
+	case "open":
+		// One-link flow: start with the existing pairing for the named
+		// workspace; only when there is none, pair with the enclosed
+		// one-time code first. An unused code simply expires, so opening
+		// never rotates a working key.
+		org := u.Query().Get("org")
+		if cfg, err := selectPairing(org); err == nil {
+			start(cfg, "")
+			return
+		}
+		code := u.Query().Get("code")
+		api := u.Query().Get("api")
+		if code == "" || api == "" {
+			fail("this connector isn't paired with that workspace and the link carries no pairing code — click \"Open connector\" in OpenV to get a fresh one")
+		}
+		start(pair(api, code, insecure), "")
 	default:
 		fail("unknown action %q", action)
 	}

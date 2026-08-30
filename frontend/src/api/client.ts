@@ -1182,6 +1182,9 @@ export interface ConnectorPairing {
   api_url: string;
   deep_link: string;
   start_link: string;
+  // Combined open-or-pair link: the connector starts with its existing
+  // pairing for the workspace and only spends the code when unpaired.
+  open_link?: string;
 }
 
 export const connectorAPI = {
