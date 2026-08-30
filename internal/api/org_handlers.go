@@ -24,6 +24,8 @@ func (h *Handler) registerOrgRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/orgs", h.CreateOrg).Methods("POST")
 	router.HandleFunc("/api/v1/orgs/{id}", h.GetOrg).Methods("GET")
 	router.HandleFunc("/api/v1/orgs/{id}", h.UpdateOrg).Methods("PUT")
+	router.HandleFunc("/api/v1/orgs/{id}", h.DeleteOrg).Methods("DELETE")
+	router.HandleFunc("/api/v1/orgs/{id}/restore", h.RestoreOrg).Methods("POST")
 	router.HandleFunc("/api/v1/orgs/{id}/activate", h.ActivateOrg).Methods("POST")
 
 	router.HandleFunc("/api/v1/orgs/{id}/members", h.ListOrgMembers).Methods("GET")
@@ -81,6 +83,9 @@ func (h *Handler) ListOrgs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	list, err := h.orgService.ListForUser(user.ID)
+	if r.URL.Query().Get("deleted") == "true" {
+		list, err = h.orgService.ListDeletedForUser(user.ID)
+	}
 	if err != nil {
 		respondInternal(w, r, "failed to list workspaces", err)
 		return
@@ -89,6 +94,70 @@ func (h *Handler) ListOrgs(w http.ResponseWriter, r *http.Request) {
 		"orgs":       list,
 		"active_org": ActiveOrg(r),
 	})
+}
+
+// DeleteOrg soft-deletes a company workspace (admin). It disappears from
+// pickers and every request against it is refused; it stays restorable for
+// orgs.DeletionGraceDays, after which the daily purge hard-deletes it and all
+// its data. Personal workspaces cannot be deleted.
+func (h *Handler) DeleteOrg(w http.ResponseWriter, r *http.Request) {
+	orgID := mux.Vars(r)["id"]
+	if !h.requireOrgRole(w, r, orgID, orgs.RoleAdmin) {
+		return
+	}
+	org, err := h.orgService.DeleteOrg(orgID)
+	if err != nil {
+		switch {
+		case errors.Is(err, orgs.ErrPersonalOrgDelete):
+			writeJSONError(w, http.StatusBadRequest, err.Error())
+		case errors.Is(err, orgs.ErrNotFound):
+			writeJSONError(w, http.StatusNotFound, err.Error())
+		default:
+			respondInternal(w, r, "failed to delete workspace", err)
+		}
+		return
+	}
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"deleted_at":  org.DeletedAt,
+		"purge_after": org.DeletedAt.Add(orgs.DeletionGraceDays * 24 * time.Hour),
+	})
+}
+
+// RestoreOrg brings a soft-deleted workspace back within the grace period.
+// Deleted workspaces fail the normal role check by design, so authorization
+// uses the any-state role lookup: platform admins and the workspace's own
+// admins may restore.
+func (h *Handler) RestoreOrg(w http.ResponseWriter, r *http.Request) {
+	orgID := mux.Vars(r)["id"]
+	user := CurrentUser(r)
+	if user == nil {
+		writeJSONError(w, http.StatusUnauthorized, "authentication required")
+		return
+	}
+	if !user.IsAdmin {
+		role, err := h.orgService.RoleInOrgAny(orgID, user.ID)
+		if err != nil {
+			respondInternal(w, r, "failed to resolve workspace access", err)
+			return
+		}
+		if role != orgs.RoleAdmin {
+			writeJSONError(w, http.StatusForbidden, "only workspace admins can restore a deleted workspace")
+			return
+		}
+	}
+	org, err := h.orgService.RestoreOrg(orgID)
+	if err != nil {
+		switch {
+		case errors.Is(err, orgs.ErrNotDeleted):
+			writeJSONError(w, http.StatusBadRequest, err.Error())
+		case errors.Is(err, orgs.ErrNotFound):
+			writeJSONError(w, http.StatusNotFound, err.Error())
+		default:
+			respondInternal(w, r, "failed to restore workspace", err)
+		}
+		return
+	}
+	json.NewEncoder(w).Encode(org)
 }
 
 // CreateOrg creates a company workspace with the caller as admin.

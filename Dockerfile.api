@@ -17,11 +17,31 @@ RUN go mod download
 COPY cmd cmd
 COPY internal internal
 COPY examples examples
+COPY docs/connector-readme.txt docs/connector-readme.txt
 
 # Build the API server. The host worker binaries (cmd/agentd, cmd/openv-mcp)
-# are NOT built here: they run on the operator's machine next to the vendor
-# CLIs (claude/codex/gemini) — build them with `make worker` instead.
+# are NOT built here for the server's own use: they run on the operator's
+# machine next to the vendor CLIs (claude/codex/gemini) — build them with
+# `make worker` instead.
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o server cmd/server/main.go
+
+# Agent Connector download bundles, served at
+# /api/v1/public/connector/download (same recipe as `make connector-dist`).
+# Baked into the image so cloud deployments (e.g. Railway) can hand users the
+# connector without an operator running make on the host.
+RUN apk --no-cache add zip
+RUN mkdir -p dist/win dist/linux && \
+	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o dist/win/openv-connector.exe ./cmd/openv-connector && \
+	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o dist/win/agentd.exe ./cmd/agentd && \
+	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o dist/win/openv-mcp.exe ./cmd/openv-mcp && \
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o dist/linux/openv-connector ./cmd/openv-connector && \
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o dist/linux/agentd ./cmd/agentd && \
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o dist/linux/openv-mcp ./cmd/openv-mcp && \
+	cp docs/connector-readme.txt dist/win/README.txt && \
+	cp docs/connector-readme.txt dist/linux/README.txt && \
+	cd dist/win && zip -q ../openv-connector-windows.zip * && \
+	cd ../linux && zip -q ../openv-connector-linux.zip * && \
+	cd .. && rm -rf win linux
 
 # Final stage (alpine:3.24 floats only across 3.24.x patch releases)
 FROM alpine:3.24
@@ -32,6 +52,8 @@ WORKDIR /root/
 
 COPY --from=builder /app/server .
 COPY --from=builder /app/examples ./examples
+# Connector download bundles; ./dist is the CONNECTOR_DIST_DIR default.
+COPY --from=builder /app/dist ./dist
 
 EXPOSE 8080
 

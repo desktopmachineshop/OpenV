@@ -49,6 +49,8 @@ export const OrgSettings: React.FC = () => {
   // General tab
   const [nameDraft, setNameDraft] = useState('');
   const [savingName, setSavingName] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState('');
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (org) setNameDraft(org.name);
@@ -66,6 +68,28 @@ export const OrgSettings: React.FC = () => {
   const flash = (msg: string) => {
     setNotice(msg);
     window.setTimeout(() => setNotice(''), 2500);
+  };
+
+  const handleDelete = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (deleteConfirm !== org.name) return;
+    setDeleting(true);
+    setError('');
+    try {
+      await orgsAPI.remove(org.id);
+      // The workspace is gone from the picker; land the user in another one.
+      const remaining = orgs.filter((o) => o.id !== org.id);
+      setOrgs(remaining);
+      const fallback = remaining.find((o) => o.type === 'personal') || remaining[0];
+      if (fallback) {
+        orgsAPI.activate(fallback.id).catch(() => {});
+        useAppStore.getState().setActiveOrgId(fallback.id, { clearProjects: true });
+      }
+      navigate('/projects');
+    } catch (err: any) {
+      setError(`Failed to delete workspace: ${apiErrorMessage(err)}`);
+      setDeleting(false);
+    }
   };
 
   const handleSaveName = async (e: React.FormEvent) => {
@@ -191,6 +215,36 @@ export const OrgSettings: React.FC = () => {
                 <span>{org.created_at ? new Date(org.created_at).toLocaleDateString() : '—'}</span>
               </div>
             </div>
+
+            {isAdmin && org.type !== 'personal' && (
+              <div className="card" style={{ borderColor: 'var(--danger, #c0392b)' }}>
+                <h3 style={{ color: 'var(--danger-text, #c0392b)' }}>Danger zone</h3>
+                <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+                  Deleting this workspace hides it immediately and locks out every member. All its
+                  projects, requirements, links, baselines, and agent data are kept for{' '}
+                  <strong>30 days</strong> — an admin can restore it in that window — and then
+                  permanently deleted. Type the workspace name to confirm.
+                </p>
+                <form onSubmit={handleDelete} style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                  <div style={{ flex: 1, minWidth: 220 }}>
+                    <label style={{ fontSize: 12 }}>Workspace name</label>
+                    <input
+                      value={deleteConfirm}
+                      onChange={(e) => setDeleteConfirm(e.target.value)}
+                      placeholder={org.name}
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    className="button"
+                    style={{ background: 'var(--danger, #c0392b)', color: '#fff' }}
+                    disabled={deleting || deleteConfirm !== org.name}
+                  >
+                    {deleting ? 'Deleting…' : 'Delete workspace'}
+                  </button>
+                </form>
+              </div>
+            )}
           </>
         )}
 
