@@ -1182,6 +1182,9 @@ export interface ConnectorPairing {
   api_url: string;
   deep_link: string;
   start_link: string;
+  // Combined open-or-pair link: the connector starts with its existing
+  // pairing for the workspace and only spends the code when unpaired.
+  open_link?: string;
 }
 
 export const connectorAPI = {
@@ -1199,7 +1202,9 @@ export const connectorAPI = {
       return false;
     }
   },
-  startLink: 'openv-connector://start',
+  // Include the workspace so a connector paired with several workspaces
+  // starts against the one the browser is in.
+  startLink: (orgId?: string) => `openv-connector://start${orgId ? `?org=${orgId}` : ''}`,
 };
 
 export const projectTeamAccessAPI = {

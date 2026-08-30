@@ -66,6 +66,13 @@ export const RunnerConnectPrompt: React.FC<RunnerConnectPromptProps> = ({
       setDownload('unavailable');
       return;
     }
+    try {
+      // Remembered so a later "no key in THIS workspace" doesn't re-download
+      // a connector this browser already fetched (pairing is per-workspace).
+      localStorage.setItem('openv-connector-downloaded', '1');
+    } catch {
+      /* private mode etc. — auto-download gating just degrades */
+    }
     const a = document.createElement('a');
     a.href = connectorAPI.downloadURL(os);
     document.body.appendChild(a);
@@ -74,8 +81,27 @@ export const RunnerConnectPrompt: React.FC<RunnerConnectPromptProps> = ({
     setDownload('started');
   }, [os]);
 
+  // Open-or-pair in one step: mint a one-time code and hand it to the
+  // connector, which only spends it when it has no pairing for this
+  // workspace. Falls back to a plain start link if minting fails.
+  const openOrPair = useCallback(async () => {
+    setError('');
+    try {
+      const res = await connectorAPI.createPairing(orgId);
+      setPairing(res.data);
+      openConnector(res.data.open_link || res.data.deep_link);
+    } catch (err: any) {
+      setError(
+        `Couldn't create a pairing code (${apiErrorMessage(err)}) — trying to open an already-paired connector instead.`
+      );
+      openConnector(connectorAPI.startLink(orgId));
+    }
+  }, [orgId, openConnector]);
+
   useEffect(() => {
-    const t = window.setTimeout(() => openConnector(connectorAPI.startLink), 300);
+    const t = window.setTimeout(() => {
+      openOrPair();
+    }, 300);
     const fallback = window.setTimeout(
       () => setPhase((p) => (p === 'opening' ? 'waiting' : p)),
       3000
@@ -84,7 +110,7 @@ export const RunnerConnectPrompt: React.FC<RunnerConnectPromptProps> = ({
       window.clearTimeout(t);
       window.clearTimeout(fallback);
     };
-  }, [openConnector]);
+  }, [openOrPair]);
 
   // Poll until this member's personal runner shows up online.
   useEffect(() => {
@@ -103,28 +129,26 @@ export const RunnerConnectPrompt: React.FC<RunnerConnectPromptProps> = ({
 
   // If the protocol launch produced no runner, the connector likely isn't
   // installed. With no runner key yet (first-time setup) start the download
-  // automatically; with an existing key it's probably installed but not
-  // running, so the waiting hint below is enough.
+  // automatically — unless this browser has downloaded the connector before:
+  // runner keys are per-workspace, so "no key in this workspace" often just
+  // means "pair the existing connector with this workspace", not "install".
   useEffect(() => {
     if (phase !== 'waiting' || autoDownloadedRef.current) return;
     const t = window.setTimeout(() => {
       if (autoDownloadedRef.current || hasKeyRef.current !== false) return;
+      let downloadedBefore = false;
+      try {
+        downloadedBefore = !!localStorage.getItem('openv-connector-downloaded');
+      } catch {
+        /* unreadable storage — treat as first time */
+      }
+      if (downloadedBefore) return;
       autoDownloadedRef.current = true;
       startDownload();
     }, 4000);
     return () => window.clearTimeout(t);
   }, [phase, startDownload]);
 
-  const createPairing = async () => {
-    setError('');
-    try {
-      const res = await connectorAPI.createPairing(orgId);
-      setPairing(res.data);
-      openConnector(res.data.deep_link);
-    } catch (err: any) {
-      setError(`Failed to create a pairing code: ${apiErrorMessage(err)}`);
-    }
-  };
 
   const waitingStatus = () => {
     switch (download) {
@@ -133,7 +157,7 @@ export const RunnerConnectPrompt: React.FC<RunnerConnectPromptProps> = ({
           <>
             The connector didn&apos;t respond, so the download has started — check your browser
             downloads for <code>{binName.replace('./', '')}</code>. Move it somewhere permanent, run{' '}
-            <code>{binName}</code> once to register it, then click “Pair connector” below.
+            <code>{binName}</code> once to register it, then click “Open connector” below.
           </>
         );
       case 'checking':
@@ -142,7 +166,8 @@ export const RunnerConnectPrompt: React.FC<RunnerConnectPromptProps> = ({
         return (
           <>
             Waiting for a runner to come online. If nothing happened, the connector probably
-            isn&apos;t installed (or isn&apos;t paired) on this machine yet — use the options below.
+            isn&apos;t installed on this machine yet — use the options below. Already installed?
+            “Open connector” starts it and pairs this workspace automatically if needed.
           </>
         );
     }
@@ -241,15 +266,8 @@ export const RunnerConnectPrompt: React.FC<RunnerConnectPromptProps> = ({
             )}
 
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
-              <button
-                className="button"
-                style={{ width: 'auto' }}
-                onClick={() => openConnector(connectorAPI.startLink)}
-              >
+              <button className="button" style={{ width: 'auto' }} onClick={openOrPair}>
                 Open connector
-              </button>
-              <button className="button-secondary button" style={{ width: 'auto' }} onClick={createPairing}>
-                Pair connector
               </button>
               <button
                 className="button-secondary button"
@@ -290,7 +308,7 @@ export const RunnerConnectPrompt: React.FC<RunnerConnectPromptProps> = ({
                     margin: 0,
                   }}
                 >
-                  {`${binName} "${pairing.deep_link}"`}
+                  {`${binName} "${pairing.open_link || pairing.deep_link}"`}
                 </pre>
               </div>
             )}
@@ -298,7 +316,8 @@ export const RunnerConnectPrompt: React.FC<RunnerConnectPromptProps> = ({
             <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 16 }}>
               First time? Download the connector — a single <code>{binName.replace('./', '')}</code>{' '}
               — move it somewhere permanent and double-click it once to register it, then click
-              “Pair connector” here. Your CLI sign-ins never leave your machine.
+              “Open connector” here: it pairs this workspace automatically. Your CLI sign-ins never
+              leave your machine.
             </div>
 
             <div style={{ textAlign: 'right' }}>

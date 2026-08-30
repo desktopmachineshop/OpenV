@@ -48,8 +48,19 @@ export interface NfrEntry {
   artifact_id?: string;
 }
 
+// Hazard sections: harm to people (Safety), design/implementation risk
+// (Technical), malicious use or data exposure (Security), schedule/cost/
+// resourcing risk (Programme), and in-service risks like misuse or
+// environment (Operational).
+export const HAZARD_CATEGORIES = ['Safety', 'Technical', 'Security', 'Programme', 'Operational'];
+
+/** Map free-form category text onto the canonical list ('' when unknown). */
+export const canonicalHazardCategory = (value: unknown): string =>
+  HAZARD_CATEGORIES.find((c) => c.toLowerCase() === String(value ?? '').trim().toLowerCase()) || '';
+
 export interface HazardEntry {
   id: string;
+  category: string;
   hazard: string;
   harm: string;
   severity: string;
@@ -159,6 +170,9 @@ export const normalizeWizardAnswers = (answers: Record<string, any>): Normalized
     withArtifactId(
       {
         id: entryId(h.id),
+        // Entries saved before hazard sections existed default to Safety —
+        // the step's original framing was harm from failure or misuse.
+        category: canonicalHazardCategory(h.category) || 'Safety',
         hazard: str(h.hazard),
         harm: str(h.harm),
         severity: str(h.severity) || 'moderate',

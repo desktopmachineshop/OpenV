@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { NavLink, Outlet, useNavigate, useParams } from 'react-router-dom';
-import { projectAPI, Project } from '../api/client';
+import { NavLink, Outlet, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { guidedAPI, projectAPI, Project } from '../api/client';
 import { useAppStore } from '../state/store';
 import { GlobalSearch } from './GlobalSearch';
 import { HelpSidebar } from './HelpSidebar';
@@ -61,8 +61,30 @@ const navSections: { label?: string; items: NavItem[] }[] = [
 export const ProjectLayout: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { setProjectId, orgs, activeOrgId, setActiveOrgId } = useAppStore();
   const [project, setProject] = useState<Project | null>(null);
+  // Once a guided-definition session exists, the nav entry disappears — the
+  // wizard is then reached only through the Overview page's adaptive CTA
+  // (Resume / Modify). Rechecked on every route change so starting or
+  // committing a session updates the menu without a reload.
+  const [hasGuidedSession, setHasGuidedSession] = useState(false);
+
+  useEffect(() => {
+    if (!projectId) return;
+    let cancelled = false;
+    guidedAPI
+      .list(projectId)
+      .then((res) => {
+        if (!cancelled) setHasGuidedSession((res.data || []).length > 0);
+      })
+      .catch(() => {
+        /* menu visibility only — keep the last known state */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId, location.pathname]);
 
   useEffect(() => {
     if (!projectId) return;
@@ -144,7 +166,9 @@ export const ProjectLayout: React.FC = () => {
                   {section.label}
                 </div>
               )}
-              {section.items.map((item) => (
+              {section.items
+                .filter((item) => item.to !== 'guided' || !hasGuidedSession)
+                .map((item) => (
                 <NavLink
                   key={item.to}
                   to={item.to}

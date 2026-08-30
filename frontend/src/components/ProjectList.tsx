@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../state/store';
-import { projectAPI, templateAPI, Project, Template } from '../api/client';
+import { guidedAPI, projectAPI, templateAPI, Project, Template } from '../api/client';
+import { generateRandomProduct, RandomProduct } from '../utils/randomProduct';
 import { apiErrorMessage } from '../api/errors';
 import { Navbar } from './Navbar';
 import { CreateOrgModal } from './CreateOrgModal';
@@ -30,8 +31,16 @@ export const ProjectList: React.FC = () => {
   const [editProjectName, setEditProjectName] = useState<string>('');
   const [editProjectDesc, setEditProjectDesc] = useState<string>('');
   const [templates, setTemplates] = useState<Template[]>([]);
-  const [createMode, setCreateMode] = useState<'blank' | 'templates' | 'examples'>('blank');
+  const [createMode, setCreateMode] = useState<'blank' | 'templates' | 'examples' | 'random'>('blank');
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
+  const [randomProduct, setRandomProduct] = useState<RandomProduct | null>(null);
+
+  const rollRandomProduct = () => {
+    const rolled = generateRandomProduct();
+    setRandomProduct(rolled);
+    setNewProjectName(rolled.name);
+    setNewProjectDesc(rolled.description);
+  };
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   // Load projects on mount and whenever the active workspace changes.
@@ -74,13 +83,37 @@ export const ProjectList: React.FC = () => {
       return;
     }
 
-    if (createMode !== 'blank' && !selectedTemplateId) {
+    if (createMode !== 'blank' && createMode !== 'random' && !selectedTemplateId) {
       setError('Please select a template or example');
       return;
     }
 
     try {
-      if (createMode === 'blank') {
+      if (createMode === 'random' && randomProduct) {
+        const response = await projectAPI.create({
+          name: newProjectName,
+          description: newProjectDesc,
+        });
+        addProject(response.data);
+        setProjectId(response.data.id);
+        // Seed the Guided Wizard's framing step with the rolled concept and
+        // land in the wizard, where the connected copilot agent picks it up
+        // and helps expand it into personas, needs, and requirements.
+        try {
+          const session = await guidedAPI.start(response.data.id);
+          await guidedAPI.saveStep(session.data.id, 1, {
+            step_1: {
+              vision: randomProduct.vision,
+              problem_statement: randomProduct.problem,
+              target_users: randomProduct.targetUsers,
+            },
+          });
+          navigate(`/projects/${response.data.id}/guided`);
+        } catch {
+          // Wizard seeding is best-effort; the project itself exists.
+          navigate(`/projects/${response.data.id}`);
+        }
+      } else if (createMode === 'blank') {
         const response = await projectAPI.create({
           name: newProjectName,
           description: newProjectDesc,
@@ -99,6 +132,7 @@ export const ProjectList: React.FC = () => {
       setNewProjectName('');
       setNewProjectDesc('');
       setSelectedTemplateId('');
+      setRandomProduct(null);
       setCreateMode('blank');
       setIsCreating(false);
       setError('');
@@ -441,20 +475,63 @@ export const ProjectList: React.FC = () => {
                     id="mode"
                     value={createMode}
                     onChange={(e) => {
-                      const mode = e.target.value as 'blank' | 'templates' | 'examples';
+                      const mode = e.target.value as 'blank' | 'templates' | 'examples' | 'random';
                       setCreateMode(mode);
                       setSelectedTemplateId('');
                       if (mode === 'blank') {
                         setNewProjectName('');
                         setNewProjectDesc('');
+                        setRandomProduct(null);
+                      } else if (mode === 'random') {
+                        rollRandomProduct();
                       }
                     }}
                   >
                     <option value="blank">Blank Project</option>
                     <option value="templates" disabled={templatesOnly.length === 0}>Templates</option>
                     <option value="examples" disabled={exampleTemplates.length === 0}>Examples</option>
+                    <option value="random">🎲 Random product (for testing)</option>
                   </select>
                 </div>
+
+                {createMode === 'random' && randomProduct && (
+                  <div
+                    style={{
+                      background: 'var(--surface-alt)',
+                      border: '1px solid var(--border-soft)',
+                      borderRadius: 4,
+                      padding: '10px 14px',
+                      fontSize: 13,
+                      marginBottom: 12,
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10 }}>
+                      <strong>
+                        {randomProduct.name}{' '}
+                        <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>({randomProduct.category})</span>
+                      </strong>
+                      <button
+                        type="button"
+                        className="button-secondary button"
+                        style={{ width: 'auto', padding: '2px 10px', fontSize: 12 }}
+                        onClick={rollRandomProduct}
+                      >
+                        🎲 Reroll
+                      </button>
+                    </div>
+                    <p style={{ margin: '6px 0 4px' }}>{randomProduct.description}</p>
+                    <p style={{ margin: '4px 0', color: 'var(--text-muted)' }}>
+                      <em>Vision:</em> {randomProduct.vision}
+                    </p>
+                    <p style={{ margin: '4px 0', color: 'var(--text-muted)' }}>
+                      <em>For:</em> {randomProduct.targetUsers}
+                    </p>
+                    <p style={{ margin: '6px 0 0', fontSize: 12, color: 'var(--text-muted)' }}>
+                      Creating this drops you into the Guided Wizard with the framing pre-filled, where
+                      your connected copilot agent helps expand it into personas, needs, and requirements.
+                    </p>
+                  </div>
+                )}
 
                 {createMode === 'templates' && (
                   <div className="form-group">

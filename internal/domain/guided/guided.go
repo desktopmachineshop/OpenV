@@ -70,6 +70,7 @@ type DraftSpec struct {
 	Title      string                 `json:"title"`
 	Body       string                 `json:"body"`
 	ParentID   *string                `json:"parent_id,omitempty"`
+	SortOrder  *int                   `json:"sort_order,omitempty"`
 	Attributes map[string]interface{} `json:"attributes"`
 	Links      []DraftLink            `json:"links"`
 }
@@ -223,6 +224,7 @@ func (s *DefaultService) MaterializeDrafts(sessionID string, drafts []DraftSpec)
 			Type:       draft.Type,
 			Title:      draft.Title,
 			Body:       draft.Body,
+			SortOrder:  draft.SortOrder,
 			Attributes: attrs,
 		})
 

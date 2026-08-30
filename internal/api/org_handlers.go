@@ -940,6 +940,10 @@ func (h *Handler) CreateConnectorPairing(w http.ResponseWriter, r *http.Request)
 		"api_url":    apiURL,
 		"deep_link":  "openv-connector://pair?code=" + code + "&api=" + url.QueryEscape(apiURL),
 		"start_link": "openv-connector://start",
+		// One-link flow: the connector starts with its existing pairing for
+		// this workspace and only spends the code when it has none, so
+		// opening never rotates a working key.
+		"open_link": "openv-connector://open?org=" + orgID + "&code=" + code + "&api=" + url.QueryEscape(apiURL),
 	})
 }
 
