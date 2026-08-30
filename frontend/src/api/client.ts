@@ -994,6 +994,9 @@ export interface Org {
   // already alerted that month); present only once an alert has fired.
   budget_alert_month?: string;
   budget_alert_threshold?: number;
+  // Present on soft-deleted workspaces (listDeleted); restorable for 30 days
+  // from this time, then permanently purged.
+  deleted_at?: string;
 }
 
 export interface OrgMember {
@@ -1107,6 +1110,12 @@ export const orgsAPI = {
   create: (name: string) => client.post<Org>('/api/v1/orgs', { name }),
   get: (id: string) => client.get<Org>(`/api/v1/orgs/${id}`),
   update: (id: string, payload: Partial<Org>) => client.put<Org>(`/api/v1/orgs/${id}`, payload),
+  // Soft delete: the workspace is hidden and locked, restorable for 30 days,
+  // then hard-deleted by the server's purge job.
+  remove: (id: string) =>
+    client.delete<{ deleted_at: string; purge_after: string }>(`/api/v1/orgs/${id}`),
+  restore: (id: string) => client.post<Org>(`/api/v1/orgs/${id}/restore`),
+  listDeleted: () => client.get<{ orgs: Org[] }>('/api/v1/orgs', { params: { deleted: 'true' } }),
   activate: (id: string) => client.post(`/api/v1/orgs/${id}/activate`),
   members: {
     list: (orgId: string) => client.get<OrgMember[]>(`/api/v1/orgs/${orgId}/members`),

@@ -422,6 +422,29 @@ func main() {
 	// stop when the signal context is canceled.
 	automation.NewTriggerMatcher(automationRepo, runService, teamService).Start(bus)
 	scheduler.New(automationRepo, runService, teamService).Start(ctx)
+
+	// Workspace purge: hard-delete workspaces whose soft-delete grace period
+	// (orgs.DeletionGraceDays) has expired — once at boot, then daily.
+	go func() {
+		purge := func() {
+			if ids, err := orgService.PurgeExpired(time.Now()); err != nil {
+				slog.Error("workspace purge failed", "error", err, "purged", len(ids))
+			} else if len(ids) > 0 {
+				slog.Info("purged expired deleted workspaces", "count", len(ids), "ids", ids)
+			}
+		}
+		purge()
+		ticker := time.NewTicker(24 * time.Hour)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				purge()
+			}
+		}
+	}()
 	go func() {
 		ticker := time.NewTicker(30 * time.Second)
 		defer ticker.Stop()

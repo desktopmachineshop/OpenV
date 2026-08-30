@@ -119,10 +119,12 @@ their own project, workers pass within their org) · `org member`/`org admin`
 
 | Method | Path | Purpose | Auth |
 |---|---|---|---|
-| GET | `/api/v1/orgs` | List the caller's orgs | user |
+| GET | `/api/v1/orgs` | List the caller's orgs (`?deleted=true` lists their soft-deleted ones) | user |
 | POST | `/api/v1/orgs` | Create a company workspace | user |
 | GET | `/api/v1/orgs/{id}` | Workspace details | org member |
 | PUT | `/api/v1/orgs/{id}` | Update name/settings/limits/`monthly_budget_usd` | org admin |
+| DELETE | `/api/v1/orgs/{id}` | Soft-delete a company workspace: hidden and locked immediately, restorable for 30 days, then hard-deleted with all its data by a daily purge. Personal workspaces are refused. | org admin |
+| POST | `/api/v1/orgs/{id}/restore` | Restore a soft-deleted workspace within the grace period | org admin (of the deleted org) |
 | POST | `/api/v1/orgs/{id}/activate` | Set the session's active workspace | org member |
 | GET | `/api/v1/orgs/{id}/members` | List workspace members | org member |
 | POST | `/api/v1/orgs/{id}/members` | Add member | org admin |

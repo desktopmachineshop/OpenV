@@ -3,6 +3,8 @@ package postgres
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
+	"time"
 
 	"github.com/openv/requirements-platform/internal/domain/orgs"
 )
@@ -17,10 +19,10 @@ func NewOrgRepository(db *sql.DB) *OrgRepository {
 	return &OrgRepository{db: db}
 }
 
-const orgColumns = `id, name, slug, org_type, plan, limits, created_by, created_at, updated_at, monthly_budget_usd, budget_alert_month, budget_alert_threshold`
+const orgColumns = `id, name, slug, org_type, plan, limits, created_by, created_at, updated_at, monthly_budget_usd, budget_alert_month, budget_alert_threshold, deleted_at`
 
 // orgColumnsQualified disambiguates joined queries (org_members also has created_at).
-const orgColumnsQualified = `o.id, o.name, o.slug, o.org_type, o.plan, o.limits, o.created_by, o.created_at, o.updated_at, o.monthly_budget_usd, o.budget_alert_month, o.budget_alert_threshold`
+const orgColumnsQualified = `o.id, o.name, o.slug, o.org_type, o.plan, o.limits, o.created_by, o.created_at, o.updated_at, o.monthly_budget_usd, o.budget_alert_month, o.budget_alert_threshold, o.deleted_at`
 
 func scanOrg(row interface{ Scan(...interface{}) error }, extra ...interface{}) (*orgs.Org, error) {
 	o := new(orgs.Org)
@@ -28,7 +30,8 @@ func scanOrg(row interface{ Scan(...interface{}) error }, extra ...interface{}) 
 	var createdBy sql.NullString
 	var budget sql.NullFloat64
 	var alertMonth sql.NullString
-	dest := []interface{}{&o.ID, &o.Name, &o.Slug, &o.OrgType, &o.Plan, &limits, &createdBy, &o.CreatedAt, &o.UpdatedAt, &budget, &alertMonth, &o.BudgetAlertThreshold}
+	var deletedAt sql.NullTime
+	dest := []interface{}{&o.ID, &o.Name, &o.Slug, &o.OrgType, &o.Plan, &limits, &createdBy, &o.CreatedAt, &o.UpdatedAt, &budget, &alertMonth, &o.BudgetAlertThreshold, &deletedAt}
 	dest = append(dest, extra...)
 	if err := row.Scan(dest...); err != nil {
 		return nil, err
@@ -36,6 +39,10 @@ func scanOrg(row interface{ Scan(...interface{}) error }, extra ...interface{}) 
 	if createdBy.Valid {
 		v := createdBy.String
 		o.CreatedBy = &v
+	}
+	if deletedAt.Valid {
+		v := deletedAt.Time
+		o.DeletedAt = &v
 	}
 	if budget.Valid {
 		v := budget.Float64
@@ -121,7 +128,7 @@ func (r *OrgRepository) ListOrgsForUser(userID string) ([]*orgs.Org, error) {
 	rows, err := r.db.Query(`
 		SELECT `+orgColumnsQualified+`, m.role FROM organizations o
 		JOIN org_members m ON m.org_id = o.id
-		WHERE m.user_id = $1
+		WHERE m.user_id = $1 AND o.deleted_at IS NULL
 		ORDER BY (o.org_type = 'personal') DESC, o.name
 	`, userID)
 	if err != nil {
@@ -147,7 +154,7 @@ func (r *OrgRepository) FindPersonalOrgForUser(userID string) (*orgs.Org, error)
 	o, err := scanOrg(r.db.QueryRow(`
 		SELECT `+orgColumnsQualified+` FROM organizations o
 		JOIN org_members m ON m.org_id = o.id
-		WHERE m.user_id = $1 AND o.org_type = 'personal'
+		WHERE m.user_id = $1 AND o.org_type = 'personal' AND o.deleted_at IS NULL
 		ORDER BY o.created_at LIMIT 1
 	`, userID))
 	if err == sql.ErrNoRows {
@@ -158,7 +165,7 @@ func (r *OrgRepository) FindPersonalOrgForUser(userID string) (*orgs.Org, error)
 
 // ListAllOrgIDs returns every organization id, oldest first.
 func (r *OrgRepository) ListAllOrgIDs() ([]string, error) {
-	rows, err := r.db.Query(`SELECT id FROM organizations ORDER BY created_at`)
+	rows, err := r.db.Query(`SELECT id FROM organizations WHERE deleted_at IS NULL ORDER BY created_at`)
 	if err != nil {
 		return nil, err
 	}
@@ -190,14 +197,147 @@ func (r *OrgRepository) RemoveMember(orgID, userID string) error {
 	return err
 }
 
-// MemberRole returns the user's role in an org ("" when not a member).
+// MemberRole returns the user's role in an org ("" when not a member). A
+// soft-deleted org counts as no membership, which is what hides and locks a
+// deleted workspace everywhere role checks gate access.
 func (r *OrgRepository) MemberRole(orgID, userID string) (string, error) {
+	var role string
+	err := r.db.QueryRow(`
+		SELECT m.role FROM org_members m
+		JOIN organizations o ON o.id = m.org_id
+		WHERE m.org_id = $1 AND m.user_id = $2 AND o.deleted_at IS NULL
+	`, orgID, userID).Scan(&role)
+	if err == sql.ErrNoRows {
+		return "", nil
+	}
+	return role, err
+}
+
+// MemberRoleAny is MemberRole without the deleted-org exclusion, for the
+// restore path where an admin acts on their own deleted workspace.
+func (r *OrgRepository) MemberRoleAny(orgID, userID string) (string, error) {
 	var role string
 	err := r.db.QueryRow(`SELECT role FROM org_members WHERE org_id = $1 AND user_id = $2`, orgID, userID).Scan(&role)
 	if err == sql.ErrNoRows {
 		return "", nil
 	}
 	return role, err
+}
+
+// SoftDeleteOrg stamps deleted_at, hiding and locking the workspace.
+func (r *OrgRepository) SoftDeleteOrg(id string, at time.Time) error {
+	_, err := r.db.Exec(`UPDATE organizations SET deleted_at = $2, updated_at = $2 WHERE id = $1`, id, at)
+	return err
+}
+
+// RestoreOrg clears deleted_at.
+func (r *OrgRepository) RestoreOrg(id string) error {
+	_, err := r.db.Exec(`UPDATE organizations SET deleted_at = NULL, updated_at = NOW() WHERE id = $1`, id)
+	return err
+}
+
+// ListDeletedOrgsForUser returns the user's soft-deleted orgs with role.
+func (r *OrgRepository) ListDeletedOrgsForUser(userID string) ([]*orgs.Org, error) {
+	rows, err := r.db.Query(`
+		SELECT `+orgColumnsQualified+`, m.role FROM organizations o
+		JOIN org_members m ON m.org_id = o.id
+		WHERE m.user_id = $1 AND o.deleted_at IS NOT NULL
+		ORDER BY o.deleted_at DESC
+	`, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var result []*orgs.Org
+	for rows.Next() {
+		var role string
+		o, err := scanOrg(rows, &role)
+		if err != nil {
+			return nil, err
+		}
+		o.Role = role
+		result = append(result, o)
+	}
+	return result, rows.Err()
+}
+
+// ListExpiredDeletedOrgIDs returns orgs soft-deleted before the cutoff.
+func (r *OrgRepository) ListExpiredDeletedOrgIDs(before time.Time) ([]string, error) {
+	rows, err := r.db.Query(`SELECT id FROM organizations WHERE deleted_at IS NOT NULL AND deleted_at < $1`, before)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var result []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		result = append(result, id)
+	}
+	return result, rows.Err()
+}
+
+// PurgeOrg hard-deletes an organization and everything it contains, in one
+// transaction. Most org- and project-scoped tables predate foreign keys, so
+// the dependents that don't cascade are deleted explicitly, children before
+// the artifacts/projects they hang off. Attachment rows go with their
+// artifacts; the files on disk are not touched here (same as artifact
+// deletion elsewhere in the app).
+func (r *OrgRepository) PurgeOrg(id string) error {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	const orgProjects = `SELECT id FROM projects WHERE org_id = $1`
+	const orgArtifacts = `SELECT DISTINCT id FROM artifacts WHERE project_id IN (` + orgProjects + `)`
+
+	// artifact_embeddings only exists when the pgvector migration ran.
+	var embeddingsTable sql.NullString
+	if err := tx.QueryRow(`SELECT to_regclass('artifact_embeddings')::text`).Scan(&embeddingsTable); err != nil {
+		return err
+	}
+	if embeddingsTable.Valid {
+		if _, err := tx.Exec(`DELETE FROM artifact_embeddings WHERE artifact_id IN (`+orgArtifacts+`)`, id); err != nil {
+			return err
+		}
+	}
+
+	stmts := []string{
+		`DELETE FROM chatter WHERE artifact_id IN (` + orgArtifacts + `)`,
+		`DELETE FROM attachments WHERE artifact_id IN (` + orgArtifacts + `)`,
+		`DELETE FROM link_artifacts WHERE artifact_id IN (` + orgArtifacts + `)`,
+		`DELETE FROM links WHERE from_id IN (` + orgArtifacts + `) OR to_id IN (` + orgArtifacts + `)`,
+		`DELETE FROM test_runs WHERE project_id IN (` + orgProjects + `)`,  // test_results cascade
+		`DELETE FROM work_items WHERE project_id IN (` + orgProjects + `)`, // activity cascades
+		`DELETE FROM interviews WHERE project_id IN (` + orgProjects + `)`, // invites/sessions/messages cascade
+		`DELETE FROM attribute_definitions WHERE org_id = $1 OR project_id IN (` + orgProjects + `)`,
+		`DELETE FROM artifact_ref_counters WHERE project_id IN (` + orgProjects + `)`,
+		`DELETE FROM artifacts WHERE project_id IN (` + orgProjects + `)`,
+		`DELETE FROM projects WHERE org_id = $1`, // baselines, product_profiles, repo_connections, project_members, team access cascade
+		`DELETE FROM agent_runs WHERE org_id = $1`,
+		`DELETE FROM agents WHERE org_id = $1`,      // remaining runs/proposals/team nodes cascade
+		`DELETE FROM agent_teams WHERE org_id = $1`, // nodes/edges cascade
+		`DELETE FROM automations WHERE org_id = $1`,
+		`DELETE FROM guided_sessions WHERE org_id = $1`, // messages cascade
+		`DELETE FROM domain_events WHERE org_id = $1`,
+		`DELETE FROM notifications WHERE org_id = $1`,
+		`DELETE FROM provider_settings WHERE org_id = $1`,
+		`DELETE FROM provider_logins WHERE org_id = $1`,
+		`DELETE FROM templates WHERE org_id = $1`,
+		`DELETE FROM organizations WHERE id = $1`, // members, teams, worker keys, pairings, hosted workers cascade
+	}
+	for _, stmt := range stmts {
+		if _, err := tx.Exec(stmt, id); err != nil {
+			return fmt.Errorf("purge org %s: %q: %w", id, stmt, err)
+		}
+	}
+	return tx.Commit()
 }
 
 // ListMembers returns an org's members with display info.

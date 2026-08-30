@@ -39,7 +39,19 @@ var (
 	// ErrInvalidBudget flags a negative monthly budget — user-facing
 	// validation (400), like ErrInvalidRole.
 	ErrInvalidBudget = errors.New("monthly budget must not be negative")
+
+	// ErrPersonalOrgDelete flags an attempt to delete a personal workspace —
+	// user-facing validation, like ErrInvalidRole.
+	ErrPersonalOrgDelete = errors.New("personal workspaces cannot be deleted")
+
+	// ErrNotDeleted flags a restore of a workspace that is not deleted —
+	// user-facing validation, like ErrInvalidRole.
+	ErrNotDeleted = errors.New("workspace is not deleted")
 )
+
+// DeletionGraceDays is how long a soft-deleted workspace stays restorable
+// before the purge job hard-deletes it and everything it contains.
+const DeletionGraceDays = 30
 
 // Org is a tenant: a personal space or a company workspace.
 type Org struct {
@@ -52,6 +64,10 @@ type Org struct {
 	CreatedBy *string                `json:"created_by,omitempty"`
 	CreatedAt time.Time              `json:"created_at"`
 	UpdatedAt time.Time              `json:"updated_at"`
+
+	// DeletedAt marks a soft-deleted workspace: hidden and locked, restorable
+	// until the purge job hard-deletes it DeletionGraceDays after this time.
+	DeletedAt *time.Time `json:"deleted_at,omitempty"`
 
 	// MonthlyBudgetUSD is the workspace's monthly spend budget (issue #186).
 	// nil means no budget is set — the default, which leaves budget alerting
@@ -99,9 +115,22 @@ type Repository interface {
 	// ListAllOrgIDs returns every organization id (boot-time seeding).
 	ListAllOrgIDs() ([]string, error)
 
+	// SoftDeleteOrg stamps deleted_at, hiding and locking the workspace.
+	SoftDeleteOrg(id string, at time.Time) error
+	// RestoreOrg clears deleted_at within the grace period.
+	RestoreOrg(id string) error
+	// ListDeletedOrgsForUser returns the user's soft-deleted orgs with role.
+	ListDeletedOrgsForUser(userID string) ([]*Org, error)
+	// ListExpiredDeletedOrgIDs returns orgs soft-deleted before the cutoff.
+	ListExpiredDeletedOrgIDs(before time.Time) ([]string, error)
+	// PurgeOrg hard-deletes the org and everything it contains.
+	PurgeOrg(id string) error
+
 	UpsertMember(orgID, userID, role string) error
 	RemoveMember(orgID, userID string) error
-	MemberRole(orgID, userID string) (string, error) // "" when not a member
+	MemberRole(orgID, userID string) (string, error) // "" when not a member or org deleted
+	// MemberRoleAny is MemberRole without the deleted-org exclusion (restore path).
+	MemberRoleAny(orgID, userID string) (string, error)
 	ListMembers(orgID string) ([]*Member, error)
 	CountAdmins(orgID string) (int, error)
 }
@@ -124,11 +153,25 @@ type Service interface {
 	// subscriber; see Repository.ClaimBudgetAlert.
 	ClaimBudgetAlert(orgID, month string, threshold int) (bool, error)
 
+	// DeleteOrg soft-deletes a company workspace: hidden and locked, restorable
+	// for DeletionGraceDays, then hard-deleted by PurgeExpired. Personal
+	// workspaces are refused with ErrPersonalOrgDelete. Idempotent.
+	DeleteOrg(id string) (*Org, error)
+	// RestoreOrg brings a soft-deleted workspace back within the grace period.
+	RestoreOrg(id string) (*Org, error)
+	// ListDeletedForUser returns the caller's soft-deleted workspaces.
+	ListDeletedForUser(userID string) ([]*Org, error)
+	// PurgeExpired hard-deletes workspaces whose grace period has passed,
+	// returning the purged ids.
+	PurgeExpired(now time.Time) ([]string, error)
+
 	AddMember(orgID, userID, role string) error
 	RemoveMember(orgID, userID string) error
 	SetMemberRole(orgID, userID, role string) error
 	ListMembers(orgID string) ([]*Member, error)
 	RoleInOrg(orgID, userID string) (string, error)
+	// RoleInOrgAny is RoleInOrg including deleted workspaces (restore path).
+	RoleInOrgAny(orgID, userID string) (string, error)
 	// IsMember is a convenience wrapper over RoleInOrg.
 	IsMember(orgID, userID string) (bool, error)
 }
@@ -268,6 +311,76 @@ func (s *DefaultService) SetMonthlyBudget(id string, budget *float64) (*Org, err
 // to the repository (see Repository.ClaimBudgetAlert).
 func (s *DefaultService) ClaimBudgetAlert(orgID, month string, threshold int) (bool, error) {
 	return s.repo.ClaimBudgetAlert(orgID, month, threshold)
+}
+
+// DeleteOrg soft-deletes a company workspace. Refuses personal workspaces;
+// re-deleting an already-deleted workspace is a no-op returning current state.
+func (s *DefaultService) DeleteOrg(id string) (*Org, error) {
+	org, err := s.Get(id)
+	if err != nil {
+		return nil, err
+	}
+	if org.OrgType == TypePersonal {
+		return nil, ErrPersonalOrgDelete
+	}
+	if org.DeletedAt != nil {
+		return org, nil
+	}
+	now := time.Now()
+	if err := s.repo.SoftDeleteOrg(id, now); err != nil {
+		return nil, err
+	}
+	org.DeletedAt = &now
+	return org, nil
+}
+
+// RestoreOrg clears a workspace's soft delete within the grace period.
+func (s *DefaultService) RestoreOrg(id string) (*Org, error) {
+	org, err := s.Get(id)
+	if err != nil {
+		return nil, err
+	}
+	if org.DeletedAt == nil {
+		return nil, ErrNotDeleted
+	}
+	if err := s.repo.RestoreOrg(id); err != nil {
+		return nil, err
+	}
+	org.DeletedAt = nil
+	return org, nil
+}
+
+// ListDeletedForUser returns the user's soft-deleted workspaces.
+func (s *DefaultService) ListDeletedForUser(userID string) ([]*Org, error) {
+	return s.repo.ListDeletedOrgsForUser(userID)
+}
+
+// PurgeExpired hard-deletes every workspace soft-deleted more than
+// DeletionGraceDays ago. Purges are independent: one failure doesn't stop the
+// rest, and the ids actually purged are returned alongside the first error.
+func (s *DefaultService) PurgeExpired(now time.Time) ([]string, error) {
+	cutoff := now.Add(-DeletionGraceDays * 24 * time.Hour)
+	ids, err := s.repo.ListExpiredDeletedOrgIDs(cutoff)
+	if err != nil {
+		return nil, err
+	}
+	var purged []string
+	var firstErr error
+	for _, id := range ids {
+		if err := s.repo.PurgeOrg(id); err != nil {
+			if firstErr == nil {
+				firstErr = fmt.Errorf("purge org %s: %w", id, err)
+			}
+			continue
+		}
+		purged = append(purged, id)
+	}
+	return purged, firstErr
+}
+
+// RoleInOrgAny returns the user's role including deleted workspaces.
+func (s *DefaultService) RoleInOrgAny(orgID, userID string) (string, error) {
+	return s.repo.MemberRoleAny(orgID, userID)
 }
 
 func validOrgRole(role string) bool {
