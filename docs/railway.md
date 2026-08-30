@@ -148,9 +148,10 @@ a normal push to the connected branch.
   own machine with `RUNNER_API_URL` pointed at the public API domain.
 - **One volume per service**: `/data` holds both agent definitions
   (`$OPENV_DATA_DIR/agents`) and uploads (`UPLOADS_DIR=/data/uploads`).
-- **Connector download bundles** (`CONNECTOR_DIST_DIR`) are not built into
-  the API image; the download endpoints will 404 unless you bake `dist/`
-  into a custom image.
+- **Connector download bundles** are baked into the API image
+  (`Dockerfile.api` builds the Windows and Linux zips into `./dist`, the
+  `CONNECTOR_DIST_DIR` default), so the "Download for Windows/Linux"
+  buttons work out of the box. macOS has no prebuilt bundle.
 - **Backups**: Railway's Postgres backups cover the database. Attachment
   files live in the service volume — `make backup` from
   [operations.md](operations.md) assumes docker compose and does not apply
