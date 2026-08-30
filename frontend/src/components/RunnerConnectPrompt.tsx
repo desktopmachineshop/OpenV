@@ -66,6 +66,13 @@ export const RunnerConnectPrompt: React.FC<RunnerConnectPromptProps> = ({
       setDownload('unavailable');
       return;
     }
+    try {
+      // Remembered so a later "no key in THIS workspace" doesn't re-download
+      // a connector this browser already fetched (pairing is per-workspace).
+      localStorage.setItem('openv-connector-downloaded', '1');
+    } catch {
+      /* private mode etc. — auto-download gating just degrades */
+    }
     const a = document.createElement('a');
     a.href = connectorAPI.downloadURL(os);
     document.body.appendChild(a);
@@ -75,7 +82,7 @@ export const RunnerConnectPrompt: React.FC<RunnerConnectPromptProps> = ({
   }, [os]);
 
   useEffect(() => {
-    const t = window.setTimeout(() => openConnector(connectorAPI.startLink), 300);
+    const t = window.setTimeout(() => openConnector(connectorAPI.startLink(orgId)), 300);
     const fallback = window.setTimeout(
       () => setPhase((p) => (p === 'opening' ? 'waiting' : p)),
       3000
@@ -103,12 +110,20 @@ export const RunnerConnectPrompt: React.FC<RunnerConnectPromptProps> = ({
 
   // If the protocol launch produced no runner, the connector likely isn't
   // installed. With no runner key yet (first-time setup) start the download
-  // automatically; with an existing key it's probably installed but not
-  // running, so the waiting hint below is enough.
+  // automatically — unless this browser has downloaded the connector before:
+  // runner keys are per-workspace, so "no key in this workspace" often just
+  // means "pair the existing connector with this workspace", not "install".
   useEffect(() => {
     if (phase !== 'waiting' || autoDownloadedRef.current) return;
     const t = window.setTimeout(() => {
       if (autoDownloadedRef.current || hasKeyRef.current !== false) return;
+      let downloadedBefore = false;
+      try {
+        downloadedBefore = !!localStorage.getItem('openv-connector-downloaded');
+      } catch {
+        /* unreadable storage — treat as first time */
+      }
+      if (downloadedBefore) return;
       autoDownloadedRef.current = true;
       startDownload();
     }, 4000);
@@ -143,6 +158,8 @@ export const RunnerConnectPrompt: React.FC<RunnerConnectPromptProps> = ({
           <>
             Waiting for a runner to come online. If nothing happened, the connector probably
             isn&apos;t installed (or isn&apos;t paired) on this machine yet — use the options below.
+            Pairings are per-workspace: a connector paired elsewhere just needs “Pair connector”
+            once for this workspace, not a new download.
           </>
         );
     }
@@ -244,7 +261,7 @@ export const RunnerConnectPrompt: React.FC<RunnerConnectPromptProps> = ({
               <button
                 className="button"
                 style={{ width: 'auto' }}
-                onClick={() => openConnector(connectorAPI.startLink)}
+                onClick={() => openConnector(connectorAPI.startLink(orgId))}
               >
                 Open connector
               </button>

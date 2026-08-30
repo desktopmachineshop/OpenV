@@ -8,6 +8,44 @@ import { useConfirm } from './ui';
 import { apiErrorMessage } from '../api/errors';
 import { getLinkTypeLabel } from '../config/linkTypeRules';
 import ReactMarkdown from 'react-markdown';
+
+// Attribute keys not shown in the Attributes section: internal snapshots, and
+// status, which the header already presents as a badge.
+const HIDDEN_ATTRIBUTE_KEYS = ['links_snapshot', 'images_snapshot', 'status'];
+
+const visibleAttributes = (attributes?: Record<string, unknown> | null): [string, unknown][] =>
+  Object.entries(attributes || {}).filter(([k]) => !HIDDEN_ATTRIBUTE_KEYS.includes(k));
+
+// Key–value rows instead of a raw JSON dump; renders nothing when every
+// attribute is hidden or absent.
+const ArtifactAttributes: React.FC<{ attributes?: Record<string, unknown> | null }> = ({ attributes }) => {
+  const entries = visibleAttributes(attributes);
+  if (entries.length === 0) return null;
+  return (
+    <div style={{ marginBottom: '12px' }}>
+      <strong>Attributes:</strong>
+      <div
+        style={{
+          marginTop: '6px',
+          display: 'grid',
+          gridTemplateColumns: 'max-content 1fr',
+          columnGap: '14px',
+          rowGap: '4px',
+          fontSize: '12px',
+        }}
+      >
+        {entries.map(([key, value]) => (
+          <React.Fragment key={key}>
+            <span style={{ color: 'var(--text-muted)' }}>{key.replace(/_/g, ' ')}</span>
+            <span style={{ color: 'var(--text)', wordBreak: 'break-word' }}>
+              {typeof value === 'string' ? value : JSON.stringify(value)}
+            </span>
+          </React.Fragment>
+        ))}
+      </div>
+    </div>
+  );
+};
 import remarkGfm from 'remark-gfm';
 
 // Artifact types the quality linter scores (mirrors the backend catalog in
@@ -402,20 +440,8 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
                     )}
                   </div>
                 </div>
-                {artifact.attributes && Object.keys(artifact.attributes).filter(k => !['links_snapshot', 'images_snapshot'].includes(k)).length > 0 && (
-                  <div style={{ marginBottom: '12px' }}>
-                    <strong>Attributes:</strong>
-                    <pre style={{ fontSize: '11px', backgroundColor: 'var(--neutral-soft)', padding: '8px', borderRadius: '3px', margin: '4px 0', overflow: 'auto' }}>
-                      {JSON.stringify(
-                        Object.fromEntries(
-                          Object.entries(artifact.attributes).filter(([k]) => !['links_snapshot', 'images_snapshot'].includes(k))
-                        ),
-                        null,
-                        2
-                      )}
-                    </pre>
-                  </div>
-                )}                {currentVersionAttachments.length > 0 && (
+                <ArtifactAttributes attributes={artifact.attributes} />
+                {currentVersionAttachments.length > 0 && (
                   <div style={{ marginBottom: '12px' }}>
                     <strong>Images:</strong>
                     <div style={{ marginTop: '6px' }}>
@@ -487,20 +513,7 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
                     {previewVersion.body || '(empty)'}
                   </p>
                 </div>
-                {previewVersion.attributes && Object.keys(previewVersion.attributes).filter(k => !['links_snapshot', 'images_snapshot'].includes(k)).length > 0 && (
-                  <div style={{ marginBottom: '12px' }}>
-                    <strong>Attributes:</strong>
-                    <pre style={{ fontSize: '11px', backgroundColor: 'var(--neutral-soft)', padding: '8px', borderRadius: '3px', margin: '4px 0', overflow: 'auto' }}>
-                      {JSON.stringify(
-                        Object.fromEntries(
-                          Object.entries(previewVersion.attributes).filter(([k]) => !['links_snapshot', 'images_snapshot'].includes(k))
-                        ),
-                        null,
-                        2
-                      )}
-                    </pre>
-                  </div>
-                )}
+                <ArtifactAttributes attributes={previewVersion.attributes} />
                 {previewVersionAttachments.length > 0 && (
                   <div style={{ marginBottom: '12px' }}>
                     <strong>Images:</strong>
@@ -604,28 +617,9 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
           )}
         </div>
       </div>
-      {artifact.attributes && Object.keys(artifact.attributes).filter(k => !['links_snapshot', 'images_snapshot'].includes(k)).length > 0 && (
-        <div>
-          <strong>Attributes:</strong>
-          <pre style={{ 
-            marginTop: '8px', 
-            backgroundColor: 'var(--surface-inset)', 
-            padding: '10px', 
-            borderRadius: '4px',
-            overflow: 'auto',
-            fontSize: '12px'
-          }}>
-            {JSON.stringify(
-              Object.fromEntries(
-                Object.entries(artifact.attributes).filter(([k]) => !['links_snapshot', 'images_snapshot'].includes(k))
-              ),
-              null,
-              2
-            )}
-          </pre>
-        </div>
-      )}
-      
+      <ArtifactAttributes attributes={artifact.attributes} />
+
+
       {/* Images Gallery */}
       {attachments && attachments.length > 0 && (
         <div style={{ marginBottom: '15px' }}>

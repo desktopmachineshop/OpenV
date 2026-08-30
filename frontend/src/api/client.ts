@@ -1199,7 +1199,9 @@ export const connectorAPI = {
       return false;
     }
   },
-  startLink: 'openv-connector://start',
+  // Include the workspace so a connector paired with several workspaces
+  // starts against the one the browser is in.
+  startLink: (orgId?: string) => `openv-connector://start${orgId ? `?org=${orgId}` : ''}`,
 };
 
 export const projectTeamAccessAPI = {

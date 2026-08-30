@@ -41,6 +41,22 @@ type connectorConfig struct {
 	UserName  string `json:"user_name"`
 }
 
+// connectorState is the on-disk config. Pairing keys are per workspace, so
+// the connector remembers every workspace it has paired with instead of only
+// the most recent one. The legacy flat fields are still read (older configs
+// migrate on load) and mirror the active pairing on save, so an older
+// connector build pointed at the same file keeps working.
+type connectorState struct {
+	ActiveOrg string                      `json:"active_org,omitempty"`
+	Pairings  map[string]*connectorConfig `json:"pairings,omitempty"`
+
+	APIURL    string `json:"api_url,omitempty"`
+	WorkerKey string `json:"worker_key,omitempty"`
+	OrgID     string `json:"org_id,omitempty"`
+	OrgName   string `json:"org_name,omitempty"`
+	UserName  string `json:"user_name,omitempty"`
+}
+
 func configPath() (string, error) {
 	base, err := os.UserConfigDir()
 	if err != nil {
@@ -49,7 +65,7 @@ func configPath() (string, error) {
 	return filepath.Join(base, "OpenV", "connector.json"), nil
 }
 
-func loadConfig() (*connectorConfig, error) {
+func loadState() (*connectorState, error) {
 	path, err := configPath()
 	if err != nil {
 		return nil, err
@@ -58,14 +74,29 @@ func loadConfig() (*connectorConfig, error) {
 	if err != nil {
 		return nil, err
 	}
-	var cfg connectorConfig
-	if err := json.Unmarshal(data, &cfg); err != nil {
+	var st connectorState
+	if err := json.Unmarshal(data, &st); err != nil {
 		return nil, err
 	}
-	return &cfg, nil
+	// Migrate a legacy single-pairing config into the pairings map.
+	if len(st.Pairings) == 0 && st.WorkerKey != "" {
+		key := st.OrgID
+		if key == "" {
+			key = "default"
+		}
+		st.Pairings = map[string]*connectorConfig{key: {
+			APIURL:    st.APIURL,
+			WorkerKey: st.WorkerKey,
+			OrgID:     st.OrgID,
+			OrgName:   st.OrgName,
+			UserName:  st.UserName,
+		}}
+		st.ActiveOrg = key
+	}
+	return &st, nil
 }
 
-func saveConfig(cfg *connectorConfig) error {
+func saveState(st *connectorState) error {
 	path, err := configPath()
 	if err != nil {
 		return err
@@ -73,11 +104,63 @@ func saveConfig(cfg *connectorConfig) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return err
 	}
-	data, err := json.MarshalIndent(cfg, "", "  ")
+	// Mirror the active pairing into the legacy flat fields.
+	if active := st.Pairings[st.ActiveOrg]; active != nil {
+		st.APIURL, st.WorkerKey, st.OrgID, st.OrgName, st.UserName =
+			active.APIURL, active.WorkerKey, active.OrgID, active.OrgName, active.UserName
+	}
+	data, err := json.MarshalIndent(st, "", "  ")
 	if err != nil {
 		return err
 	}
 	return os.WriteFile(path, data, 0o600)
+}
+
+// rememberPairing upserts a workspace pairing and makes it the active one.
+func rememberPairing(cfg *connectorConfig) error {
+	st, err := loadState()
+	if err != nil {
+		st = &connectorState{}
+	}
+	if st.Pairings == nil {
+		st.Pairings = map[string]*connectorConfig{}
+	}
+	key := cfg.OrgID
+	if key == "" {
+		key = "default"
+	}
+	st.Pairings[key] = cfg
+	st.ActiveOrg = key
+	return saveState(st)
+}
+
+// selectPairing picks the pairing to start with: the requested workspace when
+// the start link names one, else the active (most recently used) pairing.
+func selectPairing(orgHint string) (*connectorConfig, error) {
+	st, err := loadState()
+	if err != nil || len(st.Pairings) == 0 {
+		return nil, fmt.Errorf("this connector isn't paired yet.\n  Open OpenV → Workspace settings → Runners → \"Open Agent Connector\" and use the pairing link there.")
+	}
+	if orgHint != "" {
+		if cfg, ok := st.Pairings[orgHint]; ok {
+			// Best-effort: remember this as the active workspace for plain starts.
+			st.ActiveOrg = orgHint
+			_ = saveState(st)
+			return cfg, nil
+		}
+		names := make([]string, 0, len(st.Pairings))
+		for _, p := range st.Pairings {
+			names = append(names, p.OrgName)
+		}
+		return nil, fmt.Errorf("this connector isn't paired with that workspace yet — click \"Pair connector\" in OpenV.\n  Paired workspaces: %s", strings.Join(names, ", "))
+	}
+	if cfg, ok := st.Pairings[st.ActiveOrg]; ok {
+		return cfg, nil
+	}
+	for _, cfg := range st.Pairings {
+		return cfg, nil
+	}
+	return nil, fmt.Errorf("this connector isn't paired yet")
 }
 
 // fail prints the error and keeps the window open so the user can read it.
@@ -135,7 +218,7 @@ func main() {
 		handleDeepLink(arg, insecure)
 		return
 	default:
-		start(nil)
+		start(nil, "")
 	}
 }
 
@@ -156,9 +239,11 @@ func handleDeepLink(link string, insecure bool) {
 			fail("pairing link is missing its code — create a fresh one from the OpenV Runners page")
 		}
 		cfg := pair(api, code, insecure)
-		start(cfg)
+		start(cfg, "")
 	case "start":
-		start(nil)
+		// The start link may name the workspace the browser was in, so the
+		// runner comes up against the right pairing without re-pairing.
+		start(nil, u.Query().Get("org"))
 	default:
 		fail("unknown action %q", action)
 	}
@@ -211,7 +296,7 @@ func pair(apiURL, code string, insecure bool) *connectorConfig {
 		fmt.Printf("  Note: %s (%s).\n", reason, chosen)
 	}
 	cfg.APIURL = chosen
-	if err := saveConfig(cfg); err != nil {
+	if err := rememberPairing(cfg); err != nil {
 		fail("could not save connector config: %v", err)
 	}
 	fmt.Printf("  Paired with workspace %q. Config saved.\n", cfg.OrgName)
@@ -219,14 +304,15 @@ func pair(apiURL, code string, insecure bool) *connectorConfig {
 }
 
 // start launches agentd with the stored personal key, attached to this
-// console. Closing the window stops the runner.
-func start(cfg *connectorConfig) {
+// console. Closing the window stops the runner. orgHint selects among the
+// stored per-workspace pairings when set.
+func start(cfg *connectorConfig, orgHint string) {
 	if cfg == nil {
-		loaded, err := loadConfig()
+		selected, err := selectPairing(orgHint)
 		if err != nil {
-			fail("this connector isn't paired yet.\n  Open OpenV → Workspace settings → Runners → \"Open Agent Connector\" and use the pairing link there.")
+			fail("%v", err)
 		}
-		cfg = loaded
+		cfg = selected
 	}
 
 	agentd, err := findAgentd()
@@ -237,6 +323,9 @@ func start(cfg *connectorConfig) {
 
 	fmt.Printf("  Workspace: %s\n", cfg.OrgName)
 	fmt.Printf("  API:       %s\n", cfg.APIURL)
+	if !probeHealth(cfg.APIURL, healthProbeTimeout) {
+		fail("could not reach OpenV at %s.\n  If the server is up, this pairing is probably stale — open OpenV in the browser and click \"Pair connector\" to re-pair this workspace.", cfg.APIURL)
+	}
 	warnCleartextStart(cfg.APIURL, os.Stdout)
 	fmt.Println("  Your personal runner is starting — leave this window open while agents work.")
 	fmt.Println("  Close this window (or press Ctrl+C) to stop it.")
