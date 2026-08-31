@@ -167,7 +167,9 @@ export const RunnerConnectPrompt: React.FC<RunnerConnectPromptProps> = ({
           <>
             Waiting for a runner to come online. If nothing happened, the connector probably
             isn&apos;t installed on this machine yet — use the options below. Already installed?
-            “Open connector” starts it and pairs this workspace automatically if needed.
+            “Open connector” starts it and pairs this workspace automatically if needed. If its
+            window reports that it doesn&apos;t understand the link, that copy predates this
+            feature: download it again below and run it once to update the link.
           </>
         );
     }
