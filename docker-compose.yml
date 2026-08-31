@@ -59,14 +59,16 @@ services:
       RUNNER_IMAGE: ${RUNNER_IMAGE:-openv-worker:latest}
       RUNNER_NETWORK: ${RUNNER_NETWORK:-}
       RUNNER_API_URL: ${RUNNER_API_URL:-http://api:8080}
-      # Agent Connector download bundles (`make connector-dist` fills ./dist).
-      CONNECTOR_DIST_DIR: /connector-dist
+      # Agent Connector downloads need no wiring: Dockerfile.api builds one
+      # self-contained executable per OS into the image's ./dist, which is
+      # the CONNECTOR_DIST_DIR default. Set CONNECTOR_DIST_DIR and mount a
+      # host directory over it only to serve locally built ones instead
+      # (`make connector-dist` fills ./dist on the host).
     ports:
       - "8080:8080"
     volumes:
       - uploads_data:/uploads
       - openv-data:/data
-      - ./dist:/connector-dist:ro
       # - /var/run/docker.sock:/var/run/docker.sock  # enable hosted runners (Linux hosts)
     depends_on:
       postgres:

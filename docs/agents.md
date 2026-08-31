@@ -152,15 +152,23 @@ connector, and offers install + pairing if it isn't set up yet.
 
 Flow:
 
-1. **Download** the bundle from the prompt — on a first-time setup (no runner
+1. **Download** the connector from the prompt — on a first-time setup (no runner
    key yet) the download starts automatically when the `openv-connector://`
    link gets no response. Also available at
-   `GET /api/v1/public/connector/download?os=windows|linux`; operators build
-   the bundles with `make connector-dist` — served from `CONNECTOR_DIST_DIR`,
-   default `./dist`, mounted into the api container by compose. If the bundles
-   haven't been built, the prompt says so inline instead of erroring.
-2. Unzip somewhere permanent and double-click `openv-connector.exe` once —
-   it self-registers the `openv-connector://` link handler (HKCU, no admin).
+   `GET /api/v1/public/connector/download?os=windows|linux`. Nothing needs
+   building or wiring first: `Dockerfile.api` builds one self-contained
+   executable per OS into the image's `./dist`, which is the
+   `CONNECTOR_DIST_DIR` default, so compose and Railway both serve it out of
+   the box. `make connector-dist` builds the same executables on the host,
+   for a deployment that points `CONNECTOR_DIST_DIR` at its own directory.
+   Where no executable is present the prompt says so inline instead of
+   erroring.
+2. Put the executable somewhere permanent and double-click
+   `openv-connector.exe` once — it self-registers the `openv-connector://`
+   link handler (HKCU, no admin), pointing it at wherever that copy lives.
+   Run a freshly downloaded copy once after any update: the registration
+   follows the executable, so an old copy left registered is what makes the
+   connector window report that it does not understand a link.
 3. Click **Pair connector** in OpenV. The browser opens the connector with a
    deep link carrying a **one-time pairing code** (10-minute TTL, sha256-stored,
    single-use — never a credential in the URL). The connector exchanges it at
@@ -402,7 +410,7 @@ can probe persona-specific needs.
 - [ ] A runner key: personal key from Settings → My Runner (or the Agent
       Connector pairing flow), or a workspace key from Settings → Worker Keys
 - [ ] `make worker` (or `make worker-unix`) built `bin/` — or use the
-      connector bundle
+      connector download
 - [ ] `agentd` running and provider shows green in Settings
 - [ ] Agent definitions present under `$OPENV_DATA_DIR/agents/<org-id>/`
 
