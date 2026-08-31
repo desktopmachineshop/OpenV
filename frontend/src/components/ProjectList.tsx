@@ -523,13 +523,31 @@ export const ProjectList: React.FC = () => {
                     <p style={{ margin: '4px 0', color: 'var(--text-muted)' }}>
                       <em>Vision:</em> {randomProduct.vision}
                     </p>
-                    <p style={{ margin: '4px 0', color: 'var(--text-muted)' }}>
+                    <p style={{ margin: '4px 0 0', color: 'var(--text-muted)' }}>
                       <em>For:</em> {randomProduct.targetUsers}
                     </p>
-                    <p style={{ margin: '6px 0 0', fontSize: 12, color: 'var(--text-muted)' }}>
+                  </div>
+                )}
+
+                {/* Outside the concept card: this describes what the button
+                    does, and inside the card it read as part of the fake
+                    product. */}
+                {createMode === 'random' && randomProduct && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      gap: 8,
+                      alignItems: 'flex-start',
+                      fontSize: 12,
+                      color: 'var(--text-muted)',
+                      marginBottom: 12,
+                    }}
+                  >
+                    <span aria-hidden>ℹ️</span>
+                    <span>
                       Creating this drops you into the Guided Wizard with the framing pre-filled, where
                       your connected copilot agent helps expand it into personas, needs, and requirements.
-                    </p>
+                    </span>
                   </div>
                 )}
 

@@ -14,7 +14,11 @@ describe('generateRandomProduct', () => {
       expect(p.description).toMatch(/^A .+ that .+\.$/);
       expect(p.vision).toMatch(/\.$/);
       expect(p.problem).toMatch(/\.$/);
-      expect(p.targetUsers.length).toBeGreaterThan(10);
+      // Audiences must be the specific people this gimmick serves, caught in
+      // the moment it fixes — not a bare demographic that fits any product.
+      expect(p.targetUsers.split(' ').length).toBeGreaterThanOrEqual(8);
+      // A qualifying clause is what makes it a situation rather than a label.
+      expect(p.targetUsers).toMatch(/\b(who|whom|whose|whoever|where|which|that)\b/);
       // No unresolved template fragments.
       [p.description, p.vision, p.problem, p.targetUsers].forEach((text) => {
         expect(text).not.toMatch(/undefined|\$\{|\[object/);
