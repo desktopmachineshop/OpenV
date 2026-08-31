@@ -25,6 +25,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/links"
 	"github.com/openv/requirements-platform/internal/domain/projects"
 	"github.com/openv/requirements-platform/internal/domain/reports"
+	"github.com/openv/requirements-platform/internal/domain/sharedproducts"
 	"github.com/openv/requirements-platform/internal/domain/templates"
 
 	"github.com/openv/requirements-platform/internal/domain/agentruns"
@@ -51,18 +52,19 @@ import (
 
 // HandlerDeps carries every service the API layer depends on.
 type HandlerDeps struct {
-	ArtifactService   artifacts.Service
-	LinkService       links.Service
-	ProjectService    projects.Service
-	AttachmentService attachments.Service
-	ExportService     exports.Service
-	BaselineService   baselines.Service
-	ReportService     reports.Service
-	TemplateService   templates.Service
-	ChatterService    chatter.Service
-	AttributeService  attributes.Service
-	EmbeddingService  *embeddings.Service
-	UploadsDir        string
+	ArtifactService      artifacts.Service
+	LinkService          links.Service
+	ProjectService       projects.Service
+	AttachmentService    attachments.Service
+	ExportService        exports.Service
+	BaselineService      baselines.Service
+	ReportService        reports.Service
+	TemplateService      templates.Service
+	ChatterService       chatter.Service
+	AttributeService     attributes.Service
+	SharedProductService sharedproducts.Service
+	EmbeddingService     *embeddings.Service
+	UploadsDir           string
 
 	UserService         users.Service
 	MemberService       members.Service
@@ -116,8 +118,11 @@ type Handler struct {
 	templateService   templates.Service
 	chatterService    chatter.Service
 	attributeService  attributes.Service
-	embeddingService  *embeddings.Service
-	uploadsDir        string
+	// sharedProductService backs the cross-tenant community pool of demo
+	// products (see shared_product_handlers.go).
+	sharedProductService sharedproducts.Service
+	embeddingService     *embeddings.Service
+	uploadsDir           string
 
 	userService         users.Service
 	memberService       members.Service
@@ -177,6 +182,7 @@ func NewHandler(deps HandlerDeps) *Handler {
 		templateService:        deps.TemplateService,
 		chatterService:         deps.ChatterService,
 		attributeService:       deps.AttributeService,
+		sharedProductService:   deps.SharedProductService,
 		embeddingService:       deps.EmbeddingService,
 		uploadsDir:             deps.UploadsDir,
 		userService:            deps.UserService,
@@ -300,6 +306,7 @@ func (h *Handler) RegisterRoutes(router *mux.Router) {
 	h.registerAgentRoutes(router)
 	h.registerOrgRoutes(router)
 	h.registerAttributeDefinitionRoutes(router)
+	h.registerSharedProductRoutes(router)
 
 	// Health check
 	router.HandleFunc("/health", h.Health).Methods("GET")

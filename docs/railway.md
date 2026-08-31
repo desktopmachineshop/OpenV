@@ -126,6 +126,10 @@ branch instead:
 - `release` only ever fast-forwards to `master` — it carries no commits of
   its own.
 - Merges to `master` run CI as usual but deploy nothing.
+- **Promotions are batched and human-initiated** (nightly or weekly, at the
+  maintainer's discretion): each one rebuilds both services, and build
+  minutes currently outweigh real usage. Merged-but-unpromoted work sitting
+  on `master` is the normal resting state; agents must not promote unasked.
 - To ship: run the **Promote to release** workflow from the GitHub Actions
   tab (`.github/workflows/promote-release.yml`). It refuses to promote while
   any check on the master head is failing or still running, then

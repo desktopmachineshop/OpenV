@@ -251,6 +251,34 @@ pushes new items live.
 | GET | `/api/v1/meta/artifact-types` | Artifact type catalog | user |
 | GET | `/api/v1/meta/link-types` | Link type catalog (see `docs/link-type-rules.md`) | user |
 
+### Shared demo products (community pool)
+
+The joke products the new-project wizard rolls for testing. This is the only
+route group in OpenV that is deliberately cross-tenant: every workspace reads
+and writes the same pool, so it grows as people share what their agents
+invent. Consequently the gates are tighter than the role ladder alone:
+
+- **Reading** needs a session, so the pool is never anonymous or crawlable.
+- **Publishing and reporting** need a signed-in *person* — an agent run token
+  or a worker key is refused, so nothing an agent writes reaches other
+  tenants until someone has read it and pressed Share.
+- Entries are sanitized server-side to inert single-line text (no line
+  breaks, backticks, angle brackets, links, or the `openv-suggestion`
+  marker), capped per field, deduplicated by normalized name, rate-limited
+  per workspace per day (`OPENV_SHARED_PRODUCT_DAILY_LIMIT`, default 20) and
+  capped in total (`OPENV_SHARED_PRODUCT_POOL_LIMIT`, default 5000).
+- Responses carry no author identity. `created_by_org` / `created_by_user`
+  are stored for rate limiting and takedown only.
+- Reports are per person: `ReportsToHide` (3) *distinct* reporters hide an
+  entry pending review; one account clicking repeatedly changes nothing.
+
+| Method | Path | Purpose | Auth |
+|---|---|---|---|
+| GET | `/api/v1/shared-products` | List the visible community pool | user |
+| POST | `/api/v1/shared-products` | Share a product with every workspace | org member (session only) |
+| POST | `/api/v1/shared-products/{id}/report` | Flag an entry for review | user (session only) |
+| DELETE | `/api/v1/shared-products/{id}` | Remove an entry outright | platform admin |
+
 ### Product profile, V&V, test runs
 
 | Method | Path | Purpose | Auth |

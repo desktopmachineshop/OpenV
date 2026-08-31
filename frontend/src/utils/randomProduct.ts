@@ -15,6 +15,12 @@ export interface RandomProduct {
   vision: string;
   problem: string;
   targetUsers: string;
+  /**
+   * Set only on products rolled from the community pool: the shared entry's
+   * server id. Its presence is what tells the card this text was written in
+   * somebody else's workspace — so it offers Report rather than Share.
+   */
+  sharedId?: string;
 }
 
 interface Concept {
@@ -185,8 +191,7 @@ const VISION_PATTERNS: ((name: string, ambition: string) => string)[] = [
 
 const pick = <T>(items: T[]): T => items[Math.floor(Math.random() * items.length)];
 
-export const generateRandomProduct = (): RandomProduct => {
-  const concept = pick(CONCEPTS);
+const fromConcept = (concept: Concept): RandomProduct => {
   const name = pick(concept.names);
   return {
     category: concept.category,
@@ -196,6 +201,16 @@ export const generateRandomProduct = (): RandomProduct => {
     problem: concept.gap,
     targetUsers: concept.audience,
   };
+};
+
+/**
+ * Roll a product. `extra` (typically the agent-invented products kept by
+ * `loadInventedProducts`) joins the built-in concepts in one pool, so a good
+ * invention keeps coming back on later rerolls instead of being seen once.
+ */
+export const generateRandomProduct = (extra: RandomProduct[] = []): RandomProduct => {
+  const index = Math.floor(Math.random() * (CONCEPTS.length + extra.length));
+  return index < CONCEPTS.length ? fromConcept(CONCEPTS[index]) : { ...extra[index - CONCEPTS.length] };
 };
 
 // --------------------------------------------------------------------------
@@ -284,3 +299,118 @@ export const parseInventedProduct = (text: string): RandomProduct | null => {
   }
   return null;
 };
+
+// --------------------------------------------------------------------------
+// Keeping invented products
+// --------------------------------------------------------------------------
+// Inventions are worth keeping: an agent-written concept is usually better
+// than anything hardcoded here, and re-inventing costs a run. They are stored
+// in this browser (localStorage) and joined to the reroll pool, so a good one
+// comes back for free. Storage is per browser and never leaves the machine;
+// clearing site data clears them.
+
+const INVENTED_STORAGE_KEY = 'openv-invented-products';
+/** Kept newest-first; older inventions fall off the end. */
+const INVENTED_LIMIT = 50;
+
+const isProduct = (value: any): value is RandomProduct =>
+  !!value &&
+  typeof value === 'object' &&
+  REQUIRED_FIELDS.every((field) => typeof value[field] === 'string' && value[field].trim());
+
+/** Invented products kept in this browser, newest first. */
+export const loadInventedProducts = (): RandomProduct[] => {
+  let raw: string | null = null;
+  try {
+    raw = localStorage.getItem(INVENTED_STORAGE_KEY);
+  } catch {
+    return []; // private mode or blocked storage — the built-ins still work
+  }
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    const products = Array.isArray(parsed) ? parsed : parsed?.products;
+    if (!Array.isArray(products)) return [];
+    return products.filter(isProduct).slice(0, INVENTED_LIMIT);
+  } catch {
+    return [];
+  }
+};
+
+/**
+ * Keep one invented product, returning the new list. Re-inventing something
+ * with the same name replaces the older copy rather than stacking duplicates.
+ */
+export const saveInventedProduct = (product: RandomProduct): RandomProduct[] => {
+  if (!isProduct(product)) return loadInventedProducts();
+  const next = [
+    product,
+    ...loadInventedProducts().filter(
+      (p) => p.name.toLowerCase() !== product.name.toLowerCase()
+    ),
+  ].slice(0, INVENTED_LIMIT);
+  try {
+    localStorage.setItem(INVENTED_STORAGE_KEY, JSON.stringify({ v: 1, products: next }));
+  } catch {
+    // Storage full or blocked: the product still shows for this session.
+  }
+  return next;
+};
+
+/** Forget every kept invention (the built-in concepts are unaffected). */
+export const clearInventedProducts = (): void => {
+  try {
+    localStorage.removeItem(INVENTED_STORAGE_KEY);
+  } catch {
+    /* nothing to clear */
+  }
+};
+
+/** Whether a rolled product came from the kept inventions. */
+export const isInventedProduct = (product: RandomProduct, invented: RandomProduct[]): boolean =>
+  invented.some((p) => p.name === product.name && p.description === product.description);
+
+// --------------------------------------------------------------------------
+// Community-shared products
+// --------------------------------------------------------------------------
+// Products other people chose to share (POST /api/v1/shared-products) are
+// readable by every workspace, so the pool keeps growing without anyone
+// spending a run. The server sanitizes them to inert single-line text and
+// serves no author identity; the client's job is only to keep track of which
+// rolls came from there, so a shared card can be reported rather than shared
+// back.
+
+/** The API shape of a shared product (snake_case, plus server fields). */
+export interface SharedProductPayload {
+  id: string;
+  category: string;
+  name: string;
+  description: string;
+  vision: string;
+  problem: string;
+  target_users: string;
+}
+
+/** Convert a shared-pool entry into a rollable product. */
+export const fromSharedProduct = (payload: SharedProductPayload): RandomProduct => ({
+  category: payload.category,
+  name: payload.name,
+  description: payload.description,
+  vision: payload.vision,
+  problem: payload.problem,
+  targetUsers: payload.target_users,
+  sharedId: payload.id,
+});
+
+/** Whether a rolled product came from the community pool. */
+export const isSharedProduct = (product: RandomProduct): boolean => !!product.sharedId;
+
+/** The payload sent when sharing a product with every workspace. */
+export const toSharePayload = (product: RandomProduct) => ({
+  category: product.category,
+  name: product.name,
+  description: product.description,
+  vision: product.vision,
+  problem: product.problem,
+  target_users: product.targetUsers,
+});

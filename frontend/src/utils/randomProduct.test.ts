@@ -1,4 +1,16 @@
-import { generateRandomProduct, inventProductPrompt, parseInventedProduct } from './randomProduct';
+import {
+  clearInventedProducts,
+  fromSharedProduct,
+  isSharedProduct,
+  toSharePayload,
+  generateRandomProduct,
+  inventProductPrompt,
+  isInventedProduct,
+  loadInventedProducts,
+  parseInventedProduct,
+  saveInventedProduct,
+  RandomProduct,
+} from './randomProduct';
 
 // Every roll must hang together as one product: the name appears in the
 // vision, the description states the gimmick, and nothing is blank or
@@ -105,5 +117,116 @@ describe('parseInventedProduct', () => {
     expect(parseInventedProduct(JSON.stringify(braced))?.description).toBe(
       'A pen that writes {curly} notes.'
     );
+  });
+});
+
+describe('kept inventions', () => {
+  const invention = (name: string): RandomProduct => ({
+    category: 'stationery',
+    name,
+    description: `A ${name} that logs how much you actually wrote today.`,
+    vision: `${name} becomes the pen that proves the notebook was used.`,
+    problem: 'Notebooks fill with good intentions and nobody can tell which pages were real work.',
+    targetUsers: 'stationery hoarders who buy a fifth notebook while four sit empty',
+  });
+
+  beforeEach(() => {
+    clearInventedProducts();
+  });
+
+  it('keeps an invention across reloads', () => {
+    expect(loadInventedProducts()).toEqual([]);
+    saveInventedProduct(invention('Inkwell'));
+    expect(loadInventedProducts()).toEqual([invention('Inkwell')]);
+  });
+
+  it('replaces a re-invented name instead of stacking duplicates', () => {
+    saveInventedProduct(invention('Inkwell'));
+    const revised = { ...invention('Inkwell'), description: 'A pen that does something else.' };
+    const kept = saveInventedProduct(revised);
+    expect(kept).toHaveLength(1);
+    expect(kept[0].description).toBe('A pen that does something else.');
+  });
+
+  it('keeps the newest first and forgets them on request', () => {
+    saveInventedProduct(invention('First'));
+    saveInventedProduct(invention('Second'));
+    expect(loadInventedProducts().map((p) => p.name)).toEqual(['Second', 'First']);
+    clearInventedProducts();
+    expect(loadInventedProducts()).toEqual([]);
+  });
+
+  it('ignores corrupt or half-formed stored entries', () => {
+    localStorage.setItem('openv-invented-products', 'not json');
+    expect(loadInventedProducts()).toEqual([]);
+    localStorage.setItem(
+      'openv-invented-products',
+      JSON.stringify({ v: 1, products: [{ name: 'Half' }, invention('Whole')] })
+    );
+    expect(loadInventedProducts().map((p) => p.name)).toEqual(['Whole']);
+  });
+
+  it('mixes kept inventions into the reroll pool', () => {
+    const kept = [invention('Inkwell')];
+    const rolls = Array.from({ length: 400 }, () => generateRandomProduct(kept));
+    expect(rolls.some((p) => p.name === 'Inkwell')).toBe(true);
+    // Built-ins still appear, so an invention does not take over the pool.
+    expect(rolls.some((p) => p.name !== 'Inkwell')).toBe(true);
+    // A rolled invention is recognised so the card can tag it.
+    const rolledInvention = rolls.find((p) => p.name === 'Inkwell')!;
+    expect(isInventedProduct(rolledInvention, kept)).toBe(true);
+    expect(isInventedProduct(rolls.find((p) => p.name !== 'Inkwell')!, kept)).toBe(false);
+  });
+
+  it('rolls only built-ins when nothing has been invented', () => {
+    const rolls = Array.from({ length: 50 }, () => generateRandomProduct([]));
+    rolls.forEach((p) => expect(isInventedProduct(p, [])).toBe(false));
+  });
+});
+
+describe('community-shared products', () => {
+  const payload = {
+    id: 'shared-1',
+    category: 'kitchen appliance',
+    name: 'Kevinproof',
+    description: 'A coffee tin that recognises Kevin and locks.',
+    vision: 'Kevinproof becomes the reason the bean jar survives a Tuesday.',
+    problem: 'Beans vanish overnight and nobody admits to owning the grinder.',
+    target_users: 'office workers whose beans keep leaving with Kevin',
+  };
+
+  it('maps the API shape onto a rollable product, keeping the id', () => {
+    const product = fromSharedProduct(payload);
+    expect(product.targetUsers).toBe(payload.target_users);
+    expect(product.sharedId).toBe('shared-1');
+    expect(isSharedProduct(product)).toBe(true);
+  });
+
+  it('sends only the six card fields when sharing', () => {
+    // The server assigns id, timestamp and author; a client that could set
+    // them could forge attribution, so they must not be in the payload.
+    expect(toSharePayload(fromSharedProduct(payload))).toEqual({
+      category: payload.category,
+      name: payload.name,
+      description: payload.description,
+      vision: payload.vision,
+      problem: payload.problem,
+      target_users: payload.target_users,
+    });
+  });
+
+  it('rolls shared products alongside built-ins without claiming they are local inventions', () => {
+    const community = [fromSharedProduct(payload)];
+    const rolls = Array.from({ length: 400 }, () => generateRandomProduct(community));
+
+    const rolledShared = rolls.find((p) => p.name === 'Kevinproof');
+    expect(rolledShared).toBeDefined();
+    expect(isSharedProduct(rolledShared!)).toBe(true);
+    // Somebody else's shared product is not one of this browser's kept
+    // inventions, so the card must not tag it as agent-invented here.
+    expect(isInventedProduct(rolledShared!, [])).toBe(false);
+    // Built-ins keep appearing, and they carry no shared id.
+    const builtIn = rolls.find((p) => p.name !== 'Kevinproof')!;
+    expect(isSharedProduct(builtIn)).toBe(false);
   });
 });

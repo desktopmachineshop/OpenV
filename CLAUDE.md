@@ -41,5 +41,13 @@ egress to `*.up.railway.app`.
 ## Deployment
 
 Railway deploys the `release` branch, not `master`. Merges to `master`
-deploy nothing; ship by running the **Promote to release** workflow
+deploy nothing; shipping means running the **Promote to release** workflow
 (`.github/workflows/promote-release.yml`). See `docs/railway.md`.
+
+**Never run Promote to release without the maintainer explicitly asking for
+that release.** Each promotion rebuilds both Railway services, which
+currently costs more in build minutes than real usage does. Releases are
+batched — nightly or weekly — at the maintainer's discretion. Merging to
+`master` is the normal end of a piece of work: say what is merged and
+waiting, then leave promotion alone unless asked. Approval to merge is not
+approval to promote.
