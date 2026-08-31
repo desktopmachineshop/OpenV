@@ -1,0 +1,45 @@
+import { generateRandomProduct } from './randomProduct';
+
+// Every roll must hang together as one product: the name appears in the
+// vision, the description states the gimmick, and nothing is blank or
+// half-assembled. Rolling many times covers the whole concept pool.
+describe('generateRandomProduct', () => {
+  const rolls = Array.from({ length: 300 }, () => generateRandomProduct());
+
+  it('fills every field with a complete sentence or phrase', () => {
+    rolls.forEach((p) => {
+      expect(p.category.length).toBeGreaterThan(0);
+      expect(p.name.trim().length).toBeGreaterThan(0);
+      // Descriptions/visions/problems are sentences; audiences are phrases.
+      expect(p.description).toMatch(/^A .+ that .+\.$/);
+      expect(p.vision).toMatch(/\.$/);
+      expect(p.problem).toMatch(/\.$/);
+      expect(p.targetUsers.length).toBeGreaterThan(10);
+      // No unresolved template fragments.
+      [p.description, p.vision, p.problem, p.targetUsers].forEach((text) => {
+        expect(text).not.toMatch(/undefined|\$\{|\[object/);
+      });
+    });
+  });
+
+  it('ties the vision back to the product name', () => {
+    rolls.forEach((p) => {
+      expect(p.vision).toContain(p.name);
+    });
+  });
+
+  it('varies both the concept and the brand name across rolls', () => {
+    expect(new Set(rolls.map((p) => p.category)).size).toBeGreaterThan(3);
+    expect(new Set(rolls.map((p) => p.name)).size).toBeGreaterThan(5);
+    // A concept always pairs with its own description, never another's.
+    const byDescription = new Map<string, Set<string>>();
+    rolls.forEach((p) => {
+      const names = byDescription.get(p.description) || new Set<string>();
+      names.add(p.targetUsers);
+      byDescription.set(p.description, names);
+    });
+    byDescription.forEach((audiences) => {
+      expect(audiences.size).toBe(1);
+    });
+  });
+});
