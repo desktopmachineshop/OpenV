@@ -1,4 +1,13 @@
-import { generateRandomProduct, inventProductPrompt, parseInventedProduct } from './randomProduct';
+import {
+  clearInventedProducts,
+  generateRandomProduct,
+  inventProductPrompt,
+  isInventedProduct,
+  loadInventedProducts,
+  parseInventedProduct,
+  saveInventedProduct,
+  RandomProduct,
+} from './randomProduct';
 
 // Every roll must hang together as one product: the name appears in the
 // vision, the description states the gimmick, and nothing is blank or
@@ -105,5 +114,69 @@ describe('parseInventedProduct', () => {
     expect(parseInventedProduct(JSON.stringify(braced))?.description).toBe(
       'A pen that writes {curly} notes.'
     );
+  });
+});
+
+describe('kept inventions', () => {
+  const invention = (name: string): RandomProduct => ({
+    category: 'stationery',
+    name,
+    description: `A ${name} that logs how much you actually wrote today.`,
+    vision: `${name} becomes the pen that proves the notebook was used.`,
+    problem: 'Notebooks fill with good intentions and nobody can tell which pages were real work.',
+    targetUsers: 'stationery hoarders who buy a fifth notebook while four sit empty',
+  });
+
+  beforeEach(() => {
+    clearInventedProducts();
+  });
+
+  it('keeps an invention across reloads', () => {
+    expect(loadInventedProducts()).toEqual([]);
+    saveInventedProduct(invention('Inkwell'));
+    expect(loadInventedProducts()).toEqual([invention('Inkwell')]);
+  });
+
+  it('replaces a re-invented name instead of stacking duplicates', () => {
+    saveInventedProduct(invention('Inkwell'));
+    const revised = { ...invention('Inkwell'), description: 'A pen that does something else.' };
+    const kept = saveInventedProduct(revised);
+    expect(kept).toHaveLength(1);
+    expect(kept[0].description).toBe('A pen that does something else.');
+  });
+
+  it('keeps the newest first and forgets them on request', () => {
+    saveInventedProduct(invention('First'));
+    saveInventedProduct(invention('Second'));
+    expect(loadInventedProducts().map((p) => p.name)).toEqual(['Second', 'First']);
+    clearInventedProducts();
+    expect(loadInventedProducts()).toEqual([]);
+  });
+
+  it('ignores corrupt or half-formed stored entries', () => {
+    localStorage.setItem('openv-invented-products', 'not json');
+    expect(loadInventedProducts()).toEqual([]);
+    localStorage.setItem(
+      'openv-invented-products',
+      JSON.stringify({ v: 1, products: [{ name: 'Half' }, invention('Whole')] })
+    );
+    expect(loadInventedProducts().map((p) => p.name)).toEqual(['Whole']);
+  });
+
+  it('mixes kept inventions into the reroll pool', () => {
+    const kept = [invention('Inkwell')];
+    const rolls = Array.from({ length: 400 }, () => generateRandomProduct(kept));
+    expect(rolls.some((p) => p.name === 'Inkwell')).toBe(true);
+    // Built-ins still appear, so an invention does not take over the pool.
+    expect(rolls.some((p) => p.name !== 'Inkwell')).toBe(true);
+    // A rolled invention is recognised so the card can tag it.
+    const rolledInvention = rolls.find((p) => p.name === 'Inkwell')!;
+    expect(isInventedProduct(rolledInvention, kept)).toBe(true);
+    expect(isInventedProduct(rolls.find((p) => p.name !== 'Inkwell')!, kept)).toBe(false);
+  });
+
+  it('rolls only built-ins when nothing has been invented', () => {
+    const rolls = Array.from({ length: 50 }, () => generateRandomProduct([]));
+    rolls.forEach((p) => expect(isInventedProduct(p, [])).toBe(false));
   });
 });

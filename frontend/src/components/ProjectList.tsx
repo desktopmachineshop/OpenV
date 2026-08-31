@@ -12,9 +12,13 @@ import {
   Template,
 } from '../api/client';
 import {
+  clearInventedProducts,
   generateRandomProduct,
   inventProductPrompt,
+  isInventedProduct,
+  loadInventedProducts,
   parseInventedProduct,
+  saveInventedProduct,
   RandomProduct,
 } from '../utils/randomProduct';
 import { apiErrorMessage } from '../api/errors';
@@ -59,6 +63,14 @@ export const ProjectList: React.FC = () => {
   // new rather than re-treading the same joke.
   const shownProductsRef = React.useRef<string[]>([]);
 
+  // Inventions kept in this browser; they join the reroll pool so a good one
+  // comes back instead of being seen once and lost.
+  const [invented, setInvented] = useState<RandomProduct[]>([]);
+
+  useEffect(() => {
+    if (createMode === 'random') setInvented(loadInventedProducts());
+  }, [createMode]);
+
   const applyProduct = (product: RandomProduct, fromAgent: boolean) => {
     setRandomProduct(product);
     setNewProjectName(product.name);
@@ -72,7 +84,15 @@ export const ProjectList: React.FC = () => {
 
   const rollRandomProduct = () => {
     setInventError('');
-    applyProduct(generateRandomProduct(), false);
+    const kept = loadInventedProducts();
+    setInvented(kept);
+    const rolled = generateRandomProduct(kept);
+    applyProduct(rolled, isInventedProduct(rolled, kept));
+  };
+
+  const forgetInventedProducts = () => {
+    clearInventedProducts();
+    setInvented([]);
   };
 
   // Runner presence drives whether the invent button is live. Checked when the
@@ -124,6 +144,7 @@ export const ProjectList: React.FC = () => {
             setInventError('Your agent replied, but not with a usable product. Try again.');
             return;
           }
+          setInvented(saveInventedProduct(product));
           applyProduct(product, true);
           return;
         }
@@ -672,6 +693,29 @@ export const ProjectList: React.FC = () => {
                   >
                     {inventError ||
                       'No agent is connected, so “Invent with agent” is unavailable — the built-in concepts still work. Connect one from Workspace settings → Runners.'}
+                  </div>
+                )}
+
+                {createMode === 'random' && invented.length > 0 && (
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 10 }}>
+                    {invented.length} agent-invented product{invented.length > 1 ? 's' : ''} kept in this
+                    browser and mixed into Reroll.{' '}
+                    <button
+                      type="button"
+                      onClick={forgetInventedProducts}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        padding: 0,
+                        width: 'auto',
+                        color: 'var(--accent)',
+                        cursor: 'pointer',
+                        fontSize: 12,
+                        textDecoration: 'underline',
+                      }}
+                    >
+                      Forget them
+                    </button>
                   </div>
                 )}
 
