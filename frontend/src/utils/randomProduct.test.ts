@@ -1,5 +1,8 @@
 import {
   clearInventedProducts,
+  fromSharedProduct,
+  isSharedProduct,
+  toSharePayload,
   generateRandomProduct,
   inventProductPrompt,
   isInventedProduct,
@@ -178,5 +181,52 @@ describe('kept inventions', () => {
   it('rolls only built-ins when nothing has been invented', () => {
     const rolls = Array.from({ length: 50 }, () => generateRandomProduct([]));
     rolls.forEach((p) => expect(isInventedProduct(p, [])).toBe(false));
+  });
+});
+
+describe('community-shared products', () => {
+  const payload = {
+    id: 'shared-1',
+    category: 'kitchen appliance',
+    name: 'Kevinproof',
+    description: 'A coffee tin that recognises Kevin and locks.',
+    vision: 'Kevinproof becomes the reason the bean jar survives a Tuesday.',
+    problem: 'Beans vanish overnight and nobody admits to owning the grinder.',
+    target_users: 'office workers whose beans keep leaving with Kevin',
+  };
+
+  it('maps the API shape onto a rollable product, keeping the id', () => {
+    const product = fromSharedProduct(payload);
+    expect(product.targetUsers).toBe(payload.target_users);
+    expect(product.sharedId).toBe('shared-1');
+    expect(isSharedProduct(product)).toBe(true);
+  });
+
+  it('sends only the six card fields when sharing', () => {
+    // The server assigns id, timestamp and author; a client that could set
+    // them could forge attribution, so they must not be in the payload.
+    expect(toSharePayload(fromSharedProduct(payload))).toEqual({
+      category: payload.category,
+      name: payload.name,
+      description: payload.description,
+      vision: payload.vision,
+      problem: payload.problem,
+      target_users: payload.target_users,
+    });
+  });
+
+  it('rolls shared products alongside built-ins without claiming they are local inventions', () => {
+    const community = [fromSharedProduct(payload)];
+    const rolls = Array.from({ length: 400 }, () => generateRandomProduct(community));
+
+    const rolledShared = rolls.find((p) => p.name === 'Kevinproof');
+    expect(rolledShared).toBeDefined();
+    expect(isSharedProduct(rolledShared!)).toBe(true);
+    // Somebody else's shared product is not one of this browser's kept
+    // inventions, so the card must not tag it as agent-invented here.
+    expect(isInventedProduct(rolledShared!, [])).toBe(false);
+    // Built-ins keep appearing, and they carry no shared id.
+    const builtIn = rolls.find((p) => p.name !== 'Kevinproof')!;
+    expect(isSharedProduct(builtIn)).toBe(false);
   });
 });

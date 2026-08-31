@@ -42,6 +42,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/providers"
 	"github.com/openv/requirements-platform/internal/domain/repoconns"
 	"github.com/openv/requirements-platform/internal/domain/reports"
+	"github.com/openv/requirements-platform/internal/domain/sharedproducts"
 	"github.com/openv/requirements-platform/internal/domain/teams"
 	"github.com/openv/requirements-platform/internal/domain/templates"
 	"github.com/openv/requirements-platform/internal/domain/users"
@@ -61,6 +62,17 @@ import (
 func envOr(key, fallback string) string {
 	if v := os.Getenv(key); v != "" {
 		return v
+	}
+	return fallback
+}
+
+// envInt reads a positive integer setting, falling back on anything unset,
+// unparseable, or non-positive.
+func envInt(key string, fallback int) int {
+	if v := os.Getenv(key); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			return n
+		}
 	}
 	return fallback
 }
@@ -167,6 +179,7 @@ func main() {
 	hostedWorkerRepo := postgres.NewHostedWorkerRepository(db)
 	notificationRepo := postgres.NewNotificationRepository(db)
 	attributeDefRepo := postgres.NewAttributeDefinitionRepository(db)
+	sharedProductRepo := postgres.NewSharedProductRepository(db)
 
 	// Event bus. The org resolver backfills tenant attribution for events
 	// published by services that only know their project.
@@ -276,6 +289,14 @@ func main() {
 	// Typed attribute definitions (issue #219). The artifacts catalog validates
 	// a definition's applies_to_type at create/update time.
 	attributeService := attributes.NewDefaultService(attributeDefRepo, artifacts.ValidType)
+	// The community pool of joke demo products for the new-project wizard.
+	// Limits are env-tunable so a deployment can tighten them without a
+	// release; the defaults bound both abuse and storage cost.
+	sharedProductService := sharedproducts.NewDefaultService(
+		sharedProductRepo,
+		envInt("OPENV_SHARED_PRODUCT_DAILY_LIMIT", sharedproducts.DefaultDailyOrgLimit),
+		envInt("OPENV_SHARED_PRODUCT_POOL_LIMIT", sharedproducts.DefaultPoolLimit),
+	)
 	// Let the ReqIF export type enum attributes as ReqIF enumerations.
 	exportService.SetAttributeService(attributeService)
 	vvService := vv.NewDefaultService(vvRepo, artifactService, chatterService, bus)
@@ -499,38 +520,39 @@ func main() {
 
 	// Handler.
 	handler := api.NewHandler(api.HandlerDeps{
-		ArtifactService:     artifactService,
-		LinkService:         linkService,
-		ProjectService:      projectService,
-		AttachmentService:   attachmentService,
-		ExportService:       exportService,
-		BaselineService:     baselineService,
-		ReportService:       reportService,
-		TemplateService:     templateService,
-		ChatterService:      chatterService,
-		AttributeService:    attributeService,
-		EmbeddingService:    embeddingService,
-		UploadsDir:          uploadsDir,
-		UserService:         userService,
-		MemberService:       memberService,
-		ProductService:      productService,
-		VVService:           vvService,
-		WorkItemService:     workItemService,
-		GuidedService:       guidedService,
-		InterviewService:    interviewService,
-		AgentService:        agentService,
-		RunService:          runService,
-		AutomationService:   automationService,
-		ProposalService:     proposalService,
-		RepoConnService:     repoConnService,
-		ProviderService:     providerService,
-		LoginService:        loginService,
-		OrgService:          orgService,
-		OrgTeamService:      orgTeamService,
-		WorkerKeyService:    workerKeyService,
-		HostedWorkerService: hostedWorkerService,
-		NotificationService: notificationService,
-		Provisioner:         provisioner,
+		ArtifactService:      artifactService,
+		LinkService:          linkService,
+		ProjectService:       projectService,
+		AttachmentService:    attachmentService,
+		ExportService:        exportService,
+		BaselineService:      baselineService,
+		ReportService:        reportService,
+		TemplateService:      templateService,
+		ChatterService:       chatterService,
+		AttributeService:     attributeService,
+		SharedProductService: sharedProductService,
+		EmbeddingService:     embeddingService,
+		UploadsDir:           uploadsDir,
+		UserService:          userService,
+		MemberService:        memberService,
+		ProductService:       productService,
+		VVService:            vvService,
+		WorkItemService:      workItemService,
+		GuidedService:        guidedService,
+		InterviewService:     interviewService,
+		AgentService:         agentService,
+		RunService:           runService,
+		AutomationService:    automationService,
+		ProposalService:      proposalService,
+		RepoConnService:      repoConnService,
+		ProviderService:      providerService,
+		LoginService:         loginService,
+		OrgService:           orgService,
+		OrgTeamService:       orgTeamService,
+		WorkerKeyService:     workerKeyService,
+		HostedWorkerService:  hostedWorkerService,
+		NotificationService:  notificationService,
+		Provisioner:          provisioner,
 		OrgSeeder: func(orgID string) error {
 			return seeds.EnsureOrgDefaults(orgID, agentService, teamService)
 		},

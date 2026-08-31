@@ -6,6 +6,7 @@ import {
   agentsAPI,
   guidedAPI,
   projectAPI,
+  sharedProductsAPI,
   templateAPI,
   workerStatusAPI,
   Project,
@@ -13,12 +14,15 @@ import {
 } from '../api/client';
 import {
   clearInventedProducts,
+  fromSharedProduct,
   generateRandomProduct,
   inventProductPrompt,
   isInventedProduct,
+  isSharedProduct,
   loadInventedProducts,
   parseInventedProduct,
   saveInventedProduct,
+  toSharePayload,
   RandomProduct,
 } from '../utils/randomProduct';
 import { apiErrorMessage } from '../api/errors';
@@ -67,12 +71,37 @@ export const ProjectList: React.FC = () => {
   // comes back instead of being seen once and lost.
   const [invented, setInvented] = useState<RandomProduct[]>([]);
 
+  // The community pool: products other people chose to share. Everyone reads
+  // the same list, so the roll gets richer over time without anyone spending
+  // an agent run. Sharing is deliberate (the button below) — nothing an agent
+  // invents leaves this workspace until someone reads it and presses Share.
+  const [shared, setShared] = useState<RandomProduct[]>([]);
+  const [sharing, setSharing] = useState<boolean>(false);
+  const [shareNote, setShareNote] = useState<string>('');
+  const [shareError, setShareError] = useState<string>('');
+
+  const loadSharedProducts = React.useCallback(async () => {
+    try {
+      const res = await sharedProductsAPI.list();
+      setShared((res.data || []).map(fromSharedProduct));
+    } catch {
+      // The community pool is a bonus, not a dependency: the built-in
+      // concepts and this browser's inventions still roll without it.
+      setShared([]);
+    }
+  }, []);
+
   useEffect(() => {
-    if (createMode === 'random') setInvented(loadInventedProducts());
-  }, [createMode]);
+    if (createMode === 'random') {
+      setInvented(loadInventedProducts());
+      loadSharedProducts();
+    }
+  }, [createMode, loadSharedProducts]);
 
   const applyProduct = (product: RandomProduct, fromAgent: boolean) => {
     setRandomProduct(product);
+    setShareNote('');
+    setShareError('');
     setNewProjectName(product.name);
     setNewProjectDesc(product.description);
     setInventedByAgent(fromAgent);
@@ -86,8 +115,46 @@ export const ProjectList: React.FC = () => {
     setInventError('');
     const kept = loadInventedProducts();
     setInvented(kept);
-    const rolled = generateRandomProduct(kept);
+    // One pool: built-in concepts, this browser's inventions, and everything
+    // the community has shared.
+    const rolled = generateRandomProduct([...kept, ...shared]);
     applyProduct(rolled, isInventedProduct(rolled, kept));
+  };
+
+  // Share the product on screen with every workspace. Deliberate by design:
+  // the publisher has read the text, and the server sanitizes it, caps how
+  // many a workspace may publish per day, and records who published it so it
+  // can be taken down.
+  const shareProduct = async () => {
+    if (!randomProduct || isSharedProduct(randomProduct)) return;
+    setSharing(true);
+    setShareNote('');
+    setShareError('');
+    try {
+      const res = await sharedProductsAPI.publish(toSharePayload(randomProduct));
+      setShared((prev) => [fromSharedProduct(res.data), ...prev]);
+      setShareNote(`“${randomProduct.name}” is now in everyone's roll list.`);
+    } catch (err: any) {
+      setShareError(apiErrorMessage(err));
+    } finally {
+      setSharing(false);
+    }
+  };
+
+  // Flag a shared product for review and move on. Enough distinct reporters
+  // hide it for everyone; a platform admin can remove it outright.
+  const reportProduct = async () => {
+    if (!randomProduct?.sharedId) return;
+    const id = randomProduct.sharedId;
+    setShareNote('');
+    setShareError('');
+    try {
+      await sharedProductsAPI.report(id);
+      setShared((prev) => prev.filter((p) => p.sharedId !== id));
+      setShareNote('Reported for review, and taken out of your roll list.');
+    } catch (err: any) {
+      setShareError(apiErrorMessage(err));
+    }
   };
 
   const forgetInventedProducts = () => {
@@ -640,6 +707,14 @@ export const ProjectList: React.FC = () => {
                             ✨ invented by your agent
                           </span>
                         )}
+                        {isSharedProduct(randomProduct) && (
+                          <span
+                            style={{ fontWeight: 400, color: 'var(--text-muted)', marginLeft: 6, fontSize: 12 }}
+                            title="Shared by another OpenV user — report it if it does not belong here"
+                          >
+                            🌍 shared by the community
+                          </span>
+                        )}
                       </strong>
                       <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
                         <button
@@ -671,6 +746,28 @@ export const ProjectList: React.FC = () => {
                         >
                           {inventing ? '✨ Inventing…' : '✨ Invent with agent'}
                         </button>
+                        {isSharedProduct(randomProduct) ? (
+                          <button
+                            type="button"
+                            className="button-secondary button"
+                            style={{ width: 'auto', padding: '2px 10px', fontSize: 12 }}
+                            onClick={reportProduct}
+                            title="Flag this shared product for review"
+                          >
+                            ⚑ Report
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            className="button-secondary button"
+                            style={{ width: 'auto', padding: '2px 10px', fontSize: 12 }}
+                            onClick={shareProduct}
+                            disabled={sharing}
+                            title="Add this product to the pool everyone rolls from"
+                          >
+                            {sharing ? '🌍 Sharing…' : '🌍 Share'}
+                          </button>
+                        )}
                       </div>
                     </div>
                     <p style={{ margin: '6px 0 4px' }}>{randomProduct.description}</p>
@@ -693,6 +790,25 @@ export const ProjectList: React.FC = () => {
                   >
                     {inventError ||
                       'No agent is connected, so “Invent with agent” is unavailable — the built-in concepts still work. Connect one from Workspace settings → Runners.'}
+                  </div>
+                )}
+
+                {createMode === 'random' && (shareNote || shareError) && (
+                  <div
+                    style={{
+                      fontSize: 12,
+                      color: shareError ? 'var(--danger-strong)' : 'var(--text-muted)',
+                      marginBottom: 10,
+                    }}
+                  >
+                    {shareError || shareNote}
+                  </div>
+                )}
+
+                {createMode === 'random' && shared.length > 0 && (
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 10 }}>
+                    🌍 {shared.length} product{shared.length > 1 ? 's' : ''} shared by other OpenV users are
+                    mixed into Reroll. Share yours and everyone gets to roll it.
                   </div>
                 )}
 

@@ -1,5 +1,6 @@
 import axios, { AxiosInstance } from 'axios';
 import { filenameFromContentDisposition } from './contentDisposition';
+import type { SharedProductPayload, toSharePayload } from '../utils/randomProduct';
 
 // Determine API base URL
 // Priority: env var > browser detection > default fallback
@@ -1158,6 +1159,22 @@ export const myRunnerKeyAPI = {
   create: (orgId: string) =>
     client.post<{ key_record: WorkerKey; key: string }>(`/api/v1/orgs/${orgId}/my-runner-key`),
   revoke: (orgId: string) => client.delete(`/api/v1/orgs/${orgId}/my-runner-key`),
+};
+
+/**
+ * The community pool of joke demo products for the new-project wizard.
+ *
+ * This is the one API surface in OpenV whose reads and writes cross
+ * workspaces on purpose: everyone sees the same pool, so it grows as people
+ * share what their agents invent. The server sanitizes every entry to inert
+ * plain text, rate-limits publishing per workspace, and returns no author
+ * identity — `report` is the path for anything that should not be there.
+ */
+export const sharedProductsAPI = {
+  list: () => client.get<SharedProductPayload[]>('/api/v1/shared-products'),
+  publish: (product: ReturnType<typeof toSharePayload>) =>
+    client.post<SharedProductPayload>('/api/v1/shared-products', product),
+  report: (id: string) => client.post(`/api/v1/shared-products/${id}/report`),
 };
 
 export const workerStatusAPI = {

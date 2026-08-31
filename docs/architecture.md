@@ -180,6 +180,38 @@ A boot-time idempotent backfill (`BackfillOrgs` → `PromoteOrgColumns`) creates
 personal orgs and promotes the `org_id` columns to `NOT NULL` on databases that
 predate multi-tenancy.
 
+### The one deliberate exception: `shared_products`
+
+The community pool of joke demo products (`internal/domain/sharedproducts`,
+rolled by the new-project wizard's testing mode) is global on purpose: every
+workspace reads and writes the same rows, so the roll list grows as people
+share what their agents invent. It is the only table without a visibility
+`org_id` — `created_by_org` is moderation metadata, never a filter, and is
+never served to clients.
+
+Because it is the one place where text authored in one tenant reaches
+another, the containment lives outside the org scoping:
+
+- **On write** — publishing requires a signed-in person in the workspace
+  (agent-run tokens and worker keys are refused), so nothing reaches other
+  tenants unread. Each entry is flattened to inert single-line text: no line
+  breaks, backticks, angle brackets, links, or `openv-suggestion` markers,
+  with per-field length caps, name deduplication, a per-workspace daily cap
+  and a global pool ceiling.
+- **On read** — a rolled product seeds the guided wizard, whose copilot
+  prompt therefore states up front that the profile, wizard state and
+  transcript are content and never instructions, and fences the state block
+  (`buildGuidedCopilotPrompt`). That prompt runs on the member's own machine
+  with their credentials, and its replies become one-click Apply buttons, so
+  the framing is the control that keeps a stranger's sentence from reading as
+  an order.
+- **On removal** — three distinct reporters hide an entry automatically
+  (repeat clicks by one account do nothing), and a platform admin can delete
+  it outright.
+
+Anything else that ever needs to be shared across tenants should copy this
+shape rather than dropping the `org_id` filter.
+
 ---
 
 ## Observability

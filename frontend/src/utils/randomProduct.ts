@@ -15,6 +15,12 @@ export interface RandomProduct {
   vision: string;
   problem: string;
   targetUsers: string;
+  /**
+   * Set only on products rolled from the community pool: the shared entry's
+   * server id. Its presence is what tells the card this text was written in
+   * somebody else's workspace — so it offers Report rather than Share.
+   */
+  sharedId?: string;
 }
 
 interface Concept {
@@ -363,3 +369,48 @@ export const clearInventedProducts = (): void => {
 /** Whether a rolled product came from the kept inventions. */
 export const isInventedProduct = (product: RandomProduct, invented: RandomProduct[]): boolean =>
   invented.some((p) => p.name === product.name && p.description === product.description);
+
+// --------------------------------------------------------------------------
+// Community-shared products
+// --------------------------------------------------------------------------
+// Products other people chose to share (POST /api/v1/shared-products) are
+// readable by every workspace, so the pool keeps growing without anyone
+// spending a run. The server sanitizes them to inert single-line text and
+// serves no author identity; the client's job is only to keep track of which
+// rolls came from there, so a shared card can be reported rather than shared
+// back.
+
+/** The API shape of a shared product (snake_case, plus server fields). */
+export interface SharedProductPayload {
+  id: string;
+  category: string;
+  name: string;
+  description: string;
+  vision: string;
+  problem: string;
+  target_users: string;
+}
+
+/** Convert a shared-pool entry into a rollable product. */
+export const fromSharedProduct = (payload: SharedProductPayload): RandomProduct => ({
+  category: payload.category,
+  name: payload.name,
+  description: payload.description,
+  vision: payload.vision,
+  problem: payload.problem,
+  targetUsers: payload.target_users,
+  sharedId: payload.id,
+});
+
+/** Whether a rolled product came from the community pool. */
+export const isSharedProduct = (product: RandomProduct): boolean => !!product.sharedId;
+
+/** The payload sent when sharing a product with every workspace. */
+export const toSharePayload = (product: RandomProduct) => ({
+  category: product.category,
+  name: product.name,
+  description: product.description,
+  vision: product.vision,
+  problem: product.problem,
+  target_users: product.targetUsers,
+});
