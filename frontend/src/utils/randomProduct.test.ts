@@ -1,4 +1,4 @@
-import { generateRandomProduct } from './randomProduct';
+import { generateRandomProduct, inventProductPrompt, parseInventedProduct } from './randomProduct';
 
 // Every roll must hang together as one product: the name appears in the
 // vision, the description states the gimmick, and nothing is blank or
@@ -45,5 +45,65 @@ describe('generateRandomProduct', () => {
     byDescription.forEach((audiences) => {
       expect(audiences.size).toBe(1);
     });
+  });
+});
+
+describe('inventProductPrompt', () => {
+  it('asks for exactly the fields the card renders', () => {
+    const prompt = inventProductPrompt([]);
+    ['category', 'name', 'description', 'vision', 'problem', 'targetUsers'].forEach((field) => {
+      expect(prompt).toContain(field);
+    });
+    expect(prompt).toMatch(/only a json object/i);
+  });
+
+  it('tells the agent what to avoid so repeat clicks stay fresh', () => {
+    const prompt = inventProductPrompt(['Crustodian (robot)', 'Kevinproof (kitchen appliance)']);
+    expect(prompt).toContain('Crustodian (robot)');
+    expect(prompt).toContain('Kevinproof (kitchen appliance)');
+    // With nothing shown yet there is nothing to avoid.
+    expect(inventProductPrompt([])).not.toMatch(/Already used/);
+  });
+});
+
+describe('parseInventedProduct', () => {
+  const valid = {
+    category: 'stationery',
+    name: 'Inkwell',
+    description: 'A fountain pen that logs how much you actually wrote today.',
+    vision: 'Inkwell becomes the pen that proves the notebook was used.',
+    problem: 'Notebooks fill with good intentions and nobody can tell which pages were real work.',
+    targetUsers: 'stationery hoarders who buy a fifth notebook while four sit empty',
+  };
+
+  it('reads a bare JSON reply', () => {
+    expect(parseInventedProduct(JSON.stringify(valid))).toEqual(valid);
+  });
+
+  it('reads JSON wrapped in a fence or surrounded by chatter', () => {
+    expect(
+      parseInventedProduct('Sure! ```json\n' + JSON.stringify(valid) + '\n```\nHope that helps.')
+    ).toEqual(valid);
+  });
+
+  it('trims whitespace around the values', () => {
+    const padded = { ...valid, name: '  Inkwell  ' };
+    expect(parseInventedProduct(JSON.stringify(padded))?.name).toBe('Inkwell');
+  });
+
+  it('rejects replies that are not a usable product', () => {
+    const { name, ...missingName } = valid;
+    expect(parseInventedProduct(JSON.stringify(missingName))).toBeNull();
+    expect(parseInventedProduct(JSON.stringify({ ...valid, vision: '   ' }))).toBeNull();
+    expect(parseInventedProduct('I could not think of one, sorry.')).toBeNull();
+    expect(parseInventedProduct('{"category": "broken"')).toBeNull();
+    expect(parseInventedProduct('')).toBeNull();
+  });
+
+  it('handles braces inside string values', () => {
+    const braced = { ...valid, description: 'A pen that writes {curly} notes.' };
+    expect(parseInventedProduct(JSON.stringify(braced))?.description).toBe(
+      'A pen that writes {curly} notes.'
+    );
   });
 });

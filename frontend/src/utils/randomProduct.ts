@@ -197,3 +197,90 @@ export const generateRandomProduct = (): RandomProduct => {
     targetUsers: concept.audience,
   };
 };
+
+// --------------------------------------------------------------------------
+// Agent-invented products
+// --------------------------------------------------------------------------
+// The built-in concepts above are a fixed bucket, so they go stale as soon as
+// you have seen them all. With a runner connected, the same brief that shaped
+// those concepts is handed to the member's own agent, which invents something
+// nobody has read before — including categories this file never imagined.
+
+/**
+ * The brief given to the agent. `avoid` carries concepts already shown in this
+ * session so a fresh click keeps producing something new.
+ */
+export const inventProductPrompt = (avoid: string[]): string => {
+  const avoidLine = avoid.length
+    ? `\nAlready used in this session — invent something different from all of these: ${avoid.join('; ')}.\n`
+    : '';
+  return `Invent ONE fictional product concept to seed a requirements-tool demo. It must be funny in a dry, specific, observational way — the humour comes from a small true frustration taken seriously, never from randomness or wordplay salad — while still being a product an engineer could actually write requirements for.
+
+Pick any category you like: software, hardware, a video game, a toy, a kitchen appliance, a wearable, pet tech, a board game, garden kit, a robot, sports equipment, transport, stationery, musical instruments — surprise me.
+${avoidLine}
+Every field must describe the SAME product, so the parts hang together:
+- "category": a few words, lowercase (e.g. "kitchen appliance").
+- "name": a brandable product name that riffs on this product's specific gimmick. Not a generic tech-sounding mash-up.
+- "description": one sentence of the form "A <what it is> that <what it does>." — the concrete gimmick, not a category summary.
+- "vision": one sentence starting with the product name, stating the ambition for THIS product (e.g. "<Name> becomes the toy that gets confiscated at bedtime and smuggled back by breakfast.").
+- "problem": one or two sentences on why today's alternatives fail these particular people. No mention of the product itself.
+- "targetUsers": the specific people this exact gimmick serves, caught in the moment it fixes — "engineers who reconstruct yesterday from browser history thirty seconds before stand-up", never a bare demographic like "engineers".
+
+Reply with ONLY a JSON object, no commentary and no code fence:
+{"category":"","name":"","description":"","vision":"","problem":"","targetUsers":""}`;
+};
+
+const REQUIRED_FIELDS: (keyof RandomProduct)[] = [
+  'category',
+  'name',
+  'description',
+  'vision',
+  'problem',
+  'targetUsers',
+];
+
+/**
+ * Pull a product out of an agent's final text. Agents wrap JSON in fences or
+ * add a sentence either side often enough that a strict JSON.parse of the
+ * whole reply is not worth relying on, so the first balanced object wins.
+ * Returns null when the reply is not a usable product.
+ */
+export const parseInventedProduct = (text: string): RandomProduct | null => {
+  if (!text) return null;
+  const start = text.indexOf('{');
+  if (start < 0) return null;
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+  for (let i = start; i < text.length; i += 1) {
+    const ch = text[i];
+    if (escaped) {
+      escaped = false;
+    } else if (ch === '\\') {
+      escaped = true;
+    } else if (ch === '"') {
+      inString = !inString;
+    } else if (!inString && ch === '{') {
+      depth += 1;
+    } else if (!inString && ch === '}') {
+      depth -= 1;
+      if (depth === 0) {
+        let parsed: any;
+        try {
+          parsed = JSON.parse(text.slice(start, i + 1));
+        } catch {
+          return null;
+        }
+        if (!parsed || typeof parsed !== 'object') return null;
+        const product: Record<string, string> = {};
+        for (const field of REQUIRED_FIELDS) {
+          const value = parsed[field];
+          if (typeof value !== 'string' || !value.trim()) return null;
+          product[field] = value.trim();
+        }
+        return product as unknown as RandomProduct;
+      }
+    }
+  }
+  return null;
+};

@@ -1,8 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../state/store';
-import { guidedAPI, projectAPI, templateAPI, Project, Template } from '../api/client';
-import { generateRandomProduct, RandomProduct } from '../utils/randomProduct';
+import {
+  agentRunsAPI,
+  agentsAPI,
+  guidedAPI,
+  projectAPI,
+  templateAPI,
+  workerStatusAPI,
+  Project,
+  Template,
+} from '../api/client';
+import {
+  generateRandomProduct,
+  inventProductPrompt,
+  parseInventedProduct,
+  RandomProduct,
+} from '../utils/randomProduct';
 import { apiErrorMessage } from '../api/errors';
 import { Navbar } from './Navbar';
 import { CreateOrgModal } from './CreateOrgModal';
@@ -35,11 +49,99 @@ export const ProjectList: React.FC = () => {
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
   const [randomProduct, setRandomProduct] = useState<RandomProduct | null>(null);
 
+  // Agent-invented products: enabled only while a runner is online, since the
+  // invention runs on the member's own machine with their own AI subscription.
+  const [runnerOnline, setRunnerOnline] = useState<boolean | null>(null);
+  const [inventing, setInventing] = useState<boolean>(false);
+  const [inventError, setInventError] = useState<string>('');
+  const [inventedByAgent, setInventedByAgent] = useState<boolean>(false);
+  // Concepts already shown this session, so each invention asks for something
+  // new rather than re-treading the same joke.
+  const shownProductsRef = React.useRef<string[]>([]);
+
+  const applyProduct = (product: RandomProduct, fromAgent: boolean) => {
+    setRandomProduct(product);
+    setNewProjectName(product.name);
+    setNewProjectDesc(product.description);
+    setInventedByAgent(fromAgent);
+    shownProductsRef.current = [
+      ...shownProductsRef.current,
+      `${product.name} (${product.category})`,
+    ].slice(-12);
+  };
+
   const rollRandomProduct = () => {
-    const rolled = generateRandomProduct();
-    setRandomProduct(rolled);
-    setNewProjectName(rolled.name);
-    setNewProjectDesc(rolled.description);
+    setInventError('');
+    applyProduct(generateRandomProduct(), false);
+  };
+
+  // Runner presence drives whether the invent button is live. Checked when the
+  // random mode is opened and after an invention finishes.
+  const refreshRunnerPresence = React.useCallback(async () => {
+    if (!activeOrgId) return;
+    try {
+      const res = await workerStatusAPI.get(activeOrgId);
+      setRunnerOnline((res.data.workers || []).some((w) => w.online && !w.revoked));
+    } catch {
+      setRunnerOnline(false);
+    }
+  }, [activeOrgId]);
+
+  useEffect(() => {
+    if (createMode === 'random') refreshRunnerPresence();
+  }, [createMode, refreshRunnerPresence]);
+
+  // Launch the invention on the connected runner and wait for its result. The
+  // agent replies with one JSON product; anything else is reported rather than
+  // silently replaced with a canned concept.
+  const inventProduct = async () => {
+    setInventing(true);
+    setInventError('');
+    try {
+      const agents = (await agentsAPI.list()).data || [];
+      const agent =
+        agents.find((a) => a.slug === 'requirements-copilot') ||
+        agents.find((a) => a.slug === 'chief-of-staff') ||
+        agents[0];
+      if (!agent) {
+        setInventError('No agents are defined in this workspace yet.');
+        return;
+      }
+      const launched = await agentsAPI.launchRun(agent.slug, {
+        prompt: inventProductPrompt(shownProductsRef.current),
+      });
+
+      // Poll the run to completion (runs are queued, then claimed by the
+      // runner, so this is seconds-to-a-minute rather than instant).
+      const deadline = Date.now() + 120000;
+      let runId = launched.data.id;
+      for (;;) {
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        const run = (await agentRunsAPI.get(runId)).data;
+        if (run.status === 'succeeded') {
+          const product = parseInventedProduct(run.final_text);
+          if (!product) {
+            setInventError('Your agent replied, but not with a usable product. Try again.');
+            return;
+          }
+          applyProduct(product, true);
+          return;
+        }
+        if (['failed', 'cancelled', 'timed_out'].includes(run.status)) {
+          setInventError(`The invention run ${run.status}${run.error ? `: ${run.error}` : ''}.`);
+          return;
+        }
+        if (Date.now() > deadline) {
+          setInventError('The invention run is taking unusually long — check Runs for progress.');
+          return;
+        }
+      }
+    } catch (err: any) {
+      setInventError(`Could not invent a product: ${apiErrorMessage(err)}`);
+    } finally {
+      setInventing(false);
+      refreshRunnerPresence();
+    }
   };
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -509,15 +611,46 @@ export const ProjectList: React.FC = () => {
                       <strong>
                         {randomProduct.name}{' '}
                         <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>({randomProduct.category})</span>
+                        {inventedByAgent && (
+                          <span
+                            style={{ fontWeight: 400, color: 'var(--accent)', marginLeft: 6, fontSize: 12 }}
+                            title="Invented by your connected agent"
+                          >
+                            ✨ invented by your agent
+                          </span>
+                        )}
                       </strong>
-                      <button
-                        type="button"
-                        className="button-secondary button"
-                        style={{ width: 'auto', padding: '2px 10px', fontSize: 12 }}
-                        onClick={rollRandomProduct}
-                      >
-                        🎲 Reroll
-                      </button>
+                      <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                        <button
+                          type="button"
+                          className="button-secondary button"
+                          style={{ width: 'auto', padding: '2px 10px', fontSize: 12 }}
+                          onClick={rollRandomProduct}
+                          disabled={inventing}
+                        >
+                          🎲 Reroll
+                        </button>
+                        <button
+                          type="button"
+                          className="button-secondary button"
+                          style={{
+                            width: 'auto',
+                            padding: '2px 10px',
+                            fontSize: 12,
+                            opacity: runnerOnline && !inventing ? 1 : 0.5,
+                            cursor: runnerOnline && !inventing ? 'pointer' : 'not-allowed',
+                          }}
+                          onClick={inventProduct}
+                          disabled={!runnerOnline || inventing}
+                          title={
+                            runnerOnline
+                              ? 'Your connected agent invents a brand-new product concept'
+                              : 'Connect an agent (Workspace settings → Runners) to invent brand-new products'
+                          }
+                        >
+                          {inventing ? '✨ Inventing…' : '✨ Invent with agent'}
+                        </button>
+                      </div>
                     </div>
                     <p style={{ margin: '6px 0 4px' }}>{randomProduct.description}</p>
                     <p style={{ margin: '4px 0', color: 'var(--text-muted)' }}>
@@ -526,6 +659,19 @@ export const ProjectList: React.FC = () => {
                     <p style={{ margin: '4px 0 0', color: 'var(--text-muted)' }}>
                       <em>For:</em> {randomProduct.targetUsers}
                     </p>
+                  </div>
+                )}
+
+                {createMode === 'random' && (inventError || runnerOnline === false) && (
+                  <div
+                    style={{
+                      fontSize: 12,
+                      color: inventError ? 'var(--danger-strong)' : 'var(--text-muted)',
+                      marginBottom: 10,
+                    }}
+                  >
+                    {inventError ||
+                      'No agent is connected, so “Invent with agent” is unavailable — the built-in concepts still work. Connect one from Workspace settings → Runners.'}
                   </div>
                 )}
 
