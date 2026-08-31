@@ -127,6 +127,21 @@ export const ProjectList: React.FC = () => {
   // can be taken down.
   const shareProduct = async () => {
     if (!randomProduct || isSharedProduct(randomProduct)) return;
+    // Publishing is outward-facing and cannot be undone by the publisher, so
+    // the consequence is spelled out before it happens rather than only in
+    // the notice beside the button.
+    const ok = await confirm({
+      title: 'Share with every workspace',
+      message:
+        `“${randomProduct.name}” will be published to the public pool of demo products: every ` +
+        'OpenV user, in every workspace, will see it in their roll list and can use it to seed ' +
+        'a project. Sharing is permanent — you cannot unshare it yourself; only a platform admin ' +
+        'can remove it. Never share anything that names real people, customers, or unreleased work.',
+      confirmLabel: 'Share publicly',
+    });
+    if (!ok) {
+      return;
+    }
     setSharing(true);
     setShareNote('');
     setShareError('');
@@ -853,6 +868,32 @@ export const ProjectList: React.FC = () => {
                     <span>
                       Creating this drops you into the Guided Wizard with the framing pre-filled, where
                       your connected copilot agent helps expand it into personas, needs, and requirements.
+                    </span>
+                  </div>
+                )}
+
+                {/* The pool is public, so say so plainly next to the button
+                    that publishes into it — before anyone presses it, not
+                    only in the confirmation. */}
+                {createMode === 'random' && randomProduct && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      gap: 8,
+                      alignItems: 'flex-start',
+                      fontSize: 12,
+                      color: 'var(--text-muted)',
+                      marginBottom: 12,
+                    }}
+                  >
+                    <span aria-hidden>🌍</span>
+                    <span>
+                      <strong>Share publishes publicly.</strong> Anything you share goes into a pool
+                      every OpenV user can see and roll, in every workspace, and only a platform admin
+                      can remove it — so keep real people, customers, and unreleased work out of it.
+                      Rolls tagged 🌍 were written by other users; report anything that does not
+                      belong. Creating a project from a product never shares it — only the Share
+                      button does.
                     </span>
                   </div>
                 )}
