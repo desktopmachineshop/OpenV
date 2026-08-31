@@ -127,18 +127,34 @@ export const ProjectLayout: React.FC = () => {
       >
         <div style={{ padding: '16px 14px', borderBottom: '1px solid var(--sidebar-border)' }}>
           <OrgSwitcher variant="dark" />
+          {/* Explicit way back to the workspace's project list — the project
+              name alone read as a label, not a link. */}
           <div
             style={{
               fontSize: 12,
-              color: 'var(--sidebar-text-faint)',
+              color: 'var(--sidebar-text-dim)',
+              marginTop: 8,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+            }}
+            title="Back to all projects in this workspace"
+            onClick={() => navigate('/projects')}
+          >
+            <span aria-hidden>←</span> All projects
+          </div>
+          <div
+            style={{
+              fontSize: 13,
+              fontWeight: 600,
+              color: 'var(--sidebar-text)',
               marginTop: 6,
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
-              cursor: 'pointer',
             }}
-            title="All projects"
-            onClick={() => navigate('/projects')}
+            title={project?.name || ''}
           >
             {project?.name || '…'}
           </div>
