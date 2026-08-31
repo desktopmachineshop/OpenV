@@ -260,8 +260,11 @@ invent. Consequently the gates are tighter than the role ladder alone:
 
 - **Reading** needs a session, so the pool is never anonymous or crawlable.
 - **Publishing and reporting** need a signed-in *person* — an agent run token
-  or a worker key is refused, so nothing an agent writes reaches other
-  tenants until someone has read it and pressed Share.
+  or a worker key is refused. A product a member's agent invents is published
+  automatically by their browser, under their session, so the pool grows on
+  its own while every row stays attributable to an account and counts against
+  that workspace's daily cap. Nothing reviews an entry before other tenants
+  see it: reporting and admin deletion are what cover that.
 - Entries are sanitized server-side to inert single-line text (no line
   breaks, backticks, angle brackets, links, or the `openv-suggestion`
   marker), capped per field, deduplicated by normalized name, rate-limited

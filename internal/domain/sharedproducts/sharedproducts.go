@@ -15,9 +15,15 @@
 //     mistaken for markup, for a fenced suggestion block, or for a click
 //     target. Callers that embed this text in a model prompt must still
 //     fence it as untrusted data (see buildGuidedCopilotPrompt).
-//  2. Publishing is a deliberate human act, rate-limited per workspace, on
-//     text the publisher has already read on screen. Agent runs and host
-//     workers cannot publish, so nothing reaches the pool unread.
+//  2. Every publication is attributable to a person. A product a member's
+//     agent invents is published automatically — that is how the pool grows
+//     without anyone doing chores — but the request carries that member's
+//     own session, so the row records who published it and the per-workspace
+//     daily cap applies to them. Agent-run tokens and host worker keys
+//     cannot publish at all, so nothing enters the pool that no account
+//     answers for. Note what this deliberately does not promise: nobody
+//     reviews an invention before it is visible to other tenants. Removal
+//     (below) is the control that covers it.
 //  3. Everything is removable: any signed-in user can report an entry, a
 //     handful of reports hides it automatically, and a platform admin can
 //     delete it outright.

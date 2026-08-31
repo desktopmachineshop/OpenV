@@ -13,7 +13,6 @@ import {
   Template,
 } from '../api/client';
 import {
-  clearInventedProducts,
   fromSharedProduct,
   generateRandomProduct,
   inventProductPrompt,
@@ -67,17 +66,18 @@ export const ProjectList: React.FC = () => {
   // new rather than re-treading the same joke.
   const shownProductsRef = React.useRef<string[]>([]);
 
-  // Inventions kept in this browser; they join the reroll pool so a good one
-  // comes back instead of being seen once and lost.
-  const [invented, setInvented] = useState<RandomProduct[]>([]);
+  // Inventions are also kept in this browser, as the fallback for one that
+  // could not reach the shared pool (rate limit, no network). Read at roll
+  // time rather than held in state — the pool is what the UI talks about.
 
   // The community pool: products other people chose to share. Everyone reads
   // the same list, so the roll gets richer over time without anyone spending
   // an agent run. Sharing is deliberate (the button below) — nothing an agent
   // invents leaves this workspace until someone reads it and presses Share.
   const [shared, setShared] = useState<RandomProduct[]>([]);
-  const [sharing, setSharing] = useState<boolean>(false);
-  const [shareNote, setShareNote] = useState<string>('');
+  // Set when an invention could not reach the shared pool (rate limit, a
+  // name already taken, no network). The product still works locally, so
+  // this is a note rather than a failure.
   const [shareError, setShareError] = useState<string>('');
 
   const loadSharedProducts = React.useCallback(async () => {
@@ -93,14 +93,12 @@ export const ProjectList: React.FC = () => {
 
   useEffect(() => {
     if (createMode === 'random') {
-      setInvented(loadInventedProducts());
       loadSharedProducts();
     }
   }, [createMode, loadSharedProducts]);
 
   const applyProduct = (product: RandomProduct, fromAgent: boolean) => {
     setRandomProduct(product);
-    setShareNote('');
     setShareError('');
     setNewProjectName(product.name);
     setNewProjectDesc(product.description);
@@ -114,45 +112,24 @@ export const ProjectList: React.FC = () => {
   const rollRandomProduct = () => {
     setInventError('');
     const kept = loadInventedProducts();
-    setInvented(kept);
     // One pool: built-in concepts, this browser's inventions, and everything
     // the community has shared.
     const rolled = generateRandomProduct([...kept, ...shared]);
     applyProduct(rolled, isInventedProduct(rolled, kept));
   };
 
-  // Share the product on screen with every workspace. Deliberate by design:
-  // the publisher has read the text, and the server sanitizes it, caps how
-  // many a workspace may publish per day, and records who published it so it
-  // can be taken down.
-  const shareProduct = async () => {
-    if (!randomProduct || isSharedProduct(randomProduct)) return;
-    // Publishing is outward-facing and cannot be undone by the publisher, so
-    // the consequence is spelled out before it happens rather than only in
-    // the notice beside the button.
-    const ok = await confirm({
-      title: 'Share with every workspace',
-      message:
-        `“${randomProduct.name}” will be published to the public pool of demo products: every ` +
-        'OpenV user, in every workspace, will see it in their roll list and can use it to seed ' +
-        'a project. Sharing is permanent — you cannot unshare it yourself; only a platform admin ' +
-        'can remove it. Never share anything that names real people, customers, or unreleased work.',
-      confirmLabel: 'Share publicly',
-    });
-    if (!ok) {
-      return;
-    }
-    setSharing(true);
-    setShareNote('');
-    setShareError('');
+  // Publish an invention to the pool everyone rolls from. Inventions are
+  // shared automatically: the point of the pool is that it grows on its own,
+  // and a product nobody else can roll is a product invented twice. The
+  // request carries the member's own session, so the server still records who
+  // published it, sanitizes the text, and applies the per-workspace daily
+  // cap — a failure there is a note, never a lost invention.
+  const publishInvention = async (product: RandomProduct) => {
     try {
-      const res = await sharedProductsAPI.publish(toSharePayload(randomProduct));
+      const res = await sharedProductsAPI.publish(toSharePayload(product));
       setShared((prev) => [fromSharedProduct(res.data), ...prev]);
-      setShareNote(`“${randomProduct.name}” is now in everyone's roll list.`);
     } catch (err: any) {
-      setShareError(apiErrorMessage(err));
-    } finally {
-      setSharing(false);
+      setShareError(`Kept in this browser, but not added to the shared pool: ${apiErrorMessage(err)}`);
     }
   };
 
@@ -161,20 +138,14 @@ export const ProjectList: React.FC = () => {
   const reportProduct = async () => {
     if (!randomProduct?.sharedId) return;
     const id = randomProduct.sharedId;
-    setShareNote('');
     setShareError('');
     try {
       await sharedProductsAPI.report(id);
       setShared((prev) => prev.filter((p) => p.sharedId !== id));
-      setShareNote('Reported for review, and taken out of your roll list.');
+      setShareError('Reported for review, and taken out of your roll list.');
     } catch (err: any) {
       setShareError(apiErrorMessage(err));
     }
-  };
-
-  const forgetInventedProducts = () => {
-    clearInventedProducts();
-    setInvented([]);
   };
 
   // Runner presence drives whether the invent button is live. Checked when the
@@ -226,8 +197,10 @@ export const ProjectList: React.FC = () => {
             setInventError('Your agent replied, but not with a usable product. Try again.');
             return;
           }
-          setInvented(saveInventedProduct(product));
+          saveInventedProduct(product);
           applyProduct(product, true);
+          // Straight into the shared pool: everyone's roll list grows by one.
+          await publishInvention(product);
           return;
         }
         if (['failed', 'cancelled', 'timed_out'].includes(run.status)) {
@@ -761,7 +734,7 @@ export const ProjectList: React.FC = () => {
                         >
                           {inventing ? '✨ Inventing…' : '✨ Invent with agent'}
                         </button>
-                        {isSharedProduct(randomProduct) ? (
+                        {isSharedProduct(randomProduct) && (
                           <button
                             type="button"
                             className="button-secondary button"
@@ -770,17 +743,6 @@ export const ProjectList: React.FC = () => {
                             title="Flag this shared product for review"
                           >
                             ⚑ Report
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            className="button-secondary button"
-                            style={{ width: 'auto', padding: '2px 10px', fontSize: 12 }}
-                            onClick={shareProduct}
-                            disabled={sharing}
-                            title="Add this product to the pool everyone rolls from"
-                          >
-                            {sharing ? '🌍 Sharing…' : '🌍 Share'}
                           </button>
                         )}
                       </div>
@@ -808,74 +770,17 @@ export const ProjectList: React.FC = () => {
                   </div>
                 )}
 
-                {createMode === 'random' && (shareNote || shareError) && (
-                  <div
-                    style={{
-                      fontSize: 12,
-                      color: shareError ? 'var(--danger-strong)' : 'var(--text-muted)',
-                      marginBottom: 10,
-                    }}
-                  >
-                    {shareError || shareNote}
-                  </div>
-                )}
-
-                {createMode === 'random' && shared.length > 0 && (
+                {createMode === 'random' && shareError && (
                   <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 10 }}>
-                    🌍 {shared.length} product{shared.length > 1 ? 's' : ''} shared by other OpenV users are
-                    mixed into Reroll. Share yours and everyone gets to roll it.
+                    {shareError}
                   </div>
                 )}
 
-                {createMode === 'random' && invented.length > 0 && (
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 10 }}>
-                    {invented.length} agent-invented product{invented.length > 1 ? 's' : ''} kept in this
-                    browser and mixed into Reroll.{' '}
-                    <button
-                      type="button"
-                      onClick={forgetInventedProducts}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        padding: 0,
-                        width: 'auto',
-                        color: 'var(--accent)',
-                        cursor: 'pointer',
-                        fontSize: 12,
-                        textDecoration: 'underline',
-                      }}
-                    >
-                      Forget them
-                    </button>
-                  </div>
-                )}
-
-                {/* Outside the concept card: this describes what the button
-                    does, and inside the card it read as part of the fake
-                    product. */}
-                {createMode === 'random' && randomProduct && (
-                  <div
-                    style={{
-                      display: 'flex',
-                      gap: 8,
-                      alignItems: 'flex-start',
-                      fontSize: 12,
-                      color: 'var(--text-muted)',
-                      marginBottom: 12,
-                    }}
-                  >
-                    <span aria-hidden>ℹ️</span>
-                    <span>
-                      Creating this drops you into the Guided Wizard with the framing pre-filled, where
-                      your connected copilot agent helps expand it into personas, needs, and requirements.
-                    </span>
-                  </div>
-                )}
-
-                {/* The pool is public, so say so plainly next to the button
-                    that publishes into it — before anyone presses it, not
-                    only in the confirmation. */}
-                {createMode === 'random' && randomProduct && (
+                {/* One line, outside the concept card — inside it, notices
+                    read as part of the fake product. Inventions publish
+                    themselves, so this has to be readable before anyone
+                    presses "Invent with agent", not after. */}
+                {createMode === 'random' && (
                   <div
                     style={{
                       display: 'flex',
@@ -888,12 +793,16 @@ export const ProjectList: React.FC = () => {
                   >
                     <span aria-hidden>🌍</span>
                     <span>
-                      <strong>Share publishes publicly.</strong> Anything you share goes into a pool
-                      every OpenV user can see and roll, in every workspace, and only a platform admin
-                      can remove it — so keep real people, customers, and unreleased work out of it.
-                      Rolls tagged 🌍 were written by other users; report anything that does not
-                      belong. Creating a project from a product never shares it — only the Share
-                      button does.
+                      Rerolls mix the built-in concepts with{' '}
+                      {shared.length === 1
+                        ? '1 product other OpenV users have invented'
+                        : shared.length > 1
+                          ? `${shared.length} products other OpenV users have invented`
+                          : 'whatever other OpenV users invent'}{' '}
+                      — use ⚑ Report on anything that does not belong. <strong>Anything your agent
+                      invents joins that shared pool automatically</strong>, so keep real people,
+                      customers, and unreleased work out of it. Creating drops you into the Guided
+                      Wizard with this framing pre-filled.
                     </span>
                   </div>
                 )}

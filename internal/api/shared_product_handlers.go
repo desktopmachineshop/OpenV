@@ -20,7 +20,10 @@ import (
 //   - every route sits behind authentication (no /public/ prefix), so the
 //     pool is never an anonymous, crawlable, spammable surface;
 //   - publishing and reporting require a signed-in person — an agent run
-//     token or a host worker key cannot put text in front of other tenants;
+//     token or a host worker key cannot put text in front of other tenants.
+//     Inventions publish automatically from the member's browser, so this
+//     gate is what keeps every row attributable and rate-limited to an
+//     account even though no one reviews it first;
 //   - deleting requires a platform admin.
 func (h *Handler) registerSharedProductRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/shared-products", h.ListSharedProducts).Methods("GET")
@@ -65,10 +68,11 @@ func (h *Handler) ListSharedProducts(w http.ResponseWriter, r *http.Request) {
 
 // PublishSharedProduct shares one product with every workspace.
 //
-// Sharing is a deliberate act by a person who has read the text on screen:
-// only a session-authenticated member of the active workspace may publish,
-// which keeps unread agent output from reaching other tenants. The service
-// sanitizes and rate-limits from there.
+// Only a session-authenticated member of the active workspace may publish.
+// The browser calls this as soon as the member's agent invents a product, so
+// the gate is not "a human read it first" — it is that every row belongs to
+// an account, which is what makes the daily cap and takedown mean anything.
+// The service sanitizes and rate-limits from there.
 func (h *Handler) PublishSharedProduct(w http.ResponseWriter, r *http.Request) {
 	if h.sharedProductService == nil {
 		writeJSONError(w, http.StatusNotFound, "shared products are not available")
