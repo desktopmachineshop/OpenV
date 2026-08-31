@@ -13,6 +13,7 @@ import {
   Template,
 } from '../api/client';
 import {
+  describeProductFlaws,
   fromSharedProduct,
   generateRandomProduct,
   inventProductPrompt,
@@ -111,10 +112,14 @@ export const ProjectList: React.FC = () => {
 
   const rollRandomProduct = () => {
     setInventError('');
-    const kept = loadInventedProducts();
-    // One pool: built-in concepts, this browser's inventions, and everything
-    // the community has shared.
-    const rolled = generateRandomProduct([...kept, ...shared]);
+    // One collection: the built-in concepts plus every stored product. An
+    // invention normally reaches the shared pool, so this browser's copies
+    // only add the ones that did not — deduped by name so a product cannot
+    // be twice as likely to roll as its neighbours.
+    const kept = loadInventedProducts().filter(
+      (k) => !shared.some((p) => p.name.toLowerCase() === k.name.toLowerCase())
+    );
+    const rolled = generateRandomProduct([...shared, ...kept]);
     applyProduct(rolled, isInventedProduct(rolled, kept));
   };
 
@@ -167,6 +172,39 @@ export const ProjectList: React.FC = () => {
   // Launch the invention on the connected runner and wait for its result. The
   // agent replies with one JSON product; anything else is reported rather than
   // silently replaced with a canned concept.
+  // Run the invention brief on the connected runner and wait for the result.
+  // One run, one JSON product — and the product has to hold together as well
+  // as a built-in one before it goes anywhere, so a weak reply buys one retry
+  // that is told exactly what to fix rather than being quietly accepted.
+  const runInvention = async (agentSlug: string, rejected: string[]): Promise<RandomProduct | null> => {
+    const launched = await agentsAPI.launchRun(agentSlug, {
+      prompt: inventProductPrompt(shownProductsRef.current, rejected),
+    });
+
+    // Runs are queued, then claimed by the runner, so this is
+    // seconds-to-a-minute rather than instant.
+    const deadline = Date.now() + 120000;
+    for (;;) {
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      const run = (await agentRunsAPI.get(launched.data.id)).data;
+      if (run.status === 'succeeded') {
+        const product = parseInventedProduct(run.final_text);
+        if (!product) {
+          setInventError('Your agent replied, but not with a usable product. Try again.');
+        }
+        return product;
+      }
+      if (['failed', 'cancelled', 'timed_out'].includes(run.status)) {
+        setInventError(`The invention run ${run.status}${run.error ? `: ${run.error}` : ''}.`);
+        return null;
+      }
+      if (Date.now() > deadline) {
+        setInventError('The invention run is taking unusually long — check Runs for progress.');
+        return null;
+      }
+    }
+  };
+
   const inventProduct = async () => {
     setInventing(true);
     setInventError('');
@@ -180,38 +218,35 @@ export const ProjectList: React.FC = () => {
         setInventError('No agents are defined in this workspace yet.');
         return;
       }
-      const launched = await agentsAPI.launchRun(agent.slug, {
-        prompt: inventProductPrompt(shownProductsRef.current),
-      });
 
-      // Poll the run to completion (runs are queued, then claimed by the
-      // runner, so this is seconds-to-a-minute rather than instant).
-      const deadline = Date.now() + 120000;
-      let runId = launched.data.id;
-      for (;;) {
-        await new Promise((resolve) => setTimeout(resolve, 2000));
-        const run = (await agentRunsAPI.get(runId)).data;
-        if (run.status === 'succeeded') {
-          const product = parseInventedProduct(run.final_text);
-          if (!product) {
-            setInventError('Your agent replied, but not with a usable product. Try again.');
-            return;
+      let product = await runInvention(agent.slug, []);
+      if (!product) return;
+
+      // The gate is what the built-in concepts get by construction: a name
+      // that riffs on the gimmick, a vision carrying it, an audience that is
+      // a moment. A miss costs one more run rather than diluting the pool.
+      let flaws = describeProductFlaws(product);
+      if (flaws.length) {
+        const retry = await runInvention(agent.slug, flaws);
+        if (retry) {
+          const retryFlaws = describeProductFlaws(retry);
+          if (retryFlaws.length < flaws.length) {
+            product = retry;
+            flaws = retryFlaws;
           }
-          saveInventedProduct(product);
-          applyProduct(product, true);
-          // Straight into the shared pool: everyone's roll list grows by one.
-          await publishInvention(product);
-          return;
-        }
-        if (['failed', 'cancelled', 'timed_out'].includes(run.status)) {
-          setInventError(`The invention run ${run.status}${run.error ? `: ${run.error}` : ''}.`);
-          return;
-        }
-        if (Date.now() > deadline) {
-          setInventError('The invention run is taking unusually long — check Runs for progress.');
-          return;
         }
       }
+
+      applyProduct(product, true);
+      if (flaws.length) {
+        // Usable, but below the bar: show it, keep it here, and leave the
+        // shared collection alone.
+        saveInventedProduct(product);
+        setInventError(`Your agent's product is a bit off (${flaws[0]}) — reroll or invent again. Not added to the shared collection.`);
+        return;
+      }
+      saveInventedProduct(product);
+      await publishInvention(product);
     } catch (err: any) {
       setInventError(`Could not invent a product: ${apiErrorMessage(err)}`);
     } finally {
@@ -219,6 +254,7 @@ export const ProjectList: React.FC = () => {
       refreshRunnerPresence();
     }
   };
+
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   // Load projects on mount and whenever the active workspace changes.
@@ -793,16 +829,13 @@ export const ProjectList: React.FC = () => {
                   >
                     <span aria-hidden>🌍</span>
                     <span>
-                      Rerolls mix the built-in concepts with{' '}
+                      Reroll picks from the shared collection of fake products — the built-ins plus{' '}
                       {shared.length === 1
-                        ? '1 product other OpenV users have invented'
-                        : shared.length > 1
-                          ? `${shared.length} products other OpenV users have invented`
-                          : 'whatever other OpenV users invent'}{' '}
-                      — use ⚑ Report on anything that does not belong. <strong>Anything your agent
-                      invents joins that shared pool automatically</strong>, so keep real people,
-                      customers, and unreleased work out of it. Creating drops you into the Guided
-                      Wizard with this framing pre-filled.
+                        ? '1 invented by another OpenV user'
+                        : `${shared.length} invented by other OpenV users`}; ⚑ Report anything that
+                      does not belong. <strong>What your agent invents joins the collection
+                      automatically</strong>, so keep real people, customers, and unreleased work out
+                      of it. Creating drops you into the Guided Wizard with this framing pre-filled.
                     </span>
                   </div>
                 )}
