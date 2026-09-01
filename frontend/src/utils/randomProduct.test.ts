@@ -1,5 +1,6 @@
 import {
   clearInventedProducts,
+  describeProductFlaws,
   fromSharedProduct,
   isSharedProduct,
   toSharePayload,
@@ -228,5 +229,77 @@ describe('community-shared products', () => {
     // Built-ins keep appearing, and they carry no shared id.
     const builtIn = rolls.find((p) => p.name !== 'Kevinproof')!;
     expect(isSharedProduct(builtIn)).toBe(false);
+  });
+});
+
+// The quality gate has to encode the standard the built-in concepts already
+// meet — otherwise it either rejects good products or lets weak ones into the
+// collection everyone rolls from.
+describe('describeProductFlaws', () => {
+  it('accepts every built-in roll', () => {
+    Array.from({ length: 300 }, () => generateRandomProduct()).forEach((product) => {
+      expect(describeProductFlaws(product)).toEqual([]);
+    });
+  });
+
+  const good: RandomProduct = {
+    category: 'kitchen appliance',
+    name: 'Kevinproof',
+    description: 'A coffee tin that recognises Kevin and locks.',
+    vision: 'Kevinproof becomes the reason the office bean jar survives a Tuesday.',
+    problem: 'Beans vanish overnight and nobody will admit to owning the grinder.',
+    targetUsers: 'coffee-obsessed office workers whose beans keep leaving with Kevin',
+  };
+
+  it('catches the faults that made early inventions weak', () => {
+    const cases: [string, Partial<RandomProduct>, RegExp][] = [
+      // The failure the maintainer reported twice: a name bolted together
+      // from a word and a generic suffix, fitting any product anywhere.
+      ['generic suffix', { name: 'QuibbleMax', vision: 'QuibbleMax becomes the thing.' }, /generic suffix/i],
+      ['name is a sentence', { name: 'The Coffee Tin That Locks', vision: 'The Coffee Tin That Locks wins.' }, /not a brand/i],
+      ['vision drops the name', { vision: 'It becomes the reason the jar survives.' }, /vision must contain/i],
+      ['description is a category summary', { description: 'Improves kitchen security outcomes.' }, /A <what it is> that/],
+      ['audience is a label', { targetUsers: 'office workers' }, /moment/i],
+      ['audience has no clause', { targetUsers: 'busy tired underpaid overworked hungry caffeinated office people' }, /qualifying clause/i],
+      ['problem names the product', { problem: 'Kevinproof is needed because beans vanish.' }, /must not mention the product/i],
+    ];
+    cases.forEach(([label, patch, expected]) => {
+      const flaws = describeProductFlaws({ ...good, ...patch });
+      expect(flaws.length).toBeGreaterThan(0);
+      expect(flaws.join(' ')).toMatch(expected);
+      expect(label).toBeTruthy();
+    });
+  });
+
+  it('passes a product that hangs together', () => {
+    expect(describeProductFlaws(good)).toEqual([]);
+  });
+});
+
+describe('inventProductPrompt quality brief', () => {
+  it('shows two complete worked examples drawn from the built-in concepts', () => {
+    const prompt = inventProductPrompt([]);
+    // Examples are rendered products, so every card field appears in JSON form.
+    ['"category"', '"name"', '"description"', '"vision"', '"problem"', '"targetUsers"'].forEach((key) => {
+      expect(prompt.split(key).length).toBeGreaterThan(2);
+    });
+    // And they are real rolls, not invented illustrations: the concepts' own
+    // audience wording is distinctive enough to find.
+    expect(prompt).toMatch(/becomes|Make /);
+  });
+
+  it('names the failure modes that made early inventions weak', () => {
+    const prompt = inventProductPrompt([]);
+    expect(prompt).toMatch(/"Max", "Pro", "X"/);
+    expect(prompt).toMatch(/moment, with a specific detail/i);
+    expect(prompt).toMatch(/Before you answer, check your own draft/i);
+  });
+
+  it('tells a retry exactly what to fix', () => {
+    const prompt = inventProductPrompt([], ['The vision must contain the product name.']);
+    expect(prompt).toContain('Your previous attempt was rejected');
+    expect(prompt).toContain('The vision must contain the product name.');
+    // A first attempt carries no rejection notes.
+    expect(inventProductPrompt([])).not.toContain('previous attempt');
   });
 });

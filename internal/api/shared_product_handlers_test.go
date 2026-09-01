@@ -85,6 +85,11 @@ const validShareBody = `{"category":"kitchen appliance","name":"Kevinproof",` +
 // cross-tenant write path in OpenV: an agent run token or a host worker key
 // authenticates for plenty of API calls, but neither can put text in front of
 // every other workspace. Only a signed-in member of the active workspace can.
+//
+// Inventions publish automatically, so this is what keeps the pool
+// accountable: a run cannot publish on its own credentials, and every row is
+// attributable to the member whose browser sent it — which is what the daily
+// cap and the takedown trail hang on.
 func TestPublishSharedProductRequiresAPerson(t *testing.T) {
 	cases := []struct {
 		name     string

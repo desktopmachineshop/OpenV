@@ -261,7 +261,21 @@ func handleDeepLink(link string, insecure bool) {
 		}
 		start(pair(api, code, insecure), "")
 	default:
-		fail("unknown action %q", action)
+		// A link this build does not recognise means the connector on disk is
+		// older than the OpenV that produced the link — the usual cause is a
+		// copy downloaded before the action existed, still registered as the
+		// openv-connector:// handler. Do the useful thing rather than
+		// dead-ending: with a pairing on hand, starting the runner is almost
+		// certainly what the click was for.
+		if cfg, err := selectPairing(u.Query().Get("org")); err == nil {
+			fmt.Printf("  This connector does not understand %q — it is older than your OpenV.\n", action)
+			fmt.Println("  Starting the runner with the existing pairing instead.")
+			fmt.Println("  Download a fresh connector from OpenV (Runners page) and run it once to update the link.")
+			start(cfg, "")
+			return
+		}
+		fail("this connector is out of date: it does not understand %q, and it is not paired with that workspace.\n"+
+			"  Download a fresh connector from OpenV (Runners page) and run it once — that re-registers the link — then try again", action)
 	}
 }
 

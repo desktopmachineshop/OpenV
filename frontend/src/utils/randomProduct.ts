@@ -225,26 +225,15 @@ export const generateRandomProduct = (extra: RandomProduct[] = []): RandomProduc
  * The brief given to the agent. `avoid` carries concepts already shown in this
  * session so a fresh click keeps producing something new.
  */
-export const inventProductPrompt = (avoid: string[]): string => {
-  const avoidLine = avoid.length
-    ? `\nAlready used in this session — invent something different from all of these: ${avoid.join('; ')}.\n`
-    : '';
-  return `Invent ONE fictional product concept to seed a requirements-tool demo. It must be funny in a dry, specific, observational way — the humour comes from a small true frustration taken seriously, never from randomness or wordplay salad — while still being a product an engineer could actually write requirements for.
+/**
+ * A worked example, rendered from a real built-in concept so the brief always
+ * shows the standard it is asking for rather than describing it. Two of these
+ * do more for quality than any amount of adjectives about "dry humour".
+ */
+const workedExample = (concept: Concept): string =>
+  JSON.stringify(fromConcept(concept), null, 2);
 
-Pick any category you like: software, hardware, a video game, a toy, a kitchen appliance, a wearable, pet tech, a board game, garden kit, a robot, sports equipment, transport, stationery, musical instruments — surprise me.
-${avoidLine}
-Every field must describe the SAME product, so the parts hang together:
-- "category": a few words, lowercase (e.g. "kitchen appliance").
-- "name": a brandable product name that riffs on this product's specific gimmick. Not a generic tech-sounding mash-up.
-- "description": one sentence of the form "A <what it is> that <what it does>." — the concrete gimmick, not a category summary.
-- "vision": one sentence starting with the product name, stating the ambition for THIS product (e.g. "<Name> becomes the toy that gets confiscated at bedtime and smuggled back by breakfast.").
-- "problem": one or two sentences on why today's alternatives fail these particular people. No mention of the product itself.
-- "targetUsers": the specific people this exact gimmick serves, caught in the moment it fixes — "engineers who reconstruct yesterday from browser history thirty seconds before stand-up", never a bare demographic like "engineers".
-
-Reply with ONLY a JSON object, no commentary and no code fence:
-{"category":"","name":"","description":"","vision":"","problem":"","targetUsers":""}`;
-};
-
+/** The fields every usable product must carry, in card order. */
 const REQUIRED_FIELDS: (keyof RandomProduct)[] = [
   'category',
   'name',
@@ -255,11 +244,65 @@ const REQUIRED_FIELDS: (keyof RandomProduct)[] = [
 ];
 
 /**
- * Pull a product out of an agent's final text. Agents wrap JSON in fences or
- * add a sentence either side often enough that a strict JSON.parse of the
- * whole reply is not worth relying on, so the first balanced object wins.
- * Returns null when the reply is not a usable product.
+ * The brief given to the agent.
+ *
+ * The built-in concepts are funny by construction: the name is written to
+ * riff on the gimmick, the vision is generated from the name, and the
+ * audience is a moment rather than a demographic. An agent gets none of that
+ * for free, which is why early inventions came back with names bolted onto
+ * unrelated products ("QuibbleMax", "DoomX"). So the brief states each of
+ * those invariants as a rule, shows two real examples, and ends with a
+ * self-check; `describeProductFlaws` then enforces the same rules on the way
+ * back in.
+ *
+ * `avoid` carries concepts already shown this session; `rejected` carries the
+ * faults in a previous attempt, so a retry is told what to fix.
  */
+export const inventProductPrompt = (avoid: string[], rejected: string[] = []): string => {
+  const avoidLine = avoid.length
+    ? `\nAlready used in this session — invent something different from all of these: ${avoid.join('; ')}.\n`
+    : '';
+  const rejectedLine = rejected.length
+    ? `\nYour previous attempt was rejected. Fix all of this: ${rejected.join(' ')}\n`
+    : '';
+  // Two different concepts, so the examples never look like one template.
+  const first = CONCEPTS[Math.floor(Math.random() * CONCEPTS.length)];
+  const rest = CONCEPTS.filter((c) => c !== first);
+  const second = rest[Math.floor(Math.random() * rest.length)];
+
+  return `Invent ONE fictional product concept to seed a requirements-tool demo.
+
+The humour is specific and deadpan: take one small, true, widely-recognised frustration and treat it with complete engineering seriousness. It is never wordplay salad, never a random mash-up of two nouns, and never zany for its own sake. The product must still be something an engineer could write real requirements for.
+
+Here are two examples at exactly the standard required:
+
+${workedExample(first)}
+
+${workedExample(second)}
+
+Notice what makes those work, and copy it:
+- The NAME gives the joke away. Read the name and the category alone and you can half-guess the gimmick. Never bolt a generic suffix onto an unrelated word — no "Max", "Pro", "X", "Plus", "Hub", "AI", "360", "Ultra", "-ify", "-ly". A name that would fit any product in any category is the single most common failure here.
+- The DESCRIPTION names one concrete mechanism, not a category ("releases a small dramatic fog cloud when your focus timer starts", not "improves focus in the workplace").
+- The AUDIENCE is a moment, with a specific detail in it — a count, a time of day, a recurring irritant with a name — not a demographic. "engineers" is wrong; "engineers who reconstruct yesterday from browser history thirty seconds before stand-up" is right.
+- The PROBLEM says why the things people already do fail these particular people. It never mentions the product.
+- The VISION starts with the product name and states the ambition for THIS product.
+
+Pick any category you like: software, hardware, a video game, a toy, a kitchen appliance, a wearable, pet tech, a board game, garden kit, a robot, sports equipment, transport, stationery, musical instruments — surprise me. Do not copy the examples' categories.
+${avoidLine}${rejectedLine}
+Field rules — every field must describe the SAME product:
+- "category": a few words, lowercase (e.g. "kitchen appliance").
+- "name": one or two words, riffing on this product's own gimmick.
+- "description": exactly one sentence of the form "A <what it is> that <what it does>." — the concrete gimmick.
+- "vision": one sentence that CONTAINS the product name and states the ambition for it.
+- "problem": one or two sentences on why today's alternatives fail these particular people. Never mentions the product.
+- "targetUsers": at least eight words, a clause describing the people this exact gimmick serves, caught in the moment it fixes.
+
+Before you answer, check your own draft: does the name give away the gimmick? Does the vision contain the name? Is the audience a moment rather than a label? Would someone who has lived that frustration laugh in recognition? If any answer is no, rewrite it.
+
+Reply with ONLY a JSON object, no commentary and no code fence:
+{"category":"","name":"","description":"","vision":"","problem":"","targetUsers":""}`;
+};
+
 export const parseInventedProduct = (text: string): RandomProduct | null => {
   if (!text) return null;
   const start = text.indexOf('{');
@@ -369,6 +412,45 @@ export const clearInventedProducts = (): void => {
 /** Whether a rolled product came from the kept inventions. */
 export const isInventedProduct = (product: RandomProduct, invented: RandomProduct[]): boolean =>
   invented.some((p) => p.name === product.name && p.description === product.description);
+
+/**
+ * Faults that make an invented product read worse than a built-in one, in the
+ * words the retry prompt will quote back. Empty means it holds together.
+ *
+ * These are exactly the invariants the built-in concepts satisfy by
+ * construction — the name riffs on the gimmick, the vision carries the name,
+ * the description is one mechanism, the audience is a moment — so an
+ * invention that fails one is visibly weaker than the pool it would join.
+ */
+export const describeProductFlaws = (product: RandomProduct): string[] => {
+  const flaws: string[] = [];
+  const name = product.name.trim();
+
+  // A word with a generic suffix bolted on fits any product in any category,
+  // which is the failure that produced "QuibbleMax" and "DoomX".
+  if (/(max|pro|plus|hub|360|ultra)$/i.test(name)) {
+    flaws.push(`The name "${name}" is a word with a generic suffix bolted on; name it after its own gimmick instead.`);
+  }
+  if (name.split(/\s+/).length > 3) {
+    flaws.push(`The name "${name}" is a sentence, not a brand.`);
+  }
+  if (!product.vision.includes(name)) {
+    flaws.push('The vision must contain the product name.');
+  }
+  if (!/^A .+ that .+\.$/.test(product.description.trim())) {
+    flaws.push('The description must be one sentence of the form "A <what it is> that <what it does>."');
+  }
+  if (product.targetUsers.trim().split(/\s+/).length < 8) {
+    flaws.push('The audience is a label, not a moment: describe the people this gimmick serves, caught in the situation it fixes.');
+  }
+  if (!/\b(who|whom|whose|whoever|where|which|that)\b/i.test(product.targetUsers)) {
+    flaws.push('The audience needs a qualifying clause ("… who still …"), not a bare demographic.');
+  }
+  if (product.problem.toLowerCase().includes(name.toLowerCase())) {
+    flaws.push("The problem statement must not mention the product — it is why today's alternatives fail.");
+  }
+  return flaws;
+};
 
 // --------------------------------------------------------------------------
 // Community-shared products

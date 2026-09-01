@@ -192,9 +192,12 @@ never served to clients.
 Because it is the one place where text authored in one tenant reaches
 another, the containment lives outside the org scoping:
 
-- **On write** — publishing requires a signed-in person in the workspace
-  (agent-run tokens and worker keys are refused), so nothing reaches other
-  tenants unread. Each entry is flattened to inert single-line text: no line
+- **On write** — an invention is published automatically, by the member's
+  browser under their own session; agent-run tokens and worker keys are
+  refused, so every row is attributable to an account and counts against that
+  workspace's daily cap. Nobody reviews an entry first, which is a deliberate
+  trade for a pool that grows without chores — the removal path below is what
+  answers for it. Each entry is flattened to inert single-line text: no line
   breaks, backticks, angle brackets, links, or `openv-suggestion` markers,
   with per-field length caps, name deduplication, a per-workspace daily cap
   and a global pool ceiling.
