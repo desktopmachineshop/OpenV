@@ -37,12 +37,15 @@ has a shortcut whose label reflects where you are: *Start*, *Resume*, or
    *requirement* linked *derives-from* its need.
 5. **NFRs & constraints** — quality-attribute requirements grouped by category
    (Performance, Reliability, Usability, Security, Maintainability,
-   Regulatory).
+   Regulatory). Each category you use becomes its own section under
+   *Non-Functional Requirements & Constraints*, so the category is the
+   requirement's place in the document rather than a prefix on its title.
 6. **Hazards** (optional) — what could go wrong, the potential harm, and a
    severity. Skip if not applicable.
 7. **Verification stubs** (optional) — every requirement with method **test**
    is listed; checked ones get a draft test case ("Verify: …") linked with
-   *verifies*.
+   *verifies*, filed under *Functional* or the quality attribute of the
+   requirement it verifies.
 8. **Review & commit** — all draft artifacts created during the flow, grouped
    by type. **Discard** any you don't want, then **Commit** to make them all
    live.

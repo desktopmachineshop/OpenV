@@ -20,8 +20,13 @@ import {
   ReqEntry,
   NfrEntry,
   HazardEntry,
+  FUNCTIONAL_TEST_CATEGORY,
   HAZARD_CATEGORIES,
+  NFR_CATEGORIES,
+  SUBSECTION_SPECS,
+  subSectionKey,
   canonicalHazardCategory,
+  canonicalNfrCategory,
   newEntryId,
   normalizeWizardAnswers,
 } from '../components/wizard/wizardEntries';
@@ -44,7 +49,8 @@ interface DraftSpec {
 }
 
 // Section headings the wizard materializes artifacts under, in module order.
-// Hazard categories become sub-headings under the Hazards section.
+// NFR, hazard and verification categories become sub-headings under their
+// step's section.
 const SECTION_SPECS: Record<string, { title: string; sort: number }> = {
   personas: { title: 'Personas', sort: 10 },
   needs: { title: 'User Needs', sort: 20 },
@@ -66,7 +72,6 @@ const STEP_LABELS = [
 ];
 
 const VERIFICATION_METHODS = ['inspection', 'analysis', 'demonstration', 'test'];
-const NFR_CATEGORIES = ['Performance', 'Reliability', 'Usability', 'Security', 'Maintainability', 'Regulatory'];
 const SEVERITIES = ['minor', 'moderate', 'serious', 'critical'];
 
 const helpText: React.CSSProperties = { fontSize: 13, color: 'var(--text-muted)', marginBottom: 16, lineHeight: 1.5 };
@@ -399,9 +404,7 @@ export const GuidedWizard: React.FC = () => {
         return null;
       }
       case 'nfr': {
-        const category =
-          NFR_CATEGORIES.find((c) => c.toLowerCase() === String(s.category || '').trim().toLowerCase()) ||
-          NFR_CATEGORIES[0];
+        const category = canonicalNfrCategory(s.category) || NFR_CATEGORIES[0];
         if (s.replaces) {
           const i = matchEntry(d.nfrs, (n) => n.text, String(s.replaces));
           if (i >= 0) {
@@ -596,8 +599,8 @@ export const GuidedWizard: React.FC = () => {
   };
 
   // Create any missing section headings and return the updated key→artifact
-  // map. Hazard sub-sections ("hazards:Safety") nest under the Hazards
-  // heading, which is created on demand too.
+  // map. Sub-sections ("nfrs:Performance", "hazards:Safety") nest under their
+  // step's heading, which is created on demand too.
   const ensureSections = async (keys: string[]): Promise<Record<string, string>> => {
     const map = { ...sectionIds };
     if (!session) return map;
@@ -609,12 +612,15 @@ export const GuidedWizard: React.FC = () => {
     };
     for (const key of keys) {
       if (map[key]) continue;
-      if (key.startsWith('hazards:')) {
-        const cat = key.slice('hazards:'.length);
-        if (!map.hazards) {
-          map.hazards = await create(SECTION_SPECS.hazards.title, SECTION_SPECS.hazards.sort);
+      const colon = key.indexOf(':');
+      const parentKey = colon === -1 ? '' : key.slice(0, colon);
+      const spec = SUBSECTION_SPECS[parentKey];
+      if (spec) {
+        const cat = key.slice(colon + 1);
+        if (!map[parentKey]) {
+          map[parentKey] = await create(SECTION_SPECS[parentKey].title, SECTION_SPECS[parentKey].sort);
         }
-        map[key] = await create(`${cat} Hazards`, 10 * (HAZARD_CATEGORIES.indexOf(cat) + 1), map.hazards);
+        map[key] = await create(spec.title(cat), 10 * (spec.categories.indexOf(cat) + 1), map[parentKey]);
       } else if (SECTION_SPECS[key]) {
         map[key] = await create(SECTION_SPECS[key].title, SECTION_SPECS[key].sort);
       }
@@ -745,12 +751,16 @@ export const GuidedWizard: React.FC = () => {
         const updated = nfrs.slice();
         const newIdx: number[] = [];
         const drafts: DraftSpec[] = [];
+        // The category is the section the draft lands in, so it is no longer
+        // spelled into the title as well.
+        const draftSections: string[] = [];
         updated.forEach((n, i) => {
           if (!n.artifact_id && n.text.trim()) {
             newIdx.push(i);
+            draftSections.push(subSectionKey('nfrs', n.category));
             drafts.push({
               type: 'requirement',
-              title: `[${n.category}] ${n.text.trim().length > 100 ? `${n.text.trim().slice(0, 97)}…` : n.text.trim()}`,
+              title: n.text.trim().length > 100 ? `${n.text.trim().slice(0, 97)}…` : n.text.trim(),
               body: `${n.text.trim()}${n.fit_criterion.trim() ? `\n\n**Fit criterion:** ${n.fit_criterion.trim()}` : ''}`,
               attributes: { verification_method: n.verification_method, category: n.category },
             });
@@ -758,8 +768,8 @@ export const GuidedWizard: React.FC = () => {
         });
         let sections = sectionIds;
         if (drafts.length > 0) {
-          sections = await ensureSections(['nfrs']);
-          drafts.forEach((d) => (d.parent_id = sections.nfrs));
+          sections = await ensureSections(Array.from(new Set(draftSections)));
+          drafts.forEach((d, j) => (d.parent_id = sections[draftSections[j]]));
           const res = await guidedAPI.materializeDrafts(session.id, drafts);
           (res.data.artifact_ids || []).forEach((id, j) => {
             if (newIdx[j] !== undefined) updated[newIdx[j]] = { ...updated[newIdx[j]], artifact_id: id };
@@ -791,9 +801,9 @@ export const GuidedWizard: React.FC = () => {
         });
         let sections = sectionIds;
         if (drafts.length > 0) {
-          const keys = Array.from(new Set(draftCategories)).map((c) => `hazards:${c}`);
-          sections = await ensureSections(keys);
-          drafts.forEach((d, j) => (d.parent_id = sections[`hazards:${draftCategories[j]}`]));
+          const keys = draftCategories.map((c) => subSectionKey('hazards', c));
+          sections = await ensureSections(Array.from(new Set(keys)));
+          drafts.forEach((d, j) => (d.parent_id = sections[keys[j]]));
           const res = await guidedAPI.materializeDrafts(session.id, drafts);
           (res.data.artifact_ids || []).forEach((id, j) => {
             if (newIdx[j] !== undefined) updated[newIdx[j]] = { ...updated[newIdx[j]], artifact_id: id };
@@ -813,12 +823,17 @@ export const GuidedWizard: React.FC = () => {
         let createdMap = { ...stubCreated };
         let sections = sectionIds;
         if (toCreate.length > 0) {
-          sections = await ensureSections(['tests']);
-          const drafts: DraftSpec[] = toCreate.map((c) => ({
+          // A stub sits beside the kind of requirement it verifies, so the
+          // verification module reads in the same shape as the requirements.
+          const keys = toCreate.map((c) =>
+            subSectionKey('tests', c.category || FUNCTIONAL_TEST_CATEGORY)
+          );
+          sections = await ensureSections(Array.from(new Set(keys)));
+          const drafts: DraftSpec[] = toCreate.map((c, j) => ({
             type: 'test-case',
             title: `Verify: ${c.title}`,
             body: `Test case stub for requirement: ${c.title}\n\nDefine steps, preconditions and expected results.`,
-            parent_id: sections.tests,
+            parent_id: sections[keys[j]],
             links: [{ type: 'verifies', to_id: c.id }],
           }));
           const res = await guidedAPI.materializeDrafts(session.id, drafts);
@@ -925,9 +940,14 @@ export const GuidedWizard: React.FC = () => {
     }
   };
 
-  /** Requirements (functional + NFR) with verification method 'test' that were materialized. */
-  const testCandidates = (): { id: string; title: string }[] => {
-    const out: { id: string; title: string }[] = [];
+  /**
+   * Requirements (functional + NFR) with verification method 'test' that were
+   * materialized. An NFR's category rides along as its own field so the picker
+   * can show which quality attribute a line belongs to without the stub title
+   * inheriting it — the title has to match the requirement it verifies.
+   */
+  const testCandidates = (): { id: string; title: string; category?: string }[] => {
+    const out: { id: string; title: string; category?: string }[] = [];
     requirements.forEach((r) => {
       if (r.artifact_id && r.verification_method === 'test' && r.text.trim()) {
         out.push({ id: r.artifact_id, title: r.text.trim() });
@@ -935,7 +955,7 @@ export const GuidedWizard: React.FC = () => {
     });
     nfrs.forEach((n) => {
       if (n.artifact_id && n.verification_method === 'test' && n.text.trim()) {
-        out.push({ id: n.artifact_id, title: `[${n.category}] ${n.text.trim()}` });
+        out.push({ id: n.artifact_id, title: n.text.trim(), category: n.category });
       }
     });
     return out;
@@ -1352,7 +1372,8 @@ export const GuidedWizard: React.FC = () => {
             <div className="card" style={{ marginBottom: 12 }}>
               <h3>Non-functional requirements &amp; constraints</h3>
               <div style={{ ...helpText, marginBottom: 0 }}>
-                Expand the quality attributes that matter for this product and add requirements under each.
+                Expand the quality attributes that matter for this product and add requirements under
+                each — every attribute you use becomes its own section in the requirements module.
               </div>
             </div>
             {NFR_CATEGORIES.map((cat) => {
@@ -1528,7 +1549,8 @@ export const GuidedWizard: React.FC = () => {
             <h3>Verification stubs (optional)</h3>
             <div style={helpText}>
               Requirements with verification method <strong>test</strong> are listed below. Checked
-              requirements get a draft test case ("Verify: …") linked with a <em>verifies</em> relationship.
+              requirements get a draft test case ("Verify: …") linked with a <em>verifies</em>
+              relationship, filed under a section matching the requirement it verifies.
             </div>
             {candidates.length === 0 ? (
               <div style={{ color: 'var(--neutral)', fontSize: 13 }}>
@@ -1558,6 +1580,9 @@ export const GuidedWizard: React.FC = () => {
                     onChange={(e) => setStubSelected({ ...stubSelected, [c.id]: e.target.checked })}
                   />
                   <span style={{ flex: 1, fontSize: 13, color: 'var(--text)' }}>{c.title}</span>
+                  {c.category && (
+                    <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{c.category}</span>
+                  )}
                   {stubCreated[c.id] && <span style={{ fontSize: 12, color: 'var(--success)' }}>✓ stub created</span>}
                 </label>
               ))
