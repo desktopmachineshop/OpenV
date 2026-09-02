@@ -164,6 +164,24 @@ func decodeList(raw string) ([]map[string]interface{}, error) {
 	return list, nil
 }
 
+// baselineSummary strips a baseline's snapshot, which is the whole project
+// serialized — a hundred thousand characters that would swamp an agent's
+// context for what is almost always a metadata read (REQ-20). The snapshot's
+// content is reachable as a rendered map via get_project_map with
+// baseline_id, which is what an agent actually wants.
+func baselineSummary(raw string) (string, error) {
+	var baseline struct {
+		ID        string `json:"id"`
+		ProjectID string `json:"project_id"`
+		Name      string `json:"name"`
+		CreatedAt string `json:"created_at"`
+	}
+	if err := json.Unmarshal([]byte(raw), &baseline); err != nil {
+		return "", fmt.Errorf("unexpected baseline response: %v", err)
+	}
+	return toJSON(baseline)
+}
+
 func toJSON(v interface{}) (string, error) {
 	buf, err := json.Marshal(v)
 	if err != nil {
@@ -493,13 +511,16 @@ func Tools() []Tool {
 		},
 		{
 			Name:        "get_baseline",
-			Description: "Get a baseline by ID.",
+			Description: "Get a baseline's details by ID (name and capture time). The snapshot itself is not returned — read a baseline's content with get_project_map, passing baseline_id.",
 			InputSchema: schema([]string{"id"}, map[string]interface{}{
 				"id": str("Baseline ID"),
 			}),
 			Handler: func(c *Client, args map[string]interface{}) (string, error) {
 				out, _, err := c.request("GET", "/api/v1/baselines/"+strArg(args, "id"), nil, nil)
-				return out, err
+				if err != nil {
+					return out, err
+				}
+				return baselineSummary(out)
 			},
 		},
 		{
@@ -513,7 +534,10 @@ func Tools() []Tool {
 				out, _, err := c.request("POST", "/api/v1/projects/"+strArg(args, "project_id")+"/baselines", nil, map[string]interface{}{
 					"name": strArg(args, "name"),
 				})
-				return out, err
+				if err != nil {
+					return out, err
+				}
+				return baselineSummary(out)
 			},
 		},
 		{

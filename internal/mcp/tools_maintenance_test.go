@@ -22,7 +22,9 @@ const coverageReport = `{
 
 func TestCreateBaseline(t *testing.T) {
 	t.Run("named", func(t *testing.T) {
-		server, log := captureServer(t, http.StatusCreated, `{"id":"b1","name":"after MCP tools"}`)
+		// The API answers with the whole snapshot; the tool must not pass it on.
+		server, log := captureServer(t, http.StatusCreated,
+			`{"id":"b1","project_id":"p1","name":"after MCP tools","snapshot":{"artifacts":[{"id":"a1","body":"a whole project"}]}}`)
 		out, err := toolByName(t, "create_baseline").Handler(
 			NewClient(server.URL, "test-token"),
 			map[string]interface{}{"project_id": "p1", "name": "after MCP tools"},
@@ -30,8 +32,8 @@ func TestCreateBaseline(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if out != `{"id":"b1","name":"after MCP tools"}` {
-			t.Errorf("output = %q, want the baseline passed through", out)
+		if !strings.Contains(out, `"id":"b1"`) || !strings.Contains(out, `"name":"after MCP tools"`) {
+			t.Errorf("output = %q, want the baseline's id and name", out)
 		}
 		reqs := log()
 		if len(reqs) != 1 {
@@ -47,11 +49,15 @@ func TestCreateBaseline(t *testing.T) {
 
 	t.Run("unnamed leaves the server to name it", func(t *testing.T) {
 		server, log := captureServer(t, http.StatusCreated, `{"id":"b2"}`)
-		if _, err := toolByName(t, "create_baseline").Handler(
+		out, err := toolByName(t, "create_baseline").Handler(
 			NewClient(server.URL, "test-token"),
 			map[string]interface{}{"project_id": "p1"},
-		); err != nil {
+		)
+		if err != nil {
 			t.Fatal(err)
+		}
+		if strings.Contains(out, "snapshot") {
+			t.Errorf("the snapshot must not reach the agent's context: %s", out)
 		}
 		if got := log()[0].Body["name"]; got != "" {
 			t.Errorf("body name = %v, want empty so the server dates one", got)

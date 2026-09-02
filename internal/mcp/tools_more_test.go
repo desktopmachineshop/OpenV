@@ -301,13 +301,16 @@ func TestToolRequests(t *testing.T) {
 			wantOut:    `[]`,
 		},
 		{
-			tool:       "get_baseline",
-			args:       map[string]interface{}{"id": "b1"},
-			status:     200,
-			response:   `{"id":"b1"}`,
+			tool:   "get_baseline",
+			args:   map[string]interface{}{"id": "b1"},
+			status: 200,
+			// The API returns the whole project snapshot; the tool answers
+			// with the baseline's metadata alone (read its content through
+			// get_project_map with baseline_id).
+			response:   `{"id":"b1","project_id":"p1","name":"v1","created_at":"2026-01-01T00:00:00Z","snapshot":{"artifacts":[]}}`,
 			wantMethod: "GET",
 			wantPath:   "/api/v1/baselines/b1",
-			wantOut:    `{"id":"b1"}`,
+			wantOut:    `{"id":"b1","project_id":"p1","name":"v1","created_at":"2026-01-01T00:00:00Z"}`,
 		},
 		{
 			tool:       "create_test_run",
