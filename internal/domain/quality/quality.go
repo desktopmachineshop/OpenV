@@ -7,9 +7,15 @@
 //
 // The rules are heuristic and intentionally conservative — they surface
 // language smells that make a requirement ambiguous or untestable (weak words,
-// passive voice, missing "shall"/measurable phrasing, vague quantifiers,
+// passive voice, missing imperative or measurable phrasing, vague quantifiers,
 // TBD/TODO placeholders, over-long sentences). Nothing here calls out to a
 // model or the network; identical input always yields identical output.
+//
+// Which words count as binding is a house-style choice, so every entry point
+// takes a RuleSet (see ruleset.go): it names the project's normative
+// convention — ISO/IEC/IEEE 29148 "shall" or RFC 2119 must/should/may — and
+// the severity each rule speaks at. Findings are advisory: nothing here
+// rejects a write.
 package quality
 
 import (
@@ -36,6 +42,7 @@ const (
 	RuleVagueQuantifier = "vague-quantifier"
 	RulePlaceholder     = "placeholder"
 	RuleLongSentence    = "long-sentence"
+	RuleOffConvention   = "off-convention"
 )
 
 // Score bands. Band maps a 0-100 score to one of these.
@@ -84,6 +91,10 @@ type Report struct {
 	ProjectID string          `json:"project_id"`
 	Entries   []ArtifactScore `json:"entries"`
 	Summary   map[string]int  `json:"summary"` // band -> count
+	// RuleSet is what the entries were judged against — the same content
+	// scores differently under another convention, so a report is only
+	// readable next to the rules that produced it.
+	RuleSet RuleSet `json:"rule_set"`
 }
 
 // requirementTypes are the artifact types this linter judges. Quality linting
@@ -118,7 +129,7 @@ func Band(score int) string {
 // weakWords are vague, subjective, or non-verifiable qualifiers that make a
 // requirement hard to test objectively.
 var weakWords = []string{
-	"should", "may", "might", "could", "would",
+	"might", "could", "would",
 	"appropriate", "adequate", "sufficient", "acceptable", "reasonable",
 	"user-friendly", "easy", "simple", "intuitive", "seamless",
 	"fast", "quick", "slow", "responsive", "efficient",
@@ -128,6 +139,10 @@ var weakWords = []string{
 	"minimal", "maximal", "roughly", "approximately", "about",
 	"etc", "and/or", "as needed", "if necessary", "where possible",
 }
+
+// gradedKeywords are binding under RFC 2119 and weak under the "shall"
+// convention, which is the whole of the difference between the two.
+var gradedKeywords = []string{"should", "may"}
 
 // vagueQuantifiers are imprecise amounts that should be replaced with a
 // measurable value.
@@ -148,7 +163,6 @@ var placeholders = []string{
 // --- compiled patterns (built once, deterministic) ---
 
 var (
-	weakWordRe        = wordListRegexp(weakWords)
 	vagueQuantifierRe = wordListRegexp(vagueQuantifiers)
 	placeholderRe     = wordListRegexp(placeholders)
 
@@ -158,16 +172,54 @@ var (
 	// why it is only a warning.
 	passiveVoiceRe = regexp.MustCompile(`(?i)\b(?:is|are|was|were|be|been|being)\s+(?:\w+ed|\w+en)\b`)
 
-	// testablePhraseRe: signals that a requirement is stated in verifiable
-	// terms — an imperative "shall"/"must", or a measurable comparison
-	// ("<= 500 ms", "at least 3"). Its ABSENCE drives the not-testable rule.
-	testablePhraseRe = regexp.MustCompile(`(?i)\b(?:shall|must)\b`)
-	measurableRe     = regexp.MustCompile(`\d`)
+	measurableRe = regexp.MustCompile(`\d`)
 
 	// sentenceSplitRe splits on sentence-ending punctuation followed by
 	// whitespace, keeping offsets recoverable via index scanning.
 	sentenceSplitRe = regexp.MustCompile(`[.!?]+\s+`)
 )
+
+// conventionPattern holds the patterns that differ between conventions: what
+// counts as weak wording, what counts as an imperative (its absence drives the
+// not-testable rule), and which keyword belongs to the other vocabulary.
+type conventionPattern struct {
+	weakWord      *regexp.Regexp
+	imperative    *regexp.Regexp
+	offConvention *regexp.Regexp
+	// imperativeHint names the expected keywords in the not-testable message.
+	imperativeHint string
+	// offConventionHint names the convention's own keyword, for the message.
+	offConventionHint string
+}
+
+// conventionPatterns is built once at init: two small pattern sets, chosen per
+// lint call by the rule set's convention.
+var conventionPatterns = map[string]conventionPattern{
+	ConventionShall: {
+		weakWord:          wordListRegexp(append(append([]string(nil), weakWords...), gradedKeywords...)),
+		imperative:        regexp.MustCompile(`(?i)\bshall\b`),
+		offConvention:     regexp.MustCompile(`(?i)\bmust\b`),
+		imperativeHint:    "'shall'",
+		offConventionHint: "shall",
+	},
+	ConventionRFC2119: {
+		weakWord:          wordListRegexp(weakWords),
+		imperative:        regexp.MustCompile(`(?i)\b(?:must|shall|should|may|required|recommended|optional)\b`),
+		offConvention:     regexp.MustCompile(`(?i)\bshall\b`),
+		imperativeHint:    "'must'/'should'/'may'",
+		offConventionHint: "must/should/may",
+	},
+}
+
+// patternsFor returns the pattern set for a convention, falling back to the
+// default convention for anything unrecognized so a bad stored value lints
+// rather than panics.
+func patternsFor(convention string) conventionPattern {
+	if p, ok := conventionPatterns[convention]; ok {
+		return p
+	}
+	return conventionPatterns[ConventionShall]
+}
 
 // wordListRegexp compiles a case-insensitive alternation with word boundaries
 // around each phrase. Longer phrases are placed first so the alternation
@@ -193,22 +245,37 @@ func combinedText(title, body string) string {
 	return strings.TrimSpace(title) + "\n\n" + body
 }
 
-// LintArtifact runs every rule over one artifact's title and body and returns
-// its score and findings. It is pure: no I/O, no clock, no randomness.
-func LintArtifact(a *artifacts.Artifact) ArtifactScore {
+// LintArtifact runs every enabled rule over one artifact's title and body
+// against the given rule set, and returns its score and findings. It is pure:
+// no I/O, no clock, no randomness.
+func LintArtifact(a *artifacts.Artifact, rs RuleSet) ArtifactScore {
 	text := combinedText(a.Title, a.Body)
+	patterns := patternsFor(rs.Convention)
 	findings := []Finding{}
 
-	findings = append(findings, matchFindings(text, weakWordRe, RuleWeakWord, SeverityWarning,
-		"weak or subjective wording — state a verifiable criterion instead")...)
-	findings = append(findings, matchFindings(text, vagueQuantifierRe, RuleVagueQuantifier, SeverityWarning,
-		"vague quantifier — replace with a specific, measurable amount")...)
-	findings = append(findings, matchFindings(text, placeholderRe, RulePlaceholder, SeverityError,
-		"placeholder text — the requirement is incomplete")...)
-	findings = append(findings, matchFindings(text, passiveVoiceRe, RulePassiveVoice, SeverityWarning,
-		"possible passive voice — name the actor performing the action")...)
-	findings = append(findings, longSentenceFindings(text)...)
-	findings = append(findings, notTestableFindings(text)...)
+	emit := func(rule string, re *regexp.Regexp, message string) {
+		if !rs.Enabled(rule) {
+			return
+		}
+		findings = append(findings, matchFindings(text, re, rule, rs.SeverityFor(rule), message)...)
+	}
+
+	emit(RuleWeakWord, patterns.weakWord,
+		"weak or subjective wording — state a verifiable criterion instead")
+	emit(RuleVagueQuantifier, vagueQuantifierRe,
+		"vague quantifier — replace with a specific, measurable amount")
+	emit(RulePlaceholder, placeholderRe,
+		"placeholder text — the requirement is incomplete")
+	emit(RulePassiveVoice, passiveVoiceRe,
+		"possible passive voice — name the actor performing the action")
+	emit(RuleOffConvention, patterns.offConvention,
+		"normative keyword from the other convention — this project writes "+patterns.offConventionHint)
+	if rs.Enabled(RuleLongSentence) {
+		findings = append(findings, longSentenceFindings(text, rs.SeverityFor(RuleLongSentence))...)
+	}
+	if rs.Enabled(RuleNotTestable) {
+		findings = append(findings, notTestableFindings(text, patterns, rs.SeverityFor(RuleNotTestable))...)
+	}
 
 	// Stable order: by start offset, then rule name. Rules already emit in
 	// offset order, but interleaving across rules needs a final sort.
@@ -247,7 +314,7 @@ func matchFindings(text string, re *regexp.Regexp, rule, severity, message strin
 }
 
 // longSentenceFindings flags sentences longer than longSentenceWords words.
-func longSentenceFindings(text string) []Finding {
+func longSentenceFindings(text, severity string) []Finding {
 	out := []Finding{}
 	offset := 0
 	remaining := text
@@ -267,7 +334,7 @@ func longSentenceFindings(text string) []Finding {
 			start := offset + strings.Index(sentence, trimmed)
 			out = append(out, Finding{
 				Rule:     RuleLongSentence,
-				Severity: SeverityWarning,
+				Severity: severity,
 				Message:  "over-long sentence — split into shorter, single-condition statements",
 				Start:    start,
 				End:      start + len(trimmed),
@@ -284,16 +351,16 @@ func longSentenceFindings(text string) []Finding {
 }
 
 // notTestableFindings emits a single artifact-level finding when the content
-// carries neither an imperative ("shall"/"must") nor any digit (a proxy for a
+// carries neither the convention's imperative nor any digit (a proxy for a
 // measurable acceptance criterion).
-func notTestableFindings(text string) []Finding {
-	if testablePhraseRe.MatchString(text) || measurableRe.MatchString(text) {
+func notTestableFindings(text string, patterns conventionPattern, severity string) []Finding {
+	if patterns.imperative.MatchString(text) || measurableRe.MatchString(text) {
 		return nil
 	}
 	return []Finding{{
 		Rule:     RuleNotTestable,
-		Severity: SeverityWarning,
-		Message:  "no 'shall'/'must' or measurable criterion — requirement may not be testable",
+		Severity: severity,
+		Message:  "no " + patterns.imperativeHint + " or measurable criterion — requirement may not be testable",
 	}}
 }
 
@@ -322,17 +389,18 @@ func firstWords(s string, n int) string {
 // LintProject lints every requirement-type artifact in the export and returns a
 // report. Non-requirement types are skipped. Entries preserve the export's
 // artifact order for a deterministic result.
-func LintProject(export *exports.ProjectExport) *Report {
+func LintProject(export *exports.ProjectExport, rs RuleSet) *Report {
 	report := &Report{
 		ProjectID: export.ProjectID,
 		Entries:   []ArtifactScore{},
 		Summary:   map[string]int{BandGood: 0, BandFair: 0, BandPoor: 0},
+		RuleSet:   rs,
 	}
 	for _, a := range export.Artifacts {
 		if a == nil || !IsRequirementType(a.Type) {
 			continue
 		}
-		entry := LintArtifact(a)
+		entry := LintArtifact(a, rs)
 		report.Entries = append(report.Entries, entry)
 		report.Summary[entry.Band]++
 	}

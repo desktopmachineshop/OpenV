@@ -1270,6 +1270,46 @@ export const membersAPI = {
     client.delete(`/api/v1/projects/${projectId}/members/${userId}`),
 };
 
+// Requirement quality rule sets (workspace house style, overridable per
+// project). `effective` is what the linter and agents use; `workspace` and
+// `project` are the overrides that produced it, either of them null when that
+// level sets nothing. `catalog` carries the vocabulary the editor renders.
+export type QualityConvention = 'shall' | 'rfc2119';
+export type QualitySeverity = 'error' | 'warning' | 'info' | 'off';
+
+export interface QualityRuleSet {
+  convention?: QualityConvention | '';
+  severities?: Record<string, QualitySeverity>;
+}
+
+export interface QualityRulesCatalog {
+  conventions: QualityConvention[];
+  rules: string[];
+  severities: QualitySeverity[];
+  defaults: Required<QualityRuleSet>;
+  labels: Record<string, string>;
+}
+
+export interface QualityRules {
+  effective: Required<QualityRuleSet>;
+  workspace: QualityRuleSet | null;
+  project: QualityRuleSet | null;
+  summary: string;
+  catalog: QualityRulesCatalog;
+}
+
+// An empty rule set clears the level's override, so it inherits again.
+export const qualityRulesAPI = {
+  forProject: (projectId: string) =>
+    client.get<QualityRules>(`/api/v1/projects/${projectId}/quality-rules`),
+  setForProject: (projectId: string, payload: QualityRuleSet) =>
+    client.put<QualityRules>(`/api/v1/projects/${projectId}/quality-rules`, payload),
+  forWorkspace: (orgId: string) =>
+    client.get<QualityRules>(`/api/v1/orgs/${orgId}/quality-rules`),
+  setForWorkspace: (orgId: string, payload: QualityRuleSet) =>
+    client.put<QualityRules>(`/api/v1/orgs/${orgId}/quality-rules`, payload),
+};
+
 export const metaAPI = {
   artifactTypes: () => client.get<ArtifactTypeDef[]>('/api/v1/meta/artifact-types'),
   linkTypes: () => client.get<LinkTypeRule[]>('/api/v1/meta/link-types'),

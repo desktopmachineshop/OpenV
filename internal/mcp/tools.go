@@ -164,6 +164,24 @@ func decodeList(raw string) ([]map[string]interface{}, error) {
 	return list, nil
 }
 
+// baselineSummary strips a baseline's snapshot, which is the whole project
+// serialized — a hundred thousand characters that would swamp an agent's
+// context for what is almost always a metadata read (REQ-20). The snapshot's
+// content is reachable as a rendered map via get_project_map with
+// baseline_id, which is what an agent actually wants.
+func baselineSummary(raw string) (string, error) {
+	var baseline struct {
+		ID        string `json:"id"`
+		ProjectID string `json:"project_id"`
+		Name      string `json:"name"`
+		CreatedAt string `json:"created_at"`
+	}
+	if err := json.Unmarshal([]byte(raw), &baseline); err != nil {
+		return "", fmt.Errorf("unexpected baseline response: %v", err)
+	}
+	return toJSON(baseline)
+}
+
 func toJSON(v interface{}) (string, error) {
 	buf, err := json.Marshal(v)
 	if err != nil {
@@ -493,13 +511,16 @@ func Tools() []Tool {
 		},
 		{
 			Name:        "get_baseline",
-			Description: "Get a baseline by ID.",
+			Description: "Get a baseline's details by ID (name and capture time). The snapshot itself is not returned — read a baseline's content with get_project_map, passing baseline_id.",
 			InputSchema: schema([]string{"id"}, map[string]interface{}{
 				"id": str("Baseline ID"),
 			}),
 			Handler: func(c *Client, args map[string]interface{}) (string, error) {
 				out, _, err := c.request("GET", "/api/v1/baselines/"+strArg(args, "id"), nil, nil)
-				return out, err
+				if err != nil {
+					return out, err
+				}
+				return baselineSummary(out)
 			},
 		},
 		{
@@ -513,7 +534,10 @@ func Tools() []Tool {
 				out, _, err := c.request("POST", "/api/v1/projects/"+strArg(args, "project_id")+"/baselines", nil, map[string]interface{}{
 					"name": strArg(args, "name"),
 				})
-				return out, err
+				if err != nil {
+					return out, err
+				}
+				return baselineSummary(out)
 			},
 		},
 		{
@@ -567,6 +591,46 @@ func Tools() []Tool {
 				out, _, err := c.request("PUT", "/api/v1/test-runs/"+strArg(args, "run_id"), nil, map[string]interface{}{
 					"status": status,
 				})
+				return out, err
+			},
+		},
+		{
+			Name:        "get_quality_rules",
+			Description: "The requirement quality rules this project is judged against: its normative convention (\"shall\" or RFC 2119 must/should/may) and the severity of each lint rule, plus a one-sentence summary. Read this before drafting or rewording a requirement so the wording matches the project's house style.",
+			InputSchema: schema([]string{"project_id"}, map[string]interface{}{
+				"project_id": str("Project ID"),
+			}),
+			Handler: func(c *Client, args map[string]interface{}) (string, error) {
+				out, _, err := c.request("GET", "/api/v1/projects/"+strArg(args, "project_id")+"/quality-rules", nil, nil)
+				if err != nil {
+					return out, err
+				}
+				// The endpoint also carries the editor's catalog (every
+				// convention, rule and label); an agent needs the resolved
+				// rules and the sentence, not the picker's vocabulary.
+				var payload struct {
+					Effective map[string]interface{} `json:"effective"`
+					Summary   string                 `json:"summary"`
+				}
+				if err := json.Unmarshal([]byte(out), &payload); err != nil {
+					return "", fmt.Errorf("unexpected quality rules response: %v", err)
+				}
+				return toJSON(payload)
+			},
+		},
+		{
+			Name:        "get_quality_findings",
+			Description: "Lint one requirement or user need against the project's quality rules: a 0-100 score, its band, and one finding per wording problem (weak words, vague quantifiers, placeholders, passive voice, off-convention keywords, over-long sentences, untestable phrasing). Advisory — findings never block a write.",
+			InputSchema: schema([]string{"artifact_id"}, map[string]interface{}{
+				"artifact_id": str("Artifact ID or stable ref (pass project_id to resolve a ref)"),
+				"project_id":  str("Project ID, required when artifact_id is a stable ref"),
+			}),
+			Handler: func(c *Client, args map[string]interface{}) (string, error) {
+				id, err := resolveArtifactID(c, strArg(args, "project_id"), strArg(args, "artifact_id"))
+				if err != nil {
+					return "", err
+				}
+				out, _, err := c.request("GET", "/api/v1/artifacts/"+id+"/quality", nil, nil)
 				return out, err
 			},
 		},

@@ -20,14 +20,16 @@ import {
 import { apiErrorMessage } from '../api/errors';
 import { useAppStore } from '../state/store';
 import { ErrorBanner, useConfirm } from '../components/ui';
+import { QualityRulesEditor } from '../components/QualityRulesEditor';
 
-type Tab = 'members' | 'repos' | 'agents' | 'attributes' | 'danger';
+type Tab = 'members' | 'repos' | 'agents' | 'attributes' | 'quality' | 'danger';
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'members', label: 'Access' },
   { key: 'repos', label: 'Repositories' },
   { key: 'agents', label: 'Agents' },
   { key: 'attributes', label: 'Attributes' },
+  { key: 'quality', label: 'Quality rules' },
   { key: 'danger', label: 'Danger Zone' },
 ];
 
@@ -102,6 +104,11 @@ export const ProjectSettings: React.FC = () => {
 
   // Members
   const [members, setMembers] = useState<ProjectMember[]>([]);
+  // Editing quality rules needs project editor rights. Platform admins and
+  // members with no row here (workspace admins reach every project) fall
+  // through to the server's own check, which is the authority.
+  const myRole = members.find((m) => m.user_id === currentUser?.id)?.role;
+  const canEditRules = !myRole || myRole !== 'viewer' || Boolean(currentUser?.is_admin);
   const [membersLoading, setMembersLoading] = useState(true);
   const [addEmail, setAddEmail] = useState('');
   const [addRole, setAddRole] = useState('editor');
@@ -1128,6 +1135,26 @@ export const ProjectSettings: React.FC = () => {
               {savingAttr ? 'Adding…' : 'Add attribute'}
             </button>
           </form>
+        </div>
+      )}
+
+      {tab === 'quality' && (
+        <div className="card">
+          <h3>Requirement quality rules</h3>
+          <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+            How this project's requirements are worded and judged. Set nothing and the project
+            follows its workspace's house style (Workspace settings → Quality rules); override only
+            what this project needs to do differently. Agents read these rules before they draft,
+            and the quality badge scores against them.
+          </p>
+          {projectId && (
+            <QualityRulesEditor
+              level="project"
+              id={projectId}
+              canEdit={canEditRules}
+              onSaved={() => flash('Quality rules saved')}
+            />
+          )}
         </div>
       )}
 

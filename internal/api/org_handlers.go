@@ -49,6 +49,11 @@ func (h *Handler) registerOrgRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/orgs/{id}/my-runner-key", h.CreateMyRunnerKey).Methods("POST")
 	router.HandleFunc("/api/v1/orgs/{id}/my-runner-key", h.RevokeMyRunnerKey).Methods("DELETE")
 
+	// Requirement quality house style: readable by any member, set by admins,
+	// inherited by every project in the workspace.
+	router.HandleFunc("/api/v1/orgs/{id}/quality-rules", h.GetWorkspaceQualityRules).Methods("GET")
+	router.HandleFunc("/api/v1/orgs/{id}/quality-rules", h.UpdateWorkspaceQualityRules).Methods("PUT")
+
 	// Agent Connector pairing: browser issues a one-time code; the local
 	// connector exchanges it (public route — the code is the credential).
 	router.HandleFunc("/api/v1/orgs/{id}/connector-pairing", h.CreateConnectorPairing).Methods("POST")

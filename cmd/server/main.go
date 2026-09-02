@@ -42,6 +42,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/providers"
 	"github.com/openv/requirements-platform/internal/domain/repoconns"
 	"github.com/openv/requirements-platform/internal/domain/reports"
+	"github.com/openv/requirements-platform/internal/domain/settings"
 	"github.com/openv/requirements-platform/internal/domain/sharedproducts"
 	"github.com/openv/requirements-platform/internal/domain/teams"
 	"github.com/openv/requirements-platform/internal/domain/templates"
@@ -286,6 +287,9 @@ func main() {
 	}
 	productService := products.NewDefaultService(productProfileRepo)
 	exportService.SetProductService(productService)
+	// Workspace and project preferences — today the requirement quality rule
+	// set the linter judges wording against.
+	settingsService := settings.NewService(postgres.NewSettingsRepository(db))
 	// Typed attribute definitions (issue #219). The artifacts catalog validates
 	// a definition's applies_to_type at create/update time.
 	attributeService := attributes.NewDefaultService(attributeDefRepo, artifacts.ValidType)
@@ -537,6 +541,7 @@ func main() {
 		MemberService:        memberService,
 		ProductService:       productService,
 		VVService:            vvService,
+		SettingsService:      settingsService,
 		WorkItemService:      workItemService,
 		GuidedService:        guidedService,
 		InterviewService:     interviewService,

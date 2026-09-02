@@ -25,6 +25,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/links"
 	"github.com/openv/requirements-platform/internal/domain/projects"
 	"github.com/openv/requirements-platform/internal/domain/reports"
+	"github.com/openv/requirements-platform/internal/domain/settings"
 	"github.com/openv/requirements-platform/internal/domain/sharedproducts"
 	"github.com/openv/requirements-platform/internal/domain/templates"
 
@@ -70,6 +71,7 @@ type HandlerDeps struct {
 	MemberService       members.Service
 	ProductService      products.Service
 	VVService           vv.Service
+	SettingsService     settings.Service
 	WorkItemService     workitems.Service
 	GuidedService       guided.Service
 	InterviewService    interviews.Service
@@ -128,6 +130,7 @@ type Handler struct {
 	memberService       members.Service
 	productService      products.Service
 	vvService           vv.Service
+	settingsService     settings.Service
 	workItemService     workitems.Service
 	guidedService       guided.Service
 	interviewService    interviews.Service
@@ -188,6 +191,7 @@ func NewHandler(deps HandlerDeps) *Handler {
 		userService:            deps.UserService,
 		memberService:          deps.MemberService,
 		productService:         deps.ProductService,
+		settingsService:        deps.SettingsService,
 		vvService:              deps.VVService,
 		workItemService:        deps.WorkItemService,
 		guidedService:          deps.GuidedService,

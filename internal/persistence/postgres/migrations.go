@@ -648,6 +648,24 @@ var migrations = []Migration{
 		`)
 		return err
 	}},
+
+	// 0022: workspace and project settings (requirement quality rule sets).
+	// One JSONB bag per level rather than a column per preference: the rules
+	// resolve defaults -> workspace -> project, and each level stores only the
+	// keys it actually overrides. Empty settings everywhere means the platform
+	// defaults, so existing workspaces keep the ISO/IEC/IEEE 29148 "shall"
+	// convention the linter has always applied.
+	{Version: 22, Name: "workspace_project_settings", Run: func(tx *sql.Tx) error {
+		if _, err := tx.Exec(`
+			ALTER TABLE organizations ADD COLUMN IF NOT EXISTS settings JSONB NOT NULL DEFAULT '{}'
+		`); err != nil {
+			return err
+		}
+		_, err := tx.Exec(`
+			ALTER TABLE projects ADD COLUMN IF NOT EXISTS settings JSONB NOT NULL DEFAULT '{}'
+		`)
+		return err
+	}},
 }
 
 // backfillRefPrefix is the type→prefix mapping frozen at the time migration

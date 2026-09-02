@@ -10,8 +10,9 @@ import { OrgProvidersTab } from '../components/org/OrgProvidersTab';
 import { WorkerKeysTab } from '../components/org/WorkerKeysTab';
 import { OrgUsageTab } from '../components/org/OrgUsageTab';
 import { ErrorBanner } from '../components/ui';
+import { QualityRulesEditor } from '../components/QualityRulesEditor';
 
-type Tab = 'general' | 'members' | 'teams' | 'providers' | 'worker-keys' | 'usage';
+type Tab = 'general' | 'members' | 'teams' | 'providers' | 'worker-keys' | 'quality' | 'usage';
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'general', label: 'General' },
@@ -19,6 +20,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'teams', label: 'Teams' },
   { key: 'providers', label: 'AI Providers' },
   { key: 'worker-keys', label: 'Runners' },
+  { key: 'quality', label: 'Quality rules' },
   { key: 'usage', label: 'Usage' },
 ];
 
@@ -252,6 +254,28 @@ export const OrgSettings: React.FC = () => {
         {tab === 'teams' && <OrgTeamsTab org={org} isAdmin={isAdmin} />}
         {tab === 'providers' && <OrgProvidersTab isAdmin={isAdmin} />}
         {tab === 'worker-keys' && <WorkerKeysTab org={org} isAdmin={isAdmin} />}
+        {tab === 'quality' && (
+          <div className="card">
+            <h3>Requirement quality rules</h3>
+            <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+              The house style every project in this workspace inherits: which keywords state a
+              binding requirement, and how loudly each wording check speaks. A project can override
+              any of it in its own settings. Agents read the resolved rules before they draft.
+            </p>
+            <QualityRulesEditor
+              level="workspace"
+              id={org.id}
+              canEdit={isAdmin}
+              onSaved={() => flash('Quality rules saved')}
+            />
+            {!isAdmin && (
+              <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 12, marginBottom: 0 }}>
+                Only workspace admins can change the house style.
+              </p>
+            )}
+          </div>
+        )}
+
         {tab === 'usage' && <OrgUsageTab org={org} />}
       </div>
     </div>

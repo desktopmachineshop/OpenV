@@ -14,6 +14,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/baselines"
 	"github.com/openv/requirements-platform/internal/domain/links"
 	"github.com/openv/requirements-platform/internal/domain/projects"
+	"github.com/openv/requirements-platform/internal/domain/quality"
 	"github.com/openv/requirements-platform/internal/domain/users"
 )
 
@@ -41,7 +42,7 @@ func mapFixture() ([]*artifacts.Artifact, []*links.Link) {
 // and falls back to a uuid-prefix pseudo-ref for pre-ref artifacts.
 func TestBuildAIMap(t *testing.T) {
 	arts, lks := mapFixture()
-	got := buildAIMap("Demo", "live state", arts, lks, time.Date(2026, 2, 3, 4, 5, 6, 0, time.UTC))
+	got := buildAIMap("Demo", "live state", quality.DefaultRuleSet().Describe(), arts, lks, time.Date(2026, 2, 3, 4, 5, 6, 0, time.UTC))
 
 	checks := []string{
 		"# Demo — AI map",

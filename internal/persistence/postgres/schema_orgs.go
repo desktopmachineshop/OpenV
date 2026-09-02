@@ -19,6 +19,7 @@ func InitOrgSchema(db *sql.DB) error {
 		org_type VARCHAR(16) NOT NULL DEFAULT 'company',
 		plan VARCHAR(64) NOT NULL DEFAULT 'free',
 		limits JSONB NOT NULL DEFAULT '{}',
+		settings JSONB NOT NULL DEFAULT '{}',
 		created_by UUID,
 		created_at TIMESTAMP NOT NULL DEFAULT NOW(),
 		updated_at TIMESTAMP NOT NULL DEFAULT NOW()
