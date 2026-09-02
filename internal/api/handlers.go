@@ -489,6 +489,20 @@ func (h *Handler) ListArtifacts(w http.ResponseWriter, r *http.Request) {
 		page = []*artifacts.Artifact{}
 	}
 
+	// Document numbers ("1.2") are a property of the whole document, not of
+	// this page: a page or a type filter is a slice through the tree, so the
+	// numbering has to be computed from every artifact in the project and
+	// then stamped onto the rows being served. Opt-in, because that is a
+	// second query the tree view needs and a plain paginated read does not.
+	if q.Get("doc_numbers") == "1" {
+		if all, err := h.artifactService.ListArtifacts(projectID, ""); err == nil {
+			artifacts.ApplySectionNumbers(all, page)
+		} else {
+			// Numbering is a display aid; losing it must not fail the read.
+			slog.Warn("api: could not compute document numbers", "project_id", projectID, "error", err)
+		}
+	}
+
 	w.Header().Set("X-Total-Count", strconv.Itoa(total))
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(page)

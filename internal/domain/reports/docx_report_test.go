@@ -125,3 +125,52 @@ func TestBuildReportDOCXEscaping(t *testing.T) {
 		t.Error("special characters in title were not escaped")
 	}
 }
+
+// TestReportShowsNumbersAndRefs is the cross-referencing guarantee the
+// numbering exists for: a reader holding the exported document can see where
+// a section sits ("1.1") and can cite any artifact by an address that will
+// still mean the same thing after the document is reorganized ("REQ-1").
+func TestReportShowsNumbersAndRefs(t *testing.T) {
+	intro := &artifacts.Artifact{ID: "intro", Type: artifacts.TypeHeading, Ref: "HDG-1", Title: "Intro", SortOrder: 1}
+	background := &artifacts.Artifact{ID: "background", ParentID: strptr("intro"), Type: artifacts.TypeHeading, Ref: "HDG-2", Title: "Background", SortOrder: 1}
+	req := &artifacts.Artifact{ID: "req", ParentID: strptr("background"), Type: artifacts.TypeRequirement, Ref: "REQ-1", Title: "Brake within 2 m", SortOrder: 1, Version: 3}
+
+	data := &exports.ProjectExport{
+		ProjectName: "Numbering",
+		Artifacts:   []*artifacts.Artifact{intro, background, req},
+		Links: []*linksdomain.Link{
+			{ID: "l1", FromID: "req", ToID: "background", Type: "satisfies"},
+		},
+	}
+
+	out, err := buildReportDOCX(data, "")
+	if err != nil {
+		t.Fatalf("buildReportDOCX: %v", err)
+	}
+	doc := readZipPart(t, out, "word/document.xml")
+
+	for _, want := range []string{
+		"1 Intro",            // a root section is numbered by position
+		"1.1 Background",     // nesting produces the dotted number
+		"REQ-1 Brake within", // a requirement is addressed by its stable ref
+		"Reference",          // the details table names the ref explicitly
+	} {
+		if !strings.Contains(doc, want) {
+			t.Errorf("report is missing %q", want)
+		}
+	}
+
+	// A section is not also labelled with its heading ref: the number is its
+	// address in the document, and showing both would just be noise.
+	if strings.Contains(doc, "HDG-1 Intro") {
+		t.Error("section heading shows a ref instead of its document number")
+	}
+
+	// The traceability row pointing at the section carries the number, so a
+	// reader can follow the cross-reference without hunting for the title.
+	if !strings.Contains(doc, "1.1 Background") {
+		t.Error("traceability target is not addressable")
+	}
+}
+
+func strptr(s string) *string { return &s }

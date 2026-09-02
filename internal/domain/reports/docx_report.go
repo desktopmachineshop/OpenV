@@ -96,16 +96,16 @@ func docxRenderArtifactNode(body *strings.Builder, node *artifactNode, depth int
 			body.WriteString(docxParagraph(stripMarkdown(artifact.Body), ""))
 		}
 	case "heading":
-		body.WriteString(docxHeading(artifact.Title, level))
+		body.WriteString(docxHeading(model.title(artifact), level))
 		if artifact.Body != "" {
 			body.WriteString(docxParagraph(stripMarkdown(artifact.Body), ""))
 		}
 	default:
-		body.WriteString(docxHeading(artifact.Title, level))
+		body.WriteString(docxHeading(model.title(artifact), level))
 		if artifact.Body != "" {
 			body.WriteString(docxParagraph(stripMarkdown(artifact.Body), ""))
 		}
-		body.WriteString(docxArtifactDetailsTable(artifact.Type, artifact.Version))
+		body.WriteString(docxArtifactDetailsTable(artifact.Ref, artifact.Type, artifact.Version))
 		body.WriteString(docxTraceabilityTable(node, model))
 	}
 
@@ -116,11 +116,17 @@ func docxRenderArtifactNode(body *strings.Builder, node *artifactNode, depth int
 
 // docxArtifactDetailsTable renders the Type/Version metadata as a two-column
 // table.
-func docxArtifactDetailsTable(artifactType string, version int) string {
-	rows := [][2]string{
-		{"Type", artifactType},
-		{"Version", fmt.Sprintf("v%d", version)},
+func docxArtifactDetailsTable(ref, artifactType string, version int) string {
+	rows := [][2]string{}
+	// The reference is the first thing a reader needs when citing this
+	// artifact elsewhere, so it leads the table.
+	if ref != "" {
+		rows = append(rows, [2]string{"Reference", ref})
 	}
+	rows = append(rows,
+		[2]string{"Type", artifactType},
+		[2]string{"Version", fmt.Sprintf("v%d", version)},
+	)
 	var b strings.Builder
 	b.WriteString(docxTableOpen())
 	for _, row := range rows {
