@@ -1,5 +1,5 @@
 {
-  "exported_at": "2026-09-02T21:51:03.695082149Z",
+  "exported_at": "2026-09-02T22:07:55.019587431Z",
   "version": "1.0",
   "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
   "project_name": "OpenV Platform",
@@ -148,6 +148,24 @@
       "valid_to": null,
       "created_at": "2026-08-30T19:54:16.263027Z",
       "updated_at": "2026-09-02T20:29:07.43497Z"
+    },
+    {
+      "id": "e2c7d247-ec5d-4e11-bd8d-bb7533373251",
+      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
+      "type": "heading",
+      "ref": "HDG-11",
+      "title": "Non-Functional Requirements & Constraints",
+      "body": "",
+      "sort_order": 500,
+      "status": "draft",
+      "attributes": {
+        "status": "draft"
+      },
+      "version": 1,
+      "valid_from": "2026-09-02T22:05:38.237279Z",
+      "valid_to": null,
+      "created_at": "2026-09-02T22:05:38.237279Z",
+      "updated_at": "2026-09-02T22:05:38.237279Z"
     },
     {
       "id": "396be93c-4a9c-422d-83ea-567e1ef617db",
@@ -332,81 +350,6 @@
       "valid_to": null,
       "created_at": "2026-08-30T19:54:12.946734Z",
       "updated_at": "2026-08-30T19:54:53.592325Z"
-    },
-    {
-      "id": "f4e01c56-9184-4710-a74d-a78ac74be75c",
-      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
-      "parent_id": "004ecc15-015a-4650-ab65-71b8a347ab6e",
-      "type": "requirement",
-      "ref": "REQ-17",
-      "title": "Tenant isolation",
-      "body": "No user, worker or agent shall read or write data belonging to a workspace they are not a member of.",
-      "sort_order": 370,
-      "status": "approved",
-      "attributes": {
-        "links_snapshot": [
-          {
-            "attributes": null,
-            "created_at": "2026-08-30T19:54:40.284385Z",
-            "from_id": "edda457d-5856-4f47-b065-13ef3d18e121",
-            "id": "32edc31c-5a5d-4805-afdc-feb427ba900c",
-            "suspect": false,
-            "to_id": "f4e01c56-9184-4710-a74d-a78ac74be75c",
-            "type": "verifies",
-            "updated_at": "2026-08-30T19:54:40.284385Z",
-            "valid_from": "0001-01-01T00:00:00Z",
-            "valid_to": null,
-            "version": 1
-          },
-          {
-            "attributes": null,
-            "created_at": "2026-08-30T19:54:39.957945Z",
-            "from_id": "1f261541-3d4d-4e0a-b05c-6b15eea0b0bf",
-            "id": "5511c216-d9f8-422f-8383-b5e2ce1b2fc9",
-            "suspect": false,
-            "to_id": "f4e01c56-9184-4710-a74d-a78ac74be75c",
-            "type": "verifies",
-            "updated_at": "2026-08-30T19:54:39.957945Z",
-            "valid_from": "0001-01-01T00:00:00Z",
-            "valid_to": null,
-            "version": 1
-          },
-          {
-            "attributes": null,
-            "created_at": "2026-08-30T19:54:38.978845Z",
-            "from_id": "1ef984bd-76bb-4f05-a25a-c2fa0871c5c3",
-            "id": "2f7daa5f-e031-4d51-9936-10424ef0450c",
-            "suspect": false,
-            "to_id": "f4e01c56-9184-4710-a74d-a78ac74be75c",
-            "type": "satisfies",
-            "updated_at": "2026-08-30T19:54:38.978845Z",
-            "valid_from": "0001-01-01T00:00:00Z",
-            "valid_to": null,
-            "version": 1
-          },
-          {
-            "attributes": null,
-            "created_at": "2026-08-30T19:54:30.229478Z",
-            "from_id": "f4e01c56-9184-4710-a74d-a78ac74be75c",
-            "id": "adcdeb62-8a48-44ba-8582-ccdd50d15bd4",
-            "suspect": false,
-            "to_id": "1da1546a-9c64-470e-8ec7-567b5601d7ba",
-            "type": "derives-from",
-            "updated_at": "2026-08-30T19:54:30.229478Z",
-            "valid_from": "0001-01-01T00:00:00Z",
-            "valid_to": null,
-            "version": 1
-          }
-        ],
-        "priority": "must",
-        "status": "approved",
-        "verification_method": "test"
-      },
-      "version": 6,
-      "valid_from": "2026-08-30T19:54:53.887759Z",
-      "valid_to": null,
-      "created_at": "2026-08-30T19:54:13.245427Z",
-      "updated_at": "2026-08-30T19:54:53.887759Z"
     },
     {
       "id": "19dcc17f-5e6b-449c-9209-2ec8358cd7d5",
@@ -997,6 +940,19 @@
         "links_snapshot": [
           {
             "attributes": null,
+            "created_at": "2026-09-02T21:58:11.543639Z",
+            "from_id": "6fcb4db8-6441-436a-a308-8fd72c219ea6",
+            "id": "65100ee7-1a8c-4837-861c-4dd782d58181",
+            "suspect": false,
+            "to_id": "12cff868-2282-41cd-82a9-b8bfe708d9a6",
+            "type": "derives-from",
+            "updated_at": "2026-09-02T21:58:11.543639Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
             "created_at": "2026-09-02T20:46:43.308328Z",
             "from_id": "f473cb46-dc3a-4859-86aa-1ff2dc00ed99",
             "id": "3a5798d1-0bc1-47ca-9267-e3229ba5ff51",
@@ -1154,11 +1110,11 @@
         ],
         "status": "draft"
       },
-      "version": 13,
-      "valid_from": "2026-09-02T20:46:43.330522Z",
+      "version": 14,
+      "valid_from": "2026-09-02T21:58:11.561338Z",
       "valid_to": null,
       "created_at": "2026-08-30T19:54:06.221335Z",
-      "updated_at": "2026-09-02T20:46:43.330522Z"
+      "updated_at": "2026-09-02T21:58:11.561338Z"
     },
     {
       "id": "b19f3d92-8dea-44a4-aaf4-6e2ef95811b7",
@@ -1453,17 +1409,68 @@
       "updated_at": "2026-09-02T20:29:20.749692Z"
     },
     {
-      "id": "1f261541-3d4d-4e0a-b05c-6b15eea0b0bf",
+      "id": "8c8b86be-4730-49cb-9d95-93868a0c1938",
       "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
       "parent_id": "334f09a6-e9d0-4ae8-bd8b-ef25c578fab7",
-      "type": "test-case",
-      "ref": "TC-1",
-      "title": "Authorization matrix suite",
-      "body": "Automated Go suite exercising the role ladder: platform admin, org admin, direct grants, team grants, run-own-project, worker org scoping. Pass = every matrix cell returns the expected allow/deny.",
-      "sort_order": 660,
+      "type": "heading",
+      "ref": "HDG-14",
+      "title": "Functional",
+      "body": "",
+      "sort_order": 10,
       "status": "draft",
       "attributes": {
+        "status": "draft"
+      },
+      "version": 1,
+      "valid_from": "2026-09-02T22:05:39.099725Z",
+      "valid_to": null,
+      "created_at": "2026-09-02T22:05:39.099725Z",
+      "updated_at": "2026-09-02T22:05:39.099725Z"
+    },
+    {
+      "id": "498b4ebe-00c2-4f27-890c-c96fd627d22f",
+      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
+      "parent_id": "334f09a6-e9d0-4ae8-bd8b-ef25c578fab7",
+      "type": "heading",
+      "ref": "HDG-15",
+      "title": "Security",
+      "body": "",
+      "sort_order": 50,
+      "status": "draft",
+      "attributes": {
+        "status": "draft"
+      },
+      "version": 1,
+      "valid_from": "2026-09-02T22:05:39.382816Z",
+      "valid_to": null,
+      "created_at": "2026-09-02T22:05:39.382816Z",
+      "updated_at": "2026-09-02T22:05:39.382816Z"
+    },
+    {
+      "id": "f4e01c56-9184-4710-a74d-a78ac74be75c",
+      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
+      "parent_id": "379f0d9a-5464-4e29-8b36-7d2bc3c9e5aa",
+      "type": "requirement",
+      "ref": "REQ-17",
+      "title": "Tenant isolation",
+      "body": "No user, worker or agent shall read or write data belonging to a workspace they are not a member of.",
+      "sort_order": 10,
+      "status": "approved",
+      "attributes": {
         "links_snapshot": [
+          {
+            "attributes": null,
+            "created_at": "2026-08-30T19:54:40.284385Z",
+            "from_id": "edda457d-5856-4f47-b065-13ef3d18e121",
+            "id": "32edc31c-5a5d-4805-afdc-feb427ba900c",
+            "suspect": false,
+            "to_id": "f4e01c56-9184-4710-a74d-a78ac74be75c",
+            "type": "verifies",
+            "updated_at": "2026-08-30T19:54:40.284385Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
           {
             "attributes": null,
             "created_at": "2026-08-30T19:54:39.957945Z",
@@ -1479,124 +1486,53 @@
           },
           {
             "attributes": null,
-            "created_at": "2026-08-30T19:54:39.635721Z",
-            "from_id": "1f261541-3d4d-4e0a-b05c-6b15eea0b0bf",
-            "id": "f88f1325-dbb0-4e29-8b6b-a93f7ed8f4d6",
-            "suspect": false,
-            "to_id": "5f44f96d-fb91-4ddb-b76d-b531a9792ab8",
-            "type": "verifies",
-            "updated_at": "2026-08-30T19:54:39.635721Z",
-            "valid_from": "0001-01-01T00:00:00Z",
-            "valid_to": null,
-            "version": 1
-          }
-        ],
-        "status": "draft"
-      },
-      "version": 3,
-      "valid_from": "2026-08-30T19:54:39.966583Z",
-      "valid_to": null,
-      "created_at": "2026-08-30T19:54:21.76043Z",
-      "updated_at": "2026-08-30T19:54:39.966583Z"
-    },
-    {
-      "id": "edda457d-5856-4f47-b065-13ef3d18e121",
-      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
-      "parent_id": "334f09a6-e9d0-4ae8-bd8b-ef25c578fab7",
-      "type": "test-case",
-      "ref": "TC-2",
-      "title": "Tenant isolation end-to-end",
-      "body": "Live check with two accounts in different orgs: all cross-org reads and writes return 403/404; org directories and worker keys stay scoped; team-grant escalation raises effective role as designed.",
-      "sort_order": 670,
-      "status": "draft",
-      "attributes": {
-        "links_snapshot": [
-          {
-            "attributes": null,
-            "created_at": "2026-08-30T19:54:45.389719Z",
-            "from_id": "edda457d-5856-4f47-b065-13ef3d18e121",
-            "id": "4e9b6ca7-8aa9-4718-9b96-0cb056260026",
-            "suspect": false,
-            "to_id": "1da1546a-9c64-470e-8ec7-567b5601d7ba",
-            "type": "validates",
-            "updated_at": "2026-08-30T19:54:45.389719Z",
-            "valid_from": "0001-01-01T00:00:00Z",
-            "valid_to": null,
-            "version": 1
-          },
-          {
-            "attributes": null,
-            "created_at": "2026-08-30T19:54:40.616382Z",
-            "from_id": "edda457d-5856-4f47-b065-13ef3d18e121",
-            "id": "43ad2e37-f729-48bc-859b-abc53755f7a3",
-            "suspect": false,
-            "to_id": "58785d22-c280-405d-8856-163a815b8323",
-            "type": "verifies",
-            "updated_at": "2026-08-30T19:54:40.616382Z",
-            "valid_from": "0001-01-01T00:00:00Z",
-            "valid_to": null,
-            "version": 1
-          },
-          {
-            "attributes": null,
-            "created_at": "2026-08-30T19:54:40.284385Z",
-            "from_id": "edda457d-5856-4f47-b065-13ef3d18e121",
-            "id": "32edc31c-5a5d-4805-afdc-feb427ba900c",
+            "created_at": "2026-08-30T19:54:38.978845Z",
+            "from_id": "1ef984bd-76bb-4f05-a25a-c2fa0871c5c3",
+            "id": "2f7daa5f-e031-4d51-9936-10424ef0450c",
             "suspect": false,
             "to_id": "f4e01c56-9184-4710-a74d-a78ac74be75c",
-            "type": "verifies",
-            "updated_at": "2026-08-30T19:54:40.284385Z",
+            "type": "satisfies",
+            "updated_at": "2026-08-30T19:54:38.978845Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
+            "created_at": "2026-08-30T19:54:30.229478Z",
+            "from_id": "f4e01c56-9184-4710-a74d-a78ac74be75c",
+            "id": "adcdeb62-8a48-44ba-8582-ccdd50d15bd4",
+            "suspect": false,
+            "to_id": "1da1546a-9c64-470e-8ec7-567b5601d7ba",
+            "type": "derives-from",
+            "updated_at": "2026-08-30T19:54:30.229478Z",
             "valid_from": "0001-01-01T00:00:00Z",
             "valid_to": null,
             "version": 1
           }
         ],
-        "status": "draft"
+        "priority": "must",
+        "status": "approved",
+        "verification_method": "test"
       },
-      "version": 4,
-      "valid_from": "2026-08-30T19:54:45.399077Z",
+      "version": 7,
+      "valid_from": "2026-09-02T22:05:39.92132Z",
       "valid_to": null,
-      "created_at": "2026-08-30T19:54:22.085435Z",
-      "updated_at": "2026-08-30T19:54:45.399077Z"
+      "created_at": "2026-08-30T19:54:13.245427Z",
+      "updated_at": "2026-09-02T22:05:39.92132Z"
     },
     {
-      "id": "4b3dd557-2c3f-4c3c-a162-9231e2167401",
+      "id": "42892e2c-8081-4e11-98b5-38a31eb2a5c4",
       "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
-      "parent_id": "334f09a6-e9d0-4ae8-bd8b-ef25c578fab7",
-      "type": "test-case",
-      "ref": "TC-3",
-      "title": "Claim routing suite",
-      "body": "Automated suite plus live check: a personal key never claims another user's run; reserved runs return no-content to workspace workers during the grace window and are claimable after hosted_after expires; ownerless runs route immediately.",
-      "sort_order": 680,
-      "status": "draft",
+      "parent_id": "379f0d9a-5464-4e29-8b36-7d2bc3c9e5aa",
+      "type": "requirement",
+      "ref": "REQ-27",
+      "title": "Personal runner scoping",
+      "body": "A personal runner shall claim only runs launched by its owning member.",
+      "sort_order": 20,
+      "status": "approved",
       "attributes": {
         "links_snapshot": [
-          {
-            "attributes": null,
-            "created_at": "2026-08-30T19:54:45.686763Z",
-            "from_id": "4b3dd557-2c3f-4c3c-a162-9231e2167401",
-            "id": "3d23b493-1500-4ef2-a8c6-b0d561a3efa4",
-            "suspect": false,
-            "to_id": "a2b2ca88-d8af-472a-aaad-040814b783f4",
-            "type": "validates",
-            "updated_at": "2026-08-30T19:54:45.686763Z",
-            "valid_from": "0001-01-01T00:00:00Z",
-            "valid_to": null,
-            "version": 1
-          },
-          {
-            "attributes": null,
-            "created_at": "2026-08-30T19:54:41.247595Z",
-            "from_id": "4b3dd557-2c3f-4c3c-a162-9231e2167401",
-            "id": "29d00ce5-5410-4e6e-ad70-a35a76359032",
-            "suspect": false,
-            "to_id": "c214c4c3-8385-4761-8209-f188f98b0a3a",
-            "type": "verifies",
-            "updated_at": "2026-08-30T19:54:41.247595Z",
-            "valid_from": "0001-01-01T00:00:00Z",
-            "valid_to": null,
-            "version": 1
-          },
           {
             "attributes": null,
             "created_at": "2026-08-30T19:54:40.931048Z",
@@ -1609,60 +1545,54 @@
             "valid_from": "0001-01-01T00:00:00Z",
             "valid_to": null,
             "version": 1
-          }
-        ],
-        "status": "draft"
-      },
-      "version": 4,
-      "valid_from": "2026-08-30T19:54:45.702412Z",
-      "valid_to": null,
-      "created_at": "2026-08-30T19:54:22.371575Z",
-      "updated_at": "2026-08-30T19:54:45.702412Z"
-    },
-    {
-      "id": "2226625d-ec9a-4dcc-8769-eb0d455ddd7d",
-      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
-      "parent_id": "334f09a6-e9d0-4ae8-bd8b-ef25c578fab7",
-      "type": "test-case",
-      "ref": "TC-4",
-      "title": "Personal key rotation suite",
-      "body": "Automated suite: minting a new personal key revokes the previous one; revoked keys fail resolution; each member holds at most one active personal key per workspace.",
-      "sort_order": 690,
-      "status": "draft",
-      "attributes": {
-        "links_snapshot": [
+          },
           {
             "attributes": null,
-            "created_at": "2026-08-30T19:54:41.566536Z",
-            "from_id": "2226625d-ec9a-4dcc-8769-eb0d455ddd7d",
-            "id": "283377c2-5fd7-4cf2-aa29-521ae0684182",
+            "created_at": "2026-08-30T19:54:36.451295Z",
+            "from_id": "b61be707-a0ca-4d41-8c2a-99fcf4a14858",
+            "id": "ceaa6cce-b3db-403c-bdb5-f41e310e28ba",
             "suspect": false,
-            "to_id": "1ca987a2-5222-4070-bccc-f6dbf87ba319",
-            "type": "verifies",
-            "updated_at": "2026-08-30T19:54:41.566536Z",
+            "to_id": "42892e2c-8081-4e11-98b5-38a31eb2a5c4",
+            "type": "satisfies",
+            "updated_at": "2026-08-30T19:54:36.451295Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
+            "created_at": "2026-08-30T19:54:33.550081Z",
+            "from_id": "42892e2c-8081-4e11-98b5-38a31eb2a5c4",
+            "id": "34e6d2d4-fd01-4efb-b30b-64e903b06d20",
+            "suspect": false,
+            "to_id": "a2b2ca88-d8af-472a-aaad-040814b783f4",
+            "type": "derives-from",
+            "updated_at": "2026-08-30T19:54:33.550081Z",
             "valid_from": "0001-01-01T00:00:00Z",
             "valid_to": null,
             "version": 1
           }
         ],
-        "status": "draft"
+        "priority": "must",
+        "status": "approved",
+        "verification_method": "test"
       },
-      "version": 2,
-      "valid_from": "2026-08-30T19:54:41.583638Z",
+      "version": 6,
+      "valid_from": "2026-09-02T22:05:40.188006Z",
       "valid_to": null,
-      "created_at": "2026-08-30T19:54:22.644348Z",
-      "updated_at": "2026-08-30T19:54:41.583638Z"
+      "created_at": "2026-08-30T19:54:16.840361Z",
+      "updated_at": "2026-09-02T22:05:40.188006Z"
     },
     {
-      "id": "d43e4eb0-3fb1-4fb1-9a04-215035402167",
+      "id": "de6d7e57-f7a8-46e0-8793-6febed905430",
       "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
-      "parent_id": "334f09a6-e9d0-4ae8-bd8b-ef25c578fab7",
-      "type": "test-case",
-      "ref": "TC-5",
-      "title": "Hosted token-mode smoke test",
-      "body": "openv-worker image boots with an API key env, reports the CLI logged in via API-key mode without any interactive login, and excludes repo-access runs from its claims.",
-      "sort_order": 700,
-      "status": "draft",
+      "parent_id": "379f0d9a-5464-4e29-8b36-7d2bc3c9e5aa",
+      "type": "requirement",
+      "ref": "REQ-30",
+      "title": "Hosted repo exclusion",
+      "body": "Hosted runners shall refuse runs requiring repository access; such runs shall wait for a personal or workspace runner.",
+      "sort_order": 30,
+      "status": "approved",
       "attributes": {
         "links_snapshot": [
           {
@@ -1680,518 +1610,99 @@
           },
           {
             "attributes": null,
-            "created_at": "2026-08-30T19:54:41.889832Z",
-            "from_id": "d43e4eb0-3fb1-4fb1-9a04-215035402167",
-            "id": "8b746af3-40c6-4442-8fbe-f6645813fa60",
+            "created_at": "2026-08-30T19:54:37.746767Z",
+            "from_id": "e883232c-4e69-4183-8c03-18cc6892c221",
+            "id": "c34e4672-7af2-4885-b140-3f5a48f0731f",
             "suspect": false,
-            "to_id": "f806dd42-6b24-42df-9c34-33fd07a811b1",
-            "type": "verifies",
-            "updated_at": "2026-08-30T19:54:41.889832Z",
+            "to_id": "de6d7e57-f7a8-46e0-8793-6febed905430",
+            "type": "satisfies",
+            "updated_at": "2026-08-30T19:54:37.746767Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
+            "created_at": "2026-08-30T19:54:34.495636Z",
+            "from_id": "de6d7e57-f7a8-46e0-8793-6febed905430",
+            "id": "8fc285ee-33a4-4e80-9d5b-4b717fd342e6",
+            "suspect": false,
+            "to_id": "155beaf0-28d4-4993-9a71-4af1381c1793",
+            "type": "derives-from",
+            "updated_at": "2026-08-30T19:54:34.495636Z",
             "valid_from": "0001-01-01T00:00:00Z",
             "valid_to": null,
             "version": 1
           }
         ],
-        "status": "draft"
+        "priority": "must",
+        "status": "approved",
+        "verification_method": "test"
       },
-      "version": 3,
-      "valid_from": "2026-08-30T19:54:42.230439Z",
+      "version": 6,
+      "valid_from": "2026-09-02T22:05:40.487267Z",
       "valid_to": null,
-      "created_at": "2026-08-30T19:54:22.9485Z",
-      "updated_at": "2026-08-30T19:54:42.230439Z"
+      "created_at": "2026-08-30T19:54:17.694606Z",
+      "updated_at": "2026-09-02T22:05:40.487267Z"
     },
     {
-      "id": "61a04cf8-afc5-4bd3-89db-e7822d2667c5",
+      "id": "1ca987a2-5222-4070-bccc-f6dbf87ba319",
       "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
-      "parent_id": "334f09a6-e9d0-4ae8-bd8b-ef25c578fab7",
-      "type": "test-case",
-      "ref": "TC-6",
-      "title": "Connector pairing end-to-end",
-      "body": "On a real host: pairing deep link opens the connector, the one-time code exchanges for a personal key (second use rejected, expiry enforced), config is saved, agentd starts and reports online; uninstall removes the protocol handler.",
-      "sort_order": 710,
-      "status": "draft",
+      "parent_id": "379f0d9a-5464-4e29-8b36-7d2bc3c9e5aa",
+      "type": "requirement",
+      "ref": "REQ-31",
+      "title": "Hashed credentials, shown once",
+      "body": "Worker keys, agent run tokens and pairing codes shall be stored as sha256 hashes with plaintext revealed exactly once at creation.",
+      "sort_order": 40,
+      "status": "approved",
       "attributes": {
         "links_snapshot": [
           {
             "attributes": null,
-            "created_at": "2026-08-30T19:54:46.00631Z",
-            "from_id": "61a04cf8-afc5-4bd3-89db-e7822d2667c5",
-            "id": "c3e6664d-dea2-4f84-874a-9c526b683f39",
+            "created_at": "2026-08-30T19:54:41.566536Z",
+            "from_id": "2226625d-ec9a-4dcc-8769-eb0d455ddd7d",
+            "id": "283377c2-5fd7-4cf2-aa29-521ae0684182",
+            "suspect": false,
+            "to_id": "1ca987a2-5222-4070-bccc-f6dbf87ba319",
+            "type": "verifies",
+            "updated_at": "2026-08-30T19:54:41.566536Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
+            "created_at": "2026-08-30T19:54:34.839376Z",
+            "from_id": "1ca987a2-5222-4070-bccc-f6dbf87ba319",
+            "id": "b96e7c8b-52cf-4905-8db3-f60066a071ce",
             "suspect": false,
             "to_id": "0627a2b0-889e-488b-b053-d78992d97a93",
-            "type": "validates",
-            "updated_at": "2026-08-30T19:54:46.00631Z",
-            "valid_from": "0001-01-01T00:00:00Z",
-            "valid_to": null,
-            "version": 1
-          },
-          {
-            "attributes": null,
-            "created_at": "2026-08-30T19:54:42.845776Z",
-            "from_id": "61a04cf8-afc5-4bd3-89db-e7822d2667c5",
-            "id": "b69aebe2-cc65-4c88-b1a9-1bac67fcf3c7",
-            "suspect": false,
-            "to_id": "53d671e3-c473-4240-84f0-a638fd5258da",
-            "type": "verifies",
-            "updated_at": "2026-08-30T19:54:42.845776Z",
-            "valid_from": "0001-01-01T00:00:00Z",
-            "valid_to": null,
-            "version": 1
-          },
-          {
-            "attributes": null,
-            "created_at": "2026-08-30T19:54:42.525904Z",
-            "from_id": "61a04cf8-afc5-4bd3-89db-e7822d2667c5",
-            "id": "0855ef75-41d0-4ca0-a6dd-0477763551d8",
-            "suspect": false,
-            "to_id": "19336abe-88a4-4206-ba20-100efbe3b909",
-            "type": "verifies",
-            "updated_at": "2026-08-30T19:54:42.525904Z",
+            "type": "derives-from",
+            "updated_at": "2026-08-30T19:54:34.839376Z",
             "valid_from": "0001-01-01T00:00:00Z",
             "valid_to": null,
             "version": 1
           }
         ],
-        "status": "draft"
-      },
-      "version": 4,
-      "valid_from": "2026-08-30T19:54:46.014309Z",
-      "valid_to": null,
-      "created_at": "2026-08-30T19:54:23.233151Z",
-      "updated_at": "2026-08-30T19:54:46.014309Z"
-    },
-    {
-      "id": "56172312-5538-4670-a470-354877a71d72",
-      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
-      "parent_id": "334f09a6-e9d0-4ae8-bd8b-ef25c578fab7",
-      "type": "test-case",
-      "ref": "TC-7",
-      "title": "Agent proposal loop end-to-end",
-      "body": "Live run: agent claims a run with a run token, submits an artifact change, the change lands as a pending proposal, human approval materializes the artifact with correct attribution.",
-      "sort_order": 720,
-      "status": "draft",
-      "attributes": {
-        "links_snapshot": [
-          {
-            "attributes": null,
-            "created_at": "2026-08-30T19:54:46.353322Z",
-            "from_id": "56172312-5538-4670-a470-354877a71d72",
-            "id": "ca7fbf1c-b2c1-4487-aabd-28e68b7c657e",
-            "suspect": false,
-            "to_id": "8324454a-b5a6-4625-9075-314728afc142",
-            "type": "validates",
-            "updated_at": "2026-08-30T19:54:46.353322Z",
-            "valid_from": "0001-01-01T00:00:00Z",
-            "valid_to": null,
-            "version": 1
-          },
-          {
-            "attributes": null,
-            "created_at": "2026-08-30T19:54:43.220809Z",
-            "from_id": "56172312-5538-4670-a470-354877a71d72",
-            "id": "f5e13bc9-61ba-4b7b-975e-56e6687bb0af",
-            "suspect": false,
-            "to_id": "9e3c1eb3-d43d-4782-bb1f-972f61faa2fb",
-            "type": "verifies",
-            "updated_at": "2026-08-30T19:54:43.220809Z",
-            "valid_from": "0001-01-01T00:00:00Z",
-            "valid_to": null,
-            "version": 1
-          }
-        ],
-        "status": "draft"
-      },
-      "version": 3,
-      "valid_from": "2026-08-30T19:54:46.361867Z",
-      "valid_to": null,
-      "created_at": "2026-08-30T19:54:23.559593Z",
-      "updated_at": "2026-08-30T19:54:46.361867Z"
-    },
-    {
-      "id": "f1069c32-af4a-4a3b-b9ee-2e477a259dac",
-      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
-      "parent_id": "334f09a6-e9d0-4ae8-bd8b-ef25c578fab7",
-      "type": "test-case",
-      "ref": "TC-8",
-      "title": "Link rule validation suite",
-      "body": "Automated suite: each link type accepts its allowed from/to artifact types and rejects all others with a descriptive error.",
-      "sort_order": 730,
-      "status": "draft",
-      "attributes": {
-        "links_snapshot": [
-          {
-            "attributes": null,
-            "created_at": "2026-08-30T19:54:43.542773Z",
-            "from_id": "f1069c32-af4a-4a3b-b9ee-2e477a259dac",
-            "id": "d9b6cf52-0be4-48fd-b500-a10a52f446f3",
-            "suspect": false,
-            "to_id": "33a05633-7b50-4932-a465-20f304180e15",
-            "type": "verifies",
-            "updated_at": "2026-08-30T19:54:43.542773Z",
-            "valid_from": "0001-01-01T00:00:00Z",
-            "valid_to": null,
-            "version": 1
-          }
-        ],
-        "status": "draft"
-      },
-      "version": 2,
-      "valid_from": "2026-08-30T19:54:43.550646Z",
-      "valid_to": null,
-      "created_at": "2026-08-30T19:54:23.849878Z",
-      "updated_at": "2026-08-30T19:54:43.550646Z"
-    },
-    {
-      "id": "d6ac42df-c366-4ba3-88a1-516eabaffe11",
-      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
-      "parent_id": "334f09a6-e9d0-4ae8-bd8b-ef25c578fab7",
-      "type": "test-case",
-      "ref": "TC-9",
-      "title": "V&V dashboard verification",
-      "body": "Coverage, traceability matrix and gap views render correct figures for a project with known links and test-run history.",
-      "sort_order": 740,
-      "status": "draft",
-      "attributes": {
-        "links_snapshot": [
-          {
-            "attributes": null,
-            "created_at": "2026-08-30T19:54:46.658313Z",
-            "from_id": "d6ac42df-c366-4ba3-88a1-516eabaffe11",
-            "id": "6901cfdb-0f31-42a1-8896-44f1559e5bbd",
-            "suspect": false,
-            "to_id": "12cff868-2282-41cd-82a9-b8bfe708d9a6",
-            "type": "validates",
-            "updated_at": "2026-08-30T19:54:46.658313Z",
-            "valid_from": "0001-01-01T00:00:00Z",
-            "valid_to": null,
-            "version": 1
-          },
-          {
-            "attributes": null,
-            "created_at": "2026-08-30T19:54:44.478372Z",
-            "from_id": "d6ac42df-c366-4ba3-88a1-516eabaffe11",
-            "id": "cd23130c-9755-4653-89f5-3c815947658d",
-            "suspect": false,
-            "to_id": "f7bff8e7-4d24-447f-9bfd-f8a9facdb818",
-            "type": "verifies",
-            "updated_at": "2026-08-30T19:54:44.478372Z",
-            "valid_from": "0001-01-01T00:00:00Z",
-            "valid_to": null,
-            "version": 1
-          },
-          {
-            "attributes": null,
-            "created_at": "2026-08-30T19:54:44.167964Z",
-            "from_id": "d6ac42df-c366-4ba3-88a1-516eabaffe11",
-            "id": "7f2a6496-87fe-4c86-bb1b-ed4c61041e0f",
-            "suspect": false,
-            "to_id": "e7aa8b43-e18b-4276-9d28-5d4378693b53",
-            "type": "verifies",
-            "updated_at": "2026-08-30T19:54:44.167964Z",
-            "valid_from": "0001-01-01T00:00:00Z",
-            "valid_to": null,
-            "version": 1
-          },
-          {
-            "attributes": null,
-            "created_at": "2026-08-30T19:54:43.8663Z",
-            "from_id": "d6ac42df-c366-4ba3-88a1-516eabaffe11",
-            "id": "c124af13-dc69-40ea-a9a6-93896e50d815",
-            "suspect": false,
-            "to_id": "cb5b0125-1eb6-41f3-82fa-f07d98823b73",
-            "type": "verifies",
-            "updated_at": "2026-08-30T19:54:43.8663Z",
-            "valid_from": "0001-01-01T00:00:00Z",
-            "valid_to": null,
-            "version": 1
-          }
-        ],
-        "status": "draft"
+        "priority": "must",
+        "status": "approved",
+        "verification_method": "test"
       },
       "version": 5,
-      "valid_from": "2026-08-30T19:54:46.670704Z",
+      "valid_from": "2026-09-02T22:05:40.943594Z",
       "valid_to": null,
-      "created_at": "2026-08-30T19:54:24.180642Z",
-      "updated_at": "2026-08-30T19:54:46.670704Z"
+      "created_at": "2026-08-30T19:54:17.979225Z",
+      "updated_at": "2026-09-02T22:05:40.943594Z"
     },
     {
-      "id": "c53efbe2-e3f8-4d0e-a666-d7f2f1fd8f8a",
+      "id": "acbe3de0-58d6-4e82-9e56-a00ede62af26",
       "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
-      "parent_id": "334f09a6-e9d0-4ae8-bd8b-ef25c578fab7",
-      "type": "test-case",
-      "ref": "TC-10",
-      "title": "Interview elicitation flow",
-      "body": "An invited external user opens the interview link without an account, holds a conversation, and the resulting artifacts appear as interview-tagged drafts pending member review.",
-      "sort_order": 750,
-      "status": "draft",
-      "attributes": {
-        "links_snapshot": [
-          {
-            "attributes": null,
-            "created_at": "2026-08-30T19:54:46.960726Z",
-            "from_id": "c53efbe2-e3f8-4d0e-a666-d7f2f1fd8f8a",
-            "id": "7dd43b10-7977-4d9b-8d36-a8fa42d51aae",
-            "suspect": false,
-            "to_id": "b19f3d92-8dea-44a4-aaf4-6e2ef95811b7",
-            "type": "validates",
-            "updated_at": "2026-08-30T19:54:46.960726Z",
-            "valid_from": "0001-01-01T00:00:00Z",
-            "valid_to": null,
-            "version": 1
-          },
-          {
-            "attributes": null,
-            "created_at": "2026-08-30T19:54:45.081385Z",
-            "from_id": "c53efbe2-e3f8-4d0e-a666-d7f2f1fd8f8a",
-            "id": "a5816ab6-5ee9-4a87-be43-71d234db5700",
-            "suspect": false,
-            "to_id": "9c251e69-2106-4433-a084-a49cbc52a91d",
-            "type": "verifies",
-            "updated_at": "2026-08-30T19:54:45.081385Z",
-            "valid_from": "0001-01-01T00:00:00Z",
-            "valid_to": null,
-            "version": 1
-          },
-          {
-            "attributes": null,
-            "created_at": "2026-08-30T19:54:44.778232Z",
-            "from_id": "c53efbe2-e3f8-4d0e-a666-d7f2f1fd8f8a",
-            "id": "6e6e72aa-ec46-4d68-8303-adcc96abf9ec",
-            "suspect": false,
-            "to_id": "373b61ad-9b84-4c06-ae32-2dd1994835ae",
-            "type": "verifies",
-            "updated_at": "2026-08-30T19:54:44.778232Z",
-            "valid_from": "0001-01-01T00:00:00Z",
-            "valid_to": null,
-            "version": 1
-          }
-        ],
-        "status": "draft"
-      },
-      "version": 4,
-      "valid_from": "2026-08-30T19:54:46.968217Z",
-      "valid_to": null,
-      "created_at": "2026-08-30T19:54:24.47223Z",
-      "updated_at": "2026-08-30T19:54:46.968217Z"
-    },
-    {
-      "id": "a26825fb-030c-4861-857d-76f77b3bec11",
-      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
-      "parent_id": "334f09a6-e9d0-4ae8-bd8b-ef25c578fab7",
-      "type": "test-case",
-      "ref": "TC-11",
-      "title": "Workspace deletion lifecycle suite",
-      "body": "Postgres integration tests (internal/persistence/postgres/org_delete_test.go): soft delete hides the workspace from listings and voids role checks; restore works within the grace window and is refused on a live workspace; personal workspaces are refused; the expiry sweep purges the workspace row, projects, artifacts, links, and chatter without touching other workspaces.",
-      "sort_order": 760,
-      "status": "draft",
-      "attributes": {
-        "links_snapshot": [
-          {
-            "attributes": null,
-            "created_at": "2026-08-30T19:55:28.75997Z",
-            "from_id": "a26825fb-030c-4861-857d-76f77b3bec11",
-            "id": "2c089f6c-bc2a-4c29-8b67-52d37e76271e",
-            "suspect": false,
-            "to_id": "c548a9d9-44b6-4507-94e1-7354c41133c7",
-            "type": "verifies",
-            "updated_at": "2026-08-30T19:55:28.75997Z",
-            "valid_from": "0001-01-01T00:00:00Z",
-            "valid_to": null,
-            "version": 1
-          }
-        ],
-        "status": "draft"
-      },
-      "version": 2,
-      "valid_from": "2026-08-30T19:55:28.773855Z",
-      "valid_to": null,
-      "created_at": "2026-08-30T19:55:26.252502Z",
-      "updated_at": "2026-08-30T19:55:28.773855Z"
-    },
-    {
-      "id": "5d593442-3e6b-47ee-980b-4c1680ef5e22",
-      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
-      "parent_id": "334f09a6-e9d0-4ae8-bd8b-ef25c578fab7",
-      "type": "test-case",
-      "ref": "TC-12",
-      "title": "Section numbering suite",
-      "body": "Go suites over artifacts.SectionNumbers and the artifact list handler: nesting by level, renumbering on reorder, headings only, a heading under a non-heading parent, determinism for equal sort orders, broken trees, stamping only the returned page, numbering a page from the whole document, and numbering skipped unless the request asks for it.",
-      "sort_order": 761,
-      "status": "draft",
-      "attributes": {
-        "links_snapshot": [
-          {
-            "attributes": null,
-            "created_at": "2026-09-02T20:29:18.347107Z",
-            "from_id": "5d593442-3e6b-47ee-980b-4c1680ef5e22",
-            "id": "b4966778-e546-4aa4-a17e-3f1a3a452fff",
-            "suspect": false,
-            "to_id": "cb1ee990-764f-41f5-8d12-d52d002b33f0",
-            "type": "verifies",
-            "updated_at": "2026-09-02T20:29:18.347107Z",
-            "valid_from": "0001-01-01T00:00:00Z",
-            "valid_to": null,
-            "version": 1
-          }
-        ],
-        "status": "draft"
-      },
-      "version": 2,
-      "valid_from": "2026-09-02T20:29:18.354989Z",
-      "valid_to": null,
-      "created_at": "2026-09-02T20:29:12.605299Z",
-      "updated_at": "2026-09-02T20:29:18.354989Z"
-    },
-    {
-      "id": "ecbed1a4-be82-4b31-9050-f30864aa0674",
-      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
-      "parent_id": "334f09a6-e9d0-4ae8-bd8b-ef25c578fab7",
-      "type": "test-case",
-      "ref": "TC-13",
-      "title": "Reference and section number rendering in reports",
-      "body": "The rendered DOCX and PDF report titles each artifact with its stable reference and shows a section's document number, so an exported document can be cross-referenced to an address rather than to a repeated title. Covers the reporting surfaces; the detail heading, tree rows and traceability rows remain verified by demonstration.",
-      "sort_order": 762,
-      "status": "draft",
-      "attributes": {
-        "links_snapshot": [
-          {
-            "attributes": null,
-            "created_at": "2026-09-02T20:29:18.682133Z",
-            "from_id": "ecbed1a4-be82-4b31-9050-f30864aa0674",
-            "id": "5c561d49-3734-4920-b5ac-18c742015c24",
-            "suspect": false,
-            "to_id": "b5846f74-5db9-49a7-999c-2ae268c3f8d6",
-            "type": "verifies",
-            "updated_at": "2026-09-02T20:29:18.682133Z",
-            "valid_from": "0001-01-01T00:00:00Z",
-            "valid_to": null,
-            "version": 1
-          }
-        ],
-        "status": "draft"
-      },
-      "version": 2,
-      "valid_from": "2026-09-02T20:29:18.688303Z",
-      "valid_to": null,
-      "created_at": "2026-09-02T20:29:12.925121Z",
-      "updated_at": "2026-09-02T20:29:18.688303Z"
-    },
-    {
-      "id": "4014b740-6bc4-40df-8b65-b38bad2f6e17",
-      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
-      "parent_id": "334f09a6-e9d0-4ae8-bd8b-ef25c578fab7",
-      "type": "test-case",
-      "ref": "TC-14",
-      "title": "Shared demo-product pool suite",
-      "body": "Domain and handler suites: sanitization to inert text, refusal of links and agent-suggestion markup, per-field caps, name dedupe, per-workspace daily limit, pool ceiling, publication refused for agent run tokens and host worker keys, publication attributed to the calling person, author identity absent from every response, report auto-hide at three distinct reporters, and admin-only deletion. Also exercised against real Postgres in CI.",
-      "sort_order": 763,
-      "status": "draft",
-      "attributes": {
-        "links_snapshot": [
-          {
-            "attributes": null,
-            "created_at": "2026-09-02T20:29:20.419437Z",
-            "from_id": "4014b740-6bc4-40df-8b65-b38bad2f6e17",
-            "id": "78e1244e-5fdd-463d-ab85-6c659fffd3c5",
-            "suspect": false,
-            "to_id": "006182cf-b68d-488e-bea9-a7f7a35f23ea",
-            "type": "validates",
-            "updated_at": "2026-09-02T20:29:20.419437Z",
-            "valid_from": "0001-01-01T00:00:00Z",
-            "valid_to": null,
-            "version": 1
-          },
-          {
-            "attributes": null,
-            "created_at": "2026-09-02T20:29:19.332679Z",
-            "from_id": "4014b740-6bc4-40df-8b65-b38bad2f6e17",
-            "id": "94287c07-a1e8-458a-95c8-b725855bef1e",
-            "suspect": false,
-            "to_id": "050a371d-5478-4b5a-8b7e-8cc5697351d5",
-            "type": "verifies",
-            "updated_at": "2026-09-02T20:29:19.332679Z",
-            "valid_from": "0001-01-01T00:00:00Z",
-            "valid_to": null,
-            "version": 1
-          },
-          {
-            "attributes": null,
-            "created_at": "2026-09-02T20:29:19.004196Z",
-            "from_id": "4014b740-6bc4-40df-8b65-b38bad2f6e17",
-            "id": "67439277-f371-4891-a55c-ef88820af881",
-            "suspect": false,
-            "to_id": "1b4fcfe0-466b-4d25-a03d-a0bb466e7431",
-            "type": "verifies",
-            "updated_at": "2026-09-02T20:29:19.004196Z",
-            "valid_from": "0001-01-01T00:00:00Z",
-            "valid_to": null,
-            "version": 1
-          }
-        ],
-        "status": "draft"
-      },
-      "version": 4,
-      "valid_from": "2026-09-02T20:29:20.425978Z",
-      "valid_to": null,
-      "created_at": "2026-09-02T20:29:13.245961Z",
-      "updated_at": "2026-09-02T20:29:20.425978Z"
-    },
-    {
-      "id": "16397288-be92-4d09-943b-90fd4d2f9aa0",
-      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
-      "parent_id": "334f09a6-e9d0-4ae8-bd8b-ef25c578fab7",
-      "type": "test-case",
-      "ref": "TC-15",
-      "title": "Invention quality gate suite",
-      "body": "Client suite over the roller: the gate accepts every one of 300 built-in rolls, names the failure modes that made early inventions weak, tells a retry exactly what to fix, keeps inventions across rerolls, and rolls community products alongside built-ins without tagging somebody else's product as this browser's invention.",
-      "sort_order": 764,
-      "status": "draft",
-      "attributes": {
-        "links_snapshot": [
-          {
-            "attributes": null,
-            "created_at": "2026-09-02T20:29:20.736491Z",
-            "from_id": "16397288-be92-4d09-943b-90fd4d2f9aa0",
-            "id": "03effc68-6b01-4a53-af4b-8fa71e3238f2",
-            "suspect": false,
-            "to_id": "006182cf-b68d-488e-bea9-a7f7a35f23ea",
-            "type": "validates",
-            "updated_at": "2026-09-02T20:29:20.736491Z",
-            "valid_from": "0001-01-01T00:00:00Z",
-            "valid_to": null,
-            "version": 1
-          },
-          {
-            "attributes": null,
-            "created_at": "2026-09-02T20:29:19.684069Z",
-            "from_id": "16397288-be92-4d09-943b-90fd4d2f9aa0",
-            "id": "c2495262-1123-4f81-b03c-4be61912560b",
-            "suspect": false,
-            "to_id": "296e8231-2539-4d68-a99a-7e1b07548c53",
-            "type": "verifies",
-            "updated_at": "2026-09-02T20:29:19.684069Z",
-            "valid_from": "0001-01-01T00:00:00Z",
-            "valid_to": null,
-            "version": 1
-          }
-        ],
-        "status": "draft"
-      },
-      "version": 3,
-      "valid_from": "2026-09-02T20:29:20.743206Z",
-      "valid_to": null,
-      "created_at": "2026-09-02T20:29:13.551484Z",
-      "updated_at": "2026-09-02T20:29:20.743206Z"
-    },
-    {
-      "id": "a68a6229-fcd5-4cb3-b774-92f44b726ef7",
-      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
-      "parent_id": "334f09a6-e9d0-4ae8-bd8b-ef25c578fab7",
-      "type": "test-case",
-      "ref": "TC-16",
-      "title": "Copilot prompt isolation test",
-      "body": "The guided copilot prompt declares the product profile, wizard state and transcript as content and never as instructions, and fences the state block.",
-      "sort_order": 765,
+      "parent_id": "379f0d9a-5464-4e29-8b36-7d2bc3c9e5aa",
+      "type": "requirement",
+      "ref": "REQ-41",
+      "title": "Untrusted content isolation in agent prompts",
+      "body": "A prompt the platform builds for a member's own copilot shall state up front that the product profile, wizard state and transcript are content and never instructions, and shall fence the state block, so that text authored in another tenant \u2014 a rolled community product seeds the wizard \u2014 cannot read as an order to an agent running on the member's own machine with their credentials.",
+      "sort_order": 50,
       "status": "draft",
       "attributes": {
         "links_snapshot": [
@@ -2207,156 +1718,31 @@
             "valid_from": "0001-01-01T00:00:00Z",
             "valid_to": null,
             "version": 1
-          }
-        ],
-        "status": "draft"
-      },
-      "version": 2,
-      "valid_from": "2026-09-02T20:29:20.088984Z",
-      "valid_to": null,
-      "created_at": "2026-09-02T20:29:13.88619Z",
-      "updated_at": "2026-09-02T20:29:20.088984Z"
-    },
-    {
-      "id": "7cb6d84e-d60b-4d16-9f0b-e6268152cd66",
-      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
-      "parent_id": "334f09a6-e9d0-4ae8-bd8b-ef25c578fab7",
-      "type": "test-case",
-      "ref": "TC-17",
-      "title": "MCP maintenance tool suite",
-      "body": "Go suite over the MCP tool table: create_baseline, get_vv_coverage (lean projection by default, full report on detail), get_vv_gaps, close_test_run (only completed/aborted reach the API) and record_test_result (evidence is a list of attachment IDs, so a bare string is wrapped and the API stops rejecting the body); every tool surfaces API errors; the openv-mcp entrypoint prefers a run token, accepts a workspace runner key, and refuses to start with neither.",
-      "sort_order": 766,
-      "status": "draft",
-      "attributes": {
-        "links_snapshot": [
-          {
-            "attributes": null,
-            "created_at": "2026-09-02T20:46:47.561737Z",
-            "from_id": "7cb6d84e-d60b-4d16-9f0b-e6268152cd66",
-            "id": "2d214d77-814a-48b2-85ee-31f444af646d",
-            "suspect": false,
-            "to_id": "f473cb46-dc3a-4859-86aa-1ff2dc00ed99",
-            "type": "verifies",
-            "updated_at": "2026-09-02T20:46:47.561737Z",
-            "valid_from": "0001-01-01T00:00:00Z",
-            "valid_to": null,
-            "version": 1
           },
           {
             "attributes": null,
-            "created_at": "2026-09-02T20:46:46.838321Z",
-            "from_id": "7cb6d84e-d60b-4d16-9f0b-e6268152cd66",
-            "id": "d84c05af-96b6-48c5-9549-1de832f55d56",
+            "created_at": "2026-09-02T20:29:16.624499Z",
+            "from_id": "acbe3de0-58d6-4e82-9e56-a00ede62af26",
+            "id": "c945d85b-659a-4ca8-8d0b-277a81a3e0dc",
             "suspect": false,
-            "to_id": "aed7c942-3829-4c35-bad0-f23d32301766",
-            "type": "verifies",
-            "updated_at": "2026-09-02T20:46:46.838321Z",
+            "to_id": "8324454a-b5a6-4625-9075-314728afc142",
+            "type": "derives-from",
+            "updated_at": "2026-09-02T20:29:16.624499Z",
             "valid_from": "0001-01-01T00:00:00Z",
             "valid_to": null,
             "version": 1
           }
         ],
-        "status": "draft"
+        "priority": "must",
+        "status": "draft",
+        "verification_method": "test",
+        "verification_status": "verified"
       },
       "version": 4,
-      "valid_from": "2026-09-02T20:55:17.634444Z",
+      "valid_from": "2026-09-02T22:05:41.267367Z",
       "valid_to": null,
-      "created_at": "2026-09-02T20:46:23.670454Z",
-      "updated_at": "2026-09-02T20:55:17.634444Z"
-    },
-    {
-      "id": "74c51a0b-ecdf-4743-8bb7-24faa2f3b721",
-      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
-      "parent_id": "334f09a6-e9d0-4ae8-bd8b-ef25c578fab7",
-      "type": "test-case",
-      "ref": "TC-19",
-      "title": "Wizard section filing suite",
-      "body": "Client suite over the wizard's section helpers: every NFR and hazard category files under its own sub-section key, every quality attribute an NFR can carry has a matching verification section, Functional leads the verification sections, a category the step no longer offers falls back to the step's own heading rather than inventing one, a step without sub-sections is left alone, and each sub-section is named for its category.",
-      "sort_order": 766,
-      "status": "draft",
-      "attributes": {
-        "links_snapshot": [
-          {
-            "attributes": null,
-            "created_at": "2026-09-02T21:50:52.580569Z",
-            "from_id": "74c51a0b-ecdf-4743-8bb7-24faa2f3b721",
-            "id": "42358c0a-353e-4b50-8a23-887fe31f035f",
-            "suspect": false,
-            "to_id": "1f1fef91-5d25-40a2-a659-a87476f64c89",
-            "type": "verifies",
-            "updated_at": "2026-09-02T21:50:52.580569Z",
-            "valid_from": "0001-01-01T00:00:00Z",
-            "valid_to": null,
-            "version": 1
-          }
-        ],
-        "status": "draft"
-      },
-      "version": 2,
-      "valid_from": "2026-09-02T21:50:52.589418Z",
-      "valid_to": null,
-      "created_at": "2026-09-02T21:50:51.985012Z",
-      "updated_at": "2026-09-02T21:50:52.589418Z"
-    },
-    {
-      "id": "848aff27-3ea4-43cf-814e-e83f4475aae8",
-      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
-      "parent_id": "334f09a6-e9d0-4ae8-bd8b-ef25c578fab7",
-      "type": "test-case",
-      "ref": "TC-18",
-      "title": "Quality rule set suite",
-      "body": "Go suite over the rule set: the same sentence produces a weak-word finding under \"shall\" and none under RFC 2119; the off-convention rule fires on the other vocabulary's keyword in each direction; a re-graded rule costs more score and an off rule produces nothing; resolution layers defaults, workspace and project with each level overriding only its own keys; junk in stored settings is dropped rather than fatal; an invalid rule set is refused before storage; clearing an override restores inheritance and removes the stored key; a settings read failure degrades to the defaults; the report carries its rule set; and the MCP tools return the resolved rules without the editor catalog.",
-      "sort_order": 767,
-      "status": "draft",
-      "attributes": {
-        "links_snapshot": [
-          {
-            "attributes": null,
-            "created_at": "2026-09-02T21:41:28.971144Z",
-            "from_id": "848aff27-3ea4-43cf-814e-e83f4475aae8",
-            "id": "726dc2f2-ae13-40d3-a8ca-707afa421e0f",
-            "suspect": false,
-            "to_id": "37808fde-6afd-40d3-b889-0a795e3c38cc",
-            "type": "verifies",
-            "updated_at": "2026-09-02T21:41:28.971144Z",
-            "valid_from": "0001-01-01T00:00:00Z",
-            "valid_to": null,
-            "version": 1
-          },
-          {
-            "attributes": null,
-            "created_at": "2026-09-02T21:41:28.257241Z",
-            "from_id": "848aff27-3ea4-43cf-814e-e83f4475aae8",
-            "id": "536166f1-9248-4dca-be8c-024c000bd4e3",
-            "suspect": false,
-            "to_id": "56502167-fb38-49f7-8d01-9d4483e243c0",
-            "type": "verifies",
-            "updated_at": "2026-09-02T21:41:28.257241Z",
-            "valid_from": "0001-01-01T00:00:00Z",
-            "valid_to": null,
-            "version": 1
-          },
-          {
-            "attributes": null,
-            "created_at": "2026-09-02T21:41:27.572471Z",
-            "from_id": "848aff27-3ea4-43cf-814e-e83f4475aae8",
-            "id": "e309a8a4-fec3-410f-a8f2-2a96412fe987",
-            "suspect": false,
-            "to_id": "54c53523-f9a0-4860-bae0-c832e39433ba",
-            "type": "verifies",
-            "updated_at": "2026-09-02T21:41:27.572471Z",
-            "valid_from": "0001-01-01T00:00:00Z",
-            "valid_to": null,
-            "version": 1
-          }
-        ],
-        "status": "draft"
-      },
-      "version": 4,
-      "valid_from": "2026-09-02T21:41:28.979697Z",
-      "valid_to": null,
-      "created_at": "2026-09-02T21:41:06.552194Z",
-      "updated_at": "2026-09-02T21:41:28.979697Z"
+      "created_at": "2026-09-02T20:29:11.294312Z",
+      "updated_at": "2026-09-02T22:05:41.267367Z"
     },
     {
       "id": "33b75afa-933d-46f1-9725-013a1b17f0b1",
@@ -2877,6 +2263,262 @@
       "updated_at": "2026-09-02T21:41:26.921257Z"
     },
     {
+      "id": "79dd134b-1725-4a09-aa6c-04e5860fddb5",
+      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
+      "parent_id": "396be93c-4a9c-422d-83ea-567e1ef617db",
+      "type": "design-item",
+      "ref": "DES-14",
+      "title": "Server-side event name resolution",
+      "body": "The events endpoint decorates each stored event with an actor kind, the identifier inside the actor string and the display names behind it, plus the kind and name of the affected entity. Resolution runs only over the events that survive the project-visibility filter, so no identifier the caller may not see is ever dereferenced. Names come from the payload the publishing handler stamped in where it has one and from a repository lookup otherwise, memoized per page so a repeated actor, agent or artifact costs a single query. Every lookup is nil-safe and failure-tolerant: an unresolvable name is omitted and the client falls back to the raw identifier it still receives.",
+      "sort_order": 646,
+      "status": "draft",
+      "attributes": {
+        "links_snapshot": [
+          {
+            "attributes": null,
+            "created_at": "2026-09-02T21:58:16.606251Z",
+            "from_id": "79dd134b-1725-4a09-aa6c-04e5860fddb5",
+            "id": "4e47c4a1-abc2-4364-a070-36d709a844e1",
+            "suspect": false,
+            "to_id": "6fcb4db8-6441-436a-a308-8fd72c219ea6",
+            "type": "satisfies",
+            "updated_at": "2026-09-02T21:58:16.606251Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          }
+        ],
+        "status": "draft"
+      },
+      "version": 2,
+      "valid_from": "2026-09-02T21:58:16.616156Z",
+      "valid_to": null,
+      "created_at": "2026-09-02T21:58:02.389477Z",
+      "updated_at": "2026-09-02T21:58:16.616156Z"
+    },
+    {
+      "id": "1f261541-3d4d-4e0a-b05c-6b15eea0b0bf",
+      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
+      "parent_id": "498b4ebe-00c2-4f27-890c-c96fd627d22f",
+      "type": "test-case",
+      "ref": "TC-1",
+      "title": "Authorization matrix suite",
+      "body": "Automated Go suite exercising the role ladder: platform admin, org admin, direct grants, team grants, run-own-project, worker org scoping. Pass = every matrix cell returns the expected allow/deny.",
+      "sort_order": 10,
+      "status": "draft",
+      "attributes": {
+        "links_snapshot": [
+          {
+            "attributes": null,
+            "created_at": "2026-08-30T19:54:39.957945Z",
+            "from_id": "1f261541-3d4d-4e0a-b05c-6b15eea0b0bf",
+            "id": "5511c216-d9f8-422f-8383-b5e2ce1b2fc9",
+            "suspect": false,
+            "to_id": "f4e01c56-9184-4710-a74d-a78ac74be75c",
+            "type": "verifies",
+            "updated_at": "2026-08-30T19:54:39.957945Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
+            "created_at": "2026-08-30T19:54:39.635721Z",
+            "from_id": "1f261541-3d4d-4e0a-b05c-6b15eea0b0bf",
+            "id": "f88f1325-dbb0-4e29-8b6b-a93f7ed8f4d6",
+            "suspect": false,
+            "to_id": "5f44f96d-fb91-4ddb-b76d-b531a9792ab8",
+            "type": "verifies",
+            "updated_at": "2026-08-30T19:54:39.635721Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          }
+        ],
+        "status": "draft"
+      },
+      "version": 4,
+      "valid_from": "2026-09-02T22:05:41.544215Z",
+      "valid_to": null,
+      "created_at": "2026-08-30T19:54:21.76043Z",
+      "updated_at": "2026-09-02T22:05:41.544215Z"
+    },
+    {
+      "id": "edda457d-5856-4f47-b065-13ef3d18e121",
+      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
+      "parent_id": "498b4ebe-00c2-4f27-890c-c96fd627d22f",
+      "type": "test-case",
+      "ref": "TC-2",
+      "title": "Tenant isolation end-to-end",
+      "body": "Live check with two accounts in different orgs: all cross-org reads and writes return 403/404; org directories and worker keys stay scoped; team-grant escalation raises effective role as designed.",
+      "sort_order": 20,
+      "status": "draft",
+      "attributes": {
+        "links_snapshot": [
+          {
+            "attributes": null,
+            "created_at": "2026-08-30T19:54:45.389719Z",
+            "from_id": "edda457d-5856-4f47-b065-13ef3d18e121",
+            "id": "4e9b6ca7-8aa9-4718-9b96-0cb056260026",
+            "suspect": false,
+            "to_id": "1da1546a-9c64-470e-8ec7-567b5601d7ba",
+            "type": "validates",
+            "updated_at": "2026-08-30T19:54:45.389719Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
+            "created_at": "2026-08-30T19:54:40.616382Z",
+            "from_id": "edda457d-5856-4f47-b065-13ef3d18e121",
+            "id": "43ad2e37-f729-48bc-859b-abc53755f7a3",
+            "suspect": false,
+            "to_id": "58785d22-c280-405d-8856-163a815b8323",
+            "type": "verifies",
+            "updated_at": "2026-08-30T19:54:40.616382Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
+            "created_at": "2026-08-30T19:54:40.284385Z",
+            "from_id": "edda457d-5856-4f47-b065-13ef3d18e121",
+            "id": "32edc31c-5a5d-4805-afdc-feb427ba900c",
+            "suspect": false,
+            "to_id": "f4e01c56-9184-4710-a74d-a78ac74be75c",
+            "type": "verifies",
+            "updated_at": "2026-08-30T19:54:40.284385Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          }
+        ],
+        "status": "draft"
+      },
+      "version": 5,
+      "valid_from": "2026-09-02T22:05:41.791824Z",
+      "valid_to": null,
+      "created_at": "2026-08-30T19:54:22.085435Z",
+      "updated_at": "2026-09-02T22:05:41.791824Z"
+    },
+    {
+      "id": "2226625d-ec9a-4dcc-8769-eb0d455ddd7d",
+      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
+      "parent_id": "498b4ebe-00c2-4f27-890c-c96fd627d22f",
+      "type": "test-case",
+      "ref": "TC-4",
+      "title": "Personal key rotation suite",
+      "body": "Automated suite: minting a new personal key revokes the previous one; revoked keys fail resolution; each member holds at most one active personal key per workspace.",
+      "sort_order": 30,
+      "status": "draft",
+      "attributes": {
+        "links_snapshot": [
+          {
+            "attributes": null,
+            "created_at": "2026-08-30T19:54:41.566536Z",
+            "from_id": "2226625d-ec9a-4dcc-8769-eb0d455ddd7d",
+            "id": "283377c2-5fd7-4cf2-aa29-521ae0684182",
+            "suspect": false,
+            "to_id": "1ca987a2-5222-4070-bccc-f6dbf87ba319",
+            "type": "verifies",
+            "updated_at": "2026-08-30T19:54:41.566536Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          }
+        ],
+        "status": "draft"
+      },
+      "version": 3,
+      "valid_from": "2026-09-02T22:05:42.106108Z",
+      "valid_to": null,
+      "created_at": "2026-08-30T19:54:22.644348Z",
+      "updated_at": "2026-09-02T22:05:42.106108Z"
+    },
+    {
+      "id": "d43e4eb0-3fb1-4fb1-9a04-215035402167",
+      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
+      "parent_id": "498b4ebe-00c2-4f27-890c-c96fd627d22f",
+      "type": "test-case",
+      "ref": "TC-5",
+      "title": "Hosted token-mode smoke test",
+      "body": "openv-worker image boots with an API key env, reports the CLI logged in via API-key mode without any interactive login, and excludes repo-access runs from its claims.",
+      "sort_order": 40,
+      "status": "draft",
+      "attributes": {
+        "links_snapshot": [
+          {
+            "attributes": null,
+            "created_at": "2026-08-30T19:54:42.210229Z",
+            "from_id": "d43e4eb0-3fb1-4fb1-9a04-215035402167",
+            "id": "98822a94-afbb-46a7-9e5b-bc9a03a1ed3e",
+            "suspect": false,
+            "to_id": "de6d7e57-f7a8-46e0-8793-6febed905430",
+            "type": "verifies",
+            "updated_at": "2026-08-30T19:54:42.210229Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
+            "created_at": "2026-08-30T19:54:41.889832Z",
+            "from_id": "d43e4eb0-3fb1-4fb1-9a04-215035402167",
+            "id": "8b746af3-40c6-4442-8fbe-f6645813fa60",
+            "suspect": false,
+            "to_id": "f806dd42-6b24-42df-9c34-33fd07a811b1",
+            "type": "verifies",
+            "updated_at": "2026-08-30T19:54:41.889832Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          }
+        ],
+        "status": "draft"
+      },
+      "version": 4,
+      "valid_from": "2026-09-02T22:05:42.377936Z",
+      "valid_to": null,
+      "created_at": "2026-08-30T19:54:22.9485Z",
+      "updated_at": "2026-09-02T22:05:42.377936Z"
+    },
+    {
+      "id": "a68a6229-fcd5-4cb3-b774-92f44b726ef7",
+      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
+      "parent_id": "498b4ebe-00c2-4f27-890c-c96fd627d22f",
+      "type": "test-case",
+      "ref": "TC-16",
+      "title": "Copilot prompt isolation test",
+      "body": "The guided copilot prompt declares the product profile, wizard state and transcript as content and never as instructions, and fences the state block.",
+      "sort_order": 50,
+      "status": "draft",
+      "attributes": {
+        "links_snapshot": [
+          {
+            "attributes": null,
+            "created_at": "2026-09-02T20:29:20.079175Z",
+            "from_id": "a68a6229-fcd5-4cb3-b774-92f44b726ef7",
+            "id": "25aa872d-2f86-45a4-a44e-4cbacf7e1db1",
+            "suspect": false,
+            "to_id": "acbe3de0-58d6-4e82-9e56-a00ede62af26",
+            "type": "verifies",
+            "updated_at": "2026-09-02T20:29:20.079175Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          }
+        ],
+        "status": "draft"
+      },
+      "version": 3,
+      "valid_from": "2026-09-02T22:05:42.653217Z",
+      "valid_to": null,
+      "created_at": "2026-09-02T20:29:13.88619Z",
+      "updated_at": "2026-09-02T22:05:42.653217Z"
+    },
+    {
       "id": "276b1cbc-0959-4a5f-b138-05ff8fe76777",
       "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
       "parent_id": "5ab971b3-ae39-49e9-bcc5-74be9c1fd443",
@@ -2925,68 +2567,6 @@
       "valid_to": null,
       "created_at": "2026-08-30T19:54:16.548118Z",
       "updated_at": "2026-08-30T19:54:56.556081Z"
-    },
-    {
-      "id": "42892e2c-8081-4e11-98b5-38a31eb2a5c4",
-      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
-      "parent_id": "5ab971b3-ae39-49e9-bcc5-74be9c1fd443",
-      "type": "requirement",
-      "ref": "REQ-27",
-      "title": "Personal runner scoping",
-      "body": "A personal runner shall claim only runs launched by its owning member.",
-      "sort_order": 490,
-      "status": "approved",
-      "attributes": {
-        "links_snapshot": [
-          {
-            "attributes": null,
-            "created_at": "2026-08-30T19:54:40.931048Z",
-            "from_id": "4b3dd557-2c3f-4c3c-a162-9231e2167401",
-            "id": "027b4dbd-fa45-400d-a009-5be59c117a1b",
-            "suspect": false,
-            "to_id": "42892e2c-8081-4e11-98b5-38a31eb2a5c4",
-            "type": "verifies",
-            "updated_at": "2026-08-30T19:54:40.931048Z",
-            "valid_from": "0001-01-01T00:00:00Z",
-            "valid_to": null,
-            "version": 1
-          },
-          {
-            "attributes": null,
-            "created_at": "2026-08-30T19:54:36.451295Z",
-            "from_id": "b61be707-a0ca-4d41-8c2a-99fcf4a14858",
-            "id": "ceaa6cce-b3db-403c-bdb5-f41e310e28ba",
-            "suspect": false,
-            "to_id": "42892e2c-8081-4e11-98b5-38a31eb2a5c4",
-            "type": "satisfies",
-            "updated_at": "2026-08-30T19:54:36.451295Z",
-            "valid_from": "0001-01-01T00:00:00Z",
-            "valid_to": null,
-            "version": 1
-          },
-          {
-            "attributes": null,
-            "created_at": "2026-08-30T19:54:33.550081Z",
-            "from_id": "42892e2c-8081-4e11-98b5-38a31eb2a5c4",
-            "id": "34e6d2d4-fd01-4efb-b30b-64e903b06d20",
-            "suspect": false,
-            "to_id": "a2b2ca88-d8af-472a-aaad-040814b783f4",
-            "type": "derives-from",
-            "updated_at": "2026-08-30T19:54:33.550081Z",
-            "valid_from": "0001-01-01T00:00:00Z",
-            "valid_to": null,
-            "version": 1
-          }
-        ],
-        "priority": "must",
-        "status": "approved",
-        "verification_method": "test"
-      },
-      "version": 5,
-      "valid_from": "2026-08-30T19:54:56.836823Z",
-      "valid_to": null,
-      "created_at": "2026-08-30T19:54:16.840361Z",
-      "updated_at": "2026-08-30T19:54:56.836823Z"
     },
     {
       "id": "c214c4c3-8385-4761-8209-f188f98b0a3a",
@@ -3111,117 +2691,6 @@
       "valid_to": null,
       "created_at": "2026-08-30T19:54:17.419018Z",
       "updated_at": "2026-08-30T19:54:57.437425Z"
-    },
-    {
-      "id": "de6d7e57-f7a8-46e0-8793-6febed905430",
-      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
-      "parent_id": "5ab971b3-ae39-49e9-bcc5-74be9c1fd443",
-      "type": "requirement",
-      "ref": "REQ-30",
-      "title": "Hosted repo exclusion",
-      "body": "Hosted runners shall refuse runs requiring repository access; such runs shall wait for a personal or workspace runner.",
-      "sort_order": 520,
-      "status": "approved",
-      "attributes": {
-        "links_snapshot": [
-          {
-            "attributes": null,
-            "created_at": "2026-08-30T19:54:42.210229Z",
-            "from_id": "d43e4eb0-3fb1-4fb1-9a04-215035402167",
-            "id": "98822a94-afbb-46a7-9e5b-bc9a03a1ed3e",
-            "suspect": false,
-            "to_id": "de6d7e57-f7a8-46e0-8793-6febed905430",
-            "type": "verifies",
-            "updated_at": "2026-08-30T19:54:42.210229Z",
-            "valid_from": "0001-01-01T00:00:00Z",
-            "valid_to": null,
-            "version": 1
-          },
-          {
-            "attributes": null,
-            "created_at": "2026-08-30T19:54:37.746767Z",
-            "from_id": "e883232c-4e69-4183-8c03-18cc6892c221",
-            "id": "c34e4672-7af2-4885-b140-3f5a48f0731f",
-            "suspect": false,
-            "to_id": "de6d7e57-f7a8-46e0-8793-6febed905430",
-            "type": "satisfies",
-            "updated_at": "2026-08-30T19:54:37.746767Z",
-            "valid_from": "0001-01-01T00:00:00Z",
-            "valid_to": null,
-            "version": 1
-          },
-          {
-            "attributes": null,
-            "created_at": "2026-08-30T19:54:34.495636Z",
-            "from_id": "de6d7e57-f7a8-46e0-8793-6febed905430",
-            "id": "8fc285ee-33a4-4e80-9d5b-4b717fd342e6",
-            "suspect": false,
-            "to_id": "155beaf0-28d4-4993-9a71-4af1381c1793",
-            "type": "derives-from",
-            "updated_at": "2026-08-30T19:54:34.495636Z",
-            "valid_from": "0001-01-01T00:00:00Z",
-            "valid_to": null,
-            "version": 1
-          }
-        ],
-        "priority": "must",
-        "status": "approved",
-        "verification_method": "test"
-      },
-      "version": 5,
-      "valid_from": "2026-08-30T19:54:57.757014Z",
-      "valid_to": null,
-      "created_at": "2026-08-30T19:54:17.694606Z",
-      "updated_at": "2026-08-30T19:54:57.757014Z"
-    },
-    {
-      "id": "1ca987a2-5222-4070-bccc-f6dbf87ba319",
-      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
-      "parent_id": "5ab971b3-ae39-49e9-bcc5-74be9c1fd443",
-      "type": "requirement",
-      "ref": "REQ-31",
-      "title": "Hashed credentials, shown once",
-      "body": "Worker keys, agent run tokens and pairing codes shall be stored as sha256 hashes with plaintext revealed exactly once at creation.",
-      "sort_order": 530,
-      "status": "approved",
-      "attributes": {
-        "links_snapshot": [
-          {
-            "attributes": null,
-            "created_at": "2026-08-30T19:54:41.566536Z",
-            "from_id": "2226625d-ec9a-4dcc-8769-eb0d455ddd7d",
-            "id": "283377c2-5fd7-4cf2-aa29-521ae0684182",
-            "suspect": false,
-            "to_id": "1ca987a2-5222-4070-bccc-f6dbf87ba319",
-            "type": "verifies",
-            "updated_at": "2026-08-30T19:54:41.566536Z",
-            "valid_from": "0001-01-01T00:00:00Z",
-            "valid_to": null,
-            "version": 1
-          },
-          {
-            "attributes": null,
-            "created_at": "2026-08-30T19:54:34.839376Z",
-            "from_id": "1ca987a2-5222-4070-bccc-f6dbf87ba319",
-            "id": "b96e7c8b-52cf-4905-8db3-f60066a071ce",
-            "suspect": false,
-            "to_id": "0627a2b0-889e-488b-b053-d78992d97a93",
-            "type": "derives-from",
-            "updated_at": "2026-08-30T19:54:34.839376Z",
-            "valid_from": "0001-01-01T00:00:00Z",
-            "valid_to": null,
-            "version": 1
-          }
-        ],
-        "priority": "must",
-        "status": "approved",
-        "verification_method": "test"
-      },
-      "version": 4,
-      "valid_from": "2026-08-30T19:54:58.042451Z",
-      "valid_to": null,
-      "created_at": "2026-08-30T19:54:17.979225Z",
-      "updated_at": "2026-08-30T19:54:58.042451Z"
     },
     {
       "id": "19336abe-88a4-4206-ba20-100efbe3b909",
@@ -3966,6 +3435,774 @@
       "updated_at": "2026-09-02T20:29:19.346233Z"
     },
     {
+      "id": "4b3dd557-2c3f-4c3c-a162-9231e2167401",
+      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
+      "parent_id": "8c8b86be-4730-49cb-9d95-93868a0c1938",
+      "type": "test-case",
+      "ref": "TC-3",
+      "title": "Claim routing suite",
+      "body": "Automated suite plus live check: a personal key never claims another user's run; reserved runs return no-content to workspace workers during the grace window and are claimable after hosted_after expires; ownerless runs route immediately.",
+      "sort_order": 10,
+      "status": "draft",
+      "attributes": {
+        "links_snapshot": [
+          {
+            "attributes": null,
+            "created_at": "2026-08-30T19:54:45.686763Z",
+            "from_id": "4b3dd557-2c3f-4c3c-a162-9231e2167401",
+            "id": "3d23b493-1500-4ef2-a8c6-b0d561a3efa4",
+            "suspect": false,
+            "to_id": "a2b2ca88-d8af-472a-aaad-040814b783f4",
+            "type": "validates",
+            "updated_at": "2026-08-30T19:54:45.686763Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
+            "created_at": "2026-08-30T19:54:41.247595Z",
+            "from_id": "4b3dd557-2c3f-4c3c-a162-9231e2167401",
+            "id": "29d00ce5-5410-4e6e-ad70-a35a76359032",
+            "suspect": false,
+            "to_id": "c214c4c3-8385-4761-8209-f188f98b0a3a",
+            "type": "verifies",
+            "updated_at": "2026-08-30T19:54:41.247595Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
+            "created_at": "2026-08-30T19:54:40.931048Z",
+            "from_id": "4b3dd557-2c3f-4c3c-a162-9231e2167401",
+            "id": "027b4dbd-fa45-400d-a009-5be59c117a1b",
+            "suspect": false,
+            "to_id": "42892e2c-8081-4e11-98b5-38a31eb2a5c4",
+            "type": "verifies",
+            "updated_at": "2026-08-30T19:54:40.931048Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          }
+        ],
+        "status": "draft"
+      },
+      "version": 5,
+      "valid_from": "2026-09-02T22:05:42.919042Z",
+      "valid_to": null,
+      "created_at": "2026-08-30T19:54:22.371575Z",
+      "updated_at": "2026-09-02T22:05:42.919042Z"
+    },
+    {
+      "id": "61a04cf8-afc5-4bd3-89db-e7822d2667c5",
+      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
+      "parent_id": "8c8b86be-4730-49cb-9d95-93868a0c1938",
+      "type": "test-case",
+      "ref": "TC-6",
+      "title": "Connector pairing end-to-end",
+      "body": "On a real host: pairing deep link opens the connector, the one-time code exchanges for a personal key (second use rejected, expiry enforced), config is saved, agentd starts and reports online; uninstall removes the protocol handler.",
+      "sort_order": 20,
+      "status": "draft",
+      "attributes": {
+        "links_snapshot": [
+          {
+            "attributes": null,
+            "created_at": "2026-08-30T19:54:46.00631Z",
+            "from_id": "61a04cf8-afc5-4bd3-89db-e7822d2667c5",
+            "id": "c3e6664d-dea2-4f84-874a-9c526b683f39",
+            "suspect": false,
+            "to_id": "0627a2b0-889e-488b-b053-d78992d97a93",
+            "type": "validates",
+            "updated_at": "2026-08-30T19:54:46.00631Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
+            "created_at": "2026-08-30T19:54:42.845776Z",
+            "from_id": "61a04cf8-afc5-4bd3-89db-e7822d2667c5",
+            "id": "b69aebe2-cc65-4c88-b1a9-1bac67fcf3c7",
+            "suspect": false,
+            "to_id": "53d671e3-c473-4240-84f0-a638fd5258da",
+            "type": "verifies",
+            "updated_at": "2026-08-30T19:54:42.845776Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
+            "created_at": "2026-08-30T19:54:42.525904Z",
+            "from_id": "61a04cf8-afc5-4bd3-89db-e7822d2667c5",
+            "id": "0855ef75-41d0-4ca0-a6dd-0477763551d8",
+            "suspect": false,
+            "to_id": "19336abe-88a4-4206-ba20-100efbe3b909",
+            "type": "verifies",
+            "updated_at": "2026-08-30T19:54:42.525904Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          }
+        ],
+        "status": "draft"
+      },
+      "version": 5,
+      "valid_from": "2026-09-02T22:05:43.184319Z",
+      "valid_to": null,
+      "created_at": "2026-08-30T19:54:23.233151Z",
+      "updated_at": "2026-09-02T22:05:43.184319Z"
+    },
+    {
+      "id": "56172312-5538-4670-a470-354877a71d72",
+      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
+      "parent_id": "8c8b86be-4730-49cb-9d95-93868a0c1938",
+      "type": "test-case",
+      "ref": "TC-7",
+      "title": "Agent proposal loop end-to-end",
+      "body": "Live run: agent claims a run with a run token, submits an artifact change, the change lands as a pending proposal, human approval materializes the artifact with correct attribution.",
+      "sort_order": 30,
+      "status": "draft",
+      "attributes": {
+        "links_snapshot": [
+          {
+            "attributes": null,
+            "created_at": "2026-08-30T19:54:46.353322Z",
+            "from_id": "56172312-5538-4670-a470-354877a71d72",
+            "id": "ca7fbf1c-b2c1-4487-aabd-28e68b7c657e",
+            "suspect": false,
+            "to_id": "8324454a-b5a6-4625-9075-314728afc142",
+            "type": "validates",
+            "updated_at": "2026-08-30T19:54:46.353322Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
+            "created_at": "2026-08-30T19:54:43.220809Z",
+            "from_id": "56172312-5538-4670-a470-354877a71d72",
+            "id": "f5e13bc9-61ba-4b7b-975e-56e6687bb0af",
+            "suspect": false,
+            "to_id": "9e3c1eb3-d43d-4782-bb1f-972f61faa2fb",
+            "type": "verifies",
+            "updated_at": "2026-08-30T19:54:43.220809Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          }
+        ],
+        "status": "draft"
+      },
+      "version": 4,
+      "valid_from": "2026-09-02T22:05:43.444487Z",
+      "valid_to": null,
+      "created_at": "2026-08-30T19:54:23.559593Z",
+      "updated_at": "2026-09-02T22:05:43.444487Z"
+    },
+    {
+      "id": "f1069c32-af4a-4a3b-b9ee-2e477a259dac",
+      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
+      "parent_id": "8c8b86be-4730-49cb-9d95-93868a0c1938",
+      "type": "test-case",
+      "ref": "TC-8",
+      "title": "Link rule validation suite",
+      "body": "Automated suite: each link type accepts its allowed from/to artifact types and rejects all others with a descriptive error.",
+      "sort_order": 40,
+      "status": "draft",
+      "attributes": {
+        "links_snapshot": [
+          {
+            "attributes": null,
+            "created_at": "2026-08-30T19:54:43.542773Z",
+            "from_id": "f1069c32-af4a-4a3b-b9ee-2e477a259dac",
+            "id": "d9b6cf52-0be4-48fd-b500-a10a52f446f3",
+            "suspect": false,
+            "to_id": "33a05633-7b50-4932-a465-20f304180e15",
+            "type": "verifies",
+            "updated_at": "2026-08-30T19:54:43.542773Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          }
+        ],
+        "status": "draft"
+      },
+      "version": 3,
+      "valid_from": "2026-09-02T22:05:43.716657Z",
+      "valid_to": null,
+      "created_at": "2026-08-30T19:54:23.849878Z",
+      "updated_at": "2026-09-02T22:05:43.716657Z"
+    },
+    {
+      "id": "d6ac42df-c366-4ba3-88a1-516eabaffe11",
+      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
+      "parent_id": "8c8b86be-4730-49cb-9d95-93868a0c1938",
+      "type": "test-case",
+      "ref": "TC-9",
+      "title": "V&V dashboard verification",
+      "body": "Coverage, traceability matrix and gap views render correct figures for a project with known links and test-run history.",
+      "sort_order": 50,
+      "status": "draft",
+      "attributes": {
+        "links_snapshot": [
+          {
+            "attributes": null,
+            "created_at": "2026-08-30T19:54:46.658313Z",
+            "from_id": "d6ac42df-c366-4ba3-88a1-516eabaffe11",
+            "id": "6901cfdb-0f31-42a1-8896-44f1559e5bbd",
+            "suspect": false,
+            "to_id": "12cff868-2282-41cd-82a9-b8bfe708d9a6",
+            "type": "validates",
+            "updated_at": "2026-08-30T19:54:46.658313Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
+            "created_at": "2026-08-30T19:54:44.478372Z",
+            "from_id": "d6ac42df-c366-4ba3-88a1-516eabaffe11",
+            "id": "cd23130c-9755-4653-89f5-3c815947658d",
+            "suspect": false,
+            "to_id": "f7bff8e7-4d24-447f-9bfd-f8a9facdb818",
+            "type": "verifies",
+            "updated_at": "2026-08-30T19:54:44.478372Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
+            "created_at": "2026-08-30T19:54:44.167964Z",
+            "from_id": "d6ac42df-c366-4ba3-88a1-516eabaffe11",
+            "id": "7f2a6496-87fe-4c86-bb1b-ed4c61041e0f",
+            "suspect": false,
+            "to_id": "e7aa8b43-e18b-4276-9d28-5d4378693b53",
+            "type": "verifies",
+            "updated_at": "2026-08-30T19:54:44.167964Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
+            "created_at": "2026-08-30T19:54:43.8663Z",
+            "from_id": "d6ac42df-c366-4ba3-88a1-516eabaffe11",
+            "id": "c124af13-dc69-40ea-a9a6-93896e50d815",
+            "suspect": false,
+            "to_id": "cb5b0125-1eb6-41f3-82fa-f07d98823b73",
+            "type": "verifies",
+            "updated_at": "2026-08-30T19:54:43.8663Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          }
+        ],
+        "status": "draft"
+      },
+      "version": 6,
+      "valid_from": "2026-09-02T22:05:43.982733Z",
+      "valid_to": null,
+      "created_at": "2026-08-30T19:54:24.180642Z",
+      "updated_at": "2026-09-02T22:05:43.982733Z"
+    },
+    {
+      "id": "c53efbe2-e3f8-4d0e-a666-d7f2f1fd8f8a",
+      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
+      "parent_id": "8c8b86be-4730-49cb-9d95-93868a0c1938",
+      "type": "test-case",
+      "ref": "TC-10",
+      "title": "Interview elicitation flow",
+      "body": "An invited external user opens the interview link without an account, holds a conversation, and the resulting artifacts appear as interview-tagged drafts pending member review.",
+      "sort_order": 60,
+      "status": "draft",
+      "attributes": {
+        "links_snapshot": [
+          {
+            "attributes": null,
+            "created_at": "2026-08-30T19:54:46.960726Z",
+            "from_id": "c53efbe2-e3f8-4d0e-a666-d7f2f1fd8f8a",
+            "id": "7dd43b10-7977-4d9b-8d36-a8fa42d51aae",
+            "suspect": false,
+            "to_id": "b19f3d92-8dea-44a4-aaf4-6e2ef95811b7",
+            "type": "validates",
+            "updated_at": "2026-08-30T19:54:46.960726Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
+            "created_at": "2026-08-30T19:54:45.081385Z",
+            "from_id": "c53efbe2-e3f8-4d0e-a666-d7f2f1fd8f8a",
+            "id": "a5816ab6-5ee9-4a87-be43-71d234db5700",
+            "suspect": false,
+            "to_id": "9c251e69-2106-4433-a084-a49cbc52a91d",
+            "type": "verifies",
+            "updated_at": "2026-08-30T19:54:45.081385Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
+            "created_at": "2026-08-30T19:54:44.778232Z",
+            "from_id": "c53efbe2-e3f8-4d0e-a666-d7f2f1fd8f8a",
+            "id": "6e6e72aa-ec46-4d68-8303-adcc96abf9ec",
+            "suspect": false,
+            "to_id": "373b61ad-9b84-4c06-ae32-2dd1994835ae",
+            "type": "verifies",
+            "updated_at": "2026-08-30T19:54:44.778232Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          }
+        ],
+        "status": "draft"
+      },
+      "version": 5,
+      "valid_from": "2026-09-02T22:05:44.26044Z",
+      "valid_to": null,
+      "created_at": "2026-08-30T19:54:24.47223Z",
+      "updated_at": "2026-09-02T22:05:44.26044Z"
+    },
+    {
+      "id": "a26825fb-030c-4861-857d-76f77b3bec11",
+      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
+      "parent_id": "8c8b86be-4730-49cb-9d95-93868a0c1938",
+      "type": "test-case",
+      "ref": "TC-11",
+      "title": "Workspace deletion lifecycle suite",
+      "body": "Postgres integration tests (internal/persistence/postgres/org_delete_test.go): soft delete hides the workspace from listings and voids role checks; restore works within the grace window and is refused on a live workspace; personal workspaces are refused; the expiry sweep purges the workspace row, projects, artifacts, links, and chatter without touching other workspaces.",
+      "sort_order": 70,
+      "status": "draft",
+      "attributes": {
+        "links_snapshot": [
+          {
+            "attributes": null,
+            "created_at": "2026-08-30T19:55:28.75997Z",
+            "from_id": "a26825fb-030c-4861-857d-76f77b3bec11",
+            "id": "2c089f6c-bc2a-4c29-8b67-52d37e76271e",
+            "suspect": false,
+            "to_id": "c548a9d9-44b6-4507-94e1-7354c41133c7",
+            "type": "verifies",
+            "updated_at": "2026-08-30T19:55:28.75997Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          }
+        ],
+        "status": "draft"
+      },
+      "version": 3,
+      "valid_from": "2026-09-02T22:05:44.525686Z",
+      "valid_to": null,
+      "created_at": "2026-08-30T19:55:26.252502Z",
+      "updated_at": "2026-09-02T22:05:44.525686Z"
+    },
+    {
+      "id": "5d593442-3e6b-47ee-980b-4c1680ef5e22",
+      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
+      "parent_id": "8c8b86be-4730-49cb-9d95-93868a0c1938",
+      "type": "test-case",
+      "ref": "TC-12",
+      "title": "Section numbering suite",
+      "body": "Go suites over artifacts.SectionNumbers and the artifact list handler: nesting by level, renumbering on reorder, headings only, a heading under a non-heading parent, determinism for equal sort orders, broken trees, stamping only the returned page, numbering a page from the whole document, and numbering skipped unless the request asks for it.",
+      "sort_order": 80,
+      "status": "draft",
+      "attributes": {
+        "links_snapshot": [
+          {
+            "attributes": null,
+            "created_at": "2026-09-02T20:29:18.347107Z",
+            "from_id": "5d593442-3e6b-47ee-980b-4c1680ef5e22",
+            "id": "b4966778-e546-4aa4-a17e-3f1a3a452fff",
+            "suspect": false,
+            "to_id": "cb1ee990-764f-41f5-8d12-d52d002b33f0",
+            "type": "verifies",
+            "updated_at": "2026-09-02T20:29:18.347107Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          }
+        ],
+        "status": "draft"
+      },
+      "version": 3,
+      "valid_from": "2026-09-02T22:05:44.803183Z",
+      "valid_to": null,
+      "created_at": "2026-09-02T20:29:12.605299Z",
+      "updated_at": "2026-09-02T22:05:44.803183Z"
+    },
+    {
+      "id": "ecbed1a4-be82-4b31-9050-f30864aa0674",
+      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
+      "parent_id": "8c8b86be-4730-49cb-9d95-93868a0c1938",
+      "type": "test-case",
+      "ref": "TC-13",
+      "title": "Reference and section number rendering in reports",
+      "body": "The rendered DOCX and PDF report titles each artifact with its stable reference and shows a section's document number, so an exported document can be cross-referenced to an address rather than to a repeated title. Covers the reporting surfaces; the detail heading, tree rows and traceability rows remain verified by demonstration.",
+      "sort_order": 90,
+      "status": "draft",
+      "attributes": {
+        "links_snapshot": [
+          {
+            "attributes": null,
+            "created_at": "2026-09-02T20:29:18.682133Z",
+            "from_id": "ecbed1a4-be82-4b31-9050-f30864aa0674",
+            "id": "5c561d49-3734-4920-b5ac-18c742015c24",
+            "suspect": false,
+            "to_id": "b5846f74-5db9-49a7-999c-2ae268c3f8d6",
+            "type": "verifies",
+            "updated_at": "2026-09-02T20:29:18.682133Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          }
+        ],
+        "status": "draft"
+      },
+      "version": 3,
+      "valid_from": "2026-09-02T22:05:45.055593Z",
+      "valid_to": null,
+      "created_at": "2026-09-02T20:29:12.925121Z",
+      "updated_at": "2026-09-02T22:05:45.055593Z"
+    },
+    {
+      "id": "4014b740-6bc4-40df-8b65-b38bad2f6e17",
+      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
+      "parent_id": "8c8b86be-4730-49cb-9d95-93868a0c1938",
+      "type": "test-case",
+      "ref": "TC-14",
+      "title": "Shared demo-product pool suite",
+      "body": "Domain and handler suites: sanitization to inert text, refusal of links and agent-suggestion markup, per-field caps, name dedupe, per-workspace daily limit, pool ceiling, publication refused for agent run tokens and host worker keys, publication attributed to the calling person, author identity absent from every response, report auto-hide at three distinct reporters, and admin-only deletion. Also exercised against real Postgres in CI.",
+      "sort_order": 100,
+      "status": "draft",
+      "attributes": {
+        "links_snapshot": [
+          {
+            "attributes": null,
+            "created_at": "2026-09-02T20:29:20.419437Z",
+            "from_id": "4014b740-6bc4-40df-8b65-b38bad2f6e17",
+            "id": "78e1244e-5fdd-463d-ab85-6c659fffd3c5",
+            "suspect": false,
+            "to_id": "006182cf-b68d-488e-bea9-a7f7a35f23ea",
+            "type": "validates",
+            "updated_at": "2026-09-02T20:29:20.419437Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
+            "created_at": "2026-09-02T20:29:19.332679Z",
+            "from_id": "4014b740-6bc4-40df-8b65-b38bad2f6e17",
+            "id": "94287c07-a1e8-458a-95c8-b725855bef1e",
+            "suspect": false,
+            "to_id": "050a371d-5478-4b5a-8b7e-8cc5697351d5",
+            "type": "verifies",
+            "updated_at": "2026-09-02T20:29:19.332679Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
+            "created_at": "2026-09-02T20:29:19.004196Z",
+            "from_id": "4014b740-6bc4-40df-8b65-b38bad2f6e17",
+            "id": "67439277-f371-4891-a55c-ef88820af881",
+            "suspect": false,
+            "to_id": "1b4fcfe0-466b-4d25-a03d-a0bb466e7431",
+            "type": "verifies",
+            "updated_at": "2026-09-02T20:29:19.004196Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          }
+        ],
+        "status": "draft"
+      },
+      "version": 5,
+      "valid_from": "2026-09-02T22:05:45.315791Z",
+      "valid_to": null,
+      "created_at": "2026-09-02T20:29:13.245961Z",
+      "updated_at": "2026-09-02T22:05:45.315791Z"
+    },
+    {
+      "id": "16397288-be92-4d09-943b-90fd4d2f9aa0",
+      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
+      "parent_id": "8c8b86be-4730-49cb-9d95-93868a0c1938",
+      "type": "test-case",
+      "ref": "TC-15",
+      "title": "Invention quality gate suite",
+      "body": "Client suite over the roller: the gate accepts every one of 300 built-in rolls, names the failure modes that made early inventions weak, tells a retry exactly what to fix, keeps inventions across rerolls, and rolls community products alongside built-ins without tagging somebody else's product as this browser's invention.",
+      "sort_order": 110,
+      "status": "draft",
+      "attributes": {
+        "links_snapshot": [
+          {
+            "attributes": null,
+            "created_at": "2026-09-02T20:29:20.736491Z",
+            "from_id": "16397288-be92-4d09-943b-90fd4d2f9aa0",
+            "id": "03effc68-6b01-4a53-af4b-8fa71e3238f2",
+            "suspect": false,
+            "to_id": "006182cf-b68d-488e-bea9-a7f7a35f23ea",
+            "type": "validates",
+            "updated_at": "2026-09-02T20:29:20.736491Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
+            "created_at": "2026-09-02T20:29:19.684069Z",
+            "from_id": "16397288-be92-4d09-943b-90fd4d2f9aa0",
+            "id": "c2495262-1123-4f81-b03c-4be61912560b",
+            "suspect": false,
+            "to_id": "296e8231-2539-4d68-a99a-7e1b07548c53",
+            "type": "verifies",
+            "updated_at": "2026-09-02T20:29:19.684069Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          }
+        ],
+        "status": "draft"
+      },
+      "version": 4,
+      "valid_from": "2026-09-02T22:05:45.58759Z",
+      "valid_to": null,
+      "created_at": "2026-09-02T20:29:13.551484Z",
+      "updated_at": "2026-09-02T22:05:45.58759Z"
+    },
+    {
+      "id": "7cb6d84e-d60b-4d16-9f0b-e6268152cd66",
+      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
+      "parent_id": "8c8b86be-4730-49cb-9d95-93868a0c1938",
+      "type": "test-case",
+      "ref": "TC-17",
+      "title": "MCP maintenance tool suite",
+      "body": "Go suite over the MCP tool table: create_baseline, get_vv_coverage (lean projection by default, full report on detail), get_vv_gaps, close_test_run (only completed/aborted reach the API) and record_test_result (evidence is a list of attachment IDs, so a bare string is wrapped and the API stops rejecting the body); every tool surfaces API errors; the openv-mcp entrypoint prefers a run token, accepts a workspace runner key, and refuses to start with neither.",
+      "sort_order": 120,
+      "status": "draft",
+      "attributes": {
+        "links_snapshot": [
+          {
+            "attributes": null,
+            "created_at": "2026-09-02T20:46:47.561737Z",
+            "from_id": "7cb6d84e-d60b-4d16-9f0b-e6268152cd66",
+            "id": "2d214d77-814a-48b2-85ee-31f444af646d",
+            "suspect": false,
+            "to_id": "f473cb46-dc3a-4859-86aa-1ff2dc00ed99",
+            "type": "verifies",
+            "updated_at": "2026-09-02T20:46:47.561737Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
+            "created_at": "2026-09-02T20:46:46.838321Z",
+            "from_id": "7cb6d84e-d60b-4d16-9f0b-e6268152cd66",
+            "id": "d84c05af-96b6-48c5-9549-1de832f55d56",
+            "suspect": false,
+            "to_id": "aed7c942-3829-4c35-bad0-f23d32301766",
+            "type": "verifies",
+            "updated_at": "2026-09-02T20:46:46.838321Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          }
+        ],
+        "status": "draft"
+      },
+      "version": 5,
+      "valid_from": "2026-09-02T22:05:45.843095Z",
+      "valid_to": null,
+      "created_at": "2026-09-02T20:46:23.670454Z",
+      "updated_at": "2026-09-02T22:05:45.843095Z"
+    },
+    {
+      "id": "848aff27-3ea4-43cf-814e-e83f4475aae8",
+      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
+      "parent_id": "8c8b86be-4730-49cb-9d95-93868a0c1938",
+      "type": "test-case",
+      "ref": "TC-18",
+      "title": "Quality rule set suite",
+      "body": "Go suite over the rule set: the same sentence produces a weak-word finding under \"shall\" and none under RFC 2119; the off-convention rule fires on the other vocabulary's keyword in each direction; a re-graded rule costs more score and an off rule produces nothing; resolution layers defaults, workspace and project with each level overriding only its own keys; junk in stored settings is dropped rather than fatal; an invalid rule set is refused before storage; clearing an override restores inheritance and removes the stored key; a settings read failure degrades to the defaults; the report carries its rule set; and the MCP tools return the resolved rules without the editor catalog.",
+      "sort_order": 130,
+      "status": "draft",
+      "attributes": {
+        "links_snapshot": [
+          {
+            "attributes": null,
+            "created_at": "2026-09-02T21:41:28.971144Z",
+            "from_id": "848aff27-3ea4-43cf-814e-e83f4475aae8",
+            "id": "726dc2f2-ae13-40d3-a8ca-707afa421e0f",
+            "suspect": false,
+            "to_id": "37808fde-6afd-40d3-b889-0a795e3c38cc",
+            "type": "verifies",
+            "updated_at": "2026-09-02T21:41:28.971144Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
+            "created_at": "2026-09-02T21:41:28.257241Z",
+            "from_id": "848aff27-3ea4-43cf-814e-e83f4475aae8",
+            "id": "536166f1-9248-4dca-be8c-024c000bd4e3",
+            "suspect": false,
+            "to_id": "56502167-fb38-49f7-8d01-9d4483e243c0",
+            "type": "verifies",
+            "updated_at": "2026-09-02T21:41:28.257241Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
+            "created_at": "2026-09-02T21:41:27.572471Z",
+            "from_id": "848aff27-3ea4-43cf-814e-e83f4475aae8",
+            "id": "e309a8a4-fec3-410f-a8f2-2a96412fe987",
+            "suspect": false,
+            "to_id": "54c53523-f9a0-4860-bae0-c832e39433ba",
+            "type": "verifies",
+            "updated_at": "2026-09-02T21:41:27.572471Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          }
+        ],
+        "status": "draft"
+      },
+      "version": 5,
+      "valid_from": "2026-09-02T22:05:46.104393Z",
+      "valid_to": null,
+      "created_at": "2026-09-02T21:41:06.552194Z",
+      "updated_at": "2026-09-02T22:05:46.104393Z"
+    },
+    {
+      "id": "74c51a0b-ecdf-4743-8bb7-24faa2f3b721",
+      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
+      "parent_id": "8c8b86be-4730-49cb-9d95-93868a0c1938",
+      "type": "test-case",
+      "ref": "TC-19",
+      "title": "Wizard section filing suite",
+      "body": "Client suite over the wizard's section helpers: every NFR and hazard category files under its own sub-section key, every quality attribute an NFR can carry has a matching verification section, Functional leads the verification sections, a category the step no longer offers falls back to the step's own heading rather than inventing one, a step without sub-sections is left alone, and each sub-section is named for its category.",
+      "sort_order": 140,
+      "status": "draft",
+      "attributes": {
+        "links_snapshot": [
+          {
+            "attributes": null,
+            "created_at": "2026-09-02T21:50:52.580569Z",
+            "from_id": "74c51a0b-ecdf-4743-8bb7-24faa2f3b721",
+            "id": "42358c0a-353e-4b50-8a23-887fe31f035f",
+            "suspect": false,
+            "to_id": "1f1fef91-5d25-40a2-a659-a87476f64c89",
+            "type": "verifies",
+            "updated_at": "2026-09-02T21:50:52.580569Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          }
+        ],
+        "status": "draft"
+      },
+      "version": 3,
+      "valid_from": "2026-09-02T22:05:46.372133Z",
+      "valid_to": null,
+      "created_at": "2026-09-02T21:50:51.985012Z",
+      "updated_at": "2026-09-02T22:05:46.372133Z"
+    },
+    {
+      "id": "86bab759-56b7-4419-acf9-b96548d5eed5",
+      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
+      "parent_id": "8c8b86be-4730-49cb-9d95-93868a0c1938",
+      "type": "test-case",
+      "ref": "TC-20",
+      "title": "Activity log naming suite",
+      "body": "Event decoration is exercised per actor shape (user, agent run, workspace runner with and without a reserved user, system) and per event family (artifact with and without a payload title, link, baseline, comment, test result, work item, agent run), asserting the resolved names, that the raw actor and entity identifiers survive alongside them, that a repeated actor is looked up once per page, that missing services and unknown identifiers degrade to empty names rather than panicking, and that the names reach the wire on GET /api/v1/events.",
+      "sort_order": 150,
+      "status": "draft",
+      "attributes": {
+        "links_snapshot": [
+          {
+            "attributes": null,
+            "created_at": "2026-09-02T21:58:21.720054Z",
+            "from_id": "86bab759-56b7-4419-acf9-b96548d5eed5",
+            "id": "4f2428e7-9d16-4991-949e-2c9137fe5908",
+            "suspect": false,
+            "to_id": "6fcb4db8-6441-436a-a308-8fd72c219ea6",
+            "type": "verifies",
+            "updated_at": "2026-09-02T21:58:21.720054Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          }
+        ],
+        "status": "draft"
+      },
+      "version": 3,
+      "valid_from": "2026-09-02T22:07:11.096748Z",
+      "valid_to": null,
+      "created_at": "2026-09-02T21:58:06.259047Z",
+      "updated_at": "2026-09-02T22:07:11.096748Z"
+    },
+    {
+      "id": "7973f87c-ab01-4383-a9af-130a433a04ed",
+      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
+      "parent_id": "a25960b2-ee9b-4005-a2d1-d5e875c9e158",
+      "type": "requirement",
+      "ref": "REQ-20",
+      "title": "Lean agent context",
+      "body": "Agents shall obtain project requirements context exclusively from the requirements database and kanban card history via tools; the system shall not feed agents large prompt contexts or requirement documents.",
+      "sort_order": 10,
+      "status": "approved",
+      "attributes": {
+        "links_snapshot": [
+          {
+            "attributes": null,
+            "created_at": "2026-08-30T19:54:35.820411Z",
+            "from_id": "33b75afa-933d-46f1-9725-013a1b17f0b1",
+            "id": "b37e9837-253e-456a-967c-e8cc5e435446",
+            "suspect": false,
+            "to_id": "7973f87c-ab01-4383-a9af-130a433a04ed",
+            "type": "satisfies",
+            "updated_at": "2026-08-30T19:54:35.820411Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
+            "created_at": "2026-08-30T19:54:31.252182Z",
+            "from_id": "7973f87c-ab01-4383-a9af-130a433a04ed",
+            "id": "e887976e-5a3f-4ee2-8a1e-27863bed3950",
+            "suspect": false,
+            "to_id": "8324454a-b5a6-4625-9075-314728afc142",
+            "type": "derives-from",
+            "updated_at": "2026-08-30T19:54:31.252182Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          }
+        ],
+        "priority": "must",
+        "status": "approved",
+        "verification_method": "analysis",
+        "verification_status": "verified"
+      },
+      "version": 5,
+      "valid_from": "2026-09-02T22:05:39.646079Z",
+      "valid_to": null,
+      "created_at": "2026-08-30T19:54:14.504846Z",
+      "updated_at": "2026-09-02T22:05:39.646079Z"
+    },
+    {
       "id": "ca7f8662-eade-4271-be1e-3d7a6f005dee",
       "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
       "parent_id": "a4820698-d336-43b6-a67d-0bdbf52ed750",
@@ -4077,56 +4314,6 @@
       "valid_to": null,
       "created_at": "2026-08-30T19:54:14.194535Z",
       "updated_at": "2026-08-30T19:54:54.496543Z"
-    },
-    {
-      "id": "7973f87c-ab01-4383-a9af-130a433a04ed",
-      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
-      "parent_id": "bb0dd19a-fb00-41d5-8d41-2310835a6acc",
-      "type": "requirement",
-      "ref": "REQ-20",
-      "title": "Lean agent context",
-      "body": "Agents shall obtain project requirements context exclusively from the requirements database and kanban card history via tools; the system shall not feed agents large prompt contexts or requirement documents.",
-      "sort_order": 410,
-      "status": "approved",
-      "attributes": {
-        "links_snapshot": [
-          {
-            "attributes": null,
-            "created_at": "2026-08-30T19:54:35.820411Z",
-            "from_id": "33b75afa-933d-46f1-9725-013a1b17f0b1",
-            "id": "b37e9837-253e-456a-967c-e8cc5e435446",
-            "suspect": false,
-            "to_id": "7973f87c-ab01-4383-a9af-130a433a04ed",
-            "type": "satisfies",
-            "updated_at": "2026-08-30T19:54:35.820411Z",
-            "valid_from": "0001-01-01T00:00:00Z",
-            "valid_to": null,
-            "version": 1
-          },
-          {
-            "attributes": null,
-            "created_at": "2026-08-30T19:54:31.252182Z",
-            "from_id": "7973f87c-ab01-4383-a9af-130a433a04ed",
-            "id": "e887976e-5a3f-4ee2-8a1e-27863bed3950",
-            "suspect": false,
-            "to_id": "8324454a-b5a6-4625-9075-314728afc142",
-            "type": "derives-from",
-            "updated_at": "2026-08-30T19:54:31.252182Z",
-            "valid_from": "0001-01-01T00:00:00Z",
-            "valid_to": null,
-            "version": 1
-          }
-        ],
-        "priority": "must",
-        "status": "approved",
-        "verification_method": "analysis",
-        "verification_status": "verified"
-      },
-      "version": 4,
-      "valid_from": "2026-08-30T19:54:54.779005Z",
-      "valid_to": null,
-      "created_at": "2026-08-30T19:54:14.504846Z",
-      "updated_at": "2026-08-30T19:54:54.779005Z"
     },
     {
       "id": "9e3c1eb3-d43d-4782-bb1f-972f61faa2fb",
@@ -4349,56 +4536,6 @@
       "valid_to": null,
       "created_at": "2026-08-30T19:54:15.960686Z",
       "updated_at": "2026-08-30T19:54:56.267581Z"
-    },
-    {
-      "id": "acbe3de0-58d6-4e82-9e56-a00ede62af26",
-      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
-      "parent_id": "bb0dd19a-fb00-41d5-8d41-2310835a6acc",
-      "type": "requirement",
-      "ref": "REQ-41",
-      "title": "Untrusted content isolation in agent prompts",
-      "body": "A prompt the platform builds for a member's own copilot shall state up front that the product profile, wizard state and transcript are content and never instructions, and shall fence the state block, so that text authored in another tenant \u2014 a rolled community product seeds the wizard \u2014 cannot read as an order to an agent running on the member's own machine with their credentials.",
-      "sort_order": 465,
-      "status": "draft",
-      "attributes": {
-        "links_snapshot": [
-          {
-            "attributes": null,
-            "created_at": "2026-09-02T20:29:20.079175Z",
-            "from_id": "a68a6229-fcd5-4cb3-b774-92f44b726ef7",
-            "id": "25aa872d-2f86-45a4-a44e-4cbacf7e1db1",
-            "suspect": false,
-            "to_id": "acbe3de0-58d6-4e82-9e56-a00ede62af26",
-            "type": "verifies",
-            "updated_at": "2026-09-02T20:29:20.079175Z",
-            "valid_from": "0001-01-01T00:00:00Z",
-            "valid_to": null,
-            "version": 1
-          },
-          {
-            "attributes": null,
-            "created_at": "2026-09-02T20:29:16.624499Z",
-            "from_id": "acbe3de0-58d6-4e82-9e56-a00ede62af26",
-            "id": "c945d85b-659a-4ca8-8d0b-277a81a3e0dc",
-            "suspect": false,
-            "to_id": "8324454a-b5a6-4625-9075-314728afc142",
-            "type": "derives-from",
-            "updated_at": "2026-09-02T20:29:16.624499Z",
-            "valid_from": "0001-01-01T00:00:00Z",
-            "valid_to": null,
-            "version": 1
-          }
-        ],
-        "priority": "must",
-        "status": "draft",
-        "verification_method": "test",
-        "verification_status": "verified"
-      },
-      "version": 3,
-      "valid_from": "2026-09-02T20:29:20.097801Z",
-      "valid_to": null,
-      "created_at": "2026-09-02T20:29:11.294312Z",
-      "updated_at": "2026-09-02T20:29:20.097801Z"
     },
     {
       "id": "aed7c942-3829-4c35-bad0-f23d32301766",
@@ -5055,9 +5192,148 @@
       "valid_to": null,
       "created_at": "2026-09-02T21:40:53.349981Z",
       "updated_at": "2026-09-02T21:41:28.990549Z"
+    },
+    {
+      "id": "6fcb4db8-6441-436a-a308-8fd72c219ea6",
+      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
+      "parent_id": "d959d147-c2ab-4982-a59b-f0453157cbd7",
+      "type": "requirement",
+      "ref": "REQ-48",
+      "title": "Named actors and entities in the activity log",
+      "body": "The activity log shall name the person, agent or runner behind each recorded event and the artifact, link, work item, baseline, comment, test result or agent run it affected, showing those names alongside the stored identifiers so the audit trail reads without resolving identifiers by hand. A name that can no longer be resolved falls back to the identifier alone.",
+      "sort_order": 236,
+      "status": "draft",
+      "attributes": {
+        "links_snapshot": [
+          {
+            "attributes": null,
+            "created_at": "2026-09-02T21:58:21.720054Z",
+            "from_id": "86bab759-56b7-4419-acf9-b96548d5eed5",
+            "id": "4f2428e7-9d16-4991-949e-2c9137fe5908",
+            "suspect": false,
+            "to_id": "6fcb4db8-6441-436a-a308-8fd72c219ea6",
+            "type": "verifies",
+            "updated_at": "2026-09-02T21:58:21.720054Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
+            "created_at": "2026-09-02T21:58:16.606251Z",
+            "from_id": "79dd134b-1725-4a09-aa6c-04e5860fddb5",
+            "id": "4e47c4a1-abc2-4364-a070-36d709a844e1",
+            "suspect": false,
+            "to_id": "6fcb4db8-6441-436a-a308-8fd72c219ea6",
+            "type": "satisfies",
+            "updated_at": "2026-09-02T21:58:16.606251Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
+            "created_at": "2026-09-02T21:58:11.543639Z",
+            "from_id": "6fcb4db8-6441-436a-a308-8fd72c219ea6",
+            "id": "65100ee7-1a8c-4837-861c-4dd782d58181",
+            "suspect": false,
+            "to_id": "12cff868-2282-41cd-82a9-b8bfe708d9a6",
+            "type": "derives-from",
+            "updated_at": "2026-09-02T21:58:11.543639Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          }
+        ],
+        "priority": "must",
+        "status": "draft",
+        "verification_method": "test"
+      },
+      "version": 4,
+      "valid_from": "2026-09-02T21:58:21.736407Z",
+      "valid_to": null,
+      "created_at": "2026-09-02T21:57:54.907577Z",
+      "updated_at": "2026-09-02T21:58:21.736407Z"
+    },
+    {
+      "id": "a25960b2-ee9b-4005-a2d1-d5e875c9e158",
+      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
+      "parent_id": "e2c7d247-ec5d-4e11-bd8d-bb7533373251",
+      "type": "heading",
+      "ref": "HDG-12",
+      "title": "Performance",
+      "body": "",
+      "sort_order": 10,
+      "status": "draft",
+      "attributes": {
+        "status": "draft"
+      },
+      "version": 1,
+      "valid_from": "2026-09-02T22:05:38.543055Z",
+      "valid_to": null,
+      "created_at": "2026-09-02T22:05:38.543055Z",
+      "updated_at": "2026-09-02T22:05:38.543055Z"
+    },
+    {
+      "id": "379f0d9a-5464-4e29-8b36-7d2bc3c9e5aa",
+      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
+      "parent_id": "e2c7d247-ec5d-4e11-bd8d-bb7533373251",
+      "type": "heading",
+      "ref": "HDG-13",
+      "title": "Security",
+      "body": "",
+      "sort_order": 40,
+      "status": "draft",
+      "attributes": {
+        "status": "draft"
+      },
+      "version": 1,
+      "valid_from": "2026-09-02T22:05:38.809505Z",
+      "valid_to": null,
+      "created_at": "2026-09-02T22:05:38.809505Z",
+      "updated_at": "2026-09-02T22:05:38.809505Z"
     }
   ],
   "links": [
+    {
+      "id": "4f2428e7-9d16-4991-949e-2c9137fe5908",
+      "from_id": "86bab759-56b7-4419-acf9-b96548d5eed5",
+      "to_id": "6fcb4db8-6441-436a-a308-8fd72c219ea6",
+      "type": "verifies",
+      "suspect": false,
+      "attributes": null,
+      "version": 1,
+      "valid_from": "0001-01-01T00:00:00Z",
+      "valid_to": null,
+      "created_at": "2026-09-02T21:58:21.720054Z",
+      "updated_at": "2026-09-02T21:58:21.720054Z"
+    },
+    {
+      "id": "4e47c4a1-abc2-4364-a070-36d709a844e1",
+      "from_id": "79dd134b-1725-4a09-aa6c-04e5860fddb5",
+      "to_id": "6fcb4db8-6441-436a-a308-8fd72c219ea6",
+      "type": "satisfies",
+      "suspect": false,
+      "attributes": null,
+      "version": 1,
+      "valid_from": "0001-01-01T00:00:00Z",
+      "valid_to": null,
+      "created_at": "2026-09-02T21:58:16.606251Z",
+      "updated_at": "2026-09-02T21:58:16.606251Z"
+    },
+    {
+      "id": "65100ee7-1a8c-4837-861c-4dd782d58181",
+      "from_id": "6fcb4db8-6441-436a-a308-8fd72c219ea6",
+      "to_id": "12cff868-2282-41cd-82a9-b8bfe708d9a6",
+      "type": "derives-from",
+      "suspect": false,
+      "attributes": null,
+      "version": 1,
+      "valid_from": "0001-01-01T00:00:00Z",
+      "valid_to": null,
+      "created_at": "2026-09-02T21:58:11.543639Z",
+      "updated_at": "2026-09-02T21:58:11.543639Z"
+    },
     {
       "id": "42358c0a-353e-4b50-8a23-887fe31f035f",
       "from_id": "74c51a0b-ecdf-4743-8bb7-24faa2f3b721",
