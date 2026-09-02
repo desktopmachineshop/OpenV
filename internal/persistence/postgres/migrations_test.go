@@ -73,6 +73,32 @@ func tableExists(t *testing.T, db *sql.DB, table string) bool {
 
 // TestMigrateFreshDatabase: a fresh database gets the full baseline schema
 // plus a ledger recording migration 0001.
+// TestRegistryIsOrderedWithoutDB checks the shipped registry itself, with no
+// database: versions unique and ascending, names non-empty, exactly one of
+// Run/RunDB set. runMigrations enforces the same rules at boot, but only where
+// a database is reachable — this catches a migration appended in the wrong
+// place before CI ever starts Postgres.
+func TestRegistryIsOrderedWithoutDB(t *testing.T) {
+	seen := map[int]bool{}
+	previous := 0
+	for _, m := range migrations {
+		if m.Name == "" {
+			t.Errorf("migration %d has no name", m.Version)
+		}
+		if seen[m.Version] {
+			t.Errorf("duplicate migration version %d", m.Version)
+		}
+		seen[m.Version] = true
+		if m.Version <= previous {
+			t.Errorf("migration %04d (%s) is out of order: it follows %04d", m.Version, m.Name, previous)
+		}
+		previous = m.Version
+		if (m.Run == nil) == (m.RunDB == nil) {
+			t.Errorf("migration %04d (%s) must set exactly one of Run or RunDB", m.Version, m.Name)
+		}
+	}
+}
+
 func TestMigrateFreshDatabase(t *testing.T) {
 	db := testDB(t)
 

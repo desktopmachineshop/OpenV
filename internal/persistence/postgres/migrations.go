@@ -603,24 +603,6 @@ var migrations = []Migration{
 	// served to clients. No foreign keys: community content outlives the
 	// workspace that published it, and a workspace purge must not fail on it
 	// or silently retract other people's roll list.
-	// 0022: workspace and project settings (requirement quality rule sets).
-	// One JSONB bag per level rather than a column per preference: the rules
-	// resolve defaults -> workspace -> project, and each level stores only the
-	// keys it actually overrides. Empty settings everywhere means the platform
-	// defaults, so existing workspaces keep the ISO/IEC/IEEE 29148 "shall"
-	// convention the linter has always applied.
-	{Version: 22, Name: "workspace_project_settings", Run: func(tx *sql.Tx) error {
-		if _, err := tx.Exec(`
-			ALTER TABLE organizations ADD COLUMN IF NOT EXISTS settings JSONB NOT NULL DEFAULT '{}'
-		`); err != nil {
-			return err
-		}
-		_, err := tx.Exec(`
-			ALTER TABLE projects ADD COLUMN IF NOT EXISTS settings JSONB NOT NULL DEFAULT '{}'
-		`)
-		return err
-	}},
-
 	{Version: 21, Name: "shared_products", Run: func(tx *sql.Tx) error {
 		if _, err := tx.Exec(`
 			CREATE TABLE IF NOT EXISTS shared_products (
@@ -663,6 +645,24 @@ var migrations = []Migration{
 				created_at TIMESTAMP NOT NULL DEFAULT NOW(),
 				PRIMARY KEY (product_id, user_id)
 			)
+		`)
+		return err
+	}},
+
+	// 0022: workspace and project settings (requirement quality rule sets).
+	// One JSONB bag per level rather than a column per preference: the rules
+	// resolve defaults -> workspace -> project, and each level stores only the
+	// keys it actually overrides. Empty settings everywhere means the platform
+	// defaults, so existing workspaces keep the ISO/IEC/IEEE 29148 "shall"
+	// convention the linter has always applied.
+	{Version: 22, Name: "workspace_project_settings", Run: func(tx *sql.Tx) error {
+		if _, err := tx.Exec(`
+			ALTER TABLE organizations ADD COLUMN IF NOT EXISTS settings JSONB NOT NULL DEFAULT '{}'
+		`); err != nil {
+			return err
+		}
+		_, err := tx.Exec(`
+			ALTER TABLE projects ADD COLUMN IF NOT EXISTS settings JSONB NOT NULL DEFAULT '{}'
 		`)
 		return err
 	}},
