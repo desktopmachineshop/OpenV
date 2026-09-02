@@ -2202,5 +2202,8 @@ func (h *Handler) ListDomainEvents(w http.ResponseWriter, r *http.Request) {
 		}
 		list = visible
 	}
-	json.NewEncoder(w).Encode(list)
+	// Decorate only what survived the visibility filter: naming an event
+	// dereferences the IDs it carries, so events the caller may not see are
+	// never looked up.
+	json.NewEncoder(w).Encode(h.decorateEvents(list))
 }

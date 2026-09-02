@@ -1659,6 +1659,14 @@ export interface DomainEvent {
   actor: string;
   payload: Record<string, any>;
   created_at: string;
+  // Names the server resolved for the raw IDs above, so the activity log can
+  // show who did what to which thing (the IDs still ride along). Any of these
+  // may be absent when the referenced row is gone.
+  actor_kind?: 'user' | 'agent' | 'worker' | 'system' | string;
+  actor_id?: string;
+  actor_name?: string;
+  entity_kind?: string;
+  entity_name?: string;
 }
 
 export const eventsAPI = {

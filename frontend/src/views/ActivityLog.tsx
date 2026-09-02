@@ -56,8 +56,28 @@ const typeBadgeStyle = (eventType: string): React.CSSProperties => {
   };
 };
 
-// "user:<id>" / "agent:<run_id>" / "system" → a friendly label + detail.
-const formatActor = (actor: string): { label: string; detail?: string } => {
+// What each actor kind is called in the table.
+const ACTOR_KIND_LABELS: Record<string, string> = {
+  user: 'User',
+  agent: 'Agent run',
+  worker: 'Runner',
+  system: 'System',
+};
+
+// The server resolves each event's actor into a kind, the ID inside the actor
+// string and the name behind it. Fall back to parsing "user:<id>" /
+// "agent:<run_id>" / "system" here for responses that carry no names.
+const formatActor = (event: DomainEvent): { label: string; kind?: string; detail?: string } => {
+  const actor = event.actor;
+  const kindLabel = event.actor_kind ? ACTOR_KIND_LABELS[event.actor_kind] || event.actor_kind : undefined;
+  if (event.actor_kind) {
+    return {
+      label: event.actor_name || kindLabel || actor,
+      // The kind is only worth repeating once the name has taken the lead.
+      kind: event.actor_name ? kindLabel : undefined,
+      detail: event.actor_id,
+    };
+  }
   if (actor === 'system' || !actor) return { label: 'System' };
   const sep = actor.indexOf(':');
   if (sep > 0) {
@@ -204,7 +224,7 @@ export const ActivityLog: React.FC = () => {
             </thead>
             <tbody>
               {events.map((event) => {
-                const actor = formatActor(event.actor);
+                const actor = formatActor(event);
                 const isOpen = expanded.has(event.id);
                 const hasPayload = event.payload && Object.keys(event.payload).length > 0;
                 return (
@@ -220,7 +240,10 @@ export const ActivityLog: React.FC = () => {
                         <span style={typeBadgeStyle(event.event_type)}>{event.event_type}</span>
                       </td>
                       <td style={cellStyle}>
-                        {actor.label}
+                        <span title={actor.label}>{actor.label}</span>
+                        {actor.kind && (
+                          <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 6 }}>{actor.kind}</span>
+                        )}
                         {actor.detail && (
                           <span
                             title={actor.detail}
@@ -231,10 +254,28 @@ export const ActivityLog: React.FC = () => {
                         )}
                       </td>
                       <td style={cellStyle}>
-                        {event.entity_id ? (
-                          <span title={event.entity_id} style={{ fontFamily: 'monospace', fontSize: 12 }}>
-                            {shortId(event.entity_id)}
-                          </span>
+                        {event.entity_name || event.entity_id ? (
+                          <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, maxWidth: 420 }}>
+                            {event.entity_name && (
+                              <span
+                                title={event.entity_name}
+                                style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                              >
+                                {event.entity_name}
+                              </span>
+                            )}
+                            {event.entity_kind && !event.entity_name && (
+                              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{event.entity_kind}</span>
+                            )}
+                            {event.entity_id && (
+                              <span
+                                title={event.entity_id}
+                                style={{ fontFamily: 'monospace', fontSize: 11, color: 'var(--text-muted)' }}
+                              >
+                                {shortId(event.entity_id)}
+                              </span>
+                            )}
+                          </div>
                         ) : (
                           '—'
                         )}
@@ -250,7 +291,18 @@ export const ActivityLog: React.FC = () => {
                             Event <span style={{ fontFamily: 'monospace' }}>{event.id}</span>
                             {event.entity_id && (
                               <>
-                                {' · '}entity <span style={{ fontFamily: 'monospace' }}>{event.entity_id}</span>
+                                {' · '}
+                                {event.entity_kind || 'entity'}{' '}
+                                {event.entity_name && <span style={{ color: 'var(--text-body)' }}>{event.entity_name} </span>}
+                                <span style={{ fontFamily: 'monospace' }}>{event.entity_id}</span>
+                              </>
+                            )}
+                            {actor.detail && (
+                              <>
+                                {' · '}
+                                {actor.kind ? actor.kind.toLowerCase() : 'actor'}{' '}
+                                {actor.label && <span style={{ color: 'var(--text-body)' }}>{actor.label} </span>}
+                                <span style={{ fontFamily: 'monospace' }}>{actor.detail}</span>
                               </>
                             )}
                           </div>
