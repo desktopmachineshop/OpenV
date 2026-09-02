@@ -16,13 +16,13 @@
     ]
   },
   "artifacts": [
-    { "key": "H_PERS", "type": "heading", "title": "1. Personas", "body": "" },
+    { "key": "H_PERS", "type": "heading", "title": "Personas", "body": "" },
     { "key": "P1", "parent": "H_PERS", "type": "persona", "title": "Solo Founder", "body": "Defines and builds products end-to-end alone. Uses OpenV as product manager, requirements tool and virtual development team, with AI agents doing the heavy lifting under their review." },
     { "key": "P2", "parent": "H_PERS", "type": "persona", "title": "Company Admin", "body": "Owns a company workspace: manages members, teams, project access, workspace AI keys and the hosted runner. Accountable for tenant privacy and spend." },
     { "key": "P3", "parent": "H_PERS", "type": "persona", "title": "Team Contributor", "body": "Engineer or product person working in granted projects. Brings their own AI subscription via a personal runner; launches and reviews agent work." },
     { "key": "P4", "parent": "H_PERS", "type": "persona", "title": "External Stakeholder", "body": "Customer, domain expert or colleague invited by link to express needs in a natural conversation. Has no OpenV account and never sees the tool itself." },
 
-    { "key": "H_NEEDS", "type": "heading", "title": "2. Stakeholder Needs", "body": "" },
+    { "key": "H_NEEDS", "type": "heading", "title": "Stakeholder Needs", "body": "" },
     { "key": "UN1", "parent": "H_NEEDS", "type": "user-need", "title": "Define products without a team", "body": "As a solo founder I need to define one or more products and manage their complete requirement sets on my own, so that I can run a real product process without hiring." },
     { "key": "UN2", "parent": "H_NEEDS", "type": "user-need", "title": "Guided requirements definition", "body": "I need step-by-step, conversational guidance that turns rough product ideas into structured requirements, because I am not a requirements engineer." },
     { "key": "UN3", "parent": "H_NEEDS", "type": "user-need", "title": "AI does real work under my control", "body": "I need AI agents to perform meaningful requirements and development work, while every change they make passes through my explicit approval." },
@@ -34,7 +34,7 @@
     { "key": "UN9", "parent": "H_NEEDS", "type": "user-need", "title": "Predictable agent execution", "body": "I need agent work to start reliably regardless of which colleague is online, while runs I launch still prefer my own machine and subscription first." },
     { "key": "UN10", "parent": "H_NEEDS", "type": "user-need", "title": "Nothing runs without my consent", "body": "I need certainty that OpenV runs nothing in the background on my machine: a runner executes only while I have deliberately opened it, and stops when I close it." },
 
-    { "key": "H_CORE", "type": "heading", "title": "3. Requirements Management Core", "body": "" },
+    { "key": "H_CORE", "type": "heading", "title": "Requirements Management Core", "body": "" },
     { "key": "R-CORE-1", "parent": "H_CORE", "type": "requirement", "title": "Hierarchical versioned modules", "body": "The system shall organize artifacts as hierarchical, ordered modules within projects, with parent/child structure and stable ordering.", "attributes": { "status": "approved", "priority": "must" } },
     { "key": "R-CORE-2", "parent": "H_CORE", "type": "requirement", "title": "Typed artifacts with attributes", "body": "The system shall support typed artifacts (persona, user need, requirement, design item, test case, hazard, heading, description) each carrying free-form attributes.", "attributes": { "status": "approved", "priority": "must" } },
     { "key": "R-CORE-3", "parent": "H_CORE", "type": "requirement", "title": "Semantically constrained links", "body": "The system shall enforce link-type rules: verifies (test case to requirement), validates (test case to user need), satisfies (design item to requirement), derives-from (requirement to user need), decomposes-to (requirement to requirement), mitigates (design item to hazard).", "attributes": { "status": "approved", "priority": "must" } },
@@ -42,25 +42,25 @@
     { "key": "R-CORE-5", "parent": "H_CORE", "type": "requirement", "title": "Project baselines", "body": "The system shall capture immutable named baselines of a project's full artifact and link state.", "attributes": { "status": "approved", "priority": "must" } },
     { "key": "R-CORE-6", "parent": "H_CORE", "type": "requirement", "title": "Export and reporting", "body": "The system shall export projects as structured data and generate formatted PDF reports including V&V status.", "attributes": { "status": "approved", "priority": "should" } },
 
-    { "key": "H_GUID", "type": "heading", "title": "4. Guided Definition & Interviews", "body": "" },
+    { "key": "H_GUID", "type": "heading", "title": "Guided Definition & Interviews", "body": "" },
     { "key": "R-GUID-1", "parent": "H_GUID", "type": "requirement", "title": "Guided product definition wizard", "body": "The system shall provide a guided wizard that captures vision, problem statement, target users, constraints and success metrics, producing structured project artifacts.", "attributes": { "status": "approved", "priority": "must" } },
     { "key": "R-GUID-2", "parent": "H_GUID", "type": "requirement", "title": "Interview invitation links", "body": "Members shall be able to invite internal or external people by link to an interview session; invitees shall need no OpenV account.", "attributes": { "status": "approved", "priority": "must" } },
     { "key": "R-GUID-3", "parent": "H_GUID", "type": "requirement", "title": "Conversational AI elicitation", "body": "The interview session shall be an AI-led natural conversation that asks questions to understand what the invitee needs from the product, and shall record proposed artifacts as interview-tagged drafts for member review - never as directly approved content.", "attributes": { "status": "approved", "priority": "must" } },
 
-    { "key": "H_VV", "type": "heading", "title": "5. Verification & Validation", "body": "" },
+    { "key": "H_VV", "type": "heading", "title": "Verification & Validation", "body": "" },
     { "key": "R-VV-1", "parent": "H_VV", "type": "requirement", "title": "Coverage computation", "body": "The system shall compute verification coverage of requirements (via verifies links) and validation coverage of user needs (via validates links), including latest test-run results.", "attributes": { "status": "approved", "priority": "must" } },
     { "key": "R-VV-2", "parent": "H_VV", "type": "requirement", "title": "Traceability matrix", "body": "The system shall present a traceability matrix relating needs, requirements and test cases.", "attributes": { "status": "approved", "priority": "must" } },
     { "key": "R-VV-3", "parent": "H_VV", "type": "requirement", "title": "Gap reporting", "body": "The system shall report unverified requirements, unvalidated needs and failing verifications as actionable gaps.", "attributes": { "status": "approved", "priority": "must" } },
     { "key": "R-VV-4", "parent": "H_VV", "type": "requirement", "title": "Test run recording", "body": "The system shall record test runs capturing pass/fail results per test case over time.", "attributes": { "status": "approved", "priority": "must" } },
 
-    { "key": "H_TEN", "type": "heading", "title": "6. Multi-Tenancy & Access Control", "body": "" },
+    { "key": "H_TEN", "type": "heading", "title": "Multi-Tenancy & Access Control", "body": "" },
     { "key": "R-TEN-1", "parent": "H_TEN", "type": "requirement", "title": "Personal spaces", "body": "Every user shall automatically receive a personal workspace on registration.", "attributes": { "status": "approved", "priority": "must" } },
     { "key": "R-TEN-2", "parent": "H_TEN", "type": "requirement", "title": "Company workspaces", "body": "Companies shall have workspaces with admin and member roles, and named teams of users.", "attributes": { "status": "approved", "priority": "must" } },
     { "key": "R-TEN-3", "parent": "H_TEN", "type": "requirement", "title": "Per-project access grants", "body": "Project access shall be grantable per user and/or per team, with role levels (owner, editor, viewer); a member's effective role is the highest of their direct and team grants.", "attributes": { "status": "approved", "priority": "must" } },
     { "key": "R-TEN-4", "parent": "H_TEN", "type": "requirement", "title": "Tenant isolation", "body": "No user, worker or agent shall read or write data belonging to a workspace they are not a member of.", "attributes": { "status": "approved", "priority": "must" } },
     { "key": "R-TEN-5", "parent": "H_TEN", "type": "requirement", "title": "Authentication", "body": "The system shall support email/password session authentication and Google sign-in.", "attributes": { "status": "approved", "priority": "must" } },
 
-    { "key": "H_AG", "type": "heading", "title": "7. Agents & Automation", "body": "" },
+    { "key": "H_AG", "type": "heading", "title": "Agents & Automation", "body": "" },
     { "key": "R-AG-1", "parent": "H_AG", "type": "requirement", "title": "GUI-editable agent definitions", "body": "Agents shall be defined as markdown files that are fully editable in the GUI and synchronizable from disk.", "attributes": { "status": "approved", "priority": "must" } },
     { "key": "R-AG-2", "parent": "H_AG", "type": "requirement", "title": "Lean agent context", "body": "Agents shall obtain project requirements context exclusively from the requirements database and kanban card history via tools; the system shall not feed agents large prompt contexts or requirement documents.", "attributes": { "status": "approved", "priority": "must" } },
     { "key": "R-AG-3", "parent": "H_AG", "type": "requirement", "title": "Proposal-gated writes", "body": "All agent-initiated changes to project data shall be diverted into proposals that require explicit human approval before taking effect.", "attributes": { "status": "approved", "priority": "must" } },
@@ -69,7 +69,7 @@
     { "key": "R-AG-6", "parent": "H_AG", "type": "requirement", "title": "Manual, scheduled and triggered automation", "body": "Agent utilization shall be launchable manually, on cron schedules, and on project events (triggers).", "attributes": { "status": "approved", "priority": "must" } },
     { "key": "R-AG-7", "parent": "H_AG", "type": "requirement", "title": "Code repository operation", "body": "Agents shall optionally operate on connected code repositories in addition to OpenV data.", "attributes": { "status": "approved", "priority": "should" } },
 
-    { "key": "H_RUN", "type": "heading", "title": "8. Execution & Runners", "body": "" },
+    { "key": "H_RUN", "type": "heading", "title": "Execution & Runners", "body": "" },
     { "key": "R-RUN-1", "parent": "H_RUN", "type": "requirement", "title": "Bring-your-own-AI personal runners", "body": "Each member shall be able to run agents on their own machine through their own vendor CLI subscription (personal runner); the platform shall never execute consumer subscriptions server-side.", "attributes": { "status": "approved", "priority": "must" } },
     { "key": "R-RUN-2", "parent": "H_RUN", "type": "requirement", "title": "Personal runner scoping", "body": "A personal runner shall claim only runs launched by its owning member.", "attributes": { "status": "approved", "priority": "must" } },
     { "key": "R-RUN-3", "parent": "H_RUN", "type": "requirement", "title": "First-refusal routing", "body": "A run launched by a member with an online personal runner shall be reserved for that runner for a grace window (default 60 seconds, workspace-tunable) before hosted or workspace runners may claim it; ownerless runs shall route immediately.", "attributes": { "status": "approved", "priority": "must" } },
@@ -79,7 +79,7 @@
     { "key": "R-RUN-7", "parent": "H_RUN", "type": "requirement", "title": "On-demand Agent Connector", "body": "Any agent request that cannot find an active runner shall prompt the user to open the OpenV Agent Connector, offering installation if absent. The connector shall not be an auto-starting service: it runs only while its window is open and stops when closed.", "attributes": { "status": "approved", "priority": "must" } },
     { "key": "R-RUN-8", "parent": "H_RUN", "type": "requirement", "title": "Credential-free pairing links", "body": "Connector pairing shall use one-time codes with a 10-minute expiry exchanged over a public endpoint; deep links shall never carry credentials.", "attributes": { "status": "approved", "priority": "must" } },
 
-    { "key": "H_DES", "type": "heading", "title": "9. Design Items", "body": "" },
+    { "key": "H_DES", "type": "heading", "title": "Design Items", "body": "" },
     { "key": "D1", "parent": "H_DES", "type": "design-item", "title": "MCP stdio tool server", "body": "Hand-rolled JSON-RPC MCP server (~21 tools) is the only data path between agents and OpenV: requirements, links, V&V, kanban, proposals. Enforces the lean-context rule by construction." },
     { "key": "D2", "parent": "H_DES", "type": "design-item", "title": "Server-side proposal diversion", "body": "Write endpoints detect an agent run context and divert mutations into proposal records; approval replays the operation as the reviewing human." },
     { "key": "D3", "parent": "H_DES", "type": "design-item", "title": "agent_runs queue with routing claims", "body": "The agent_runs table is the job queue (FOR UPDATE SKIP LOCKED). Claim SQL scopes personal keys to their owner's runs and holds reserved runs until hosted_after expires." },
@@ -89,7 +89,7 @@
     { "key": "D7", "parent": "H_DES", "type": "design-item", "title": "Workspace authorization ladder", "body": "Request authorization resolves platform admin, org admin, direct and team project grants, run-own-project and worker-same-org in one ladder; workers carry org and optional user scope from their key." },
     { "key": "D8", "parent": "H_DES", "type": "design-item", "title": "Crew builder UIs", "body": "Cytoscape-based org-chart editor with department containers and hierarchical layout, plus a network-diagram editor with typed edges; both edit the same crew graph." },
 
-    { "key": "H_TEST", "type": "heading", "title": "10. Verification & Validation Tests", "body": "" },
+    { "key": "H_TEST", "type": "heading", "title": "Verification & Validation Tests", "body": "" },
     { "key": "T1", "parent": "H_TEST", "type": "test-case", "title": "Authorization matrix suite", "body": "Automated Go suite exercising the role ladder: platform admin, org admin, direct grants, team grants, run-own-project, worker org scoping. Pass = every matrix cell returns the expected allow/deny." },
     { "key": "T2", "parent": "H_TEST", "type": "test-case", "title": "Tenant isolation end-to-end", "body": "Live check with two accounts in different orgs: all cross-org reads and writes return 403/404; org directories and worker keys stay scoped; team-grant escalation raises effective role as designed." },
     { "key": "T3", "parent": "H_TEST", "type": "test-case", "title": "Claim routing suite", "body": "Automated suite plus live check: a personal key never claims another user's run; reserved runs return no-content to workspace workers during the grace window and are claimable after hosted_after expires; ownerless runs route immediately." },

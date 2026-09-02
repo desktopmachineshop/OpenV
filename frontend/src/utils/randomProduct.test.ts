@@ -220,14 +220,17 @@ describe('community-shared products', () => {
     const community = [fromSharedProduct(payload)];
     const rolls = Array.from({ length: 400 }, () => generateRandomProduct(community));
 
-    const rolledShared = rolls.find((p) => p.name === 'Kevinproof');
+    // Rolls are told apart by the shared id, not by name: 'Kevinproof' is
+    // also a built-in concept name, so a name match finds whichever kind was
+    // rolled first and the assertion below passes or fails at random.
+    const rolledShared = rolls.find((p) => p.sharedId === payload.id);
     expect(rolledShared).toBeDefined();
     expect(isSharedProduct(rolledShared!)).toBe(true);
     // Somebody else's shared product is not one of this browser's kept
     // inventions, so the card must not tag it as agent-invented here.
     expect(isInventedProduct(rolledShared!, [])).toBe(false);
     // Built-ins keep appearing, and they carry no shared id.
-    const builtIn = rolls.find((p) => p.name !== 'Kevinproof')!;
+    const builtIn = rolls.find((p) => !p.sharedId)!;
     expect(isSharedProduct(builtIn)).toBe(false);
   });
 });
