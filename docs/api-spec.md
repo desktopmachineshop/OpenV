@@ -201,10 +201,26 @@ their own project, workers pass within their org) · `org member`/`org admin`
 
 ### Artifacts, links, attachments, chatter
 
+Every artifact carries two identifiers, and they answer different questions:
+
+- **`ref`** (`REQ-12`) is the stable address. It is minted server-side on
+  create from a per-project, per-prefix counter, is unique among a project's
+  live artifacts, stays constant across versions, and is **never reissued** —
+  deleting `REQ-12` does not free the number, because the counter only ever
+  moves forward. This is what a review comment, a test result, or an exported
+  report cites.
+- **`doc_number`** (`1.2`) is the section number of a heading, derived from
+  its position in the tree. Reordering the document changes it, which is why
+  it is never a citation. It is computed, never stored, and served only when
+  a list request passes `doc_numbers=1` — that flag makes the handler read the
+  whole project, since a page or a type filter is only a slice of the tree and
+  cannot be numbered on its own. Only headings get one.
+
+
 | Method | Path | Purpose | Auth |
 |---|---|---|---|
 | POST | `/api/v1/artifacts` | Create artifact | editor |
-| GET | `/api/v1/artifacts` | List artifacts (`?project_id=&type=`) | viewer |
+| GET | `/api/v1/artifacts` | List artifacts (`?project_id=&type=&doc_numbers=1`) | viewer |
 | GET | `/api/v1/artifacts/{id}` | Get artifact (current version) | viewer |
 | PUT | `/api/v1/artifacts/{id}` | Update (creates a new temporal version) | editor |
 | DELETE | `/api/v1/artifacts/{id}` | Soft-delete (history retained) | editor |

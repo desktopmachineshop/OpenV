@@ -88,6 +88,13 @@ export interface Artifact {
   project_id: string;
   parent_id?: string | null;
   type: string;
+  // Stable address, minted once per project and never reissued — this is what
+  // a reader cites ("REQ-12"). Constant across versions and reordering.
+  ref?: string;
+  // Derived section number for headings ("1.2"). Position-dependent, so it
+  // changes when the document is reordered; served only when the caller asks
+  // for doc_numbers=1. Never a citation — that is what ref is for.
+  doc_number?: string;
   title: string;
   body: string;
   sort_order?: number;
@@ -181,9 +188,20 @@ export const artifactAPI = {
   // One page of a project's artifacts in stable tree order. The response body
   // is a plain array; res.headers['x-total-count'] carries the total so
   // callers can page until exhaustion.
-  listPage: (projectId: string, opts?: { type?: string; limit?: number; offset?: number }) =>
+  listPage: (
+    projectId: string,
+    opts?: { type?: string; limit?: number; offset?: number; docNumbers?: boolean }
+  ) =>
     client.get<Artifact[]>('/api/v1/artifacts', {
-      params: { project_id: projectId, type: opts?.type, limit: opts?.limit, offset: opts?.offset },
+      params: {
+        project_id: projectId,
+        type: opts?.type,
+        limit: opts?.limit,
+        offset: opts?.offset,
+        // Opt-in: computing section numbers reads the whole project, which a
+        // plain paginated fetch has no reason to pay for.
+        doc_numbers: opts?.docNumbers ? '1' : undefined,
+      },
     }),
   // All of a project's artifacts, fetched through the paged API. The module
   // view renders artifacts as a parent_id tree, so it structurally needs the
@@ -194,7 +212,15 @@ export const artifactAPI = {
     const all: Artifact[] = [];
     for (;;) {
       const res = await client.get<Artifact[]>('/api/v1/artifacts', {
-        params: { project_id: projectId, type, limit: ARTIFACT_PAGE_LIMIT, offset: all.length },
+        params: {
+          project_id: projectId,
+          type,
+          limit: ARTIFACT_PAGE_LIMIT,
+          offset: all.length,
+          // This is the whole-project read the tree view renders, so it is
+          // the one call that wants section numbers.
+          doc_numbers: '1',
+        },
       });
       const page = res.data || [];
       all.push(...page);

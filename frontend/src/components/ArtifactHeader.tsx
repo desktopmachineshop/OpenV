@@ -182,7 +182,28 @@ export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
         }}
       >
         <div style={{ flex: 1 }}>
-          <h3 style={{ margin: '0 0 8px 0' }}>{displayArtifact.title}</h3>
+          {/* The stable reference leads the title: it is the address a
+              reader quotes in a review, a test result, or a report, and
+              unlike a section number it never changes or gets reused. */}
+          <h3 style={{ margin: '0 0 8px 0' }}>
+            {displayArtifact.ref && (
+              <code
+                style={{
+                  marginRight: 8,
+                  fontSize: '0.8em',
+                  color: 'var(--text-muted)',
+                  background: 'var(--surface-alt)',
+                  border: '1px solid var(--border-soft)',
+                  borderRadius: 3,
+                  padding: '0 5px',
+                }}
+                title="Stable reference — unique in this project and never reissued"
+              >
+                {displayArtifact.ref}
+              </code>
+            )}
+            {displayArtifact.title}
+          </h3>
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '8px' }}>
             <span
               style={{

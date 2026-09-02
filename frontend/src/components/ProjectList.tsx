@@ -27,6 +27,7 @@ import {
 } from '../utils/randomProduct';
 import { apiErrorMessage } from '../api/errors';
 import { Navbar } from './Navbar';
+import { HelpSidebar } from './HelpSidebar';
 import { CreateOrgModal } from './CreateOrgModal';
 import { useConfirm, usePrompt } from './ui';
 import './ProjectList.css';
@@ -503,22 +504,12 @@ export const ProjectList: React.FC = () => {
   return (
     <>
       <Navbar title="Projects" showWorkspaceControls />
+      {/* The same floating, context-aware help bubble every project page
+          carries, rather than a one-off link to the manual index: on this
+          page it explains creating, importing, templating and exporting
+          projects. */}
+      <HelpSidebar />
       <div className="project-list-container">
-
-      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-        {/* Plain anchor styled like the button: the manual opens in a new
-            tab so it doesn't navigate away from the projects list. */}
-        <a
-          className="button-secondary"
-          href="/manual"
-          target="_blank"
-          rel="noopener"
-          style={{ padding: '8px 14px', fontSize: 13, textDecoration: 'none', display: 'inline-block' }}
-          title="Open the user manual in a new tab"
-        >
-          ? Help
-        </a>
-      </div>
 
 
       {error && (

@@ -281,9 +281,30 @@ export const ArtifactList: React.FC<ArtifactListProps> = ({
                     {collapsed ? '▸' : '▾'}
                   </button>
                 )}
+                {/* A section shows where it sits ("1.2"); everything else
+                    shows the address a reader cites ("REQ-12"). */}
+                {artifact.doc_number && (
+                  <span style={{ color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>
+                    {artifact.doc_number}
+                  </span>
+                )}
                 {artifact.title}
               </div>
               <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                {artifact.ref && !artifact.doc_number && (
+                  <code
+                    style={{
+                      background: 'var(--surface-alt)',
+                      border: '1px solid var(--border-soft)',
+                      borderRadius: 3,
+                      padding: '0 4px',
+                      fontSize: '11px',
+                    }}
+                    title="Stable reference — cite this; it never changes or gets reused"
+                  >
+                    {artifact.ref}
+                  </code>
+                )}
                 <span>
                   {artifact.type} • v{artifact.version}
                   {hasChildren && (

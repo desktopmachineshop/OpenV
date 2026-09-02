@@ -25,7 +25,12 @@ type Artifact struct {
 	// current artifacts and constant across versions. Assigned server-side
 	// on create (see ref.go); distinct from CreateArtifactRequest.Ref, the
 	// proposal-mode temporary token.
-	Ref       string `json:"ref,omitempty"`
+	Ref string `json:"ref,omitempty"`
+	// DocNumber is the derived document number ("1.2") for a heading, filled
+	// in by the API when it serves a whole project and left empty otherwise.
+	// It is never stored: it describes where the artifact currently sits, so
+	// reordering the document changes it while Ref stays put (numbering.go).
+	DocNumber string `json:"doc_number,omitempty"`
 	Title     string `json:"title"`
 	Body      string `json:"body"` // markdown or rich text
 	SortOrder int    `json:"sort_order"`

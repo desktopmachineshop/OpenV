@@ -132,10 +132,16 @@ type Service interface {
 // (PDF, DOCX). It is built once from a project export snapshot so that no
 // renderer duplicates the tree/link-group construction.
 type reportModel struct {
-	data                 *exports.ProjectExport
-	baselineName         string
-	roots                []*artifactNode
-	attachmentMap        map[string][]*attachments.Attachment
+	data          *exports.ProjectExport
+	baselineName  string
+	roots         []*artifactNode
+	attachmentMap map[string][]*attachments.Attachment
+	// sectionNumbers holds the derived document number ("1.2") for each
+	// heading; see artifacts.SectionNumbers. Empty for everything else.
+	sectionNumbers map[string]string
+	// artifactTitles is what a traceability row shows for a link target. It
+	// carries the stable ref, because a reader following a cross-reference
+	// needs the address, not just the words.
 	artifactTitles       map[string]string
 	linkGroupsByArtifact map[string]linkGroups
 }
@@ -149,9 +155,11 @@ func buildReportModel(data *exports.ProjectExport, baselineName string) *reportM
 		attachmentMap[attachment.ArtifactID] = append(attachmentMap[attachment.ArtifactID], attachment)
 	}
 
+	sectionNumbers := artifacts.SectionNumbers(data.Artifacts)
+
 	artifactTitles := map[string]string{}
 	for _, artifact := range data.Artifacts {
-		artifactTitles[artifact.ID] = artifact.Title
+		artifactTitles[artifact.ID] = qualifiedTitle(artifact, sectionNumbers)
 	}
 
 	linkGroupsByArtifact := buildLinkGroups(data.Links)
@@ -177,9 +185,36 @@ func buildReportModel(data *exports.ProjectExport, baselineName string) *reportM
 		baselineName:         baselineName,
 		roots:                roots,
 		attachmentMap:        attachmentMap,
+		sectionNumbers:       sectionNumbers,
 		artifactTitles:       artifactTitles,
 		linkGroupsByArtifact: linkGroupsByArtifact,
 	}
+}
+
+// qualifiedTitle renders the heading a reader sees, prefixed with whichever
+// address applies to that artifact:
+//
+//	1.2 Background          — a section, numbered by position
+//	REQ-12 Brake within 2 m — everything else, addressed by its stable ref
+//
+// The two never both appear: a section's number IS its address in the
+// document, and a requirement's ref is the one that survives reordering.
+func qualifiedTitle(artifact *artifacts.Artifact, sectionNumbers map[string]string) string {
+	if artifact == nil {
+		return ""
+	}
+	if number := sectionNumbers[artifact.ID]; number != "" {
+		return strings.TrimSpace(number + " " + artifact.Title)
+	}
+	if artifact.Ref != "" {
+		return strings.TrimSpace(artifact.Ref + " " + artifact.Title)
+	}
+	return artifact.Title
+}
+
+// title returns the display heading for a node in this report.
+func (m *reportModel) title(artifact *artifacts.Artifact) string {
+	return qualifiedTitle(artifact, m.sectionNumbers)
 }
 
 // loadReportExport resolves the project export snapshot for a report, either
@@ -448,6 +483,19 @@ func linkTypeLabelForDirection(linkType string, isIncoming bool) string {
 	return linkType
 }
 
+// nodeTitle is the qualified heading for a node ("1.2 Background",
+// "REQ-12 Brake within 2 m"), read from the shared title index that
+// buildReportModel populates and every renderer already carries.
+func nodeTitle(node *artifactNode, artifactTitles map[string]string) string {
+	if node == nil || node.artifact == nil {
+		return ""
+	}
+	if t := artifactTitles[node.artifact.ID]; t != "" {
+		return t
+	}
+	return node.artifact.Title
+}
+
 func renderArtifactNode(
 	pdf *gofpdf.Fpdf,
 	tr func(string) string,
@@ -517,10 +565,10 @@ func renderArtifactContent(
 		yStart := pdf.GetY()
 		pdf.SetX(xStart)
 		if linkID > 0 {
-			pdf.MultiCell(0, 6, tr(node.artifact.Title), "", "L", false)
+			pdf.MultiCell(0, 6, tr(nodeTitle(node, artifactTitles)), "", "L", false)
 			pdf.SetLink(linkID, yStart, -1)
 		} else {
-			pdf.MultiCell(0, 6, tr(node.artifact.Title), "", "L", false)
+			pdf.MultiCell(0, 6, tr(nodeTitle(node, artifactTitles)), "", "L", false)
 		}
 	}
 
@@ -602,10 +650,10 @@ func renderArtifactContentWithSplitting(
 		yStart := pdf.GetY()
 		pdf.SetX(xStart)
 		if linkID > 0 {
-			pdf.MultiCell(0, 6, tr(node.artifact.Title), "", "L", false)
+			pdf.MultiCell(0, 6, tr(nodeTitle(node, artifactTitles)), "", "L", false)
 			pdf.SetLink(linkID, yStart, -1)
 		} else {
-			pdf.MultiCell(0, 6, tr(node.artifact.Title), "", "L", false)
+			pdf.MultiCell(0, 6, tr(nodeTitle(node, artifactTitles)), "", "L", false)
 		}
 	}
 
@@ -1112,7 +1160,7 @@ func calculateArtifactSectionHeight(
 			fontSize = 13.0
 		}
 		pdf.SetFont("Arial", "B", fontSize)
-		sectionHeight += estimateWrappedTextHeight(pdf, node.artifact.Title, contentWidth, lineHeight)
+		sectionHeight += estimateWrappedTextHeight(pdf, nodeTitle(node, artifactTitles), contentWidth, lineHeight)
 	}
 
 	if node.artifact.Type == "heading" || node.artifact.Type == "description" {
