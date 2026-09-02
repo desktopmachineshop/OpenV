@@ -5,6 +5,21 @@ on:
     branches: [master]
   pull_request:
 
+# Merges to master land in bursts, and a run for a commit that is no longer the
+# head proves nothing anyone acts on: promotion reads the check runs of master's
+# head commit, and nothing else consults an older commit's result. So a newer
+# master push cancels the run it superseded rather than paying for it to finish.
+#
+# Only master cancels. A pull request keeps its runs to completion, because a
+# PR's checks are what a reviewer reads on the PR itself, and cancelling those
+# would leave a reviewer looking at a cancelled tick with no result behind it.
+# A PR's group therefore carries its head SHA, giving every push a group of its
+# own: without that, PR runs would share one group and — not being cancelled —
+# would queue behind each other instead of running side by side.
+concurrency:
+  group: ci-${{ github.ref }}-${{ github.event.pull_request.head.sha || 'head' }}
+  cancel-in-progress: ${{ github.ref == 'refs/heads/master' }}
+
 jobs:
   backend:
     name: Backend (go vet + test)
