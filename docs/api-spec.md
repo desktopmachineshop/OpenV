@@ -475,6 +475,14 @@ conventions.
 |---|---|---|---|
 | GET | `/api/v1/events` | Domain event feed (`?project_id=` viewer; workspace-wide: org admin) | user |
 
+Each event carries its stored audit fields (`actor` — `user:<id>`,
+`agent:<run id>`, `worker:<org>[:user:<id>]` or `system` — plus `entity_id`)
+and, alongside them, the names those IDs stand for, resolved server-side for
+the events the caller may see: `actor_kind`, `actor_id`, `actor_name`, and
+`entity_kind` / `entity_name` (the artifact title, work item title, baseline
+name, agent name, ...). A name is omitted when the row behind the ID is gone,
+so clients must fall back to the raw IDs.
+
 ## Error responses
 
 Errors are plain-text (`http.Error`) or `{"error": "..."}` JSON depending on
