@@ -190,6 +190,64 @@ func TestCloseTestRun(t *testing.T) {
 	})
 }
 
+// TestGetQualityRules covers the tool agents read before they word a
+// requirement: the resolved rules and the summary, without the editor's
+// catalog of every convention and label.
+func TestGetQualityRules(t *testing.T) {
+	response := `{"effective":{"convention":"rfc2119","severities":{"weak-word":"warning"}},` +
+		`"workspace":{"convention":"rfc2119"},"project":null,"summary":"RFC 2119 keywords…",` +
+		`"catalog":{"conventions":["shall","rfc2119"],"labels":{"shall":"…"}}}`
+	server, log := captureServer(t, http.StatusOK, response)
+	out, err := toolByName(t, "get_quality_rules").Handler(
+		NewClient(server.URL, "test-token"), map[string]interface{}{"project_id": "p1"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := log()[0].Path; got != "/api/v1/projects/p1/quality-rules" {
+		t.Errorf("path = %s, want /api/v1/projects/p1/quality-rules", got)
+	}
+	var payload struct {
+		Effective map[string]interface{} `json:"effective"`
+		Summary   string                 `json:"summary"`
+	}
+	if err := json.Unmarshal([]byte(out), &payload); err != nil {
+		t.Fatalf("bad JSON %q: %v", out, err)
+	}
+	if payload.Effective["convention"] != "rfc2119" || payload.Summary == "" {
+		t.Errorf("resolved rules lost: %s", out)
+	}
+	if strings.Contains(out, "catalog") {
+		t.Errorf("the picker catalog must not reach the agent: %s", out)
+	}
+}
+
+// TestGetQualityFindingsResolvesRefs covers linting an artifact by stable ref.
+func TestGetQualityFindingsResolvesRefs(t *testing.T) {
+	score := `{"artifact_id":"a1","score":84,"band":"good","findings":[],"rule_set":{"convention":"shall"}}`
+	server, log := captureServer(t, http.StatusOK, score)
+	client := NewClient(server.URL, "test-token")
+
+	t.Run("by id", func(t *testing.T) {
+		out, err := toolByName(t, "get_quality_findings").Handler(client, map[string]interface{}{"artifact_id": "a1"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if out != score {
+			t.Errorf("output = %q, want the score passed through", out)
+		}
+		if got := log()[0].Path; got != "/api/v1/artifacts/a1/quality" {
+			t.Errorf("path = %s, want /api/v1/artifacts/a1/quality", got)
+		}
+	})
+
+	t.Run("ref without project_id is refused", func(t *testing.T) {
+		_, err := toolByName(t, "get_quality_findings").Handler(client, map[string]interface{}{"artifact_id": "REQ-12"})
+		if err == nil || !strings.Contains(err.Error(), "project_id") {
+			t.Fatalf("err = %v, want a request for project_id", err)
+		}
+	})
+}
+
 func TestGetVVGaps(t *testing.T) {
 	gaps := `{"requirements_without_method":["r2"],"requirements_without_test_case":["r2"],` +
 		`"requirements_failing":[],"orphan_test_cases":[],"needs_without_requirement":[],"hazards_unmitigated":[]}`
@@ -219,6 +277,7 @@ func TestMaintenanceLoopIsCovered(t *testing.T) {
 		"get_project_map", "get_artifact", "create_artifact", "update_artifact",
 		"create_link", "delete_link", "create_test_run", "record_test_result",
 		"close_test_run", "get_vv_coverage", "get_vv_gaps", "create_baseline", "list_baselines",
+		"get_quality_rules", "get_quality_findings",
 	} {
 		if !have[name] {
 			t.Errorf("maintenance tool %q missing from the tool table", name)

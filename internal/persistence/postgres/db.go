@@ -77,6 +77,7 @@ func InitSchema(db *sql.DB) error {
 		name VARCHAR(512) NOT NULL,
 		description TEXT,
 		agent_auth VARCHAR(32) NOT NULL DEFAULT 'user-account',
+		settings JSONB NOT NULL DEFAULT '{}',
 		created_at TIMESTAMP NOT NULL DEFAULT NOW(),
 		updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 	);

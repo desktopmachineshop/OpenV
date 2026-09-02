@@ -59,7 +59,8 @@ func (h *Handler) ProjectAIMap(w http.ResponseWriter, r *http.Request) {
 		payload.Links = lks
 	}
 
-	text := buildAIMap(project.Name, source, payload.Artifacts, payload.Links, time.Now())
+	text := buildAIMap(project.Name, source, h.qualityRuleSetFor(projectID).Describe(),
+		payload.Artifacts, payload.Links, time.Now())
 	w.Header().Set("Content-Type", "text/markdown; charset=utf-8")
 	w.Write([]byte(text))
 }

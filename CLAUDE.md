@@ -42,6 +42,13 @@ workspace runner key:
   `vv`, `status`, `export`, and `sync.py api METHOD PATH [JSON]` for any
   endpoint without a tool or subcommand.
 
+Requirement **wording** follows the project's quality rule set, not personal
+taste: `get_quality_rules` names the convention in force (the OpenV Platform
+project writes ISO/IEC/IEEE 29148 "shall": *the system shall …*), and
+`get_quality_findings` lints a draft before you save it. Note that the
+`priority` attribute is MoSCoW — `must` / `should` / `could` — which is a
+separate vocabulary from the normative keyword in the body; do not mix them.
+
 See `docs/requirements-maintenance.md` for the process and
 `docs/api-spec.md` for the endpoints.
 

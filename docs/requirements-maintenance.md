@@ -74,6 +74,33 @@ Bulk **export stays out of the tool surface** on purpose: it is a file-level
 backup, and a tool that returns a whole project invites agents to spend their
 context on it. Use `sync.py export` for that.
 
+## House style: the quality rule set
+
+How a requirement is worded is a project setting, not a matter of taste. Each
+workspace carries a **quality rule set** — the normative convention its
+requirements are written in, plus the severity of each lint rule — and every
+project inherits it until it sets its own (Workspace settings → Quality rules,
+Project settings → Quality rules, or the `quality-rules` endpoints).
+
+Two conventions are supported:
+
+| Convention | Binding wording | What the linter flags |
+|---|---|---|
+| `shall` (default, ISO/IEC/IEEE 29148) | "The system **shall** …" | `should`, `may`, `might`, `could` as weak wording; `must` as off-convention |
+| `rfc2119` | **MUST** / **SHOULD** / **MAY**, each a graded obligation | `shall` as off-convention; should/may are normative, not weak |
+
+The OpenV Platform project uses `shall`. Note that this is a different
+vocabulary from the `priority` attribute, which is MoSCoW (`must` / `should` /
+`could`) — the two look alike and mean different things, so a requirement body
+states obligation with the convention's keyword and leaves prioritization to
+the attribute.
+
+Rules are **advisory**: they score an artifact (0-100, good/fair/poor) and
+explain each finding, and never block a write. Agents see the resolved rules in
+two places — the `get_quality_rules` tool, and the House style line in the AI
+map they orient on — so a drafting agent writes to the project's convention
+rather than guessing. `get_quality_findings` lints one artifact.
+
 ## Go-live (one time)
 
 ```bash

@@ -20,9 +20,11 @@ import (
 // the get_project_map MCP tool.
 
 // buildAIMap renders the map. source describes provenance ("live state" or
-// a baseline stamp); artifacts and links are the project's current set or a
+// a baseline stamp); houseStyle is the project's resolved quality rule set in
+// one sentence, so an agent orienting here learns how to word a requirement
+// before it drafts one; artifacts and links are the project's current set or a
 // baseline snapshot.
-func buildAIMap(projectName, source string, arts []*artifacts.Artifact, lks []*links.Link, now time.Time) string {
+func buildAIMap(projectName, source, houseStyle string, arts []*artifacts.Artifact, lks []*links.Link, now time.Time) string {
 	refOf := make(map[string]string, len(arts)) // artifact id -> display ref
 	for _, a := range arts {
 		if a.Ref != "" {
@@ -101,6 +103,9 @@ func buildAIMap(projectName, source string, arts []*artifacts.Artifact, lks []*l
 	fmt.Fprintf(&b, "# %s — AI map\n", projectName)
 	fmt.Fprintf(&b, "Source: %s · Generated: %s\n", source, now.UTC().Format(time.RFC3339))
 	fmt.Fprintf(&b, "Artifacts: %d (%s) · Links: %d\n", len(arts), strings.Join(countParts, ", "), len(lks))
+	if houseStyle != "" {
+		fmt.Fprintf(&b, "House style: %s\n", houseStyle)
+	}
 	b.WriteString("Syntax: REF Title [status] {→type TARGET; ←type SOURCE} — indent = hierarchy, → links out, ← linked from, trailing ? = suspect link, [status] omitted when draft. Bodies via get_artifact/get_context.\n\n")
 
 	seen := make(map[string]bool, len(arts))

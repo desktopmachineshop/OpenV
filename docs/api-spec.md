@@ -139,6 +139,8 @@ their own project, workers pass within their org) · `org member`/`org admin`
 | GET | `/api/v1/projects/{id}/team-access` | List team grants on a project | viewer |
 | PUT | `/api/v1/projects/{id}/team-access` | Grant/update a team's project role | owner |
 | DELETE | `/api/v1/projects/{id}/team-access/{teamId}` | Revoke a team grant | owner |
+| GET | `/api/v1/orgs/{id}/quality-rules` | Workspace requirement quality rules (house style every project inherits) | org member |
+| PUT | `/api/v1/orgs/{id}/quality-rules` | Set the house style; an empty body clears it back to the platform defaults | org admin |
 
 ### Workers, runner keys, connector, hosted runner
 
@@ -315,6 +317,22 @@ invent. Consequently the gates are tighter than the role ladder alone:
 | GET | `/api/v1/projects/{id}/vv/matrix` | Traceability matrix | viewer |
 | GET | `/api/v1/projects/{id}/vv/gaps` | Coverage gaps | viewer |
 | GET | `/api/v1/projects/{id}/vv/report` | V&V report | viewer |
+
+### Requirement quality
+
+Advisory linting of requirement wording. `quality-rules` names the project's
+normative convention (`shall` — ISO/IEC/IEEE 29148 — or `rfc2119`) and the
+severity of each rule; a project inherits its workspace's rules until it sets
+its own, and an empty PUT body clears the override. Reports carry the rule set
+they were produced under, since the same sentence scores differently between
+conventions.
+
+| Method | Path | Purpose | Auth |
+|---|---|---|---|
+| GET | `/api/v1/projects/{id}/quality` | Lint every requirement/user need (`?baseline_id=` lints a snapshot) | viewer |
+| GET | `/api/v1/artifacts/{id}/quality` | Lint one artifact (400 for a type the linter does not judge) | viewer |
+| GET | `/api/v1/projects/{id}/quality-rules` | Resolved rules + both levels' overrides + the editor catalog | viewer |
+| PUT | `/api/v1/projects/{id}/quality-rules` | Set or clear the project's override | editor |
 
 ### Work items (kanban)
 

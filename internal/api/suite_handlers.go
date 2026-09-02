@@ -46,9 +46,12 @@ func (h *Handler) registerSuiteRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/projects/{id}/vv/report", h.GetVVReport).Methods("GET")
 	router.HandleFunc("/api/v1/projects/{id}/impact", h.GetImpact).Methods("GET")
 
-	// Requirement quality linting (issue #217).
+	// Requirement quality linting (issue #217) and the rule sets it judges
+	// against: workspace house style, overridable per project.
 	router.HandleFunc("/api/v1/projects/{id}/quality", h.GetProjectQuality).Methods("GET")
 	router.HandleFunc("/api/v1/artifacts/{id}/quality", h.GetArtifactQuality).Methods("GET")
+	router.HandleFunc("/api/v1/projects/{id}/quality-rules", h.GetProjectQualityRules).Methods("GET")
+	router.HandleFunc("/api/v1/projects/{id}/quality-rules", h.UpdateProjectQualityRules).Methods("PUT")
 
 	// Work items (kanban).
 	router.HandleFunc("/api/v1/projects/{id}/work-items", h.CreateWorkItem).Methods("POST")
@@ -575,7 +578,7 @@ func (h *Handler) GetProjectQuality(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(quality.LintProject(export))
+	json.NewEncoder(w).Encode(quality.LintProject(export, h.qualityRuleSetFor(projectID)))
 }
 
 // GetArtifactQuality lints a single artifact. It returns 400 for a type the
@@ -594,8 +597,12 @@ func (h *Handler) GetArtifactQuality(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "artifact type "+artifact.Type+" is not quality-linted")
 		return
 	}
+	rs := h.qualityRuleSetFor(artifact.ProjectID)
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(quality.LintArtifact(artifact))
+	json.NewEncoder(w).Encode(struct {
+		quality.ArtifactScore
+		RuleSet quality.RuleSet `json:"rule_set"`
+	}{ArtifactScore: quality.LintArtifact(artifact, rs), RuleSet: rs})
 }
 
 // --- Work items ---
