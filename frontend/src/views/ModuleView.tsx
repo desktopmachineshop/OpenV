@@ -59,6 +59,16 @@ export const ModuleView: React.FC = () => {
     return saved ? parseInt(saved) : 320;
   });
   const [isResizing, setIsResizing] = useState<'left' | 'right' | null>(null);
+  // Drag origin for a column resize: the pointer position and column width at
+  // mousedown. Resizing is a delta from that origin rather than an absolute
+  // position derived from clientX, so the divider stays under the cursor no
+  // matter what sits to the left of the columns (the 200px project sidebar,
+  // page padding, the handle itself) instead of snapping on grab (issue: the
+  // divider jumped ~a sidebar's width left on the first mouse move).
+  const resizeOrigin = React.useRef<{ side: 'left' | 'right'; startX: number; startWidth: number } | null>(null);
+  // Latest width during a drag, so mouseup can persist it without the effect
+  // having to re-subscribe on every mousemove.
+  const liveWidths = React.useRef({ left: leftColumnWidth, right: rightColumnWidth });
 
   // Read the project from the URL first so a hard refresh doesn't flash
   // "No Project Selected" while ProjectLayout syncs the store.
@@ -104,37 +114,58 @@ export const ModuleView: React.FC = () => {
     return leftHasOrder ? -1 : 1;
   };
 
-  // Handle column resizing
+  // Start a column resize: record where the drag began so the move handler can
+  // work in deltas. preventDefault keeps the browser from starting a text
+  // selection or native drag under the cursor.
+  const startResize = (side: 'left' | 'right') => (e: React.MouseEvent) => {
+    e.preventDefault();
+    resizeOrigin.current = {
+      side,
+      startX: e.clientX,
+      startWidth: side === 'left' ? leftColumnWidth : rightColumnWidth,
+    };
+    setIsResizing(side);
+  };
+
+  // Handle column resizing. Depends only on isResizing: the handlers read the
+  // in-flight width from a ref, so the listeners are attached once per drag
+  // rather than being torn down and re-added on every mousemove.
   useEffect(() => {
+    if (!isResizing) return;
+
     const handleMouseMove = (e: MouseEvent) => {
-      if (!isResizing) return;
-      
-      if (isResizing === 'left') {
-        const newWidth = Math.max(200, Math.min(800, e.clientX - 20));
+      const origin = resizeOrigin.current;
+      if (!origin) return;
+
+      // The left column grows as the pointer moves right; the right column
+      // grows as it moves left.
+      const delta = origin.side === 'left' ? e.clientX - origin.startX : origin.startX - e.clientX;
+      const [min, max] = origin.side === 'left' ? [200, 800] : [250, 600];
+      const newWidth = Math.max(min, Math.min(max, origin.startWidth + delta));
+
+      liveWidths.current[origin.side] = newWidth;
+      if (origin.side === 'left') {
         setLeftColumnWidth(newWidth);
-      } else if (isResizing === 'right') {
-        const newWidth = Math.max(250, Math.min(600, window.innerWidth - e.clientX - 20));
+      } else {
         setRightColumnWidth(newWidth);
       }
     };
 
     const handleMouseUp = () => {
-      if (isResizing) {
-        if (isResizing === 'left') {
-          localStorage.setItem('openv-leftColumnWidth', leftColumnWidth.toString());
-        } else {
-          localStorage.setItem('openv-rightColumnWidth', rightColumnWidth.toString());
-        }
-        setIsResizing(null);
+      const origin = resizeOrigin.current;
+      if (origin?.side === 'right') {
+        localStorage.setItem('openv-rightColumnWidth', liveWidths.current.right.toString());
+      } else if (origin?.side === 'left') {
+        localStorage.setItem('openv-leftColumnWidth', liveWidths.current.left.toString());
       }
+      resizeOrigin.current = null;
+      setIsResizing(null);
     };
 
-    if (isResizing) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-      document.body.style.cursor = 'col-resize';
-      document.body.style.userSelect = 'none';
-    }
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
 
     return () => {
       document.removeEventListener('mousemove', handleMouseMove);
@@ -142,7 +173,7 @@ export const ModuleView: React.FC = () => {
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
     };
-  }, [isResizing, leftColumnWidth, rightColumnWidth]);
+  }, [isResizing]);
 
   const loadArtifacts = useCallback(async () => {
     try {
@@ -1332,7 +1363,7 @@ export const ModuleView: React.FC = () => {
 
       {/* Resize handle for left column */}
       <div
-        onMouseDown={() => setIsResizing('left')}
+        onMouseDown={startResize('left')}
         style={{
           width: '10px',
           cursor: 'col-resize',
@@ -1425,7 +1456,7 @@ export const ModuleView: React.FC = () => {
           <>
             {/* Resize handle for right column */}
             <div
-              onMouseDown={() => setIsResizing('right')}
+              onMouseDown={startResize('right')}
               style={{
                 width: '10px',
                 cursor: 'col-resize',
