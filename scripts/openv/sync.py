@@ -9,10 +9,21 @@ any environment with Python 3 — no PowerShell, no extra dependencies.
 Configuration (environment variables, overridable by flags):
 
   OPENV_API_URL     e.g. https://openv-production.up.railway.app
-  OPENV_EMAIL       account to act as (must already exist, except `register`)
+  OPENV_API_TOKEN   workspace runner key (preferred). Minted in OpenV under
+                    Settings -> Runners -> Workspace keys. Scoped to that one
+                    workspace, stored only as a hash, revocable in a click.
+  OPENV_EMAIL       account to act as — only needed for `register` and
+                    `bootstrap`, which create accounts and workspaces
   OPENV_PASSWORD    its password
   OPENV_WORKSPACE   workspace name        (default: Desktop Machine Shop)
+                    Ignored when OPENV_API_TOKEN is set: the key already
+                    names its workspace, and the server scopes every request
+                    to it.
   OPENV_PROJECT     project name          (default: OpenV Platform)
+
+Prefer the token. A password is unscoped and non-revocable without changing
+it everywhere; a runner key reaches only one workspace's projects, cannot
+sign in, and can be revoked without disturbing anything else.
 
 Commands:
 
@@ -30,7 +41,8 @@ Commands:
                                api POST /api/v1/artifacts '{"project_id":...}'
 
 Never commit credentials. In Claude Code cloud sessions, set the OPENV_*
-variables in the cloud environment configuration.
+variables in the cloud environment configuration — they are injected when a
+session starts, so a variable added mid-session only reaches the next one.
 """
 
 import argparse
@@ -49,15 +61,20 @@ DEFAULT_DEF = os.path.join(
 
 
 class Client:
-    def __init__(self, base, org_id=None):
+    def __init__(self, base, org_id=None, token=None):
         self.base = base.rstrip("/")
         self.org_id = org_id
+        # A workspace runner key authenticates as a Bearer token; without one
+        # we fall back to a login that leaves a session cookie in this jar.
+        self.token = token
         jar = http.cookiejar.CookieJar()
         self.opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar))
 
     def call(self, method, path, body=None):
         req = urllib.request.Request(self.base + path, method=method)
         req.add_header("Content-Type", "application/json; charset=utf-8")
+        if self.token:
+            req.add_header("Authorization", "Bearer " + self.token)
         if self.org_id:
             req.add_header("X-Org-ID", self.org_id)
         data = json.dumps(body).encode() if body is not None else None
@@ -104,13 +121,31 @@ class Client:
 
 
 def connect(args, need_project=True):
-    c = Client(args.api)
-    c.login(args.email, args.password)
-    c.ensure_workspace(args.workspace)
+    """Authenticated client plus the target project.
+
+    With a runner key there is nothing to resolve: the key names its own
+    workspace and the server scopes every request to it, so the workspace
+    lookup (which needs a user session — GET /api/v1/orgs lists the orgs the
+    *caller* belongs to, and a key belongs to none) is skipped entirely.
+    """
+    token = getattr(args, "token", None)
+    c = Client(args.api, token=token)
+    if not token:
+        c.login(args.email, args.password)
+        c.ensure_workspace(args.workspace)
     project = c.find_project(args.project)
     if need_project and project is None:
         raise SystemExit(f"project {args.project!r} not found — run bootstrap first")
     return c, project
+
+
+def require_password(args, command):
+    """Refuse early, with the reason, when a key cannot do the job."""
+    if not (args.email and args.password):
+        raise SystemExit(
+            f"{command} needs a real account (OPENV_EMAIL and OPENV_PASSWORD): "
+            "a workspace runner key cannot create accounts or workspaces"
+        )
 
 
 def load_def(path):
@@ -119,6 +154,7 @@ def load_def(path):
 
 
 def cmd_register(args):
+    require_password(args, "register")
     c = Client(args.api)
     name = args.name or args.email.split("@")[0]
     c.call("POST", "/api/v1/auth/register", {"email": args.email, "password": args.password, "name": name})
@@ -126,6 +162,9 @@ def cmd_register(args):
 
 
 def cmd_bootstrap(args):
+    # Bootstrap creates the workspace itself, which a runner key cannot do:
+    # keys are scoped to an existing workspace and carry no user identity.
+    require_password(args, "bootstrap")
     definition = load_def(args.def_file)
     c = Client(args.api)
     c.login(args.email, args.password)
@@ -371,6 +410,7 @@ def cmd_api(args):
 def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--api", default=os.environ.get("OPENV_API_URL", "http://localhost:8080"))
+    p.add_argument("--token", default=os.environ.get("OPENV_API_TOKEN"))
     p.add_argument("--email", default=os.environ.get("OPENV_EMAIL"))
     p.add_argument("--password", default=os.environ.get("OPENV_PASSWORD"))
     p.add_argument("--workspace", default=os.environ.get("OPENV_WORKSPACE", "Desktop Machine Shop"))
@@ -404,8 +444,11 @@ def main():
     s.set_defaults(fn=cmd_api)
 
     args = p.parse_args()
-    if not args.email or not args.password:
-        raise SystemExit("set OPENV_EMAIL and OPENV_PASSWORD (or --email/--password)")
+    if not args.token and not (args.email and args.password):
+        raise SystemExit(
+            "set OPENV_API_TOKEN (a workspace runner key from Settings -> Runners), "
+            "or OPENV_EMAIL and OPENV_PASSWORD"
+        )
     args.fn(args)
 
 

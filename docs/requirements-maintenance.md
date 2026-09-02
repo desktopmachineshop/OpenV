@@ -16,10 +16,24 @@ anywhere: Windows PowerShell, Linux, CI, or an agent sandbox.
 
 ```bash
 export OPENV_API_URL=https://openv-production.up.railway.app
-export OPENV_EMAIL=...        # an account with access to the workspace
-export OPENV_PASSWORD=...
+export OPENV_API_TOKEN=...    # workspace runner key (preferred)
 python3 scripts/openv/sync.py <command>
 ```
+
+Mint the key in OpenV under **Settings → Runners → Workspace keys → + Create
+key** (workspace admin only; it is shown once). It is scoped to that one
+workspace, stored only as a hash, and revocable in a click — prefer it to a
+password, which is unscoped and cannot be revoked without changing it
+everywhere. With a key set, `OPENV_WORKSPACE` is ignored: the key already
+names its workspace and the server scopes every request to it.
+
+Use a **Workspace key**, not your personal *My Runner* key: creating a
+personal key revokes your previous one, so pairing the Agent Connector would
+silently kill a sync credential taken from there.
+
+`register` and `bootstrap` still need `OPENV_EMAIL` / `OPENV_PASSWORD` — they
+create accounts and workspaces, which a key cannot do. Everything else runs
+on the key alone.
 
 (PowerShell: `$env:OPENV_API_URL = "..."` etc.)
 
@@ -70,7 +84,9 @@ live-only artifacts and attribute changes survive.
 
 - Never commit credentials. Locally, set the `OPENV_*` variables in your
   shell; in Claude Code cloud sessions, set them in the cloud environment
-  configuration (claude.ai/code → environment → settings).
+  configuration (claude.ai/code → environment → settings). Those variables
+  are injected when a session starts, so one added mid-session only reaches
+  the next session — an existing session keeps the environment it booted with.
 - The cloud environment's **Network access** must allow the instance —
   add `*.up.railway.app` to the Custom allowed-domains list, otherwise the
   session's egress proxy blocks every API call.

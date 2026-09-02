@@ -33,10 +33,15 @@ covers anything without a dedicated subcommand. See
 `docs/requirements-maintenance.md` for the process and
 `docs/api-spec.md` for the endpoints.
 
-Credentials come from `OPENV_API_URL` / `OPENV_EMAIL` / `OPENV_PASSWORD`
-environment variables. Never commit them. In Claude Code cloud sessions they
+Credentials come from environment variables: `OPENV_API_URL` plus
+`OPENV_API_TOKEN`, a workspace runner key minted under Settings → Runners →
+Workspace keys. It is scoped to one workspace, stored hashed, and revocable,
+so prefer it to `OPENV_EMAIL` / `OPENV_PASSWORD` — those are still accepted,
+and are required only by `register` and `bootstrap`, which create accounts
+and workspaces. Never commit any of them. In Claude Code cloud sessions they
 belong in the cloud environment configuration, which must also allow network
-egress to `*.up.railway.app`.
+egress to `*.up.railway.app`; variables are injected at session start, so a
+new one only reaches the next session.
 
 ## Deployment
 
