@@ -7,7 +7,7 @@
 
 GO_IMAGE := golang:1.25
 
-.PHONY: build up down prod-up prod-down worker worker-unix worker-image connector-dist test backup restore
+.PHONY: build up down prod-up prod-down worker worker-unix worker-image connector-dist mcp test backup restore
 
 ## Build all Docker images.
 build:
@@ -67,6 +67,12 @@ worker:
 ## Build host worker binaries for Linux/macOS (bin/agentd, bin/openv-mcp).
 worker-unix:
 	docker run --rm -v "$(CURDIR):/app" -w /app $(GO_IMAGE) sh -c 'go build -o bin/agentd ./cmd/agentd && go build -o bin/openv-mcp ./cmd/openv-mcp'
+
+## Build the MCP tool server for an agent session in this repo (bin/openv-mcp)
+## with the host Go toolchain — no Docker. scripts/openv/mcp-server.sh builds
+## it on demand too; this target just gets it out of the way first.
+mcp:
+	go build -o bin/openv-mcp ./cmd/openv-mcp
 
 ## Build the hosted runner image (agentd + openv-mcp + vendor CLIs).
 worker-image:

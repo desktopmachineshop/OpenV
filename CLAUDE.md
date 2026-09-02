@@ -27,10 +27,21 @@ project as part of the same piece of work, not batched for later:
   lands;
 - capture a baseline after any coherent set of changes.
 
-Use `scripts/openv/sync.py` for all of this — it is stdlib-only Python 3 and
-works from any machine or agent session. `sync.py api METHOD PATH [JSON]`
-covers anything without a dedicated subcommand. See
-`docs/requirements-maintenance.md` for the process and
+Two paths reach the live project, and both authenticate with the same
+workspace runner key:
+
+- The **`openv` MCP tools** (`.mcp.json` starts `openv-mcp` in this repo) are
+  the normal way to do the work in session: `get_project_map` to orient,
+  `create_artifact` / `update_artifact` / `create_link` to edit,
+  `create_test_run` + `record_test_result` for evidence, `get_vv_coverage`
+  and `get_vv_gaps` to check V&V, `create_baseline` to snapshot. Writes made
+  with a runner key land directly — they are your edits, not agent proposals.
+- **`scripts/openv/sync.py`** — stdlib-only Python 3, so it runs from any
+  machine or session with no build step — covers the rest: `bootstrap`,
+  `vv`, `status`, `export`, and `sync.py api METHOD PATH [JSON]` for any
+  endpoint without a tool or subcommand.
+
+See `docs/requirements-maintenance.md` for the process and
 `docs/api-spec.md` for the endpoints.
 
 Credentials come from environment variables: `OPENV_API_URL` plus

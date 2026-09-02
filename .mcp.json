@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "openv": {
+      "command": "./scripts/openv/mcp-server.sh",
+      "env": {
+        "OPENV_API_URL": "${OPENV_API_URL:-https://openv-production.up.railway.app}",
+        "OPENV_API_TOKEN": "${OPENV_API_TOKEN:-}"
+      }
+    }
+  }
+}
