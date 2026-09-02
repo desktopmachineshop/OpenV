@@ -33,8 +33,9 @@ workspace runner key:
 - The **`openv` MCP tools** (`.mcp.json` starts `openv-mcp` in this repo) are
   the normal way to do the work in session: `get_project_map` to orient,
   `create_artifact` / `update_artifact` / `create_link` to edit,
-  `create_test_run` + `record_test_result` for evidence, `get_vv_coverage`
-  and `get_vv_gaps` to check V&V, `create_baseline` to snapshot. Writes made
+  `create_test_run` + `record_test_result` + `close_test_run` for evidence,
+  `get_vv_coverage` and `get_vv_gaps` to check V&V, `create_baseline` to
+  snapshot. Writes made
   with a runner key land directly — they are your edits, not agent proposals.
 - **`scripts/openv/sync.py`** — stdlib-only Python 3, so it runs from any
   machine or session with no build step — covers the rest: `bootstrap`,

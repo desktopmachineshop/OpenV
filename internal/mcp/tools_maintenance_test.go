@@ -59,6 +59,46 @@ func TestCreateBaseline(t *testing.T) {
 	})
 }
 
+// TestRecordTestResultEvidence covers the shape the API decodes: evidence is
+// a list of attachment IDs, and a string there makes it reject the whole body.
+func TestRecordTestResultEvidence(t *testing.T) {
+	cases := []struct {
+		name string
+		args map[string]interface{}
+		want []interface{}
+	}{
+		{"omitted", map[string]interface{}{}, []interface{}{}},
+		{"list", map[string]interface{}{"evidence": []interface{}{"att-1", "att-2"}}, []interface{}{"att-1", "att-2"}},
+		{"bare string", map[string]interface{}{"evidence": "att-1"}, []interface{}{"att-1"}},
+		{"empty string", map[string]interface{}{"evidence": ""}, []interface{}{}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			server, log := captureServer(t, http.StatusCreated, `{"id":"res-1"}`)
+			args := map[string]interface{}{"run_id": "tr1", "test_case_id": "tc1", "status": "pass"}
+			for k, v := range tc.args {
+				args[k] = v
+			}
+			if _, err := toolByName(t, "record_test_result").Handler(NewClient(server.URL, "test-token"), args); err != nil {
+				t.Fatal(err)
+			}
+			body := log()[0].Body
+			got, ok := body["evidence"].([]interface{})
+			if !ok {
+				t.Fatalf("evidence = %#v, want a JSON list", body["evidence"])
+			}
+			if len(got) != len(tc.want) {
+				t.Fatalf("evidence = %v, want %v", got, tc.want)
+			}
+			for i := range got {
+				if got[i] != tc.want[i] {
+					t.Errorf("evidence[%d] = %v, want %v", i, got[i], tc.want[i])
+				}
+			}
+		})
+	}
+}
+
 func TestGetVVCoverage(t *testing.T) {
 	tool := toolByName(t, "get_vv_coverage")
 
@@ -119,6 +159,37 @@ func TestGetVVCoverage(t *testing.T) {
 	})
 }
 
+func TestCloseTestRun(t *testing.T) {
+	tool := toolByName(t, "close_test_run")
+
+	t.Run("completed", func(t *testing.T) {
+		server, log := captureServer(t, http.StatusOK, `{"id":"tr1","status":"completed"}`)
+		if _, err := tool.Handler(NewClient(server.URL, "test-token"),
+			map[string]interface{}{"run_id": "tr1", "status": "Completed"}); err != nil {
+			t.Fatal(err)
+		}
+		req := log()[0]
+		if req.Method != "PUT" || req.Path != "/api/v1/test-runs/tr1" {
+			t.Errorf("request = %s %s, want PUT /api/v1/test-runs/tr1", req.Method, req.Path)
+		}
+		if req.Body["status"] != "completed" {
+			t.Errorf("status = %v, want completed", req.Body["status"])
+		}
+	})
+
+	t.Run("other statuses never reach the API", func(t *testing.T) {
+		server, log := captureServer(t, http.StatusOK, `{}`)
+		_, err := tool.Handler(NewClient(server.URL, "test-token"),
+			map[string]interface{}{"run_id": "tr1", "status": "in-progress"})
+		if err == nil || !strings.Contains(err.Error(), "completed or aborted") {
+			t.Fatalf("err = %v, want a rejected-status error", err)
+		}
+		if len(log()) != 0 {
+			t.Error("invalid status still hit the API")
+		}
+	})
+}
+
 func TestGetVVGaps(t *testing.T) {
 	gaps := `{"requirements_without_method":["r2"],"requirements_without_test_case":["r2"],` +
 		`"requirements_failing":[],"orphan_test_cases":[],"needs_without_requirement":[],"hazards_unmitigated":[]}`
@@ -147,7 +218,7 @@ func TestMaintenanceLoopIsCovered(t *testing.T) {
 	for _, name := range []string{
 		"get_project_map", "get_artifact", "create_artifact", "update_artifact",
 		"create_link", "delete_link", "create_test_run", "record_test_result",
-		"get_vv_coverage", "get_vv_gaps", "create_baseline", "list_baselines",
+		"close_test_run", "get_vv_coverage", "get_vv_gaps", "create_baseline", "list_baselines",
 	} {
 		if !have[name] {
 			t.Errorf("maintenance tool %q missing from the tool table", name)

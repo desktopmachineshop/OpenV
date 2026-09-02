@@ -66,9 +66,9 @@ with it as your own edits, not as agent proposals.
 its sources change; `make mcp` builds it ahead of time so a session starts
 without waiting for the compile. The whole maintenance loop is covered by
 tools — `get_project_map` to orient, `create_artifact` / `update_artifact` /
-`create_link` to edit, `create_test_run` and `record_test_result` for
-evidence, `get_vv_coverage` and `get_vv_gaps` to check V&V, `create_baseline`
-to snapshot.
+`create_link` to edit, `create_test_run`, `record_test_result` and
+`close_test_run` for evidence, `get_vv_coverage` and `get_vv_gaps` to check
+V&V, `create_baseline` to snapshot.
 
 Bulk **export stays out of the tool surface** on purpose: it is a file-level
 backup, and a tool that returns a whole project invites agents to spend their

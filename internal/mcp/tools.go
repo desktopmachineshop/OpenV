@@ -104,9 +104,43 @@ func boolean(desc string) map[string]interface{} {
 	return map[string]interface{}{"type": "boolean", "description": desc}
 }
 
+func strList(desc string) map[string]interface{} {
+	return map[string]interface{}{
+		"type":        "array",
+		"items":       map[string]interface{}{"type": "string"},
+		"description": desc,
+	}
+}
+
 func strArg(args map[string]interface{}, key string) string {
 	v, _ := args[key].(string)
 	return v
+}
+
+// strListArg reads a list-of-strings argument, tolerating a bare string for
+// clients that send a single value unwrapped. Always a non-nil slice: the API
+// rejects a body whose list field is a string or null.
+func strListArg(args map[string]interface{}, key string) []string {
+	out := []string{}
+	switch v := args[key].(type) {
+	case []interface{}:
+		for _, item := range v {
+			if s, ok := item.(string); ok && s != "" {
+				out = append(out, s)
+			}
+		}
+	case []string:
+		for _, s := range v {
+			if s != "" {
+				out = append(out, s)
+			}
+		}
+	case string:
+		if v != "" {
+			out = append(out, v)
+		}
+	}
+	return out
 }
 
 // boolArg reads a boolean argument. Some CLIs hand the server a JSON string
@@ -506,14 +540,32 @@ func Tools() []Tool {
 				"test_case_id": str("Test case artifact ID"),
 				"status":       str("Result status (e.g. pass, fail, blocked)"),
 				"notes":        str("Optional notes"),
-				"evidence":     str("Optional evidence"),
+				"evidence":     strList("Optional evidence attachment IDs"),
 			}),
 			Handler: func(c *Client, args map[string]interface{}) (string, error) {
 				out, _, err := c.request("POST", "/api/v1/test-runs/"+strArg(args, "run_id")+"/results", nil, map[string]interface{}{
 					"test_case_id": strArg(args, "test_case_id"),
 					"status":       strArg(args, "status"),
 					"notes":        strArg(args, "notes"),
-					"evidence":     strArg(args, "evidence"),
+					"evidence":     strListArg(args, "evidence"),
+				})
+				return out, err
+			},
+		},
+		{
+			Name:        "close_test_run",
+			Description: "Close a test run once its results are recorded: status \"completed\", or \"aborted\" for a run that was abandoned. Only an in-progress run can be closed.",
+			InputSchema: schema([]string{"run_id", "status"}, map[string]interface{}{
+				"run_id": str("Test run ID"),
+				"status": str("completed or aborted"),
+			}),
+			Handler: func(c *Client, args map[string]interface{}) (string, error) {
+				status := strings.ToLower(strings.TrimSpace(strArg(args, "status")))
+				if status != "completed" && status != "aborted" {
+					return "", fmt.Errorf("status %q: a run closes as completed or aborted", strArg(args, "status"))
+				}
+				out, _, err := c.request("PUT", "/api/v1/test-runs/"+strArg(args, "run_id"), nil, map[string]interface{}{
+					"status": status,
 				})
 				return out, err
 			},
