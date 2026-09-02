@@ -321,12 +321,12 @@ func TestToolRequests(t *testing.T) {
 		},
 		{
 			tool:       "record_test_result",
-			args:       map[string]interface{}{"run_id": "tr1", "test_case_id": "tc1", "status": "pass", "notes": "n", "evidence": "e"},
+			args:       map[string]interface{}{"run_id": "tr1", "test_case_id": "tc1", "status": "pass", "notes": "n", "evidence": []interface{}{"e"}},
 			status:     201,
 			response:   `{"id":"res1"}`,
 			wantMethod: "POST",
 			wantPath:   "/api/v1/test-runs/tr1/results",
-			wantBody:   map[string]interface{}{"test_case_id": "tc1", "status": "pass", "notes": "n", "evidence": "e"},
+			wantBody:   map[string]interface{}{"test_case_id": "tc1", "status": "pass", "notes": "n", "evidence": []string{"e"}},
 			wantOut:    `{"id":"res1"}`,
 		},
 		{
@@ -546,7 +546,7 @@ func TestToolsMapAPIErrors(t *testing.T) {
 	genericArgs := map[string]interface{}{
 		"project_id": "p1", "id": "x1", "query": "q", "artifact_id": "a1",
 		"from_id": "a1", "to_id": "a2", "type": "requirement", "title": "T",
-		"message": "m", "run_id": "tr1", "test_case_id": "tc1", "status": "pass",
+		"message": "m", "run_id": "tr1", "test_case_id": "tc1", "status": "completed",
 		"name": "N", "comment": "c", "need": "n",
 	}
 	server, _ := captureServer(t, http.StatusForbidden, `{"error":"forbidden"}`)

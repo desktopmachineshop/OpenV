@@ -46,6 +46,34 @@ on the key alone.
 | `export [--out FILE]` | Download the live project export JSON (periodic backup) |
 | `api METHOD PATH [JSON]` | Authenticated ad-hoc call for anything else, e.g. `api POST /api/v1/artifacts '{...}'` |
 
+## The tool server (agent sessions)
+
+An agent session working in this repository does not have to drive the REST
+API by hand: `.mcp.json` at the repository root starts **`openv-mcp`**, the
+same MCP tool server `agentd` runs beside a vendor CLI, so the session gets
+26 typed tools over the workspace instead of a script and an API spec.
+
+It authenticates from the environment — `OPENV_API_URL` plus
+`OPENV_API_TOKEN`, the same workspace runner key `sync.py` uses. A
+platform-launched agent run gets `OPENV_RUN_TOKEN` from `agentd` instead, and
+that token wins where both are set. The credential decides what the session
+may touch: a run token stays scoped to its run's project and its agent's
+write mode, while a **workspace runner key is a workspace-wide editor with no
+proposal gating** — the same authority `sync.py` has, so treat MCP writes made
+with it as your own edits, not as agent proposals.
+
+`scripts/openv/mcp-server.sh` builds `bin/openv-mcp` on first use and whenever
+its sources change; `make mcp` builds it ahead of time so a session starts
+without waiting for the compile. The whole maintenance loop is covered by
+tools — `get_project_map` to orient, `create_artifact` / `update_artifact` /
+`create_link` to edit, `create_test_run`, `record_test_result` and
+`close_test_run` for evidence, `get_vv_coverage` and `get_vv_gaps` to check
+V&V, `create_baseline` to snapshot.
+
+Bulk **export stays out of the tool surface** on purpose: it is a file-level
+backup, and a tool that returns a whole project invites agents to spend their
+context on it. Use `sync.py export` for that.
+
 ## Go-live (one time)
 
 ```bash
@@ -70,8 +98,8 @@ the OpenV UI or `sync.py api` — not by editing the seed file:
 2. When verification for a requirement lands (a test suite, an E2E check),
    record it: create or reuse a test run, add results, set
    `verification_status` on the requirement.
-3. After a coherent set of changes, capture a baseline
-   (`sync.py api POST /api/v1/projects/{id}/baselines '{"name":"..."}'`).
+3. After a coherent set of changes, capture a baseline — the `create_baseline`
+   tool, or `sync.py api POST /api/v1/projects/{id}/baselines '{"name":"..."}'`.
 4. Periodically (or before risky changes) run `sync.py export` and commit
    the export under `docs/exports/` as an off-instance backup.
 
@@ -90,6 +118,6 @@ live-only artifacts and attribute changes survive.
 - The cloud environment's **Network access** must allow the instance —
   add `*.up.railway.app` to the Custom allowed-domains list, otherwise the
   session's egress proxy blocks every API call.
-- Worker keys (Settings → Worker Keys in the UI) authenticate agent
-  *runners*, not this tool: workspace/project creation and import require a
-  user session, so `sync.py` uses email + password login.
+- A workspace runner key authenticates both `sync.py` and `openv-mcp`; only
+  `register` and `bootstrap` still need `OPENV_EMAIL` / `OPENV_PASSWORD`,
+  because creating an account or a workspace requires a user session.

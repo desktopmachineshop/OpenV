@@ -14,6 +14,14 @@ attached. The MCP server gives the agent tools to read and propose changes to
 project data. Where the worker runs — and which credentials it uses — depends
 on the runner tier below.
 
+`openv-mcp` also runs outside a platform run: given a workspace runner key in
+`OPENV_API_TOKEN` instead of the `OPENV_RUN_TOKEN` `agentd` injects, it serves
+the same tools to any MCP host — for instance an agent session working in this
+repository, which starts it from `.mcp.json`. The credential, not the server,
+sets the limits: a run token is scoped to its run's project and its agent's
+write mode, a runner key carries workspace-wide editor rights with no proposal
+gating. See `docs/requirements-maintenance.md`.
+
 ## Runner tiers
 
 OpenV has two kinds of runners; a workspace can use either or both.

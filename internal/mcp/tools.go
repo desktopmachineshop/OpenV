@@ -100,9 +100,59 @@ func obj(desc string) map[string]interface{} {
 	return map[string]interface{}{"type": "object", "description": desc}
 }
 
+func boolean(desc string) map[string]interface{} {
+	return map[string]interface{}{"type": "boolean", "description": desc}
+}
+
+func strList(desc string) map[string]interface{} {
+	return map[string]interface{}{
+		"type":        "array",
+		"items":       map[string]interface{}{"type": "string"},
+		"description": desc,
+	}
+}
+
 func strArg(args map[string]interface{}, key string) string {
 	v, _ := args[key].(string)
 	return v
+}
+
+// strListArg reads a list-of-strings argument, tolerating a bare string for
+// clients that send a single value unwrapped. Always a non-nil slice: the API
+// rejects a body whose list field is a string or null.
+func strListArg(args map[string]interface{}, key string) []string {
+	out := []string{}
+	switch v := args[key].(type) {
+	case []interface{}:
+		for _, item := range v {
+			if s, ok := item.(string); ok && s != "" {
+				out = append(out, s)
+			}
+		}
+	case []string:
+		for _, s := range v {
+			if s != "" {
+				out = append(out, s)
+			}
+		}
+	case string:
+		if v != "" {
+			out = append(out, v)
+		}
+	}
+	return out
+}
+
+// boolArg reads a boolean argument. Some CLIs hand the server a JSON string
+// where the schema says boolean, so "true" counts as true.
+func boolArg(args map[string]interface{}, key string) bool {
+	switch v := args[key].(type) {
+	case bool:
+		return v
+	case string:
+		return strings.EqualFold(strings.TrimSpace(v), "true")
+	}
+	return false
 }
 
 // decodeList parses a JSON array response into generic maps.
@@ -453,6 +503,20 @@ func Tools() []Tool {
 			},
 		},
 		{
+			Name:        "create_baseline",
+			Description: "Capture a baseline: an immutable snapshot of the project's artifacts and links. Capture one after a coherent set of changes has landed, so later work can be compared against it.",
+			InputSchema: schema([]string{"project_id"}, map[string]interface{}{
+				"project_id": str("Project ID"),
+				"name":       str("Optional baseline name (the server names a dated one when omitted)"),
+			}),
+			Handler: func(c *Client, args map[string]interface{}) (string, error) {
+				out, _, err := c.request("POST", "/api/v1/projects/"+strArg(args, "project_id")+"/baselines", nil, map[string]interface{}{
+					"name": strArg(args, "name"),
+				})
+				return out, err
+			},
+		},
+		{
 			Name:        "create_test_run",
 			Description: "Create a test run in a project.",
 			InputSchema: schema([]string{"project_id", "name"}, map[string]interface{}{
@@ -476,15 +540,79 @@ func Tools() []Tool {
 				"test_case_id": str("Test case artifact ID"),
 				"status":       str("Result status (e.g. pass, fail, blocked)"),
 				"notes":        str("Optional notes"),
-				"evidence":     str("Optional evidence"),
+				"evidence":     strList("Optional evidence attachment IDs"),
 			}),
 			Handler: func(c *Client, args map[string]interface{}) (string, error) {
 				out, _, err := c.request("POST", "/api/v1/test-runs/"+strArg(args, "run_id")+"/results", nil, map[string]interface{}{
 					"test_case_id": strArg(args, "test_case_id"),
 					"status":       strArg(args, "status"),
 					"notes":        strArg(args, "notes"),
-					"evidence":     strArg(args, "evidence"),
+					"evidence":     strListArg(args, "evidence"),
 				})
+				return out, err
+			},
+		},
+		{
+			Name:        "close_test_run",
+			Description: "Close a test run once its results are recorded: status \"completed\", or \"aborted\" for a run that was abandoned. Only an in-progress run can be closed.",
+			InputSchema: schema([]string{"run_id", "status"}, map[string]interface{}{
+				"run_id": str("Test run ID"),
+				"status": str("completed or aborted"),
+			}),
+			Handler: func(c *Client, args map[string]interface{}) (string, error) {
+				status := strings.ToLower(strings.TrimSpace(strArg(args, "status")))
+				if status != "completed" && status != "aborted" {
+					return "", fmt.Errorf("status %q: a run closes as completed or aborted", strArg(args, "status"))
+				}
+				out, _, err := c.request("PUT", "/api/v1/test-runs/"+strArg(args, "run_id"), nil, map[string]interface{}{
+					"status": status,
+				})
+				return out, err
+			},
+		},
+		{
+			Name:        "get_vv_coverage",
+			Description: "Verification coverage for a project: the rollup summary plus one line per requirement (verification method, status, rollup). Pass detail=true for the full report, which also carries each requirement's test cases and their latest results.",
+			InputSchema: schema([]string{"project_id"}, map[string]interface{}{
+				"project_id": str("Project ID"),
+				"detail":     boolean("Return the full report instead of the per-requirement summary lines"),
+			}),
+			Handler: func(c *Client, args map[string]interface{}) (string, error) {
+				out, _, err := c.request("GET", "/api/v1/projects/"+strArg(args, "project_id")+"/vv/coverage", nil, nil)
+				if err != nil {
+					return out, err
+				}
+				if boolArg(args, "detail") {
+					return out, nil
+				}
+				// Lean by default (REQ-20): the per-requirement test case IDs
+				// and their result maps are the bulk of the report and are
+				// rarely what the caller is after.
+				var report struct {
+					ProjectID string         `json:"project_id"`
+					Summary   map[string]int `json:"summary"`
+					Entries   []struct {
+						RequirementID      string `json:"requirement_id"`
+						Title              string `json:"title"`
+						VerificationMethod string `json:"verification_method"`
+						VerificationStatus string `json:"verification_status"`
+						Rollup             string `json:"rollup"`
+					} `json:"entries"`
+				}
+				if err := json.Unmarshal([]byte(out), &report); err != nil {
+					return "", fmt.Errorf("unexpected coverage response: %v", err)
+				}
+				return toJSON(report)
+			},
+		},
+		{
+			Name:        "get_vv_gaps",
+			Description: "Traceability and verification gaps in a project: requirements with no verification method, with no test case, or whose latest results fail, plus orphan test cases, user needs no requirement derives from, and unmitigated hazards. Each is a list of artifact IDs.",
+			InputSchema: schema([]string{"project_id"}, map[string]interface{}{
+				"project_id": str("Project ID"),
+			}),
+			Handler: func(c *Client, args map[string]interface{}) (string, error) {
+				out, _, err := c.request("GET", "/api/v1/projects/"+strArg(args, "project_id")+"/vv/gaps", nil, nil)
 				return out, err
 			},
 		},
