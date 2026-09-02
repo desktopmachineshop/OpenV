@@ -58,6 +58,52 @@ export const HAZARD_CATEGORIES = ['Safety', 'Technical', 'Security', 'Programme'
 export const canonicalHazardCategory = (value: unknown): string =>
   HAZARD_CATEGORIES.find((c) => c.toLowerCase() === String(value ?? '').trim().toLowerCase()) || '';
 
+// NFR sections: the quality attributes the step offers, in the order it
+// presents them, which is also the order their headings take in the module.
+export const NFR_CATEGORIES = [
+  'Performance',
+  'Reliability',
+  'Usability',
+  'Security',
+  'Maintainability',
+  'Regulatory',
+];
+
+/** Map free-form category text onto the canonical list ('' when unknown). */
+export const canonicalNfrCategory = (value: unknown): string =>
+  NFR_CATEGORIES.find((c) => c.toLowerCase() === String(value ?? '').trim().toLowerCase()) || '';
+
+// The verification step files a stub beside the kind of requirement it
+// verifies: an NFR's stub under that quality attribute, a functional
+// requirement's under Functional, which leads because functional tests are
+// what a reader looks for first.
+export const FUNCTIONAL_TEST_CATEGORY = 'Functional';
+export const TEST_CATEGORIES = [FUNCTIONAL_TEST_CATEGORY, ...NFR_CATEGORIES];
+
+// Steps whose categories become sub-headings one level under the step's own
+// section: "nfrs:Performance" is "Performance" under the NFR heading,
+// "hazards:Safety" is "Safety Hazards" under the Hazards heading. A hazard
+// category needs the noun because "Safety" alone does not say what the section
+// holds; under "Non-Functional Requirements & Constraints" the attribute name
+// already reads as one. Ordering follows the category list, so sections sit in
+// the order the step presents them.
+export const SUBSECTION_SPECS: Record<
+  string,
+  { categories: string[]; title: (category: string) => string }
+> = {
+  nfrs: { categories: NFR_CATEGORIES, title: (category) => category },
+  hazards: { categories: HAZARD_CATEGORIES, title: (category) => `${category} Hazards` },
+  tests: { categories: TEST_CATEGORIES, title: (category) => category },
+};
+
+/**
+ * Section key a categorized entry's draft is filed under. A category the step
+ * no longer offers has no section to nest in, so its draft sits directly under
+ * the step's own heading rather than inventing one.
+ */
+export const subSectionKey = (step: string, category: string): string =>
+  SUBSECTION_SPECS[step]?.categories.includes(category) ? `${step}:${category}` : step;
+
 export interface HazardEntry {
   id: string;
   category: string;

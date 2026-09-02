@@ -1,4 +1,14 @@
-import { newEntryId, normalizeWizardAnswers } from './wizardEntries';
+import {
+  FUNCTIONAL_TEST_CATEGORY,
+  HAZARD_CATEGORIES,
+  NFR_CATEGORIES,
+  SUBSECTION_SPECS,
+  TEST_CATEGORIES,
+  canonicalNfrCategory,
+  newEntryId,
+  normalizeWizardAnswers,
+  subSectionKey,
+} from './wizardEntries';
 
 describe('newEntryId', () => {
   it('generates non-empty unique ids', () => {
@@ -139,5 +149,61 @@ describe('normalizeWizardAnswers', () => {
     });
     expect(roundTripped.personas).toEqual(first.personas);
     expect(roundTripped.needs).toEqual(first.needs);
+  });
+});
+
+// A category is a place in the document, not a prefix on a title: the wizard
+// files each NFR and hazard under a section named for its category, so the
+// key it computes has to name a section that actually gets created.
+describe('canonicalNfrCategory', () => {
+  it('maps free-form text onto the canonical category', () => {
+    expect(canonicalNfrCategory('performance')).toBe('Performance');
+    expect(canonicalNfrCategory('  REGULATORY  ')).toBe('Regulatory');
+  });
+
+  it('returns empty for a category the step does not offer', () => {
+    expect(canonicalNfrCategory('Sustainability')).toBe('');
+    expect(canonicalNfrCategory(undefined)).toBe('');
+    expect(canonicalNfrCategory(null)).toBe('');
+  });
+});
+
+describe('subSectionKey', () => {
+  it('files a known category under its own sub-section', () => {
+    expect(subSectionKey('nfrs', 'Performance')).toBe('nfrs:Performance');
+    expect(subSectionKey('nfrs', 'Regulatory')).toBe('nfrs:Regulatory');
+    expect(subSectionKey('hazards', 'Safety')).toBe('hazards:Safety');
+  });
+
+  it('files a verification stub beside the kind of requirement it verifies', () => {
+    expect(subSectionKey('tests', FUNCTIONAL_TEST_CATEGORY)).toBe('tests:Functional');
+    expect(subSectionKey('tests', 'Regulatory')).toBe('tests:Regulatory');
+    // Every quality attribute an NFR can carry has a verification section to
+    // land in, so a stub never falls back to the flat list by accident.
+    NFR_CATEGORIES.forEach((c) => expect(subSectionKey('tests', c)).toBe(`tests:${c}`));
+  });
+
+  it('falls back to the step heading for a category the step no longer offers', () => {
+    // Inventing "nfrs:Sustainability" would create a heading no step can
+    // refill, so the draft sits directly under the NFR section instead.
+    expect(subSectionKey('nfrs', 'Sustainability')).toBe('nfrs');
+    expect(subSectionKey('nfrs', '')).toBe('nfrs');
+    expect(subSectionKey('hazards', 'Financial')).toBe('hazards');
+  });
+
+  it('leaves a step without sub-sections alone', () => {
+    expect(subSectionKey('personas', 'Performance')).toBe('personas');
+    expect(subSectionKey('tests', 'Sustainability')).toBe('tests');
+  });
+
+  it('leads the verification sections with Functional', () => {
+    expect(TEST_CATEGORIES[0]).toBe(FUNCTIONAL_TEST_CATEGORY);
+    expect(TEST_CATEGORIES.slice(1)).toEqual(NFR_CATEGORIES);
+  });
+
+  it('names a section for every category the steps offer', () => {
+    NFR_CATEGORIES.forEach((c) => expect(SUBSECTION_SPECS.nfrs.title(c)).toBe(c));
+    HAZARD_CATEGORIES.forEach((c) => expect(SUBSECTION_SPECS.hazards.title(c)).toBe(`${c} Hazards`));
+    TEST_CATEGORIES.forEach((c) => expect(SUBSECTION_SPECS.tests.title(c)).toBe(c));
   });
 });

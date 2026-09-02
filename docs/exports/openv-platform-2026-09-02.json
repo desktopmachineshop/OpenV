@@ -1,5 +1,5 @@
 {
-  "exported_at": "2026-09-02T20:30:28.862724922Z",
+  "exported_at": "2026-09-02T21:51:03.695082149Z",
   "version": "1.0",
   "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
   "project_name": "OpenV Platform",
@@ -567,6 +567,32 @@
         "links_snapshot": [
           {
             "attributes": null,
+            "created_at": "2026-09-02T21:41:24.689099Z",
+            "from_id": "37808fde-6afd-40d3-b889-0a795e3c38cc",
+            "id": "f2642723-5d27-441f-9b40-f093e9bf874f",
+            "suspect": false,
+            "to_id": "7a179f00-7564-42d1-9dfe-8c99d7660322",
+            "type": "derives-from",
+            "updated_at": "2026-09-02T21:41:24.689099Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
+            "created_at": "2026-09-02T21:41:23.291777Z",
+            "from_id": "54c53523-f9a0-4860-bae0-c832e39433ba",
+            "id": "a45449e3-240f-421e-b7a1-53eeda8d44ea",
+            "suspect": false,
+            "to_id": "7a179f00-7564-42d1-9dfe-8c99d7660322",
+            "type": "derives-from",
+            "updated_at": "2026-09-02T21:41:23.291777Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
             "created_at": "2026-08-30T21:51:50.060686Z",
             "from_id": "807fa39f-386d-4447-ac73-8d3ad0cc5b96",
             "id": "9c296b42-dc2f-4921-84fd-f7d2821ab00b",
@@ -583,7 +609,7 @@
             "created_at": "2026-08-30T19:54:27.078567Z",
             "from_id": "1f1fef91-5d25-40a2-a659-a87476f64c89",
             "id": "f67d0eac-e589-4167-88f0-624821847403",
-            "suspect": false,
+            "suspect": true,
             "to_id": "7a179f00-7564-42d1-9dfe-8c99d7660322",
             "type": "derives-from",
             "updated_at": "2026-08-30T19:54:27.078567Z",
@@ -594,11 +620,11 @@
         ],
         "status": "draft"
       },
-      "version": 3,
-      "valid_from": "2026-08-30T21:51:50.08028Z",
+      "version": 5,
+      "valid_from": "2026-09-02T21:41:24.70541Z",
       "valid_to": null,
       "created_at": "2026-08-30T19:54:04.666838Z",
-      "updated_at": "2026-08-30T21:51:50.08028Z"
+      "updated_at": "2026-09-02T21:41:24.70541Z"
     },
     {
       "id": "8324454a-b5a6-4625-9075-314728afc142",
@@ -612,6 +638,32 @@
       "status": "draft",
       "attributes": {
         "links_snapshot": [
+          {
+            "attributes": null,
+            "created_at": "2026-09-02T21:41:23.98581Z",
+            "from_id": "56502167-fb38-49f7-8d01-9d4483e243c0",
+            "id": "3e6688c8-e018-4f42-96b7-c4b68eca9afc",
+            "suspect": false,
+            "to_id": "8324454a-b5a6-4625-9075-314728afc142",
+            "type": "derives-from",
+            "updated_at": "2026-09-02T21:41:23.98581Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
+            "created_at": "2026-09-02T20:46:42.609689Z",
+            "from_id": "aed7c942-3829-4c35-bad0-f23d32301766",
+            "id": "df13f1dc-9881-47e2-81a9-06c2aff39336",
+            "suspect": false,
+            "to_id": "8324454a-b5a6-4625-9075-314728afc142",
+            "type": "derives-from",
+            "updated_at": "2026-09-02T20:46:42.609689Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
           {
             "attributes": null,
             "created_at": "2026-09-02T20:29:16.624499Z",
@@ -719,11 +771,11 @@
         ],
         "status": "draft"
       },
-      "version": 9,
-      "valid_from": "2026-09-02T20:29:16.6387Z",
+      "version": 11,
+      "valid_from": "2026-09-02T21:41:24.015028Z",
       "valid_to": null,
       "created_at": "2026-08-30T19:54:05.004986Z",
-      "updated_at": "2026-09-02T20:29:16.6387Z"
+      "updated_at": "2026-09-02T21:41:24.015028Z"
     },
     {
       "id": "155beaf0-28d4-4993-9a71-4af1381c1793",
@@ -737,6 +789,19 @@
       "status": "draft",
       "attributes": {
         "links_snapshot": [
+          {
+            "attributes": null,
+            "created_at": "2026-09-02T20:46:44.043189Z",
+            "from_id": "511b532f-cec9-45d9-b111-2f8c957f73f7",
+            "id": "3a9b1d47-372d-4af6-9333-075df8b5e592",
+            "suspect": false,
+            "to_id": "155beaf0-28d4-4993-9a71-4af1381c1793",
+            "type": "derives-from",
+            "updated_at": "2026-09-02T20:46:44.043189Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
           {
             "attributes": null,
             "created_at": "2026-08-30T19:54:34.495636Z",
@@ -779,11 +844,11 @@
         ],
         "status": "draft"
       },
-      "version": 4,
-      "valid_from": "2026-08-30T19:54:34.512982Z",
+      "version": 5,
+      "valid_from": "2026-09-02T20:46:44.059913Z",
       "valid_to": null,
       "created_at": "2026-08-30T19:54:05.290874Z",
-      "updated_at": "2026-08-30T19:54:34.512982Z"
+      "updated_at": "2026-09-02T20:46:44.059913Z"
     },
     {
       "id": "9cce6ebf-35ca-4761-a2f9-c10d7b851972",
@@ -932,6 +997,19 @@
         "links_snapshot": [
           {
             "attributes": null,
+            "created_at": "2026-09-02T20:46:43.308328Z",
+            "from_id": "f473cb46-dc3a-4859-86aa-1ff2dc00ed99",
+            "id": "3a5798d1-0bc1-47ca-9267-e3229ba5ff51",
+            "suspect": false,
+            "to_id": "12cff868-2282-41cd-82a9-b8bfe708d9a6",
+            "type": "derives-from",
+            "updated_at": "2026-09-02T20:46:43.308328Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
             "created_at": "2026-09-02T20:29:14.843696Z",
             "from_id": "cb1ee990-764f-41f5-8d12-d52d002b33f0",
             "id": "795cf7ec-c0cd-44d0-a7a9-63398c14abe5",
@@ -1076,11 +1154,11 @@
         ],
         "status": "draft"
       },
-      "version": 12,
-      "valid_from": "2026-09-02T20:29:14.857425Z",
+      "version": 13,
+      "valid_from": "2026-09-02T20:46:43.330522Z",
       "valid_to": null,
       "created_at": "2026-08-30T19:54:06.221335Z",
-      "updated_at": "2026-09-02T20:29:14.857425Z"
+      "updated_at": "2026-09-02T20:46:43.330522Z"
     },
     {
       "id": "b19f3d92-8dea-44a4-aaf4-6e2ef95811b7",
@@ -2140,26 +2218,73 @@
       "updated_at": "2026-09-02T20:29:20.088984Z"
     },
     {
-      "id": "33b75afa-933d-46f1-9725-013a1b17f0b1",
+      "id": "7cb6d84e-d60b-4d16-9f0b-e6268152cd66",
       "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
-      "parent_id": "396be93c-4a9c-422d-83ea-567e1ef617db",
-      "type": "design-item",
-      "ref": "DES-1",
-      "title": "MCP stdio tool server",
-      "body": "Hand-rolled JSON-RPC MCP server (~21 tools) is the only data path between agents and OpenV: requirements, links, V&V, kanban, proposals. Enforces the lean-context rule by construction.",
-      "sort_order": 570,
+      "parent_id": "334f09a6-e9d0-4ae8-bd8b-ef25c578fab7",
+      "type": "test-case",
+      "ref": "TC-17",
+      "title": "MCP maintenance tool suite",
+      "body": "Go suite over the MCP tool table: create_baseline, get_vv_coverage (lean projection by default, full report on detail), get_vv_gaps, close_test_run (only completed/aborted reach the API) and record_test_result (evidence is a list of attachment IDs, so a bare string is wrapped and the API stops rejecting the body); every tool surfaces API errors; the openv-mcp entrypoint prefers a run token, accepts a workspace runner key, and refuses to start with neither.",
+      "sort_order": 766,
       "status": "draft",
       "attributes": {
         "links_snapshot": [
           {
             "attributes": null,
-            "created_at": "2026-08-30T19:54:35.820411Z",
-            "from_id": "33b75afa-933d-46f1-9725-013a1b17f0b1",
-            "id": "b37e9837-253e-456a-967c-e8cc5e435446",
+            "created_at": "2026-09-02T20:46:47.561737Z",
+            "from_id": "7cb6d84e-d60b-4d16-9f0b-e6268152cd66",
+            "id": "2d214d77-814a-48b2-85ee-31f444af646d",
             "suspect": false,
-            "to_id": "7973f87c-ab01-4383-a9af-130a433a04ed",
-            "type": "satisfies",
-            "updated_at": "2026-08-30T19:54:35.820411Z",
+            "to_id": "f473cb46-dc3a-4859-86aa-1ff2dc00ed99",
+            "type": "verifies",
+            "updated_at": "2026-09-02T20:46:47.561737Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
+            "created_at": "2026-09-02T20:46:46.838321Z",
+            "from_id": "7cb6d84e-d60b-4d16-9f0b-e6268152cd66",
+            "id": "d84c05af-96b6-48c5-9549-1de832f55d56",
+            "suspect": false,
+            "to_id": "aed7c942-3829-4c35-bad0-f23d32301766",
+            "type": "verifies",
+            "updated_at": "2026-09-02T20:46:46.838321Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          }
+        ],
+        "status": "draft"
+      },
+      "version": 4,
+      "valid_from": "2026-09-02T20:55:17.634444Z",
+      "valid_to": null,
+      "created_at": "2026-09-02T20:46:23.670454Z",
+      "updated_at": "2026-09-02T20:55:17.634444Z"
+    },
+    {
+      "id": "74c51a0b-ecdf-4743-8bb7-24faa2f3b721",
+      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
+      "parent_id": "334f09a6-e9d0-4ae8-bd8b-ef25c578fab7",
+      "type": "test-case",
+      "ref": "TC-19",
+      "title": "Wizard section filing suite",
+      "body": "Client suite over the wizard's section helpers: every NFR and hazard category files under its own sub-section key, every quality attribute an NFR can carry has a matching verification section, Functional leads the verification sections, a category the step no longer offers falls back to the step's own heading rather than inventing one, a step without sub-sections is left alone, and each sub-section is named for its category.",
+      "sort_order": 766,
+      "status": "draft",
+      "attributes": {
+        "links_snapshot": [
+          {
+            "attributes": null,
+            "created_at": "2026-09-02T21:50:52.580569Z",
+            "from_id": "74c51a0b-ecdf-4743-8bb7-24faa2f3b721",
+            "id": "42358c0a-353e-4b50-8a23-887fe31f035f",
+            "suspect": false,
+            "to_id": "1f1fef91-5d25-40a2-a659-a87476f64c89",
+            "type": "verifies",
+            "updated_at": "2026-09-02T21:50:52.580569Z",
             "valid_from": "0001-01-01T00:00:00Z",
             "valid_to": null,
             "version": 1
@@ -2168,10 +2293,89 @@
         "status": "draft"
       },
       "version": 2,
-      "valid_from": "2026-08-30T19:54:35.829422Z",
+      "valid_from": "2026-09-02T21:50:52.589418Z",
+      "valid_to": null,
+      "created_at": "2026-09-02T21:50:51.985012Z",
+      "updated_at": "2026-09-02T21:50:52.589418Z"
+    },
+    {
+      "id": "848aff27-3ea4-43cf-814e-e83f4475aae8",
+      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
+      "parent_id": "334f09a6-e9d0-4ae8-bd8b-ef25c578fab7",
+      "type": "test-case",
+      "ref": "TC-18",
+      "title": "Quality rule set suite",
+      "body": "Go suite over the rule set: the same sentence produces a weak-word finding under \"shall\" and none under RFC 2119; the off-convention rule fires on the other vocabulary's keyword in each direction; a re-graded rule costs more score and an off rule produces nothing; resolution layers defaults, workspace and project with each level overriding only its own keys; junk in stored settings is dropped rather than fatal; an invalid rule set is refused before storage; clearing an override restores inheritance and removes the stored key; a settings read failure degrades to the defaults; the report carries its rule set; and the MCP tools return the resolved rules without the editor catalog.",
+      "sort_order": 767,
+      "status": "draft",
+      "attributes": {
+        "links_snapshot": [
+          {
+            "attributes": null,
+            "created_at": "2026-09-02T21:41:28.971144Z",
+            "from_id": "848aff27-3ea4-43cf-814e-e83f4475aae8",
+            "id": "726dc2f2-ae13-40d3-a8ca-707afa421e0f",
+            "suspect": false,
+            "to_id": "37808fde-6afd-40d3-b889-0a795e3c38cc",
+            "type": "verifies",
+            "updated_at": "2026-09-02T21:41:28.971144Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
+            "created_at": "2026-09-02T21:41:28.257241Z",
+            "from_id": "848aff27-3ea4-43cf-814e-e83f4475aae8",
+            "id": "536166f1-9248-4dca-be8c-024c000bd4e3",
+            "suspect": false,
+            "to_id": "56502167-fb38-49f7-8d01-9d4483e243c0",
+            "type": "verifies",
+            "updated_at": "2026-09-02T21:41:28.257241Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
+            "created_at": "2026-09-02T21:41:27.572471Z",
+            "from_id": "848aff27-3ea4-43cf-814e-e83f4475aae8",
+            "id": "e309a8a4-fec3-410f-a8f2-2a96412fe987",
+            "suspect": false,
+            "to_id": "54c53523-f9a0-4860-bae0-c832e39433ba",
+            "type": "verifies",
+            "updated_at": "2026-09-02T21:41:27.572471Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          }
+        ],
+        "status": "draft"
+      },
+      "version": 4,
+      "valid_from": "2026-09-02T21:41:28.979697Z",
+      "valid_to": null,
+      "created_at": "2026-09-02T21:41:06.552194Z",
+      "updated_at": "2026-09-02T21:41:28.979697Z"
+    },
+    {
+      "id": "33b75afa-933d-46f1-9725-013a1b17f0b1",
+      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
+      "parent_id": "396be93c-4a9c-422d-83ea-567e1ef617db",
+      "type": "design-item",
+      "ref": "DES-1",
+      "title": "MCP stdio tool server",
+      "body": "Hand-rolled JSON-RPC MCP server (27 tools) is the only data path between agents and OpenV: requirements, links, V&V evidence, coverage and gaps, baselines, kanban, proposals. Runs over stdio beside the agent CLI, authenticating with the run token agentd injects, or - for sessions that are not a platform-launched run, such as an agent maintaining this project - a workspace runner key from the environment. Enforces the lean-context rule by construction.",
+      "sort_order": 570,
+      "status": "draft",
+      "attributes": {
+        "status": "draft"
+      },
+      "version": 6,
+      "valid_from": "2026-09-02T20:56:19.206706Z",
       "valid_to": null,
       "created_at": "2026-08-30T19:54:19.132476Z",
-      "updated_at": "2026-08-30T19:54:35.829422Z"
+      "updated_at": "2026-09-02T20:56:19.206706Z"
     },
     {
       "id": "ee07e6b9-88fd-4252-a404-68a759cae74c",
@@ -2577,6 +2781,100 @@
       "valid_to": null,
       "created_at": "2026-09-02T20:29:12.271681Z",
       "updated_at": "2026-09-02T20:29:17.992894Z"
+    },
+    {
+      "id": "6ebf68aa-85b7-4a7b-a875-4024cd3b09b7",
+      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
+      "parent_id": "396be93c-4a9c-422d-83ea-567e1ef617db",
+      "type": "design-item",
+      "ref": "DES-12",
+      "title": "Remote MCP transport",
+      "body": "Proposed, not built: an HTTP MCP transport placed in front of the existing exported tool table, so the remote endpoint and the stdio server run the same handlers and no second tool implementation appears. Member-level authorization and per-client consent replace the bearer credential the stdio server takes from its environment.",
+      "sort_order": 644,
+      "status": "draft",
+      "attributes": {
+        "links_snapshot": [
+          {
+            "attributes": null,
+            "created_at": "2026-09-02T20:46:46.158316Z",
+            "from_id": "6ebf68aa-85b7-4a7b-a875-4024cd3b09b7",
+            "id": "cafaf05d-df35-44c3-858e-6983b0a01c77",
+            "suspect": false,
+            "to_id": "511b532f-cec9-45d9-b111-2f8c957f73f7",
+            "type": "satisfies",
+            "updated_at": "2026-09-02T20:46:46.158316Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          }
+        ],
+        "status": "draft"
+      },
+      "version": 2,
+      "valid_from": "2026-09-02T20:46:46.16625Z",
+      "valid_to": null,
+      "created_at": "2026-09-02T20:46:23.03889Z",
+      "updated_at": "2026-09-02T20:46:46.16625Z"
+    },
+    {
+      "id": "17eee380-5b58-4e57-9596-3a5a86baa9ba",
+      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
+      "parent_id": "396be93c-4a9c-422d-83ea-567e1ef617db",
+      "type": "design-item",
+      "ref": "DES-13",
+      "title": "Layered quality rule sets",
+      "body": "A settings JSONB column on organizations and projects holds a rule set under one key, resolved defaults \u2192 workspace \u2192 project so each level stores only its own diff. The linter keeps one pattern set per convention and takes the resolved set as an argument, so it stays pure and a report can carry the rules that produced it. Unknown conventions, rules and severities are dropped on read and refused on write, and a settings read failure degrades to the platform defaults rather than failing the report. Agents receive the same resolved set through the tool surface and as a House style line in the AI map header.",
+      "sort_order": 645,
+      "status": "draft",
+      "attributes": {
+        "links_snapshot": [
+          {
+            "attributes": null,
+            "created_at": "2026-09-02T21:41:26.908593Z",
+            "from_id": "17eee380-5b58-4e57-9596-3a5a86baa9ba",
+            "id": "73dea6f5-b651-4326-8dcc-af32f1d53d93",
+            "suspect": false,
+            "to_id": "37808fde-6afd-40d3-b889-0a795e3c38cc",
+            "type": "satisfies",
+            "updated_at": "2026-09-02T21:41:26.908593Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
+            "created_at": "2026-09-02T21:41:26.143665Z",
+            "from_id": "17eee380-5b58-4e57-9596-3a5a86baa9ba",
+            "id": "513d5d4c-8fa0-4220-b0d7-3bd3bcd42f67",
+            "suspect": false,
+            "to_id": "56502167-fb38-49f7-8d01-9d4483e243c0",
+            "type": "satisfies",
+            "updated_at": "2026-09-02T21:41:26.143665Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
+            "created_at": "2026-09-02T21:41:25.378456Z",
+            "from_id": "17eee380-5b58-4e57-9596-3a5a86baa9ba",
+            "id": "e6f13ed6-5f75-4713-be8f-e2527cc1e67a",
+            "suspect": false,
+            "to_id": "54c53523-f9a0-4860-bae0-c832e39433ba",
+            "type": "satisfies",
+            "updated_at": "2026-09-02T21:41:25.378456Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          }
+        ],
+        "status": "draft"
+      },
+      "version": 4,
+      "valid_from": "2026-09-02T21:41:26.921257Z",
+      "valid_to": null,
+      "created_at": "2026-09-02T21:41:02.304304Z",
+      "updated_at": "2026-09-02T21:41:26.921257Z"
     },
     {
       "id": "276b1cbc-0959-4a5f-b138-05ff8fe76777",
@@ -3050,6 +3348,55 @@
       "updated_at": "2026-08-30T21:20:50.288215Z"
     },
     {
+      "id": "511b532f-cec9-45d9-b111-2f8c957f73f7",
+      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
+      "parent_id": "5ab971b3-ae39-49e9-bcc5-74be9c1fd443",
+      "type": "requirement",
+      "ref": "REQ-44",
+      "title": "Remote MCP workspace connector",
+      "body": "The platform shall expose its tool surface over an authenticated remote MCP endpoint, so a member can attach a compliant AI client to their workspace without installing a local binary or holding a long-lived shared secret.\n\nThe endpoint shall reuse the platform's existing tool definitions and authorization rules, shall authenticate the member rather than a workspace-wide key, and shall record the member's consent per client. Not yet implemented: the local stdio path remains the supported route.",
+      "sort_order": 555,
+      "status": "draft",
+      "attributes": {
+        "links_snapshot": [
+          {
+            "attributes": null,
+            "created_at": "2026-09-02T20:46:46.158316Z",
+            "from_id": "6ebf68aa-85b7-4a7b-a875-4024cd3b09b7",
+            "id": "cafaf05d-df35-44c3-858e-6983b0a01c77",
+            "suspect": false,
+            "to_id": "511b532f-cec9-45d9-b111-2f8c957f73f7",
+            "type": "satisfies",
+            "updated_at": "2026-09-02T20:46:46.158316Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
+            "created_at": "2026-09-02T20:46:44.043189Z",
+            "from_id": "511b532f-cec9-45d9-b111-2f8c957f73f7",
+            "id": "3a9b1d47-372d-4af6-9333-075df8b5e592",
+            "suspect": false,
+            "to_id": "155beaf0-28d4-4993-9a71-4af1381c1793",
+            "type": "derives-from",
+            "updated_at": "2026-09-02T20:46:44.043189Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          }
+        ],
+        "priority": "should",
+        "status": "draft",
+        "verification_method": "demonstration"
+      },
+      "version": 3,
+      "valid_from": "2026-09-02T20:46:46.171975Z",
+      "valid_to": null,
+      "created_at": "2026-09-02T20:46:22.389557Z",
+      "updated_at": "2026-09-02T20:46:46.171975Z"
+    },
+    {
       "id": "cb5b0125-1eb6-41f3-82fa-f07d98823b73",
       "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
       "parent_id": "71bd9fdb-1ab3-4b79-a5b9-06802ac01beb",
@@ -3240,17 +3587,30 @@
       "type": "requirement",
       "ref": "REQ-7",
       "title": "Guided product definition wizard",
-      "body": "The system shall provide a step-by-step guided wizard (framing, personas, needs, requirements, NFRs, hazards, verification stubs, review) that materializes traceable draft artifacts as the user progresses. Hazards shall be captured under risk categories (Safety, Technical, Security, Programme, Operational). Materialized artifacts shall be organized under automatically created section headings \u2014 one per wizard section, with a sub-heading per used hazard category \u2014 reused across wizard re-runs within the same session. Once any guided session exists for a project, the wizard's navigation entry shall be hidden; the wizard is then reached only via the Product Overview page's adaptive control (Start / Resume / Modify guided definition).",
+      "body": "The system shall provide a step-by-step guided wizard (framing, personas, needs, requirements, NFRs, hazards, verification stubs, review) that materializes traceable draft artifacts as the user progresses. Hazards shall be captured under risk categories (Safety, Technical, Security, Programme, Operational) and non-functional requirements under quality attributes (Performance, Reliability, Usability, Security, Maintainability, Regulatory). Materialized artifacts shall be organized under automatically created section headings \u2014 one per wizard step, with a sub-heading per used NFR category, per used hazard category, and per verification grouping (Functional first, then each quality attribute stubbed) \u2014 reused across wizard re-runs within the same session. A category shall place an artifact in the document rather than appear as a prefix on its title, and a verification stub shall be filed beside the kind of requirement it verifies, carrying the same title as that requirement. A category the wizard no longer offers shall file its artifact directly under the step's own heading rather than create a section no step can refill. Once any guided session exists for a project, the wizard's navigation entry shall be hidden; the wizard is then reached only via the Product Overview page's adaptive control (Start / Resume / Modify guided definition).",
       "sort_order": 250,
       "status": "draft",
       "attributes": {
         "links_snapshot": [
           {
             "attributes": null,
+            "created_at": "2026-09-02T21:50:52.580569Z",
+            "from_id": "74c51a0b-ecdf-4743-8bb7-24faa2f3b721",
+            "id": "42358c0a-353e-4b50-8a23-887fe31f035f",
+            "suspect": false,
+            "to_id": "1f1fef91-5d25-40a2-a659-a87476f64c89",
+            "type": "verifies",
+            "updated_at": "2026-09-02T21:50:52.580569Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
             "created_at": "2026-08-30T19:54:27.078567Z",
             "from_id": "1f1fef91-5d25-40a2-a659-a87476f64c89",
             "id": "f67d0eac-e589-4167-88f0-624821847403",
-            "suspect": false,
+            "suspect": true,
             "to_id": "7a179f00-7564-42d1-9dfe-8c99d7660322",
             "type": "derives-from",
             "updated_at": "2026-08-30T19:54:27.078567Z",
@@ -3264,11 +3624,11 @@
         "verification_method": "demonstration",
         "verification_status": "verified"
       },
-      "version": 5,
-      "valid_from": "2026-08-30T22:34:37.615936Z",
+      "version": 7,
+      "valid_from": "2026-09-02T21:50:52.594834Z",
       "valid_to": null,
       "created_at": "2026-08-30T19:54:09.7116Z",
-      "updated_at": "2026-08-30T22:34:37.615936Z"
+      "updated_at": "2026-09-02T21:50:52.594834Z"
     },
     {
       "id": "373b61ad-9b84-4c06-ae32-2dd1994835ae",
@@ -4041,6 +4401,130 @@
       "updated_at": "2026-09-02T20:29:20.097801Z"
     },
     {
+      "id": "aed7c942-3829-4c35-bad0-f23d32301766",
+      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
+      "parent_id": "bb0dd19a-fb00-41d5-8d41-2310835a6acc",
+      "type": "requirement",
+      "ref": "REQ-42",
+      "title": "Tool-surface access for maintenance sessions",
+      "body": "The MCP tool server shall authenticate with any credential the API already accepts for the operations it performs - an agent run token injected by a platform-launched run, or a workspace runner key - so that agent sessions outside a platform run reach project data through the same tool surface as platform runs, rather than through bespoke API scripts.\n\nThe presented credential, not the tool server, shall determine what the session may read and write: a run token stays scoped to its run's project and its agent's write mode, while a workspace runner key carries workspace-wide editor rights and no proposal gating.",
+      "sort_order": 466,
+      "status": "draft",
+      "attributes": {
+        "links_snapshot": [
+          {
+            "attributes": null,
+            "created_at": "2026-09-02T20:46:46.838321Z",
+            "from_id": "7cb6d84e-d60b-4d16-9f0b-e6268152cd66",
+            "id": "d84c05af-96b6-48c5-9549-1de832f55d56",
+            "suspect": false,
+            "to_id": "aed7c942-3829-4c35-bad0-f23d32301766",
+            "type": "verifies",
+            "updated_at": "2026-09-02T20:46:46.838321Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
+            "created_at": "2026-09-02T20:46:44.749607Z",
+            "from_id": "33b75afa-933d-46f1-9725-013a1b17f0b1",
+            "id": "ddd3ad25-79d1-4455-966b-adf5f9c2b710",
+            "suspect": false,
+            "to_id": "aed7c942-3829-4c35-bad0-f23d32301766",
+            "type": "satisfies",
+            "updated_at": "2026-09-02T20:46:44.749607Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
+            "created_at": "2026-09-02T20:46:42.609689Z",
+            "from_id": "aed7c942-3829-4c35-bad0-f23d32301766",
+            "id": "df13f1dc-9881-47e2-81a9-06c2aff39336",
+            "suspect": false,
+            "to_id": "8324454a-b5a6-4625-9075-314728afc142",
+            "type": "derives-from",
+            "updated_at": "2026-09-02T20:46:42.609689Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          }
+        ],
+        "priority": "must",
+        "status": "draft",
+        "verification_method": "test"
+      },
+      "version": 4,
+      "valid_from": "2026-09-02T20:46:46.857597Z",
+      "valid_to": null,
+      "created_at": "2026-09-02T20:46:21.049898Z",
+      "updated_at": "2026-09-02T20:46:46.857597Z"
+    },
+    {
+      "id": "f473cb46-dc3a-4859-86aa-1ff2dc00ed99",
+      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
+      "parent_id": "bb0dd19a-fb00-41d5-8d41-2310835a6acc",
+      "type": "requirement",
+      "ref": "REQ-43",
+      "title": "Maintenance loop covered by tools",
+      "body": "The tool surface shall cover every step of the requirements-maintenance loop an agent performs in session: reading project data, editing artifacts and links, recording verification evidence, reporting verification coverage and traceability gaps, and capturing baselines. No maintenance step shall require an agent to bypass the tool surface with raw API calls.\n\nBulk project export is excluded by design: it is a file-level backup operation, and exposing it as a tool would invite agents to pull a whole project into context against the lean-context rule.",
+      "sort_order": 467,
+      "status": "draft",
+      "attributes": {
+        "links_snapshot": [
+          {
+            "attributes": null,
+            "created_at": "2026-09-02T20:46:47.561737Z",
+            "from_id": "7cb6d84e-d60b-4d16-9f0b-e6268152cd66",
+            "id": "2d214d77-814a-48b2-85ee-31f444af646d",
+            "suspect": false,
+            "to_id": "f473cb46-dc3a-4859-86aa-1ff2dc00ed99",
+            "type": "verifies",
+            "updated_at": "2026-09-02T20:46:47.561737Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
+            "created_at": "2026-09-02T20:46:45.453479Z",
+            "from_id": "33b75afa-933d-46f1-9725-013a1b17f0b1",
+            "id": "b8c48137-60dc-44fd-b65c-6058855c6af0",
+            "suspect": false,
+            "to_id": "f473cb46-dc3a-4859-86aa-1ff2dc00ed99",
+            "type": "satisfies",
+            "updated_at": "2026-09-02T20:46:45.453479Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
+            "created_at": "2026-09-02T20:46:43.308328Z",
+            "from_id": "f473cb46-dc3a-4859-86aa-1ff2dc00ed99",
+            "id": "3a5798d1-0bc1-47ca-9267-e3229ba5ff51",
+            "suspect": false,
+            "to_id": "12cff868-2282-41cd-82a9-b8bfe708d9a6",
+            "type": "derives-from",
+            "updated_at": "2026-09-02T20:46:43.308328Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          }
+        ],
+        "priority": "must",
+        "status": "draft",
+        "verification_method": "test"
+      },
+      "version": 4,
+      "valid_from": "2026-09-02T20:46:47.576634Z",
+      "valid_to": null,
+      "created_at": "2026-09-02T20:46:21.706067Z",
+      "updated_at": "2026-09-02T20:46:47.576634Z"
+    },
+    {
       "id": "581bb5e3-32dc-420c-86f9-5eb19e877160",
       "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
       "parent_id": "d959d147-c2ab-4982-a59b-f0453157cbd7",
@@ -4385,9 +4869,429 @@
       "valid_to": null,
       "created_at": "2026-09-02T20:29:09.97473Z",
       "updated_at": "2026-09-02T20:29:18.360804Z"
+    },
+    {
+      "id": "54c53523-f9a0-4860-bae0-c832e39433ba",
+      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
+      "parent_id": "d959d147-c2ab-4982-a59b-f0453157cbd7",
+      "type": "requirement",
+      "ref": "REQ-45",
+      "title": "Requirement wording convention",
+      "body": "Each workspace shall carry a requirement quality rule set: the normative convention its requirements are written in \u2014 ISO/IEC/IEEE 29148 \"shall\" or RFC 2119 must/should/may \u2014 and the severity, including off, of each wording rule.\n\nEach project shall inherit its workspace's rule set until it stores an override, and each level shall store only the keys it overrides, so a project that re-grades one rule keeps its workspace's convention. A workspace that has stored nothing shall resolve to the \"shall\" convention.\n\nThe linter shall judge wording against the resolved convention, so that a keyword binding under one convention is not reported as weak wording under the other, and shall report a keyword belonging to the other convention so that one project does not drift between the two vocabularies.",
+      "sort_order": 233,
+      "status": "draft",
+      "attributes": {
+        "links_snapshot": [
+          {
+            "attributes": null,
+            "created_at": "2026-09-02T21:41:27.572471Z",
+            "from_id": "848aff27-3ea4-43cf-814e-e83f4475aae8",
+            "id": "e309a8a4-fec3-410f-a8f2-2a96412fe987",
+            "suspect": false,
+            "to_id": "54c53523-f9a0-4860-bae0-c832e39433ba",
+            "type": "verifies",
+            "updated_at": "2026-09-02T21:41:27.572471Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
+            "created_at": "2026-09-02T21:41:25.378456Z",
+            "from_id": "17eee380-5b58-4e57-9596-3a5a86baa9ba",
+            "id": "e6f13ed6-5f75-4713-be8f-e2527cc1e67a",
+            "suspect": false,
+            "to_id": "54c53523-f9a0-4860-bae0-c832e39433ba",
+            "type": "satisfies",
+            "updated_at": "2026-09-02T21:41:25.378456Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
+            "created_at": "2026-09-02T21:41:23.291777Z",
+            "from_id": "54c53523-f9a0-4860-bae0-c832e39433ba",
+            "id": "a45449e3-240f-421e-b7a1-53eeda8d44ea",
+            "suspect": false,
+            "to_id": "7a179f00-7564-42d1-9dfe-8c99d7660322",
+            "type": "derives-from",
+            "updated_at": "2026-09-02T21:41:23.291777Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          }
+        ],
+        "priority": "must",
+        "status": "draft",
+        "verification_method": "test"
+      },
+      "version": 4,
+      "valid_from": "2026-09-02T21:41:27.58855Z",
+      "valid_to": null,
+      "created_at": "2026-09-02T21:40:43.025699Z",
+      "updated_at": "2026-09-02T21:41:27.58855Z"
+    },
+    {
+      "id": "56502167-fb38-49f7-8d01-9d4483e243c0",
+      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
+      "parent_id": "d959d147-c2ab-4982-a59b-f0453157cbd7",
+      "type": "requirement",
+      "ref": "REQ-46",
+      "title": "Quality rules visible to people and agents",
+      "body": "The resolved rule set shall be visible to everyone who writes requirements, human or agent.\n\nWorkspace admins shall set the house style and project editors shall set a project's override from settings, and both surfaces shall show which level a rule came from so an inherited value is never mistaken for a local one.\n\nAgents shall reach the same rules through the tool surface, and the project orientation map an agent reads before drafting shall state the convention in force, so that an agent writes to the project's house style rather than inferring one from the artifacts it happens to read.",
+      "sort_order": 234,
+      "status": "draft",
+      "attributes": {
+        "links_snapshot": [
+          {
+            "attributes": null,
+            "created_at": "2026-09-02T21:41:28.257241Z",
+            "from_id": "848aff27-3ea4-43cf-814e-e83f4475aae8",
+            "id": "536166f1-9248-4dca-be8c-024c000bd4e3",
+            "suspect": false,
+            "to_id": "56502167-fb38-49f7-8d01-9d4483e243c0",
+            "type": "verifies",
+            "updated_at": "2026-09-02T21:41:28.257241Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
+            "created_at": "2026-09-02T21:41:26.143665Z",
+            "from_id": "17eee380-5b58-4e57-9596-3a5a86baa9ba",
+            "id": "513d5d4c-8fa0-4220-b0d7-3bd3bcd42f67",
+            "suspect": false,
+            "to_id": "56502167-fb38-49f7-8d01-9d4483e243c0",
+            "type": "satisfies",
+            "updated_at": "2026-09-02T21:41:26.143665Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
+            "created_at": "2026-09-02T21:41:23.98581Z",
+            "from_id": "56502167-fb38-49f7-8d01-9d4483e243c0",
+            "id": "3e6688c8-e018-4f42-96b7-c4b68eca9afc",
+            "suspect": false,
+            "to_id": "8324454a-b5a6-4625-9075-314728afc142",
+            "type": "derives-from",
+            "updated_at": "2026-09-02T21:41:23.98581Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          }
+        ],
+        "priority": "must",
+        "status": "draft",
+        "verification_method": "test"
+      },
+      "version": 4,
+      "valid_from": "2026-09-02T21:41:28.274299Z",
+      "valid_to": null,
+      "created_at": "2026-09-02T21:40:50.340128Z",
+      "updated_at": "2026-09-02T21:41:28.274299Z"
+    },
+    {
+      "id": "37808fde-6afd-40d3-b889-0a795e3c38cc",
+      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
+      "parent_id": "d959d147-c2ab-4982-a59b-f0453157cbd7",
+      "type": "requirement",
+      "ref": "REQ-47",
+      "title": "Advisory quality findings",
+      "body": "Quality findings shall be advisory. The linter shall score an artifact and explain each finding in terms of the rule that produced it, and shall never reject, gate or divert a write, whoever the author is.\n\nA quality report shall carry the rule set it was produced under, because the same wording scores differently between conventions and a score without its rules cannot be read.",
+      "sort_order": 235,
+      "status": "draft",
+      "attributes": {
+        "links_snapshot": [
+          {
+            "attributes": null,
+            "created_at": "2026-09-02T21:41:28.971144Z",
+            "from_id": "848aff27-3ea4-43cf-814e-e83f4475aae8",
+            "id": "726dc2f2-ae13-40d3-a8ca-707afa421e0f",
+            "suspect": false,
+            "to_id": "37808fde-6afd-40d3-b889-0a795e3c38cc",
+            "type": "verifies",
+            "updated_at": "2026-09-02T21:41:28.971144Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
+            "created_at": "2026-09-02T21:41:26.908593Z",
+            "from_id": "17eee380-5b58-4e57-9596-3a5a86baa9ba",
+            "id": "73dea6f5-b651-4326-8dcc-af32f1d53d93",
+            "suspect": false,
+            "to_id": "37808fde-6afd-40d3-b889-0a795e3c38cc",
+            "type": "satisfies",
+            "updated_at": "2026-09-02T21:41:26.908593Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
+            "created_at": "2026-09-02T21:41:24.689099Z",
+            "from_id": "37808fde-6afd-40d3-b889-0a795e3c38cc",
+            "id": "f2642723-5d27-441f-9b40-f093e9bf874f",
+            "suspect": false,
+            "to_id": "7a179f00-7564-42d1-9dfe-8c99d7660322",
+            "type": "derives-from",
+            "updated_at": "2026-09-02T21:41:24.689099Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          }
+        ],
+        "priority": "must",
+        "status": "draft",
+        "verification_method": "test"
+      },
+      "version": 4,
+      "valid_from": "2026-09-02T21:41:28.990549Z",
+      "valid_to": null,
+      "created_at": "2026-09-02T21:40:53.349981Z",
+      "updated_at": "2026-09-02T21:41:28.990549Z"
     }
   ],
   "links": [
+    {
+      "id": "42358c0a-353e-4b50-8a23-887fe31f035f",
+      "from_id": "74c51a0b-ecdf-4743-8bb7-24faa2f3b721",
+      "to_id": "1f1fef91-5d25-40a2-a659-a87476f64c89",
+      "type": "verifies",
+      "suspect": false,
+      "attributes": null,
+      "version": 1,
+      "valid_from": "0001-01-01T00:00:00Z",
+      "valid_to": null,
+      "created_at": "2026-09-02T21:50:52.580569Z",
+      "updated_at": "2026-09-02T21:50:52.580569Z"
+    },
+    {
+      "id": "726dc2f2-ae13-40d3-a8ca-707afa421e0f",
+      "from_id": "848aff27-3ea4-43cf-814e-e83f4475aae8",
+      "to_id": "37808fde-6afd-40d3-b889-0a795e3c38cc",
+      "type": "verifies",
+      "suspect": false,
+      "attributes": null,
+      "version": 1,
+      "valid_from": "0001-01-01T00:00:00Z",
+      "valid_to": null,
+      "created_at": "2026-09-02T21:41:28.971144Z",
+      "updated_at": "2026-09-02T21:41:28.971144Z"
+    },
+    {
+      "id": "536166f1-9248-4dca-be8c-024c000bd4e3",
+      "from_id": "848aff27-3ea4-43cf-814e-e83f4475aae8",
+      "to_id": "56502167-fb38-49f7-8d01-9d4483e243c0",
+      "type": "verifies",
+      "suspect": false,
+      "attributes": null,
+      "version": 1,
+      "valid_from": "0001-01-01T00:00:00Z",
+      "valid_to": null,
+      "created_at": "2026-09-02T21:41:28.257241Z",
+      "updated_at": "2026-09-02T21:41:28.257241Z"
+    },
+    {
+      "id": "e309a8a4-fec3-410f-a8f2-2a96412fe987",
+      "from_id": "848aff27-3ea4-43cf-814e-e83f4475aae8",
+      "to_id": "54c53523-f9a0-4860-bae0-c832e39433ba",
+      "type": "verifies",
+      "suspect": false,
+      "attributes": null,
+      "version": 1,
+      "valid_from": "0001-01-01T00:00:00Z",
+      "valid_to": null,
+      "created_at": "2026-09-02T21:41:27.572471Z",
+      "updated_at": "2026-09-02T21:41:27.572471Z"
+    },
+    {
+      "id": "73dea6f5-b651-4326-8dcc-af32f1d53d93",
+      "from_id": "17eee380-5b58-4e57-9596-3a5a86baa9ba",
+      "to_id": "37808fde-6afd-40d3-b889-0a795e3c38cc",
+      "type": "satisfies",
+      "suspect": false,
+      "attributes": null,
+      "version": 1,
+      "valid_from": "0001-01-01T00:00:00Z",
+      "valid_to": null,
+      "created_at": "2026-09-02T21:41:26.908593Z",
+      "updated_at": "2026-09-02T21:41:26.908593Z"
+    },
+    {
+      "id": "513d5d4c-8fa0-4220-b0d7-3bd3bcd42f67",
+      "from_id": "17eee380-5b58-4e57-9596-3a5a86baa9ba",
+      "to_id": "56502167-fb38-49f7-8d01-9d4483e243c0",
+      "type": "satisfies",
+      "suspect": false,
+      "attributes": null,
+      "version": 1,
+      "valid_from": "0001-01-01T00:00:00Z",
+      "valid_to": null,
+      "created_at": "2026-09-02T21:41:26.143665Z",
+      "updated_at": "2026-09-02T21:41:26.143665Z"
+    },
+    {
+      "id": "e6f13ed6-5f75-4713-be8f-e2527cc1e67a",
+      "from_id": "17eee380-5b58-4e57-9596-3a5a86baa9ba",
+      "to_id": "54c53523-f9a0-4860-bae0-c832e39433ba",
+      "type": "satisfies",
+      "suspect": false,
+      "attributes": null,
+      "version": 1,
+      "valid_from": "0001-01-01T00:00:00Z",
+      "valid_to": null,
+      "created_at": "2026-09-02T21:41:25.378456Z",
+      "updated_at": "2026-09-02T21:41:25.378456Z"
+    },
+    {
+      "id": "f2642723-5d27-441f-9b40-f093e9bf874f",
+      "from_id": "37808fde-6afd-40d3-b889-0a795e3c38cc",
+      "to_id": "7a179f00-7564-42d1-9dfe-8c99d7660322",
+      "type": "derives-from",
+      "suspect": false,
+      "attributes": null,
+      "version": 1,
+      "valid_from": "0001-01-01T00:00:00Z",
+      "valid_to": null,
+      "created_at": "2026-09-02T21:41:24.689099Z",
+      "updated_at": "2026-09-02T21:41:24.689099Z"
+    },
+    {
+      "id": "3e6688c8-e018-4f42-96b7-c4b68eca9afc",
+      "from_id": "56502167-fb38-49f7-8d01-9d4483e243c0",
+      "to_id": "8324454a-b5a6-4625-9075-314728afc142",
+      "type": "derives-from",
+      "suspect": false,
+      "attributes": null,
+      "version": 1,
+      "valid_from": "0001-01-01T00:00:00Z",
+      "valid_to": null,
+      "created_at": "2026-09-02T21:41:23.98581Z",
+      "updated_at": "2026-09-02T21:41:23.98581Z"
+    },
+    {
+      "id": "a45449e3-240f-421e-b7a1-53eeda8d44ea",
+      "from_id": "54c53523-f9a0-4860-bae0-c832e39433ba",
+      "to_id": "7a179f00-7564-42d1-9dfe-8c99d7660322",
+      "type": "derives-from",
+      "suspect": false,
+      "attributes": null,
+      "version": 1,
+      "valid_from": "0001-01-01T00:00:00Z",
+      "valid_to": null,
+      "created_at": "2026-09-02T21:41:23.291777Z",
+      "updated_at": "2026-09-02T21:41:23.291777Z"
+    },
+    {
+      "id": "2d214d77-814a-48b2-85ee-31f444af646d",
+      "from_id": "7cb6d84e-d60b-4d16-9f0b-e6268152cd66",
+      "to_id": "f473cb46-dc3a-4859-86aa-1ff2dc00ed99",
+      "type": "verifies",
+      "suspect": true,
+      "attributes": null,
+      "version": 1,
+      "valid_from": "0001-01-01T00:00:00Z",
+      "valid_to": null,
+      "created_at": "2026-09-02T20:46:47.561737Z",
+      "updated_at": "2026-09-02T20:46:47.561737Z"
+    },
+    {
+      "id": "d84c05af-96b6-48c5-9549-1de832f55d56",
+      "from_id": "7cb6d84e-d60b-4d16-9f0b-e6268152cd66",
+      "to_id": "aed7c942-3829-4c35-bad0-f23d32301766",
+      "type": "verifies",
+      "suspect": true,
+      "attributes": null,
+      "version": 1,
+      "valid_from": "0001-01-01T00:00:00Z",
+      "valid_to": null,
+      "created_at": "2026-09-02T20:46:46.838321Z",
+      "updated_at": "2026-09-02T20:46:46.838321Z"
+    },
+    {
+      "id": "cafaf05d-df35-44c3-858e-6983b0a01c77",
+      "from_id": "6ebf68aa-85b7-4a7b-a875-4024cd3b09b7",
+      "to_id": "511b532f-cec9-45d9-b111-2f8c957f73f7",
+      "type": "satisfies",
+      "suspect": false,
+      "attributes": null,
+      "version": 1,
+      "valid_from": "0001-01-01T00:00:00Z",
+      "valid_to": null,
+      "created_at": "2026-09-02T20:46:46.158316Z",
+      "updated_at": "2026-09-02T20:46:46.158316Z"
+    },
+    {
+      "id": "b8c48137-60dc-44fd-b65c-6058855c6af0",
+      "from_id": "33b75afa-933d-46f1-9725-013a1b17f0b1",
+      "to_id": "f473cb46-dc3a-4859-86aa-1ff2dc00ed99",
+      "type": "satisfies",
+      "suspect": true,
+      "attributes": null,
+      "version": 1,
+      "valid_from": "0001-01-01T00:00:00Z",
+      "valid_to": null,
+      "created_at": "2026-09-02T20:46:45.453479Z",
+      "updated_at": "2026-09-02T20:46:45.453479Z"
+    },
+    {
+      "id": "ddd3ad25-79d1-4455-966b-adf5f9c2b710",
+      "from_id": "33b75afa-933d-46f1-9725-013a1b17f0b1",
+      "to_id": "aed7c942-3829-4c35-bad0-f23d32301766",
+      "type": "satisfies",
+      "suspect": true,
+      "attributes": null,
+      "version": 1,
+      "valid_from": "0001-01-01T00:00:00Z",
+      "valid_to": null,
+      "created_at": "2026-09-02T20:46:44.749607Z",
+      "updated_at": "2026-09-02T20:46:44.749607Z"
+    },
+    {
+      "id": "3a9b1d47-372d-4af6-9333-075df8b5e592",
+      "from_id": "511b532f-cec9-45d9-b111-2f8c957f73f7",
+      "to_id": "155beaf0-28d4-4993-9a71-4af1381c1793",
+      "type": "derives-from",
+      "suspect": false,
+      "attributes": null,
+      "version": 1,
+      "valid_from": "0001-01-01T00:00:00Z",
+      "valid_to": null,
+      "created_at": "2026-09-02T20:46:44.043189Z",
+      "updated_at": "2026-09-02T20:46:44.043189Z"
+    },
+    {
+      "id": "3a5798d1-0bc1-47ca-9267-e3229ba5ff51",
+      "from_id": "f473cb46-dc3a-4859-86aa-1ff2dc00ed99",
+      "to_id": "12cff868-2282-41cd-82a9-b8bfe708d9a6",
+      "type": "derives-from",
+      "suspect": false,
+      "attributes": null,
+      "version": 1,
+      "valid_from": "0001-01-01T00:00:00Z",
+      "valid_to": null,
+      "created_at": "2026-09-02T20:46:43.308328Z",
+      "updated_at": "2026-09-02T20:46:43.308328Z"
+    },
+    {
+      "id": "df13f1dc-9881-47e2-81a9-06c2aff39336",
+      "from_id": "aed7c942-3829-4c35-bad0-f23d32301766",
+      "to_id": "8324454a-b5a6-4625-9075-314728afc142",
+      "type": "derives-from",
+      "suspect": false,
+      "attributes": null,
+      "version": 1,
+      "valid_from": "0001-01-01T00:00:00Z",
+      "valid_to": null,
+      "created_at": "2026-09-02T20:46:42.609689Z",
+      "updated_at": "2026-09-02T20:46:42.609689Z"
+    },
     {
       "id": "03effc68-6b01-4a53-af4b-8fa71e3238f2",
       "from_id": "16397288-be92-4d09-943b-90fd4d2f9aa0",
@@ -5134,7 +6038,7 @@
       "from_id": "33b75afa-933d-46f1-9725-013a1b17f0b1",
       "to_id": "7973f87c-ab01-4383-a9af-130a433a04ed",
       "type": "satisfies",
-      "suspect": false,
+      "suspect": true,
       "attributes": null,
       "version": 1,
       "valid_from": "0001-01-01T00:00:00Z",
