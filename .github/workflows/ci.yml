@@ -75,7 +75,7 @@ jobs:
         run: go test ./cmd/... ./internal/...
 
   frontend:
-    name: Frontend (tsc + build)
+    name: Frontend (tsc + test + build)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -94,6 +94,11 @@ jobs:
 
       - name: Type check
         run: npx tsc --noEmit
+
+      - name: Unit tests
+        run: npm test -- --watchAll=false
+        env:
+          CI: "true"
 
       # CI=true makes CRA (react-scripts) treat eslint warnings (unused vars,
       # exhaustive-deps) as errors, so the build fails on any new warning.

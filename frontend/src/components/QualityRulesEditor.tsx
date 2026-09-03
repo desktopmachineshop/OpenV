@@ -15,11 +15,13 @@ import { ErrorBanner } from './ui';
 // advisory — they change what the linter reports, never whether a write is
 // allowed.
 //
-// The same editor serves both levels: at workspace level "Inherit" means the
-// platform default, at project level it means the workspace's choice.
-
-// INHERIT is the empty value both selects use for "not set at this level".
-const INHERIT = '';
+// The same editor serves both levels. Neither selector carries an explicit
+// "inherit" entry: a control shows what the level actually gets — its own
+// override if it has one, otherwise the value it inherits — so the inherited
+// value appears once, preselected. Picking it again clears the override, so
+// the level goes back to tracking the one above it. At project level a value
+// that differs from the workspace's is called out under the control, since
+// that is the only remaining sign an override is in play.
 
 const conventionNames: Record<QualityConvention, string> = {
   shall: 'ISO/IEC/IEEE 29148 — "shall"',
@@ -45,6 +47,12 @@ const severityNames: Record<QualitySeverity, string> = {
 
 const label: React.CSSProperties = { fontSize: 13, color: 'var(--text)' };
 const hint: React.CSSProperties = { fontSize: 12, color: 'var(--text-muted)' };
+// Marks a control whose value differs from what the level above sets.
+const overrideHint: React.CSSProperties = {
+  fontSize: 12,
+  color: 'var(--danger)',
+  marginTop: 4,
+};
 
 interface Props {
   level: 'workspace' | 'project';
@@ -112,13 +120,25 @@ export const QualityRulesEditor: React.FC<Props> = ({ level, id, canEdit, onSave
     return !sameConvention || !sameSeverities;
   }, [draft, rules, level]);
 
+  // Choosing the value this level already inherits drops the override instead
+  // of storing a copy of it, so the rule keeps following the level above and a
+  // later change there still reaches this level.
   const setSeverity = (rule: string, value: string) => {
     setDraft((prev) => {
       const severities = { ...(prev.severities || {}) };
-      if (value === INHERIT) delete severities[rule];
+      if (value === inheritedSeverity(rule)) delete severities[rule];
       else severities[rule] = value as QualitySeverity;
       return { ...prev, severities };
     });
+  };
+
+  const setConvention = (value: string) => {
+    setDraft((prev) => ({
+      ...prev,
+      convention: (value === inherited?.convention ? undefined : value) as
+        | QualityConvention
+        | undefined,
+    }));
   };
 
   const save = async () => {
@@ -149,8 +169,14 @@ export const QualityRulesEditor: React.FC<Props> = ({ level, id, canEdit, onSave
   if (loading) return <div style={hint}>Loading quality rules…</div>;
   if (!rules || !inherited) return <ErrorBanner message={error} onDismiss={() => setError('')} />;
 
-  const inheritLabel =
-    level === 'project' ? 'Inherit from workspace' : 'Platform default';
+  // A workspace is the top level anyone sets, so its choices are the house
+  // style rather than a deviation; only a project flags what it overrides.
+  const overrideNote = (inheritedName: string) =>
+    level === 'project' ? (
+      <div style={overrideHint}>Workspace default is {inheritedName}</div>
+    ) : null;
+
+  const conventionValue = (draft.convention || inherited.convention) as QualityConvention;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -163,11 +189,11 @@ export const QualityRulesEditor: React.FC<Props> = ({ level, id, canEdit, onSave
           agents read it before drafting — so a project keeps one vocabulary instead of mixing two.
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {[INHERIT, ...rules.catalog.conventions].map((value) => {
-            const selected = (draft.convention || INHERIT) === value;
+          {rules.catalog.conventions.map((value) => {
+            const selected = conventionValue === value;
             return (
               <label
-                key={value || 'inherit'}
+                key={value}
                 style={{
                   display: 'flex',
                   gap: 10,
@@ -187,30 +213,19 @@ export const QualityRulesEditor: React.FC<Props> = ({ level, id, canEdit, onSave
                   style={{ width: 'auto', marginTop: 3 }}
                   checked={selected}
                   disabled={!canEdit || saving}
-                  onChange={() =>
-                    setDraft((prev) => ({
-                      ...prev,
-                      convention: (value || undefined) as QualityConvention | undefined,
-                    }))
-                  }
+                  onChange={() => setConvention(value)}
                 />
                 <span style={label}>
-                  <b>
-                    {value
-                      ? conventionNames[value as QualityConvention]
-                      : `${inheritLabel} — ${conventionNames[inherited.convention as QualityConvention]}`}
-                  </b>
+                  <b>{conventionNames[value]}</b>
                   <br />
-                  <span style={hint}>
-                    {value
-                      ? rules.catalog.labels[value]
-                      : 'Follow the level above; changing it there changes this project too.'}
-                  </span>
+                  <span style={hint}>{rules.catalog.labels[value]}</span>
                 </span>
               </label>
             );
           })}
         </div>
+        {conventionValue !== inherited.convention &&
+          overrideNote(conventionNames[inherited.convention as QualityConvention])}
       </div>
 
       <div>
@@ -220,40 +235,44 @@ export const QualityRulesEditor: React.FC<Props> = ({ level, id, canEdit, onSave
           requirement and explain themselves, and never block a save.
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          {rules.catalog.rules.map((rule) => (
-            <div
-              key={rule}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: 12,
-                padding: '6px 0',
-                borderBottom: '1px solid var(--surface-inset)',
-              }}
-            >
-              <span style={label}>
-                {ruleNames[rule] || rule}
-                <br />
-                <span style={hint}>{rules.catalog.labels[rule]}</span>
-              </span>
-              <select
-                value={draft.severities?.[rule] ?? INHERIT}
-                disabled={!canEdit || saving}
-                style={{ width: 160, flex: 'none' }}
-                onChange={(e) => setSeverity(rule, e.target.value)}
+          {rules.catalog.rules.map((rule) => {
+            const severity = draft.severities?.[rule] ?? inheritedSeverity(rule);
+            return (
+              <div
+                key={rule}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 12,
+                  padding: '6px 0',
+                  borderBottom: '1px solid var(--surface-inset)',
+                }}
               >
-                <option value={INHERIT}>
-                  {inheritLabel} ({severityNames[inheritedSeverity(rule)]})
-                </option>
-                {rules.catalog.severities.map((severity) => (
-                  <option key={severity} value={severity}>
-                    {severityNames[severity]}
-                  </option>
-                ))}
-              </select>
-            </div>
-          ))}
+                <span style={label}>
+                  {ruleNames[rule] || rule}
+                  <br />
+                  <span style={hint}>{rules.catalog.labels[rule]}</span>
+                </span>
+                <div style={{ width: 160, flex: 'none' }}>
+                  <select
+                    value={severity}
+                    disabled={!canEdit || saving}
+                    style={{ width: '100%' }}
+                    onChange={(e) => setSeverity(rule, e.target.value)}
+                  >
+                    {rules.catalog.severities.map((severity) => (
+                      <option key={severity} value={severity}>
+                        {severityNames[severity]}
+                      </option>
+                    ))}
+                  </select>
+                  {severity !== inheritedSeverity(rule) &&
+                    overrideNote(severityNames[inheritedSeverity(rule)])}
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 
@@ -281,9 +300,11 @@ export const QualityRulesEditor: React.FC<Props> = ({ level, id, canEdit, onSave
             className="secondary"
             onClick={() => setDraft({})}
             disabled={saving || (!draft.convention && !Object.keys(draft.severities || {}).length)}
-            title={`Clear this ${level}'s overrides so everything is inherited`}
+            title={`Clear this ${level}'s overrides so everything follows the ${
+              level === 'project' ? 'workspace' : 'platform default'
+            }`}
           >
-            Reset to inherited
+            {level === 'project' ? 'Reset to workspace defaults' : 'Reset to platform defaults'}
           </button>
         </div>
       )}
