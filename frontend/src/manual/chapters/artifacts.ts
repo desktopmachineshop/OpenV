@@ -36,8 +36,25 @@ link type definitions.
 - Artifacts form a **hierarchy**: right-click an artifact in the list for
   **create before / create after / create child**. New siblings inherit the
   type and parent of the artifact you clicked.
+- The same menu offers **copy**, **paste before / paste after** and
+  **duplicate** (a copy placed directly after the original). A copy carries the
+  type, title, body and attributes; links and figures stay with the original,
+  because a copy that inherited "verifies REQ-12" would assert a verification
+  nobody made. Pasted artifacts are titled "… (copy)".
 - **Drag artifacts** within the same parent to reorder them.
 - **Collapse all / Expand all** manage the tree at once.
+
+## Referencing figures and linked artifacts
+
+Type **\`#\`** in an artifact's description to cite something: its own figures
+(\`REQ-17-FIG-1\`) and the artifacts it is already linked to. Filter by typing,
+choose with the arrow keys or the mouse, and the reference is inserted as
+\`#REQ-17-FIG-1\`.
+
+The list is deliberately short. It offers only what this artifact is already
+connected to, because a description citing a requirement it has no link to is
+a claim the traceability matrix cannot see — link it first, and it appears in
+the menu.
 
 ## Search & filters
 
@@ -60,11 +77,18 @@ Select an artifact to see its details; **Edit** opens the editor.
   preview any previous version and **restore** it. Restoring creates a new
   version with the old content; nothing is lost.
 
-## Attachments
+## Figures
 
-Images can be attached to an artifact (upload while editing). They appear in a
-gallery on the artifact details, with a lightbox view. Attachments can be
-deleted from the details or the editor.
+Images attached to an artifact are **figures**. Each is numbered from the
+artifact's own reference — \`REQ-17-FIG-1\` — and that number is never reissued,
+so it stays a safe citation even after the figure it named is deleted. The
+stored file takes the figure's name too, so downloading one saves
+\`REQ-17-FIG-1.png\` rather than whatever the camera called it.
+
+Upload while editing; figures appear in a gallery on the artifact details with
+a lightbox view. Use **⬆** on a figure to upload a new version: the figure
+keeps its reference, the artifact takes a new version, and the notes record the
+change. **🕘** shows the history, and every superseded version stays viewable.
 
 ## Comments (Chatter)
 

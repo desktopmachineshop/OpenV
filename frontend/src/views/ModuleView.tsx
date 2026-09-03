@@ -2,7 +2,7 @@ import React, { useCallback, useState, useEffect } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useAppStore } from '../state/store';
 import { artifactAPI, linkAPI, attachmentAPI, baselineAPI, projectAPI, qualityAPI, agentsAPI, Artifact, Link, Attachment, Baseline, ProjectExport } from '../api/client';
-import type { QualityRowInfo } from '../components/ArtifactList';
+import type { ArtifactContextAction, QualityRowInfo } from '../components/ArtifactList';
 import { ArtifactEditor } from '../components/ArtifactEditor';
 import { ArtifactList } from '../components/ArtifactList';
 import { ArtifactHeader } from '../components/ArtifactHeader';
@@ -326,6 +326,23 @@ export const ModuleView: React.FC = () => {
     }
   };
 
+  // Replacing a figure's image bumps the artifact's version server-side and
+  // writes a note, so the artifact is reloaded rather than patched locally.
+  const handleUploadAttachmentVersion = async (attachmentId: string, file: File) => {
+    setUploadingAttachmentId(attachmentId);
+    try {
+      const response = await attachmentAPI.uploadVersion(attachmentId, file);
+      setAttachments((prev) => prev.map((a) => (a.id === attachmentId ? response.data : a)));
+      setError('');
+      loadArtifacts();
+    } catch (error: any) {
+      console.error('Failed to upload figure version:', error);
+      setError(`Failed to upload the new figure version: ${apiErrorMessage(error, 'Unknown error')}`);
+    } finally {
+      setUploadingAttachmentId(null);
+    }
+  };
+
   const handleDeleteAttachment = async (attachmentId: string) => {
     try {
       await attachmentAPI.delete(attachmentId);
@@ -587,7 +604,92 @@ export const ModuleView: React.FC = () => {
     }
   };
 
-  const handleArtifactContextMenu = (action: 'create-before' | 'create-after' | 'create-child', artifact: Artifact) => {
+  // Copying holds an artifact's CONTENT, not its identity: type, title, body
+  // and attributes. Links and figures stay with the original — a pasted copy
+  // that inherited "verifies REQ-12" would assert a verification nobody made.
+  const [clipboard, setClipboard] = useState<Artifact | null>(null);
+
+  /**
+   * Create `source`'s content as a sibling of `target`, then renumber that
+   * sibling group so the new artifact sits immediately before or after it.
+   *
+   * Renumbering the whole group is what the drag-to-reorder path already does:
+   * sort orders are plain integers, so there is not always a gap to slot into,
+   * and rewriting 1..n is both simpler and always correct.
+   */
+  const pasteRelativeTo = async (
+    source: Pick<Artifact, 'type' | 'title' | 'body' | 'attributes'>,
+    target: Artifact,
+    position: 'before' | 'after'
+  ) => {
+    if (!projectId) return;
+    try {
+      // links_snapshot describes the ORIGINAL's links; carrying it over would
+      // show a copy wearing traceability it does not have.
+      const { links_snapshot, ...attributes } = (source.attributes || {}) as Record<string, any>;
+      const response = await artifactAPI.create({
+        project_id: projectId,
+        parent_id: target.parent_id ?? null,
+        type: source.type,
+        title: `${source.title} (copy)`,
+        body: source.body,
+        attributes,
+      });
+      const created = response.data;
+
+      const siblings = artifacts
+        .filter((a) => (a.parent_id ?? null) === (target.parent_id ?? null) && a.id !== created.id)
+        .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+      const at = siblings.findIndex((a) => a.id === target.id);
+      const ordered = [...siblings];
+      ordered.splice(position === 'before' ? Math.max(at, 0) : at + 1, 0, created);
+
+      const updates = ordered
+        .map((a, index) => ({ artifact: a, newOrder: index + 1 }))
+        .filter(({ artifact: a, newOrder }) => (a.sort_order ?? 0) !== newOrder);
+      const responses = await Promise.all(
+        updates.map(({ artifact: a, newOrder }) =>
+          artifactAPI.update(a.id, {
+            parent_id: a.parent_id ?? null,
+            type: a.type,
+            title: a.title,
+            body: a.body,
+            attributes: a.attributes,
+            sort_order: newOrder,
+          })
+        )
+      );
+
+      const updated = new Map<string, Artifact>(responses.map((r) => [r.data.id, r.data]));
+      setArtifacts([
+        ...artifacts.map((a) => updated.get(a.id) || a),
+        updated.get(created.id) || created,
+      ]);
+      setSelectedArtifactId(created.id);
+      loadQuality();
+      setError('');
+    } catch (error: any) {
+      console.error('Failed to paste artifact:', error);
+      setError(`Failed to paste artifact: ${apiErrorMessage(error, 'Unknown error')}`);
+    }
+  };
+
+  const handleArtifactContextMenu = (action: ArtifactContextAction, artifact: Artifact) => {
+    if (action === 'copy') {
+      setClipboard(artifact);
+      return;
+    }
+    if (action === 'duplicate') {
+      // A duplicate is a copy of this artifact placed directly after it.
+      void pasteRelativeTo(artifact, artifact, 'after');
+      return;
+    }
+    if (action === 'paste-before' || action === 'paste-after') {
+      if (!clipboard) return;
+      void pasteRelativeTo(clipboard, artifact, action === 'paste-before' ? 'before' : 'after');
+      return;
+    }
+
     // Auto-populate the create form based on the action. A sibling shares the
     // clicked artifact's parent; a child uses the clicked artifact as parent.
     // Both inherit its type. The fresh object identity re-applies the context
@@ -1354,6 +1456,7 @@ export const ModuleView: React.FC = () => {
           onSelect={handleSelectArtifact}
           onReorder={handleReorderArtifact}
           onContextMenuAction={handleArtifactContextMenu}
+          canPaste={!!clipboard}
           defaultCollapsed
           collapseAllTrigger={collapseAllToken}
           expandAllTrigger={expandAllToken}
@@ -1399,6 +1502,7 @@ export const ModuleView: React.FC = () => {
             }}
             attachments={attachments}
             onUploadAttachment={handleUploadAttachment}
+            onUploadAttachmentVersion={handleUploadAttachmentVersion}
             onDeleteAttachment={handleDeleteAttachment}
             isUploadLoading={uploadingAttachmentId === editingArtifact.id}
             links={allLinks}
@@ -1429,6 +1533,7 @@ export const ModuleView: React.FC = () => {
               artifacts={activeArtifacts}
               attachments={detailAttachments}
               onDeleteAttachment={isBaselineView ? undefined : handleDeleteAttachment}
+              onUploadAttachmentVersion={isBaselineView ? undefined : handleUploadAttachmentVersion}
               onSelectArtifact={handleSelectArtifact}
               previewVersion={previewVersion}
               onClosePreview={() => setPreviewVersion(null)}

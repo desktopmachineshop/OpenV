@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Artifact,
   AttributeDefinition,
@@ -16,6 +16,14 @@ import {
   createPendingLinkId,
   serializePendingAdds,
 } from '../utils/pendingLinks';
+import {
+  ReferenceCandidate,
+  ReferenceQuery,
+  activeReferenceQuery,
+  applyReference,
+  matchReferences,
+  referenceCandidates,
+} from './artifactReferences';
 
 interface ArtifactEditorProps {
   artifact?: Artifact;
@@ -35,6 +43,7 @@ interface ArtifactEditorProps {
   onCancel: () => void;
   attachments?: Attachment[];
   onUploadAttachment?: (file: File) => void;
+  onUploadAttachmentVersion?: (attachmentId: string, file: File) => void;
   onDeleteAttachment?: (attachmentId: string) => void;
   isUploadLoading?: boolean;
   links?: Link[];
@@ -51,6 +60,7 @@ export const ArtifactEditor: React.FC<ArtifactEditorProps> = ({
   onCancel,
   attachments = [],
   onUploadAttachment,
+  onUploadAttachmentVersion,
   onDeleteAttachment,
   isUploadLoading,
   links = [],
@@ -140,6 +150,65 @@ export const ArtifactEditor: React.FC<ArtifactEditorProps> = ({
       ...prev,
       [name]: value,
     }));
+  };
+
+  // "#" in the description offers what this artifact can already point at:
+  // its own figures and the artifacts it is linked to. Nothing else, so the
+  // text cannot cite something the traceability matrix has never heard of.
+  const bodyRef = useRef<HTMLTextAreaElement>(null);
+  const [refQuery, setRefQuery] = useState<ReferenceQuery | null>(null);
+  const [refHighlight, setRefHighlight] = useState(0);
+
+  const candidates = useMemo(
+    () => referenceCandidates(artifact, links, artifacts, attachments),
+    [artifact, links, artifacts, attachments]
+  );
+  const refMatches = useMemo(
+    () => (refQuery ? matchReferences(candidates, refQuery.query).slice(0, 8) : []),
+    [candidates, refQuery]
+  );
+
+  // Recompute from the caret after every keystroke or cursor move, so the menu
+  // opens, filters and closes with the writer rather than lagging behind.
+  const syncReferenceMenu = () => {
+    const el = bodyRef.current;
+    if (!el || candidates.length === 0) {
+      setRefQuery(null);
+      return;
+    }
+    const next = activeReferenceQuery(el.value, el.selectionStart ?? 0);
+    setRefQuery(next);
+    setRefHighlight(0);
+  };
+
+  const insertReference = (candidate: ReferenceCandidate) => {
+    const el = bodyRef.current;
+    if (!el || !refQuery) return;
+    const { text, caret } = applyReference(el.value, refQuery, el.selectionStart ?? 0, candidate.ref);
+    setFormData((prev) => ({ ...prev, body: text }));
+    setRefQuery(null);
+    // The value lands via React, so the caret is restored once it has.
+    requestAnimationFrame(() => {
+      el.focus();
+      el.setSelectionRange(caret, caret);
+    });
+  };
+
+  const handleBodyKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (!refQuery || refMatches.length === 0) return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setRefHighlight((i) => (i + 1) % refMatches.length);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setRefHighlight((i) => (i - 1 + refMatches.length) % refMatches.length);
+    } else if (e.key === 'Enter' || e.key === 'Tab') {
+      e.preventDefault();
+      insertReference(refMatches[Math.min(refHighlight, refMatches.length - 1)]);
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      setRefQuery(null);
+    }
   };
 
   const handleCreateLinkFromEditor = (link: Partial<Link>) => {
@@ -304,15 +373,68 @@ export const ArtifactEditor: React.FC<ArtifactEditorProps> = ({
             />
           </div>
 
-          <div className="form-group">
+          <div className="form-group" style={{ position: 'relative' }}>
             <label htmlFor="body">Description</label>
             <textarea
               id="body"
               name="body"
+              ref={bodyRef}
               value={formData.body || ''}
-              onChange={handleChange}
-              placeholder="Enter artifact description (markdown supported)"
+              onChange={(e) => {
+                handleChange(e);
+                syncReferenceMenu();
+              }}
+              onKeyDown={handleBodyKeyDown}
+              onKeyUp={syncReferenceMenu}
+              onClick={syncReferenceMenu}
+              onBlur={() => setRefQuery(null)}
+              placeholder={
+                candidates.length > 0
+                  ? 'Enter artifact description (markdown supported) — # to reference a figure or linked artifact'
+                  : 'Enter artifact description (markdown supported)'
+              }
             />
+            {refQuery && refMatches.length > 0 && (
+              // onMouseDown, not onClick: blur fires first and would close the
+              // menu before a click could land.
+              <div
+                style={{
+                  position: 'absolute',
+                  left: 8,
+                  right: 8,
+                  zIndex: 20,
+                  background: 'var(--surface)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 4,
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                  maxHeight: 220,
+                  overflowY: 'auto',
+                }}
+              >
+                {refMatches.map((c, i) => (
+                  <div
+                    key={c.ref}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      insertReference(c);
+                    }}
+                    onMouseEnter={() => setRefHighlight(i)}
+                    style={{
+                      padding: '6px 10px',
+                      cursor: 'pointer',
+                      fontSize: 12,
+                      background: i === refHighlight ? 'var(--tint-blue)' : 'transparent',
+                    }}
+                  >
+                    <span style={{ fontWeight: 700 }}>{c.ref}</span>
+                    <span style={{ color: 'var(--text-muted)' }}>
+                      {' '}
+                      · {c.kind === 'figure' ? 'figure' : c.relation || 'linked'} · {c.label}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {applicableDefs.length > 0 && (
@@ -333,6 +455,7 @@ export const ArtifactEditor: React.FC<ArtifactEditorProps> = ({
               artifactId={artifact.id}
               attachments={attachments}
               onUpload={onUploadAttachment || (() => {})}
+              onUploadVersion={onUploadAttachmentVersion}
               onDelete={onDeleteAttachment || (() => {})}
               isUploadLoading={isUploadLoading}
               showUpload={true}

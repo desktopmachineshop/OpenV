@@ -9,13 +9,29 @@ export interface QualityRowInfo {
   findingCount: number;
 }
 
+/** What the artifact context menu can ask the view to do. */
+export type ArtifactContextAction =
+  | 'create-before'
+  | 'create-after'
+  | 'create-child'
+  | 'copy'
+  | 'paste-before'
+  | 'paste-after'
+  | 'duplicate';
+
 interface ArtifactListProps {
   artifacts: Artifact[];
   allArtifacts: Artifact[];
   selectedId?: string;
   onSelect: (id: string) => void;
   onReorder: (sourceId: string, targetId: string, mode: 'swap' | 'insert') => void;
-  onContextMenuAction?: (action: 'create-before' | 'create-after' | 'create-child', artifact: Artifact) => void;
+  onContextMenuAction?: (action: ArtifactContextAction, artifact: Artifact) => void;
+  /**
+   * Whether something has been copied, which is what makes the paste entries
+   * usable. Without it they are shown greyed rather than hidden, so the menu
+   * keeps the same shape whether or not a copy has happened.
+   */
+  canPaste?: boolean;
   defaultCollapsed?: boolean;
   collapseAllTrigger?: number;
   expandAllTrigger?: number;
@@ -84,6 +100,7 @@ export const ArtifactList: React.FC<ArtifactListProps> = ({
   onSelect,
   onReorder,
   onContextMenuAction,
+  canPaste = false,
   defaultCollapsed = false,
   collapseAllTrigger = 0,
   expandAllTrigger = 0,
@@ -415,80 +432,52 @@ export const ArtifactList: React.FC<ArtifactListProps> = ({
               minWidth: '180px',
             }}
           >
-            <button
-              onClick={() => {
-                const artifact = allArtifacts.find(a => a.id === contextMenu.artifactId);
-                if (artifact && onContextMenuAction) {
-                  onContextMenuAction('create-before', artifact);
-                }
-                setContextMenu(null);
-              }}
-              style={{
-                display: 'block',
-                width: '100%',
-                padding: '8px 12px',
-                border: 'none',
-                backgroundColor: 'transparent',
-                textAlign: 'left',
-                cursor: 'pointer',
-                fontSize: '12px',
-                color: 'var(--text)',
-                borderBottom: '1px solid var(--neutral-soft)',
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--tint-blue)')}
-              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-            >
-              ➕ Create before
-            </button>
-            <button
-              onClick={() => {
-                const artifact = allArtifacts.find(a => a.id === contextMenu.artifactId);
-                if (artifact && onContextMenuAction) {
-                  onContextMenuAction('create-after', artifact);
-                }
-                setContextMenu(null);
-              }}
-              style={{
-                display: 'block',
-                width: '100%',
-                padding: '8px 12px',
-                border: 'none',
-                backgroundColor: 'transparent',
-                textAlign: 'left',
-                cursor: 'pointer',
-                fontSize: '12px',
-                color: 'var(--text)',
-                borderBottom: '1px solid var(--neutral-soft)',
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--tint-blue)')}
-              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-            >
-              ➕ Create after
-            </button>
-            <button
-              onClick={() => {
-                const artifact = allArtifacts.find(a => a.id === contextMenu.artifactId);
-                if (artifact && onContextMenuAction) {
-                  onContextMenuAction('create-child', artifact);
-                }
-                setContextMenu(null);
-              }}
-              style={{
-                display: 'block',
-                width: '100%',
-                padding: '8px 12px',
-                border: 'none',
-                backgroundColor: 'transparent',
-                textAlign: 'left',
-                cursor: 'pointer',
-                fontSize: '12px',
-                color: 'var(--text)',
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--tint-blue)')}
-              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-            >
-              ➕ Create new child
-            </button>
+            {([
+              { action: 'create-before' as const, label: '➕ Create before' },
+              { action: 'create-after' as const, label: '➕ Create after' },
+              { action: 'create-child' as const, label: '➕ Create new child' },
+              { action: 'copy' as const, label: '📋 Copy', separated: true },
+              { action: 'duplicate' as const, label: '🧬 Duplicate' },
+              { action: 'paste-before' as const, label: '📥 Paste before', needsClipboard: true },
+              { action: 'paste-after' as const, label: '📥 Paste after', needsClipboard: true },
+            ]).map((item, index, all) => {
+              const disabled = !!item.needsClipboard && !canPaste;
+              return (
+                <button
+                  key={item.action}
+                  disabled={disabled}
+                  title={disabled ? 'Copy an artifact first' : undefined}
+                  onClick={() => {
+                    const artifact = allArtifacts.find((a) => a.id === contextMenu.artifactId);
+                    if (artifact && onContextMenuAction) {
+                      onContextMenuAction(item.action, artifact);
+                    }
+                    setContextMenu(null);
+                  }}
+                  style={{
+                    display: 'block',
+                    width: '100%',
+                    padding: '8px 12px',
+                    border: 'none',
+                    backgroundColor: 'transparent',
+                    textAlign: 'left',
+                    cursor: disabled ? 'not-allowed' : 'pointer',
+                    fontSize: '12px',
+                    color: disabled ? 'var(--neutral)' : 'var(--text)',
+                    borderBottom: index < all.length - 1 ? '1px solid var(--neutral-soft)' : 'none',
+                    // A rule above Copy separates making new artifacts from
+                    // moving this one around.
+                    borderTop: item.separated ? '1px solid var(--border)' : undefined,
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!disabled) e.currentTarget.style.backgroundColor = 'var(--tint-blue)';
+                  }}
+                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                >
+                  {item.label}
+                </button>
+              );
+            })}
           </div>
         </>
       )}

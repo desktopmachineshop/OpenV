@@ -236,11 +236,40 @@ Every artifact carries two identifiers, and they answer different questions:
 | DELETE | `/api/v1/links/{id}` | Delete link | editor |
 | POST | `/api/v1/attachments/upload` | Upload a file (multipart) to an artifact or test result | editor |
 | GET | `/api/v1/attachments/{id}` | Attachment metadata | viewer |
-| GET | `/api/v1/attachments/{id}/download` | Download the file | viewer |
+| GET | `/api/v1/attachments/{id}/download` | Download the file (`?version=N` for a superseded one) | viewer |
+| POST | `/api/v1/attachments/{id}/versions` | Replace a figure's image with a new version (multipart) | editor |
+| GET | `/api/v1/attachments/{id}/versions` | A figure's version history, newest first | viewer |
 | DELETE | `/api/v1/attachments/{id}` | Delete attachment | editor |
 | GET | `/api/v1/artifacts/{artifactID}/attachments` | List an artifact's attachments | viewer |
 | POST | `/api/v1/chatter` | Comment on an artifact | editor |
 | GET | `/api/v1/chatter` | List an artifact's activity feed | viewer |
+
+### Figures
+
+An image attached to an artifact is a **figure**, and carries a reference of
+its own — `REQ-17-FIG-1` — built from the artifact's stable reference and a
+per-artifact counter.
+
+- The number is minted once and **never reissued**: the counter only moves
+  forward, so deleting a figure does not free its number, and two concurrent
+  uploads cannot be handed the same one. A partial unique index on
+  `figure_ref` backstops the counter.
+- The stored name is the figure's (`REQ-17-FIG-1.png`), and a download is
+  served under it, so saving an image lands a file named for what the document
+  calls it. The name the uploader's file had is kept as `original_filename`,
+  and the on-disk path stays UUID-unique: the uploads directory is flat across
+  projects, figure references are unique only within one, and each version
+  needs a file of its own.
+- An artifact with no stable reference yields no figure reference rather than a
+  bare `FIG-1` that would collide once the artifact got one.
+
+Uploading a **new version** keeps the figure's reference and supersedes its
+file. Because the artifact now shows something different, that upload also
+takes the artifact to a new version and writes a note to its feed
+("Figure REQ-17-FIG-1 updated from version 1 to 2 — …"). Superseded versions
+stay retrievable through `?version=N`. The artifact's new version is an
+attribute-free update: it does not demote an approved artifact or mark its
+links suspect, because nothing the artifact *says* changed.
 
 ### Review queue
 
