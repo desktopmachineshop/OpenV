@@ -123,3 +123,35 @@ export const applyReference = (
   const next = text.slice(0, query.start) + inserted + text.slice(caret);
   return { text: next, caret: query.start + inserted.length };
 };
+
+/**
+ * URL scheme a rendered reference links to. It is not a real protocol: the
+ * renderer intercepts it and hands the reference back to the app, so a
+ * citation navigates within the project instead of leaving it.
+ */
+export const REFERENCE_SCHEME = 'openv-ref:';
+
+// A reference in prose: "#" at a word boundary, then the reference itself.
+// Trailing punctuation is left out of the match so "see #REQ-12." links the
+// reference and keeps the full stop as text.
+const inlineReferencePattern = /(^|\s)#([A-Za-z][A-Za-z0-9]*-\d+(?:-FIG-\d+)?)/g;
+
+/**
+ * Rewrite the references in a body as markdown links, so the markdown
+ * renderer produces anchors the app can intercept.
+ *
+ * Only text that already looks like a reference is touched — a bare "#" or a
+ * markdown heading is left exactly as written, because turning "# Heading"
+ * into a link would break every document that uses headings.
+ */
+export const linkifyReferences = (body: string): string =>
+  body.replace(inlineReferencePattern, (_m, before: string, ref: string) =>
+    `${before}[#${ref}](${REFERENCE_SCHEME}${ref})`
+  );
+
+/** Whether a reference names a figure ("REQ-17-FIG-1") rather than an artifact. */
+export const isFigureRef = (ref: string): boolean => /-FIG-\d+$/.test(ref);
+
+/** The reference a rendered link points at, or '' when it is an ordinary link. */
+export const referenceFromHref = (href: string | undefined): string =>
+  href && href.startsWith(REFERENCE_SCHEME) ? href.slice(REFERENCE_SCHEME.length) : '';

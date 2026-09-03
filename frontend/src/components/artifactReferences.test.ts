@@ -1,9 +1,12 @@
 import { Artifact, Attachment, Link } from '../api/client';
 import {
+  REFERENCE_SCHEME,
   activeReferenceQuery,
   applyReference,
+  linkifyReferences,
   matchReferences,
   referenceCandidates,
+  referenceFromHref,
 } from './artifactReferences';
 
 const artifact = (over: Partial<Artifact> & { id: string }): Artifact => ({
@@ -154,5 +157,52 @@ describe('applyReference', () => {
     expect(got.text).toBe('see #TC-4  for the rest');
     // The caret sits after the inserted reference, not at the end.
     expect(got.text.slice(0, got.caret)).toBe('see #TC-4 ');
+  });
+});
+
+// A citation in prose should be followed, not retyped into the search box.
+// The rewrite has to be conservative: bodies are markdown, and "# Heading" is
+// far more common than a reference.
+describe('linkifyReferences', () => {
+  it('links a reference in prose', () => {
+    expect(linkifyReferences('as shown in #REQ-17-FIG-1 above')).toBe(
+      `as shown in [#REQ-17-FIG-1](${REFERENCE_SCHEME}REQ-17-FIG-1) above`
+    );
+    expect(linkifyReferences('#TC-4 covers it')).toBe(
+      `[#TC-4](${REFERENCE_SCHEME}TC-4) covers it`
+    );
+  });
+
+  it('links every reference in a body', () => {
+    const got = linkifyReferences('#REQ-1 and #HAZ-2-FIG-3');
+    expect(got).toContain(`${REFERENCE_SCHEME}REQ-1`);
+    expect(got).toContain(`${REFERENCE_SCHEME}HAZ-2-FIG-3`);
+  });
+
+  it('leaves markdown headings and bare hashes alone', () => {
+    for (const body of ['# Heading', '## Sub heading', 'a # on its own', '#not-a-ref']) {
+      expect(linkifyReferences(body)).toBe(body);
+    }
+  });
+
+  it('keeps trailing punctuation out of the link', () => {
+    expect(linkifyReferences('see #REQ-12.')).toBe(
+      `see [#REQ-12](${REFERENCE_SCHEME}REQ-12).`
+    );
+  });
+
+  it('does not touch a # inside a word', () => {
+    expect(linkifyReferences('PR#12 and http://x/y#REQ-1')).toBe('PR#12 and http://x/y#REQ-1');
+  });
+});
+
+describe('referenceFromHref', () => {
+  it('reads the reference out of an intercepted link', () => {
+    expect(referenceFromHref(`${REFERENCE_SCHEME}REQ-17-FIG-1`)).toBe('REQ-17-FIG-1');
+  });
+
+  it('reports nothing for an ordinary link', () => {
+    expect(referenceFromHref('https://example.com')).toBe('');
+    expect(referenceFromHref(undefined)).toBe('');
   });
 });

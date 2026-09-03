@@ -2,6 +2,15 @@ import React, { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { guidedAPI, projectAPI, Project } from '../api/client';
 import { hasWizardProgress } from './wizard/assistantSession';
+import {
+  PanelMode,
+  loadPanelMode,
+  nextPanelMode,
+  panelIsOpen,
+  panelModeLabel,
+  panelTakesSpace,
+  savePanelMode,
+} from './panelMode';
 import { useAppStore } from '../state/store';
 import { GlobalSearch } from './GlobalSearch';
 import { HelpSidebar } from './HelpSidebar';
@@ -75,6 +84,10 @@ export const ProjectLayout: React.FC = () => {
   // wizard creates one. That must not take the wizard out of the nav, so a
   // session still on step one with nothing entered does not count.
   const [hasGuidedSession, setHasGuidedSession] = useState(false);
+  // How much room the project menu takes: pinned, auto-hiding on hover, or
+  // hidden. Remembered per person so the choice survives a reload.
+  const [navMode, setNavMode] = useState<PanelMode>(() => loadPanelMode('project-nav'));
+  const [navHovered, setNavHovered] = useState(false);
 
   useEffect(() => {
     if (!projectId) return;
@@ -119,16 +132,50 @@ export const ProjectLayout: React.FC = () => {
     }
   }, [project, orgs, activeOrgId, setActiveOrgId]);
 
+  const open = panelIsOpen(navMode, navHovered);
+  const takesSpace = panelTakesSpace(navMode);
+
   return (
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
+      {/* The edge strip is what brings a hidden or auto-hiding nav back: with
+          the nav gone there would otherwise be nothing left to click. */}
+      {!takesSpace && (
+        <div
+          onMouseEnter={() => setNavHovered(true)}
+          onMouseLeave={() => setNavHovered(false)}
+          style={{
+            width: 10,
+            minWidth: 10,
+            background: 'var(--sidebar-bg)',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'flex-start',
+            justifyContent: 'center',
+            paddingTop: 12,
+            color: 'var(--sidebar-text-dim)',
+            fontSize: 10,
+          }}
+          title={`Project menu: ${panelModeLabel(navMode)} — click the pin inside to change`}
+          onClick={() => setNavHovered(true)}
+        >
+          ›
+        </div>
+      )}
       <aside
+        onMouseEnter={() => navMode === 'autohide' && setNavHovered(true)}
+        onMouseLeave={() => navMode === 'autohide' && setNavHovered(false)}
         style={{
-          width: 200,
-          minWidth: 200,
+          width: open ? 200 : 0,
+          minWidth: open ? 200 : 0,
           background: 'var(--sidebar-bg)',
           color: 'var(--sidebar-text)',
-          display: 'flex',
+          display: open ? 'flex' : 'none',
           flexDirection: 'column',
+          // An auto-hiding nav floats over the document instead of reflowing
+          // it every time the pointer crosses the edge.
+          ...(takesSpace
+            ? {}
+            : { position: 'fixed', left: 10, top: 0, bottom: 0, zIndex: 900, boxShadow: '2px 0 8px rgba(0,0,0,0.25)' }),
         }}
       >
         <div style={{ padding: '16px 14px', borderBottom: '1px solid var(--sidebar-border)' }}>
@@ -230,6 +277,30 @@ export const ProjectLayout: React.FC = () => {
         </nav>
         <div style={{ borderTop: '1px solid var(--sidebar-border)', padding: 12 }}>
           <UserMenu variant="dark" />
+          <button
+            onClick={() => {
+              const next = nextPanelMode(navMode);
+              setNavMode(next);
+              savePanelMode('project-nav', next);
+              setNavHovered(false);
+            }}
+            title={`Project menu: ${panelModeLabel(navMode)} — click for ${panelModeLabel(
+              nextPanelMode(navMode)
+            )}`}
+            style={{
+              marginTop: 8,
+              width: '100%',
+              background: 'none',
+              border: '1px solid var(--sidebar-border)',
+              borderRadius: 4,
+              color: 'var(--sidebar-text-dim)',
+              fontSize: 11,
+              padding: '4px 6px',
+              cursor: 'pointer',
+            }}
+          >
+            Menu: {panelModeLabel(navMode)}
+          </button>
         </div>
       </aside>
       <main style={{ flex: 1, overflow: 'auto', background: 'var(--bg-app)' }}>

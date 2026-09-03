@@ -41,7 +41,13 @@ link type definitions.
   type, title, body and attributes; links and figures stay with the original,
   because a copy that inherited "verifies REQ-12" would assert a verification
   nobody made. Pasted artifacts are titled "… (copy)".
-- **Drag artifacts** within the same parent to reorder them.
+- **Drag an artifact** onto another to move it. Where you let go decides what
+  happens: the **top half** drops it before that artifact, the **bottom left**
+  after it, and the **bottom right** makes it a **child** of it. The row shows
+  which it will be — a line on the edge it will land against, or an outline
+  around the artifact it will go inside — so re-parenting and reordering are
+  the same gesture. Dropping into a collapsed artifact expands it, and an
+  artifact can never be dropped into its own subtree.
 - **Collapse all / Expand all** manage the tree at once.
 
 ## Referencing figures and linked artifacts
@@ -51,10 +57,28 @@ Type **\`#\`** in an artifact's description to cite something: its own figures
 choose with the arrow keys or the mouse, and the reference is inserted as
 \`#REQ-17-FIG-1\`.
 
+Outside edit mode a reference is a link: clicking an artifact reference selects
+that artifact, and clicking a figure reference opens the figure where you are,
+so following a citation never loses your place.
+
 The list is deliberately short. It offers only what this artifact is already
 connected to, because a description citing a requirement it has no link to is
 a claim the traceability matrix cannot see — link it first, and it appears in
 the menu.
+
+## Making room
+
+The **project menu** and the **Notes** panel each have three states, chosen
+from the control at the foot of the menu and the button in the Notes header:
+
+- **Pinned** — always open, taking its width from the page.
+- **Auto-hide** — a thin strip at the edge; hovering it opens the panel over
+  the document, and moving away closes it. The document does not reflow.
+- **Hidden** — only the strip remains, which brings the panel back.
+
+Each choice is remembered per person and per panel. The artifact tree fills the
+height of its column, so a taller window shows more of the document rather
+than more empty space.
 
 ## Search & filters
 
@@ -85,10 +109,13 @@ so it stays a safe citation even after the figure it named is deleted. The
 stored file takes the figure's name too, so downloading one saves
 \`REQ-17-FIG-1.png\` rather than whatever the camera called it.
 
-Upload while editing; figures appear in a gallery on the artifact details with
-a lightbox view. Use **⬆** on a figure to upload a new version: the figure
-keeps its reference, the artifact takes a new version, and the notes record the
-change. **🕘** shows the history, and every superseded version stays viewable.
+Figures are added, replaced and removed **while editing** the artifact — what
+the document shows changes by a deliberate edit, not a stray click while
+reading. Use **⬆** on a figure to upload a new version: the figure keeps its
+reference, the artifact takes a new version, and the notes record the change.
+**🕘** shows the history, and every superseded version stays viewable.
+
+On the details view figures are read-only, with the lightbox for a closer look.
 
 ## Comments (Chatter)
 

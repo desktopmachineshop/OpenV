@@ -9,7 +9,12 @@ interface ChatterPanelProps {
   /** Project the notes belong to — the assistant tab needs it with or without an artifact. */
   projectId?: string;
   isOpen: boolean;
+  /** Cycle the panel's visibility: pinned → auto-hide → hidden. */
   onToggle: () => void;
+  /** The panel's current visibility, for the control's label. */
+  modeLabel?: string;
+  /** What clicking the control would switch to. */
+  nextModeLabel?: string;
 }
 
 type Tab = 'comments' | 'assistant';
@@ -19,6 +24,8 @@ export const ChatterPanel: React.FC<ChatterPanelProps> = ({
   projectId,
   isOpen,
   onToggle,
+  modeLabel,
+  nextModeLabel,
 }) => {
   // Comments belong to an artifact; the assistant does not, so with nothing
   // selected the panel opens on the tab that still has something to show.
@@ -132,23 +139,26 @@ export const ChatterPanel: React.FC<ChatterPanelProps> = ({
         <h3 style={{ margin: 0, fontSize: '14px', fontWeight: 'bold' }}>
           💬 Notes
         </h3>
+        {/* One control for how much room the panel takes, rather than a
+            close button that gave no way back. */}
         <button
           onClick={onToggle}
           style={{
             background: 'none',
-            border: 'none',
+            border: '1px solid var(--border)',
+            borderRadius: 4,
             cursor: 'pointer',
-            fontSize: '18px',
-            padding: '0',
-            width: '24px',
-            height: '24px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
+            fontSize: '11px',
+            padding: '2px 6px',
+            color: 'var(--text-muted)',
           }}
-          title="Close Notes"
+          title={
+            modeLabel && nextModeLabel
+              ? `Notes: ${modeLabel} — click for ${nextModeLabel}`
+              : 'Hide notes'
+          }
         >
-          ×
+          {modeLabel || 'Hide'}
         </button>
       </div>
 

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Artifact } from '../api/client';
+import { DropZone, dropZoneFor, planMove } from '../utils/artifactDrag';
 import { QualityBadge } from './QualityBadge';
 
 /** Per-artifact quality summary keyed by artifact id (issue #217). */
@@ -24,7 +25,11 @@ interface ArtifactListProps {
   allArtifacts: Artifact[];
   selectedId?: string;
   onSelect: (id: string) => void;
-  onReorder: (sourceId: string, targetId: string, mode: 'swap' | 'insert') => void;
+  /**
+   * 'swap' comes from the ▲▼ buttons. The rest come from a drag, and say where
+   * the pointer let go: before the target, after it, or inside it.
+   */
+  onReorder: (sourceId: string, targetId: string, mode: 'swap' | DropZone) => void;
   onContextMenuAction?: (action: ArtifactContextAction, artifact: Artifact) => void;
   /**
    * Whether something has been copied, which is what makes the paste entries
@@ -108,9 +113,11 @@ export const ArtifactList: React.FC<ArtifactListProps> = ({
   qualityScores,
 }) => {
   const [draggingId, setDraggingId] = useState<string | null>(null);
-  const [dragOverId, setDragOverId] = useState<string | null>(null);
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; artifactId: string } | null>(null);
+  // Which row a drag is over and which quadrant, so the row can show what
+  // letting go would do before it happens.
+  const [dropTarget, setDropTarget] = useState<{ id: string; zone: DropZone } | null>(null);
   const hasInitialized = useRef(false);
 
   const hierarchy = useMemo(() => buildHierarchy(artifacts), [artifacts]);
@@ -191,6 +198,7 @@ export const ArtifactList: React.FC<ArtifactListProps> = ({
       return current.children.reduce((sum, child) => sum + 1 + countDescendants(child), 0);
     };
     const descendantCount = hasChildren ? countDescendants(node) : 0;
+    const drop = dropTarget && dropTarget.id === artifact.id ? dropTarget.zone : null;
 
     return (
       <React.Fragment key={artifact.id}>
@@ -211,52 +219,80 @@ export const ArtifactList: React.FC<ArtifactListProps> = ({
           }}
           onDragOver={(event) => {
             if (readOnly) return;
-            const draggedId = draggingId || event.dataTransfer.getData('text/plain');
-            if (!draggedId || draggedId === artifact.id) {
-              return;
-            }
-            const dragged = allArtifacts.find((item) => item.id === draggedId);
-            if (!dragged) {
-              return;
-            }
-            if (normalizeParentId(dragged.parent_id) !== normalizeParentId(artifact.parent_id)) {
+            // dataTransfer is unreadable during dragover in most browsers, so
+            // the dragged id comes from state; the id is only read on drop.
+            const draggedId = draggingId;
+            if (!draggedId || draggedId === artifact.id) return;
+            const box = event.currentTarget.getBoundingClientRect();
+            const zone = dropZoneFor(box, event.clientX, event.clientY);
+            // Ask the planner rather than guessing: it refuses a drop into the
+            // dragged artifact's own subtree and one that changes nothing, and
+            // the row should not invite a drop that would be ignored.
+            if (!planMove(allArtifacts, draggedId, artifact.id, zone)) {
+              setDropTarget(null);
               return;
             }
             event.preventDefault();
-            setDragOverId(artifact.id);
+            event.dataTransfer.dropEffect = 'move';
+            setDropTarget((prev) =>
+              prev && prev.id === artifact.id && prev.zone === zone
+                ? prev
+                : { id: artifact.id, zone }
+            );
           }}
-          onDragLeave={() => setDragOverId(null)}
+          onDragLeave={(event) => {
+            // Leaving for a child element of the same row is not leaving.
+            if (event.currentTarget.contains(event.relatedTarget as Node | null)) return;
+            setDropTarget((prev) => (prev && prev.id === artifact.id ? null : prev));
+          }}
           onDrop={(event) => {
             if (readOnly) return;
             event.preventDefault();
-            const draggedId = event.dataTransfer.getData('text/plain');
-            setDragOverId(null);
+            const draggedId = event.dataTransfer.getData('text/plain') || draggingId;
+            const box = event.currentTarget.getBoundingClientRect();
+            const zone = dropZoneFor(box, event.clientX, event.clientY);
+            setDropTarget(null);
             setDraggingId(null);
-            if (!draggedId || draggedId === artifact.id) {
-              return;
+            if (!draggedId || draggedId === artifact.id) return;
+            if (!planMove(allArtifacts, draggedId, artifact.id, zone)) return;
+            // A drop into a collapsed parent would otherwise vanish from view.
+            if (zone === 'child') {
+              setCollapsedIds((prev) => {
+                if (!prev.has(artifact.id)) return prev;
+                const next = new Set(prev);
+                next.delete(artifact.id);
+                return next;
+              });
             }
-            const dragged = allArtifacts.find((item) => item.id === draggedId);
-            if (!dragged) {
-              return;
-            }
-            if (normalizeParentId(dragged.parent_id) !== normalizeParentId(artifact.parent_id)) {
-              return;
-            }
-            onReorder(draggedId, artifact.id, 'insert');
+            onReorder(draggedId, artifact.id, zone);
           }}
           onDragEnd={() => {
             setDraggingId(null);
-            setDragOverId(null);
+            setDropTarget(null);
           }}
           style={{
+            position: 'relative',
             padding: '12px',
             paddingLeft: `${12 + indentPx}px`,
             borderBottom: '1px solid var(--border-soft)',
             cursor: 'pointer',
             backgroundColor:
-              selectedId === artifact.id ? 'var(--tint-blue)' : 'transparent',
+              drop === 'child'
+                ? 'var(--tint-blue)'
+                : selectedId === artifact.id
+                ? 'var(--tint-blue)'
+                : 'transparent',
             transition: 'background-color 0.2s',
-            outline: dragOverId === artifact.id ? '2px dashed var(--text-muted)' : 'none',
+            // A sibling drop shows a line on the edge it would land against; a
+            // child drop outlines the row it would go inside.
+            boxShadow:
+              drop === 'before'
+                ? 'inset 0 2px 0 0 var(--accent)'
+                : drop === 'after'
+                ? 'inset 0 -2px 0 0 var(--accent)'
+                : 'none',
+            outline: drop === 'child' ? '2px solid var(--accent)' : 'none',
+            outlineOffset: drop === 'child' ? '-2px' : undefined,
             opacity: draggingId === artifact.id ? 0.6 : 1,
           }}
           onMouseOver={(e) => {
@@ -397,12 +433,15 @@ export const ArtifactList: React.FC<ArtifactListProps> = ({
   };
 
   return (
-    <div className="card">
-      <h3>Artifacts</h3>
+    // No card around the tree: the list is the column's content, and a panel
+    // inside a panel only wasted the width. It fills the height it is given
+    // rather than stopping at a fixed 500px with empty space beneath.
+    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+      <h3 style={{ marginTop: 0 }}>Artifacts</h3>
       {artifacts.length === 0 ? (
         <p>No artifacts yet. Create one to get started.</p>
       ) : (
-        <div style={{ overflowY: 'auto', maxHeight: '500px' }}>
+        <div style={{ overflowY: 'auto', flex: 1, minHeight: 0 }}>
           {hierarchy.map((node) => renderArtifact(node))}
         </div>
       )}
