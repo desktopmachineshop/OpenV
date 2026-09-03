@@ -292,6 +292,8 @@ func (h *Handler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/attachments/upload", h.UploadAttachment).Methods("POST")
 	router.HandleFunc("/api/v1/attachments/{id}", h.GetAttachmentMeta).Methods("GET")
 	router.HandleFunc("/api/v1/attachments/{id}/download", h.DownloadAttachment).Methods("GET")
+	router.HandleFunc("/api/v1/attachments/{id}/versions", h.UploadAttachmentVersion).Methods("POST")
+	router.HandleFunc("/api/v1/attachments/{id}/versions", h.ListAttachmentVersions).Methods("GET")
 	router.HandleFunc("/api/v1/attachments/{id}", h.DeleteAttachment).Methods("DELETE")
 	router.HandleFunc("/api/v1/artifacts/{artifactID}/attachments", h.ListArtifactAttachments).Methods("GET")
 
@@ -2017,30 +2019,42 @@ func (h *Handler) UploadAttachment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Generate unique filename
-	filename := fmt.Sprintf("%s_%s", uuid.New().String(), header.Filename)
-	filepath := filepath.Join(h.uploadsDir, filename)
-
-	// Write file to disk
-	if err := os.WriteFile(filepath, fileData, 0644); err != nil {
+	// On-disk names stay UUID-unique: the uploads directory is flat across
+	// every project, figure references are only unique within one, and each
+	// version of a figure needs a file of its own. The figure's name is what
+	// the record carries and what a download is served as.
+	storedPath := filepath.Join(h.uploadsDir, fmt.Sprintf("%s_%s", uuid.New().String(), header.Filename))
+	if err := os.WriteFile(storedPath, fileData, 0644); err != nil {
 		respondInternal(w, r, "Failed to save file", err)
 		return
 	}
 
-	// Create attachment record
+	// The figure reference is built on the artifact's own reference, so the
+	// artifact is read before the number is drawn.
+	artifactRef := ""
+	if a, err := h.artifactService.GetArtifact(artifactID); err == nil && a != nil {
+		artifactRef = a.Ref
+	}
+
 	attachment := attachments.NewAttachment(attachments.CreateAttachmentRequest{
-		ArtifactID: artifactID,
-		Filename:   header.Filename,
-		MimeType:   mimeType,
-		FilePath:   filepath,
-		FileSize:   len(fileData),
+		ArtifactID:       artifactID,
+		Filename:         header.Filename,
+		OriginalFilename: header.Filename,
+		MimeType:         mimeType,
+		FilePath:         storedPath,
+		FileSize:         len(fileData),
 	})
 
-	if err := h.attachmentService.CreateAttachment(attachment); err != nil {
+	if err := h.attachmentService.CreateFigure(attachment, artifactRef); err != nil {
 		// Clean up file if database save fails
-		_ = os.Remove(filepath)
+		_ = os.Remove(storedPath)
 		respondInternal(w, r, "Failed to save attachment metadata", err)
 		return
+	}
+
+	if attachment.FigureRef != "" {
+		h.logFigureNote(r, artifactID, fmt.Sprintf("Figure %s added (version 1) — %s.",
+			attachment.FigureRef, attachment.OriginalFilename))
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -2066,6 +2080,144 @@ func (h *Handler) GetAttachmentMeta(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(attachment)
 }
 
+// logFigureNote records a figure event in the artifact's notes. The feed is
+// where a reader looks to find out why a drawing changed, so a failure to write
+// one is logged rather than failing the upload that succeeded.
+func (h *Handler) logFigureNote(r *http.Request, artifactID, message string) {
+	entry := chatter.NewChatterEntry(artifactID, message, true, "figure-change")
+	entry.AuthorName = "System"
+	if user := CurrentUser(r); user != nil {
+		entry.CreatedBy = &user.ID
+		if user.Name != "" {
+			entry.AuthorName = user.Name
+		} else {
+			entry.AuthorName = user.Email
+		}
+	}
+	if err := h.chatterService.CreateEntry(entry); err != nil {
+		slog.Warn("api: failed to log figure note", "artifact_id", artifactID, "error", err)
+	}
+}
+
+// UploadAttachmentVersion replaces a figure's image with a new version.
+//
+// The figure keeps its reference and its place in the document; what changes
+// is which file it points at. Because the artifact now says something
+// different to a reader, the artifact takes a new version too, and the notes
+// record the move from one figure version to the next.
+func (h *Handler) UploadAttachmentVersion(w http.ResponseWriter, r *http.Request) {
+	id := mux.Vars(r)["id"]
+
+	existing, err := h.attachmentService.GetAttachment(id)
+	if err != nil || existing == nil {
+		writeJSONError(w, http.StatusNotFound, "Attachment not found")
+		return
+	}
+	if !h.requireProjectRole(w, r, h.projectIDForArtifact(existing.ArtifactID), members.RoleEditor) {
+		return
+	}
+
+	file, header, err := r.FormFile("file")
+	if err != nil {
+		writeJSONError(w, http.StatusBadRequest, "Failed to get file from request")
+		return
+	}
+	defer file.Close()
+
+	mimeType := header.Header.Get("Content-Type")
+	if !isImageMimeType(mimeType) {
+		writeJSONError(w, http.StatusBadRequest, "File must be an image")
+		return
+	}
+
+	fileData, err := io.ReadAll(file)
+	if err != nil {
+		respondInternal(w, r, "Failed to read file", err)
+		return
+	}
+
+	// A new file, not a rewrite of the old one: the superseded version must
+	// stay readable.
+	storedPath := filepath.Join(h.uploadsDir, fmt.Sprintf("%s_%s", uuid.New().String(), header.Filename))
+	if err := os.WriteFile(storedPath, fileData, 0644); err != nil {
+		respondInternal(w, r, "Failed to save file", err)
+		return
+	}
+
+	version := &attachments.Version{
+		Filename:         header.Filename,
+		OriginalFilename: header.Filename,
+		MimeType:         mimeType,
+		FilePath:         storedPath,
+		FileSize:         len(fileData),
+	}
+	if user := CurrentUser(r); user != nil {
+		version.CreatedBy = &user.ID
+	}
+
+	previous := existing.Version
+	next, err := h.attachmentService.AddVersion(id, version)
+	if err != nil {
+		_ = os.Remove(storedPath)
+		respondInternal(w, r, "Failed to record the new figure version", err)
+		return
+	}
+	if next == 0 {
+		_ = os.Remove(storedPath)
+		writeJSONError(w, http.StatusNotFound, "Attachment not found")
+		return
+	}
+
+	// The artifact carries the figure, so a new figure version is a new
+	// artifact version. Nothing the artifact SAYS changed, so this goes
+	// through an attribute-free update: it does not demote an approved
+	// artifact or mark its links suspect.
+	if _, err := h.artifactService.UpdateArtifact(existing.ArtifactID, artifacts.UpdateArtifactRequest{}); err != nil {
+		slog.Warn("api: failed to version artifact after a figure change",
+			"artifact_id", existing.ArtifactID, "attachment_id", id, "error", err)
+	}
+
+	label := existing.FigureRef
+	if label == "" {
+		label = existing.Filename
+	}
+	h.logFigureNote(r, existing.ArtifactID, fmt.Sprintf(
+		"Figure %s updated from version %d to %d — %s.", label, previous, next, version.OriginalFilename))
+
+	updated, err := h.attachmentService.GetAttachment(id)
+	if err != nil || updated == nil {
+		updated = existing
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(updated)
+}
+
+// ListAttachmentVersions returns a figure's version history, newest first.
+func (h *Handler) ListAttachmentVersions(w http.ResponseWriter, r *http.Request) {
+	id := mux.Vars(r)["id"]
+
+	attachment, err := h.attachmentService.GetAttachment(id)
+	if err != nil || attachment == nil {
+		writeJSONError(w, http.StatusNotFound, "Attachment not found")
+		return
+	}
+	if !h.requireProjectRole(w, r, h.projectIDForArtifact(attachment.ArtifactID), members.RoleViewer) {
+		return
+	}
+
+	versions, err := h.attachmentService.GetVersions(id)
+	if err != nil {
+		respondInternal(w, r, "Failed to list figure versions", err)
+		return
+	}
+	if versions == nil {
+		versions = []*attachments.Version{}
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(versions)
+}
+
 // DownloadAttachment serves the attachment file
 func (h *Handler) DownloadAttachment(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
@@ -2081,13 +2233,36 @@ func (h *Handler) DownloadAttachment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// ?version=N serves a superseded version; without it the current one. The
+	// version is part of the URL, so a new version is a new URL and the long
+	// cache below never serves a stale drawing.
+	name, mime, path, size := attachment.Filename, attachment.MimeType, attachment.FilePath, attachment.FileSize
+	if raw := r.URL.Query().Get("version"); raw != "" {
+		n, err := strconv.Atoi(raw)
+		if err != nil || n < 1 {
+			writeJSONError(w, http.StatusBadRequest, "version must be a positive number")
+			return
+		}
+		if n != attachment.Version {
+			v, err := h.attachmentService.GetVersion(id, n)
+			if err != nil || v == nil {
+				writeJSONError(w, http.StatusNotFound, "That version of the figure was not found")
+				return
+			}
+			name, mime, path, size = v.Filename, v.MimeType, v.FilePath, v.FileSize
+		}
+	}
+
 	// Set appropriate headers for image serving
-	w.Header().Set("Content-Type", attachment.MimeType)
-	w.Header().Set("Content-Length", strconv.Itoa(attachment.FileSize))
+	w.Header().Set("Content-Type", mime)
+	w.Header().Set("Content-Length", strconv.Itoa(size))
 	w.Header().Set("Cache-Control", "public, max-age=31536000")
+	// Saving the image should land a file named for the figure, not for
+	// whatever the uploader happened to call it.
+	w.Header().Set("Content-Disposition", fmt.Sprintf("inline; filename=%q", name))
 
 	// Serve the file
-	http.ServeFile(w, r, attachment.FilePath)
+	http.ServeFile(w, r, path)
 }
 
 // DeleteAttachment deletes an attachment

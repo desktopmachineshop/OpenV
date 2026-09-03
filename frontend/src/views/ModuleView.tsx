@@ -326,6 +326,23 @@ export const ModuleView: React.FC = () => {
     }
   };
 
+  // Replacing a figure's image bumps the artifact's version server-side and
+  // writes a note, so the artifact is reloaded rather than patched locally.
+  const handleUploadAttachmentVersion = async (attachmentId: string, file: File) => {
+    setUploadingAttachmentId(attachmentId);
+    try {
+      const response = await attachmentAPI.uploadVersion(attachmentId, file);
+      setAttachments((prev) => prev.map((a) => (a.id === attachmentId ? response.data : a)));
+      setError('');
+      loadArtifacts();
+    } catch (error: any) {
+      console.error('Failed to upload figure version:', error);
+      setError(`Failed to upload the new figure version: ${apiErrorMessage(error, 'Unknown error')}`);
+    } finally {
+      setUploadingAttachmentId(null);
+    }
+  };
+
   const handleDeleteAttachment = async (attachmentId: string) => {
     try {
       await attachmentAPI.delete(attachmentId);
@@ -1399,6 +1416,7 @@ export const ModuleView: React.FC = () => {
             }}
             attachments={attachments}
             onUploadAttachment={handleUploadAttachment}
+            onUploadAttachmentVersion={handleUploadAttachmentVersion}
             onDeleteAttachment={handleDeleteAttachment}
             isUploadLoading={uploadingAttachmentId === editingArtifact.id}
             links={allLinks}
@@ -1429,6 +1447,7 @@ export const ModuleView: React.FC = () => {
               artifacts={activeArtifacts}
               attachments={detailAttachments}
               onDeleteAttachment={isBaselineView ? undefined : handleDeleteAttachment}
+              onUploadAttachmentVersion={isBaselineView ? undefined : handleUploadAttachmentVersion}
               onSelectArtifact={handleSelectArtifact}
               previewVersion={previewVersion}
               onClosePreview={() => setPreviewVersion(null)}

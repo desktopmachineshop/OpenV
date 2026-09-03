@@ -169,10 +169,34 @@ export interface ProjectExport {
 export interface Attachment {
   id: string;
   artifact_id: string;
+  /** Stored name, derived from figure_ref (e.g. "REQ-17-FIG-1.png"). */
   filename: string;
+  /** The name the uploaded file had. */
+  original_filename: string;
   mime_type: string;
   file_path: string;
   file_size: number;
+  /**
+   * The figure's citable reference and its number within the artifact. Absent
+   * only on images whose artifact has no stable reference to build one from.
+   */
+  figure_ref?: string;
+  figure_num?: number;
+  /** The figure's current version, starting at 1. */
+  version: number;
+  created_at: string;
+}
+
+/** One uploaded revision of a figure. */
+export interface AttachmentVersion {
+  id: string;
+  attachment_id: string;
+  version: number;
+  filename: string;
+  original_filename: string;
+  mime_type: string;
+  file_size: number;
+  created_by?: string | null;
   created_at: string;
 }
 
@@ -457,8 +481,20 @@ export const attachmentAPI = {
   },
   getMeta: (id: string) =>
     client.get<Attachment>(`/api/v1/attachments/${id}`),
-  getDownloadUrl: (id: string) =>
-    `${API_BASE_URL}/api/v1/attachments/${id}/download`,
+  // The version is part of the URL, so a new version is a new URL: the
+  // browser cannot serve the superseded drawing from cache, and an older
+  // version stays addressable.
+  getDownloadUrl: (id: string, version?: number) =>
+    `${API_BASE_URL}/api/v1/attachments/${id}/download${version ? `?version=${version}` : ''}`,
+  uploadVersion: (id: string, file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return client.post<Attachment>(`/api/v1/attachments/${id}/versions`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+  listVersions: (id: string) =>
+    client.get<AttachmentVersion[]>(`/api/v1/attachments/${id}/versions`),
   delete: (id: string) =>
     client.delete(`/api/v1/attachments/${id}`),
   listByArtifact: (artifactId: string) =>

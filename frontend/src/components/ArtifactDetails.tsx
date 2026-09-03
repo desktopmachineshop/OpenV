@@ -59,6 +59,7 @@ interface ArtifactDetailsProps {
   artifacts?: Artifact[];
   attachments?: Attachment[];
   onDeleteAttachment?: (attachmentId: string) => void;
+  onUploadAttachmentVersion?: (attachmentId: string, file: File) => void;
   onSelectArtifact?: (artifactId: string) => void;
   previewVersion?: Artifact | null;
   onClosePreview?: () => void;
@@ -92,6 +93,7 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
   artifacts = [],
   attachments = [],
   onDeleteAttachment,
+  onUploadAttachmentVersion,
   onSelectArtifact,
   previewVersion,
   onClosePreview,
@@ -628,6 +630,7 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
             artifactId={artifact.id} 
             attachments={attachments}
             onDelete={onDeleteAttachment || (() => {})}
+            onUploadVersion={onUploadAttachmentVersion}
             showUpload={false}
           />
         </div>
