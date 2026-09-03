@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { guidedAPI, projectAPI, Project } from '../api/client';
+import { hasWizardProgress } from './wizard/assistantSession';
 import { useAppStore } from '../state/store';
 import { GlobalSearch } from './GlobalSearch';
 import { HelpSidebar } from './HelpSidebar';
@@ -64,10 +65,15 @@ export const ProjectLayout: React.FC = () => {
   const location = useLocation();
   const { setProjectId, orgs, activeOrgId, setActiveOrgId } = useAppStore();
   const [project, setProject] = useState<Project | null>(null);
-  // Once a guided-definition session exists, the nav entry disappears — the
-  // wizard is then reached only through the Overview page's adaptive CTA
+  // Once a guided definition has been worked on, the nav entry disappears —
+  // the wizard is then reached only through the Overview page's adaptive CTA
   // (Resume / Modify). Rechecked on every route change so starting or
   // committing a session updates the menu without a reload.
+  //
+  // "Worked on", not "exists": the V&V Assistant's conversation is stored on a
+  // guided session, so opening the notes chat in a project that never ran the
+  // wizard creates one. That must not take the wizard out of the nav, so a
+  // session still on step one with nothing entered does not count.
   const [hasGuidedSession, setHasGuidedSession] = useState(false);
 
   useEffect(() => {
@@ -76,7 +82,7 @@ export const ProjectLayout: React.FC = () => {
     guidedAPI
       .list(projectId)
       .then((res) => {
-        if (!cancelled) setHasGuidedSession((res.data || []).length > 0);
+        if (!cancelled) setHasGuidedSession(hasWizardProgress(res.data || []));
       })
       .catch(() => {
         /* menu visibility only — keep the last known state */

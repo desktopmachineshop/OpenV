@@ -1,17 +1,33 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { ChatterEntry, chatterAPI } from '../api/client';
+import { GuidedChatPanel } from './wizard/GuidedChatPanel';
+import { resolveAssistantSessionId } from './wizard/assistantSession';
 
 interface ChatterPanelProps {
+  /** The artifact whose notes these are; absent when nothing is selected. */
   artifactId?: string;
+  /** Project the notes belong to — the assistant tab needs it with or without an artifact. */
+  projectId?: string;
   isOpen: boolean;
   onToggle: () => void;
 }
 
+type Tab = 'comments' | 'assistant';
+
 export const ChatterPanel: React.FC<ChatterPanelProps> = ({
   artifactId,
+  projectId,
   isOpen,
   onToggle,
 }) => {
+  // Comments belong to an artifact; the assistant does not, so with nothing
+  // selected the panel opens on the tab that still has something to show.
+  const [tab, setTab] = useState<Tab>(artifactId ? 'comments' : 'assistant');
+  // Resolved lazily and only for the assistant tab: finding the conversation
+  // can create a guided session, which should not happen just because someone
+  // opened an artifact.
+  const [assistantSessionId, setAssistantSessionId] = useState('');
+  const [assistantError, setAssistantError] = useState('');
   const [entries, setEntries] = useState<ChatterEntry[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -39,6 +55,30 @@ export const ChatterPanel: React.FC<ChatterPanelProps> = ({
       loadChatterEntries();
     }
   }, [artifactId, isOpen, loadChatterEntries]);
+
+  // With no artifact there are no comments to show, so keep the panel on the
+  // assistant rather than an empty tab.
+  useEffect(() => {
+    if (!artifactId) setTab('assistant');
+  }, [artifactId]);
+
+  useEffect(() => {
+    if (!isOpen || tab !== 'assistant' || !projectId || assistantSessionId) return;
+    let cancelled = false;
+    (async () => {
+      const id = await resolveAssistantSessionId(projectId);
+      if (cancelled) return;
+      if (id) {
+        setAssistantSessionId(id);
+        setAssistantError('');
+      } else {
+        setAssistantError('The assistant conversation could not be opened. Try again in a moment.');
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, tab, projectId, assistantSessionId]);
 
   const handleAddMessage = async () => {
     if (!newMessage.trim() || !artifactId) {
@@ -112,6 +152,40 @@ export const ChatterPanel: React.FC<ChatterPanelProps> = ({
         </button>
       </div>
 
+      {/* Tabs: the artifact's own comments, and the project's assistant. */}
+      <div style={{ display: 'flex', borderBottom: '1px solid var(--neutral-soft)' }}>
+        {([
+          { id: 'comments' as Tab, label: 'Comments' },
+          { id: 'assistant' as Tab, label: 'V&V Assistant' },
+        ]).map((t) => {
+          const active = tab === t.id;
+          const disabled = t.id === 'comments' && !artifactId;
+          return (
+            <button
+              key={t.id}
+              onClick={() => !disabled && setTab(t.id)}
+              disabled={disabled}
+              title={disabled ? 'Select an artifact to read and add its comments' : undefined}
+              style={{
+                flex: 1,
+                padding: '8px 6px',
+                background: 'none',
+                border: 'none',
+                borderBottom: active ? '2px solid var(--accent)' : '2px solid transparent',
+                color: disabled ? 'var(--neutral)' : active ? 'var(--text)' : 'var(--text-muted)',
+                fontWeight: active ? 700 : 400,
+                fontSize: 12,
+                cursor: disabled ? 'not-allowed' : 'pointer',
+              }}
+            >
+              {t.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {tab === 'comments' ? (
+        <>
       {/* Entries list */}
       <div
         style={{
@@ -204,6 +278,35 @@ export const ChatterPanel: React.FC<ChatterPanelProps> = ({
           Add Note
         </button>
       </div>
+        </>
+      ) : (
+        // One conversation per project: the same transcript the wizard shows,
+        // with the artifact on screen passed as this turn's context.
+        <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+          {assistantError ? (
+            <div style={{ padding: 12, fontSize: 12, color: 'var(--danger)' }}>{assistantError}</div>
+          ) : !projectId ? (
+            <div style={{ padding: 12, fontSize: 12, color: 'var(--text-muted)' }}>
+              Open a project to chat with the V&amp;V Assistant.
+            </div>
+          ) : !assistantSessionId ? (
+            <div style={{ padding: 12, fontSize: 12, color: 'var(--text-muted)' }}>
+              Opening the conversation…
+            </div>
+          ) : (
+            <GuidedChatPanel
+              sessionId={assistantSessionId}
+              artifactId={artifactId}
+              embedded
+              subtitle={
+                artifactId
+                  ? 'Answers about the artifact on screen — same conversation as the wizard.'
+                  : 'Same conversation as the guided wizard, for the project as a whole.'
+              }
+            />
+          )}
+        </div>
+      )}
     </div>
   );
 };

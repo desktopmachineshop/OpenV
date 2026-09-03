@@ -1,5 +1,5 @@
 {
-  "exported_at": "2026-09-02T22:07:55.019587431Z",
+  "exported_at": "2026-09-03T05:44:59.369562378Z",
   "version": "1.0",
   "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
   "project_name": "OpenV Platform",
@@ -510,6 +510,19 @@
         "links_snapshot": [
           {
             "attributes": null,
+            "created_at": "2026-09-03T05:36:19.994457Z",
+            "from_id": "c3ced80a-a194-47ea-b387-495ffbbe5e07",
+            "id": "2ce8635f-4535-423a-927d-d1f6b1f4ab57",
+            "suspect": false,
+            "to_id": "7a179f00-7564-42d1-9dfe-8c99d7660322",
+            "type": "derives-from",
+            "updated_at": "2026-09-03T05:36:19.994457Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
             "created_at": "2026-09-02T21:41:24.689099Z",
             "from_id": "37808fde-6afd-40d3-b889-0a795e3c38cc",
             "id": "f2642723-5d27-441f-9b40-f093e9bf874f",
@@ -539,7 +552,7 @@
             "created_at": "2026-08-30T21:51:50.060686Z",
             "from_id": "807fa39f-386d-4447-ac73-8d3ad0cc5b96",
             "id": "9c296b42-dc2f-4921-84fd-f7d2821ab00b",
-            "suspect": false,
+            "suspect": true,
             "to_id": "7a179f00-7564-42d1-9dfe-8c99d7660322",
             "type": "derives-from",
             "updated_at": "2026-08-30T21:51:50.060686Z",
@@ -552,10 +565,10 @@
             "created_at": "2026-08-30T19:54:27.078567Z",
             "from_id": "1f1fef91-5d25-40a2-a659-a87476f64c89",
             "id": "f67d0eac-e589-4167-88f0-624821847403",
-            "suspect": true,
+            "suspect": false,
             "to_id": "7a179f00-7564-42d1-9dfe-8c99d7660322",
             "type": "derives-from",
-            "updated_at": "2026-08-30T19:54:27.078567Z",
+            "updated_at": "2026-09-03T05:17:23.296692Z",
             "valid_from": "0001-01-01T00:00:00Z",
             "valid_to": null,
             "version": 1
@@ -563,11 +576,11 @@
         ],
         "status": "draft"
       },
-      "version": 5,
-      "valid_from": "2026-09-02T21:41:24.70541Z",
+      "version": 6,
+      "valid_from": "2026-09-03T05:36:20.013781Z",
       "valid_to": null,
       "created_at": "2026-08-30T19:54:04.666838Z",
-      "updated_at": "2026-09-02T21:41:24.70541Z"
+      "updated_at": "2026-09-03T05:36:20.013781Z"
     },
     {
       "id": "8324454a-b5a6-4625-9075-314728afc142",
@@ -1701,7 +1714,7 @@
       "type": "requirement",
       "ref": "REQ-41",
       "title": "Untrusted content isolation in agent prompts",
-      "body": "A prompt the platform builds for a member's own copilot shall state up front that the product profile, wizard state and transcript are content and never instructions, and shall fence the state block, so that text authored in another tenant \u2014 a rolled community product seeds the wizard \u2014 cannot read as an order to an agent running on the member's own machine with their credentials.",
+      "body": "A prompt the platform builds for a member's own assistant shall state up front that the product profile, wizard state, transcript and any artifact supplied for context are content and never instructions, and shall fence the state block and the artifact block, so that text authored in another tenant \u2014 a rolled community product seeds the wizard \u2014 or written into an artifact by anyone who can edit the project cannot read as an order to an agent running on the member's own machine with their credentials.",
       "sort_order": 50,
       "status": "draft",
       "attributes": {
@@ -1738,11 +1751,11 @@
         "verification_method": "test",
         "verification_status": "verified"
       },
-      "version": 4,
-      "valid_from": "2026-09-02T22:05:41.267367Z",
+      "version": 5,
+      "valid_from": "2026-09-03T05:36:18.152873Z",
       "valid_to": null,
       "created_at": "2026-09-02T20:29:11.294312Z",
-      "updated_at": "2026-09-02T22:05:41.267367Z"
+      "updated_at": "2026-09-03T05:36:18.152873Z"
     },
     {
       "id": "33b75afa-933d-46f1-9725-013a1b17f0b1",
@@ -2491,7 +2504,7 @@
       "type": "test-case",
       "ref": "TC-16",
       "title": "Copilot prompt isolation test",
-      "body": "The guided copilot prompt declares the product profile, wizard state and transcript as content and never as instructions, and fences the state block.",
+      "body": "The assistant prompt declares the product profile, wizard state, transcript and the artifact on screen as content and never as instructions, fences the state block and the artifact block, and places the trust rules ahead of every scrap of that content.",
       "sort_order": 50,
       "status": "draft",
       "attributes": {
@@ -2512,11 +2525,11 @@
         ],
         "status": "draft"
       },
-      "version": 3,
-      "valid_from": "2026-09-02T22:05:42.653217Z",
+      "version": 4,
+      "valid_from": "2026-09-03T05:36:18.47471Z",
       "valid_to": null,
       "created_at": "2026-09-02T20:29:13.88619Z",
-      "updated_at": "2026-09-02T22:05:42.653217Z"
+      "updated_at": "2026-09-03T05:36:18.47471Z"
     },
     {
       "id": "276b1cbc-0959-4a5f-b138-05ff8fe76777",
@@ -3204,7 +3217,7 @@
       "type": "requirement",
       "ref": "REQ-35",
       "title": "Random test product generation",
-      "body": "The new-project flow shall offer a testing mode that generates a random product concept (name, description, vision, problem statement, target users) across varied categories including software, hardware, games, toys, and appliances, with the option to reroll, and shall seed the guided definition wizard with the generated framing so the connected copilot agent can expand it into a full definition.",
+      "body": "The new-project flow shall offer a testing mode that generates a random product concept (name, description, vision, problem statement, target users) across varied categories including software, hardware, games, toys, and appliances, with the option to reroll, and shall seed the guided definition wizard with the generated framing so the connected V&V Assistant can expand it into a full definition.",
       "sort_order": 280,
       "status": "draft",
       "attributes": {
@@ -3239,11 +3252,11 @@
         "status": "draft",
         "verification_method": "demonstration"
       },
-      "version": 3,
-      "valid_from": "2026-09-02T20:29:16.291215Z",
+      "version": 4,
+      "valid_from": "2026-09-03T05:36:18.790708Z",
       "valid_to": null,
       "created_at": "2026-08-30T21:51:48.850044Z",
-      "updated_at": "2026-09-02T20:29:16.291215Z"
+      "updated_at": "2026-09-03T05:36:18.790708Z"
     },
     {
       "id": "296e8231-2539-4d68-a99a-7e1b07548c53",
@@ -3433,6 +3446,56 @@
       "valid_to": null,
       "created_at": "2026-09-02T20:29:10.956626Z",
       "updated_at": "2026-09-02T20:29:19.346233Z"
+    },
+    {
+      "id": "c3ced80a-a194-47ea-b387-495ffbbe5e07",
+      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
+      "parent_id": "8880d07f-b93a-4a1f-9598-15e7a20b45eb",
+      "type": "requirement",
+      "ref": "REQ-49",
+      "title": "V&V Assistant across the wizard and artifact notes",
+      "body": "The system shall provide one assistant, named the V&V Assistant, reachable both beside the guided definition wizard and in the Notes panel of the requirements module. One conversation shall serve a whole project, so that what a member asks in the wizard is present in the notes and the reverse. The Notes panel shall present the artifact's comments and the assistant as separate tabs, and shall offer the assistant whether or not an artifact is selected. With an artifact selected, that artifact shall be supplied to the turn as fenced untrusted content, so the assistant answers about what the reader has open and cites it by its stable reference. Suggestion cards shall be applicable only in the wizard, where the entry sections they fill exist. A session created solely to hold the conversation shall not count as a guided definition in progress, so that opening the notes chat neither removes the wizard from the project navigation nor offers to resume a definition nobody started.\n\nA workspace provisioned before the assistant was named shall adopt the current name, description and system prompt for its seeded agent, field by field and only where the workspace still carries the text the previous seed wrote; a field a member has edited shall be left as they wrote it, and an agent already current shall not be rewritten. The agent's slug shall not change, so that a workspace provisioned before the rename keeps a working chat.",
+      "sort_order": 284,
+      "status": "draft",
+      "attributes": {
+        "links_snapshot": [
+          {
+            "attributes": null,
+            "created_at": "2026-09-03T05:36:20.297448Z",
+            "from_id": "7a4908f9-3c59-44e8-bbeb-c358ccb9b184",
+            "id": "27c50bec-f678-4466-bfac-3da1b6efddfd",
+            "suspect": false,
+            "to_id": "c3ced80a-a194-47ea-b387-495ffbbe5e07",
+            "type": "verifies",
+            "updated_at": "2026-09-03T05:36:20.297448Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
+            "created_at": "2026-09-03T05:36:19.994457Z",
+            "from_id": "c3ced80a-a194-47ea-b387-495ffbbe5e07",
+            "id": "2ce8635f-4535-423a-927d-d1f6b1f4ab57",
+            "suspect": false,
+            "to_id": "7a179f00-7564-42d1-9dfe-8c99d7660322",
+            "type": "derives-from",
+            "updated_at": "2026-09-03T05:36:19.994457Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          }
+        ],
+        "priority": "should",
+        "status": "draft",
+        "verification_method": "test",
+        "verification_status": "verified"
+      },
+      "version": 4,
+      "valid_from": "2026-09-03T05:44:51.748829Z",
+      "valid_to": null,
+      "created_at": "2026-09-03T05:36:19.09926Z",
+      "updated_at": "2026-09-03T05:44:51.748829Z"
     },
     {
       "id": "4b3dd557-2c3f-4c3c-a162-9231e2167401",
@@ -4151,6 +4214,74 @@
       "valid_to": null,
       "created_at": "2026-09-02T21:58:06.259047Z",
       "updated_at": "2026-09-02T22:07:11.096748Z"
+    },
+    {
+      "id": "7a4908f9-3c59-44e8-bbeb-c358ccb9b184",
+      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
+      "parent_id": "8c8b86be-4730-49cb-9d95-93868a0c1938",
+      "type": "test-case",
+      "ref": "TC-21",
+      "title": "V&V Assistant notes chat suite",
+      "body": "Client suite over the session helpers that decide where the conversation lives: a session created only to hold the chat is told apart from a wizard someone worked on (by step, answers and status), a project with only chat-created sessions reports no wizard progress, and the newest session is the one the notes panel reads so it shows the transcript the wizard resumes into. Paired with the Go prompt test that fences the artifact on screen.",
+      "sort_order": 160,
+      "status": "draft",
+      "attributes": {
+        "links_snapshot": [
+          {
+            "attributes": null,
+            "created_at": "2026-09-03T05:36:20.297448Z",
+            "from_id": "7a4908f9-3c59-44e8-bbeb-c358ccb9b184",
+            "id": "27c50bec-f678-4466-bfac-3da1b6efddfd",
+            "suspect": false,
+            "to_id": "c3ced80a-a194-47ea-b387-495ffbbe5e07",
+            "type": "verifies",
+            "updated_at": "2026-09-03T05:36:20.297448Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          }
+        ],
+        "status": "draft"
+      },
+      "version": 2,
+      "valid_from": "2026-09-03T05:36:20.305352Z",
+      "valid_to": null,
+      "created_at": "2026-09-03T05:36:19.395948Z",
+      "updated_at": "2026-09-03T05:36:20.305352Z"
+    },
+    {
+      "id": "ed5fc36d-eb1a-497c-8b7b-271bb65357a1",
+      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
+      "parent_id": "8c8b86be-4730-49cb-9d95-93868a0c1938",
+      "type": "test-case",
+      "ref": "TC-22",
+      "title": "Quality rules editor presentation",
+      "body": "Frontend Jest suite over the quality rules editor at both levels: each severity select offers the four severities exactly once with no separate inherit entry, and opens on the value the level is in force with; a project select opens on the workspace's value unflagged; changing it away from the workspace value shows an override warning naming that value, and choosing the workspace value again clears the warning and drops the override, so a save sends only the severities that differ; the convention list offers each convention once with the inherited one preselected, and a project convention that differs from the workspace's carries the same warning.",
+      "sort_order": 161,
+      "status": "draft",
+      "attributes": {
+        "links_snapshot": [
+          {
+            "attributes": null,
+            "created_at": "2026-09-03T05:37:13.985034Z",
+            "from_id": "ed5fc36d-eb1a-497c-8b7b-271bb65357a1",
+            "id": "15634fc4-bd19-45ff-ae54-e060e52df908",
+            "suspect": false,
+            "to_id": "56502167-fb38-49f7-8d01-9d4483e243c0",
+            "type": "verifies",
+            "updated_at": "2026-09-03T05:37:13.985034Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          }
+        ],
+        "status": "draft"
+      },
+      "version": 2,
+      "valid_from": "2026-09-03T05:37:13.991765Z",
+      "valid_to": null,
+      "created_at": "2026-09-03T05:37:09.750447Z",
+      "updated_at": "2026-09-03T05:37:13.991765Z"
     },
     {
       "id": "7973f87c-ab01-4383-a9af-130a433a04ed",
@@ -5076,17 +5207,30 @@
       "type": "requirement",
       "ref": "REQ-46",
       "title": "Quality rules visible to people and agents",
-      "body": "The resolved rule set shall be visible to everyone who writes requirements, human or agent.\n\nWorkspace admins shall set the house style and project editors shall set a project's override from settings, and both surfaces shall show which level a rule came from so an inherited value is never mistaken for a local one.\n\nAgents shall reach the same rules through the tool surface, and the project orientation map an agent reads before drafting shall state the convention in force, so that an agent writes to the project's house style rather than inferring one from the artifacts it happens to read.",
+      "body": "The resolved rule set shall be visible to everyone who writes requirements, human or agent.\n\nWorkspace admins shall set the house style and project editors shall set a project's override from settings. Each setting shall list every value it permits exactly once, preselected to the value in force at that level. A project setting that differs from its workspace value shall carry an override warning naming the workspace value, so that a local value is never mistaken for an inherited one.\n\nAgents shall reach the same rules through the tool surface, and the project orientation map an agent reads before drafting shall state the convention in force, so that an agent writes to the project's house style rather than inferring one from the artifacts it happens to read.",
       "sort_order": 234,
       "status": "draft",
       "attributes": {
         "links_snapshot": [
           {
             "attributes": null,
+            "created_at": "2026-09-03T05:37:13.985034Z",
+            "from_id": "ed5fc36d-eb1a-497c-8b7b-271bb65357a1",
+            "id": "15634fc4-bd19-45ff-ae54-e060e52df908",
+            "suspect": false,
+            "to_id": "56502167-fb38-49f7-8d01-9d4483e243c0",
+            "type": "verifies",
+            "updated_at": "2026-09-03T05:37:13.985034Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
             "created_at": "2026-09-02T21:41:28.257241Z",
             "from_id": "848aff27-3ea4-43cf-814e-e83f4475aae8",
             "id": "536166f1-9248-4dca-be8c-024c000bd4e3",
-            "suspect": false,
+            "suspect": true,
             "to_id": "56502167-fb38-49f7-8d01-9d4483e243c0",
             "type": "verifies",
             "updated_at": "2026-09-02T21:41:28.257241Z",
@@ -5099,7 +5243,7 @@
             "created_at": "2026-09-02T21:41:26.143665Z",
             "from_id": "17eee380-5b58-4e57-9596-3a5a86baa9ba",
             "id": "513d5d4c-8fa0-4220-b0d7-3bd3bcd42f67",
-            "suspect": false,
+            "suspect": true,
             "to_id": "56502167-fb38-49f7-8d01-9d4483e243c0",
             "type": "satisfies",
             "updated_at": "2026-09-02T21:41:26.143665Z",
@@ -5112,7 +5256,7 @@
             "created_at": "2026-09-02T21:41:23.98581Z",
             "from_id": "56502167-fb38-49f7-8d01-9d4483e243c0",
             "id": "3e6688c8-e018-4f42-96b7-c4b68eca9afc",
-            "suspect": false,
+            "suspect": true,
             "to_id": "8324454a-b5a6-4625-9075-314728afc142",
             "type": "derives-from",
             "updated_at": "2026-09-02T21:41:23.98581Z",
@@ -5125,11 +5269,11 @@
         "status": "draft",
         "verification_method": "test"
       },
-      "version": 4,
-      "valid_from": "2026-09-02T21:41:28.274299Z",
+      "version": 7,
+      "valid_from": "2026-09-03T05:37:14.012424Z",
       "valid_to": null,
       "created_at": "2026-09-02T21:40:50.340128Z",
-      "updated_at": "2026-09-02T21:41:28.274299Z"
+      "updated_at": "2026-09-03T05:37:14.012424Z"
     },
     {
       "id": "37808fde-6afd-40d3-b889-0a795e3c38cc",
@@ -5296,6 +5440,45 @@
   ],
   "links": [
     {
+      "id": "15634fc4-bd19-45ff-ae54-e060e52df908",
+      "from_id": "ed5fc36d-eb1a-497c-8b7b-271bb65357a1",
+      "to_id": "56502167-fb38-49f7-8d01-9d4483e243c0",
+      "type": "verifies",
+      "suspect": false,
+      "attributes": null,
+      "version": 1,
+      "valid_from": "0001-01-01T00:00:00Z",
+      "valid_to": null,
+      "created_at": "2026-09-03T05:37:13.985034Z",
+      "updated_at": "2026-09-03T05:37:13.985034Z"
+    },
+    {
+      "id": "27c50bec-f678-4466-bfac-3da1b6efddfd",
+      "from_id": "7a4908f9-3c59-44e8-bbeb-c358ccb9b184",
+      "to_id": "c3ced80a-a194-47ea-b387-495ffbbe5e07",
+      "type": "verifies",
+      "suspect": true,
+      "attributes": null,
+      "version": 1,
+      "valid_from": "0001-01-01T00:00:00Z",
+      "valid_to": null,
+      "created_at": "2026-09-03T05:36:20.297448Z",
+      "updated_at": "2026-09-03T05:36:20.297448Z"
+    },
+    {
+      "id": "2ce8635f-4535-423a-927d-d1f6b1f4ab57",
+      "from_id": "c3ced80a-a194-47ea-b387-495ffbbe5e07",
+      "to_id": "7a179f00-7564-42d1-9dfe-8c99d7660322",
+      "type": "derives-from",
+      "suspect": true,
+      "attributes": null,
+      "version": 1,
+      "valid_from": "0001-01-01T00:00:00Z",
+      "valid_to": null,
+      "created_at": "2026-09-03T05:36:19.994457Z",
+      "updated_at": "2026-09-03T05:36:19.994457Z"
+    },
+    {
       "id": "4f2428e7-9d16-4991-949e-2c9137fe5908",
       "from_id": "86bab759-56b7-4419-acf9-b96548d5eed5",
       "to_id": "6fcb4db8-6441-436a-a308-8fd72c219ea6",
@@ -5365,7 +5548,7 @@
       "from_id": "848aff27-3ea4-43cf-814e-e83f4475aae8",
       "to_id": "56502167-fb38-49f7-8d01-9d4483e243c0",
       "type": "verifies",
-      "suspect": false,
+      "suspect": true,
       "attributes": null,
       "version": 1,
       "valid_from": "0001-01-01T00:00:00Z",
@@ -5404,7 +5587,7 @@
       "from_id": "17eee380-5b58-4e57-9596-3a5a86baa9ba",
       "to_id": "56502167-fb38-49f7-8d01-9d4483e243c0",
       "type": "satisfies",
-      "suspect": false,
+      "suspect": true,
       "attributes": null,
       "version": 1,
       "valid_from": "0001-01-01T00:00:00Z",
@@ -5443,7 +5626,7 @@
       "from_id": "56502167-fb38-49f7-8d01-9d4483e243c0",
       "to_id": "8324454a-b5a6-4625-9075-314728afc142",
       "type": "derives-from",
-      "suspect": false,
+      "suspect": true,
       "attributes": null,
       "version": 1,
       "valid_from": "0001-01-01T00:00:00Z",
@@ -5469,26 +5652,26 @@
       "from_id": "7cb6d84e-d60b-4d16-9f0b-e6268152cd66",
       "to_id": "f473cb46-dc3a-4859-86aa-1ff2dc00ed99",
       "type": "verifies",
-      "suspect": true,
+      "suspect": false,
       "attributes": null,
       "version": 1,
       "valid_from": "0001-01-01T00:00:00Z",
       "valid_to": null,
       "created_at": "2026-09-02T20:46:47.561737Z",
-      "updated_at": "2026-09-02T20:46:47.561737Z"
+      "updated_at": "2026-09-03T05:17:23.306662Z"
     },
     {
       "id": "d84c05af-96b6-48c5-9549-1de832f55d56",
       "from_id": "7cb6d84e-d60b-4d16-9f0b-e6268152cd66",
       "to_id": "aed7c942-3829-4c35-bad0-f23d32301766",
       "type": "verifies",
-      "suspect": true,
+      "suspect": false,
       "attributes": null,
       "version": 1,
       "valid_from": "0001-01-01T00:00:00Z",
       "valid_to": null,
       "created_at": "2026-09-02T20:46:46.838321Z",
-      "updated_at": "2026-09-02T20:46:46.838321Z"
+      "updated_at": "2026-09-03T05:17:23.303977Z"
     },
     {
       "id": "cafaf05d-df35-44c3-858e-6983b0a01c77",
@@ -5508,26 +5691,26 @@
       "from_id": "33b75afa-933d-46f1-9725-013a1b17f0b1",
       "to_id": "f473cb46-dc3a-4859-86aa-1ff2dc00ed99",
       "type": "satisfies",
-      "suspect": true,
+      "suspect": false,
       "attributes": null,
       "version": 1,
       "valid_from": "0001-01-01T00:00:00Z",
       "valid_to": null,
       "created_at": "2026-09-02T20:46:45.453479Z",
-      "updated_at": "2026-09-02T20:46:45.453479Z"
+      "updated_at": "2026-09-03T05:17:23.281353Z"
     },
     {
       "id": "ddd3ad25-79d1-4455-966b-adf5f9c2b710",
       "from_id": "33b75afa-933d-46f1-9725-013a1b17f0b1",
       "to_id": "aed7c942-3829-4c35-bad0-f23d32301766",
       "type": "satisfies",
-      "suspect": true,
+      "suspect": false,
       "attributes": null,
       "version": 1,
       "valid_from": "0001-01-01T00:00:00Z",
       "valid_to": null,
       "created_at": "2026-09-02T20:46:44.749607Z",
-      "updated_at": "2026-09-02T20:46:44.749607Z"
+      "updated_at": "2026-09-03T05:17:23.292122Z"
     },
     {
       "id": "3a9b1d47-372d-4af6-9333-075df8b5e592",
@@ -5599,7 +5782,7 @@
       "from_id": "a68a6229-fcd5-4cb3-b774-92f44b726ef7",
       "to_id": "acbe3de0-58d6-4e82-9e56-a00ede62af26",
       "type": "verifies",
-      "suspect": false,
+      "suspect": true,
       "attributes": null,
       "version": 1,
       "valid_from": "0001-01-01T00:00:00Z",
@@ -5729,7 +5912,7 @@
       "from_id": "acbe3de0-58d6-4e82-9e56-a00ede62af26",
       "to_id": "8324454a-b5a6-4625-9075-314728afc142",
       "type": "derives-from",
-      "suspect": false,
+      "suspect": true,
       "attributes": null,
       "version": 1,
       "valid_from": "0001-01-01T00:00:00Z",
@@ -5742,7 +5925,7 @@
       "from_id": "807fa39f-386d-4447-ac73-8d3ad0cc5b96",
       "to_id": "006182cf-b68d-488e-bea9-a7f7a35f23ea",
       "type": "derives-from",
-      "suspect": false,
+      "suspect": true,
       "attributes": null,
       "version": 1,
       "valid_from": "0001-01-01T00:00:00Z",
@@ -5820,7 +6003,7 @@
       "from_id": "807fa39f-386d-4447-ac73-8d3ad0cc5b96",
       "to_id": "7a179f00-7564-42d1-9dfe-8c99d7660322",
       "type": "derives-from",
-      "suspect": false,
+      "suspect": true,
       "attributes": null,
       "version": 1,
       "valid_from": "0001-01-01T00:00:00Z",
@@ -6028,26 +6211,26 @@
       "from_id": "61a04cf8-afc5-4bd3-89db-e7822d2667c5",
       "to_id": "53d671e3-c473-4240-84f0-a638fd5258da",
       "type": "verifies",
-      "suspect": true,
+      "suspect": false,
       "attributes": null,
       "version": 1,
       "valid_from": "0001-01-01T00:00:00Z",
       "valid_to": null,
       "created_at": "2026-08-30T19:54:42.845776Z",
-      "updated_at": "2026-08-30T19:54:42.845776Z"
+      "updated_at": "2026-09-03T05:17:23.275934Z"
     },
     {
       "id": "0855ef75-41d0-4ca0-a6dd-0477763551d8",
       "from_id": "61a04cf8-afc5-4bd3-89db-e7822d2667c5",
       "to_id": "19336abe-88a4-4206-ba20-100efbe3b909",
       "type": "verifies",
-      "suspect": true,
+      "suspect": false,
       "attributes": null,
       "version": 1,
       "valid_from": "0001-01-01T00:00:00Z",
       "valid_to": null,
       "created_at": "2026-08-30T19:54:42.525904Z",
-      "updated_at": "2026-08-30T19:54:42.525904Z"
+      "updated_at": "2026-09-03T05:17:23.301301Z"
     },
     {
       "id": "98822a94-afbb-46a7-9e5b-bc9a03a1ed3e",
@@ -6210,26 +6393,26 @@
       "from_id": "44ffd7dd-d3d1-44a9-988e-5d07b11f6e21",
       "to_id": "53d671e3-c473-4240-84f0-a638fd5258da",
       "type": "satisfies",
-      "suspect": true,
+      "suspect": false,
       "attributes": null,
       "version": 1,
       "valid_from": "0001-01-01T00:00:00Z",
       "valid_to": null,
       "created_at": "2026-08-30T19:54:38.354618Z",
-      "updated_at": "2026-08-30T19:54:38.354618Z"
+      "updated_at": "2026-09-03T05:17:23.305576Z"
     },
     {
       "id": "057b6b1f-f5a8-478a-803b-03b5aaf5f4ab",
       "from_id": "44ffd7dd-d3d1-44a9-988e-5d07b11f6e21",
       "to_id": "19336abe-88a4-4206-ba20-100efbe3b909",
       "type": "satisfies",
-      "suspect": true,
+      "suspect": false,
       "attributes": null,
       "version": 1,
       "valid_from": "0001-01-01T00:00:00Z",
       "valid_to": null,
       "created_at": "2026-08-30T19:54:38.042505Z",
-      "updated_at": "2026-08-30T19:54:38.042505Z"
+      "updated_at": "2026-09-03T05:17:23.293623Z"
     },
     {
       "id": "c34e4672-7af2-4885-b140-3f5a48f0731f",
@@ -6314,39 +6497,39 @@
       "from_id": "33b75afa-933d-46f1-9725-013a1b17f0b1",
       "to_id": "7973f87c-ab01-4383-a9af-130a433a04ed",
       "type": "satisfies",
-      "suspect": true,
+      "suspect": false,
       "attributes": null,
       "version": 1,
       "valid_from": "0001-01-01T00:00:00Z",
       "valid_to": null,
       "created_at": "2026-08-30T19:54:35.820411Z",
-      "updated_at": "2026-08-30T19:54:35.820411Z"
+      "updated_at": "2026-09-03T05:17:23.299481Z"
     },
     {
       "id": "b7342cf6-b6fa-4cdc-92bd-34e77674058e",
       "from_id": "53d671e3-c473-4240-84f0-a638fd5258da",
       "to_id": "0627a2b0-889e-488b-b053-d78992d97a93",
       "type": "derives-from",
-      "suspect": true,
+      "suspect": false,
       "attributes": null,
       "version": 1,
       "valid_from": "0001-01-01T00:00:00Z",
       "valid_to": null,
       "created_at": "2026-08-30T19:54:35.462382Z",
-      "updated_at": "2026-08-30T19:54:35.462382Z"
+      "updated_at": "2026-09-03T05:17:23.309489Z"
     },
     {
       "id": "d877feda-e249-4b11-abbb-4ed53cc711b8",
       "from_id": "19336abe-88a4-4206-ba20-100efbe3b909",
       "to_id": "0627a2b0-889e-488b-b053-d78992d97a93",
       "type": "derives-from",
-      "suspect": true,
+      "suspect": false,
       "attributes": null,
       "version": 1,
       "valid_from": "0001-01-01T00:00:00Z",
       "valid_to": null,
       "created_at": "2026-08-30T19:54:35.16615Z",
-      "updated_at": "2026-08-30T19:54:35.16615Z"
+      "updated_at": "2026-09-03T05:17:23.294587Z"
     },
     {
       "id": "b96e7c8b-52cf-4905-8db3-f60066a071ce",
@@ -6665,13 +6848,13 @@
       "from_id": "1f1fef91-5d25-40a2-a659-a87476f64c89",
       "to_id": "7a179f00-7564-42d1-9dfe-8c99d7660322",
       "type": "derives-from",
-      "suspect": true,
+      "suspect": false,
       "attributes": null,
       "version": 1,
       "valid_from": "0001-01-01T00:00:00Z",
       "valid_to": null,
       "created_at": "2026-08-30T19:54:27.078567Z",
-      "updated_at": "2026-08-30T19:54:27.078567Z"
+      "updated_at": "2026-09-03T05:17:23.296692Z"
     },
     {
       "id": "552dbca9-8278-411f-9ab7-313446e5c53a",

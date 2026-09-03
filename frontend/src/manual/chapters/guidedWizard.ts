@@ -1,9 +1,9 @@
-// User manual chapter: Guided requirements wizard + copilot chat.
+// User manual chapter: Guided requirements wizard + the V&V Assistant chat.
 const content = `
-# Guided definition & copilot
+# Guided definition & the V&V Assistant
 
 **Guided Definition** walks you from a blank product to a committed, traceable
-requirement set in eight steps — with an AI copilot alongside that suggests
+requirement set in eight steps — with the V&V Assistant alongside, suggesting
 entries you can add with one click.
 
 ## Starting, resuming, modifying
@@ -59,9 +59,9 @@ After committing you're offered **Create baseline** — a snapshot named
 "Initial requirements" — plus shortcuts to the Requirements view or straight
 back into *Modify guided definition*.
 
-## The copilot chat
+## The V&V Assistant chat
 
-The panel on the right is a chat copilot that sees your current step and
+The panel on the right is the V&V Assistant, which sees your current step and
 everything you've entered so far.
 
 - Ask it anything — brainstorming personas, tightening a requirement,
@@ -72,10 +72,20 @@ everything you've entered so far.
   Entries already materialized as artifacts can't be replaced from chat.
 - **Quick actions** (like *Review step*) send canned prompts, e.g. a
   quality-check of the current step's entries for clarity and testability.
-- The copilot is nudged automatically when you advance or skip a step, so it
+- The assistant is nudged automatically when you advance or skip a step, so it
   follows along with context.
 
-Copilot turns execute on an agent runner like any other agent work. If no
+The same assistant is also in the **Notes** panel on the Requirements page,
+under its own tab beside Comments. It is one conversation per project, so what
+you asked in the wizard is there in the notes and the other way round. With an
+artifact selected the assistant is told which one you are reading and answers
+about it; with nothing selected it answers for the project as a whole. Comments
+stay where they were — they belong to an artifact, the conversation does not.
+
+Suggestion cards appear in the notes chat too, but they can only be added from
+the wizard, which is where the entry sections they fill in live.
+
+Assistant turns execute on an agent runner like any other agent work. If no
 runner is online the panel says so and pauses replies — messages you send are
 saved and answered as soon as a runner connects (see *Runs & runners*).
 `;

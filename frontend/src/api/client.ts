@@ -721,6 +721,8 @@ export interface GuidedSession {
   answers: Record<string, any>;
   draft_artifact_ids: string[];
   agent_run_id?: string | null;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface GuidedChatMessage {
@@ -1459,15 +1461,23 @@ export const guidedAPI = {
   abandon: (id: string) => client.post<GuidedSession>(`/api/v1/guided-sessions/${id}/abandon`),
   listMessages: (id: string) =>
     client.get<GuidedChatMessage[]>(`/api/v1/guided-sessions/${id}/messages`),
-  sendMessage: (id: string, content: string, step: number, state: Record<string, any>) =>
+  // artifactId is set when the turn comes from an artifact's notes panel: the
+  // assistant answers about the artifact on screen.
+  sendMessage: (
+    id: string,
+    content: string,
+    step: number,
+    state: Record<string, any>,
+    artifactId?: string
+  ) =>
     client.post<{ message: GuidedChatMessage; runner_online?: boolean }>(
       `/api/v1/guided-sessions/${id}/messages`,
-      { content, step, state }
+      { content, step, state, artifact_id: artifactId || '' }
     ),
-  kickoffChat: (id: string, step: number, state: Record<string, any>) =>
+  kickoffChat: (id: string, step: number, state: Record<string, any>, artifactId?: string) =>
     client.post<{ status: 'launched' | 'pending' | 'skipped' | 'unavailable'; runner_online?: boolean }>(
       `/api/v1/guided-sessions/${id}/chat/kickoff`,
-      { step, state }
+      { step, state, artifact_id: artifactId || '' }
     ),
   nudgeChat: (id: string, step: number, state: Record<string, any>, event: string) =>
     client.post<{ status: 'launched' | 'pending' | 'unavailable'; runner_online?: boolean }>(

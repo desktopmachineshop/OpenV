@@ -346,7 +346,13 @@ conventions.
 | POST | `/api/v1/work-items/{id}/move` | Move card (agent columns can enqueue runs) | editor |
 | POST | `/api/v1/work-items/{id}/comments` | Comment on card | viewer |
 
-### Guided sessions (requirements wizard + copilot chat)
+### Guided sessions (requirements wizard + V&V Assistant chat)
+
+The assistant's transcript is stored on a guided session, and one conversation
+serves the whole project: the wizard writes into it, and so does the notes
+panel beside any artifact. The message and kickoff endpoints therefore accept
+an optional `artifact_id` — the artifact the reader has open — which is added
+to that turn's prompt as fenced, untrusted content. The wizard sends none.
 
 | Method | Path | Purpose | Auth |
 |---|---|---|---|
@@ -357,11 +363,11 @@ conventions.
 | POST | `/api/v1/guided-sessions/{id}/drafts` | Materialize draft artifacts | editor |
 | POST | `/api/v1/guided-sessions/{id}/commit` | Commit session (drafts become real) | editor |
 | POST | `/api/v1/guided-sessions/{id}/abandon` | Abandon session | editor |
-| GET | `/api/v1/guided-sessions/{id}/messages` | Copilot chat history | viewer |
-| POST | `/api/v1/guided-sessions/{id}/messages` | Send a chat message (launches a copilot turn) | editor |
-| POST | `/api/v1/guided-sessions/{id}/chat/kickoff` | First copilot greeting | editor |
+| GET | `/api/v1/guided-sessions/{id}/messages` | Assistant chat history | viewer |
+| POST | `/api/v1/guided-sessions/{id}/messages` | Send a chat message (launches an assistant turn; optional `artifact_id`) | editor |
+| POST | `/api/v1/guided-sessions/{id}/chat/kickoff` | First assistant greeting (optional `artifact_id`) | editor |
 | POST | `/api/v1/guided-sessions/{id}/chat/nudge` | Context nudge after step change | editor |
-| GET | `/api/v1/guided-sessions/{id}/chat/stream` | SSE stream of copilot replies | viewer |
+| GET | `/api/v1/guided-sessions/{id}/chat/stream` | SSE stream of assistant replies | viewer |
 
 ### Interviews
 

@@ -312,7 +312,7 @@ export const ProjectList: React.FC = () => {
         addProject(response.data);
         setProjectId(response.data.id);
         // Seed the Guided Wizard's framing step with the rolled concept and
-        // land in the wizard, where the connected copilot agent picks it up
+        // land in the wizard, where the connected V&V Assistant picks it up
         // and helps expand it into personas, needs, and requirements.
         try {
           const session = await guidedAPI.start(response.data.id);
