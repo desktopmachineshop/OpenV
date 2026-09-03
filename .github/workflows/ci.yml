@@ -75,7 +75,7 @@ jobs:
         run: go test ./cmd/... ./internal/...
 
   frontend:
-    name: Frontend (tsc + build)
+    name: Frontend (tsc + test + build)
     runs-on: ubuntu-latest
     defaults:
       run:
