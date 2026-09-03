@@ -95,6 +95,11 @@ jobs:
       - name: Type check
         run: npx tsc --noEmit
 
+      - name: Unit tests
+        run: npm test -- --watchAll=false
+        env:
+          CI: "true"
+
       # CI=true makes CRA (react-scripts) treat eslint warnings (unused vars,
       # exhaustive-deps) as errors, so the build fails on any new warning.
       # Set explicitly to keep that strictness even if the runner default changes.
