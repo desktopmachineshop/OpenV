@@ -1,5 +1,5 @@
 {
-  "exported_at": "2026-09-03T10:53:36.263563263Z",
+  "exported_at": "2026-09-03T15:06:17.226035657Z",
   "version": "1.0",
   "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
   "project_name": "OpenV Platform",
@@ -4906,9 +4906,9 @@
       "type": "requirement",
       "ref": "REQ-1",
       "title": "Hierarchical versioned modules",
-      "body": "The system shall organize artifacts as hierarchical, ordered modules within projects, with parent/child structure and stable ordering.",
+      "body": "The system shall organize artifacts as hierarchical, ordered modules within projects, with parent/child structure and stable ordering. Creating an artifact relative to another \u2014 before it or after it \u2014 shall place the new artifact in that position within its sibling group rather than at the end of the group.",
       "sort_order": 180,
-      "status": "approved",
+      "status": "draft",
       "attributes": {
         "links_snapshot": [
           {
@@ -4926,15 +4926,15 @@
           }
         ],
         "priority": "must",
-        "status": "approved",
+        "status": "draft",
         "verification_method": "demonstration",
         "verification_status": "verified"
       },
-      "version": 3,
-      "valid_from": "2026-08-30T19:54:49.000607Z",
+      "version": 4,
+      "valid_from": "2026-09-03T15:06:14.103586Z",
       "valid_to": null,
       "created_at": "2026-08-30T19:54:07.673438Z",
-      "updated_at": "2026-08-30T19:54:49.000607Z"
+      "updated_at": "2026-09-03T15:06:14.103586Z"
     },
     {
       "id": "70abf6b1-122d-4a9e-abff-1082ce0e7c5e",
@@ -5425,7 +5425,7 @@
       "type": "requirement",
       "ref": "REQ-52",
       "title": "Referencing figures and linked artifacts in descriptions",
-      "body": "An artifact's description shall let its author cite a figure or another artifact by typing a hash, which shall offer that artifact's own figures and the artifacts it is already linked to, filtered by what is typed, and shall insert the chosen reference into the text.\n\nThe offer shall be confined to what the artifact is already connected to, so that a description cannot cite an artifact with no traceability link behind it. A hash inside a word shall not open the offer, so that ordinary text such as a URL fragment is left alone.",
+      "body": "An artifact's description shall let its author cite a figure or another artifact by typing a hash, which shall offer that artifact's own figures and the artifacts it is already linked to, filtered by what is typed, and shall insert the chosen reference into the text.\n\nThe offer shall be confined to what the artifact is already connected to, so that a description cannot cite an artifact with no traceability link behind it. A hash inside a word shall not open the offer, so that ordinary text such as a URL fragment is left alone.\n\nA reference in a rendered description shall be a link: following an artifact reference shall select that artifact, and following a figure reference shall open that figure without leaving the description. Text that merely resembles a reference \u2014 a markdown heading, a hash inside a word \u2014 shall be left as written, and trailing punctuation shall not be absorbed into the link.\n\nA description shall preserve the line breaks its author typed.",
       "sort_order": 234,
       "status": "draft",
       "attributes": {
@@ -5434,11 +5434,11 @@
         "verification_method": "test",
         "verification_status": "verified"
       },
-      "version": 4,
-      "valid_from": "2026-09-03T10:53:33.984898Z",
+      "version": 5,
+      "valid_from": "2026-09-03T15:06:13.790264Z",
       "valid_to": null,
       "created_at": "2026-09-03T10:53:32.140396Z",
-      "updated_at": "2026-09-03T10:53:33.984898Z"
+      "updated_at": "2026-09-03T15:06:13.790264Z"
     },
     {
       "id": "37808fde-6afd-40d3-b889-0a795e3c38cc",
@@ -5503,6 +5503,27 @@
       "updated_at": "2026-09-02T21:41:28.990549Z"
     },
     {
+      "id": "aaf23559-feea-438e-89e8-5107314c73f5",
+      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
+      "parent_id": "d959d147-c2ab-4982-a59b-f0453157cbd7",
+      "type": "requirement",
+      "ref": "REQ-53",
+      "title": "Panels that yield their space",
+      "body": "The project navigation and the artifact notes panel shall each offer three states \u2014 pinned, auto-hidden and hidden \u2014 chosen independently and remembered per person across sessions. A pinned panel shall take its width from the page; an auto-hidden panel shall present an edge affordance that opens it over the document on hover, without reflowing the document; a hidden panel shall leave that affordance and nothing else, so that a reader can always bring it back. The artifact tree shall occupy the height available to it rather than a fixed height.",
+      "sort_order": 235,
+      "status": "draft",
+      "attributes": {
+        "priority": "should",
+        "status": "draft",
+        "verification_method": "demonstration"
+      },
+      "version": 1,
+      "valid_from": "2026-09-03T15:06:14.432725Z",
+      "valid_to": null,
+      "created_at": "2026-09-03T15:06:14.432725Z",
+      "updated_at": "2026-09-03T15:06:14.432725Z"
+    },
+    {
       "id": "6fcb4db8-6441-436a-a308-8fd72c219ea6",
       "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
       "parent_id": "d959d147-c2ab-4982-a59b-f0453157cbd7",
@@ -5563,6 +5584,27 @@
       "valid_to": null,
       "created_at": "2026-09-02T21:57:54.907577Z",
       "updated_at": "2026-09-02T21:58:21.736407Z"
+    },
+    {
+      "id": "1dd04c5f-6bba-4ebd-98d7-15e7f3f7f957",
+      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
+      "parent_id": "d959d147-c2ab-4982-a59b-f0453157cbd7",
+      "type": "requirement",
+      "ref": "REQ-54",
+      "title": "Figures change only while editing",
+      "body": "Adding, replacing and removing a figure shall be possible only while editing the artifact that carries it. A view that presents an artifact for reading shall present its figures for reading, so that what the document shows cannot change by a stray click.",
+      "sort_order": 236,
+      "status": "draft",
+      "attributes": {
+        "priority": "should",
+        "status": "draft",
+        "verification_method": "demonstration"
+      },
+      "version": 1,
+      "valid_from": "2026-09-03T15:06:14.721746Z",
+      "valid_to": null,
+      "created_at": "2026-09-03T15:06:14.721746Z",
+      "updated_at": "2026-09-03T15:06:14.721746Z"
     },
     {
       "id": "742f80c7-e6f6-48c8-b354-99b00b181515",
@@ -5659,7 +5701,7 @@
       "from_id": "f56ca2ee-5418-4d20-96e3-09628945aa16",
       "to_id": "7a15c0fd-8201-444d-a0e0-2b909c25e5e2",
       "type": "verifies",
-      "suspect": false,
+      "suspect": true,
       "attributes": null,
       "version": 1,
       "valid_from": "0001-01-01T00:00:00Z",
@@ -5672,7 +5714,7 @@
       "from_id": "7a15c0fd-8201-444d-a0e0-2b909c25e5e2",
       "to_id": "12cff868-2282-41cd-82a9-b8bfe708d9a6",
       "type": "derives-from",
-      "suspect": false,
+      "suspect": true,
       "attributes": null,
       "version": 1,
       "valid_from": "0001-01-01T00:00:00Z",
@@ -7206,7 +7248,7 @@
       "from_id": "581bb5e3-32dc-420c-86f9-5eb19e877160",
       "to_id": "a97f2988-992f-41a5-9431-b85104712dfe",
       "type": "derives-from",
-      "suspect": false,
+      "suspect": true,
       "attributes": null,
       "version": 1,
       "valid_from": "0001-01-01T00:00:00Z",
