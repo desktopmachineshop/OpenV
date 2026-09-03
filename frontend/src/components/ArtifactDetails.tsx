@@ -446,7 +446,7 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
                 <ArtifactAttributes attributes={artifact.attributes} />
                 {currentVersionAttachments.length > 0 && (
                   <div style={{ marginBottom: '12px' }}>
-                    <strong>Images:</strong>
+                    <strong>Figures:</strong>
                     <div style={{ marginTop: '6px' }}>
                       <ImageGallery 
                         artifactId={artifact.id} 
@@ -519,7 +519,7 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
                 <ArtifactAttributes attributes={previewVersion.attributes} />
                 {previewVersionAttachments.length > 0 && (
                   <div style={{ marginBottom: '12px' }}>
-                    <strong>Images:</strong>
+                    <strong>Figures:</strong>
                     <div style={{ marginTop: '6px' }}>
                       <ImageGallery 
                         artifactId={previewVersion.id} 
@@ -623,7 +623,7 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
       <ArtifactAttributes attributes={artifact.attributes} />
 
 
-      {/* Images Gallery */}
+      {/* Figures */}
       {attachments && attachments.length > 0 && (
         <div style={{ marginBottom: '15px' }}>
           <ImageGallery 

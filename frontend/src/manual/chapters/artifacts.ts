@@ -77,11 +77,18 @@ Select an artifact to see its details; **Edit** opens the editor.
   preview any previous version and **restore** it. Restoring creates a new
   version with the old content; nothing is lost.
 
-## Attachments
+## Figures
 
-Images can be attached to an artifact (upload while editing). They appear in a
-gallery on the artifact details, with a lightbox view. Attachments can be
-deleted from the details or the editor.
+Images attached to an artifact are **figures**. Each is numbered from the
+artifact's own reference — \`REQ-17-FIG-1\` — and that number is never reissued,
+so it stays a safe citation even after the figure it named is deleted. The
+stored file takes the figure's name too, so downloading one saves
+\`REQ-17-FIG-1.png\` rather than whatever the camera called it.
+
+Upload while editing; figures appear in a gallery on the artifact details with
+a lightbox view. Use **⬆** on a figure to upload a new version: the figure
+keeps its reference, the artifact takes a new version, and the notes record the
+change. **🕘** shows the history, and every superseded version stays viewable.
 
 ## Comments (Chatter)
 

@@ -47,11 +47,11 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
 
   const validImage = (file: File): boolean => {
     if (!file.type.startsWith('image/')) {
-      void alertDialog({ title: 'Upload image', message: 'Please select an image file.' });
+      void alertDialog({ title: 'Upload figure', message: 'Please select an image file.' });
       return false;
     }
     if (file.size > 10 * 1024 * 1024) {
-      void alertDialog({ title: 'Upload image', message: 'File size must be less than 10MB.' });
+      void alertDialog({ title: 'Upload figure', message: 'File size must be less than 10MB.' });
       return false;
     }
     return true;
@@ -89,8 +89,8 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
   const handleDelete = async (e: React.MouseEvent, attachmentId: string) => {
     e.stopPropagation();
     const ok = await confirm({
-      title: 'Delete image',
-      message: 'Are you sure you want to delete this image?',
+      title: 'Delete figure',
+      message: 'Are you sure you want to delete this figure? Its number is never reissued.',
       confirmLabel: 'Delete',
       danger: true,
     });
@@ -103,13 +103,13 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
     const file = e.target.files?.[0];
     if (file) {
       if (!file.type.startsWith('image/')) {
-        void alertDialog({ title: 'Upload image', message: 'Please select an image file.' });
+        void alertDialog({ title: 'Upload figure', message: 'Please select an image file.' });
         return;
       }
 
       const maxSize = 10 * 1024 * 1024;
       if (file.size > maxSize) {
-        void alertDialog({ title: 'Upload image', message: 'File size must be less than 10MB.' });
+        void alertDialog({ title: 'Upload figure', message: 'File size must be less than 10MB.' });
         return;
       }
 
@@ -134,13 +134,13 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
     const file = e.dataTransfer.files?.[0];
     if (file) {
       if (!file.type.startsWith('image/')) {
-        void alertDialog({ title: 'Upload image', message: 'Please drop an image file.' });
+        void alertDialog({ title: 'Upload figure', message: 'Please drop an image file.' });
         return;
       }
 
       const maxSize = 10 * 1024 * 1024;
       if (file.size > maxSize) {
-        void alertDialog({ title: 'Upload image', message: 'File size must be less than 10MB.' });
+        void alertDialog({ title: 'Upload figure', message: 'File size must be less than 10MB.' });
         return;
       }
 
@@ -156,7 +156,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
 
     return (
       <div className="image-gallery">
-        <h4 className="gallery-title">Images</h4>
+        <h4 className="gallery-title">Figures</h4>
         <div 
           className="gallery-grid"
           style={{
@@ -179,11 +179,11 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
               onChange={handleFileChange}
               disabled={isUploadLoading}
               className="gallery-upload-input"
-              aria-label="Upload image"
+              aria-label="Upload a figure"
             />
             <div className="gallery-upload-content">
               <div className="upload-icon">📷</div>
-              <p className="upload-text">{isUploadLoading ? 'Uploading...' : 'Drag images here or click'}</p>
+              <p className="upload-text">{isUploadLoading ? 'Uploading...' : 'Drag figures here or click'}</p>
             </div>
           </div>
         </div>
@@ -194,7 +194,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
   return (
     <>
       <div className="image-gallery">
-        <h4 className="gallery-title">Images ({attachments.length})</h4>
+        <h4 className="gallery-title">Figures ({attachments.length})</h4>
         <div 
           className="gallery-grid"
           style={{
@@ -237,8 +237,8 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
                 <button
                   className="gallery-delete-btn"
                   onClick={(e) => handleDelete(e, attachment.id)}
-                  title="Delete image"
-                  aria-label="Delete image"
+                  title="Delete figure"
+                  aria-label="Delete figure"
                 >
                   🗑
                 </button>
@@ -269,7 +269,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
                 onChange={handleFileChange}
                 disabled={isUploadLoading}
                 className="gallery-upload-input"
-                aria-label="Upload image"
+                aria-label="Upload a figure"
               />
               <div className="gallery-upload-content">
                 <div className="upload-icon">➕</div>
