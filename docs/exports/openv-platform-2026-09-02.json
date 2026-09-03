@@ -1,5 +1,5 @@
 {
-  "exported_at": "2026-09-03T05:36:29.044297306Z",
+  "exported_at": "2026-09-03T05:44:59.369562378Z",
   "version": "1.0",
   "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
   "project_name": "OpenV Platform",
@@ -3454,7 +3454,7 @@
       "type": "requirement",
       "ref": "REQ-49",
       "title": "V&V Assistant across the wizard and artifact notes",
-      "body": "The system shall provide one assistant, named the V&V Assistant, reachable both beside the guided definition wizard and in the Notes panel of the requirements module. One conversation shall serve a whole project, so that what a member asks in the wizard is present in the notes and the reverse. The Notes panel shall present the artifact's comments and the assistant as separate tabs, and shall offer the assistant whether or not an artifact is selected. With an artifact selected, that artifact shall be supplied to the turn as fenced untrusted content, so the assistant answers about what the reader has open and cites it by its stable reference. Suggestion cards shall be applicable only in the wizard, where the entry sections they fill exist. A session created solely to hold the conversation shall not count as a guided definition in progress, so that opening the notes chat neither removes the wizard from the project navigation nor offers to resume a definition nobody started.",
+      "body": "The system shall provide one assistant, named the V&V Assistant, reachable both beside the guided definition wizard and in the Notes panel of the requirements module. One conversation shall serve a whole project, so that what a member asks in the wizard is present in the notes and the reverse. The Notes panel shall present the artifact's comments and the assistant as separate tabs, and shall offer the assistant whether or not an artifact is selected. With an artifact selected, that artifact shall be supplied to the turn as fenced untrusted content, so the assistant answers about what the reader has open and cites it by its stable reference. Suggestion cards shall be applicable only in the wizard, where the entry sections they fill exist. A session created solely to hold the conversation shall not count as a guided definition in progress, so that opening the notes chat neither removes the wizard from the project navigation nor offers to resume a definition nobody started.\n\nA workspace provisioned before the assistant was named shall adopt the current name, description and system prompt for its seeded agent, field by field and only where the workspace still carries the text the previous seed wrote; a field a member has edited shall be left as they wrote it, and an agent already current shall not be rewritten. The agent's slug shall not change, so that a workspace provisioned before the rename keeps a working chat.",
       "sort_order": 284,
       "status": "draft",
       "attributes": {
@@ -3491,11 +3491,11 @@
         "verification_method": "test",
         "verification_status": "verified"
       },
-      "version": 3,
-      "valid_from": "2026-09-03T05:36:20.311173Z",
+      "version": 4,
+      "valid_from": "2026-09-03T05:44:51.748829Z",
       "valid_to": null,
       "created_at": "2026-09-03T05:36:19.09926Z",
-      "updated_at": "2026-09-03T05:36:20.311173Z"
+      "updated_at": "2026-09-03T05:44:51.748829Z"
     },
     {
       "id": "4b3dd557-2c3f-4c3c-a162-9231e2167401",
@@ -4248,6 +4248,40 @@
       "valid_to": null,
       "created_at": "2026-09-03T05:36:19.395948Z",
       "updated_at": "2026-09-03T05:36:20.305352Z"
+    },
+    {
+      "id": "ed5fc36d-eb1a-497c-8b7b-271bb65357a1",
+      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
+      "parent_id": "8c8b86be-4730-49cb-9d95-93868a0c1938",
+      "type": "test-case",
+      "ref": "TC-22",
+      "title": "Quality rules editor presentation",
+      "body": "Frontend Jest suite over the quality rules editor at both levels: each severity select offers the four severities exactly once with no separate inherit entry, and opens on the value the level is in force with; a project select opens on the workspace's value unflagged; changing it away from the workspace value shows an override warning naming that value, and choosing the workspace value again clears the warning and drops the override, so a save sends only the severities that differ; the convention list offers each convention once with the inherited one preselected, and a project convention that differs from the workspace's carries the same warning.",
+      "sort_order": 161,
+      "status": "draft",
+      "attributes": {
+        "links_snapshot": [
+          {
+            "attributes": null,
+            "created_at": "2026-09-03T05:37:13.985034Z",
+            "from_id": "ed5fc36d-eb1a-497c-8b7b-271bb65357a1",
+            "id": "15634fc4-bd19-45ff-ae54-e060e52df908",
+            "suspect": false,
+            "to_id": "56502167-fb38-49f7-8d01-9d4483e243c0",
+            "type": "verifies",
+            "updated_at": "2026-09-03T05:37:13.985034Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          }
+        ],
+        "status": "draft"
+      },
+      "version": 2,
+      "valid_from": "2026-09-03T05:37:13.991765Z",
+      "valid_to": null,
+      "created_at": "2026-09-03T05:37:09.750447Z",
+      "updated_at": "2026-09-03T05:37:13.991765Z"
     },
     {
       "id": "7973f87c-ab01-4383-a9af-130a433a04ed",
@@ -5173,17 +5207,30 @@
       "type": "requirement",
       "ref": "REQ-46",
       "title": "Quality rules visible to people and agents",
-      "body": "The resolved rule set shall be visible to everyone who writes requirements, human or agent.\n\nWorkspace admins shall set the house style and project editors shall set a project's override from settings. Each setting shall list every value it permits exactly once and shall preselect the value in force at that level, and a project setting that differs from its workspace value shall carry an override warning naming the workspace value, so a local value is never mistaken for an inherited one.\n\nAgents shall reach the same rules through the tool surface, and the project orientation map an agent reads before drafting shall state the convention in force, so that an agent writes to the project's house style rather than inferring one from the artifacts it happens to read.",
+      "body": "The resolved rule set shall be visible to everyone who writes requirements, human or agent.\n\nWorkspace admins shall set the house style and project editors shall set a project's override from settings. Each setting shall list every value it permits exactly once, preselected to the value in force at that level. A project setting that differs from its workspace value shall carry an override warning naming the workspace value, so that a local value is never mistaken for an inherited one.\n\nAgents shall reach the same rules through the tool surface, and the project orientation map an agent reads before drafting shall state the convention in force, so that an agent writes to the project's house style rather than inferring one from the artifacts it happens to read.",
       "sort_order": 234,
       "status": "draft",
       "attributes": {
         "links_snapshot": [
           {
             "attributes": null,
+            "created_at": "2026-09-03T05:37:13.985034Z",
+            "from_id": "ed5fc36d-eb1a-497c-8b7b-271bb65357a1",
+            "id": "15634fc4-bd19-45ff-ae54-e060e52df908",
+            "suspect": false,
+            "to_id": "56502167-fb38-49f7-8d01-9d4483e243c0",
+            "type": "verifies",
+            "updated_at": "2026-09-03T05:37:13.985034Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
             "created_at": "2026-09-02T21:41:28.257241Z",
             "from_id": "848aff27-3ea4-43cf-814e-e83f4475aae8",
             "id": "536166f1-9248-4dca-be8c-024c000bd4e3",
-            "suspect": false,
+            "suspect": true,
             "to_id": "56502167-fb38-49f7-8d01-9d4483e243c0",
             "type": "verifies",
             "updated_at": "2026-09-02T21:41:28.257241Z",
@@ -5196,7 +5243,7 @@
             "created_at": "2026-09-02T21:41:26.143665Z",
             "from_id": "17eee380-5b58-4e57-9596-3a5a86baa9ba",
             "id": "513d5d4c-8fa0-4220-b0d7-3bd3bcd42f67",
-            "suspect": false,
+            "suspect": true,
             "to_id": "56502167-fb38-49f7-8d01-9d4483e243c0",
             "type": "satisfies",
             "updated_at": "2026-09-02T21:41:26.143665Z",
@@ -5209,7 +5256,7 @@
             "created_at": "2026-09-02T21:41:23.98581Z",
             "from_id": "56502167-fb38-49f7-8d01-9d4483e243c0",
             "id": "3e6688c8-e018-4f42-96b7-c4b68eca9afc",
-            "suspect": false,
+            "suspect": true,
             "to_id": "8324454a-b5a6-4625-9075-314728afc142",
             "type": "derives-from",
             "updated_at": "2026-09-02T21:41:23.98581Z",
@@ -5222,11 +5269,11 @@
         "status": "draft",
         "verification_method": "test"
       },
-      "version": 5,
-      "valid_from": "2026-09-03T05:36:20.06703Z",
+      "version": 7,
+      "valid_from": "2026-09-03T05:37:14.012424Z",
       "valid_to": null,
       "created_at": "2026-09-02T21:40:50.340128Z",
-      "updated_at": "2026-09-03T05:36:20.06703Z"
+      "updated_at": "2026-09-03T05:37:14.012424Z"
     },
     {
       "id": "37808fde-6afd-40d3-b889-0a795e3c38cc",
@@ -5393,11 +5440,24 @@
   ],
   "links": [
     {
+      "id": "15634fc4-bd19-45ff-ae54-e060e52df908",
+      "from_id": "ed5fc36d-eb1a-497c-8b7b-271bb65357a1",
+      "to_id": "56502167-fb38-49f7-8d01-9d4483e243c0",
+      "type": "verifies",
+      "suspect": false,
+      "attributes": null,
+      "version": 1,
+      "valid_from": "0001-01-01T00:00:00Z",
+      "valid_to": null,
+      "created_at": "2026-09-03T05:37:13.985034Z",
+      "updated_at": "2026-09-03T05:37:13.985034Z"
+    },
+    {
       "id": "27c50bec-f678-4466-bfac-3da1b6efddfd",
       "from_id": "7a4908f9-3c59-44e8-bbeb-c358ccb9b184",
       "to_id": "c3ced80a-a194-47ea-b387-495ffbbe5e07",
       "type": "verifies",
-      "suspect": false,
+      "suspect": true,
       "attributes": null,
       "version": 1,
       "valid_from": "0001-01-01T00:00:00Z",
@@ -5410,7 +5470,7 @@
       "from_id": "c3ced80a-a194-47ea-b387-495ffbbe5e07",
       "to_id": "7a179f00-7564-42d1-9dfe-8c99d7660322",
       "type": "derives-from",
-      "suspect": false,
+      "suspect": true,
       "attributes": null,
       "version": 1,
       "valid_from": "0001-01-01T00:00:00Z",

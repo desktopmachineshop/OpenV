@@ -143,6 +143,80 @@ Everything you create is a proposal: a human reviews and approves your test case
 // EnsureOrgDefaults seeds an organization's default agent definitions (as
 // editable markdown files) and its "Founder's Dev Team" if they don't
 // exist yet.
+// previousSeedIdentity records what a seeded agent's identity fields used to
+// say, for seeds that were renamed after workspaces had already been
+// provisioned. EnsureOrgDefaults only ever creates missing agents, because a
+// seeded agent belongs to its workspace once it exists: a member can rename it,
+// retune its prompt, or point it at another model, and no later release should
+// undo that.
+//
+// So a rename is adopted field by field, and only where the workspace still
+// carries the exact text the old seed wrote. An agent someone has edited keeps
+// what they wrote; one nobody has touched catches up.
+var previousSeedIdentity = map[string]agents.Definition{
+	// The requirements copilot became the V&V Assistant when its chat moved
+	// out of the wizard and into every artifact's notes panel. The slug stays
+	// as it is — it is what the chat handler resolves, and renaming it would
+	// break the chat in every workspace provisioned before the rename.
+	"requirements-copilot": {
+		Name:         "Requirements Copilot",
+		Description:  "Chats alongside the guided definition wizard: asks probing questions and suggests personas, needs, requirements, NFRs and hazards.",
+		SystemPrompt: `You are a requirements copilot sitting beside a founder working through a guided product-definition wizard. Your job each turn: (1) ask one or two sharp questions grounded in what they have entered so far, and (2) surface what they are missing — unstated hazards and failure modes, missing non-functional requirements, ambiguous or untestable statements, personas or needs with no requirements behind them. You may read existing project artifacts through your OpenV tools for context, but never create or modify artifacts yourself — the wizard materializes entries the user accepts. Keep replies short and conversational; follow the suggestion-format instructions in each turn's prompt exactly so your proposals can be added with one click.`,
+	},
+}
+
+// adoptSeedRename brings one already-provisioned agent up to the current seed's
+// identity, field by field, skipping any field the workspace has edited. It
+// reports whether anything was written — nothing is when the agent is already
+// current or has been made the member's own, so a restart does not rewrite
+// files or churn content hashes.
+func adoptSeedRename(orgID string, existing *agents.Agent, want agents.Definition, agentService agents.Service) (bool, error) {
+	prev, ok := previousSeedIdentity[existing.Slug]
+	if !ok {
+		return false, nil
+	}
+
+	// Everything the workspace may have tuned is carried over untouched; only
+	// the identity fields below are candidates for the rename.
+	def := agents.Definition{
+		Slug:           existing.Slug,
+		Name:           existing.Name,
+		Description:    existing.Description,
+		Provider:       existing.Provider,
+		Model:          existing.Model,
+		Effort:         existing.Effort,
+		AllowedTools:   existing.AllowedTools,
+		WriteMode:      existing.WriteMode,
+		RepoAccess:     existing.RepoAccess,
+		MaxTurns:       existing.MaxTurns,
+		TimeoutSeconds: existing.TimeoutSeconds,
+		Config:         existing.Config,
+		SystemPrompt:   existing.SystemPrompt,
+	}
+
+	changed := false
+	for _, f := range []struct {
+		current  *string
+		old, new string
+	}{
+		{&def.Name, prev.Name, want.Name},
+		{&def.Description, prev.Description, want.Description},
+		{&def.SystemPrompt, prev.SystemPrompt, want.SystemPrompt},
+	} {
+		if *f.current == f.old && f.old != f.new {
+			*f.current = f.new
+			changed = true
+		}
+	}
+	if !changed {
+		return false, nil
+	}
+	if _, err := agentService.SaveDefinition(orgID, &def); err != nil {
+		return false, fmt.Errorf("failed to rename seeded agent %s: %w", existing.Slug, err)
+	}
+	return true, nil
+}
+
 func EnsureOrgDefaults(orgID string, agentService agents.Service, crewService teams.Service) error {
 	if orgID == "" {
 		return fmt.Errorf("seeds: organization id is required")
@@ -163,6 +237,14 @@ func EnsureOrgDefaults(orgID string, agentService agents.Service, crewService te
 				return fmt.Errorf("failed to seed agent %s: %w", seed.def.Slug, err)
 			}
 			log.Printf("seeds: created default agent %q for org %s", seed.def.Slug, orgID)
+		} else {
+			renamed, err := adoptSeedRename(orgID, existing, seed.def, agentService)
+			if err != nil {
+				return err
+			}
+			if renamed {
+				log.Printf("seeds: adopted the current name for agent %q in org %s", seed.def.Slug, orgID)
+			}
 		}
 		if seed.label != "" {
 			roles[seed.def.Slug] = teamRole{label: seed.label, department: seed.department}

@@ -250,6 +250,14 @@ per-workspace (`$AGENTS_DIR/<org-id>/<slug>.md`); seed agents (e.g.
 slug keeps its original name so workspaces provisioned before the rename keep
 working) are created when a workspace is first provisioned.
 
+A seeded agent belongs to its workspace once it exists: a member can rename it,
+retune its prompt or point it at another model, and startup never overwrites
+that. The one exception is a seed whose own identity changed — the requirements
+copilot became the V&V Assistant — where the new name, description and system
+prompt are adopted at startup **field by field, and only where the workspace
+still carries the exact text the old seed wrote**. An agent anyone has edited
+keeps what they wrote; an untouched one catches up.
+
 ### Choosing a model
 
 The **Model** field in the agent editor (and **Default model** in Workspace
