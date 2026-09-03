@@ -3,6 +3,17 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useAppStore } from '../state/store';
 import { artifactAPI, linkAPI, attachmentAPI, baselineAPI, projectAPI, qualityAPI, agentsAPI, Artifact, Link, Attachment, Baseline, ProjectExport } from '../api/client';
 import type { ArtifactContextAction, QualityRowInfo } from '../components/ArtifactList';
+import { ImageLightbox } from '../components/ImageLightbox';
+import { isFigureRef } from '../components/artifactReferences';
+import {
+  PanelMode,
+  loadPanelMode,
+  nextPanelMode,
+  panelIsOpen,
+  panelModeLabel,
+  panelTakesSpace,
+  savePanelMode,
+} from '../components/panelMode';
 import { ArtifactEditor } from '../components/ArtifactEditor';
 import { ArtifactList } from '../components/ArtifactList';
 import { ArtifactHeader } from '../components/ArtifactHeader';
@@ -44,7 +55,19 @@ export const ModuleView: React.FC = () => {
   // Pre-filled values for the create form when it is opened from an
   // artifact's context menu (create before/after/child). Explicit state —
   // ArtifactEditor applies it via an effect whenever it changes (issue #26).
+  // How much room the notes panel takes. Same three states as the project
+  // menu, remembered separately: notes and navigation are wanted at different
+  // times.
+  const [notesMode, setNotesMode] = useState<PanelMode>(() => loadPanelMode('artifact-notes'));
+  const [notesHovered, setNotesHovered] = useState(false);
   const [pendingCreateContext, setPendingCreateContext] = useState<Partial<Artifact> | null>(null);
+  // Where a "create before/after" should put the artifact once it exists. The
+  // API appends new artifacts to the end of their sibling group, so without
+  // this a "create after" landed at the bottom of the level rather than next
+  // to the artifact that was right-clicked.
+  const [pendingCreatePlacement, setPendingCreatePlacement] = useState<
+    { anchorId: string; position: 'before' | 'after' } | null
+  >(null);
   // "Draft test cases" launch guard: disables the button while the run is being
   // enqueued so a double-click can't launch two runs (issue #218).
   const [draftingTests, setDraftingTests] = useState(false);
@@ -361,9 +384,31 @@ export const ModuleView: React.FC = () => {
         project_id: projectId,
         ...data,
       });
-      addArtifact(response.data);
+      const created = response.data;
+      addArtifact(created);
+
+      // "Create before/after" means beside the artifact that was
+      // right-clicked, not at the end of its level, so the new artifact is
+      // moved into place once it has an id.
+      if (pendingCreatePlacement) {
+        const changed = await placeAmongSiblings(
+          created,
+          pendingCreatePlacement.anchorId,
+          pendingCreatePlacement.position,
+          artifacts
+        );
+        if (changed.length > 0) {
+          const updated = new Map<string, Artifact>(changed.map((a) => [a.id, a]));
+          setArtifacts([
+            ...artifacts.map((a) => updated.get(a.id) || a),
+            updated.get(created.id) || created,
+          ]);
+        }
+      }
+
       setIsCreating(false);
       setPendingCreateContext(null);
+      setPendingCreatePlacement(null);
       loadQuality();
       setError('');
     } catch (error: any) {
@@ -610,12 +655,50 @@ export const ModuleView: React.FC = () => {
   const [clipboard, setClipboard] = useState<Artifact | null>(null);
 
   /**
-   * Create `source`'s content as a sibling of `target`, then renumber that
-   * sibling group so the new artifact sits immediately before or after it.
+   * Move `created` to sit immediately before or after `anchorId` within its
+   * sibling group, by renumbering that group 1..n.
    *
-   * Renumbering the whole group is what the drag-to-reorder path already does:
-   * sort orders are plain integers, so there is not always a gap to slot into,
-   * and rewriting 1..n is both simpler and always correct.
+   * Renumbering the whole group is what drag-to-reorder already does: sort
+   * orders are plain integers, so there is not always a gap to slot into, and
+   * rewriting 1..n is both simpler and always correct. Returns the artifacts
+   * that changed, so the caller can fold them into state in one go.
+   */
+  const placeAmongSiblings = async (
+    created: Artifact,
+    anchorId: string,
+    position: 'before' | 'after',
+    pool: Artifact[]
+  ): Promise<Artifact[]> => {
+    const siblings = pool
+      .filter((a) => (a.parent_id ?? null) === (created.parent_id ?? null) && a.id !== created.id)
+      .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+    const at = siblings.findIndex((a) => a.id === anchorId);
+    if (at === -1) return [];
+
+    const ordered = [...siblings];
+    ordered.splice(position === 'before' ? at : at + 1, 0, created);
+    const updates = ordered
+      .map((a, index) => ({ artifact: a, newOrder: index + 1 }))
+      .filter(({ artifact: a, newOrder }) => (a.sort_order ?? 0) !== newOrder);
+
+    const responses = await Promise.all(
+      updates.map(({ artifact: a, newOrder }) =>
+        artifactAPI.update(a.id, {
+          parent_id: a.parent_id ?? null,
+          type: a.type,
+          title: a.title,
+          body: a.body,
+          attributes: a.attributes,
+          sort_order: newOrder,
+        })
+      )
+    );
+    return responses.map((r) => r.data);
+  };
+
+  /**
+   * Create `source`'s content as a sibling of `target`, positioned immediately
+   * before or after it.
    */
   const pasteRelativeTo = async (
     source: Pick<Artifact, 'type' | 'title' | 'body' | 'attributes'>,
@@ -637,30 +720,8 @@ export const ModuleView: React.FC = () => {
       });
       const created = response.data;
 
-      const siblings = artifacts
-        .filter((a) => (a.parent_id ?? null) === (target.parent_id ?? null) && a.id !== created.id)
-        .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
-      const at = siblings.findIndex((a) => a.id === target.id);
-      const ordered = [...siblings];
-      ordered.splice(position === 'before' ? Math.max(at, 0) : at + 1, 0, created);
-
-      const updates = ordered
-        .map((a, index) => ({ artifact: a, newOrder: index + 1 }))
-        .filter(({ artifact: a, newOrder }) => (a.sort_order ?? 0) !== newOrder);
-      const responses = await Promise.all(
-        updates.map(({ artifact: a, newOrder }) =>
-          artifactAPI.update(a.id, {
-            parent_id: a.parent_id ?? null,
-            type: a.type,
-            title: a.title,
-            body: a.body,
-            attributes: a.attributes,
-            sort_order: newOrder,
-          })
-        )
-      );
-
-      const updated = new Map<string, Artifact>(responses.map((r) => [r.data.id, r.data]));
+      const changed = await placeAmongSiblings(created, target.id, position, artifacts);
+      const updated = new Map<string, Artifact>(changed.map((a) => [a.id, a]));
       setArtifacts([
         ...artifacts.map((a) => updated.get(a.id) || a),
         updated.get(created.id) || created,
@@ -672,6 +733,39 @@ export const ModuleView: React.FC = () => {
       console.error('Failed to paste artifact:', error);
       setError(`Failed to paste artifact: ${apiErrorMessage(error, 'Unknown error')}`);
     }
+  };
+
+  // A citation clicked in a description. A figure opens where it is — the
+  // reader wanted to see the drawing, not navigate away from the sentence
+  // citing it — and an artifact reference selects that artifact.
+  const [figureInView, setFigureInView] = useState<Attachment | null>(null);
+
+  const notesOpen = panelIsOpen(notesMode, notesHovered);
+  const notesPinned = panelTakesSpace(notesMode);
+
+  const cycleNotesMode = () => {
+    const next = nextPanelMode(notesMode);
+    setNotesMode(next);
+    savePanelMode('artifact-notes', next);
+    setNotesHovered(false);
+  };
+
+  const handleReferenceClick = (ref: string) => {
+    if (isFigureRef(ref)) {
+      const figure = attachments.find((a) => a.figure_ref === ref);
+      if (figure) {
+        setFigureInView(figure);
+        return;
+      }
+    }
+    const target = artifacts.find((a) => a.ref === ref);
+    if (target) {
+      setSelectedArtifactId(target.id);
+      setIsEditing(false);
+      setIsCreating(false);
+      return;
+    }
+    setError(`${ref} is not in this project — it may have been deleted.`);
   };
 
   const handleArtifactContextMenu = (action: ArtifactContextAction, artifact: Artifact) => {
@@ -701,6 +795,13 @@ export const ModuleView: React.FC = () => {
       body: '',
       attributes: {},
     });
+    // A child goes to the end of its new parent's children, which is where a
+    // first child belongs; a sibling goes beside the artifact clicked.
+    setPendingCreatePlacement(
+      action === 'create-child'
+        ? null
+        : { anchorId: artifact.id, position: action === 'create-before' ? 'before' : 'after' }
+    );
 
     // Switch to create mode
     setIsEditing(false);
@@ -1091,14 +1192,19 @@ export const ModuleView: React.FC = () => {
         </button>
       </div>
       <div style={{ display: 'flex', gap: '0', paddingLeft: '20px', paddingRight: '20px', height: 'calc(100vh - 72px)', overflow: 'hidden' }}>
-      <div style={{ width: `${leftColumnWidth}px`, minWidth: '200px', maxWidth: '800px', display: 'flex', flexDirection: 'column', overflowX: 'hidden', overflowY: 'auto', minHeight: 0, paddingRight: '10px' }}>
+      {/* The column scrolls nothing itself: the artifact tree inside it owns
+          the leftover height and scrolls there, so the tree grows with the
+          window instead of sitting in a fixed-height box. */}
+      <div style={{ width: `${leftColumnWidth}px`, minWidth: '200px', maxWidth: '800px', display: 'flex', flexDirection: 'column', overflowX: 'hidden', overflowY: 'hidden', minHeight: 0, paddingRight: '10px' }}>
         <ErrorBanner message={error} onDismiss={() => setError('')} style={{ marginBottom: 15 }} />
         {!isBaselineView && (
           <button
             onClick={() => {
               setIsCreating(!isCreating);
-              // A manual open (or cancel) always starts from a blank form.
+              // A manual open (or cancel) always starts from a blank form, and
+              // without the placement a context-menu create had asked for.
               setPendingCreateContext(null);
+              setPendingCreatePlacement(null);
               setError('');
             }}
             className="button"
@@ -1444,6 +1550,7 @@ export const ModuleView: React.FC = () => {
             onCancel={() => {
               setIsCreating(false);
               setPendingCreateContext(null);
+              setPendingCreatePlacement(null);
               setError('');
             }}
           />
@@ -1532,9 +1639,8 @@ export const ModuleView: React.FC = () => {
               links={activeLinks} 
               artifacts={activeArtifacts}
               attachments={detailAttachments}
-              onDeleteAttachment={isBaselineView ? undefined : handleDeleteAttachment}
-              onUploadAttachmentVersion={isBaselineView ? undefined : handleUploadAttachmentVersion}
               onSelectArtifact={handleSelectArtifact}
+              onReferenceClick={handleReferenceClick}
               previewVersion={previewVersion}
               onClosePreview={() => setPreviewVersion(null)}
               allowLinkDelete={!isBaselineView}
@@ -1558,8 +1664,33 @@ export const ModuleView: React.FC = () => {
         </div>
 
         {/* The notes column stays whether or not an artifact is selected: its
-            comments tab needs one, its assistant tab does not. */}
-            {/* Resize handle for right column */}
+            comments tab needs one, its assistant tab does not. Its width is
+            only spent when pinned — auto-hide floats it over the document on
+            hover, and hidden leaves just the strip that brings it back. */}
+        {!notesPinned && (
+          <div
+            onMouseEnter={() => setNotesHovered(true)}
+            onMouseLeave={() => setNotesHovered(false)}
+            onClick={() => setNotesHovered(true)}
+            title={`Notes: ${panelModeLabel(notesMode)} — click the button inside to change`}
+            style={{
+              width: 10,
+              minWidth: 10,
+              borderLeft: '1px solid var(--border)',
+              background: 'var(--surface-alt)',
+              cursor: 'pointer',
+              display: 'flex',
+              justifyContent: 'center',
+              paddingTop: 12,
+              fontSize: 10,
+              color: 'var(--text-muted)',
+            }}
+          >
+            ‹
+          </div>
+        )}
+            {/* Resize handle — only a pinned column has a width to drag. */}
+            {notesPinned && (
             <div
               onMouseDown={startResize('right')}
               style={{
@@ -1582,17 +1713,53 @@ export const ModuleView: React.FC = () => {
                 }
               }}
             />
-            <div style={{ width: `${rightColumnWidth}px`, minWidth: '250px', maxWidth: '600px', overflow: 'hidden' }}>
+            )}
+            {notesOpen && (
+            <div
+              onMouseEnter={() => notesMode === 'autohide' && setNotesHovered(true)}
+              onMouseLeave={() => notesMode === 'autohide' && setNotesHovered(false)}
+              style={{
+                width: `${rightColumnWidth}px`,
+                minWidth: '250px',
+                maxWidth: '600px',
+                overflow: 'hidden',
+                // Unpinned, the panel floats over the document rather than
+                // reflowing it whenever the pointer crosses the edge.
+                ...(notesPinned
+                  ? {}
+                  : {
+                      position: 'fixed',
+                      right: 10,
+                      top: 0,
+                      bottom: 0,
+                      zIndex: 900,
+                      background: 'var(--surface)',
+                      boxShadow: '-2px 0 8px rgba(0,0,0,0.2)',
+                    }),
+              }}
+            >
               <ChatterPanel
                 key={selectedArtifact ? `chatter-${selectedArtifact.id}-v${selectedArtifact.version}` : 'chatter-none'}
                 artifactId={selectedArtifact?.id}
                 projectId={projectId || undefined}
                 isOpen={true}
-                onToggle={() => {}}
+                onToggle={cycleNotesMode}
+                modeLabel={panelModeLabel(notesMode)}
+                nextModeLabel={panelModeLabel(nextPanelMode(notesMode))}
               />
             </div>
+            )}
       </div>
       </div>
+
+      {/* A figure opened by clicking its citation in a description. */}
+      {figureInView && (
+        <ImageLightbox
+          imageUrl={attachmentAPI.getDownloadUrl(figureInView.id, figureInView.version)}
+          filename={`${figureInView.figure_ref || figureInView.filename} (v${figureInView.version})`}
+          onClose={() => setFigureInView(null)}
+        />
+      )}
     </>
   );
 };

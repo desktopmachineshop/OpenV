@@ -7,7 +7,15 @@ import './ImageGallery.css';
 interface ImageGalleryProps {
   artifactId: string;
   attachments: Attachment[];
-  onDelete: (attachmentId: string) => void;
+  /** Omitted when the gallery is read-only. */
+  onDelete?: (attachmentId: string) => void;
+  /**
+   * Show figures without the controls that change them. Adding, replacing and
+   * removing a figure belongs to editing the artifact, so the details view
+   * passes this: what the document shows should change by a deliberate edit,
+   * not a stray click while reading.
+   */
+  readOnly?: boolean;
   onUpload?: (file: File) => void;
   /**
    * Replace a figure's image with a new version. Without it the gallery is
@@ -26,6 +34,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
   artifactId,
   attachments,
   onDelete,
+  readOnly = false,
   onUpload,
   onUploadVersion,
   isUploadLoading = false,
@@ -95,7 +104,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
       danger: true,
     });
     if (ok) {
-      onDelete(attachmentId);
+      onDelete?.(attachmentId);
     }
   };
 
@@ -214,7 +223,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
                 className="gallery-thumbnail"
               />
               <div className="gallery-overlay">
-                {onUploadVersion && (
+                {!readOnly && onUploadVersion && (
                   <button
                     className="gallery-delete-btn"
                     onClick={(e) => startVersionUpload(e, attachment.id)}
@@ -234,14 +243,16 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
                     🕘
                   </button>
                 )}
-                <button
-                  className="gallery-delete-btn"
-                  onClick={(e) => handleDelete(e, attachment.id)}
-                  title="Delete figure"
-                  aria-label="Delete figure"
-                >
-                  🗑
-                </button>
+                {!readOnly && (
+                  <button
+                    className="gallery-delete-btn"
+                    onClick={(e) => handleDelete(e, attachment.id)}
+                    title="Delete figure"
+                    aria-label="Delete figure"
+                  >
+                    🗑
+                  </button>
+                )}
               </div>
               <p className="gallery-filename">
                 {figureLabel(attachment)}
@@ -252,7 +263,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
             </div>
           ))}
 
-          {showUpload && (
+          {showUpload && !readOnly && (
             <div
               className="gallery-upload-item"
               onDragOver={handleDragOver}

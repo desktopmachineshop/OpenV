@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 import { Artifact, Link, Attachment, QualityScore } from '../api/client';
 import { linkAPI, qualityAPI } from '../api/client';
+import { ArtifactBody } from './ArtifactBody';
 import { ImageGallery } from './ImageGallery';
 import { QualityFindingsPanel } from './QualityBadge';
 import { useConfirm } from './ui';
@@ -58,8 +59,8 @@ interface ArtifactDetailsProps {
   links?: Link[];
   artifacts?: Artifact[];
   attachments?: Attachment[];
-  onDeleteAttachment?: (attachmentId: string) => void;
-  onUploadAttachmentVersion?: (attachmentId: string, file: File) => void;
+  /** Follow a "#REQ-12" citation in the description. */
+  onReferenceClick?: (ref: string) => void;
   onSelectArtifact?: (artifactId: string) => void;
   previewVersion?: Artifact | null;
   onClosePreview?: () => void;
@@ -92,8 +93,7 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
   links = [], 
   artifacts = [],
   attachments = [],
-  onDeleteAttachment,
-  onUploadAttachmentVersion,
+  onReferenceClick,
   onSelectArtifact,
   previewVersion,
   onClosePreview,
@@ -605,16 +605,10 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
         )}
       </div>
       <div style={{ marginBottom: '15px' }}>
-        <strong>ID:</strong>
-        <code style={{ marginLeft: '10px', fontSize: '12px', backgroundColor: 'var(--surface-inset)', padding: '2px 6px' }}>
-          {artifact.id}
-        </code>
-      </div>
-      <div style={{ marginBottom: '15px' }}>
         <strong>Description:</strong>
         <div style={{ marginTop: '8px' }}>
           {artifact.body ? (
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>{artifact.body}</ReactMarkdown>
+            <ArtifactBody body={artifact.body} onReferenceClick={onReferenceClick} />
           ) : (
             <p style={{ fontStyle: 'italic', color: 'var(--text-muted)' }}>(empty)</p>
           )}
@@ -623,14 +617,15 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
       <ArtifactAttributes attributes={artifact.attributes} />
 
 
-      {/* Figures */}
+      {/* Figures. Read-only here: a figure is added, replaced or removed while
+          editing the artifact, so that changing what the document shows is a
+          deliberate edit rather than a stray click on a details page. */}
       {attachments && attachments.length > 0 && (
         <div style={{ marginBottom: '15px' }}>
-          <ImageGallery 
-            artifactId={artifact.id} 
+          <ImageGallery
+            artifactId={artifact.id}
             attachments={attachments}
-            onDelete={onDeleteAttachment || (() => {})}
-            onUploadVersion={onUploadAttachmentVersion}
+            readOnly
             showUpload={false}
           />
         </div>

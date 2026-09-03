@@ -397,12 +397,15 @@ export const ArtifactList: React.FC<ArtifactListProps> = ({
   };
 
   return (
-    <div className="card">
-      <h3>Artifacts</h3>
+    // No card around the tree: the list is the column's content, and a panel
+    // inside a panel only wasted the width. It fills the height it is given
+    // rather than stopping at a fixed 500px with empty space beneath.
+    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+      <h3 style={{ marginTop: 0 }}>Artifacts</h3>
       {artifacts.length === 0 ? (
         <p>No artifacts yet. Create one to get started.</p>
       ) : (
-        <div style={{ overflowY: 'auto', maxHeight: '500px' }}>
+        <div style={{ overflowY: 'auto', flex: 1, minHeight: 0 }}>
           {hierarchy.map((node) => renderArtifact(node))}
         </div>
       )}
