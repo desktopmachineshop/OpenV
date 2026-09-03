@@ -33,7 +33,7 @@ export const MANUAL_CHAPTERS: ManualChapter[] = [
   { slug: 'product-overview', title: 'Product Overview', content: productOverview },
   { slug: 'artifacts', title: 'Requirements & artifacts', content: artifacts },
   { slug: 'links', title: 'Traceability links', content: links },
-  { slug: 'guided-wizard', title: 'Guided definition & copilot', content: guidedWizard },
+  { slug: 'guided-wizard', title: 'Guided definition & the V&V Assistant', content: guidedWizard },
   { slug: 'board', title: 'Kanban board', content: board },
   { slug: 'agents', title: 'Agents', content: agents },
   { slug: 'crews', title: 'Crews', content: crews },

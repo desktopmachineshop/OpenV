@@ -1,6 +1,6 @@
 // Random product generator for the new-project wizard's testing mode: mints
 // an amusing-but-workable product concept to seed the Guided Wizard, where
-// the connected copilot agent takes it from framing to requirements.
+// the connected V&V Assistant takes it from framing to requirements.
 //
 // Every roll comes from ONE concept, so the parts hang together: the name
 // riffs on the gimmick, the description states it, the vision is that

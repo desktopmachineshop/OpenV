@@ -13,6 +13,7 @@ import {
 } from '../api/client';
 import { apiErrorMessage } from '../api/errors';
 import { useAppStore } from '../state/store';
+import { isUntouchedByWizard } from '../components/wizard/assistantSession';
 import { ErrorBanner } from '../components/ui';
 
 interface MetricRow {
@@ -188,8 +189,13 @@ export const ProductOverview: React.FC = () => {
 
   // Label the guided CTA by where the project actually is: a session in
   // progress resumes, a committed one reopens for modification.
+  //
+  // A session the assistant created to hold its conversation, never opened in
+  // the wizard, is not progress — offering to "resume" it would send the user
+  // into an empty step one they never started.
   const guidedInProgress = guidedSessions.some(
-    (s) => s.status === 'in-progress' || s.status === 'in_progress'
+    (s) =>
+      (s.status === 'in-progress' || s.status === 'in_progress') && !isUntouchedByWizard(s)
   );
   const guidedCommitted = guidedSessions.some((s) => s.status === 'committed');
   const guidedCtaLabel = guidedInProgress

@@ -87,15 +87,15 @@ const HELP_TOPICS: Record<string, HelpTopic> = {
   guided: {
     title: 'Guided Definition',
     summary:
-      'An eight-step wizard from a blank product to a committed, traceable requirement set — with an AI copilot suggesting entries you can add with one click.',
+      'An eight-step wizard from a blank product to a committed, traceable requirement set — with the V&V Assistant suggesting entries you can add with one click.',
     tips: [
       'Moving Next materializes new entries as draft artifacts (green dot); edit them later in the Requirements view.',
-      "Click a copilot suggestion card's add button to insert it into the current step; replacements update an entry in place.",
+      "Click an assistant suggestion card's add button to insert it into the current step; replacements update an entry in place.",
       'Abandon session keeps drafts already created — only unsaved entries are discarded.',
-      "If the copilot doesn't answer, no runner is online; your messages are saved and answered once one connects.",
+      "If the assistant doesn't answer, no runner is online; your messages are saved and answered once one connects.",
       'After committing, take the offered "Initial requirements" baseline as your starting snapshot.',
     ],
-    chapter: { slug: 'guided-wizard', title: 'Guided definition & copilot' },
+    chapter: { slug: 'guided-wizard', title: 'Guided definition & the V&V Assistant' },
   },
   interviews: {
     title: 'Interviews',

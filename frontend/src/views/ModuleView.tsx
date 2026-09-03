@@ -1452,8 +1452,8 @@ export const ModuleView: React.FC = () => {
         )}
         </div>
 
-        {selectedArtifact && (
-          <>
+        {/* The notes column stays whether or not an artifact is selected: its
+            comments tab needs one, its assistant tab does not. */}
             {/* Resize handle for right column */}
             <div
               onMouseDown={startResize('right')}
@@ -1479,14 +1479,13 @@ export const ModuleView: React.FC = () => {
             />
             <div style={{ width: `${rightColumnWidth}px`, minWidth: '250px', maxWidth: '600px', overflow: 'hidden' }}>
               <ChatterPanel
-                key={`chatter-${selectedArtifact.id}-v${selectedArtifact.version}`}
-                artifactId={selectedArtifact.id}
+                key={selectedArtifact ? `chatter-${selectedArtifact.id}-v${selectedArtifact.version}` : 'chatter-none'}
+                artifactId={selectedArtifact?.id}
+                projectId={projectId || undefined}
                 isOpen={true}
                 onToggle={() => {}}
               />
             </div>
-          </>
-        )}
       </div>
       </div>
     </>

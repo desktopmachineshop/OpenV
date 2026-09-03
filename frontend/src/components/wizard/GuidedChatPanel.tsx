@@ -10,23 +10,39 @@ export interface CopilotSuggestion {
 
 interface GuidedChatPanelProps {
   sessionId: string;
-  /** 1-based current wizard step, included in every turn's context. */
-  step: number;
+  /**
+   * 1-based current wizard step, included in every turn's context. Omitted
+   * outside the wizard — the notes panel has no step.
+   */
+  step?: number;
   /** Snapshot of everything entered in the wizard so far. */
-  getState: () => Record<string, any>;
+  getState?: () => Record<string, any>;
+  /**
+   * The artifact the reader has open, when this panel sits in an artifact's
+   * notes. Sent with each turn so the assistant answers about it.
+   */
+  artifactId?: string;
+  /** Line under the title; the wizard and the notes panel say different things. */
+  subtitle?: string;
+  /**
+   * Fill the parent instead of standing as its own sticky column. The wizard
+   * places this panel beside the form at a fixed width; the notes panel hosts
+   * it inside a column the reader can resize.
+   */
+  embedded?: boolean;
   /**
    * "<messageId>:<segmentIndex>" keys of suggestions already applied. Owned
    * by the wizard and persisted in the session answers, so the applied state
    * survives navigating away and remounting this panel.
    */
-  applied: Record<string, boolean>;
+  applied?: Record<string, boolean>;
   /**
    * Insert or replace a batch of suggestions in the wizard, applied in order
    * against one snapshot. Each item carries its suggestion key so the wizard
    * can record (and persist) what was applied. Returns one result per
    * suggestion: null on success, or a reason it could not be applied.
    */
-  onApplySuggestions: (items: { suggestion: CopilotSuggestion; key: string }[]) => (string | null)[];
+  onApplySuggestions?: (items: { suggestion: CopilotSuggestion; key: string }[]) => (string | null)[];
 }
 
 type Segment =
@@ -76,9 +92,11 @@ const FRAMING_FIELD_LABELS: Record<string, string> = {
   target_users: 'Target users',
 };
 
-// Canned copilot commands, sent as ordinary chat messages so they read
+// Canned assistant commands, sent as ordinary chat messages so they read
 // naturally in the transcript and the reply flows through the normal turn.
-const QUICK_ACTIONS: { label: string; title: string; message: string }[] = [
+type QuickAction = { label: string; title: string; message: string };
+
+const QUICK_ACTIONS: QuickAction[] = [
   {
     label: 'Review step',
     title: 'Quality-check the entries on the current step',
@@ -102,6 +120,29 @@ const QUICK_ACTIONS: { label: string; title: string; message: string }[] = [
     title: 'Propose entries for the current step',
     message:
       'Draft entries for this step based on everything you know about the product so far, as suggestion blocks I can add or apply.',
+  },
+];
+
+// Beside an artifact there is no step to review and nothing to draft into,
+// so the notes panel offers what a reader of one artifact actually wants.
+const NOTES_QUICK_ACTIONS: QuickAction[] = [
+  {
+    label: 'Review this',
+    title: 'Quality-check the artifact on screen',
+    message:
+      'Review the artifact I am reading: is it clear, specific and testable? Quote the wording that weakens it and say how you would rewrite it.',
+  },
+  {
+    label: 'How would I verify it?',
+    title: 'Propose verification for this artifact',
+    message:
+      'How would I verify the artifact I am reading? Propose a verification method and the test cases that would demonstrate it, and say what evidence each would produce.',
+  },
+  {
+    label: 'What is missing?',
+    title: 'Gaps around this artifact',
+    message:
+      'What is missing around the artifact I am reading — unstated hazards, absent non-functional requirements, needs or requirements it should trace to but does not?',
   },
 ];
 
@@ -132,15 +173,25 @@ export interface GuidedChatPanelHandle {
   nudge: (step: number, event: string) => void;
 }
 
-// AI copilot chat beside the guided wizard: streams the session conversation
-// over SSE and renders the copilot's structured proposals as one-click Adds.
+// The V&V Assistant's chat beside the guided wizard: streams the session
+// conversation over SSE and renders its structured proposals as one-click Adds.
+const NO_STATE = (): Record<string, any> => ({});
+
 export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanelProps>(({
   sessionId,
-  step,
-  getState,
-  applied,
+  step = 0,
+  getState = NO_STATE,
+  artifactId,
+  subtitle = 'Asks questions and suggests entries you can add with one click.',
+  embedded = false,
+  applied = {},
   onApplySuggestions,
 }, ref) => {
+  // Suggestions are applied into wizard entry sections. Beside an artifact
+  // there is nowhere to put them, so the cards render without their buttons
+  // rather than offering an action that cannot work.
+  const canApply = !!onApplySuggestions;
+  const quickActions = artifactId ? NOTES_QUICK_ACTIONS : QUICK_ACTIONS;
   const [messages, setMessages] = useState<GuidedChatMessage[]>([]);
   const [composerText, setComposerText] = useState('');
   const [sending, setSending] = useState(false);
@@ -166,6 +217,8 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
   getStateRef.current = getState;
   const stepRef = useRef(step);
   stepRef.current = step;
+  const artifactRef = useRef(artifactId);
+  artifactRef.current = artifactId;
 
   const appendMessage = useCallback((msg: GuidedChatMessage) => {
     setMessages((prev) => {
@@ -243,18 +296,23 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
         const transcript = res.data || [];
         transcript.forEach((m) => appendMessage(m));
         connectStream();
-        // Empty conversation: ask the copilot to open with a question.
+        // Empty conversation: ask the assistant to open with a question.
         if (transcript.length === 0 && !kickedRef.current) {
           kickedRef.current = true;
           try {
-            const kick = await guidedAPI.kickoffChat(sessionId, stepRef.current, getStateRef.current());
+            const kick = await guidedAPI.kickoffChat(
+              sessionId,
+              stepRef.current,
+              getStateRef.current(),
+              artifactRef.current
+            );
             applyTurnStatus(kick.data);
           } catch {
-            // copilot optional — the wizard still works without it
+            // the assistant is optional — the wizard still works without it
           }
         }
       } catch {
-        if (!cancelled) setSendError('Failed to load the copilot conversation.');
+        if (!cancelled) setSendError('Failed to load the assistant conversation.');
       }
     })();
     return () => {
@@ -309,7 +367,13 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
     setSendError('');
     setTyping(true);
     try {
-      const res = await guidedAPI.sendMessage(sessionId, content, stepRef.current, getStateRef.current());
+      const res = await guidedAPI.sendMessage(
+        sessionId,
+        content,
+        stepRef.current,
+        getStateRef.current(),
+        artifactRef.current
+      );
       if (res.data.message) appendMessage(res.data.message);
       if (res.data.runner_online === false) {
         setRunnerOffline(true);
@@ -329,6 +393,7 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
   // Apply every not-yet-applied suggestion of one reply in a single batch.
   // The wizard records and persists which keys applied successfully.
   const applyAll = (pending: { suggestion: CopilotSuggestion; key: string }[]) => {
+    if (!onApplySuggestions) return;
     const results = onApplySuggestions(pending);
     const errors = results.filter((r): r is string => r !== null);
     setSendError(
@@ -411,7 +476,11 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
             Replaces: {replacesLabel(s)}
           </div>
         )}
-        {isAdded ? (
+        {!canApply ? (
+          <div style={{ fontSize: 11, color: 'var(--neutral)', fontStyle: 'italic' }}>
+            Open Guided Definition to add this to the wizard.
+          </div>
+        ) : isAdded ? (
           <span style={{ fontSize: 12, color: 'var(--success)' }}>{doneLabel}</span>
         ) : (
           <button
@@ -432,30 +501,32 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
   return (
     <div
       style={{
-        width: 340,
-        minWidth: 340,
         display: 'flex',
         flexDirection: 'column',
         background: 'var(--surface)',
-        border: '1px solid var(--border)',
-        borderRadius: 4,
-        position: 'sticky',
-        top: 20,
-        height: 'calc(100vh - 160px)',
-        minHeight: 420,
+        ...(embedded
+          ? { width: '100%', height: '100%', minHeight: 0 }
+          : {
+              width: 340,
+              minWidth: 340,
+              border: '1px solid var(--border)',
+              borderRadius: 4,
+              position: 'sticky',
+              top: 20,
+              height: 'calc(100vh - 160px)',
+              minHeight: 420,
+            }),
       }}
     >
       <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--border)' }}>
-        <div style={{ fontWeight: 700, color: 'var(--text)', fontSize: 14 }}>Requirements Copilot</div>
-        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-          Asks questions and suggests entries you can add with one click.
-        </div>
+        <div style={{ fontWeight: 700, color: 'var(--text)', fontSize: 14 }}>V&amp;V Assistant</div>
+        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{subtitle}</div>
       </div>
 
       <div ref={scrollerRef} style={{ flex: 1, overflowY: 'auto', padding: 12 }}>
         {messages.length === 0 && !typing && (
           <div style={{ textAlign: 'center', color: 'var(--neutral)', fontSize: 12, marginTop: 24 }}>
-            The copilot will join in a moment — or ask it anything about your requirements.
+            The assistant will join in a moment — or ask it anything about your requirements.
           </div>
         )}
         {messages.map((m, i) => (
@@ -507,7 +578,7 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
                               renderSuggestion(seg, `${m.id}:${i}`)
                             )
                           )}
-                          {pending.length >= 2 && (
+                          {canApply && pending.length >= 2 && (
                             <div style={{ marginTop: 8 }}>
                               <button
                                 className="button"
@@ -544,8 +615,8 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
               lineHeight: 1.5,
             }}
           >
-            <div style={{ fontWeight: 700, marginBottom: 4 }}>⚠ Copilot agent not connected</div>
-            No runner is online to answer, so copilot replies are paused. To connect one, open{' '}
+            <div style={{ fontWeight: 700, marginBottom: 4 }}>⚠ V&amp;V Assistant not connected</div>
+            No runner is online to answer, so assistant replies are paused. To connect one, open{' '}
             <Link to="/org/settings" style={{ color: 'var(--warning-text)', fontWeight: 600 }}>
               Workspace Settings → Runners
             </Link>{' '}
@@ -565,7 +636,7 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
                 color: 'var(--text-muted)',
               }}
             >
-              The copilot is thinking…
+              The assistant is thinking…
             </div>
           </div>
         )}
@@ -573,7 +644,7 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
 
       <div style={{ borderTop: '1px solid var(--border)', padding: 10 }}>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
-          {QUICK_ACTIONS.map((qa) => (
+          {quickActions.map((qa) => (
             <button
               key={qa.label}
               onClick={() => send(qa.message)}
@@ -607,7 +678,7 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
                 send();
               }
             }}
-            placeholder="Ask the copilot… (Ctrl+Enter to send)"
+            placeholder="Ask the V&amp;V Assistant… (Ctrl+Enter to send)"
             rows={2}
             style={{ flex: 1, minHeight: 40, resize: 'none', fontSize: 13 }}
           />

@@ -14,7 +14,7 @@ Only the hosted runner is online, and hosted runners never clone repositories.
 Runs that need repo access wait for a personal or workspace runner — start
 your Agent Connector.
 
-## The guided copilot doesn't answer
+## The V&V Assistant doesn't answer
 
 Same cause: no runner online. The chat panel says replies are paused; your
 messages are saved and answered as soon as a runner connects.

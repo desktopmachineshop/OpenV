@@ -246,8 +246,9 @@ markdown body that becomes the agent's system prompt. The server syncs these
 files into the database at startup, so editing a file and restarting (or
 re-syncing via `POST /api/v1/agents/sync`) updates the agent. Agent files are
 per-workspace (`$AGENTS_DIR/<org-id>/<slug>.md`); seed agents (e.g.
-`requirements-interviewer`, `requirements-copilot`) are created when a
-workspace is first provisioned.
+`requirements-interviewer`, `requirements-copilot` — the V&V Assistant, whose
+slug keeps its original name so workspaces provisioned before the rename keep
+working) are created when a workspace is first provisioned.
 
 ### Choosing a model
 
