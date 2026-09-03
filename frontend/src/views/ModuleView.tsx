@@ -3,6 +3,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useAppStore } from '../state/store';
 import { artifactAPI, linkAPI, attachmentAPI, baselineAPI, projectAPI, qualityAPI, agentsAPI, Artifact, Link, Attachment, Baseline, ProjectExport } from '../api/client';
 import type { ArtifactContextAction, QualityRowInfo } from '../components/ArtifactList';
+import { DropZone, planMove } from '../utils/artifactDrag';
 import { ImageLightbox } from '../components/ImageLightbox';
 import { isFigureRef } from '../components/artifactReferences';
 import {
@@ -580,52 +581,34 @@ export const ModuleView: React.FC = () => {
     }
   };
 
-  const handleReorderArtifact = async (sourceId: string, targetId: string, mode: 'swap' | 'insert') => {
-    if (isBaselineView) return;
-
-    const source = artifacts.find((item) => item.id === sourceId);
-    const target = artifacts.find((item) => item.id === targetId);
-    if (!source || !target) return;
-
-    if (normalizeParentId(source.parent_id) !== normalizeParentId(target.parent_id)) {
-      return;
-    }
-
-    const siblings = artifacts
-      .filter((item) => normalizeParentId(item.parent_id) === normalizeParentId(source.parent_id))
-      .sort(compareArtifacts);
-
-    const sourceIndex = siblings.findIndex((item) => item.id === sourceId);
-    const targetIndex = siblings.findIndex((item) => item.id === targetId);
-    if (sourceIndex === -1 || targetIndex === -1) return;
-
-    const reordered = [...siblings];
-    if (mode === 'swap') {
-      const temp = reordered[sourceIndex];
-      reordered[sourceIndex] = reordered[targetIndex];
-      reordered[targetIndex] = temp;
-    } else {
-      const [moved] = reordered.splice(sourceIndex, 1);
-      const insertIndex = targetIndex > sourceIndex ? targetIndex - 1 : targetIndex;
-      reordered.splice(insertIndex, 0, moved);
-    }
-
-    const updates = reordered
-      .map((artifact, index) => ({
-        artifact,
-        newOrder: index + 1,
-      }))
-      .filter(({ artifact, newOrder }) => (artifact.sort_order ?? 0) !== newOrder);
-
-    if (updates.length === 0) {
-      return;
-    }
+  /**
+   * Save a sibling group in a given order, re-parenting `reparentId` on the way
+   * when the move changed its parent.
+   *
+   * Renumbering the whole group is the same approach the ▲▼ buttons and paste
+   * already use: sort orders are plain integers with no guaranteed gaps, so
+   * rewriting 1..n is simpler than finding room between two of them.
+   */
+  const saveSiblingOrder = async (
+    ordered: Artifact[],
+    parentId: string | null,
+    reparentId?: string
+  ) => {
+    const updates = ordered
+      .map((artifact, index) => ({ artifact, newOrder: index + 1 }))
+      .filter(
+        ({ artifact, newOrder }) =>
+          (artifact.sort_order ?? 0) !== newOrder || artifact.id === reparentId
+      );
+    if (updates.length === 0) return;
 
     try {
       const responses = await Promise.all(
         updates.map(({ artifact, newOrder }) =>
           artifactAPI.update(artifact.id, {
-            parent_id: artifact.parent_id ?? null,
+            // Only the moved artifact changes parent; its new siblings keep
+            // theirs, which is the same value.
+            parent_id: artifact.id === reparentId ? parentId : artifact.parent_id ?? null,
             type: artifact.type,
             title: artifact.title,
             body: artifact.body,
@@ -638,15 +621,47 @@ export const ModuleView: React.FC = () => {
       const updatedMap = new Map<string, Artifact>(
         responses.map((response) => [response.data.id, response.data])
       );
-
-      const nextArtifacts = artifacts.map((item) => updatedMap.get(item.id) || item);
-      setArtifacts(nextArtifacts);
+      setArtifacts(artifacts.map((item) => updatedMap.get(item.id) || item));
       setError('');
     } catch (error: any) {
-      console.error('Failed to reorder artifacts:', error);
-      const errorMsg = apiErrorMessage(error, 'Unknown error');
-      setError(`Failed to reorder artifacts: ${errorMsg}`);
+      console.error('Failed to move artifacts:', error);
+      setError(`Failed to move artifacts: ${apiErrorMessage(error, 'Unknown error')}`);
     }
+  };
+
+  const handleReorderArtifact = async (
+    sourceId: string,
+    targetId: string,
+    mode: 'swap' | DropZone
+  ) => {
+    if (isBaselineView) return;
+
+    // The ▲▼ buttons swap two siblings in place; they never re-parent.
+    if (mode === 'swap') {
+      const source = artifacts.find((item) => item.id === sourceId);
+      const target = artifacts.find((item) => item.id === targetId);
+      if (!source || !target) return;
+      if (normalizeParentId(source.parent_id) !== normalizeParentId(target.parent_id)) return;
+
+      const siblings = artifacts
+        .filter((item) => normalizeParentId(item.parent_id) === normalizeParentId(source.parent_id))
+        .sort(compareArtifacts);
+      const sourceIndex = siblings.findIndex((item) => item.id === sourceId);
+      const targetIndex = siblings.findIndex((item) => item.id === targetId);
+      if (sourceIndex === -1 || targetIndex === -1) return;
+
+      const reordered = [...siblings];
+      reordered[sourceIndex] = siblings[targetIndex];
+      reordered[targetIndex] = siblings[sourceIndex];
+      await saveSiblingOrder(reordered, normalizeParentId(source.parent_id));
+      return;
+    }
+
+    // A drag: the planner decides where it lands and refuses the moves that
+    // must not happen (into its own subtree, or changing nothing).
+    const plan = planMove(artifacts, sourceId, targetId, mode);
+    if (!plan) return;
+    await saveSiblingOrder(plan.ordered, plan.parentId, plan.reparents ? sourceId : undefined);
   };
 
   // Copying holds an artifact's CONTENT, not its identity: type, title, body

@@ -41,7 +41,13 @@ link type definitions.
   type, title, body and attributes; links and figures stay with the original,
   because a copy that inherited "verifies REQ-12" would assert a verification
   nobody made. Pasted artifacts are titled "… (copy)".
-- **Drag artifacts** within the same parent to reorder them.
+- **Drag an artifact** onto another to move it. Where you let go decides what
+  happens: the **top half** drops it before that artifact, the **bottom left**
+  after it, and the **bottom right** makes it a **child** of it. The row shows
+  which it will be — a line on the edge it will land against, or an outline
+  around the artifact it will go inside — so re-parenting and reordering are
+  the same gesture. Dropping into a collapsed artifact expands it, and an
+  artifact can never be dropped into its own subtree.
 - **Collapse all / Expand all** manage the tree at once.
 
 ## Referencing figures and linked artifacts

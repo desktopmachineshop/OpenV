@@ -1,5 +1,5 @@
 {
-  "exported_at": "2026-09-03T15:06:17.226035657Z",
+  "exported_at": "2026-09-03T16:06:04.443732422Z",
   "version": "1.0",
   "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
   "project_name": "OpenV Platform",
@@ -4391,6 +4391,40 @@
       "updated_at": "2026-09-03T10:53:33.655059Z"
     },
     {
+      "id": "38c2a818-bd1b-4bd9-a0ac-8f525ce9823b",
+      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
+      "parent_id": "8c8b86be-4730-49cb-9d95-93868a0c1938",
+      "type": "test-case",
+      "ref": "TC-25",
+      "title": "Artifact drag placement suite",
+      "body": "Client suite over the drag helpers: the pointer's quadrant resolves to before/after/child and is read relative to the row rather than the page, a zero-height row does not divide by zero, an artifact is recognised as its own descendant to any depth, a cycle already in the data terminates the search rather than hanging, and a planned move places a sibling before or after, appends a child last, moves an artifact out to the root or between two different parents, and refuses a drop onto itself, into its own subtree, or one that changes nothing.",
+      "sort_order": 200,
+      "status": "draft",
+      "attributes": {
+        "links_snapshot": [
+          {
+            "attributes": null,
+            "created_at": "2026-09-03T16:06:02.202499Z",
+            "from_id": "38c2a818-bd1b-4bd9-a0ac-8f525ce9823b",
+            "id": "62a983a2-0330-4a8f-b03e-a5a96f1c651a",
+            "suspect": false,
+            "to_id": "581bb5e3-32dc-420c-86f9-5eb19e877160",
+            "type": "verifies",
+            "updated_at": "2026-09-03T16:06:02.202499Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          }
+        ],
+        "status": "draft"
+      },
+      "version": 2,
+      "valid_from": "2026-09-03T16:06:02.218989Z",
+      "valid_to": null,
+      "created_at": "2026-09-03T16:06:01.597457Z",
+      "updated_at": "2026-09-03T16:06:02.218989Z"
+    },
+    {
       "id": "7973f87c-ab01-4383-a9af-130a433a04ed",
       "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
       "parent_id": "a25960b2-ee9b-4005-a2d1-d5e875c9e158",
@@ -4906,17 +4940,30 @@
       "type": "requirement",
       "ref": "REQ-1",
       "title": "Hierarchical versioned modules",
-      "body": "The system shall organize artifacts as hierarchical, ordered modules within projects, with parent/child structure and stable ordering. Creating an artifact relative to another \u2014 before it or after it \u2014 shall place the new artifact in that position within its sibling group rather than at the end of the group.",
+      "body": "The system shall organize artifacts as hierarchical, ordered modules within projects, with parent/child structure and stable ordering. Creating an artifact relative to another \u2014 before it or after it \u2014 shall place the new artifact in that position within its sibling group rather than at the end of the group.\n\nDragging an artifact onto another shall both reorder and re-parent, decided by where the pointer is released: the upper half shall place it before that artifact, the lower left after it, and the lower right shall make it a child of it. The artifact under the pointer shall show which of the three would happen before the drop is made. An artifact shall never be droppable into its own subtree, and a drop that would change nothing shall be refused rather than written. A drop into a collapsed artifact shall expand it, so the moved artifact remains visible.",
       "sort_order": 180,
       "status": "draft",
       "attributes": {
         "links_snapshot": [
           {
             "attributes": null,
+            "created_at": "2026-09-03T16:06:02.202499Z",
+            "from_id": "38c2a818-bd1b-4bd9-a0ac-8f525ce9823b",
+            "id": "62a983a2-0330-4a8f-b03e-a5a96f1c651a",
+            "suspect": false,
+            "to_id": "581bb5e3-32dc-420c-86f9-5eb19e877160",
+            "type": "verifies",
+            "updated_at": "2026-09-03T16:06:02.202499Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
             "created_at": "2026-08-30T19:54:25.025074Z",
             "from_id": "581bb5e3-32dc-420c-86f9-5eb19e877160",
             "id": "dfb58e75-a28e-4cc1-b87c-cc6fdaab330e",
-            "suspect": false,
+            "suspect": true,
             "to_id": "a97f2988-992f-41a5-9431-b85104712dfe",
             "type": "derives-from",
             "updated_at": "2026-08-30T19:54:25.025074Z",
@@ -4930,11 +4977,11 @@
         "verification_method": "demonstration",
         "verification_status": "verified"
       },
-      "version": 4,
-      "valid_from": "2026-09-03T15:06:14.103586Z",
+      "version": 6,
+      "valid_from": "2026-09-03T16:06:02.227926Z",
       "valid_to": null,
       "created_at": "2026-08-30T19:54:07.673438Z",
-      "updated_at": "2026-09-03T15:06:14.103586Z"
+      "updated_at": "2026-09-03T16:06:02.227926Z"
     },
     {
       "id": "70abf6b1-122d-4a9e-abff-1082ce0e7c5e",
@@ -5696,6 +5743,19 @@
     }
   ],
   "links": [
+    {
+      "id": "62a983a2-0330-4a8f-b03e-a5a96f1c651a",
+      "from_id": "38c2a818-bd1b-4bd9-a0ac-8f525ce9823b",
+      "to_id": "581bb5e3-32dc-420c-86f9-5eb19e877160",
+      "type": "verifies",
+      "suspect": false,
+      "attributes": null,
+      "version": 1,
+      "valid_from": "0001-01-01T00:00:00Z",
+      "valid_to": null,
+      "created_at": "2026-09-03T16:06:02.202499Z",
+      "updated_at": "2026-09-03T16:06:02.202499Z"
+    },
     {
       "id": "e729c0a3-c262-4330-a0b2-f6e34b488068",
       "from_id": "f56ca2ee-5418-4d20-96e3-09628945aa16",
