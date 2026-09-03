@@ -36,8 +36,25 @@ link type definitions.
 - Artifacts form a **hierarchy**: right-click an artifact in the list for
   **create before / create after / create child**. New siblings inherit the
   type and parent of the artifact you clicked.
+- The same menu offers **copy**, **paste before / paste after** and
+  **duplicate** (a copy placed directly after the original). A copy carries the
+  type, title, body and attributes; links and figures stay with the original,
+  because a copy that inherited "verifies REQ-12" would assert a verification
+  nobody made. Pasted artifacts are titled "… (copy)".
 - **Drag artifacts** within the same parent to reorder them.
 - **Collapse all / Expand all** manage the tree at once.
+
+## Referencing figures and linked artifacts
+
+Type **\`#\`** in an artifact's description to cite something: its own figures
+(\`REQ-17-FIG-1\`) and the artifacts it is already linked to. Filter by typing,
+choose with the arrow keys or the mouse, and the reference is inserted as
+\`#REQ-17-FIG-1\`.
+
+The list is deliberately short. It offers only what this artifact is already
+connected to, because a description citing a requirement it has no link to is
+a claim the traceability matrix cannot see — link it first, and it appears in
+the menu.
 
 ## Search & filters
 

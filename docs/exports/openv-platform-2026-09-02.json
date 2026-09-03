@@ -1,5 +1,5 @@
 {
-  "exported_at": "2026-09-03T08:55:04.143704357Z",
+  "exported_at": "2026-09-03T10:53:36.263563263Z",
   "version": "1.0",
   "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
   "project_name": "OpenV Platform",
@@ -450,6 +450,19 @@
         "links_snapshot": [
           {
             "attributes": null,
+            "created_at": "2026-09-03T10:53:33.027673Z",
+            "from_id": "cf7f4bde-27d6-4108-b135-566b7ec9caa8",
+            "id": "d842c68b-8c5b-4d44-862d-75bcea151a50",
+            "suspect": false,
+            "to_id": "a97f2988-992f-41a5-9431-b85104712dfe",
+            "type": "derives-from",
+            "updated_at": "2026-09-03T10:53:33.027673Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
             "created_at": "2026-08-30T19:54:29.256357Z",
             "from_id": "cb49b8aa-01d0-4467-a3bf-575e44fe5128",
             "id": "1b8dd207-40f0-4cb5-9cbb-931662e81309",
@@ -490,11 +503,11 @@
         ],
         "status": "draft"
       },
-      "version": 4,
-      "valid_from": "2026-08-30T19:54:29.27562Z",
+      "version": 5,
+      "valid_from": "2026-09-03T10:53:33.050372Z",
       "valid_to": null,
       "created_at": "2026-08-30T19:54:04.374317Z",
-      "updated_at": "2026-08-30T19:54:29.27562Z"
+      "updated_at": "2026-09-03T10:53:33.050372Z"
     },
     {
       "id": "7a179f00-7564-42d1-9dfe-8c99d7660322",
@@ -953,6 +966,19 @@
         "links_snapshot": [
           {
             "attributes": null,
+            "created_at": "2026-09-03T10:53:33.327418Z",
+            "from_id": "7a15c0fd-8201-444d-a0e0-2b909c25e5e2",
+            "id": "e35fe60e-03ee-49bd-aefc-418974910fd9",
+            "suspect": false,
+            "to_id": "12cff868-2282-41cd-82a9-b8bfe708d9a6",
+            "type": "derives-from",
+            "updated_at": "2026-09-03T10:53:33.327418Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
             "created_at": "2026-09-03T08:55:01.416602Z",
             "from_id": "742f80c7-e6f6-48c8-b354-99b00b181515",
             "id": "cf4e1f04-888c-40f2-baa5-3fb78f21cfcb",
@@ -1136,11 +1162,11 @@
         ],
         "status": "draft"
       },
-      "version": 15,
-      "valid_from": "2026-09-03T08:55:01.434946Z",
+      "version": 16,
+      "valid_from": "2026-09-03T10:53:33.34697Z",
       "valid_to": null,
       "created_at": "2026-08-30T19:54:06.221335Z",
-      "updated_at": "2026-09-03T08:55:01.434946Z"
+      "updated_at": "2026-09-03T10:53:33.34697Z"
     },
     {
       "id": "b19f3d92-8dea-44a4-aaf4-6e2ef95811b7",
@@ -4331,6 +4357,40 @@
       "updated_at": "2026-09-03T08:55:01.754156Z"
     },
     {
+      "id": "f56ca2ee-5418-4d20-96e3-09628945aa16",
+      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
+      "parent_id": "8c8b86be-4730-49cb-9d95-93868a0c1938",
+      "type": "test-case",
+      "ref": "TC-24",
+      "title": "Description reference suite",
+      "body": "Client suite over the reference helpers: the offer lists an artifact's own figures before the artifacts it links to, excludes anything it is not linked to, follows a link in either direction and names each neighbour once, skips a neighbour with no reference to cite and figures belonging to other artifacts, and offers nothing while an artifact is still being created. The caret rules: a hash opens the offer only at a word boundary (so 'PR#12' and URL fragments are ignored), it closes once the writer moves past it, and it reads from the caret rather than the end of the text. Insertion replaces what was typed, keeps the text that followed, and leaves the caret after the reference.",
+      "sort_order": 180,
+      "status": "draft",
+      "attributes": {
+        "links_snapshot": [
+          {
+            "attributes": null,
+            "created_at": "2026-09-03T10:53:33.641211Z",
+            "from_id": "f56ca2ee-5418-4d20-96e3-09628945aa16",
+            "id": "e729c0a3-c262-4330-a0b2-f6e34b488068",
+            "suspect": false,
+            "to_id": "7a15c0fd-8201-444d-a0e0-2b909c25e5e2",
+            "type": "verifies",
+            "updated_at": "2026-09-03T10:53:33.641211Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          }
+        ],
+        "status": "draft"
+      },
+      "version": 2,
+      "valid_from": "2026-09-03T10:53:33.655059Z",
+      "valid_to": null,
+      "created_at": "2026-09-03T10:53:32.442447Z",
+      "updated_at": "2026-09-03T10:53:33.655059Z"
+    },
+    {
       "id": "7973f87c-ab01-4383-a9af-130a433a04ed",
       "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
       "parent_id": "a25960b2-ee9b-4005-a2d1-d5e875c9e158",
@@ -5248,6 +5308,42 @@
       "updated_at": "2026-09-02T21:41:27.58855Z"
     },
     {
+      "id": "cf7f4bde-27d6-4108-b135-566b7ec9caa8",
+      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
+      "parent_id": "d959d147-c2ab-4982-a59b-f0453157cbd7",
+      "type": "requirement",
+      "ref": "REQ-51",
+      "title": "Copy, paste and duplicate artifacts",
+      "body": "The artifact context menu shall offer copy, paste before, paste after and duplicate alongside its create actions. Copying shall take an artifact's content \u2014 type, title, body and attributes \u2014 and not its identity, its links or its figures, so that a copy never asserts traceability nobody created. Pasting shall place the copy as a sibling of the artifact acted on, immediately before or after it, and duplicating shall place a copy of that artifact directly after it. A pasted artifact shall be titled so a reader can tell it from its original. Paste shall be offered but unusable until something has been copied.",
+      "sort_order": 233,
+      "status": "draft",
+      "attributes": {
+        "links_snapshot": [
+          {
+            "attributes": null,
+            "created_at": "2026-09-03T10:53:33.027673Z",
+            "from_id": "cf7f4bde-27d6-4108-b135-566b7ec9caa8",
+            "id": "d842c68b-8c5b-4d44-862d-75bcea151a50",
+            "suspect": false,
+            "to_id": "a97f2988-992f-41a5-9431-b85104712dfe",
+            "type": "derives-from",
+            "updated_at": "2026-09-03T10:53:33.027673Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          }
+        ],
+        "priority": "should",
+        "status": "draft",
+        "verification_method": "demonstration"
+      },
+      "version": 2,
+      "valid_from": "2026-09-03T10:53:33.042071Z",
+      "valid_to": null,
+      "created_at": "2026-09-03T10:53:31.81789Z",
+      "updated_at": "2026-09-03T10:53:33.042071Z"
+    },
+    {
       "id": "56502167-fb38-49f7-8d01-9d4483e243c0",
       "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
       "parent_id": "d959d147-c2ab-4982-a59b-f0453157cbd7",
@@ -5321,6 +5417,28 @@
       "valid_to": null,
       "created_at": "2026-09-02T21:40:50.340128Z",
       "updated_at": "2026-09-03T05:37:14.012424Z"
+    },
+    {
+      "id": "7a15c0fd-8201-444d-a0e0-2b909c25e5e2",
+      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
+      "parent_id": "d959d147-c2ab-4982-a59b-f0453157cbd7",
+      "type": "requirement",
+      "ref": "REQ-52",
+      "title": "Referencing figures and linked artifacts in descriptions",
+      "body": "An artifact's description shall let its author cite a figure or another artifact by typing a hash, which shall offer that artifact's own figures and the artifacts it is already linked to, filtered by what is typed, and shall insert the chosen reference into the text.\n\nThe offer shall be confined to what the artifact is already connected to, so that a description cannot cite an artifact with no traceability link behind it. A hash inside a word shall not open the offer, so that ordinary text such as a URL fragment is left alone.",
+      "sort_order": 234,
+      "status": "draft",
+      "attributes": {
+        "priority": "should",
+        "status": "draft",
+        "verification_method": "test",
+        "verification_status": "verified"
+      },
+      "version": 4,
+      "valid_from": "2026-09-03T10:53:33.984898Z",
+      "valid_to": null,
+      "created_at": "2026-09-03T10:53:32.140396Z",
+      "updated_at": "2026-09-03T10:53:33.984898Z"
     },
     {
       "id": "37808fde-6afd-40d3-b889-0a795e3c38cc",
@@ -5536,6 +5654,45 @@
     }
   ],
   "links": [
+    {
+      "id": "e729c0a3-c262-4330-a0b2-f6e34b488068",
+      "from_id": "f56ca2ee-5418-4d20-96e3-09628945aa16",
+      "to_id": "7a15c0fd-8201-444d-a0e0-2b909c25e5e2",
+      "type": "verifies",
+      "suspect": false,
+      "attributes": null,
+      "version": 1,
+      "valid_from": "0001-01-01T00:00:00Z",
+      "valid_to": null,
+      "created_at": "2026-09-03T10:53:33.641211Z",
+      "updated_at": "2026-09-03T10:53:33.641211Z"
+    },
+    {
+      "id": "e35fe60e-03ee-49bd-aefc-418974910fd9",
+      "from_id": "7a15c0fd-8201-444d-a0e0-2b909c25e5e2",
+      "to_id": "12cff868-2282-41cd-82a9-b8bfe708d9a6",
+      "type": "derives-from",
+      "suspect": false,
+      "attributes": null,
+      "version": 1,
+      "valid_from": "0001-01-01T00:00:00Z",
+      "valid_to": null,
+      "created_at": "2026-09-03T10:53:33.327418Z",
+      "updated_at": "2026-09-03T10:53:33.327418Z"
+    },
+    {
+      "id": "d842c68b-8c5b-4d44-862d-75bcea151a50",
+      "from_id": "cf7f4bde-27d6-4108-b135-566b7ec9caa8",
+      "to_id": "a97f2988-992f-41a5-9431-b85104712dfe",
+      "type": "derives-from",
+      "suspect": false,
+      "attributes": null,
+      "version": 1,
+      "valid_from": "0001-01-01T00:00:00Z",
+      "valid_to": null,
+      "created_at": "2026-09-03T10:53:33.027673Z",
+      "updated_at": "2026-09-03T10:53:33.027673Z"
+    },
     {
       "id": "c7601fa3-9ad1-46a7-897b-4df5e34e6bb7",
       "from_id": "344ba31f-504a-4b7f-bc52-0a83ce0e7eb9",
