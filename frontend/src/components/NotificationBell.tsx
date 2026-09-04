@@ -178,8 +178,12 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ variant = 'l
         <div
           style={{
             position: 'absolute',
-            top: 'calc(100% + 6px)',
-            ...(dark ? { left: 0 } : { right: 0 }),
+            // The dark bell sits in the sidebar footer, at the bottom of the
+            // window: a panel dropping down from it would be off-screen, so
+            // it opens upward the way the user menu beside it does.
+            ...(dark
+              ? { bottom: 'calc(100% + 6px)', left: 0 }
+              : { top: 'calc(100% + 6px)', right: 0 }),
             width: 320,
             maxHeight: 420,
             overflowY: 'auto',

@@ -223,11 +223,8 @@ export const ProjectLayout: React.FC = () => {
           >
             {project?.name || '…'}
           </div>
-          <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <GlobalSearch />
-            </div>
-            <NotificationBell variant="dark" />
+          <div style={{ marginTop: 8 }}>
+            <GlobalSearch />
           </div>
         </div>
         {/* minHeight: 0 is what lets this shrink below its content in the
@@ -319,7 +316,14 @@ export const ProjectLayout: React.FC = () => {
           </a>
         </nav>
         <div style={{ borderTop: '1px solid var(--sidebar-border)', padding: 12, flexShrink: 0 }}>
-          <UserMenu variant="dark" />
+          {/* The bell lives with the account controls: both are about the
+              person using OpenV rather than the project they are in. */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <UserMenu variant="dark" />
+            </div>
+            <NotificationBell variant="dark" />
+          </div>
           <button
             onClick={() => {
               const next = nextPanelMode(navMode);
