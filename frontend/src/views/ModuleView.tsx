@@ -1069,9 +1069,14 @@ export const ModuleView: React.FC = () => {
   };
 
   return (
-    <>
+    // The module owns exactly the height it is given and no more: the toolbar
+    // takes what it needs (two rows when the window is narrow) and the columns
+    // below take the rest. Nothing here is measured in viewport units, so the
+    // page never grows past the window and the browser never adds a scrollbar
+    // around the whole app — every panel that needs to scroll scrolls itself.
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       {/* The floating help panel is mounted once in ProjectLayout now. */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '16px 20px 12px', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '16px 20px 12px', flexWrap: 'wrap', flexShrink: 0 }}>
         <h2 style={{ color: 'var(--text)', margin: 0 }}>Requirements</h2>
         <div style={{ flex: 1 }} />
         <select
@@ -1206,7 +1211,7 @@ export const ModuleView: React.FC = () => {
           Report (DOCX)
         </button>
       </div>
-      <div style={{ display: 'flex', gap: '0', paddingLeft: '20px', paddingRight: '20px', height: 'calc(100vh - 72px)', overflow: 'hidden' }}>
+      <div style={{ display: 'flex', gap: '0', paddingLeft: '20px', paddingRight: '20px', paddingBottom: '10px', flex: 1, minHeight: 0, overflow: 'hidden' }}>
       {/* The column scrolls nothing itself: the artifact tree inside it owns
           the leftover height and scrolls there, so the tree grows with the
           window instead of sitting in a fixed-height box. */}
@@ -1775,7 +1780,7 @@ export const ModuleView: React.FC = () => {
           onClose={() => setFigureInView(null)}
         />
       )}
-    </>
+    </div>
   );
 };
 

@@ -11,6 +11,15 @@ import {
   panelTakesSpace,
   savePanelMode,
 } from './panelMode';
+import {
+  NavSectionState,
+  activeNavPath,
+  loadNavSections,
+  navSectionIsOpen,
+  saveNavSections,
+  sectionHasActive,
+  toggleNavSection,
+} from './navSections';
 import { useAppStore } from '../state/store';
 import { GlobalSearch } from './GlobalSearch';
 import { HelpSidebar } from './HelpSidebar';
@@ -88,6 +97,8 @@ export const ProjectLayout: React.FC = () => {
   // hidden. Remembered per person so the choice survives a reload.
   const [navMode, setNavMode] = useState<PanelMode>(() => loadPanelMode('project-nav'));
   const [navHovered, setNavHovered] = useState(false);
+  // Which menu groups are expanded. They start collapsed — see navSections.ts.
+  const [navOpenSections, setNavOpenSections] = useState<NavSectionState>(() => loadNavSections());
 
   useEffect(() => {
     if (!projectId) return;
@@ -132,6 +143,7 @@ export const ProjectLayout: React.FC = () => {
     }
   }, [project, orgs, activeOrgId, setActiveOrgId]);
 
+  const activePath = activeNavPath(location.pathname, projectId || '');
   const open = panelIsOpen(navMode, navHovered);
   const takesSpace = panelTakesSpace(navMode);
 
@@ -178,7 +190,7 @@ export const ProjectLayout: React.FC = () => {
             : { position: 'fixed', left: 10, top: 0, bottom: 0, zIndex: 900, boxShadow: '2px 0 8px rgba(0,0,0,0.25)' }),
         }}
       >
-        <div style={{ padding: '16px 14px', borderBottom: '1px solid var(--sidebar-border)' }}>
+        <div style={{ padding: '16px 14px', borderBottom: '1px solid var(--sidebar-border)', flexShrink: 0 }}>
           <OrgSwitcher variant="dark" />
           {/* Explicit way back to the workspace's project list — the project
               name alone read as a label, not a link. */}
@@ -218,44 +230,75 @@ export const ProjectLayout: React.FC = () => {
             <NotificationBell variant="dark" />
           </div>
         </div>
-        <nav style={{ flex: 1, overflowY: 'auto', padding: '8px 0' }}>
-          {navSections.map((section, i) => (
-            <div key={section.label || `section-${i}`} style={{ marginTop: i === 0 ? 0 : 10 }}>
-              {section.label && (
-                <div
-                  style={{
-                    padding: '4px 16px',
-                    fontSize: 10,
-                    fontWeight: 700,
-                    letterSpacing: 1,
-                    textTransform: 'uppercase',
-                    color: 'var(--sidebar-text-faint)',
-                  }}
-                >
-                  {section.label}
-                </div>
-              )}
-              {section.items
-                .filter((item) => item.to !== 'guided' || !hasGuidedSession)
-                .map((item) => (
-                <NavLink
-                  key={item.to}
-                  to={item.to}
-                  end={item.end}
-                  style={({ isActive }) => ({
-                    display: 'block',
-                    padding: '9px 16px',
-                    color: isActive ? 'var(--accent-fg)' : 'var(--sidebar-text-dim)',
-                    background: isActive ? 'var(--accent)' : 'transparent',
-                    textDecoration: 'none',
-                    fontSize: 14,
-                  })}
-                >
-                  {item.label}
-                </NavLink>
-              ))}
-            </div>
-          ))}
+        {/* minHeight: 0 is what lets this shrink below its content in the
+            column, so a menu taller than the window scrolls here instead of
+            pushing the account controls off the bottom. */}
+        <nav style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '8px 0' }}>
+          {navSections.map((section, i) => {
+            const items = section.items.filter(
+              (item) => item.to !== 'guided' || !hasGuidedSession
+            );
+            // An unlabelled group has no header to click, so it never collapses.
+            const label = section.label;
+            const expanded = label
+              ? navSectionIsOpen(navOpenSections, label, sectionHasActive(items, activePath))
+              : true;
+            return (
+              <div key={label || `section-${i}`} style={{ marginTop: i === 0 ? 0 : 10 }}>
+                {label && (
+                  <button
+                    type="button"
+                    aria-expanded={expanded}
+                    onClick={() => {
+                      const next = toggleNavSection(navOpenSections, label, expanded);
+                      setNavOpenSections(next);
+                      saveNavSections(next);
+                    }}
+                    title={`${expanded ? 'Collapse' : 'Expand'} ${label}`}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      width: '100%',
+                      padding: '6px 16px',
+                      background: 'none',
+                      border: 'none',
+                      textAlign: 'left',
+                      fontSize: 10,
+                      fontWeight: 700,
+                      letterSpacing: 1,
+                      textTransform: 'uppercase',
+                      color: 'var(--sidebar-text-faint)',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <span aria-hidden style={{ fontSize: 8, width: 8 }}>
+                      {expanded ? '▾' : '▸'}
+                    </span>
+                    {label}
+                  </button>
+                )}
+                {expanded &&
+                  items.map((item) => (
+                    <NavLink
+                      key={item.to}
+                      to={item.to}
+                      end={item.end}
+                      style={({ isActive }) => ({
+                        display: 'block',
+                        padding: '9px 16px',
+                        color: isActive ? 'var(--accent-fg)' : 'var(--sidebar-text-dim)',
+                        background: isActive ? 'var(--accent)' : 'transparent',
+                        textDecoration: 'none',
+                        fontSize: 14,
+                      })}
+                    >
+                      {item.label}
+                    </NavLink>
+                  ))}
+              </div>
+            );
+          })}
           <div style={{ borderTop: '1px solid var(--sidebar-border)', margin: '8px 0' }} />
           {/* Plain anchor (not NavLink): the manual opens in a new tab so it
               doesn't navigate the user away from their work (issue #162). */}
@@ -275,7 +318,7 @@ export const ProjectLayout: React.FC = () => {
             Help
           </a>
         </nav>
-        <div style={{ borderTop: '1px solid var(--sidebar-border)', padding: 12 }}>
+        <div style={{ borderTop: '1px solid var(--sidebar-border)', padding: 12, flexShrink: 0 }}>
           <UserMenu variant="dark" />
           <button
             onClick={() => {
@@ -303,7 +346,7 @@ export const ProjectLayout: React.FC = () => {
           </button>
         </div>
       </aside>
-      <main style={{ flex: 1, overflow: 'auto', background: 'var(--bg-app)' }}>
+      <main style={{ flex: 1, minWidth: 0, minHeight: 0, overflow: 'auto', background: 'var(--bg-app)' }}>
         <Outlet />
       </main>
       {/* Floating context-aware help — mounted once here so the ? button is
