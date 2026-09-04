@@ -63,10 +63,32 @@ export async function createProject(page: Page, name: string): Promise<string> {
   return page.url().split('/').pop()!;
 }
 
+/**
+ * Expand a group in the project menu, if it is not already open.
+ *
+ * The menu's groups collapse and start collapsed, so a destination inside one
+ * is not on the page until its heading is opened. The heading reports its own
+ * state, so this is idempotent — the group holding the current page opens
+ * itself, and clicking it again would close it.
+ */
+export async function openMenuGroup(page: Page, group: string): Promise<void> {
+  const heading = page.locator('nav').getByRole('button', { name: group, exact: true });
+  await expect(heading).toBeVisible();
+  if ((await heading.getAttribute('aria-expanded')) !== 'true') {
+    await heading.click();
+  }
+}
+
+/** Navigate to a project module through the menu, opening its group first. */
+export async function openModule(page: Page, group: string, label: string): Promise<void> {
+  await openMenuGroup(page, group);
+  await page.getByRole('link', { name: label, exact: true }).click();
+}
+
 /** Open the Requirements module from the project shell. */
 export async function openRequirements(page: Page): Promise<void> {
   // exact: the overview page also renders "View in Requirements →" links.
-  await page.getByRole('link', { name: 'Requirements', exact: true }).click();
+  await openModule(page, 'Define', 'Requirements');
   await expect(page.getByRole('heading', { name: 'Requirements' })).toBeVisible();
 }
 

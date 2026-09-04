@@ -1,5 +1,5 @@
 {
-  "exported_at": "2026-09-03T16:06:04.443732422Z",
+  "exported_at": "2026-09-04T07:23:14.482095373Z",
   "version": "1.0",
   "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
   "project_name": "OpenV Platform",
@@ -4425,6 +4425,40 @@
       "updated_at": "2026-09-03T16:06:02.218989Z"
     },
     {
+      "id": "04e6798a-0977-446c-8fd8-646a8b70d4ba",
+      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
+      "parent_id": "8c8b86be-4730-49cb-9d95-93868a0c1938",
+      "type": "test-case",
+      "ref": "TC-26",
+      "title": "Project menu group expansion suite",
+      "body": "Client suite over the helpers that decide which menu groups are open: an unchosen group is collapsed, the group holding the current page opens itself, an explicit choice beats both defaults, and one click closes a group that opened itself. The route helper reads the module out of a project path (including a deep path and the overview) and reports nothing outside the project. Stored choices round-trip through browser storage, and stored junk \u2014 unparseable text, an array, a non-boolean value \u2014 falls back to the default rather than breaking the menu.",
+      "sort_order": 201,
+      "status": "draft",
+      "attributes": {
+        "links_snapshot": [
+          {
+            "attributes": null,
+            "created_at": "2026-09-04T07:22:36.41421Z",
+            "from_id": "04e6798a-0977-446c-8fd8-646a8b70d4ba",
+            "id": "6a710f83-df2f-48e4-a3c8-13bf2cb573b0",
+            "suspect": false,
+            "to_id": "aa43b05c-bdd3-4f87-93a2-7eb23cafc676",
+            "type": "verifies",
+            "updated_at": "2026-09-04T07:22:36.41421Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          }
+        ],
+        "status": "draft"
+      },
+      "version": 2,
+      "valid_from": "2026-09-04T07:22:36.424227Z",
+      "valid_to": null,
+      "created_at": "2026-09-04T07:22:31.519724Z",
+      "updated_at": "2026-09-04T07:22:36.424227Z"
+    },
+    {
       "id": "7973f87c-ab01-4383-a9af-130a433a04ed",
       "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
       "parent_id": "a25960b2-ee9b-4005-a2d1-d5e875c9e158",
@@ -5556,7 +5590,7 @@
       "type": "requirement",
       "ref": "REQ-53",
       "title": "Panels that yield their space",
-      "body": "The project navigation and the artifact notes panel shall each offer three states \u2014 pinned, auto-hidden and hidden \u2014 chosen independently and remembered per person across sessions. A pinned panel shall take its width from the page; an auto-hidden panel shall present an edge affordance that opens it over the document on hover, without reflowing the document; a hidden panel shall leave that affordance and nothing else, so that a reader can always bring it back. The artifact tree shall occupy the height available to it rather than a fixed height.",
+      "body": "The project navigation and the artifact notes panel shall each offer three states: pinned, auto-hidden and hidden. The reader shall choose each panel's state independently, and the system shall remember that choice per person across sessions. A pinned panel shall take its width from the page. An auto-hidden panel shall present an edge affordance that opens the panel over the document on hover, and shall leave the document's layout unchanged. A hidden panel shall leave that affordance and nothing else, so that the reader can always bring the panel back.\n\nThe requirements workspace shall fit the height of the browser window at every window size, so that the window itself never scrolls. The artifact tree, the artifact document, the notes panel and the project navigation shall each scroll within their own bounds. The toolbar shall wrap to further rows without displacing the regions below it.",
       "sort_order": 235,
       "status": "draft",
       "attributes": {
@@ -5564,11 +5598,11 @@
         "status": "draft",
         "verification_method": "demonstration"
       },
-      "version": 1,
-      "valid_from": "2026-09-03T15:06:14.432725Z",
+      "version": 3,
+      "valid_from": "2026-09-04T07:22:13.995483Z",
       "valid_to": null,
       "created_at": "2026-09-03T15:06:14.432725Z",
-      "updated_at": "2026-09-03T15:06:14.432725Z"
+      "updated_at": "2026-09-04T07:22:13.995483Z"
     },
     {
       "id": "6fcb4db8-6441-436a-a308-8fd72c219ea6",
@@ -5704,6 +5738,42 @@
       "updated_at": "2026-09-03T08:55:01.759857Z"
     },
     {
+      "id": "aa43b05c-bdd3-4f87-93a2-7eb23cafc676",
+      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
+      "parent_id": "d959d147-c2ab-4982-a59b-f0453157cbd7",
+      "type": "requirement",
+      "ref": "REQ-55",
+      "title": "Collapsible project menu groups",
+      "body": "The project navigation shall group its destinations under headings. The navigation shall collapse every group by default, so that each group occupies one line until the reader opens it. The navigation shall expand or collapse a group when the reader selects its heading. The system shall remember each choice per person across sessions. The navigation shall expand the group holding the reader's current page until the reader collapses that group.",
+      "sort_order": 285,
+      "status": "draft",
+      "attributes": {
+        "links_snapshot": [
+          {
+            "attributes": null,
+            "created_at": "2026-09-04T07:22:36.41421Z",
+            "from_id": "04e6798a-0977-446c-8fd8-646a8b70d4ba",
+            "id": "6a710f83-df2f-48e4-a3c8-13bf2cb573b0",
+            "suspect": false,
+            "to_id": "aa43b05c-bdd3-4f87-93a2-7eb23cafc676",
+            "type": "verifies",
+            "updated_at": "2026-09-04T07:22:36.41421Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          }
+        ],
+        "priority": "should",
+        "status": "draft",
+        "verification_method": "test"
+      },
+      "version": 3,
+      "valid_from": "2026-09-04T07:22:36.434817Z",
+      "valid_to": null,
+      "created_at": "2026-09-04T07:21:36.332511Z",
+      "updated_at": "2026-09-04T07:22:36.434817Z"
+    },
+    {
       "id": "a25960b2-ee9b-4005-a2d1-d5e875c9e158",
       "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
       "parent_id": "e2c7d247-ec5d-4e11-bd8d-bb7533373251",
@@ -5743,6 +5813,19 @@
     }
   ],
   "links": [
+    {
+      "id": "6a710f83-df2f-48e4-a3c8-13bf2cb573b0",
+      "from_id": "04e6798a-0977-446c-8fd8-646a8b70d4ba",
+      "to_id": "aa43b05c-bdd3-4f87-93a2-7eb23cafc676",
+      "type": "verifies",
+      "suspect": false,
+      "attributes": null,
+      "version": 1,
+      "valid_from": "0001-01-01T00:00:00Z",
+      "valid_to": null,
+      "created_at": "2026-09-04T07:22:36.41421Z",
+      "updated_at": "2026-09-04T07:22:36.41421Z"
+    },
     {
       "id": "62a983a2-0330-4a8f-b03e-a5a96f1c651a",
       "from_id": "38c2a818-bd1b-4bd9-a0ac-8f525ce9823b",

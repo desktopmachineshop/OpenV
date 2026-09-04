@@ -80,6 +80,17 @@ Each choice is remembered per person and per panel. The artifact tree fills the
 height of its column, so a taller window shows more of the document rather
 than more empty space.
 
+The menu's groups — Define, Verify, Plan, Agents — start collapsed, so the menu
+is a handful of lines instead of a full column of links. Click a group heading
+to open or close it; the group holding the page you are on opens by itself
+until you close it, and your choices are remembered. A menu longer than the
+window scrolls on its own.
+
+Nothing on the page is sized to the browser window, so the window itself never
+scrolls: the tree, the document, and the Notes panel each scroll inside their
+own column, and the toolbar takes a second row on a narrow window without
+pushing anything off the bottom.
+
 ## Search & filters
 
 The search box matches title, body, type, IDs and attributes. The ⚙ button
