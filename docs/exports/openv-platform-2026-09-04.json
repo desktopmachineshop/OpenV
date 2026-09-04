@@ -1,5 +1,5 @@
 {
-  "exported_at": "2026-09-04T10:25:31.010990679Z",
+  "exported_at": "2026-09-04T21:24:52.126570664Z",
   "version": "1.0",
   "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
   "project_name": "OpenV Platform",
@@ -760,6 +760,45 @@
         "links_snapshot": [
           {
             "attributes": null,
+            "created_at": "2026-09-04T21:23:39.48264Z",
+            "from_id": "4ee51bb8-5f5b-4b49-9e50-272b3db42c28",
+            "id": "8d0f5117-bd7e-4fba-8125-f5f1d8f1d1b1",
+            "suspect": false,
+            "to_id": "155beaf0-28d4-4993-9a71-4af1381c1793",
+            "type": "validates",
+            "updated_at": "2026-09-04T21:23:39.48264Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
+            "created_at": "2026-09-04T21:23:10.398034Z",
+            "from_id": "c910d39b-9011-4825-9f5a-66181c35669e",
+            "id": "9922b622-3589-4d8a-8d44-d3366ce69ee9",
+            "suspect": false,
+            "to_id": "155beaf0-28d4-4993-9a71-4af1381c1793",
+            "type": "derives-from",
+            "updated_at": "2026-09-04T21:23:10.398034Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
+            "created_at": "2026-09-04T21:23:09.122396Z",
+            "from_id": "d6567e11-4298-4335-b421-a55bc373a89f",
+            "id": "91f588a2-51b5-415b-afa6-ea22ef566f2c",
+            "suspect": false,
+            "to_id": "155beaf0-28d4-4993-9a71-4af1381c1793",
+            "type": "derives-from",
+            "updated_at": "2026-09-04T21:23:09.122396Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
             "created_at": "2026-09-02T20:46:44.043189Z",
             "from_id": "511b532f-cec9-45d9-b111-2f8c957f73f7",
             "id": "3a9b1d47-372d-4af6-9333-075df8b5e592",
@@ -813,11 +852,11 @@
         ],
         "status": "draft"
       },
-      "version": 5,
-      "valid_from": "2026-09-02T20:46:44.059913Z",
+      "version": 8,
+      "valid_from": "2026-09-04T21:23:39.497931Z",
       "valid_to": null,
       "created_at": "2026-08-30T19:54:05.290874Z",
-      "updated_at": "2026-09-02T20:46:44.059913Z"
+      "updated_at": "2026-09-04T21:23:39.497931Z"
     },
     {
       "id": "9cce6ebf-35ca-4761-a2f9-c10d7b851972",
@@ -1302,6 +1341,45 @@
         "links_snapshot": [
           {
             "attributes": null,
+            "created_at": "2026-09-04T21:23:18.192789Z",
+            "from_id": "52a92be9-0c63-421a-8343-416cc2b78c9b",
+            "id": "9626d64c-7796-4b90-92e6-1656e7131639",
+            "suspect": false,
+            "to_id": "0627a2b0-889e-488b-b053-d78992d97a93",
+            "type": "derives-from",
+            "updated_at": "2026-09-04T21:23:18.192789Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
+            "created_at": "2026-09-04T21:23:13.81837Z",
+            "from_id": "b5b40e4a-79ca-4185-bf00-0f8ea0ce1885",
+            "id": "78b9f1c0-e6a2-4b6e-9238-3061618b9514",
+            "suspect": false,
+            "to_id": "0627a2b0-889e-488b-b053-d78992d97a93",
+            "type": "derives-from",
+            "updated_at": "2026-09-04T21:23:13.81837Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
+            "created_at": "2026-09-04T21:23:12.355628Z",
+            "from_id": "838ee128-69f7-4b2f-8cab-784108b2ed4a",
+            "id": "2d8cd979-03e4-408f-85e1-f1e281b17f79",
+            "suspect": false,
+            "to_id": "0627a2b0-889e-488b-b053-d78992d97a93",
+            "type": "derives-from",
+            "updated_at": "2026-09-04T21:23:12.355628Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
             "created_at": "2026-08-30T19:54:46.00631Z",
             "from_id": "61a04cf8-afc5-4bd3-89db-e7822d2667c5",
             "id": "c3e6664d-dea2-4f84-874a-9c526b683f39",
@@ -1321,7 +1399,7 @@
             "suspect": false,
             "to_id": "0627a2b0-889e-488b-b053-d78992d97a93",
             "type": "derives-from",
-            "updated_at": "2026-08-30T19:54:35.462382Z",
+            "updated_at": "2026-09-03T05:17:23.309489Z",
             "valid_from": "0001-01-01T00:00:00Z",
             "valid_to": null,
             "version": 1
@@ -1334,7 +1412,7 @@
             "suspect": false,
             "to_id": "0627a2b0-889e-488b-b053-d78992d97a93",
             "type": "derives-from",
-            "updated_at": "2026-08-30T19:54:35.16615Z",
+            "updated_at": "2026-09-03T05:17:23.294587Z",
             "valid_from": "0001-01-01T00:00:00Z",
             "valid_to": null,
             "version": 1
@@ -1355,11 +1433,11 @@
         ],
         "status": "draft"
       },
-      "version": 5,
-      "valid_from": "2026-08-30T19:54:46.020731Z",
+      "version": 8,
+      "valid_from": "2026-09-04T21:23:18.208597Z",
       "valid_to": null,
       "created_at": "2026-08-30T19:54:07.103422Z",
-      "updated_at": "2026-08-30T19:54:46.020731Z"
+      "updated_at": "2026-09-04T21:23:18.208597Z"
     },
     {
       "id": "006182cf-b68d-488e-bea9-a7f7a35f23ea",
@@ -1795,6 +1873,117 @@
       "valid_to": null,
       "created_at": "2026-09-02T20:29:11.294312Z",
       "updated_at": "2026-09-03T05:36:18.152873Z"
+    },
+    {
+      "id": "b5b40e4a-79ca-4185-bf00-0f8ea0ce1885",
+      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
+      "parent_id": "379f0d9a-5464-4e29-8b36-7d2bc3c9e5aa",
+      "type": "requirement",
+      "ref": "REQ-60",
+      "title": "Leased runner state erasure",
+      "body": "The system shall revoke a lease's credential when the lease ends. The leased runner shall erase that lease's vendor CLI credentials and working files before the runner serves another member.",
+      "sort_order": 51,
+      "status": "draft",
+      "attributes": {
+        "links_snapshot": [
+          {
+            "attributes": null,
+            "created_at": "2026-09-04T21:23:32.035658Z",
+            "from_id": "932ee53b-a2d3-4c85-a65c-c049377c7a92",
+            "id": "9817574e-d2b5-4750-8ff9-c42e6614f395",
+            "suspect": false,
+            "to_id": "b5b40e4a-79ca-4185-bf00-0f8ea0ce1885",
+            "type": "verifies",
+            "updated_at": "2026-09-04T21:23:32.035658Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
+            "created_at": "2026-09-04T21:23:13.81837Z",
+            "from_id": "b5b40e4a-79ca-4185-bf00-0f8ea0ce1885",
+            "id": "78b9f1c0-e6a2-4b6e-9238-3061618b9514",
+            "suspect": false,
+            "to_id": "0627a2b0-889e-488b-b053-d78992d97a93",
+            "type": "derives-from",
+            "updated_at": "2026-09-04T21:23:13.81837Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          }
+        ],
+        "priority": "must",
+        "status": "draft",
+        "verification_method": "test"
+      },
+      "version": 4,
+      "valid_from": "2026-09-04T21:24:42.832021Z",
+      "valid_to": null,
+      "created_at": "2026-09-04T21:22:34.193363Z",
+      "updated_at": "2026-09-04T21:24:42.832021Z"
+    },
+    {
+      "id": "52a92be9-0c63-421a-8343-416cc2b78c9b",
+      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
+      "parent_id": "379f0d9a-5464-4e29-8b36-7d2bc3c9e5aa",
+      "type": "requirement",
+      "ref": "REQ-61",
+      "title": "Runner pool credential scope",
+      "body": "The system shall restrict a runner pool node's own credential to the pool registration, heartbeat and release endpoints. The system shall grant a pool node access to a workspace's data only through the credential of a lease held by a member of that workspace.",
+      "sort_order": 52,
+      "status": "draft",
+      "attributes": {
+        "links_snapshot": [
+          {
+            "attributes": null,
+            "created_at": "2026-09-04T21:23:36.281836Z",
+            "from_id": "932ee53b-a2d3-4c85-a65c-c049377c7a92",
+            "id": "4f6757b2-961f-49f5-b723-06e4560bd7d4",
+            "suspect": false,
+            "to_id": "52a92be9-0c63-421a-8343-416cc2b78c9b",
+            "type": "verifies",
+            "updated_at": "2026-09-04T21:23:36.281836Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
+            "created_at": "2026-09-04T21:23:22.6865Z",
+            "from_id": "af3fba09-5d87-4c7c-b544-4308c1f25431",
+            "id": "68fcc687-b500-419b-a3c5-48ea79b278cf",
+            "suspect": false,
+            "to_id": "52a92be9-0c63-421a-8343-416cc2b78c9b",
+            "type": "satisfies",
+            "updated_at": "2026-09-04T21:23:22.6865Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
+            "created_at": "2026-09-04T21:23:18.192789Z",
+            "from_id": "52a92be9-0c63-421a-8343-416cc2b78c9b",
+            "id": "9626d64c-7796-4b90-92e6-1656e7131639",
+            "suspect": false,
+            "to_id": "0627a2b0-889e-488b-b053-d78992d97a93",
+            "type": "derives-from",
+            "updated_at": "2026-09-04T21:23:18.192789Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          }
+        ],
+        "priority": "must",
+        "status": "draft",
+        "verification_method": "test"
+      },
+      "version": 5,
+      "valid_from": "2026-09-04T21:24:44.049831Z",
+      "valid_to": null,
+      "created_at": "2026-09-04T21:22:38.513432Z",
+      "updated_at": "2026-09-04T21:24:44.049831Z"
     },
     {
       "id": "33b75afa-933d-46f1-9725-013a1b17f0b1",
@@ -2349,6 +2538,100 @@
       "updated_at": "2026-09-02T21:58:16.616156Z"
     },
     {
+      "id": "af3fba09-5d87-4c7c-b544-4308c1f25431",
+      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
+      "parent_id": "396be93c-4a9c-422d-83ea-567e1ef617db",
+      "type": "design-item",
+      "ref": "DES-15",
+      "title": "Runner pool and lease protocol",
+      "body": "Pre-warmed agentd processes register against a deployment-wide pool key and heartbeat; a lease atomically reserves one idle node (SELECT ... FOR UPDATE SKIP LOCKED) and mints a session-scoped personal runner key handed to the node once, on the heartbeat that picks the lease up. A server-side sweep ends lapsed leases (hard expiry, idle window, lost node) and revokes their keys. Needs no Docker daemon at the API, so it runs on platforms that offer replicas but no docker socket.",
+      "sort_order": 647,
+      "status": "draft",
+      "attributes": {
+        "links_snapshot": [
+          {
+            "attributes": null,
+            "created_at": "2026-09-04T21:23:22.6865Z",
+            "from_id": "af3fba09-5d87-4c7c-b544-4308c1f25431",
+            "id": "68fcc687-b500-419b-a3c5-48ea79b278cf",
+            "suspect": false,
+            "to_id": "52a92be9-0c63-421a-8343-416cc2b78c9b",
+            "type": "satisfies",
+            "updated_at": "2026-09-04T21:23:22.6865Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
+            "created_at": "2026-09-04T21:23:21.425043Z",
+            "from_id": "af3fba09-5d87-4c7c-b544-4308c1f25431",
+            "id": "2fb86b92-cb03-4de5-9615-7ad2b21df7ee",
+            "suspect": false,
+            "to_id": "838ee128-69f7-4b2f-8cab-784108b2ed4a",
+            "type": "satisfies",
+            "updated_at": "2026-09-04T21:23:21.425043Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
+            "created_at": "2026-09-04T21:23:20.155076Z",
+            "from_id": "af3fba09-5d87-4c7c-b544-4308c1f25431",
+            "id": "4167fba3-1eec-4f42-aa22-d6eeaf5fbb08",
+            "suspect": false,
+            "to_id": "d6567e11-4298-4335-b421-a55bc373a89f",
+            "type": "satisfies",
+            "updated_at": "2026-09-04T21:23:20.155076Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          }
+        ],
+        "status": "draft"
+      },
+      "version": 4,
+      "valid_from": "2026-09-04T21:23:22.702661Z",
+      "valid_to": null,
+      "created_at": "2026-09-04T21:22:41.249709Z",
+      "updated_at": "2026-09-04T21:23:22.702661Z"
+    },
+    {
+      "id": "31752bd4-2afd-4692-8dcb-ebba92ec77a2",
+      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
+      "parent_id": "396be93c-4a9c-422d-83ea-567e1ef617db",
+      "type": "design-item",
+      "ref": "DES-16",
+      "title": "Headless CLI sign-in relay",
+      "body": "A leased runner has no console and no browser, so each vendor flow is relayed through the existing login broker: TUI sign-ins (claude setup-token) run over a pseudo-terminal with a wide window so the URL does not soft-wrap, and the pasted code is typed back into it; loopback sign-ins (codex) have their redirect pasted back and replayed against the CLI's own advertised local port, using only the pasted path and query so another host cannot be reached.",
+      "sort_order": 648,
+      "status": "draft",
+      "attributes": {
+        "links_snapshot": [
+          {
+            "attributes": null,
+            "created_at": "2026-09-04T21:23:27.867362Z",
+            "from_id": "31752bd4-2afd-4692-8dcb-ebba92ec77a2",
+            "id": "6dfbbe31-d31a-4af6-a020-c948bf44b6a2",
+            "suspect": false,
+            "to_id": "c910d39b-9011-4825-9f5a-66181c35669e",
+            "type": "satisfies",
+            "updated_at": "2026-09-04T21:23:27.867362Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          }
+        ],
+        "status": "draft"
+      },
+      "version": 2,
+      "valid_from": "2026-09-04T21:23:27.878929Z",
+      "valid_to": null,
+      "created_at": "2026-09-04T21:22:44.404167Z",
+      "updated_at": "2026-09-04T21:23:27.878929Z"
+    },
+    {
       "id": "1f261541-3d4d-4e0a-b05c-6b15eea0b0bf",
       "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
       "parent_id": "498b4ebe-00c2-4f27-890c-c96fd627d22f",
@@ -2571,15 +2854,63 @@
       "updated_at": "2026-09-03T05:36:18.47471Z"
     },
     {
+      "id": "932ee53b-a2d3-4c85-a65c-c049377c7a92",
+      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
+      "parent_id": "498b4ebe-00c2-4f27-890c-c96fd627d22f",
+      "type": "test-case",
+      "ref": "TC-29",
+      "title": "Lease teardown and credential scope suite",
+      "body": "Ending a lease revokes its credential and sends the node to draining before it is released; a stale release from a finished lease cannot free a node that has since been leased again; a session key never displaces the member's own connector key while still counting as their runner for routing. The pool key authenticates a pool node and carries no workspace, user or worker identity, and a wrong key is rejected; the pool endpoints refuse a member session and a workspace worker key. End to end against a live API and pool node: after the lease ends the node's per-lease home is removed, the key is revoked, and a second lease on the same node reports the vendor CLI as installed but signed out.",
+      "sort_order": 51,
+      "status": "draft",
+      "attributes": {
+        "execution_method": "automated",
+        "links_snapshot": [
+          {
+            "attributes": null,
+            "created_at": "2026-09-04T21:23:36.281836Z",
+            "from_id": "932ee53b-a2d3-4c85-a65c-c049377c7a92",
+            "id": "4f6757b2-961f-49f5-b723-06e4560bd7d4",
+            "suspect": false,
+            "to_id": "52a92be9-0c63-421a-8343-416cc2b78c9b",
+            "type": "verifies",
+            "updated_at": "2026-09-04T21:23:36.281836Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
+            "created_at": "2026-09-04T21:23:32.035658Z",
+            "from_id": "932ee53b-a2d3-4c85-a65c-c049377c7a92",
+            "id": "9817574e-d2b5-4750-8ff9-c42e6614f395",
+            "suspect": false,
+            "to_id": "b5b40e4a-79ca-4185-bf00-0f8ea0ce1885",
+            "type": "verifies",
+            "updated_at": "2026-09-04T21:23:32.035658Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          }
+        ],
+        "status": "draft"
+      },
+      "version": 3,
+      "valid_from": "2026-09-04T21:23:36.301535Z",
+      "valid_to": null,
+      "created_at": "2026-09-04T21:22:58.088097Z",
+      "updated_at": "2026-09-04T21:23:36.301535Z"
+    },
+    {
       "id": "276b1cbc-0959-4a5f-b138-05ff8fe76777",
       "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
       "parent_id": "5ab971b3-ae39-49e9-bcc5-74be9c1fd443",
       "type": "requirement",
       "ref": "REQ-26",
-      "title": "Bring-your-own-AI personal runners",
-      "body": "Each member shall be able to run agents on their own machine through their own vendor CLI subscription (personal runner); the platform shall never execute consumer subscriptions server-side.",
+      "title": "Bring-your-own-AI runners",
+      "body": "Each member shall be able to run agents through their own vendor CLI subscription, on their own machine (personal runner) or on a runner leased to that member alone (transient runner). The platform shall drive every consumer subscription through the vendor's own CLI, signed in by the member who owns it, and shall never share a member's subscription with another member, proxy its credentials, or execute it in the API server.",
       "sort_order": 480,
-      "status": "approved",
+      "status": "draft",
       "attributes": {
         "links_snapshot": [
           {
@@ -2610,15 +2941,15 @@
           }
         ],
         "priority": "must",
-        "status": "approved",
+        "status": "draft",
         "verification_method": "demonstration",
         "verification_status": "verified"
       },
-      "version": 4,
-      "valid_from": "2026-08-30T19:54:56.556081Z",
+      "version": 6,
+      "valid_from": "2026-09-04T21:23:56.761948Z",
       "valid_to": null,
       "created_at": "2026-08-30T19:54:16.548118Z",
-      "updated_at": "2026-08-30T19:54:56.556081Z"
+      "updated_at": "2026-09-04T21:23:56.761948Z"
     },
     {
       "id": "c214c4c3-8385-4761-8209-f188f98b0a3a",
@@ -2916,6 +3247,192 @@
       "valid_to": null,
       "created_at": "2026-09-02T20:46:22.389557Z",
       "updated_at": "2026-09-02T20:46:46.171975Z"
+    },
+    {
+      "id": "d6567e11-4298-4335-b421-a55bc373a89f",
+      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
+      "parent_id": "5ab971b3-ae39-49e9-bcc5-74be9c1fd443",
+      "type": "requirement",
+      "ref": "REQ-57",
+      "title": "Transient runner leasing",
+      "body": "The system shall lease one pre-warmed runner from its runner pool to a requesting member. The system shall reserve that runner for the leasing member alone. The system shall route runs that member launches to the leased runner on the same first-refusal terms as a personal runner. The member shall install no software to obtain or use the leased runner.",
+      "sort_order": 556,
+      "status": "draft",
+      "attributes": {
+        "links_snapshot": [
+          {
+            "attributes": null,
+            "created_at": "2026-09-04T21:23:29.263928Z",
+            "from_id": "4ee51bb8-5f5b-4b49-9e50-272b3db42c28",
+            "id": "5183df69-be5e-4b15-a00f-e39fb2767b89",
+            "suspect": false,
+            "to_id": "d6567e11-4298-4335-b421-a55bc373a89f",
+            "type": "verifies",
+            "updated_at": "2026-09-04T21:23:29.263928Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
+            "created_at": "2026-09-04T21:23:20.155076Z",
+            "from_id": "af3fba09-5d87-4c7c-b544-4308c1f25431",
+            "id": "4167fba3-1eec-4f42-aa22-d6eeaf5fbb08",
+            "suspect": false,
+            "to_id": "d6567e11-4298-4335-b421-a55bc373a89f",
+            "type": "satisfies",
+            "updated_at": "2026-09-04T21:23:20.155076Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
+            "created_at": "2026-09-04T21:23:09.122396Z",
+            "from_id": "d6567e11-4298-4335-b421-a55bc373a89f",
+            "id": "91f588a2-51b5-415b-afa6-ea22ef566f2c",
+            "suspect": false,
+            "to_id": "155beaf0-28d4-4993-9a71-4af1381c1793",
+            "type": "derives-from",
+            "updated_at": "2026-09-04T21:23:09.122396Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          }
+        ],
+        "priority": "must",
+        "status": "draft",
+        "verification_method": "test"
+      },
+      "version": 5,
+      "valid_from": "2026-09-04T21:24:38.359654Z",
+      "valid_to": null,
+      "created_at": "2026-09-04T21:22:22.862613Z",
+      "updated_at": "2026-09-04T21:24:38.359654Z"
+    },
+    {
+      "id": "c910d39b-9011-4825-9f5a-66181c35669e",
+      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
+      "parent_id": "5ab971b3-ae39-49e9-bcc5-74be9c1fd443",
+      "type": "requirement",
+      "ref": "REQ-58",
+      "title": "Browser-relayed sign-in on a leased runner",
+      "body": "The system shall relay each vendor CLI sign-in that runs on a leased runner to the requesting member's browser. The system shall present the authorization link the CLI produces. The system shall accept the authorization code or redirect address the member returns.",
+      "sort_order": 557,
+      "status": "draft",
+      "attributes": {
+        "links_snapshot": [
+          {
+            "attributes": null,
+            "created_at": "2026-09-04T21:23:37.76625Z",
+            "from_id": "dea325e8-841d-4557-953d-7bc24c12f69b",
+            "id": "2f16e2f6-b4da-490e-8657-6b107720aa2b",
+            "suspect": false,
+            "to_id": "c910d39b-9011-4825-9f5a-66181c35669e",
+            "type": "verifies",
+            "updated_at": "2026-09-04T21:23:37.76625Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
+            "created_at": "2026-09-04T21:23:27.867362Z",
+            "from_id": "31752bd4-2afd-4692-8dcb-ebba92ec77a2",
+            "id": "6dfbbe31-d31a-4af6-a020-c948bf44b6a2",
+            "suspect": false,
+            "to_id": "c910d39b-9011-4825-9f5a-66181c35669e",
+            "type": "satisfies",
+            "updated_at": "2026-09-04T21:23:27.867362Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
+            "created_at": "2026-09-04T21:23:10.398034Z",
+            "from_id": "c910d39b-9011-4825-9f5a-66181c35669e",
+            "id": "9922b622-3589-4d8a-8d44-d3366ce69ee9",
+            "suspect": false,
+            "to_id": "155beaf0-28d4-4993-9a71-4af1381c1793",
+            "type": "derives-from",
+            "updated_at": "2026-09-04T21:23:10.398034Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          }
+        ],
+        "priority": "must",
+        "status": "draft",
+        "verification_method": "demonstration"
+      },
+      "version": 5,
+      "valid_from": "2026-09-04T21:24:39.997843Z",
+      "valid_to": null,
+      "created_at": "2026-09-04T21:22:25.476672Z",
+      "updated_at": "2026-09-04T21:24:39.997843Z"
+    },
+    {
+      "id": "838ee128-69f7-4b2f-8cab-784108b2ed4a",
+      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
+      "parent_id": "5ab971b3-ae39-49e9-bcc5-74be9c1fd443",
+      "type": "requirement",
+      "ref": "REQ-59",
+      "title": "Runner lease expiry",
+      "body": "The system shall end a runner lease when the workspace's configured lease lifetime elapses. The system shall also end the lease when the leased runner claims no work within the workspace's configured idle window. Whichever condition occurs first shall end the lease, and the system shall record which one did.",
+      "sort_order": 558,
+      "status": "draft",
+      "attributes": {
+        "links_snapshot": [
+          {
+            "attributes": null,
+            "created_at": "2026-09-04T21:23:30.639269Z",
+            "from_id": "4ee51bb8-5f5b-4b49-9e50-272b3db42c28",
+            "id": "5d52bf5b-f392-4ed0-b632-383bc94440e4",
+            "suspect": false,
+            "to_id": "838ee128-69f7-4b2f-8cab-784108b2ed4a",
+            "type": "verifies",
+            "updated_at": "2026-09-04T21:23:30.639269Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
+            "created_at": "2026-09-04T21:23:21.425043Z",
+            "from_id": "af3fba09-5d87-4c7c-b544-4308c1f25431",
+            "id": "2fb86b92-cb03-4de5-9615-7ad2b21df7ee",
+            "suspect": false,
+            "to_id": "838ee128-69f7-4b2f-8cab-784108b2ed4a",
+            "type": "satisfies",
+            "updated_at": "2026-09-04T21:23:21.425043Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
+            "created_at": "2026-09-04T21:23:12.355628Z",
+            "from_id": "838ee128-69f7-4b2f-8cab-784108b2ed4a",
+            "id": "2d8cd979-03e4-408f-85e1-f1e281b17f79",
+            "suspect": false,
+            "to_id": "0627a2b0-889e-488b-b053-d78992d97a93",
+            "type": "derives-from",
+            "updated_at": "2026-09-04T21:23:12.355628Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          }
+        ],
+        "priority": "must",
+        "status": "draft",
+        "verification_method": "test"
+      },
+      "version": 5,
+      "valid_from": "2026-09-04T21:24:41.617843Z",
+      "valid_to": null,
+      "created_at": "2026-09-04T21:22:27.871615Z",
+      "updated_at": "2026-09-04T21:24:41.617843Z"
     },
     {
       "id": "cb5b0125-1eb6-41f3-82fa-f07d98823b73",
@@ -4506,6 +5023,102 @@
       "updated_at": "2026-09-04T10:24:59.587633Z"
     },
     {
+      "id": "4ee51bb8-5f5b-4b49-9e50-272b3db42c28",
+      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
+      "parent_id": "8c8b86be-4730-49cb-9d95-93868a0c1938",
+      "type": "test-case",
+      "ref": "TC-28",
+      "title": "Runner lease lifecycle suite",
+      "body": "Domain and repository suites over the pool: leasing takes an idle node and mints one credential handed over exactly once; a second lease for the same member returns the first; a one-node pool refuses a second member; the atomic lease under eight concurrent callers gives four nodes to four callers and never the same node twice; the sweep ends leases past their hard expiry, past their idle window, stuck starting, and on nodes that stopped heartbeating, with the reason recorded on each; activity defers the idle timeout; extending is capped from the lease's start.",
+      "sort_order": 203,
+      "status": "draft",
+      "attributes": {
+        "execution_method": "automated",
+        "links_snapshot": [
+          {
+            "attributes": null,
+            "created_at": "2026-09-04T21:23:39.48264Z",
+            "from_id": "4ee51bb8-5f5b-4b49-9e50-272b3db42c28",
+            "id": "8d0f5117-bd7e-4fba-8125-f5f1d8f1d1b1",
+            "suspect": false,
+            "to_id": "155beaf0-28d4-4993-9a71-4af1381c1793",
+            "type": "validates",
+            "updated_at": "2026-09-04T21:23:39.48264Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
+            "created_at": "2026-09-04T21:23:30.639269Z",
+            "from_id": "4ee51bb8-5f5b-4b49-9e50-272b3db42c28",
+            "id": "5d52bf5b-f392-4ed0-b632-383bc94440e4",
+            "suspect": false,
+            "to_id": "838ee128-69f7-4b2f-8cab-784108b2ed4a",
+            "type": "verifies",
+            "updated_at": "2026-09-04T21:23:30.639269Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
+            "created_at": "2026-09-04T21:23:29.263928Z",
+            "from_id": "4ee51bb8-5f5b-4b49-9e50-272b3db42c28",
+            "id": "5183df69-be5e-4b15-a00f-e39fb2767b89",
+            "suspect": false,
+            "to_id": "d6567e11-4298-4335-b421-a55bc373a89f",
+            "type": "verifies",
+            "updated_at": "2026-09-04T21:23:29.263928Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          }
+        ],
+        "status": "draft"
+      },
+      "version": 4,
+      "valid_from": "2026-09-04T21:23:39.490932Z",
+      "valid_to": null,
+      "created_at": "2026-09-04T21:22:52.186046Z",
+      "updated_at": "2026-09-04T21:23:39.490932Z"
+    },
+    {
+      "id": "dea325e8-841d-4557-953d-7bc24c12f69b",
+      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
+      "parent_id": "8c8b86be-4730-49cb-9d95-93868a0c1938",
+      "type": "test-case",
+      "ref": "TC-30",
+      "title": "Headless sign-in relay suite",
+      "body": "Automated: the loopback replay forwards the pasted path and query to the CLI's own advertised listener, ignores any host named in the paste, rejects a paste carrying no authorization code with a message naming what to paste, and reports a rejected replay rather than swallowing it; ANSI-painted terminal output is reduced to text the authorization URL can be scraped from. Manual, because it needs a real vendor subscription: start a user-targeted sign-in against a leased runner for each provider and confirm the authorization link reaches the browser, the pasted value completes the flow, and the provider is then reported signed in.",
+      "sort_order": 204,
+      "status": "draft",
+      "attributes": {
+        "execution_method": "manual",
+        "links_snapshot": [
+          {
+            "attributes": null,
+            "created_at": "2026-09-04T21:23:37.76625Z",
+            "from_id": "dea325e8-841d-4557-953d-7bc24c12f69b",
+            "id": "2f16e2f6-b4da-490e-8657-6b107720aa2b",
+            "suspect": false,
+            "to_id": "c910d39b-9011-4825-9f5a-66181c35669e",
+            "type": "verifies",
+            "updated_at": "2026-09-04T21:23:37.76625Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          }
+        ],
+        "status": "draft"
+      },
+      "version": 2,
+      "valid_from": "2026-09-04T21:23:37.775002Z",
+      "valid_to": null,
+      "created_at": "2026-09-04T21:23:01.898684Z",
+      "updated_at": "2026-09-04T21:23:37.775002Z"
+    },
+    {
       "id": "7973f87c-ab01-4383-a9af-130a433a04ed",
       "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
       "parent_id": "a25960b2-ee9b-4005-a2d1-d5e875c9e158",
@@ -5910,6 +6523,201 @@
   ],
   "links": [
     {
+      "id": "8d0f5117-bd7e-4fba-8125-f5f1d8f1d1b1",
+      "from_id": "4ee51bb8-5f5b-4b49-9e50-272b3db42c28",
+      "to_id": "155beaf0-28d4-4993-9a71-4af1381c1793",
+      "type": "validates",
+      "suspect": false,
+      "attributes": null,
+      "version": 1,
+      "valid_from": "0001-01-01T00:00:00Z",
+      "valid_to": null,
+      "created_at": "2026-09-04T21:23:39.48264Z",
+      "updated_at": "2026-09-04T21:23:39.48264Z"
+    },
+    {
+      "id": "2f16e2f6-b4da-490e-8657-6b107720aa2b",
+      "from_id": "dea325e8-841d-4557-953d-7bc24c12f69b",
+      "to_id": "c910d39b-9011-4825-9f5a-66181c35669e",
+      "type": "verifies",
+      "suspect": true,
+      "attributes": null,
+      "version": 1,
+      "valid_from": "0001-01-01T00:00:00Z",
+      "valid_to": null,
+      "created_at": "2026-09-04T21:23:37.76625Z",
+      "updated_at": "2026-09-04T21:23:37.76625Z"
+    },
+    {
+      "id": "4f6757b2-961f-49f5-b723-06e4560bd7d4",
+      "from_id": "932ee53b-a2d3-4c85-a65c-c049377c7a92",
+      "to_id": "52a92be9-0c63-421a-8343-416cc2b78c9b",
+      "type": "verifies",
+      "suspect": true,
+      "attributes": null,
+      "version": 1,
+      "valid_from": "0001-01-01T00:00:00Z",
+      "valid_to": null,
+      "created_at": "2026-09-04T21:23:36.281836Z",
+      "updated_at": "2026-09-04T21:23:36.281836Z"
+    },
+    {
+      "id": "9817574e-d2b5-4750-8ff9-c42e6614f395",
+      "from_id": "932ee53b-a2d3-4c85-a65c-c049377c7a92",
+      "to_id": "b5b40e4a-79ca-4185-bf00-0f8ea0ce1885",
+      "type": "verifies",
+      "suspect": true,
+      "attributes": null,
+      "version": 1,
+      "valid_from": "0001-01-01T00:00:00Z",
+      "valid_to": null,
+      "created_at": "2026-09-04T21:23:32.035658Z",
+      "updated_at": "2026-09-04T21:23:32.035658Z"
+    },
+    {
+      "id": "5d52bf5b-f392-4ed0-b632-383bc94440e4",
+      "from_id": "4ee51bb8-5f5b-4b49-9e50-272b3db42c28",
+      "to_id": "838ee128-69f7-4b2f-8cab-784108b2ed4a",
+      "type": "verifies",
+      "suspect": true,
+      "attributes": null,
+      "version": 1,
+      "valid_from": "0001-01-01T00:00:00Z",
+      "valid_to": null,
+      "created_at": "2026-09-04T21:23:30.639269Z",
+      "updated_at": "2026-09-04T21:23:30.639269Z"
+    },
+    {
+      "id": "5183df69-be5e-4b15-a00f-e39fb2767b89",
+      "from_id": "4ee51bb8-5f5b-4b49-9e50-272b3db42c28",
+      "to_id": "d6567e11-4298-4335-b421-a55bc373a89f",
+      "type": "verifies",
+      "suspect": true,
+      "attributes": null,
+      "version": 1,
+      "valid_from": "0001-01-01T00:00:00Z",
+      "valid_to": null,
+      "created_at": "2026-09-04T21:23:29.263928Z",
+      "updated_at": "2026-09-04T21:23:29.263928Z"
+    },
+    {
+      "id": "6dfbbe31-d31a-4af6-a020-c948bf44b6a2",
+      "from_id": "31752bd4-2afd-4692-8dcb-ebba92ec77a2",
+      "to_id": "c910d39b-9011-4825-9f5a-66181c35669e",
+      "type": "satisfies",
+      "suspect": true,
+      "attributes": null,
+      "version": 1,
+      "valid_from": "0001-01-01T00:00:00Z",
+      "valid_to": null,
+      "created_at": "2026-09-04T21:23:27.867362Z",
+      "updated_at": "2026-09-04T21:23:27.867362Z"
+    },
+    {
+      "id": "68fcc687-b500-419b-a3c5-48ea79b278cf",
+      "from_id": "af3fba09-5d87-4c7c-b544-4308c1f25431",
+      "to_id": "52a92be9-0c63-421a-8343-416cc2b78c9b",
+      "type": "satisfies",
+      "suspect": true,
+      "attributes": null,
+      "version": 1,
+      "valid_from": "0001-01-01T00:00:00Z",
+      "valid_to": null,
+      "created_at": "2026-09-04T21:23:22.6865Z",
+      "updated_at": "2026-09-04T21:23:22.6865Z"
+    },
+    {
+      "id": "2fb86b92-cb03-4de5-9615-7ad2b21df7ee",
+      "from_id": "af3fba09-5d87-4c7c-b544-4308c1f25431",
+      "to_id": "838ee128-69f7-4b2f-8cab-784108b2ed4a",
+      "type": "satisfies",
+      "suspect": true,
+      "attributes": null,
+      "version": 1,
+      "valid_from": "0001-01-01T00:00:00Z",
+      "valid_to": null,
+      "created_at": "2026-09-04T21:23:21.425043Z",
+      "updated_at": "2026-09-04T21:23:21.425043Z"
+    },
+    {
+      "id": "4167fba3-1eec-4f42-aa22-d6eeaf5fbb08",
+      "from_id": "af3fba09-5d87-4c7c-b544-4308c1f25431",
+      "to_id": "d6567e11-4298-4335-b421-a55bc373a89f",
+      "type": "satisfies",
+      "suspect": true,
+      "attributes": null,
+      "version": 1,
+      "valid_from": "0001-01-01T00:00:00Z",
+      "valid_to": null,
+      "created_at": "2026-09-04T21:23:20.155076Z",
+      "updated_at": "2026-09-04T21:23:20.155076Z"
+    },
+    {
+      "id": "9626d64c-7796-4b90-92e6-1656e7131639",
+      "from_id": "52a92be9-0c63-421a-8343-416cc2b78c9b",
+      "to_id": "0627a2b0-889e-488b-b053-d78992d97a93",
+      "type": "derives-from",
+      "suspect": true,
+      "attributes": null,
+      "version": 1,
+      "valid_from": "0001-01-01T00:00:00Z",
+      "valid_to": null,
+      "created_at": "2026-09-04T21:23:18.192789Z",
+      "updated_at": "2026-09-04T21:23:18.192789Z"
+    },
+    {
+      "id": "78b9f1c0-e6a2-4b6e-9238-3061618b9514",
+      "from_id": "b5b40e4a-79ca-4185-bf00-0f8ea0ce1885",
+      "to_id": "0627a2b0-889e-488b-b053-d78992d97a93",
+      "type": "derives-from",
+      "suspect": true,
+      "attributes": null,
+      "version": 1,
+      "valid_from": "0001-01-01T00:00:00Z",
+      "valid_to": null,
+      "created_at": "2026-09-04T21:23:13.81837Z",
+      "updated_at": "2026-09-04T21:23:13.81837Z"
+    },
+    {
+      "id": "2d8cd979-03e4-408f-85e1-f1e281b17f79",
+      "from_id": "838ee128-69f7-4b2f-8cab-784108b2ed4a",
+      "to_id": "0627a2b0-889e-488b-b053-d78992d97a93",
+      "type": "derives-from",
+      "suspect": true,
+      "attributes": null,
+      "version": 1,
+      "valid_from": "0001-01-01T00:00:00Z",
+      "valid_to": null,
+      "created_at": "2026-09-04T21:23:12.355628Z",
+      "updated_at": "2026-09-04T21:23:12.355628Z"
+    },
+    {
+      "id": "9922b622-3589-4d8a-8d44-d3366ce69ee9",
+      "from_id": "c910d39b-9011-4825-9f5a-66181c35669e",
+      "to_id": "155beaf0-28d4-4993-9a71-4af1381c1793",
+      "type": "derives-from",
+      "suspect": true,
+      "attributes": null,
+      "version": 1,
+      "valid_from": "0001-01-01T00:00:00Z",
+      "valid_to": null,
+      "created_at": "2026-09-04T21:23:10.398034Z",
+      "updated_at": "2026-09-04T21:23:10.398034Z"
+    },
+    {
+      "id": "91f588a2-51b5-415b-afa6-ea22ef566f2c",
+      "from_id": "d6567e11-4298-4335-b421-a55bc373a89f",
+      "to_id": "155beaf0-28d4-4993-9a71-4af1381c1793",
+      "type": "derives-from",
+      "suspect": true,
+      "attributes": null,
+      "version": 1,
+      "valid_from": "0001-01-01T00:00:00Z",
+      "valid_to": null,
+      "created_at": "2026-09-04T21:23:09.122396Z",
+      "updated_at": "2026-09-04T21:23:09.122396Z"
+    },
+    {
       "id": "fee3e78f-6f3e-4dd3-ba2d-a5b8b5eb3a04",
       "from_id": "f0c7c1d0-4659-497c-9ed2-c83842d9f176",
       "to_id": "fc0d8415-9427-4c5e-a0bf-106803ea5d62",
@@ -7032,7 +7840,7 @@
       "from_id": "57fca2bd-8be9-4cb6-9b34-9e63b5629359",
       "to_id": "276b1cbc-0959-4a5f-b138-05ff8fe76777",
       "type": "satisfies",
-      "suspect": false,
+      "suspect": true,
       "attributes": null,
       "version": 1,
       "valid_from": "0001-01-01T00:00:00Z",
@@ -7188,7 +7996,7 @@
       "from_id": "276b1cbc-0959-4a5f-b138-05ff8fe76777",
       "to_id": "155beaf0-28d4-4993-9a71-4af1381c1793",
       "type": "derives-from",
-      "suspect": false,
+      "suspect": true,
       "attributes": null,
       "version": 1,
       "valid_from": "0001-01-01T00:00:00Z",

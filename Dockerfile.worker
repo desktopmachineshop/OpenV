@@ -1,6 +1,11 @@
-# Hosted runner image: agentd + openv-mcp + vendor CLIs in one container.
-# Built with `make worker-image`; the API server provisions one container per
-# workspace from this image (see internal/hosting and docs/agents.md).
+# Runner image: agentd + openv-mcp + vendor CLIs in one container. Built with
+# `make worker-image`, it serves both platform runner tiers (docs/agents.md):
+#
+#   - hosted runners: the API provisions one container per workspace from this
+#     image (see internal/hosting), token-mode, no CLI sign-in;
+#   - transient runner pool nodes: replicas started with RUNNER_POOL_KEY, which
+#     wait to be leased by a member and sign that member's own CLIs in over the
+#     browser relay.
 
 # Base image policy: pin to specific minor-version tags (not `latest` or
 # bare-major tags, not sha digests). Pinned tags still receive OS-package
@@ -24,16 +29,17 @@ RUN GOOS=linux CGO_ENABLED=0 go build -o /out/agentd ./cmd/agentd && \
 # (node:20.20-* floats only across 20.20.x patch releases)
 FROM node:20.20-bookworm-slim
 
-# git is included for future use; hosted runners refuse repo-access runs, so
-# no repository is ever cloned in this container today.
+# git is needed by pool nodes, which do run repo-access agents (cloning the
+# connection's repository URL — a leased runner has no local checkout to point
+# at). Hosted runners refuse those runs and never clone.
 RUN apt-get update && \
     apt-get install -y --no-install-recommends git ca-certificates && \
     rm -rf /var/lib/apt/lists/*
 
-RUN npm install -g @anthropic-ai/claude-code
-# Additional vendor CLIs (uncomment to bake in):
-# RUN npm install -g @openai/codex
-# RUN npm install -g @google/gemini-cli
+# All three vendor CLIs are baked in: a member leasing a transient runner
+# cannot install anything on it, so whatever is not in this image is not a
+# provider they can sign into.
+RUN npm install -g @anthropic-ai/claude-code @openai/codex @google/gemini-cli
 
 # Dedicated non-root user with HOME on the /data volume so CLI state
 # (credentials, caches) survives container replacement. The base image's
@@ -45,6 +51,9 @@ RUN userdel -r node 2>/dev/null || true && \
 
 COPY --from=build /out/agentd /out/openv-mcp /usr/local/bin/
 
+# OPENV_HOSTED marks the hosted-runner default. A pool node overrides it by
+# setting RUNNER_POOL_KEY, which takes precedence: pool mode never reads the
+# hosted flag, and gives each lease its own HOME under the session root.
 ENV HOME=/data/home \
     OPENV_HOSTED=true
 
@@ -52,7 +61,8 @@ VOLUME /data
 
 USER worker
 
-# agentd reads OPENV_API_URL, WORKER_API_KEY, and OPENV_HOSTED from the
-# environment (injected at provision time by internal/hosting).
+# agentd reads OPENV_API_URL, WORKER_API_KEY and OPENV_HOSTED from the
+# environment (injected at provision time by internal/hosting), or
+# RUNNER_POOL_KEY to come up as a transient runner pool node instead.
 ENTRYPOINT ["/usr/local/bin/agentd"]
 CMD ["--workspaces", "/data/workspaces"]

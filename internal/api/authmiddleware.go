@@ -20,6 +20,13 @@ const (
 	ctxWorkerOrg  contextKey = "openv-worker-org"
 	ctxWorkerUser contextKey = "openv-worker-user"
 	ctxActiveOrg  contextKey = "openv-active-org"
+	// ctxWorkerSession marks a credential minted for a transient runner
+	// lease, so the run and sign-in handlers can record activity against it.
+	ctxWorkerSession contextKey = "openv-worker-session"
+	// ctxPoolNode marks a request from a runner pool node, which presents
+	// the deployment's pool key and has no workspace of its own until it is
+	// leased.
+	ctxPoolNode contextKey = "openv-pool-node"
 )
 
 // SessionCookieName is the browser session cookie.
@@ -41,6 +48,11 @@ type AuthMiddleware struct {
 	// the boot process registers it as an org key (resolved by hash first).
 	legacyWorkerKey string
 	legacyOrgID     func() string
+	// poolKey authenticates transient runner pool nodes (RUNNER_POOL_KEY).
+	// It grants nothing but the pool endpoints: a node holds no workspace
+	// identity until a member leases it, at which point it authenticates
+	// everything else with the lease's own session key.
+	poolKey string
 }
 
 // NewAuthMiddleware creates the middleware. legacyOrgID lazily resolves the
@@ -55,6 +67,9 @@ func NewAuthMiddleware(userService users.Service, runService agentruns.Service, 
 		legacyOrgID:     legacyOrgID,
 	}
 }
+
+// SetPoolKey wires the transient runner pool credential (wiring-time only).
+func (m *AuthMiddleware) SetPoolKey(key string) { m.poolKey = key }
 
 func isOpenPath(path string) bool {
 	if path == "/health" {
@@ -93,6 +108,9 @@ func (m *AuthMiddleware) Wrap(next http.Handler) http.Handler {
 				if resolved.UserID != "" {
 					ctx = context.WithValue(ctx, ctxWorkerUser, resolved.UserID)
 				}
+				if resolved.SessionID != "" {
+					ctx = context.WithValue(ctx, ctxWorkerSession, resolved.SessionID)
+				}
 				annotateRequestLog(ctx, resolved.OrgID, resolved.UserID, "worker")
 				next.ServeHTTP(w, r.WithContext(ctx))
 				return
@@ -105,6 +123,14 @@ func (m *AuthMiddleware) Wrap(next http.Handler) http.Handler {
 					next.ServeHTTP(w, r.WithContext(ctx))
 					return
 				}
+			}
+			// Pool nodes: the deployment-wide key, good only for the pool
+			// endpoints (enforced by RequirePoolNode on those handlers).
+			if m.poolKey != "" && subtle.ConstantTimeCompare([]byte(token), []byte(m.poolKey)) == 1 {
+				ctx := context.WithValue(r.Context(), ctxPoolNode, true)
+				annotateRequestLog(ctx, "", "", "pool-node")
+				next.ServeHTTP(w, r.WithContext(ctx))
+				return
 			}
 			if run, err := m.runService.GetByToken(token); err == nil && run != nil {
 				ctx := context.WithValue(r.Context(), ctxRun, run)
@@ -195,6 +221,21 @@ func WorkerUser(r *http.Request) string {
 		return v
 	}
 	return ""
+}
+
+// WorkerSession returns the transient runner lease a worker credential
+// belongs to ("" for ordinary keys).
+func WorkerSession(r *http.Request) string {
+	if v, ok := r.Context().Value(ctxWorkerSession).(string); ok {
+		return v
+	}
+	return ""
+}
+
+// IsPoolNode reports whether the request presented the runner pool key.
+func IsPoolNode(r *http.Request) bool {
+	v, ok := r.Context().Value(ctxPoolNode).(bool)
+	return ok && v
 }
 
 // IsWorker reports whether the request authenticated with a worker key.

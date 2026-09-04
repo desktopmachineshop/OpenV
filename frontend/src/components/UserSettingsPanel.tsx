@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useAppStore } from '../state/store';
 import { ProviderSetting, providerSettingsAPI, notificationPrefsAPI } from '../api/client';
 import { MyRunnerCard } from './org/MyRunnerCard';
+import { CloudRunnerCard } from './org/CloudRunnerCard';
 import { ProviderConnectCard } from './agents/ProviderConnectCard';
 import { ThemeSwitcher } from './ThemeSwitcher';
 
@@ -191,12 +192,17 @@ export const UserSettingsPanel: React.FC<UserSettingsPanelProps> = ({ onClose })
           <>
             <MyRunnerCard orgId={activeOrgId} />
 
+            <CloudRunnerCard orgId={activeOrgId} onChanged={loadProviders} />
+
             <div className="card">
               <h3 style={{ marginBottom: 6 }}>Agent sign-ins</h3>
               <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-                Sign the vendor CLIs on <b>your machine</b> into your own subscriptions. The flow
-                runs through your personal runner (Agent Connector), and credentials never leave
-                your machine. Projects set to “API key” auth override these sign-ins for their runs.
+                Sign the vendor CLIs into your own subscriptions. The flow runs on{' '}
+                <b>whichever runner of yours is online</b> — your own machine via the Agent
+                Connector, or the cloud runner above — and the credentials stay there. A cloud
+                runner is wiped when its lease ends, so those sign-ins are per-session; sign-ins on
+                your own machine persist. Projects set to “API key” auth override these sign-ins
+                for their runs.
               </p>
               {CLI_PROVIDERS.map((p) => (
                 <ProviderConnectCard

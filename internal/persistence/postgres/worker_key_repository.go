@@ -17,16 +17,20 @@ func NewWorkerKeyRepository(db *sql.DB) *WorkerKeyRepository {
 	return &WorkerKeyRepository{db: db}
 }
 
-const workerKeyColumns = `k.id, k.org_id, k.user_id, k.name, k.key_hash, k.created_by, k.revoked, k.last_used_at, k.created_at`
+const workerKeyColumns = `k.id, k.org_id, k.user_id, k.name, k.key_hash, k.created_by, k.revoked, k.last_used_at, k.created_at, k.session_id`
 
 func scanWorkerKey(row interface{ Scan(...interface{}) error }, extra ...interface{}) (*workerkeys.Key, error) {
 	k := new(workerkeys.Key)
-	var userID, createdBy sql.NullString
+	var userID, createdBy, sessionID sql.NullString
 	var lastUsed sql.NullTime
-	dest := []interface{}{&k.ID, &k.OrgID, &userID, &k.Name, &k.KeyHash, &createdBy, &k.Revoked, &lastUsed, &k.CreatedAt}
+	dest := []interface{}{&k.ID, &k.OrgID, &userID, &k.Name, &k.KeyHash, &createdBy, &k.Revoked, &lastUsed, &k.CreatedAt, &sessionID}
 	dest = append(dest, extra...)
 	if err := row.Scan(dest...); err != nil {
 		return nil, err
+	}
+	if sessionID.Valid {
+		v := sessionID.String
+		k.SessionID = &v
 	}
 	if userID.Valid {
 		v := userID.String
@@ -46,9 +50,9 @@ func scanWorkerKey(row interface{ Scan(...interface{}) error }, extra ...interfa
 // Save inserts a worker key.
 func (r *WorkerKeyRepository) Save(k *workerkeys.Key) error {
 	_, err := r.db.Exec(`
-		INSERT INTO worker_keys (id, org_id, user_id, name, key_hash, created_by, revoked, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-	`, k.ID, k.OrgID, k.UserID, k.Name, k.KeyHash, k.CreatedBy, k.Revoked, k.CreatedAt)
+		INSERT INTO worker_keys (id, org_id, user_id, name, key_hash, created_by, revoked, created_at, session_id)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+	`, k.ID, k.OrgID, k.UserID, k.Name, k.KeyHash, k.CreatedBy, k.Revoked, k.CreatedAt, k.SessionID)
 	return err
 }
 
@@ -78,10 +82,13 @@ func (r *WorkerKeyRepository) List(orgID string) ([]*workerkeys.Key, error) {
 }
 
 // FindPersonal returns the user's active personal key in the org, or nil.
+// Transient runner session keys are excluded: leasing a cloud runner must not
+// shadow (or, through Create's rotation, revoke) the key on the member's own
+// machine.
 func (r *WorkerKeyRepository) FindPersonal(orgID, userID string) (*workerkeys.Key, error) {
 	k, err := scanWorkerKey(r.db.QueryRow(`
 		SELECT `+workerKeyColumns+` FROM worker_keys k
-		WHERE k.org_id = $1 AND k.user_id = $2 AND NOT k.revoked
+		WHERE k.org_id = $1 AND k.user_id = $2 AND NOT k.revoked AND k.session_id IS NULL
 		ORDER BY k.created_at DESC LIMIT 1
 	`, orgID, userID))
 	if err == sql.ErrNoRows {
@@ -90,7 +97,10 @@ func (r *WorkerKeyRepository) FindPersonal(orgID, userID string) (*workerkeys.Ke
 	return k, err
 }
 
-// HasOnlinePersonalKey reports recent activity on the user's personal key.
+// HasOnlinePersonalKey reports recent activity on any of the user's personal
+// keys — their own machine's connector key or a transient runner they hold a
+// lease on. Both are "their runner" for routing: a run they launch is
+// reserved for whichever one is online.
 func (r *WorkerKeyRepository) HasOnlinePersonalKey(orgID, userID string, since time.Time) (bool, error) {
 	var count int
 	err := r.db.QueryRow(`

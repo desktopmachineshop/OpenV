@@ -24,7 +24,7 @@ gating. See `docs/requirements-maintenance.md`.
 
 ## Runner tiers
 
-OpenV has two kinds of runners; a workspace can use either or both.
+OpenV has three kinds of runners; a workspace can use any mix of them.
 
 ### Personal runners (your machine, your subscription)
 
@@ -40,6 +40,61 @@ settings (Settings → My Runner) and starts `agentd` with it.
   login is relayed to your browser; credentials stay on your machine).
 - Online/offline is derived from the key's poll heartbeat; the UI shows your
   runner's status live.
+
+### Transient runners (in the cloud, nothing to install)
+
+A transient runner is a **pre-warmed runner the platform already has running**,
+leased to **one member at a time** for a bounded stretch of time. The member
+presses **Start a cloud runner** (user settings → Cloud runner, or the prompt a
+run shows when no runner is online), signs their vendor CLIs into it **from
+their browser**, and launches runs — with nothing downloaded, installed or
+paired.
+
+- **Per member.** While the lease lasts, the runner is that member's alone; it
+  claims their runs exactly as their own machine would, because it holds a
+  personal runner key scoped to the lease.
+- **Their own sign-ins.** The CLI sign-in flow runs *on the leased runner* and
+  is relayed to the member's browser: an "Open sign-in page" link, and a field
+  to paste back whatever the CLI asks for. See **Signing in on a transient
+  runner** below for what each vendor's flow looks like.
+- **It ends, and it is wiped.** A lease has a hard lifetime (default **60
+  minutes**, org-tunable via `runner_session_minutes`) and an idle window
+  (default **15 minutes** with no run activity, `runner_session_idle_minutes`;
+  the clock resets whenever the runner claims a run or a sign-in). Whichever
+  comes first ends the lease: the session credential is revoked server-side and
+  the node deletes the lease's HOME — where the vendor CLIs keep their
+  credentials — before taking another member. **So the next session starts with
+  signing in again.** That is the design, not a limitation: nothing of a member
+  survives on a shared pool node.
+- **Extend** resets both clocks, capped at 8 hours from the original start so a
+  forgotten tab cannot hold a node forever.
+- **Repo access** works by cloning the connection's repository URL; a leased
+  runner has no local checkout to point at, so per-member local paths do not
+  apply to it. Private repositories that need credentials on the host will not
+  clone.
+
+Members keep whichever tier suits the moment: a cloud runner for a quick piece
+of work on a machine with nothing installed, the connector on their own machine
+for everyday work. Leasing one does not disturb the other — a cloud lease mints
+its own credential and never rotates the member's connector key.
+
+#### The pool
+
+Transient runners come from a **pool of always-on `agentd` processes** started
+with the deployment's `RUNNER_POOL_KEY` (`agentd --pool-key …`). A pool node
+belongs to nobody: it registers, heartbeats, and waits. When a member leases
+one, the API hands that node a session credential on its next heartbeat; when
+the lease ends, the node wipes and reports itself free.
+
+The pool is deliberately not "a container per request": pre-warmed nodes are
+ready in seconds, and — unlike hosted runners — the design needs no Docker
+daemon at the API, so it works on platforms (Railway among them) that give you
+replicas but no docker socket. Sizing the pool is sizing concurrency: **one
+member can hold one node**, so a pool of three serves three simultaneous
+members. When every node is busy, the UI says so and the member can try again
+or fall back to the connector.
+
+Operators: see **Enable transient runners (operators)** below.
 
 ### Hosted runner (always-on, org API keys)
 
@@ -69,7 +124,9 @@ environment only and are **never stored** by the platform.
 When you launch a run and your personal runner is online, the run is
 **reserved for your runner** for a grace period (default **60 seconds**,
 org-tunable via the workspace limit `runner_grace_seconds`). If your runner
-does not claim it in time, the hosted/workspace runners take over.
+does not claim it in time, the hosted/workspace runners take over. A transient
+runner you hold a lease on counts as your runner here: runs you launch prefer
+whichever of your runners is online.
 
 **Ownerless runs** — launched by the system rather than a member: board
 triggers, automations, delegations between agents — are claimable by **any
@@ -78,12 +135,32 @@ first come first served, so the load spreads across every runner that is
 online. Runs another member launched are never routed to your personal
 runner; they stay with that member's runner or the workspace/hosted pool.
 
-### Compliance note
+### Where your subscription runs
 
-Consumer CLI subscriptions run **only on the member's own machine** through
-the vendor's own CLI — the platform never executes them server-side, shares
-them between members, or proxies their credentials. Hosted runners are
-API-billed: they use the org's provider API keys under the vendor's API terms.
+A consumer CLI subscription is always driven by **the vendor's own CLI**, signed
+in by **the member who owns it**, and OpenV never sees or stores the resulting
+credentials — the CLI writes them to the machine it runs on, and OpenV brokers
+only the sign-in URL and the one-time code.
+
+*Which* machine that is depends on the tier the member chose:
+
+- **Personal runner** — their own machine. Credentials persist there between
+  sessions, and never leave it.
+- **Transient runner** — a pool node in the platform's own infrastructure,
+  leased to that member alone. Its credentials live in a directory created for
+  the lease and deleted when the lease ends, and no other member is ever served
+  by that node while it holds them. This is a real difference from a personal
+  runner and worth being deliberate about: a member signing in here is putting
+  their subscription's credentials on infrastructure the operator controls, for
+  as long as the lease lasts. Check your vendor's terms if that matters for
+  your deployment — and note that operators can leave the feature off simply by
+  not configuring a pool.
+- **Hosted runner** — a platform container billed against the **org's provider
+  API keys**, under the vendor's API terms. No consumer subscription is
+  involved, and CLI sign-in is disabled there.
+
+A subscription is never shared between members, proxied, or executed by the API
+server itself in any tier.
 
 ## Prerequisites
 
@@ -95,7 +172,8 @@ API-billed: they use the org's provider API keys under the vendor's API terms.
 3. Docker (used by `make worker` to build the worker binaries, and by the
    hosted runner tier).
 
-You can sign the CLIs in either way (personal runners only):
+You can sign the CLIs in either way (personal and transient runners; hosted
+runners are API-key only):
 
 - **From the UI (recommended):** your **user settings** (click your user info
   in the bottom-left of the sidebar → Settings) → **Agent sign-ins**. This
@@ -112,7 +190,22 @@ You can sign the CLIs in either way (personal runners only):
   of the workspace's shared workers.
 - **From a terminal:** run `claude login` / `codex login` / `gemini` on the
   host yourself, then hit "Sync"/reload — the worker's next detection report
-  updates the provider status.
+  updates the provider status. (Not available on a transient runner — there is
+  no terminal on it to use.)
+
+### Signing in on a transient runner
+
+A leased runner has no console to open a TUI in and no browser to catch an
+OAuth redirect, so each vendor's flow is relayed to the member's own browser:
+
+| Provider | How it is relayed |
+| --- | --- |
+| **Claude Code** | `claude setup-token` is a terminal UI that renders nothing over pipes, so it is driven over a **pseudo-terminal** inside the runner. The URL it prints is scraped out and shown as a link; the code the member pastes back is typed into that terminal. |
+| **Gemini CLI** | Already a paste-back flow (`NO_BROWSER=1`): URL out, code in. Unchanged. |
+| **Codex CLI** | `codex login` completes against a **loopback port on the runner**, which the member's browser cannot reach. So after authorizing, the member's browser shows a connection error — they copy that whole address out of the address bar and paste it back, and the runner replays it against its own listener. Only the path and query of the paste are used, always against the port the CLI itself advertised, so a paste naming another host cannot make the runner fetch it. |
+
+All three surface in the same **Agent sign-ins** cards. Sign-ins on a leased
+runner last exactly as long as the lease.
 
 ## Per-project agent auth
 
@@ -204,6 +297,52 @@ make worker-unix
 `agentd` polls for queued runs, launches the configured provider CLI with
 `openv-mcp` wired in, streams progress back, and reports completion. Stale runs
 that stop heartbeating are failed automatically by the server's reaper.
+
+## Enable transient runners (operators)
+
+Transient runners are off until a deployment configures a pool. Two things:
+
+1. **Set `RUNNER_POOL_KEY`** on the API service — a long random string
+   (`openssl rand -hex 32`). This is the shared credential pool nodes present.
+   It authenticates *nothing but* the pool endpoints: a node holds no workspace
+   identity until a member leases it, and then uses that lease's own key.
+   Leaving it unset disables the feature (the UI card hides itself).
+2. **Run some pool nodes** with the same key. Each is an `agentd` from the
+   `openv-worker` image (`make worker-image`), started in pool mode:
+
+   ```bash
+   agentd --api https://<api-host> --pool-key <RUNNER_POOL_KEY>
+   ```
+
+   With compose, that is a scaled service — `make runner-pool-up POOL=3`, or:
+
+   ```bash
+   RUNNER_POOL_KEY=<same-key> docker compose --profile runner-pool \
+     up -d --scale runner-pool=3 runner-pool
+   ```
+
+   On Railway, it is a third service from `Dockerfile.worker` with a replica
+   count; see `docs/railway.md`.
+
+Sizing: **one node serves one member at a time**, so the pool size is the
+number of members who can hold a cloud runner simultaneously. Idle nodes cost
+whatever an idle container costs on your platform — they are pre-warmed on
+purpose, since provisioning on demand is what makes this slow elsewhere.
+
+Pool node environment (all optional beyond the key):
+
+| Variable | Meaning |
+| --- | --- |
+| `RUNNER_POOL_KEY` | Shared pool credential; presence switches `agentd` to pool mode. |
+| `OPENV_API_URL` | API base URL as seen from the node. |
+| `RUNNER_POOL` | Pool label, for running more than one pool later (default `default`). |
+| `RUNNER_NODE_NAME` | Stable node name across restarts (default: hostname). A restarted node reclaims its own row rather than leaving a phantom in the pool. |
+| `RUNNER_SESSION_ROOT` | Parent directory for per-lease HOME directories (default: under `--workspaces`). Wiped at startup and after every lease. |
+
+Workspace tuning lives in the org's `limits` JSONB, like the hosted-runner
+caps: `runner_session_minutes` (lease lifetime) and
+`runner_session_idle_minutes` (idle window). Defaults are 60/15 on the free
+plan and 120/20 on team.
 
 ## Enable the hosted runner tier (operators)
 
@@ -424,8 +563,10 @@ can probe persona-specific needs.
 
 - [ ] `make up` — stack is running
 - [ ] Vendor CLI installed and logged in on the host
-- [ ] A runner key: personal key from Settings → My Runner (or the Agent
-      Connector pairing flow), or a workspace key from Settings → Worker Keys
+- [ ] A runner: a leased cloud runner (nothing to install — needs
+      `RUNNER_POOL_KEY` and a pool), a personal key from Settings → My Runner
+      (or the Agent Connector pairing flow), or a workspace key from
+      Settings → Worker Keys
 - [ ] `make worker` (or `make worker-unix`) built `bin/` — or use the
       connector download
 - [ ] `agentd` running and provider shows green in Settings

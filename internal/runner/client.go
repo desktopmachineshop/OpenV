@@ -3,6 +3,7 @@ package runner
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -287,4 +288,91 @@ func (c *Client) ListRepoConnections(projectID string) ([]*repoconns.RepoConnect
 		return nil, err
 	}
 	return conns, nil
+}
+
+// --- Transient runner pool ---
+//
+// These calls are made with the deployment's pool key, before any workspace
+// is in the picture. Once a lease arrives the node builds a second client
+// around the lease's own session key and uses that for everything else.
+
+// PoolNode is a registered pool node as the API sees it.
+type PoolNode struct {
+	ID     string `json:"id"`
+	Name   string `json:"name"`
+	Pool   string `json:"pool"`
+	Status string `json:"status"`
+}
+
+// PoolAssignment is the lease a node has been handed. WorkerKey is present
+// only on the heartbeat that picks the lease up.
+type PoolAssignment struct {
+	SessionID string    `json:"session_id"`
+	OrgID     string    `json:"org_id"`
+	UserID    string    `json:"user_id"`
+	UserName  string    `json:"user_name"`
+	WorkerKey string    `json:"worker_key"`
+	ExpiresAt time.Time `json:"expires_at"`
+}
+
+// RegisterPoolNode announces this process as available to lease.
+func (c *Client) RegisterPoolNode(name, pool string, providers []string) (*PoolNode, error) {
+	resp, err := c.doWithRetry(c.http, "POST", "/api/v1/runner-pool/nodes", map[string]interface{}{
+		"name":      name,
+		"pool":      pool,
+		"providers": providers,
+	})
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK {
+		return nil, httpError(resp)
+	}
+	node := new(PoolNode)
+	if err := json.NewDecoder(resp.Body).Decode(node); err != nil {
+		return nil, err
+	}
+	return node, nil
+}
+
+// ErrPoolNodeUnknown means the API has no record of this node, so it must
+// register again (a reset database, or a purged pool).
+var ErrPoolNodeUnknown = errors.New("pool node is not registered")
+
+// PoolHeartbeat records a beat and returns the node's lease, or nil.
+func (c *Client) PoolHeartbeat(nodeID string) (*PoolAssignment, error) {
+	resp, err := c.do(c.http, "POST", "/api/v1/runner-pool/nodes/"+nodeID+"/heartbeat", map[string]interface{}{})
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, ErrPoolNodeUnknown
+	}
+	if resp.StatusCode != http.StatusOK {
+		return nil, httpError(resp)
+	}
+	var body struct {
+		Assignment *PoolAssignment `json:"assignment"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+		return nil, err
+	}
+	return body.Assignment, nil
+}
+
+// ReleasePoolNode reports that the node has wiped a lease's state.
+func (c *Client) ReleasePoolNode(nodeID, sessionID string) error {
+	resp, err := c.doWithRetry(c.http, "POST", "/api/v1/runner-pool/nodes/"+nodeID+"/release", map[string]interface{}{
+		"session_id": sessionID,
+	})
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusOK {
+		return httpError(resp)
+	}
+	return nil
 }

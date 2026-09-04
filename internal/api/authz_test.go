@@ -69,6 +69,12 @@ func (f *fakeOrgService) RoleInOrg(orgID, userID string) (string, error) {
 	return f.roles[orgID][userID], nil
 }
 
+// Get answers the handlers that read a workspace's effective limits (e.g.
+// transient runner lease timings) with a plain free-plan workspace.
+func (f *fakeOrgService) Get(id string) (*orgs.Org, error) {
+	return &orgs.Org{ID: id, Plan: orgs.PlanFree}, nil
+}
+
 // Budget CRUD recording (issue #186). updatedNames captures UpdateOrg's name
 // arg; budgetCalls captures each SetMonthlyBudget budget (nil = cleared);
 // budgetErr, when set, is returned by SetMonthlyBudget after recording.

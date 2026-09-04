@@ -44,6 +44,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/proposals"
 	"github.com/openv/requirements-platform/internal/domain/providers"
 	"github.com/openv/requirements-platform/internal/domain/repoconns"
+	"github.com/openv/requirements-platform/internal/domain/runnersessions"
 	"github.com/openv/requirements-platform/internal/domain/teams"
 	"github.com/openv/requirements-platform/internal/domain/users"
 	"github.com/openv/requirements-platform/internal/domain/vv"
@@ -89,8 +90,11 @@ type HandlerDeps struct {
 	OrgTeamService      orgs.TeamService
 	WorkerKeyService    workerkeys.Service
 	HostedWorkerService hostedworkers.Service
-	NotificationService notifications.Service
-	Provisioner         hosting.Provisioner
+	// RunnerSessionService drives transient runners; nil on deployments
+	// with no runner pool configured.
+	RunnerSessionService runnersessions.Service
+	NotificationService  notifications.Service
+	Provisioner          hosting.Provisioner
 	// OrgSeeder provisions default agents/crew for a new workspace.
 	OrgSeeder func(orgID string) error
 	// PublicAPIURL is the externally-reachable API base (connector config).
@@ -129,38 +133,39 @@ type Handler struct {
 	embeddingService     *embeddings.Service
 	uploadsDir           string
 
-	userService         users.Service
-	memberService       members.Service
-	productService      products.Service
-	vvService           vv.Service
-	settingsService     settings.Service
-	workItemService     workitems.Service
-	guidedService       guided.Service
-	interviewService    interviews.Service
-	agentService        agents.Service
-	runService          agentruns.Service
-	automationService   automations.Service
-	proposalService     proposals.Service
-	repoConnService     repoconns.Service
-	providerService     providers.Service
-	loginService        providers.LoginService
-	teamService         teams.Service
-	orgService          orgs.Service
-	orgTeamService      orgs.TeamService
-	workerKeyService    workerkeys.Service
-	hostedWorkerService hostedworkers.Service
-	notificationService notifications.Service
-	provisioner         hosting.Provisioner
-	orgSeeder           func(orgID string) error
-	publicAPIURL        string
-	connectorDistDir    string
-	bus                 events.Bus
-	eventRepo           events.Repository
-	sseHub              *SSEHub
-	googleOAuth         *GoogleOAuthConfig
-	oidc                *OIDCConfig
-	secureCookies       bool
-	cookieSameSite      http.SameSite
+	userService          users.Service
+	memberService        members.Service
+	productService       products.Service
+	vvService            vv.Service
+	settingsService      settings.Service
+	workItemService      workitems.Service
+	guidedService        guided.Service
+	interviewService     interviews.Service
+	agentService         agents.Service
+	runService           agentruns.Service
+	automationService    automations.Service
+	proposalService      proposals.Service
+	repoConnService      repoconns.Service
+	providerService      providers.Service
+	loginService         providers.LoginService
+	teamService          teams.Service
+	orgService           orgs.Service
+	orgTeamService       orgs.TeamService
+	workerKeyService     workerkeys.Service
+	hostedWorkerService  hostedworkers.Service
+	runnerSessionService runnersessions.Service
+	notificationService  notifications.Service
+	provisioner          hosting.Provisioner
+	orgSeeder            func(orgID string) error
+	publicAPIURL         string
+	connectorDistDir     string
+	bus                  events.Bus
+	eventRepo            events.Repository
+	sseHub               *SSEHub
+	googleOAuth          *GoogleOAuthConfig
+	oidc                 *OIDCConfig
+	secureCookies        bool
+	cookieSameSite       http.SameSite
 
 	// Rate limiters for the public (invite-token) interview endpoints; see
 	// ratelimit.go for defaults and environment overrides.
@@ -212,6 +217,7 @@ func NewHandler(deps HandlerDeps) *Handler {
 		orgTeamService:         deps.OrgTeamService,
 		workerKeyService:       deps.WorkerKeyService,
 		hostedWorkerService:    deps.HostedWorkerService,
+		runnerSessionService:   deps.RunnerSessionService,
 		notificationService:    deps.NotificationService,
 		provisioner:            deps.Provisioner,
 		orgSeeder:              deps.OrgSeeder,
@@ -317,6 +323,7 @@ func (h *Handler) RegisterRoutes(router *mux.Router) {
 	h.registerNotificationRoutes(router)
 	h.registerAgentRoutes(router)
 	h.registerOrgRoutes(router)
+	h.registerRunnerSessionRoutes(router)
 	h.registerAttributeDefinitionRoutes(router)
 	h.registerSharedProductRoutes(router)
 

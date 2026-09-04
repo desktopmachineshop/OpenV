@@ -59,6 +59,12 @@ services:
       RUNNER_IMAGE: ${RUNNER_IMAGE:-openv-worker:latest}
       RUNNER_NETWORK: ${RUNNER_NETWORK:-}
       RUNNER_API_URL: ${RUNNER_API_URL:-http://api:8080}
+      # Transient runners: members lease a pre-warmed runner from the pool
+      # below instead of installing the connector. Set RUNNER_POOL_KEY on the
+      # API and the pool to the same secret to turn the feature on; leaving it
+      # unset disables it (no pool, nothing to lease).
+      #   openssl rand -hex 32
+      RUNNER_POOL_KEY: ${RUNNER_POOL_KEY:-}
       # Agent Connector downloads need no wiring: Dockerfile.api builds one
       # self-contained executable per OS into the image's ./dist, which is
       # the CONNECTOR_DIST_DIR default. Set CONNECTOR_DIST_DIR and mount a
@@ -74,6 +80,33 @@ services:
       postgres:
         condition: service_healthy
     restart: on-failure
+
+  # Transient runner pool. Each replica is a pre-warmed agentd that belongs to
+  # nobody until a member leases it; it then serves that one member, and wipes
+  # everything the lease wrote when it ends. Scale it to however many members
+  # you expect to be running agents at once:
+  #
+  #   docker compose up -d --scale runner-pool=3
+  #
+  # No container_name (replicas need distinct names) and no volume (a pool
+  # node's state is meant to be thrown away).
+  runner-pool:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    environment:
+      OPENV_API_URL: ${RUNNER_API_URL:-http://api:8080}
+      RUNNER_POOL_KEY: ${RUNNER_POOL_KEY:-}
+      RUNNER_POOL: ${RUNNER_POOL:-default}
+      # Leases get a HOME of their own under here, removed when they end.
+      RUNNER_SESSION_ROOT: /data/sessions
+      # Unset the image's hosted-runner default: a pool node is a member's own
+      # runner for the length of a lease, and does sign their CLIs in.
+      OPENV_HOSTED: ""
+    depends_on:
+      - api
+    restart: on-failure
+    profiles: ["runner-pool"]
 
   frontend:
     build:
