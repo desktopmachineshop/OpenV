@@ -79,7 +79,7 @@ const HELP_TOPICS: Record<string, HelpTopic> = {
     tips: [
       'Baseline views are read-only — switch back to Live Project in the Requirements view to edit.',
       'Capture and delete baselines from the top bar of the Requirements view.',
-      'Generate Report works for the live project or any baseline.',
+      'The Download button takes the live project or any baseline away as a PDF, Word file, JSON, CSV or ReqIF.',
       'The V&V dashboard and the Matrix have their own baseline selectors for historical views.',
     ],
     chapter: { slug: 'artifacts', title: 'Requirements & artifacts' },

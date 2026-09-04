@@ -122,9 +122,19 @@ type linkTypeLabel struct {
 var linkTypeLabels = buildLinkTypeLabels()
 
 // Service defines report generation behavior.
+//
+// The Generate* methods load a project (or baseline) snapshot and render it.
+// The Render* methods render a snapshot the caller already has — which is how
+// a download renders the SAME narrowed snapshot as a PDF and as a Word file
+// without either renderer knowing what a filter is.
 type Service interface {
 	GenerateProjectReport(projectID string, baselineID string) ([]byte, string, error)
 	GenerateProjectReportDOCX(projectID string, baselineID string) ([]byte, string, error)
+	RenderProjectReport(data *exports.ProjectExport, baselineName string) ([]byte, string, error)
+	RenderProjectReportDOCX(data *exports.ProjectExport, baselineName string) ([]byte, string, error)
+	// LoadReportExport is the snapshot a report reads: the live project, or a
+	// baseline's stored snapshot with the baseline's name beside it.
+	LoadReportExport(projectID string, baselineID string) (*exports.ProjectExport, string, error)
 	GenerateVVReport(projectID string, baselineID string, latest map[string]*vv.TestResult, runs []*vv.TestRun) ([]byte, string, error)
 }
 
@@ -273,13 +283,21 @@ func (s *DefaultService) GenerateProjectReport(projectID string, baselineID stri
 		return nil, "", err
 	}
 
+	return s.RenderProjectReport(data, baselineName)
+}
+
+// RenderProjectReport builds a PDF from a snapshot the caller prepared.
+func (s *DefaultService) RenderProjectReport(data *exports.ProjectExport, baselineName string) ([]byte, string, error) {
+	if data == nil {
+		return nil, "", errors.New("nothing to report on")
+	}
+
 	pdf, err := buildReportPDF(data, baselineName)
 	if err != nil {
 		return nil, "", err
 	}
 
-	filename := reportFilename(data.ProjectName, baselineName, "pdf")
-	return pdf, filename, nil
+	return pdf, reportFilename(data.ProjectName, baselineName, "pdf"), nil
 }
 
 // GenerateProjectReportDOCX builds a Word (.docx) spec document for a project
@@ -294,13 +312,30 @@ func (s *DefaultService) GenerateProjectReportDOCX(projectID string, baselineID 
 		return nil, "", err
 	}
 
+	return s.RenderProjectReportDOCX(data, baselineName)
+}
+
+// RenderProjectReportDOCX builds a Word document from a prepared snapshot.
+func (s *DefaultService) RenderProjectReportDOCX(data *exports.ProjectExport, baselineName string) ([]byte, string, error) {
+	if data == nil {
+		return nil, "", errors.New("nothing to report on")
+	}
+
 	docx, err := buildReportDOCX(data, baselineName)
 	if err != nil {
 		return nil, "", err
 	}
 
-	filename := reportFilename(data.ProjectName, baselineName, "docx")
-	return docx, filename, nil
+	return docx, reportFilename(data.ProjectName, baselineName, "docx"), nil
+}
+
+// LoadReportExport exposes the snapshot load so a download can narrow it
+// before any renderer sees it.
+func (s *DefaultService) LoadReportExport(projectID string, baselineID string) (*exports.ProjectExport, string, error) {
+	if projectID == "" {
+		return nil, "", errors.New("project_id is required")
+	}
+	return s.loadReportExport(projectID, baselineID)
 }
 
 func buildReportPDF(data *exports.ProjectExport, baselineName string) ([]byte, error) {

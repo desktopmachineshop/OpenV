@@ -1,6 +1,7 @@
 import axios, { AxiosInstance } from 'axios';
 import { filenameFromContentDisposition } from './contentDisposition';
 import type { SharedProductPayload, toSharePayload } from '../utils/randomProduct';
+import { downloadQuery } from '../utils/downloadSelection';
 
 // Determine API base URL
 // Priority: env var > browser detection > default fallback
@@ -166,6 +167,34 @@ export interface ProjectExport {
   attachments: Attachment[];
 }
 
+// What a project offers a download: the sections a reader can narrow to, the
+// artifact types it holds, and the attachment categories actually attached.
+// Served by /download/options so a chooser never offers a filter that would
+// come back empty.
+export interface DownloadOptions {
+  sections: DownloadSection[];
+  types: { type: string; count: number }[];
+  attachments: { category: string; count: number; bytes: number }[];
+}
+
+export interface DownloadSection {
+  id: string;
+  ref?: string;
+  number?: string;
+  title: string;
+  artifacts: number;
+}
+
+/** What a download contains. Empty lists mean "everything". */
+export interface DownloadSelection {
+  sections: string[];
+  types: string[];
+  includeHeadings: boolean;
+  attachments: string[];
+}
+
+export type DownloadFormat = 'json' | 'csv' | 'reqif' | 'pdf' | 'docx';
+
 export interface Attachment {
   id: string;
   artifact_id: string;
@@ -324,6 +353,20 @@ export const reviewAPI = {
     client.get<ReviewQueue>(`/api/v1/projects/${projectId}/review-queue`),
 };
 
+// Hand the browser a file to save. One copy of the anchor dance, used by every
+// download: the object URL is revoked straight after the click so a large
+// export is not held in memory for the life of the tab.
+const saveBlob = (data: BlobPart, filename: string): void => {
+  const url = window.URL.createObjectURL(new Blob([data]));
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', filename);
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
+};
+
 export const projectAPI = {
   create: (payload: Partial<Project>) =>
     client.post<Project>('/api/v1/projects', payload),
@@ -335,54 +378,31 @@ export const projectAPI = {
     client.put<Project>(`/api/v1/projects/${id}`, payload),
   delete: (id: string) =>
     client.delete(`/api/v1/projects/${id}`),
-  export: async (id: string, format: 'json' | 'csv' = 'json') => {
-    const response = await client.get(`/api/v1/projects/${id}/export?format=${format}`, {
-      responseType: 'blob',
-    });
-
-    // Extract filename from Content-Disposition header or use default
-    const filename =
-      filenameFromContentDisposition(response.headers['content-disposition']) ||
-      `project_export_${new Date().toISOString().slice(0, 10)}.${format}`;
-
-    // Create a download link and trigger it
-    const url = window.URL.createObjectURL(new Blob([response.data]));
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', filename);
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    window.URL.revokeObjectURL(url);
-    
-    return response;
+  downloadOptions: (id: string, baselineId?: string) => {
+    const params = baselineId && baselineId !== 'live' ? `?baseline_id=${encodeURIComponent(baselineId)}` : '';
+    return client.get<DownloadOptions>(`/api/v1/projects/${id}/download/options${params}`);
   },
-  report: async (id: string, baselineId?: string, format: 'pdf' | 'docx' = 'pdf') => {
-    const query = new URLSearchParams();
-    if (baselineId && baselineId !== 'live') {
-      query.set('baseline_id', baselineId);
-    }
-    if (format && format !== 'pdf') {
-      query.set('format', format);
-    }
-    const params = query.toString() ? `?${query.toString()}` : '';
-    const response = await client.get(`/api/v1/projects/${id}/report${params}`, {
-      responseType: 'blob',
-    });
+  // One call per format, all of them narrowed by the same selection. The
+  // response may be the document itself or a zip of it with its attachments —
+  // the filename in the Content-Disposition header says which, so the browser
+  // saves whatever the server actually built.
+  download: async (
+    id: string,
+    format: DownloadFormat,
+    selection: DownloadSelection,
+    baselineId?: string
+  ) => {
+    const query = downloadQuery(selection, baselineId);
+    const response = await client.get(
+      `/api/v1/projects/${id}/download/${format}${query ? `?${query}` : ''}`,
+      { responseType: 'blob' }
+    );
 
     const filename =
       filenameFromContentDisposition(response.headers['content-disposition']) ||
-      `project_report_${new Date().toISOString().slice(0, 10)}.${format}`;
+      `project_download_${new Date().toISOString().slice(0, 10)}.${format}`;
 
-    const url = window.URL.createObjectURL(new Blob([response.data]));
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', filename);
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    window.URL.revokeObjectURL(url);
-
+    saveBlob(response.data, filename);
     return response;
   },
   import: async (file: File) => {

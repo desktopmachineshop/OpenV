@@ -1,7 +1,7 @@
 import React, { useCallback, useState, useEffect } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useAppStore } from '../state/store';
-import { artifactAPI, linkAPI, attachmentAPI, baselineAPI, projectAPI, qualityAPI, agentsAPI, Artifact, Link, Attachment, Baseline, ProjectExport } from '../api/client';
+import { artifactAPI, linkAPI, attachmentAPI, baselineAPI, qualityAPI, agentsAPI, Artifact, Link, Attachment, Baseline, ProjectExport } from '../api/client';
 import type { ArtifactContextAction, QualityRowInfo } from '../components/ArtifactList';
 import { DropZone, planMove } from '../utils/artifactDrag';
 import { ImageLightbox } from '../components/ImageLightbox';
@@ -20,6 +20,7 @@ import { ArtifactList } from '../components/ArtifactList';
 import { ArtifactHeader } from '../components/ArtifactHeader';
 import { ArtifactDetails } from '../components/ArtifactDetails';
 import { ChatterPanel } from '../components/ChatterPanel';
+import { DownloadWizard } from '../components/DownloadWizard';
 import { ErrorBanner, useAlert, useConfirm, usePrompt } from '../components/ui';
 import { apiErrorMessage } from '../api/errors';
 
@@ -72,6 +73,8 @@ export const ModuleView: React.FC = () => {
   // "Draft test cases" launch guard: disables the button while the run is being
   // enqueued so a double-click can't launch two runs (issue #218).
   const [draftingTests, setDraftingTests] = useState(false);
+  // The download wizard, opened from the one Download button above.
+  const [downloadOpen, setDownloadOpen] = useState(false);
 
   // Resizable columns state
   const [leftColumnWidth, setLeftColumnWidth] = useState<number>(() => {
@@ -566,18 +569,6 @@ export const ModuleView: React.FC = () => {
       console.error('Failed to delete baseline:', error);
       const errorMsg = apiErrorMessage(error, 'Unknown error');
       setError(`Failed to delete baseline: ${errorMsg}`);
-    }
-  };
-
-  const handleGenerateReport = async (format: 'pdf' | 'docx' = 'pdf') => {
-    if (!projectId) return;
-    try {
-      await projectAPI.report(projectId, activeBaselineId, format);
-      setError('');
-    } catch (error: any) {
-      console.error('Failed to generate report:', error);
-      const errorMsg = apiErrorMessage(error, 'Unknown error');
-      setError(`Failed to generate report: ${errorMsg}`);
     }
   };
 
@@ -1180,8 +1171,10 @@ export const ModuleView: React.FC = () => {
         >
           {draftingTests ? 'Drafting…' : '🧪 Draft test cases'}
         </button>
+        {/* One way out of a project: the wizard asks what shape and how much,
+            and every format reads the same narrowed snapshot. */}
         <button
-          onClick={() => handleGenerateReport('pdf')}
+          onClick={() => setDownloadOpen(true)}
           style={{
             height: '36px',
             padding: '0 12px',
@@ -1192,23 +1185,9 @@ export const ModuleView: React.FC = () => {
             cursor: 'pointer',
             fontSize: '12px',
           }}
+          title="Download this project — choose a format, sections and attachments"
         >
-          Report (PDF)
-        </button>
-        <button
-          onClick={() => handleGenerateReport('docx')}
-          style={{
-            height: '36px',
-            padding: '0 12px',
-            backgroundColor: 'var(--accent-alt)',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer',
-            fontSize: '12px',
-          }}
-        >
-          Report (DOCX)
+          ↓ Download
         </button>
       </div>
       <div style={{ display: 'flex', gap: '0', paddingLeft: '20px', paddingRight: '20px', paddingBottom: '10px', flex: 1, minHeight: 0, overflow: 'hidden' }}>
@@ -1771,6 +1750,14 @@ export const ModuleView: React.FC = () => {
             )}
       </div>
       </div>
+
+      {downloadOpen && projectId && (
+        <DownloadWizard
+          projectId={projectId}
+          baselineId={activeBaselineId}
+          onClose={() => setDownloadOpen(false)}
+        />
+      )}
 
       {/* A figure opened by clicking its citation in a description. */}
       {figureInView && (
