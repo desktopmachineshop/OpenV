@@ -1,4 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
+import { openModule } from './helpers';
 
 // OpenV E2E smoke journey (issue #135).
 //
@@ -72,7 +73,7 @@ test('creates a project', async () => {
 
 test('creates a requirement and a user need', async () => {
   // exact: the overview page also renders "View in Requirements →" links.
-  await page.getByRole('link', { name: 'Requirements', exact: true }).click();
+  await openModule(page, 'Define', 'Requirements');
   await expect(page.getByRole('heading', { name: 'Requirements' })).toBeVisible();
 
   // Requirement via the New Artifact form (default type is "requirement").

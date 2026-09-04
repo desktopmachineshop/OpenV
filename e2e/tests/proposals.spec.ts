@@ -1,5 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
-import { makeRunId, makeUser, registerUser, createProject } from './helpers';
+import { makeRunId, makeUser, registerUser, createProject, openModule } from './helpers';
 
 // Proposals / agent-run review journey (issue #189).
 //
@@ -57,7 +57,7 @@ test('the proposal review surface renders with an honest empty count', async () 
 
   // The Runs module hosts ProposalReviewPanel; its "Pending approvals" pill
   // reflects the live count of pending proposals for the project.
-  await page.getByRole('link', { name: 'Runs', exact: true }).click();
+  await openModule(page, 'Agents', 'Runs');
   await expect(page.getByRole('heading', { name: 'Runs' })).toBeVisible();
 
   // A brand-new project has no agent runs and therefore no proposals: the

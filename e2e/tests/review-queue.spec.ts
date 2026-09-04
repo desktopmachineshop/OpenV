@@ -7,6 +7,7 @@ import {
   openRequirements,
   createRequirement,
   openArtifactForEdit,
+  openModule,
 } from './helpers';
 
 // Review-queue journey (issue #189).
@@ -85,7 +86,7 @@ test('editing the child flags the link suspect', async () => {
 });
 
 test('Review Queue shows the suspect link and the in-review artifact', async () => {
-  await page.getByRole('link', { name: 'Review Queue', exact: true }).click();
+  await openModule(page, 'Verify', 'Review Queue');
   await expect(page.getByRole('heading', { name: 'Review Queue' })).toBeVisible();
 
   // Suspect-links section: the decomposes-to link from parent to the (edited)

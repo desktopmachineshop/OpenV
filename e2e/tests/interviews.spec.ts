@@ -1,5 +1,5 @@
 import { test, expect, Page, BrowserContext } from '@playwright/test';
-import { makeRunId, makeUser, registerUser, createProject, apiURL } from './helpers';
+import { makeRunId, makeUser, registerUser, createProject, openModule, apiURL } from './helpers';
 
 // Interviews journey (issue #189).
 //
@@ -48,7 +48,7 @@ test('creates an interview and mints a public invite link', async () => {
   await registerUser(page, user);
   projectId = await createProject(page, projectName);
 
-  await page.getByRole('link', { name: 'Interviews', exact: true }).click();
+  await openModule(page, 'Define', 'Interviews');
   await expect(page.getByRole('heading', { name: 'Interviews' })).toBeVisible();
 
   await page.getByRole('button', { name: '+ New interview' }).click();
