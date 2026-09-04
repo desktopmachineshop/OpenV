@@ -20,6 +20,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/attributes"
 	"github.com/openv/requirements-platform/internal/domain/baselines"
 	"github.com/openv/requirements-platform/internal/domain/chatter"
+	"github.com/openv/requirements-platform/internal/domain/downloads"
 	"github.com/openv/requirements-platform/internal/domain/embeddings"
 	"github.com/openv/requirements-platform/internal/domain/exports"
 	"github.com/openv/requirements-platform/internal/domain/links"
@@ -58,6 +59,7 @@ type HandlerDeps struct {
 	ProjectService       projects.Service
 	AttachmentService    attachments.Service
 	ExportService        exports.Service
+	DownloadService      downloads.Service
 	BaselineService      baselines.Service
 	ReportService        reports.Service
 	TemplateService      templates.Service
@@ -115,6 +117,7 @@ type Handler struct {
 	projectService    projects.Service
 	attachmentService attachments.Service
 	exportService     exports.Service
+	downloadService   downloads.Service
 	baselineService   baselines.Service
 	reportService     reports.Service
 	templateService   templates.Service
@@ -180,6 +183,7 @@ func NewHandler(deps HandlerDeps) *Handler {
 		projectService:         deps.ProjectService,
 		attachmentService:      deps.AttachmentService,
 		exportService:          deps.ExportService,
+		downloadService:        deps.DownloadService,
 		baselineService:        deps.BaselineService,
 		reportService:          deps.ReportService,
 		templateService:        deps.TemplateService,
@@ -256,6 +260,8 @@ func (h *Handler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/projects/{id}/export", h.ExportProject).Methods("GET")
 	router.HandleFunc("/api/v1/projects/import", h.ImportProject).Methods("POST")
 	router.HandleFunc("/api/v1/projects/{id}/report", h.GenerateReport).Methods("GET")
+	// One download surface with a route per output; see download_handlers.go.
+	h.registerDownloadRoutes(router)
 	router.HandleFunc("/api/v1/projects/{id}/ai-map", h.ProjectAIMap).Methods("GET")
 	router.HandleFunc("/api/v1/projects/{id}/review-queue", h.ReviewQueue).Methods("GET")
 	router.HandleFunc("/api/v1/projects/{id}/reindex-embeddings", h.ReindexEmbeddings).Methods("POST")

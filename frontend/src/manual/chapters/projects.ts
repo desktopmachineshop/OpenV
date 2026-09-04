@@ -15,8 +15,7 @@ date. Hovering a card reveals its action buttons:
 | --- | --- |
 | ⧉ | **Save as template** — snapshot this project as a reusable template |
 | ✎ | **Edit project** — rename it or change the description |
-| ↓ JSON | **Export project as JSON** — download the whole project (re-importable) |
-| ↓ CSV | **Export artifacts as CSV** — download the artifacts as flat spreadsheet rows |
+| ↓ | **Download** — opens the download wizard (format, sections, attachments) |
 | ✕ | **Delete project** — removes the project and all its artifacts |
 
 Click anywhere else on the card to open the project.
@@ -33,15 +32,54 @@ Click **+ New Project**. The form offers a **Project Type**:
 Choosing a template or example pre-fills the name and description; you can
 change both before creating.
 
-## Import & export
+## Downloading a project
 
-- **↑ Import Project** takes a JSON file previously produced by
-  **Export project as JSON** and creates a new project from it.
-- Export/import is a simple way to move a project between servers or keep an
+There is one way out of a project, and it is the **↓ Download** button — on the
+project card here, and in the Requirements toolbar inside the project. It opens
+a two-step wizard.
+
+**1. Format** — what shape you need it in:
+
+| Format | What it is |
+| --- | --- |
+| PDF specification | The document as a reader sees it: sections, artifacts, figures, traceability |
+| Word document | The same specification as a .docx, for editing or review outside OpenV |
+| JSON data | The complete project, and the only format an OpenV import reads back |
+| CSV table | One row per artifact for a spreadsheet; links fold into a single column |
+| ReqIF interchange | The OMG format read by DOORS and Polarion |
+
+**2. Content** — how much of it:
+
+- **Sections** — tick the top-level sections to include. A section brings
+  everything underneath it, however deep. Each shows how many artifacts it
+  holds, so you can see what leaving one out costs.
+- **Artifact types** — tick the types to include (requirements, test cases,
+  and whatever else this project holds), and whether **Headings** come with
+  them. Untick headings for a plain list of artifacts with no document
+  structure around them.
+- **Attachments** — tick the categories of file to bring along: figures,
+  unnumbered images, documents, data files. Only the categories this project
+  actually holds are offered. Ticking any makes the download a **.zip**: the
+  document plus an \`attachments/\` folder, each file named by its figure
+  reference where it has one.
+
+The line at the foot of the wizard says what you are about to get — "1 of 3
+sections, no headings, with figures" — and the button refuses to download a
+selection that would produce an empty file.
+
+Whatever you pick applies to whichever format you chose: the filters are
+applied once, to the project snapshot, before the PDF or the CSV is built from
+it. A baseline selected in the Requirements toolbar is downloaded instead of
+the live project.
+
+## Import
+
+- **↑ Import Project** takes a JSON file previously produced by the wizard's
+  **JSON data** format and creates a new project from it.
+- Download/import is a simple way to move a project between servers or keep an
   offline copy.
-- The CSV export is a one-way snapshot for spreadsheets and reports: one row
-  per artifact with its status, version, parent, and outgoing links. It cannot
-  be re-imported.
+- The other formats are one-way: CSV, PDF, Word and ReqIF are snapshots to read
+  or to hand to another tool, not something OpenV reads back.
 
 ## Inside a project
 
@@ -82,7 +120,7 @@ Project membership is managed in **Settings → Access** inside the project:
 ## Deleting a project
 
 Use the ✕ on the project card, or **Settings → Danger Zone** inside the
-project. Deletion removes the project and all of its artifacts — export first
+project. Deletion removes the project and all of its artifacts — download first
 if you might need it again.
 `;
 

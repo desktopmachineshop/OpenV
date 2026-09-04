@@ -142,8 +142,9 @@ links) at a point in time. The top bar of the Requirements view controls them:
 - The **baseline dropdown** switches between "Live Project" and any baseline.
   Baseline views are **read-only** — you can browse but not edit.
 - 🗑 deletes the selected baseline (the live project can't be deleted here).
-- **Generate Report** — produces a report for the live project or the selected
-  baseline.
+- **↓ Download** — opens the download wizard for the live project or the
+  selected baseline: PDF, Word, JSON, CSV or ReqIF, narrowed to the sections,
+  types and attachments you pick. See the Projects chapter.
 
 Baselines also drive comparisons in the **V&V** dashboard and the
 **Matrix** view, both of which have their own baseline selector.

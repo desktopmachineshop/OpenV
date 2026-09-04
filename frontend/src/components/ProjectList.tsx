@@ -28,6 +28,7 @@ import {
 import { apiErrorMessage } from '../api/errors';
 import { Navbar } from './Navbar';
 import { HelpSidebar } from './HelpSidebar';
+import { DownloadWizard } from './DownloadWizard';
 import { CreateOrgModal } from './CreateOrgModal';
 import { useConfirm, usePrompt } from './ui';
 import './ProjectList.css';
@@ -45,6 +46,8 @@ export const ProjectList: React.FC = () => {
     navigate(`/projects/${id}`);
   };
   const [error, setError] = useState<string>('');
+  // The project whose download wizard is open, if any.
+  const [downloadProjectId, setDownloadProjectId] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [newProjectName, setNewProjectName] = useState<string>('');
   const [newProjectDesc, setNewProjectDesc] = useState<string>('');
@@ -427,17 +430,6 @@ export const ProjectList: React.FC = () => {
     setEditProjectDesc('');
   };
 
-  const handleExportProject = async (id: string, format: 'json' | 'csv', e: React.MouseEvent) => {
-    e.stopPropagation();
-    try {
-      await projectAPI.export(id, format);
-      setError('');
-    } catch (err: any) {
-      console.error('Failed to export project:', err);
-      setError(`Failed to export project: ${apiErrorMessage(err)}`);
-    }
-  };
-
   const handleImportClick = () => {
     fileInputRef.current?.click();
   };
@@ -509,6 +501,12 @@ export const ProjectList: React.FC = () => {
           page it explains creating, importing, templating and exporting
           projects. */}
       <HelpSidebar />
+      {downloadProjectId && (
+        <DownloadWizard
+          projectId={downloadProjectId}
+          onClose={() => setDownloadProjectId(null)}
+        />
+      )}
       <div className="project-list-container">
 
 
@@ -592,18 +590,14 @@ export const ProjectList: React.FC = () => {
                         ✎
                       </button>
                       <button
-                        className="icon-btn export-btn export-format-btn"
-                        onClick={(e) => handleExportProject(project.id, 'json', e)}
-                        title="Export project as JSON (full project, re-importable)"
+                        className="icon-btn export-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDownloadProjectId(project.id);
+                        }}
+                        title="Download this project — choose a format, sections and attachments"
                       >
-                        ↓ JSON
-                      </button>
-                      <button
-                        className="icon-btn export-btn export-format-btn"
-                        onClick={(e) => handleExportProject(project.id, 'csv', e)}
-                        title="Export artifacts as CSV (flat spreadsheet rows)"
-                      >
-                        ↓ CSV
+                        ↓
                       </button>
                       <button
                         className="icon-btn delete-btn"

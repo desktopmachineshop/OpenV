@@ -1,5 +1,5 @@
 {
-  "exported_at": "2026-09-04T07:23:14.482095373Z",
+  "exported_at": "2026-09-04T10:25:31.010990679Z",
   "version": "1.0",
   "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
   "project_name": "OpenV Platform",
@@ -4459,6 +4459,53 @@
       "updated_at": "2026-09-04T07:22:36.424227Z"
     },
     {
+      "id": "f0c7c1d0-4659-497c-9ed2-c83842d9f176",
+      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
+      "parent_id": "8c8b86be-4730-49cb-9d95-93868a0c1938",
+      "type": "test-case",
+      "ref": "TC-27",
+      "title": "Download selection and archive suite",
+      "body": "Go suite over the selection filter and the download assembly, plus the client suite over the form that drives them.\n\nSelection: the whole project passes through untouched; headings drop out on request; a section brings its whole subtree including grandchildren; a type filter and a section filter combine; a link survives only when both of its ends do; attachment metadata always travels with its artifact while the files are opt-in; a parent cycle already in the data terminates rather than hanging; the snapshot handed in is never mutated.\n\nAssembly: every format renders the same narrowed snapshot; the baseline's name reaches the renderer; a download with no attachment categories is the plain file; one with categories is a zip holding the document and the files; only the categories asked for are packed; an unreadable file is recorded in a manifest rather than failing the download; archive entry names cannot climb out of the archive; two files with one name both survive.\n\nOptions: sections, types and attachment categories are counted off the project, and a project with none offers none.\n\nClient: everything ticked sends no filter, an unticked box sends the narrowing, the query carries a baseline but not the live project, and an empty selection is refused before it is sent.",
+      "sort_order": 202,
+      "status": "draft",
+      "attributes": {
+        "links_snapshot": [
+          {
+            "attributes": null,
+            "created_at": "2026-09-04T10:24:59.576135Z",
+            "from_id": "f0c7c1d0-4659-497c-9ed2-c83842d9f176",
+            "id": "fee3e78f-6f3e-4dd3-ba2d-a5b8b5eb3a04",
+            "suspect": false,
+            "to_id": "fc0d8415-9427-4c5e-a0bf-106803ea5d62",
+            "type": "verifies",
+            "updated_at": "2026-09-04T10:24:59.576135Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
+          {
+            "attributes": null,
+            "created_at": "2026-09-04T10:24:53.816759Z",
+            "from_id": "f0c7c1d0-4659-497c-9ed2-c83842d9f176",
+            "id": "a17b1f2d-b62f-4c40-a6fb-f77acc9a37a7",
+            "suspect": false,
+            "to_id": "f97d911b-6bb9-4fbc-b178-fba5e73c1490",
+            "type": "verifies",
+            "updated_at": "2026-09-04T10:24:53.816759Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          }
+        ],
+        "status": "draft"
+      },
+      "version": 3,
+      "valid_from": "2026-09-04T10:24:59.587633Z",
+      "valid_to": null,
+      "created_at": "2026-09-04T10:24:48.159776Z",
+      "updated_at": "2026-09-04T10:24:59.587633Z"
+    },
+    {
       "id": "7973f87c-ab01-4383-a9af-130a433a04ed",
       "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
       "parent_id": "a25960b2-ee9b-4005-a2d1-d5e875c9e158",
@@ -5183,18 +5230,31 @@
       "parent_id": "d959d147-c2ab-4982-a59b-f0453157cbd7",
       "type": "requirement",
       "ref": "REQ-6",
-      "title": "Export and reporting",
-      "body": "The system shall export projects as structured data and generate formatted PDF reports including V&V status.",
+      "title": "Project download in every format",
+      "body": "The system shall offer one download action per project, from which a member chooses the output format. The system shall render a project as a PDF specification, a Word document, structured JSON, a CSV table and a ReqIF interchange file. The PDF and the Word document shall include V&V status. The JSON shall carry everything a project import restores.\n\nThe system shall prepare one project snapshot per download and render every format from that snapshot, so that the same request yields the same content in whichever format a member chose. The system shall download a baseline's snapshot in place of the live project when the member has selected a baseline.",
       "sort_order": 230,
-      "status": "approved",
+      "status": "draft",
       "attributes": {
         "links_snapshot": [
+          {
+            "attributes": null,
+            "created_at": "2026-09-04T10:24:59.576135Z",
+            "from_id": "f0c7c1d0-4659-497c-9ed2-c83842d9f176",
+            "id": "fee3e78f-6f3e-4dd3-ba2d-a5b8b5eb3a04",
+            "suspect": false,
+            "to_id": "fc0d8415-9427-4c5e-a0bf-106803ea5d62",
+            "type": "verifies",
+            "updated_at": "2026-09-04T10:24:59.576135Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          },
           {
             "attributes": null,
             "created_at": "2026-08-30T19:54:26.754764Z",
             "from_id": "fc0d8415-9427-4c5e-a0bf-106803ea5d62",
             "id": "552dbca9-8278-411f-9ab7-313446e5c53a",
-            "suspect": false,
+            "suspect": true,
             "to_id": "12cff868-2282-41cd-82a9-b8bfe708d9a6",
             "type": "derives-from",
             "updated_at": "2026-08-30T19:54:26.754764Z",
@@ -5204,15 +5264,15 @@
           }
         ],
         "priority": "should",
-        "status": "approved",
+        "status": "draft",
         "verification_method": "demonstration",
         "verification_status": "verified"
       },
-      "version": 3,
-      "valid_from": "2026-08-30T19:54:50.503117Z",
+      "version": 5,
+      "valid_from": "2026-09-04T10:24:59.595674Z",
       "valid_to": null,
       "created_at": "2026-08-30T19:54:09.140519Z",
-      "updated_at": "2026-08-30T19:54:50.503117Z"
+      "updated_at": "2026-09-04T10:24:59.595674Z"
     },
     {
       "id": "b5846f74-5db9-49a7-999c-2ae268c3f8d6",
@@ -5774,6 +5834,42 @@
       "updated_at": "2026-09-04T07:22:36.434817Z"
     },
     {
+      "id": "f97d911b-6bb9-4fbc-b178-fba5e73c1490",
+      "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
+      "parent_id": "d959d147-c2ab-4982-a59b-f0453157cbd7",
+      "type": "requirement",
+      "ref": "REQ-56",
+      "title": "Choosing what a download contains",
+      "body": "The download action shall let a member narrow what the download contains, and shall apply that choice to the prepared snapshot before rendering any format.\n\nA member shall be able to select which top-level sections to include, and the system shall include every artifact beneath a selected section. A member shall be able to select which artifact types to include, and shall be able to exclude headings so that the download holds artifacts alone. The system shall include a traceability link only when the download contains both artifacts it joins.\n\nA member shall be able to select which categories of attachment to include, and the system shall offer only the categories the project holds. The system shall deliver the rendered document and the selected attachment files together as one archive whenever a member selects any attachment category. The system shall name each attachment in the archive by its figure reference where it has one.\n\nThe system shall state what the current selection contains before the member commits to it. The system shall refuse a selection that matches no artifact.",
+      "sort_order": 286,
+      "status": "draft",
+      "attributes": {
+        "links_snapshot": [
+          {
+            "attributes": null,
+            "created_at": "2026-09-04T10:24:53.816759Z",
+            "from_id": "f0c7c1d0-4659-497c-9ed2-c83842d9f176",
+            "id": "a17b1f2d-b62f-4c40-a6fb-f77acc9a37a7",
+            "suspect": false,
+            "to_id": "f97d911b-6bb9-4fbc-b178-fba5e73c1490",
+            "type": "verifies",
+            "updated_at": "2026-09-04T10:24:53.816759Z",
+            "valid_from": "0001-01-01T00:00:00Z",
+            "valid_to": null,
+            "version": 1
+          }
+        ],
+        "priority": "should",
+        "status": "draft",
+        "verification_method": "test"
+      },
+      "version": 3,
+      "valid_from": "2026-09-04T10:24:53.832134Z",
+      "valid_to": null,
+      "created_at": "2026-09-04T10:24:24.54332Z",
+      "updated_at": "2026-09-04T10:24:53.832134Z"
+    },
+    {
       "id": "a25960b2-ee9b-4005-a2d1-d5e875c9e158",
       "project_id": "e17c1297-0735-4fd3-976e-2e0605c91bb6",
       "parent_id": "e2c7d247-ec5d-4e11-bd8d-bb7533373251",
@@ -5813,6 +5909,32 @@
     }
   ],
   "links": [
+    {
+      "id": "fee3e78f-6f3e-4dd3-ba2d-a5b8b5eb3a04",
+      "from_id": "f0c7c1d0-4659-497c-9ed2-c83842d9f176",
+      "to_id": "fc0d8415-9427-4c5e-a0bf-106803ea5d62",
+      "type": "verifies",
+      "suspect": false,
+      "attributes": null,
+      "version": 1,
+      "valid_from": "0001-01-01T00:00:00Z",
+      "valid_to": null,
+      "created_at": "2026-09-04T10:24:59.576135Z",
+      "updated_at": "2026-09-04T10:24:59.576135Z"
+    },
+    {
+      "id": "a17b1f2d-b62f-4c40-a6fb-f77acc9a37a7",
+      "from_id": "f0c7c1d0-4659-497c-9ed2-c83842d9f176",
+      "to_id": "f97d911b-6bb9-4fbc-b178-fba5e73c1490",
+      "type": "verifies",
+      "suspect": false,
+      "attributes": null,
+      "version": 1,
+      "valid_from": "0001-01-01T00:00:00Z",
+      "valid_to": null,
+      "created_at": "2026-09-04T10:24:53.816759Z",
+      "updated_at": "2026-09-04T10:24:53.816759Z"
+    },
     {
       "id": "6a710f83-df2f-48e4-a3c8-13bf2cb573b0",
       "from_id": "04e6798a-0977-446c-8fd8-646a8b70d4ba",
@@ -7326,7 +7448,7 @@
       "from_id": "fc0d8415-9427-4c5e-a0bf-106803ea5d62",
       "to_id": "12cff868-2282-41cd-82a9-b8bfe708d9a6",
       "type": "derives-from",
-      "suspect": false,
+      "suspect": true,
       "attributes": null,
       "version": 1,
       "valid_from": "0001-01-01T00:00:00Z",

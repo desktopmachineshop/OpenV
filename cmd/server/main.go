@@ -27,6 +27,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/automations"
 	"github.com/openv/requirements-platform/internal/domain/baselines"
 	"github.com/openv/requirements-platform/internal/domain/chatter"
+	"github.com/openv/requirements-platform/internal/domain/downloads"
 	"github.com/openv/requirements-platform/internal/domain/embeddings"
 	"github.com/openv/requirements-platform/internal/domain/exports"
 	"github.com/openv/requirements-platform/internal/domain/guided"
@@ -216,6 +217,9 @@ func main() {
 	chatterService := chatter.NewDefaultService(chatterRepo)
 	exportService := exports.NewService(artifactService, linkService, attachmentService, projectInfoRepo, projectService)
 	reportService := reports.NewService(exportService, baselineService)
+	// One download service over both: it prepares the snapshot once, narrows it
+	// to what was asked for, and hands it to the renderer for the chosen format.
+	downloadService := downloads.NewService(exportService, reportService)
 	templateService := templates.NewService(templateRepo, exportService)
 	if err := templateService.SeedDefaults(); err != nil {
 		slog.Warn("failed to seed templates", "error", err)
@@ -529,6 +533,7 @@ func main() {
 		ProjectService:       projectService,
 		AttachmentService:    attachmentService,
 		ExportService:        exportService,
+		DownloadService:      downloadService,
 		BaselineService:      baselineService,
 		ReportService:        reportService,
 		TemplateService:      templateService,

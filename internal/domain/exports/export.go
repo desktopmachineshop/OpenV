@@ -58,6 +58,10 @@ type ProjectExport struct {
 // Service defines the export/import service interface
 type Service interface {
 	ExportProject(projectID string, format ExportFormat) ([]byte, string, error)
+	// PrepareExport assembles the snapshot every output reads; RenderExport
+	// turns one into bytes. Downloads narrow the snapshot between the two.
+	PrepareExport(projectID string, withAttributeDefs bool) (*ProjectExport, error)
+	RenderExport(data *ProjectExport, format ExportFormat) ([]byte, string, error)
 	ImportProject(data []byte, orgID string) (string, error)
 	ImportProjectWithOverrides(data []byte, nameOverride string, descOverride string, orgID string) (string, error)
 	// ImportProjectReqIF imports a ReqIF 1.x document into a new project owned by
@@ -121,24 +125,41 @@ func NewService(
 	}
 }
 
-// ExportProject exports a project in the specified format
+// ExportProject exports a project in the specified format.
+//
+// It is prepare-then-render: PrepareExport assembles the snapshot every output
+// reads, RenderExport turns that snapshot into one format's bytes. A download
+// that narrows the project sits between the two — see the downloads package —
+// so a filtered PDF and a filtered CSV are the same document in two shapes.
 func (s *DefaultService) ExportProject(projectID string, format ExportFormat) ([]byte, string, error) {
+	data, err := s.PrepareExport(projectID, format == FormatReqIF)
+	if err != nil {
+		return nil, "", err
+	}
+	return s.RenderExport(data, format)
+}
+
+// PrepareExport assembles the project snapshot that every export, report and
+// download is rendered from: artifacts, links, attachment metadata and the
+// product profile. withAttributeDefs additionally loads the effective
+// attribute definitions, which only ReqIF needs.
+func (s *DefaultService) PrepareExport(projectID string, withAttributeDefs bool) (*ProjectExport, error) {
 	// Get project info
 	project, err := s.projectRepo.FindByID(projectID)
 	if err != nil {
-		return nil, "", fmt.Errorf("failed to get project: %w", err)
+		return nil, fmt.Errorf("failed to get project: %w", err)
 	}
 
 	// Get all artifacts
 	artifactList, err := s.artifactService.ListArtifacts(projectID, "")
 	if err != nil {
-		return nil, "", fmt.Errorf("failed to get artifacts: %w", err)
+		return nil, fmt.Errorf("failed to get artifacts: %w", err)
 	}
 
 	// Get all links
 	linkList, err := s.linkService.GetAllLinks(projectID)
 	if err != nil {
-		return nil, "", fmt.Errorf("failed to get links: %w", err)
+		return nil, fmt.Errorf("failed to get links: %w", err)
 	}
 
 	// Get all attachments for every artifact in one batched query (was a
@@ -155,7 +176,7 @@ func (s *DefaultService) ExportProject(projectID string, format ExportFormat) ([
 	if len(artifactIDs) > 0 {
 		byArtifact, err := s.attachmentService.GetAttachmentsByArtifacts(artifactIDs)
 		if err != nil {
-			return nil, "", fmt.Errorf("failed to get attachments: %w", err)
+			return nil, fmt.Errorf("failed to get attachments: %w", err)
 		}
 		for _, artifact := range artifactList {
 			if artifact == nil {
@@ -185,29 +206,39 @@ func (s *DefaultService) ExportProject(projectID string, format ExportFormat) ([
 		}
 	}
 
-	// Export based on format
-	switch format {
-	case FormatJSON:
-		return s.exportJSON(exportData)
-	case FormatCSV:
-		return s.exportCSV(exportData)
-	case FormatReqIF:
-		// Attach the effective attribute definitions so enum attributes export
-		// as ReqIF enumerations. Best-effort: definitions are optional fidelity,
-		// so failures degrade to free-form string attributes rather than fail
-		// the export.
-		if s.attributeService != nil {
-			orgID := ""
-			if s.projectService != nil {
-				if p, err := s.projectService.GetProject(projectID); err == nil && p != nil {
-					orgID = p.OrgID
-				}
-			}
-			if defs, err := s.attributeService.EffectiveForProject(orgID, projectID); err == nil {
-				exportData.AttributeDefs = defs
+	// Attach the effective attribute definitions so ReqIF can type enum
+	// attributes as enumerations. Best-effort: definitions are optional
+	// fidelity, so failures degrade to free-form string attributes rather than
+	// fail the export.
+	if withAttributeDefs && s.attributeService != nil {
+		orgID := ""
+		if s.projectService != nil {
+			if p, err := s.projectService.GetProject(projectID); err == nil && p != nil {
+				orgID = p.OrgID
 			}
 		}
-		return s.exportReqIF(exportData)
+		if defs, err := s.attributeService.EffectiveForProject(orgID, projectID); err == nil {
+			exportData.AttributeDefs = defs
+		}
+	}
+
+	return exportData, nil
+}
+
+// RenderExport turns a prepared snapshot into one format's bytes and the
+// filename to serve it under. It reads only the snapshot, so a narrowed
+// snapshot renders exactly as a whole one does.
+func (s *DefaultService) RenderExport(data *ProjectExport, format ExportFormat) ([]byte, string, error) {
+	if data == nil {
+		return nil, "", fmt.Errorf("nothing to export")
+	}
+	switch format {
+	case FormatJSON:
+		return s.exportJSON(data)
+	case FormatCSV:
+		return s.exportCSV(data)
+	case FormatReqIF:
+		return s.exportReqIF(data)
 	case FormatExcel:
 		return nil, "", fmt.Errorf("%w: excel export not yet implemented", ErrUnsupportedFormat)
 	default:
