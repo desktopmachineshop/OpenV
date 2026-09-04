@@ -57,6 +57,12 @@ FRONTEND_URL=https://<your-frontend-domain>.up.railway.app
 #   openssl rand -hex 32
 WORKER_API_KEY=<long random string>
 
+# Transient runners: set this to a long random string (openssl rand -hex 32)
+# and give the runner-pool service the same value. Members can then lease a
+# pre-warmed cloud runner from the UI instead of installing the connector.
+# Leave it unset to keep the feature off. See section 4 below.
+RUNNER_POOL_KEY=<long random string>
+
 # Railway containers have no Docker daemon: hosted runner containers cannot
 # be provisioned there. Run agent workers (agentd) on your own machine
 # instead, pointed at the API domain — see docs/agents.md.
@@ -109,7 +115,51 @@ Because the two domains reference each other (`CORS_ORIGIN` on the API,
 `REACT_APP_API_URL` on the frontend), generate both domains first, then fill
 in the variables, then let both services deploy.
 
-## 4. Verify
+## 4. Runner pool service (optional — transient runners)
+
+Transient runners let a member lease a pre-warmed cloud runner from the UI and
+sign their agents into it from the browser, with nothing to download. Railway
+cannot run the hosted-runner tier (no Docker socket), but it runs a pool
+perfectly well: a pool is just replicas of one service.
+
+**Create → GitHub Repo**, pick the same repository a third time.
+
+Service settings:
+
+- **Root Directory**: leave as `/`, and set **Settings → Build → Dockerfile
+  Path** to `Dockerfile.worker` (this service is the runner image, not the API).
+- **Networking**: none. A pool node makes outbound calls only; do not generate
+  a domain.
+- **Settings → Deploy → Replicas**: the number of members who can hold a cloud
+  runner at once. Start at 2 and raise it when members start seeing "every
+  cloud runner is in use".
+- **Volume**: none. A pool node's state is meant to be thrown away, and it is
+  wiped between leases anyway.
+
+Variables:
+
+```dotenv
+# Must match the API service's RUNNER_POOL_KEY exactly.
+RUNNER_POOL_KEY=${{openv-api.RUNNER_POOL_KEY}}
+
+# The API as seen from inside the pool node. Railway's private network is
+# cheaper than egressing to the public domain.
+OPENV_API_URL=http://${{openv-api.RAILWAY_PRIVATE_DOMAIN}}:8080
+
+# Per-lease HOME directories (created and deleted per lease).
+RUNNER_SESSION_ROOT=/data/sessions
+
+# Each replica gets a distinct hostname, which is the node's identity.
+# Unset the image's hosted-runner default — a leased node is a member's own
+# runner and does sign their CLIs in.
+OPENV_HOSTED=
+```
+
+Substitute your API service's actual name for `openv-api` in the references
+above. With `RUNNER_POOL_KEY` set on both services, the **Cloud runner** card
+appears in each member's settings.
+
+## 5. Verify
 
 - `https://<api-domain>/health` returns OK.
 - The frontend loads and can sign in / create a project. A CORS error in
@@ -149,7 +199,13 @@ a normal push to the connected branch.
 - **Hosted runners are unavailable** (`HOSTED_RUNNERS=off`): the API
   provisions runner containers via the host Docker socket, which Railway
   does not expose. Use host-side workers (`make worker`, `agentd`) on your
-  own machine with `RUNNER_API_URL` pointed at the public API domain.
+  own machine with `RUNNER_API_URL` pointed at the public API domain — or
+  the **transient runner pool** in section 4, which needs no Docker daemon
+  and gives members a runner without installing anything.
+- **Pool replicas are billed while idle.** Pre-warming is the point (a lease
+  is ready in seconds), but an idle replica still costs what an idle
+  container costs. Size the pool to real concurrent use, and leave
+  `RUNNER_POOL_KEY` unset on deployments that do not want the feature.
 - **One volume per service**: `/data` holds both agent definitions
   (`$OPENV_DATA_DIR/agents`) and uploads (`UPLOADS_DIR=/data/uploads`).
 - **Connector downloads** are baked into the API image (`Dockerfile.api`

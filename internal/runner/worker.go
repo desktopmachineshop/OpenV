@@ -27,6 +27,11 @@ type Options struct {
 	// Hosted marks a platform-run token-mode worker: no interactive CLI
 	// sign-in, and repo-access runs are never claimed.
 	Hosted bool
+	// Headless marks a worker with no console and no browser on its host —
+	// a transient runner in a container. CLI sign-in still happens here, but
+	// every step of it is relayed to the member's browser: TUI logins run
+	// over a pseudo-terminal, loopback redirects are pasted back.
+	Headless bool
 	// WorkspaceRetention is how long a run's workspace directory is kept
 	// before the periodic cleanup sweep removes it. Defaults to
 	// defaultWorkspaceRetention when unset.
@@ -45,6 +50,7 @@ type Worker struct {
 	mcpBinary        string
 	apiURL           string
 	hosted           bool
+	headless         bool
 
 	workspaceRetention time.Duration
 
@@ -119,6 +125,7 @@ func NewWorker(client *Client, opts Options) *Worker {
 		mcpBinary:          opts.MCPBinary,
 		apiURL:             opts.APIURL,
 		hosted:             opts.Hosted,
+		headless:           opts.Headless,
 		workspaceRetention: opts.WorkspaceRetention,
 	}
 }

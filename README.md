@@ -19,6 +19,7 @@ AI agents that work inside your projects, powered by your own vendor CLI
 subscription (Claude Code / Codex / Gemini) running on your machine:
 
 - **Agent workers**: host-side `agentd` worker pulls queued runs from the server; no API keys stored server-side
+- **Transient runners**: lease a pre-warmed cloud runner for a while and sign your agents into it from the browser — nothing to install; the lease expires when you stop using it and the runner is wiped
 - **MCP tool surface**: agents read and propose changes through typed tools (`openv-mcp`), fetching requirement content at run time
 - **Human review**: agent writes land as proposals or draft artifacts for approval — nothing merges unreviewed
 - **Product discovery**: personas, user needs, `derives-from`/`validates` traceability, and guided product definition

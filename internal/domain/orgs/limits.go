@@ -21,6 +21,12 @@ const (
 	// LimitRunnerCPUs caps the org's hosted runner container CPU, in CPUs
 	// (fractions allowed; mapped to docker NanoCPUs).
 	LimitRunnerCPUs = "runner_cpus"
+	// LimitRunnerSessionMinutes is the maximum lifetime of a transient
+	// runner lease, in minutes.
+	LimitRunnerSessionMinutes = "runner_session_minutes"
+	// LimitRunnerSessionIdleMinutes is how long a transient runner lease may
+	// go without run activity before it is reclaimed, in minutes.
+	LimitRunnerSessionIdleMinutes = "runner_session_idle_minutes"
 )
 
 // PlanDefaults returns the default limits for a billing plan. The values are
@@ -30,13 +36,17 @@ func PlanDefaults(plan string) map[string]interface{} {
 	switch plan {
 	case PlanTeam:
 		return map[string]interface{}{
-			LimitRunnerMemoryMB: 4096,
-			LimitRunnerCPUs:     2.0,
+			LimitRunnerMemoryMB:           4096,
+			LimitRunnerCPUs:               2.0,
+			LimitRunnerSessionMinutes:     120,
+			LimitRunnerSessionIdleMinutes: 20,
 		}
 	default: // PlanFree and anything unrecognized
 		return map[string]interface{}{
-			LimitRunnerMemoryMB: 2048,
-			LimitRunnerCPUs:     1.0,
+			LimitRunnerMemoryMB:           2048,
+			LimitRunnerCPUs:               1.0,
+			LimitRunnerSessionMinutes:     60,
+			LimitRunnerSessionIdleMinutes: 15,
 		}
 	}
 }

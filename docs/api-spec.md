@@ -53,9 +53,22 @@ Keys are org-scoped rows in `worker_keys` (stored hashed):
 - **Personal runner keys** — one per member (`worker_keys.user_id` set);
   minted via `/orgs/{id}/my-runner-key` or the Agent Connector pairing flow.
   A personal key only claims runs its owner launched.
+- **Session keys** — a personal key bound to a transient runner lease
+  (`worker_keys.session_id` set), minted when a member leases a pool node and
+  revoked when the lease ends. It routes like any personal key; it is kept
+  distinct so leasing a cloud runner never rotates the member's own connector
+  key.
 
 A worker principal passes project checks only for projects belonging to its
 own org.
+
+### 3a. Runner pool nodes — Bearer `RUNNER_POOL_KEY`
+
+Transient runner pool nodes present the deployment-wide `RUNNER_POOL_KEY`.
+This principal has **no workspace and no user**: it may call the
+`/api/v1/runner-pool/*` endpoints and nothing else. A node gains a workspace
+identity only by being leased, and then authenticates as the lease's session
+key like any other runner.
 
 ### 4. Legacy `WORKER_API_KEY`
 
@@ -142,7 +155,7 @@ their own project, workers pass within their org) · `org member`/`org admin`
 | GET | `/api/v1/orgs/{id}/quality-rules` | Workspace requirement quality rules (house style every project inherits) | org member |
 | PUT | `/api/v1/orgs/{id}/quality-rules` | Set the house style; an empty body clears it back to the platform defaults | org admin |
 
-### Workers, runner keys, connector, hosted runner
+### Workers, runner keys, connector, hosted and transient runners
 
 | Method | Path | Purpose | Auth |
 |---|---|---|---|
@@ -161,6 +174,14 @@ their own project, workers pass within their org) · `org member`/`org admin`
 | POST | `/api/v1/orgs/{id}/hosted-runner/stop` | Stop the container | org admin |
 | DELETE | `/api/v1/orgs/{id}/hosted-runner` | Delete (optionally `?purge=true` removes the volume) | org admin |
 | GET | `/api/v1/orgs/{id}/worker-status` | Live runner presence / queue depth | org member |
+| GET | `/api/v1/orgs/{id}/runner-session` | My transient runner lease (with deadline and pool occupancy) | org member |
+| POST | `/api/v1/orgs/{id}/runner-session` | Lease a cloud runner (409-free: an existing lease is returned; 503 when the pool is full) | org member |
+| POST | `/api/v1/orgs/{id}/runner-session/extend` | Reset my lease's clocks (capped at 8h from its start) | org member |
+| DELETE | `/api/v1/orgs/{id}/runner-session` | End my lease now (the node is wiped) | org member |
+| GET | `/api/v1/orgs/{id}/runner-pool` | Pool occupancy and the workspace's live leases | org admin |
+| POST | `/api/v1/runner-pool/nodes` | Register a pool node | pool key |
+| POST | `/api/v1/runner-pool/nodes/{id}/heartbeat` | Heartbeat; returns the node's lease (credential once) | pool key |
+| POST | `/api/v1/runner-pool/nodes/{id}/release` | Report a lease wiped; return to the idle pool | pool key |
 
 ### Projects, baselines, templates
 

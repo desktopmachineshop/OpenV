@@ -109,6 +109,43 @@ func InitOrgSchema(db *sql.DB) error {
 		created_at TIMESTAMP NOT NULL DEFAULT NOW(),
 		updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 	);
+
+	-- Transient runners. A pool node is a pre-warmed always-on worker
+	-- process with no workspace identity of its own; a runner session leases
+	-- one to a single member for a bounded stretch of time, after which the
+	-- node wipes the member's CLI credentials and returns to the pool.
+	CREATE TABLE IF NOT EXISTS runner_pool_nodes (
+		id UUID PRIMARY KEY,
+		pool VARCHAR(64) NOT NULL DEFAULT 'default',
+		name VARCHAR(255) NOT NULL,
+		providers TEXT NOT NULL DEFAULT '',
+		status VARCHAR(32) NOT NULL DEFAULT 'idle', -- idle|leased|draining|offline
+		session_id UUID,
+		last_seen_at TIMESTAMP NOT NULL DEFAULT NOW(),
+		created_at TIMESTAMP NOT NULL DEFAULT NOW()
+	);
+
+	CREATE UNIQUE INDEX IF NOT EXISTS idx_runner_pool_nodes_name ON runner_pool_nodes(pool, name);
+	CREATE INDEX IF NOT EXISTS idx_runner_pool_nodes_free ON runner_pool_nodes(pool, status, last_seen_at);
+
+	CREATE TABLE IF NOT EXISTS runner_sessions (
+		id UUID PRIMARY KEY,
+		org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+		user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+		node_id UUID,
+		worker_key_id UUID,
+		status VARCHAR(32) NOT NULL DEFAULT 'starting', -- starting|active|ending|ended
+		started_at TIMESTAMP NOT NULL DEFAULT NOW(),
+		expires_at TIMESTAMP NOT NULL,
+		last_activity_at TIMESTAMP NOT NULL DEFAULT NOW(),
+		ended_at TIMESTAMP,
+		end_reason VARCHAR(32) NOT NULL DEFAULT '',
+		idle_minutes INT NOT NULL DEFAULT 15
+	);
+
+	CREATE INDEX IF NOT EXISTS idx_runner_sessions_live ON runner_sessions(org_id, user_id, status);
+	CREATE INDEX IF NOT EXISTS idx_runner_sessions_sweep ON runner_sessions(status, expires_at);
+	CREATE INDEX IF NOT EXISTS idx_runner_sessions_key ON runner_sessions(worker_key_id);
 	`
 
 	if _, err := db.Exec(schema); err != nil {
@@ -157,6 +194,12 @@ func InitOrgSchema(db *sql.DB) error {
 		-- Personal runner keys (phase 3): user_id NULL = workspace key.
 		IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='worker_keys' AND column_name='user_id') THEN
 			ALTER TABLE worker_keys ADD COLUMN user_id UUID REFERENCES users(id) ON DELETE CASCADE;
+		END IF;
+
+		-- Transient runner session keys: personal keys that live and die with
+		-- one lease, and never displace a member's connector key.
+		IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='worker_keys' AND column_name='session_id') THEN
+			ALTER TABLE worker_keys ADD COLUMN session_id UUID;
 		END IF;
 
 		-- Claim routing (phase 3): first refusal for the launcher's personal

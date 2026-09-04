@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ConnectorPairing, connectorAPI, myRunnerKeyAPI } from '../api/client';
+import { ConnectorPairing, connectorAPI, myRunnerKeyAPI, cloudRunnerAPI } from '../api/client';
 import { apiErrorMessage } from '../api/errors';
 
 interface RunnerConnectPromptProps {
@@ -36,6 +36,12 @@ export const RunnerConnectPrompt: React.FC<RunnerConnectPromptProps> = ({
   reason,
 }) => {
   const [phase, setPhase] = useState<'opening' | 'waiting' | 'connected'>('opening');
+  // Transient runners give a no-install way out of this prompt: lease one and
+  // the queued run has somewhere to go without downloading anything. null
+  // until the first read; false on deployments with no runner pool.
+  const [cloudEnabled, setCloudEnabled] = useState<boolean | null>(null);
+  const [cloudBusy, setCloudBusy] = useState(false);
+  const [cloudStarted, setCloudStarted] = useState(false);
   const [pairing, setPairing] = useState<ConnectorPairing | null>(null);
   const [download, setDownload] = useState<'idle' | 'checking' | 'started' | 'unavailable'>('idle');
   const [error, setError] = useState('');
@@ -98,6 +104,40 @@ export const RunnerConnectPrompt: React.FC<RunnerConnectPromptProps> = ({
     }
   }, [orgId, openConnector]);
 
+  // Does this deployment offer cloud runners at all?
+  useEffect(() => {
+    let cancelled = false;
+    cloudRunnerAPI
+      .get(orgId)
+      .then((res) => {
+        if (cancelled) return;
+        setCloudEnabled(res.data.enabled);
+        if (res.data.session) setCloudStarted(true);
+      })
+      .catch(() => {
+        if (!cancelled) setCloudEnabled(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [orgId]);
+
+  // Lease a cloud runner instead of installing anything. The member still has
+  // to sign their agents into it — that is what the settings panel is for —
+  // but the runner itself is online in seconds.
+  const startCloudRunner = useCallback(async () => {
+    setCloudBusy(true);
+    setError('');
+    try {
+      await cloudRunnerAPI.start(orgId);
+      setCloudStarted(true);
+    } catch (err: any) {
+      setError(`Couldn't start a cloud runner: ${apiErrorMessage(err)}`);
+    } finally {
+      setCloudBusy(false);
+    }
+  }, [orgId]);
+
   useEffect(() => {
     const t = window.setTimeout(() => {
       openOrPair();
@@ -123,9 +163,18 @@ export const RunnerConnectPrompt: React.FC<RunnerConnectPromptProps> = ({
       } catch {
         // Transient — keep polling.
       }
+      if (!cloudStarted) return;
+      try {
+        // A leased cloud runner counts as connected once its node has
+        // actually picked the lease up.
+        const cloud = await cloudRunnerAPI.get(orgId);
+        if (cloud.data.session?.status === 'active') setPhase('connected');
+      } catch {
+        // Transient — keep polling.
+      }
     }, 3000);
     return () => window.clearInterval(poll);
-  }, [orgId, phase]);
+  }, [orgId, phase, cloudStarted]);
 
   // If the protocol launch produced no runner, the connector likely isn't
   // installed. With no runner key yet (first-time setup) start the download
@@ -217,7 +266,7 @@ export const RunnerConnectPrompt: React.FC<RunnerConnectPromptProps> = ({
         {phase === 'connected' ? (
           <>
             <p style={{ fontSize: 13, color: 'var(--success)', fontWeight: 600 }}>
-              ✓ Your personal runner is online — queued runs will start now.
+              ✓ A runner of yours is online — queued runs will start now.
             </p>
             <div style={{ textAlign: 'right' }}>
               <button className="button" style={{ width: 'auto' }} onClick={onClose}>
@@ -279,7 +328,37 @@ export const RunnerConnectPrompt: React.FC<RunnerConnectPromptProps> = ({
               >
                 {download === 'checking' ? 'Checking…' : `Download for ${osLabel}`}
               </button>
+              {cloudEnabled && !cloudStarted && (
+                <button
+                  className="button-secondary button"
+                  style={{ width: 'auto' }}
+                  onClick={startCloudRunner}
+                  disabled={cloudBusy}
+                  title="Run in the cloud instead — nothing to install"
+                >
+                  {cloudBusy ? 'Starting…' : 'Start a cloud runner'}
+                </button>
+              )}
             </div>
+
+            {cloudStarted && (
+              <div
+                style={{
+                  background: 'var(--tint-blue)',
+                  border: '1px solid var(--accent)',
+                  borderRadius: 4,
+                  padding: '12px 14px',
+                  fontSize: 13,
+                  color: 'var(--text)',
+                  marginBottom: 16,
+                }}
+              >
+                A cloud runner is starting for you. It has no agent sign-ins yet — open your
+                settings → <b>Agent sign-ins</b> and connect a provider, and it will pick this run
+                up. The runner ends on its own once you stop using it, and its sign-ins end with
+                it.
+              </div>
+            )}
 
             {pairing && (
               <div

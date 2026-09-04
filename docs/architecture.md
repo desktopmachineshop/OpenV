@@ -174,7 +174,11 @@ an `org_id` column on `projects`, `agents`, `agent_teams`, `automations`,
 - **project_members** and **project_team_access** — direct and people-team
   grants of the project role ladder (`owner`/`editor`/`viewer`); a user's
   effective role is the highest of the two.
-- **worker_keys** — org-scoped runner credentials (workspace or per-member).
+- **worker_keys** — org-scoped runner credentials (workspace, per-member, or
+  bound to a transient runner lease via `session_id`).
+- **runner_pool_nodes / runner_sessions** — the transient runner pool and the
+  leases members hold over it: one node serves one member at a time, and its
+  state is wiped between leases.
 
 A boot-time idempotent backfill (`BackfillOrgs` → `PromoteOrgColumns`) creates
 personal orgs and promotes the `org_id` columns to `NOT NULL` on databases that
@@ -383,7 +387,8 @@ Host
 ├── Frontend (nginx static build, host port 80)
 ├── API (Go, port 8080, X-Forwarded-For aware behind a proxy)
 ├── PostgreSQL (internal only)
-└── (optional) agentd worker(s) + hosted-runner containers
+└── (optional) agentd worker(s), a transient runner pool, hosted-runner
+    containers
 ```
 Put a reverse proxy (Caddy, Traefik, nginx) in front for TLS. Kubernetes/Helm
 remains a roadmap item.
@@ -444,7 +449,10 @@ Every API request authenticates as one of four principals; only `/health`,
 - **Agent runs** — a single-run Bearer token (stored hashed), minted per run,
   scoping a worker's callbacks to that run and its own project.
 - **Workers** — org-scoped Bearer worker keys (`worker_keys`, stored hashed):
-  workspace keys minted by org admins, or per-member personal runner keys. The
+  workspace keys minted by org admins, per-member personal runner keys, or
+  short-lived session keys bound to a transient runner lease. Pool nodes
+  present the deployment's `RUNNER_POOL_KEY` instead, which carries no
+  workspace identity at all and reaches only the pool endpoints. The
   legacy `WORKER_API_KEY` env value is registered as the bootstrap org's
   workspace key at startup and still accepted directly.
 

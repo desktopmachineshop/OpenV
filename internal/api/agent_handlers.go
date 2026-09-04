@@ -630,6 +630,9 @@ func (h *Handler) ClaimAgentRun(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
+	// A transient runner's idle clock measures work, not polling: claiming a
+	// run is what counts as use.
+	h.touchRunnerSession(r)
 	// Hosted runners never execute repo-access agents.
 	run, err := h.runService.Claim(req.WorkerID, WorkerOrg(r), WorkerUser(r), req.Providers, req.MinPriority, req.Hosted)
 	if err != nil {
@@ -1597,6 +1600,9 @@ func (h *Handler) ClaimProviderLogin(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
+	// Signing a CLI in is use of the runner too — a member part-way through
+	// an OAuth flow must not have the runner pulled from under them.
+	h.touchRunnerSession(r)
 	json.NewEncoder(w).Encode(login)
 }
 

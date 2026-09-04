@@ -7,7 +7,7 @@
 
 GO_IMAGE := golang:1.25
 
-.PHONY: build up down prod-up prod-down worker worker-unix worker-image connector-dist mcp test backup restore
+.PHONY: build up down prod-up prod-down worker worker-unix worker-image runner-pool-up runner-pool-down connector-dist mcp test backup restore
 
 ## Build all Docker images.
 build:
@@ -77,6 +77,19 @@ mcp:
 ## Build the hosted runner image (agentd + openv-mcp + vendor CLIs).
 worker-image:
 	docker build -f Dockerfile.worker -t openv-worker:latest .
+
+## Start the transient runner pool alongside the stack: POOL pre-warmed runner
+## nodes (default 2) members can lease from the UI instead of installing the
+## connector. Requires RUNNER_POOL_KEY set to the same value as the API's (put
+## it in .env). See docs/agents.md.
+runner-pool-up:
+	@test -n "$(RUNNER_POOL_KEY)$$(grep -s '^RUNNER_POOL_KEY=' .env)" || \
+		{ echo "Set RUNNER_POOL_KEY (in .env or the environment) first: openssl rand -hex 32"; exit 1; }
+	docker compose --profile runner-pool up -d --scale runner-pool=$(or $(POOL),2) runner-pool
+
+## Stop the transient runner pool (leases end; the API reclaims the nodes).
+runner-pool-down:
+	docker compose --profile runner-pool stop runner-pool
 
 ## Build the Agent Connector downloads (dist/openv-connector-windows.exe and
 ## dist/openv-connector-linux): one self-contained executable per OS, with

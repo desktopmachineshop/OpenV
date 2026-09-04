@@ -43,6 +43,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/providers"
 	"github.com/openv/requirements-platform/internal/domain/repoconns"
 	"github.com/openv/requirements-platform/internal/domain/reports"
+	"github.com/openv/requirements-platform/internal/domain/runnersessions"
 	"github.com/openv/requirements-platform/internal/domain/settings"
 	"github.com/openv/requirements-platform/internal/domain/sharedproducts"
 	"github.com/openv/requirements-platform/internal/domain/teams"
@@ -179,6 +180,7 @@ func main() {
 	orgRepo := postgres.NewOrgRepository(db)
 	workerKeyRepo := postgres.NewWorkerKeyRepository(db)
 	hostedWorkerRepo := postgres.NewHostedWorkerRepository(db)
+	runnerSessionRepo := postgres.NewRunnerSessionRepository(db)
 	notificationRepo := postgres.NewNotificationRepository(db)
 	attributeDefRepo := postgres.NewAttributeDefinitionRepository(db)
 	sharedProductRepo := postgres.NewSharedProductRepository(db)
@@ -233,6 +235,19 @@ func main() {
 	workerKeyService := workerkeys.NewDefaultService(workerKeyRepo)
 	workerKeyService.SetPairingRepository(workerKeyRepo)
 	hostedWorkerService := hostedworkers.NewDefaultService(hostedWorkerRepo)
+
+	// Transient runners. A deployment opts in by setting RUNNER_POOL_KEY —
+	// the shared credential its pool nodes present — because without a pool
+	// there is nothing to lease. Everything else about the feature is on by
+	// default for the workspaces on that deployment.
+	runnerPoolKey := os.Getenv("RUNNER_POOL_KEY")
+	var runnerSessionService runnersessions.Service
+	if runnerPoolKey != "" {
+		runnerSessionService = runnersessions.NewDefaultService(runnerSessionRepo, workerKeyService)
+		slog.Info("transient runners enabled (runner pool configured)")
+	} else {
+		slog.Info("transient runners disabled (set RUNNER_POOL_KEY to enable)")
+	}
 
 	// Hosted runner provisioner (Docker). Disabled when HOSTED_RUNNERS=off
 	// or the docker daemon is unreachable. Boot reconcile syncs stored
@@ -488,6 +503,16 @@ func main() {
 					slog.Warn("reaper failed stale runs", "count", len(ids))
 				}
 				_ = userRepo.DeleteExpiredSessions(time.Now())
+				// Transient runners: end lapsed leases (hard expiry, idle
+				// window, or a node that stopped heartbeating) so their
+				// nodes go back to the pool and their credentials die.
+				if runnerSessionService != nil {
+					if ended, err := runnerSessionService.Sweep(time.Now()); err != nil {
+						slog.Error("runner session sweep failed", "error", err)
+					} else if len(ended) > 0 {
+						slog.Info("ended lapsed runner sessions", "count", len(ended))
+					}
+				}
 			}
 		}
 	}()
@@ -561,6 +586,7 @@ func main() {
 		OrgTeamService:       orgTeamService,
 		WorkerKeyService:     workerKeyService,
 		HostedWorkerService:  hostedWorkerService,
+		RunnerSessionService: runnerSessionService,
 		NotificationService:  notificationService,
 		Provisioner:          provisioner,
 		OrgSeeder: func(orgID string) error {
@@ -595,6 +621,7 @@ func main() {
 	router.Handle("/metrics", metricsCollector.Handler(os.Getenv("OPENV_METRICS_TOKEN"))).Methods("GET")
 
 	authMiddleware := api.NewAuthMiddleware(userService, runService, orgService, workerKeyService, workerKey, bootstrapOrgID)
+	authMiddleware.SetPoolKey(runnerPoolKey)
 	// Request logging wraps outside auth so rejected requests are logged too;
 	// auth annotates the log line with the resolved org/user. The metrics HTTP
 	// middleware sits between them, recording every request (including rejected

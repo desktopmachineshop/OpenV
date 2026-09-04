@@ -29,8 +29,14 @@ type loginFlow struct {
 	pasteBack bool
 	// interactive is true for TUI CLIs that need a real terminal: the
 	// worker opens them in a visible console window on its host instead
-	// of driving them over pipes.
+	// of driving them over pipes. On a headless runner there is no console,
+	// so the same flow runs over a pseudo-terminal instead.
 	interactive bool
+	// loopback is true for CLIs that complete their OAuth against a local
+	// port on the machine running them. On a headless runner the member's
+	// browser cannot reach that port, so the redirect is relayed back and
+	// replayed locally.
+	loopback bool
 	// browserDetail is shown when the CLI opens the browser itself.
 	browserDetail string
 }
@@ -47,6 +53,7 @@ func flowFor(provider string) (loginFlow, bool) {
 	case providers.ProviderCodexCLI:
 		return loginFlow{
 			command:       []string{"codex", "login"},
+			loopback:      true,
 			browserDetail: "A sign-in page should have opened in a browser on the machine running agentd. Complete sign-in there; this page updates automatically.",
 		}, true
 	case providers.ProviderGeminiCLI:
@@ -98,8 +105,19 @@ func (w *Worker) handleLogin(ctx context.Context, login *providers.LoginRequest)
 	runCtx, cancel := context.WithTimeout(ctx, loginTimeout)
 	defer cancel()
 
+	// A headless runner (a transient runner in a container) has neither a
+	// console to open nor a browser to catch a redirect, so both of those
+	// flows are relayed to the member's own browser instead.
 	if flow.interactive {
-		w.handleInteractiveLogin(runCtx, login, flow)
+		if w.headless {
+			w.handlePTYLogin(runCtx, login, flow)
+		} else {
+			w.handleInteractiveLogin(runCtx, login, flow)
+		}
+		return
+	}
+	if flow.loopback && w.headless {
+		w.handleLoopbackLogin(runCtx, login, flow)
 		return
 	}
 

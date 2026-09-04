@@ -16,6 +16,11 @@ var ErrNotFound = errors.New("worker key not found")
 // UserID nil = a workspace runner key; set = a member's personal runner key
 // (claims only runs that user launched). The plaintext is shown once at
 // creation; only the hash is stored.
+//
+// SessionID marks a key minted for a transient runner lease. Such a key is
+// still personal — it routes the member's runs and sign-ins exactly like
+// their own machine's key — but it lives and dies with the lease and never
+// displaces the member's connector key.
 type Key struct {
 	ID         string     `json:"id"`
 	OrgID      string     `json:"org_id"`
@@ -26,6 +31,8 @@ type Key struct {
 	Revoked    bool       `json:"revoked"`
 	LastUsedAt *time.Time `json:"last_used_at,omitempty"`
 	CreatedAt  time.Time  `json:"created_at"`
+	// SessionID is set on transient runner session keys.
+	SessionID *string `json:"session_id,omitempty"`
 	// UserName is denormalized for display on personal keys.
 	UserName string `json:"user_name,omitempty"`
 }
@@ -36,6 +43,7 @@ type Repository interface {
 	List(orgID string) ([]*Key, error)
 	FindByID(id string) (*Key, error)
 	FindByHash(hash string) (*Key, error) // (nil, nil) when absent
+	// FindPersonal returns the member's own (non-session) personal key.
 	FindPersonal(orgID, userID string) (*Key, error)
 	Revoke(id string) error
 	Touch(id string, at time.Time) error
@@ -49,6 +57,9 @@ type Resolved struct {
 	OrgID  string
 	KeyID  string
 	UserID string // "" for workspace keys
+	// SessionID is set when the credential belongs to a transient runner
+	// lease, so callers can record activity against it.
+	SessionID string
 }
 
 // Service defines worker key logic.
@@ -72,6 +83,12 @@ type Service interface {
 	// EnsureBootstrapKey upserts a workspace key with a known plaintext
 	// (keeps the WORKER_API_KEY env workflow working).
 	EnsureBootstrapKey(orgID, plaintext, name string) error
+
+	// MintSessionKey creates a personal key bound to a transient runner
+	// lease, leaving the member's connector key alone.
+	MintSessionKey(orgID, userID, sessionID, name string) (string, string, error)
+	// RevokeSessionKey revokes a session key by id.
+	RevokeSessionKey(orgID, keyID string) error
 
 	// CreatePairing issues a short-lived one-time code the local Agent
 	// Connector exchanges for the member's personal runner key.
@@ -174,6 +191,43 @@ func (s *DefaultService) Create(orgID, name string, createdBy *string, userID *s
 	return key, token, nil
 }
 
+// MintSessionKey creates the credential a transient runner lease hands to its
+// pool node. Unlike Create it rotates nothing: the member may well have a
+// connector key on their own machine, and leasing a cloud runner must not
+// sign that machine out.
+func (s *DefaultService) MintSessionKey(orgID, userID, sessionID, name string) (string, string, error) {
+	if orgID == "" || userID == "" || sessionID == "" {
+		return "", "", errors.New("workspace, user and session are required")
+	}
+	name = strings.TrimSpace(name)
+	if name == "" {
+		name = "cloud runner"
+	}
+	token, err := users.NewToken()
+	if err != nil {
+		return "", "", err
+	}
+	key := &Key{
+		ID:        uuid.New().String(),
+		OrgID:     orgID,
+		UserID:    &userID,
+		Name:      name,
+		KeyHash:   users.HashToken(token),
+		CreatedBy: &userID,
+		SessionID: &sessionID,
+		CreatedAt: time.Now(),
+	}
+	if err := s.repo.Save(key); err != nil {
+		return "", "", err
+	}
+	return key.ID, token, nil
+}
+
+// RevokeSessionKey revokes a lease's credential.
+func (s *DefaultService) RevokeSessionKey(orgID, keyID string) error {
+	return s.Revoke(orgID, keyID)
+}
+
 // List returns an org's keys.
 func (s *DefaultService) List(orgID string) ([]*Key, error) {
 	return s.repo.List(orgID)
@@ -221,6 +275,9 @@ func (s *DefaultService) Resolve(token string) (Resolved, error) {
 	resolved := Resolved{OrgID: key.OrgID, KeyID: key.ID}
 	if key.UserID != nil {
 		resolved.UserID = *key.UserID
+	}
+	if key.SessionID != nil {
+		resolved.SessionID = *key.SessionID
 	}
 	return resolved, nil
 }

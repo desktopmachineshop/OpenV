@@ -1245,6 +1245,53 @@ export const myRunnerKeyAPI = {
   revoke: (orgId: string) => client.delete(`/api/v1/orgs/${orgId}/my-runner-key`),
 };
 
+/** A transient runner lease: the member's cloud runner, while it lasts. */
+export interface RunnerSession {
+  id: string;
+  org_id: string;
+  user_id: string;
+  node_id: string;
+  status: 'starting' | 'active' | 'ending' | 'ended';
+  started_at: string;
+  expires_at: string;
+  last_activity_at: string;
+  end_reason?: string;
+  idle_minutes: number;
+  node_name?: string;
+}
+
+/** How busy the runner pool is right now. */
+export interface RunnerPoolCounts {
+  total: number;
+  idle: number;
+  leased: number;
+}
+
+export interface RunnerSessionPayload {
+  enabled: boolean;
+  session: RunnerSession | null;
+  deadline?: string;
+  seconds_remaining?: number;
+  pool?: RunnerPoolCounts;
+}
+
+/**
+ * Transient runners: lease a pre-warmed cloud runner for a while instead of
+ * installing the connector. The lease ends on its own (hard expiry or idle),
+ * and the runner is wiped when it does — so the next one starts with a fresh
+ * agent sign-in.
+ */
+export const cloudRunnerAPI = {
+  get: (orgId: string) =>
+    client.get<RunnerSessionPayload>(`/api/v1/orgs/${orgId}/runner-session`),
+  start: (orgId: string) =>
+    client.post<RunnerSessionPayload>(`/api/v1/orgs/${orgId}/runner-session`),
+  extend: (orgId: string) =>
+    client.post<RunnerSessionPayload>(`/api/v1/orgs/${orgId}/runner-session/extend`),
+  end: (orgId: string) =>
+    client.delete<RunnerSessionPayload>(`/api/v1/orgs/${orgId}/runner-session`),
+};
+
 /**
  * The community pool of joke demo products for the new-project wizard.
  *
