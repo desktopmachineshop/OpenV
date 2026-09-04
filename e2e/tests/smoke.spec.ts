@@ -176,21 +176,28 @@ test('finds the artifact through global search', async () => {
   await expect(page.getByRole('heading', { name: reqTitle }).first()).toBeVisible();
 });
 
-test('exports the project as JSON', async () => {
+test('downloads the project as JSON through the wizard', async () => {
   await page.goto('/projects');
   const card = page.locator('.project-card').filter({ hasText: projectName });
   await expect(card).toBeVisible();
 
-  const exportResponse = page.waitForResponse(
-    (r) => r.url().includes(`/api/v1/projects/${projectId}/export`) && r.url().includes('format=json')
+  // One download button per project now, and the format is chosen in the
+  // wizard it opens rather than by picking a different button.
+  await card.getByTitle(/^Download this project/).click();
+  const wizard = page.getByRole('dialog');
+  await expect(wizard).toBeVisible();
+  await wizard.getByText('JSON data').click();
+
+  const exportResponse = page.waitForResponse((r) =>
+    r.url().includes(`/api/v1/projects/${projectId}/download/json`)
   );
-  await card.getByTitle('Export project as JSON (full project, re-importable)').click();
+  await wizard.getByRole('button', { name: 'Download', exact: true }).click();
 
   const response = await exportResponse;
   expect(response.status()).toBe(200);
   expect(response.headers()['content-type']).toContain('application/json');
 
-  // The export is the real project payload: both artifacts and the link.
+  // The download is the real project payload: both artifacts and the link.
   const body = JSON.parse((await response.body()).toString('utf-8'));
   const titles = (body.artifacts || []).map((a: { title: string }) => a.title);
   expect(titles).toContain(reqTitle);
