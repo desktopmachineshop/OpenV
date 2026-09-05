@@ -131,3 +131,89 @@ func TestStripANSIExposesTheAuthURL(t *testing.T) {
 		t.Errorf("scraped URL = %q, want the authorize link", got)
 	}
 }
+
+// realRetryFrame is what `claude setup-token` actually drew after a code it
+// rejected, captured verbatim from the CLI over a pseudo-terminal. It is a
+// redraw: carriage returns, cursor moves and colour, and not a single
+// newline — which is precisely how a line scanner sat on this message
+// without ever seeing it, leaving the sign-in stuck at "code sent".
+const realRetryFrame = "\x1b(B\x0f\x1b[2K\x1b[1A\x1b[2K\x1b[G\x1b[1A\r\x1b[1C\x1b[4A" +
+	"\x1b[38;5;211mOAuth error: Invalid code. Please make sure the full code was copied" +
+	"\r\x1b[2B\x1b[39m\x1b[K\r\x1b[1C\x1b[1B\x1b[38;5;153mPress \x1b[1mEnter\x1b[22m to retry." +
+	"\r\x1b[1B\x1b[39m\x1b[K\r\x1b[1B\x1b[K\r\x1b[1A"
+
+// The rejection is recovered from that frame and reads as a human sentence,
+// so the member is told what went wrong instead of watching a dead card.
+func TestTUIErrorReadsTheRealRejection(t *testing.T) {
+	got := tuiError(realRetryFrame)
+	if !strings.Contains(got, "Invalid code") {
+		t.Fatalf("tuiError = %q, want the CLI's rejection message", got)
+	}
+	if strings.Contains(got, "\x1b") || strings.Contains(got, "[38;5;") {
+		t.Errorf("tuiError leaked terminal escapes: %q", got)
+	}
+	if got != "OAuth error: Invalid code. Please make sure the full code was copied" {
+		t.Errorf("tuiError = %q, want the message on its own", got)
+	}
+}
+
+// The prompt a healthy flow shows is not an error: a card that cried failure
+// at the paste prompt would be worse than one that says nothing.
+func TestTUIErrorIgnoresHealthyOutput(t *testing.T) {
+	healthy := "\x1b[2GPaste\x1b[8Gcode\x1b[13Ghere\x1b[18Gif\x1b[21Gprompted\x1b[30G>\r\r\n"
+	if got := tuiError(healthy); got != "" {
+		t.Errorf("tuiError(healthy prompt) = %q, want \"\"", got)
+	}
+}
+
+// A TUI redraw carries its lines on carriage returns; visibleLines has to
+// recover them, or everything downstream reads one run-on line.
+func TestVisibleLinesSplitsOnCarriageReturns(t *testing.T) {
+	lines := visibleLines(realRetryFrame)
+	var joined []string
+	for _, l := range lines {
+		joined = append(joined, l)
+	}
+	if len(joined) < 2 {
+		t.Fatalf("visibleLines returned %d lines (%q), want the message and the retry prompt", len(joined), joined)
+	}
+	var sawMessage, sawRetry bool
+	for _, l := range joined {
+		if strings.Contains(l, "Invalid code") {
+			sawMessage = true
+		}
+		if strings.Contains(l, "to retry") {
+			sawRetry = true
+		}
+	}
+	if !sawMessage || !sawRetry {
+		t.Errorf("visibleLines lost content: %q", joined)
+	}
+}
+
+// The last frame wins: a TUI redraws, so an older frame still sitting in the
+// buffer must not be reported over what is on screen now.
+func TestTUIErrorPrefersTheLatestFrame(t *testing.T) {
+	buffer := realRetryFrame + "\r\x1b[38;5;211mOAuth error: Code expired\r\n"
+	if got := tuiError(buffer); !strings.Contains(got, "expired") {
+		t.Errorf("tuiError = %q, want the most recent frame's message", got)
+	}
+}
+
+// The screen buffer is bounded, and keeps the newest output — the end is
+// where the current frame is.
+func TestScreenBufferKeepsTheTail(t *testing.T) {
+	b := newScreenBuffer(64)
+	b.add(strings.Repeat("x", 200))
+	b.add("OAuth error: Invalid code")
+	if got := b.String(); len(got) > 64 {
+		t.Errorf("screen buffer grew to %d bytes, want at most 64", len(got))
+	}
+	if !strings.Contains(b.String(), "Invalid code") {
+		t.Errorf("screen buffer dropped the newest output: %q", b.String())
+	}
+	b.reset()
+	if b.String() != "" {
+		t.Errorf("reset left %q behind; a stale error must not be blamed on a new attempt", b.String())
+	}
+}
