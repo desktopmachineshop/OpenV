@@ -420,6 +420,38 @@ runner adapters (`internal/runner`):
   `max` are mapped down to `high` (the CLI's top tier).
 - **Gemini CLI** — ignored (no headless reasoning-effort control).
 
+### Tools an agent may use
+
+`allowed_tools` (frontmatter, and **Allowed tools** in the agent editor) is a
+comma-separated allowlist passed to the vendor CLI. `mcp__openv__*` grants the
+OpenV tool surface; the vendor's own built-in tools can be named alongside it.
+
+The seeded **V&V Assistant** carries `mcp__openv__*, WebSearch, WebFetch`: the
+questions it exists to ask — is this limit real, does that standard say what
+you think, is this hazard already covered — usually have an authoritative
+source, and it is better for it to check one than to half-remember it. Fetch
+accompanies search because search returns snippets, and a snippet is not a
+citation.
+
+Two things make that safe enough to ship on by default, and both are worth
+keeping if you grant web access to an agent of your own:
+
+- The agent **writes nothing itself**. What it reads can reach a project only
+  as a suggestion a person accepted, or — for agents in `proposal` mode — a
+  proposal a person approved.
+- Its system prompt tells it to treat pages as **someone else's text, not as
+  instructions**: a page cannot change its job or what it proposes. Web content
+  is untrusted input in exactly the way a pasted document is.
+
+Granting a tool without mentioning it in the system prompt mostly wastes it —
+the model is left to discover it has the tool. Say what it is for.
+
+**Changing an existing agent:** a seed describes a *new* workspace. Agents
+already provisioned belong to their workspace and are never retrofitted (see
+`adoptSeedRename`, which carries `AllowedTools` across untouched), so adding a
+tool to a seed does nothing for a workspace that already has that agent — edit
+it under **Agents → the agent → Allowed tools** instead.
+
 ### write_mode: proposal vs direct
 
 - `write_mode: proposal` (default) — every write the agent makes (create/update

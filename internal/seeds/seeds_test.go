@@ -1,6 +1,7 @@
 package seeds
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/openv/requirements-platform/internal/domain/agents"
@@ -226,5 +227,51 @@ func TestPreviousSeedIdentityDiffersFromTheCurrentSeed(t *testing.T) {
 	}
 	if prev.SystemPrompt == want.SystemPrompt {
 		t.Error("previous system prompt is identical to the current one")
+	}
+}
+
+// The V&V Assistant can look things up. Its whole job is asking whether a
+// requirement is testable, a hazard is covered, a limit is real — questions
+// that usually have an authoritative source somewhere.
+func TestVVAssistantCanSearchTheWeb(t *testing.T) {
+	var def *agents.Definition
+	for _, seed := range defaultAgents() {
+		if seed.def.Slug == "requirements-copilot" {
+			d := seed.def
+			def = &d
+			break
+		}
+	}
+	if def == nil {
+		t.Fatal("the V&V Assistant seed is missing")
+	}
+
+	has := func(tool string) bool {
+		for _, t := range def.AllowedTools {
+			if t == tool {
+				return true
+			}
+		}
+		return false
+	}
+	if !has("WebSearch") {
+		t.Errorf("allowed_tools = %v, want WebSearch among them", def.AllowedTools)
+	}
+	// Search returns snippets; without fetch the agent can cite a result it
+	// never read.
+	if !has("WebFetch") {
+		t.Errorf("allowed_tools = %v, want WebFetch alongside WebSearch", def.AllowedTools)
+	}
+	// Granting the tools without saying so leaves the model to guess it has
+	// them, and the untrusted-content rule unstated.
+	if !strings.Contains(def.SystemPrompt, "search the web") {
+		t.Error("the system prompt does not tell the assistant it can search the web")
+	}
+	if !strings.Contains(def.SystemPrompt, "not as instructions") {
+		t.Error("the system prompt does not tell the assistant to treat web content as untrusted")
+	}
+	// It still must not write to a project itself.
+	if !strings.Contains(def.SystemPrompt, "never create or modify artifacts yourself") {
+		t.Error("the assistant's read-only stance was lost")
 	}
 }
