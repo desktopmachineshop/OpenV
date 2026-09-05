@@ -44,10 +44,19 @@ type loginFlow struct {
 func flowFor(provider string) (loginFlow, bool) {
 	switch provider {
 	case providers.ProviderClaudeCode:
-		// claude's login is an Ink TUI: it renders nothing over pipes, so
-		// it must run in a real terminal on the worker host.
+		// `auth login`, not `setup-token`. Both drive the same paste-back
+		// OAuth over a terminal, but setup-token asks only for
+		// `user:inference` and mints a long-lived token for headless use —
+		// it leaves the CLI itself signed out, so every run afterwards dies
+		// on "Not logged in". `auth login` requests the scopes a session
+		// needs (`user:sessions:claude_code`, `user:mcp_servers`, ...) and
+		// signs the CLI in.
+		//
+		// It is an Ink TUI either way: it renders nothing over pipes, so it
+		// needs a real terminal — a console window on a personal runner, a
+		// pseudo-terminal on a headless one.
 		return loginFlow{
-			command:     []string{"claude", "setup-token"},
+			command:     []string{"claude", "auth", "login"},
 			interactive: true,
 		}, true
 	case providers.ProviderCodexCLI:

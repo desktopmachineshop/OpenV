@@ -39,19 +39,60 @@ func (a *ClaudeCodeAdapter) Detect(ctx context.Context) Availability {
 		av.Detail = "API key mode (ANTHROPIC_API_KEY)"
 		return av
 	}
+	// Ask the CLI. `claude auth status --json` answers authoritatively,
+	// including for credentials that live nowhere under HOME (a token in the
+	// environment, or a host-managed provider).
+	if out, err := runVersion(ctx, "claude", "auth", "status", "--json"); err == nil {
+		if loggedIn, method, ok := parseClaudeAuthStatus(out); ok {
+			av.LoggedIn = loggedIn
+			if loggedIn {
+				av.Detail = "signed in (" + method + ")"
+			} else {
+				av.Detail = "not signed in; connect Claude Code to sign in"
+			}
+			return av
+		}
+	}
+
+	// Older CLIs have no `auth status`. Fall back to looking for config, and
+	// say so: the presence of a directory is a guess, not a sign-in — a
+	// runner can hold a config and still refuse every run.
 	home, _ := os.UserHomeDir()
 	if home != "" {
 		if _, err := os.Stat(filepath.Join(home, ".claude")); err == nil {
 			av.LoggedIn = true
-			av.Detail = "~/.claude present; assuming logged in"
+			av.Detail = "~/.claude present; assuming logged in (CLI too old for `auth status`)"
 		} else if _, err := os.Stat(filepath.Join(home, ".claude.json")); err == nil {
 			av.LoggedIn = true
-			av.Detail = "~/.claude.json present; assuming logged in"
+			av.Detail = "~/.claude.json present; assuming logged in (CLI too old for `auth status`)"
 		} else {
 			av.Detail = "no ~/.claude config found; run `claude` once to log in"
 		}
 	}
 	return av
+}
+
+// parseClaudeAuthStatus reads `claude auth status --json`. It reports
+// (loggedIn, method, ok); ok is false when the output is not the JSON this
+// understands, so the caller can fall back rather than call a CLI that
+// answered in some other shape "signed out".
+func parseClaudeAuthStatus(out string) (bool, string, bool) {
+	var status struct {
+		LoggedIn   *bool  `json:"loggedIn"`
+		AuthMethod string `json:"authMethod"`
+	}
+	start := strings.Index(out, "{")
+	if start < 0 {
+		return false, "", false
+	}
+	if err := json.Unmarshal([]byte(out[start:]), &status); err != nil || status.LoggedIn == nil {
+		return false, "", false
+	}
+	method := status.AuthMethod
+	if method == "" {
+		method = "unknown method"
+	}
+	return *status.LoggedIn, method, true
 }
 
 // writeMCPConfig writes the standard mcpServers JSON config file. The file

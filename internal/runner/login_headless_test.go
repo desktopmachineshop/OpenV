@@ -5,6 +5,8 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/openv/requirements-platform/internal/domain/providers"
 )
 
 // The loopback port is read from the CLI's own redirect_uri, so a vendor that
@@ -215,5 +217,75 @@ func TestScreenBufferKeepsTheTail(t *testing.T) {
 	b.reset()
 	if b.String() != "" {
 		t.Errorf("reset left %q behind; a stale error must not be blamed on a new attempt", b.String())
+	}
+}
+
+// The Claude Code sign-in must be `auth login`, not `setup-token`. Both drive
+// the same paste-back flow over a terminal, but setup-token asks only for
+// user:inference and leaves the CLI signed out — every run after it dies on
+// "Not logged in", which is exactly what happened in production.
+func TestClaudeCodeSignsInRatherThanMintingAToken(t *testing.T) {
+	flow, ok := flowFor(providers.ProviderClaudeCode)
+	if !ok {
+		t.Fatal("no sign-in flow for claude-code")
+	}
+	got := strings.Join(flow.command, " ")
+	if got != "claude auth login" {
+		t.Errorf("claude sign-in command = %q, want \"claude auth login\"", got)
+	}
+	if !flow.interactive {
+		t.Error("the claude sign-in is an Ink TUI and renders nothing over pipes; it must be marked interactive")
+	}
+}
+
+// The CLI's own answer decides whether it is signed in. Anything else is a
+// guess, and the guess it replaced ("~/.claude exists") reported a signed-out
+// runner as ready.
+func TestParseClaudeAuthStatus(t *testing.T) {
+	cases := []struct {
+		name       string
+		out        string
+		wantLogged bool
+		wantMethod string
+		wantOK     bool
+	}{
+		{
+			name:       "signed in",
+			out:        `{"loggedIn": true, "authMethod": "oauth_token", "apiProvider": "firstParty"}`,
+			wantLogged: true, wantMethod: "oauth_token", wantOK: true,
+		},
+		{
+			name:   "signed out",
+			out:    `{"loggedIn": false, "authMethod": ""}`,
+			wantOK: true, wantMethod: "unknown method",
+		},
+		{
+			name:       "leading noise before the json",
+			out:        "warning: something\n{\"loggedIn\": true, \"authMethod\": \"api_key\"}",
+			wantLogged: true, wantMethod: "api_key", wantOK: true,
+		},
+		// An older CLI answers "unknown command", and a caller that read
+		// that as "signed out" would hide a working runner.
+		{name: "not json", out: "error: unknown command 'auth'"},
+		{name: "empty", out: ""},
+		// JSON without the field is not an answer either.
+		{name: "json missing the field", out: `{"apiProvider": "firstParty"}`},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			loggedIn, method, ok := parseClaudeAuthStatus(tc.out)
+			if ok != tc.wantOK {
+				t.Fatalf("ok = %v, want %v", ok, tc.wantOK)
+			}
+			if !tc.wantOK {
+				return
+			}
+			if loggedIn != tc.wantLogged {
+				t.Errorf("loggedIn = %v, want %v", loggedIn, tc.wantLogged)
+			}
+			if method != tc.wantMethod {
+				t.Errorf("method = %q, want %q", method, tc.wantMethod)
+			}
+		})
 	}
 }
