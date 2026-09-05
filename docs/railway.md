@@ -8,8 +8,9 @@ the Go API (`Dockerfile.api`) and the static React frontend
 The code is already Railway-aware: the API prefers a `DATABASE_URL`
 connection string when one is set (`cmd/server/main.go`) and listens on the
 `PORT` Railway injects; the frontend image serves on container port 8080.
-`railway.json` (API) and `frontend/railway.json` (frontend) carry the
-build/deploy settings, so most of the setup is wiring environment variables.
+The frontend carries its build/deploy settings in `frontend/railway.json`;
+the API's live on the service itself (see below). Most of the setup is wiring
+environment variables.
 
 ## 1. Create the database
 
@@ -23,9 +24,19 @@ reference.
 
 Service settings:
 
-- **Root Directory**: leave as `/`. Railway picks up the root `railway.json`
-  automatically (Dockerfile build from `Dockerfile.api`, health check on
-  `/health`).
+- **Root Directory**: leave as `/`.
+- **Build → Dockerfile Path**: `Dockerfile.api`.
+- **Deploy → Healthcheck Path**: `/health`, timeout 120s; restart policy
+  `ON_FAILURE`, 10 retries.
+
+  These live on the service rather than in a root `railway.json` on purpose.
+  A config file at the repository root applies to **every** service that
+  builds from that root and overrides the service's own Build settings — so
+  a second service built from this repo (the runner pool in section 4) would
+  silently build `Dockerfile.api` instead of its own image, and neither the
+  service's Dockerfile Path nor `RAILWAY_DOCKERFILE_PATH` could override it.
+  `frontend/railway.json` is fine to keep: it sits under the frontend's own
+  root directory, so it reaches only that service.
 - **Networking → Generate Domain**, target port **8080** (any port works —
   the API reads Railway's `PORT` — but 8080 matches the default). Note the
   domain; it is your public API URL.
@@ -127,7 +138,9 @@ perfectly well: a pool is just replicas of one service.
 Service settings:
 
 - **Root Directory**: leave as `/`, and set **Settings → Build → Dockerfile
-  Path** to `Dockerfile.worker` (this service is the runner image, not the API).
+  Path** to `Dockerfile.worker` (this service is the runner image, not the
+  API). If it builds the API instead, something has reintroduced a
+  `railway.json` at the repository root — see the note in section 2.
 - **Networking**: none. A pool node makes outbound calls only; do not generate
   a domain.
 - **Settings → Deploy → Replicas**: the number of members who can hold a cloud
