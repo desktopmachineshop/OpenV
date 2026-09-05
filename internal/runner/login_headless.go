@@ -39,6 +39,63 @@ var ansiPattern = regexp.MustCompile(`\x1b\[[0-9;?]*[ -/]*[@-~]|\x1b\][^\x07\x1b
 // stripANSI reduces terminal output to the text a human would see.
 func stripANSI(s string) string { return ansiPattern.ReplaceAllString(s, "") }
 
+// visibleLines recovers the lines a human would read from raw terminal output.
+// A TUI redraws with carriage returns rather than newlines, so a plain line
+// scanner can sit on a full screen of text without ever seeing one — which is
+// how an error message can go unnoticed while the flow waits forever.
+func visibleLines(raw string) []string {
+	text := stripANSI(strings.ReplaceAll(raw, "\r", "\n"))
+	var out []string
+	for _, line := range strings.Split(text, "\n") {
+		if line = strings.TrimSpace(line); line != "" {
+			out = append(out, line)
+		}
+	}
+	return out
+}
+
+// tuiFailureMarkers name a line that says what went wrong; tuiRetryMarkers
+// only say that something did. Both are matched case-insensitively.
+var (
+	tuiFailureMarkers = []string{"invalid code", "oauth error", "error:", "failed"}
+	tuiRetryMarkers   = []string{"to retry", "try again"}
+)
+
+func matchesAny(lower string, markers []string) bool {
+	for _, marker := range markers {
+		if strings.Contains(lower, marker) {
+			return true
+		}
+	}
+	return false
+}
+
+// tuiError returns the message a sign-in TUI is showing, or "" when it shows
+// no sign of trouble.
+//
+// An explanation beats an instruction. The CLI draws both — "OAuth error:
+// Invalid code…" above "Press Enter to retry." — and only the first tells the
+// member anything they can act on; the second is addressed to a terminal they
+// do not have. A retry prompt on its own is still worth relaying, since it
+// means the code did not take. Within each kind the last line wins: a TUI
+// redraws, so older frames sit earlier in the buffer.
+func tuiError(raw string) string {
+	failure, retry := "", ""
+	for _, line := range visibleLines(raw) {
+		lower := strings.ToLower(line)
+		switch {
+		case matchesAny(lower, tuiFailureMarkers):
+			failure = line
+		case matchesAny(lower, tuiRetryMarkers):
+			retry = line
+		}
+	}
+	if failure != "" {
+		return failure
+	}
+	return retry
+}
+
 // ptyNudgeAfter is how long to wait for a URL before pressing Enter for the
 // member: some CLIs open with a "press Enter to continue" prompt that never
 // prints a URL until it is answered.
@@ -64,22 +121,20 @@ func (w *Worker) handlePTYLogin(ctx context.Context, login *providers.LoginReque
 	}
 	defer tty.Close()
 
-	urlCh := make(chan string, 1)
-	tail := newLineTail(40)
+	// Read raw chunks rather than lines: the sign-in TUI redraws with
+	// carriage returns and can render a whole screen — an error among it —
+	// without ever emitting a newline.
+	chunks := make(chan string, 64)
 	go func() {
-		scanner := bufio.NewScanner(tty)
-		scanner.Buffer(make([]byte, 64*1024), 1024*1024)
-		for scanner.Scan() {
-			line := strings.TrimRight(stripANSI(scanner.Text()), " ")
-			if line == "" {
-				continue
+		buf := make([]byte, 8192)
+		for {
+			n, err := tty.Read(buf)
+			if n > 0 {
+				chunks <- string(buf[:n])
 			}
-			tail.add(line)
-			if url := authURLPattern.FindString(line); url != "" {
-				select {
-				case urlCh <- url:
-				default:
-				}
+			if err != nil {
+				close(chunks)
+				return
 			}
 		}
 	}()
@@ -87,25 +142,53 @@ func (w *Worker) handlePTYLogin(ctx context.Context, login *providers.LoginReque
 	done := make(chan error, 1)
 	go func() { done <- cmd.Wait() }()
 
-	detail := "Open the sign-in link, authorize, then paste the code you are given back here."
+	const pasteDetail = "Open the sign-in link, authorize, then paste the code you are given back here."
+
+	screen := newScreenBuffer(32 * 1024)
+	tail := newLineTail(40)
 	urlReported := false
 	nudged := false
+	// sentCode is the code last typed into the terminal. A member who pastes
+	// a different one is retrying, and gets another go — the CLI itself
+	// offers a retry after a bad code, so refusing one here is what left the
+	// flow stuck at "code sent".
+	sentCode := ""
+	reportedErr := ""
 
 	pollTicker := time.NewTicker(2 * time.Second)
 	defer pollTicker.Stop()
 	nudge := time.NewTimer(ptyNudgeAfter)
 	defer nudge.Stop()
 
-	codeSent := false
 	for {
 		select {
 		case err := <-done:
 			w.finishLogin(ctx, login, err, ctx.Err(), tail)
 			return
-		case authURL := <-urlCh:
+		case chunk, ok := <-chunks:
+			if !ok {
+				continue
+			}
+			screen.add(chunk)
+			for _, line := range visibleLines(chunk) {
+				tail.add(line)
+			}
 			if !urlReported {
-				w.loginProgress(login.ID, providers.LoginAwaitingCode, authURL, detail)
-				urlReported = true
+				if authURL := authURLPattern.FindString(stripANSI(chunk)); authURL != "" {
+					w.loginProgress(login.ID, providers.LoginAwaitingCode, authURL, pasteDetail)
+					urlReported = true
+				}
+			}
+			// Once a code has been typed, whatever the CLI says about it is
+			// the member's answer: relay it instead of waiting for an exit
+			// that a retry prompt will never produce.
+			if sentCode != "" {
+				if msg := tuiError(screen.String()); msg != "" && msg != reportedErr {
+					reportedErr = msg
+					log.Printf("login %s: the sign-in terminal reported: %s", login.ID, msg)
+					w.loginProgress(login.ID, providers.LoginAwaitingCode, "",
+						msg+" — paste the code again, in full, to retry.")
+				}
 			}
 		case <-nudge.C:
 			// No URL yet: answer the "press Enter" prompt once, then tell
@@ -131,12 +214,29 @@ func (w *Worker) handlePTYLogin(ctx context.Context, login *providers.LoginReque
 				<-done
 				return
 			}
-			if !codeSent && strings.TrimSpace(current.Code) != "" {
-				codeSent = true
-				if _, err := io.WriteString(tty, strings.TrimSpace(current.Code)+"\r"); err != nil {
-					log.Printf("login %s: writing code to terminal failed: %v", login.ID, err)
-				}
+			code := strings.TrimSpace(current.Code)
+			if code == "" || code == sentCode {
+				continue
 			}
+			// A retry lands on the CLI's "press Enter to retry" prompt, so
+			// clear that first; on the first attempt the extra Enter is
+			// harmless at an empty paste field.
+			if sentCode != "" {
+				if _, err := io.WriteString(tty, "\r"); err != nil {
+					log.Printf("login %s: clearing the retry prompt failed: %v", login.ID, err)
+				}
+				time.Sleep(250 * time.Millisecond)
+			}
+			sentCode = code
+			reportedErr = ""
+			screen.reset()
+			if _, err := io.WriteString(tty, code+"\r"); err != nil {
+				log.Printf("login %s: writing code to terminal failed: %v", login.ID, err)
+				continue
+			}
+			log.Printf("login %s: code submitted to the sign-in terminal", login.ID)
+			w.loginProgress(login.ID, providers.LoginAwaitingCode, "",
+				"Code received — completing the sign-in on the runner…")
 		case <-ctx.Done():
 			killTree(cmd)
 			<-done
@@ -145,6 +245,32 @@ func (w *Worker) handlePTYLogin(ctx context.Context, login *providers.LoginReque
 		}
 	}
 }
+
+// screenBuffer keeps the tail of what a TUI has drawn, so a message can be
+// read out of output that arrives in arbitrary chunks.
+type screenBuffer struct {
+	max  int
+	text strings.Builder
+}
+
+func newScreenBuffer(max int) *screenBuffer { return &screenBuffer{max: max} }
+
+func (b *screenBuffer) add(chunk string) {
+	b.text.WriteString(chunk)
+	if b.text.Len() <= b.max {
+		return
+	}
+	trimmed := b.text.String()
+	trimmed = trimmed[len(trimmed)-b.max:]
+	b.text.Reset()
+	b.text.WriteString(trimmed)
+}
+
+func (b *screenBuffer) String() string { return b.text.String() }
+
+// reset drops what the TUI drew before the current attempt, so a stale error
+// from a previous paste is never reported against a new one.
+func (b *screenBuffer) reset() { b.text.Reset() }
 
 // finishLogin reports the terminal state of a sign-in the CLI has exited.
 func (w *Worker) finishLogin(ctx context.Context, login *providers.LoginRequest, waitErr, ctxErr error, tail *lineTail) {
