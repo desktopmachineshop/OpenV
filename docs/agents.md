@@ -182,7 +182,7 @@ runners are API-key only):
   flow: an "Open sign-in page" link, and — for Gemini, which uses a paste-back
   flow — a field to paste the authorization code. Codex opens a browser window
   directly on the runner machine and completes there. Claude Code runs an
-  interactive `claude setup-token` in a terminal window on the worker host.
+  interactive `claude auth login` in a terminal window on the worker host.
   Credentials are stored by the CLI on the host; OpenV only brokers the URL
   and one-time code. Your runner (Agent Connector / `agentd`) must be running.
   Workspace admins can still run *workspace-targeted* sign-ins from
@@ -200,7 +200,7 @@ OAuth redirect, so each vendor's flow is relayed to the member's own browser:
 
 | Provider | How it is relayed |
 | --- | --- |
-| **Claude Code** | `claude setup-token` is a terminal UI that renders nothing over pipes, so it is driven over a **pseudo-terminal** inside the runner. The URL it prints is scraped out and shown as a link; the code the member pastes back is typed into that terminal. |
+| **Claude Code** | `claude auth login` is a terminal UI that renders nothing over pipes, so it is driven over a **pseudo-terminal** inside the runner. The URL it prints is scraped out and shown as a link; the code the member pastes back is typed into that terminal. Not `claude setup-token`: that asks only for `user:inference` and mints a long-lived token for headless use, leaving the CLI itself signed out — runs after it fail with "Not logged in". Needs a CLI new enough to have `claude auth login` (`auth status` likewise, which is how a runner's sign-in state is read). |
 | **Gemini CLI** | Already a paste-back flow (`NO_BROWSER=1`): URL out, code in. Unchanged. |
 | **Codex CLI** | `codex login` completes against a **loopback port on the runner**, which the member's browser cannot reach. So after authorizing, the member's browser shows a connection error — they copy that whole address out of the address bar and paste it back, and the runner replays it against its own listener. Only the path and query of the paste are used, always against the port the CLI itself advertised, so a paste naming another host cannot make the runner fetch it. |
 
