@@ -57,7 +57,12 @@ COPY --from=build /out/agentd /out/openv-mcp /usr/local/bin/
 ENV HOME=/data/home \
     OPENV_HOSTED=true
 
-VOLUME /data
+# No VOLUME instruction: Railway rejects one outright ("docker VOLUME is not
+# supported, use Railway Volumes"), and nothing needs it. A hosted runner gets
+# its persistent volume bind-mounted at /data by the provisioner
+# (internal/hosting), which does not depend on the image declaring it; a pool
+# node wants /data thrown away between leases, so an anonymous volume would be
+# actively wrong there.
 
 USER worker
 
