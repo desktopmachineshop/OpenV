@@ -120,6 +120,20 @@ jobs:
       - name: Build frontend production image
         run: docker build -f frontend/Dockerfile.prod frontend
 
+      # The runner image (agentd + openv-mcp + the three vendor CLIs) serves
+      # both the hosted runner tier and transient runner pool nodes. It went
+      # unbuilt by CI for a long time, so breakage in it surfaced only when a
+      # deployment tried to build it — after a release promotion, which is an
+      # expensive place to learn. It is the slowest of the three (a Node base
+      # plus three global npm installs on top of the Go build).
+      #
+      # Note what this does not cover: a plain `docker build` accepts
+      # instructions a platform may still reject — Railway refuses an image
+      # declaring a VOLUME, for instance — so a green build here is not proof
+      # the image deploys everywhere.
+      - name: Build runner image
+        run: docker build -f Dockerfile.worker .
+
   # Boots the real compose stack (postgres + api + frontend) and runs the
   # Playwright smoke journey in e2e/ against it. Independent of the other
   # jobs so backend/frontend feedback stays fast.
