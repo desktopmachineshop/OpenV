@@ -163,6 +163,11 @@ export const AgentsPage: React.FC = () => {
                 <strong style={{ flex: 1, fontSize: 14, color: 'var(--text)' }}>
                   🤖 {agent.name}
                 </strong>
+                {agent.locked && (
+                  <span title="Locked: platform updates never change this agent" style={{ fontSize: 13 }}>
+                    🔒
+                  </span>
+                )}
                 {agent.repo_access && (
                   <span title="Has repository access" style={{ fontSize: 13 }}>
                     📁

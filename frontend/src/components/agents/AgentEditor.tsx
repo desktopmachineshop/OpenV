@@ -32,6 +32,7 @@ interface FormState {
   effort: string;
   write_mode: 'proposal' | 'direct';
   repo_access: boolean;
+  locked: boolean;
   max_turns: number;
   timeout_seconds: number;
   allowed_tools: string;
@@ -47,6 +48,7 @@ const toForm = (agent: AgentDef | null): FormState => ({
   effort: agent?.effort || '',
   write_mode: agent?.write_mode || 'proposal',
   repo_access: agent?.repo_access || false,
+  locked: agent?.locked || false,
   max_turns: agent?.max_turns ?? 30,
   timeout_seconds: agent?.timeout_seconds ?? 600,
   allowed_tools: (agent?.allowed_tools || []).join(', '),
@@ -111,6 +113,7 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({ agent, onSaved, onCanc
       effort: form.effort,
       write_mode: form.write_mode,
       repo_access: form.repo_access,
+      locked: form.locked,
       max_turns: Number(form.max_turns) || 0,
       timeout_seconds: Number(form.timeout_seconds) || 0,
       allowed_tools: form.allowed_tools
@@ -329,6 +332,28 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({ agent, onSaved, onCanc
                 placeholder="e.g. openv_search, openv_read, openv_propose"
                 style={{ fontSize: 13 }}
               />
+            </div>
+            <div className="form-group" style={{ gridColumn: '1 / span 2' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                <input
+                  id="agent-locked"
+                  type="checkbox"
+                  checked={form.locked}
+                  onChange={(e) => set({ locked: e.target.checked })}
+                  style={{ width: 'auto', marginTop: 3 }}
+                />
+                <div>
+                  <label htmlFor="agent-locked" style={{ margin: 0, fontWeight: 400 }}>
+                    Lock this agent against automatic updates
+                  </label>
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
+                    Platform releases bring a standard agent's prompt and tools up to date
+                    where you have not changed them. Lock it and they never will — this agent
+                    then changes only when someone here changes it. You can unlock it again at
+                    any time.
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
           <div className="form-group">

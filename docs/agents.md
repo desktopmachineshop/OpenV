@@ -397,6 +397,19 @@ prompt are adopted at startup **field by field, and only where the workspace
 still carries the exact text the old seed wrote**. An agent anyone has edited
 keeps what they wrote; an untouched one catches up.
 
+### Locking an agent
+
+**Agents → the agent → Lock this agent against automatic updates** stops even
+that. A locked agent is skipped by seed adoption entirely, before any field is
+compared, so a workspace that has to be able to say *this agent does not change
+unless we change it* can say it — the lock does not depend on which fields
+happen to still match a seed. People with access can still edit the agent
+themselves, and can untick the box at any time, at which point it rejoins the
+adoption path.
+
+The flag lives in the file's frontmatter (`locked: true`), so it survives a
+file sync and an export/import as well as a database round trip.
+
 ### Choosing a model
 
 The **Model** field in the agent editor (and **Default model** in Workspace
@@ -453,6 +466,8 @@ agent nobody has tuned catches up — including to tools the seed has gained,
 and to the prompt that explains them. One somebody edited keeps what they
 wrote, per field: narrow an agent's tools yourself and no later release
 widens them again.
+An agent with `locked: true` is skipped before any of that comparison
+happens — see [Locking an agent](#locking-an-agent).
 
 Two consequences worth holding on to:
 

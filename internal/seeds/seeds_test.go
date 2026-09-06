@@ -348,3 +348,39 @@ func TestVVAssistantCanSearchTheWeb(t *testing.T) {
 		t.Error("the assistant's read-only stance was lost")
 	}
 }
+
+// A locked agent does not move, even when every field still carries exactly
+// what an earlier seed wrote — the case adoption would otherwise act on. This
+// is the whole promise of the lock: nothing changes unless we change it.
+func TestAdoptSeedDefaultsSkipsALockedAgent(t *testing.T) {
+	want := currentCopilotSeed(t)
+	versions := previousSeedVersions["requirements-copilot"]
+	prev := versions[len(versions)-1]
+	existing := &agents.Agent{
+		Slug:         "requirements-copilot",
+		Name:         prev.Name,
+		Description:  prev.Description,
+		SystemPrompt: prev.SystemPrompt,
+		AllowedTools: prev.AllowedTools,
+		Locked:       true,
+	}
+	svc := &fakeAgentService{bySlug: map[string]*agents.Agent{"requirements-copilot": existing}}
+
+	changed, err := adoptSeedDefaults("org-1", existing, want, svc)
+	if err != nil {
+		t.Fatalf("adoptSeedDefaults() error: %v", err)
+	}
+	if changed {
+		t.Error("a locked agent was updated")
+	}
+	if len(svc.saved) != 0 {
+		t.Errorf("a locked agent was written %d times; it must not be touched at all", len(svc.saved))
+	}
+	// Unlocking restores the ordinary behaviour, so the lock is a choice and
+	// not a one-way door.
+	existing.Locked = false
+	changed, err = adoptSeedDefaults("org-1", existing, want, svc)
+	if err != nil || !changed {
+		t.Fatalf("after unlocking, adoptSeedDefaults() = %v, %v; want true, nil", changed, err)
+	}
+}

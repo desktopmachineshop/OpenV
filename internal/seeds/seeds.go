@@ -212,6 +212,12 @@ var previousSeedVersions = map[string][]agents.Definition{
 // wrote (previousSeedVersions). An agent someone tuned keeps what they wrote;
 // an untouched one catches up, including to capabilities the seed has gained.
 func adoptSeedDefaults(orgID string, existing *agents.Agent, want agents.Definition, agentService agents.Service) (bool, error) {
+	// A locked agent is the workspace's answer to "can this change without
+	// us?": no. It is checked before anything else, so the guarantee does not
+	// depend on which fields happen to still match a seed.
+	if existing.Locked {
+		return false, nil
+	}
 	prior, ok := previousSeedVersions[existing.Slug]
 	if !ok {
 		return false, nil

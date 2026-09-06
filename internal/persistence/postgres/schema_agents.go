@@ -23,6 +23,7 @@ func InitAgentSchema(db *sql.DB) error {
 		max_turns INT NOT NULL DEFAULT 50,
 		timeout_seconds INT NOT NULL DEFAULT 1800,
 		config JSONB NOT NULL DEFAULT '{}',
+		locked BOOLEAN NOT NULL DEFAULT FALSE,
 		system_prompt TEXT NOT NULL DEFAULT '',
 		file_path VARCHAR(1024) NOT NULL DEFAULT '',
 		content_hash VARCHAR(128) NOT NULL DEFAULT '',
@@ -326,6 +327,24 @@ func InitAgentSchema(db *sql.DB) error {
 	`
 	if _, err := db.Exec(effortSQL); err != nil {
 		return fmt.Errorf("failed to add agent effort column: %w", err)
+	}
+
+	// Locked agents opt out of seed adoption. Defaulting to false keeps every
+	// existing agent behaving exactly as it did — locking is a choice a
+	// workspace makes, never one a migration makes for it.
+	lockedSQL := `
+	DO $$
+	BEGIN
+		IF NOT EXISTS (
+			SELECT 1 FROM information_schema.columns
+			WHERE table_name='agents' AND column_name='locked'
+		) THEN
+			ALTER TABLE agents ADD COLUMN locked BOOLEAN NOT NULL DEFAULT FALSE;
+		END IF;
+	END $$;
+	`
+	if _, err := db.Exec(lockedSQL); err != nil {
+		return fmt.Errorf("failed to add agent locked column: %w", err)
 	}
 
 	return nil
