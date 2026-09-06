@@ -35,9 +35,17 @@ export const nextPanelMode = (mode: PanelMode): PanelMode =>
  * Pinned always does. Auto-hide does only while hovered, and then it overlays
  * rather than pushing the document around: a panel that reflows the text every
  * time the pointer drifts past would be worse than one that stays shut.
+ *
+ * `revealed` is the reader asking for the panel back by clicking its edge
+ * strip. It is what makes "hidden" a state you can leave: hovering a hidden
+ * panel deliberately does nothing — that is the difference between hidden and
+ * auto-hide — so without an explicit reveal there is no way back short of
+ * cycling the mode, and the strip becomes a button that does nothing. A
+ * revealed panel stays open until it is dismissed rather than closing when the
+ * pointer wanders off, because someone who asked for it is about to use it.
  */
-export const panelIsOpen = (mode: PanelMode, hovered: boolean): boolean =>
-  mode === 'pinned' || (mode === 'autohide' && hovered);
+export const panelIsOpen = (mode: PanelMode, hovered: boolean, revealed = false): boolean =>
+  mode === 'pinned' || revealed || (mode === 'autohide' && hovered);
 
 /** Whether the panel takes width from the document rather than floating over it. */
 export const panelTakesSpace = (mode: PanelMode): boolean => mode === 'pinned';

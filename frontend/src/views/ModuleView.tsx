@@ -62,6 +62,10 @@ export const ModuleView: React.FC = () => {
   // times.
   const [notesMode, setNotesMode] = useState<PanelMode>(() => loadPanelMode('artifact-notes'));
   const [notesHovered, setNotesHovered] = useState(false);
+  // An explicit "show it to me" from the edge strip. Hover alone never opens a
+  // hidden notes panel, so this is the only way back from that mode, and it
+  // stays open until dismissed rather than vanishing when the pointer moves.
+  const [notesRevealed, setNotesRevealed] = useState(false);
   const [pendingCreateContext, setPendingCreateContext] = useState<Partial<Artifact> | null>(null);
   // Where a "create before/after" should put the artifact once it exists. The
   // API appends new artifacts to the end of their sibling group, so without
@@ -746,7 +750,7 @@ export const ModuleView: React.FC = () => {
   // citing it — and an artifact reference selects that artifact.
   const [figureInView, setFigureInView] = useState<Attachment | null>(null);
 
-  const notesOpen = panelIsOpen(notesMode, notesHovered);
+  const notesOpen = panelIsOpen(notesMode, notesHovered, notesRevealed);
   const notesPinned = panelTakesSpace(notesMode);
 
   const cycleNotesMode = () => {
@@ -754,7 +758,19 @@ export const ModuleView: React.FC = () => {
     setNotesMode(next);
     savePanelMode('artifact-notes', next);
     setNotesHovered(false);
+    setNotesRevealed(false);
   };
+
+  // Escape dismisses a revealed notes panel, the same key that closes every
+  // other thing this view floats over the document.
+  useEffect(() => {
+    if (!notesRevealed) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setNotesRevealed(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [notesRevealed]);
 
   const handleReferenceClick = (ref: string) => {
     if (isFigureRef(ref)) {
@@ -1668,10 +1684,13 @@ export const ModuleView: React.FC = () => {
             hover, and hidden leaves just the strip that brings it back. */}
         {!notesPinned && (
           <div
+            className="panel-edge-strip"
             onMouseEnter={() => setNotesHovered(true)}
             onMouseLeave={() => setNotesHovered(false)}
-            onClick={() => setNotesHovered(true)}
-            title={`Notes: ${panelModeLabel(notesMode)} — click the button inside to change`}
+            onClick={() => setNotesRevealed((shown) => !shown)}
+            title={`Notes: ${panelModeLabel(notesMode)} — click to ${
+              notesOpen ? 'hide' : 'show'
+            }, then the button inside to change the mode`}
             style={{
               width: 10,
               minWidth: 10,
@@ -1712,6 +1731,14 @@ export const ModuleView: React.FC = () => {
                 }
               }}
             />
+            )}
+            {/* Clicking away closes a panel that was revealed on purpose: an
+                overlay with no way out but the same 10px strip is a trap. */}
+            {notesRevealed && !notesPinned && (
+              <div
+                onClick={() => setNotesRevealed(false)}
+                style={{ position: 'fixed', inset: 0, zIndex: 899 }}
+              />
             )}
             {notesOpen && (
             <div

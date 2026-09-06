@@ -97,6 +97,10 @@ export const ProjectLayout: React.FC = () => {
   // hidden. Remembered per person so the choice survives a reload.
   const [navMode, setNavMode] = useState<PanelMode>(() => loadPanelMode('project-nav'));
   const [navHovered, setNavHovered] = useState(false);
+  // An explicit "show it to me" from the edge strip. Hover alone never opens a
+  // hidden menu, so this is the only way back from that mode, and it stays
+  // open until dismissed rather than vanishing when the pointer moves.
+  const [navRevealed, setNavRevealed] = useState(false);
   // Which menu groups are expanded. They start collapsed — see navSections.ts.
   const [navOpenSections, setNavOpenSections] = useState<NavSectionState>(() => loadNavSections());
 
@@ -143,8 +147,24 @@ export const ProjectLayout: React.FC = () => {
     }
   }, [project, orgs, activeOrgId, setActiveOrgId]);
 
+  // Escape dismisses a revealed menu, the same key that closes every other
+  // thing this app floats over the document.
+  useEffect(() => {
+    if (!navRevealed) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setNavRevealed(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [navRevealed]);
+
+  // Navigating from the menu is the commonest reason to be done with it.
+  useEffect(() => {
+    setNavRevealed(false);
+  }, [location.pathname]);
+
   const activePath = activeNavPath(location.pathname, projectId || '');
-  const open = panelIsOpen(navMode, navHovered);
+  const open = panelIsOpen(navMode, navHovered, navRevealed);
   const takesSpace = panelTakesSpace(navMode);
 
   return (
@@ -153,6 +173,7 @@ export const ProjectLayout: React.FC = () => {
           the nav gone there would otherwise be nothing left to click. */}
       {!takesSpace && (
         <div
+          className="panel-edge-strip"
           onMouseEnter={() => setNavHovered(true)}
           onMouseLeave={() => setNavHovered(false)}
           style={{
@@ -167,11 +188,21 @@ export const ProjectLayout: React.FC = () => {
             color: 'var(--sidebar-text-dim)',
             fontSize: 10,
           }}
-          title={`Project menu: ${panelModeLabel(navMode)} — click the pin inside to change`}
-          onClick={() => setNavHovered(true)}
+          title={`Project menu: ${panelModeLabel(navMode)} — click to ${
+            open ? 'hide' : 'show'
+          }, then the button inside to change the mode`}
+          onClick={() => setNavRevealed((shown) => !shown)}
         >
           ›
         </div>
+      )}
+      {/* Clicking away closes a menu that was revealed on purpose: an overlay
+          with no way out but the same 10px strip is a trap. */}
+      {navRevealed && !takesSpace && (
+        <div
+          onClick={() => setNavRevealed(false)}
+          style={{ position: 'fixed', inset: 0, zIndex: 899 }}
+        />
       )}
       <aside
         onMouseEnter={() => navMode === 'autohide' && setNavHovered(true)}
@@ -330,6 +361,7 @@ export const ProjectLayout: React.FC = () => {
               setNavMode(next);
               savePanelMode('project-nav', next);
               setNavHovered(false);
+              setNavRevealed(false);
             }}
             title={`Project menu: ${panelModeLabel(navMode)} — click for ${panelModeLabel(
               nextPanelMode(navMode)
