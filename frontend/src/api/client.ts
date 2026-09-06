@@ -826,6 +826,8 @@ export interface AgentDef {
   model: string;
   effort: string;
   allowed_tools: string[];
+  /** Pinned against seed adoption: releases never update this agent. */
+  locked?: boolean;
   write_mode: 'proposal' | 'direct';
   repo_access: boolean;
   max_turns: number;

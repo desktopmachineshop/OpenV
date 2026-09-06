@@ -397,6 +397,19 @@ prompt are adopted at startup **field by field, and only where the workspace
 still carries the exact text the old seed wrote**. An agent anyone has edited
 keeps what they wrote; an untouched one catches up.
 
+### Locking an agent
+
+**Agents → the agent → Lock this agent against automatic updates** stops even
+that. A locked agent is skipped by seed adoption entirely, before any field is
+compared, so a workspace that has to be able to say *this agent does not change
+unless we change it* can say it — the lock does not depend on which fields
+happen to still match a seed. People with access can still edit the agent
+themselves, and can untick the box at any time, at which point it rejoins the
+adoption path.
+
+The flag lives in the file's frontmatter (`locked: true`), so it survives a
+file sync and an export/import as well as a database round trip.
+
 ### Choosing a model
 
 The **Model** field in the agent editor (and **Default model** in Workspace
@@ -446,11 +459,29 @@ keeping if you grant web access to an agent of your own:
 Granting a tool without mentioning it in the system prompt mostly wastes it —
 the model is left to discover it has the tool. Say what it is for.
 
-**Changing an existing agent:** a seed describes a *new* workspace. Agents
-already provisioned belong to their workspace and are never retrofitted (see
-`adoptSeedRename`, which carries `AllowedTools` across untouched), so adding a
-tool to a seed does nothing for a workspace that already has that agent — edit
-it under **Agents → the agent → Allowed tools** instead.
+**Changing an existing agent.** A seeded agent belongs to its workspace, so a
+release only touches fields the workspace has left exactly as some release of
+the seed wrote them (`adoptSeedDefaults`, against `previousSeedVersions`). An
+agent nobody has tuned catches up — including to tools the seed has gained,
+and to the prompt that explains them. One somebody edited keeps what they
+wrote, per field: narrow an agent's tools yourself and no later release
+widens them again.
+An agent with `locked: true` is skipped before any of that comparison
+happens — see [Locking an agent](#locking-an-agent).
+
+Two consequences worth holding on to:
+
+- **Editing a seed's `allowed_tools` grants those tools**, at the next
+  startup, to every workspace that never tuned that agent. That is the point,
+  and it is also the reason to be deliberate about what a seed may do.
+- **Changing a seed has two halves**: change it, and append what it said
+  before to `previousSeedVersions`. Skip the second and the change reaches
+  new workspaces only — silently. A test in `internal/seeds` fails if a
+  recorded version is identical to the current seed, which catches the
+  commonest version of that mistake.
+
+To grant a tool to one agent without touching anyone else's, edit it under
+**Agents → the agent → Allowed tools** instead.
 
 ### write_mode: proposal vs direct
 

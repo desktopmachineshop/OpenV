@@ -275,6 +275,7 @@ func (s *FileService) syncOne(orgID string, def *Definition, path, content strin
 		existing.MaxTurns = def.MaxTurns
 		existing.TimeoutSeconds = def.TimeoutSeconds
 		existing.Config = def.Config
+		existing.Locked = def.Locked
 		existing.SystemPrompt = def.SystemPrompt
 		existing.FilePath = path
 		existing.ContentHash = hash
@@ -301,6 +302,7 @@ func (s *FileService) syncOne(orgID string, def *Definition, path, content strin
 		MaxTurns:       def.MaxTurns,
 		TimeoutSeconds: def.TimeoutSeconds,
 		Config:         def.Config,
+		Locked:         def.Locked,
 		SystemPrompt:   def.SystemPrompt,
 		FilePath:       path,
 		ContentHash:    hash,

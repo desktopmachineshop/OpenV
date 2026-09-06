@@ -71,11 +71,16 @@ type Agent struct {
 	TimeoutSeconds int                    `json:"timeout_seconds"`
 	Config         map[string]interface{} `json:"config"`
 	SystemPrompt   string                 `json:"system_prompt"`
-	FilePath       string                 `json:"file_path"`
-	ContentHash    string                 `json:"content_hash"`
-	SyncedAt       *time.Time             `json:"synced_at,omitempty"`
-	CreatedAt      time.Time              `json:"created_at"`
-	UpdatedAt      time.Time              `json:"updated_at"`
+	// Locked pins the agent against automatic updates: the seed adoption
+	// that brings untouched agents up to a new release skips it entirely.
+	// For a workspace that needs to be able to say this agent does not
+	// change unless we change it.
+	Locked      bool       `json:"locked"`
+	FilePath    string     `json:"file_path"`
+	ContentHash string     `json:"content_hash"`
+	SyncedAt    *time.Time `json:"synced_at,omitempty"`
+	CreatedAt   time.Time  `json:"created_at"`
+	UpdatedAt   time.Time  `json:"updated_at"`
 }
 
 // Definition is the editable content of an agent's markdown file:
@@ -93,7 +98,11 @@ type Definition struct {
 	MaxTurns       int                    `json:"max_turns" yaml:"max_turns,omitempty"`
 	TimeoutSeconds int                    `json:"timeout_seconds" yaml:"timeout_seconds,omitempty"`
 	Config         map[string]interface{} `json:"config" yaml:"config,omitempty"`
-	SystemPrompt   string                 `json:"system_prompt" yaml:"-"`
+	// Locked travels in the frontmatter so the guarantee survives a file
+	// sync: an agent edited on disk stays locked without anyone having to
+	// remember to re-tick it.
+	Locked       bool   `json:"locked" yaml:"locked,omitempty"`
+	SystemPrompt string `json:"system_prompt" yaml:"-"`
 }
 
 // Validate checks a definition for required fields and sane defaults.
