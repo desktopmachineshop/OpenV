@@ -286,3 +286,15 @@ textarea {
   font-weight: bold;
 }
 
+
+/* The 10px strip left behind by a hidden or auto-hiding side panel. It is now
+   the only way back from hidden, so it has to answer "is this a button?" —
+   widening the arrow and lifting the ground on hover says yes without
+   spending any layout width. */
+.panel-edge-strip {
+  transition: background-color 0.15s, color 0.15s;
+}
+.panel-edge-strip:hover {
+  background-color: var(--accent);
+  color: #fff;
+}

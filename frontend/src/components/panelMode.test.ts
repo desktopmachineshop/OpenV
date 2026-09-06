@@ -29,6 +29,21 @@ describe('panelIsOpen', () => {
   it('stays shut when hidden, even under the pointer', () => {
     expect(panelIsOpen('hidden', true)).toBe(false);
   });
+
+  // The bug this guards: the edge strip is the only way back from hidden, and
+  // hover deliberately does not open a hidden panel, so without an explicit
+  // reveal clicking the strip did nothing at all.
+  it('opens a hidden panel when the reader asks for it back', () => {
+    expect(panelIsOpen('hidden', false, true)).toBe(true);
+  });
+
+  it('reveals an auto-hiding panel too, for a click where there is no hover', () => {
+    expect(panelIsOpen('autohide', false, true)).toBe(true);
+  });
+
+  it('leaves a pinned panel open whatever the reveal says', () => {
+    expect(panelIsOpen('pinned', false, false)).toBe(true);
+  });
 });
 
 // An auto-hiding panel overlays the document. Reflowing the text every time
