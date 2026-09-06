@@ -446,11 +446,27 @@ keeping if you grant web access to an agent of your own:
 Granting a tool without mentioning it in the system prompt mostly wastes it —
 the model is left to discover it has the tool. Say what it is for.
 
-**Changing an existing agent:** a seed describes a *new* workspace. Agents
-already provisioned belong to their workspace and are never retrofitted (see
-`adoptSeedRename`, which carries `AllowedTools` across untouched), so adding a
-tool to a seed does nothing for a workspace that already has that agent — edit
-it under **Agents → the agent → Allowed tools** instead.
+**Changing an existing agent.** A seeded agent belongs to its workspace, so a
+release only touches fields the workspace has left exactly as some release of
+the seed wrote them (`adoptSeedDefaults`, against `previousSeedVersions`). An
+agent nobody has tuned catches up — including to tools the seed has gained,
+and to the prompt that explains them. One somebody edited keeps what they
+wrote, per field: narrow an agent's tools yourself and no later release
+widens them again.
+
+Two consequences worth holding on to:
+
+- **Editing a seed's `allowed_tools` grants those tools**, at the next
+  startup, to every workspace that never tuned that agent. That is the point,
+  and it is also the reason to be deliberate about what a seed may do.
+- **Changing a seed has two halves**: change it, and append what it said
+  before to `previousSeedVersions`. Skip the second and the change reaches
+  new workspaces only — silently. A test in `internal/seeds` fails if a
+  recorded version is identical to the current seed, which catches the
+  commonest version of that mistake.
+
+To grant a tool to one agent without touching anyone else's, edit it under
+**Agents → the agent → Allowed tools** instead.
 
 ### write_mode: proposal vs direct
 

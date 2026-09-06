@@ -3,6 +3,7 @@ package seeds
 import (
 	"fmt"
 	"log"
+	"slices"
 
 	"github.com/openv/requirements-platform/internal/domain/agents"
 	"github.com/openv/requirements-platform/internal/domain/teams"
@@ -164,31 +165,60 @@ You can search the web and read pages you find. Use it when a claim has an autho
 // So a rename is adopted field by field, and only where the workspace still
 // carries the exact text the old seed wrote. An agent someone has edited keeps
 // what they wrote; one nobody has touched catches up.
-var previousSeedIdentity = map[string]agents.Definition{
+// previousSeedVersions records what earlier releases of each seed wrote,
+// oldest first. It is how "the workspace has not touched this" is decided: a
+// field is brought up to the current seed only when the agent still carries,
+// verbatim, a value some release of the seed put there. Anything else is
+// someone's own work and is left alone.
+//
+// Adding to a seed therefore has two halves. Change the seed, and append what
+// it said before to the list here — miss the second half and the change simply
+// never reaches a workspace that already has the agent.
+//
+// This does mean a release can widen what an untouched agent may do, tools
+// included. That is the point (a capability nobody can receive is not much of
+// a capability), but it is worth remembering when editing a seed's
+// AllowedTools: for every workspace that never tuned that agent, the edit
+// lands.
+var previousSeedVersions = map[string][]agents.Definition{
 	// The requirements copilot became the V&V Assistant when its chat moved
 	// out of the wizard and into every artifact's notes panel. The slug stays
 	// as it is — it is what the chat handler resolves, and renaming it would
 	// break the chat in every workspace provisioned before the rename.
 	"requirements-copilot": {
-		Name:         "Requirements Copilot",
-		Description:  "Chats alongside the guided definition wizard: asks probing questions and suggests personas, needs, requirements, NFRs and hazards.",
-		SystemPrompt: `You are a requirements copilot sitting beside a founder working through a guided product-definition wizard. Your job each turn: (1) ask one or two sharp questions grounded in what they have entered so far, and (2) surface what they are missing — unstated hazards and failure modes, missing non-functional requirements, ambiguous or untestable statements, personas or needs with no requirements behind them. You may read existing project artifacts through your OpenV tools for context, but never create or modify artifacts yourself — the wizard materializes entries the user accepts. Keep replies short and conversational; follow the suggestion-format instructions in each turn's prompt exactly so your proposals can be added with one click.`,
+		{
+			Name:         "Requirements Copilot",
+			Description:  "Chats alongside the guided definition wizard: asks probing questions and suggests personas, needs, requirements, NFRs and hazards.",
+			SystemPrompt: `You are a requirements copilot sitting beside a founder working through a guided product-definition wizard. Your job each turn: (1) ask one or two sharp questions grounded in what they have entered so far, and (2) surface what they are missing — unstated hazards and failure modes, missing non-functional requirements, ambiguous or untestable statements, personas or needs with no requirements behind them. You may read existing project artifacts through your OpenV tools for context, but never create or modify artifacts yourself — the wizard materializes entries the user accepts. Keep replies short and conversational; follow the suggestion-format instructions in each turn's prompt exactly so your proposals can be added with one click.`,
+			AllowedTools: []string{"mcp__openv__*"},
+		},
+		// The V&V Assistant before it could look anything up.
+		{
+			Name:         "V&V Assistant",
+			Description:  "Chats alongside the guided definition wizard and the notes panel: asks probing questions and surfaces gaps in personas, needs, requirements, NFRs, hazards and verification.",
+			SystemPrompt: `You are the V&V Assistant sitting beside a founder working through a guided product-definition wizard. Your job each turn: (1) ask one or two sharp questions grounded in what they have entered so far, and (2) surface what they are missing — unstated hazards and failure modes, missing non-functional requirements, ambiguous or untestable statements, personas or needs with no requirements behind them. You may read existing project artifacts through your OpenV tools for context, but never create or modify artifacts yourself — the wizard materializes entries the user accepts. Keep replies short and conversational; follow the suggestion-format instructions in each turn's prompt exactly so your proposals can be added with one click.`,
+			AllowedTools: []string{"mcp__openv__*"},
+		},
 	},
 }
 
-// adoptSeedRename brings one already-provisioned agent up to the current seed's
-// identity, field by field, skipping any field the workspace has edited. It
+// adoptSeedDefaults brings one already-provisioned agent up to the current
+// seed, field by field, skipping any field the workspace has made its own. It
 // reports whether anything was written — nothing is when the agent is already
-// current or has been made the member's own, so a restart does not rewrite
-// files or churn content hashes.
-func adoptSeedRename(orgID string, existing *agents.Agent, want agents.Definition, agentService agents.Service) (bool, error) {
-	prev, ok := previousSeedIdentity[existing.Slug]
+// current or has been edited, so a restart does not rewrite files or churn
+// content hashes.
+//
+// "Made its own" means: the value is not one an earlier release of the seed
+// wrote (previousSeedVersions). An agent someone tuned keeps what they wrote;
+// an untouched one catches up, including to capabilities the seed has gained.
+func adoptSeedDefaults(orgID string, existing *agents.Agent, want agents.Definition, agentService agents.Service) (bool, error) {
+	prior, ok := previousSeedVersions[existing.Slug]
 	if !ok {
 		return false, nil
 	}
 
 	// Everything the workspace may have tuned is carried over untouched; only
-	// the identity fields below are candidates for the rename.
+	// the fields below are candidates for adoption.
 	def := agents.Definition{
 		Slug:           existing.Slug,
 		Name:           existing.Name,
@@ -207,23 +237,48 @@ func adoptSeedRename(orgID string, existing *agents.Agent, want agents.Definitio
 
 	changed := false
 	for _, f := range []struct {
-		current  *string
-		old, new string
+		current *string
+		want    string
+		earlier func(agents.Definition) string
 	}{
-		{&def.Name, prev.Name, want.Name},
-		{&def.Description, prev.Description, want.Description},
-		{&def.SystemPrompt, prev.SystemPrompt, want.SystemPrompt},
+		{&def.Name, want.Name, func(d agents.Definition) string { return d.Name }},
+		{&def.Description, want.Description, func(d agents.Definition) string { return d.Description }},
+		{&def.SystemPrompt, want.SystemPrompt, func(d agents.Definition) string { return d.SystemPrompt }},
 	} {
-		if *f.current == f.old && f.old != f.new {
-			*f.current = f.new
-			changed = true
+		if *f.current == f.want {
+			continue
+		}
+		for _, p := range prior {
+			// An empty recorded value matches nothing: it means that release
+			// did not set the field, not that every agent missing it is
+			// untouched.
+			if was := f.earlier(p); was != "" && *f.current == was {
+				*f.current = f.want
+				changed = true
+				break
+			}
 		}
 	}
+
+	// Tools travel the same way. A grant is the one adoption that widens what
+	// the agent may do rather than just what it says, so it is held to the
+	// same test: the workspace must still be carrying a list the seed itself
+	// wrote.
+	if !slices.Equal(def.AllowedTools, want.AllowedTools) {
+		for _, p := range prior {
+			if len(p.AllowedTools) > 0 && slices.Equal(def.AllowedTools, p.AllowedTools) {
+				def.AllowedTools = append([]string(nil), want.AllowedTools...)
+				changed = true
+				break
+			}
+		}
+	}
+
 	if !changed {
 		return false, nil
 	}
 	if _, err := agentService.SaveDefinition(orgID, &def); err != nil {
-		return false, fmt.Errorf("failed to rename seeded agent %s: %w", existing.Slug, err)
+		return false, fmt.Errorf("failed to update seeded agent %s: %w", existing.Slug, err)
 	}
 	return true, nil
 }
@@ -249,12 +304,12 @@ func EnsureOrgDefaults(orgID string, agentService agents.Service, crewService te
 			}
 			log.Printf("seeds: created default agent %q for org %s", seed.def.Slug, orgID)
 		} else {
-			renamed, err := adoptSeedRename(orgID, existing, seed.def, agentService)
+			adopted, err := adoptSeedDefaults(orgID, existing, seed.def, agentService)
 			if err != nil {
 				return err
 			}
-			if renamed {
-				log.Printf("seeds: adopted the current name for agent %q in org %s", seed.def.Slug, orgID)
+			if adopted {
+				log.Printf("seeds: brought agent %q up to the current seed in org %s", seed.def.Slug, orgID)
 			}
 		}
 		if seed.label != "" {

@@ -1,6 +1,7 @@
 package seeds
 
 import (
+	"slices"
 	"strings"
 	"testing"
 
@@ -102,9 +103,9 @@ func currentCopilotSeed(t *testing.T) agents.Definition {
 
 // An agent nobody has edited still says what the old seed wrote, so it takes
 // the new name, description and prompt.
-func TestAdoptSeedRenameUpdatesAnUntouchedAgent(t *testing.T) {
+func TestAdoptSeedDefaultsUpdatesAnUntouchedAgent(t *testing.T) {
 	want := currentCopilotSeed(t)
-	prev := previousSeedIdentity["requirements-copilot"]
+	prev := previousSeedVersions["requirements-copilot"][0]
 	existing := &agents.Agent{
 		Slug:         "requirements-copilot",
 		Name:         prev.Name,
@@ -116,9 +117,9 @@ func TestAdoptSeedRenameUpdatesAnUntouchedAgent(t *testing.T) {
 	}
 	svc := &fakeAgentService{bySlug: map[string]*agents.Agent{"requirements-copilot": existing}}
 
-	changed, err := adoptSeedRename("org-1", existing, want, svc)
+	changed, err := adoptSeedDefaults("org-1", existing, want, svc)
 	if err != nil || !changed {
-		t.Fatalf("adoptSeedRename() = %v, %v; want true, nil", changed, err)
+		t.Fatalf("adoptSeedDefaults() = %v, %v; want true, nil", changed, err)
 	}
 	if len(svc.saved) != 1 {
 		t.Fatalf("wrote %d definitions, want 1", len(svc.saved))
@@ -138,9 +139,9 @@ func TestAdoptSeedRenameUpdatesAnUntouchedAgent(t *testing.T) {
 
 // The point of the migration: a workspace that renamed or retuned its agent
 // keeps exactly what it wrote.
-func TestAdoptSeedRenameLeavesAnEditedAgentAlone(t *testing.T) {
+func TestAdoptSeedDefaultsLeavesAnEditedAgentAlone(t *testing.T) {
 	want := currentCopilotSeed(t)
-	prev := previousSeedIdentity["requirements-copilot"]
+	prev := previousSeedVersions["requirements-copilot"][0]
 
 	cases := []struct {
 		name     string
@@ -169,9 +170,9 @@ func TestAdoptSeedRenameLeavesAnEditedAgentAlone(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			svc := &fakeAgentService{bySlug: map[string]*agents.Agent{"requirements-copilot": tc.existing}}
-			changed, err := adoptSeedRename("org-1", tc.existing, want, svc)
+			changed, err := adoptSeedDefaults("org-1", tc.existing, want, svc)
 			if err != nil {
-				t.Fatalf("adoptSeedRename() error: %v", err)
+				t.Fatalf("adoptSeedDefaults() error: %v", err)
 			}
 			if changed != tc.wantSave {
 				t.Fatalf("changed = %v, want %v", changed, tc.wantSave)
@@ -186,7 +187,7 @@ func TestAdoptSeedRenameLeavesAnEditedAgentAlone(t *testing.T) {
 }
 
 // Already renamed: a restart must not rewrite the file and churn its hash.
-func TestAdoptSeedRenameIsIdempotent(t *testing.T) {
+func TestAdoptSeedDefaultsAreIdempotent(t *testing.T) {
 	want := currentCopilotSeed(t)
 	existing := &agents.Agent{
 		Slug:         "requirements-copilot",
@@ -196,9 +197,9 @@ func TestAdoptSeedRenameIsIdempotent(t *testing.T) {
 	}
 	svc := &fakeAgentService{bySlug: map[string]*agents.Agent{"requirements-copilot": existing}}
 
-	changed, err := adoptSeedRename("org-1", existing, want, svc)
+	changed, err := adoptSeedDefaults("org-1", existing, want, svc)
 	if err != nil || changed {
-		t.Fatalf("adoptSeedRename() = %v, %v; want false, nil on an already-current agent", changed, err)
+		t.Fatalf("adoptSeedDefaults() = %v, %v; want false, nil on an already-current agent", changed, err)
 	}
 	if len(svc.saved) != 0 {
 		t.Errorf("wrote %d definitions for an unchanged agent, want 0", len(svc.saved))
@@ -206,27 +207,99 @@ func TestAdoptSeedRenameIsIdempotent(t *testing.T) {
 }
 
 // A seed with no recorded previous identity is never touched.
-func TestAdoptSeedRenameSkipsAgentsWithNoRecordedRename(t *testing.T) {
+func TestAdoptSeedDefaultsSkipsAgentsWithNoRecordedHistory(t *testing.T) {
 	existing := &agents.Agent{Slug: TestCaseAuthorSlug, Name: "Whatever They Called It"}
 	svc := &fakeAgentService{bySlug: map[string]*agents.Agent{TestCaseAuthorSlug: existing}}
 
-	changed, err := adoptSeedRename("org-1", existing, agents.Definition{Name: "New Name"}, svc)
+	changed, err := adoptSeedDefaults("org-1", existing, agents.Definition{Name: "New Name"}, svc)
 	if err != nil || changed || len(svc.saved) != 0 {
-		t.Fatalf("adoptSeedRename() = %v, %v, %d saves; want false, nil, 0", changed, err, len(svc.saved))
+		t.Fatalf("adoptSeedDefaults() = %v, %v, %d saves; want false, nil, 0", changed, err, len(svc.saved))
 	}
 }
 
-// The recorded "previous" text has to be the text that actually shipped, or
-// the migration silently matches nothing and every workspace keeps the old
-// name for ever.
-func TestPreviousSeedIdentityDiffersFromTheCurrentSeed(t *testing.T) {
+// Every recorded version has to be text that actually shipped, and none of it
+// may equal what ships now — a recorded value identical to the current seed
+// matches nothing useful, and a field nobody recorded can never reach a
+// workspace that already has the agent. This is the half of a seed change
+// that is easy to forget.
+func TestPreviousSeedVersionsDifferFromTheCurrentSeed(t *testing.T) {
 	want := currentCopilotSeed(t)
-	prev := previousSeedIdentity["requirements-copilot"]
-	if prev.Name == "" || prev.Name == want.Name {
-		t.Errorf("previous name %q does not differ from the current %q", prev.Name, want.Name)
+	versions := previousSeedVersions["requirements-copilot"]
+	if len(versions) == 0 {
+		t.Fatal("no previous versions recorded; nothing can be adopted")
 	}
-	if prev.SystemPrompt == want.SystemPrompt {
-		t.Error("previous system prompt is identical to the current one")
+	for i, prev := range versions {
+		if prev.SystemPrompt == want.SystemPrompt {
+			t.Errorf("version %d records the current system prompt; it should record what came before", i)
+		}
+		if slices.Equal(prev.AllowedTools, want.AllowedTools) {
+			t.Errorf("version %d records the current allowed_tools; it should record what came before", i)
+		}
+		if prev.SystemPrompt == "" || len(prev.AllowedTools) == 0 {
+			t.Errorf("version %d leaves a field unrecorded, so an agent carrying it can never be recognised as untouched", i)
+		}
+	}
+	// The oldest recorded version is the pre-rename identity the rename
+	// migration keys on.
+	if versions[0].Name == "" || versions[0].Name == want.Name {
+		t.Errorf("oldest recorded name %q does not differ from the current %q", versions[0].Name, want.Name)
+	}
+}
+
+// The case this mechanism exists for: an agent provisioned before the seed
+// gained a capability, never touched by anyone, receives it.
+func TestAdoptSeedDefaultsGrantsNewToolsToAnUntouchedAgent(t *testing.T) {
+	want := currentCopilotSeed(t)
+	versions := previousSeedVersions["requirements-copilot"]
+	prev := versions[len(versions)-1] // as it shipped before web access
+	existing := &agents.Agent{
+		Slug:         "requirements-copilot",
+		Name:         prev.Name,
+		Description:  prev.Description,
+		SystemPrompt: prev.SystemPrompt,
+		AllowedTools: prev.AllowedTools,
+		Model:        "some-model",
+	}
+	svc := &fakeAgentService{bySlug: map[string]*agents.Agent{"requirements-copilot": existing}}
+
+	changed, err := adoptSeedDefaults("org-1", existing, want, svc)
+	if err != nil || !changed {
+		t.Fatalf("adoptSeedDefaults() = %v, %v; want true, nil", changed, err)
+	}
+	got := svc.saved[0]
+	if !slices.Equal(got.AllowedTools, want.AllowedTools) {
+		t.Errorf("allowed_tools = %v, want %v", got.AllowedTools, want.AllowedTools)
+	}
+	if got.SystemPrompt != want.SystemPrompt {
+		t.Error("the prompt explaining the new tools was not adopted alongside them")
+	}
+	if got.Model != "some-model" {
+		t.Errorf("adoption disturbed a field the workspace owns: model = %q", got.Model)
+	}
+}
+
+// A workspace that chose its agent's tools keeps them. Widening those without
+// asking is the one thing this mechanism must never do.
+func TestAdoptSeedDefaultsLeavesEditedToolsAlone(t *testing.T) {
+	want := currentCopilotSeed(t)
+	versions := previousSeedVersions["requirements-copilot"]
+	prev := versions[len(versions)-1]
+	existing := &agents.Agent{
+		Slug:         "requirements-copilot",
+		Name:         prev.Name,
+		Description:  prev.Description,
+		SystemPrompt: prev.SystemPrompt,
+		AllowedTools: []string{"mcp__openv__get_artifact"}, // narrowed by the member
+	}
+	svc := &fakeAgentService{bySlug: map[string]*agents.Agent{"requirements-copilot": existing}}
+
+	if _, err := adoptSeedDefaults("org-1", existing, want, svc); err != nil {
+		t.Fatalf("adoptSeedDefaults() error: %v", err)
+	}
+	for _, saved := range svc.saved {
+		if !slices.Equal(saved.AllowedTools, []string{"mcp__openv__get_artifact"}) {
+			t.Errorf("the workspace's own tool list was overwritten with %v", saved.AllowedTools)
+		}
 	}
 }
 
