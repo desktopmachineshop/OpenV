@@ -34,10 +34,12 @@ Compared to the dev stack, the overlay:
 - sets memory limits via `mem_limit` (honored by plain, non-swarm
   `docker compose`): 1 GB for Postgres and the API, 256 MB for the frontend
 
-> **Not covered yet:** hosted-runner containers that the API provisions on the
-> Docker daemon (`internal/hosting/docker.go`) are created outside compose and
-> currently run with **no resource caps**. Budget host memory accordingly if
-> `HOSTED_RUNNERS` is enabled.
+> **Hosted-runner containers** that the API provisions on the Docker daemon
+> (`internal/hosting/docker.go`) are created outside compose, so the
+> `mem_limit` values above do not apply to them. They get their own memory and
+> CPU caps from the workspace's plan limits (`runner_memory_mb`,
+> `runner_cpus`; see `docs/agents.md`). Budget host memory for them separately
+> if `HOSTED_RUNNERS` is enabled.
 
 ### Required configuration (.env)
 
