@@ -192,6 +192,20 @@ input:focus, textarea:focus, select:focus {
   }
 }
 
+/* A sheet of actions on a phone: every control full width and tall enough
+   to tap, in the order the toolbar showed them. */
+.action-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.action-sheet > button,
+.action-sheet > select {
+  width: 100%;
+  min-height: 44px;
+  font-size: 14px;
+}
+
 /* Wide content (tables, matrices, code) scrolls inside its own box so the
    page itself never scrolls sideways on a phone. */
 .table-scroll {
