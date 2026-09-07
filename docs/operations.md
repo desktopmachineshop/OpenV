@@ -50,11 +50,9 @@ automatically; it is gitignored). Required:
 # Database password (replaces the dev default "postgres").
 POSTGRES_PASSWORD=change-me
 
-# Public URL browsers use to reach the API. Baked into the frontend bundle
-# at BUILD time - changing it requires `up -d --build`.
-REACT_APP_API_URL=https://openv.example.com:8080
-
-# Public origin the frontend is served from (CORS allow-origin).
+# Public origin the frontend is served from (CORS allow-origin). The
+# frontend's nginx proxies /api/ to the api service, so browsers reach the
+# API on this same origin and the session cookie is first-party.
 CORS_ORIGIN=https://openv.example.com
 
 # Shared key agent workers use to authenticate with the API (replaces the
@@ -68,9 +66,16 @@ Recommended in production (see `docker-compose.yml` for the full list):
 ```dotenv
 FRONTEND_PORT=80
 
-# Google sign-in + correct redirect URLs:
-PUBLIC_URL=https://openv.example.com:8080
+# Google sign-in + correct redirect URLs. PUBLIC_URL is where browsers reach
+# the API: the frontend origin, since /api/ is proxied there.
+PUBLIC_URL=https://openv.example.com
 FRONTEND_URL=https://openv.example.com
+
+# Split deployment only: browsers reach the API on its own origin instead of
+# through the frontend's proxy. Baked into the frontend bundle at BUILD time
+# (`up -d --build` to change). Cookies are then cross-site, which needs
+# CROSS_SITE_COOKIES=true on the api service and does not work on Safari/iOS.
+# REACT_APP_API_URL=https://openv.example.com:8080
 GOOGLE_CLIENT_ID=...
 GOOGLE_CLIENT_SECRET=...
 ```
@@ -116,11 +121,18 @@ Notes:
   the API directly: the headers are client-supplied, and trusting them would
   let anyone dodge per-IP limits — or exhaust another client's bucket — by
   spoofing a header.
-- `REACT_APP_API_URL` is a build argument: the React bundle is static, so the
-  frontend image must be rebuilt when it changes. The same value is written
-  into the frontend's content security policy at build time
-  (`frontend/security-headers.conf`), so the browser will only connect to
-  that API origin.
+- The frontend container proxies `/api/` to the API (`frontend/nginx.conf`;
+  the upstream comes from `API_UPSTREAM`, `api:8080` in compose, and is
+  re-resolved through the container's DNS so an API restart with a new
+  address is picked up). Browsers therefore use one origin for both, the
+  session cookie is first-party, and the frontend's content security policy
+  is `'self'` only. Server-sent event streams and file downloads pass through
+  unbuffered; the proxy's request-body cap matches `OPENV_MAX_BODY_MB`.
+- `REACT_APP_API_URL` (split deployments only) is a build argument: the
+  React bundle is static, so the frontend image must be rebuilt when it
+  changes. The same value is written into the frontend's content security
+  policy at build time (`frontend/security-headers.conf`), so the browser
+  will only connect to that API origin.
 - The API sets HSTS when `SECURE_COOKIES=true` (or `CROSS_SITE_COOKIES=true`);
   set it only once the API is reachable over TLS alone, because browsers then
   refuse plain HTTP to that host for a year.

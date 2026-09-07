@@ -8,7 +8,7 @@ import { defineConfig, devices } from '@playwright/test';
 // (http://localhost:8080 for the dev compose stack).
 //
 // Run it:
-//   cd e2e && npm ci && npx playwright install --with-deps chromium && npx playwright test
+//   cd e2e && npm ci && npx playwright install --with-deps chromium webkit && npx playwright test
 //
 // Without Node on the host, run it in the official Playwright image (version
 // must match the pinned @playwright/test version) with host networking so
@@ -39,10 +39,21 @@ export default defineConfig({
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
   },
+  // Two engines: Chromium for the bulk of the desktop audience and WebKit
+  // because Safari is the browser on every iPhone and iPad, and it is the
+  // one that rejects cross-site cookies (docs/plans/mobile-support.md).
+  // Each project runs the journey in its own worker with its own user.
   projects: [
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
+    },
+    {
+      // The core journey only: enough to catch an engine-specific break in
+      // sign-in, navigation or editing without doubling the suite's time.
+      name: 'webkit',
+      testMatch: /smoke\.spec\.ts/,
+      use: { ...devices['Desktop Safari'] },
     },
   ],
 });

@@ -16,8 +16,11 @@ RUN npm ci --legacy-peer-deps
 # Copy source files
 COPY . .
 
-# API base URL baked into the static bundle at build time.
-# Pass --build-arg REACT_APP_API_URL=https://your-host:8080 (see docker-compose.prod.yml).
+# API base URL baked into the static bundle at build time. Leave it EMPTY
+# (the default) to have the app call /api on its own origin, which nginx
+# proxies to the API (API_UPSTREAM at run time) — the session cookie is then
+# first-party and works on Safari/iOS. Set it only for a split deployment
+# where the browser talks to the API's own origin directly.
 ARG REACT_APP_API_URL=""
 ENV REACT_APP_API_URL=$REACT_APP_API_URL
 
@@ -38,13 +41,23 @@ RUN apk --no-cache add curl
 
 # Copy custom nginx configuration and the security headers it includes in
 # every location. The content security policy names the API origin the app
-# was built against, so the same build argument is substituted in here.
+# was built against, so the same build argument is substituted in here; when
+# it is empty the app only ever talks to its own origin ('self').
 ARG REACT_APP_API_URL=""
 COPY nginx.conf /etc/nginx/nginx.conf
 COPY security-headers.conf /etc/nginx/security-headers.conf
-RUN api_origin="${REACT_APP_API_URL:-http://localhost:8080}" && \
-    api_origin="${api_origin%/}" && \
-    sed -i "s|__API_ORIGIN__|${api_origin}|g" /etc/nginx/security-headers.conf && \
+# /api/ proxy: the entrypoint script rewrites the include from API_UPSTREAM
+# and the container's DNS at start; the copied default keeps `nginx -t`
+# meaningful here and covers a compose stack whose API service is `api`.
+COPY docker-entrypoint.d/40-openv-api-proxy.sh /docker-entrypoint.d/40-openv-api-proxy.sh
+COPY openv-nginx/api-proxy.conf /etc/nginx/openv/api-proxy.conf
+RUN api_origin="${REACT_APP_API_URL%/}" && \
+    if [ -n "$api_origin" ]; then \
+        sed -i "s|__API_ORIGIN__|${api_origin}|g" /etc/nginx/security-headers.conf; \
+    else \
+        sed -i "s| __API_ORIGIN__||g" /etc/nginx/security-headers.conf; \
+    fi && \
+    chmod +x /docker-entrypoint.d/40-openv-api-proxy.sh && \
     nginx -t
 
 # Copy built assets from builder stage
@@ -54,7 +67,7 @@ COPY --from=builder /app/build /usr/share/nginx/html
 # Give it ownership of the paths nginx writes to. (Do not add a custom
 # user with a hardcoded uid/gid: current nginx:alpine images already
 # ship gid 101, which made `addgroup -g 101` fail — see PR #50/#75.)
-RUN chown -R nginx:nginx /usr/share/nginx/html /var/cache/nginx /var/log/nginx && \
+RUN chown -R nginx:nginx /usr/share/nginx/html /var/cache/nginx /var/log/nginx /etc/nginx/openv && \
     touch /var/run/nginx.pid && \
     chown nginx:nginx /var/run/nginx.pid
 

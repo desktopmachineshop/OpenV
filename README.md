@@ -231,7 +231,7 @@ npm test
 - `PORT` - API server port (default: 8080)
 
 **Frontend**
-- `REACT_APP_API_URL` - Backend API URL (default: http://localhost:8080)
+- `REACT_APP_API_URL` - Backend API URL for the dev server (default: http://localhost:8080). Production builds leave it empty and call `/api` on their own origin, which the frontend's nginx proxies to the API (`API_UPSTREAM`)
 
 ## Roadmap
 

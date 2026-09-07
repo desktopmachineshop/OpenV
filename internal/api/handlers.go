@@ -110,7 +110,10 @@ type HandlerDeps struct {
 	// CrossSiteCookies marks deployments where the frontend and API are served
 	// from different sites (e.g. two *.up.railway.app domains): auth cookies are
 	// issued with SameSite=None, and Secure is forced on since browsers reject
-	// SameSite=None cookies without it.
+	// SameSite=None cookies without it. They also carry the Partitioned
+	// attribute (CHIPS), the only form of third-party cookie current
+	// browsers still accept. Safari still refuses them, so prefer serving the
+	// API on the frontend's origin (docs/railway.md) and leave this off.
 	CrossSiteCookies bool
 }
 

@@ -157,9 +157,9 @@ jobs:
         working-directory: e2e
         run: npm ci
 
-      - name: Install Playwright Chromium
+      - name: Install Playwright browsers
         working-directory: e2e
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install --with-deps chromium webkit
 
       - name: Wait for the API
         run: timeout 180 bash -c 'until curl -fsS http://localhost:8080/health >/dev/null; do sleep 2; done'

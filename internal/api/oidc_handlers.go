@@ -249,9 +249,10 @@ func (h *Handler) setOIDCFlowCookie(w http.ResponseWriter, name, value string) {
 		Value:    value,
 		Path:     "/",
 		HttpOnly: true,
-		Secure:   h.secureCookies,
-		SameSite: h.cookieSameSite,
-		MaxAge:   600,
+		Secure:      h.secureCookies,
+		SameSite:    h.cookieSameSite,
+		Partitioned: h.partitionedCookies(),
+		MaxAge:      600,
 	})
 }
 
@@ -261,8 +262,9 @@ func (h *Handler) clearOIDCFlowCookie(w http.ResponseWriter, name string) {
 		Value:    "",
 		Path:     "/",
 		HttpOnly: true,
-		Secure:   h.secureCookies,
-		SameSite: h.cookieSameSite,
-		MaxAge:   -1,
+		Secure:      h.secureCookies,
+		SameSite:    h.cookieSameSite,
+		Partitioned: h.partitionedCookies(),
+		MaxAge:      -1,
 	})
 }
