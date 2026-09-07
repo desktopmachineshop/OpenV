@@ -6,6 +6,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -119,6 +120,10 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
+	if ok, retryAfter := h.registerIPLimiter.allow(clientIP(r)); !ok {
+		writeRateLimited(w, "Too many accounts created from this address; try again later.", retryAfter)
+		return
+	}
 	user, err := h.userService.Register(req.Email, req.Password, req.Name)
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
@@ -144,13 +149,45 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
+	// Every attempt charges the client address; only a failure charges the
+	// account, so a targeted account closes after a few wrong passwords
+	// while its owner, signing in correctly, is never locked out by them.
+	ip := clientIP(r)
+	if ok, retryAfter := h.authIPLimiter.allow(ip); !ok {
+		writeRateLimited(w, "Too many sign-in attempts from this address; try again later.", retryAfter)
+		return
+	}
+	account := accountKey(req.Email)
+	if ok, retryAfter := h.authAccountLimiter.check(account); !ok {
+		writeRateLimited(w, "Too many failed sign-in attempts for this account; try again later.", retryAfter)
+		return
+	}
 	user, token, err := h.userService.Login(req.Email, req.Password)
 	if err != nil {
+		h.authAccountLimiter.penalize(account)
 		writeJSONError(w, http.StatusUnauthorized, err.Error())
 		return
 	}
 	h.setSessionCookie(w, token)
 	json.NewEncoder(w).Encode(user)
+}
+
+// accountKey normalises an email into the key its failed sign-ins are
+// counted under, so "Dave@Example.com" and "dave@example.com" share one
+// bucket.
+func accountKey(email string) string {
+	return strings.ToLower(strings.TrimSpace(email))
+}
+
+// throttleSSO charges one SSO start or callback against the client address
+// and answers 429 when the address has spent its budget. Returns false when
+// the caller must stop.
+func (h *Handler) throttleSSO(w http.ResponseWriter, r *http.Request) bool {
+	if ok, retryAfter := h.ssoIPLimiter.allow(clientIP(r)); !ok {
+		writeRateLimited(w, "Too many sign-in attempts from this address; try again later.", retryAfter)
+		return false
+	}
+	return true
 }
 
 // Logout invalidates the current session.
@@ -183,6 +220,9 @@ func (h *Handler) GoogleLogin(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusNotFound, "google sign-in is not configured")
 		return
 	}
+	if !h.throttleSSO(w, r) {
+		return
+	}
 	state, err := users.NewToken()
 	if err != nil {
 		respondInternal(w, r, "failed to start google sign-in", err)
@@ -204,6 +244,9 @@ func (h *Handler) GoogleLogin(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 	if h.googleOAuth == nil || h.googleOAuth.ClientID == "" {
 		writeJSONError(w, http.StatusNotFound, "google sign-in is not configured")
+		return
+	}
+	if !h.throttleSSO(w, r) {
 		return
 	}
 	stateCookie, err := r.Cookie("openv_oauth_state")

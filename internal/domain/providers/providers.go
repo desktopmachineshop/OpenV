@@ -45,6 +45,31 @@ func DefaultAPIKeyEnv(provider string) string {
 	return ""
 }
 
+// AllowedAPIKeyEnvs lists every environment variable name a provider setting
+// may name as its api_key_env: the variables the vendors' own CLIs and SDKs
+// read. The runner copies the named variable from its host into the agent's
+// environment, so an unrestricted name would let a workspace admin have any
+// host secret (the worker key, the pool key, the database URL) handed to an
+// agent. The catalog closes that: a name outside it is refused on write and
+// ignored by the runner.
+func AllowedAPIKeyEnvs() []string {
+	return []string{"ANTHROPIC_API_KEY", "OPENAI_API_KEY", "GEMINI_API_KEY", "GOOGLE_API_KEY"}
+}
+
+// IsAllowedAPIKeyEnv reports whether name is blank (meaning "the provider's
+// default") or one of the catalogued key variables.
+func IsAllowedAPIKeyEnv(name string) bool {
+	if name == "" {
+		return true
+	}
+	for _, allowed := range AllowedAPIKeyEnvs() {
+		if name == allowed {
+			return true
+		}
+	}
+	return false
+}
+
 // KnownProviders returns the supported provider names in display order.
 func KnownProviders() []string {
 	return []string{
@@ -165,6 +190,9 @@ func (s *DefaultService) Upsert(setting *ProviderSetting) error {
 	}
 	if setting.AuthMode != AuthSubscriptionCLI && setting.AuthMode != AuthAPIKey {
 		return fmt.Errorf("%w: invalid auth_mode %q", ErrInvalidSetting, setting.AuthMode)
+	}
+	if !IsAllowedAPIKeyEnv(setting.APIKeyEnv) {
+		return fmt.Errorf("%w: api_key_env %q is not a provider key variable (one of %v)", ErrInvalidSetting, setting.APIKeyEnv, AllowedAPIKeyEnvs())
 	}
 	if setting.ID == "" {
 		setting.ID = uuid.New().String()

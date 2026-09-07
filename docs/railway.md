@@ -88,6 +88,14 @@ HOSTED_RUNNERS=off
 # one domain.
 SECURE_COOKIES=true
 CROSS_SITE_COOKIES=true
+
+# Railway's edge terminates TLS and forwards the client address in
+# X-Forwarded-For; without this the per-address throttles on sign-in,
+# registration and the public interview routes key on the edge instead.
+OPENV_TRUST_PROXY=1
+
+# /metrics is open to anyone otherwise. openssl rand -hex 32
+OPENV_METRICS_TOKEN=<long random string>
 ```
 
 Optional — Google sign-in (see `docker-compose.yml` for details):
