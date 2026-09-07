@@ -3,33 +3,30 @@ import { filenameFromContentDisposition } from './contentDisposition';
 import type { SharedProductPayload, toSharePayload } from '../utils/randomProduct';
 import { downloadQuery } from '../utils/downloadSelection';
 
-// Determine API base URL
-// Priority: env var > browser detection > default fallback
-const getAPIBaseURL = (): string => {
-  // Check for environment variable set at build time (Railway Variables)
-  if (process.env.REACT_APP_API_URL) {
-    console.log('Using REACT_APP_API_URL:', process.env.REACT_APP_API_URL);
-    return process.env.REACT_APP_API_URL;
+// Determine API base URL.
+//
+// 1. REACT_APP_API_URL, baked in at build time: a split deployment where the
+//    browser talks to the API's own origin. Cookies are then third-party,
+//    which Safari/iOS block — prefer 2.
+// 2. Production builds default to the app's own origin: nginx proxies /api/
+//    to the API (frontend/nginx.conf), so the session cookie is first-party.
+// 3. The CRA dev server and tests fall back to port 8080 on the page's host,
+//    which is where the dev compose stack serves the API.
+export const getAPIBaseURL = (): string => {
+  const configured = (process.env.REACT_APP_API_URL || '').trim().replace(/\/+$/, '');
+  if (configured) {
+    return configured;
   }
-
-  // Runtime detection for local development
+  if (process.env.NODE_ENV === 'production') {
+    return '';
+  }
   if (typeof window !== 'undefined' && window.location) {
-    const protocol = window.location.protocol; // http: or https:
-    const hostname = window.location.hostname; // localhost or IP
-    
-    // Local development: use port 8080
-    const apiUrl = `${protocol}//${hostname}:8080`;
-    console.log('Detected local API URL:', apiUrl);
-    return apiUrl;
+    return `${window.location.protocol}//${window.location.hostname}:8080`;
   }
-
-  // Default fallback
   return 'http://localhost:8080';
 };
 
 const API_BASE_URL = getAPIBaseURL();
-
-console.log('API_BASE_URL:', API_BASE_URL);
 
 const client: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,

@@ -23,6 +23,7 @@ import { ChatterPanel } from '../components/ChatterPanel';
 import { DownloadWizard } from '../components/DownloadWizard';
 import { ErrorBanner, useAlert, useConfirm, usePrompt } from '../components/ui';
 import { apiErrorMessage } from '../api/errors';
+import { useViewport } from '../hooks/useViewport';
 
 export const ModuleView: React.FC = () => {
   const confirm = useConfirm();
@@ -66,6 +67,13 @@ export const ModuleView: React.FC = () => {
   // hidden notes panel, so this is the only way back from that mode, and it
   // stays open until dismissed rather than vanishing when the pointer moves.
   const [notesRevealed, setNotesRevealed] = useState(false);
+  // Phones and tablets cannot fit three columns: the module stacks and shows
+  // one pane at a time — the tree, the selected artifact's document, or the
+  // notes — chosen with a segmented control under the toolbar. Selecting an
+  // artifact in the tree moves to its document, which is what the tap meant.
+  const viewport = useViewport();
+  const stacked = viewport.isCompact;
+  const [stackedPane, setStackedPane] = useState<'tree' | 'document' | 'notes'>('tree');
   const [pendingCreateContext, setPendingCreateContext] = useState<Partial<Artifact> | null>(null);
   // Where a "create before/after" should put the artifact once it exists. The
   // API appends new artifacts to the end of their sibling group, so without
@@ -315,6 +323,9 @@ export const ModuleView: React.FC = () => {
   // Updates the store and the ?artifact= param together so the URL always
   // reflects (and can restore) the current selection.
   const handleSelectArtifact = (artifactId: string | null) => {
+    if (artifactId && stacked) {
+      setStackedPane('document');
+    }
     // If selecting a different artifact than currently selected
     if (artifactId !== selectedArtifactId) {
       // Exit edit mode if active
@@ -1206,11 +1217,49 @@ export const ModuleView: React.FC = () => {
           ↓ Download
         </button>
       </div>
-      <div style={{ display: 'flex', gap: '0', paddingLeft: '20px', paddingRight: '20px', paddingBottom: '10px', flex: 1, minHeight: 0, overflow: 'hidden' }}>
+      {stacked && (
+        <div
+          role="tablist"
+          aria-label="Requirements panes"
+          style={{ display: 'flex', margin: '0 12px 8px', border: '1px solid var(--border)', borderRadius: 6, overflow: 'hidden', flexShrink: 0 }}
+        >
+          {(['tree', 'document', 'notes'] as const).map((pane) => {
+            const active = stackedPane === pane;
+            const label = pane === 'tree' ? 'Tree' : pane === 'document' ? 'Document' : 'Notes';
+            return (
+              <button
+                key={pane}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                onClick={() => setStackedPane(pane)}
+                style={{
+                  flex: 1,
+                  minHeight: 44,
+                  border: 'none',
+                  borderLeft: pane === 'tree' ? 'none' : '1px solid var(--border)',
+                  background: active ? 'var(--accent)' : 'var(--surface)',
+                  color: active ? 'var(--accent-fg)' : 'var(--text)',
+                  fontSize: 14,
+                  fontWeight: active ? 600 : 400,
+                  cursor: 'pointer',
+                }}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+      )}
+      <div style={{ display: 'flex', gap: '0', paddingLeft: stacked ? '12px' : '20px', paddingRight: stacked ? '12px' : '20px', paddingBottom: '10px', flex: 1, minHeight: 0, overflow: 'hidden' }}>
       {/* The column scrolls nothing itself: the artifact tree inside it owns
           the leftover height and scrolls there, so the tree grows with the
-          window instead of sitting in a fixed-height box. */}
-      <div style={{ width: `${leftColumnWidth}px`, minWidth: '200px', maxWidth: '800px', display: 'flex', flexDirection: 'column', overflowX: 'hidden', overflowY: 'hidden', minHeight: 0, paddingRight: '10px' }}>
+          window instead of sitting in a fixed-height box. Stacked, every
+          pane keeps its state (tree expansion, editor drafts) by being hidden
+          rather than unmounted. */}
+      <div style={stacked
+        ? { flex: 1, minWidth: 0, display: stackedPane === 'tree' ? 'flex' : 'none', flexDirection: 'column', overflowX: 'hidden', overflowY: 'hidden', minHeight: 0 }
+        : { width: `${leftColumnWidth}px`, minWidth: '200px', maxWidth: '800px', display: 'flex', flexDirection: 'column', overflowX: 'hidden', overflowY: 'hidden', minHeight: 0, paddingRight: '10px' }}>
         <ErrorBanner message={error} onDismiss={() => setError('')} style={{ marginBottom: 15 }} />
         {!isBaselineView && (
           <button
@@ -1587,6 +1636,7 @@ export const ModuleView: React.FC = () => {
         /></div>
 
       {/* Resize handle for left column */}
+      {!stacked && (
       <div
         onMouseDown={startResize('left')}
         style={{
@@ -1609,9 +1659,10 @@ export const ModuleView: React.FC = () => {
           }
         }}
       />
+      )}
 
-      <div style={{ display: 'flex', flex: 1, gap: '0', minWidth: 0, overflow: 'hidden' }}>
-        <div style={{ flex: 1, minWidth: 0, overflow: 'auto', display: 'flex', flexDirection: 'column', paddingLeft: '10px', paddingRight: selectedArtifact ? '5px' : '10px' }}>
+      <div style={{ display: stacked && stackedPane === 'tree' ? 'none' : 'flex', flex: 1, gap: '0', minWidth: 0, overflow: 'hidden' }}>
+        <div style={{ flex: 1, minWidth: 0, overflow: 'auto', display: stacked && stackedPane !== 'document' ? 'none' : 'flex', flexDirection: 'column', paddingLeft: stacked ? 0 : '10px', paddingRight: stacked ? 0 : selectedArtifact ? '5px' : '10px' }}>
         {!isBaselineView && isEditing && editingArtifact && (
           <ArtifactEditor
             artifact={editingArtifact}
@@ -1682,18 +1733,18 @@ export const ModuleView: React.FC = () => {
             comments tab needs one, its assistant tab does not. Its width is
             only spent when pinned — auto-hide floats it over the document on
             hover, and hidden leaves just the strip that brings it back. */}
-        {!notesPinned && (
+        {!stacked && !notesPinned && (
           <div
             className="panel-edge-strip"
-            onMouseEnter={() => setNotesHovered(true)}
+            onMouseEnter={() => !viewport.coarsePointer && setNotesHovered(true)}
             onMouseLeave={() => setNotesHovered(false)}
             onClick={() => setNotesRevealed((shown) => !shown)}
             title={`Notes: ${panelModeLabel(notesMode)} — click to ${
               notesOpen ? 'hide' : 'show'
             }, then the button inside to change the mode`}
             style={{
-              width: 10,
-              minWidth: 10,
+              width: viewport.coarsePointer ? 24 : 10,
+              minWidth: viewport.coarsePointer ? 24 : 10,
               borderLeft: '1px solid var(--border)',
               background: 'var(--surface-alt)',
               cursor: 'pointer',
@@ -1708,7 +1759,7 @@ export const ModuleView: React.FC = () => {
           </div>
         )}
             {/* Resize handle — only a pinned column has a width to drag. */}
-            {notesPinned && (
+            {!stacked && notesPinned && (
             <div
               onMouseDown={startResize('right')}
               style={{
@@ -1734,24 +1785,24 @@ export const ModuleView: React.FC = () => {
             )}
             {/* Clicking away closes a panel that was revealed on purpose: an
                 overlay with no way out but the same 10px strip is a trap. */}
-            {notesRevealed && !notesPinned && (
+            {!stacked && notesRevealed && !notesPinned && (
               <div
                 onClick={() => setNotesRevealed(false)}
                 style={{ position: 'fixed', inset: 0, zIndex: 899 }}
               />
             )}
-            {notesOpen && (
+            {(stacked ? stackedPane === 'notes' : notesOpen) && (
             <div
-              onMouseEnter={() => notesMode === 'autohide' && setNotesHovered(true)}
-              onMouseLeave={() => notesMode === 'autohide' && setNotesHovered(false)}
+              onMouseEnter={() => !stacked && notesMode === 'autohide' && setNotesHovered(true)}
+              onMouseLeave={() => !stacked && notesMode === 'autohide' && setNotesHovered(false)}
               style={{
-                width: `${rightColumnWidth}px`,
-                minWidth: '250px',
-                maxWidth: '600px',
+                ...(stacked
+                  ? { flex: 1, minWidth: 0 }
+                  : { width: `${rightColumnWidth}px`, minWidth: '250px', maxWidth: '600px' }),
                 overflow: 'hidden',
                 // Unpinned, the panel floats over the document rather than
                 // reflowing it whenever the pointer crosses the edge.
-                ...(notesPinned
+                ...(notesPinned || stacked
                   ? {}
                   : {
                       position: 'fixed',
@@ -1769,9 +1820,9 @@ export const ModuleView: React.FC = () => {
                 artifactId={selectedArtifact?.id}
                 projectId={projectId || undefined}
                 isOpen={true}
-                onToggle={cycleNotesMode}
-                modeLabel={panelModeLabel(notesMode)}
-                nextModeLabel={panelModeLabel(nextPanelMode(notesMode))}
+                onToggle={stacked ? () => setStackedPane('document') : cycleNotesMode}
+                modeLabel={stacked ? 'Notes' : panelModeLabel(notesMode)}
+                nextModeLabel={stacked ? 'Document' : panelModeLabel(nextPanelMode(notesMode))}
               />
             </div>
             )}

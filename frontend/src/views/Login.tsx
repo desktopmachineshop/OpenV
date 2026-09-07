@@ -61,15 +61,21 @@ export const Login: React.FC = () => {
 
   return (
     <div
+      className="app-shell"
       style={{
-        minHeight: '100vh',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         background: 'var(--sidebar-bg)',
+        padding: 16,
+        boxSizing: 'border-box',
+        overflowY: 'auto',
       }}
     >
-      <div className="card" style={{ width: 380, padding: 32, background: 'var(--surface)', borderRadius: 8 }}>
+      <div
+        className="card"
+        style={{ width: '100%', maxWidth: 380, padding: 32, background: 'var(--surface)', borderRadius: 8, boxSizing: 'border-box', margin: 0 }}
+      >
         <h1 style={{ margin: 0, fontSize: 26, color: 'var(--text)' }}>OpenV</h1>
         <p style={{ color: 'var(--text-muted)', marginTop: 4, marginBottom: 24, fontSize: 14 }}>
           {mode === 'login' ? 'Sign in to your workspace' : 'Create your account'}
@@ -80,6 +86,7 @@ export const Login: React.FC = () => {
               <input
                 type="text"
                 placeholder="Your name"
+                autoComplete="name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 style={{ width: '100%', padding: 10, boxSizing: 'border-box' }}
@@ -90,6 +97,8 @@ export const Login: React.FC = () => {
             <input
               type="email"
               placeholder="Email"
+              autoComplete="email"
+              inputMode="email"
               value={email}
               required
               onChange={(e) => setEmail(e.target.value)}
@@ -100,6 +109,7 @@ export const Login: React.FC = () => {
             <input
               type="password"
               placeholder={mode === 'register' ? 'Password (min 8 characters)' : 'Password'}
+              autoComplete={mode === 'register' ? 'new-password' : 'current-password'}
               value={password}
               required
               onChange={(e) => setPassword(e.target.value)}

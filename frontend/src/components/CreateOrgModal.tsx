@@ -62,7 +62,7 @@ export const CreateOrgModal: React.FC<CreateOrgModalProps> = ({ onClose, onCreat
       <div
         className="card"
         onClick={(e) => e.stopPropagation()}
-        style={{ width: 400, background: 'var(--surface)', borderRadius: 8, padding: 24, margin: 0 }}
+        style={{ width: 'min(400px, calc(100vw - 32px))', maxHeight: 'calc(100vh - 32px)', overflowY: 'auto', boxSizing: 'border-box', background: 'var(--surface)', borderRadius: 8, padding: 24, margin: 0 }}
       >
         <h3 style={{ marginTop: 0, color: 'var(--text)' }}>Create a company workspace</h3>
         <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>

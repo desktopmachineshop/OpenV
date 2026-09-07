@@ -7,8 +7,6 @@
 # docker compose reads it automatically; see docs/operations.md):
 #
 #   POSTGRES_PASSWORD   database password (replaces the dev default)
-#   REACT_APP_API_URL   public URL browsers use to reach the API,
-#                       e.g. https://openv.example.com:8080
 #   CORS_ORIGIN         public origin the frontend is served from,
 #                       e.g. https://openv.example.com
 #   WORKER_API_KEY      shared key host/hosted agent workers use to
@@ -16,6 +14,11 @@
 #
 # Optional:
 #   FRONTEND_PORT       host port for the frontend (default 80)
+#   REACT_APP_API_URL   only for a split deployment where browsers reach the
+#                       API on its own origin (e.g. https://openv.example.com:8080).
+#                       Leave it unset: the frontend's nginx proxies /api/ to
+#                       the api service, so the browser sees one origin and
+#                       the session cookie is first-party (works on iOS).
 #   PUBLIC_URL / FRONTEND_URL / GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET
 #                       for Google sign-in (see docker-compose.yml)
 #
@@ -58,18 +61,20 @@ services:
       dockerfile: Dockerfile.prod
       args:
         # Baked into the static bundle at build time — changing it requires
-        # a rebuild (`up -d --build`).
-        - REACT_APP_API_URL=${REACT_APP_API_URL:?set REACT_APP_API_URL in .env (the public API URL, e.g. https://openv.example.com:8080)}
+        # a rebuild (`up -d --build`). Empty = same-origin /api/ (proxied).
+        - REACT_APP_API_URL=${REACT_APP_API_URL:-}
     # Dockerfile.prod serves the static build with nginx on container port
     # 8080; !override replaces the dev "3000:3000" mapping instead of
     # merging with it.
     ports: !override
       - "${FRONTEND_PORT:-80}:8080"
-    # Runtime env is irrelevant for the static nginx build (the value is
-    # baked in at build time); overridden here only so `docker inspect`
-    # doesn't show a misleading dev value.
     environment:
-      - REACT_APP_API_URL=${REACT_APP_API_URL}
+      # Where nginx proxies /api/ to: the api service on the compose network.
+      # Read at container start (frontend/docker-entrypoint.d/).
+      - API_UPSTREAM=api:8080
+      # Irrelevant at run time (baked in at build); overridden so `docker
+      # inspect` doesn't show a misleading dev value.
+      - REACT_APP_API_URL=${REACT_APP_API_URL:-}
     restart: unless-stopped
     depends_on:
       api:

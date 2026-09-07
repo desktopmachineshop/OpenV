@@ -137,6 +137,7 @@ export const WorkerKeysTab: React.FC<WorkerKeysTabProps> = ({ org, isAdmin }) =>
         ) : keys.length === 0 ? (
           <div style={{ color: 'var(--neutral)', fontSize: 13 }}>No worker keys yet.</div>
         ) : (
+          <div className="table-scroll">
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr>
@@ -189,6 +190,7 @@ export const WorkerKeysTab: React.FC<WorkerKeysTabProps> = ({ org, isAdmin }) =>
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 

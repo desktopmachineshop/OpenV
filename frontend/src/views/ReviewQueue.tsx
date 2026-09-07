@@ -4,6 +4,7 @@ import { Artifact, linkAPI, reviewAPI, SuspectLink } from '../api/client';
 import { apiErrorMessage } from '../api/errors';
 import { useAppStore } from '../state/store';
 import { ErrorBanner, SegmentedControl, useConfirm } from '../components/ui';
+import { useViewport } from '../hooks/useViewport';
 
 type Section = 'all' | 'links' | 'artifacts';
 
@@ -36,6 +37,9 @@ const cardStyle: React.CSSProperties = {
  * via ?artifact= so the reviewer can open and sign them off.
  */
 export const ReviewQueue: React.FC = () => {
+  // Phones: a five-column table of links is unreadable at 390px; each link
+  // becomes a card with the same checkbox and Confirm button (REQ-107).
+  const phone = useViewport().isPhone;
   const params = useParams<{ projectId: string }>();
   const storeProjectId = useAppStore((s) => s.projectId);
   const projectId = params.projectId || storeProjectId;
@@ -192,7 +196,48 @@ export const ReviewQueue: React.FC = () => {
                 <div style={{ color: 'var(--text-muted)', fontSize: 14 }}>
                   No suspect links. Traceability is trusted.
                 </div>
+              ) : phone ? (
+                <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+                  {suspectLinks.map((l) => (
+                    <li
+                      key={l.id}
+                      style={{
+                        display: 'flex',
+                        gap: 10,
+                        alignItems: 'flex-start',
+                        padding: '12px 0',
+                        borderTop: '1px solid var(--border)',
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={!!selected[l.id]}
+                        aria-label={`Select link ${l.from_title} to ${l.to_title}`}
+                        onChange={(e) => setSelected((s) => ({ ...s, [l.id]: e.target.checked }))}
+                        style={{ width: 22, height: 22, marginTop: 2, flexShrink: 0 }}
+                      />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ color: 'var(--text)' }}>{l.from_title}</div>
+                        <div style={{ margin: '4px 0', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                          <span style={typeChip(l.from_type)}>{l.from_type}</span>
+                          <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>{l.type} →</span>
+                          <span style={typeChip(l.to_type)}>{l.to_type}</span>
+                        </div>
+                        <div style={{ color: 'var(--text)' }}>{l.to_title}</div>
+                        <button
+                          className="button-secondary"
+                          onClick={() => confirmLink(l.id)}
+                          disabled={!!confirming[l.id]}
+                          style={{ marginTop: 8, minHeight: 44 }}
+                        >
+                          {confirming[l.id] ? 'Confirming…' : 'Confirm'}
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
               ) : (
+                <div className="table-scroll">
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
                   <thead>
                     <tr style={{ textAlign: 'left', color: 'var(--text-muted)', fontSize: 12 }}>
@@ -245,6 +290,7 @@ export const ReviewQueue: React.FC = () => {
                     ))}
                   </tbody>
                 </table>
+                </div>
               )}
             </section>
           )}
@@ -273,7 +319,7 @@ export const ReviewQueue: React.FC = () => {
                         display: 'flex',
                         alignItems: 'center',
                         gap: 10,
-                        padding: '8px 0',
+                        padding: phone ? '12px 0' : '8px 0',
                         borderTop: '1px solid var(--border)',
                       }}
                     >

@@ -109,7 +109,8 @@ export const OrgSwitcher: React.FC<OrgSwitcherProps> = ({ variant = 'light' }) =
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
-            maxWidth: dark ? 110 : 220,
+            // Narrow enough on a phone to leave room for the account controls.
+            maxWidth: dark ? 110 : 'min(220px, 40vw)',
           }}
         >
           {activeOrg ? activeOrg.name : 'OpenV'}

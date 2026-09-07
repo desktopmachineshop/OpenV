@@ -150,7 +150,7 @@ export const GlobalSearch: React.FC = () => {
             position: 'absolute',
             top: 'calc(100% + 4px)',
             left: 0,
-            width: 340,
+            width: 'min(340px, calc(100vw - 32px))',
             maxHeight: 420,
             overflowY: 'auto',
             background: 'var(--surface)',

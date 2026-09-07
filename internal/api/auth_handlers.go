@@ -74,26 +74,37 @@ func (h *Handler) provisionPersonalWorkspace(userID, displayName string) {
 
 func (h *Handler) setSessionCookie(w http.ResponseWriter, token string) {
 	http.SetCookie(w, &http.Cookie{
-		Name:     SessionCookieName,
-		Value:    token,
-		Path:     "/",
-		HttpOnly: true,
-		Secure:   h.secureCookies,
-		SameSite: h.cookieSameSite,
-		Expires:  time.Now().Add(users.SessionDuration),
+		Name:        SessionCookieName,
+		Value:       token,
+		Path:        "/",
+		HttpOnly:    true,
+		Secure:      h.secureCookies,
+		SameSite:    h.cookieSameSite,
+		Partitioned: h.partitionedCookies(),
+		Expires:     time.Now().Add(users.SessionDuration),
 	})
 }
 
 func (h *Handler) clearSessionCookie(w http.ResponseWriter) {
 	http.SetCookie(w, &http.Cookie{
-		Name:     SessionCookieName,
-		Value:    "",
-		Path:     "/",
-		HttpOnly: true,
-		Secure:   h.secureCookies,
-		SameSite: h.cookieSameSite,
-		MaxAge:   -1,
+		Name:        SessionCookieName,
+		Value:       "",
+		Path:        "/",
+		HttpOnly:    true,
+		Secure:      h.secureCookies,
+		SameSite:    h.cookieSameSite,
+		Partitioned: h.partitionedCookies(),
+		MaxAge:      -1,
 	})
+}
+
+// partitionedCookies reports whether auth cookies carry the Partitioned
+// attribute: only for cross-site deployments (SameSite=None), where a
+// partitioned cookie is the one third-party cookie Chromium-based browsers
+// still store. Same-site deployments must not set it — a partitioned cookie
+// is keyed by the top-level site as well, which is pointless there.
+func (h *Handler) partitionedCookies() bool {
+	return h.cookieSameSite == http.SameSiteNoneMode
 }
 
 // AuthConfig tells the login page which sign-in methods are available.
@@ -229,13 +240,14 @@ func (h *Handler) GoogleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	http.SetCookie(w, &http.Cookie{
-		Name:     "openv_oauth_state",
-		Value:    state,
-		Path:     "/",
-		HttpOnly: true,
-		Secure:   h.secureCookies,
-		SameSite: h.cookieSameSite,
-		MaxAge:   600,
+		Name:        "openv_oauth_state",
+		Value:       state,
+		Path:        "/",
+		HttpOnly:    true,
+		Secure:      h.secureCookies,
+		SameSite:    h.cookieSameSite,
+		Partitioned: h.partitionedCookies(),
+		MaxAge:      600,
 	})
 	http.Redirect(w, r, h.googleOAuth.oauthConfig().AuthCodeURL(state), http.StatusFound)
 }

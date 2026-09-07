@@ -245,24 +245,26 @@ func (h *Handler) OIDCCallback(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) setOIDCFlowCookie(w http.ResponseWriter, name, value string) {
 	http.SetCookie(w, &http.Cookie{
-		Name:     name,
-		Value:    value,
-		Path:     "/",
-		HttpOnly: true,
-		Secure:   h.secureCookies,
-		SameSite: h.cookieSameSite,
-		MaxAge:   600,
+		Name:        name,
+		Value:       value,
+		Path:        "/",
+		HttpOnly:    true,
+		Secure:      h.secureCookies,
+		SameSite:    h.cookieSameSite,
+		Partitioned: h.partitionedCookies(),
+		MaxAge:      600,
 	})
 }
 
 func (h *Handler) clearOIDCFlowCookie(w http.ResponseWriter, name string) {
 	http.SetCookie(w, &http.Cookie{
-		Name:     name,
-		Value:    "",
-		Path:     "/",
-		HttpOnly: true,
-		Secure:   h.secureCookies,
-		SameSite: h.cookieSameSite,
-		MaxAge:   -1,
+		Name:        name,
+		Value:       "",
+		Path:        "/",
+		HttpOnly:    true,
+		Secure:      h.secureCookies,
+		SameSite:    h.cookieSameSite,
+		Partitioned: h.partitionedCookies(),
+		MaxAge:      -1,
 	})
 }

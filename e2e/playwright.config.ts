@@ -8,7 +8,7 @@ import { defineConfig, devices } from '@playwright/test';
 // (http://localhost:8080 for the dev compose stack).
 //
 // Run it:
-//   cd e2e && npm ci && npx playwright install --with-deps chromium && npx playwright test
+//   cd e2e && npm ci && npx playwright install --with-deps chromium webkit && npx playwright test
 //
 // Without Node on the host, run it in the official Playwright image (version
 // must match the pinned @playwright/test version) with host networking so
@@ -17,6 +17,11 @@ import { defineConfig, devices } from '@playwright/test';
 //     -e BASE_URL=http://localhost:3000 \
 //     mcr.microsoft.com/playwright:v1.57.0-jammy \
 //     bash -c "npm ci && npx playwright test"
+//
+// Every project registers its own users, so a run makes about eight
+// registrations from one address; the API throttles registrations per
+// address (5 by default), so the stack under test needs
+// OPENV_REGISTER_IP_BURST raised (CI sets 100 — see .github/workflows/ci.yml).
 //
 // The tests are a single user journey (register -> project -> artifacts ->
 // link -> baseline -> status -> search -> export) executed serially in one
@@ -39,10 +44,38 @@ export default defineConfig({
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
   },
+  // Two engines: Chromium for the bulk of the desktop audience and WebKit
+  // because Safari is the browser on every iPhone and iPad, and it is the
+  // one that rejects cross-site cookies (docs/plans/mobile-support.md).
+  // Each project runs the journey in its own worker with its own user.
+  //
+  // The phone projects run only the mobile journey (mobile.spec.ts), which
+  // asserts the shape the app takes below the tablet breakpoint; the desktop
+  // projects skip it for the same reason.
   projects: [
     {
       name: 'chromium',
+      testIgnore: /mobile\.spec\.ts/,
       use: { ...devices['Desktop Chrome'] },
+    },
+    {
+      // The core journey only: enough to catch an engine-specific break in
+      // sign-in, navigation or editing without doubling the suite's time.
+      name: 'webkit',
+      testMatch: /smoke\.spec\.ts/,
+      use: { ...devices['Desktop Safari'] },
+    },
+    {
+      // Safari on an iPhone: the WebKit engine, a 390px viewport and touch.
+      name: 'iphone',
+      testMatch: /mobile\.spec\.ts/,
+      use: { ...devices['iPhone 13'] },
+    },
+    {
+      // Chrome on Android.
+      name: 'android',
+      testMatch: /mobile\.spec\.ts/,
+      use: { ...devices['Pixel 5'] },
     },
   ],
 });

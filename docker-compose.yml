@@ -51,6 +51,11 @@ services:
       # Optional override of which types email (comma-separated). Default:
       #   run_failed,proposal_pending,review_requested,budget_threshold
       OPENV_EMAIL_NOTIFICATION_TYPES: ${OPENV_EMAIL_NOTIFICATION_TYPES:-}
+      # Registrations allowed per client address before throttling (API
+      # default 5, refilling 10/hour). Unset keeps the default; the CI E2E
+      # job raises it because every Playwright project registers its own
+      # users from one address (see .github/workflows/ci.yml).
+      OPENV_REGISTER_IP_BURST: ${OPENV_REGISTER_IP_BURST:-}
       # Hosted runners: the API provisions per-workspace runner containers on
       # the local docker daemon. Requires the docker socket volume below and
       # the openv-worker image (`make worker-image`). Set HOSTED_RUNNERS=off

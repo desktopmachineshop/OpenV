@@ -58,9 +58,12 @@ OPENV_DATA_DIR=/data
 UPLOADS_DIR=/data/uploads
 
 # Public origins. CORS_ORIGIN must be exactly the frontend's origin
-# (scheme + host, no trailing slash, no path).
+# (scheme + host, no trailing slash, no path). Browsers reach the API through
+# the frontend's /api/ proxy (section 3), so PUBLIC_URL — the base for OAuth
+# redirect URIs and links — is the frontend origin too. The API's own domain
+# stays for connectors, agent runners and MCP clients (OPENV_API_URL).
 CORS_ORIGIN=https://<your-frontend-domain>.up.railway.app
-PUBLIC_URL=https://<your-api-domain>.up.railway.app
+PUBLIC_URL=https://<your-frontend-domain>.up.railway.app
 FRONTEND_URL=https://<your-frontend-domain>.up.railway.app
 
 # Legacy shared worker key (org-scoped keys minted in workspace settings are
@@ -79,15 +82,14 @@ RUNNER_POOL_KEY=<long random string>
 # instead, pointed at the API domain — see docs/agents.md.
 HOSTED_RUNNERS=off
 
-# The frontend and API live on two different *.up.railway.app domains, which
-# browsers treat as different SITES (up.railway.app is on the Public Suffix
-# List). Without these, the session cookie is SameSite=Lax and is never sent
-# on the frontend's cross-site API calls — register/login appear to succeed
-# but every request after them is 401. CROSS_SITE_COOKIES issues cookies with
-# SameSite=None and implies Secure. Not needed when both services sit behind
-# one domain.
+# Railway terminates TLS, so the session cookie can be Secure. Leave
+# CROSS_SITE_COOKIES unset: with the frontend proxying /api/ the cookie is
+# first-party (SameSite=Lax). Set CROSS_SITE_COOKIES=true only for the legacy
+# split setup where the app is built with REACT_APP_API_URL and calls the
+# API's own *.up.railway.app domain — a different SITE (up.railway.app is on
+# the Public Suffix List), so the cookie must be SameSite=None + Partitioned,
+# which Safari and iOS refuse: the app cannot sign in on an iPhone that way.
 SECURE_COOKIES=true
-CROSS_SITE_COOKIES=true
 
 # Railway's edge terminates TLS and forwards the client address in
 # X-Forwarded-For; without this the per-address throttles on sign-in,
@@ -103,8 +105,9 @@ Optional — Google sign-in (see `docker-compose.yml` for details):
 ```dotenv
 GOOGLE_CLIENT_ID=...
 GOOGLE_CLIENT_SECRET=...
-# Authorized redirect URI in the Google console:
-#   https://<your-api-domain>.up.railway.app/api/v1/auth/google/callback
+# Authorized redirect URI in the Google console (through the frontend's
+# /api/ proxy, so the sign-in cookies land on the frontend origin):
+#   https://<your-frontend-domain>.up.railway.app/api/v1/auth/google/callback
 ```
 
 Optional — SMTP email notifications: the `OPENV_SMTP_*` variables from
@@ -124,15 +127,22 @@ Service settings:
 Variables:
 
 ```dotenv
-# Baked into the static bundle at BUILD time (Dockerfile.prod declares the
-# matching ARG, and Railway passes service variables as build args).
-# Changing it requires a redeploy. No trailing slash.
-REACT_APP_API_URL=https://<your-api-domain>.up.railway.app
+# Where nginx proxies /api/ to: the API service over Railway's private
+# network (http, port 8080). Read when the container starts; the name is
+# re-resolved through Railway's internal DNS on every request, so API
+# redeploys (which change its private address) need no frontend restart.
+# Substitute your API service's actual name for `openv-api`.
+API_UPSTREAM=${{openv-api.RAILWAY_PRIVATE_DOMAIN}}:8080
 ```
 
-Because the two domains reference each other (`CORS_ORIGIN` on the API,
-`REACT_APP_API_URL` on the frontend), generate both domains first, then fill
-in the variables, then let both services deploy.
+Leave `REACT_APP_API_URL` **unset** (or empty): the app then calls `/api` on
+its own origin, the session cookie is first-party, and the frontend's content
+security policy allows its own origin only. Setting it to the API's public
+domain is the legacy split setup — see the `CROSS_SITE_COOKIES` note in
+section 2 for why that cannot sign in on iOS.
+
+Generate the frontend domain first, since the API's `CORS_ORIGIN`,
+`PUBLIC_URL` and `FRONTEND_URL` all name it; then let both services deploy.
 
 ## 4. Runner pool service (optional — transient runners)
 
@@ -182,10 +192,14 @@ appears in each member's settings.
 
 ## 5. Verify
 
-- `https://<api-domain>/health` returns OK.
-- The frontend loads and can sign in / create a project. A CORS error in
-  the browser console means `CORS_ORIGIN` does not exactly match the
-  frontend origin.
+- `https://<api-domain>/health` returns OK, and so does
+  `https://<frontend-domain>/api/v1/auth/config` (the proxy path: a 502 here
+  means nginx cannot reach `API_UPSTREAM` — check the frontend's deploy log
+  for the `openv: proxying /api/ to ...` line and the API service's name).
+- The frontend loads and can sign in / create a project, on a phone too. A
+  CORS error in the browser console means the app was built with
+  `REACT_APP_API_URL` and `CORS_ORIGIN` does not exactly match the frontend
+  origin.
 
 ## Release pipeline
 

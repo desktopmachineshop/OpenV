@@ -195,10 +195,18 @@ body.sidebar-expanded {
     padding: 70px 15px 15px 15px;
   }
 
+  /* Phones: the compact shell has a top bar where the button used to sit,
+     and the guided wizard's assistant button owns the bottom-right corner,
+     so the help button goes bottom-left, clear of both and the thumb. */
   .help-toggle {
-    width: 50px;
-    height: 50px;
+    width: 48px;
+    height: 48px;
     font-size: 20px;
-    top: 15px;
+    right: auto;
+    left: 16px;
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    /* Below the navigation drawer (900) and its backdrop (899), which
+       would otherwise show this button through the drawer's footer. */
+    z-index: 850;
   }
 }

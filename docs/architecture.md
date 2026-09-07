@@ -479,7 +479,12 @@ Every API request authenticates as one of four principals; only `/health`,
   serves its own set from `frontend/security-headers.conf`, included in every
   location block (nginx drops inherited `add_header` directives wherever a
   location adds its own), with a CSP that allows scripts from the app's
-  origin only and names the API origin as the sole connect source.
+  origin only and, by default, its own origin as the sole connect source:
+  nginx proxies `/api/` to the API (`API_UPSTREAM`), so the browser sees one
+  origin and the session cookie is a first-party `SameSite=Lax` cookie. That
+  is what makes sign-in work on Safari and iOS, which refuse third-party
+  cookies; the split topology (`REACT_APP_API_URL` + `CROSS_SITE_COOKIES`,
+  cookies `SameSite=None; Partitioned`) remains supported for other clients.
 - **Rate limiting** (`internal/api/ratelimit.go`), in-memory token buckets:
   the public (token-only) interview endpoints per invite and per IP, so a
   leaked invite token cannot become unbounded provider spend; and the

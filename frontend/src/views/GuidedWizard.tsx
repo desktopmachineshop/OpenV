@@ -14,6 +14,7 @@ import { StepShell } from '../components/wizard/StepShell';
 import { ErrorBanner, useConfirm } from '../components/ui';
 import { RepeatingCardList } from '../components/wizard/RepeatingCardList';
 import { GuidedChatPanel, GuidedChatPanelHandle, CopilotSuggestion } from '../components/wizard/GuidedChatPanel';
+import { useViewport } from '../hooks/useViewport';
 import {
   PersonaEntry,
   NeedEntry,
@@ -87,6 +88,12 @@ export const GuidedWizard: React.FC = () => {
   const [session, setSession] = useState<GuidedSession | null>(null);
   const [latestCommitted, setLatestCommitted] = useState<GuidedSession | null>(null);
   const chatRef = useRef<GuidedChatPanelHandle>(null);
+  // Phones and tablets: the assistant is a bottom sheet behind a floating
+  // button instead of a column beside the steps. It stays mounted while the
+  // sheet is closed so its conversation (and the ref the steps nudge) live on.
+  const viewport = useViewport();
+  const compact = viewport.isCompact;
+  const [assistantOpen, setAssistantOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -1614,6 +1621,7 @@ export const GuidedWizard: React.FC = () => {
                     <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 6 }}>
                       {type} ({grouped[type].length})
                     </div>
+                    <div className="table-scroll">
                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                       <tbody>
                         {grouped[type].map((a) => (
@@ -1631,6 +1639,7 @@ export const GuidedWizard: React.FC = () => {
                         ))}
                       </tbody>
                     </table>
+                    </div>
                   </div>
                 ))
             )}
@@ -1651,9 +1660,9 @@ export const GuidedWizard: React.FC = () => {
   };
 
   return (
-    <div style={{ padding: 24, maxWidth: 1560, margin: '0 auto' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-        <h2 style={{ color: 'var(--text)', margin: 0 }}>Guided requirements definition</h2>
+    <div style={{ padding: compact ? 12 : 24, maxWidth: 1560, margin: '0 auto' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, gap: 10, flexWrap: 'wrap' }}>
+        <h2 style={{ color: 'var(--text)', margin: 0, fontSize: compact ? 20 : undefined }}>Guided requirements definition</h2>
         <button
           onClick={handleAbandon}
           disabled={busy}
@@ -1675,11 +1684,12 @@ export const GuidedWizard: React.FC = () => {
       </div>
       <ErrorBanner message={error} onDismiss={() => setError('')} style={{ marginBottom: 16 }} />
       <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start' }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ flex: 1, minWidth: 0, paddingBottom: compact ? 72 : 0 }}>
           <StepShell
             steps={STEP_LABELS}
             current={step}
             maxReached={maxReached}
+            compact={compact}
             onSelectStep={(s) => setStep(s)}
             onBack={handleBack}
             onNext={handleNext}
@@ -1697,14 +1707,100 @@ export const GuidedWizard: React.FC = () => {
             {renderStepContent()}
           </StepShell>
         </div>
-        <GuidedChatPanel
-          ref={chatRef}
-          sessionId={session.id}
-          step={step}
-          getState={buildAnswers}
-          applied={appliedSuggestions}
-          onApplySuggestions={handleApplySuggestions}
-        />
+        {compact ? (
+          <>
+            {assistantOpen && (
+              <div
+                onClick={() => setAssistantOpen(false)}
+                style={{ position: 'fixed', inset: 0, background: 'var(--overlay)', zIndex: 949 }}
+              />
+            )}
+            <div
+              role="dialog"
+              aria-label="V&V Assistant"
+              aria-hidden={!assistantOpen}
+              className="safe-area-bottom"
+              style={{
+                position: 'fixed',
+                left: 0,
+                right: 0,
+                bottom: 0,
+                height: '75vh',
+                maxHeight: '75dvh',
+                display: assistantOpen ? 'flex' : 'none',
+                flexDirection: 'column',
+                background: 'var(--surface)',
+                borderTop: '1px solid var(--border)',
+                borderRadius: '12px 12px 0 0',
+                boxShadow: '0 -4px 16px rgba(0,0,0,0.2)',
+                zIndex: 950,
+              }}
+            >
+              <button
+                type="button"
+                aria-label="Close assistant"
+                onClick={() => setAssistantOpen(false)}
+                style={{
+                  alignSelf: 'flex-end',
+                  width: 44,
+                  height: 44,
+                  background: 'none',
+                  border: 'none',
+                  fontSize: 20,
+                  color: 'var(--text-muted)',
+                  cursor: 'pointer',
+                }}
+              >
+                ✕
+              </button>
+              <div style={{ flex: 1, minHeight: 0 }}>
+                <GuidedChatPanel
+                  ref={chatRef}
+                  embedded
+                  sessionId={session.id}
+                  step={step}
+                  getState={buildAnswers}
+                  applied={appliedSuggestions}
+                  onApplySuggestions={handleApplySuggestions}
+                />
+              </div>
+            </div>
+            {!assistantOpen && (
+              <button
+                type="button"
+                onClick={() => setAssistantOpen(true)}
+                title="Open the V&V Assistant"
+                style={{
+                  position: 'fixed',
+                  right: 16,
+                  bottom: 'calc(16px + env(safe-area-inset-bottom, 0px))',
+                  minHeight: 48,
+                  padding: '0 18px',
+                  borderRadius: 24,
+                  border: 'none',
+                  background: 'var(--accent)',
+                  color: 'var(--accent-fg)',
+                  fontSize: 14,
+                  fontWeight: 600,
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
+                  cursor: 'pointer',
+                  zIndex: 940,
+                }}
+              >
+                💬 Assistant
+              </button>
+            )}
+          </>
+        ) : (
+          <GuidedChatPanel
+            ref={chatRef}
+            sessionId={session.id}
+            step={step}
+            getState={buildAnswers}
+            applied={appliedSuggestions}
+            onApplySuggestions={handleApplySuggestions}
+          />
+        )}
       </div>
     </div>
   );

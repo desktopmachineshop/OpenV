@@ -294,6 +294,7 @@ export const ProductOverview: React.FC = () => {
           <div style={{ color: 'var(--neutral)', fontSize: 13, marginBottom: 10 }}>No success metrics defined yet.</div>
         )}
         {metrics.length > 0 && (
+          <div className="table-scroll">
           <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 10 }}>
             <thead>
               <tr>
@@ -332,6 +333,7 @@ export const ProductOverview: React.FC = () => {
               ))}
             </tbody>
           </table>
+          </div>
         )}
         <div style={{ display: 'flex', gap: 10 }}>
           <button

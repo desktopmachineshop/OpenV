@@ -679,6 +679,7 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
               }
             }}
             placeholder="Ask the V&amp;V Assistant… (Ctrl+Enter to send)"
+            enterKeyHint="enter"
             rows={2}
             style={{ flex: 1, minHeight: 40, resize: 'none', fontSize: 13 }}
           />

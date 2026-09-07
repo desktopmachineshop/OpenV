@@ -134,6 +134,52 @@ input:focus, textarea:focus, select:focus {
   box-shadow: 0 0 4px rgba(52, 152, 219, 0.3);
 }
 
+/* Touch devices (docs/plans/mobile-support.md). iOS zooms the page into any
+   field whose text is smaller than 16px when it gets focus, and never zooms
+   back out, so on a coarse pointer every field is 16px regardless of the
+   size it has on a desktop. */
+@media (hover: none) and (pointer: coarse) {
+  input, textarea, select {
+    font-size: 16px;
+  }
+}
+
+/* The app shell fills the window. 100dvh follows the mobile browser's
+   collapsing toolbars where it is supported; 100vh is the fallback and is
+   what desktops have always had. */
+.app-shell {
+  height: 100vh;
+  height: 100dvh;
+}
+
+/* Wide content (tables, matrices, code) scrolls inside its own box so the
+   page itself never scrolls sideways on a phone. */
+.table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.table-scroll > table {
+  min-width: 100%;
+}
+
+/* Safe-area insets (the notch and the home indicator) on installed apps. */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.safe-area-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 textarea {
   resize: vertical;
   min-height: 100px;

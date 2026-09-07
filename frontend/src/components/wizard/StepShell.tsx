@@ -17,6 +17,8 @@ interface StepShellProps {
   hideNav?: boolean;
   /** optional extra action rendered between Back and Next (e.g. Skip) */
   extraAction?: React.ReactNode;
+  /** phones and tablets: the rail becomes a progress strip above the step */
+  compact?: boolean;
   children: React.ReactNode;
 }
 
@@ -34,8 +36,105 @@ export const StepShell: React.FC<StepShellProps> = ({
   busy,
   hideNav,
   extraAction,
+  compact,
   children,
 }) => {
+  const footer = !hideNav && (
+    <div
+      style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginTop: 20,
+        gap: 10,
+        flexWrap: 'wrap',
+      }}
+    >
+      <button
+        className="button-secondary"
+        onClick={onBack}
+        disabled={backDisabled || busy}
+        style={{ opacity: backDisabled || busy ? 0.5 : 1, minHeight: compact ? 44 : undefined }}
+      >
+        ← Back
+      </button>
+      <div style={{ display: 'flex', gap: 10 }}>
+        {extraAction}
+        <button
+          className="button"
+          onClick={onNext}
+          disabled={nextDisabled || busy}
+          style={{
+            background: 'var(--accent)',
+            opacity: nextDisabled || busy ? 0.5 : 1,
+            minHeight: compact ? 44 : undefined,
+          }}
+        >
+          {busy ? 'Saving…' : nextLabel || 'Next →'}
+        </button>
+      </div>
+    </div>
+  );
+
+  if (compact) {
+    // A 220px rail is a third of a phone. The same information — where you
+    // are, what is done, where you may jump back to — fits in one strip: a
+    // progress bar and a native select over the steps already reached, which
+    // every mobile browser renders as a proper picker.
+    const label = steps[current - 1] || '';
+    return (
+      <div>
+        <div
+          style={{
+            background: 'var(--surface)',
+            border: '1px solid var(--border)',
+            borderRadius: 4,
+            padding: '10px 12px',
+            marginBottom: 16,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+              Step {current} of {steps.length}
+            </div>
+            <select
+              aria-label="Go to step"
+              value={current}
+              disabled={busy || !onSelectStep}
+              onChange={(e) => onSelectStep && onSelectStep(Number(e.target.value))}
+              style={{ flex: 1, minWidth: 0, minHeight: 44, fontWeight: 600 }}
+            >
+              {steps.map((s, i) => (
+                <option key={s} value={i + 1} disabled={i + 1 > maxReached}>
+                  {i + 1 < current ? '✓ ' : ''}
+                  {s}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div
+            role="progressbar"
+            aria-valuemin={1}
+            aria-valuemax={steps.length}
+            aria-valuenow={current}
+            aria-valuetext={label}
+            style={{ height: 4, background: 'var(--neutral-soft)', borderRadius: 2, marginTop: 10, overflow: 'hidden' }}
+          >
+            <div
+              style={{
+                width: `${(current / steps.length) * 100}%`,
+                height: '100%',
+                background: 'var(--accent)',
+              }}
+            />
+          </div>
+        </div>
+        {children}
+        {footer}
+      </div>
+    );
+  }
+
   return (
     <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start' }}>
       <div
@@ -101,40 +200,7 @@ export const StepShell: React.FC<StepShellProps> = ({
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         {children}
-        {!hideNav && (
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginTop: 20,
-              gap: 10,
-            }}
-          >
-            <button
-              className="button-secondary"
-              onClick={onBack}
-              disabled={backDisabled || busy}
-              style={{ opacity: backDisabled || busy ? 0.5 : 1 }}
-            >
-              ← Back
-            </button>
-            <div style={{ display: 'flex', gap: 10 }}>
-              {extraAction}
-              <button
-                className="button"
-                onClick={onNext}
-                disabled={nextDisabled || busy}
-                style={{
-                  background: 'var(--accent)',
-                  opacity: nextDisabled || busy ? 0.5 : 1,
-                }}
-              >
-                {busy ? 'Saving…' : nextLabel || 'Next →'}
-              </button>
-            </div>
-          </div>
-        )}
+        {footer}
       </div>
     </div>
   );

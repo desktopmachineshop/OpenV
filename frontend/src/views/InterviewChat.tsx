@@ -372,6 +372,7 @@ export const InterviewChat: React.FC = () => {
               }
             }}
             placeholder="Type your answer… (Ctrl+Enter to send)"
+            enterKeyHint="enter"
             rows={2}
             style={{ flex: 1, minHeight: 44, resize: 'none', fontSize: 14 }}
           />
