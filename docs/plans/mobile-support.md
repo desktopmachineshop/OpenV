@@ -225,9 +225,10 @@ Shipped, in one PR on top of this plan:
   wrappers rather than new mobile views.
 - **Phase 3** — every artifact row has a visible ⋯ actions button opening
   the right-click menu; the menu gains *Move to…* (target artifact and
-  before / after / inside, validated by `planMove`); on coarse pointers a
-  grip handle drags rows through pointer events with `touch-action: none`
-  on the handle only, so the list still scrolls.
+  before / after / inside, validated by `planMove`). Rows keep the HTML5
+  drag: mobile browsers start it from a long press on the row, so the grip
+  handle first shipped for touch was redundant and was removed after the
+  maintainer's first phone session.
 - **Phase 4 (part)** — manifest shortcuts and categories; muted text raised
   to 4.6:1; reduced-motion media query.
 - **Testing** — `e2e/tests/mobile.spec.ts` runs in iPhone 13 (WebKit) and
