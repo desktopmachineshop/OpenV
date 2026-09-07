@@ -43,9 +43,14 @@ export default defineConfig({
   // because Safari is the browser on every iPhone and iPad, and it is the
   // one that rejects cross-site cookies (docs/plans/mobile-support.md).
   // Each project runs the journey in its own worker with its own user.
+  //
+  // The phone projects run only the mobile journey (mobile.spec.ts), which
+  // asserts the shape the app takes below the tablet breakpoint; the desktop
+  // projects skip it for the same reason.
   projects: [
     {
       name: 'chromium',
+      testIgnore: /mobile\.spec\.ts/,
       use: { ...devices['Desktop Chrome'] },
     },
     {
@@ -54,6 +59,18 @@ export default defineConfig({
       name: 'webkit',
       testMatch: /smoke\.spec\.ts/,
       use: { ...devices['Desktop Safari'] },
+    },
+    {
+      // Safari on an iPhone: the WebKit engine, a 390px viewport and touch.
+      name: 'iphone',
+      testMatch: /mobile\.spec\.ts/,
+      use: { ...devices['iPhone 13'] },
+    },
+    {
+      // Chrome on Android.
+      name: 'android',
+      testMatch: /mobile\.spec\.ts/,
+      use: { ...devices['Pixel 5'] },
     },
   ],
 });

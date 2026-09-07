@@ -144,6 +144,7 @@ export const OrgMembersTab: React.FC<OrgMembersTabProps> = ({ org, isAdmin, curr
         {loading ? (
           <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Loading members…</div>
         ) : (
+          <div className="table-scroll">
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr>
@@ -223,6 +224,7 @@ export const OrgMembersTab: React.FC<OrgMembersTabProps> = ({ org, isAdmin, curr
               )}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 

@@ -193,6 +193,7 @@ export const ReviewQueue: React.FC = () => {
                   No suspect links. Traceability is trusted.
                 </div>
               ) : (
+                <div className="table-scroll">
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
                   <thead>
                     <tr style={{ textAlign: 'left', color: 'var(--text-muted)', fontSize: 12 }}>
@@ -245,6 +246,7 @@ export const ReviewQueue: React.FC = () => {
                     ))}
                   </tbody>
                 </table>
+                </div>
               )}
             </section>
           )}

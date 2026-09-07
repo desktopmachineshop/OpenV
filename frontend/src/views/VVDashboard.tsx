@@ -281,6 +281,7 @@ export const VVDashboard: React.FC = () => {
       <div className="card">
         <h3>Requirement coverage</h3>
         <div style={{ overflowX: 'auto' }}>
+          <div className="table-scroll">
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead>
               <tr>
@@ -323,6 +324,7 @@ export const VVDashboard: React.FC = () => {
               )}
             </tbody>
           </table>
+          </div>
         </div>
       </div>
 
@@ -403,6 +405,7 @@ export const VVDashboard: React.FC = () => {
           </div>
         )}
 
+        <div className="table-scroll">
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
           <thead>
             <tr>
@@ -485,6 +488,7 @@ export const VVDashboard: React.FC = () => {
             )}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );

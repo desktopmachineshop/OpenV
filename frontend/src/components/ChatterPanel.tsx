@@ -256,6 +256,7 @@ export const ChatterPanel: React.FC<ChatterPanelProps> = ({
             }
           }}
           placeholder="Add a note..."
+          enterKeyHint="enter"
           style={{
             width: '100%',
             minHeight: '60px',

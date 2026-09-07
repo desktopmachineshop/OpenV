@@ -221,6 +221,7 @@ export const AgentRunsPage: React.FC = () => {
       <div style={{ display: 'flex', gap: 16, flex: 1, minHeight: 0 }}>
         <div style={{ flex: 1, overflowY: 'auto', minWidth: 0 }}>
           <div className="table-container">
+            <div className="table-scroll">
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
                 <tr>
@@ -323,6 +324,7 @@ export const AgentRunsPage: React.FC = () => {
                 )}
               </tbody>
             </table>
+            </div>
           </div>
         </div>
 

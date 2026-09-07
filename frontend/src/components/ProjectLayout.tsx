@@ -21,6 +21,7 @@ import {
   toggleNavSection,
 } from './navSections';
 import { useAppStore } from '../state/store';
+import { useViewport } from '../hooks/useViewport';
 import { GlobalSearch } from './GlobalSearch';
 import { HelpSidebar } from './HelpSidebar';
 import { NotificationBell } from './NotificationBell';
@@ -103,6 +104,11 @@ export const ProjectLayout: React.FC = () => {
   const [navRevealed, setNavRevealed] = useState(false);
   // Which menu groups are expanded. They start collapsed — see navSections.ts.
   const [navOpenSections, setNavOpenSections] = useState<NavSectionState>(() => loadNavSections());
+  // Phones and tablets get a top bar with a menu button and the nav as a
+  // drawer over the page; the pinned / auto-hide / hidden choice is a desktop
+  // preference and is left untouched for when the window is wide again.
+  const viewport = useViewport();
+  const compact = viewport.isCompact;
 
   useEffect(() => {
     if (!projectId) return;
@@ -164,21 +170,78 @@ export const ProjectLayout: React.FC = () => {
   }, [location.pathname]);
 
   const activePath = activeNavPath(location.pathname, projectId || '');
-  const open = panelIsOpen(navMode, navHovered, navRevealed);
-  const takesSpace = panelTakesSpace(navMode);
+  // A touch screen cannot hover, so auto-hide behaves as hidden there: the
+  // edge strip (wider, to be tappable) reveals the menu on tap instead.
+  const open = compact
+    ? navRevealed
+    : panelIsOpen(navMode, navHovered && !viewport.coarsePointer, navRevealed);
+  const takesSpace = compact ? false : panelTakesSpace(navMode);
+  const stripWidth = viewport.coarsePointer ? 24 : 10;
 
   return (
-    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
+    <div
+      className="app-shell"
+      style={{ display: 'flex', flexDirection: compact ? 'column' : 'row', overflow: 'hidden' }}
+    >
+      {compact && (
+        <header
+          className="safe-area-top"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 4,
+            minHeight: 48,
+            paddingRight: 8,
+            background: 'var(--sidebar-bg)',
+            color: 'var(--sidebar-text)',
+            flexShrink: 0,
+          }}
+        >
+          <button
+            type="button"
+            aria-label="Project menu"
+            aria-expanded={navRevealed}
+            onClick={() => setNavRevealed((shown) => !shown)}
+            style={{
+              width: 48,
+              height: 48,
+              background: 'none',
+              border: 'none',
+              color: 'var(--sidebar-text)',
+              fontSize: 22,
+              cursor: 'pointer',
+              flexShrink: 0,
+            }}
+          >
+            ☰
+          </button>
+          <div
+            style={{
+              flex: 1,
+              minWidth: 0,
+              fontSize: 15,
+              fontWeight: 600,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+            title={project?.name || ''}
+          >
+            {project?.name || '…'}
+          </div>
+          <NotificationBell variant="dark" />
+        </header>
+      )}
       {/* The edge strip is what brings a hidden or auto-hiding nav back: with
           the nav gone there would otherwise be nothing left to click. */}
-      {!takesSpace && (
+      {!compact && !takesSpace && (
         <div
           className="panel-edge-strip"
-          onMouseEnter={() => setNavHovered(true)}
+          onMouseEnter={() => !viewport.coarsePointer && setNavHovered(true)}
           onMouseLeave={() => setNavHovered(false)}
           style={{
-            width: 10,
-            minWidth: 10,
+            width: stripWidth,
+            minWidth: stripWidth,
             background: 'var(--sidebar-bg)',
             cursor: 'pointer',
             display: 'flex',
@@ -205,23 +268,52 @@ export const ProjectLayout: React.FC = () => {
         />
       )}
       <aside
-        onMouseEnter={() => navMode === 'autohide' && setNavHovered(true)}
-        onMouseLeave={() => navMode === 'autohide' && setNavHovered(false)}
+        aria-label="Project navigation"
+        onMouseEnter={() => navMode === 'autohide' && !compact && setNavHovered(true)}
+        onMouseLeave={() => navMode === 'autohide' && !compact && setNavHovered(false)}
         style={{
-          width: open ? 200 : 0,
-          minWidth: open ? 200 : 0,
+          width: open ? (compact ? 'min(300px, 85vw)' : 200) : 0,
+          minWidth: open ? (compact ? 'min(300px, 85vw)' : 200) : 0,
           background: 'var(--sidebar-bg)',
           color: 'var(--sidebar-text)',
           display: open ? 'flex' : 'none',
           flexDirection: 'column',
           // An auto-hiding nav floats over the document instead of reflowing
-          // it every time the pointer crosses the edge.
+          // it every time the pointer crosses the edge; on a phone the drawer
+          // always floats.
           ...(takesSpace
             ? {}
-            : { position: 'fixed', left: 10, top: 0, bottom: 0, zIndex: 900, boxShadow: '2px 0 8px rgba(0,0,0,0.25)' }),
+            : {
+                position: 'fixed',
+                left: compact ? 0 : stripWidth,
+                top: 0,
+                bottom: 0,
+                zIndex: 900,
+                boxShadow: '2px 0 8px rgba(0,0,0,0.25)',
+              }),
         }}
       >
         <div style={{ padding: '16px 14px', borderBottom: '1px solid var(--sidebar-border)', flexShrink: 0 }}>
+          {compact && (
+            <button
+              type="button"
+              aria-label="Close menu"
+              onClick={() => setNavRevealed(false)}
+              style={{
+                float: 'right',
+                width: 44,
+                height: 44,
+                margin: '-10px -10px 0 0',
+                background: 'none',
+                border: 'none',
+                color: 'var(--sidebar-text-dim)',
+                fontSize: 20,
+                cursor: 'pointer',
+              }}
+            >
+              ✕
+            </button>
+          )}
           <OrgSwitcher variant="dark" />
           {/* Explicit way back to the workspace's project list — the project
               name alone read as a label, not a link. */}
@@ -314,7 +406,7 @@ export const ProjectLayout: React.FC = () => {
                       end={item.end}
                       style={({ isActive }) => ({
                         display: 'block',
-                        padding: '9px 16px',
+                        padding: compact ? '12px 16px' : '9px 16px',
                         color: isActive ? 'var(--accent-fg)' : 'var(--sidebar-text-dim)',
                         background: isActive ? 'var(--accent)' : 'transparent',
                         textDecoration: 'none',
@@ -355,6 +447,7 @@ export const ProjectLayout: React.FC = () => {
             </div>
             <NotificationBell variant="dark" />
           </div>
+          {!compact && (
           <button
             onClick={() => {
               const next = nextPanelMode(navMode);
@@ -380,6 +473,7 @@ export const ProjectLayout: React.FC = () => {
           >
             Menu: {panelModeLabel(navMode)}
           </button>
+          )}
         </div>
       </aside>
       <main style={{ flex: 1, minWidth: 0, minHeight: 0, overflow: 'auto', background: 'var(--bg-app)' }}>

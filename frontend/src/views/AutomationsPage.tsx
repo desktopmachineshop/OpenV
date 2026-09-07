@@ -254,6 +254,7 @@ export const AutomationsPage: React.FC = () => {
       <ErrorBanner message={error} onDismiss={() => setError('')} />
 
       <div className="table-container" style={{ marginBottom: 20 }}>
+        <div className="table-scroll">
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
           <thead>
             <tr>
@@ -377,6 +378,7 @@ export const AutomationsPage: React.FC = () => {
             )}
           </tbody>
         </table>
+        </div>
       </div>
 
       {form && (

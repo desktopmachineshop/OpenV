@@ -147,7 +147,7 @@ export const WorkItemDrawer: React.FC<WorkItemDrawerProps> = ({
         top: 0,
         right: 0,
         bottom: 0,
-        width: 420,
+        width: 'min(420px, 100vw)',
         background: 'var(--surface)',
         boxShadow: '-4px 0 16px rgba(0,0,0,0.15)',
         zIndex: 100,

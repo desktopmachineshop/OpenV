@@ -202,6 +202,7 @@ export const ActivityLog: React.FC = () => {
 
       <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
         <div className="table-container">
+          <div className="table-scroll">
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead>
               <tr>
@@ -343,6 +344,7 @@ export const ActivityLog: React.FC = () => {
               )}
             </tbody>
           </table>
+          </div>
         </div>
 
         {maybeMore && (

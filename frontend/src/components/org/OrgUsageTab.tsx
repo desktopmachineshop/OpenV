@@ -319,6 +319,7 @@ export const OrgUsageTab: React.FC<OrgUsageTabProps> = ({ org }) => {
             {usage.by_agent.length === 0 ? (
               <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>No runs in this window yet.</p>
             ) : (
+              <div className="table-scroll">
               <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 18 }}>
                 <thead>
                   <tr>
@@ -345,6 +346,7 @@ export const OrgUsageTab: React.FC<OrgUsageTabProps> = ({ org }) => {
                   ))}
                 </tbody>
               </table>
+              </div>
             )}
 
             <h4 style={{ fontSize: 13, color: 'var(--text)', margin: '0 0 6px' }}>By day</h4>
@@ -353,6 +355,7 @@ export const OrgUsageTab: React.FC<OrgUsageTabProps> = ({ org }) => {
                 No runs in this window yet.
               </p>
             ) : (
+              <div className="table-scroll">
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr>
@@ -379,6 +382,7 @@ export const OrgUsageTab: React.FC<OrgUsageTabProps> = ({ org }) => {
                   ))}
                 </tbody>
               </table>
+              </div>
             )}
           </>
         )}

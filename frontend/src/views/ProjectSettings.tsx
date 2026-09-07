@@ -569,6 +569,7 @@ export const ProjectSettings: React.FC = () => {
             {membersLoading ? (
               <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Loading members…</div>
             ) : (
+              <div className="table-scroll">
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr>
@@ -642,6 +643,7 @@ export const ProjectSettings: React.FC = () => {
                   )}
                 </tbody>
               </table>
+              </div>
             )}
           </div>
 
@@ -684,6 +686,7 @@ export const ProjectSettings: React.FC = () => {
             {teamGrantsLoading ? (
               <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Loading team access…</div>
             ) : (
+              <div className="table-scroll">
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr>
@@ -726,6 +729,7 @@ export const ProjectSettings: React.FC = () => {
                   )}
                 </tbody>
               </table>
+              </div>
             )}
 
             <form
@@ -1015,6 +1019,7 @@ export const ProjectSettings: React.FC = () => {
               No project attributes defined yet.
             </div>
           ) : (
+            <div className="table-scroll">
             <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 16 }}>
               <thead>
                 <tr>
@@ -1054,6 +1059,7 @@ export const ProjectSettings: React.FC = () => {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
 
           <form onSubmit={handleAddAttribute} style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-end' }}>
