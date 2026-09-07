@@ -144,8 +144,14 @@ jobs:
       - uses: actions/checkout@v4
 
       # Build + start in the background while npm/Playwright set up below.
+      # The Playwright projects (desktop Chromium, WebKit, iPhone, Android)
+      # each register their own users from the runner's one address; the
+      # API's default registration throttle (5 per address) would refuse
+      # the sixth, so it is raised for this stack only.
       - name: Build and start the compose stack
         run: docker compose up -d --build
+        env:
+          OPENV_REGISTER_IP_BURST: "100"
 
       - uses: actions/setup-node@v4
         with:

@@ -18,6 +18,11 @@ import { defineConfig, devices } from '@playwright/test';
 //     mcr.microsoft.com/playwright:v1.57.0-jammy \
 //     bash -c "npm ci && npx playwright test"
 //
+// Every project registers its own users, so a run makes about eight
+// registrations from one address; the API throttles registrations per
+// address (5 by default), so the stack under test needs
+// OPENV_REGISTER_IP_BURST raised (CI sets 100 — see .github/workflows/ci.yml).
+//
 // The tests are a single user journey (register -> project -> artifacts ->
 // link -> baseline -> status -> search -> export) executed serially in one
 // browser page; every run registers a fresh user so it is purely additive to
