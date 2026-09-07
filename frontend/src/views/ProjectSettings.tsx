@@ -522,7 +522,7 @@ export const ProjectSettings: React.FC = () => {
     <div style={{ padding: 24, maxWidth: 900, margin: '0 auto' }}>
       <h2 style={{ color: 'var(--text)', marginBottom: 16 }}>Project settings</h2>
 
-      <div style={{ display: 'flex', gap: 4, borderBottom: '2px solid var(--border)', marginBottom: 20 }}>
+      <div className="tab-strip" role="tablist">
         {TABS.map((t) => (
           <button
             key={t.key}
