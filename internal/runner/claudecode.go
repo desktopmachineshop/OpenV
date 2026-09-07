@@ -177,6 +177,10 @@ type claudeParser struct {
 	costUSD   *float64
 	isError   bool
 	errorText string
+	// CLI-reported timing (see the result branch of ParseLine).
+	durationMs    int64
+	durationAPIMs int64
+	numTurns      int64
 }
 
 func (p *claudeParser) ParseLine(line string, emit func(RunEvent)) {
@@ -222,11 +226,24 @@ func (p *claudeParser) ParseLine(line string, emit func(RunEvent)) {
 			p.errorText = p.finalText
 		}
 		p.mu.Unlock()
+		// Timing from the CLI itself: duration_ms is its whole wall time and
+		// duration_api_ms the part spent waiting on the model, so the
+		// difference is CLI, MCP and tool overhead. num_turns says how many
+		// model round trips the answer took. Recorded so slow turns can be
+		// attributed without guessing (docs/assessments, agent latency).
 		emit(RunEvent{Kind: agentruns.LogUsage, Payload: map[string]interface{}{
-			"input_tokens":   p.tokensIn,
-			"output_tokens":  p.tokensOut,
-			"total_cost_usd": msg["total_cost_usd"],
+			"input_tokens":    p.tokensIn,
+			"output_tokens":   p.tokensOut,
+			"total_cost_usd":  msg["total_cost_usd"],
+			"duration_ms":     msg["duration_ms"],
+			"duration_api_ms": msg["duration_api_ms"],
+			"num_turns":       msg["num_turns"],
 		}})
+		p.mu.Lock()
+		p.durationMs = asInt64(msg["duration_ms"])
+		p.durationAPIMs = asInt64(msg["duration_api_ms"])
+		p.numTurns = asInt64(msg["num_turns"])
+		p.mu.Unlock()
 	case "system":
 		emit(RunEvent{Kind: agentruns.LogSystem, Payload: msg})
 	default:
@@ -238,11 +255,14 @@ func (p *claudeParser) Result(exitCode int, stderrTail string) (Result, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	res := Result{
-		ExitCode:  exitCode,
-		FinalText: p.finalText,
-		TokensIn:  p.tokensIn,
-		TokensOut: p.tokensOut,
-		CostUSD:   p.costUSD,
+		ExitCode:      exitCode,
+		FinalText:     p.finalText,
+		TokensIn:      p.tokensIn,
+		TokensOut:     p.tokensOut,
+		CostUSD:       p.costUSD,
+		DurationMs:    p.durationMs,
+		DurationAPIMs: p.durationAPIMs,
+		NumTurns:      p.numTurns,
 	}
 	if p.isError {
 		detail := p.errorText

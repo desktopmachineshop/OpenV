@@ -152,6 +152,60 @@ input:focus, textarea:focus, select:focus {
   height: 100dvh;
 }
 
+/* A row of tabs scrolls sideways inside its own strip when it is wider than
+   the screen, instead of stretching the page (the settings pages have six
+   or seven tabs). The strip hides its scrollbar on touch, where a swipe is
+   the natural gesture, and keeps a thin one elsewhere. */
+.tab-strip {
+  display: flex;
+  gap: 4px;
+  border-bottom: 2px solid var(--border);
+  margin-bottom: 20px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+.tab-strip > button {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+@media (hover: none) and (pointer: coarse) {
+  .tab-strip {
+    scrollbar-width: none;
+  }
+  .tab-strip::-webkit-scrollbar {
+    display: none;
+  }
+  .tab-strip > button {
+    min-height: 44px;
+  }
+}
+
+/* Phones: whatever a page does, it never drags the viewport sideways. The
+   real fix is always in the element that overflowed (the E2E journey still
+   measures the document's scroll width), but a person on a phone should
+   not meet a half-off-screen page while that fix is on its way. */
+@media (max-width: 640px) {
+  html, body {
+    overflow-x: hidden;
+  }
+}
+
+/* A sheet of actions on a phone: every control full width and tall enough
+   to tap, in the order the toolbar showed them. */
+.action-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.action-sheet > button,
+.action-sheet > select {
+  width: 100%;
+  min-height: 44px;
+  font-size: 14px;
+}
+
 /* Wide content (tables, matrices, code) scrolls inside its own box so the
    page itself never scrolls sideways on a phone. */
 .table-scroll {

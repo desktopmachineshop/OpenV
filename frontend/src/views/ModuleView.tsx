@@ -21,7 +21,7 @@ import { ArtifactHeader } from '../components/ArtifactHeader';
 import { ArtifactDetails } from '../components/ArtifactDetails';
 import { ChatterPanel } from '../components/ChatterPanel';
 import { DownloadWizard } from '../components/DownloadWizard';
-import { ErrorBanner, useAlert, useConfirm, usePrompt } from '../components/ui';
+import { ErrorBanner, Modal, useAlert, useConfirm, usePrompt } from '../components/ui';
 import { apiErrorMessage } from '../api/errors';
 import { useViewport } from '../hooks/useViewport';
 
@@ -74,6 +74,10 @@ export const ModuleView: React.FC = () => {
   const viewport = useViewport();
   const stacked = viewport.isCompact;
   const [stackedPane, setStackedPane] = useState<'tree' | 'document' | 'notes'>('tree');
+  // Stacked, the toolbar's baseline picker and five buttons fold into one
+  // actions sheet behind a ⋯ button: on a phone they took two full rows
+  // above the content.
+  const [toolsOpen, setToolsOpen] = useState(false);
   const [pendingCreateContext, setPendingCreateContext] = useState<Partial<Artifact> | null>(null);
   // Where a "create before/after" should put the artifact once it exists. The
   // API appends new artifacts to the end of their sibling group, so without
@@ -1086,17 +1090,8 @@ export const ModuleView: React.FC = () => {
     }
   };
 
-  return (
-    // The module owns exactly the height it is given and no more: the toolbar
-    // takes what it needs (two rows when the window is narrow) and the columns
-    // below take the rest. Nothing here is measured in viewport units, so the
-    // page never grows past the window and the browser never adds a scrollbar
-    // around the whole app — every panel that needs to scroll scrolls itself.
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-      {/* The floating help panel is mounted once in ProjectLayout now. */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '16px 20px 12px', flexWrap: 'wrap', flexShrink: 0 }}>
-        <h2 style={{ color: 'var(--text)', margin: 0 }}>Requirements</h2>
-        <div style={{ flex: 1 }} />
+  const toolbarActions = (
+    <>
         <select
           value={activeBaselineId}
           onChange={(e) => handleBaselineChange(e.target.value)}
@@ -1156,7 +1151,7 @@ export const ModuleView: React.FC = () => {
           }}
           title="Delete selected baseline"
         >
-          🗑
+          {stacked ? '🗑 Delete baseline' : '🗑'}
         </button>
         <button
           onClick={handleCaptureBaseline}
@@ -1216,7 +1211,57 @@ export const ModuleView: React.FC = () => {
         >
           ↓ Download
         </button>
+    </>
+  );
+
+  return (
+    // The module owns exactly the height it is given and no more: the toolbar
+    // takes what it needs (two rows when the window is narrow) and the columns
+    // below take the rest. Nothing here is measured in viewport units, so the
+    // page never grows past the window and the browser never adds a scrollbar
+    // around the whole app — every panel that needs to scroll scrolls itself.
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      {/* The floating help panel is mounted once in ProjectLayout now. */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: stacked ? '8px 12px 6px' : '16px 20px 12px', flexWrap: 'wrap', flexShrink: 0 }}>
+        <h2 style={{ color: 'var(--text)', margin: 0, fontSize: stacked ? 20 : undefined }}>Requirements</h2>
+        <div style={{ flex: 1 }} />
+        {stacked ? (
+          <button
+            type="button"
+            aria-label="Requirements actions"
+            aria-expanded={toolsOpen}
+            onClick={() => setToolsOpen(true)}
+            title="Baselines, test drafting and download"
+            style={{
+              width: 44,
+              height: 44,
+              border: '1px solid var(--border)',
+              borderRadius: 6,
+              background: 'var(--surface)',
+              color: 'var(--text)',
+              fontSize: 22,
+              lineHeight: 1,
+              cursor: 'pointer',
+              flexShrink: 0,
+            }}
+          >
+            ⋯
+          </button>
+        ) : (
+          toolbarActions
+        )}
       </div>
+      {stacked && toolsOpen && (
+        <Modal title="Requirements" width={400} onClose={() => setToolsOpen(false)}>
+          <div className="action-sheet" onClick={(e) => {
+            // Any button in the sheet is a one-shot action: close on use.
+            if ((e.target as HTMLElement).closest('button')) setToolsOpen(false);
+          }}>
+            <label style={{ fontSize: 12 }}>Baseline</label>
+            {toolbarActions}
+          </div>
+        </Modal>
+      )}
       {stacked && (
         <div
           role="tablist"
@@ -1272,16 +1317,18 @@ export const ModuleView: React.FC = () => {
               setError('');
             }}
             className="button"
-            style={{ width: '100%', marginBottom: '20px' }}
+            style={{ width: '100%', marginBottom: stacked ? '10px' : '20px' }}
           >
             {isCreating ? 'Cancel' : '+ New Artifact'}
           </button>
         )}
 
-        <div style={{ marginBottom: '20px' }}>
+        <div style={{ marginBottom: stacked ? '10px' : '20px' }}>
+          {!stacked && (
           <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--text)' }}>
             Filter and Search:
           </label>
+          )}
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
             <div style={{ position: 'relative', flex: 1 }}>
               <input
@@ -1633,6 +1680,7 @@ export const ModuleView: React.FC = () => {
           expandAllTrigger={expandAllToken}
           readOnly={isBaselineView}
           qualityScores={isBaselineView ? undefined : qualityScores}
+          hideHeading={stacked}
         /></div>
 
       {/* Resize handle for left column */}

@@ -15,6 +15,7 @@ import { ErrorBanner, useConfirm } from '../components/ui';
 import { RepeatingCardList } from '../components/wizard/RepeatingCardList';
 import { GuidedChatPanel, GuidedChatPanelHandle, CopilotSuggestion } from '../components/wizard/GuidedChatPanel';
 import { useViewport } from '../hooks/useViewport';
+import { useVisualViewport } from '../hooks/useVisualViewport';
 import {
   PersonaEntry,
   NeedEntry,
@@ -94,6 +95,10 @@ export const GuidedWizard: React.FC = () => {
   const viewport = useViewport();
   const compact = viewport.isCompact;
   const [assistantOpen, setAssistantOpen] = useState(false);
+  // The sheet sits above the on-screen keyboard: its height and bottom
+  // offset follow the visual viewport, since position: fixed anchors to the
+  // layout viewport, which the keyboard does not shrink on iOS.
+  const visual = useVisualViewport();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -1724,9 +1729,8 @@ export const GuidedWizard: React.FC = () => {
                 position: 'fixed',
                 left: 0,
                 right: 0,
-                bottom: 0,
-                height: '75vh',
-                maxHeight: '75dvh',
+                bottom: visual.keyboardInset,
+                height: Math.round(visual.height * (visual.keyboardInset > 0 ? 0.95 : 0.75)),
                 display: assistantOpen ? 'flex' : 'none',
                 flexDirection: 'column',
                 background: 'var(--surface)',

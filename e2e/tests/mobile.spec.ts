@@ -17,6 +17,7 @@ const reqTitle = `E2E Mobile REQ ${runId}`;
 test.describe.configure({ mode: 'serial' });
 
 let page: Page;
+let projectId = '';
 
 /** The page must never be wider than the phone: horizontal scrolling on a
  *  phone means something has a fixed desktop width. */
@@ -46,7 +47,7 @@ test('registers on a phone-sized screen without sideways scrolling', async () =>
 });
 
 test('creates a project and lands in the mobile shell', async () => {
-  await createProject(page, projectName);
+  projectId = await createProject(page, projectName);
   // The compact shell: a top bar with the menu button, no permanent sidebar.
   const menuButton = page.getByRole('button', { name: 'Project menu' });
   await expect(menuButton).toBeVisible();
@@ -102,5 +103,23 @@ test('the requirements module stacks into tree, document and notes panes', async
 test('the project list and settings pages fit the phone', async () => {
   await page.goto('/projects');
   await expect(page.getByText(projectName).first()).toBeVisible();
+  await expectNoHorizontalScroll(page);
+
+  // Both settings pages carry a row of six or seven tabs, wider than a
+  // phone: the row must scroll inside itself, and its last tab must still
+  // be reachable, without the page moving sideways.
+  await page.goto(`/projects/${projectId}/settings`);
+  const projectTabs = page.getByRole('tablist');
+  await expect(projectTabs).toBeVisible();
+  await expectNoHorizontalScroll(page);
+  await projectTabs.getByRole('button').last().click();
+  await expectNoHorizontalScroll(page);
+
+  await page.goto('/org/settings');
+  const orgTabs = page.getByRole('tablist');
+  await expect(orgTabs).toBeVisible();
+  await expectNoHorizontalScroll(page);
+  await orgTabs.getByRole('button', { name: 'Usage' }).click();
+  await expect(orgTabs.getByRole('button', { name: 'Usage' })).toBeInViewport();
   await expectNoHorizontalScroll(page);
 });

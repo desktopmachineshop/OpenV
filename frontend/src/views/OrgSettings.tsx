@@ -134,7 +134,7 @@ export const OrgSettings: React.FC = () => {
           </span>
         </div>
 
-        <div style={{ display: 'flex', gap: 4, borderBottom: '2px solid var(--border)', marginBottom: 20 }}>
+        <div className="tab-strip" role="tablist">
           {TABS.map((t) => (
             <button
               key={t.key}

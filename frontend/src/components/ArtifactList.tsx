@@ -43,6 +43,8 @@ interface ArtifactListProps {
   collapseAllTrigger?: number;
   expandAllTrigger?: number;
   readOnly?: boolean;
+  /** Stacked on a phone the pane's segmented control already says "Tree". */
+  hideHeading?: boolean;
   /** Quality scores by artifact id; a badge is shown on rows present here. */
   qualityScores?: Record<string, QualityRowInfo>;
 }
@@ -113,6 +115,7 @@ export const ArtifactList: React.FC<ArtifactListProps> = ({
   expandAllTrigger = 0,
   readOnly = false,
   qualityScores,
+  hideHeading = false,
 }) => {
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
@@ -607,7 +610,7 @@ export const ArtifactList: React.FC<ArtifactListProps> = ({
     // inside a panel only wasted the width. It fills the height it is given
     // rather than stopping at a fixed 500px with empty space beneath.
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-      <h3 style={{ marginTop: 0 }}>Artifacts</h3>
+      {!hideHeading && <h3 style={{ marginTop: 0 }}>Artifacts</h3>}
       {artifacts.length === 0 ? (
         <p>No artifacts yet. Create one to get started.</p>
       ) : (

@@ -473,7 +473,16 @@ func (w *Worker) execute(ctx context.Context, claim *ClaimResponse) {
 		req.Status = agentruns.StatusSucceeded
 	}
 	w.finish(run.ID, req)
-	log.Printf("run %s: finished (%s)", run.ID, req.Status)
+	if result.DurationMs > 0 {
+		// Split the wall time so a slow run can be read off the runner log:
+		// the model's share versus CLI start-up, tool calls and MCP traffic.
+		log.Printf("run %s: finished (%s) in %.1fs: model %.1fs over %d turn(s), overhead %.1fs",
+			run.ID, req.Status,
+			float64(result.DurationMs)/1000, float64(result.DurationAPIMs)/1000, result.NumTurns,
+			float64(result.DurationMs-result.DurationAPIMs)/1000)
+	} else {
+		log.Printf("run %s: finished (%s)", run.ID, req.Status)
+	}
 }
 
 // prepHeartbeatInterval is how often the pre-pump heartbeat refreshes a

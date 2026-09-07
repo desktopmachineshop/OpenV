@@ -47,6 +47,12 @@ type Result struct {
 	TokensIn  int64
 	TokensOut int64
 	CostUSD   *float64
+	// Timing as reported by the provider CLI, when it reports any: the
+	// CLI's whole wall time, the part of it spent waiting on the model, and
+	// the number of model round trips. Zero when the adapter has no figures.
+	DurationMs    int64
+	DurationAPIMs int64
+	NumTurns      int64
 }
 
 // RunHandle controls a started run.
