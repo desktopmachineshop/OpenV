@@ -74,10 +74,10 @@ func (h *Handler) provisionPersonalWorkspace(userID, displayName string) {
 
 func (h *Handler) setSessionCookie(w http.ResponseWriter, token string) {
 	http.SetCookie(w, &http.Cookie{
-		Name:     SessionCookieName,
-		Value:    token,
-		Path:     "/",
-		HttpOnly: true,
+		Name:        SessionCookieName,
+		Value:       token,
+		Path:        "/",
+		HttpOnly:    true,
 		Secure:      h.secureCookies,
 		SameSite:    h.cookieSameSite,
 		Partitioned: h.partitionedCookies(),
@@ -87,10 +87,10 @@ func (h *Handler) setSessionCookie(w http.ResponseWriter, token string) {
 
 func (h *Handler) clearSessionCookie(w http.ResponseWriter) {
 	http.SetCookie(w, &http.Cookie{
-		Name:     SessionCookieName,
-		Value:    "",
-		Path:     "/",
-		HttpOnly: true,
+		Name:        SessionCookieName,
+		Value:       "",
+		Path:        "/",
+		HttpOnly:    true,
 		Secure:      h.secureCookies,
 		SameSite:    h.cookieSameSite,
 		Partitioned: h.partitionedCookies(),

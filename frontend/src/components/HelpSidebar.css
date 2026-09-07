@@ -205,5 +205,8 @@ body.sidebar-expanded {
     right: auto;
     left: 16px;
     bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    /* Below the navigation drawer (900) and its backdrop (899), which
+       would otherwise show this button through the drawer's footer. */
+    z-index: 850;
   }
 }

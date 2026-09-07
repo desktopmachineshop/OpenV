@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AppNotification, notificationsAPI } from '../api/client';
+import { useViewport } from '../hooks/useViewport';
 
 interface NotificationBellProps {
   /**
@@ -46,6 +47,10 @@ const pathForNotification = (n: AppNotification): string => {
 // NotificationBell: unread badge + dropdown inbox, fed by the REST list and
 // kept live by the per-user SSE stream (EventSource reconnects on its own).
 export const NotificationBell: React.FC<NotificationBellProps> = ({ variant = 'light' }) => {
+  // Phones: the panel takes the width of the screen below the top bar instead
+  // of a 320px popover hanging off a corner (which lands half off-screen).
+  const viewport = useViewport();
+  const compact = viewport.isCompact;
   const navigate = useNavigate();
   const dark = variant === 'dark';
   const [open, setOpen] = useState(false);
@@ -176,16 +181,22 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ variant = 'l
 
       {open && (
         <div
+          role="dialog"
+          aria-label="Notifications"
           style={{
-            position: 'absolute',
-            // The dark bell sits in the sidebar footer, at the bottom of the
-            // window: a panel dropping down from it would be off-screen, so
-            // it opens upward the way the user menu beside it does.
-            ...(dark
-              ? { bottom: 'calc(100% + 6px)', left: 0 }
-              : { top: 'calc(100% + 6px)', right: 0 }),
-            width: 320,
-            maxHeight: 420,
+            ...(compact
+              ? { position: 'fixed', left: 8, right: 8, top: 56, width: 'auto', maxHeight: 'calc(100vh - 72px)' }
+              : {
+                  position: 'absolute',
+                  // The dark bell sits in the sidebar footer, at the bottom of the
+                  // window: a panel dropping down from it would be off-screen, so
+                  // it opens upward the way the user menu beside it does.
+                  ...(dark
+                    ? { bottom: 'calc(100% + 6px)', left: 0 }
+                    : { top: 'calc(100% + 6px)', right: 0 }),
+                  width: 320,
+                  maxHeight: 420,
+                }),
             overflowY: 'auto',
             background: 'var(--surface)',
             border: '1px solid var(--border)',

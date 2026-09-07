@@ -1,9 +1,10 @@
 # Mobile support plan
 
-Status: proposed, 2026-09-07. Evidence base: the frontend readiness review in
-`docs/assessments/2026-09-07-mobile-readiness.md`. Requirements recorded in
-the OpenV Platform project under **Mobile** (NEED-13, REQ-101 … REQ-110,
-DES-23, TC-50), all draft until the maintainer approves the direction.
+Status: approved and implemented through Phase 3, 2026-09-07 — see
+section 8 for what shipped and what is deferred. Evidence base: the frontend
+readiness review in `docs/assessments/2026-09-07-mobile-readiness.md`.
+Requirements recorded in the OpenV Platform project under **Mobile**
+(NEED-13, REQ-101 … REQ-110, DES-23, TC-50).
 
 ## 1. Where we are
 
@@ -194,3 +195,52 @@ coverage; DES-23 same-origin API proxy; TC-50 mobile journey suite.
 2. Whether Web Push is worth its backend surface now or waits.
 3. Whether a store presence will ever matter (it changes nothing in Phases
    0 to 3; it decides whether Phase 4 grows a Capacitor wrapper).
+
+## 8. Implementation status (2026-09-07)
+
+Decisions taken: Phase 0 option A (nginx proxy); Web Push deferred; no
+store presence planned.
+
+Shipped, in one PR on top of this plan:
+
+- **Phase 0** — `frontend/nginx.conf` proxies `/api/` to `API_UPSTREAM`
+  (re-resolved through the container's DNS by
+  `frontend/docker-entrypoint.d/40-openv-api-proxy.sh`); the client defaults
+  to a relative `/api` in production builds; the CSP collapses to `'self'`;
+  `Partitioned` on cross-site cookies; a WebKit Playwright project. The
+  connector download goes through the proxy unbuffered, so no special case
+  was needed. Production needs the variable changes in `docs/railway.md`
+  (`API_UPSTREAM` on the frontend; `CROSS_SITE_COOKIES` off and `PUBLIC_URL`
+  on the frontend origin for the API) at the next promotion.
+- **Phase 1** — `hooks/useViewport`; drawer navigation with a top bar below
+  900 px; the stacked Tree / Document / Notes requirements module; the
+  wizard's progress strip and assistant bottom sheet; 16 px fields on touch,
+  `100dvh`, table wrappers, safe-area helpers, reduced motion, clamped login
+  and modals, viewport and installed-app meta tags.
+- **Phase 2** — notifications panel full-width on phones; suspect links as
+  cards with 44 px controls; the board shows one column at a time with a
+  pager and a card actions sheet offering *Open card* and *Move to <column>*
+  (the same move as a drop, so it launches an agent from To Do). Runs,
+  proposals and the requirements page reuse the stacked layout and table
+  wrappers rather than new mobile views.
+- **Phase 3** — every artifact row has a visible ⋯ actions button opening
+  the right-click menu; the menu gains *Move to…* (target artifact and
+  before / after / inside, validated by `planMove`); on coarse pointers a
+  grip handle drags rows through pointer events with `touch-action: none`
+  on the handle only, so the list still scrolls.
+- **Phase 4 (part)** — manifest shortcuts and categories; muted text raised
+  to 4.6:1; reduced-motion media query.
+- **Testing** — `e2e/tests/mobile.spec.ts` runs in iPhone 13 (WebKit) and
+  Pixel 5 (Chromium) projects: drawer navigation, the stacked module, and
+  the no-horizontal-scroll contract on every page it visits.
+
+Deferred, each a follow-up of its own:
+
+- Web Push (VAPID keys, a subscription table, a subscribe endpoint, the
+  worker's `push` handler) — REQ-109 remains partially met (installable,
+  no push).
+- The runner card and the relayed sign-in screen sized for a phone
+  (REQ-108); they work through the responsive shell but were not reworked.
+- Figure actions on touch and the tap-to-insert reference menu; server-side
+  figure thumbnails; manifest screenshots; an iPad project and Lighthouse in
+  CI.

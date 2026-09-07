@@ -16,7 +16,8 @@ import {
 } from '../api/client';
 import { useAppStore } from '../state/store';
 import { WorkItemDrawer } from '../components/kanban/WorkItemDrawer';
-import { ArtifactPicker, ErrorBanner } from '../components/ui';
+import { ArtifactPicker, ErrorBanner, Modal, SegmentedControl } from '../components/ui';
+import { useViewport } from '../hooks/useViewport';
 
 const COLUMNS: { key: string; label: string; color: string }[] = [
   { key: 'backlog', label: 'Backlog', color: 'var(--neutral)' },
@@ -62,6 +63,18 @@ export const KanbanBoard: React.FC = () => {
   const [composers, setComposers] = useState<Record<string, ComposerState>>({});
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
   const dragItemId = useRef<string | null>(null);
+  // Phones show one column at a time (docs/plans/mobile-support.md): five
+  // 260px columns do not fit, and drag-and-drop between them never starts
+  // from a finger, so a card's actions menu offers Move to… instead.
+  const viewport = useViewport();
+  const phone = viewport.isPhone;
+  const [phoneColumn, setPhoneColumn] = useState<string>(COLUMNS[0].key);
+  const [actionsFor, setActionsFor] = useState<WorkItem | null>(null);
+
+  const moveItem = (id: string, columnKey: string) => {
+    dragItemId.current = id;
+    void handleDrop(columnKey);
+  };
 
   const loadItems = useCallback(() => {
     if (!projectId) return;
@@ -310,20 +323,59 @@ export const KanbanBoard: React.FC = () => {
   };
 
   return (
-    <div style={{ padding: 20, height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ padding: phone ? 12 : 20, height: '100%', display: 'flex', flexDirection: 'column' }}>
       <style>
         {`@keyframes ovPulse { 0% { opacity: 1; } 50% { opacity: 0.25; } 100% { opacity: 1; } }`}
       </style>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 14, marginBottom: 6 }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 14, marginBottom: 6, flexWrap: 'wrap' }}>
         <h2 style={{ color: 'var(--text)', margin: 0 }}>Board</h2>
         <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>
-          Tip: assign a card to an agent and drag it to To Do to launch the agent.
+          {phone
+            ? 'Tip: a card’s ⋯ menu moves it between columns.'
+            : 'Tip: assign a card to an agent and drag it to To Do to launch the agent.'}
         </span>
       </div>
       <ErrorBanner message={error} onDismiss={() => setError('')} style={{ marginBottom: 8 }} />
 
+      {phone && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+          <button
+            type="button"
+            aria-label="Previous column"
+            className="button-secondary"
+            style={{ minWidth: 44, minHeight: 44, padding: 0 }}
+            disabled={COLUMNS.findIndex((c) => c.key === phoneColumn) === 0}
+            onClick={() => setPhoneColumn(COLUMNS[COLUMNS.findIndex((c) => c.key === phoneColumn) - 1].key)}
+          >
+            ‹
+          </button>
+          <div style={{ flex: 1, minWidth: 0, overflowX: 'auto' }}>
+            <SegmentedControl
+              aria-label="Board column"
+              value={phoneColumn}
+              onChange={setPhoneColumn}
+              options={COLUMNS.map((c) => ({
+                value: c.key,
+                label: `${c.label} ${(itemsByColumn[c.key] || []).length}`,
+                activeColor: c.color,
+              }))}
+            />
+          </div>
+          <button
+            type="button"
+            aria-label="Next column"
+            className="button-secondary"
+            style={{ minWidth: 44, minHeight: 44, padding: 0 }}
+            disabled={COLUMNS.findIndex((c) => c.key === phoneColumn) === COLUMNS.length - 1}
+            onClick={() => setPhoneColumn(COLUMNS[COLUMNS.findIndex((c) => c.key === phoneColumn) + 1].key)}
+          >
+            ›
+          </button>
+        </div>
+      )}
+
       <div style={{ display: 'flex', gap: 12, flex: 1, overflowX: 'auto', alignItems: 'flex-start' }}>
-        {COLUMNS.map((col) => {
+        {COLUMNS.filter((col) => !phone || col.key === phoneColumn).map((col) => {
           const composer = composers[col.key] || emptyComposer();
           return (
             <div
@@ -338,7 +390,8 @@ export const KanbanBoard: React.FC = () => {
                 handleDrop(col.key);
               }}
               style={{
-                flex: '0 0 260px',
+                flex: phone ? '1 1 auto' : '0 0 260px',
+                width: phone ? '100%' : undefined,
                 background: dragOverColumn === col.key ? 'var(--tint-blue)' : 'var(--surface-alt)',
                 borderRadius: 6,
                 padding: 10,
@@ -389,9 +442,32 @@ export const KanbanBoard: React.FC = () => {
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
-                      <div style={{ flex: 1, fontSize: 13, color: 'var(--text)', fontWeight: 600 }}>
+                      <div style={{ flex: 1, fontSize: phone ? 15 : 13, color: 'var(--text)', fontWeight: 600 }}>
                         {item.title}
                       </div>
+                      {phone && (
+                        <button
+                          type="button"
+                          aria-label={`Actions for ${item.title}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActionsFor(item);
+                          }}
+                          style={{
+                            width: 44,
+                            height: 44,
+                            margin: '-10px -12px -10px 0',
+                            border: 'none',
+                            background: 'none',
+                            fontSize: 20,
+                            color: 'var(--text-muted)',
+                            cursor: 'pointer',
+                            flexShrink: 0,
+                          }}
+                        >
+                          ⋯
+                        </button>
+                      )}
                       {live && (
                         <span
                           title={`Run ${runsByWorkItem[item.id]?.status}`}
@@ -519,6 +595,41 @@ export const KanbanBoard: React.FC = () => {
           );
         })}
       </div>
+
+      {actionsFor && (
+        <Modal title={actionsFor.title} width={360} onClose={() => setActionsFor(null)}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <button
+              className="button"
+              style={{ minHeight: 44 }}
+              onClick={() => {
+                setSelectedId(actionsFor.id);
+                setActionsFor(null);
+              }}
+            >
+              Open card
+            </button>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6 }}>Move to</div>
+            {COLUMNS.filter((c) => c.key !== actionsFor.column).map((c) => (
+              <button
+                key={c.key}
+                className="button-secondary"
+                disabled={isDragDisabled(actionsFor)}
+                title={isDragDisabled(actionsFor) ? 'Agent run in progress — card is locked' : undefined}
+                style={{ minHeight: 44, display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center' }}
+                onClick={() => {
+                  moveItem(actionsFor.id, c.key);
+                  setPhoneColumn(c.key);
+                  setActionsFor(null);
+                }}
+              >
+                <span style={{ width: 10, height: 10, borderRadius: '50%', background: c.color }} />
+                {c.label}
+              </button>
+            ))}
+          </div>
+        </Modal>
+      )}
 
       {selectedId && projectId && (
         <WorkItemDrawer
