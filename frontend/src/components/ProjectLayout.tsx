@@ -109,6 +109,9 @@ export const ProjectLayout: React.FC = () => {
   // preference and is left untouched for when the window is wide again.
   const viewport = useViewport();
   const compact = viewport.isCompact;
+  // On phones the help panel opens from the top bar rather than a floating
+  // button, which sat on top of every composer at the bottom of the page.
+  const [helpOpen, setHelpOpen] = useState(false);
 
   useEffect(() => {
     if (!projectId) return;
@@ -229,6 +232,26 @@ export const ProjectLayout: React.FC = () => {
           >
             {project?.name || '…'}
           </div>
+          <button
+            type="button"
+            aria-label="Help"
+            aria-expanded={helpOpen}
+            onClick={() => setHelpOpen((o) => !o)}
+            title="Help for this page"
+            style={{
+              width: 44,
+              height: 44,
+              background: 'none',
+              border: 'none',
+              color: 'var(--sidebar-text)',
+              fontSize: 20,
+              fontWeight: 700,
+              cursor: 'pointer',
+              flexShrink: 0,
+            }}
+          >
+            ?
+          </button>
           <NotificationBell variant="dark" />
         </header>
       )}
@@ -481,7 +504,7 @@ export const ProjectLayout: React.FC = () => {
       </main>
       {/* Floating context-aware help — mounted once here so the ? button is
           available on every project page (issue #162). */}
-      <HelpSidebar />
+      {compact ? <HelpSidebar open={helpOpen} onOpenChange={setHelpOpen} /> : <HelpSidebar />}
     </div>
   );
 };

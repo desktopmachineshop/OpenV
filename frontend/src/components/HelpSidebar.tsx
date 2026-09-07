@@ -14,20 +14,38 @@ import './HelpSidebar.css';
 // Chapter slugs must match MANUAL_CHAPTERS in src/manual/index.ts — they are
 // deep-linked as /manual/<slug>.
 
-export const HelpSidebar: React.FC = () => {
-  const [isExpanded, setIsExpanded] = useState(false);
+interface HelpSidebarProps {
+  /** Controlled open state (the compact shell keeps it, with the button in
+   *  its top bar); omit for the floating button to manage it. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}
+
+export const HelpSidebar: React.FC<HelpSidebarProps> = ({ open, onOpenChange }) => {
+  const [ownExpanded, setOwnExpanded] = useState(false);
+  const controlled = open !== undefined;
+  const isExpanded = controlled ? open : ownExpanded;
+  const setIsExpanded = (next: boolean) => {
+    if (onOpenChange) onOpenChange(next);
+    if (!controlled) setOwnExpanded(next);
+  };
   const location = useLocation();
   const topic = helpTopicForPath(location.pathname);
 
   return (
     <div className={`help-sidebar ${isExpanded ? 'expanded' : 'collapsed'}`}>
-      <button
-        className="help-toggle"
-        onClick={() => setIsExpanded(!isExpanded)}
-        title={isExpanded ? 'Collapse help' : 'Expand help'}
-      >
-        {isExpanded ? '✕' : '?'}
-      </button>
+      {/* Controlled by the shell's own button on phones: a floating button
+          there lands on whatever composer sits at the bottom of the page. */}
+      {(!controlled || isExpanded) && (
+        <button
+          className="help-toggle"
+          onClick={() => setIsExpanded(!isExpanded)}
+          title={isExpanded ? 'Collapse help' : 'Expand help'}
+          aria-label={isExpanded ? 'Close help' : 'Help'}
+        >
+          {isExpanded ? '✕' : '?'}
+        </button>
+      )}
 
       {isExpanded && (
         <div className="help-content">

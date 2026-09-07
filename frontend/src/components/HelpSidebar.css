@@ -195,18 +195,26 @@ body.sidebar-expanded {
     padding: 70px 15px 15px 15px;
   }
 
-  /* Phones: the compact shell has a top bar where the button used to sit,
-     and the guided wizard's assistant button owns the bottom-right corner,
-     so the help button goes bottom-left, clear of both and the thumb. */
+  /* Phones: inside the project shell the button lives in the top bar
+     (ProjectLayout) and this floating one is not rendered; on the other
+     pages it stays bottom-right but smaller. When the panel is open it
+     covers the screen, with the close button in its top corner. */
   .help-toggle {
     width: 48px;
     height: 48px;
     font-size: 20px;
-    right: auto;
-    left: 16px;
-    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
-    /* Below the navigation drawer (900) and its backdrop (899), which
-       would otherwise show this button through the drawer's footer. */
-    z-index: 850;
+  }
+  .help-sidebar.expanded {
+    width: 100vw;
+  }
+  .help-sidebar.expanded .help-toggle {
+    top: 12px;
+    right: 12px;
+    bottom: auto;
+    width: 44px;
+    height: 44px;
+  }
+  body.sidebar-expanded {
+    padding-right: 0;
   }
 }
