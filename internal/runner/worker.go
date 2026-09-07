@@ -365,6 +365,18 @@ func (w *Worker) execute(ctx context.Context, claim *ClaimResponse) {
 		if keyEnv == "" {
 			keyEnv = providers.DefaultAPIKeyEnv(claim.Agent.Provider)
 		}
+		// The API refuses to store a name outside the provider-key catalog;
+		// a row written before that rule, or an API this runner does not
+		// trust, still must not turn the runner into a host-secret reader.
+		if !providers.IsAllowedAPIKeyEnv(keyEnv) {
+			w.finish(run.ID, agentruns.FinishRequest{
+				Status: agentruns.StatusFailed,
+				Error: "this project's provider setting names " + keyEnv +
+					" as its API key variable, which is not a provider key variable; fix the provider setting in workspace settings",
+				ErrorClass: classifySite(siteAPIKeyMissing, nil),
+			})
+			return
+		}
 		key := os.Getenv(keyEnv)
 		if key == "" {
 			w.finish(run.ID, agentruns.FinishRequest{

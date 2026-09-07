@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -59,7 +60,7 @@ func RequestLogMiddleware(next http.Handler) http.Handler {
 
 		attrs := []any{
 			slog.String("method", r.Method),
-			slog.String("path", r.URL.Path),
+			slog.String("path", redactPath(r.URL.Path)),
 			slog.Int("status", rec.status),
 			slog.Duration("duration", time.Since(start)),
 		}
@@ -84,4 +85,22 @@ func RequestLogMiddleware(next http.Handler) http.Handler {
 			slog.Info("http request", attrs...)
 		}
 	})
+}
+
+// redactPath hides the credential a public route carries in its path. The
+// interview invite token is the whole of a participant's access, so a log
+// line naming it would hand a live invite to anyone who can read logs.
+func redactPath(path string) string {
+	const prefix = "/api/v1/public/interviews/"
+	if !strings.HasPrefix(path, prefix) {
+		return path
+	}
+	rest := path[len(prefix):]
+	if rest == "" {
+		return path
+	}
+	if i := strings.IndexByte(rest, '/'); i >= 0 {
+		return prefix + "[token]" + rest[i:]
+	}
+	return prefix + "[token]"
 }

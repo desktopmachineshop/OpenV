@@ -109,14 +109,29 @@ Notes:
 - The overlay terminates plain HTTP. For TLS put a reverse proxy (Caddy,
   Traefik, nginx) in front of the frontend and API ports.
 - When the API does sit behind a reverse proxy, also set `OPENV_TRUST_PROXY=1`
-  on the api service so per-IP rate limiting on the public interview endpoints
-  keys on the real client address from `X-Forwarded-For`/`X-Real-IP` (make
-  sure the proxy overwrites those headers). Leave it unset when clients reach
+  on the api service so per-IP rate limiting — on the public interview
+  endpoints and on sign-in, registration and SSO — keys on the real client
+  address from `X-Forwarded-For`/`X-Real-IP` (make sure the proxy overwrites
+  those headers). Leave it unset when clients reach
   the API directly: the headers are client-supplied, and trusting them would
   let anyone dodge per-IP limits — or exhaust another client's bucket — by
   spoofing a header.
 - `REACT_APP_API_URL` is a build argument: the React bundle is static, so the
-  frontend image must be rebuilt when it changes.
+  frontend image must be rebuilt when it changes. The same value is written
+  into the frontend's content security policy at build time
+  (`frontend/security-headers.conf`), so the browser will only connect to
+  that API origin.
+- The API sets HSTS when `SECURE_COOKIES=true` (or `CROSS_SITE_COOKIES=true`);
+  set it only once the API is reachable over TLS alone, because browsers then
+  refuse plain HTTP to that host for a year.
+- Credential throttling defaults (per client address unless stated) can be
+  tuned with `OPENV_AUTH_IP_BURST` / `OPENV_AUTH_IP_REFILL_PER_HOUR` (30,
+  120), `OPENV_AUTH_ACCOUNT_BURST` / `_REFILL_PER_HOUR` (5 failed sign-ins,
+  20; per account), `OPENV_REGISTER_IP_BURST` / `_REFILL_PER_HOUR` (5, 10) and
+  `OPENV_SSO_IP_BURST` / `_REFILL_PER_HOUR` (20, 60). Body and upload caps:
+  `OPENV_MAX_BODY_MB` (32) and `OPENV_MAX_UPLOAD_MB` (25).
+- Set `OPENV_METRICS_TOKEN` so `/metrics` needs a bearer token; without it
+  anyone can read the API's request and runtime statistics.
 - If you switch an existing deployment from the dev Postgres password, the
   database was already initialized with the old one — `POSTGRES_PASSWORD` on
   an existing volume does not change it. Run

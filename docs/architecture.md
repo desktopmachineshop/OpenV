@@ -468,11 +468,38 @@ Every API request authenticates as one of four principals; only `/health`,
 
 ### Transport & hardening
 - **CORS** is restricted to the configured frontend origin (`CORS_ORIGIN`),
-  not "all origins", and allows credentials.
-- **Rate limiting** on the public (token-only) interview endpoints: in-memory
-  per-invite and per-IP token buckets bound provider spend from a leaked
-  invite token (`internal/api/ratelimit.go`). Behind a proxy, set
-  `OPENV_TRUST_PROXY=1` so limits key on the real client IP.
+  with credentials. The API refuses to start when the value is a wildcard or
+  empty (`api.CORSMiddleware`): reflecting any origin together with
+  credentials would let any site drive the API with a member's cookie.
+- **Browser hardening headers** on every API response
+  (`internal/api/security_headers.go`): `X-Content-Type-Options: nosniff`,
+  `X-Frame-Options: DENY`, a referrer policy and a `default-src 'none'`
+  content security policy, plus HSTS when `SECURE_COOKIES` or
+  `CROSS_SITE_COOKIES` declares a TLS-only deployment. The frontend's nginx
+  serves its own set from `frontend/security-headers.conf`, included in every
+  location block (nginx drops inherited `add_header` directives wherever a
+  location adds its own), with a CSP that allows scripts from the app's
+  origin only and names the API origin as the sole connect source.
+- **Rate limiting** (`internal/api/ratelimit.go`), in-memory token buckets:
+  the public (token-only) interview endpoints per invite and per IP, so a
+  leaked invite token cannot become unbounded provider spend; and the
+  credential endpoints — every sign-in attempt per client address, failed
+  sign-ins per account, registrations per address, and SSO starts and
+  callbacks per address (`OPENV_AUTH_*`, `OPENV_REGISTER_*`, `OPENV_SSO_*`).
+  Behind a proxy, set `OPENV_TRUST_PROXY=1` so limits key on the real client
+  IP.
+- **Request and upload caps**: every body is capped at `OPENV_MAX_BODY_MB`
+  (32 MB) and an attachment at `OPENV_MAX_UPLOAD_MB` (25 MB). An upload's
+  bytes must sniff as the image type the uploader declared
+  (`internal/api/attachment_safety.go`), and an SVG — a document that can
+  carry script — is always served as a download inside a sandboxing CSP
+  rather than rendered inline on the API origin.
+- **Provider key variables** come from a fixed catalog
+  (`providers.AllowedAPIKeyEnvs`): a workspace setting can only name the
+  variables the vendors' own tools read, so a runner can never be made to
+  hand an unrelated host secret to an agent.
+- **Log redaction**: the request log replaces the invite-token segment of
+  public interview paths with `[token]`.
 - **Sanitized error responses** (`internal/api/httperr.go`): clients get a
   stable public message while SQL text, file paths, and upstream details go
   only to the server log.

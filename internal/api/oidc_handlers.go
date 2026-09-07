@@ -114,6 +114,9 @@ func (h *Handler) OIDCLogin(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusNotFound, "sso sign-in is not configured")
 		return
 	}
+	if !h.throttleSSO(w, r) {
+		return
+	}
 	ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
 	defer cancel()
 	if err := h.oidc.ensure(ctx); err != nil {
@@ -143,6 +146,9 @@ func (h *Handler) OIDCLogin(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) OIDCCallback(w http.ResponseWriter, r *http.Request) {
 	if !h.oidc.Enabled() {
 		writeJSONError(w, http.StatusNotFound, "sso sign-in is not configured")
+		return
+	}
+	if !h.throttleSSO(w, r) {
 		return
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)

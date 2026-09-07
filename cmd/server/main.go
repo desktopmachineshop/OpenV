@@ -632,26 +632,20 @@ func main() {
 	)
 
 	// CORS: restricted to the configured frontend origin, with credentials.
-	corsOrigin := envOr("CORS_ORIGIN", "http://localhost:3000")
-	corsHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		origin := r.Header.Get("Origin")
-		if origin == corsOrigin || corsOrigin == "*" {
-			w.Header().Set("Access-Control-Allow-Origin", origin)
-			w.Header().Set("Access-Control-Allow-Credentials", "true")
-			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Org-ID")
-			// Pagination metadata (artifact totals, event cursors) and export
-			// filenames ride on response headers; without this the browser
-			// hides them from cross-origin scripts.
-			w.Header().Set("Access-Control-Expose-Headers", "X-Total-Count, X-Next-Cursor, Content-Disposition")
-			w.Header().Set("Access-Control-Max-Age", "3600")
-		}
-		if r.Method == "OPTIONS" {
-			w.WriteHeader(http.StatusOK)
-			return
-		}
-		protected.ServeHTTP(w, r)
-	})
+	// A wildcard is refused at startup rather than reflected (see
+	// api.CORSMiddleware).
+	corsHandler, err := api.CORSMiddleware(envOr("CORS_ORIGIN", "http://localhost:3000"), protected)
+	if err != nil {
+		fatal("invalid CORS_ORIGIN", err)
+	}
+	// Outermost: cap every request body, then stamp the browser-hardening
+	// headers on every response, including CORS preflights and rejections.
+	// HSTS follows SECURE_COOKIES, the deployment's declaration that it is
+	// only reached over TLS.
+	secureDeployment := os.Getenv("SECURE_COOKIES") == "true" || os.Getenv("CROSS_SITE_COOKIES") == "true"
+	rootHandler := api.SecurityHeadersMiddleware(secureDeployment)(
+		api.BodyLimitMiddleware(maxRequestBodyBytes())(corsHandler),
+	)
 
 	// HTTP server. ReadHeaderTimeout defends against slowloris-style clients
 	// holding connections open while trickling headers; IdleTimeout reclaims
@@ -665,7 +659,7 @@ func main() {
 	// per-handler request parsing.
 	srv := &http.Server{
 		Addr:              ":" + port,
-		Handler:           corsHandler,
+		Handler:           rootHandler,
 		ReadHeaderTimeout: 10 * time.Second,
 		IdleTimeout:       120 * time.Second,
 		// Derive request contexts from the signal context so long-lived SSE
@@ -701,4 +695,17 @@ func main() {
 		<-errCh // wait for ListenAndServe to return
 		slog.Info("server stopped")
 	}
+}
+
+// maxRequestBodyBytes is the cap the API places on any single request body.
+// OPENV_MAX_BODY_MB overrides the 32 MB default; attachment uploads carry a
+// tighter cap of their own (OPENV_MAX_UPLOAD_MB).
+func maxRequestBodyBytes() int64 {
+	mb := int64(32)
+	if v := os.Getenv("OPENV_MAX_BODY_MB"); v != "" {
+		if n, err := strconv.ParseInt(v, 10, 64); err == nil && n > 0 {
+			mb = n
+		}
+	}
+	return mb * 1024 * 1024
 }

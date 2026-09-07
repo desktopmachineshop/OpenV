@@ -172,6 +172,14 @@ type Handler struct {
 	interviewMsgLimiter    *rateLimiter // per-invite participant messages
 	interviewIPLimiter     *rateLimiter // per-IP intro GETs
 	interviewStreamLimiter *rateLimiter // per-IP SSE stream connects (more generous: reconnects are routine)
+
+	// Throttles for the credential endpoints (see ratelimit.go): every
+	// sign-in attempt per client address, failed sign-ins per account,
+	// registrations per address, and SSO starts/callbacks per address.
+	authIPLimiter      *rateLimiter
+	authAccountLimiter *rateLimiter
+	registerIPLimiter  *rateLimiter
+	ssoIPLimiter       *rateLimiter
 }
 
 // NewHandler creates a new API handler
@@ -233,6 +241,10 @@ func NewHandler(deps HandlerDeps) *Handler {
 		interviewMsgLimiter:    newRateLimiterFromEnv(envInterviewMsgBurst, envInterviewMsgRefill, defaultInterviewMsgBurst, defaultInterviewMsgRefill),
 		interviewIPLimiter:     newRateLimiterFromEnv(envInterviewIPBurst, envInterviewIPRefill, defaultInterviewIPBurst, defaultInterviewIPRefill),
 		interviewStreamLimiter: newRateLimiterFromEnv(envInterviewStreamBurst, envInterviewStreamRefill, defaultInterviewStreamBurst, defaultInterviewStreamRefill),
+		authIPLimiter:          newRateLimiterFromEnv(envAuthIPBurst, envAuthIPRefill, defaultAuthIPBurst, defaultAuthIPRefill),
+		authAccountLimiter:     newRateLimiterFromEnv(envAuthAccountBurst, envAuthAccountRefill, defaultAuthAccountBurst, defaultAuthAccountRefill),
+		registerIPLimiter:      newRateLimiterFromEnv(envRegisterIPBurst, envRegisterIPRefill, defaultRegisterIPBurst, defaultRegisterIPRefill),
+		ssoIPLimiter:           newRateLimiterFromEnv(envSSOIPBurst, envSSOIPRefill, defaultSSOIPBurst, defaultSSOIPRefill),
 	}
 }
 
@@ -2026,9 +2038,12 @@ func (h *Handler) UploadAttachment(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Read file content
-	fileData, err := io.ReadAll(file)
-	if err != nil {
-		respondInternal(w, r, "Failed to read file", err)
+	fileData, ok := readUpload(w, r, file)
+	if !ok {
+		return
+	}
+	if !uploadLooksLikeImage(mimeType, fileData) {
+		writeJSONError(w, http.StatusBadRequest, "File content does not match an image of the declared type")
 		return
 	}
 
@@ -2143,9 +2158,12 @@ func (h *Handler) UploadAttachmentVersion(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	fileData, err := io.ReadAll(file)
-	if err != nil {
-		respondInternal(w, r, "Failed to read file", err)
+	fileData, ok := readUpload(w, r, file)
+	if !ok {
+		return
+	}
+	if !uploadLooksLikeImage(mimeType, fileData) {
+		writeJSONError(w, http.StatusBadRequest, "File content does not match an image of the declared type")
 		return
 	}
 
@@ -2272,7 +2290,8 @@ func (h *Handler) DownloadAttachment(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "public, max-age=31536000")
 	// Saving the image should land a file named for the figure, not for
 	// whatever the uploader happened to call it.
-	w.Header().Set("Content-Disposition", fmt.Sprintf("inline; filename=%q", name))
+	w.Header().Set("Content-Disposition", fmt.Sprintf("%s; filename=%q", attachmentDisposition(mime), name))
+	setAttachmentSecurityHeaders(w, mime)
 
 	// Serve the file
 	http.ServeFile(w, r, path)

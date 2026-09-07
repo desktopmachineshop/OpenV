@@ -539,6 +539,17 @@ the events the caller may see: `actor_kind`, `actor_id`, `actor_name`, and
 name, agent name, ...). A name is omitted when the row behind the ID is gone,
 so clients must fall back to the raw IDs.
 
+## Throttling
+
+Sign-in (`POST /auth/login`), registration (`POST /auth/register`) and the
+Google and OIDC start and callback routes are throttled per client address,
+and sign-in additionally per account on failed attempts; the public interview
+routes are throttled per invite and per address. A throttled request is
+answered `429` with a JSON `error` and a `Retry-After` header in seconds.
+Request bodies are capped at 32 MB and attachment uploads at 25 MB (`413`
+when exceeded); an upload whose bytes do not match the declared image type
+is refused with `400`, and an SVG attachment is always served as a download.
+
 ## Error responses
 
 Errors are plain-text (`http.Error`) or `{"error": "..."}` JSON depending on

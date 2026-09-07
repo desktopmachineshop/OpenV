@@ -51,6 +51,43 @@ const (
 	defaultInterviewStreamRefill = 120.0
 )
 
+// Throttling for the credential endpoints. bcrypt makes each password guess
+// expensive for the server but nothing stopped a client from making them
+// back to back; these buckets do. Sign-in charges every attempt against the
+// client address and every FAILED attempt against the account, so a shared
+// office address is not locked out by one colleague's typo while a targeted
+// account still closes after a handful of wrong passwords. Registration and
+// the single sign-on start/callback charge per address only.
+//
+// Defaults (overridable via environment variables):
+//
+//	OPENV_AUTH_IP_BURST                 = 30  sign-in attempts instantly per address
+//	OPENV_AUTH_IP_REFILL_PER_HOUR       = 120 sign-in attempts/hour steady state
+//	OPENV_AUTH_ACCOUNT_BURST            = 5   failed sign-ins instantly per account
+//	OPENV_AUTH_ACCOUNT_REFILL_PER_HOUR  = 20  failed sign-ins/hour steady state
+//	OPENV_REGISTER_IP_BURST             = 5   registrations instantly per address
+//	OPENV_REGISTER_IP_REFILL_PER_HOUR   = 10  registrations/hour steady state
+//	OPENV_SSO_IP_BURST                  = 20  SSO starts or callbacks instantly per address
+//	OPENV_SSO_IP_REFILL_PER_HOUR        = 60  SSO starts or callbacks/hour steady state
+const (
+	envAuthIPBurst           = "OPENV_AUTH_IP_BURST"
+	envAuthIPRefill          = "OPENV_AUTH_IP_REFILL_PER_HOUR"
+	envAuthAccountBurst      = "OPENV_AUTH_ACCOUNT_BURST"
+	envAuthAccountRefill     = "OPENV_AUTH_ACCOUNT_REFILL_PER_HOUR"
+	envRegisterIPBurst       = "OPENV_REGISTER_IP_BURST"
+	envRegisterIPRefill      = "OPENV_REGISTER_IP_REFILL_PER_HOUR"
+	envSSOIPBurst            = "OPENV_SSO_IP_BURST"
+	envSSOIPRefill           = "OPENV_SSO_IP_REFILL_PER_HOUR"
+	defaultAuthIPBurst       = 30
+	defaultAuthIPRefill      = 120.0
+	defaultAuthAccountBurst  = 5
+	defaultAuthAccountRefill = 20.0
+	defaultRegisterIPBurst   = 5
+	defaultRegisterIPRefill  = 10.0
+	defaultSSOIPBurst        = 20
+	defaultSSOIPRefill       = 60.0
+)
+
 // cleanupEvery bounds how often a limiter sweeps stale buckets, and
 // staleAfter is how long a bucket must sit untouched before the sweep drops
 // it (any bucket idle that long has refilled to burst, so dropping it is
@@ -145,6 +182,60 @@ func (l *rateLimiter) allow(key string) (bool, time.Duration) {
 	}
 	waitHours := (1 - b.tokens) / l.refillPerHour
 	return false, time.Duration(waitHours * float64(time.Hour))
+}
+
+// check reports whether key currently has a token without consuming one, so
+// a caller can refuse a request that would fail anyway and charge the bucket
+// only once the outcome is known (see penalize). A nil limiter allows
+// everything.
+func (l *rateLimiter) check(key string) (bool, time.Duration) {
+	if l == nil {
+		return true, 0
+	}
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	b := l.refillLocked(key)
+	if b.tokens >= 1 {
+		return true, 0
+	}
+	waitHours := (1 - b.tokens) / l.refillPerHour
+	return false, time.Duration(waitHours * float64(time.Hour))
+}
+
+// penalize consumes one token for key, letting it go negative-free: a bucket
+// already empty stays empty and its wait simply restarts. Used to charge a
+// failed sign-in against the account it targeted.
+func (l *rateLimiter) penalize(key string) {
+	if l == nil {
+		return
+	}
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	b := l.refillLocked(key)
+	if b.tokens >= 1 {
+		b.tokens--
+	} else {
+		b.tokens = 0
+	}
+}
+
+// refillLocked returns key's bucket after crediting the tokens elapsed time
+// has earned it, creating a full bucket for an unseen key. Called with l.mu
+// held.
+func (l *rateLimiter) refillLocked(key string) *bucket {
+	now := l.now()
+	l.maybeCleanupLocked(now)
+	b, ok := l.buckets[key]
+	if !ok {
+		b = &bucket{tokens: l.burst, last: now}
+		l.buckets[key] = b
+		return b
+	}
+	if elapsed := now.Sub(b.last).Hours(); elapsed > 0 {
+		b.tokens = math.Min(l.burst, b.tokens+elapsed*l.refillPerHour)
+		b.last = now
+	}
+	return b
 }
 
 // maybeCleanupLocked drops buckets untouched long enough to have fully
