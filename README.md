@@ -39,7 +39,7 @@ Setup guide: [docs/agents.md](docs/agents.md)
 
 - **Hosted service**: free while OpenV is in alpha, every feature included,
   no card and no trial clock. Four tiers are planned: **Single User** (free,
-  bring your own AI subscription), **Business Life** (higher cloud-runner
+  bring your own AI subscription), **Business Lite** (higher cloud-runner
   limits, agents on your own API keys, always-on agents), **Business**
   (shared company workspaces, teams and per-project access) and
   **Enterprise** (run on your own servers with our support, SSO/OIDC setup,

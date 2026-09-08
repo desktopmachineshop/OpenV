@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useViewport } from '../hooks/useViewport';
 import {
   ALPHA_NOTE,
-  BUSINESS_LIFE_LIMITS,
+  BUSINESS_LITE_LIMITS,
   DATA_PROMISE,
   EXPORT_FORMATS,
   FEATURES,
@@ -383,9 +383,9 @@ export const Landing: React.FC<LandingProps> = ({ section }) => {
                 <li key={line}>{line}</li>
               ))}
             </ul>
-            <p style={{ margin: '14px 0 6px', fontSize: 15, color: 'var(--text-body)' }}>Business Life will raise the cloud runner to:</p>
+            <p style={{ margin: '14px 0 6px', fontSize: 15, color: 'var(--text-body)' }}>Business Lite will raise the cloud runner to:</p>
             <ul style={{ margin: 0, paddingLeft: 18, fontSize: 15, lineHeight: 1.7, color: 'var(--text-body)' }}>
-              {BUSINESS_LIFE_LIMITS.map((line) => (
+              {BUSINESS_LITE_LIMITS.map((line) => (
                 <li key={line}>{line}</li>
               ))}
             </ul>
