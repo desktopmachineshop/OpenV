@@ -1,7 +1,7 @@
 {
   "short_name": "OpenV",
   "name": "OpenV - V&V Requirements Management",
-  "description": "Verification & Validation requirements management platform",
+  "description": "Requirements management with traceability, V&V evidence and AI agents that work inside the audit trail",
   "icons": [
     {
       "src": "favicon.ico",

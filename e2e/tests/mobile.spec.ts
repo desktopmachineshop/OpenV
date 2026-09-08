@@ -39,6 +39,15 @@ test.afterAll(async () => {
   await page?.close();
 });
 
+test('the landing page fits a phone', async () => {
+  await page.goto('/');
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  await expectNoHorizontalScroll(page);
+  await page.goto('/pricing');
+  await expect(page.locator('#pricing')).toBeInViewport();
+  await expectNoHorizontalScroll(page);
+});
+
 test('registers on a phone-sized screen without sideways scrolling', async () => {
   await page.goto('/login');
   await expectNoHorizontalScroll(page);

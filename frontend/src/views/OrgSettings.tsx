@@ -202,7 +202,7 @@ export const OrgSettings: React.FC = () => {
             <div className="card">
               <h3>Plan</h3>
               <p style={{ fontSize: 13, color: 'var(--text)', marginBottom: 0 }}>
-                Plan: <strong>{org.plan || 'Free'}</strong> — billing coming soon.
+                Plan: <strong>{org.plan || 'Free'}</strong> — free during the alpha with every feature included. See <a href="/pricing" target="_blank" rel="noreferrer">what free means</a>.
               </p>
             </div>
 

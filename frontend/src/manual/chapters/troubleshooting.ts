@@ -76,6 +76,18 @@ an agent's output, check there first.
 - Projects set to **API key** auth (Project Settings → Agents) always use the
   workspace's key regardless of who launches.
 
+## Is OpenV free? What happens to my data if that changes?
+
+The hosted service is free while OpenV is in alpha, with every feature
+included; self-hosting is free for good under the AGPL-3.0; and registered
+charities and open-source projects stay free on the hosted service. The
+[pricing page](/pricing) lists the hosted-runner limits in force. There is no
+billing in the product today.
+
+If hosted OpenV ever charges, your data will not be behind the paywall.
+Export and import stay available on every plan, and a JSON export restores
+into a self-hosted OpenV.
+
 ## How do I back up a project?
 
 Use **↓ JSON** (Export project as JSON) on the Projects page — it downloads the
