@@ -50,6 +50,19 @@ export async function registerUser(page: Page, user: TestUser): Promise<void> {
   await expect(page.getByText(`${user.name}'s Space`)).toBeVisible();
 }
 
+/** The page must never be wider than the window: horizontal scrolling on a
+ *  phone means something has a fixed desktop width, and on a desktop it
+ *  means a table or pane forgot to scroll inside itself. */
+export async function expectNoHorizontalScroll(p: Page): Promise<void> {
+  const overflow = await p.evaluate(() => ({
+    scrollWidth: document.documentElement.scrollWidth,
+    innerWidth: window.innerWidth,
+  }));
+  expect(overflow.scrollWidth, `page scrolls sideways: ${JSON.stringify(overflow)}`).toBeLessThanOrEqual(
+    overflow.innerWidth
+  );
+}
+
 /** Create a project and return its id; leaves the browser in the project shell. */
 export async function createProject(page: Page, name: string): Promise<string> {
   // A fresh account renders the button twice (empty-state placeholder and the

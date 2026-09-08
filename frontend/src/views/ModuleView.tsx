@@ -61,7 +61,15 @@ export const ModuleView: React.FC = () => {
   // How much room the notes panel takes. Same three states as the project
   // menu, remembered separately: notes and navigation are wanted at different
   // times.
-  const [notesMode, setNotesMode] = useState<PanelMode>(() => loadPanelMode('artifact-notes'));
+  // A first visit on a small laptop (under 1200px) starts the notes column
+  // auto-hidden: pinned, it would leave the document a sliver between the
+  // tree and the notes. A saved choice always wins.
+  const [notesMode, setNotesMode] = useState<PanelMode>(() =>
+    loadPanelMode(
+      'artifact-notes',
+      typeof window !== 'undefined' && window.innerWidth < 1200 ? 'autohide' : 'pinned'
+    )
+  );
   const [notesHovered, setNotesHovered] = useState(false);
   // An explicit "show it to me" from the edge strip. Hover alone never opens a
   // hidden notes panel, so this is the only way back from that mode, and it
@@ -102,6 +110,14 @@ export const ModuleView: React.FC = () => {
     return saved ? parseInt(saved) : 320;
   });
   const [isResizing, setIsResizing] = useState<'left' | 'right' | null>(null);
+  // The tree column as drawn: the saved width, clamped so the document keeps
+  // at least 420px beside the project sidebar and a pinned notes column. The
+  // saved value is untouched — a wider window gets it back.
+  const notesTakesSpace = panelTakesSpace(notesMode);
+  const leftColumnDrawn = Math.max(
+    200,
+    Math.min(leftColumnWidth, viewport.width - 260 - (notesTakesSpace ? rightColumnWidth + 10 : 10) - 420)
+  );
   // Drag origin for a column resize: the pointer position and column width at
   // mousedown. Resizing is a delta from that origin rather than an absolute
   // position derived from clientX, so the divider stays under the cursor no
@@ -165,7 +181,7 @@ export const ModuleView: React.FC = () => {
     resizeOrigin.current = {
       side,
       startX: e.clientX,
-      startWidth: side === 'left' ? leftColumnWidth : rightColumnWidth,
+      startWidth: side === 'left' ? leftColumnDrawn : rightColumnWidth,
     };
     setIsResizing(side);
   };
@@ -1104,7 +1120,9 @@ export const ModuleView: React.FC = () => {
             fontSize: '12px',
             backgroundColor: 'var(--surface)',
             cursor: 'pointer',
+            width: 'auto',
             minWidth: '180px',
+            maxWidth: '100%',
           }}
         >
           <option value="live">Live Project</option>
@@ -1304,7 +1322,7 @@ export const ModuleView: React.FC = () => {
           rather than unmounted. */}
       <div style={stacked
         ? { flex: 1, minWidth: 0, display: stackedPane === 'tree' ? 'flex' : 'none', flexDirection: 'column', overflowX: 'hidden', overflowY: 'hidden', minHeight: 0 }
-        : { width: `${leftColumnWidth}px`, minWidth: '200px', maxWidth: '800px', display: 'flex', flexDirection: 'column', overflowX: 'hidden', overflowY: 'hidden', minHeight: 0, paddingRight: '10px' }}>
+        : { width: `${leftColumnDrawn}px`, minWidth: '200px', maxWidth: '800px', display: 'flex', flexDirection: 'column', overflowX: 'hidden', overflowY: 'hidden', minHeight: 0, paddingRight: '10px' }}>
         <ErrorBanner message={error} onDismiss={() => setError('')} style={{ marginBottom: 15 }} />
         {!isBaselineView && (
           <button
@@ -1711,6 +1729,9 @@ export const ModuleView: React.FC = () => {
 
       <div style={{ display: stacked && stackedPane === 'tree' ? 'none' : 'flex', flex: 1, gap: '0', minWidth: 0, overflow: 'hidden' }}>
         <div style={{ flex: 1, minWidth: 0, overflow: 'auto', display: stacked && stackedPane !== 'document' ? 'none' : 'flex', flexDirection: 'column', paddingLeft: stacked ? 0 : '10px', paddingRight: stacked ? 0 : selectedArtifact ? '5px' : '10px' }}>
+        {/* The document and its editor read at the measure on a wide screen;
+            the column itself keeps the notes handle at the window's edge. */}
+        <div className={stacked ? undefined : 'measure'} style={{ width: '100%' }}>
         {!isBaselineView && isEditing && editingArtifact && (
           <ArtifactEditor
             artifact={editingArtifact}
@@ -1776,6 +1797,7 @@ export const ModuleView: React.FC = () => {
           </div>
         )}
         </div>
+        </div>
 
         {/* The notes column stays whether or not an artifact is selected: its
             comments tab needs one, its assistant tab does not. Its width is
@@ -1799,7 +1821,7 @@ export const ModuleView: React.FC = () => {
               display: 'flex',
               justifyContent: 'center',
               paddingTop: 12,
-              fontSize: 10,
+              fontSize: 12,
               color: 'var(--text-muted)',
             }}
           >

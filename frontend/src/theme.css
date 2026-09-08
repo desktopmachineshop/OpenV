@@ -15,6 +15,13 @@
 :root {
   color-scheme: light;
 
+  /* Reading measure: the widest a document, form or settings card grows on
+     a large screen (docs/plans/mobile-support.md §8). One number, so every
+     capped surface stops at the same place. */
+  --measure: 1100px;
+  /* A single-line field or a hint under one: shorter than the measure. */
+  --measure-field: 720px;
+
   /* App shell */
   --bg-app: #f5f6fa;
   --surface: #ffffff;

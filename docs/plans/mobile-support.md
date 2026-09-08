@@ -278,6 +278,48 @@ reports elements past the viewport, clipped containers, tap targets under
 options in personal settings, the workspace switcher menu, the agent
 editor sheet, and the runs and automations tables.
 
+### Desktop pass (2026-09-08)
+
+The same run-through for desktop displays, from a 1024 px laptop to 4K.
+The audit tool gained ten desktop profiles (`npm run audit:desktop` in
+`e2e/`): 1024×768, 1280×800, 1366×768, 1440×900, 1536×864 (Windows at
+125 %), 1920×1080, 2560×1440, 3840×2160 at a device pixel ratio of 2, and
+HiDPI variants of 1440 and 1920 at 2×. On a desktop profile the tool
+clicks instead of tapping, skips the phone-only drawer screens, applies a
+24 px click-target floor instead of the 32 px tap floor, and adds three
+wide-screen checks: text blocks wider than 900 px with over 200
+characters (unbounded line length), single-line fields wider than 720 px,
+and raster images drawn larger than their pixels (blur on HiDPI). Nothing
+overflowed, nothing was blurry, and no text block ran too long; the
+findings and the fixes, by class:
+
+- **A squeezed document at 1024 px** — the requirements module drew the
+  tree at its saved 400 px and the notes column at 320 px, which left the
+  document a 50 px sliver with 22 px-wide form fields. The tree column is
+  now drawn at its saved width clamped so the document keeps at least
+  420 px (`ModuleView`), and a first visit under 1200 px starts the notes
+  column auto-hidden; a saved choice still wins.
+- **Reading surfaces on a wide display** — one token, `--measure: 1100px`
+  in `theme.css`, and a `.measure` utility in `index.css`. The artifact
+  document and its editor, and the agent editor, stop growing there and
+  stay left-aligned with their pane; inside a measured surface a
+  single-line field or a hint under one stops at `--measure-field`
+  (720 px). Tables keep their full width and scroll.
+- **Stretched fields** — the baseline selector took the toolbar's whole
+  width (a 2320 px `<select>` at 2560); it is now `width: auto`. Workspace
+  name fields, run review notes and the bulk review note carry a maximum
+  width.
+- **Click targets and text** — the "Menu: Pinned" and "Notes: Pinned"
+  mode buttons were 22 and 18 px tall at 11 px; the tree's move up and
+  down arrows 18 px; the test-run status select 22 px; the manual's
+  heading links 22 px; the collapsed-panel strip glyph 10 px. All are at
+  or above 24 px and 12 px now.
+
+`desktop.spec.ts` (chromium only, viewports from `test.use`) keeps the two
+broken contracts under CI: at 1024×768 every page fits without sideways
+scrolling and the document keeps its 400 px; at 2560×1440 the document
+and the editor's title field stop at the measures.
+
 Deferred, each a follow-up of its own:
 
 - Web Push (VAPID keys, a subscription table, a subscribe endpoint, the

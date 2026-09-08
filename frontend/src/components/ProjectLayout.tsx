@@ -272,7 +272,7 @@ export const ProjectLayout: React.FC = () => {
             justifyContent: 'center',
             paddingTop: 12,
             color: 'var(--sidebar-text-dim)',
-            fontSize: 10,
+            fontSize: 12,
           }}
           title={`Project menu: ${panelModeLabel(navMode)} — click to ${
             open ? 'hide' : 'show'
@@ -490,8 +490,9 @@ export const ProjectLayout: React.FC = () => {
               border: '1px solid var(--sidebar-border)',
               borderRadius: 4,
               color: 'var(--sidebar-text-dim)',
-              fontSize: 11,
-              padding: '4px 6px',
+              fontSize: 12,
+              padding: '5px 6px',
+              minHeight: 26,
               cursor: 'pointer',
             }}
           >

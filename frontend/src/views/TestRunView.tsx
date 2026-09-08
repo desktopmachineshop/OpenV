@@ -185,7 +185,7 @@ export const TestRunView: React.FC = () => {
             color: '#fff',
             border: 'none',
             borderRadius: 12,
-            padding: '3px 10px',
+            padding: '5px 10px',
             fontSize: 12,
             fontWeight: 600,
             cursor: readOnly ? 'default' : 'pointer',

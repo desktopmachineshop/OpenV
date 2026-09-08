@@ -1,15 +1,19 @@
 #!/usr/bin/env node
-// Phone-width audit of every screen.
+// Layout audit of every screen at phone and desktop sizes.
 //
-// Renders a production build on a Pixel 5 (Chromium) and optionally an
-// iPhone 13 (WebKit) against a mocked API, opens the modals and sheets
-// reachable from each screen, and reports per screen:
+// Renders a production build on a Pixel 5 (Chromium), an iPhone 13 (WebKit)
+// and a set of desktop profiles (1024 px laptop to 4K, plus HiDPI) against a
+// mocked API, opens the modals and sheets reachable from each screen, and
+// reports per screen:
 //   - elements extending past the viewport's right edge (page overflow),
 //   - containers whose content is clipped horizontally (scrollWidth >
 //     clientWidth with overflow hidden/auto/scroll), excluding known
 //     scrollers such as .table-scroll and .tab-strip,
 //   - interactive elements with a tap target under 32 px,
 //   - visible text under 12 px,
+//   - on desktop profiles only: text blocks running wider than a readable
+//     measure, form fields stretched across the screen, and raster images
+//     drawn larger than their pixels (blur on HiDPI),
 //   - page errors.
 // It is the regression tool for the class of defect fixed in the phone
 // polish pass (docs/plans/mobile-support.md §8): run it after any layout
@@ -17,12 +21,15 @@
 //
 // Usage (from e2e/, with the frontend build served statically):
 //   cd frontend && CI=true npm run build && npx serve -s build -l 5000
-//   cd e2e && npm run audit:phone
+//   cd e2e && npm run audit:phone        # Pixel 5
+//   cd e2e && npm run audit:desktop      # every desktop profile
 // Environment:
 //   BASE_URL       where the build is served (default http://127.0.0.1:5000)
 //   OUT            directory for audit.json and screenshots
 //                  (default test-results/phone-audit)
-//   ENGINES        comma list of android,iphone,desktop (default android)
+//   ENGINES        comma list of android, iphone, desktop (default android);
+//                  desktop:<profile+...> restricts the desktop pass, e.g.
+//                  desktop:laptop-1366+fhd-1920 (see DESKTOP_PROFILES)
 //   TAGS           comma list of screen tags to restrict the run
 //   CHROMIUM_PATH  executablePath override for Chromium
 // Exit code is 1 when a screen fails to render or throws a page error;
@@ -155,8 +162,9 @@ async function mock(page) {
     return route.fulfill({ status: 200, contentType: 'application/json', body: route.request().method() === 'GET' ? '[]' : '{}' });
   });
 }
-const AUDIT = () => {
+const AUDIT = (opts) => {
   const vw = window.innerWidth;
+  const desktop = !!(opts && opts.desktop);
   const inScroller = (el) => {
     for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) {
       const o = getComputedStyle(p).overflowX;
@@ -167,7 +175,11 @@ const AUDIT = () => {
   };
   const vis = (el) => { const r = el.getBoundingClientRect(); const cs = getComputedStyle(el); return r.width > 0 && r.height > 0 && cs.visibility !== 'hidden' && cs.display !== 'none'; };
   const desc = (el) => `${el.tagName.toLowerCase()}${el.id ? '#' + el.id : ''}${el.className && typeof el.className === 'string' ? '.' + el.className.trim().split(/\s+/).slice(0, 2).join('.') : ''} "${(el.getAttribute('aria-label') || el.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 40)}"`;
-  const out = { overflow: [], clipped: [], small: [], tiny: [], scrollWidth: document.documentElement.scrollWidth, vw, coarse: matchMedia('(hover: none) and (pointer: coarse)').matches };
+  const out = { overflow: [], clipped: [], small: [], tiny: [], lines: [], stretched: [], blurry: [], scrollWidth: document.documentElement.scrollWidth, vw, dpr: window.devicePixelRatio, coarse: matchMedia('(hover: none) and (pointer: coarse)').matches };
+  // Desktop-only measures: a text block wider than this is hard to read; a
+  // field wider than this is a form stretched across the screen.
+  const MEASURE = 900;
+  const FIELD = 720;
   const all = Array.from(document.querySelectorAll('body *'));
   for (const el of all) {
     if (!vis(el)) continue;
@@ -189,8 +201,28 @@ const AUDIT = () => {
     if (el.matches('button, a[href], input:not([type=hidden]), select, textarea, [role=button], [role=tab], [role=radio], [role=checkbox]') && !el.closest('svg')) {
       const isTick = el.matches('input[type=checkbox], input[type=radio]');
       const inlineLink = el.matches('a') && cs.display === 'inline';
-      const floor = isTick ? 18 : 32;
+      // A mouse needs less than a finger: 24 px is the click floor on desktop.
+      const floor = isTick ? (desktop ? 13 : 18) : desktop ? 24 : 32;
       if (!inlineLink && (r.height < floor || r.width < floor)) out.small.push({ el: desc(el), w: Math.round(r.width), h: Math.round(r.height) });
+    }
+    if (desktop) {
+      // A paragraph-sized text block laid out wider than a readable measure.
+      if (el.matches('p, li, dd, blockquote, h1, h2, h3, h4, label, span, div') && r.width > MEASURE && !el.closest('pre, code, table, textarea, .ag-root-wrapper, [contenteditable]')) {
+        const ownText = Array.from(el.childNodes).filter((n) => n.nodeType === 3).map((n) => n.textContent).join(' ').replace(/\s+/g, ' ').trim();
+        // Only text that actually wraps: enough characters to fill more than
+        // one line at this width, and rendered on more than one line.
+        const lineHeight = parseFloat(cs.lineHeight) || parseFloat(cs.fontSize) * 1.4;
+        if (ownText.length > 200 && r.height > lineHeight * 1.5) out.lines.push({ el: desc(el), width: Math.round(r.width), chars: ownText.length });
+      }
+      // A single-line field stretched across the screen.
+      if (el.matches('input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]):not([type=hidden]), select') && r.width > FIELD && !el.closest('.ag-root-wrapper')) {
+        out.stretched.push({ el: desc(el), width: Math.round(r.width) });
+      }
+      // A raster drawn larger than its pixels: blurry, worst on HiDPI.
+      if (el.matches('img') && el.naturalWidth > 0 && !/\.svg(\?|$)/i.test(el.currentSrc || el.src || '')) {
+        const cssPixelsAvailable = el.naturalWidth / window.devicePixelRatio;
+        if (r.width > cssPixelsAvailable * 1.05) out.blurry.push({ el: desc(el), rendered: Math.round(r.width), natural: el.naturalWidth, dpr: window.devicePixelRatio, src: (el.currentSrc || el.src || '').split('/').pop() });
+      }
     }
     const fs = parseFloat(cs.fontSize);
     if (fs < 12 && el.childNodes.length && Array.from(el.childNodes).some((n) => n.nodeType === 3 && n.textContent.trim())) out.tiny.push({ el: desc(el), fontSize: fs });
@@ -200,30 +232,41 @@ const AUDIT = () => {
   out.clipped = dedupe(out.clipped, (x) => x.el).slice(0, 12);
   out.small = dedupe(out.small, (x) => x.el).slice(0, 25);
   out.tiny = dedupe(out.tiny, (x) => x.el + x.fontSize).slice(0, 15);
+  out.lines = dedupe(out.lines, (x) => x.el).slice(0, 12);
+  out.stretched = dedupe(out.stretched, (x) => x.el).slice(0, 12);
+  out.blurry = dedupe(out.blurry, (x) => x.el).slice(0, 12);
   return out;
+};
+// press taps on a touch context and clicks elsewhere, so one screen list
+// opens on phones and desktops alike.
+const press = async (locator) => {
+  if (locator.page().context()._options.hasTouch) return locator.tap();
+  return locator.click();
 };
 const SCREENS = [
   { tag: 'login', path: '/login' },
   { tag: 'register', path: '/login?mode=register' },
   { tag: 'projects', path: '/projects' },
-  { tag: 'projects-switcher', path: '/projects', open: async (p) => { const b = p.getByRole('button', { name: /Space|workspace/i }).first(); if (await b.count()) await b.tap(); } },
-  { tag: 'projects-new', path: '/projects', open: async (p) => p.getByRole('button', { name: '+ New Project' }).first().tap() },
-  { tag: 'user-menu', path: '/projects', open: async (p) => { await p.locator('[title="Sam Example"]').first().tap(); } },
-  { tag: 'user-settings', path: '/projects', open: async (p) => { await p.locator('[title="Sam Example"]').first().tap(); await p.waitForTimeout(300); await p.getByText('Settings', { exact: true }).first().tap(); } },
-  { tag: 'drawer-user-settings', path: '/projects/p1', open: async (p) => { await p.getByRole('button', { name: 'Project menu' }).tap(); await p.waitForTimeout(300); await p.getByText('Sam Example').last().tap(); } },
+  { tag: 'projects-switcher', path: '/projects', open: async (p) => { const b = p.getByRole('button', { name: /Space|workspace/i }).first(); if (await b.count()) await press(b); } },
+  { tag: 'projects-new', path: '/projects', open: async (p) => press(p.getByRole('button', { name: '+ New Project' }).first()) },
+  { tag: 'user-menu', path: '/projects', open: async (p) => { await press(p.locator('[title="Sam Example"]').first()); } },
+  { tag: 'user-settings', path: '/projects', open: async (p) => { await press(p.locator('[title="Sam Example"]').first()); await p.waitForTimeout(300); await press(p.getByText('Settings', { exact: true }).first()); } },
+  { tag: 'drawer-user-settings', phone: true, path: '/projects/p1', open: async (p) => { await press(p.getByRole('button', { name: 'Project menu' })); await p.waitForTimeout(300); await press(p.getByText('Sam Example').last()); } },
   { tag: 'overview', path: '/projects/p1' },
-  { tag: 'drawer', path: '/projects/p1', open: async (p) => p.getByRole('button', { name: 'Project menu' }).tap() },
-  { tag: 'notifications', path: '/projects/p1', open: async (p) => p.getByRole('button', { name: /notifications/i }).first().tap() },
-  { tag: 'help', path: '/projects/p1', open: async (p) => p.getByRole('button', { name: 'Help' }).first().tap() },
+  { tag: 'drawer', phone: true, path: '/projects/p1', open: async (p) => press(p.getByRole('button', { name: 'Project menu' })) },
+  { tag: 'notifications', path: '/projects/p1', open: async (p) => press(p.getByRole('button', { name: /notifications/i }).first()) },
+  { tag: 'help', path: '/projects/p1', open: async (p) => press(p.getByRole('button', { name: 'Help' }).first()) },
   { tag: 'requirements', path: '/projects/p1/requirements' },
-  { tag: 'requirements-doc', path: '/projects/p1/requirements', open: async (p) => { const ex = p.getByRole('button', { name: 'Expand all' }); if (await ex.count()) await ex.first().tap(); await p.getByText('Positioning accuracy').first().tap(); await p.waitForTimeout(600); } },
-  { tag: 'requirements-new', path: '/projects/p1/requirements', open: async (p) => p.getByRole('button', { name: '+ New Artifact' }).tap() },
-  { tag: 'requirements-edit', path: '/projects/p1/requirements', open: async (p) => { const ex = p.getByRole('button', { name: 'Expand all' }); if (await ex.count()) await ex.first().tap(); await p.getByText('Positioning accuracy').first().tap(); await p.waitForTimeout(500); await p.getByRole('button', { name: 'Edit', exact: true }).first().tap(); } },
-  { tag: 'requirements-download', path: '/projects/p1/requirements', open: async (p) => { await p.getByRole('button', { name: 'Requirements actions' }).tap(); await p.getByRole('button', { name: /Download/ }).first().tap(); } },
-  { tag: 'requirements-menu', path: '/projects/p1/requirements', open: async (p) => { const ex = p.getByRole('button', { name: 'Expand all' }); if (await ex.count()) await ex.first().tap(); await p.getByRole('button', { name: /Actions for Positioning/ }).tap(); } },
+  { tag: 'requirements-doc', path: '/projects/p1/requirements', open: async (p) => { const ex = p.getByRole('button', { name: 'Expand all' }); if (await ex.count()) await press(ex.first()); await press(p.getByText('Positioning accuracy').first()); await p.waitForTimeout(600); } },
+  { tag: 'requirements-new', path: '/projects/p1/requirements', open: async (p) => press(p.getByRole('button', { name: '+ New Artifact' })) },
+  { tag: 'requirements-edit', path: '/projects/p1/requirements', open: async (p) => { const ex = p.getByRole('button', { name: 'Expand all' }); if (await ex.count()) await press(ex.first()); await press(p.getByText('Positioning accuracy').first()); await p.waitForTimeout(500); await press(p.getByRole('button', { name: 'Edit', exact: true }).first()); } },
+  // On a phone the toolbar folds into an action sheet; a desktop has the
+  // Download button in the toolbar itself.
+  { tag: 'requirements-download', path: '/projects/p1/requirements', open: async (p) => { await press(p.getByRole('button', { name: 'Requirements actions' })); await press(p.getByRole('button', { name: /Download/ }).first()); }, openDesktop: async (p) => press(p.getByRole('button', { name: /Download/ }).first()) },
+  { tag: 'requirements-menu', path: '/projects/p1/requirements', open: async (p) => { const ex = p.getByRole('button', { name: 'Expand all' }); if (await ex.count()) await press(ex.first()); await press(p.getByRole('button', { name: /Actions for Positioning/ })); } },
   { tag: 'baseline-compare', path: '/projects/p1/baselines/b1/compare' },
   { tag: 'guided', path: '/projects/p1/guided' },
-  { tag: 'guided-assistant', path: '/projects/p1/guided', open: async (p) => { const b = p.getByRole('button', { name: /assistant/i }).first(); if (await b.count()) await b.tap(); } },
+  { tag: 'guided-assistant', path: '/projects/p1/guided', open: async (p) => { const b = p.getByRole('button', { name: /assistant/i }).first(); if (await b.count()) await press(b); } },
   { tag: 'interviews', path: '/projects/p1/interviews' },
   { tag: 'vv', path: '/projects/p1/vv' },
   { tag: 'test-run', path: '/projects/p1/vv/runs/tr1' },
@@ -231,28 +274,28 @@ const SCREENS = [
   { tag: 'impact', path: '/projects/p1/impact?artifact=req-2' },
   { tag: 'review', path: '/projects/p1/review' },
   { tag: 'board', path: '/projects/p1/board' },
-  { tag: 'board-card', path: '/projects/p1/board', open: async (p) => { await p.getByText('Write the enclosure interlock').first().tap(); } },
+  { tag: 'board-card', path: '/projects/p1/board', open: async (p) => { await press(p.getByText('Write the enclosure interlock').first()); } },
   { tag: 'crew', path: '/projects/p1/crew' },
   { tag: 'crew-network', path: '/projects/p1/crew/network' },
   { tag: 'automations', path: '/projects/p1/automations' },
-  { tag: 'automations-new', path: '/projects/p1/automations', open: async (p) => { const b = p.getByRole('button', { name: /New automation|\+ New/i }).first(); if (await b.count()) await b.tap(); } },
+  { tag: 'automations-new', path: '/projects/p1/automations', open: async (p) => { const b = p.getByRole('button', { name: /New automation|\+ New/i }).first(); if (await b.count()) await press(b); } },
   { tag: 'agent-runs', path: '/projects/p1/agent-runs' },
-  { tag: 'agent-run-detail', path: '/projects/p1/agent-runs', open: async (p) => { const b = p.getByText('Review the safety requirements').first(); if (await b.count()) await b.tap(); } },
+  { tag: 'agent-run-detail', path: '/projects/p1/agent-runs', open: async (p) => { const b = p.getByText('Review the safety requirements').first(); if (await b.count()) await press(b); } },
   { tag: 'agents', path: '/projects/p1/agents' },
-  { tag: 'agents-edit', path: '/projects/p1/agents', open: async (p) => { const b = p.getByText('Requirements Analyst').first(); if (await b.count()) await b.tap(); } },
+  { tag: 'agents-edit', path: '/projects/p1/agents', open: async (p) => { const b = p.getByText('Requirements Analyst').first(); if (await b.count()) await press(b); } },
   { tag: 'activity', path: '/projects/p1/activity' },
   { tag: 'settings', path: '/projects/p1/settings' },
   { tag: 'settings-agents', path: '/projects/p1/settings?tab=agents' },
   { tag: 'settings-access', path: '/projects/p1/settings?tab=access' },
   { tag: 'org-settings', path: '/org/settings' },
-  { tag: 'org-members', path: '/org/settings', open: async (p) => { const t = p.getByRole('tab', { name: /Members/ }); if (await t.count()) await t.tap(); } },
-  { tag: 'org-runners', path: '/org/settings', open: async (p) => { const t = p.getByRole('tab', { name: /Runners/ }); if (await t.count()) await t.tap(); } },
-  { tag: 'org-usage', path: '/org/settings', open: async (p) => { const t = p.getByRole('tab', { name: /Usage|Budget/ }); if (await t.count()) await t.tap(); } },
-  { tag: 'org-quality', path: '/org/settings', open: async (p) => { const t = p.getByRole('tab', { name: /Quality/ }); if (await t.count()) await t.tap(); } },
+  { tag: 'org-members', path: '/org/settings', open: async (p) => { const t = p.getByRole('tab', { name: /Members/ }); if (await t.count()) await press(t); } },
+  { tag: 'org-runners', path: '/org/settings', open: async (p) => { const t = p.getByRole('tab', { name: /Runners/ }); if (await t.count()) await press(t); } },
+  { tag: 'org-usage', path: '/org/settings', open: async (p) => { const t = p.getByRole('tab', { name: /Usage|Budget/ }); if (await t.count()) await press(t); } },
+  { tag: 'org-quality', path: '/org/settings', open: async (p) => { const t = p.getByRole('tab', { name: /Quality/ }); if (await t.count()) await press(t); } },
   { tag: 'manual', path: '/manual' },
   { tag: 'landing', path: '/' },
 ];
-async function runEngine(engine, device, name) {
+async function runEngine(engine, device, name, desktop = false) {
   const browser = await engine.launch(
     engine === chromium && process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {}
   );
@@ -260,6 +303,9 @@ async function runEngine(engine, device, name) {
   const only = (process.env.TAGS || '').split(',').filter(Boolean);
   for (const s of SCREENS) {
     if (only.length && !only.includes(s.tag)) continue;
+    // Phone-only screens (the drawer) have no desktop counterpart.
+    if (desktop && s.phone) continue;
+    const open = desktop && s.openDesktop ? s.openDesktop : s.open;
     // A fresh context per screen: Chromium flips its hover/pointer media
     // flags after a synthetic mouse event, which real phones never see.
     const ctx = await browser.newContext({ ...device, baseURL: BASE_URL, serviceWorkers: 'block' });
@@ -270,8 +316,8 @@ async function runEngine(engine, device, name) {
     let openErr = '';
     try {
       await page.goto(s.path); await page.waitForTimeout(900);
-      if (s.open) { try { await s.open(page); } catch (e) { openErr = String(e).split('\n')[0].slice(0, 120); } await page.waitForTimeout(500); }
-      const audit = await page.evaluate(AUDIT);
+      if (open) { try { await open(page); } catch (e) { openErr = String(e).split('\n')[0].slice(0, 120); } await page.waitForTimeout(500); }
+      const audit = await page.evaluate(AUDIT, { desktop });
       await page.screenshot({ path: `${OUT}/${name}-${s.tag}.png`, fullPage: true });
       report.push({ tag: s.tag, url: page.url().replace(BASE_URL, ''), openErr, errors, ...audit });
     } catch (e) {
@@ -282,14 +328,40 @@ async function runEngine(engine, device, name) {
   await browser.close();
   return report;
 }
+// Desktop profiles: the common laptop panels, the Windows 125 % scaling
+// size, full HD, 1440p, 4K at its native 2x scale, and two HiDPI variants
+// that catch rasters drawn larger than their pixels.
+const DESKTOP_PROFILES = {
+  'laptop-1024': { width: 1024, height: 768, scale: 1 },
+  'laptop-1280': { width: 1280, height: 800, scale: 1 },
+  'laptop-1366': { width: 1366, height: 768, scale: 1 },
+  'laptop-1440': { width: 1440, height: 900, scale: 1 },
+  'win125-1536': { width: 1536, height: 864, scale: 1 },
+  'fhd-1920': { width: 1920, height: 1080, scale: 1 },
+  'qhd-2560': { width: 2560, height: 1440, scale: 1 },
+  'uhd-3840': { width: 1920, height: 1080, scale: 2 }, // 3840x2160 panel at 200 %
+  'hidpi-1440': { width: 1440, height: 900, scale: 2 },
+  'hidpi-1920': { width: 1920, height: 1080, scale: 2 },
+};
+const desktopDevice = (p) => ({
+  ...devices['Desktop Chrome'],
+  viewport: { width: p.width, height: p.height },
+  deviceScaleFactor: p.scale,
+});
 (async () => {
-  const which = process.env.ENGINES || 'android';
+  const which = (process.env.ENGINES || 'android').split(',').map((s) => s.trim()).filter(Boolean);
   const all = {};
   if (which.includes('android')) all.android = await runEngine(chromium, devices['Pixel 5'], 'android');
   if (which.includes('iphone')) all.iphone = await runEngine(webkit, devices['iPhone 13'], 'iphone');
-  // A desktop pass is a regression check for the phone fixes: nothing
-  // should have moved at 1280 px.
-  if (which.includes('desktop')) all.desktop = await runEngine(chromium, { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 800 } }, 'desktop');
+  const desktopArg = which.find((w) => w === 'desktop' || w.startsWith('desktop:'));
+  if (desktopArg) {
+    const wanted = desktopArg.includes(':') ? desktopArg.slice('desktop:'.length).split('+').filter(Boolean) : Object.keys(DESKTOP_PROFILES);
+    for (const name of wanted) {
+      const profile = DESKTOP_PROFILES[name];
+      if (!profile) { console.error(`unknown desktop profile ${name}; known: ${Object.keys(DESKTOP_PROFILES).join(', ')}`); process.exit(2); }
+      all[name] = await runEngine(chromium, desktopDevice(profile), name, true);
+    }
+  }
   fs.writeFileSync(`${OUT}/audit.json`, JSON.stringify(all, null, 1));
   let failed = false;
   for (const [eng, rep] of Object.entries(all)) {
@@ -301,6 +373,9 @@ async function runEngine(engine, device, name) {
       if (r.clipped && r.clipped.length) flags.push(`clipped:${r.clipped.length}`);
       if (r.small && r.small.length) flags.push(`small:${r.small.length}`);
       if (r.tiny && r.tiny.length) flags.push(`tiny:${r.tiny.length}`);
+      if (r.lines && r.lines.length) flags.push(`lines:${r.lines.length}`);
+      if (r.stretched && r.stretched.length) flags.push(`stretched:${r.stretched.length}`);
+      if (r.blurry && r.blurry.length) flags.push(`blurry:${r.blurry.length}`);
       if (r.errors && r.errors.length) { flags.push(`errors:${r.errors.length}`); failed = true; }
       if (r.openErr) flags.push('open-failed');
       console.log(`${eng} ${r.tag.padEnd(22)} ${flags.join(' ') || 'ok'}`);
