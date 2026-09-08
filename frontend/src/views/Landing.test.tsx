@@ -1,7 +1,14 @@
 import React, { act } from 'react';
 import { createRoot, Root } from 'react-dom/client';
 import { Landing } from './Landing';
-import { DATA_PROMISE, HOSTED_LIMITS, PRICING_TIERS } from '../landing/content';
+import {
+  ALPHA_NOTE,
+  BUSINESS_LIFE_LIMITS,
+  DATA_PROMISE,
+  HOSTED_LIMITS,
+  HOSTED_TIERS,
+  OTHER_TIERS,
+} from '../landing/content';
 
 // CRA's Jest cannot resolve react-router v7's package exports, so the router
 // is mocked with the two pieces the view uses: Link renders a plain anchor
@@ -13,8 +20,8 @@ jest.mock('react-router-dom', () => ({
 }));
 
 // The landing page is static copy; what matters is that the hosting terms,
-// the limits and the data promise from landing/content.ts all reach the DOM,
-// and that the calls to action point where they say.
+// the tiers, the limits and the data promise from landing/content.ts all
+// reach the DOM, and that the calls to action point where they say.
 
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -43,19 +50,34 @@ const render = async (el: React.ReactElement) => {
 };
 
 describe('Landing', () => {
-  it('states the three pricing tiers, the limits and the data promise', async () => {
+  it('states every tier, the alpha note, both limit lists and the data promise', async () => {
     await render(<Landing />);
     const text = container.textContent || '';
-    for (const tier of PRICING_TIERS) {
+    for (const tier of [...HOSTED_TIERS, ...OTHER_TIERS]) {
       expect(text).toContain(tier.name);
       expect(text).toContain(tier.summary);
+      for (const point of tier.points) expect(text).toContain(point);
     }
-    for (const line of HOSTED_LIMITS) {
+    expect(text).toContain(ALPHA_NOTE);
+    for (const line of [...HOSTED_LIMITS, ...BUSINESS_LIFE_LIMITS]) {
       expect(text).toContain(line);
     }
     expect(text).toContain(DATA_PROMISE);
     expect(text).toContain('ReqIF');
     expect(text).toContain('AGPL-3.0');
+  });
+
+  it('marks exactly the three paid tiers as coming soon, with one free sign-up in the hosted row', async () => {
+    await render(<Landing />);
+    const pricing = container.querySelector('#pricing') as HTMLElement;
+    const chips = Array.from(pricing.querySelectorAll('span')).filter((el) => el.textContent === 'Coming soon');
+    expect(chips).toHaveLength(3);
+    const cards = Array.from(pricing.querySelectorAll('article'));
+    expect(cards).toHaveLength(HOSTED_TIERS.length + OTHER_TIERS.length);
+    const signUps = cards.filter((card) =>
+      Array.from(card.querySelectorAll('a')).some((a) => a.getAttribute('href') === '/login?mode=register')
+    );
+    expect(signUps).toHaveLength(1);
   });
 
   it('links sign-in and registration to the login screen', async () => {
@@ -72,6 +94,7 @@ describe('Landing', () => {
     const text = (container.textContent || '').toLowerCase();
     expect(text).not.toContain('upgrade');
     expect(text).not.toContain('per seat');
+    expect(text).not.toContain('per month');
     expect(text).not.toContain('billing coming soon');
   });
 });

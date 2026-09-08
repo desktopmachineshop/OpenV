@@ -81,8 +81,10 @@ an agent's output, check there first.
 The hosted service is free while OpenV is in alpha, with every feature
 included; self-hosting is free for good under the AGPL-3.0; and registered
 charities and open-source projects stay free on the hosted service. The
-[pricing page](/pricing) lists the hosted-runner limits in force. There is no
-billing in the product today.
+hosted service will come in four tiers: Single User (free, bring your own
+AI), and Business Life, Business and Enterprise, which are coming soon. The
+[pricing page](/pricing) describes each tier and lists the hosted-runner
+limits in force. There is no billing in the product today.
 
 If hosted OpenV ever charges, your data will not be behind the paywall.
 Export and import stay available on every plan, and a JSON export restores

@@ -2,17 +2,21 @@ import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useViewport } from '../hooks/useViewport';
 import {
+  ALPHA_NOTE,
+  BUSINESS_LIFE_LIMITS,
   DATA_PROMISE,
   EXPORT_FORMATS,
   FEATURES,
   FEEDBACK_ISSUE_URL,
   HOSTED_LIMITS,
+  HOSTED_TIERS,
   IMPORT_FORMATS,
   ISSUES_URL,
   LICENSE_GLOSS,
   LICENSE_URL,
+  OTHER_TIERS,
   PRICING_FOOTNOTE,
-  PRICING_TIERS,
+  PricingTier,
   QUICKSTART_URL,
   REPO_URL,
   SELF_HOST_COMMANDS,
@@ -90,6 +94,62 @@ const ExternalLink: React.FC<{ href: string; style?: React.CSSProperties; childr
   <a href={href} target="_blank" rel="noreferrer" style={style}>
     {children}
   </a>
+);
+
+const TierCard: React.FC<{ tier: PricingTier; compact: boolean }> = ({ tier, compact }) => (
+  <article
+    aria-labelledby={`tier-${tier.id}`}
+    style={{
+      background: 'var(--bg-app)',
+      border: `1px solid ${tier.available ? 'var(--border)' : 'var(--border-soft)'}`,
+      borderRadius: 10,
+      padding: compact ? 20 : 22,
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 10,
+      minWidth: 0,
+    }}
+  >
+    <h3 id={`tier-${tier.id}`} style={{ margin: 0, fontSize: 19, color: 'var(--text)' }}>
+      {tier.name}
+    </h3>
+    {tier.available ? (
+      <div style={{ fontSize: 28, fontWeight: 700, color: 'var(--success-text)' }}>{tier.price}</div>
+    ) : (
+      <div>
+        <span
+          style={{
+            display: 'inline-block',
+            fontSize: 12,
+            fontWeight: 700,
+            letterSpacing: 0.5,
+            textTransform: 'uppercase',
+            color: 'var(--accent-text)',
+            background: 'var(--tint-blue)',
+            borderRadius: 999,
+            padding: '5px 10px',
+          }}
+        >
+          {tier.price}
+        </span>
+      </div>
+    )}
+    <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5, color: 'var(--text-body)' }}>{tier.summary}</p>
+    <ul style={{ margin: 0, paddingLeft: 18, fontSize: 14, lineHeight: 1.6, color: 'var(--text-body)', flex: 1 }}>
+      {tier.points.map((p) => (
+        <li key={p}>{p}</li>
+      ))}
+    </ul>
+    {tier.cta.external ? (
+      <ExternalLink href={tier.cta.href} style={{ ...secondaryButton, textAlign: 'center', fontSize: 14, padding: '10px 14px' }}>
+        {tier.cta.label}
+      </ExternalLink>
+    ) : (
+      <Link to={tier.cta.href} style={{ ...primaryButton, textAlign: 'center', fontSize: 14, padding: '10px 14px' }}>
+        {tier.cta.label}
+      </Link>
+    )}
+  </article>
 );
 
 export const Landing: React.FC<LandingProps> = ({ section }) => {
@@ -278,55 +338,39 @@ export const Landing: React.FC<LandingProps> = ({ section }) => {
 
         <Section alt compact={compact} id="pricing">
           <H2 compact={compact}>Pricing</H2>
-          <Lead>Three ways to run OpenV. All of them are free today, and two of them stay that way.</Lead>
+          <Lead>Free while in alpha, free forever to self-host, and a clear path when your team grows.</Lead>
+          <div
+            role="note"
+            style={{
+              marginBottom: 24,
+              padding: '14px 18px',
+              borderRadius: 8,
+              background: 'var(--tint-blue)',
+              border: '1px solid var(--tint-blue-border)',
+              color: 'var(--text)',
+              fontSize: 15,
+              lineHeight: 1.6,
+            }}
+          >
+            {ALPHA_NOTE}
+          </div>
+          <h3 style={{ margin: '0 0 14px', fontSize: 20, color: 'var(--text)' }}>Hosted by us</h3>
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: compact ? '1fr' : 'repeat(3, minmax(0, 1fr))',
-              gap: 20,
+              gridTemplateColumns: phone ? '1fr' : compact ? 'repeat(2, minmax(0, 1fr))' : 'repeat(4, minmax(0, 1fr))',
+              gap: 16,
               alignItems: 'stretch',
             }}
           >
-            {PRICING_TIERS.map((tier) => (
-              <article
-                key={tier.id}
-                aria-labelledby={`tier-${tier.id}`}
-                style={{
-                  background: 'var(--bg-app)',
-                  border: '1px solid var(--border)',
-                  borderRadius: 10,
-                  padding: 24,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 12,
-                }}
-              >
-                <h3 id={`tier-${tier.id}`} style={{ margin: 0, fontSize: 20, color: 'var(--text)' }}>
-                  {tier.name}
-                </h3>
-                <div style={{ fontSize: 30, fontWeight: 700, color: 'var(--success-text)' }}>{tier.price}</div>
-                <p style={{ margin: 0, fontSize: 15, lineHeight: 1.5, color: 'var(--text-body)' }}>{tier.summary}</p>
-                <ul style={{ margin: 0, paddingLeft: 18, fontSize: 14, lineHeight: 1.6, color: 'var(--text-body)', flex: 1 }}>
-                  {tier.points.map((p) => (
-                    <li key={p}>{p}</li>
-                  ))}
-                </ul>
-                {tier.cta.external ? (
-                  <ExternalLink href={tier.cta.href} style={{ ...secondaryButton, textAlign: 'center' }}>
-                    {tier.cta.label}
-                  </ExternalLink>
-                ) : (
-                  <Link to={tier.cta.href} style={{ ...primaryButton, textAlign: 'center' }}>
-                    {tier.cta.label}
-                  </Link>
-                )}
-              </article>
+            {HOSTED_TIERS.map((tier) => (
+              <TierCard key={tier.id} tier={tier} compact={compact} />
             ))}
           </div>
 
           <div
             style={{
-              marginTop: 28,
+              marginTop: 24,
               background: 'var(--bg-app)',
               border: '1px solid var(--border)',
               borderRadius: 10,
@@ -339,7 +383,27 @@ export const Landing: React.FC<LandingProps> = ({ section }) => {
                 <li key={line}>{line}</li>
               ))}
             </ul>
+            <p style={{ margin: '14px 0 6px', fontSize: 15, color: 'var(--text-body)' }}>Business Life will raise the cloud runner to:</p>
+            <ul style={{ margin: 0, paddingLeft: 18, fontSize: 15, lineHeight: 1.7, color: 'var(--text-body)' }}>
+              {BUSINESS_LIFE_LIMITS.map((line) => (
+                <li key={line}>{line}</li>
+              ))}
+            </ul>
             <p style={{ margin: '14px 0 0', fontSize: 14, lineHeight: 1.6, color: 'var(--text-muted)' }}>{PRICING_FOOTNOTE}</p>
+          </div>
+
+          <h3 style={{ margin: '32px 0 14px', fontSize: 20, color: 'var(--text)' }}>Other ways to run OpenV</h3>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: compact ? '1fr' : 'repeat(2, minmax(0, 1fr))',
+              gap: 16,
+              alignItems: 'stretch',
+            }}
+          >
+            {OTHER_TIERS.map((tier) => (
+              <TierCard key={tier.id} tier={tier} compact={compact} />
+            ))}
           </div>
         </Section>
 

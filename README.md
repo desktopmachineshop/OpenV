@@ -38,10 +38,15 @@ Setup guide: [docs/agents.md](docs/agents.md)
 ## Pricing
 
 - **Hosted service**: free while OpenV is in alpha, every feature included,
-  no card and no trial clock. The hosted-runner limits in force (2 GB / 1 CPU
-  hosted runner, 60-minute cloud-runner lease reclaimed after 15 idle
-  minutes) are listed on the instance's `/pricing` page. Agent runs use your
-  own AI subscription or your workspace's API keys.
+  no card and no trial clock. Four tiers are planned: **Single User** (free,
+  bring your own AI subscription), **Business Life** (higher cloud-runner
+  limits, agents on your own API keys, always-on agents), **Business**
+  (shared company workspaces, teams and per-project access) and
+  **Enterprise** (run on your own servers with our support, SSO/OIDC setup,
+  custom integrations, support SLA). The paid tiers are coming soon with no
+  prices yet. The hosted-runner limits in force (2 GB / 1 CPU hosted runner,
+  60-minute cloud-runner lease reclaimed after 15 idle minutes) are listed on
+  the instance's `/pricing` page.
 - **Self-hosted**: free forever under the AGPL-3.0, all features, your hardware.
 - **Charities and open-source projects**: free forever on the hosted service.
   Claim it with a [free-hosting issue](https://github.com/desktopmachineshop/OpenV/issues/new?template=free-hosting.md).
