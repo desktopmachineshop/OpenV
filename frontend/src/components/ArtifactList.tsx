@@ -428,7 +428,33 @@ export const ArtifactList: React.FC<ArtifactListProps> = ({
               </div>
             </div>
             {!readOnly && (
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+              // One column, in the order the buttons act: up, more, down.
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'stretch', flexShrink: 0 }}>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (neighborIds.up) {
+                      onReorder(artifact.id, neighborIds.up, 'swap');
+                    }
+                  }}
+                  disabled={!neighborIds.up}
+                  title="Move up"
+                  aria-label={`Move ${artifact.title} up`}
+                  style={{
+                    backgroundColor: neighborIds.up ? 'var(--neutral-soft)' : 'var(--surface-inset)',
+                    color: 'var(--text)',
+                    border: '1px solid var(--border)',
+                    padding: 0,
+                    width: touch ? 44 : 24,
+                    minHeight: touch ? 32 : 18,
+                    borderRadius: '3px',
+                    cursor: neighborIds.up ? 'pointer' : 'not-allowed',
+                    fontSize: '10px',
+                    lineHeight: 1,
+                  }}
+                >
+                  ▲
+                </button>
                 <button
                   type="button"
                   aria-label={`Actions for ${artifact.title}`}
@@ -453,54 +479,31 @@ export const ArtifactList: React.FC<ArtifactListProps> = ({
                 >
                   ⋯
                 </button>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (neighborIds.up) {
-                        onReorder(artifact.id, neighborIds.up, 'swap');
-                      }
-                    }}
-                    disabled={!neighborIds.up}
-                    title="Move up"
-                    style={{
-                      backgroundColor: neighborIds.up ? 'var(--neutral-soft)' : 'var(--surface-inset)',
-                      color: 'var(--text)',
-                      border: '1px solid var(--border)',
-                      padding: touch ? '0 10px' : '2px 6px',
-                      minHeight: touch ? 20 : undefined,
-                      borderRadius: '3px',
-                      cursor: neighborIds.up ? 'pointer' : 'not-allowed',
-                      fontSize: '10px',
-                      lineHeight: 1,
-                    }}
-                  >
-                    ▲
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (neighborIds.down) {
-                        onReorder(artifact.id, neighborIds.down, 'swap');
-                      }
-                    }}
-                    disabled={!neighborIds.down}
-                    title="Move down"
-                    style={{
-                      backgroundColor: neighborIds.down ? 'var(--neutral-soft)' : 'var(--surface-inset)',
-                      color: 'var(--text)',
-                      border: '1px solid var(--border)',
-                      padding: touch ? '0 10px' : '2px 6px',
-                      minHeight: touch ? 20 : undefined,
-                      borderRadius: '3px',
-                      cursor: neighborIds.down ? 'pointer' : 'not-allowed',
-                      fontSize: '10px',
-                      lineHeight: 1,
-                    }}
-                  >
-                    ▼
-                  </button>
-                </div>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (neighborIds.down) {
+                      onReorder(artifact.id, neighborIds.down, 'swap');
+                    }
+                  }}
+                  disabled={!neighborIds.down}
+                  title="Move down"
+                  aria-label={`Move ${artifact.title} down`}
+                  style={{
+                    backgroundColor: neighborIds.down ? 'var(--neutral-soft)' : 'var(--surface-inset)',
+                    color: 'var(--text)',
+                    border: '1px solid var(--border)',
+                    padding: 0,
+                    width: touch ? 44 : 24,
+                    minHeight: touch ? 32 : 18,
+                    borderRadius: '3px',
+                    cursor: neighborIds.down ? 'pointer' : 'not-allowed',
+                    fontSize: '10px',
+                    lineHeight: 1,
+                  }}
+                >
+                  ▼
+                </button>
               </div>
             )}
           </div>

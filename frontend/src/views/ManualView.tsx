@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { MANUAL_CHAPTERS, ManualChapter, getChapter, headingId } from '../manual';
+import { useViewport } from '../hooks/useViewport';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -120,6 +121,10 @@ export const ManualView: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [query, setQuery] = useState('');
+  // Phones and tablets: the contents column becomes a drawer behind a menu
+  // button in a top bar, closing once a chapter or section is chosen.
+  const compact = useViewport().isCompact;
+  const [tocOpen, setTocOpen] = useState(false);
 
   const chapter = (chapterSlug && getChapter(chapterSlug)) || MANUAL_CHAPTERS[0];
   const index = MANUAL_CHAPTERS.findIndex((c) => c.slug === chapter.slug);
@@ -160,20 +165,75 @@ export const ManualView: React.FC = () => {
     navigate(`/manual/${hit.chapter.slug}${hit.sectionId ? `#${hit.sectionId}` : ''}`);
   };
 
+  const tocVisible = !compact || tocOpen;
+
   return (
-    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
+    <div className="app-shell" style={{ display: 'flex', flexDirection: compact ? 'column' : 'row', overflow: 'hidden' }}>
+      {compact && (
+        <header
+          className="safe-area-top"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 4,
+            minHeight: 48,
+            paddingRight: 8,
+            background: 'var(--sidebar-bg)',
+            color: 'var(--sidebar-text)',
+            flexShrink: 0,
+          }}
+        >
+          <button
+            type="button"
+            aria-label="Contents"
+            aria-expanded={tocOpen}
+            onClick={() => setTocOpen((o) => !o)}
+            style={{ width: 48, height: 48, background: 'none', border: 'none', color: 'var(--sidebar-text)', fontSize: 22, cursor: 'pointer', flexShrink: 0 }}
+          >
+            ☰
+          </button>
+          <div style={{ flex: 1, minWidth: 0, fontSize: 15, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {searching ? 'OpenV Manual' : chapter.title}
+          </div>
+          <Link to="/projects" style={{ fontSize: 13, color: 'var(--sidebar-text-dim)', textDecoration: 'none', padding: '8px 4px' }}>
+            App
+          </Link>
+        </header>
+      )}
+      {compact && tocOpen && (
+        <div onClick={() => setTocOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 899 }} />
+      )}
       {/* Sidebar */}
       <aside
+        aria-label="Manual contents"
         style={{
-          width: 260,
-          minWidth: 260,
+          width: compact ? 'min(300px, 85vw)' : 260,
+          minWidth: compact ? 'min(300px, 85vw)' : 260,
           background: 'var(--sidebar-bg)',
           color: 'var(--sidebar-text)',
-          display: 'flex',
+          display: tocVisible ? 'flex' : 'none',
           flexDirection: 'column',
+          ...(compact
+            ? { position: 'fixed', left: 0, top: 0, bottom: 0, zIndex: 900, boxShadow: '2px 0 8px rgba(0,0,0,0.25)' }
+            : {}),
+        }}
+        onClick={(e) => {
+          // Choosing a chapter or section is the reason to have opened the
+          // drawer, so a tapped link closes it.
+          if (compact && (e.target as HTMLElement).closest('a')) setTocOpen(false);
         }}
       >
         <div style={{ padding: '16px 14px', borderBottom: '1px solid var(--sidebar-border)' }}>
+          {compact && (
+            <button
+              type="button"
+              aria-label="Close contents"
+              onClick={() => setTocOpen(false)}
+              style={{ float: 'right', width: 44, height: 44, margin: '-10px -10px 0 0', background: 'none', border: 'none', color: 'var(--sidebar-text-dim)', fontSize: 20, cursor: 'pointer' }}
+            >
+              ✕
+            </button>
+          )}
           <div style={{ fontWeight: 700, fontSize: 16 }}>OpenV Manual</div>
           <Link
             to="/projects"
@@ -249,7 +309,7 @@ export const ManualView: React.FC = () => {
         id="manual-scroll"
         style={{ flex: 1, overflowY: 'auto', background: 'var(--bg-app)' }}
       >
-        <div style={{ maxWidth: 860, margin: '0 auto', padding: 24 }}>
+        <div style={{ maxWidth: 860, margin: '0 auto', padding: compact ? 12 : 24 }}>
           {searching ? (
             <div className="card">
               <h3 style={{ marginBottom: 4 }}>
@@ -288,7 +348,7 @@ export const ManualView: React.FC = () => {
             </div>
           ) : (
             <>
-              <div className="card markdown-content" style={{ padding: '24px 32px' }}>
+              <div className="card markdown-content" style={{ padding: compact ? '16px 14px' : '24px 32px' }}>
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
                   components={{
@@ -306,6 +366,7 @@ export const ManualView: React.FC = () => {
                   justifyContent: 'space-between',
                   gap: 12,
                   marginBottom: 32,
+                  flexWrap: 'wrap',
                 }}
               >
                 <div>
