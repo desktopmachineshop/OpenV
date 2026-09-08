@@ -168,8 +168,10 @@ test('finds the artifact through global search', async () => {
   const search = page.getByLabel('Search artifacts across projects');
   await search.fill(reqTitle);
 
-  // Search hits render as role=button rows (title + type + snippet).
-  await page.getByRole('button', { name: reqTitle }).click();
+  // Search hits render as role=button rows (title + type + snippet) inside the
+  // results region. Scope to it: the artifact rows behind the popover carry
+  // the title in their own button labels (Move … up, Actions for …).
+  await page.getByRole('region', { name: 'Search results' }).getByRole('button', { name: reqTitle }).click();
 
   // Selecting a hit deep-links into the owning project's requirements view.
   await expect(page).toHaveURL(new RegExp(`/projects/${projectId}/requirements\\?artifact=`));
