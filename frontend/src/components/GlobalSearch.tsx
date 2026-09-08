@@ -146,6 +146,8 @@ export const GlobalSearch: React.FC = () => {
       />
       {showDropdown && (
         <div
+          role="region"
+          aria-label="Search results"
           style={{
             position: 'absolute',
             top: 'calc(100% + 4px)',

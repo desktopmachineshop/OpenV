@@ -125,20 +125,14 @@ export const ArtifactList: React.FC<ArtifactListProps> = ({
   const [dropTarget, setDropTarget] = useState<{ id: string; zone: DropZone } | null>(null);
   const hasInitialized = useRef(false);
   // Touch parity (docs/plans/mobile-support.md, REQ-106): a touch screen has
-  // no right-click and HTML5 drag never starts from a finger, so every row
-  // carries a visible actions button, the menu gains a Move to… dialog that
-  // does what a drop does, and on coarse pointers a grip handle drags rows
-  // through pointer events instead.
+  // no right-click, so every row carries a visible actions button and the
+  // menu gains a Move to… dialog that does what a drop does. Rows keep the
+  // HTML5 drag: mobile browsers start it from a long press on the row.
   const viewport = useViewport();
   const touch = viewport.coarsePointer;
   const [moveDialogFor, setMoveDialogFor] = useState<Artifact | null>(null);
   const [moveTargetId, setMoveTargetId] = useState('');
   const [moveZone, setMoveZone] = useState<DropZone>('after');
-  // A pointer drag in flight from a grip handle: which row and where the
-  // finger is. The drop target itself is the same state the HTML5 drag uses,
-  // so the rows show the same feedback either way.
-  const pointerDrag = useRef<{ id: string; pointerId: number } | null>(null);
-  const listRef = useRef<HTMLDivElement>(null);
 
   const hierarchy = useMemo(() => buildHierarchy(artifacts), [artifacts]);
 
@@ -208,66 +202,6 @@ export const ArtifactList: React.FC<ArtifactListProps> = ({
     });
   };
 
-  const rowAt = (x: number, y: number): { id: string; box: DOMRect } | null => {
-    const el = document.elementFromPoint(x, y);
-    const row = el?.closest?.('[data-artifact-row]') as HTMLElement | null;
-    if (!row) return null;
-    return { id: row.dataset.artifactRow || '', box: row.getBoundingClientRect() };
-  };
-
-  const onGripPointerDown = (artifact: Artifact) => (event: React.PointerEvent<HTMLButtonElement>) => {
-    if (readOnly) return;
-    event.stopPropagation();
-    event.currentTarget.setPointerCapture(event.pointerId);
-    pointerDrag.current = { id: artifact.id, pointerId: event.pointerId };
-    setDraggingId(artifact.id);
-  };
-
-  const onGripPointerMove = (event: React.PointerEvent<HTMLButtonElement>) => {
-    const drag = pointerDrag.current;
-    if (!drag || drag.pointerId !== event.pointerId) return;
-    event.preventDefault();
-    const row = rowAt(event.clientX, event.clientY);
-    if (!row || row.id === drag.id) {
-      setDropTarget(null);
-      return;
-    }
-    const zone = dropZoneFor(row.box, event.clientX, event.clientY);
-    if (!planMove(allArtifacts, drag.id, row.id, zone)) {
-      setDropTarget(null);
-      return;
-    }
-    setDropTarget((prev) => (prev && prev.id === row.id && prev.zone === zone ? prev : { id: row.id, zone }));
-    // Keep the list scrolling while the finger sits near an edge; the
-    // browser will not scroll for a captured pointer on its own.
-    const list = listRef.current;
-    if (list) {
-      const box = list.getBoundingClientRect();
-      if (event.clientY < box.top + 40) list.scrollTop -= 8;
-      else if (event.clientY > box.bottom - 40) list.scrollTop += 8;
-    }
-  };
-
-  const onGripPointerUp = (event: React.PointerEvent<HTMLButtonElement>) => {
-    const drag = pointerDrag.current;
-    if (!drag || drag.pointerId !== event.pointerId) return;
-    pointerDrag.current = null;
-    const target = dropTarget;
-    setDraggingId(null);
-    setDropTarget(null);
-    if (event.type === 'pointercancel' || !target) return;
-    if (!planMove(allArtifacts, drag.id, target.id, target.zone)) return;
-    if (target.zone === 'child') {
-      setCollapsedIds((prev) => {
-        if (!prev.has(target.id)) return prev;
-        const next = new Set(prev);
-        next.delete(target.id);
-        return next;
-      });
-    }
-    onReorder(drag.id, target.id, target.zone);
-  };
-
   const openMoveDialog = (artifact: Artifact) => {
     // Default to "after the next sibling", the commonest small move; the
     // dialog only offers placements the planner would accept.
@@ -321,7 +255,6 @@ export const ArtifactList: React.FC<ArtifactListProps> = ({
     return (
       <React.Fragment key={artifact.id}>
         <div
-          data-artifact-row={artifact.id}
           onClick={() => onSelect(artifact.id)}
           onContextMenu={(event) => {
             event.preventDefault();
@@ -495,35 +428,33 @@ export const ArtifactList: React.FC<ArtifactListProps> = ({
               </div>
             </div>
             {!readOnly && (
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
-                {touch && (
-                  <button
-                    type="button"
-                    aria-label={`Drag ${artifact.title}`}
-                    title="Hold and drag to move"
-                    onClick={(e) => e.stopPropagation()}
-                    onPointerDown={onGripPointerDown(artifact)}
-                    onPointerMove={onGripPointerMove}
-                    onPointerUp={onGripPointerUp}
-                    onPointerCancel={onGripPointerUp}
-                    style={{
-                      // touch-action: none is what lets a finger drag this
-                      // row instead of scrolling the list; it is set on the
-                      // grip alone so the rest of the row still scrolls.
-                      touchAction: 'none',
-                      width: 44,
-                      minHeight: 44,
-                      border: '1px solid var(--border)',
-                      borderRadius: 3,
-                      background: 'var(--neutral-soft)',
-                      color: 'var(--text-muted)',
-                      fontSize: 18,
-                      cursor: 'grab',
-                    }}
-                  >
-                    ⠿
-                  </button>
-                )}
+              // One column, in the order the buttons act: up, more, down.
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'stretch', flexShrink: 0 }}>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (neighborIds.up) {
+                      onReorder(artifact.id, neighborIds.up, 'swap');
+                    }
+                  }}
+                  disabled={!neighborIds.up}
+                  title="Move up"
+                  aria-label={`Move ${artifact.title} up`}
+                  style={{
+                    backgroundColor: neighborIds.up ? 'var(--neutral-soft)' : 'var(--surface-inset)',
+                    color: 'var(--text)',
+                    border: '1px solid var(--border)',
+                    padding: 0,
+                    width: touch ? 44 : 24,
+                    minHeight: touch ? 32 : 18,
+                    borderRadius: '3px',
+                    cursor: neighborIds.up ? 'pointer' : 'not-allowed',
+                    fontSize: '10px',
+                    lineHeight: 1,
+                  }}
+                >
+                  ▲
+                </button>
                 <button
                   type="button"
                   aria-label={`Actions for ${artifact.title}`}
@@ -548,54 +479,31 @@ export const ArtifactList: React.FC<ArtifactListProps> = ({
                 >
                   ⋯
                 </button>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (neighborIds.up) {
-                        onReorder(artifact.id, neighborIds.up, 'swap');
-                      }
-                    }}
-                    disabled={!neighborIds.up}
-                    title="Move up"
-                    style={{
-                      backgroundColor: neighborIds.up ? 'var(--neutral-soft)' : 'var(--surface-inset)',
-                      color: 'var(--text)',
-                      border: '1px solid var(--border)',
-                      padding: touch ? '0 10px' : '2px 6px',
-                      minHeight: touch ? 20 : undefined,
-                      borderRadius: '3px',
-                      cursor: neighborIds.up ? 'pointer' : 'not-allowed',
-                      fontSize: '10px',
-                      lineHeight: 1,
-                    }}
-                  >
-                    ▲
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (neighborIds.down) {
-                        onReorder(artifact.id, neighborIds.down, 'swap');
-                      }
-                    }}
-                    disabled={!neighborIds.down}
-                    title="Move down"
-                    style={{
-                      backgroundColor: neighborIds.down ? 'var(--neutral-soft)' : 'var(--surface-inset)',
-                      color: 'var(--text)',
-                      border: '1px solid var(--border)',
-                      padding: touch ? '0 10px' : '2px 6px',
-                      minHeight: touch ? 20 : undefined,
-                      borderRadius: '3px',
-                      cursor: neighborIds.down ? 'pointer' : 'not-allowed',
-                      fontSize: '10px',
-                      lineHeight: 1,
-                    }}
-                  >
-                    ▼
-                  </button>
-                </div>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (neighborIds.down) {
+                      onReorder(artifact.id, neighborIds.down, 'swap');
+                    }
+                  }}
+                  disabled={!neighborIds.down}
+                  title="Move down"
+                  aria-label={`Move ${artifact.title} down`}
+                  style={{
+                    backgroundColor: neighborIds.down ? 'var(--neutral-soft)' : 'var(--surface-inset)',
+                    color: 'var(--text)',
+                    border: '1px solid var(--border)',
+                    padding: 0,
+                    width: touch ? 44 : 24,
+                    minHeight: touch ? 32 : 18,
+                    borderRadius: '3px',
+                    cursor: neighborIds.down ? 'pointer' : 'not-allowed',
+                    fontSize: '10px',
+                    lineHeight: 1,
+                  }}
+                >
+                  ▼
+                </button>
               </div>
             )}
           </div>
@@ -614,7 +522,7 @@ export const ArtifactList: React.FC<ArtifactListProps> = ({
       {artifacts.length === 0 ? (
         <p>No artifacts yet. Create one to get started.</p>
       ) : (
-        <div ref={listRef} style={{ overflowY: 'auto', flex: 1, minHeight: 0 }}>
+        <div style={{ overflowY: 'auto', flex: 1, minHeight: 0 }}>
           {hierarchy.map((node) => renderArtifact(node))}
         </div>
       )}

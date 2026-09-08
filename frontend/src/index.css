@@ -206,6 +206,22 @@ input:focus, textarea:focus, select:focus {
   font-size: 14px;
 }
 
+/* Manual and other markdown: tables and code blocks scroll inside
+   themselves on a narrow screen; images never exceed the column. */
+.markdown-content table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+}
+.markdown-content pre {
+  max-width: 100%;
+  overflow-x: auto;
+}
+.markdown-content img {
+  max-width: 100%;
+  height: auto;
+}
+
 /* Wide content (tables, matrices, code) scrolls inside its own box so the
    page itself never scrolls sideways on a phone. */
 .table-scroll {
