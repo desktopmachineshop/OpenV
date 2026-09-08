@@ -228,7 +228,11 @@ Shipped, in one PR on top of this plan:
   before / after / inside, validated by `planMove`). Rows keep the HTML5
   drag: mobile browsers start it from a long press on the row, so the grip
   handle first shipped for touch was redundant and was removed after the
-  maintainer's first phone session.
+  maintainer's first phone session. Row controls sit in one column in the
+  order they act: Move up, ⋯, Move down.
+- **Manual** — below the tablet breakpoint `/manual` shows a top bar
+  (Contents button, chapter title, App link); the table of contents is a
+  drawer that closes on selection; tables, code and images fit the card.
 - **Phase 4 (part)** — manifest shortcuts and categories; muted text raised
   to 4.6:1; reduced-motion media query.
 - **Testing** — `e2e/tests/mobile.spec.ts` runs in iPhone 13 (WebKit) and
