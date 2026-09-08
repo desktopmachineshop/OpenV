@@ -34,8 +34,14 @@ export function SegmentedControl<T extends string>({
     <div
       role="group"
       aria-label={ariaLabel}
+      className="segmented-control"
       style={{
         display: 'inline-flex',
+        // Options wrap onto a second line rather than being clipped when the
+        // row they sit in is narrower than their labels (a phone).
+        flexWrap: 'wrap',
+        flexShrink: 0,
+        maxWidth: '100%',
         border: '1px solid var(--border)',
         borderRadius: 4,
         overflow: 'hidden',
@@ -55,6 +61,7 @@ export function SegmentedControl<T extends string>({
               padding: '6px 14px',
               border: 'none',
               cursor: 'pointer',
+              flexShrink: 0,
               fontSize: 13,
               background: active ? opt.activeColor || activeColor : 'var(--surface)',
               color: active ? '#fff' : 'var(--text)',

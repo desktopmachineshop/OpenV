@@ -1,4 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useViewport } from '../../hooks/useViewport';
+import { dialogCardStyle } from './dialogCard';
 
 export interface PromptDialogProps {
   title?: string;
@@ -34,6 +36,7 @@ export const PromptDialog: React.FC<PromptDialogProps> = ({
 }) => {
   const [value, setValue] = useState(defaultValue);
   const inputRef = useRef<HTMLInputElement>(null);
+  const { isPhone } = useViewport();
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -73,14 +76,7 @@ export const PromptDialog: React.FC<PromptDialogProps> = ({
         className="card"
         onClick={(e) => e.stopPropagation()}
         onSubmit={submit}
-        style={{
-          width: 440,
-          maxWidth: 'calc(100vw - 40px)',
-          background: 'var(--surface)',
-          borderRadius: 8,
-          padding: 22,
-          margin: 0,
-        }}
+        style={{ ...dialogCardStyle(isPhone, 440, 22), background: 'var(--surface)' }}
       >
         {title && <h3 style={{ marginTop: 0, marginBottom: 10, color: 'var(--text)', fontSize: 16 }}>{title}</h3>}
         {message && (

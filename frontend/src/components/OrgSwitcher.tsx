@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { orgsAPI } from '../api/client';
 import { useAppStore } from '../state/store';
+import { useViewport } from '../hooks/useViewport';
 import { CreateOrgModal } from './CreateOrgModal';
 
 interface OrgSwitcherProps {
@@ -18,6 +19,11 @@ export const OrgSwitcher: React.FC<OrgSwitcherProps> = ({ variant = 'light' }) =
   const [open, setOpen] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const { isPhone } = useViewport();
+  // Where the trigger sits when the menu opens: on a phone the menu is
+  // fixed to the screen (full width) instead of hanging off the trigger,
+  // so a long workspace name can never push it past the right edge.
+  const [menuTop, setMenuTop] = useState(0);
 
   const activeOrg = orgs.find((o) => o.id === activeOrgId) || null;
   const dark = variant === 'dark';
@@ -52,11 +58,12 @@ export const OrgSwitcher: React.FC<OrgSwitcherProps> = ({ variant = 'light' }) =
         display: 'inline-block',
         padding: '1px 7px',
         borderRadius: 9,
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: 600,
         background: bg,
         color,
-        lineHeight: '15px',
+        lineHeight: '17px',
+        flexShrink: 0,
         verticalAlign: 'middle',
       }}
     >
@@ -70,6 +77,7 @@ export const OrgSwitcher: React.FC<OrgSwitcherProps> = ({ variant = 'light' }) =
     gap: 8,
     width: '100%',
     padding: '9px 14px',
+    minHeight: isPhone ? 44 : undefined,
     background: 'none',
     border: 'none',
     textAlign: 'left',
@@ -88,13 +96,19 @@ export const OrgSwitcher: React.FC<OrgSwitcherProps> = ({ variant = 'light' }) =
   return (
     <div ref={rootRef} style={{ position: 'relative' }}>
       <button
-        onClick={() => setOpen(!open)}
+        onClick={(e) => {
+          setMenuTop(e.currentTarget.getBoundingClientRect().bottom + 6);
+          setOpen(!open);
+        }}
         title="Switch workspace"
+        aria-haspopup="menu"
+        aria-expanded={open}
         style={{
           display: 'flex',
           alignItems: 'center',
           gap: 6,
           width: '100%',
+          minHeight: 40,
           background: 'none',
           border: 'none',
           padding: 0,
@@ -110,23 +124,24 @@ export const OrgSwitcher: React.FC<OrgSwitcherProps> = ({ variant = 'light' }) =
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
             // Narrow enough on a phone to leave room for the account controls.
-            maxWidth: dark ? 110 : 'min(220px, 40vw)',
+            maxWidth: dark ? 110 : 'min(220px, 42vw)',
+            minWidth: 0,
           }}
         >
           {activeOrg ? activeOrg.name : 'OpenV'}
         </span>
         {activeOrg?.type === 'personal' && pill('personal', dark ? 'var(--sidebar-menu-bg)' : 'var(--neutral-soft)', dark ? 'var(--sidebar-text-dim)' : 'var(--text-muted)')}
         {activeOrg?.type === 'company' && activeOrg.role === 'admin' && pill('admin', 'var(--accent)')}
-        <span style={{ fontSize: 10, color: dark ? 'var(--sidebar-text-faint)' : 'var(--text-muted)' }}>▼</span>
+        <span aria-hidden style={{ fontSize: 12, color: dark ? 'var(--sidebar-text-faint)' : 'var(--text-muted)', flexShrink: 0 }}>▼</span>
       </button>
 
       {open && (
         <div
+          role="menu"
           style={{
-            position: 'absolute',
-            top: 'calc(100% + 6px)',
-            left: 0,
-            minWidth: 240,
+            ...(isPhone
+              ? { position: 'fixed', top: menuTop, left: 12, right: 12 }
+              : { position: 'absolute', top: 'calc(100% + 6px)', left: 0, minWidth: 240 }),
             background: 'var(--surface)',
             borderRadius: 6,
             border: '1px solid var(--border)',
@@ -135,7 +150,7 @@ export const OrgSwitcher: React.FC<OrgSwitcherProps> = ({ variant = 'light' }) =
             overflow: 'hidden',
           }}
         >
-          <div style={{ padding: '8px 14px 4px', fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>
+          <div style={{ padding: '8px 14px 4px', fontSize: 12, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>
             Workspaces
           </div>
           {orgs.map((org) => (

@@ -57,7 +57,7 @@ export const QualityBadge: React.FC<QualityBadgeProps> = ({ score, band, finding
         color: s.text,
         borderRadius: '10px',
         padding: '1px 7px',
-        fontSize: '10px',
+        fontSize: '12px',
         fontWeight: 700,
         lineHeight: 1.6,
         whiteSpace: 'nowrap',
@@ -141,7 +141,7 @@ export const QualityFindingsPanel: React.FC<QualityFindingsPanelProps> = ({ scor
                 <strong style={{ color: severityColor[f.severity] }}>{ruleLabels[f.rule] || f.rule}</strong>
                 <span
                   style={{
-                    fontSize: '10px',
+                    fontSize: '12px',
                     textTransform: 'uppercase',
                     letterSpacing: '0.03em',
                     color: 'var(--text-muted)',
@@ -156,7 +156,7 @@ export const QualityFindingsPanel: React.FC<QualityFindingsPanelProps> = ({ scor
                   style={{
                     display: 'inline-block',
                     marginTop: '4px',
-                    fontSize: '11px',
+                    fontSize: '12px',
                     backgroundColor: 'var(--surface-inset)',
                     padding: '1px 5px',
                     borderRadius: '2px',

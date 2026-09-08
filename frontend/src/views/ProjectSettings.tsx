@@ -627,7 +627,7 @@ export const ProjectSettings: React.FC = () => {
                       <td style={{ ...td, textAlign: 'right' }}>
                         <button
                           onClick={() => handleRemoveMember(m)}
-                          style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontSize: 12, width: 'auto', padding: 2 }}
+                          style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontSize: 13, width: 'auto', padding: '6px 8px', minHeight: 36 }}
                         >
                           Remove
                         </button>
@@ -875,7 +875,7 @@ export const ProjectSettings: React.FC = () => {
                     </button>
                     <button
                       onClick={() => handleDeleteRepo(r)}
-                      style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontSize: 12, width: 'auto', padding: 2 }}
+                      style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontSize: 13, width: 'auto', padding: '6px 8px', minHeight: 36 }}
                     >
                       Remove
                     </button>

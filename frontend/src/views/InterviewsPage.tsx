@@ -25,7 +25,7 @@ const chip = (bg: string): React.CSSProperties => ({
   display: 'inline-block',
   padding: '2px 8px',
   borderRadius: 10,
-  fontSize: 11,
+  fontSize: 12,
   fontWeight: 600,
   color: '#fff',
   background: bg,
@@ -378,12 +378,12 @@ export const InterviewsPage: React.FC = () => {
                           }}
                           onClick={() => openTranscript(s)}
                         >
-                          <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>{openSessionId === s.id ? '▾' : '▸'}</span>
+                          <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>{openSessionId === s.id ? '▾' : '▸'}</span>
                           <span style={{ flex: 1, color: 'var(--text)' }}>
                             {s.participant_name || 'Anonymous participant'}
                           </span>
                           <span style={chip(s.status === 'active' ? 'var(--warning)' : 'var(--neutral)')}>{s.status}</span>
-                          <span style={{ color: 'var(--neutral)', fontSize: 11 }}>
+                          <span style={{ color: 'var(--neutral)', fontSize: 12 }}>
                             {s.started_at ? new Date(s.started_at).toLocaleString() : ''}
                           </span>
                         </div>
@@ -421,7 +421,7 @@ export const InterviewsPage: React.FC = () => {
                                   }}
                                 >
                                   {m.role === 'system' ? (
-                                    <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--neutral)' }}>{m.content}</div>
+                                    <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--neutral)' }}>{m.content}</div>
                                   ) : (
                                     <div
                                       style={{

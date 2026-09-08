@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Artifact, ArtifactStatus, artifactAPI } from '../api/client';
 import { useAlert, useConfirm } from './ui';
+import { useViewport } from '../hooks/useViewport';
 
 // Review state machine (mirrors internal/domain/artifacts/status.go):
 // draft <-> in_review -> approved -> superseded. The server is authoritative;
@@ -57,6 +58,9 @@ export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
   const confirm = useConfirm();
   const alertDialog = useAlert();
   const [versions, setVersions] = useState<Artifact[]>([artifact]);
+  // On a phone the Edit / Delete / History column moves under the title as
+  // a row of full-width buttons instead of squeezing the title.
+  const { isPhone } = useViewport();
   const [showVersions, setShowVersions] = useState(false);
   const [loadingVersions, setLoadingVersions] = useState(false);
   const [localPreviewVersion, setLocalPreviewVersion] = useState<Artifact | null>(previewVersion || null);
@@ -176,12 +180,13 @@ export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
       <div
         style={{
           display: 'flex',
+          flexDirection: isPhone ? 'column' : 'row',
           justifyContent: 'space-between',
-          alignItems: 'flex-start',
-          gap: '20px',
+          alignItems: isPhone ? 'stretch' : 'flex-start',
+          gap: isPhone ? '12px' : '20px',
         }}
       >
-        <div style={{ flex: 1 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
           {/* The stable reference leads the title: it is the address a
               reader quotes in a review, a test result, or a report, and
               unlike a section number it never changes or gets reused. */}
@@ -204,7 +209,7 @@ export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
             )}
             {displayArtifact.title}
           </h3>
-          <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '8px' }}>
+          <div style={{ display: 'flex', gap: '8px 10px', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap' }}>
             <span
               style={{
                 display: 'inline-block',
@@ -212,7 +217,8 @@ export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
                 color: 'var(--accent-fg)',
                 padding: '4px 8px',
                 borderRadius: '3px',
-                fontSize: '11px',
+                fontSize: '12px',
+                whiteSpace: 'nowrap',
               }}
             >
               {displayArtifact.type}
@@ -225,22 +231,23 @@ export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
                 color: 'white',
                 padding: '4px 8px',
                 borderRadius: '3px',
-                fontSize: '11px',
+                fontSize: '12px',
+                whiteSpace: 'nowrap',
               }}
             >
               {STATUS_META[displayStatus].label}
             </span>
-            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+            <span style={{ fontSize: '12px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
               Version {displayArtifact.version}
             </span>
             {displayArtifact.version > 1 && (
-              <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+              <span style={{ fontSize: '12px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
                 • {versions.length} total
               </span>
             )}
           </div>
           {!localPreviewVersion && NEXT_STATUSES[status].length > 0 && (
-            <div style={{ display: 'flex', gap: '6px', marginBottom: '8px' }}>
+            <div style={{ display: 'flex', gap: '6px', marginBottom: '8px', flexWrap: 'wrap' }}>
               {NEXT_STATUSES[status].map((next) => (
                 <button
                   key={next}
@@ -250,10 +257,11 @@ export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
                     backgroundColor: 'transparent',
                     color: STATUS_META[next].color,
                     border: `1px solid ${STATUS_META[next].color}`,
-                    padding: '3px 10px',
+                    padding: '6px 12px',
+                    minHeight: 36,
                     borderRadius: '3px',
                     cursor: changingStatus ? 'wait' : 'pointer',
-                    fontSize: '11px',
+                    fontSize: '12px',
                     opacity: changingStatus ? 0.6 : 1,
                   }}
                 >
@@ -263,13 +271,13 @@ export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
             </div>
           )}
           <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-muted)' }}>
-            UID: <code style={{ backgroundColor: 'var(--neutral-soft)', padding: '2px 6px', borderRadius: '3px' }}>
+            UID: <code style={{ backgroundColor: 'var(--neutral-soft)', padding: '2px 6px', borderRadius: '3px', wordBreak: 'break-all' }}>
               {displayArtifact.id}
             </code>
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: '8px', flexDirection: 'column' }}>
+        <div style={{ display: 'flex', gap: '8px', flexDirection: isPhone ? 'row' : 'column', flexWrap: 'wrap' }}>
           <button
             onClick={() => onEdit(displayArtifact)}
             disabled={localPreviewVersion !== null}
@@ -278,6 +286,8 @@ export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
               color: 'var(--accent-fg)',
               border: 'none',
               padding: '6px 12px',
+              minHeight: 36,
+              flex: isPhone ? '1 1 auto' : undefined,
               borderRadius: '3px',
               cursor: localPreviewVersion ? 'not-allowed' : 'pointer',
               fontSize: '12px',
@@ -294,6 +304,8 @@ export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
               color: 'white',
               border: 'none',
               padding: '6px 12px',
+              minHeight: 36,
+              flex: isPhone ? '1 1 auto' : undefined,
               borderRadius: '3px',
               cursor: localPreviewVersion ? 'not-allowed' : 'pointer',
               fontSize: '12px',
@@ -310,6 +322,8 @@ export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
                 color: 'white',
                 border: 'none',
                 padding: '6px 12px',
+                minHeight: 36,
+                flex: isPhone ? '1 1 auto' : undefined,
                 borderRadius: '3px',
                 cursor: 'pointer',
                 fontSize: '12px',

@@ -17,6 +17,7 @@ import {
 } from '../api/client';
 import { apiErrorMessage } from '../api/errors';
 import { useAppStore } from '../state/store';
+import { useViewport } from '../hooks/useViewport';
 
 const STATUS_OPTIONS = ['pass', 'fail', 'blocked', 'not-run'];
 
@@ -67,6 +68,7 @@ interface ResultRow {
 }
 
 export const TestRunView: React.FC = () => {
+  const { isPhone } = useViewport();
   const { projectId, runId } = useParams<{ projectId: string; runId: string }>();
   const activeOrgId = useAppStore((s) => s.activeOrgId);
   const [run, setRun] = useState<TestRun | null>(null);
@@ -217,7 +219,7 @@ export const TestRunView: React.FC = () => {
           borderRadius: 12,
           background: executionColor(row.executionMethod),
           color: '#fff',
-          fontSize: 11,
+          fontSize: 12,
           fontWeight: 600,
         }}
       >
@@ -232,7 +234,9 @@ export const TestRunView: React.FC = () => {
         headerName: 'Test case',
         field: 'testCaseTitle',
         pinned: 'left',
-        minWidth: 260,
+        // A pinned column is never scrolled away, so on a phone it must
+        // leave room for the columns beside it.
+        minWidth: isPhone ? 150 : 260,
         flex: 2,
       },
       {
@@ -244,6 +248,7 @@ export const TestRunView: React.FC = () => {
       {
         headerName: 'Version tested',
         field: 'versionTested',
+        hide: isPhone,
         width: 140,
         valueFormatter: (p) => (p.value == null ? '—' : `v${p.value}`),
       },
@@ -271,7 +276,7 @@ export const TestRunView: React.FC = () => {
             {p.data?.byAgent && (
               <span
                 title="Recorded by an agent run"
-                style={{ marginLeft: 6, color: 'var(--purple)', fontSize: 11, fontWeight: 600 }}
+                style={{ marginLeft: 6, color: 'var(--purple)', fontSize: 12, fontWeight: 600 }}
               >
                 ⚙ agent
               </span>
@@ -280,7 +285,7 @@ export const TestRunView: React.FC = () => {
         ),
       },
     ],
-    [StatusRenderer, ExecutionRenderer, readOnly]
+    [StatusRenderer, ExecutionRenderer, readOnly, isPhone]
   );
 
   const agentRunnable = rows.filter((r) => r.executionMethod === 'automated').length;
@@ -329,7 +334,7 @@ export const TestRunView: React.FC = () => {
       <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16, flexWrap: 'wrap' }}>
         <Link
           to={`/projects/${projectId}/vv`}
-          style={{ color: 'var(--accent)', textDecoration: 'none', fontSize: 13 }}
+          style={{ color: 'var(--accent)', textDecoration: 'none', fontSize: 13, display: 'inline-block', padding: '9px 0' }}
         >
           ← Back to V&amp;V
         </Link>
@@ -451,7 +456,7 @@ export const TestRunView: React.FC = () => {
       {error && <div style={{ color: 'var(--danger)', marginBottom: 10, fontSize: 13 }}>{error}</div>}
       {loading && <div style={{ color: 'var(--text-muted)', marginBottom: 10 }}>Loading…</div>}
 
-      <div className="ag-theme-quartz" style={{ flex: 1, minHeight: 420 }}>
+      <div className="ag-theme-quartz" style={{ flex: 1, minHeight: isPhone ? 320 : 420, width: '100%' }}>
         <AgGridReact<ResultRow>
           rowData={rows}
           columnDefs={columnDefs}

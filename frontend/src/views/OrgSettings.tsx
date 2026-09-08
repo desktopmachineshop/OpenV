@@ -11,6 +11,7 @@ import { WorkerKeysTab } from '../components/org/WorkerKeysTab';
 import { OrgUsageTab } from '../components/org/OrgUsageTab';
 import { ErrorBanner } from '../components/ui';
 import { QualityRulesEditor } from '../components/QualityRulesEditor';
+import { useViewport } from '../hooks/useViewport';
 
 type Tab = 'general' | 'members' | 'teams' | 'providers' | 'worker-keys' | 'quality' | 'usage';
 
@@ -31,6 +32,7 @@ export const OrgSettings: React.FC = () => {
   const { orgs, activeOrgId, orgsLoaded, setOrgs, currentUser } = useAppStore();
   const org = orgs.find((o) => o.id === activeOrgId) || null;
   const isAdmin = Boolean(org && (org.role === 'admin' || currentUser?.is_admin));
+  const { isPhone } = useViewport();
 
   // The active tab lives in the URL (?tab=…) so refreshes and deep links keep
   // it; unknown values fall back to the first tab.
@@ -117,14 +119,14 @@ export const OrgSettings: React.FC = () => {
         <Link to="/projects" style={{ fontSize: 13, color: 'var(--accent)', textDecoration: 'none' }}>
           ← Back to projects
         </Link>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, margin: '10px 0 16px' }}>
-          <h2 style={{ color: 'var(--text)', margin: 0 }}>{org.name}</h2>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, margin: '10px 0 16px', flexWrap: 'wrap' }}>
+          <h2 style={{ color: 'var(--text)', margin: 0, overflowWrap: 'anywhere' }}>{org.name}</h2>
           <span
             style={{
               display: 'inline-block',
               padding: '2px 10px',
               borderRadius: 10,
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: 600,
               color: org.type === 'personal' ? 'var(--text-muted)' : 'var(--accent-fg)',
               background: org.type === 'personal' ? 'var(--neutral-soft)' : 'var(--accent)',
@@ -208,11 +210,20 @@ export const OrgSettings: React.FC = () => {
 
             <div className="card">
               <h3>Details</h3>
-              <div style={{ fontSize: 13, color: 'var(--text)', display: 'grid', gridTemplateColumns: '110px 1fr', rowGap: 8 }}>
+              <div
+                style={{
+                  fontSize: 13,
+                  color: 'var(--text)',
+                  display: 'grid',
+                  // One column on a phone: a UUID beside a label does not fit.
+                  gridTemplateColumns: isPhone ? '1fr' : '110px 1fr',
+                  rowGap: isPhone ? 4 : 8,
+                }}
+              >
                 <span style={{ color: 'var(--text-muted)' }}>Workspace ID</span>
-                <code style={{ fontSize: 12 }}>{org.id}</code>
+                <code style={{ fontSize: 12, wordBreak: 'break-all', marginBottom: isPhone ? 8 : 0 }}>{org.id}</code>
                 <span style={{ color: 'var(--text-muted)' }}>Slug</span>
-                <code style={{ fontSize: 12 }}>{org.slug || '—'}</code>
+                <code style={{ fontSize: 12, wordBreak: 'break-all', marginBottom: isPhone ? 8 : 0 }}>{org.slug || '—'}</code>
                 <span style={{ color: 'var(--text-muted)' }}>Created</span>
                 <span>{org.created_at ? new Date(org.created_at).toLocaleDateString() : '—'}</span>
               </div>

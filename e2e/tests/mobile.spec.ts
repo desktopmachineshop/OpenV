@@ -132,3 +132,62 @@ test('the project list and settings pages fit the phone', async () => {
   await expect(orgTabs.getByRole('button', { name: 'Usage' })).toBeInViewport();
   await expectNoHorizontalScroll(page);
 });
+
+test('the personal settings sheet shows every theme option', async () => {
+  // The example from the maintainer's phone: the System / Light / Dark
+  // control was clipped after "System". The settings open from the drawer
+  // footer and fill the screen; every option must be inside the viewport.
+  await page.goto(`/projects/${projectId}`);
+  await page.getByRole('button', { name: 'Project menu' }).click();
+  const drawer = page.getByRole('complementary', { name: 'Project navigation' });
+  await drawer.getByRole('button', { name: /^Account menu/ }).click();
+  await drawer.getByRole('button', { name: 'Settings', exact: true }).click();
+
+  const theme = page.getByRole('radiogroup', { name: 'Theme' });
+  await expect(theme).toBeVisible();
+  for (const option of ['System', 'Light', 'Dark']) {
+    // The clipped control scored 0 here; 0.95 leaves room for WebKit's
+    // sub-pixel rounding of a fully visible button.
+    await expect(theme.getByRole('radio', { name: option })).toBeInViewport({ ratio: 0.95 });
+  }
+  await expectNoHorizontalScroll(page);
+  await page.getByRole('button', { name: 'Close settings' }).click();
+  await expect(theme).toBeHidden();
+});
+
+test('the workspace switcher menu stays on the screen', async () => {
+  await page.goto('/projects');
+  // The trigger's accessible name is the workspace's own name; its title
+  // is the stable handle.
+  await page.getByTitle('Switch workspace').click();
+  const menu = page.getByRole('menu');
+  await expect(menu).toBeVisible();
+  await expect(menu).toBeInViewport({ ratio: 1 });
+  await expect(menu.getByRole('button', { name: 'Workspace settings' })).toBeVisible();
+  await expectNoHorizontalScroll(page);
+  // A press outside the menu closes it.
+  await page.mouse.click(200, 600);
+  await expect(menu).toBeHidden();
+});
+
+test('the agent pages open their side panes as sheets', async () => {
+  // Agents: the list takes the width; the editor is a full-screen sheet.
+  await page.goto(`/projects/${projectId}/agents`);
+  await expect(page.getByRole('heading', { name: 'Agents' })).toBeVisible();
+  await expectNoHorizontalScroll(page);
+  await page.getByRole('button', { name: 'New agent' }).click();
+  const sheet = page.getByRole('dialog', { name: 'New agent' });
+  await expect(sheet).toBeVisible();
+  await expectNoHorizontalScroll(page);
+  await sheet.getByRole('button', { name: 'Close editor' }).click();
+  await expect(sheet).toBeHidden();
+
+  // Runs and automations: the tables keep to the phone's width.
+  await page.goto(`/projects/${projectId}/agent-runs`);
+  await expect(page.getByRole('columnheader', { name: 'Agent' })).toBeVisible();
+  await expect(page.getByRole('columnheader', { name: 'Tokens' })).toHaveCount(0);
+  await expectNoHorizontalScroll(page);
+  await page.goto(`/projects/${projectId}/automations`);
+  await expect(page.getByRole('columnheader', { name: 'Name' })).toBeVisible();
+  await expectNoHorizontalScroll(page);
+});

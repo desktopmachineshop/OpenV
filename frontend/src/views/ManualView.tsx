@@ -195,7 +195,7 @@ export const ManualView: React.FC = () => {
           <div style={{ flex: 1, minWidth: 0, fontSize: 15, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {searching ? 'OpenV Manual' : chapter.title}
           </div>
-          <Link to="/projects" style={{ fontSize: 13, color: 'var(--sidebar-text-dim)', textDecoration: 'none', padding: '8px 4px' }}>
+          <Link to="/projects" style={{ fontSize: 13, color: 'var(--sidebar-text-dim)', textDecoration: 'none', padding: '12px 8px', minHeight: 40, display: 'inline-flex', alignItems: 'center' }}>
             App
           </Link>
         </header>

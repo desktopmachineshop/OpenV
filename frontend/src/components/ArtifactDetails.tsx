@@ -6,6 +6,7 @@ import { ArtifactBody } from './ArtifactBody';
 import { ImageGallery } from './ImageGallery';
 import { QualityFindingsPanel } from './QualityBadge';
 import { useConfirm } from './ui';
+import { useViewport } from '../hooks/useViewport';
 import { apiErrorMessage } from '../api/errors';
 import { getLinkTypeLabel } from '../config/linkTypeRules';
 import ReactMarkdown from 'react-markdown';
@@ -101,6 +102,7 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
   liveLinks = true,
   onLinksChanged,
 }) => {
+  const { isPhone } = useViewport();
   const confirm = useConfirm();
   const [currentVersionLinks, setCurrentVersionLinks] = useState<Link[]>(links || []);
   const [previewVersionLinks, setPreviewVersionLinks] = useState<Link[]>([]);
@@ -327,7 +329,7 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
                         {direction === 'outgoing' ? getArtifactTitle(link.to_id) : getArtifactTitle(link.from_id)}
                       </span>
                     </strong>
-                    <div style={{ marginTop: '3px', color: 'var(--text-body)', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <div style={{ marginTop: '3px', color: 'var(--text-body)', fontSize: '12px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       ID: {linkedArtifactId.substring(0, 8)}...
                     </div>
                   </div>
@@ -337,13 +339,15 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
                       disabled={deletingLinkId === link.id}
                       style={{
                         marginLeft: '8px',
-                        padding: '4px 8px',
+                        padding: '6px 10px',
+                        minHeight: 36,
+                        flexShrink: 0,
                         backgroundColor: 'var(--danger)',
                         color: 'white',
                         border: 'none',
                         borderRadius: '3px',
                         cursor: deletingLinkId === link.id ? 'not-allowed' : 'pointer',
-                        fontSize: '11px',
+                        fontSize: '12px',
                         opacity: deletingLinkId === link.id ? 0.6 : 1,
                         transition: 'opacity 0.2s ease',
                       }}
@@ -391,7 +395,7 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
                 padding: '4px 8px',
                 borderRadius: '3px',
                 cursor: 'pointer',
-                fontSize: '11px',
+                fontSize: '12px',
               }}
             >
               Close Preview
@@ -402,7 +406,7 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
+              gridTemplateColumns: isPhone ? '1fr' : '1fr 1fr',
               gap: '16px',
               marginBottom: '16px',
             }}
@@ -462,7 +466,7 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
                     <strong style={{ fontSize: '12px', color: 'var(--success)', marginBottom: '6px', display: 'block' }}>Links</strong>
                     {currentOutgoingLinks.length > 0 && (
                       <div style={{ marginBottom: '8px' }}>
-                        <span style={{ fontSize: '11px', color: 'var(--success)', fontWeight: 'bold' }}>↓ From ({currentOutgoingLinks.length})</span>
+                        <span style={{ fontSize: '12px', color: 'var(--success)', fontWeight: 'bold' }}>↓ From ({currentOutgoingLinks.length})</span>
                         <div style={{ marginTop: '4px' }}>
                           {renderLinkGroup(currentOutgoingByType, 'outgoing', true)}
                         </div>
@@ -470,7 +474,7 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
                     )}
                     {currentIncomingLinks.length > 0 && (
                       <div>
-                        <span style={{ fontSize: '11px', color: 'var(--accent-strong)', fontWeight: 'bold' }}>↑ To ({currentIncomingLinks.length})</span>
+                        <span style={{ fontSize: '12px', color: 'var(--accent-strong)', fontWeight: 'bold' }}>↑ To ({currentIncomingLinks.length})</span>
                         <div style={{ marginTop: '4px' }}>
                           {renderLinkGroup(currentIncomingByType, 'incoming', true)}
                         </div>
@@ -478,7 +482,7 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
                     )}
                   </div>
                 )}
-                <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--border)', fontSize: '11px', color: 'var(--text-muted)' }}>
+                <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--border)', fontSize: '12px', color: 'var(--text-muted)' }}>
                   <p style={{ margin: '0 0 4px 0' }}>
                     <strong>Created:</strong> {new Date(artifact.created_at).toLocaleString()}
                   </p>
@@ -536,7 +540,7 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
                     <strong style={{ fontSize: '12px', color: 'var(--accent-strong)', marginBottom: '6px', display: 'block' }}>Links</strong>
                     {previewOutgoingLinks.length > 0 && (
                       <div style={{ marginBottom: '8px' }}>
-                        <span style={{ fontSize: '11px', color: 'var(--success)', fontWeight: 'bold' }}>↓ From ({previewOutgoingLinks.length})</span>
+                        <span style={{ fontSize: '12px', color: 'var(--success)', fontWeight: 'bold' }}>↓ From ({previewOutgoingLinks.length})</span>
                         <div style={{ marginTop: '4px' }}>
                           {renderLinkGroup(previewOutgoingByType, 'outgoing', true)}
                         </div>
@@ -544,7 +548,7 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
                     )}
                     {previewIncomingLinks.length > 0 && (
                       <div>
-                        <span style={{ fontSize: '11px', color: 'var(--accent-strong)', fontWeight: 'bold' }}>↑ To ({previewIncomingLinks.length})</span>
+                        <span style={{ fontSize: '12px', color: 'var(--accent-strong)', fontWeight: 'bold' }}>↑ To ({previewIncomingLinks.length})</span>
                         <div style={{ marginTop: '4px' }}>
                           {renderLinkGroup(previewIncomingByType, 'incoming', true)}
                         </div>
@@ -552,7 +556,7 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
                     )}
                   </div>
                 )}
-                <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--border)', fontSize: '11px', color: 'var(--text-muted)' }}>
+                <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--border)', fontSize: '12px', color: 'var(--text-muted)' }}>
                   <p style={{ margin: '0 0 4px 0' }}>
                     <strong>Created:</strong> {new Date(previewVersion.created_at).toLocaleString()}
                   </p>
@@ -598,7 +602,7 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
           <RouterLink
             to={`/projects/${artifact.project_id}/impact?artifact=${artifact.id}`}
             title="Trace what a change to this artifact would affect"
-            style={{ marginLeft: '10px', fontSize: '12px', color: 'var(--accent-strong)', textDecoration: 'none' }}
+            style={{ marginLeft: '10px', fontSize: '12px', color: 'var(--accent-strong)', textDecoration: 'none', display: 'inline-block', padding: '9px 0' }}
           >
             Show impact →
           </RouterLink>

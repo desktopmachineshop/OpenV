@@ -314,9 +314,9 @@ export const DownloadWizard: React.FC<DownloadWizardProps> = ({ projectId, basel
 // A checkbox or radio keeps its own size: index.css gives every input
 // width:100%, which would push the label it belongs to across the dialog.
 const tickStyle: React.CSSProperties = {
-  width: 16,
-  height: 16,
-  minWidth: 16,
+  width: 18,
+  height: 18,
+  minWidth: 18,
   flexShrink: 0,
   padding: 0,
   margin: 0,

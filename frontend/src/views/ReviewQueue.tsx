@@ -16,7 +16,7 @@ const typeChip = (label: string): React.CSSProperties => ({
   background: 'var(--surface-alt, var(--surface))',
   border: '1px solid var(--border)',
   color: 'var(--text-muted)',
-  fontSize: 11,
+  fontSize: 12,
   fontWeight: 600,
   whiteSpace: 'nowrap',
 });

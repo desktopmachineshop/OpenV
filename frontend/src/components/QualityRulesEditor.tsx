@@ -247,14 +247,16 @@ export const QualityRulesEditor: React.FC<Props> = ({ level, id, canEdit, onSave
                   gap: 12,
                   padding: '6px 0',
                   borderBottom: '1px solid var(--surface-inset)',
+                  // The select drops under the label when the row is narrow.
+                  flexWrap: 'wrap',
                 }}
               >
-                <span style={label}>
+                <span style={{ ...label, flex: '1 1 200px', minWidth: 0 }}>
                   {ruleNames[rule] || rule}
                   <br />
                   <span style={hint}>{rules.catalog.labels[rule]}</span>
                 </span>
-                <div style={{ width: 160, flex: 'none' }}>
+                <div style={{ flex: '0 1 160px', minWidth: 140 }}>
                   <select
                     value={severity}
                     disabled={!canEdit || saving}

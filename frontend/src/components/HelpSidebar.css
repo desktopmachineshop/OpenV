@@ -99,6 +99,7 @@
 
 .help-manual-link {
   display: inline-block;
+  padding: 9px 0;
   font-size: 13px;
   font-weight: 600;
   color: var(--accent);
@@ -113,7 +114,8 @@
 .help-item a {
   display: block;
   color: var(--accent);
-  margin-bottom: 5px;
+  padding: 9px 0;
+  margin-bottom: 2px;
   font-size: 13px;
   font-weight: 600;
   text-decoration: none;

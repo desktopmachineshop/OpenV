@@ -1,4 +1,6 @@
 import React, { useEffect } from 'react';
+import { useViewport } from '../../hooks/useViewport';
+import { dialogCardStyle } from './dialogCard';
 
 interface ModalProps {
   title?: React.ReactNode;
@@ -14,6 +16,7 @@ interface ModalProps {
  * and Escape. Render it conditionally — mounting the component opens it.
  */
 export const Modal: React.FC<ModalProps> = ({ title, width = 520, onClose, children, cardStyle }) => {
+  const { isPhone } = useViewport();
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -44,14 +47,8 @@ export const Modal: React.FC<ModalProps> = ({ title, width = 520, onClose, child
         className="card"
         onClick={(e) => e.stopPropagation()}
         style={{
-          width,
-          maxWidth: 'calc(100vw - 40px)',
-          maxHeight: 'calc(100vh - 60px)',
-          overflowY: 'auto',
+          ...dialogCardStyle(isPhone, width),
           background: 'var(--surface)',
-          borderRadius: 8,
-          padding: 24,
-          margin: 0,
           ...cardStyle,
         }}
       >

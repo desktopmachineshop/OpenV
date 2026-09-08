@@ -1,4 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useViewport } from '../hooks/useViewport';
+import { dialogCardStyle } from './ui/dialogCard';
 import { ConnectorPairing, connectorAPI, myRunnerKeyAPI, cloudRunnerAPI } from '../api/client';
 import { apiErrorMessage } from '../api/errors';
 
@@ -35,6 +37,7 @@ export const RunnerConnectPrompt: React.FC<RunnerConnectPromptProps> = ({
   onClose,
   reason,
 }) => {
+  const { isPhone } = useViewport();
   const [phase, setPhase] = useState<'opening' | 'waiting' | 'connected'>('opening');
   // Transient runners give a no-install way out of this prompt: lease one and
   // the queued run has somewhere to go without downloading anything. null
@@ -241,7 +244,7 @@ export const RunnerConnectPrompt: React.FC<RunnerConnectPromptProps> = ({
       <div
         className="card"
         onClick={(e) => e.stopPropagation()}
-        style={{ width: 620, maxWidth: '92vw', background: 'var(--surface)', borderRadius: 8, padding: 24, margin: 0 }}
+        style={{ ...dialogCardStyle(isPhone, 620), background: 'var(--surface)' }}
       >
         <h3 style={{ marginTop: 0, color: 'var(--text)' }}>
           {phase === 'connected' ? 'Runner connected' : 'No runner is online'}

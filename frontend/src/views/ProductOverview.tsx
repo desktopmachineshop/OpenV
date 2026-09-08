@@ -15,6 +15,7 @@ import { apiErrorMessage } from '../api/errors';
 import { useAppStore } from '../state/store';
 import { isUntouchedByWizard } from '../components/wizard/assistantSession';
 import { ErrorBanner } from '../components/ui';
+import { useViewport } from '../hooks/useViewport';
 
 interface MetricRow {
   name: string;
@@ -41,7 +42,7 @@ const chip = (bg: string): React.CSSProperties => ({
   display: 'inline-block',
   padding: '2px 8px',
   borderRadius: 10,
-  fontSize: 11,
+  fontSize: 12,
   fontWeight: 600,
   color: '#fff',
   background: bg,
@@ -51,6 +52,7 @@ export const ProductOverview: React.FC = () => {
   const params = useParams<{ projectId: string }>();
   const storeProjectId = useAppStore((s) => s.projectId);
   const projectId = params.projectId || storeProjectId;
+  const { isPhone } = useViewport();
 
   const [profile, setProfile] = useState<ProductProfile | null>(null);
   const [artifacts, setArtifacts] = useState<Artifact[]>([]);
@@ -393,7 +395,7 @@ export const ProductOverview: React.FC = () => {
       </div>
 
       {/* Personas & user needs */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isPhone ? '1fr' : '1fr 1fr', gap: 20 }}>
         {[
           { label: 'Personas', items: personas },
           { label: 'User needs', items: userNeeds },
@@ -462,7 +464,7 @@ export const ProductOverview: React.FC = () => {
                   {s.participant_name || 'Anonymous participant'} · {interviewName(s.interview_id)}
                 </span>
                 <span style={chip(s.status === 'active' ? 'var(--warning)' : 'var(--neutral)')}>{s.status}</span>
-                <span style={{ color: 'var(--neutral)', fontSize: 11 }}>
+                <span style={{ color: 'var(--neutral)', fontSize: 12 }}>
                   {s.started_at ? new Date(s.started_at).toLocaleString() : ''}
                 </span>
               </li>

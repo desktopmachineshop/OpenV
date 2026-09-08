@@ -49,7 +49,7 @@ export const ErrorClassChip: React.FC<{ errorClass?: string | null; title?: stri
         borderRadius: 12,
         background: meta.color,
         color: '#fff',
-        fontSize: 10.5,
+        fontSize: 12,
         fontWeight: 600,
         marginLeft: 6,
       }}
@@ -339,7 +339,7 @@ export const RunDetailPanel: React.FC<RunDetailPanelProps> = ({ runId, onSelectR
             <span style={{ color: 'var(--text)' }}>{n.agent_name || n.agent_id}</span>
             <span
               style={{
-                fontSize: 10.5,
+                fontSize: 12,
                 background: runStatusColor(n.status),
                 color: '#fff',
                 borderRadius: 8,

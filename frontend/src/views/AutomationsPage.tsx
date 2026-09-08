@@ -10,6 +10,7 @@ import {
 } from '../api/client';
 import { useAppStore } from '../state/store';
 import { ErrorBanner, Modal, SegmentedControl, useConfirm } from '../components/ui';
+import { useViewport } from '../hooks/useViewport';
 
 const EVENT_TYPES = [
   'artifact.created',
@@ -109,6 +110,12 @@ export const AutomationsPage: React.FC = () => {
   const params = useParams<{ projectId: string }>();
   const storeProjectId = useAppStore((s) => s.projectId);
   const projectId = params.projectId || storeProjectId;
+  // A phone lists name, kind, the switch and the actions; the target, the
+  // schedule and the run times are in the editor a tap away.
+  const { isPhone } = useViewport();
+  const columns = isPhone
+    ? ['Name', 'Kind', 'Enabled', '']
+    : ['Name', 'Kind', 'Target', 'Schedule / Event', 'Enabled', 'Last run', 'Next run', ''];
   const activeOrgId = useAppStore((s) => s.activeOrgId);
   const navigate = useNavigate();
   const confirm = useConfirm();
@@ -258,7 +265,7 @@ export const AutomationsPage: React.FC = () => {
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
           <thead>
             <tr>
-              {['Name', 'Kind', 'Target', 'Schedule / Event', 'Enabled', 'Last run', 'Next run', ''].map(
+              {columns.map(
                 (h, i) => (
                   <th
                     key={i}
@@ -296,26 +303,30 @@ export const AutomationsPage: React.FC = () => {
                       borderRadius: 12,
                       background: kindColor(a.kind),
                       color: '#fff',
-                      fontSize: 11.5,
+                      fontSize: 12,
                       fontWeight: 600,
                     }}
                   >
                     {kindLabel(a.kind)}
                   </span>
                 </td>
-                <td style={{ padding: '9px 12px', borderBottom: '1px solid var(--neutral-soft)', color: 'var(--text)' }}>
-                  {targetLabel(a)}
-                </td>
-                <td
-                  style={{
-                    padding: '9px 12px',
-                    borderBottom: '1px solid var(--neutral-soft)',
-                    color: 'var(--text-body)',
-                    fontFamily: a.kind === 'scheduled' ? 'monospace' : undefined,
-                  }}
-                >
-                  {scheduleLabel(a)}
-                </td>
+                {!isPhone && (
+                  <>
+                    <td style={{ padding: '9px 12px', borderBottom: '1px solid var(--neutral-soft)', color: 'var(--text)' }}>
+                      {targetLabel(a)}
+                    </td>
+                    <td
+                      style={{
+                        padding: '9px 12px',
+                        borderBottom: '1px solid var(--neutral-soft)',
+                        color: 'var(--text-body)',
+                        fontFamily: a.kind === 'scheduled' ? 'monospace' : undefined,
+                      }}
+                    >
+                      {scheduleLabel(a)}
+                    </td>
+                  </>
+                )}
                 <td style={{ padding: '9px 12px', borderBottom: '1px solid var(--neutral-soft)' }}>
                   <label
                     style={{
@@ -338,16 +349,21 @@ export const AutomationsPage: React.FC = () => {
                     </span>
                   </label>
                 </td>
-                <td style={{ padding: '9px 12px', borderBottom: '1px solid var(--neutral-soft)', color: 'var(--text-body)' }}>
-                  {a.last_run_at ? new Date(a.last_run_at).toLocaleString() : '—'}
-                </td>
-                <td style={{ padding: '9px 12px', borderBottom: '1px solid var(--neutral-soft)', color: 'var(--text-body)' }}>
-                  {a.next_run_at ? new Date(a.next_run_at).toLocaleString() : '—'}
-                </td>
+                {!isPhone && (
+                  <>
+                    <td style={{ padding: '9px 12px', borderBottom: '1px solid var(--neutral-soft)', color: 'var(--text-body)' }}>
+                      {a.last_run_at ? new Date(a.last_run_at).toLocaleString() : '—'}
+                    </td>
+                    <td style={{ padding: '9px 12px', borderBottom: '1px solid var(--neutral-soft)', color: 'var(--text-body)' }}>
+                      {a.next_run_at ? new Date(a.next_run_at).toLocaleString() : '—'}
+                    </td>
+                  </>
+                )}
                 <td style={{ padding: '9px 12px', borderBottom: '1px solid var(--neutral-soft)', whiteSpace: 'nowrap' }}>
+                  <div style={{ display: 'flex', gap: 6, flexDirection: isPhone ? 'column' : 'row' }}>
                   <button
                     className="button"
-                    style={{ padding: '4px 10px', fontSize: 12, marginRight: 6 }}
+                    style={{ padding: '4px 10px', fontSize: 12, minHeight: 36 }}
                     onClick={() => runNow(a)}
                   >
                     Run now
@@ -356,6 +372,7 @@ export const AutomationsPage: React.FC = () => {
                     style={{
                       padding: '4px 10px',
                       fontSize: 12,
+                      minHeight: 36,
                       background: 'var(--danger)',
                       color: '#fff',
                       border: 'none',
@@ -366,12 +383,13 @@ export const AutomationsPage: React.FC = () => {
                   >
                     Delete
                   </button>
+                  </div>
                 </td>
               </tr>
             ))}
             {automations.length === 0 && (
               <tr>
-                <td colSpan={8} style={{ padding: 16, color: 'var(--text-muted)', background: 'var(--surface)' }}>
+                <td colSpan={columns.length} style={{ padding: 16, color: 'var(--text-muted)', background: 'var(--surface)' }}>
                   No automations yet.
                 </td>
               </tr>

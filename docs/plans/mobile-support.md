@@ -239,6 +239,45 @@ Shipped, in one PR on top of this plan:
   Pixel 5 (Chromium) projects: drawer navigation, the stacked module, and
   the no-horizontal-scroll contract on every page it visits.
 
+### Phone polish pass (2026-09-08)
+
+A run-through of every screen at 390 px, prompted by the personal settings
+modal clipping its System / Light / Dark control after "System". The
+findings and the fixes, by class:
+
+- **Clipped or off-screen controls** — dialog shells (`Modal`,
+  `ConfirmDialog`, `PromptDialog`, the runner dialogs) share
+  `ui/dialogCard.ts`: on a phone the card fills the width with 16 px
+  padding. Personal settings is a full-screen sheet whose rows wrap.
+  Segmented controls wrap. The workspace switcher's menu is fixed to the
+  screen on phones. The top bar is one row (logo, workspace, bell, account)
+  with the centred title dropped.
+- **Two-pane layouts** — `ui/Sheet.tsx` opens the side pane as a
+  full-screen sheet below 900 px: the agent editor, a run's detail, a crew
+  node's settings.
+- **Wide tables and grids** — the runs, automations and V&V tables show
+  their identifying columns on a phone (the rest are in the detail a tap
+  away); the ag-grid views pin a 150 px first column and hide the
+  lowest-value columns.
+- **Tap targets** — a touch-screen floor in `index.css`: 40 px for
+  `.button`, `.button-secondary`, `.icon-btn`, selects and text fields,
+  36 px for every other button, 18 px ticks. Inline-styled buttons that
+  set their own padding carry `minHeight` explicitly.
+- **Text** — nothing under 12 px: chips, refs, timestamps, tree glyphs,
+  upload hints.
+- **Grids that never collapsed** — Product Overview personas / needs, the
+  agent editor form, the version compare, the workspace details all go to
+  one column on a phone.
+
+The regression tool is `e2e/tools/phone-audit.js` (`npm run audit:phone`
+in `e2e/`): it renders a served production build on a Pixel 5 against a
+mocked API, opens the sheets and dialogs reachable from 48 screens, and
+reports elements past the viewport, clipped containers, tap targets under
+32 px, text under 12 px and page errors, with a screenshot per screen.
+`mobile.spec.ts` covers the four worst cases end to end: the theme
+options in personal settings, the workspace switcher menu, the agent
+editor sheet, and the runs and automations tables.
+
 Deferred, each a follow-up of its own:
 
 - Web Push (VAPID keys, a subscription table, a subscribe endpoint, the

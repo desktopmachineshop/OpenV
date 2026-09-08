@@ -17,7 +17,7 @@ const typeChipStyle: React.CSSProperties = {
   borderRadius: 10,
   background: 'var(--neutral-soft)',
   color: 'var(--text)',
-  fontSize: 11,
+  fontSize: 12,
   fontWeight: 600,
   whiteSpace: 'nowrap',
   flexShrink: 0,
@@ -30,7 +30,7 @@ const fieldBadgeStyle: React.CSSProperties = {
   background: 'var(--tint-yellow)',
   border: '1px solid var(--tint-yellow-border)',
   color: 'var(--warning-text)',
-  fontSize: 11,
+  fontSize: 12,
   whiteSpace: 'nowrap',
 };
 
@@ -228,7 +228,7 @@ export const BaselineCompare: React.FC = () => {
         <div style={{ flex: 1 }} />
         <RouterLink
           to={`/projects/${projectId}/requirements`}
-          style={{ fontSize: 13, color: 'var(--accent)' }}
+          style={{ fontSize: 13, color: 'var(--accent)', display: 'inline-block', padding: '9px 0' }}
         >
           ← Back to Requirements
         </RouterLink>

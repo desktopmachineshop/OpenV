@@ -147,6 +147,8 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ variant = 'l
           border: 'none',
           cursor: 'pointer',
           padding: 4,
+          minWidth: 40,
+          minHeight: 40,
           fontSize: 16,
           lineHeight: 1,
           color: dark ? 'var(--sidebar-text-dim)' : 'var(--text)',
@@ -225,8 +227,9 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ variant = 'l
                   border: 'none',
                   color: 'var(--accent)',
                   cursor: 'pointer',
-                  fontSize: 12,
-                  padding: 0,
+                  fontSize: 12.5,
+                  padding: '6px 0',
+                  minHeight: 36,
                 }}
               >
                 Mark all read
@@ -289,7 +292,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ variant = 'l
                     flexShrink: 0,
                   }}
                 >
-                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                  <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
                     {timeAgo(n.created_at)}
                   </span>
                   {!n.read && (
@@ -303,8 +306,9 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ variant = 'l
                         background: 'none',
                         border: 'none',
                         cursor: 'pointer',
-                        padding: 0,
-                        fontSize: 11,
+                        padding: '6px 0',
+                        minHeight: 36,
+                        fontSize: 12.5,
                         color: 'var(--accent)',
                       }}
                     >
