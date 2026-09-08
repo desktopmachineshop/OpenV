@@ -2,6 +2,7 @@ import axios, { AxiosInstance } from 'axios';
 import { filenameFromContentDisposition } from './contentDisposition';
 import type { SharedProductPayload, toSharePayload } from '../utils/randomProduct';
 import { downloadQuery } from '../utils/downloadSelection';
+import { isPublicPath } from '../utils/publicPaths';
 
 // Determine API base URL.
 //
@@ -69,8 +70,7 @@ client.interceptors.response.use(
     if (
       error.response?.status === 401 &&
       typeof window !== 'undefined' &&
-      !window.location.pathname.startsWith('/login') &&
-      !window.location.pathname.startsWith('/interview/') &&
+      !isPublicPath(window.location.pathname) &&
       !String(error.config?.url || '').includes('/api/v1/auth/')
     ) {
       window.location.href = '/login';

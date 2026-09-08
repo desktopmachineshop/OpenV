@@ -59,10 +59,11 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
     },
     {
-      // The core journey only: enough to catch an engine-specific break in
-      // sign-in, navigation or editing without doubling the suite's time.
+      // The core journey plus the public front page: enough to catch an
+      // engine-specific break in sign-in, navigation or editing without
+      // doubling the suite's time.
       name: 'webkit',
-      testMatch: /smoke\.spec\.ts/,
+      testMatch: /(smoke|landing)\.spec\.ts/,
       use: { ...devices['Desktop Safari'] },
     },
     {

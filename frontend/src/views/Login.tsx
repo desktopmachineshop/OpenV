@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { authAPI } from '../api/client';
 import { apiErrorMessage } from '../api/errors';
 import { useAppStore } from '../state/store';
@@ -8,8 +8,12 @@ import { useAppStore } from '../state/store';
 // register mode. The first registered user becomes the admin.
 export const Login: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const setCurrentUser = useAppStore((s) => s.setCurrentUser);
-  const [mode, setMode] = useState<'login' | 'register'>('login');
+  // The landing page links straight to registration with ?mode=register.
+  const [mode, setMode] = useState<'login' | 'register'>(
+    searchParams.get('mode') === 'register' ? 'register' : 'login'
+  );
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
@@ -76,7 +80,10 @@ export const Login: React.FC = () => {
         className="card"
         style={{ width: '100%', maxWidth: 380, padding: 32, background: 'var(--surface)', borderRadius: 8, boxSizing: 'border-box', margin: 0 }}
       >
-        <h1 style={{ margin: 0, fontSize: 26, color: 'var(--text)' }}>OpenV</h1>
+        <Link to="/" style={{ fontSize: 13, color: 'var(--text-muted)', textDecoration: 'none' }}>
+          ← About OpenV
+        </Link>
+        <h1 style={{ margin: '8px 0 0', fontSize: 26, color: 'var(--text)' }}>OpenV</h1>
         <p style={{ color: 'var(--text-muted)', marginTop: 4, marginBottom: 24, fontSize: 14 }}>
           {mode === 'login' ? 'Sign in to your workspace' : 'Create your account'}
         </p>

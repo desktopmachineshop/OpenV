@@ -29,15 +29,27 @@ subscription (Claude Code / Codex / Gemini) running on your machine:
 
 Setup guide: [docs/agents.md](docs/agents.md)
 
-### Planned Features
-- Graph-based traceability visualization
-- V&V coverage reporting and dashboards
-- Baseline snapshots and diff comparison
+### What's next
+- Web Push notifications and phone-side runner control (see `docs/plans/mobile-support.md`)
+- GitHub issues and pull requests tied to requirements and verification evidence
 - Plugin system for custom rules and integrations
-- Cloud deployment (Kubernetes, Helm)
-- Advanced search and filtering
-- Test result integration
-- Multi-user support with OIDC
+- Helm charts for Kubernetes
+
+## Pricing
+
+- **Hosted service**: free while OpenV is in alpha, every feature included,
+  no card and no trial clock. The hosted-runner limits in force (2 GB / 1 CPU
+  hosted runner, 60-minute cloud-runner lease reclaimed after 15 idle
+  minutes) are listed on the instance's `/pricing` page. Agent runs use your
+  own AI subscription or your workspace's API keys.
+- **Self-hosted**: free forever under the AGPL-3.0, all features, your hardware.
+- **Charities and open-source projects**: free forever on the hosted service.
+  Claim it with a [free-hosting issue](https://github.com/desktopmachineshop/OpenV/issues/new?template=free-hosting.md).
+
+If hosted OpenV ever charges, your data will not be behind the paywall:
+export (JSON, CSV, ReqIF, PDF, Word) and import (JSON, ReqIF) stay available
+on every plan, and a JSON export restores into a self-hosted OpenV. There is
+no billing in the product today.
 
 ## Quick Start
 
@@ -235,18 +247,18 @@ npm test
 
 ## Roadmap
 
-- [x] Core artifact CRUD
-- [x] Basic traceability links
-- [x] Module view UI
-- [ ] Graph visualization
-- [ ] V&V dashboard and coverage reports
-- [ ] Baseline management
+- [x] Core artifact CRUD, versions and typed traceability links
+- [x] Module view, document view and traceability matrix
+- [x] Baselines, comparison and change impact analysis
+- [x] V&V dashboard, coverage, gaps and test runs
+- [x] Import/export: JSON, CSV, ReqIF, PDF, Word
+- [x] Workspaces, teams, per-project access, Google and OIDC sign-in
+- [x] Multi-agent suite: runners, proposals, crews, automations, interviews
+- [x] Phone-friendly shell
+- [ ] Web Push and runner control from a phone
+- [ ] GitHub issues and PRs tied to requirements and evidence
 - [ ] Plugin system
-- [ ] Cloud deployment (Helm charts)
-- [ ] Advanced search and filtering
-- [ ] Multi-user authentication
-- [ ] Test result integration
-- [ ] Import/export formats
+- [ ] Helm charts
 
 ## Contributing
 

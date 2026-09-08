@@ -9,7 +9,9 @@ are admin-only; other members see read-only or explanatory views.
 ## General
 
 - **Workspace name** — admins can rename the workspace.
-- **Plan** — the workspace's plan (billing coming soon).
+- **Plan** — the workspace's plan. Every workspace is on the free plan while
+  OpenV is in alpha, with every feature included; the hosted-runner limits in
+  force are listed on the [pricing page](/pricing).
 - **Details** — workspace ID, slug, and creation date.
 
 ## Members

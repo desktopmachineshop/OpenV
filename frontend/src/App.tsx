@@ -31,6 +31,9 @@ const ModuleView = lazy(() =>
 const ManualView = lazy(() =>
   import('./views/ManualView').then((m) => ({ default: m.ManualView }))
 );
+// Landing is the public front page; signed-in users never render it, so it
+// stays out of the main bundle they download.
+const Landing = lazy(() => import('./views/Landing').then((m) => ({ default: m.Landing })));
 const CrewBuilder = lazy(() =>
   import('./views/CrewBuilder').then((m) => ({ default: m.CrewBuilder }))
 );
@@ -135,7 +138,10 @@ function App() {
         <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/interview/:token" element={<InterviewChat />} />
-        <Route path="/" element={<Navigate to="/projects" replace />} />
+        {/* The front page for visitors; a signed-in user goes straight to work.
+            authChecked gates rendering above, so currentUser is settled here. */}
+        <Route path="/" element={currentUser ? <Navigate to="/projects" replace /> : <Landing />} />
+        <Route path="/pricing" element={<Landing section="pricing" />} />
         <Route path="/projects" element={<ProjectList />} />
         <Route path="/org/settings" element={<OrgSettings />} />
         <Route path="/manual" element={<ManualView />} />
