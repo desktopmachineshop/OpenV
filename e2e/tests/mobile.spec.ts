@@ -1,5 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
-import { createProject, makeRunId, makeUser, registerUser } from './helpers';
+import { createProject, expectNoHorizontalScroll, makeRunId, makeUser, registerUser } from './helpers';
 
 // Mobile journey (docs/plans/mobile-support.md, REQ-101..REQ-105).
 //
@@ -18,18 +18,6 @@ test.describe.configure({ mode: 'serial' });
 
 let page: Page;
 let projectId = '';
-
-/** The page must never be wider than the phone: horizontal scrolling on a
- *  phone means something has a fixed desktop width. */
-async function expectNoHorizontalScroll(p: Page): Promise<void> {
-  const overflow = await p.evaluate(() => ({
-    scrollWidth: document.documentElement.scrollWidth,
-    innerWidth: window.innerWidth,
-  }));
-  expect(overflow.scrollWidth, `page scrolls sideways: ${JSON.stringify(overflow)}`).toBeLessThanOrEqual(
-    overflow.innerWidth
-  );
-}
 
 test.beforeAll(async ({ browser }) => {
   page = await browser.newPage();

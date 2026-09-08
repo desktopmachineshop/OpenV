@@ -162,7 +162,7 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({ agent, onSaved, onCanc
     : FALLBACK_PROVIDERS;
 
   return (
-    <div className="card" style={{ marginBottom: 0 }}>
+    <div className="card measure" style={{ marginBottom: 0 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
         <h3 style={{ margin: 0, flex: '1 1 160px', minWidth: 0, overflowWrap: 'anywhere' }}>{isNew ? 'New agent' : `Edit: ${agent?.name}`}</h3>
         {!isNew && (
@@ -349,7 +349,7 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({ agent, onSaved, onCanc
                   <label htmlFor="agent-locked" style={{ margin: 0, fontWeight: 400 }}>
                     Lock this agent against automatic updates
                   </label>
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4, maxWidth: 'var(--measure-field)' }}>
                     Platform releases bring a standard agent's prompt and tools up to date
                     where you have not changed them. Lock it and they never will — this agent
                     then changes only when someone here changes it. You can unlock it again at

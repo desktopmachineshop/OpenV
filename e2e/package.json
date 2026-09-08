@@ -6,7 +6,8 @@
   "scripts": {
     "test": "playwright test",
     "report": "playwright show-report",
-    "audit:phone": "node tools/phone-audit.js"
+    "audit:phone": "node tools/phone-audit.js",
+    "audit:desktop": "ENGINES=desktop node tools/phone-audit.js"
   },
   "devDependencies": {
     "@playwright/test": "1.57.0",

@@ -148,8 +148,9 @@ export const ChatterPanel: React.FC<ChatterPanelProps> = ({
             border: '1px solid var(--border)',
             borderRadius: 4,
             cursor: 'pointer',
-            fontSize: '11px',
-            padding: '2px 6px',
+            fontSize: 12,
+            padding: '3px 8px',
+            minHeight: 24,
             color: 'var(--text-muted)',
           }}
           title={

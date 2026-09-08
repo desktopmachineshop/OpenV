@@ -287,7 +287,8 @@ export const ManualView: React.FC = () => {
                         to={`/manual/${c.slug}#${h.id}`}
                         style={{
                           display: 'block',
-                          padding: '4px 16px 4px 38px',
+                          padding: '5px 16px 5px 38px',
+                          lineHeight: '14px',
                           color: 'var(--sidebar-text-faint)',
                           textDecoration: 'none',
                           fontSize: 12,

@@ -175,7 +175,7 @@ export const ProposalReviewPanel: React.FC<ProposalReviewPanelProps> = ({
             value={bulkNote}
             onChange={(e) => setBulkNote(e.target.value)}
             placeholder="Bulk review note (optional)"
-            style={{ flex: 1, minWidth: 180, fontSize: 13, padding: '7px 10px' }}
+            style={{ flex: 1, minWidth: 180, maxWidth: 640, fontSize: 13, padding: '7px 10px' }}
             disabled={bulkBusy}
           />
           <button
@@ -293,7 +293,7 @@ export const ProposalReviewPanel: React.FC<ProposalReviewPanelProps> = ({
               value={notes[p.id] || ''}
               onChange={(e) => setNotes((n) => ({ ...n, [p.id]: e.target.value }))}
               placeholder="Review note (optional)"
-              style={{ flex: 1, minWidth: 180, fontSize: 13, padding: '7px 10px' }}
+              style={{ flex: 1, minWidth: 180, maxWidth: 640, fontSize: 13, padding: '7px 10px' }}
             />
             <button
               className="button"

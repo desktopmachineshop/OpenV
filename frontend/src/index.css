@@ -437,6 +437,21 @@ textarea {
 }
 
 
+/* Large screens: a reading surface (the artifact document, a form, a
+   settings card) stops growing at the measure and stays left-aligned with
+   the pane it sits in, so lines and fields keep a readable length on a
+   2560 px or 4K display. Tables are not capped; they scroll. */
+.measure {
+  max-width: var(--measure);
+}
+/* A single-line field inside a measured surface stops at the field measure:
+   a title or a slug does not need eleven hundred pixels. Textareas keep the
+   full measure, as does anything the page sized itself. */
+.measure input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']),
+.measure select {
+  max-width: var(--measure-field);
+}
+
 /* The 10px strip left behind by a hidden or auto-hiding side panel. It is now
    the only way back from hidden, so it has to answer "is this a button?" —
    widening the arrow and lifting the ground on hover says yes without

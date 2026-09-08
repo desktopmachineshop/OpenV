@@ -182,7 +182,7 @@ export const OrgSettings: React.FC = () => {
               <h3>Workspace name</h3>
               {isAdmin ? (
                 <form onSubmit={handleSaveName} style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap' }}>
-                  <div style={{ flex: 1, minWidth: 220 }}>
+                  <div style={{ flex: 1, minWidth: 220, maxWidth: 480 }}>
                     <label style={{ fontSize: 12 }}>Name</label>
                     <input value={nameDraft} onChange={(e) => setNameDraft(e.target.value)} />
                   </div>
@@ -239,7 +239,7 @@ export const OrgSettings: React.FC = () => {
                   permanently deleted. Type the workspace name to confirm.
                 </p>
                 <form onSubmit={handleDelete} style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap' }}>
-                  <div style={{ flex: 1, minWidth: 220 }}>
+                  <div style={{ flex: 1, minWidth: 220, maxWidth: 480 }}>
                     <label style={{ fontSize: 12 }}>Workspace name</label>
                     <input
                       value={deleteConfirm}
