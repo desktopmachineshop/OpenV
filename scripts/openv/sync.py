@@ -27,7 +27,9 @@ sign in, and can be revoked without disturbing anything else.
 
 Commands:
 
-  register                     create the account (open registration)
+  register                     create the account (open registration; on a
+                               server that sends email the account stays
+                               walled until the emailed link is clicked)
   bootstrap [--def FILE]       idempotent full load of the seed definition:
                                ensure workspace + project, save profile,
                                create/update artifacts (matched by title),

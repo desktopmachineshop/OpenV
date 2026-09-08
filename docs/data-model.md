@@ -75,8 +75,18 @@ JSONB, `is_default`, `org_id` (NULL = global built-in).
 
 ### users
 `email` (unique, case-insensitive), `name`, `avatar_url`, `auth_provider`
-(`password` | `google`), `password_hash`, `is_admin` (the first registered
-user), timestamps.
+(`password` | `google` | `oidc`), `password_hash`, `is_admin` (the first
+registered user), `email_notifications` (opt-out for notification email,
+0013), `email_verified` + `email_verified_at` (0024: SSO accounts are
+verified by their provider; a password account is verified by following an
+emailed link, enforced only where SMTP is configured), timestamps.
+
+### email_verifications
+One-shot verification links (0024, the `connector_pairings` shape): `user_id`,
+`email` (the address the link went to; applied to the user on confirm, which
+is how a change of address works), `token_hash` (unique; the raw token is
+never stored), `expires_at` (24 h), `used`. Issuing a link discards the
+user's unused ones.
 
 ### sessions
 Cookie sessions: `user_id`, `token_hash` (unique), `expires_at`,

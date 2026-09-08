@@ -51,6 +51,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/workerkeys"
 	"github.com/openv/requirements-platform/internal/domain/workitems"
 	"github.com/openv/requirements-platform/internal/hosting"
+	"github.com/openv/requirements-platform/internal/notify"
 )
 
 // HandlerDeps carries every service the API layer depends on.
@@ -107,6 +108,13 @@ type HandlerDeps struct {
 	GoogleOAuth      *GoogleOAuthConfig
 	OIDC             *OIDCConfig
 	SecureCookies    bool
+	// Mailer sends the sign-up verification email; nil or disabled means the
+	// feature is inert. EmailLinkBase is the frontend origin the emailed link
+	// points at; EmailVerification is the deployment's policy (see
+	// notify.VerificationPolicyFromEnv).
+	Mailer            notify.Mailer
+	EmailLinkBase     string
+	EmailVerification users.EmailVerificationPolicy
 	// CrossSiteCookies marks deployments where the frontend and API are served
 	// from different sites (e.g. two *.up.railway.app domains): auth cookies are
 	// issued with SameSite=None, and Secure is forced on since browsers reject
@@ -183,6 +191,14 @@ type Handler struct {
 	authAccountLimiter *rateLimiter
 	registerIPLimiter  *rateLimiter
 	ssoIPLimiter       *rateLimiter
+	// verifyResendLimiter bounds verification mails per account (resend and
+	// change of address share it).
+	verifyResendLimiter *rateLimiter
+
+	// Sign-up email verification (see email_verification_handlers.go).
+	mailer            notify.Mailer
+	emailLinkBase     string
+	emailVerification users.EmailVerificationPolicy
 }
 
 // NewHandler creates a new API handler
@@ -248,6 +264,10 @@ func NewHandler(deps HandlerDeps) *Handler {
 		authAccountLimiter:     newRateLimiterFromEnv(envAuthAccountBurst, envAuthAccountRefill, defaultAuthAccountBurst, defaultAuthAccountRefill),
 		registerIPLimiter:      newRateLimiterFromEnv(envRegisterIPBurst, envRegisterIPRefill, defaultRegisterIPBurst, defaultRegisterIPRefill),
 		ssoIPLimiter:           newRateLimiterFromEnv(envSSOIPBurst, envSSOIPRefill, defaultSSOIPBurst, defaultSSOIPRefill),
+		verifyResendLimiter:    newRateLimiterFromEnv(envVerifyResendBurst, envVerifyResendRefill, defaultVerifyResendBurst, defaultVerifyResendRefill),
+		mailer:                 deps.Mailer,
+		emailLinkBase:          deps.EmailLinkBase,
+		emailVerification:      deps.EmailVerification,
 	}
 }
 

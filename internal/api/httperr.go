@@ -10,6 +10,20 @@ import (
 // frontend reads err.response.data.error, so the field name is load-bearing.
 type errorBody struct {
 	Error string `json:"error"`
+	// Code is a stable machine-readable reason for the errors a client has to
+	// branch on (the message is for people and may change).
+	Code string `json:"code,omitempty"`
+}
+
+// ErrCodeEmailUnverified marks the 403 the auth middleware answers for a
+// session whose account has not yet confirmed its email address.
+const ErrCodeEmailUnverified = "email_unverified"
+
+// writeJSONErrorCode is writeJSONError with a machine-readable code.
+func writeJSONErrorCode(w http.ResponseWriter, status int, message, code string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(errorBody{Error: message, Code: code})
 }
 
 // writeJSONError writes a JSON {"error": message} body with the given status.

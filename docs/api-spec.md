@@ -115,11 +115,14 @@ their own project, workers pass within their org) · `org member`/`org admin`
 
 | Method | Path | Purpose | Auth |
 |---|---|---|---|
-| POST | `/api/v1/auth/register` | Create password account (first user becomes admin) and log in | open |
+| POST | `/api/v1/auth/register` | Create password account (first user becomes admin) and log in; on a server with SMTP the account starts unverified and a verification link is emailed | open |
 | POST | `/api/v1/auth/login` | Password login, sets session cookie | open |
 | POST | `/api/v1/auth/logout` | End session, clear cookie | open |
 | GET | `/api/v1/auth/me` | Current user profile | user |
-| GET | `/api/v1/auth/config` | Which sign-in methods are enabled (Google) | open |
+| GET | `/api/v1/auth/config` | Which sign-in methods are enabled (Google, OIDC) and whether `email_verification_required` | open |
+| POST | `/api/v1/auth/verify-email` | Confirm an emailed link `{token}`; returns the user (`400` invalid/expired, `409` address taken) | open |
+| POST | `/api/v1/auth/verify-email/resend` | Email a fresh link to the session's account (`202 {sent_to}`; `409` already verified; `502` mail failed) | user (cookie only, JSON body) |
+| POST | `/api/v1/auth/verify-email/change` | Email a fresh link to a corrected address `{email}`; the account's address changes when that link is confirmed | user (cookie only, JSON body) |
 | GET | `/api/v1/auth/google` | Start Google OIDC flow | open |
 | GET | `/api/v1/auth/google/callback` | OIDC callback, creates/logs in user | open |
 | GET | `/api/v1/users` | List users (for member pickers) | user |
@@ -546,6 +549,14 @@ Google and OIDC start and callback routes are throttled per client address,
 and sign-in additionally per account on failed attempts; the public interview
 routes are throttled per invite and per address. A throttled request is
 answered `429` with a JSON `error` and a `Retry-After` header in seconds.
+Verification resend and change-of-address are throttled per account
+(`OPENV_VERIFY_RESEND_BURST` 3, `OPENV_VERIFY_RESEND_REFILL_PER_HOUR` 6).
+
+While a server requires email verification (`email_verification_required` in
+`GET /auth/config`), a session whose account has `email_verified: false` is
+answered `403 {"error":"email not verified","code":"email_unverified"}` on
+every route outside `/api/v1/auth/*`; `code` is the stable field a client
+branches on. Bearer credentials are never gated.
 Request bodies are capped at 32 MB and attachment uploads at 25 MB (`413`
 when exceeded); an upload whose bytes do not match the declared image type
 is refused with `400`, and an SVG attachment is always served as a download.

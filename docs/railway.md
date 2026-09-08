@@ -113,6 +113,15 @@ GOOGLE_CLIENT_SECRET=...
 Optional — SMTP email notifications: the `OPENV_SMTP_*` variables from
 [operations.md](operations.md) work unchanged.
 
+Setting them also turns on **email verification for sign-ups**, for every
+password account including the maintainer's own (the accounts that predate
+the feature are unverified). Roll it out in two steps: add the `OPENV_SMTP_*`
+variables together with `OPENV_EMAIL_VERIFICATION=off`, confirm a
+notification email arrives, then remove the `off`. From that deploy each
+password account meets the *Check your inbox* page on its next request and
+verifies with one click on *Resend email*. Re-adding `off` switches it back
+off at once. With no SMTP variables nothing is enforced.
+
 ## 3. Frontend service
 
 **Create → GitHub Repo**, pick the same repository again.

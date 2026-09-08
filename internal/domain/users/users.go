@@ -24,6 +24,11 @@ const (
 // SessionDuration is how long a login session stays valid.
 const SessionDuration = 30 * 24 * time.Hour
 
+// EmailVerificationTTL is how long an emailed verification link stays valid.
+// Long enough to survive a slow inbox, short enough that a link forwarded or
+// left in a mailbox is not a standing credential.
+const EmailVerificationTTL = 24 * time.Hour
+
 var (
 	ErrInvalidCredentials = errors.New("invalid email or password")
 	ErrEmailTaken         = errors.New("an account with this email already exists")
@@ -36,7 +41,22 @@ var (
 	// auto-linking would be an account-takeover vector. Explicit verified
 	// account linking is a documented follow-up (issue #242).
 	ErrProviderMismatch = errors.New("an account with this email already exists with a different sign-in method")
+	// ErrVerificationInvalid covers every way a verification link can fail —
+	// unknown, already used, expired — with one message, so a probe learns
+	// nothing about which token values exist.
+	ErrVerificationInvalid = errors.New("verification link is invalid or has expired")
+	ErrAlreadyVerified     = errors.New("email is already verified")
 )
+
+// EmailVerificationPolicy says whether password accounts must prove control
+// of their address before the app serves them (SEC-15 / REQ-95). Required is
+// true only when the deployment can actually send mail and the operator has
+// not switched it off (see notify.VerificationPolicyFromEnv); with it false,
+// accounts are born verified and nothing is enforced, which keeps a default
+// self-hosted stack, CI and the E2E suite exactly as they were.
+type EmailVerificationPolicy struct {
+	Required bool
+}
 
 // User is a platform account.
 type User struct {
@@ -50,9 +70,29 @@ type User struct {
 	// EmailNotifications is the per-user opt-out for email delivery of
 	// higher-signal notifications (issue #187). Defaults TRUE; only has any
 	// effect when the server has SMTP configured (email is opt-in infra).
-	EmailNotifications bool      `json:"email_notifications"`
-	CreatedAt          time.Time `json:"created_at"`
-	UpdatedAt          time.Time `json:"updated_at"`
+	EmailNotifications bool `json:"email_notifications"`
+	// EmailVerified says the account has proved control of Email by following
+	// an emailed link (or was created by an identity provider that asserted a
+	// verified address). The auth middleware refuses an unverified session
+	// while EmailVerificationPolicy.Required is on.
+	EmailVerified   bool       `json:"email_verified"`
+	EmailVerifiedAt *time.Time `json:"email_verified_at,omitempty"`
+	CreatedAt       time.Time  `json:"created_at"`
+	UpdatedAt       time.Time  `json:"updated_at"`
+}
+
+// EmailVerification is one emailed verification link. The raw token is never
+// stored, only its hash; Email is the address the link was sent to, which
+// becomes the account's address when the link is confirmed (that is how a
+// change of address works: the new address is never applied unproven).
+type EmailVerification struct {
+	ID        string
+	UserID    string
+	Email     string
+	TokenHash string
+	ExpiresAt time.Time
+	Used      bool
+	CreatedAt time.Time
 }
 
 // Session is a logged-in browser session. Token is only present at creation.
@@ -77,6 +117,15 @@ type Repository interface {
 	// SetEmailNotifications flips one user's email opt-out. Scoped by id so it
 	// can only ever touch that user's own row.
 	SetEmailNotifications(userID string, enabled bool) error
+	// SaveEmailVerification stores v after discarding the user's unused
+	// pending links, so at most one link is live per account.
+	SaveEmailVerification(v *EmailVerification) error
+	// ConsumeEmailVerification atomically spends the link with this hash
+	// (unused, unexpired at now), marks its user verified at now and applies
+	// the link's email to the user row. Returns the updated user; nil, nil
+	// when the hash is unknown, spent or expired; ErrEmailTaken when the
+	// address now belongs to another account.
+	ConsumeEmailVerification(tokenHash string, now time.Time) (*User, error)
 
 	SaveSession(s *Session) error
 	FindSessionByTokenHash(hash string) (*Session, error)
@@ -105,11 +154,32 @@ type Service interface {
 	ListUsers() ([]*User, error)
 	// SetEmailNotifications updates the caller's own email opt-out (issue #187).
 	SetEmailNotifications(userID string, enabled bool) error
+	// IssueEmailVerification mints a fresh verification link for the user.
+	// email "" means the account's current address; any other address is a
+	// change request — the link goes there and the account's address changes
+	// only when it is confirmed. Returns the raw token (for the email) and
+	// the normalised address it was issued for. Errors: ErrAlreadyVerified,
+	// ErrEmailTaken, or an invalid address.
+	IssueEmailVerification(userID, email string) (token, sentTo string, err error)
+	// ConfirmEmailVerification spends a raw token: single use, valid for
+	// EmailVerificationTTL. It marks the user verified, applies the link's
+	// address, and returns the user. ErrVerificationInvalid for anything
+	// unknown, used or expired; ErrEmailTaken when the address was claimed
+	// by another account in the meantime.
+	ConfirmEmailVerification(token string) (*User, error)
 }
 
 // DefaultService implements Service.
 type DefaultService struct {
-	repo Repository
+	repo   Repository
+	policy EmailVerificationPolicy
+}
+
+// SetEmailVerificationPolicy wires the deployment's verification policy
+// (wiring-time only). It decides whether Register creates accounts verified
+// (policy off) or pending a link (policy on).
+func (s *DefaultService) SetEmailVerificationPolicy(p EmailVerificationPolicy) {
+	s.policy = p
 }
 
 // NewDefaultService creates a new user service.
@@ -167,8 +237,74 @@ func (s *DefaultService) Register(email, password, name string) (*User, error) {
 		CreatedAt:          now,
 		UpdatedAt:          now,
 	}
+	// With no way to send a link there is nothing to wait for: the account
+	// is verified at birth and the feature is inert.
+	if !s.policy.Required {
+		user.EmailVerified = true
+		user.EmailVerifiedAt = &now
+	}
 	if err := s.repo.SaveUser(user); err != nil {
 		return nil, err
+	}
+	return user, nil
+}
+
+// IssueEmailVerification mints a verification link for the user; see the
+// Service interface for the address semantics.
+func (s *DefaultService) IssueEmailVerification(userID, email string) (string, string, error) {
+	user, err := s.repo.FindUserByID(userID)
+	if err != nil {
+		return "", "", err
+	}
+	if user == nil {
+		return "", "", errors.New("user not found")
+	}
+	if user.EmailVerified {
+		return "", "", ErrAlreadyVerified
+	}
+	email = strings.ToLower(strings.TrimSpace(email))
+	if email == "" {
+		email = user.Email
+	}
+	if !strings.Contains(email, "@") {
+		return "", "", errors.New("a valid email is required")
+	}
+	if email != user.Email {
+		if existing, _ := s.repo.FindUserByEmail(email); existing != nil && existing.ID != user.ID {
+			return "", "", ErrEmailTaken
+		}
+	}
+	token, err := NewToken()
+	if err != nil {
+		return "", "", err
+	}
+	now := time.Now()
+	v := &EmailVerification{
+		ID:        uuid.New().String(),
+		UserID:    user.ID,
+		Email:     email,
+		TokenHash: HashToken(token),
+		ExpiresAt: now.Add(EmailVerificationTTL),
+		CreatedAt: now,
+	}
+	if err := s.repo.SaveEmailVerification(v); err != nil {
+		return "", "", err
+	}
+	return token, email, nil
+}
+
+// ConfirmEmailVerification spends a raw verification token.
+func (s *DefaultService) ConfirmEmailVerification(token string) (*User, error) {
+	token = strings.TrimSpace(token)
+	if token == "" {
+		return nil, ErrVerificationInvalid
+	}
+	user, err := s.repo.ConsumeEmailVerification(HashToken(token), time.Now())
+	if err != nil {
+		return nil, err
+	}
+	if user == nil {
+		return nil, ErrVerificationInvalid
 	}
 	return user, nil
 }
@@ -221,6 +357,8 @@ func (s *DefaultService) LoginWithSSO(provider, email, name, avatarURL string) (
 			return nil, "", err
 		}
 		now := time.Now()
+		// The identity provider asserted a verified address (both callbacks
+		// refuse anything else), so the account is verified from the start.
 		user = &User{
 			ID:                 uuid.New().String(),
 			Email:              email,
@@ -229,6 +367,8 @@ func (s *DefaultService) LoginWithSSO(provider, email, name, avatarURL string) (
 			AuthProvider:       provider,
 			IsAdmin:            count == 0,
 			EmailNotifications: true,
+			EmailVerified:      true,
+			EmailVerifiedAt:    &now,
 			CreatedAt:          now,
 			UpdatedAt:          now,
 		}

@@ -7,6 +7,20 @@
  * KanbanBoard: `err.response?.data?.error || err.message`, with a couple of
  * defensive extras (plain-string bodies, `{ message: ... }` bodies).
  */
+/** True when the API refused the call because the account's email is unverified. */
+export function isEmailUnverifiedError(err: unknown): boolean {
+  const anyErr = err as { response?: { status?: number; data?: { code?: unknown } } } | null;
+  return anyErr?.response?.status === 403 && anyErr?.response?.data?.code === 'email_unverified';
+}
+
+/** Seconds the API asked the client to wait, from a 429's Retry-After header. */
+export function retryAfterSeconds(err: unknown): number | null {
+  const anyErr = err as { response?: { headers?: Record<string, unknown> } } | null;
+  const raw = anyErr?.response?.headers?.['retry-after'];
+  const n = typeof raw === 'string' ? parseInt(raw, 10) : NaN;
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
 export function apiErrorMessage(err: unknown, fallback = 'Request failed'): string {
   const anyErr = err as {
     response?: { data?: unknown };

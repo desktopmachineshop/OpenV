@@ -5,6 +5,7 @@ import { useAppStore } from './state/store';
 import { ProjectList } from './components/ProjectList';
 import { ProjectLayout } from './components/ProjectLayout';
 import { Login } from './views/Login';
+import { VerifyEmail } from './views/VerifyEmail';
 import { ProductOverview } from './views/ProductOverview';
 import { InterviewsPage } from './views/InterviewsPage';
 import { GuidedWizard } from './views/GuidedWizard';
@@ -68,8 +69,17 @@ function RouteFallback() {
 }
 
 function App() {
-  const { currentUser, setCurrentUser, setMeta, orgsLoaded, setOrgs, setActiveOrgId, setOrgsLoaded } =
-    useAppStore();
+  const {
+    currentUser,
+    setCurrentUser,
+    setMeta,
+    orgsLoaded,
+    setOrgs,
+    setActiveOrgId,
+    setOrgsLoaded,
+    emailVerificationRequired,
+    setEmailVerificationRequired,
+  } = useAppStore();
   const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
@@ -78,16 +88,27 @@ function App() {
       setAuthChecked(true);
       return;
     }
-    authAPI
-      .me()
-      .then((res) => setCurrentUser(res.data))
-      .catch(() => setCurrentUser(null))
+    // The session and the server's verification policy are read together:
+    // both decide what a signed-in user sees first.
+    Promise.allSettled([authAPI.me(), authAPI.config()])
+      .then(([me, config]) => {
+        setCurrentUser(me.status === 'fulfilled' ? me.value.data : null);
+        if (config.status === 'fulfilled') {
+          setEmailVerificationRequired(!!config.value.data.email_verification_required);
+        }
+      })
       .finally(() => setAuthChecked(true));
-  }, [setCurrentUser]);
+  }, [setCurrentUser, setEmailVerificationRequired]);
+
+  // The wall: a signed-in account that has not confirmed its email, on a
+  // server that requires it, sees only the verification page. The API
+  // refuses everything else anyway; skipping the loads below just keeps the
+  // console quiet.
+  const walled = !!currentUser && emailVerificationRequired && !currentUser.email_verified;
 
   // Load the user's workspaces once authenticated and resolve the active one.
   useEffect(() => {
-    if (!currentUser) return;
+    if (!currentUser || walled) return;
     orgsAPI
       .list()
       .then((res) => {
@@ -116,16 +137,16 @@ function App() {
         // Org endpoints unavailable — don't block the app.
         setOrgsLoaded(true);
       });
-  }, [currentUser, setOrgs, setActiveOrgId, setOrgsLoaded]);
+  }, [currentUser, walled, setOrgs, setActiveOrgId, setOrgsLoaded]);
 
   useEffect(() => {
-    if (!currentUser || !orgsLoaded) return;
+    if (!currentUser || walled || !orgsLoaded) return;
     Promise.all([metaAPI.artifactTypes(), metaAPI.linkTypes()])
       .then(([types, rules]) =>
         setMeta({ artifactTypes: types.data, linkTypeRules: rules.data, loaded: true })
       )
       .catch(() => setMeta({ loaded: false }));
-  }, [currentUser, orgsLoaded, setMeta]);
+  }, [currentUser, walled, orgsLoaded, setMeta]);
 
   if (!authChecked) {
     return <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>Loading…</div>;
@@ -137,11 +158,16 @@ function App() {
         <Suspense fallback={<RouteFallback />}>
         <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/verify-email" element={<VerifyEmail />} />
         <Route path="/interview/:token" element={<InterviewChat />} />
         {/* The front page for visitors; a signed-in user goes straight to work.
             authChecked gates rendering above, so currentUser is settled here. */}
         <Route path="/" element={currentUser ? <Navigate to="/projects" replace /> : <Landing />} />
         <Route path="/pricing" element={<Landing section="pricing" />} />
+        {walled ? (
+          <Route path="*" element={<Navigate to="/verify-email" replace />} />
+        ) : (
+          <>
         <Route path="/projects" element={<ProjectList />} />
         <Route path="/org/settings" element={<OrgSettings />} />
         <Route path="/manual" element={<ManualView />} />
@@ -170,6 +196,8 @@ function App() {
           <Route path="settings" element={<ProjectSettings />} />
         </Route>
           <Route path="*" element={<Navigate to="/projects" replace />} />
+          </>
+        )}
         </Routes>
         </Suspense>
       </DialogProvider>

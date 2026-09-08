@@ -20,7 +20,10 @@ Open the app in your browser and you land on the sign-in screen.
 
 The **first user to register becomes the server admin**.
 
-After signing in you are taken to the **Projects** page.
+After signing in you are taken to the **Projects** page. On a server that
+sends email, a new account first sees a **Check your inbox** page: click the
+link in the email (valid for 24 hours) and you are through. The page can
+resend the email, send it to a corrected address, or sign you out.
 
 ## Workspaces
 

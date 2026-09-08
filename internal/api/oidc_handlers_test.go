@@ -145,7 +145,13 @@ func (m *memUserRepo) FindUserByID(id string) (*users.User, error) { return m.us
 func (m *memUserRepo) ListUsers() ([]*users.User, error)           { return nil, nil }
 func (m *memUserRepo) CountUsers() (int, error)                    { return len(m.users), nil }
 func (m *memUserRepo) SetEmailNotifications(string, bool) error    { return nil }
-func (m *memUserRepo) SaveSession(s *users.Session) error          { m.sessions[s.ID] = s; return nil }
+func (m *memUserRepo) SaveEmailVerification(*users.EmailVerification) error {
+	return nil
+}
+func (m *memUserRepo) ConsumeEmailVerification(string, time.Time) (*users.User, error) {
+	return nil, nil
+}
+func (m *memUserRepo) SaveSession(s *users.Session) error { m.sessions[s.ID] = s; return nil }
 func (m *memUserRepo) FindSessionByTokenHash(hash string) (*users.Session, error) {
 	for _, s := range m.sessions {
 		if s.TokenHash == hash {

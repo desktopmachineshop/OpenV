@@ -1,5 +1,6 @@
 import { useViewport } from '../hooks/useViewport';
 import React, { useCallback, useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAppStore } from '../state/store';
 import { ProviderSetting, providerSettingsAPI, notificationPrefsAPI } from '../api/client';
 import { MyRunnerCard } from './org/MyRunnerCard';
@@ -26,7 +27,7 @@ const CLI_PROVIDERS: { key: string; label: string }[] = [
 // always happens here.)
 export const UserSettingsPanel: React.FC<UserSettingsPanelProps> = ({ onClose }) => {
   const { isPhone } = useViewport();
-  const { currentUser, activeOrgId, orgs } = useAppStore();
+  const { currentUser, activeOrgId, orgs, emailVerificationRequired } = useAppStore();
   const activeOrg = orgs.find((o) => o.id === activeOrgId);
   const [providers, setProviders] = useState<ProviderSetting[]>([]);
 
@@ -154,6 +155,29 @@ export const UserSettingsPanel: React.FC<UserSettingsPanelProps> = ({ onClose })
             <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
               Personal settings{activeOrg ? ` · ${activeOrg.name}` : ''}
             </div>
+            {emailVerificationRequired && currentUser && (
+              <div style={{ fontSize: 12, marginTop: 4, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                <span style={{ color: 'var(--text-muted)', overflowWrap: 'anywhere' }}>{currentUser.email}</span>
+                {currentUser.email_verified ? (
+                  <span
+                    style={{
+                      padding: '1px 8px',
+                      borderRadius: 10,
+                      fontSize: 12,
+                      fontWeight: 600,
+                      background: 'var(--tint-green)',
+                      color: 'var(--success)',
+                    }}
+                  >
+                    Verified
+                  </span>
+                ) : (
+                  <Link to="/verify-email" style={{ color: 'var(--accent)', fontSize: 12 }}>
+                    Unverified — verify now
+                  </Link>
+                )}
+              </div>
+            )}
           </div>
           <button
             onClick={onClose}

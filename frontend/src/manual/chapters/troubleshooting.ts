@@ -26,6 +26,15 @@ hasn't been signed in. Install the CLI on the machine that runs your runner,
 then sign in — from your user settings → Agent sign-ins (personal runner) or
 Workspace settings → AI Providers → Connect (shared workers).
 
+## I'm stuck on "Check your inbox"
+
+The server sends new accounts a verification link and serves nothing else
+until it is clicked. Check the spam folder, then use **Resend email**. If the
+address has a typo, **Use a different address** sends the link there; your
+account keeps its old address until the new one is confirmed. If no email
+ever arrives, the server's operator may not have finished setting up mail —
+ask them; they can verify the account directly.
+
 ## I can't add someone to a project
 
 Adding a member by email requires that the person **already has an OpenV

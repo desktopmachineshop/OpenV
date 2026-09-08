@@ -38,7 +38,10 @@ const OrgHeader = "X-Org-ID"
 // AuthMiddleware authenticates every API request as one of: a human user
 // (session cookie, with an active-org context), an agent run (Bearer run
 // token), or an org-scoped host worker (Bearer worker key). Auth routes,
-// public interview routes, and /health stay open.
+// public interview routes, and /health stay open. A session whose account
+// has not verified its email is refused with 403 email_unverified while
+// the deployment's verification policy requires it; Bearer credentials are
+// never subject to that gate.
 type AuthMiddleware struct {
 	userService   users.Service
 	runService    agentruns.Service
@@ -53,6 +56,14 @@ type AuthMiddleware struct {
 	// identity until a member leases it, at which point it authenticates
 	// everything else with the lease's own session key.
 	poolKey string
+	// emailVerification is the deployment's sign-up verification policy.
+	emailVerification users.EmailVerificationPolicy
+}
+
+// SetEmailVerificationPolicy wires the sign-up verification policy
+// (wiring-time only).
+func (m *AuthMiddleware) SetEmailVerificationPolicy(p users.EmailVerificationPolicy) {
+	m.emailVerification = p
 }
 
 // NewAuthMiddleware creates the middleware. legacyOrgID lazily resolves the
@@ -145,6 +156,15 @@ func (m *AuthMiddleware) Wrap(next http.Handler) http.Handler {
 		// Session cookie.
 		if cookie, err := r.Cookie(SessionCookieName); err == nil && cookie.Value != "" {
 			if user, err := m.userService.GetBySessionToken(cookie.Value); err == nil && user != nil {
+				// The wall: an unverified account gets nothing beyond the open
+				// paths (sign-out, resend, change, confirm all live under
+				// /api/v1/auth/) until its link is clicked. Checked before the
+				// org is resolved so the refused request does no other work.
+				if m.emailVerification.Required && !user.EmailVerified {
+					annotateRequestLog(r.Context(), "", user.ID, "user")
+					writeJSONErrorCode(w, http.StatusForbidden, "email not verified", ErrCodeEmailUnverified)
+					return
+				}
 				activeOrg := m.resolveActiveOrg(r, cookie.Value, user)
 				ctx := context.WithValue(r.Context(), ctxUser, user)
 				ctx = context.WithValue(ctx, ctxActiveOrg, activeOrg)
