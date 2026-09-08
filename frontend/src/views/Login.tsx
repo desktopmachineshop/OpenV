@@ -10,6 +10,8 @@ export const Login: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const setCurrentUser = useAppStore((s) => s.setCurrentUser);
+  const setEmailVerificationRequired = useAppStore((s) => s.setEmailVerificationRequired);
+  const [verificationRequired, setVerificationRequired] = useState(false);
   // The landing page links straight to registration with ?mode=register.
   const [mode, setMode] = useState<'login' | 'register'>(
     searchParams.get('mode') === 'register' ? 'register' : 'login'
@@ -30,6 +32,8 @@ export const Login: React.FC = () => {
         setGoogleEnabled(res.data.google_enabled);
         setOidcEnabled(res.data.oidc_enabled);
         if (res.data.oidc_provider_name) setOidcName(res.data.oidc_provider_name);
+        setVerificationRequired(!!res.data.email_verification_required);
+        setEmailVerificationRequired(!!res.data.email_verification_required);
       })
       .catch(() => {
         setGoogleEnabled(false);
@@ -43,7 +47,7 @@ export const Login: React.FC = () => {
         navigate('/projects');
       })
       .catch(() => {});
-  }, [navigate, setCurrentUser]);
+  }, [navigate, setCurrentUser, setEmailVerificationRequired]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,9 +59,11 @@ export const Login: React.FC = () => {
           ? await authAPI.login(email, password)
           : await authAPI.register(email, password, name);
       setCurrentUser(res.data);
-      navigate('/projects');
+      // On a server that sends verification links, an account that has not
+      // clicked its link lands on the wall rather than the app.
+      navigate(verificationRequired && !res.data.email_verified ? '/verify-email' : '/projects');
     } catch (err: any) {
-      setError(apiErrorMessage(err, 'Sign-in failed'));
+      setError(apiErrorMessage(err, mode === 'login' ? 'Sign-in failed' : 'Registration failed'));
     } finally {
       setBusy(false);
     }

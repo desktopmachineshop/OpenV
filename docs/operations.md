@@ -106,6 +106,43 @@ still succeeds. Each user can opt out under Settings → Notifications (stored a
 `users.email_notifications`, default on); the opt-out only matters once SMTP is
 configured.
 
+### Email verification for sign-ups
+
+Setting `OPENV_SMTP_HOST` also switches on **email verification** for password
+accounts (SEC-15 / REQ-95). The boot log says which state applies:
+
+- `email verification: required` — SMTP is configured and
+  `OPENV_EMAIL_VERIFICATION` is not `off`. A new password account is signed in
+  but meets a *Check your inbox* page until the emailed link is clicked; every
+  other API call from that session answers
+  `403 {"error":"email not verified","code":"email_unverified"}`. The page
+  offers resend, a corrected address (applied only when its link is
+  confirmed) and sign-out. Links are valid 24 hours and work once; they point
+  at `FRONTEND_URL/verify-email`.
+- `email verification: disabled (no OPENV_SMTP_HOST)` — accounts are verified
+  at sign-up and nothing is enforced (the default for a self-hosted stack,
+  dev, CI).
+- `email verification: disabled (OPENV_EMAIL_VERIFICATION=off)` — the
+  operator's switch, immediate, no data change.
+
+Accounts created through Google or OIDC are verified by the provider and never
+meet the page. **Every password account that existed before the feature is
+unverified**, including the first admin: the moment verification becomes
+required they meet the page on their next request (a live session included,
+not only at sign-in) and verify with one click on *Resend email*. To turn it
+on without that step, grandfather them first:
+
+```sql
+UPDATE users SET email_verified = TRUE, email_verified_at = NOW()
+WHERE auth_provider = 'password' AND NOT email_verified;
+```
+
+The same statement scoped to one email unblocks a single account whose mail
+cannot be delivered. Resend and change-of-address are throttled per account
+(`OPENV_VERIFY_RESEND_BURST`, default 3; `OPENV_VERIFY_RESEND_REFILL_PER_HOUR`,
+default 6). Worker keys, run tokens and the runner pool key never meet the
+gate: only browser sessions do.
+
 If a required variable is missing, `docker compose ... up`/`config` fails with
 an error naming the variable rather than starting with dev defaults.
 

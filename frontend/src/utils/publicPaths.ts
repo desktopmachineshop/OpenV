@@ -3,7 +3,9 @@
 // bounce a visitor off a public page. Matching is by path segment: "/manual"
 // covers "/manual/getting-started" but not "/manual-not", and the root is an
 // exact match, since every signed-in route starts with a segment of its own.
-const PUBLIC_SEGMENTS = ['/login', '/pricing', '/manual', '/interview'];
+// /verify-email is public because the emailed link may be opened in a
+// browser that holds no session.
+const PUBLIC_SEGMENTS = ['/login', '/pricing', '/manual', '/interview', '/verify-email'];
 
 export function isPublicPath(pathname: string): boolean {
   const path = pathname.split(/[?#]/)[0];

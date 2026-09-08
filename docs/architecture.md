@@ -440,7 +440,10 @@ Every API request authenticates as one of four principals; only `/health`,
 - **Human users** — an `openv_session` HttpOnly cookie (SameSite=Lax, `Secure`
   when `SECURE_COOKIES=true`). Sign-in is email/password by default, with
   optional **Google OIDC** when `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` are
-  set. The first user ever registered becomes the platform admin.
+  set. The first user ever registered becomes the platform admin. Where the
+  server can send mail, a password account must confirm an emailed link
+  before the middleware serves it anything beyond the auth routes
+  (`403 email_unverified`); SSO accounts are verified by their provider.
 - **Active workspace (`X-Org-ID`)** — each session request runs in one
   organization ("workspace"). The header selects it; the middleware validates
   membership and falls back to the session's stored active org, then the

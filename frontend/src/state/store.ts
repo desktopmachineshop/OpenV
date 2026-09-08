@@ -10,6 +10,11 @@ interface MetaState {
 interface AppState {
   currentUser: User | null;
   setCurrentUser: (user: User | null) => void;
+  // Whether this server walls unverified accounts (from /auth/config).
+  // Defaults false so an unreachable config never walls anyone client-side;
+  // the API's own gate still protects data.
+  emailVerificationRequired: boolean;
+  setEmailVerificationRequired: (required: boolean) => void;
   meta: MetaState;
   setMeta: (meta: Partial<MetaState>) => void;
   orgs: Org[];
@@ -47,6 +52,8 @@ interface AppState {
 export const useAppStore = create<AppState>((set) => ({
   currentUser: null,
   setCurrentUser: (user: User | null) => set({ currentUser: user }),
+  emailVerificationRequired: false,
+  setEmailVerificationRequired: (required: boolean) => set({ emailVerificationRequired: required }),
 
   meta: { artifactTypes: [], linkTypeRules: [], loaded: false },
   setMeta: (meta: Partial<MetaState>) =>

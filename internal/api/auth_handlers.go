@@ -42,6 +42,9 @@ func (h *Handler) registerAuthRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/auth/logout", h.Logout).Methods("POST")
 	router.HandleFunc("/api/v1/auth/me", h.Me).Methods("GET")
 	router.HandleFunc("/api/v1/auth/config", h.AuthConfig).Methods("GET")
+	router.HandleFunc("/api/v1/auth/verify-email", h.VerifyEmail).Methods("POST")
+	router.HandleFunc("/api/v1/auth/verify-email/resend", h.ResendVerification).Methods("POST")
+	router.HandleFunc("/api/v1/auth/verify-email/change", h.ChangeVerificationEmail).Methods("POST")
 	router.HandleFunc("/api/v1/auth/google", h.GoogleLogin).Methods("GET")
 	router.HandleFunc("/api/v1/auth/google/callback", h.GoogleCallback).Methods("GET")
 	h.registerOIDCRoutes(router)
@@ -113,6 +116,9 @@ func (h *Handler) AuthConfig(w http.ResponseWriter, r *http.Request) {
 		"google_enabled":     h.googleOAuth != nil && h.googleOAuth.ClientID != "",
 		"oidc_enabled":       h.oidc.Enabled(),
 		"oidc_provider_name": "",
+		// Tells the SPA whether an unverified account meets the wall, so it
+		// never walls anyone on a deployment that cannot send the link.
+		"email_verification_required": h.emailVerification.Required,
 	}
 	if h.oidc.Enabled() {
 		resp["oidc_provider_name"] = h.oidc.displayName()
@@ -147,6 +153,11 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.setSessionCookie(w, token)
+	// The link goes out in the background: registration never waits on SMTP,
+	// and the wall's Resend covers a mail that did not arrive.
+	if h.emailVerification.Required && !user.EmailVerified {
+		h.sendVerificationAsync(user, user.Email)
+	}
 	json.NewEncoder(w).Encode(user)
 }
 
@@ -210,15 +221,26 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// Me returns the authenticated user (401 when logged out).
-func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
+// sessionUser resolves the browser session on an open auth route, where the
+// middleware has not run. Cookie only: Bearer credentials are never accepted
+// here, so a runner key or run token can neither read the account nor drive
+// its verification. nil when there is no valid session.
+func (h *Handler) sessionUser(r *http.Request) *users.User {
 	cookie, err := r.Cookie(SessionCookieName)
 	if err != nil || cookie.Value == "" {
-		writeJSONError(w, http.StatusUnauthorized, "not authenticated")
-		return
+		return nil
 	}
 	user, err := h.userService.GetBySessionToken(cookie.Value)
-	if err != nil || user == nil {
+	if err != nil {
+		return nil
+	}
+	return user
+}
+
+// Me returns the authenticated user (401 when logged out).
+func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
+	user := h.sessionUser(r)
+	if user == nil {
 		writeJSONError(w, http.StatusUnauthorized, "not authenticated")
 		return
 	}

@@ -9,12 +9,45 @@ import (
 
 // memRepo is a minimal in-memory Repository for the service tests.
 type memRepo struct {
-	users    map[string]*User
-	sessions map[string]*Session
+	users         map[string]*User
+	sessions      map[string]*Session
+	verifications map[string]*EmailVerification // by token hash
 }
 
 func newMemRepo() *memRepo {
-	return &memRepo{users: map[string]*User{}, sessions: map[string]*Session{}}
+	return &memRepo{users: map[string]*User{}, sessions: map[string]*Session{}, verifications: map[string]*EmailVerification{}}
+}
+
+func (m *memRepo) SaveEmailVerification(v *EmailVerification) error {
+	for hash, existing := range m.verifications {
+		if existing.UserID == v.UserID && !existing.Used {
+			delete(m.verifications, hash)
+		}
+	}
+	m.verifications[v.TokenHash] = v
+	return nil
+}
+
+func (m *memRepo) ConsumeEmailVerification(tokenHash string, now time.Time) (*User, error) {
+	v := m.verifications[tokenHash]
+	if v == nil || v.Used || !v.ExpiresAt.After(now) {
+		return nil, nil
+	}
+	user := m.users[v.UserID]
+	if user == nil {
+		return nil, nil
+	}
+	for _, other := range m.users {
+		if other.ID != user.ID && strings.EqualFold(other.Email, v.Email) {
+			return nil, ErrEmailTaken
+		}
+	}
+	v.Used = true
+	user.Email = v.Email
+	user.EmailVerified = true
+	user.EmailVerifiedAt = &now
+	user.UpdatedAt = now
+	return user, nil
 }
 
 func (m *memRepo) SaveUser(u *User) error   { m.users[u.ID] = u; return nil }
@@ -129,5 +162,144 @@ func TestLoginWithGoogleThenOIDCRejected(t *testing.T) {
 	// But a repeat Google login still works.
 	if _, _, err := svc.LoginWithGoogle("g@example.com", "G User", ""); err != nil {
 		t.Errorf("same-provider google login should proceed: %v", err)
+	}
+}
+
+// --- email verification ----------------------------------------------------
+
+func TestRegisterVerifiedWhenPolicyOff(t *testing.T) {
+	svc := NewDefaultService(newMemRepo())
+	user, err := svc.Register("off@example.com", "password1", "Off")
+	if err != nil {
+		t.Fatalf("Register: %v", err)
+	}
+	if !user.EmailVerified || user.EmailVerifiedAt == nil {
+		t.Error("with no verification policy the account must be born verified")
+	}
+	if _, _, err := svc.IssueEmailVerification(user.ID, ""); !errors.Is(err, ErrAlreadyVerified) {
+		t.Errorf("issuing for a verified account returned %v, want ErrAlreadyVerified", err)
+	}
+}
+
+func TestRegisterPendingWhenPolicyOn(t *testing.T) {
+	repo := newMemRepo()
+	svc := NewDefaultService(repo)
+	svc.SetEmailVerificationPolicy(EmailVerificationPolicy{Required: true})
+	user, err := svc.Register("pending@example.com", "password1", "Pending")
+	if err != nil {
+		t.Fatalf("Register: %v", err)
+	}
+	if user.EmailVerified || user.EmailVerifiedAt != nil {
+		t.Fatal("with verification required the account must start unverified")
+	}
+
+	// SSO accounts are verified by their provider.
+	sso, _, err := svc.LoginWithSSO(ProviderOIDC, "sso@example.com", "SSO", "")
+	if err != nil {
+		t.Fatalf("LoginWithSSO: %v", err)
+	}
+	if !sso.EmailVerified {
+		t.Error("an SSO account must be verified at creation")
+	}
+
+	first, sentTo, err := svc.IssueEmailVerification(user.ID, "")
+	if err != nil {
+		t.Fatalf("IssueEmailVerification: %v", err)
+	}
+	if sentTo != "pending@example.com" {
+		t.Errorf("sentTo = %q", sentTo)
+	}
+	second, _, err := svc.IssueEmailVerification(user.ID, "")
+	if err != nil {
+		t.Fatalf("second issue: %v", err)
+	}
+	// Issuing again replaces the pending link: the first token is dead.
+	if _, err := svc.ConfirmEmailVerification(first); !errors.Is(err, ErrVerificationInvalid) {
+		t.Errorf("superseded token returned %v, want ErrVerificationInvalid", err)
+	}
+	if _, err := svc.ConfirmEmailVerification(""); !errors.Is(err, ErrVerificationInvalid) {
+		t.Errorf("empty token returned %v, want ErrVerificationInvalid", err)
+	}
+	verified, err := svc.ConfirmEmailVerification(second)
+	if err != nil {
+		t.Fatalf("ConfirmEmailVerification: %v", err)
+	}
+	if !verified.EmailVerified || verified.EmailVerifiedAt == nil || verified.ID != user.ID {
+		t.Errorf("confirm did not verify the user: %+v", verified)
+	}
+	// Single use.
+	if _, err := svc.ConfirmEmailVerification(second); !errors.Is(err, ErrVerificationInvalid) {
+		t.Errorf("reused token returned %v, want ErrVerificationInvalid", err)
+	}
+}
+
+func TestVerificationExpiry(t *testing.T) {
+	repo := newMemRepo()
+	svc := NewDefaultService(repo)
+	svc.SetEmailVerificationPolicy(EmailVerificationPolicy{Required: true})
+	user, _ := svc.Register("late@example.com", "password1", "Late")
+	token, _, err := svc.IssueEmailVerification(user.ID, "")
+	if err != nil {
+		t.Fatalf("issue: %v", err)
+	}
+	repo.verifications[HashToken(token)].ExpiresAt = time.Now().Add(-time.Minute)
+	if _, err := svc.ConfirmEmailVerification(token); !errors.Is(err, ErrVerificationInvalid) {
+		t.Errorf("expired token returned %v, want ErrVerificationInvalid", err)
+	}
+}
+
+func TestVerificationChangeOfAddress(t *testing.T) {
+	repo := newMemRepo()
+	svc := NewDefaultService(repo)
+	svc.SetEmailVerificationPolicy(EmailVerificationPolicy{Required: true})
+	user, _ := svc.Register("typo@example.com", "password1", "Typo")
+	if _, err := svc.Register("taken@example.com", "password1", "Taken"); err != nil {
+		t.Fatalf("Register taken: %v", err)
+	}
+
+	if _, _, err := svc.IssueEmailVerification(user.ID, "Taken@Example.com"); !errors.Is(err, ErrEmailTaken) {
+		t.Errorf("change to a taken address returned %v, want ErrEmailTaken", err)
+	}
+	if _, _, err := svc.IssueEmailVerification(user.ID, "not-an-address"); err == nil {
+		t.Error("an invalid address must be refused")
+	}
+	token, sentTo, err := svc.IssueEmailVerification(user.ID, " Fixed@Example.com ")
+	if err != nil {
+		t.Fatalf("issue change: %v", err)
+	}
+	if sentTo != "fixed@example.com" {
+		t.Errorf("sentTo = %q, want the normalised new address", sentTo)
+	}
+	if repo.users[user.ID].Email != "typo@example.com" {
+		t.Error("the account address must not change before the link is confirmed")
+	}
+
+	verified, err := svc.ConfirmEmailVerification(token)
+	if err != nil {
+		t.Fatalf("confirm: %v", err)
+	}
+	if verified.Email != "fixed@example.com" || !verified.EmailVerified {
+		t.Errorf("confirm did not apply the new address: %+v", verified)
+	}
+}
+
+func TestVerificationConfirmRefusesAddressTakenMeanwhile(t *testing.T) {
+	repo := newMemRepo()
+	svc := NewDefaultService(repo)
+	svc.SetEmailVerificationPolicy(EmailVerificationPolicy{Required: true})
+	user, _ := svc.Register("first@example.com", "password1", "First")
+	token, _, err := svc.IssueEmailVerification(user.ID, "new@example.com")
+	if err != nil {
+		t.Fatalf("issue: %v", err)
+	}
+	// Someone registers the new address before the link is clicked.
+	if _, err := svc.Register("new@example.com", "password1", "Other"); err != nil {
+		t.Fatalf("Register other: %v", err)
+	}
+	if _, err := svc.ConfirmEmailVerification(token); !errors.Is(err, ErrEmailTaken) {
+		t.Errorf("confirm returned %v, want ErrEmailTaken", err)
+	}
+	if repo.users[user.ID].EmailVerified {
+		t.Error("a refused confirm must leave the account unverified")
 	}
 }

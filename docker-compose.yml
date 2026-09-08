@@ -43,6 +43,10 @@ services:
       # (the default) leaves email off; only in-app + SSE notifications deliver.
       # Set the SMTP_* vars to email high-signal notifications (failed runs,
       # proposals/reviews pending, budget alerts). Deep links use FRONTEND_URL.
+      # Setting them also requires new password accounts to confirm an emailed
+      # link before using the app; OPENV_EMAIL_VERIFICATION=off keeps SMTP for
+      # notifications only (docs/operations.md).
+      OPENV_EMAIL_VERIFICATION: ${OPENV_EMAIL_VERIFICATION:-}
       OPENV_SMTP_HOST: ${OPENV_SMTP_HOST:-}
       OPENV_SMTP_PORT: ${OPENV_SMTP_PORT:-587}
       OPENV_SMTP_USER: ${OPENV_SMTP_USER:-}

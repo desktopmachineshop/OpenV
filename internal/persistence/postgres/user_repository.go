@@ -2,7 +2,10 @@ package postgres
 
 import (
 	"database/sql"
+	"errors"
 	"time"
+
+	"github.com/lib/pq"
 
 	"github.com/openv/requirements-platform/internal/domain/users"
 )
@@ -17,13 +20,18 @@ func NewUserRepository(db *sql.DB) *UserRepository {
 	return &UserRepository{db: db}
 }
 
-const userColumns = `id, email, name, avatar_url, auth_provider, COALESCE(password_hash, ''), is_admin, COALESCE(email_notifications, TRUE), created_at, updated_at`
+const userColumns = `id, email, name, avatar_url, auth_provider, COALESCE(password_hash, ''), is_admin, COALESCE(email_notifications, TRUE), COALESCE(email_verified, FALSE), email_verified_at, created_at, updated_at`
 
 func scanUser(row interface{ Scan(...interface{}) error }) (*users.User, error) {
 	u := new(users.User)
-	err := row.Scan(&u.ID, &u.Email, &u.Name, &u.AvatarURL, &u.AuthProvider, &u.PasswordHash, &u.IsAdmin, &u.EmailNotifications, &u.CreatedAt, &u.UpdatedAt)
+	var verifiedAt sql.NullTime
+	err := row.Scan(&u.ID, &u.Email, &u.Name, &u.AvatarURL, &u.AuthProvider, &u.PasswordHash, &u.IsAdmin, &u.EmailNotifications, &u.EmailVerified, &verifiedAt, &u.CreatedAt, &u.UpdatedAt)
 	if err != nil {
 		return nil, err
+	}
+	if verifiedAt.Valid {
+		t := verifiedAt.Time
+		u.EmailVerifiedAt = &t
 	}
 	return u, nil
 }
@@ -31,13 +39,15 @@ func scanUser(row interface{ Scan(...interface{}) error }) (*users.User, error) 
 // SaveUser inserts a user.
 func (r *UserRepository) SaveUser(u *users.User) error {
 	_, err := r.db.Exec(`
-		INSERT INTO users (id, email, name, avatar_url, auth_provider, password_hash, is_admin, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, NULLIF($6, ''), $7, $8, $9)
-	`, u.ID, u.Email, u.Name, u.AvatarURL, u.AuthProvider, u.PasswordHash, u.IsAdmin, u.CreatedAt, u.UpdatedAt)
+		INSERT INTO users (id, email, name, avatar_url, auth_provider, password_hash, is_admin, email_verified, email_verified_at, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, NULLIF($6, ''), $7, $8, $9, $10, $11)
+	`, u.ID, u.Email, u.Name, u.AvatarURL, u.AuthProvider, u.PasswordHash, u.IsAdmin, u.EmailVerified, u.EmailVerifiedAt, u.CreatedAt, u.UpdatedAt)
 	return err
 }
 
-// UpdateUser updates mutable user fields.
+// UpdateUser updates mutable user fields. It deliberately leaves the
+// verification columns alone: they only move through
+// ConsumeEmailVerification, so a stale struct can never undo a confirm.
 func (r *UserRepository) UpdateUser(u *users.User) error {
 	_, err := r.db.Exec(`
 		UPDATE users SET name = $2, avatar_url = $3, auth_provider = $4, password_hash = NULLIF($5, ''), is_admin = $6, updated_at = $7
@@ -90,6 +100,77 @@ func (r *UserRepository) SetEmailNotifications(userID string, enabled bool) erro
 	_, err := r.db.Exec(
 		`UPDATE users SET email_notifications = $2, updated_at = NOW() WHERE id = $1`,
 		userID, enabled)
+	return err
+}
+
+// SaveEmailVerification stores a link after discarding the user's unused
+// pending ones, so one link is live per account.
+func (r *UserRepository) SaveEmailVerification(v *users.EmailVerification) error {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if _, err := tx.Exec(`DELETE FROM email_verifications WHERE user_id = $1 AND NOT used`, v.UserID); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(`
+		INSERT INTO email_verifications (id, user_id, email, token_hash, expires_at, used, created_at)
+		VALUES ($1, $2, $3, $4, $5, FALSE, $6)
+	`, v.ID, v.UserID, v.Email, v.TokenHash, v.ExpiresAt, v.CreatedAt); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+// ConsumeEmailVerification spends a link and marks its user verified in one
+// transaction. The UPDATE ... RETURNING is the single-use guard: two racing
+// confirms of the same link see one row flip and one no-op. A unique
+// violation on the users email index means the link's address was claimed
+// by another account since the link was issued; the transaction rolls back
+// and the caller sees ErrEmailTaken, leaving the user unverified.
+func (r *UserRepository) ConsumeEmailVerification(tokenHash string, now time.Time) (*users.User, error) {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+	var userID, email string
+	err = tx.QueryRow(`
+		UPDATE email_verifications SET used = TRUE
+		WHERE token_hash = $1 AND NOT used AND expires_at > $2
+		RETURNING user_id, email
+	`, tokenHash, now).Scan(&userID, &email)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	if _, err := tx.Exec(`
+		UPDATE users SET email = $2, email_verified = TRUE, email_verified_at = $3, updated_at = $3
+		WHERE id = $1
+	`, userID, email, now); err != nil {
+		var pqErr *pq.Error
+		if errors.As(err, &pqErr) && pqErr.Code == "23505" {
+			return nil, users.ErrEmailTaken
+		}
+		return nil, err
+	}
+	u, err := scanUser(tx.QueryRow(`SELECT `+userColumns+` FROM users WHERE id = $1`, userID))
+	if err != nil {
+		return nil, err
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+	return u, nil
+}
+
+// DeleteSpentEmailVerifications removes used links and links that expired
+// before cutoff; housekeeping only, correctness never depends on it.
+func (r *UserRepository) DeleteSpentEmailVerifications(cutoff time.Time) error {
+	_, err := r.db.Exec(`DELETE FROM email_verifications WHERE used OR expires_at < $1`, cutoff)
 	return err
 }
 

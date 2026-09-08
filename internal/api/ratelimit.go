@@ -69,23 +69,29 @@ const (
 //	OPENV_REGISTER_IP_REFILL_PER_HOUR   = 10  registrations/hour steady state
 //	OPENV_SSO_IP_BURST                  = 20  SSO starts or callbacks instantly per address
 //	OPENV_SSO_IP_REFILL_PER_HOUR        = 60  SSO starts or callbacks/hour steady state
+//	OPENV_VERIFY_RESEND_BURST           = 3   verification mails instantly per account
+//	OPENV_VERIFY_RESEND_REFILL_PER_HOUR = 6   verification mails/hour steady state
 const (
-	envAuthIPBurst           = "OPENV_AUTH_IP_BURST"
-	envAuthIPRefill          = "OPENV_AUTH_IP_REFILL_PER_HOUR"
-	envAuthAccountBurst      = "OPENV_AUTH_ACCOUNT_BURST"
-	envAuthAccountRefill     = "OPENV_AUTH_ACCOUNT_REFILL_PER_HOUR"
-	envRegisterIPBurst       = "OPENV_REGISTER_IP_BURST"
-	envRegisterIPRefill      = "OPENV_REGISTER_IP_REFILL_PER_HOUR"
-	envSSOIPBurst            = "OPENV_SSO_IP_BURST"
-	envSSOIPRefill           = "OPENV_SSO_IP_REFILL_PER_HOUR"
-	defaultAuthIPBurst       = 30
-	defaultAuthIPRefill      = 120.0
-	defaultAuthAccountBurst  = 5
-	defaultAuthAccountRefill = 20.0
-	defaultRegisterIPBurst   = 5
-	defaultRegisterIPRefill  = 10.0
-	defaultSSOIPBurst        = 20
-	defaultSSOIPRefill       = 60.0
+	envAuthIPBurst            = "OPENV_AUTH_IP_BURST"
+	envAuthIPRefill           = "OPENV_AUTH_IP_REFILL_PER_HOUR"
+	envAuthAccountBurst       = "OPENV_AUTH_ACCOUNT_BURST"
+	envAuthAccountRefill      = "OPENV_AUTH_ACCOUNT_REFILL_PER_HOUR"
+	envRegisterIPBurst        = "OPENV_REGISTER_IP_BURST"
+	envRegisterIPRefill       = "OPENV_REGISTER_IP_REFILL_PER_HOUR"
+	envSSOIPBurst             = "OPENV_SSO_IP_BURST"
+	envSSOIPRefill            = "OPENV_SSO_IP_REFILL_PER_HOUR"
+	envVerifyResendBurst      = "OPENV_VERIFY_RESEND_BURST"
+	envVerifyResendRefill     = "OPENV_VERIFY_RESEND_REFILL_PER_HOUR"
+	defaultAuthIPBurst        = 30
+	defaultAuthIPRefill       = 120.0
+	defaultAuthAccountBurst   = 5
+	defaultAuthAccountRefill  = 20.0
+	defaultRegisterIPBurst    = 5
+	defaultRegisterIPRefill   = 10.0
+	defaultSSOIPBurst         = 20
+	defaultSSOIPRefill        = 60.0
+	defaultVerifyResendBurst  = 3
+	defaultVerifyResendRefill = 6.0
 )
 
 // cleanupEvery bounds how often a limiter sweeps stale buckets, and

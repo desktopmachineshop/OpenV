@@ -33,7 +33,9 @@ silently kill a sync credential taken from there.
 
 `register` and `bootstrap` still need `OPENV_EMAIL` / `OPENV_PASSWORD` — they
 create accounts and workspaces, which a key cannot do. Everything else runs
-on the key alone.
+on the key alone. On a server that sends email, a freshly registered account
+must click its verification link before `bootstrap` can act as it (the API
+answers `403 email_unverified` until then).
 
 (PowerShell: `$env:OPENV_API_URL = "..."` etc.)
 

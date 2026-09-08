@@ -423,7 +423,16 @@ func main() {
 	// in-app + SSE delivery (and dev/compose) are unaffected. Deep links point
 	// at the frontend (FRONTEND_URL), falling back to PUBLIC_URL.
 	emailMailer := notify.MailerFromEnv()
-	emailLinkBase := envOr("FRONTEND_URL", envOr("PUBLIC_URL", "http://localhost:"+port))
+	// Links in mail point at the SPA, which the API itself never serves, so
+	// the last fallback is the dev frontend, not this process.
+	emailLinkBase := envOr("FRONTEND_URL", envOr("PUBLIC_URL", "http://localhost:3000"))
+	// Sign-up email verification (SEC-15 / REQ-95): enforced only when the
+	// mailer can send and the operator has not switched it off, so a stack
+	// with no SMTP is unchanged. The policy reaches the user service (new
+	// accounts start unverified), the handler (sends the link) and the auth
+	// middleware (walls unverified sessions).
+	emailVerification := notify.VerificationPolicyFromEnv(emailMailer)
+	userService.SetEmailVerificationPolicy(emailVerification)
 	emailDispatcher := notify.NewEmailDispatcher(emailMailer, userService, emailLinkBase, notify.EmailTypesFromEnv())
 
 	// Notification fan-out: bus events become per-user inbox rows plus live
@@ -592,16 +601,19 @@ func main() {
 		OrgSeeder: func(orgID string) error {
 			return seeds.EnsureOrgDefaults(orgID, agentService, teamService)
 		},
-		TeamService:      teamService,
-		Bus:              bus,
-		EventRepo:        eventRepo,
-		SSEHub:           sseHub,
-		GoogleOAuth:      googleOAuth,
-		OIDC:             oidcConfig,
-		SecureCookies:    os.Getenv("SECURE_COOKIES") == "true",
-		CrossSiteCookies: os.Getenv("CROSS_SITE_COOKIES") == "true",
-		PublicAPIURL:     envOr("PUBLIC_URL", "http://localhost:"+port),
-		ConnectorDistDir: envOr("CONNECTOR_DIST_DIR", "./dist"),
+		TeamService:       teamService,
+		Bus:               bus,
+		EventRepo:         eventRepo,
+		SSEHub:            sseHub,
+		GoogleOAuth:       googleOAuth,
+		OIDC:              oidcConfig,
+		SecureCookies:     os.Getenv("SECURE_COOKIES") == "true",
+		CrossSiteCookies:  os.Getenv("CROSS_SITE_COOKIES") == "true",
+		PublicAPIURL:      envOr("PUBLIC_URL", "http://localhost:"+port),
+		ConnectorDistDir:  envOr("CONNECTOR_DIST_DIR", "./dist"),
+		Mailer:            emailMailer,
+		EmailLinkBase:     emailLinkBase,
+		EmailVerification: emailVerification,
 	})
 
 	// Close the construction cycle: the proposal appliers run the handler's
@@ -622,6 +634,7 @@ func main() {
 
 	authMiddleware := api.NewAuthMiddleware(userService, runService, orgService, workerKeyService, workerKey, bootstrapOrgID)
 	authMiddleware.SetPoolKey(runnerPoolKey)
+	authMiddleware.SetEmailVerificationPolicy(emailVerification)
 	// Request logging wraps outside auth so rejected requests are logged too;
 	// auth annotates the log line with the resolved org/user. The metrics HTTP
 	// middleware sits between them, recording every request (including rejected

@@ -75,6 +75,16 @@ client.interceptors.response.use(
     ) {
       window.location.href = '/login';
     }
+    // An unverified account meets the wall: the server refuses everything
+    // but the auth endpoints until the emailed link is clicked.
+    if (
+      error.response?.status === 403 &&
+      error.response?.data?.code === 'email_unverified' &&
+      typeof window !== 'undefined' &&
+      !window.location.pathname.startsWith('/verify-email')
+    ) {
+      window.location.href = '/verify-email';
+    }
     return Promise.reject(error);
   }
 );
@@ -554,7 +564,18 @@ export interface User {
   // Per-user email-notification opt-out (issue #187). Only has an effect when
   // the server has SMTP configured.
   email_notifications?: boolean;
+  // Whether the account has proved control of its address. Only gates
+  // anything when AuthConfig.email_verification_required is true.
+  email_verified: boolean;
+  email_verified_at?: string;
   created_at: string;
+}
+
+export interface AuthConfig {
+  google_enabled: boolean;
+  oidc_enabled: boolean;
+  oidc_provider_name: string;
+  email_verification_required: boolean;
 }
 
 export interface NotificationPrefs {
@@ -1038,16 +1059,21 @@ export interface CrewImportResult {
 }
 
 export const authAPI = {
-  config: () =>
-    client.get<{ google_enabled: boolean; oidc_enabled: boolean; oidc_provider_name: string }>(
-      '/api/v1/auth/config'
-    ),
+  config: () => client.get<AuthConfig>('/api/v1/auth/config'),
   register: (email: string, password: string, name: string) =>
     client.post<User>('/api/v1/auth/register', { email, password, name }),
   login: (email: string, password: string) =>
     client.post<User>('/api/v1/auth/login', { email, password }),
   logout: () => client.post('/api/v1/auth/logout'),
   me: () => client.get<User>('/api/v1/auth/me'),
+  // Sign-up email verification: confirm an emailed link (no session needed),
+  // resend it, or send it to a corrected address (the address changes only
+  // when that link is confirmed).
+  verifyEmail: (token: string) => client.post<User>('/api/v1/auth/verify-email', { token }),
+  resendVerification: () =>
+    client.post<{ sent_to: string }>('/api/v1/auth/verify-email/resend', {}),
+  changeVerificationEmail: (email: string) =>
+    client.post<{ sent_to: string }>('/api/v1/auth/verify-email/change', { email }),
   googleLoginUrl: () => `${API_BASE_URL}/api/v1/auth/google`,
   oidcLoginUrl: () => `${API_BASE_URL}/api/v1/auth/oidc/login`,
   listUsers: () => client.get<User[]>('/api/v1/users'),
