@@ -5,7 +5,8 @@ import { useAppStore } from '../state/store';
 import { RunDetailPanel, runStatusColor, ErrorClassChip } from '../components/agents/RunDetailPanel';
 import { ProposalReviewPanel } from '../components/agents/ProposalReviewPanel';
 import { RunnerConnectPrompt } from '../components/RunnerConnectPrompt';
-import { ErrorBanner } from '../components/ui';
+import { ErrorBanner, Sheet } from '../components/ui';
+import { useViewport } from '../hooks/useViewport';
 
 // Cap the 5s poll: this page re-fetches every run in the project on a timer,
 // which is unbounded as run history grows. 200 covers the visible table; the
@@ -51,6 +52,12 @@ export const AgentRunsPage: React.FC = () => {
   const [error, setError] = useState('');
 
   const selectedRunId = searchParams.get('run');
+  // A phone shows the three columns that identify a run; the rest is in the
+  // detail. A compact viewport opens that detail as a sheet over the list.
+  const { isPhone, isCompact } = useViewport();
+  const columns = isPhone
+    ? ['Agent', 'Status', 'Started']
+    : ['Agent', 'Status', 'Started', 'Duration', 'Tokens', 'Cost'];
 
   const load = useCallback(() => {
     if (!projectId) return;
@@ -225,7 +232,7 @@ export const AgentRunsPage: React.FC = () => {
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
                 <tr>
-                  {['Agent', 'Status', 'Started', 'Duration', 'Tokens', 'Cost'].map((h) => (
+                  {columns.map((h) => (
                     <th
                       key={h}
                       style={{
@@ -256,7 +263,7 @@ export const AgentRunsPage: React.FC = () => {
                     <td style={{ padding: '9px 12px', borderBottom: '1px solid var(--neutral-soft)' }}>
                       🤖 {run.agent_name || run.agent_id}
                       {run.team_id && (
-                        <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 6 }}>(crew)</span>
+                        <span style={{ fontSize: 12, color: 'var(--text-muted)', marginLeft: 6 }}>(crew)</span>
                       )}
                     </td>
                     <td style={{ padding: '9px 12px', borderBottom: '1px solid var(--neutral-soft)' }}>
@@ -267,7 +274,7 @@ export const AgentRunsPage: React.FC = () => {
                           borderRadius: 12,
                           background: runStatusColor(run.status),
                           color: '#fff',
-                          fontSize: 11.5,
+                          fontSize: 12,
                           fontWeight: 600,
                           animation:
                             run.status === 'running'
@@ -291,7 +298,7 @@ export const AgentRunsPage: React.FC = () => {
                               borderRadius: 12,
                               background: 'var(--tint-purple)',
                               color: 'var(--purple)',
-                              fontSize: 10.5,
+                              fontSize: 12,
                               fontWeight: 600,
                             }}
                           >
@@ -302,22 +309,26 @@ export const AgentRunsPage: React.FC = () => {
                     <td style={{ padding: '9px 12px', borderBottom: '1px solid var(--neutral-soft)', color: 'var(--text-body)' }}>
                       {run.started_at ? new Date(run.started_at).toLocaleString() : '—'}
                     </td>
-                    <td style={{ padding: '9px 12px', borderBottom: '1px solid var(--neutral-soft)', color: 'var(--text-body)' }}>
-                      {formatDuration(run)}
-                    </td>
-                    <td style={{ padding: '9px 12px', borderBottom: '1px solid var(--neutral-soft)', color: 'var(--text-body)' }}>
-                      {run.tokens_in + run.tokens_out > 0
-                        ? (run.tokens_in + run.tokens_out).toLocaleString()
-                        : '—'}
-                    </td>
-                    <td style={{ padding: '9px 12px', borderBottom: '1px solid var(--neutral-soft)', color: 'var(--text-body)' }}>
-                      {run.cost_usd != null ? `$${run.cost_usd.toFixed(4)}` : '—'}
-                    </td>
+                    {!isPhone && (
+                      <>
+                        <td style={{ padding: '9px 12px', borderBottom: '1px solid var(--neutral-soft)', color: 'var(--text-body)' }}>
+                          {formatDuration(run)}
+                        </td>
+                        <td style={{ padding: '9px 12px', borderBottom: '1px solid var(--neutral-soft)', color: 'var(--text-body)' }}>
+                          {run.tokens_in + run.tokens_out > 0
+                            ? (run.tokens_in + run.tokens_out).toLocaleString()
+                            : '—'}
+                        </td>
+                        <td style={{ padding: '9px 12px', borderBottom: '1px solid var(--neutral-soft)', color: 'var(--text-body)' }}>
+                          {run.cost_usd != null ? `$${run.cost_usd.toFixed(4)}` : '—'}
+                        </td>
+                      </>
+                    )}
                   </tr>
                 ))}
                 {runs.length === 0 && (
                   <tr>
-                    <td colSpan={6} style={{ padding: 16, color: 'var(--text-muted)', background: 'var(--surface)' }}>
+                    <td colSpan={columns.length} style={{ padding: 16, color: 'var(--text-muted)', background: 'var(--surface)' }}>
                       No runs yet. Launch an agent from the Agents page or the board.
                     </td>
                   </tr>
@@ -328,7 +339,18 @@ export const AgentRunsPage: React.FC = () => {
           </div>
         </div>
 
-        {selectedRunId && (
+        {selectedRunId && isCompact && (
+          <Sheet label="Run detail" onClose={() => selectRun(null)}>
+            <div style={{ flex: 1, minHeight: 0 }}>
+              <RunDetailPanel
+                runId={selectedRunId}
+                onSelectRun={(id) => selectRun(id)}
+                onClose={() => selectRun(null)}
+              />
+            </div>
+          </Sheet>
+        )}
+        {selectedRunId && !isCompact && (
           <div style={{ width: 460, flexShrink: 0, minHeight: 0 }}>
             <RunDetailPanel
               runId={selectedRunId}

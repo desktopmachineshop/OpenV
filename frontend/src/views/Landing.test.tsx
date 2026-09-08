@@ -3,7 +3,7 @@ import { createRoot, Root } from 'react-dom/client';
 import { Landing } from './Landing';
 import {
   ALPHA_NOTE,
-  BUSINESS_LIFE_LIMITS,
+  BUSINESS_LITE_LIMITS,
   DATA_PROMISE,
   HOSTED_LIMITS,
   HOSTED_TIERS,
@@ -59,7 +59,7 @@ describe('Landing', () => {
       for (const point of tier.points) expect(text).toContain(point);
     }
     expect(text).toContain(ALPHA_NOTE);
-    for (const line of [...HOSTED_LIMITS, ...BUSINESS_LIFE_LIMITS]) {
+    for (const line of [...HOSTED_LIMITS, ...BUSINESS_LITE_LIMITS]) {
       expect(text).toContain(line);
     }
     expect(text).toContain(DATA_PROMISE);

@@ -15,7 +15,7 @@ test('the pricing section states the three tiers, the limits and the data promis
   await page.goto('/pricing');
   const pricing = page.locator('#pricing');
   await expect(pricing).toBeInViewport();
-  for (const name of ['Single User', 'Business Life', 'Business', 'Enterprise', 'Self-hosted', 'Charities and open source']) {
+  for (const name of ['Single User', 'Business Lite', 'Business', 'Enterprise', 'Self-hosted', 'Charities and open source']) {
     await expect(pricing.getByRole('heading', { name, exact: true })).toBeVisible();
   }
   await expect(pricing.getByText('Coming soon', { exact: true })).toHaveCount(3);

@@ -362,7 +362,7 @@ export const ArtifactList: React.FC<ArtifactListProps> = ({
             <div style={{ flex: 1 }}>
               <div style={{ fontWeight: 600, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 {depth > 0 && (
-                  <span style={{ color: 'var(--neutral)', fontSize: '10px' }}>└</span>
+                  <span style={{ color: 'var(--neutral)', fontSize: '12px' }}>└</span>
                 )}
                 {hasChildren && (
                   <button
@@ -377,8 +377,12 @@ export const ArtifactList: React.FC<ArtifactListProps> = ({
                       padding: 0,
                       cursor: 'pointer',
                       color: 'var(--text-muted)',
-                      fontSize: '12px',
-                      width: '14px',
+                      fontSize: '14px',
+                      width: '32px',
+                      minHeight: '32px',
+                      // Wider than the glyph for a fingertip, without
+                      // taking that room from the row.
+                      margin: '-6px -9px',
                       textAlign: 'center',
                     }}
                     title={collapsed ? 'Expand' : 'Collapse'}
@@ -403,7 +407,7 @@ export const ArtifactList: React.FC<ArtifactListProps> = ({
                       border: '1px solid var(--border-soft)',
                       borderRadius: 3,
                       padding: '0 4px',
-                      fontSize: '11px',
+                      fontSize: '12px',
                     }}
                     title="Stable reference — cite this; it never changes or gets reused"
                   >
@@ -449,7 +453,7 @@ export const ArtifactList: React.FC<ArtifactListProps> = ({
                     minHeight: touch ? 32 : 18,
                     borderRadius: '3px',
                     cursor: neighborIds.up ? 'pointer' : 'not-allowed',
-                    fontSize: '10px',
+                    fontSize: '12px',
                     lineHeight: 1,
                   }}
                 >
@@ -498,7 +502,7 @@ export const ArtifactList: React.FC<ArtifactListProps> = ({
                     minHeight: touch ? 32 : 18,
                     borderRadius: '3px',
                     cursor: neighborIds.down ? 'pointer' : 'not-allowed',
-                    fontSize: '10px',
+                    fontSize: '12px',
                     lineHeight: 1,
                   }}
                 >

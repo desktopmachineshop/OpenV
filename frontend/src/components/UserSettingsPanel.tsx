@@ -1,3 +1,4 @@
+import { useViewport } from '../hooks/useViewport';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useAppStore } from '../state/store';
 import { ProviderSetting, providerSettingsAPI, notificationPrefsAPI } from '../api/client';
@@ -24,6 +25,7 @@ const CLI_PROVIDERS: { key: string; label: string }[] = [
 // choose between "user account" and "API key" auth — the sign-in itself
 // always happens here.)
 export const UserSettingsPanel: React.FC<UserSettingsPanelProps> = ({ onClose }) => {
+  const { isPhone } = useViewport();
   const { currentUser, activeOrgId, orgs } = useAppStore();
   const activeOrg = orgs.find((o) => o.id === activeOrgId);
   const [providers, setProviders] = useState<ProviderSetting[]>([]);
@@ -99,15 +101,30 @@ export const UserSettingsPanel: React.FC<UserSettingsPanelProps> = ({ onClose })
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        style={{
-          width: 720,
-          maxWidth: '94vw',
-          maxHeight: '88vh',
-          overflowY: 'auto',
-          background: 'var(--bg-app)',
-          borderRadius: 8,
-          padding: 24,
-        }}
+        className={isPhone ? 'safe-area-top safe-area-bottom' : undefined}
+        style={
+          isPhone
+            ? {
+                // A full-screen sheet on a phone: the settings are a page of
+                // cards, and a page deserves the whole screen.
+                width: '100vw',
+                height: '100vh',
+                maxHeight: '100dvh',
+                overflowY: 'auto',
+                background: 'var(--bg-app)',
+                padding: 16,
+                boxSizing: 'border-box',
+              }
+            : {
+                width: 720,
+                maxWidth: '94vw',
+                maxHeight: '88vh',
+                overflowY: 'auto',
+                background: 'var(--bg-app)',
+                borderRadius: 8,
+                padding: 24,
+              }
+        }
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
           {currentUser?.avatar_url ? (
@@ -140,7 +157,8 @@ export const UserSettingsPanel: React.FC<UserSettingsPanelProps> = ({ onClose })
           </div>
           <button
             onClick={onClose}
-            style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 18, width: 'auto' }}
+            aria-label="Close settings"
+            style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 20, width: 40, minHeight: 40, padding: 0, flexShrink: 0 }}
             title="Close"
           >
             ✕
@@ -148,8 +166,11 @@ export const UserSettingsPanel: React.FC<UserSettingsPanelProps> = ({ onClose })
         </div>
 
         <div className="card">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-            <div>
+          {/* The text and the control share a row that wraps: on a phone the
+              theme switcher drops under the description instead of being
+              squeezed until its last option is cut off. */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+            <div style={{ flex: '1 1 220px', minWidth: 0 }}>
               <h3 style={{ marginBottom: 4 }}>Appearance</h3>
               <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 0 }}>
                 Theme for this browser. “System” follows your OS setting.
@@ -160,8 +181,8 @@ export const UserSettingsPanel: React.FC<UserSettingsPanelProps> = ({ onClose })
         </div>
 
         <div className="card">
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
-            <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+            <div style={{ flex: '1 1 220px', minWidth: 0 }}>
               <h3 style={{ marginBottom: 4 }}>Notifications</h3>
               <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 0 }}>
                 Email me about high-signal events (failed runs, proposals awaiting review, review
@@ -169,7 +190,7 @@ export const UserSettingsPanel: React.FC<UserSettingsPanelProps> = ({ onClose })
                 Email requires the server to have SMTP configured.
               </p>
             </div>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', whiteSpace: 'nowrap', minHeight: 40, flexShrink: 0 }}>
               <input
                 type="checkbox"
                 checked={emailNotifications}

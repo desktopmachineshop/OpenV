@@ -165,7 +165,7 @@ export const LinkPanel: React.FC<LinkPanelProps> = ({
                       {direction === 'outgoing' ? getArtifactTitle(link.to_id) : getArtifactTitle(link.from_id)}
                     </span>
                   </strong>
-                  <div style={{ marginTop: '3px', color: 'var(--text-body)', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <div style={{ marginTop: '3px', color: 'var(--text-body)', fontSize: '12px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     ID: {linkedArtifactId.substring(0, 8)}...
                     {isSuspect(link) && (
                       <span
@@ -177,7 +177,7 @@ export const LinkPanel: React.FC<LinkPanelProps> = ({
                           backgroundColor: 'var(--warning)',
                           color: '#fff',
                           fontWeight: 600,
-                          fontSize: '10px',
+                          fontSize: '12px',
                         }}
                       >
                         suspect
@@ -193,11 +193,13 @@ export const LinkPanel: React.FC<LinkPanelProps> = ({
                       backgroundColor: 'var(--warning)',
                       color: '#fff',
                       border: 'none',
-                      padding: '4px 8px',
+                      padding: '6px 10px',
+                      minHeight: 36,
                       borderRadius: '3px',
                       cursor: 'pointer',
-                      fontSize: '11px',
+                      fontSize: '12px',
                       marginLeft: '8px',
+                      flexShrink: 0,
                     }}
                   >
                     Confirm
@@ -210,11 +212,13 @@ export const LinkPanel: React.FC<LinkPanelProps> = ({
                       backgroundColor: 'var(--danger)',
                       color: 'white',
                       border: 'none',
-                      padding: '4px 8px',
+                      padding: '6px 10px',
+                      minHeight: 36,
                       borderRadius: '3px',
                       cursor: 'pointer',
-                      fontSize: '11px',
+                      fontSize: '12px',
                       marginLeft: '8px',
+                      flexShrink: 0,
                     }}
                   >
                     Delete

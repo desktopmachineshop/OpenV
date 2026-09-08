@@ -1,4 +1,6 @@
 import React, { useEffect, useRef } from 'react';
+import { useViewport } from '../../hooks/useViewport';
+import { dialogCardStyle } from './dialogCard';
 
 export interface ConfirmDialogProps {
   title?: string;
@@ -32,6 +34,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
 }) => {
   const boxRef = useRef<HTMLDivElement>(null);
   const confirmRef = useRef<HTMLButtonElement>(null);
+  const { isPhone } = useViewport();
 
   useEffect(() => {
     confirmRef.current?.focus();
@@ -90,14 +93,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
         aria-modal="true"
         className="card"
         onClick={(e) => e.stopPropagation()}
-        style={{
-          width: 420,
-          maxWidth: 'calc(100vw - 40px)',
-          background: 'var(--surface)',
-          borderRadius: 8,
-          padding: 22,
-          margin: 0,
-        }}
+        style={{ ...dialogCardStyle(isPhone, 420, 22), background: 'var(--surface)' }}
       >
         {title && <h3 style={{ marginTop: 0, marginBottom: 10, color: 'var(--text)', fontSize: 16 }}>{title}</h3>}
         <div style={{ fontSize: 13.5, color: 'var(--text-body)', lineHeight: 1.5, marginBottom: 18 }}>
@@ -108,7 +104,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
             <button
               type="button"
               className="button-secondary"
-              style={{ width: 'auto', padding: '8px 16px', fontSize: 13 }}
+              style={{ width: 'auto', padding: '8px 16px', fontSize: 13, minHeight: 40 }}
               onClick={onCancel}
             >
               {cancelLabel}
@@ -127,6 +123,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
               borderRadius: 4,
               cursor: 'pointer',
               fontWeight: 600,
+              minHeight: 40,
             }}
             onClick={onConfirm}
           >

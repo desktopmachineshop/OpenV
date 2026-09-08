@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { useViewport } from '../../hooks/useViewport';
+import { dialogCardStyle } from '../ui/dialogCard';
 
 interface RunnerKeyModalProps {
   title: string;
@@ -10,6 +12,7 @@ interface RunnerKeyModalProps {
 // and the agentd setup snippet. The plaintext is never retrievable again.
 export const RunnerKeyModal: React.FC<RunnerKeyModalProps> = ({ title, plaintext, onClose }) => {
   const [copied, setCopied] = useState(false);
+  const { isPhone } = useViewport();
 
   const copyKey = async () => {
     try {
@@ -39,7 +42,7 @@ export const RunnerKeyModal: React.FC<RunnerKeyModalProps> = ({ title, plaintext
       <div
         className="card"
         onClick={(e) => e.stopPropagation()}
-        style={{ width: 560, maxWidth: '90vw', background: 'var(--surface)', borderRadius: 8, padding: 24, margin: 0 }}
+        style={{ ...dialogCardStyle(isPhone, 560), background: 'var(--surface)' }}
       >
         <h3 style={{ marginTop: 0, color: 'var(--text)' }}>{title}</h3>
         <div
@@ -55,22 +58,26 @@ export const RunnerKeyModal: React.FC<RunnerKeyModalProps> = ({ title, plaintext
         >
           This key is shown only once. Store it somewhere safe before closing.
         </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 16 }}>
+        {/* The key wraps on narrow screens so every character is visible;
+            the Copy button drops under it rather than squeezing it. */}
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 16, flexWrap: 'wrap' }}>
           <code
             style={{
-              flex: 1,
+              flex: '1 1 240px',
+              minWidth: 0,
               background: 'var(--code-block-bg)',
               color: 'var(--code-block-text)',
               padding: '10px 12px',
               borderRadius: 4,
               fontSize: 13,
+              wordBreak: 'break-all',
+              whiteSpace: isPhone ? 'normal' : 'nowrap',
               overflowX: 'auto',
-              whiteSpace: 'nowrap',
             }}
           >
             {plaintext}
           </code>
-          <button className="button" style={{ padding: '8px 14px', width: 'auto' }} onClick={copyKey}>
+          <button className="button" style={{ padding: '8px 14px', width: 'auto', flexShrink: 0 }} onClick={copyKey}>
             {copied ? 'Copied!' : 'Copy'}
           </button>
         </div>

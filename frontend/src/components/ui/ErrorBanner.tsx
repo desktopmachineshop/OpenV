@@ -42,9 +42,12 @@ export const ErrorBanner: React.FC<ErrorBannerProps> = ({ message, onDismiss, st
             border: 'none',
             cursor: 'pointer',
             color: 'var(--danger-strong)',
-            fontSize: 15,
+            fontSize: 18,
             lineHeight: 1,
-            padding: '1px 2px',
+            padding: 0,
+            width: 32,
+            minHeight: 32,
+            margin: '-6px -8px -6px 0',
             flexShrink: 0,
           }}
         >

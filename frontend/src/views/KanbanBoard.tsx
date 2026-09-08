@@ -263,7 +263,7 @@ export const KanbanBoard: React.FC = () => {
             display: 'inline-flex',
             alignItems: 'center',
             gap: 4,
-            fontSize: 11,
+            fontSize: 12,
             background: 'var(--tint-purple)',
             border: '1px solid var(--tint-purple-border)',
             borderRadius: 10,
@@ -286,7 +286,7 @@ export const KanbanBoard: React.FC = () => {
             display: 'inline-flex',
             alignItems: 'center',
             gap: 4,
-            fontSize: 11,
+            fontSize: 12,
             background: 'var(--tint-blue)',
             border: '1px solid var(--tint-blue-border)',
             borderRadius: 10,
@@ -313,7 +313,7 @@ export const KanbanBoard: React.FC = () => {
           display: 'inline-flex',
           alignItems: 'center',
           justifyContent: 'center',
-          fontSize: 11,
+          fontSize: 12,
           fontWeight: 700,
         }}
       >
@@ -352,6 +352,9 @@ export const KanbanBoard: React.FC = () => {
           <div style={{ flex: 1, minWidth: 0, overflowX: 'auto' }}>
             <SegmentedControl
               aria-label="Board column"
+              // One line at its natural width, so the strip scrolls sideways
+              // instead of shrinking to fit and hiding its last column.
+              style={{ flexWrap: 'nowrap', maxWidth: 'none', width: 'max-content' }}
               value={phoneColumn}
               onChange={setPhoneColumn}
               options={COLUMNS.map((c) => ({
@@ -494,7 +497,7 @@ export const KanbanBoard: React.FC = () => {
                     >
                       {renderAssigneeBadge(item)}
                       {item.artifact_ids && item.artifact_ids.length > 0 && (
-                        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                        <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
                           🔗 {item.artifact_ids.length}
                         </span>
                       )}

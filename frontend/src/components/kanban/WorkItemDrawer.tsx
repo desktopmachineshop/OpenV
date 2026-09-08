@@ -150,7 +150,8 @@ export const WorkItemDrawer: React.FC<WorkItemDrawerProps> = ({
         width: 'min(420px, 100vw)',
         background: 'var(--surface)',
         boxShadow: '-4px 0 16px rgba(0,0,0,0.15)',
-        zIndex: 100,
+        // Above the project nav drawer (900), below dialogs (2000).
+        zIndex: 950,
         display: 'flex',
         flexDirection: 'column',
       }}
@@ -184,13 +185,20 @@ export const WorkItemDrawer: React.FC<WorkItemDrawerProps> = ({
         )}
         <button
           onClick={onClose}
+          aria-label="Close"
           style={{
             background: 'none',
             border: 'none',
-            fontSize: 20,
+            fontSize: 22,
             cursor: 'pointer',
             color: 'var(--text-muted)',
             lineHeight: 1,
+            width: 40,
+            minHeight: 40,
+            padding: 0,
+            marginTop: -8,
+            marginRight: -8,
+            flexShrink: 0,
           }}
           title="Close"
         >
@@ -269,7 +277,7 @@ export const WorkItemDrawer: React.FC<WorkItemDrawerProps> = ({
                 fontSize: 13,
               }}
             >
-              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 3 }}>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 3 }}>
                 <strong>{a.actor || 'system'}</strong> · {a.kind} ·{' '}
                 {new Date(a.created_at).toLocaleString()}
               </div>

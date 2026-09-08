@@ -39,7 +39,7 @@ const badge = (background: string, color = 'var(--surface)'): React.CSSPropertie
   borderRadius: 8,
   background,
   color,
-  fontSize: 11,
+  fontSize: 12,
   fontWeight: 600,
 });
 

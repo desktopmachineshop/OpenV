@@ -164,9 +164,11 @@ export const ProposalReviewPanel: React.FC<ProposalReviewPanelProps> = ({
               fontSize: 13,
               color: 'var(--text)',
               cursor: 'pointer',
+              whiteSpace: 'nowrap',
+              minHeight: 36,
             }}
           >
-            <input type="checkbox" checked={allSelected} onChange={toggleAll} disabled={bulkBusy} />
+            <input type="checkbox" checked={allSelected} onChange={toggleAll} disabled={bulkBusy} style={{ width: 'auto' }} />
             Select all ({selectedIds.length}/{proposals.length})
           </label>
           <input

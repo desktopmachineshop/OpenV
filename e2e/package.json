@@ -5,7 +5,8 @@
   "description": "Playwright E2E smoke pack. Runs against an already-running OpenV stack (BASE_URL, default http://localhost:3000).",
   "scripts": {
     "test": "playwright test",
-    "report": "playwright show-report"
+    "report": "playwright show-report",
+    "audit:phone": "node tools/phone-audit.js"
   },
   "devDependencies": {
     "@playwright/test": "1.57.0",

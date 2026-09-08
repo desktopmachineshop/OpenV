@@ -91,8 +91,8 @@ export const HOSTED_TIERS: PricingTier[] = [
     cta: { label: 'Create free account', href: '/login?mode=register' },
   },
   {
-    id: 'business-life',
-    name: 'Business Life',
+    id: 'business-lite',
+    name: 'Business Lite',
     price: 'Coming soon',
     available: false,
     summary: 'For one person who wants agents working while the laptop is closed.',
@@ -102,7 +102,7 @@ export const HOSTED_TIERS: PricingTier[] = [
       'Agents on your own API keys instead of a signed-in CLI.',
       'Always-on agents: a hosted runner that keeps cron and event automations running unattended.',
     ],
-    cta: { label: 'Tell us you want this', href: interest('Business Life'), external: true },
+    cta: { label: 'Tell us you want this', href: interest('Business Lite'), external: true },
   },
   {
     id: 'business',
@@ -111,7 +111,7 @@ export const HOSTED_TIERS: PricingTier[] = [
     available: false,
     summary: 'For companies working on the same products together.',
     points: [
-      'Everything in Business Life.',
+      'Everything in Business Lite.',
       'Shared company workspaces.',
       'Teams and per-project access.',
       'Workspace AI budget and usage reporting.',
@@ -172,9 +172,9 @@ export const PRICING_TIERS: PricingTier[] = [...HOSTED_TIERS, ...OTHER_TIERS];
 export const ALPHA_NOTE =
   'While OpenV is in alpha, every workspace has every tier’s features, free. When tiers launch you keep what you have until we announce otherwise, and export never depends on a plan.';
 
-/** Business Life quotes the team plan in internal/domain/orgs/limits.go;
+/** Business Lite quotes the team plan in internal/domain/orgs/limits.go;
  *  change both together. */
-export const BUSINESS_LIFE_LIMITS: string[] = [
+export const BUSINESS_LITE_LIMITS: string[] = [
   'Cloud runner: 4 GB memory, 2 CPUs.',
   'Cloud runner lease: 120 minutes, reclaimed after 20 idle minutes.',
 ];

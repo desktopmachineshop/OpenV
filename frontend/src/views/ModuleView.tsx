@@ -1351,7 +1351,7 @@ export const ModuleView: React.FC = () => {
                   top: '50%',
                   right: '10px',
                   transform: 'translateY(-50%)',
-                  fontSize: '11px',
+                  fontSize: '12px',
                   color: 'var(--text-muted)',
                   maxWidth: '140px',
                   whiteSpace: 'nowrap',

@@ -9,6 +9,7 @@ export {
 export type { AlertOptions, ConfirmOptions, PromptOptions } from './DialogProvider';
 export { ErrorBanner } from './ErrorBanner';
 export { Modal } from './Modal';
+export { Sheet } from './Sheet';
 export { SegmentedControl } from './SegmentedControl';
 export type { SegmentedOption } from './SegmentedControl';
 export { ArtifactPicker } from './ArtifactPicker';

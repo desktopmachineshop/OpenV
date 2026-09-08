@@ -16,8 +16,12 @@ export const ThemeSwitcher: React.FC = () => {
     <div
       role="radiogroup"
       aria-label="Theme"
+      className="segmented-control"
       style={{
         display: 'inline-flex',
+        flexWrap: 'wrap',
+        flexShrink: 0,
+        maxWidth: '100%',
         border: '1px solid var(--neutral-mid)',
         borderRadius: 6,
         overflow: 'hidden',
@@ -35,8 +39,9 @@ export const ThemeSwitcher: React.FC = () => {
             onClick={() => setPref(opt.value)}
             style={{
               width: 'auto',
+              flexShrink: 0,
               padding: '6px 14px',
-              fontSize: 12,
+              fontSize: 13,
               fontWeight: active ? 700 : 400,
               border: 'none',
               cursor: 'pointer',

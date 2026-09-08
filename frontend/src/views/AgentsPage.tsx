@@ -2,8 +2,9 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { AgentDef, agentsAPI } from '../api/client';
 import { useAppStore } from '../state/store';
+import { useViewport } from '../hooks/useViewport';
 import { AgentEditor } from '../components/agents/AgentEditor';
-import { ErrorBanner, Modal, useConfirm } from '../components/ui';
+import { ErrorBanner, Modal, useConfirm, Sheet } from '../components/ui';
 
 const providerBadgeColor = (provider: string): string => {
   switch (provider) {
@@ -25,6 +26,9 @@ export const AgentsPage: React.FC = () => {
   const params = useParams<{ projectId: string }>();
   const storeProjectId = useAppStore((s) => s.projectId);
   const projectId = params.projectId || storeProjectId;
+  // Compact viewports have no room for a list beside an editor: the list
+  // takes the width and the editor opens as a full-screen sheet.
+  const { isCompact } = useViewport();
   const activeOrgId = useAppStore((s) => s.activeOrgId);
   const navigate = useNavigate();
   const confirm = useConfirm();
@@ -107,6 +111,15 @@ export const AgentsPage: React.FC = () => {
     }
   };
 
+  const closeEditor = () => {
+    setCreating(false);
+    setSelectedSlug(null);
+  };
+  const onEditorSaved = () => {
+    setCreating(false);
+    load();
+  };
+
   return (
     <div style={{ padding: 20, height: '100%', display: 'flex', flexDirection: 'column' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
@@ -135,7 +148,7 @@ export const AgentsPage: React.FC = () => {
 
       <div style={{ display: 'flex', gap: 16, flex: 1, minHeight: 0 }}>
         {/* Agent list */}
-        <div style={{ width: 320, flexShrink: 0, overflowY: 'auto' }}>
+        <div style={isCompact ? { flex: 1, minWidth: 0, overflowY: 'auto' } : { width: 320, flexShrink: 0, overflowY: 'auto' }}>
           {agents.length === 0 && (
             <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>
               No agents defined yet. Create one or sync from disk.
@@ -177,7 +190,7 @@ export const AgentsPage: React.FC = () => {
               <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
                 <span
                   style={{
-                    fontSize: 11,
+                    fontSize: 12,
                     background: providerBadgeColor(agent.provider),
                     color: '#fff',
                     borderRadius: 10,
@@ -189,7 +202,7 @@ export const AgentsPage: React.FC = () => {
                 </span>
                 <span
                   style={{
-                    fontSize: 11,
+                    fontSize: 12,
                     background: agent.write_mode === 'direct' ? 'var(--danger)' : 'var(--warning)',
                     color: '#fff',
                     borderRadius: 10,
@@ -213,7 +226,7 @@ export const AgentsPage: React.FC = () => {
               <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
                 <button
                   className="button"
-                  style={{ padding: '4px 10px', fontSize: 12 }}
+                  style={{ padding: '4px 10px', fontSize: 12, minHeight: 36 }}
                   onClick={(e) => {
                     e.stopPropagation();
                     setLaunchAgent(agent);
@@ -226,6 +239,7 @@ export const AgentsPage: React.FC = () => {
                   style={{
                     padding: '4px 10px',
                     fontSize: 12,
+                    minHeight: 36,
                     background: 'var(--danger)',
                     color: '#fff',
                     border: 'none',
@@ -245,25 +259,23 @@ export const AgentsPage: React.FC = () => {
         </div>
 
         {/* Editor */}
-        <div style={{ flex: 1, overflowY: 'auto', minWidth: 0 }}>
-          {creating || selected ? (
-            <AgentEditor
-              agent={creating ? null : selected}
-              onSaved={() => {
-                setCreating(false);
-                load();
-              }}
-              onCancel={() => {
-                setCreating(false);
-                setSelectedSlug(null);
-              }}
-            />
-          ) : (
-            <div style={{ color: 'var(--text-muted)', padding: 40, textAlign: 'center' }}>
-              Select an agent to edit it, or create a new one.
-            </div>
-          )}
-        </div>
+        {isCompact ? (
+          (creating || selected) && (
+            <Sheet label={creating ? 'New agent' : 'Edit agent'} onClose={closeEditor}>
+              <AgentEditor agent={creating ? null : selected} onSaved={onEditorSaved} onCancel={closeEditor} />
+            </Sheet>
+          )
+        ) : (
+          <div style={{ flex: 1, overflowY: 'auto', minWidth: 0 }}>
+            {creating || selected ? (
+              <AgentEditor agent={creating ? null : selected} onSaved={onEditorSaved} onCancel={closeEditor} />
+            ) : (
+              <div style={{ color: 'var(--text-muted)', padding: 40, textAlign: 'center' }}>
+                Select an agent to edit it, or create a new one.
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Launch modal */}

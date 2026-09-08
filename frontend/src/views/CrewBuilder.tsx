@@ -17,7 +17,8 @@ import { useAppStore } from '../state/store';
 import { CrewCanvas, CrewFilter } from '../components/crews/CrewCanvas';
 import { NodeConfigPanel } from '../components/crews/NodeConfigPanel';
 import { EdgeConfigPanel } from '../components/crews/EdgeConfigPanel';
-import { ErrorBanner, Modal, SegmentedControl, useConfirm, usePrompt } from '../components/ui';
+import { ErrorBanner, Modal, SegmentedControl, Sheet, useConfirm, usePrompt } from '../components/ui';
+import { useViewport } from '../hooks/useViewport';
 
 const LIVE_STATUSES = ['queued', 'claimed', 'running'];
 const EDGE_TYPES: { value: string; label: string; color: string }[] = [
@@ -50,6 +51,8 @@ export const CrewBuilder: React.FC = () => {
   const params = useParams<{ projectId: string }>();
   const storeProjectId = useAppStore((s) => s.projectId);
   const projectId = params.projectId || storeProjectId;
+  // The config pane beside the canvas becomes a sheet on compact viewports.
+  const { isCompact } = useViewport();
   const activeOrgId = useAppStore((s) => s.activeOrgId);
   const navigate = useNavigate();
   const location = useLocation();
@@ -429,7 +432,7 @@ export const CrewBuilder: React.FC = () => {
         {selectedCrew?.is_default && (
           <span
             style={{
-              fontSize: 11,
+              fontSize: 12,
               background: 'var(--accent)',
               color: 'var(--accent-fg)',
               borderRadius: 10,
@@ -665,28 +668,43 @@ export const CrewBuilder: React.FC = () => {
             </div>
           )}
         </div>
-        {(selectedNode || selectedEdge) && graph && (
-          <div style={{ width: 320, flexShrink: 0, overflowY: 'auto' }}>
-            {selectedNode && (
-              <NodeConfigPanel
-                node={selectedNode}
-                graph={graph}
-                agents={agents}
-                members={members}
-                onChanged={loadGraph}
-                onClose={() => setSelectedNodeId(null)}
-              />
-            )}
-            {selectedEdge && (
-              <EdgeConfigPanel
-                edge={selectedEdge}
-                graph={graph}
-                onChanged={loadGraph}
-                onClose={() => setSelectedEdgeId(null)}
-              />
-            )}
-          </div>
-        )}
+        {(selectedNode || selectedEdge) && graph && (() => {
+          const panel = (
+            <>
+              {selectedNode && (
+                <NodeConfigPanel
+                  node={selectedNode}
+                  graph={graph}
+                  agents={agents}
+                  members={members}
+                  onChanged={loadGraph}
+                  onClose={() => setSelectedNodeId(null)}
+                />
+              )}
+              {selectedEdge && (
+                <EdgeConfigPanel
+                  edge={selectedEdge}
+                  graph={graph}
+                  onChanged={loadGraph}
+                  onClose={() => setSelectedEdgeId(null)}
+                />
+              )}
+            </>
+          );
+          return isCompact ? (
+            <Sheet
+              label={selectedNode ? 'Crew member settings' : 'Connection settings'}
+              onClose={() => {
+                setSelectedNodeId(null);
+                setSelectedEdgeId(null);
+              }}
+            >
+              {panel}
+            </Sheet>
+          ) : (
+            <div style={{ width: 320, flexShrink: 0, overflowY: 'auto' }}>{panel}</div>
+          );
+        })()}
       </div>
 
       {/* Edge-type picker popup */}

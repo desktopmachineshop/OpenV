@@ -110,9 +110,27 @@ export const UserMenu: React.FC<UserMenuProps> = ({ variant = 'light' }) => {
 
   return (
     <div ref={rootRef} style={{ position: 'relative' }}>
-      <div
-        style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}
+      <button
+        type="button"
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          cursor: 'pointer',
+          background: 'none',
+          border: 'none',
+          padding: dark ? '4px 0' : '2px 4px',
+          minHeight: 40,
+          width: dark ? '100%' : 'auto',
+          minWidth: 0,
+          color: 'inherit',
+          font: 'inherit',
+          textAlign: 'left',
+        }}
         title={dark ? undefined : displayName}
+        aria-label={`Account menu for ${displayName}`}
+        aria-haspopup="menu"
+        aria-expanded={menuOpen}
         onClick={() => setMenuOpen(!menuOpen)}
       >
         {avatar}
@@ -123,14 +141,16 @@ export const UserMenu: React.FC<UserMenuProps> = ({ variant = 'light' }) => {
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
+              minWidth: 0,
+              color: 'var(--sidebar-text)',
             }}
           >
             {displayName}
           </div>
         ) : (
-          <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>▼</span>
+          <span aria-hidden style={{ fontSize: 12, color: 'var(--text-muted)' }}>▼</span>
         )}
-      </div>
+      </button>
       {menuOpen && (
         <div style={dropdownStyle}>
           {!dark && (

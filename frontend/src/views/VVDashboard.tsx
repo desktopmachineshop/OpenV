@@ -11,6 +11,7 @@ import {
 } from '../api/client';
 import { useAppStore } from '../state/store';
 import { ErrorBanner, useConfirm } from '../components/ui';
+import { useViewport } from '../hooks/useViewport';
 
 // ---------------------------------------------------------------------------
 // Shared color helpers for V&V rollup statuses
@@ -60,6 +61,10 @@ export const VVDashboard: React.FC = () => {
   const params = useParams<{ projectId: string }>();
   const storeProjectId = useAppStore((s) => s.projectId);
   const projectId = params.projectId || storeProjectId;
+  // A phone shows a run's name and status; when it started and which
+  // baseline it tested are on the run's own page.
+  const { isPhone } = useViewport();
+  const runColumns = isPhone ? ['Name', 'Status', ''] : ['Name', 'Status', 'Started', 'Baseline', ''];
   const confirm = useConfirm();
 
   const [baselines, setBaselines] = useState<Baseline[]>([]);
@@ -409,7 +414,7 @@ export const VVDashboard: React.FC = () => {
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
           <thead>
             <tr>
-              {['Name', 'Status', 'Started', 'Baseline', ''].map((h, i) => (
+              {runColumns.map((h, i) => (
                 <th
                   key={i}
                   style={{
@@ -442,20 +447,24 @@ export const VVDashboard: React.FC = () => {
                 <td style={{ padding: '8px 10px', borderBottom: '1px solid var(--neutral-soft)' }}>
                   <span style={chipStyle(runStatusColor(run.status))}>{run.status}</span>
                 </td>
-                <td style={{ padding: '8px 10px', borderBottom: '1px solid var(--neutral-soft)', color: 'var(--text-body)' }}>
-                  {run.started_at ? new Date(run.started_at).toLocaleString() : '—'}
-                </td>
-                <td style={{ padding: '8px 10px', borderBottom: '1px solid var(--neutral-soft)', color: 'var(--text-body)' }}>
-                  {run.baseline_id
-                    ? baselines.find((b) => b.id === run.baseline_id)?.name || run.baseline_id
-                    : 'Live'}
-                </td>
+                {!isPhone && (
+                  <>
+                    <td style={{ padding: '8px 10px', borderBottom: '1px solid var(--neutral-soft)', color: 'var(--text-body)' }}>
+                      {run.started_at ? new Date(run.started_at).toLocaleString() : '—'}
+                    </td>
+                    <td style={{ padding: '8px 10px', borderBottom: '1px solid var(--neutral-soft)', color: 'var(--text-body)' }}>
+                      {run.baseline_id
+                        ? baselines.find((b) => b.id === run.baseline_id)?.name || run.baseline_id
+                        : 'Live'}
+                    </td>
+                  </>
+                )}
                 <td style={{ padding: '8px 10px', borderBottom: '1px solid var(--neutral-soft)', whiteSpace: 'nowrap' }}>
                   {run.status === 'in-progress' && (
                     <>
                       <button
                         className="button"
-                        style={{ padding: '4px 10px', fontSize: 12, marginRight: 6 }}
+                        style={{ padding: '4px 10px', fontSize: 12, marginRight: 6, minHeight: 36 }}
                         onClick={() => handleRunStatus(run.id, 'completed')}
                       >
                         Complete
@@ -464,6 +473,7 @@ export const VVDashboard: React.FC = () => {
                         style={{
                           padding: '4px 10px',
                           fontSize: 12,
+                          minHeight: 36,
                           background: 'var(--danger)',
                           color: '#fff',
                           border: 'none',
@@ -481,7 +491,7 @@ export const VVDashboard: React.FC = () => {
             ))}
             {runs.length === 0 && !loading && (
               <tr>
-                <td colSpan={5} style={{ padding: 12, color: 'var(--text-muted)' }}>
+                <td colSpan={runColumns.length} style={{ padding: 12, color: 'var(--text-muted)' }}>
                   No test runs yet. Create one to start recording results.
                 </td>
               </tr>

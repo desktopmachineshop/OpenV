@@ -404,10 +404,11 @@ export const ProjectLayout: React.FC = () => {
                       gap: 6,
                       width: '100%',
                       padding: '6px 16px',
+                      minHeight: compact ? 36 : 28,
                       background: 'none',
                       border: 'none',
                       textAlign: 'left',
-                      fontSize: 10,
+                      fontSize: 12,
                       fontWeight: 700,
                       letterSpacing: 1,
                       textTransform: 'uppercase',
@@ -415,7 +416,7 @@ export const ProjectLayout: React.FC = () => {
                       cursor: 'pointer',
                     }}
                   >
-                    <span aria-hidden style={{ fontSize: 8, width: 8 }}>
+                    <span aria-hidden style={{ fontSize: 12, width: 12 }}>
                       {expanded ? '▾' : '▸'}
                     </span>
                     {label}

@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { AgentDef, agentsAPI, ProviderSetting, providerSettingsAPI } from '../../api/client';
 import { ModelSelect } from './ModelSelect';
+import { useViewport } from '../../hooks/useViewport';
 
 // Used until the provider settings load (or if they fail to) — the server
 // returns the same list, in the same order, with each provider's models.
@@ -56,6 +57,7 @@ const toForm = (agent: AgentDef | null): FormState => ({
 });
 
 export const AgentEditor: React.FC<AgentEditorProps> = ({ agent, onSaved, onCancel }) => {
+  const { isPhone } = useViewport();
   const isNew = !agent;
   const [mode, setMode] = useState<'form' | 'raw'>('form');
   const [form, setForm] = useState<FormState>(toForm(agent));
@@ -161,10 +163,10 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({ agent, onSaved, onCanc
 
   return (
     <div className="card" style={{ marginBottom: 0 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-        <h3 style={{ margin: 0, flex: 1 }}>{isNew ? 'New agent' : `Edit: ${agent?.name}`}</h3>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
+        <h3 style={{ margin: 0, flex: '1 1 160px', minWidth: 0, overflowWrap: 'anywhere' }}>{isNew ? 'New agent' : `Edit: ${agent?.name}`}</h3>
         {!isNew && (
-          <div style={{ display: 'inline-flex', border: '1px solid var(--border)', borderRadius: 4, overflow: 'hidden' }}>
+          <div style={{ display: 'inline-flex', flexShrink: 0, border: '1px solid var(--border)', borderRadius: 4, overflow: 'hidden' }}>
             {(['form', 'raw'] as const).map((m) => (
               <button
                 key={m}
@@ -185,7 +187,8 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({ agent, onSaved, onCanc
         )}
         <button
           onClick={onCancel}
-          style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: 'var(--text-muted)' }}
+          aria-label="Close editor"
+          style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: 'var(--text-muted)', width: 40, minHeight: 40, padding: 0, flexShrink: 0 }}
           title="Close editor"
         >
           ×
@@ -212,7 +215,7 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({ agent, onSaved, onCanc
 
       {mode === 'form' ? (
         <>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 14px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isPhone ? '1fr' : '1fr 1fr', gap: '0 14px' }}>
             <div className="form-group">
               <label>Slug</label>
               <input
@@ -231,7 +234,7 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({ agent, onSaved, onCanc
                 style={{ fontSize: 13 }}
               />
             </div>
-            <div className="form-group" style={{ gridColumn: '1 / span 2' }}>
+            <div className="form-group" style={{ gridColumn: isPhone ? undefined : '1 / span 2' }}>
               <label>Description</label>
               <input
                 value={form.description}
@@ -324,7 +327,7 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({ agent, onSaved, onCanc
                 style={{ fontSize: 13 }}
               />
             </div>
-            <div className="form-group" style={{ gridColumn: '1 / span 2' }}>
+            <div className="form-group" style={{ gridColumn: isPhone ? undefined : '1 / span 2' }}>
               <label>Allowed tools (comma-separated)</label>
               <input
                 value={form.allowed_tools}
@@ -333,7 +336,7 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({ agent, onSaved, onCanc
                 style={{ fontSize: 13 }}
               />
             </div>
-            <div className="form-group" style={{ gridColumn: '1 / span 2' }}>
+            <div className="form-group" style={{ gridColumn: isPhone ? undefined : '1 / span 2' }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
                 <input
                   id="agent-locked"

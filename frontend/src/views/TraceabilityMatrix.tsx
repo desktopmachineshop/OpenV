@@ -14,6 +14,7 @@ import {
   vvAPI,
 } from '../api/client';
 import { useAppStore } from '../state/store';
+import { useViewport } from '../hooks/useViewport';
 
 const resultColor = (status: string): string => {
   switch ((status || '').toLowerCase()) {
@@ -49,6 +50,9 @@ export const TraceabilityMatrix: React.FC = () => {
   const params = useParams<{ projectId: string }>();
   const storeProjectId = useAppStore((s) => s.projectId);
   const projectId = params.projectId || storeProjectId;
+  // A phone keeps requirement, needs and test cases; design outputs and
+  // hazards are a swipe too far and can be exported instead.
+  const { isPhone } = useViewport();
 
   const gridRef = useRef<AgGridReact<MatrixRow>>(null);
   const [baselines, setBaselines] = useState<Baseline[]>([]);
@@ -223,7 +227,7 @@ export const TraceabilityMatrix: React.FC = () => {
         headerName: 'Requirement',
         field: 'title',
         pinned: 'left',
-        minWidth: 240,
+        minWidth: isPhone ? 150 : 240,
         flex: 1,
         wrapText: true,
         autoHeight: true,
@@ -235,7 +239,7 @@ export const TraceabilityMatrix: React.FC = () => {
               <Link
                 to={`/projects/${projectId}/impact?artifact=${p.data.requirement_id}`}
                 title="Trace what a change to this requirement would affect"
-                style={{ fontSize: 11, color: 'var(--accent-strong)', textDecoration: 'none' }}
+                style={{ fontSize: 12, color: 'var(--accent-strong)', textDecoration: 'none', display: 'inline-block', padding: '6px 0' }}
               >
                 Show impact →
               </Link>
@@ -261,6 +265,7 @@ export const TraceabilityMatrix: React.FC = () => {
       },
       {
         headerName: 'Design',
+        hide: isPhone,
         children: [
           {
             headerName: 'Design outputs',
@@ -293,6 +298,7 @@ export const TraceabilityMatrix: React.FC = () => {
       },
       {
         headerName: 'Hazards',
+        hide: isPhone,
         children: [
           {
             headerName: 'Linked hazards',
@@ -308,7 +314,7 @@ export const TraceabilityMatrix: React.FC = () => {
         ],
       },
     ],
-    [ChipListRenderer, TestCaseRenderer, joinTitles, projectId]
+    [ChipListRenderer, TestCaseRenderer, joinTitles, projectId, isPhone]
   );
 
   const exportCsv = () => {
@@ -367,7 +373,7 @@ export const TraceabilityMatrix: React.FC = () => {
       {error && <div style={{ color: 'var(--danger)', marginBottom: 10, fontSize: 13 }}>{error}</div>}
       {loading && <div style={{ color: 'var(--text-muted)', marginBottom: 10 }}>Loading…</div>}
 
-      <div className="ag-theme-quartz" style={{ flex: 1, minHeight: 480 }}>
+      <div className="ag-theme-quartz" style={{ flex: 1, minHeight: isPhone ? 320 : 480, width: '100%' }}>
         <AgGridReact<MatrixRow>
           ref={gridRef}
           rowData={rows}
