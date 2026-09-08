@@ -49,7 +49,7 @@ export const IMPORT_FORMATS = 'JSON and ReqIF';
 export const DATA_PROMISE =
   'If hosted OpenV ever charges, your data will not be behind the paywall. Export and import stay available on every plan, and a JSON export restores into a self-hosted OpenV.';
 
-/** Hosted-plan limits in force. Mirrors the free plan in
+/** Single User (free plan) limits in force. Mirrors the free plan in
  *  internal/domain/orgs/limits.go; change both together. */
 export const HOSTED_LIMITS: string[] = [
   'Hosted runner: 2 GB memory, 1 CPU.',
@@ -62,30 +62,86 @@ export const HOSTED_LIMITS: string[] = [
 export interface PricingTier {
   id: string;
   name: string;
+  /** "Free", "Free forever" or "Coming soon". */
   price: string;
+  /** False for tiers that exist on the page but cannot be had yet. */
+  available: boolean;
   summary: string;
   points: string[];
   cta: { label: string; href: string; external?: boolean };
 }
 
-export const PRICING_TIERS: PricingTier[] = [
+const interest = (tier: string) =>
+  `${REPO_URL}/issues/new?template=alpha-feedback.md&title=${encodeURIComponent(`Interested in ${tier}`)}`;
+
+/** The hosted service, from the free offering to the enterprise tier. */
+export const HOSTED_TIERS: PricingTier[] = [
   {
-    id: 'hosted',
-    name: 'Hosted alpha',
+    id: 'single',
+    name: 'Single User',
     price: 'Free',
-    summary: 'Free while OpenV is in alpha. Every feature. No card, no trial clock.',
+    available: true,
+    summary: 'The current offering. Bring your own AI.',
     points: [
-      'The full product: requirements, V&V, agents, interviews, automations.',
-      'Workspaces, teams and per-project access included.',
-      'Runs on our servers; the limits below apply.',
-      'When hosted plans arrive they will be announced ahead of time.',
+      'Requirements, V&V, traceability and interviews: the full product for one person.',
+      'Agents run on your own AI subscription (Claude Code, Codex or Gemini) via the Agent Connector on your machine, or a leased cloud runner within the free limits.',
+      'Personal workspace.',
+      'Export everything, always.',
     ],
     cta: { label: 'Create free account', href: '/login?mode=register' },
   },
   {
+    id: 'business-life',
+    name: 'Business Life',
+    price: 'Coming soon',
+    available: false,
+    summary: 'For one person who wants agents working while the laptop is closed.',
+    points: [
+      'Everything in Single User.',
+      'Higher cloud runner limits: 4 GB memory, 2 CPUs, 120-minute lease reclaimed after 20 idle minutes.',
+      'Agents on your own API keys instead of a signed-in CLI.',
+      'Always-on agents: a hosted runner that keeps cron and event automations running unattended.',
+    ],
+    cta: { label: 'Tell us you want this', href: interest('Business Life'), external: true },
+  },
+  {
+    id: 'business',
+    name: 'Business',
+    price: 'Coming soon',
+    available: false,
+    summary: 'For companies working on the same products together.',
+    points: [
+      'Everything in Business Life.',
+      'Shared company workspaces.',
+      'Teams and per-project access.',
+      'Workspace AI budget and usage reporting.',
+    ],
+    cta: { label: 'Tell us you want this', href: interest('Business'), external: true },
+  },
+  {
+    id: 'enterprise',
+    name: 'Enterprise',
+    price: 'Coming soon',
+    available: false,
+    summary: 'For organisations that need it on their terms.',
+    points: [
+      'Everything in Business.',
+      'Run on your own servers with our support.',
+      'SSO/OIDC and directory setup.',
+      'Custom integrations with your PLM, ALM, ticketing or CI.',
+      'Support SLA and priority fixes.',
+    ],
+    cta: { label: 'Tell us you want this', href: interest('Enterprise'), external: true },
+  },
+];
+
+/** The two ways that are free for good. */
+export const OTHER_TIERS: PricingTier[] = [
+  {
     id: 'self-host',
     name: 'Self-hosted',
     price: 'Free forever',
+    available: true,
     summary: 'AGPL-3.0. All features, your hardware, no limits from us.',
     points: [
       'One command: git clone, docker compose up.',
@@ -99,14 +155,28 @@ export const PRICING_TIERS: PricingTier[] = [
     id: 'charity',
     name: 'Charities and open source',
     price: 'Free forever',
+    available: true,
     summary: 'Registered charities and open-source projects use the hosted service free, for as long as it exists.',
     points: [
-      'Everything in the hosted plan.',
-      'Stays free when hosted plans arrive.',
+      'Everything in the hosted service.',
+      'Stays free when tiers launch.',
       'Claim it with a GitHub issue: tell us who you are and the workspace name.',
     ],
     cta: { label: 'Claim free hosting', href: FREE_HOSTING_ISSUE_URL, external: true },
   },
+];
+
+/** Every tier on the page, for tests and the manual. */
+export const PRICING_TIERS: PricingTier[] = [...HOSTED_TIERS, ...OTHER_TIERS];
+
+export const ALPHA_NOTE =
+  'While OpenV is in alpha, every workspace has every tier’s features, free. When tiers launch you keep what you have until we announce otherwise, and export never depends on a plan.';
+
+/** Business Life quotes the team plan in internal/domain/orgs/limits.go;
+ *  change both together. */
+export const BUSINESS_LIFE_LIMITS: string[] = [
+  'Cloud runner: 4 GB memory, 2 CPUs.',
+  'Cloud runner lease: 120 minutes, reclaimed after 20 idle minutes.',
 ];
 
 export const PRICING_FOOTNOTE =

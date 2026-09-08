@@ -15,9 +15,11 @@ test('the pricing section states the three tiers, the limits and the data promis
   await page.goto('/pricing');
   const pricing = page.locator('#pricing');
   await expect(pricing).toBeInViewport();
-  await expect(pricing.getByRole('heading', { name: 'Hosted alpha' })).toBeVisible();
-  await expect(pricing.getByRole('heading', { name: 'Self-hosted' })).toBeVisible();
-  await expect(pricing.getByRole('heading', { name: 'Charities and open source' })).toBeVisible();
+  for (const name of ['Single User', 'Business Life', 'Business', 'Enterprise', 'Self-hosted', 'Charities and open source']) {
+    await expect(pricing.getByRole('heading', { name, exact: true })).toBeVisible();
+  }
+  await expect(pricing.getByText('Coming soon', { exact: true })).toHaveCount(3);
+  await expect(pricing.getByText('While OpenV is in alpha, every workspace has every tier', { exact: false })).toBeVisible();
   await expect(pricing.getByText('Hosted runner: 2 GB memory, 1 CPU.')).toBeVisible();
   await expect(page.getByText('If hosted OpenV ever charges, your data will not be behind the paywall.', { exact: false })).toBeVisible();
   await expect(page.getByText('ReqIF interchange')).toBeVisible();
