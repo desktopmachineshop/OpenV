@@ -3,6 +3,7 @@ package runner
 import (
 	"context"
 	"errors"
+	"log"
 
 	"github.com/openv/requirements-platform/internal/domain/agents"
 )
@@ -42,8 +43,23 @@ type RunSpec struct {
 	// cloned repository, a fetched page. Such a run auto-approves nothing:
 	// the allowlist is its entire approval surface, and file edits or shell
 	// commands outside it are denied rather than granted (REQ-91, HAZ-1).
-	// Set by the worker from the agent definition (agents.UntrustedInput).
-	Untrusted  bool
+	// Set by the worker from BOTH the run's origin
+	// (agentruns.Run.UntrustedOrigin — an interview turn is untrusted
+	// whichever agent serves it) and the agent definition
+	// (agents.Agent.UntrustedInput).
+	Untrusted bool
+	// RepoAccess says the run's workspace is a clone of a connected
+	// repository the agent is expected to *edit*. It is separate from
+	// Untrusted because the two want opposite things from a CLI: an
+	// untrusted run wants the tightest confinement the CLI has, while a
+	// repo-access agent's whole purpose is to write files. Only claude-code
+	// can hold both at once (its allowlist names the editing tools
+	// individually); codex and gemini refuse the combination at Start rather
+	// than hand the agent a sandbox that silently defeats it.
+	RepoAccess bool
+	// MaxTurns is the definition's per-run turn cap. Only claude-code can
+	// enforce it; codex and gemini treat it as a documented no-op and log
+	// that they have, with TimeoutSec left as the actual bound.
 	MaxTurns   int
 	TimeoutSec int
 	Env        map[string]string
@@ -86,23 +102,32 @@ type RunHandle interface {
 //	Model          yes                  yes                  yes
 //	Effort         yes                  yes (capped "high")  no (ignored*)
 //	SystemPrompt   yes                  yes (prefixed)       yes (prefixed)
-//	MaxTurns       yes                  error if set         error if set
+//	MaxTurns       yes                  no (ignored*)        no (ignored*)
 //	AllowedTools   --allowedTools       sandbox + MCP filter tools.core +
 //	                                                         includeTools
 //	                                                         + MCP filter
 //	Untrusted      (no widening**)      --sandbox read-only  --approval-mode
+//	RepoAccess     yes                  error if set***      error if set***
 //	MCP env token  file (0600)          process env (byname) process env ($VAR)
 //
-// *gemini's headless CLI exposes no reasoning-effort control, so Effort is a
-// documented no-op there rather than an error (it never runs unconstrained on
-// account of it). MaxTurns, by contrast, is a safety limit: an adapter that
-// cannot enforce a requested cap fails the run at Start instead of silently
-// running without it.
+// *A no-op is documented and logged, never silent. gemini's headless CLI
+// exposes no reasoning-effort control; neither codex exec nor headless gemini
+// has a per-run turn cap. Neither is a safety limit an adapter can be asked
+// to fake: MaxTurns bounds cost and looping, and TimeoutSec — which every
+// adapter does enforce — bounds both too, so the run is never unbounded. The
+// adapter logs once, at Start, that the cap is not applied on that provider.
 //
 // **claude-code runs on the CLI's default permission mode whether or not the
 // run is trusted; the allowlist is the whole approval surface. Trust changes
 // what the *other* CLIs may touch (codex's sandbox, gemini's approval mode),
 // never what claude may do unasked.
+//
+// ***RepoAccess is refused, because it is the one case where a confinement
+// would defeat the agent rather than protect it: codex's sandbox and gemini's
+// approval mode are whole-workspace switches, so the only ways to run a
+// repo-editing agent there are "may edit everything" or "may edit nothing".
+// claude-code can express the middle — its allowlist names the editing tools
+// one at a time — so repo access belongs there. See codexUnsupported.
 //
 // AllowedTools is mandatory on every agent (REQ-91), and an empty one is
 // refused everywhere — API, worker and adapter. A non-empty one is never a
@@ -149,9 +174,72 @@ func agentLabel(a *agents.Agent) string {
 // with an implicit "all tools" allowance.
 func requireAllowedTools(spec RunSpec) error {
 	if len(agents.NonEmptyTools(spec.AllowedTools)) == 0 {
-		return errors.New(agents.AllowedToolsRequired)
+		return agentPolicyError(agents.AllowedToolsRequired)
 	}
 	return nil
+}
+
+// ErrAgentPolicy marks an adapter refusal that only an edit to the agent
+// definition can fix: the definition asks for something this provider cannot
+// do safely, and the same run attempted again will be refused the same way.
+// The worker classifies such a failure as agent_error, so it is never
+// auto-retried. Match it with errors.Is; the message a person reads is the
+// adapter's own (see agentPolicyError).
+var ErrAgentPolicy = errors.New("agent definition is not runnable on this provider")
+
+// policyError is an ErrAgentPolicy that keeps its own wording, so the run's
+// failure text says the specific thing that is wrong rather than a generic
+// sentinel.
+type policyError struct{ msg string }
+
+func (e *policyError) Error() string { return e.msg }
+
+// Is makes errors.Is(err, ErrAgentPolicy) true without wrapping the sentinel's
+// text into the message.
+func (e *policyError) Is(target error) bool { return target == ErrAgentPolicy }
+
+// agentPolicyError builds a refusal the worker will treat as non-retryable.
+func agentPolicyError(msg string) error { return &policyError{msg: msg} }
+
+// noteMaxTurnsUnenforced records, once per run at Start, that a provider is
+// not applying the definition's MaxTurns.
+//
+// codex exec and headless gemini have no per-run turn cap, and Validate
+// coerces every definition's MaxTurns to a positive number (50 by default),
+// so refusing a spec that carries one would mean refusing every persisted
+// agent on those providers — the failure mode this replaces. Ignoring it
+// silently is the other bad answer. So it is a *documented* no-op, exactly as
+// Effort already is on gemini: logged with the run id, and with the bound
+// that does apply — the run-level timeout the adapter enforces itself.
+func noteMaxTurnsUnenforced(provider string, spec RunSpec) {
+	if spec.MaxTurns <= 0 {
+		return
+	}
+	log.Printf("run %s: %s has no per-run turn cap; max_turns=%d is not enforced — the run's %ds timeout is the bound",
+		spec.RunID, provider, spec.MaxTurns, spec.TimeoutSec)
+}
+
+// refuseRepoAccess is the refusal codex-cli and gemini-cli share for an agent
+// that carries repository access.
+//
+// Both CLIs express "what may this run touch?" as one whole-workspace switch:
+// codex's --sandbox, gemini's --approval-mode. Neither can say "may edit the
+// clone, through these tools, and nothing else" — which is exactly what a
+// repo-access agent is for. The two available answers are therefore to run it
+// confined, where its edits silently fail (it is untrusted: a cloned
+// repository's files are content nobody in the workspace wrote), or to run it
+// unconfined, which hands a repo's contents the run of the machine. Refusing
+// says so out loud instead, at Start, before the CLI is launched.
+//
+// It is not retryable: nothing about the run changes on a second attempt.
+// claude-code is unaffected — its allowlist names Edit/Write/Bash(...) one at
+// a time, so the middle ground exists there.
+func refuseRepoAccess(provider string, spec RunSpec) error {
+	if !spec.RepoAccess {
+		return nil
+	}
+	return agentPolicyError("repository access on " + provider +
+		" cannot confine edits per tool; use claude-code or remove repo access")
 }
 
 // mergedProcEnv builds the environment for a CLI subprocess, overlaying the

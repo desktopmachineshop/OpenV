@@ -53,12 +53,14 @@ func TestExecuteRefusesAgentWithNoAllowedTools(t *testing.T) {
 	}
 }
 
-// The worker labels a run untrusted from the agent definition, and hands that
-// to the adapter — which is what turns auto-approval off (REQ-91, HAZ-1).
+// The worker labels a run untrusted from BOTH the run's origin and the agent
+// definition, and hands that to the adapter — which is what turns
+// auto-approval off (REQ-91, HAZ-1).
 func TestExecutePassesUntrustedToTheAdapter(t *testing.T) {
 	cases := []struct {
 		name  string
 		agent agents.Agent
+		run   *agentruns.Run
 		want  bool
 	}{
 		{
@@ -81,6 +83,25 @@ func TestExecutePassesUntrustedToTheAdapter(t *testing.T) {
 			agent: agents.Agent{Slug: "requirements-copilot", Provider: "fake", AllowedTools: []string{"mcp__openv__*", "WebSearch", "WebFetch"}},
 			want:  true,
 		},
+		{
+			// Trust is a property of where the run came from, not of one
+			// slug. An interview can be bound to any agent (agent_slug on
+			// create), and an interview turn's prompt is a participant's own
+			// transcript whichever agent is serving it. Reading trust off the
+			// definition alone let a workspace point its interviews at an
+			// ordinary agent and get an auto-approving run out of a
+			// stranger's text.
+			name:  "an interview turn is untrusted whatever agent serves it",
+			agent: agents.Agent{Slug: "requirements-analyst", Provider: "fake", AllowedTools: []string{"mcp__openv__*"}},
+			run:   &agentruns.Run{ID: "r1", Prompt: "hi", InterviewSessionID: strPtr("sess-1")},
+			want:  true,
+		},
+		{
+			name:  "an ordinary run of the same agent is trusted",
+			agent: agents.Agent{Slug: "requirements-analyst", Provider: "fake", AllowedTools: []string{"mcp__openv__*"}},
+			run:   &agentruns.Run{ID: "r1", Prompt: "hi"},
+			want:  false,
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -101,6 +122,9 @@ func TestExecutePassesUntrustedToTheAdapter(t *testing.T) {
 			claim := testClaim()
 			agent := tc.agent
 			claim.Agent = &agent
+			if tc.run != nil {
+				claim.Run = tc.run
+			}
 			w.execute(context.Background(), claim)
 
 			if got.Untrusted != tc.want {
@@ -109,3 +133,5 @@ func TestExecutePassesUntrustedToTheAdapter(t *testing.T) {
 		})
 	}
 }
+
+func strPtr(s string) *string { return &s }

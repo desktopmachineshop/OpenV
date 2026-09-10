@@ -33,11 +33,20 @@ func splitToolScope(entry string) (name, scope string) {
 }
 
 // openvToolNames returns the OpenV MCP tools an allowlist names, bare (the
-// mcp__openv__ prefix stripped), plus whether the list carried the
-// mcp__openv__* wildcard.
+// mcp__openv__ prefix stripped), plus whether the list carried a wildcard.
+//
+// Two spellings are wildcards, because Claude Code documents both: the
+// per-tool glob "mcp__openv__*", and the server-wide "mcp__openv" — naming
+// the MCP server on its own, which grants every tool it offers. Reading the
+// bare form as "an OpenV tool literally called the empty string" would hand
+// such an agent an empty OPENV_MCP_TOOLS, i.e. no OpenV tools at all.
 func openvToolNames(allowed []string) (names []string, wildcard bool) {
 	for _, entry := range agents.NonEmptyTools(allowed) {
 		name, _ := splitToolScope(entry)
+		if name == mcp.ServerTools {
+			wildcard = true
+			continue
+		}
 		if !strings.HasPrefix(name, mcp.ToolPrefix) {
 			continue
 		}
@@ -121,15 +130,21 @@ var geminiBuiltinTools = map[string][]string{
 //     MCP tools are named bare there — openv is the only server in
 //     the run, so no serverAlias__tool prefixing applies.
 //
-// includeAll reports the mcp__openv__* wildcard, for which includeTools is
-// omitted rather than written empty.
+// includeAll reports either wildcard spelling — the per-tool "mcp__openv__*"
+// or the server-wide "mcp__openv" — for which includeTools is omitted rather
+// than written empty.
 //
-// Note what tools.core can and cannot express: it registers a tool or does
-// not. It has no per-command scoping, so "Bash(git *)" carries its scope
-// through in gemini's own run_shell_command(git *) spelling — which registers
-// the shell tool but does not constrain the command. What holds it is the
-// approval mode: neither "default" nor "auto_edit" auto-approves a shell call,
-// and a headless run cannot answer the confirmation it would raise.
+// Note how tools.core spells a scope. For every tool but the shell it
+// registers a tool or does not; for run_shell_command it takes a literal
+// *command prefix* — run_shell_command(git) admits `git status` and nothing
+// outside `git ...`. Claude's Bash scope is a glob ("git *"), so the trailing
+// glob is stripped to reach the prefix gemini matches on
+// (geminiShellPrefix); left on, "run_shell_command(git *)" would match a
+// command literally beginning "git *" and so scope the shell down to nothing.
+// A bare "Bash(*)" carries no prefix at all and registers the unscoped shell,
+// which is then held by the approval mode: neither "default" nor "auto_edit"
+// auto-approves a shell call, and a headless run cannot answer the
+// confirmation it would raise.
 func geminiToolSettings(allowed []string) (core []string, include []string, includeAll bool) {
 	core = []string{}
 	include = []string{}
@@ -138,6 +153,12 @@ func geminiToolSettings(allowed []string) (core []string, include []string, incl
 
 	for _, entry := range agents.NonEmptyTools(allowed) {
 		name, scope := splitToolScope(entry)
+		if name == mcp.ServerTools {
+			// The server-wide form grants every OpenV tool, exactly as
+			// mcp__openv__* does.
+			includeAll = true
+			continue
+		}
 		if strings.HasPrefix(name, mcp.ToolPrefix) {
 			tool := strings.TrimPrefix(name, mcp.ToolPrefix)
 			switch {
@@ -150,8 +171,12 @@ func geminiToolSettings(allowed []string) (core []string, include []string, incl
 			continue
 		}
 		for _, mapped := range geminiBuiltinTools[name] {
-			if scope != "" {
-				mapped += "(" + scope + ")"
+			entryScope := scope
+			if mapped == geminiShellTool {
+				entryScope = geminiShellPrefix(scope)
+			}
+			if entryScope != "" {
+				mapped += "(" + entryScope + ")"
 			}
 			if !seenCore[mapped] {
 				seenCore[mapped] = true
@@ -162,4 +187,21 @@ func geminiToolSettings(allowed []string) (core []string, include []string, incl
 	sort.Strings(core)
 	sort.Strings(include)
 	return core, include, includeAll
+}
+
+// geminiShellTool is gemini's built-in shell tool, the one tools.core entry
+// that takes an argument scope.
+const geminiShellTool = "run_shell_command"
+
+// geminiShellPrefix converts a Claude Bash scope into the literal command
+// prefix a tools.core shell entry matches on: "git *" -> "git", "npm test"
+// -> "npm test", "*" -> "" (no scope, i.e. any command). Only the trailing
+// glob is dropped; a scope with an interior wildcard ("git * --force") has no
+// prefix form and is left as written rather than silently broadened.
+func geminiShellPrefix(scope string) string {
+	scope = strings.TrimSpace(scope)
+	if !strings.HasSuffix(scope, "*") {
+		return scope
+	}
+	return strings.TrimSpace(strings.TrimSuffix(scope, "*"))
 }

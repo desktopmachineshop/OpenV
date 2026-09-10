@@ -34,13 +34,28 @@ func ValidEffort(v string) bool {
 // InterviewerSlug is the seeded interviewer agent's slug. Its prompt carries
 // a stakeholder's own words — text authored outside the workspace — so it is
 // treated as an untrusted-input agent wherever that matters (UntrustedInput).
+//
+// It is a backstop, not the rule: what makes an interview turn untrusted is
+// that it *is* an interview turn (agentruns.Run.UntrustedOrigin), whichever
+// agent the interview was bound to.
 const InterviewerSlug = "requirements-interviewer"
+
+// openvServerTools is Claude Code's server-wide allowlist spelling for the
+// OpenV MCP server: naming the server on its own grants every tool it offers.
+// It means exactly what openvToolPrefix+"*" means, so both forms have to be
+// recognised as OpenV — not as some other MCP server (see mcp.ServerTools,
+// which this deliberately restates rather than importing: the domain package
+// stays free of the transport packages).
+const (
+	openvServerTools = "mcp__openv"
+	openvToolPrefix  = openvServerTools + "__"
+)
 
 // DefaultAllowedTools is the narrowest allowlist that still lets an agent do
 // OpenV work, and what a legacy definition carrying no allowlist at all is
 // backfilled to. It is never a widening: before allowlists were mandatory, an
 // empty list meant the vendor CLI started with *every* tool it has.
-func DefaultAllowedTools() []string { return []string{"mcp__openv__*"} }
+func DefaultAllowedTools() []string { return []string{openvToolPrefix + "*"} }
 
 // AllowedToolsRequired is the single wording for a definition that carries no
 // tool allowlist. Validate returns it (so the API answers 400 with it) and the
@@ -124,6 +139,17 @@ type Definition struct {
 
 // Validate checks a definition for required fields and sane defaults.
 func (d *Definition) Validate() error {
+	return d.validate(true)
+}
+
+// validate is Validate with one knob: requireTools off admits a definition
+// that names no tools. Exactly one caller turns it off — a *locked* file
+// already on disk, being re-read by the sync (parseSyncedFile). See there for
+// why that is the one case where an allowlist can be absent, and note what it
+// buys: nothing. Such an agent is kept in the registry so it stays visible
+// and editable, and it still cannot run — the worker and every adapter refuse
+// an empty allowlist (REQ-91).
+func (d *Definition) validate(requireTools bool) error {
 	if d.Slug == "" {
 		return errors.New("agent definition requires a slug")
 	}
@@ -148,7 +174,7 @@ func (d *Definition) Validate() error {
 	// Definitions already on disk are backfilled as they sync instead
 	// (parseSyncedFile), so an install predating this rule keeps working.
 	d.AllowedTools = NonEmptyTools(d.AllowedTools)
-	if len(d.AllowedTools) == 0 {
+	if requireTools && len(d.AllowedTools) == 0 {
 		return errors.New(AllowedToolsRequired)
 	}
 	if !ValidEffort(d.Effort) {
@@ -209,18 +235,24 @@ func NonEmptyTools(tools []string) []string {
 	return out
 }
 
-// UntrustedInput reports whether this agent's prompt or tool results can carry
-// content authored outside the workspace — a stakeholder's words, a
+// UntrustedInput reports what this agent's *definition* says about whether its
+// tool results can carry content authored outside the workspace — a
 // repository's files, a web page. Such a run must never auto-approve file
 // edits or shell commands (REQ-91, HAZ-1): everything it may do has to be on
 // its allowlist, where a person put it.
 //
-// Three things make an agent untrusted:
+// Three things make an agent untrusted by definition:
 //
-//   - it is the seeded interviewer, whose whole prompt is a stranger's text;
 //   - it has repository access, so a cloned repo's files reach the model;
 //   - it holds a tool that reads the outside world — WebFetch/WebSearch, or an
-//     MCP server other than openv, whose tool results OpenV cannot vouch for.
+//     MCP server other than openv, whose tool results OpenV cannot vouch for;
+//   - it is the seeded interviewer, kept as a backstop.
+//
+// This is only half the question. The other half is where the *run* came from
+// — an interview turn's prompt is a stranger's transcript whatever agent is
+// serving it — and that lives on the run
+// (agentruns.Run.UntrustedOrigin). The worker ORs the two; neither alone is
+// the answer.
 func (a *Agent) UntrustedInput() bool {
 	if a == nil {
 		return false
@@ -235,12 +267,15 @@ func ToolsReachOutside(tools []string) bool {
 		name := strings.TrimSpace(t)
 		// Drop a vendor argument filter ("Bash(git *)") before matching.
 		if i := strings.IndexByte(name, '('); i >= 0 {
-			name = name[:i]
+			name = strings.TrimSpace(name[:i])
 		}
 		switch {
 		case strings.EqualFold(name, "WebFetch"), strings.EqualFold(name, "WebSearch"):
 			return true
-		case strings.HasPrefix(name, "mcp__") && !strings.HasPrefix(name, "mcp__openv__"):
+		case name == openvServerTools || strings.HasPrefix(name, openvToolPrefix):
+			// OpenV's own server, in either spelling: its tool results are
+			// the workspace's own data.
+		case strings.HasPrefix(name, "mcp__"):
 			return true
 		}
 	}

@@ -81,10 +81,17 @@ type Tool struct {
 	Handler     func(c *Client, args map[string]interface{}) (string, error)
 }
 
+// ServerTools is Claude Code's server-wide allowlist spelling: naming the MCP
+// server on its own grants every tool that server offers. It is documented
+// alongside the per-tool form, so an agent definition may carry either
+// "mcp__openv" or "mcp__openv__*" to mean the whole OpenV surface, and both
+// must be read the same way everywhere.
+const ServerTools = "mcp__openv"
+
 // ToolPrefix is what a vendor CLI's allowlist calls these tools: the MCP
 // server is registered as "openv", so its tools are addressed as
 // mcp__openv__<name>.
-const ToolPrefix = "mcp__openv__"
+const ToolPrefix = ServerTools + "__"
 
 // EnvToolAllowlist names the environment variable that narrows the tool set
 // this MCP server exposes. It is the server's own half of REQ-91: a vendor CLI
@@ -97,8 +104,8 @@ const ToolPrefix = "mcp__openv__"
 //   - unset — no filter; every tool in the table is served. This is how
 //     openv-mcp behaves outside a platform run (a repository session with a
 //     workspace runner key, say).
-//   - "*" or "mcp__openv__*" — the wildcard an agent definition writes; every
-//     tool is served.
+//   - "*", "mcp__openv__*" or the bare server name "mcp__openv" — the
+//     wildcard spellings an agent definition may write; every tool is served.
 //   - a comma-separated list — only those tools are served. Entries may be
 //     bare ("get_artifact") or prefixed as a vendor CLI writes them
 //     ("mcp__openv__get_artifact"); blanks are ignored.
@@ -119,6 +126,10 @@ func FilterTools(tools []Tool, allow []string) []Tool {
 		name = strings.TrimSpace(name)
 		if name == "" {
 			continue
+		}
+		if name == ServerTools {
+			// The server-wide form: every tool this server offers.
+			return tools
 		}
 		name = strings.TrimPrefix(name, ToolPrefix)
 		if name == toolWildcard {

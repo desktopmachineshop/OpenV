@@ -252,22 +252,10 @@ func adoptSeedDefaults(orgID string, existing *agents.Agent, want agents.Definit
 	}
 
 	// Everything the workspace may have tuned is carried over untouched; only
-	// the fields below are candidates for adoption.
-	def := agents.Definition{
-		Slug:           existing.Slug,
-		Name:           existing.Name,
-		Description:    existing.Description,
-		Provider:       existing.Provider,
-		Model:          existing.Model,
-		Effort:         existing.Effort,
-		AllowedTools:   existing.AllowedTools,
-		WriteMode:      existing.WriteMode,
-		RepoAccess:     existing.RepoAccess,
-		MaxTurns:       existing.MaxTurns,
-		TimeoutSeconds: existing.TimeoutSeconds,
-		Config:         existing.Config,
-		SystemPrompt:   existing.SystemPrompt,
-	}
+	// the fields below are candidates for adoption. definitionOf is the one
+	// place that knows how to render a row back into its file, so a field
+	// added to the definition cannot be silently dropped here.
+	def := definitionOf(existing)
 
 	changed := false
 	for _, f := range []struct {
@@ -368,17 +356,40 @@ func definitionOf(a *agents.Agent) agents.Definition {
 	}
 }
 
+// seedAllowedTools maps each seeded slug to the allowlist its own seed
+// carries, so the org-wide backfill can give a seeded agent the list it was
+// meant to have rather than the generic fallback.
+func seedAllowedTools() map[string][]string {
+	want := make(map[string][]string, len(defaultAgents()))
+	for _, seed := range defaultAgents() {
+		want[seed.def.Slug] = seed.def.AllowedTools
+	}
+	return want
+}
+
 // BackfillOrgAllowedTools does the same for every agent in the workspace,
 // seeded or not: an agent someone created through the API before allowlists
-// were mandatory gets the OpenV tools rather than silently keeping all of
-// them. Startup calls it once per org, after the agent files have synced.
+// were mandatory gets an allowlist rather than silently keeping every tool.
+// Startup calls it once per org, after the agent files have synced.
+//
+// It is seed-aware, and has to be. This runs before the per-seed reconcile in
+// EnsureOrgDefaults, so whatever it writes is what a seeded row ends up with:
+// a seed that is only there once the loop reaches it would arrive too late,
+// and a seeded `developer` that predates REQ-91 would be left holding
+// mcp__openv__* — no Read, Grep, Glob, Edit, Write or Bash(git *) — with
+// nothing to put them back, because backfillAllowedTools only ever fires on a
+// row that has no list at all. An agent nobody seeded gets
+// agents.DefaultAllowedTools().
 func BackfillOrgAllowedTools(orgID string, agentService agents.Service) error {
 	list, err := agentService.List(orgID)
 	if err != nil {
 		return err
 	}
+	seeded := seedAllowedTools()
 	for _, a := range list {
-		if err := backfillAllowedTools(orgID, a, agents.DefaultAllowedTools(), agentService); err != nil {
+		// A nil entry (not a seeded slug) falls back to the OpenV tools
+		// inside backfillAllowedTools.
+		if err := backfillAllowedTools(orgID, a, seeded[a.Slug], agentService); err != nil {
 			return err
 		}
 	}
@@ -390,7 +401,9 @@ func EnsureOrgDefaults(orgID string, agentService agents.Service, crewService te
 		return fmt.Errorf("seeds: organization id is required")
 	}
 	// Before anything else: an agent from an install that predates mandatory
-	// allowlists cannot run until it has one (REQ-91).
+	// allowlists cannot run until it has one (REQ-91). This is seed-aware, so
+	// a seeded row gets its own seed's list here and the loop below sees a
+	// row that is already whole.
 	if err := BackfillOrgAllowedTools(orgID, agentService); err != nil {
 		return err
 	}
@@ -411,9 +424,11 @@ func EnsureOrgDefaults(orgID string, agentService agents.Service, crewService te
 			}
 			log.Printf("seeds: created default agent %q for org %s", seed.def.Slug, orgID)
 		} else {
-			if err := backfillAllowedTools(orgID, existing, seed.def.AllowedTools, agentService); err != nil {
-				return err
-			}
+			// No backfill here: BackfillOrgAllowedTools above already ran,
+			// seed list and all, and `existing` was read after it. Repeating
+			// it would be dead code that reads a stale row — and would hand
+			// adoptSeedDefaults a definition with no allowed_tools, which
+			// SaveDefinition rightly refuses.
 			adopted, err := adoptSeedDefaults(orgID, existing, seed.def, agentService)
 			if err != nil {
 				return err

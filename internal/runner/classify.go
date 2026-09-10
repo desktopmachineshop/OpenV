@@ -1,6 +1,7 @@
 package runner
 
 import (
+	"errors"
 	"strings"
 
 	"github.com/openv/requirements-platform/internal/domain/agentruns"
@@ -23,7 +24,9 @@ const (
 	// siteAPIKeyMissing: the project uses api-key auth but the key env is unset
 	// on the runner host.
 	siteAPIKeyMissing
-	// siteAdapterStart: the provider adapter failed to launch its CLI.
+	// siteAdapterStart: the provider adapter failed to launch its CLI, or
+	// refused the agent definition outright (ErrAgentPolicy — see
+	// classifySite, which separates the two).
 	siteAdapterStart
 	// siteAgentResult: the run executed and handle.Wait returned an error — the
 	// agent CLI itself failed. The underlying error is inspected to separate a
@@ -40,8 +43,10 @@ const (
 )
 
 // classifySite maps a terminal finish at the given site to an agentruns error
-// class. For siteAgentResult the wait error is inspected; every other site maps
-// to a fixed class.
+// class. Two sites inspect the error they are given — siteAgentResult (what
+// the CLI failed with) and siteAdapterStart (whether the adapter refused the
+// definition rather than failing to launch); every other site maps to a fixed
+// class.
 func classifySite(site finishSite, waitErr error) string {
 	switch site {
 	case siteNoAdapter:
@@ -53,6 +58,14 @@ func classifySite(site finishSite, waitErr error) string {
 	case siteAPIKeyMissing:
 		return agentruns.ErrorClassAuth
 	case siteAdapterStart:
+		// An adapter that refused the definition itself (no allowlist, repo
+		// access on a CLI that cannot confine edits per tool) is not a
+		// provider outage: the same run will be refused again, so it must not
+		// be auto-retried. Everything else at this site is the CLI failing to
+		// launch, which is.
+		if errors.Is(waitErr, ErrAgentPolicy) {
+			return agentruns.ErrorClassAgentError
+		}
 		return agentruns.ErrorClassProviderUnavailable
 	case siteTimeout:
 		return agentruns.ErrorClassTimeout

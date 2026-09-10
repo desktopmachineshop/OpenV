@@ -73,6 +73,7 @@ func (a *CodexCLIAdapter) Start(ctx context.Context, spec RunSpec) (RunHandle, e
 	if err != nil {
 		return nil, err
 	}
+	noteMaxTurnsUnenforced(providers.ProviderCodexCLI, spec)
 
 	prompt := spec.Prompt
 	if spec.SystemPrompt != "" {
@@ -167,23 +168,33 @@ func codexArgs(spec RunSpec) ([]string, error) {
 	return args, nil
 }
 
-// codexUnsupported fails a run that carries constraints codex exec cannot
-// enforce, rather than silently running unconstrained.
+// codexUnsupported fails a run that codex exec cannot serve at all, rather
+// than starting one whose confinement defeats it.
 //
-// A non-empty allowlist is not one of them. codex exec has no allowlist flag,
+// Two things fail here, and it is worth being precise about why only two.
+//
+//   - An empty allowlist: that is the one case where the CLI would run with
+//     every tool it has (REQ-91).
+//   - Repository access: see refuseRepoAccess. A repo-access agent exists to
+//     edit a clone, and codex's only lever is a whole-workspace sandbox.
+//
+// A non-empty allowlist is not a refusal. codex exec has no allowlist flag,
 // but the allowlist is not thereby ignored: it stays on the definition (where
 // it documents intent and is what the API validates), it gates the OpenV MCP
 // server's own tool exposure through OPENV_MCP_TOOLS, and codex's own tools
-// are confined by --sandbox. An empty allowlist is still refused — that is the
-// case where a CLI would run with everything it has.
+// are confined by --sandbox.
+//
+// MaxTurns is not a refusal either, any more: agents.Definition.Validate
+// gives every persisted definition a positive MaxTurns (50 unless set), so
+// refusing one refused every real agent on this provider — the run failed at
+// Start before any of the sandbox or MCP-filter work below could apply. It is
+// a documented, logged no-op instead (noteMaxTurnsUnenforced), with the run's
+// timeout as the bound that does hold.
 func codexUnsupported(spec RunSpec) error {
 	if err := requireAllowedTools(spec); err != nil {
 		return err
 	}
-	if spec.MaxTurns > 0 {
-		return errors.New("codex-cli adapter cannot enforce MaxTurns: codex exec has no per-run turn cap, and running without the requested limit would be unconstrained — clear it on the agent or use a provider that supports it (e.g. claude-code)")
-	}
-	return nil
+	return refuseRepoAccess(providers.ProviderCodexCLI, spec)
 }
 
 // jsonScalar JSON-encodes a string so it can be handed to codex's `-c

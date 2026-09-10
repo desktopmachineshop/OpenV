@@ -2,6 +2,7 @@ package runner
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -46,17 +47,38 @@ func TestGeminiApprovalMode(t *testing.T) {
 	}
 }
 
-// MaxTurns has no headless equivalent, so a run that asks for one is refused
-// rather than run without it. A tool allowlist, by contrast, is translated
-// into gemini's own settings and no longer stops the run — but an empty one is
-// still refused, because that is the case where the CLI would run with every
-// tool it has (REQ-91).
+// What headless gemini refuses, and what it merely cannot apply. An empty
+// allowlist is refused (REQ-91) and so is repository access — gemini's
+// approval mode is a whole-run switch, so a repo-editing agent either
+// auto-approves every edit or waits on a confirmation nobody can answer. A
+// MaxTurns is a logged no-op like Effort, not a refusal: Validate gives every
+// persisted definition one, so refusing it refused every real gemini agent.
 func TestBuildGeminiArgs_UnsupportedCapsError(t *testing.T) {
-	t.Run("max_turns", func(t *testing.T) {
+	t.Run("max_turns is a no-op, not a refusal", func(t *testing.T) {
 		spec := geminiSpec()
 		spec.MaxTurns = 3
-		if _, err := buildGeminiArgs(spec); err == nil {
-			t.Fatal("expected error when MaxTurns is set")
+		args, err := buildGeminiArgs(spec)
+		if err != nil {
+			t.Fatalf("a gemini agent carrying max_turns must still run: %v", err)
+		}
+		if slices.Contains(args, "--max-turns") {
+			t.Errorf("gemini argv should carry no turn cap: %v", args)
+		}
+	})
+	t.Run("repo access is refused", func(t *testing.T) {
+		spec := geminiSpec()
+		spec.RepoAccess = true
+		_, err := buildGeminiArgs(spec)
+		if err == nil {
+			t.Fatal("expected a refusal for a repo-access agent on gemini")
+		}
+		if !errors.Is(err, ErrAgentPolicy) {
+			t.Errorf("a repo-access refusal must be non-retryable agent policy: %v", err)
+		}
+		for _, want := range []string{"repository access", "gemini-cli", "claude-code"} {
+			if !strings.Contains(err.Error(), want) {
+				t.Errorf("refusal %q should mention %q", err, want)
+			}
 		}
 	})
 	t.Run("allowed_tools are accepted, not refused", func(t *testing.T) {
@@ -117,19 +139,49 @@ func TestGeminiToolSettings(t *testing.T) {
 	if !slices.Equal(include, wantInclude) {
 		t.Errorf("includeTools = %v, want %v (bare names, openv is the only server)", include, wantInclude)
 	}
+	// The shell scope is gemini's, not Claude's: tools.core matches a literal
+	// command PREFIX, so "git *" becomes "git". Left as the glob it would
+	// match a command literally starting "git *" and scope the shell to
+	// nothing.
 	wantCore := []string{
 		"edit", "google_web_search", "grep_search", "read_file", "replace",
-		"run_shell_command(git *)", "search_file_content",
+		"run_shell_command(git)", "search_file_content",
 	}
 	if !slices.Equal(core, wantCore) {
 		t.Errorf("tools.core = %v, want %v", core, wantCore)
 	}
 
+	// Shell scopes, in the shapes an allowlist actually carries.
+	for _, tc := range []struct {
+		entry string
+		want  string
+	}{
+		{"Bash(git *)", "run_shell_command(git)"},
+		{"Bash(npm test)", "run_shell_command(npm test)"},
+		{"Bash(*)", "run_shell_command"},
+		{"Bash", "run_shell_command"},
+	} {
+		got, _, _ := geminiToolSettings([]string{tc.entry})
+		if !slices.Equal(got, []string{tc.want}) {
+			t.Errorf("geminiToolSettings(%q) core = %v, want [%s]", tc.entry, got, tc.want)
+		}
+	}
+
 	// The wildcard means "every OpenV tool", which gemini spells as an
 	// omitted includeTools rather than an empty one.
-	_, _, includeAll = geminiToolSettings([]string{"mcp__openv__*"})
-	if !includeAll {
-		t.Error("mcp__openv__* should ask for every tool from the openv server")
+	// Both wildcard spellings: the per-tool glob and Claude Code's
+	// server-wide form, which names the MCP server on its own.
+	for _, wildcard := range []string{"mcp__openv__*", "mcp__openv"} {
+		gotCore, gotInclude, gotAll := geminiToolSettings([]string{wildcard})
+		if !gotAll {
+			t.Errorf("%q should ask for every tool from the openv server", wildcard)
+		}
+		if len(gotInclude) != 0 {
+			t.Errorf("%q: includeTools = %v, want none (the key is omitted)", wildcard, gotInclude)
+		}
+		if len(gotCore) != 0 {
+			t.Errorf("%q: tools.core = %v, want empty — it names no built-in tool", wildcard, gotCore)
+		}
 	}
 	// An agent that names only OpenV tools gets no built-in tools — an empty
 	// tools.core, never an omitted one.

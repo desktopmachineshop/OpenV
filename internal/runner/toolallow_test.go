@@ -19,6 +19,12 @@ func TestOpenVToolAllowlist(t *testing.T) {
 		want    string
 	}{
 		{"wildcard", []string{"mcp__openv__*", "Read"}, "*"},
+		// Claude Code's server-wide form: naming the MCP server on its own
+		// grants every tool it offers. Reading it as "a tool with an empty
+		// name" would set OPENV_MCP_TOOLS to "" — which openv-mcp reads as
+		// NO OpenV tools, the exact opposite of what was asked for.
+		{"the bare server name is the wildcard too", []string{"mcp__openv", "Read"}, "*"},
+		{"bare server name alone", []string{"mcp__openv"}, "*"},
 		{"named tools", []string{"mcp__openv__get_artifact", "Bash", "mcp__openv__create_link"}, "get_artifact,create_link"},
 		{"no openv tools at all", []string{"Read", "Edit"}, ""},
 		{"blanks are not tools", []string{"mcp__openv__get_artifact", "  "}, "get_artifact"},

@@ -1,6 +1,7 @@
 package runner
 
 import (
+	"errors"
 	"slices"
 	"strings"
 	"testing"
@@ -85,18 +86,43 @@ func TestBuildCodexArgs_CommandEscaped(t *testing.T) {
 	}
 }
 
-// MaxTurns is unsupportable on codex exec: setting it must fail the run at
-// Start rather than silently running without the cap the agent asked for.
-// A non-empty allowlist, by contrast, is no longer a refusal — codex is
-// confined instead (sandbox + the OpenV MCP server's own tool filter) — while
-// an empty one is still refused, because that is the case where the CLI would
-// run with every tool it has (REQ-91).
+// What codex exec refuses, and what it merely cannot apply. An empty
+// allowlist is refused (that is the case where the CLI would run with every
+// tool it has, REQ-91) and so is repository access (codex's only lever is a
+// whole-workspace sandbox). A non-empty allowlist runs — codex is confined
+// instead — and so does a MaxTurns, which is a logged no-op rather than a
+// refusal: Validate gives every persisted definition one, so refusing it
+// refused every real codex agent.
 func TestBuildCodexArgs_UnsupportedCapsError(t *testing.T) {
-	t.Run("max_turns", func(t *testing.T) {
+	t.Run("max_turns is a no-op, not a refusal", func(t *testing.T) {
 		spec := codexSpec()
+		spec.AllowedTools = []string{"mcp__openv__*"}
 		spec.MaxTurns = 5
-		if _, err := buildCodexArgs(spec); err == nil {
-			t.Fatal("expected error when MaxTurns is set")
+		args, err := buildCodexArgs(spec)
+		if err != nil {
+			t.Fatalf("a codex agent carrying max_turns must still run: %v", err)
+		}
+		for _, a := range args {
+			if strings.Contains(a, "turn") {
+				t.Errorf("codex argv should carry no turn cap, got %q", a)
+			}
+		}
+	})
+	t.Run("repo access is refused", func(t *testing.T) {
+		spec := codexSpec()
+		spec.AllowedTools = []string{"mcp__openv__*", "Edit"}
+		spec.RepoAccess = true
+		_, err := buildCodexArgs(spec)
+		if err == nil {
+			t.Fatal("expected a refusal for a repo-access agent on codex")
+		}
+		if !errors.Is(err, ErrAgentPolicy) {
+			t.Errorf("a repo-access refusal must be non-retryable agent policy: %v", err)
+		}
+		for _, want := range []string{"repository access", "codex-cli", "claude-code"} {
+			if !strings.Contains(err.Error(), want) {
+				t.Errorf("refusal %q should mention %q", err, want)
+			}
 		}
 	})
 	t.Run("allowed_tools are accepted, not refused", func(t *testing.T) {

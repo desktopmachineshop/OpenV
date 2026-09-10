@@ -423,9 +423,14 @@ func (w *Worker) execute(ctx context.Context, claim *ClaimResponse) {
 			Env:     env,
 		},
 		AllowedTools: claim.Agent.AllowedTools,
-		// An agent that reads content nobody in the workspace wrote runs
-		// with nothing auto-approved beyond its allowlist (REQ-91, HAZ-1).
-		Untrusted:  claim.Agent.UntrustedInput(),
+		// A run that reads content nobody in the workspace wrote gets nothing
+		// auto-approved beyond its allowlist (REQ-91, HAZ-1). Two independent
+		// sources say so and either is enough: where the run came from (an
+		// interview turn is a stranger's transcript whichever agent the
+		// interview was bound to) and what the definition grants (repo
+		// access, web tools, a foreign MCP server).
+		Untrusted:  run.UntrustedOrigin() || claim.Agent.UntrustedInput(),
+		RepoAccess: claim.Agent.RepoAccess,
 		MaxTurns:   claim.Agent.MaxTurns,
 		TimeoutSec: claim.Agent.TimeoutSeconds,
 		Env:        env,
@@ -436,7 +441,7 @@ func (w *Worker) execute(ctx context.Context, claim *ClaimResponse) {
 		w.finish(run.ID, agentruns.FinishRequest{
 			Status:     agentruns.StatusFailed,
 			Error:      "adapter start failed: " + err.Error(),
-			ErrorClass: classifySite(siteAdapterStart, nil),
+			ErrorClass: classifySite(siteAdapterStart, err),
 		})
 		return
 	}

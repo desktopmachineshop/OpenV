@@ -393,7 +393,28 @@ $AGENTS_DIR/<org-id>/<slug>.md   (default: $OPENV_DATA_DIR/agents,
 Each file has YAML frontmatter — `slug`, `name`, `description`, `provider`,
 `model`, `effort`, `allowed_tools`, `write_mode`, `repo_access`, `max_turns`,
 `timeout_seconds`, `config` (see `internal/domain/agents/agents.go`) — and a
-markdown body that becomes the agent's system prompt. The server syncs these
+markdown body that becomes the agent's system prompt.
+
+Not every provider can apply every field, and where one cannot it says so
+rather than either failing the run or pretending:
+
+| Field | Claude Code | Codex CLI | Gemini CLI |
+| --- | --- | --- | --- |
+| `model` | yes | yes | yes |
+| `effort` | yes | yes (capped at `high`) | no — logged no-op |
+| `max_turns` | yes | no — logged no-op | no — logged no-op |
+| `timeout_seconds` | yes | yes | yes |
+| `allowed_tools` | `--allowedTools` | sandbox + `OPENV_MCP_TOOLS` | `tools.core` + `includeTools` + `OPENV_MCP_TOOLS` |
+| `repo_access` | yes | **refused** | **refused** |
+
+A *logged no-op* is exactly that: the run starts, and the runner logs once that
+the field is not enforced on that provider. Neither `codex exec` nor headless
+gemini has a per-run turn cap, and every definition carries a `max_turns` —
+it defaults to 50 when the frontmatter omits it — so refusing one would refuse
+every agent on those providers. `timeout_seconds`, which all three adapters do
+enforce, is the bound that holds either way. `repo_access` is the one field
+that *is* refused; see [Untrusted content never
+auto-approves](#untrusted-content-never-auto-approves) for why. The server syncs these
 files into the database at startup, so editing a file and restarting (or
 re-syncing via `POST /api/v1/agents/sync`) updates the agent. Agent files are
 per-workspace (`$AGENTS_DIR/<org-id>/<slug>.md`); seed agents (e.g.
@@ -457,9 +478,13 @@ the run before launching anything, naming the agent and saying its definition
 needs `allowed_tools`. The reason is that an empty list is not "no tools" — it
 is *every* tool, because a vendor CLI started without an allowlist runs with
 its whole toolbox. An agent that carries none from an install predating this
-rule is backfilled to `mcp__openv__*` at startup (logged, and a narrowing);
-an agent that is `locked: true` is left exactly as it is and reported instead,
-so it refuses to run until someone gives it an allowlist themselves.
+rule is backfilled at startup (logged, and a narrowing) — to its own seed's
+list if it is a seeded agent, otherwise to `mcp__openv__*`. An agent that is
+`locked: true` is left exactly as it is and reported instead, so it refuses to
+run until someone gives it an allowlist themselves. The same two rules apply on
+both paths that could rewrite the agent — the registry reconcile at startup and
+the markdown file sync — so a locked agent is not quietly filled in by whichever
+one runs second.
 
 #### How each provider applies one
 
@@ -476,7 +501,14 @@ CLI can apply, and what fills the gap where it cannot.
 not depend on any vendor flag. `openv-mcp` reads it and serves only the tools
 it names: `*` for the whole surface, a comma-separated list (bare or
 `mcp__openv__`-prefixed) for a subset, and — set but empty — nothing at all,
-which is what an agent that names no OpenV tool gets. Unset means no filter,
+which is what an agent that names no OpenV tool gets.
+
+An allowlist may ask for the whole OpenV surface in either of the two spellings
+Claude Code documents: the per-tool glob `mcp__openv__*`, or the server-wide
+`mcp__openv`, which names the MCP server on its own. Both mean the same thing
+everywhere — `OPENV_MCP_TOOLS=*`, an omitted `includeTools` on gemini, and
+*not* "a foreign MCP server" when the platform decides whether an agent reaches
+outside the workspace. Unset means no filter,
 which is how `openv-mcp` behaves outside a platform run (a repository session
 holding a workspace runner key). Both `tools/list` and `tools/call` see the
 same filtered table, so a tool left out is neither advertised nor callable.
@@ -502,9 +534,13 @@ so the translation only ever narrows; `tools.core` is written even when empty,
 because an omitted key would hand the run every built-in gemini ships. Note
 that `tools.allowed` and `--allowed-tools` are **not** used despite the name:
 they are gemini's *auto-approval* list, which would widen a run rather than
-restrict it. Note too that `tools.core` registers a tool or does not — it has
-no per-command scoping, so `Bash(git *)` carries its scope through as
-`run_shell_command(git *)` but what actually holds a shell call is the
+restrict it. Note too how `tools.core` spells a scope: for every tool but the shell it
+registers a tool or does not, but `run_shell_command` takes a literal
+**command prefix**. So `Bash(git *)` becomes `run_shell_command(git)` — the
+trailing glob is Claude's spelling, not gemini's, and left on it would match a
+command literally beginning `git *` and scope the shell down to nothing.
+`Bash(npm test)` carries through unchanged; `Bash` and `Bash(*)` register the
+unscoped shell. Whatever the scope, what finally holds a shell call is the
 approval mode, which never auto-approves one.
 
 **Codex** has no allowlist of any kind: `codex exec` offers no flag for it, and
@@ -517,25 +553,49 @@ tools through `OPENV_MCP_TOOLS`; codex's own tools are held by `--sandbox`
 
 #### Untrusted content never auto-approves
 
-Some agents read text nobody in the workspace wrote. Three things mark one:
+Some runs read text nobody in the workspace wrote. Two independent things mark
+one, and **either** is enough.
 
-- it is the seeded **interviewer** (its whole prompt is a stranger's words,
-  typed on a public invite link);
+**Where the run came from.** An **interview turn**'s prompt is a participant's
+own transcript, typed on a public invite link by someone who is not a member of
+the workspace. That is true whichever agent is serving the interview — an
+interview names its agent when it is created (`agent_slug`), so it need not be
+the seeded interviewer — so the mark rides on the queued run
+(`agentruns.Run.UntrustedOrigin`), not on a slug.
+
+**What the definition grants.** An agent is untrusted by definition when:
+
 - it has **repo access**, so a cloned repository's files reach the model;
 - it holds a tool that reaches outside — **WebFetch/WebSearch**, or an MCP
-  server other than openv.
+  server other than openv;
+- it is the seeded **interviewer** (kept as a backstop for the origin rule
+  above).
 
 Such a run is started with **nothing auto-approved beyond its allowlist**
-(`RunSpec.Untrusted`, set by the worker from the agent definition). The
-allowlist is the entire approval surface: a file edit or a shell command the
-agent was not granted is denied rather than prompted for, because a headless
-run has nobody to prompt. Exactly what that means per provider:
+(`RunSpec.Untrusted`, which the worker sets by OR-ing the two). The allowlist is
+the entire approval surface: a file edit or a shell command the agent was not
+granted is denied rather than prompted for, because a headless run has nobody to
+prompt. Exactly what that means per provider:
 
-| Provider | Trusted run | Untrusted run |
-| --- | --- | --- |
-| **Claude Code** | `--permission-mode default` | `--permission-mode default` |
-| **Codex CLI** | `--sandbox workspace-write` | `--sandbox read-only` |
-| **Gemini CLI** | `--approval-mode auto_edit` (+ `defaultApprovalMode` in the isolated settings file) | `--approval-mode default` (+ the same in the settings file) |
+| Provider | Trusted run | Untrusted run | Repo-access agent |
+| --- | --- | --- | --- |
+| **Claude Code** | `--permission-mode default` | `--permission-mode default` | runs (the allowlist names the editing tools) |
+| **Codex CLI** | `--sandbox workspace-write` | `--sandbox read-only` | **refused at `Start`** |
+| **Gemini CLI** | `--approval-mode auto_edit` (+ `defaultApprovalMode` in the isolated settings file) | `--approval-mode default` (+ the same in the settings file) | **refused at `Start`** |
+
+**Why repo access is refused on codex and gemini.** A repo-access agent is
+untrusted (a clone's files are content nobody in the workspace wrote) *and*
+exists to edit files. Codex and gemini each express "what may this run touch?"
+as one whole-workspace switch — the sandbox, the approval mode — so the only
+answers available there are "may edit everything" and "may edit nothing".
+Running such an agent under the read-only sandbox or the confirm-everything
+approval mode does not protect anything; it silently defeats the agent, which
+reports that it could not write. So the adapter refuses instead, with
+*"repository access on `<provider>` cannot confine edits per tool; use
+claude-code or remove repo access"*. The refusal is agent policy, so the run
+fails as `agent_error` and is never auto-retried. Claude Code can express the
+middle — its allowlist names `Edit`, `Write`, `Bash(git *)` one at a time — so
+repo access belongs there, and nothing about it changes.
 
 Claude Code is deliberately the same both ways. `acceptEdits` would let a run
 write files nobody put on its allowlist, which is precisely the surface the

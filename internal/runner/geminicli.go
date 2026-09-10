@@ -80,6 +80,7 @@ func (a *GeminiCLIAdapter) Start(ctx context.Context, spec RunSpec) (RunHandle, 
 	if err != nil {
 		return nil, err
 	}
+	noteMaxTurnsUnenforced(providers.ProviderGeminiCLI, spec)
 
 	// Isolated settings file: rather than overwriting the user's workspace
 	// .gemini/settings.json, write our own and point gemini's *system*
@@ -145,24 +146,29 @@ func buildGeminiArgs(spec RunSpec) ([]string, error) {
 	return args, nil
 }
 
-// geminiUnsupported fails a run that carries constraints the headless gemini
-// CLI cannot enforce, rather than silently running unconstrained. The CLI has
-// no reliable per-run turn cap, so a MaxTurns an agent asked for would be
-// quietly dropped.
+// geminiUnsupported fails a run the headless gemini CLI cannot serve at all,
+// rather than starting one whose confinement defeats it. Two things fail:
+//
+//   - An empty allowlist — the one case where the CLI would run with every
+//     tool it has (REQ-91).
+//   - Repository access — see refuseRepoAccess. gemini's approval mode is a
+//     whole-run switch, so a repo-editing agent either has every edit
+//     auto-approved or waits on a confirmation a headless run cannot answer.
 //
 // The tool allowlist is not one of them: it is translated into gemini's own
 // settings by geminiToolSettings (tools.core plus the openv server's
-// includeTools) and enforced again server-side through OPENV_MCP_TOOLS. An
-// empty allowlist is still refused, because that is the case where the CLI
-// would run with every tool it has.
+// includeTools) and enforced again server-side through OPENV_MCP_TOOLS.
+//
+// MaxTurns is not one either. The CLI has no reliable per-run turn cap, and
+// agents.Definition.Validate gives every persisted definition a positive one,
+// so refusing it refused every real agent on this provider. It joins Effort
+// as a documented, logged no-op (noteMaxTurnsUnenforced); the run's timeout
+// is the bound that holds.
 func geminiUnsupported(spec RunSpec) error {
 	if err := requireAllowedTools(spec); err != nil {
 		return err
 	}
-	if spec.MaxTurns > 0 {
-		return errors.New("gemini-cli adapter cannot enforce MaxTurns: the headless gemini CLI has no reliable per-run turn cap, and running without the requested limit would be unconstrained — clear it on the agent or use a provider that supports it (e.g. claude-code)")
-	}
-	return nil
+	return refuseRepoAccess(providers.ProviderGeminiCLI, spec)
 }
 
 // writeGeminiSettings writes the isolated gemini settings file that wires the

@@ -28,13 +28,25 @@ func ParseFile(content string) (*Definition, error) {
 // narrowing, since an empty list used to mean the vendor CLI got every tool it
 // has — and logged, so the operator can set what the agent actually needs.
 //
+// With one exception, which is the whole point of the flag: a definition
+// marked locked: true is the workspace's standing answer to "can this change
+// without us?", and the answer is no — not even to something narrowing, not
+// even here. A locked file with no allowlist is loaded exactly as written and
+// reported, and the agent stays in the registry unable to run until a person
+// gives it a list. That is the same policy seeds.backfillAllowedTools applies
+// on the registry side; the two must not disagree, or a locked agent would be
+// left alone at startup and quietly rewritten by the next file sync.
+//
 // Content a person is saving right now goes through ParseFile instead, and is
 // refused: nobody should be able to write a new agent with no allowlist.
 func parseSyncedFile(content string) (*Definition, error) {
 	return parseFile(content, true)
 }
 
-func parseFile(content string, backfillTools bool) (*Definition, error) {
+// parseFile parses agent markdown. synced marks a file already on disk (see
+// parseSyncedFile) and turns on the allowlist backfill / locked carve-out;
+// a save a person is making now passes false and is validated in full.
+func parseFile(content string, synced bool) (*Definition, error) {
 	normalized := strings.ReplaceAll(content, "\r\n", "\n")
 	if !strings.HasPrefix(normalized, "---\n") {
 		return nil, errors.New("agent file must start with '---' YAML frontmatter")
@@ -53,7 +65,19 @@ func parseFile(content string, backfillTools bool) (*Definition, error) {
 		return nil, fmt.Errorf("invalid agent frontmatter: %w", err)
 	}
 	def.SystemPrompt = strings.TrimSpace(body)
-	if backfillTools && len(NonEmptyTools(def.AllowedTools)) == 0 {
+	needsTools := len(NonEmptyTools(def.AllowedTools)) == 0
+	switch {
+	case !synced || !needsTools:
+		// Nothing to do: either a person is saving this now (full validation
+		// below), or the file already names its tools.
+	case def.Locked:
+		log.Printf("agents: %q is locked and has no allowed_tools; leaving it as written — it cannot run until someone sets an allowlist (Agents → %s → Allowed tools)",
+			def.Slug, def.Slug)
+		if err := validateLoose(def); err != nil {
+			return nil, err
+		}
+		return def, nil
+	default:
 		def.AllowedTools = DefaultAllowedTools()
 		log.Printf("agents: %q has no allowed_tools; defaulting to %v — set an explicit allowlist for this agent",
 			def.Slug, def.AllowedTools)
@@ -63,6 +87,11 @@ func parseFile(content string, backfillTools bool) (*Definition, error) {
 	}
 	return def, nil
 }
+
+// validateLoose validates everything but the allowlist requirement, for the
+// one definition that is allowed to carry none: a locked file already on
+// disk. Split out so the exemption is named where it is used.
+func validateLoose(def *Definition) error { return def.validate(false) }
 
 // SerializeFile renders a definition back to markdown file content.
 func SerializeFile(def *Definition) (string, error) {
