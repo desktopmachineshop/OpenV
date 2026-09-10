@@ -409,6 +409,13 @@ func TestGapAnalysisUnverifiedTracksTheRollup(t *testing.T) {
 			mkArtifact("req-inspection", "requirement", "Inspection", map[string]interface{}{
 				"verification_method": MethodInspection,
 			}),
+			// A method value outside the canonical enumeration. The rollup
+			// treats anything but "test" as manually verified, so the gap
+			// bucket must too — a closed list of known methods would drop
+			// this requirement out of every bucket.
+			mkArtifact("req-review", "requirement", "Reviewed", map[string]interface{}{
+				"verification_method": "review",
+			}),
 			mkArtifact("req-test-notc", "requirement", "Test, no case", map[string]interface{}{
 				"verification_method": MethodTest,
 			}),
@@ -439,8 +446,15 @@ func TestGapAnalysisUnverifiedTracksTheRollup(t *testing.T) {
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("RequirementsUnverified = %v, want %v (the uncovered non-test rollups)", got, want)
 	}
-	if !reflect.DeepEqual(got, []string{"req-demo", "req-inspection"}) {
-		t.Errorf("RequirementsUnverified = %v, want [req-demo req-inspection]", got)
+	if !reflect.DeepEqual(got, []string{"req-demo", "req-inspection", "req-review"}) {
+		t.Errorf("RequirementsUnverified = %v, want [req-demo req-inspection req-review]", got)
+	}
+	// A requirement with no method at all rolls up as method-missing, so it
+	// belongs to RequirementsWithoutMethod and to no other bucket.
+	for _, id := range gaps.RequirementsUnverified {
+		if id == "req-nomethod" {
+			t.Error("RequirementsUnverified contains req-nomethod; a method-less requirement belongs only in RequirementsWithoutMethod")
+		}
 	}
 	// The rest of the report is unchanged by the new bucket.
 	if !reflect.DeepEqual(gaps.RequirementsWithoutTestCase, []string{"req-test-notc"}) {

@@ -147,6 +147,11 @@ func TestValidateLinkTypeRules(t *testing.T) {
 				if hasWildcard(rule.AllowedFromTypes) {
 					t.Skip("rule accepts every source artifact type")
 				}
+				// TestRuleTableIsWellFormed already reports an empty end as
+				// a table defect; bail out here rather than index into it.
+				if len(allowedTo) == 0 {
+					t.Fatalf("rule %q allows no target artifact types", rule.Type)
+				}
 				to := allowedTo[0]
 				for _, from := range catalog {
 					if inList(rule.AllowedFromTypes, from) {
@@ -168,6 +173,9 @@ func TestValidateLinkTypeRules(t *testing.T) {
 			t.Run("other target types rejected", func(t *testing.T) {
 				if hasWildcard(rule.AllowedToTypes) {
 					t.Skip("rule accepts every target artifact type")
+				}
+				if len(allowedFrom) == 0 {
+					t.Fatalf("rule %q allows no source artifact types", rule.Type)
 				}
 				from := allowedFrom[0]
 				for _, to := range catalog {
@@ -301,16 +309,7 @@ func TestUnconstrainedLinkTypes(t *testing.T) {
 
 	for _, linkType := range []string{"impacts", "relates-to"} {
 		t.Run(linkType, func(t *testing.T) {
-			var rule *LinkTypeRule
-			for i := range linkTypeRules {
-				if linkTypeRules[i].Type == linkType {
-					rule = &linkTypeRules[i]
-					break
-				}
-			}
-			if rule == nil {
-				t.Fatalf("no rule for link type %q", linkType)
-			}
+			rule := ruleFor(t, linkType)
 			if !hasWildcard(rule.AllowedFromTypes) || !hasWildcard(rule.AllowedToTypes) {
 				t.Fatalf("rule %q is no longer wildcarded on both ends: from=%v to=%v",
 					linkType, rule.AllowedFromTypes, rule.AllowedToTypes)
@@ -326,19 +325,24 @@ func TestUnconstrainedLinkTypes(t *testing.T) {
 		})
 	}
 
-	if got, want := relatesToRule(t).Label, relatesToRule(t).InverseLabel; got != want {
+	relatesTo := ruleFor(t, "relates-to")
+	if got, want := relatesTo.Label, relatesTo.InverseLabel; got != want {
 		t.Errorf("relates-to label = %q, inverse = %q; the table documents it as symmetric", got, want)
 	}
 }
 
-func relatesToRule(t *testing.T) LinkTypeRule {
+// ruleFor returns the table's rule for a link type, failing the test if the
+// table has none. ValidateLinkType matches on the first rule with a given
+// type, and TestRuleTableIsWellFormed rejects duplicates, so this lookup is
+// the same one the validator performs.
+func ruleFor(t *testing.T, linkType string) LinkTypeRule {
 	t.Helper()
 	for _, rule := range linkTypeRules {
-		if rule.Type == "relates-to" {
+		if rule.Type == linkType {
 			return rule
 		}
 	}
-	t.Fatal("no relates-to rule in the table")
+	t.Fatalf("no rule for link type %q in the table", linkType)
 	return LinkTypeRule{}
 }
 

@@ -377,7 +377,7 @@ invent. Consequently the gates are tighter than the role ladder alone:
 |---|---|
 | `requirements_without_method` | No `verification_method` attribute set |
 | `requirements_without_test_case` | Method is `test` but no test case verifies it |
-| `requirements_unverified` | Method is `demonstration`, `analysis` or `inspection` and it is not yet marked verified — no test case can cover these, so they would otherwise be invisible here even though the coverage rollup already counts them as `uncovered` |
+| `requirements_unverified` | Method is set to any method other than `test` (`demonstration`, `analysis`, `inspection` or any other value the project uses) and it is not yet marked verified — no test case can cover these, so they would otherwise be invisible here even though the coverage rollup already counts them as `uncovered` |
 | `requirements_failing` | Latest result of a verifying test case is a fail |
 | `orphan_test_cases` | Test cases that verify nothing |
 | `needs_without_requirement` | User needs no requirement derives from |
