@@ -87,22 +87,38 @@ type RunHandle interface {
 //	Effort         yes                  yes (capped "high")  no (ignored*)
 //	SystemPrompt   yes                  yes (prefixed)       yes (prefixed)
 //	MaxTurns       yes                  error if set         error if set
-//	AllowedTools   yes (--allowedTools) error if set         error if set
-//	Untrusted      --permission-mode    --sandbox read-only  --approval-mode
+//	AllowedTools   --allowedTools       sandbox + MCP filter tools.core +
+//	                                                         includeTools
+//	                                                         + MCP filter
+//	Untrusted      (no widening**)      --sandbox read-only  --approval-mode
 //	MCP env token  file (0600)          process env (byname) process env ($VAR)
 //
 // *gemini's headless CLI exposes no reasoning-effort control, so Effort is a
 // documented no-op there rather than an error (it never runs unconstrained on
-// account of it). MaxTurns/AllowedTools, by contrast, are safety limits: an
-// adapter that cannot enforce a requested limit fails the run at Start instead
-// of silently running without it.
+// account of it). MaxTurns, by contrast, is a safety limit: an adapter that
+// cannot enforce a requested cap fails the run at Start instead of silently
+// running without it.
 //
-// AllowedTools is now mandatory on every agent (REQ-91), and neither codex
-// exec nor the headless gemini CLI has anything to express it with. In
-// practice that means **agent runs are claude-code only** until those CLIs
-// grow a per-run allowlist: the other two adapters refuse at Start with a
-// message saying so, rather than running an agent with every tool its CLI
-// happens to have. See docs/agents.md, "Tools an agent may use".
+// **claude-code runs on the CLI's default permission mode whether or not the
+// run is trusted; the allowlist is the whole approval surface. Trust changes
+// what the *other* CLIs may touch (codex's sandbox, gemini's approval mode),
+// never what claude may do unasked.
+//
+// AllowedTools is mandatory on every agent (REQ-91), and an empty one is
+// refused everywhere — API, worker and adapter. A non-empty one is never a
+// reason to refuse: what differs is how much of it a CLI can apply.
+//
+//   - claude-code takes it verbatim as --allowedTools.
+//   - gemini-cli has it translated into the settings it documents for
+//     restricting tools: tools.core for its built-ins, and the openv server's
+//     includeTools for the OpenV tools (see geminiToolSettings).
+//   - codex exec has no allowlist of any kind, so it is confined instead:
+//     --sandbox workspace-write, or read-only when untrusted.
+//
+// All three additionally hand openv-mcp OPENV_MCP_TOOLS, so the OpenV MCP
+// server serves only the mcp__openv__* tools the definition names, whatever
+// the CLI's own flags can or cannot express. See docs/agents.md, "Tools an
+// agent may use".
 type Adapter interface {
 	Name() string
 	Detect(ctx context.Context) Availability

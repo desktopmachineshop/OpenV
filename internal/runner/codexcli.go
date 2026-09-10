@@ -13,7 +13,6 @@ import (
 	"sync"
 
 	"github.com/openv/requirements-platform/internal/domain/agentruns"
-	"github.com/openv/requirements-platform/internal/domain/agents"
 	"github.com/openv/requirements-platform/internal/domain/providers"
 )
 
@@ -69,6 +68,7 @@ func codexAuthPath() string {
 
 // Start launches a codex exec run.
 func (a *CodexCLIAdapter) Start(ctx context.Context, spec RunSpec) (RunHandle, error) {
+	spec = withOpenVToolFilter(spec)
 	args, err := buildCodexArgs(spec)
 	if err != nil {
 		return nil, err
@@ -111,7 +111,7 @@ func buildCodexArgs(spec RunSpec) ([]string, error) {
 // codexArgs is the argv itself, with the policy question (codexUnsupported)
 // already settled by the caller. Split out so the wiring it produces — the
 // escaping, and the run token travelling by name rather than by value — stays
-// testable even while codexUnsupported refuses every real agent.
+// testable independently of that policy.
 func codexArgs(spec RunSpec) ([]string, error) {
 	args := []string{"exec", "--json", "--cd", spec.WorkDir}
 
@@ -144,6 +144,14 @@ func codexArgs(spec RunSpec) ([]string, error) {
 		}
 		args = append(args, "-c", "model_reasoning_effort="+jsonScalar(effort))
 	}
+	// codex exec has no tool-allowlist flag, so the agent's allowlist is
+	// applied the two ways codex leaves open: the sandbox below bounds what
+	// the CLI's own tools may touch, and OPENV_MCP_TOOLS — forwarded to the
+	// MCP server by name, with the rest of its environment — narrows the
+	// OpenV tools the server exposes to exactly the ones the definition names
+	// (see withOpenVToolFilter). What is left unbounded is which *shell*
+	// commands run inside the sandbox; that is what the sandbox is for.
+	//
 	// An untrusted run (interview transcript, cloned repo, fetched page) gets
 	// the read-only sandbox: nothing it was told by the outside world can
 	// turn into a file write or a command (REQ-91, HAZ-1).
@@ -160,16 +168,15 @@ func codexArgs(spec RunSpec) ([]string, error) {
 }
 
 // codexUnsupported fails a run that carries constraints codex exec cannot
-// enforce, rather than silently running unconstrained. codex exec has no
-// per-run turn cap and no tool allow-list — its only guardrail is --sandbox,
-// which buildCodexArgs always pins to workspace-write.
+// enforce, rather than silently running unconstrained.
+//
+// A non-empty allowlist is not one of them. codex exec has no allowlist flag,
+// but the allowlist is not thereby ignored: it stays on the definition (where
+// it documents intent and is what the API validates), it gates the OpenV MCP
+// server's own tool exposure through OPENV_MCP_TOOLS, and codex's own tools
+// are confined by --sandbox. An empty allowlist is still refused — that is the
+// case where a CLI would run with everything it has.
 func codexUnsupported(spec RunSpec) error {
-	// Every agent must carry an allowlist (REQ-91) and codex exec has no way
-	// to apply one, so this is where a codex agent stops. Said plainly,
-	// because the way out is to move the agent to a provider that can.
-	if len(agents.NonEmptyTools(spec.AllowedTools)) > 0 {
-		return errors.New("codex-cli adapter cannot enforce a tool allowlist: codex exec has no per-run allowlist flag, and every agent must carry one (its only guardrail is --sandbox). Point this agent at claude-code, which passes the allowlist as --allowedTools")
-	}
 	if err := requireAllowedTools(spec); err != nil {
 		return err
 	}

@@ -1,8 +1,11 @@
 package runner
 
 import (
+	"slices"
 	"strings"
 	"testing"
+
+	"github.com/openv/requirements-platform/internal/mcp"
 )
 
 func codexSpec() RunSpec {
@@ -82,11 +85,12 @@ func TestBuildCodexArgs_CommandEscaped(t *testing.T) {
 	}
 }
 
-// MaxTurns / AllowedTools are unsupportable on codex exec: setting either must
-// fail the run at Start rather than silently running unconstrained. And since
-// every agent must now carry an allowlist (REQ-91), a spec without one is
-// refused too — so a codex agent is refused either way, which is exactly what
-// the docs promise.
+// MaxTurns is unsupportable on codex exec: setting it must fail the run at
+// Start rather than silently running without the cap the agent asked for.
+// A non-empty allowlist, by contrast, is no longer a refusal — codex is
+// confined instead (sandbox + the OpenV MCP server's own tool filter) — while
+// an empty one is still refused, because that is the case where the CLI would
+// run with every tool it has (REQ-91).
 func TestBuildCodexArgs_UnsupportedCapsError(t *testing.T) {
 	t.Run("max_turns", func(t *testing.T) {
 		spec := codexSpec()
@@ -95,15 +99,11 @@ func TestBuildCodexArgs_UnsupportedCapsError(t *testing.T) {
 			t.Fatal("expected error when MaxTurns is set")
 		}
 	})
-	t.Run("allowed_tools", func(t *testing.T) {
+	t.Run("allowed_tools are accepted, not refused", func(t *testing.T) {
 		spec := codexSpec()
-		spec.AllowedTools = []string{"Bash"}
-		_, err := buildCodexArgs(spec)
-		if err == nil {
-			t.Fatal("expected error when AllowedTools is set")
-		}
-		if !strings.Contains(err.Error(), "allowlist") || !strings.Contains(err.Error(), "claude-code") {
-			t.Errorf("refusal should say the CLI cannot enforce an allowlist and name a provider that can: %v", err)
+		spec.AllowedTools = []string{"Bash", "mcp__openv__get_artifact"}
+		if _, err := buildCodexArgs(spec); err != nil {
+			t.Fatalf("a codex agent with an allowlist must still run: %v", err)
 		}
 	})
 	t.Run("no allowed_tools at all", func(t *testing.T) {
@@ -115,6 +115,28 @@ func TestBuildCodexArgs_UnsupportedCapsError(t *testing.T) {
 			t.Errorf("refusal should name allowed_tools: %v", err)
 		}
 	})
+}
+
+// A codex run's OpenV tools are narrowed by the MCP server itself: Start adds
+// OPENV_MCP_TOOLS to the MCP server's environment, and codex forwards it there
+// by name along with the run token — so the allowlist is enforced even though
+// codex exec has no allowlist flag.
+func TestCodexStart_ForwardsOpenVToolFilterByName(t *testing.T) {
+	spec := codexSpec()
+	spec.AllowedTools = []string{"mcp__openv__get_artifact", "mcp__openv__list_artifacts", "Bash"}
+	spec = withOpenVToolFilter(spec)
+
+	if got := spec.MCP.Env[mcp.EnvToolAllowlist]; got != "get_artifact,list_artifacts" {
+		t.Errorf("%s = %q, want the agent's OpenV tools", mcp.EnvToolAllowlist, got)
+	}
+	args, err := codexArgs(spec)
+	if err != nil {
+		t.Fatalf("codexArgs: %v", err)
+	}
+	want := `mcp_servers.openv.env_vars=["OPENV_API_URL","OPENV_MCP_TOOLS","OPENV_RUN_TOKEN"]`
+	if !slices.Contains(args, want) {
+		t.Errorf("env_vars override = %v, want it to carry %q", args, want)
+	}
 }
 
 // An untrusted run gets codex's read-only sandbox: an interview transcript or

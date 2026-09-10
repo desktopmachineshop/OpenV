@@ -11,7 +11,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/openv/requirements-platform/internal/domain/agents"
 	"github.com/openv/requirements-platform/internal/domain/providers"
 )
 
@@ -76,6 +75,7 @@ func (a *GeminiCLIAdapter) Detect(ctx context.Context) Availability {
 // final object, so stdout events stream only at the end; stderr is surfaced
 // live (EmitStderr) so a long run isn't silent and failures stay visible.
 func (a *GeminiCLIAdapter) Start(ctx context.Context, spec RunSpec) (RunHandle, error) {
+	spec = withOpenVToolFilter(spec)
 	args, err := buildGeminiArgs(spec)
 	if err != nil {
 		return nil, err
@@ -88,7 +88,7 @@ func (a *GeminiCLIAdapter) Start(ctx context.Context, spec RunSpec) (RunHandle, 
 	// least-privilege approval mode. The run token is referenced via $VAR and
 	// resolved from the process environment, so it never lands in the file.
 	settingsPath := filepath.Join(spec.WorkDir, ".openv", "gemini-settings.json")
-	if err := writeGeminiSettings(settingsPath, spec.MCP, geminiApprovalMode(spec)); err != nil {
+	if err := writeGeminiSettings(settingsPath, spec.MCP, geminiApprovalMode(spec), spec.AllowedTools); err != nil {
 		return nil, err
 	}
 	procEnv := mergedProcEnv(spec)
@@ -129,6 +129,12 @@ func buildGeminiArgs(spec RunSpec) ([]string, error) {
 	// An untrusted run drops even that: "default" approves nothing on its own
 	// (REQ-91, HAZ-1), so a page or a participant's answer cannot talk the
 	// agent into an edit.
+	//
+	// The allowlist itself is not a flag here — it is written into the
+	// isolated settings file (tools.core and the openv server's includeTools)
+	// by writeGeminiSettings, because that is where gemini documents tool
+	// restriction. --allowed-tools exists but is an auto-approval list, and
+	// passing it would widen the run.
 	args := []string{
 		"--output-format", "json",
 		"--approval-mode", geminiApprovalMode(spec),
@@ -141,14 +147,15 @@ func buildGeminiArgs(spec RunSpec) ([]string, error) {
 
 // geminiUnsupported fails a run that carries constraints the headless gemini
 // CLI cannot enforce, rather than silently running unconstrained. The CLI has
-// no reliable per-run turn cap, and its tool names don't map to the agent's
-// (Claude-shaped) AllowedTools list, so honouring either would be incorrect.
+// no reliable per-run turn cap, so a MaxTurns an agent asked for would be
+// quietly dropped.
+//
+// The tool allowlist is not one of them: it is translated into gemini's own
+// settings by geminiToolSettings (tools.core plus the openv server's
+// includeTools) and enforced again server-side through OPENV_MCP_TOOLS. An
+// empty allowlist is still refused, because that is the case where the CLI
+// would run with every tool it has.
 func geminiUnsupported(spec RunSpec) error {
-	// As for codex: an allowlist is mandatory on every agent (REQ-91) and
-	// this CLI cannot express one, so a gemini agent stops here.
-	if len(agents.NonEmptyTools(spec.AllowedTools)) > 0 {
-		return errors.New("gemini-cli adapter cannot enforce a tool allowlist: the headless gemini CLI has no per-run allowlist, and its tool names do not map to the agent's (Claude-shaped) list, so honouring it would be incorrect — and every agent must carry one. Point this agent at claude-code, which passes the allowlist as --allowedTools")
-	}
 	if err := requireAllowedTools(spec); err != nil {
 		return err
 	}
@@ -159,11 +166,19 @@ func geminiUnsupported(spec RunSpec) error {
 }
 
 // writeGeminiSettings writes the isolated gemini settings file that wires the
-// openv MCP server. Pointed at via GEMINI_CLI_SYSTEM_SETTINGS_PATH, it never
-// overwrites the user's own .gemini/settings.json. Secret env values are
-// written as ${VAR} references resolved from the process environment at load
-// time, so the token stays out of the file; the file is still written 0600.
-func writeGeminiSettings(path string, mcp MCPServerConfig, approvalMode string) error {
+// openv MCP server and applies the agent's tool allowlist. Pointed at via
+// GEMINI_CLI_SYSTEM_SETTINGS_PATH, it never overwrites the user's own
+// .gemini/settings.json. Secret env values are written as ${VAR} references
+// resolved from the process environment at load time, so the token stays out
+// of the file; the file is still written 0600.
+//
+// The allowlist lands in the two keys gemini documents for restricting tools:
+// tools.core ("Restrict the set of built-in tools with an allowlist") and the
+// openv server's includeTools ("Subset of tools that should be enabled for
+// this server"). tools.allowed and --allowed-tools are NOT used: despite the
+// name they are an auto-approval list, which would widen the run rather than
+// narrow it.
+func writeGeminiSettings(path string, mcp MCPServerConfig, approvalMode string, allowedTools []string) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return err
 	}
@@ -175,17 +190,30 @@ func writeGeminiSettings(path string, mcp MCPServerConfig, approvalMode string) 
 	for k := range mcp.Env {
 		env[k] = "${" + k + "}"
 	}
+	core, include, includeAll := geminiToolSettings(allowedTools)
+	openv := map[string]interface{}{
+		"command": mcp.Command,
+		"args":    args,
+		"env":     env,
+		"trust":   true,
+	}
+	// Omitted means "every tool from this server", which is what the
+	// mcp__openv__* wildcard asks for; an empty array would mean none.
+	if !includeAll {
+		openv["includeTools"] = include
+	}
 	cfg := map[string]interface{}{
 		"general": map[string]interface{}{
 			"defaultApprovalMode": approvalMode,
 		},
+		"tools": map[string]interface{}{
+			// Always written, empty included: an agent that names only OpenV
+			// tools gets no built-in tools at all, where an omitted key would
+			// hand it every one gemini ships.
+			"core": core,
+		},
 		"mcpServers": map[string]interface{}{
-			"openv": map[string]interface{}{
-				"command": mcp.Command,
-				"args":    args,
-				"env":     env,
-				"trust":   true,
-			},
+			"openv": openv,
 		},
 	}
 	buf, err := json.MarshalIndent(cfg, "", "  ")

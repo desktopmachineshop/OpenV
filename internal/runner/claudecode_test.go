@@ -1,6 +1,7 @@
 package runner
 
 import (
+	"slices"
 	"strings"
 	"testing"
 )
@@ -57,46 +58,51 @@ func TestBuildClaudeArgs_PassesAllowlist(t *testing.T) {
 	}
 }
 
-// REQ-91 / HAZ-1: a run carrying content from outside the workspace approves
-// nothing on its own. Whatever the mode is called, it is never one that skips
-// permissions.
-func TestBuildClaudeArgs_UntrustedNeverAutoApproves(t *testing.T) {
+// REQ-91 / HAZ-1: no claude-code run auto-approves anything, trusted or not.
+// The allowlist is the whole approval surface, so acceptEdits — which would
+// let a run write files nobody put on that list — is passed by no path, and
+// neither is any outright bypass.
+func TestBuildClaudeArgs_NoRunAutoApproves(t *testing.T) {
+	for _, untrusted := range []bool{false, true} {
+		spec := claudeSpec()
+		spec.Untrusted = untrusted
+		args, err := buildClaudeArgs(spec, "/work/.openv/mcp.json")
+		if err != nil {
+			t.Fatalf("buildClaudeArgs: %v", err)
+		}
+		if got := flagValue(args, "--permission-mode"); got != "default" {
+			t.Errorf("untrusted=%v: --permission-mode = %q, want default", untrusted, got)
+		}
+		joined := strings.Join(args, " ")
+		for _, forbidden := range []string{"acceptEdits", "bypassPermissions", "dangerously-skip-permissions"} {
+			if strings.Contains(joined, forbidden) {
+				t.Errorf("untrusted=%v: run must not carry %q: %v", untrusted, forbidden, args)
+			}
+		}
+	}
+}
+
+// Trust changes nothing about claude's argv: the same flags, both ways. What
+// trust decides is how far the content a run reads is believed — which is a
+// question for the other CLIs' sandboxes, not for this one's permissions.
+func TestBuildClaudeArgs_TrustDoesNotChangeArgv(t *testing.T) {
+	trusted, err := buildClaudeArgs(claudeSpec(), "/work/.openv/mcp.json")
+	if err != nil {
+		t.Fatalf("buildClaudeArgs: %v", err)
+	}
 	spec := claudeSpec()
 	spec.Untrusted = true
-	args, err := buildClaudeArgs(spec, "/work/.openv/mcp.json")
+	untrusted, err := buildClaudeArgs(spec, "/work/.openv/mcp.json")
 	if err != nil {
 		t.Fatalf("buildClaudeArgs: %v", err)
 	}
-	if got := flagValue(args, "--permission-mode"); got != "default" {
-		t.Errorf("untrusted --permission-mode = %q, want default", got)
-	}
-	joined := strings.Join(args, " ")
-	for _, forbidden := range []string{"bypassPermissions", "acceptEdits", "dangerously-skip-permissions"} {
-		if strings.Contains(joined, forbidden) {
-			t.Errorf("untrusted run must not carry %q: %v", forbidden, args)
-		}
+	if !slices.Equal(trusted, untrusted) {
+		t.Errorf("argv differs by trust:\n trusted = %v\n untrusted = %v", trusted, untrusted)
 	}
 }
 
-// A trusted run may auto-approve edits in its own workspace — but never
-// bypasses permissions altogether, for any run.
-func TestBuildClaudeArgs_TrustedModeAndNeverBypass(t *testing.T) {
-	args, err := buildClaudeArgs(claudeSpec(), "/work/.openv/mcp.json")
-	if err != nil {
-		t.Fatalf("buildClaudeArgs: %v", err)
-	}
-	if got := flagValue(args, "--permission-mode"); got != "acceptEdits" {
-		t.Errorf("trusted --permission-mode = %q, want acceptEdits", got)
-	}
-	joined := strings.Join(args, " ")
-	for _, forbidden := range []string{"bypassPermissions", "dangerously-skip-permissions"} {
-		if strings.Contains(joined, forbidden) {
-			t.Fatalf("no run may carry %q: %v", forbidden, args)
-		}
-	}
-}
-
-// Every run states its permission mode; none is left to the CLI's default.
+// Every run states its permission mode; none is left to whatever the CLI, or
+// a settings file on the runner host, happens to default to.
 func TestBuildClaudeArgs_AlwaysStatesPermissionMode(t *testing.T) {
 	for _, untrusted := range []bool{false, true} {
 		spec := claudeSpec()

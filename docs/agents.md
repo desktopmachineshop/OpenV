@@ -461,20 +461,59 @@ rule is backfilled to `mcp__openv__*` at startup (logged, and a narrowing);
 an agent that is `locked: true` is left exactly as it is and reported instead,
 so it refuses to run until someone gives it an allowlist themselves.
 
-#### Which providers can enforce one
+#### How each provider applies one
 
-| Provider | How the allowlist is passed | Runs today? |
+Every provider runs. What differs is how much of the allowlist the vendor's own
+CLI can apply, and what fills the gap where it cannot.
+
+| Provider | The vendor CLI's own tools | The OpenV (`mcp__openv__*`) tools |
 | --- | --- | --- |
-| **Claude Code** | `--allowedTools <comma-joined>` | yes |
-| **Codex CLI** | nothing to pass it to — `codex exec` has no per-run allowlist; its only guardrail is `--sandbox` | **no** |
-| **Gemini CLI** | nothing to pass it to — the headless CLI has no per-run allowlist, and its tool names do not map to the Claude-shaped list | **no** |
+| **Claude Code** | `--allowedTools <comma-joined>`, verbatim | the same flag, plus `OPENV_MCP_TOOLS` |
+| **Codex CLI** | no allowlist exists — confined by `--sandbox` instead | `OPENV_MCP_TOOLS` |
+| **Gemini CLI** | translated into `tools.core` in the run's isolated settings file | `mcpServers.openv.includeTools`, plus `OPENV_MCP_TOOLS` |
 
-Since every agent must carry an allowlist and neither of the other two CLIs can
-apply one, **agent runs are effectively claude-code only** at present. A codex
-or gemini agent fails at Start with a message saying exactly that and pointing
-at claude-code, rather than running with every tool its CLI happens to have.
-Both adapters gain support the moment the vendor does; the refusal lives in
-`codexUnsupported` / `geminiUnsupported` (`internal/runner`).
+**`OPENV_MCP_TOOLS`** is the platform's own half of the guarantee, and it does
+not depend on any vendor flag. `openv-mcp` reads it and serves only the tools
+it names: `*` for the whole surface, a comma-separated list (bare or
+`mcp__openv__`-prefixed) for a subset, and — set but empty — nothing at all,
+which is what an agent that names no OpenV tool gets. Unset means no filter,
+which is how `openv-mcp` behaves outside a platform run (a repository session
+holding a workspace runner key). Both `tools/list` and `tools/call` see the
+same filtered table, so a tool left out is neither advertised nor callable.
+Every adapter sets it, through the same route the run token already takes:
+Claude's `0600` `mcp.json`, codex's `env_vars` forward-by-name, gemini's
+`${VAR}` reference.
+
+**Gemini's translation** maps the Claude-shaped list onto the two settings
+[the CLI documents for restricting tools](https://google-gemini.github.io/gemini-cli/docs/get-started/configuration.html):
+`tools.core` ("Restrict the set of built-in tools with an allowlist") and the
+openv server's
+[`includeTools`](https://google-gemini.github.io/gemini-cli/docs/tools/mcp-server.html)
+("Subset of tools that should be enabled for this server"). `mcp__openv__<tool>`
+becomes a bare `<tool>` in `includeTools` — openv is the only MCP server in a
+run, so gemini's `serverAlias__toolName` collision prefixing never applies —
+and `mcp__openv__*` omits the key, which is how gemini spells "every tool from
+this server". Vendor tools map by name: `Read` → `read_file`, `Write` →
+`write_file`, `Edit` → `replace`, `Grep` → `grep_search`, `Glob` → `glob`,
+`LS` → `list_directory`, `Bash` → `run_shell_command`, `WebFetch` →
+`web_fetch`, `WebSearch` → `google_web_search`, `TodoWrite` → `write_todos`.
+A Claude tool gemini has no equivalent for is dropped rather than approximated,
+so the translation only ever narrows; `tools.core` is written even when empty,
+because an omitted key would hand the run every built-in gemini ships. Note
+that `tools.allowed` and `--allowed-tools` are **not** used despite the name:
+they are gemini's *auto-approval* list, which would widen a run rather than
+restrict it. Note too that `tools.core` registers a tool or does not — it has
+no per-command scoping, so `Bash(git *)` carries its scope through as
+`run_shell_command(git *)` but what actually holds a shell call is the
+approval mode, which never auto-approves one.
+
+**Codex** has no allowlist of any kind: `codex exec` offers no flag for it, and
+no settings key. The allowlist still stands on the definition, where it
+documents intent and is what the API validates, and it still gates the OpenV
+tools through `OPENV_MCP_TOOLS`; codex's own tools are held by `--sandbox`
+(below). The translation and the refusals live in `geminiToolSettings` /
+`codexUnsupported` / `geminiUnsupported` and `withOpenVToolFilter`
+(`internal/runner`).
 
 #### Untrusted content never auto-approves
 
@@ -494,15 +533,22 @@ run has nobody to prompt. Exactly what that means per provider:
 
 | Provider | Trusted run | Untrusted run |
 | --- | --- | --- |
-| **Claude Code** | `--permission-mode acceptEdits` | `--permission-mode default` |
+| **Claude Code** | `--permission-mode default` | `--permission-mode default` |
 | **Codex CLI** | `--sandbox workspace-write` | `--sandbox read-only` |
 | **Gemini CLI** | `--approval-mode auto_edit` (+ `defaultApprovalMode` in the isolated settings file) | `--approval-mode default` (+ the same in the settings file) |
 
+Claude Code is deliberately the same both ways. `acceptEdits` would let a run
+write files nobody put on its allowlist, which is precisely the surface the
+allowlist exists to describe, so no claude-code run auto-approves anything —
+the allowlist is the whole approval surface, and trust decides how far the
+content a run *reads* is believed, not what the CLI may do unasked. The mode
+is still stated explicitly rather than left off, so a run is not at the mercy
+of whatever the CLI, or a settings file on the runner host, happens to default
+to.
+
 `--dangerously-skip-permissions`, `bypassPermissions`, `--yolo` and
 `--sandbox danger-full-access` are **never** passed, to any run, trusted or
-not. Note that the codex and gemini columns are what those adapters *would*
-do — both refuse to start at all while they cannot enforce an allowlist (see
-the table above).
+not.
 
 #### The seeded interviewer
 

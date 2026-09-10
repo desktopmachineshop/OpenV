@@ -86,6 +86,65 @@ type Tool struct {
 // mcp__openv__<name>.
 const ToolPrefix = "mcp__openv__"
 
+// EnvToolAllowlist names the environment variable that narrows the tool set
+// this MCP server exposes. It is the server's own half of REQ-91: a vendor CLI
+// that has no per-run allowlist flag of its own (codex exec, and anything else
+// that only knows how to spawn an MCP server) still cannot call an OpenV tool
+// the agent definition did not name, because the tool is not there to call.
+//
+// The variable is read as *set or unset*, not empty or non-empty:
+//
+//   - unset — no filter; every tool in the table is served. This is how
+//     openv-mcp behaves outside a platform run (a repository session with a
+//     workspace runner key, say).
+//   - "*" or "mcp__openv__*" — the wildcard an agent definition writes; every
+//     tool is served.
+//   - a comma-separated list — only those tools are served. Entries may be
+//     bare ("get_artifact") or prefixed as a vendor CLI writes them
+//     ("mcp__openv__get_artifact"); blanks are ignored.
+//   - set but empty — no OpenV tool is served at all. That is deliberate: an
+//     agent whose allowlist names no mcp__openv__ tool gets none, rather than
+//     all of them.
+const EnvToolAllowlist = "OPENV_MCP_TOOLS"
+
+// toolWildcard is the "every tool" entry, accepted bare or prefixed.
+const toolWildcard = "*"
+
+// FilterTools returns the subset of tools the allowlist admits. A nil allow
+// slice is not "allow nothing" — callers that mean "no filter" pass the whole
+// table back themselves; see EnvFilteredTools.
+func FilterTools(tools []Tool, allow []string) []Tool {
+	want := make(map[string]bool, len(allow))
+	for _, name := range allow {
+		name = strings.TrimSpace(name)
+		if name == "" {
+			continue
+		}
+		name = strings.TrimPrefix(name, ToolPrefix)
+		if name == toolWildcard {
+			return tools
+		}
+		want[name] = true
+	}
+	out := make([]Tool, 0, len(tools))
+	for _, t := range tools {
+		if want[t.Name] {
+			out = append(out, t)
+		}
+	}
+	return out
+}
+
+// EnvFilteredTools applies EnvToolAllowlist to the tool table. With the
+// variable unset the table is returned unchanged.
+func EnvFilteredTools(tools []Tool) []Tool {
+	raw, ok := os.LookupEnv(EnvToolAllowlist)
+	if !ok {
+		return tools
+	}
+	return FilterTools(tools, strings.Split(raw, ","))
+}
+
 // readOnlyTools names every tool in Tools() that only reads: its handler
 // issues GETs and changes nothing. It is the list an agent that must not write
 // is granted (see the seeded interviewer in internal/seeds).
@@ -936,9 +995,11 @@ type rpcResponse struct {
 	Error   *rpcError       `json:"error,omitempty"`
 }
 
-// ServeStdio runs the MCP server over stdin/stdout until EOF.
+// ServeStdio runs the MCP server over stdin/stdout until EOF, serving only the
+// tools EnvToolAllowlist admits. Both tools/list and tools/call see the same
+// filtered table, so a tool left out is neither advertised nor callable.
 func ServeStdio(client *Client, tools []Tool) error {
-	return serve(os.Stdin, os.Stdout, client, tools)
+	return serve(os.Stdin, os.Stdout, client, EnvFilteredTools(tools))
 }
 
 // serve is the transport-agnostic JSON-RPC loop behind ServeStdio; split out

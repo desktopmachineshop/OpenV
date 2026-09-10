@@ -127,30 +127,20 @@ func writeMCPConfig(path string, mcp MCPServerConfig) error {
 	return os.WriteFile(path, buf, 0o600)
 }
 
-// Permission modes handed to `claude --permission-mode`. Every run names one
-// explicitly, so what a run may do without asking is a property of the agent
-// definition rather than of whatever the CLI happens to default to.
-const (
-	// claudeModeTrusted auto-approves file edits inside the run's own
-	// workspace. Reserved for agents whose prompt and tool results are the
-	// workspace's own text.
-	claudeModeTrusted = "acceptEdits"
-	// claudeModeUntrusted approves nothing on its own: tools on the allowlist
-	// run, anything else needs an approval that headless mode cannot get and
-	// is therefore denied. This is the mode for any agent that reads content
-	// authored outside the workspace (REQ-91, HAZ-1) — and note that neither
-	// --dangerously-skip-permissions nor bypassPermissions is ever passed, to
-	// any run, trusted or not.
-	claudeModeUntrusted = "default"
-)
-
-// claudePermissionMode is the mode a spec runs under.
-func claudePermissionMode(spec RunSpec) string {
-	if spec.Untrusted {
-		return claudeModeUntrusted
-	}
-	return claudeModeTrusted
-}
+// claudePermissionMode is the mode handed to `claude --permission-mode`, and
+// it is the same for every run: the default. Nothing auto-approves — tools on
+// the allowlist run, anything else needs an approval that headless mode cannot
+// get and is therefore denied.
+//
+// There is deliberately no "trusted" widening. acceptEdits would let a run
+// write files nobody put on its allowlist, which is precisely the surface the
+// allowlist exists to describe (REQ-91, HAZ-1); trust decides how far the
+// content a run reads is believed, not what the CLI may do without being told.
+// The mode is still stated explicitly rather than left off, so a run is not at
+// the mercy of whatever the CLI, or a settings file on the runner host,
+// happens to default to. --dangerously-skip-permissions and bypassPermissions
+// are passed by no path, for any run.
+const claudePermissionMode = "default"
 
 // buildClaudeArgs assembles the CLI argv for one run. Split out from Start so
 // the flags a spec produces — the allowlist and the permission mode above all
@@ -167,7 +157,7 @@ func buildClaudeArgs(spec RunSpec, mcpPath string) ([]string, error) {
 		"--output-format", "stream-json",
 		"--verbose",
 		"--mcp-config", mcpPath,
-		"--permission-mode", claudePermissionMode(spec),
+		"--permission-mode", claudePermissionMode,
 	}
 	if spec.SystemPrompt != "" {
 		args = append(args, "--append-system-prompt", spec.SystemPrompt)
@@ -187,6 +177,7 @@ func buildClaudeArgs(spec RunSpec, mcpPath string) ([]string, error) {
 
 // Start launches a headless Claude Code run.
 func (a *ClaudeCodeAdapter) Start(ctx context.Context, spec RunSpec) (RunHandle, error) {
+	spec = withOpenVToolFilter(spec)
 	mcpPath := filepath.Join(spec.WorkDir, ".openv", "mcp.json")
 	args, err := buildClaudeArgs(spec, mcpPath)
 	if err != nil {
