@@ -150,34 +150,53 @@ gate: only browser sessions do.
 
 | Variable             | Default | Meaning                                                            |
 | -------------------- | ------- | ------------------------------------------------------------------ |
-| `OPENV_REGISTRATION` | `open`  | `open`: anyone may sign up. `closed`: only invited addresses and SSO |
+| `OPENV_REGISTRATION` | `open`  | `open`: anyone may sign up. `closed`: only an invitation link and SSO |
 
-With `OPENV_REGISTRATION=closed`, `POST /api/v1/auth/register` answers
-`403 {"error":"registration is closed","code":"registration_closed"}` unless
-the address has a pending, unexpired workspace invitation (or the request
-carries a valid `invite_token` for it) — in which case the sign-up proceeds.
+With `OPENV_REGISTRATION=closed` there are exactly two doors:
+
+- an **invitation link**: `POST /api/v1/auth/register` carrying an
+  `invite_token` that is live and was issued to **the address being
+  registered**;
+- **single sign-on**, which never meets the policy at all — the identity
+  provider is doing the admitting.
+
+Everything else answers
+`403 {"error":"registration is closed","code":"registration_closed"}`. A
+pending invitation for the address, *without* its link, is deliberately not a
+door: answering differently for an invited address would turn the sign-up
+form into an oracle for who the admins have invited, and would let whoever
+learns an invited address register it first and sit on it, so the real
+invitee finds their address taken. The refusal is byte-for-byte the same for
+an invited address as for a stranger.
+
 The login page reads the policy (`GET /api/v1/auth/policy`) and hides its
 *Create a new account* button, showing *Registration is closed; ask a
-workspace admin for an invitation* instead. Single sign-on is never affected:
-the identity provider is doing the admitting. Registration stays throttled per
+workspace admin for an invitation* instead. Registration stays throttled per
 client address either way (`OPENV_REGISTER_IP_BURST`, `_REFILL_PER_HOUR`).
 
-**An invitation lets the address register; membership is granted when the
-link is used or the address is verified.** The two are deliberately separate.
-Anyone can type an address into a sign-up form, so registering an invited
-address is not evidence that the person controls it, and a membership is a
-credential into somebody's workspace. Control is proven in exactly three
-ways, and each of them grants the membership:
+**Registering an address never grants the membership; only proof of owning
+it does.** The two are deliberately separate. Anyone can type an address into
+a sign-up form, and a membership is a credential into somebody's workspace.
+An invitation converts in exactly three ways, and in no others:
 
-- the sign-up carries the link's token (`invite_token`), or the signed-in
-  account posts it to `POST /api/v1/auth/invitations/accept` — holding the
-  link means the invited mailbox was read;
-- the account confirms its own email-verification link, which accepts every
-  invitation waiting for that address (this is what carries someone who
-  signed up without the token, or who was invited after they signed up);
+- the sign-up carries the link's token (`invite_token`) **and** registers the
+  invited address;
+- a signed-in account whose own address **is** the invited one posts the
+  token to `POST /api/v1/auth/invitations/accept`; a session on any other
+  address is refused with
+  `403 {"code":"invitation_email_mismatch"}` — this is the path for someone
+  who already had an account, or who registered without the link;
 - an identity provider signs the person in and asserts `email_verified` for
   the address; an unverified or absent claim is refused outright and grants
   nothing.
+
+Confirming an email-verification link grants **nothing**. It used to take up
+every invitation waiting for the address, and that was a way in: the
+change-of-address flow (`POST /auth/verify-email/change`) lets any account
+have a verification mail sent to an address of its choosing, so "verified"
+proves the account can read that mailbox's link, not that the account is the
+person an admin invited. Someone who signed up without the link opens the
+link afterwards, signed in, instead.
 
 A deployment with no SMTP therefore has one path only: pass the invitation
 link to the person, since nothing else can prove the address.
@@ -202,10 +221,15 @@ deployment usable:
   Members tab shows it for the admin to pass on.
 - Following the link signed out opens sign-up with the address prefilled and
   carries the token through whichever way the person continues — creating the
-  account, or signing in to one they already had. Following it signed in
-  joins that account to the workspace straight away. Signing up for the
-  invited address *without* the link joins nothing until that address is
-  verified.
+  account, or signing in to one they already had (the token is posted only
+  when the address that signed in is the invited one). Following it **signed
+  in** shows the invitation with a *Join* button rather than accepting it on
+  arrival, and when the session is some other address it says which address
+  to sign in as and offers to sign out. Signing up for the invited address
+  *without* the link joins nothing at all: the link is the only way in.
+- An invitation never changes a role somebody already has. An admin who
+  follows a later "member" link stays an admin (the invitation is still
+  spent), so the last admin of a workspace cannot be demoted this way.
 - Re-inviting an address replaces its previous invitation, whether that one
   was still live or had expired; only the newest link ever works.
 - Admins can see and revoke pending invitations on the same tab. Revoking
@@ -275,8 +299,11 @@ Notes:
 - Credential throttling defaults (per client address unless stated) can be
   tuned with `OPENV_AUTH_IP_BURST` / `OPENV_AUTH_IP_REFILL_PER_HOUR` (30,
   120), `OPENV_AUTH_ACCOUNT_BURST` / `_REFILL_PER_HOUR` (5 failed sign-ins,
-  20; per account), `OPENV_REGISTER_IP_BURST` / `_REFILL_PER_HOUR` (5, 10) and
-  `OPENV_SSO_IP_BURST` / `_REFILL_PER_HOUR` (20, 60). Body and upload caps:
+  20; per account), `OPENV_REGISTER_IP_BURST` / `_REFILL_PER_HOUR` (5, 10),
+  `OPENV_SSO_IP_BURST` / `_REFILL_PER_HOUR` (20, 60) and
+  `OPENV_INVITE_PREVIEW_BURST` / `_REFILL_PER_HOUR` (60, 240 — invite-link
+  previews have their own generous bucket so opening an invitation never
+  spends the sign-in budget). Body and upload caps:
   `OPENV_MAX_BODY_MB` (32) and `OPENV_MAX_UPLOAD_MB` (25).
 - Set `OPENV_METRICS_TOKEN` so `/metrics` needs a bearer token; without it
   anyone can read the API's request and runtime statistics.

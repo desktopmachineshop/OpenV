@@ -24,6 +24,11 @@ const (
 	// ErrCodeRegistrationClosed marks the 403 that registration answers on a
 	// deployment with no public sign-up door (REQ-95).
 	ErrCodeRegistrationClosed = "registration_closed"
+	// ErrCodeInvitationEmailMismatch marks the 403 for accepting an invite
+	// link while signed in as some other address. The invited address is
+	// deliberately absent from that response, so the code is how the client
+	// tells this refusal from an unusable link.
+	ErrCodeInvitationEmailMismatch = "invitation_email_mismatch"
 	// The three ways a password change refuses (REQ-99).
 	ErrCodeWeakPassword      = "weak_password"
 	ErrCodePasswordIncorrect = "password_incorrect"

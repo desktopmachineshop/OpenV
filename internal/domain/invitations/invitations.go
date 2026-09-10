@@ -3,7 +3,15 @@ package invitations
 // Workspace invitations (REQ-95 / HAZ-15). A closed deployment has no
 // self-service door, so an admin's invitation is how a new person gets an
 // account at all: the invitation names the address and the role, and holds
-// them until whoever controls that address signs up or signs in.
+// them until the account that PROVABLY OWNS that address takes them up.
+//
+// "Provably owns" is the whole design. The link's token proves the invited
+// mailbox was read, and every acceptance checks it against the address the
+// invitation was issued to (AcceptTokenForEmail); the one exception is a
+// sign-in where an identity provider itself asserts the address as verified
+// (AcceptAllForProviderVerifiedEmail). Claiming the address — registering
+// it, or having an emailed verification link for it confirmed — is not
+// proof and grants nothing here.
 //
 // The token follows the worker-key pattern — random, shown once at creation,
 // stored only as a SHA-256 hash — because an invitation link IS a credential:
@@ -12,6 +20,7 @@ package invitations
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -34,7 +43,25 @@ var (
 	// ErrInvalidEmail is user-facing validation, like orgs.ErrInvalidRole:
 	// the handler answers 400 rather than 500.
 	ErrInvalidEmail = errors.New("a valid email is required")
+	// ErrEmailMismatch means the link itself is good but was issued to a
+	// different address than the account presenting it. It is separate from
+	// ErrInvalidToken because the two answers differ: an unusable link is
+	// one flat 404 that teaches a prober nothing, while a mismatch is a 403
+	// the signed-in person can act on. The invited address does not travel
+	// with the error — what to disclose is the caller's decision.
+	ErrEmailMismatch = errors.New("this invitation was sent to a different address")
 )
+
+// Acceptance is what taking up an invitation did. Role is the role the
+// account holds in the workspace once the acceptance is over, which is not
+// always the invited role: an account that was already a member keeps the
+// role it had (AlreadyMember), because an invitation is an offer of a way
+// in, never a way to move somebody between roles.
+type Acceptance struct {
+	Invitation    *Invitation `json:"invitation"`
+	Role          string      `json:"role"`
+	AlreadyMember bool        `json:"already_member"`
+}
 
 // Invitation is one pending or accepted invitation to a workspace. Token is
 // never stored; the raw value is returned once, by Create.
@@ -75,7 +102,7 @@ type Repository interface {
 	FindByID(id string) (*Invitation, error)
 	FindByTokenHash(hash string) (*Invitation, error)
 	// ListPendingForEmail returns every workspace's pending invitations for
-	// one address — what an address takes up once it is proven (verified).
+	// one address — what an address takes up once a provider has verified it.
 	ListPendingForEmail(email string, now time.Time) ([]*Invitation, error)
 	// MarkAccepted stamps accepted_at, and reports whether THIS caller won:
 	// false means the row was already accepted, so two concurrent sign-ins
@@ -88,12 +115,17 @@ type Repository interface {
 }
 
 // Workspaces is the slice of orgs.Service invitations need: the membership
-// an acceptance creates, and the workspace itself, which Create reads to
-// refuse an invitation into a personal space. Declaring it here rather than
-// taking the whole service keeps the dependency two methods wide and the
-// tests free of an org service.
+// an acceptance creates, the role the account already holds there — an
+// existing membership is never rewritten by an invitation — and the
+// workspace itself, which Create reads to refuse an invitation into a
+// personal space. Declaring it here rather than taking the whole service
+// keeps the dependency three methods wide and the tests free of an org
+// service.
 type Workspaces interface {
 	AddMember(orgID, userID, role string) error
+	// RoleInOrg returns the account's current role, "" when it is not a
+	// member.
+	RoleInOrg(orgID, userID string) (string, error)
 	Get(orgID string) (*orgs.Org, error)
 }
 
@@ -114,22 +146,30 @@ type Service interface {
 	Lookup(token string) (*Invitation, error)
 	// PendingForEmail returns every pending invitation for an address.
 	PendingForEmail(email string) ([]*Invitation, error)
-	// AcceptToken accepts the invitation a raw token names, joining userID to
-	// its workspace at the invited role.
-	AcceptToken(token, userID string) (*Invitation, error)
-	// AcceptTokenForEmail is AcceptToken with the address checked as well:
-	// the invitation must have been issued to email, or it is refused with
-	// ErrInvalidToken. Registration uses it, so a token that reached one
-	// address can never join a different one to the workspace.
-	AcceptTokenForEmail(token, email, userID string) (*Invitation, error)
-	// AcceptAllForEmail accepts every pending invitation for an address.
-	// Membership is a credential, so this is only ever called with proof
-	// that the account controls the address: the confirmed verification
-	// link, or an identity provider asserting the address as verified.
-	// Registration by itself is not such proof and must not call it.
-	// Best-effort per invitation: one workspace that refuses the membership
-	// does not strand the others, and the accepted ones are returned.
-	AcceptAllForEmail(email, userID string) ([]*Invitation, error)
+	// AcceptTokenForEmail takes up the invitation a raw token names, joining
+	// userID to its workspace at the invited role — but only for the address
+	// the invitation was issued to. There is deliberately no way to accept a
+	// token WITHOUT naming the address: the rule that an invitation converts
+	// only for the account that provably owns the invited address is
+	// structural here, not a check a caller can forget. A token that reached
+	// one mailbox can therefore never join a different account.
+	//
+	// ErrInvalidToken when the link is unknown, revoked, spent or expired;
+	// ErrEmailMismatch when the link is live but was sent elsewhere.
+	AcceptTokenForEmail(token, email, userID string) (*Acceptance, error)
+	// AcceptAllForProviderVerifiedEmail accepts every pending invitation for
+	// an address. Membership is a credential, so the name states the only
+	// precondition under which it may be called: an identity provider has
+	// asserted this address as verified for the account signing in. Nothing
+	// weaker qualifies — not registering the address, and not confirming an
+	// emailed verification link, which the address-change flow lets an
+	// account point at an address it does not own.
+	//
+	// One workspace that refuses its membership does not strand the others:
+	// the acceptances that succeeded are returned AND the failures are
+	// reported, so the caller can log them. A refused invitation stays
+	// pending and can be taken up later with its link.
+	AcceptAllForProviderVerifiedEmail(email, userID string) ([]*Acceptance, error)
 	// PurgeExpired drops expired rows (boot/reaper housekeeping).
 	PurgeExpired(now time.Time) error
 }
@@ -245,69 +285,87 @@ func (s *DefaultService) PendingForEmail(email string) ([]*Invitation, error) {
 	return s.repo.ListPendingForEmail(email, time.Now())
 }
 
-// AcceptToken accepts the invitation a raw token names.
-func (s *DefaultService) AcceptToken(token, userID string) (*Invitation, error) {
-	inv, err := s.Lookup(token)
-	if err != nil {
-		return nil, err
-	}
-	if err := s.accept(inv, userID, time.Now()); err != nil {
-		return nil, err
-	}
-	return inv, nil
-}
-
 // AcceptTokenForEmail accepts a raw token only for the address it was sent
 // to; see the Service interface.
-func (s *DefaultService) AcceptTokenForEmail(token, email, userID string) (*Invitation, error) {
+func (s *DefaultService) AcceptTokenForEmail(token, email, userID string) (*Acceptance, error) {
 	inv, err := s.Lookup(token)
 	if err != nil {
 		return nil, err
 	}
 	if inv.Email != users.NormalizeEmail(email) {
-		return nil, ErrInvalidToken
+		return nil, ErrEmailMismatch
 	}
-	if err := s.accept(inv, userID, time.Now()); err != nil {
-		return nil, err
-	}
-	return inv, nil
+	return s.accept(inv, userID, time.Now())
 }
 
-// AcceptAllForEmail accepts every pending invitation for an address.
-func (s *DefaultService) AcceptAllForEmail(email, userID string) ([]*Invitation, error) {
+// AcceptAllForProviderVerifiedEmail accepts every pending invitation for an
+// address a provider has verified; see the Service interface.
+func (s *DefaultService) AcceptAllForProviderVerifiedEmail(email, userID string) ([]*Acceptance, error) {
 	pending, err := s.PendingForEmail(email)
 	if err != nil {
 		return nil, err
 	}
 	now := time.Now()
-	var accepted []*Invitation
+	var accepted []*Acceptance
+	var failures []error
 	for _, inv := range pending {
-		if err := s.accept(inv, userID, now); err != nil {
+		acc, err := s.accept(inv, userID, now)
+		if err != nil {
 			// A workspace that has since been deleted, or refuses the role,
-			// must not block the person's other invitations.
+			// must not block the person's other invitations — but it is
+			// reported rather than dropped, so the caller can log a
+			// membership that did not happen. The row stays pending and the
+			// link still works.
+			failures = append(failures, fmt.Errorf("invitation %s (workspace %s): %w", inv.ID, inv.OrgID, err))
 			continue
 		}
-		accepted = append(accepted, inv)
+		accepted = append(accepted, acc)
 	}
-	return accepted, nil
+	return accepted, errors.Join(failures...)
 }
 
-// accept claims the row and creates the membership. The claim comes first:
-// if two sign-ins race, only the winner writes, and a membership that fails
-// afterwards leaves an accepted invitation rather than a repeatable join.
-func (s *DefaultService) accept(inv *Invitation, userID string, now time.Time) error {
-	won, err := s.repo.MarkAccepted(inv.ID, now)
+// accept creates the membership and marks the row taken.
+//
+// Two rules shape it. An existing membership is left exactly as it is: an
+// invitation offers a way in, never a move between roles, so an admin who
+// follows a later "member" link stays an admin and a workspace's last admin
+// can never be demoted through this path. And the writes are ordered
+// membership-first, so a failure cannot consume the invitation: if stamping
+// the row fails after the member was added, the invitation stays pending and
+// the next attempt lands on the already-a-member branch, which is
+// idempotent. The reverse order would spend the link and leave no membership
+// at all.
+//
+// Losing the race for the stamp (won == false) still reports the link as
+// spent. The membership that was written a moment earlier stands: it is
+// exactly the one the token authorized, into the workspace the token names,
+// at the role it names.
+func (s *DefaultService) accept(inv *Invitation, userID string, now time.Time) (*Acceptance, error) {
+	existing, err := s.members.RoleInOrg(inv.OrgID, userID)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	if !won {
-		return ErrInvalidToken
+	if existing != "" {
+		// Already in: take the invitation out of circulation and report the
+		// role they actually hold, which is not necessarily the invited one.
+		if _, err := s.repo.MarkAccepted(inv.ID, now); err != nil {
+			return nil, err
+		}
+		inv.AcceptedAt = &now
+		return &Acceptance{Invitation: inv, Role: existing, AlreadyMember: true}, nil
 	}
 	if err := s.members.AddMember(inv.OrgID, userID, inv.Role); err != nil {
-		return err
+		return nil, err
+	}
+	won, err := s.repo.MarkAccepted(inv.ID, now)
+	if err != nil {
+		return nil, err
+	}
+	if !won {
+		return nil, ErrInvalidToken
 	}
 	inv.AcceptedAt = &now
-	return nil
+	return &Acceptance{Invitation: inv, Role: inv.Role}, nil
 }
 
 // PurgeExpired drops expired rows.

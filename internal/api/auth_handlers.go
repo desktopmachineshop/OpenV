@@ -156,34 +156,34 @@ func (h *Handler) registrationPolicy() string {
 }
 
 // registrationAllowed reports whether this address may create an account.
-// Open deployments allow everyone; a closed one allows an address a
-// workspace admin has a live invitation out to, or one arriving with a valid
-// invitation link. This is a door, not a grant: passing it creates the
-// account and nothing else. The membership the invitation names is granted
-// only once control of the address is proven — see acceptInvitationToken and
-// acceptInvitationsForVerifiedEmail.
+// Open deployments allow everyone. A closed one has exactly one door here —
+// a live invitation link whose address is the one being registered — and
+// single sign-on, which never reaches this function because the identity
+// provider is doing the admitting.
 //
-// A failure to look the invitation up is treated as "no invitation": on a
-// closed deployment the safe answer to an unanswerable question is no.
+// A pending invitation for the address, WITHOUT its link, is deliberately
+// not a door. It would answer 403-or-200 by whether an address has been
+// invited, which turns the sign-up form into an oracle for who an admin has
+// invited; and it would let whoever learns an invited address register it
+// first and sit on it, so the real invitee finds their address taken.
+//
+// This is a door, not a grant: passing it creates the account. The
+// membership the invitation names is granted separately, by
+// acceptInvitationToken, and only for the address the token was issued to.
 func (h *Handler) registrationAllowed(email, inviteToken string) bool {
 	if h.registrationPolicy() == RegistrationOpen {
 		return true
 	}
-	if h.invitationService == nil {
+	if h.invitationService == nil || inviteToken == "" {
 		return false
 	}
-	if inviteToken != "" {
-		if inv, err := h.invitationService.Lookup(inviteToken); err == nil && inv != nil &&
-			inv.Email == users.NormalizeEmail(email) {
-			return true
-		}
-	}
-	pending, err := h.invitationService.PendingForEmail(email)
-	if err != nil {
-		slog.Warn("registration: failed to look up invitations for a sign-up", slog.Any("error", err))
+	// A lookup failure is treated as "no invitation": on a closed deployment
+	// the safe answer to an unanswerable question is no.
+	inv, err := h.invitationService.Lookup(inviteToken)
+	if err != nil || inv == nil {
 		return false
 	}
-	return len(pending) > 0
+	return inv.Email == users.NormalizeEmail(email)
 }
 
 // Register creates a password account and logs it in.
@@ -217,10 +217,11 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.provisionPersonalWorkspace(user.ID, user.Name)
-	// Only the invitation whose link this sign-up carried is taken up: a
-	// membership follows proof that the invited mailbox was read, never the
-	// mere claim of an address. Someone who registered without the link
-	// joins when they confirm their verification mail instead.
+	// Only the invitation whose link this sign-up carried is taken up, and
+	// only when it was issued to the address being registered: a membership
+	// follows proof that the invited mailbox was read, never the mere claim
+	// of an address. Someone who registered without the link uses it
+	// afterwards, signed in, through POST /auth/invitations/accept.
 	h.acceptInvitationToken(req.InviteToken, user)
 	_, token, err := h.userService.Login(req.Email, req.Password)
 	if err != nil {
@@ -417,7 +418,7 @@ func (h *Handler) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 	// doing the admitting — and an invited address joins its workspaces on
 	// the way in. Google's userinfo is refused above unless email_verified is
 	// true, which is the proof of control this join rests on.
-	h.acceptInvitationsForVerifiedEmail(googleUser.ID, googleUser.Email)
+	h.acceptInvitationsForProviderVerifiedEmail(googleUser.ID, googleUser.Email)
 	h.setSessionCookie(w, token)
 
 	dest := h.googleOAuth.FrontendURL

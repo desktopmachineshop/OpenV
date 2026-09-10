@@ -127,7 +127,7 @@ Optional — **registration policy and session lifetime** (see
 
 ```dotenv
 # Close the public sign-up door. New accounts then arrive only through a
-# workspace invitation or the configured SSO provider.
+# workspace invitation LINK or the configured SSO provider.
 OPENV_REGISTRATION=closed
 
 # Shorten session lifetimes below the 720h/168h defaults (Go durations).
@@ -143,6 +143,8 @@ service and redeploy it; the login page picks the policy up from
 runtime. Existing accounts and sessions are unaffected. Invite people from
 *Workspace settings → Members* afterwards — with SMTP configured the
 invitation is emailed, and without it the link is shown once for you to send.
+The link is what admits and joins them: an invited address that never
+receives it cannot sign up on a closed deployment.
 
 ## 3. Frontend service
 

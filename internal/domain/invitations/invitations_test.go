@@ -9,9 +9,12 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/orgs"
 )
 
-// memRepo is a minimal in-memory Repository for the service tests.
+// memRepo is a minimal in-memory Repository for the service tests. markErr,
+// when set, fails the NEXT MarkAccepted and then clears itself, which is how
+// a half-finished acceptance is staged.
 type memRepo struct {
-	rows map[string]*Invitation
+	rows    map[string]*Invitation
+	markErr error
 }
 
 func newMemRepo() *memRepo { return &memRepo{rows: map[string]*Invitation{}} }
@@ -65,6 +68,11 @@ func (m *memRepo) ListPendingForEmail(email string, now time.Time) ([]*Invitatio
 }
 
 func (m *memRepo) MarkAccepted(id string, at time.Time) (bool, error) {
+	if m.markErr != nil {
+		err := m.markErr
+		m.markErr = nil // one failure, so a retry can be observed
+		return false, err
+	}
 	inv := m.rows[id]
 	if inv == nil || inv.AcceptedAt != nil || !inv.ExpiresAt.After(at) {
 		return false, nil
@@ -85,11 +93,14 @@ func (m *memRepo) DeleteExpired(before time.Time) error {
 }
 
 // memMembers records the memberships an acceptance creates, and can refuse
-// one workspace to prove a refusal does not strand the others. It also
-// answers Get, which Create reads to refuse a personal workspace: every
-// workspace is a company one unless personal names it.
+// one workspace to prove a refusal does not strand the others. It answers
+// RoleInOrg from the memberships it holds — which is what tells acceptance
+// that somebody is already in — and Get, which Create reads to refuse a
+// personal workspace: every workspace is a company one unless personal
+// names it.
 type memMembers struct {
-	added    []string // "orgID:userID:role"
+	added    []string          // "orgID:userID:role"
+	roles    map[string]string // "orgID:userID" -> role
 	refuse   map[string]error
 	personal map[string]bool
 	missing  map[string]bool
@@ -100,7 +111,12 @@ func (m *memMembers) AddMember(orgID, userID, role string) error {
 		return err
 	}
 	m.added = append(m.added, orgID+":"+userID+":"+role)
+	m.roles[orgID+":"+userID] = role
 	return nil
+}
+
+func (m *memMembers) RoleInOrg(orgID, userID string) (string, error) {
+	return m.roles[orgID+":"+userID], nil
 }
 
 func (m *memMembers) Get(orgID string) (*orgs.Org, error) {
@@ -116,7 +132,12 @@ func (m *memMembers) Get(orgID string) (*orgs.Org, error) {
 
 func newTestService() (*DefaultService, *memRepo, *memMembers) {
 	repo := newMemRepo()
-	members := &memMembers{refuse: map[string]error{}, personal: map[string]bool{}, missing: map[string]bool{}}
+	members := &memMembers{
+		roles:    map[string]string{},
+		refuse:   map[string]error{},
+		personal: map[string]bool{},
+		missing:  map[string]bool{},
+	}
 	return NewDefaultService(repo, members), repo, members
 }
 
@@ -142,15 +163,19 @@ func TestCreateAndAccept(t *testing.T) {
 	if _, err := svc.Lookup(token); err != nil {
 		t.Fatalf("Lookup: %v", err)
 	}
-	if _, err := svc.AcceptToken(token, "user-1"); err != nil {
-		t.Fatalf("AcceptToken: %v", err)
+	acc, err := svc.AcceptTokenForEmail(token, "dave@example.com", "user-1")
+	if err != nil {
+		t.Fatalf("AcceptTokenForEmail: %v", err)
+	}
+	if acc.Role != orgs.RoleMember || acc.AlreadyMember {
+		t.Errorf("acceptance = %+v, want a fresh membership at the invited role", acc)
 	}
 	if len(members.added) != 1 || members.added[0] != "org-1:user-1:member" {
 		t.Errorf("memberships = %v", members.added)
 	}
 
 	// One use only: the link is spent.
-	if _, err := svc.AcceptToken(token, "user-2"); !errors.Is(err, ErrInvalidToken) {
+	if _, err := svc.AcceptTokenForEmail(token, "dave@example.com", "user-2"); !errors.Is(err, ErrInvalidToken) {
 		t.Errorf("second acceptance returned %v, want ErrInvalidToken", err)
 	}
 	if pending, _ := svc.ListPending("org-1"); len(pending) != 0 {
@@ -205,7 +230,7 @@ func TestExpiredInvitationIsNeitherVisibleNorAcceptable(t *testing.T) {
 	if _, err := svc.Lookup(token); !errors.Is(err, ErrInvalidToken) {
 		t.Errorf("expired link returned %v, want ErrInvalidToken", err)
 	}
-	if _, err := svc.AcceptToken(token, "user-1"); !errors.Is(err, ErrInvalidToken) {
+	if _, err := svc.AcceptTokenForEmail(token, "late@example.com", "user-1"); !errors.Is(err, ErrInvalidToken) {
 		t.Errorf("accepting an expired link returned %v, want ErrInvalidToken", err)
 	}
 	if len(members.added) != 0 {
@@ -243,10 +268,10 @@ func TestRevoke(t *testing.T) {
 	}
 }
 
-// A new account joins every workspace that invited its address, whatever
-// case each invitation was typed in — and one workspace that refuses does
-// not strand the rest.
-func TestAcceptAllForEmail(t *testing.T) {
+// A provider-verified address joins every workspace that invited it,
+// whatever case each invitation was typed in — and one workspace that
+// refuses does not strand the rest, though it IS reported.
+func TestAcceptAllForProviderVerifiedEmail(t *testing.T) {
 	svc, _, members := newTestService()
 	if _, _, err := svc.Create("org-1", "Dave@Example.com", orgs.RoleAdmin, nil); err != nil {
 		t.Fatalf("Create org-1: %v", err)
@@ -259,9 +284,14 @@ func TestAcceptAllForEmail(t *testing.T) {
 	}
 	members.refuse["org-2"] = errors.New("workspace is gone")
 
-	accepted, err := svc.AcceptAllForEmail("DAVE@EXAMPLE.COM", "user-1")
-	if err != nil {
-		t.Fatalf("AcceptAllForEmail: %v", err)
+	accepted, err := svc.AcceptAllForProviderVerifiedEmail("DAVE@EXAMPLE.COM", "user-1")
+	// The refusal is returned, not swallowed: the caller logs a membership
+	// that did not happen instead of silently losing it.
+	if err == nil {
+		t.Fatal("a refused workspace must be reported, not dropped")
+	}
+	if !strings.Contains(err.Error(), "org-2") {
+		t.Errorf("error %q does not name the workspace that refused", err)
 	}
 	if len(accepted) != 2 {
 		t.Fatalf("accepted %d invitations, want 2", len(accepted))
@@ -269,9 +299,78 @@ func TestAcceptAllForEmail(t *testing.T) {
 	if len(members.added) != 2 {
 		t.Errorf("memberships = %v", members.added)
 	}
-	// Nothing is left pending for the address.
-	if pending, _ := svc.PendingForEmail("dave@example.com"); len(pending) != 0 {
-		t.Errorf("still pending: %d", len(pending))
+	// The two that worked are spent; the one that refused stays pending, so
+	// its link can still take it up later.
+	pending, _ := svc.PendingForEmail("dave@example.com")
+	if len(pending) != 1 || pending[0].OrgID != "org-2" {
+		t.Errorf("pending = %+v, want only the workspace that refused", pending)
+	}
+}
+
+// An invitation is an offer of a way in, never a way to move somebody
+// between roles: an admin who follows a later "member" link stays an admin,
+// and the workspace's last admin therefore cannot be demoted through this
+// path. The invitation is still spent, so the link does not stay live.
+func TestAcceptNeverRewritesAnExistingRole(t *testing.T) {
+	svc, _, members := newTestService()
+	members.roles["org-1:user-1"] = orgs.RoleAdmin // the only admin
+
+	_, token, err := svc.Create("org-1", "admin@example.com", orgs.RoleMember, nil)
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	acc, err := svc.AcceptTokenForEmail(token, "admin@example.com", "user-1")
+	if err != nil {
+		t.Fatalf("AcceptTokenForEmail: %v", err)
+	}
+	if !acc.AlreadyMember || acc.Role != orgs.RoleAdmin {
+		t.Errorf("acceptance = %+v, want the role they already held", acc)
+	}
+	if len(members.added) != 0 {
+		t.Errorf("an existing membership was rewritten: %v", members.added)
+	}
+	if members.roles["org-1:user-1"] != orgs.RoleAdmin {
+		t.Errorf("role = %q, want the last admin to stay an admin", members.roles["org-1:user-1"])
+	}
+	if _, err := svc.Lookup(token); !errors.Is(err, ErrInvalidToken) {
+		t.Error("an accepted invitation must be spent even when it granted nothing new")
+	}
+}
+
+// The membership is written BEFORE the row is stamped, so a failure cannot
+// consume the invitation: the link still works, and using it again lands on
+// the already-a-member branch rather than joining twice.
+func TestAFailedStampLeavesTheInvitationUsable(t *testing.T) {
+	svc, repo, members := newTestService()
+	_, token, err := svc.Create("org-1", "half@example.com", orgs.RoleMember, nil)
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	repo.markErr = errors.New("database went away mid-write")
+
+	if _, err := svc.AcceptTokenForEmail(token, "half@example.com", "user-1"); err == nil {
+		t.Fatal("a failed stamp must be reported")
+	}
+	if len(members.added) != 1 {
+		t.Fatalf("memberships = %v, want the member added before the stamp", members.added)
+	}
+	if _, err := svc.Lookup(token); err != nil {
+		t.Fatalf("the invitation must still be pending after a failed stamp: %v", err)
+	}
+
+	// The retry is idempotent: no second membership, and the row is spent.
+	acc, err := svc.AcceptTokenForEmail(token, "half@example.com", "user-1")
+	if err != nil {
+		t.Fatalf("retry: %v", err)
+	}
+	if !acc.AlreadyMember || acc.Role != orgs.RoleMember {
+		t.Errorf("acceptance = %+v, want the membership the first attempt wrote", acc)
+	}
+	if len(members.added) != 1 {
+		t.Errorf("memberships = %v, want exactly one", members.added)
+	}
+	if _, err := svc.Lookup(token); !errors.Is(err, ErrInvalidToken) {
+		t.Error("the retry must spend the invitation")
 	}
 }
 
@@ -282,10 +381,10 @@ func TestAcceptIsClaimedOnce(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Create: %v", err)
 	}
-	if _, err := svc.AcceptToken(token, "user-1"); err != nil {
+	if _, err := svc.AcceptTokenForEmail(token, "race@example.com", "user-1"); err != nil {
 		t.Fatalf("first accept: %v", err)
 	}
-	if _, err := svc.AcceptToken(token, "user-2"); !errors.Is(err, ErrInvalidToken) {
+	if _, err := svc.AcceptTokenForEmail(token, "race@example.com", "user-2"); !errors.Is(err, ErrInvalidToken) {
 		t.Errorf("second accept returned %v, want ErrInvalidToken", err)
 	}
 	if len(members.added) != 1 {
@@ -363,8 +462,10 @@ func TestAcceptTokenForEmailChecksTheAddress(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Create: %v", err)
 	}
-	if _, err := svc.AcceptTokenForEmail(token, "someone-else@example.com", "user-1"); !errors.Is(err, ErrInvalidToken) {
-		t.Errorf("mismatched address returned %v, want ErrInvalidToken", err)
+	// A mismatch is its own error: the link is live, it was simply sent
+	// somewhere else, and the caller answers differently (403, not 404).
+	if _, err := svc.AcceptTokenForEmail(token, "someone-else@example.com", "user-1"); !errors.Is(err, ErrEmailMismatch) {
+		t.Errorf("mismatched address returned %v, want ErrEmailMismatch", err)
 	}
 	if len(members.added) != 0 {
 		t.Fatalf("a mismatched address joined anyway: %v", members.added)

@@ -1,12 +1,21 @@
 package api
 
 // Workspace invitations (REQ-95 / HAZ-15). An admin invites an address; the
-// invitation holds the workspace and role until whoever CONTROLS that
-// address proves it — by opening the link (signed in, or as the token a
-// sign-up carries), by confirming the address's verification link, or by
-// signing in through an identity provider that asserts the address as
-// verified. Registering the invited address, by itself, proves nothing and
-// grants nothing: it only opens the door on a closed deployment.
+// invitation holds the workspace and role until the acting account PROVABLY
+// OWNS that address. There are exactly three ways to prove it, and nothing
+// else converts an invitation into a membership:
+//
+//   - a sign-up carries the link's token and registers the invited address
+//     (POST /auth/register with invite_token);
+//   - a signed-in account whose own address IS the invited one posts the
+//     token (POST /auth/invitations/accept);
+//   - an identity provider signs the account in and asserts the invited
+//     address as email_verified.
+//
+// Registering the invited address proves nothing on its own — anyone can
+// type an address into a form — and neither does confirming an emailed
+// verification link, because the change-of-address flow lets an account aim
+// that mail at an address it does not own.
 //
 // The two public routes live under /api/v1/auth/, which the middleware
 // leaves open: the preview must answer a browser that has no session yet
@@ -235,9 +244,14 @@ func (h *Handler) PreviewInvitation(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusNotFound, invitations.ErrInvalidToken.Error())
 		return
 	}
-	// A 256-bit token is not guessable; this only bounds how fast one
-	// address can make the database look.
-	if ok, retryAfter := h.authIPLimiter.allow(clientIP(r)); !ok {
+	// A 256-bit token is not guessable, so this only bounds how fast one
+	// address can make the database look. It draws on its OWN bucket rather
+	// than the sign-in one: opening an invite link is not a credential
+	// attempt, and a page that previews the link (a reload, a second tab,
+	// the link followed again after signing out) must never spend somebody's
+	// sign-in budget and lock them out of the very account they were invited
+	// to use.
+	if ok, retryAfter := h.invitePreviewLimiter.allow(clientIP(r)); !ok {
 		writeRateLimited(w, "Too many attempts from this address; try again later.", retryAfter)
 		return
 	}
@@ -257,6 +271,15 @@ func (h *Handler) PreviewInvitation(w http.ResponseWriter, r *http.Request) {
 // AcceptInvitation joins the signed-in account to the invitation's workspace
 // (open route, session cookie only). This is the path for someone who
 // already has an account and clicks an invite link.
+//
+// It converts only when the session's own address IS the invited one.
+// Holding the link is not enough by itself: a link forwarded, or found, or
+// simply guessed at by whoever is signed in on that browser would otherwise
+// put a stranger's account into the workspace under the invited person's
+// name. A mismatch is 403 invitation_email_mismatch, and the body does not
+// say which address was invited — the preview endpoint already tells the
+// link's holder that, and this answer goes to whoever is signed in, who is
+// not necessarily the same person.
 func (h *Handler) AcceptInvitation(w http.ResponseWriter, r *http.Request) {
 	if !requireJSONBody(w, r) {
 		return
@@ -277,39 +300,53 @@ func (h *Handler) AcceptInvitation(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusNotFound, invitations.ErrInvalidToken.Error())
 		return
 	}
-	inv, err := h.invitationService.AcceptToken(req.Token, user.ID)
+	acc, err := h.invitationService.AcceptTokenForEmail(req.Token, user.Email, user.ID)
 	if err != nil {
-		if errors.Is(err, invitations.ErrInvalidToken) {
+		switch {
+		case errors.Is(err, invitations.ErrEmailMismatch):
+			writeJSONErrorCode(w, http.StatusForbidden,
+				"this invitation was sent to a different address; sign in as that address to accept it",
+				ErrCodeInvitationEmailMismatch)
+		case errors.Is(err, invitations.ErrInvalidToken):
 			writeJSONError(w, http.StatusNotFound, err.Error())
-			return
+		default:
+			h.writeInvitationError(w, r, err)
 		}
-		h.writeInvitationError(w, r, err)
 		return
 	}
-	json.NewEncoder(w).Encode(map[string]any{"org_id": inv.OrgID, "org_name": inv.OrgName, "role": inv.Role})
+	// role is what the account holds now, which is the invited role only
+	// when it was not already a member: an invitation never rewrites a role.
+	json.NewEncoder(w).Encode(map[string]any{
+		"org_id":         acc.Invitation.OrgID,
+		"org_name":       acc.Invitation.OrgName,
+		"role":           acc.Role,
+		"already_member": acc.AlreadyMember,
+	})
 }
 
-// acceptInvitationsForVerifiedEmail joins an account to every workspace that
-// invited its address. Membership is a credential, so this runs ONLY where
-// control of the address has been proven: the account confirmed its
-// verification link, or an identity provider asserted the address as
-// verified. Registering with the address proves nothing and must never call
-// it — that path takes the invitation token instead, which proves the person
-// read the mail.
+// acceptInvitationsForProviderVerifiedEmail joins an account to every
+// workspace that invited its address. Membership is a credential, so the
+// name states the one precondition: an identity provider has just asserted
+// this address as verified for the account signing in (see the OIDC
+// callback, which refuses an unverified or absent claim before reaching
+// here). Nothing weaker qualifies — registering the address does not, and
+// neither does confirming an emailed verification link, since an account can
+// aim that mail at an address it does not own.
 //
-// Best-effort: a failed join must never fail the sign-in or the verification
-// the person actually asked for.
-func (h *Handler) acceptInvitationsForVerifiedEmail(userID, email string) {
+// A membership that could not be written is logged at ERROR and swallowed:
+// the sign-in the person actually asked for still succeeds, and the
+// invitation stays pending so its link can take it up later.
+func (h *Handler) acceptInvitationsForProviderVerifiedEmail(userID, email string) {
 	if h.invitationService == nil {
 		return
 	}
-	accepted, err := h.invitationService.AcceptAllForEmail(email, userID)
+	accepted, err := h.invitationService.AcceptAllForProviderVerifiedEmail(email, userID)
 	if err != nil {
-		slog.Warn("invitation: failed to accept pending invitations", "user_id", userID, "error", err)
-		return
+		slog.Error("invitation: a provider-verified address could not join every workspace that invited it",
+			"user_id", userID, "error", err)
 	}
 	if len(accepted) > 0 {
-		slog.Info("invitation: verified address joined invited workspaces", "user_id", userID, "count", len(accepted))
+		slog.Info("invitation: provider-verified address joined invited workspaces", "user_id", userID, "count", len(accepted))
 	}
 }
 
@@ -323,10 +360,10 @@ func (h *Handler) acceptInvitationToken(token string, user *users.User) {
 	if token == "" || h.invitationService == nil || user == nil {
 		return
 	}
-	inv, err := h.invitationService.AcceptTokenForEmail(token, user.Email, user.ID)
+	acc, err := h.invitationService.AcceptTokenForEmail(token, user.Email, user.ID)
 	if err != nil {
 		slog.Warn("invitation: registration token was not accepted", "user_id", user.ID, "error", err)
 		return
 	}
-	slog.Info("invitation: new account joined its invited workspace", "user_id", user.ID, "org_id", inv.OrgID)
+	slog.Info("invitation: new account joined its invited workspace", "user_id", user.ID, "org_id", acc.Invitation.OrgID)
 }

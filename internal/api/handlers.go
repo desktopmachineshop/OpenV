@@ -205,6 +205,10 @@ type Handler struct {
 	// verifyResendLimiter bounds verification mails per account (resend and
 	// change of address share it).
 	verifyResendLimiter *rateLimiter
+	// invitePreviewLimiter bounds invite-link previews per address. Separate
+	// from authIPLimiter on purpose: opening an invite link must never spend
+	// somebody's sign-in budget (see ratelimit.go).
+	invitePreviewLimiter *rateLimiter
 
 	// Sign-up email verification (see email_verification_handlers.go).
 	mailer            notify.Mailer
@@ -284,6 +288,7 @@ func NewHandler(deps HandlerDeps) *Handler {
 		registerIPLimiter:      newRateLimiterFromEnv(envRegisterIPBurst, envRegisterIPRefill, defaultRegisterIPBurst, defaultRegisterIPRefill),
 		ssoIPLimiter:           newRateLimiterFromEnv(envSSOIPBurst, envSSOIPRefill, defaultSSOIPBurst, defaultSSOIPRefill),
 		verifyResendLimiter:    newRateLimiterFromEnv(envVerifyResendBurst, envVerifyResendRefill, defaultVerifyResendBurst, defaultVerifyResendRefill),
+		invitePreviewLimiter:   newRateLimiterFromEnv(envInvitePreviewBurst, envInvitePreviewRefill, defaultInvitePreviewBurst, defaultInvitePreviewRefill),
 		mailer:                 deps.Mailer,
 		emailLinkBase:          deps.EmailLinkBase,
 		emailVerification:      deps.EmailVerification,

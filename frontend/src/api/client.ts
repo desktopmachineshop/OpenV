@@ -1119,11 +1119,16 @@ export const authAPI = {
   // Registration policy on its own, for a caller that needs nothing else.
   policy: () => client.get<{ registration: 'open' | 'closed' }>('/api/v1/auth/policy'),
   // Invite links: preview one (open — the holder has no session yet), or
-  // accept it as the signed-in account.
+  // accept it as the signed-in account. Accepting converts only when the
+  // session's own address IS the invited one; any other address is refused
+  // with 403 invitation_email_mismatch, and that body deliberately does not
+  // name the invited address. `role` is what the account holds afterwards,
+  // which is the role it already had when `already_member` is true — an
+  // invitation never rewrites a membership.
   invitation: (token: string) =>
     client.get<InvitationPreview>(`/api/v1/auth/invitations/${encodeURIComponent(token)}`),
   acceptInvitation: (token: string) =>
-    client.post<{ org_id: string; org_name: string; role: string }>(
+    client.post<{ org_id: string; org_name: string; role: string; already_member: boolean }>(
       '/api/v1/auth/invitations/accept',
       { token }
     ),

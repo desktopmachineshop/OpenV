@@ -27,12 +27,16 @@ resend the email, send it to a corrected address, or sign you out.
 
 Some servers **close registration**: there is then no *Create a new account*
 button, and the sign-in screen tells you to ask a workspace admin for an
-invitation. An invitation link opens the sign-up form with your address
-already filled in, and joins you to the workspace that invited you — use the
-link itself, whether you are creating an account or signing in to one you
-already have. Signing up for the invited address without following the link
-leaves the invitation waiting: you join that workspace when you confirm your
-verification email. Single sign-on is unaffected.
+invitation. The invitation **link** is the way in — it opens the sign-up form
+with your address already filled in, and joins you to the workspace that
+invited you. Use the link itself, whether you are creating an account or
+signing in to one you already have; typing the invited address into a sign-up
+form without the link joins nothing, and on a closed server does not let you
+sign up at all. If you are already signed in when you open the link, OpenV
+shows you the invitation and you press **Join** — and if you are signed in as
+a different address, it says which address to sign in as instead. Single
+sign-on is unaffected: an invited address joins its workspaces as it signs
+in, because the identity provider vouches for the address.
 
 ### Your password and your sessions
 

@@ -40,10 +40,15 @@ first:
   again; create a fresh invitation if you lose it.
 - Opening the link signed out starts sign-up with the address filled in, and
   the link carries through whether they create an account or sign in to one
-  they already have; opening it while signed in simply joins that account to
-  the workspace. The link is what grants the membership — somebody who signs
-  up for the invited address without it joins the workspace when they confirm
-  their verification email instead.
+  they already have. Opening it while already signed in shows the invitation
+  with a **Join** button, so nobody is put into the workspace without seeing
+  it — and if that browser is signed in as somebody else, it says which
+  address to sign in as instead. The link is what grants the membership, and
+  only to the address it was sent to: signing up for the invited address
+  without the link joins nothing.
+- An invitation never changes a role somebody already has. If you invite an
+  existing admin as a member, they stay an admin — use the members table to
+  change a role.
 - Re-inviting an address is how you resend: the previous link stops working,
   expired or not, and only the newest one lets them in.
 - **Pending invitations** are listed above the Add member form while any are

@@ -4,28 +4,45 @@ import { Login } from './Login';
 
 // CRA's Jest cannot resolve react-router v7's package exports, so the router
 // is mocked with the two pieces the view uses: Link renders a plain anchor
-// and the hooks return inert values.
-jest.mock('react-router-dom', () => ({
-  Link: ({ to, children, ...rest }: any) => require('react').createElement('a', { href: String(to), ...rest }, children),
-  useNavigate: () => jest.fn(),
-  useSearchParams: () => [new URLSearchParams((globalThis as any).__testSearch || ''), jest.fn()],
-}));
+// and the hooks return inert values. useNavigate hands back the SAME
+// function every render, as the real one does — a fresh identity would make
+// every effect that depends on it re-run on every render, which is not how
+// the view behaves in the app.
+jest.mock('react-router-dom', () => {
+  const navigate = jest.fn();
+  return {
+    Link: ({ to, children, ...rest }: any) =>
+      require('react').createElement('a', { href: String(to), ...rest }, children),
+    useNavigate: () => navigate,
+    useSearchParams: () => [new URLSearchParams((globalThis as any).__testSearch || ''), jest.fn()],
+  };
+});
 
 // The login module builds an axios client at import time, so the API is
-// mocked wholesale. config() and invitation() answer from mutable fixtures
-// so a test can put the view on a closed deployment or hand it an invite
-// link; me() never resolves, which is what "signed out" looks like here.
+// mocked wholesale. config(), invitation() and me() answer from mutable
+// fixtures so a test can put the view on a closed deployment, hand it an
+// invite link, or sign a particular account in. A null `me` fixture never
+// resolves, which is what "signed out" looks like here.
+type Calls = {
+  login: any[][];
+  register: any[][];
+  acceptInvitation: any[][];
+  logout: any[][];
+};
+
 const authFixtures: {
   config: any;
   invitation: any;
-  calls: { login: any[][]; register: any[][]; acceptInvitation: any[][] };
+  me: any;
+  calls: Calls;
 } = {
   config: null,
   invitation: null,
-  calls: { login: [], register: [], acceptInvitation: [] },
+  me: null,
+  calls: { login: [], register: [], acceptInvitation: [], logout: [] },
 };
 
-const record = (name: 'login' | 'register' | 'acceptInvitation', data: any) => (...args: any[]) => {
+const record = (name: keyof Calls, data: any) => (...args: any[]) => {
   authFixtures.calls[name].push(args);
   return Promise.resolve({ data });
 };
@@ -36,12 +53,14 @@ jest.mock('../api/client', () => ({
       authFixtures.config
         ? Promise.resolve({ data: authFixtures.config })
         : new Promise(() => {}),
-    me: () => new Promise(() => {}),
+    me: () =>
+      authFixtures.me ? Promise.resolve({ data: authFixtures.me }) : new Promise(() => {}),
     invitation: () =>
       authFixtures.invitation
         ? Promise.resolve({ data: authFixtures.invitation })
         : Promise.reject(new Error('invalid invitation')),
     acceptInvitation: (...args: any[]) => record('acceptInvitation', {})(...args),
+    logout: (...args: any[]) => record('logout', {})(...args),
     login: (...args: any[]) =>
       record('login', { id: 'u1', email: 'member@example.com', email_verified: true })(...args),
     register: (...args: any[]) =>
@@ -59,7 +78,8 @@ let root: Root;
 beforeEach(() => {
   authFixtures.config = null;
   authFixtures.invitation = null;
-  authFixtures.calls = { login: [], register: [], acceptInvitation: [] };
+  authFixtures.me = null;
+  authFixtures.calls = { login: [], register: [], acceptInvitation: [], logout: [] };
   container = document.createElement('div');
   document.body.appendChild(container);
   act(() => {
@@ -199,6 +219,95 @@ describe('Login', () => {
 
     expect(authFixtures.calls.login).toHaveLength(1);
     expect(authFixtures.calls.acceptInvitation).toEqual([['tok-456']]);
+  });
+
+  // Signing in as one address must not take up an invitation sent to
+  // another: the server refuses it (403), and the client does not ask.
+  it('does not post the token when the signed-in address is not the invited one', async () => {
+    authFixtures.config = { google_enabled: false, oidc_enabled: false, registration: 'closed' };
+    authFixtures.invitation = {
+      email: 'someone-else@example.com',
+      org_name: 'Desktop Machine Shop',
+      role: 'member',
+      expires_at: '2030-01-01T00:00:00Z',
+    };
+    await render('/login?invite=tok-789');
+    const toggle = Array.from(container.querySelectorAll('button')).find((b) =>
+      (b.textContent || '').includes('I already have an account')
+    ) as HTMLButtonElement;
+    await act(async () => {
+      toggle.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    // login() answers as member@example.com, not the invited address.
+    await submitForm('secret-password');
+
+    expect(authFixtures.calls.login).toHaveLength(1);
+    expect(authFixtures.calls.acceptInvitation).toHaveLength(0);
+  });
+
+  // A link opened in a browser somebody is already signed in on must not
+  // quietly put that account into the workspace: the invitation is shown and
+  // the person presses Join.
+  it('shows a signed-in account the invitation instead of accepting it', async () => {
+    authFixtures.config = { google_enabled: false, oidc_enabled: false, registration: 'closed' };
+    authFixtures.me = { id: 'u1', email: 'member@example.com', email_verified: true };
+    authFixtures.invitation = {
+      email: 'member@example.com',
+      org_name: 'Desktop Machine Shop',
+      role: 'member',
+      expires_at: '2030-01-01T00:00:00Z',
+    };
+    await render('/login?invite=tok-abc');
+
+    expect(authFixtures.calls.acceptInvitation).toHaveLength(0);
+    // No credentials form: this browser has a session.
+    expect(container.querySelector('input[type="password"]')).toBeNull();
+    const join = Array.from(container.querySelectorAll('button')).find((b) =>
+      (b.textContent || '').includes('Join Desktop Machine Shop')
+    ) as HTMLButtonElement;
+    expect(join).toBeDefined();
+
+    await act(async () => {
+      join.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    expect(authFixtures.calls.acceptInvitation).toEqual([['tok-abc']]);
+  });
+
+  // The session belongs to somebody else: name the address the invitation is
+  // for, offer to sign out, and call nothing.
+  it('tells a signed-in account when the invitation is for another address', async () => {
+    authFixtures.config = { google_enabled: false, oidc_enabled: false, registration: 'closed' };
+    authFixtures.me = { id: 'u1', email: 'colleague@example.com', email_verified: true };
+    authFixtures.invitation = {
+      email: 'invited@example.com',
+      org_name: 'Desktop Machine Shop',
+      role: 'admin',
+      expires_at: '2030-01-01T00:00:00Z',
+    };
+    await render('/login?invite=tok-def');
+
+    expect(container.textContent).toContain('This invitation is for');
+    expect(container.textContent).toContain('invited@example.com');
+    expect(container.textContent).toContain('Sign out and sign in with that address');
+    expect(authFixtures.calls.acceptInvitation).toHaveLength(0);
+    expect(
+      Array.from(container.querySelectorAll('button')).find((b) =>
+        (b.textContent || '').includes('Join ')
+      )
+    ).toBeUndefined();
+
+    // Signing out puts the sign-in form back, on the same link.
+    const signOut = Array.from(container.querySelectorAll('button')).find(
+      (b) => (b.textContent || '').trim() === 'Sign out'
+    ) as HTMLButtonElement;
+    await act(async () => {
+      signOut.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    expect(authFixtures.calls.logout).toHaveLength(1);
+    // The handler awaits the logout call before it clears the session, so
+    // the state it sets lands a microtask later than the click itself.
+    await act(async () => {});
+    expect(container.querySelector('input[type="password"]')).not.toBeNull();
   });
 
   it('says so when the invite link no longer works', async () => {
