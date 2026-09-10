@@ -235,9 +235,18 @@ func NewToken() (string, error) {
 	return hex.EncodeToString(buf), nil
 }
 
+// NormalizeEmail folds an address into the one form the platform stores and
+// compares: trimmed and lower-cased. It is the single definition every
+// caller uses — the user service, the API handlers, invitations — so
+// "Dave@Example.com" and "dave@example.com " are the same account, the same
+// rate-limit bucket and the same invitation everywhere.
+func NormalizeEmail(email string) string {
+	return strings.ToLower(strings.TrimSpace(email))
+}
+
 // Register creates a password account. The first user becomes admin.
 func (s *DefaultService) Register(email, password, name string) (*User, error) {
-	email = strings.ToLower(strings.TrimSpace(email))
+	email = NormalizeEmail(email)
 	if email == "" || !strings.Contains(email, "@") {
 		return nil, errors.New("a valid email is required")
 	}
@@ -295,7 +304,7 @@ func (s *DefaultService) IssueEmailVerification(userID, email string) (string, s
 	if user.EmailVerified {
 		return "", "", ErrAlreadyVerified
 	}
-	email = strings.ToLower(strings.TrimSpace(email))
+	email = NormalizeEmail(email)
 	if email == "" {
 		email = user.Email
 	}
@@ -344,7 +353,7 @@ func (s *DefaultService) ConfirmEmailVerification(token string) (*User, error) {
 
 // Login verifies credentials and creates a session, returning the raw token.
 func (s *DefaultService) Login(email, password string) (*User, string, error) {
-	email = strings.ToLower(strings.TrimSpace(email))
+	email = NormalizeEmail(email)
 	user, err := s.repo.FindUserByEmail(email)
 	if err != nil || user == nil || user.PasswordHash == "" {
 		return nil, "", ErrInvalidCredentials
@@ -372,7 +381,7 @@ func (s *DefaultService) LoginWithGoogle(email, name, avatarURL string) (*User, 
 // auto-linked (issue #242) — proving control of the same email at a second IdP
 // is not proof of the same person.
 func (s *DefaultService) LoginWithSSO(provider, email, name, avatarURL string) (*User, string, error) {
-	email = strings.ToLower(strings.TrimSpace(email))
+	email = NormalizeEmail(email)
 	if email == "" {
 		return nil, "", errors.New("sso identity has no email")
 	}
@@ -573,7 +582,7 @@ func (s *DefaultService) GetByID(id string) (*User, error) {
 
 // FindByEmail returns a user by email, or nil if not found.
 func (s *DefaultService) FindByEmail(email string) (*User, error) {
-	return s.repo.FindUserByEmail(strings.ToLower(strings.TrimSpace(email)))
+	return s.repo.FindUserByEmail(NormalizeEmail(email))
 }
 
 // ListUsers returns all users.

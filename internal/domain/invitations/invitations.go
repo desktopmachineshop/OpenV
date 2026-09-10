@@ -64,16 +64,18 @@ func (i *Invitation) Pending(now time.Time) bool {
 // Repository defines invitation persistence. Find methods return (nil, nil)
 // when no row matches.
 type Repository interface {
-	Save(inv *Invitation) error
+	// Replace inserts an invitation, first clearing ANY unaccepted row for
+	// the same (org, email) — expired or not — as one atomic write. The
+	// pending-uniqueness index covers every unaccepted row, so an expired
+	// leftover would otherwise make a re-invite fail, and two admins
+	// re-inviting at once would race.
+	Replace(inv *Invitation) error
 	// ListPending returns the workspace's unaccepted, unexpired invitations.
 	ListPending(orgID string, now time.Time) ([]*Invitation, error)
 	FindByID(id string) (*Invitation, error)
 	FindByTokenHash(hash string) (*Invitation, error)
-	// FindPendingForOrg returns the workspace's pending invitation for an
-	// email, if any (the uniqueness the admin UI relies on).
-	FindPendingForOrg(orgID, email string, now time.Time) (*Invitation, error)
 	// ListPendingForEmail returns every workspace's pending invitations for
-	// one address — what a new account accepts on sign-up.
+	// one address — what an address takes up once it is proven (verified).
 	ListPendingForEmail(email string, now time.Time) ([]*Invitation, error)
 	// MarkAccepted stamps accepted_at, and reports whether THIS caller won:
 	// false means the row was already accepted, so two concurrent sign-ins
@@ -85,18 +87,23 @@ type Repository interface {
 	DeleteExpired(before time.Time) error
 }
 
-// MemberAdder is the slice of orgs.Service an acceptance needs. Declaring it
-// here rather than taking the whole service keeps the dependency one method
-// wide and the tests free of an org service.
-type MemberAdder interface {
+// Workspaces is the slice of orgs.Service invitations need: the membership
+// an acceptance creates, and the workspace itself, which Create reads to
+// refuse an invitation into a personal space. Declaring it here rather than
+// taking the whole service keeps the dependency two methods wide and the
+// tests free of an org service.
+type Workspaces interface {
 	AddMember(orgID, userID, role string) error
+	Get(orgID string) (*orgs.Org, error)
 }
 
 // Service defines invitation domain logic.
 type Service interface {
 	// Create issues an invitation and returns it with the raw token (shown
-	// once). Re-inviting an address that already has a pending invitation
-	// replaces it, so the newest link is the only one that works.
+	// once). Re-inviting an address replaces whatever unaccepted invitation
+	// it already has, so the newest link is the only one that works. A
+	// personal workspace is refused with orgs.ErrPersonalOrgMembers — it
+	// cannot have members, so it cannot invite any.
 	Create(orgID, email, role string, invitedBy *string) (*Invitation, string, error)
 	// ListPending returns a workspace's live invitations.
 	ListPending(orgID string) ([]*Invitation, error)
@@ -110,10 +117,18 @@ type Service interface {
 	// AcceptToken accepts the invitation a raw token names, joining userID to
 	// its workspace at the invited role.
 	AcceptToken(token, userID string) (*Invitation, error)
-	// AcceptAllForEmail accepts every pending invitation for an address —
-	// what registration and a first SSO sign-in call. Best-effort per
-	// invitation: one workspace that refuses the membership does not strand
-	// the others, and the accepted ones are returned.
+	// AcceptTokenForEmail is AcceptToken with the address checked as well:
+	// the invitation must have been issued to email, or it is refused with
+	// ErrInvalidToken. Registration uses it, so a token that reached one
+	// address can never join a different one to the workspace.
+	AcceptTokenForEmail(token, email, userID string) (*Invitation, error)
+	// AcceptAllForEmail accepts every pending invitation for an address.
+	// Membership is a credential, so this is only ever called with proof
+	// that the account controls the address: the confirmed verification
+	// link, or an identity provider asserting the address as verified.
+	// Registration by itself is not such proof and must not call it.
+	// Best-effort per invitation: one workspace that refuses the membership
+	// does not strand the others, and the accepted ones are returned.
 	AcceptAllForEmail(email, userID string) ([]*Invitation, error)
 	// PurgeExpired drops expired rows (boot/reaper housekeeping).
 	PurgeExpired(now time.Time) error
@@ -122,24 +137,18 @@ type Service interface {
 // DefaultService implements Service.
 type DefaultService struct {
 	repo    Repository
-	members MemberAdder
+	members Workspaces
 	ttl     time.Duration
 }
 
 // NewDefaultService creates an invitation service.
-func NewDefaultService(repo Repository, members MemberAdder) *DefaultService {
+func NewDefaultService(repo Repository, members Workspaces) *DefaultService {
 	return &DefaultService{repo: repo, members: members, ttl: DefaultTTL}
-}
-
-// NormalizeEmail is the one place an invited address is folded, so a lookup
-// by "Dave@Example.com" finds the invitation stored for "dave@example.com".
-func NormalizeEmail(email string) string {
-	return strings.ToLower(strings.TrimSpace(email))
 }
 
 // Create issues an invitation; see Service.
 func (s *DefaultService) Create(orgID, email, role string, invitedBy *string) (*Invitation, string, error) {
-	email = NormalizeEmail(email)
+	email = users.NormalizeEmail(email)
 	if email == "" || !strings.Contains(email, "@") {
 		return nil, "", ErrInvalidEmail
 	}
@@ -149,14 +158,20 @@ func (s *DefaultService) Create(orgID, email, role string, invitedBy *string) (*
 	if role != orgs.RoleAdmin && role != orgs.RoleMember {
 		return nil, "", orgs.ErrInvalidRole
 	}
-	now := time.Now()
-	// Re-inviting is how an admin resends: the old link stops working, so
-	// only one live credential per address per workspace ever exists.
-	if existing, err := s.repo.FindPendingForOrg(orgID, email, now); err == nil && existing != nil {
-		if err := s.repo.Delete(existing.ID); err != nil {
-			return nil, "", err
-		}
+	// A personal workspace cannot have members, so it must not be able to
+	// hand out an invitation that promises one. Refused before any row is
+	// written, with the same error the membership path uses.
+	org, err := s.members.Get(orgID)
+	if err != nil {
+		return nil, "", err
 	}
+	if org == nil {
+		return nil, "", orgs.ErrNotFound
+	}
+	if org.OrgType == orgs.TypePersonal {
+		return nil, "", orgs.ErrPersonalOrgMembers
+	}
+	now := time.Now()
 	token, err := users.NewToken()
 	if err != nil {
 		return nil, "", err
@@ -171,8 +186,17 @@ func (s *DefaultService) Create(orgID, email, role string, invitedBy *string) (*
 		ExpiresAt: now.Add(s.ttl),
 		CreatedAt: now,
 	}
-	if err := s.repo.Save(inv); err != nil {
+	// Re-inviting is how an admin resends: the previous link — pending or
+	// long expired — is cleared in the same write, so only one live
+	// credential per address per workspace ever exists and a re-invite
+	// cannot trip the pending-uniqueness index.
+	if err := s.repo.Replace(inv); err != nil {
 		return nil, "", err
+	}
+	// Read the row back for the display names (workspace, inviter): they are
+	// joined in by the repository, and the invitation email names both.
+	if stored, err := s.repo.FindByID(inv.ID); err == nil && stored != nil {
+		return stored, token, nil
 	}
 	return inv, token, nil
 }
@@ -214,7 +238,7 @@ func (s *DefaultService) Lookup(token string) (*Invitation, error) {
 
 // PendingForEmail returns every pending invitation for an address.
 func (s *DefaultService) PendingForEmail(email string) ([]*Invitation, error) {
-	email = NormalizeEmail(email)
+	email = users.NormalizeEmail(email)
 	if email == "" {
 		return nil, nil
 	}
@@ -226,6 +250,22 @@ func (s *DefaultService) AcceptToken(token, userID string) (*Invitation, error) 
 	inv, err := s.Lookup(token)
 	if err != nil {
 		return nil, err
+	}
+	if err := s.accept(inv, userID, time.Now()); err != nil {
+		return nil, err
+	}
+	return inv, nil
+}
+
+// AcceptTokenForEmail accepts a raw token only for the address it was sent
+// to; see the Service interface.
+func (s *DefaultService) AcceptTokenForEmail(token, email, userID string) (*Invitation, error) {
+	inv, err := s.Lookup(token)
+	if err != nil {
+		return nil, err
+	}
+	if inv.Email != users.NormalizeEmail(email) {
+		return nil, ErrInvalidToken
 	}
 	if err := s.accept(inv, userID, time.Now()); err != nil {
 		return nil, err

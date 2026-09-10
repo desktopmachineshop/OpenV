@@ -1092,8 +1092,18 @@ export interface CrewImportResult {
 
 export const authAPI = {
   config: () => client.get<AuthConfig>('/api/v1/auth/config'),
-  register: (email: string, password: string, name: string) =>
-    client.post<User>('/api/v1/auth/register', { email, password, name }),
+  // inviteToken is the token from an invite link the form was opened with.
+  // It is what grants the invited membership: the server treats holding the
+  // link as proof the invited mailbox was read, and registering the address
+  // without it joins nothing (the membership then waits for the address's
+  // verification link).
+  register: (email: string, password: string, name: string, inviteToken?: string) =>
+    client.post<User>('/api/v1/auth/register', {
+      email,
+      password,
+      name,
+      ...(inviteToken ? { invite_token: inviteToken } : {}),
+    }),
   login: (email: string, password: string) =>
     client.post<User>('/api/v1/auth/login', { email, password }),
   logout: () => client.post('/api/v1/auth/logout'),
@@ -1282,15 +1292,22 @@ export const orgsAPI = {
   // people who have not arrived yet.
   invitations: {
     list: (orgId: string) => client.get<OrgInvitation[]>(`/api/v1/orgs/${orgId}/invitations`),
+    // Same branch as members.add: 200 with the membership when the address
+    // already has an account, 409 when it is already a member, 201 with the
+    // invitation and its one-time link when it has no account.
     create: (orgId: string, email: string, role: string) =>
-      client.post<OrgInvitationCreated>(`/api/v1/orgs/${orgId}/invitations`, { email, role }),
+      client.post<OrgInvitationCreated | OrgMember>(`/api/v1/orgs/${orgId}/invitations`, {
+        email,
+        role,
+      }),
     revoke: (orgId: string, invitationId: string) =>
       client.delete(`/api/v1/orgs/${orgId}/invitations/${invitationId}`),
   },
   members: {
     list: (orgId: string) => client.get<OrgMember[]>(`/api/v1/orgs/${orgId}/members`),
-    // 201 when the address already has an account and joined; 202 with an
-    // OrgInvitationCreated body when it did not and was invited instead.
+    // 201 when the address already has an account and joined; 409 when it is
+    // already a member (change a role with setRole); 202 with an
+    // OrgInvitationCreated body when it had no account and was invited.
     add: (orgId: string, email: string, role: string) =>
       client.post<OrgInvitationCreated | ''>(`/api/v1/orgs/${orgId}/members`, { email, role }),
     setRole: (orgId: string, userId: string, role: string) =>

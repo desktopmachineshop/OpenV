@@ -18,7 +18,17 @@ jest.mock('react-router-dom', () => ({
 const authFixtures: {
   config: any;
   invitation: any;
-} = { config: null, invitation: null };
+  calls: { login: any[][]; register: any[][]; acceptInvitation: any[][] };
+} = {
+  config: null,
+  invitation: null,
+  calls: { login: [], register: [], acceptInvitation: [] },
+};
+
+const record = (name: 'login' | 'register' | 'acceptInvitation', data: any) => (...args: any[]) => {
+  authFixtures.calls[name].push(args);
+  return Promise.resolve({ data });
+};
 
 jest.mock('../api/client', () => ({
   authAPI: {
@@ -31,9 +41,11 @@ jest.mock('../api/client', () => ({
       authFixtures.invitation
         ? Promise.resolve({ data: authFixtures.invitation })
         : Promise.reject(new Error('invalid invitation')),
-    acceptInvitation: () => Promise.resolve({ data: {} }),
-    login: () => Promise.reject(new Error('not in this test')),
-    register: () => Promise.reject(new Error('not in this test')),
+    acceptInvitation: (...args: any[]) => record('acceptInvitation', {})(...args),
+    login: (...args: any[]) =>
+      record('login', { id: 'u1', email: 'member@example.com', email_verified: true })(...args),
+    register: (...args: any[]) =>
+      record('register', { id: 'u2', email: 'invited@example.com', email_verified: true })(...args),
     oidcLoginUrl: () => '/oidc',
     googleLoginUrl: () => '/google',
   },
@@ -47,6 +59,7 @@ let root: Root;
 beforeEach(() => {
   authFixtures.config = null;
   authFixtures.invitation = null;
+  authFixtures.calls = { login: [], register: [], acceptInvitation: [] };
   container = document.createElement('div');
   document.body.appendChild(container);
   act(() => {
@@ -65,6 +78,21 @@ const render = async (path: string) => {
   (globalThis as any).__testSearch = path.includes('?') ? path.slice(path.indexOf('?')) : '';
   await act(async () => {
     root.render(<Login />);
+  });
+};
+
+// submitForm fills the password (the address comes prefilled from the invite
+// preview) and submits, the way a person would.
+const submitForm = async (password: string) => {
+  const field = container.querySelector('input[type="password"]') as HTMLInputElement;
+  const setValue = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')!.set!;
+  await act(async () => {
+    setValue.call(field, password);
+    field.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  const form = container.querySelector('form') as HTMLFormElement;
+  await act(async () => {
+    form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
   });
 };
 
@@ -128,6 +156,49 @@ describe('Login', () => {
     expect(email.value).toBe('invited@example.com');
     expect(container.textContent).toContain('Desktop Machine Shop');
     expect(container.textContent).not.toContain('Registration is closed');
+  });
+
+  // The token, not the address, is what grants the invited membership: it
+  // has to reach the server with the sign-up.
+  it('sends the invite token with a sign-up', async () => {
+    authFixtures.config = { google_enabled: false, oidc_enabled: false, registration: 'closed' };
+    authFixtures.invitation = {
+      email: 'invited@example.com',
+      org_name: 'Desktop Machine Shop',
+      role: 'member',
+      expires_at: '2030-01-01T00:00:00Z',
+    };
+    await render('/login?invite=tok-123');
+    await submitForm('secret-password');
+
+    expect(authFixtures.calls.register).toHaveLength(1);
+    expect(authFixtures.calls.register[0][3]).toBe('tok-123');
+    // Sign-up carries the token itself; there is no second call.
+    expect(authFixtures.calls.acceptInvitation).toHaveLength(0);
+  });
+
+  // Somebody who already has an account follows the same link, switches to
+  // sign-in, and must still end up in the workspace.
+  it('accepts the invite token after signing in with an existing account', async () => {
+    authFixtures.config = { google_enabled: false, oidc_enabled: false, registration: 'closed' };
+    authFixtures.invitation = {
+      email: 'member@example.com',
+      org_name: 'Desktop Machine Shop',
+      role: 'member',
+      expires_at: '2030-01-01T00:00:00Z',
+    };
+    await render('/login?invite=tok-456');
+    // "I already have an account — sign in".
+    const toggle = Array.from(container.querySelectorAll('button')).find((b) =>
+      (b.textContent || '').includes('I already have an account')
+    ) as HTMLButtonElement;
+    await act(async () => {
+      toggle.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    await submitForm('secret-password');
+
+    expect(authFixtures.calls.login).toHaveLength(1);
+    expect(authFixtures.calls.acceptInvitation).toEqual([['tok-456']]);
   });
 
   it('says so when the invite link no longer works', async () => {

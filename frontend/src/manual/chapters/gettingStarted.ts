@@ -28,8 +28,11 @@ resend the email, send it to a corrected address, or sign you out.
 Some servers **close registration**: there is then no *Create a new account*
 button, and the sign-in screen tells you to ask a workspace admin for an
 invitation. An invitation link opens the sign-up form with your address
-already filled in, and joins you to the workspace that invited you as soon as
-your account exists. Single sign-on is unaffected.
+already filled in, and joins you to the workspace that invited you — use the
+link itself, whether you are creating an account or signing in to one you
+already have. Signing up for the invited address without following the link
+leaves the invitation waiting: you join that workspace when you confirm your
+verification email. Single sign-on is unaffected.
 
 ### Your password and your sessions
 

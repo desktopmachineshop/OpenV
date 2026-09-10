@@ -115,7 +115,7 @@ their own project, workers pass within their org) · `org member`/`org admin`
 
 | Method | Path | Purpose | Auth |
 |---|---|---|---|
-| POST | `/api/v1/auth/register` | Create password account (first user becomes admin) and log in; on a server with SMTP the account starts unverified and a verification link is emailed. `403 {"code":"registration_closed"}` when `OPENV_REGISTRATION=closed` and the address has no pending invitation | open |
+| POST | `/api/v1/auth/register` | Create password account `{email, password, name, invite_token?}` (first user becomes admin) and log in; on a server with SMTP the account starts unverified and a verification link is emailed. `invite_token` is the token from an invite link (`/login?invite=<token>`): when it is valid **for the address being registered**, that one invitation is accepted and the membership it names is granted. Without it registration grants no membership — the invitation stays pending until the address is verified. `403 {"code":"registration_closed"}` when `OPENV_REGISTRATION=closed` and the address has neither a pending invitation nor a valid `invite_token` | open |
 | POST | `/api/v1/auth/login` | Password login, sets session cookie | open |
 | POST | `/api/v1/auth/logout` | End session, clear cookie | open |
 | GET | `/api/v1/auth/me` | Current user profile | user |
@@ -124,7 +124,7 @@ their own project, workers pass within their org) · `org member`/`org admin`
 | GET | `/api/v1/auth/invitations/{token}` | Preview an invite link: `{email, org_name, role, expires_at}`; one `404` for every unusable link | open |
 | POST | `/api/v1/auth/invitations/accept` | Join the signed-in account to the invitation's workspace `{token}` (`404` when the link is unusable) | user (cookie only, JSON body) |
 | PUT | `/api/v1/me/password` | Change password `{current_password, new_password}`; `204` on success and every OTHER session of the account is invalidated. `400 weak_password`, `403 password_incorrect`, `409 no_password` (SSO-only account) | user |
-| POST | `/api/v1/auth/verify-email` | Confirm an emailed link `{token}`; returns the user (`400` invalid/expired, `409` address taken) | open |
+| POST | `/api/v1/auth/verify-email` | Confirm an emailed link `{token}`; returns the user (`400` invalid/expired, `409` address taken). Confirming proves control of the address, so every pending workspace invitation for it is accepted here | open |
 | POST | `/api/v1/auth/verify-email/resend` | Email a fresh link to the session's account (`202 {sent_to}`; `409` already verified; `502` mail failed) | user (cookie only, JSON body) |
 | POST | `/api/v1/auth/verify-email/change` | Email a fresh link to a corrected address `{email}`; the account's address changes when that link is confirmed | user (cookie only, JSON body) |
 | GET | `/api/v1/auth/google` | Start Google OIDC flow | open |
@@ -147,9 +147,9 @@ their own project, workers pass within their org) · `org member`/`org admin`
 | POST | `/api/v1/orgs/{id}/restore` | Restore a soft-deleted workspace within the grace period | org admin (of the deleted org) |
 | POST | `/api/v1/orgs/{id}/activate` | Set the session's active workspace | org member |
 | GET | `/api/v1/orgs/{id}/members` | List workspace members | org member |
-| POST | `/api/v1/orgs/{id}/members` | Add member by email. `201` when the address has an account and joined; `202 {invitation, link, emailed}` when it does not and was invited instead | org admin |
+| POST | `/api/v1/orgs/{id}/members` | Add member by email. `201` when the address has an account and joined; `409` when it is already a member (change a role with `PUT`); `202 {invitation, link, emailed}` when it has no account and was invited instead. `400` for a personal workspace | org admin |
 | GET | `/api/v1/orgs/{id}/invitations` | Pending invitations to the workspace | org admin |
-| POST | `/api/v1/orgs/{id}/invitations` | Invite an address `{email, role}` → `201 {invitation, link, emailed}`; `link` is the one-time `${FRONTEND_URL}/login?invite=<token>` and is never retrievable again | org admin |
+| POST | `/api/v1/orgs/{id}/invitations` | Bring an address `{email, role}` into the workspace, taking the same branch as `POST /members`: `200` with the membership when the address already has an account, `409` when it is already a member, `201 {invitation, link, emailed}` when it has no account. `link` is the one-time `${FRONTEND_URL}/login?invite=<token>` and is never retrievable again. `400` for a personal workspace. Re-inviting an address replaces whatever unaccepted invitation it holds | org admin |
 | DELETE | `/api/v1/orgs/{id}/invitations/{invId}` | Revoke a pending invitation (its link stops working) | org admin |
 | PUT | `/api/v1/orgs/{id}/members/{userId}` | Change org role | org admin |
 | DELETE | `/api/v1/orgs/{id}/members/{userId}` | Remove member (self-removal = leave, allowed for members) | org admin / self |

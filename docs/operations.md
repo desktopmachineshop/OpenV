@@ -154,14 +154,33 @@ gate: only browser sessions do.
 
 With `OPENV_REGISTRATION=closed`, `POST /api/v1/auth/register` answers
 `403 {"error":"registration is closed","code":"registration_closed"}` unless
-the address has a pending, unexpired workspace invitation — in which case the
-sign-up proceeds and the invitation is accepted on the way in. The login page
-reads the policy (`GET /api/v1/auth/policy`) and hides its *Create a new
-account* button, showing *Registration is closed; ask a workspace admin for an
-invitation* instead. Single sign-on is never affected: the identity provider is
-doing the admitting, and a first SSO sign-in also takes up any invitation for
-that address. Registration stays throttled per client address either way
-(`OPENV_REGISTER_IP_BURST`, `_REFILL_PER_HOUR`).
+the address has a pending, unexpired workspace invitation (or the request
+carries a valid `invite_token` for it) — in which case the sign-up proceeds.
+The login page reads the policy (`GET /api/v1/auth/policy`) and hides its
+*Create a new account* button, showing *Registration is closed; ask a
+workspace admin for an invitation* instead. Single sign-on is never affected:
+the identity provider is doing the admitting. Registration stays throttled per
+client address either way (`OPENV_REGISTER_IP_BURST`, `_REFILL_PER_HOUR`).
+
+**An invitation lets the address register; membership is granted when the
+link is used or the address is verified.** The two are deliberately separate.
+Anyone can type an address into a sign-up form, so registering an invited
+address is not evidence that the person controls it, and a membership is a
+credential into somebody's workspace. Control is proven in exactly three
+ways, and each of them grants the membership:
+
+- the sign-up carries the link's token (`invite_token`), or the signed-in
+  account posts it to `POST /api/v1/auth/invitations/accept` — holding the
+  link means the invited mailbox was read;
+- the account confirms its own email-verification link, which accepts every
+  invitation waiting for that address (this is what carries someone who
+  signed up without the token, or who was invited after they signed up);
+- an identity provider signs the person in and asserts `email_verified` for
+  the address; an unverified or absent claim is refused outright and grants
+  nothing.
+
+A deployment with no SMTP therefore has one path only: pass the invitation
+link to the person, since nothing else can prove the address.
 
 Closing registration on an existing deployment changes nothing for accounts
 that already exist — nobody is signed out, and every workspace keeps its
@@ -181,8 +200,14 @@ deployment usable:
 - With SMTP configured the link is emailed. **Without SMTP the invitation
   still exists**: the API returns the link once when it is created and the
   Members tab shows it for the admin to pass on.
-- Following the link signed out opens sign-up with the address prefilled;
-  following it signed in joins that account to the workspace.
+- Following the link signed out opens sign-up with the address prefilled and
+  carries the token through whichever way the person continues — creating the
+  account, or signing in to one they already had. Following it signed in
+  joins that account to the workspace straight away. Signing up for the
+  invited address *without* the link joins nothing until that address is
+  verified.
+- Re-inviting an address replaces its previous invitation, whether that one
+  was still live or had expired; only the newest link ever works.
 - Admins can see and revoke pending invitations on the same tab. Revoking
   stops the link working immediately. Expired invitations are swept by the
   same background reaper that sweeps sessions.

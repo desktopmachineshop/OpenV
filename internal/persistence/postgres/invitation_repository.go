@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/openv/requirements-platform/internal/domain/invitations"
+	"github.com/openv/requirements-platform/internal/domain/users"
 )
 
 // InvitationRepository implements invitations.Repository.
@@ -16,6 +17,12 @@ type InvitationRepository struct {
 func NewInvitationRepository(db *sql.DB) *InvitationRepository {
 	return &InvitationRepository{db: db}
 }
+
+// invitationEmail folds an address the way every row is written, so a lookup
+// is a plain equality against the email column and idx_org_invitations_email
+// is actually used. LOWER(i.email) = LOWER($1) would read the same and scan
+// the whole table.
+func invitationEmail(email string) string { return users.NormalizeEmail(email) }
 
 const invitationColumns = `i.id, i.org_id, i.email, i.role, i.token_hash, i.invited_by, i.expires_at, i.accepted_at, i.created_at`
 
@@ -61,12 +68,29 @@ func scanInvitations(rows *sql.Rows) ([]*invitations.Invitation, error) {
 	return result, rows.Err()
 }
 
-// Save inserts an invitation.
-func (r *InvitationRepository) Save(inv *invitations.Invitation) error {
+// Replace inserts an invitation, overwriting any unaccepted invitation the
+// workspace already holds for the address.
+//
+// It is one statement rather than a delete followed by an insert because
+// idx_org_invitations_pending covers EVERY unaccepted row, expired ones
+// included: a delete-then-insert would leave a window in which a concurrent
+// re-invite has already inserted, and the second insert would fail the
+// index. Upserting on that same index instead makes the second writer wait
+// and then overwrite, so re-inviting an address is always the newest link
+// and never an error. Accepted rows are history and are left alone.
+func (r *InvitationRepository) Replace(inv *invitations.Invitation) error {
 	_, err := r.db.Exec(`
 		INSERT INTO org_invitations (id, org_id, email, role, token_hash, invited_by, expires_at, accepted_at, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-	`, inv.ID, inv.OrgID, inv.Email, inv.Role, inv.TokenHash, inv.InvitedBy, inv.ExpiresAt, inv.AcceptedAt, inv.CreatedAt)
+		ON CONFLICT (org_id, email) WHERE accepted_at IS NULL
+		DO UPDATE SET
+			id = EXCLUDED.id,
+			role = EXCLUDED.role,
+			token_hash = EXCLUDED.token_hash,
+			invited_by = EXCLUDED.invited_by,
+			expires_at = EXCLUDED.expires_at,
+			created_at = EXCLUDED.created_at
+	`, inv.ID, inv.OrgID, invitationEmail(inv.Email), inv.Role, inv.TokenHash, inv.InvitedBy, inv.ExpiresAt, inv.AcceptedAt, inv.CreatedAt)
 	return err
 }
 
@@ -100,26 +124,13 @@ func (r *InvitationRepository) FindByTokenHash(hash string) (*invitations.Invita
 	return inv, err
 }
 
-// FindPendingForOrg returns the workspace's pending invitation for an email.
-// The address is matched case-insensitively even though the domain folds it
-// on the way in, so a row written by hand still resolves.
-func (r *InvitationRepository) FindPendingForOrg(orgID, email string, now time.Time) (*invitations.Invitation, error) {
-	inv, err := scanInvitation(r.db.QueryRow(invitationSelect+`
-		WHERE i.org_id = $1 AND LOWER(i.email) = LOWER($2) AND i.accepted_at IS NULL AND i.expires_at > $3
-	`, orgID, email, now))
-	if err == sql.ErrNoRows {
-		return nil, nil
-	}
-	return inv, err
-}
-
 // ListPendingForEmail returns every workspace's pending invitations for one
 // address, oldest first (the order they are accepted in).
 func (r *InvitationRepository) ListPendingForEmail(email string, now time.Time) ([]*invitations.Invitation, error) {
 	rows, err := r.db.Query(invitationSelect+`
-		WHERE LOWER(i.email) = LOWER($1) AND i.accepted_at IS NULL AND i.expires_at > $2
+		WHERE i.email = $1 AND i.accepted_at IS NULL AND i.expires_at > $2
 		ORDER BY i.created_at
-	`, email, now)
+	`, invitationEmail(email), now)
 	if err != nil {
 		return nil, err
 	}

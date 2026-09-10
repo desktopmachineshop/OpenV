@@ -6,7 +6,6 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -157,16 +156,27 @@ func (h *Handler) registrationPolicy() string {
 }
 
 // registrationAllowed reports whether this address may create an account.
-// Open deployments allow everyone; a closed one allows only an address a
-// workspace admin has a live invitation out to. A failure to look the
-// invitation up is treated as "no invitation": on a closed deployment the
-// safe answer to an unanswerable question is no.
-func (h *Handler) registrationAllowed(email string) bool {
+// Open deployments allow everyone; a closed one allows an address a
+// workspace admin has a live invitation out to, or one arriving with a valid
+// invitation link. This is a door, not a grant: passing it creates the
+// account and nothing else. The membership the invitation names is granted
+// only once control of the address is proven — see acceptInvitationToken and
+// acceptInvitationsForVerifiedEmail.
+//
+// A failure to look the invitation up is treated as "no invitation": on a
+// closed deployment the safe answer to an unanswerable question is no.
+func (h *Handler) registrationAllowed(email, inviteToken string) bool {
 	if h.registrationPolicy() == RegistrationOpen {
 		return true
 	}
 	if h.invitationService == nil {
 		return false
+	}
+	if inviteToken != "" {
+		if inv, err := h.invitationService.Lookup(inviteToken); err == nil && inv != nil &&
+			inv.Email == users.NormalizeEmail(email) {
+			return true
+		}
 	}
 	pending, err := h.invitationService.PendingForEmail(email)
 	if err != nil {
@@ -182,6 +192,10 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		Email    string `json:"email"`
 		Password string `json:"password"`
 		Name     string `json:"name"`
+		// InviteToken is the token from an invite link the sign-up form was
+		// opened with (optional). It is what turns the invitation into a
+		// membership here: holding it proves the invited mailbox was read.
+		InviteToken string `json:"invite_token"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
@@ -193,7 +207,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	}
 	// On a closed deployment an invitation is the door: an invited address
 	// registers normally, everyone else is turned away (REQ-95).
-	if !h.registrationAllowed(req.Email) {
+	if !h.registrationAllowed(req.Email, req.InviteToken) {
 		writeJSONErrorCode(w, http.StatusForbidden, "registration is closed", ErrCodeRegistrationClosed)
 		return
 	}
@@ -203,10 +217,11 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.provisionPersonalWorkspace(user.ID, user.Name)
-	// Any workspace that invited this address gets its member now, so the
-	// person lands in the workspace they were invited to rather than an
-	// empty personal space.
-	h.acceptPendingInvitations(user.ID, user.Email)
+	// Only the invitation whose link this sign-up carried is taken up: a
+	// membership follows proof that the invited mailbox was read, never the
+	// mere claim of an address. Someone who registered without the link
+	// joins when they confirm their verification mail instead.
+	h.acceptInvitationToken(req.InviteToken, user)
 	_, token, err := h.userService.Login(req.Email, req.Password)
 	if err != nil {
 		respondInternal(w, r, "failed to sign in after registration", err)
@@ -258,7 +273,7 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 // counted under, so "Dave@Example.com" and "dave@example.com" share one
 // bucket.
 func accountKey(email string) string {
-	return strings.ToLower(strings.TrimSpace(email))
+	return users.NormalizeEmail(email)
 }
 
 // throttleSSO charges one SSO start or callback against the client address
@@ -399,9 +414,10 @@ func (h *Handler) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 	}
 	h.provisionPersonalWorkspace(googleUser.ID, googleUser.Name)
 	// Single sign-on is never subject to the registration policy — the IdP is
-	// doing the admitting — but an invited address still joins its workspaces
-	// on the way in.
-	h.acceptPendingInvitations(googleUser.ID, googleUser.Email)
+	// doing the admitting — and an invited address joins its workspaces on
+	// the way in. Google's userinfo is refused above unless email_verified is
+	// true, which is the proof of control this join rests on.
+	h.acceptInvitationsForVerifiedEmail(googleUser.ID, googleUser.Email)
 	h.setSessionCookie(w, token)
 
 	dest := h.googleOAuth.FrontendURL

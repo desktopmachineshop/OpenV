@@ -15,6 +15,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/openv/requirements-platform/internal/domain/orgs"
 	"github.com/openv/requirements-platform/internal/domain/users"
 )
 
@@ -297,7 +298,9 @@ func TestOIDCCallbackCreatesUserAndSession(t *testing.T) {
 
 // TestOIDCCallbackRequiresVerifiedEmail: a positively-verified email is
 // required (issue #242). An absent or false email_verified claim is rejected
-// with 403 and provisions no account, closing the address-takeover vector.
+// with 403, provisions no account and — the other half of the same rule —
+// takes up no workspace invitation waiting for that address: the provider's
+// assertion is the only proof of control this path has.
 func TestOIDCCallbackRequiresVerifiedEmail(t *testing.T) {
 	cases := []struct {
 		name         string
@@ -325,6 +328,9 @@ func TestOIDCCallbackRequiresVerifiedEmail(t *testing.T) {
 			stub := newOIDCStub(t, "client-abc")
 			cfg := stub.config("client-abc", "https://app/api/v1/auth/oidc/callback")
 			h, repo := newOIDCTestHandler(cfg)
+			invites := newFakeInviteService()
+			invites.invite("org-1", "verify@example.com", orgs.RoleAdmin)
+			h.invitationService = invites
 
 			const nonce = "the-nonce"
 			claims := map[string]any{
@@ -353,12 +359,20 @@ func TestOIDCCallbackRequiresVerifiedEmail(t *testing.T) {
 				if !strings.Contains(rec.Body.String(), "verif") {
 					t.Errorf("error should mention verification: %s", rec.Body.String())
 				}
+				if len(invites.accepted) != 0 {
+					t.Errorf("an unverified claim joined an invited workspace: %v", invites.accepted)
+				}
 			} else {
 				if rec.Code != http.StatusFound {
 					t.Fatalf("expected 302 for verified email, got %d (%s)", rec.Code, rec.Body.String())
 				}
 				if u, _ := repo.FindUserByEmail("verify@example.com"); u == nil {
 					t.Error("verified email should provision an account")
+				}
+				// A verified address IS proof of control, so its invitation
+				// is taken up on the way in.
+				if len(invites.accepted) != 1 {
+					t.Errorf("accepted = %v, want the invitation taken up", invites.accepted)
 				}
 			}
 		})

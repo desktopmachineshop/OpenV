@@ -65,6 +65,11 @@ func (h *Handler) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 		respondInternal(w, r, "failed to verify email", err)
 		return
 	}
+	// Confirming the link is the proof of control an invitation waits for:
+	// every workspace that invited this address gets its member now. This is
+	// the path for anyone who signed up without an invite token — including
+	// someone the admin invited before they registered at all.
+	h.acceptInvitationsForVerifiedEmail(user.ID, user.Email)
 	json.NewEncoder(w).Encode(user)
 }
 

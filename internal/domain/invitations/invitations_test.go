@@ -16,10 +16,21 @@ type memRepo struct {
 
 func newMemRepo() *memRepo { return &memRepo{rows: map[string]*Invitation{}} }
 
-func (m *memRepo) Save(inv *Invitation) error {
+func (m *memRepo) save(inv *Invitation) error {
 	copied := *inv
 	m.rows[inv.ID] = &copied
 	return nil
+}
+
+// Replace mirrors the postgres upsert: any unaccepted row for the same
+// (org, email) — expired or not — makes way for the new one.
+func (m *memRepo) Replace(inv *Invitation) error {
+	for id, row := range m.rows {
+		if row.OrgID == inv.OrgID && row.Email == inv.Email && row.AcceptedAt == nil {
+			delete(m.rows, id)
+		}
+	}
+	return m.save(inv)
 }
 
 func (m *memRepo) ListPending(orgID string, now time.Time) ([]*Invitation, error) {
@@ -37,15 +48,6 @@ func (m *memRepo) FindByID(id string) (*Invitation, error) { return m.rows[id], 
 func (m *memRepo) FindByTokenHash(hash string) (*Invitation, error) {
 	for _, inv := range m.rows {
 		if inv.TokenHash == hash {
-			return inv, nil
-		}
-	}
-	return nil, nil
-}
-
-func (m *memRepo) FindPendingForOrg(orgID, email string, now time.Time) (*Invitation, error) {
-	for _, inv := range m.rows {
-		if inv.OrgID == orgID && strings.EqualFold(inv.Email, email) && inv.Pending(now) {
 			return inv, nil
 		}
 	}
@@ -83,10 +85,14 @@ func (m *memRepo) DeleteExpired(before time.Time) error {
 }
 
 // memMembers records the memberships an acceptance creates, and can refuse
-// one workspace to prove a refusal does not strand the others.
+// one workspace to prove a refusal does not strand the others. It also
+// answers Get, which Create reads to refuse a personal workspace: every
+// workspace is a company one unless personal names it.
 type memMembers struct {
-	added  []string // "orgID:userID:role"
-	refuse map[string]error
+	added    []string // "orgID:userID:role"
+	refuse   map[string]error
+	personal map[string]bool
+	missing  map[string]bool
 }
 
 func (m *memMembers) AddMember(orgID, userID, role string) error {
@@ -97,9 +103,20 @@ func (m *memMembers) AddMember(orgID, userID, role string) error {
 	return nil
 }
 
+func (m *memMembers) Get(orgID string) (*orgs.Org, error) {
+	if m.missing[orgID] {
+		return nil, orgs.ErrNotFound
+	}
+	orgType := orgs.TypeCompany
+	if m.personal[orgID] {
+		orgType = orgs.TypePersonal
+	}
+	return &orgs.Org{ID: orgID, Name: "Test Workspace", OrgType: orgType}, nil
+}
+
 func newTestService() (*DefaultService, *memRepo, *memMembers) {
 	repo := newMemRepo()
-	members := &memMembers{refuse: map[string]error{}}
+	members := &memMembers{refuse: map[string]error{}, personal: map[string]bool{}, missing: map[string]bool{}}
 	return NewDefaultService(repo, members), repo, members
 }
 
@@ -273,5 +290,90 @@ func TestAcceptIsClaimedOnce(t *testing.T) {
 	}
 	if len(members.added) != 1 {
 		t.Errorf("memberships = %v, want exactly one", members.added)
+	}
+}
+
+// A personal workspace cannot have members, so it cannot invite: the refusal
+// comes before any row is written.
+func TestCreateRefusesAPersonalWorkspace(t *testing.T) {
+	svc, repo, _ := newTestService()
+	svc.members.(*memMembers).personal["org-personal"] = true
+
+	if _, _, err := svc.Create("org-personal", "someone@example.com", "", nil); !errors.Is(err, orgs.ErrPersonalOrgMembers) {
+		t.Fatalf("Create on a personal workspace returned %v, want orgs.ErrPersonalOrgMembers", err)
+	}
+	if len(repo.rows) != 0 {
+		t.Errorf("a refused invitation wrote %d rows", len(repo.rows))
+	}
+}
+
+// Re-inviting an address whose previous invitation has EXPIRED works: the
+// pending-uniqueness index covers expired rows too, so the old row has to go
+// whether it was still live or not (it used to 500).
+func TestReInvitingAnExpiredAddressReplacesTheOldRow(t *testing.T) {
+	svc, repo, _ := newTestService()
+	first, _, err := svc.Create("org-1", "lapsed@example.com", orgs.RoleMember, nil)
+	if err != nil {
+		t.Fatalf("first Create: %v", err)
+	}
+	repo.rows[first.ID].ExpiresAt = time.Now().Add(-time.Hour)
+
+	second, token, err := svc.Create("org-1", "Lapsed@Example.com", orgs.RoleAdmin, nil)
+	if err != nil {
+		t.Fatalf("re-invite after expiry: %v", err)
+	}
+	if _, ok := repo.rows[first.ID]; ok {
+		t.Error("the expired row survived the re-invite")
+	}
+	if len(repo.rows) != 1 || repo.rows[second.ID] == nil {
+		t.Errorf("rows = %d, want only the new invitation", len(repo.rows))
+	}
+	if _, err := svc.Lookup(token); err != nil {
+		t.Errorf("the new link must work: %v", err)
+	}
+}
+
+// Create hands back the row as stored, so the invitation email can name the
+// workspace and the person who sent it.
+func TestCreateReturnsTheDisplayNames(t *testing.T) {
+	svc, repo, _ := newTestService()
+	inv, _, err := svc.Create("org-1", "named@example.com", "", nil)
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	// The repository joins the names in on the way out; Create must read the
+	// row back rather than return the struct it wrote.
+	repo.rows[inv.ID].OrgName = "Desktop Machine Shop"
+	repo.rows[inv.ID].InvitedByName = "Dave"
+	again, _, err := svc.Create("org-1", "named@example.com", "", nil)
+	if err != nil {
+		t.Fatalf("second Create: %v", err)
+	}
+	stored := repo.rows[again.ID]
+	if again.ID != stored.ID || again.Email != stored.Email {
+		t.Errorf("Create returned %+v, want the stored row", again)
+	}
+}
+
+// A token joins only the address it was sent to: registering as somebody
+// else with a link that reached a different mailbox grants nothing.
+func TestAcceptTokenForEmailChecksTheAddress(t *testing.T) {
+	svc, _, members := newTestService()
+	_, token, err := svc.Create("org-1", "invited@example.com", orgs.RoleAdmin, nil)
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	if _, err := svc.AcceptTokenForEmail(token, "someone-else@example.com", "user-1"); !errors.Is(err, ErrInvalidToken) {
+		t.Errorf("mismatched address returned %v, want ErrInvalidToken", err)
+	}
+	if len(members.added) != 0 {
+		t.Fatalf("a mismatched address joined anyway: %v", members.added)
+	}
+	// The invited address, however it is typed, joins at the invited role.
+	if _, err := svc.AcceptTokenForEmail(token, " Invited@Example.com ", "user-1"); err != nil {
+		t.Fatalf("AcceptTokenForEmail: %v", err)
+	}
+	if len(members.added) != 1 || members.added[0] != "org-1:user-1:admin" {
+		t.Errorf("memberships = %v", members.added)
 	}
 }

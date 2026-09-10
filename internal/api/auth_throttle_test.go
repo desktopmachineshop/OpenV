@@ -21,6 +21,16 @@ type fakeLoginService struct {
 	// accounts is the directory FindByEmail answers from; an address that is
 	// not in it has no account, which is what makes AddOrgMember invite.
 	accounts map[string]*users.User
+	// confirmed is the account a verification link resolves to; nil means
+	// every link is invalid.
+	confirmed *users.User
+}
+
+func (f *fakeLoginService) ConfirmEmailVerification(token string) (*users.User, error) {
+	if f.confirmed == nil {
+		return nil, users.ErrVerificationInvalid
+	}
+	return f.confirmed, nil
 }
 
 func (f *fakeLoginService) Login(email, password string) (*users.User, string, error) {

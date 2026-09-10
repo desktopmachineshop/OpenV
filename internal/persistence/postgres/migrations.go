@@ -879,8 +879,11 @@ var migrations = []Migration{
 		`); err != nil {
 			return err
 		}
-		// Sign-up and first SSO sign-in look an address up across every
-		// workspace, so the email needs its own index.
+		// A verified address (email verification, SSO) and a closed
+		// deployment's sign-up check look an address up across every
+		// workspace, so the email needs its own index. Lookups compare the
+		// column directly against a folded address — never LOWER(email) —
+		// so this plain index is the one they use.
 		if _, err := tx.Exec(`CREATE INDEX IF NOT EXISTS idx_org_invitations_email ON org_invitations(email)`); err != nil {
 			return err
 		}

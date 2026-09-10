@@ -10,8 +10,13 @@ import { useAppStore } from '../state/store';
 // Two things can close or redirect that door. A deployment with
 // registration: 'closed' has no sign-up form at all (REQ-95) — the only ways
 // in are an invitation and SSO. And an invite link (?invite=<token>) opens
-// the sign-up form with the invited address already filled in; if the person
-// is already signed in, the link joins them to the workspace instead.
+// the sign-up form with the invited address already filled in.
+//
+// The token travels with whatever the person does next, because it — not the
+// address — is what grants the invited membership: sign-up sends it to
+// register, signing in (they already had an account) posts it to
+// invitations/accept once the session exists, and a browser that is already
+// signed in accepts it on arrival.
 export const Login: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -103,8 +108,16 @@ export const Login: React.FC = () => {
       const res =
         activeMode === 'login'
           ? await authAPI.login(email, password)
-          : await authAPI.register(email, password, name);
+          : await authAPI.register(email, password, name, inviteToken);
       setCurrentUser(res.data);
+      // Signing in through an invite link is how somebody who already has an
+      // account takes it up: register carries the token itself, but a
+      // sign-in has to hand it over once there is a session to join. A link
+      // that no longer works is not worth blocking on — they are signed in
+      // either way.
+      if (inviteToken && activeMode === 'login') {
+        await authAPI.acceptInvitation(inviteToken).catch(() => {});
+      }
       // On a server that sends verification links, an account that has not
       // clicked its link lands on the wall rather than the app.
       navigate(verificationRequired && !res.data.email_verified ? '/verify-email' : '/projects');

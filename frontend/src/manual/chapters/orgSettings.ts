@@ -27,8 +27,10 @@ member). Note the distinction:
 ### Inviting someone who has no account yet
 
 Adding an email that already has an OpenV account joins that person straight
-away. An email with no account gets an **invitation** instead, so you never
-have to ask someone to sign up first:
+away — if they are already in the workspace, OpenV says so rather than adding
+them twice; change their role in the members table instead. An email with no
+account gets an **invitation**, so you never have to ask someone to sign up
+first:
 
 - The invitation is valid for **seven days** and can be used once. It names
   the workspace and the role you chose.
@@ -36,8 +38,14 @@ have to ask someone to sign up first:
   If it does not, OpenV shows you the invitation **link once**, right after
   you create it — copy it then and send it yourself. It cannot be shown
   again; create a fresh invitation if you lose it.
-- Opening the link signed out starts sign-up with the address filled in;
-  opening it while signed in simply joins that account to the workspace.
+- Opening the link signed out starts sign-up with the address filled in, and
+  the link carries through whether they create an account or sign in to one
+  they already have; opening it while signed in simply joins that account to
+  the workspace. The link is what grants the membership — somebody who signs
+  up for the invited address without it joins the workspace when they confirm
+  their verification email instead.
+- Re-inviting an address is how you resend: the previous link stops working,
+  expired or not, and only the newest one lets them in.
 - **Pending invitations** are listed above the Add member form while any are
   outstanding, with who they were sent to and when they expire. *Revoke*
   stops a link working immediately.

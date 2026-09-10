@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"database/sql"
+	"fmt"
 	"testing"
 	"time"
 
@@ -37,8 +38,8 @@ func saveInvitation(t *testing.T, repo *InvitationRepository, orgID, email, role
 		ExpiresAt: expires,
 		CreatedAt: time.Now().UTC(),
 	}
-	if err := repo.Save(inv); err != nil {
-		t.Fatalf("Save: %v", err)
+	if err := repo.Replace(inv); err != nil {
+		t.Fatalf("Replace: %v", err)
 	}
 	return inv
 }
@@ -81,10 +82,9 @@ func TestInvitationRoundTrip(t *testing.T) {
 	if pending, err := repo.ListPending(orgID, now); err != nil || len(pending) != 1 {
 		t.Fatalf("ListPending = %d, %v", len(pending), err)
 	}
-	// The address is matched case-insensitively from either direction.
-	if found, err := repo.FindPendingForOrg(orgID, "INVITED@example.com", now); err != nil || found == nil {
-		t.Errorf("FindPendingForOrg (mixed case) = %v, %v", found, err)
-	}
+	// Addresses are stored folded, and a lookup folds what it is given, so
+	// the plain equality the email index serves still matches whatever case
+	// the caller types.
 	if byEmail, err := repo.ListPendingForEmail("Invited@Example.com", now); err != nil || len(byEmail) != 1 {
 		t.Errorf("ListPendingForEmail = %d, %v", len(byEmail), err)
 	}
@@ -126,9 +126,6 @@ func TestInvitationExpiryAndPurge(t *testing.T) {
 	now := time.Now()
 	if pending, _ := repo.ListPending(orgID, now); len(pending) != 0 {
 		t.Errorf("expired invitation listed as pending")
-	}
-	if found, _ := repo.FindPendingForOrg(orgID, "late@example.com", now); found != nil {
-		t.Errorf("expired invitation found as pending for the workspace")
 	}
 	if byEmail, _ := repo.ListPendingForEmail("late@example.com", now); len(byEmail) != 0 {
 		t.Errorf("expired invitation found as pending for the address")
@@ -277,5 +274,107 @@ func TestSetPasswordHashTouchesOnlyThePassword(t *testing.T) {
 	}
 	if got.Name != user.Name || got.Email != user.Email || got.EmailVerified != user.EmailVerified {
 		t.Errorf("the rest of the row changed: %+v", got)
+	}
+}
+
+// Re-inviting an address the workspace already holds an unaccepted
+// invitation for replaces that row instead of tripping
+// idx_org_invitations_pending — which covers EVERY unaccepted row, so an
+// expired leftover used to make the insert fail with a 500.
+func TestReplaceReInvitesOverAnyUnacceptedRow(t *testing.T) {
+	db := testDB(t)
+	initTestSchema(t, db)
+	repo := NewInvitationRepository(db)
+
+	orgID := saveTestOrg(t, db, "Re-invites")
+	replace := func(email, role, token string, expires time.Time) *invitations.Invitation {
+		t.Helper()
+		inv := &invitations.Invitation{
+			ID:        uuid.New().String(),
+			OrgID:     orgID,
+			Email:     email,
+			Role:      role,
+			TokenHash: users.HashToken(token),
+			ExpiresAt: expires,
+			CreatedAt: time.Now().UTC(),
+		}
+		if err := repo.Replace(inv); err != nil {
+			t.Fatalf("Replace(%s): %v", token, err)
+		}
+		return inv
+	}
+	future := time.Now().UTC().Add(invitations.DefaultTTL)
+
+	// A live invitation is replaced by the newer one, and its link dies.
+	first := replace("again@example.com", orgs.RoleMember, "tok-1", future)
+	second := replace("again@example.com", orgs.RoleAdmin, "tok-2", future)
+	if got, _ := repo.FindByTokenHash(users.HashToken("tok-1")); got != nil {
+		t.Error("the superseded link still resolves")
+	}
+	if got, _ := repo.FindByID(first.ID); got != nil {
+		t.Error("the superseded row survived")
+	}
+	if got, _ := repo.FindByID(second.ID); got == nil || got.Role != orgs.RoleAdmin {
+		t.Errorf("the new invitation = %v", got)
+	}
+
+	// An EXPIRED leftover is no different: re-inviting works.
+	expired := replace("again@example.com", orgs.RoleMember, "tok-3", time.Now().UTC().Add(-time.Hour))
+	third := replace("again@example.com", orgs.RoleMember, "tok-4", future)
+	if got, _ := repo.FindByID(expired.ID); got != nil {
+		t.Error("the expired row survived the re-invite")
+	}
+	pending, err := repo.ListPendingForEmail("AGAIN@example.com", time.Now())
+	if err != nil || len(pending) != 1 || pending[0].ID != third.ID {
+		t.Fatalf("pending after re-invites = %d (%v), want only the newest", len(pending), err)
+	}
+
+	// Accepted history is untouched, and the address can be invited again
+	// after it has been accepted.
+	if won, err := repo.MarkAccepted(third.ID, time.Now().UTC()); err != nil || !won {
+		t.Fatalf("MarkAccepted = %v, %v", won, err)
+	}
+	fourth := replace("again@example.com", orgs.RoleMember, "tok-5", future)
+	if got, _ := repo.FindByID(third.ID); got == nil || got.AcceptedAt == nil {
+		t.Error("the accepted invitation was overwritten")
+	}
+	if got, _ := repo.FindByID(fourth.ID); got == nil {
+		t.Error("the re-invite after acceptance is missing")
+	}
+}
+
+// Two admins re-inviting the same address at the same moment both succeed:
+// the second waits on the first and overwrites it, rather than failing the
+// pending-uniqueness index.
+func TestReplaceSurvivesConcurrentReInvites(t *testing.T) {
+	db := testDB(t)
+	initTestSchema(t, db)
+	repo := NewInvitationRepository(db)
+
+	orgID := saveTestOrg(t, db, "Concurrent re-invites")
+	saveInvitation(t, repo, orgID, "race@example.com", orgs.RoleMember, "tok-race-0",
+		time.Now().UTC().Add(-time.Hour), nil)
+
+	errs := make(chan error, 2)
+	for i := 0; i < 2; i++ {
+		go func(i int) {
+			errs <- repo.Replace(&invitations.Invitation{
+				ID:        uuid.New().String(),
+				OrgID:     orgID,
+				Email:     "race@example.com",
+				Role:      orgs.RoleMember,
+				TokenHash: users.HashToken(fmt.Sprintf("tok-race-%d", i+1)),
+				ExpiresAt: time.Now().UTC().Add(invitations.DefaultTTL),
+				CreatedAt: time.Now().UTC(),
+			})
+		}(i)
+	}
+	for i := 0; i < 2; i++ {
+		if err := <-errs; err != nil {
+			t.Fatalf("concurrent Replace: %v", err)
+		}
+	}
+	if pending, err := repo.ListPendingForEmail("race@example.com", time.Now()); err != nil || len(pending) != 1 {
+		t.Fatalf("pending after the race = %d (%v), want 1", len(pending), err)
 	}
 }
