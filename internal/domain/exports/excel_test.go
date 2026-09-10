@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"unicode/utf8"
 
 	"github.com/xuri/excelize/v2"
 
@@ -114,10 +115,11 @@ func TestExportProjectExcel(t *testing.T) {
 		}
 	}
 
-	// One artifact, cell by cell.
+	// One artifact, cell by cell. The section column places the row in the
+	// document: REQ-1 sits inside heading 1.
 	row := header[1]
 	for i, want := range []string{
-		"REQ-1", "", "a1", "requirement", "The pump shall stop on overheat",
+		"REQ-1", "1", "a1", "requirement", "The pump shall stop on overheat",
 		"Line one\nLine two", "approved", "3", "h1", "",
 		"2026-01-02T03:04:05Z", "2026-02-03T04:05:06Z",
 	} {
@@ -126,7 +128,7 @@ func TestExportProjectExcel(t *testing.T) {
 		}
 	}
 
-	// The heading carries its derived section number, as text.
+	// The heading carries its own derived section number, as text.
 	if got := cell(t, f, "Headings", "B2"); got != "1" {
 		t.Errorf("heading section number = %q, want 1", got)
 	}
@@ -281,5 +283,87 @@ func TestExcelTypeSheetNameFallsBackToTheType(t *testing.T) {
 	}
 	if got := excelTypeSheetName(""); got != "Untyped" {
 		t.Errorf("empty type sheet = %q, want Untyped", got)
+	}
+}
+
+func TestExcelTypeSheetNameCapitalisesByRune(t *testing.T) {
+	// w[:1] would cut "évaluation" mid-rune and produce an invalid UTF-8
+	// sheet name Excel refuses to open.
+	got := excelTypeSheetName("évaluation")
+	if got != "Évaluations" {
+		t.Errorf("évaluation sheet = %q, want Évaluations", got)
+	}
+	if !utf8.ValidString(got) {
+		t.Errorf("évaluation sheet = %q, not valid UTF-8", got)
+	}
+	if got := excelTypeSheetName("évaluation-de_sécurité"); got != "Évaluation De Sécurités" {
+		t.Errorf("multi-word accented sheet = %q, want Évaluation De Sécurités", got)
+	}
+}
+
+// TestExcelSectionsFileLeavesUnderTheirHeading: SectionNumbers numbers only
+// headings, but a flat sheet has no other way to say where a row lives, so a
+// non-heading takes its nearest heading ancestor's number.
+func TestExcelSectionsFileLeavesUnderTheirHeading(t *testing.T) {
+	list := []*artifacts.Artifact{
+		{ID: "h1", Type: artifacts.TypeHeading, Title: "Requirements", SortOrder: 1},
+		{ID: "h2", Type: artifacts.TypeHeading, ParentID: strPtr("h1"), Title: "Safety", SortOrder: 1},
+		{ID: "r1", Type: artifacts.TypeRequirement, ParentID: strPtr("h2"), SortOrder: 1},
+		// Two levels of non-heading: the walk keeps climbing past r1.
+		{ID: "t1", Type: artifacts.TypeTestCase, ParentID: strPtr("r1"), SortOrder: 1},
+		{ID: "h3", Type: artifacts.TypeHeading, Title: "Verification", SortOrder: 2},
+		// No heading above it at all, so it has no section to show.
+		{ID: "loose", Type: artifacts.TypeRequirement, SortOrder: 3},
+		// A dangling parent must not send the walk off the end of the tree.
+		{ID: "orphan", Type: artifacts.TypeHazard, ParentID: strPtr("gone"), SortOrder: 4},
+	}
+
+	sections := excelSections(list)
+	for id, want := range map[string]string{
+		"h1": "1", "h2": "1.1", "r1": "1.1", "t1": "1.1", "h3": "2",
+		"loose": "", "orphan": "",
+	} {
+		if got := sections[id]; got != want {
+			t.Errorf("section of %s = %q, want %q", id, got, want)
+		}
+	}
+}
+
+// TestExcelSectionsSurviveAParentCycle: a corrupt tree must not hang an export.
+func TestExcelSectionsSurviveAParentCycle(t *testing.T) {
+	list := []*artifacts.Artifact{
+		{ID: "a", Type: artifacts.TypeRequirement, ParentID: strPtr("b")},
+		{ID: "b", Type: artifacts.TypeRequirement, ParentID: strPtr("a")},
+	}
+	done := make(chan map[string]string, 1)
+	go func() { done <- excelSections(list) }()
+	select {
+	case sections := <-done:
+		if sections["a"] != "" || sections["b"] != "" {
+			t.Errorf("sections = %v, want no numbers for a cycle with no heading", sections)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("excelSections did not terminate on a parent cycle")
+	}
+}
+
+// TestExcelRowIsTheCSVRow is the contract the shared helper exists to enforce:
+// after ref and section, an artifact sheet's row is exactly the CSV's row.
+func TestExcelRowIsTheCSVRow(t *testing.T) {
+	artifactList, linkList := excelFixture()
+	linkColumn := linksByFrom(linkList)
+	sections := excelSections(artifactList)
+
+	for _, a := range artifactList {
+		row := excelArtifactRow(a, sections, linkColumn)
+		if len(row) != len(excelArtifactHeader) {
+			t.Fatalf("%s row has %d columns, want %d", a.ID, len(row), len(excelArtifactHeader))
+		}
+		want := csvRow(a, linkColumn)
+		for i, col := range csvHeader {
+			if got := row[i+2]; got != want[i] {
+				t.Errorf("%s %s = %q, want the CSV's %q", a.ID, col, got, want[i])
+			}
+		}
 	}
 }

@@ -3,6 +3,7 @@ import {
   DOWNLOAD_FORMATS,
   attachmentLabel,
   describeSelection,
+  downloadExtension,
   downloadQuery,
   formatBytes,
   isArchive,
@@ -189,6 +190,15 @@ describe('the offered formats', () => {
   it('names the Excel workbook by its extension, since that is what a reader looks for', () => {
     const excel = DOWNLOAD_FORMATS.find((f) => f.format === 'excel');
     expect(excel?.label).toBe('Excel workbook (.xlsx)');
+  });
+
+  it('saves each format under the extension its file actually has', () => {
+    // The wire name is not always the extension: a workbook asked for as
+    // "excel" is an .xlsx file, and naming it .excel opens as nothing.
+    expect(downloadExtension('excel')).toBe('xlsx');
+    for (const format of ['pdf', 'docx', 'json', 'csv', 'reqif'] as const) {
+      expect(downloadExtension(format)).toBe(format);
+    }
   });
 
   it('names each attachment category in words', () => {

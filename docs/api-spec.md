@@ -217,9 +217,12 @@ their own project, workers pass within their org) · `org member`/`org admin`
   type present named after the type ("Requirements", "Test Cases"), and a
   `Links` sheet of the traceability links by endpoint ref and title. An
   artifact sheet carries the CSV's columns with the stable `ref` and the
-  derived `section` number in front; refs, section numbers and timestamps are
-  written as text so a spreadsheet cannot re-read them as numbers or dates.
-  It is a download only — there is no Excel import.
+  derived `section` number in front. `section` is a heading's own number and,
+  for every other row, the number of the heading it sits under — the same
+  section the PDF nests it in — so a flat sheet still places an artifact in
+  the document; a row with no heading above it leaves it empty. Refs, section
+  numbers and timestamps are written as text so a spreadsheet cannot re-read
+  them as numbers or dates. It is a download only — there is no Excel import.
 - **ReqIF import** (`internal/domain/exports/reqif_import.go`): `POST
   /api/v1/projects/import` accepts a ReqIF document as well as JSON. ReqIF is
   selected by `?format=reqif`, an XML/ReqIF `Content-Type`, or sniffed from a

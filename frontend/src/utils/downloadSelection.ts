@@ -62,6 +62,21 @@ export const DOWNLOAD_FORMATS: FormatChoice[] = [
   },
 ];
 
+/**
+ * The extension a format's file is saved under. It is not always the format's
+ * own name: `excel` is what the wire calls the workbook, and `.xlsx` is what a
+ * spreadsheet opens — a file named `.excel` opens as nothing at all.
+ *
+ * Only used for the fallback filename, when the server sent no
+ * Content-Disposition to take a name from.
+ */
+const DOWNLOAD_EXTENSIONS: Partial<Record<DownloadFormat, string>> = {
+  excel: 'xlsx',
+};
+
+export const downloadExtension = (format: DownloadFormat): string =>
+  DOWNLOAD_EXTENSIONS[format] || format;
+
 /** What each attachment category is called where a reader chooses it. */
 const ATTACHMENT_LABELS: Record<string, string> = {
   figures: 'Figures',

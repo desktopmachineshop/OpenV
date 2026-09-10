@@ -271,16 +271,57 @@ var csvHeader = []string{
 	"parent_id", "links", "created_at", "updated_at",
 }
 
-// exportCSV exports project data as RFC 4180 CSV, one row per artifact.
-func (s *DefaultService) exportCSV(data *ProjectExport) ([]byte, string, error) {
-	// Fold links into per-artifact "type:targetId" pairs, keyed by source.
-	linksByFrom := make(map[string][]string, len(data.Links))
-	for _, link := range data.Links {
+// linksByFrom folds outgoing links into the CSV's "type:targetId" pairs, keyed
+// by source artifact. Both table exports read it, so the links column means the
+// same thing in a CSV and in a workbook.
+func linksByFrom(list []*links.Link) map[string][]string {
+	byFrom := make(map[string][]string, len(list))
+	for _, link := range list {
 		if link == nil {
 			continue
 		}
-		linksByFrom[link.FromID] = append(linksByFrom[link.FromID], link.Type+":"+link.ToID)
+		byFrom[link.FromID] = append(byFrom[link.FromID], link.Type+":"+link.ToID)
 	}
+	return byFrom
+}
+
+// csvRow is one artifact as a table row, in csvHeader's order. It is the single
+// definition of what those columns carry: the CSV writes it as-is, and the
+// Excel export writes it after the ref and section columns, which is what makes
+// "an artifact's shared columns carry exactly what the CSV carries" true by
+// construction rather than by inspection.
+func csvRow(a *artifacts.Artifact, linkColumn map[string][]string) []string {
+	// Prefer the first-class status column; fall back to the legacy attribute
+	// mirror for exports captured before the column existed.
+	status := a.Status
+	if status == "" && a.Attributes != nil {
+		if v, ok := a.Attributes["status"].(string); ok {
+			status = v
+		}
+	}
+
+	parentID := ""
+	if a.ParentID != nil {
+		parentID = *a.ParentID
+	}
+
+	return []string{
+		a.ID,
+		a.Type,
+		a.Title,
+		a.Body,
+		status,
+		strconv.Itoa(a.Version),
+		parentID,
+		strings.Join(linkColumn[a.ID], ";"),
+		a.CreatedAt.UTC().Format(time.RFC3339),
+		a.UpdatedAt.UTC().Format(time.RFC3339),
+	}
+}
+
+// exportCSV exports project data as RFC 4180 CSV, one row per artifact.
+func (s *DefaultService) exportCSV(data *ProjectExport) ([]byte, string, error) {
+	linkColumn := linksByFrom(data.Links)
 
 	var buf bytes.Buffer
 	writer := csv.NewWriter(&buf)
@@ -293,34 +334,7 @@ func (s *DefaultService) exportCSV(data *ProjectExport) ([]byte, string, error) 
 		if artifact == nil {
 			continue
 		}
-
-		// Prefer the first-class status column; fall back to the legacy
-		// attribute mirror for exports captured before the column existed.
-		status := artifact.Status
-		if status == "" && artifact.Attributes != nil {
-			if v, ok := artifact.Attributes["status"].(string); ok {
-				status = v
-			}
-		}
-
-		parentID := ""
-		if artifact.ParentID != nil {
-			parentID = *artifact.ParentID
-		}
-
-		row := []string{
-			artifact.ID,
-			artifact.Type,
-			artifact.Title,
-			artifact.Body,
-			status,
-			strconv.Itoa(artifact.Version),
-			parentID,
-			strings.Join(linksByFrom[artifact.ID], ";"),
-			artifact.CreatedAt.UTC().Format(time.RFC3339),
-			artifact.UpdatedAt.UTC().Format(time.RFC3339),
-		}
-		if err := writer.Write(row); err != nil {
+		if err := writer.Write(csvRow(artifact, linkColumn)); err != nil {
 			return nil, "", fmt.Errorf("failed to write CSV row: %w", err)
 		}
 	}

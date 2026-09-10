@@ -6,11 +6,12 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/xuri/excelize/v2"
 
 	"github.com/openv/requirements-platform/internal/domain/artifacts"
-	"github.com/openv/requirements-platform/internal/domain/links"
 )
 
 // The Excel export is the CSV a reader can actually work in.
@@ -24,7 +25,12 @@ import (
 // It renders from the same narrowed snapshot as every other download (see the
 // downloads package), so "the requirements sections, no headings" means here
 // exactly what it means in the PDF, and an artifact's shared columns carry
-// exactly what the CSV export carries.
+// exactly what the CSV export carries — they are literally the CSV's row
+// (csvRow in export.go), written after the ref and section columns.
+//
+// The section column is where the row sits in the document: a heading's own
+// number, and for everything else the number of the heading it lives under, so
+// a requirement on a flat sheet can still be placed in the specification.
 
 const (
 	// excelSheetNameLimit is Excel's hard limit on a sheet name.
@@ -46,7 +52,8 @@ const (
 
 // excelArtifactHeader is an artifact sheet's column layout: the CSV export's
 // columns, with the stable ref and the derived section number in front — the
-// two things a reader navigates a specification by.
+// two things a reader navigates a specification by. A heading's section number
+// is its own; every other row carries the section it sits in.
 var excelArtifactHeader = append([]string{"ref", "section"}, csvHeader...)
 
 // excelLinkHeader is the traceability sheet's column layout. Endpoints are
@@ -154,8 +161,8 @@ func writeExcelProjectSheet(f *excelize.File, data *ProjectExport, styles excelS
 		if err := f.SetCellStr(excelSheetProject, fmt.Sprintf("B%d", i+1), value); err != nil {
 			return fmt.Errorf("failed to write the project sheet: %w", err)
 		}
-		labelWidth = maxFloat(labelWidth, excelWidth(label))
-		valueWidth = maxFloat(valueWidth, excelWidth(value))
+		labelWidth = max(labelWidth, excelWidth(label))
+		valueWidth = max(valueWidth, excelWidth(value))
 	}
 
 	if err := f.SetCellStyle(excelSheetProject, "A1", fmt.Sprintf("A%d", len(rows)), styles.header); err != nil {
@@ -187,8 +194,8 @@ func writeExcelArtifactSheets(f *excelize.File, data *ProjectExport, styles exce
 	}
 	sortExcelTypes(order)
 
-	sections := artifacts.SectionNumbers(data.Artifacts)
-	linkColumn := excelLinkColumn(data.Links)
+	sections := excelSections(data.Artifacts)
+	linkColumn := linksByFrom(data.Links)
 	used := map[string]bool{
 		strings.ToLower(excelSheetProject): true,
 		strings.ToLower(excelSheetLinks):   true,
@@ -269,50 +276,58 @@ func writeExcelLinksSheet(f *excelize.File, data *ProjectExport, styles excelSty
 }
 
 // excelArtifactRow is one artifact as a sheet row, in excelArtifactHeader's
-// order.
+// order: the stable ref and the section number it sits in, then the CSV
+// export's own row (export.go), unchanged.
 func excelArtifactRow(a *artifacts.Artifact, sections map[string]string, linkColumn map[string][]string) []string {
-	// Prefer the first-class status column; fall back to the legacy attribute
-	// mirror for snapshots captured before the column existed.
-	status := a.Status
-	if status == "" && a.Attributes != nil {
-		if v, ok := a.Attributes["status"].(string); ok {
-			status = v
-		}
-	}
-
-	parentID := ""
-	if a.ParentID != nil {
-		parentID = *a.ParentID
-	}
-
-	return []string{
-		a.Ref,
-		sections[a.ID],
-		a.ID,
-		a.Type,
-		a.Title,
-		a.Body,
-		status,
-		strconv.Itoa(a.Version),
-		parentID,
-		strings.Join(linkColumn[a.ID], ";"),
-		a.CreatedAt.UTC().Format(time.RFC3339),
-		a.UpdatedAt.UTC().Format(time.RFC3339),
-	}
+	return append([]string{a.Ref, sections[a.ID]}, csvRow(a, linkColumn)...)
 }
 
-// excelLinkColumn folds outgoing links into the CSV's "type:targetId" pairs,
-// keyed by source artifact, so the links column means the same thing in both
-// table formats.
-func excelLinkColumn(list []*links.Link) map[string][]string {
-	byFrom := make(map[string][]string, len(list))
-	for _, link := range list {
-		if link == nil {
+// excelSections is the section number each artifact's row shows.
+//
+// artifacts.SectionNumbers numbers headings only — a leaf is cited by its ref,
+// not by a clause number that churns on every edit. A flat sheet has no
+// hierarchy to show that with, though, so a requirement whose section column
+// were left empty would arrive unplaceable: sorting or filtering the sheet
+// tells the reader nothing about where in the specification the row belongs.
+// So a non-heading is filed under its nearest heading ancestor's number, which
+// is the same section the PDF nests it inside; an artifact with no heading
+// above it has no number, and its column stays empty.
+func excelSections(list []*artifacts.Artifact) map[string]string {
+	numbers := artifacts.SectionNumbers(list)
+
+	byID := make(map[string]*artifacts.Artifact, len(list))
+	for _, a := range list {
+		if a != nil {
+			byID[a.ID] = a
+		}
+	}
+
+	sections := make(map[string]string, len(list))
+	for _, a := range list {
+		if a == nil {
 			continue
 		}
-		byFrom[link.FromID] = append(byFrom[link.FromID], link.Type+":"+link.ToID)
+		if number, ok := numbers[a.ID]; ok {
+			sections[a.ID] = number
+			continue
+		}
+		// Walk up the parent chain to the first numbered heading. seen stops a
+		// parent cycle, which SectionNumbers tolerates and so must this.
+		seen := map[string]bool{a.ID: true}
+		for node := a; node.ParentID != nil && *node.ParentID != "" && !seen[*node.ParentID]; {
+			seen[*node.ParentID] = true
+			parent := byID[*node.ParentID]
+			if parent == nil {
+				break
+			}
+			if number, ok := numbers[parent.ID]; ok {
+				sections[a.ID] = number
+				break
+			}
+			node = parent
+		}
 	}
-	return byFrom
+	return sections
 }
 
 // excelTable is one sheet's worth of data: a header, its rows, and which
@@ -371,7 +386,7 @@ func writeExcelTable(f *excelize.File, sheet string, table excelTable, styles ex
 					return fmt.Errorf("failed to write %s!%s: %w", sheet, cell, err)
 				}
 			}
-			widths[i] = maxFloat(widths[i], excelWidth(value))
+			widths[i] = max(widths[i], excelWidth(value))
 		}
 	}
 
@@ -463,13 +478,6 @@ func excelWidth(value string) float64 {
 	return width
 }
 
-func maxFloat(a, b float64) float64 {
-	if a > b {
-		return a
-	}
-	return b
-}
-
 // excelColumn is the index of a named column in a header.
 func excelColumn(header []string, name string) int {
 	for i, h := range header {
@@ -490,7 +498,13 @@ func excelTypeSheetName(artifactType string) string {
 		return r == '-' || r == '_' || r == ' '
 	})
 	for i, w := range words {
-		words[i] = strings.ToUpper(w[:1]) + w[1:]
+		// The first rune, not the first byte: a type like "évaluation"
+		// would otherwise be cut mid-rune into an invalid UTF-8 sheet name.
+		r, size := utf8.DecodeRuneInString(w)
+		if size == 0 {
+			continue
+		}
+		words[i] = string(unicode.ToUpper(r)) + w[size:]
 	}
 	name := strings.Join(words, " ")
 	if name == "" {
