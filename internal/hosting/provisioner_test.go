@@ -1,7 +1,11 @@
 package hosting
 
 import (
+	"errors"
+	"reflect"
 	"testing"
+
+	"github.com/moby/moby/api/types/container"
 
 	"github.com/openv/requirements-platform/internal/domain/orgs"
 )
@@ -60,5 +64,111 @@ func TestResourceLimitsForOrgBadValues(t *testing.T) {
 	}
 	if rl.NanoCPUs != 0 {
 		t.Errorf("NanoCPUs = %d, want 0 (explicit no-cap opt-out)", rl.NanoCPUs)
+	}
+}
+
+// TestBuildRunnerSpec: the container/host configuration handed to docker
+// carries the runner image, the fixed platform env plus the org's extra env,
+// the org label, the unless-stopped restart policy, the org's data volume
+// bind and its resource caps. Extra env is emitted in sorted key order so the
+// spec is reproducible.
+func TestBuildRunnerSpec(t *testing.T) {
+	spec := buildRunnerSpec(
+		"openv-worker:latest",
+		"", // no RUNNER_NETWORK
+		"http://api:8080",
+		"org-42",
+		"wk-secret",
+		map[string]string{"ZED": "z", "ANTHROPIC_API_KEY": "sk-test"},
+		ResourceLimits{MemoryMB: 2048, NanoCPUs: 1e9},
+	)
+
+	if spec.config.Image != "openv-worker:latest" {
+		t.Errorf("Image = %q, want openv-worker:latest", spec.config.Image)
+	}
+	wantEnv := []string{
+		"OPENV_API_URL=http://api:8080",
+		"WORKER_API_KEY=wk-secret",
+		"OPENV_HOSTED=true",
+		"ANTHROPIC_API_KEY=sk-test",
+		"ZED=z",
+	}
+	if !reflect.DeepEqual(spec.config.Env, wantEnv) {
+		t.Errorf("Env = %q, want %q", spec.config.Env, wantEnv)
+	}
+	if spec.config.Labels["openv.org"] != "org-42" {
+		t.Errorf("Labels = %v, want openv.org=org-42", spec.config.Labels)
+	}
+
+	if got := spec.hostConfig.RestartPolicy.Name; got != container.RestartPolicyUnlessStopped {
+		t.Errorf("RestartPolicy = %q, want unless-stopped", got)
+	}
+	wantBinds := []string{"openv-runner-org-42:/data"}
+	if !reflect.DeepEqual(spec.hostConfig.Binds, wantBinds) {
+		t.Errorf("Binds = %q, want %q", spec.hostConfig.Binds, wantBinds)
+	}
+	if spec.hostConfig.Resources.Memory != 2048*1024*1024 {
+		t.Errorf("Memory = %d, want %d bytes", spec.hostConfig.Resources.Memory, 2048*1024*1024)
+	}
+	if spec.hostConfig.Resources.NanoCPUs != 1e9 {
+		t.Errorf("NanoCPUs = %d, want 1e9", spec.hostConfig.Resources.NanoCPUs)
+	}
+
+	if spec.networking != nil {
+		t.Errorf("networking = %+v, want nil when RUNNER_NETWORK is unset", spec.networking)
+	}
+}
+
+// TestBuildRunnerSpecNetworkAndNoCaps: RUNNER_NETWORK attaches the runner to
+// that network, and zero ResourceLimits stay zero ("no cap" to docker).
+func TestBuildRunnerSpecNetworkAndNoCaps(t *testing.T) {
+	spec := buildRunnerSpec("img", "openv-net", "http://api:8080", "org-1", "wk", nil, ResourceLimits{})
+
+	if spec.networking == nil {
+		t.Fatal("networking = nil, want an endpoint for openv-net")
+	}
+	if _, ok := spec.networking.EndpointsConfig["openv-net"]; ok != true || len(spec.networking.EndpointsConfig) != 1 {
+		t.Errorf("EndpointsConfig = %v, want exactly openv-net", spec.networking.EndpointsConfig)
+	}
+	if spec.hostConfig.Resources.Memory != 0 || spec.hostConfig.Resources.NanoCPUs != 0 {
+		t.Errorf("resources = %+v, want zero (no cap)", spec.hostConfig.Resources)
+	}
+	wantEnv := []string{"OPENV_API_URL=http://api:8080", "WORKER_API_KEY=wk", "OPENV_HOSTED=true"}
+	if !reflect.DeepEqual(spec.config.Env, wantEnv) {
+		t.Errorf("Env = %q, want %q", spec.config.Env, wantEnv)
+	}
+}
+
+// TestDisabledProvisionerRefusesEverything: with the feature off (or docker
+// absent) every operation reports the feature is not enabled rather than
+// touching a nil docker client.
+func TestDisabledProvisionerRefusesEverything(t *testing.T) {
+	var p Provisioner = disabledProvisioner{}
+	if p.Enabled() {
+		t.Error("Enabled() = true, want false")
+	}
+	if err := p.Provision("org", "c", "wk", nil, ResourceLimits{}); !errors.Is(err, errDisabled) {
+		t.Errorf("Provision err = %v, want errDisabled", err)
+	}
+	if err := p.Start("c"); !errors.Is(err, errDisabled) {
+		t.Errorf("Start err = %v, want errDisabled", err)
+	}
+	if err := p.Stop("c"); !errors.Is(err, errDisabled) {
+		t.Errorf("Stop err = %v, want errDisabled", err)
+	}
+	if err := p.Remove("c", true, "org"); !errors.Is(err, errDisabled) {
+		t.Errorf("Remove err = %v, want errDisabled", err)
+	}
+	if _, err := p.ContainerState("c"); !errors.Is(err, errDisabled) {
+		t.Errorf("ContainerState err = %v, want errDisabled", err)
+	}
+}
+
+// TestNewProvisionerDisabledByEnv: HOSTED_RUNNERS=off short-circuits before
+// any docker connection is attempted.
+func TestNewProvisionerDisabledByEnv(t *testing.T) {
+	t.Setenv("HOSTED_RUNNERS", "off")
+	if p := NewProvisioner(); p.Enabled() {
+		t.Errorf("NewProvisioner() enabled with HOSTED_RUNNERS=off")
 	}
 }

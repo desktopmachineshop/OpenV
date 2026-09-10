@@ -173,16 +173,11 @@ Findings are not suppressed. There is no allow-list and no
 `--ignore`/`audit-level` escape hatch beyond the documented `high` threshold:
 a reachable advisory either gets fixed or the gate stays red.
 
-**Known open finding.** The Go half of the gate is currently red on
-GO-2026-4887 (CVE-2026-34040, CVSS 8.8) and GO-2026-4883 (CVSS 6.8) in
-`github.com/docker/docker`, reached from `internal/hosting` — the hosted-runner
-provisioner, and the subject of hazard HAZ-7. Neither has a fix on that module
-path: `v28.5.2+incompatible` is the last release under `github.com/docker/docker`,
-and the fixes ship in the renamed `github.com/moby/moby/client` module, whose
-client API is a rewrite (options structs, extra return values) and whose
-`v2` sibling needs Go 1.26. Closing this means porting `internal/hosting/docker.go`
-to that client, which is its own piece of work, not a dependency bump. Until
-then the job reports the truth rather than being told to look away.
+The hosted-runner provisioner in `internal/hosting` talks to the Docker
+daemon through `github.com/moby/moby/client` (the renamed, still-maintained
+Moby engine client), which is where the fixes for GO-2026-4887 and
+GO-2026-4883 ship; the retired `github.com/docker/docker` module is no longer
+a dependency.
 
 ## Database inspection
 
