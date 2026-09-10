@@ -29,8 +29,10 @@ var ErrUnsupportedFormat = errors.New("unsupported export format")
 type ExportFormat string
 
 const (
-	FormatJSON  ExportFormat = "json"
-	FormatCSV   ExportFormat = "csv"
+	FormatJSON ExportFormat = "json"
+	FormatCSV  ExportFormat = "csv"
+	// FormatExcel is an .xlsx workbook: a sheet per artifact type, a
+	// traceability sheet, and a cover naming the snapshot (excel.go).
 	FormatExcel ExportFormat = "excel"
 	// FormatReqIF is the OMG ReqIF 1.x interchange format read by DOORS and
 	// Polarion (issue #224). Export only for now; import is a fast-follow.
@@ -39,11 +41,16 @@ const (
 
 // ProjectExport contains all project data for export
 type ProjectExport struct {
-	ExportedAt     time.Time                 `json:"exported_at"`
-	Version        string                    `json:"version"`
-	ProjectID      string                    `json:"project_id"`
-	ProjectName    string                    `json:"project_name"`
-	ProjectDesc    string                    `json:"project_description"`
+	ExportedAt  time.Time `json:"exported_at"`
+	Version     string    `json:"version"`
+	ProjectID   string    `json:"project_id"`
+	ProjectName string    `json:"project_name"`
+	ProjectDesc string    `json:"project_description"`
+	// BaselineName names the baseline a snapshot was loaded from, when it was
+	// one rather than the live project. It is set by the download layer for
+	// the formats that show it on the page (the Excel cover sheet; the PDF and
+	// Word renderers take it as an argument), and is empty for a live export.
+	BaselineName   string                    `json:"baseline_name,omitempty"`
 	Artifacts      []*artifacts.Artifact     `json:"artifacts"`
 	Links          []*links.Link             `json:"links"`
 	Attachments    []*attachments.Attachment `json:"attachments"`
@@ -240,7 +247,7 @@ func (s *DefaultService) RenderExport(data *ProjectExport, format ExportFormat) 
 	case FormatReqIF:
 		return s.exportReqIF(data)
 	case FormatExcel:
-		return nil, "", fmt.Errorf("%w: excel export not yet implemented", ErrUnsupportedFormat)
+		return s.exportExcel(data)
 	default:
 		return nil, "", fmt.Errorf("%w: %s", ErrUnsupportedFormat, format)
 	}

@@ -176,7 +176,19 @@ describe('formatBytes', () => {
 
 describe('the offered formats', () => {
   it('covers every output the server renders', () => {
-    expect(DOWNLOAD_FORMATS.map((f) => f.format)).toEqual(['pdf', 'docx', 'json', 'csv', 'reqif']);
+    expect(DOWNLOAD_FORMATS.map((f) => f.format)).toEqual([
+      'pdf',
+      'docx',
+      'json',
+      'csv',
+      'excel',
+      'reqif',
+    ]);
+  });
+
+  it('names the Excel workbook by its extension, since that is what a reader looks for', () => {
+    const excel = DOWNLOAD_FORMATS.find((f) => f.format === 'excel');
+    expect(excel?.label).toBe('Excel workbook (.xlsx)');
   });
 
   it('names each attachment category in words', () => {

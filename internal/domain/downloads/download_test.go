@@ -148,6 +148,48 @@ func TestEveryFormatSeesTheSameSelection(t *testing.T) {
 	}
 }
 
+// The Excel workbook is a first-class download, not a special case: it is
+// offered, it is accepted, and it is served as a spreadsheet.
+func TestExcelIsAnOfferedFormat(t *testing.T) {
+	offered := false
+	for _, f := range Formats {
+		if f == FormatExcel {
+			offered = true
+		}
+	}
+	if !offered {
+		t.Errorf("Formats = %v, want the Excel workbook among them", Formats)
+	}
+	if !Supported("excel") {
+		t.Error(`Supported("excel") = false, want true`)
+	}
+	want := "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+	if got := ContentType(FormatExcel); got != want {
+		t.Errorf("ContentType(excel) = %q, want %q", got, want)
+	}
+}
+
+// The workbook has a cover sheet naming the snapshot, so the baseline's name
+// has to reach the renderer — for the other table formats there is nowhere to
+// put it, and it does not.
+func TestExcelCarriesTheBaselineName(t *testing.T) {
+	s, rec := newService(t)
+	if _, err := s.Download(Request{ProjectID: "p1", BaselineID: "b7", Format: FormatExcel}); err != nil {
+		t.Fatalf("Download: %v", err)
+	}
+	if rec.renderedFrom.BaselineName != "Baseline b7" {
+		t.Errorf("rendered baseline name = %q, want %q", rec.renderedFrom.BaselineName, "Baseline b7")
+	}
+
+	s, rec = newService(t)
+	if _, err := s.Download(Request{ProjectID: "p1", BaselineID: "b7", Format: FormatCSV}); err != nil {
+		t.Fatalf("Download: %v", err)
+	}
+	if rec.renderedFrom.BaselineName != "" {
+		t.Errorf("csv snapshot baseline name = %q, want it left alone", rec.renderedFrom.BaselineName)
+	}
+}
+
 func TestDownloadRejectsAnUnknownFormat(t *testing.T) {
 	s, _ := newService(t)
 	if _, err := s.Download(Request{ProjectID: "p1", Format: "xls"}); err == nil {

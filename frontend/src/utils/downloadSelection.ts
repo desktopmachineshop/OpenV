@@ -51,6 +51,11 @@ export const DOWNLOAD_FORMATS: FormatChoice[] = [
     description: 'One row per artifact for a spreadsheet. Links fold into a single column.',
   },
   {
+    format: 'excel',
+    label: 'Excel workbook (.xlsx)',
+    description: 'A sheet per artifact type, one for the links, and a cover naming the snapshot.',
+  },
+  {
     format: 'reqif',
     label: 'ReqIF interchange',
     description: 'The OMG format read by DOORS and Polarion.',

@@ -200,7 +200,7 @@ export interface DownloadSelection {
   attachments: string[];
 }
 
-export type DownloadFormat = 'json' | 'csv' | 'reqif' | 'pdf' | 'docx';
+export type DownloadFormat = 'json' | 'csv' | 'excel' | 'reqif' | 'pdf' | 'docx';
 
 export interface Attachment {
   id: string;

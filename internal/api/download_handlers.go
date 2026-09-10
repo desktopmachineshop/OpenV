@@ -30,6 +30,7 @@ func (h *Handler) registerDownloadRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/projects/{id}/download/options", h.DownloadOptions).Methods("GET")
 	router.HandleFunc("/api/v1/projects/{id}/download/json", h.DownloadJSON).Methods("GET")
 	router.HandleFunc("/api/v1/projects/{id}/download/csv", h.DownloadCSV).Methods("GET")
+	router.HandleFunc("/api/v1/projects/{id}/download/excel", h.DownloadExcel).Methods("GET")
 	router.HandleFunc("/api/v1/projects/{id}/download/reqif", h.DownloadReqIF).Methods("GET")
 	router.HandleFunc("/api/v1/projects/{id}/download/pdf", h.DownloadPDF).Methods("GET")
 	router.HandleFunc("/api/v1/projects/{id}/download/docx", h.DownloadDOCX).Methods("GET")
@@ -59,6 +60,12 @@ func (h *Handler) DownloadJSON(w http.ResponseWriter, r *http.Request) {
 // DownloadCSV serves one row per artifact for a spreadsheet.
 func (h *Handler) DownloadCSV(w http.ResponseWriter, r *http.Request) {
 	h.serveDownload(w, r, downloads.FormatCSV)
+}
+
+// DownloadExcel serves the project as an .xlsx workbook: a sheet per artifact
+// type, the traceability links, and a cover naming the snapshot.
+func (h *Handler) DownloadExcel(w http.ResponseWriter, r *http.Request) {
+	h.serveDownload(w, r, downloads.FormatExcel)
 }
 
 // DownloadReqIF serves the OMG interchange format read by DOORS and Polarion.

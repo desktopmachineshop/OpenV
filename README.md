@@ -52,7 +52,7 @@ Setup guide: [docs/agents.md](docs/agents.md)
   Claim it with a [free-hosting issue](https://github.com/desktopmachineshop/OpenV/issues/new?template=free-hosting.md).
 
 If hosted OpenV ever charges, your data will not be behind the paywall:
-export (JSON, CSV, ReqIF, PDF, Word) and import (JSON, ReqIF) stay available
+export (JSON, CSV, Excel, ReqIF, PDF, Word) and import (JSON, ReqIF) stay available
 on every plan, and a JSON export restores into a self-hosted OpenV. There is
 no billing in the product today.
 
@@ -256,7 +256,7 @@ npm test
 - [x] Module view, document view and traceability matrix
 - [x] Baselines, comparison and change impact analysis
 - [x] V&V dashboard, coverage, gaps and test runs
-- [x] Import/export: JSON, CSV, ReqIF, PDF, Word
+- [x] Import/export: JSON, CSV, Excel, ReqIF, PDF, Word
 - [x] Workspaces, teams, per-project access, Google and OIDC sign-in
 - [x] Multi-agent suite: runners, proposals, crews, automations, interviews
 - [x] Phone-friendly shell
