@@ -45,6 +45,12 @@ func (h *Handler) registerAuthRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/auth/verify-email", h.VerifyEmail).Methods("POST")
 	router.HandleFunc("/api/v1/auth/verify-email/resend", h.ResendVerification).Methods("POST")
 	router.HandleFunc("/api/v1/auth/verify-email/change", h.ChangeVerificationEmail).Methods("POST")
+	// Registration policy and invitation links: the login page has to know
+	// whether the sign-up form exists at all, and an invite link must resolve
+	// for a browser that holds no session yet.
+	router.HandleFunc("/api/v1/auth/policy", h.AuthPolicy).Methods("GET")
+	router.HandleFunc("/api/v1/auth/invitations/accept", h.AcceptInvitation).Methods("POST")
+	router.HandleFunc("/api/v1/auth/invitations/{token}", h.PreviewInvitation).Methods("GET")
 	router.HandleFunc("/api/v1/auth/google", h.GoogleLogin).Methods("GET")
 	router.HandleFunc("/api/v1/auth/google/callback", h.GoogleCallback).Methods("GET")
 	h.registerOIDCRoutes(router)
@@ -76,6 +82,11 @@ func (h *Handler) provisionPersonalWorkspace(userID, displayName string) {
 }
 
 func (h *Handler) setSessionCookie(w http.ResponseWriter, token string) {
+	// The cookie's own expiry tracks the server's absolute session lifetime,
+	// so a browser stops presenting a cookie the server would refuse anyway
+	// (REQ-99). Idle expiry is not expressible in a cookie and stays a
+	// server-side check.
+	maxAge := h.sessionPolicy.Normalized().MaxAge
 	http.SetCookie(w, &http.Cookie{
 		Name:        SessionCookieName,
 		Value:       token,
@@ -84,7 +95,8 @@ func (h *Handler) setSessionCookie(w http.ResponseWriter, token string) {
 		Secure:      h.secureCookies,
 		SameSite:    h.cookieSameSite,
 		Partitioned: h.partitionedCookies(),
-		Expires:     time.Now().Add(users.SessionDuration),
+		Expires:     time.Now().Add(maxAge),
+		MaxAge:      int(maxAge.Seconds()),
 	})
 }
 
@@ -119,11 +131,49 @@ func (h *Handler) AuthConfig(w http.ResponseWriter, r *http.Request) {
 		// Tells the SPA whether an unverified account meets the wall, so it
 		// never walls anyone on a deployment that cannot send the link.
 		"email_verification_required": h.emailVerification.Required,
+		// Whether the page should offer a sign-up form at all (REQ-95).
+		"registration": h.registrationPolicy(),
 	}
 	if h.oidc.Enabled() {
 		resp["oidc_provider_name"] = h.oidc.displayName()
 	}
 	json.NewEncoder(w).Encode(resp)
+}
+
+// AuthPolicy is the narrow public answer to "can I sign myself up here?".
+// It exists beside AuthConfig so a client that only needs the policy — a
+// deployment check, a script — does not have to read the sign-in methods.
+func (h *Handler) AuthPolicy(w http.ResponseWriter, r *http.Request) {
+	json.NewEncoder(w).Encode(map[string]string{"registration": h.registrationPolicy()})
+}
+
+// registrationPolicy reports the deployment's policy, defaulting to open so
+// a handler constructed without one (tests) behaves as it always did.
+func (h *Handler) registrationPolicy() string {
+	if h.registration == RegistrationClosed {
+		return RegistrationClosed
+	}
+	return RegistrationOpen
+}
+
+// registrationAllowed reports whether this address may create an account.
+// Open deployments allow everyone; a closed one allows only an address a
+// workspace admin has a live invitation out to. A failure to look the
+// invitation up is treated as "no invitation": on a closed deployment the
+// safe answer to an unanswerable question is no.
+func (h *Handler) registrationAllowed(email string) bool {
+	if h.registrationPolicy() == RegistrationOpen {
+		return true
+	}
+	if h.invitationService == nil {
+		return false
+	}
+	pending, err := h.invitationService.PendingForEmail(email)
+	if err != nil {
+		slog.Warn("registration: failed to look up invitations for a sign-up", slog.Any("error", err))
+		return false
+	}
+	return len(pending) > 0
 }
 
 // Register creates a password account and logs it in.
@@ -141,12 +191,22 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		writeRateLimited(w, "Too many accounts created from this address; try again later.", retryAfter)
 		return
 	}
+	// On a closed deployment an invitation is the door: an invited address
+	// registers normally, everyone else is turned away (REQ-95).
+	if !h.registrationAllowed(req.Email) {
+		writeJSONErrorCode(w, http.StatusForbidden, "registration is closed", ErrCodeRegistrationClosed)
+		return
+	}
 	user, err := h.userService.Register(req.Email, req.Password, req.Name)
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	h.provisionPersonalWorkspace(user.ID, user.Name)
+	// Any workspace that invited this address gets its member now, so the
+	// person lands in the workspace they were invited to rather than an
+	// empty personal space.
+	h.acceptPendingInvitations(user.ID, user.Email)
 	_, token, err := h.userService.Login(req.Email, req.Password)
 	if err != nil {
 		respondInternal(w, r, "failed to sign in after registration", err)
@@ -338,6 +398,10 @@ func (h *Handler) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.provisionPersonalWorkspace(googleUser.ID, googleUser.Name)
+	// Single sign-on is never subject to the registration policy — the IdP is
+	// doing the admitting — but an invited address still joins its workspaces
+	// on the way in.
+	h.acceptPendingInvitations(googleUser.ID, googleUser.Email)
 	h.setSessionCookie(w, token)
 
 	dest := h.googleOAuth.FrontendURL

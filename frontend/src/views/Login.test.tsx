@@ -12,12 +12,26 @@ jest.mock('react-router-dom', () => ({
 }));
 
 // The login module builds an axios client at import time, so the API is
-// mocked wholesale; neither call it makes on mount needs to resolve for the
-// mode to be decided.
+// mocked wholesale. config() and invitation() answer from mutable fixtures
+// so a test can put the view on a closed deployment or hand it an invite
+// link; me() never resolves, which is what "signed out" looks like here.
+const authFixtures: {
+  config: any;
+  invitation: any;
+} = { config: null, invitation: null };
+
 jest.mock('../api/client', () => ({
   authAPI: {
-    config: () => new Promise(() => {}),
+    config: () =>
+      authFixtures.config
+        ? Promise.resolve({ data: authFixtures.config })
+        : new Promise(() => {}),
     me: () => new Promise(() => {}),
+    invitation: () =>
+      authFixtures.invitation
+        ? Promise.resolve({ data: authFixtures.invitation })
+        : Promise.reject(new Error('invalid invitation')),
+    acceptInvitation: () => Promise.resolve({ data: {} }),
     login: () => Promise.reject(new Error('not in this test')),
     register: () => Promise.reject(new Error('not in this test')),
     oidcLoginUrl: () => '/oidc',
@@ -31,6 +45,8 @@ let container: HTMLDivElement;
 let root: Root;
 
 beforeEach(() => {
+  authFixtures.config = null;
+  authFixtures.invitation = null;
   container = document.createElement('div');
   document.body.appendChild(container);
   act(() => {
@@ -69,5 +85,55 @@ describe('Login', () => {
     await render('/login');
     const back = Array.from(container.querySelectorAll('a')).find((a) => a.getAttribute('href') === '/');
     expect(back).toBeDefined();
+  });
+
+  it('offers sign-up while registration is open', async () => {
+    authFixtures.config = { google_enabled: false, oidc_enabled: false, registration: 'open' };
+    await render('/login');
+    expect(container.textContent).toContain('Create a new account');
+    expect(container.textContent).not.toContain('Registration is closed');
+  });
+
+  it('hides sign-up and says so when registration is closed', async () => {
+    authFixtures.config = { google_enabled: false, oidc_enabled: false, registration: 'closed' };
+    await render('/login');
+    expect(container.textContent).not.toContain('Create a new account');
+    expect(container.textContent).toContain(
+      'Registration is closed; ask a workspace admin for an invitation.'
+    );
+  });
+
+  // ?mode=register cannot conjure a sign-up form on a closed deployment.
+  it('falls back to sign-in when registration is closed', async () => {
+    authFixtures.config = { google_enabled: false, oidc_enabled: false, registration: 'closed' };
+    await render('/login?mode=register');
+    expect(container.querySelector('input[placeholder="Your name"]')).toBeNull();
+    expect(container.textContent).toContain('Sign in to your workspace');
+  });
+
+  it('opens registration prefilled from an invite link', async () => {
+    authFixtures.config = { google_enabled: false, oidc_enabled: false, registration: 'closed' };
+    authFixtures.invitation = {
+      email: 'invited@example.com',
+      org_name: 'Desktop Machine Shop',
+      role: 'member',
+      expires_at: '2030-01-01T00:00:00Z',
+    };
+    await render('/login?invite=tok-123');
+
+    // The sign-up form is available even though registration is closed —
+    // the invitation is the door — and the address comes prefilled.
+    expect(container.querySelector('input[placeholder="Your name"]')).not.toBeNull();
+    const email = container.querySelector('input[type="email"]') as HTMLInputElement;
+    expect(email.value).toBe('invited@example.com');
+    expect(container.textContent).toContain('Desktop Machine Shop');
+    expect(container.textContent).not.toContain('Registration is closed');
+  });
+
+  it('says so when the invite link no longer works', async () => {
+    authFixtures.config = { google_enabled: false, oidc_enabled: false, registration: 'closed' };
+    await render('/login?invite=expired');
+    expect(container.textContent).toContain('This invitation link is invalid or has expired.');
+    expect(container.textContent).toContain('Registration is closed');
   });
 });

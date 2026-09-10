@@ -122,6 +122,28 @@ password account meets the *Check your inbox* page on its next request and
 verifies with one click on *Resend email*. Re-adding `off` switches it back
 off at once. With no SMTP variables nothing is enforced.
 
+Optional — **registration policy and session lifetime** (see
+[operations.md](operations.md)):
+
+```dotenv
+# Close the public sign-up door. New accounts then arrive only through a
+# workspace invitation or the configured SSO provider.
+OPENV_REGISTRATION=closed
+
+# Shorten session lifetimes below the 720h/168h defaults (Go durations).
+OPENV_SESSION_MAX_AGE=336h
+OPENV_SESSION_IDLE=72h
+```
+
+**On the hosted instance, registration is open** — that is the default, and
+none of these variables is set there today, so anyone who reaches the site can
+create an account. To close it, set `OPENV_REGISTRATION=closed` on the **API**
+service and redeploy it; the login page picks the policy up from
+`GET /api/v1/auth/policy` with no frontend rebuild, since the SPA reads it at
+runtime. Existing accounts and sessions are unaffected. Invite people from
+*Workspace settings → Members* afterwards — with SMTP configured the
+invitation is emailed, and without it the link is shown once for you to send.
+
 ## 3. Frontend service
 
 **Create → GitHub Repo**, pick the same repository again.

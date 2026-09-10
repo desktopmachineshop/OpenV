@@ -143,6 +143,80 @@ cannot be delivered. Resend and change-of-address are throttled per account
 default 6). Worker keys, run tokens and the runner pool key never meet the
 gate: only browser sessions do.
 
+### Who may create an account
+
+`OPENV_REGISTRATION` decides whether the deployment has a public sign-up door
+(REQ-95). The boot log always says which state is in force.
+
+| Variable             | Default | Meaning                                                            |
+| -------------------- | ------- | ------------------------------------------------------------------ |
+| `OPENV_REGISTRATION` | `open`  | `open`: anyone may sign up. `closed`: only invited addresses and SSO |
+
+With `OPENV_REGISTRATION=closed`, `POST /api/v1/auth/register` answers
+`403 {"error":"registration is closed","code":"registration_closed"}` unless
+the address has a pending, unexpired workspace invitation — in which case the
+sign-up proceeds and the invitation is accepted on the way in. The login page
+reads the policy (`GET /api/v1/auth/policy`) and hides its *Create a new
+account* button, showing *Registration is closed; ask a workspace admin for an
+invitation* instead. Single sign-on is never affected: the identity provider is
+doing the admitting, and a first SSO sign-in also takes up any invitation for
+that address. Registration stays throttled per client address either way
+(`OPENV_REGISTER_IP_BURST`, `_REFILL_PER_HOUR`).
+
+Closing registration on an existing deployment changes nothing for accounts
+that already exist — nobody is signed out, and every workspace keeps its
+members.
+
+### Workspace invitations
+
+Workspace admins invite by email under *Workspace settings → Members*. An
+address that already has an account joins the workspace immediately; an
+address that does not gets an invitation, which is what makes a closed
+deployment usable:
+
+- Invitations are valid **7 days** and can be accepted once. The link is
+  `${FRONTEND_URL}/login?invite=<token>`, and the token is stored only as a
+  SHA-256 hash — the same contract as runner keys, because the link *is* a
+  credential into the workspace.
+- With SMTP configured the link is emailed. **Without SMTP the invitation
+  still exists**: the API returns the link once when it is created and the
+  Members tab shows it for the admin to pass on.
+- Following the link signed out opens sign-up with the address prefilled;
+  following it signed in joins that account to the workspace.
+- Admins can see and revoke pending invitations on the same tab. Revoking
+  stops the link working immediately. Expired invitations are swept by the
+  same background reaper that sweeps sessions.
+
+### Session lifetime
+
+A session ends two ways (REQ-99): an absolute deadline measured from sign-in,
+and an idle deadline measured from its last request. Both are enforced on
+every authenticated request and swept from the database in the background.
+Both are **caps, not targets** — an operator may shorten them, never lengthen
+them past the defaults.
+
+| Variable                | Default (and ceiling) | Meaning                              |
+| ----------------------- | --------------------- | ------------------------------------ |
+| `OPENV_SESSION_MAX_AGE` | `720h` (30 days)      | Absolute lifetime from sign-in       |
+| `OPENV_SESSION_IDLE`    | `168h` (7 days)       | How long a session may go unused     |
+
+Values are Go durations (`720h`, `12h`, `45m` — note `30d` is *not* a Go
+duration). A value above the ceiling is clamped, and anything unparseable or
+non-positive falls back to the default; each of those decisions logs a line at
+boot. The session cookie's own expiry tracks `OPENV_SESSION_MAX_AGE`, so
+shortening it also shortens how long a browser keeps the cookie. A live
+session records its last activity at most once a minute, so shortening the
+idle window does not multiply database writes.
+
+Changing either value applies to sessions that already exist, not just new
+ones: shortening the absolute lifetime signs out sessions that are already
+older than the new value on their next request.
+
+**Password changes** (`PUT /api/v1/me/password`, Settings → Change password)
+delete every other session of the account, keeping only the browser that made
+the change. Accounts created through Google or OIDC have no password to change
+and get `409 no_password`.
+
 If a required variable is missing, `docker compose ... up`/`config` fails with
 an error naming the variable rather than starting with dev defaults.
 

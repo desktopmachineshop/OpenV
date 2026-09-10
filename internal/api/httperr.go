@@ -15,9 +15,20 @@ type errorBody struct {
 	Code string `json:"code,omitempty"`
 }
 
-// ErrCodeEmailUnverified marks the 403 the auth middleware answers for a
-// session whose account has not yet confirmed its email address.
-const ErrCodeEmailUnverified = "email_unverified"
+// Machine-readable error codes. A client branches on these; the messages
+// beside them are for people and may change.
+const (
+	// ErrCodeEmailUnverified marks the 403 the auth middleware answers for a
+	// session whose account has not yet confirmed its email address.
+	ErrCodeEmailUnverified = "email_unverified"
+	// ErrCodeRegistrationClosed marks the 403 that registration answers on a
+	// deployment with no public sign-up door (REQ-95).
+	ErrCodeRegistrationClosed = "registration_closed"
+	// The three ways a password change refuses (REQ-99).
+	ErrCodeWeakPassword      = "weak_password"
+	ErrCodePasswordIncorrect = "password_incorrect"
+	ErrCodeNoPassword        = "no_password"
+)
 
 // writeJSONErrorCode is writeJSONError with a machine-readable code.
 func writeJSONErrorCode(w http.ResponseWriter, status int, message, code string) {

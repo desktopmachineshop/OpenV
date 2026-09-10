@@ -234,6 +234,10 @@ func (h *Handler) OIDCCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.provisionPersonalWorkspace(user.ID, user.Name)
+	// The registration policy never applies to single sign-on (the IdP is
+	// doing the admitting), but an invited address joins its workspaces here
+	// just as it would on sign-up.
+	h.acceptPendingInvitations(user.ID, user.Email)
 	h.setSessionCookie(w, token)
 
 	dest := h.oidc.FrontendURL

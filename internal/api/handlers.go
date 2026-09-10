@@ -37,6 +37,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/guided"
 	"github.com/openv/requirements-platform/internal/domain/hostedworkers"
 	"github.com/openv/requirements-platform/internal/domain/interviews"
+	"github.com/openv/requirements-platform/internal/domain/invitations"
 	"github.com/openv/requirements-platform/internal/domain/members"
 	"github.com/openv/requirements-platform/internal/domain/notifications"
 	"github.com/openv/requirements-platform/internal/domain/orgs"
@@ -115,6 +116,16 @@ type HandlerDeps struct {
 	Mailer            notify.Mailer
 	EmailLinkBase     string
 	EmailVerification users.EmailVerificationPolicy
+	// InvitationService backs workspace invitations; nil leaves the
+	// endpoints answering 404 and registration unable to see an invitation.
+	InvitationService invitations.Service
+	// Registration is the deployment's sign-up policy ("open" or "closed",
+	// see RegistrationPolicyFromEnv); empty means open.
+	Registration string
+	// SessionPolicy must be the policy the user service was given, so the
+	// session cookie and the server agree on when a session ends (REQ-99).
+	// The zero value means the defaults.
+	SessionPolicy users.SessionPolicy
 	// CrossSiteCookies marks deployments where the frontend and API are served
 	// from different sites (e.g. two *.up.railway.app domains): auth cookies are
 	// issued with SameSite=None, and Secure is forced on since browsers reject
@@ -199,6 +210,14 @@ type Handler struct {
 	mailer            notify.Mailer
 	emailLinkBase     string
 	emailVerification users.EmailVerificationPolicy
+
+	// Workspace invitations and the registration policy (REQ-95; see
+	// invitation_handlers.go and registration_policy.go).
+	invitationService invitations.Service
+	registration      string
+	// sessionPolicy is the same policy the user service enforces; the handler
+	// holds it so the cookie it writes expires when the session does.
+	sessionPolicy users.SessionPolicy
 }
 
 // NewHandler creates a new API handler
@@ -268,6 +287,9 @@ func NewHandler(deps HandlerDeps) *Handler {
 		mailer:                 deps.Mailer,
 		emailLinkBase:          deps.EmailLinkBase,
 		emailVerification:      deps.EmailVerification,
+		invitationService:      deps.InvitationService,
+		registration:           deps.Registration,
+		sessionPolicy:          deps.SessionPolicy,
 	}
 }
 
@@ -358,6 +380,8 @@ func (h *Handler) RegisterRoutes(router *mux.Router) {
 	h.registerNotificationRoutes(router)
 	h.registerAgentRoutes(router)
 	h.registerOrgRoutes(router)
+	h.registerInvitationRoutes(router)
+	h.registerPasswordRoutes(router)
 	h.registerRunnerSessionRoutes(router)
 	h.registerAttributeDefinitionRoutes(router)
 	h.registerSharedProductRoutes(router)

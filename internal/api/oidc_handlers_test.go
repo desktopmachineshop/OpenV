@@ -163,7 +163,24 @@ func (m *memUserRepo) FindSessionByTokenHash(hash string) (*users.Session, error
 func (m *memUserRepo) TouchSession(string, time.Time) error     { return nil }
 func (m *memUserRepo) SetSessionActiveOrg(string, string) error { return nil }
 func (m *memUserRepo) DeleteSession(id string) error            { delete(m.sessions, id); return nil }
-func (m *memUserRepo) DeleteExpiredSessions(time.Time) error    { return nil }
+func (m *memUserRepo) DeleteExpiredSessions(time.Time, time.Duration, time.Duration) error {
+	return nil
+}
+func (m *memUserRepo) DeleteSessionsForUser(userID, exceptTokenHash string) error {
+	for id, s := range m.sessions {
+		if s.UserID == userID && s.TokenHash != exceptTokenHash {
+			delete(m.sessions, id)
+		}
+	}
+	return nil
+}
+func (m *memUserRepo) SetPasswordHash(userID, hash string, at time.Time) error {
+	if u := m.users[userID]; u != nil {
+		u.PasswordHash = hash
+		u.UpdatedAt = at
+	}
+	return nil
+}
 
 // --- tests -----------------------------------------------------------------
 

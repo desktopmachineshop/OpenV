@@ -25,6 +25,25 @@ sends email, a new account first sees a **Check your inbox** page: click the
 link in the email (valid for 24 hours) and you are through. The page can
 resend the email, send it to a corrected address, or sign you out.
 
+Some servers **close registration**: there is then no *Create a new account*
+button, and the sign-in screen tells you to ask a workspace admin for an
+invitation. An invitation link opens the sign-up form with your address
+already filled in, and joins you to the workspace that invited you as soon as
+your account exists. Single sign-on is unaffected.
+
+### Your password and your sessions
+
+Open **your settings** from the user block at the bottom-left of the sidebar
+to **change your password** — current password, then the new one twice.
+Changing it signs out every other browser and device you are signed in on,
+which is what you want if you are changing it because the old one may have
+leaked; the browser you are using stays signed in. Accounts that sign in with
+Google or single sign-on have no password here — change it at that provider.
+
+Sessions do not last forever: one expires a set time after you sign in, and
+sooner if you stop using it. Your server's administrator sets both limits
+(30 days and 7 days unless they shortened them), and you simply sign in again.
+
 ## Workspaces
 
 Everything in OpenV lives inside a **workspace** (also called an org):

@@ -15,6 +15,12 @@ import (
 type fakeLoginService struct {
 	users.Service
 	registered int
+	// sessions resolves a cookie value to its user, for the handlers that
+	// read the session themselves on an open auth route.
+	sessions map[string]*users.User
+	// accounts is the directory FindByEmail answers from; an address that is
+	// not in it has no account, which is what makes AddOrgMember invite.
+	accounts map[string]*users.User
 }
 
 func (f *fakeLoginService) Login(email, password string) (*users.User, string, error) {
@@ -26,7 +32,18 @@ func (f *fakeLoginService) Login(email, password string) (*users.User, string, e
 
 func (f *fakeLoginService) Register(email, password, name string) (*users.User, error) {
 	f.registered++
-	return &users.User{ID: "u2", Email: email}, nil
+	return &users.User{ID: "u2", Email: strings.ToLower(email)}, nil
+}
+
+func (f *fakeLoginService) GetBySessionToken(token string) (*users.User, error) {
+	if u := f.sessions[token]; u != nil {
+		return u, nil
+	}
+	return nil, users.ErrSessionInvalid
+}
+
+func (f *fakeLoginService) FindByEmail(email string) (*users.User, error) {
+	return f.accounts[strings.ToLower(strings.TrimSpace(email))], nil
 }
 
 func loginReq(email, password string) *http.Request {

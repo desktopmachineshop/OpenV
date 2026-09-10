@@ -12,6 +12,9 @@ type memRepo struct {
 	users         map[string]*User
 	sessions      map[string]*Session
 	verifications map[string]*EmailVerification // by token hash
+	// touches counts TouchSession calls, so the session tests can assert
+	// that last_seen_at is not rewritten on every single request.
+	touches int
 }
 
 func newMemRepo() *memRepo {
@@ -75,10 +78,35 @@ func (m *memRepo) FindSessionByTokenHash(hash string) (*Session, error) {
 	}
 	return nil, nil
 }
-func (m *memRepo) TouchSession(string, time.Time) error     { return nil }
+func (m *memRepo) TouchSession(id string, lastSeen time.Time) error {
+	m.touches++
+	if s := m.sessions[id]; s != nil {
+		s.LastSeenAt = lastSeen
+	}
+	return nil
+}
 func (m *memRepo) SetSessionActiveOrg(string, string) error { return nil }
 func (m *memRepo) DeleteSession(id string) error            { delete(m.sessions, id); return nil }
-func (m *memRepo) DeleteExpiredSessions(time.Time) error    { return nil }
+func (m *memRepo) DeleteExpiredSessions(time.Time, time.Duration, time.Duration) error {
+	return nil
+}
+func (m *memRepo) DeleteSessionsForUser(userID, exceptTokenHash string) error {
+	for id, s := range m.sessions {
+		if s.UserID == userID && s.TokenHash != exceptTokenHash {
+			delete(m.sessions, id)
+		}
+	}
+	return nil
+}
+func (m *memRepo) SetPasswordHash(userID, hash string, at time.Time) error {
+	u := m.users[userID]
+	if u == nil {
+		return nil
+	}
+	u.PasswordHash = hash
+	u.UpdatedAt = at
+	return nil
+}
 
 // TestLoginWithSSONewUserRecordsProvider: a first-time SSO login provisions an
 // account labelled with the given provider.

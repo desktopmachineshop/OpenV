@@ -288,7 +288,10 @@ func (h *Handler) ListOrgMembers(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(list)
 }
 
-// AddOrgMember invites an existing user by email (admin).
+// AddOrgMember adds a member by email (admin). An address that already has
+// an account joins immediately (201); one that does not gets an invitation
+// instead of the old "they must sign up first" 404 (202 with the invitation
+// and its one-time link), which is what makes a closed deployment usable.
 func (h *Handler) AddOrgMember(w http.ResponseWriter, r *http.Request) {
 	orgID := mux.Vars(r)["id"]
 	if !h.requireOrgRole(w, r, orgID, orgs.RoleAdmin) {
@@ -311,7 +314,13 @@ func (h *Handler) AddOrgMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if user == nil {
-		writeJSONError(w, http.StatusNotFound, "no user with that email — they must sign up first")
+		resp, err := h.inviteToOrg(r, orgID, req.Email, req.Role)
+		if err != nil {
+			h.writeInvitationError(w, r, err)
+			return
+		}
+		w.WriteHeader(http.StatusAccepted)
+		json.NewEncoder(w).Encode(resp)
 		return
 	}
 	if err := h.orgService.AddMember(orgID, user.ID, req.Role); err != nil {

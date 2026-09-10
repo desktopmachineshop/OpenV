@@ -16,14 +16,35 @@ are admin-only; other members see read-only or explanatory views.
 
 ## Members
 
-The people in the workspace. Admins can add members by email — the person
-must already have an OpenV account (no invite emails are sent) — and manage
-each member's workspace role (**member** or **admin**; new members default to
+The people in the workspace. Admins add members by email and manage each
+member's workspace role (**member** or **admin**; new members default to
 member). Note the distinction:
 
 - **Workspace membership** gets someone into the workspace.
 - **Project access** is granted per project (Project Settings → Access) —
   directly or via teams.
+
+### Inviting someone who has no account yet
+
+Adding an email that already has an OpenV account joins that person straight
+away. An email with no account gets an **invitation** instead, so you never
+have to ask someone to sign up first:
+
+- The invitation is valid for **seven days** and can be used once. It names
+  the workspace and the role you chose.
+- If the server has email configured, the invitation is sent to that address.
+  If it does not, OpenV shows you the invitation **link once**, right after
+  you create it — copy it then and send it yourself. It cannot be shown
+  again; create a fresh invitation if you lose it.
+- Opening the link signed out starts sign-up with the address filled in;
+  opening it while signed in simply joins that account to the workspace.
+- **Pending invitations** are listed above the Add member form while any are
+  outstanding, with who they were sent to and when they expire. *Revoke*
+  stops a link working immediately.
+
+On a server where the operator has closed public registration, an invitation
+is the only way in besides single sign-on — the sign-in page then says so
+instead of offering *Create a new account*.
 
 ## Teams
 

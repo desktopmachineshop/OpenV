@@ -115,11 +115,15 @@ their own project, workers pass within their org) · `org member`/`org admin`
 
 | Method | Path | Purpose | Auth |
 |---|---|---|---|
-| POST | `/api/v1/auth/register` | Create password account (first user becomes admin) and log in; on a server with SMTP the account starts unverified and a verification link is emailed | open |
+| POST | `/api/v1/auth/register` | Create password account (first user becomes admin) and log in; on a server with SMTP the account starts unverified and a verification link is emailed. `403 {"code":"registration_closed"}` when `OPENV_REGISTRATION=closed` and the address has no pending invitation | open |
 | POST | `/api/v1/auth/login` | Password login, sets session cookie | open |
 | POST | `/api/v1/auth/logout` | End session, clear cookie | open |
 | GET | `/api/v1/auth/me` | Current user profile | user |
-| GET | `/api/v1/auth/config` | Which sign-in methods are enabled (Google, OIDC) and whether `email_verification_required` | open |
+| GET | `/api/v1/auth/config` | Which sign-in methods are enabled (Google, OIDC), whether `email_verification_required`, and the `registration` policy | open |
+| GET | `/api/v1/auth/policy` | The registration policy alone: `{"registration":"open"\|"closed"}` | open |
+| GET | `/api/v1/auth/invitations/{token}` | Preview an invite link: `{email, org_name, role, expires_at}`; one `404` for every unusable link | open |
+| POST | `/api/v1/auth/invitations/accept` | Join the signed-in account to the invitation's workspace `{token}` (`404` when the link is unusable) | user (cookie only, JSON body) |
+| PUT | `/api/v1/me/password` | Change password `{current_password, new_password}`; `204` on success and every OTHER session of the account is invalidated. `400 weak_password`, `403 password_incorrect`, `409 no_password` (SSO-only account) | user |
 | POST | `/api/v1/auth/verify-email` | Confirm an emailed link `{token}`; returns the user (`400` invalid/expired, `409` address taken) | open |
 | POST | `/api/v1/auth/verify-email/resend` | Email a fresh link to the session's account (`202 {sent_to}`; `409` already verified; `502` mail failed) | user (cookie only, JSON body) |
 | POST | `/api/v1/auth/verify-email/change` | Email a fresh link to a corrected address `{email}`; the account's address changes when that link is confirmed | user (cookie only, JSON body) |
@@ -143,7 +147,10 @@ their own project, workers pass within their org) · `org member`/`org admin`
 | POST | `/api/v1/orgs/{id}/restore` | Restore a soft-deleted workspace within the grace period | org admin (of the deleted org) |
 | POST | `/api/v1/orgs/{id}/activate` | Set the session's active workspace | org member |
 | GET | `/api/v1/orgs/{id}/members` | List workspace members | org member |
-| POST | `/api/v1/orgs/{id}/members` | Add member | org admin |
+| POST | `/api/v1/orgs/{id}/members` | Add member by email. `201` when the address has an account and joined; `202 {invitation, link, emailed}` when it does not and was invited instead | org admin |
+| GET | `/api/v1/orgs/{id}/invitations` | Pending invitations to the workspace | org admin |
+| POST | `/api/v1/orgs/{id}/invitations` | Invite an address `{email, role}` → `201 {invitation, link, emailed}`; `link` is the one-time `${FRONTEND_URL}/login?invite=<token>` and is never retrievable again | org admin |
+| DELETE | `/api/v1/orgs/{id}/invitations/{invId}` | Revoke a pending invitation (its link stops working) | org admin |
 | PUT | `/api/v1/orgs/{id}/members/{userId}` | Change org role | org admin |
 | DELETE | `/api/v1/orgs/{id}/members/{userId}` | Remove member (self-removal = leave, allowed for members) | org admin / self |
 | GET | `/api/v1/orgs/{id}/teams` | List people-teams | org member |
@@ -556,7 +563,20 @@ While a server requires email verification (`email_verification_required` in
 `GET /auth/config`), a session whose account has `email_verified: false` is
 answered `403 {"error":"email not verified","code":"email_unverified"}` on
 every route outside `/api/v1/auth/*`; `code` is the stable field a client
-branches on. Bearer credentials are never gated.
+branches on. Bearer credentials are never gated. A wrong `current_password` on
+`PUT /me/password` spends the account's sign-in budget, so guessing it is
+throttled the same way guessing at the login form is.
+
+## Sessions
+
+A session ends at whichever deadline comes first: `OPENV_SESSION_MAX_AGE`
+(absolute, from sign-in; default and ceiling 720h) or `OPENV_SESSION_IDLE`
+(since its last request; default and ceiling 168h). Both are checked on every
+authenticated request, so shortening either applies to sessions that already
+exist, and a background sweep deletes the rows. An expired session is
+answered like any other invalid one (`401`). A successful `PUT /me/password`
+invalidates every other session of the account immediately; the caller's own
+survives. See [operations.md](operations.md) for the variables.
 Request bodies are capped at 32 MB and attachment uploads at 25 MB (`413`
 when exceeded); an upload whose bytes do not match the declared image type
 is refused with `400`, and an SVG attachment is always served as a download.

@@ -576,6 +576,38 @@ export interface AuthConfig {
   oidc_enabled: boolean;
   oidc_provider_name: string;
   email_verification_required: boolean;
+  // Whether this deployment still has a public sign-up door (REQ-95). When
+  // 'closed', new accounts arrive only by invitation or through SSO.
+  registration?: 'open' | 'closed';
+}
+
+// What an invite link resolves to before the holder has any account: enough
+// to prefill the sign-up form and name the workspace, nothing more.
+export interface InvitationPreview {
+  email: string;
+  org_name: string;
+  role: 'admin' | 'member';
+  expires_at: string;
+}
+
+// A pending invitation as an admin sees it on the Members tab.
+export interface OrgInvitation {
+  id: string;
+  org_id: string;
+  email: string;
+  role: 'admin' | 'member';
+  expires_at: string;
+  created_at: string;
+  invited_by_name?: string;
+}
+
+// The answer to creating an invitation: the row, the one-time link (shown
+// once — the server keeps only its hash), and whether it was emailed. With
+// no SMTP configured the admin passes the link on themselves.
+export interface OrgInvitationCreated {
+  invitation: OrgInvitation;
+  link: string;
+  emailed: boolean;
 }
 
 export interface NotificationPrefs {
@@ -1074,9 +1106,27 @@ export const authAPI = {
     client.post<{ sent_to: string }>('/api/v1/auth/verify-email/resend', {}),
   changeVerificationEmail: (email: string) =>
     client.post<{ sent_to: string }>('/api/v1/auth/verify-email/change', { email }),
+  // Registration policy on its own, for a caller that needs nothing else.
+  policy: () => client.get<{ registration: 'open' | 'closed' }>('/api/v1/auth/policy'),
+  // Invite links: preview one (open — the holder has no session yet), or
+  // accept it as the signed-in account.
+  invitation: (token: string) =>
+    client.get<InvitationPreview>(`/api/v1/auth/invitations/${encodeURIComponent(token)}`),
+  acceptInvitation: (token: string) =>
+    client.post<{ org_id: string; org_name: string; role: string }>(
+      '/api/v1/auth/invitations/accept',
+      { token }
+    ),
   googleLoginUrl: () => `${API_BASE_URL}/api/v1/auth/google`,
   oidcLoginUrl: () => `${API_BASE_URL}/api/v1/auth/oidc/login`,
   listUsers: () => client.get<User[]>('/api/v1/users'),
+};
+
+// The account's own password (REQ-99). A successful change ends every other
+// session of the account; this browser's stays signed in.
+export const passwordAPI = {
+  change: (current_password: string, new_password: string) =>
+    client.put('/api/v1/me/password', { current_password, new_password }),
 };
 
 // Per-user notification preferences (issue #187): the email opt-out toggle.
@@ -1227,10 +1277,22 @@ export const orgsAPI = {
   restore: (id: string) => client.post<Org>(`/api/v1/orgs/${id}/restore`),
   listDeleted: () => client.get<{ orgs: Org[] }>('/api/v1/orgs', { params: { deleted: 'true' } }),
   activate: (id: string) => client.post(`/api/v1/orgs/${id}/activate`),
+  // Pending invitations to the workspace (admin). An address with no account
+  // is invited rather than refused, so this is where an admin watches for
+  // people who have not arrived yet.
+  invitations: {
+    list: (orgId: string) => client.get<OrgInvitation[]>(`/api/v1/orgs/${orgId}/invitations`),
+    create: (orgId: string, email: string, role: string) =>
+      client.post<OrgInvitationCreated>(`/api/v1/orgs/${orgId}/invitations`, { email, role }),
+    revoke: (orgId: string, invitationId: string) =>
+      client.delete(`/api/v1/orgs/${orgId}/invitations/${invitationId}`),
+  },
   members: {
     list: (orgId: string) => client.get<OrgMember[]>(`/api/v1/orgs/${orgId}/members`),
+    // 201 when the address already has an account and joined; 202 with an
+    // OrgInvitationCreated body when it did not and was invited instead.
     add: (orgId: string, email: string, role: string) =>
-      client.post(`/api/v1/orgs/${orgId}/members`, { email, role }),
+      client.post<OrgInvitationCreated | ''>(`/api/v1/orgs/${orgId}/members`, { email, role }),
     setRole: (orgId: string, userId: string, role: string) =>
       client.put(`/api/v1/orgs/${orgId}/members/${userId}`, { role }),
     remove: (orgId: string, userId: string) =>
