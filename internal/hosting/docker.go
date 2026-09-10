@@ -3,8 +3,10 @@ package hosting
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -54,6 +56,65 @@ func newDockerProvisioner() (*dockerProvisioner, error) {
 
 func (p *dockerProvisioner) Enabled() bool { return true }
 
+// defaultPidsLimit caps the processes a runner container may create. A vendor
+// CLI is node plus a handful of children, so a few hundred is generous; the
+// point is that a fork bomb — from a bug, a hostile repository, or a prompt
+// injection that reached a shell — cannot take the docker host down with it.
+const defaultPidsLimit int64 = 256
+
+// PidsLimit is the per-container process cap, overridable with
+// HOSTED_RUNNER_PIDS_LIMIT. A value of 0 or less means "no cap" (docker's own
+// convention) for an operator who has to lift it; anything unparseable falls
+// back to the default rather than to unlimited.
+func PidsLimit() int64 {
+	raw := os.Getenv("HOSTED_RUNNER_PIDS_LIMIT")
+	if raw == "" {
+		return defaultPidsLimit
+	}
+	n, err := strconv.ParseInt(strings.TrimSpace(raw), 10, 64)
+	if err != nil {
+		log.Printf("hosting: HOSTED_RUNNER_PIDS_LIMIT=%q is not a number; using %d", raw, defaultPidsLimit)
+		return defaultPidsLimit
+	}
+	if n <= 0 {
+		return 0
+	}
+	return n
+}
+
+// hostConfigFor builds the runner container's HostConfig: the org's data
+// volume, its resource caps, and the isolation a container that runs a vendor
+// CLI on someone else's prompt needs (REQ-96, HAZ-2).
+//
+//   - CapDrop ALL — a runner needs no Linux capability at all; it runs one
+//     node process as an unprivileged user.
+//   - no-new-privileges — nothing inside can gain privilege through a setuid
+//     binary, so a compromised CLI cannot climb.
+//   - PidsLimit — a fork bomb hits a wall instead of the host.
+//   - Memory / NanoCPUs — the org's plan caps, as before.
+//
+// ReadonlyRootfs is deliberately NOT set: the runner image's vendor CLIs write
+// outside /data (npm and CLI caches under /tmp, git's temporary files), so a
+// read-only root filesystem breaks runs today. Getting there means giving each
+// of those paths a tmpfs mount, which is worth doing but is not this change.
+func hostConfigFor(volName string, limits ResourceLimits, pidsLimit int64) *container.HostConfig {
+	cfg := &container.HostConfig{
+		RestartPolicy: container.RestartPolicy{Name: container.RestartPolicyUnlessStopped},
+		Binds:         []string{volName + ":/data"},
+		CapDrop:       []string{"ALL"},
+		SecurityOpt:   []string{"no-new-privileges:true"},
+		Resources: container.Resources{
+			// Zero values mean "no cap" to docker, matching ResourceLimits.
+			Memory:   limits.MemoryMB * 1024 * 1024,
+			NanoCPUs: limits.NanoCPUs,
+		},
+	}
+	if pidsLimit > 0 {
+		cfg.Resources.PidsLimit = &pidsLimit
+	}
+	return cfg
+}
+
 // volumeName is the org's persistent runner volume (HOME, workspaces, CLI
 // state live under /data).
 func volumeName(orgID string) string {
@@ -69,9 +130,9 @@ type runnerSpec struct {
 }
 
 // buildRunnerSpec assembles the container, host and networking configuration
-// for an org's runner. It touches no docker API, so it is the unit-testable
-// half of Provision.
-func buildRunnerSpec(image, netName, apiURL, orgID, workerKey string, extraEnv map[string]string, limits ResourceLimits) runnerSpec {
+// for an org's runner — including the isolation hostConfigFor applies. It
+// touches no docker API, so it is the unit-testable half of Provision.
+func buildRunnerSpec(image, netName, apiURL, orgID, workerKey string, extraEnv map[string]string, limits ResourceLimits, pidsLimit int64) runnerSpec {
 	env := []string{
 		"OPENV_API_URL=" + apiURL,
 		"WORKER_API_KEY=" + workerKey,
@@ -92,20 +153,19 @@ func buildRunnerSpec(image, netName, apiURL, orgID, workerKey string, extraEnv m
 			Env:    env,
 			Labels: map[string]string{"openv.org": orgID},
 		},
-		hostConfig: &container.HostConfig{
-			RestartPolicy: container.RestartPolicy{Name: container.RestartPolicyUnlessStopped},
-			Binds:         []string{volumeName(orgID) + ":/data"},
-			Resources: container.Resources{
-				// Zero values mean "no cap" to docker, matching ResourceLimits.
-				Memory:   limits.MemoryMB * 1024 * 1024,
-				NanoCPUs: limits.NanoCPUs,
-			},
-		},
+		hostConfig: hostConfigFor(volumeName(orgID), limits, pidsLimit),
 	}
+	// The runner belongs on a network of its own, reaching the API and the
+	// providers and nothing else — not the database, not the other services
+	// (REQ-96). Without RUNNER_NETWORK it lands on docker's default bridge,
+	// where it can talk to every other container on it, so say so once per
+	// spec rather than letting it pass silently.
 	if netName != "" {
 		spec.networking = &network.NetworkingConfig{
 			EndpointsConfig: map[string]*network.EndpointSettings{netName: {}},
 		}
+	} else {
+		log.Printf("hosting: RUNNER_NETWORK is unset, so the runner for org %s joins the default bridge network and can reach every container on it; see docs/operations.md (hosted runner isolation)", orgID)
 	}
 	return spec
 }
@@ -124,7 +184,7 @@ func (p *dockerProvisioner) Provision(orgID, containerName, workerKey string, ex
 		return fmt.Errorf("create volume %s: %w", volName, err)
 	}
 
-	spec := buildRunnerSpec(p.image, p.network, p.apiURL, orgID, workerKey, extraEnv, limits)
+	spec := buildRunnerSpec(p.image, p.network, p.apiURL, orgID, workerKey, extraEnv, limits, PidsLimit())
 
 	created, err := p.cli.ContainerCreate(ctx, client.ContainerCreateOptions{
 		Config:           spec.config,

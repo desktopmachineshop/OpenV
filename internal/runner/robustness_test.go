@@ -101,7 +101,7 @@ func newTestWorker(rs *recordingServer, adapter Adapter) *Worker {
 func testClaim() *ClaimResponse {
 	return &ClaimResponse{
 		Run:      &agentruns.Run{ID: "r1", Prompt: "hi"},
-		Agent:    &agents.Agent{Provider: "fake", Name: "fake-agent"},
+		Agent:    &agents.Agent{Provider: "fake", Name: "fake-agent", AllowedTools: agents.DefaultAllowedTools()},
 		RunToken: "tok",
 	}
 }

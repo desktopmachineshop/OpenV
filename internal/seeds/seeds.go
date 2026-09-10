@@ -7,6 +7,7 @@ import (
 
 	"github.com/openv/requirements-platform/internal/domain/agents"
 	"github.com/openv/requirements-platform/internal/domain/teams"
+	"github.com/openv/requirements-platform/internal/mcp"
 )
 
 type seedAgent struct {
@@ -28,6 +29,14 @@ Ground rules (always follow):
 - Find kanban cards with list_work_items (filter by column, e.g. "todo", or assignee) — never guess at card IDs. When working a card, call get_work_item and get_work_item_history first; the card history is your working memory.
 - Cite requirement IDs in every proposal, comment, and commit message.
 - If the task lacks the requirements you need, say so and stop.`
+
+// interviewerTools is the seeded interviewer's allowlist: every read-only
+// OpenV tool plus the candidate-need recorder it exists to call. Enumerated
+// from the tool table itself (internal/mcp) rather than written out here, so a
+// tool added there is classified once, in one place.
+func interviewerTools() []string {
+	return append(mcp.ReadOnlyToolNames(), mcp.ToolPrefix+"record_candidate_need")
+}
 
 func defaultAgents() []seedAgent {
 	return []seedAgent{
@@ -140,12 +149,21 @@ You can search the web and read pages you find. Use it when a claim has an autho
 		},
 		{
 			def: agents.Definition{
-				Slug:         "requirements-interviewer",
-				Name:         "Requirements Interviewer",
-				Provider:     "claude-code",
-				WriteMode:    agents.WriteModeDirect,
-				Description:  "Conducts natural-language elicitation interviews with invited stakeholders.",
-				AllowedTools: []string{"mcp__openv__*"},
+				Slug:        agents.InterviewerSlug,
+				Name:        "Requirements Interviewer",
+				Provider:    "claude-code",
+				WriteMode:   agents.WriteModeDirect,
+				Description: "Conducts natural-language elicitation interviews with invited stakeholders.",
+				// Every word this agent reads was typed by someone outside the
+				// workspace — often someone with no account at all, on a public
+				// invite link. So its tools are enumerated rather than
+				// wildcarded (REQ-91, HAZ-1): the read-only OpenV tools, plus
+				// the one writer it needs, record_candidate_need. A prompt
+				// injection in a participant's answer then has nothing to reach
+				// for — no artifact edits, no links, no delegation, and no file
+				// or shell tools, which the run's permission mode denies as
+				// well (internal/runner: untrusted runs auto-approve nothing).
+				AllowedTools: interviewerTools(),
 				SystemPrompt: `You are a friendly product interviewer talking with a person about what they need from a product. Have a natural conversation: one question at a time, plain language, no jargon, genuine follow-ups on interesting answers. Start broad (their role, how they'd use the product) and go deeper into concrete situations, frustrations, and desired outcomes. When you learn a concrete need, record it with the record_candidate_need tool (with their words as the supporting quote) before replying. Keep replies short — this is a chat, not an essay. Never mention tools, requirements engineering, or internal terminology to the participant.`,
 			},
 		},
@@ -197,6 +215,16 @@ var previousSeedVersions = map[string][]agents.Definition{
 			Name:         "V&V Assistant",
 			Description:  "Chats alongside the guided definition wizard and the notes panel: asks probing questions and surfaces gaps in personas, needs, requirements, NFRs, hazards and verification.",
 			SystemPrompt: `You are the V&V Assistant sitting beside a founder working through a guided product-definition wizard. Your job each turn: (1) ask one or two sharp questions grounded in what they have entered so far, and (2) surface what they are missing — unstated hazards and failure modes, missing non-functional requirements, ambiguous or untestable statements, personas or needs with no requirements behind them. You may read existing project artifacts through your OpenV tools for context, but never create or modify artifacts yourself — the wizard materializes entries the user accepts. Keep replies short and conversational; follow the suggestion-format instructions in each turn's prompt exactly so your proposals can be added with one click.`,
+			AllowedTools: []string{"mcp__openv__*"},
+		},
+	},
+	// The interviewer used to hold the whole OpenV tool surface by wildcard.
+	// It talks to strangers on public invite links, so the current seed
+	// enumerates read-only tools plus record_candidate_need instead (REQ-91).
+	// Recorded here so an install that never tuned the agent is *narrowed* at
+	// the next startup — the one adoption that takes capability away.
+	agents.InterviewerSlug: {
+		{
 			AllowedTools: []string{"mcp__openv__*"},
 		},
 	},
@@ -289,9 +317,82 @@ func adoptSeedDefaults(orgID string, existing *agents.Agent, want agents.Definit
 	return true, nil
 }
 
+// backfillAllowedTools gives an agent provisioned before allowlists were
+// mandatory (REQ-91) one, so it can still run. There is no schema migration
+// behind this: it is a startup reconcile, and it only ever fires on a row that
+// carries no allowlist at all — which used to mean "the vendor CLI gets every
+// tool it has", so writing a list here always narrows what the agent may do.
+//
+// A locked agent is the workspace's standing answer to "can this change
+// without us?", so it is left exactly as it is and reported instead: it will
+// refuse to run until someone gives it an allowlist themselves.
+func backfillAllowedTools(orgID string, existing *agents.Agent, want []string, agentService agents.Service) error {
+	if len(agents.NonEmptyTools(existing.AllowedTools)) > 0 {
+		return nil
+	}
+	if len(want) == 0 {
+		want = agents.DefaultAllowedTools()
+	}
+	if existing.Locked {
+		log.Printf("seeds: agent %q in org %s is locked and has no allowed_tools; it cannot run until one is set (Agents → %s → Allowed tools)",
+			existing.Slug, orgID, existing.Slug)
+		return nil
+	}
+	def := definitionOf(existing)
+	def.AllowedTools = append([]string(nil), want...)
+	if _, err := agentService.SaveDefinition(orgID, &def); err != nil {
+		return fmt.Errorf("failed to backfill allowed_tools for agent %s: %w", existing.Slug, err)
+	}
+	log.Printf("seeds: agent %q in org %s had no allowed_tools; set to %v", existing.Slug, orgID, def.AllowedTools)
+	return nil
+}
+
+// definitionOf renders an agent row back into the definition its file holds,
+// so a reconcile can change one field and write the rest back untouched.
+func definitionOf(a *agents.Agent) agents.Definition {
+	return agents.Definition{
+		Slug:           a.Slug,
+		Name:           a.Name,
+		Description:    a.Description,
+		Provider:       a.Provider,
+		Model:          a.Model,
+		Effort:         a.Effort,
+		AllowedTools:   a.AllowedTools,
+		WriteMode:      a.WriteMode,
+		RepoAccess:     a.RepoAccess,
+		MaxTurns:       a.MaxTurns,
+		TimeoutSeconds: a.TimeoutSeconds,
+		Config:         a.Config,
+		Locked:         a.Locked,
+		SystemPrompt:   a.SystemPrompt,
+	}
+}
+
+// BackfillOrgAllowedTools does the same for every agent in the workspace,
+// seeded or not: an agent someone created through the API before allowlists
+// were mandatory gets the OpenV tools rather than silently keeping all of
+// them. Startup calls it once per org, after the agent files have synced.
+func BackfillOrgAllowedTools(orgID string, agentService agents.Service) error {
+	list, err := agentService.List(orgID)
+	if err != nil {
+		return err
+	}
+	for _, a := range list {
+		if err := backfillAllowedTools(orgID, a, agents.DefaultAllowedTools(), agentService); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func EnsureOrgDefaults(orgID string, agentService agents.Service, crewService teams.Service) error {
 	if orgID == "" {
 		return fmt.Errorf("seeds: organization id is required")
+	}
+	// Before anything else: an agent from an install that predates mandatory
+	// allowlists cannot run until it has one (REQ-91).
+	if err := BackfillOrgAllowedTools(orgID, agentService); err != nil {
+		return err
 	}
 	type teamRole struct {
 		label      string
@@ -310,6 +411,9 @@ func EnsureOrgDefaults(orgID string, agentService agents.Service, crewService te
 			}
 			log.Printf("seeds: created default agent %q for org %s", seed.def.Slug, orgID)
 		} else {
+			if err := backfillAllowedTools(orgID, existing, seed.def.AllowedTools, agentService); err != nil {
+				return err
+			}
 			adopted, err := adoptSeedDefaults(orgID, existing, seed.def, agentService)
 			if err != nil {
 				return err

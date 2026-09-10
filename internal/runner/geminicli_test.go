@@ -25,39 +25,57 @@ func geminiSpec() RunSpec {
 	}
 }
 
-// yolo (auto-approve everything, unsandboxed) must be gone; the least-privilege
-// auto_edit mode replaces it.
-func TestBuildGeminiArgs_NoYolo(t *testing.T) {
-	args, err := buildGeminiArgs(geminiSpec())
-	if err != nil {
-		t.Fatalf("buildGeminiArgs: %v", err)
+// yolo (auto-approve everything, unsandboxed) must never be the mode, and an
+// untrusted run drops even auto_edit: it approves nothing beyond its
+// allowlist (REQ-91).
+func TestGeminiApprovalMode(t *testing.T) {
+	if got := geminiApprovalMode(geminiSpec()); got != "auto_edit" {
+		t.Errorf("trusted approval mode = %q, want auto_edit", got)
 	}
-	joined := strings.Join(args, " ")
-	if strings.Contains(joined, "yolo") {
-		t.Fatalf("yolo mode still present: %v", args)
+	untrusted := geminiSpec()
+	untrusted.Untrusted = true
+	if got := geminiApprovalMode(untrusted); got != "default" {
+		t.Errorf("untrusted approval mode = %q, want default", got)
 	}
-	if !strings.Contains(joined, "--approval-mode auto_edit") {
-		t.Errorf("expected --approval-mode auto_edit: %v", args)
+	for _, spec := range []RunSpec{geminiSpec(), untrusted} {
+		if strings.Contains(geminiApprovalMode(spec), "yolo") {
+			t.Fatal("yolo mode must never be used")
+		}
 	}
 }
 
+// Every agent must carry a tool allowlist (REQ-91), and the headless gemini
+// CLI has no way to apply one — so a gemini agent is refused before launch
+// either way: with an allowlist it cannot enforce, and without one it must
+// not run at all.
 func TestBuildGeminiArgs_UnsupportedCapsError(t *testing.T) {
 	t.Run("max_turns", func(t *testing.T) {
 		spec := geminiSpec()
 		spec.MaxTurns = 3
 		if _, err := buildGeminiArgs(spec); err == nil {
 			t.Fatal("expected error when MaxTurns is set")
-		} else if !strings.Contains(err.Error(), "MaxTurns") {
-			t.Errorf("error should name MaxTurns: %v", err)
 		}
 	})
 	t.Run("allowed_tools", func(t *testing.T) {
 		spec := geminiSpec()
 		spec.AllowedTools = []string{"Read"}
-		if _, err := buildGeminiArgs(spec); err == nil {
+		_, err := buildGeminiArgs(spec)
+		if err == nil {
 			t.Fatal("expected error when AllowedTools is set")
-		} else if !strings.Contains(err.Error(), "AllowedTools") {
-			t.Errorf("error should name AllowedTools: %v", err)
+		}
+		if !strings.Contains(err.Error(), "allowlist") || !strings.Contains(err.Error(), "claude-code") {
+			t.Errorf("refusal should say the CLI cannot enforce an allowlist and name a provider that can: %v", err)
+		}
+	})
+	t.Run("no allowed_tools at all", func(t *testing.T) {
+		spec := geminiSpec()
+		spec.AllowedTools = nil
+		_, err := buildGeminiArgs(spec)
+		if err == nil {
+			t.Fatal("expected error when the agent names no tools")
+		}
+		if !strings.Contains(err.Error(), "allowed_tools") {
+			t.Errorf("refusal should name allowed_tools: %v", err)
 		}
 	})
 }
@@ -67,7 +85,7 @@ func TestBuildGeminiArgs_UnsupportedCapsError(t *testing.T) {
 func TestWriteGeminiSettings(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, ".openv", "gemini-settings.json")
-	if err := writeGeminiSettings(path, geminiSpec().MCP); err != nil {
+	if err := writeGeminiSettings(path, geminiSpec().MCP, geminiApprovalMode(geminiSpec())); err != nil {
 		t.Fatalf("writeGeminiSettings: %v", err)
 	}
 

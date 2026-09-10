@@ -24,6 +24,12 @@ interface AgentEditorProps {
 // xhigh/max down to high; Gemini has no headless effort control yet).
 const EFFORT_LEVELS = ['low', 'medium', 'high', 'xhigh', 'max'];
 
+// The API's own wording for a definition with no tool allowlist (it answers
+// 400 with it). Shown here before the request goes out, so the reason arrives
+// at the same moment as the refusal.
+export const ALLOWED_TOOLS_REQUIRED =
+  'agent definition requires allowed_tools: every agent must name the tools its vendor CLI may use (e.g. mcp__openv__*), because a CLI started with no allowlist runs with all of them';
+
 interface FormState {
   slug: string;
   name: string;
@@ -103,7 +109,19 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({ agent, onSaved, onCanc
 
   const set = (update: Partial<FormState>) => setForm((f) => ({ ...f, ...update }));
 
+  // Every agent must name the tools its CLI may use: an empty allowlist is not
+  // "no tools", it is every tool the vendor CLI has. The API refuses it with a
+  // 400; the form refuses it here so nobody has to find that out by saving.
+  const allowedTools = form.allowed_tools
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+
   const saveForm = async () => {
+    if (allowedTools.length === 0) {
+      setError(ALLOWED_TOOLS_REQUIRED);
+      return;
+    }
     setSaving(true);
     setError('');
     const payload: Partial<AgentDef> = {
@@ -118,10 +136,7 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({ agent, onSaved, onCanc
       locked: form.locked,
       max_turns: Number(form.max_turns) || 0,
       timeout_seconds: Number(form.timeout_seconds) || 0,
-      allowed_tools: form.allowed_tools
-        .split(',')
-        .map((s) => s.trim())
-        .filter(Boolean),
+      allowed_tools: allowedTools,
       system_prompt: form.system_prompt,
     };
     try {
@@ -328,13 +343,22 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({ agent, onSaved, onCanc
               />
             </div>
             <div className="form-group" style={{ gridColumn: isPhone ? undefined : '1 / span 2' }}>
-              <label>Allowed tools (comma-separated)</label>
+              <label>Allowed tools (comma-separated, required)</label>
               <input
                 value={form.allowed_tools}
                 onChange={(e) => set({ allowed_tools: e.target.value })}
-                placeholder="e.g. openv_search, openv_read, openv_propose"
-                style={{ fontSize: 13 }}
+                placeholder="e.g. mcp__openv__*, Read, WebSearch"
+                aria-invalid={allowedTools.length === 0}
+                style={{
+                  fontSize: 13,
+                  borderColor: allowedTools.length === 0 ? 'var(--danger)' : undefined,
+                }}
               />
+              <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginTop: 4 }}>
+                {allowedTools.length === 0
+                  ? 'Required: an empty list means the vendor CLI runs with every tool it has, so the agent cannot be saved without one.'
+                  : 'mcp__openv__* grants the OpenV tools. Add vendor tools (Read, Edit, WebSearch…) only where this agent needs them.'}
+              </div>
             </div>
             <div className="form-group" style={{ gridColumn: isPhone ? undefined : '1 / span 2' }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
@@ -371,7 +395,7 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({ agent, onSaved, onCanc
             <button
               className="button"
               onClick={saveForm}
-              disabled={saving || !form.slug.trim() || !form.name.trim()}
+              disabled={saving || !form.slug.trim() || !form.name.trim() || allowedTools.length === 0}
             >
               {saving ? 'Saving…' : isNew ? 'Create agent' : 'Save changes'}
             </button>

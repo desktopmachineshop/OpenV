@@ -118,6 +118,11 @@ environment only and are **never stored** by the platform.
   2 CPUs). There is no UI/API for editing org limits yet — operators set the
   keys directly on the `organizations.limits` JSONB column; changes apply the
   next time the runner is provisioned.
+- **Isolated**: every capability dropped, no-new-privileges, a process cap
+  (`HOSTED_RUNNER_PIDS_LIMIT`, default 256), and only the org's data volume
+  mounted — never the docker socket. See `docs/operations.md`, *Hosted
+  runners: the docker socket, and how to avoid it*, which is also where the
+  reason to prefer the transient pool is spelled out.
 
 ### Routing and the first-refusal grace window
 
@@ -352,11 +357,18 @@ Hosted runners are off unless the API server can reach a Docker daemon:
    (produces `openv-worker:latest` from `Dockerfile.worker`).
 2. Mount the docker socket into the API container (uncomment the
    `/var/run/docker.sock` volume line in `docker-compose.yml`; Linux hosts).
+   **Read the warning first**: mounting the host's container socket into the
+   API grants the API control of the host. `docs/operations.md` says what that
+   means and why the transient pool above — which needs no socket — is the
+   alternative to reach for.
 3. Optional env on the API service: `RUNNER_IMAGE` (default
-   `openv-worker:latest`), `RUNNER_NETWORK` (attach runner containers to a
-   compose network so they can reach the API), `RUNNER_API_URL` (API base URL
-   as seen from inside a runner container, default `http://api:8080`), and
-   `HOSTED_RUNNERS=off` to hard-disable the feature.
+   `openv-worker:latest`), `RUNNER_NETWORK` (the network runner containers
+   join — set it to one that reaches the API and the provider endpoints only;
+   without it they land on the default bridge with every other container),
+   `RUNNER_API_URL` (API base URL as seen from inside a runner container,
+   default `http://api:8080`), `HOSTED_RUNNER_PIDS_LIMIT` (process cap per
+   runner container, default 256, `0` for none), and `HOSTED_RUNNERS=off` to
+   hard-disable the feature.
 
 Each workspace's runner container gets a persistent volume
 (`openv-runner-<org-id>`) holding its HOME and workspaces; deleting the
@@ -438,6 +450,76 @@ runner adapters (`internal/runner`):
 `allowed_tools` (frontmatter, and **Allowed tools** in the agent editor) is a
 comma-separated allowlist passed to the vendor CLI. `mcp__openv__*` grants the
 OpenV tool surface; the vendor's own built-in tools can be named alongside it.
+
+**An allowlist is mandatory.** An agent whose definition names no tools is
+refused: the API answers `400` on create and on update, and the runner fails
+the run before launching anything, naming the agent and saying its definition
+needs `allowed_tools`. The reason is that an empty list is not "no tools" — it
+is *every* tool, because a vendor CLI started without an allowlist runs with
+its whole toolbox. An agent that carries none from an install predating this
+rule is backfilled to `mcp__openv__*` at startup (logged, and a narrowing);
+an agent that is `locked: true` is left exactly as it is and reported instead,
+so it refuses to run until someone gives it an allowlist themselves.
+
+#### Which providers can enforce one
+
+| Provider | How the allowlist is passed | Runs today? |
+| --- | --- | --- |
+| **Claude Code** | `--allowedTools <comma-joined>` | yes |
+| **Codex CLI** | nothing to pass it to — `codex exec` has no per-run allowlist; its only guardrail is `--sandbox` | **no** |
+| **Gemini CLI** | nothing to pass it to — the headless CLI has no per-run allowlist, and its tool names do not map to the Claude-shaped list | **no** |
+
+Since every agent must carry an allowlist and neither of the other two CLIs can
+apply one, **agent runs are effectively claude-code only** at present. A codex
+or gemini agent fails at Start with a message saying exactly that and pointing
+at claude-code, rather than running with every tool its CLI happens to have.
+Both adapters gain support the moment the vendor does; the refusal lives in
+`codexUnsupported` / `geminiUnsupported` (`internal/runner`).
+
+#### Untrusted content never auto-approves
+
+Some agents read text nobody in the workspace wrote. Three things mark one:
+
+- it is the seeded **interviewer** (its whole prompt is a stranger's words,
+  typed on a public invite link);
+- it has **repo access**, so a cloned repository's files reach the model;
+- it holds a tool that reaches outside — **WebFetch/WebSearch**, or an MCP
+  server other than openv.
+
+Such a run is started with **nothing auto-approved beyond its allowlist**
+(`RunSpec.Untrusted`, set by the worker from the agent definition). The
+allowlist is the entire approval surface: a file edit or a shell command the
+agent was not granted is denied rather than prompted for, because a headless
+run has nobody to prompt. Exactly what that means per provider:
+
+| Provider | Trusted run | Untrusted run |
+| --- | --- | --- |
+| **Claude Code** | `--permission-mode acceptEdits` | `--permission-mode default` |
+| **Codex CLI** | `--sandbox workspace-write` | `--sandbox read-only` |
+| **Gemini CLI** | `--approval-mode auto_edit` (+ `defaultApprovalMode` in the isolated settings file) | `--approval-mode default` (+ the same in the settings file) |
+
+`--dangerously-skip-permissions`, `bypassPermissions`, `--yolo` and
+`--sandbox danger-full-access` are **never** passed, to any run, trusted or
+not. Note that the codex and gemini columns are what those adapters *would*
+do — both refuse to start at all while they cannot enforce an allowlist (see
+the table above).
+
+#### The seeded interviewer
+
+The interviewer's allowlist is enumerated rather than wildcarded: every
+read-only OpenV tool, plus `mcp__openv__record_candidate_need`, the one write
+it exists to make. It holds no vendor tools at all — no file reads, no shell —
+and no OpenV tool that creates, updates, deletes or delegates. So a prompt
+injection in a participant's answer has nothing to reach for: the worst it can
+do is get a candidate need recorded, which is a suggestion a person reviews.
+The list is generated from the tool table itself (`mcp.ReadOnlyToolNames()`),
+so a tool added to OpenV is classified once, in one place.
+
+A workspace that provisioned before this change and never tuned the
+interviewer is **narrowed** at the next startup, through the same adoption path
+that grants capabilities (see *Changing an existing agent* below) — an
+adoption that takes capability away rather than adding it. One that edited the
+agent's tools keeps what it wrote.
 
 The seeded **V&V Assistant** carries `mcp__openv__*, WebSearch, WebFetch`: the
 questions it exists to ask — is this limit real, does that standard say what

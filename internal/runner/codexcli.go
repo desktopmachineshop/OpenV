@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -14,6 +13,7 @@ import (
 	"sync"
 
 	"github.com/openv/requirements-platform/internal/domain/agentruns"
+	"github.com/openv/requirements-platform/internal/domain/agents"
 	"github.com/openv/requirements-platform/internal/domain/providers"
 )
 
@@ -105,7 +105,14 @@ func buildCodexArgs(spec RunSpec) ([]string, error) {
 	if err := codexUnsupported(spec); err != nil {
 		return nil, err
 	}
+	return codexArgs(spec)
+}
 
+// codexArgs is the argv itself, with the policy question (codexUnsupported)
+// already settled by the caller. Split out so the wiring it produces — the
+// escaping, and the run token travelling by name rather than by value — stays
+// testable even while codexUnsupported refuses every real agent.
+func codexArgs(spec RunSpec) ([]string, error) {
 	args := []string{"exec", "--json", "--cd", spec.WorkDir}
 
 	// MCP server wiring. command/args are JSON-encoded to stay escaped; the run
@@ -137,7 +144,14 @@ func buildCodexArgs(spec RunSpec) ([]string, error) {
 		}
 		args = append(args, "-c", "model_reasoning_effort="+jsonScalar(effort))
 	}
-	args = append(args, "--sandbox", "workspace-write", "--skip-git-repo-check")
+	// An untrusted run (interview transcript, cloned repo, fetched page) gets
+	// the read-only sandbox: nothing it was told by the outside world can
+	// turn into a file write or a command (REQ-91, HAZ-1).
+	sandbox := "workspace-write"
+	if spec.Untrusted {
+		sandbox = "read-only"
+	}
+	args = append(args, "--sandbox", sandbox, "--skip-git-repo-check")
 
 	// "-" makes codex exec read the prompt from stdin — prompts can exceed
 	// the ~32K Windows command-line limit.
@@ -150,16 +164,17 @@ func buildCodexArgs(spec RunSpec) ([]string, error) {
 // per-run turn cap and no tool allow-list — its only guardrail is --sandbox,
 // which buildCodexArgs always pins to workspace-write.
 func codexUnsupported(spec RunSpec) error {
-	var unsupported []string
+	// Every agent must carry an allowlist (REQ-91) and codex exec has no way
+	// to apply one, so this is where a codex agent stops. Said plainly,
+	// because the way out is to move the agent to a provider that can.
+	if len(agents.NonEmptyTools(spec.AllowedTools)) > 0 {
+		return errors.New("codex-cli adapter cannot enforce a tool allowlist: codex exec has no per-run allowlist flag, and every agent must carry one (its only guardrail is --sandbox). Point this agent at claude-code, which passes the allowlist as --allowedTools")
+	}
+	if err := requireAllowedTools(spec); err != nil {
+		return err
+	}
 	if spec.MaxTurns > 0 {
-		unsupported = append(unsupported, "MaxTurns")
-	}
-	if len(spec.AllowedTools) > 0 {
-		unsupported = append(unsupported, "AllowedTools")
-	}
-	if len(unsupported) > 0 {
-		return fmt.Errorf("codex-cli adapter cannot enforce %s: the codex exec CLI has no equivalent, and running without the requested limit would be unconstrained — clear these on the agent or use a provider that supports them (e.g. claude-code)",
-			strings.Join(unsupported, " and "))
+		return errors.New("codex-cli adapter cannot enforce MaxTurns: codex exec has no per-run turn cap, and running without the requested limit would be unconstrained — clear it on the agent or use a provider that supports it (e.g. claude-code)")
 	}
 	return nil
 }

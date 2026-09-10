@@ -454,6 +454,22 @@ to that turn's prompt as fenced, untrusted content. The wizard sends none.
 | PUT | `/api/v1/agents/{slug}/raw` | Save raw markdown | org admin |
 | POST | `/api/v1/agents/{slug}/runs` | Launch a run of this agent | editor (project-scoped) / user |
 
+**`allowed_tools` is required.** `POST /api/v1/agents` and
+`PUT /api/v1/agents/{slug}` answer **400** when the definition carries no tool
+allowlist — absent, `[]`, or only blank entries — with:
+
+```json
+{"error":"agent definition requires allowed_tools: every agent must name the tools its vendor CLI may use (e.g. mcp__openv__*), because a CLI started with no allowlist runs with all of them"}
+```
+
+`PUT /api/v1/agents/{slug}/raw` refuses the same content the same way, since
+the frontmatter goes through the same validation. An empty list is not "no
+tools": a vendor CLI started without an allowlist runs with every tool it has,
+so the platform will not store an agent that has none, and the runner fails
+such a run before launching anything (`docs/agents.md`, *Tools an agent may
+use*). Definitions already on disk from before this rule are backfilled to
+`mcp__openv__*` when they sync, not rejected.
+
 ### Agent runs
 
 | Method | Path | Purpose | Auth |

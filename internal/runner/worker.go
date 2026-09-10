@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/openv/requirements-platform/internal/domain/agentruns"
+	"github.com/openv/requirements-platform/internal/domain/agents"
 	"github.com/openv/requirements-platform/internal/domain/providers"
 	"github.com/openv/requirements-platform/internal/domain/repoconns"
 )
@@ -315,6 +316,21 @@ func (w *Worker) execute(ctx context.Context, claim *ClaimResponse) {
 		return
 	}
 
+	// No allowlist, no run (REQ-91). Checked here, before a repository is
+	// cloned or a workspace built, because nothing about this run can
+	// succeed; the adapters refuse it too, but only here is the agent known
+	// by name, and a person reading the failed run needs to be told which
+	// definition to fix.
+	if len(agents.NonEmptyTools(claim.Agent.AllowedTools)) == 0 {
+		w.finish(run.ID, agentruns.FinishRequest{
+			Status: agentruns.StatusFailed,
+			Error: "agent " + agentLabel(claim.Agent) + " names no tools it may use: " +
+				agents.AllowedToolsRequired,
+			ErrorClass: classifySite(siteAgentPolicy, nil),
+		})
+		return
+	}
+
 	var conns []*repoconns.RepoConnection
 	if run.ProjectID != nil && claim.Agent.RepoAccess {
 		var err error
@@ -407,9 +423,12 @@ func (w *Worker) execute(ctx context.Context, claim *ClaimResponse) {
 			Env:     env,
 		},
 		AllowedTools: claim.Agent.AllowedTools,
-		MaxTurns:     claim.Agent.MaxTurns,
-		TimeoutSec:   claim.Agent.TimeoutSeconds,
-		Env:          env,
+		// An agent that reads content nobody in the workspace wrote runs
+		// with nothing auto-approved beyond its allowlist (REQ-91, HAZ-1).
+		Untrusted:  claim.Agent.UntrustedInput(),
+		MaxTurns:   claim.Agent.MaxTurns,
+		TimeoutSec: claim.Agent.TimeoutSeconds,
+		Env:        env,
 	}
 
 	handle, err := adapter.Start(ctx, spec)

@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -12,8 +11,27 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/openv/requirements-platform/internal/domain/agents"
 	"github.com/openv/requirements-platform/internal/domain/providers"
 )
+
+// Gemini approval modes. "auto_edit" auto-approves file edits (and nothing
+// else); "default" approves nothing on its own and is what an untrusted run
+// gets. "yolo" is never used.
+const (
+	geminiModeTrusted   = "auto_edit"
+	geminiModeUntrusted = "default"
+)
+
+// geminiApprovalMode is the approval mode a spec runs under. It is applied
+// twice — as the --approval-mode flag and as defaultApprovalMode in the
+// isolated settings file — so neither one alone can widen the run.
+func geminiApprovalMode(spec RunSpec) string {
+	if spec.Untrusted {
+		return geminiModeUntrusted
+	}
+	return geminiModeTrusted
+}
 
 // GeminiCLIAdapter runs Google's Gemini CLI in headless mode.
 type GeminiCLIAdapter struct{}
@@ -70,7 +88,7 @@ func (a *GeminiCLIAdapter) Start(ctx context.Context, spec RunSpec) (RunHandle, 
 	// least-privilege approval mode. The run token is referenced via $VAR and
 	// resolved from the process environment, so it never lands in the file.
 	settingsPath := filepath.Join(spec.WorkDir, ".openv", "gemini-settings.json")
-	if err := writeGeminiSettings(settingsPath, spec.MCP); err != nil {
+	if err := writeGeminiSettings(settingsPath, spec.MCP, geminiApprovalMode(spec)); err != nil {
 		return nil, err
 	}
 	procEnv := mergedProcEnv(spec)
@@ -107,9 +125,13 @@ func buildGeminiArgs(spec RunSpec) ([]string, error) {
 	// auto-approved (yolo would auto-approve everything, unsandboxed). The
 	// openv MCP server is separately marked trusted in the settings file, so
 	// its tool calls run without prompting under this mode.
+	//
+	// An untrusted run drops even that: "default" approves nothing on its own
+	// (REQ-91, HAZ-1), so a page or a participant's answer cannot talk the
+	// agent into an edit.
 	args := []string{
 		"--output-format", "json",
-		"--approval-mode", "auto_edit",
+		"--approval-mode", geminiApprovalMode(spec),
 	}
 	if spec.Model != "" {
 		args = append(args, "--model", spec.Model)
@@ -122,16 +144,16 @@ func buildGeminiArgs(spec RunSpec) ([]string, error) {
 // no reliable per-run turn cap, and its tool names don't map to the agent's
 // (Claude-shaped) AllowedTools list, so honouring either would be incorrect.
 func geminiUnsupported(spec RunSpec) error {
-	var unsupported []string
+	// As for codex: an allowlist is mandatory on every agent (REQ-91) and
+	// this CLI cannot express one, so a gemini agent stops here.
+	if len(agents.NonEmptyTools(spec.AllowedTools)) > 0 {
+		return errors.New("gemini-cli adapter cannot enforce a tool allowlist: the headless gemini CLI has no per-run allowlist, and its tool names do not map to the agent's (Claude-shaped) list, so honouring it would be incorrect — and every agent must carry one. Point this agent at claude-code, which passes the allowlist as --allowedTools")
+	}
+	if err := requireAllowedTools(spec); err != nil {
+		return err
+	}
 	if spec.MaxTurns > 0 {
-		unsupported = append(unsupported, "MaxTurns")
-	}
-	if len(spec.AllowedTools) > 0 {
-		unsupported = append(unsupported, "AllowedTools")
-	}
-	if len(unsupported) > 0 {
-		return fmt.Errorf("gemini-cli adapter cannot enforce %s: the headless gemini CLI has no equivalent, and running without the requested limit would be unconstrained — clear these on the agent or use a provider that supports them (e.g. claude-code)",
-			strings.Join(unsupported, " and "))
+		return errors.New("gemini-cli adapter cannot enforce MaxTurns: the headless gemini CLI has no reliable per-run turn cap, and running without the requested limit would be unconstrained — clear it on the agent or use a provider that supports it (e.g. claude-code)")
 	}
 	return nil
 }
@@ -141,7 +163,7 @@ func geminiUnsupported(spec RunSpec) error {
 // overwrites the user's own .gemini/settings.json. Secret env values are
 // written as ${VAR} references resolved from the process environment at load
 // time, so the token stays out of the file; the file is still written 0600.
-func writeGeminiSettings(path string, mcp MCPServerConfig) error {
+func writeGeminiSettings(path string, mcp MCPServerConfig, approvalMode string) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return err
 	}
@@ -155,7 +177,7 @@ func writeGeminiSettings(path string, mcp MCPServerConfig) error {
 	}
 	cfg := map[string]interface{}{
 		"general": map[string]interface{}{
-			"defaultApprovalMode": "auto_edit",
+			"defaultApprovalMode": approvalMode,
 		},
 		"mcpServers": map[string]interface{}{
 			"openv": map[string]interface{}{

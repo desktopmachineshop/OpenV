@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -17,6 +18,23 @@ import (
 // ParseFile splits a markdown agent file into frontmatter + body.
 // Format: leading "---\n<yaml>\n---\n<system prompt body>".
 func ParseFile(content string) (*Definition, error) {
+	return parseFile(content, false)
+}
+
+// parseSyncedFile parses a file that is already on disk, where refusing it is
+// worse than fixing it: a definition written before allowlists were mandatory
+// (REQ-91) carries none, and rejecting it would drop the agent out of the
+// registry at the next sync. So it is backfilled to the OpenV tools — a
+// narrowing, since an empty list used to mean the vendor CLI got every tool it
+// has — and logged, so the operator can set what the agent actually needs.
+//
+// Content a person is saving right now goes through ParseFile instead, and is
+// refused: nobody should be able to write a new agent with no allowlist.
+func parseSyncedFile(content string) (*Definition, error) {
+	return parseFile(content, true)
+}
+
+func parseFile(content string, backfillTools bool) (*Definition, error) {
 	normalized := strings.ReplaceAll(content, "\r\n", "\n")
 	if !strings.HasPrefix(normalized, "---\n") {
 		return nil, errors.New("agent file must start with '---' YAML frontmatter")
@@ -35,6 +53,11 @@ func ParseFile(content string) (*Definition, error) {
 		return nil, fmt.Errorf("invalid agent frontmatter: %w", err)
 	}
 	def.SystemPrompt = strings.TrimSpace(body)
+	if backfillTools && len(NonEmptyTools(def.AllowedTools)) == 0 {
+		def.AllowedTools = DefaultAllowedTools()
+		log.Printf("agents: %q has no allowed_tools; defaulting to %v — set an explicit allowlist for this agent",
+			def.Slug, def.AllowedTools)
+	}
 	if err := def.Validate(); err != nil {
 		return nil, err
 	}
@@ -214,7 +237,7 @@ func (s *FileService) SyncFromDisk(orgID string) error {
 			errs = append(errs, fmt.Sprintf("%s: %v", entry.Name(), err))
 			continue
 		}
-		def, err := ParseFile(string(data))
+		def, err := parseSyncedFile(string(data))
 		if err != nil {
 			errs = append(errs, fmt.Sprintf("%s: %v", entry.Name(), err))
 			continue

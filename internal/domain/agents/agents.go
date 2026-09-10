@@ -3,6 +3,7 @@ package agents
 import (
 	"errors"
 	"regexp"
+	"strings"
 	"time"
 )
 
@@ -29,6 +30,22 @@ func ValidEffort(v string) bool {
 	}
 	return false
 }
+
+// InterviewerSlug is the seeded interviewer agent's slug. Its prompt carries
+// a stakeholder's own words — text authored outside the workspace — so it is
+// treated as an untrusted-input agent wherever that matters (UntrustedInput).
+const InterviewerSlug = "requirements-interviewer"
+
+// DefaultAllowedTools is the narrowest allowlist that still lets an agent do
+// OpenV work, and what a legacy definition carrying no allowlist at all is
+// backfilled to. It is never a widening: before allowlists were mandatory, an
+// empty list meant the vendor CLI started with *every* tool it has.
+func DefaultAllowedTools() []string { return []string{"mcp__openv__*"} }
+
+// AllowedToolsRequired is the single wording for a definition that carries no
+// tool allowlist. Validate returns it (so the API answers 400 with it) and the
+// runner echoes it when it refuses to launch such an agent.
+const AllowedToolsRequired = "agent definition requires allowed_tools: every agent must name the tools its vendor CLI may use (e.g. mcp__openv__*), because a CLI started with no allowlist runs with all of them"
 
 // ErrNotFound is returned when an agent doesn't exist.
 var ErrNotFound = errors.New("agent not found")
@@ -126,6 +143,14 @@ func (d *Definition) Validate() error {
 	default:
 		return errors.New("write_mode must be 'proposal' or 'direct'")
 	}
+	// REQ-91: no allowlist, no agent. Enforced here so every write path — the
+	// REST handlers, a raw markdown save, an import — refuses identically.
+	// Definitions already on disk are backfilled as they sync instead
+	// (parseSyncedFile), so an install predating this rule keeps working.
+	d.AllowedTools = NonEmptyTools(d.AllowedTools)
+	if len(d.AllowedTools) == 0 {
+		return errors.New(AllowedToolsRequired)
+	}
 	if !ValidEffort(d.Effort) {
 		return errors.New("effort must be one of low, medium, high, xhigh, max (or empty for the provider default)")
 	}
@@ -170,4 +195,54 @@ type Service interface {
 	SyncFromDisk(orgID string) error
 	// SyncAllFromDisk walks every org subdirectory and syncs each one.
 	SyncAllFromDisk() error
+}
+
+// NonEmptyTools drops blank entries from a tool list, so an allowlist of
+// `[""]` or `[" "]` counts as no allowlist at all.
+func NonEmptyTools(tools []string) []string {
+	out := make([]string, 0, len(tools))
+	for _, t := range tools {
+		if s := strings.TrimSpace(t); s != "" {
+			out = append(out, s)
+		}
+	}
+	return out
+}
+
+// UntrustedInput reports whether this agent's prompt or tool results can carry
+// content authored outside the workspace — a stakeholder's words, a
+// repository's files, a web page. Such a run must never auto-approve file
+// edits or shell commands (REQ-91, HAZ-1): everything it may do has to be on
+// its allowlist, where a person put it.
+//
+// Three things make an agent untrusted:
+//
+//   - it is the seeded interviewer, whose whole prompt is a stranger's text;
+//   - it has repository access, so a cloned repo's files reach the model;
+//   - it holds a tool that reads the outside world — WebFetch/WebSearch, or an
+//     MCP server other than openv, whose tool results OpenV cannot vouch for.
+func (a *Agent) UntrustedInput() bool {
+	if a == nil {
+		return false
+	}
+	return a.Slug == InterviewerSlug || a.RepoAccess || ToolsReachOutside(a.AllowedTools)
+}
+
+// ToolsReachOutside reports whether an allowlist grants a tool that pulls in
+// content nobody in the workspace wrote.
+func ToolsReachOutside(tools []string) bool {
+	for _, t := range tools {
+		name := strings.TrimSpace(t)
+		// Drop a vendor argument filter ("Bash(git *)") before matching.
+		if i := strings.IndexByte(name, '('); i >= 0 {
+			name = name[:i]
+		}
+		switch {
+		case strings.EqualFold(name, "WebFetch"), strings.EqualFold(name, "WebSearch"):
+			return true
+		case strings.HasPrefix(name, "mcp__") && !strings.HasPrefix(name, "mcp__openv__"):
+			return true
+		}
+	}
+	return false
 }

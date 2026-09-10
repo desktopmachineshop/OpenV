@@ -81,6 +81,54 @@ type Tool struct {
 	Handler     func(c *Client, args map[string]interface{}) (string, error)
 }
 
+// ToolPrefix is what a vendor CLI's allowlist calls these tools: the MCP
+// server is registered as "openv", so its tools are addressed as
+// mcp__openv__<name>.
+const ToolPrefix = "mcp__openv__"
+
+// readOnlyTools names every tool in Tools() that only reads: its handler
+// issues GETs and changes nothing. It is the list an agent that must not write
+// is granted (see the seeded interviewer in internal/seeds).
+//
+// A tool absent from this set is treated as a writer, so a tool added later
+// grants nothing until someone deliberately lists it here. TestReadOnlyTools
+// checks every name still exists in Tools().
+var readOnlyTools = map[string]bool{
+	"list_projects":           true,
+	"list_artifacts":          true,
+	"get_artifact":            true,
+	"get_project_map":         true,
+	"get_context":             true,
+	"get_project_tree":        true,
+	"search_artifacts":        true,
+	"list_links_for_artifact": true,
+	"list_baselines":          true,
+	"get_baseline":            true,
+	"get_quality_rules":       true,
+	"get_quality_findings":    true,
+	"get_vv_coverage":         true,
+	"get_vv_gaps":             true,
+	"list_work_items":         true,
+	"get_work_item":           true,
+	"get_work_item_history":   true,
+}
+
+// ReadOnly reports whether a tool only reads project data.
+func ReadOnly(name string) bool { return readOnlyTools[strings.TrimPrefix(name, ToolPrefix)] }
+
+// ReadOnlyToolNames returns the allowlist entries — prefixed as a vendor CLI
+// wants them — for every read-only OpenV tool, in the table's own order so the
+// result is stable.
+func ReadOnlyToolNames() []string {
+	var out []string
+	for _, t := range Tools() {
+		if readOnlyTools[t.Name] {
+			out = append(out, ToolPrefix+t.Name)
+		}
+	}
+	return out
+}
+
 func schema(required []string, props map[string]interface{}) map[string]interface{} {
 	if required == nil {
 		required = []string{}

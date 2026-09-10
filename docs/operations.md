@@ -190,6 +190,85 @@ Notes:
 To stop: `docker compose -f docker-compose.yml -f docker-compose.prod.yml down`
 (or `make prod-down`). Data lives in named volumes and survives `down`.
 
+## Hosted runners: the docker socket, and how to avoid it
+
+A hosted runner is a container the **API creates on a Docker daemon**, which
+means the API needs a daemon to talk to — in the compose deployment, the host's
+own, mounted in as `/var/run/docker.sock`.
+
+> **Mounting the host's container socket into the API grants the API control
+> of the host.** This is not a hardening detail; it is the whole security
+> boundary. Anything that can reach that socket can start a container with the
+> host's filesystem bind-mounted and run as root inside it — so a remote-code
+> execution bug in the API, or an agent that talks the API into a request it
+> should not make, becomes root on the machine. It also crosses every other
+> tenant boundary on that daemon: the socket is not scoped to OpenV's own
+> containers.
+
+**The transient runner pool is the alternative, and it needs no socket at
+all.** Pool nodes are ordinary long-lived `agentd` replicas started with a
+shared `RUNNER_POOL_KEY`; they register themselves and wait to be leased, so
+nothing has to create a container on demand and the API never talks to a
+daemon. It is also what works on platforms that give you replicas but no socket
+(Railway among them). Prefer it, and leave `HOSTED_RUNNERS=off` unless a
+workspace genuinely needs an always-on API-key runner. See `docs/agents.md`,
+*Enable transient runners (operators)*.
+
+If you do enable hosted runners, keep the socket off the public path: run the
+API on a host that carries nothing else, and treat access to that host as
+equivalent to root.
+
+### What a hosted runner container is created with
+
+Every hosted runner container is created with the isolation below
+(`internal/hosting/docker.go`, `hostConfigFor`) — it runs a vendor CLI over
+prompts that may carry text nobody in the workspace wrote, so it is treated as
+a place where something will eventually go wrong:
+
+| Setting | Value | Why |
+| --- | --- | --- |
+| `CapDrop` | `ALL` | A runner is one node process as an unprivileged user; it needs no Linux capability. |
+| `SecurityOpt` | `no-new-privileges:true` | Nothing inside can climb through a setuid binary. |
+| `PidsLimit` | 256 (`HOSTED_RUNNER_PIDS_LIMIT`) | A fork bomb hits a wall instead of the host. |
+| `Memory` / `NanoCPUs` | the workspace's plan caps | `runner_memory_mb`, `runner_cpus`; see `docs/agents.md`. |
+| `Binds` | the org's data volume only | Never the docker socket. |
+| `ReadonlyRootfs` | **not set** | The vendor CLIs in the runner image write outside `/data` (npm and CLI caches, git temporaries), so a read-only root filesystem breaks runs today. Getting there means a tmpfs for each of those paths. |
+
+`HOSTED_RUNNER_PIDS_LIMIT` on the API service overrides the process cap; `0`
+means no cap (docker's own convention), and an unparseable value falls back to
+256 rather than to unlimited.
+
+### The runner network
+
+Set **`RUNNER_NETWORK`** on the API service to a docker network that reaches
+**the API and the provider endpoints, and nothing else**. Without it a runner
+lands on docker's default bridge, where it can reach every other container on
+it — the database included — and the API logs a line saying so at each
+provision.
+
+The compose example (`docker-compose.prod.yml`) declares an `openv-runners`
+network that only the API also joins:
+
+```yaml
+networks:
+  openv-runners:
+    name: openv-runners
+
+services:
+  api:
+    networks: [default, openv-runners]   # reachable by runners
+    environment:
+      RUNNER_NETWORK: openv-runners
+```
+
+Postgres stays on `default` only, so a runner container has no route to it.
+Note what this does and does not buy you: it removes the runner's access to
+your other services, but a bridge network still has **egress to the internet**,
+which is what lets the CLIs reach `api.anthropic.com` and friends. Restricting
+that egress to the provider endpoints themselves is a host firewall or a proxy
+job (allow the vendor API hostnames, deny the rest); docker networking alone
+cannot express it.
+
 ## Backup and restore
 
 Everything the stack persists lives in three named volumes: the Postgres data

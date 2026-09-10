@@ -1,6 +1,11 @@
 package runner
 
-import "context"
+import (
+	"context"
+	"errors"
+
+	"github.com/openv/requirements-platform/internal/domain/agents"
+)
 
 // Availability is a provider detection result.
 type Availability struct {
@@ -26,12 +31,22 @@ type RunSpec struct {
 	Model        string
 	// Effort is the reasoning effort level ("", low, medium, high, xhigh,
 	// max). Adapters map it to their CLI's nearest equivalent or ignore it.
-	Effort       string
-	MCP          MCPServerConfig
+	Effort string
+	MCP    MCPServerConfig
+	// AllowedTools is the agent definition's tool allowlist. It is mandatory:
+	// a CLI started without one runs with every tool it has, so an adapter
+	// refuses a spec that carries none (REQ-91).
 	AllowedTools []string
-	MaxTurns     int
-	TimeoutSec   int
-	Env          map[string]string
+	// Untrusted marks a run whose prompt or tool results carry content
+	// authored outside the workspace — an interview participant's words, a
+	// cloned repository, a fetched page. Such a run auto-approves nothing:
+	// the allowlist is its entire approval surface, and file edits or shell
+	// commands outside it are denied rather than granted (REQ-91, HAZ-1).
+	// Set by the worker from the agent definition (agents.UntrustedInput).
+	Untrusted  bool
+	MaxTurns   int
+	TimeoutSec int
+	Env        map[string]string
 }
 
 // RunEvent is one streamed event from a running agent.
@@ -66,24 +81,61 @@ type RunHandle interface {
 //
 // Per-adapter capability matrix (RunSpec fields honoured vs. rejected):
 //
-//	Capability     claude-code   codex-cli            gemini-cli
-//	-----------    -----------   ------------------   ------------------
-//	Model          yes           yes                  yes
-//	Effort         yes           yes (capped "high")  no (ignored*)
-//	SystemPrompt   yes           yes (prefixed)       yes (prefixed)
-//	MaxTurns       yes           error if set         error if set
-//	AllowedTools   yes           error if set         error if set
-//	MCP env token  file (0600)   process env (byname) process env ($VAR)
+//	Capability     claude-code          codex-cli            gemini-cli
+//	-----------    ------------------   ------------------   ------------------
+//	Model          yes                  yes                  yes
+//	Effort         yes                  yes (capped "high")  no (ignored*)
+//	SystemPrompt   yes                  yes (prefixed)       yes (prefixed)
+//	MaxTurns       yes                  error if set         error if set
+//	AllowedTools   yes (--allowedTools) error if set         error if set
+//	Untrusted      --permission-mode    --sandbox read-only  --approval-mode
+//	MCP env token  file (0600)          process env (byname) process env ($VAR)
 //
 // *gemini's headless CLI exposes no reasoning-effort control, so Effort is a
 // documented no-op there rather than an error (it never runs unconstrained on
 // account of it). MaxTurns/AllowedTools, by contrast, are safety limits: an
 // adapter that cannot enforce a requested limit fails the run at Start instead
 // of silently running without it.
+//
+// AllowedTools is now mandatory on every agent (REQ-91), and neither codex
+// exec nor the headless gemini CLI has anything to express it with. In
+// practice that means **agent runs are claude-code only** until those CLIs
+// grow a per-run allowlist: the other two adapters refuse at Start with a
+// message saying so, rather than running an agent with every tool its CLI
+// happens to have. See docs/agents.md, "Tools an agent may use".
 type Adapter interface {
 	Name() string
 	Detect(ctx context.Context) Availability
 	Start(ctx context.Context, spec RunSpec) (RunHandle, error)
+}
+
+// agentLabel names an agent the way a person would look for it: its name and
+// slug, or whichever of the two the claim carries.
+func agentLabel(a *agents.Agent) string {
+	switch {
+	case a == nil:
+		return "(unknown)"
+	case a.Name != "" && a.Slug != "":
+		return a.Name + " (" + a.Slug + ")"
+	case a.Name != "":
+		return a.Name
+	case a.Slug != "":
+		return a.Slug
+	default:
+		return "(unnamed)"
+	}
+}
+
+// requireAllowedTools refuses to launch a vendor CLI for an agent that names
+// no tools (REQ-91). Every adapter calls it first, so the guarantee does not
+// depend on the caller: the worker checks too, and names the agent when it
+// does, but an adapter driven from anywhere else still cannot start a CLI
+// with an implicit "all tools" allowance.
+func requireAllowedTools(spec RunSpec) error {
+	if len(agents.NonEmptyTools(spec.AllowedTools)) == 0 {
+		return errors.New(agents.AllowedToolsRequired)
+	}
+	return nil
 }
 
 // mergedProcEnv builds the environment for a CLI subprocess, overlaying the

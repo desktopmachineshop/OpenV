@@ -33,6 +33,10 @@ const (
 	siteTimeout
 	// sitePanic: the worker panicked executing the run.
 	sitePanic
+	// siteAgentPolicy: the agent definition itself forbids the run — today,
+	// an agent carrying no tool allowlist (REQ-91). Nothing was launched, and
+	// retrying cannot help until someone edits the definition.
+	siteAgentPolicy
 )
 
 // classifySite maps a terminal finish at the given site to an agentruns error
@@ -54,6 +58,9 @@ func classifySite(site finishSite, waitErr error) string {
 		return agentruns.ErrorClassTimeout
 	case sitePanic:
 		return agentruns.ErrorClassWorkerError
+	case siteAgentPolicy:
+		// Not retryable: the definition has to change first.
+		return agentruns.ErrorClassAgentError
 	case siteAgentResult:
 		return classifyAgentError(waitErr)
 	default:

@@ -13,6 +13,7 @@ import (
 	"sync"
 
 	"github.com/openv/requirements-platform/internal/domain/agentruns"
+	"github.com/openv/requirements-platform/internal/domain/agents"
 	"github.com/openv/requirements-platform/internal/domain/providers"
 )
 
@@ -126,13 +127,38 @@ func writeMCPConfig(path string, mcp MCPServerConfig) error {
 	return os.WriteFile(path, buf, 0o600)
 }
 
-// Start launches a headless Claude Code run.
-func (a *ClaudeCodeAdapter) Start(ctx context.Context, spec RunSpec) (RunHandle, error) {
-	mcpPath := filepath.Join(spec.WorkDir, ".openv", "mcp.json")
-	if err := writeMCPConfig(mcpPath, spec.MCP); err != nil {
-		return nil, fmt.Errorf("write mcp config: %w", err)
-	}
+// Permission modes handed to `claude --permission-mode`. Every run names one
+// explicitly, so what a run may do without asking is a property of the agent
+// definition rather than of whatever the CLI happens to default to.
+const (
+	// claudeModeTrusted auto-approves file edits inside the run's own
+	// workspace. Reserved for agents whose prompt and tool results are the
+	// workspace's own text.
+	claudeModeTrusted = "acceptEdits"
+	// claudeModeUntrusted approves nothing on its own: tools on the allowlist
+	// run, anything else needs an approval that headless mode cannot get and
+	// is therefore denied. This is the mode for any agent that reads content
+	// authored outside the workspace (REQ-91, HAZ-1) — and note that neither
+	// --dangerously-skip-permissions nor bypassPermissions is ever passed, to
+	// any run, trusted or not.
+	claudeModeUntrusted = "default"
+)
 
+// claudePermissionMode is the mode a spec runs under.
+func claudePermissionMode(spec RunSpec) string {
+	if spec.Untrusted {
+		return claudeModeUntrusted
+	}
+	return claudeModeTrusted
+}
+
+// buildClaudeArgs assembles the CLI argv for one run. Split out from Start so
+// the flags a spec produces — the allowlist and the permission mode above all
+// — can be asserted in a test without launching anything.
+func buildClaudeArgs(spec RunSpec, mcpPath string) ([]string, error) {
+	if err := requireAllowedTools(spec); err != nil {
+		return nil, err
+	}
 	// The prompt travels over stdin (`... | claude -p`), never argv: prompts
 	// carry transcripts and wizard state, and Windows caps a command line at
 	// ~32K characters.
@@ -141,6 +167,7 @@ func (a *ClaudeCodeAdapter) Start(ctx context.Context, spec RunSpec) (RunHandle,
 		"--output-format", "stream-json",
 		"--verbose",
 		"--mcp-config", mcpPath,
+		"--permission-mode", claudePermissionMode(spec),
 	}
 	if spec.SystemPrompt != "" {
 		args = append(args, "--append-system-prompt", spec.SystemPrompt)
@@ -154,8 +181,19 @@ func (a *ClaudeCodeAdapter) Start(ctx context.Context, spec RunSpec) (RunHandle,
 	if spec.Effort != "" {
 		args = append(args, "--effort", spec.Effort)
 	}
-	if len(spec.AllowedTools) > 0 {
-		args = append(args, "--allowedTools", strings.Join(spec.AllowedTools, ","))
+	args = append(args, "--allowedTools", strings.Join(agents.NonEmptyTools(spec.AllowedTools), ","))
+	return args, nil
+}
+
+// Start launches a headless Claude Code run.
+func (a *ClaudeCodeAdapter) Start(ctx context.Context, spec RunSpec) (RunHandle, error) {
+	mcpPath := filepath.Join(spec.WorkDir, ".openv", "mcp.json")
+	args, err := buildClaudeArgs(spec, mcpPath)
+	if err != nil {
+		return nil, err
+	}
+	if err := writeMCPConfig(mcpPath, spec.MCP); err != nil {
+		return nil, fmt.Errorf("write mcp config: %w", err)
 	}
 
 	return startProc(ctx, procConfig{
