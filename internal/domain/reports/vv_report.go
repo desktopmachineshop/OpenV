@@ -227,6 +227,7 @@ func buildVVReportPDF(
 	}{
 		{"Requirements without a verification method", gaps.RequirementsWithoutMethod},
 		{"Requirements without a test case", gaps.RequirementsWithoutTestCase},
+		{"Unverified (demonstration, analysis, inspection)", gaps.RequirementsUnverified},
 		{"Requirements with failing tests", gaps.RequirementsFailing},
 		{"Orphan test cases (verify nothing)", gaps.OrphanTestCases},
 		{"User needs without a derived requirement", gaps.NeedsWithoutRequirement},

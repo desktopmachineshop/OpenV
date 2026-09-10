@@ -30,6 +30,12 @@ The **Gaps** section groups problems that need attention — e.g. requirements
 without a verification method, or without any verifying test. An empty gaps
 section means full coverage.
 
+**Unverified (demonstration, analysis, inspection)** is the section for
+requirements whose method is not *test*: nothing links a test case to them,
+so they can never show up as "without a test case". They stay listed until
+the requirement is marked verified, which is the same point at which the
+coverage rollup turns them from *uncovered* into *verified-manually*.
+
 ## Baselines
 
 The **Baseline** selector switches the whole dashboard between the live

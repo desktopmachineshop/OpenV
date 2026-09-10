@@ -371,6 +371,21 @@ invent. Consequently the gates are tighter than the role ladder alone:
 | GET | `/api/v1/projects/{id}/vv/gaps` | Coverage gaps | viewer |
 | GET | `/api/v1/projects/{id}/vv/report` | V&V report | viewer |
 
+`vv/gaps` returns one list of artifact IDs per bucket:
+
+| Bucket | Contents |
+|---|---|
+| `requirements_without_method` | No `verification_method` attribute set |
+| `requirements_without_test_case` | Method is `test` but no test case verifies it |
+| `requirements_unverified` | Method is `demonstration`, `analysis` or `inspection` and it is not yet marked verified — no test case can cover these, so they would otherwise be invisible here even though the coverage rollup already counts them as `uncovered` |
+| `requirements_failing` | Latest result of a verifying test case is a fail |
+| `orphan_test_cases` | Test cases that verify nothing |
+| `needs_without_requirement` | User needs no requirement derives from |
+| `hazards_unmitigated` | Hazards no design item mitigates |
+
+`requirements_unverified` is derived from the same rollup `vv/coverage`
+computes, so the two views cannot disagree about a requirement.
+
 ### Requirement quality
 
 Advisory linting of requirement wording. `quality-rules` names the project's

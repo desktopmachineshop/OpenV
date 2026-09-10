@@ -12,6 +12,7 @@ import {
 import { useAppStore } from '../state/store';
 import { ErrorBanner, useConfirm } from '../components/ui';
 import { useViewport } from '../hooks/useViewport';
+import { gapLabel } from './vvGapLabels';
 
 // ---------------------------------------------------------------------------
 // Shared color helpers for V&V rollup statuses
@@ -341,10 +342,10 @@ export const VVDashboard: React.FC = () => {
         </div>
       )}
       <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 8 }}>
-        {gapEntries.map(([label, ids]) => (
-          <div key={label} className="card" style={{ flex: '1 1 260px', marginBottom: 12 }}>
-            <h3 style={{ fontSize: 14, textTransform: 'capitalize' }}>
-              {label.replace(/[-_]/g, ' ')}{' '}
+        {gapEntries.map(([key, ids]) => (
+          <div key={key} className="card" style={{ flex: '1 1 260px', marginBottom: 12 }}>
+            <h3 style={{ fontSize: 14 }}>
+              {gapLabel(key)}{' '}
               <span style={{ color: 'var(--danger)', fontWeight: 700 }}>({ids.length})</span>
             </h3>
             <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, color: 'var(--text-body)' }}>

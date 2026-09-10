@@ -54,10 +54,18 @@ type Matrix struct {
 type GapReport struct {
 	RequirementsWithoutMethod   []string `json:"requirements_without_method"`
 	RequirementsWithoutTestCase []string `json:"requirements_without_test_case"`
-	RequirementsFailing         []string `json:"requirements_failing"`
-	OrphanTestCases             []string `json:"orphan_test_cases"`
-	NeedsWithoutRequirement     []string `json:"needs_without_requirement"`
-	HazardsUnmitigated          []string `json:"hazards_unmitigated"`
+	// RequirementsUnverified holds requirements verified by demonstration,
+	// analysis or inspection that nothing has yet attested to. They can
+	// never appear in RequirementsWithoutTestCase — a non-test method needs
+	// no test case — so without this bucket the gap report stayed silent
+	// about them while the coverage rollup already counted them as
+	// "uncovered". It is derived from that same rollup (see GapAnalysis),
+	// so the two views cannot disagree.
+	RequirementsUnverified  []string `json:"requirements_unverified"`
+	RequirementsFailing     []string `json:"requirements_failing"`
+	OrphanTestCases         []string `json:"orphan_test_cases"`
+	NeedsWithoutRequirement []string `json:"needs_without_requirement"`
+	HazardsUnmitigated      []string `json:"hazards_unmitigated"`
 }
 
 // attrString reads a string attribute from an artifact, "" if absent.
@@ -71,6 +79,19 @@ func attrString(a *artifacts.Artifact, key string) string {
 		}
 	}
 	return ""
+}
+
+// isNonTestMethod reports whether a verification method is one of the
+// methods whose evidence is an attestation on the requirement rather than a
+// test result: demonstration, analysis or inspection. A missing method is
+// not one of them — that is its own gap (RequirementsWithoutMethod).
+func isNonTestMethod(method string) bool {
+	switch method {
+	case MethodDemonstration, MethodAnalysis, MethodInspection:
+		return true
+	default:
+		return false
+	}
 }
 
 // resultSeverity ranks result statuses for worst-of rollups.
@@ -270,6 +291,7 @@ func GapAnalysis(export *exports.ProjectExport, coverage *CoverageReport) *GapRe
 	report := &GapReport{
 		RequirementsWithoutMethod:   []string{},
 		RequirementsWithoutTestCase: []string{},
+		RequirementsUnverified:      []string{},
 		RequirementsFailing:         []string{},
 		OrphanTestCases:             []string{},
 		NeedsWithoutRequirement:     []string{},
@@ -282,6 +304,16 @@ func GapAnalysis(export *exports.ProjectExport, coverage *CoverageReport) *GapRe
 		}
 		if entry.VerificationMethod == MethodTest && len(entry.TestCaseIDs) == 0 {
 			report.RequirementsWithoutTestCase = append(report.RequirementsWithoutTestCase, entry.RequirementID)
+		}
+		// A demonstration/analysis/inspection requirement is verified by an
+		// attestation on the artifact, not by a test case, so the bucket
+		// above can never hold it. ComputeCoverage already decides whether
+		// such a requirement counts: it rolls up as verified-manually once
+		// attested and as uncovered until then. Reusing that verdict rather
+		// than re-reading the attributes is what keeps the gap report and
+		// the coverage rollup from telling two different stories.
+		if isNonTestMethod(entry.VerificationMethod) && entry.Rollup == RollupUncovered {
+			report.RequirementsUnverified = append(report.RequirementsUnverified, entry.RequirementID)
 		}
 		if entry.Rollup == RollupFail {
 			report.RequirementsFailing = append(report.RequirementsFailing, entry.RequirementID)
