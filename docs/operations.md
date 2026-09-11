@@ -180,7 +180,12 @@ a sign-up form, and a membership is a credential into somebody's workspace.
 An invitation converts in exactly three ways, and in no others:
 
 - the sign-up carries the link's token (`invite_token`) **and** registers the
-  invited address;
+  invited address — which also marks that address verified, since the token
+  was mailed there and nowhere else, so an invitee on a closed,
+  verification-required deployment is not walled behind a second mail. The
+  answer's `invitation` field says what the token did (`accepted`,
+  `already_member`, `email_mismatch`, `invalid`), so a link that granted
+  nothing is never a silent nothing;
 - a signed-in account whose own address **is** the invited one posts the
   token to `POST /api/v1/auth/invitations/accept`; a session on any other
   address is refused with
@@ -303,7 +308,11 @@ Notes:
   `OPENV_SSO_IP_BURST` / `_REFILL_PER_HOUR` (20, 60) and
   `OPENV_INVITE_PREVIEW_BURST` / `_REFILL_PER_HOUR` (60, 240 — invite-link
   previews have their own generous bucket so opening an invitation never
-  spends the sign-in budget). Body and upload caps:
+  spends the sign-in budget) and `OPENV_INVITE_BURST` / `_REFILL_PER_HOUR`
+  (20, 60 — invitations per **inviting account**: creating one mails an
+  address the sender chose, so the endpoint is a relay and is bounded;
+  re-posting an unchanged invitation within an hour mails nothing at all).
+  Body and upload caps:
   `OPENV_MAX_BODY_MB` (32) and `OPENV_MAX_UPLOAD_MB` (25).
 - Set `OPENV_METRICS_TOKEN` so `/metrics` needs a bearer token; without it
   anyone can read the API's request and runtime statistics.

@@ -147,6 +147,35 @@ func TestChangePasswordInvalidatesEveryOtherSession(t *testing.T) {
 	}
 }
 
+// The password DID change, so a sweep of the other sessions that fails
+// afterwards must not be reported as a failed change: a caller told "that
+// did not work" retries with a current password the server no longer holds,
+// and the owner is left believing the old one still opens their account.
+// The sessions that survived die at their idle deadline instead.
+func TestChangePasswordSucceedsWhenTheSessionSweepFails(t *testing.T) {
+	repo := newMemRepo()
+	svc := NewDefaultService(repo)
+	user, err := svc.Register("owner@example.com", "old-password", "Owner")
+	if err != nil {
+		t.Fatalf("Register: %v", err)
+	}
+	if _, _, err := svc.Login("owner@example.com", "old-password"); err != nil {
+		t.Fatalf("Login: %v", err)
+	}
+	repo.deleteSessionsErr = errors.New("database went away after the password was written")
+
+	if err := svc.ChangePassword(user.ID, "old-password", "new-password", ""); err != nil {
+		t.Fatalf("ChangePassword returned %v, want success: the password did change", err)
+	}
+	// And it really did change: the new one signs in, the old one does not.
+	if _, _, err := svc.Login("owner@example.com", "new-password"); err != nil {
+		t.Errorf("new password rejected: %v", err)
+	}
+	if _, _, err := svc.Login("owner@example.com", "old-password"); !errors.Is(err, ErrInvalidCredentials) {
+		t.Errorf("old password returned %v, want ErrInvalidCredentials", err)
+	}
+}
+
 func TestChangePasswordRefusesAnSSOAccount(t *testing.T) {
 	repo := newMemRepo()
 	svc := NewDefaultService(repo)

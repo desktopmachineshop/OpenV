@@ -15,6 +15,11 @@ type memRepo struct {
 	// touches counts TouchSession calls, so the session tests can assert
 	// that last_seen_at is not rewritten on every single request.
 	touches int
+	// deleteSessionsErr, when set, fails DeleteSessionsForUser — the sweep a
+	// password change makes after the password itself is already stored.
+	deleteSessionsErr error
+	// markVerifiedErr, when set, fails MarkEmailVerified.
+	markVerifiedErr error
 }
 
 func newMemRepo() *memRepo {
@@ -28,6 +33,21 @@ func (m *memRepo) SaveEmailVerification(v *EmailVerification) error {
 		}
 	}
 	m.verifications[v.TokenHash] = v
+	return nil
+}
+
+// markVerifiedErr, when set, fails MarkEmailVerified.
+func (m *memRepo) MarkEmailVerified(userID string, at time.Time) error {
+	if m.markVerifiedErr != nil {
+		return m.markVerifiedErr
+	}
+	user := m.users[userID]
+	if user == nil {
+		return errors.New("no such user")
+	}
+	user.EmailVerified = true
+	user.EmailVerifiedAt = &at
+	user.UpdatedAt = at
 	return nil
 }
 
@@ -91,6 +111,9 @@ func (m *memRepo) DeleteExpiredSessions(time.Time, time.Duration, time.Duration)
 	return nil
 }
 func (m *memRepo) DeleteSessionsForUser(userID, exceptTokenHash string) error {
+	if m.deleteSessionsErr != nil {
+		return m.deleteSessionsErr
+	}
 	for id, s := range m.sessions {
 		if s.UserID == userID && s.TokenHash != exceptTokenHash {
 			delete(m.sessions, id)
@@ -329,5 +352,39 @@ func TestVerificationConfirmRefusesAddressTakenMeanwhile(t *testing.T) {
 	}
 	if repo.users[user.ID].EmailVerified {
 		t.Error("a refused confirm must leave the account unverified")
+	}
+}
+
+// MarkEmailVerified records proof of control that did not come from an
+// emailed link — an invitation token delivered to the account's own address.
+// It touches only the verification columns, and verifying twice is a no-op.
+func TestMarkEmailVerified(t *testing.T) {
+	repo := newMemRepo()
+	svc := NewDefaultService(repo)
+	svc.SetEmailVerificationPolicy(EmailVerificationPolicy{Required: true})
+	user, err := svc.Register("invited@example.com", "a-password", "Invited")
+	if err != nil {
+		t.Fatalf("Register: %v", err)
+	}
+	if user.EmailVerified {
+		t.Fatal("a password account on a verifying deployment starts unverified")
+	}
+
+	verified, err := svc.MarkEmailVerified(user.ID)
+	if err != nil {
+		t.Fatalf("MarkEmailVerified: %v", err)
+	}
+	if !verified.EmailVerified || verified.EmailVerifiedAt == nil {
+		t.Errorf("user = %+v, want verified with a timestamp", verified)
+	}
+	if verified.Email != "invited@example.com" {
+		t.Errorf("email = %q, want the address left alone", verified.Email)
+	}
+	// Again is a no-op, not an error.
+	if _, err := svc.MarkEmailVerified(user.ID); err != nil {
+		t.Errorf("verifying twice returned %v", err)
+	}
+	if _, err := svc.MarkEmailVerified("no-such-user"); err == nil {
+		t.Error("an unknown account must be reported")
 	}
 }

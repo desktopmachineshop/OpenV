@@ -152,6 +152,13 @@ func (m *memUserRepo) SaveEmailVerification(*users.EmailVerification) error {
 func (m *memUserRepo) ConsumeEmailVerification(string, time.Time) (*users.User, error) {
 	return nil, nil
 }
+func (m *memUserRepo) MarkEmailVerified(userID string, at time.Time) error {
+	if u := m.users[userID]; u != nil {
+		u.EmailVerified = true
+		u.EmailVerifiedAt = &at
+	}
+	return nil
+}
 func (m *memUserRepo) SaveSession(s *users.Session) error { m.sessions[s.ID] = s; return nil }
 func (m *memUserRepo) FindSessionByTokenHash(hash string) (*users.Session, error) {
 	for _, s := range m.sessions {

@@ -133,6 +133,17 @@ func (r *UserRepository) SaveEmailVerification(v *users.EmailVerification) error
 	return tx.Commit()
 }
 
+// MarkEmailVerified records proof of control that did not come from an
+// emailed link. It writes only the verification columns — never the address
+// — so it cannot move an account onto an address it has not proved.
+func (r *UserRepository) MarkEmailVerified(userID string, at time.Time) error {
+	_, err := r.db.Exec(`
+		UPDATE users SET email_verified = TRUE, email_verified_at = COALESCE(email_verified_at, $2), updated_at = $2
+		WHERE id = $1
+	`, userID, at)
+	return err
+}
+
 // ConsumeEmailVerification spends a link and marks its user verified in one
 // transaction. The UPDATE ... RETURNING is the single-use guard: two racing
 // confirms of the same link see one row flip and one no-op. A unique

@@ -105,9 +105,15 @@ type Repository interface {
 	// one address — what an address takes up once a provider has verified it.
 	ListPendingForEmail(email string, now time.Time) ([]*Invitation, error)
 	// MarkAccepted stamps accepted_at, and reports whether THIS caller won:
-	// false means the row was already accepted, so two concurrent sign-ins
-	// cannot both count as the acceptance.
+	// false means the row was already accepted, revoked or expired, so two
+	// concurrent sign-ins cannot both count as the acceptance. It is the
+	// claim an acceptance rests on: winning it is what entitles the caller
+	// to write the membership.
 	MarkAccepted(id string, at time.Time) (bool, error)
+	// ClearAccepted returns a stamped row to pending (accepted_at = NULL).
+	// It undoes a claim whose membership could not be written, so the link
+	// stays usable instead of being spent for nothing.
+	ClearAccepted(id string) error
 	Delete(id string) error
 	// DeleteExpired removes expired, never-accepted rows; housekeeping only,
 	// correctness never depends on it.
@@ -157,6 +163,19 @@ type Service interface {
 	// ErrInvalidToken when the link is unknown, revoked, spent or expired;
 	// ErrEmailMismatch when the link is live but was sent elsewhere.
 	AcceptTokenForEmail(token, email, userID string) (*Acceptance, error)
+	// AcceptResolvedForEmail is AcceptTokenForEmail for a caller that has
+	// ALREADY resolved the token — registration, which must ask "may this
+	// address sign up?" and "what does its link grant?" from one lookup.
+	// Two lookups would leave a window in which the invitation is revoked
+	// between them, admitting an account that then joins nothing.
+	//
+	// Resolving earlier is not a weaker check: the row is claimed here
+	// (MarkAccepted), so an invitation revoked, spent or expired since the
+	// lookup fails with ErrInvalidToken and grants nothing. The address is
+	// still checked against the invitation, so the structural rule — a
+	// token converts only for the address it was issued to — holds on this
+	// path too.
+	AcceptResolvedForEmail(inv *Invitation, email, userID string) (*Acceptance, error)
 	// AcceptAllForProviderVerifiedEmail accepts every pending invitation for
 	// an address. Membership is a credential, so the name states the only
 	// precondition under which it may be called: an identity provider has
@@ -292,6 +311,15 @@ func (s *DefaultService) AcceptTokenForEmail(token, email, userID string) (*Acce
 	if err != nil {
 		return nil, err
 	}
+	return s.AcceptResolvedForEmail(inv, email, userID)
+}
+
+// AcceptResolvedForEmail accepts an invitation the caller already resolved;
+// see the Service interface.
+func (s *DefaultService) AcceptResolvedForEmail(inv *Invitation, email, userID string) (*Acceptance, error) {
+	if inv == nil {
+		return nil, ErrInvalidToken
+	}
 	if inv.Email != users.NormalizeEmail(email) {
 		return nil, ErrEmailMismatch
 	}
@@ -324,22 +352,25 @@ func (s *DefaultService) AcceptAllForProviderVerifiedEmail(email, userID string)
 	return accepted, errors.Join(failures...)
 }
 
-// accept creates the membership and marks the row taken.
+// accept claims the row and then creates the membership.
 //
-// Two rules shape it. An existing membership is left exactly as it is: an
+// Three rules shape it. An existing membership is left exactly as it is: an
 // invitation offers a way in, never a move between roles, so an admin who
 // follows a later "member" link stays an admin and a workspace's last admin
-// can never be demoted through this path. And the writes are ordered
-// membership-first, so a failure cannot consume the invitation: if stamping
-// the row fails after the member was added, the invitation stays pending and
-// the next attempt lands on the already-a-member branch, which is
-// idempotent. The reverse order would spend the link and leave no membership
-// at all.
+// can never be demoted through this path.
 //
-// Losing the race for the stamp (won == false) still reports the link as
-// spent. The membership that was written a moment earlier stands: it is
-// exactly the one the token authorized, into the workspace the token names,
-// at the role it names.
+// The writes are ordered claim-first: MarkAccepted must affect exactly one
+// still-pending row before any membership is written. That claim is what
+// closes the revoke race — an invitation revoked (or spent, or expired)
+// between the lookup and here loses the claim, so the acceptance fails with
+// ErrInvalidToken and grants nothing, instead of writing a membership the
+// admin had already taken back while the caller was told 404.
+//
+// And a claim whose membership cannot be written is given back: the row is
+// un-stamped, so the link stays usable and the person can try again rather
+// than holding a spent link and no membership. If even the un-stamp fails
+// both failures are reported together — the row is then stamped with no
+// membership behind it, which the caller must be able to see in its log.
 func (s *DefaultService) accept(inv *Invitation, userID string, now time.Time) (*Acceptance, error) {
 	existing, err := s.members.RoleInOrg(inv.OrgID, userID)
 	if err != nil {
@@ -348,14 +379,13 @@ func (s *DefaultService) accept(inv *Invitation, userID string, now time.Time) (
 	if existing != "" {
 		// Already in: take the invitation out of circulation and report the
 		// role they actually hold, which is not necessarily the invited one.
+		// Nothing is granted here, so losing the claim is not an error —
+		// the membership the link offered is already there either way.
 		if _, err := s.repo.MarkAccepted(inv.ID, now); err != nil {
 			return nil, err
 		}
 		inv.AcceptedAt = &now
 		return &Acceptance{Invitation: inv, Role: existing, AlreadyMember: true}, nil
-	}
-	if err := s.members.AddMember(inv.OrgID, userID, inv.Role); err != nil {
-		return nil, err
 	}
 	won, err := s.repo.MarkAccepted(inv.ID, now)
 	if err != nil {
@@ -363,6 +393,12 @@ func (s *DefaultService) accept(inv *Invitation, userID string, now time.Time) (
 	}
 	if !won {
 		return nil, ErrInvalidToken
+	}
+	if err := s.members.AddMember(inv.OrgID, userID, inv.Role); err != nil {
+		if clearErr := s.repo.ClearAccepted(inv.ID); clearErr != nil {
+			return nil, errors.Join(err, fmt.Errorf("invitation %s stayed spent: %w", inv.ID, clearErr))
+		}
+		return nil, err
 	}
 	inv.AcceptedAt = &now
 	return &Acceptance{Invitation: inv, Role: inv.Role}, nil

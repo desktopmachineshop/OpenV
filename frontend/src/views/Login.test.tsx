@@ -34,11 +34,17 @@ const authFixtures: {
   config: any;
   invitation: any;
   me: any;
+  // What register() reports the invite token did, and whether accepting one
+  // fails — the two ways a conversion can not happen.
+  registerOutcome: string | null;
+  acceptError: any;
   calls: Calls;
 } = {
   config: null,
   invitation: null,
   me: null,
+  registerOutcome: null,
+  acceptError: null,
   calls: { login: [], register: [], acceptInvitation: [], logout: [] },
 };
 
@@ -59,12 +65,22 @@ jest.mock('../api/client', () => ({
       authFixtures.invitation
         ? Promise.resolve({ data: authFixtures.invitation })
         : Promise.reject(new Error('invalid invitation')),
-    acceptInvitation: (...args: any[]) => record('acceptInvitation', {})(...args),
+    acceptInvitation: (...args: any[]) => {
+      authFixtures.calls.acceptInvitation.push(args);
+      return authFixtures.acceptError
+        ? Promise.reject(authFixtures.acceptError)
+        : Promise.resolve({ data: {} });
+    },
     logout: (...args: any[]) => record('logout', {})(...args),
     login: (...args: any[]) =>
       record('login', { id: 'u1', email: 'member@example.com', email_verified: true })(...args),
     register: (...args: any[]) =>
-      record('register', { id: 'u2', email: 'invited@example.com', email_verified: true })(...args),
+      record('register', {
+        id: 'u2',
+        email: 'invited@example.com',
+        email_verified: true,
+        ...(authFixtures.registerOutcome ? { invitation: authFixtures.registerOutcome } : {}),
+      })(...args),
     oidcLoginUrl: () => '/oidc',
     googleLoginUrl: () => '/google',
   },
@@ -79,6 +95,8 @@ beforeEach(() => {
   authFixtures.config = null;
   authFixtures.invitation = null;
   authFixtures.me = null;
+  authFixtures.registerOutcome = null;
+  authFixtures.acceptError = null;
   authFixtures.calls = { login: [], register: [], acceptInvitation: [], logout: [] };
   container = document.createElement('div');
   document.body.appendChild(container);
@@ -308,6 +326,135 @@ describe('Login', () => {
     // the state it sets lands a microtask later than the click itself.
     await act(async () => {});
     expect(container.querySelector('input[type="password"]')).not.toBeNull();
+  });
+
+  // The token converts only for the address it was issued to, so the field
+  // is not the person's to change: an editable one only produces a sign-up
+  // that silently joins nothing.
+  it('locks the address to the invited one while an invite is loaded', async () => {
+    authFixtures.config = { google_enabled: false, oidc_enabled: false, registration: 'closed' };
+    authFixtures.invitation = {
+      email: 'invited@example.com',
+      org_name: 'Desktop Machine Shop',
+      role: 'member',
+      expires_at: '2030-01-01T00:00:00Z',
+    };
+    await render('/login?invite=tok-123');
+
+    const email = container.querySelector('input[type="email"]') as HTMLInputElement;
+    expect(email.value).toBe('invited@example.com');
+    expect(email.readOnly).toBe(true);
+    // And the way out is named: drop the link.
+    expect(container.textContent).toContain('This invitation was sent to invited@example.com');
+  });
+
+  // A sign-up that joined nothing must not pass in silence.
+  it('says which address the link was issued to when the server reports a mismatch', async () => {
+    authFixtures.config = { google_enabled: false, oidc_enabled: false, registration: 'open' };
+    authFixtures.invitation = {
+      email: 'invited@example.com',
+      org_name: 'Desktop Machine Shop',
+      role: 'member',
+      expires_at: '2030-01-01T00:00:00Z',
+    };
+    authFixtures.registerOutcome = 'email_mismatch';
+    await render('/login?invite=tok-123');
+    await submitForm('secret-password');
+
+    expect(authFixtures.calls.register).toHaveLength(1);
+    expect(container.textContent).toContain(
+      'This link was issued to invited@example.com; register with that address to join.'
+    );
+  });
+
+  it('says so when the link was revoked before the sign-up landed', async () => {
+    authFixtures.config = { google_enabled: false, oidc_enabled: false, registration: 'open' };
+    authFixtures.invitation = {
+      email: 'invited@example.com',
+      org_name: 'Desktop Machine Shop',
+      role: 'member',
+      expires_at: '2030-01-01T00:00:00Z',
+    };
+    authFixtures.registerOutcome = 'invalid';
+    await render('/login?invite=tok-123');
+    await submitForm('secret-password');
+
+    expect(container.textContent).toContain('no longer valid');
+    expect(container.textContent).toContain('did not join the workspace');
+    // The account exists and is signed in, so there is a way on from here.
+    expect(
+      Array.from(container.querySelectorAll('button')).find((b) =>
+        (b.textContent || '').includes('Continue to OpenV')
+      )
+    ).toBeDefined();
+  });
+
+  // An accepted invitation is silent, as before: the person lands in the app.
+  it('says nothing extra when the sign-up accepted the invitation', async () => {
+    authFixtures.config = { google_enabled: false, oidc_enabled: false, registration: 'open' };
+    authFixtures.invitation = {
+      email: 'invited@example.com',
+      org_name: 'Desktop Machine Shop',
+      role: 'member',
+      expires_at: '2030-01-01T00:00:00Z',
+    };
+    authFixtures.registerOutcome = 'accepted';
+    await render('/login?invite=tok-123');
+    await submitForm('secret-password');
+
+    expect(container.textContent).not.toContain('did not join');
+    expect(container.textContent).not.toContain('was issued to');
+  });
+
+  // A failed accept after signing in is reported, not swallowed: they asked
+  // to join a workspace, and silence would leave them believing they did.
+  it('surfaces an error when the invitation could not be accepted after sign-in', async () => {
+    authFixtures.config = { google_enabled: false, oidc_enabled: false, registration: 'closed' };
+    authFixtures.invitation = {
+      email: 'member@example.com',
+      org_name: 'Desktop Machine Shop',
+      role: 'member',
+      expires_at: '2030-01-01T00:00:00Z',
+    };
+    authFixtures.acceptError = {
+      response: { data: { error: 'invitation link is invalid or has expired' } },
+    };
+    await render('/login?invite=tok-456');
+    const toggle = Array.from(container.querySelectorAll('button')).find((b) =>
+      (b.textContent || '').includes('I already have an account')
+    ) as HTMLButtonElement;
+    await act(async () => {
+      toggle.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    await submitForm('secret-password');
+
+    expect(authFixtures.calls.acceptInvitation).toEqual([['tok-456']]);
+    expect(container.textContent).toContain('invitation link is invalid or has expired');
+  });
+
+  // The banner has to tell the person what to do with the form they are
+  // looking at, not with the one the link opened.
+  it('tells the invitee what to do in whichever mode is showing', async () => {
+    authFixtures.config = { google_enabled: false, oidc_enabled: false, registration: 'closed' };
+    authFixtures.invitation = {
+      email: 'invited@example.com',
+      org_name: 'Desktop Machine Shop',
+      role: 'member',
+      expires_at: '2030-01-01T00:00:00Z',
+    };
+    await render('/login?invite=tok-123');
+    expect(container.textContent).toContain(
+      'Create your account with invited@example.com to join.'
+    );
+
+    const toggle = Array.from(container.querySelectorAll('button')).find((b) =>
+      (b.textContent || '').includes('I already have an account')
+    ) as HTMLButtonElement;
+    await act(async () => {
+      toggle.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    expect(container.textContent).toContain('Sign in as invited@example.com to join.');
+    expect(container.textContent).not.toContain('Create your account with');
   });
 
   it('says so when the invite link no longer works', async () => {

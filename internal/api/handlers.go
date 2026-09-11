@@ -209,6 +209,10 @@ type Handler struct {
 	// from authIPLimiter on purpose: opening an invite link must never spend
 	// somebody's sign-in budget (see ratelimit.go).
 	invitePreviewLimiter *rateLimiter
+	// inviteLimiter bounds invitations per INVITING ACCOUNT: creating one
+	// mails an address the sender chose, so the endpoint is a mail relay
+	// (see ratelimit.go).
+	inviteLimiter *rateLimiter
 
 	// Sign-up email verification (see email_verification_handlers.go).
 	mailer            notify.Mailer
@@ -289,6 +293,7 @@ func NewHandler(deps HandlerDeps) *Handler {
 		ssoIPLimiter:           newRateLimiterFromEnv(envSSOIPBurst, envSSOIPRefill, defaultSSOIPBurst, defaultSSOIPRefill),
 		verifyResendLimiter:    newRateLimiterFromEnv(envVerifyResendBurst, envVerifyResendRefill, defaultVerifyResendBurst, defaultVerifyResendRefill),
 		invitePreviewLimiter:   newRateLimiterFromEnv(envInvitePreviewBurst, envInvitePreviewRefill, defaultInvitePreviewBurst, defaultInvitePreviewRefill),
+		inviteLimiter:          newRateLimiterFromEnv(envInviteBurst, envInviteRefill, defaultInviteBurst, defaultInviteRefill),
 		mailer:                 deps.Mailer,
 		emailLinkBase:          deps.EmailLinkBase,
 		emailVerification:      deps.EmailVerification,

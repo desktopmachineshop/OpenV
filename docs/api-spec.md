@@ -115,13 +115,13 @@ their own project, workers pass within their org) · `org member`/`org admin`
 
 | Method | Path | Purpose | Auth |
 |---|---|---|---|
-| POST | `/api/v1/auth/register` | Create password account `{email, password, name, invite_token?}` (first user becomes admin) and log in; on a server with SMTP the account starts unverified and a verification link is emailed. `invite_token` is the token from an invite link (`/login?invite=<token>`): when it is valid **for the address being registered**, that one invitation is accepted and the membership it names is granted. Without it registration grants no membership — the invitation stays pending until its link is used. `403 {"code":"registration_closed"}` when `OPENV_REGISTRATION=closed` and the request carries no `invite_token` issued to the address being registered (a pending invitation for the address is **not** a door: it would leak who has been invited, and let a stranger squat the address) | open |
+| POST | `/api/v1/auth/register` | Create password account `{email, password, name, invite_token?}` (first user becomes admin) and log in; on a server with SMTP the account starts unverified and a verification link is emailed. `invite_token` is the token from an invite link (`/login?invite=<token>`): when it is valid **for the address being registered**, that one invitation is accepted and the membership it names is granted, **and the account's address is marked verified** — the token was mailed to that address and nowhere else, so a closed, verification-required deployment does not wall the invitee behind a second mail. Without it registration grants no membership — the invitation stays pending until its link is used. When a token was supplied the answer carries an `invitation` field saying what it did: `accepted`, `already_member`, `email_mismatch` (live link, different address), `invalid` (unknown, revoked, spent, expired — including revoked between the sign-up being allowed and the membership being claimed); the field is absent when no token was sent. The token is resolved **once** per sign-up, so a revoke can never produce an account that "passed" and then joined nothing in silence. `403 {"code":"registration_closed"}` when `OPENV_REGISTRATION=closed` and the request carries no `invite_token` issued to the address being registered (a pending invitation for the address is **not** a door: it would leak who has been invited, and let a stranger squat the address) | open |
 | POST | `/api/v1/auth/login` | Password login, sets session cookie | open |
 | POST | `/api/v1/auth/logout` | End session, clear cookie | open |
 | GET | `/api/v1/auth/me` | Current user profile | user |
 | GET | `/api/v1/auth/config` | Which sign-in methods are enabled (Google, OIDC), whether `email_verification_required`, and the `registration` policy | open |
 | GET | `/api/v1/auth/policy` | The registration policy alone: `{"registration":"open"\|"closed"}` | open |
-| GET | `/api/v1/auth/invitations/{token}` | Preview an invite link: `{email, org_name, role, expires_at}`; one `404` for every unusable link. Throttled on its own bucket, not the sign-in one | open |
+| POST | `/api/v1/auth/invitations/preview` | Preview an invite link `{token}` → `{email, org_name, role, expires_at}`; one `404` for every unusable link. The token travels in the body, never in the path: an invite link is a credential, and a URL is written into access logs, proxy logs, browser history and `Referer` headers. Throttled on its own bucket, not the sign-in one | open |
 | POST | `/api/v1/auth/invitations/accept` | Join the signed-in account to the invitation's workspace `{token}` → `{org_id, org_name, role, already_member}`. Converts only when the **session's own email is the invited address**; otherwise `403 {"code":"invitation_email_mismatch"}`, whose body never names the invited address (the preview already shows it to whoever holds the link). `404` when the link is unusable. An account that is already a member keeps its role — `role` reports the role it holds, `already_member` is `true`, and the invitation is spent | user (cookie only, JSON body) |
 | PUT | `/api/v1/me/password` | Change password `{current_password, new_password}`; `204` on success and every OTHER session of the account is invalidated. `400 weak_password`, `403 password_incorrect`, `409 no_password` (SSO-only account) | user |
 | POST | `/api/v1/auth/verify-email` | Confirm an emailed link `{token}`; returns the user (`400` invalid/expired, `409` address taken). Grants **no** workspace membership: the address it confirms is one the account asked the mail to be sent to, so it is not evidence that the account is the person an admin invited | open |
@@ -147,9 +147,9 @@ their own project, workers pass within their org) · `org member`/`org admin`
 | POST | `/api/v1/orgs/{id}/restore` | Restore a soft-deleted workspace within the grace period | org admin (of the deleted org) |
 | POST | `/api/v1/orgs/{id}/activate` | Set the session's active workspace | org member |
 | GET | `/api/v1/orgs/{id}/members` | List workspace members | org member |
-| POST | `/api/v1/orgs/{id}/members` | Add member by email. `201` when the address has an account and joined; `409` when it is already a member (change a role with `PUT`); `202 {invitation, link, emailed}` when it has no account and was invited instead. `400` for a personal workspace | org admin |
+| POST | `/api/v1/orgs/{id}/members` | Add member by email. `201` with the membership when the address has an account and joined; `409` when it is already a member (change a role with `PUT`); `202 {invitation, link, emailed, reason?}` when it has no account and was invited instead. `400` for a personal workspace. `POST /orgs/{id}/invitations` answers the same outcomes with the same statuses and bodies | org admin |
 | GET | `/api/v1/orgs/{id}/invitations` | Pending invitations to the workspace | org admin |
-| POST | `/api/v1/orgs/{id}/invitations` | Bring an address `{email, role}` into the workspace, taking the same branch as `POST /members`: `200` with the membership when the address already has an account, `409` when it is already a member, `201 {invitation, link, emailed}` when it has no account. `link` is the one-time `${FRONTEND_URL}/login?invite=<token>` and is never retrievable again. `400` for a personal workspace. Re-inviting an address replaces whatever unaccepted invitation it holds | org admin |
+| POST | `/api/v1/orgs/{id}/invitations` | Bring an address `{email, role}` into the workspace, taking the same branch **and the same statuses** as `POST /members`: `201` with the membership when the address already has an account, `409` when it is already a member, `202 {invitation, link, emailed, reason?}` when it has no account. `link` is the one-time `${FRONTEND_URL}/login?invite=<token>` and is never retrievable again. `400` for a personal workspace. Re-inviting an address replaces whatever unaccepted invitation it holds — except, on a deployment that can send mail, within an hour of an **unchanged** one (same role, still valid), which is returned as-is with `emailed:false`, a `reason`, and no `link`, so a repeated click cannot mail the same person again (without SMTP the link in the response is the delivery, so a fresh one is always minted). Throttled per inviting account (`429`) | org admin |
 | DELETE | `/api/v1/orgs/{id}/invitations/{invId}` | Revoke a pending invitation (its link stops working) | org admin |
 | PUT | `/api/v1/orgs/{id}/members/{userId}` | Change org role | org admin |
 | DELETE | `/api/v1/orgs/{id}/members/{userId}` | Remove member (self-removal = leave, allowed for members) | org admin / self |
@@ -558,12 +558,20 @@ routes are throttled per invite and per address. A throttled request is
 answered `429` with a JSON `error` and a `Retry-After` header in seconds.
 Verification resend and change-of-address are throttled per account
 (`OPENV_VERIFY_RESEND_BURST` 3, `OPENV_VERIFY_RESEND_REFILL_PER_HOUR` 6).
-Previewing an invite link (`GET /auth/invitations/{token}`) has its own
+Previewing an invite link (`POST /auth/invitations/preview`) has its own
 generous per-address bucket (`OPENV_INVITE_PREVIEW_BURST` 60,
 `OPENV_INVITE_PREVIEW_REFILL_PER_HOUR` 240) and deliberately does **not**
 draw on the sign-in one: the token is unguessable, so the limit only bounds
 lookups, and opening an invite link must never cost somebody the sign-in
 budget for the account they were invited to use.
+Creating an invitation (`POST /orgs/{id}/invitations` and `POST
+/orgs/{id}/members` for an address with no account) mails an address the
+sender chose, so it is bounded per **inviting account**
+(`OPENV_INVITE_BURST` 20, `OPENV_INVITE_REFILL_PER_HOUR` 60): one admin — or
+one stolen admin session — cannot point the deployment's SMTP credentials at
+a list, and cannot spend a colleague's budget either. Re-posting an
+unchanged invitation within the hour does not mail anything at all (see the
+endpoint), so an impatient admin costs the invitee nothing.
 
 While a server requires email verification (`email_verification_required` in
 `GET /auth/config`), a session whose account has `email_verified: false` is

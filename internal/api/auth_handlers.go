@@ -12,6 +12,7 @@ import (
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 
+	"github.com/openv/requirements-platform/internal/domain/invitations"
 	"github.com/openv/requirements-platform/internal/domain/members"
 	"github.com/openv/requirements-platform/internal/domain/users"
 )
@@ -49,7 +50,9 @@ func (h *Handler) registerAuthRoutes(router *mux.Router) {
 	// for a browser that holds no session yet.
 	router.HandleFunc("/api/v1/auth/policy", h.AuthPolicy).Methods("GET")
 	router.HandleFunc("/api/v1/auth/invitations/accept", h.AcceptInvitation).Methods("POST")
-	router.HandleFunc("/api/v1/auth/invitations/{token}", h.PreviewInvitation).Methods("GET")
+	// The token travels in the body, not the path: an invite link is a
+	// credential, and a URL is logged (see PreviewInvitation).
+	router.HandleFunc("/api/v1/auth/invitations/preview", h.PreviewInvitation).Methods("POST")
 	router.HandleFunc("/api/v1/auth/google", h.GoogleLogin).Methods("GET")
 	router.HandleFunc("/api/v1/auth/google/callback", h.GoogleCallback).Methods("GET")
 	h.registerOIDCRoutes(router)
@@ -155,7 +158,21 @@ func (h *Handler) registrationPolicy() string {
 	return RegistrationOpen
 }
 
-// registrationAllowed reports whether this address may create an account.
+// registrationAllowed reports whether this address may create an account,
+// AND hands back the invitation its link resolved to, so the token is looked
+// up exactly once per sign-up. Two lookups — one to open the door, one to
+// grant the membership — leave a window in which the invitation is revoked
+// in between: the account is created because it "passed", and then joins
+// nothing, which is the confusing half-outcome this signature removes. The
+// membership is still claimed separately (the caller accepts by the
+// invitation returned here), so a revoke that lands after this read fails
+// cleanly there rather than granting anything.
+//
+// outcome is what to tell the caller about the token they supplied: "" when
+// it resolved (or when there was none), InviteOutcomeInvalid for a link that
+// is unknown, revoked, spent or expired, InviteOutcomeEmailMismatch for a
+// live link issued to a different address.
+//
 // Open deployments allow everyone. A closed one has exactly one door here —
 // a live invitation link whose address is the one being registered — and
 // single sign-on, which never reaches this function because the identity
@@ -169,21 +186,34 @@ func (h *Handler) registrationPolicy() string {
 //
 // This is a door, not a grant: passing it creates the account. The
 // membership the invitation names is granted separately, by
-// acceptInvitationToken, and only for the address the token was issued to.
-func (h *Handler) registrationAllowed(email, inviteToken string) bool {
-	if h.registrationPolicy() == RegistrationOpen {
-		return true
+// acceptResolvedInvitation, and only for the address the token was issued to.
+func (h *Handler) registrationAllowed(email, inviteToken string) (bool, *invitations.Invitation, string) {
+	open := h.registrationPolicy() == RegistrationOpen
+	if inviteToken == "" {
+		return open, nil, ""
 	}
-	if h.invitationService == nil || inviteToken == "" {
-		return false
+	if h.invitationService == nil {
+		return open, nil, InviteOutcomeInvalid
 	}
 	// A lookup failure is treated as "no invitation": on a closed deployment
 	// the safe answer to an unanswerable question is no.
 	inv, err := h.invitationService.Lookup(inviteToken)
 	if err != nil || inv == nil {
-		return false
+		return open, nil, InviteOutcomeInvalid
 	}
-	return inv.Email == users.NormalizeEmail(email)
+	if inv.Email != users.NormalizeEmail(email) {
+		return open, nil, InviteOutcomeEmailMismatch
+	}
+	return true, inv, ""
+}
+
+// registerResponse is the created account plus, when the sign-up carried an
+// invite token, what that token did (see the InviteOutcome constants). The
+// user's own fields stay at the top level, so a client that ignores the
+// outcome reads exactly the body it always did.
+type registerResponse struct {
+	*users.User
+	Invitation string `json:"invitation,omitempty"`
 }
 
 // Register creates a password account and logs it in.
@@ -206,8 +236,11 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// On a closed deployment an invitation is the door: an invited address
-	// registers normally, everyone else is turned away (REQ-95).
-	if !h.registrationAllowed(req.Email, req.InviteToken) {
+	// registers normally, everyone else is turned away (REQ-95). The token
+	// is resolved once, here, and the membership is granted from what it
+	// resolved to.
+	allowed, invite, outcome := h.registrationAllowed(req.Email, req.InviteToken)
+	if !allowed {
 		writeJSONErrorCode(w, http.StatusForbidden, "registration is closed", ErrCodeRegistrationClosed)
 		return
 	}
@@ -222,7 +255,10 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	// follows proof that the invited mailbox was read, never the mere claim
 	// of an address. Someone who registered without the link uses it
 	// afterwards, signed in, through POST /auth/invitations/accept.
-	h.acceptInvitationToken(req.InviteToken, user)
+	if invite != nil {
+		outcome = h.acceptResolvedInvitation(invite, user)
+		user = h.verifiedByInvitation(user, outcome)
+	}
 	_, token, err := h.userService.Login(req.Email, req.Password)
 	if err != nil {
 		respondInternal(w, r, "failed to sign in after registration", err)
@@ -234,7 +270,34 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	if h.emailVerification.Required && !user.EmailVerified {
 		h.sendVerificationAsync(user, user.Email)
 	}
-	json.NewEncoder(w).Encode(user)
+	json.NewEncoder(w).Encode(registerResponse{User: user, Invitation: outcome})
+}
+
+// verifiedByInvitation marks the new account's address verified when an
+// invitation token it carried was taken up. The token was mailed to that
+// address and nowhere else, so presenting it proves the mailbox was read —
+// the same proof an emailed verification link provides, and the same one an
+// identity provider asserts for LoginWithSSO, which verifies its accounts
+// from the start for exactly this reason.
+//
+// Without this a closed, verification-required deployment walls its invitees
+// behind a SECOND mail immediately after they followed the first, which is
+// both pointless and the most likely place to lose somebody. A failure here
+// is not fatal: the account exists, and the wall's Resend still works.
+func (h *Handler) verifiedByInvitation(user *users.User, outcome string) *users.User {
+	if user == nil || user.EmailVerified {
+		return user
+	}
+	if outcome != InviteOutcomeAccepted && outcome != InviteOutcomeAlreadyMember {
+		return user
+	}
+	verified, err := h.userService.MarkEmailVerified(user.ID)
+	if err != nil {
+		slog.Warn("invitation: could not mark an invited address verified",
+			slog.String("user_id", user.ID), slog.Any("error", err))
+		return user
+	}
+	return verified
 }
 
 // Login authenticates email/password credentials.

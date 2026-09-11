@@ -24,6 +24,29 @@ type fakeLoginService struct {
 	// confirmed is the account a verification link resolves to; nil means
 	// every link is invalid.
 	confirmed *users.User
+	// lastRegistered is the account Register last created, so a handler that
+	// marks it verified can be observed changing THAT account.
+	lastRegistered *users.User
+	// verified records MarkEmailVerified calls; verifyErr fails them, which
+	// must not fail the registration they hang off.
+	verified  []string
+	verifyErr error
+}
+
+// MarkEmailVerified mirrors the real service: the account's own address is
+// marked verified, and the address itself is untouched.
+func (f *fakeLoginService) MarkEmailVerified(userID string) (*users.User, error) {
+	if f.verifyErr != nil {
+		return nil, f.verifyErr
+	}
+	f.verified = append(f.verified, userID)
+	user := f.lastRegistered
+	if user == nil || user.ID != userID {
+		user = &users.User{ID: userID}
+	}
+	verified := *user
+	verified.EmailVerified = true
+	return &verified, nil
 }
 
 func (f *fakeLoginService) ConfirmEmailVerification(token string) (*users.User, error) {
@@ -31,6 +54,15 @@ func (f *fakeLoginService) ConfirmEmailVerification(token string) (*users.User, 
 		return nil, users.ErrVerificationInvalid
 	}
 	return f.confirmed, nil
+}
+
+// IssueEmailVerification mints the link a verifying deployment mails after
+// registration; the fake just names the address it would go to.
+func (f *fakeLoginService) IssueEmailVerification(userID, email string) (string, string, error) {
+	if email == "" && f.lastRegistered != nil {
+		email = f.lastRegistered.Email
+	}
+	return "verify-token", email, nil
 }
 
 func (f *fakeLoginService) Login(email, password string) (*users.User, string, error) {
@@ -42,7 +74,8 @@ func (f *fakeLoginService) Login(email, password string) (*users.User, string, e
 
 func (f *fakeLoginService) Register(email, password, name string) (*users.User, error) {
 	f.registered++
-	return &users.User{ID: "u2", Email: strings.ToLower(email)}, nil
+	f.lastRegistered = &users.User{ID: "u2", Email: strings.ToLower(strings.TrimSpace(email))}
+	return f.lastRegistered, nil
 }
 
 func (f *fakeLoginService) GetBySessionToken(token string) (*users.User, error) {

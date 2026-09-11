@@ -152,6 +152,19 @@ func (r *InvitationRepository) MarkAccepted(id string, at time.Time) (bool, erro
 	return n == 1, err
 }
 
+// ClearAccepted returns a stamped row to pending, undoing a claim whose
+// membership could not be written so the link stays usable.
+//
+// It can fail where a re-invite has landed in the meantime: the
+// pending-uniqueness index covers every unaccepted row, so un-stamping an
+// address that now holds a fresh pending invitation violates it. That is
+// the right outcome — the newest link is the live one — and the caller
+// reports the failure rather than silently dropping it.
+func (r *InvitationRepository) ClearAccepted(id string) error {
+	_, err := r.db.Exec(`UPDATE org_invitations SET accepted_at = NULL WHERE id = $1`, id)
+	return err
+}
+
 // Delete removes an invitation.
 func (r *InvitationRepository) Delete(id string) error {
 	_, err := r.db.Exec(`DELETE FROM org_invitations WHERE id = $1`, id)

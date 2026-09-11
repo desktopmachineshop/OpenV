@@ -11,10 +11,13 @@ import (
 
 // memRepo is a minimal in-memory Repository for the service tests. markErr,
 // when set, fails the NEXT MarkAccepted and then clears itself, which is how
-// a half-finished acceptance is staged.
+// a half-finished acceptance is staged; clearErr fails every un-stamp, for
+// the case where a claim cannot even be given back.
 type memRepo struct {
-	rows    map[string]*Invitation
-	markErr error
+	rows     map[string]*Invitation
+	markErr  error
+	clearErr error
+	cleared  []string
 }
 
 func newMemRepo() *memRepo { return &memRepo{rows: map[string]*Invitation{}} }
@@ -79,6 +82,18 @@ func (m *memRepo) MarkAccepted(id string, at time.Time) (bool, error) {
 	}
 	inv.AcceptedAt = &at
 	return true, nil
+}
+
+// ClearAccepted returns a stamped row to pending, as the SQL does.
+func (m *memRepo) ClearAccepted(id string) error {
+	if m.clearErr != nil {
+		return m.clearErr
+	}
+	m.cleared = append(m.cleared, id)
+	if inv := m.rows[id]; inv != nil {
+		inv.AcceptedAt = nil
+	}
+	return nil
 }
 
 func (m *memRepo) Delete(id string) error { delete(m.rows, id); return nil }
@@ -337,10 +352,10 @@ func TestAcceptNeverRewritesAnExistingRole(t *testing.T) {
 	}
 }
 
-// The membership is written BEFORE the row is stamped, so a failure cannot
-// consume the invitation: the link still works, and using it again lands on
-// the already-a-member branch rather than joining twice.
-func TestAFailedStampLeavesTheInvitationUsable(t *testing.T) {
+// The row is claimed BEFORE any membership is written, so a claim that
+// fails grants nothing at all — and leaves the link usable, because nothing
+// was spent.
+func TestAFailedClaimGrantsNothingAndLeavesTheLinkUsable(t *testing.T) {
 	svc, repo, members := newTestService()
 	_, token, err := svc.Create("org-1", "half@example.com", orgs.RoleMember, nil)
 	if err != nil {
@@ -349,28 +364,138 @@ func TestAFailedStampLeavesTheInvitationUsable(t *testing.T) {
 	repo.markErr = errors.New("database went away mid-write")
 
 	if _, err := svc.AcceptTokenForEmail(token, "half@example.com", "user-1"); err == nil {
-		t.Fatal("a failed stamp must be reported")
+		t.Fatal("a failed claim must be reported")
 	}
-	if len(members.added) != 1 {
-		t.Fatalf("memberships = %v, want the member added before the stamp", members.added)
+	if len(members.added) != 0 {
+		t.Fatalf("memberships = %v, want none written behind a failed claim", members.added)
 	}
 	if _, err := svc.Lookup(token); err != nil {
-		t.Fatalf("the invitation must still be pending after a failed stamp: %v", err)
+		t.Fatalf("the invitation must still be pending after a failed claim: %v", err)
 	}
 
-	// The retry is idempotent: no second membership, and the row is spent.
+	// The retry gets the membership the first attempt never wrote.
 	acc, err := svc.AcceptTokenForEmail(token, "half@example.com", "user-1")
 	if err != nil {
 		t.Fatalf("retry: %v", err)
 	}
-	if !acc.AlreadyMember || acc.Role != orgs.RoleMember {
-		t.Errorf("acceptance = %+v, want the membership the first attempt wrote", acc)
+	if acc.AlreadyMember || acc.Role != orgs.RoleMember {
+		t.Errorf("acceptance = %+v, want a fresh membership at the invited role", acc)
 	}
 	if len(members.added) != 1 {
 		t.Errorf("memberships = %v, want exactly one", members.added)
 	}
 	if _, err := svc.Lookup(token); !errors.Is(err, ErrInvalidToken) {
 		t.Error("the retry must spend the invitation")
+	}
+}
+
+// The revoke race. An invitation deleted between the lookup and the claim
+// must grant NO membership: the claim finds no pending row, so the
+// acceptance fails with the same flat ErrInvalidToken the caller already
+// answers 404 to — instead of handing out a membership the admin had just
+// taken back while telling the caller the link was invalid.
+func TestARowRevokedBetweenLookupAndClaimGrantsNothing(t *testing.T) {
+	svc, repo, members := newTestService()
+	inv, token, err := svc.Create("org-1", "raced@example.com", orgs.RoleAdmin, nil)
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	// Resolve the link the way registration does, then revoke it — exactly
+	// the window the old membership-first ordering wrote through.
+	resolved, err := svc.Lookup(token)
+	if err != nil {
+		t.Fatalf("Lookup: %v", err)
+	}
+	if err := svc.Revoke("org-1", inv.ID); err != nil {
+		t.Fatalf("Revoke: %v", err)
+	}
+
+	if _, err := svc.AcceptResolvedForEmail(resolved, "raced@example.com", "user-1"); !errors.Is(err, ErrInvalidToken) {
+		t.Fatalf("accepting a revoked invitation returned %v, want ErrInvalidToken", err)
+	}
+	if len(members.added) != 0 {
+		t.Errorf("a revoked invitation granted membership anyway: %v", members.added)
+	}
+	if len(repo.rows) != 0 {
+		t.Errorf("the revoked row came back: %+v", repo.rows)
+	}
+}
+
+// A claim whose membership cannot be written is given back: the row returns
+// to pending, so the link still works and the person is not left holding a
+// spent link and no membership.
+func TestAFailedAddMemberReturnsTheInvitationToPending(t *testing.T) {
+	svc, repo, members := newTestService()
+	inv, token, err := svc.Create("org-1", "refused@example.com", orgs.RoleMember, nil)
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	members.refuse["org-1"] = errors.New("workspace is locked")
+
+	if _, err := svc.AcceptTokenForEmail(token, "refused@example.com", "user-1"); err == nil {
+		t.Fatal("a refused membership must be reported")
+	}
+	if len(members.added) != 0 {
+		t.Errorf("memberships = %v, want none", members.added)
+	}
+	if repo.rows[inv.ID].AcceptedAt != nil {
+		t.Error("the row stayed stamped after its membership failed")
+	}
+	if _, err := svc.Lookup(token); err != nil {
+		t.Fatalf("the link must still work: %v", err)
+	}
+
+	// Once the workspace accepts members again, the same link joins.
+	delete(members.refuse, "org-1")
+	if _, err := svc.AcceptTokenForEmail(token, "refused@example.com", "user-1"); err != nil {
+		t.Fatalf("retry after the workspace recovered: %v", err)
+	}
+	if len(members.added) != 1 {
+		t.Errorf("memberships = %v, want exactly one", members.added)
+	}
+}
+
+// When even the un-stamp fails, both failures are reported: the row is spent
+// with no membership behind it, and the caller's log has to be able to say so.
+func TestAFailedUnstampIsReportedWithTheMembershipFailure(t *testing.T) {
+	svc, repo, members := newTestService()
+	_, token, err := svc.Create("org-1", "stuck@example.com", orgs.RoleMember, nil)
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	members.refuse["org-1"] = errors.New("workspace is locked")
+	repo.clearErr = errors.New("database went away")
+
+	_, err = svc.AcceptTokenForEmail(token, "stuck@example.com", "user-1")
+	if err == nil {
+		t.Fatal("want an error")
+	}
+	if !strings.Contains(err.Error(), "workspace is locked") || !strings.Contains(err.Error(), "database went away") {
+		t.Errorf("error %q must report both the refused membership and the failed un-stamp", err)
+	}
+}
+
+// An account that is already a member does not need the claim: nothing is
+// granted, so losing the race for the stamp is not a failure.
+func TestAlreadyAMemberSpendsTheLinkWithoutClaiming(t *testing.T) {
+	svc, repo, members := newTestService()
+	members.roles["org-1:user-1"] = orgs.RoleMember
+	inv, token, err := svc.Create("org-1", "in@example.com", orgs.RoleAdmin, nil)
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	acc, err := svc.AcceptTokenForEmail(token, "in@example.com", "user-1")
+	if err != nil {
+		t.Fatalf("AcceptTokenForEmail: %v", err)
+	}
+	if !acc.AlreadyMember || acc.Role != orgs.RoleMember {
+		t.Errorf("acceptance = %+v, want the role already held", acc)
+	}
+	if repo.rows[inv.ID].AcceptedAt == nil {
+		t.Error("the link must be spent")
+	}
+	if len(repo.cleared) != 0 {
+		t.Errorf("nothing was granted, so nothing should have been un-stamped: %v", repo.cleared)
 	}
 }
 

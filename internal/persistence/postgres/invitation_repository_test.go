@@ -106,6 +106,22 @@ func TestInvitationRoundTrip(t *testing.T) {
 		t.Fatalf("FindByID after acceptance = %v, %v", accepted, err)
 	}
 
+	// A claim whose membership could not be written is given back: the row
+	// returns to pending, the link works again, and it can be re-claimed.
+	if err := repo.ClearAccepted(inv.ID); err != nil {
+		t.Fatalf("ClearAccepted: %v", err)
+	}
+	back, err := repo.FindByID(inv.ID)
+	if err != nil || back == nil || back.AcceptedAt != nil {
+		t.Fatalf("FindByID after ClearAccepted = %v, %v", back, err)
+	}
+	if pending, _ := repo.ListPending(orgID, time.Now()); len(pending) != 1 {
+		t.Error("an un-stamped invitation must be pending again")
+	}
+	if won, err := repo.MarkAccepted(inv.ID, at); err != nil || !won {
+		t.Fatalf("re-claim after an un-stamp = %v, %v", won, err)
+	}
+
 	// The partial unique index leaves accepted history alone: the same
 	// address can be invited to the same workspace again.
 	saveInvitation(t, repo, orgID, "invited@example.com", orgs.RoleMember, "raw-token-2", future, &admin.ID)

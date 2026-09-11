@@ -289,12 +289,13 @@ func (h *Handler) ListOrgMembers(w http.ResponseWriter, r *http.Request) {
 }
 
 // AddOrgMember adds a member by email (admin). An address that already has
-// an account joins immediately (201); one that is already a member is a
-// conflict (409 — changing a role is PUT, not a second add); one with no
-// account gets an invitation instead of the old "they must sign up first"
-// 404 (202 with the invitation and its one-time link), which is what makes a
-// closed deployment usable. POST /orgs/{id}/invitations goes through the
-// same branch, so the two cannot disagree.
+// an account joins immediately (201 with the membership); one that is
+// already a member is a conflict (409 — changing a role is PUT, not a second
+// add); one with no account gets an invitation instead of the old "they must
+// sign up first" 404 (202 with the invitation and its one-time link), which
+// is what makes a closed deployment usable. POST /orgs/{id}/invitations goes
+// through the same branch AND the same status writer, so the two cannot
+// disagree about either the outcome or how it is reported.
 func (h *Handler) AddOrgMember(w http.ResponseWriter, r *http.Request) {
 	orgID := mux.Vars(r)["id"]
 	if !h.requireOrgRole(w, r, orgID, orgs.RoleAdmin) {
@@ -313,12 +314,7 @@ func (h *Handler) AddOrgMember(w http.ResponseWriter, r *http.Request) {
 		h.writeInvitationError(w, r, err)
 		return
 	}
-	if outcome.Invitation != nil {
-		w.WriteHeader(http.StatusAccepted)
-		json.NewEncoder(w).Encode(outcome.Invitation)
-		return
-	}
-	w.WriteHeader(http.StatusCreated)
+	writeAddOrInviteOutcome(w, outcome)
 }
 
 func (h *Handler) UpdateOrgMember(w http.ResponseWriter, r *http.Request) {

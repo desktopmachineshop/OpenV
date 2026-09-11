@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { InvitationPreview, authAPI } from '../api/client';
+import { InvitationOutcome, InvitationPreview, authAPI } from '../api/client';
 import { apiErrorMessage } from '../api/errors';
 import { useAppStore } from '../state/store';
 
@@ -18,7 +18,9 @@ import { useAppStore } from '../state/store';
 // one nobody asked for:
 //
 //   - signed out, creating the account: the token rides along with register,
-//     which checks it against the address being registered;
+//     which checks it against the address being registered — and while an
+//     invitation is loaded the address field is LOCKED to the invited one,
+//     because any other address produces a sign-up that joins nothing;
 //   - signed out, signing in to an account they already had: the token is
 //     posted afterwards, but only when the address that signed in is the
 //     invited one;
@@ -27,6 +29,11 @@ import { useAppStore } from '../state/store';
 //     the address to sign in as instead. A link opened in a browser where a
 //     colleague is signed in must not quietly put THEIR account into the
 //     workspace.
+//
+// Whatever the path, a conversion that did NOT happen is said out loud: the
+// register call reports what the token did (`invitation`), and a failed
+// accept is shown rather than swallowed. Somebody who followed a link to
+// join a workspace must never be dropped into an empty account instead.
 export const Login: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -50,6 +57,10 @@ export const Login: React.FC = () => {
   const [registrationClosed, setRegistrationClosed] = useState(false);
   const [invite, setInvite] = useState<InvitationPreview | null>(null);
   const [inviteError, setInviteError] = useState('');
+  // Where to go when the credentials worked but the invitation did not: the
+  // account exists and is signed in, so the person must not be stranded on
+  // this form with an error and no way forward.
+  const [continueTo, setContinueTo] = useState<string | null>(null);
   // The address this browser is already signed in as, when it is AND the URL
   // carries an invite link. Null means there is no session to decide about:
   // either nobody is signed in, or there was no invitation and the effect
@@ -156,30 +167,66 @@ export const Login: React.FC = () => {
     }
   };
 
+  // inviteOutcomeMessage turns what the server says the token did into
+  // something the person can act on. A sign-up that joined nothing must not
+  // pass in silence: they followed a link to get into a workspace, and if
+  // that did not happen they need to know why, and what to do instead.
+  const inviteOutcomeMessage = (outcome: InvitationOutcome | undefined): string => {
+    switch (outcome) {
+      case 'email_mismatch':
+        return invite
+          ? `This link was issued to ${invite.email}; register with that address to join.`
+          : 'This link was issued to a different address; register with that address to join.';
+      case 'invalid':
+        return 'This invitation link is no longer valid, so your account did not join the workspace. Ask an admin for a new invitation.';
+      default:
+        return '';
+    }
+  };
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setContinueTo(null);
     setBusy(true);
     try {
-      const res =
-        activeMode === 'login'
-          ? await authAPI.login(email, password)
-          : await authAPI.register(email, password, name, inviteToken);
+      if (activeMode === 'register') {
+        const res = await authAPI.register(email, password, name, inviteToken);
+        setCurrentUser(res.data);
+        // The account exists either way, but the invitation may not have
+        // converted. Say so and stay on this page rather than dropping
+        // somebody into an empty account wondering where the workspace went.
+        const outcomeMessage = inviteOutcomeMessage(res.data.invitation);
+        if (outcomeMessage) {
+          setError(outcomeMessage);
+          setContinueTo(
+            verificationRequired && !res.data.email_verified ? '/verify-email' : '/projects'
+          );
+          return;
+        }
+        navigate(verificationRequired && !res.data.email_verified ? '/verify-email' : '/projects');
+        return;
+      }
+      const res = await authAPI.login(email, password);
       setCurrentUser(res.data);
       // Signing in through an invite link is how somebody who already has an
       // account takes it up: register carries the token itself, but a
       // sign-in has to hand it over once there is a session to join — and
       // only when the address that just signed in IS the invited one. The
       // server enforces that with a 403; the client does not fire a call it
-      // knows would be refused. A link that no longer works is not worth
-      // blocking on either: they are signed in either way.
-      if (
-        inviteToken &&
-        activeMode === 'login' &&
-        invite &&
-        sameAddress(res.data.email, invite.email)
-      ) {
-        await authAPI.acceptInvitation(inviteToken).catch(() => {});
+      // knows would be refused. A call that IS made and fails is reported:
+      // they are signed in either way, but they asked to join a workspace,
+      // and a swallowed error leaves them believing they did.
+      if (inviteToken && invite && sameAddress(res.data.email, invite.email)) {
+        try {
+          await authAPI.acceptInvitation(inviteToken);
+        } catch (err: any) {
+          setError(apiErrorMessage(err, `Signed in, but could not join ${invite.org_name}`));
+          setContinueTo(
+            verificationRequired && !res.data.email_verified ? '/verify-email' : '/projects'
+          );
+          return;
+        }
       }
       // On a server that sends verification links, an account that has not
       // clicked its link lands on the wall rather than the app.
@@ -303,6 +350,9 @@ export const Login: React.FC = () => {
             </button>
           </>
         )}
+        {/* What to do next depends on which form is showing: the banner
+            said "create your account" even after the person switched to
+            sign-in, which is the opposite of the instruction they need. */}
         {!decidingAsSignedIn && invite && (
           <div
             style={{
@@ -315,8 +365,10 @@ export const Login: React.FC = () => {
               color: 'var(--text)',
             }}
           >
-            You have been invited to <b>{invite.org_name}</b> as {invite.role}. Create your account
-            with {invite.email} to join.
+            You have been invited to <b>{invite.org_name}</b> as {invite.role}.{' '}
+            {activeMode === 'register'
+              ? `Create your account with ${invite.email} to join.`
+              : `Sign in as ${invite.email} to join.`}
           </div>
         )}
         {/* The credentials form and the sign-in methods are for a
@@ -340,6 +392,11 @@ export const Login: React.FC = () => {
                   />
                 </div>
               )}
+              {/* While an invitation is loaded the address is not the
+                  person's to choose: the token converts only for the address
+                  it was issued to, so an editable field here only produces a
+                  sign-up that silently joins nothing. Somebody who wants a
+                  different address drops the link and comes back to /login. */}
               <div className="form-group" style={{ marginBottom: 12 }}>
                 <input
                   type="email"
@@ -348,9 +405,23 @@ export const Login: React.FC = () => {
                   inputMode="email"
                   value={email}
                   required
+                  readOnly={!!invite}
+                  aria-readonly={!!invite}
+                  title={invite ? `This invitation was sent to ${invite.email}` : undefined}
                   onChange={(e) => setEmail(e.target.value)}
-                  style={{ width: '100%', padding: 10, boxSizing: 'border-box' }}
+                  style={{
+                    width: '100%',
+                    padding: 10,
+                    boxSizing: 'border-box',
+                    ...(invite ? { background: 'var(--neutral-soft)', cursor: 'not-allowed' } : {}),
+                  }}
                 />
+                {invite && (
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
+                    This invitation was sent to {invite.email}. To use another address, open{' '}
+                    <a href="/login">the sign-in page</a> without the invitation link.
+                  </div>
+                )}
               </div>
               <div className="form-group" style={{ marginBottom: 16 }}>
                 <input
@@ -370,6 +441,18 @@ export const Login: React.FC = () => {
                 {busy ? 'Please wait…' : activeMode === 'login' ? 'Sign in' : 'Create account'}
               </button>
             </form>
+            {/* The credentials worked and the invitation did not: they are
+                signed in, and the way on must not be a dead end. */}
+            {continueTo && (
+              <button
+                className="button-secondary button"
+                type="button"
+                style={{ width: '100%', marginTop: 12 }}
+                onClick={() => navigate(continueTo)}
+              >
+                Continue to OpenV
+              </button>
+            )}
             {oidcEnabled && (
               <a
                 href={authAPI.oidcLoginUrl()}

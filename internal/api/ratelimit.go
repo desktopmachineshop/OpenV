@@ -73,6 +73,16 @@ const (
 //	OPENV_VERIFY_RESEND_REFILL_PER_HOUR = 6   verification mails/hour steady state
 //	OPENV_INVITE_PREVIEW_BURST          = 60  invite-link previews instantly per address
 //	OPENV_INVITE_PREVIEW_REFILL_PER_HOUR = 240 invite-link previews/hour steady state
+//	OPENV_INVITE_BURST                  = 20  invitations instantly per inviting account
+//	OPENV_INVITE_REFILL_PER_HOUR        = 60  invitations/hour steady state
+//
+// Creating an invitation sends mail to an address the sender chose, so the
+// endpoint is a relay: without a bound, one admin account — or one stolen
+// admin session — could point the deployment's SMTP credentials at a list
+// and spend its sending reputation. The bucket is keyed on the INVITING
+// ACCOUNT rather than the address: an admin's browser and their scripted
+// bulk invite share one budget wherever they run from, and one admin
+// working through a shared office address cannot exhaust their colleagues'.
 //
 // Previewing an invite link gets its own, deliberately generous bucket
 // instead of drawing on the sign-in one. It is not a credential attempt: the
@@ -95,6 +105,8 @@ const (
 	envVerifyResendRefill      = "OPENV_VERIFY_RESEND_REFILL_PER_HOUR"
 	envInvitePreviewBurst      = "OPENV_INVITE_PREVIEW_BURST"
 	envInvitePreviewRefill     = "OPENV_INVITE_PREVIEW_REFILL_PER_HOUR"
+	envInviteBurst             = "OPENV_INVITE_BURST"
+	envInviteRefill            = "OPENV_INVITE_REFILL_PER_HOUR"
 	defaultAuthIPBurst         = 30
 	defaultAuthIPRefill        = 120.0
 	defaultAuthAccountBurst    = 5
@@ -107,6 +119,8 @@ const (
 	defaultVerifyResendRefill  = 6.0
 	defaultInvitePreviewBurst  = 60
 	defaultInvitePreviewRefill = 240.0
+	defaultInviteBurst         = 20
+	defaultInviteRefill        = 60.0
 )
 
 // cleanupEvery bounds how often a limiter sweeps stale buckets, and

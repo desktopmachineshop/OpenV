@@ -85,14 +85,19 @@ export const OrgMembersTab: React.FC<OrgMembersTabProps> = ({ org, isAdmin, curr
       const res = await orgsAPI.members.add(org.id, inviteEmail.trim(), inviteRole);
       setInviteEmail('');
       // 201: the address had an account and is now a member. 202: it did
-      // not, so an invitation went out instead and carries the link back.
+      // not, so an invitation is outstanding — either one that went out just
+      // now (with its one-time link) or the one that is already in their
+      // inbox, which the server does not re-send within the hour and whose
+      // link it cannot show again.
       if (res.status === 202 && res.data) {
-        const created = res.data as { link: string; emailed: boolean };
-        setInviteLink(created.link);
+        const created = res.data as { link?: string; emailed: boolean; reason?: string };
+        setInviteLink(created.link || '');
         flash(
           created.emailed
             ? 'Invitation emailed. They join the workspace when they accept it.'
-            : 'Invitation created. Send them the link below — it is shown only once.'
+            : created.reason
+              ? `They already have an invitation: ${created.reason}`
+              : 'Invitation created. Send them the link below — it is shown only once.'
         );
         await loadInvitations();
       } else {

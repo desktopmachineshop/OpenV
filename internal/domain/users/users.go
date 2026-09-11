@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -127,6 +128,11 @@ type Repository interface {
 	// SaveEmailVerification stores v after discarding the user's unused
 	// pending links, so at most one link is live per account.
 	SaveEmailVerification(v *EmailVerification) error
+	// MarkEmailVerified records that an account has proved control of its
+	// CURRENT address by some other means than an emailed link — today, an
+	// invitation token that reached that mailbox. It touches only the
+	// verification columns, never the address itself.
+	MarkEmailVerified(userID string, at time.Time) error
 	// ConsumeEmailVerification atomically spends the link with this hash
 	// (unused, unexpired at now), marks its user verified at now and applies
 	// the link's email to the user row. Returns the updated user; nil, nil
@@ -164,7 +170,11 @@ type Service interface {
 	// ChangePassword replaces a password account's password and, per REQ-99,
 	// invalidates every session of that account except the caller's own
 	// (keepToken; "" keeps none). Errors: ErrNoPassword when the account has
-	// no password, ErrPasswordIncorrect, ErrWeakPassword.
+	// no password, ErrPasswordIncorrect, ErrWeakPassword — all of them
+	// before anything is written. Once the new password is stored the change
+	// has happened, so a sweep of the other sessions that fails is logged,
+	// not returned: those sessions expire at their idle deadline anyway, and
+	// reporting failure would tell the owner their old password still works.
 	ChangePassword(userID, currentPassword, newPassword, keepToken string) error
 	// SessionByToken returns the session record itself (for org context).
 	SessionByToken(token string) (*Session, error)
@@ -182,6 +192,11 @@ type Service interface {
 	// the normalised address it was issued for. Errors: ErrAlreadyVerified,
 	// ErrEmailTaken, or an invalid address.
 	IssueEmailVerification(userID, email string) (token, sentTo string, err error)
+	// MarkEmailVerified marks the account verified without an emailed link,
+	// for a caller that already holds proof the account controls its current
+	// address — an invitation token delivered to that mailbox. Returns the
+	// updated user. Verifying an already-verified account is a no-op.
+	MarkEmailVerified(userID string) (*User, error)
 	// ConfirmEmailVerification spends a raw token: single use, valid for
 	// EmailVerificationTTL. It marks the user verified, applies the link's
 	// address, and returns the user. ErrVerificationInvalid for anything
@@ -348,6 +363,29 @@ func (s *DefaultService) ConfirmEmailVerification(token string) (*User, error) {
 	if user == nil {
 		return nil, ErrVerificationInvalid
 	}
+	return user, nil
+}
+
+// MarkEmailVerified marks an account verified on proof that is not an
+// emailed link; see the Service interface.
+func (s *DefaultService) MarkEmailVerified(userID string) (*User, error) {
+	user, err := s.repo.FindUserByID(userID)
+	if err != nil {
+		return nil, err
+	}
+	if user == nil {
+		return nil, errors.New("user not found")
+	}
+	if user.EmailVerified {
+		return user, nil
+	}
+	now := time.Now()
+	if err := s.repo.MarkEmailVerified(user.ID, now); err != nil {
+		return nil, err
+	}
+	user.EmailVerified = true
+	user.EmailVerifiedAt = &now
+	user.UpdatedAt = now
 	return user, nil
 }
 
@@ -563,7 +601,17 @@ func (s *DefaultService) ChangePassword(userID, currentPassword, newPassword, ke
 	if keepToken != "" {
 		except = HashToken(keepToken)
 	}
-	return s.repo.DeleteSessionsForUser(user.ID, except)
+	// The password DID change, so the change cannot be reported as failed:
+	// a caller told "that did not work" retries with a current password the
+	// server no longer holds, and the owner is left believing the old one
+	// still opens the account. A sweep that did not run is logged instead;
+	// the sessions it would have killed still die at their idle deadline,
+	// and the session policy bounds how long that is (REQ-99).
+	if err := s.repo.DeleteSessionsForUser(user.ID, except); err != nil {
+		slog.Error("password changed but other sessions were not signed out",
+			"user_id", user.ID, "error", err)
+	}
+	return nil
 }
 
 // SetActiveOrg persists the session's default workspace.

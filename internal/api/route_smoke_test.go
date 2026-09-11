@@ -18,7 +18,7 @@ func TestRegisterRoutesResolvesTheNewPaths(t *testing.T) {
 
 	for _, tc := range []struct{ method, path string }{
 		{http.MethodGet, "/api/v1/auth/policy"},
-		{http.MethodGet, "/api/v1/auth/invitations/tok-123"},
+		{http.MethodPost, "/api/v1/auth/invitations/preview"},
 		{http.MethodPost, "/api/v1/auth/invitations/accept"},
 		{http.MethodGet, "/api/v1/orgs/org-1/invitations"},
 		{http.MethodPost, "/api/v1/orgs/org-1/invitations"},

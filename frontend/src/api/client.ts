@@ -581,6 +581,24 @@ export interface AuthConfig {
   registration?: 'open' | 'closed';
 }
 
+// What a sign-up that carried an invite token did with it. Absent when the
+// form carried no token at all.
+//
+//   accepted       — the membership the link named was granted;
+//   already_member — the account was in that workspace already and kept the
+//                    role it had; the link is spent either way;
+//   email_mismatch — the link is live but was issued to another address, so
+//                    it granted nothing;
+//   invalid        — unknown, revoked, spent or expired, including a link
+//                    revoked in the moment between the sign-up being allowed
+//                    and the membership being claimed.
+export type InvitationOutcome = 'accepted' | 'already_member' | 'email_mismatch' | 'invalid';
+
+// The created account, plus what its invite token did (see InvitationOutcome).
+export interface RegisterResult extends User {
+  invitation?: InvitationOutcome;
+}
+
 // What an invite link resolves to before the holder has any account: enough
 // to prefill the sign-up form and name the workspace, nothing more.
 export interface InvitationPreview {
@@ -604,10 +622,17 @@ export interface OrgInvitation {
 // The answer to creating an invitation: the row, the one-time link (shown
 // once — the server keeps only its hash), and whether it was emailed. With
 // no SMTP configured the admin passes the link on themselves.
+//
+// `reason` explains an invitation that was NOT emailed for some other
+// cause — today, an unchanged invitation to the same address created less
+// than an hour ago, which is handed back instead of mailing a second link.
+// Such an answer carries no `link`: the only copy went out in the first
+// mail, and minting a new one is what re-inviting at a different role does.
 export interface OrgInvitationCreated {
   invitation: OrgInvitation;
   link: string;
   emailed: boolean;
+  reason?: string;
 }
 
 export interface NotificationPrefs {
@@ -1095,10 +1120,16 @@ export const authAPI = {
   // inviteToken is the token from an invite link the form was opened with.
   // It is what grants the invited membership: the server treats holding the
   // link as proof the invited mailbox was read, and registering the address
-  // without it joins nothing (the membership then waits for the address's
-  // verification link).
+  // without it joins nothing — the invitation then waits for its link, which
+  // a signed-in account posts to POST /auth/invitations/accept. (Confirming
+  // a verification link grants nothing: that address is one the account
+  // asked the mail to be sent to, so it proves nothing about who was
+  // invited.)
+  //
+  // `invitation` on the answer says what the token did — see
+  // RegisterResult — and is absent when none was sent.
   register: (email: string, password: string, name: string, inviteToken?: string) =>
-    client.post<User>('/api/v1/auth/register', {
+    client.post<RegisterResult>('/api/v1/auth/register', {
       email,
       password,
       name,
@@ -1125,8 +1156,11 @@ export const authAPI = {
   // name the invited address. `role` is what the account holds afterwards,
   // which is the role it already had when `already_member` is true — an
   // invitation never rewrites a membership.
+  // The token goes in the body, never in the URL: an invite link is a
+  // credential, and a path lands in access logs, proxy logs, browser history
+  // and Referer headers.
   invitation: (token: string) =>
-    client.get<InvitationPreview>(`/api/v1/auth/invitations/${encodeURIComponent(token)}`),
+    client.post<InvitationPreview>('/api/v1/auth/invitations/preview', { token }),
   acceptInvitation: (token: string) =>
     client.post<{ org_id: string; org_name: string; role: string; already_member: boolean }>(
       '/api/v1/auth/invitations/accept',
@@ -1297,9 +1331,10 @@ export const orgsAPI = {
   // people who have not arrived yet.
   invitations: {
     list: (orgId: string) => client.get<OrgInvitation[]>(`/api/v1/orgs/${orgId}/invitations`),
-    // Same branch as members.add: 200 with the membership when the address
-    // already has an account, 409 when it is already a member, 201 with the
-    // invitation and its one-time link when it has no account.
+    // Same branch AND the same statuses as members.add: 201 with the
+    // membership when the address already has an account, 409 when it is
+    // already a member, 202 with the invitation and its one-time link when
+    // it has no account.
     create: (orgId: string, email: string, role: string) =>
       client.post<OrgInvitationCreated | OrgMember>(`/api/v1/orgs/${orgId}/invitations`, {
         email,
@@ -1310,11 +1345,12 @@ export const orgsAPI = {
   },
   members: {
     list: (orgId: string) => client.get<OrgMember[]>(`/api/v1/orgs/${orgId}/members`),
-    // 201 when the address already has an account and joined; 409 when it is
-    // already a member (change a role with setRole); 202 with an
-    // OrgInvitationCreated body when it had no account and was invited.
+    // 201 with the membership when the address already has an account and
+    // joined; 409 when it is already a member (change a role with setRole);
+    // 202 with an OrgInvitationCreated body when it had no account and was
+    // invited instead. invitations.create answers the same pair.
     add: (orgId: string, email: string, role: string) =>
-      client.post<OrgInvitationCreated | ''>(`/api/v1/orgs/${orgId}/members`, { email, role }),
+      client.post<OrgInvitationCreated | OrgMember>(`/api/v1/orgs/${orgId}/members`, { email, role }),
     setRole: (orgId: string, userId: string, role: string) =>
       client.put(`/api/v1/orgs/${orgId}/members/${userId}`, { role }),
     remove: (orgId: string, userId: string) =>
