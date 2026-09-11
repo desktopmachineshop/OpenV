@@ -12,27 +12,31 @@ import { ProviderConnectCard, pasteKind } from './ProviderConnectCard';
 // Prefixed with "mock" so Jest allows the module factory below to close
 // over them.
 const mockSubmitted: string[] = [];
-const mockLogin = {
+const mockLogin: { status: string; detail: string; paste_kind?: 'code' | 'url' } = {
   status: 'awaiting_code',
   detail: 'Open the sign-in link, authorize, then paste the code you are given back here.',
+  paste_kind: undefined,
 };
+// What the next poll answers with. Null leaves the poll hanging, which is
+// what every test that is not about polling wants.
+const mockPoll: { data: any } = { data: null };
+
+const mockStarted = () => ({
+  id: 'pl1',
+  provider: 'claude-code',
+  target: 'user',
+  status: mockLogin.status,
+  auth_url: 'https://claude.ai/oauth/authorize?client=openv',
+  detail: mockLogin.detail,
+  paste_kind: mockLogin.paste_kind,
+  created_at: '',
+  updated_at: '',
+});
 
 jest.mock('../../api/client', () => ({
   providerLoginsAPI: {
-    start: () =>
-      Promise.resolve({
-        data: {
-          id: 'pl1',
-          provider: 'claude-code',
-          target: 'user',
-          status: mockLogin.status,
-          auth_url: 'https://claude.ai/oauth/authorize?client=openv',
-          detail: mockLogin.detail,
-          created_at: '',
-          updated_at: '',
-        },
-      }),
-    get: () => new Promise(() => {}),
+    start: () => Promise.resolve({ data: mockStarted() }),
+    get: () => (mockPoll.data ? Promise.resolve({ data: mockPoll.data }) : new Promise(() => {})),
     submitCode: (id: string, code: string) => {
       mockSubmitted.push(`${id}:${code}`);
       return Promise.resolve({ data: {} });
@@ -63,9 +67,23 @@ const connect = async () => {
 
 const field = () => container.querySelector('input') as HTMLInputElement;
 
+// What a password manager does: set the value and fire input.
+const paste = async (input: HTMLInputElement, value: string) => {
+  await act(async () => {
+    const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')!.set!;
+    setter.call(input, value);
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+};
+
+const button = (label: string) =>
+  Array.from(container.querySelectorAll('button')).find((b) => b.textContent === label);
+
 beforeEach(() => {
   mockSubmitted.length = 0;
+  mockPoll.data = null;
   mockLogin.status = 'awaiting_code';
+  mockLogin.paste_kind = undefined;
   mockLogin.detail = 'Open the sign-in link, authorize, then paste the code you are given back here.';
   container = document.createElement('div');
   document.body.appendChild(container);
@@ -107,12 +125,7 @@ test('the keyboard send key submits the pasted code', async () => {
   await connect();
 
   const input = field();
-  await act(async () => {
-    // What a password manager does: set the value and fire input.
-    const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')!.set!;
-    setter.call(input, ' code-from-manager ');
-    input.dispatchEvent(new Event('input', { bubbles: true }));
-  });
+  await paste(input, ' code-from-manager ');
   await act(async () => {
     input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
   });
@@ -158,7 +171,71 @@ test('the Paste button appears only where the clipboard can be read', async () =
 
 test('pasteKind reads what the worker asked for', () => {
   expect(pasteKind(null)).toBe('text');
+  // The worker says which flow it is driving; that is the answer.
+  expect(pasteKind({ paste_kind: 'url', detail: 'paste the code you are given back here' } as any)).toBe(
+    'url'
+  );
+  expect(
+    pasteKind({ paste_kind: 'code', detail: 'copy the whole address from the address bar' } as any)
+  ).toBe('text');
+  // A worker older than the field says nothing, and its prose is all there
+  // is left to go on.
   expect(pasteKind({ detail: 'paste the code you are given back here' } as any)).toBe('text');
   expect(pasteKind({ detail: 'copy the whole address from the address bar' } as any)).toBe('url');
   expect(pasteKind({ detail: 'paste the URL here' } as any)).toBe('url');
+});
+
+test('the keyboard follows the worker’s paste kind, not its prose', async () => {
+  mockLogin.paste_kind = 'url';
+  await render();
+  await connect();
+
+  expect(field().getAttribute('inputmode')).toBe('url');
+  expect(button('Submit address')).toBeTruthy();
+});
+
+test('a refused code hands the field back', async () => {
+  jest.useFakeTimers();
+  try {
+    await render();
+    await connect();
+
+    await paste(field(), 'first-code');
+    await act(async () => {
+      button('Submit code')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    expect(mockSubmitted).toEqual(['pl1:first-code']);
+    expect(field().disabled).toBe(true);
+
+    // A poll that repeats what the member was already told changes nothing:
+    // the code is still on its way to the CLI.
+    mockPoll.data = { ...mockStarted(), status: 'awaiting_code' };
+    await act(async () => {
+      jest.advanceTimersByTime(2000);
+    });
+    expect(field().disabled).toBe(true);
+
+    // The worker refusing the code re-issues awaiting_code with new wording,
+    // and that is the cue to let the member paste again.
+    mockPoll.data = {
+      ...mockStarted(),
+      status: 'awaiting_code',
+      detail: 'OAuth error: Invalid code — paste the code again, in full, to retry.',
+    };
+    await act(async () => {
+      jest.advanceTimersByTime(2000);
+    });
+
+    expect(field().disabled).toBe(false);
+    const submit = button('Submit code');
+    expect(submit).toBeTruthy();
+    expect(submit!.disabled).toBe(false);
+
+    await act(async () => {
+      submit!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    expect(mockSubmitted).toEqual(['pl1:first-code', 'pl1:first-code']);
+  } finally {
+    jest.useRealTimers();
+  }
 });

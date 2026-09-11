@@ -254,6 +254,17 @@ input:focus, textarea:focus, select:focus {
   font-size: 14px;
 }
 
+/* Text meant only for a screen reader. Held off to the left rather than
+   clipped to a 1 px box, so it is out of sight without looking to a layout
+   audit like a container cutting its own content off. */
+.sr-only {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  white-space: nowrap;
+}
+
 /* Manual and other markdown: tables and code blocks scroll inside
    themselves on a narrow screen; images never exceed the column. */
 .markdown-content table {

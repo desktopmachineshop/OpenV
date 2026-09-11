@@ -114,14 +114,14 @@ export const MyRunnerCard: React.FC<MyRunnerCardProps> = ({ orgId, onKeysChanged
           >
             <button
               className="button"
-              style={isPhone ? { minHeight: 44 } : { width: 'auto' }}
+              style={isPhone ? undefined : { width: 'auto' }}
               onClick={() => setShowConnect(true)}
             >
               Set up Agent Connector
             </button>
             <button
               className="button-secondary button"
-              style={isPhone ? { minHeight: 44 } : { width: 'auto' }}
+              style={isPhone ? undefined : { width: 'auto' }}
               onClick={() => createKey(false)}
               disabled={busy}
               title="Advanced: mint a key and run agentd manually"
@@ -157,7 +157,7 @@ export const MyRunnerCard: React.FC<MyRunnerCardProps> = ({ orgId, onKeysChanged
             {!online && (
               <button
                 className="button"
-                style={isPhone ? { minHeight: 44 } : { width: 'auto', padding: '6px 14px' }}
+                style={isPhone ? undefined : { width: 'auto', padding: '6px 14px' }}
                 onClick={() => setShowConnect(true)}
               >
                 Open connector
@@ -165,7 +165,7 @@ export const MyRunnerCard: React.FC<MyRunnerCardProps> = ({ orgId, onKeysChanged
             )}
             <button
               className="button-secondary button"
-              style={isPhone ? { minHeight: 44 } : { width: 'auto', padding: '6px 14px' }}
+              style={isPhone ? undefined : { width: 'auto', padding: '6px 14px' }}
               onClick={() => createKey(true)}
               disabled={busy}
             >
@@ -181,7 +181,6 @@ export const MyRunnerCard: React.FC<MyRunnerCardProps> = ({ orgId, onKeysChanged
                 cursor: 'pointer',
                 fontSize: isPhone ? 14 : 13,
                 width: isPhone ? '100%' : 'auto',
-                minHeight: isPhone ? 44 : undefined,
                 padding: '6px 14px',
                 borderRadius: 4,
               }}

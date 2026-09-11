@@ -188,6 +188,7 @@ func InitAgentSchema(db *sql.DB) error {
 		auth_url TEXT NOT NULL DEFAULT '',
 		code TEXT NOT NULL DEFAULT '',
 		detail TEXT NOT NULL DEFAULT '',
+		paste_kind VARCHAR(16) NOT NULL DEFAULT '',
 		requested_by UUID,
 		created_at TIMESTAMP NOT NULL DEFAULT NOW(),
 		updated_at TIMESTAMP NOT NULL DEFAULT NOW()
@@ -268,6 +269,24 @@ func InitAgentSchema(db *sql.DB) error {
 	`
 	if _, err := db.Exec(targetSQL); err != nil {
 		return fmt.Errorf("failed to add provider login target column: %w", err)
+	}
+
+	// What the member is being asked to paste back ("code" or "url"), added
+	// once the UI stopped guessing it from the worker's prose. Rows written
+	// by an older worker keep the empty default, which means "unknown".
+	pasteKindSQL := `
+	DO $$
+	BEGIN
+		IF NOT EXISTS (
+			SELECT 1 FROM information_schema.columns
+			WHERE table_name='provider_logins' AND column_name='paste_kind'
+		) THEN
+			ALTER TABLE provider_logins ADD COLUMN paste_kind VARCHAR(16) NOT NULL DEFAULT '';
+		END IF;
+	END $$;
+	`
+	if _, err := db.Exec(pasteKindSQL); err != nil {
+		return fmt.Errorf("failed to add provider login paste kind column: %w", err)
 	}
 
 	// Repo connections used to carry a shared local_path that members without

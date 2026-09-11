@@ -175,7 +175,7 @@ func (w *Worker) handlePTYLogin(ctx context.Context, login *providers.LoginReque
 			}
 			if !urlReported {
 				if authURL := authURLPattern.FindString(stripANSI(chunk)); authURL != "" {
-					w.loginProgress(login.ID, providers.LoginAwaitingCode, authURL, pasteDetail)
+					w.loginProgressKind(login.ID, providers.LoginAwaitingCode, authURL, pasteDetail, providers.PasteKindCode)
 					urlReported = true
 				}
 			}
@@ -186,8 +186,8 @@ func (w *Worker) handlePTYLogin(ctx context.Context, login *providers.LoginReque
 				if msg := tuiError(screen.String()); msg != "" && msg != reportedErr {
 					reportedErr = msg
 					log.Printf("login %s: the sign-in terminal reported: %s", login.ID, msg)
-					w.loginProgress(login.ID, providers.LoginAwaitingCode, "",
-						msg+" — paste the code again, in full, to retry.")
+					w.loginProgressKind(login.ID, providers.LoginAwaitingCode, "",
+						msg+" — paste the code again, in full, to retry.", providers.PasteKindCode)
 				}
 			}
 		case <-nudge.C:
@@ -200,8 +200,9 @@ func (w *Worker) handlePTYLogin(ctx context.Context, login *providers.LoginReque
 				continue
 			}
 			if !urlReported {
-				w.loginProgress(login.ID, providers.LoginAwaitingCode, "",
-					"The sign-in CLI has not printed a link yet. Output so far: "+tail.String())
+				w.loginProgressKind(login.ID, providers.LoginAwaitingCode, "",
+					"The sign-in CLI has not printed a link yet. Output so far: "+tail.String(),
+					providers.PasteKindCode)
 				urlReported = true
 			}
 		case <-pollTicker.C:
@@ -235,8 +236,8 @@ func (w *Worker) handlePTYLogin(ctx context.Context, login *providers.LoginReque
 				continue
 			}
 			log.Printf("login %s: code submitted to the sign-in terminal", login.ID)
-			w.loginProgress(login.ID, providers.LoginAwaitingCode, "",
-				"Code received — completing the sign-in on the runner…")
+			w.loginProgressKind(login.ID, providers.LoginAwaitingCode, "",
+				"Code received — completing the sign-in on the runner…", providers.PasteKindCode)
 		case <-ctx.Done():
 			killTree(cmd)
 			<-done
@@ -353,12 +354,13 @@ func (w *Worker) handleLoopbackLogin(ctx context.Context, login *providers.Login
 				continue
 			}
 			loopback = loopbackBaseFrom(authURL)
-			w.loginProgress(login.ID, providers.LoginAwaitingCode, authURL, loopbackDetail)
+			w.loginProgressKind(login.ID, providers.LoginAwaitingCode, authURL, loopbackDetail, providers.PasteKindURL)
 			reported = true
 		case <-announce.C:
 			if !reported {
-				w.loginProgress(login.ID, providers.LoginAwaitingCode, "",
-					"The sign-in CLI has not printed a link yet. Output so far: "+tail.String())
+				w.loginProgressKind(login.ID, providers.LoginAwaitingCode, "",
+					"The sign-in CLI has not printed a link yet. Output so far: "+tail.String(),
+					providers.PasteKindURL)
 				reported = true
 			}
 		case <-pollTicker.C:
@@ -379,7 +381,7 @@ func (w *Worker) handleLoopbackLogin(ctx context.Context, login *providers.Login
 				// The paste was unusable. Say so and let the member try
 				// again rather than failing the whole request.
 				replayed = false
-				w.loginProgress(login.ID, providers.LoginAwaitingCode, "", err.Error())
+				w.loginProgressKind(login.ID, providers.LoginAwaitingCode, "", err.Error(), providers.PasteKindURL)
 			}
 		case <-ctx.Done():
 			killTree(cmd)

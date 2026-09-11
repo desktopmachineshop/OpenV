@@ -84,6 +84,31 @@ export const CloudRunnerCard: React.FC<CloudRunnerCardProps> = ({ orgId, onChang
     };
   }, [session, load]);
 
+  // What a screen reader is told about the clock. The visible figure moves
+  // every second, and a live region on it would interrupt whatever is being
+  // read once a second for the whole lease; the marks worth hearing are the
+  // whole minutes and the five-minute warning, so only those are announced.
+  const minutesLeft = remaining > 0 ? Math.ceil(remaining / 60) : 0;
+  const [announcement, setAnnouncement] = useState('');
+  const announcedMinuteRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!session) {
+      announcedMinuteRef.current = null;
+      setAnnouncement('');
+      return;
+    }
+    if (announcedMinuteRef.current === minutesLeft) return;
+    announcedMinuteRef.current = minutesLeft;
+    setAnnouncement(
+      minutesLeft <= 0
+        ? 'Your cloud runner is expiring now.'
+        : minutesLeft === 5
+        ? 'Five minutes left on your cloud runner.'
+        : `${minutesLeft} ${minutesLeft === 1 ? 'minute' : 'minutes'} left on your cloud runner.`
+    );
+  }, [session, minutesLeft]);
+
   const act = async (fn: () => Promise<{ data: RunnerSessionPayload }>, failure: string) => {
     setBusy(true);
     try {
@@ -174,6 +199,9 @@ export const CloudRunnerCard: React.FC<CloudRunnerCardProps> = ({ orgId, onChang
         </>
       ) : (
         <>
+          <p className="sr-only" role="status" aria-live="polite" style={{ margin: 0 }}>
+            {announcement}
+          </p>
           {isPhone ? (
             // Stacked: the two facts as label-over-value rows, then the two
             // actions full width. Nothing sits side by side, so nothing is
@@ -197,10 +225,7 @@ export const CloudRunnerCard: React.FC<CloudRunnerCardProps> = ({ orgId, onChang
                 </div>
                 <div>
                   <dt style={{ fontSize: 12, color: 'var(--text-muted)' }}>Ends in</dt>
-                  <dd
-                    aria-live="polite"
-                    style={{ margin: 0, fontSize: 15, fontWeight: 600, color: 'var(--text)' }}
-                  >
+                  <dd style={{ margin: 0, fontSize: 15, fontWeight: 600, color: 'var(--text)' }}>
                     {formatRemaining(remaining)}
                   </dd>
                 </div>

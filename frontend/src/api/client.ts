@@ -1755,6 +1755,11 @@ export interface ProviderLogin {
   status: 'pending' | 'claimed' | 'url_ready' | 'awaiting_code' | 'completed' | 'failed' | 'cancelled';
   auth_url: string;
   detail: string;
+  // What the worker is waiting for the member to paste back: a short code,
+  // or the whole redirected address of a loopback flow. The worker knows
+  // which from the flow it is driving; absent from workers older than the
+  // field (and from steps that ask for no paste at all).
+  paste_kind?: 'code' | 'url';
   created_at: string;
   updated_at: string;
 }

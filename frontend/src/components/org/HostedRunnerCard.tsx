@@ -228,7 +228,7 @@ export const HostedRunnerCard: React.FC<HostedRunnerCardProps> = ({ orgId, isAdm
               <button
                 type="submit"
                 className="button"
-                style={isPhone ? { minHeight: 44 } : { width: 'auto' }}
+                style={isPhone ? undefined : { width: 'auto' }}
                 disabled={busy}
               >
                 {busy ? 'Enabling…' : 'Enable hosted runner'}
@@ -280,7 +280,7 @@ export const HostedRunnerCard: React.FC<HostedRunnerCardProps> = ({ orgId, isAdm
                 {status.container_state === 'running' ? (
                   <button
                     className="button-secondary button"
-                    style={isPhone ? { minHeight: 44 } : { width: 'auto', padding: '6px 14px' }}
+                    style={isPhone ? undefined : { width: 'auto', padding: '6px 14px' }}
                     onClick={handleStop}
                     disabled={busy}
                   >
@@ -289,7 +289,7 @@ export const HostedRunnerCard: React.FC<HostedRunnerCardProps> = ({ orgId, isAdm
                 ) : (
                   <button
                     className="button"
-                    style={isPhone ? { minHeight: 44 } : { width: 'auto', padding: '6px 14px' }}
+                    style={isPhone ? undefined : { width: 'auto', padding: '6px 14px' }}
                     onClick={handleStart}
                     disabled={busy}
                   >
@@ -306,7 +306,6 @@ export const HostedRunnerCard: React.FC<HostedRunnerCardProps> = ({ orgId, isAdm
                     cursor: 'pointer',
                     fontSize: isPhone ? 14 : 13,
                     width: isPhone ? '100%' : 'auto',
-                    minHeight: isPhone ? 44 : undefined,
                     padding: '6px 14px',
                     borderRadius: 4,
                   }}
@@ -368,7 +367,6 @@ export const HostedRunnerCard: React.FC<HostedRunnerCardProps> = ({ orgId, isAdm
                     fontSize: isPhone ? 14 : 13,
                     fontWeight: 600,
                     width: isPhone ? '100%' : 'auto',
-                    minHeight: isPhone ? 44 : undefined,
                     padding: '6px 14px',
                     borderRadius: 4,
                   }}
@@ -377,7 +375,7 @@ export const HostedRunnerCard: React.FC<HostedRunnerCardProps> = ({ orgId, isAdm
                 </button>
                 <button
                   className="button-secondary button"
-                  style={isPhone ? { minHeight: 44 } : { width: 'auto', padding: '6px 14px' }}
+                  style={isPhone ? undefined : { width: 'auto', padding: '6px 14px' }}
                   onClick={() => {
                     setConfirmingRemove(false);
                     setPurgeVolume(false);

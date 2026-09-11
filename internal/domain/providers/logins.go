@@ -27,6 +27,17 @@ var activeLoginStatuses = map[string]bool{
 	LoginAwaitingCode: true,
 }
 
+// Paste kinds: what the worker is waiting for the member to paste back.
+// The two CLI flows ask for different things, and only the worker knows
+// which — the UI uses this to pick a phone keyboard and label the field.
+const (
+	// PasteKindCode is a short authorization code (a paste-back CLI flow).
+	PasteKindCode = "code"
+	// PasteKindURL is the whole redirected address (a loopback CLI flow the
+	// member's browser cannot reach).
+	PasteKindURL = "url"
+)
+
 // LoginStaleAfter is how long an active request may go without progress
 // before StartLogin abandons it and creates a fresh one (covers dead workers).
 const LoginStaleAfter = 15 * time.Minute
@@ -50,11 +61,15 @@ type LoginRequest struct {
 	Provider string `json:"provider"`
 	// Target is where the sign-in executes: "workspace" (any shared worker)
 	// or "user" (only the requester's personal runner).
-	Target      string    `json:"target"`
-	Status      string    `json:"status"`
-	AuthURL     string    `json:"auth_url"`
-	Code        string    `json:"code,omitempty"`
-	Detail      string    `json:"detail"`
+	Target  string `json:"target"`
+	Status  string `json:"status"`
+	AuthURL string `json:"auth_url"`
+	Code    string `json:"code,omitempty"`
+	Detail  string `json:"detail"`
+	// PasteKind is what the member must paste back ("code" or "url"), as
+	// reported by the worker. Empty until a flow asks for a paste — and
+	// always empty from a worker older than this field.
+	PasteKind   string    `json:"paste_kind,omitempty"`
 	RequestedBy *string   `json:"requested_by,omitempty"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
@@ -103,8 +118,10 @@ type LoginService interface {
 	// when none). workerUserID is the personal runner's owner ("" for
 	// workspace workers).
 	Claim(orgID, workerUserID string) (*LoginRequest, error)
-	// Progress records worker-side state updates.
-	Progress(id, status, authURL, detail string) (*LoginRequest, error)
+	// Progress records worker-side state updates. pasteKind is "code" or
+	// "url" when the worker is asking for a paste, and "" otherwise (which
+	// leaves any kind already recorded in place).
+	Progress(id, status, authURL, detail, pasteKind string) (*LoginRequest, error)
 }
 
 // DefaultLoginService implements LoginService.
@@ -233,7 +250,7 @@ func (s *DefaultLoginService) Claim(orgID, workerUserID string) (*LoginRequest, 
 }
 
 // Progress applies a worker-side status update.
-func (s *DefaultLoginService) Progress(id, status, authURL, detail string) (*LoginRequest, error) {
+func (s *DefaultLoginService) Progress(id, status, authURL, detail, pasteKind string) (*LoginRequest, error) {
 	login, err := s.Get(id)
 	if err != nil {
 		return nil, err
@@ -253,6 +270,9 @@ func (s *DefaultLoginService) Progress(id, status, authURL, detail string) (*Log
 	}
 	if detail != "" {
 		login.Detail = detail
+	}
+	if pasteKind != "" {
+		login.PasteKind = pasteKind
 	}
 	login.UpdatedAt = time.Now()
 	if err := s.repo.UpdateLogin(login); err != nil {

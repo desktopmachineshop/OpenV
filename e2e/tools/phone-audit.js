@@ -115,7 +115,6 @@ const routes = [
   // admin's provider-key enable form.
   [/\/api\/v1\/orgs\/[^/]+\/hosted-runner/, { enabled: true, online: false, container_state: '', record: null }],
   [/\/api\/v1\/orgs\/[^/]+\/runner-session/, runnerSessionIdle],
-  [/\/api\/v1\/orgs\/[^/]+\/runner-pool/, runnerPool],
   [/\/api\/v1\/orgs\/[^/]+\/members/, [{ user_id: 'u1', email: user.email, name: user.name, role: 'admin', joined_at: now }]],
   [/\/api\/v1\/orgs\/[^/]+\/teams/, []],
   [/\/api\/v1\/orgs\/[^/]+\/runners/, []],
@@ -185,14 +184,19 @@ const routes = [
   [/\/api\/v1\/chatter/, []],
   [/\/api\/v1\/search/, { hits: [] }],
 ];
+// How a route table's entry is answered: null aborts the request (the log
+// stream, which must not be answered with JSON), a function is called with
+// the URL, anything else is the JSON body. Both tables answer the same way,
+// so both go through here.
+const fulfil = (route, body) => {
+  if (body === null) return route.abort();
+  const b = typeof body === 'function' ? body(route.request().url()) : body;
+  return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(b) });
+};
 async function mock(page) {
   await page.route('**/api/**', async (route) => {
     const url = route.request().url();
-    for (const [re, body] of routes) if (re.test(url)) {
-      if (body === null) return route.abort();
-      const b = typeof body === 'function' ? body(url) : body;
-      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(b) });
-    }
+    for (const [re, body] of routes) if (re.test(url)) return fulfil(route, body);
     return route.fulfill({ status: 200, contentType: 'application/json', body: route.request().method() === 'GET' ? '[]' : '{}' });
   });
 }
@@ -203,10 +207,7 @@ async function mockScreen(page, extra) {
   if (!extra || !extra.length) return;
   await page.route('**/api/**', async (route) => {
     const url = route.request().url();
-    for (const [re, body] of extra) if (re.test(url)) {
-      const b = typeof body === 'function' ? body(url) : body;
-      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(b) });
-    }
+    for (const [re, body] of extra) if (re.test(url)) return fulfil(route, body);
     return route.fallback();
   });
 }

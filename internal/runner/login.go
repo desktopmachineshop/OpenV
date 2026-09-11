@@ -170,9 +170,11 @@ func (w *Worker) handleLogin(ctx context.Context, login *providers.LoginRequest)
 
 	status := providers.LoginURLReady
 	detail := flow.browserDetail
+	pasteKind := ""
 	if flow.pasteBack {
 		status = providers.LoginAwaitingCode
 		detail = "Open the sign-in link, authorize, then paste the code you receive back here."
+		pasteKind = providers.PasteKindCode
 	}
 
 	// Relay the URL when it appears (codex may not print one — the browser
@@ -180,10 +182,10 @@ func (w *Worker) handleLogin(ctx context.Context, login *providers.LoginRequest)
 	urlReported := false
 	select {
 	case url := <-urlCh:
-		w.loginProgress(login.ID, status, url, detail)
+		w.loginProgressKind(login.ID, status, url, detail, pasteKind)
 		urlReported = true
 	case <-time.After(20 * time.Second):
-		w.loginProgress(login.ID, status, "", detail)
+		w.loginProgressKind(login.ID, status, "", detail, pasteKind)
 	case <-runCtx.Done():
 	}
 
@@ -213,7 +215,7 @@ func (w *Worker) handleLogin(ctx context.Context, login *providers.LoginRequest)
 			return
 		case url := <-urlCh:
 			if !urlReported {
-				w.loginProgress(login.ID, status, url, detail)
+				w.loginProgressKind(login.ID, status, url, detail, pasteKind)
 				urlReported = true
 			}
 		case <-pollTicker.C:
@@ -316,7 +318,15 @@ func (w *Worker) redetect(ctx context.Context, provider string) {
 }
 
 func (w *Worker) loginProgress(id, status, authURL, detail string) {
-	if err := w.client.LoginProgress(id, status, authURL, detail); err != nil {
+	w.loginProgressKind(id, status, authURL, detail, "")
+}
+
+// loginProgressKind reports progress on a step that is waiting for the member
+// to paste something back, naming which kind of paste it is. Only the worker
+// knows: it is the flow it is driving, not something to be read back out of
+// the instruction text.
+func (w *Worker) loginProgressKind(id, status, authURL, detail, pasteKind string) {
+	if err := w.client.LoginProgress(id, status, authURL, detail, pasteKind); err != nil {
 		log.Printf("login %s: progress update failed: %v", id, err)
 	}
 }

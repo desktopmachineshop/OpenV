@@ -18,13 +18,20 @@ interface Props {
 /**
  * What the worker is asking the member to paste back. Two CLIs ask for two
  * different things: most hand over a short code, but a loopback flow
- * (Codex) asks for the whole redirected address, and the worker says so in
- * its detail text. The distinction decides the keyboard a phone opens — a
- * URL keyboard for an address, plain text for a code — so it is read from
- * the detail rather than hard-coded per provider.
+ * (Codex) asks for the whole redirected address. The distinction decides the
+ * keyboard a phone opens — a URL keyboard for an address, plain text for a
+ * code — so the worker reports it as `paste_kind`, which is the flow it is
+ * driving rather than a guess.
+ *
+ * A worker older than that field says nothing, and the only clue left is the
+ * prose it wrote for the member; sniffing that is the fallback, never the
+ * first answer.
  */
-export const pasteKind = (login: ProviderLogin | null | undefined): 'url' | 'text' =>
-  login && /address|\burl\b/i.test(login.detail || '') ? 'url' : 'text';
+export const pasteKind = (login: ProviderLogin | null | undefined): 'url' | 'text' => {
+  if (!login) return 'text';
+  if (login.paste_kind) return login.paste_kind === 'url' ? 'url' : 'text';
+  return /address|\burl\b/i.test(login.detail || '') ? 'url' : 'text';
+};
 
 // ProviderConnectCard drives a CLI provider sign-in from the UI: it creates
 // a login request, the host worker runs the vendor CLI's own login flow, and
@@ -49,6 +56,11 @@ export const ProviderConnectCard: React.FC<Props> = ({
   const [codeSent, setCodeSent] = useState(false);
   const [error, setError] = useState('');
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // The detail shown when the last code was submitted, or null when nothing
+  // is in flight. The worker answers a refused code by re-issuing
+  // awaiting_code with new wording ("… — paste the code again, in full"), so
+  // a detail that has moved on is the signal that the field is wanted again.
+  const sentDetailRef = useRef<string | null>(null);
 
   const stopPolling = useCallback(() => {
     if (pollRef.current) {
@@ -66,6 +78,18 @@ export const ProviderConnectCard: React.FC<Props> = ({
         try {
           const res = await providerLoginsAPI.get(id);
           setLogin(res.data);
+          // Still waiting on a paste, but no longer for the reason it was
+          // waiting when the member sent one: the worker has come back with
+          // something to say about that code. Hand the field back rather
+          // than leaving a disabled "Code sent…" as the last word.
+          if (
+            res.data.status === 'awaiting_code' &&
+            sentDetailRef.current !== null &&
+            res.data.detail !== sentDetailRef.current
+          ) {
+            sentDetailRef.current = null;
+            setCodeSent(false);
+          }
           if (['completed', 'failed', 'cancelled'].includes(res.data.status)) {
             stopPolling();
             if (res.data.status === 'completed') onComplete();
@@ -82,6 +106,7 @@ export const ProviderConnectCard: React.FC<Props> = ({
     setError('');
     setCode('');
     setCodeSent(false);
+    sentDetailRef.current = null;
     try {
       const res = await providerLoginsAPI.start(provider, target);
       setLogin(res.data);
@@ -95,6 +120,7 @@ export const ProviderConnectCard: React.FC<Props> = ({
     if (!login || !code.trim()) return;
     try {
       await providerLoginsAPI.submitCode(login.id, code.trim());
+      sentDetailRef.current = login.detail;
       setCodeSent(true);
     } catch (err: any) {
       setError(apiErrorMessage(err));
@@ -102,9 +128,10 @@ export const ProviderConnectCard: React.FC<Props> = ({
   };
 
   // A phone's keyboard sends with its own key, not with a button the
-  // keyboard is covering.
+  // keyboard is covering — except mid-composition, where an IME's Enter
+  // commits the candidate being typed and means nothing to this field.
   const onFieldKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
+    if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
       e.preventDefault();
       submitCode();
     }
@@ -306,7 +333,7 @@ export const ProviderConnectCard: React.FC<Props> = ({
                 {clipboardReadable && (
                   <button
                     className="button-secondary button"
-                    style={isPhone ? { minHeight: 44 } : { padding: '6px 14px', fontSize: 13, width: 'auto' }}
+                    style={isPhone ? undefined : { padding: '6px 14px', fontSize: 13, width: 'auto' }}
                     onClick={pasteFromClipboard}
                     disabled={codeSent}
                   >
@@ -315,7 +342,7 @@ export const ProviderConnectCard: React.FC<Props> = ({
                 )}
                 <button
                   className="button"
-                  style={isPhone ? { minHeight: 44 } : { padding: '6px 14px', fontSize: 13, width: 'auto' }}
+                  style={isPhone ? undefined : { padding: '6px 14px', fontSize: 13, width: 'auto' }}
                   onClick={submitCode}
                   disabled={codeSent || !code.trim()}
                 >

@@ -1633,12 +1633,15 @@ func (h *Handler) ProgressProviderLogin(w http.ResponseWriter, r *http.Request) 
 		Status  string `json:"status"`
 		AuthURL string `json:"auth_url"`
 		Detail  string `json:"detail"`
+		// PasteKind ("code" or "url") is what the worker is waiting for the
+		// member to paste back; older workers omit it.
+		PasteKind string `json:"paste_kind"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	login, err := h.loginService.Progress(mux.Vars(r)["id"], req.Status, req.AuthURL, req.Detail)
+	login, err := h.loginService.Progress(mux.Vars(r)["id"], req.Status, req.AuthURL, req.Detail, req.PasteKind)
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
