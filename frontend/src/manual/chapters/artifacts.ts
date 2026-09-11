@@ -143,7 +143,7 @@ links) at a point in time. The top bar of the Requirements view controls them:
   Baseline views are **read-only** — you can browse but not edit.
 - 🗑 deletes the selected baseline (the live project can't be deleted here).
 - **↓ Download** — opens the download wizard for the live project or the
-  selected baseline: PDF, Word, JSON, CSV or ReqIF, narrowed to the sections,
+  selected baseline: PDF, Word, JSON, CSV, Excel or ReqIF, narrowed to the sections,
   types and attachments you pick. See the Projects chapter.
 
 Baselines also drive comparisons in the **V&V** dashboard and the

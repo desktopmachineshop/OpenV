@@ -18,6 +18,16 @@ jest.mock('../api/client', () => ({
   notificationPrefsAPI: { get: jest.fn(), update: jest.fn() },
   providerSettingsAPI: { list: jest.fn() },
   pushAPI: { config: jest.fn(), list: jest.fn(), subscribe: jest.fn(), unsubscribe: jest.fn() },
+  // The panel also carries the change-password form (REQ-99), which asks the
+  // server for its own minimum length on mount. These tests are about push, so
+  // the policy call is stubbed rather than asserted — but it has to exist, or
+  // the effect throws and takes the whole panel down with it.
+  DEFAULT_MIN_PASSWORD_LENGTH: 8,
+  passwordAPI: { change: jest.fn() },
+  // A plain function, not jest.fn(): CRA resets mocks between tests, which
+  // would strip a factory-set resolved value and leave the effect awaiting
+  // undefined.
+  authAPI: { policy: () => Promise.resolve({ data: { min_password_length: 8 } }) },
 }));
 jest.mock('./org/MyRunnerCard', () => ({ MyRunnerCard: () => null }));
 jest.mock('./org/CloudRunnerCard', () => ({ CloudRunnerCard: () => null }));

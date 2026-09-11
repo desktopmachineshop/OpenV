@@ -2,6 +2,7 @@ package users
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -12,6 +13,14 @@ type memRepo struct {
 	users         map[string]*User
 	sessions      map[string]*Session
 	verifications map[string]*EmailVerification // by token hash
+	// touches counts TouchSession calls, so the session tests can assert
+	// that last_seen_at is not rewritten on every single request.
+	touches int
+	// deleteSessionsErr, when set, fails DeleteSessionsForUser — the sweep a
+	// password change makes after the password itself is already stored.
+	deleteSessionsErr error
+	// markVerifiedErr, when set, fails MarkEmailVerified.
+	markVerifiedErr error
 }
 
 func newMemRepo() *memRepo {
@@ -25,6 +34,21 @@ func (m *memRepo) SaveEmailVerification(v *EmailVerification) error {
 		}
 	}
 	m.verifications[v.TokenHash] = v
+	return nil
+}
+
+// markVerifiedErr, when set, fails MarkEmailVerified.
+func (m *memRepo) MarkEmailVerified(userID string, at time.Time) error {
+	if m.markVerifiedErr != nil {
+		return m.markVerifiedErr
+	}
+	user := m.users[userID]
+	if user == nil {
+		return errors.New("no such user")
+	}
+	user.EmailVerified = true
+	user.EmailVerifiedAt = &at
+	user.UpdatedAt = at
 	return nil
 }
 
@@ -78,10 +102,38 @@ func (m *memRepo) FindSessionByTokenHash(hash string) (*Session, error) {
 	}
 	return nil, nil
 }
-func (m *memRepo) TouchSession(string, time.Time) error     { return nil }
+func (m *memRepo) TouchSession(id string, lastSeen time.Time) error {
+	m.touches++
+	if s := m.sessions[id]; s != nil {
+		s.LastSeenAt = lastSeen
+	}
+	return nil
+}
 func (m *memRepo) SetSessionActiveOrg(string, string) error { return nil }
 func (m *memRepo) DeleteSession(id string) error            { delete(m.sessions, id); return nil }
-func (m *memRepo) DeleteExpiredSessions(time.Time) error    { return nil }
+func (m *memRepo) DeleteExpiredSessions(time.Time, time.Duration, time.Duration) error {
+	return nil
+}
+func (m *memRepo) DeleteSessionsForUser(userID, exceptTokenHash string) error {
+	if m.deleteSessionsErr != nil {
+		return m.deleteSessionsErr
+	}
+	for id, s := range m.sessions {
+		if s.UserID == userID && s.TokenHash != exceptTokenHash {
+			delete(m.sessions, id)
+		}
+	}
+	return nil
+}
+func (m *memRepo) SetPasswordHash(userID, hash string, at time.Time) error {
+	u := m.users[userID]
+	if u == nil {
+		return nil
+	}
+	u.PasswordHash = hash
+	u.UpdatedAt = at
+	return nil
+}
 
 // TestLoginWithSSONewUserRecordsProvider: a first-time SSO login provisions an
 // account labelled with the given provider.
@@ -304,5 +356,55 @@ func TestVerificationConfirmRefusesAddressTakenMeanwhile(t *testing.T) {
 	}
 	if repo.users[user.ID].EmailVerified {
 		t.Error("a refused confirm must leave the account unverified")
+	}
+}
+
+// MarkEmailVerified records proof of control that did not come from an
+// emailed link — an invitation token delivered to the account's own address.
+// It touches only the verification columns, and verifying twice is a no-op.
+func TestMarkEmailVerified(t *testing.T) {
+	repo := newMemRepo()
+	svc := NewDefaultService(repo)
+	svc.SetEmailVerificationPolicy(EmailVerificationPolicy{Required: true})
+	user, err := svc.Register("invited@example.com", "a-password", "Invited")
+	if err != nil {
+		t.Fatalf("Register: %v", err)
+	}
+	if user.EmailVerified {
+		t.Fatal("a password account on a verifying deployment starts unverified")
+	}
+
+	verified, err := svc.MarkEmailVerified(user.ID)
+	if err != nil {
+		t.Fatalf("MarkEmailVerified: %v", err)
+	}
+	if !verified.EmailVerified || verified.EmailVerifiedAt == nil {
+		t.Errorf("user = %+v, want verified with a timestamp", verified)
+	}
+	if verified.Email != "invited@example.com" {
+		t.Errorf("email = %q, want the address left alone", verified.Email)
+	}
+	// Again is a no-op, not an error.
+	if _, err := svc.MarkEmailVerified(user.ID); err != nil {
+		t.Errorf("verifying twice returned %v", err)
+	}
+	if _, err := svc.MarkEmailVerified("no-such-user"); err == nil {
+		t.Error("an unknown account must be reported")
+	}
+}
+
+// The refusal names the length the service actually enforces. Both come from
+// MinPasswordLength, so raising the minimum cannot leave the message telling
+// people a number the server no longer uses.
+func TestWeakPasswordMessageNamesTheMinimum(t *testing.T) {
+	want := fmt.Sprintf("password must be at least %d characters", MinPasswordLength)
+	if ErrWeakPassword.Error() != want {
+		t.Errorf("ErrWeakPassword = %q, want %q", ErrWeakPassword.Error(), want)
+	}
+	// And a password one character short really is refused with it.
+	svc := NewDefaultService(newMemRepo())
+	short := strings.Repeat("a", MinPasswordLength-1)
+	if _, err := svc.Register("short@example.com", short, "Short"); !errors.Is(err, ErrWeakPassword) {
+		t.Errorf("Register with %d characters returned %v, want ErrWeakPassword", len(short), err)
 	}
 }

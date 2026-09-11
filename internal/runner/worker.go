@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/openv/requirements-platform/internal/domain/agentruns"
+	"github.com/openv/requirements-platform/internal/domain/agents"
 	"github.com/openv/requirements-platform/internal/domain/providers"
 	"github.com/openv/requirements-platform/internal/domain/repoconns"
 )
@@ -315,6 +316,37 @@ func (w *Worker) execute(ctx context.Context, claim *ClaimResponse) {
 		return
 	}
 
+	// No allowlist, no run (REQ-91). Checked here, before a repository is
+	// cloned or a workspace built, because nothing about this run can
+	// succeed; the adapters refuse it too, but only here is the agent known
+	// by name, and a person reading the failed run needs to be told which
+	// definition to fix.
+	if len(agents.NonEmptyTools(claim.Agent.AllowedTools)) == 0 {
+		w.finish(run.ID, agentruns.FinishRequest{
+			Status: agentruns.StatusFailed,
+			Error: "agent " + agentLabel(claim.Agent) + " names no tools it may use: " +
+				agents.AllowedToolsRequired,
+			ErrorClass: classifySite(siteAgentPolicy, nil),
+		})
+		return
+	}
+
+	// Repository access on a provider that cannot confine edits per tool is
+	// refused here, before PrepareWorkspace clones anything (REQ-91). The
+	// adapter refuses it too, but only after a clone has already been made —
+	// a repository copied onto the runner host for a run that was never going
+	// to start. The definition cannot be saved this way either; this catches
+	// the one written before that rule, or edited on disk.
+	if claim.Agent.RepoAccess && claim.Agent.Provider != providers.ProviderClaudeCode {
+		w.finish(run.ID, agentruns.FinishRequest{
+			Status: agentruns.StatusFailed,
+			Error: "agent " + agentLabel(claim.Agent) + ": " +
+				agents.RepoAccessUnsupported(claim.Agent.Provider).Error(),
+			ErrorClass: classifySite(siteAgentPolicy, nil),
+		})
+		return
+	}
+
 	var conns []*repoconns.RepoConnection
 	if run.ProjectID != nil && claim.Agent.RepoAccess {
 		var err error
@@ -407,9 +439,17 @@ func (w *Worker) execute(ctx context.Context, claim *ClaimResponse) {
 			Env:     env,
 		},
 		AllowedTools: claim.Agent.AllowedTools,
-		MaxTurns:     claim.Agent.MaxTurns,
-		TimeoutSec:   claim.Agent.TimeoutSeconds,
-		Env:          env,
+		// A run that reads content nobody in the workspace wrote gets nothing
+		// auto-approved beyond its allowlist (REQ-91, HAZ-1). Two independent
+		// sources say so and either is enough: where the run came from (an
+		// interview turn is a stranger's transcript whichever agent the
+		// interview was bound to) and what the definition grants (repo
+		// access, web tools, a foreign MCP server).
+		Untrusted:  run.UntrustedOrigin() || claim.Agent.UntrustedInput(),
+		RepoAccess: claim.Agent.RepoAccess,
+		MaxTurns:   claim.Agent.MaxTurns,
+		TimeoutSec: claim.Agent.TimeoutSeconds,
+		Env:        env,
 	}
 
 	handle, err := adapter.Start(ctx, spec)
@@ -417,7 +457,7 @@ func (w *Worker) execute(ctx context.Context, claim *ClaimResponse) {
 		w.finish(run.ID, agentruns.FinishRequest{
 			Status:     agentruns.StatusFailed,
 			Error:      "adapter start failed: " + err.Error(),
-			ErrorClass: classifySite(siteAdapterStart, nil),
+			ErrorClass: classifySite(siteAdapterStart, err),
 		})
 		return
 	}

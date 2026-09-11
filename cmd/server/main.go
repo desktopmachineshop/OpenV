@@ -33,6 +33,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/guided"
 	"github.com/openv/requirements-platform/internal/domain/hostedworkers"
 	"github.com/openv/requirements-platform/internal/domain/interviews"
+	"github.com/openv/requirements-platform/internal/domain/invitations"
 	"github.com/openv/requirements-platform/internal/domain/links"
 	"github.com/openv/requirements-platform/internal/domain/members"
 	"github.com/openv/requirements-platform/internal/domain/notifications"
@@ -179,6 +180,7 @@ func main() {
 	providerRepo := postgres.NewProviderSettingRepository(db)
 	teamRepo := postgres.NewTeamRepository(db)
 	orgRepo := postgres.NewOrgRepository(db)
+	invitationRepo := postgres.NewInvitationRepository(db)
 	workerKeyRepo := postgres.NewWorkerKeyRepository(db)
 	hostedWorkerRepo := postgres.NewHostedWorkerRepository(db)
 	runnerSessionRepo := postgres.NewRunnerSessionRepository(db)
@@ -234,6 +236,10 @@ func main() {
 	memberService := members.NewDefaultService(memberRepo)
 	orgService := orgs.NewDefaultService(orgRepo)
 	orgTeamService := orgs.NewTeamService(orgRepo, orgService)
+	// Workspace invitations (REQ-95): the only way into a workspace for
+	// someone with no account, and the prerequisite for closing self-service
+	// registration below.
+	invitationService := invitations.NewDefaultService(invitationRepo, orgService)
 	workerKeyService := workerkeys.NewDefaultService(workerKeyRepo)
 	workerKeyService.SetPairingRepository(workerKeyRepo)
 	hostedWorkerService := hostedworkers.NewDefaultService(hostedWorkerRepo)
@@ -330,7 +336,11 @@ func main() {
 	interviewService := interviews.NewDefaultService(interviewRepo)
 
 	// Agent engine services.
-	agentService, err := agents.NewFileService(agentsDir, agentRepo)
+	// The file sync backfills a definition that carries no allowlist (REQ-91),
+	// and it runs before seeds.EnsureOrgDefaults, so it is the one that
+	// decides what a seeded agent ends up with — hence the seed lookup.
+	agentService, err := agents.NewFileService(agentsDir, agentRepo,
+		agents.WithSeedAllowedTools(seeds.SeedAllowedTools))
 	if err != nil {
 		fatal("failed to initialize agent service", err)
 	}
@@ -435,6 +445,12 @@ func main() {
 	// middleware (walls unverified sessions).
 	emailVerification := notify.VerificationPolicyFromEnv(emailMailer)
 	userService.SetEmailVerificationPolicy(emailVerification)
+	// Session lifetime (REQ-99): an absolute deadline and an idle one, both
+	// operator-shortenable, neither extendable past the defaults.
+	sessionPolicy := users.SessionPolicyFromEnv()
+	userService.SetSessionPolicy(sessionPolicy)
+	// Registration policy (REQ-95): open unless the operator closes it.
+	registrationPolicy := api.RegistrationPolicyFromEnv()
 	emailDispatcher := notify.NewEmailDispatcher(emailMailer, userService, emailLinkBase, notify.EmailTypesFromEnv())
 
 	// Optional web push side channel for the same high-signal types (REQ-109).
@@ -532,7 +548,10 @@ func main() {
 				} else if len(ids) > 0 {
 					slog.Warn("reaper failed stale runs", "count", len(ids))
 				}
-				_ = userRepo.DeleteExpiredSessions(time.Now())
+				_ = userRepo.DeleteExpiredSessions(time.Now(), sessionPolicy.MaxAge, sessionPolicy.Idle)
+				// Invitations that nobody accepted expire; the rows are of
+				// no further use to anyone.
+				_ = invitationService.PurgeExpired(time.Now())
 				// Transient runners: end lapsed leases (hard expiry, idle
 				// window, or a node that stopped heartbeating) so their
 				// nodes go back to the pool and their credentials die.
@@ -637,6 +656,9 @@ func main() {
 		Mailer:            emailMailer,
 		EmailLinkBase:     emailLinkBase,
 		EmailVerification: emailVerification,
+		InvitationService: invitationService,
+		Registration:      registrationPolicy,
+		SessionPolicy:     sessionPolicy,
 	})
 
 	// Close the construction cycle: the proposal appliers run the handler's

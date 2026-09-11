@@ -250,6 +250,151 @@ cannot be delivered. Resend and change-of-address are throttled per account
 default 6). Worker keys, run tokens and the runner pool key never meet the
 gate: only browser sessions do.
 
+### Who may create an account
+
+`OPENV_REGISTRATION` decides whether the deployment has a public sign-up door
+(REQ-95). The boot log always says which state is in force.
+
+| Variable             | Default | Meaning                                                            |
+| -------------------- | ------- | ------------------------------------------------------------------ |
+| `OPENV_REGISTRATION` | `open`  | `open`: anyone may sign up. `closed`: only an invitation link and SSO |
+
+With `OPENV_REGISTRATION=closed` there are exactly two doors:
+
+- an **invitation link**: `POST /api/v1/auth/register` carrying an
+  `invite_token` that is live and was issued to **the address being
+  registered**;
+- **single sign-on**, which never meets the policy at all — the identity
+  provider is doing the admitting.
+
+Everything else answers
+`403 {"error":"registration is closed","code":"registration_closed"}`. A
+pending invitation for the address, *without* its link, is deliberately not a
+door: answering differently for an invited address would turn the sign-up
+form into an oracle for who the admins have invited, and would let whoever
+learns an invited address register it first and sit on it, so the real
+invitee finds their address taken. The refusal is byte-for-byte the same for
+an invited address as for a stranger.
+
+The login page reads the policy (`GET /api/v1/auth/policy`) and hides its
+*Create a new account* button, showing *Registration is closed; ask a
+workspace admin for an invitation* instead. Registration stays throttled per
+client address either way (`OPENV_REGISTER_IP_BURST`, `_REFILL_PER_HOUR`).
+
+**Registering an address never grants the membership; only proof of owning
+it does.** The two are deliberately separate. Anyone can type an address into
+a sign-up form, and a membership is a credential into somebody's workspace.
+An invitation converts in exactly three ways, and in no others:
+
+- the sign-up carries the link's token (`invite_token`) **and** registers the
+  invited address — which also marks that address verified, since the token
+  was mailed there and nowhere else, so an invitee on a closed,
+  verification-required deployment is not walled behind a second mail. The
+  answer's `invitation` field says what the token did (`accepted`,
+  `already_member`, `email_mismatch`, `invalid`), so a link that granted
+  nothing is never a silent nothing;
+- a signed-in account whose own address **is** the invited one posts the
+  token to `POST /api/v1/auth/invitations/accept`; a session on any other
+  address is refused with
+  `403 {"code":"invitation_email_mismatch"}` — this is the path for someone
+  who already had an account, or who registered without the link. A
+  successful accept marks that address verified too, for the same reason the
+  sign-up path does: the link reached the mailbox, and it is this account's
+  own address;
+- an identity provider signs the person in and asserts `email_verified` for
+  the address; an unverified or absent claim is refused outright and grants
+  nothing.
+
+Confirming an email-verification link grants **nothing**. It used to take up
+every invitation waiting for the address, and that was a way in: the
+change-of-address flow (`POST /auth/verify-email/change`) lets any account
+have a verification mail sent to an address of its choosing, so "verified"
+proves the account can read that mailbox's link, not that the account is the
+person an admin invited. Someone who signed up without the link opens the
+link afterwards, signed in, instead.
+
+A deployment with no SMTP therefore has one path only: pass the invitation
+link to the person, since nothing else can prove the address.
+
+Closing registration on an existing deployment changes nothing for accounts
+that already exist — nobody is signed out, and every workspace keeps its
+members.
+
+### Workspace invitations
+
+Workspace admins invite by email under *Workspace settings → Members*. An
+address that already has an account **whose owner has proved it** joins the
+workspace immediately; an address that does not — no account at all, or, on a
+deployment that requires email verification, an account that has not verified
+that address — gets an invitation, which is what makes a closed deployment
+usable. The unverified case matters: until somebody has read the mailbox,
+nothing ties that account to the address an admin typed, so the membership
+waits for the link rather than being granted on a claim. Using the link both
+joins the workspace and marks the address verified, so the invitee is not
+asked to prove the same thing twice:
+
+- Invitations are valid **7 days** and can be accepted once. The link is
+  `${FRONTEND_URL}/login?invite=<token>`, and the token is stored only as a
+  SHA-256 hash — the same contract as runner keys, because the link *is* a
+  credential into the workspace.
+- With SMTP configured the link is emailed, off the request path — the
+  response's `emailed` says the send was queued, not that it landed, so no
+  admin waits on a slow relay and a failure is logged rather than shown.
+  **Without SMTP the invitation still exists**: the API returns the link once
+  when it is created and the Members tab shows it for the admin to pass on.
+- Following the link signed out opens sign-up with the address prefilled and
+  carries the token through whichever way the person continues — creating the
+  account, or signing in to one they already had (the token is posted only
+  when the address that signed in is the invited one). Following it **signed
+  in** shows the invitation with a *Join* button rather than accepting it on
+  arrival, and when the session is some other address it says which address
+  to sign in as and offers to sign out. Signing up for the invited address
+  *without* the link joins nothing at all: the link is the only way in.
+- An invitation never changes a role somebody already has. An admin who
+  follows a later "member" link stays an admin (the invitation is still
+  spent), so the last admin of a workspace cannot be demoted this way.
+- Re-inviting an address replaces its previous invitation, whether that one
+  was still live or had expired; only the newest link ever works. The
+  invitation keeps its id across the replacement, so a list an admin already
+  has open still revokes the right row. Re-inviting an **unchanged**
+  invitation (same role, still valid) within an hour of its link actually
+  being delivered is not re-sent — the person has one in their inbox — but an
+  invitation whose send failed, or was never attempted, is minted and sent
+  again on the next click.
+- Admins can see and revoke pending invitations on the same tab. Revoking
+  stops the link working immediately. Expired invitations are swept by the
+  same background reaper that sweeps sessions.
+
+### Session lifetime
+
+A session ends two ways (REQ-99): an absolute deadline measured from sign-in,
+and an idle deadline measured from its last request. Both are enforced on
+every authenticated request and swept from the database in the background.
+Both are **caps, not targets** — an operator may shorten them, never lengthen
+them past the defaults.
+
+| Variable                | Default (and ceiling) | Meaning                              |
+| ----------------------- | --------------------- | ------------------------------------ |
+| `OPENV_SESSION_MAX_AGE` | `720h` (30 days)      | Absolute lifetime from sign-in       |
+| `OPENV_SESSION_IDLE`    | `168h` (7 days)       | How long a session may go unused     |
+
+Values are Go durations (`720h`, `12h`, `45m` — note `30d` is *not* a Go
+duration). A value above the ceiling is clamped, and anything unparseable or
+non-positive falls back to the default; each of those decisions logs a line at
+boot. The session cookie's own expiry tracks `OPENV_SESSION_MAX_AGE`, so
+shortening it also shortens how long a browser keeps the cookie. A live
+session records its last activity at most once a minute, so shortening the
+idle window does not multiply database writes.
+
+Changing either value applies to sessions that already exist, not just new
+ones: shortening the absolute lifetime signs out sessions that are already
+older than the new value on their next request.
+
+**Password changes** (`PUT /api/v1/me/password`, Settings → Change password)
+delete every other session of the account, keeping only the browser that made
+the change. Accounts created through Google or OIDC have no password to change
+and get `409 no_password`.
+
 If a required variable is missing, `docker compose ... up`/`config` fails with
 an error naming the variable rather than starting with dev defaults.
 
@@ -283,8 +428,15 @@ Notes:
 - Credential throttling defaults (per client address unless stated) can be
   tuned with `OPENV_AUTH_IP_BURST` / `OPENV_AUTH_IP_REFILL_PER_HOUR` (30,
   120), `OPENV_AUTH_ACCOUNT_BURST` / `_REFILL_PER_HOUR` (5 failed sign-ins,
-  20; per account), `OPENV_REGISTER_IP_BURST` / `_REFILL_PER_HOUR` (5, 10) and
-  `OPENV_SSO_IP_BURST` / `_REFILL_PER_HOUR` (20, 60). Body and upload caps:
+  20; per account), `OPENV_REGISTER_IP_BURST` / `_REFILL_PER_HOUR` (5, 10),
+  `OPENV_SSO_IP_BURST` / `_REFILL_PER_HOUR` (20, 60) and
+  `OPENV_INVITE_PREVIEW_BURST` / `_REFILL_PER_HOUR` (60, 240 — invite-link
+  previews have their own generous bucket so opening an invitation never
+  spends the sign-in budget) and `OPENV_INVITE_BURST` / `_REFILL_PER_HOUR`
+  (20, 60 — invitations per **inviting account**: creating one mails an
+  address the sender chose, so the endpoint is a relay and is bounded;
+  re-posting an unchanged invitation within an hour mails nothing at all).
+  Body and upload caps:
   `OPENV_MAX_BODY_MB` (32) and `OPENV_MAX_UPLOAD_MB` (25).
 - Set `OPENV_METRICS_TOKEN` so `/metrics` needs a bearer token; without it
   anyone can read the API's request and runtime statistics.
@@ -296,6 +448,87 @@ Notes:
 
 To stop: `docker compose -f docker-compose.yml -f docker-compose.prod.yml down`
 (or `make prod-down`). Data lives in named volumes and survives `down`.
+
+## Hosted runners: the docker socket, and how to avoid it
+
+A hosted runner is a container the **API creates on a Docker daemon**, which
+means the API needs a daemon to talk to — in the compose deployment, the host's
+own, mounted in as `/var/run/docker.sock`.
+
+> **Mounting the host's container socket into the API grants the API control
+> of the host.** This is not a hardening detail; it is the whole security
+> boundary. Anything that can reach that socket can start a container with the
+> host's filesystem bind-mounted and run as root inside it — so a remote-code
+> execution bug in the API, or an agent that talks the API into a request it
+> should not make, becomes root on the machine. It also crosses every other
+> tenant boundary on that daemon: the socket is not scoped to OpenV's own
+> containers.
+
+**The transient runner pool is the alternative, and it needs no socket at
+all.** Pool nodes are ordinary long-lived `agentd` replicas started with a
+shared `RUNNER_POOL_KEY`; they register themselves and wait to be leased, so
+nothing has to create a container on demand and the API never talks to a
+daemon. It is also what works on platforms that give you replicas but no socket
+(Railway among them). Prefer it, and leave `HOSTED_RUNNERS=off` unless a
+workspace genuinely needs an always-on API-key runner. See `docs/agents.md`,
+*Enable transient runners (operators)*.
+
+If you do enable hosted runners, keep the socket off the public path: run the
+API on a host that carries nothing else, and treat access to that host as
+equivalent to root.
+
+### What a hosted runner container is created with
+
+Every hosted runner container is created with the isolation below
+(`internal/hosting/docker.go`, `hostConfigFor`) — it runs a vendor CLI over
+prompts that may carry text nobody in the workspace wrote, so it is treated as
+a place where something will eventually go wrong:
+
+| Setting | Value | Why |
+| --- | --- | --- |
+| `CapDrop` | `ALL` | A runner is one node process as an unprivileged user; it needs no Linux capability. |
+| `SecurityOpt` | `no-new-privileges:true` | Nothing inside can climb through a setuid binary. |
+| `PidsLimit` | 1024 (`HOSTED_RUNNER_PIDS_LIMIT`) | A fork bomb hits a wall instead of the host. The cgroup counts **threads**, not processes, so the cap sits well above any process count you would guess from `ps`: a node CLI's thread pool, a toolchain build and a test run share the allowance. |
+| `Memory` / `NanoCPUs` | the workspace's plan caps | `runner_memory_mb`, `runner_cpus`; see `docs/agents.md`. |
+| `Binds` | the org's data volume only | Never the docker socket. |
+| `ReadonlyRootfs` | **not set** | The vendor CLIs in the runner image write outside `/data` (npm and CLI caches, git temporaries), so a read-only root filesystem breaks runs today. Getting there means a tmpfs for each of those paths. |
+
+`HOSTED_RUNNER_PIDS_LIMIT` on the API service overrides the cap; `0` means no
+cap (docker's own convention), and an unparseable value falls back to the
+default of 1024 rather than to unlimited. Raise it if runs in a workspace start
+failing to spawn — the symptom is a `fork`/`EAGAIN` failure deep inside a
+vendor CLI, not a message about the limit.
+
+### The runner network
+
+Set **`RUNNER_NETWORK`** on the API service to a docker network that reaches
+**the API and the provider endpoints, and nothing else**. Without it a runner
+lands on docker's default bridge, where it can reach every other container on
+it — the database included — and the API logs a line saying so at each
+provision.
+
+The compose example (`docker-compose.prod.yml`) declares an `openv-runners`
+network that only the API also joins:
+
+```yaml
+networks:
+  openv-runners:
+    name: openv-runners
+
+services:
+  api:
+    networks: [default, openv-runners]   # reachable by runners
+    environment:
+      RUNNER_NETWORK: openv-runners
+```
+
+Postgres stays on `default` only, so a runner container has no route to it.
+Note what this does and does not buy you: it removes the runner's access to
+your other services, but a bridge network still has **egress to the internet**,
+which is what lets the CLIs reach `api.anthropic.com` and friends. Restricting
+that egress to the provider endpoints themselves is a host firewall or a proxy
+job (allow the vendor API hostnames, deny the rest); docker networking alone
+cannot express it.
 
 ## Backup and restore
 

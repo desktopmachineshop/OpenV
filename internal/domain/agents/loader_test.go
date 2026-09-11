@@ -39,7 +39,7 @@ func TestParseFileRoundTrip(t *testing.T) {
 }
 
 func TestParseFileDefaults(t *testing.T) {
-	content := "---\nslug: minimal\nname: Minimal\nprovider: gemini-cli\n---\nDo things.\n"
+	content := "---\nslug: minimal\nname: Minimal\nprovider: gemini-cli\nallowed_tools:\n  - mcp__openv__*\n---\nDo things.\n"
 	def, err := ParseFile(content)
 	if err != nil {
 		t.Fatalf("ParseFile failed: %v", err)
@@ -69,7 +69,7 @@ func TestParseFileErrors(t *testing.T) {
 }
 
 func TestParseFileWindowsLineEndings(t *testing.T) {
-	content := strings.ReplaceAll("---\nslug: crlf\nname: CRLF\nprovider: codex-cli\n---\nprompt body\n", "\n", "\r\n")
+	content := strings.ReplaceAll("---\nslug: crlf\nname: CRLF\nprovider: codex-cli\nallowed_tools:\n  - mcp__openv__*\n---\nprompt body\n", "\n", "\r\n")
 	def, err := ParseFile(content)
 	if err != nil {
 		t.Fatalf("ParseFile with CRLF failed: %v", err)

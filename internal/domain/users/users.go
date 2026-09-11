@@ -5,6 +5,8 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -21,8 +23,9 @@ const (
 	ProviderOIDC = "oidc"
 )
 
-// SessionDuration is how long a login session stays valid.
-const SessionDuration = 30 * 24 * time.Hour
+// MinPasswordLength is the shortest password the platform accepts, at
+// registration and at every later change.
+const MinPasswordLength = 8
 
 // EmailVerificationTTL is how long an emailed verification link stays valid.
 // Long enough to survive a slow inbox, short enough that a link forwarded or
@@ -46,6 +49,14 @@ var (
 	// nothing about which token values exist.
 	ErrVerificationInvalid = errors.New("verification link is invalid or has expired")
 	ErrAlreadyVerified     = errors.New("email is already verified")
+	// ErrWeakPassword, ErrPasswordIncorrect and ErrNoPassword are the three
+	// ways a password change refuses. They are separate errors so the handler
+	// can answer 400, 403 and 409 instead of one indiscriminate 400.
+	// The length in the message is derived from MinPasswordLength, so the
+	// rule and what the person is told can never drift apart.
+	ErrWeakPassword      = fmt.Errorf("password must be at least %d characters", MinPasswordLength)
+	ErrPasswordIncorrect = errors.New("current password is incorrect")
+	ErrNoPassword        = errors.New("this account signs in through an identity provider and has no password to change")
 )
 
 // EmailVerificationPolicy says whether password accounts must prove control
@@ -128,6 +139,11 @@ type Repository interface {
 	// SaveEmailVerification stores v after discarding the user's unused
 	// pending links, so at most one link is live per account.
 	SaveEmailVerification(v *EmailVerification) error
+	// MarkEmailVerified records that an account has proved control of its
+	// CURRENT address by some other means than an emailed link — today, an
+	// invitation token that reached that mailbox. It touches only the
+	// verification columns, never the address itself.
+	MarkEmailVerified(userID string, at time.Time) error
 	// ConsumeEmailVerification atomically spends the link with this hash
 	// (unused, unexpired at now), marks its user verified at now and applies
 	// the link's email to the user row. Returns the updated user; nil, nil
@@ -140,7 +156,16 @@ type Repository interface {
 	TouchSession(id string, lastSeen time.Time) error
 	SetSessionActiveOrg(id string, orgID string) error
 	DeleteSession(id string) error
-	DeleteExpiredSessions(now time.Time) error
+	// DeleteSessionsForUser removes every session of one account except the
+	// one whose token hashes to exceptTokenHash ("" removes them all). It is
+	// how a password change signs the other browsers out (REQ-99).
+	DeleteSessionsForUser(userID, exceptTokenHash string) error
+	// SetPasswordHash writes only the password column, so a change cannot
+	// carry a stale copy of the rest of the row back into the database.
+	SetPasswordHash(userID, hash string, at time.Time) error
+	// DeleteExpiredSessions sweeps sessions past their stored expiry, older
+	// than maxAge, or unused for longer than idle.
+	DeleteExpiredSessions(now time.Time, maxAge, idle time.Duration) error
 }
 
 // Service defines user/auth domain logic.
@@ -153,6 +178,15 @@ type Service interface {
 	LoginWithSSO(provider, email, name, avatarURL string) (*User, string, error)
 	Logout(token string) error
 	GetBySessionToken(token string) (*User, error)
+	// ChangePassword replaces a password account's password and, per REQ-99,
+	// invalidates every session of that account except the caller's own
+	// (keepToken; "" keeps none). Errors: ErrNoPassword when the account has
+	// no password, ErrPasswordIncorrect, ErrWeakPassword — all of them
+	// before anything is written. Once the new password is stored the change
+	// has happened, so a sweep of the other sessions that fails is logged,
+	// not returned: those sessions expire at their idle deadline anyway, and
+	// reporting failure would tell the owner their old password still works.
+	ChangePassword(userID, currentPassword, newPassword, keepToken string) error
 	// SessionByToken returns the session record itself (for org context).
 	SessionByToken(token string) (*Session, error)
 	// SetActiveOrg persists the session's default workspace.
@@ -171,6 +205,11 @@ type Service interface {
 	// the normalised address it was issued for. Errors: ErrAlreadyVerified,
 	// ErrEmailTaken, or an invalid address.
 	IssueEmailVerification(userID, email string) (token, sentTo string, err error)
+	// MarkEmailVerified marks the account verified without an emailed link,
+	// for a caller that already holds proof the account controls its current
+	// address — an invitation token delivered to that mailbox. Returns the
+	// updated user. Verifying an already-verified account is a no-op.
+	MarkEmailVerified(userID string) (*User, error)
 	// ConfirmEmailVerification spends a raw token: single use, valid for
 	// EmailVerificationTTL. It marks the user verified, applies the link's
 	// address, and returns the user. ErrVerificationInvalid for anything
@@ -181,8 +220,9 @@ type Service interface {
 
 // DefaultService implements Service.
 type DefaultService struct {
-	repo   Repository
-	policy EmailVerificationPolicy
+	repo     Repository
+	policy   EmailVerificationPolicy
+	sessions SessionPolicy
 }
 
 // SetEmailVerificationPolicy wires the deployment's verification policy
@@ -190,6 +230,17 @@ type DefaultService struct {
 // (policy off) or pending a link (policy on).
 func (s *DefaultService) SetEmailVerificationPolicy(p EmailVerificationPolicy) {
 	s.policy = p
+}
+
+// SetSessionPolicy wires the deployment's session lifetime bounds
+// (wiring-time only). The zero policy means the defaults.
+func (s *DefaultService) SetSessionPolicy(p SessionPolicy) {
+	s.sessions = p.Normalized()
+}
+
+// SessionLifetime reports the session bounds in force.
+func (s *DefaultService) SessionLifetime() SessionPolicy {
+	return s.sessions.Normalized()
 }
 
 // NewDefaultService creates a new user service.
@@ -212,14 +263,23 @@ func NewToken() (string, error) {
 	return hex.EncodeToString(buf), nil
 }
 
+// NormalizeEmail folds an address into the one form the platform stores and
+// compares: trimmed and lower-cased. It is the single definition every
+// caller uses — the user service, the API handlers, invitations — so
+// "Dave@Example.com" and "dave@example.com " are the same account, the same
+// rate-limit bucket and the same invitation everywhere.
+func NormalizeEmail(email string) string {
+	return strings.ToLower(strings.TrimSpace(email))
+}
+
 // Register creates a password account. The first user becomes admin.
 func (s *DefaultService) Register(email, password, name string) (*User, error) {
-	email = strings.ToLower(strings.TrimSpace(email))
+	email = NormalizeEmail(email)
 	if email == "" || !strings.Contains(email, "@") {
 		return nil, errors.New("a valid email is required")
 	}
-	if len(password) < 8 {
-		return nil, errors.New("password must be at least 8 characters")
+	if len(password) < MinPasswordLength {
+		return nil, ErrWeakPassword
 	}
 	if existing, _ := s.repo.FindUserByEmail(email); existing != nil {
 		return nil, ErrEmailTaken
@@ -272,7 +332,7 @@ func (s *DefaultService) IssueEmailVerification(userID, email string) (string, s
 	if user.EmailVerified {
 		return "", "", ErrAlreadyVerified
 	}
-	email = strings.ToLower(strings.TrimSpace(email))
+	email = NormalizeEmail(email)
 	if email == "" {
 		email = user.Email
 	}
@@ -319,9 +379,32 @@ func (s *DefaultService) ConfirmEmailVerification(token string) (*User, error) {
 	return user, nil
 }
 
+// MarkEmailVerified marks an account verified on proof that is not an
+// emailed link; see the Service interface.
+func (s *DefaultService) MarkEmailVerified(userID string) (*User, error) {
+	user, err := s.repo.FindUserByID(userID)
+	if err != nil {
+		return nil, err
+	}
+	if user == nil {
+		return nil, errors.New("user not found")
+	}
+	if user.EmailVerified {
+		return user, nil
+	}
+	now := time.Now()
+	if err := s.repo.MarkEmailVerified(user.ID, now); err != nil {
+		return nil, err
+	}
+	user.EmailVerified = true
+	user.EmailVerifiedAt = &now
+	user.UpdatedAt = now
+	return user, nil
+}
+
 // Login verifies credentials and creates a session, returning the raw token.
 func (s *DefaultService) Login(email, password string) (*User, string, error) {
-	email = strings.ToLower(strings.TrimSpace(email))
+	email = NormalizeEmail(email)
 	user, err := s.repo.FindUserByEmail(email)
 	if err != nil || user == nil || user.PasswordHash == "" {
 		return nil, "", ErrInvalidCredentials
@@ -349,7 +432,7 @@ func (s *DefaultService) LoginWithGoogle(email, name, avatarURL string) (*User, 
 // auto-linked (issue #242) — proving control of the same email at a second IdP
 // is not proof of the same person.
 func (s *DefaultService) LoginWithSSO(provider, email, name, avatarURL string) (*User, string, error) {
-	email = strings.ToLower(strings.TrimSpace(email))
+	email = NormalizeEmail(email)
 	if email == "" {
 		return nil, "", errors.New("sso identity has no email")
 	}
@@ -420,7 +503,7 @@ func (s *DefaultService) createSession(userID string) (string, error) {
 		ID:         uuid.New().String(),
 		UserID:     userID,
 		TokenHash:  HashToken(token),
-		ExpiresAt:  now.Add(SessionDuration),
+		ExpiresAt:  now.Add(s.SessionLifetime().MaxAge),
 		CreatedAt:  now,
 		LastSeenAt: now,
 	}
@@ -439,17 +522,47 @@ func (s *DefaultService) Logout(token string) error {
 	return s.repo.DeleteSession(session.ID)
 }
 
+// sessionLive applies both halves of REQ-99 to a stored session: the
+// absolute deadline from sign-in and the idle deadline from its last
+// request. The policy is re-applied on every read rather than trusted from
+// expires_at alone, so shortening OPENV_SESSION_MAX_AGE takes effect for the
+// sessions that already exist instead of only the next ones.
+func (s *DefaultService) sessionLive(session *Session, now time.Time) bool {
+	if session == nil || !session.ExpiresAt.After(now) {
+		return false
+	}
+	p := s.SessionLifetime()
+	if now.Sub(session.CreatedAt) >= p.MaxAge {
+		return false
+	}
+	return now.Sub(lastSeen(session)) < p.Idle
+}
+
+// lastSeen falls back to creation for a row written before last_seen_at
+// existed, which reads as "used once, at sign-in".
+func lastSeen(session *Session) time.Time {
+	if session.LastSeenAt.IsZero() {
+		return session.CreatedAt
+	}
+	return session.LastSeenAt
+}
+
 // GetBySessionToken resolves a session token to its user.
 func (s *DefaultService) GetBySessionToken(token string) (*User, error) {
 	session, err := s.repo.FindSessionByTokenHash(HashToken(token))
 	if err != nil {
 		return nil, err
 	}
-	if session == nil || session.ExpiresAt.Before(time.Now()) {
+	now := time.Now()
+	if !s.sessionLive(session, now) {
 		return nil, ErrSessionInvalid
 	}
-	// Touch at most opportunistically; failures don't invalidate the session.
-	_ = s.repo.TouchSession(session.ID, time.Now())
+	// One write per SessionTouchInterval at most: idle expiry is measured in
+	// days, so an UPDATE on every authenticated request buys nothing.
+	// Opportunistic — a failed touch never invalidates the session.
+	if now.Sub(lastSeen(session)) >= SessionTouchInterval {
+		_ = s.repo.TouchSession(session.ID, now)
+	}
 	return s.repo.FindUserByID(session.UserID)
 }
 
@@ -459,10 +572,59 @@ func (s *DefaultService) SessionByToken(token string) (*Session, error) {
 	if err != nil {
 		return nil, err
 	}
-	if session == nil || session.ExpiresAt.Before(time.Now()) {
+	if !s.sessionLive(session, time.Now()) {
 		return nil, ErrSessionInvalid
 	}
 	return session, nil
+}
+
+// ChangePassword replaces a password account's password; see Service.
+func (s *DefaultService) ChangePassword(userID, currentPassword, newPassword, keepToken string) error {
+	user, err := s.repo.FindUserByID(userID)
+	if err != nil {
+		return err
+	}
+	if user == nil {
+		return ErrInvalidCredentials
+	}
+	// An SSO-only account has nothing to compare against: changing "the
+	// password" there would silently mint one, which is not what the person
+	// asked for.
+	if user.PasswordHash == "" {
+		return ErrNoPassword
+	}
+	if bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(currentPassword)) != nil {
+		return ErrPasswordIncorrect
+	}
+	if len(newPassword) < MinPasswordLength {
+		return ErrWeakPassword
+	}
+	hash, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+	if err := s.repo.SetPasswordHash(user.ID, string(hash), time.Now()); err != nil {
+		return err
+	}
+	// The point of a password change is often that the old one leaked, so
+	// every session it could have opened dies with it — except the one doing
+	// the changing, which would otherwise sign the owner out of their own
+	// browser (REQ-99).
+	except := ""
+	if keepToken != "" {
+		except = HashToken(keepToken)
+	}
+	// The password DID change, so the change cannot be reported as failed:
+	// a caller told "that did not work" retries with a current password the
+	// server no longer holds, and the owner is left believing the old one
+	// still opens the account. A sweep that did not run is logged instead;
+	// the sessions it would have killed still die at their idle deadline,
+	// and the session policy bounds how long that is (REQ-99).
+	if err := s.repo.DeleteSessionsForUser(user.ID, except); err != nil {
+		slog.Error("password changed but other sessions were not signed out",
+			"user_id", user.ID, "error", err)
+	}
+	return nil
 }
 
 // SetActiveOrg persists the session's default workspace.
@@ -481,7 +643,7 @@ func (s *DefaultService) GetByID(id string) (*User, error) {
 
 // FindByEmail returns a user by email, or nil if not found.
 func (s *DefaultService) FindByEmail(email string) (*User, error) {
-	return s.repo.FindUserByEmail(strings.ToLower(strings.TrimSpace(email)))
+	return s.repo.FindUserByEmail(NormalizeEmail(email))
 }
 
 // ListUsers returns all users.

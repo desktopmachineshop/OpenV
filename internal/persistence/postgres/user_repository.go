@@ -56,6 +56,16 @@ func (r *UserRepository) UpdateUser(u *users.User) error {
 	return err
 }
 
+// SetPasswordHash writes only the password column. A password change must
+// not carry a stale copy of the rest of the row (name, provider, admin flag)
+// back into the database, which a full UpdateUser would.
+func (r *UserRepository) SetPasswordHash(userID, hash string, at time.Time) error {
+	_, err := r.db.Exec(`
+		UPDATE users SET password_hash = $2, updated_at = $3 WHERE id = $1
+	`, userID, hash, at)
+	return err
+}
+
 // FindUserByEmail returns the user with the given email, or nil.
 func (r *UserRepository) FindUserByEmail(email string) (*users.User, error) {
 	row := r.db.QueryRow(`SELECT `+userColumns+` FROM users WHERE LOWER(email) = LOWER($1)`, email)
@@ -129,6 +139,17 @@ func (r *UserRepository) SaveEmailVerification(v *users.EmailVerification) error
 		return err
 	}
 	return tx.Commit()
+}
+
+// MarkEmailVerified records proof of control that did not come from an
+// emailed link. It writes only the verification columns — never the address
+// — so it cannot move an account onto an address it has not proved.
+func (r *UserRepository) MarkEmailVerified(userID string, at time.Time) error {
+	_, err := r.db.Exec(`
+		UPDATE users SET email_verified = TRUE, email_verified_at = COALESCE(email_verified_at, $2), updated_at = $2
+		WHERE id = $1
+	`, userID, at)
+	return err
 }
 
 // ConsumeEmailVerification spends a link and marks its user verified in one
@@ -232,8 +253,22 @@ func (r *UserRepository) DeleteSession(id string) error {
 	return err
 }
 
-// DeleteExpiredSessions removes sessions past their expiry.
-func (r *UserRepository) DeleteExpiredSessions(now time.Time) error {
-	_, err := r.db.Exec(`DELETE FROM sessions WHERE expires_at < $1`, now)
+// DeleteSessionsForUser removes the account's sessions, keeping the one
+// whose token hashes to exceptTokenHash ("" keeps none).
+func (r *UserRepository) DeleteSessionsForUser(userID, exceptTokenHash string) error {
+	_, err := r.db.Exec(`
+		DELETE FROM sessions WHERE user_id = $1 AND token_hash <> $2
+	`, userID, exceptTokenHash)
+	return err
+}
+
+// DeleteExpiredSessions removes sessions past their stored expiry, older
+// than maxAge, or unused for longer than idle — the sweep half of the two
+// deadlines GetBySessionToken enforces on read (REQ-99).
+func (r *UserRepository) DeleteExpiredSessions(now time.Time, maxAge, idle time.Duration) error {
+	_, err := r.db.Exec(`
+		DELETE FROM sessions
+		WHERE expires_at < $1 OR created_at < $2 OR last_seen_at < $3
+	`, now, now.Add(-maxAge), now.Add(-idle))
 	return err
 }
