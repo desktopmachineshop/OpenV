@@ -2,7 +2,15 @@ import { useViewport } from '../hooks/useViewport';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAppStore } from '../state/store';
-import { ProviderSetting, providerSettingsAPI, notificationPrefsAPI } from '../api/client';
+import {
+  DEFAULT_MIN_PASSWORD_LENGTH,
+  ProviderSetting,
+  providerSettingsAPI,
+  notificationPrefsAPI,
+  passwordAPI,
+  authAPI,
+} from '../api/client';
+import { apiErrorMessage } from '../api/errors';
 import { MyRunnerCard } from './org/MyRunnerCard';
 import { CloudRunnerCard } from './org/CloudRunnerCard';
 import { ProviderConnectCard } from './agents/ProviderConnectCard';
@@ -35,6 +43,68 @@ export const UserSettingsPanel: React.FC<UserSettingsPanelProps> = ({ onClose })
   // toggle reflects the stored preference, not just the initial /me payload.
   const [emailNotifications, setEmailNotifications] = useState<boolean>(true);
   const [emailPrefSaving, setEmailPrefSaving] = useState(false);
+
+  // Change password (REQ-99). Only for accounts that have one: an account
+  // created through Google or SSO signs in at its provider, and the server
+  // answers 409 rather than quietly minting a password for it.
+  const hasPassword = !currentUser?.auth_provider || currentUser.auth_provider === 'password';
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordNotice, setPasswordNotice] = useState('');
+  const [passwordSaving, setPasswordSaving] = useState(false);
+  // The server's own rule, so this form cannot tell somebody a length the
+  // server does not enforce. The default stands in while it loads.
+  const [minPasswordLength, setMinPasswordLength] = useState(DEFAULT_MIN_PASSWORD_LENGTH);
+
+  useEffect(() => {
+    let cancelled = false;
+    authAPI
+      .policy()
+      .then((res) => {
+        if (!cancelled && res.data.min_password_length) {
+          setMinPasswordLength(res.data.min_password_length);
+        }
+      })
+      .catch(() => {
+        // Non-fatal: the form keeps the default length.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const changePassword = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      setPasswordError('');
+      setPasswordNotice('');
+      // Caught here rather than at the server: the two boxes are a typo
+      // guard, and only one new password is ever sent.
+      if (newPassword !== confirmPassword) {
+        setPasswordError('The new passwords do not match.');
+        return;
+      }
+      if (newPassword.length < minPasswordLength) {
+        setPasswordError(`The new password must be at least ${minPasswordLength} characters.`);
+        return;
+      }
+      setPasswordSaving(true);
+      try {
+        await passwordAPI.change(currentPassword, newPassword);
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+        setPasswordNotice('Password changed. Your other sessions have been signed out.');
+      } catch (err: any) {
+        setPasswordError(apiErrorMessage(err, 'Could not change the password'));
+      } finally {
+        setPasswordSaving(false);
+      }
+    },
+    [currentPassword, newPassword, confirmPassword, minPasswordLength]
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -226,6 +296,67 @@ export const UserSettingsPanel: React.FC<UserSettingsPanelProps> = ({ onClose })
             </label>
           </div>
         </div>
+
+        {hasPassword && (
+          <div className="card">
+            <h3 style={{ marginBottom: 4 }}>Change password</h3>
+            <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+              Changing your password signs out every other browser and device you are signed in on.
+              This one stays signed in.
+            </p>
+            <form onSubmit={changePassword} style={{ maxWidth: 360 }}>
+              <div className="form-group" style={{ marginBottom: 10 }}>
+                <label style={{ fontSize: 12 }}>Current password</label>
+                <input
+                  type="password"
+                  autoComplete="current-password"
+                  value={currentPassword}
+                  required
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                />
+              </div>
+              <div className="form-group" style={{ marginBottom: 10 }}>
+                <label style={{ fontSize: 12 }}>
+                  New password (min {minPasswordLength} characters)
+                </label>
+                <input
+                  type="password"
+                  autoComplete="new-password"
+                  value={newPassword}
+                  required
+                  onChange={(e) => setNewPassword(e.target.value)}
+                />
+              </div>
+              <div className="form-group" style={{ marginBottom: 12 }}>
+                <label style={{ fontSize: 12 }}>Confirm new password</label>
+                <input
+                  type="password"
+                  autoComplete="new-password"
+                  value={confirmPassword}
+                  required
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                />
+              </div>
+              {passwordError && (
+                <div style={{ color: 'var(--danger)', fontSize: 13, marginBottom: 10 }}>
+                  {passwordError}
+                </div>
+              )}
+              {passwordNotice && (
+                <div style={{ color: 'var(--success)', fontSize: 13, marginBottom: 10 }}>
+                  {passwordNotice}
+                </div>
+              )}
+              <button
+                type="submit"
+                className="button"
+                disabled={passwordSaving || !currentPassword || !newPassword}
+              >
+                {passwordSaving ? 'Changing…' : 'Change password'}
+              </button>
+            </form>
+          </div>
+        )}
 
         {!activeOrgId ? (
           <div className="card">

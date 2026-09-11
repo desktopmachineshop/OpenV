@@ -1,0 +1,1657 @@
+package api
+
+// Handler-level cover for the registration policy, invitation endpoints and
+// password change (REQ-95, REQ-99). The services are faked: what is under
+// test here is the HTTP contract — which status, which code, and what the
+// handler does to the account on the way through.
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"sync"
+	"testing"
+	"time"
+
+	"github.com/gorilla/mux"
+
+	"github.com/openv/requirements-platform/internal/domain/invitations"
+	"github.com/openv/requirements-platform/internal/domain/orgs"
+	"github.com/openv/requirements-platform/internal/domain/users"
+)
+
+// fakeInviteService is the slice of invitations.Service the handlers touch.
+type fakeInviteService struct {
+	pending  map[string][]*invitations.Invitation // email -> pending
+	byToken  map[string]*invitations.Invitation
+	accepted []string // "token:userID" and "email:userID"
+	created  []*invitations.Invitation
+	revoked  []string
+	// memberRoles is what the workspace already thinks of the account,
+	// keyed "orgID:userID" — the real service reads it to leave an existing
+	// role alone.
+	memberRoles  map[string]string
+	createErr    error
+	lookupErr    error
+	acceptAllErr error
+	// gone marks rows that can no longer be claimed — revoked, or already
+	// taken up. The real service claims the row with MarkAccepted before it
+	// writes anything, so an invitation that went away between being
+	// resolved and being accepted grants nothing; the fake models that.
+	gone map[string]bool
+	// onLookup runs after a successful Lookup, which is where a test stages
+	// what happens BETWEEN resolving a link and accepting it.
+	onLookup func(*invitations.Invitation)
+	// emailed records MarkEmailed, which the handler calls from the sending
+	// goroutine — so it, and every read of it, is taken under mu.
+	mu      sync.Mutex
+	emailed map[string]time.Time
+}
+
+func newFakeInviteService() *fakeInviteService {
+	return &fakeInviteService{
+		pending:     map[string][]*invitations.Invitation{},
+		byToken:     map[string]*invitations.Invitation{},
+		memberRoles: map[string]string{},
+		gone:        map[string]bool{},
+		emailed:     map[string]time.Time{},
+	}
+}
+
+// FindPending answers the targeted lookup the resend check makes, with the
+// delivery stamp the fake holds for that row.
+func (f *fakeInviteService) FindPending(orgID, email string) (*invitations.Invitation, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	for _, inv := range f.pending[users.NormalizeEmail(email)] {
+		if inv == nil || inv.OrgID != orgID || !inv.Pending(time.Now()) {
+			continue
+		}
+		found := *inv
+		if at, ok := f.emailed[inv.ID]; ok {
+			found.LastEmailedAt = &at
+		}
+		return &found, nil
+	}
+	return nil, nil
+}
+
+// MarkEmailed is what the sending goroutine calls once a link has actually
+// gone out.
+func (f *fakeInviteService) MarkEmailed(invID string, at time.Time) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.emailed[invID] = at
+	return nil
+}
+
+// markEmailed stages a link that was delivered at a given time, which is the
+// only state in which an unchanged re-invite is suppressed.
+func (f *fakeInviteService) markEmailed(inv *invitations.Invitation, at time.Time) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.emailed[inv.ID] = at
+}
+
+// wasEmailed reports whether a link has been recorded as delivered.
+func (f *fakeInviteService) wasEmailed(invID string) bool {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	_, ok := f.emailed[invID]
+	return ok
+}
+
+func (f *fakeInviteService) Create(orgID, email, role string, invitedBy *string) (*invitations.Invitation, string, error) {
+	if f.createErr != nil {
+		return nil, "", f.createErr
+	}
+	if role == "" {
+		role = orgs.RoleMember
+	}
+	// The real service reads the row back after saving it, so the names the
+	// invitation mail needs are always populated; the fake mirrors that.
+	inv := &invitations.Invitation{
+		ID:        "inv-1",
+		OrgID:     orgID,
+		Email:     users.NormalizeEmail(email),
+		Role:      role,
+		OrgName:   "Test Workspace",
+		InvitedBy: invitedBy,
+		ExpiresAt: time.Now().Add(invitations.DefaultTTL),
+	}
+	if invitedBy != nil {
+		inv.InvitedByName = "Ada Admin"
+	}
+	f.created = append(f.created, inv)
+	f.byToken["tok-"+inv.Email] = inv
+	return inv, "tok-" + inv.Email, nil
+}
+
+func (f *fakeInviteService) ListPending(orgID string) ([]*invitations.Invitation, error) {
+	var out []*invitations.Invitation
+	for _, list := range f.pending {
+		for _, inv := range list {
+			if inv.OrgID == orgID {
+				out = append(out, inv)
+			}
+		}
+	}
+	return out, nil
+}
+
+func (f *fakeInviteService) Revoke(orgID, invID string) error {
+	if invID == "missing" {
+		return invitations.ErrNotFound
+	}
+	f.revoked = append(f.revoked, orgID+":"+invID)
+	return nil
+}
+
+func (f *fakeInviteService) Lookup(token string) (*invitations.Invitation, error) {
+	if f.lookupErr != nil {
+		return nil, f.lookupErr
+	}
+	if inv := f.byToken[token]; inv != nil {
+		if f.onLookup != nil {
+			f.onLookup(inv)
+		}
+		return inv, nil
+	}
+	return nil, invitations.ErrInvalidToken
+}
+
+func (f *fakeInviteService) PendingForEmail(email string) ([]*invitations.Invitation, error) {
+	return f.pending[users.NormalizeEmail(email)], nil
+}
+
+func (f *fakeInviteService) AcceptTokenForEmail(token, email, userID string) (*invitations.Acceptance, error) {
+	inv, err := f.Lookup(token)
+	if err != nil {
+		return nil, err
+	}
+	return f.acceptResolved(inv, email, userID, token)
+}
+
+func (f *fakeInviteService) AcceptResolvedForEmail(inv *invitations.Invitation, email, userID string) (*invitations.Acceptance, error) {
+	if inv == nil {
+		return nil, invitations.ErrInvalidToken
+	}
+	return f.acceptResolved(inv, email, userID, "inv-"+inv.ID)
+}
+
+// acceptResolved is the shared body of both acceptances; label is what the
+// call records, so a test can tell which path took the invitation up.
+func (f *fakeInviteService) acceptResolved(inv *invitations.Invitation, email, userID, label string) (*invitations.Acceptance, error) {
+	if inv.Email != users.NormalizeEmail(email) {
+		return nil, invitations.ErrEmailMismatch
+	}
+	if existing := f.memberRoles[inv.OrgID+":"+userID]; existing != "" {
+		// Mirrors the real service: an existing membership keeps its role,
+		// and nothing is granted, so no claim is needed.
+		f.accepted = append(f.accepted, label+":"+userID)
+		delete(f.pending, inv.Email)
+		return &invitations.Acceptance{Invitation: inv, Role: existing, AlreadyMember: true}, nil
+	}
+	if f.gone[inv.ID] {
+		// Revoked or spent since it was resolved: the claim finds nothing.
+		return nil, invitations.ErrInvalidToken
+	}
+	f.gone[inv.ID] = true
+	f.accepted = append(f.accepted, label+":"+userID)
+	delete(f.pending, inv.Email)
+	return &invitations.Acceptance{Invitation: inv, Role: inv.Role}, nil
+}
+
+// revoke takes an invitation out of circulation the way an admin's DELETE
+// does, for staging the race between resolving a link and accepting it.
+func (f *fakeInviteService) revoke(inv *invitations.Invitation) {
+	f.gone[inv.ID] = true
+	delete(f.pending, inv.Email)
+	delete(f.byToken, "tok-"+inv.Email)
+}
+
+func (f *fakeInviteService) AcceptAllForProviderVerifiedEmail(email, userID string) ([]*invitations.Acceptance, error) {
+	email = users.NormalizeEmail(email)
+	list := f.pending[email]
+	if len(list) > 0 {
+		f.accepted = append(f.accepted, email+":"+userID)
+		delete(f.pending, email)
+	}
+	out := make([]*invitations.Acceptance, 0, len(list))
+	for _, inv := range list {
+		out = append(out, &invitations.Acceptance{Invitation: inv, Role: inv.Role})
+	}
+	return out, f.acceptAllErr
+}
+
+func (f *fakeInviteService) PurgeExpired(time.Time) error { return nil }
+
+// invite adds a pending invitation for an address.
+func (f *fakeInviteService) invite(orgID, email, role string) *invitations.Invitation {
+	email = users.NormalizeEmail(email)
+	inv := &invitations.Invitation{
+		ID: "inv-" + email, OrgID: orgID, Email: email, Role: role,
+		OrgName: "Test Workspace", ExpiresAt: time.Now().Add(time.Hour),
+	}
+	f.pending[email] = append(f.pending[email], inv)
+	f.byToken["tok-"+email] = inv
+	return inv
+}
+
+// registerReq posts a sign-up. The password is the one fakeLoginService
+// accepts, since Register signs the new account straight in.
+func registerReq(email string) *http.Request {
+	return registerWithTokenReq(email, "")
+}
+
+// registerWithTokenReq posts a sign-up carrying an invite link's token, the
+// way the login page does when it was opened with ?invite=.
+func registerWithTokenReq(email, inviteToken string) *http.Request {
+	body, _ := json.Marshal(map[string]string{
+		"email": email, "password": "right", "name": "New", "invite_token": inviteToken,
+	})
+	r := httptest.NewRequest(http.MethodPost, "/api/v1/auth/register", strings.NewReader(string(body)))
+	r.RemoteAddr = "203.0.113.11:5555"
+	r.Header.Set("Content-Type", "application/json")
+	return r
+}
+
+// previewReq posts an invite token the way the sign-up page does: in a JSON
+// body, never in the URL, so the credential stays out of every access log.
+func previewReq(token string) *http.Request {
+	body, _ := json.Marshal(map[string]string{"token": token})
+	r := httptest.NewRequest(http.MethodPost, "/api/v1/auth/invitations/preview", strings.NewReader(string(body)))
+	r.RemoteAddr = "203.0.113.12:6666"
+	r.Header.Set("Content-Type", "application/json")
+	return r
+}
+
+// fakeMemberOrgs is the slice of orgs.Service the member/invite branch
+// touches: who is already in the workspace, and whether it is a personal one.
+type fakeMemberOrgs struct {
+	orgs.Service
+	roles    map[string]string // userID -> role
+	personal bool
+	added    []string // "orgID:userID:role"
+}
+
+func (f *fakeMemberOrgs) RoleInOrg(orgID, userID string) (string, error) {
+	return f.roles[userID], nil
+}
+
+func (f *fakeMemberOrgs) AddMember(orgID, userID, role string) error {
+	if f.personal {
+		return orgs.ErrPersonalOrgMembers
+	}
+	f.added = append(f.added, orgID+":"+userID+":"+role)
+	return nil
+}
+
+func (f *fakeMemberOrgs) Get(id string) (*orgs.Org, error) {
+	orgType := orgs.TypeCompany
+	if f.personal {
+		orgType = orgs.TypePersonal
+	}
+	return &orgs.Org{ID: id, Name: "Test Workspace", OrgType: orgType}, nil
+}
+
+func newRegistrationHandler(policy string) (*Handler, *fakeLoginService, *fakeInviteService) {
+	svc := &fakeLoginService{}
+	invites := newFakeInviteService()
+	return &Handler{
+		userService:          svc,
+		invitationService:    invites,
+		registration:         policy,
+		registerIPLimiter:    newRateLimiter(100, 1),
+		authIPLimiter:        newRateLimiter(100, 1),
+		authAccountLimiter:   newRateLimiter(100, 1),
+		invitePreviewLimiter: newRateLimiter(100, 1),
+		inviteLimiter:        newRateLimiter(100, 1),
+		emailLinkBase:        "https://app.example.com",
+	}, svc, invites
+}
+
+func TestRegistrationOpenByDefault(t *testing.T) {
+	h, svc, _ := newRegistrationHandler("")
+	rec := httptest.NewRecorder()
+	h.Register(rec, registerReq("stranger@example.com"))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", rec.Code)
+	}
+	if svc.registered != 1 {
+		t.Errorf("registrations = %d, want 1", svc.registered)
+	}
+}
+
+func TestRegistrationClosedRefusesAnUninvitedAddress(t *testing.T) {
+	h, svc, _ := newRegistrationHandler(RegistrationClosed)
+	rec := httptest.NewRecorder()
+	h.Register(rec, registerReq("stranger@example.com"))
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("status = %d, want 403", rec.Code)
+	}
+	var body errorBody
+	if err := json.NewDecoder(rec.Body).Decode(&body); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if body.Code != ErrCodeRegistrationClosed || body.Error != "registration is closed" {
+		t.Errorf("body = %+v", body)
+	}
+	if svc.registered != 0 {
+		t.Error("a refused registration must not create an account")
+	}
+}
+
+// On a closed deployment the invitation LINK is the door — the pending row
+// is not. Answering differently for an invited address would tell a prober
+// who the admins have invited, and would let whoever learns an invited
+// address register it first and sit on it.
+func TestRegistrationClosedRefusesAnInvitedAddressWithoutTheLink(t *testing.T) {
+	h, svc, invites := newRegistrationHandler(RegistrationClosed)
+	invites.invite("org-1", "invited@example.com", orgs.RoleAdmin)
+
+	rec := httptest.NewRecorder()
+	h.Register(rec, registerReq("Invited@Example.com"))
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("status = %d, want 403", rec.Code)
+	}
+	// Byte for byte the answer an uninvited address gets, so the form is not
+	// an oracle for who has been invited.
+	if rec.Body.String() != closedRegistrationBody(t, h) {
+		t.Errorf("an invited address gets a different refusal than a stranger:\n%s", rec.Body.String())
+	}
+	if svc.registered != 0 {
+		t.Error("a refused registration must not create an account")
+	}
+	if len(invites.pending["invited@example.com"]) != 1 {
+		t.Error("the invitation must still be waiting for its link")
+	}
+}
+
+// closedRegistrationBody is what a plain stranger is told on a closed
+// deployment, for comparing an invited address's refusal against.
+func closedRegistrationBody(t *testing.T, h *Handler) string {
+	t.Helper()
+	rec := httptest.NewRecorder()
+	h.Register(rec, registerReq("stranger-baseline@example.com"))
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("baseline status = %d, want 403", rec.Code)
+	}
+	return rec.Body.String()
+}
+
+// The link admits its own address and only its own: a token that reached one
+// mailbox cannot register a different address on a closed deployment.
+func TestRegistrationClosedAdmitsOnlyTheLinksOwnAddress(t *testing.T) {
+	h, svc, invites := newRegistrationHandler(RegistrationClosed)
+	invites.invite("org-1", "invited@example.com", orgs.RoleAdmin)
+
+	rec := httptest.NewRecorder()
+	h.Register(rec, registerWithTokenReq("Invited@Example.com", "tok-invited@example.com"))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200: %s", rec.Code, rec.Body.String())
+	}
+	if svc.registered != 1 {
+		t.Errorf("registrations = %d, want 1", svc.registered)
+	}
+
+	rec = httptest.NewRecorder()
+	h.Register(rec, registerWithTokenReq("squatter@example.com", "tok-invited@example.com"))
+	if rec.Code != http.StatusForbidden {
+		t.Errorf("a link used for another address returned %d, want 403", rec.Code)
+	}
+	if svc.registered != 1 {
+		t.Error("a link for another address must not create an account")
+	}
+}
+
+// The security rule in one test: an address is not a proof of anything. Only
+// the token from the invitation mail — or, later, the verification link —
+// turns a pending invitation into a membership.
+func TestRegisteringAnInvitedAddressGrantsNothingWithoutTheToken(t *testing.T) {
+	h, _, invites := newRegistrationHandler("")
+	invites.invite("org-1", "invited@example.com", orgs.RoleAdmin)
+
+	rec := httptest.NewRecorder()
+	h.Register(rec, registerReq("invited@example.com"))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200: %s", rec.Code, rec.Body.String())
+	}
+	if len(invites.accepted) != 0 {
+		t.Fatalf("registration alone joined the workspace: %v", invites.accepted)
+	}
+
+	// A token issued to a DIFFERENT address is no better: it grants nothing
+	// to the account registering here.
+	invites.invite("org-2", "someone-else@example.com", orgs.RoleAdmin)
+	rec = httptest.NewRecorder()
+	h.Register(rec, registerWithTokenReq("other@example.com", "tok-someone-else@example.com"))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", rec.Code)
+	}
+	if len(invites.accepted) != 0 {
+		t.Errorf("a token for another address was accepted: %v", invites.accepted)
+	}
+}
+
+// With the token, registration does join the workspace: holding the link is
+// proof the invited mailbox was read.
+func TestRegisteringWithTheInviteTokenJoinsTheWorkspace(t *testing.T) {
+	for _, policy := range []string{"", RegistrationClosed} {
+		h, svc, invites := newRegistrationHandler(policy)
+		invites.invite("org-1", "invited@example.com", orgs.RoleAdmin)
+
+		rec := httptest.NewRecorder()
+		h.Register(rec, registerWithTokenReq("Invited@Example.com", "tok-invited@example.com"))
+		if rec.Code != http.StatusOK {
+			t.Fatalf("policy %q: status = %d, want 200: %s", policy, rec.Code, rec.Body.String())
+		}
+		if svc.registered != 1 {
+			t.Errorf("policy %q: registrations = %d, want 1", policy, svc.registered)
+		}
+		if len(invites.accepted) != 1 {
+			t.Errorf("policy %q: accepted = %v, want the token to be taken up", policy, invites.accepted)
+		}
+	}
+}
+
+// Confirming a verification link grants NO membership. The address it
+// confirms is one the account asked the mail to be sent to (the
+// change-of-address flow), so an attacker could point a verification mail at
+// an address an admin had invited and be handed the workspace. "Verified"
+// here proves the account can read that mailbox's link, not that the account
+// is the person who was invited.
+func TestVerifyingTheEmailGrantsNoMembership(t *testing.T) {
+	h, svc, invites := newRegistrationHandler("")
+	h.emailVerification = users.EmailVerificationPolicy{Required: true}
+	svc.confirmed = &users.User{ID: "u-2", Email: "invited@example.com", EmailVerified: true}
+	invites.invite("org-1", "invited@example.com", orgs.RoleMember)
+	invites.invite("org-2", "invited@example.com", orgs.RoleAdmin)
+
+	rec := httptest.NewRecorder()
+	h.VerifyEmail(rec, jsonReq(http.MethodPost, "/api/v1/auth/verify-email", `{"token":"verify-me"}`, ""))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200: %s", rec.Code, rec.Body.String())
+	}
+	if len(invites.accepted) != 0 {
+		t.Errorf("verification joined workspaces: %v", invites.accepted)
+	}
+	if len(invites.pending["invited@example.com"]) != 2 {
+		t.Error("the invitations must still be waiting for their links")
+	}
+}
+
+// A provider-verified sign-in takes up the invitations waiting for the
+// address — and a membership that could not be written is reported (the
+// handler logs it) without failing the sign-in the person actually asked
+// for. The invitation stays acceptable through its link.
+func TestProviderVerifiedSignInJoinsAndSurvivesAFailure(t *testing.T) {
+	h, _, invites := newRegistrationHandler("")
+	invites.invite("org-1", "sso@example.com", orgs.RoleMember)
+	invites.acceptAllErr = errors.New("one workspace is gone")
+
+	// Returns normally: the caller has already signed the person in.
+	h.acceptInvitationsForProviderVerifiedEmail("u-7", "SSO@Example.com")
+
+	if len(invites.accepted) != 1 || invites.accepted[0] != "sso@example.com:u-7" {
+		t.Errorf("accepted = %v, want the invitations that could be taken up", invites.accepted)
+	}
+}
+
+// With no invitation service to consult, a closed deployment says no rather
+// than falling open.
+func TestRegistrationClosedWithoutInvitationsRefuses(t *testing.T) {
+	h, _, _ := newRegistrationHandler(RegistrationClosed)
+	h.invitationService = nil
+	rec := httptest.NewRecorder()
+	h.Register(rec, registerReq("someone@example.com"))
+	if rec.Code != http.StatusForbidden {
+		t.Errorf("status = %d, want 403", rec.Code)
+	}
+}
+
+// A lookup failure on a closed deployment is not a reason to let someone in.
+func TestRegistrationClosedFailsSafeOnLookupError(t *testing.T) {
+	h, svc, invites := newRegistrationHandler(RegistrationClosed)
+	invites.invite("org-1", "invited@example.com", orgs.RoleMember)
+	invites.lookupErr = errors.New("database is down")
+	rec := httptest.NewRecorder()
+	h.Register(rec, registerWithTokenReq("invited@example.com", "tok-invited@example.com"))
+	if rec.Code != http.StatusForbidden {
+		t.Errorf("status = %d, want 403", rec.Code)
+	}
+	if svc.registered != 0 {
+		t.Error("an unanswerable lookup must not create an account")
+	}
+}
+
+func TestAuthPolicyEndpoint(t *testing.T) {
+	for _, tc := range []struct{ configured, want string }{
+		{"", RegistrationOpen},
+		{RegistrationOpen, RegistrationOpen},
+		{RegistrationClosed, RegistrationClosed},
+	} {
+		h, _, _ := newRegistrationHandler(tc.configured)
+		rec := httptest.NewRecorder()
+		h.AuthPolicy(rec, httptest.NewRequest(http.MethodGet, "/api/v1/auth/policy", nil))
+		if rec.Code != http.StatusOK {
+			t.Fatalf("status = %d", rec.Code)
+		}
+		var body map[string]any
+		if err := json.NewDecoder(rec.Body).Decode(&body); err != nil {
+			t.Fatalf("decode: %v", err)
+		}
+		if body["registration"] != tc.want {
+			t.Errorf("registration = %v for %q, want %q", body["registration"], tc.configured, tc.want)
+		}
+		// The sign-up and change-password forms state the server's own rule
+		// rather than a copy of it, so the policy has to carry it.
+		if body["min_password_length"] != float64(users.MinPasswordLength) {
+			t.Errorf("min_password_length = %v, want %d", body["min_password_length"], users.MinPasswordLength)
+		}
+	}
+}
+
+// --- invitation endpoints --------------------------------------------------
+
+// muxReq attaches route variables the way gorilla/mux does, so a handler can
+// be driven without standing up the whole router.
+func muxReq(method, path, body string, vars map[string]string) *http.Request {
+	var r *http.Request
+	if body == "" {
+		r = httptest.NewRequest(method, path, nil)
+	} else {
+		r = httptest.NewRequest(method, path, strings.NewReader(body))
+		r.Header.Set("Content-Type", "application/json")
+	}
+	r.RemoteAddr = "203.0.113.12:6666"
+	return mux.SetURLVars(r, vars)
+}
+
+// asUser puts an authenticated platform admin on the request, which passes
+// requireOrgRole without an org service.
+func asUser(r *http.Request, user *users.User) *http.Request {
+	return r.WithContext(context.WithValue(r.Context(), ctxUser, user))
+}
+
+func TestPreviewInvitationRevealsOnlyTheInvitation(t *testing.T) {
+	h, _, invites := newRegistrationHandler("")
+	invites.invite("org-1", "invited@example.com", orgs.RoleAdmin)
+
+	rec := httptest.NewRecorder()
+	h.PreviewInvitation(rec, previewReq("tok-invited@example.com"))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", rec.Code)
+	}
+	var body map[string]any
+	if err := json.NewDecoder(rec.Body).Decode(&body); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if body["email"] != "invited@example.com" || body["role"] != orgs.RoleAdmin || body["org_name"] != "Test Workspace" {
+		t.Errorf("body = %+v", body)
+	}
+	// Nothing about the invitation's identity leaks.
+	if _, ok := body["id"]; ok {
+		t.Error("the preview must not carry the invitation id")
+	}
+
+	// Every failure is one 404.
+	rec = httptest.NewRecorder()
+	h.PreviewInvitation(rec, previewReq("no-such-token"))
+	if rec.Code != http.StatusNotFound {
+		t.Errorf("unknown token status = %d, want 404", rec.Code)
+	}
+}
+
+// The token is a credential, so it travels in the POST body — never in the
+// path, where it would be written into access logs, proxy logs, browser
+// history and Referer headers. The route is the same shape as
+// POST /auth/verify-email, which carries its token the same way.
+func TestPreviewInvitationTakesTheTokenInTheBody(t *testing.T) {
+	h, _, invites := newRegistrationHandler("")
+	invites.invite("org-1", "invited@example.com", orgs.RoleMember)
+
+	router := mux.NewRouter()
+	h.registerAuthRoutes(router)
+
+	// The old GET path is gone: no route answers it.
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, httptest.NewRequest(http.MethodGet,
+		"/api/v1/auth/invitations/tok-invited@example.com", nil))
+	if rec.Code == http.StatusOK {
+		t.Errorf("a token in the URL still resolves (status %d); it must not", rec.Code)
+	}
+
+	// The POST does, on a path that carries no token at all.
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, previewReq("tok-invited@example.com"))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200: %s", rec.Code, rec.Body.String())
+	}
+	var body map[string]any
+	if err := json.NewDecoder(rec.Body).Decode(&body); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if body["email"] != "invited@example.com" {
+		t.Errorf("body = %+v", body)
+	}
+
+	// A body that is not JSON is a 400, not a 500.
+	rec = httptest.NewRecorder()
+	bad := httptest.NewRequest(http.MethodPost, "/api/v1/auth/invitations/preview", strings.NewReader("{"))
+	bad.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(rec, bad)
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("malformed body status = %d, want 400", rec.Code)
+	}
+}
+
+func TestCreateAndRevokeInvitation(t *testing.T) {
+	h, _, invites := newRegistrationHandler("")
+	admin := &users.User{ID: "u-admin", Email: "admin@example.com", IsAdmin: true}
+
+	rec := httptest.NewRecorder()
+	h.CreateOrgInvitation(rec, asUser(muxReq(http.MethodPost, "/api/v1/orgs/org-1/invitations",
+		`{"email":"New@Example.com","role":"member"}`, map[string]string{"id": "org-1"}), admin))
+	// 202: an invitation went out. Both entry points answer with the same
+	// pair — 201 for a membership, 202 for an invitation.
+	if rec.Code != http.StatusAccepted {
+		t.Fatalf("status = %d, want 202: %s", rec.Code, rec.Body.String())
+	}
+	var resp invitationResponse
+	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if resp.Invitation.Email != "new@example.com" {
+		t.Errorf("email = %q", resp.Invitation.Email)
+	}
+	// The one-time link is handed back so an admin on a mailer-less
+	// deployment can pass it on, and it points at the login page.
+	if !strings.HasPrefix(resp.Link, "https://app.example.com/login?invite=") {
+		t.Errorf("link = %q", resp.Link)
+	}
+	if resp.Emailed {
+		t.Error("emailed must be false with no mailer configured")
+	}
+	// The token itself is never part of the invitation body.
+	if strings.Contains(rec.Body.String(), `"token_hash"`) {
+		t.Error("the token hash must not be serialized")
+	}
+
+	rec = httptest.NewRecorder()
+	h.RevokeOrgInvitation(rec, asUser(muxReq(http.MethodDelete, "/api/v1/orgs/org-1/invitations/inv-1", "",
+		map[string]string{"id": "org-1", "invId": "inv-1"}), admin))
+	if rec.Code != http.StatusNoContent {
+		t.Fatalf("revoke status = %d, want 204", rec.Code)
+	}
+	if len(invites.revoked) != 1 || invites.revoked[0] != "org-1:inv-1" {
+		t.Errorf("revoked = %v", invites.revoked)
+	}
+
+	rec = httptest.NewRecorder()
+	h.RevokeOrgInvitation(rec, asUser(muxReq(http.MethodDelete, "/api/v1/orgs/org-1/invitations/missing", "",
+		map[string]string{"id": "org-1", "invId": "missing"}), admin))
+	if rec.Code != http.StatusNotFound {
+		t.Errorf("unknown invitation status = %d, want 404", rec.Code)
+	}
+}
+
+func TestInvitationEndpointsRefuseAnAnonymousCaller(t *testing.T) {
+	h, _, _ := newRegistrationHandler("")
+	for name, call := range map[string]func(http.ResponseWriter, *http.Request){
+		"create": h.CreateOrgInvitation,
+		"list":   h.ListOrgInvitations,
+		"revoke": h.RevokeOrgInvitation,
+	} {
+		rec := httptest.NewRecorder()
+		call(rec, muxReq(http.MethodPost, "/api/v1/orgs/org-1/invitations", `{"email":"a@b.com"}`,
+			map[string]string{"id": "org-1", "invId": "inv-1"}))
+		if rec.Code != http.StatusUnauthorized {
+			t.Errorf("%s status = %d, want 401", name, rec.Code)
+		}
+	}
+}
+
+func TestAcceptInvitationJoinsTheSignedInAccount(t *testing.T) {
+	h, svc, invites := newRegistrationHandler("")
+	invites.invite("org-1", "member@example.com", orgs.RoleMember)
+	svc.sessions = map[string]*users.User{"cookie-1": {ID: "u-1", Email: "Member@Example.com"}}
+
+	// The session's address is the invited one (however it is cased), so the
+	// link converts.
+	rec := httptest.NewRecorder()
+	h.AcceptInvitation(rec, jsonReq(http.MethodPost, "/api/v1/auth/invitations/accept",
+		`{"token":"tok-member@example.com"}`, "cookie-1"))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200: %s", rec.Code, rec.Body.String())
+	}
+	if len(invites.accepted) != 1 {
+		t.Errorf("accepted = %v", invites.accepted)
+	}
+	var body map[string]any
+	if err := json.NewDecoder(rec.Body).Decode(&body); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if body["org_id"] != "org-1" || body["role"] != orgs.RoleMember || body["already_member"] != false {
+		t.Errorf("body = %+v", body)
+	}
+
+	// No session: nothing is joined.
+	rec = httptest.NewRecorder()
+	h.AcceptInvitation(rec, jsonReq(http.MethodPost, "/api/v1/auth/invitations/accept",
+		`{"token":"tok-member@example.com"}`, ""))
+	if rec.Code != http.StatusUnauthorized {
+		t.Errorf("anonymous accept status = %d, want 401", rec.Code)
+	}
+
+	// An unusable link is one 404.
+	rec = httptest.NewRecorder()
+	h.AcceptInvitation(rec, jsonReq(http.MethodPost, "/api/v1/auth/invitations/accept",
+		`{"token":"nope"}`, "cookie-1"))
+	if rec.Code != http.StatusNotFound {
+		t.Errorf("bad token status = %d, want 404", rec.Code)
+	}
+}
+
+// Holding the link is not enough: the signed-in account must BE the invited
+// address. Otherwise a forwarded link would put whoever is signed in on that
+// browser into somebody else's workspace.
+func TestAcceptInvitationRefusesAnotherAddress(t *testing.T) {
+	h, svc, invites := newRegistrationHandler("")
+	invites.invite("org-1", "invited@example.com", orgs.RoleAdmin)
+	svc.sessions = map[string]*users.User{"cookie-2": {ID: "u-9", Email: "someone-else@example.com"}}
+
+	rec := httptest.NewRecorder()
+	h.AcceptInvitation(rec, jsonReq(http.MethodPost, "/api/v1/auth/invitations/accept",
+		`{"token":"tok-invited@example.com"}`, "cookie-2"))
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("status = %d, want 403: %s", rec.Code, rec.Body.String())
+	}
+	var body errorBody
+	if err := json.NewDecoder(rec.Body).Decode(&body); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if body.Code != ErrCodeInvitationEmailMismatch {
+		t.Errorf("code = %q, want %q", body.Code, ErrCodeInvitationEmailMismatch)
+	}
+	// The refusal reaches whoever is signed in on this browser, who is not
+	// necessarily the person the link was sent to: it must not name the
+	// invited address (the preview endpoint tells the link's holder that).
+	if strings.Contains(rec.Body.String(), "invited@example.com") {
+		t.Errorf("the invited address leaked into the refusal: %s", rec.Body.String())
+	}
+	if len(invites.accepted) != 0 {
+		t.Errorf("a mismatched account joined anyway: %v", invites.accepted)
+	}
+	if len(invites.pending["invited@example.com"]) != 1 {
+		t.Error("a refused acceptance must leave the invitation pending")
+	}
+}
+
+// An invitation never rewrites a role: an admin who follows a later "member"
+// link stays an admin, and the answer says so.
+func TestAcceptInvitationLeavesAnExistingRoleAlone(t *testing.T) {
+	h, svc, invites := newRegistrationHandler("")
+	invites.invite("org-1", "boss@example.com", orgs.RoleMember)
+	invites.memberRoles["org-1:u-3"] = orgs.RoleAdmin
+	svc.sessions = map[string]*users.User{"cookie-3": {ID: "u-3", Email: "boss@example.com"}}
+
+	rec := httptest.NewRecorder()
+	h.AcceptInvitation(rec, jsonReq(http.MethodPost, "/api/v1/auth/invitations/accept",
+		`{"token":"tok-boss@example.com"}`, "cookie-3"))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200: %s", rec.Code, rec.Body.String())
+	}
+	var body map[string]any
+	if err := json.NewDecoder(rec.Body).Decode(&body); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if body["role"] != orgs.RoleAdmin || body["already_member"] != true {
+		t.Errorf("body = %+v, want the role they already held", body)
+	}
+}
+
+// Opening an invite link must never spend somebody's sign-in budget: the
+// preview draws on its own bucket, so a person who reloads the link a dozen
+// times can still sign in to the account they were invited to use.
+func TestPreviewInvitationDoesNotSpendTheSignInBudget(t *testing.T) {
+	h, _, invites := newRegistrationHandler("")
+	invites.invite("org-1", "invited@example.com", orgs.RoleMember)
+	h.authIPLimiter = newRateLimiter(1, 1)
+
+	for i := 0; i < 5; i++ {
+		rec := httptest.NewRecorder()
+		h.PreviewInvitation(rec, previewReq("tok-invited@example.com"))
+		if rec.Code != http.StatusOK {
+			t.Fatalf("preview %d: status = %d, want 200", i, rec.Code)
+		}
+	}
+	// The one sign-in token is untouched.
+	if ok, _ := h.authIPLimiter.check("203.0.113.12"); !ok {
+		t.Error("previewing an invite link consumed the sign-in bucket")
+	}
+
+	// Its own bucket still bounds it.
+	h.invitePreviewLimiter = newRateLimiter(1, 1)
+	rec := httptest.NewRecorder()
+	h.PreviewInvitation(rec, previewReq("tok-invited@example.com"))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("first preview status = %d, want 200", rec.Code)
+	}
+	rec = httptest.NewRecorder()
+	h.PreviewInvitation(rec, previewReq("tok-invited@example.com"))
+	if rec.Code != http.StatusTooManyRequests {
+		t.Errorf("second preview status = %d, want 429", rec.Code)
+	}
+}
+
+// AddOrgMember no longer dead-ends on an address with no account: it invites.
+func TestAddOrgMemberInvitesAnAddressWithNoAccount(t *testing.T) {
+	h, _, invites := newRegistrationHandler("")
+	h.userService = &fakeLoginService{}
+	admin := &users.User{ID: "u-admin", Email: "admin@example.com", IsAdmin: true}
+
+	rec := httptest.NewRecorder()
+	h.AddOrgMember(rec, asUser(muxReq(http.MethodPost, "/api/v1/orgs/org-1/members",
+		`{"email":"nobody@example.com","role":"member"}`, map[string]string{"id": "org-1"}), admin))
+	if rec.Code != http.StatusAccepted {
+		t.Fatalf("status = %d, want 202: %s", rec.Code, rec.Body.String())
+	}
+	if len(invites.created) != 1 || invites.created[0].Email != "nobody@example.com" {
+		t.Errorf("created = %v", invites.created)
+	}
+}
+
+// The invitation email names the workspace and the person who sent it — the
+// invitee has no membership yet to read either from, so they only ever see
+// what Create put on the row.
+func TestInvitationMailNamesTheWorkspaceAndInviter(t *testing.T) {
+	h, _, _ := newRegistrationHandler("")
+	mailer := newTestMailer()
+	h.mailer = mailer
+	admin := &users.User{ID: "u-admin", Email: "admin@example.com", Name: "Ada Admin", IsAdmin: true}
+
+	rec := httptest.NewRecorder()
+	h.CreateOrgInvitation(rec, asUser(muxReq(http.MethodPost, "/api/v1/orgs/org-1/invitations",
+		`{"email":"new@example.com","role":"member"}`, map[string]string{"id": "org-1"}), admin))
+	if rec.Code != http.StatusAccepted {
+		t.Fatalf("status = %d, want 202: %s", rec.Code, rec.Body.String())
+	}
+	var resp invitationResponse
+	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if !resp.Emailed {
+		t.Error("emailed = false with a working mailer")
+	}
+	if resp.Invitation.OrgName != "Test Workspace" || resp.Invitation.InvitedByName != "Ada Admin" {
+		t.Errorf("the response does not name the workspace and inviter: %+v", resp.Invitation)
+	}
+	// The mail goes out off the request path — emailed says it was queued —
+	// so the assertions on it wait for the send to land.
+	<-mailer.sent
+	mailer.mu.Lock()
+	defer mailer.mu.Unlock()
+	if len(mailer.body) != 1 {
+		t.Fatalf("mails sent = %d", len(mailer.body))
+	}
+	if !strings.Contains(mailer.body[0], "Test Workspace") || !strings.Contains(mailer.body[0], "Ada Admin") {
+		t.Errorf("mail body names neither workspace nor inviter:\n%s", mailer.body[0])
+	}
+}
+
+// Inviting into a personal workspace is refused before a row is written —
+// a personal space cannot have members, so it cannot promise one.
+func TestInvitingAPersonalWorkspaceIsRefused(t *testing.T) {
+	h, _, invites := newRegistrationHandler("")
+	invites.createErr = orgs.ErrPersonalOrgMembers
+	h.orgService = &fakeMemberOrgs{roles: map[string]string{}, personal: true}
+	admin := &users.User{ID: "u-admin", Email: "admin@example.com", IsAdmin: true}
+
+	for name, call := range map[string]func(http.ResponseWriter, *http.Request){
+		"invitations": h.CreateOrgInvitation,
+		"members":     h.AddOrgMember,
+	} {
+		rec := httptest.NewRecorder()
+		call(rec, asUser(muxReq(http.MethodPost, "/api/v1/orgs/org-personal/"+name,
+			`{"email":"nobody@example.com","role":"member"}`, map[string]string{"id": "org-personal"}), admin))
+		if rec.Code != http.StatusBadRequest {
+			t.Errorf("%s status = %d, want 400: %s", name, rec.Code, rec.Body.String())
+		}
+		if len(invites.created) != 0 {
+			t.Errorf("%s wrote an invitation into a personal workspace", name)
+		}
+	}
+}
+
+// Both entry points take the same branch: an address with an account joins
+// now, one already in the workspace is a conflict, one with no account is
+// invited. Only the statuses differ.
+func TestInvitingAnAddressThatAlreadyHasAnAccount(t *testing.T) {
+	h, svc, invites := newRegistrationHandler("")
+	member := &users.User{ID: "u-9", Email: "known@example.com", Name: "Known"}
+	svc.accounts = map[string]*users.User{"known@example.com": member}
+	orgSvc := &fakeMemberOrgs{roles: map[string]string{}}
+	h.orgService = orgSvc
+	admin := &users.User{ID: "u-admin", Email: "admin@example.com", IsAdmin: true}
+
+	// POST /orgs/{id}/invitations on an address that has an account adds the
+	// membership instead of mailing a link nobody needs: 201 with the
+	// member, the same answer POST /members gives for the same outcome.
+	rec := httptest.NewRecorder()
+	h.CreateOrgInvitation(rec, asUser(muxReq(http.MethodPost, "/api/v1/orgs/org-1/invitations",
+		`{"email":"Known@example.com","role":"admin"}`, map[string]string{"id": "org-1"}), admin))
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("status = %d, want 201: %s", rec.Code, rec.Body.String())
+	}
+	var got orgs.Member
+	if err := json.NewDecoder(rec.Body).Decode(&got); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if got.UserID != "u-9" || got.Role != orgs.RoleAdmin || got.UserEmail != "known@example.com" {
+		t.Errorf("member = %+v", got)
+	}
+	if len(orgSvc.added) != 1 || orgSvc.added[0] != "org-1:u-9:admin" {
+		t.Errorf("memberships = %v", orgSvc.added)
+	}
+	if len(invites.created) != 0 {
+		t.Errorf("an account holder was sent an invitation: %v", invites.created)
+	}
+
+	// Already a member: a conflict from either endpoint, not a second row
+	// and not a silent role rewrite.
+	orgSvc.roles["u-9"] = orgs.RoleMember
+	for name, call := range map[string]func(http.ResponseWriter, *http.Request){
+		"invitations": h.CreateOrgInvitation,
+		"members":     h.AddOrgMember,
+	} {
+		rec = httptest.NewRecorder()
+		call(rec, asUser(muxReq(http.MethodPost, "/api/v1/orgs/org-1/"+name,
+			`{"email":"known@example.com","role":"admin"}`, map[string]string{"id": "org-1"}), admin))
+		if rec.Code != http.StatusConflict {
+			t.Errorf("%s status = %d, want 409: %s", name, rec.Code, rec.Body.String())
+		}
+	}
+	if len(orgSvc.added) != 1 {
+		t.Errorf("memberships after the conflicts = %v", orgSvc.added)
+	}
+
+	// An address with no account is invited: 202 from either route.
+	rec = httptest.NewRecorder()
+	h.CreateOrgInvitation(rec, asUser(muxReq(http.MethodPost, "/api/v1/orgs/org-1/invitations",
+		`{"email":"stranger@example.com","role":"member"}`, map[string]string{"id": "org-1"}), admin))
+	if rec.Code != http.StatusAccepted {
+		t.Fatalf("invite status = %d, want 202: %s", rec.Code, rec.Body.String())
+	}
+	if len(invites.created) != 1 || invites.created[0].Email != "stranger@example.com" {
+		t.Errorf("created = %v", invites.created)
+	}
+}
+
+// The two entry points answer the SAME outcome with the same status and the
+// same body, so a client never has to know which one it called: 201 with the
+// membership when an address joined, 202 with {invitation, link, emailed}
+// when a link went out instead.
+func TestBothEntryPointsAgreeOnTheStatusPair(t *testing.T) {
+	admin := &users.User{ID: "u-admin", Email: "admin@example.com", IsAdmin: true}
+	calls := map[string]func(*Handler) func(http.ResponseWriter, *http.Request){
+		"invitations": func(h *Handler) func(http.ResponseWriter, *http.Request) { return h.CreateOrgInvitation },
+		"members":     func(h *Handler) func(http.ResponseWriter, *http.Request) { return h.AddOrgMember },
+	}
+	for name, pick := range calls {
+		// An address with an account: 201 and the membership.
+		h, svc, invites := newRegistrationHandler("")
+		svc.accounts = map[string]*users.User{"known@example.com": {ID: "u-9", Email: "known@example.com", Name: "Known"}}
+		h.orgService = &fakeMemberOrgs{roles: map[string]string{}}
+		rec := httptest.NewRecorder()
+		pick(h)(rec, asUser(muxReq(http.MethodPost, "/api/v1/orgs/org-1/"+name,
+			`{"email":"known@example.com","role":"member"}`, map[string]string{"id": "org-1"}), admin))
+		if rec.Code != http.StatusCreated {
+			t.Errorf("%s: joining an account holder returned %d, want 201: %s", name, rec.Code, rec.Body.String())
+		}
+		var member orgs.Member
+		if err := json.NewDecoder(rec.Body).Decode(&member); err != nil {
+			t.Fatalf("%s: decode member: %v", name, err)
+		}
+		if member.UserID != "u-9" || member.UserEmail != "known@example.com" || member.Role != orgs.RoleMember {
+			t.Errorf("%s: member body = %+v", name, member)
+		}
+
+		// An address with no account: 202 and the invitation.
+		rec = httptest.NewRecorder()
+		pick(h)(rec, asUser(muxReq(http.MethodPost, "/api/v1/orgs/org-1/"+name,
+			`{"email":"nobody@example.com","role":"member"}`, map[string]string{"id": "org-1"}), admin))
+		if rec.Code != http.StatusAccepted {
+			t.Errorf("%s: inviting returned %d, want 202: %s", name, rec.Code, rec.Body.String())
+		}
+		var resp invitationResponse
+		if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
+			t.Fatalf("%s: decode invitation: %v", name, err)
+		}
+		if resp.Invitation == nil || resp.Invitation.Email != "nobody@example.com" || resp.Link == "" {
+			t.Errorf("%s: invitation body = %+v (link %q)", name, resp.Invitation, resp.Link)
+		}
+		if len(invites.created) != 1 {
+			t.Errorf("%s: created = %v", name, invites.created)
+		}
+	}
+}
+
+// Someone who already has an account and follows an invite link while signed
+// out signs in first, then accepts the token: the handler pair has to work
+// in that order, on the session the sign-in just issued.
+func TestSignInThenAcceptTheInviteToken(t *testing.T) {
+	h, svc, invites := newRegistrationHandler("")
+	invites.invite("org-1", "member@example.com", orgs.RoleMember)
+	svc.sessions = map[string]*users.User{"session-token": {ID: "u1", Email: "member@example.com"}}
+
+	rec := httptest.NewRecorder()
+	h.Login(rec, jsonReq(http.MethodPost, "/api/v1/auth/login",
+		`{"email":"member@example.com","password":"right"}`, ""))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("login status = %d: %s", rec.Code, rec.Body.String())
+	}
+	var session string
+	for _, c := range rec.Result().Cookies() {
+		if c.Name == SessionCookieName {
+			session = c.Value
+		}
+	}
+	if session == "" {
+		t.Fatal("sign-in issued no session cookie")
+	}
+	if len(invites.accepted) != 0 {
+		t.Errorf("signing in must not accept anything on its own: %v", invites.accepted)
+	}
+
+	rec = httptest.NewRecorder()
+	h.AcceptInvitation(rec, jsonReq(http.MethodPost, "/api/v1/auth/invitations/accept",
+		`{"token":"tok-member@example.com"}`, session))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("accept status = %d, want 200: %s", rec.Code, rec.Body.String())
+	}
+	if len(invites.accepted) != 1 || invites.accepted[0] != "tok-member@example.com:u1" {
+		t.Errorf("accepted = %v", invites.accepted)
+	}
+}
+
+// --- invitation mail relay ------------------------------------------------
+
+// Creating an invitation mails an address the sender chose, so the endpoint
+// is a relay and is bounded per INVITING ACCOUNT: one admin (or one stolen
+// admin session) cannot point the deployment's SMTP credentials at a list,
+// and cannot spend a colleague's budget either.
+func TestInvitationCreationIsThrottledPerInvitingAccount(t *testing.T) {
+	h, _, invites := newRegistrationHandler("")
+	h.inviteLimiter = newRateLimiter(2, 1)
+	ada := &users.User{ID: "u-ada", Email: "ada@example.com", IsAdmin: true}
+	bob := &users.User{ID: "u-bob", Email: "bob@example.com", IsAdmin: true}
+
+	invite := func(admin *users.User, email string) int {
+		rec := httptest.NewRecorder()
+		h.CreateOrgInvitation(rec, asUser(muxReq(http.MethodPost, "/api/v1/orgs/org-1/invitations",
+			`{"email":"`+email+`","role":"member"}`, map[string]string{"id": "org-1"}), admin))
+		return rec.Code
+	}
+
+	if code := invite(ada, "one@example.com"); code != http.StatusAccepted {
+		t.Fatalf("first invitation = %d, want 202", code)
+	}
+	if code := invite(ada, "two@example.com"); code != http.StatusAccepted {
+		t.Fatalf("second invitation = %d, want 202", code)
+	}
+	rec := httptest.NewRecorder()
+	h.CreateOrgInvitation(rec, asUser(muxReq(http.MethodPost, "/api/v1/orgs/org-1/invitations",
+		`{"email":"three@example.com","role":"member"}`, map[string]string{"id": "org-1"}), ada))
+	if rec.Code != http.StatusTooManyRequests {
+		t.Fatalf("third invitation = %d, want 429", rec.Code)
+	}
+	if rec.Header().Get("Retry-After") == "" {
+		t.Error("a throttled invitation must say when to try again")
+	}
+	if len(invites.created) != 2 {
+		t.Errorf("created = %d invitations, want the two that were allowed", len(invites.created))
+	}
+
+	// A different admin has their own budget: one account cannot lock the
+	// workspace's other admins out of inviting.
+	if code := invite(bob, "four@example.com"); code != http.StatusAccepted {
+		t.Errorf("another admin's invitation = %d, want 202", code)
+	}
+
+	// The same bucket covers the members route, which mints the same link.
+	rec = httptest.NewRecorder()
+	h.AddOrgMember(rec, asUser(muxReq(http.MethodPost, "/api/v1/orgs/org-1/members",
+		`{"email":"five@example.com","role":"member"}`, map[string]string{"id": "org-1"}), ada))
+	if rec.Code != http.StatusTooManyRequests {
+		t.Errorf("the members route = %d, want 429 from the same budget", rec.Code)
+	}
+}
+
+// Re-posting an invitation that has not changed does not mail a second link:
+// the person already has one in their inbox, and an impatient admin, a
+// double-submitted form or a retrying script must not turn into repeated
+// mail. The existing invitation comes back with emailed:false and a reason.
+func TestReInvitingWithinTheHourDoesNotMailAgain(t *testing.T) {
+	h, _, invites := newRegistrationHandler("")
+	mailer := newTestMailer()
+	h.mailer = mailer
+	admin := &users.User{ID: "u-admin", Email: "admin@example.com", Name: "Ada Admin", IsAdmin: true}
+	pending := invites.invite("org-1", "waiting@example.com", orgs.RoleMember)
+	pending.CreatedAt = time.Now().Add(-5 * time.Minute)
+	// Its link actually reached the address five minutes ago — the only
+	// state in which there is a second mail worth suppressing.
+	invites.markEmailed(pending, time.Now().Add(-5*time.Minute))
+
+	post := func(role string) *httptest.ResponseRecorder {
+		rec := httptest.NewRecorder()
+		h.CreateOrgInvitation(rec, asUser(muxReq(http.MethodPost, "/api/v1/orgs/org-1/invitations",
+			`{"email":"Waiting@Example.com","role":"`+role+`"}`, map[string]string{"id": "org-1"}), admin))
+		return rec
+	}
+
+	rec := post(orgs.RoleMember)
+	if rec.Code != http.StatusAccepted {
+		t.Fatalf("status = %d, want 202: %s", rec.Code, rec.Body.String())
+	}
+	var resp invitationResponse
+	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if resp.Invitation == nil || resp.Invitation.ID != pending.ID {
+		t.Errorf("invitation = %+v, want the one already waiting", resp.Invitation)
+	}
+	if resp.Emailed {
+		t.Error("emailed = true; the unchanged invitation must not be re-sent")
+	}
+	if resp.Reason == "" {
+		t.Error("an invitation that was not mailed must say why")
+	}
+	if resp.Link != "" {
+		t.Error("the existing link cannot be re-shown: the server keeps only its hash")
+	}
+	if len(invites.created) != 0 {
+		t.Errorf("a second invitation was minted: %v", invites.created)
+	}
+	mailer.mu.Lock()
+	sent := len(mailer.body)
+	mailer.mu.Unlock()
+	if sent != 0 {
+		t.Errorf("mails sent = %d, want none", sent)
+	}
+
+	// A CHANGED invitation is a different offer, so it is minted and mailed:
+	// re-inviting at another role must reach the person.
+	rec = post(orgs.RoleAdmin)
+	if rec.Code != http.StatusAccepted {
+		t.Fatalf("changed role status = %d, want 202: %s", rec.Code, rec.Body.String())
+	}
+	var changed invitationResponse
+	if err := json.NewDecoder(rec.Body).Decode(&changed); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if !changed.Emailed || changed.Link == "" || changed.Reason != "" {
+		t.Errorf("a changed invitation must be minted and mailed: %+v", changed)
+	}
+	if len(invites.created) != 1 {
+		t.Errorf("created = %v, want the re-invitation at the new role", invites.created)
+	}
+}
+
+// With no SMTP the link in the response IS the delivery, so there is no mail
+// to suppress: withholding it would leave an admin who closed the dialog
+// unable to invite that person for an hour.
+func TestReInvitingWithoutAMailerAlwaysMintsALink(t *testing.T) {
+	h, _, invites := newRegistrationHandler("")
+	admin := &users.User{ID: "u-admin", Email: "admin@example.com", IsAdmin: true}
+	pending := invites.invite("org-1", "waiting@example.com", orgs.RoleMember)
+	pending.CreatedAt = time.Now().Add(-time.Minute)
+
+	rec := httptest.NewRecorder()
+	h.CreateOrgInvitation(rec, asUser(muxReq(http.MethodPost, "/api/v1/orgs/org-1/invitations",
+		`{"email":"waiting@example.com","role":"member"}`, map[string]string{"id": "org-1"}), admin))
+	if rec.Code != http.StatusAccepted {
+		t.Fatalf("status = %d, want 202: %s", rec.Code, rec.Body.String())
+	}
+	var resp invitationResponse
+	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if resp.Link == "" || resp.Reason != "" {
+		t.Errorf("a mailer-less deployment must hand back a fresh link: %+v", resp)
+	}
+}
+
+// Once the window has passed, re-inviting mails a fresh link again: an
+// invitation that has been sitting for hours is exactly what "resend" is for.
+func TestReInvitingAfterTheWindowMailsAgain(t *testing.T) {
+	h, _, invites := newRegistrationHandler("")
+	mailer := newTestMailer()
+	h.mailer = mailer
+	admin := &users.User{ID: "u-admin", Email: "admin@example.com", IsAdmin: true}
+	pending := invites.invite("org-1", "stale@example.com", orgs.RoleMember)
+	pending.CreatedAt = time.Now().Add(-2 * time.Hour)
+	invites.markEmailed(pending, time.Now().Add(-2*time.Hour))
+
+	rec := httptest.NewRecorder()
+	h.CreateOrgInvitation(rec, asUser(muxReq(http.MethodPost, "/api/v1/orgs/org-1/invitations",
+		`{"email":"stale@example.com","role":"member"}`, map[string]string{"id": "org-1"}), admin))
+	if rec.Code != http.StatusAccepted {
+		t.Fatalf("status = %d, want 202: %s", rec.Code, rec.Body.String())
+	}
+	var resp invitationResponse
+	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if !resp.Emailed || resp.Link == "" {
+		t.Errorf("a stale invitation must be re-sent: %+v", resp)
+	}
+	if len(invites.created) != 1 {
+		t.Errorf("created = %v, want a fresh link", invites.created)
+	}
+}
+
+// --- what the registration says the token did ------------------------------
+
+// registerOutcome posts a sign-up and returns the status and the invitation
+// outcome the body reports.
+func registerOutcome(t *testing.T, h *Handler, email, token string) (int, string, map[string]any) {
+	t.Helper()
+	rec := httptest.NewRecorder()
+	h.Register(rec, registerWithTokenReq(email, token))
+	body := map[string]any{}
+	if rec.Body.Len() > 0 {
+		if err := json.NewDecoder(rec.Body).Decode(&body); err != nil {
+			t.Fatalf("decode: %v", err)
+		}
+	}
+	outcome, _ := body["invitation"].(string)
+	return rec.Code, outcome, body
+}
+
+// A sign-up that carried a link says what the link did. Silence is the bug
+// this closes: somebody follows an invitation, registers, and lands in an
+// empty account with no idea the membership did not happen.
+func TestRegisterReportsWhatTheInviteTokenDid(t *testing.T) {
+	t.Run("accepted", func(t *testing.T) {
+		h, _, invites := newRegistrationHandler("")
+		invites.invite("org-1", "invited@example.com", orgs.RoleMember)
+		code, outcome, _ := registerOutcome(t, h, "Invited@Example.com", "tok-invited@example.com")
+		if code != http.StatusOK || outcome != InviteOutcomeAccepted {
+			t.Errorf("status %d outcome %q, want 200 %q", code, outcome, InviteOutcomeAccepted)
+		}
+	})
+
+	t.Run("already a member", func(t *testing.T) {
+		h, _, invites := newRegistrationHandler("")
+		invites.invite("org-1", "invited@example.com", orgs.RoleAdmin)
+		invites.memberRoles["org-1:u2"] = orgs.RoleMember
+		_, outcome, _ := registerOutcome(t, h, "invited@example.com", "tok-invited@example.com")
+		if outcome != InviteOutcomeAlreadyMember {
+			t.Errorf("outcome = %q, want %q", outcome, InviteOutcomeAlreadyMember)
+		}
+	})
+
+	// The link is live but was issued elsewhere. On an OPEN deployment the
+	// account is still created — registering is allowed — so the outcome is
+	// the only thing that tells the person their link granted nothing.
+	t.Run("email mismatch", func(t *testing.T) {
+		h, svc, invites := newRegistrationHandler("")
+		invites.invite("org-1", "invited@example.com", orgs.RoleMember)
+		code, outcome, _ := registerOutcome(t, h, "someone-else@example.com", "tok-invited@example.com")
+		if code != http.StatusOK || outcome != InviteOutcomeEmailMismatch {
+			t.Errorf("status %d outcome %q, want 200 %q", code, outcome, InviteOutcomeEmailMismatch)
+		}
+		if svc.registered != 1 {
+			t.Error("an open deployment still creates the account")
+		}
+		if len(invites.accepted) != 0 {
+			t.Errorf("a mismatched link granted something: %v", invites.accepted)
+		}
+	})
+
+	t.Run("invalid", func(t *testing.T) {
+		h, _, _ := newRegistrationHandler("")
+		_, outcome, _ := registerOutcome(t, h, "nobody@example.com", "tok-nothing")
+		if outcome != InviteOutcomeInvalid {
+			t.Errorf("outcome = %q, want %q", outcome, InviteOutcomeInvalid)
+		}
+	})
+
+	// No token, no outcome: the field is absent from an ordinary sign-up.
+	t.Run("absent without a token", func(t *testing.T) {
+		h, _, _ := newRegistrationHandler("")
+		rec := httptest.NewRecorder()
+		h.Register(rec, registerReq("plain@example.com"))
+		if rec.Code != http.StatusOK {
+			t.Fatalf("status = %d, want 200", rec.Code)
+		}
+		body := map[string]any{}
+		if err := json.NewDecoder(rec.Body).Decode(&body); err != nil {
+			t.Fatalf("decode: %v", err)
+		}
+		if _, ok := body["invitation"]; ok {
+			t.Errorf("a sign-up with no token reported an invitation outcome: %v", body["invitation"])
+		}
+		if body["email"] != "plain@example.com" {
+			t.Errorf("the account's own fields must stay at the top level: %v", body)
+		}
+	})
+}
+
+// The revoke race, end to end. The token is resolved ONCE — opening the door
+// and naming the membership — and the membership is claimed afterwards. An
+// admin who revokes the invitation in that window leaves an account that was
+// allowed in and joined nothing, and the response says so instead of
+// pretending the link worked.
+func TestRegisterReportsAnInvitationRevokedMidFlight(t *testing.T) {
+	h, svc, invites := newRegistrationHandler(RegistrationClosed)
+	invites.invite("org-1", "invited@example.com", orgs.RoleMember)
+	// Revoked between the lookup and the acceptance.
+	invites.onLookup = func(inv *invitations.Invitation) {
+		invites.onLookup = nil
+		invites.revoke(inv)
+	}
+
+	code, outcome, _ := registerOutcome(t, h, "invited@example.com", "tok-invited@example.com")
+	if code != http.StatusOK {
+		t.Fatalf("status = %d, want 200: the sign-up was allowed on a live link", code)
+	}
+	if outcome != InviteOutcomeInvalid {
+		t.Errorf("outcome = %q, want %q", outcome, InviteOutcomeInvalid)
+	}
+	if svc.registered != 1 {
+		t.Errorf("registrations = %d, want 1", svc.registered)
+	}
+	if len(invites.accepted) != 0 {
+		t.Errorf("a revoked invitation granted membership anyway: %v", invites.accepted)
+	}
+}
+
+// --- the token proves the mailbox -----------------------------------------
+
+// An invitation token was mailed to the address being registered and nowhere
+// else, so presenting it proves that mailbox was read — the same proof a
+// verification link gives. A closed, verification-required deployment must
+// therefore not wall its invitee behind a SECOND mail.
+func TestRegisteringWithAnInviteTokenVerifiesTheAddress(t *testing.T) {
+	h, svc, invites := newRegistrationHandler(RegistrationClosed)
+	h.emailVerification = users.EmailVerificationPolicy{Required: true}
+	mailer := newTestMailer()
+	h.mailer = mailer
+	invites.invite("org-1", "invited@example.com", orgs.RoleMember)
+
+	code, outcome, body := registerOutcome(t, h, "invited@example.com", "tok-invited@example.com")
+	if code != http.StatusOK || outcome != InviteOutcomeAccepted {
+		t.Fatalf("status %d outcome %q", code, outcome)
+	}
+	if body["email_verified"] != true {
+		t.Errorf("email_verified = %v, want true: the token reached that mailbox", body["email_verified"])
+	}
+	if len(svc.verified) != 1 || svc.verified[0] != "u2" {
+		t.Errorf("verified = %v, want the new account", svc.verified)
+	}
+	// And no verification mail goes out: there is nothing left to prove.
+	select {
+	case <-mailer.sent:
+		t.Error("a verification mail was sent to an address the invite link already proved")
+	case <-time.After(50 * time.Millisecond):
+	}
+}
+
+// Registering WITHOUT a usable token proves nothing, so the wall still
+// applies and the verification mail still goes out.
+func TestRegisteringWithoutAnInviteTokenStaysUnverified(t *testing.T) {
+	h, svc, _ := newRegistrationHandler("")
+	h.emailVerification = users.EmailVerificationPolicy{Required: true}
+	mailer := newTestMailer()
+	h.mailer = mailer
+
+	rec := httptest.NewRecorder()
+	h.Register(rec, registerReq("plain@example.com"))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", rec.Code)
+	}
+	if len(svc.verified) != 0 {
+		t.Errorf("an unproved address was marked verified: %v", svc.verified)
+	}
+	select {
+	case <-mailer.sent:
+	case <-time.After(2 * time.Second):
+		t.Error("no verification mail was sent")
+	}
+}
+
+// A failure to record the verification is not a failure to register: the
+// account exists, and the wall's Resend still works.
+func TestAFailedVerificationStampStillRegisters(t *testing.T) {
+	h, svc, invites := newRegistrationHandler(RegistrationClosed)
+	h.emailVerification = users.EmailVerificationPolicy{Required: true}
+	svc.verifyErr = errors.New("database went away")
+	invites.invite("org-1", "invited@example.com", orgs.RoleMember)
+
+	code, outcome, body := registerOutcome(t, h, "invited@example.com", "tok-invited@example.com")
+	if code != http.StatusOK || outcome != InviteOutcomeAccepted {
+		t.Errorf("status %d outcome %q, want 200 %q", code, outcome, InviteOutcomeAccepted)
+	}
+	if body["email_verified"] != false {
+		t.Errorf("email_verified = %v, want false when the stamp failed", body["email_verified"])
+	}
+}
+
+// --- proof of the address before a membership ------------------------------
+
+// On a deployment that requires verification, an account that has NOT proved
+// it owns its address must not be handed a workspace by an admin typing that
+// address: nobody has read the mailbox yet. It is invited instead — the same
+// 202 an address with no account gets — and the link is what converts it.
+// An account that HAS verified keeps the direct-add path.
+func TestAddingAnUnverifiedAccountInvitesInsteadOfGrantingMembership(t *testing.T) {
+	admin := &users.User{ID: "u-admin", Email: "admin@example.com", IsAdmin: true}
+	post := func(h *Handler, email string) *httptest.ResponseRecorder {
+		rec := httptest.NewRecorder()
+		h.CreateOrgInvitation(rec, asUser(muxReq(http.MethodPost, "/api/v1/orgs/org-1/invitations",
+			`{"email":"`+email+`","role":"member"}`, map[string]string{"id": "org-1"}), admin))
+		return rec
+	}
+
+	// Unverified, and the deployment sends verification mail: invited.
+	h, svc, invites := newRegistrationHandler("")
+	h.emailVerification = users.EmailVerificationPolicy{Required: true}
+	orgSvc := &fakeMemberOrgs{roles: map[string]string{}}
+	h.orgService = orgSvc
+	svc.accounts = map[string]*users.User{
+		"unverified@example.com": {ID: "u-un", Email: "unverified@example.com", Name: "Un"},
+		"verified@example.com":   {ID: "u-ok", Email: "verified@example.com", Name: "Ok", EmailVerified: true},
+	}
+
+	rec := post(h, "Unverified@Example.com")
+	if rec.Code != http.StatusAccepted {
+		t.Fatalf("unverified account status = %d, want 202: %s", rec.Code, rec.Body.String())
+	}
+	var resp invitationResponse
+	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if resp.Invitation == nil || resp.Invitation.Email != "unverified@example.com" || resp.Link == "" {
+		t.Errorf("an unverified account must be invited: %+v (link %q)", resp.Invitation, resp.Link)
+	}
+	if len(orgSvc.added) != 0 {
+		t.Errorf("an unverified address was granted membership directly: %v", orgSvc.added)
+	}
+
+	// Verified: joined now, no link minted for somebody who needs none.
+	rec = post(h, "verified@example.com")
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("verified account status = %d, want 201: %s", rec.Code, rec.Body.String())
+	}
+	if len(orgSvc.added) != 1 || orgSvc.added[0] != "org-1:u-ok:member" {
+		t.Errorf("memberships = %v, want the verified account joined", orgSvc.added)
+	}
+	if len(invites.created) != 1 {
+		t.Errorf("invitations = %d, want only the one for the unverified address", len(invites.created))
+	}
+
+	// Where the deployment cannot verify addresses at all, there is no
+	// proof to wait for and the old behaviour stands: the account joins.
+	open, openSvc, openInvites := newRegistrationHandler("")
+	openOrgs := &fakeMemberOrgs{roles: map[string]string{}}
+	open.orgService = openOrgs
+	openSvc.accounts = map[string]*users.User{
+		"unverified@example.com": {ID: "u-un", Email: "unverified@example.com"},
+	}
+	if rec := post(open, "unverified@example.com"); rec.Code != http.StatusCreated {
+		t.Fatalf("status without a verification policy = %d, want 201: %s", rec.Code, rec.Body.String())
+	}
+	if len(openOrgs.added) != 1 || len(openInvites.created) != 0 {
+		t.Errorf("memberships = %v, invitations = %v", openOrgs.added, openInvites.created)
+	}
+}
+
+// Accepting a link proves the account read the invited mailbox, and the
+// invitation was issued to its OWN address — the same proof a verification
+// link carries. So the address is marked verified, and somebody who followed
+// an invitation is not immediately walled behind a second mail.
+func TestAcceptingAnInvitationVerifiesTheAddress(t *testing.T) {
+	h, svc, invites := newRegistrationHandler("")
+	h.emailVerification = users.EmailVerificationPolicy{Required: true}
+	invites.invite("org-1", "member@example.com", orgs.RoleMember)
+	svc.sessions = map[string]*users.User{
+		"session-token": {ID: "u1", Email: "member@example.com"},
+	}
+
+	rec := httptest.NewRecorder()
+	h.AcceptInvitation(rec, jsonReq(http.MethodPost, "/api/v1/auth/invitations/accept",
+		`{"token":"tok-member@example.com"}`, "session-token"))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("accept status = %d, want 200: %s", rec.Code, rec.Body.String())
+	}
+	if len(svc.verified) != 1 || svc.verified[0] != "u1" {
+		t.Errorf("verified = %v, want the accepting account", svc.verified)
+	}
+
+	// An account that was already in the workspace took the same link to the
+	// same mailbox, so it proves the same thing: already_member verifies too.
+	invites.invite("org-2", "member@example.com", orgs.RoleMember)
+	invites.memberRoles["org-2:u1"] = orgs.RoleAdmin
+	rec = httptest.NewRecorder()
+	h.AcceptInvitation(rec, jsonReq(http.MethodPost, "/api/v1/auth/invitations/accept",
+		`{"token":"tok-member@example.com"}`, "session-token"))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("already-member accept status = %d, want 200: %s", rec.Code, rec.Body.String())
+	}
+	if len(svc.verified) != 2 {
+		t.Errorf("verified = %v, want the already-member accept to verify as well", svc.verified)
+	}
+
+	// A mismatched address is refused, and verifies nothing: the account
+	// presenting the link is not the one it was sent to.
+	svc.sessions["other-session"] = &users.User{ID: "u2", Email: "someone-else@example.com"}
+	invites.invite("org-3", "invited@example.com", orgs.RoleMember)
+	rec = httptest.NewRecorder()
+	h.AcceptInvitation(rec, jsonReq(http.MethodPost, "/api/v1/auth/invitations/accept",
+		`{"token":"tok-invited@example.com"}`, "other-session"))
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("mismatch status = %d, want 403: %s", rec.Code, rec.Body.String())
+	}
+	if len(svc.verified) != 2 {
+		t.Errorf("verified = %v, want no stamp from a refused acceptance", svc.verified)
+	}
+}
+
+// An unchanged pending invitation whose mail never actually went out has
+// nothing sitting in anybody's inbox: re-posting it mints and sends a fresh
+// link, and hands the admin the link back, rather than suppressing a mail
+// that was never delivered.
+func TestReInvitingResendsWhenTheFirstMailNeverLanded(t *testing.T) {
+	h, _, invites := newRegistrationHandler("")
+	mailer := newTestMailer()
+	h.mailer = mailer
+	admin := &users.User{ID: "u-admin", Email: "admin@example.com", Name: "Ada Admin", IsAdmin: true}
+	// Pending, minutes old, and never delivered — the shape a failed send
+	// leaves behind.
+	pending := invites.invite("org-1", "waiting@example.com", orgs.RoleMember)
+	pending.CreatedAt = time.Now().Add(-5 * time.Minute)
+
+	rec := httptest.NewRecorder()
+	h.CreateOrgInvitation(rec, asUser(muxReq(http.MethodPost, "/api/v1/orgs/org-1/invitations",
+		`{"email":"waiting@example.com","role":"member"}`, map[string]string{"id": "org-1"}), admin))
+	if rec.Code != http.StatusAccepted {
+		t.Fatalf("status = %d, want 202: %s", rec.Code, rec.Body.String())
+	}
+	var resp invitationResponse
+	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if !resp.Emailed || resp.Link == "" || resp.Reason != "" {
+		t.Errorf("an invitation that was never delivered must be re-sent: %+v", resp)
+	}
+	if len(invites.created) != 1 {
+		t.Errorf("created = %v, want a fresh link", invites.created)
+	}
+
+	// The send is off the request path, and only a send that SUCCEEDS stamps
+	// the row — that stamp is what suppresses the next click.
+	<-mailer.sent
+	if !invites.wasEmailed(resp.Invitation.ID) {
+		t.Error("a delivered link left no last_emailed_at behind")
+	}
+}
+
+// A mailer that refuses still answers emailed:true — the send was queued —
+// and leaves the row unstamped, so the next click sends again instead of
+// telling the admin their colleague already has a link.
+func TestAFailedInvitationSendLeavesTheRowUnstamped(t *testing.T) {
+	h, _, invites := newRegistrationHandler("")
+	mailer := newTestMailer()
+	mailer.err = errors.New("smtp down")
+	h.mailer = mailer
+	admin := &users.User{ID: "u-admin", Email: "admin@example.com", Name: "Ada Admin", IsAdmin: true}
+
+	rec := httptest.NewRecorder()
+	h.CreateOrgInvitation(rec, asUser(muxReq(http.MethodPost, "/api/v1/orgs/org-1/invitations",
+		`{"email":"new@example.com","role":"member"}`, map[string]string{"id": "org-1"}), admin))
+	if rec.Code != http.StatusAccepted {
+		t.Fatalf("status = %d, want 202: %s", rec.Code, rec.Body.String())
+	}
+	var resp invitationResponse
+	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if !resp.Emailed {
+		t.Error("emailed reports a queued send, which this was")
+	}
+	<-mailer.sent
+	if invites.wasEmailed(resp.Invitation.ID) {
+		t.Error("a failed send must not stamp the row")
+	}
+}
+
+// Only an unusable link is a 404. A lookup that failed for any other reason
+// is the server's fault and is reported as one: answering "invalid or
+// expired" would send the invitee off for a replacement link that fails the
+// same way.
+func TestPreviewInvitationReportsALookupFailure(t *testing.T) {
+	h, _, invites := newRegistrationHandler("")
+	invites.lookupErr = errors.New("database is on fire")
+
+	rec := httptest.NewRecorder()
+	h.PreviewInvitation(rec, previewReq("tok-anything"))
+	if rec.Code != http.StatusInternalServerError {
+		t.Fatalf("status = %d, want 500: %s", rec.Code, rec.Body.String())
+	}
+	if strings.Contains(rec.Body.String(), "database is on fire") {
+		t.Errorf("the internal failure leaked to the caller: %s", rec.Body.String())
+	}
+
+	// An unknown token is still the one flat 404 a prober learns nothing from.
+	invites.lookupErr = nil
+	rec = httptest.NewRecorder()
+	h.PreviewInvitation(rec, previewReq("tok-nothing"))
+	if rec.Code != http.StatusNotFound {
+		t.Errorf("unknown token status = %d, want 404: %s", rec.Code, rec.Body.String())
+	}
+}
