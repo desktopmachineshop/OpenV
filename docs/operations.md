@@ -106,6 +106,113 @@ still succeeds. Each user can opt out under Settings → Notifications (stored a
 `users.email_notifications`, default on); the opt-out only matters once SMTP is
 configured.
 
+### What "high-signal" means
+
+Both side channels — email and web push — carry the same four notification
+types, and only those:
+
+| Type | Fires when |
+|---|---|
+| `run_failed` | An agent run you launched finished with an error |
+| `proposal_pending` | An agent submitted a change that needs your approval |
+| `review_requested` | An artifact entered the review queue (reviewers only) |
+| `budget_threshold` | Workspace spend crossed 80 % or 100 % of its budget |
+
+Chatter `@mention`s and `interview_completed` are deliberately **not** in the
+set: they are frequent enough that a mailbox — never mind a buzzing pocket —
+would stop being worth reading. They stay in-app, where the bell and its SSE
+stream deliver them live. Either list can be overridden per deployment with
+`OPENV_EMAIL_NOTIFICATION_TYPES` / `OPENV_PUSH_NOTIFICATION_TYPES`; an unset,
+empty, or separators-only value falls back to the four above.
+
+### Optional — web push notifications (REQ-109)
+
+Web push sends the same high-signal types to a member's phone or desktop even
+when OpenV is closed. As opt-in as email: with no VAPID key pair configured,
+`GET /api/v1/me/push/config` answers `enabled: false`, the settings toggle
+explains that the server has no keys, and nothing is ever sent.
+
+Generate one key pair **per deployment** — the public half is what browsers
+subscribe with, so rotating it invalidates every existing subscription:
+
+```console
+$ make vapid-keys          # or: go run ./cmd/openv-vapid
+OPENV_VAPID_PUBLIC_KEY=BF...
+OPENV_VAPID_PRIVATE_KEY=oG...
+OPENV_VAPID_SUBJECT=mailto:admin@example.com
+```
+
+| Variable | Purpose |
+|---|---|
+| `OPENV_VAPID_PUBLIC_KEY` | Application server key handed to browsers. Unset ⇒ push off |
+| `OPENV_VAPID_PRIVATE_KEY` | Signs the request to the push service. Treat as a secret; never commit it |
+| `OPENV_VAPID_SUBJECT` | Operator contact, `mailto:` or `https:` only — anything else leaves push off |
+| `OPENV_PUSH_NOTIFICATION_TYPES` | Comma-separated type override (default: the four high-signal types) |
+| `OPENV_PUSH_ENDPOINT_HOSTS` | Comma-separated EXTRA push-service hosts accepted in a subscription endpoint (see below). Unset ⇒ the built-in list only |
+
+Edit `OPENV_VAPID_SUBJECT` to an address you actually read: push services use
+it to reach the operator about a misbehaving deployment. A half-configured or
+malformed set leaves push off and says why in the boot log
+(`push: web push enabled` / `push: VAPID key pair incomplete` / `push:
+OPENV_VAPID_SUBJECT must be a mailto: or https: URI`).
+
+#### Which push services a subscription may name
+
+A subscription endpoint is a URL this server will later POST to, from inside
+the deployment's network and with no authentication — so it is only accepted
+when its **host** is a known push service. Endpoints are minted by browsers,
+and those are these:
+
+| Browser | Host pattern |
+|---|---|
+| Chrome, Chromium, Android | `fcm.googleapis.com` |
+| Safari (iOS / iPadOS / macOS) | `*.push.apple.com` |
+| Edge (Windows Notification Service) | `*.notify.windows.com` |
+| Firefox | `push.services.mozilla.com`, `updates.push.services.mozilla.com`, `*.push.services.mozilla.com` |
+
+`*.` matches one or more leading labels and never the bare domain. Anything
+else — another host, an address literal (`https://127.0.0.1/…`,
+`https://169.254.169.254/…`), a port other than 443, embedded credentials, or
+plain `http` — is refused with **400**. No name is ever resolved: DNS would
+only add a window in which a name that answers publicly now answers with an
+internal address at send time, so the list itself is the guard.
+
+A self-hosted push service (a Mozilla autopush of your own, a UnifiedPush
+distributor) is added with `OPENV_PUSH_ENDPOINT_HOSTS`, which **extends** the
+built-in list rather than replacing it:
+
+```bash
+OPENV_PUSH_ENDPOINT_HOSTS=push.example.internal,*.push.corp.example
+```
+
+Entries are hosts, exact or leading-wildcard, and are read per request, so a
+change takes effect on restart of the process that serves the API. An address
+literal is refused even when listed — name the service.
+
+Deep links in the notification are **same-origin paths** (`/projects/…`): the
+service worker follows a tap with `WindowClient.navigate`, which refuses a
+cross-origin URL, so unlike the emails they do not use `FRONTEND_URL`.
+Members turn push on **per device**, under Settings → Notifications → *Push
+notifications on this device*: the browser asks for permission, subscribes,
+and the subscription is stored in `push_subscriptions` (one row per device,
+unique on the endpoint). The same switch withdraws it. The per-user opt-in
+lives in `users.push_notifications` and defaults **off** — unlike email, push
+only exists once someone has granted a browser permission.
+
+Sends happen off the request path, on a fixed pool of 8 workers fed by a
+1024-deep queue, and each request to a push service times out after 10s. They
+are best-effort: a push service answering 404 or 410 means the subscription is
+gone for good and the row is deleted; any other failure stamps `failed_at`
+and keeps it, which the next successful send clears. If a push service is slow
+enough to fill the queue, further notifications are **dropped** rather than
+allowed to back up into the request path, and each drop logs
+`push: dispatch queue full; notification not pushed` with a running total —
+in-app and SSE delivery are unaffected.
+
+Browser support is the usual caveat: on iOS and iPadOS, push works only for
+an app **installed to the Home Screen** (Safari 16.4+). The settings toggle
+says so when the browser cannot do it.
+
 ### Email verification for sign-ups
 
 Setting `OPENV_SMTP_HOST` also switches on **email verification** for password

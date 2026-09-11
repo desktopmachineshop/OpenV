@@ -32,6 +32,12 @@
 //                  desktop:laptop-1366+fhd-1920 (see DESKTOP_PROFILES)
 //   TAGS           comma list of screen tags to restrict the run
 //   CHROMIUM_PATH  executablePath override for Chromium
+//   SHOT_SIZE      exact-size screenshot mode for the PWA manifest's
+//                  screenshots, which must declare fixed pixel dimensions:
+//                  <cssWidth>x<cssHeight>@<dpr> replaces the phone profile's
+//                  viewport (e.g. 360x640@3 => 1080x1920 PNGs)
+//   SHOT_FULLPAGE  0 clips each screenshot to the viewport instead of the
+//                  full page, which is what a fixed size needs
 // Exit code is 1 when a screen fails to render or throws a page error;
 // layout findings are reported, not failed, because some (ag-grid's
 // virtualised columns, deliberate scrollers) are expected.
@@ -295,6 +301,19 @@ const SCREENS = [
   { tag: 'manual', path: '/manual' },
   { tag: 'landing', path: '/' },
 ];
+// phoneDevice is the Pixel 5 profile, or the exact viewport SHOT_SIZE names.
+const phoneDevice = () => {
+  const raw = process.env.SHOT_SIZE;
+  if (!raw) return devices['Pixel 5'];
+  const m = /^(\d+)x(\d+)(?:@(\d+(?:\.\d+)?))?$/.exec(raw.trim());
+  if (!m) { console.error(`SHOT_SIZE must look like 360x640@3, got ${raw}`); process.exit(2); }
+  return {
+    ...devices['Pixel 5'],
+    viewport: { width: Number(m[1]), height: Number(m[2]) },
+    deviceScaleFactor: m[3] ? Number(m[3]) : 1,
+  };
+};
+
 async function runEngine(engine, device, name, desktop = false) {
   const browser = await engine.launch(
     engine === chromium && process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {}
@@ -318,7 +337,7 @@ async function runEngine(engine, device, name, desktop = false) {
       await page.goto(s.path); await page.waitForTimeout(900);
       if (open) { try { await open(page); } catch (e) { openErr = String(e).split('\n')[0].slice(0, 120); } await page.waitForTimeout(500); }
       const audit = await page.evaluate(AUDIT, { desktop });
-      await page.screenshot({ path: `${OUT}/${name}-${s.tag}.png`, fullPage: true });
+      await page.screenshot({ path: `${OUT}/${name}-${s.tag}.png`, fullPage: process.env.SHOT_FULLPAGE !== '0' });
       report.push({ tag: s.tag, url: page.url().replace(BASE_URL, ''), openErr, errors, ...audit });
     } catch (e) {
       report.push({ tag: s.tag, fatal: String(e).split('\n')[0].slice(0, 160) });
@@ -351,7 +370,7 @@ const desktopDevice = (p) => ({
 (async () => {
   const which = (process.env.ENGINES || 'android').split(',').map((s) => s.trim()).filter(Boolean);
   const all = {};
-  if (which.includes('android')) all.android = await runEngine(chromium, devices['Pixel 5'], 'android');
+  if (which.includes('android')) all.android = await runEngine(chromium, phoneDevice(), 'android');
   if (which.includes('iphone')) all.iphone = await runEngine(webkit, devices['iPhone 13'], 'iphone');
   const desktopArg = which.find((w) => w === 'desktop' || w.startsWith('desktop:'));
   if (desktopArg) {

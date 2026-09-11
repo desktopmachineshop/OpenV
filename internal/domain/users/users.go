@@ -82,6 +82,11 @@ type User struct {
 	// higher-signal notifications (issue #187). Defaults TRUE; only has any
 	// effect when the server has SMTP configured (email is opt-in infra).
 	EmailNotifications bool `json:"email_notifications"`
+	// PushNotifications is the per-user opt-in for web push delivery of the
+	// same higher-signal notification types (REQ-109). Defaults FALSE: push
+	// only reaches a device the member has explicitly granted permission on,
+	// so there is nothing to opt out of until they opt in.
+	PushNotifications bool `json:"push_notifications"`
 	// EmailVerified says the account has proved control of Email by following
 	// an emailed link (or was created by an identity provider that asserted a
 	// verified address). The auth middleware refuses an unverified session
@@ -128,6 +133,9 @@ type Repository interface {
 	// SetEmailNotifications flips one user's email opt-out. Scoped by id so it
 	// can only ever touch that user's own row.
 	SetEmailNotifications(userID string, enabled bool) error
+	// SetPushNotifications flips one user's web-push opt-in. Scoped by id,
+	// same as the email flag.
+	SetPushNotifications(userID string, enabled bool) error
 	// SaveEmailVerification stores v after discarding the user's unused
 	// pending links, so at most one link is live per account.
 	SaveEmailVerification(v *EmailVerification) error
@@ -188,6 +196,8 @@ type Service interface {
 	ListUsers() ([]*User, error)
 	// SetEmailNotifications updates the caller's own email opt-out (issue #187).
 	SetEmailNotifications(userID string, enabled bool) error
+	// SetPushNotifications updates the caller's own web-push opt-in (REQ-109).
+	SetPushNotifications(userID string, enabled bool) error
 	// IssueEmailVerification mints a fresh verification link for the user.
 	// email "" means the account's current address; any other address is a
 	// change request — the link goes there and the account's address changes
@@ -644,4 +654,9 @@ func (s *DefaultService) ListUsers() ([]*User, error) {
 // SetEmailNotifications updates a user's email-notification opt-out.
 func (s *DefaultService) SetEmailNotifications(userID string, enabled bool) error {
 	return s.repo.SetEmailNotifications(userID, enabled)
+}
+
+// SetPushNotifications updates a user's web-push opt-in.
+func (s *DefaultService) SetPushNotifications(userID string, enabled bool) error {
+	return s.repo.SetPushNotifications(userID, enabled)
 }

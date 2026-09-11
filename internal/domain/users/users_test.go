@@ -90,6 +90,9 @@ func (m *memRepo) CountUsers() (int, error)              { return len(m.users), 
 func (m *memRepo) SetEmailNotifications(string, bool) error {
 	return nil
 }
+func (m *memRepo) SetPushNotifications(string, bool) error {
+	return nil
+}
 func (m *memRepo) SaveSession(s *Session) error { m.sessions[s.ID] = s; return nil }
 func (m *memRepo) FindSessionByTokenHash(hash string) (*Session, error) {
 	for _, s := range m.sessions {

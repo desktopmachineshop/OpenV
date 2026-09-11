@@ -330,8 +330,38 @@ pushes new items live.
 | POST | `/api/v1/notifications/read` | Mark specific notifications read | user |
 | POST | `/api/v1/notifications/read-all` | Mark all read | user |
 | GET | `/api/v1/notifications/stream` | SSE stream of new notifications | user |
-| GET | `/api/v1/me/notification-prefs` | Get email-notification opt-out | user |
-| PUT | `/api/v1/me/notification-prefs` | Update email-notification opt-out | user |
+| GET | `/api/v1/me/notification-prefs` | Get the caller's email opt-out and push opt-in | user |
+| PUT | `/api/v1/me/notification-prefs` | Update either preference (`email_notifications`, `push_notifications`); an absent field is left as it was | user |
+
+### Web push subscriptions
+
+Per-device web push for the same high-signal types (REQ-109). Session cookie
+only — run tokens and worker keys are refused — and every query is keyed on
+the session's user id, so a member only ever sees or withdraws their own
+devices. Off unless the server has a VAPID key pair (`docs/operations.md`).
+
+| Method | Path | Purpose | Auth |
+|---|---|---|---|
+| GET | `/api/v1/me/push/config` | `{enabled, public_key}`; `enabled` is false when no VAPID keys are configured | user |
+| GET | `/api/v1/me/push-subscriptions` | `{subscriptions: [...]}` — the caller's devices, never their encryption keys | user |
+| POST | `/api/v1/me/push-subscriptions` | Register this device: `{endpoint, keys:{p256dh, auth}, user_agent?}` → 201. Idempotent on `endpoint`: re-posting refreshes the keys | user |
+| DELETE | `/api/v1/me/push-subscriptions` | Withdraw a device: `{endpoint}` → 204 (204 too when nothing was there) | user |
+
+`endpoint` must be an `https` URL on port 443, with no credentials, whose
+host is a known push service: `fcm.googleapis.com`, `*.push.apple.com`,
+`*.notify.windows.com`, `push.services.mozilla.com`,
+`updates.push.services.mozilla.com` or `*.push.services.mozilla.com`, plus any
+host listed in `OPENV_PUSH_ENDPOINT_HOSTS` (comma-separated, exact or
+leading-wildcard, for a self-hosted push service — see `docs/operations.md`).
+Anything else, including an address literal, is **400**; no name is resolved.
+
+The 201 body is the **persisted** row, so re-posting a device already on file
+answers with the same `id` and `created_at` that `GET
+/api/v1/me/push-subscriptions` lists.
+
+A push service that answers 404 or 410 deletes the subscription server-side;
+any other failure stamps `failed_at` and keeps the row, which a later
+successful send clears.
 
 ### Meta
 

@@ -42,6 +42,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/projects"
 	"github.com/openv/requirements-platform/internal/domain/proposals"
 	"github.com/openv/requirements-platform/internal/domain/providers"
+	"github.com/openv/requirements-platform/internal/domain/pushsubs"
 	"github.com/openv/requirements-platform/internal/domain/repoconns"
 	"github.com/openv/requirements-platform/internal/domain/reports"
 	"github.com/openv/requirements-platform/internal/domain/runnersessions"
@@ -184,6 +185,7 @@ func main() {
 	hostedWorkerRepo := postgres.NewHostedWorkerRepository(db)
 	runnerSessionRepo := postgres.NewRunnerSessionRepository(db)
 	notificationRepo := postgres.NewNotificationRepository(db)
+	pushSubRepo := postgres.NewPushSubscriptionRepository(db)
 	attributeDefRepo := postgres.NewAttributeDefinitionRepository(db)
 	sharedProductRepo := postgres.NewSharedProductRepository(db)
 
@@ -451,12 +453,30 @@ func main() {
 	registrationPolicy := api.RegistrationPolicyFromEnv()
 	emailDispatcher := notify.NewEmailDispatcher(emailMailer, userService, emailLinkBase, notify.EmailTypesFromEnv())
 
+	// Optional web push side channel for the same high-signal types (REQ-109).
+	// Also strictly opt-in: with no OPENV_VAPID_* key pair the dispatcher has
+	// no sender, /api/v1/me/push/config reports enabled=false and nothing is
+	// ever sent. Deep links use the same frontend base as the emails.
+	vapid := notify.VAPIDFromEnv()
+	pushSubService := pushsubs.NewDefaultService(pushSubRepo)
+	var pushSender notify.PushSender
+	if vapid.Enabled() {
+		// An explicit client: webpush-go's fallback is a bare http.Client
+		// with no timeout, which would let a push service that stops
+		// answering hold a dispatcher worker indefinitely.
+		pushSender = notify.NewWebPushSender(vapid, notify.DefaultPushHTTPClient())
+	}
+	// Push deep links are same-origin paths resolved by the service worker,
+	// so unlike the emails above the dispatcher needs no base URL.
+	pushDispatcher := notify.NewPushDispatcher(pushSender, pushSubService, userService, notify.PushTypesFromEnv())
+
 	// Notification fan-out: bus events become per-user inbox rows plus live
 	// SSE pushes on notify:<user_id> (issue #132), plus a best-effort email
 	// for eligible types when the recipient is opted in and SMTP is on (#187).
 	notificationService := notifications.NewDefaultService(notificationRepo)
 	notify.NewNotifier(notificationService, memberService, sseHub).
 		SetEmailDispatcher(emailDispatcher).
+		SetPushDispatcher(pushDispatcher).
 		Start(bus)
 
 	// Workspace budget alerts (issue #186): a finishing run's cost can push
@@ -464,6 +484,7 @@ func main() {
 	// monitor alerts org admins once per threshold per month. Warn-only.
 	notify.NewBudgetMonitor(orgService, runService, notificationService, sseHub).
 		SetEmailDispatcher(emailDispatcher).
+		SetPushDispatcher(pushDispatcher).
 		Start(bus)
 
 	// Optional over-budget soft-block (default OFF — warn-only). When
@@ -616,6 +637,8 @@ func main() {
 		HostedWorkerService:  hostedWorkerService,
 		RunnerSessionService: runnerSessionService,
 		NotificationService:  notificationService,
+		PushSubService:       pushSubService,
+		VAPID:                vapid,
 		Provisioner:          provisioner,
 		OrgSeeder: func(orgID string) error {
 			return seeds.EnsureOrgDefaults(orgID, agentService, teamService)

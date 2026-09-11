@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { PANEL_NOTIFICATIONS, PANEL_PARAM } from '../appShortcuts';
 import { AppNotification, notificationsAPI } from '../api/client';
 import { useViewport } from '../hooks/useViewport';
 
@@ -71,6 +72,19 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ variant = 'l
       setLoading(false);
     }
   }, []);
+
+  // The installed-app "Notifications" shortcut lands on ?panel=notifications
+  // (manifest.json): there is no notifications route — the inbox is this
+  // panel — so the parameter opens it, then is dropped so a reload or a back
+  // navigation does not reopen it.
+  const [searchParams, setSearchParams] = useSearchParams();
+  useEffect(() => {
+    if (searchParams.get(PANEL_PARAM) !== PANEL_NOTIFICATIONS) return;
+    setOpen(true);
+    const next = new URLSearchParams(searchParams);
+    next.delete(PANEL_PARAM);
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   // Initial badge + live updates over SSE.
   useEffect(() => {

@@ -637,6 +637,24 @@ export interface OrgInvitationCreated {
 
 export interface NotificationPrefs {
   email_notifications: boolean;
+  /** Web push opt-in (REQ-109). Defaults false until a device is granted permission. */
+  push_notifications: boolean;
+}
+
+/** Whether this deployment can send web push, and the key to subscribe with. */
+export interface PushConfig {
+  enabled: boolean;
+  public_key: string;
+}
+
+/** One device the member has subscribed. The encryption keys are never returned. */
+export interface PushSubscriptionRecord {
+  id: string;
+  endpoint: string;
+  user_agent?: string;
+  created_at: string;
+  last_used_at?: string;
+  failed_at?: string;
 }
 
 export interface ProjectMember {
@@ -1188,11 +1206,26 @@ export const passwordAPI = {
     client.put('/api/v1/me/password', { current_password, new_password }),
 };
 
-// Per-user notification preferences (issue #187): the email opt-out toggle.
+// Per-user notification preferences: the email opt-out (issue #187) and the
+// web push opt-in (REQ-109). update() takes a partial — the server leaves any
+// preference the body does not name exactly as it was.
 export const notificationPrefsAPI = {
   get: () => client.get<NotificationPrefs>('/api/v1/me/notification-prefs'),
-  update: (email_notifications: boolean) =>
-    client.put<NotificationPrefs>('/api/v1/me/notification-prefs', { email_notifications }),
+  update: (prefs: Partial<NotificationPrefs>) =>
+    client.put<NotificationPrefs>('/api/v1/me/notification-prefs', prefs),
+};
+
+// Web push subscriptions (REQ-109). One subscription per device; the browser
+// owns the endpoint and the keys, the server only stores them.
+export const pushAPI = {
+  config: () => client.get<PushConfig>('/api/v1/me/push/config'),
+  list: () =>
+    client.get<{ subscriptions: PushSubscriptionRecord[] }>('/api/v1/me/push-subscriptions'),
+  subscribe: (body: { endpoint: string; keys: { p256dh: string; auth: string }; user_agent?: string }) =>
+    client.post<PushSubscriptionRecord>('/api/v1/me/push-subscriptions', body),
+  // DELETE with a body: axios puts it under `data`.
+  unsubscribe: (endpoint: string) =>
+    client.delete<void>('/api/v1/me/push-subscriptions', { data: { endpoint } }),
 };
 
 // ---------------------------------------------------------------------------
