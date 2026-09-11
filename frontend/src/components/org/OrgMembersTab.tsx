@@ -254,7 +254,8 @@ export const OrgMembersTab: React.FC<OrgMembersTabProps> = ({ org, isAdmin, curr
                       {(isAdmin || isSelf) && (
                         <button
                           onClick={() => handleRemove(m)}
-                          style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontSize: 12, width: 'auto', padding: 2 }}
+                          className="compact-action"
+                          style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontSize: 13, width: 'auto' }}
                         >
                           {isSelf ? 'Leave' : 'Remove'}
                         </button>

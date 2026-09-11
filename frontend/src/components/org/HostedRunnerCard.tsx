@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { HostedRunnerStatus, hostedRunnerAPI } from '../../api/client';
 import { apiErrorMessage } from '../../api/errors';
+import { useViewport } from '../../hooks/useViewport';
 
 interface HostedRunnerCardProps {
   orgId: string;
@@ -11,11 +12,18 @@ const chipStyle = (bg: string): React.CSSProperties => ({
   display: 'inline-block',
   padding: '2px 10px',
   borderRadius: 10,
-  fontSize: 11,
+  fontSize: 12,
   fontWeight: 600,
   color: '#fff',
   background: bg,
 });
+
+// The provider API keys the enable form collects, one row each.
+const KEY_FIELDS: { id: string; label: string; placeholder: string }[] = [
+  { id: 'anthropic', label: 'Anthropic API key', placeholder: 'sk-ant-…' },
+  { id: 'openai', label: 'OpenAI API key', placeholder: 'sk-…' },
+  { id: 'gemini', label: 'Gemini API key', placeholder: 'AIza…' },
+];
 
 const statusColor = (status: string): string => {
   if (status === 'running') return 'var(--success)';
@@ -25,15 +33,21 @@ const statusColor = (status: string): string => {
 
 // Admin-managed hosted runner container. Non-admins get read-only status.
 export const HostedRunnerCard: React.FC<HostedRunnerCardProps> = ({ orgId, isAdmin }) => {
+  // On a phone the status facts stack under their labels and every action is
+  // a full-width, 44 px row (REQ-108).
+  const { isPhone } = useViewport();
   const [status, setStatus] = useState<HostedRunnerStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
-  // Enable form
-  const [anthropicKey, setAnthropicKey] = useState('');
-  const [openaiKey, setOpenaiKey] = useState('');
-  const [geminiKey, setGeminiKey] = useState('');
+  // Enable form: one value per provider key, in the order KEY_FIELDS lists.
+  const [keyValues, setKeyValues] = useState<Record<string, string>>({
+    anthropic: '',
+    openai: '',
+    gemini: '',
+  });
+  const setKey = (id: string, value: string) => setKeyValues((prev) => ({ ...prev, [id]: value }));
   const [formError, setFormError] = useState('');
 
   // Remove confirmation
@@ -59,9 +73,10 @@ export const HostedRunnerCard: React.FC<HostedRunnerCardProps> = ({ orgId, isAdm
   const handleEnable = async (e: React.FormEvent) => {
     e.preventDefault();
     const providerKeys: Record<string, string> = {};
-    if (anthropicKey.trim()) providerKeys.anthropic = anthropicKey.trim();
-    if (openaiKey.trim()) providerKeys.openai = openaiKey.trim();
-    if (geminiKey.trim()) providerKeys.gemini = geminiKey.trim();
+    for (const f of KEY_FIELDS) {
+      const value = (keyValues[f.id] || '').trim();
+      if (value) providerKeys[f.id] = value;
+    }
     if (Object.keys(providerKeys).length === 0) {
       setFormError('Enter at least one provider API key.');
       return;
@@ -70,9 +85,7 @@ export const HostedRunnerCard: React.FC<HostedRunnerCardProps> = ({ orgId, isAdm
     setBusy(true);
     try {
       await hostedRunnerAPI.enable(orgId, providerKeys);
-      setAnthropicKey('');
-      setOpenaiKey('');
-      setGeminiKey('');
+      setKeyValues({ anthropic: '', openai: '', gemini: '' });
       await load();
     } catch (err: any) {
       setError(`Failed to enable the hosted runner: ${apiErrorMessage(err)}`);
@@ -171,47 +184,56 @@ export const HostedRunnerCard: React.FC<HostedRunnerCardProps> = ({ orgId, isAdm
               Enable a hosted runner for this workspace. Provide at least one provider API key for
               the runner to use.
             </div>
-            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 8 }}>
-              <div style={{ flex: 1, minWidth: 180 }}>
-                <label style={{ fontSize: 12 }}>Anthropic API key</label>
-                <input
-                  type="password"
-                  value={anthropicKey}
-                  onChange={(e) => setAnthropicKey(e.target.value)}
-                  placeholder="sk-ant-…"
-                  autoComplete="off"
-                />
-              </div>
-              <div style={{ flex: 1, minWidth: 180 }}>
-                <label style={{ fontSize: 12 }}>OpenAI API key</label>
-                <input
-                  type="password"
-                  value={openaiKey}
-                  onChange={(e) => setOpenaiKey(e.target.value)}
-                  placeholder="sk-…"
-                  autoComplete="off"
-                />
-              </div>
-              <div style={{ flex: 1, minWidth: 180 }}>
-                <label style={{ fontSize: 12 }}>Gemini API key</label>
-                <input
-                  type="password"
-                  value={geminiKey}
-                  onChange={(e) => setGeminiKey(e.target.value)}
-                  placeholder="AIza…"
-                  autoComplete="off"
-                />
-              </div>
+            <div
+              // One field per row on a phone; three across on a wider screen.
+              style={
+                isPhone
+                  ? { display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 8 }
+                  : { display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 8 }
+              }
+            >
+              {KEY_FIELDS.map((f) => (
+                <div key={f.id} style={isPhone ? { minWidth: 0 } : { flex: 1, minWidth: 180 }}>
+                  <label htmlFor={f.id} style={{ fontSize: isPhone ? 13 : 12 }}>
+                    {f.label}
+                  </label>
+                  <input
+                    id={f.id}
+                    type="password"
+                    value={keyValues[f.id]}
+                    onChange={(e) => setKey(f.id, e.target.value)}
+                    placeholder={f.placeholder}
+                    // A key is not a password to remember, an email or a
+                    // sentence: no manager fill, no autocapitalise, no
+                    // autocorrect, and a plain keyboard.
+                    autoComplete="off"
+                    inputMode="text"
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    spellCheck={false}
+                    style={isPhone ? { width: '100%', minHeight: 44 } : undefined}
+                  />
+                </div>
+              ))}
             </div>
             {formError && (
-              <div style={{ color: 'var(--danger)', fontSize: 12, marginBottom: 8 }}>{formError}</div>
+              <div style={{ color: 'var(--danger)', fontSize: isPhone ? 13 : 12, marginBottom: 8 }}>
+                {formError}
+              </div>
             )}
-            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12 }}>
+            <div style={{ fontSize: isPhone ? 13 : 12, color: 'var(--text-muted)', marginBottom: 12 }}>
               Keys are sent to the runner container once and never stored by OpenV.
             </div>
-            <button type="submit" className="button" style={{ width: 'auto' }} disabled={busy}>
-              {busy ? 'Enabling…' : 'Enable hosted runner'}
-            </button>
+            <div className={isPhone ? 'action-sheet' : undefined}>
+              <button
+                type="submit"
+                className="button"
+                style={isPhone ? undefined : { width: 'auto' }}
+                disabled={busy}
+              >
+                {busy ? 'Enabling…' : 'Enable hosted runner'}
+              </button>
+            </div>
           </form>
         ) : (
           <div style={{ color: 'var(--neutral)', fontSize: 13 }}>
@@ -220,31 +242,45 @@ export const HostedRunnerCard: React.FC<HostedRunnerCardProps> = ({ orgId, isAdm
         )
       ) : (
         <>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-            <span style={chipStyle(statusColor(record.status))}>{record.status || 'unknown'}</span>
-            <span style={{ fontSize: 13, color: 'var(--text)' }}>
-              <span
-                style={{
-                  color: status.online ? 'var(--success)' : 'var(--neutral)',
-                  marginRight: 4,
-                  fontSize: 11,
-                }}
-              >
-                ●
+          <div
+            // A phone stacks the facts under their labels and puts the
+            // actions in a full-width column; a wider screen keeps the row.
+            style={
+              isPhone
+                ? { display: 'flex', flexDirection: 'column', gap: 10 }
+                : { display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }
+            }
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+              <span style={chipStyle(statusColor(record.status))}>{record.status || 'unknown'}</span>
+              <span style={{ fontSize: 13, color: 'var(--text)' }}>
+                <span
+                  style={{
+                    color: status.online ? 'var(--success)' : 'var(--neutral)',
+                    marginRight: 4,
+                    fontSize: 12,
+                  }}
+                >
+                  ●
+                </span>
+                {status.online ? 'online' : 'offline'}
               </span>
-              {status.online ? 'online' : 'offline'}
-            </span>
-            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-              container: <code style={{ fontSize: 12 }}>{record.container_name}</code>
+            </div>
+            <div style={{ fontSize: isPhone ? 13 : 12, color: 'var(--text-muted)', overflowWrap: 'anywhere' }}>
+              container:{' '}
+              <code style={{ fontSize: isPhone ? 13 : 12 }}>{record.container_name}</code>
               {status.container_state ? ` (${status.container_state})` : ''}
-            </span>
-            <div style={{ flex: 1 }} />
+            </div>
+            {!isPhone && <div style={{ flex: 1 }} />}
             {isAdmin && (
-              <div style={{ display: 'flex', gap: 8 }}>
+              <div
+                className={isPhone ? 'action-sheet' : undefined}
+                style={isPhone ? undefined : { display: 'flex', gap: 8 }}
+              >
                 {status.container_state === 'running' ? (
                   <button
                     className="button-secondary button"
-                    style={{ width: 'auto', padding: '6px 14px' }}
+                    style={isPhone ? undefined : { width: 'auto', padding: '6px 14px' }}
                     onClick={handleStop}
                     disabled={busy}
                   >
@@ -253,7 +289,7 @@ export const HostedRunnerCard: React.FC<HostedRunnerCardProps> = ({ orgId, isAdm
                 ) : (
                   <button
                     className="button"
-                    style={{ width: 'auto', padding: '6px 14px' }}
+                    style={isPhone ? undefined : { width: 'auto', padding: '6px 14px' }}
                     onClick={handleStart}
                     disabled={busy}
                   >
@@ -268,8 +304,8 @@ export const HostedRunnerCard: React.FC<HostedRunnerCardProps> = ({ orgId, isAdm
                     border: '1px solid var(--danger)',
                     color: 'var(--danger)',
                     cursor: 'pointer',
-                    fontSize: 13,
-                    width: 'auto',
+                    fontSize: isPhone ? 14 : 13,
+                    width: isPhone ? '100%' : 'auto',
                     padding: '6px 14px',
                     borderRadius: 4,
                   }}
@@ -316,7 +352,10 @@ export const HostedRunnerCard: React.FC<HostedRunnerCardProps> = ({ orgId, isAdm
                 />
                 also delete its credential volume
               </label>
-              <div style={{ display: 'flex', gap: 8 }}>
+              <div
+                className={isPhone ? 'action-sheet' : undefined}
+                style={isPhone ? undefined : { display: 'flex', gap: 8 }}
+              >
                 <button
                   onClick={handleRemove}
                   disabled={busy}
@@ -325,9 +364,9 @@ export const HostedRunnerCard: React.FC<HostedRunnerCardProps> = ({ orgId, isAdm
                     border: 'none',
                     color: '#fff',
                     cursor: 'pointer',
-                    fontSize: 13,
+                    fontSize: isPhone ? 14 : 13,
                     fontWeight: 600,
-                    width: 'auto',
+                    width: isPhone ? '100%' : 'auto',
                     padding: '6px 14px',
                     borderRadius: 4,
                   }}
@@ -336,7 +375,7 @@ export const HostedRunnerCard: React.FC<HostedRunnerCardProps> = ({ orgId, isAdm
                 </button>
                 <button
                   className="button-secondary button"
-                  style={{ width: 'auto', padding: '6px 14px' }}
+                  style={isPhone ? undefined : { width: 'auto', padding: '6px 14px' }}
                   onClick={() => {
                     setConfirmingRemove(false);
                     setPurgeVolume(false);

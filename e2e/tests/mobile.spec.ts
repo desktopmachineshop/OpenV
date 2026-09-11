@@ -179,3 +179,75 @@ test('the agent pages open their side panes as sheets', async () => {
   await expect(page.getByRole('columnheader', { name: 'Name' })).toBeVisible();
   await expectNoHorizontalScroll(page);
 });
+
+test('runner control and the relayed sign-in work at phone size', async () => {
+  // REQ-108. The workspace Runners tab is the runner surface every member
+  // reaches; its controls must be on the screen and tappable.
+  await page.goto('/org/settings?tab=worker-keys');
+  await expect(page.getByRole('heading', { name: 'My personal runner' })).toBeVisible();
+  await expectNoHorizontalScroll(page);
+  // Reachable and tappable, not necessarily above the fold: the hosted-runner
+  // card sits above this one, so on a short phone (the iPhone 13's 664 px
+  // against the Pixel 5's 727 px) the control starts below the first screen.
+  // What REQ-108 asks is that a thumb can reach it and hit it.
+  const connector = page.getByRole('button', { name: 'Set up Agent Connector' });
+  await connector.scrollIntoViewIfNeeded();
+  await expect(connector).toBeInViewport();
+  expect((await connector.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+
+  // The cloud runner lease lives in personal settings, beside the agent
+  // sign-ins it feeds. A deployment with no pool renders no card at all, so
+  // the lease control is asserted only where it exists; "Start a cloud
+  // runner" on an unleased pool is the same full-width control as "Extend
+  // the lease" and "End now" once a lease is held.
+  await page.goto(`/projects/${projectId}`);
+  await page.getByRole('button', { name: 'Project menu' }).click();
+  const drawer = page.getByRole('complementary', { name: 'Project navigation' });
+  await drawer.getByRole('button', { name: /^Account menu/ }).click();
+  await drawer.getByRole('button', { name: 'Settings', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Agent sign-ins' })).toBeVisible();
+  await expectNoHorizontalScroll(page);
+
+  const lease = page.getByRole('button', { name: /Start a cloud runner|Extend the lease/ }).first();
+  if (await lease.count()) {
+    await lease.scrollIntoViewIfNeeded();
+    await expect(lease).toBeInViewport();
+    expect((await lease.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  }
+
+  // The relay: a real sign-in needs a runner to claim it, so the worker's
+  // side is answered from the test. What is under test is this browser's
+  // half — the link a phone can follow, and the field that takes a paste
+  // from a password manager and submits with the keyboard's send key.
+  await page.route('**/api/v1/provider-logins**', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        id: 'e2e-login',
+        provider: 'claude-code',
+        target: 'user',
+        status: 'awaiting_code',
+        auth_url: 'https://example.com/oauth/authorize?client_id=openv',
+        detail: 'Open the sign-in link, authorize, then paste the code you are given back here.',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }),
+    })
+  );
+  await page.getByRole('button', { name: 'Connect', exact: true }).first().click();
+
+  const codeField = page.getByRole('textbox', { name: 'Authorization code' });
+  await expect(codeField).toBeVisible();
+  await expect(codeField).toHaveAttribute('enterkeyhint', 'send');
+  await expect(codeField).toHaveAttribute('inputmode', 'text');
+  await expect(codeField).toHaveAttribute('autocapitalize', 'none');
+  expect((await codeField.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+
+  const authLink = page.getByRole('link', { name: /Open sign-in page/ });
+  await expect(authLink).toBeInViewport();
+  await expect(authLink).toHaveAttribute('target', '_blank');
+  await expectNoHorizontalScroll(page);
+  await page.unroute('**/api/v1/provider-logins**');
+  await page.getByRole('button', { name: 'Close settings' }).click();
+});

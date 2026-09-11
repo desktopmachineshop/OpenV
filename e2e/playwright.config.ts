@@ -43,6 +43,14 @@ export default defineConfig({
     baseURL: process.env.BASE_URL || 'http://localhost:3000',
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
+    // The app registers a service worker for PWA installability, and its
+    // fetch handler puts every API call through the worker. Chromium's
+    // interception sits below that and still sees the call; WebKit's sits
+    // above it and does not, so a page.route mock silently reached the real
+    // API on the iPhone project and not on Android. No test here asserts
+    // anything about the worker, so the context does without it and route
+    // mocks behave the same in both engines.
+    serviceWorkers: 'block',
   },
   // Two engines: Chromium for the bulk of the desktop audience and WebKit
   // because Safari is the browser on every iPhone and iPad, and it is the

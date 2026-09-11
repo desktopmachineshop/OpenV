@@ -232,7 +232,7 @@ export const OrgUsageTab: React.FC<OrgUsageTabProps> = ({ org }) => {
                 <span
                   style={{
                     marginLeft: 'auto',
-                    fontSize: 11.5,
+                    fontSize: 12,
                     fontWeight: 600,
                     color: barColor,
                     border: `1px solid ${barColor}`,
@@ -307,7 +307,7 @@ export const OrgUsageTab: React.FC<OrgUsageTabProps> = ({ org }) => {
                     padding: '10px 14px',
                   }}
                 >
-                  <div style={{ fontSize: 11.5, color: 'var(--text-muted)', fontWeight: 600 }}>{stat.label}</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600 }}>{stat.label}</div>
                   <div style={{ fontSize: 20, color: 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>
                     {stat.value}
                   </div>

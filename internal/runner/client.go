@@ -265,12 +265,15 @@ func (c *Client) ClaimLogin() (*providers.LoginRequest, error) {
 	return &login, nil
 }
 
-// LoginProgress reports sign-in progress back to the API.
-func (c *Client) LoginProgress(id, status, authURL, detail string) error {
+// LoginProgress reports sign-in progress back to the API. pasteKind names
+// what the member must paste back ("code" or "url") when this step asks for
+// one, and is empty otherwise.
+func (c *Client) LoginProgress(id, status, authURL, detail, pasteKind string) error {
 	resp, err := c.do(c.http, "POST", "/api/v1/provider-logins/"+id+"/progress", map[string]string{
-		"status":   status,
-		"auth_url": authURL,
-		"detail":   detail,
+		"status":     status,
+		"auth_url":   authURL,
+		"detail":     detail,
+		"paste_kind": pasteKind,
 	})
 	if err != nil {
 		return err

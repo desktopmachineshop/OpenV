@@ -1,10 +1,13 @@
 package runner
 
 import (
+	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/openv/requirements-platform/internal/domain/providers"
 )
@@ -288,4 +291,122 @@ func TestParseClaudeAuthStatus(t *testing.T) {
 			}
 		})
 	}
+}
+
+// The UI needs to know what the member is being asked to paste — a short code
+// or a whole redirected address — to open the right keyboard on a phone and
+// label the field. Only the worker knows for certain: it is a property of the
+// flow it is driving, not something to be guessed from the instruction text.
+// These tests pin the field each headless flow reports.
+
+// loginProgressServer stands in for the API: it records every progress post
+// and answers the worker's own poll with a cancellation, so the flow under
+// test reports its paste-back step and then stops.
+func loginProgressServer(t *testing.T, posts chan<- map[string]string) *httptest.Server {
+	t.Helper()
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case strings.HasSuffix(r.URL.Path, "/progress"):
+			var body map[string]string
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				t.Errorf("decoding a progress post: %v", err)
+			}
+			select {
+			case posts <- body:
+			default:
+			}
+			_, _ = w.Write([]byte(`{}`))
+		case strings.HasSuffix(r.URL.Path, "/full"):
+			_ = json.NewEncoder(w).Encode(providers.LoginRequest{ID: "l1", Status: providers.LoginCancelled})
+		default:
+			_, _ = w.Write([]byte(`{}`))
+		}
+	}))
+}
+
+// awaitPasteStep returns the first progress post that asks the member to paste
+// something back.
+func awaitPasteStep(t *testing.T, posts <-chan map[string]string) map[string]string {
+	t.Helper()
+	deadline := time.After(30 * time.Second)
+	for {
+		select {
+		case post := <-posts:
+			if post["status"] == providers.LoginAwaitingCode {
+				return post
+			}
+		case <-deadline:
+			t.Fatal("the worker never reported a paste-back step")
+			return nil
+		}
+	}
+}
+
+// waitFor fails the test if the flow has not returned in time, rather than
+// hanging the suite.
+func waitFor(t *testing.T, done <-chan struct{}) {
+	t.Helper()
+	select {
+	case <-done:
+	case <-time.After(30 * time.Second):
+		t.Fatal("the sign-in flow did not return after the request was cancelled")
+	}
+}
+
+// A loopback flow asks for the whole redirected address.
+func TestLoopbackLoginReportsAURLPaste(t *testing.T) {
+	posts := make(chan map[string]string, 8)
+	srv := loginProgressServer(t, posts)
+	defer srv.Close()
+
+	worker := NewWorker(NewClient(srv.URL, "worker-key"), Options{Headless: true})
+	flow := loginFlow{
+		command: []string{"sh", "-c",
+			"echo https://auth.example.com/authorize?redirect_uri=http%3A%2F%2F127.0.0.1%3A1455%2Fcb; sleep 5"},
+		loopback: true,
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		worker.handleLoopbackLogin(ctx, &providers.LoginRequest{ID: "l1", Provider: providers.ProviderCodexCLI}, flow)
+	}()
+
+	post := awaitPasteStep(t, posts)
+	if got := post["paste_kind"]; got != providers.PasteKindURL {
+		t.Errorf("loopback sign-in reported paste_kind %q, want %q", got, providers.PasteKindURL)
+	}
+	waitFor(t, done)
+}
+
+// A terminal (paste-back) flow asks for a short code.
+func TestPTYLoginReportsACodePaste(t *testing.T) {
+	if !ptySupported {
+		t.Skip("this platform drives TUI sign-ins in a console window, not a pseudo-terminal")
+	}
+	posts := make(chan map[string]string, 8)
+	srv := loginProgressServer(t, posts)
+	defer srv.Close()
+
+	worker := NewWorker(NewClient(srv.URL, "worker-key"), Options{Headless: true})
+	flow := loginFlow{
+		command:     []string{"sh", "-c", "echo https://claude.ai/oauth/authorize?client_id=openv; sleep 5"},
+		interactive: true,
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		worker.handlePTYLogin(ctx, &providers.LoginRequest{ID: "l1", Provider: providers.ProviderClaudeCode}, flow)
+	}()
+
+	post := awaitPasteStep(t, posts)
+	if got := post["paste_kind"]; got != providers.PasteKindCode {
+		t.Errorf("terminal sign-in reported paste_kind %q, want %q", got, providers.PasteKindCode)
+	}
+	waitFor(t, done)
 }

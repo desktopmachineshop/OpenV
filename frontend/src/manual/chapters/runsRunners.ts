@@ -73,6 +73,15 @@ The trade is that it doesn't last:
 If every cloud runner is in use, the card says so: they're leased one member
 at a time, so you either wait or use your own machine.
 
+**On a phone** the whole lease is one column: the status, the countdown and
+how many runners are free, each under its own label, with **Start a cloud
+runner** / **Extend the lease** / **End now** as full-width buttons you can
+hit with a thumb. The sign-in relay below it is built for a phone too — the
+**Open sign-in page** link hands the vendor's page to your browser, and the
+field it comes back to takes a paste from your password manager (there's a
+**Paste** button where the browser allows it) and submits with the keyboard's
+send key.
+
 ### Hosted runner (always-on, org API keys)
 
 A workspace admin can provision a **hosted runner** — a platform-managed
