@@ -328,7 +328,11 @@ func main() {
 	interviewService := interviews.NewDefaultService(interviewRepo)
 
 	// Agent engine services.
-	agentService, err := agents.NewFileService(agentsDir, agentRepo)
+	// The file sync backfills a definition that carries no allowlist (REQ-91),
+	// and it runs before seeds.EnsureOrgDefaults, so it is the one that
+	// decides what a seeded agent ends up with — hence the seed lookup.
+	agentService, err := agents.NewFileService(agentsDir, agentRepo,
+		agents.WithSeedAllowedTools(seeds.SeedAllowedTools))
 	if err != nil {
 		fatal("failed to initialize agent service", err)
 	}

@@ -7,6 +7,7 @@ import (
 
 	"github.com/openv/requirements-platform/internal/domain/agents"
 	"github.com/openv/requirements-platform/internal/domain/teams"
+	"github.com/openv/requirements-platform/internal/mcp"
 )
 
 type seedAgent struct {
@@ -28,6 +29,14 @@ Ground rules (always follow):
 - Find kanban cards with list_work_items (filter by column, e.g. "todo", or assignee) — never guess at card IDs. When working a card, call get_work_item and get_work_item_history first; the card history is your working memory.
 - Cite requirement IDs in every proposal, comment, and commit message.
 - If the task lacks the requirements you need, say so and stop.`
+
+// interviewerTools is the seeded interviewer's allowlist: every read-only
+// OpenV tool plus the candidate-need recorder it exists to call. Enumerated
+// from the tool table itself (internal/mcp) rather than written out here, so a
+// tool added there is classified once, in one place.
+func interviewerTools() []string {
+	return append(mcp.ReadOnlyToolNames(), mcp.ToolPrefix+"record_candidate_need")
+}
 
 func defaultAgents() []seedAgent {
 	return []seedAgent{
@@ -140,12 +149,21 @@ You can search the web and read pages you find. Use it when a claim has an autho
 		},
 		{
 			def: agents.Definition{
-				Slug:         "requirements-interviewer",
-				Name:         "Requirements Interviewer",
-				Provider:     "claude-code",
-				WriteMode:    agents.WriteModeDirect,
-				Description:  "Conducts natural-language elicitation interviews with invited stakeholders.",
-				AllowedTools: []string{"mcp__openv__*"},
+				Slug:        agents.InterviewerSlug,
+				Name:        "Requirements Interviewer",
+				Provider:    "claude-code",
+				WriteMode:   agents.WriteModeDirect,
+				Description: "Conducts natural-language elicitation interviews with invited stakeholders.",
+				// Every word this agent reads was typed by someone outside the
+				// workspace — often someone with no account at all, on a public
+				// invite link. So its tools are enumerated rather than
+				// wildcarded (REQ-91, HAZ-1): the read-only OpenV tools, plus
+				// the one writer it needs, record_candidate_need. A prompt
+				// injection in a participant's answer then has nothing to reach
+				// for — no artifact edits, no links, no delegation, and no file
+				// or shell tools, which the run's permission mode denies as
+				// well (internal/runner: untrusted runs auto-approve nothing).
+				AllowedTools: interviewerTools(),
 				SystemPrompt: `You are a friendly product interviewer talking with a person about what they need from a product. Have a natural conversation: one question at a time, plain language, no jargon, genuine follow-ups on interesting answers. Start broad (their role, how they'd use the product) and go deeper into concrete situations, frustrations, and desired outcomes. When you learn a concrete need, record it with the record_candidate_need tool (with their words as the supporting quote) before replying. Keep replies short — this is a chat, not an essay. Never mention tools, requirements engineering, or internal terminology to the participant.`,
 			},
 		},
@@ -200,6 +218,16 @@ var previousSeedVersions = map[string][]agents.Definition{
 			AllowedTools: []string{"mcp__openv__*"},
 		},
 	},
+	// The interviewer used to hold the whole OpenV tool surface by wildcard.
+	// It talks to strangers on public invite links, so the current seed
+	// enumerates read-only tools plus record_candidate_need instead (REQ-91).
+	// Recorded here so an install that never tuned the agent is *narrowed* at
+	// the next startup — the one adoption that takes capability away.
+	agents.InterviewerSlug: {
+		{
+			AllowedTools: []string{"mcp__openv__*"},
+		},
+	},
 }
 
 // adoptSeedDefaults brings one already-provisioned agent up to the current
@@ -224,22 +252,10 @@ func adoptSeedDefaults(orgID string, existing *agents.Agent, want agents.Definit
 	}
 
 	// Everything the workspace may have tuned is carried over untouched; only
-	// the fields below are candidates for adoption.
-	def := agents.Definition{
-		Slug:           existing.Slug,
-		Name:           existing.Name,
-		Description:    existing.Description,
-		Provider:       existing.Provider,
-		Model:          existing.Model,
-		Effort:         existing.Effort,
-		AllowedTools:   existing.AllowedTools,
-		WriteMode:      existing.WriteMode,
-		RepoAccess:     existing.RepoAccess,
-		MaxTurns:       existing.MaxTurns,
-		TimeoutSeconds: existing.TimeoutSeconds,
-		Config:         existing.Config,
-		SystemPrompt:   existing.SystemPrompt,
-	}
+	// the fields below are candidates for adoption. definitionOf is the one
+	// place that knows how to render a row back into its file, so a field
+	// added to the definition cannot be silently dropped here.
+	def := definitionOf(existing)
 
 	changed := false
 	for _, f := range []struct {
@@ -289,9 +305,129 @@ func adoptSeedDefaults(orgID string, existing *agents.Agent, want agents.Definit
 	return true, nil
 }
 
+// backfillAllowedTools gives an agent provisioned before allowlists were
+// mandatory (REQ-91) one, so it can still run. There is no schema migration
+// behind this: it is a startup reconcile, and it only ever fires on a row that
+// carries no allowlist at all — which used to mean "the vendor CLI gets every
+// tool it has", so writing a list here always narrows what the agent may do.
+//
+// A locked agent is the workspace's standing answer to "can this change
+// without us?", so it is left exactly as it is and reported instead: it will
+// refuse to run until someone gives it an allowlist themselves.
+func backfillAllowedTools(orgID string, existing *agents.Agent, want []string, agentService agents.Service) error {
+	if len(agents.NonEmptyTools(existing.AllowedTools)) > 0 {
+		return nil
+	}
+	if len(want) == 0 {
+		want = agents.DefaultAllowedTools()
+	}
+	if existing.Locked {
+		log.Printf("seeds: agent %q in org %s is locked and has no allowed_tools; it cannot run until one is set (Agents → %s → Allowed tools)",
+			existing.Slug, orgID, existing.Slug)
+		return nil
+	}
+	def := definitionOf(existing)
+	def.AllowedTools = append([]string(nil), want...)
+	if _, err := agentService.SaveDefinition(orgID, &def); err != nil {
+		return fmt.Errorf("failed to backfill allowed_tools for agent %s: %w", existing.Slug, err)
+	}
+	log.Printf("seeds: agent %q in org %s had no allowed_tools; set to %v", existing.Slug, orgID, def.AllowedTools)
+	return nil
+}
+
+// definitionOf renders an agent row back into the definition its file holds,
+// so a reconcile can change one field and write the rest back untouched.
+func definitionOf(a *agents.Agent) agents.Definition {
+	return agents.Definition{
+		Slug:           a.Slug,
+		Name:           a.Name,
+		Description:    a.Description,
+		Provider:       a.Provider,
+		Model:          a.Model,
+		Effort:         a.Effort,
+		AllowedTools:   a.AllowedTools,
+		WriteMode:      a.WriteMode,
+		RepoAccess:     a.RepoAccess,
+		MaxTurns:       a.MaxTurns,
+		TimeoutSeconds: a.TimeoutSeconds,
+		Config:         a.Config,
+		Locked:         a.Locked,
+		SystemPrompt:   a.SystemPrompt,
+	}
+}
+
+// SeedAllowedTools returns the allowlist the seeded agent with this slug
+// carries, or nil for a slug nobody seeded. It is the lookup the *file* sync
+// backfills from (agents.WithSeedAllowedTools, wired in cmd/server), so a
+// seeded definition on disk that predates REQ-91 is filled in with the same
+// list the registry-side backfill below would have given it.
+//
+// The two paths have to agree, and the file sync runs first: it is what turns
+// a legacy `developer.md` into a registry row, and BackfillOrgAllowedTools
+// only ever fires on a row with no allowlist at all. Whatever the sync writes
+// is therefore final, which is why it needs this and cannot wait for
+// EnsureOrgDefaults.
+//
+// The returned slice is a copy: callers hand it to a Definition that is then
+// validated and trimmed in place.
+func SeedAllowedTools(slug string) []string {
+	want, ok := seedAllowedTools()[slug]
+	if !ok {
+		return nil
+	}
+	return append([]string(nil), want...)
+}
+
+// seedAllowedTools maps each seeded slug to the allowlist its own seed
+// carries, so the org-wide backfill can give a seeded agent the list it was
+// meant to have rather than the generic fallback.
+func seedAllowedTools() map[string][]string {
+	want := make(map[string][]string, len(defaultAgents()))
+	for _, seed := range defaultAgents() {
+		want[seed.def.Slug] = seed.def.AllowedTools
+	}
+	return want
+}
+
+// BackfillOrgAllowedTools does the same for every agent in the workspace,
+// seeded or not: an agent someone created through the API before allowlists
+// were mandatory gets an allowlist rather than silently keeping every tool.
+// Startup calls it once per org, after the agent files have synced.
+//
+// It is seed-aware, and has to be. This runs before the per-seed reconcile in
+// EnsureOrgDefaults, so whatever it writes is what a seeded row ends up with:
+// a seed that is only there once the loop reaches it would arrive too late,
+// and a seeded `developer` that predates REQ-91 would be left holding
+// mcp__openv__* — no Read, Grep, Glob, Edit, Write or Bash(git *) — with
+// nothing to put them back, because backfillAllowedTools only ever fires on a
+// row that has no list at all. An agent nobody seeded gets
+// agents.DefaultAllowedTools().
+func BackfillOrgAllowedTools(orgID string, agentService agents.Service) error {
+	list, err := agentService.List(orgID)
+	if err != nil {
+		return err
+	}
+	seeded := seedAllowedTools()
+	for _, a := range list {
+		// A nil entry (not a seeded slug) falls back to the OpenV tools
+		// inside backfillAllowedTools.
+		if err := backfillAllowedTools(orgID, a, seeded[a.Slug], agentService); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func EnsureOrgDefaults(orgID string, agentService agents.Service, crewService teams.Service) error {
 	if orgID == "" {
 		return fmt.Errorf("seeds: organization id is required")
+	}
+	// Before anything else: an agent from an install that predates mandatory
+	// allowlists cannot run until it has one (REQ-91). This is seed-aware, so
+	// a seeded row gets its own seed's list here and the loop below sees a
+	// row that is already whole.
+	if err := BackfillOrgAllowedTools(orgID, agentService); err != nil {
+		return err
 	}
 	type teamRole struct {
 		label      string
@@ -310,6 +446,11 @@ func EnsureOrgDefaults(orgID string, agentService agents.Service, crewService te
 			}
 			log.Printf("seeds: created default agent %q for org %s", seed.def.Slug, orgID)
 		} else {
+			// No backfill here: BackfillOrgAllowedTools above already ran,
+			// seed list and all, and `existing` was read after it. Repeating
+			// it would be dead code that reads a stale row — and would hand
+			// adoptSeedDefaults a definition with no allowed_tools, which
+			// SaveDefinition rightly refuses.
 			adopted, err := adoptSeedDefaults(orgID, existing, seed.def, agentService)
 			if err != nil {
 				return err
