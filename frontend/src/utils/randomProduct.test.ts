@@ -203,6 +203,22 @@ describe('community-shared products', () => {
     expect(isSharedProduct(product)).toBe(true);
   });
 
+  it('carries the vote counts and the caller’s own vote', () => {
+    const product = fromSharedProduct({ ...payload, votes: 7, votes_week: 2, voted: true });
+    expect(product.votes).toBe(7);
+    expect(product.votesWeek).toBe(2);
+    expect(product.voted).toBe(true);
+  });
+
+  it('reads a payload without vote fields as no votes rather than blanks', () => {
+    // A server that predates voting, or a row nobody has voted for, must
+    // still render a count on the card instead of an empty space.
+    const product = fromSharedProduct(payload);
+    expect(product.votes).toBe(0);
+    expect(product.votesWeek).toBe(0);
+    expect(product.voted).toBe(false);
+  });
+
   it('sends only the six card fields when sharing', () => {
     // The server assigns id, timestamp and author; a client that could set
     // them could forge attribution, so they must not be in the payload.

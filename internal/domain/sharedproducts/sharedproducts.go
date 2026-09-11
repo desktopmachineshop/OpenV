@@ -28,6 +28,11 @@
 //     handful of reports hides it automatically, and a platform admin can
 //     delete it outright.
 //
+// Votes (the "top" filters in the roller) follow the same per-person rule as
+// reports: one account, one vote, stored as a (product, user) pair so the
+// count cannot be clicked up, and never served back as identity. A hidden
+// entry can be neither listed nor voted for.
+//
 // Author identity is stored for rate limiting and takedown only, and is
 // never serialized to clients — no tenant learns who published what.
 package sharedproducts
@@ -69,6 +74,27 @@ const (
 	// DefaultListLimit / MaxListLimit bound a list request.
 	DefaultListLimit = 200
 	MaxListLimit     = 500
+	// VoteWindowDays is the "this week" window the weekly leaderboard counts
+	// over. It is a rolling window computed by the database, not a calendar
+	// week, so a product that was popular last Tuesday falls out of the list
+	// on its own rather than at a weekly reset everyone has to wait for.
+	VoteWindowDays = 7
+)
+
+// Sort names an ordering for a list request.
+type Sort string
+
+// The orderings a caller may ask for. Anything else is refused rather than
+// silently treated as recent: a typo in a filter should not look like an
+// answer.
+const (
+	// SortRecent is the pool's default: newest first, which is what the
+	// roller has always seen.
+	SortRecent Sort = "recent"
+	// SortTop is most-voted first, over the whole life of the pool.
+	SortTop Sort = "top"
+	// SortTopWeek is most-voted first, counting only the last VoteWindowDays.
+	SortTopWeek Sort = "top_week"
 )
 
 // Errors.
@@ -82,6 +108,8 @@ var (
 	ErrRateLimited     = errors.New("this workspace has shared too many products today")
 	ErrPoolFull        = errors.New("the shared product pool is full")
 	ErrNotPublishable  = errors.New("only a signed-in person can share a product")
+	ErrNotVotable      = errors.New("only a signed-in person can vote for a shared product")
+	ErrBadSort         = errors.New("sort must be one of: recent, top, top_week")
 )
 
 // Product is one community-shared demo product.
@@ -99,6 +127,18 @@ type Product struct {
 	TargetUsers string    `json:"target_users"`
 	CreatedAt   time.Time `json:"created_at"`
 
+	// Votes is the all-time count of distinct people who voted for this
+	// entry; VotesWeek counts only the last VoteWindowDays. Voted is the
+	// calling person's own vote — false for a caller with no session user
+	// (a runner key), who cannot vote at all.
+	//
+	// Votes are a popularity signal, not identity: like reports, who voted
+	// is stored per person so one account cannot vote twice, and is never
+	// served to anyone.
+	Votes     int  `json:"votes"`
+	VotesWeek int  `json:"votes_week"`
+	Voted     bool `json:"voted"`
+
 	// NameKey is the normalized name the pool dedupes on.
 	NameKey string `json:"-"`
 	// CreatedByOrg / CreatedByUser are moderation metadata, never published.
@@ -108,10 +148,31 @@ type Product struct {
 	Hidden        bool   `json:"-"`
 }
 
+// ListOptions is one read of the pool: how many rows, in what order, and on
+// whose behalf (so each row can carry that person's own vote back).
+type ListOptions struct {
+	// Limit caps the rows returned; the service bounds it.
+	Limit int
+	// Sort is the ordering. The empty value means SortRecent.
+	Sort Sort
+	// ViewerID is the signed-in person, or "" for a caller with no session
+	// user — who then sees Voted false on every row.
+	ViewerID string
+}
+
+// VoteCounts is what a vote or unvote settles on: the entry's totals and
+// whether the voter's own vote now stands. It is the vote endpoints' payload.
+type VoteCounts struct {
+	Votes     int  `json:"votes"`
+	VotesWeek int  `json:"votes_week"`
+	Voted     bool `json:"voted"`
+}
+
 // Repository is the storage port.
 type Repository interface {
-	// ListVisible returns unhidden products, newest first.
-	ListVisible(limit int) ([]*Product, error)
+	// ListVisible returns unhidden products in the requested order, each
+	// carrying its vote counts and the viewer's own vote.
+	ListVisible(opts ListOptions) ([]*Product, error)
 	Create(p *Product) error
 	// CountByOrgSince counts an org's publications in a window (rate limit).
 	CountByOrgSince(orgID string, since time.Time) (int, error)
@@ -120,6 +181,16 @@ type Repository interface {
 	// AddReport records one person's report and returns how many distinct
 	// people have now reported the entry.
 	AddReport(id, userID string) (int, error)
+	// AddVote records one person's vote for a visible entry and returns how
+	// many distinct people have now voted for it. Voting twice is a no-op.
+	// A hidden or missing entry is ErrNotFound.
+	AddVote(id, userID string) (int, error)
+	// RemoveVote withdraws one person's vote and returns the new total.
+	// Withdrawing a vote that was never cast is a no-op.
+	RemoveVote(id, userID string) (int, error)
+	// CountVotesWeek counts votes cast for an entry inside the rolling
+	// VoteWindowDays window, as the database reckons "now".
+	CountVotesWeek(id string) (int, error)
 	// SetHidden hides or unhides an entry.
 	SetHidden(id string, hidden bool) error
 	Delete(id string) error
@@ -127,12 +198,17 @@ type Repository interface {
 
 // Service is the shared-pool use case surface.
 type Service interface {
-	List(limit int) ([]*Product, error)
+	List(opts ListOptions) ([]*Product, error)
 	// Publish stores a product on behalf of a signed-in user in a workspace.
 	Publish(in Product, orgID, userID string) (*Product, error)
 	// Report flags an entry on one person's behalf; it auto-hides once
 	// ReportsToHide distinct people have flagged it.
 	Report(id, userID string) error
+	// Vote records one person's vote for an entry. It is idempotent: voting
+	// again returns the same counts rather than inflating them.
+	Vote(id, userID string) (VoteCounts, error)
+	// Unvote withdraws one person's vote, and is likewise idempotent.
+	Unvote(id, userID string) (VoteCounts, error)
 	// Delete removes an entry outright (platform admin).
 	Delete(id string) error
 }
@@ -157,15 +233,24 @@ func NewDefaultService(repo Repository, dailyLimit, poolLimit int) *DefaultServi
 	return &DefaultService{repo: repo, dailyLimit: dailyLimit, poolLimit: poolLimit, now: time.Now}
 }
 
-// List returns the visible pool, newest first.
-func (s *DefaultService) List(limit int) ([]*Product, error) {
-	if limit <= 0 {
-		limit = DefaultListLimit
+// List returns the visible pool in the requested order — newest first by
+// default, or most-voted first for the leaderboards. An unknown sort is
+// refused (ErrBadSort) rather than quietly answered with the default.
+func (s *DefaultService) List(opts ListOptions) ([]*Product, error) {
+	if opts.Limit <= 0 {
+		opts.Limit = DefaultListLimit
 	}
-	if limit > MaxListLimit {
-		limit = MaxListLimit
+	if opts.Limit > MaxListLimit {
+		opts.Limit = MaxListLimit
 	}
-	return s.repo.ListVisible(limit)
+	switch opts.Sort {
+	case "":
+		opts.Sort = SortRecent
+	case SortRecent, SortTop, SortTopWeek:
+	default:
+		return nil, ErrBadSort
+	}
+	return s.repo.ListVisible(opts)
 }
 
 // Publish sanitizes, rate-limits and stores one product.
@@ -223,6 +308,49 @@ func (s *DefaultService) Report(id, userID string) error {
 		return s.repo.SetHidden(id, true)
 	}
 	return nil
+}
+
+// Vote records one person's vote for an entry.
+//
+// Votes are per person, like reports: the repository dedupes on
+// (product, user), so pressing the button twice settles on the same count
+// and nobody can lift their own invention up the leaderboard alone. A hidden
+// entry is not votable — it is not listed either, and the repository reports
+// it as ErrNotFound rather than letting votes accrue to something nobody can
+// see.
+func (s *DefaultService) Vote(id, userID string) (VoteCounts, error) {
+	if strings.TrimSpace(userID) == "" {
+		return VoteCounts{}, ErrNotVotable
+	}
+	total, err := s.repo.AddVote(id, userID)
+	if err != nil {
+		return VoteCounts{}, err
+	}
+	return s.voteCounts(id, total, true)
+}
+
+// Unvote withdraws one person's vote. Withdrawing a vote that was never cast
+// is a no-op that reports the entry's current counts.
+func (s *DefaultService) Unvote(id, userID string) (VoteCounts, error) {
+	if strings.TrimSpace(userID) == "" {
+		return VoteCounts{}, ErrNotVotable
+	}
+	total, err := s.repo.RemoveVote(id, userID)
+	if err != nil {
+		return VoteCounts{}, err
+	}
+	return s.voteCounts(id, total, false)
+}
+
+// voteCounts pairs an all-time total with the weekly count the database
+// computes over its own clock, so both numbers a client renders come from
+// the same place the leaderboard is ordered by.
+func (s *DefaultService) voteCounts(id string, total int, voted bool) (VoteCounts, error) {
+	week, err := s.repo.CountVotesWeek(id)
+	if err != nil {
+		return VoteCounts{}, err
+	}
+	return VoteCounts{Votes: total, VotesWeek: week, Voted: voted}, nil
 }
 
 // Delete removes an entry.

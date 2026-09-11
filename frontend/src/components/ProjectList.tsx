@@ -26,11 +26,18 @@ import {
   RandomProduct,
 } from '../utils/randomProduct';
 import { apiErrorMessage } from '../api/errors';
+import {
+  ProductVoteButton,
+  TopSharedProducts,
+  voteDisabledReason,
+  RandomFilter,
+  VoteState,
+} from './SharedProductVotes';
 import { Navbar } from './Navbar';
 import { HelpSidebar } from './HelpSidebar';
 import { DownloadWizard } from './DownloadWizard';
 import { CreateOrgModal } from './CreateOrgModal';
-import { useConfirm, usePrompt } from './ui';
+import { SegmentedControl, useConfirm, usePrompt } from './ui';
 import './ProjectList.css';
 
 export const ProjectList: React.FC = () => {
@@ -80,6 +87,12 @@ export const ProjectList: React.FC = () => {
   // an agent run. Sharing is deliberate (the button below) — nothing an agent
   // invents leaves this workspace until someone reads it and presses Share.
   const [shared, setShared] = useState<RandomProduct[]>([]);
+  // Which list the roller is showing: chance (the original behaviour), or one
+  // of the two vote leaderboards. The leaderboards are read from the server —
+  // it owns the counts and the week — rather than sorted out of `shared`.
+  const [randomFilter, setRandomFilter] = useState<RandomFilter>('random');
+  // Bumped after a vote so the open leaderboard re-reads the standings.
+  const [voteRevision, setVoteRevision] = useState<number>(0);
   // Set when an invention could not reach the shared pool (rate limit, a
   // name already taken, no network). The product still works locally, so
   // this is a note rather than a failure.
@@ -140,6 +153,18 @@ export const ProjectList: React.FC = () => {
     } catch (err: any) {
       setShareError(`Kept in this browser, but not added to the shared pool: ${apiErrorMessage(err)}`);
     }
+  };
+
+  // A vote landed: the server is the authority on the counts, so the card and
+  // this browser's copy of the pool take what came back rather than each
+  // keeping their own arithmetic. The open leaderboard is re-read too, since
+  // one vote can change the order.
+  const applyVote = (state: VoteState) => {
+    setRandomProduct((prev) => (prev ? { ...prev, ...state } : prev));
+    setShared((prev) =>
+      prev.map((p) => (p.sharedId && p.sharedId === randomProduct?.sharedId ? { ...p, ...state } : p))
+    );
+    setVoteRevision((n) => n + 1);
   };
 
   // Flag a shared product for review and move on. Enough distinct reporters
@@ -693,6 +718,33 @@ export const ProjectList: React.FC = () => {
                   </select>
                 </div>
 
+                {/* Chance or standing: rerolling is the original behaviour
+                    and stays the default, with the two leaderboards beside
+                    it for people who would rather see what the pool likes. */}
+                {createMode === 'random' && (
+                  <div style={{ marginBottom: 10 }}>
+                    <SegmentedControl<RandomFilter>
+                      aria-label="How to pick a product"
+                      value={randomFilter}
+                      onChange={setRandomFilter}
+                      options={[
+                        { value: 'random', label: '🎲 Random', title: 'Roll from the whole shared pool' },
+                        { value: 'top', label: 'Top 5 all time', title: 'The five most-voted products ever' },
+                        { value: 'top_week', label: 'Top 5 this week', title: 'The five most-voted products of the last seven days' },
+                      ]}
+                    />
+                  </div>
+                )}
+
+                {createMode === 'random' && randomFilter !== 'random' && (
+                  <TopSharedProducts
+                    sort={randomFilter}
+                    refreshKey={voteRevision}
+                    selectedId={randomProduct?.sharedId}
+                    onUse={(product) => applyProduct(product, false)}
+                  />
+                )}
+
                 {createMode === 'random' && randomProduct && (
                   <div
                     style={{
@@ -729,7 +781,7 @@ export const ProjectList: React.FC = () => {
                         <button
                           type="button"
                           className="button-secondary button"
-                          style={{ width: 'auto', padding: '2px 10px', fontSize: 12 }}
+                          style={{ width: 'auto', padding: '6px 10px', fontSize: 12 }}
                           onClick={rollRandomProduct}
                           disabled={inventing}
                         >
@@ -740,7 +792,7 @@ export const ProjectList: React.FC = () => {
                           className="button-secondary button"
                           style={{
                             width: 'auto',
-                            padding: '2px 10px',
+                            padding: '6px 10px',
                             fontSize: 12,
                             opacity: runnerOnline && !inventing ? 1 : 0.5,
                             cursor: runnerOnline && !inventing ? 'pointer' : 'not-allowed',
@@ -759,7 +811,7 @@ export const ProjectList: React.FC = () => {
                           <button
                             type="button"
                             className="button-secondary button"
-                            style={{ width: 'auto', padding: '2px 10px', fontSize: 12 }}
+                            style={{ width: 'auto', padding: '6px 10px', fontSize: 12 }}
                             onClick={reportProduct}
                             title="Flag this shared product for review"
                           >
@@ -775,6 +827,31 @@ export const ProjectList: React.FC = () => {
                     <p style={{ margin: '4px 0 0', color: 'var(--text-muted)' }}>
                       <em>For:</em> {randomProduct.targetUsers}
                     </p>
+                    {/* The vote sits on its own line under the product it is
+                        about, where the count has room next to the weekly
+                        hint even on a phone. */}
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        flexWrap: 'wrap',
+                        gap: 8,
+                        marginTop: 10,
+                        paddingTop: 8,
+                        borderTop: '1px solid var(--border-soft)',
+                      }}
+                    >
+                      <ProductVoteButton
+                        product={randomProduct}
+                        onChange={applyVote}
+                        onError={(message) => setShareError(message)}
+                      />
+                      {voteDisabledReason(randomProduct) && (
+                        <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                          {voteDisabledReason(randomProduct)}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 )}
 
@@ -817,10 +894,13 @@ export const ProjectList: React.FC = () => {
                       Reroll picks from the shared collection of fake products — the built-ins plus{' '}
                       {shared.length === 1
                         ? '1 invented by another OpenV user'
-                        : `${shared.length} invented by other OpenV users`}; ⚑ Report anything that
-                      does not belong. <strong>What your agent invents joins the collection
-                      automatically</strong>, so keep real people, customers, and unreleased work out
-                      of it. Creating drops you into the Guided Wizard with this framing pre-filled.
+                        : `${shared.length} invented by other OpenV users`}; ▲ Vote for the ones
+                      worth keeping (they are what the Top 5 filters show) and ⚑ Report anything
+                      that does not belong. Only products that reached the shared pool can be voted
+                      for — a built-in concept, or an invention still kept in this browser, cannot.{' '}
+                      <strong>What your agent invents joins the collection automatically</strong>, so
+                      keep real people, customers, and unreleased work out of it. Creating drops you
+                      into the Guided Wizard with this framing pre-filled.
                     </span>
                   </div>
                 )}

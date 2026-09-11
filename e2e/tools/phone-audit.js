@@ -80,7 +80,12 @@ const automation = { id: 'au1', org_id: 'org1', project_id: 'p1', name: 'Nightly
 const crewTeam = { id: 't1', org_id: 'org1', name: "Founder's Dev Team", description: 'Analyst → Developer → Reviewer', nodes: [{ id: 'n1', team_id: 't1', kind: 'agent', agent_id: 'a1', label: 'Analyst', x: 80, y: 80 }, { id: 'n2', team_id: 't1', kind: 'agent', agent_id: 'a3', label: 'Developer', x: 320, y: 80 }], edges: [{ id: 'e1', team_id: 't1', from_node_id: 'n1', to_node_id: 'n2', type: 'handoff' }], created_at: now, updated_at: now };
 const usage = { window_days: 30, totals: { runs: 12, input_tokens: 240000, output_tokens: 18000, cost_usd: 3.4 }, month_to_date_usd: 3.4, monthly_budget_usd: 20, by_agent: [{ agent_id: 'a1', agent_name: 'Requirements Analyst', runs: 8, input_tokens: 180000, output_tokens: 12000, cost_usd: 2.6 }], by_day: [{ day: '2026-09-01', runs: 3, cost_usd: 0.9 }] };
 const coverageOld = { summary: { total_requirements: 3, verified: 1, covered: 2, uncovered: 1, coverage_pct: 66.7 }, requirements: [{ id: 'req-1', ref: 'REQ-1', title: 'Work envelope', status: 'verified', test_cases: [{ id: 'tc-1', ref: 'TC-1', title: 'Accuracy survey with a ballbar', last_result: 'pass' }] }, { id: 'req-2', ref: 'REQ-2', title: 'Positioning accuracy', status: 'uncovered', test_cases: [] }] };
+// The community pool behind the new-project wizard's random mode, with vote
+// counts so the Top 5 filters have something to lay out.
+const sharedProduct = (id, name, votes, votesWeek) => ({ id, category: 'kitchen appliance', name, description: `${name} recognises Kevin and locks itself until he owns up.`, vision: `${name} becomes the reason the office bean jar survives a Tuesday.`, problem: 'Beans vanish overnight and nobody admits to owning the grinder.', target_users: 'coffee-obsessed office workers whose beans keep leaving with Kevin', votes, votes_week: votesWeek, voted: false });
+const sharedProducts = [sharedProduct('sp1', 'Kevinproof', 12, 5), sharedProduct('sp2', 'Crustodian', 9, 4), sharedProduct('sp3', 'Loafwatch', 7, 2), sharedProduct('sp4', 'Mugshot Registry', 4, 1), sharedProduct('sp5', 'Fridge Amnesty Box', 2, 1)];
 const routes = [
+  [/\/api\/v1\/shared-products/, (url) => (/sort=top/.test(url) ? sharedProducts.slice(0, 5) : sharedProducts)],
   [/\/api\/v1\/auth\/me/, user],
   [/\/api\/v1\/auth\/config/, { google_enabled: false, oidc_enabled: false }],
   [/\/api\/v1\/orgs$/, { orgs: [org, org2], active_org: 'org1' }],
@@ -249,6 +254,9 @@ const SCREENS = [
   { tag: 'projects', path: '/projects' },
   { tag: 'projects-switcher', path: '/projects', open: async (p) => { const b = p.getByRole('button', { name: /Space|workspace/i }).first(); if (await b.count()) await press(b); } },
   { tag: 'projects-new', path: '/projects', open: async (p) => press(p.getByRole('button', { name: '+ New Project' }).first()) },
+  // Random-product mode with a Top 5 leaderboard open: a vote control, a
+  // segmented filter and a five-row list, all inside the create form.
+  { tag: 'projects-random-top', path: '/projects', open: async (p) => { await press(p.getByRole('button', { name: '+ New Project' }).first()); await p.waitForTimeout(200); await p.selectOption('#mode', 'random'); await p.waitForTimeout(400); await press(p.getByRole('button', { name: 'Top 5 all time' })); await p.waitForTimeout(400); } },
   { tag: 'user-menu', path: '/projects', open: async (p) => { await press(p.locator('[title="Sam Example"]').first()); } },
   { tag: 'user-settings', path: '/projects', open: async (p) => { await press(p.locator('[title="Sam Example"]').first()); await p.waitForTimeout(300); await press(p.getByText('Settings', { exact: true }).first()); } },
   { tag: 'drawer-user-settings', phone: true, path: '/projects/p1', open: async (p) => { await press(p.getByRole('button', { name: 'Project menu' })); await p.waitForTimeout(300); await press(p.getByText('Sam Example').last()); } },

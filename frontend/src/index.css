@@ -204,6 +204,13 @@ input:focus, textarea:focus, select:focus {
   .icon-btn {
     min-width: 40px;
   }
+  /* The vote arrow is a small target carrying a small number, and it sits
+     next to other controls on the rolled product card — it gets the full
+     44 px rather than the general button floor. */
+  .vote-button {
+    min-height: 44px;
+    min-width: 44px;
+  }
   input[type='checkbox'],
   input[type='radio'] {
     width: 18px;

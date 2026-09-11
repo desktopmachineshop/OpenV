@@ -1326,11 +1326,26 @@ export const cloudRunnerAPI = {
  * plain text, rate-limits publishing per workspace, and returns no author
  * identity — `report` is the path for anything that should not be there.
  */
+/** What a vote or unvote settles on: the entry's counts and your own vote. */
+export interface SharedProductVotes {
+  votes: number;
+  votes_week: number;
+  voted: boolean;
+}
+
+/** How the pool is ordered: newest first, or the two vote leaderboards. */
+export type SharedProductSort = 'recent' | 'top' | 'top_week';
+
 export const sharedProductsAPI = {
-  list: () => client.get<SharedProductPayload[]>('/api/v1/shared-products'),
+  list: (params?: { sort?: SharedProductSort; limit?: number }) =>
+    client.get<SharedProductPayload[]>('/api/v1/shared-products', { params }),
   publish: (product: ReturnType<typeof toSharePayload>) =>
     client.post<SharedProductPayload>('/api/v1/shared-products', product),
   report: (id: string) => client.post(`/api/v1/shared-products/${id}/report`),
+  // Voting is idempotent on both sides, hence PUT/DELETE rather than POST:
+  // pressing an already-pressed arrow settles on the same count.
+  vote: (id: string) => client.put<SharedProductVotes>(`/api/v1/shared-products/${id}/vote`),
+  unvote: (id: string) => client.delete<SharedProductVotes>(`/api/v1/shared-products/${id}/vote`),
 };
 
 export const workerStatusAPI = {

@@ -30,15 +30,25 @@ type fakeRepo struct {
 	reporters map[string]bool
 	hidden    map[string]bool
 	deleted   []string
+	// votes / voters mirror the storage contract: a vote is a (product,
+	// user) pair, so the count is of people and a repeat press is a no-op.
+	votes     map[string]int
+	voters    map[string]bool
+	weekVotes map[string]int
+	lastOpts  ListOptions
 }
 
 func newFakeRepo() *fakeRepo {
-	return &fakeRepo{reports: map[string]int{}, reporters: map[string]bool{}, hidden: map[string]bool{}}
+	return &fakeRepo{
+		reports: map[string]int{}, reporters: map[string]bool{}, hidden: map[string]bool{},
+		votes: map[string]int{}, voters: map[string]bool{}, weekVotes: map[string]int{},
+	}
 }
 
-func (f *fakeRepo) ListVisible(limit int) ([]*Product, error) {
-	if limit < len(f.products) {
-		return f.products[:limit], nil
+func (f *fakeRepo) ListVisible(opts ListOptions) ([]*Product, error) {
+	f.lastOpts = opts
+	if opts.Limit < len(f.products) {
+		return f.products[:opts.Limit], nil
 	}
 	return f.products, nil
 }
@@ -59,6 +69,32 @@ func (f *fakeRepo) AddReport(id, userID string) (int, error) {
 	}
 	return f.reports[id], nil
 }
+func (f *fakeRepo) AddVote(id, userID string) (int, error) {
+	if f.hidden[id] {
+		return 0, ErrNotFound
+	}
+	key := id + "/" + userID
+	if !f.voters[key] {
+		f.voters[key] = true
+		f.votes[id]++
+		f.weekVotes[id]++
+	}
+	return f.votes[id], nil
+}
+func (f *fakeRepo) RemoveVote(id, userID string) (int, error) {
+	if f.hidden[id] {
+		return 0, ErrNotFound
+	}
+	key := id + "/" + userID
+	if f.voters[key] {
+		delete(f.voters, key)
+		f.votes[id]--
+		f.weekVotes[id]--
+	}
+	return f.votes[id], nil
+}
+func (f *fakeRepo) CountVotesWeek(id string) (int, error) { return f.weekVotes[id], nil }
+
 func (f *fakeRepo) SetHidden(id string, hidden bool) error { f.hidden[id] = hidden; return nil }
 func (f *fakeRepo) Delete(id string) error                 { f.deleted = append(f.deleted, id); return nil }
 
@@ -250,14 +286,109 @@ func TestListClampsLimit(t *testing.T) {
 	}
 	svc := NewDefaultService(repo, 0, 0)
 
-	got, err := svc.List(100000)
+	got, err := svc.List(ListOptions{Limit: 100000})
 	if err != nil {
 		t.Fatalf("List: %v", err)
 	}
 	if len(got) != MaxListLimit {
 		t.Errorf("List(100000) returned %d, want the %d cap", len(got), MaxListLimit)
 	}
-	if got, _ := svc.List(0); len(got) != DefaultListLimit {
+	if got, _ := svc.List(ListOptions{}); len(got) != DefaultListLimit {
 		t.Errorf("List(0) returned %d, want the %d default", len(got), DefaultListLimit)
+	}
+}
+
+// TestListSortIsCheckedNotGuessed: the roller's two leaderboards are just a
+// sort parameter, so a value the service does not know must be refused. A
+// typo answered with the default ordering would look like "nobody voted".
+func TestListSortIsCheckedNotGuessed(t *testing.T) {
+	repo := newFakeRepo()
+	repo.products = append(repo.products, &Product{ID: "p1"})
+	svc := NewDefaultService(repo, 0, 0)
+
+	for _, sort := range []Sort{"", SortRecent, SortTop, SortTopWeek} {
+		if _, err := svc.List(ListOptions{Sort: sort, ViewerID: "u1"}); err != nil {
+			t.Errorf("List(sort=%q) = %v, want it accepted", sort, err)
+		}
+	}
+	// The empty sort resolves to recent before it reaches storage, so the
+	// repository never has to guess either.
+	if _, err := svc.List(ListOptions{}); err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if repo.lastOpts.Sort != SortRecent {
+		t.Errorf("default sort reached the repository as %q, want %q", repo.lastOpts.Sort, SortRecent)
+	}
+	if _, err := svc.List(ListOptions{Sort: "popular"}); !errors.Is(err, ErrBadSort) {
+		t.Errorf("List(sort=popular) = %v, want ErrBadSort", err)
+	}
+	// The viewer travels with the request: each row has to carry that
+	// person's own vote, and nobody else's.
+	if _, err := svc.List(ListOptions{ViewerID: "u9"}); err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if repo.lastOpts.ViewerID != "u9" {
+		t.Errorf("viewer reached the repository as %q, want u9", repo.lastOpts.ViewerID)
+	}
+}
+
+// TestVoteIsPerPersonAndReversible is the vote contract in one test: one
+// account is one vote however many times it presses, withdrawing takes it
+// back, and both answer with the counts the card renders.
+func TestVoteIsPerPersonAndReversible(t *testing.T) {
+	repo := newFakeRepo()
+	svc := NewDefaultService(repo, 0, 0)
+
+	counts, err := svc.Vote("p1", "u1")
+	if err != nil {
+		t.Fatalf("Vote: %v", err)
+	}
+	if counts != (VoteCounts{Votes: 1, VotesWeek: 1, Voted: true}) {
+		t.Errorf("first vote = %+v, want 1/1/voted", counts)
+	}
+
+	// Pressing again is a no-op, not a second vote.
+	again, err := svc.Vote("p1", "u1")
+	if err != nil || again != counts {
+		t.Errorf("second vote = %+v, %v; want the same counts", again, err)
+	}
+
+	// A different person does add one.
+	if counts, err = svc.Vote("p1", "u2"); err != nil || counts.Votes != 2 {
+		t.Errorf("second voter = %+v, %v; want 2 votes", counts, err)
+	}
+
+	// Withdrawing takes back exactly one vote and reports it as withdrawn.
+	if counts, err = svc.Unvote("p1", "u1"); err != nil || counts.Votes != 1 || counts.Voted {
+		t.Errorf("unvote = %+v, %v; want 1 vote and voted=false", counts, err)
+	}
+	// Withdrawing a vote never cast changes nothing.
+	if counts, err = svc.Unvote("p1", "u3"); err != nil || counts.Votes != 1 {
+		t.Errorf("unvote by a non-voter = %+v, %v; want 1 vote", counts, err)
+	}
+
+	// Votes are attributable, like reports: a caller with no person behind
+	// it (agent run, worker key) cannot vote at all.
+	if _, err := svc.Vote("p1", ""); !errors.Is(err, ErrNotVotable) {
+		t.Errorf("anonymous vote = %v, want ErrNotVotable", err)
+	}
+	if _, err := svc.Unvote("p1", " "); !errors.Is(err, ErrNotVotable) {
+		t.Errorf("anonymous unvote = %v, want ErrNotVotable", err)
+	}
+}
+
+// TestVoteOnHiddenProductIsNotFound: a hidden entry is out of the roll list,
+// so it cannot quietly accumulate votes either — it answers exactly as a
+// deleted one does.
+func TestVoteOnHiddenProductIsNotFound(t *testing.T) {
+	repo := newFakeRepo()
+	svc := NewDefaultService(repo, 0, 0)
+	repo.hidden["p1"] = true
+
+	if _, err := svc.Vote("p1", "u1"); !errors.Is(err, ErrNotFound) {
+		t.Errorf("vote on a hidden entry = %v, want ErrNotFound", err)
+	}
+	if _, err := svc.Unvote("p1", "u1"); !errors.Is(err, ErrNotFound) {
+		t.Errorf("unvote on a hidden entry = %v, want ErrNotFound", err)
 	}
 }
