@@ -427,7 +427,11 @@ to that turn's prompt as fenced, untrusted content. The wizard sends none.
 flight, so this nudge was **parked** on the session — the newest parked nudge
 wins, and the finishing turn launches exactly one more from it) or
 `unavailable` (no turn is coming). Both `launched` and `pending` mean a reply
-will arrive on the stream.
+will arrive on the stream. If the in-flight turn finishes while the nudge is
+being parked, the request takes it back and launches it itself, answering
+`launched`: a nudge is never left waiting for a turn that has already gone
+looking for one. Committing or abandoning a session discards any nudge still
+parked on it.
 
 The chat streams (`chat/stream` and the public interview stream) carry two
 event types: `message`, one complete transcript message, and
@@ -486,9 +490,10 @@ The logs body is `{"entries": [...], "partial_text": "..."}`; a bare array of
 entries is still accepted (older runners). `partial_text` is the assistant
 answer written so far — the whole text, not a delta, capped at 64 KB — and an
 empty string means "unchanged". It is stored on the run as `partial_text`,
-returned with the run, cleared when the run finishes (`final_text` takes
-over), and broadcast as `partial` on the run's own stream and as
-`assistant_partial` on any session the run belongs to.
+returned with the run, cleared whenever the run stops being live — at finish
+(`final_text` takes over), when the stale-run reaper fails it, and when a
+worker releases it back to the queue — and broadcast as `partial` on the run's
+own stream and as `assistant_partial` on any session the run belongs to.
 | POST | `/api/v1/agent-runs/{id}/cancel` | Request cancellation | launcher / editor |
 | POST | `/api/v1/agent-runs/{id}/start` | Worker marks run running | worker |
 | POST | `/api/v1/agent-runs/{id}/finish` | Worker reports completion | worker |

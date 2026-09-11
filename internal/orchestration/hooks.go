@@ -441,6 +441,22 @@ func (h *Hooks) launchPendingNudge(run *agentruns.Run) {
 	if nudge == nil {
 		return
 	}
+	// The wizard may have been committed or abandoned while the turn ran: a
+	// closed session gets no copilot turn, and the nudge it was owed dies
+	// with it. Checked after the take, so the nudge is cleared either way.
+	session, err := h.guidedService.GetSession(sessionID)
+	if err != nil {
+		slog.Warn("orchestration: could not read the guided session for its parked nudge; dropping it", "session_id", sessionID, "error", err)
+		return
+	}
+	if session == nil || session.Status != guided.StatusInProgress {
+		status := "missing"
+		if session != nil {
+			status = session.Status
+		}
+		slog.Info("orchestration: discarding a parked wizard nudge for a closed guided session", "session_id", sessionID, "status", status)
+		return
+	}
 	if h.nudgeLauncher == nil {
 		slog.Warn("orchestration: no nudge launcher wired; dropping the parked wizard nudge", "session_id", sessionID)
 		return

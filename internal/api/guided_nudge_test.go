@@ -25,6 +25,12 @@ type fakeGuidedNudgeService struct {
 	guided.Service
 	session *guided.Session
 	parked  []*guided.PendingNudge
+	// held is what TakePendingNudge hands back (once); takes counts the calls.
+	held  *guided.PendingNudge
+	takes int
+	// onPark runs inside SetPendingNudge, so a test can interleave the run's
+	// finish with the park.
+	onPark func()
 }
 
 func (f *fakeGuidedNudgeService) GetSession(id string) (*guided.Session, error) {
@@ -33,7 +39,18 @@ func (f *fakeGuidedNudgeService) GetSession(id string) (*guided.Session, error) 
 
 func (f *fakeGuidedNudgeService) SetPendingNudge(sessionID string, nudge *guided.PendingNudge) error {
 	f.parked = append(f.parked, nudge)
+	f.held = nudge
+	if f.onPark != nil {
+		f.onPark()
+	}
 	return nil
+}
+
+func (f *fakeGuidedNudgeService) TakePendingNudge(sessionID string) (*guided.PendingNudge, error) {
+	f.takes++
+	nudge := f.held
+	f.held = nil
+	return nudge, nil
 }
 
 // No runner key has ever been used, so the wizard is told turns are queuing
@@ -159,5 +176,58 @@ func TestNudgeParksADefaultEvent(t *testing.T) {
 	}
 	if len(guidedSvc.parked) != 1 || guidedSvc.parked[0].Event != "updated the wizard" {
 		t.Fatalf("parked %+v, want the default event text", guidedSvc.parked)
+	}
+}
+
+// The "is a turn running" read and the park are not atomic with the run's
+// finish. A nudge parked in that window is owed by a run whose finish hook
+// has already looked for one and found nothing — it would sit there until
+// some later turn, and then fire against stale wizard state. The handler
+// re-checks after parking and takes the nudge back.
+func TestNudgeParkedAsTheRunFinishesIsTakenBack(t *testing.T) {
+	h, guidedSvc, runSvc := nudgeFixture(agentruns.StatusRunning)
+	// The run finishes exactly between the in-flight read and the park.
+	guidedSvc.onPark = func() {
+		runSvc.byID["run-1"].Status = agentruns.StatusSucceeded
+	}
+
+	w := httptest.NewRecorder()
+	h.NudgeGuidedChat(w, nudgeReq(`{"step":3,"state":{"step_3":"needs"},"event":"saved step 3"}`))
+
+	// The fixture has no copilot agent, so the launch attempt reports
+	// "unavailable" — what matters is that the handler launched instead of
+	// promising a reply nobody owes.
+	if got := nudgeStatus(t, w); got != "unavailable" && got != "launched" {
+		t.Fatalf("status = %q, want the nudge launched rather than left parked", got)
+	}
+	if len(guidedSvc.parked) != 1 {
+		t.Fatalf("parked %d nudges, want the one park before the re-check", len(guidedSvc.parked))
+	}
+	if guidedSvc.takes != 1 {
+		t.Fatalf("TakePendingNudge calls = %d, want the nudge reclaimed once", guidedSvc.takes)
+	}
+	if guidedSvc.held != nil {
+		t.Fatalf("a nudge is still parked on a free session: %+v", guidedSvc.held)
+	}
+}
+
+// If the finishing run's hook got there first, the nudge is already taken:
+// that run owes the reply, and the handler must not launch a second turn.
+func TestNudgeTakenByTheFinishingRunStaysPending(t *testing.T) {
+	h, guidedSvc, runSvc := nudgeFixture(agentruns.StatusRunning)
+	guidedSvc.onPark = func() {
+		runSvc.byID["run-1"].Status = agentruns.StatusSucceeded
+		// The finish hook takes the parked nudge before the handler re-checks.
+		guidedSvc.held = nil
+	}
+
+	w := httptest.NewRecorder()
+	h.NudgeGuidedChat(w, nudgeReq(`{"step":3,"state":{},"event":"saved step 3"}`))
+
+	if got := nudgeStatus(t, w); got != "pending" {
+		t.Fatalf("status = %q, want pending: the finishing run owes the reply", got)
+	}
+	if len(runSvc.launchReqs) != 0 {
+		t.Fatalf("launched %d runs for a nudge another turn already took", len(runSvc.launchReqs))
 	}
 }

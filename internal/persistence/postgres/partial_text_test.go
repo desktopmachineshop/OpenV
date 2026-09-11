@@ -148,3 +148,52 @@ func TestPendingNudgeSetAndTake(t *testing.T) {
 		t.Fatalf("the nudge was handed out twice: %+v", again)
 	}
 }
+
+// A parked nudge that cannot be read back is destroyed by the take (the
+// column is cleared in the same statement). That drop must be reported, not
+// swallowed: the caller logs it, and a silent (nil, nil) would read as "no
+// nudge was waiting".
+func TestTakePendingNudgeReportsMalformedPayload(t *testing.T) {
+	db := testDB(t)
+	initTestSchema(t, db)
+	repo := NewGuidedRepository(db)
+
+	orgID := uuid.New().String()
+	projectID := uuid.New().String()
+	if _, err := db.Exec(`INSERT INTO organizations (id, name, slug) VALUES ($1, 'Bad Nudge Org', $2)`, orgID, "bad-nudge-"+orgID[:8]); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`INSERT INTO projects (id, org_id, name) VALUES ($1, $2, 'Bad Nudge Project')`, projectID, orgID); err != nil {
+		t.Fatal(err)
+	}
+	session := &guided.Session{ID: uuid.New().String(), ProjectID: projectID, Status: guided.StatusInProgress, CurrentStep: 1}
+	if err := repo.Save(session); err != nil {
+		t.Fatal(err)
+	}
+
+	// Valid JSON, but not a nudge object: json.Unmarshal into the struct fails.
+	if _, err := db.Exec(`UPDATE guided_sessions SET pending_nudge = $2 WHERE id = $1`, session.ID, `"saved step 3"`); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := repo.TakePendingNudge(session.ID)
+	if err == nil {
+		t.Fatalf("TakePendingNudge = %+v, nil; want the malformed payload reported", got)
+	}
+	if got != nil {
+		t.Fatalf("TakePendingNudge returned %+v alongside its error", got)
+	}
+
+	// It was cleared all the same, so the session is not stuck on it.
+	stored, err := repo.FindByID(session.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stored.PendingNudge != nil {
+		t.Fatalf("malformed nudge survived the take: %+v", stored.PendingNudge)
+	}
+	again, err := repo.TakePendingNudge(session.ID)
+	if err != nil || again != nil {
+		t.Fatalf("second take = %+v, %v; want nothing waiting", again, err)
+	}
+}

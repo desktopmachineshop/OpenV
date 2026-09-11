@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -126,25 +127,62 @@ func writeMCPConfig(path string, mcp MCPServerConfig) error {
 	return os.WriteFile(path, buf, 0o600)
 }
 
-// partialMessagesProbe caches whether the installed claude CLI understands
-// --include-partial-messages. Probed once per process: `claude --help` costs
-// a second, and the answer cannot change under a running worker.
+// partialMessagesProbe caches a DEFINITE answer about whether the installed
+// claude CLI understands --include-partial-messages. `claude --help` costs a
+// second and the answer cannot change under a running worker, so it is asked
+// once — but only an answer actually read off the CLI is cached. An
+// inconclusive probe (a cancelled context, a probe timeout, a CLI that could
+// not be run) leaves the question open so the next run asks again, instead of
+// disabling token streaming for the life of the process on one bad moment.
 var partialMessagesProbe struct {
-	once      sync.Once
+	mu        sync.Mutex
+	resolved  bool
 	supported bool
+	// Outcomes already logged, so a worker probing on every run says each
+	// thing once rather than per run.
+	loggedResolved     bool
+	loggedInconclusive bool
+}
+
+// claudeHelpProbe reads `claude --help`. A variable so tests can drive the
+// probe without a claude binary on PATH.
+var claudeHelpProbe = func(ctx context.Context) (string, error) {
+	return runVersion(ctx, "claude", "--help")
 }
 
 // claudeSupportsPartialMessages reports whether this machine's claude accepts
-// --include-partial-messages. A probe that fails answers false, so an
-// unreadable or ancient CLI keeps running exactly as it did before.
+// --include-partial-messages. An inconclusive probe answers false — this run
+// collects whole assistant messages, exactly as it did before token streaming
+// existed — without settling the question for later runs.
 func claudeSupportsPartialMessages(ctx context.Context) bool {
-	partialMessagesProbe.once.Do(func() {
-		out, err := runVersion(ctx, "claude", "--help")
-		if err != nil && out == "" {
-			return
+	partialMessagesProbe.mu.Lock()
+	defer partialMessagesProbe.mu.Unlock()
+	if partialMessagesProbe.resolved {
+		return partialMessagesProbe.supported
+	}
+
+	out, err := claudeHelpProbe(ctx)
+	// Help output is the answer: the flag is either in it or it is not. A
+	// non-zero exit that still printed help is just as readable, which is why
+	// this turns on the output and not on err.
+	if strings.TrimSpace(out) == "" {
+		if !partialMessagesProbe.loggedInconclusive {
+			partialMessagesProbe.loggedInconclusive = true
+			log.Printf("could not read `claude --help` (%v); collecting whole assistant messages this run and probing again on the next", err)
 		}
-		partialMessagesProbe.supported = strings.Contains(out, "--include-partial-messages")
-	})
+		return false
+	}
+
+	partialMessagesProbe.resolved = true
+	partialMessagesProbe.supported = strings.Contains(out, "--include-partial-messages")
+	if !partialMessagesProbe.loggedResolved {
+		partialMessagesProbe.loggedResolved = true
+		if partialMessagesProbe.supported {
+			log.Printf("claude supports --include-partial-messages: streaming assistant replies token by token")
+		} else {
+			log.Printf("claude does not advertise --include-partial-messages: streaming assistant replies a message at a time")
+		}
+	}
 	return partialMessagesProbe.supported
 }
 

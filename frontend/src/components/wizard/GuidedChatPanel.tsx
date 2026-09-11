@@ -172,8 +172,20 @@ const suggestionSummary = (s: CopilotSuggestion): { title: string; detail: strin
 // bursts (Next, Next, Skip); the server coalesces what still overlaps a turn.
 const NUDGE_MIN_INTERVAL_MS = 1000;
 
+/**
+ * One wizard nudge waiting for the throttle window to open. The state is
+ * snapshotted when the user acted, so the copilot comments on what they had
+ * entered at the moment of the action it is told about.
+ */
+type DeferredNudge = { step: number; event: string; state: Record<string, any> };
+
 export interface GuidedChatPanelHandle {
-  /** Fire a copilot turn reacting to a wizard action (step saved/skipped); shows the thinking indicator immediately. */
+  /**
+   * Fire a copilot turn reacting to a wizard action (step saved/skipped).
+   * Sent immediately — showing the thinking indicator at once — unless it
+   * lands inside the one-per-second window, in which case it waits (as the
+   * newest held nudge) for the window to open.
+   */
   nudge: (step: number, event: string) => void;
 }
 
@@ -220,6 +232,10 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
   const closedRef = useRef(false);
   const kickedRef = useRef(false);
   const lastNudgeRef = useRef(0);
+  // The newest nudge that arrived inside the throttle window, waiting for it
+  // to open, and the timer that will send it.
+  const deferredNudgeRef = useRef<DeferredNudge | null>(null);
+  const nudgeTimerRef = useRef<number | null>(null);
 
   // Snapshot getters live in refs so the SSE effect doesn't resubscribe on
   // every wizard keystroke.
@@ -351,6 +367,20 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
     };
   }, [sessionId, appendMessage, connectStream, applyTurnStatus]);
 
+  // Send one nudge now, opening a fresh throttle window.
+  const sendNudge = useCallback(
+    (nudge: DeferredNudge) => {
+      if (!sessionId) return;
+      lastNudgeRef.current = Date.now();
+      setTyping(true);
+      guidedAPI
+        .nudgeChat(sessionId, nudge.step, nudge.state, nudge.event)
+        .then((res) => applyTurnStatus(res.data))
+        .catch(() => setTyping(false));
+    },
+    [sessionId, applyTurnStatus]
+  );
+
   // Wizard actions (Next/Skip) call this through a ref so the thinking
   // indicator appears the moment the user acts, not when the reply lands.
   useImperativeHandle(
@@ -362,17 +392,46 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
         // parks the newest one and answers it when the turn finishes), so the
         // panel does not track run state. It only refuses to spam: at most
         // one nudge a second, however fast the wizard is saving.
-        const now = Date.now();
-        if (now - lastNudgeRef.current < NUDGE_MIN_INTERVAL_MS) return;
-        lastNudgeRef.current = now;
-        setTyping(true);
-        guidedAPI
-          .nudgeChat(sessionId, nudgeStep, getStateRef.current(), event)
-          .then((res) => applyTurnStatus(res.data))
-          .catch(() => setTyping(false));
+        //
+        // A nudge inside that window is DEFERRED, never dropped: the last
+        // save of a burst carries the freshest wizard state, and dropping it
+        // would keep the newest state from ever reaching the server (and the
+        // server-side coalescing from ever seeing it). The newest one waits
+        // in a ref — replacing any held one — and goes out when the window
+        // opens.
+        const held: DeferredNudge = { step: nudgeStep, event, state: getStateRef.current() };
+        const wait = NUDGE_MIN_INTERVAL_MS - (Date.now() - lastNudgeRef.current);
+        if (wait <= 0) {
+          sendNudge(held);
+          return;
+        }
+        // Deferred only: nothing has been asked of the server yet, so the
+        // thinking indicator stays as it is until the request actually goes.
+        deferredNudgeRef.current = held;
+        if (nudgeTimerRef.current === null) {
+          nudgeTimerRef.current = window.setTimeout(() => {
+            nudgeTimerRef.current = null;
+            const next = deferredNudgeRef.current;
+            deferredNudgeRef.current = null;
+            if (next) sendNudge(next);
+          }, wait);
+        }
       },
     }),
-    [sessionId, applyTurnStatus]
+    [sessionId, sendNudge]
+  );
+
+  // A held nudge belongs to the session it was entered against: drop it (and
+  // its timer) when the panel unmounts or moves to another session.
+  useEffect(
+    () => () => {
+      if (nudgeTimerRef.current !== null) {
+        window.clearTimeout(nudgeTimerRef.current);
+        nudgeTimerRef.current = null;
+      }
+      deferredNudgeRef.current = null;
+    },
+    [sessionId]
   );
 
   // Scroll so the START of the newest message is in view — the reader begins

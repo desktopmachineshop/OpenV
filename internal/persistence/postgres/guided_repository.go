@@ -3,6 +3,7 @@ package postgres
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 
 	"github.com/openv/requirements-platform/internal/domain/guided"
 )
@@ -111,7 +112,10 @@ func (r *GuidedRepository) TakePendingNudge(sessionID string) (*guided.PendingNu
 	}
 	nudge := &guided.PendingNudge{}
 	if err := json.Unmarshal(payload, nudge); err != nil {
-		return nil, nil
+		// The column is already cleared by the statement above, so the nudge
+		// is gone either way; reporting the error is the only way that drop
+		// becomes visible to the caller (which logs it) instead of silent.
+		return nil, fmt.Errorf("guided session %s: malformed parked nudge (discarded): %w", sessionID, err)
 	}
 	return nudge, nil
 }

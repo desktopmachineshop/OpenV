@@ -3,6 +3,7 @@ package guided
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/google/uuid"
@@ -335,8 +336,23 @@ func (s *DefaultService) Commit(sessionID string) (*Session, error) {
 	if err := s.repo.Update(session); err != nil {
 		return nil, err
 	}
+	s.clearPendingNudge(session)
 
 	return session, nil
+}
+
+// clearPendingNudge drops any wizard nudge still parked on a session that has
+// just closed. A committed or abandoned session must not get a copilot turn,
+// and the parked nudge is the one thing that could still launch one. The
+// session is already closed by the time this runs, so a failure is logged
+// rather than returned — the hooks refuse a closed session's nudge anyway.
+func (s *DefaultService) clearPendingNudge(session *Session) {
+	if err := s.repo.SetPendingNudge(session.ID, nil); err != nil {
+		slog.Warn("guided: failed to clear the parked nudge of a closed session",
+			"session_id", session.ID, "status", session.Status, "error", err)
+		return
+	}
+	session.PendingNudge = nil
 }
 
 // AppendChatMessage adds a message to a session's copilot conversation.
@@ -405,6 +421,7 @@ func (s *DefaultService) Abandon(sessionID string) (*Session, error) {
 	if err := s.repo.Update(session); err != nil {
 		return nil, err
 	}
+	s.clearPendingNudge(session)
 
 	return session, nil
 }

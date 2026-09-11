@@ -10,7 +10,6 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
-	"unicode/utf8"
 
 	"github.com/openv/requirements-platform/internal/domain/agentruns"
 	"github.com/openv/requirements-platform/internal/domain/providers"
@@ -520,17 +519,15 @@ func startHeartbeat(interval time.Duration, beat func()) (stop func()) {
 	}
 }
 
-// partialTextLimit caps the answer-so-far each batch carries. The whole text
-// is sent every time (not a delta), so a lost batch costs freshness and can
-// never corrupt what the reader sees; the cap keeps one runaway run from
-// pushing megabytes through the log endpoint every 750ms.
-const partialTextLimit = 64 * 1024
-
 // pump batches run events into log pushes every 750ms until the event
 // channel closes; returns true when the run was cancelled server-side.
 // Each push also carries the assistant text written so far, when the
 // provider reports any and it changed since the last successful push, so the
-// chat panels can show the reply forming.
+// chat panels can show the reply forming. The whole text is sent every time
+// (not a delta), so a lost batch costs freshness and can never corrupt what
+// the reader sees; agentruns.TruncatePartial applies the same cap the API
+// stores it under, which keeps one runaway run from pushing megabytes through
+// the log endpoint every 750ms.
 func (w *Worker) pump(runID string, handle RunHandle) bool {
 	var batch []agentruns.LogEntry
 	seq := 0
@@ -541,7 +538,7 @@ func (w *Worker) pump(runID string, handle RunHandle) bool {
 	flush := func() {
 		partial := ""
 		if partialSource != nil {
-			if text := truncatePartial(partialSource.PartialText()); text != sentPartial {
+			if text := agentruns.TruncatePartial(partialSource.PartialText()); text != sentPartial {
 				partial = text
 			}
 		}
@@ -580,19 +577,6 @@ func (w *Worker) pump(runID string, handle RunHandle) bool {
 			flush()
 		}
 	}
-}
-
-// truncatePartial cuts the answer-so-far to partialTextLimit bytes without
-// splitting a UTF-8 rune, keeping the head (a bubble reads from its start).
-func truncatePartial(text string) string {
-	if len(text) <= partialTextLimit {
-		return text
-	}
-	cut := partialTextLimit
-	for cut > 0 && !utf8.RuneStart(text[cut]) {
-		cut--
-	}
-	return text[:cut]
 }
 
 func (w *Worker) finish(runID string, req agentruns.FinishRequest) {

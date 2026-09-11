@@ -90,7 +90,7 @@ func joinPartial(done []string, live string) string {
 //
 //	Capability     claude-code   codex-cli            gemini-cli
 //	-----------    -----------   ------------------   ------------------
-//	Partial text   yes (tokens)  yes (per message)    no (one JSON blob)
+//	Partial text   yes (tokens)  yes (current message) no (one JSON blob)
 //	Model          yes           yes                  yes
 //	Effort         yes           yes (capped "high")  no (ignored*)
 //	SystemPrompt   yes           yes (prefixed)       yes (prefixed)
@@ -101,8 +101,10 @@ func joinPartial(done []string, live string) string {
 // Partial text is the answer-so-far the log pump streams to the chat panels
 // (PartialTextSource): claude reports token deltas when its CLI supports
 // --include-partial-messages and whole assistant messages otherwise; codex
-// reports each agent message as it completes; gemini prints one JSON object
-// at the very end, so it has nothing to stream and reports no partials.
+// reports its current agent message, the same one its result reports as the
+// final answer, so the bubble never shrinks when the reply lands; gemini
+// prints one JSON object at the very end, so it has nothing to stream and
+// reports no partials.
 //
 // *gemini's headless CLI exposes no reasoning-effort control, so Effort is a
 // documented no-op there rather than an error (it never runs unconstrained on

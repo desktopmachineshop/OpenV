@@ -247,9 +247,13 @@ func (rep *AgentRunRepository) Claim(workerID string, orgID string, workerUserID
 // still owned by workerID and non-terminal (claimed or running); reports
 // whether it was applied. Running is included so a worker shutting down
 // mid-run can hand the run back instead of failing it.
+//
+// partial_text is cleared with the release: the answer the departing worker
+// had begun is not the answer whichever worker picks the run up next will
+// write, and a queued run must not show text as if it were being typed.
 func (rep *AgentRunRepository) ReleaseClaim(runID, workerID string) (bool, error) {
 	res, err := rep.db.Exec(`
-		UPDATE agent_runs SET status = 'queued', worker_id = '', heartbeat_at = NULL, started_at = NULL
+		UPDATE agent_runs SET status = 'queued', worker_id = '', heartbeat_at = NULL, started_at = NULL, partial_text = ''
 		WHERE id = $1 AND status IN ('claimed', 'running') AND worker_id = $2
 	`, runID, workerID)
 	if err != nil {
@@ -370,9 +374,13 @@ func (rep *AgentRunRepository) UpdatePartialText(runID string, text string) (boo
 
 // FailStale fails claimed/running runs whose heartbeat predates cutoff,
 // revoking their run tokens along with the terminal transition.
+//
+// The half-written answer goes with them: a failed run has no reply coming,
+// and leaving partial_text behind makes the run detail panel render "Output
+// so far" under a live cursor on a run that will never write another word.
 func (rep *AgentRunRepository) FailStale(cutoff time.Time) ([]string, error) {
 	rows, err := rep.db.Query(`
-		UPDATE agent_runs SET status = 'failed', error = 'worker lost (heartbeat timeout)', error_class = 'worker_error', finished_at = NOW(), run_token_hash = ''
+		UPDATE agent_runs SET status = 'failed', error = 'worker lost (heartbeat timeout)', error_class = 'worker_error', finished_at = NOW(), run_token_hash = '', partial_text = ''
 		WHERE status IN ('claimed', 'running') AND heartbeat_at < $1
 		RETURNING id
 	`, cutoff)

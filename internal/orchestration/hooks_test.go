@@ -171,6 +171,20 @@ type fakeGuidedService struct {
 	pendingErr error
 	takes      int
 	parked     []*guided.PendingNudge
+	// The session a parked nudge belongs to. In progress unless a test
+	// commits or abandons it; nil means it has gone missing.
+	session    *guided.Session
+	sessionErr error
+}
+
+func (f *fakeGuidedService) GetSession(id string) (*guided.Session, error) {
+	if f.sessionErr != nil {
+		return nil, f.sessionErr
+	}
+	if f.session != nil {
+		return f.session, nil
+	}
+	return &guided.Session{ID: id, Status: guided.StatusInProgress}, nil
 }
 
 func (f *fakeGuidedService) SetPendingNudge(sessionID string, nudge *guided.PendingNudge) error {
@@ -1234,5 +1248,63 @@ func TestPendingNudgeWithoutLauncherIsDropped(t *testing.T) {
 	f.hooks.RunStatusChanged(&agentruns.Run{ID: "r1", Status: agentruns.StatusSucceeded, GuidedSessionID: strptr("gs-1")})
 	if f.guided.pending != nil {
 		t.Fatal("the parked nudge should still be cleared")
+	}
+}
+
+// A wizard that was committed or abandoned while the turn ran gets no copilot
+// turn: nobody is watching that chat, and the nudge dies with the session.
+func TestPendingNudgeOfAClosedSessionIsDiscarded(t *testing.T) {
+	for _, status := range []string{guided.StatusCommitted, guided.StatusAbandoned} {
+		t.Run(status, func(t *testing.T) {
+			f := newFixture()
+			launcher := &fakeNudgeLauncher{}
+			f.hooks.SetGuidedNudgeLauncher(launcher)
+			f.guided.session = &guided.Session{ID: "gs-1", Status: status}
+			f.guided.pending = &guided.PendingNudge{Step: 4, Event: "saved step 4"}
+
+			f.hooks.RunStatusChanged(&agentruns.Run{ID: "r1", Status: agentruns.StatusSucceeded, GuidedSessionID: strptr("gs-1")})
+
+			if len(launcher.launches) != 0 {
+				t.Fatalf("%s session launched %+v", status, launcher.launches)
+			}
+			// Taken all the same, so nothing is left to fire later.
+			if f.guided.takes != 1 || f.guided.pending != nil {
+				t.Fatalf("%s: takes=%d pending=%+v, want the nudge taken and dropped", status, f.guided.takes, f.guided.pending)
+			}
+		})
+	}
+}
+
+// A session that has vanished, or one that cannot be read, is not launched
+// into either — the nudge is already taken, so it is simply dropped.
+func TestPendingNudgeWithoutAReadableSessionIsDropped(t *testing.T) {
+	t.Run("missing", func(t *testing.T) {
+		f := newFixture()
+		launcher := &fakeNudgeLauncher{}
+		f.hooks.SetGuidedNudgeLauncher(launcher)
+		f.guided.sessionErr = errors.New("guided session not found")
+		f.guided.pending = &guided.PendingNudge{Step: 1, Event: "saved step 1"}
+
+		f.hooks.RunStatusChanged(&agentruns.Run{ID: "r1", Status: agentruns.StatusSucceeded, GuidedSessionID: strptr("gs-1")})
+
+		if len(launcher.launches) != 0 {
+			t.Fatalf("launched %+v for a session that could not be read", launcher.launches)
+		}
+	})
+}
+
+// The ordinary case still launches: an in-progress session is what a parked
+// nudge is for.
+func TestPendingNudgeOfAnInProgressSessionStillLaunches(t *testing.T) {
+	f := newFixture()
+	launcher := &fakeNudgeLauncher{}
+	f.hooks.SetGuidedNudgeLauncher(launcher)
+	f.guided.session = &guided.Session{ID: "gs-1", Status: guided.StatusInProgress}
+	f.guided.pending = &guided.PendingNudge{Step: 2, Event: "saved step 2"}
+
+	f.hooks.RunStatusChanged(&agentruns.Run{ID: "r1", Status: agentruns.StatusSucceeded, GuidedSessionID: strptr("gs-1")})
+
+	if len(launcher.launches) != 1 {
+		t.Fatalf("launches = %+v, want the parked nudge launched", launcher.launches)
 	}
 }

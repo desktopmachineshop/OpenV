@@ -160,11 +160,22 @@ describe('GuidedChatPanel streaming', () => {
 });
 
 describe('GuidedChatPanel nudges', () => {
-  it('sends at most one nudge a second and lets the server coalesce', async () => {
+  const renderWithRef = async () => {
     const ref = React.createRef<any>();
     await act(async () => {
-      root.render(<GuidedChatPanel ref={ref} sessionId="gs-1" step={2} />);
+      root.render(<GuidedChatPanel ref={ref} sessionId="gs-1" step={2} getState={() => state} />);
     });
+    return ref;
+  };
+  // The wizard's live state, which the test moves on between saves.
+  let state: Record<string, any> = {};
+
+  beforeEach(() => {
+    state = {};
+  });
+
+  it('sends at most one nudge a second and lets the server coalesce', async () => {
+    const ref = await renderWithRef();
 
     await act(async () => {
       ref.current.nudge(2, 'saved step 2');
@@ -186,5 +197,81 @@ describe('GuidedChatPanel nudges', () => {
     }
     expect(api.nudgeChat).toHaveBeenCalledTimes(2);
     expect(api.nudgeChat).toHaveBeenLastCalledWith('gs-1', 4, expect.anything(), 'saved step 4');
+  });
+
+  // The freshest wizard state must reach the server: a nudge inside the
+  // window waits for it to open instead of being thrown away.
+  it('defers the newest nudge of a burst instead of dropping it', async () => {
+    jest.useFakeTimers();
+    try {
+      const ref = await renderWithRef();
+
+      // Opens the throttle window.
+      state = { step_2: 'personas' };
+      await act(async () => {
+        ref.current.nudge(2, 'saved step 2');
+      });
+      expect(api.nudgeChat).toHaveBeenCalledTimes(1);
+
+      // Two more saves inside that one second: exactly one request follows,
+      // carrying the second save's step, event and state.
+      state = { step_3: 'needs' };
+      act(() => {
+        ref.current.nudge(3, 'saved step 3');
+      });
+      state = { step_4: 'requirements' };
+      act(() => {
+        ref.current.nudge(4, 'saved step 4');
+      });
+      expect(api.nudgeChat).toHaveBeenCalledTimes(1);
+
+      await act(async () => {
+        jest.advanceTimersByTime(1000);
+      });
+      expect(api.nudgeChat).toHaveBeenCalledTimes(2);
+      expect(api.nudgeChat).toHaveBeenLastCalledWith(
+        'gs-1',
+        4,
+        { step_4: 'requirements' },
+        'saved step 4'
+      );
+
+      // And nothing else goes out afterwards.
+      await act(async () => {
+        jest.advanceTimersByTime(5000);
+      });
+      expect(api.nudgeChat).toHaveBeenCalledTimes(2);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  // Nothing has been asked of the server yet, so a merely deferred nudge must
+  // not claim the assistant is answering.
+  it('does not show the thinking indicator for a nudge that was only deferred', async () => {
+    api.nudgeChat.mockResolvedValue({ data: { status: 'unavailable', runner_online: true } } as any);
+    jest.useFakeTimers();
+    try {
+      const ref = await renderWithRef();
+
+      await act(async () => {
+        ref.current.nudge(2, 'saved step 2');
+      });
+      // The first nudge was answered "unavailable": no reply is coming.
+      expect(container.textContent).not.toContain('The assistant is thinking');
+
+      act(() => {
+        ref.current.nudge(3, 'saved step 3');
+      });
+      expect(container.textContent).not.toContain('The assistant is thinking');
+
+      // Once it actually goes out, the indicator behaves as usual.
+      await act(async () => {
+        jest.advanceTimersByTime(1000);
+      });
+      expect(api.nudgeChat).toHaveBeenCalledTimes(2);
+    } finally {
+      jest.useRealTimers();
+    }
   });
 });

@@ -113,6 +113,12 @@ func TestFailStale(t *testing.T) {
 	staleRunning := f.queueRun(t, runSpec{})
 	f.setRunState(t, staleRunning, agentruns.StatusRunning, "tok-running")
 	setHeartbeat(staleRunning, stale)
+	// Both stale runs were mid-answer when their worker went away.
+	for _, id := range []string{staleClaimed, staleRunning} {
+		if applied, err := f.repo.UpdatePartialText(id, "Your vision statement is va"); err != nil || !applied {
+			t.Fatalf("seed partial text on %s = %v, %v", id, applied, err)
+		}
+	}
 
 	freshRunning := f.queueRun(t, runSpec{})
 	f.setRunState(t, freshRunning, agentruns.StatusRunning, "tok-fresh")
@@ -148,6 +154,12 @@ func TestFailStale(t *testing.T) {
 		}
 		if hash := f.tokenHash(t, id); hash != "" {
 			t.Errorf("run %s token hash = %q, want revoked", id, hash)
+		}
+		// A failed run has no reply coming: the half-written answer must go
+		// with it, or the run detail panel renders "Output so far" under a
+		// live cursor on a terminal run.
+		if run.PartialText != "" {
+			t.Errorf("run %s kept partial_text %q after being reaped", id, run.PartialText)
 		}
 	}
 
@@ -385,6 +397,11 @@ func TestReleaseClaimRequiresOwningWorker(t *testing.T) {
 		t.Fatalf("claim = %v, %v", claimed, err)
 	}
 
+	// The worker had begun writing an answer before handing the run back.
+	if applied, err := f.repo.UpdatePartialText(id, "Half an answ"); err != nil || !applied {
+		t.Fatalf("seed partial text = %v, %v", applied, err)
+	}
+
 	// The wrong worker cannot release it.
 	ok, err := f.repo.ReleaseClaim(id, "w-2")
 	if err != nil || ok {
@@ -392,6 +409,9 @@ func TestReleaseClaimRequiresOwningWorker(t *testing.T) {
 	}
 	if got := f.status(t, id); got != agentruns.StatusClaimed {
 		t.Errorf("run = %s, want still claimed", got)
+	}
+	if got := f.mustFind(t, id).PartialText; got != "Half an answ" {
+		t.Errorf("refused release changed partial_text to %q", got)
 	}
 
 	// The owning worker returns it to the queue.
@@ -402,6 +422,11 @@ func TestReleaseClaimRequiresOwningWorker(t *testing.T) {
 	run := f.mustFind(t, id)
 	if run.Status != agentruns.StatusQueued || run.WorkerID != "" || run.HeartbeatAt != nil {
 		t.Errorf("released run = %s/%q/%v, want queued with no worker or heartbeat", run.Status, run.WorkerID, run.HeartbeatAt)
+	}
+	// The next worker writes its own answer: a re-queued run must not carry
+	// the departing worker's half-written one.
+	if run.PartialText != "" {
+		t.Errorf("re-queued run kept partial_text %q", run.PartialText)
 	}
 
 	// A running run can still be released by its owning worker: this is the
