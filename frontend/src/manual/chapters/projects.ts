@@ -87,6 +87,7 @@ a two-step wizard.
 | Word document | The same specification as a .docx, for editing or review outside OpenV |
 | JSON data | The complete project, and the only format an OpenV import reads back |
 | CSV table | One row per artifact for a spreadsheet; links fold into a single column |
+| Excel workbook (.xlsx) | A sheet per artifact type, a sheet of traceability links, and a cover naming the snapshot |
 | ReqIF interchange | The OMG format read by DOORS and Polarion |
 
 **2. Content** — how much of it:
@@ -119,7 +120,7 @@ the live project.
   **JSON data** format and creates a new project from it.
 - Download/import is a simple way to move a project between servers or keep an
   offline copy.
-- The other formats are one-way: CSV, PDF, Word and ReqIF are snapshots to read
+- The other formats are one-way: CSV, Excel, PDF, Word and ReqIF are snapshots to read
   or to hand to another tool, not something OpenV reads back.
 
 ## Inside a project

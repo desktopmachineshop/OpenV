@@ -6,8 +6,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/openv/requirements-platform/internal/domain/agentruns"
@@ -22,6 +24,9 @@ type Client struct {
 	workerKey string
 	http      *http.Client
 	logHTTP   *http.Client
+	// legacyLogs latches when the API refuses the streaming log body, so this
+	// runner keeps talking to an older API in the shape it understands.
+	legacyLogs atomic.Bool
 }
 
 // NewClient creates a worker API client.
@@ -152,14 +157,35 @@ func (c *Client) Start(runID string) error {
 }
 
 // PushLogs appends a log batch (also serves as heartbeat) and reports back
-// whether cancellation was requested.
-func (c *Client) PushLogs(runID string, entries []agentruns.LogEntry) (bool, string, error) {
+// whether cancellation was requested. partialText, when non-empty, is the
+// assistant answer written so far (the whole text, not a delta); an empty
+// string leaves whatever the API already holds alone.
+//
+// The body is an object — {entries, partial_text} — which an API older than
+// this field rejects as a bad request. That happens whenever a freshly built
+// runner meets a not-yet-promoted API, so a 400 downgrades this client to the
+// legacy bare-array body for the rest of its life rather than stranding the
+// run with no logs and no heartbeat.
+func (c *Client) PushLogs(runID string, entries []agentruns.LogEntry, partialText string) (bool, string, error) {
 	if entries == nil {
 		entries = []agentruns.LogEntry{}
 	}
-	resp, err := c.doWithRetry(c.logHTTP, "POST", "/api/v1/agent-runs/"+runID+"/logs", entries)
+	path := "/api/v1/agent-runs/" + runID + "/logs"
+	var body interface{} = map[string]interface{}{"entries": entries, "partial_text": partialText}
+	if c.legacyLogs.Load() {
+		body = entries
+	}
+	resp, err := c.doWithRetry(c.logHTTP, "POST", path, body)
 	if err != nil {
 		return false, "", err
+	}
+	if resp.StatusCode == http.StatusBadRequest && !c.legacyLogs.Load() {
+		resp.Body.Close()
+		c.legacyLogs.Store(true)
+		log.Printf("logs endpoint rejected the streaming body; falling back to the legacy log batch (no partial answers)")
+		if resp, err = c.doWithRetry(c.logHTTP, "POST", path, entries); err != nil {
+			return false, "", err
+		}
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {

@@ -122,6 +122,52 @@ password account meets the *Check your inbox* page on its next request and
 verifies with one click on *Resend email*. Re-adding `off` switches it back
 off at once. With no SMTP variables nothing is enforced.
 
+Optional — **registration policy and session lifetime** (see
+[operations.md](operations.md)):
+
+```dotenv
+# Close the public sign-up door. New accounts then arrive only through a
+# workspace invitation LINK or the configured SSO provider.
+OPENV_REGISTRATION=closed
+
+# Shorten session lifetimes below the 720h/168h defaults (Go durations).
+OPENV_SESSION_MAX_AGE=336h
+OPENV_SESSION_IDLE=72h
+```
+
+**On the hosted instance, registration is open** — that is the default, and
+none of these variables is set there today, so anyone who reaches the site can
+create an account. To close it, set `OPENV_REGISTRATION=closed` on the **API**
+service and redeploy it; the login page picks the policy up from
+`GET /api/v1/auth/policy` with no frontend rebuild, since the SPA reads it at
+runtime. Existing accounts and sessions are unaffected. Invite people from
+*Workspace settings → Members* afterwards — with SMTP configured the
+invitation is emailed, and without it the link is shown once for you to send.
+The link is what admits and joins them: an invited address that never
+receives it cannot sign up on a closed deployment.
+
+Optional — web push notifications (REQ-109): generate one VAPID key pair for
+the deployment (`make vapid-keys`, or `go run ./cmd/openv-vapid`) and set all
+three variables on the **API** service:
+
+```dotenv
+OPENV_VAPID_PUBLIC_KEY=<public half from make vapid-keys>
+OPENV_VAPID_PRIVATE_KEY=<private half — a secret; Railway stores it sealed>
+# Operator contact for the push services. mailto: or https: only.
+OPENV_VAPID_SUBJECT=mailto:you@example.com
+```
+
+With any of them unset, push stays off and everything else is unchanged. The
+public key reaches browsers through `/api/v1/me/push/config`, so it needs no
+frontend variable and no rebuild — but it is baked into every subscription a
+member takes, so **rotating the pair invalidates every existing
+subscription** and each device has to be turned on again.
+
+Push also needs the app served over HTTPS on one origin with a registered
+service worker, which is what section 3's frontend already does. See
+[operations.md](operations.md) for what "high-signal" covers and the
+per-device opt-in.
+
 ## 3. Frontend service
 
 **Create → GitHub Repo**, pick the same repository again.

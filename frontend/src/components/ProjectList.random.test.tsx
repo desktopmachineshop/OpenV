@@ -19,7 +19,12 @@ jest.mock('../api/client', () => ({
   workerStatusAPI: { get: jest.fn() },
 }));
 
-jest.mock('react-router-dom', () => ({ useNavigate: () => jest.fn() }));
+// The list reads the query string as well as navigating (the settings tabs
+// open by ?tab=), so the router double has to answer both.
+jest.mock('react-router-dom', () => ({
+  useNavigate: () => jest.fn(),
+  useSearchParams: () => [new URLSearchParams(), () => {}],
+}));
 
 jest.mock('../state/store', () => ({
   useAppStore: () => ({

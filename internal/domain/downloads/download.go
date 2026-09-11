@@ -1,7 +1,7 @@
 // Package downloads assembles one project download.
 //
 // Everything a reader can take away from a project — the JSON an import reads
-// back, a CSV for a spreadsheet, ReqIF for DOORS, the PDF and Word
+// back, a CSV or an Excel workbook for a spreadsheet, ReqIF for DOORS, the PDF and Word
 // specifications, and the figures themselves — comes from one prepared
 // snapshot, narrowed once by the reader's selection and then handed to the
 // renderer for the format they picked. That is the point of this package: the
@@ -35,6 +35,7 @@ type Format string
 const (
 	FormatJSON  Format = "json"
 	FormatCSV   Format = "csv"
+	FormatExcel Format = "excel"
 	FormatReqIF Format = "reqif"
 	FormatPDF   Format = "pdf"
 	FormatDOCX  Format = "docx"
@@ -42,7 +43,7 @@ const (
 
 // Formats lists what a download can be rendered as, in the order a chooser
 // should offer them.
-var Formats = []Format{FormatJSON, FormatCSV, FormatReqIF, FormatPDF, FormatDOCX}
+var Formats = []Format{FormatJSON, FormatCSV, FormatExcel, FormatReqIF, FormatPDF, FormatDOCX}
 
 // Supported reports whether a string names a format this package renders.
 func Supported(format string) bool {
@@ -176,6 +177,12 @@ func (s *DefaultService) Download(req Request) (*Result, error) {
 		body, filename, err = s.exportService.RenderExport(data, exports.FormatJSON)
 	case FormatCSV:
 		body, filename, err = s.exportService.RenderExport(data, exports.FormatCSV)
+	case FormatExcel:
+		// The workbook has a cover sheet, and a snapshot taken from a baseline
+		// should say so on it. data is the narrowed copy Apply returned, so
+		// naming it here does not touch the loaded snapshot.
+		data.BaselineName = baselineName
+		body, filename, err = s.exportService.RenderExport(data, exports.FormatExcel)
 	case FormatReqIF:
 		body, filename, err = s.exportService.RenderExport(data, exports.FormatReqIF)
 	case FormatPDF:
@@ -210,6 +217,8 @@ func ContentType(format Format) string {
 		return "application/json"
 	case FormatCSV:
 		return "text/csv; charset=utf-8"
+	case FormatExcel:
+		return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 	case FormatReqIF:
 		// ReqIF is an XML dialect; application/xml is what tools accept.
 		return "application/xml; charset=utf-8"

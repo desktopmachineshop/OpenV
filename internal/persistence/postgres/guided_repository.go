@@ -3,6 +3,7 @@ package postgres
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 
 	"github.com/openv/requirements-platform/internal/domain/guided"
 )
@@ -75,6 +76,50 @@ func (r *GuidedRepository) Update(s *guided.Session) error {
 	return err
 }
 
+// SetPendingNudge parks the newest wizard nudge on the session (nil clears
+// it). A single-column write: it races the session's own updates on purpose,
+// since a nudge arrives from a different action than a step save.
+func (r *GuidedRepository) SetPendingNudge(sessionID string, nudge *guided.PendingNudge) error {
+	if nudge == nil {
+		_, err := r.db.Exec(`UPDATE guided_sessions SET pending_nudge = NULL WHERE id = $1`, sessionID)
+		return err
+	}
+	payload, err := json.Marshal(nudge)
+	if err != nil {
+		return err
+	}
+	_, err = r.db.Exec(`UPDATE guided_sessions SET pending_nudge = $2 WHERE id = $1`, sessionID, payload)
+	return err
+}
+
+// TakePendingNudge returns the waiting nudge and clears it in one statement,
+// so two finishing runs cannot both launch the same nudge.
+func (r *GuidedRepository) TakePendingNudge(sessionID string) (*guided.PendingNudge, error) {
+	// RETURNING reports the NEW row, which is the cleared one, so the old
+	// value is read through a self-join that snapshots the row as it was.
+	var payload []byte
+	err := r.db.QueryRow(`
+		UPDATE guided_sessions g SET pending_nudge = NULL
+		FROM guided_sessions old
+		WHERE g.id = $1 AND old.id = g.id AND g.pending_nudge IS NOT NULL
+		RETURNING old.pending_nudge
+	`, sessionID).Scan(&payload)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	nudge := &guided.PendingNudge{}
+	if err := json.Unmarshal(payload, nudge); err != nil {
+		// The column is already cleared by the statement above, so the nudge
+		// is gone either way; reporting the error is the only way that drop
+		// becomes visible to the caller (which logs it) instead of silent.
+		return nil, fmt.Errorf("guided session %s: malformed parked nudge (discarded): %w", sessionID, err)
+	}
+	return nudge, nil
+}
+
 // marshalSessionJSON marshals the JSONB fields of a session with non-nil defaults
 func marshalSessionJSON(s *guided.Session) ([]byte, []byte, error) {
 	answers := s.Answers
@@ -102,7 +147,7 @@ func marshalSessionJSON(s *guided.Session) ([]byte, []byte, error) {
 func scanGuidedSession(scan func(dest ...interface{}) error) (*guided.Session, error) {
 	session := &guided.Session{}
 	var projectID sql.NullString
-	var answersJSON, draftIDsJSON []byte
+	var answersJSON, draftIDsJSON, pendingNudgeJSON []byte
 
 	err := scan(
 		&session.ID,
@@ -112,6 +157,7 @@ func scanGuidedSession(scan func(dest ...interface{}) error) (*guided.Session, e
 		&answersJSON,
 		&draftIDsJSON,
 		&session.AgentRunID,
+		&pendingNudgeJSON,
 		&session.CreatedBy,
 		&session.CreatedAt,
 		&session.UpdatedAt,
@@ -138,13 +184,22 @@ func scanGuidedSession(scan func(dest ...interface{}) error) (*guided.Session, e
 		}
 	}
 
+	// A NULL (or unreadable) pending nudge means nothing is waiting — never a
+	// reason to fail the read of an otherwise good session.
+	if len(pendingNudgeJSON) > 0 {
+		nudge := &guided.PendingNudge{}
+		if err := json.Unmarshal(pendingNudgeJSON, nudge); err == nil {
+			session.PendingNudge = nudge
+		}
+	}
+
 	return session, nil
 }
 
 // FindByID retrieves a guided session by ID
 func (r *GuidedRepository) FindByID(id string) (*guided.Session, error) {
 	query := `
-		SELECT id, project_id, status, current_step, answers, draft_artifact_ids, agent_run_id, created_by, created_at, updated_at
+		SELECT id, project_id, status, current_step, answers, draft_artifact_ids, agent_run_id, pending_nudge, created_by, created_at, updated_at
 		FROM guided_sessions
 		WHERE id = $1
 	`
@@ -198,7 +253,7 @@ func (r *GuidedRepository) ListChatMessages(sessionID string) ([]*guided.ChatMes
 // ListByProject retrieves all guided sessions for a project, newest first
 func (r *GuidedRepository) ListByProject(projectID string) ([]*guided.Session, error) {
 	query := `
-		SELECT id, project_id, status, current_step, answers, draft_artifact_ids, agent_run_id, created_by, created_at, updated_at
+		SELECT id, project_id, status, current_step, answers, draft_artifact_ids, agent_run_id, pending_nudge, created_by, created_at, updated_at
 		FROM guided_sessions
 		WHERE project_id = $1
 		ORDER BY created_at DESC

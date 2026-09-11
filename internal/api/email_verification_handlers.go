@@ -65,6 +65,15 @@ func (h *Handler) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 		respondInternal(w, r, "failed to verify email", err)
 		return
 	}
+	// Confirming a verification link deliberately grants NO membership. The
+	// address it confirms is one the account asked to be sent to (see
+	// ChangeVerificationEmail), so "verified" here means the account can
+	// read that mailbox's link — not that the account is the person an admin
+	// invited. Pointing a change-of-address mail at an invited address would
+	// otherwise hand over the workspace. An invitation converts through its
+	// own link instead: with the sign-up (invite_token), by POSTing the
+	// token while signed in as the invited address, or through a provider
+	// that asserts the address as verified.
 	json.NewEncoder(w).Encode(user)
 }
 

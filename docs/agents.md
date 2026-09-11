@@ -118,6 +118,12 @@ environment only and are **never stored** by the platform.
   2 CPUs). There is no UI/API for editing org limits yet — operators set the
   keys directly on the `organizations.limits` JSONB column; changes apply the
   next time the runner is provisioned.
+- **Isolated**: every capability dropped, no-new-privileges, a process cap
+  (`HOSTED_RUNNER_PIDS_LIMIT`, default 1024 — the cgroup counts threads, not
+  processes), and only the org's data volume
+  mounted — never the docker socket. See `docs/operations.md`, *Hosted
+  runners: the docker socket, and how to avoid it*, which is also where the
+  reason to prefer the transient pool is spelled out.
 
 ### Routing and the first-refusal grace window
 
@@ -352,11 +358,19 @@ Hosted runners are off unless the API server can reach a Docker daemon:
    (produces `openv-worker:latest` from `Dockerfile.worker`).
 2. Mount the docker socket into the API container (uncomment the
    `/var/run/docker.sock` volume line in `docker-compose.yml`; Linux hosts).
+   **Read the warning first**: mounting the host's container socket into the
+   API grants the API control of the host. `docs/operations.md` says what that
+   means and why the transient pool above — which needs no socket — is the
+   alternative to reach for.
 3. Optional env on the API service: `RUNNER_IMAGE` (default
-   `openv-worker:latest`), `RUNNER_NETWORK` (attach runner containers to a
-   compose network so they can reach the API), `RUNNER_API_URL` (API base URL
-   as seen from inside a runner container, default `http://api:8080`), and
-   `HOSTED_RUNNERS=off` to hard-disable the feature.
+   `openv-worker:latest`), `RUNNER_NETWORK` (the network runner containers
+   join — set it to one that reaches the API and the provider endpoints only;
+   without it they land on the default bridge with every other container),
+   `RUNNER_API_URL` (API base URL as seen from inside a runner container,
+   default `http://api:8080`), `HOSTED_RUNNER_PIDS_LIMIT` (task cap per
+   runner container, default 1024 — the pids cgroup counts threads, `0` for
+   none), and `HOSTED_RUNNERS=off` to
+   hard-disable the feature.
 
 Each workspace's runner container gets a persistent volume
 (`openv-runner-<org-id>`) holding its HOME and workspaces; deleting the
@@ -381,7 +395,29 @@ $AGENTS_DIR/<org-id>/<slug>.md   (default: $OPENV_DATA_DIR/agents,
 Each file has YAML frontmatter — `slug`, `name`, `description`, `provider`,
 `model`, `effort`, `allowed_tools`, `write_mode`, `repo_access`, `max_turns`,
 `timeout_seconds`, `config` (see `internal/domain/agents/agents.go`) — and a
-markdown body that becomes the agent's system prompt. The server syncs these
+markdown body that becomes the agent's system prompt.
+
+Not every provider can apply every field, and where one cannot it says so
+rather than either failing the run or pretending:
+
+| Field | Claude Code | Codex CLI | Gemini CLI |
+| --- | --- | --- | --- |
+| `model` | yes | yes | yes |
+| `effort` | yes | yes (capped at `high`) | no — logged no-op |
+| `max_turns` | yes | no — logged no-op | no — logged no-op |
+| `timeout_seconds` | yes | yes | yes |
+| `allowed_tools` | `--allowedTools` | sandbox + `OPENV_MCP_TOOLS` | `tools.core` + `includeTools` + `OPENV_MCP_TOOLS` |
+| `repo_access` | yes | **refused at save** | **refused at save** |
+
+A *logged no-op* is exactly that: the run starts, and the runner logs once that
+the field is not enforced on that provider. Neither `codex exec` nor headless
+gemini has a per-run turn cap, and every definition carries a `max_turns` —
+it defaults to 50 when the frontmatter omits it — so refusing one would refuse
+every agent on those providers. `timeout_seconds`, which all three adapters do
+enforce, is the bound that holds either way. `repo_access` is the one field
+that *is* refused, and it is refused early — the definition cannot be saved
+that way at all; see [Untrusted content never
+auto-approves](#untrusted-content-never-auto-approves) for why. The server syncs these
 files into the database at startup, so editing a file and restarting (or
 re-syncing via `POST /api/v1/agents/sync`) updates the agent. Agent files are
 per-workspace (`$AGENTS_DIR/<org-id>/<slug>.md`); seed agents (e.g.
@@ -438,6 +474,203 @@ runner adapters (`internal/runner`):
 `allowed_tools` (frontmatter, and **Allowed tools** in the agent editor) is a
 comma-separated allowlist passed to the vendor CLI. `mcp__openv__*` grants the
 OpenV tool surface; the vendor's own built-in tools can be named alongside it.
+
+**An allowlist is mandatory.** An agent whose definition names no tools is
+refused: the API answers `400` on create and on update, and the runner fails
+the run before launching anything, naming the agent and saying its definition
+needs `allowed_tools`. The reason is that an empty list is not "no tools" — it
+is *every* tool, because a vendor CLI started without an allowlist runs with
+its whole toolbox. An agent that carries none from an install predating this
+rule is backfilled at startup (logged, and a narrowing) — to its own seed's
+list if it is a seeded agent, otherwise to `mcp__openv__*`. An agent that is
+`locked: true` is left exactly as it is and reported instead, so it refuses to
+run until someone gives it an allowlist themselves.
+
+The same two rules apply on both paths that could rewrite the agent — the
+markdown file sync and the registry reconcile at startup — so a locked agent is
+not quietly filled in by whichever one runs second, and a seeded agent gets its
+seed's list whichever one reaches it first. That last part matters because the
+file sync *always* runs first (`SyncAllFromDisk` before `EnsureOrgDefaults`)
+and the registry-side backfill only ever fires on a row with no allowlist at
+all: whatever the sync decides is final, so the sync reads the same seed table
+the reconcile does. The sync also **writes the filled-in list back to the
+`.md`**, so this is decided — and logged — once, not on every startup for the
+life of the install.
+
+#### How each provider applies one
+
+Every provider runs. What differs is how much of the allowlist the vendor's own
+CLI can apply, and what fills the gap where it cannot.
+
+| Provider | The vendor CLI's own tools | The OpenV (`mcp__openv__*`) tools |
+| --- | --- | --- |
+| **Claude Code** | `--allowedTools <comma-joined>`, verbatim | the same flag, plus `OPENV_MCP_TOOLS` |
+| **Codex CLI** | no allowlist exists — confined by `--sandbox`, which the allowlist picks | `OPENV_MCP_TOOLS` |
+| **Gemini CLI** | translated into `tools.core` in the run's isolated settings file | `mcpServers.openv.includeTools`, plus `OPENV_MCP_TOOLS` |
+
+**`OPENV_MCP_TOOLS`** is the platform's own half of the guarantee, and it does
+not depend on any vendor flag. `openv-mcp` reads it and serves only the tools
+it names: `*` for the whole surface, a comma-separated list (bare or
+`mcp__openv__`-prefixed) for a subset, and — set but empty — nothing at all,
+which is what an agent that names no OpenV tool gets.
+
+An allowlist may ask for the whole OpenV surface in either of the two spellings
+Claude Code documents: the per-tool glob `mcp__openv__*`, or the server-wide
+`mcp__openv`, which names the MCP server on its own. Both mean the same thing
+everywhere — `OPENV_MCP_TOOLS=*`, an omitted `includeTools` on gemini, and
+*not* "a foreign MCP server" when the platform decides whether an agent reaches
+outside the workspace. Unset means no filter,
+which is how `openv-mcp` behaves outside a platform run (a repository session
+holding a workspace runner key). Both `tools/list` and `tools/call` see the
+same filtered table, so a tool left out is neither advertised nor callable.
+Every adapter sets it, through the same route the run token already takes:
+Claude's `0600` `mcp.json`, codex's `env_vars` forward-by-name, gemini's
+`${VAR}` reference.
+
+**Gemini's translation** maps the Claude-shaped list onto the two settings
+[the CLI documents for restricting tools](https://google-gemini.github.io/gemini-cli/docs/get-started/configuration.html):
+`tools.core` ("Restrict the set of built-in tools with an allowlist") and the
+openv server's
+[`includeTools`](https://google-gemini.github.io/gemini-cli/docs/tools/mcp-server.html)
+("Subset of tools that should be enabled for this server"). `mcp__openv__<tool>`
+becomes a bare `<tool>` in `includeTools` — openv is the only MCP server in a
+run, so gemini's `serverAlias__toolName` collision prefixing never applies —
+and `mcp__openv__*` omits the key, which is how gemini spells "every tool from
+this server". Vendor tools map by name: `Read` → `read_file`, `Write` →
+`write_file`, `Edit` → `replace`, `Grep` → `grep_search`, `Glob` → `glob`,
+`LS` → `list_directory`, `Bash` → `run_shell_command`, `WebFetch` →
+`web_fetch`, `WebSearch` → `google_web_search`, `TodoWrite` → `write_todos`.
+A Claude tool gemini has no equivalent for is dropped rather than approximated,
+so the translation only ever narrows; `tools.core` is written even when empty,
+because an omitted key would hand the run every built-in gemini ships. Note
+that `tools.allowed` and `--allowed-tools` are **not** used despite the name:
+they are gemini's *auto-approval* list, which would widen a run rather than
+restrict it. Note too how `tools.core` spells a scope: for every tool but the shell it
+registers a tool or does not, but `run_shell_command` takes a literal
+**command prefix**. So `Bash(git:*)` becomes `run_shell_command(git)` — the
+trailing glob is Claude's spelling, not gemini's, and left on it would match a
+command literally beginning `git:` and scope the shell down to nothing. The
+colon is the form Claude Code documents; the older `Bash(git *)` means the same
+thing and maps to the same prefix, so an allowlist may carry either.
+`Bash(npm test)` carries through unchanged; `Bash` and `Bash(*)` register the
+unscoped shell. Whatever the scope, what finally holds a shell call is the
+approval mode, which never auto-approves one.
+
+**Codex** has no allowlist of any kind: `codex exec` offers no flag for it, and
+no settings key. The allowlist still stands on the definition, where it
+documents intent and is what the API validates, and it still gates the OpenV
+tools through `OPENV_MCP_TOOLS`; codex's own tools are held by `--sandbox`
+(below) — and the allowlist is what *picks* the sandbox, so it decides there
+too, one step removed: an agent that names no file tool and no shell gets
+`read-only`, because a writable workspace serves nothing it was granted.
+
+The translation and the refusals live in `geminiToolSettings`,
+`allowsFileOrShellWork`, `codexUnsupported`, `geminiUnsupported` and
+`withOpenVToolFilter` (`internal/runner`).
+
+#### Untrusted content never auto-approves
+
+Some runs read text nobody in the workspace wrote. Two independent things mark
+one, and **either** is enough.
+
+**Where the run came from.** An **interview turn**'s prompt is a participant's
+own transcript, typed on a public invite link by someone who is not a member of
+the workspace. That is true whichever agent is serving the interview — an
+interview names its agent when it is created (`agent_slug`), so it need not be
+the seeded interviewer — so the mark rides on the queued run
+(`agentruns.Run.UntrustedOrigin`), not on a slug.
+
+**What the definition grants.** An agent is untrusted by definition when:
+
+- it has **repo access**, so a cloned repository's files reach the model;
+- it holds a tool that reaches outside — **WebFetch/WebSearch**, an MCP server
+  other than openv, or **a shell in any form**: `Bash`, `Bash(*)`,
+  `Bash(git:*)`, `Bash(npm test)` all alike. A scope is a string match on the
+  command line, not a network policy, so no spelling of one stops `curl`,
+  `wget` or `git fetch` from bringing the outside world in. It costs such an
+  agent nothing it was granted — the allowlist stays the whole approval
+  surface either way;
+- it is the seeded **interviewer** (kept as a backstop for the origin rule
+  above).
+
+Such a run is started with **nothing auto-approved beyond its allowlist**
+(`RunSpec.Untrusted`, which the worker sets by OR-ing the two). The allowlist is
+the entire approval surface: a file edit or a shell command the agent was not
+granted is denied rather than prompted for, because a headless run has nobody to
+prompt. Exactly what that means per provider:
+
+| Provider | Trusted run | Untrusted run | Repo-access agent |
+| --- | --- | --- | --- |
+| **Claude Code** | `--permission-mode default` | `--permission-mode default` | runs (the allowlist names the editing tools) |
+| **Codex CLI** | `--sandbox workspace-write` *only if the allowlist names a file tool or a shell*; `--sandbox read-only` otherwise | `--sandbox read-only` | **refused before the definition is saved** |
+| **Gemini CLI** | `--approval-mode auto_edit` (+ `defaultApprovalMode` in the isolated settings file) | `--approval-mode default` (+ the same in the settings file) | **refused before the definition is saved** |
+
+**Why codex reads the allowlist for its sandbox.** `workspace-write` is granted
+to the whole run — codex has no way to give it to some tools and not others —
+so granting it to an agent whose allowlist is `mcp__openv__*` would hand that
+agent a writable workspace and a shell its definition never mentions. Both
+halves therefore have to be true: the run is trusted, **and** the allowlist
+names something a writable workspace would serve (`Edit`, `Write`,
+`MultiEdit`, `NotebookEdit`, or `Bash` in any scoped form). Otherwise
+`read-only`, which is what that agent asked for. So the allowlist still decides
+on the one CLI that cannot apply one — it picks the confinement instead of the
+tools.
+
+**Why repo access is refused on codex and gemini.** A repo-access agent is
+untrusted (a clone's files are content nobody in the workspace wrote) *and*
+exists to edit files. Codex and gemini each express "what may this run touch?"
+as one whole-workspace switch — the sandbox, the approval mode — so the only
+answers available there are "may edit everything" and "may edit nothing".
+Running such an agent under the read-only sandbox or the confirm-everything
+approval mode does not protect anything; it silently defeats the agent, which
+reports that it could not write. So it is refused, in the same words in three
+places: *"repository access requires the claude-code provider: `<provider>`
+cannot confine edits per tool; use claude-code or turn repo access off"*.
+
+1. **When the definition is saved.** `agents.Definition.Validate` rejects
+   `repo_access: true` on any other provider, so the API answers 400 and the
+   agent editor shows the message while someone is still choosing the provider.
+2. **Before the run clones anything.** The worker checks the claimed agent
+   ahead of `PrepareWorkspace`, so a repository is never copied onto the runner
+   host for a run that cannot start. (This is where a definition written
+   straight to disk before the rule is caught.)
+3. **At `Start`, in the adapter.** Defence in depth, for a `RunSpec` that
+   reached an adapter some other way.
+
+The refusal is agent policy, so the run fails as `agent_error` and is never
+auto-retried. Claude Code can express the middle — its allowlist names `Edit`,
+`Write`, `Bash(git:*)` one at a time — so repo access belongs there, and
+nothing about it changes.
+
+Claude Code is deliberately the same both ways. `acceptEdits` would let a run
+write files nobody put on its allowlist, which is precisely the surface the
+allowlist exists to describe, so no claude-code run auto-approves anything —
+the allowlist is the whole approval surface, and trust decides how far the
+content a run *reads* is believed, not what the CLI may do unasked. The mode
+is still stated explicitly rather than left off, so a run is not at the mercy
+of whatever the CLI, or a settings file on the runner host, happens to default
+to.
+
+`--dangerously-skip-permissions`, `bypassPermissions`, `--yolo` and
+`--sandbox danger-full-access` are **never** passed, to any run, trusted or
+not.
+
+#### The seeded interviewer
+
+The interviewer's allowlist is enumerated rather than wildcarded: every
+read-only OpenV tool, plus `mcp__openv__record_candidate_need`, the one write
+it exists to make. It holds no vendor tools at all — no file reads, no shell —
+and no OpenV tool that creates, updates, deletes or delegates. So a prompt
+injection in a participant's answer has nothing to reach for: the worst it can
+do is get a candidate need recorded, which is a suggestion a person reviews.
+The list is generated from the tool table itself (`mcp.ReadOnlyToolNames()`),
+so a tool added to OpenV is classified once, in one place.
+
+A workspace that provisioned before this change and never tuned the
+interviewer is **narrowed** at the next startup, through the same adoption path
+that grants capabilities (see *Changing an existing agent* below) — an
+adoption that takes capability away rather than adding it. One that edited the
+agent's tools keeps what it wrote.
 
 The seeded **V&V Assistant** carries `mcp__openv__*, WebSearch, WebFetch`: the
 questions it exists to ask — is this limit real, does that standard say what
@@ -605,6 +838,67 @@ entirely — their IDs are never given to it — and the API refuses any result 
 agent run tries to record for one (`403`). They stay in the run for a person to
 execute by hand in the same grid. A result applied from an approved *proposal*
 is not treated as agent-executed, since a human signed off on it.
+
+## Streaming replies
+
+A conversational turn (the wizard's V&V Assistant, the notes panel, an
+interview) takes 14–21 s, almost all of it model time — see
+`docs/assessments/2026-09-07-agent-latency.md`. The answer no longer waits for
+the run to finish:
+
+- the runner's provider adapter accumulates the assistant text as it is
+  written — claude asks its CLI for `--include-partial-messages` when that
+  CLI supports it, and otherwise collects whole assistant messages (the probe
+  caches only an answer actually read off `claude --help`, so a probe that
+  times out costs one run's token streaming rather than the process's);
+  codex reports its **current** agent message — the same one it reports as
+  the final answer, so the text never shrinks when the reply lands; gemini
+  prints one JSON object at the end and streams nothing;
+- the log pump includes `partial_text` — the **whole answer so far, not a
+  delta**, capped at 64 KB — in its 750 ms log batch whenever it changed, so
+  a batch lost on the wire costs freshness and never corrupts the display;
+- the API stores it on the run (`agent_runs.partial_text`, cleared whenever
+  the run stops being live: at finish, when the stale-run reaper fails it, and
+  when a worker hands it back to the queue) and, for a run that belongs to a
+  guided session or an interview, broadcasts
+  `assistant_partial` `{run_id, text}` on that session's SSE channel, at most
+  once per 500 ms per run;
+- the chat panels render it as an in-progress bubble with a cursor and
+  replace it when the final `message` arrives (or when a failure note does).
+  The run detail panel shows the same text as "Output so far".
+
+Nothing about the model work changes — only when the reader first sees it.
+
+## Wizard nudges
+
+Saving or skipping a wizard step posts a **nudge** (`POST
+/api/v1/guided-sessions/{id}/chat/nudge`), so the assistant comments on what
+was just entered without the user typing. Wizard steps are saved faster than a
+turn runs, so most nudges used to land while a turn was in flight and were
+answered by nobody.
+
+A nudge that arrives mid-turn is now parked on the session
+(`guided_sessions.pending_nudge`) and answered as `{"status":"pending"}`. Only
+the newest one is kept — a later nudge overwrites it — and when the running
+turn finishes, the orchestration hooks launch exactly one turn from it, after
+the finished reply has been appended so the new turn sees it.
+
+Two things keep a parked nudge from being orphaned or fired into a closed
+wizard:
+
+- the park is not atomic with the run's finish, so the request re-checks after
+  parking; if the turn has finished in that window (its hook already looked for
+  a nudge and found none), the request takes the nudge back and launches it
+  itself. `TakePendingNudge` hands a nudge out at most once, so the hook and
+  the request can never both launch it;
+- committing or abandoning a session clears its parked nudge, and the hooks
+  check the session's status after taking one — a closed wizard gets no
+  copilot turn.
+
+The panel itself sends at most one nudge a second; a nudge inside that window
+is **deferred**, not dropped — the newest one waits (replacing any held one)
+and goes out when the window opens, so the freshest wizard state always
+reaches the server.
 
 ## Interview links
 

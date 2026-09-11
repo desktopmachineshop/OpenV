@@ -115,12 +115,16 @@ their own project, workers pass within their org) · `org member`/`org admin`
 
 | Method | Path | Purpose | Auth |
 |---|---|---|---|
-| POST | `/api/v1/auth/register` | Create password account (first user becomes admin) and log in; on a server with SMTP the account starts unverified and a verification link is emailed | open |
+| POST | `/api/v1/auth/register` | Create password account `{email, password, name, invite_token?}` (first user becomes admin) and log in; on a server with SMTP the account starts unverified and a verification link is emailed. `invite_token` is the token from an invite link (`/login?invite=<token>`): when it is valid **for the address being registered**, that one invitation is accepted and the membership it names is granted, **and the account's address is marked verified** — the token was mailed to that address and nowhere else, so a closed, verification-required deployment does not wall the invitee behind a second mail. Without it registration grants no membership — the invitation stays pending until its link is used. When a token was supplied the answer carries an `invitation` field saying what it did: `accepted`, `already_member`, `email_mismatch` (live link, different address), `invalid` (unknown, revoked, spent, expired — including revoked between the sign-up being allowed and the membership being claimed); the field is absent when no token was sent. The token is resolved **once** per sign-up, so a revoke can never produce an account that "passed" and then joined nothing in silence. `403 {"code":"registration_closed"}` when `OPENV_REGISTRATION=closed` and the request carries no `invite_token` issued to the address being registered (a pending invitation for the address is **not** a door: it would leak who has been invited, and let a stranger squat the address) | open |
 | POST | `/api/v1/auth/login` | Password login, sets session cookie | open |
 | POST | `/api/v1/auth/logout` | End session, clear cookie | open |
 | GET | `/api/v1/auth/me` | Current user profile | user |
-| GET | `/api/v1/auth/config` | Which sign-in methods are enabled (Google, OIDC) and whether `email_verification_required` | open |
-| POST | `/api/v1/auth/verify-email` | Confirm an emailed link `{token}`; returns the user (`400` invalid/expired, `409` address taken) | open |
+| GET | `/api/v1/auth/config` | Which sign-in methods are enabled (Google, OIDC), whether `email_verification_required`, and the `registration` policy | open |
+| GET | `/api/v1/auth/policy` | The registration policy alone, plus the server's password rule: `{"registration":"open"\|"closed","min_password_length":8}`. Clients state `min_password_length` in their password forms rather than a copy of it, so the form and the server can never disagree | open |
+| POST | `/api/v1/auth/invitations/preview` | Preview an invite link `{token}` → `{email, org_name, role, expires_at}`; one `404` for every unusable link. The token travels in the body, never in the path: an invite link is a credential, and a URL is written into access logs, proxy logs, browser history and `Referer` headers. Throttled on its own bucket, not the sign-in one. Only an unusable link is `404`: a lookup that fails for any other reason answers `500`, because telling the invitee their link is invalid would send them off for a replacement that fails identically | open |
+| POST | `/api/v1/auth/invitations/accept` | Join the signed-in account to the invitation's workspace `{token}` → `{org_id, org_name, role, already_member}`. Converts only when the **session's own email is the invited address**; otherwise `403 {"code":"invitation_email_mismatch"}`, whose body never names the invited address (the preview already shows it to whoever holds the link). `404` when the link is unusable. An account that is already a member keeps its role — `role` reports the role it holds, `already_member` is `true`, and the invitation is spent. A successful accept (`already_member` included) **marks the account's address verified**: the token was mailed to that address and nowhere else, and it is the session's own address, so this is the same proof `POST /auth/register` accepts from an `invite_token` | user (cookie only, JSON body) |
+| PUT | `/api/v1/me/password` | Change password `{current_password, new_password}`; `204` on success and every OTHER session of the account is invalidated. `400 weak_password`, `403 password_incorrect`, `409 no_password` (SSO-only account) | user |
+| POST | `/api/v1/auth/verify-email` | Confirm an emailed link `{token}`; returns the user (`400` invalid/expired, `409` address taken). Grants **no** workspace membership: the address it confirms is one the account asked the mail to be sent to, so it is not evidence that the account is the person an admin invited | open |
 | POST | `/api/v1/auth/verify-email/resend` | Email a fresh link to the session's account (`202 {sent_to}`; `409` already verified; `502` mail failed) | user (cookie only, JSON body) |
 | POST | `/api/v1/auth/verify-email/change` | Email a fresh link to a corrected address `{email}`; the account's address changes when that link is confirmed | user (cookie only, JSON body) |
 | GET | `/api/v1/auth/google` | Start Google OIDC flow | open |
@@ -143,7 +147,10 @@ their own project, workers pass within their org) · `org member`/`org admin`
 | POST | `/api/v1/orgs/{id}/restore` | Restore a soft-deleted workspace within the grace period | org admin (of the deleted org) |
 | POST | `/api/v1/orgs/{id}/activate` | Set the session's active workspace | org member |
 | GET | `/api/v1/orgs/{id}/members` | List workspace members | org member |
-| POST | `/api/v1/orgs/{id}/members` | Add member | org admin |
+| POST | `/api/v1/orgs/{id}/members` | Add member by email. `201` with the membership when the address has an account **whose owner has proved it** and joined; `409` when it is already a member (change a role with `PUT`); `202 {invitation, link, emailed, reason?}` when it has no account — or, where the deployment requires email verification, has one that has **not** verified that address — and was invited instead, so the membership waits for somebody to read the mailbox. `400` for a personal workspace. `POST /orgs/{id}/invitations` answers the same outcomes with the same statuses and bodies | org admin |
+| GET | `/api/v1/orgs/{id}/invitations` | Pending invitations to the workspace | org admin |
+| POST | `/api/v1/orgs/{id}/invitations` | Bring an address `{email, role}` into the workspace, taking the same branch **and the same statuses** as `POST /members`: `201` with the membership when the address already has an account that has verified it, `409` when it is already a member, `202 {invitation, link, emailed, reason?}` when it has no account (or an unverified one, where verification is required). `link` is the one-time `${FRONTEND_URL}/login?invite=<token>` and is never retrievable again. `emailed` is `true` when SMTP is configured and the send was **queued**: the mail goes out off the request path, so no admin waits on a relay, and a failure is logged rather than reported. Re-inviting an address replaces whatever unaccepted invitation it holds — keeping its `id`, so an id a client already holds stays valid — except, on a deployment that can send mail, within an hour of an **unchanged** one (same role, still valid) whose link was **actually delivered**, which is returned as-is with `emailed:false`, a `reason`, and no `link`, so a repeated click cannot mail the same person again. An invitation whose send failed, or never happened, has nothing in anybody's inbox and is minted and sent again (without SMTP the link in the response is the delivery, so a fresh one is always minted). Throttled per inviting account (`429`) | org admin |
+| DELETE | `/api/v1/orgs/{id}/invitations/{invId}` | Revoke a pending invitation (its link stops working) | org admin |
 | PUT | `/api/v1/orgs/{id}/members/{userId}` | Change org role | org admin |
 | DELETE | `/api/v1/orgs/{id}/members/{userId}` | Remove member (self-removal = leave, allowed for members) | org admin / self |
 | GET | `/api/v1/orgs/{id}/teams` | List people-teams | org member |
@@ -208,10 +215,21 @@ their own project, workers pass within their org) · `org member`/`org admin`
 
 **Export/import caveats** (`internal/domain/exports/export.go`):
 
-- The `?format=` on export accepts `json` (default), `csv`, and `reqif` (OMG
-  ReqIF 1.x, read by DOORS/Polarion). **`excel` is a stub** — the service
-  returns `ErrUnsupportedFormat` ("excel export not yet implemented"), so the
-  API rejects it.
+- The `?format=` on export accepts `json` (default), `csv`, `excel` and
+  `reqif` (OMG ReqIF 1.x, read by DOORS/Polarion). Anything else is a 400.
+- **Excel** (`internal/domain/exports/excel.go`) is an `.xlsx` workbook served
+  as `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`: a
+  `Project` cover sheet (name, description, export time, baseline when the
+  snapshot came from one, artifact and link counts), one sheet per artifact
+  type present named after the type ("Requirements", "Test Cases"), and a
+  `Links` sheet of the traceability links by endpoint ref and title. An
+  artifact sheet carries the CSV's columns with the stable `ref` and the
+  derived `section` number in front. `section` is a heading's own number and,
+  for every other row, the number of the heading it sits under — the same
+  section the PDF nests it in — so a flat sheet still places an artifact in
+  the document; a row with no heading above it leaves it empty. Refs, section
+  numbers and timestamps are written as text so a spreadsheet cannot re-read
+  them as numbers or dates. It is a download only — there is no Excel import.
 - **ReqIF import** (`internal/domain/exports/reqif_import.go`): `POST
   /api/v1/projects/import` accepts a ReqIF document as well as JSON. ReqIF is
   selected by `?format=reqif`, an XML/ReqIF `Content-Type`, or sniffed from a
@@ -312,8 +330,38 @@ pushes new items live.
 | POST | `/api/v1/notifications/read` | Mark specific notifications read | user |
 | POST | `/api/v1/notifications/read-all` | Mark all read | user |
 | GET | `/api/v1/notifications/stream` | SSE stream of new notifications | user |
-| GET | `/api/v1/me/notification-prefs` | Get email-notification opt-out | user |
-| PUT | `/api/v1/me/notification-prefs` | Update email-notification opt-out | user |
+| GET | `/api/v1/me/notification-prefs` | Get the caller's email opt-out and push opt-in | user |
+| PUT | `/api/v1/me/notification-prefs` | Update either preference (`email_notifications`, `push_notifications`); an absent field is left as it was | user |
+
+### Web push subscriptions
+
+Per-device web push for the same high-signal types (REQ-109). Session cookie
+only — run tokens and worker keys are refused — and every query is keyed on
+the session's user id, so a member only ever sees or withdraws their own
+devices. Off unless the server has a VAPID key pair (`docs/operations.md`).
+
+| Method | Path | Purpose | Auth |
+|---|---|---|---|
+| GET | `/api/v1/me/push/config` | `{enabled, public_key}`; `enabled` is false when no VAPID keys are configured | user |
+| GET | `/api/v1/me/push-subscriptions` | `{subscriptions: [...]}` — the caller's devices, never their encryption keys | user |
+| POST | `/api/v1/me/push-subscriptions` | Register this device: `{endpoint, keys:{p256dh, auth}, user_agent?}` → 201. Idempotent on `endpoint`: re-posting refreshes the keys | user |
+| DELETE | `/api/v1/me/push-subscriptions` | Withdraw a device: `{endpoint}` → 204 (204 too when nothing was there) | user |
+
+`endpoint` must be an `https` URL on port 443, with no credentials, whose
+host is a known push service: `fcm.googleapis.com`, `*.push.apple.com`,
+`*.notify.windows.com`, `push.services.mozilla.com`,
+`updates.push.services.mozilla.com` or `*.push.services.mozilla.com`, plus any
+host listed in `OPENV_PUSH_ENDPOINT_HOSTS` (comma-separated, exact or
+leading-wildcard, for a self-hosted push service — see `docs/operations.md`).
+Anything else, including an address literal, is **400**; no name is resolved.
+
+The 201 body is the **persisted** row, so re-posting a device already on file
+answers with the same `id` and `created_at` that `GET
+/api/v1/me/push-subscriptions` lists.
+
+A push service that answers 404 or 410 deletes the subscription server-side;
+any other failure stamps `failed_at` and keeps the row, which a later
+successful send clears.
 
 ### Meta
 
@@ -394,6 +442,21 @@ hidden entry is out of every list and cannot be voted for either.
 | GET | `/api/v1/projects/{id}/vv/gaps` | Coverage gaps | viewer |
 | GET | `/api/v1/projects/{id}/vv/report` | V&V report | viewer |
 
+`vv/gaps` returns one list of artifact IDs per bucket:
+
+| Bucket | Contents |
+|---|---|
+| `requirements_without_method` | No `verification_method` attribute set |
+| `requirements_without_test_case` | Method is `test` but no test case verifies it |
+| `requirements_unverified` | Method is set to any method other than `test` (`demonstration`, `analysis`, `inspection` or any other value the project uses) and it is not yet marked verified — no test case can cover these, so they would otherwise be invisible here even though the coverage rollup already counts them as `uncovered` |
+| `requirements_failing` | Latest result of a verifying test case is a fail |
+| `orphan_test_cases` | Test cases that verify nothing |
+| `needs_without_requirement` | User needs no requirement derives from |
+| `hazards_unmitigated` | Hazards no design item mitigates |
+
+`requirements_unverified` is derived from the same rollup `vv/coverage`
+computes, so the two views cannot disagree about a requirement.
+
 ### Requirement quality
 
 Advisory linting of requirement wording. `quality-rules` names the project's
@@ -445,6 +508,24 @@ to that turn's prompt as fenced, untrusted content. The wizard sends none.
 | POST | `/api/v1/guided-sessions/{id}/chat/nudge` | Context nudge after step change | editor |
 | GET | `/api/v1/guided-sessions/{id}/chat/stream` | SSE stream of assistant replies | viewer |
 
+`chat/nudge` takes `{step, state, event}` and answers `{status, runner_online}`.
+`status` is `launched` (a turn was enqueued), `pending` (a turn is already in
+flight, so this nudge was **parked** on the session — the newest parked nudge
+wins, and the finishing turn launches exactly one more from it) or
+`unavailable` (no turn is coming). Both `launched` and `pending` mean a reply
+will arrive on the stream. If the in-flight turn finishes while the nudge is
+being parked, the request takes it back and launches it itself, answering
+`launched`: a nudge is never left waiting for a turn that has already gone
+looking for one. Committing or abandoning a session discards any nudge still
+parked on it.
+
+The chat streams (`chat/stream` and the public interview stream) carry two
+event types: `message`, one complete transcript message, and
+`assistant_partial`, `{run_id, text}` — the answer **so far** while the agent
+writes it, always the whole text rather than a delta, sent at most once per
+500 ms per run. A client renders it as an in-progress bubble and replaces it
+when the next `message` arrives.
+
 ### Interviews
 
 | Method | Path | Purpose | Auth |
@@ -477,6 +558,31 @@ to that turn's prompt as fenced, untrusted content. The wizard sends none.
 | PUT | `/api/v1/agents/{slug}/raw` | Save raw markdown | org admin |
 | POST | `/api/v1/agents/{slug}/runs` | Launch a run of this agent | editor (project-scoped) / user |
 
+**`allowed_tools` is required.** `POST /api/v1/agents` and
+`PUT /api/v1/agents/{slug}` answer **400** when the definition carries no tool
+allowlist — absent, `[]`, or only blank entries — with:
+
+```json
+{"error":"agent definition requires allowed_tools: every agent must name the tools its vendor CLI may use (e.g. mcp__openv__*), because a CLI started with no allowlist runs with all of them"}
+```
+
+`PUT /api/v1/agents/{slug}/raw` refuses the same content the same way, since
+the frontmatter goes through the same validation. An empty list is not "no
+tools": a vendor CLI started without an allowlist runs with every tool it has,
+so the platform will not store an agent that has none, and the runner fails
+such a run before launching anything (`docs/agents.md`, *Tools an agent may
+use*). Definitions already on disk from before this rule are backfilled to
+`mcp__openv__*` when they sync, not rejected.
+
+A **non-empty** allowlist is never a reason to refuse, whichever provider the
+agent names. Claude Code takes it verbatim (`--allowedTools`); gemini-cli has
+it translated into the settings that CLI documents for restricting tools
+(`tools.core`, and the openv server's `includeTools`); codex-cli, which has no
+allowlist mechanism at all, is confined by its sandbox instead. In every case
+the OpenV MCP server is additionally handed `OPENV_MCP_TOOLS` and serves only
+the `mcp__openv__*` tools the definition names, so the allowlist is enforced
+for OpenV's own tools regardless of what the vendor CLI can express.
+
 ### Agent runs
 
 | Method | Path | Purpose | Auth |
@@ -490,6 +596,15 @@ to that turn's prompt as fenced, untrusted content. The wizard sends none.
 | GET | `/api/v1/agent-runs/{id}/logs` | Run log entries | launcher / viewer |
 | POST | `/api/v1/agent-runs/{id}/logs` | Worker appends log entries (returns cancel flag) | worker |
 | GET | `/api/v1/agent-runs/{id}/stream` | SSE live log stream | launcher / viewer |
+
+The logs body is `{"entries": [...], "partial_text": "..."}`; a bare array of
+entries is still accepted (older runners). `partial_text` is the assistant
+answer written so far — the whole text, not a delta, capped at 64 KB — and an
+empty string means "unchanged". It is stored on the run as `partial_text`,
+returned with the run, cleared whenever the run stops being live — at finish
+(`final_text` takes over), when the stale-run reaper fails it, and when a
+worker releases it back to the queue — and broadcast as `partial` on the run's
+own stream and as `assistant_partial` on any session the run belongs to.
 | POST | `/api/v1/agent-runs/{id}/cancel` | Request cancellation | launcher / editor |
 | POST | `/api/v1/agent-runs/{id}/start` | Worker marks run running | worker |
 | POST | `/api/v1/agent-runs/{id}/finish` | Worker reports completion | worker |
@@ -574,12 +689,41 @@ routes are throttled per invite and per address. A throttled request is
 answered `429` with a JSON `error` and a `Retry-After` header in seconds.
 Verification resend and change-of-address are throttled per account
 (`OPENV_VERIFY_RESEND_BURST` 3, `OPENV_VERIFY_RESEND_REFILL_PER_HOUR` 6).
+Previewing an invite link (`POST /auth/invitations/preview`) has its own
+generous per-address bucket (`OPENV_INVITE_PREVIEW_BURST` 60,
+`OPENV_INVITE_PREVIEW_REFILL_PER_HOUR` 240) and deliberately does **not**
+draw on the sign-in one: the token is unguessable, so the limit only bounds
+lookups, and opening an invite link must never cost somebody the sign-in
+budget for the account they were invited to use.
+Creating an invitation (`POST /orgs/{id}/invitations` and `POST
+/orgs/{id}/members` for an address with no account) mails an address the
+sender chose, so it is bounded per **inviting account**
+(`OPENV_INVITE_BURST` 20, `OPENV_INVITE_REFILL_PER_HOUR` 60): one admin — or
+one stolen admin session — cannot point the deployment's SMTP credentials at
+a list, and cannot spend a colleague's budget either. Re-posting an
+unchanged invitation within the hour of its link being **delivered** does not
+mail anything at all (see the endpoint), so an impatient admin costs the
+invitee nothing; an invitation whose send failed is re-sent instead, since
+nothing reached the invitee to be spared.
 
 While a server requires email verification (`email_verification_required` in
 `GET /auth/config`), a session whose account has `email_verified: false` is
 answered `403 {"error":"email not verified","code":"email_unverified"}` on
 every route outside `/api/v1/auth/*`; `code` is the stable field a client
-branches on. Bearer credentials are never gated.
+branches on. Bearer credentials are never gated. A wrong `current_password` on
+`PUT /me/password` spends the account's sign-in budget, so guessing it is
+throttled the same way guessing at the login form is.
+
+## Sessions
+
+A session ends at whichever deadline comes first: `OPENV_SESSION_MAX_AGE`
+(absolute, from sign-in; default and ceiling 720h) or `OPENV_SESSION_IDLE`
+(since its last request; default and ceiling 168h). Both are checked on every
+authenticated request, so shortening either applies to sessions that already
+exist, and a background sweep deletes the rows. An expired session is
+answered like any other invalid one (`401`). A successful `PUT /me/password`
+invalidates every other session of the account immediately; the caller's own
+survives. See [operations.md](operations.md) for the variables.
 Request bodies are capped at 32 MB and attachment uploads at 25 MB (`413`
 when exceeded); an upload whose bytes do not match the declared image type
 is refused with `400`, and an SVG attachment is always served as a download.

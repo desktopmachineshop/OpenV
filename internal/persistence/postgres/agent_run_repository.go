@@ -22,7 +22,7 @@ func NewAgentRunRepository(db *sql.DB) *AgentRunRepository {
 
 const runColumns = `r.id, COALESCE(r.org_id::text, ''), r.agent_id, r.project_id, r.automation_id, r.trigger_event_id, r.team_id, r.team_node_id, r.parent_run_id, r.work_item_id, r.interview_session_id, r.guided_session_id, r.retried_from_run_id,
 	r.status, r.cancel_requested, r.priority, r.prompt, r.run_token_hash, r.worker_id, r.heartbeat_at, r.started_at, r.finished_at, r.exit_code,
-	r.final_text, r.error, r.error_class, r.attempt_count, r.max_attempts, r.next_attempt_at, r.tokens_in, r.tokens_out, r.cost_usd, r.artifacts_touched, r.launched_by, r.created_at, r.preferred_user_id, r.hosted_after,
+	r.final_text, r.partial_text, r.error, r.error_class, r.attempt_count, r.max_attempts, r.next_attempt_at, r.tokens_in, r.tokens_out, r.cost_usd, r.artifacts_touched, r.launched_by, r.created_at, r.preferred_user_id, r.hosted_after,
 	r.agent_content_hash, r.agent_model, r.agent_effort, a.name, a.provider`
 
 func scanRun(row interface{ Scan(...interface{}) error }) (*agentruns.Run, error) {
@@ -35,7 +35,7 @@ func scanRun(row interface{ Scan(...interface{}) error }) (*agentruns.Run, error
 
 	err := row.Scan(&r.ID, &r.OrgID, &r.AgentID, &projectID, &automationID, &triggerEventID, &teamID, &teamNodeID, &parentRunID, &workItemID, &interviewSessionID, &guidedSessionID, &retriedFromRunID,
 		&r.Status, &r.CancelRequested, &r.Priority, &r.Prompt, &r.RunTokenHash, &r.WorkerID, &heartbeatAt, &startedAt, &finishedAt, &exitCode,
-		&r.FinalText, &r.Error, &r.ErrorClass, &r.AttemptCount, &r.MaxAttempts, &nextAttemptAt, &r.TokensIn, &r.TokensOut, &costUSD, &touched, &launchedBy, &r.CreatedAt, &preferredUserID, &hostedAfter,
+		&r.FinalText, &r.PartialText, &r.Error, &r.ErrorClass, &r.AttemptCount, &r.MaxAttempts, &nextAttemptAt, &r.TokensIn, &r.TokensOut, &costUSD, &touched, &launchedBy, &r.CreatedAt, &preferredUserID, &hostedAfter,
 		&r.AgentContentHash, &r.AgentModel, &r.AgentEffort, &r.AgentName, &r.AgentProvider)
 	if err != nil {
 		return nil, err
@@ -247,9 +247,13 @@ func (rep *AgentRunRepository) Claim(workerID string, orgID string, workerUserID
 // still owned by workerID and non-terminal (claimed or running); reports
 // whether it was applied. Running is included so a worker shutting down
 // mid-run can hand the run back instead of failing it.
+//
+// partial_text is cleared with the release: the answer the departing worker
+// had begun is not the answer whichever worker picks the run up next will
+// write, and a queued run must not show text as if it were being typed.
 func (rep *AgentRunRepository) ReleaseClaim(runID, workerID string) (bool, error) {
 	res, err := rep.db.Exec(`
-		UPDATE agent_runs SET status = 'queued', worker_id = '', heartbeat_at = NULL, started_at = NULL
+		UPDATE agent_runs SET status = 'queued', worker_id = '', heartbeat_at = NULL, started_at = NULL, partial_text = ''
 		WHERE id = $1 AND status IN ('claimed', 'running') AND worker_id = $2
 	`, runID, workerID)
 	if err != nil {
@@ -298,7 +302,7 @@ func (rep *AgentRunRepository) UpdateTerminal(r *agentruns.Run) (bool, error) {
 	res, err := rep.db.Exec(`
 		UPDATE agent_runs SET status = $2, cancel_requested = $3, worker_id = $4, heartbeat_at = $5, started_at = $6, finished_at = $7,
 			exit_code = $8, final_text = $9, error = $10, tokens_in = $11, tokens_out = $12, cost_usd = $13, artifacts_touched = $14,
-			error_class = $15, run_token_hash = ''
+			error_class = $15, run_token_hash = '', partial_text = ''
 		WHERE id = $1 AND status NOT IN ('succeeded', 'failed', 'cancelled', 'timed_out', 'awaiting_approval')
 	`, r.ID, r.Status, r.CancelRequested, r.WorkerID, r.HeartbeatAt, r.StartedAt, r.FinishedAt,
 		r.ExitCode, r.FinalText, r.Error, r.TokensIn, r.TokensOut, r.CostUSD, touched, r.ErrorClass)
@@ -352,11 +356,31 @@ func (rep *AgentRunRepository) Heartbeat(runID string, at time.Time) (bool, erro
 	return n > 0, err
 }
 
+// UpdatePartialText stores the assistant text a live run has written so far.
+// Conditional on the run still being live, so a log batch that lands after
+// the run finished (or was cancelled) cannot put a half-written answer back
+// on a terminal run; reports whether the write was applied.
+func (rep *AgentRunRepository) UpdatePartialText(runID string, text string) (bool, error) {
+	res, err := rep.db.Exec(`
+		UPDATE agent_runs SET partial_text = $2
+		WHERE id = $1 AND status IN ('claimed', 'running')
+	`, runID, text)
+	if err != nil {
+		return false, err
+	}
+	n, err := res.RowsAffected()
+	return n > 0, err
+}
+
 // FailStale fails claimed/running runs whose heartbeat predates cutoff,
 // revoking their run tokens along with the terminal transition.
+//
+// The half-written answer goes with them: a failed run has no reply coming,
+// and leaving partial_text behind makes the run detail panel render "Output
+// so far" under a live cursor on a run that will never write another word.
 func (rep *AgentRunRepository) FailStale(cutoff time.Time) ([]string, error) {
 	rows, err := rep.db.Query(`
-		UPDATE agent_runs SET status = 'failed', error = 'worker lost (heartbeat timeout)', error_class = 'worker_error', finished_at = NOW(), run_token_hash = ''
+		UPDATE agent_runs SET status = 'failed', error = 'worker lost (heartbeat timeout)', error_class = 'worker_error', finished_at = NOW(), run_token_hash = '', partial_text = ''
 		WHERE status IN ('claimed', 'running') AND heartbeat_at < $1
 		RETURNING id
 	`, cutoff)

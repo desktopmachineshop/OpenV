@@ -16,14 +16,48 @@ are admin-only; other members see read-only or explanatory views.
 
 ## Members
 
-The people in the workspace. Admins can add members by email — the person
-must already have an OpenV account (no invite emails are sent) — and manage
-each member's workspace role (**member** or **admin**; new members default to
+The people in the workspace. Admins add members by email and manage each
+member's workspace role (**member** or **admin**; new members default to
 member). Note the distinction:
 
 - **Workspace membership** gets someone into the workspace.
 - **Project access** is granted per project (Project Settings → Access) —
   directly or via teams.
+
+### Inviting someone who has no account yet
+
+Adding an email that already has an OpenV account joins that person straight
+away — if they are already in the workspace, OpenV says so rather than adding
+them twice; change their role in the members table instead. An email with no
+account gets an **invitation**, so you never have to ask someone to sign up
+first:
+
+- The invitation is valid for **seven days** and can be used once. It names
+  the workspace and the role you chose.
+- If the server has email configured, the invitation is sent to that address.
+  If it does not, OpenV shows you the invitation **link once**, right after
+  you create it — copy it then and send it yourself. It cannot be shown
+  again; create a fresh invitation if you lose it.
+- Opening the link signed out starts sign-up with the address filled in, and
+  the link carries through whether they create an account or sign in to one
+  they already have. Opening it while already signed in shows the invitation
+  with a **Join** button, so nobody is put into the workspace without seeing
+  it — and if that browser is signed in as somebody else, it says which
+  address to sign in as instead. The link is what grants the membership, and
+  only to the address it was sent to: signing up for the invited address
+  without the link joins nothing.
+- An invitation never changes a role somebody already has. If you invite an
+  existing admin as a member, they stay an admin — use the members table to
+  change a role.
+- Re-inviting an address is how you resend: the previous link stops working,
+  expired or not, and only the newest one lets them in.
+- **Pending invitations** are listed above the Add member form while any are
+  outstanding, with who they were sent to and when they expire. *Revoke*
+  stops a link working immediately.
+
+On a server where the operator has closed public registration, an invitation
+is the only way in besides single sign-on — the sign-in page then says so
+instead of offering *Create a new account*.
 
 ## Teams
 

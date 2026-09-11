@@ -1,5 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import {
+  ShortcutTarget,
+  SHORTCUT_PARAM,
+  lastProject,
+  projectPathFor,
+  shortcutLabel,
+  shortcutTarget,
+} from '../appShortcuts';
 import { useAppStore } from '../state/store';
 import {
   agentRunsAPI,
@@ -48,9 +56,14 @@ export const ProjectList: React.FC = () => {
   const prompt = usePrompt();
   const [showCreateOrg, setShowCreateOrg] = useState<boolean>(false);
 
-  const openProject = (id: string) => {
+  // An installed-app shortcut (manifest.json) lands here with ?go=review or
+  // ?go=board; opening a project then goes straight to that tab.
+  const [searchParams] = useSearchParams();
+  const shortcut: ShortcutTarget | null = shortcutTarget(searchParams.get(SHORTCUT_PARAM));
+
+  const openProject = (id: string, target: ShortcutTarget | null = shortcut) => {
     setProjectId(id);
-    navigate(`/projects/${id}`);
+    navigate(projectPathFor(id, target));
   };
   const [error, setError] = useState<string>('');
   // The project whose download wizard is open, if any.
@@ -298,6 +311,18 @@ export const ProjectList: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeOrgId]);
 
+  // A shortcut that knows which project the member was last in goes there
+  // without asking. When it does not (first run, or that project is not in
+  // this workspace) the list stays put and the banner below explains why.
+  useEffect(() => {
+    if (!shortcut || loading || projects.length === 0) return;
+    const remembered = lastProject();
+    if (remembered && projects.some((p) => p.id === remembered)) {
+      openProject(remembered);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shortcut, loading, projects]);
+
   const loadProjects = async () => {
     try {
       setLoading(true);
@@ -539,6 +564,16 @@ export const ProjectList: React.FC = () => {
       )}
       <div className="project-list-container">
 
+      {/* An installed-app shortcut that could not guess the project says so
+          rather than silently dropping the member on the plain project list. */}
+      {shortcut && (
+        <div
+          className="card"
+          style={{ marginBottom: 12, fontSize: 13, color: 'var(--text-muted)' }}
+        >
+          Choose a project to open its {shortcutLabel(shortcut)}.
+        </div>
+      )}
 
       {error && (
         <div className="error-message">

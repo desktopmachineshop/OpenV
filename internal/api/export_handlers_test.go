@@ -45,7 +45,7 @@ func exportRequest(t *testing.T, format string) *http.Request {
 }
 
 func TestExportProjectUnsupportedFormatReturns400(t *testing.T) {
-	for _, format := range []string{"xml", "excel", "pdf"} {
+	for _, format := range []string{"xml", "docx", "pdf"} {
 		fake := &fakeExportService{}
 		h := &Handler{exportService: fake}
 
@@ -108,6 +108,29 @@ func TestExportProjectCSVHeaders(t *testing.T) {
 	}
 	if len(fake.requested) != 1 || fake.requested[0] != exports.FormatCSV {
 		t.Errorf("service formats requested = %v, want [csv]", fake.requested)
+	}
+}
+
+func TestExportProjectExcelHeaders(t *testing.T) {
+	fake := &fakeExportService{data: []byte("PK\x03\x04"), filename: "project_Demo_20260101_000000.xlsx"}
+	h := &Handler{exportService: fake}
+
+	w := httptest.NewRecorder()
+	h.ExportProject(w, exportRequest(t, "excel"))
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200 (body: %s)", w.Code, w.Body.String())
+	}
+	wantType := "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+	if got := w.Header().Get("Content-Type"); got != wantType {
+		t.Errorf("Content-Type = %q, want %q", got, wantType)
+	}
+	want := `attachment; filename="project_Demo_20260101_000000.xlsx"`
+	if got := w.Header().Get("Content-Disposition"); got != want {
+		t.Errorf("Content-Disposition = %q, want %q", got, want)
+	}
+	if len(fake.requested) != 1 || fake.requested[0] != exports.FormatExcel {
+		t.Errorf("service formats requested = %v, want [excel]", fake.requested)
 	}
 }
 

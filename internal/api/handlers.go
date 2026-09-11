@@ -37,12 +37,14 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/guided"
 	"github.com/openv/requirements-platform/internal/domain/hostedworkers"
 	"github.com/openv/requirements-platform/internal/domain/interviews"
+	"github.com/openv/requirements-platform/internal/domain/invitations"
 	"github.com/openv/requirements-platform/internal/domain/members"
 	"github.com/openv/requirements-platform/internal/domain/notifications"
 	"github.com/openv/requirements-platform/internal/domain/orgs"
 	"github.com/openv/requirements-platform/internal/domain/products"
 	"github.com/openv/requirements-platform/internal/domain/proposals"
 	"github.com/openv/requirements-platform/internal/domain/providers"
+	"github.com/openv/requirements-platform/internal/domain/pushsubs"
 	"github.com/openv/requirements-platform/internal/domain/repoconns"
 	"github.com/openv/requirements-platform/internal/domain/runnersessions"
 	"github.com/openv/requirements-platform/internal/domain/teams"
@@ -95,7 +97,13 @@ type HandlerDeps struct {
 	// with no runner pool configured.
 	RunnerSessionService runnersessions.Service
 	NotificationService  notifications.Service
-	Provisioner          hosting.Provisioner
+	// PushSubService stores per-device web push subscriptions (REQ-109).
+	// nil leaves the endpoints answering "not available".
+	PushSubService pushsubs.Service
+	// VAPID is the web push key pair; the zero value disables push and is
+	// what /api/v1/me/push/config reports as enabled=false.
+	VAPID       notify.VAPIDConfig
+	Provisioner hosting.Provisioner
 	// OrgSeeder provisions default agents/crew for a new workspace.
 	OrgSeeder func(orgID string) error
 	// PublicAPIURL is the externally-reachable API base (connector config).
@@ -115,6 +123,16 @@ type HandlerDeps struct {
 	Mailer            notify.Mailer
 	EmailLinkBase     string
 	EmailVerification users.EmailVerificationPolicy
+	// InvitationService backs workspace invitations; nil leaves the
+	// endpoints answering 404 and registration unable to see an invitation.
+	InvitationService invitations.Service
+	// Registration is the deployment's sign-up policy ("open" or "closed",
+	// see RegistrationPolicyFromEnv); empty means open.
+	Registration string
+	// SessionPolicy must be the policy the user service was given, so the
+	// session cookie and the server agree on when a session ends (REQ-99).
+	// The zero value means the defaults.
+	SessionPolicy users.SessionPolicy
 	// CrossSiteCookies marks deployments where the frontend and API are served
 	// from different sites (e.g. two *.up.railway.app domains): auth cookies are
 	// issued with SameSite=None, and Secure is forced on since browsers reject
@@ -166,6 +184,8 @@ type Handler struct {
 	hostedWorkerService  hostedworkers.Service
 	runnerSessionService runnersessions.Service
 	notificationService  notifications.Service
+	pushSubService       pushsubs.Service
+	vapid                notify.VAPIDConfig
 	provisioner          hosting.Provisioner
 	orgSeeder            func(orgID string) error
 	publicAPIURL         string
@@ -194,11 +214,27 @@ type Handler struct {
 	// verifyResendLimiter bounds verification mails per account (resend and
 	// change of address share it).
 	verifyResendLimiter *rateLimiter
+	// invitePreviewLimiter bounds invite-link previews per address. Separate
+	// from authIPLimiter on purpose: opening an invite link must never spend
+	// somebody's sign-in budget (see ratelimit.go).
+	invitePreviewLimiter *rateLimiter
+	// inviteLimiter bounds invitations per INVITING ACCOUNT: creating one
+	// mails an address the sender chose, so the endpoint is a mail relay
+	// (see ratelimit.go).
+	inviteLimiter *rateLimiter
 
 	// Sign-up email verification (see email_verification_handlers.go).
 	mailer            notify.Mailer
 	emailLinkBase     string
 	emailVerification users.EmailVerificationPolicy
+
+	// Workspace invitations and the registration policy (REQ-95; see
+	// invitation_handlers.go and registration_policy.go).
+	invitationService invitations.Service
+	registration      string
+	// sessionPolicy is the same policy the user service enforces; the handler
+	// holds it so the cookie it writes expires when the session does.
+	sessionPolicy users.SessionPolicy
 }
 
 // NewHandler creates a new API handler
@@ -246,6 +282,8 @@ func NewHandler(deps HandlerDeps) *Handler {
 		hostedWorkerService:    deps.HostedWorkerService,
 		runnerSessionService:   deps.RunnerSessionService,
 		notificationService:    deps.NotificationService,
+		pushSubService:         deps.PushSubService,
+		vapid:                  deps.VAPID,
 		provisioner:            deps.Provisioner,
 		orgSeeder:              deps.OrgSeeder,
 		publicAPIURL:           deps.PublicAPIURL,
@@ -265,9 +303,14 @@ func NewHandler(deps HandlerDeps) *Handler {
 		registerIPLimiter:      newRateLimiterFromEnv(envRegisterIPBurst, envRegisterIPRefill, defaultRegisterIPBurst, defaultRegisterIPRefill),
 		ssoIPLimiter:           newRateLimiterFromEnv(envSSOIPBurst, envSSOIPRefill, defaultSSOIPBurst, defaultSSOIPRefill),
 		verifyResendLimiter:    newRateLimiterFromEnv(envVerifyResendBurst, envVerifyResendRefill, defaultVerifyResendBurst, defaultVerifyResendRefill),
+		invitePreviewLimiter:   newRateLimiterFromEnv(envInvitePreviewBurst, envInvitePreviewRefill, defaultInvitePreviewBurst, defaultInvitePreviewRefill),
+		inviteLimiter:          newRateLimiterFromEnv(envInviteBurst, envInviteRefill, defaultInviteBurst, defaultInviteRefill),
 		mailer:                 deps.Mailer,
 		emailLinkBase:          deps.EmailLinkBase,
 		emailVerification:      deps.EmailVerification,
+		invitationService:      deps.InvitationService,
+		registration:           deps.Registration,
+		sessionPolicy:          deps.SessionPolicy,
 	}
 }
 
@@ -356,8 +399,11 @@ func (h *Handler) RegisterRoutes(router *mux.Router) {
 	h.registerMetaRoutes(router)
 	h.registerSuiteRoutes(router)
 	h.registerNotificationRoutes(router)
+	h.registerPushRoutes(router)
 	h.registerAgentRoutes(router)
 	h.registerOrgRoutes(router)
+	h.registerInvitationRoutes(router)
+	h.registerPasswordRoutes(router)
 	h.registerRunnerSessionRoutes(router)
 	h.registerAttributeDefinitionRoutes(router)
 	h.registerSharedProductRoutes(router)
@@ -1568,6 +1614,8 @@ func (h *Handler) ExportProject(w http.ResponseWriter, r *http.Request) {
 		contentType = "application/json"
 	case exports.FormatCSV:
 		contentType = "text/csv; charset=utf-8"
+	case exports.FormatExcel:
+		contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 	case exports.FormatReqIF:
 		// ReqIF is an XML dialect; application/xml is the widely accepted media
 		// type for it (the registered application/reqif+xml is not universal).

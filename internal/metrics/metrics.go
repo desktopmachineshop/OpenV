@@ -175,6 +175,10 @@ func routeTemplate(router *mux.Router, r *http.Request) string {
 // RunLogsAppended satisfies agentruns.Subscriber; log volume is not metered.
 func (m *Metrics) RunLogsAppended(_ *agentruns.Run, _ []agentruns.LogEntry) {}
 
+// RunPartialText satisfies agentruns.Subscriber; streamed answer text is not
+// metered (the run's tokens are, at finish).
+func (m *Metrics) RunPartialText(_ *agentruns.Run, _ string) {}
+
 // RunStatusChanged updates the queued/running gauges on every transition and
 // increments agent_runs_total once a run reaches a terminal status.
 func (m *Metrics) RunStatusChanged(run *agentruns.Run) {

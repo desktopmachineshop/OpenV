@@ -15,6 +15,54 @@ import (
 type fakeLoginService struct {
 	users.Service
 	registered int
+	// sessions resolves a cookie value to its user, for the handlers that
+	// read the session themselves on an open auth route.
+	sessions map[string]*users.User
+	// accounts is the directory FindByEmail answers from; an address that is
+	// not in it has no account, which is what makes AddOrgMember invite.
+	accounts map[string]*users.User
+	// confirmed is the account a verification link resolves to; nil means
+	// every link is invalid.
+	confirmed *users.User
+	// lastRegistered is the account Register last created, so a handler that
+	// marks it verified can be observed changing THAT account.
+	lastRegistered *users.User
+	// verified records MarkEmailVerified calls; verifyErr fails them, which
+	// must not fail the registration they hang off.
+	verified  []string
+	verifyErr error
+}
+
+// MarkEmailVerified mirrors the real service: the account's own address is
+// marked verified, and the address itself is untouched.
+func (f *fakeLoginService) MarkEmailVerified(userID string) (*users.User, error) {
+	if f.verifyErr != nil {
+		return nil, f.verifyErr
+	}
+	f.verified = append(f.verified, userID)
+	user := f.lastRegistered
+	if user == nil || user.ID != userID {
+		user = &users.User{ID: userID}
+	}
+	verified := *user
+	verified.EmailVerified = true
+	return &verified, nil
+}
+
+func (f *fakeLoginService) ConfirmEmailVerification(token string) (*users.User, error) {
+	if f.confirmed == nil {
+		return nil, users.ErrVerificationInvalid
+	}
+	return f.confirmed, nil
+}
+
+// IssueEmailVerification mints the link a verifying deployment mails after
+// registration; the fake just names the address it would go to.
+func (f *fakeLoginService) IssueEmailVerification(userID, email string) (string, string, error) {
+	if email == "" && f.lastRegistered != nil {
+		email = f.lastRegistered.Email
+	}
+	return "verify-token", email, nil
 }
 
 func (f *fakeLoginService) Login(email, password string) (*users.User, string, error) {
@@ -26,7 +74,19 @@ func (f *fakeLoginService) Login(email, password string) (*users.User, string, e
 
 func (f *fakeLoginService) Register(email, password, name string) (*users.User, error) {
 	f.registered++
-	return &users.User{ID: "u2", Email: email}, nil
+	f.lastRegistered = &users.User{ID: "u2", Email: strings.ToLower(strings.TrimSpace(email))}
+	return f.lastRegistered, nil
+}
+
+func (f *fakeLoginService) GetBySessionToken(token string) (*users.User, error) {
+	if u := f.sessions[token]; u != nil {
+		return u, nil
+	}
+	return nil, users.ErrSessionInvalid
+}
+
+func (f *fakeLoginService) FindByEmail(email string) (*users.User, error) {
+	return f.accounts[strings.ToLower(strings.TrimSpace(email))], nil
 }
 
 func loginReq(email, password string) *http.Request {

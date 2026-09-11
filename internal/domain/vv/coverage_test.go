@@ -276,6 +276,7 @@ func TestGapAnalysis(t *testing.T) {
 
 	assertIDs("RequirementsWithoutMethod", gaps.RequirementsWithoutMethod, []string{"req-nomethod"})
 	assertIDs("RequirementsWithoutTestCase", gaps.RequirementsWithoutTestCase, []string{"req-notc"})
+	assertIDs("RequirementsUnverified", gaps.RequirementsUnverified, []string{})
 	assertIDs("RequirementsFailing", gaps.RequirementsFailing, []string{"req-fail"})
 	assertIDs("OrphanTestCases", gaps.OrphanTestCases, []string{"tc-orphan"})
 	assertIDs("NeedsWithoutRequirement", gaps.NeedsWithoutRequirement, []string{"need-orphan"})
@@ -289,11 +290,178 @@ func TestGapAnalysisEmptyProject(t *testing.T) {
 
 	if len(gaps.RequirementsWithoutMethod) != 0 ||
 		len(gaps.RequirementsWithoutTestCase) != 0 ||
+		len(gaps.RequirementsUnverified) != 0 ||
 		len(gaps.RequirementsFailing) != 0 ||
 		len(gaps.OrphanTestCases) != 0 ||
 		len(gaps.NeedsWithoutRequirement) != 0 ||
 		len(gaps.HazardsUnmitigated) != 0 {
 		t.Errorf("expected empty gap report, got %+v", gaps)
+	}
+}
+
+// TestGapAnalysisUnverifiedNonTestRequirements covers the gap bucket for
+// requirements verified by demonstration, analysis or inspection. They carry
+// no test case, so RequirementsWithoutTestCase can never hold them; before
+// this bucket existed the gap report was silent about them while the
+// coverage rollup already called them uncovered.
+func TestGapAnalysisUnverifiedNonTestRequirements(t *testing.T) {
+	tests := []struct {
+		name           string
+		attributes     map[string]interface{}
+		wantUnverified bool
+		wantRollup     string
+	}{
+		{
+			name:           "demonstration with no status is unverified",
+			attributes:     map[string]interface{}{"verification_method": MethodDemonstration},
+			wantUnverified: true,
+			wantRollup:     RollupUncovered,
+		},
+		{
+			name:           "analysis with no status is unverified",
+			attributes:     map[string]interface{}{"verification_method": MethodAnalysis},
+			wantUnverified: true,
+			wantRollup:     RollupUncovered,
+		},
+		{
+			name:           "inspection with no status is unverified",
+			attributes:     map[string]interface{}{"verification_method": MethodInspection},
+			wantUnverified: true,
+			wantRollup:     RollupUncovered,
+		},
+		{
+			name: "demonstration marked verified is not a gap",
+			attributes: map[string]interface{}{
+				"verification_method": MethodDemonstration,
+				"verification_status": "verified",
+			},
+			wantUnverified: false,
+			wantRollup:     RollupVerifiedManually,
+		},
+		{
+			name: "a status that is not 'verified' does not clear the gap",
+			attributes: map[string]interface{}{
+				"verification_method": MethodInspection,
+				"verification_status": "in-progress",
+			},
+			wantUnverified: true,
+			wantRollup:     RollupUncovered,
+		},
+		{
+			name:           "a test-method requirement never lands in the bucket",
+			attributes:     map[string]interface{}{"verification_method": MethodTest},
+			wantUnverified: false,
+			wantRollup:     RollupUncovered,
+		},
+		{
+			name:           "a requirement with no method at all is a different gap",
+			attributes:     nil,
+			wantUnverified: false,
+			wantRollup:     RollupMethodMissing,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			export := mkExport([]*artifacts.Artifact{
+				mkArtifact("req-1", "requirement", "Req 1", tt.attributes),
+			}, nil)
+
+			coverage := ComputeCoverage(export, nil)
+			gaps := GapAnalysis(export, coverage)
+
+			if got := entryFor(t, coverage, "req-1").Rollup; got != tt.wantRollup {
+				t.Errorf("rollup = %q, want %q", got, tt.wantRollup)
+			}
+			got := len(gaps.RequirementsUnverified) == 1 && gaps.RequirementsUnverified[0] == "req-1"
+			if got != tt.wantUnverified {
+				t.Errorf("RequirementsUnverified = %v, want the requirement present = %v",
+					gaps.RequirementsUnverified, tt.wantUnverified)
+			}
+			// The bucket is for requirements no test case can cover; it must
+			// never double-report one that the test-case bucket owns.
+			for _, id := range gaps.RequirementsUnverified {
+				for _, other := range gaps.RequirementsWithoutTestCase {
+					if id == other {
+						t.Errorf("requirement %q reported in both RequirementsUnverified and RequirementsWithoutTestCase", id)
+					}
+				}
+			}
+		})
+	}
+}
+
+// TestGapAnalysisUnverifiedTracksTheRollup is the by-construction guarantee:
+// across a mixed project, the bucket holds exactly the requirements whose
+// coverage rollup says "uncovered" for a non-test method. The gaps view and
+// the coverage view cannot drift apart without this test failing.
+func TestGapAnalysisUnverifiedTracksTheRollup(t *testing.T) {
+	export := mkExport(
+		[]*artifacts.Artifact{
+			mkArtifact("req-nomethod", "requirement", "No method", nil),
+			mkArtifact("req-demo", "requirement", "Demonstration", map[string]interface{}{
+				"verification_method": MethodDemonstration,
+			}),
+			mkArtifact("req-analysis-verified", "requirement", "Analysed", map[string]interface{}{
+				"verification_method": MethodAnalysis,
+				"verification_status": "verified",
+			}),
+			mkArtifact("req-inspection", "requirement", "Inspection", map[string]interface{}{
+				"verification_method": MethodInspection,
+			}),
+			// A method value outside the canonical enumeration. The rollup
+			// treats anything but "test" as manually verified, so the gap
+			// bucket must too — a closed list of known methods would drop
+			// this requirement out of every bucket.
+			mkArtifact("req-review", "requirement", "Reviewed", map[string]interface{}{
+				"verification_method": "review",
+			}),
+			mkArtifact("req-test-notc", "requirement", "Test, no case", map[string]interface{}{
+				"verification_method": MethodTest,
+			}),
+			mkArtifact("req-test-pass", "requirement", "Test, passing", map[string]interface{}{
+				"verification_method": MethodTest,
+			}),
+			mkArtifact("tc-pass", "test-case", "TC pass", nil),
+		},
+		[]*links.Link{mkLink("tc-pass", "req-test-pass", "verifies")},
+	)
+
+	coverage := ComputeCoverage(export, map[string]*TestResult{
+		"tc-pass": mkResult("tc-pass", ResultPass),
+	})
+	gaps := GapAnalysis(export, coverage)
+
+	want := []string{}
+	for _, entry := range coverage.Entries {
+		if entry.Rollup == RollupUncovered && entry.VerificationMethod != MethodTest &&
+			entry.VerificationMethod != "" {
+			want = append(want, entry.RequirementID)
+		}
+	}
+
+	got := append([]string{}, gaps.RequirementsUnverified...)
+	sort.Strings(got)
+	sort.Strings(want)
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("RequirementsUnverified = %v, want %v (the uncovered non-test rollups)", got, want)
+	}
+	if !reflect.DeepEqual(got, []string{"req-demo", "req-inspection", "req-review"}) {
+		t.Errorf("RequirementsUnverified = %v, want [req-demo req-inspection req-review]", got)
+	}
+	// A requirement with no method at all rolls up as method-missing, so it
+	// belongs to RequirementsWithoutMethod and to no other bucket.
+	for _, id := range gaps.RequirementsUnverified {
+		if id == "req-nomethod" {
+			t.Error("RequirementsUnverified contains req-nomethod; a method-less requirement belongs only in RequirementsWithoutMethod")
+		}
+	}
+	// The rest of the report is unchanged by the new bucket.
+	if !reflect.DeepEqual(gaps.RequirementsWithoutTestCase, []string{"req-test-notc"}) {
+		t.Errorf("RequirementsWithoutTestCase = %v, want [req-test-notc]", gaps.RequirementsWithoutTestCase)
+	}
+	if !reflect.DeepEqual(gaps.RequirementsWithoutMethod, []string{"req-nomethod"}) {
+		t.Errorf("RequirementsWithoutMethod = %v, want [req-nomethod]", gaps.RequirementsWithoutMethod)
 	}
 }
 

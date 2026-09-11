@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Org, OrgMember, User, orgsAPI } from '../../api/client';
+import { Org, OrgInvitation, OrgMember, User, orgsAPI } from '../../api/client';
 import { apiErrorMessage } from '../../api/errors';
 import { ErrorBanner, useConfirm } from '../ui';
 
@@ -35,6 +35,11 @@ export const OrgMembersTab: React.FC<OrgMembersTabProps> = ({ org, isAdmin, curr
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState('member');
   const [inviting, setInviting] = useState(false);
+  const [invitations, setInvitations] = useState<OrgInvitation[]>([]);
+  // The one-time link for the invitation just created. The server stores
+  // only its hash, so this is the single moment it can be copied — which is
+  // the only way to invite anyone on a deployment with no SMTP.
+  const [inviteLink, setInviteLink] = useState('');
 
   const flash = (msg: string) => {
     setNotice(msg);
@@ -53,30 +58,73 @@ export const OrgMembersTab: React.FC<OrgMembersTabProps> = ({ org, isAdmin, curr
     }
   }, [org.id]);
 
+  const loadInvitations = useCallback(async () => {
+    if (!isAdmin) return;
+    try {
+      const res = await orgsAPI.invitations.list(org.id);
+      setInvitations(res.data || []);
+    } catch {
+      // Non-fatal: the members list is the point of this tab, and an older
+      // server has no invitations endpoint at all.
+      setInvitations([]);
+    }
+  }, [org.id, isAdmin]);
+
   useEffect(() => {
     load();
-  }, [load]);
+    loadInvitations();
+  }, [load, loadInvitations]);
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inviteEmail.trim()) return;
     setInviting(true);
     setError('');
+    setInviteLink('');
     try {
-      await orgsAPI.members.add(org.id, inviteEmail.trim(), inviteRole);
+      const res = await orgsAPI.members.add(org.id, inviteEmail.trim(), inviteRole);
       setInviteEmail('');
-      flash('Member added to the workspace.');
-      await load();
-    } catch (err: any) {
-      if (err.response?.status === 404) {
-        setError(
-          `No account exists for "${inviteEmail.trim()}". They need to sign up first — once they have an account, add them here by the same email.`
+      // 201: the address had an account and is now a member. 202: it did
+      // not, so an invitation is outstanding — either one that went out just
+      // now (with its one-time link) or the one that is already in their
+      // inbox, which the server does not re-send within the hour and whose
+      // link it cannot show again.
+      if (res.status === 202 && res.data) {
+        const created = res.data as { link?: string; emailed: boolean; reason?: string };
+        setInviteLink(created.link || '');
+        flash(
+          created.emailed
+            ? 'Invitation emailed. They join the workspace when they accept it.'
+            : created.reason
+              ? `They already have an invitation: ${created.reason}`
+              : 'Invitation created. Send them the link below — it is shown only once.'
         );
+        await loadInvitations();
       } else {
-        setError(`Failed to add member: ${apiErrorMessage(err)}`);
+        flash('Member added to the workspace.');
+        await load();
       }
+    } catch (err: any) {
+      setError(`Failed to add member: ${apiErrorMessage(err)}`);
     } finally {
       setInviting(false);
+    }
+  };
+
+  const handleRevokeInvitation = async (invitation: OrgInvitation) => {
+    const ok = await confirm({
+      title: 'Revoke invitation',
+      message: `Revoke the invitation to ${invitation.email}? Their link stops working.`,
+      confirmLabel: 'Revoke',
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      await orgsAPI.invitations.revoke(org.id, invitation.id);
+      setInvitations((prev) => prev.filter((i) => i.id !== invitation.id));
+      setError('');
+    } catch (err: any) {
+      setError(`Failed to revoke invitation: ${apiErrorMessage(err)}`);
     }
   };
 
@@ -228,12 +276,52 @@ export const OrgMembersTab: React.FC<OrgMembersTabProps> = ({ org, isAdmin, curr
         )}
       </div>
 
+      {isAdmin && invitations.length > 0 && (
+        <div className="card">
+          <h3>Pending invitations</h3>
+          <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+            People who have been invited but have not joined yet. An invitation expires after seven
+            days; revoking one stops its link working immediately.
+          </p>
+          <div className="table-scroll">
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr>
+                  <th style={th}>Email</th>
+                  <th style={{ ...th, width: 100 }}>Role</th>
+                  <th style={{ ...th, width: 150 }}>Expires</th>
+                  <th style={{ ...th, width: 80 }}></th>
+                </tr>
+              </thead>
+              <tbody>
+                {invitations.map((inv) => (
+                  <tr key={inv.id}>
+                    <td style={td}>{inv.email}</td>
+                    <td style={td}>{inv.role}</td>
+                    <td style={td}>{new Date(inv.expires_at).toLocaleDateString()}</td>
+                    <td style={{ ...td, textAlign: 'right' }}>
+                      <button
+                        onClick={() => handleRevokeInvitation(inv)}
+                        style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontSize: 12, width: 'auto', padding: 2 }}
+                      >
+                        Revoke
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       {isAdmin && (
         <div className="card">
           <h3>Add member</h3>
           <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-            The person must already have an OpenV account — invite them to sign up first, then add
-            their email here.
+            Someone who already has an OpenV account joins straight away. An address with no account
+            gets an invitation instead — emailed when the server has SMTP configured, and otherwise
+            as a link for you to pass on.
           </p>
           <form onSubmit={handleInvite} style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap' }}>
             <div style={{ flex: 1, minWidth: 220 }}>
@@ -256,6 +344,17 @@ export const OrgMembersTab: React.FC<OrgMembersTabProps> = ({ org, isAdmin, curr
               {inviting ? 'Adding…' : 'Add member'}
             </button>
           </form>
+          {inviteLink && (
+            <div style={{ marginTop: 14 }}>
+              <label style={{ fontSize: 12 }}>Invitation link (shown once)</label>
+              <input
+                readOnly
+                value={inviteLink}
+                onFocus={(e) => e.currentTarget.select()}
+                style={{ width: '100%', fontFamily: 'monospace', fontSize: 12 }}
+              />
+            </div>
+          )}
         </div>
       )}
     </>

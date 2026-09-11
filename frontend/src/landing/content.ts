@@ -40,6 +40,7 @@ export const EXPORT_FORMATS: { label: string; body: string }[] = [
   { label: 'Word document', body: 'The same specification as a .docx, for editing or review outside OpenV.' },
   { label: 'JSON data', body: 'The complete project, including everything an OpenV import can restore.' },
   { label: 'CSV table', body: 'One row per artifact for a spreadsheet.' },
+  { label: 'Excel workbook (.xlsx)', body: 'A sheet per artifact type, one for the links, and a cover naming the snapshot.' },
   { label: 'ReqIF interchange', body: 'The OMG format read by DOORS and Polarion.' },
 ];
 

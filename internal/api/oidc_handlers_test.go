@@ -15,6 +15,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/openv/requirements-platform/internal/domain/orgs"
 	"github.com/openv/requirements-platform/internal/domain/users"
 )
 
@@ -145,11 +146,19 @@ func (m *memUserRepo) FindUserByID(id string) (*users.User, error) { return m.us
 func (m *memUserRepo) ListUsers() ([]*users.User, error)           { return nil, nil }
 func (m *memUserRepo) CountUsers() (int, error)                    { return len(m.users), nil }
 func (m *memUserRepo) SetEmailNotifications(string, bool) error    { return nil }
+func (m *memUserRepo) SetPushNotifications(string, bool) error     { return nil }
 func (m *memUserRepo) SaveEmailVerification(*users.EmailVerification) error {
 	return nil
 }
 func (m *memUserRepo) ConsumeEmailVerification(string, time.Time) (*users.User, error) {
 	return nil, nil
+}
+func (m *memUserRepo) MarkEmailVerified(userID string, at time.Time) error {
+	if u := m.users[userID]; u != nil {
+		u.EmailVerified = true
+		u.EmailVerifiedAt = &at
+	}
+	return nil
 }
 func (m *memUserRepo) SaveSession(s *users.Session) error { m.sessions[s.ID] = s; return nil }
 func (m *memUserRepo) FindSessionByTokenHash(hash string) (*users.Session, error) {
@@ -163,7 +172,24 @@ func (m *memUserRepo) FindSessionByTokenHash(hash string) (*users.Session, error
 func (m *memUserRepo) TouchSession(string, time.Time) error     { return nil }
 func (m *memUserRepo) SetSessionActiveOrg(string, string) error { return nil }
 func (m *memUserRepo) DeleteSession(id string) error            { delete(m.sessions, id); return nil }
-func (m *memUserRepo) DeleteExpiredSessions(time.Time) error    { return nil }
+func (m *memUserRepo) DeleteExpiredSessions(time.Time, time.Duration, time.Duration) error {
+	return nil
+}
+func (m *memUserRepo) DeleteSessionsForUser(userID, exceptTokenHash string) error {
+	for id, s := range m.sessions {
+		if s.UserID == userID && s.TokenHash != exceptTokenHash {
+			delete(m.sessions, id)
+		}
+	}
+	return nil
+}
+func (m *memUserRepo) SetPasswordHash(userID, hash string, at time.Time) error {
+	if u := m.users[userID]; u != nil {
+		u.PasswordHash = hash
+		u.UpdatedAt = at
+	}
+	return nil
+}
 
 // --- tests -----------------------------------------------------------------
 
@@ -280,7 +306,9 @@ func TestOIDCCallbackCreatesUserAndSession(t *testing.T) {
 
 // TestOIDCCallbackRequiresVerifiedEmail: a positively-verified email is
 // required (issue #242). An absent or false email_verified claim is rejected
-// with 403 and provisions no account, closing the address-takeover vector.
+// with 403, provisions no account and — the other half of the same rule —
+// takes up no workspace invitation waiting for that address: the provider's
+// assertion is the only proof of control this path has.
 func TestOIDCCallbackRequiresVerifiedEmail(t *testing.T) {
 	cases := []struct {
 		name         string
@@ -308,6 +336,9 @@ func TestOIDCCallbackRequiresVerifiedEmail(t *testing.T) {
 			stub := newOIDCStub(t, "client-abc")
 			cfg := stub.config("client-abc", "https://app/api/v1/auth/oidc/callback")
 			h, repo := newOIDCTestHandler(cfg)
+			invites := newFakeInviteService()
+			invites.invite("org-1", "verify@example.com", orgs.RoleAdmin)
+			h.invitationService = invites
 
 			const nonce = "the-nonce"
 			claims := map[string]any{
@@ -336,12 +367,20 @@ func TestOIDCCallbackRequiresVerifiedEmail(t *testing.T) {
 				if !strings.Contains(rec.Body.String(), "verif") {
 					t.Errorf("error should mention verification: %s", rec.Body.String())
 				}
+				if len(invites.accepted) != 0 {
+					t.Errorf("an unverified claim joined an invited workspace: %v", invites.accepted)
+				}
 			} else {
 				if rec.Code != http.StatusFound {
 					t.Fatalf("expected 302 for verified email, got %d (%s)", rec.Code, rec.Body.String())
 				}
 				if u, _ := repo.FindUserByEmail("verify@example.com"); u == nil {
 					t.Error("verified email should provision an account")
+				}
+				// A verified address IS proof of control, so its invitation
+				// is taken up on the way in.
+				if len(invites.accepted) != 1 {
+					t.Errorf("accepted = %v, want the invitation taken up", invites.accepted)
 				}
 			}
 		})

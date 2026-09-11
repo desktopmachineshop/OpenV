@@ -120,7 +120,10 @@ type fakeRunService struct {
 	byID     map[string]*agentruns.Run
 	started  []string
 	appended []string
-	finished []string
+	// Log pushes as they arrived, for the streaming tests.
+	appendedEntries  [][]agentruns.LogEntry
+	appendedPartials []string
+	finished         []string
 
 	startErr  error // returned by MarkRunning after recording the call
 	finishErr error // returned by Finish after recording the call
@@ -173,8 +176,13 @@ func (f *fakeRunService) MarkRunning(id string) error {
 	return f.startErr
 }
 
-func (f *fakeRunService) AppendLogs(id string, entries []agentruns.LogEntry) (*agentruns.Run, error) {
+func (f *fakeRunService) AppendLogs(id string, entries []agentruns.LogEntry, partialText string) (*agentruns.Run, error) {
 	f.appended = append(f.appended, id)
+	f.appendedEntries = append(f.appendedEntries, entries)
+	f.appendedPartials = append(f.appendedPartials, partialText)
+	if run, ok := f.byID[id]; ok && partialText != "" {
+		run.PartialText = partialText
+	}
 	return f.byID[id], nil
 }
 
