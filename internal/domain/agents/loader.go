@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -17,14 +18,60 @@ import (
 // ParseFile splits a markdown agent file into frontmatter + body.
 // Format: leading "---\n<yaml>\n---\n<system prompt body>".
 func ParseFile(content string) (*Definition, error) {
+	def, _, err := parseFile(content, false, nil)
+	return def, err
+}
+
+// parseSyncedFile parses a file that is already on disk, where refusing it is
+// worse than fixing it: a definition written before allowlists were mandatory
+// (REQ-91) carries none, and rejecting it would drop the agent out of the
+// registry at the next sync. So it is backfilled — and logged, so the operator
+// can set what the agent actually needs — and it reports whether it did, so
+// the caller can write the fix back to the file instead of re-deciding it on
+// every sync.
+//
+// What it is backfilled *to* comes from seedTools, a slug -> allowlist lookup
+// the seeds package supplies (seeds.SeedAllowedTools, wired in through
+// WithSeedAllowedTools). A seeded agent gets its own seed's list; anything
+// else, and anything when no lookup is wired, gets DefaultAllowedTools. That
+// matters because this path runs first: cmd/server syncs the files from disk
+// before seeds.EnsureOrgDefaults reconciles the registry, so without the
+// lookup a seeded `developer` whose file predates REQ-91 was handed
+// mcp__openv__* here — no Read, Grep, Glob, Edit, Write or Bash(git:*) — and
+// the registry-side backfill, which only ever fires on a row with no list at
+// all, then found a row that already had one and left it. The two backfills
+// have to agree, so they read the same map.
+//
+// Either way it is a narrowing: an empty list used to mean the vendor CLI got
+// every tool it has.
+//
+// With one exception, which is the whole point of the flag: a definition
+// marked locked: true is the workspace's standing answer to "can this change
+// without us?", and the answer is no — not even to something narrowing, not
+// even here. A locked file with no allowlist is loaded exactly as written and
+// reported, and the agent stays in the registry unable to run until a person
+// gives it a list. That is the same policy seeds.backfillAllowedTools applies
+// on the registry side; the two must not disagree, or a locked agent would be
+// left alone at startup and quietly rewritten by the next file sync.
+//
+// Content a person is saving right now goes through ParseFile instead, and is
+// refused: nobody should be able to write a new agent with no allowlist.
+func parseSyncedFile(content string, seedTools SeedToolsFunc) (*Definition, bool, error) {
+	return parseFile(content, true, seedTools)
+}
+
+// parseFile parses agent markdown. synced marks a file already on disk (see
+// parseSyncedFile) and turns on the allowlist backfill / locked carve-out;
+// a save a person is making now passes false and is validated in full.
+func parseFile(content string, synced bool, seedTools SeedToolsFunc) (*Definition, bool, error) {
 	normalized := strings.ReplaceAll(content, "\r\n", "\n")
 	if !strings.HasPrefix(normalized, "---\n") {
-		return nil, errors.New("agent file must start with '---' YAML frontmatter")
+		return nil, false, errors.New("agent file must start with '---' YAML frontmatter")
 	}
 	rest := normalized[4:]
 	end := strings.Index(rest, "\n---")
 	if end < 0 {
-		return nil, errors.New("agent file frontmatter is not closed with '---'")
+		return nil, false, errors.New("agent file frontmatter is not closed with '---'")
 	}
 	front := rest[:end]
 	body := rest[end+4:]
@@ -32,14 +79,55 @@ func ParseFile(content string) (*Definition, error) {
 
 	def := &Definition{}
 	if err := yaml.Unmarshal([]byte(front), def); err != nil {
-		return nil, fmt.Errorf("invalid agent frontmatter: %w", err)
+		return nil, false, fmt.Errorf("invalid agent frontmatter: %w", err)
 	}
 	def.SystemPrompt = strings.TrimSpace(body)
-	if err := def.Validate(); err != nil {
-		return nil, err
+	needsTools := len(NonEmptyTools(def.AllowedTools)) == 0
+	backfilled := false
+	switch {
+	case !synced || !needsTools:
+		// Nothing to do: either a person is saving this now (full validation
+		// below), or the file already names its tools.
+	case def.Locked:
+		log.Printf("agents: %q is locked and has no allowed_tools; leaving it as written — it cannot run until someone sets an allowlist (Agents → %s → Allowed tools)",
+			def.Slug, def.Slug)
+		if err := validateLoose(def); err != nil {
+			return nil, false, err
+		}
+		return def, false, nil
+	default:
+		def.AllowedTools = backfillToolsFor(def.Slug, seedTools)
+		backfilled = true
+		log.Printf("agents: %q has no allowed_tools; setting %v and rewriting the file — review the list and narrow it if the agent needs less",
+			def.Slug, def.AllowedTools)
 	}
-	return def, nil
+	if err := def.Validate(); err != nil {
+		return nil, false, err
+	}
+	return def, backfilled, nil
 }
+
+// SeedToolsFunc answers "what allowlist does the seeded agent with this slug
+// carry?", and nil for a slug nobody seeded. The seeds package implements it
+// (seeds.SeedAllowedTools); the domain package takes it as a function because
+// seeds imports agents, not the other way round.
+type SeedToolsFunc func(slug string) []string
+
+// backfillToolsFor picks the allowlist a legacy definition is filled in with:
+// the seed's own list where there is one, DefaultAllowedTools otherwise.
+func backfillToolsFor(slug string, seedTools SeedToolsFunc) []string {
+	if seedTools != nil {
+		if want := NonEmptyTools(seedTools(slug)); len(want) > 0 {
+			return want
+		}
+	}
+	return DefaultAllowedTools()
+}
+
+// validateLoose validates everything but the allowlist requirement, for the
+// one definition that is allowed to carry none: a locked file already on
+// disk. Split out so the exemption is named where it is used.
+func validateLoose(def *Definition) error { return def.validate(false) }
 
 // SerializeFile renders a definition back to markdown file content.
 func SerializeFile(def *Definition) (string, error) {
@@ -61,16 +149,33 @@ func contentHash(content string) string {
 // FileService implements Service over a directory of markdown files plus
 // the registry repository.
 type FileService struct {
-	dir  string
-	repo Repository
+	dir       string
+	repo      Repository
+	seedTools SeedToolsFunc
+}
+
+// FileServiceOption configures a FileService at construction.
+type FileServiceOption func(*FileService)
+
+// WithSeedAllowedTools teaches the sync path what the platform's seeded agents
+// are supposed to be allowed to do, so a seeded definition on disk that
+// carries no allowlist is backfilled to its own seed's list rather than to the
+// generic OpenV-only fallback. Pass seeds.SeedAllowedTools; see
+// parseSyncedFile for why the two backfills have to read the same map.
+func WithSeedAllowedTools(lookup SeedToolsFunc) FileServiceOption {
+	return func(s *FileService) { s.seedTools = lookup }
 }
 
 // NewFileService creates the agent service rooted at dir (created if missing).
-func NewFileService(dir string, repo Repository) (*FileService, error) {
+func NewFileService(dir string, repo Repository, opts ...FileServiceOption) (*FileService, error) {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return nil, fmt.Errorf("failed to create agents directory %s: %w", dir, err)
 	}
-	return &FileService{dir: dir, repo: repo}, nil
+	svc := &FileService{dir: dir, repo: repo}
+	for _, opt := range opts {
+		opt(svc)
+	}
+	return svc, nil
 }
 
 func (s *FileService) orgDir(orgID string) string {
@@ -214,12 +319,26 @@ func (s *FileService) SyncFromDisk(orgID string) error {
 			errs = append(errs, fmt.Sprintf("%s: %v", entry.Name(), err))
 			continue
 		}
-		def, err := ParseFile(string(data))
+		def, backfilled, err := parseSyncedFile(string(data), s.seedTools)
 		if err != nil {
 			errs = append(errs, fmt.Sprintf("%s: %v", entry.Name(), err))
 			continue
 		}
-		if _, err := s.syncOne(orgID, def, path, string(data)); err != nil {
+		content := string(data)
+		if backfilled {
+			// Write the filled-in allowlist back, so this is decided once
+			// rather than re-decided — and re-logged — on every sync. The
+			// registry row and the file then agree, which is also what makes
+			// the content hash below mean anything.
+			if rewritten, err := s.rewriteBackfilled(path, def); err != nil {
+				// Not fatal: the definition is good in memory, so the agent
+				// syncs and runs. Only the log repeats.
+				log.Printf("agents: could not rewrite %s with its backfilled allowed_tools: %v", path, err)
+			} else {
+				content = rewritten
+			}
+		}
+		if _, err := s.syncOne(orgID, def, path, content); err != nil {
 			errs = append(errs, fmt.Sprintf("%s: %v", entry.Name(), err))
 		}
 	}
@@ -227,6 +346,20 @@ func (s *FileService) SyncFromDisk(orgID string) error {
 		return fmt.Errorf("agent sync completed with errors: %s", strings.Join(errs, "; "))
 	}
 	return nil
+}
+
+// rewriteBackfilled serializes a definition whose allowlist was filled in by
+// the sync and writes it over the file it came from, returning the new content
+// so the caller can hash what is actually on disk.
+func (s *FileService) rewriteBackfilled(path string, def *Definition) (string, error) {
+	content, err := SerializeFile(def)
+	if err != nil {
+		return "", err
+	}
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		return "", err
+	}
+	return content, nil
 }
 
 // SyncAllFromDisk walks the org subdirectories at the root and syncs each

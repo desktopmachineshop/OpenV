@@ -270,6 +270,18 @@ export const RunDetailPanel: React.FC<RunDetailPanelProps> = ({ runId, onSelectR
             // ignore malformed events
           }
         });
+        es.addEventListener('partial', (evt: MessageEvent) => {
+          // The answer as the agent writes it; replaced by final_text at
+          // finish. Always the whole text, so a dropped frame is harmless.
+          reconnectAttempts = 0;
+          try {
+            const data = JSON.parse(evt.data);
+            const text = typeof data === 'string' ? data : data.text || '';
+            setRun((prev) => (prev ? { ...prev, partial_text: text } : prev));
+          } catch {
+            // ignore malformed events
+          }
+        });
         es.addEventListener('status', (evt: MessageEvent) => {
           reconnectAttempts = 0;
           let status = '';
@@ -562,6 +574,37 @@ export const RunDetailPanel: React.FC<RunDetailPanelProps> = ({ runId, onSelectR
             }}
           >
             {run.error}
+          </div>
+        )}
+
+        {!run?.final_text && run?.partial_text && (
+          <div style={{ marginTop: 12 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4 }}>
+              Output so far
+            </div>
+            <div
+              style={{
+                background: 'var(--surface-alt)',
+                border: '1px solid var(--neutral-soft)',
+                borderRadius: 4,
+                padding: '10px 12px',
+                fontSize: 13,
+                whiteSpace: 'pre-wrap',
+                color: 'var(--text)',
+              }}
+            >
+              {run.partial_text}
+              <span
+                aria-hidden="true"
+                style={{
+                  display: 'inline-block',
+                  width: 7,
+                  marginLeft: 2,
+                  borderBottom: '2px solid var(--text-muted)',
+                  verticalAlign: 'baseline',
+                }}
+              />
+            </div>
           </div>
         )}
 

@@ -10,7 +10,7 @@ GO_IMAGE := golang:1.25
 # .github/workflows/ci.yml so `make vuln` and CI scan with the same tool.
 GOVULNCHECK_VERSION := v1.8.0
 
-.PHONY: build up down prod-up prod-down worker worker-unix worker-image runner-pool-up runner-pool-down connector-dist mcp test vuln backup restore
+.PHONY: build up down prod-up prod-down worker worker-unix worker-image runner-pool-up runner-pool-down connector-dist mcp vapid-keys test vuln backup restore
 
 ## Build all Docker images.
 build:
@@ -92,6 +92,13 @@ worker-unix:
 ## it on demand too; this target just gets it out of the way first.
 mcp:
 	go build -o bin/openv-mcp ./cmd/openv-mcp
+
+## Print a fresh VAPID key pair for web push notifications (REQ-109). One pair
+## per deployment: paste the three lines into the API service's environment.
+## Rotating the pair invalidates every existing subscription. See
+## docs/operations.md.
+vapid-keys:
+	@go run ./cmd/openv-vapid
 
 ## Build the hosted runner image (agentd + openv-mcp + vendor CLIs).
 worker-image:

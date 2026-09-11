@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -69,10 +68,12 @@ func codexAuthPath() string {
 
 // Start launches a codex exec run.
 func (a *CodexCLIAdapter) Start(ctx context.Context, spec RunSpec) (RunHandle, error) {
+	spec = withOpenVToolFilter(spec)
 	args, err := buildCodexArgs(spec)
 	if err != nil {
 		return nil, err
 	}
+	noteMaxTurnsUnenforced(providers.ProviderCodexCLI, spec)
 
 	prompt := spec.Prompt
 	if spec.SystemPrompt != "" {
@@ -105,7 +106,14 @@ func buildCodexArgs(spec RunSpec) ([]string, error) {
 	if err := codexUnsupported(spec); err != nil {
 		return nil, err
 	}
+	return codexArgs(spec)
+}
 
+// codexArgs is the argv itself, with the policy question (codexUnsupported)
+// already settled by the caller. Split out so the wiring it produces — the
+// escaping, and the run token travelling by name rather than by value — stays
+// testable independently of that policy.
+func codexArgs(spec RunSpec) ([]string, error) {
 	args := []string{"exec", "--json", "--cd", spec.WorkDir}
 
 	// MCP server wiring. command/args are JSON-encoded to stay escaped; the run
@@ -137,7 +145,34 @@ func buildCodexArgs(spec RunSpec) ([]string, error) {
 		}
 		args = append(args, "-c", "model_reasoning_effort="+jsonScalar(effort))
 	}
-	args = append(args, "--sandbox", "workspace-write", "--skip-git-repo-check")
+	// codex exec has no tool-allowlist flag, so the agent's allowlist is
+	// applied the two ways codex leaves open: the sandbox below bounds what
+	// the CLI's own tools may touch, and OPENV_MCP_TOOLS — forwarded to the
+	// MCP server by name, with the rest of its environment — narrows the
+	// OpenV tools the server exposes to exactly the ones the definition names
+	// (see withOpenVToolFilter). What is left unbounded is which *shell*
+	// commands run inside the sandbox; that is what the sandbox is for.
+	//
+	// The sandbox is read-only unless this run has a reason to write, and two
+	// things have to be true for that.
+	//
+	//   - The run is trusted. An untrusted one (interview transcript, cloned
+	//     repo, fetched page) never writes: nothing it was told by the outside
+	//     world may turn into a file write or a command (REQ-91, HAZ-1).
+	//   - Its allowlist names a tool a writable workspace would serve — a file
+	//     edit or a shell command. This is the half the sandbox alone cannot
+	//     see. codex has no per-tool allowlist, so workspace-write is granted
+	//     to the *whole run*, and granting it to an agent whose list is
+	//     `mcp__openv__*` would hand it a writable workspace and a shell its
+	//     definition never gave it. Read-only is what that agent asked for.
+	//
+	// So the allowlist still decides, even on the CLI that cannot apply one:
+	// it picks the confinement instead of the tools.
+	sandbox := "read-only"
+	if !spec.Untrusted && allowsFileOrShellWork(spec.AllowedTools) {
+		sandbox = "workspace-write"
+	}
+	args = append(args, "--sandbox", sandbox, "--skip-git-repo-check")
 
 	// "-" makes codex exec read the prompt from stdin — prompts can exceed
 	// the ~32K Windows command-line limit.
@@ -145,23 +180,33 @@ func buildCodexArgs(spec RunSpec) ([]string, error) {
 	return args, nil
 }
 
-// codexUnsupported fails a run that carries constraints codex exec cannot
-// enforce, rather than silently running unconstrained. codex exec has no
-// per-run turn cap and no tool allow-list — its only guardrail is --sandbox,
-// which buildCodexArgs always pins to workspace-write.
+// codexUnsupported fails a run that codex exec cannot serve at all, rather
+// than starting one whose confinement defeats it.
+//
+// Two things fail here, and it is worth being precise about why only two.
+//
+//   - An empty allowlist: that is the one case where the CLI would run with
+//     every tool it has (REQ-91).
+//   - Repository access: see refuseRepoAccess. A repo-access agent exists to
+//     edit a clone, and codex's only lever is a whole-workspace sandbox.
+//
+// A non-empty allowlist is not a refusal. codex exec has no allowlist flag,
+// but the allowlist is not thereby ignored: it stays on the definition (where
+// it documents intent and is what the API validates), it gates the OpenV MCP
+// server's own tool exposure through OPENV_MCP_TOOLS, and codex's own tools
+// are confined by --sandbox.
+//
+// MaxTurns is not a refusal either, any more: agents.Definition.Validate
+// gives every persisted definition a positive MaxTurns (50 unless set), so
+// refusing one refused every real agent on this provider — the run failed at
+// Start before any of the sandbox or MCP-filter work below could apply. It is
+// a documented, logged no-op instead (noteMaxTurnsUnenforced), with the run's
+// timeout as the bound that does hold.
 func codexUnsupported(spec RunSpec) error {
-	var unsupported []string
-	if spec.MaxTurns > 0 {
-		unsupported = append(unsupported, "MaxTurns")
+	if err := requireAllowedTools(spec); err != nil {
+		return err
 	}
-	if len(spec.AllowedTools) > 0 {
-		unsupported = append(unsupported, "AllowedTools")
-	}
-	if len(unsupported) > 0 {
-		return fmt.Errorf("codex-cli adapter cannot enforce %s: the codex exec CLI has no equivalent, and running without the requested limit would be unconstrained — clear these on the agent or use a provider that supports them (e.g. claude-code)",
-			strings.Join(unsupported, " and "))
-	}
-	return nil
+	return refuseRepoAccess(providers.ProviderCodexCLI, spec)
 }
 
 // jsonScalar JSON-encodes a string so it can be handed to codex's `-c
@@ -185,10 +230,23 @@ func sortedKeys(m map[string]string) []string {
 type codexParser struct {
 	mu        sync.Mutex
 	finalText string
+	// The current agent message: what the bubble shows while the run is in
+	// flight, and the fallback final answer when no task_complete arrives.
 	lastText  string
 	tokensIn  int64
 	tokensOut int64
 	failed    string
+}
+
+// PartialText returns the assistant answer so far: the current agent message,
+// which is exactly what Result reports as FinalText. Codex emits whole
+// messages rather than token deltas, so the bubble fills a message at a time
+// — and because it shows the same message the reply will be, the text never
+// visibly shrinks when the final answer lands.
+func (p *codexParser) PartialText() string {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.lastText
 }
 
 func (p *codexParser) ParseLine(line string, emit func(RunEvent)) {
@@ -207,6 +265,9 @@ func (p *codexParser) ParseLine(line string, emit func(RunEvent)) {
 	case "agent_message":
 		text, _ := msg["message"].(string)
 		p.mu.Lock()
+		// The newest message replaces the last one: codex's own result is the
+		// last agent message, so anything else would show the reader text
+		// that the finished reply then drops.
 		p.lastText = text
 		p.mu.Unlock()
 		emit(RunEvent{Kind: agentruns.LogText, Payload: map[string]interface{}{"text": text}})

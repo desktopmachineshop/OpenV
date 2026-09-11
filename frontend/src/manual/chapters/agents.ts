@@ -41,11 +41,35 @@ to watch progress.
 | Repository access | Allow runs that clone a connected repository |
 | Max turns | Cap on agentic turns per run |
 | Timeout (seconds) | Wall-clock limit per run |
-| Allowed tools | Comma-separated tool allowlist |
+| Allowed tools | Comma-separated tool allowlist — **required**, see below |
 | System prompt | The agent's instructions (markdown) |
 
 Existing agents also have a **Raw markdown** tab showing the underlying
 definition file (frontmatter + system prompt) for direct editing.
+
+## Every agent needs an allowlist
+
+**Allowed tools** cannot be left empty. An empty list is not "no tools" — a
+vendor CLI started without an allowlist runs with *every* tool it has, so
+saving an agent without one is refused, and a run of an agent that somehow has
+none fails before the CLI starts. \`mcp__openv__*\` grants the OpenV tools;
+name the vendor's own tools (Read, Edit, WebSearch…) alongside it only where
+the agent genuinely needs them. Granting a tool you never mention in the system
+prompt mostly wastes it — say what it is for.
+
+Agents that read text written outside your workspace — the interviewer, any
+agent with repository access, any agent holding WebSearch or WebFetch — run
+with **nothing auto-approved beyond that allowlist**: a file edit or a shell
+command they were not granted is refused rather than waved through. That is the
+protection against a stray instruction hidden in a web page, a repository file,
+or an interview answer.
+
+**What the interviewer may do.** The seeded **Requirements Interviewer** talks
+to people on public invite links, so it holds the narrowest allowlist of all:
+the read-only OpenV tools, plus \`record_candidate_need\`, and nothing else. It
+cannot create or edit artifacts, create links, delegate to another agent, read
+files, or run commands. The worst a participant can talk it into is recording a
+candidate need — which is a suggestion you review like any other.
 
 ## Write mode: proposal vs direct
 

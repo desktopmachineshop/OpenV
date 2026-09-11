@@ -24,11 +24,15 @@ import (
 //     Inventions publish automatically from the member's browser, so this
 //     gate is what keeps every row attributable and rate-limited to an
 //     account even though no one reviews it first;
+//   - voting requires a signed-in person too, so a vote count is a count of
+//     people rather than of credentials;
 //   - deleting requires a platform admin.
 func (h *Handler) registerSharedProductRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/shared-products", h.ListSharedProducts).Methods("GET")
 	router.HandleFunc("/api/v1/shared-products", h.PublishSharedProduct).Methods("POST")
 	router.HandleFunc("/api/v1/shared-products/{id}/report", h.ReportSharedProduct).Methods("POST")
+	router.HandleFunc("/api/v1/shared-products/{id}/vote", h.VoteSharedProduct).Methods("PUT")
+	router.HandleFunc("/api/v1/shared-products/{id}/vote", h.UnvoteSharedProduct).Methods("DELETE")
 	router.HandleFunc("/api/v1/shared-products/{id}", h.DeleteSharedProduct).Methods("DELETE")
 }
 
@@ -46,6 +50,11 @@ type sharedProductRequest struct {
 
 // ListSharedProducts returns the visible community pool. Any authenticated
 // caller may read it; the payload carries no author identity.
+//
+// ?sort= picks the ordering (recent, the default and the behaviour the roller
+// has always had; top; top_week) and ?limit= caps the rows. Each row carries
+// its vote counts and the caller's own vote — false for a caller with no
+// session user, such as a runner key, which cannot vote either.
 func (h *Handler) ListSharedProducts(w http.ResponseWriter, r *http.Request) {
 	if h.sharedProductService == nil {
 		writeJSONError(w, http.StatusNotFound, "shared products are not available")
@@ -57,9 +66,17 @@ func (h *Handler) ListSharedProducts(w http.ResponseWriter, r *http.Request) {
 			limit = n
 		}
 	}
-	products, err := h.sharedProductService.List(limit)
+	viewerID := ""
+	if user := CurrentUser(r); user != nil {
+		viewerID = user.ID
+	}
+	products, err := h.sharedProductService.List(sharedproducts.ListOptions{
+		Limit:    limit,
+		Sort:     sharedproducts.Sort(r.URL.Query().Get("sort")),
+		ViewerID: viewerID,
+	})
 	if err != nil {
-		respondInternal(w, r, "failed to load shared products", err)
+		writeSharedProductError(w, r, err)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
@@ -131,6 +148,51 @@ func (h *Handler) ReportSharedProduct(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// VoteSharedProduct records the caller's vote for an entry and answers with
+// the entry's counts. Session users only, like reporting: a vote is a person
+// saying they like a product, so an agent-run token or a runner key — which
+// have no person behind them — cannot cast one.
+//
+// PUT rather than POST because it is idempotent: voting again settles on the
+// same counts rather than adding a second vote.
+func (h *Handler) VoteSharedProduct(w http.ResponseWriter, r *http.Request) {
+	h.changeSharedProductVote(w, r, true)
+}
+
+// UnvoteSharedProduct withdraws the caller's vote, and is likewise idempotent.
+func (h *Handler) UnvoteSharedProduct(w http.ResponseWriter, r *http.Request) {
+	h.changeSharedProductVote(w, r, false)
+}
+
+// changeSharedProductVote is the shared body of the two vote endpoints: the
+// person gate, the call, and the counts both answer with.
+func (h *Handler) changeSharedProductVote(w http.ResponseWriter, r *http.Request, vote bool) {
+	if h.sharedProductService == nil {
+		writeJSONError(w, http.StatusNotFound, "shared products are not available")
+		return
+	}
+	user := CurrentUser(r)
+	if user == nil {
+		writeJSONError(w, http.StatusForbidden, sharedproducts.ErrNotVotable.Error())
+		return
+	}
+	id := mux.Vars(r)["id"]
+
+	var counts sharedproducts.VoteCounts
+	var err error
+	if vote {
+		counts, err = h.sharedProductService.Vote(id, user.ID)
+	} else {
+		counts, err = h.sharedProductService.Unvote(id, user.ID)
+	}
+	if err != nil {
+		writeSharedProductError(w, r, err)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(counts)
+}
+
 // DeleteSharedProduct removes an entry outright. Platform admins only: this
 // is the takedown path for anything the report threshold has not caught.
 func (h *Handler) DeleteSharedProduct(w http.ResponseWriter, r *http.Request) {
@@ -161,9 +223,10 @@ func writeSharedProductError(w http.ResponseWriter, r *http.Request, err error) 
 		writeJSONError(w, http.StatusConflict, err.Error())
 	case errors.Is(err, sharedproducts.ErrRateLimited), errors.Is(err, sharedproducts.ErrPoolFull):
 		writeJSONError(w, http.StatusTooManyRequests, err.Error())
-	case errors.Is(err, sharedproducts.ErrNotPublishable):
+	case errors.Is(err, sharedproducts.ErrNotPublishable), errors.Is(err, sharedproducts.ErrNotVotable):
 		writeJSONError(w, http.StatusForbidden, err.Error())
-	case errors.Is(err, sharedproducts.ErrEmptyField),
+	case errors.Is(err, sharedproducts.ErrBadSort),
+		errors.Is(err, sharedproducts.ErrEmptyField),
 		errors.Is(err, sharedproducts.ErrTooLong),
 		errors.Is(err, sharedproducts.ErrLinksNotAllowed),
 		errors.Is(err, sharedproducts.ErrDisallowedText):

@@ -1,5 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import {
+  ShortcutTarget,
+  SHORTCUT_PARAM,
+  lastProject,
+  projectPathFor,
+  shortcutLabel,
+  shortcutTarget,
+} from '../appShortcuts';
 import { useAppStore } from '../state/store';
 import {
   agentRunsAPI,
@@ -26,11 +34,18 @@ import {
   RandomProduct,
 } from '../utils/randomProduct';
 import { apiErrorMessage } from '../api/errors';
+import {
+  ProductVoteButton,
+  TopSharedProducts,
+  voteDisabledReason,
+  RandomFilter,
+  VoteState,
+} from './SharedProductVotes';
 import { Navbar } from './Navbar';
 import { HelpSidebar } from './HelpSidebar';
 import { DownloadWizard } from './DownloadWizard';
 import { CreateOrgModal } from './CreateOrgModal';
-import { useConfirm, usePrompt } from './ui';
+import { SegmentedControl, useConfirm, usePrompt } from './ui';
 import './ProjectList.css';
 
 export const ProjectList: React.FC = () => {
@@ -41,9 +56,14 @@ export const ProjectList: React.FC = () => {
   const prompt = usePrompt();
   const [showCreateOrg, setShowCreateOrg] = useState<boolean>(false);
 
-  const openProject = (id: string) => {
+  // An installed-app shortcut (manifest.json) lands here with ?go=review or
+  // ?go=board; opening a project then goes straight to that tab.
+  const [searchParams] = useSearchParams();
+  const shortcut: ShortcutTarget | null = shortcutTarget(searchParams.get(SHORTCUT_PARAM));
+
+  const openProject = (id: string, target: ShortcutTarget | null = shortcut) => {
     setProjectId(id);
-    navigate(`/projects/${id}`);
+    navigate(projectPathFor(id, target));
   };
   const [error, setError] = useState<string>('');
   // The project whose download wizard is open, if any.
@@ -72,14 +92,23 @@ export const ProjectList: React.FC = () => {
   const shownProductsRef = React.useRef<string[]>([]);
 
   // Inventions are also kept in this browser, as the fallback for one that
-  // could not reach the shared pool (rate limit, no network). Read at roll
-  // time rather than held in state — the pool is what the UI talks about.
+  // could not reach the shared pool (rate limit, no network). Held in state
+  // as well as in storage because the card has to tell a kept invention from
+  // a built-in concept while rendering — the two cannot be voted for for
+  // quite different reasons, and only one of them is ever fixable.
+  const [invented, setInvented] = useState<RandomProduct[]>(loadInventedProducts);
 
   // The community pool: products other people chose to share. Everyone reads
   // the same list, so the roll gets richer over time without anyone spending
   // an agent run. Sharing is deliberate (the button below) — nothing an agent
   // invents leaves this workspace until someone reads it and presses Share.
   const [shared, setShared] = useState<RandomProduct[]>([]);
+  // Which list the roller is showing: chance (the original behaviour), or one
+  // of the two vote leaderboards. The leaderboards are read from the server —
+  // it owns the counts and the week — rather than sorted out of `shared`.
+  const [randomFilter, setRandomFilter] = useState<RandomFilter>('random');
+  // Bumped after a vote so the open leaderboard re-reads the standings.
+  const [voteRevision, setVoteRevision] = useState<number>(0);
   // Set when an invention could not reach the shared pool (rate limit, a
   // name already taken, no network). The product still works locally, so
   // this is a note rather than a failure.
@@ -120,7 +149,9 @@ export const ProjectList: React.FC = () => {
     // invention normally reaches the shared pool, so this browser's copies
     // only add the ones that did not — deduped by name so a product cannot
     // be twice as likely to roll as its neighbours.
-    const kept = loadInventedProducts().filter(
+    const stored = loadInventedProducts();
+    setInvented(stored);
+    const kept = stored.filter(
       (k) => !shared.some((p) => p.name.toLowerCase() === k.name.toLowerCase())
     );
     const rolled = generateRandomProduct([...shared, ...kept]);
@@ -140,6 +171,18 @@ export const ProjectList: React.FC = () => {
     } catch (err: any) {
       setShareError(`Kept in this browser, but not added to the shared pool: ${apiErrorMessage(err)}`);
     }
+  };
+
+  // A vote landed: the server is the authority on the counts, so the card and
+  // this browser's copy of the pool take what came back rather than each
+  // keeping their own arithmetic. The open leaderboard is re-read too, since
+  // one vote can change the order.
+  const applyVote = (state: VoteState) => {
+    setRandomProduct((prev) => (prev ? { ...prev, ...state } : prev));
+    setShared((prev) =>
+      prev.map((p) => (p.sharedId && p.sharedId === randomProduct?.sharedId ? { ...p, ...state } : p))
+    );
+    setVoteRevision((n) => n + 1);
   };
 
   // Flag a shared product for review and move on. Enough distinct reporters
@@ -245,11 +288,11 @@ export const ProjectList: React.FC = () => {
       if (flaws.length) {
         // Usable, but below the bar: show it, keep it here, and leave the
         // shared collection alone.
-        saveInventedProduct(product);
+        setInvented(saveInventedProduct(product));
         setInventError(`Your agent's product is a bit off (${flaws[0]}) — reroll or invent again. Not added to the shared collection.`);
         return;
       }
-      saveInventedProduct(product);
+      setInvented(saveInventedProduct(product));
       await publishInvention(product);
     } catch (err: any) {
       setInventError(`Could not invent a product: ${apiErrorMessage(err)}`);
@@ -267,6 +310,18 @@ export const ProjectList: React.FC = () => {
     loadTemplates();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeOrgId]);
+
+  // A shortcut that knows which project the member was last in goes there
+  // without asking. When it does not (first run, or that project is not in
+  // this workspace) the list stays put and the banner below explains why.
+  useEffect(() => {
+    if (!shortcut || loading || projects.length === 0) return;
+    const remembered = lastProject();
+    if (remembered && projects.some((p) => p.id === remembered)) {
+      openProject(remembered);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shortcut, loading, projects]);
 
   const loadProjects = async () => {
     try {
@@ -509,6 +564,16 @@ export const ProjectList: React.FC = () => {
       )}
       <div className="project-list-container">
 
+      {/* An installed-app shortcut that could not guess the project says so
+          rather than silently dropping the member on the plain project list. */}
+      {shortcut && (
+        <div
+          className="card"
+          style={{ marginBottom: 12, fontSize: 13, color: 'var(--text-muted)' }}
+        >
+          Choose a project to open its {shortcutLabel(shortcut)}.
+        </div>
+      )}
 
       {error && (
         <div className="error-message">
@@ -693,6 +758,33 @@ export const ProjectList: React.FC = () => {
                   </select>
                 </div>
 
+                {/* Chance or standing: rerolling is the original behaviour
+                    and stays the default, with the two leaderboards beside
+                    it for people who would rather see what the pool likes. */}
+                {createMode === 'random' && (
+                  <div style={{ marginBottom: 10 }}>
+                    <SegmentedControl<RandomFilter>
+                      aria-label="How to pick a product"
+                      value={randomFilter}
+                      onChange={setRandomFilter}
+                      options={[
+                        { value: 'random', label: '🎲 Random', title: 'Roll from the whole shared pool' },
+                        { value: 'top', label: 'Top 5 all time', title: 'The five most-voted products ever' },
+                        { value: 'top_week', label: 'Top 5 this week', title: 'The five most-voted products of the last seven days' },
+                      ]}
+                    />
+                  </div>
+                )}
+
+                {createMode === 'random' && randomFilter !== 'random' && (
+                  <TopSharedProducts
+                    sort={randomFilter}
+                    refreshKey={voteRevision}
+                    selectedId={randomProduct?.sharedId}
+                    onUse={(product) => applyProduct(product, false)}
+                  />
+                )}
+
                 {createMode === 'random' && randomProduct && (
                   <div
                     style={{
@@ -729,7 +821,7 @@ export const ProjectList: React.FC = () => {
                         <button
                           type="button"
                           className="button-secondary button"
-                          style={{ width: 'auto', padding: '2px 10px', fontSize: 12 }}
+                          style={{ width: 'auto', padding: '6px 10px', fontSize: 12 }}
                           onClick={rollRandomProduct}
                           disabled={inventing}
                         >
@@ -740,7 +832,7 @@ export const ProjectList: React.FC = () => {
                           className="button-secondary button"
                           style={{
                             width: 'auto',
-                            padding: '2px 10px',
+                            padding: '6px 10px',
                             fontSize: 12,
                             opacity: runnerOnline && !inventing ? 1 : 0.5,
                             cursor: runnerOnline && !inventing ? 'pointer' : 'not-allowed',
@@ -759,7 +851,7 @@ export const ProjectList: React.FC = () => {
                           <button
                             type="button"
                             className="button-secondary button"
-                            style={{ width: 'auto', padding: '2px 10px', fontSize: 12 }}
+                            style={{ width: 'auto', padding: '6px 10px', fontSize: 12 }}
                             onClick={reportProduct}
                             title="Flag this shared product for review"
                           >
@@ -775,6 +867,32 @@ export const ProjectList: React.FC = () => {
                     <p style={{ margin: '4px 0 0', color: 'var(--text-muted)' }}>
                       <em>For:</em> {randomProduct.targetUsers}
                     </p>
+                    {/* The vote sits on its own line under the product it is
+                        about, where the count has room next to the weekly
+                        hint even on a phone. */}
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        flexWrap: 'wrap',
+                        gap: 8,
+                        marginTop: 10,
+                        paddingTop: 8,
+                        borderTop: '1px solid var(--border-soft)',
+                      }}
+                    >
+                      <ProductVoteButton
+                        product={randomProduct}
+                        invented={invented}
+                        onChange={applyVote}
+                        onError={(message) => setShareError(message)}
+                      />
+                      {voteDisabledReason(randomProduct, invented) && (
+                        <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                          {voteDisabledReason(randomProduct, invented)}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 )}
 
@@ -817,10 +935,13 @@ export const ProjectList: React.FC = () => {
                       Reroll picks from the shared collection of fake products — the built-ins plus{' '}
                       {shared.length === 1
                         ? '1 invented by another OpenV user'
-                        : `${shared.length} invented by other OpenV users`}; ⚑ Report anything that
-                      does not belong. <strong>What your agent invents joins the collection
-                      automatically</strong>, so keep real people, customers, and unreleased work out
-                      of it. Creating drops you into the Guided Wizard with this framing pre-filled.
+                        : `${shared.length} invented by other OpenV users`}; ▲ Vote for the ones
+                      worth keeping (they are what the Top 5 filters show) and ⚑ Report anything
+                      that does not belong. Only products that reached the shared pool can be voted
+                      for — a built-in concept, or an invention still kept in this browser, cannot.{' '}
+                      <strong>What your agent invents joins the collection automatically</strong>, so
+                      keep real people, customers, and unreleased work out of it. Creating drops you
+                      into the Guided Wizard with this framing pre-filled.
                     </span>
                   </div>
                 )}

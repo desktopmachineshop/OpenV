@@ -41,6 +41,17 @@ func (h *SSEHub) RunLogsAppended(run *agentruns.Run, entries []agentruns.LogEntr
 	}
 }
 
+// RunPartialText broadcasts the answer a live run has written so far on the
+// run's own stream, so a run detail view can show it forming. Session chat
+// panels are served by the orchestration hooks instead, on the session's
+// channel.
+func (h *SSEHub) RunPartialText(run *agentruns.Run, text string) {
+	h.broadcast(run.ID, sseEvent{Event: "partial", Data: map[string]interface{}{
+		"run_id": run.ID,
+		"text":   text,
+	}})
+}
+
 // RunStatusChanged broadcasts a run status transition.
 func (h *SSEHub) RunStatusChanged(run *agentruns.Run) {
 	h.broadcast(run.ID, sseEvent{Event: "status", Data: map[string]interface{}{

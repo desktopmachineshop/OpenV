@@ -1,9 +1,11 @@
 package api
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"sort"
@@ -170,6 +172,13 @@ func (h *Handler) CreateAgent(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
+	// Validate before the store does, so the definition rules — an allowlist
+	// above all (REQ-91) — answer 400 with their own wording whatever the
+	// service behind this happens to be.
+	if err := def.Validate(); err != nil {
+		writeJSONError(w, http.StatusBadRequest, err.Error())
+		return
+	}
 	// Friendly pre-check; the (org_id, slug) unique index is the real guard,
 	// so a concurrent create that slips past this still conflicts below.
 	if existing, _ := h.agentService.GetBySlug(ActiveOrg(r), def.Slug); existing != nil {
@@ -220,6 +229,12 @@ func (h *Handler) UpdateAgent(w http.ResponseWriter, r *http.Request) {
 	}
 	if def.Slug != slug {
 		writeJSONError(w, http.StatusBadRequest, "slug in body does not match URL")
+		return
+	}
+	// Same rules as on create: an update may not take an agent's allowlist
+	// away either (REQ-91).
+	if err := def.Validate(); err != nil {
+		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	agent, err := h.agentService.SaveDefinition(ActiveOrg(r), &def)
@@ -784,12 +799,12 @@ func (h *Handler) AppendAgentRunLogs(w http.ResponseWriter, r *http.Request) {
 	if h.requireWorkerRun(w, r) == nil {
 		return
 	}
-	var entries []agentruns.LogEntry
-	if err := json.NewDecoder(r.Body).Decode(&entries); err != nil {
+	entries, partialText, err := decodeRunLogBody(r.Body)
+	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	run, err := h.runService.AppendLogs(mux.Vars(r)["id"], entries)
+	run, err := h.runService.AppendLogs(mux.Vars(r)["id"], entries, partialText)
 	if err != nil {
 		respondInternal(w, r, "failed to append run logs", err)
 		return
@@ -798,6 +813,33 @@ func (h *Handler) AppendAgentRunLogs(w http.ResponseWriter, r *http.Request) {
 		"cancel_requested": run.CancelRequested,
 		"status":           run.Status,
 	})
+}
+
+// decodeRunLogBody reads a worker's log push in either shape: the current
+// object — {"entries": [...], "partial_text": "..."} — or the bare array of
+// entries that runners built before streaming shipped still send. partial_text
+// is the whole assistant answer so far, not a delta; empty means "unchanged".
+func decodeRunLogBody(body io.Reader) ([]agentruns.LogEntry, string, error) {
+	var raw json.RawMessage
+	if err := json.NewDecoder(body).Decode(&raw); err != nil {
+		return nil, "", err
+	}
+	trimmed := bytes.TrimLeft(raw, " \t\r\n")
+	if len(trimmed) > 0 && trimmed[0] == '[' {
+		var entries []agentruns.LogEntry
+		if err := json.Unmarshal(raw, &entries); err != nil {
+			return nil, "", err
+		}
+		return entries, "", nil
+	}
+	var payload struct {
+		Entries     []agentruns.LogEntry `json:"entries"`
+		PartialText string               `json:"partial_text"`
+	}
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		return nil, "", err
+	}
+	return payload.Entries, payload.PartialText, nil
 }
 
 func (h *Handler) FinishAgentRun(w http.ResponseWriter, r *http.Request) {

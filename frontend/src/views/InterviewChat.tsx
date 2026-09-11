@@ -19,6 +19,9 @@ export const InterviewChat: React.FC = () => {
   const [composerText, setComposerText] = useState('');
   const [sending, setSending] = useState(false);
   const [typing, setTyping] = useState(false);
+  // The interviewer's reply as it is written (`assistant_partial`): always
+  // the whole text so far, replaced by the final message when it lands.
+  const [partial, setPartial] = useState('');
   const [sendError, setSendError] = useState('');
 
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -33,6 +36,7 @@ export const InterviewChat: React.FC = () => {
     });
     if (msg.role === 'assistant' || msg.role === 'system') {
       setTyping(false);
+      setPartial('');
     }
   }, []);
 
@@ -52,6 +56,16 @@ export const InterviewChat: React.FC = () => {
       try {
         const msg = JSON.parse(event.data) as InterviewMessage;
         if (msg && msg.id) appendMessage(msg);
+      } catch {
+        // ignore malformed events
+      }
+    });
+    es.addEventListener('assistant_partial', (event: MessageEvent) => {
+      try {
+        const data = JSON.parse(event.data) as { run_id?: string; text?: string };
+        if (typeof data?.text !== 'string' || !data.text) return;
+        setPartial(data.text);
+        setTyping(false);
       } catch {
         // ignore malformed events
       }
@@ -110,7 +124,7 @@ export const InterviewChat: React.FC = () => {
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, typing]);
+  }, [messages, typing, partial]);
 
   const submitName = (e: React.FormEvent) => {
     e.preventDefault();
@@ -298,7 +312,7 @@ export const InterviewChat: React.FC = () => {
       </header>
 
       <div style={{ flex: 1, overflowY: 'auto', padding: 16 }}>
-        {messages.length === 0 && !typing && (
+        {messages.length === 0 && !typing && !partial && (
           <div style={{ textAlign: 'center', color: 'var(--neutral)', fontSize: 13, marginTop: 30 }}>
             Say hello to get started — the interviewer will guide the conversation.
           </div>
@@ -338,7 +352,37 @@ export const InterviewChat: React.FC = () => {
             )}
           </div>
         ))}
-        {typing && (
+        {partial && (
+          <div data-testid="assistant-partial" style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: 10 }}>
+            <div
+              style={{
+                maxWidth: '80%',
+                padding: '10px 14px',
+                borderRadius: 14,
+                borderBottomLeftRadius: 4,
+                fontSize: 14,
+                lineHeight: 1.5,
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
+                background: 'var(--surface-alt)',
+                color: 'var(--text)',
+              }}
+            >
+              {partial}
+              <span
+                aria-hidden="true"
+                style={{
+                  display: 'inline-block',
+                  width: 7,
+                  marginLeft: 2,
+                  borderBottom: '2px solid var(--text-muted)',
+                  verticalAlign: 'baseline',
+                }}
+              />
+            </div>
+          </div>
+        )}
+        {typing && !partial && (
           <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: 10 }}>
             <div
               style={{

@@ -1,7 +1,7 @@
 import axios, { AxiosInstance } from 'axios';
 import { filenameFromContentDisposition } from './contentDisposition';
 import type { SharedProductPayload, toSharePayload } from '../utils/randomProduct';
-import { downloadQuery } from '../utils/downloadSelection';
+import { downloadExtension, downloadQuery } from '../utils/downloadSelection';
 import { isPublicPath } from '../utils/publicPaths';
 
 // Determine API base URL.
@@ -200,7 +200,7 @@ export interface DownloadSelection {
   attachments: string[];
 }
 
-export type DownloadFormat = 'json' | 'csv' | 'reqif' | 'pdf' | 'docx';
+export type DownloadFormat = 'json' | 'csv' | 'excel' | 'reqif' | 'pdf' | 'docx';
 
 export interface Attachment {
   id: string;
@@ -407,7 +407,7 @@ export const projectAPI = {
 
     const filename =
       filenameFromContentDisposition(response.headers['content-disposition']) ||
-      `project_download_${new Date().toISOString().slice(0, 10)}.${format}`;
+      `project_download_${new Date().toISOString().slice(0, 10)}.${downloadExtension(format)}`;
 
     saveBlob(response.data, filename);
     return response;
@@ -576,10 +576,85 @@ export interface AuthConfig {
   oidc_enabled: boolean;
   oidc_provider_name: string;
   email_verification_required: boolean;
+  // Whether this deployment still has a public sign-up door (REQ-95). When
+  // 'closed', new accounts arrive only by invitation or through SSO.
+  registration?: 'open' | 'closed';
+}
+
+// What a sign-up that carried an invite token did with it. Absent when the
+// form carried no token at all.
+//
+//   accepted       — the membership the link named was granted;
+//   already_member — the account was in that workspace already and kept the
+//                    role it had; the link is spent either way;
+//   email_mismatch — the link is live but was issued to another address, so
+//                    it granted nothing;
+//   invalid        — unknown, revoked, spent or expired, including a link
+//                    revoked in the moment between the sign-up being allowed
+//                    and the membership being claimed.
+export type InvitationOutcome = 'accepted' | 'already_member' | 'email_mismatch' | 'invalid';
+
+// The created account, plus what its invite token did (see InvitationOutcome).
+export interface RegisterResult extends User {
+  invitation?: InvitationOutcome;
+}
+
+// What an invite link resolves to before the holder has any account: enough
+// to prefill the sign-up form and name the workspace, nothing more.
+export interface InvitationPreview {
+  email: string;
+  org_name: string;
+  role: 'admin' | 'member';
+  expires_at: string;
+}
+
+// A pending invitation as an admin sees it on the Members tab.
+export interface OrgInvitation {
+  id: string;
+  org_id: string;
+  email: string;
+  role: 'admin' | 'member';
+  expires_at: string;
+  created_at: string;
+  invited_by_name?: string;
+}
+
+// The answer to creating an invitation: the row, the one-time link (shown
+// once — the server keeps only its hash), and whether it was emailed. With
+// no SMTP configured the admin passes the link on themselves.
+//
+// `reason` explains an invitation that was NOT emailed for some other
+// cause — today, an unchanged invitation to the same address created less
+// than an hour ago, which is handed back instead of mailing a second link.
+// Such an answer carries no `link`: the only copy went out in the first
+// mail, and minting a new one is what re-inviting at a different role does.
+export interface OrgInvitationCreated {
+  invitation: OrgInvitation;
+  link: string;
+  emailed: boolean;
+  reason?: string;
 }
 
 export interface NotificationPrefs {
   email_notifications: boolean;
+  /** Web push opt-in (REQ-109). Defaults false until a device is granted permission. */
+  push_notifications: boolean;
+}
+
+/** Whether this deployment can send web push, and the key to subscribe with. */
+export interface PushConfig {
+  enabled: boolean;
+  public_key: string;
+}
+
+/** One device the member has subscribed. The encryption keys are never returned. */
+export interface PushSubscriptionRecord {
+  id: string;
+  endpoint: string;
+  user_agent?: string;
+  created_at: string;
+  last_used_at?: string;
+  failed_at?: string;
 }
 
 export interface ProjectMember {
@@ -871,6 +946,9 @@ export interface AgentRun {
   status: string;
   prompt: string;
   final_text: string;
+  // The answer a still-running agent has written so far (whole text, not a
+  // delta). Cleared when the run finishes and final_text takes over.
+  partial_text?: string;
   error: string;
   // Structured failure taxonomy (issue #184): a class for a terminal failure
   // (provider_unavailable | auth | workspace | timeout | agent_error |
@@ -1058,10 +1136,31 @@ export interface CrewImportResult {
   warnings?: string[];
 }
 
+// What a password form says about length while /auth/policy is in flight,
+// and if it cannot be read at all. The server's own min_password_length
+// replaces it as soon as the policy answers.
+export const DEFAULT_MIN_PASSWORD_LENGTH = 8;
+
 export const authAPI = {
   config: () => client.get<AuthConfig>('/api/v1/auth/config'),
-  register: (email: string, password: string, name: string) =>
-    client.post<User>('/api/v1/auth/register', { email, password, name }),
+  // inviteToken is the token from an invite link the form was opened with.
+  // It is what grants the invited membership: the server treats holding the
+  // link as proof the invited mailbox was read, and registering the address
+  // without it joins nothing — the invitation then waits for its link, which
+  // a signed-in account posts to POST /auth/invitations/accept. (Confirming
+  // a verification link grants nothing: that address is one the account
+  // asked the mail to be sent to, so it proves nothing about who was
+  // invited.)
+  //
+  // `invitation` on the answer says what the token did — see
+  // RegisterResult — and is absent when none was sent.
+  register: (email: string, password: string, name: string, inviteToken?: string) =>
+    client.post<RegisterResult>('/api/v1/auth/register', {
+      email,
+      password,
+      name,
+      ...(inviteToken ? { invite_token: inviteToken } : {}),
+    }),
   login: (email: string, password: string) =>
     client.post<User>('/api/v1/auth/login', { email, password }),
   logout: () => client.post('/api/v1/auth/logout'),
@@ -1074,16 +1173,62 @@ export const authAPI = {
     client.post<{ sent_to: string }>('/api/v1/auth/verify-email/resend', {}),
   changeVerificationEmail: (email: string) =>
     client.post<{ sent_to: string }>('/api/v1/auth/verify-email/change', { email }),
+  // Registration policy on its own, for a caller that needs nothing else.
+  // min_password_length is the server's own rule, so a password form states
+  // the length that will actually be enforced rather than a copy of it.
+  policy: () =>
+    client.get<{ registration: 'open' | 'closed'; min_password_length?: number }>(
+      '/api/v1/auth/policy'
+    ),
+  // Invite links: preview one (open — the holder has no session yet), or
+  // accept it as the signed-in account. Accepting converts only when the
+  // session's own address IS the invited one; any other address is refused
+  // with 403 invitation_email_mismatch, and that body deliberately does not
+  // name the invited address. `role` is what the account holds afterwards,
+  // which is the role it already had when `already_member` is true — an
+  // invitation never rewrites a membership.
+  // The token goes in the body, never in the URL: an invite link is a
+  // credential, and a path lands in access logs, proxy logs, browser history
+  // and Referer headers.
+  invitation: (token: string) =>
+    client.post<InvitationPreview>('/api/v1/auth/invitations/preview', { token }),
+  acceptInvitation: (token: string) =>
+    client.post<{ org_id: string; org_name: string; role: string; already_member: boolean }>(
+      '/api/v1/auth/invitations/accept',
+      { token }
+    ),
   googleLoginUrl: () => `${API_BASE_URL}/api/v1/auth/google`,
   oidcLoginUrl: () => `${API_BASE_URL}/api/v1/auth/oidc/login`,
   listUsers: () => client.get<User[]>('/api/v1/users'),
 };
 
-// Per-user notification preferences (issue #187): the email opt-out toggle.
+// The account's own password (REQ-99). A successful change ends every other
+// session of the account; this browser's stays signed in.
+export const passwordAPI = {
+  change: (current_password: string, new_password: string) =>
+    client.put('/api/v1/me/password', { current_password, new_password }),
+};
+
+// Per-user notification preferences: the email opt-out (issue #187) and the
+// web push opt-in (REQ-109). update() takes a partial — the server leaves any
+// preference the body does not name exactly as it was.
 export const notificationPrefsAPI = {
   get: () => client.get<NotificationPrefs>('/api/v1/me/notification-prefs'),
-  update: (email_notifications: boolean) =>
-    client.put<NotificationPrefs>('/api/v1/me/notification-prefs', { email_notifications }),
+  update: (prefs: Partial<NotificationPrefs>) =>
+    client.put<NotificationPrefs>('/api/v1/me/notification-prefs', prefs),
+};
+
+// Web push subscriptions (REQ-109). One subscription per device; the browser
+// owns the endpoint and the keys, the server only stores them.
+export const pushAPI = {
+  config: () => client.get<PushConfig>('/api/v1/me/push/config'),
+  list: () =>
+    client.get<{ subscriptions: PushSubscriptionRecord[] }>('/api/v1/me/push-subscriptions'),
+  subscribe: (body: { endpoint: string; keys: { p256dh: string; auth: string }; user_agent?: string }) =>
+    client.post<PushSubscriptionRecord>('/api/v1/me/push-subscriptions', body),
+  // DELETE with a body: axios puts it under `data`.
+  unsubscribe: (endpoint: string) =>
+    client.delete<void>('/api/v1/me/push-subscriptions', { data: { endpoint } }),
 };
 
 // ---------------------------------------------------------------------------
@@ -1227,10 +1372,31 @@ export const orgsAPI = {
   restore: (id: string) => client.post<Org>(`/api/v1/orgs/${id}/restore`),
   listDeleted: () => client.get<{ orgs: Org[] }>('/api/v1/orgs', { params: { deleted: 'true' } }),
   activate: (id: string) => client.post(`/api/v1/orgs/${id}/activate`),
+  // Pending invitations to the workspace (admin). An address with no account
+  // is invited rather than refused, so this is where an admin watches for
+  // people who have not arrived yet.
+  invitations: {
+    list: (orgId: string) => client.get<OrgInvitation[]>(`/api/v1/orgs/${orgId}/invitations`),
+    // Same branch AND the same statuses as members.add: 201 with the
+    // membership when the address already has an account, 409 when it is
+    // already a member, 202 with the invitation and its one-time link when
+    // it has no account.
+    create: (orgId: string, email: string, role: string) =>
+      client.post<OrgInvitationCreated | OrgMember>(`/api/v1/orgs/${orgId}/invitations`, {
+        email,
+        role,
+      }),
+    revoke: (orgId: string, invitationId: string) =>
+      client.delete(`/api/v1/orgs/${orgId}/invitations/${invitationId}`),
+  },
   members: {
     list: (orgId: string) => client.get<OrgMember[]>(`/api/v1/orgs/${orgId}/members`),
+    // 201 with the membership when the address already has an account and
+    // joined; 409 when it is already a member (change a role with setRole);
+    // 202 with an OrgInvitationCreated body when it had no account and was
+    // invited instead. invitations.create answers the same pair.
     add: (orgId: string, email: string, role: string) =>
-      client.post(`/api/v1/orgs/${orgId}/members`, { email, role }),
+      client.post<OrgInvitationCreated | OrgMember>(`/api/v1/orgs/${orgId}/members`, { email, role }),
     setRole: (orgId: string, userId: string, role: string) =>
       client.put(`/api/v1/orgs/${orgId}/members/${userId}`, { role }),
     remove: (orgId: string, userId: string) =>
@@ -1326,11 +1492,26 @@ export const cloudRunnerAPI = {
  * plain text, rate-limits publishing per workspace, and returns no author
  * identity — `report` is the path for anything that should not be there.
  */
+/** What a vote or unvote settles on: the entry's counts and your own vote. */
+export interface SharedProductVotes {
+  votes: number;
+  votes_week: number;
+  voted: boolean;
+}
+
+/** How the pool is ordered: newest first, or the two vote leaderboards. */
+export type SharedProductSort = 'recent' | 'top' | 'top_week';
+
 export const sharedProductsAPI = {
-  list: () => client.get<SharedProductPayload[]>('/api/v1/shared-products'),
+  list: (params?: { sort?: SharedProductSort; limit?: number }) =>
+    client.get<SharedProductPayload[]>('/api/v1/shared-products', { params }),
   publish: (product: ReturnType<typeof toSharePayload>) =>
     client.post<SharedProductPayload>('/api/v1/shared-products', product),
   report: (id: string) => client.post(`/api/v1/shared-products/${id}/report`),
+  // Voting is idempotent on both sides, hence PUT/DELETE rather than POST:
+  // pressing an already-pressed arrow settles on the same count.
+  vote: (id: string) => client.put<SharedProductVotes>(`/api/v1/shared-products/${id}/vote`),
+  unvote: (id: string) => client.delete<SharedProductVotes>(`/api/v1/shared-products/${id}/vote`),
 };
 
 export const workerStatusAPI = {

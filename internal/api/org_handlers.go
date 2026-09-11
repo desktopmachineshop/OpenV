@@ -288,7 +288,14 @@ func (h *Handler) ListOrgMembers(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(list)
 }
 
-// AddOrgMember invites an existing user by email (admin).
+// AddOrgMember adds a member by email (admin). An address that already has
+// an account joins immediately (201 with the membership); one that is
+// already a member is a conflict (409 — changing a role is PUT, not a second
+// add); one with no account gets an invitation instead of the old "they must
+// sign up first" 404 (202 with the invitation and its one-time link), which
+// is what makes a closed deployment usable. POST /orgs/{id}/invitations goes
+// through the same branch AND the same status writer, so the two cannot
+// disagree about either the outcome or how it is reported.
 func (h *Handler) AddOrgMember(w http.ResponseWriter, r *http.Request) {
 	orgID := mux.Vars(r)["id"]
 	if !h.requireOrgRole(w, r, orgID, orgs.RoleAdmin) {
@@ -302,27 +309,12 @@ func (h *Handler) AddOrgMember(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	if req.Role == "" {
-		req.Role = orgs.RoleMember
-	}
-	user, err := h.userService.FindByEmail(req.Email)
+	outcome, err := h.addOrInviteToOrg(r, orgID, req.Email, req.Role)
 	if err != nil {
-		respondInternal(w, r, "failed to look up user", err)
+		h.writeInvitationError(w, r, err)
 		return
 	}
-	if user == nil {
-		writeJSONError(w, http.StatusNotFound, "no user with that email — they must sign up first")
-		return
-	}
-	if err := h.orgService.AddMember(orgID, user.ID, req.Role); err != nil {
-		if errors.Is(err, orgs.ErrInvalidRole) || errors.Is(err, orgs.ErrPersonalOrgMembers) {
-			writeJSONError(w, http.StatusBadRequest, err.Error())
-		} else {
-			respondInternal(w, r, "failed to add workspace member", err)
-		}
-		return
-	}
-	w.WriteHeader(http.StatusCreated)
+	writeAddOrInviteOutcome(w, outcome)
 }
 
 func (h *Handler) UpdateOrgMember(w http.ResponseWriter, r *http.Request) {

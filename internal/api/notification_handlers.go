@@ -28,9 +28,19 @@ func (h *Handler) registerNotificationRoutes(router *mux.Router) {
 }
 
 // notificationPrefs is the wire shape for a user's own notification
-// preferences (issue #187). Minimal by design: a single email opt-out.
+// preferences: the email opt-out (issue #187) and the web push opt-in
+// (REQ-109). In-app + SSE delivery is not a preference — it is always on.
 type notificationPrefs struct {
 	EmailNotifications bool `json:"email_notifications"`
+	PushNotifications  bool `json:"push_notifications"`
+}
+
+// notificationPrefsUpdate is the PUT body. Both fields are POINTERS so a
+// client can change one preference without having to know (or resend) the
+// other: an absent field is left exactly as it is.
+type notificationPrefsUpdate struct {
+	EmailNotifications *bool `json:"email_notifications"`
+	PushNotifications  *bool `json:"push_notifications"`
 }
 
 // GetNotificationPrefs returns the caller's own notification preferences.
@@ -41,7 +51,10 @@ func (h *Handler) GetNotificationPrefs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(notificationPrefs{EmailNotifications: user.EmailNotifications})
+	json.NewEncoder(w).Encode(notificationPrefs{
+		EmailNotifications: user.EmailNotifications,
+		PushNotifications:  user.PushNotifications,
+	})
 }
 
 // UpdateNotificationPrefs updates the caller's own notification preferences.
@@ -53,17 +66,31 @@ func (h *Handler) UpdateNotificationPrefs(w http.ResponseWriter, r *http.Request
 		writeJSONError(w, http.StatusUnauthorized, "authentication required")
 		return
 	}
-	var req notificationPrefs
+	var req notificationPrefsUpdate
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	if err := h.userService.SetEmailNotifications(user.ID, req.EmailNotifications); err != nil {
-		respondInternal(w, r, "failed to update notification preferences", err)
-		return
+	prefs := notificationPrefs{
+		EmailNotifications: user.EmailNotifications,
+		PushNotifications:  user.PushNotifications,
+	}
+	if req.EmailNotifications != nil {
+		if err := h.userService.SetEmailNotifications(user.ID, *req.EmailNotifications); err != nil {
+			respondInternal(w, r, "failed to update notification preferences", err)
+			return
+		}
+		prefs.EmailNotifications = *req.EmailNotifications
+	}
+	if req.PushNotifications != nil {
+		if err := h.userService.SetPushNotifications(user.ID, *req.PushNotifications); err != nil {
+			respondInternal(w, r, "failed to update notification preferences", err)
+			return
+		}
+		prefs.PushNotifications = *req.PushNotifications
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(notificationPrefs{EmailNotifications: req.EmailNotifications})
+	json.NewEncoder(w).Encode(prefs)
 }
 
 // requireHumanUser answers the current user or writes a 401. Notifications

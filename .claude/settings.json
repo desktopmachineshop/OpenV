@@ -1,5 +1,20 @@
 {
   "permissions": {
-    "allow": ["mcp__Railway"]
+    "allow": [
+      "mcp__Railway",
+      "Bash(go test *)",
+      "Bash(go build *)",
+      "Bash(go vet *)",
+      "Bash(gofmt *)",
+      "Bash(npx tsc --noEmit)",
+      "mcp__github__pull_request_read",
+      "mcp__openv__get_artifact",
+      "mcp__openv__get_quality_findings",
+      "mcp__openv__search_artifacts",
+      "mcp__openv__get_vv_coverage",
+      "mcp__openv__get_vv_gaps",
+      "mcp__openv__list_projects",
+      "mcp__openv__list_links_for_artifact"
+    ]
   }
 }

@@ -21,6 +21,15 @@ export interface RandomProduct {
    * somebody else's workspace — so it offers Report rather than Share.
    */
   sharedId?: string;
+  /**
+   * Vote state, carried only on products from the shared pool: the all-time
+   * count, the count inside the last seven days, and whether you voted. A
+   * product invented in this browser and not yet published has nothing to
+   * vote on, so these stay undefined for it.
+   */
+  votes?: number;
+  votesWeek?: number;
+  voted?: boolean;
 }
 
 interface Concept {
@@ -471,9 +480,18 @@ export interface SharedProductPayload {
   vision: string;
   problem: string;
   target_users: string;
+  /** All-time votes, votes inside the last seven days, and your own vote. */
+  votes?: number;
+  votes_week?: number;
+  voted?: boolean;
 }
 
-/** Convert a shared-pool entry into a rollable product. */
+/**
+ * Convert a shared-pool entry into a rollable product.
+ *
+ * Vote fields default to zero/false rather than undefined so the card can
+ * render a count without a server that predates voting making it blank.
+ */
 export const fromSharedProduct = (payload: SharedProductPayload): RandomProduct => ({
   category: payload.category,
   name: payload.name,
@@ -482,6 +500,9 @@ export const fromSharedProduct = (payload: SharedProductPayload): RandomProduct 
   problem: payload.problem,
   targetUsers: payload.target_users,
   sharedId: payload.id,
+  votes: payload.votes || 0,
+  votesWeek: payload.votes_week || 0,
+  voted: !!payload.voted,
 });
 
 /** Whether a rolled product came from the community pool. */

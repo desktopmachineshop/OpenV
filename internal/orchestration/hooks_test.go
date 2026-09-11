@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/openv/requirements-platform/internal/domain/agentruns"
 	domainevents "github.com/openv/requirements-platform/internal/domain/events"
@@ -164,6 +165,62 @@ type fakeGuidedService struct {
 	guided.Service
 	appends   []appendCall
 	appendErr error
+	// Coalesced wizard nudges: what TakePendingNudge hands back, how often it
+	// was asked, and what SetPendingNudge parked.
+	pending    *guided.PendingNudge
+	pendingErr error
+	takes      int
+	parked     []*guided.PendingNudge
+	// The session a parked nudge belongs to. In progress unless a test
+	// commits or abandons it; nil means it has gone missing.
+	session    *guided.Session
+	sessionErr error
+}
+
+func (f *fakeGuidedService) GetSession(id string) (*guided.Session, error) {
+	if f.sessionErr != nil {
+		return nil, f.sessionErr
+	}
+	if f.session != nil {
+		return f.session, nil
+	}
+	return &guided.Session{ID: id, Status: guided.StatusInProgress}, nil
+}
+
+func (f *fakeGuidedService) SetPendingNudge(sessionID string, nudge *guided.PendingNudge) error {
+	f.parked = append(f.parked, nudge)
+	f.pending = nudge
+	return nil
+}
+
+func (f *fakeGuidedService) TakePendingNudge(sessionID string) (*guided.PendingNudge, error) {
+	f.takes++
+	if f.pendingErr != nil {
+		return nil, f.pendingErr
+	}
+	nudge := f.pending
+	f.pending = nil
+	return nudge, nil
+}
+
+type nudgeLaunch struct {
+	sessionID  string
+	nudge      guided.PendingNudge
+	launchedBy string
+}
+
+type fakeNudgeLauncher struct {
+	launches []nudgeLaunch
+	err      error
+}
+
+func (f *fakeNudgeLauncher) LaunchGuidedNudge(sessionID string, nudge guided.PendingNudge, launchedBy *string) error {
+	user := ""
+	if launchedBy != nil {
+		user = *launchedBy
+	}
+	f.launches = append(f.launches, nudgeLaunch{sessionID: sessionID, nudge: nudge, launchedBy: user})
+	return f.err
 }
 
 func (f *fakeGuidedService) AppendChatMessage(sessionID, role, content string) (*guided.ChatMessage, error) {
@@ -970,5 +1027,284 @@ func TestBoardMoveLaunchFailureRecordsCardActivity(t *testing.T) {
 	act := f.workItems.activities[0]
 	if act.kind != workitems.KindRunFailed || act.actor != "system" || !strings.Contains(act.content, "no such agent") {
 		t.Errorf("activity = %+v, want system run-failed with the error", act)
+	}
+}
+
+// --- Streamed assistant text ---
+
+// A conversational run's answer-so-far is broadcast on its session's channel
+// as assistant_partial, carrying the whole text (not a delta) so the panel
+// can render it as one bubble.
+func TestPartialTextBroadcastsOnSessionChannel(t *testing.T) {
+	cases := []struct {
+		name    string
+		mutate  func(*agentruns.Run)
+		wantKey string
+	}{
+		{"guided", func(r *agentruns.Run) { r.GuidedSessionID = strptr("gs-1") }, "guided:gs-1"},
+		{"interview", func(r *agentruns.Run) { r.InterviewSessionID = strptr("iv-1") }, "interview:iv-1"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			f := newFixture()
+			run := &agentruns.Run{ID: "r1", Status: agentruns.StatusRunning}
+			tc.mutate(run)
+
+			f.hooks.RunPartialText(run, "Your vision statement is")
+
+			if len(f.broadcaster.calls) != 1 {
+				t.Fatalf("broadcasts = %+v, want one", f.broadcaster.calls)
+			}
+			call := f.broadcaster.calls[0]
+			if call.key != tc.wantKey || call.event != "assistant_partial" {
+				t.Fatalf("broadcast = %s/%s, want %s/assistant_partial", call.key, call.event, tc.wantKey)
+			}
+			data, ok := call.data.(map[string]interface{})
+			if !ok || data["run_id"] != "r1" || data["text"] != "Your vision statement is" {
+				t.Fatalf("payload = %+v, want the run id and the whole text", call.data)
+			}
+		})
+	}
+}
+
+// A run that is not a conversation has no chat panel to stream into; its own
+// log stream (the SSE hub) already carries the text.
+func TestPartialTextIgnoresNonConversationalRuns(t *testing.T) {
+	f := newFixture()
+	f.hooks.RunPartialText(&agentruns.Run{ID: "r1", Status: agentruns.StatusRunning}, "some text")
+	f.hooks.RunPartialText(&agentruns.Run{ID: "r2", GuidedSessionID: strptr("gs-1")}, "   ")
+	if len(f.broadcaster.calls) != 0 {
+		t.Fatalf("broadcasts = %+v, want none", f.broadcaster.calls)
+	}
+}
+
+// At most one partial per run per 500ms, however fast the batches arrive —
+// and the limit is per run, not global.
+func TestPartialTextIsRateLimitedPerRun(t *testing.T) {
+	f := newFixture()
+	now := time.Date(2026, 9, 11, 10, 0, 0, 0, time.UTC)
+	timeNow = func() time.Time { return now }
+	defer func() { timeNow = time.Now }()
+
+	runA := &agentruns.Run{ID: "r1", GuidedSessionID: strptr("gs-1")}
+	runB := &agentruns.Run{ID: "r2", GuidedSessionID: strptr("gs-2")}
+
+	f.hooks.RunPartialText(runA, "one")
+	f.hooks.RunPartialText(runA, "one two")           // 0ms later: dropped
+	f.hooks.RunPartialText(runB, "other run's first") // a different run: allowed
+	now = now.Add(400 * time.Millisecond)
+	f.hooks.RunPartialText(runA, "one two three") // still inside the window
+	now = now.Add(200 * time.Millisecond)
+	f.hooks.RunPartialText(runA, "one two three four") // 600ms: allowed
+
+	var texts []string
+	for _, c := range f.broadcaster.calls {
+		texts = append(texts, c.data.(map[string]interface{})["text"].(string))
+	}
+	want := []string{"one", "other run's first", "one two three four"}
+	if len(texts) != len(want) {
+		t.Fatalf("broadcast texts = %v, want %v", texts, want)
+	}
+	for i := range want {
+		if texts[i] != want[i] {
+			t.Fatalf("broadcast texts = %v, want %v", texts, want)
+		}
+	}
+
+	// A finished run forgets its bookkeeping, so nothing is silenced by a
+	// stale timestamp later.
+	f.hooks.RunStatusChanged(&agentruns.Run{ID: "r1", Status: agentruns.StatusSucceeded})
+	f.broadcaster.calls = nil
+	f.hooks.RunPartialText(runA, "fresh run, same id")
+	if len(f.broadcaster.calls) != 1 {
+		t.Fatalf("broadcasts after the run finished = %+v, want one", f.broadcaster.calls)
+	}
+}
+
+// --- Coalesced wizard nudges ---
+
+// The nudge parked while a turn was in flight is launched exactly once, when
+// that turn finishes — after the reply is delivered, so the new turn's prompt
+// contains the answer that just landed.
+func TestFinishedRunLaunchesTheParkedNudge(t *testing.T) {
+	f := newFixture()
+	launcher := &fakeNudgeLauncher{}
+	f.hooks.SetGuidedNudgeLauncher(launcher)
+	f.guided.pending = &guided.PendingNudge{
+		Step:  4,
+		State: map[string]interface{}{"step_4": "the newest state"},
+		Event: "saved step 4",
+	}
+	user := "u-1"
+
+	f.hooks.RunStatusChanged(&agentruns.Run{
+		ID:              "r1",
+		Status:          agentruns.StatusSucceeded,
+		GuidedSessionID: strptr("gs-1"),
+		FinalText:       "Here is a suggestion.",
+		LaunchedBy:      &user,
+	})
+
+	if len(launcher.launches) != 1 {
+		t.Fatalf("launches = %+v, want exactly one", launcher.launches)
+	}
+	got := launcher.launches[0]
+	if got.sessionID != "gs-1" || got.nudge.Step != 4 || got.nudge.Event != "saved step 4" {
+		t.Fatalf("launched %+v, want the newest parked nudge for gs-1", got)
+	}
+	if got.nudge.State["step_4"] != "the newest state" {
+		t.Fatalf("launched with state %+v, want the state saved with the nudge", got.nudge.State)
+	}
+	if got.launchedBy != "u-1" {
+		t.Fatalf("launchedBy = %q, want the original launcher so personal-runner routing survives", got.launchedBy)
+	}
+	// The reply is delivered before the follow-up turn is launched.
+	if len(f.guided.appends) != 1 || f.guided.appends[0].content != "Here is a suggestion." {
+		t.Fatalf("reply delivery = %+v, want the finished answer appended", f.guided.appends)
+	}
+}
+
+// Every way out of a run frees the session; a run still in flight does not.
+func TestPendingNudgeTakenOnlyWhenTheRunIsDone(t *testing.T) {
+	done := []string{
+		agentruns.StatusSucceeded,
+		agentruns.StatusFailed,
+		agentruns.StatusTimedOut,
+		agentruns.StatusCancelled,
+		agentruns.StatusAwaitingApproval,
+	}
+	for _, status := range done {
+		t.Run(status, func(t *testing.T) {
+			f := newFixture()
+			launcher := &fakeNudgeLauncher{}
+			f.hooks.SetGuidedNudgeLauncher(launcher)
+			f.guided.pending = &guided.PendingNudge{Step: 2, Event: "saved step 2"}
+
+			f.hooks.RunStatusChanged(&agentruns.Run{ID: "r1", Status: status, GuidedSessionID: strptr("gs-1")})
+
+			if len(launcher.launches) != 1 {
+				t.Fatalf("%s launched %d turns, want 1", status, len(launcher.launches))
+			}
+		})
+	}
+	for _, status := range []string{agentruns.StatusQueued, agentruns.StatusClaimed, agentruns.StatusRunning} {
+		t.Run(status, func(t *testing.T) {
+			f := newFixture()
+			launcher := &fakeNudgeLauncher{}
+			f.hooks.SetGuidedNudgeLauncher(launcher)
+			f.guided.pending = &guided.PendingNudge{Step: 2, Event: "saved step 2"}
+
+			f.hooks.RunStatusChanged(&agentruns.Run{ID: "r1", Status: status, GuidedSessionID: strptr("gs-1")})
+
+			if f.guided.takes != 0 || len(launcher.launches) != 0 {
+				t.Fatalf("%s: the session is still busy; takes=%d launches=%d", status, f.guided.takes, len(launcher.launches))
+			}
+		})
+	}
+}
+
+// Nothing parked, nothing launched — so the turn a nudge launches does not
+// itself trigger another one.
+func TestNoPendingNudgeLaunchesNothing(t *testing.T) {
+	f := newFixture()
+	launcher := &fakeNudgeLauncher{}
+	f.hooks.SetGuidedNudgeLauncher(launcher)
+
+	f.hooks.RunStatusChanged(&agentruns.Run{ID: "r1", Status: agentruns.StatusSucceeded, GuidedSessionID: strptr("gs-1")})
+	f.hooks.RunStatusChanged(&agentruns.Run{ID: "r2", Status: agentruns.StatusSucceeded, GuidedSessionID: strptr("gs-1")})
+
+	if len(launcher.launches) != 0 {
+		t.Fatalf("launches = %+v, want none", launcher.launches)
+	}
+	if f.guided.takes != 2 {
+		t.Fatalf("TakePendingNudge calls = %d, want one per finished run", f.guided.takes)
+	}
+}
+
+// A non-guided run never looks for a wizard nudge, and a launcher failure is
+// swallowed: nudges are commentary, not the user's message.
+func TestPendingNudgeFailuresAreContained(t *testing.T) {
+	f := newFixture()
+	launcher := &fakeNudgeLauncher{err: errors.New("copilot agent missing")}
+	f.hooks.SetGuidedNudgeLauncher(launcher)
+	f.guided.pending = &guided.PendingNudge{Step: 1, Event: "saved step 1"}
+
+	f.hooks.RunStatusChanged(&agentruns.Run{ID: "r1", Status: agentruns.StatusSucceeded, InterviewSessionID: strptr("iv-1")})
+	if f.guided.takes != 0 {
+		t.Fatal("an interview run asked the wizard for a nudge")
+	}
+
+	f.hooks.RunStatusChanged(&agentruns.Run{ID: "r2", Status: agentruns.StatusFailed, GuidedSessionID: strptr("gs-1")})
+	if len(launcher.launches) != 1 {
+		t.Fatalf("launches = %+v, want the one attempt", launcher.launches)
+	}
+}
+
+// With no launcher wired (a stripped-down wiring, or a test), a parked nudge
+// is dropped rather than panicking the run's status callback.
+func TestPendingNudgeWithoutLauncherIsDropped(t *testing.T) {
+	f := newFixture()
+	f.guided.pending = &guided.PendingNudge{Step: 3, Event: "saved step 3"}
+	f.hooks.RunStatusChanged(&agentruns.Run{ID: "r1", Status: agentruns.StatusSucceeded, GuidedSessionID: strptr("gs-1")})
+	if f.guided.pending != nil {
+		t.Fatal("the parked nudge should still be cleared")
+	}
+}
+
+// A wizard that was committed or abandoned while the turn ran gets no copilot
+// turn: nobody is watching that chat, and the nudge dies with the session.
+func TestPendingNudgeOfAClosedSessionIsDiscarded(t *testing.T) {
+	for _, status := range []string{guided.StatusCommitted, guided.StatusAbandoned} {
+		t.Run(status, func(t *testing.T) {
+			f := newFixture()
+			launcher := &fakeNudgeLauncher{}
+			f.hooks.SetGuidedNudgeLauncher(launcher)
+			f.guided.session = &guided.Session{ID: "gs-1", Status: status}
+			f.guided.pending = &guided.PendingNudge{Step: 4, Event: "saved step 4"}
+
+			f.hooks.RunStatusChanged(&agentruns.Run{ID: "r1", Status: agentruns.StatusSucceeded, GuidedSessionID: strptr("gs-1")})
+
+			if len(launcher.launches) != 0 {
+				t.Fatalf("%s session launched %+v", status, launcher.launches)
+			}
+			// Taken all the same, so nothing is left to fire later.
+			if f.guided.takes != 1 || f.guided.pending != nil {
+				t.Fatalf("%s: takes=%d pending=%+v, want the nudge taken and dropped", status, f.guided.takes, f.guided.pending)
+			}
+		})
+	}
+}
+
+// A session that has vanished, or one that cannot be read, is not launched
+// into either — the nudge is already taken, so it is simply dropped.
+func TestPendingNudgeWithoutAReadableSessionIsDropped(t *testing.T) {
+	t.Run("missing", func(t *testing.T) {
+		f := newFixture()
+		launcher := &fakeNudgeLauncher{}
+		f.hooks.SetGuidedNudgeLauncher(launcher)
+		f.guided.sessionErr = errors.New("guided session not found")
+		f.guided.pending = &guided.PendingNudge{Step: 1, Event: "saved step 1"}
+
+		f.hooks.RunStatusChanged(&agentruns.Run{ID: "r1", Status: agentruns.StatusSucceeded, GuidedSessionID: strptr("gs-1")})
+
+		if len(launcher.launches) != 0 {
+			t.Fatalf("launched %+v for a session that could not be read", launcher.launches)
+		}
+	})
+}
+
+// The ordinary case still launches: an in-progress session is what a parked
+// nudge is for.
+func TestPendingNudgeOfAnInProgressSessionStillLaunches(t *testing.T) {
+	f := newFixture()
+	launcher := &fakeNudgeLauncher{}
+	f.hooks.SetGuidedNudgeLauncher(launcher)
+	f.guided.session = &guided.Session{ID: "gs-1", Status: guided.StatusInProgress}
+	f.guided.pending = &guided.PendingNudge{Step: 2, Event: "saved step 2"}
+
+	f.hooks.RunStatusChanged(&agentruns.Run{ID: "r1", Status: agentruns.StatusSucceeded, GuidedSessionID: strptr("gs-1")})
+
+	if len(launcher.launches) != 1 {
+		t.Fatalf("launches = %+v, want the parked nudge launched", launcher.launches)
 	}
 }

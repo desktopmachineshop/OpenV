@@ -28,9 +28,50 @@ Click **+ New Project**. The form offers a **Project Type**:
 - **Templates** — start from a template you previously saved with ⧉.
 - **Examples** — start from a bundled example project (when the server ships
   any), useful for exploring the product with realistic data.
+- **🎲 Random product (for testing)** — start from a made-up product, when
+  what you want is something to try OpenV on rather than your real work.
 
 Choosing a template or example pre-fills the name and description; you can
 change both before creating.
+
+### Random products and the community pool
+
+The random mode rolls a fake product — a name, a category, a one-line
+description, a vision and an audience — and pre-fills the form with it.
+**Creating** then drops you into the Guided Wizard with that framing already
+in place.
+
+Three things feed the roll: the built-in concepts, the products your own
+connected agent invents (**✨ Invent with agent**, available while a runner is
+online), and the **community pool** — the fake products other OpenV users have
+shared. The pool is the one thing in OpenV every workspace reads and writes:
+anything published there is visible to everyone, so it is deliberately jokes
+and nothing else. What your agent invents joins it automatically, which is how
+it grows without anyone doing chores — so keep real people, customers and
+unreleased work out of the invention brief.
+
+Above the card is a filter:
+
+- **🎲 Random** — reroll over the whole pool, which is the mode's original
+  behaviour.
+- **Top 5 all time** — the five most-voted products ever.
+- **Top 5 this week** — the five most-voted products of the last seven days,
+  a rolling window rather than a Monday-to-Sunday one.
+
+Each entry in a Top 5 list shows its votes and a **Use this** button that puts
+it on the card and in the form.
+
+**▲ Vote** on the card says "keep this one": one vote per account, pressed
+again to take it back, and the counts you see are everyone's. The hint beside
+it (*· N this week*) is that product's votes inside the weekly window. Only
+products that actually reached the shared pool can be voted for — a built-in
+concept, or an invention that stayed in this browser because the pool was
+full or the name was taken, has nothing for anyone else to vote on, and the
+arrow says so.
+
+**⚑ Report** is the other side of the same coin: flag anything that does not
+belong, and three different people reporting it hides it from everyone's roll
+list pending review.
 
 ## Downloading a project
 
@@ -46,6 +87,7 @@ a two-step wizard.
 | Word document | The same specification as a .docx, for editing or review outside OpenV |
 | JSON data | The complete project, and the only format an OpenV import reads back |
 | CSV table | One row per artifact for a spreadsheet; links fold into a single column |
+| Excel workbook (.xlsx) | A sheet per artifact type, a sheet of traceability links, and a cover naming the snapshot |
 | ReqIF interchange | The OMG format read by DOORS and Polarion |
 
 **2. Content** — how much of it:
@@ -78,7 +120,7 @@ the live project.
   **JSON data** format and creates a new project from it.
 - Download/import is a simple way to move a project between servers or keep an
   offline copy.
-- The other formats are one-way: CSV, PDF, Word and ReqIF are snapshots to read
+- The other formats are one-way: CSV, Excel, PDF, Word and ReqIF are snapshots to read
   or to hand to another tool, not something OpenV reads back.
 
 ## Inside a project

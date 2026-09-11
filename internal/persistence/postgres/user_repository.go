@@ -20,12 +20,12 @@ func NewUserRepository(db *sql.DB) *UserRepository {
 	return &UserRepository{db: db}
 }
 
-const userColumns = `id, email, name, avatar_url, auth_provider, COALESCE(password_hash, ''), is_admin, COALESCE(email_notifications, TRUE), COALESCE(email_verified, FALSE), email_verified_at, created_at, updated_at`
+const userColumns = `id, email, name, avatar_url, auth_provider, COALESCE(password_hash, ''), is_admin, COALESCE(email_notifications, TRUE), COALESCE(push_notifications, FALSE), COALESCE(email_verified, FALSE), email_verified_at, created_at, updated_at`
 
 func scanUser(row interface{ Scan(...interface{}) error }) (*users.User, error) {
 	u := new(users.User)
 	var verifiedAt sql.NullTime
-	err := row.Scan(&u.ID, &u.Email, &u.Name, &u.AvatarURL, &u.AuthProvider, &u.PasswordHash, &u.IsAdmin, &u.EmailNotifications, &u.EmailVerified, &verifiedAt, &u.CreatedAt, &u.UpdatedAt)
+	err := row.Scan(&u.ID, &u.Email, &u.Name, &u.AvatarURL, &u.AuthProvider, &u.PasswordHash, &u.IsAdmin, &u.EmailNotifications, &u.PushNotifications, &u.EmailVerified, &verifiedAt, &u.CreatedAt, &u.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -53,6 +53,16 @@ func (r *UserRepository) UpdateUser(u *users.User) error {
 		UPDATE users SET name = $2, avatar_url = $3, auth_provider = $4, password_hash = NULLIF($5, ''), is_admin = $6, updated_at = $7
 		WHERE id = $1
 	`, u.ID, u.Name, u.AvatarURL, u.AuthProvider, u.PasswordHash, u.IsAdmin, u.UpdatedAt)
+	return err
+}
+
+// SetPasswordHash writes only the password column. A password change must
+// not carry a stale copy of the rest of the row (name, provider, admin flag)
+// back into the database, which a full UpdateUser would.
+func (r *UserRepository) SetPasswordHash(userID, hash string, at time.Time) error {
+	_, err := r.db.Exec(`
+		UPDATE users SET password_hash = $2, updated_at = $3 WHERE id = $1
+	`, userID, hash, at)
 	return err
 }
 
@@ -103,6 +113,14 @@ func (r *UserRepository) SetEmailNotifications(userID string, enabled bool) erro
 	return err
 }
 
+// SetPushNotifications flips one user's web-push opt-in.
+func (r *UserRepository) SetPushNotifications(userID string, enabled bool) error {
+	_, err := r.db.Exec(
+		`UPDATE users SET push_notifications = $2, updated_at = NOW() WHERE id = $1`,
+		userID, enabled)
+	return err
+}
+
 // SaveEmailVerification stores a link after discarding the user's unused
 // pending ones, so one link is live per account.
 func (r *UserRepository) SaveEmailVerification(v *users.EmailVerification) error {
@@ -121,6 +139,17 @@ func (r *UserRepository) SaveEmailVerification(v *users.EmailVerification) error
 		return err
 	}
 	return tx.Commit()
+}
+
+// MarkEmailVerified records proof of control that did not come from an
+// emailed link. It writes only the verification columns — never the address
+// — so it cannot move an account onto an address it has not proved.
+func (r *UserRepository) MarkEmailVerified(userID string, at time.Time) error {
+	_, err := r.db.Exec(`
+		UPDATE users SET email_verified = TRUE, email_verified_at = COALESCE(email_verified_at, $2), updated_at = $2
+		WHERE id = $1
+	`, userID, at)
+	return err
 }
 
 // ConsumeEmailVerification spends a link and marks its user verified in one
@@ -224,8 +253,22 @@ func (r *UserRepository) DeleteSession(id string) error {
 	return err
 }
 
-// DeleteExpiredSessions removes sessions past their expiry.
-func (r *UserRepository) DeleteExpiredSessions(now time.Time) error {
-	_, err := r.db.Exec(`DELETE FROM sessions WHERE expires_at < $1`, now)
+// DeleteSessionsForUser removes the account's sessions, keeping the one
+// whose token hashes to exceptTokenHash ("" keeps none).
+func (r *UserRepository) DeleteSessionsForUser(userID, exceptTokenHash string) error {
+	_, err := r.db.Exec(`
+		DELETE FROM sessions WHERE user_id = $1 AND token_hash <> $2
+	`, userID, exceptTokenHash)
+	return err
+}
+
+// DeleteExpiredSessions removes sessions past their stored expiry, older
+// than maxAge, or unused for longer than idle — the sweep half of the two
+// deadlines GetBySessionToken enforces on read (REQ-99).
+func (r *UserRepository) DeleteExpiredSessions(now time.Time, maxAge, idle time.Duration) error {
+	_, err := r.db.Exec(`
+		DELETE FROM sessions
+		WHERE expires_at < $1 OR created_at < $2 OR last_seen_at < $3
+	`, now, now.Add(-maxAge), now.Add(-idle))
 	return err
 }

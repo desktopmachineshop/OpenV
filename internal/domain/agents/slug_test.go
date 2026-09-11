@@ -50,7 +50,7 @@ func TestValidSlug(t *testing.T) {
 }
 
 func TestValidateRejectsBadSlug(t *testing.T) {
-	def := &Definition{Slug: "../escape", Name: "Evil", Provider: "claude-code"}
+	def := &Definition{Slug: "../escape", Name: "Evil", Provider: "claude-code", AllowedTools: DefaultAllowedTools()}
 	if err := def.Validate(); err == nil {
 		t.Error("Validate accepted a path-traversal slug")
 	}

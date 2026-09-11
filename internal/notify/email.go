@@ -157,9 +157,17 @@ func DefaultEmailTypes() []string {
 // EmailTypesFromEnv reads the comma-separated OPENV_EMAIL_NOTIFICATION_TYPES
 // override, or returns DefaultEmailTypes when it is unset/empty.
 func EmailTypesFromEnv() []string {
-	raw := strings.TrimSpace(os.Getenv("OPENV_EMAIL_NOTIFICATION_TYPES"))
+	return typeListFromEnv("OPENV_EMAIL_NOTIFICATION_TYPES", DefaultEmailTypes)
+}
+
+// typeListFromEnv parses a comma-separated notification-type allow-list from
+// one environment variable, falling back to fallback() when it is unset,
+// empty, or all separators. Shared by the email and push side channels so
+// both overrides behave identically.
+func typeListFromEnv(key string, fallback func() []string) []string {
+	raw := strings.TrimSpace(os.Getenv(key))
 	if raw == "" {
-		return DefaultEmailTypes()
+		return fallback()
 	}
 	var out []string
 	for _, p := range strings.Split(raw, ",") {
@@ -168,7 +176,7 @@ func EmailTypesFromEnv() []string {
 		}
 	}
 	if len(out) == 0 {
-		return DefaultEmailTypes()
+		return fallback()
 	}
 	return out
 }

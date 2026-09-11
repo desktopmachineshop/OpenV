@@ -49,7 +49,7 @@ func TestCreateAgentDuplicateSlug(t *testing.T) {
 	createAgent := func(t *testing.T, svc *fakeAgentDefService) *httptest.ResponseRecorder {
 		t.Helper()
 		h := &Handler{agentService: svc}
-		body := `{"slug":"reviewer","name":"Reviewer","provider":"claude"}`
+		body := `{"slug":"reviewer","name":"Reviewer","provider":"claude","allowed_tools":["mcp__openv__*"]}`
 		r := httptest.NewRequest(http.MethodPost, "/api/v1/agents", strings.NewReader(body))
 		ctx := context.WithValue(r.Context(), ctxUser, &users.User{ID: "root", IsAdmin: true})
 		ctx = context.WithValue(ctx, ctxActiveOrg, "org-1")
@@ -93,6 +93,56 @@ func TestCreateAgentDuplicateSlug(t *testing.T) {
 			t.Fatalf("saved = %v, want the reviewer definition", svc.saved)
 		}
 	})
+}
+
+// REQ-91: an agent definition with no tool allowlist is refused, on create and
+// on update alike, with the message that says what to add. Nothing reaches the
+// store — an agent with no allowlist is one whose vendor CLI would run with
+// every tool it has.
+func TestAgentDefinitionRequiresAllowedTools(t *testing.T) {
+	bodies := []string{
+		`{"slug":"reviewer","name":"Reviewer","provider":"claude-code"}`,
+		`{"slug":"reviewer","name":"Reviewer","provider":"claude-code","allowed_tools":[]}`,
+		`{"slug":"reviewer","name":"Reviewer","provider":"claude-code","allowed_tools":["  "]}`,
+	}
+	call := func(t *testing.T, method, body string) (*httptest.ResponseRecorder, *fakeAgentDefService) {
+		t.Helper()
+		svc := &fakeAgentDefService{bySlug: map[string]*agents.Agent{}}
+		h := &Handler{agentService: svc}
+		r := httptest.NewRequest(method, "/api/v1/agents/reviewer", strings.NewReader(body))
+		r = mux.SetURLVars(r, map[string]string{"slug": "reviewer"})
+		ctx := context.WithValue(r.Context(), ctxUser, &users.User{ID: "root", IsAdmin: true})
+		ctx = context.WithValue(ctx, ctxActiveOrg, "org-1")
+		w := httptest.NewRecorder()
+		if method == http.MethodPost {
+			h.CreateAgent(w, r.WithContext(ctx))
+		} else {
+			h.UpdateAgent(w, r.WithContext(ctx))
+		}
+		return w, svc
+	}
+
+	for _, method := range []string{http.MethodPost, http.MethodPut} {
+		for _, body := range bodies {
+			w, svc := call(t, method, body)
+			if w.Code != http.StatusBadRequest {
+				t.Errorf("%s %s: status = %d, want 400 (body %q)", method, body, w.Code, w.Body.String())
+			}
+			if !strings.Contains(w.Body.String(), "allowed_tools") {
+				t.Errorf("%s %s: error should name allowed_tools, got %q", method, body, w.Body.String())
+			}
+			if len(svc.saved) != 0 {
+				t.Errorf("%s %s: definition reached the store anyway", method, body)
+			}
+		}
+	}
+
+	// The same definition with an allowlist is accepted, so the rule is about
+	// the tools and nothing else.
+	ok := `{"slug":"reviewer","name":"Reviewer","provider":"claude-code","allowed_tools":["mcp__openv__*"]}`
+	if w, svc := call(t, http.MethodPost, ok); w.Code != http.StatusCreated || len(svc.saved) != 1 {
+		t.Errorf("a definition with an allowlist was refused: status %d body %q", w.Code, w.Body.String())
+	}
 }
 
 // TestWorkerLifecycleErrorContract locks in the 409-vs-500 split on the

@@ -256,6 +256,7 @@ func TestGetQualityFindingsResolvesRefs(t *testing.T) {
 
 func TestGetVVGaps(t *testing.T) {
 	gaps := `{"requirements_without_method":["r2"],"requirements_without_test_case":["r2"],` +
+		`"requirements_unverified":["r3"],` +
 		`"requirements_failing":[],"orphan_test_cases":[],"needs_without_requirement":[],"hazards_unmitigated":[]}`
 	server, log := captureServer(t, http.StatusOK, gaps)
 	out, err := toolByName(t, "get_vv_gaps").Handler(
@@ -268,6 +269,15 @@ func TestGetVVGaps(t *testing.T) {
 	}
 	if got := log()[0].Path; got != "/api/v1/projects/p1/vv/gaps" {
 		t.Errorf("path = %s, want /api/v1/projects/p1/vv/gaps", got)
+	}
+
+	// The tool description is the only place an agent learns which buckets
+	// the report carries, so it has to name the unverified one.
+	desc := toolByName(t, "get_vv_gaps").Description
+	for _, want := range []string{"requirements_unverified", "demonstration", "analysis", "inspection"} {
+		if !strings.Contains(desc, want) {
+			t.Errorf("get_vv_gaps description does not mention %q: %s", want, desc)
+		}
 	}
 }
 
