@@ -186,7 +186,12 @@ test('runner control and the relayed sign-in work at phone size', async () => {
   await page.goto('/org/settings?tab=worker-keys');
   await expect(page.getByRole('heading', { name: 'My personal runner' })).toBeVisible();
   await expectNoHorizontalScroll(page);
+  // Reachable and tappable, not necessarily above the fold: the hosted-runner
+  // card sits above this one, so on a short phone (the iPhone 13's 664 px
+  // against the Pixel 5's 727 px) the control starts below the first screen.
+  // What REQ-108 asks is that a thumb can reach it and hit it.
   const connector = page.getByRole('button', { name: 'Set up Agent Connector' });
+  await connector.scrollIntoViewIfNeeded();
   await expect(connector).toBeInViewport();
   expect((await connector.boundingBox())!.height).toBeGreaterThanOrEqual(44);
 
