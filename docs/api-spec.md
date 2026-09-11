@@ -393,13 +393,36 @@ invent. Consequently the gates are tighter than the role ladder alone:
   are stored for rate limiting and takedown only.
 - Reports are per person: `ReportsToHide` (3) *distinct* reporters hide an
   entry pending review; one account clicking repeatedly changes nothing.
+- Votes are per person too, and the same gate applies: a session user votes,
+  an agent-run token or a runner key cannot. Voting is idempotent on both
+  sides — hence `PUT` / `DELETE` rather than `POST`.
 
 | Method | Path | Purpose | Auth |
 |---|---|---|---|
 | GET | `/api/v1/shared-products` | List the visible community pool | user |
 | POST | `/api/v1/shared-products` | Share a product with every workspace | org member (session only) |
 | POST | `/api/v1/shared-products/{id}/report` | Flag an entry for review | user (session only) |
+| PUT | `/api/v1/shared-products/{id}/vote` | Vote for an entry | user (session only) |
+| DELETE | `/api/v1/shared-products/{id}/vote` | Withdraw your vote | user (session only) |
 | DELETE | `/api/v1/shared-products/{id}` | Remove an entry outright | platform admin |
+
+`GET /api/v1/shared-products` takes `?limit=` (default 200, max 500) and
+`?sort=`:
+
+| `sort` | Order | Rows |
+|---|---|---|
+| `recent` (default) | newest first | every visible entry |
+| `top` | most votes first, then newest | only entries with at least one vote |
+| `top_week` | most votes in the last 7 days first, then newest | only entries voted for in that window |
+
+Any other `sort` is `400`. Every row carries `votes` (all time), `votes_week`
+(votes inside the rolling seven-day window, counted by the database against
+its own clock) and `voted` — *your* vote, so a caller with no session user
+(a workspace runner key) always reads `false`.
+
+Both vote endpoints answer `200` with `{"votes": N, "votes_week": N,
+"voted": true|false}`, and `404` for an id that is unknown *or* hidden: a
+hidden entry is out of every list and cannot be voted for either.
 
 ### Product profile, V&V, test runs
 

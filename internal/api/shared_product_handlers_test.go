@@ -23,19 +23,47 @@ type fakeSharedProductService struct {
 	userIDs    []string
 	reported   []string
 	deleted    []string
+	voted      []string
+	unvoted    []string
 	publishErr error
+	// listOpts records the options of the last List call; listErr is
+	// returned instead of a pool when set (a refused sort, say).
+	listOpts sharedproducts.ListOptions
+	listErr  error
+	voteErr  error
 }
 
-func (f *fakeSharedProductService) List(limit int) ([]*sharedproducts.Product, error) {
+func (f *fakeSharedProductService) List(opts sharedproducts.ListOptions) ([]*sharedproducts.Product, error) {
+	f.listOpts = opts
+	if f.listErr != nil {
+		return nil, f.listErr
+	}
 	return []*sharedproducts.Product{{
 		ID: "p1", Category: "kitchen appliance", Name: "Kevinproof",
 		Description: "A coffee tin that recognises Kevin and locks.",
 		Vision:      "Kevinproof becomes the reason the bean jar survives.",
 		Problem:     "Beans vanish overnight.",
 		TargetUsers: "office workers whose beans keep leaving with Kevin",
+		Votes:       4, VotesWeek: 2, Voted: opts.ViewerID == "member",
 		// Author metadata is set but must never be serialized.
 		CreatedByOrg: "org-secret", CreatedByUser: "user-secret",
 	}}, nil
+}
+
+func (f *fakeSharedProductService) Vote(id, userID string) (sharedproducts.VoteCounts, error) {
+	if f.voteErr != nil {
+		return sharedproducts.VoteCounts{}, f.voteErr
+	}
+	f.voted = append(f.voted, id+"/"+userID)
+	return sharedproducts.VoteCounts{Votes: 5, VotesWeek: 3, Voted: true}, nil
+}
+
+func (f *fakeSharedProductService) Unvote(id, userID string) (sharedproducts.VoteCounts, error) {
+	if f.voteErr != nil {
+		return sharedproducts.VoteCounts{}, f.voteErr
+	}
+	f.unvoted = append(f.unvoted, id+"/"+userID)
+	return sharedproducts.VoteCounts{Votes: 4, VotesWeek: 2, Voted: false}, nil
 }
 
 func (f *fakeSharedProductService) Publish(in sharedproducts.Product, orgID, userID string) (*sharedproducts.Product, error) {
@@ -175,6 +203,135 @@ func TestListSharedProductsHidesAuthors(t *testing.T) {
 	}
 	if len(got) != 1 || got[0]["name"] != "Kevinproof" {
 		t.Errorf("unexpected payload: %s", body)
+	}
+}
+
+// TestListSharedProductsSortAndViewer: the two leaderboards are a query
+// parameter, and the caller's own vote travels with the read — the pool is
+// shared, so "voted" has to mean "you voted", not "somebody did".
+func TestListSharedProductsSortAndViewer(t *testing.T) {
+	svc := &fakeSharedProductService{}
+	h := sharedTestHandler(svc)
+
+	r := inOrg(httptest.NewRequest(http.MethodGet, "/api/v1/shared-products?sort=top_week&limit=5", nil), "member")
+	w := httptest.NewRecorder()
+	h.ListSharedProducts(w, r)
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d (body %q)", w.Code, w.Body.String())
+	}
+	if svc.listOpts.Sort != sharedproducts.SortTopWeek || svc.listOpts.Limit != 5 {
+		t.Errorf("list options = %+v, want top_week/5", svc.listOpts)
+	}
+	if svc.listOpts.ViewerID != "member" {
+		t.Errorf("viewer = %q, want member", svc.listOpts.ViewerID)
+	}
+	var got []map[string]interface{}
+	if err := json.Unmarshal(w.Body.Bytes(), &got); err != nil {
+		t.Fatalf("payload: %v", err)
+	}
+	if got[0]["votes"] != float64(4) || got[0]["votes_week"] != float64(2) || got[0]["voted"] != true {
+		t.Errorf("row = %v, want votes 4 / week 2 / voted", got[0])
+	}
+
+	// A caller with no session user — a workspace runner key — reads the
+	// pool but has no vote of its own, and cannot cast one either.
+	svc.listOpts = sharedproducts.ListOptions{}
+	w = httptest.NewRecorder()
+	h.ListSharedProducts(w, httptest.NewRequest(http.MethodGet, "/api/v1/shared-products", nil))
+	if svc.listOpts.ViewerID != "" {
+		t.Errorf("runner-key viewer = %q, want empty", svc.listOpts.ViewerID)
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &got); err != nil {
+		t.Fatalf("payload: %v", err)
+	}
+	if got[0]["voted"] != false {
+		t.Errorf("runner-key row = %v, want voted false", got[0])
+	}
+}
+
+// TestListSharedProductsRejectsUnknownSort: a sort the service does not know
+// is a 400, not a silently reordered list — the client asked a question that
+// was not answered.
+func TestListSharedProductsRejectsUnknownSort(t *testing.T) {
+	h := sharedTestHandler(&fakeSharedProductService{listErr: sharedproducts.ErrBadSort})
+	r := inOrg(httptest.NewRequest(http.MethodGet, "/api/v1/shared-products?sort=popular", nil), "member")
+	w := httptest.NewRecorder()
+	h.ListSharedProducts(w, r)
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("status = %d, want 400 (body %q)", w.Code, w.Body.String())
+	}
+}
+
+// TestVoteSharedProductNeedsAPerson: voting is a person saying they like a
+// product, so the credentials with nobody behind them — an agent run token, a
+// worker key — are refused, exactly as they are for publishing and reporting.
+func TestVoteSharedProductNeedsAPerson(t *testing.T) {
+	withID := func(r *http.Request) *http.Request {
+		return mux.SetURLVars(r, map[string]string{"id": "p1"})
+	}
+
+	for _, method := range []string{http.MethodPut, http.MethodDelete} {
+		svc := &fakeSharedProductService{}
+		h := sharedTestHandler(svc)
+
+		w := httptest.NewRecorder()
+		anon := withID(httptest.NewRequest(method, "/api/v1/shared-products/p1/vote", nil))
+		if method == http.MethodPut {
+			h.VoteSharedProduct(w, anon)
+		} else {
+			h.UnvoteSharedProduct(w, anon)
+		}
+		if w.Code != http.StatusForbidden {
+			t.Errorf("%s without a person: status = %d, want 403", method, w.Code)
+		}
+		if len(svc.voted)+len(svc.unvoted) != 0 {
+			t.Errorf("%s reached the service without a person", method)
+		}
+
+		w = httptest.NewRecorder()
+		signed := withID(inOrg(httptest.NewRequest(method, "/api/v1/shared-products/p1/vote", nil), "member"))
+		if method == http.MethodPut {
+			h.VoteSharedProduct(w, signed)
+		} else {
+			h.UnvoteSharedProduct(w, signed)
+		}
+		if w.Code != http.StatusOK {
+			t.Fatalf("%s: status = %d (body %q)", method, w.Code, w.Body.String())
+		}
+		var counts map[string]interface{}
+		if err := json.Unmarshal(w.Body.Bytes(), &counts); err != nil {
+			t.Fatalf("%s payload: %v", method, err)
+		}
+		wantVoted := method == http.MethodPut
+		if counts["voted"] != wantVoted {
+			t.Errorf("%s payload = %v, want voted %v", method, counts, wantVoted)
+		}
+		if _, ok := counts["votes_week"]; !ok {
+			t.Errorf("%s payload has no votes_week: %v", method, counts)
+		}
+		recorded := svc.voted
+		if method == http.MethodDelete {
+			recorded = svc.unvoted
+		}
+		if len(recorded) != 1 || recorded[0] != "p1/member" {
+			t.Errorf("%s recorded %v, want [p1/member]", method, recorded)
+		}
+	}
+}
+
+// TestVoteHiddenSharedProductIsNotFound: an entry that reports have hidden is
+// gone from every roll list, so voting for it answers as it would for an id
+// that never existed — no signal that something is there.
+func TestVoteHiddenSharedProductIsNotFound(t *testing.T) {
+	h := sharedTestHandler(&fakeSharedProductService{voteErr: sharedproducts.ErrNotFound})
+	r := mux.SetURLVars(
+		inOrg(httptest.NewRequest(http.MethodPut, "/api/v1/shared-products/p1/vote", nil), "member"),
+		map[string]string{"id": "p1"},
+	)
+	w := httptest.NewRecorder()
+	h.VoteSharedProduct(w, r)
+	if w.Code != http.StatusNotFound {
+		t.Errorf("status = %d, want 404 (body %q)", w.Code, w.Body.String())
 	}
 }
 

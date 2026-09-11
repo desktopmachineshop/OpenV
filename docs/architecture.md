@@ -215,6 +215,14 @@ another, the containment lives outside the org scoping:
 - **On removal** — three distinct reporters hide an entry automatically
   (repeat clicks by one account do nothing), and a platform admin can delete
   it outright.
+- **On ranking** — votes (the roller's "top 5 all time" / "top 5 this week"
+  filters) are stored per `(product, user)` for the same reason reports are,
+  so a count is of people rather than clicks, and are never served back as
+  identity. `shared_products.votes` is a denormalised all-time count written
+  in the same transaction as the vote row; the weekly figure is counted from
+  `shared_product_votes` over a rolling seven-day window, because it changes
+  as time passes rather than only as votes arrive. A hidden entry is neither
+  listed nor votable.
 
 Anything else that ever needs to be shared across tenants should copy this
 shape rather than dropping the `org_id` filter.
