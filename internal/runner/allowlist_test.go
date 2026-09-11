@@ -2,11 +2,13 @@ package runner
 
 import (
 	"context"
+	"os"
 	"strings"
 	"testing"
 
 	"github.com/openv/requirements-platform/internal/domain/agentruns"
 	"github.com/openv/requirements-platform/internal/domain/agents"
+	"github.com/openv/requirements-platform/internal/domain/providers"
 )
 
 // REQ-91: an agent whose definition carries no allowlist fails its run before
@@ -53,6 +55,95 @@ func TestExecuteRefusesAgentWithNoAllowedTools(t *testing.T) {
 	}
 }
 
+// REQ-91: repository access on a provider that cannot confine edits per tool
+// fails the run before PrepareWorkspace makes a workspace, let alone clones a
+// repository onto the runner host. The adapters refuse it too, but only after
+// the clone — by which point someone's source is already on the box for a run
+// that was never going to start.
+func TestExecuteRefusesRepoAccessBeforeCloning(t *testing.T) {
+	for _, provider := range []string{providers.ProviderCodexCLI, providers.ProviderGeminiCLI} {
+		t.Run(provider, func(t *testing.T) {
+			rs := newRecordingServer()
+			defer rs.srv.Close()
+
+			launched := false
+			adapter := &fakeAdapter{start: func(context.Context, RunSpec) (RunHandle, error) {
+				launched = true
+				return nil, nil
+			}}
+			w := newTestWorker(rs, adapter)
+			w.adapters[provider] = adapter
+			base := t.TempDir()
+			w.workspaceBase = base
+
+			claim := testClaim()
+			claim.Agent = &agents.Agent{
+				Slug: "developer", Name: "Developer", Provider: provider, RepoAccess: true,
+				AllowedTools: []string{"mcp__openv__*", "Read", "Edit", "Write", "Bash(git:*)"},
+			}
+			projectID := "proj-1"
+			claim.Run = &agentruns.Run{ID: "r1", Prompt: "hi", ProjectID: &projectID}
+			w.execute(context.Background(), claim)
+
+			if launched {
+				t.Fatal("the vendor CLI was launched for a repo-access agent on a provider that cannot confine edits")
+			}
+			entries, err := os.ReadDir(base)
+			if err != nil {
+				t.Fatalf("read workspace base: %v", err)
+			}
+			if len(entries) != 0 {
+				t.Errorf("workspace base = %v, want nothing: the refusal must come before PrepareWorkspace", entries)
+			}
+			got := rs.finishBody
+			if got.Status != agentruns.StatusFailed {
+				t.Errorf("status = %q, want %q", got.Status, agentruns.StatusFailed)
+			}
+			if got.ErrorClass != agentruns.ErrorClassAgentError {
+				t.Errorf("error class = %q, want %q (only an edit to the definition fixes this)", got.ErrorClass, agentruns.ErrorClassAgentError)
+			}
+			if agentruns.IsRetryableClass(got.ErrorClass) {
+				t.Error("a definition that has to be edited must not be auto-retried")
+			}
+			for _, want := range []string{"Developer", provider, "claude-code"} {
+				if !strings.Contains(got.Error, want) {
+					t.Errorf("failure message %q should mention %q", got.Error, want)
+				}
+			}
+		})
+	}
+}
+
+// The same agent on claude-code is not refused: its allowlist names the
+// editing tools one at a time, which is the whole reason repo access lives
+// there.
+func TestExecuteAllowsRepoAccessOnClaudeCode(t *testing.T) {
+	rs := newRecordingServer()
+	defer rs.srv.Close()
+
+	h := &fakeHandle{events: make(chan RunEvent), waitCh: make(chan struct{})}
+	close(h.events)
+	close(h.waitCh)
+	launched := false
+	adapter := &fakeAdapter{start: func(context.Context, RunSpec) (RunHandle, error) {
+		launched = true
+		return h, nil
+	}}
+	w := newTestWorker(rs, adapter)
+	w.workspaceBase = t.TempDir()
+
+	claim := testClaim()
+	claim.Agent = &agents.Agent{
+		Slug: "developer", Name: "Developer", Provider: providers.ProviderClaudeCode, RepoAccess: true,
+		AllowedTools: []string{"mcp__openv__*", "Read", "Edit", "Write", "Bash(git:*)"},
+	}
+	w.execute(context.Background(), claim)
+
+	if !launched {
+		t.Fatal("a repo-access agent on claude-code must still run")
+	}
+}
+
 // The worker labels a run untrusted from BOTH the run's origin and the agent
 // definition, and hands that to the adapter — which is what turns
 // auto-approval off (REQ-91, HAZ-1).
@@ -74,8 +165,10 @@ func TestExecutePassesUntrustedToTheAdapter(t *testing.T) {
 			want:  true,
 		},
 		{
+			// claude-code because repo access is legal nowhere else; the
+			// worker refuses it on any other provider before it clones.
 			name:  "repo access brings someone else's files in",
-			agent: agents.Agent{Slug: "developer", Provider: "fake", RepoAccess: true, AllowedTools: []string{"mcp__openv__*", "Edit"}},
+			agent: agents.Agent{Slug: "developer", Provider: providers.ProviderClaudeCode, RepoAccess: true, AllowedTools: []string{"mcp__openv__*", "Edit"}},
 			want:  true,
 		},
 		{

@@ -2,9 +2,12 @@ package agents
 
 import (
 	"errors"
+	"fmt"
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/openv/requirements-platform/internal/domain/providers"
 )
 
 // Write modes.
@@ -61,6 +64,23 @@ func DefaultAllowedTools() []string { return []string{openvToolPrefix + "*"} }
 // tool allowlist. Validate returns it (so the API answers 400 with it) and the
 // runner echoes it when it refuses to launch such an agent.
 const AllowedToolsRequired = "agent definition requires allowed_tools: every agent must name the tools its vendor CLI may use (e.g. mcp__openv__*), because a CLI started with no allowlist runs with all of them"
+
+// RepoAccessUnsupported is the single wording for an agent that asks for
+// repository access on a provider that cannot confine edits per tool. Validate
+// returns it (so the API answers 400 with it and the agent editor shows it),
+// the worker echoes it before it clones anything, and the codex and gemini
+// adapters echo it again at Start as defence in depth.
+//
+// The reason is the same in all three places: a repo-access agent exists to
+// edit a clone, and it is untrusted by definition (a repository's files are
+// content nobody in the workspace wrote). codex and gemini express "what may
+// this run touch?" as one whole-workspace switch — a sandbox, an approval
+// mode — so the only answers they offer are "edit everything" and "edit
+// nothing". Claude Code names Edit, Write and Bash(git:*) one at a time, so
+// the middle ground a repo-access agent needs exists only there.
+func RepoAccessUnsupported(provider string) error {
+	return fmt.Errorf("repository access requires the claude-code provider: %s cannot confine edits per tool; use claude-code or turn repo access off", provider)
+}
 
 // ErrNotFound is returned when an agent doesn't exist.
 var ErrNotFound = errors.New("agent not found")
@@ -177,6 +197,14 @@ func (d *Definition) validate(requireTools bool) error {
 	if requireTools && len(d.AllowedTools) == 0 {
 		return errors.New(AllowedToolsRequired)
 	}
+	// Repository access only works where the allowlist can carve out the
+	// editing tools; on the other CLIs it is a setting that can only either
+	// defeat the agent or unconfine the run (RepoAccessUnsupported). Refusing
+	// it here means the agent editor says so while someone is choosing the
+	// provider, instead of a queued run failing an hour later.
+	if d.RepoAccess && d.Provider != providers.ProviderClaudeCode {
+		return RepoAccessUnsupported(d.Provider)
+	}
 	if !ValidEffort(d.Effort) {
 		return errors.New("effort must be one of low, medium, high, xhigh, max (or empty for the provider default)")
 	}
@@ -244,7 +272,8 @@ func NonEmptyTools(tools []string) []string {
 // Three things make an agent untrusted by definition:
 //
 //   - it has repository access, so a cloned repo's files reach the model;
-//   - it holds a tool that reads the outside world — WebFetch/WebSearch, or an
+//   - it holds a tool that reads the outside world — WebFetch/WebSearch, a
+//     shell (any Bash grant: curl, wget, git fetch all run through one), or an
 //     MCP server other than openv, whose tool results OpenV cannot vouch for;
 //   - it is the seeded interviewer, kept as a backstop.
 //
@@ -262,15 +291,24 @@ func (a *Agent) UntrustedInput() bool {
 
 // ToolsReachOutside reports whether an allowlist grants a tool that pulls in
 // content nobody in the workspace wrote.
+//
+// A shell counts, and the scope on it makes no difference. `Bash(git *)` is
+// `git fetch`; an unscoped Bash is curl and wget. The scope is a string match
+// on the command line, not a network policy, so no spelling of it turns a
+// shell into something that cannot reach the internet. An agent holding one
+// therefore runs untrusted — which costs it nothing it was granted, since the
+// allowlist stays the whole approval surface either way.
 func ToolsReachOutside(tools []string) bool {
 	for _, t := range tools {
 		name := strings.TrimSpace(t)
-		// Drop a vendor argument filter ("Bash(git *)") before matching.
+		// Drop a vendor argument filter ("Bash(git:*)") before matching.
 		if i := strings.IndexByte(name, '('); i >= 0 {
 			name = strings.TrimSpace(name[:i])
 		}
 		switch {
 		case strings.EqualFold(name, "WebFetch"), strings.EqualFold(name, "WebSearch"):
+			return true
+		case strings.EqualFold(name, "Bash"):
 			return true
 		case name == openvServerTools || strings.HasPrefix(name, openvToolPrefix):
 			// OpenV's own server, in either spelling: its tool results are

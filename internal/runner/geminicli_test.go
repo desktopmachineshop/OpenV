@@ -156,7 +156,14 @@ func TestGeminiToolSettings(t *testing.T) {
 		entry string
 		want  string
 	}{
+		// Claude Code's documented prefix form is the colon one; "git *" is
+		// the older spelling the seeded agents were written in. Both mean
+		// "any git command" and both have to reach the same gemini prefix —
+		// read literally, "git:*" would have become run_shell_command(git:),
+		// which matches nothing.
+		{"Bash(git:*)", "run_shell_command(git)"},
 		{"Bash(git *)", "run_shell_command(git)"},
+		{"Bash(gh pr:*)", "run_shell_command(gh pr)"},
 		{"Bash(npm test)", "run_shell_command(npm test)"},
 		{"Bash(*)", "run_shell_command"},
 		{"Bash", "run_shell_command"},
@@ -188,6 +195,42 @@ func TestGeminiToolSettings(t *testing.T) {
 	core, _, _ = geminiToolSettings([]string{"mcp__openv__*"})
 	if len(core) != 0 {
 		t.Errorf("tools.core = %v, want empty for an agent that names no built-in tools", core)
+	}
+
+	// Both prefix spellings of a scoped shell reach the same entry, so an
+	// allowlist carrying both registers one tool, not two.
+	core, _, _ = geminiToolSettings([]string{"Bash(git:*)", "Bash(git *)"})
+	if !slices.Equal(core, []string{"run_shell_command(git)"}) {
+		t.Errorf("tools.core = %v, want the one shell entry both spellings mean", core)
+	}
+}
+
+// geminiToolSettings reads the mcp__openv grammar through openvToolNames — the
+// same function OPENV_MCP_TOOLS is built from — rather than a second parser of
+// its own. The two used to be separate and were free to drift; this pins them
+// to the same answer, duplicates and all.
+func TestGeminiIncludeToolsMatchesTheOpenVToolFilter(t *testing.T) {
+	cases := [][]string{
+		{"mcp__openv__get_artifact", "mcp__openv__get_artifact", "Read"},
+		{"mcp__openv__list_artifacts", "mcp__openv__get_context", "Bash(git:*)"},
+		{"mcp__openv__get_artifact", "mcp__openv"},
+		{"mcp__openv__*", "mcp__openv__get_artifact"},
+		{"Read", "Grep"},
+	}
+	for _, tools := range cases {
+		include, includeAll := openvToolNames(tools)
+		gotInclude, gotAll := func() ([]string, bool) {
+			_, inc, all := geminiToolSettings(tools)
+			return inc, all
+		}()
+		if gotAll != includeAll {
+			t.Errorf("%v: includeAll = %v, want %v", tools, gotAll, includeAll)
+		}
+		want := append([]string(nil), include...)
+		slices.Sort(want)
+		if !slices.Equal(gotInclude, want) {
+			t.Errorf("%v: includeTools = %v, want %v (the same tools OPENV_MCP_TOOLS gets)", tools, gotInclude, want)
+		}
 	}
 }
 

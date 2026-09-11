@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/openv/requirements-platform/internal/domain/agents"
+	"github.com/openv/requirements-platform/internal/domain/providers"
 )
 
 // workerBuiltSpec produces a RunSpec the way a real run does: an agent
@@ -45,11 +46,18 @@ func workerBuiltSpec(t *testing.T, def agents.Definition) RunSpec {
 	w := newTestWorker(rs, adapter)
 	w.workspaceBase = t.TempDir()
 
+	// Repo access is legal only on claude-code, and the worker refuses it on
+	// anything else before it clones, so an agent carrying it claims as that
+	// provider — newTestWorker registers the fake adapter under both names.
+	provider := "fake"
+	if def.RepoAccess {
+		provider = providers.ProviderClaudeCode
+	}
 	claim := testClaim()
 	claim.Agent = &agents.Agent{
 		Slug:           def.Slug,
 		Name:           def.Name,
-		Provider:       "fake",
+		Provider:       provider,
 		Model:          def.Model,
 		Effort:         def.Effort,
 		AllowedTools:   def.AllowedTools,
@@ -123,12 +131,17 @@ func TestWorkerBuiltSpecStartsOnEveryProvider(t *testing.T) {
 // refusal is agent policy, so the run is not auto-retried. claude-code, whose
 // allowlist names the editing tools one at a time, is unaffected.
 func TestRepoAccessRefusedOnCLIsThatCannotConfineEdits(t *testing.T) {
+	// A legal definition — repo access on claude-code, which is the only way
+	// one can now be saved — whose spec is then handed to the adapters that
+	// cannot serve it. Those refusals are the last of three (Validate, then
+	// the worker's pre-clone check, then this), and the only one a spec built
+	// some other way would ever reach.
 	spec := workerBuiltSpec(t, agents.Definition{
 		Slug:         "developer",
 		Name:         "Developer",
-		Provider:     "codex-cli",
+		Provider:     providers.ProviderClaudeCode,
 		RepoAccess:   true,
-		AllowedTools: []string{"mcp__openv__*", "Read", "Edit", "Write", "Bash(git *)"},
+		AllowedTools: []string{"mcp__openv__*", "Read", "Edit", "Write", "Bash(git:*)"},
 	})
 	if !spec.RepoAccess {
 		t.Fatal("the worker did not carry the definition's repo access into the spec")

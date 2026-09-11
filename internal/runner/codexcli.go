@@ -153,12 +153,24 @@ func codexArgs(spec RunSpec) ([]string, error) {
 	// (see withOpenVToolFilter). What is left unbounded is which *shell*
 	// commands run inside the sandbox; that is what the sandbox is for.
 	//
-	// An untrusted run (interview transcript, cloned repo, fetched page) gets
-	// the read-only sandbox: nothing it was told by the outside world can
-	// turn into a file write or a command (REQ-91, HAZ-1).
-	sandbox := "workspace-write"
-	if spec.Untrusted {
-		sandbox = "read-only"
+	// The sandbox is read-only unless this run has a reason to write, and two
+	// things have to be true for that.
+	//
+	//   - The run is trusted. An untrusted one (interview transcript, cloned
+	//     repo, fetched page) never writes: nothing it was told by the outside
+	//     world may turn into a file write or a command (REQ-91, HAZ-1).
+	//   - Its allowlist names a tool a writable workspace would serve — a file
+	//     edit or a shell command. This is the half the sandbox alone cannot
+	//     see. codex has no per-tool allowlist, so workspace-write is granted
+	//     to the *whole run*, and granting it to an agent whose list is
+	//     `mcp__openv__*` would hand it a writable workspace and a shell its
+	//     definition never gave it. Read-only is what that agent asked for.
+	//
+	// So the allowlist still decides, even on the CLI that cannot apply one:
+	// it picks the confinement instead of the tools.
+	sandbox := "read-only"
+	if !spec.Untrusted && allowsFileOrShellWork(spec.AllowedTools) {
+		sandbox = "workspace-write"
 	}
 	args = append(args, "--sandbox", sandbox, "--skip-git-repo-check")
 

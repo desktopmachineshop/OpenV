@@ -331,6 +331,22 @@ func (w *Worker) execute(ctx context.Context, claim *ClaimResponse) {
 		return
 	}
 
+	// Repository access on a provider that cannot confine edits per tool is
+	// refused here, before PrepareWorkspace clones anything (REQ-91). The
+	// adapter refuses it too, but only after a clone has already been made —
+	// a repository copied onto the runner host for a run that was never going
+	// to start. The definition cannot be saved this way either; this catches
+	// the one written before that rule, or edited on disk.
+	if claim.Agent.RepoAccess && claim.Agent.Provider != providers.ProviderClaudeCode {
+		w.finish(run.ID, agentruns.FinishRequest{
+			Status: agentruns.StatusFailed,
+			Error: "agent " + agentLabel(claim.Agent) + ": " +
+				agents.RepoAccessUnsupported(claim.Agent.Provider).Error(),
+			ErrorClass: classifySite(siteAgentPolicy, nil),
+		})
+		return
+	}
+
 	var conns []*repoconns.RepoConnection
 	if run.ProjectID != nil && claim.Agent.RepoAccess {
 		var err error

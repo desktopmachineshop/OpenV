@@ -165,28 +165,62 @@ func TestCodexStart_ForwardsOpenVToolFilterByName(t *testing.T) {
 	}
 }
 
-// An untrusted run gets codex's read-only sandbox: an interview transcript or
-// a fetched page cannot turn into a file write (REQ-91, HAZ-1).
-func TestCodexArgs_UntrustedSandbox(t *testing.T) {
-	trusted, err := codexArgs(codexSpec())
-	if err != nil {
-		t.Fatalf("codexArgs: %v", err)
+// codex's sandbox is picked from BOTH halves of the question, because codex
+// has no per-tool allowlist and so grants the sandbox to the whole run:
+// workspace-write needs a trusted run AND an allowlist that names something a
+// writable workspace would serve. An untrusted run (interview transcript,
+// fetched page, cloned repo) never writes (REQ-91, HAZ-1); neither does an
+// OpenV-only agent, which was never granted a file tool or a shell in the
+// first place.
+func TestCodexArgs_SandboxFromTrustAndAllowlist(t *testing.T) {
+	sandboxOf := func(t *testing.T, untrusted bool, tools ...string) string {
+		t.Helper()
+		spec := codexSpec()
+		spec.Untrusted = untrusted
+		spec.AllowedTools = tools
+		args, err := codexArgs(spec)
+		if err != nil {
+			t.Fatalf("codexArgs: %v", err)
+		}
+		joined := strings.Join(args, " ")
+		if strings.Contains(joined, "danger-full-access") {
+			t.Fatalf("danger-full-access must never be used: %v", args)
+		}
+		for _, mode := range []string{"workspace-write", "read-only"} {
+			if strings.Contains(joined, "--sandbox "+mode) {
+				return mode
+			}
+		}
+		t.Fatalf("no --sandbox in argv: %v", args)
+		return ""
 	}
-	if !strings.Contains(strings.Join(trusted, " "), "--sandbox workspace-write") {
-		t.Errorf("trusted run should use workspace-write: %v", trusted)
+
+	cases := []struct {
+		name      string
+		untrusted bool
+		tools     []string
+		want      string
+	}{
+		{"an editing agent on a trusted run", false, []string{"mcp__openv__*", "Read", "Edit", "Write"}, "workspace-write"},
+		{"the same agent on an untrusted run", true, []string{"mcp__openv__*", "Read", "Edit", "Write"}, "read-only"},
+		{"OpenV tools only", false, []string{"mcp__openv__*"}, "read-only"},
+		{"the server-wide OpenV spelling", false, []string{"mcp__openv"}, "read-only"},
+		{"OpenV tools and read-only vendor tools", false, []string{"mcp__openv__*", "Read", "Grep", "Glob"}, "read-only"},
+		// Every Bash spelling is a shell, so every one of them earns the
+		// writable sandbox on a trusted run — a scoped shell is still a shell.
+		{"a scoped shell, colon form", false, []string{"mcp__openv__*", "Bash(git:*)"}, "workspace-write"},
+		{"a scoped shell, glob form", false, []string{"mcp__openv__*", "Bash(git *)"}, "workspace-write"},
+		{"a literal command scope", false, []string{"mcp__openv__*", "Bash(npm test)"}, "workspace-write"},
+		{"an unscoped shell", false, []string{"mcp__openv__*", "Bash"}, "workspace-write"},
+		{"the other file writers", false, []string{"mcp__openv__*", "MultiEdit"}, "workspace-write"},
+		{"notebook edits", false, []string{"mcp__openv__*", "NotebookEdit"}, "workspace-write"},
 	}
-	spec := codexSpec()
-	spec.Untrusted = true
-	untrusted, err := codexArgs(spec)
-	if err != nil {
-		t.Fatalf("codexArgs: %v", err)
-	}
-	joined := strings.Join(untrusted, " ")
-	if !strings.Contains(joined, "--sandbox read-only") {
-		t.Errorf("untrusted run should use the read-only sandbox: %v", untrusted)
-	}
-	if strings.Contains(joined, "danger-full-access") {
-		t.Fatalf("danger-full-access must never be used: %v", untrusted)
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := sandboxOf(t, tc.untrusted, tc.tools...); got != tc.want {
+				t.Errorf("--sandbox %s, want %s (untrusted=%v, tools=%v)", got, tc.want, tc.untrusted, tc.tools)
+			}
+		})
 	}
 }
 

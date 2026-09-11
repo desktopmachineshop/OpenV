@@ -356,6 +356,28 @@ func definitionOf(a *agents.Agent) agents.Definition {
 	}
 }
 
+// SeedAllowedTools returns the allowlist the seeded agent with this slug
+// carries, or nil for a slug nobody seeded. It is the lookup the *file* sync
+// backfills from (agents.WithSeedAllowedTools, wired in cmd/server), so a
+// seeded definition on disk that predates REQ-91 is filled in with the same
+// list the registry-side backfill below would have given it.
+//
+// The two paths have to agree, and the file sync runs first: it is what turns
+// a legacy `developer.md` into a registry row, and BackfillOrgAllowedTools
+// only ever fires on a row with no allowlist at all. Whatever the sync writes
+// is therefore final, which is why it needs this and cannot wait for
+// EnsureOrgDefaults.
+//
+// The returned slice is a copy: callers hand it to a Definition that is then
+// validated and trimmed in place.
+func SeedAllowedTools(slug string) []string {
+	want, ok := seedAllowedTools()[slug]
+	if !ok {
+		return nil
+	}
+	return append([]string(nil), want...)
+}
+
 // seedAllowedTools maps each seeded slug to the allowlist its own seed
 // carries, so the org-wide backfill can give a seeded agent the list it was
 // meant to have rather than the generic fallback.

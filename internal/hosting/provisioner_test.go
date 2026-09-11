@@ -82,7 +82,7 @@ func TestBuildRunnerSpec(t *testing.T) {
 		"wk-secret",
 		map[string]string{"ZED": "z", "ANTHROPIC_API_KEY": "sk-test"},
 		ResourceLimits{MemoryMB: 2048, NanoCPUs: 1e9},
-		256,
+		defaultPidsLimit,
 	)
 
 	if spec.config.Image != "openv-worker:latest" {
@@ -129,8 +129,8 @@ func TestBuildRunnerSpec(t *testing.T) {
 	if !slices.Contains(spec.hostConfig.SecurityOpt, "no-new-privileges:true") {
 		t.Errorf("SecurityOpt = %v, want no-new-privileges:true", spec.hostConfig.SecurityOpt)
 	}
-	if spec.hostConfig.Resources.PidsLimit == nil || *spec.hostConfig.Resources.PidsLimit != 256 {
-		t.Errorf("PidsLimit = %v, want 256", spec.hostConfig.Resources.PidsLimit)
+	if spec.hostConfig.Resources.PidsLimit == nil || *spec.hostConfig.Resources.PidsLimit != defaultPidsLimit {
+		t.Errorf("PidsLimit = %v, want %d", spec.hostConfig.Resources.PidsLimit, defaultPidsLimit)
 	}
 }
 
@@ -194,7 +194,7 @@ func TestNewProvisionerDisabledByEnv(t *testing.T) {
 // somebody's prompt, so it is asserted field by field.
 func TestHostConfigForHardening(t *testing.T) {
 	limits := ResourceLimits{MemoryMB: 2048, NanoCPUs: 1e9}
-	cfg := hostConfigFor("openv-runner-org1", limits, 256)
+	cfg := hostConfigFor("openv-runner-org1", limits, defaultPidsLimit)
 
 	if !slices.Contains(cfg.CapDrop, "ALL") {
 		t.Errorf("CapDrop = %v, want ALL", cfg.CapDrop)
@@ -205,8 +205,8 @@ func TestHostConfigForHardening(t *testing.T) {
 	if !slices.Contains(cfg.SecurityOpt, "no-new-privileges:true") {
 		t.Errorf("SecurityOpt = %v, want no-new-privileges:true", cfg.SecurityOpt)
 	}
-	if cfg.Resources.PidsLimit == nil || *cfg.Resources.PidsLimit != 256 {
-		t.Errorf("PidsLimit = %v, want 256", cfg.Resources.PidsLimit)
+	if cfg.Resources.PidsLimit == nil || *cfg.Resources.PidsLimit != defaultPidsLimit {
+		t.Errorf("PidsLimit = %v, want %d", cfg.Resources.PidsLimit, defaultPidsLimit)
 	}
 	if cfg.Resources.Memory != 2048*1024*1024 {
 		t.Errorf("Memory = %d, want %d", cfg.Resources.Memory, int64(2048*1024*1024))
@@ -240,6 +240,15 @@ func TestHostConfigForNoPidsCap(t *testing.T) {
 }
 
 func TestPidsLimit(t *testing.T) {
+	// The pids cgroup counts THREADS, not processes. A node CLI's libuv pool
+	// and V8 workers, a toolchain build and a test run all draw on the same
+	// allowance, so a cap sized as if it were a process count (256) sat close
+	// enough to a real workload's ceiling to abort runs — visible only as a
+	// fork failure deep inside a vendor CLI. It still has to stop a fork bomb,
+	// so it is raised, not removed.
+	if defaultPidsLimit != 1024 {
+		t.Errorf("defaultPidsLimit = %d, want 1024", defaultPidsLimit)
+	}
 	cases := []struct {
 		env  string
 		want int64

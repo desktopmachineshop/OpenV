@@ -40,7 +40,10 @@ func splitToolScope(entry string) (name, scope string) {
 // the MCP server on its own, which grants every tool it offers. Reading the
 // bare form as "an OpenV tool literally called the empty string" would hand
 // such an agent an empty OPENV_MCP_TOOLS, i.e. no OpenV tools at all.
+// Duplicates are dropped: this is an allowlist, so naming a tool twice grants
+// nothing the first mention did not.
 func openvToolNames(allowed []string) (names []string, wildcard bool) {
+	seen := map[string]bool{}
 	for _, entry := range agents.NonEmptyTools(allowed) {
 		name, _ := splitToolScope(entry)
 		if name == mcp.ServerTools {
@@ -55,7 +58,8 @@ func openvToolNames(allowed []string) (names []string, wildcard bool) {
 			wildcard = true
 			continue
 		}
-		if name != "" {
+		if name != "" && !seen[name] {
+			seen[name] = true
 			names = append(names, name)
 		}
 	}
@@ -146,29 +150,22 @@ var geminiBuiltinTools = map[string][]string{
 // auto-approves a shell call, and a headless run cannot answer the
 // confirmation it would raise.
 func geminiToolSettings(allowed []string) (core []string, include []string, includeAll bool) {
+	// The mcp__openv grammar — the two wildcard spellings, the bare server
+	// name, a scoped tool — is read in exactly one place (openvToolNames),
+	// which is also what OPENV_MCP_TOOLS is built from. Re-parsing it here
+	// only created somewhere for the two readings to drift apart. What is
+	// left below is gemini's own business: mapping the vendor tools.
+	names, all := openvToolNames(allowed)
+	includeAll = all
+	include = append([]string{}, names...)
+
 	core = []string{}
-	include = []string{}
 	seenCore := map[string]bool{}
-	seenInclude := map[string]bool{}
 
 	for _, entry := range agents.NonEmptyTools(allowed) {
 		name, scope := splitToolScope(entry)
-		if name == mcp.ServerTools {
-			// The server-wide form grants every OpenV tool, exactly as
-			// mcp__openv__* does.
-			includeAll = true
-			continue
-		}
-		if strings.HasPrefix(name, mcp.ToolPrefix) {
-			tool := strings.TrimPrefix(name, mcp.ToolPrefix)
-			switch {
-			case tool == "*":
-				includeAll = true
-			case tool != "" && !seenInclude[tool]:
-				seenInclude[tool] = true
-				include = append(include, tool)
-			}
-			continue
+		if name == mcp.ServerTools || strings.HasPrefix(name, mcp.ToolPrefix) {
+			continue // an OpenV tool: already handled above.
 		}
 		for _, mapped := range geminiBuiltinTools[name] {
 			entryScope := scope
@@ -194,14 +191,60 @@ func geminiToolSettings(allowed []string) (core []string, include []string, incl
 const geminiShellTool = "run_shell_command"
 
 // geminiShellPrefix converts a Claude Bash scope into the literal command
-// prefix a tools.core shell entry matches on: "git *" -> "git", "npm test"
-// -> "npm test", "*" -> "" (no scope, i.e. any command). Only the trailing
-// glob is dropped; a scope with an interior wildcard ("git * --force") has no
-// prefix form and is left as written rather than silently broadened.
+// prefix a tools.core shell entry matches on: "git:*" -> "git", "git *" ->
+// "git", "npm test" -> "npm test", "*" -> "" (no scope, i.e. any command).
+//
+// Both prefix spellings are accepted because both are written. Claude Code
+// documents the colon form — Bash(git:*) — and that is what a definition
+// copied from its own settings carries; "git *" is the older, looser spelling
+// the seeded agents were authored in. They mean the same thing, so they map to
+// the same gemini prefix; reading the colon form literally would have produced
+// run_shell_command(git:) and scoped the shell down to commands beginning
+// "git:", i.e. to nothing.
+//
+// Only a trailing glob is dropped; a scope with an interior wildcard
+// ("git * --force") has no prefix form and is left as written rather than
+// silently broadened.
 func geminiShellPrefix(scope string) string {
 	scope = strings.TrimSpace(scope)
+	if rest, ok := strings.CutSuffix(scope, ":*"); ok {
+		return strings.TrimSpace(rest)
+	}
 	if !strings.HasSuffix(scope, "*") {
 		return scope
 	}
 	return strings.TrimSpace(strings.TrimSuffix(scope, "*"))
+}
+
+// shellToolName is the Claude-vocabulary tool that runs a command, in the
+// vocabulary every agent definition is written in.
+const shellToolName = "Bash"
+
+// fileWritingTools are the Claude-vocabulary tools that change a file on disk.
+// Read, Grep, Glob and the rest are deliberately absent: an agent that can
+// only look at the workspace has nothing to gain from a writable sandbox.
+var fileWritingTools = []string{"Edit", "Write", "MultiEdit", "NotebookEdit"}
+
+// allowsFileOrShellWork reports whether an allowlist names any tool that could
+// change something outside the model's own context — a file write, or a shell
+// command — whatever scope it carries. Scope is deliberately ignored: every
+// Bash spelling counts (bare, "Bash(*)", "Bash(git:*)", "Bash(git *)",
+// "Bash(npm test)"), because a scoped shell is still a shell.
+//
+// It answers the question a CLI with no per-tool allowlist has to ask before
+// choosing a whole-workspace confinement: is there anything on this agent's
+// list that a writable workspace would even serve? See buildCodexArgs.
+func allowsFileOrShellWork(allowed []string) bool {
+	for _, entry := range agents.NonEmptyTools(allowed) {
+		name, _ := splitToolScope(entry)
+		if strings.EqualFold(name, shellToolName) {
+			return true
+		}
+		for _, w := range fileWritingTools {
+			if strings.EqualFold(name, w) {
+				return true
+			}
+		}
+	}
+	return false
 }

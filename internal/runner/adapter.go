@@ -234,12 +234,19 @@ func noteMaxTurnsUnenforced(provider string, spec RunSpec) {
 // It is not retryable: nothing about the run changes on a second attempt.
 // claude-code is unaffected — its allowlist names Edit/Write/Bash(...) one at
 // a time, so the middle ground exists there.
+//
+// This is now the last of three refusals, not the first: the definition cannot
+// be saved that way (agents.Definition.Validate) and the worker refuses the
+// run before it clones anything. It stays because an adapter is reached by
+// paths that never went through either — a definition written straight to disk
+// before this rule existed, a caller building a RunSpec itself — and because a
+// refusal here costs nothing when the earlier two did their job. All three say
+// the same sentence (agents.RepoAccessUnsupported).
 func refuseRepoAccess(provider string, spec RunSpec) error {
 	if !spec.RepoAccess {
 		return nil
 	}
-	return agentPolicyError("repository access on " + provider +
-		" cannot confine edits per tool; use claude-code or remove repo access")
+	return agentPolicyError(agents.RepoAccessUnsupported(provider).Error())
 }
 
 // mergedProcEnv builds the environment for a CLI subprocess, overlaying the

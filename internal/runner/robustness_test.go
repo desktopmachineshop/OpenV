@@ -14,6 +14,7 @@ import (
 
 	"github.com/openv/requirements-platform/internal/domain/agentruns"
 	"github.com/openv/requirements-platform/internal/domain/agents"
+	"github.com/openv/requirements-platform/internal/domain/providers"
 )
 
 // --- test doubles ---
@@ -89,8 +90,12 @@ func (rs *recordingServer) hit(name string) int {
 func newTestWorker(rs *recordingServer, adapter Adapter) *Worker {
 	client := NewClient(rs.srv.URL, "test-key")
 	return &Worker{
-		client:             client,
-		adapters:           map[string]Adapter{"fake": adapter},
+		client: client,
+		// The same fake under two names: "fake" for ordinary runs, and
+		// claude-code for the tests that need repo access, which is legal on
+		// no other provider (agents.Definition.Validate, and the worker's own
+		// pre-clone refusal).
+		adapters:           map[string]Adapter{"fake": adapter, providers.ProviderClaudeCode: adapter},
 		workerID:           "w-test",
 		workspaceBase:      "",
 		apiURL:             rs.srv.URL,

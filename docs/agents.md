@@ -119,7 +119,8 @@ environment only and are **never stored** by the platform.
   keys directly on the `organizations.limits` JSONB column; changes apply the
   next time the runner is provisioned.
 - **Isolated**: every capability dropped, no-new-privileges, a process cap
-  (`HOSTED_RUNNER_PIDS_LIMIT`, default 256), and only the org's data volume
+  (`HOSTED_RUNNER_PIDS_LIMIT`, default 1024 — the cgroup counts threads, not
+  processes), and only the org's data volume
   mounted — never the docker socket. See `docs/operations.md`, *Hosted
   runners: the docker socket, and how to avoid it*, which is also where the
   reason to prefer the transient pool is spelled out.
@@ -366,8 +367,9 @@ Hosted runners are off unless the API server can reach a Docker daemon:
    join — set it to one that reaches the API and the provider endpoints only;
    without it they land on the default bridge with every other container),
    `RUNNER_API_URL` (API base URL as seen from inside a runner container,
-   default `http://api:8080`), `HOSTED_RUNNER_PIDS_LIMIT` (process cap per
-   runner container, default 256, `0` for none), and `HOSTED_RUNNERS=off` to
+   default `http://api:8080`), `HOSTED_RUNNER_PIDS_LIMIT` (task cap per
+   runner container, default 1024 — the pids cgroup counts threads, `0` for
+   none), and `HOSTED_RUNNERS=off` to
    hard-disable the feature.
 
 Each workspace's runner container gets a persistent volume
@@ -405,7 +407,7 @@ rather than either failing the run or pretending:
 | `max_turns` | yes | no — logged no-op | no — logged no-op |
 | `timeout_seconds` | yes | yes | yes |
 | `allowed_tools` | `--allowedTools` | sandbox + `OPENV_MCP_TOOLS` | `tools.core` + `includeTools` + `OPENV_MCP_TOOLS` |
-| `repo_access` | yes | **refused** | **refused** |
+| `repo_access` | yes | **refused at save** | **refused at save** |
 
 A *logged no-op* is exactly that: the run starts, and the runner logs once that
 the field is not enforced on that provider. Neither `codex exec` nor headless
@@ -413,7 +415,8 @@ gemini has a per-run turn cap, and every definition carries a `max_turns` —
 it defaults to 50 when the frontmatter omits it — so refusing one would refuse
 every agent on those providers. `timeout_seconds`, which all three adapters do
 enforce, is the bound that holds either way. `repo_access` is the one field
-that *is* refused; see [Untrusted content never
+that *is* refused, and it is refused early — the definition cannot be saved
+that way at all; see [Untrusted content never
 auto-approves](#untrusted-content-never-auto-approves) for why. The server syncs these
 files into the database at startup, so editing a file and restarting (or
 re-syncing via `POST /api/v1/agents/sync`) updates the agent. Agent files are
@@ -481,10 +484,18 @@ its whole toolbox. An agent that carries none from an install predating this
 rule is backfilled at startup (logged, and a narrowing) — to its own seed's
 list if it is a seeded agent, otherwise to `mcp__openv__*`. An agent that is
 `locked: true` is left exactly as it is and reported instead, so it refuses to
-run until someone gives it an allowlist themselves. The same two rules apply on
-both paths that could rewrite the agent — the registry reconcile at startup and
-the markdown file sync — so a locked agent is not quietly filled in by whichever
-one runs second.
+run until someone gives it an allowlist themselves.
+
+The same two rules apply on both paths that could rewrite the agent — the
+markdown file sync and the registry reconcile at startup — so a locked agent is
+not quietly filled in by whichever one runs second, and a seeded agent gets its
+seed's list whichever one reaches it first. That last part matters because the
+file sync *always* runs first (`SyncAllFromDisk` before `EnsureOrgDefaults`)
+and the registry-side backfill only ever fires on a row with no allowlist at
+all: whatever the sync decides is final, so the sync reads the same seed table
+the reconcile does. The sync also **writes the filled-in list back to the
+`.md`**, so this is decided — and logged — once, not on every startup for the
+life of the install.
 
 #### How each provider applies one
 
@@ -494,7 +505,7 @@ CLI can apply, and what fills the gap where it cannot.
 | Provider | The vendor CLI's own tools | The OpenV (`mcp__openv__*`) tools |
 | --- | --- | --- |
 | **Claude Code** | `--allowedTools <comma-joined>`, verbatim | the same flag, plus `OPENV_MCP_TOOLS` |
-| **Codex CLI** | no allowlist exists — confined by `--sandbox` instead | `OPENV_MCP_TOOLS` |
+| **Codex CLI** | no allowlist exists — confined by `--sandbox`, which the allowlist picks | `OPENV_MCP_TOOLS` |
 | **Gemini CLI** | translated into `tools.core` in the run's isolated settings file | `mcpServers.openv.includeTools`, plus `OPENV_MCP_TOOLS` |
 
 **`OPENV_MCP_TOOLS`** is the platform's own half of the guarantee, and it does
@@ -536,9 +547,11 @@ that `tools.allowed` and `--allowed-tools` are **not** used despite the name:
 they are gemini's *auto-approval* list, which would widen a run rather than
 restrict it. Note too how `tools.core` spells a scope: for every tool but the shell it
 registers a tool or does not, but `run_shell_command` takes a literal
-**command prefix**. So `Bash(git *)` becomes `run_shell_command(git)` — the
+**command prefix**. So `Bash(git:*)` becomes `run_shell_command(git)` — the
 trailing glob is Claude's spelling, not gemini's, and left on it would match a
-command literally beginning `git *` and scope the shell down to nothing.
+command literally beginning `git:` and scope the shell down to nothing. The
+colon is the form Claude Code documents; the older `Bash(git *)` means the same
+thing and maps to the same prefix, so an allowlist may carry either.
 `Bash(npm test)` carries through unchanged; `Bash` and `Bash(*)` register the
 unscoped shell. Whatever the scope, what finally holds a shell call is the
 approval mode, which never auto-approves one.
@@ -547,9 +560,13 @@ approval mode, which never auto-approves one.
 no settings key. The allowlist still stands on the definition, where it
 documents intent and is what the API validates, and it still gates the OpenV
 tools through `OPENV_MCP_TOOLS`; codex's own tools are held by `--sandbox`
-(below). The translation and the refusals live in `geminiToolSettings` /
-`codexUnsupported` / `geminiUnsupported` and `withOpenVToolFilter`
-(`internal/runner`).
+(below) — and the allowlist is what *picks* the sandbox, so it decides there
+too, one step removed: an agent that names no file tool and no shell gets
+`read-only`, because a writable workspace serves nothing it was granted.
+
+The translation and the refusals live in `geminiToolSettings`,
+`allowsFileOrShellWork`, `codexUnsupported`, `geminiUnsupported` and
+`withOpenVToolFilter` (`internal/runner`).
 
 #### Untrusted content never auto-approves
 
@@ -566,8 +583,13 @@ the seeded interviewer — so the mark rides on the queued run
 **What the definition grants.** An agent is untrusted by definition when:
 
 - it has **repo access**, so a cloned repository's files reach the model;
-- it holds a tool that reaches outside — **WebFetch/WebSearch**, or an MCP
-  server other than openv;
+- it holds a tool that reaches outside — **WebFetch/WebSearch**, an MCP server
+  other than openv, or **a shell in any form**: `Bash`, `Bash(*)`,
+  `Bash(git:*)`, `Bash(npm test)` all alike. A scope is a string match on the
+  command line, not a network policy, so no spelling of one stops `curl`,
+  `wget` or `git fetch` from bringing the outside world in. It costs such an
+  agent nothing it was granted — the allowlist stays the whole approval
+  surface either way;
 - it is the seeded **interviewer** (kept as a backstop for the origin rule
   above).
 
@@ -580,8 +602,19 @@ prompt. Exactly what that means per provider:
 | Provider | Trusted run | Untrusted run | Repo-access agent |
 | --- | --- | --- | --- |
 | **Claude Code** | `--permission-mode default` | `--permission-mode default` | runs (the allowlist names the editing tools) |
-| **Codex CLI** | `--sandbox workspace-write` | `--sandbox read-only` | **refused at `Start`** |
-| **Gemini CLI** | `--approval-mode auto_edit` (+ `defaultApprovalMode` in the isolated settings file) | `--approval-mode default` (+ the same in the settings file) | **refused at `Start`** |
+| **Codex CLI** | `--sandbox workspace-write` *only if the allowlist names a file tool or a shell*; `--sandbox read-only` otherwise | `--sandbox read-only` | **refused before the definition is saved** |
+| **Gemini CLI** | `--approval-mode auto_edit` (+ `defaultApprovalMode` in the isolated settings file) | `--approval-mode default` (+ the same in the settings file) | **refused before the definition is saved** |
+
+**Why codex reads the allowlist for its sandbox.** `workspace-write` is granted
+to the whole run — codex has no way to give it to some tools and not others —
+so granting it to an agent whose allowlist is `mcp__openv__*` would hand that
+agent a writable workspace and a shell its definition never mentions. Both
+halves therefore have to be true: the run is trusted, **and** the allowlist
+names something a writable workspace would serve (`Edit`, `Write`,
+`MultiEdit`, `NotebookEdit`, or `Bash` in any scoped form). Otherwise
+`read-only`, which is what that agent asked for. So the allowlist still decides
+on the one CLI that cannot apply one — it picks the confinement instead of the
+tools.
 
 **Why repo access is refused on codex and gemini.** A repo-access agent is
 untrusted (a clone's files are content nobody in the workspace wrote) *and*
@@ -590,12 +623,24 @@ as one whole-workspace switch — the sandbox, the approval mode — so the only
 answers available there are "may edit everything" and "may edit nothing".
 Running such an agent under the read-only sandbox or the confirm-everything
 approval mode does not protect anything; it silently defeats the agent, which
-reports that it could not write. So the adapter refuses instead, with
-*"repository access on `<provider>` cannot confine edits per tool; use
-claude-code or remove repo access"*. The refusal is agent policy, so the run
-fails as `agent_error` and is never auto-retried. Claude Code can express the
-middle — its allowlist names `Edit`, `Write`, `Bash(git *)` one at a time — so
-repo access belongs there, and nothing about it changes.
+reports that it could not write. So it is refused, in the same words in three
+places: *"repository access requires the claude-code provider: `<provider>`
+cannot confine edits per tool; use claude-code or turn repo access off"*.
+
+1. **When the definition is saved.** `agents.Definition.Validate` rejects
+   `repo_access: true` on any other provider, so the API answers 400 and the
+   agent editor shows the message while someone is still choosing the provider.
+2. **Before the run clones anything.** The worker checks the claimed agent
+   ahead of `PrepareWorkspace`, so a repository is never copied onto the runner
+   host for a run that cannot start. (This is where a definition written
+   straight to disk before the rule is caught.)
+3. **At `Start`, in the adapter.** Defence in depth, for a `RunSpec` that
+   reached an adapter some other way.
+
+The refusal is agent policy, so the run fails as `agent_error` and is never
+auto-retried. Claude Code can express the middle — its allowlist names `Edit`,
+`Write`, `Bash(git:*)` one at a time — so repo access belongs there, and
+nothing about it changes.
 
 Claude Code is deliberately the same both ways. `acceptEdits` would let a run
 write files nobody put on its allowlist, which is precisely the surface the

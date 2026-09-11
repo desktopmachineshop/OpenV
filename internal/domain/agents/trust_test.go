@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 )
 
@@ -45,7 +46,15 @@ func TestUntrustedInput(t *testing.T) {
 	}{
 		{"nil", nil, false},
 		{"openv only", &Agent{Slug: "vv-engineer", AllowedTools: []string{"mcp__openv__*"}}, false},
-		{"openv tools and local file reads", &Agent{Slug: "reviewer", AllowedTools: []string{"mcp__openv__*", "Read", "Bash(git *)"}}, false},
+		{"openv tools and local file reads", &Agent{Slug: "reviewer", AllowedTools: []string{"mcp__openv__*", "Read", "Grep", "Glob"}}, false},
+		// A shell is a way out of the workspace whatever scope it carries:
+		// `git fetch` under Bash(git:*), curl and wget under a bare one. The
+		// scope is a string match on the command line, not a network policy.
+		{"a scoped shell, colon form", &Agent{Slug: "reviewer", AllowedTools: []string{"mcp__openv__*", "Read", "Bash(git:*)"}}, true},
+		{"a scoped shell, glob form", &Agent{Slug: "reviewer", AllowedTools: []string{"mcp__openv__*", "Read", "Bash(git *)"}}, true},
+		{"a literal command scope", &Agent{Slug: "reviewer", AllowedTools: []string{"Bash(npm test)"}}, true},
+		{"an unscoped shell", &Agent{Slug: "reviewer", AllowedTools: []string{"Bash"}}, true},
+		{"an unscoped shell, oddly cased", &Agent{Slug: "reviewer", AllowedTools: []string{"bash(*)"}}, true},
 		{"the interviewer", &Agent{Slug: InterviewerSlug, AllowedTools: []string{"mcp__openv__get_artifact"}}, true},
 		{"repo access", &Agent{Slug: "developer", RepoAccess: true, AllowedTools: []string{"mcp__openv__*"}}, true},
 		{"web fetch", &Agent{Slug: "a", AllowedTools: []string{"mcp__openv__*", "WebFetch"}}, true},
@@ -80,12 +89,76 @@ func TestParseFileAndSyncedFileDisagreeOnMissingTools(t *testing.T) {
 		t.Error("ParseFile accepted content with no allowed_tools; a new save must be refused")
 	}
 
-	def, err := parseSyncedFile(legacy)
+	def, backfilled, err := parseSyncedFile(legacy, nil)
 	if err != nil {
 		t.Fatalf("parseSyncedFile: %v", err)
 	}
+	if !backfilled {
+		t.Error("parseSyncedFile filled the allowlist in but did not say so; the file is never rewritten")
+	}
 	if len(def.AllowedTools) != 1 || def.AllowedTools[0] != "mcp__openv__*" {
 		t.Errorf("allowed_tools = %q, want the default OpenV allowlist", def.AllowedTools)
+	}
+
+	// With a seed lookup wired in, a seeded slug is filled in with its own
+	// seed's list instead — the generic fallback would take tools away from
+	// an agent the platform itself shipped.
+	seeded := func(slug string) []string {
+		if slug == "legacy" {
+			return []string{"mcp__openv__*", "Read", "Edit", "Bash(git:*)"}
+		}
+		return nil
+	}
+	def, backfilled, err = parseSyncedFile(legacy, seeded)
+	if err != nil {
+		t.Fatalf("parseSyncedFile with a seed lookup: %v", err)
+	}
+	if !backfilled {
+		t.Error("backfilled = false, want true")
+	}
+	if !slices.Equal(def.AllowedTools, []string{"mcp__openv__*", "Read", "Edit", "Bash(git:*)"}) {
+		t.Errorf("allowed_tools = %q, want the seed's own list", def.AllowedTools)
+	}
+
+	// A slug the lookup does not know still gets the generic fallback.
+	def, _, err = parseSyncedFile(legacy, func(string) []string { return nil })
+	if err != nil {
+		t.Fatalf("parseSyncedFile: %v", err)
+	}
+	if !slices.Equal(def.AllowedTools, DefaultAllowedTools()) {
+		t.Errorf("allowed_tools = %q, want the default for an unseeded slug", def.AllowedTools)
+	}
+}
+
+// REQ-91: repository access is only expressible on claude-code, whose
+// allowlist names the editing tools one at a time. On a CLI whose only lever
+// is a whole-workspace sandbox or approval mode the setting can do nothing but
+// defeat the agent or unconfine the run, so the definition is refused where it
+// is written — the API answers 400 and the agent editor shows the message.
+func TestValidateRefusesRepoAccessOffClaudeCode(t *testing.T) {
+	base := func(provider string) *Definition {
+		return &Definition{
+			Slug: "developer", Name: "Developer", Provider: provider, RepoAccess: true,
+			AllowedTools: []string{"mcp__openv__*", "Read", "Edit", "Write", "Bash(git:*)"},
+		}
+	}
+	for _, provider := range []string{"codex-cli", "gemini-cli", "anthropic-api"} {
+		err := base(provider).Validate()
+		if err == nil {
+			t.Fatalf("Validate accepted repo access on %s", provider)
+		}
+		if !strings.Contains(err.Error(), "claude-code") || !strings.Contains(err.Error(), provider) {
+			t.Errorf("Validate(%s) = %q, want it to name both the provider and the remedy", provider, err)
+		}
+	}
+	if err := base("claude-code").Validate(); err != nil {
+		t.Fatalf("Validate refused repo access on claude-code: %v", err)
+	}
+	// Without repo access the same providers are fine.
+	def := base("codex-cli")
+	def.RepoAccess = false
+	if err := def.Validate(); err != nil {
+		t.Fatalf("Validate refused an ordinary codex agent: %v", err)
 	}
 }
 

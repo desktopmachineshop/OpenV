@@ -229,14 +229,16 @@ a place where something will eventually go wrong:
 | --- | --- | --- |
 | `CapDrop` | `ALL` | A runner is one node process as an unprivileged user; it needs no Linux capability. |
 | `SecurityOpt` | `no-new-privileges:true` | Nothing inside can climb through a setuid binary. |
-| `PidsLimit` | 256 (`HOSTED_RUNNER_PIDS_LIMIT`) | A fork bomb hits a wall instead of the host. |
+| `PidsLimit` | 1024 (`HOSTED_RUNNER_PIDS_LIMIT`) | A fork bomb hits a wall instead of the host. The cgroup counts **threads**, not processes, so the cap sits well above any process count you would guess from `ps`: a node CLI's thread pool, a toolchain build and a test run share the allowance. |
 | `Memory` / `NanoCPUs` | the workspace's plan caps | `runner_memory_mb`, `runner_cpus`; see `docs/agents.md`. |
 | `Binds` | the org's data volume only | Never the docker socket. |
 | `ReadonlyRootfs` | **not set** | The vendor CLIs in the runner image write outside `/data` (npm and CLI caches, git temporaries), so a read-only root filesystem breaks runs today. Getting there means a tmpfs for each of those paths. |
 
-`HOSTED_RUNNER_PIDS_LIMIT` on the API service overrides the process cap; `0`
-means no cap (docker's own convention), and an unparseable value falls back to
-256 rather than to unlimited.
+`HOSTED_RUNNER_PIDS_LIMIT` on the API service overrides the cap; `0` means no
+cap (docker's own convention), and an unparseable value falls back to the
+default of 1024 rather than to unlimited. Raise it if runs in a workspace start
+failing to spawn — the symptom is a `fork`/`EAGAIN` failure deep inside a
+vendor CLI, not a message about the limit.
 
 ### The runner network
 

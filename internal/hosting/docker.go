@@ -56,11 +56,21 @@ func newDockerProvisioner() (*dockerProvisioner, error) {
 
 func (p *dockerProvisioner) Enabled() bool { return true }
 
-// defaultPidsLimit caps the processes a runner container may create. A vendor
-// CLI is node plus a handful of children, so a few hundred is generous; the
-// point is that a fork bomb — from a bug, a hostile repository, or a prompt
-// injection that reached a shell — cannot take the docker host down with it.
-const defaultPidsLimit int64 = 256
+// defaultPidsLimit caps the processes a runner container may create.
+//
+// The cgroup this maps to (pids.max) counts *threads*, not processes: a node
+// runtime with its libuv pool and V8's workers, a JIT-happy toolchain, and a
+// `go build -p 8` or a jest run inside the same container each contribute tens
+// of tasks, and they add up well past the process count anyone would guess
+// from `ps`. 256 was sized as if it were a process count and was close enough
+// to a real workload's ceiling to abort runs under load, with a fork() failure
+// deep inside a vendor CLI as the only symptom.
+//
+// 1024 keeps the property that matters — a fork bomb, from a bug, a hostile
+// repository, or a prompt injection that reached a shell, hits a wall instead
+// of the docker host — while leaving ordinary work room it will not need to
+// use (REQ-96, HAZ-2).
+const defaultPidsLimit int64 = 1024
 
 // PidsLimit is the per-container process cap, overridable with
 // HOSTED_RUNNER_PIDS_LIMIT. A value of 0 or less means "no cap" (docker's own
