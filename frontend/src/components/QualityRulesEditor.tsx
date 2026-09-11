@@ -45,6 +45,10 @@ const severityNames: Record<QualitySeverity, string> = {
   off: 'Off',
 };
 
+// These buttons take no app class, so they drew at the browser's default
+// 19 px — under the click floor the desktop pass set. .compact-action
+// raises them, and raises them further on a touch screen.
+const editorButton: React.CSSProperties = { fontSize: 13 };
 const label: React.CSSProperties = { fontSize: 13, color: 'var(--text)' };
 const hint: React.CSSProperties = { fontSize: 12, color: 'var(--text-muted)' };
 // Marks a control whose value differs from what the level above sets.
@@ -291,15 +295,16 @@ export const QualityRulesEditor: React.FC<Props> = ({ level, id, canEdit, onSave
       </div>
 
       {canEdit && (
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={save} disabled={!dirty || saving}>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button className="compact-action" style={editorButton} onClick={save} disabled={!dirty || saving}>
             {saving ? 'Saving…' : 'Save rules'}
           </button>
-          <button className="secondary" onClick={() => void load()} disabled={!dirty || saving}>
+          <button style={editorButton} className="secondary compact-action" onClick={() => void load()} disabled={!dirty || saving}>
             Discard changes
           </button>
           <button
-            className="secondary"
+            style={editorButton}
+            className="secondary compact-action"
             onClick={() => setDraft({})}
             disabled={saving || (!draft.convention && !Object.keys(draft.severities || {}).length)}
             title={`Clear this ${level}'s overrides so everything follows the ${

@@ -62,13 +62,36 @@ const link = (id, from, to, type) => ({ id, from_id: from, to_id: to, type, susp
 const links = [link('l1', 'req-1', 'need-1', 'derives-from'), link('l2', 'req-2', 'need-1', 'derives-from'), link('l5', 'tc-1', 'req-2', 'verifies')];
 const agent = (id, name) => ({ id, org_id: 'org1', name, slug: name.toLowerCase().replace(/\s+/g, '-'), description: 'Drafts and reviews requirements against the house style, then proposes changes for approval.', provider: 'claude', model: 'claude-sonnet-5', effort: 'medium', write_mode: 'proposal', system_prompt: 'You are…', tools: [], locked: false, seed_key: null, created_at: now, updated_at: now });
 const agents = [agent('a1', 'Requirements Analyst'), agent('a2', 'V&V Engineer'), agent('a3', 'Developer')];
-const run = (id, status) => ({ id, org_id: 'org1', project_id: 'p1', agent_id: 'a1', agent_name: 'Requirements Analyst', status, prompt: 'Review the safety requirements for testability and propose fixes where the wording is weak.', final_text: status === 'succeeded' ? 'Reviewed 6 requirements; proposed 2 rewrites.' : '', error: status === 'failed' ? 'runner lost' : '', launched_by: 'u1', launched_by_name: 'Sam Example', created_at: now, updated_at: now, started_at: now, finished_at: now, usage: { input_tokens: 12000, output_tokens: 800, cost_usd: 0.12 } });
+const run = (id, status) => ({ id, org_id: 'org1', project_id: 'p1', agent_id: 'a1', agent_name: 'Requirements Analyst', status, tokens_in: 12000, tokens_out: 800, cost_usd: 0.12, prompt: 'Review the safety requirements for testability and propose fixes where the wording is weak.', final_text: status === 'succeeded' ? 'Reviewed 6 requirements; proposed 2 rewrites.' : '', error: status === 'failed' ? 'runner lost' : '', launched_by: 'u1', launched_by_name: 'Sam Example', created_at: now, updated_at: now, started_at: now, finished_at: now, usage: { input_tokens: 12000, output_tokens: 800, cost_usd: 0.12 } });
 const runs = [run('r1', 'succeeded'), run('r2', 'running'), run('r3', 'failed')];
 const workItems = [
   { id: 'w1', project_id: 'p1', title: 'Write the enclosure interlock test procedure', description: 'Cover door open at speed.', column: 'backlog', sort_order: 0, assignee_type: 'user', assignee_id: 'u1', artifact_ids: ['req-2'], created_at: now, updated_at: now },
   { id: 'w2', project_id: 'p1', title: 'Draft spindle requirements', description: '', column: 'in-progress', sort_order: 0, assignee_type: 'agent', assignee_id: 'a1', agent_run_id: 'r2', artifact_ids: [], created_at: now, updated_at: now },
   { id: 'w3', project_id: 'p1', title: 'Review noise requirement', description: '', column: 'review', sort_order: 0, assignee_type: 'user', assignee_id: null, artifact_ids: ['req-1'], created_at: now, updated_at: now },
 ];
+// A leased cloud runner, and the same payload with the pool free: the runner
+// card is the phone's lease control (REQ-108).
+const runnerPool = { total: 3, idle: 2, leased: 1 };
+const runnerSessionIdle = { enabled: true, session: null, pool: runnerPool };
+const runnerSessionLeased = {
+  enabled: true,
+  session: { id: 'rs1', org_id: 'org1', user_id: 'u1', status: 'active', idle_minutes: 20, created_at: now },
+  // Real time, not the frozen fixture clock: the card counts down to it.
+  deadline: new Date(Date.now() + 23 * 60 * 1000).toISOString(),
+  seconds_remaining: 1380,
+  pool: runnerPool,
+};
+// A relayed vendor sign-in waiting for the code the member pastes back.
+const providerLogin = {
+  id: 'pl1',
+  provider: 'claude-code',
+  target: 'user',
+  status: 'awaiting_code',
+  auth_url: 'https://claude.ai/oauth/authorize?client_id=openv&redirect_uri=http%3A%2F%2F127.0.0.1%3A45123%2Fcallback&state=abc123',
+  detail: 'Open the sign-in link, authorize, then paste the code you are given back here.',
+  created_at: now,
+  updated_at: now,
+};
 const notifications = [
   { id: 'n1', user_id: 'u1', type: 'proposal_pending', title: 'Proposal awaiting review', body: 'Requirements Analyst proposed a change to REQ-2 Positioning accuracy.', read: false, link: '/projects/p1/review', created_at: now },
   { id: 'n2', user_id: 'u1', type: 'run_failed', title: 'Run failed', body: 'Developer run r3 failed: runner lost.', read: true, link: '/projects/p1/agent-runs', created_at: now },
@@ -88,6 +111,11 @@ const routes = [
   [/\/api\/v1\/orgs\/[^/]+\/worker-status/, { workers: [{ id: 'wk1', name: 'Sam laptop', personal: true, hosted: false, user_name: 'Sam Example', online: true, revoked: false, last_used_at: now }], queue: { queued: 1, oldest_queued_seconds: 40, queued_repo_access: 0 } }],
   [/\/api\/v1\/projects\/p1\/download\/options/, { sections: [{ id: 'hdg-2', ref: 'HDG-2', number: '2', title: 'Functional requirements', artifacts: 2 }], types: [{ type: 'requirement', count: 2 }, { type: 'user-need', count: 1 }], attachments: [] }],
   [/\/api\/v1\/baselines\/b1\/diff/, { base: { id: 'b1', name: 'Release candidate 1' }, target: { id: 'live', name: 'Live project' }, added: [{ id: 'req-1', type: 'requirement', title: 'Work envelope' }], removed: [], modified: [{ id: 'req-2', type: 'requirement', old_title: 'Positioning accuracy', new_title: 'Positioning accuracy (tightened)', title_changed: true, body_changed: true, type_changed: false, status_changed: false, parent_changed: false }], links_added: [], links_removed: [] }],
+  // Hosted runners on, none provisioned: the Runners tab draws the
+  // admin's provider-key enable form.
+  [/\/api\/v1\/orgs\/[^/]+\/hosted-runner/, { enabled: true, online: false, container_state: '', record: null }],
+  [/\/api\/v1\/orgs\/[^/]+\/runner-session/, runnerSessionIdle],
+  [/\/api\/v1\/orgs\/[^/]+\/runner-pool/, runnerPool],
   [/\/api\/v1\/orgs\/[^/]+\/members/, [{ user_id: 'u1', email: user.email, name: user.name, role: 'admin', joined_at: now }]],
   [/\/api\/v1\/orgs\/[^/]+\/teams/, []],
   [/\/api\/v1\/orgs\/[^/]+\/runners/, []],
@@ -143,11 +171,17 @@ const routes = [
   [/\/api\/v1\/teams/, [crewTeam]],
   [/\/api\/v1\/crew-templates/, []],
   [/\/api\/v1\/automations/, [automation]],
-  [/\/api\/v1\/agent-runs\/r1\/(messages|events|log)/, []],
-  [/\/api\/v1\/agent-runs\/r1/, runs[0]],
+  // The log stream: aborted, not answered with JSON — WebKit reports a
+  // wrong-MIME EventSource as a page error, and the panel's polling
+  // fallback is what a mocked run should exercise anyway.
+  [/\/api\/v1\/agent-runs\/[^/]+\/stream/, null],
+  [/\/api\/v1\/agent-runs\/r\d\/(messages|events|log|tree)/, []],
+  [/\/api\/v1\/agent-runs\/(r\d)(\?|$)/, (url) => runs.find((r) => r.id === url.match(/agent-runs\/(r\d)/)[1]) || runs[0]],
   [/\/api\/v1\/agent-runs/, runs],
   [/\/api\/v1\/proposals/, [{ id: 'pr1', org_id: 'org1', project_id: 'p1', run_id: 'r1', agent_name: 'Requirements Analyst', kind: 'update_artifact', target_id: 'req-2', target_ref: 'REQ-2', summary: 'Tighten the accuracy wording', payload: { title: 'Positioning accuracy', body: 'The mill shall…' }, status: 'pending', created_at: now }]],
   [/\/api\/v1\/runner-sessions/, []],
+  [/\/api\/v1\/provider-logins/, providerLogin],
+  [/\/api\/v1\/provider-settings/, []],
   [/\/api\/v1\/chatter/, []],
   [/\/api\/v1\/search/, { hits: [] }],
 ];
@@ -160,6 +194,20 @@ async function mock(page) {
       return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(b) });
     }
     return route.fulfill({ status: 200, contentType: 'application/json', body: route.request().method() === 'GET' ? '[]' : '{}' });
+  });
+}
+// A screen may override a route for itself (a leased runner, a failed run):
+// registered after the shared table, so Playwright tries it first and falls
+// back to the shared one for everything else.
+async function mockScreen(page, extra) {
+  if (!extra || !extra.length) return;
+  await page.route('**/api/**', async (route) => {
+    const url = route.request().url();
+    for (const [re, body] of extra) if (re.test(url)) {
+      const b = typeof body === 'function' ? body(url) : body;
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(b) });
+    }
+    return route.fallback();
   });
 }
 const AUDIT = (opts) => {
@@ -281,6 +329,10 @@ const SCREENS = [
   { tag: 'automations-new', path: '/projects/p1/automations', open: async (p) => { const b = p.getByRole('button', { name: /New automation|\+ New/i }).first(); if (await b.count()) await press(b); } },
   { tag: 'agent-runs', path: '/projects/p1/agent-runs' },
   { tag: 'agent-run-detail', path: '/projects/p1/agent-runs', open: async (p) => { const b = p.getByText('Review the safety requirements').first(); if (await b.count()) await press(b); } },
+  // A failed run's detail, where Retry lives, and a running one, where
+  // Cancel does: on a phone both open as a full-screen sheet.
+  { tag: 'run-detail-actions', path: '/projects/p1/agent-runs?run=r3' },
+  { tag: 'run-detail-cancel', path: '/projects/p1/agent-runs?run=r2' },
   { tag: 'agents', path: '/projects/p1/agents' },
   { tag: 'agents-edit', path: '/projects/p1/agents', open: async (p) => { const b = p.getByText('Requirements Analyst').first(); if (await b.count()) await press(b); } },
   { tag: 'activity', path: '/projects/p1/activity' },
@@ -288,10 +340,49 @@ const SCREENS = [
   { tag: 'settings-agents', path: '/projects/p1/settings?tab=agents' },
   { tag: 'settings-access', path: '/projects/p1/settings?tab=access' },
   { tag: 'org-settings', path: '/org/settings' },
-  { tag: 'org-members', path: '/org/settings', open: async (p) => { const t = p.getByRole('tab', { name: /Members/ }); if (await t.count()) await press(t); } },
-  { tag: 'org-runners', path: '/org/settings', open: async (p) => { const t = p.getByRole('tab', { name: /Runners/ }); if (await t.count()) await press(t); } },
-  { tag: 'org-usage', path: '/org/settings', open: async (p) => { const t = p.getByRole('tab', { name: /Usage|Budget/ }); if (await t.count()) await press(t); } },
-  { tag: 'org-quality', path: '/org/settings', open: async (p) => { const t = p.getByRole('tab', { name: /Quality/ }); if (await t.count()) await press(t); } },
+  { tag: 'org-members', path: '/org/settings?tab=members' },
+  // The tab strip is buttons in a role=tablist, not role=tab elements, so
+  // the tab is selected through its URL (?tab=…) rather than a click that
+  // silently matched nothing.
+  { tag: 'org-runners', path: '/org/settings?tab=worker-keys' },
+  // REQ-108, the phone's runner controls: a live lease with its countdown,
+  // extend and end; and the relayed vendor sign-in waiting for a paste-back.
+  // Both live in personal settings, which opens from the account menu.
+  {
+    tag: 'org-runner-lease',
+    path: '/projects',
+    routes: [[/\/api\/v1\/orgs\/[^/]+\/runner-session/, runnerSessionLeased]],
+    open: async (p) => {
+      await press(p.locator('[title="Sam Example"]').first());
+      await p.waitForTimeout(300);
+      await press(p.getByText('Settings', { exact: true }).first());
+      await p.waitForTimeout(600);
+      // The panel is a fixed full-screen sheet, so the card has to be
+      // scrolled to before the screenshot shows it.
+      await p.getByRole('heading', { name: 'Cloud runner' }).scrollIntoViewIfNeeded();
+      await p.waitForTimeout(200);
+    },
+  },
+  {
+    tag: 'runner-relay',
+    path: '/projects',
+    routes: [[/\/api\/v1\/orgs\/[^/]+\/runner-session/, runnerSessionLeased]],
+    open: async (p) => {
+      await press(p.locator('[title="Sam Example"]').first());
+      await p.waitForTimeout(300);
+      await press(p.getByText('Settings', { exact: true }).first());
+      await p.waitForTimeout(600);
+      const connect = p.getByRole('button', { name: 'Connect', exact: true }).first();
+      await connect.scrollIntoViewIfNeeded();
+      await press(connect);
+      await p.waitForTimeout(400);
+      await p.getByRole('link', { name: /Open sign-in page/ }).scrollIntoViewIfNeeded();
+      await p.waitForTimeout(200);
+    },
+  },
+  { tag: 'org-usage', path: '/org/settings?tab=usage' },
+  { tag: 'org-quality', path: '/org/settings?tab=quality' },
+  { tag: 'org-providers', path: '/org/settings?tab=providers' },
   { tag: 'manual', path: '/manual' },
   { tag: 'landing', path: '/' },
 ];
@@ -313,6 +404,7 @@ async function runEngine(engine, device, name, desktop = false) {
     const errors = [];
     page.on('pageerror', (e) => errors.push(String(e).split('\n')[0]));
     await mock(page);
+    await mockScreen(page, s.routes);
     let openErr = '';
     try {
       await page.goto(s.path); await page.waitForTimeout(900);

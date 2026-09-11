@@ -4,6 +4,7 @@ import { apiErrorMessage } from '../../api/errors';
 import { RunnerKeyModal } from './RunnerKeyModal';
 import { RunnerConnectPrompt } from '../RunnerConnectPrompt';
 import { ErrorBanner, useConfirm } from '../ui';
+import { useViewport } from '../../hooks/useViewport';
 
 interface MyRunnerCardProps {
   orgId: string;
@@ -15,6 +16,9 @@ interface MyRunnerCardProps {
 // personal runner during the grace window.
 export const MyRunnerCard: React.FC<MyRunnerCardProps> = ({ orgId, onKeysChanged }) => {
   const confirm = useConfirm();
+  // Same phone shape as the other runner cards: facts stacked, actions in a
+  // full-width 44 px column (REQ-108).
+  const { isPhone } = useViewport();
   const [keyRecord, setKeyRecord] = useState<WorkerKey | null>(null);
   const [online, setOnline] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -104,17 +108,20 @@ export const MyRunnerCard: React.FC<MyRunnerCardProps> = ({ orgId, onKeysChanged
             your personal runner for the first minute. The easiest setup is the Agent Connector —
             it pairs, stores your key, and starts the runner on demand.
           </p>
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <div
+            className={isPhone ? 'action-sheet' : undefined}
+            style={isPhone ? undefined : { display: 'flex', gap: 10, flexWrap: 'wrap' }}
+          >
             <button
               className="button"
-              style={{ width: 'auto' }}
+              style={isPhone ? { minHeight: 44 } : { width: 'auto' }}
               onClick={() => setShowConnect(true)}
             >
               Set up Agent Connector
             </button>
             <button
               className="button-secondary button"
-              style={{ width: 'auto' }}
+              style={isPhone ? { minHeight: 44 } : { width: 'auto' }}
               onClick={() => createKey(false)}
               disabled={busy}
               title="Advanced: mint a key and run agentd manually"
@@ -124,10 +131,16 @@ export const MyRunnerCard: React.FC<MyRunnerCardProps> = ({ orgId, onKeysChanged
           </div>
         </>
       ) : (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+        <div
+          style={
+            isPhone
+              ? { display: 'flex', flexDirection: 'column', gap: 10 }
+              : { display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }
+          }
+        >
           <span style={{ fontSize: 13, color: 'var(--text)', fontWeight: 600 }}>
             <span
-              style={{ color: online ? 'var(--success)' : 'var(--neutral)', marginRight: 4, fontSize: 11 }}
+              style={{ color: online ? 'var(--success)' : 'var(--neutral)', marginRight: 4, fontSize: 12 }}
             >
               ●
             </span>
@@ -136,40 +149,46 @@ export const MyRunnerCard: React.FC<MyRunnerCardProps> = ({ orgId, onKeysChanged
           <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>
             created {keyRecord.created_at ? new Date(keyRecord.created_at).toLocaleDateString() : '—'}
           </span>
-          <div style={{ flex: 1 }} />
-          {!online && (
+          {!isPhone && <div style={{ flex: 1 }} />}
+          <div
+            className={isPhone ? 'action-sheet' : undefined}
+            style={isPhone ? undefined : { display: 'contents' }}
+          >
+            {!online && (
+              <button
+                className="button"
+                style={isPhone ? { minHeight: 44 } : { width: 'auto', padding: '6px 14px' }}
+                onClick={() => setShowConnect(true)}
+              >
+                Open connector
+              </button>
+            )}
             <button
-              className="button"
-              style={{ width: 'auto', padding: '6px 14px' }}
-              onClick={() => setShowConnect(true)}
+              className="button-secondary button"
+              style={isPhone ? { minHeight: 44 } : { width: 'auto', padding: '6px 14px' }}
+              onClick={() => createKey(true)}
+              disabled={busy}
             >
-              Open connector
+              Rotate
             </button>
-          )}
-          <button
-            className="button-secondary button"
-            style={{ width: 'auto', padding: '6px 14px' }}
-            onClick={() => createKey(true)}
-            disabled={busy}
-          >
-            Rotate
-          </button>
-          <button
-            onClick={handleRevoke}
-            disabled={busy}
-            style={{
-              background: 'none',
-              border: '1px solid var(--danger)',
-              color: 'var(--danger)',
-              cursor: 'pointer',
-              fontSize: 13,
-              width: 'auto',
-              padding: '6px 14px',
-              borderRadius: 4,
-            }}
-          >
-            Revoke
-          </button>
+            <button
+              onClick={handleRevoke}
+              disabled={busy}
+              style={{
+                background: 'none',
+                border: '1px solid var(--danger)',
+                color: 'var(--danger)',
+                cursor: 'pointer',
+                fontSize: isPhone ? 14 : 13,
+                width: isPhone ? '100%' : 'auto',
+                minHeight: isPhone ? 44 : undefined,
+                padding: '6px 14px',
+                borderRadius: 4,
+              }}
+            >
+              Revoke
+            </button>
+          </div>
         </div>
       )}
 

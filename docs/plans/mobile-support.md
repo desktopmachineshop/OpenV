@@ -271,7 +271,7 @@ findings and the fixes, by class:
 
 The regression tool is `e2e/tools/phone-audit.js` (`npm run audit:phone`
 in `e2e/`): it renders a served production build on a Pixel 5 against a
-mocked API, opens the sheets and dialogs reachable from 48 screens, and
+mocked API, opens the sheets and dialogs reachable from 53 screens, and
 reports elements past the viewport, clipped containers, tap targets under
 32 px, text under 12 px and page errors, with a screenshot per screen.
 `mobile.spec.ts` covers the four worst cases end to end: the theme
@@ -320,13 +320,56 @@ broken contracts under CI: at 1024×768 every page fits without sideways
 scrolling and the document keeps its 400 px; at 2560×1440 the document
 and the editor's title field stop at the measures.
 
+### Runner control from a phone (2026-09-11)
+
+REQ-108, the item this section deferred. The three runner cards
+(`CloudRunnerCard`, `MyRunnerCard`, `HostedRunnerCard`) read `useViewport`
+and take a stacked shape on a phone: each fact under its own label — the
+lease's status, its countdown, the pool's free count — and every action a
+full-width 44 px row in an `.action-sheet` column, through the same
+handlers as before. The hosted runner's enable form is one key per row with
+`autocomplete="off"`, `inputMode="text"` and no autocapitalise or
+autocorrect, because an API key is not a password to remember.
+
+The relayed sign-in (`ProviderConnectCard`) is the screen that has to work
+on a phone, since the vendor's page opens in the phone's own browser and
+the code comes back through a password manager. The authorization link is a
+real `<a target="_blank" rel="noopener noreferrer">`, full width and
+tappable; the paste-back field carries `enterKeyHint="send"` and submits on
+Enter, `autoCapitalize="none"`, `autoCorrect="off"`, `spellCheck={false}`,
+and `inputMode="url"` or `"text"` depending on whether the worker asked for
+a redirected address (the loopback flow, Codex) or a short code — read from
+the worker's own detail text by `pasteKind`. A **Paste** button appears
+only where `navigator.clipboard.readText` exists and fails silently when
+the browser refuses. The worker's instructions read at 13 px and wrap.
+A run's detail sheet moves Cancel and Retry out of the title row into the
+same full-width pair.
+
+Covered by `ProviderConnectCard.test.tsx` (the field contract, which holds
+at every width), by the audit screens `org-runner-lease`, `runner-relay`,
+`run-detail-actions` and `run-detail-cancel` (the audit mocks the
+runner-session, hosted-runner and provider-login endpoints, and a screen may
+now override a route for itself), and by a `mobile.spec.ts` step covering
+the Runners tab, the lease control and the relay field's send key.
+
+Two audit repairs came with it. The workspace settings screens opened their
+tab with `getByRole('tab')`, which matches nothing — the tab strip is
+buttons in a `role="tablist"` — so `org-runners`, `org-members`,
+`org-usage` and `org-quality` had all been auditing the General tab; they
+now address the tab through its URL (`?tab=…`), and `org-providers` joins
+them. What that uncovered is fixed here too: the usage tab's four stat
+labels at 11.5 px, a member row's Leave button at 18 px, and the quality
+editor's three unclassed buttons at 19 px, the last two through a new
+`.compact-action` class (28 px for a mouse, 40 px for a finger) rather than
+an inline height a media query cannot raise. The run log's SSE route is now
+aborted rather than answered with JSON, which WebKit reported as a page
+error.
+
 Deferred, each a follow-up of its own:
 
 - Web Push (VAPID keys, a subscription table, a subscribe endpoint, the
   worker's `push` handler) — REQ-109 remains partially met (installable,
   no push).
-- The runner card and the relayed sign-in screen sized for a phone
-  (REQ-108); they work through the responsive shell but were not reworked.
 - Figure actions on touch and the tap-to-insert reference menu; server-side
   figure thumbnails; manifest screenshots; an iPad project and Lighthouse in
   CI.

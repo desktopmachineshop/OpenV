@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { providerLoginsAPI, ProviderLogin } from '../../api/client';
 import { apiErrorMessage } from '../../api/errors';
+import { useViewport } from '../../hooks/useViewport';
 
 interface Props {
   provider: string;
@@ -14,10 +15,27 @@ interface Props {
   title?: string;
 }
 
+/**
+ * What the worker is asking the member to paste back. Two CLIs ask for two
+ * different things: most hand over a short code, but a loopback flow
+ * (Codex) asks for the whole redirected address, and the worker says so in
+ * its detail text. The distinction decides the keyboard a phone opens — a
+ * URL keyboard for an address, plain text for a code — so it is read from
+ * the detail rather than hard-coded per provider.
+ */
+export const pasteKind = (login: ProviderLogin | null | undefined): 'url' | 'text' =>
+  login && /address|\burl\b/i.test(login.detail || '') ? 'url' : 'text';
+
 // ProviderConnectCard drives a CLI provider sign-in from the UI: it creates
 // a login request, the host worker runs the vendor CLI's own login flow, and
 // this component relays the auth URL (and paste-back code where the CLI
 // needs one). Credentials are stored by the CLI on the host, never in OpenV.
+//
+// The relay is a phone job by design (REQ-108): the sign-in link opens in
+// the phone's own browser, and what comes back is pasted here — usually from
+// a password manager — so the field takes a paste, submits with the
+// keyboard's send key, and offers a Paste button where the clipboard API is
+// available.
 export const ProviderConnectCard: React.FC<Props> = ({
   provider,
   loggedIn,
@@ -25,6 +43,7 @@ export const ProviderConnectCard: React.FC<Props> = ({
   target = 'workspace',
   title = 'Subscription sign-in',
 }) => {
+  const { isPhone } = useViewport();
   const [login, setLogin] = useState<ProviderLogin | null>(null);
   const [code, setCode] = useState('');
   const [codeSent, setCodeSent] = useState(false);
@@ -82,6 +101,30 @@ export const ProviderConnectCard: React.FC<Props> = ({
     }
   };
 
+  // A phone's keyboard sends with its own key, not with a button the
+  // keyboard is covering.
+  const onFieldKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      submitCode();
+    }
+  };
+
+  // Reading the clipboard needs a user gesture and a permission the browser
+  // may refuse; when it is missing or refused the field is still there to
+  // paste into by hand, so the failure is silent.
+  const clipboardReadable =
+    typeof navigator !== 'undefined' && !!navigator.clipboard && typeof navigator.clipboard.readText === 'function';
+
+  const pasteFromClipboard = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (text && text.trim()) setCode(text.trim());
+    } catch {
+      // No permission, or an empty clipboard: leave the field to the member.
+    }
+  };
+
   const cancel = async () => {
     if (!login) return;
     try {
@@ -117,6 +160,35 @@ export const ProviderConnectCard: React.FC<Props> = ({
     }
   };
 
+  const cancelButton = (
+    <button
+      onClick={cancel}
+      style={{
+        background: 'none',
+        border: isPhone ? '1px solid var(--danger)' : 'none',
+        borderRadius: isPhone ? 4 : undefined,
+        color: 'var(--danger)',
+        cursor: 'pointer',
+        fontSize: isPhone ? 14 : 13,
+        width: isPhone ? '100%' : 'auto',
+        // 44 px for a finger, and never under the desktop click floor.
+        minHeight: isPhone ? 44 : 26,
+        padding: isPhone ? undefined : '4px 10px',
+        marginTop: isPhone ? 8 : undefined,
+      }}
+    >
+      Cancel
+    </button>
+  );
+
+  const kind = pasteKind(login);
+  // Controls sit in a full-width column on a phone (the .action-sheet
+  // pattern) and keep their inline row on a pointer-sized screen.
+  const actionClass = isPhone ? 'action-sheet' : '';
+  const rowStyle: React.CSSProperties = isPhone
+    ? { display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }
+    : { display: 'flex', gap: 8, marginTop: 8, alignItems: 'center' };
+
   return (
     <div
       style={{
@@ -127,73 +199,140 @@ export const ProviderConnectCard: React.FC<Props> = ({
         borderRadius: 6,
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-        <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{title}</span>
-        {loggedIn && !active && (
-          <span style={{ fontSize: 12, color: 'var(--success)', fontWeight: 600 }}>● connected</span>
-        )}
-        <div style={{ flex: 1 }} />
+      <div
+        style={
+          isPhone
+            ? { display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: 8 }
+            : { display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }
+        }
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', minWidth: 0 }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{title}</span>
+          {loggedIn && !active && (
+            <span style={{ fontSize: 12, color: 'var(--success)', fontWeight: 600 }}>● connected</span>
+          )}
+        </div>
+        {!isPhone && <div style={{ flex: 1 }} />}
         {!active ? (
-          <button className="button" style={{ padding: '6px 14px', fontSize: 13 }} onClick={start}>
+          <button
+            className="button"
+            style={isPhone ? { minHeight: 44, width: '100%', fontSize: 14 } : { padding: '6px 14px', fontSize: 13 }}
+            onClick={start}
+          >
             {loggedIn ? 'Re-connect' : 'Connect'}
           </button>
         ) : (
-          <button
-            onClick={cancel}
-            style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontSize: 12, width: 'auto' }}
-          >
-            Cancel
-          </button>
+          // On a phone Cancel goes last, under the steps it abandons; beside
+          // the title it would outrank the sign-in link below it.
+          !isPhone && cancelButton
         )}
       </div>
 
       {(login || error) && (
         <div style={{ marginTop: 8 }}>
-          {error && <div style={{ color: 'var(--danger)', fontSize: 12 }}>{error}</div>}
+          {error && <div style={{ color: 'var(--danger)', fontSize: 13 }}>{error}</div>}
           {login && (
             <div
+              // 13 px and free to wrap: the worker's instructions are a
+              // paragraph, and they are the whole screen on a phone.
               style={{
-                fontSize: 12,
-                color: login.status === 'failed' ? 'var(--danger)' : login.status === 'completed' ? 'var(--success)' : 'var(--text-muted)',
+                fontSize: 13,
+                lineHeight: 1.5,
+                overflowWrap: 'anywhere',
+                color:
+                  login.status === 'failed'
+                    ? 'var(--danger)'
+                    : login.status === 'completed'
+                    ? 'var(--success)'
+                    : 'var(--text-muted)',
               }}
             >
               {statusLine()}
             </div>
           )}
           {login && active && login.auth_url && (
+            // A real link, so a phone hands it to its own browser (and a
+            // long press offers copy / open in a new tab).
             <a
               href={login.auth_url}
               target="_blank"
-              rel="noreferrer"
+              rel="noopener noreferrer"
               className="button"
-              style={{ display: 'inline-block', marginTop: 8, padding: '6px 14px', fontSize: 13, textDecoration: 'none' }}
+              style={
+                isPhone
+                  ? {
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginTop: 8,
+                      minHeight: 44,
+                      width: '100%',
+                      fontSize: 14,
+                      textDecoration: 'none',
+                    }
+                  : { display: 'inline-block', marginTop: 8, padding: '6px 14px', fontSize: 13, textDecoration: 'none' }
+              }
             >
               Open sign-in page ↗
             </a>
           )}
           {login && login.status === 'awaiting_code' && (
-            <div style={{ display: 'flex', gap: 8, marginTop: 8, alignItems: 'center' }}>
+            <div style={rowStyle}>
               <input
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
-                placeholder="Paste the authorization code here"
-                style={{ flex: 1, padding: '6px 8px', fontSize: 13 }}
+                onKeyDown={onFieldKeyDown}
+                aria-label={kind === 'url' ? 'Redirected address' : 'Authorization code'}
+                placeholder={
+                  kind === 'url' ? 'Paste the redirected address here' : 'Paste the authorization code here'
+                }
+                // Phone input hygiene: the right keyboard, no autocapitalise
+                // or autocorrect mangling a code, and the send key submits.
+                inputMode={kind === 'url' ? 'url' : 'text'}
+                type="text"
+                autoComplete="off"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                enterKeyHint="send"
+                style={
+                  isPhone
+                    ? { width: '100%', minHeight: 44, fontSize: 16, padding: '8px 10px' }
+                    : { flex: 1, padding: '6px 8px', fontSize: 13 }
+                }
                 disabled={codeSent}
               />
-              <button
-                className="button"
-                style={{ padding: '6px 14px', fontSize: 13, width: 'auto' }}
-                onClick={submitCode}
-                disabled={codeSent || !code.trim()}
-              >
-                {codeSent ? 'Code sent…' : 'Submit code'}
-              </button>
+              <div className={actionClass} style={isPhone ? undefined : { display: 'flex', gap: 8 }}>
+                {clipboardReadable && (
+                  <button
+                    className="button-secondary button"
+                    style={isPhone ? { minHeight: 44 } : { padding: '6px 14px', fontSize: 13, width: 'auto' }}
+                    onClick={pasteFromClipboard}
+                    disabled={codeSent}
+                  >
+                    Paste
+                  </button>
+                )}
+                <button
+                  className="button"
+                  style={isPhone ? { minHeight: 44 } : { padding: '6px 14px', fontSize: 13, width: 'auto' }}
+                  onClick={submitCode}
+                  disabled={codeSent || !code.trim()}
+                >
+                  {codeSent ? 'Code sent…' : kind === 'url' ? 'Submit address' : 'Submit code'}
+                </button>
+              </div>
             </div>
           )}
+          {isPhone && active && cancelButton}
           {login && login.status === 'failed' && (
             <button
               className="button-secondary button"
-              style={{ marginTop: 8, padding: '6px 14px', fontSize: 13, width: 'auto' }}
+              style={
+                isPhone
+                  ? { marginTop: 8, minHeight: 44, width: '100%', fontSize: 14 }
+                  : { marginTop: 8, padding: '6px 14px', fontSize: 13, width: 'auto' }
+              }
               onClick={start}
             >
               Retry

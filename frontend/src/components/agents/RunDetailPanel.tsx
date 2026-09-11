@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { AgentRun, agentRunsAPI, RunLogEntry } from '../../api/client';
 import { ExpandableText } from '../ExpandableText';
+import { useViewport } from '../../hooks/useViewport';
 
 const TERMINAL_STATUSES = ['succeeded', 'failed', 'timed_out', 'cancelled'];
 
@@ -146,7 +147,38 @@ const logLine = (entry: RunLogEntry, idx: number): React.ReactNode => {
   }
 };
 
+// Cancel and Retry are the same control in two shapes: a compact chip in the
+// title row on a pointer-sized screen, a full-width tappable row on a phone.
+const cancelStyle = (phone: boolean): React.CSSProperties => ({
+  background: 'var(--danger)',
+  color: '#fff',
+  border: 'none',
+  padding: phone ? '10px 14px' : '5px 12px',
+  borderRadius: 4,
+  cursor: 'pointer',
+  fontSize: phone ? 14 : 12,
+  fontWeight: phone ? 600 : undefined,
+  minHeight: phone ? 44 : undefined,
+});
+
+const retryStyle = (phone: boolean, retrying: boolean): React.CSSProperties => ({
+  background: 'var(--accent)',
+  color: 'var(--accent-fg)',
+  border: 'none',
+  padding: phone ? '10px 14px' : '5px 12px',
+  borderRadius: 4,
+  cursor: retrying ? 'default' : 'pointer',
+  fontSize: phone ? 14 : 12,
+  fontWeight: phone ? 600 : undefined,
+  minHeight: phone ? 44 : undefined,
+  opacity: retrying ? 0.6 : 1,
+});
+
 export const RunDetailPanel: React.FC<RunDetailPanelProps> = ({ runId, onSelectRun, onClose }) => {
+  // On a phone this panel is a full-screen sheet: Cancel and Retry move out
+  // of the title row into a full-width, 44 px pair under it, so watching a
+  // run and acting on it are both one-handed (REQ-108).
+  const { isPhone } = useViewport();
   const [run, setRun] = useState<AgentRun | null>(null);
   const [logs, setLogs] = useState<RunLogEntry[]>([]);
   const [tree, setTree] = useState<AgentRun[]>([]);
@@ -383,7 +415,7 @@ export const RunDetailPanel: React.FC<RunDetailPanelProps> = ({ runId, onSelectR
           {run && (
             <span
               style={{
-                fontSize: 11,
+                fontSize: 12,
                 background: runStatusColor(run.status),
                 color: '#fff',
                 borderRadius: 10,
@@ -397,48 +429,61 @@ export const RunDetailPanel: React.FC<RunDetailPanelProps> = ({ runId, onSelectR
           )}
           {run && <ErrorClassChip errorClass={run.error_class} />}
         </strong>
-        {isLive && (
-          <button
-            onClick={cancel}
-            style={{
-              background: 'var(--danger)',
-              color: '#fff',
-              border: 'none',
-              padding: '5px 12px',
-              borderRadius: 4,
-              cursor: 'pointer',
-              fontSize: 12,
-            }}
-          >
+        {!isPhone && isLive && (
+          <button onClick={cancel} style={cancelStyle(false)}>
             Cancel
           </button>
         )}
-        {isRetryable && (
+        {!isPhone && isRetryable && (
           <button
             onClick={retry}
             disabled={retrying}
             title="Re-run this prompt as a new run with the same agent and project"
-            style={{
-              background: 'var(--accent)',
-              color: 'var(--accent-fg)',
-              border: 'none',
-              padding: '5px 12px',
-              borderRadius: 4,
-              cursor: retrying ? 'default' : 'pointer',
-              fontSize: 12,
-              opacity: retrying ? 0.6 : 1,
-            }}
+            style={retryStyle(false, retrying)}
           >
             {retrying ? 'Retrying…' : 'Retry'}
           </button>
         )}
         <button
           onClick={onClose}
-          style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: 'var(--text-muted)' }}
+          aria-label="Close run detail"
+          style={{
+            background: 'none',
+            border: 'none',
+            fontSize: isPhone ? 24 : 18,
+            lineHeight: 1,
+            cursor: 'pointer',
+            color: 'var(--text-muted)',
+            // A finger needs 44 px; a mouse still needs more than the 11 px
+            // the glyph drew on its own.
+            minWidth: isPhone ? 44 : 28,
+            minHeight: isPhone ? 44 : 28,
+            flexShrink: 0,
+          }}
         >
           ×
         </button>
       </div>
+
+      {isPhone && (isLive || isRetryable) && (
+        <div className="action-sheet" style={{ padding: '10px 12px 0' }}>
+          {isLive && (
+            <button onClick={cancel} style={cancelStyle(true)}>
+              Cancel this run
+            </button>
+          )}
+          {isRetryable && (
+            <button
+              onClick={retry}
+              disabled={retrying}
+              title="Re-run this prompt as a new run with the same agent and project"
+              style={retryStyle(true, retrying)}
+            >
+              {retrying ? 'Retrying…' : 'Retry this run'}
+            </button>
+          )}
+        </div>
+      )}
 
       <div style={{ flex: 1, overflowY: 'auto', padding: 16 }}>
         {error && <div style={{ color: 'var(--danger)', fontSize: 12, marginBottom: 8 }}>{error}</div>}

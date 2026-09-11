@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { RunnerSessionPayload, cloudRunnerAPI } from '../../api/client';
 import { apiErrorMessage } from '../../api/errors';
 import { ErrorBanner, useConfirm } from '../ui';
+import { useViewport } from '../../hooks/useViewport';
 
 interface CloudRunnerCardProps {
   orgId: string;
@@ -32,6 +33,9 @@ const formatRemaining = (seconds: number): string => {
 // its own idle/expiry clock) and takes those sign-ins with it.
 export const CloudRunnerCard: React.FC<CloudRunnerCardProps> = ({ orgId, onChanged }) => {
   const confirm = useConfirm();
+  // A phone gets the lease as a stacked block — each fact with its label
+  // above it, each action full width and tall enough to tap (REQ-108).
+  const { isPhone } = useViewport();
   const [payload, setPayload] = useState<RunnerSessionPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -142,60 +146,124 @@ export const CloudRunnerCard: React.FC<CloudRunnerCardProps> = ({ orgId, onChang
             stop using it — everything on it is wiped when it does, so the next one needs a fresh
             sign-in.
           </p>
-          <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+          <div
+            className={isPhone ? 'action-sheet' : undefined}
+            style={isPhone ? undefined : { display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}
+          >
             <button
               className="button"
-              style={{ width: 'auto' }}
+              style={isPhone ? { minHeight: 44 } : { width: 'auto' }}
               onClick={() => act(() => cloudRunnerAPI.start(orgId), 'Failed to start a cloud runner')}
               disabled={busy}
             >
               {busy ? 'Starting…' : 'Start a cloud runner'}
             </button>
-            {pool && (
+            {pool && !isPhone && (
               <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
                 {pool.idle} of {pool.total} free
               </span>
             )}
           </div>
+          {pool && isPhone && (
+            // Under the button and at reading size, not a 12 px aside
+            // squeezed beside it.
+            <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 10 }}>
+              {pool.idle} of {pool.total} free right now
+            </div>
+          )}
         </>
       ) : (
         <>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 13, color: 'var(--text)', fontWeight: 600 }}>
-              <span
-                style={{
-                  color: session.status === 'active' ? 'var(--success)' : 'var(--warning)',
-                  marginRight: 4,
-                  fontSize: 11,
-                }}
-              >
-                ●
+          {isPhone ? (
+            // Stacked: the two facts as label-over-value rows, then the two
+            // actions full width. Nothing sits side by side, so nothing is
+            // squeezed off the right edge at 390 px.
+            <>
+              <dl style={{ margin: '0 0 12px', display: 'grid', gap: 10 }}>
+                <div>
+                  <dt style={{ fontSize: 12, color: 'var(--text-muted)' }}>Status</dt>
+                  <dd style={{ margin: 0, fontSize: 15, fontWeight: 600, color: 'var(--text)' }}>
+                    <span
+                      style={{
+                        color: session.status === 'active' ? 'var(--success)' : 'var(--warning)',
+                        marginRight: 4,
+                        fontSize: 12,
+                      }}
+                    >
+                      ●
+                    </span>
+                    {session.status === 'active' ? 'running' : 'starting…'}
+                  </dd>
+                </div>
+                <div>
+                  <dt style={{ fontSize: 12, color: 'var(--text-muted)' }}>Ends in</dt>
+                  <dd
+                    aria-live="polite"
+                    style={{ margin: 0, fontSize: 15, fontWeight: 600, color: 'var(--text)' }}
+                  >
+                    {formatRemaining(remaining)}
+                  </dd>
+                </div>
+                {pool && (
+                  <div>
+                    <dt style={{ fontSize: 12, color: 'var(--text-muted)' }}>Pool</dt>
+                    <dd style={{ margin: 0, fontSize: 15, color: 'var(--text)' }}>
+                      {pool.idle} of {pool.total} free
+                    </dd>
+                  </div>
+                )}
+              </dl>
+              <div className="action-sheet">
+                <button
+                  className="button"
+                  onClick={() => act(() => cloudRunnerAPI.extend(orgId), 'Failed to extend your cloud runner')}
+                  disabled={busy}
+                >
+                  Extend the lease
+                </button>
+                <button className="button-secondary button" onClick={handleEnd} disabled={busy}>
+                  End now
+                </button>
+              </div>
+            </>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 13, color: 'var(--text)', fontWeight: 600 }}>
+                <span
+                  style={{
+                    color: session.status === 'active' ? 'var(--success)' : 'var(--warning)',
+                    marginRight: 4,
+                    fontSize: 12,
+                  }}
+                >
+                  ●
+                </span>
+                {session.status === 'active' ? 'running' : 'starting…'}
               </span>
-              {session.status === 'active' ? 'running' : 'starting…'}
-            </span>
-            <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-              ends in {formatRemaining(remaining)}
-            </span>
-            <div style={{ flex: 1 }} />
-            <button
-              className="button-secondary button"
-              style={{ width: 'auto' }}
-              onClick={() => act(() => cloudRunnerAPI.extend(orgId), 'Failed to extend your cloud runner')}
-              disabled={busy}
-              title="Reset the clock and keep this runner longer"
-            >
-              Extend
-            </button>
-            <button
-              className="button-secondary button"
-              style={{ width: 'auto' }}
-              onClick={handleEnd}
-              disabled={busy}
-            >
-              End now
-            </button>
-          </div>
-          <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 10, marginBottom: 0 }}>
+              <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+                ends in {formatRemaining(remaining)}
+              </span>
+              <div style={{ flex: 1 }} />
+              <button
+                className="button-secondary button"
+                style={{ width: 'auto' }}
+                onClick={() => act(() => cloudRunnerAPI.extend(orgId), 'Failed to extend your cloud runner')}
+                disabled={busy}
+                title="Reset the clock and keep this runner longer"
+              >
+                Extend
+              </button>
+              <button
+                className="button-secondary button"
+                style={{ width: 'auto' }}
+                onClick={handleEnd}
+                disabled={busy}
+              >
+                End now
+              </button>
+            </div>
+          )}
+          <p style={{ fontSize: isPhone ? 13 : 12, color: 'var(--text-muted)', marginTop: 10, marginBottom: 0 }}>
             Sign your agents in below — the sign-in runs on this runner and its credentials live
             only as long as the runner does. The clock resets whenever the runner is working, and
             it stops {session.idle_minutes} minutes after you stop using it.

@@ -226,6 +226,20 @@ input:focus, textarea:focus, select:focus {
   }
 }
 
+/* Small inline actions that carry no .button class — a table row's Remove,
+   an editor's Save / Discard: over the desktop click floor, and over the
+   touch floor where a finger has to hit them. Use the class rather than an
+   inline minHeight, which would win over the media query below. */
+.compact-action {
+  min-height: 28px;
+  padding: 5px 12px;
+}
+@media (hover: none) and (pointer: coarse) {
+  .compact-action {
+    min-height: 40px;
+  }
+}
+
 /* A sheet of actions on a phone: every control full width and tall enough
    to tap, in the order the toolbar showed them. */
 .action-sheet {
