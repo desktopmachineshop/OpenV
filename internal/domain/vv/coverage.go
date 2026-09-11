@@ -54,10 +54,19 @@ type Matrix struct {
 type GapReport struct {
 	RequirementsWithoutMethod   []string `json:"requirements_without_method"`
 	RequirementsWithoutTestCase []string `json:"requirements_without_test_case"`
-	RequirementsFailing         []string `json:"requirements_failing"`
-	OrphanTestCases             []string `json:"orphan_test_cases"`
-	NeedsWithoutRequirement     []string `json:"needs_without_requirement"`
-	HazardsUnmitigated          []string `json:"hazards_unmitigated"`
+	// RequirementsUnverified holds requirements whose verification method is
+	// anything other than test — demonstration, analysis and inspection, and
+	// any other value a project uses — that nothing has yet attested to. They
+	// can never appear in RequirementsWithoutTestCase — a non-test method
+	// needs no test case — so without this bucket the gap report stayed silent
+	// about them while the coverage rollup already counted them as
+	// "uncovered". It is derived from that same rollup (see GapAnalysis),
+	// so the two views cannot disagree.
+	RequirementsUnverified  []string `json:"requirements_unverified"`
+	RequirementsFailing     []string `json:"requirements_failing"`
+	OrphanTestCases         []string `json:"orphan_test_cases"`
+	NeedsWithoutRequirement []string `json:"needs_without_requirement"`
+	HazardsUnmitigated      []string `json:"hazards_unmitigated"`
 }
 
 // attrString reads a string attribute from an artifact, "" if absent.
@@ -270,6 +279,7 @@ func GapAnalysis(export *exports.ProjectExport, coverage *CoverageReport) *GapRe
 	report := &GapReport{
 		RequirementsWithoutMethod:   []string{},
 		RequirementsWithoutTestCase: []string{},
+		RequirementsUnverified:      []string{},
 		RequirementsFailing:         []string{},
 		OrphanTestCases:             []string{},
 		NeedsWithoutRequirement:     []string{},
@@ -282,6 +292,20 @@ func GapAnalysis(export *exports.ProjectExport, coverage *CoverageReport) *GapRe
 		}
 		if entry.VerificationMethod == MethodTest && len(entry.TestCaseIDs) == 0 {
 			report.RequirementsWithoutTestCase = append(report.RequirementsWithoutTestCase, entry.RequirementID)
+		}
+		// A requirement whose method is anything but test is verified by an
+		// attestation on the artifact, not by a test case, so the bucket
+		// above can never hold it. ComputeCoverage already decides whether
+		// such a requirement counts: it rolls up as verified-manually once
+		// attested and as uncovered until then. Mirroring that branch —
+		// the same open "not test" predicate, not a closed list of the
+		// canonical methods — is what keeps the gap report and the coverage
+		// rollup from telling two different stories when a project carries a
+		// method value the enumeration never anticipated. An uncovered
+		// rollup already implies a non-empty method: a missing one rolls up
+		// as method-missing and belongs to RequirementsWithoutMethod alone.
+		if entry.Rollup == RollupUncovered && entry.VerificationMethod != MethodTest {
+			report.RequirementsUnverified = append(report.RequirementsUnverified, entry.RequirementID)
 		}
 		if entry.Rollup == RollupFail {
 			report.RequirementsFailing = append(report.RequirementsFailing, entry.RequirementID)

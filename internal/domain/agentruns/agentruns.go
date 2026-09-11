@@ -212,6 +212,31 @@ type Run struct {
 	AgentProvider string `json:"agent_provider,omitempty"`
 }
 
+// UntrustedOrigin reports whether this run's *origin* — where its prompt came
+// from, rather than which agent is serving it — carries content authored
+// outside the workspace.
+//
+// Today that is one thing: an interview turn. The prompt of an interview turn
+// is the participant's own transcript, typed on a public invite link by
+// someone who is not a member of the workspace. Trust is a property of that
+// origin, not of a slug: an interview may be bound to any agent
+// (`agent_slug` on create), so pinning "untrusted" to the seeded
+// interviewer's slug would let a workspace hand its interviews to a
+// repo-writing agent and quietly get an auto-approving run (REQ-91, HAZ-1).
+//
+// The flag travels with the queued run and reaches the runner in the claim
+// payload — InterviewSessionID is persisted on agent_runs and serialized into
+// the claim — so no separate column is needed for it to survive a restart or
+// a hand-off to another runner. The worker ORs it with the signals derived
+// from the agent definition (agents.Agent.UntrustedInput) to set
+// RunSpec.Untrusted.
+func (r *Run) UntrustedOrigin() bool {
+	if r == nil {
+		return false
+	}
+	return r.InterviewSessionID != nil
+}
+
 // LogEntry is one streamed event from a run.
 type LogEntry struct {
 	RunID     string                 `json:"run_id"`

@@ -39,8 +39,21 @@ services:
 
   api:
     restart: unless-stopped
+    # Hosted runners (only if you enable them — see the socket warning in
+    # docs/operations.md) are created on the openv-runners network below, and
+    # the API joins it so they can reach it. Postgres does not, so a runner
+    # container has no route to the database.
+    networks:
+      - default
+      - openv-runners
     environment:
       DB_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      # Which network the API attaches hosted runner containers to. Leaving it
+      # unset drops them on the default bridge with every other container.
+      RUNNER_NETWORK: ${RUNNER_NETWORK:-openv-runners}
+      # Processes one runner container may create (fork-bomb ceiling).
+      # 0 = no cap; unset = 256.
+      HOSTED_RUNNER_PIDS_LIMIT: ${HOSTED_RUNNER_PIDS_LIMIT:-}
       CORS_ORIGIN: ${CORS_ORIGIN:?set CORS_ORIGIN in .env (e.g. https://openv.example.com)}
       # Without this, docker-compose.yml falls back to "dev-worker-key" —
       # never acceptable in production, so make it required here.
@@ -86,3 +99,16 @@ services:
       retries: 3
       start_period: 10s
     mem_limit: 256m
+
+# The network hosted runner containers are attached to (RUNNER_NETWORK above).
+# Only the api service joins it, so a runner reaches the API and — because a
+# bridge network has egress — the provider endpoints, and nothing else of
+# yours: not Postgres, not the frontend, not another workspace's services.
+#
+# Egress itself is deliberately open here, since that is how the vendor CLIs
+# reach api.anthropic.com and friends. Narrowing it to the provider hostnames
+# is a host firewall or proxy job — docker networking cannot express it. See
+# docs/operations.md, "Hosted runners: the docker socket, and how to avoid it".
+networks:
+  openv-runners:
+    name: ${RUNNER_NETWORK:-openv-runners}

@@ -172,6 +172,13 @@ func (h *Handler) CreateAgent(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
+	// Validate before the store does, so the definition rules — an allowlist
+	// above all (REQ-91) — answer 400 with their own wording whatever the
+	// service behind this happens to be.
+	if err := def.Validate(); err != nil {
+		writeJSONError(w, http.StatusBadRequest, err.Error())
+		return
+	}
 	// Friendly pre-check; the (org_id, slug) unique index is the real guard,
 	// so a concurrent create that slips past this still conflicts below.
 	if existing, _ := h.agentService.GetBySlug(ActiveOrg(r), def.Slug); existing != nil {
@@ -222,6 +229,12 @@ func (h *Handler) UpdateAgent(w http.ResponseWriter, r *http.Request) {
 	}
 	if def.Slug != slug {
 		writeJSONError(w, http.StatusBadRequest, "slug in body does not match URL")
+		return
+	}
+	// Same rules as on create: an update may not take an agent's allowlist
+	// away either (REQ-91).
+	if err := def.Validate(); err != nil {
+		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	agent, err := h.agentService.SaveDefinition(ActiveOrg(r), &def)

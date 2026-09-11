@@ -234,6 +234,12 @@ func (h *Handler) OIDCCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.provisionPersonalWorkspace(user.ID, user.Name)
+	// The registration policy never applies to single sign-on (the IdP is
+	// doing the admitting), and an invited address joins its workspaces here.
+	// This is reached only past the email_verified check above: the provider
+	// asserting the address as verified is the proof of control that a
+	// membership requires. An unverified — or absent — claim never gets here.
+	h.acceptInvitationsForProviderVerifiedEmail(user.ID, user.Email)
 	h.setSessionCookie(w, token)
 
 	dest := h.oidc.FrontendURL

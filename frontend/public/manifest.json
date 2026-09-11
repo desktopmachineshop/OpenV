@@ -57,10 +57,72 @@
           "type": "image/png"
         }
       ]
+    },
+    {
+      "name": "Review queue",
+      "short_name": "Review",
+      "description": "Suspect links and artifacts waiting for review",
+      "url": "/projects?go=review",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Board",
+      "short_name": "Board",
+      "description": "The work board for your most recent project",
+      "url": "/projects?go=board",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "short_name": "Alerts",
+      "description": "Your notification inbox",
+      "url": "/projects?panel=notifications",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
     }
   ],
   "display_override": [
     "standalone",
     "minimal-ui"
+  ],
+  "screenshots": [
+    {
+      "src": "screenshots/review-queue-phone.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "The review queue: suspect links and artifacts waiting for review"
+    },
+    {
+      "src": "screenshots/board-phone.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "The board: one column at a time, with a card actions sheet"
+    },
+    {
+      "src": "Images/screenshot-requirements.png",
+      "sizes": "2160x1350",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "The requirements workspace: tree, document and notes"
+    }
   ]
 }

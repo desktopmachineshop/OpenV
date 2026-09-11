@@ -3,6 +3,7 @@ package hosting
 import (
 	"errors"
 	"reflect"
+	"slices"
 	"testing"
 
 	"github.com/moby/moby/api/types/container"
@@ -81,6 +82,7 @@ func TestBuildRunnerSpec(t *testing.T) {
 		"wk-secret",
 		map[string]string{"ZED": "z", "ANTHROPIC_API_KEY": "sk-test"},
 		ResourceLimits{MemoryMB: 2048, NanoCPUs: 1e9},
+		defaultPidsLimit,
 	)
 
 	if spec.config.Image != "openv-worker:latest" {
@@ -117,12 +119,25 @@ func TestBuildRunnerSpec(t *testing.T) {
 	if spec.networking != nil {
 		t.Errorf("networking = %+v, want nil when RUNNER_NETWORK is unset", spec.networking)
 	}
+
+	// REQ-96 / HAZ-2: the spec a runner is created from carries the isolation
+	// too, not just the resource caps — see TestHostConfigForHardening for the
+	// field-by-field reasoning.
+	if !slices.Contains(spec.hostConfig.CapDrop, "ALL") {
+		t.Errorf("CapDrop = %v, want ALL", spec.hostConfig.CapDrop)
+	}
+	if !slices.Contains(spec.hostConfig.SecurityOpt, "no-new-privileges:true") {
+		t.Errorf("SecurityOpt = %v, want no-new-privileges:true", spec.hostConfig.SecurityOpt)
+	}
+	if spec.hostConfig.Resources.PidsLimit == nil || *spec.hostConfig.Resources.PidsLimit != defaultPidsLimit {
+		t.Errorf("PidsLimit = %v, want %d", spec.hostConfig.Resources.PidsLimit, defaultPidsLimit)
+	}
 }
 
 // TestBuildRunnerSpecNetworkAndNoCaps: RUNNER_NETWORK attaches the runner to
 // that network, and zero ResourceLimits stay zero ("no cap" to docker).
 func TestBuildRunnerSpecNetworkAndNoCaps(t *testing.T) {
-	spec := buildRunnerSpec("img", "openv-net", "http://api:8080", "org-1", "wk", nil, ResourceLimits{})
+	spec := buildRunnerSpec("img", "openv-net", "http://api:8080", "org-1", "wk", nil, ResourceLimits{}, 0)
 
 	if spec.networking == nil {
 		t.Fatal("networking = nil, want an endpoint for openv-net")
@@ -170,5 +185,86 @@ func TestNewProvisionerDisabledByEnv(t *testing.T) {
 	t.Setenv("HOSTED_RUNNERS", "off")
 	if p := NewProvisioner(); p.Enabled() {
 		t.Errorf("NewProvisioner() enabled with HOSTED_RUNNERS=off")
+	}
+}
+
+// REQ-96 / HAZ-2: a hosted runner container is created with no capabilities,
+// no way to gain privilege, a process cap, and its memory/CPU caps. This is
+// the whole isolation posture of a container that runs a vendor CLI on
+// somebody's prompt, so it is asserted field by field.
+func TestHostConfigForHardening(t *testing.T) {
+	limits := ResourceLimits{MemoryMB: 2048, NanoCPUs: 1e9}
+	cfg := hostConfigFor("openv-runner-org1", limits, defaultPidsLimit)
+
+	if !slices.Contains(cfg.CapDrop, "ALL") {
+		t.Errorf("CapDrop = %v, want ALL", cfg.CapDrop)
+	}
+	if len(cfg.CapAdd) != 0 {
+		t.Errorf("CapAdd = %v, want nothing added back", cfg.CapAdd)
+	}
+	if !slices.Contains(cfg.SecurityOpt, "no-new-privileges:true") {
+		t.Errorf("SecurityOpt = %v, want no-new-privileges:true", cfg.SecurityOpt)
+	}
+	if cfg.Resources.PidsLimit == nil || *cfg.Resources.PidsLimit != defaultPidsLimit {
+		t.Errorf("PidsLimit = %v, want %d", cfg.Resources.PidsLimit, defaultPidsLimit)
+	}
+	if cfg.Resources.Memory != 2048*1024*1024 {
+		t.Errorf("Memory = %d, want %d", cfg.Resources.Memory, int64(2048*1024*1024))
+	}
+	if cfg.Resources.NanoCPUs != 1e9 {
+		t.Errorf("NanoCPUs = %d, want 1e9", cfg.Resources.NanoCPUs)
+	}
+	// The org's data volume is still the only thing mounted — in particular
+	// never the docker socket, which would hand the container the host.
+	if len(cfg.Binds) != 1 || cfg.Binds[0] != "openv-runner-org1:/data" {
+		t.Errorf("Binds = %v, want only the org's data volume", cfg.Binds)
+	}
+	if cfg.Privileged {
+		t.Error("a runner container must never be privileged")
+	}
+	// ReadonlyRootfs is knowingly off: the vendor CLIs in the runner image
+	// write outside /data. If that changes, this test is where to say so.
+	if cfg.ReadonlyRootfs {
+		t.Error("ReadonlyRootfs is set but the runner image writes outside /data; give those paths tmpfs mounts first")
+	}
+}
+
+// A cap of zero is docker's "no limit", and is what an operator gets by
+// deliberately setting HOSTED_RUNNER_PIDS_LIMIT to 0 — so it must not be
+// written as a literal zero, which docker would read as "no processes".
+func TestHostConfigForNoPidsCap(t *testing.T) {
+	cfg := hostConfigFor("v", ResourceLimits{}, 0)
+	if cfg.Resources.PidsLimit != nil {
+		t.Errorf("PidsLimit = %v, want unset", *cfg.Resources.PidsLimit)
+	}
+}
+
+func TestPidsLimit(t *testing.T) {
+	// The pids cgroup counts THREADS, not processes. A node CLI's libuv pool
+	// and V8 workers, a toolchain build and a test run all draw on the same
+	// allowance, so a cap sized as if it were a process count (256) sat close
+	// enough to a real workload's ceiling to abort runs — visible only as a
+	// fork failure deep inside a vendor CLI. It still has to stop a fork bomb,
+	// so it is raised, not removed.
+	if defaultPidsLimit != 1024 {
+		t.Errorf("defaultPidsLimit = %d, want 1024", defaultPidsLimit)
+	}
+	cases := []struct {
+		env  string
+		want int64
+	}{
+		{"", defaultPidsLimit},
+		{"64", 64},
+		{" 512 ", 512},
+		{"0", 0},
+		{"-1", 0},
+		{"banana", defaultPidsLimit}, // never silently unlimited
+	}
+	for _, tc := range cases {
+		// An empty value takes the same path as an unset one.
+		t.Setenv("HOSTED_RUNNER_PIDS_LIMIT", tc.env)
+		if got := PidsLimit(); got != tc.want {
+			t.Errorf("HOSTED_RUNNER_PIDS_LIMIT=%q: PidsLimit() = %d, want %d", tc.env, got, tc.want)
+		}
 	}
 }

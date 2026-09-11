@@ -106,6 +106,42 @@ func TestEmailVerificationRoundTrip(t *testing.T) {
 	}
 }
 
+// MarkEmailVerified records proof of control that did not come from an
+// emailed link — an invitation token delivered to the account's own address.
+// It writes only the verification columns: the address itself is never
+// touched, so it cannot move an account onto one it has not proved.
+func TestMarkEmailVerifiedTouchesOnlyTheVerificationColumns(t *testing.T) {
+	db := testDB(t)
+	initTestSchema(t, db)
+	repo := NewUserRepository(db)
+
+	user := saveTestUser(t, repo, "invited@example.com", users.ProviderPassword, false)
+	at := time.Now().UTC().Truncate(time.Microsecond)
+	if err := repo.MarkEmailVerified(user.ID, at); err != nil {
+		t.Fatalf("MarkEmailVerified: %v", err)
+	}
+	got, err := repo.FindUserByID(user.ID)
+	if err != nil || got == nil {
+		t.Fatalf("FindUserByID: %v", err)
+	}
+	if !got.EmailVerified || got.EmailVerifiedAt == nil {
+		t.Errorf("user = %+v, want verified with a timestamp", got)
+	}
+	if got.Email != "invited@example.com" || got.Name != "Test" || got.AuthProvider != users.ProviderPassword {
+		t.Errorf("MarkEmailVerified changed more than the verification columns: %+v", got)
+	}
+
+	// Verifying again keeps the original timestamp: when they proved it is
+	// history, not something a later write resets.
+	if err := repo.MarkEmailVerified(user.ID, at.Add(time.Hour)); err != nil {
+		t.Fatalf("second MarkEmailVerified: %v", err)
+	}
+	again, _ := repo.FindUserByID(user.ID)
+	if !again.EmailVerifiedAt.Equal(*got.EmailVerifiedAt) {
+		t.Errorf("email_verified_at moved from %v to %v", got.EmailVerifiedAt, again.EmailVerifiedAt)
+	}
+}
+
 // TestEmailVerificationBackfill re-runs the 0024 backfill on rows that
 // predate it: SSO accounts become verified, password accounts stay pending.
 func TestEmailVerificationBackfill(t *testing.T) {

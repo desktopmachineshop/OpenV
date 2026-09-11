@@ -71,27 +71,56 @@ const (
 //	OPENV_SSO_IP_REFILL_PER_HOUR        = 60  SSO starts or callbacks/hour steady state
 //	OPENV_VERIFY_RESEND_BURST           = 3   verification mails instantly per account
 //	OPENV_VERIFY_RESEND_REFILL_PER_HOUR = 6   verification mails/hour steady state
+//	OPENV_INVITE_PREVIEW_BURST          = 60  invite-link previews instantly per address
+//	OPENV_INVITE_PREVIEW_REFILL_PER_HOUR = 240 invite-link previews/hour steady state
+//	OPENV_INVITE_BURST                  = 20  invitations instantly per inviting account
+//	OPENV_INVITE_REFILL_PER_HOUR        = 60  invitations/hour steady state
+//
+// Creating an invitation sends mail to an address the sender chose, so the
+// endpoint is a relay: without a bound, one admin account — or one stolen
+// admin session — could point the deployment's SMTP credentials at a list
+// and spend its sending reputation. The bucket is keyed on the INVITING
+// ACCOUNT rather than the address: an admin's browser and their scripted
+// bulk invite share one budget wherever they run from, and one admin
+// working through a shared office address cannot exhaust their colleagues'.
+//
+// Previewing an invite link gets its own, deliberately generous bucket
+// instead of drawing on the sign-in one. It is not a credential attempt: the
+// token is 256 bits, so the limit only bounds database lookups, and the page
+// re-previews on every reload, second tab, or return to the link after
+// signing out. Charging that against sign-in attempts would let opening an
+// invitation lock somebody out of the account they were invited to use —
+// and a shared office address, where several colleagues open their links the
+// same morning, would run the sign-in bucket down for everyone.
 const (
-	envAuthIPBurst            = "OPENV_AUTH_IP_BURST"
-	envAuthIPRefill           = "OPENV_AUTH_IP_REFILL_PER_HOUR"
-	envAuthAccountBurst       = "OPENV_AUTH_ACCOUNT_BURST"
-	envAuthAccountRefill      = "OPENV_AUTH_ACCOUNT_REFILL_PER_HOUR"
-	envRegisterIPBurst        = "OPENV_REGISTER_IP_BURST"
-	envRegisterIPRefill       = "OPENV_REGISTER_IP_REFILL_PER_HOUR"
-	envSSOIPBurst             = "OPENV_SSO_IP_BURST"
-	envSSOIPRefill            = "OPENV_SSO_IP_REFILL_PER_HOUR"
-	envVerifyResendBurst      = "OPENV_VERIFY_RESEND_BURST"
-	envVerifyResendRefill     = "OPENV_VERIFY_RESEND_REFILL_PER_HOUR"
-	defaultAuthIPBurst        = 30
-	defaultAuthIPRefill       = 120.0
-	defaultAuthAccountBurst   = 5
-	defaultAuthAccountRefill  = 20.0
-	defaultRegisterIPBurst    = 5
-	defaultRegisterIPRefill   = 10.0
-	defaultSSOIPBurst         = 20
-	defaultSSOIPRefill        = 60.0
-	defaultVerifyResendBurst  = 3
-	defaultVerifyResendRefill = 6.0
+	envAuthIPBurst             = "OPENV_AUTH_IP_BURST"
+	envAuthIPRefill            = "OPENV_AUTH_IP_REFILL_PER_HOUR"
+	envAuthAccountBurst        = "OPENV_AUTH_ACCOUNT_BURST"
+	envAuthAccountRefill       = "OPENV_AUTH_ACCOUNT_REFILL_PER_HOUR"
+	envRegisterIPBurst         = "OPENV_REGISTER_IP_BURST"
+	envRegisterIPRefill        = "OPENV_REGISTER_IP_REFILL_PER_HOUR"
+	envSSOIPBurst              = "OPENV_SSO_IP_BURST"
+	envSSOIPRefill             = "OPENV_SSO_IP_REFILL_PER_HOUR"
+	envVerifyResendBurst       = "OPENV_VERIFY_RESEND_BURST"
+	envVerifyResendRefill      = "OPENV_VERIFY_RESEND_REFILL_PER_HOUR"
+	envInvitePreviewBurst      = "OPENV_INVITE_PREVIEW_BURST"
+	envInvitePreviewRefill     = "OPENV_INVITE_PREVIEW_REFILL_PER_HOUR"
+	envInviteBurst             = "OPENV_INVITE_BURST"
+	envInviteRefill            = "OPENV_INVITE_REFILL_PER_HOUR"
+	defaultAuthIPBurst         = 30
+	defaultAuthIPRefill        = 120.0
+	defaultAuthAccountBurst    = 5
+	defaultAuthAccountRefill   = 20.0
+	defaultRegisterIPBurst     = 5
+	defaultRegisterIPRefill    = 10.0
+	defaultSSOIPBurst          = 20
+	defaultSSOIPRefill         = 60.0
+	defaultVerifyResendBurst   = 3
+	defaultVerifyResendRefill  = 6.0
+	defaultInvitePreviewBurst  = 60
+	defaultInvitePreviewRefill = 240.0
+	defaultInviteBurst         = 20
+	defaultInviteRefill        = 60.0
 )
 
 // cleanupEvery bounds how often a limiter sweeps stale buckets, and
