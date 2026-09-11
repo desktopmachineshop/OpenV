@@ -61,7 +61,10 @@ func New(userID, endpoint, p256dh, auth, userAgent string) *Subscription {
 type Repository interface {
 	// Upsert stores a subscription, keyed on its endpoint: an endpoint that
 	// already exists has its keys, user agent and owner refreshed and its
-	// failed_at cleared, so re-posting the same device is idempotent.
+	// failed_at cleared, so re-posting the same device is idempotent. The
+	// row's own identity survives: s is filled in from the PERSISTED row, so
+	// after a re-post s.ID and s.CreatedAt are the existing row's, not the
+	// candidate values the caller generated.
 	Upsert(s *Subscription) error
 	// ListForUser returns the member's devices, newest first.
 	ListForUser(userID string) ([]*Subscription, error)
@@ -79,7 +82,8 @@ type Repository interface {
 
 // Service is the thin domain façade over the repository.
 type Service interface {
-	// Subscribe stores or refreshes one device's subscription.
+	// Subscribe stores or refreshes one device's subscription, filling s in
+	// from the persisted row (see Repository.Upsert).
 	Subscribe(s *Subscription) error
 	ListForUser(userID string) ([]*Subscription, error)
 	// Unsubscribe withdraws one of the caller's own devices.

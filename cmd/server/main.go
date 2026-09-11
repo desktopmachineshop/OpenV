@@ -445,9 +445,14 @@ func main() {
 	pushSubService := pushsubs.NewDefaultService(pushSubRepo)
 	var pushSender notify.PushSender
 	if vapid.Enabled() {
-		pushSender = notify.NewWebPushSender(vapid, nil)
+		// An explicit client: webpush-go's fallback is a bare http.Client
+		// with no timeout, which would let a push service that stops
+		// answering hold a dispatcher worker indefinitely.
+		pushSender = notify.NewWebPushSender(vapid, notify.DefaultPushHTTPClient())
 	}
-	pushDispatcher := notify.NewPushDispatcher(pushSender, pushSubService, userService, emailLinkBase, notify.PushTypesFromEnv())
+	// Push deep links are same-origin paths resolved by the service worker,
+	// so unlike the emails above the dispatcher needs no base URL.
+	pushDispatcher := notify.NewPushDispatcher(pushSender, pushSubService, userService, notify.PushTypesFromEnv())
 
 	// Notification fan-out: bus events become per-user inbox rows plus live
 	// SSE pushes on notify:<user_id> (issue #132), plus a best-effort email

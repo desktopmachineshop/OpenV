@@ -78,8 +78,12 @@ menu) → **Notifications** to choose how the high-signal four reach you:
   Tapping the notification opens OpenV at the thing it is about.
 
   If the switch is greyed out, the text under it says why: the server has no
-  push keys configured, your browser cannot receive push, or notifications
-  are blocked for the site in your browser settings. On an iPhone or iPad,
+  push keys configured, your browser cannot receive push, this site's service
+  worker is unavailable (reload, or leave a private window), or notifications
+  are blocked for the site in your browser settings. The switch reads off
+  until this device is subscribed *and* the server has it on file — if the
+  browser is subscribed but the server is not, it says so and turning it on
+  again re-registers the device. On an iPhone or iPad,
   push only works once OpenV is **installed to the Home Screen** (Share →
   Add to Home Screen).
 

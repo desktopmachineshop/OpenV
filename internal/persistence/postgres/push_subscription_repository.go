@@ -24,8 +24,14 @@ func NewPushSubscriptionRepository(db *sql.DB) *PushSubscriptionRepository {
 // repeat POST of the same endpoint refreshes the keys, the user agent and the
 // owner, and clears any failure mark — so the endpoint stays one row however
 // often the browser rotates its keys.
+//
+// The identity of an existing row is NOT overwritten: RETURNING hands back
+// the id and created_at the row actually has, and they are written back into
+// s. Callers (the handler's 201 body) therefore describe the persisted
+// device, not the candidate they built, and re-posting a known endpoint
+// answers with the same id GET /me/push-subscriptions lists.
 func (r *PushSubscriptionRepository) Upsert(s *pushsubs.Subscription) error {
-	_, err := r.db.Exec(`
+	return r.db.QueryRow(`
 		INSERT INTO push_subscriptions (id, user_id, endpoint, p256dh, auth, user_agent, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		ON CONFLICT (endpoint) DO UPDATE SET
@@ -34,8 +40,8 @@ func (r *PushSubscriptionRepository) Upsert(s *pushsubs.Subscription) error {
 			auth = EXCLUDED.auth,
 			user_agent = EXCLUDED.user_agent,
 			failed_at = NULL
-	`, s.ID, s.UserID, s.Endpoint, s.P256dh, s.Auth, s.UserAgent, s.CreatedAt)
-	return err
+		RETURNING id, created_at
+	`, s.ID, s.UserID, s.Endpoint, s.P256dh, s.Auth, s.UserAgent, s.CreatedAt).Scan(&s.ID, &s.CreatedAt)
 }
 
 const pushSubscriptionColumns = `id, user_id, endpoint, p256dh, auth, COALESCE(user_agent, ''), created_at, last_used_at, failed_at`

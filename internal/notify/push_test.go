@@ -3,7 +3,9 @@ package notify
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -192,7 +194,7 @@ func TestPushDispatcherGates(t *testing.T) {
 	dir := &fakeDirectory{users: map[string]*users.User{"u-1": pushOptedIn("u-1")}}
 
 	// No sender (no VAPID keys configured): a no-op, and Enabled says so.
-	off := NewPushDispatcher(nil, store, dir, "https://openv.example.com", DefaultPushTypes())
+	off := NewPushDispatcher(nil, store, dir, DefaultPushTypes())
 	if off.Enabled() {
 		t.Fatal("a dispatcher with no sender must not report Enabled")
 	}
@@ -208,7 +210,7 @@ func TestPushDispatcherGates(t *testing.T) {
 	nilDispatcher.Wait()
 
 	sender := newFakePushSender()
-	d := NewPushDispatcher(sender, store, dir, "https://openv.example.com", DefaultPushTypes())
+	d := NewPushDispatcher(sender, store, dir, DefaultPushTypes())
 
 	// A type off the allow-list never reaches the sender.
 	d.Dispatch(pushNotification("u-1", notifications.TypeMention))
@@ -248,7 +250,7 @@ func TestPushDispatcherFanOut(t *testing.T) {
 	}}
 	dir := &fakeDirectory{users: map[string]*users.User{"u-1": pushOptedIn("u-1"), "u-2": pushOptedIn("u-2")}}
 	sender := newFakePushSender()
-	d := NewPushDispatcher(sender, store, dir, "https://openv.example.com/", DefaultPushTypes())
+	d := NewPushDispatcher(sender, store, dir, DefaultPushTypes())
 
 	n := pushNotification("u-1", notifications.TypeRunFailed)
 	d.Dispatch(n)
@@ -266,9 +268,9 @@ func TestPushDispatcherFanOut(t *testing.T) {
 	if got.Title != n.Title || got.Body != n.Body {
 		t.Fatalf("payload = %+v, want the notification's title and body", got)
 	}
-	// The deep link matches the in-app bell and the email, with the trailing
-	// slash trimmed off the base.
-	if want := "https://openv.example.com/projects/proj-1/agent-runs?run=run-9"; got.URL != want {
+	// The deep link is a same-origin PATH: the service worker navigates an
+	// open window to it, and navigate() refuses a cross-origin URL.
+	if want := "/projects/proj-1/agent-runs?run=run-9"; got.URL != want {
 		t.Fatalf("url = %q, want %q", got.URL, want)
 	}
 	// Coalescing is scoped per type and project.
@@ -301,7 +303,7 @@ func TestPushDispatcherOutcomes(t *testing.T) {
 	sender.status[rateSub.Endpoint] = http.StatusTooManyRequests
 	sender.err[brokenSub.Endpoint] = errors.New("dial tcp: connection refused")
 
-	d := NewPushDispatcher(sender, store, dir, "https://openv.example.com", DefaultPushTypes())
+	d := NewPushDispatcher(sender, store, dir, DefaultPushTypes())
 	d.Dispatch(pushNotification("u-1", notifications.TypeProposalPending))
 	d.Wait()
 
@@ -317,29 +319,153 @@ func TestPushDispatcherOutcomes(t *testing.T) {
 	}
 }
 
-// TestPushDispatcherBoundedConcurrency: however many devices a member has,
-// the dispatcher never has more than pushConcurrency sends in flight.
+// TestPushDispatcherBoundedConcurrency: however many notifications are
+// dispatched, and however many devices each recipient has, the worker pool
+// never has more than pushWorkers sends in flight — and it is still doing
+// them concurrently.
 func TestPushDispatcherBoundedConcurrency(t *testing.T) {
 	var subs []*pushsubs.Subscription
-	for i := 0; i < pushConcurrency*4; i++ {
-		subs = append(subs, pushsubs.New("u-1", "https://push.example.com/"+string(rune('a'+i)), "p", "a", "device"))
+	for i := 0; i < 4; i++ {
+		subs = append(subs, pushsubs.New("u-1", fmt.Sprintf("https://push.example.com/%d", i), "p", "a", "device"))
 	}
 	store := &fakeSubStore{subs: map[string][]*pushsubs.Subscription{"u-1": subs}}
 	dir := &fakeDirectory{users: map[string]*users.User{"u-1": pushOptedIn("u-1")}}
 	sender := newFakePushSender()
-	d := NewPushDispatcher(sender, store, dir, "https://openv.example.com", DefaultPushTypes())
+	d := NewPushDispatcher(sender, store, dir, DefaultPushTypes())
 
-	d.Dispatch(pushNotification("u-1", notifications.TypeReviewRequested))
+	for i := 0; i < pushWorkers*4; i++ {
+		d.Dispatch(pushNotification("u-1", notifications.TypeReviewRequested))
+	}
 	d.Wait()
 
 	sender.mu.Lock()
 	peak := sender.maxSeen
 	sender.mu.Unlock()
-	if peak > pushConcurrency {
-		t.Fatalf("%d sends were in flight at once, want at most %d", peak, pushConcurrency)
+	if peak > pushWorkers {
+		t.Fatalf("%d sends were in flight at once, want at most %d", peak, pushWorkers)
 	}
 	if peak < 2 {
-		t.Fatalf("sends were fully serialized (peak %d); the fan-out is not concurrent", peak)
+		t.Fatalf("sends were fully serialized (peak %d); the pool is not concurrent", peak)
+	}
+	if d.Dropped() != 0 {
+		t.Fatalf("%d notifications were dropped with a queue %d deep", d.Dropped(), pushQueueDepth)
+	}
+}
+
+// blockingPushSender holds every send until released — a push service that
+// accepts the connection and then says nothing.
+type blockingPushSender struct {
+	release chan struct{}
+	mu      sync.Mutex
+	sent    int
+}
+
+func (b *blockingPushSender) Send(*pushsubs.Subscription, []byte) (int, error) {
+	<-b.release
+	b.mu.Lock()
+	b.sent++
+	b.mu.Unlock()
+	return http.StatusCreated, nil
+}
+
+func (b *blockingPushSender) count() int {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.sent
+}
+
+// TestPushDispatcherDoesNotBlockOnAStalledPushService: with every worker
+// stuck in a send that outlives any timeout, Dispatch still returns at once.
+// Notifications queue up to pushQueueDepth and are then DROPPED — counted,
+// not blocked on — so the notification path (and the request that triggered
+// it) is never pinned by a push service that has stopped answering.
+func TestPushDispatcherDoesNotBlockOnAStalledPushService(t *testing.T) {
+	sub := pushsubs.New("u-1", "https://push.example.com/stuck", "p", "a", "device")
+	store := &fakeSubStore{subs: map[string][]*pushsubs.Subscription{"u-1": {sub}}}
+	dir := &fakeDirectory{users: map[string]*users.User{"u-1": pushOptedIn("u-1")}}
+	sender := &blockingPushSender{release: make(chan struct{})}
+	d := NewPushDispatcher(sender, store, dir, DefaultPushTypes())
+
+	total := pushQueueDepth + pushWorkers + 64
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		for i := 0; i < total; i++ {
+			d.Dispatch(pushNotification("u-1", notifications.TypeRunFailed))
+		}
+	}()
+	select {
+	case <-done:
+	case <-time.After(30 * time.Second):
+		t.Fatal("Dispatch blocked on a stalled push service")
+	}
+
+	dropped := d.Dropped()
+	if dropped == 0 {
+		t.Fatalf("%d notifications were dispatched into a queue %d deep, yet none was dropped",
+			total, pushQueueDepth)
+	}
+	if dropped > int64(total) {
+		t.Fatalf("dropped = %d, more than the %d dispatched", dropped, total)
+	}
+
+	// Released, the queued work drains: nothing is lost but the drops.
+	close(sender.release)
+	d.Wait()
+	if got, want := sender.count(), total-int(dropped); got != want {
+		t.Fatalf("sent %d messages, want the %d that were queued", got, want)
+	}
+}
+
+// TestWebPushSenderAlwaysHasARequestTimeout: webpush-go falls back to a bare
+// http.Client — no timeout at all — when handed a nil client, which is how a
+// single unresponsive push service would hold a worker forever.
+func TestWebPushSenderAlwaysHasARequestTimeout(t *testing.T) {
+	cfg := VAPIDConfig{PublicKey: "pub", PrivateKey: "priv", Subject: "mailto:ops@example.com"}
+
+	client, ok := NewWebPushSender(cfg, nil).client.(*http.Client)
+	if !ok {
+		t.Fatal("a nil client was passed straight through to webpush-go")
+	}
+	if client.Timeout != pushRequestTimeout {
+		t.Fatalf("default client timeout = %v, want %v", client.Timeout, pushRequestTimeout)
+	}
+	if DefaultPushHTTPClient().Timeout <= 0 {
+		t.Fatal("DefaultPushHTTPClient has no timeout")
+	}
+
+	// An explicit client is honoured as given.
+	custom := &http.Client{Timeout: time.Second}
+	if got, ok := NewWebPushSender(cfg, custom).client.(*http.Client); !ok || got != custom {
+		t.Fatalf("client = %v, want the one passed in", got)
+	}
+}
+
+// TestRenderPushURLIsASameOriginPath: the payload url is a PATH, never an
+// absolute link. The service worker follows a tap with
+// WindowClient.navigate, which rejects a cross-origin URL — and an absolute
+// link built from FRONTEND_URL is cross-origin the moment the deployment is
+// reached by any other name.
+func TestRenderPushURLIsASameOriginPath(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		ref  map[string]interface{}
+		want string
+	}{
+		{"run", map[string]interface{}{"kind": "run", "run_id": "run-9", "project_id": "proj-1"}, "/projects/proj-1/agent-runs?run=run-9"},
+		{"artifact", map[string]interface{}{"kind": "artifact", "project_id": "proj-1"}, "/projects/proj-1/requirements"},
+		{"budget alert", map[string]interface{}{"kind": "org_usage", "org_id": "org-1"}, "/org/settings?tab=usage"},
+		{"no ref", nil, "/projects"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got := renderPush(notifications.New("org-1", "u-1", notifications.TypeRunFailed, "Title", "Body", tc.ref)).URL
+			if got != tc.want {
+				t.Fatalf("url = %q, want %q", got, tc.want)
+			}
+			if !strings.HasPrefix(got, "/") || strings.Contains(got, "://") {
+				t.Fatalf("url = %q, want a same-origin path", got)
+			}
+		})
 	}
 }
 
@@ -349,13 +475,13 @@ func TestPushDispatcherStoreErrors(t *testing.T) {
 	sender := newFakePushSender()
 
 	dirErr := &fakeDirectory{err: errors.New("db down")}
-	d := NewPushDispatcher(sender, &fakeSubStore{}, dirErr, "https://openv.example.com", DefaultPushTypes())
+	d := NewPushDispatcher(sender, &fakeSubStore{}, dirErr, DefaultPushTypes())
 	d.Dispatch(pushNotification("u-1", notifications.TypeRunFailed))
 	d.Wait()
 
 	storeErr := &fakeSubStore{err: errors.New("db down")}
 	dir := &fakeDirectory{users: map[string]*users.User{"u-1": pushOptedIn("u-1")}}
-	d = NewPushDispatcher(sender, storeErr, dir, "https://openv.example.com", DefaultPushTypes())
+	d = NewPushDispatcher(sender, storeErr, dir, DefaultPushTypes())
 	d.Dispatch(pushNotification("u-1", notifications.TypeRunFailed))
 	d.Wait()
 
@@ -411,7 +537,7 @@ func TestNotifierDispatchesPush(t *testing.T) {
 		"u-viewer": pushOptedIn("u-viewer"),
 	}}
 	sender := newFakePushSender()
-	push := NewPushDispatcher(sender, subs, dir, "https://openv.example.com", DefaultPushTypes())
+	push := NewPushDispatcher(sender, subs, dir, DefaultPushTypes())
 
 	n := NewNotifier(store, memberSvc, broadcaster).SetPushDispatcher(push)
 	n.Handle(domainevents.Event{
@@ -438,7 +564,7 @@ func TestNotifierDispatchesPush(t *testing.T) {
 	if got.Title != "Agent proposal pending review" {
 		t.Fatalf("push title = %q", got.Title)
 	}
-	if want := "https://openv.example.com/projects/proj-1/agent-runs?run=run-9"; got.URL != want {
+	if want := "/projects/proj-1/agent-runs?run=run-9"; got.URL != want {
 		t.Fatalf("push url = %q, want %q", got.URL, want)
 	}
 }

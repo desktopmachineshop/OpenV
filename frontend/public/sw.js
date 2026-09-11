@@ -67,6 +67,19 @@ self.addEventListener('push', (event) => {
 // A tap focuses an OpenV window that is already open — navigating it to the
 // deep link — and only opens a new one when there is none. Two windows of a
 // collaborative app are rarely what anyone wanted.
+//
+// `target` is a same-origin PATH (internal/notify/push.go builds it that way):
+// WindowClient.navigate rejects anything cross-origin, and a URL that is not
+// exactly this origin — a deployment reached by a second hostname, an
+// absolute link built from a misconfigured FRONTEND_URL — is cross-origin.
+// Should navigate reject anyway, opening a window still gets the member where
+// they tapped to go, so a rejection falls back to openWindow rather than
+// swallowing the tap.
+function openTarget(target) {
+  if (self.clients.openWindow) return self.clients.openWindow(target);
+  return undefined;
+}
+
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const target = (event.notification.data && event.notification.data.url) || '/';
@@ -76,12 +89,14 @@ self.addEventListener('notificationclick', (event) => {
         if (!('focus' in client)) continue;
         // Same origin (matchAll is origin-scoped) — reuse this window.
         if ('navigate' in client) {
-          return client.focus().then((focused) => (focused || client).navigate(target));
+          return client
+            .focus()
+            .then((focused) => (focused || client).navigate(target))
+            .catch(() => openTarget(target));
         }
         return client.focus();
       }
-      if (self.clients.openWindow) return self.clients.openWindow(target);
-      return undefined;
+      return openTarget(target);
     })
   );
 });

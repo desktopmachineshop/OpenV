@@ -82,6 +82,15 @@ func TestPushSubscriptionRepository(t *testing.T) {
 	if rotated.ID != phone.ID {
 		t.Fatalf("re-subscribe changed the row id: %s -> %s", phone.ID, rotated.ID)
 	}
+	// Upsert fills the CANDIDATE in from the persisted row (RETURNING), so
+	// the handler's 201 body describes the device on file rather than the row
+	// it would have inserted had the endpoint been new.
+	if again.ID != phone.ID {
+		t.Fatalf("Upsert left the candidate id at %s, want the persisted %s", again.ID, phone.ID)
+	}
+	if !again.CreatedAt.Equal(phone.CreatedAt) {
+		t.Fatalf("Upsert left created_at at %v, want the persisted %v", again.CreatedAt, phone.CreatedAt)
+	}
 
 	// Marks: a failure stamps failed_at; a later success clears it.
 	failedAt := time.Now().Truncate(time.Microsecond)

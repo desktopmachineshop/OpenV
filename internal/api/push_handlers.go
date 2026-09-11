@@ -2,8 +2,12 @@ package api
 
 import (
 	"encoding/json"
+	"net"
 	"net/http"
+	"net/url"
+	"os"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/gorilla/mux"
 	"github.com/openv/requirements-platform/internal/domain/pushsubs"
@@ -21,9 +25,35 @@ const (
 	// maxPushKeyLen bounds the base64url client keys (p256dh is 65 bytes
 	// encoded to 88 chars, auth 16 bytes to 24).
 	maxPushKeyLen = 256
-	// maxPushUserAgentLen bounds the cosmetic device label.
+	// maxPushUserAgentLen bounds the cosmetic device label, in RUNES.
 	maxPushUserAgentLen = 400
+
+	// envPushEndpointHosts names extra push-service hosts a self-hosted
+	// deployment accepts, on top of the built-in list. Comma-separated;
+	// entries may be exact hosts or a leading-wildcard pattern
+	// ("*.push.example.net").
+	envPushEndpointHosts = "OPENV_PUSH_ENDPOINT_HOSTS"
 )
+
+// defaultPushEndpointHosts is the allow-list of push services a subscription
+// endpoint may point at. A subscription endpoint is a URL this server will
+// later POST to, unauthenticated and from inside the deployment's network, so
+// "any https URL" is a server-side request forgery primitive: an endpoint is
+// only ever minted by a browser's push service, and those are these.
+//
+// Matching is on the host alone and never resolves a name — DNS would only
+// add a TOCTOU window (a name that answers with a public address now can
+// answer with 169.254.169.254 at send time). The allow-list IS the guard, so
+// it holds names only: an address literal is refused outright, including one
+// reached through the override.
+var defaultPushEndpointHosts = []string{
+	"fcm.googleapis.com",                // Chrome, Chromium, Android
+	"*.push.apple.com",                  // Safari, iOS / iPadOS / macOS
+	"*.notify.windows.com",              // Edge (Windows Notification Service)
+	"push.services.mozilla.com",         // Firefox
+	"updates.push.services.mozilla.com", // Firefox (current autopush host)
+	"*.push.services.mozilla.com",       // Firefox (regional autopush hosts)
+}
 
 func (h *Handler) registerPushRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/me/push/config", h.GetPushConfig).Methods("GET")
@@ -126,10 +156,12 @@ func (h *Handler) CreatePushSubscription(w http.ResponseWriter, r *http.Request)
 	if userAgent == "" {
 		userAgent = strings.TrimSpace(r.UserAgent())
 	}
-	if len(userAgent) > maxPushUserAgentLen {
-		userAgent = userAgent[:maxPushUserAgentLen]
-	}
+	userAgent = truncateRunes(userAgent, maxPushUserAgentLen)
 
+	// Subscribe fills sub in from the PERSISTED row (the upsert returns it),
+	// so a re-post of a device already on file answers with that row's id and
+	// created_at rather than the ones generated a moment ago for a row that
+	// was never inserted — the 201 body matches what GET lists.
 	sub := pushsubs.New(userID, endpoint, p256dh, auth, userAgent)
 	if err := h.pushSubService.Subscribe(sub); err != nil {
 		respondInternal(w, r, "failed to store push subscription", err)
@@ -140,16 +172,25 @@ func (h *Handler) CreatePushSubscription(w http.ResponseWriter, r *http.Request)
 	json.NewEncoder(w).Encode(sub)
 }
 
+// truncateRunes cuts s to at most max runes. Slicing bytes instead would cut
+// a multi-byte character in half — a user agent is free text from the browser
+// and routinely carries non-ASCII — and store a string ending in an invalid
+// UTF-8 sequence, which postgres refuses outright. Same rule as
+// notify.truncate, minus the ellipsis: this is a device label, not prose.
+func truncateRunes(s string, max int) string {
+	// A string of at most max BYTES cannot hold more than max runes.
+	if len(s) <= max || utf8.RuneCountInString(s) <= max {
+		return s
+	}
+	return string([]rune(s)[:max])
+}
+
 // validatePushSubscription answers a client-facing message, or "" when the
 // subscription is well-formed enough to store.
 func validatePushSubscription(endpoint, p256dh, auth string) string {
 	switch {
 	case endpoint == "":
 		return "endpoint is required"
-	case !strings.HasPrefix(endpoint, "https://"):
-		// Push services are https-only; anything else is a mistake or an
-		// attempt to make the server post somewhere it should not.
-		return "endpoint must be an https URL"
 	case len(endpoint) > maxPushEndpointLen:
 		return "endpoint is too long"
 	case p256dh == "" || auth == "":
@@ -157,7 +198,70 @@ func validatePushSubscription(endpoint, p256dh, auth string) string {
 	case len(p256dh) > maxPushKeyLen || len(auth) > maxPushKeyLen:
 		return "keys are too long"
 	}
+	return validatePushEndpoint(endpoint)
+}
+
+// validatePushEndpoint answers "" when the endpoint is an https URL at a
+// known push service, and a client-facing message otherwise. See
+// defaultPushEndpointHosts for why the host is checked against a list rather
+// than merely required to be https.
+func validatePushEndpoint(endpoint string) string {
+	u, err := url.Parse(endpoint)
+	if err != nil || u.Scheme != "https" || u.Host == "" {
+		// Push services are https-only; anything else is a mistake or an
+		// attempt to make the server post somewhere it should not.
+		return "endpoint must be an https URL"
+	}
+	if u.User != nil {
+		return "endpoint must not carry credentials"
+	}
+	if port := u.Port(); port != "" && port != "443" {
+		return "endpoint must use the default https port"
+	}
+	host := strings.ToLower(strings.TrimSuffix(u.Hostname(), "."))
+	// An address literal can never be a push service, and is the shape an
+	// SSRF attempt takes (127.0.0.1, 169.254.169.254, 10.x). Refused before
+	// the allow-list so an over-broad override cannot let one through.
+	if net.ParseIP(host) != nil {
+		return "endpoint must name a known push service"
+	}
+	if !pushEndpointHostAllowed(host) {
+		return "endpoint is not a known push service; a self-hosted push service must be listed in " + envPushEndpointHosts
+	}
 	return ""
+}
+
+// pushEndpointHostAllowed matches a host against the built-in list plus the
+// operator's additions. Read from the environment per call: the list is a few
+// entries long, this runs once per subscribe, and it keeps the override
+// changeable without a restart-shaped cache.
+func pushEndpointHostAllowed(host string) bool {
+	for _, pattern := range pushEndpointHostPatterns() {
+		if matchPushEndpointHost(pattern, host) {
+			return true
+		}
+	}
+	return false
+}
+
+func pushEndpointHostPatterns() []string {
+	patterns := append([]string(nil), defaultPushEndpointHosts...)
+	for _, extra := range strings.Split(os.Getenv(envPushEndpointHosts), ",") {
+		if extra = strings.ToLower(strings.TrimSpace(strings.TrimSuffix(strings.TrimSpace(extra), "."))); extra != "" {
+			patterns = append(patterns, extra)
+		}
+	}
+	return patterns
+}
+
+// matchPushEndpointHost compares one pattern to one host. "*.example.com"
+// matches any SUBDOMAIN of example.com and not example.com itself; anything
+// else is an exact match.
+func matchPushEndpointHost(pattern, host string) bool {
+	if suffix, ok := strings.CutPrefix(pattern, "*"); ok {
+		return strings.HasSuffix(host, suffix) && len(host) > len(suffix)
+	}
+	return host == pattern
 }
 
 // DeletePushSubscription withdraws one of the caller's own devices. 204

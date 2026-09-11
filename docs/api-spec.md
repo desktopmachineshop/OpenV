@@ -329,9 +329,21 @@ devices. Off unless the server has a VAPID key pair (`docs/operations.md`).
 | POST | `/api/v1/me/push-subscriptions` | Register this device: `{endpoint, keys:{p256dh, auth}, user_agent?}` → 201. Idempotent on `endpoint`: re-posting refreshes the keys | user |
 | DELETE | `/api/v1/me/push-subscriptions` | Withdraw a device: `{endpoint}` → 204 (204 too when nothing was there) | user |
 
-`endpoint` must be an `https` URL. A push service that answers 404 or 410
-deletes the subscription server-side; any other failure stamps `failed_at`
-and keeps the row, which a later successful send clears.
+`endpoint` must be an `https` URL on port 443, with no credentials, whose
+host is a known push service: `fcm.googleapis.com`, `*.push.apple.com`,
+`*.notify.windows.com`, `push.services.mozilla.com`,
+`updates.push.services.mozilla.com` or `*.push.services.mozilla.com`, plus any
+host listed in `OPENV_PUSH_ENDPOINT_HOSTS` (comma-separated, exact or
+leading-wildcard, for a self-hosted push service — see `docs/operations.md`).
+Anything else, including an address literal, is **400**; no name is resolved.
+
+The 201 body is the **persisted** row, so re-posting a device already on file
+answers with the same `id` and `created_at` that `GET
+/api/v1/me/push-subscriptions` lists.
+
+A push service that answers 404 or 410 deletes the subscription server-side;
+any other failure stamps `failed_at` and keeps the row, which a later
+successful send clears.
 
 ### Meta
 

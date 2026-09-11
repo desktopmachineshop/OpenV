@@ -6,7 +6,7 @@ import { ProviderSetting, providerSettingsAPI, notificationPrefsAPI, pushAPI } f
 import {
   PushUnavailableReason,
   currentPermission,
-  getExistingSubscription,
+  reconcileThisDevice,
   subscribeThisDevice,
   supportsPush,
   unsubscribeThisDevice,
@@ -44,11 +44,15 @@ export const UserSettingsPanel: React.FC<UserSettingsPanelProps> = ({ onClose })
   const [emailNotifications, setEmailNotifications] = useState<boolean>(true);
   const [emailPrefSaving, setEmailPrefSaving] = useState(false);
 
-  // Web push on THIS device (REQ-109). Three things have to line up: the
-  // server has VAPID keys, the browser has the APIs, and the member has both
-  // granted permission and subscribed here. pushOn is true only when all
-  // three hold; pushUnavailable says which one does not.
+  // Web push on THIS device (REQ-109). Four things have to line up: the
+  // server has VAPID keys, the browser has the APIs and a service worker, the
+  // member has granted permission, and a subscription taken with the CURRENT
+  // key exists here AND is on file server-side. pushOn is true only when all
+  // of them hold; pushUnavailable says which one does not, and pushStale
+  // marks the one case where the browser is subscribed but the server is not
+  // — the toggle is offered, and turning it on re-registers this device.
   const [pushOn, setPushOn] = useState(false);
+  const [pushStale, setPushStale] = useState(false);
   const [pushKey, setPushKey] = useState('');
   const [pushUnavailable, setPushUnavailable] = useState<PushUnavailableReason>('');
   const [pushSaving, setPushSaving] = useState(false);
@@ -69,8 +73,11 @@ export const UserSettingsPanel: React.FC<UserSettingsPanelProps> = ({ onClose })
     };
   }, []);
 
-  // Reflect the real state of this device: the server's configuration, the
-  // browser's permission, and whether a subscription already exists here.
+  // Reflect the real state of this device, reconciled with the server: the
+  // deployment's configuration, the browser's permission, and whether a
+  // subscription taken with the current key exists here AND is one of the
+  // devices the server has on file. Anything less is shown as off — a toggle
+  // that says "on" while nothing will ever arrive is worse than no toggle.
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -91,8 +98,14 @@ export const UserSettingsPanel: React.FC<UserSettingsPanelProps> = ({ onClose })
           return;
         }
         setPushUnavailable('');
-        const existing = await getExistingSubscription();
-        if (!cancelled) setPushOn(Boolean(existing) && currentPermission() === 'granted');
+        const state = await reconcileThisDevice(res.data.public_key);
+        if (cancelled) return;
+        if (state.status === 'unavailable') {
+          setPushUnavailable(state.reason);
+          return;
+        }
+        setPushOn(state.status === 'on' && currentPermission() === 'granted');
+        setPushStale(state.status === 'unregistered');
       } catch {
         // The config endpoint is the only signal that push exists at all; if
         // it cannot be read, present push as unavailable rather than offering
@@ -135,6 +148,7 @@ export const UserSettingsPanel: React.FC<UserSettingsPanelProps> = ({ onClose })
         await notificationPrefsAPI.update({ push_notifications: true });
         setPushOn(true);
       }
+      setPushStale(false);
     } catch (err) {
       setPushError(err instanceof Error ? err.message : 'Could not change push notifications.');
       if (currentPermission() === 'denied') setPushUnavailable('denied');
@@ -151,6 +165,8 @@ export const UserSettingsPanel: React.FC<UserSettingsPanelProps> = ({ onClose })
         return 'Push notifications are not configured on this server.';
       case 'denied':
         return 'Notifications are blocked for this site. Allow them in your browser settings, then try again.';
+      case 'no-service-worker':
+        return 'The service worker for this site is unavailable, so push cannot be set up here. Reload the page, or try again outside a private window.';
       default:
         return '';
     }
@@ -344,6 +360,12 @@ export const UserSettingsPanel: React.FC<UserSettingsPanelProps> = ({ onClose })
               {pushUnavailable && (
                 <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '6px 0 0' }}>
                   {pushUnavailableText(pushUnavailable)}
+                </p>
+              )}
+              {!pushUnavailable && pushStale && (
+                <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '6px 0 0' }}>
+                  This browser is subscribed, but this server has no record of it. Turn push on
+                  again to re-register this device.
                 </p>
               )}
               {pushError && !pushUnavailable && (

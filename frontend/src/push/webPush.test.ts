@@ -1,7 +1,11 @@
 import {
+  NO_SERVICE_WORKER_MESSAGE,
+  SERVICE_WORKER_READY_TIMEOUT_MS,
   currentPermission,
   getExistingSubscription,
+  getServiceWorkerRegistration,
   matchesApplicationServerKey,
+  reconcileThisDevice,
   subscribeThisDevice,
   supportsPush,
   unsubscribeThisDevice,
@@ -41,26 +45,48 @@ const fakeSubscription = (endpoint = 'https://push.example.com/abc'): FakeSubscr
 });
 
 // installPushAPIs fakes the three browser APIs webPush feature-detects.
+//
+// `registered: false` is a container that has no registration yet (so `ready`
+// is consulted); `readyHangs` is the case that used to wedge the toggle at
+// "Working…" — `ready` never settles, as it does not when registration failed
+// or the worker script 404s; `hasGetRegistration: false` is an older browser
+// without getRegistration at all.
 const installPushAPIs = (opts: {
   permission?: NotificationPermission;
   requestPermission?: NotificationPermission;
   existing?: FakeSubscription | null;
   subscribeResult?: FakeSubscription;
+  registered?: boolean;
+  readyHangs?: boolean;
+  hasGetRegistration?: boolean;
 }) => {
   const subscribe = jest.fn().mockResolvedValue(opts.subscribeResult || fakeSubscription());
   const getSubscription = jest.fn().mockResolvedValue(opts.existing ?? null);
   const requestPermission = jest.fn().mockResolvedValue(opts.requestPermission || 'granted');
+  const registration = { pushManager: { subscribe, getSubscription } };
 
   (window as any).Notification = {
     permission: opts.permission || 'default',
     requestPermission,
   };
   (window as any).PushManager = function PushManager() {};
+  const container: any = {
+    ready: opts.readyHangs ? new Promise(() => {}) : Promise.resolve(registration),
+  };
+  const getRegistration = jest
+    .fn()
+    .mockResolvedValue(opts.registered === false ? undefined : registration);
+  if (opts.hasGetRegistration !== false) container.getRegistration = getRegistration;
   Object.defineProperty(window.navigator, 'serviceWorker', {
     configurable: true,
-    value: { ready: Promise.resolve({ pushManager: { subscribe, getSubscription } }) },
+    value: container,
   });
-  return { subscribe, getSubscription, requestPermission };
+  return { subscribe, getSubscription, requestPermission, getRegistration, registration };
+};
+
+/** Lets every already-resolved promise in the chain settle. */
+const flushMicrotasks = async () => {
+  for (let i = 0; i < 8; i += 1) await Promise.resolve();
 };
 
 const removePushAPIs = () => {
@@ -73,6 +99,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   api.subscribe.mockResolvedValue({ data: {} } as any);
   api.unsubscribe.mockResolvedValue({ data: undefined } as any);
+  api.list.mockResolvedValue({ data: { subscriptions: [] } } as any);
 });
 
 afterEach(removePushAPIs);
@@ -114,6 +141,39 @@ describe('currentPermission', () => {
   });
 });
 
+describe('getServiceWorkerRegistration', () => {
+  it('asks getRegistration first, without touching ready', async () => {
+    const { getRegistration, registration } = installPushAPIs({});
+    await expect(getServiceWorkerRegistration()).resolves.toBe(registration);
+    expect(getRegistration).toHaveBeenCalled();
+  });
+
+  it('falls back to ready when nothing is registered yet', async () => {
+    const { registration } = installPushAPIs({ registered: false });
+    await expect(getServiceWorkerRegistration()).resolves.toBe(registration);
+  });
+
+  it('still works on a browser with no getRegistration', async () => {
+    const { registration } = installPushAPIs({ hasGetRegistration: false });
+    await expect(getServiceWorkerRegistration()).resolves.toBe(registration);
+  });
+
+  // The defect this guards: `ready` never settles when registration failed or
+  // was blocked, so awaiting it hung the caller forever with nothing to show.
+  it('gives up on a ready that never settles instead of hanging', async () => {
+    jest.useFakeTimers();
+    try {
+      installPushAPIs({ registered: false, readyHangs: true });
+      const pending = getServiceWorkerRegistration();
+      await flushMicrotasks();
+      jest.advanceTimersByTime(SERVICE_WORKER_READY_TIMEOUT_MS);
+      await expect(pending).resolves.toBeNull();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+});
+
 describe('getExistingSubscription', () => {
   it('answers null on a browser without push', async () => {
     removePushAPIs();
@@ -124,6 +184,91 @@ describe('getExistingSubscription', () => {
     const existing = fakeSubscription();
     installPushAPIs({ existing });
     await expect(getExistingSubscription()).resolves.toBe(existing);
+  });
+
+  it('answers null, rather than hanging, when no service worker turns up', async () => {
+    jest.useFakeTimers();
+    try {
+      installPushAPIs({ existing: fakeSubscription(), registered: false, readyHangs: true });
+      const pending = getExistingSubscription();
+      await flushMicrotasks();
+      jest.advanceTimersByTime(SERVICE_WORKER_READY_TIMEOUT_MS);
+      await expect(pending).resolves.toBeNull();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+});
+
+describe('reconcileThisDevice', () => {
+  it('is on only when the server also knows the endpoint', async () => {
+    const existing = fakeSubscription();
+    installPushAPIs({ existing, permission: 'granted' });
+    api.list.mockResolvedValue({
+      data: { subscriptions: [{ id: 's-1', endpoint: existing.endpoint }] },
+    } as any);
+
+    await expect(reconcileThisDevice(PUBLIC_KEY)).resolves.toEqual({
+      status: 'on',
+      subscription: existing,
+    });
+  });
+
+  it('reports a browser subscription the server has never heard of', async () => {
+    const existing = fakeSubscription();
+    installPushAPIs({ existing, permission: 'granted' });
+    api.list.mockResolvedValue({
+      data: { subscriptions: [{ id: 's-9', endpoint: 'https://push.example.com/someone-else' }] },
+    } as any);
+
+    await expect(reconcileThisDevice(PUBLIC_KEY)).resolves.toEqual({
+      status: 'unregistered',
+      subscription: existing,
+    });
+  });
+
+  it('is off when this device has no subscription', async () => {
+    installPushAPIs({ existing: null });
+    await expect(reconcileThisDevice(PUBLIC_KEY)).resolves.toEqual({ status: 'off' });
+    expect(api.list).not.toHaveBeenCalled();
+  });
+
+  it('is off when the subscription was taken with another VAPID key', async () => {
+    const stale = fakeSubscription();
+    stale.options = { applicationServerKey: urlBase64ToUint8Array('AAAA').buffer };
+    installPushAPIs({ existing: stale, permission: 'granted' });
+
+    await expect(reconcileThisDevice(PUBLIC_KEY)).resolves.toEqual({ status: 'off' });
+    expect(api.list).not.toHaveBeenCalled();
+  });
+
+  it('is off, not on, when the device list cannot be read', async () => {
+    installPushAPIs({ existing: fakeSubscription(), permission: 'granted' });
+    api.list.mockRejectedValue(new Error('offline'));
+
+    await expect(reconcileThisDevice(PUBLIC_KEY)).resolves.toEqual({ status: 'off' });
+  });
+
+  it('reports an unsupported browser and an unavailable service worker', async () => {
+    removePushAPIs();
+    await expect(reconcileThisDevice(PUBLIC_KEY)).resolves.toEqual({
+      status: 'unavailable',
+      reason: 'unsupported',
+    });
+
+    jest.useFakeTimers();
+    try {
+      installPushAPIs({ registered: false, readyHangs: true });
+      const pending = reconcileThisDevice(PUBLIC_KEY);
+      await flushMicrotasks();
+      jest.advanceTimersByTime(SERVICE_WORKER_READY_TIMEOUT_MS);
+      await expect(pending).resolves.toEqual({
+        status: 'unavailable',
+        reason: 'no-service-worker',
+      });
+    } finally {
+      jest.useRealTimers();
+    }
   });
 });
 
@@ -167,6 +312,21 @@ describe('subscribeThisDevice', () => {
   it('refuses on a browser without push', async () => {
     removePushAPIs();
     await expect(subscribeThisDevice(PUBLIC_KEY)).rejects.toThrow(/does not support/i);
+  });
+
+  it('says the service worker is unavailable rather than hanging', async () => {
+    jest.useFakeTimers();
+    try {
+      const { subscribe } = installPushAPIs({ registered: false, readyHangs: true });
+      const pending = subscribeThisDevice(PUBLIC_KEY);
+      await flushMicrotasks();
+      jest.advanceTimersByTime(SERVICE_WORKER_READY_TIMEOUT_MS);
+      await expect(pending).rejects.toThrow(NO_SERVICE_WORKER_MESSAGE);
+      expect(subscribe).not.toHaveBeenCalled();
+      expect(api.subscribe).not.toHaveBeenCalled();
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it('re-registers an existing subscription instead of taking a second one', async () => {

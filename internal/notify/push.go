@@ -11,7 +11,11 @@ package notify
 //
 // Unlike email, sends do not happen on the caller's goroutine. A member can
 // have many devices and a push service can be slow, so Dispatch hands the
-// work to a goroutine and the per-device sends run with bounded concurrency.
+// notification to a FIXED pool of workers over a bounded queue: the process
+// never runs more than pushWorkers sends at once however fast notifications
+// arrive, and a queue that is full drops (and counts) rather than blocking
+// the request path — the alternative, one unbounded goroutine per
+// notification, turns a stalled push service into unbounded memory.
 // Failures are logged and swallowed; push never fails a run or a notification.
 
 import (
@@ -22,6 +26,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	webpush "github.com/SherClockHolmes/webpush-go"
@@ -45,10 +50,25 @@ const (
 	// been overtaken by the app itself.
 	pushTTLSeconds = 24 * 60 * 60
 
-	// pushConcurrency bounds simultaneous sends across the whole process, so
-	// a member with many devices — or a burst of notifications — cannot open
-	// an unbounded number of outbound connections.
-	pushConcurrency = 8
+	// pushWorkers is the size of the fixed goroutine pool that drains the
+	// dispatch queue. It bounds simultaneous sends across the whole process,
+	// so a burst of notifications — or a member with many devices — cannot
+	// open an unbounded number of outbound connections.
+	pushWorkers = 8
+
+	// pushQueueDepth is how many notifications may wait for a worker. Deep
+	// enough to ride out a slow push service, bounded so that one that has
+	// stopped answering cannot grow the queue without limit: past this,
+	// Dispatch drops the notification (counted, and logged) rather than
+	// blocking the caller. In-app and SSE delivery are unaffected — push is
+	// the side channel.
+	pushQueueDepth = 1024
+
+	// pushRequestTimeout bounds ONE request to a push service. Without it the
+	// send inherits http.Client's zero value — no timeout at all — and a push
+	// service that accepts the connection and then says nothing holds a
+	// worker for as long as it likes.
+	pushRequestTimeout = 10 * time.Second
 
 	// pushBodyLimit truncates the notification body for the phone banner;
 	// anything longer is unreadable there and only inflates the payload.
@@ -126,9 +146,20 @@ type WebPushSender struct {
 	client webpush.HTTPClient
 }
 
-// NewWebPushSender builds a sender for the given keys. client may be nil, in
-// which case webpush-go uses its own http.Client.
+// DefaultPushHTTPClient is the client the sender uses to reach push services:
+// http.DefaultClient's behaviour plus a timeout, which is the one thing the
+// default lacks and the one thing that matters here.
+func DefaultPushHTTPClient() *http.Client {
+	return &http.Client{Timeout: pushRequestTimeout}
+}
+
+// NewWebPushSender builds a sender for the given keys. A nil client is NOT
+// passed through to webpush-go — its fallback is a bare http.Client with no
+// timeout — it is replaced by DefaultPushHTTPClient.
 func NewWebPushSender(vapid VAPIDConfig, client webpush.HTTPClient) *WebPushSender {
+	if client == nil {
+		client = DefaultPushHTTPClient()
+	}
 	return &WebPushSender{vapid: vapid, client: client}
 }
 
@@ -167,12 +198,17 @@ type PushDispatcher struct {
 	sender   PushSender
 	subs     PushSubscriptionStore
 	users    UserDirectory
-	linkBase string // frontend base URL for deep links, no trailing slash
 	eligible map[string]bool
-	// sem bounds concurrent outbound sends process-wide.
-	sem chan struct{}
-	// inflight tracks dispatched goroutines so tests (and only tests) can
-	// wait for delivery to settle.
+	// queue holds notifications waiting for a worker; workers starts the
+	// pool on the first dispatch, so a deployment with push off (and every
+	// test that never dispatches) runs no extra goroutines.
+	queue   chan *notifications.Notification
+	workers sync.Once
+	// dropped counts notifications refused because the queue was full. Read
+	// by Dropped for logs and tests; it is the signal that push is behind.
+	dropped atomic.Int64
+	// inflight tracks queued work so tests (and only tests) can wait for
+	// delivery to settle.
 	inflight sync.WaitGroup
 	// now is injectable so tests can pin the timestamps written to the
 	// subscription rows; defaults to time.Now.
@@ -181,9 +217,10 @@ type PushDispatcher struct {
 
 // NewPushDispatcher wires a dispatcher. sender nil (the usual case when no
 // VAPID keys are configured) leaves push off and every Dispatch a no-op.
-// eligibleTypes is the allow-list (see DefaultPushTypes / PushTypesFromEnv);
-// linkBase is the externally reachable frontend base URL used for deep links.
-func NewPushDispatcher(sender PushSender, subs PushSubscriptionStore, dir UserDirectory, linkBase string, eligibleTypes []string) *PushDispatcher {
+// eligibleTypes is the allow-list (see DefaultPushTypes / PushTypesFromEnv).
+// Deep links are same-origin PATHS (see PushPayload.URL), so no base URL is
+// needed here — the browser resolves them against the app's own origin.
+func NewPushDispatcher(sender PushSender, subs PushSubscriptionStore, dir UserDirectory, eligibleTypes []string) *PushDispatcher {
 	elig := make(map[string]bool, len(eligibleTypes))
 	for _, t := range eligibleTypes {
 		if t = strings.TrimSpace(t); t != "" {
@@ -194,9 +231,8 @@ func NewPushDispatcher(sender PushSender, subs PushSubscriptionStore, dir UserDi
 		sender:   sender,
 		subs:     subs,
 		users:    dir,
-		linkBase: strings.TrimRight(strings.TrimSpace(linkBase), "/"),
 		eligible: elig,
-		sem:      make(chan struct{}, pushConcurrency),
+		queue:    make(chan *notifications.Notification, pushQueueDepth),
 		now:      time.Now,
 	}
 }
@@ -210,18 +246,47 @@ func (d *PushDispatcher) Eligible(ntype string) bool {
 }
 
 // Dispatch queues best-effort pushes for one notification and returns at
-// once. It is a no-op when the dispatcher is nil, no sender is wired, the
-// type is not eligible, or the recipient has not opted in. Nil-safe, so
-// callers can hold a nil *PushDispatcher and call it unconditionally.
+// once — it never blocks on a push service, and never blocks on the queue
+// either: a full queue is a drop, counted and logged. It is a no-op when the
+// dispatcher is nil, no sender is wired, the type is not eligible, or the
+// recipient has not opted in. Nil-safe, so callers can hold a nil
+// *PushDispatcher and call it unconditionally.
 func (d *PushDispatcher) Dispatch(n *notifications.Notification) {
 	if !d.Enabled() || n == nil || !d.eligible[n.Type] {
 		return
 	}
+	d.workers.Do(d.startWorkers)
 	d.inflight.Add(1)
-	go func() {
-		defer d.inflight.Done()
-		d.deliver(n)
-	}()
+	select {
+	case d.queue <- n:
+	default:
+		d.inflight.Done()
+		slog.Warn("push: dispatch queue full; notification not pushed",
+			"user_id", n.UserID, "type", n.Type, "dropped_total", d.dropped.Add(1))
+	}
+}
+
+// startWorkers launches the fixed pool. Once only, on the first dispatch.
+func (d *PushDispatcher) startWorkers() {
+	for i := 0; i < pushWorkers; i++ {
+		go func() {
+			for n := range d.queue {
+				d.deliver(n)
+				d.inflight.Done()
+			}
+		}()
+	}
+}
+
+// Dropped is the number of notifications refused because the dispatch queue
+// was full since boot. Non-zero means push is running behind — the push
+// service is slow or down — and is worth an operator's attention; in-app and
+// SSE delivery are unaffected.
+func (d *PushDispatcher) Dropped() int64 {
+	if d == nil {
+		return 0
+	}
+	return d.dropped.Load()
 }
 
 // Wait blocks until every queued dispatch has settled. For tests and an
@@ -232,8 +297,11 @@ func (d *PushDispatcher) Wait() {
 	}
 }
 
-// deliver loads the recipient, checks the opt-in, and fans the payload out to
-// their devices with bounded concurrency.
+// deliver loads the recipient, checks the opt-in, and sends the payload to
+// each of their devices in turn. The per-device sends are sequential on
+// purpose: concurrency across the process comes from the worker pool, which
+// bounds it, and a member's handful of devices is not worth fanning out
+// further (nor worth letting one stalled device hold several workers).
 func (d *PushDispatcher) deliver(n *notifications.Notification) {
 	u, err := d.users.GetByID(n.UserID)
 	if err != nil {
@@ -251,25 +319,14 @@ func (d *PushDispatcher) deliver(n *notifications.Notification) {
 	if len(subs) == 0 {
 		return
 	}
-	payload, err := json.Marshal(renderPush(n, d.linkBase))
+	payload, err := json.Marshal(renderPush(n))
 	if err != nil {
 		slog.Error("push: failed to encode payload", "user_id", n.UserID, "error", err)
 		return
 	}
-
-	var wg sync.WaitGroup
 	for _, sub := range subs {
-		wg.Add(1)
-		d.sem <- struct{}{}
-		go func(s *pushsubs.Subscription) {
-			defer func() {
-				<-d.sem
-				wg.Done()
-			}()
-			d.sendOne(s, payload, n.Type)
-		}(sub)
+		d.sendOne(sub, payload, n.Type)
 	}
-	wg.Wait()
 }
 
 // sendOne delivers to one device and records the outcome:
@@ -314,8 +371,13 @@ func (d *PushDispatcher) markFailed(s *pushsubs.Subscription, at time.Time) {
 type PushPayload struct {
 	Title string `json:"title"`
 	Body  string `json:"body"`
-	// URL is an absolute deep link to the notification's subject, the same
-	// destination the in-app bell and the email use.
+	// URL is a SAME-ORIGIN PATH ("/projects/…") to the notification's
+	// subject — the same destination the in-app bell and the email link to,
+	// minus the origin. It has to be a path: the service worker follows a
+	// tap with WindowClient.navigate, which rejects a cross-origin URL, and
+	// an absolute FRONTEND_URL link is cross-origin whenever the deployment
+	// is reached by any other name. Emails, which have no such window, keep
+	// their absolute links.
 	URL string `json:"url"`
 	// Tag coalesces banners: a new notification with a tag already on screen
 	// replaces it instead of stacking. Scoped per type and project so a
@@ -324,11 +386,11 @@ type PushPayload struct {
 }
 
 // renderPush builds the worker payload for a notification.
-func renderPush(n *notifications.Notification, linkBase string) PushPayload {
+func renderPush(n *notifications.Notification) PushPayload {
 	return PushPayload{
 		Title: n.Title,
 		Body:  truncate(n.Body, pushBodyLimit),
-		URL:   deepLink(n, linkBase),
+		URL:   notificationPath(n.EntityRef),
 		Tag:   pushTag(n),
 	}
 }
