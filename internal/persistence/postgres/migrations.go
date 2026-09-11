@@ -848,6 +848,12 @@ var migrations = []Migration{
 	// invitation per address per workspace while leaving the accepted history
 	// alone: re-inviting after an acceptance is a new, separate row.
 	//
+	// last_emailed_at is when the link was last actually delivered, and is
+	// NULL until a send succeeds — the mail goes out off the request path, so
+	// the row's existence says nothing about whether anybody received one. It
+	// is what makes suppressing a repeat mail safe: an invitation whose send
+	// failed, or was never attempted, has no stamp and is sent again.
+	//
 	// sessions.last_seen_at is added here rather than assumed. The column is
 	// in the frozen baseline, so every database created since it landed has
 	// it — but a database whose sessions table predates it does not, and
@@ -865,7 +871,8 @@ var migrations = []Migration{
 				invited_by UUID REFERENCES users(id) ON DELETE SET NULL,
 				expires_at TIMESTAMP NOT NULL,
 				accepted_at TIMESTAMP,
-				created_at TIMESTAMP NOT NULL DEFAULT NOW()
+				created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+				last_emailed_at TIMESTAMP
 			)
 		`); err != nil {
 			return err

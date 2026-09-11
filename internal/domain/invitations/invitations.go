@@ -75,6 +75,12 @@ type Invitation struct {
 	ExpiresAt  time.Time  `json:"expires_at"`
 	AcceptedAt *time.Time `json:"accepted_at,omitempty"`
 	CreatedAt  time.Time  `json:"created_at"`
+	// LastEmailedAt is when the link was last actually delivered, and nil
+	// when no send has succeeded — the mail goes out off the request path,
+	// so "an invitation exists" is not evidence that anybody received one.
+	// Suppressing a re-send reads this, never CreatedAt: a link that was
+	// never sent must be re-sent on the next click, not sat on for an hour.
+	LastEmailedAt *time.Time `json:"last_emailed_at,omitempty"`
 
 	// OrgName and InvitedByName are denormalized for display: the invitee
 	// sees which workspace, and by whom, before they have any membership to
@@ -96,11 +102,22 @@ type Repository interface {
 	// pending-uniqueness index covers every unaccepted row, so an expired
 	// leftover would otherwise make a re-invite fail, and two admins
 	// re-inviting at once would race.
+	//
+	// It writes the stored row back into inv: the id an existing row keeps
+	// (a re-invite rotates the token, never the id, so an id already handed
+	// to a client stays valid) and the display names, which are joined in on
+	// the way out. Create therefore costs one query.
 	Replace(inv *Invitation) error
 	// ListPending returns the workspace's unaccepted, unexpired invitations.
 	ListPending(orgID string, now time.Time) ([]*Invitation, error)
+	// FindPending returns the workspace's live invitation for one address,
+	// or nil. It is the targeted form of ListPending: deciding whether to
+	// re-send one address's link must not read every pending row.
+	FindPending(orgID, email string, now time.Time) (*Invitation, error)
 	FindByID(id string) (*Invitation, error)
 	FindByTokenHash(hash string) (*Invitation, error)
+	// MarkEmailed stamps last_emailed_at after a send succeeded.
+	MarkEmailed(id string, at time.Time) error
 	// ListPendingForEmail returns every workspace's pending invitations for
 	// one address — what an address takes up once a provider has verified it.
 	ListPendingForEmail(email string, now time.Time) ([]*Invitation, error)
@@ -145,6 +162,14 @@ type Service interface {
 	Create(orgID, email, role string, invitedBy *string) (*Invitation, string, error)
 	// ListPending returns a workspace's live invitations.
 	ListPending(orgID string) ([]*Invitation, error)
+	// FindPending returns the workspace's live invitation for one address,
+	// or nil — what a caller deciding whether to re-send needs, without
+	// reading the whole pending list.
+	FindPending(orgID, email string) (*Invitation, error)
+	// MarkEmailed records that the link was delivered, which is what makes a
+	// re-send suppressible: an invitation whose mail failed, or was never
+	// attempted, has no stamp and is sent again on the next click.
+	MarkEmailed(invID string, at time.Time) error
 	// Revoke deletes one invitation, verifying it belongs to the workspace.
 	Revoke(orgID, invID string) error
 	// Lookup resolves a raw token to its pending invitation, for the sign-up
@@ -248,16 +273,27 @@ func (s *DefaultService) Create(orgID, email, role string, invitedBy *string) (*
 	// Re-inviting is how an admin resends: the previous link — pending or
 	// long expired — is cleared in the same write, so only one live
 	// credential per address per workspace ever exists and a re-invite
-	// cannot trip the pending-uniqueness index.
+	// cannot trip the pending-uniqueness index. Replace writes the stored
+	// row back into inv — the id an existing row kept, and the display
+	// names the invitation email uses — so no second read is needed.
 	if err := s.repo.Replace(inv); err != nil {
 		return nil, "", err
 	}
-	// Read the row back for the display names (workspace, inviter): they are
-	// joined in by the repository, and the invitation email names both.
-	if stored, err := s.repo.FindByID(inv.ID); err == nil && stored != nil {
-		return stored, token, nil
-	}
 	return inv, token, nil
+}
+
+// FindPending returns the workspace's live invitation for an address.
+func (s *DefaultService) FindPending(orgID, email string) (*Invitation, error) {
+	email = users.NormalizeEmail(email)
+	if email == "" {
+		return nil, nil
+	}
+	return s.repo.FindPending(orgID, email, time.Now())
+}
+
+// MarkEmailed records a delivered link; see Service.
+func (s *DefaultService) MarkEmailed(invID string, at time.Time) error {
+	return s.repo.MarkEmailed(invID, at)
 }
 
 // ListPending returns a workspace's live invitations.

@@ -145,8 +145,15 @@ func (h *Handler) AuthConfig(w http.ResponseWriter, r *http.Request) {
 // AuthPolicy is the narrow public answer to "can I sign myself up here?".
 // It exists beside AuthConfig so a client that only needs the policy — a
 // deployment check, a script — does not have to read the sign-in methods.
+//
+// min_password_length is the server's rule, published so the sign-up form
+// and the change-password form state the length the server will actually
+// enforce instead of a copy of it that can drift.
 func (h *Handler) AuthPolicy(w http.ResponseWriter, r *http.Request) {
-	json.NewEncoder(w).Encode(map[string]string{"registration": h.registrationPolicy()})
+	json.NewEncoder(w).Encode(map[string]any{
+		"registration":        h.registrationPolicy(),
+		"min_password_length": users.MinPasswordLength,
+	})
 }
 
 // registrationPolicy reports the deployment's policy, defaulting to open so

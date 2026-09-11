@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -44,6 +45,10 @@ type fakeInviteService struct {
 	// onLookup runs after a successful Lookup, which is where a test stages
 	// what happens BETWEEN resolving a link and accepting it.
 	onLookup func(*invitations.Invitation)
+	// emailed records MarkEmailed, which the handler calls from the sending
+	// goroutine — so it, and every read of it, is taken under mu.
+	mu      sync.Mutex
+	emailed map[string]time.Time
 }
 
 func newFakeInviteService() *fakeInviteService {
@@ -52,7 +57,51 @@ func newFakeInviteService() *fakeInviteService {
 		byToken:     map[string]*invitations.Invitation{},
 		memberRoles: map[string]string{},
 		gone:        map[string]bool{},
+		emailed:     map[string]time.Time{},
 	}
+}
+
+// FindPending answers the targeted lookup the resend check makes, with the
+// delivery stamp the fake holds for that row.
+func (f *fakeInviteService) FindPending(orgID, email string) (*invitations.Invitation, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	for _, inv := range f.pending[users.NormalizeEmail(email)] {
+		if inv == nil || inv.OrgID != orgID || !inv.Pending(time.Now()) {
+			continue
+		}
+		found := *inv
+		if at, ok := f.emailed[inv.ID]; ok {
+			found.LastEmailedAt = &at
+		}
+		return &found, nil
+	}
+	return nil, nil
+}
+
+// MarkEmailed is what the sending goroutine calls once a link has actually
+// gone out.
+func (f *fakeInviteService) MarkEmailed(invID string, at time.Time) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.emailed[invID] = at
+	return nil
+}
+
+// markEmailed stages a link that was delivered at a given time, which is the
+// only state in which an unchanged re-invite is suppressed.
+func (f *fakeInviteService) markEmailed(inv *invitations.Invitation, at time.Time) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.emailed[inv.ID] = at
+}
+
+// wasEmailed reports whether a link has been recorded as delivered.
+func (f *fakeInviteService) wasEmailed(invID string) bool {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	_, ok := f.emailed[invID]
+	return ok
 }
 
 func (f *fakeInviteService) Create(orgID, email, role string, invitedBy *string) (*invitations.Invitation, string, error) {
@@ -491,12 +540,17 @@ func TestAuthPolicyEndpoint(t *testing.T) {
 		if rec.Code != http.StatusOK {
 			t.Fatalf("status = %d", rec.Code)
 		}
-		var body map[string]string
+		var body map[string]any
 		if err := json.NewDecoder(rec.Body).Decode(&body); err != nil {
 			t.Fatalf("decode: %v", err)
 		}
 		if body["registration"] != tc.want {
-			t.Errorf("registration = %q for %q, want %q", body["registration"], tc.configured, tc.want)
+			t.Errorf("registration = %v for %q, want %q", body["registration"], tc.configured, tc.want)
+		}
+		// The sign-up and change-password forms state the server's own rule
+		// rather than a copy of it, so the policy has to carry it.
+		if body["min_password_length"] != float64(users.MinPasswordLength) {
+			t.Errorf("min_password_length = %v, want %d", body["min_password_length"], users.MinPasswordLength)
 		}
 	}
 }
@@ -836,6 +890,9 @@ func TestInvitationMailNamesTheWorkspaceAndInviter(t *testing.T) {
 	if resp.Invitation.OrgName != "Test Workspace" || resp.Invitation.InvitedByName != "Ada Admin" {
 		t.Errorf("the response does not name the workspace and inviter: %+v", resp.Invitation)
 	}
+	// The mail goes out off the request path — emailed says it was queued —
+	// so the assertions on it wait for the send to land.
+	<-mailer.sent
 	mailer.mu.Lock()
 	defer mailer.mu.Unlock()
 	if len(mailer.body) != 1 {
@@ -1085,6 +1142,9 @@ func TestReInvitingWithinTheHourDoesNotMailAgain(t *testing.T) {
 	admin := &users.User{ID: "u-admin", Email: "admin@example.com", Name: "Ada Admin", IsAdmin: true}
 	pending := invites.invite("org-1", "waiting@example.com", orgs.RoleMember)
 	pending.CreatedAt = time.Now().Add(-5 * time.Minute)
+	// Its link actually reached the address five minutes ago — the only
+	// state in which there is a second mail worth suppressing.
+	invites.markEmailed(pending, time.Now().Add(-5*time.Minute))
 
 	post := func(role string) *httptest.ResponseRecorder {
 		rec := httptest.NewRecorder()
@@ -1174,6 +1234,7 @@ func TestReInvitingAfterTheWindowMailsAgain(t *testing.T) {
 	admin := &users.User{ID: "u-admin", Email: "admin@example.com", IsAdmin: true}
 	pending := invites.invite("org-1", "stale@example.com", orgs.RoleMember)
 	pending.CreatedAt = time.Now().Add(-2 * time.Hour)
+	invites.markEmailed(pending, time.Now().Add(-2*time.Hour))
 
 	rec := httptest.NewRecorder()
 	h.CreateOrgInvitation(rec, asUser(muxReq(http.MethodPost, "/api/v1/orgs/org-1/invitations",
@@ -1378,5 +1439,219 @@ func TestAFailedVerificationStampStillRegisters(t *testing.T) {
 	}
 	if body["email_verified"] != false {
 		t.Errorf("email_verified = %v, want false when the stamp failed", body["email_verified"])
+	}
+}
+
+// --- proof of the address before a membership ------------------------------
+
+// On a deployment that requires verification, an account that has NOT proved
+// it owns its address must not be handed a workspace by an admin typing that
+// address: nobody has read the mailbox yet. It is invited instead — the same
+// 202 an address with no account gets — and the link is what converts it.
+// An account that HAS verified keeps the direct-add path.
+func TestAddingAnUnverifiedAccountInvitesInsteadOfGrantingMembership(t *testing.T) {
+	admin := &users.User{ID: "u-admin", Email: "admin@example.com", IsAdmin: true}
+	post := func(h *Handler, email string) *httptest.ResponseRecorder {
+		rec := httptest.NewRecorder()
+		h.CreateOrgInvitation(rec, asUser(muxReq(http.MethodPost, "/api/v1/orgs/org-1/invitations",
+			`{"email":"`+email+`","role":"member"}`, map[string]string{"id": "org-1"}), admin))
+		return rec
+	}
+
+	// Unverified, and the deployment sends verification mail: invited.
+	h, svc, invites := newRegistrationHandler("")
+	h.emailVerification = users.EmailVerificationPolicy{Required: true}
+	orgSvc := &fakeMemberOrgs{roles: map[string]string{}}
+	h.orgService = orgSvc
+	svc.accounts = map[string]*users.User{
+		"unverified@example.com": {ID: "u-un", Email: "unverified@example.com", Name: "Un"},
+		"verified@example.com":   {ID: "u-ok", Email: "verified@example.com", Name: "Ok", EmailVerified: true},
+	}
+
+	rec := post(h, "Unverified@Example.com")
+	if rec.Code != http.StatusAccepted {
+		t.Fatalf("unverified account status = %d, want 202: %s", rec.Code, rec.Body.String())
+	}
+	var resp invitationResponse
+	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if resp.Invitation == nil || resp.Invitation.Email != "unverified@example.com" || resp.Link == "" {
+		t.Errorf("an unverified account must be invited: %+v (link %q)", resp.Invitation, resp.Link)
+	}
+	if len(orgSvc.added) != 0 {
+		t.Errorf("an unverified address was granted membership directly: %v", orgSvc.added)
+	}
+
+	// Verified: joined now, no link minted for somebody who needs none.
+	rec = post(h, "verified@example.com")
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("verified account status = %d, want 201: %s", rec.Code, rec.Body.String())
+	}
+	if len(orgSvc.added) != 1 || orgSvc.added[0] != "org-1:u-ok:member" {
+		t.Errorf("memberships = %v, want the verified account joined", orgSvc.added)
+	}
+	if len(invites.created) != 1 {
+		t.Errorf("invitations = %d, want only the one for the unverified address", len(invites.created))
+	}
+
+	// Where the deployment cannot verify addresses at all, there is no
+	// proof to wait for and the old behaviour stands: the account joins.
+	open, openSvc, openInvites := newRegistrationHandler("")
+	openOrgs := &fakeMemberOrgs{roles: map[string]string{}}
+	open.orgService = openOrgs
+	openSvc.accounts = map[string]*users.User{
+		"unverified@example.com": {ID: "u-un", Email: "unverified@example.com"},
+	}
+	if rec := post(open, "unverified@example.com"); rec.Code != http.StatusCreated {
+		t.Fatalf("status without a verification policy = %d, want 201: %s", rec.Code, rec.Body.String())
+	}
+	if len(openOrgs.added) != 1 || len(openInvites.created) != 0 {
+		t.Errorf("memberships = %v, invitations = %v", openOrgs.added, openInvites.created)
+	}
+}
+
+// Accepting a link proves the account read the invited mailbox, and the
+// invitation was issued to its OWN address — the same proof a verification
+// link carries. So the address is marked verified, and somebody who followed
+// an invitation is not immediately walled behind a second mail.
+func TestAcceptingAnInvitationVerifiesTheAddress(t *testing.T) {
+	h, svc, invites := newRegistrationHandler("")
+	h.emailVerification = users.EmailVerificationPolicy{Required: true}
+	invites.invite("org-1", "member@example.com", orgs.RoleMember)
+	svc.sessions = map[string]*users.User{
+		"session-token": {ID: "u1", Email: "member@example.com"},
+	}
+
+	rec := httptest.NewRecorder()
+	h.AcceptInvitation(rec, jsonReq(http.MethodPost, "/api/v1/auth/invitations/accept",
+		`{"token":"tok-member@example.com"}`, "session-token"))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("accept status = %d, want 200: %s", rec.Code, rec.Body.String())
+	}
+	if len(svc.verified) != 1 || svc.verified[0] != "u1" {
+		t.Errorf("verified = %v, want the accepting account", svc.verified)
+	}
+
+	// An account that was already in the workspace took the same link to the
+	// same mailbox, so it proves the same thing: already_member verifies too.
+	invites.invite("org-2", "member@example.com", orgs.RoleMember)
+	invites.memberRoles["org-2:u1"] = orgs.RoleAdmin
+	rec = httptest.NewRecorder()
+	h.AcceptInvitation(rec, jsonReq(http.MethodPost, "/api/v1/auth/invitations/accept",
+		`{"token":"tok-member@example.com"}`, "session-token"))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("already-member accept status = %d, want 200: %s", rec.Code, rec.Body.String())
+	}
+	if len(svc.verified) != 2 {
+		t.Errorf("verified = %v, want the already-member accept to verify as well", svc.verified)
+	}
+
+	// A mismatched address is refused, and verifies nothing: the account
+	// presenting the link is not the one it was sent to.
+	svc.sessions["other-session"] = &users.User{ID: "u2", Email: "someone-else@example.com"}
+	invites.invite("org-3", "invited@example.com", orgs.RoleMember)
+	rec = httptest.NewRecorder()
+	h.AcceptInvitation(rec, jsonReq(http.MethodPost, "/api/v1/auth/invitations/accept",
+		`{"token":"tok-invited@example.com"}`, "other-session"))
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("mismatch status = %d, want 403: %s", rec.Code, rec.Body.String())
+	}
+	if len(svc.verified) != 2 {
+		t.Errorf("verified = %v, want no stamp from a refused acceptance", svc.verified)
+	}
+}
+
+// An unchanged pending invitation whose mail never actually went out has
+// nothing sitting in anybody's inbox: re-posting it mints and sends a fresh
+// link, and hands the admin the link back, rather than suppressing a mail
+// that was never delivered.
+func TestReInvitingResendsWhenTheFirstMailNeverLanded(t *testing.T) {
+	h, _, invites := newRegistrationHandler("")
+	mailer := newTestMailer()
+	h.mailer = mailer
+	admin := &users.User{ID: "u-admin", Email: "admin@example.com", Name: "Ada Admin", IsAdmin: true}
+	// Pending, minutes old, and never delivered — the shape a failed send
+	// leaves behind.
+	pending := invites.invite("org-1", "waiting@example.com", orgs.RoleMember)
+	pending.CreatedAt = time.Now().Add(-5 * time.Minute)
+
+	rec := httptest.NewRecorder()
+	h.CreateOrgInvitation(rec, asUser(muxReq(http.MethodPost, "/api/v1/orgs/org-1/invitations",
+		`{"email":"waiting@example.com","role":"member"}`, map[string]string{"id": "org-1"}), admin))
+	if rec.Code != http.StatusAccepted {
+		t.Fatalf("status = %d, want 202: %s", rec.Code, rec.Body.String())
+	}
+	var resp invitationResponse
+	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if !resp.Emailed || resp.Link == "" || resp.Reason != "" {
+		t.Errorf("an invitation that was never delivered must be re-sent: %+v", resp)
+	}
+	if len(invites.created) != 1 {
+		t.Errorf("created = %v, want a fresh link", invites.created)
+	}
+
+	// The send is off the request path, and only a send that SUCCEEDS stamps
+	// the row — that stamp is what suppresses the next click.
+	<-mailer.sent
+	if !invites.wasEmailed(resp.Invitation.ID) {
+		t.Error("a delivered link left no last_emailed_at behind")
+	}
+}
+
+// A mailer that refuses still answers emailed:true — the send was queued —
+// and leaves the row unstamped, so the next click sends again instead of
+// telling the admin their colleague already has a link.
+func TestAFailedInvitationSendLeavesTheRowUnstamped(t *testing.T) {
+	h, _, invites := newRegistrationHandler("")
+	mailer := newTestMailer()
+	mailer.err = errors.New("smtp down")
+	h.mailer = mailer
+	admin := &users.User{ID: "u-admin", Email: "admin@example.com", Name: "Ada Admin", IsAdmin: true}
+
+	rec := httptest.NewRecorder()
+	h.CreateOrgInvitation(rec, asUser(muxReq(http.MethodPost, "/api/v1/orgs/org-1/invitations",
+		`{"email":"new@example.com","role":"member"}`, map[string]string{"id": "org-1"}), admin))
+	if rec.Code != http.StatusAccepted {
+		t.Fatalf("status = %d, want 202: %s", rec.Code, rec.Body.String())
+	}
+	var resp invitationResponse
+	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if !resp.Emailed {
+		t.Error("emailed reports a queued send, which this was")
+	}
+	<-mailer.sent
+	if invites.wasEmailed(resp.Invitation.ID) {
+		t.Error("a failed send must not stamp the row")
+	}
+}
+
+// Only an unusable link is a 404. A lookup that failed for any other reason
+// is the server's fault and is reported as one: answering "invalid or
+// expired" would send the invitee off for a replacement link that fails the
+// same way.
+func TestPreviewInvitationReportsALookupFailure(t *testing.T) {
+	h, _, invites := newRegistrationHandler("")
+	invites.lookupErr = errors.New("database is on fire")
+
+	rec := httptest.NewRecorder()
+	h.PreviewInvitation(rec, previewReq("tok-anything"))
+	if rec.Code != http.StatusInternalServerError {
+		t.Fatalf("status = %d, want 500: %s", rec.Code, rec.Body.String())
+	}
+	if strings.Contains(rec.Body.String(), "database is on fire") {
+		t.Errorf("the internal failure leaked to the caller: %s", rec.Body.String())
+	}
+
+	// An unknown token is still the one flat 404 a prober learns nothing from.
+	invites.lookupErr = nil
+	rec = httptest.NewRecorder()
+	h.PreviewInvitation(rec, previewReq("tok-nothing"))
+	if rec.Code != http.StatusNotFound {
+		t.Errorf("unknown token status = %d, want 404: %s", rec.Code, rec.Body.String())
 	}
 }

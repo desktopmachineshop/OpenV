@@ -2,6 +2,7 @@ package users
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -386,5 +387,21 @@ func TestMarkEmailVerified(t *testing.T) {
 	}
 	if _, err := svc.MarkEmailVerified("no-such-user"); err == nil {
 		t.Error("an unknown account must be reported")
+	}
+}
+
+// The refusal names the length the service actually enforces. Both come from
+// MinPasswordLength, so raising the minimum cannot leave the message telling
+// people a number the server no longer uses.
+func TestWeakPasswordMessageNamesTheMinimum(t *testing.T) {
+	want := fmt.Sprintf("password must be at least %d characters", MinPasswordLength)
+	if ErrWeakPassword.Error() != want {
+		t.Errorf("ErrWeakPassword = %q, want %q", ErrWeakPassword.Error(), want)
+	}
+	// And a password one character short really is refused with it.
+	svc := NewDefaultService(newMemRepo())
+	short := strings.Repeat("a", MinPasswordLength-1)
+	if _, err := svc.Register("short@example.com", short, "Short"); !errors.Is(err, ErrWeakPassword) {
+		t.Errorf("Register with %d characters returned %v, want ErrWeakPassword", len(short), err)
 	}
 }

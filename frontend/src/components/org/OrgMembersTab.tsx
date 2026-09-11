@@ -121,7 +121,7 @@ export const OrgMembersTab: React.FC<OrgMembersTabProps> = ({ org, isAdmin, curr
     if (!ok) return;
     try {
       await orgsAPI.invitations.revoke(org.id, invitation.id);
-      setInvitations(invitations.filter((i) => i.id !== invitation.id));
+      setInvitations((prev) => prev.filter((i) => i.id !== invitation.id));
       setError('');
     } catch (err: any) {
       setError(`Failed to revoke invitation: ${apiErrorMessage(err)}`);

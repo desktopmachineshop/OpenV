@@ -2,7 +2,14 @@ import { useViewport } from '../hooks/useViewport';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAppStore } from '../state/store';
-import { ProviderSetting, providerSettingsAPI, notificationPrefsAPI, passwordAPI } from '../api/client';
+import {
+  DEFAULT_MIN_PASSWORD_LENGTH,
+  ProviderSetting,
+  providerSettingsAPI,
+  notificationPrefsAPI,
+  passwordAPI,
+  authAPI,
+} from '../api/client';
 import { apiErrorMessage } from '../api/errors';
 import { MyRunnerCard } from './org/MyRunnerCard';
 import { CloudRunnerCard } from './org/CloudRunnerCard';
@@ -47,6 +54,26 @@ export const UserSettingsPanel: React.FC<UserSettingsPanelProps> = ({ onClose })
   const [passwordError, setPasswordError] = useState('');
   const [passwordNotice, setPasswordNotice] = useState('');
   const [passwordSaving, setPasswordSaving] = useState(false);
+  // The server's own rule, so this form cannot tell somebody a length the
+  // server does not enforce. The default stands in while it loads.
+  const [minPasswordLength, setMinPasswordLength] = useState(DEFAULT_MIN_PASSWORD_LENGTH);
+
+  useEffect(() => {
+    let cancelled = false;
+    authAPI
+      .policy()
+      .then((res) => {
+        if (!cancelled && res.data.min_password_length) {
+          setMinPasswordLength(res.data.min_password_length);
+        }
+      })
+      .catch(() => {
+        // Non-fatal: the form keeps the default length.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const changePassword = useCallback(
     async (e: React.FormEvent) => {
@@ -59,8 +86,8 @@ export const UserSettingsPanel: React.FC<UserSettingsPanelProps> = ({ onClose })
         setPasswordError('The new passwords do not match.');
         return;
       }
-      if (newPassword.length < 8) {
-        setPasswordError('The new password must be at least 8 characters.');
+      if (newPassword.length < minPasswordLength) {
+        setPasswordError(`The new password must be at least ${minPasswordLength} characters.`);
         return;
       }
       setPasswordSaving(true);
@@ -76,7 +103,7 @@ export const UserSettingsPanel: React.FC<UserSettingsPanelProps> = ({ onClose })
         setPasswordSaving(false);
       }
     },
-    [currentPassword, newPassword, confirmPassword]
+    [currentPassword, newPassword, confirmPassword, minPasswordLength]
   );
 
   useEffect(() => {
@@ -289,7 +316,9 @@ export const UserSettingsPanel: React.FC<UserSettingsPanelProps> = ({ onClose })
                 />
               </div>
               <div className="form-group" style={{ marginBottom: 10 }}>
-                <label style={{ fontSize: 12 }}>New password (min 8 characters)</label>
+                <label style={{ fontSize: 12 }}>
+                  New password (min {minPasswordLength} characters)
+                </label>
                 <input
                   type="password"
                   autoComplete="new-password"

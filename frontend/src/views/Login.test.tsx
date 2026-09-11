@@ -33,6 +33,10 @@ type Calls = {
 const authFixtures: {
   config: any;
   invitation: any;
+  // null: the preview never resolves, which is what an in-flight (or very
+  // slow) preview looks like to somebody who signs in straight away.
+  invitationPending: boolean;
+  policy: any;
   me: any;
   // What register() reports the invite token did, and whether accepting one
   // fails — the two ways a conversion can not happen.
@@ -42,6 +46,8 @@ const authFixtures: {
 } = {
   config: null,
   invitation: null,
+  invitationPending: false,
+  policy: { registration: 'open', min_password_length: 8 },
   me: null,
   registerOutcome: null,
   acceptError: null,
@@ -54,7 +60,9 @@ const record = (name: keyof Calls, data: any) => (...args: any[]) => {
 };
 
 jest.mock('../api/client', () => ({
+  DEFAULT_MIN_PASSWORD_LENGTH: 8,
   authAPI: {
+    policy: () => Promise.resolve({ data: authFixtures.policy }),
     config: () =>
       authFixtures.config
         ? Promise.resolve({ data: authFixtures.config })
@@ -62,9 +70,11 @@ jest.mock('../api/client', () => ({
     me: () =>
       authFixtures.me ? Promise.resolve({ data: authFixtures.me }) : new Promise(() => {}),
     invitation: () =>
-      authFixtures.invitation
-        ? Promise.resolve({ data: authFixtures.invitation })
-        : Promise.reject(new Error('invalid invitation')),
+      authFixtures.invitationPending
+        ? new Promise(() => {})
+        : authFixtures.invitation
+          ? Promise.resolve({ data: authFixtures.invitation })
+          : Promise.reject(new Error('invalid invitation')),
     acceptInvitation: (...args: any[]) => {
       authFixtures.calls.acceptInvitation.push(args);
       return authFixtures.acceptError
@@ -94,6 +104,8 @@ let root: Root;
 beforeEach(() => {
   authFixtures.config = null;
   authFixtures.invitation = null;
+  authFixtures.invitationPending = false;
+  authFixtures.policy = { registration: 'open', min_password_length: 8 };
   authFixtures.me = null;
   authFixtures.registerOutcome = null;
   authFixtures.acceptError = null;
@@ -462,5 +474,66 @@ describe('Login', () => {
     await render('/login?invite=expired');
     expect(container.textContent).toContain('This invitation link is invalid or has expired.');
     expect(container.textContent).toContain('Registration is closed');
+  });
+
+  // Somebody with an account can sign in before the preview has come back.
+  // The token must still be posted: dropping it would leave them signed in
+  // and quietly not in the workspace they followed a link to join. Whether
+  // the address matches is the server's call — it answers 403 — and it is
+  // the only thing that can decide it here, because the preview that would
+  // have said so has not arrived.
+  it('posts the invite token when signing in before the preview resolves', async () => {
+    authFixtures.config = { google_enabled: false, oidc_enabled: false, registration: 'open' };
+    authFixtures.invitationPending = true;
+    await render('/login?invite=tok-early');
+    const toggle = Array.from(container.querySelectorAll('button')).find((b) =>
+      (b.textContent || '').includes('I already have an account')
+    ) as HTMLButtonElement;
+    await act(async () => {
+      toggle.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    await submitForm('secret-password');
+
+    expect(authFixtures.calls.login).toHaveLength(1);
+    expect(authFixtures.calls.acceptInvitation).toEqual([['tok-early']]);
+  });
+
+  // And when the server refuses that accept, the person is told rather than
+  // being dropped into the app believing they joined.
+  it('reports a refused accept when the preview never resolved', async () => {
+    authFixtures.config = { google_enabled: false, oidc_enabled: false, registration: 'open' };
+    authFixtures.invitationPending = true;
+    // The server's own words: this link was issued to another address.
+    authFixtures.acceptError = {
+      response: {
+        status: 403,
+        data: { error: 'this invitation was sent to a different address' },
+      },
+    };
+    await render('/login?invite=tok-early');
+    const toggle = Array.from(container.querySelectorAll('button')).find((b) =>
+      (b.textContent || '').includes('I already have an account')
+    ) as HTMLButtonElement;
+    await act(async () => {
+      toggle.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    await submitForm('secret-password');
+
+    expect(authFixtures.calls.acceptInvitation).toEqual([['tok-early']]);
+    expect(container.textContent).toContain('this invitation was sent to a different address');
+    expect(
+      Array.from(container.querySelectorAll('button')).find((b) =>
+        (b.textContent || '').includes('Continue to OpenV')
+      )
+    ).toBeDefined();
+  });
+
+  // The sign-up form states the server's own password rule, not a copy of it.
+  it('takes the minimum password length from the server policy', async () => {
+    authFixtures.config = { google_enabled: false, oidc_enabled: false, registration: 'open' };
+    authFixtures.policy = { registration: 'open', min_password_length: 12 };
+    await render('/login?mode=register');
+    const field = container.querySelector('input[type="password"]') as HTMLInputElement;
+    expect(field.placeholder).toBe('Password (min 12 characters)');
   });
 });

@@ -190,7 +190,10 @@ An invitation converts in exactly three ways, and in no others:
   token to `POST /api/v1/auth/invitations/accept`; a session on any other
   address is refused with
   `403 {"code":"invitation_email_mismatch"}` — this is the path for someone
-  who already had an account, or who registered without the link;
+  who already had an account, or who registered without the link. A
+  successful accept marks that address verified too, for the same reason the
+  sign-up path does: the link reached the mailbox, and it is this account's
+  own address;
 - an identity provider signs the person in and asserts `email_verified` for
   the address; an unverified or absent claim is refused outright and grants
   nothing.
@@ -213,17 +216,25 @@ members.
 ### Workspace invitations
 
 Workspace admins invite by email under *Workspace settings → Members*. An
-address that already has an account joins the workspace immediately; an
-address that does not gets an invitation, which is what makes a closed
-deployment usable:
+address that already has an account **whose owner has proved it** joins the
+workspace immediately; an address that does not — no account at all, or, on a
+deployment that requires email verification, an account that has not verified
+that address — gets an invitation, which is what makes a closed deployment
+usable. The unverified case matters: until somebody has read the mailbox,
+nothing ties that account to the address an admin typed, so the membership
+waits for the link rather than being granted on a claim. Using the link both
+joins the workspace and marks the address verified, so the invitee is not
+asked to prove the same thing twice:
 
 - Invitations are valid **7 days** and can be accepted once. The link is
   `${FRONTEND_URL}/login?invite=<token>`, and the token is stored only as a
   SHA-256 hash — the same contract as runner keys, because the link *is* a
   credential into the workspace.
-- With SMTP configured the link is emailed. **Without SMTP the invitation
-  still exists**: the API returns the link once when it is created and the
-  Members tab shows it for the admin to pass on.
+- With SMTP configured the link is emailed, off the request path — the
+  response's `emailed` says the send was queued, not that it landed, so no
+  admin waits on a slow relay and a failure is logged rather than shown.
+  **Without SMTP the invitation still exists**: the API returns the link once
+  when it is created and the Members tab shows it for the admin to pass on.
 - Following the link signed out opens sign-up with the address prefilled and
   carries the token through whichever way the person continues — creating the
   account, or signing in to one they already had (the token is posted only
@@ -236,7 +247,13 @@ deployment usable:
   follows a later "member" link stays an admin (the invitation is still
   spent), so the last admin of a workspace cannot be demoted this way.
 - Re-inviting an address replaces its previous invitation, whether that one
-  was still live or had expired; only the newest link ever works.
+  was still live or had expired; only the newest link ever works. The
+  invitation keeps its id across the replacement, so a list an admin already
+  has open still revokes the right row. Re-inviting an **unchanged**
+  invitation (same role, still valid) within an hour of its link actually
+  being delivered is not re-sent — the person has one in their inbox — but an
+  invitation whose send failed, or was never attempted, is minted and sent
+  again on the next click.
 - Admins can see and revoke pending invitations on the same tab. Revoking
   stops the link working immediately. Expired invitations are swept by the
   same background reaper that sweeps sessions.

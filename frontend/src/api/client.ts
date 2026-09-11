@@ -1115,6 +1115,11 @@ export interface CrewImportResult {
   warnings?: string[];
 }
 
+// What a password form says about length while /auth/policy is in flight,
+// and if it cannot be read at all. The server's own min_password_length
+// replaces it as soon as the policy answers.
+export const DEFAULT_MIN_PASSWORD_LENGTH = 8;
+
 export const authAPI = {
   config: () => client.get<AuthConfig>('/api/v1/auth/config'),
   // inviteToken is the token from an invite link the form was opened with.
@@ -1148,7 +1153,12 @@ export const authAPI = {
   changeVerificationEmail: (email: string) =>
     client.post<{ sent_to: string }>('/api/v1/auth/verify-email/change', { email }),
   // Registration policy on its own, for a caller that needs nothing else.
-  policy: () => client.get<{ registration: 'open' | 'closed' }>('/api/v1/auth/policy'),
+  // min_password_length is the server's own rule, so a password form states
+  // the length that will actually be enforced rather than a copy of it.
+  policy: () =>
+    client.get<{ registration: 'open' | 'closed'; min_password_length?: number }>(
+      '/api/v1/auth/policy'
+    ),
   // Invite links: preview one (open — the holder has no session yet), or
   // accept it as the signed-in account. Accepting converts only when the
   // session's own address IS the invited one; any other address is refused

@@ -49,10 +49,14 @@ func (h *Handler) registerInvitationRoutes(router *mux.Router) {
 
 // invitationResponse is what an admin gets back when an invitation is
 // created: the row, the one-time link (shown once, like a worker key), and
-// whether the server actually mailed it — with no SMTP the admin has to send
-// the link themselves, and the UI says so. Reason explains an invitation
-// that was NOT mailed for a reason other than a missing mailer, and is empty
-// otherwise.
+// whether the server QUEUED a mail for it — with no SMTP the admin has to
+// send the link themselves, and the UI says so. Emailed is true when a
+// mailer is configured and the send was handed off, not when the mail
+// landed: the send happens off the request path, so nobody waits on SMTP,
+// and a failure is logged (the row's last_emailed_at is stamped only on
+// success, which is what makes a repeat click re-send). Reason explains an
+// invitation that was NOT mailed for a reason other than a missing mailer,
+// and is empty otherwise.
 type invitationResponse struct {
 	Invitation *invitations.Invitation `json:"invitation"`
 	Link       string                  `json:"link"`
@@ -60,12 +64,12 @@ type invitationResponse struct {
 	Reason     string                  `json:"reason,omitempty"`
 }
 
-// inviteResendWindow is how long an unchanged pending invitation suppresses
-// a second mail to the same address, and inviteReasonRecentlySent is what
-// the admin is told when it does.
+// inviteResendWindow is how long an unchanged pending invitation whose link
+// WAS delivered suppresses a second mail to the same address, and
+// inviteReasonRecentlySent is what the admin is told when it does.
 const (
 	inviteResendWindow       = time.Hour
-	inviteReasonRecentlySent = "an unchanged invitation to this address was created less than an hour ago; its link was not re-sent"
+	inviteReasonRecentlySent = "an unchanged invitation to this address was emailed less than an hour ago; its link was not re-sent"
 )
 
 // errThrottled marks a request a limiter refused inside the shared
@@ -139,6 +143,15 @@ var errAlreadyOrgMember = errors.New("that address is already a member of this w
 // neither can invite an address that already has an account, or duplicate a
 // membership. The two handlers differ only in the statuses they map the
 // outcome onto.
+//
+// An account is added directly only when the deployment already knows the
+// address is theirs. Where verification is required and the account has NOT
+// verified it, adding would hand the workspace to whoever typed that address
+// into a sign-up form: nobody has proved they read the mailbox. Such an
+// address is invited instead, exactly as one with no account at all is, so
+// the membership waits for the link — which, once used, also marks the
+// account verified. The admin sees the same 202 either way and never learns
+// whether the address has an account.
 func (h *Handler) addOrInviteToOrg(r *http.Request, orgID, email, role string) (*memberOrInvitation, error) {
 	if role == "" {
 		role = orgs.RoleMember
@@ -164,6 +177,13 @@ func (h *Handler) addOrInviteToOrg(r *http.Request, orgID, email, role string) (
 	if existing != "" {
 		return nil, errAlreadyOrgMember
 	}
+	if h.emailVerification.Required && !user.EmailVerified {
+		resp, err := h.inviteToOrg(r, orgID, email, role)
+		if err != nil {
+			return nil, err
+		}
+		return &memberOrInvitation{Invitation: resp}, nil
+	}
 	if err := h.orgService.AddMember(orgID, user.ID, role); err != nil {
 		return nil, err
 	}
@@ -182,10 +202,12 @@ func (h *Handler) addOrInviteToOrg(r *http.Request, orgID, email, role string) (
 //
 // Two things stand between a click and an outbound mail. An invitation that
 // is already pending for the address, unchanged (same role, not expired) and
-// less than an hour old, is handed straight back WITHOUT mailing anything:
-// re-posting the same invitation — an impatient admin, a double-submitted
-// form, a retrying script — must not turn into repeated mail to somebody
-// who has one link sitting in their inbox already. The link is not
+// whose link was actually DELIVERED less than an hour ago, is handed
+// straight back WITHOUT mailing anything: re-posting the same invitation —
+// an impatient admin, a double-submitted form, a retrying script — must not
+// turn into repeated mail to somebody who has one link sitting in their
+// inbox already. An invitation whose send failed, or never happened, has
+// nothing sitting in any inbox, so it is minted and sent again. The link is not
 // re-shown, because it exists only in that mail: the server keeps a hash,
 // and minting a new one is what "resend" means (it replaces the old link).
 // That trade only holds where the server can mail at all: with no SMTP the
@@ -220,7 +242,7 @@ func (h *Handler) inviteToOrg(r *http.Request, orgID, email, role string) (*invi
 		return nil, err
 	}
 	link := notify.InvitationLink(h.emailLinkBase, token)
-	return &invitationResponse{Invitation: inv, Link: link, Emailed: h.sendInvitationMail(inv, link)}, nil
+	return &invitationResponse{Invitation: inv, Link: link, Emailed: h.sendInvitationMailAsync(inv, link)}, nil
 }
 
 // inviteBudgetKey is the bucket an invitation is charged to: the inviting
@@ -237,40 +259,56 @@ func inviteBudgetKey(r *http.Request) string {
 
 // unchangedPendingInvitation returns the workspace's live invitation for the
 // address when it says exactly what a fresh one would — same role, still
-// valid — and was created inside inviteResendWindow. nil means "mint and
-// mail one", which is also the answer when the pending list cannot be read:
-// failing to suppress a mail is better than failing to invite somebody.
+// valid — AND its link reached the address inside inviteResendWindow. The
+// row is looked up by (workspace, address), not by reading every pending
+// invitation the workspace holds.
+//
+// The window is measured from the delivery, never from the row: mail goes
+// out off the request path, so an invitation that exists is not an
+// invitation anybody received. A row whose send failed, or has not been
+// attempted, has no last_emailed_at and is re-sent.
+//
+// nil means "mint and mail one", which is also the answer when the lookup
+// fails: failing to suppress a mail is better than failing to invite
+// somebody.
 func (h *Handler) unchangedPendingInvitation(orgID, email, role string) *invitations.Invitation {
-	list, err := h.invitationService.ListPending(orgID)
-	if err != nil {
+	inv, err := h.invitationService.FindPending(orgID, email)
+	if err != nil || inv == nil {
 		return nil
 	}
-	email = users.NormalizeEmail(email)
 	now := time.Now()
-	for _, inv := range list {
-		if inv == nil || users.NormalizeEmail(inv.Email) != email {
-			continue
-		}
-		if inv.Role == role && inv.Pending(now) && now.Sub(inv.CreatedAt) < inviteResendWindow {
-			return inv
-		}
-		return nil
+	if inv.Role == role && inv.Pending(now) &&
+		inv.LastEmailedAt != nil && now.Sub(*inv.LastEmailedAt) < inviteResendWindow {
+		return inv
 	}
 	return nil
 }
 
-// sendInvitationMail delivers the link when SMTP is configured, reporting
-// whether it went out. A failure is logged and swallowed: the invitation is
-// already real, and the admin can still hand the link over.
-func (h *Handler) sendInvitationMail(inv *invitations.Invitation, link string) bool {
+// sendInvitationMailAsync hands the link to SMTP without making the request
+// wait, the way registration's verification link goes out: an admin's click
+// must not sit on a slow relay. It reports whether the send was QUEUED — a
+// mailer is configured and the goroutine is away — which is what the
+// response's emailed means.
+//
+// A failure is logged and swallowed: the invitation is already real, and the
+// admin can still hand the link over. Only a send that SUCCEEDED stamps the
+// row, so a failed one is re-sent by the next click rather than suppressed
+// as "already emailed".
+func (h *Handler) sendInvitationMailAsync(inv *invitations.Invitation, link string) bool {
 	if h.mailer == nil || !h.mailer.Enabled() {
 		return false
 	}
 	subject, body := notify.RenderInvitationEmail(inv.OrgName, inv.InvitedByName, link, invitations.DefaultTTL)
-	if err := notify.SendWithTimeout(h.mailer, inv.Email, subject, body, notify.VerificationSendTimeout); err != nil {
-		slog.Warn("invitation: failed to send invitation email", "org_id", inv.OrgID, "error", err)
-		return false
-	}
+	go func() {
+		if err := notify.SendWithTimeout(h.mailer, inv.Email, subject, body, notify.VerificationSendTimeout); err != nil {
+			slog.Warn("invitation: failed to send invitation email", "org_id", inv.OrgID, "error", err)
+			return
+		}
+		if err := h.invitationService.MarkEmailed(inv.ID, time.Now()); err != nil {
+			slog.Warn("invitation: could not record that the link was emailed",
+				"invitation_id", inv.ID, "org_id", inv.OrgID, "error", err)
+		}
+	}()
 	return true
 }
 
@@ -373,9 +411,17 @@ func (h *Handler) PreviewInvitation(w http.ResponseWriter, r *http.Request) {
 		writeRateLimited(w, "Too many attempts from this address; try again later.", retryAfter)
 		return
 	}
+	// Only an unusable link is a 404. A database that cannot be read is not
+	// evidence that the token is wrong, and answering "invalid or expired"
+	// to it sends the invitee off to ask for a new invitation that will fail
+	// exactly the same way; it is reported as the server fault it is.
 	inv, err := h.invitationService.Lookup(req.Token)
-	if err != nil {
-		writeJSONError(w, http.StatusNotFound, invitations.ErrInvalidToken.Error())
+	if err != nil || inv == nil {
+		if err == nil || errors.Is(err, invitations.ErrInvalidToken) {
+			writeJSONError(w, http.StatusNotFound, invitations.ErrInvalidToken.Error())
+			return
+		}
+		respondInternal(w, r, "failed to read the invitation", err)
 		return
 	}
 	json.NewEncoder(w).Encode(map[string]any{
@@ -432,6 +478,17 @@ func (h *Handler) AcceptInvitation(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
+	// Presenting the token proves this account read the invited mailbox —
+	// the link was mailed there and nowhere else — and the address it was
+	// issued to IS this account's own, which AcceptTokenForEmail has just
+	// checked. That is the same proof Register accepts from an invite token,
+	// so the address is marked verified here too: an invitee must not be
+	// walled behind a second mail immediately after following the first.
+	outcome := InviteOutcomeAccepted
+	if acc.AlreadyMember {
+		outcome = InviteOutcomeAlreadyMember
+	}
+	h.verifiedByInvitation(user, outcome)
 	// role is what the account holds now, which is the invited role only
 	// when it was not already a member: an invitation never rewrites a role.
 	json.NewEncoder(w).Encode(map[string]any{

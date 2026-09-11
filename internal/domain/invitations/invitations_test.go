@@ -29,14 +29,40 @@ func (m *memRepo) save(inv *Invitation) error {
 }
 
 // Replace mirrors the postgres upsert: any unaccepted row for the same
-// (org, email) — expired or not — makes way for the new one.
+// (org, email) — expired or not — makes way for the new one, but KEEPS ITS
+// ID, so an id already handed to a client still names the invitation. The
+// display names come back off the join (here: off the row that was there),
+// and the row is written back into inv, as the RETURNING does. A fresh link
+// has not been emailed yet.
 func (m *memRepo) Replace(inv *Invitation) error {
 	for id, row := range m.rows {
 		if row.OrgID == inv.OrgID && row.Email == inv.Email && row.AcceptedAt == nil {
+			inv.ID = row.ID
+			inv.OrgName = row.OrgName
+			inv.InvitedByName = row.InvitedByName
 			delete(m.rows, id)
 		}
 	}
+	inv.LastEmailedAt = nil
 	return m.save(inv)
+}
+
+// FindPending is the targeted lookup behind "has this address already got a
+// live invitation here?".
+func (m *memRepo) FindPending(orgID, email string, now time.Time) (*Invitation, error) {
+	for _, inv := range m.rows {
+		if inv.OrgID == orgID && strings.EqualFold(inv.Email, email) && inv.Pending(now) {
+			return inv, nil
+		}
+	}
+	return nil, nil
+}
+
+func (m *memRepo) MarkEmailed(id string, at time.Time) error {
+	if inv := m.rows[id]; inv != nil {
+		inv.LastEmailedAt = &at
+	}
+	return nil
 }
 
 func (m *memRepo) ListPending(orgID string, now time.Time) ([]*Invitation, error) {
@@ -546,11 +572,16 @@ func TestReInvitingAnExpiredAddressReplacesTheOldRow(t *testing.T) {
 	if err != nil {
 		t.Fatalf("re-invite after expiry: %v", err)
 	}
-	if _, ok := repo.rows[first.ID]; ok {
-		t.Error("the expired row survived the re-invite")
-	}
+	// One row, still under the id the first invitation had: the credential
+	// is rotated, the identity of the invitation is not.
 	if len(repo.rows) != 1 || repo.rows[second.ID] == nil {
-		t.Errorf("rows = %d, want only the new invitation", len(repo.rows))
+		t.Errorf("rows = %d, want only the re-invitation", len(repo.rows))
+	}
+	if second.ID != first.ID {
+		t.Errorf("re-invite id = %s, want the existing row's %s", second.ID, first.ID)
+	}
+	if stored := repo.rows[second.ID]; stored == nil || stored.Role != orgs.RoleAdmin || !stored.Pending(time.Now()) {
+		t.Errorf("the expired row was not rotated into the new invitation: %+v", stored)
 	}
 	if _, err := svc.Lookup(token); err != nil {
 		t.Errorf("the new link must work: %v", err)
@@ -565,8 +596,8 @@ func TestCreateReturnsTheDisplayNames(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Create: %v", err)
 	}
-	// The repository joins the names in on the way out; Create must read the
-	// row back rather than return the struct it wrote.
+	// The repository joins the names in on the way out and writes the stored
+	// row back into what Create returns — one query, no second read.
 	repo.rows[inv.ID].OrgName = "Desktop Machine Shop"
 	repo.rows[inv.ID].InvitedByName = "Dave"
 	again, _, err := svc.Create("org-1", "named@example.com", "", nil)
@@ -576,6 +607,54 @@ func TestCreateReturnsTheDisplayNames(t *testing.T) {
 	stored := repo.rows[again.ID]
 	if again.ID != stored.ID || again.Email != stored.Email {
 		t.Errorf("Create returned %+v, want the stored row", again)
+	}
+	if again.OrgName != "Desktop Machine Shop" || again.InvitedByName != "Dave" {
+		t.Errorf("Create returned %+v, want the joined display names", again)
+	}
+}
+
+// FindPending answers the one question a re-invite asks — is there already a
+// live invitation for THIS address here? — without reading the workspace's
+// other invitations.
+func TestFindPendingReturnsOnlyTheLiveInvitationForTheAddress(t *testing.T) {
+	svc, repo, _ := newTestService()
+	inv, _, err := svc.Create("org-1", "waiting@example.com", orgs.RoleMember, nil)
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	if _, _, err := svc.Create("org-1", "other@example.com", orgs.RoleMember, nil); err != nil {
+		t.Fatalf("second Create: %v", err)
+	}
+
+	found, err := svc.FindPending("org-1", "Waiting@Example.com")
+	if err != nil || found == nil || found.ID != inv.ID {
+		t.Fatalf("FindPending = %+v, %v; want the invitation for that address", found, err)
+	}
+	if found.LastEmailedAt != nil {
+		t.Error("a fresh invitation must not look like one that was emailed")
+	}
+
+	// A delivered link is stamped, which is what lets a caller suppress a
+	// second mail.
+	at := time.Now()
+	if err := svc.MarkEmailed(inv.ID, at); err != nil {
+		t.Fatalf("MarkEmailed: %v", err)
+	}
+	if stamped, _ := svc.FindPending("org-1", "waiting@example.com"); stamped == nil || stamped.LastEmailedAt == nil {
+		t.Errorf("MarkEmailed did not stamp the row: %+v", stamped)
+	}
+
+	// Another workspace, an address with nothing pending, and an expired
+	// invitation are all "nothing here".
+	if found, _ := svc.FindPending("org-2", "waiting@example.com"); found != nil {
+		t.Error("FindPending crossed a workspace boundary")
+	}
+	if found, _ := svc.FindPending("org-1", "nobody@example.com"); found != nil {
+		t.Error("FindPending invented an invitation")
+	}
+	repo.rows[inv.ID].ExpiresAt = time.Now().Add(-time.Minute)
+	if found, _ := svc.FindPending("org-1", "waiting@example.com"); found != nil {
+		t.Error("an expired invitation is not pending")
 	}
 }
 

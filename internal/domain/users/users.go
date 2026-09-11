@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"log/slog"
 	"strings"
 	"time"
@@ -51,7 +52,9 @@ var (
 	// ErrWeakPassword, ErrPasswordIncorrect and ErrNoPassword are the three
 	// ways a password change refuses. They are separate errors so the handler
 	// can answer 400, 403 and 409 instead of one indiscriminate 400.
-	ErrWeakPassword      = errors.New("password must be at least 8 characters")
+	// The length in the message is derived from MinPasswordLength, so the
+	// rule and what the person is told can never drift apart.
+	ErrWeakPassword      = fmt.Errorf("password must be at least %d characters", MinPasswordLength)
 	ErrPasswordIncorrect = errors.New("current password is incorrect")
 	ErrNoPassword        = errors.New("this account signs in through an identity provider and has no password to change")
 )

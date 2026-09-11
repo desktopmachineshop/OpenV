@@ -1,6 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { InvitationOutcome, InvitationPreview, authAPI } from '../api/client';
+import {
+  DEFAULT_MIN_PASSWORD_LENGTH,
+  InvitationOutcome,
+  InvitationPreview,
+  authAPI,
+} from '../api/client';
 import { apiErrorMessage } from '../api/errors';
 import { useAppStore } from '../state/store';
 
@@ -55,6 +60,11 @@ export const Login: React.FC = () => {
   const [oidcEnabled, setOidcEnabled] = useState(false);
   const [oidcName, setOidcName] = useState('SSO');
   const [registrationClosed, setRegistrationClosed] = useState(false);
+  // The server's password rule, so the form states what will actually be
+  // enforced. DEFAULT_MIN_PASSWORD_LENGTH stands in while the policy is in
+  // flight, and if the call fails — a form that says nothing about length is
+  // worse than one that says the usual number.
+  const [minPasswordLength, setMinPasswordLength] = useState(DEFAULT_MIN_PASSWORD_LENGTH);
   const [invite, setInvite] = useState<InvitationPreview | null>(null);
   const [inviteError, setInviteError] = useState('');
   // Where to go when the credentials worked but the invitation did not: the
@@ -81,6 +91,14 @@ export const Login: React.FC = () => {
       .catch(() => {
         setGoogleEnabled(false);
         setOidcEnabled(false);
+      });
+    authAPI
+      .policy()
+      .then((res) => {
+        if (res.data.min_password_length) setMinPasswordLength(res.data.min_password_length);
+      })
+      .catch(() => {
+        // Leave the default: the sign-up form still needs to say something.
       });
     // Already signed in? With no invitation there is nothing to decide, so
     // go straight to projects. With one, stay here and let the person say
@@ -211,17 +229,29 @@ export const Login: React.FC = () => {
       setCurrentUser(res.data);
       // Signing in through an invite link is how somebody who already has an
       // account takes it up: register carries the token itself, but a
-      // sign-in has to hand it over once there is a session to join — and
-      // only when the address that just signed in IS the invited one. The
-      // server enforces that with a 403; the client does not fire a call it
-      // knows would be refused. A call that IS made and fails is reported:
-      // they are signed in either way, but they asked to join a workspace,
-      // and a swallowed error leaves them believing they did.
-      if (inviteToken && invite && sameAddress(res.data.email, invite.email)) {
+      // sign-in has to hand it over once there is a session to join.
+      //
+      // The token is posted whenever the preview has NOT told us the link
+      // belongs to somebody else. A preview that is still in flight, or that
+      // failed, is not a reason to drop the token on the floor — somebody
+      // who signs in quickly would silently not join, which is the one
+      // outcome this view exists to prevent. Only a loaded preview naming a
+      // different address suppresses the call, because the server answers
+      // that with a 403 and a call known to be refused is not worth making;
+      // any other mismatch is the server's 403 to report. A call that IS
+      // made and fails is reported: they are signed in either way, but they
+      // asked to join a workspace, and a swallowed error leaves them
+      // believing they did.
+      if (inviteToken && (!invite || sameAddress(res.data.email, invite.email))) {
         try {
           await authAPI.acceptInvitation(inviteToken);
         } catch (err: any) {
-          setError(apiErrorMessage(err, `Signed in, but could not join ${invite.org_name}`));
+          setError(
+            apiErrorMessage(
+              err,
+              `Signed in, but could not join ${invite ? invite.org_name : 'the workspace'}`
+            )
+          );
           setContinueTo(
             verificationRequired && !res.data.email_verified ? '/verify-email' : '/projects'
           );
@@ -426,7 +456,11 @@ export const Login: React.FC = () => {
               <div className="form-group" style={{ marginBottom: 16 }}>
                 <input
                   type="password"
-                  placeholder={activeMode === 'register' ? 'Password (min 8 characters)' : 'Password'}
+                  placeholder={
+                    activeMode === 'register'
+                      ? `Password (min ${minPasswordLength} characters)`
+                      : 'Password'
+                  }
                   autoComplete={activeMode === 'register' ? 'new-password' : 'current-password'}
                   value={password}
                   required

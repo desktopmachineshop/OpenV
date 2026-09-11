@@ -24,7 +24,7 @@ func NewInvitationRepository(db *sql.DB) *InvitationRepository {
 // the whole table.
 func invitationEmail(email string) string { return users.NormalizeEmail(email) }
 
-const invitationColumns = `i.id, i.org_id, i.email, i.role, i.token_hash, i.invited_by, i.expires_at, i.accepted_at, i.created_at`
+const invitationColumns = `i.id, i.org_id, i.email, i.role, i.token_hash, i.invited_by, i.expires_at, i.accepted_at, i.created_at, i.last_emailed_at`
 
 // invitationJoin carries the display names an invitee sees before they have
 // any membership to read them from.
@@ -38,9 +38,9 @@ const invitationSelect = `SELECT ` + invitationColumns + `, COALESCE(o.name, '')
 func scanInvitation(row interface{ Scan(...interface{}) error }) (*invitations.Invitation, error) {
 	inv := new(invitations.Invitation)
 	var invitedBy sql.NullString
-	var acceptedAt sql.NullTime
+	var acceptedAt, lastEmailedAt sql.NullTime
 	err := row.Scan(&inv.ID, &inv.OrgID, &inv.Email, &inv.Role, &inv.TokenHash, &invitedBy,
-		&inv.ExpiresAt, &acceptedAt, &inv.CreatedAt, &inv.OrgName, &inv.InvitedByName)
+		&inv.ExpiresAt, &acceptedAt, &inv.CreatedAt, &lastEmailedAt, &inv.OrgName, &inv.InvitedByName)
 	if err != nil {
 		return nil, err
 	}
@@ -51,6 +51,10 @@ func scanInvitation(row interface{ Scan(...interface{}) error }) (*invitations.I
 	if acceptedAt.Valid {
 		t := acceptedAt.Time
 		inv.AcceptedAt = &t
+	}
+	if lastEmailedAt.Valid {
+		t := lastEmailedAt.Time
+		inv.LastEmailedAt = &t
 	}
 	return inv, nil
 }
@@ -78,20 +82,43 @@ func scanInvitations(rows *sql.Rows) ([]*invitations.Invitation, error) {
 // index. Upserting on that same index instead makes the second writer wait
 // and then overwrite, so re-inviting an address is always the newest link
 // and never an error. Accepted rows are history and are left alone.
+//
+// An existing row KEEPS ITS ID: everything that makes the invitation a live
+// credential is rotated (token hash, role, expiry, inviter, created_at, and
+// last_emailed_at, which a fresh link has not earned yet), but the id an
+// admin's client is already holding — in a list, behind a Revoke button —
+// stays the one that names this invitation. Replacing it would quietly turn
+// those ids into 404s.
+//
+// The row is read back in the same statement, through the same join as every
+// other query, so the caller gets the id that survived and the display names
+// the invitation email needs without a second round trip.
 func (r *InvitationRepository) Replace(inv *invitations.Invitation) error {
-	_, err := r.db.Exec(`
-		INSERT INTO org_invitations (id, org_id, email, role, token_hash, invited_by, expires_at, accepted_at, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-		ON CONFLICT (org_id, email) WHERE accepted_at IS NULL
-		DO UPDATE SET
-			id = EXCLUDED.id,
-			role = EXCLUDED.role,
-			token_hash = EXCLUDED.token_hash,
-			invited_by = EXCLUDED.invited_by,
-			expires_at = EXCLUDED.expires_at,
-			created_at = EXCLUDED.created_at
-	`, inv.ID, inv.OrgID, invitationEmail(inv.Email), inv.Role, inv.TokenHash, inv.InvitedBy, inv.ExpiresAt, inv.AcceptedAt, inv.CreatedAt)
-	return err
+	stored, err := scanInvitation(r.db.QueryRow(`
+		WITH upserted AS (
+			INSERT INTO org_invitations (id, org_id, email, role, token_hash, invited_by, expires_at, accepted_at, created_at, last_emailed_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NULL)
+			ON CONFLICT (org_id, email) WHERE accepted_at IS NULL
+			DO UPDATE SET
+				role = EXCLUDED.role,
+				token_hash = EXCLUDED.token_hash,
+				invited_by = EXCLUDED.invited_by,
+				expires_at = EXCLUDED.expires_at,
+				accepted_at = EXCLUDED.accepted_at,
+				created_at = EXCLUDED.created_at,
+				last_emailed_at = EXCLUDED.last_emailed_at
+			RETURNING id, org_id, email, role, token_hash, invited_by, expires_at, accepted_at, created_at, last_emailed_at
+		)
+		SELECT `+invitationColumns+`, COALESCE(o.name, ''), COALESCE(u.name, '')
+		FROM upserted i
+		LEFT JOIN organizations o ON o.id = i.org_id
+		LEFT JOIN users u ON u.id = i.invited_by
+	`, inv.ID, inv.OrgID, invitationEmail(inv.Email), inv.Role, inv.TokenHash, inv.InvitedBy, inv.ExpiresAt, inv.AcceptedAt, inv.CreatedAt))
+	if err != nil {
+		return err
+	}
+	*inv = *stored
+	return nil
 }
 
 // ListPending returns the workspace's live invitations, newest first.
@@ -104,6 +131,28 @@ func (r *InvitationRepository) ListPending(orgID string, now time.Time) ([]*invi
 		return nil, err
 	}
 	return scanInvitations(rows)
+}
+
+// FindPending returns the workspace's live invitation for one address, or
+// nil. It reads the pending-uniqueness index directly, so deciding whether
+// one address's link should be re-sent never scans the workspace's other
+// invitations.
+func (r *InvitationRepository) FindPending(orgID, email string, now time.Time) (*invitations.Invitation, error) {
+	inv, err := scanInvitation(r.db.QueryRow(invitationSelect+`
+		WHERE i.org_id = $1 AND i.email = $2 AND i.accepted_at IS NULL AND i.expires_at > $3
+	`, orgID, invitationEmail(email), now))
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	return inv, err
+}
+
+// MarkEmailed stamps last_emailed_at after a send succeeded, which is what
+// lets an unchanged re-invite suppress a second mail: without the stamp the
+// link is sent again rather than sat on.
+func (r *InvitationRepository) MarkEmailed(id string, at time.Time) error {
+	_, err := r.db.Exec(`UPDATE org_invitations SET last_emailed_at = $2 WHERE id = $1`, id, at)
+	return err
 }
 
 // FindByID returns one invitation, or nil.

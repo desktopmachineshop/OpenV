@@ -321,24 +321,26 @@ func TestReplaceReInvitesOverAnyUnacceptedRow(t *testing.T) {
 	}
 	future := time.Now().UTC().Add(invitations.DefaultTTL)
 
-	// A live invitation is replaced by the newer one, and its link dies.
+	// A live invitation is replaced by the newer one, and its link dies —
+	// but the row keeps its id, so an id already handed to a client still
+	// names this invitation.
 	first := replace("again@example.com", orgs.RoleMember, "tok-1", future)
 	second := replace("again@example.com", orgs.RoleAdmin, "tok-2", future)
 	if got, _ := repo.FindByTokenHash(users.HashToken("tok-1")); got != nil {
 		t.Error("the superseded link still resolves")
 	}
-	if got, _ := repo.FindByID(first.ID); got != nil {
-		t.Error("the superseded row survived")
+	if second.ID != first.ID {
+		t.Errorf("re-invite id = %s, want the existing row's %s", second.ID, first.ID)
 	}
-	if got, _ := repo.FindByID(second.ID); got == nil || got.Role != orgs.RoleAdmin {
-		t.Errorf("the new invitation = %v", got)
+	if got, _ := repo.FindByID(first.ID); got == nil || got.Role != orgs.RoleAdmin {
+		t.Errorf("the re-invitation under the original id = %v", got)
 	}
 
-	// An EXPIRED leftover is no different: re-inviting works.
+	// An EXPIRED leftover is no different: re-inviting works, on the same row.
 	expired := replace("again@example.com", orgs.RoleMember, "tok-3", time.Now().UTC().Add(-time.Hour))
 	third := replace("again@example.com", orgs.RoleMember, "tok-4", future)
-	if got, _ := repo.FindByID(expired.ID); got != nil {
-		t.Error("the expired row survived the re-invite")
+	if third.ID != expired.ID {
+		t.Errorf("re-invite after expiry id = %s, want %s", third.ID, expired.ID)
 	}
 	pending, err := repo.ListPendingForEmail("AGAIN@example.com", time.Now())
 	if err != nil || len(pending) != 1 || pending[0].ID != third.ID {
@@ -392,5 +394,62 @@ func TestReplaceSurvivesConcurrentReInvites(t *testing.T) {
 	}
 	if pending, err := repo.ListPendingForEmail("race@example.com", time.Now()); err != nil || len(pending) != 1 {
 		t.Fatalf("pending after the race = %d (%v), want 1", len(pending), err)
+	}
+}
+
+// A re-invite rotates the credential and keeps the invitation's identity:
+// the id an admin's client is holding — in a list, behind a Revoke button —
+// must still name this invitation afterwards. The stored row comes back from
+// the same write, display names joined in, with the delivery stamp cleared:
+// the new link has not been sent to anybody yet.
+func TestReplaceKeepsTheIDAndReturnsTheStoredRow(t *testing.T) {
+	db := testDB(t)
+	initTestSchema(t, db)
+	repo := NewInvitationRepository(db)
+	userRepo := NewUserRepository(db)
+
+	orgID := saveTestOrg(t, db, "Desktop Machine Shop")
+	admin := saveTestUser(t, userRepo, "ada@example.com", users.ProviderPassword, true)
+	future := time.Now().UTC().Add(invitations.DefaultTTL)
+	first := saveInvitation(t, repo, orgID, "keep@example.com", orgs.RoleMember, "tok-keep-1", future, &admin.ID)
+
+	// Replace wrote the stored row back, names and all — Create needs no
+	// second read to name the workspace and the inviter in the mail.
+	if first.OrgName != "Desktop Machine Shop" || first.InvitedByName == "" {
+		t.Errorf("Replace did not return the joined display names: %+v", first)
+	}
+	if first.LastEmailedAt != nil {
+		t.Error("a brand-new invitation cannot already have been emailed")
+	}
+
+	stamped := time.Now().UTC().Truncate(time.Microsecond)
+	if err := repo.MarkEmailed(first.ID, stamped); err != nil {
+		t.Fatalf("MarkEmailed: %v", err)
+	}
+	sent, err := repo.FindPending(orgID, "Keep@Example.com", time.Now())
+	if err != nil || sent == nil || sent.LastEmailedAt == nil || !sent.LastEmailedAt.Equal(stamped) {
+		t.Fatalf("FindPending after MarkEmailed = %+v (%v), want the row stamped at %v", sent, err, stamped)
+	}
+
+	second := saveInvitation(t, repo, orgID, "KEEP@example.com", orgs.RoleAdmin, "tok-keep-2", future, &admin.ID)
+	if second.ID != first.ID {
+		t.Errorf("re-invite id = %s, want the existing row's %s", second.ID, first.ID)
+	}
+	if second.LastEmailedAt != nil {
+		t.Errorf("the new link inherited the old delivery stamp: %v", second.LastEmailedAt)
+	}
+	stored, err := repo.FindByID(first.ID)
+	if err != nil || stored == nil {
+		t.Fatalf("FindByID after the re-invite = %+v (%v), want the invitation under its original id", stored, err)
+	}
+	if stored.Role != orgs.RoleAdmin || stored.TokenHash != users.HashToken("tok-keep-2") || stored.LastEmailedAt != nil {
+		t.Errorf("the row was not rotated onto the new invitation: %+v", stored)
+	}
+	// An address with nothing live here, and another workspace, are both nil.
+	if got, err := repo.FindPending(orgID, "nobody@example.com", time.Now()); err != nil || got != nil {
+		t.Errorf("FindPending for an uninvited address = %+v (%v)", got, err)
+	}
+	if got, err := repo.FindPending(uuid.New().String(), "keep@example.com", time.Now()); err != nil || got != nil {
+		t.Errorf("FindPending crossed a workspace boundary: %+v (%v)", got, err)
 	}
 }
