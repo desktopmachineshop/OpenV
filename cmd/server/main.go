@@ -620,6 +620,10 @@ func main() {
 	// own domain writes (events, link-snapshot auto-versioning) when a human
 	// approves a proposal. Done before the server starts serving.
 	proposalService.SetAppliers(handler.ProposalAppliers())
+	// Same cycle, other direction: a wizard nudge parked while a copilot run
+	// was in flight is launched by the handler when the hooks see that run
+	// finish.
+	hooks.SetGuidedNudgeLauncher(handler)
 
 	// Router + middleware.
 	router := mux.NewRouter()

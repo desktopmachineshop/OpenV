@@ -127,6 +127,15 @@ func (f *fakeRunRepo) AppendLogs(runID string, entries []LogEntry) error {
 	return nil
 }
 
+func (f *fakeRunRepo) UpdatePartialText(runID string, text string) (bool, error) {
+	r, ok := f.runs[runID]
+	if !ok || (r.Status != StatusClaimed && r.Status != StatusRunning) {
+		return false, nil
+	}
+	r.PartialText = text
+	return true, nil
+}
+
 func (f *fakeRunRepo) UpdateWorkItemID(runID, workItemID string) error {
 	if r, ok := f.runs[runID]; ok {
 		r.WorkItemID = &workItemID
@@ -785,7 +794,7 @@ func TestMarkRunningLosesRaceToReaper(t *testing.T) {
 func TestAppendLogsRefreshesHeartbeatOnLiveRun(t *testing.T) {
 	svc, repo := newFakeService(&Run{ID: "r1", Status: StatusRunning})
 
-	run, err := svc.AppendLogs("r1", []LogEntry{{RunID: "r1", Seq: 1, Kind: LogText}})
+	run, err := svc.AppendLogs("r1", []LogEntry{{RunID: "r1", Seq: 1, Kind: LogText}}, "half an answ")
 	if err != nil {
 		t.Fatalf("AppendLogs: %v", err)
 	}
@@ -798,6 +807,9 @@ func TestAppendLogsRefreshesHeartbeatOnLiveRun(t *testing.T) {
 	if len(repo.logs["r1"]) != 1 {
 		t.Errorf("stored %d log entries, want 1", len(repo.logs["r1"]))
 	}
+	if repo.runs["r1"].PartialText != "half an answ" {
+		t.Errorf("partial_text = %q, want the answer so far", repo.runs["r1"].PartialText)
+	}
 }
 
 func TestAppendLogsKeepsLogsButNotHeartbeatOnTerminalRun(t *testing.T) {
@@ -806,7 +818,7 @@ func TestAppendLogsKeepsLogsButNotHeartbeatOnTerminalRun(t *testing.T) {
 	// refreshed — the run is not alive.
 	svc, repo := newFakeService(&Run{ID: "r1", Status: StatusFailed, Error: "worker lost (heartbeat timeout)"})
 
-	run, err := svc.AppendLogs("r1", []LogEntry{{RunID: "r1", Seq: 7, Kind: LogText}})
+	run, err := svc.AppendLogs("r1", []LogEntry{{RunID: "r1", Seq: 7, Kind: LogText}}, "too late")
 	if err != nil {
 		t.Fatalf("AppendLogs: %v", err)
 	}
@@ -818,6 +830,9 @@ func TestAppendLogsKeepsLogsButNotHeartbeatOnTerminalRun(t *testing.T) {
 	}
 	if len(repo.logs["r1"]) != 1 {
 		t.Errorf("stored %d log entries, want the late batch kept", len(repo.logs["r1"]))
+	}
+	if repo.runs["r1"].PartialText != "" {
+		t.Errorf("partial_text = %q, want nothing written back onto a terminal run", repo.runs["r1"].PartialText)
 	}
 }
 

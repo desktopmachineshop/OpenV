@@ -1,6 +1,9 @@
 package runner
 
-import "context"
+import (
+	"context"
+	"strings"
+)
 
 // Availability is a provider detection result.
 type Availability struct {
@@ -62,18 +65,44 @@ type RunHandle interface {
 	Cancel()
 }
 
+// PartialTextSource is implemented by run handles whose provider reports the
+// assistant's answer as it is written. The log pump ships what it returns to
+// the API so a chat panel can show the reply forming; providers that only
+// produce text at the end implement nothing and stream no partials.
+type PartialTextSource interface {
+	// PartialText returns the whole assistant text so far, not a delta.
+	PartialText() string
+}
+
+// joinPartial renders accumulated assistant text: the messages that finished
+// during a run, plus the one still being written, separated as paragraphs.
+func joinPartial(done []string, live string) string {
+	parts := done
+	if strings.TrimSpace(live) != "" {
+		parts = append(append([]string{}, done...), live)
+	}
+	return strings.Join(parts, "\n\n")
+}
+
 // Adapter drives one agent provider.
 //
 // Per-adapter capability matrix (RunSpec fields honoured vs. rejected):
 //
 //	Capability     claude-code   codex-cli            gemini-cli
 //	-----------    -----------   ------------------   ------------------
+//	Partial text   yes (tokens)  yes (per message)    no (one JSON blob)
 //	Model          yes           yes                  yes
 //	Effort         yes           yes (capped "high")  no (ignored*)
 //	SystemPrompt   yes           yes (prefixed)       yes (prefixed)
 //	MaxTurns       yes           error if set         error if set
 //	AllowedTools   yes           error if set         error if set
 //	MCP env token  file (0600)   process env (byname) process env ($VAR)
+//
+// Partial text is the answer-so-far the log pump streams to the chat panels
+// (PartialTextSource): claude reports token deltas when its CLI supports
+// --include-partial-messages and whole assistant messages otherwise; codex
+// reports each agent message as it completes; gemini prints one JSON object
+// at the very end, so it has nothing to stream and reports no partials.
 //
 // *gemini's headless CLI exposes no reasoning-effort control, so Effort is a
 // documented no-op there rather than an error (it never runs unconstrained on

@@ -76,6 +76,7 @@ type procConfig struct {
 // procHandle is the shared RunHandle implementation for CLI adapters.
 type procHandle struct {
 	cmd    *exec.Cmd
+	parser streamParser
 	events chan RunEvent
 	done   chan struct{}
 
@@ -115,6 +116,7 @@ func startProc(ctx context.Context, cfg procConfig, parser streamParser) (*procH
 
 	h := &procHandle{
 		cmd:      cmd,
+		parser:   parser,
 		events:   make(chan RunEvent, 256),
 		done:     make(chan struct{}),
 		cancelCh: make(chan struct{}),
@@ -258,6 +260,16 @@ func startProc(ctx context.Context, cfg procConfig, parser streamParser) (*procH
 }
 
 func (h *procHandle) Events() <-chan RunEvent { return h.events }
+
+// PartialText forwards the parser's answer-so-far, when its provider has
+// one. Called from the log pump while the process is still running, so the
+// parsers that implement it guard their own state.
+func (h *procHandle) PartialText() string {
+	if src, ok := h.parser.(PartialTextSource); ok {
+		return src.PartialText()
+	}
+	return ""
+}
 
 func (h *procHandle) Wait() (Result, error) {
 	<-h.done

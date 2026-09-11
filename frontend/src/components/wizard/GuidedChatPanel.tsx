@@ -168,6 +168,10 @@ const suggestionSummary = (s: CopilotSuggestion): { title: string; detail: strin
   }
 };
 
+// Floor between two nudges sent from this panel. Wizard saves can come in
+// bursts (Next, Next, Skip); the server coalesces what still overlaps a turn.
+const NUDGE_MIN_INTERVAL_MS = 1000;
+
 export interface GuidedChatPanelHandle {
   /** Fire a copilot turn reacting to a wizard action (step saved/skipped); shows the thinking indicator immediately. */
   nudge: (step: number, event: string) => void;
@@ -196,6 +200,11 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
   const [composerText, setComposerText] = useState('');
   const [sending, setSending] = useState(false);
   const [typing, setTyping] = useState(false);
+  // The reply as it is being written, pushed by the server as
+  // `assistant_partial` while the run is in flight. It is the whole text so
+  // far (never a delta), so a dropped event only costs a frame; the final
+  // `message` replaces it.
+  const [partial, setPartial] = useState('');
   const [sendError, setSendError] = useState('');
   // True when the API reports no runner online: turns queue unanswered, so
   // the panel shows connect instructions instead of a thinking indicator.
@@ -210,6 +219,7 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
   const retryRef = useRef(0);
   const closedRef = useRef(false);
   const kickedRef = useRef(false);
+  const lastNudgeRef = useRef(0);
 
   // Snapshot getters live in refs so the SSE effect doesn't resubscribe on
   // every wizard keystroke.
@@ -227,6 +237,9 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
     });
     if (msg.role === 'assistant' || msg.role === 'system') {
       setTyping(false);
+      // The real message has landed (or the turn failed): whatever the
+      // streaming bubble was showing is superseded.
+      setPartial('');
     }
     // An assistant reply proves a runner is processing turns again.
     if (msg.role === 'assistant') {
@@ -270,6 +283,18 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
         // ignore malformed events
       }
     });
+    es.addEventListener('assistant_partial', (event: MessageEvent) => {
+      try {
+        const data = JSON.parse(event.data) as { run_id?: string; text?: string };
+        if (typeof data?.text !== 'string' || !data.text) return;
+        setPartial(data.text);
+        // Text is arriving, so the assistant is demonstrably answering.
+        setTyping(false);
+        setRunnerOffline(false);
+      } catch {
+        // ignore malformed events
+      }
+    });
     es.onerror = () => {
       es.close();
       if (esRef.current === es) esRef.current = null;
@@ -288,6 +313,7 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
     closedRef.current = false;
     kickedRef.current = false;
     setMessages([]);
+    setPartial('');
     let cancelled = false;
     (async () => {
       try {
@@ -332,6 +358,13 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
     () => ({
       nudge: (nudgeStep: number, event: string) => {
         if (!sessionId) return;
+        // The server decides what to do with a nudge that lands mid-turn (it
+        // parks the newest one and answers it when the turn finishes), so the
+        // panel does not track run state. It only refuses to spam: at most
+        // one nudge a second, however fast the wizard is saving.
+        const now = Date.now();
+        if (now - lastNudgeRef.current < NUDGE_MIN_INTERVAL_MS) return;
+        lastNudgeRef.current = now;
         setTyping(true);
         guidedAPI
           .nudgeChat(sessionId, nudgeStep, getStateRef.current(), event)
@@ -352,12 +385,13 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
     scroller.scrollTo({ top: scroller.scrollTop + delta - 4, behavior: 'smooth' });
   }, [messages]);
 
-  // The typing indicator sits below the last message; bring it into view.
+  // The typing indicator and the streaming bubble sit below the last
+  // message; keep the tail in view as the reply grows.
   useEffect(() => {
-    if (!typing) return;
+    if (!typing && !partial) return;
     const scroller = scrollerRef.current;
     if (scroller) scroller.scrollTo({ top: scroller.scrollHeight, behavior: 'smooth' });
-  }, [typing]);
+  }, [typing, partial]);
 
   // preset carries a quick-action message; without it the composer text is sent.
   const send = async (preset?: string) => {
@@ -524,7 +558,7 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
       </div>
 
       <div ref={scrollerRef} style={{ flex: 1, overflowY: 'auto', padding: 12 }}>
-        {messages.length === 0 && !typing && (
+        {messages.length === 0 && !typing && !partial && (
           <div style={{ textAlign: 'center', color: 'var(--neutral)', fontSize: 12, marginTop: 24 }}>
             The assistant will join in a moment — or ask it anything about your requirements.
           </div>
@@ -624,7 +658,39 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
             Messages you send are saved and will be answered as soon as a runner connects.
           </div>
         )}
-        {typing && !runnerOffline && (
+        {partial && (
+          <div data-testid="assistant-partial" style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: 8 }}>
+            <div
+              style={{
+                maxWidth: '90%',
+                padding: '8px 12px',
+                borderRadius: 12,
+                borderBottomLeftRadius: 4,
+                fontSize: 13,
+                lineHeight: 1.5,
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
+                background: 'var(--surface-alt)',
+                color: 'var(--text)',
+              }}
+            >
+              {/* Suggestion blocks are only rendered once the reply is
+                  complete — half a fenced JSON block is not a card. */}
+              {partial}
+              <span
+                aria-hidden="true"
+                style={{
+                  display: 'inline-block',
+                  width: 7,
+                  marginLeft: 2,
+                  borderBottom: '2px solid var(--text-muted)',
+                  verticalAlign: 'baseline',
+                }}
+              />
+            </div>
+          </div>
+        )}
+        {typing && !partial && !runnerOffline && (
           <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: 8 }}>
             <div
               style={{

@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/openv/requirements-platform/internal/domain/agentruns"
 	"github.com/openv/requirements-platform/internal/domain/automations"
@@ -20,6 +22,19 @@ type SessionBroadcaster interface {
 	BroadcastSession(key string, event string, data interface{})
 }
 
+// GuidedNudgeLauncher launches one copilot turn for a wizard nudge that was
+// parked while a run was in flight. Implemented by the API handler, which
+// owns prompt building; wired after construction (main.go) because the
+// handler is built from these hooks' own services.
+type GuidedNudgeLauncher interface {
+	LaunchGuidedNudge(sessionID string, nudge guided.PendingNudge, launchedBy *string) error
+}
+
+// partialBroadcastInterval is the floor between two assistant_partial events
+// for one run. The worker already batches at 750ms, but a retry, a second
+// worker, or a future faster pump must not turn a reply into an SSE flood.
+const partialBroadcastInterval = 500 * time.Millisecond
+
 // Hooks wires run lifecycle changes to the kanban board, team follow-ups,
 // and interview sessions, and lets kanban card moves drive agent runs.
 // It implements agentruns.Subscriber and subscribes to the event bus.
@@ -31,6 +46,12 @@ type Hooks struct {
 	guidedService    guided.Service
 	projectService   projects.Service
 	broadcaster      SessionBroadcaster
+	nudgeLauncher    GuidedNudgeLauncher
+
+	// Last assistant_partial broadcast per run, for the rate limit. Entries
+	// are dropped when the run reaches a terminal state.
+	partialMu   sync.Mutex
+	lastPartial map[string]time.Time
 }
 
 // NewHooks creates the orchestration hooks.
@@ -43,8 +64,14 @@ func NewHooks(runService agentruns.Service, teamService teams.Service, workItemS
 		guidedService:    guidedService,
 		projectService:   projectService,
 		broadcaster:      broadcaster,
+		lastPartial:      map[string]time.Time{},
 	}
 }
+
+// SetGuidedNudgeLauncher closes the construction cycle: coalesced wizard
+// nudges are launched through the API handler once it exists. Without one,
+// a parked nudge simply waits for the next thing the user does.
+func (h *Hooks) SetGuidedNudgeLauncher(l GuidedNudgeLauncher) { h.nudgeLauncher = l }
 
 // SubscribeBus attaches the board-drives-AI trigger.
 func (h *Hooks) SubscribeBus(bus domainevents.Bus) {
@@ -55,9 +82,64 @@ func (h *Hooks) SubscribeBus(bus domainevents.Bus) {
 // handles log fan-out).
 func (h *Hooks) RunLogsAppended(run *agentruns.Run, entries []agentruns.LogEntry) {}
 
+// RunPartialText implements agentruns.Subscriber: a conversational run's
+// answer-so-far goes to its session's chat channel as `assistant_partial`,
+// so the panel can render the reply while it is being written. The final
+// `message` event replaces whatever the last partial left on screen.
+func (h *Hooks) RunPartialText(run *agentruns.Run, text string) {
+	if h.broadcaster == nil || strings.TrimSpace(text) == "" {
+		return
+	}
+	key := ""
+	switch {
+	case run.GuidedSessionID != nil:
+		key = "guided:" + *run.GuidedSessionID
+	case run.InterviewSessionID != nil:
+		key = "interview:" + *run.InterviewSessionID
+	default:
+		// Not a conversation: the run's own log stream already carries it.
+		return
+	}
+	if !h.allowPartial(run.ID) {
+		return
+	}
+	h.broadcaster.BroadcastSession(key, "assistant_partial", map[string]interface{}{
+		"run_id": run.ID,
+		"text":   text,
+	})
+}
+
+// allowPartial reports whether this run may broadcast now, and records the
+// time when it may.
+func (h *Hooks) allowPartial(runID string) bool {
+	now := timeNow()
+	h.partialMu.Lock()
+	defer h.partialMu.Unlock()
+	if last, ok := h.lastPartial[runID]; ok && now.Sub(last) < partialBroadcastInterval {
+		return false
+	}
+	h.lastPartial[runID] = now
+	return true
+}
+
+// forgetPartial drops a finished run's rate-limit bookkeeping.
+func (h *Hooks) forgetPartial(runID string) {
+	h.partialMu.Lock()
+	delete(h.lastPartial, runID)
+	h.partialMu.Unlock()
+}
+
+// timeNow is time.Now, indirected so tests can drive the partial rate limit.
+var timeNow = time.Now
+
 // RunStatusChanged implements agentruns.Subscriber.
 func (h *Hooks) RunStatusChanged(run *agentruns.Run) {
 	h.syncWorkItem(run)
+
+	live := run.Status == agentruns.StatusQueued || run.Status == agentruns.StatusClaimed || run.Status == agentruns.StatusRunning
+	if !live {
+		h.forgetPartial(run.ID)
+	}
 
 	switch run.Status {
 	case agentruns.StatusSucceeded:
@@ -80,6 +162,13 @@ func (h *Hooks) RunStatusChanged(run *agentruns.Run) {
 	case agentruns.StatusFailed, agentruns.StatusTimedOut:
 		h.deliverInterviewFailure(run)
 		h.deliverGuidedFailure(run)
+	}
+
+	// Last: the session is free again, so hand over the nudge that arrived
+	// while this run held it. After the reply is delivered, so the new turn's
+	// prompt contains the answer this run just gave.
+	if !live {
+		h.launchPendingNudge(run)
 	}
 }
 
@@ -333,6 +422,31 @@ func (h *Hooks) deliverGuidedFailure(run *agentruns.Run) {
 	}
 	if h.broadcaster != nil {
 		h.broadcaster.BroadcastSession("guided:"+*run.GuidedSessionID, "message", message)
+	}
+}
+
+// launchPendingNudge launches the one turn a session's parked nudge is owed,
+// now that the run that was in flight has finished. Nudges are commentary:
+// a failure is logged, never surfaced to the wizard.
+func (h *Hooks) launchPendingNudge(run *agentruns.Run) {
+	if run.GuidedSessionID == nil || h.guidedService == nil {
+		return
+	}
+	sessionID := *run.GuidedSessionID
+	nudge, err := h.guidedService.TakePendingNudge(sessionID)
+	if err != nil {
+		slog.Error("orchestration: failed to read the session's pending nudge", "session_id", sessionID, "error", err)
+		return
+	}
+	if nudge == nil {
+		return
+	}
+	if h.nudgeLauncher == nil {
+		slog.Warn("orchestration: no nudge launcher wired; dropping the parked wizard nudge", "session_id", sessionID)
+		return
+	}
+	if err := h.nudgeLauncher.LaunchGuidedNudge(sessionID, *nudge, run.LaunchedBy); err != nil {
+		slog.Warn("orchestration: failed to launch the coalesced wizard nudge", "session_id", sessionID, "error", err)
 	}
 }
 

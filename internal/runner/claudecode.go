@@ -126,6 +126,28 @@ func writeMCPConfig(path string, mcp MCPServerConfig) error {
 	return os.WriteFile(path, buf, 0o600)
 }
 
+// partialMessagesProbe caches whether the installed claude CLI understands
+// --include-partial-messages. Probed once per process: `claude --help` costs
+// a second, and the answer cannot change under a running worker.
+var partialMessagesProbe struct {
+	once      sync.Once
+	supported bool
+}
+
+// claudeSupportsPartialMessages reports whether this machine's claude accepts
+// --include-partial-messages. A probe that fails answers false, so an
+// unreadable or ancient CLI keeps running exactly as it did before.
+func claudeSupportsPartialMessages(ctx context.Context) bool {
+	partialMessagesProbe.once.Do(func() {
+		out, err := runVersion(ctx, "claude", "--help")
+		if err != nil && out == "" {
+			return
+		}
+		partialMessagesProbe.supported = strings.Contains(out, "--include-partial-messages")
+	})
+	return partialMessagesProbe.supported
+}
+
 // Start launches a headless Claude Code run.
 func (a *ClaudeCodeAdapter) Start(ctx context.Context, spec RunSpec) (RunHandle, error) {
 	mcpPath := filepath.Join(spec.WorkDir, ".openv", "mcp.json")
@@ -141,6 +163,14 @@ func (a *ClaudeCodeAdapter) Start(ctx context.Context, spec RunSpec) (RunHandle,
 		"--output-format", "stream-json",
 		"--verbose",
 		"--mcp-config", mcpPath,
+	}
+	// Token-level streaming, so the chat panel can show the answer as it is
+	// written instead of waiting out the whole turn. Older CLIs reject the
+	// unknown flag and would fail the run, so it is added only when this
+	// machine's claude advertises it; without it the parser still streams at
+	// whole-assistant-message granularity.
+	if claudeSupportsPartialMessages(ctx) {
+		args = append(args, "--include-partial-messages")
 	}
 	if spec.SystemPrompt != "" {
 		args = append(args, "--append-system-prompt", spec.SystemPrompt)
@@ -172,6 +202,14 @@ func (a *ClaudeCodeAdapter) Start(ctx context.Context, spec RunSpec) (RunHandle,
 type claudeParser struct {
 	mu        sync.Mutex
 	finalText string
+	// Assistant text as it is written, for the streaming chat bubble:
+	// doneText holds the messages that completed during this run and
+	// liveText the one currently being typed out of `stream_event` deltas.
+	// An `assistant` event is authoritative for the message it reports, so
+	// it replaces whatever the deltas accumulated for it — the two shapes
+	// describe the same text and must never both be counted.
+	doneText  []string
+	liveText  string
 	tokensIn  int64
 	tokensOut int64
 	costUSD   *float64
@@ -190,13 +228,23 @@ func (p *claudeParser) ParseLine(line string, emit func(RunEvent)) {
 		return
 	}
 	switch msg["type"] {
+	case "stream_event":
+		// Only present with --include-partial-messages: the raw Anthropic
+		// message stream, of which the text deltas are what a reader wants
+		// to see appear. Tool-use input deltas are deliberately ignored.
+		p.appendDelta(msg)
 	case "assistant":
 		message, _ := msg["message"].(map[string]interface{})
 		content, _ := message["content"].([]interface{})
+		var finished []string
 		for _, blockAny := range content {
 			block, _ := blockAny.(map[string]interface{})
 			switch block["type"] {
 			case "text":
+				text, _ := block["text"].(string)
+				if strings.TrimSpace(text) != "" {
+					finished = append(finished, text)
+				}
 				emit(RunEvent{Kind: agentruns.LogText, Payload: map[string]interface{}{
 					"text": block["text"],
 				}})
@@ -208,6 +256,10 @@ func (p *claudeParser) ParseLine(line string, emit func(RunEvent)) {
 				}})
 			}
 		}
+		p.mu.Lock()
+		p.doneText = append(p.doneText, finished...)
+		p.liveText = ""
+		p.mu.Unlock()
 	case "result":
 		p.mu.Lock()
 		if text, ok := msg["result"].(string); ok {
@@ -249,6 +301,48 @@ func (p *claudeParser) ParseLine(line string, emit func(RunEvent)) {
 	default:
 		emit(RunEvent{Kind: agentruns.LogText, Payload: map[string]interface{}{"text": line}})
 	}
+}
+
+// appendDelta folds one `stream_event` line into the live message text.
+func (p *claudeParser) appendDelta(msg map[string]interface{}) {
+	event, _ := msg["event"].(map[string]interface{})
+	if event == nil {
+		return
+	}
+	switch event["type"] {
+	case "content_block_start":
+		// A text block can start with content already in it.
+		block, _ := event["content_block"].(map[string]interface{})
+		if block == nil || block["type"] != "text" {
+			return
+		}
+		if text, _ := block["text"].(string); text != "" {
+			p.mu.Lock()
+			p.liveText += text
+			p.mu.Unlock()
+		}
+	case "content_block_delta":
+		delta, _ := event["delta"].(map[string]interface{})
+		if delta == nil || delta["type"] != "text_delta" {
+			return
+		}
+		text, _ := delta["text"].(string)
+		if text == "" {
+			return
+		}
+		p.mu.Lock()
+		p.liveText += text
+		p.mu.Unlock()
+	}
+}
+
+// PartialText returns the assistant text written so far: the messages this
+// run has completed plus the one being typed. Safe to call from the log pump
+// while the process is still running.
+func (p *claudeParser) PartialText() string {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return joinPartial(p.doneText, p.liveText)
 }
 
 func (p *claudeParser) Result(exitCode int, stderrTail string) (Result, error) {

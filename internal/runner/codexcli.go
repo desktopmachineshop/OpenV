@@ -186,9 +186,19 @@ type codexParser struct {
 	mu        sync.Mutex
 	finalText string
 	lastText  string
+	// Assistant messages as they land, for the streaming chat bubble.
+	doneText  []string
 	tokensIn  int64
 	tokensOut int64
 	failed    string
+}
+
+// PartialText returns the assistant text written so far. Codex emits whole
+// messages rather than token deltas, so this grows a message at a time.
+func (p *codexParser) PartialText() string {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return joinPartial(p.doneText, "")
 }
 
 func (p *codexParser) ParseLine(line string, emit func(RunEvent)) {
@@ -208,6 +218,12 @@ func (p *codexParser) ParseLine(line string, emit func(RunEvent)) {
 		text, _ := msg["message"].(string)
 		p.mu.Lock()
 		p.lastText = text
+		// Codex reports a finished message at a time, not token deltas, so
+		// the partial answer grows a message at a time — coarser than
+		// claude's, but still ahead of the run's finish.
+		if strings.TrimSpace(text) != "" {
+			p.doneText = append(p.doneText, text)
+		}
 		p.mu.Unlock()
 		emit(RunEvent{Kind: agentruns.LogText, Payload: map[string]interface{}{"text": text}})
 	case "agent_reasoning":
