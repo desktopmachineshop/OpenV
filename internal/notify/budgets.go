@@ -47,6 +47,9 @@ type BudgetMonitor struct {
 	// email is an optional best-effort email side channel (issue #187); nil
 	// means email is off. Dispatch is nil-safe.
 	email *EmailDispatcher
+	// push is an optional best-effort web push side channel (REQ-109); nil
+	// means push is off. Dispatch is nil-safe and returns immediately.
+	push *PushDispatcher
 	// now is injectable so tests can pin the month; defaults to time.Now.
 	now func() time.Time
 }
@@ -61,6 +64,13 @@ func NewBudgetMonitor(orgSvc BudgetOrgService, spend BudgetSpendReader, store no
 // calling this) leaves email off.
 func (m *BudgetMonitor) SetEmailDispatcher(d *EmailDispatcher) *BudgetMonitor {
 	m.email = d
+	return m
+}
+
+// SetPushDispatcher attaches a web push side channel. Passing nil (or never
+// calling this) leaves push off.
+func (m *BudgetMonitor) SetPushDispatcher(d *PushDispatcher) *BudgetMonitor {
+	m.push = d
 	return m
 }
 
@@ -158,6 +168,8 @@ func (m *BudgetMonitor) alertAdmins(orgID, month string, threshold int, spend, b
 		// Best-effort email side channel; no-op unless SMTP is configured and
 		// the admin is opted in.
 		m.email.Dispatch(n)
+		// Same for web push, which also needs a subscribed device.
+		m.push.Dispatch(n)
 	}
 }
 

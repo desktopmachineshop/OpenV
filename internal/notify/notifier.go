@@ -38,6 +38,9 @@ type Notifier struct {
 	// email is an optional best-effort email side channel (issue #187); nil
 	// means email is off. Dispatch is nil-safe.
 	email *EmailDispatcher
+	// push is an optional best-effort web push side channel (REQ-109); nil
+	// means push is off. Dispatch is nil-safe and returns immediately.
+	push *PushDispatcher
 }
 
 // NewNotifier creates a notifier. broadcaster may be nil (store-only mode,
@@ -50,6 +53,13 @@ func NewNotifier(store notifications.Service, memberSvc MemberLister, broadcaste
 // calling this) leaves email off.
 func (n *Notifier) SetEmailDispatcher(d *EmailDispatcher) *Notifier {
 	n.email = d
+	return n
+}
+
+// SetPushDispatcher attaches a web push side channel. Passing nil (or never
+// calling this) leaves push off.
+func (n *Notifier) SetPushDispatcher(d *PushDispatcher) *Notifier {
+	n.push = d
 	return n
 }
 
@@ -235,6 +245,10 @@ func (n *Notifier) deliver(e domainevents.Event, userID, ntype, title, body stri
 	// Best-effort email side channel; a no-op unless SMTP is configured, the
 	// type is eligible, and the recipient is opted in.
 	n.email.Dispatch(notification)
+	// Same gates for web push, which additionally needs the recipient to have
+	// subscribed a device. Queued to a goroutine, so this does not wait on a
+	// push service.
+	n.push.Dispatch(notification)
 }
 
 func payloadString(e domainevents.Event, key string) string {

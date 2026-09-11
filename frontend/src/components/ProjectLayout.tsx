@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { rememberProject } from '../appShortcuts';
 import { guidedAPI, projectAPI, Project } from '../api/client';
 import { hasWizardProgress } from './wizard/assistantSession';
 import {
@@ -132,6 +133,9 @@ export const ProjectLayout: React.FC = () => {
   useEffect(() => {
     if (!projectId) return;
     setProjectId(projectId);
+    // Remember where we are, so an installed-app shortcut to the review queue
+    // or the board (which have no project-free url) can land in one tap.
+    rememberProject(projectId);
     projectAPI
       .get(projectId)
       .then((res) => setProject(res.data))

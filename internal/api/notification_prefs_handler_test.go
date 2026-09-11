@@ -15,13 +15,21 @@ import (
 // assert the update is scoped to the session user (own-user only).
 type fakeUserPrefService struct {
 	users.Service
-	setUser    string
-	setEnabled bool
-	setCalled  bool
+	setUser     string
+	setEnabled  bool
+	setCalled   bool
+	pushUser    string
+	pushEnabled bool
+	pushCalled  bool
 }
 
 func (f *fakeUserPrefService) SetEmailNotifications(userID string, enabled bool) error {
 	f.setUser, f.setEnabled, f.setCalled = userID, enabled, true
+	return nil
+}
+
+func (f *fakeUserPrefService) SetPushNotifications(userID string, enabled bool) error {
+	f.pushUser, f.pushEnabled, f.pushCalled = userID, enabled, true
 	return nil
 }
 
@@ -119,5 +127,56 @@ func TestUpdateNotificationPrefsOwnUserOnly(t *testing.T) {
 	}
 	if svc.setCalled {
 		t.Fatal("service reached on malformed body")
+	}
+}
+
+// TestNotificationPrefsCarryPushFlag: the push opt-in rides alongside the
+// email opt-out, and a PUT that names only one preference leaves the other
+// alone — the settings panel flips them independently.
+func TestNotificationPrefsCarryPushFlag(t *testing.T) {
+	svc := &fakeUserPrefService{}
+	h := &Handler{userService: svc}
+	user := &users.User{ID: "u-1", EmailNotifications: true, PushNotifications: true}
+
+	// GET reflects both stored values.
+	w := httptest.NewRecorder()
+	h.GetNotificationPrefs(w, prefReq(http.MethodGet, "", user))
+	var resp notificationPrefs
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("invalid JSON: %v", err)
+	}
+	if !resp.EmailNotifications || !resp.PushNotifications {
+		t.Fatalf("prefs = %+v, want both true", resp)
+	}
+
+	// A push-only PUT must not touch the email flag.
+	w = httptest.NewRecorder()
+	h.UpdateNotificationPrefs(w, prefReq(http.MethodPut, `{"push_notifications":false}`, user))
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200 (body %q)", w.Code, w.Body.String())
+	}
+	if svc.setCalled {
+		t.Fatal("a push-only update changed the email preference")
+	}
+	if !svc.pushCalled || svc.pushUser != "u-1" || svc.pushEnabled {
+		t.Fatalf("SetPushNotifications(user=%q enabled=%v called=%v)", svc.pushUser, svc.pushEnabled, svc.pushCalled)
+	}
+	resp = notificationPrefs{}
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("invalid JSON: %v", err)
+	}
+	if !resp.EmailNotifications || resp.PushNotifications {
+		t.Fatalf("response = %+v, want email untouched and push off", resp)
+	}
+
+	// An email-only PUT must not touch the push flag.
+	svc.pushCalled = false
+	w = httptest.NewRecorder()
+	h.UpdateNotificationPrefs(w, prefReq(http.MethodPut, `{"email_notifications":false}`, user))
+	if svc.pushCalled {
+		t.Fatal("an email-only update changed the push preference")
+	}
+	if !svc.setCalled || svc.setEnabled {
+		t.Fatalf("SetEmailNotifications(enabled=%v called=%v)", svc.setEnabled, svc.setCalled)
 	}
 }

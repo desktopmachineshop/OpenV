@@ -43,6 +43,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/products"
 	"github.com/openv/requirements-platform/internal/domain/proposals"
 	"github.com/openv/requirements-platform/internal/domain/providers"
+	"github.com/openv/requirements-platform/internal/domain/pushsubs"
 	"github.com/openv/requirements-platform/internal/domain/repoconns"
 	"github.com/openv/requirements-platform/internal/domain/runnersessions"
 	"github.com/openv/requirements-platform/internal/domain/teams"
@@ -95,7 +96,13 @@ type HandlerDeps struct {
 	// with no runner pool configured.
 	RunnerSessionService runnersessions.Service
 	NotificationService  notifications.Service
-	Provisioner          hosting.Provisioner
+	// PushSubService stores per-device web push subscriptions (REQ-109).
+	// nil leaves the endpoints answering "not available".
+	PushSubService pushsubs.Service
+	// VAPID is the web push key pair; the zero value disables push and is
+	// what /api/v1/me/push/config reports as enabled=false.
+	VAPID       notify.VAPIDConfig
+	Provisioner hosting.Provisioner
 	// OrgSeeder provisions default agents/crew for a new workspace.
 	OrgSeeder func(orgID string) error
 	// PublicAPIURL is the externally-reachable API base (connector config).
@@ -166,6 +173,8 @@ type Handler struct {
 	hostedWorkerService  hostedworkers.Service
 	runnerSessionService runnersessions.Service
 	notificationService  notifications.Service
+	pushSubService       pushsubs.Service
+	vapid                notify.VAPIDConfig
 	provisioner          hosting.Provisioner
 	orgSeeder            func(orgID string) error
 	publicAPIURL         string
@@ -246,6 +255,8 @@ func NewHandler(deps HandlerDeps) *Handler {
 		hostedWorkerService:    deps.HostedWorkerService,
 		runnerSessionService:   deps.RunnerSessionService,
 		notificationService:    deps.NotificationService,
+		pushSubService:         deps.PushSubService,
+		vapid:                  deps.VAPID,
 		provisioner:            deps.Provisioner,
 		orgSeeder:              deps.OrgSeeder,
 		publicAPIURL:           deps.PublicAPIURL,
@@ -356,6 +367,7 @@ func (h *Handler) RegisterRoutes(router *mux.Router) {
 	h.registerMetaRoutes(router)
 	h.registerSuiteRoutes(router)
 	h.registerNotificationRoutes(router)
+	h.registerPushRoutes(router)
 	h.registerAgentRoutes(router)
 	h.registerOrgRoutes(router)
 	h.registerRunnerSessionRoutes(router)

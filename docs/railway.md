@@ -122,6 +122,28 @@ password account meets the *Check your inbox* page on its next request and
 verifies with one click on *Resend email*. Re-adding `off` switches it back
 off at once. With no SMTP variables nothing is enforced.
 
+Optional — web push notifications (REQ-109): generate one VAPID key pair for
+the deployment (`make vapid-keys`, or `go run ./cmd/openv-vapid`) and set all
+three variables on the **API** service:
+
+```dotenv
+OPENV_VAPID_PUBLIC_KEY=<public half from make vapid-keys>
+OPENV_VAPID_PRIVATE_KEY=<private half — a secret; Railway stores it sealed>
+# Operator contact for the push services. mailto: or https: only.
+OPENV_VAPID_SUBJECT=mailto:you@example.com
+```
+
+With any of them unset, push stays off and everything else is unchanged. The
+public key reaches browsers through `/api/v1/me/push/config`, so it needs no
+frontend variable and no rebuild — but it is baked into every subscription a
+member takes, so **rotating the pair invalidates every existing
+subscription** and each device has to be turned on again.
+
+Push also needs the app served over HTTPS on one origin with a registered
+service worker, which is what section 3's frontend already does. See
+[operations.md](operations.md) for what "high-signal" covers and the
+per-device opt-in.
+
 ## 3. Frontend service
 
 **Create → GitHub Repo**, pick the same repository again.
