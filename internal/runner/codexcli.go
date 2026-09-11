@@ -230,10 +230,23 @@ func sortedKeys(m map[string]string) []string {
 type codexParser struct {
 	mu        sync.Mutex
 	finalText string
+	// The current agent message: what the bubble shows while the run is in
+	// flight, and the fallback final answer when no task_complete arrives.
 	lastText  string
 	tokensIn  int64
 	tokensOut int64
 	failed    string
+}
+
+// PartialText returns the assistant answer so far: the current agent message,
+// which is exactly what Result reports as FinalText. Codex emits whole
+// messages rather than token deltas, so the bubble fills a message at a time
+// — and because it shows the same message the reply will be, the text never
+// visibly shrinks when the final answer lands.
+func (p *codexParser) PartialText() string {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.lastText
 }
 
 func (p *codexParser) ParseLine(line string, emit func(RunEvent)) {
@@ -252,6 +265,9 @@ func (p *codexParser) ParseLine(line string, emit func(RunEvent)) {
 	case "agent_message":
 		text, _ := msg["message"].(string)
 		p.mu.Lock()
+		// The newest message replaces the last one: codex's own result is the
+		// last agent message, so anything else would show the reader text
+		// that the finished reply then drops.
 		p.lastText = text
 		p.mu.Unlock()
 		emit(RunEvent{Kind: agentruns.LogText, Payload: map[string]interface{}{"text": text}})

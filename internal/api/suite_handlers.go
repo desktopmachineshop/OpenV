@@ -888,6 +888,24 @@ func (h *Handler) guidedRunnerOnline(session *guided.Session) bool {
 	return false
 }
 
+// guidedTurnInFlight reports whether the session's latest copilot run is
+// still going (queued, claimed or running) — i.e. whether a nudge arriving now
+// would be answered by a turn nobody is waiting for.
+func (h *Handler) guidedTurnInFlight(session *guided.Session) bool {
+	if session == nil || session.AgentRunID == nil {
+		return false
+	}
+	run, err := h.runService.Get(*session.AgentRunID)
+	if err != nil || run == nil {
+		return false
+	}
+	switch run.Status {
+	case agentruns.StatusQueued, agentruns.StatusClaimed, agentruns.StatusRunning:
+		return true
+	}
+	return false
+}
+
 // guidedStepLabels mirrors the wizard's step names for prompt context.
 var guidedStepLabels = []string{
 	"Product framing", "Personas", "User needs", "Requirements",
@@ -936,7 +954,7 @@ func (h *Handler) PostGuidedChatMessage(w http.ResponseWriter, r *http.Request) 
 	}
 	h.sseHub.BroadcastSession("guided:"+session.ID, "message", message)
 
-	if err := h.launchGuidedTurn(r, session, req.Step, req.State, "", req.ArtifactID); err != nil {
+	if err := h.launchGuidedTurn(CurrentUserID(r), session, req.Step, req.State, "", req.ArtifactID); err != nil {
 		note, _ := h.guidedService.AppendChatMessage(session.ID, guided.ChatRoleSystem,
 			"The V&V Assistant is unavailable right now ("+err.Error()+"). Your message was saved — please try again shortly.")
 		if note != nil {
@@ -982,16 +1000,11 @@ func (h *Handler) KickoffGuidedChat(w http.ResponseWriter, r *http.Request) {
 		reply("skipped")
 		return
 	}
-	if session.AgentRunID != nil {
-		if run, err := h.runService.Get(*session.AgentRunID); err == nil && run != nil {
-			switch run.Status {
-			case agentruns.StatusQueued, agentruns.StatusClaimed, agentruns.StatusRunning:
-				reply("pending")
-				return
-			}
-		}
+	if h.guidedTurnInFlight(session) {
+		reply("pending")
+		return
 	}
-	if err := h.launchGuidedTurn(r, session, req.Step, req.State, "", req.ArtifactID); err != nil {
+	if err := h.launchGuidedTurn(CurrentUserID(r), session, req.Step, req.State, "", req.ArtifactID); err != nil {
 		note, _ := h.guidedService.AppendChatMessage(session.ID, guided.ChatRoleSystem,
 			"The V&V Assistant is unavailable right now ("+err.Error()+"). You can keep filling in the wizard and try the chat again shortly.")
 		if note != nil {
@@ -1005,8 +1018,18 @@ func (h *Handler) KickoffGuidedChat(w http.ResponseWriter, r *http.Request) {
 
 // NudgeGuidedChat launches a copilot turn in reaction to a wizard action
 // (saving or skipping a step) without a chat message from the user, so the
-// copilot comments on newly entered data as the user progresses. Silently
-// skipped while a turn is already pending.
+// copilot comments on newly entered data as the user progresses.
+//
+// A nudge that arrives while a turn is in flight is parked on the session
+// rather than dropped: the running turn's finish launches exactly one more
+// turn from the newest parked nudge (orchestration hooks). Before that, such
+// nudges were answered by nobody — the wizard saves steps faster than a turn
+// takes to run, so most of them landed mid-flight.
+//
+// The in-flight read and the park are not atomic with the run's finish, so a
+// nudge parked in that window would be owed by a run that has already looked
+// for one. After parking, this handler therefore re-checks and takes the
+// nudge back when the session turns out to be free, launching it itself.
 func (h *Handler) NudgeGuidedChat(w http.ResponseWriter, r *http.Request) {
 	session := h.getGuidedSessionChecked(w, r, members.RoleEditor)
 	if session == nil {
@@ -1032,25 +1055,85 @@ func (h *Handler) NudgeGuidedChat(w http.ResponseWriter, r *http.Request) {
 			"runner_online": runnerOnline,
 		})
 	}
-	if session.AgentRunID != nil {
-		if run, err := h.runService.Get(*session.AgentRunID); err == nil && run != nil {
-			switch run.Status {
-			case agentruns.StatusQueued, agentruns.StatusClaimed, agentruns.StatusRunning:
-				reply("pending")
-				return
-			}
-		}
-	}
 	event := strings.TrimSpace(req.Event)
 	if event == "" {
 		event = "updated the wizard"
 	}
+	nudge := &guided.PendingNudge{Step: req.Step, State: req.State, Event: event}
+	if h.guidedTurnInFlight(session) {
+		// Park the newest nudge (overwriting any earlier one) for the running
+		// turn to answer when it finishes.
+		if err := h.guidedService.SetPendingNudge(session.ID, nudge); err != nil {
+			slog.Warn("api: failed to park a wizard nudge", "session_id", session.ID, "error", err)
+			// Nothing is holding the nudge, so fall through and launch it here
+			// rather than promising a reply that nobody owes.
+		} else if h.pendingNudgeStillOwed(session) {
+			reply("pending")
+			return
+		} else {
+			// The run finished between the status read and the park: its
+			// finish hook looked for a parked nudge and found none, so this
+			// one would wait for some later turn that may never come. Take it
+			// back — TakePendingNudge hands it out at most once, so this can
+			// never race the hook into two turns — and launch it here.
+			taken, err := h.guidedService.TakePendingNudge(session.ID)
+			if err != nil {
+				slog.Warn("api: failed to reclaim a wizard nudge parked as the turn finished", "session_id", session.ID, "error", err)
+				reply("pending")
+				return
+			}
+			if taken == nil {
+				// The finishing run got there first; it owes the reply.
+				reply("pending")
+				return
+			}
+			nudge = taken
+		}
+	}
 	// Nudges are best-effort commentary: no system note on failure.
-	if err := h.launchGuidedTurn(r, session, req.Step, req.State, event, ""); err != nil {
+	if err := h.launchGuidedTurn(CurrentUserID(r), session, nudge.Step, nudge.State, nudge.Event, ""); err != nil {
 		reply("unavailable")
 		return
 	}
 	reply("launched")
+}
+
+// pendingNudgeStillOwed reports whether a turn is still in flight for the
+// session, re-read after parking a nudge on it. The session is re-fetched so
+// a turn launched in the meantime (which will answer the nudge when it ends)
+// counts too; if it cannot be re-read, the session in hand is used.
+func (h *Handler) pendingNudgeStillOwed(session *guided.Session) bool {
+	fresh, err := h.guidedService.GetSession(session.ID)
+	if err == nil && fresh != nil {
+		session = fresh
+	}
+	return h.guidedTurnInFlight(session)
+}
+
+// LaunchGuidedNudge launches the single turn a session's parked nudge is
+// owed. It implements orchestration.GuidedNudgeLauncher, called from the run
+// hooks when the turn that was in flight finishes — there is no request and
+// no session-scoped authorization to do here: the nudge was authorized when
+// the editor sent it, and its state is the state they had entered then.
+func (h *Handler) LaunchGuidedNudge(sessionID string, nudge guided.PendingNudge, launchedBy *string) error {
+	session, err := h.guidedService.GetSession(sessionID)
+	if err != nil {
+		return err
+	}
+	if session == nil {
+		return fmt.Errorf("guided session %s not found", sessionID)
+	}
+	// A committed or abandoned session is done with the copilot: the wizard
+	// is closed, nobody is watching the chat, and the turn would cost a run
+	// for an answer no one reads.
+	if session.Status != guided.StatusInProgress {
+		return fmt.Errorf("guided session %s is %s; not launching a parked nudge", sessionID, session.Status)
+	}
+	event := strings.TrimSpace(nudge.Event)
+	if event == "" {
+		event = "updated the wizard"
+	}
+	return h.launchGuidedTurn(launchedBy, session, nudge.Step, nudge.State, event, "")
 }
 
 // StreamGuidedChat is the wizard's copilot SSE channel.
@@ -1074,7 +1157,7 @@ func (h *Handler) StreamGuidedChat(w http.ResponseWriter, r *http.Request) {
 // launchGuidedTurn enqueues one copilot response as a priority run. event,
 // when non-empty, describes a wizard action the user took without chatting
 // (e.g. saving a step) for the copilot to react to.
-func (h *Handler) launchGuidedTurn(r *http.Request, session *guided.Session, step int, state map[string]interface{}, event, artifactID string) error {
+func (h *Handler) launchGuidedTurn(launchedBy *string, session *guided.Session, step int, state map[string]interface{}, event, artifactID string) error {
 	// The copilot agent lives in the project's workspace.
 	orgID := ""
 	if project, err := h.projectService.GetProject(session.ProjectID); err == nil && project != nil {
@@ -1120,7 +1203,7 @@ func (h *Handler) launchGuidedTurn(r *http.Request, session *guided.Session, ste
 		GuidedSessionID: &sessionID,
 		Priority:        agentruns.PriorityInterview,
 		Prompt:          prompt,
-		LaunchedBy:      CurrentUserID(r),
+		LaunchedBy:      launchedBy,
 	})
 	if err != nil {
 		return err

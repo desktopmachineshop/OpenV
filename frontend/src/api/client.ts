@@ -946,6 +946,9 @@ export interface AgentRun {
   status: string;
   prompt: string;
   final_text: string;
+  // The answer a still-running agent has written so far (whole text, not a
+  // delta). Cleared when the run finishes and final_text takes over.
+  partial_text?: string;
   error: string;
   // Structured failure taxonomy (issue #184): a class for a terminal failure
   // (provider_unavailable | auth | workspace | timeout | agent_error |

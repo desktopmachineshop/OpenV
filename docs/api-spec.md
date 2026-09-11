@@ -485,6 +485,24 @@ to that turn's prompt as fenced, untrusted content. The wizard sends none.
 | POST | `/api/v1/guided-sessions/{id}/chat/nudge` | Context nudge after step change | editor |
 | GET | `/api/v1/guided-sessions/{id}/chat/stream` | SSE stream of assistant replies | viewer |
 
+`chat/nudge` takes `{step, state, event}` and answers `{status, runner_online}`.
+`status` is `launched` (a turn was enqueued), `pending` (a turn is already in
+flight, so this nudge was **parked** on the session — the newest parked nudge
+wins, and the finishing turn launches exactly one more from it) or
+`unavailable` (no turn is coming). Both `launched` and `pending` mean a reply
+will arrive on the stream. If the in-flight turn finishes while the nudge is
+being parked, the request takes it back and launches it itself, answering
+`launched`: a nudge is never left waiting for a turn that has already gone
+looking for one. Committing or abandoning a session discards any nudge still
+parked on it.
+
+The chat streams (`chat/stream` and the public interview stream) carry two
+event types: `message`, one complete transcript message, and
+`assistant_partial`, `{run_id, text}` — the answer **so far** while the agent
+writes it, always the whole text rather than a delta, sent at most once per
+500 ms per run. A client renders it as an in-progress bubble and replaces it
+when the next `message` arrives.
+
 ### Interviews
 
 | Method | Path | Purpose | Auth |
@@ -555,6 +573,15 @@ for OpenV's own tools regardless of what the vendor CLI can express.
 | GET | `/api/v1/agent-runs/{id}/logs` | Run log entries | launcher / viewer |
 | POST | `/api/v1/agent-runs/{id}/logs` | Worker appends log entries (returns cancel flag) | worker |
 | GET | `/api/v1/agent-runs/{id}/stream` | SSE live log stream | launcher / viewer |
+
+The logs body is `{"entries": [...], "partial_text": "..."}`; a bare array of
+entries is still accepted (older runners). `partial_text` is the assistant
+answer written so far — the whole text, not a delta, capped at 64 KB — and an
+empty string means "unchanged". It is stored on the run as `partial_text`,
+returned with the run, cleared whenever the run stops being live — at finish
+(`final_text` takes over), when the stale-run reaper fails it, and when a
+worker releases it back to the queue — and broadcast as `partial` on the run's
+own stream and as `assistant_partial` on any session the run belongs to.
 | POST | `/api/v1/agent-runs/{id}/cancel` | Request cancellation | launcher / editor |
 | POST | `/api/v1/agent-runs/{id}/start` | Worker marks run running | worker |
 | POST | `/api/v1/agent-runs/{id}/finish` | Worker reports completion | worker |

@@ -89,3 +89,21 @@ from the next release the split is exact per run.
 6. **Keep the CLI warm.** The 1.5 s boot recurs per turn; a resident CLI
    session per chat would remove it, but that is the largest change here and
    worth it only after 1–3.
+
+## Implemented
+
+Item 1 (**stream the reply**) and item 4's first half (**stop paying for
+nudges**) landed together:
+
+- the runner now ships the answer so far in each 750 ms log batch
+  (`partial_text`), the API stores it on the run and broadcasts
+  `assistant_partial` on the session's SSE channel, and the chat panels render
+  it as it is written — the reader sees the first words in a few seconds
+  instead of waiting 14–21 s for the whole reply;
+- a nudge that arrives while a turn is in flight is parked on the session and
+  answered by exactly one turn when that one finishes, instead of launching a
+  run nobody hears or being dropped.
+
+Items 2, 3, 5 and 6 (less prompt, model choice, faster claim poll, a warm
+CLI) are untouched: they change model work or queue latency, not perception.
+See the "Streaming replies" and "Wizard nudges" sections of `docs/agents.md`.

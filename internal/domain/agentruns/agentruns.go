@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"time"
+	"unicode/utf8"
 
 	"github.com/google/uuid"
 
@@ -169,7 +170,12 @@ type Run struct {
 	FinishedAt       *time.Time `json:"finished_at,omitempty"`
 	ExitCode         *int       `json:"exit_code,omitempty"`
 	FinalText        string     `json:"final_text"`
-	Error            string     `json:"error"`
+	// PartialText is the assistant text written so far by a run still in
+	// flight — the whole text, not a delta, refreshed from the worker's log
+	// batches and cleared when the run finishes (FinalText then holds the
+	// answer). Empty for every run that is not currently streaming.
+	PartialText string `json:"partial_text,omitempty"`
+	Error       string `json:"error"`
 	// ErrorClass is the structured failure taxonomy bucket for a terminal
 	// failure (see the ErrorClass* constants); empty for a run that succeeded
 	// or was cancelled.
@@ -394,6 +400,11 @@ type Repository interface {
 	// older than cutoff; returns the affected run IDs.
 	FailStale(cutoff time.Time) ([]string, error)
 	AppendLogs(runID string, entries []LogEntry) error
+	// UpdatePartialText stores the assistant text a live run has written so
+	// far, but only while the run is still claimed/running, so a late batch
+	// can never resurrect a finished run's bubble; reports whether the write
+	// was applied.
+	UpdatePartialText(runID string, text string) (bool, error)
 	ListLogs(runID string, afterSeq int) ([]LogEntry, error)
 	CountRunsSince(automationID string, since time.Time) (int, error)
 	CountPendingProposals(runID string) (int, error)
@@ -447,7 +458,10 @@ type Service interface {
 	// Used at claim time to hand the worker a usable credential.
 	ReissueToken(runID string) (string, error)
 	MarkRunning(id string) error
-	AppendLogs(runID string, entries []LogEntry) (*Run, error)
+	// AppendLogs persists a log batch and, when partialText is non-empty, the
+	// assistant text written so far (see Run.PartialText). An empty
+	// partialText means "unchanged" — the stored value is left alone.
+	AppendLogs(runID string, entries []LogEntry, partialText string) (*Run, error)
 	Logs(runID string, afterSeq int) ([]LogEntry, error)
 	Finish(id string, req FinishRequest) (*Run, error)
 	RequestCancel(id string) (*Run, error)
@@ -473,6 +487,10 @@ type Service interface {
 type Subscriber interface {
 	RunLogsAppended(run *Run, entries []LogEntry)
 	RunStatusChanged(run *Run)
+	// RunPartialText is called when a live run reports more assistant text
+	// (the whole text so far, not a delta). Subscribers that stream it to a
+	// chat panel are expected to rate-limit their own fan-out.
+	RunPartialText(run *Run, text string)
 }
 
 // DefaultGraceSeconds is how long a run waits for the launcher's personal
@@ -811,11 +829,22 @@ func (s *DefaultService) MarkRunning(id string) error {
 // conditional on the run still being live, so a late log batch from a worker
 // whose run was already failed (or cancelled) never refreshes heartbeat_at
 // on a terminal run; the logs themselves are still kept.
-func (s *DefaultService) AppendLogs(runID string, entries []LogEntry) (*Run, error) {
+func (s *DefaultService) AppendLogs(runID string, entries []LogEntry, partialText string) (*Run, error) {
 	if len(entries) > 0 {
 		if err := s.repo.AppendLogs(runID, entries); err != nil {
 			return nil, err
 		}
+	}
+	// The partial answer is stored before the heartbeat so a reader that sees
+	// a fresh heartbeat never sees stale text. A run the reaper (or a cancel)
+	// already finished keeps its empty partial: the write is conditional.
+	partialStored := false
+	if partialText != "" {
+		applied, err := s.repo.UpdatePartialText(runID, TruncatePartial(partialText))
+		if err != nil {
+			return nil, err
+		}
+		partialStored = applied
 	}
 	if _, err := s.repo.Heartbeat(runID, time.Now()); err != nil {
 		return nil, err
@@ -829,7 +858,31 @@ func (s *DefaultService) AppendLogs(runID string, entries []LogEntry) (*Run, err
 			sub.RunLogsAppended(run, entries)
 		}
 	}
+	if partialStored {
+		for _, sub := range s.subscribers {
+			sub.RunPartialText(run, run.PartialText)
+		}
+	}
 	return run, nil
+}
+
+// PartialTextLimit caps the stored/streamed partial answer. It exists so one
+// runaway run cannot push megabytes through the log endpoint and the SSE
+// fan-out; a real answer is orders of magnitude smaller (AnswerLengthRule).
+const PartialTextLimit = 64 * 1024
+
+// TruncatePartial cuts partial assistant text to PartialTextLimit bytes
+// without splitting a UTF-8 rune, keeping the head: a chat bubble reads from
+// its start, and the final text replaces it moments later anyway.
+func TruncatePartial(text string) string {
+	if len(text) <= PartialTextLimit {
+		return text
+	}
+	cut := PartialTextLimit
+	for cut > 0 && !utf8.RuneStart(text[cut]) {
+		cut--
+	}
+	return text[:cut]
 }
 
 // Logs returns persisted log entries after a sequence number.
@@ -862,6 +915,10 @@ func (s *DefaultService) Finish(id string, req FinishRequest) (*Run, error) {
 	run.FinishedAt = &now
 	run.ExitCode = req.ExitCode
 	run.FinalText = req.FinalText
+	// The answer is now final: the streaming bubble's text has no further
+	// use, and leaving it behind would let a reader see a half-written reply
+	// beside the finished one.
+	run.PartialText = ""
 	run.Error = req.Error
 	run.ErrorClass = req.ErrorClass
 	run.TokensIn = req.TokensIn

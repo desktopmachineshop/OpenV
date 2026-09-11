@@ -3,6 +3,7 @@ package guided
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/google/uuid"
@@ -44,9 +45,24 @@ type Session struct {
 	Answers          map[string]interface{} `json:"answers"`
 	DraftArtifactIDs []string               `json:"draft_artifact_ids"`
 	AgentRunID       *string                `json:"agent_run_id,omitempty"`
-	CreatedBy        *string                `json:"created_by,omitempty"`
-	CreatedAt        time.Time              `json:"created_at"`
-	UpdatedAt        time.Time              `json:"updated_at"`
+	// PendingNudge is the newest wizard nudge that arrived while a copilot
+	// run was still in flight. Exactly one is kept — a later nudge overwrites
+	// it — and the finishing run launches one turn from it and clears it, so
+	// a burst of step saves costs one reply instead of several unanswered
+	// ones. Nil when nothing is waiting.
+	PendingNudge *PendingNudge `json:"pending_nudge,omitempty"`
+	CreatedBy    *string       `json:"created_by,omitempty"`
+	CreatedAt    time.Time     `json:"created_at"`
+	UpdatedAt    time.Time     `json:"updated_at"`
+}
+
+// PendingNudge is a wizard action the copilot still owes a reply to: the
+// step the user was on, the wizard state at that moment, and a short phrase
+// naming what they did ("saved step 3").
+type PendingNudge struct {
+	Step  int                    `json:"step"`
+	State map[string]interface{} `json:"state,omitempty"`
+	Event string                 `json:"event"`
 }
 
 // ChatMessage is one turn in a session's copilot conversation.
@@ -84,6 +100,14 @@ type Repository interface {
 
 	SaveChatMessage(m *ChatMessage) error
 	ListChatMessages(sessionID string) ([]*ChatMessage, error)
+
+	// SetPendingNudge parks (or, with nil, clears) the session's waiting
+	// nudge, overwriting whatever was there.
+	SetPendingNudge(sessionID string, nudge *PendingNudge) error
+	// TakePendingNudge returns the waiting nudge and clears it in the same
+	// statement, so two finishing runs can never launch one nudge twice.
+	// Returns nil when nothing is waiting.
+	TakePendingNudge(sessionID string) (*PendingNudge, error)
 }
 
 // Service defines guided flow domain logic.
@@ -99,6 +123,13 @@ type Service interface {
 	AppendChatMessage(sessionID, role, content string) (*ChatMessage, error)
 	GetChatTranscript(sessionID string) ([]*ChatMessage, error)
 	AttachAgentRun(sessionID, runID string) error
+
+	// SetPendingNudge stores the nudge a session owes a reply to, replacing
+	// any earlier one (nil clears it).
+	SetPendingNudge(sessionID string, nudge *PendingNudge) error
+	// TakePendingNudge hands back the waiting nudge and clears it; nil when
+	// there is none.
+	TakePendingNudge(sessionID string) (*PendingNudge, error)
 }
 
 // DefaultService implements the Service interface.
@@ -305,8 +336,23 @@ func (s *DefaultService) Commit(sessionID string) (*Session, error) {
 	if err := s.repo.Update(session); err != nil {
 		return nil, err
 	}
+	s.clearPendingNudge(session)
 
 	return session, nil
+}
+
+// clearPendingNudge drops any wizard nudge still parked on a session that has
+// just closed. A committed or abandoned session must not get a copilot turn,
+// and the parked nudge is the one thing that could still launch one. The
+// session is already closed by the time this runs, so a failure is logged
+// rather than returned — the hooks refuse a closed session's nudge anyway.
+func (s *DefaultService) clearPendingNudge(session *Session) {
+	if err := s.repo.SetPendingNudge(session.ID, nil); err != nil {
+		slog.Warn("guided: failed to clear the parked nudge of a closed session",
+			"session_id", session.ID, "status", session.Status, "error", err)
+		return
+	}
+	session.PendingNudge = nil
 }
 
 // AppendChatMessage adds a message to a session's copilot conversation.
@@ -352,6 +398,16 @@ func (s *DefaultService) AttachAgentRun(sessionID, runID string) error {
 	return s.repo.Update(session)
 }
 
+// SetPendingNudge parks the wizard nudge a session still owes a reply to.
+func (s *DefaultService) SetPendingNudge(sessionID string, nudge *PendingNudge) error {
+	return s.repo.SetPendingNudge(sessionID, nudge)
+}
+
+// TakePendingNudge returns the waiting nudge and clears it.
+func (s *DefaultService) TakePendingNudge(sessionID string) (*PendingNudge, error) {
+	return s.repo.TakePendingNudge(sessionID)
+}
+
 // Abandon marks a session abandoned, leaving any drafts in place.
 func (s *DefaultService) Abandon(sessionID string) (*Session, error) {
 	session, err := s.repo.FindByID(sessionID)
@@ -365,6 +421,7 @@ func (s *DefaultService) Abandon(sessionID string) (*Session, error) {
 	if err := s.repo.Update(session); err != nil {
 		return nil, err
 	}
+	s.clearPendingNudge(session)
 
 	return session, nil
 }

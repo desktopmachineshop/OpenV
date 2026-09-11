@@ -168,8 +168,24 @@ const suggestionSummary = (s: CopilotSuggestion): { title: string; detail: strin
   }
 };
 
+// Floor between two nudges sent from this panel. Wizard saves can come in
+// bursts (Next, Next, Skip); the server coalesces what still overlaps a turn.
+const NUDGE_MIN_INTERVAL_MS = 1000;
+
+/**
+ * One wizard nudge waiting for the throttle window to open. The state is
+ * snapshotted when the user acted, so the copilot comments on what they had
+ * entered at the moment of the action it is told about.
+ */
+type DeferredNudge = { step: number; event: string; state: Record<string, any> };
+
 export interface GuidedChatPanelHandle {
-  /** Fire a copilot turn reacting to a wizard action (step saved/skipped); shows the thinking indicator immediately. */
+  /**
+   * Fire a copilot turn reacting to a wizard action (step saved/skipped).
+   * Sent immediately — showing the thinking indicator at once — unless it
+   * lands inside the one-per-second window, in which case it waits (as the
+   * newest held nudge) for the window to open.
+   */
   nudge: (step: number, event: string) => void;
 }
 
@@ -196,6 +212,11 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
   const [composerText, setComposerText] = useState('');
   const [sending, setSending] = useState(false);
   const [typing, setTyping] = useState(false);
+  // The reply as it is being written, pushed by the server as
+  // `assistant_partial` while the run is in flight. It is the whole text so
+  // far (never a delta), so a dropped event only costs a frame; the final
+  // `message` replaces it.
+  const [partial, setPartial] = useState('');
   const [sendError, setSendError] = useState('');
   // True when the API reports no runner online: turns queue unanswered, so
   // the panel shows connect instructions instead of a thinking indicator.
@@ -210,6 +231,11 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
   const retryRef = useRef(0);
   const closedRef = useRef(false);
   const kickedRef = useRef(false);
+  const lastNudgeRef = useRef(0);
+  // The newest nudge that arrived inside the throttle window, waiting for it
+  // to open, and the timer that will send it.
+  const deferredNudgeRef = useRef<DeferredNudge | null>(null);
+  const nudgeTimerRef = useRef<number | null>(null);
 
   // Snapshot getters live in refs so the SSE effect doesn't resubscribe on
   // every wizard keystroke.
@@ -227,6 +253,9 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
     });
     if (msg.role === 'assistant' || msg.role === 'system') {
       setTyping(false);
+      // The real message has landed (or the turn failed): whatever the
+      // streaming bubble was showing is superseded.
+      setPartial('');
     }
     // An assistant reply proves a runner is processing turns again.
     if (msg.role === 'assistant') {
@@ -270,6 +299,18 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
         // ignore malformed events
       }
     });
+    es.addEventListener('assistant_partial', (event: MessageEvent) => {
+      try {
+        const data = JSON.parse(event.data) as { run_id?: string; text?: string };
+        if (typeof data?.text !== 'string' || !data.text) return;
+        setPartial(data.text);
+        // Text is arriving, so the assistant is demonstrably answering.
+        setTyping(false);
+        setRunnerOffline(false);
+      } catch {
+        // ignore malformed events
+      }
+    });
     es.onerror = () => {
       es.close();
       if (esRef.current === es) esRef.current = null;
@@ -288,6 +329,7 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
     closedRef.current = false;
     kickedRef.current = false;
     setMessages([]);
+    setPartial('');
     let cancelled = false;
     (async () => {
       try {
@@ -325,6 +367,20 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
     };
   }, [sessionId, appendMessage, connectStream, applyTurnStatus]);
 
+  // Send one nudge now, opening a fresh throttle window.
+  const sendNudge = useCallback(
+    (nudge: DeferredNudge) => {
+      if (!sessionId) return;
+      lastNudgeRef.current = Date.now();
+      setTyping(true);
+      guidedAPI
+        .nudgeChat(sessionId, nudge.step, nudge.state, nudge.event)
+        .then((res) => applyTurnStatus(res.data))
+        .catch(() => setTyping(false));
+    },
+    [sessionId, applyTurnStatus]
+  );
+
   // Wizard actions (Next/Skip) call this through a ref so the thinking
   // indicator appears the moment the user acts, not when the reply lands.
   useImperativeHandle(
@@ -332,14 +388,50 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
     () => ({
       nudge: (nudgeStep: number, event: string) => {
         if (!sessionId) return;
-        setTyping(true);
-        guidedAPI
-          .nudgeChat(sessionId, nudgeStep, getStateRef.current(), event)
-          .then((res) => applyTurnStatus(res.data))
-          .catch(() => setTyping(false));
+        // The server decides what to do with a nudge that lands mid-turn (it
+        // parks the newest one and answers it when the turn finishes), so the
+        // panel does not track run state. It only refuses to spam: at most
+        // one nudge a second, however fast the wizard is saving.
+        //
+        // A nudge inside that window is DEFERRED, never dropped: the last
+        // save of a burst carries the freshest wizard state, and dropping it
+        // would keep the newest state from ever reaching the server (and the
+        // server-side coalescing from ever seeing it). The newest one waits
+        // in a ref — replacing any held one — and goes out when the window
+        // opens.
+        const held: DeferredNudge = { step: nudgeStep, event, state: getStateRef.current() };
+        const wait = NUDGE_MIN_INTERVAL_MS - (Date.now() - lastNudgeRef.current);
+        if (wait <= 0) {
+          sendNudge(held);
+          return;
+        }
+        // Deferred only: nothing has been asked of the server yet, so the
+        // thinking indicator stays as it is until the request actually goes.
+        deferredNudgeRef.current = held;
+        if (nudgeTimerRef.current === null) {
+          nudgeTimerRef.current = window.setTimeout(() => {
+            nudgeTimerRef.current = null;
+            const next = deferredNudgeRef.current;
+            deferredNudgeRef.current = null;
+            if (next) sendNudge(next);
+          }, wait);
+        }
       },
     }),
-    [sessionId, applyTurnStatus]
+    [sessionId, sendNudge]
+  );
+
+  // A held nudge belongs to the session it was entered against: drop it (and
+  // its timer) when the panel unmounts or moves to another session.
+  useEffect(
+    () => () => {
+      if (nudgeTimerRef.current !== null) {
+        window.clearTimeout(nudgeTimerRef.current);
+        nudgeTimerRef.current = null;
+      }
+      deferredNudgeRef.current = null;
+    },
+    [sessionId]
   );
 
   // Scroll so the START of the newest message is in view — the reader begins
@@ -352,12 +444,13 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
     scroller.scrollTo({ top: scroller.scrollTop + delta - 4, behavior: 'smooth' });
   }, [messages]);
 
-  // The typing indicator sits below the last message; bring it into view.
+  // The typing indicator and the streaming bubble sit below the last
+  // message; keep the tail in view as the reply grows.
   useEffect(() => {
-    if (!typing) return;
+    if (!typing && !partial) return;
     const scroller = scrollerRef.current;
     if (scroller) scroller.scrollTo({ top: scroller.scrollHeight, behavior: 'smooth' });
-  }, [typing]);
+  }, [typing, partial]);
 
   // preset carries a quick-action message; without it the composer text is sent.
   const send = async (preset?: string) => {
@@ -524,7 +617,7 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
       </div>
 
       <div ref={scrollerRef} style={{ flex: 1, overflowY: 'auto', padding: 12 }}>
-        {messages.length === 0 && !typing && (
+        {messages.length === 0 && !typing && !partial && (
           <div style={{ textAlign: 'center', color: 'var(--neutral)', fontSize: 12, marginTop: 24 }}>
             The assistant will join in a moment — or ask it anything about your requirements.
           </div>
@@ -624,7 +717,39 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
             Messages you send are saved and will be answered as soon as a runner connects.
           </div>
         )}
-        {typing && !runnerOffline && (
+        {partial && (
+          <div data-testid="assistant-partial" style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: 8 }}>
+            <div
+              style={{
+                maxWidth: '90%',
+                padding: '8px 12px',
+                borderRadius: 12,
+                borderBottomLeftRadius: 4,
+                fontSize: 13,
+                lineHeight: 1.5,
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
+                background: 'var(--surface-alt)',
+                color: 'var(--text)',
+              }}
+            >
+              {/* Suggestion blocks are only rendered once the reply is
+                  complete — half a fenced JSON block is not a card. */}
+              {partial}
+              <span
+                aria-hidden="true"
+                style={{
+                  display: 'inline-block',
+                  width: 7,
+                  marginLeft: 2,
+                  borderBottom: '2px solid var(--text-muted)',
+                  verticalAlign: 'baseline',
+                }}
+              />
+            </div>
+          </div>
+        )}
+        {typing && !partial && !runnerOffline && (
           <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: 8 }}>
             <div
               style={{

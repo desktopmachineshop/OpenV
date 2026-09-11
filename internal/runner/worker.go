@@ -292,7 +292,7 @@ func (w *Worker) execute(ctx context.Context, claim *ClaimResponse) {
 	defer cancelPrep()
 	var prepCancelled atomic.Bool
 	stopHeartbeat := startHeartbeat(prepHeartbeatInterval, func() {
-		cancelRequested, _, err := w.client.PushLogs(run.ID, nil)
+		cancelRequested, _, err := w.client.PushLogs(run.ID, nil, "")
 		if err != nil {
 			log.Printf("run %s: heartbeat failed: %v", run.ID, err)
 			return
@@ -561,18 +561,36 @@ func startHeartbeat(interval time.Duration, beat func()) (stop func()) {
 
 // pump batches run events into log pushes every 750ms until the event
 // channel closes; returns true when the run was cancelled server-side.
+// Each push also carries the assistant text written so far, when the
+// provider reports any and it changed since the last successful push, so the
+// chat panels can show the reply forming. The whole text is sent every time
+// (not a delta), so a lost batch costs freshness and can never corrupt what
+// the reader sees; agentruns.TruncatePartial applies the same cap the API
+// stores it under, which keeps one runaway run from pushing megabytes through
+// the log endpoint every 750ms.
 func (w *Worker) pump(runID string, handle RunHandle) bool {
 	var batch []agentruns.LogEntry
 	seq := 0
 	cancelled := false
+	partialSource, _ := handle.(PartialTextSource)
+	sentPartial := ""
 
 	flush := func() {
-		cancelRequested, _, err := w.client.PushLogs(runID, batch)
+		partial := ""
+		if partialSource != nil {
+			if text := agentruns.TruncatePartial(partialSource.PartialText()); text != sentPartial {
+				partial = text
+			}
+		}
+		cancelRequested, _, err := w.client.PushLogs(runID, batch, partial)
 		if err != nil {
 			log.Printf("run %s: push logs failed: %v", runID, err)
 			return
 		}
 		batch = batch[:0]
+		if partial != "" {
+			sentPartial = partial
+		}
 		if cancelRequested && !cancelled {
 			cancelled = true
 			handle.Cancel()

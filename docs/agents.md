@@ -839,6 +839,67 @@ agent run tries to record for one (`403`). They stay in the run for a person to
 execute by hand in the same grid. A result applied from an approved *proposal*
 is not treated as agent-executed, since a human signed off on it.
 
+## Streaming replies
+
+A conversational turn (the wizard's V&V Assistant, the notes panel, an
+interview) takes 14–21 s, almost all of it model time — see
+`docs/assessments/2026-09-07-agent-latency.md`. The answer no longer waits for
+the run to finish:
+
+- the runner's provider adapter accumulates the assistant text as it is
+  written — claude asks its CLI for `--include-partial-messages` when that
+  CLI supports it, and otherwise collects whole assistant messages (the probe
+  caches only an answer actually read off `claude --help`, so a probe that
+  times out costs one run's token streaming rather than the process's);
+  codex reports its **current** agent message — the same one it reports as
+  the final answer, so the text never shrinks when the reply lands; gemini
+  prints one JSON object at the end and streams nothing;
+- the log pump includes `partial_text` — the **whole answer so far, not a
+  delta**, capped at 64 KB — in its 750 ms log batch whenever it changed, so
+  a batch lost on the wire costs freshness and never corrupts the display;
+- the API stores it on the run (`agent_runs.partial_text`, cleared whenever
+  the run stops being live: at finish, when the stale-run reaper fails it, and
+  when a worker hands it back to the queue) and, for a run that belongs to a
+  guided session or an interview, broadcasts
+  `assistant_partial` `{run_id, text}` on that session's SSE channel, at most
+  once per 500 ms per run;
+- the chat panels render it as an in-progress bubble with a cursor and
+  replace it when the final `message` arrives (or when a failure note does).
+  The run detail panel shows the same text as "Output so far".
+
+Nothing about the model work changes — only when the reader first sees it.
+
+## Wizard nudges
+
+Saving or skipping a wizard step posts a **nudge** (`POST
+/api/v1/guided-sessions/{id}/chat/nudge`), so the assistant comments on what
+was just entered without the user typing. Wizard steps are saved faster than a
+turn runs, so most nudges used to land while a turn was in flight and were
+answered by nobody.
+
+A nudge that arrives mid-turn is now parked on the session
+(`guided_sessions.pending_nudge`) and answered as `{"status":"pending"}`. Only
+the newest one is kept — a later nudge overwrites it — and when the running
+turn finishes, the orchestration hooks launch exactly one turn from it, after
+the finished reply has been appended so the new turn sees it.
+
+Two things keep a parked nudge from being orphaned or fired into a closed
+wizard:
+
+- the park is not atomic with the run's finish, so the request re-checks after
+  parking; if the turn has finished in that window (its hook already looked for
+  a nudge and found none), the request takes the nudge back and launches it
+  itself. `TakePendingNudge` hands a nudge out at most once, so the hook and
+  the request can never both launch it;
+- committing or abandoning a session clears its parked nudge, and the hooks
+  check the session's status after taking one — a closed wizard gets no
+  copilot turn.
+
+The panel itself sends at most one nudge a second; a nudge inside that window
+is **deferred**, not dropped — the newest one waits (replacing any held one)
+and goes out when the window opens, so the freshest wizard state always
+reaches the server.
+
 ## Interview links
 
 For requirements elicitation, create an **interview** in a project and generate
