@@ -1,7 +1,12 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { sharedProductsAPI } from '../api/client';
 import { apiErrorMessage } from '../api/errors';
-import { fromSharedProduct, RandomProduct } from '../utils/randomProduct';
+import {
+  fromSharedProduct,
+  isInventedProduct,
+  isSharedProduct,
+  RandomProduct,
+} from '../utils/randomProduct';
 
 // Voting on the community pool of demo products.
 //
@@ -23,15 +28,27 @@ export interface VoteState {
 }
 
 /**
- * Why a product cannot be voted for, or '' when it can. Inventions are
- * published automatically, so a product with no shared id is one that never
- * made it (a rate limit, a name already taken, no network) and lives in this
- * browser alone — there is nothing for anyone else to vote on.
+ * Why a product cannot be voted for, or '' when it can.
+ *
+ * Two quite different things cannot be voted for, and saying the same
+ * sentence about both is wrong. A built-in concept was never anybody's
+ * invention: every roller has it, and it was never in the pool at all. An
+ * invention kept in this browser did try to reach the pool and did not make
+ * it (a rate limit, a name already taken, no network), which is a passing
+ * condition rather than a permanent one. `invented` is this browser's kept
+ * inventions — the same list the roller draws from — and is what tells the
+ * two apart.
  */
-export const voteDisabledReason = (product: RandomProduct): string =>
-  product.sharedId
-    ? ''
-    : 'Kept in this browser only — a product has to reach the shared pool before anyone can vote for it.';
+export const voteDisabledReason = (
+  product: RandomProduct,
+  invented: RandomProduct[] = []
+): string => {
+  if (isSharedProduct(product)) return '';
+  if (isInventedProduct(product, invented)) {
+    return 'Kept in this browser only — an invention has to reach the shared pool before anyone can vote for it.';
+  }
+  return 'A built-in example — it is not in the shared pool, so there is nothing for anyone else to vote for.';
+};
 
 /**
  * The up-arrow and its count on the rolled product card.
@@ -42,11 +59,13 @@ export const voteDisabledReason = (product: RandomProduct): string =>
  */
 export const ProductVoteButton: React.FC<{
   product: RandomProduct;
+  /** This browser's kept inventions, for naming why a vote is unavailable. */
+  invented?: RandomProduct[];
   onChange: (state: VoteState) => void;
   onError?: (message: string) => void;
-}> = ({ product, onChange, onError }) => {
+}> = ({ product, invented, onChange, onError }) => {
   const [busy, setBusy] = useState(false);
-  const disabledReason = voteDisabledReason(product);
+  const disabledReason = voteDisabledReason(product, invented);
   const voted = !!product.voted;
   const votes = product.votes || 0;
   const votesWeek = product.votesWeek || 0;
@@ -118,12 +137,24 @@ export const TopSharedProducts: React.FC<{
   const [products, setProducts] = useState<RandomProduct[] | null>(null);
   const [error, setError] = useState('');
 
+  // The filter races its own fetches: switching "Top 5 all time" to "Top 5
+  // this week" fires a second read before the first has answered, and a slow
+  // first answer landing last would leave rows on screen that disagree with
+  // the selected filter. Each request takes a sequence number and only the
+  // newest one is allowed to write state; a superseded answer is dropped,
+  // including its error.
+  const requestRef = useRef(0);
+
   const load = useCallback(async () => {
+    const seq = requestRef.current + 1;
+    requestRef.current = seq;
     try {
       const res = await sharedProductsAPI.list({ sort, limit: 5 });
+      if (requestRef.current !== seq) return;
       setProducts((res.data || []).map(fromSharedProduct));
       setError('');
     } catch (err: any) {
+      if (requestRef.current !== seq) return;
       setProducts([]);
       setError(apiErrorMessage(err));
     }

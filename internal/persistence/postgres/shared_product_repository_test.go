@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"sync"
 	"testing"
 	"time"
 
@@ -354,6 +355,155 @@ func TestSharedProductTopSorts(t *testing.T) {
 	// A limit applies to the leaderboard too.
 	if one, err := svc.List(sharedproducts.ListOptions{Sort: sharedproducts.SortTop, Limit: 1}); err != nil || len(one) != 1 || one[0].ID != old.ID {
 		t.Errorf("top limit 1 = %v, %v", describePool(one), err)
+	}
+}
+
+// TestSharedProductConcurrentVotesKeepTheColumnHonest is the reason the vote
+// transaction locks the product row.
+//
+// The denormalised shared_products.votes column is what the all-time
+// leaderboard orders by, and it is written from a recount. Without a lock two
+// simultaneous changes each recount on their own snapshot and the later
+// commit overwrites the earlier one with a total that never included it —
+// leaving a vote row standing against a count that does not know about it.
+// Every goroutine here uses its own connection out of the pool, so this is a
+// real race rather than a simulated one.
+func TestSharedProductConcurrentVotesKeepTheColumnHonest(t *testing.T) {
+	db := testDB(t)
+	initTestSchema(t, db)
+	repo := NewSharedProductRepository(db)
+	svc := sharedproducts.NewDefaultService(repo, 0, 0)
+
+	product := shareOne(t, svc, "Kevinproof", uuid.New().String(), uuid.New().String())
+
+	const voters = 8
+	first := make([]string, voters)
+	for i := range first {
+		first[i] = uuid.New().String()
+	}
+
+	// race runs one call per voter at once, releasing them all from a single
+	// channel so the transactions genuinely overlap.
+	race := func(name string, ids []string, call func(userID string) (int, error)) {
+		t.Helper()
+		var wg sync.WaitGroup
+		start := make(chan struct{})
+		errs := make(chan error, len(ids))
+		for _, id := range ids {
+			wg.Add(1)
+			go func(userID string) {
+				defer wg.Done()
+				<-start
+				if _, err := call(userID); err != nil {
+					errs <- err
+				}
+			}(id)
+		}
+		close(start)
+		wg.Wait()
+		close(errs)
+		for err := range errs {
+			t.Fatalf("%s: %v", name, err)
+		}
+	}
+
+	// Eight people vote at once. Every vote is a row, so the column must be 8.
+	race("concurrent votes", first, func(userID string) (int, error) {
+		return repo.AddVote(product.ID, userID)
+	})
+	assertVoteColumn(t, db, product.ID, voters)
+
+	// Now the harder case: half of them withdraw while eight new people vote,
+	// all at the same time. A withdrawal racing a vote is exactly the pair
+	// that used to lose a write.
+	second := make([]string, voters)
+	for i := range second {
+		second[i] = uuid.New().String()
+	}
+	mixed := append(append([]string{}, first[:voters/2]...), second...)
+	race("concurrent votes and withdrawals", mixed, func(userID string) (int, error) {
+		for _, withdrawing := range first[:voters/2] {
+			if userID == withdrawing {
+				return repo.RemoveVote(product.ID, userID)
+			}
+		}
+		return repo.AddVote(product.ID, userID)
+	})
+	assertVoteColumn(t, db, product.ID, voters/2+voters)
+}
+
+// TestSharedProductWeeklyWindowFollowsTheConstant: the "this week" window is
+// built from sharedproducts.VoteWindowDays rather than written into the SQL,
+// so the four doc comments that name the constant as the source are telling
+// the truth. Moving it moves both the weekly count and the weekly
+// leaderboard.
+func TestSharedProductWeeklyWindowFollowsTheConstant(t *testing.T) {
+	db := testDB(t)
+	initTestSchema(t, db)
+	repo := NewSharedProductRepository(db)
+	svc := sharedproducts.NewDefaultService(repo, 0, 0)
+
+	// The domain constant is what a real caller gets.
+	if repo.voteWindowDays != sharedproducts.VoteWindowDays {
+		t.Fatalf("window = %d days, want sharedproducts.VoteWindowDays (%d)",
+			repo.voteWindowDays, sharedproducts.VoteWindowDays)
+	}
+
+	product := shareOne(t, svc, "Kevinproof", uuid.New().String(), uuid.New().String())
+	if _, err := svc.Vote(product.ID, uuid.New().String()); err != nil {
+		t.Fatalf("vote: %v", err)
+	}
+	// Older than the default window, newer than the widened one below.
+	if _, err := db.Exec(
+		`UPDATE shared_product_votes SET created_at = NOW() - INTERVAL '10 days' WHERE product_id = $1`,
+		product.ID,
+	); err != nil {
+		t.Fatalf("age the vote: %v", err)
+	}
+
+	weekCount := func() int {
+		t.Helper()
+		n, err := repo.CountVotesWeek(product.ID)
+		if err != nil {
+			t.Fatalf("count week: %v", err)
+		}
+		return n
+	}
+	weekBoard := func() []*sharedproducts.Product {
+		t.Helper()
+		pool, err := svc.List(sharedproducts.ListOptions{Sort: sharedproducts.SortTopWeek, Limit: 5})
+		if err != nil {
+			t.Fatalf("top_week: %v", err)
+		}
+		return pool
+	}
+
+	// Ten days ago is outside a seven-day week.
+	if n := weekCount(); n != 0 {
+		t.Errorf("ten-day-old vote counted inside a %d-day window: %d", repo.voteWindowDays, n)
+	}
+	if board := weekBoard(); len(board) != 0 {
+		t.Errorf("top_week = %v, want nothing inside the window", describePool(board))
+	}
+
+	// Widen the window and the same vote is inside it — the interval follows
+	// the value rather than a hard-coded seven.
+	repo.voteWindowDays = 30
+	if n := weekCount(); n != 1 {
+		t.Errorf("ten-day-old vote in a 30-day window = %d, want 1", n)
+	}
+	board := weekBoard()
+	if len(board) != 1 || board[0].ID != product.ID || board[0].VotesWeek != 1 {
+		t.Errorf("top_week over 30 days = %v, want the aged vote", describePool(board))
+	}
+
+	// And narrowing it drops the vote back out, from both reads.
+	repo.voteWindowDays = 1
+	if n := weekCount(); n != 0 {
+		t.Errorf("ten-day-old vote in a 1-day window = %d, want 0", n)
+	}
+	if board := weekBoard(); len(board) != 0 {
+		t.Errorf("top_week over 1 day = %v, want nothing", describePool(board))
 	}
 }
 

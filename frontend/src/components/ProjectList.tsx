@@ -79,8 +79,11 @@ export const ProjectList: React.FC = () => {
   const shownProductsRef = React.useRef<string[]>([]);
 
   // Inventions are also kept in this browser, as the fallback for one that
-  // could not reach the shared pool (rate limit, no network). Read at roll
-  // time rather than held in state — the pool is what the UI talks about.
+  // could not reach the shared pool (rate limit, no network). Held in state
+  // as well as in storage because the card has to tell a kept invention from
+  // a built-in concept while rendering — the two cannot be voted for for
+  // quite different reasons, and only one of them is ever fixable.
+  const [invented, setInvented] = useState<RandomProduct[]>(loadInventedProducts);
 
   // The community pool: products other people chose to share. Everyone reads
   // the same list, so the roll gets richer over time without anyone spending
@@ -133,7 +136,9 @@ export const ProjectList: React.FC = () => {
     // invention normally reaches the shared pool, so this browser's copies
     // only add the ones that did not — deduped by name so a product cannot
     // be twice as likely to roll as its neighbours.
-    const kept = loadInventedProducts().filter(
+    const stored = loadInventedProducts();
+    setInvented(stored);
+    const kept = stored.filter(
       (k) => !shared.some((p) => p.name.toLowerCase() === k.name.toLowerCase())
     );
     const rolled = generateRandomProduct([...shared, ...kept]);
@@ -270,11 +275,11 @@ export const ProjectList: React.FC = () => {
       if (flaws.length) {
         // Usable, but below the bar: show it, keep it here, and leave the
         // shared collection alone.
-        saveInventedProduct(product);
+        setInvented(saveInventedProduct(product));
         setInventError(`Your agent's product is a bit off (${flaws[0]}) — reroll or invent again. Not added to the shared collection.`);
         return;
       }
-      saveInventedProduct(product);
+      setInvented(saveInventedProduct(product));
       await publishInvention(product);
     } catch (err: any) {
       setInventError(`Could not invent a product: ${apiErrorMessage(err)}`);
@@ -843,12 +848,13 @@ export const ProjectList: React.FC = () => {
                     >
                       <ProductVoteButton
                         product={randomProduct}
+                        invented={invented}
                         onChange={applyVote}
                         onError={(message) => setShareError(message)}
                       />
-                      {voteDisabledReason(randomProduct) && (
+                      {voteDisabledReason(randomProduct, invented) && (
                         <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                          {voteDisabledReason(randomProduct)}
+                          {voteDisabledReason(randomProduct, invented)}
                         </span>
                       )}
                     </div>

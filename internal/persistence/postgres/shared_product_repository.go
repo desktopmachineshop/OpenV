@@ -2,6 +2,8 @@ package postgres
 
 import (
 	"database/sql"
+	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -15,19 +17,31 @@ import (
 // limiting and takedown and is never a filter on what a caller may see.
 type SharedProductRepository struct {
 	db *sql.DB
+	// voteWindowDays is the length of the rolling "this week" window, in
+	// days. It is sharedproducts.VoteWindowDays for every real caller — the
+	// domain constant is the single place the window is stated — and is a
+	// field only so a test can move the window and watch the counts follow.
+	voteWindowDays int
 }
 
 // NewSharedProductRepository creates a new repository.
 func NewSharedProductRepository(db *sql.DB) *SharedProductRepository {
-	return &SharedProductRepository{db: db}
+	return &SharedProductRepository{db: db, voteWindowDays: sharedproducts.VoteWindowDays}
 }
 
 const sharedProductColumns = `p.id, p.category, p.name, p.description, p.vision, p.problem, p.target_users, p.created_at`
 
-// voteWindow is the SQL expression for the rolling "this week" window. The
-// database reckons it against its own clock, so the weekly leaderboard and
-// the weekly count on a card can never disagree about when the week started.
-const voteWindow = `NOW() - INTERVAL '7 days'`
+// voteWindowSince renders the SQL expression for the start of the rolling
+// "this week" window, reading the length from the numbered parameter given.
+//
+// The database reckons the window against its own clock, so the weekly
+// leaderboard and the weekly count on a card can never disagree about when
+// the week started; the length is bound as a parameter rather than written
+// into the SQL so sharedproducts.VoteWindowDays stays the only statement of
+// how long a "week" is here.
+func voteWindowSince(param int) string {
+	return fmt.Sprintf(`NOW() - make_interval(days => $%d)`, param)
+}
 
 // ListVisible returns unhidden products in the requested order, each carrying
 // its all-time votes, its votes inside the weekly window, and whether the
@@ -60,13 +74,13 @@ func (r *SharedProductRepository) ListVisible(opts sharedproducts.ListOptions) (
 		LEFT JOIN LATERAL (
 			SELECT COUNT(*) AS week_votes
 			FROM shared_product_votes sv
-			WHERE sv.product_id = p.id AND sv.created_at >= `+voteWindow+`
+			WHERE sv.product_id = p.id AND sv.created_at >= `+voteWindowSince(3)+`
 		) w ON TRUE
 		LEFT JOIN shared_product_votes v ON v.product_id = p.id AND v.user_id = $2
 		WHERE `+where+`
 		ORDER BY `+order+`
 		LIMIT $1
-	`, opts.Limit, nullUUID(opts.ViewerID))
+	`, opts.Limit, nullUUID(opts.ViewerID), r.voteWindowDays)
 	if err != nil {
 		return nil, err
 	}
@@ -192,6 +206,14 @@ func (r *SharedProductRepository) RemoveVote(id, userID string) (int, error) {
 // changeVote applies one vote change and recounts inside a single
 // transaction, so the denormalised shared_products.votes column can never
 // disagree with the rows it summarises.
+//
+// The product row is locked FOR UPDATE first, and that lock is what makes the
+// recount trustworthy rather than merely atomic. Two people voting at the
+// same moment would otherwise each count on their own snapshot and the later
+// commit would write a total that never saw the other's row: a product left
+// at "▲ 0" with a vote row standing, dropped out of ?sort=top and showing the
+// voter a count their own press did not produce. Locking serialises the
+// second transaction behind the first, so each recount sees the other's work.
 func (r *SharedProductRepository) changeVote(id string, change func(*sql.Tx) error) (int, error) {
 	tx, err := r.db.Begin()
 	if err != nil {
@@ -199,13 +221,18 @@ func (r *SharedProductRepository) changeVote(id string, change func(*sql.Tx) err
 	}
 	defer tx.Rollback() //nolint:errcheck // no-op after commit
 
-	var visible bool
-	if err := tx.QueryRow(
-		`SELECT EXISTS (SELECT 1 FROM shared_products WHERE id = $1 AND hidden = FALSE)`, id,
-	).Scan(&visible); err != nil {
+	// One statement does both jobs: it takes the lock and answers whether the
+	// entry may be voted for at all. A hidden entry is out of every list, so
+	// a vote for it would be a number nobody can see being earned.
+	var hidden bool
+	switch err := tx.QueryRow(
+		`SELECT hidden FROM shared_products WHERE id = $1 FOR UPDATE`, id,
+	).Scan(&hidden); {
+	case errors.Is(err, sql.ErrNoRows):
+		return 0, sharedproducts.ErrNotFound
+	case err != nil:
 		return 0, err
-	}
-	if !visible {
+	case hidden:
 		return 0, sharedproducts.ErrNotFound
 	}
 	if err := change(tx); err != nil {
@@ -231,8 +258,8 @@ func (r *SharedProductRepository) CountVotesWeek(id string) (int, error) {
 	var count int
 	err := r.db.QueryRow(`
 		SELECT COUNT(*) FROM shared_product_votes
-		WHERE product_id = $1 AND created_at >= `+voteWindow,
-		id,
+		WHERE product_id = $1 AND created_at >= `+voteWindowSince(2),
+		id, r.voteWindowDays,
 	).Scan(&count)
 	return count, err
 }

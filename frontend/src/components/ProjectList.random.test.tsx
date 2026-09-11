@@ -176,16 +176,18 @@ describe('random product mode', () => {
     expect(voteButton().textContent).toContain('7');
   });
 
-  it('cannot vote for an invention that never reached the pool', async () => {
-    // Nothing is shared, so the roll lands on a built-in concept: there is
-    // no row anyone else could vote for.
+  it('cannot vote for a built-in concept, and says which kind it is', async () => {
+    // Nothing is shared and nothing was invented here, so the roll lands on a
+    // built-in concept: there is no row anyone else could vote for, and it is
+    // not an invention that merely failed to publish.
     api.list.mockResolvedValue({ data: [] } as any);
     await render();
     await openRandomMode();
 
     expect(voteButton().disabled).toBe(true);
     expect(voteButton().getAttribute('title')).toContain('shared pool');
-    expect(container.textContent).toContain('has to reach the shared pool');
+    expect(container.textContent).toContain('built-in example');
+    expect(container.textContent).not.toContain('Kept in this browser only');
     expect(api.vote).not.toHaveBeenCalled();
   });
 
