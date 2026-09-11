@@ -1,7 +1,7 @@
 import axios, { AxiosInstance } from 'axios';
 import { filenameFromContentDisposition } from './contentDisposition';
 import type { SharedProductPayload, toSharePayload } from '../utils/randomProduct';
-import { downloadQuery } from '../utils/downloadSelection';
+import { downloadExtension, downloadQuery } from '../utils/downloadSelection';
 import { isPublicPath } from '../utils/publicPaths';
 
 // Determine API base URL.
@@ -200,7 +200,7 @@ export interface DownloadSelection {
   attachments: string[];
 }
 
-export type DownloadFormat = 'json' | 'csv' | 'reqif' | 'pdf' | 'docx';
+export type DownloadFormat = 'json' | 'csv' | 'excel' | 'reqif' | 'pdf' | 'docx';
 
 export interface Attachment {
   id: string;
@@ -407,7 +407,7 @@ export const projectAPI = {
 
     const filename =
       filenameFromContentDisposition(response.headers['content-disposition']) ||
-      `project_download_${new Date().toISOString().slice(0, 10)}.${format}`;
+      `project_download_${new Date().toISOString().slice(0, 10)}.${downloadExtension(format)}`;
 
     saveBlob(response.data, filename);
     return response;

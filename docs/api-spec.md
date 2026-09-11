@@ -208,10 +208,21 @@ their own project, workers pass within their org) · `org member`/`org admin`
 
 **Export/import caveats** (`internal/domain/exports/export.go`):
 
-- The `?format=` on export accepts `json` (default), `csv`, and `reqif` (OMG
-  ReqIF 1.x, read by DOORS/Polarion). **`excel` is a stub** — the service
-  returns `ErrUnsupportedFormat` ("excel export not yet implemented"), so the
-  API rejects it.
+- The `?format=` on export accepts `json` (default), `csv`, `excel` and
+  `reqif` (OMG ReqIF 1.x, read by DOORS/Polarion). Anything else is a 400.
+- **Excel** (`internal/domain/exports/excel.go`) is an `.xlsx` workbook served
+  as `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`: a
+  `Project` cover sheet (name, description, export time, baseline when the
+  snapshot came from one, artifact and link counts), one sheet per artifact
+  type present named after the type ("Requirements", "Test Cases"), and a
+  `Links` sheet of the traceability links by endpoint ref and title. An
+  artifact sheet carries the CSV's columns with the stable `ref` and the
+  derived `section` number in front. `section` is a heading's own number and,
+  for every other row, the number of the heading it sits under — the same
+  section the PDF nests it in — so a flat sheet still places an artifact in
+  the document; a row with no heading above it leaves it empty. Refs, section
+  numbers and timestamps are written as text so a spreadsheet cannot re-read
+  them as numbers or dates. It is a download only — there is no Excel import.
 - **ReqIF import** (`internal/domain/exports/reqif_import.go`): `POST
   /api/v1/projects/import` accepts a ReqIF document as well as JSON. ReqIF is
   selected by `?format=reqif`, an XML/ReqIF `Content-Type`, or sniffed from a

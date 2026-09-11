@@ -213,7 +213,7 @@ func TestExportProjectCSVEmptyProject(t *testing.T) {
 func TestExportProjectUnsupportedFormats(t *testing.T) {
 	svc := newTestService("Anything", nil, nil)
 
-	for _, format := range []ExportFormat{FormatExcel, ExportFormat("xml"), ExportFormat("")} {
+	for _, format := range []ExportFormat{ExportFormat("xml"), ExportFormat("")} {
 		_, _, err := svc.ExportProject("p1", format)
 		if err == nil {
 			t.Errorf("ExportProject(%q) expected error, got nil", format)
