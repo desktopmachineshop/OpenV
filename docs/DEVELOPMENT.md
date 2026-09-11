@@ -135,8 +135,49 @@ make test   # go test ./... inside golang:1.25
 
 CI runs on GitHub Actions (`.github/workflows/ci.yml`): Go vet/test scoped
 to `./cmd/... ./internal/...` with a Postgres service (`OPENV_TEST_DATABASE_URL`
-enables the integration tests), a frontend `npm ci` + `tsc` + build, and Docker
-image builds. Still run `make test` locally before pushing.
+enables the integration tests), a frontend `npm ci` + `tsc` + build, Docker
+image builds, a Playwright smoke journey against the composed stack, and the
+vulnerability scan below. Still run `make test` locally before pushing.
+
+### The vulnerability gate
+
+The **Vulnerability scan** job (`vuln`) is a supply-chain gate on every pull
+request, required by REQ-98. It runs two scanners:
+
+- `govulncheck ./cmd/... ./internal/...` over the server and worker code.
+  govulncheck is call-graph aware, so it reports only advisories the binaries
+  can actually reach and stays quiet about a vulnerable package that nothing
+  calls. It exits non-zero as soon as one is reachable.
+- `npm audit --omit=dev --audit-level=high` in `frontend/`. `--omit=dev`
+  keeps the gate on code that reaches a browser; a build-time-only advisory
+  in the `react-scripts` tree does not fail a PR. `e2e/` is not audited — it
+  declares devDependencies only, so there is nothing for `--omit=dev` to see.
+
+Run the same two checks before pushing:
+
+```bash
+make vuln
+```
+
+Two things follow from how the scanners work. The Go toolchain comes from the
+`go` directive in `go.mod`, and govulncheck attributes standard-library
+advisories to whichever toolchain builds the code — so **keeping that
+directive on a current Go patch release is part of passing the gate**, and a
+stdlib finding is usually fixed by bumping it rather than by touching any
+dependency. And a frontend advisory that lives in a transitive package is
+normally closed with an entry in the `overrides` block of
+`frontend/package.json` (that is what pins `fast-uri`, among others), then
+`npm install --package-lock-only` to refresh the lock file.
+
+Findings are not suppressed. There is no allow-list and no
+`--ignore`/`audit-level` escape hatch beyond the documented `high` threshold:
+a reachable advisory either gets fixed or the gate stays red.
+
+The hosted-runner provisioner in `internal/hosting` talks to the Docker
+daemon through `github.com/moby/moby/client` (the renamed, still-maintained
+Moby engine client), which is where the fixes for GO-2026-4887 and
+GO-2026-4883 ship; the retired `github.com/docker/docker` module is no longer
+a dependency.
 
 ## Database inspection
 

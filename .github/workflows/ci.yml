@@ -48,7 +48,7 @@ jobs:
 
       - uses: actions/setup-go@v5
         with:
-          go-version-file: go.mod # go 1.25 — keep in sync automatically
+          go-version-file: go.mod # go 1.25.x — keep in sync automatically
           cache: true
 
       # Fail if any Go source is not gofmt-clean. Scoped to ./cmd ./internal
@@ -107,6 +107,72 @@ jobs:
         run: npm run build
         env:
           CI: "true"
+
+  # REQ-98: a supply-chain gate on every pull request. Two scanners, one job.
+  #
+  # govulncheck is not a dependency-list scanner: it resolves the call graph
+  # and reports only vulnerabilities the binaries can actually reach, so its
+  # non-zero exit means "reachable", not merely "present in go.sum". The scope
+  # matches the backend job (./cmd/... ./internal/...) rather than ./... for
+  # the same reason — ./... would sweep the Go package vendored inside
+  # frontend/node_modules.
+  #
+  # The Go toolchain comes from go.mod, so keeping the `go` directive on a
+  # current patch release is part of passing this gate: govulncheck attributes
+  # standard-library advisories to whichever toolchain builds the code.
+  #
+  # The frontend steps run even when the Go scan has already failed
+  # (`!cancelled()`), so one red scanner never hides the other's result.
+  # e2e/ is deliberately not audited: its package.json declares devDependencies
+  # only (Playwright), so `npm audit --omit=dev` there has nothing to look at.
+  vuln:
+    name: Vulnerability scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod # go 1.25.x — keep in sync automatically
+          cache: true
+
+      # Pinned, not @latest, so a govulncheck release cannot turn a green PR
+      # red on its own; the advisory database is fetched live either way, so
+      # the pin delays new tooling, never new findings. Keep in step with
+      # GOVULNCHECK_VERSION in the Makefile (`make vuln`).
+      #
+      # govulncheck v1.8.0 itself needs Go >= 1.26 to build, which is newer
+      # than the toolchain this repo compiles with: GOTOOLCHAIN=auto lets the
+      # install fetch that newer toolchain for the tool alone. The scan it then
+      # runs still uses the go.mod toolchain, which is what gets shipped.
+      - name: Install govulncheck
+        env:
+          GOTOOLCHAIN: auto
+        run: go install golang.org/x/vuln/cmd/govulncheck@v1.8.0
+
+      - name: govulncheck (server and worker binaries)
+        run: "$(go env GOPATH)/bin/govulncheck ./cmd/... ./internal/..."
+
+      - uses: actions/setup-node@v4
+        if: ${{ !cancelled() }}
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        if: ${{ !cancelled() }}
+        working-directory: frontend
+        run: npm ci --legacy-peer-deps
+
+      # --omit=dev keeps the gate on what ships to a browser; build-time-only
+      # advisories (react-scripts and its tree) are noise here and are not
+      # allowed to fail a PR. --audit-level=high sets the failure threshold
+      # REQ-98 names.
+      - name: npm audit (production dependencies)
+        if: ${{ !cancelled() }}
+        working-directory: frontend
+        run: npm audit --omit=dev --audit-level=high
 
   docker:
     name: Docker builds

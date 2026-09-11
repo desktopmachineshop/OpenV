@@ -6,8 +6,11 @@
 # Linux/macOS hosts. See docs/agents.md.
 
 GO_IMAGE := golang:1.25
+# Keep in step with the `Install govulncheck` step in
+# .github/workflows/ci.yml so `make vuln` and CI scan with the same tool.
+GOVULNCHECK_VERSION := v1.8.0
 
-.PHONY: build up down prod-up prod-down worker worker-unix worker-image runner-pool-up runner-pool-down connector-dist mcp test backup restore
+.PHONY: build up down prod-up prod-down worker worker-unix worker-image runner-pool-up runner-pool-down connector-dist mcp test vuln backup restore
 
 ## Build all Docker images.
 build:
@@ -28,6 +31,22 @@ prod-up:
 ## Stop the production stack.
 prod-down:
 	docker compose -f docker-compose.yml -f docker-compose.prod.yml down
+
+## Run the CI vulnerability gate locally (the `vuln` job in
+## .github/workflows/ci.yml): govulncheck over the server and worker binaries,
+## then an audit of the frontend's production dependencies. Both scanners
+## always run — a finding in the first does not hide the second's result —
+## and any finding fails the target. Needs a host Go toolchain and npm; no
+## Docker.
+## govulncheck reads the advisory database over the network on every run.
+## The npm side reads frontend/package-lock.json, so it works without a
+## prior `npm install`.
+vuln:
+	GOTOOLCHAIN=auto go install golang.org/x/vuln/cmd/govulncheck@$(GOVULNCHECK_VERSION)
+	@rc=0; \
+	"$$(go env GOPATH)/bin/govulncheck" ./cmd/... ./internal/... || rc=1; \
+	(cd frontend && npm audit --omit=dev --audit-level=high) || rc=1; \
+	exit $$rc
 
 ## Back up the openv database plus the openv-data and uploads volumes into a
 ## single timestamped bundle: backups/openv-backup-<stamp>.tar.gz, then prune
