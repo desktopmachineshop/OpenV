@@ -25,6 +25,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/exports"
 	"github.com/openv/requirements-platform/internal/domain/links"
 	"github.com/openv/requirements-platform/internal/domain/projects"
+	"github.com/openv/requirements-platform/internal/domain/release"
 	"github.com/openv/requirements-platform/internal/domain/reports"
 	"github.com/openv/requirements-platform/internal/domain/settings"
 	"github.com/openv/requirements-platform/internal/domain/sharedproducts"
@@ -80,6 +81,7 @@ type HandlerDeps struct {
 	VVService           vv.Service
 	EvidenceService     evidence.Service
 	SettingsService     settings.Service
+	ReleaseService      release.Service
 	WorkItemService     workitems.Service
 	GuidedService       guided.Service
 	InterviewService    interviews.Service
@@ -170,6 +172,7 @@ type Handler struct {
 	vvService            vv.Service
 	evidenceService      evidence.Service
 	settingsService      settings.Service
+	releaseService       release.Service
 	workItemService      workitems.Service
 	guidedService        guided.Service
 	interviewService     interviews.Service
@@ -267,6 +270,7 @@ func NewHandler(deps HandlerDeps) *Handler {
 		memberService:          deps.MemberService,
 		productService:         deps.ProductService,
 		settingsService:        deps.SettingsService,
+		releaseService:         deps.ReleaseService,
 		vvService:              deps.VVService,
 		evidenceService:        deps.EvidenceService,
 		workItemService:        deps.WorkItemService,
@@ -429,6 +433,7 @@ func (h *Handler) RegisterRoutes(router *mux.Router) {
 	h.registerInvitationRoutes(router)
 	h.registerPasswordRoutes(router)
 	h.registerAvatarRoutes(router)
+	h.registerReleaseRoutes(router)
 	h.registerRunnerSessionRoutes(router)
 	h.registerAttributeDefinitionRoutes(router)
 	h.registerSharedProductRoutes(router)

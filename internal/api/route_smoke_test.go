@@ -27,6 +27,7 @@ func TestRegisterRoutesResolvesTheNewPaths(t *testing.T) {
 		{http.MethodPost, "/api/v1/me/avatar"},
 		{http.MethodDelete, "/api/v1/me/avatar"},
 		{http.MethodGet, "/api/v1/users/user-1/avatar"},
+		{http.MethodGet, "/api/v1/release"},
 	} {
 		var match mux.RouteMatch
 		if !router.Match(httptest.NewRequest(tc.method, tc.path, nil), &match) {

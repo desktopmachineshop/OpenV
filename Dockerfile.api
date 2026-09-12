@@ -17,6 +17,9 @@ RUN go mod download
 COPY cmd cmd
 COPY internal internal
 COPY examples examples
+# The repository-root package embeds the customer-facing release notes, which
+# is how the server knows which release it is (GET /api/v1/release).
+COPY release_notes.go RELEASE_NOTES.md ./
 
 # Build the API server. The host worker binaries (cmd/agentd, cmd/openv-mcp)
 # are NOT built here for the server's own use: they run on the operator's

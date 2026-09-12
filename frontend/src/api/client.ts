@@ -1727,6 +1727,22 @@ export const qualityRulesAPI = {
     client.put<QualityRules>(`/api/v1/orgs/${orgId}/quality-rules`, payload),
 };
 
+// The running release (RELEASE_NOTES.md as built into the API): version,
+// its customer-facing bullets, and the whole history for the What's new
+// page. Uncached, so an open tab can notice a newer release behind the same
+// URL.
+export interface ReleaseInfo {
+  version: string;
+  date: string;
+  notes: string[];
+  markdown: string;
+  history: string;
+}
+
+export const releaseAPI = {
+  current: () => client.get<ReleaseInfo>('/api/v1/release'),
+};
+
 export const metaAPI = {
   artifactTypes: () => client.get<ArtifactTypeDef[]>('/api/v1/meta/artifact-types'),
   linkTypes: () => client.get<LinkTypeRule[]>('/api/v1/meta/link-types'),

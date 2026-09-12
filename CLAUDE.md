@@ -68,6 +68,12 @@ Railway deploys the `release` branch, not `master`. Merges to `master`
 deploy nothing; shipping means running the **Promote to release** workflow
 (`.github/workflows/promote-release.yml`). See `docs/railway.md`.
 
+Every pull request adds a customer-facing bullet under `## Unreleased` in
+`RELEASE_NOTES.md` (what a workspace member will notice, not how it was
+built); the *Release notes* CI job refuses one that does not, unless the PR
+carries the `no-release-notes` label. Promotion cuts those bullets into the
+dated section the app announces to every account.
+
 **Never run Promote to release without the maintainer explicitly asking for
 that release.** Each promotion rebuilds both Railway services, which
 currently costs more in build minutes than real usage does. Releases are

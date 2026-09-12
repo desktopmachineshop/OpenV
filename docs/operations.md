@@ -148,6 +148,8 @@ OPENV_VAPID_SUBJECT=mailto:admin@example.com
 | `OPENV_VAPID_PRIVATE_KEY` | Signs the request to the push service. Treat as a secret; never commit it |
 | `OPENV_VAPID_SUBJECT` | Operator contact, `mailto:` or `https:` only — anything else leaves push off |
 | `OPENV_PUSH_NOTIFICATION_TYPES` | Comma-separated type override (default: the four high-signal types) |
+
+`release_published` (a new release announced to every account) is in-app only by default; add it to either list to email or push it as well.
 | `OPENV_PUSH_ENDPOINT_HOSTS` | Comma-separated EXTRA push-service hosts accepted in a subscription endpoint (see below). Unset ⇒ the built-in list only |
 
 Edit `OPENV_VAPID_SUBJECT` to an address you actually read: push services use
