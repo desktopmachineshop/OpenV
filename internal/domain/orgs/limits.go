@@ -326,7 +326,18 @@ func ParseLimits(raw string) (map[string]interface{}, error) {
 // limits win, then the deployment's, then the plan's. The receiver's map is
 // never mutated.
 func (o *Org) EffectiveLimits() map[string]interface{} {
-	merged := PlanDefaults(o.Plan)
+	// On a deployment somebody runs themselves the plan column is meaningless
+	// — there is no billing relationship to describe — so the base is
+	// PlanSelfHost whatever the row says. Reading the column instead would
+	// leave every workspace created BEFORE the operator set OPENV_SELF_HOSTED
+	// on the hosted tier's ceilings, which is precisely the population the
+	// setting exists for, and "no limits from us" would stay false for them.
+	// The layers above still apply, so an operator can cap a workspace.
+	plan := o.Plan
+	if selfHosted {
+		plan = PlanSelfHost
+	}
+	merged := PlanDefaults(plan)
 	for k, v := range deploymentLimits {
 		merged[k] = v
 	}

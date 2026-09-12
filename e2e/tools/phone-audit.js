@@ -125,6 +125,17 @@ const routes = [
   [/\/api\/v1\/auth\/config/, { google_enabled: false, oidc_enabled: false }],
   [/\/api\/v1\/orgs$/, { orgs: [org, org2], active_org: 'org1' }],
   [/\/api\/v1\/orgs\/[^/]+\/usage/, usage],
+  [/\/api\/v1\/orgs\/[^/]+\/limits/, {
+    org_id: 'org1', plan: 'single', self_hosted: false,
+    limits: [
+      { key: 'max_members', label: 'Workspace members', description: 'How many people can be in this workspace. Pending invitations count towards it.', unit: 'count', limit: 10, unlimited: false, used: 3 },
+      { key: 'max_projects', label: 'Projects', description: 'How many projects this workspace can hold.', unit: 'count', limit: 10, unlimited: false, used: 9 },
+      { key: 'max_shared_workspaces', label: 'Shared workspaces', description: 'How many shared workspaces you can create. Your personal workspace is never counted.', unit: 'count', limit: 0, unlimited: true, used: 2 },
+      { key: 'evidence_storage_mb', label: 'Test evidence storage', description: 'Total size of the test evidence files this workspace has uploaded.', unit: 'mb', limit: 2048, unlimited: false, used: 2048 },
+      { key: 'runner_session_minutes', label: 'Cloud runner lease', description: 'How long a leased cloud runner lasts before it is reclaimed.', unit: 'minutes', limit: 60, unlimited: false },
+      { key: 'runner_memory_mb', label: 'Hosted runner memory', description: "Memory available to this workspace's always-on hosted runner.", unit: 'mb', limit: 2048, unlimited: false },
+    ],
+  }],
   [/\/api\/v1\/orgs\/[^/]+\/worker-status/, { workers: [{ id: 'wk1', name: 'Sam laptop', personal: true, hosted: false, user_name: 'Sam Example', online: true, revoked: false, last_used_at: now }], queue: { queued: 1, oldest_queued_seconds: 40, queued_repo_access: 0 } }],
   [/\/api\/v1\/projects\/p1\/download\/options/, { sections: [{ id: 'hdg-2', ref: 'HDG-2', number: '2', title: 'Functional requirements', artifacts: 2 }], types: [{ type: 'requirement', count: 2 }, { type: 'user-need', count: 1 }], attachments: [] }],
   [/\/api\/v1\/baselines\/b1\/diff/, { base: { id: 'b1', name: 'Release candidate 1' }, target: { id: 'live', name: 'Live project' }, added: [{ id: 'req-1', type: 'requirement', title: 'Work envelope' }], removed: [], modified: [{ id: 'req-2', type: 'requirement', old_title: 'Positioning accuracy', new_title: 'Positioning accuracy (tightened)', title_changed: true, body_changed: true, type_changed: false, status_changed: false, parent_changed: false }], links_added: [], links_removed: [] }],
@@ -375,6 +386,7 @@ const SCREENS = [
   { tag: 'settings-access', path: '/projects/p1/settings?tab=access' },
   { tag: 'org-settings', path: '/org/settings' },
   { tag: 'org-members', path: '/org/settings?tab=members' },
+  { tag: 'org-limits', path: '/org/settings?tab=limits' },
   // The tab strip is buttons in a role=tablist, not role=tab elements, so
   // the tab is selected through its URL (?tab=…) rather than a click that
   // silently matched nothing.

@@ -283,3 +283,33 @@ func TestLimitFloatCoercions(t *testing.T) {
 		}
 	}
 }
+
+// A deployment that turns OPENV_SELF_HOSTED on later must lift the ceilings
+// for the workspaces it ALREADY has. Those were created on a hosted plan, and
+// they are exactly the population the setting exists for — reading the stored
+// plan would leave "no limits from us" false for every existing install.
+func TestSelfHostedIgnoresTheStoredPlan(t *testing.T) {
+	t.Cleanup(func() { SetSelfHosted(false); SetDeploymentLimits(nil) })
+
+	existing := &Org{Plan: PlanSingle}
+	if _, capped := Ceiling(existing.EffectiveLimits(), LimitEvidenceStorageMB); !capped {
+		t.Fatal("a hosted workspace is uncapped before the flag; the test proves nothing")
+	}
+
+	SetSelfHosted(true)
+	for _, def := range Catalog() {
+		if _, capped := Ceiling(existing.EffectiveLimits(), def.Key); capped {
+			t.Errorf("a pre-existing workspace is still capped on %s after going self-hosted", def.Key)
+		}
+	}
+
+	// The operator can still cap one, through either layer above.
+	SetDeploymentLimits(map[string]interface{}{LimitMaxProjects: 5})
+	if got, capped := Ceiling(existing.EffectiveLimits(), LimitMaxProjects); !capped || got != 5 {
+		t.Errorf("a self-hosted operator could not set a limit: (%d, %v)", got, capped)
+	}
+	existing.Limits = map[string]interface{}{LimitMaxProjects: 9}
+	if got, _ := Ceiling(existing.EffectiveLimits(), LimitMaxProjects); got != 9 {
+		t.Errorf("a self-hosted operator could not set one workspace apart: %d", got)
+	}
+}

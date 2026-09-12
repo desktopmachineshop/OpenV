@@ -69,7 +69,16 @@ export const OrgLimitsTab: React.FC<OrgLimitsTabProps> = ({ org }) => {
     orgsAPI
       .limits(org.id)
       .then((res) => {
-        if (!cancelled) setData(res.data);
+        if (cancelled) return;
+        const body = res.data;
+        if (!body || !Array.isArray(body.limits)) {
+          // A response we cannot read is an error to show, not a crash: this
+          // panel sits inside workspace settings and must not take the rest
+          // of the page down with it.
+          setError('The workspace limits could not be read.');
+          return;
+        }
+        setData(body);
       })
       .catch((err: any) => {
         if (!cancelled) setError(`Failed to load the limits: ${apiErrorMessage(err)}`);
