@@ -150,6 +150,9 @@ type Repository interface {
 	ListRunsByProject(projectID string) ([]*TestRun, error)
 	DeleteRun(id string) error
 	UpsertResult(r *TestResult) error
+	// FindResultByCase returns the run's existing result for a test case, or
+	// (nil, nil) when it has none.
+	FindResultByCase(runID, testCaseID string) (*TestResult, error)
 	ListResultsByRun(runID string) ([]*TestResult, error)
 	LatestResultPerCase(projectID string) (map[string]*TestResult, error)
 }
@@ -290,9 +293,17 @@ func (s *DefaultService) UpsertResult(runID string, req UpsertResultRequest, exe
 		return nil, fmt.Errorf("%w (%s: %s)", ErrNotAgentExecutable, testCase.Title, ExecutionMethod(testCase.Attributes))
 	}
 
+	// An omitted evidence field means "leave it alone"; only an explicit
+	// empty list clears it. The run grid sends status and notes and nothing
+	// else on every edit, so writing []string{} here for a nil field silently
+	// discarded whatever evidence had been attached — the commonest edit in
+	// the product destroyed the rarest thing in it.
 	evidence := req.Evidence
 	if evidence == nil {
 		evidence = []string{}
+		if existing, err := s.repo.FindResultByCase(runID, req.TestCaseID); err == nil && existing != nil {
+			evidence = existing.Evidence
+		}
 	}
 
 	now := time.Now()

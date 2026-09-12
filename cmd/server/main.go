@@ -29,6 +29,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/chatter"
 	"github.com/openv/requirements-platform/internal/domain/downloads"
 	"github.com/openv/requirements-platform/internal/domain/embeddings"
+	"github.com/openv/requirements-platform/internal/domain/evidence"
 	"github.com/openv/requirements-platform/internal/domain/exports"
 	"github.com/openv/requirements-platform/internal/domain/guided"
 	"github.com/openv/requirements-platform/internal/domain/hostedworkers"
@@ -169,6 +170,7 @@ func main() {
 	eventRepo := postgres.NewEventRepository(db)
 	productProfileRepo := postgres.NewProductProfileRepository(db)
 	vvRepo := postgres.NewVVRepository(db)
+	evidenceRepo := postgres.NewEvidenceRepository(db)
 	workItemRepo := postgres.NewWorkItemRepository(db)
 	guidedRepo := postgres.NewGuidedRepository(db)
 	interviewRepo := postgres.NewInterviewRepository(db)
@@ -339,6 +341,7 @@ func main() {
 	// Let the ReqIF export type enum attributes as ReqIF enumerations.
 	exportService.SetAttributeService(attributeService)
 	vvService := vv.NewDefaultService(vvRepo, artifactService, chatterService, bus)
+	evidenceService := evidence.NewDefaultService(evidenceRepo)
 	workItemService := workitems.NewDefaultService(workItemRepo, bus)
 	guidedService := guided.NewDefaultService(guidedRepo, artifactService, linkService, chatterService, productService, bus)
 	interviewService := interviews.NewDefaultService(interviewRepo)
@@ -639,6 +642,7 @@ func main() {
 		MemberService:        memberService,
 		ProductService:       productService,
 		VVService:            vvService,
+		EvidenceService:      evidenceService,
 		SettingsService:      settingsService,
 		WorkItemService:      workItemService,
 		GuidedService:        guidedService,

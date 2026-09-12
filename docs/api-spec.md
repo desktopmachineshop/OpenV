@@ -467,10 +467,56 @@ hidden entry is out of every list and cannot be voted for either.
 | DELETE | `/api/v1/test-runs/{id}` | Delete test run | editor |
 | POST | `/api/v1/test-runs/{id}/results` | Record/overwrite a test result | editor |
 | GET | `/api/v1/test-runs/{id}/results` | List results | viewer |
+| GET | `/api/v1/test-runs/{id}/citations` | Evidence cited across the run, keyed by test result id | viewer |
 | GET | `/api/v1/projects/{id}/vv/coverage` | Verification coverage summary | viewer |
 | GET | `/api/v1/projects/{id}/vv/matrix` | Traceability matrix | viewer |
 | GET | `/api/v1/projects/{id}/vv/gaps` | Coverage gaps | viewer |
 | GET | `/api/v1/projects/{id}/vv/report` | V&V report | viewer |
+
+### Evidence bundles
+
+A bundle is one physical or manual capture session — what was done, when, by
+whom, under what conditions, and the files it produced. It belongs to the
+project rather than to a run, because one session commonly answers several
+test cases at once: a single 90-minute noise sweep across idle, half and full
+load is the evidence for all three. Results **cite** a bundle; the same bundle
+may be cited by any number of results, in this run and in later ones.
+
+A bundle carries a citable reference (`EVD-1`), unique within the project and
+never reissued, and may have no files at all — for an inspection or a
+demonstration, a written account is the evidence.
+
+| Method | Path | Purpose | Auth |
+|---|---|---|---|
+| GET | `/api/v1/projects/{id}/evidence-bundles` | List bundles, newest capture first | viewer |
+| POST | `/api/v1/projects/{id}/evidence-bundles` | Record a capture session | editor |
+| GET | `/api/v1/evidence-bundles/{id}` | One bundle with its files and the results citing it | viewer |
+| PUT | `/api/v1/evidence-bundles/{id}` | Edit a bundle (the `ref` and project are fixed) | editor |
+| DELETE | `/api/v1/evidence-bundles/{id}` | Delete a bundle, its files and its citations | editor |
+| POST | `/api/v1/evidence-bundles/{id}/files` | Upload one file (multipart, streamed) | editor |
+| GET | `/api/v1/evidence-files/{id}/download` | Download a file | viewer |
+| DELETE | `/api/v1/evidence-files/{id}` | Delete one file | editor |
+| GET | `/api/v1/test-results/{id}/citations` | The bundles a result rests on | viewer |
+| POST | `/api/v1/test-results/{id}/citations` | Cite a bundle (`{"bundle_id", "note"}`) | editor |
+| DELETE | `/api/v1/test-results/{id}/citations/{bundleId}` | Drop a citation; the bundle is untouched | editor |
+
+**Uploads** are a separate path from artifact figures, and the rules differ.
+Any file type is accepted; the per-file cap is `OPENV_MAX_EVIDENCE_MB`
+(default 200), distinct from the figure cap `OPENV_MAX_UPLOAD_MB` (25). The
+body is streamed to disk rather than buffered, and its SHA-256 is recorded at
+upload.
+
+**Downloads are never rendered.** Evidence may be any format, including ones
+that carry script, so every file is served `application/octet-stream` with
+`Content-Disposition: attachment`, `X-Content-Type-Options: nosniff` and a
+`default-src 'none'` policy. The recorded digest is returned in
+`X-Evidence-SHA256` so a downloader can check the bytes against the record.
+
+**Storage** is capped per workspace by the `evidence_storage_mb` org limit
+(free 2048, team 20480), because uploads share one volume with the rest of
+the deployment. An upload that would exceed it is refused with `413` and a
+message naming the current usage. Citing a bundle twice from one result is
+accepted quietly rather than refused — it is the state the caller asked for.
 
 `vv/gaps` returns one list of artifact IDs per bucket:
 

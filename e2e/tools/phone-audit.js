@@ -102,6 +102,12 @@ const notifications = [
   { id: 'n1', user_id: 'u1', type: 'proposal_pending', title: 'Proposal awaiting review', body: 'Requirements Analyst proposed a change to REQ-2 Positioning accuracy.', read: false, link: '/projects/p1/review', created_at: now },
   { id: 'n2', user_id: 'u1', type: 'run_failed', title: 'Run failed', body: 'Developer run r3 failed: runner lost.', read: true, link: '/projects/p1/agent-runs', created_at: now },
 ];
+// tr2 is the same campaign still in progress: a completed run is read-only,
+// so its evidence picker is deliberately unreachable and cannot be audited.
+const openTestRun = { id: 'tr2', project_id: 'p1', name: 'Accuracy survey September', description: 'Ballbar at three heights', status: 'in-progress', started_at: now, created_at: now, updated_at: now };
+const evidenceFile = { id: 'evf1', bundle_id: 'ev1', filename: 'sweep-20260910.wav', mime_type: 'audio/wav', file_size: 48000000, sha256: 'a1b2c3', created_at: now };
+const evidenceCitation = { id: 'evc1', bundle_id: 'ev1', test_result_id: 'res1', note: 'channel 2 from 00:12', created_at: now, bundle_ref: 'EVD-1', bundle_title: 'Noise sweep, 90 minutes, all load conditions', test_case_id: 'tc-1', test_case_title: 'Ballbar circularity', test_case_ref: 'TC-1', run_id: 'tr1', run_name: 'Design verification rev B' };
+const evidenceBundle = { id: 'ev1', project_id: 'p1', ref: 'EVD-1', title: 'Noise sweep, 90 minutes, all load conditions', summary: 'One continuous capture covering idle, half and full load on the anechoic rig.', captured_at: now, captured_by: 'J. Patel, acoustics lab', conditions: { rig: 'anechoic chamber 2', ambient: '21.5 C', calibrated: '2026-09-01' }, created_at: now, updated_at: now, file_count: 1, total_size: 48000000, files: [evidenceFile], citations: [evidenceCitation] };
 const testRun = { id: 'tr1', project_id: 'p1', name: 'Accuracy survey September', description: 'Ballbar at three heights', status: 'completed', started_at: now, completed_at: now, created_at: now, updated_at: now };
 const baseline = { id: 'b1', project_id: 'p1', name: 'Release candidate 1', created_at: now };
 const interview = { id: 'i1', project_id: 'p1', title: 'Lab manager interview', description: 'Safety and noise', status: 'open', invite_token: 'tok', created_at: now, updated_at: now };
@@ -151,6 +157,15 @@ const routes = [
   [/\/api\/v1\/projects\/p1\/vv\/coverage/, { project_id: 'p1', entries: [{ requirement_id: 'req-1', title: 'Work envelope of at least 300 by 200 by 100 millimetres', verification_method: 'inspection', verification_status: 'verified', test_case_ids: ['tc-1'], latest_results: { 'tc-1': 'pass' }, rollup: 'pass' }, { requirement_id: 'req-2', title: 'Positioning accuracy', verification_method: 'test', verification_status: '', test_case_ids: [], latest_results: {}, rollup: 'uncovered' }], summary: { total: 2, covered: 1, uncovered: 1, verified: 1, pass: 1, fail: 0 } }],
   [/\/api\/v1\/projects\/p1\/vv\/gaps/, { uncovered: ['req-2'], unverified: ['req-2'], failing: [] }],
   [/\/api\/v1\/projects\/p1\/vv\/matrix/, [{ requirement_id: 'req-1', title: 'Work envelope of at least 300 by 200 by 100 millimetres', user_need_ids: ['need-1'], design_ids: [], test_case_ids: ['tc-1'], latest_results: { 'tc-1': 'pass' }, hazard_ids: [] }, { requirement_id: 'req-2', title: 'Positioning accuracy', user_need_ids: ['need-1'], design_ids: [], test_case_ids: [], latest_results: {}, hazard_ids: [] }]],
+  // Evidence: one capture cited by the run's result, which is the shape the
+  // feature exists for (one rig session, several test cases).
+  [/\/api\/v1\/projects\/p1\/evidence-bundles/, [evidenceBundle]],
+  [/\/api\/v1\/evidence-bundles\/ev1/, evidenceBundle],
+  [/\/api\/v1\/test-runs\/tr2\/citations/, { res2: [{ ...evidenceCitation, id: 'evc2', test_result_id: 'res2', run_id: 'tr2' }] }],
+  [/\/api\/v1\/test-runs\/tr2\/results/, [{ id: 'res2', run_id: 'tr2', test_case_id: 'tc-1', status: 'pass', notes: 'Ballbar within spec at all heights.', evidence: [], executed_at: now }]],
+  [/\/api\/v1\/test-runs\/tr2/, openTestRun],
+  [/\/api\/v1\/test-runs\/tr1\/citations/, { res1: [evidenceCitation] }],
+  [/\/api\/v1\/test-results\/res1\/citations/, [evidenceCitation]],
   [/\/api\/v1\/projects\/p1\/test-runs\/tr1/, testRun],
   [/\/api\/v1\/test-runs\/tr1\/results/, [{ id: 'res1', run_id: 'tr1', test_case_id: 'tc-1', status: 'pass', notes: 'Ballbar within spec at all heights.', evidence: [], executed_at: now }]],
   [/\/api\/v1\/test-runs\/tr1/, testRun],
@@ -333,6 +348,10 @@ const SCREENS = [
   { tag: 'interviews', path: '/projects/p1/interviews' },
   { tag: 'vv', path: '/projects/p1/vv' },
   { tag: 'test-run', path: '/projects/p1/vv/runs/tr1' },
+  { tag: 'evidence', path: '/projects/p1/evidence' },
+  { tag: 'evidence-detail', path: '/projects/p1/evidence', open: async (p) => { await press(p.getByText('Noise sweep, 90 minutes, all load conditions').first()); await p.waitForTimeout(400); } },
+  { tag: 'evidence-new', path: '/projects/p1/evidence', open: async (p) => press(p.getByRole('button', { name: 'Record a capture' }).first()) },
+  { tag: 'test-run-evidence', path: '/projects/p1/vv/runs/tr2', open: async (p) => { const b = p.getByRole('button', { name: /EVD-1|\+ evidence/ }).first(); if (await b.count()) await press(b); await p.waitForTimeout(400); } },
   { tag: 'matrix', path: '/projects/p1/matrix' },
   { tag: 'impact', path: '/projects/p1/impact?artifact=req-2' },
   { tag: 'review', path: '/projects/p1/review' },

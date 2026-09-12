@@ -61,6 +61,7 @@ results.
    - **Notes** — free text, edited inline.
    - **Version tested** — which version of the test case the result was
      recorded against.
+   - **Evidence** — the capture the result rests on (see below).
    - **Executed at** — timestamp of the recorded result.
 3. Record results as you execute. Each change saves immediately.
 4. **Complete run** when finished (or **Abort run**). Completed and aborted
@@ -71,6 +72,50 @@ the result chips in the **Matrix** view.
 
 Agents can also record test results — with *proposal* write mode those arrive
 as proposals for approval first.
+
+## Evidence for physical and manual tests
+
+An automated test is its own evidence: the run either passed or it did not. A
+**physical** or **manual** test case is different — somebody goes to a rig or
+inspects the thing, and what they bring back is the only reason to believe the
+result. The **Evidence** view is where that lives.
+
+An **evidence bundle** is one capture session, not one result. Record it once:
+
+- **What was done** — "Noise sweep, 90 minutes, all load conditions".
+- **What was observed** — a written account. For an inspection or a
+  demonstration this may be the whole of the evidence; files are optional.
+- **When** and **who** — the capture date, and who carried it out. "Who" is
+  free text, because the person on the rig is often not an OpenV user.
+- **Conditions** — rig, serial numbers, calibration date, ambient temperature,
+  entered one per line as \`name: value\`.
+- **Files** — the dataset itself, in any format. Each file's SHA-256 is
+  recorded at upload so it can be checked against the record later.
+
+Each bundle gets a citable reference like **EVD-1**, unique in the project and
+never reused, so a capture named in a report still means the same thing a year
+later.
+
+### Citing a capture
+
+One long run on a rig usually answers **several** test cases at once — a
+single noise sweep is the evidence for the idle, half-load and full-load
+conditions alike. So a bundle is recorded once and **cited** from each result:
+open the run, click the **Evidence** cell on a row, and pick the capture.
+
+Rows whose test case is physical or manual say *evidence needed* until
+something is cited, so a result that nothing backs is visible at a glance.
+
+Removing a citation says this result no longer rests on that capture. It does
+**not** delete the capture, which other results may still cite. Deleting the
+bundle itself is the destructive path, and the confirmation names the results
+that will lose their evidence.
+
+### Limits
+
+Each file is capped (200 MB by default) and each workspace has a total
+evidence allowance; an upload that would exceed it is refused with a message
+saying how much is in use. Ask an administrator if you need more.
 `;
 
 export default content;
