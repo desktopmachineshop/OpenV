@@ -7,14 +7,18 @@ import 'ag-grid-community/styles/ag-theme-quartz.css';
 import {
   AgentDef,
   Artifact,
+  EvidenceBundle,
+  EvidenceCitation,
   ExecutionMethod,
   TestResult,
   TestRun,
   agentsAPI,
   artifactAPI,
+  evidenceAPI,
   executionMethodOf,
   vvAPI,
 } from '../api/client';
+import { EvidencePicker } from '../components/EvidencePicker';
 import { apiErrorMessage } from '../api/errors';
 import { useAppStore } from '../state/store';
 import { useViewport } from '../hooks/useViewport';
@@ -65,6 +69,10 @@ interface ResultRow {
   notes: string;
   executedAt: string | null;
   byAgent: boolean;
+  /** Null until an outcome has been recorded — there is nothing to cite
+   *  evidence against until then. */
+  resultId: string | null;
+  citations: EvidenceCitation[];
 }
 
 export const TestRunView: React.FC = () => {
@@ -83,6 +91,12 @@ export const TestRunView: React.FC = () => {
   const [launching, setLaunching] = useState(false);
   const [launchNotice, setLaunchNotice] = useState<React.ReactNode>(null);
 
+  // Evidence. Citations arrive keyed by result id in one request rather than
+  // one per row, and the project's bundles are loaded once for the picker.
+  const [citations, setCitations] = useState<Record<string, EvidenceCitation[]>>({});
+  const [bundles, setBundles] = useState<EvidenceBundle[]>([]);
+  const [citingRow, setCitingRow] = useState<ResultRow | null>(null);
+
   const load = useCallback(() => {
     if (!projectId || !runId) return;
     setLoading(true);
@@ -90,11 +104,17 @@ export const TestRunView: React.FC = () => {
       vvAPI.getRun(runId),
       artifactAPI.list(projectId, 'test-case'),
       vvAPI.listResults(runId),
+      // Evidence must never be the reason the run fails to open, so both
+      // evidence calls degrade to empty rather than rejecting the batch.
+      evidenceAPI.citationsForRun(runId).catch(() => ({ data: {} })),
+      evidenceAPI.list(projectId).catch(() => ({ data: [] })),
     ])
-      .then(([r, tc, res]) => {
+      .then(([r, tc, res, cites, pool]) => {
         setRun(r.data);
         setTestCases(tc.data || []);
         setResults(res.data || []);
+        setCitations(cites.data || {});
+        setBundles(pool.data || []);
         setError('');
       })
       .catch((err: any) => {
@@ -149,6 +169,22 @@ export const TestRunView: React.FC = () => {
     [runId]
   );
 
+  // Re-read the run's citations after a change. Only the citation map moves,
+  // so the grid's results and test cases are left where they are.
+  const refreshCitations = useCallback(async () => {
+    if (!runId) return;
+    try {
+      const res = await evidenceAPI.citationsForRun(runId);
+      const next = res.data || {};
+      setCitations(next);
+      setCitingRow((row) =>
+        row && row.resultId ? { ...row, citations: next[row.resultId] || [] } : row
+      );
+    } catch (err: any) {
+      setError(apiErrorMessage(err, 'Failed to reload the evidence'));
+    }
+  }, [runId]);
+
   const rows: ResultRow[] = useMemo(() => {
     const byCase: Record<string, TestResult> = {};
     results.forEach((r) => {
@@ -165,9 +201,11 @@ export const TestRunView: React.FC = () => {
         notes: r ? r.notes : '',
         executedAt: r?.executed_at || null,
         byAgent: Boolean(r?.executed_by_agent_run_id),
+        resultId: r ? r.id : null,
+        citations: r ? citations[r.id] || [] : [],
       };
     });
-  }, [testCases, results]);
+  }, [testCases, results, citations]);
 
   const readOnly = run ? run.status !== 'in-progress' : false;
 
@@ -228,6 +266,63 @@ export const TestRunView: React.FC = () => {
     );
   }, []);
 
+  // Evidence lives in its own column because a physical result is only as
+  // good as what backs it. A case that needs a rig or a person shows the
+  // prompt even when nothing is cited yet; an automated one does not nag.
+  const EvidenceRenderer = useCallback(
+    (params: ICellRendererParams<ResultRow>) => {
+      const row = params.data;
+      if (!row) return null;
+      const cited = row.citations || [];
+      const needsEvidence = row.executionMethod !== 'automated';
+      if (!row.resultId) {
+        return (
+          <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>
+            {needsEvidence ? 'record a result first' : '\u2014'}
+          </span>
+        );
+      }
+      const label = cited.length
+        ? cited.length === 1
+          ? cited[0].bundle_ref || 'cited'
+          : `${cited[0].bundle_ref} +${cited.length - 1}`
+        : readOnly
+          ? '\u2014'
+          : needsEvidence
+            ? '+ evidence needed'
+            : '+ evidence';
+      return (
+        <button
+          onClick={() => setCitingRow(row)}
+          disabled={readOnly}
+          title={
+            cited.length
+              ? cited.map((c) => `${c.bundle_ref} ${c.bundle_title}`).join(', ')
+              : 'Cite the capture this result rests on'
+          }
+          style={{
+            background: 'none',
+            border: 'none',
+            padding: '4px 6px',
+            minHeight: 32,
+            minWidth: 36,
+            cursor: readOnly ? 'default' : 'pointer',
+            color: cited.length
+              ? 'var(--text)'
+              : needsEvidence
+                ? 'var(--warning)'
+                : 'var(--text-muted)',
+            fontSize: 12,
+            textAlign: 'left',
+          }}
+        >
+          {label}
+        </button>
+      );
+    },
+    [readOnly]
+  );
+
   const columnDefs: ColDef<ResultRow>[] = useMemo(
     () => [
       {
@@ -266,6 +361,13 @@ export const TestRunView: React.FC = () => {
         minWidth: 220,
       },
       {
+        headerName: 'Evidence',
+        field: 'citations',
+        width: 170,
+        sortable: false,
+        cellRenderer: EvidenceRenderer,
+      },
+      {
         headerName: 'Executed at',
         field: 'executedAt',
         width: 210,
@@ -285,7 +387,7 @@ export const TestRunView: React.FC = () => {
         ),
       },
     ],
-    [StatusRenderer, ExecutionRenderer, readOnly, isPhone]
+    [StatusRenderer, ExecutionRenderer, EvidenceRenderer, readOnly, isPhone]
   );
 
   const agentRunnable = rows.filter((r) => r.executionMethod === 'automated').length;
@@ -471,6 +573,17 @@ export const TestRunView: React.FC = () => {
           stopEditingWhenCellsLoseFocus={true}
         />
       </div>
+
+      {citingRow?.resultId && (
+        <EvidencePicker
+          resultId={citingRow.resultId}
+          testCaseTitle={citingRow.testCaseTitle}
+          bundles={bundles}
+          cited={citingRow.citations}
+          onClose={() => setCitingRow(null)}
+          onChanged={refreshCitations}
+        />
+      )}
     </div>
   );
 };

@@ -222,6 +222,25 @@ func scanResult(rows *sql.Rows) (*vv.TestResult, error) {
 }
 
 // ListResultsByRun retrieves all results recorded in a run
+// FindResultByCase returns the run's existing result for one test case, or
+// (nil, nil) when nothing has been recorded for it yet.
+func (r *VVRepository) FindResultByCase(runID, testCaseID string) (*vv.TestResult, error) {
+	rows, err := r.db.Query(`
+		SELECT id, run_id, test_case_id, test_case_version, status, notes, evidence,
+		       executed_at, executed_by, executed_by_agent_run_id, created_at, updated_at
+		FROM test_results
+		WHERE run_id = $1 AND test_case_id = $2
+	`, runID, testCaseID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	if !rows.Next() {
+		return nil, rows.Err()
+	}
+	return scanResult(rows)
+}
+
 func (r *VVRepository) ListResultsByRun(runID string) ([]*vv.TestResult, error) {
 	query := `
 		SELECT id, run_id, test_case_id, test_case_version, status, notes, evidence, executed_at, executed_by, executed_by_agent_run_id, created_at, updated_at

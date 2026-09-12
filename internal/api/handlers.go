@@ -34,6 +34,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/agents"
 	"github.com/openv/requirements-platform/internal/domain/automations"
 	"github.com/openv/requirements-platform/internal/domain/events"
+	"github.com/openv/requirements-platform/internal/domain/evidence"
 	"github.com/openv/requirements-platform/internal/domain/guided"
 	"github.com/openv/requirements-platform/internal/domain/hostedworkers"
 	"github.com/openv/requirements-platform/internal/domain/interviews"
@@ -77,6 +78,7 @@ type HandlerDeps struct {
 	MemberService       members.Service
 	ProductService      products.Service
 	VVService           vv.Service
+	EvidenceService     evidence.Service
 	SettingsService     settings.Service
 	WorkItemService     workitems.Service
 	GuidedService       guided.Service
@@ -166,6 +168,7 @@ type Handler struct {
 	memberService        members.Service
 	productService       products.Service
 	vvService            vv.Service
+	evidenceService      evidence.Service
 	settingsService      settings.Service
 	workItemService      workitems.Service
 	guidedService        guided.Service
@@ -265,6 +268,7 @@ func NewHandler(deps HandlerDeps) *Handler {
 		productService:         deps.ProductService,
 		settingsService:        deps.SettingsService,
 		vvService:              deps.VVService,
+		evidenceService:        deps.EvidenceService,
 		workItemService:        deps.WorkItemService,
 		guidedService:          deps.GuidedService,
 		interviewService:       deps.InterviewService,
@@ -407,6 +411,7 @@ func (h *Handler) RegisterRoutes(router *mux.Router) {
 	h.registerRunnerSessionRoutes(router)
 	h.registerAttributeDefinitionRoutes(router)
 	h.registerSharedProductRoutes(router)
+	h.registerEvidenceRoutes(router)
 
 	// Health check
 	router.HandleFunc("/health", h.Health).Methods("GET")

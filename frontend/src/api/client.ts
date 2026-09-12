@@ -1672,6 +1672,103 @@ const downloadBlob = async (url: string, fallbackName: string) => {
   return response;
 };
 
+// An evidence bundle is one physical or manual capture session: what was done,
+// when, by whom, and the files it produced. It belongs to the project rather
+// than to any run, because one long run on a rig commonly answers several test
+// cases at once — results cite it.
+export interface EvidenceFile {
+  id: string;
+  bundle_id: string;
+  filename: string;
+  mime_type: string;
+  file_size: number;
+  /** Recorded at upload, so a download can be checked against the record. */
+  sha256: string;
+  uploaded_by?: string | null;
+  created_at: string;
+}
+
+/** One result's claim on one bundle. Carries display fields so a citation can
+ *  be rendered without resolving four more ids. */
+export interface EvidenceCitation {
+  id: string;
+  bundle_id: string;
+  test_result_id: string;
+  note: string;
+  created_at: string;
+  bundle_ref?: string;
+  bundle_title?: string;
+  test_case_id?: string;
+  test_case_title?: string;
+  test_case_ref?: string;
+  run_id?: string;
+  run_name?: string;
+}
+
+export interface EvidenceBundle {
+  id: string;
+  project_id: string;
+  /** Citable, per project: "EVD-1". Never reissued. */
+  ref: string;
+  title: string;
+  summary: string;
+  /** When the test was carried out, which is not when it was uploaded. */
+  captured_at?: string | null;
+  /** Free text: the person on the rig is often not an OpenV user. */
+  captured_by: string;
+  conditions: Record<string, unknown>;
+  created_by?: string | null;
+  created_at: string;
+  updated_at: string;
+  /** Present on a single-bundle fetch only; the list carries the counts. */
+  files?: EvidenceFile[];
+  citations?: EvidenceCitation[];
+  file_count: number;
+  total_size: number;
+}
+
+export interface EvidenceBundleInput {
+  title: string;
+  summary?: string;
+  captured_at?: string | null;
+  captured_by?: string;
+  conditions?: Record<string, unknown>;
+}
+
+export const evidenceAPI = {
+  list: (projectId: string) =>
+    client.get<EvidenceBundle[]>(`/api/v1/projects/${projectId}/evidence-bundles`),
+  create: (projectId: string, payload: EvidenceBundleInput) =>
+    client.post<EvidenceBundle>(`/api/v1/projects/${projectId}/evidence-bundles`, payload),
+  get: (id: string) => client.get<EvidenceBundle>(`/api/v1/evidence-bundles/${id}`),
+  update: (id: string, payload: EvidenceBundleInput) =>
+    client.put<EvidenceBundle>(`/api/v1/evidence-bundles/${id}`, payload),
+  remove: (id: string) => client.delete(`/api/v1/evidence-bundles/${id}`),
+
+  uploadFile: (bundleId: string, file: File) => {
+    const form = new FormData();
+    form.append('file', file);
+    return client.post<EvidenceFile>(`/api/v1/evidence-bundles/${bundleId}/files`, form);
+  },
+  deleteFile: (fileId: string) => client.delete(`/api/v1/evidence-files/${fileId}`),
+  /** The server always answers as a download, so this is a plain link target. */
+  downloadUrl: (fileId: string) => `${API_BASE_URL}/api/v1/evidence-files/${fileId}/download`,
+
+  citationsForResult: (resultId: string) =>
+    client.get<EvidenceCitation[]>(`/api/v1/test-results/${resultId}/citations`),
+  /** Keyed by test result id, so the run grid renders its evidence column in
+   *  one request rather than one per row. */
+  citationsForRun: (runId: string) =>
+    client.get<Record<string, EvidenceCitation[]>>(`/api/v1/test-runs/${runId}/citations`),
+  cite: (resultId: string, bundleId: string, note?: string) =>
+    client.post<EvidenceCitation>(`/api/v1/test-results/${resultId}/citations`, {
+      bundle_id: bundleId,
+      note: note || '',
+    }),
+  uncite: (resultId: string, bundleId: string) =>
+    client.delete(`/api/v1/test-results/${resultId}/citations/${bundleId}`),
+};
+
 export const vvAPI = {
   createRun: (projectId: string, payload: { name: string; description?: string; baseline_id?: string }) =>
     client.post<TestRun>(`/api/v1/projects/${projectId}/test-runs`, payload),

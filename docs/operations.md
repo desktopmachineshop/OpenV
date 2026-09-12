@@ -438,6 +438,16 @@ Notes:
   re-posting an unchanged invitation within an hour mails nothing at all).
   Body and upload caps:
   `OPENV_MAX_BODY_MB` (32) and `OPENV_MAX_UPLOAD_MB` (25).
+- **Test evidence storage.** Evidence files (the datasets behind physical and
+  manual test results) have their own per-file cap, `OPENV_MAX_EVIDENCE_MB`
+  (200), because the 25 MB figure cap is right for an image pasted into a
+  requirement and useless for an instrument capture. They are written to
+  `UPLOADS_DIR` like everything else, so they share the deployment's single
+  volume: watch its free space, and cap each workspace with the
+  `evidence_storage_mb` org limit (free 2048, team 20480) rather than relying
+  on the per-file cap alone. One campaign's captures can otherwise fill the
+  volume and take the deployment down with it. Evidence is included in the
+  volume backup along with figures.
 - Set `OPENV_METRICS_TOKEN` so `/metrics` needs a bearer token; without it
   anyone can read the API's request and runtime statistics.
 - If you switch an existing deployment from the dev Postgres password, the
