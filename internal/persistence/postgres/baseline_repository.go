@@ -20,8 +20,8 @@ func NewBaselineRepository(db *sql.DB) *BaselineRepository {
 // Create inserts a new baseline.
 func (r *BaselineRepository) Create(baseline *baselines.Baseline) error {
 	query := `
-		INSERT INTO baselines (id, project_id, name, snapshot, created_at)
-		VALUES ($1, $2, $3, $4, $5)
+		INSERT INTO baselines (id, project_id, name, snapshot, created_at, created_by)
+		VALUES ($1, $2, $3, $4, $5, $6)
 	`
 
 	_, err := r.db.Exec(query,
@@ -30,6 +30,7 @@ func (r *BaselineRepository) Create(baseline *baselines.Baseline) error {
 		baseline.Name,
 		baseline.Snapshot,
 		baseline.CreatedAt,
+		baseline.CreatedBy,
 	)
 
 	return err
@@ -38,10 +39,11 @@ func (r *BaselineRepository) Create(baseline *baselines.Baseline) error {
 // ListByProjectID returns baselines for a project.
 func (r *BaselineRepository) ListByProjectID(projectID string) ([]*baselines.Baseline, error) {
 	query := `
-		SELECT id, project_id, name, created_at
-		FROM baselines
-		WHERE project_id = $1
-		ORDER BY created_at DESC
+		SELECT b.id, b.project_id, b.name, b.created_at, b.created_by, COALESCE(u.name, '')
+		FROM baselines b
+		LEFT JOIN users u ON u.id = b.created_by
+		WHERE b.project_id = $1
+		ORDER BY b.created_at DESC
 	`
 
 	rows, err := r.db.Query(query, projectID)
@@ -53,7 +55,8 @@ func (r *BaselineRepository) ListByProjectID(projectID string) ([]*baselines.Bas
 	var results []*baselines.Baseline
 	for rows.Next() {
 		item := &baselines.Baseline{}
-		if err := rows.Scan(&item.ID, &item.ProjectID, &item.Name, &item.CreatedAt); err != nil {
+		if err := rows.Scan(&item.ID, &item.ProjectID, &item.Name, &item.CreatedAt,
+			&item.CreatedBy, &item.CreatedByName); err != nil {
 			return nil, err
 		}
 		results = append(results, item)
@@ -65,9 +68,10 @@ func (r *BaselineRepository) ListByProjectID(projectID string) ([]*baselines.Bas
 // GetByID returns a baseline by ID.
 func (r *BaselineRepository) GetByID(id string) (*baselines.Baseline, error) {
 	query := `
-		SELECT id, project_id, name, snapshot, created_at
-		FROM baselines
-		WHERE id = $1
+		SELECT b.id, b.project_id, b.name, b.snapshot, b.created_at, b.created_by, COALESCE(u.name, '')
+		FROM baselines b
+		LEFT JOIN users u ON u.id = b.created_by
+		WHERE b.id = $1
 	`
 
 	baseline := &baselines.Baseline{}
@@ -77,6 +81,8 @@ func (r *BaselineRepository) GetByID(id string) (*baselines.Baseline, error) {
 		&baseline.Name,
 		&baseline.Snapshot,
 		&baseline.CreatedAt,
+		&baseline.CreatedBy,
+		&baseline.CreatedByName,
 	); err != nil {
 		if err == sql.ErrNoRows {
 			return nil, errors.New("baseline not found")

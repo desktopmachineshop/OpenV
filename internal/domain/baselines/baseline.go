@@ -21,6 +21,14 @@ type Baseline struct {
 	Name      string          `json:"name"`
 	Snapshot  json.RawMessage `json:"snapshot"`
 	CreatedAt time.Time       `json:"created_at"`
+	// CreatedBy is the account that captured this baseline. Nil for the
+	// baselines taken before authorship was recorded, and for one whose
+	// author has since deleted their account — a baseline outlives the person
+	// who took it, and the snapshot stays trustworthy either way.
+	CreatedBy *string `json:"created_by,omitempty"`
+	// CreatedByName is that account's display name, resolved on read so a
+	// reader sees a person rather than a UUID. Empty when CreatedBy is nil.
+	CreatedByName string `json:"created_by_name,omitempty"`
 }
 
 // Repository defines baseline persistence operations.
@@ -33,7 +41,7 @@ type Repository interface {
 
 // Service defines baseline business logic.
 type Service interface {
-	CreateBaseline(projectID string, name string, snapshot []byte) (*Baseline, error)
+	CreateBaseline(projectID string, name string, snapshot []byte, createdBy *string) (*Baseline, error)
 	ListBaselines(projectID string) ([]*Baseline, error)
 	GetBaseline(id string) (*Baseline, error)
 	// GetProjectBaseline loads a baseline by ID, scoped to a project: a
@@ -52,8 +60,10 @@ func NewService(repo Repository) *DefaultService {
 	return &DefaultService{repo: repo}
 }
 
-// CreateBaseline stores a project snapshot as a baseline.
-func (s *DefaultService) CreateBaseline(projectID string, name string, snapshot []byte) (*Baseline, error) {
+// CreateBaseline stores a project snapshot as a baseline. createdBy may be
+// nil when no account is attributable — an automation holding a workspace
+// key, say — which is recorded honestly rather than attributed to somebody.
+func (s *DefaultService) CreateBaseline(projectID string, name string, snapshot []byte, createdBy *string) (*Baseline, error) {
 	if projectID == "" {
 		return nil, errors.New("project_id is required")
 	}
@@ -70,6 +80,7 @@ func (s *DefaultService) CreateBaseline(projectID string, name string, snapshot 
 		Name:      name,
 		Snapshot:  json.RawMessage(snapshot),
 		CreatedAt: time.Now(),
+		CreatedBy: createdBy,
 	}
 
 	if err := s.repo.Create(baseline); err != nil {
