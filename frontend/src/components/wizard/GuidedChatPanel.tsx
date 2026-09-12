@@ -1,6 +1,7 @@
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { guidedAPI, GuidedChatMessage } from '../../api/client';
+import { ChatMarkdown } from '../ChatMarkdown';
 
 /** One structured proposal embedded in a copilot reply. */
 export interface CopilotSuggestion {
@@ -644,7 +645,11 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
                   borderRadius: 12,
                   fontSize: 13,
                   lineHeight: 1.5,
-                  whiteSpace: 'pre-wrap',
+                  // A person's message is literal text, so their line breaks
+                  // are honoured as typed. The assistant's is markdown, which
+                  // brings its own block layout — preserving its newlines on
+                  // top of that would space every paragraph twice.
+                  whiteSpace: m.role === 'user' ? 'pre-wrap' : 'normal',
                   wordBreak: 'break-word',
                   background: m.role === 'user' ? 'var(--accent)' : 'var(--surface-alt)',
                   color: m.role === 'user' ? 'var(--accent-fg)' : 'var(--text)',
@@ -666,7 +671,9 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
                         <>
                           {segments.map((seg, i) =>
                             seg.type === 'text' ? (
-                              seg.text.trim() ? <span key={`${m.id}:${i}`}>{seg.text}</span> : null
+                              seg.text.trim() ? (
+                                <ChatMarkdown key={`${m.id}:${i}`} text={seg.text.trim()} />
+                              ) : null
                             ) : (
                               renderSuggestion(seg, `${m.id}:${i}`)
                             )
@@ -727,25 +734,16 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
                 borderBottomLeftRadius: 4,
                 fontSize: 13,
                 lineHeight: 1.5,
-                whiteSpace: 'pre-wrap',
                 wordBreak: 'break-word',
                 background: 'var(--surface-alt)',
                 color: 'var(--text)',
               }}
             >
               {/* Suggestion blocks are only rendered once the reply is
-                  complete — half a fenced JSON block is not a card. */}
-              {partial}
-              <span
-                aria-hidden="true"
-                style={{
-                  display: 'inline-block',
-                  width: 7,
-                  marginLeft: 2,
-                  borderBottom: '2px solid var(--text-muted)',
-                  verticalAlign: 'baseline',
-                }}
-              />
+                  complete — half a fenced JSON block is not a card. The prose
+                  around them is still markdown while it arrives, so the text
+                  does not visibly restyle itself the moment the reply ends. */}
+              <ChatMarkdown text={partial} streaming />
             </div>
           </div>
         )}

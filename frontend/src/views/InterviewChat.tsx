@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { publicInterviewAPI, InterviewMessage } from '../api/client';
 import { useConfirm } from '../components/ui';
+import { ChatMarkdown } from '../components/ChatMarkdown';
 
 type Phase = 'loading' | 'error' | 'name' | 'chat' | 'done';
 
@@ -339,7 +340,9 @@ export const InterviewChat: React.FC = () => {
                   borderRadius: 14,
                   fontSize: 14,
                   lineHeight: 1.5,
-                  whiteSpace: 'pre-wrap',
+                  // The participant's own words are literal; the assistant
+                  // replies in markdown and brings its own block layout.
+                  whiteSpace: m.role === 'participant' ? 'pre-wrap' : 'normal',
                   wordBreak: 'break-word',
                   background: m.role === 'participant' ? 'var(--accent)' : 'var(--surface-alt)',
                   color: m.role === 'participant' ? 'var(--accent-fg)' : 'var(--text)',
@@ -347,7 +350,7 @@ export const InterviewChat: React.FC = () => {
                   borderBottomLeftRadius: m.role === 'assistant' ? 4 : 14,
                 }}
               >
-                {m.content}
+                {m.role === 'participant' ? m.content : <ChatMarkdown text={m.content} />}
               </div>
             )}
           </div>
@@ -362,23 +365,12 @@ export const InterviewChat: React.FC = () => {
                 borderBottomLeftRadius: 4,
                 fontSize: 14,
                 lineHeight: 1.5,
-                whiteSpace: 'pre-wrap',
                 wordBreak: 'break-word',
                 background: 'var(--surface-alt)',
                 color: 'var(--text)',
               }}
             >
-              {partial}
-              <span
-                aria-hidden="true"
-                style={{
-                  display: 'inline-block',
-                  width: 7,
-                  marginLeft: 2,
-                  borderBottom: '2px solid var(--text-muted)',
-                  verticalAlign: 'baseline',
-                }}
-              />
+              <ChatMarkdown text={partial} streaming />
             </div>
           </div>
         )}

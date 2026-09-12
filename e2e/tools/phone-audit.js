@@ -161,7 +161,22 @@ const routes = [
   [/\/api\/v1\/meta\/attribute-definitions/, []],
   [/\/api\/v1\/attribute-definitions/, []],
   [/\/api\/v1\/templates/, []],
-  [/\/api\/v1\/guided-sessions/, []],
+  // A session with a transcript, so the assistant's chat renders something.
+  // The reply is deliberately markdown — bold, a list, inline code and an
+  // arrow — because that is what the model writes and the panel has to show
+  // it as formatting rather than as literal asterisks.
+  [/\/api\/v1\/guided-sessions\/gs1\/messages/, [
+    { id: 'gm1', session_id: 'gs1', role: 'user', content: 'What headings should the personas sit under?', created_at: now },
+    { id: 'gm2', session_id: 'gs1', role: 'assistant', created_at: now, content:
+      'The three needs you have are already parented correctly — from the live project they map one-to-one:\n\n' +
+      '- **PER-1 Chief Engineer** → NEED-2 (drop-in replacement)\n' +
+      '- **PER-2 Commercial** → NEED-1 (source from more than one vendor)\n' +
+      '- **PER-3 Customer** → NEED-3 (run a Fanuc robot)\n\n' +
+      'Two things before you start adding:\n\n' +
+      '1. I cannot re-parent needs myself — tell me the new needs per persona and I will draft each as a `need`.\n' +
+      '2. Keep the wording testable.\n' },
+  ]],
+  [/\/api\/v1\/guided-sessions/, [{ id: 'gs1', project_id: 'p1', status: 'in-progress', current_step: 1, answers: {}, created_at: now, updated_at: now }]],
   [/\/api\/v1\/projects\/p1\/guided/, []],
   [/\/api\/v1\/projects\/p1\/profile/, { product_name: 'Benchtop CNC Mill', one_liner: 'Desktop 3-axis mill', audience: 'Prototyping shops', problem: 'Waiting a week for the shop', solution: 'Mill on the desk', personas: [] }],
   [/\/api\/v1\/projects\/p1\/interviews/, [interview]],
