@@ -128,7 +128,9 @@ const routes = [
   [/\/api\/v1\/orgs\/[^/]+\/limits/, {
     org_id: 'org1', plan: 'single', self_hosted: false,
     limits: [
-      { key: 'max_members', label: 'Workspace members', description: 'How many people can be in this workspace. Pending invitations count towards it.', unit: 'count', limit: 10, unlimited: false, used: 3 },
+      // The personal-workspace shape: a full bar that is a fact rather than a
+      // warning, with the longest description in the panel.
+      { key: 'max_members', label: 'Workspace members', description: 'A personal workspace is only ever you. Create a shared workspace to work with other people.', unit: 'count', limit: 1, unlimited: false, used: 1, fixed: true },
       { key: 'max_projects', label: 'Projects', description: 'How many projects this workspace can hold.', unit: 'count', limit: 10, unlimited: false, used: 9 },
       { key: 'max_shared_workspaces', label: 'Shared workspaces', description: 'How many shared workspaces you can create. Your personal workspace is never counted.', unit: 'count', limit: 0, unlimited: true, used: 2 },
       { key: 'evidence_storage_mb', label: 'Test evidence storage', description: 'Total size of the test evidence files this workspace has uploaded.', unit: 'mb', limit: 2048, unlimited: false, used: 2048 },

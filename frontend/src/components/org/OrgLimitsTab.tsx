@@ -49,7 +49,21 @@ export const usedFraction = (limit: LimitUsage): number | null => {
   return Math.min(1, limit.used / limit.limit);
 };
 
-const barColour = (fraction: number): string => {
+/**
+ * Whether being at or near this ceiling is worth colouring as a warning.
+ *
+ * A personal workspace's single seat is full the moment it exists and can
+ * never be anything else, so painting it red would teach people to ignore the
+ * colour on the limits that do mean something.
+ */
+export const isAlarming = (limit: LimitUsage): boolean => {
+  if (limit.fixed) return false;
+  const fraction = usedFraction(limit);
+  return fraction !== null && fraction >= 0.8;
+};
+
+const barColour = (fraction: number, limit: LimitUsage): string => {
+  if (limit.fixed) return 'var(--text-muted)';
   if (fraction >= 1) return 'var(--danger)';
   if (fraction >= 0.8) return 'var(--warning)';
   return 'var(--primary)';
@@ -112,6 +126,7 @@ export const OrgLimitsTab: React.FC<OrgLimitsTabProps> = ({ org }) => {
         <div style={{ display: 'grid', gap: 14 }}>
           {data.limits.map((limit) => {
             const fraction = usedFraction(limit);
+            const alarming = isAlarming(limit);
             return (
               <div key={limit.key} className="card" style={{ padding: 14 }}>
                 <div
@@ -127,8 +142,8 @@ export const OrgLimitsTab: React.FC<OrgLimitsTabProps> = ({ org }) => {
                   <span
                     style={{
                       fontSize: 13,
-                      color: fraction !== null && fraction >= 0.8 ? barColour(fraction) : 'var(--text-muted)',
-                      fontWeight: fraction !== null && fraction >= 0.8 ? 600 : 400,
+                      color: alarming ? barColour(fraction as number, limit) : 'var(--text-muted)',
+                      fontWeight: alarming ? 600 : 400,
                     }}
                   >
                     {limitSummary(limit)}
@@ -149,7 +164,7 @@ export const OrgLimitsTab: React.FC<OrgLimitsTabProps> = ({ org }) => {
                       style={{
                         width: `${Math.round(fraction * 100)}%`,
                         height: '100%',
-                        background: barColour(fraction),
+                        background: barColour(fraction, limit),
                       }}
                     />
                   </div>

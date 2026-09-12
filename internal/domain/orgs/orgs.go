@@ -34,7 +34,7 @@ var (
 
 	// ErrPersonalOrgMembers flags an attempt to add members to a personal
 	// workspace — user-facing validation, like ErrInvalidRole.
-	ErrPersonalOrgMembers = errors.New("personal workspaces cannot have additional members")
+	ErrPersonalOrgMembers = errors.New("personal workspaces cannot have additional members. " + PersonalWorkspaceRemedy)
 
 	// ErrInvalidBudget flags a negative monthly budget — user-facing
 	// validation (400), like ErrInvalidRole.

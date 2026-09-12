@@ -498,6 +498,12 @@ decides the remedy offered), and one entry per limit:
 
 `unlimited` is stated rather than implied, so a client never has to know that
 `0` is special. `used` is absent for limits whose usage cannot be counted.
+`fixed` marks a ceiling nothing raises — no plan, no setting — so a client can
+show it as a fact rather than as a warning that the workspace is full. A
+**personal workspace** reports `max_members` as `{"limit": 1, "fixed": true}`
+whatever its plan says: it is one person's by definition, and adding anybody to
+it is refused by `POST /orgs/{id}/members` and `/invitations` with `400`, not
+as a limit refusal.
 
 **When a limit stops a call**, the answer is `403` with
 `"code": "limit_reached"` and the arithmetic attached:

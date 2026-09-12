@@ -313,3 +313,54 @@ func TestSelfHostedIgnoresTheStoredPlan(t *testing.T) {
 		t.Errorf("a self-hosted operator could not set one workspace apart: %d", got)
 	}
 }
+
+// A personal workspace holds one person. That is not a tier's ration — it is
+// what "personal" means — so no plan, no deployment override and no
+// per-workspace setting may raise it.
+func TestAPersonalWorkspaceSeatsOnePerson(t *testing.T) {
+	t.Cleanup(func() {
+		SetDeploymentLimits(nil)
+		SetSelfHosted(false)
+	})
+
+	personal := &Org{OrgType: TypePersonal, Plan: PlanEnterprise}
+	if got, capped := Ceiling(personal.EffectiveLimits(), LimitMaxMembers); !capped || got != 1 {
+		t.Fatalf("an enterprise personal workspace allows %d members (capped=%v), want 1", got, capped)
+	}
+
+	// Not by the operator...
+	SetDeploymentLimits(map[string]interface{}{LimitMaxMembers: 50})
+	if got, _ := Ceiling(personal.EffectiveLimits(), LimitMaxMembers); got != 1 {
+		t.Errorf("a deployment override raised a personal workspace to %d", got)
+	}
+	// ...nor on the workspace itself, where 0 would otherwise mean unlimited.
+	personal.Limits = map[string]interface{}{LimitMaxMembers: 0}
+	if got, capped := Ceiling(personal.EffectiveLimits(), LimitMaxMembers); !capped || got != 1 {
+		t.Errorf("a workspace setting raised a personal workspace to %d (capped=%v)", got, capped)
+	}
+	// ...nor by owning the hardware.
+	SetSelfHosted(true)
+	if got, capped := Ceiling(personal.EffectiveLimits(), LimitMaxMembers); !capped || got != 1 {
+		t.Errorf("self-hosting raised a personal workspace to %d (capped=%v)", got, capped)
+	}
+
+	// And a shared workspace is untouched by any of it.
+	shared := &Org{OrgType: TypeCompany, Plan: PlanSingle}
+	if _, capped := Ceiling(shared.EffectiveLimits(), LimitMaxMembers); !capped {
+		t.Error("the deployment override stopped applying to shared workspaces")
+	}
+}
+
+// The one refusal a person can actually reach on a personal workspace has to
+// say what to do instead. An upgrade would not help — no plan makes a personal
+// workspace hold two people — so suggesting one sends them to the pricing page
+// for nothing.
+func TestThePersonalRefusalPointsAtASharedWorkspace(t *testing.T) {
+	msg := ErrPersonalOrgMembers.Error()
+	if !strings.Contains(msg, PersonalWorkspaceRemedy) {
+		t.Errorf("the refusal does not carry the remedy: %q", msg)
+	}
+	if strings.Contains(msg, "Upgrade") || strings.Contains(msg, "OPENV_LIMITS") {
+		t.Errorf("the refusal offers a remedy that does not exist: %q", msg)
+	}
+}

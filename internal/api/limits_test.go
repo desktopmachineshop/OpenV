@@ -128,3 +128,83 @@ func TestTheDeploymentOverrideTakesEffectWithoutTouchingAWorkspace(t *testing.T)
 		t.Errorf("a workspace could not be lifted above the deployment override: %v", err)
 	}
 }
+
+// seatedOrgService answers the two reads a seat check makes: what kind of
+// workspace this is, and who is already in it.
+type seatedOrgService struct {
+	orgs.Service
+	org     *orgs.Org
+	members []*orgs.Member
+}
+
+func (s *seatedOrgService) Get(id string) (*orgs.Org, error) { return s.org, nil }
+
+func (s *seatedOrgService) ListMembers(orgID string) ([]*orgs.Member, error) {
+	return s.members, nil
+}
+
+// A personal workspace's single seat is the domain's to enforce: AddMember
+// and the invitation path refuse it outright, and more precisely than a seat
+// count can. The seat check must therefore stand aside rather than answer the
+// same attempt with a vaguer refusal about a ceiling nothing raises.
+func TestTheSeatCheckDefersToThePersonalWorkspaceRefusal(t *testing.T) {
+	t.Cleanup(func() { orgs.SetSelfHosted(false) })
+
+	for _, mode := range []bool{false, true} {
+		orgs.SetSelfHosted(mode)
+		h := NewHandler(HandlerDeps{})
+		h.orgService = &seatedOrgService{
+			org:     &orgs.Org{ID: "org-1", OrgType: orgs.TypePersonal, Plan: orgs.PlanBusiness},
+			members: []*orgs.Member{{OrgID: "org-1", UserID: "u1", Role: orgs.RoleAdmin}},
+		}
+		if err := h.checkOrgSeats("org-1", 1); err != nil {
+			t.Errorf("self_hosted=%v: the seat check shadowed the personal refusal: %v", mode, err)
+		}
+	}
+
+	// And whichever refusal a person does reach tells them what to do
+	// instead, rather than offering an upgrade that would not help.
+	msg := orgs.ErrPersonalOrgMembers.Error()
+	if !strings.Contains(msg, "shared workspace") {
+		t.Errorf("the personal refusal points nowhere useful: %q", msg)
+	}
+	if strings.Contains(msg, "Upgrade") {
+		t.Errorf("the personal refusal sells a plan that would not help: %q", msg)
+	}
+}
+
+// The panel has to say the same thing the refusal does, and must not paint a
+// permanently full bar as a problem.
+func TestThePersonalSeatReadsAsAFactNotAWarning(t *testing.T) {
+	h := NewHandler(HandlerDeps{})
+	h.orgService = &seatedOrgService{
+		org:     &orgs.Org{ID: "org-1", OrgType: orgs.TypePersonal, Plan: orgs.PlanSingle},
+		members: []*orgs.Member{{OrgID: "org-1", UserID: "u1", Role: orgs.RoleAdmin}},
+	}
+
+	res, err := h.buildLimitsResponse("org-1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var seats *LimitUsage
+	for i := range res.Limits {
+		if res.Limits[i].Key == orgs.LimitMaxMembers {
+			seats = &res.Limits[i]
+		}
+	}
+	if seats == nil {
+		t.Fatal("the members limit is missing from the response")
+	}
+	if seats.Unlimited || seats.Limit != 1 {
+		t.Errorf("a personal workspace reports limit=%d unlimited=%v, want 1 and false", seats.Limit, seats.Unlimited)
+	}
+	if seats.Used == nil || *seats.Used != 1 {
+		t.Errorf("usage is %v, want 1", seats.Used)
+	}
+	if !seats.Fixed {
+		t.Error("the personal seat is not marked as a ceiling nothing raises")
+	}
+	if !strings.Contains(seats.Description, "shared workspace") {
+		t.Errorf("the description does not say what to do instead: %q", seats.Description)
+	}
+}

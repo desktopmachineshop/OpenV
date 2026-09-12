@@ -462,6 +462,11 @@ Notes:
   - The count limits (`max_members`, `max_shared_workspaces`, `max_projects`)
     ship at zero on every plan, so nothing is refused until somebody
     deliberately sets one.
+  - The one exception is a **personal workspace, which always seats exactly
+    one person**. That is not a ration, so no plan, no `OPENV_LIMITS` and no
+    per-workspace setting raises it — a personal workspace with two people in
+    it would be a shared workspace nobody can leave. Working with other
+    people means a shared workspace.
 
 - **Test evidence storage.** Evidence files (the datasets behind physical and
   manual test results) have their own per-file cap, `OPENV_MAX_EVIDENCE_MB`

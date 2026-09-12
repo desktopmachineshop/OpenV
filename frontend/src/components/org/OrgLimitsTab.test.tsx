@@ -1,4 +1,4 @@
-import { formatLimit, limitSummary, usedFraction } from './OrgLimitsTab';
+import { formatLimit, isAlarming, limitSummary, usedFraction } from './OrgLimitsTab';
 import { limitRefusal } from '../../api/errors';
 import { LimitUsage } from '../../api/client';
 
@@ -66,6 +66,29 @@ describe('the usage bar', () => {
   // overflow its track.
   it('clamps a workspace that is already over', () => {
     expect(usedFraction(limit({ used: 30, limit: 10 }))).toBe(1);
+  });
+});
+
+// A personal workspace seats one person and always will, so it is full from
+// the moment it exists. Painting that red would teach people to ignore the
+// colour on the limits where being full is actually a problem.
+describe('a ceiling nothing raises', () => {
+  const personalSeat = limit({ limit: 1, used: 1, fixed: true });
+
+  it('is not treated as a warning even though it is full', () => {
+    expect(usedFraction(personalSeat)).toBe(1);
+    expect(isAlarming(personalSeat)).toBe(false);
+  });
+
+  it('still warns on a limit somebody could do something about', () => {
+    expect(isAlarming(limit({ used: 10, limit: 10 }))).toBe(true);
+    expect(isAlarming(limit({ used: 8, limit: 10 }))).toBe(true);
+    expect(isAlarming(limit({ used: 3, limit: 10 }))).toBe(false);
+    expect(isAlarming(limit({ unlimited: true, limit: 0, used: 900 }))).toBe(false);
+  });
+
+  it('reads as usage against its ceiling like any other', () => {
+    expect(limitSummary(personalSeat)).toBe('1 of 1');
   });
 });
 

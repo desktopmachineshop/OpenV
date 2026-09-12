@@ -34,6 +34,11 @@ type LimitUsage struct {
 	// Used is the current count, present only for limits that can be
 	// measured.
 	Used *int `json:"used,omitempty"`
+	// Fixed marks a ceiling nothing raises — no plan, no setting. A personal
+	// workspace's single seat is the only one today. The panel reads it as
+	// "this is how it is" rather than warning that the workspace is full,
+	// which is the difference between a fact and an alarm.
+	Fixed bool `json:"fixed,omitempty"`
 }
 
 // limitsResponse is the whole picture of what a workspace may do.
@@ -69,14 +74,25 @@ func (h *Handler) writeLimitError(w http.ResponseWriter, err error) bool {
 // cannot be read. Nil limits mean nothing is enforced: a limit check must
 // never be the reason a legitimate action fails.
 func (h *Handler) effectiveLimits(orgID string) map[string]interface{} {
+	org := h.orgForLimits(orgID)
+	if org == nil {
+		return nil
+	}
+	return org.EffectiveLimits()
+}
+
+// orgForLimits reads the workspace a limit check applies to, or nil when it
+// cannot be read. Callers that need more than the numbers — whether the
+// workspace is a personal one, say — use this rather than effectiveLimits.
+func (h *Handler) orgForLimits(orgID string) *orgs.Org {
 	if h.orgService == nil || orgID == "" {
 		return nil
 	}
 	org, err := h.orgService.Get(orgID)
-	if err != nil || org == nil {
+	if err != nil {
 		return nil
 	}
-	return org.EffectiveLimits()
+	return org
 }
 
 // countOrgSeats counts the people a workspace's member limit applies to:
@@ -105,7 +121,20 @@ func (h *Handler) countOrgSeats(orgID string) (int, error) {
 // checkOrgSeats refuses when the workspace has no room for `adding` more
 // people. A nil error means there is room, or that no limit applies.
 func (h *Handler) checkOrgSeats(orgID string, adding int) error {
-	limits := h.effectiveLimits(orgID)
+	org := h.orgForLimits(orgID)
+	if org == nil {
+		return nil
+	}
+	if org.OrgType == orgs.TypePersonal {
+		// A personal workspace's single seat is enforced in the domain, by
+		// AddMember and the invitation path, which refuse more specifically
+		// than a seat count can and say so as a 400. Refusing here too would
+		// only replace that with a vaguer 403 about a ceiling nothing raises.
+		// The limit is still reported, so the panel says "1 of 1" rather than
+		// claiming a workspace nobody can join has no limit at all.
+		return nil
+	}
+	limits := org.EffectiveLimits()
 	if _, capped := orgs.Ceiling(limits, orgs.LimitMaxMembers); !capped {
 		return nil
 	}
@@ -197,13 +226,23 @@ func (h *Handler) buildLimitsResponse(orgID string) (*limitsResponse, error) {
 	out := &limitsResponse{OrgID: orgID, Plan: org.Plan, SelfHosted: orgs.SelfHosted()}
 	for _, def := range orgs.Catalog() {
 		cap, capped := orgs.Ceiling(limits, def.Key)
+		description, fixed := def.Description, false
+		if def.Key == orgs.LimitMaxMembers && org.OrgType == orgs.TypePersonal {
+			// Otherwise this reads as a ceiling somebody could raise, and the
+			// panel shows a full bar with no explanation of why it can never
+			// be anything else.
+			description = "A personal workspace is only ever you. " +
+				"Create a shared workspace to work with other people."
+			fixed = true
+		}
 		usage := LimitUsage{
 			Key:         def.Key,
 			Label:       def.Label,
-			Description: def.Description,
+			Description: description,
 			Unit:        def.Unit,
 			Limit:       cap,
 			Unlimited:   !capped,
+			Fixed:       fixed,
 		}
 		if def.Countable {
 			if used, ok := h.countFor(def.Key, org); ok {

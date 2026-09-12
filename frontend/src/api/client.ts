@@ -1367,6 +1367,9 @@ export interface LimitUsage {
   unlimited: boolean;
   /** Present only for limits whose usage can be counted. */
   used?: number;
+  /** A ceiling nothing raises — no plan, no setting. Shown as a fact rather
+   *  than as a warning that the workspace is full. */
+  fixed?: boolean;
 }
 
 export interface WorkspaceLimits {

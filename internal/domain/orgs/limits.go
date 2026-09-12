@@ -200,6 +200,21 @@ func KnownLimitKeys() []string {
 // configuration change rather than a deployment.
 const unlimited = 0
 
+// PersonalWorkspaceMembers is how many people a personal workspace holds. It
+// is not a plan gate and no tier raises it: a personal workspace is one
+// person's by definition, which is why AddMember and the invitation path
+// refuse it outright. Stating it as a limit is what makes the settings panel
+// honest — "No limit" on a workspace nobody can ever be added to would be a
+// lie, and the refusal on the way in reads better with a number behind it.
+const PersonalWorkspaceMembers = 1
+
+// PersonalWorkspaceRemedy replaces the usual "upgrade" or "change the setting"
+// advice when somebody tries to add a person to a personal workspace. Neither
+// remedy applies: no plan and no configuration changes what a personal
+// workspace is, so the only useful sentence points at a shared one.
+const PersonalWorkspaceRemedy = "A personal workspace is only ever you. " +
+	"Create a shared workspace to work with other people."
+
 // PlanDefaults returns the default limits for a billing plan.
 //
 // An unknown or empty plan gets the most restrictive hosted defaults, so a bad
@@ -343,6 +358,14 @@ func (o *Org) EffectiveLimits() map[string]interface{} {
 	}
 	for k, v := range o.Limits {
 		merged[k] = v
+	}
+	if o.OrgType == TypePersonal {
+		// Applied after every layer, including the operator's, because this
+		// one is not a ration: a personal workspace with two people in it is
+		// not a more generous personal workspace, it is a shared one that
+		// nobody can leave or be an admin of. Self-hosting does not change
+		// that either — the hardware is theirs, the definition is not.
+		merged[LimitMaxMembers] = PersonalWorkspaceMembers
 	}
 	return merged
 }
