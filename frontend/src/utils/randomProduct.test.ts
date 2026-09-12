@@ -61,6 +61,36 @@ describe('generateRandomProduct', () => {
   });
 });
 
+// The same concepts are seeded into the shared pool server-side, so a card
+// rendered from the client copy would be an unvotable duplicate of a real row.
+// The roller only falls back to them when it has nothing else.
+describe('generateRandomProduct built-in fallback', () => {
+  const pooled = (name: string) => ({
+    category: 'robot',
+    name,
+    description: `${name} does the thing.`,
+    vision: `${name} becomes the thing.`,
+    problem: 'Nobody does the thing.',
+    targetUsers: 'people who need the thing done',
+    sharedId: `shared-${name}`,
+  });
+
+  it('rolls only from the pool when built-ins are excluded', () => {
+    const pool = [pooled('Alpha'), pooled('Beta')];
+    for (let i = 0; i < 50; i += 1) {
+      const rolled = generateRandomProduct(pool, false);
+      expect(pool.some((p) => p.name === rolled.name)).toBe(true);
+      expect(rolled.sharedId).toBeTruthy();
+    }
+  });
+
+  it('still rolls a built-in when there is nothing else to show', () => {
+    const rolled = generateRandomProduct([], true);
+    expect(rolled.name).toBeTruthy();
+    expect(rolled.sharedId).toBeUndefined();
+  });
+});
+
 describe('inventProductPrompt', () => {
   it('asks for exactly the fields the card renders', () => {
     const prompt = inventProductPrompt([]);

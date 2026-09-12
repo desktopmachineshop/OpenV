@@ -145,7 +145,7 @@ export const ProjectList: React.FC = () => {
 
   const rollRandomProduct = () => {
     setInventError('');
-    // One collection: the built-in concepts plus every stored product. An
+    // One collection: the shared pool plus every stored product. An
     // invention normally reaches the shared pool, so this browser's copies
     // only add the ones that did not — deduped by name so a product cannot
     // be twice as likely to roll as its neighbours.
@@ -154,7 +154,12 @@ export const ProjectList: React.FC = () => {
     const kept = stored.filter(
       (k) => !shared.some((p) => p.name.toLowerCase() === k.name.toLowerCase())
     );
-    const rolled = generateRandomProduct([...shared, ...kept]);
+    // The built-in concepts are seeded into the pool server-side, so they
+    // normally arrive as shared rows that can be voted for. They are rendered
+    // client-side only when the pool came back empty — a deployment that has
+    // not seeded yet, or an API that would not answer — so that the roller
+    // always has something to show rather than nothing.
+    const rolled = generateRandomProduct([...shared, ...kept], shared.length === 0);
     applyProduct(rolled, isInventedProduct(rolled, kept));
   };
 
