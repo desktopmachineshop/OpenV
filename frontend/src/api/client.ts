@@ -2112,26 +2112,47 @@ export interface AppNotification {
   body?: string;
   entity_ref: Record<string, any>;
   read: boolean;
+  /** The member's own "keep this in reach"; survives clearing. */
+  flagged: boolean;
+  /** Set once the member has cleared it — absent while it is in the inbox. */
+  cleared_at?: string;
   created_at: string;
 }
+
+/** Which slice of the member's notifications a listing returns. */
+export type NotificationView = 'inbox' | 'flagged' | 'cleared';
 
 export interface NotificationList {
   notifications: AppNotification[] | null;
   unread_count: number;
+  /** Present only while more pages remain; hand it straight back as `before`. */
+  next_cursor?: string;
 }
 
 export const notificationsAPI = {
-  list: (params?: { unread?: boolean; limit?: number }) =>
+  list: (params?: { view?: NotificationView; unread?: boolean; limit?: number; before?: string }) =>
     client.get<NotificationList>('/api/v1/notifications', {
       params: {
+        ...(params?.view ? { view: params.view } : {}),
         ...(params?.unread ? { unread: 'true' } : {}),
         ...(params?.limit ? { limit: params.limit } : {}),
+        ...(params?.before ? { before: params.before } : {}),
       },
     }),
   markRead: (ids: string[]) =>
     client.post<{ updated: number; unread_count: number }>('/api/v1/notifications/read', { ids }),
   markAllRead: () =>
     client.post<{ updated: number; unread_count: number }>('/api/v1/notifications/read-all'),
+  // Archives the inbox: the rows move to the cleared view rather than going
+  // anywhere, so this is recoverable in the sense that matters.
+  clearAll: () =>
+    client.post<{ cleared: number; unread_count: number }>('/api/v1/notifications/clear'),
+  // The one call that destroys notifications, and it can only reach what has
+  // already been cleared. Ask before calling it.
+  deleteCleared: () =>
+    client.delete<{ deleted: number; unread_count: number }>('/api/v1/notifications/cleared'),
+  setFlagged: (id: string, flagged: boolean) =>
+    client.put<{ flagged: boolean }>(`/api/v1/notifications/${id}/flag`, { flagged }),
   streamUrl: () => `${API_BASE_URL}/api/v1/notifications/stream`,
 };
 

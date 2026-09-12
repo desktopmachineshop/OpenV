@@ -40,8 +40,60 @@ type Notification struct {
 	Body      string                 `json:"body,omitempty"`
 	EntityRef map[string]interface{} `json:"entity_ref"`
 	Read      bool                   `json:"read"`
-	CreatedAt time.Time              `json:"created_at"`
+	// Flagged is the member's own "keep this in reach". Independent of
+	// ClearedAt: flagging does not exempt a row from a clear, and a flagged
+	// row that was cleared is still found by the flagged view.
+	Flagged bool `json:"flagged"`
+	// ClearedAt is nil while the notification is in the inbox, and stamped
+	// when the member clears it. Clearing archives rather than deletes, so
+	// the history stays readable.
+	ClearedAt *time.Time `json:"cleared_at,omitempty"`
+	CreatedAt time.Time  `json:"created_at"`
 }
+
+// View names the slice of a member's notifications a listing returns.
+type View string
+
+const (
+	// ViewInbox is everything not yet cleared — what the bell badge counts.
+	ViewInbox View = "inbox"
+	// ViewFlagged is everything flagged, cleared or not: flagging is how a
+	// member keeps something reachable after clearing it.
+	ViewFlagged View = "flagged"
+	// ViewCleared is the history — what has been cleared.
+	ViewCleared View = "cleared"
+)
+
+// ParseView maps the wire value to a view, defaulting to the inbox so an
+// absent or unknown parameter behaves the way the endpoint always has.
+func ParseView(raw string) View {
+	switch View(raw) {
+	case ViewFlagged:
+		return ViewFlagged
+	case ViewCleared:
+		return ViewCleared
+	default:
+		return ViewInbox
+	}
+}
+
+// ListQuery is one page of one view.
+//
+// Paging is a keyset cursor rather than an offset: the history only grows,
+// and an offset would skip or repeat rows as new notifications arrive at the
+// top of it. Before is the last row of the previous page — rows strictly older
+// than it come next, with the id breaking ties between rows that share a
+// timestamp.
+type ListQuery struct {
+	View       View
+	UnreadOnly bool
+	Limit      int
+	BeforeTime time.Time
+	BeforeID   string
+}
+
+// HasCursor reports whether the query continues a previous page.
+func (q ListQuery) HasCursor() bool { return !q.BeforeTime.IsZero() && q.BeforeID != "" }
 
 // New creates an unread notification with a fresh id and timestamp.
 func New(orgID, userID, ntype, title, body string, entityRef map[string]interface{}) *Notification {
@@ -57,6 +109,7 @@ func New(orgID, userID, ntype, title, body string, entityRef map[string]interfac
 		Body:      body,
 		EntityRef: entityRef,
 		Read:      false,
+		Flagged:   false,
 		CreatedAt: time.Now(),
 	}
 }
@@ -65,13 +118,25 @@ func New(orgID, userID, ntype, title, body string, entityRef map[string]interfac
 // in the query itself, so a caller can never touch another user's rows.
 type Repository interface {
 	Insert(n *Notification) error
-	// ListForUser returns the user's notifications, newest first.
-	ListForUser(userID string, unreadOnly bool, limit int) ([]*Notification, error)
+	// List returns one page of one view, newest first.
+	List(userID string, q ListQuery) ([]*Notification, error)
 	// MarkRead marks the given ids read for that user only; rows belonging
 	// to other users are silently unaffected. Returns rows updated.
 	MarkRead(userID string, ids []string) (int64, error)
 	// MarkAllRead marks every unread row of the user read. Returns rows updated.
 	MarkAllRead(userID string) (int64, error)
+	// ClearInbox archives every uncleared row of the user — stamping
+	// cleared_at and marking it read — and returns how many moved. The rows
+	// stay readable in the cleared view.
+	ClearInbox(userID string) (int64, error)
+	// SetFlagged flags or unflags one row of the user's own. Returns whether
+	// a row matched, so a stale id answers 404 instead of pretending.
+	SetFlagged(userID, id string, flagged bool) (bool, error)
+	// DeleteCleared permanently removes the user's cleared rows. This is the
+	// only path that destroys a notification.
+	DeleteCleared(userID string) (int64, error)
+	// CountUnread counts unread rows still in the inbox: a cleared row never
+	// contributes to the badge.
 	CountUnread(userID string) (int, error)
 }
 
@@ -79,9 +144,17 @@ type Repository interface {
 // the notify subscriber depend on this interface so tests can fake it.
 type Service interface {
 	Create(n *Notification) error
-	ListForUser(userID string, unreadOnly bool, limit int) ([]*Notification, error)
+	List(userID string, q ListQuery) ([]*Notification, error)
 	MarkRead(userID string, ids []string) (int64, error)
 	MarkAllRead(userID string) (int64, error)
+	// ClearInbox archives the inbox into the cleared view. Recoverable in the
+	// sense that matters: the rows are still there to read.
+	ClearInbox(userID string) (int64, error)
+	// SetFlagged flags or unflags one of the user's own notifications.
+	SetFlagged(userID, id string, flagged bool) (bool, error)
+	// DeleteCleared permanently removes what the user has already cleared.
+	// This one cannot be undone, so callers ask first.
+	DeleteCleared(userID string) (int64, error)
 	CountUnread(userID string) (int, error)
 }
 
@@ -97,8 +170,8 @@ func NewDefaultService(repo Repository) *DefaultService {
 
 func (s *DefaultService) Create(n *Notification) error { return s.repo.Insert(n) }
 
-func (s *DefaultService) ListForUser(userID string, unreadOnly bool, limit int) ([]*Notification, error) {
-	return s.repo.ListForUser(userID, unreadOnly, limit)
+func (s *DefaultService) List(userID string, q ListQuery) ([]*Notification, error) {
+	return s.repo.List(userID, q)
 }
 
 func (s *DefaultService) MarkRead(userID string, ids []string) (int64, error) {
@@ -107,6 +180,18 @@ func (s *DefaultService) MarkRead(userID string, ids []string) (int64, error) {
 
 func (s *DefaultService) MarkAllRead(userID string) (int64, error) {
 	return s.repo.MarkAllRead(userID)
+}
+
+func (s *DefaultService) ClearInbox(userID string) (int64, error) {
+	return s.repo.ClearInbox(userID)
+}
+
+func (s *DefaultService) SetFlagged(userID, id string, flagged bool) (bool, error) {
+	return s.repo.SetFlagged(userID, id, flagged)
+}
+
+func (s *DefaultService) DeleteCleared(userID string) (int64, error) {
+	return s.repo.DeleteCleared(userID)
 }
 
 func (s *DefaultService) CountUnread(userID string) (int, error) {

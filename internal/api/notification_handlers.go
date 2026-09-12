@@ -2,10 +2,14 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
+	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/openv/requirements-platform/internal/domain/notifications"
 	"github.com/openv/requirements-platform/internal/notify"
 )
 
@@ -22,6 +26,11 @@ func (h *Handler) registerNotificationRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/notifications", h.ListNotifications).Methods("GET")
 	router.HandleFunc("/api/v1/notifications/read", h.MarkNotificationsRead).Methods("POST")
 	router.HandleFunc("/api/v1/notifications/read-all", h.MarkAllNotificationsRead).Methods("POST")
+	// Clearing archives (POST, because rows move rather than go); deleting
+	// what has already been cleared is the one destructive path (DELETE).
+	router.HandleFunc("/api/v1/notifications/clear", h.ClearNotifications).Methods("POST")
+	router.HandleFunc("/api/v1/notifications/cleared", h.DeleteClearedNotifications).Methods("DELETE")
+	router.HandleFunc("/api/v1/notifications/{id}/flag", h.FlagNotification).Methods("PUT")
 	router.HandleFunc("/api/v1/notifications/stream", h.StreamNotifications).Methods("GET")
 	router.HandleFunc("/api/v1/me/notification-prefs", h.GetNotificationPrefs).Methods("GET")
 	router.HandleFunc("/api/v1/me/notification-prefs", h.UpdateNotificationPrefs).Methods("PUT")
@@ -113,21 +122,35 @@ func (h *Handler) ListNotifications(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	unreadOnly := r.URL.Query().Get("unread") == "true"
-	limit := defaultNotificationLimit
+	query := notifications.ListQuery{
+		View:       notifications.ParseView(r.URL.Query().Get("view")),
+		UnreadOnly: r.URL.Query().Get("unread") == "true",
+		Limit:      defaultNotificationLimit,
+	}
 	if raw := r.URL.Query().Get("limit"); raw != "" {
 		parsed, err := strconv.Atoi(raw)
 		if err != nil || parsed < 1 {
 			writeJSONError(w, http.StatusBadRequest, "limit must be a positive integer")
 			return
 		}
-		limit = parsed
-		if limit > maxNotificationLimit {
-			limit = maxNotificationLimit
+		query.Limit = parsed
+		if query.Limit > maxNotificationLimit {
+			query.Limit = maxNotificationLimit
 		}
 	}
+	// The cursor is opaque to the client: it hands back whatever the previous
+	// page's next_cursor said. A malformed one is the client's bug, not a
+	// silent first page, so it is refused.
+	if raw := r.URL.Query().Get("before"); raw != "" {
+		at, id, err := parseNotificationCursor(raw)
+		if err != nil {
+			writeJSONError(w, http.StatusBadRequest, "before is not a valid cursor")
+			return
+		}
+		query.BeforeTime, query.BeforeID = at, id
+	}
 
-	list, err := h.notificationService.ListForUser(userID, unreadOnly, limit)
+	list, err := h.notificationService.List(userID, query)
 	if err != nil {
 		respondInternal(w, r, "failed to load notifications", err)
 		return
@@ -137,11 +160,36 @@ func (h *Handler) ListNotifications(w http.ResponseWriter, r *http.Request) {
 		respondInternal(w, r, "failed to count unread notifications", err)
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	// A full page means there may be more; a short one is the end. The cursor
+	// names the last row, so the next page starts strictly after it.
+	body := map[string]interface{}{
 		"notifications": list,
 		"unread_count":  unread,
-	})
+	}
+	if len(list) == query.Limit && query.Limit > 0 {
+		last := list[len(list)-1]
+		body["next_cursor"] = formatNotificationCursor(last.CreatedAt, last.ID)
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(body)
+}
+
+// Notification cursors are "<RFC3339Nano>|<id>" — the ordering key of the last
+// row of a page, in the same order the listing uses.
+func formatNotificationCursor(at time.Time, id string) string {
+	return at.UTC().Format(time.RFC3339Nano) + "|" + id
+}
+
+func parseNotificationCursor(raw string) (time.Time, string, error) {
+	at, id, found := strings.Cut(raw, "|")
+	if !found || id == "" {
+		return time.Time{}, "", fmt.Errorf("cursor must be \"<timestamp>|<id>\"")
+	}
+	parsed, err := time.Parse(time.RFC3339Nano, at)
+	if err != nil {
+		return time.Time{}, "", err
+	}
+	return parsed, id, nil
 }
 
 // MarkNotificationsRead marks the given ids read. Rows belonging to other
@@ -182,6 +230,88 @@ func (h *Handler) MarkAllNotificationsRead(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	h.respondNotificationCount(w, r, userID, updated)
+}
+
+// ClearNotifications archives the caller's inbox: every uncleared row is
+// stamped cleared and marked read, and stays readable in the cleared view.
+//
+// POST rather than DELETE because nothing is destroyed — the rows move
+// between views. Deleting what has been cleared is a separate, deliberate
+// call (DeleteClearedNotifications).
+func (h *Handler) ClearNotifications(w http.ResponseWriter, r *http.Request) {
+	userID, ok := h.requireHumanUser(w, r)
+	if !ok {
+		return
+	}
+	cleared, err := h.notificationService.ClearInbox(userID)
+	if err != nil {
+		respondInternal(w, r, "failed to clear notifications", err)
+		return
+	}
+	h.respondNotificationAction(w, r, userID, "cleared", cleared)
+}
+
+// DeleteClearedNotifications permanently removes what the caller has already
+// cleared. The one path in the API that destroys a notification, and it can
+// only reach rows the member has already put out of the way.
+func (h *Handler) DeleteClearedNotifications(w http.ResponseWriter, r *http.Request) {
+	userID, ok := h.requireHumanUser(w, r)
+	if !ok {
+		return
+	}
+	deleted, err := h.notificationService.DeleteCleared(userID)
+	if err != nil {
+		respondInternal(w, r, "failed to delete cleared notifications", err)
+		return
+	}
+	h.respondNotificationAction(w, r, userID, "deleted", deleted)
+}
+
+// FlagNotification flags or unflags one of the caller's own notifications.
+//
+// The id comes from the path and the service scopes the update by session
+// user, so somebody else's id matches nothing and answers 404 — the same
+// answer a genuinely missing id gets, which is what keeps the endpoint from
+// telling a caller that a notification exists but is not theirs.
+func (h *Handler) FlagNotification(w http.ResponseWriter, r *http.Request) {
+	userID, ok := h.requireHumanUser(w, r)
+	if !ok {
+		return
+	}
+	var body struct {
+		Flagged *bool `json:"flagged"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Flagged == nil {
+		writeJSONError(w, http.StatusBadRequest, "flagged must be true or false")
+		return
+	}
+	found, err := h.notificationService.SetFlagged(userID, mux.Vars(r)["id"], *body.Flagged)
+	if err != nil {
+		respondInternal(w, r, "failed to flag notification", err)
+		return
+	}
+	if !found {
+		writeJSONError(w, http.StatusNotFound, "notification not found")
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{"flagged": *body.Flagged})
+}
+
+// respondNotificationAction answers a bulk action with how many rows it
+// touched, under the name of what actually happened to them, plus the unread
+// count the bell badge reads from.
+func (h *Handler) respondNotificationAction(w http.ResponseWriter, r *http.Request, userID, verb string, n int64) {
+	unread, err := h.notificationService.CountUnread(userID)
+	if err != nil {
+		respondInternal(w, r, "failed to count unread notifications", err)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		verb:           n,
+		"unread_count": unread,
+	})
 }
 
 func (h *Handler) respondNotificationCount(w http.ResponseWriter, r *http.Request, userID string, updated int64) {

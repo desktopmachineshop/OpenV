@@ -326,9 +326,12 @@ pushes new items live.
 
 | Method | Path | Purpose | Auth |
 |---|---|---|---|
-| GET | `/api/v1/notifications` | List the caller's notifications (`?unread=true&limit=`) | user |
+| GET | `/api/v1/notifications` | List the caller's notifications (`?view=inbox\|flagged\|cleared&unread=true&limit=&before=<cursor>`) | user |
 | POST | `/api/v1/notifications/read` | Mark specific notifications read | user |
 | POST | `/api/v1/notifications/read-all` | Mark all read | user |
+| POST | `/api/v1/notifications/clear` | Archive the caller's inbox into the cleared view | user |
+| DELETE | `/api/v1/notifications/cleared` | Permanently delete what the caller has cleared (irreversible) | user |
+| PUT | `/api/v1/notifications/{id}/flag` | Flag or unflag one of the caller's notifications | user |
 | GET | `/api/v1/notifications/stream` | SSE stream of new notifications | user |
 | GET | `/api/v1/me/notification-prefs` | Get the caller's email opt-out and push opt-in | user |
 | PUT | `/api/v1/me/notification-prefs` | Update either preference (`email_notifications`, `push_notifications`); an absent field is left as it was | user |
