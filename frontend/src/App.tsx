@@ -9,6 +9,7 @@ import { VerifyEmail } from './views/VerifyEmail';
 import { ProductOverview } from './views/ProductOverview';
 import { InterviewsPage } from './views/InterviewsPage';
 import { GuidedWizard } from './views/GuidedWizard';
+import { EvidenceView } from './views/EvidenceView';
 import { VVDashboard } from './views/VVDashboard';
 import { KanbanBoard } from './views/KanbanBoard';
 import { AutomationsPage } from './views/AutomationsPage';
@@ -179,6 +180,7 @@ function App() {
           <Route path="guided" element={<GuidedWizard />} />
           <Route path="interviews" element={<InterviewsPage />} />
           <Route path="vv" element={<VVDashboard />} />
+          <Route path="evidence" element={<EvidenceView />} />
           <Route path="vv/runs/:runId" element={<TestRunView />} />
           <Route path="matrix" element={<TraceabilityMatrix />} />
           <Route path="impact" element={<ImpactView />} />
