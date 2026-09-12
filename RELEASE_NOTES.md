@@ -16,6 +16,15 @@ Section headings are the release version: the promotion date, with `.2`,
 
 ## Unreleased
 
+- The V&V Assistant's answers now read as they were written — lists as lists,
+  emphasis as emphasis — instead of showing the raw markup around them. The
+  same goes for the assistant in an interview.
+- Add what the assistant suggests from wherever you are talking to it. A
+  persona, need, requirement, NFR or hazard it proposes can be added to the
+  project straight from the notes panel, filed under the usual heading and
+  left as a draft for you to review; before, only the guided definition
+  wizard could take them.
+
 ## 2026-09-12.2
 
 - Get a notification whenever OpenV is updated, with a summary of what
