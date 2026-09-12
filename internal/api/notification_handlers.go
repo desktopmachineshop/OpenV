@@ -22,6 +22,7 @@ func (h *Handler) registerNotificationRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/notifications", h.ListNotifications).Methods("GET")
 	router.HandleFunc("/api/v1/notifications/read", h.MarkNotificationsRead).Methods("POST")
 	router.HandleFunc("/api/v1/notifications/read-all", h.MarkAllNotificationsRead).Methods("POST")
+	router.HandleFunc("/api/v1/notifications", h.ClearNotifications).Methods("DELETE")
 	router.HandleFunc("/api/v1/notifications/stream", h.StreamNotifications).Methods("GET")
 	router.HandleFunc("/api/v1/me/notification-prefs", h.GetNotificationPrefs).Methods("GET")
 	router.HandleFunc("/api/v1/me/notification-prefs", h.UpdateNotificationPrefs).Methods("PUT")
@@ -182,6 +183,40 @@ func (h *Handler) MarkAllNotificationsRead(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	h.respondNotificationCount(w, r, userID, updated)
+}
+
+// ClearNotifications deletes every notification belonging to the caller.
+//
+// DELETE on the collection, because that is what it does — the read-all route
+// is a POST because marking read changes rows rather than removing them. The
+// service scopes the delete by user id, so this can only ever empty the
+// caller's own list.
+//
+// The reply names "deleted" rather than reusing the read-all payload's
+// "updated": this count includes notifications that were already read, so
+// calling it an update would overstate what changed for the member. The unread
+// count rides along for the same reason the other routes carry it — the bell
+// badge is driven by it, and after a clear it is always zero.
+func (h *Handler) ClearNotifications(w http.ResponseWriter, r *http.Request) {
+	userID, ok := h.requireHumanUser(w, r)
+	if !ok {
+		return
+	}
+	deleted, err := h.notificationService.ClearAll(userID)
+	if err != nil {
+		respondInternal(w, r, "failed to clear notifications", err)
+		return
+	}
+	unread, err := h.notificationService.CountUnread(userID)
+	if err != nil {
+		respondInternal(w, r, "failed to count unread notifications", err)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"deleted":      deleted,
+		"unread_count": unread,
+	})
 }
 
 func (h *Handler) respondNotificationCount(w http.ResponseWriter, r *http.Request, userID string, updated int64) {

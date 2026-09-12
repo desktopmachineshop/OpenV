@@ -100,6 +100,22 @@ func (r *NotificationRepository) MarkAllRead(userID string) (int64, error) {
 }
 
 // CountUnread returns the user's unread count (the bell badge).
+// DeleteAllForUser removes every notification belonging to the user, read or
+// not, and returns how many rows went. Scoped by user_id in the statement
+// itself, so a caller can only ever clear their own list.
+//
+// Deliberately destructive and deliberately total: "clear all" that quietly
+// spared the unread ones would leave the bell still showing a count after the
+// member asked for an empty list. The confirmation for that lives in the UI,
+// where the member can be told what they are about to lose.
+func (r *NotificationRepository) DeleteAllForUser(userID string) (int64, error) {
+	res, err := r.db.Exec(`DELETE FROM notifications WHERE user_id = $1`, userID)
+	if err != nil {
+		return 0, err
+	}
+	return res.RowsAffected()
+}
+
 func (r *NotificationRepository) CountUnread(userID string) (int, error) {
 	var count int
 	err := r.db.QueryRow(`

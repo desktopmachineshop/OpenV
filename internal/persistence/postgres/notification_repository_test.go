@@ -98,3 +98,71 @@ func TestNotificationRepositoryRoundTrip(t *testing.T) {
 		t.Fatalf("bob unread = %d, want 1 (untouched by alice's mark-all)", count)
 	}
 }
+
+// TestNotificationRepositoryDeleteAllForUser: a clear empties one user's list
+// and leaves everyone else's alone. The scoping is the whole security story
+// here — the statement is a bare DELETE, so if the user_id predicate were ever
+// dropped it would take the entire table with it.
+func TestNotificationRepositoryDeleteAllForUser(t *testing.T) {
+	db := testDB(t)
+	initTestSchema(t, db)
+	repo := NewNotificationRepository(db)
+
+	alice := uuid.New().String()
+	bob := uuid.New().String()
+	mk := func(userID, title string) *notifications.Notification {
+		return notifications.New("", userID, notifications.TypeRunFailed, title, "body", nil)
+	}
+
+	aliceRead := mk(alice, "already read")
+	for _, n := range []*notifications.Notification{aliceRead, mk(alice, "unread one"), mk(alice, "unread two"), mk(bob, "bobs")} {
+		if err := repo.Insert(n); err != nil {
+			t.Fatalf("Insert(%s): %v", n.Title, err)
+		}
+	}
+	// One of Alice's is read, to prove the clear takes read and unread alike.
+	if _, err := repo.MarkRead(alice, []string{aliceRead.ID}); err != nil {
+		t.Fatalf("MarkRead: %v", err)
+	}
+
+	deleted, err := repo.DeleteAllForUser(alice)
+	if err != nil {
+		t.Fatalf("DeleteAllForUser: %v", err)
+	}
+	if deleted != 3 {
+		t.Fatalf("deleted = %d, want 3 (two unread and one read)", deleted)
+	}
+
+	left, err := repo.ListForUser(alice, false, 10)
+	if err != nil {
+		t.Fatalf("ListForUser(alice): %v", err)
+	}
+	if len(left) != 0 {
+		t.Fatalf("alice still has %d notifications after a clear", len(left))
+	}
+	unread, err := repo.CountUnread(alice)
+	if err != nil {
+		t.Fatalf("CountUnread(alice): %v", err)
+	}
+	if unread != 0 {
+		t.Fatalf("alice's unread count = %d after a clear, want 0", unread)
+	}
+
+	// Bob is untouched.
+	bobs, err := repo.ListForUser(bob, false, 10)
+	if err != nil {
+		t.Fatalf("ListForUser(bob): %v", err)
+	}
+	if len(bobs) != 1 || bobs[0].Title != "bobs" {
+		t.Fatalf("bob's list = %+v, want his one notification intact", bobs)
+	}
+
+	// Clearing an already-empty list is a no-op rather than an error.
+	again, err := repo.DeleteAllForUser(alice)
+	if err != nil {
+		t.Fatalf("second DeleteAllForUser: %v", err)
+	}
+	if again != 0 {
+		t.Fatalf("second clear deleted %d rows, want 0", again)
+	}
+}

@@ -72,6 +72,9 @@ type Repository interface {
 	MarkRead(userID string, ids []string) (int64, error)
 	// MarkAllRead marks every unread row of the user read. Returns rows updated.
 	MarkAllRead(userID string) (int64, error)
+	// DeleteAllForUser removes every row of the user, read or not, and
+	// returns how many went. Rows belonging to anyone else are untouched.
+	DeleteAllForUser(userID string) (int64, error)
 	CountUnread(userID string) (int, error)
 }
 
@@ -82,6 +85,9 @@ type Service interface {
 	ListForUser(userID string, unreadOnly bool, limit int) ([]*Notification, error)
 	MarkRead(userID string, ids []string) (int64, error)
 	MarkAllRead(userID string) (int64, error)
+	// ClearAll deletes every notification the user has. Unlike MarkAllRead
+	// this cannot be undone, so callers ask the member first.
+	ClearAll(userID string) (int64, error)
 	CountUnread(userID string) (int, error)
 }
 
@@ -107,6 +113,11 @@ func (s *DefaultService) MarkRead(userID string, ids []string) (int64, error) {
 
 func (s *DefaultService) MarkAllRead(userID string) (int64, error) {
 	return s.repo.MarkAllRead(userID)
+}
+
+// ClearAll deletes every notification the user has, read or unread.
+func (s *DefaultService) ClearAll(userID string) (int64, error) {
+	return s.repo.DeleteAllForUser(userID)
 }
 
 func (s *DefaultService) CountUnread(userID string) (int, error) {

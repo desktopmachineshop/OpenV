@@ -23,6 +23,7 @@ type fakeNotificationService struct {
 	readUser    string
 	readIDs     []string
 	readAllUser string
+	clearUser   string
 	list        []*notifications.Notification
 	unread      int
 }
@@ -40,6 +41,13 @@ func (f *fakeNotificationService) MarkRead(userID string, ids []string) (int64, 
 func (f *fakeNotificationService) MarkAllRead(userID string) (int64, error) {
 	f.readAllUser = userID
 	return 3, nil
+}
+
+func (f *fakeNotificationService) ClearAll(userID string) (int64, error) {
+	f.clearUser = userID
+	// A clear empties the list, so the unread count that follows it is zero.
+	f.unread = 0
+	return 7, nil
 }
 
 func (f *fakeNotificationService) CountUnread(userID string) (int, error) {
@@ -74,6 +82,7 @@ func TestNotificationEndpointsRequireUser(t *testing.T) {
 		{"list", h.ListNotifications, notificationReq(http.MethodGet, "/api/v1/notifications", "", nil)},
 		{"read", h.MarkNotificationsRead, notificationReq(http.MethodPost, "/api/v1/notifications/read", `{"ids":["n-1"]}`, nil)},
 		{"read-all", h.MarkAllNotificationsRead, notificationReq(http.MethodPost, "/api/v1/notifications/read-all", "", nil)},
+		{"clear", h.ClearNotifications, notificationReq(http.MethodDelete, "/api/v1/notifications", "", nil)},
 		{"stream", h.StreamNotifications, notificationReq(http.MethodGet, "/api/v1/notifications/stream", "", nil)},
 	}
 	for _, tc := range calls {
@@ -85,7 +94,7 @@ func TestNotificationEndpointsRequireUser(t *testing.T) {
 			}
 		})
 	}
-	if svc.listUser != "" || svc.readUser != "" || svc.readAllUser != "" {
+	if svc.listUser != "" || svc.readUser != "" || svc.readAllUser != "" || svc.clearUser != "" {
 		t.Fatal("service must not be reached without an authenticated user")
 	}
 }
@@ -161,5 +170,38 @@ func TestMarkReadScopedToSessionUser(t *testing.T) {
 	h.MarkAllNotificationsRead(w, notificationReq(http.MethodPost, "/api/v1/notifications/read-all", "", user))
 	if w.Code != http.StatusOK || svc.readAllUser != "u-1" {
 		t.Fatalf("read-all: status = %d user = %q, want 200 for u-1", w.Code, svc.readAllUser)
+	}
+}
+
+// TestClearNotificationsScopedToSessionUser: clearing is keyed by the session
+// user, reports how many rows went, and leaves the caller with an unread count
+// of zero — the badge is driven by that number, so a clear that did not return
+// zero would leave the bell claiming unread items the member can no longer see.
+func TestClearNotificationsScopedToSessionUser(t *testing.T) {
+	svc := &fakeNotificationService{unread: 4}
+	h := &Handler{notificationService: svc}
+	user := &users.User{ID: "u-1"}
+
+	w := httptest.NewRecorder()
+	h.ClearNotifications(w, notificationReq(http.MethodDelete, "/api/v1/notifications", "", user))
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", w.Code)
+	}
+	if svc.clearUser != "u-1" {
+		t.Fatalf("cleared for %q, want the session user u-1", svc.clearUser)
+	}
+	var body struct {
+		Deleted     int64 `json:"deleted"`
+		UnreadCount int   `json:"unread_count"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
+		t.Fatalf("decode body: %v", err)
+	}
+	if body.Deleted != 7 {
+		t.Errorf("deleted = %d, want 7", body.Deleted)
+	}
+	if body.UnreadCount != 0 {
+		t.Errorf("unread_count = %d, want 0 after a clear", body.UnreadCount)
 	}
 }

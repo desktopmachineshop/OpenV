@@ -2132,6 +2132,11 @@ export const notificationsAPI = {
     client.post<{ updated: number; unread_count: number }>('/api/v1/notifications/read', { ids }),
   markAllRead: () =>
     client.post<{ updated: number; unread_count: number }>('/api/v1/notifications/read-all'),
+  // Deletes the caller's whole list, read and unread alike, and cannot be
+  // undone — ask before calling it. The count is named deleted rather than
+  // updated because it includes notifications that were already read.
+  clearAll: () =>
+    client.delete<{ deleted: number; unread_count: number }>('/api/v1/notifications'),
   streamUrl: () => `${API_BASE_URL}/api/v1/notifications/stream`,
 };
 

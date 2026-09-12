@@ -329,6 +329,7 @@ pushes new items live.
 | GET | `/api/v1/notifications` | List the caller's notifications (`?unread=true&limit=`) | user |
 | POST | `/api/v1/notifications/read` | Mark specific notifications read | user |
 | POST | `/api/v1/notifications/read-all` | Mark all read | user |
+| DELETE | `/api/v1/notifications` | Clear the caller's whole list, read and unread (irreversible) | user |
 | GET | `/api/v1/notifications/stream` | SSE stream of new notifications | user |
 | GET | `/api/v1/me/notification-prefs` | Get the caller's email opt-out and push opt-in | user |
 | PUT | `/api/v1/me/notification-prefs` | Update either preference (`email_notifications`, `push_notifications`); an absent field is left as it was | user |

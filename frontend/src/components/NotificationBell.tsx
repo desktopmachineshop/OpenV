@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { PANEL_NOTIFICATIONS, PANEL_PARAM } from '../appShortcuts';
 import { AppNotification, notificationsAPI } from '../api/client';
 import { useViewport } from '../hooks/useViewport';
+import { useConfirm } from './ui';
 
 interface NotificationBellProps {
   /**
@@ -58,6 +59,8 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ variant = 'l
   const [items, setItems] = useState<AppNotification[]>([]);
   const [unread, setUnread] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [clearing, setClearing] = useState(false);
+  const confirm = useConfirm();
   const rootRef = useRef<HTMLDivElement | null>(null);
 
   const refresh = useCallback(async () => {
@@ -134,6 +137,32 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ variant = 'l
       setUnread(res.data.unread_count);
     } catch {
       // ignore
+    }
+  };
+
+  // Clearing throws the list away for good, so it asks first and names what
+  // is going — including the unread ones, which are the ones a member would
+  // actually miss. Unlike markAll this does not update optimistically: an
+  // emptied list that came back on the next refresh would be worse than a
+  // half-second wait.
+  const clearAll = async () => {
+    const unreadPart = unread > 0 ? ` ${unread} of them unread.` : '';
+    const ok = await confirm({
+      title: 'Clear notifications',
+      message: `Delete all ${items.length} notifications?${unreadPart} This cannot be undone.`,
+      confirmLabel: 'Clear all',
+      danger: true,
+    });
+    if (!ok) return;
+    setClearing(true);
+    try {
+      const res = await notificationsAPI.clearAll();
+      setItems([]);
+      setUnread(res.data.unread_count);
+    } catch {
+      // Left as it was: the list on screen still matches the server.
+    } finally {
+      setClearing(false);
     }
   };
 
@@ -233,22 +262,46 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ variant = 'l
             <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>
               Notifications
             </span>
-            {unread > 0 && (
-              <button
-                onClick={markAll}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: 'var(--accent)',
-                  cursor: 'pointer',
-                  fontSize: 12.5,
-                  padding: '6px 0',
-                  minHeight: 36,
-                }}
-              >
-                Mark all read
-              </button>
-            )}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              {unread > 0 && (
+                <button
+                  onClick={markAll}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--accent)',
+                    cursor: 'pointer',
+                    fontSize: 12.5,
+                    padding: '6px 0',
+                    minHeight: 36,
+                  }}
+                >
+                  Mark all read
+                </button>
+              )}
+              {/* Only offered when there is something to clear. Muted rather
+                  than accent-coloured: it sits beside the routine action and
+                  should not be the one a thumb finds first. --text-muted holds
+                  4.4:1 on the panel, so it stays legible while reading as
+                  secondary. */}
+              {items.length > 0 && (
+                <button
+                  onClick={clearAll}
+                  disabled={clearing}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--text-muted)',
+                    cursor: clearing ? 'default' : 'pointer',
+                    fontSize: 12.5,
+                    padding: '6px 0',
+                    minHeight: 36,
+                  }}
+                >
+                  {clearing ? 'Clearing…' : 'Clear all'}
+                </button>
+              )}
+            </div>
           </div>
 
           {items.length === 0 ? (
