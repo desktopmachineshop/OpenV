@@ -29,6 +29,7 @@ func (h *Handler) registerOrgRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/orgs/{id}/restore", h.RestoreOrg).Methods("POST")
 	router.HandleFunc("/api/v1/orgs/{id}/activate", h.ActivateOrg).Methods("POST")
 
+	router.HandleFunc("/api/v1/orgs/{id}/limits", h.GetOrgLimits).Methods("GET")
 	router.HandleFunc("/api/v1/orgs/{id}/members", h.ListOrgMembers).Methods("GET")
 	router.HandleFunc("/api/v1/orgs/{id}/members", h.AddOrgMember).Methods("POST")
 	router.HandleFunc("/api/v1/orgs/{id}/members/{userId}", h.UpdateOrgMember).Methods("PUT")
@@ -180,6 +181,13 @@ func (h *Handler) CreateOrg(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
+	if err := h.checkSharedWorkspaceCount(user.ID); err != nil {
+		if h.writeLimitError(w, err) {
+			return
+		}
+		respondInternal(w, r, "failed to check the workspace limit", err)
+		return
+	}
 	org, err := h.orgService.CreateOrg(req.Name, orgs.TypeCompany, user.ID)
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
@@ -275,6 +283,27 @@ func (h *Handler) ActivateOrg(w http.ResponseWriter, r *http.Request) {
 }
 
 // --- Workspace members ---
+
+// GetOrgLimits returns every limit this workspace is subject to, with usage
+// where usage can be counted. Any member may read it: knowing what the
+// workspace allows is not privileged, and hiding it only produces a surprise
+// at the moment somebody is refused.
+func (h *Handler) GetOrgLimits(w http.ResponseWriter, r *http.Request) {
+	orgID := mux.Vars(r)["id"]
+	if !h.requireOrgRole(w, r, orgID, orgs.RoleMember) {
+		return
+	}
+	out, err := h.buildLimitsResponse(orgID)
+	if err != nil {
+		if errors.Is(err, orgs.ErrNotFound) {
+			writeJSONError(w, http.StatusNotFound, "workspace not found")
+			return
+		}
+		respondInternal(w, r, "failed to read the workspace limits", err)
+		return
+	}
+	respondJSON(w, http.StatusOK, out)
+}
 
 func (h *Handler) ListOrgMembers(w http.ResponseWriter, r *http.Request) {
 	orgID := mux.Vars(r)["id"]

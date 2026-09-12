@@ -214,6 +214,9 @@ type Service interface {
 	Update(id string, req UpdateRequest) (*Bundle, error)
 	Delete(id string) ([]*File, error)
 
+	// StorageUsedByOrg totals the workspace's evidence, so a limits view can
+	// show usage beside the ceiling rather than only refusing at it.
+	StorageUsedByOrg(orgID string) (int64, error)
 	// CheckQuota reports whether the project's workspace can accept another
 	// incoming bytes of evidence, returning ErrQuotaExceeded when it cannot.
 	// limitBytes <= 0 means unlimited.
@@ -372,6 +375,11 @@ func (s *DefaultService) Delete(id string) ([]*File, error) {
 		return nil, ErrNotFound
 	}
 	return s.repo.Delete(id)
+}
+
+// StorageUsedByOrg totals the workspace's evidence files.
+func (s *DefaultService) StorageUsedByOrg(orgID string) (int64, error) {
+	return s.repo.StorageUsedByOrg(orgID)
 }
 
 // CheckQuota refuses an upload that would take the workspace over its evidence

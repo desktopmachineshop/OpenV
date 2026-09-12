@@ -1486,6 +1486,14 @@ func (h *Handler) CreateProject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if err := h.checkProjectCount(orgID); err != nil {
+		if h.writeLimitError(w, err) {
+			return
+		}
+		respondInternal(w, r, "failed to check the project limit", err)
+		return
+	}
+
 	project := projects.NewProject(req)
 	project.OrgID = orgID
 	if err := h.projectService.CreateProject(project); err != nil {

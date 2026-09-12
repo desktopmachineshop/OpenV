@@ -255,6 +255,24 @@ func PlanDefaults(plan string) map[string]interface{} {
 	}
 }
 
+// defaultPlan is the plan new workspaces are created on. The hosted service
+// leaves it at PlanSingle; a self-hosted deployment sets PlanSelfHost, which
+// is what makes "no limits from us" true rather than merely advertised.
+var defaultPlan = PlanSingle
+
+// SetDefaultPlan installs the plan new workspaces are created on. An unknown
+// name is ignored rather than stored, so a typo cannot create workspaces on a
+// plan whose defaults nobody has written.
+func SetDefaultPlan(plan string) {
+	switch plan {
+	case PlanSingle, PlanBusinessLite, PlanBusiness, PlanEnterprise, PlanSelfHost, PlanFree, PlanTeam:
+		defaultPlan = plan
+	}
+}
+
+// DefaultPlan is the plan new workspaces are created on.
+func DefaultPlan() string { return defaultPlan }
+
 // deploymentLimits is the middle layer: a deployment-wide override read once
 // at boot from OPENV_LIMITS. Nil until SetDeploymentLimits is called, which is
 // the hosted service's state — it runs on plan defaults alone.
