@@ -1356,12 +1356,35 @@ export interface OrgUsageSummary {
   month_to_date_cost_usd: number;
 }
 
+/** One workspace limit, as the limits endpoint reports it. */
+export interface LimitUsage {
+  key: string;
+  label: string;
+  description: string;
+  unit: 'count' | 'mb' | 'minutes' | 'cpus' | '';
+  /** The ceiling. Meaningless when `unlimited` is true. */
+  limit: number;
+  unlimited: boolean;
+  /** Present only for limits whose usage can be counted. */
+  used?: number;
+}
+
+export interface WorkspaceLimits {
+  org_id: string;
+  plan: string;
+  /** Decides which remedy to offer: a plan upgrade, or a setting to change. */
+  self_hosted: boolean;
+  limits: LimitUsage[];
+}
+
 export const orgsAPI = {
   list: () => client.get<{ orgs: Org[]; active_org: string }>('/api/v1/orgs'),
   usage: (orgId: string, days?: number) =>
     client.get<OrgUsageSummary>(`/api/v1/orgs/${orgId}/usage`, {
       params: days ? { days } : {},
     }),
+  /** Every limit this workspace is subject to, with usage where countable. */
+  limits: (orgId: string) => client.get<WorkspaceLimits>(`/api/v1/orgs/${orgId}/limits`),
   create: (name: string) => client.post<Org>('/api/v1/orgs', { name }),
   get: (id: string) => client.get<Org>(`/api/v1/orgs/${id}`),
   update: (id: string, payload: Partial<Org>) => client.put<Org>(`/api/v1/orgs/${id}`, payload),
