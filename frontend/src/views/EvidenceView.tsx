@@ -495,7 +495,15 @@ const BundleDetail: React.FC<BundleDetailProps> = ({
             >
               <a
                 href={evidenceAPI.downloadUrl(file.id)}
-                style={{ flex: '1 1 200px', wordBreak: 'break-all' }}
+                // A download is a control, not prose: it needs a finger-sized
+                // target even though its text is one line high.
+                style={{
+                  flex: '1 1 200px',
+                  wordBreak: 'break-all',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  minHeight: 32,
+                }}
               >
                 {file.filename}
               </a>
