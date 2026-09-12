@@ -33,6 +33,12 @@ const pathForNotification = (n: AppNotification): string => {
   // Workspace budget alerts are not project-scoped — deep-link to the
   // workspace usage tab where the budget lives.
   if (ref.kind === 'org_usage') return '/org/settings?tab=usage';
+  // Membership and privilege changes land on the people list they are about:
+  // the workspace's members tab, or the project's own.
+  if (ref.kind === 'membership') return '/org/settings?tab=members';
+  if (ref.kind === 'project_membership' && ref.project_id) {
+    return `/projects/${ref.project_id}/settings?tab=members`;
+  }
   const projectId = ref.project_id;
   if (!projectId) return '/projects';
   switch (ref.kind) {

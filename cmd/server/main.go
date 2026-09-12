@@ -485,6 +485,17 @@ func main() {
 	notify.NewNotifier(notificationService, memberService, sseHub).
 		SetEmailDispatcher(emailDispatcher).
 		SetPushDispatcher(pushDispatcher).
+		// Membership and privilege changes: the affected member hears what
+		// changed about their own access, and the workspace's admins hear who
+		// joined and who left.
+		SetOrgService(orgService).
+		SetUserNamer(notify.UserNamerFunc(func(userID string) string {
+			user, err := userService.GetByID(userID)
+			if err != nil || user == nil {
+				return ""
+			}
+			return user.Name
+		})).
 		Start(bus)
 
 	// Workspace budget alerts (issue #186): a finishing run's cost can push

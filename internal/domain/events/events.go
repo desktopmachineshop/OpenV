@@ -28,6 +28,37 @@ const (
 	// ProposalCreated fires when a proposal-mode agent write is diverted
 	// into the review queue; payload carries {op, run_id}.
 	ProposalCreated = "proposal.created"
+
+	// Membership changes. These carry no ProjectID for the workspace ones —
+	// they are org-level, and Event.OrgID is stamped with WithOrg — so a
+	// subscriber must read OrgID rather than inferring the tenant from a
+	// project.
+	//
+	// Two audiences care, for different reasons: the affected person needs to
+	// know what changed about their own access, and the workspace admins need
+	// to know who came and went, which is a governance question rather than a
+	// courtesy.
+	//
+	// OrgMemberAdded carries {user_id, role}.
+	OrgMemberAdded = "org.member_added"
+	// OrgMemberRoleChanged carries {user_id, from, to}.
+	OrgMemberRoleChanged = "org.member_role_changed"
+	// OrgMemberRemoved carries {user_id, self} — self distinguishes leaving
+	// from being removed, which read very differently to both audiences.
+	OrgMemberRemoved = "org.member_removed"
+	// OrgInvitationSent carries {email, role}. The invited address usually has
+	// no account yet, so there is nobody to notify in app; the admins are the
+	// audience, and the invitation email is the invitee's.
+	OrgInvitationSent = "org.invitation_sent"
+	// OrgInvitationAccepted carries {user_id, role}. This is the join.
+	OrgInvitationAccepted = "org.invitation_accepted"
+
+	// ProjectMemberAdded carries {user_id, role}.
+	ProjectMemberAdded = "project.member_added"
+	// ProjectMemberRoleChanged carries {user_id, from, to}.
+	ProjectMemberRoleChanged = "project.member_role_changed"
+	// ProjectMemberRemoved carries {user_id, self}.
+	ProjectMemberRemoved = "project.member_removed"
 )
 
 // Actor constants; user actors are "user:<id>", agent actors "agent:<run_id>".

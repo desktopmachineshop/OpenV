@@ -336,6 +336,33 @@ pushes new items live.
 | GET | `/api/v1/me/notification-prefs` | Get the caller's email opt-out and push opt-in | user |
 | PUT | `/api/v1/me/notification-prefs` | Update either preference (`email_notifications`, `push_notifications`); an absent field is left as it was | user |
 
+#### Notification types
+
+| Type | Fires on | Goes to |
+|---|---|---|
+| `run_failed` | An agent run finishes failed | Whoever launched it |
+| `proposal_pending` | A proposal-mode agent write needs approval | Project editors and owners |
+| `review_requested` | An artifact enters `in_review` | Project editors and owners |
+| `interview_completed` | An interview participant finishes | Project editors and owners |
+| `mention` | An `@name` in a comment | The mentioned project members |
+| `budget_threshold` | Month-to-date spend crosses 80% or 100% | Workspace admins |
+| `access_changed` | Your own workspace or project access changes | The affected member |
+| `membership_changed` | Somebody joins, leaves, is invited, or changes role | Workspace admins |
+
+`access_changed` and `membership_changed` are two audiences for the same
+events, and are separate types because the reasons differ: one answers "what
+can I do now?", the other is workspace governance. Nobody is notified about
+their own action, and somebody who leaves voluntarily is not told they left
+— only the admins are. An invitation to an address with no account notifies
+the admins only; the invitation email is that person's notification. Project
+membership changes reach the affected member but **not** workspace admins:
+project roles change constantly and would drown the arrivals and departures
+that matter.
+
+Both email by default (with everything else in `DefaultEmailTypes`, overridable
+with `OPENV_EMAIL_NOTIFICATION_TYPES`), because an access change is exactly the
+thing somebody needs to know while they are not looking at the app.
+
 ### Web push subscriptions
 
 Per-device web push for the same high-signal types (REQ-109). Session cookie

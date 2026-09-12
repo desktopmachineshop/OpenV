@@ -41,6 +41,11 @@ type Notifier struct {
 	// push is an optional best-effort web push side channel (REQ-109); nil
 	// means push is off. Dispatch is nil-safe and returns immediately.
 	push *PushDispatcher
+	// orgSvc and userNamer serve the membership fan-out (see membership.go).
+	// Both are optional: without orgSvc the membership events are ignored
+	// rather than half-delivered.
+	orgSvc    OrgMemberLister
+	userNamer UserNamer
 }
 
 // NewNotifier creates a notifier. broadcaster may be nil (store-only mode,
@@ -76,10 +81,18 @@ func (n *Notifier) Start(bus domainevents.Bus) {
 //   - artifact.status_changed to in_review -> project editors and owners (reviewers)
 //   - chatter.created with kind "interview-completed" -> project editors and owners
 //   - chatter.created comments containing @mentions   -> mentioned project members
+//   - membership and role changes -> the affected person, and the
+//     workspace's admins (see membership.go)
 //
 // The acting user (actor "user:<id>") never receives a notification for
 // their own action.
 func (n *Notifier) Handle(e domainevents.Event) {
+	// Membership first: it covers eight event types and answers whether it
+	// took the event, which keeps the switch below about content rather than
+	// access.
+	if n.handleMembership(e) {
+		return
+	}
 	switch e.EventType {
 	case domainevents.ProposalCreated:
 		n.fanOutToEditors(e, notifications.TypeProposalPending,
