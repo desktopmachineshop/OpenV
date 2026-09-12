@@ -17,6 +17,7 @@ import (
 	"github.com/gorilla/mux"
 	_ "github.com/lib/pq"
 
+	openv "github.com/openv/requirements-platform"
 	"github.com/openv/requirements-platform/internal/api"
 	"github.com/openv/requirements-platform/internal/automation"
 	"github.com/openv/requirements-platform/internal/domain/agentruns"
@@ -44,6 +45,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/proposals"
 	"github.com/openv/requirements-platform/internal/domain/providers"
 	"github.com/openv/requirements-platform/internal/domain/pushsubs"
+	"github.com/openv/requirements-platform/internal/domain/release"
 	"github.com/openv/requirements-platform/internal/domain/repoconns"
 	"github.com/openv/requirements-platform/internal/domain/reports"
 	"github.com/openv/requirements-platform/internal/domain/runnersessions"
@@ -569,6 +571,24 @@ func main() {
 		SetPushDispatcher(pushDispatcher).
 		Start(bus)
 
+	// The running release: RELEASE_NOTES.md as built into this binary. Its
+	// top dated section is what GET /api/v1/release reports and what every
+	// account is told about, once per release, when a server first boots on
+	// it. A notes file that fails to parse is logged and serves an empty
+	// release rather than keeping the API down over documentation.
+	releaseService, err := release.NewService(openv.ReleaseNotesMarkdown)
+	if err != nil {
+		slog.Error("release notes failed to parse; serving no release", "error", err)
+		releaseService = release.Empty()
+	}
+	if cur := releaseService.Current(); cur != nil {
+		slog.Info("release", "version", cur.Version)
+		announcer := notify.NewReleaseAnnouncer(postgres.NewReleaseRepository(db), userService, notificationService, sseHub).
+			SetEmailDispatcher(emailDispatcher).
+			SetPushDispatcher(pushDispatcher)
+		go announcer.Announce(cur)
+	}
+
 	// Optional over-budget soft-block (default OFF — warn-only). When
 	// OPENV_BUDGET_ENFORCE=true, new launches are refused once a workspace has
 	// hit 100% of its monthly budget. Fails open on lookup errors so a budget
@@ -704,6 +724,7 @@ func main() {
 		VVService:            vvService,
 		EvidenceService:      evidenceService,
 		SettingsService:      settingsService,
+		ReleaseService:       releaseService,
 		WorkItemService:      workItemService,
 		GuidedService:        guidedService,
 		InterviewService:     interviewService,

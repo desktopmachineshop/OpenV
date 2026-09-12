@@ -155,6 +155,15 @@ export const UserMenu: React.FC<UserMenuProps> = ({ variant = 'light' }) => {
           >
             Settings
           </button>
+          <button
+            onClick={() => {
+              setMenuOpen(false);
+              navigate('/whats-new');
+            }}
+            style={itemStyle}
+          >
+            What's new
+          </button>
           <button onClick={handleLogout} style={itemStyle}>
             Sign out
           </button>

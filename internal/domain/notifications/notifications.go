@@ -37,6 +37,10 @@ const (
 	// an admin may reasonably want it when they do not want their own
 	// access notifications, or the other way round.
 	TypeMembershipChanged = "membership_changed"
+	// TypeReleasePublished tells every account that the platform has been
+	// updated, with the release's customer-facing notes. One row per account
+	// per release, deduped by the release_announcements claim.
+	TypeReleasePublished = "release_published"
 )
 
 // Notification is one inbox entry for one user. EntityRef points the

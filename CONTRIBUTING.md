@@ -11,6 +11,18 @@ welcome.
   `.github/workflows/ci.yml`) before opening a PR.
 - Keep PRs focused: one change per PR.
 
+## Release notes
+
+`RELEASE_NOTES.md` at the repository root is read by the people who use
+OpenV, so every pull request adds at least one bullet under `## Unreleased`
+saying what they will notice: what they can now do, what looks different,
+what they no longer have to do. Write for a workspace member, not a
+developer; the implementation belongs in the pull request. CI refuses a
+pull request that adds no bullet; a change nobody can see (CI, refactors,
+internal docs) carries the `no-release-notes` label instead. The promotion
+to `release` turns the Unreleased bullets into the dated section the app
+announces to every account (see `docs/railway.md`, "Release pipeline").
+
 ## Licensing of contributions
 
 OpenV is licensed under the [GNU AGPL-3.0](LICENSE). By contributing, you
