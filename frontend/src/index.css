@@ -468,6 +468,64 @@ textarea {
   font-weight: bold;
 }
 
+/* Markdown inside a chat bubble.
+   The document styles above are sized for a page; a reply is a small box in a
+   column, so the outer margins come off (they would pad the bubble twice) and
+   the headings come down to something that does not shout inside it. */
+.chat-markdown > :first-child {
+  margin-top: 0;
+}
+.chat-markdown > :last-child {
+  margin-bottom: 0;
+}
+.chat-markdown h1,
+.chat-markdown h2,
+.chat-markdown h3,
+.chat-markdown h4 {
+  font-size: 1.05em;
+  margin: 0.6em 0 0.3em;
+  color: var(--text);
+}
+.chat-markdown p,
+.chat-markdown ul,
+.chat-markdown ol,
+.chat-markdown pre,
+.chat-markdown blockquote {
+  margin: 0.4em 0;
+}
+.chat-markdown ul,
+.chat-markdown ol {
+  /* Far enough in for the marker, no further: a bubble is narrow and the
+     document's 2em indent eats the line. */
+  padding-left: 1.3em;
+}
+.chat-markdown li {
+  margin: 0.15em 0;
+}
+.chat-markdown table {
+  font-size: 0.95em;
+}
+.chat-markdown code {
+  /* The document style shrinks inline code to 0.9em, which inside a 13px
+     bubble lands under the readable floor. Full size, and padded only enough
+     to read as code — 6px either side put a visible gap before the following
+     punctuation. */
+  font-size: 1em;
+  padding: 1px 4px;
+}
+
+/* The caret for a reply still arriving. Drawn on the last block rather than
+   as an element after it, so it follows the final word instead of dropping
+   onto a line of its own. */
+.chat-markdown--streaming > :last-child::after {
+  content: '';
+  display: inline-block;
+  width: 7px;
+  margin-left: 2px;
+  border-bottom: 2px solid var(--text-muted);
+  vertical-align: baseline;
+}
+
 
 /* Large screens: a reading surface (the artifact document, a form, a
    settings card) stops growing at the measure and stays left-aligned with

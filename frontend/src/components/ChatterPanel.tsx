@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { ChatterEntry, chatterAPI } from '../api/client';
+import { Artifact, ChatterEntry, artifactAPI, chatterAPI } from '../api/client';
 import { GuidedChatPanel } from './wizard/GuidedChatPanel';
 import { resolveAssistantSessionId } from './wizard/assistantSession';
+import { applySuggestionsToProject } from './wizard/applySuggestion';
 
 interface ChatterPanelProps {
   /** The artifact whose notes these are; absent when nothing is selected. */
@@ -15,6 +16,12 @@ interface ChatterPanelProps {
   modeLabel?: string;
   /** What clicking the control would switch to. */
   nextModeLabel?: string;
+  /**
+   * Refresh the project after the assistant adds something. Without it an
+   * applied suggestion is saved but invisible until the reader navigates,
+   * which reads as the button having done nothing.
+   */
+  onArtifactsChanged?: () => void;
 }
 
 type Tab = 'comments' | 'assistant';
@@ -26,6 +33,7 @@ export const ChatterPanel: React.FC<ChatterPanelProps> = ({
   onToggle,
   modeLabel,
   nextModeLabel,
+  onArtifactsChanged,
 }) => {
   // Comments belong to an artifact; the assistant does not, so with nothing
   // selected the panel opens on the tab that still has something to show.
@@ -86,6 +94,35 @@ export const ChatterPanel: React.FC<ChatterPanelProps> = ({
       cancelled = true;
     };
   }, [isOpen, tab, projectId, assistantSessionId]);
+
+  /**
+   * Add what the assistant suggested to the project.
+   *
+   * The wizard applies a suggestion into the form somebody is filling in;
+   * here there is no form, so it goes straight into the project as a draft
+   * artifact under the heading the wizard would have used. The project's
+   * artifacts are read at apply time rather than held in state: a heading
+   * created a minute ago by somebody else should be found, not duplicated.
+   */
+  const applySuggestions = useCallback(
+    async (items: { suggestion: any; key: string }[]): Promise<(string | null)[]> => {
+      if (!projectId) return items.map(() => 'No project is open.');
+      let artifacts: Artifact[] = [];
+      try {
+        const res = await artifactAPI.list(projectId);
+        artifacts = res.data || [];
+      } catch {
+        // Without the list, headings cannot be matched and would be created
+        // again. Refusing is better than quietly growing a second set.
+        return items.map(() => 'The project could not be read, so nothing was added.');
+      }
+      return applySuggestionsToProject(
+        { projectId, artifacts, onChanged: onArtifactsChanged },
+        items
+      );
+    },
+    [projectId, onArtifactsChanged]
+  );
 
   const handleAddMessage = async () => {
     if (!newMessage.trim() || !artifactId) {
@@ -310,6 +347,7 @@ export const ChatterPanel: React.FC<ChatterPanelProps> = ({
               sessionId={assistantSessionId}
               artifactId={artifactId}
               embedded
+              onApplySuggestions={applySuggestions}
               subtitle={
                 artifactId
                   ? 'Answers about the artifact on screen — same conversation as the wizard.'

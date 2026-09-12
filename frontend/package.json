@@ -54,5 +54,11 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "jest": {
+    "moduleNameMapper": {
+      "^react-markdown$": "<rootDir>/src/testStubs/reactMarkdown.tsx",
+      "^remark-gfm$": "<rootDir>/src/testStubs/remarkPlugin.ts"
+    }
   }
 }
