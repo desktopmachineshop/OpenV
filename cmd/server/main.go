@@ -776,6 +776,15 @@ func main() {
 		metricsCollector.HTTPMiddleware(router)(authMiddleware.Wrap(router)),
 	)
 
+	// Compression sits outside all of that so it sees the finished response,
+	// whichever layer produced it. It leaves event streams alone — the API
+	// holds SSE connections open for minutes and a compressor would batch
+	// their events instead of delivering them — and skips anything too small
+	// to be worth the header. The payload it exists for is a baseline
+	// snapshot: a whole project export, which is close to a megabyte of JSON
+	// for a real project and about a fifth of that compressed.
+	protected = api.CompressionMiddleware(protected)
+
 	// CORS: restricted to the configured frontend origin, with credentials.
 	// A wildcard is refused at startup rather than reflected (see
 	// api.CORSMiddleware).

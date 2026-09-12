@@ -151,6 +151,12 @@ export interface Baseline {
   project_id: string;
   name: string;
   created_at: string;
+  /** The account that captured it. Absent for baselines taken before
+   *  authorship was recorded, and for one captured by an automation. */
+  created_by?: string;
+  /** That account's display name, resolved server-side so a reader never
+   *  sees a bare id. Absent whenever created_by is. */
+  created_by_name?: string;
 }
 
 export interface Template {
