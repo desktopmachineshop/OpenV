@@ -5,6 +5,7 @@ import { Modal } from './ui';
 import {
   DOWNLOAD_FORMATS,
   FormSelection,
+  applyTemplate,
   attachmentLabel,
   describeSelection,
   formatBytes,
@@ -64,6 +65,11 @@ export const DownloadWizard: React.FC<DownloadWizardProps> = ({ projectId, basel
 
   const empty = selectsNothing(selection, options);
   const summary = useMemo(() => describeSelection(selection, options), [selection, options]);
+  // Presets, fields and the document switches shape a document a person
+  // reads; the data formats carry everything and ignore them.
+  const isDocument = format === 'pdf' || format === 'docx';
+  const templates = options?.templates || [];
+  const fields = options?.fields || [];
 
   const handleDownload = useCallback(async () => {
     setDownloading(true);
@@ -77,6 +83,9 @@ export const DownloadWizard: React.FC<DownloadWizardProps> = ({ projectId, basel
       setDownloading(false);
     }
   }, [projectId, format, selection, options, baselineId, onClose]);
+
+  const switchContent = (key: keyof FormSelection['content']) =>
+    setSelection((s) => ({ ...s, content: { ...s.content, [key]: !s.content[key] } }));
 
   const checkbox = (checked: boolean, label: React.ReactNode, onChange: () => void, hint?: string) => (
     <label
@@ -182,6 +191,113 @@ export const DownloadWizard: React.FC<DownloadWizardProps> = ({ projectId, basel
 
           {!loading && options && (
             <>
+              {!isDocument && (
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 14 }}>
+                  Templates, fields and document options apply to the PDF and Word documents.
+                </div>
+              )}
+
+              {isDocument && templates.length > 0 && (
+                <section style={{ marginBottom: 14 }}>
+                  <SectionHeading title="Template" />
+                  {templates.map((template) => (
+                    <label
+                      key={template.key}
+                      style={{
+                        display: 'block',
+                        border: `1px solid ${
+                          selection.template === template.key ? 'var(--accent)' : 'var(--border)'
+                        }`,
+                        borderRadius: 6,
+                        padding: '10px 12px',
+                        marginBottom: 8,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <input
+                          type="radio"
+                          name="download-template"
+                          checked={selection.template === template.key}
+                          // Choosing a preset again re-applies it, which is how a
+                          // reader gets back to it after changing switches by hand.
+                          onClick={() => setSelection((s) => applyTemplate(s, template, options))}
+                          onChange={() => undefined}
+                          style={tickStyle}
+                        />
+                        <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--text)' }}>
+                          {template.name}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: 12, color: 'var(--text-muted)', marginLeft: 24 }}>
+                        {template.description}
+                      </div>
+                    </label>
+                  ))}
+                </section>
+              )}
+
+              {isDocument && (
+                <section style={{ marginBottom: 14 }}>
+                  <SectionHeading title="Document" />
+                  {checkbox(selection.content.toc, 'Table of contents', () => switchContent('toc'))}
+                  {checkbox(
+                    selection.content.traceability,
+                    'Traceability',
+                    () => switchContent('traceability'),
+                    'incoming and outgoing links under each artifact'
+                  )}
+                  {checkbox(
+                    selection.content.figures,
+                    'Figures',
+                    () => switchContent('figures'),
+                    'embedded with their figure reference'
+                  )}
+                  {checkbox(
+                    selection.content.vvStatus,
+                    'V&V status',
+                    () => switchContent('vvStatus'),
+                    'verification rollup per requirement, coverage summary and gaps'
+                  )}
+                  {checkbox(
+                    selection.content.testResults,
+                    'Test results',
+                    () => switchContent('testResults'),
+                    'latest result per test case and the test runs'
+                  )}
+                </section>
+              )}
+
+              {isDocument && fields.length > 0 && (
+                <section style={{ marginBottom: 14 }}>
+                  <SectionHeading
+                    title="Fields"
+                    action={selection.allFields ? 'Clear all' : 'Select all'}
+                    onAction={() =>
+                      setSelection((s) =>
+                        s.allFields
+                          ? { ...s, allFields: false, fields: [] }
+                          : { ...s, allFields: true, fields: fields.map((f) => f.key) }
+                      )
+                    }
+                  />
+                  {fields.map((field) =>
+                    checkbox(
+                      selection.allFields || selection.fields.includes(field.key),
+                      field.label,
+                      () =>
+                        setSelection((s) => {
+                          // A tick on any one field is a choice of fields, so
+                          // "all of them" ends the moment the first box moves.
+                          const ticked = s.allFields ? fields.map((f) => f.key) : s.fields;
+                          return { ...s, allFields: false, fields: toggle(ticked, field.key) };
+                        }),
+                      `${field.count} artifact${field.count === 1 ? '' : 's'}${field.custom ? ' · custom' : ''}`
+                    )
+                  )}
+                </section>
+              )}
+
               {options.sections.length > 0 && (
                 <section style={{ marginBottom: 14 }}>
                   <SectionHeading

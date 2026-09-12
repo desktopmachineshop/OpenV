@@ -19,7 +19,13 @@
 //
 // toWire is the translation, and it is why unticking one of two sections sends
 // a filter while ticking both sends none.
-import { DownloadFormat, DownloadOptions, DownloadSelection } from '../api/client';
+import {
+  DownloadContent,
+  DownloadFormat,
+  DownloadOptions,
+  DownloadSelection,
+  DownloadTemplate,
+} from '../api/client';
 
 /** The formats a project can be taken away as, in the order they are offered. */
 export interface FormatChoice {
@@ -89,6 +95,15 @@ const ATTACHMENT_LABELS: Record<string, string> = {
 export const attachmentLabel = (category: string): string =>
   ATTACHMENT_LABELS[category] || category;
 
+/** The switches that decide what a PDF or Word document holds beyond its artifacts. */
+export interface ContentSwitches {
+  traceability: boolean;
+  figures: boolean;
+  toc: boolean;
+  testResults: boolean;
+  vvStatus: boolean;
+}
+
 /** A ticked-box selection, before it is translated for the wire. */
 export interface FormSelection {
   /** Ticked section ids. */
@@ -98,18 +113,85 @@ export interface FormSelection {
   includeHeadings: boolean;
   /** Ticked attachment categories. Untouched, no files travel. */
   attachments: string[];
+  /**
+   * The preset the reader started from, or '' for none. It stays as it was
+   * when a switch is later changed by hand: the cover records the starting
+   * point, not a promise that nothing moved since.
+   */
+  template: string;
+  content: ContentSwitches;
+  /** Every attribute shows, whatever `fields` holds. */
+  allFields: boolean;
+  /** Ticked attribute keys, honoured when `allFields` is off. */
+  fields: string[];
 }
 
-/**
- * Everything ticked but the attachments: the form a download opens on, which
- * produces exactly what the old export buttons did.
- */
-export const selectAll = (options: DownloadOptions | null): FormSelection => ({
-  sections: (options?.sections || []).map((s) => s.id),
-  types: (options?.types || []).map((t) => t.type),
-  includeHeadings: true,
-  attachments: [],
+/** What the server puts in a document when it is told nothing. */
+export const SERVER_CONTENT_DEFAULTS: DownloadContent = {
+  traceability: true,
+  figures: true,
+  toc: true,
+  all_fields: true,
+  test_results: false,
+  vv_status: false,
+};
+
+/** The preset a wizard opens on, when the server offers presets at all. */
+const OPENING_TEMPLATE = 'standard';
+
+const contentSwitches = (content: DownloadContent): ContentSwitches => ({
+  traceability: content.traceability,
+  figures: content.figures,
+  toc: content.toc,
+  testResults: content.test_results,
+  vvStatus: content.vv_status,
 });
+
+/**
+ * Everything ticked but the attachments, with the document switches at the
+ * server's defaults: the form a download opens on, which produces exactly what
+ * the old export buttons did.
+ */
+export const selectAll = (options: DownloadOptions | null): FormSelection => {
+  const defaults = options?.defaults || SERVER_CONTENT_DEFAULTS;
+  const templates = options?.templates || [];
+  const opening = templates.find((t) => t.key === OPENING_TEMPLATE) || templates[0];
+  return {
+    sections: (options?.sections || []).map((s) => s.id),
+    types: (options?.types || []).map((t) => t.type),
+    includeHeadings: true,
+    attachments: [],
+    template: opening ? opening.key : '',
+    content: contentSwitches(defaults),
+    allFields: true,
+    fields: (options?.fields || []).map((f) => f.key),
+  };
+};
+
+/**
+ * Start a selection from a preset. The preset says which types and which
+ * document contents it means; the sections and attachments are the reader's
+ * own and stay as they are. A preset can name a type or a field the project
+ * does not have, so both lists are cut down to what the form can actually
+ * offer.
+ */
+export const applyTemplate = (
+  selection: FormSelection,
+  template: DownloadTemplate,
+  options: DownloadOptions | null
+): FormSelection => {
+  const allTypes = (options?.types || []).map((t) => t.type);
+  const allFields = (options?.fields || []).map((f) => f.key);
+  const content = template.content;
+  return {
+    ...selection,
+    template: template.key,
+    types: template.types ? allTypes.filter((t) => template.types!.includes(t)) : allTypes,
+    content: contentSwitches(content),
+    allFields: content.all_fields,
+    fields: content.all_fields ? allFields : allFields.filter((k) => (content.fields || []).includes(k)),
+  };
+};
 
 /** Add or remove one value from a ticked list. */
 export const toggle = (list: string[], value: string): string[] =>
@@ -152,20 +234,46 @@ export const toWire = (
     types: complete(selection.types, allTypes) ? [] : selection.types,
     includeHeadings: selection.includeHeadings,
     attachments: selection.attachments,
+    template: selection.template,
+    traceability: selection.content.traceability,
+    figures: selection.content.figures,
+    toc: selection.content.toc,
+    testResults: selection.content.testResults,
+    vvStatus: selection.content.vvStatus,
+    fields: selection.allFields ? undefined : selection.fields,
   };
 };
 
 /**
  * The query string for a download. Only the narrowing travels; the server's
- * defaults are the whole project with its headings and no files.
+ * defaults are the whole project with its headings, its traceability, figures
+ * and contents, every field, no results, no V&V rollup and no files.
+ *
+ * The template travels too, but only as a name for the cover: every switch it
+ * implies is sent as itself, so what the reader saw ticked is what the server
+ * builds even if the preset changes underneath them.
  */
 export const downloadQuery = (selection: DownloadSelection, baselineId?: string): string => {
+  const defaults = SERVER_CONTENT_DEFAULTS;
   const params = new URLSearchParams();
   if (selection.sections.length > 0) params.set('sections', selection.sections.join(','));
   if (selection.types.length > 0) params.set('types', selection.types.join(','));
   if (!selection.includeHeadings) params.set('headings', '0');
   if (selection.attachments.length > 0) params.set('attachments', selection.attachments.join(','));
   if (baselineId && baselineId !== 'live') params.set('baseline_id', baselineId);
+
+  if (selection.template) params.set('template', selection.template);
+  const flag = (name: string, value: boolean, fallback: boolean) => {
+    if (value !== fallback) params.set(name, value ? '1' : '0');
+  };
+  flag('traceability', selection.traceability, defaults.traceability);
+  flag('figures', selection.figures, defaults.figures);
+  flag('toc', selection.toc, defaults.toc);
+  flag('results', selection.testResults, defaults.test_results);
+  flag('vv', selection.vvStatus, defaults.vv_status);
+  if (selection.fields) {
+    params.set('fields', selection.fields.length === 0 ? 'none' : selection.fields.join(','));
+  }
   return params.toString();
 };
 
@@ -198,7 +306,33 @@ export const describeSelection = (
     parts.push(`with ${selection.attachments.map(attachmentLabel).join(' and ').toLowerCase()}`);
   }
 
+  // The document switches are worth a word only where they left the defaults:
+  // what was added reads as "with …", what was taken away as "without …".
+  const defaults = options?.defaults || SERVER_CONTENT_DEFAULTS;
+  const added: string[] = [];
+  const removed: string[] = [];
+  const note = (label: string, value: boolean, fallback: boolean) => {
+    if (value === fallback) return;
+    (value ? added : removed).push(label);
+  };
+  note('a table of contents', selection.content.toc, defaults.toc);
+  note('traceability', selection.content.traceability, defaults.traceability);
+  note('figures', selection.content.figures, defaults.figures);
+  note('V&V status', selection.content.vvStatus, defaults.vv_status);
+  note('test results', selection.content.testResults, defaults.test_results);
+  if (added.length > 0) parts.push(`with ${added.join(' and ')}`);
+  if (removed.length > 0) parts.push(`without ${removed.join(' or ')}`);
+  if (!selection.allFields) {
+    const fields = options?.fields?.length ?? 0;
+    if (selection.fields.length === 0) parts.push('no fields');
+    else if (fields > 0 && selection.fields.length < fields) {
+      parts.push(`${selection.fields.length} of ${fields} fields`);
+    }
+  }
+
+  const template = options?.templates?.find((t) => t.key === selection.template);
   const sentence = parts.join(', ');
+  if (template) return `${template.name}: ${sentence}`;
   return sentence.charAt(0).toUpperCase() + sentence.slice(1);
 };
 

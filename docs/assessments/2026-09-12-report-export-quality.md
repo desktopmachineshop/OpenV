@@ -222,3 +222,16 @@ doing 3 first is what makes 4 and 5 tractable.
   tests that do not read document content), REQ-50 and REQ-52 (figure and
   reference behaviour stops at the SPA).
 - Baseline *2026-09-12 Report export quality assessment*.
+
+## 7. Resolution (same day)
+
+Actions 1 to 8 were implemented in the change that carries this document:
+a document model (`internal/domain/reports/doc`, goldmark) replaces
+`stripMarkdown`; both renderers were rewritten over it (embedded UTF-8
+fonts, per-row tables, flowing bodies, captioned figures with WebP/BMP/TIFF
+decoding and placeholders for the rest, links and bookmarks, contents,
+footers, metadata, deterministic ordering, fields and V&V status); the
+downloads gained template presets, field toggles and evidence sections; the
+cover states the snapshot; workspaces can carry a logo. The fidelity checks
+of TC-66 run as `internal/domain/reports/fidelity_test.go`. See
+`docs/reports.md`.

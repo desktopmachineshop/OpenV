@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -28,6 +29,12 @@ func (h *Handler) registerOrgRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/orgs/{id}", h.DeleteOrg).Methods("DELETE")
 	router.HandleFunc("/api/v1/orgs/{id}/restore", h.RestoreOrg).Methods("POST")
 	router.HandleFunc("/api/v1/orgs/{id}/activate", h.ActivateOrg).Methods("POST")
+
+	// Workspace logo: any member may fetch it (it is shown in the app and on
+	// download cover pages); admins upload and remove it.
+	router.HandleFunc("/api/v1/orgs/{id}/logo", h.GetOrgLogo).Methods("GET")
+	router.HandleFunc("/api/v1/orgs/{id}/logo", h.UploadOrgLogo).Methods("POST")
+	router.HandleFunc("/api/v1/orgs/{id}/logo", h.DeleteOrgLogo).Methods("DELETE")
 
 	router.HandleFunc("/api/v1/orgs/{id}/limits", h.GetOrgLimits).Methods("GET")
 	router.HandleFunc("/api/v1/orgs/{id}/members", h.ListOrgMembers).Methods("GET")
@@ -261,6 +268,150 @@ func (h *Handler) UpdateOrg(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	json.NewEncoder(w).Encode(org)
+}
+
+// --- Workspace logo ---
+
+// maxOrgLogoBytes caps a workspace logo upload. A logo is a small raster
+// image for a cover page, not an attachment, so it gets its own limit rather
+// than the attachment cap.
+const maxOrgLogoBytes = 2 * 1024 * 1024
+
+// orgLogoExtensions maps the accepted logo MIME types to the extension the
+// file is stored under. Only inert raster formats are accepted: an SVG can
+// carry script and is never rendered on the API origin.
+var orgLogoExtensions = map[string]string{
+	"image/png":  ".png",
+	"image/jpeg": ".jpg",
+	"image/gif":  ".gif",
+	"image/webp": ".webp",
+}
+
+// orgLogoPath is where a workspace's logo of the given type is stored:
+// one file per workspace under uploads/org-logos, named by org id so an
+// upload replaces the previous logo of the same type in place.
+func (h *Handler) orgLogoPath(orgID, ext string) string {
+	return filepath.Join(h.uploadsDir, "org-logos", orgID+ext)
+}
+
+// UploadOrgLogo stores a workspace logo (admin). The multipart field "file"
+// must be a PNG, JPEG, GIF or WebP whose bytes match the declared type, and
+// at most maxOrgLogoBytes (413 beyond that). A previous logo of another
+// type is removed so one workspace never leaves two files behind.
+func (h *Handler) UploadOrgLogo(w http.ResponseWriter, r *http.Request) {
+	orgID := mux.Vars(r)["id"]
+	if !h.requireOrgRole(w, r, orgID, orgs.RoleAdmin) {
+		return
+	}
+	file, header, err := r.FormFile("file")
+	if err != nil {
+		writeJSONError(w, http.StatusBadRequest, "Failed to get file from request")
+		return
+	}
+	defer file.Close()
+
+	mimeType := header.Header.Get("Content-Type")
+	ext, ok := orgLogoExtensions[mimeType]
+	if !ok {
+		writeJSONError(w, http.StatusBadRequest, "Logo must be a PNG, JPEG, GIF or WebP image")
+		return
+	}
+	data, err := io.ReadAll(io.LimitReader(file, maxOrgLogoBytes+1))
+	if err != nil {
+		respondInternal(w, r, "Failed to read file", err)
+		return
+	}
+	if len(data) > maxOrgLogoBytes {
+		writeJSONError(w, http.StatusRequestEntityTooLarge, "Logo is larger than 2 MB")
+		return
+	}
+	if !uploadLooksLikeImage(mimeType, data) {
+		writeJSONError(w, http.StatusBadRequest, "File content does not match an image of the declared type")
+		return
+	}
+
+	dest := h.orgLogoPath(orgID, ext)
+	if err := os.MkdirAll(filepath.Dir(dest), 0o755); err != nil {
+		respondInternal(w, r, "Failed to save logo", err)
+		return
+	}
+	if err := os.WriteFile(dest, data, 0o644); err != nil {
+		respondInternal(w, r, "Failed to save logo", err)
+		return
+	}
+	// The previous logo, if it was stored under another extension, is now
+	// orphaned; drop it. The record is read before it is overwritten.
+	if prev, err := h.orgService.Get(orgID); err == nil && prev != nil && prev.LogoPath != "" && prev.LogoPath != dest {
+		_ = os.Remove(prev.LogoPath)
+	}
+	org, err := h.orgService.SetLogo(orgID, dest, mimeType)
+	if err != nil {
+		respondInternal(w, r, "Failed to save logo", err)
+		return
+	}
+	json.NewEncoder(w).Encode(org)
+}
+
+// GetOrgLogo serves the workspace logo to any member; 404 when none is set.
+// The bytes are served as the stored type only, never sniffed, and cached
+// briefly per user so a settings page or report preview does not refetch it
+// on every render.
+func (h *Handler) GetOrgLogo(w http.ResponseWriter, r *http.Request) {
+	orgID := mux.Vars(r)["id"]
+	if !h.requireOrgRole(w, r, orgID, orgs.RoleMember) {
+		return
+	}
+	org, err := h.orgService.Get(orgID)
+	if err != nil {
+		respondError(w, r, http.StatusNotFound, "workspace not found", err)
+		return
+	}
+	if org.LogoPath == "" {
+		writeJSONError(w, http.StatusNotFound, "workspace has no logo")
+		return
+	}
+	f, err := os.Open(org.LogoPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			writeJSONError(w, http.StatusNotFound, "workspace has no logo")
+			return
+		}
+		respondInternal(w, r, "Failed to read logo", err)
+		return
+	}
+	defer f.Close()
+	w.Header().Set("Content-Type", org.LogoMime)
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.Header().Set("Cache-Control", "private, max-age=300")
+	w.Header().Set("Content-Disposition", "inline")
+	w.WriteHeader(http.StatusOK)
+	io.Copy(w, f)
+}
+
+// DeleteOrgLogo removes the workspace logo (admin): the file goes first
+// (a missing one is not an error), then the record forgets it.
+func (h *Handler) DeleteOrgLogo(w http.ResponseWriter, r *http.Request) {
+	orgID := mux.Vars(r)["id"]
+	if !h.requireOrgRole(w, r, orgID, orgs.RoleAdmin) {
+		return
+	}
+	org, err := h.orgService.Get(orgID)
+	if err != nil {
+		respondError(w, r, http.StatusNotFound, "workspace not found", err)
+		return
+	}
+	if org.LogoPath != "" {
+		if err := os.Remove(org.LogoPath); err != nil && !os.IsNotExist(err) {
+			respondInternal(w, r, "Failed to remove logo", err)
+			return
+		}
+	}
+	org, err = h.orgService.ClearLogo(orgID)
+	if err != nil {
+		respondInternal(w, r, "Failed to remove logo", err)
+		return
+	}
 	json.NewEncoder(w).Encode(org)
 }
 

@@ -1,6 +1,9 @@
-import { DownloadOptions } from '../api/client';
+import { DownloadOptions, DownloadTemplate } from '../api/client';
 import {
   DOWNLOAD_FORMATS,
+  FormSelection,
+  SERVER_CONTENT_DEFAULTS,
+  applyTemplate,
   attachmentLabel,
   describeSelection,
   downloadExtension,
@@ -28,6 +31,43 @@ const options: DownloadOptions = {
   ],
 };
 
+// The presets the server offers, as the wizard sees them. A project with
+// presets also names its fields and says what a document holds by default.
+const standard: DownloadTemplate = {
+  key: 'standard',
+  name: 'Specification',
+  description: 'The whole document.',
+  content: { ...SERVER_CONTENT_DEFAULTS, template: 'standard' },
+};
+const vv: DownloadTemplate = {
+  key: 'vv',
+  name: 'Verification & Validation',
+  description: 'Requirements and test cases with their verification state.',
+  // A type the project does not hold, to check it is cut down.
+  types: ['requirement', 'test-case', 'test-procedure'],
+  content: {
+    template: 'vv',
+    traceability: true,
+    figures: false,
+    toc: true,
+    all_fields: false,
+    fields: ['priority', 'verification_status', 'not_here'],
+    test_results: true,
+    vv_status: true,
+  },
+};
+const withTemplates: DownloadOptions = {
+  ...options,
+  fields: [
+    { key: 'priority', label: 'Priority', count: 12, custom: false },
+    { key: 'status', label: 'Status', count: 16, custom: false },
+    { key: 'verification_status', label: 'Verification status', count: 12, custom: false },
+    { key: 'owner', label: 'Owner', count: 3, custom: true },
+  ],
+  templates: [standard, vv],
+  defaults: SERVER_CONTENT_DEFAULTS,
+};
+
 describe('selectAll', () => {
   it('opens on the whole project, with no files', () => {
     const got = selectAll(options);
@@ -38,13 +78,72 @@ describe('selectAll', () => {
     expect(got.attachments).toEqual([]);
   });
 
+  it('opens on the server defaults with every field, and no preset when none is offered', () => {
+    const got = selectAll(options);
+    expect(got.template).toBe('');
+    expect(got.content).toEqual({
+      traceability: true,
+      figures: true,
+      toc: true,
+      testResults: false,
+      vvStatus: false,
+    });
+    expect(got.allFields).toBe(true);
+    expect(got.fields).toEqual([]);
+  });
+
+  it('starts from the standard preset when the server offers presets', () => {
+    const got = selectAll(withTemplates);
+    expect(got.template).toBe('standard');
+    expect(got.fields).toEqual(['priority', 'status', 'verification_status', 'owner']);
+    expect(got.allFields).toBe(true);
+  });
+
   it('survives a project whose options have not loaded', () => {
     expect(selectAll(null)).toEqual({
       sections: [],
       types: [],
       includeHeadings: true,
       attachments: [],
+      template: '',
+      content: { traceability: true, figures: true, toc: true, testResults: false, vvStatus: false },
+      allFields: true,
+      fields: [],
     });
+  });
+});
+
+describe('applyTemplate', () => {
+  it('narrows the types to the ones the project actually has', () => {
+    const got = applyTemplate(selectAll(withTemplates), vv, withTemplates);
+    expect(got.template).toBe('vv');
+    expect(got.types).toEqual(['requirement', 'test-case']);
+  });
+
+  it('opens every type for a preset that names none', () => {
+    const narrowed = { ...selectAll(withTemplates), types: ['requirement'] };
+    expect(applyTemplate(narrowed, standard, withTemplates).types).toEqual(['requirement', 'test-case']);
+  });
+
+  it('takes the content switches and fields from the preset', () => {
+    const got = applyTemplate(selectAll(withTemplates), vv, withTemplates);
+    expect(got.content).toEqual({
+      traceability: true,
+      figures: false,
+      toc: true,
+      testResults: true,
+      vvStatus: true,
+    });
+    expect(got.allFields).toBe(false);
+    // A key the project does not hold is not ticked, since it cannot be shown.
+    expect(got.fields).toEqual(['priority', 'verification_status']);
+  });
+
+  it('leaves the sections and attachments as the reader had them', () => {
+    const before = { ...selectAll(withTemplates), sections: ['s1'], attachments: ['figures'] };
+    const got = applyTemplate(before, vv, withTemplates);
+    expect(got.sections).toEqual(['s1']);
+    expect(got.attachments).toEqual(['figures']);
   });
 });
 
@@ -80,6 +179,19 @@ describe('toWire', () => {
   it('sends the heading choice either way', () => {
     expect(toWire({ ...selectAll(options), includeHeadings: false }, options).includeHeadings).toBe(false);
   });
+
+  it('carries the preset and the document switches', () => {
+    const wire = toWire(applyTemplate(selectAll(withTemplates), vv, withTemplates), withTemplates);
+    expect(wire.template).toBe('vv');
+    expect(wire.figures).toBe(false);
+    expect(wire.vvStatus).toBe(true);
+    expect(wire.testResults).toBe(true);
+    expect(wire.fields).toEqual(['priority', 'verification_status']);
+  });
+
+  it('sends no field filter while every field shows', () => {
+    expect(toWire(selectAll(withTemplates), withTemplates).fields).toBeUndefined();
+  });
 });
 
 describe('downloadQuery', () => {
@@ -88,17 +200,69 @@ describe('downloadQuery', () => {
   });
 
   it('spells out only what was narrowed', () => {
-    const query = downloadQuery({
-      sections: ['s1'],
-      types: ['requirement'],
-      includeHeadings: false,
-      attachments: ['figures', 'data'],
-    });
+    const query = downloadQuery(
+      toWire(
+        {
+          ...selectAll(options),
+          sections: ['s1'],
+          types: ['requirement'],
+          includeHeadings: false,
+          attachments: ['figures', 'data'],
+        },
+        options
+      )
+    );
     const params = new URLSearchParams(query);
     expect(params.get('sections')).toBe('s1');
     expect(params.get('types')).toBe('requirement');
     expect(params.get('headings')).toBe('0');
     expect(params.get('attachments')).toBe('figures,data');
+    expect(params.has('traceability')).toBe(false);
+    expect(params.has('fields')).toBe(false);
+  });
+
+  it('names the preset but sends its switches as themselves', () => {
+    const query = downloadQuery(toWire(selectAll(withTemplates), withTemplates));
+    // The standard preset is the server's own default, so nothing but its
+    // name travels.
+    expect(query).toBe('template=standard');
+  });
+
+  it('spells out the V&V preset as what it switches on', () => {
+    const wire = toWire(applyTemplate(selectAll(withTemplates), vv, withTemplates), withTemplates);
+    const params = new URLSearchParams(downloadQuery(wire));
+    expect(params.get('template')).toBe('vv');
+    expect(params.get('vv')).toBe('1');
+    expect(params.get('results')).toBe('1');
+    expect(params.get('figures')).toBe('0');
+    // Still the default, so not worth a parameter.
+    expect(params.has('traceability')).toBe(false);
+    expect(params.has('toc')).toBe(false);
+    expect(params.get('fields')).toBe('priority,verification_status');
+  });
+
+  it('sends the switches a reader turned off', () => {
+    const selection: FormSelection = {
+      ...selectAll(withTemplates),
+      content: { traceability: false, figures: true, toc: false, testResults: false, vvStatus: false },
+    };
+    const params = new URLSearchParams(downloadQuery(toWire(selection, withTemplates)));
+    expect(params.get('traceability')).toBe('0');
+    expect(params.get('toc')).toBe('0');
+    expect(params.has('figures')).toBe(false);
+  });
+
+  it('says which fields show, and when none do', () => {
+    const some: FormSelection = {
+      ...selectAll(withTemplates),
+      allFields: false,
+      fields: ['priority', 'status'],
+    };
+    expect(new URLSearchParams(downloadQuery(toWire(some, withTemplates))).get('fields')).toBe(
+      'priority,status'
+    );
+    const none: FormSelection = { ...selectAll(withTemplates), allFields: false, fields: [] };
+    expect(new URLSearchParams(downloadQuery(toWire(none, withTemplates))).get('fields')).toBe('none');
   });
 
   it('carries a baseline but not the live project', () => {
@@ -146,10 +310,46 @@ describe('describeSelection', () => {
 
   it('says what was left out and what was added', () => {
     const got = describeSelection(
-      { sections: ['s1'], types: ['requirement'], includeHeadings: false, attachments: ['figures'] },
+      {
+        ...selectAll(options),
+        sections: ['s1'],
+        types: ['requirement'],
+        includeHeadings: false,
+        attachments: ['figures'],
+      },
       options
     );
     expect(got).toBe('1 of 2 sections, requirement only, no headings, with figures');
+  });
+
+  it('names the preset it started from', () => {
+    expect(describeSelection(selectAll(withTemplates), withTemplates)).toBe(
+      'Specification: the whole project'
+    );
+  });
+
+  it('names what a preset switched on beyond the defaults', () => {
+    const got = describeSelection(
+      applyTemplate(selectAll(withTemplates), vv, withTemplates),
+      withTemplates
+    );
+    expect(got).toBe(
+      'Verification & Validation: the whole project, with V&V status and test results, without figures, 2 of 4 fields'
+    );
+  });
+
+  it('names what a reader switched off', () => {
+    const got = describeSelection(
+      {
+        ...selectAll(withTemplates),
+        template: '',
+        content: { traceability: false, figures: true, toc: true, testResults: false, vvStatus: false },
+        allFields: false,
+        fields: [],
+      },
+      withTemplates
+    );
+    expect(got).toBe('The whole project, without traceability, no fields');
   });
 });
 

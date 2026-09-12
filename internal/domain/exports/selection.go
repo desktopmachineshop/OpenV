@@ -91,12 +91,17 @@ type Selection struct {
 	// Empty means none: attachments turn a download into an archive, so they
 	// are opt-in.
 	Attachments []string `json:"attachments,omitempty"`
+	// Content is what the rendered documents carry beyond the artifacts:
+	// fields, traceability, figures, test evidence. The data formats ignore
+	// it.
+	Content Content `json:"content"`
 }
 
 // Everything is the selection the plain export has always produced: the whole
-// project, headings included, no attachment files.
+// project, headings included, no attachment files, the specification's
+// default content.
 func Everything() Selection {
-	return Selection{IncludeHeadings: true}
+	return Selection{IncludeHeadings: true, Content: DefaultContent()}
 }
 
 // NarrowsArtifacts reports whether the selection leaves anything out of the

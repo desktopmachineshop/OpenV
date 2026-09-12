@@ -19,10 +19,10 @@ func NewOrgRepository(db *sql.DB) *OrgRepository {
 	return &OrgRepository{db: db}
 }
 
-const orgColumns = `id, name, slug, org_type, plan, limits, created_by, created_at, updated_at, monthly_budget_usd, budget_alert_month, budget_alert_threshold, deleted_at`
+const orgColumns = `id, name, slug, org_type, plan, limits, created_by, created_at, updated_at, monthly_budget_usd, budget_alert_month, budget_alert_threshold, deleted_at, logo_path, logo_mime`
 
 // orgColumnsQualified disambiguates joined queries (org_members also has created_at).
-const orgColumnsQualified = `o.id, o.name, o.slug, o.org_type, o.plan, o.limits, o.created_by, o.created_at, o.updated_at, o.monthly_budget_usd, o.budget_alert_month, o.budget_alert_threshold, o.deleted_at`
+const orgColumnsQualified = `o.id, o.name, o.slug, o.org_type, o.plan, o.limits, o.created_by, o.created_at, o.updated_at, o.monthly_budget_usd, o.budget_alert_month, o.budget_alert_threshold, o.deleted_at, o.logo_path, o.logo_mime`
 
 func scanOrg(row interface{ Scan(...interface{}) error }, extra ...interface{}) (*orgs.Org, error) {
 	o := new(orgs.Org)
@@ -31,7 +31,7 @@ func scanOrg(row interface{ Scan(...interface{}) error }, extra ...interface{}) 
 	var budget sql.NullFloat64
 	var alertMonth sql.NullString
 	var deletedAt sql.NullTime
-	dest := []interface{}{&o.ID, &o.Name, &o.Slug, &o.OrgType, &o.Plan, &limits, &createdBy, &o.CreatedAt, &o.UpdatedAt, &budget, &alertMonth, &o.BudgetAlertThreshold, &deletedAt}
+	dest := []interface{}{&o.ID, &o.Name, &o.Slug, &o.OrgType, &o.Plan, &limits, &createdBy, &o.CreatedAt, &o.UpdatedAt, &budget, &alertMonth, &o.BudgetAlertThreshold, &deletedAt, &o.LogoPath, &o.LogoMime}
 	dest = append(dest, extra...)
 	if err := row.Scan(dest...); err != nil {
 		return nil, err
@@ -51,6 +51,7 @@ func scanOrg(row interface{ Scan(...interface{}) error }, extra ...interface{}) 
 	if alertMonth.Valid {
 		o.BudgetAlertMonth = alertMonth.String
 	}
+	o.HasLogo = o.LogoPath != ""
 	if err := json.Unmarshal(limits, &o.Limits); err != nil || o.Limits == nil {
 		o.Limits = map[string]interface{}{}
 	}
@@ -88,6 +89,14 @@ func (r *OrgRepository) SetBudget(orgID string, budget *float64) error {
 	_, err := r.db.Exec(`
 		UPDATE organizations SET monthly_budget_usd = $2, updated_at = NOW() WHERE id = $1
 	`, orgID, budget)
+	return err
+}
+
+// SetLogo writes only logo_path and logo_mime (empty strings clear them).
+func (r *OrgRepository) SetLogo(orgID, path, mime string) error {
+	_, err := r.db.Exec(`
+		UPDATE organizations SET logo_path = $2, logo_mime = $3, updated_at = NOW() WHERE id = $1
+	`, orgID, path, mime)
 	return err
 }
 

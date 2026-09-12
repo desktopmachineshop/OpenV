@@ -80,6 +80,15 @@ type Org struct {
 	BudgetAlertMonth     string `json:"budget_alert_month,omitempty"`
 	BudgetAlertThreshold int    `json:"budget_alert_threshold,omitempty"`
 
+	// LogoPath and LogoMime locate the workspace logo on disk (under the
+	// uploads directory) and record its image type; both are empty when no
+	// logo has been uploaded. Never serialised — clients learn only HasLogo
+	// and fetch the bytes through the logo endpoint.
+	LogoPath string `json:"-"`
+	LogoMime string `json:"-"`
+	// HasLogo reports whether a logo is stored (LogoPath != "").
+	HasLogo bool `json:"has_logo"`
+
 	// Role is the requesting user's role, populated by ListForUser.
 	Role string `json:"role,omitempty"`
 }
@@ -103,6 +112,8 @@ type Repository interface {
 	// SetBudget writes only monthly_budget_usd (nil clears it), leaving the
 	// alert-dedupe columns untouched so it never races the alert claim.
 	SetBudget(orgID string, budget *float64) error
+	// SetLogo writes only logo_path and logo_mime (empty strings clear them).
+	SetLogo(id, path, mime string) error
 	// ClaimBudgetAlert atomically records that an alert for (month, threshold)
 	// is being sent, and reports whether THIS caller won the claim. It writes
 	// only when the row's recorded month differs or the new threshold is
@@ -149,6 +160,12 @@ type Service interface {
 	// SetMonthlyBudget sets (or clears, with nil) the workspace's monthly
 	// spend budget. Rejects a negative amount with ErrInvalidBudget.
 	SetMonthlyBudget(id string, budget *float64) (*Org, error)
+	// SetLogo records the workspace logo's on-disk path and MIME type and
+	// returns the updated org.
+	SetLogo(id, path, mime string) (*Org, error)
+	// ClearLogo forgets the workspace logo (stores empty path and MIME) and
+	// returns the updated org. Removing the file is the caller's job.
+	ClearLogo(id string) (*Org, error)
 	// ClaimBudgetAlert is the atomic dedupe claim used by the budget-alert
 	// subscriber; see Repository.ClaimBudgetAlert.
 	ClaimBudgetAlert(orgID, month string, threshold int) (bool, error)
@@ -305,6 +322,29 @@ func (s *DefaultService) SetMonthlyBudget(id string, budget *float64) (*Org, err
 	org.MonthlyBudgetUSD = budget
 	org.UpdatedAt = time.Now()
 	return org, nil
+}
+
+// SetLogo records where the workspace logo lives and what image type it is.
+// The write touches only the two logo columns.
+func (s *DefaultService) SetLogo(id, path, mime string) (*Org, error) {
+	org, err := s.Get(id)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.repo.SetLogo(id, path, mime); err != nil {
+		return nil, err
+	}
+	org.LogoPath = path
+	org.LogoMime = mime
+	org.HasLogo = path != ""
+	org.UpdatedAt = time.Now()
+	return org, nil
+}
+
+// ClearLogo forgets the workspace logo. The file on disk is the API's to
+// remove; the domain only records that there is no logo any more.
+func (s *DefaultService) ClearLogo(id string) (*Org, error) {
+	return s.SetLogo(id, "", "")
 }
 
 // ClaimBudgetAlert delegates the atomic per-threshold-per-month dedupe claim

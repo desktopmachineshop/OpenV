@@ -48,6 +48,7 @@ func snapshot() *exports.ProjectExport {
 type recorder struct {
 	loaded       []string
 	renderedFrom *exports.ProjectExport
+	renderOpts   reports.RenderOptions
 }
 
 type fakeExports struct {
@@ -66,23 +67,26 @@ type fakeReports struct {
 	rec *recorder
 }
 
-func (f *fakeReports) LoadReportExport(projectID, baselineID string) (*exports.ProjectExport, string, error) {
+func (f *fakeReports) LoadReportExport(projectID, baselineID string) (*exports.ProjectExport, reports.Snapshot, error) {
 	f.rec.loaded = append(f.rec.loaded, projectID+"/"+baselineID)
-	name := ""
+	snap := reports.Snapshot{}
 	if baselineID != "" && baselineID != "live" {
-		name = "Baseline " + baselineID
+		snap.BaselineID = baselineID
+		snap.BaselineName = "Baseline " + baselineID
 	}
-	return snapshot(), name, nil
+	return snapshot(), snap, nil
 }
 
-func (f *fakeReports) RenderProjectReport(data *exports.ProjectExport, baselineName string) ([]byte, string, error) {
+func (f *fakeReports) RenderProjectReport(data *exports.ProjectExport, opts reports.RenderOptions) ([]byte, string, error) {
 	f.rec.renderedFrom = data
-	return []byte("PDF:" + baselineName), "widget.pdf", nil
+	f.rec.renderOpts = opts
+	return []byte("PDF:" + opts.Snapshot.BaselineName), "widget.pdf", nil
 }
 
-func (f *fakeReports) RenderProjectReportDOCX(data *exports.ProjectExport, baselineName string) ([]byte, string, error) {
+func (f *fakeReports) RenderProjectReportDOCX(data *exports.ProjectExport, opts reports.RenderOptions) ([]byte, string, error) {
 	f.rec.renderedFrom = data
-	return []byte("DOCX:" + baselineName), "widget.docx", nil
+	f.rec.renderOpts = opts
+	return []byte("DOCX:" + opts.Snapshot.BaselineName), "widget.docx", nil
 }
 
 func newService(t *testing.T) (*DefaultService, *recorder) {

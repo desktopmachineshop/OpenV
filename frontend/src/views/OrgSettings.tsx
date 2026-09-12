@@ -57,6 +57,11 @@ export const OrgSettings: React.FC = () => {
   const [savingName, setSavingName] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState('');
   const [deleting, setDeleting] = useState(false);
+  // Logo card: logoVersion busts the browser cache after an upload so the
+  // <img> refetches the new file from the same URL.
+  const [logoBusy, setLogoBusy] = useState(false);
+  const [logoError, setLogoError] = useState('');
+  const [logoVersion, setLogoVersion] = useState(0);
 
   useEffect(() => {
     if (org) setNameDraft(org.name);
@@ -111,6 +116,43 @@ export const OrgSettings: React.FC = () => {
       setError(`Failed to update workspace: ${apiErrorMessage(err)}`);
     } finally {
       setSavingName(false);
+    }
+  };
+
+  const applyOrg = (updated: Partial<typeof org>) =>
+    setOrgs(orgs.map((o) => (o.id === org.id ? { ...o, ...updated } : o)));
+
+  const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const input = e.target;
+    const file = input.files?.[0];
+    if (!file) return;
+    setLogoBusy(true);
+    setLogoError('');
+    try {
+      const res = await orgsAPI.uploadLogo(org.id, file);
+      applyOrg(res.data);
+      setLogoVersion((v) => v + 1);
+      flash('Workspace logo updated.');
+    } catch (err: any) {
+      setLogoError(`Failed to upload logo: ${apiErrorMessage(err)}`);
+    } finally {
+      setLogoBusy(false);
+      // Reset so picking the same file again re-triggers onChange.
+      input.value = '';
+    }
+  };
+
+  const handleRemoveLogo = async () => {
+    setLogoBusy(true);
+    setLogoError('');
+    try {
+      const res = await orgsAPI.removeLogo(org.id);
+      applyOrg(res.data);
+      flash('Workspace logo removed.');
+    } catch (err: any) {
+      setLogoError(`Failed to remove logo: ${apiErrorMessage(err)}`);
+    } finally {
+      setLogoBusy(false);
     }
   };
 
@@ -199,6 +241,46 @@ export const OrgSettings: React.FC = () => {
               ) : (
                 <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 0 }}>
                   Only workspace admins can rename the workspace.
+                </p>
+              )}
+            </div>
+
+            <div className="card">
+              <h3>Workspace logo</h3>
+              <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+                Shown on the cover page of PDF and Word downloads. PNG, JPG, GIF or WebP up to 2 MB.
+              </p>
+              <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
+                {org.has_logo ? (
+                  <img
+                    src={`${orgsAPI.logoUrl(org.id)}?v=${logoVersion}`}
+                    alt="Workspace logo"
+                    style={{ maxHeight: 64, maxWidth: 240, objectFit: 'contain' }}
+                  />
+                ) : (
+                  <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>No logo yet</span>
+                )}
+                {isAdmin && (
+                  <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                    <input
+                      type="file"
+                      accept="image/png,image/jpeg,image/gif,image/webp"
+                      aria-label="Upload workspace logo"
+                      disabled={logoBusy}
+                      onChange={handleLogoChange}
+                      style={{ fontSize: 13 }}
+                    />
+                    {org.has_logo && (
+                      <button type="button" className="button-secondary" disabled={logoBusy} onClick={handleRemoveLogo}>
+                        {logoBusy ? 'Working…' : 'Remove logo'}
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+              {logoError && (
+                <p style={{ fontSize: 13, color: 'var(--danger-text, #c0392b)', marginBottom: 0, marginTop: 8 }}>
+                  {logoError}
                 </p>
               )}
             </div>

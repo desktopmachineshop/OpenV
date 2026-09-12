@@ -23,6 +23,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/attachments"
 	"github.com/openv/requirements-platform/internal/domain/exports"
 	"github.com/openv/requirements-platform/internal/domain/reports"
+	"github.com/openv/requirements-platform/internal/domain/vv"
 )
 
 // ErrUnsupportedFormat is returned for a format this package cannot render.
@@ -79,6 +80,13 @@ type Options struct {
 	Sections    []Section               `json:"sections"`
 	Types       []TypeCount             `json:"types"`
 	Attachments []exports.CategoryCount `json:"attachments"`
+	// Fields are the attribute keys the project's artifacts carry, standard
+	// ones first, so a form can offer each as a switch.
+	Fields []exports.FieldOption `json:"fields"`
+	// Templates are the presets a reader can start from.
+	Templates []exports.Template `json:"templates"`
+	// Defaults is the content a download carries when nothing is chosen.
+	Defaults exports.Content `json:"defaults"`
 }
 
 // Section is a top-level heading a download can be narrowed to.
@@ -105,10 +113,22 @@ type Service interface {
 	Download(req Request) (*Result, error)
 }
 
+// EvidenceSource supplies the test evidence a document can carry: the latest
+// result per test case and the project's test runs. Evidence is live state,
+// not part of a baseline's snapshot, so a baseline document shows the results
+// as they stand at export time.
+type EvidenceSource func(projectID string) (latest map[string]*vv.TestResult, runs []*vv.TestRun, err error)
+
+// WorkspaceSource supplies what the cover shows of the project's workspace:
+// its name and logo.
+type WorkspaceSource func(projectID string) (reports.Workspace, error)
+
 // DefaultService renders downloads over the export and report services.
 type DefaultService struct {
 	exportService exports.Service
 	reportService reports.Service
+	evidence      EvidenceSource
+	workspace     WorkspaceSource
 	// readFile reads an attachment's bytes off disk. Injected so the archive
 	// path is testable without a filesystem.
 	readFile func(path string) ([]byte, error)
@@ -129,18 +149,50 @@ func (s *DefaultService) SetFileReader(read func(path string) ([]byte, error)) {
 	s.readFile = read
 }
 
+// SetEvidenceSource wires where test results come from. Without one, a
+// document that asks for evidence renders with none.
+func (s *DefaultService) SetEvidenceSource(src EvidenceSource) {
+	s.evidence = src
+}
+
+// SetWorkspaceSource wires where the workspace name and logo come from.
+// Without one, the cover carries neither.
+func (s *DefaultService) SetWorkspaceSource(src WorkspaceSource) {
+	s.workspace = src
+}
+
 // prepare loads the snapshot for a request and narrows it. Every format goes
 // through here, which is what makes "no headings" mean the same thing in a PDF
 // and in a CSV.
-func (s *DefaultService) prepare(req Request) (*exports.ProjectExport, string, error) {
+func (s *DefaultService) prepare(req Request) (*exports.ProjectExport, reports.Snapshot, error) {
 	if req.ProjectID == "" {
-		return nil, "", errors.New("project_id is required")
+		return nil, reports.Snapshot{}, errors.New("project_id is required")
 	}
-	data, baselineName, err := s.reportService.LoadReportExport(req.ProjectID, req.BaselineID)
+	data, snap, err := s.reportService.LoadReportExport(req.ProjectID, req.BaselineID)
 	if err != nil {
-		return nil, "", err
+		return nil, reports.Snapshot{}, err
 	}
-	return exports.Apply(data, req.Selection), baselineName, nil
+	return exports.Apply(data, req.Selection), snap, nil
+}
+
+// renderOptions assembles what the document renderers need beside the
+// snapshot. Evidence and the workspace are best-effort: a document is still
+// worth having when the logo cannot be read.
+func (s *DefaultService) renderOptions(req Request, snap reports.Snapshot) (reports.RenderOptions, error) {
+	opts := reports.RenderOptions{Snapshot: snap, Content: req.Selection.Content}
+	if req.Selection.Content.NeedsEvidence() && s.evidence != nil {
+		latest, runs, err := s.evidence(req.ProjectID)
+		if err != nil {
+			return opts, err
+		}
+		opts.Latest, opts.Runs = latest, runs
+	}
+	if s.workspace != nil {
+		if ws, err := s.workspace(req.ProjectID); err == nil {
+			opts.Workspace = ws
+		}
+	}
+	return opts, nil
 }
 
 // Options reports what this project offers a download form.
@@ -163,10 +215,11 @@ func (s *DefaultService) Download(req Request) (*Result, error) {
 		return nil, fmt.Errorf("%w: %s", ErrUnsupportedFormat, req.Format)
 	}
 
-	data, baselineName, err := s.prepare(req)
+	data, snap, err := s.prepare(req)
 	if err != nil {
 		return nil, err
 	}
+	baselineName := snap.BaselineName
 
 	var (
 		body     []byte
@@ -185,10 +238,17 @@ func (s *DefaultService) Download(req Request) (*Result, error) {
 		body, filename, err = s.exportService.RenderExport(data, exports.FormatExcel)
 	case FormatReqIF:
 		body, filename, err = s.exportService.RenderExport(data, exports.FormatReqIF)
-	case FormatPDF:
-		body, filename, err = s.reportService.RenderProjectReport(data, baselineName)
-	case FormatDOCX:
-		body, filename, err = s.reportService.RenderProjectReportDOCX(data, baselineName)
+	case FormatPDF, FormatDOCX:
+		var opts reports.RenderOptions
+		opts, err = s.renderOptions(req, snap)
+		if err != nil {
+			return nil, err
+		}
+		if req.Format == FormatPDF {
+			body, filename, err = s.reportService.RenderProjectReport(data, opts)
+		} else {
+			body, filename, err = s.reportService.RenderProjectReportDOCX(data, opts)
+		}
 	}
 	if err != nil {
 		return nil, err
