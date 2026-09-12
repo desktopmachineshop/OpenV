@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { PANEL_NOTIFICATIONS, PANEL_PARAM } from '../appShortcuts';
-import { AppNotification, notificationsAPI } from '../api/client';
+import { AppNotification, NotificationView, notificationsAPI } from '../api/client';
 import { useViewport } from '../hooks/useViewport';
 import { useConfirm } from './ui';
 
@@ -12,6 +12,10 @@ interface NotificationBellProps {
    */
   variant?: 'dark' | 'light';
 }
+
+// How many rows a page of any view carries. The inbox rarely fills one; the
+// cleared history is the view that pages.
+const PAGE_SIZE = 30;
 
 // timeAgo renders a compact relative timestamp ("2m", "3h", "5d").
 const timeAgo = (iso: string): string => {
@@ -60,21 +64,58 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ variant = 'l
   const [unread, setUnread] = useState(0);
   const [loading, setLoading] = useState(false);
   const [clearing, setClearing] = useState(false);
+  // Which tab is showing. The inbox is what the badge counts; flagged and
+  // cleared are the two ways a member gets back to something afterwards.
+  const [view, setView] = useState<NotificationView>('inbox');
+  const [cursor, setCursor] = useState<string | undefined>(undefined);
+  const [paging, setPaging] = useState(false);
   const confirm = useConfirm();
   const rootRef = useRef<HTMLDivElement | null>(null);
+  // The SSE subscription is set up once; this lets its handler see the tab
+  // showing right now without tearing the stream down on every switch.
+  const viewRef = useRef<NotificationView>('inbox');
+  useEffect(() => {
+    viewRef.current = view;
+  }, [view]);
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (which: NotificationView = 'inbox') => {
     setLoading(true);
     try {
-      const res = await notificationsAPI.list({ limit: 30 });
+      const res = await notificationsAPI.list({ view: which, limit: PAGE_SIZE });
       setItems(res.data.notifications || []);
       setUnread(res.data.unread_count);
+      setCursor(res.data.next_cursor);
     } catch {
       // ignore — the bell simply stays stale on transient errors
     } finally {
       setLoading(false);
     }
   }, []);
+
+  // Page the current view. The cursor is opaque: whatever the last page
+  // returned goes straight back as `before`, so new arrivals at the top of
+  // the list cannot make a page skip or repeat rows the way an offset would.
+  const loadMore = async () => {
+    if (!cursor || paging) return;
+    setPaging(true);
+    try {
+      const res = await notificationsAPI.list({ view, limit: PAGE_SIZE, before: cursor });
+      setItems((prev) => [...prev, ...(res.data.notifications || [])]);
+      setCursor(res.data.next_cursor);
+    } catch {
+      // The cursor stands, so the button is still there to try again.
+    } finally {
+      setPaging(false);
+    }
+  };
+
+  const showView = async (which: NotificationView) => {
+    if (which === view) return;
+    setView(which);
+    setItems([]);
+    setCursor(undefined);
+    await refresh(which);
+  };
 
   // The installed-app "Notifications" shortcut lands on ?panel=notifications
   // (manifest.json): there is no notifications route — the inbox is this
@@ -97,7 +138,10 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ variant = 'l
       try {
         const n: AppNotification = JSON.parse((ev as MessageEvent).data);
         setUnread((u) => u + 1);
-        setItems((prev) => [n, ...prev].slice(0, 30));
+        // A new notification arrives in the inbox. Dropping it into the
+        // flagged or cleared list while one of those is showing would put a
+        // row there that does not belong to that view.
+        setItems((prev) => (viewRef.current === 'inbox' ? [n, ...prev].slice(0, PAGE_SIZE) : prev));
       } catch {
         // malformed frame — ignore
       }
@@ -140,29 +184,64 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ variant = 'l
     }
   };
 
-  // Clearing throws the list away for good, so it asks first and names what
-  // is going — including the unread ones, which are the ones a member would
-  // actually miss. Unlike markAll this does not update optimistically: an
-  // emptied list that came back on the next refresh would be worse than a
-  // half-second wait.
+  // Clearing archives rather than deletes: the rows move to the Cleared tab,
+  // so this asks for confirmation but does not warn about losing anything.
   const clearAll = async () => {
     const unreadPart = unread > 0 ? ` ${unread} of them unread.` : '';
     const ok = await confirm({
       title: 'Clear notifications',
-      message: `Delete all ${items.length} notifications?${unreadPart} This cannot be undone.`,
+      message: `Clear all ${items.length} notifications?${unreadPart} They move to the Cleared tab, where you can still read them.`,
       confirmLabel: 'Clear all',
-      danger: true,
     });
     if (!ok) return;
     setClearing(true);
     try {
       const res = await notificationsAPI.clearAll();
       setItems([]);
+      setCursor(undefined);
       setUnread(res.data.unread_count);
     } catch {
       // Left as it was: the list on screen still matches the server.
     } finally {
       setClearing(false);
+    }
+  };
+
+  // The one destructive action, and it only reaches what is already cleared.
+  const deleteCleared = async () => {
+    const ok = await confirm({
+      title: 'Delete cleared notifications',
+      message: `Permanently delete all ${items.length} cleared notifications? This cannot be undone.`,
+      confirmLabel: 'Delete forever',
+      danger: true,
+    });
+    if (!ok) return;
+    setClearing(true);
+    try {
+      const res = await notificationsAPI.deleteCleared();
+      setItems([]);
+      setCursor(undefined);
+      setUnread(res.data.unread_count);
+    } catch {
+      // Left as it was.
+    } finally {
+      setClearing(false);
+    }
+  };
+
+  // Flagging is optimistic: it is one boolean, the row is already on screen,
+  // and a failure puts it straight back.
+  const toggleFlag = async (n: AppNotification) => {
+    const next = !n.flagged;
+    setItems((prev) => prev.map((x) => (x.id === n.id ? { ...x, flagged: next } : x)));
+    try {
+      await notificationsAPI.setFlagged(n.id, next);
+      // Unflagging from the Flagged tab takes the row out of that view.
+      if (!next && viewRef.current === 'flagged') {
+        setItems((prev) => prev.filter((x) => x.id !== n.id));
+      }
+    } catch {
+      setItems((prev) => prev.map((x) => (x.id === n.id ? { ...x, flagged: !next } : x)));
     }
   };
 
@@ -175,7 +254,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ variant = 'l
   const toggle = () => {
     const next = !open;
     setOpen(next);
-    if (next) refresh();
+    if (next) refresh(view);
   };
 
   return (
@@ -263,7 +342,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ variant = 'l
               Notifications
             </span>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              {unread > 0 && (
+              {view === 'inbox' && unread > 0 && (
                 <button
                   onClick={markAll}
                   style={{
@@ -279,12 +358,11 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ variant = 'l
                   Mark all read
                 </button>
               )}
-              {/* Only offered when there is something to clear. Muted rather
-                  than accent-coloured: it sits beside the routine action and
-                  should not be the one a thumb finds first. --text-muted holds
-                  4.4:1 on the panel, so it stays legible while reading as
-                  secondary. */}
-              {items.length > 0 && (
+              {/* Each bulk action belongs to the tab it acts on: clearing is
+                  an inbox action, deleting forever only makes sense where the
+                  cleared rows are. Muted rather than accent-coloured, so
+                  neither is the control a thumb finds first. */}
+              {view === 'inbox' && items.length > 0 && (
                 <button
                   onClick={clearAll}
                   disabled={clearing}
@@ -301,12 +379,76 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ variant = 'l
                   {clearing ? 'Clearing…' : 'Clear all'}
                 </button>
               )}
+              {view === 'cleared' && items.length > 0 && (
+                <button
+                  onClick={deleteCleared}
+                  disabled={clearing}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--text-muted)',
+                    cursor: clearing ? 'default' : 'pointer',
+                    fontSize: 12.5,
+                    padding: '6px 0',
+                    minHeight: 36,
+                  }}
+                >
+                  {clearing ? 'Deleting…' : 'Delete forever'}
+                </button>
+              )}
             </div>
+          </div>
+
+          {/* The three views. Tabs rather than a filter menu: there are
+              exactly three, and which one is showing decides what the bulk
+              action above does, so it needs to be visible at a glance. */}
+          <div
+            role="tablist"
+            aria-label="Notification views"
+            style={{
+              display: 'flex',
+              gap: 4,
+              padding: '6px 8px',
+              borderBottom: '1px solid var(--border-soft)',
+            }}
+          >
+            {([
+              ['inbox', 'Inbox'],
+              ['flagged', 'Flagged'],
+              ['cleared', 'Cleared'],
+            ] as [NotificationView, string][]).map(([key, label]) => (
+              <button
+                key={key}
+                role="tab"
+                aria-selected={view === key}
+                onClick={() => showView(key)}
+                style={{
+                  flex: 1,
+                  background: view === key ? 'var(--tint-blue)' : 'none',
+                  border: 'none',
+                  borderRadius: 4,
+                  color: view === key ? 'var(--text)' : 'var(--text-muted)',
+                  fontSize: 12.5,
+                  fontWeight: view === key ? 600 : 400,
+                  cursor: 'pointer',
+                  padding: '6px 8px',
+                  minHeight: 36,
+                }}
+              >
+                {label}
+              </button>
+            ))}
           </div>
 
           {items.length === 0 ? (
             <div style={{ padding: 16, fontSize: 13, color: 'var(--text-muted)' }}>
-              {loading ? 'Loading…' : "You're all caught up."}
+              {loading
+                ? 'Loading…'
+                : view === 'flagged'
+                  ? 'Nothing flagged. Flag a notification to keep it here.'
+                  : view === 'cleared'
+                    ? 'Nothing cleared yet.'
+                    : "You're all caught up."}
             </div>
           ) : (
             items.map((n) => (
@@ -362,6 +504,38 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ variant = 'l
                   <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
                     {timeAgo(n.created_at)}
                   </span>
+                  {/* Flagging is how a notification stays reachable after the
+                      inbox is cleared, so it is offered on every row in every
+                      view — including the cleared one, where it is the way to
+                      pull something back out of the history. */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleFlag(n);
+                    }}
+                    aria-pressed={n.flagged}
+                    aria-label={n.flagged ? 'Remove flag' : 'Flag this notification'}
+                    title={n.flagged ? 'Remove flag' : 'Flag to keep'}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      padding: '6px 0',
+                      // A single glyph is only ~13 px wide, well under the
+                      // 32 px tap floor, so the target is widened to match
+                      // its height rather than left the size of the star.
+                      minHeight: 36,
+                      minWidth: 36,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: 14,
+                      lineHeight: 1,
+                      color: n.flagged ? 'var(--accent)' : 'var(--text-muted)',
+                    }}
+                  >
+                    {n.flagged ? '★' : '☆'}
+                  </button>
                   {!n.read && (
                     <button
                       onClick={(e) => {
@@ -385,6 +559,29 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ variant = 'l
                 </div>
               </div>
             ))
+          )}
+
+          {/* Only while the server says there is another page. The cleared
+              history is the view this is really for. */}
+          {cursor && (
+            <button
+              onClick={loadMore}
+              disabled={paging}
+              style={{
+                display: 'block',
+                width: '100%',
+                background: 'none',
+                border: 'none',
+                borderTop: '1px solid var(--border-soft)',
+                color: 'var(--accent)',
+                cursor: paging ? 'default' : 'pointer',
+                fontSize: 12.5,
+                padding: '10px 12px',
+                minHeight: 44,
+              }}
+            >
+              {paging ? 'Loading…' : 'Load older'}
+            </button>
           )}
         </div>
       )}

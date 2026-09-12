@@ -3,6 +3,7 @@ package postgres
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 
 	"github.com/lib/pq"
 	"github.com/openv/requirements-platform/internal/domain/notifications"
@@ -37,18 +38,38 @@ func (r *NotificationRepository) Insert(n *notifications.Notification) error {
 }
 
 // ListForUser returns the user's notifications, newest first.
-func (r *NotificationRepository) ListForUser(userID string, unreadOnly bool, limit int) ([]*notifications.Notification, error) {
+// List returns one page of one view, newest first.
+//
+// The cursor is a keyset on (created_at, id) rather than an OFFSET: the
+// history only grows at the top, so an offset would skip or repeat rows as
+// notifications arrive between pages. The id breaks ties, which matters
+// because a fan-out writes several rows in the same instant.
+func (r *NotificationRepository) List(userID string, q notifications.ListQuery) ([]*notifications.Notification, error) {
 	query := `
-		SELECT id, COALESCE(org_id::text, ''), user_id, type, title, body, entity_ref, read, created_at
+		SELECT id, COALESCE(org_id::text, ''), user_id, type, title, body, entity_ref, read, flagged, cleared_at, created_at
 		FROM notifications
 		WHERE user_id = $1
 	`
-	if unreadOnly {
+	args := []interface{}{userID}
+	switch q.View {
+	case notifications.ViewFlagged:
+		query += ` AND flagged`
+	case notifications.ViewCleared:
+		query += ` AND cleared_at IS NOT NULL`
+	default:
+		query += ` AND cleared_at IS NULL`
+	}
+	if q.UnreadOnly {
 		query += ` AND NOT read`
 	}
-	query += ` ORDER BY created_at DESC LIMIT $2`
+	if q.HasCursor() {
+		args = append(args, q.BeforeTime, q.BeforeID)
+		query += fmt.Sprintf(` AND (created_at, id) < ($%d, $%d)`, len(args)-1, len(args))
+	}
+	args = append(args, q.Limit)
+	query += fmt.Sprintf(` ORDER BY created_at DESC, id DESC LIMIT $%d`, len(args))
 
-	rows, err := r.db.Query(query, userID, limit)
+	rows, err := r.db.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -58,8 +79,13 @@ func (r *NotificationRepository) ListForUser(userID string, unreadOnly bool, lim
 	for rows.Next() {
 		n := new(notifications.Notification)
 		var entityRef []byte
-		if err := rows.Scan(&n.ID, &n.OrgID, &n.UserID, &n.Type, &n.Title, &n.Body, &entityRef, &n.Read, &n.CreatedAt); err != nil {
+		var clearedAt sql.NullTime
+		if err := rows.Scan(&n.ID, &n.OrgID, &n.UserID, &n.Type, &n.Title, &n.Body, &entityRef, &n.Read, &n.Flagged, &clearedAt, &n.CreatedAt); err != nil {
 			return nil, err
+		}
+		if clearedAt.Valid {
+			t := clearedAt.Time
+			n.ClearedAt = &t
 		}
 		if len(entityRef) > 0 {
 			if err := json.Unmarshal(entityRef, &n.EntityRef); err != nil {
@@ -100,26 +126,65 @@ func (r *NotificationRepository) MarkAllRead(userID string) (int64, error) {
 }
 
 // CountUnread returns the user's unread count (the bell badge).
-// DeleteAllForUser removes every notification belonging to the user, read or
-// not, and returns how many rows went. Scoped by user_id in the statement
-// itself, so a caller can only ever clear their own list.
+// ClearInbox archives every uncleared row of the user and returns how many
+// moved. Scoped by user_id in the statement itself, so a caller can only ever
+// clear their own list.
 //
-// Deliberately destructive and deliberately total: "clear all" that quietly
-// spared the unread ones would leave the bell still showing a count after the
-// member asked for an empty list. The confirmation for that lives in the UI,
-// where the member can be told what they are about to lose.
-func (r *NotificationRepository) DeleteAllForUser(userID string) (int64, error) {
-	res, err := r.db.Exec(`DELETE FROM notifications WHERE user_id = $1`, userID)
+// Deliberately total — sparing the unread ones would leave the bell showing a
+// count after the member asked for an empty inbox — and deliberately not a
+// delete: the rows stay, readable in the cleared view. Marking them read in
+// the same statement keeps the badge and the inbox in step, since a cleared
+// row never counts towards the badge anyway.
+func (r *NotificationRepository) ClearInbox(userID string) (int64, error) {
+	res, err := r.db.Exec(`
+		UPDATE notifications SET cleared_at = NOW(), read = TRUE
+		WHERE user_id = $1 AND cleared_at IS NULL
+	`, userID)
 	if err != nil {
 		return 0, err
 	}
 	return res.RowsAffected()
 }
 
+// SetFlagged flags or unflags one of the user's own rows, reporting whether
+// one matched — an id belonging to somebody else matches nothing, and is
+// answered the same way a missing one is.
+func (r *NotificationRepository) SetFlagged(userID, id string, flagged bool) (bool, error) {
+	res, err := r.db.Exec(`
+		UPDATE notifications SET flagged = $3
+		WHERE user_id = $1 AND id = $2
+	`, userID, id, flagged)
+	if err != nil {
+		return false, err
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return false, err
+	}
+	return n > 0, nil
+}
+
+// DeleteCleared permanently removes what the user has already cleared. The
+// only path in the system that destroys a notification, which is why it takes
+// only rows the member has already put out of the way.
+func (r *NotificationRepository) DeleteCleared(userID string) (int64, error) {
+	res, err := r.db.Exec(
+		`DELETE FROM notifications WHERE user_id = $1 AND cleared_at IS NOT NULL`,
+		userID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return res.RowsAffected()
+}
+
+// CountUnread counts unread rows still in the inbox. A cleared row never
+// contributes to the bell badge, however it was left.
 func (r *NotificationRepository) CountUnread(userID string) (int, error) {
 	var count int
 	err := r.db.QueryRow(`
-		SELECT COUNT(*) FROM notifications WHERE user_id = $1 AND NOT read
+		SELECT COUNT(*) FROM notifications
+		WHERE user_id = $1 AND NOT read AND cleared_at IS NULL
 	`, userID).Scan(&count)
 	return count, err
 }
