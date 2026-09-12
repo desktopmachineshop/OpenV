@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Org, OrgInvitation, OrgMember, User, orgsAPI } from '../../api/client';
 import { apiErrorMessage } from '../../api/errors';
 import { ErrorBanner, useConfirm } from '../ui';
+import { Avatar } from '../Avatar';
 
 const th: React.CSSProperties = {
   textAlign: 'left',
@@ -209,26 +210,7 @@ export const OrgMembersTab: React.FC<OrgMembersTabProps> = ({ org, isAdmin, curr
                   <tr key={m.user_id}>
                     <td style={td}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        {m.avatar_url ? (
-                          <img src={m.avatar_url} alt="" style={{ width: 28, height: 28, borderRadius: '50%' }} />
-                        ) : (
-                          <div
-                            style={{
-                              width: 28,
-                              height: 28,
-                              borderRadius: '50%',
-                              background: 'var(--accent)',
-                              color: 'var(--accent-fg)',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              fontSize: 13,
-                              fontWeight: 700,
-                            }}
-                          >
-                            {(m.user_name || m.user_email || '?').charAt(0).toUpperCase()}
-                          </div>
-                        )}
+                        <Avatar src={m.avatar_url} name={m.user_name || m.user_email} />
                         <span>
                           {m.user_name || '—'}
                           {isSelf && <span style={{ color: 'var(--text-muted)', fontSize: 12 }}> (you)</span>}

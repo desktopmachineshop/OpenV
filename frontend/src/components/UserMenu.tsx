@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { authAPI } from '../api/client';
 import { useAppStore } from '../state/store';
 import { UserSettingsPanel } from './UserSettingsPanel';
+import { Avatar } from './Avatar';
 
 interface UserMenuProps {
   /**
@@ -46,31 +47,7 @@ export const UserMenu: React.FC<UserMenuProps> = ({ variant = 'light' }) => {
 
   const displayName = currentUser?.name || currentUser?.email || 'Not signed in';
 
-  const avatar = currentUser?.avatar_url ? (
-    <img
-      src={currentUser.avatar_url}
-      alt=""
-      style={{ width: 28, height: 28, borderRadius: '50%' }}
-    />
-  ) : (
-    <div
-      style={{
-        width: 28,
-        height: 28,
-        borderRadius: '50%',
-        background: 'var(--accent)',
-        color: 'var(--accent-fg)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontSize: 13,
-        fontWeight: 700,
-        flexShrink: 0,
-      }}
-    >
-      {(currentUser?.name || currentUser?.email || '?').charAt(0).toUpperCase()}
-    </div>
-  );
+  const avatar = <Avatar src={currentUser?.avatar_url} name={currentUser?.name || currentUser?.email} />;
 
   const itemStyle: React.CSSProperties = {
     display: 'block',

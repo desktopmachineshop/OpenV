@@ -21,6 +21,7 @@ import { apiErrorMessage } from '../api/errors';
 import { useAppStore } from '../state/store';
 import { ErrorBanner, useConfirm } from '../components/ui';
 import { QualityRulesEditor } from '../components/QualityRulesEditor';
+import { Avatar } from '../components/Avatar';
 
 type Tab = 'members' | 'repos' | 'agents' | 'attributes' | 'quality' | 'danger';
 
@@ -584,26 +585,7 @@ export const ProjectSettings: React.FC = () => {
                     <tr key={m.user_id}>
                       <td style={td}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          {m.avatar_url ? (
-                            <img src={m.avatar_url} alt="" style={{ width: 28, height: 28, borderRadius: '50%' }} />
-                          ) : (
-                            <div
-                              style={{
-                                width: 28,
-                                height: 28,
-                                borderRadius: '50%',
-                                background: 'var(--accent)',
-                                color: 'var(--accent-fg)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                fontSize: 13,
-                                fontWeight: 700,
-                              }}
-                            >
-                              {(m.user_name || m.user_email || '?').charAt(0).toUpperCase()}
-                            </div>
-                          )}
+                          <Avatar src={m.avatar_url} name={m.user_name || m.user_email} />
                           <span>
                             {m.user_name || '—'}
                             {currentUser && m.user_id === currentUser.id && (

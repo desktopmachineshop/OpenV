@@ -21,6 +21,7 @@ import {
   unsubscribeThisDevice,
 } from '../push/webPush';
 import { MyRunnerCard } from './org/MyRunnerCard';
+import { Avatar } from './Avatar';
 import { CloudRunnerCard } from './org/CloudRunnerCard';
 import { ProviderConnectCard } from './agents/ProviderConnectCard';
 import { ThemeSwitcher } from './ThemeSwitcher';
@@ -307,26 +308,7 @@ export const UserSettingsPanel: React.FC<UserSettingsPanelProps> = ({ onClose })
         }
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-          {currentUser?.avatar_url ? (
-            <img src={currentUser.avatar_url} alt="" style={{ width: 40, height: 40, borderRadius: '50%' }} />
-          ) : (
-            <div
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: '50%',
-                background: 'var(--accent)',
-                color: 'var(--accent-fg)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: 17,
-                fontWeight: 700,
-              }}
-            >
-              {(currentUser?.name || currentUser?.email || '?').charAt(0).toUpperCase()}
-            </div>
-          )}
+          <Avatar src={currentUser?.avatar_url} name={currentUser?.name || currentUser?.email} size={40} />
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>
               {currentUser?.name || currentUser?.email || 'My settings'}
