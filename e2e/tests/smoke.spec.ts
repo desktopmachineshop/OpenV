@@ -142,10 +142,21 @@ test('captures a baseline via the prompt dialog', async () => {
 
   // The new baseline appears in the baseline selector.
   const baselineSelect = page.locator('select[title="Select baseline"]');
-  await expect(baselineSelect.locator('option', { hasText: baselineName })).toHaveCount(1);
+  const baselineOption = baselineSelect.locator('option', { hasText: baselineName });
+  await expect(baselineOption).toHaveCount(1);
+
+  // A baseline is the thing a later argument about what was agreed gets
+  // settled against, so the option says who captured it as well as when.
+  await expect(baselineOption).toContainText(user.name);
+
+  // That means the label is no longer the bare name, so pick the option
+  // showing this name by its value rather than matching the whole label —
+  // which is also what a person does, since the name is what they recognise.
+  const baselineId = await baselineOption.getAttribute('value');
+  expect(baselineId).toBeTruthy();
 
   // Viewing the baseline is read-only; back to live restores editing.
-  await baselineSelect.selectOption({ label: baselineName });
+  await baselineSelect.selectOption(baselineId as string);
   await expect(page.getByRole('button', { name: '+ New Artifact' })).toBeHidden();
   await baselineSelect.selectOption({ label: 'Live Project' });
   await expect(page.getByRole('button', { name: '+ New Artifact' })).toBeVisible();
