@@ -8,8 +8,8 @@
 # - refuses to promote if any check run on the master head is failing or
 #   still in progress (master's own CI gates every promotion)
 # - every release says what changed: the Unreleased bullets of
-#   RELEASE_NOTES.md are cut into a dated section (committed to master by
-#   this workflow), and a master whose notes name nothing newer than what
+#   RELEASE_NOTES.md are cut into a new version section (committed to master
+#   by this workflow), and a master whose notes name nothing newer than what
 #   `release` already carries is refused (scripts/release_notes.py)
 # - the push is a plain fast-forward; if `release` somehow has commits that
 #   master lacks, the push is rejected instead of overwriting them
@@ -18,6 +18,11 @@ name: Promote to release
 
 on:
   workflow_dispatch:
+    inputs:
+      major:
+        description: "Cut a major release (1.0.0). Otherwise the version is derived from the notes: a new feature is a minor bump, maintenance and fixes a patch."
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -56,23 +61,28 @@ jobs:
             exit 1
           fi
 
-      # The API announces the release named by the top dated section of
+      # The API announces the release named by the top section of
       # RELEASE_NOTES.md, so every promotion must carry one that is new. The
       # usual case: pull requests left bullets under Unreleased, and they are
-      # cut here into today's section (2026-09-12, then 2026-09-12.2 for a
-      # second release that day) and committed to master first, so master
-      # and release stay identical. A maintainer who cut the notes by hand
-      # leaves Unreleased empty and the check below still passes; a master
-      # with nothing new to say is refused.
+      # cut here into a new version section — the version derived from what
+      # the bullets are (a new feature is a minor bump, maintenance and fixes
+      # a patch, a major one asked for above) — and committed to master
+      # first, so master and release stay identical. A maintainer who cut the
+      # notes by hand leaves Unreleased empty and the check below still
+      # passes; a master with nothing new to say is refused.
       - name: Cut the release notes
+        env:
+          MAJOR: ${{ inputs.major }}
         run: |
           git fetch --no-tags --depth=1 origin release || true
           git show origin/release:RELEASE_NOTES.md > /tmp/released-notes.md 2>/dev/null || : > /tmp/released-notes.md
-          if python3 scripts/release_notes.py cut RELEASE_NOTES.md; then
+          major=""
+          if [ "$MAJOR" = "true" ]; then major="--major"; fi
+          if python3 scripts/release_notes.py cut $major RELEASE_NOTES.md; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git add RELEASE_NOTES.md
-            git commit -m "Cut release notes $(python3 scripts/release_notes.py version RELEASE_NOTES.md)"
+            git commit -m "Release $(python3 scripts/release_notes.py version RELEASE_NOTES.md)"
           fi
           python3 scripts/release_notes.py check-release --released /tmp/released-notes.md RELEASE_NOTES.md
 

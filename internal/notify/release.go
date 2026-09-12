@@ -102,25 +102,43 @@ func (a *ReleaseAnnouncer) Announce(rel *release.Release) int {
 }
 
 // ReleaseMessage is the notification copy: a title naming the release and a
-// body listing its first bullets, one per line, with a pointer to the rest.
+// body listing its first bullets under the group each belongs to, with a
+// pointer to the rest.
+//
+// The groups are here because "OpenV was updated, here are five bullets" is
+// not what anyone wants to know. A member wants to tell a new capability
+// apart from a fix to something that was annoying them, at a glance, without
+// opening the page.
 func ReleaseMessage(rel *release.Release) (title, body string) {
-	title = "OpenV was updated (" + rel.Version + ")"
-	lines := rel.Notes
-	more := 0
-	if len(lines) > maxAnnouncedNotes {
-		more = len(lines) - maxAnnouncedNotes
-		lines = lines[:maxAnnouncedNotes]
-	}
+	title = release.Headline(rel.Version)
 	var b strings.Builder
-	for _, l := range lines {
-		b.WriteString("• ")
-		b.WriteString(l)
-		b.WriteString("\n")
+	left, more := maxAnnouncedNotes, 0
+	for _, c := range rel.Categories {
+		shown := c.Notes
+		if len(shown) > left {
+			shown = shown[:left]
+		}
+		left -= len(shown)
+		more += len(c.Notes) - len(shown)
+		if len(shown) == 0 {
+			continue
+		}
+		// A legacy section has no groups of its own; its bullets are simply
+		// the release, so heading them "Changes" adds a word and no meaning.
+		if c.Name != release.UncategorizedNotes {
+			b.WriteString(c.Name)
+			b.WriteString("\n")
+		}
+		for _, l := range shown {
+			b.WriteString("• ")
+			b.WriteString(l)
+			b.WriteString("\n")
+		}
 	}
 	switch {
 	case more > 0:
 		b.WriteString("…and more under What's new.")
-	case len(lines) == 0:
+	case b.Len() == 0:
 		b.WriteString("See What's new for details.")
 	}
 	return title, strings.TrimSpace(b.String())

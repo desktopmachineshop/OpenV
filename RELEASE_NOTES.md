@@ -1,20 +1,26 @@
 # OpenV release notes
 
-What changed for the people who use OpenV, one release at a time. This file
-is customer-facing: write for a member of a workspace, not for a developer
-(what they can now do, what looks different, what they no longer have to do),
-and keep the internals for the pull request.
+What changed for the people who use OpenV, newest release first. Each
+release is a version number and three groups: what you can now do, what
+quietly improved, and what stopped being broken.
 
-Every pull request adds at least one bullet under **Unreleased** (CI refuses
-one that does not, unless it carries the `no-release-notes` label). When
-master is promoted to `release`, the Unreleased bullets become a dated
-section, the API serves it at `GET /api/v1/release`, and every account is
-notified that the platform has been updated.
-
-Section headings are the release version: the promotion date, with `.2`,
-`.3` … appended when there is more than one release in a day.
+Contributors: how to add to this file, and what the promotion does with it,
+is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
+
+### New features
+
+- OpenV releases are numbered now. What's new names the version you were
+  upgraded to and keeps new features, maintenance updates and bug fixes
+  apart instead of running them together in one list, and the notification
+  that announces a release is grouped the same way.
+
+### Bug fixes
+
+- What's new shows the releases and nothing else. It was also showing the
+  notes file's instructions to contributors, and changes that had not
+  shipped yet.
 
 ## 2026-09-12.3
 

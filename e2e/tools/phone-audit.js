@@ -126,6 +126,35 @@ const routes = [
   [/\/api\/v1\/shared-products/, (url) => (/sort=top/.test(url) ? sharedProducts.slice(0, 5) : sharedProducts)],
   [/\/api\/v1\/auth\/me/, user],
   [/\/api\/v1\/auth\/config/, { google_enabled: false, oidc_enabled: false }],
+  // What's new: a numbered release with two of the three groups filled, and
+  // one of the dated releases from before OpenV had version numbers, which
+  // has no groups at all.
+  [/\/api\/v1\/release/, {
+    version: '0.2.0', date: '2026-09-14',
+    notes: ['Export a traceability matrix to Excel from the V&V tab.', 'Baselines load again on a large project.'],
+    categories: [
+      { name: 'New features', notes: ['Export a traceability matrix to Excel from the V&V tab.'] },
+      { name: 'Bug fixes', notes: ['Baselines load again on a large project.'] },
+    ],
+    markdown: '',
+    releases: [
+      {
+        version: '0.2.0', date: '2026-09-14',
+        notes: ['Export a traceability matrix to Excel from the V&V tab.', 'Baselines load again on a large project.'],
+        categories: [
+          { name: 'New features', notes: ['Export a traceability matrix to Excel from the V&V tab.'] },
+          { name: 'Bug fixes', notes: ['Baselines load again on a large project.'] },
+        ],
+        markdown: '',
+      },
+      {
+        version: '2026-09-12', date: '2026-09-12',
+        notes: ['Upload your own profile picture from Personal settings. It replaces the picture your sign-in provider supplied and stays put across sign-ins.'],
+        categories: [{ name: 'Changes', notes: ['Upload your own profile picture from Personal settings. It replaces the picture your sign-in provider supplied and stays put across sign-ins.'] }],
+        markdown: '',
+      },
+    ],
+  }],
   [/\/api\/v1\/orgs$/, { orgs: [org, org2], active_org: 'org1' }],
   [/\/api\/v1\/orgs\/[^/]+\/usage/, usage],
   [/\/api\/v1\/orgs\/[^/]+\/limits/, {
@@ -404,6 +433,7 @@ const SCREENS = [
   { tag: 'settings', path: '/projects/p1/settings' },
   { tag: 'settings-agents', path: '/projects/p1/settings?tab=agents' },
   { tag: 'settings-access', path: '/projects/p1/settings?tab=access' },
+  { tag: 'whats-new', path: '/whats-new' },
   { tag: 'org-settings', path: '/org/settings' },
   { tag: 'org-members', path: '/org/settings?tab=members' },
   { tag: 'org-limits', path: '/org/settings?tab=limits' },

@@ -277,17 +277,25 @@ branch instead:
   that push.
 - **Every release says what changed.** `RELEASE_NOTES.md` at the repository
   root is customer-facing: each pull request adds a bullet under
-  `## Unreleased` (the *Release notes* CI job refuses a PR that adds none,
-  unless it carries the `no-release-notes` label), and the promotion moves
-  those bullets into a dated section — `2026-09-12`, then `2026-09-12.2`
-  for a second release that day — committed to master before `release` is
-  pushed. A master whose notes name nothing newer than what `release`
-  already carries is refused. The API embeds the file: `GET /api/v1/release`
-  reports the running version and notes, the first server to boot on a new
-  release notifies every account (`release_published`), and open tabs poll
-  the version and offer a reload. `scripts/release_notes.py` (stdlib
-  Python) is the one implementation of these rules: `check`, `check-pr`,
-  `cut`, `check-release`, `version`.
+  `## Unreleased`, grouped under `### New features`, `### Maintenance
+  updates` or `### Bug fixes` (the *Release notes* CI job refuses a PR that
+  adds none, unless it carries the `no-release-notes` label). The promotion
+  moves those bullets into a new section headed by a semantic version and
+  the date — `## 0.2.0 — 2026-09-13` — committed to master before `release`
+  is pushed. **The version is derived from the notes**: a release carrying
+  anything under *New features* is a minor bump, one of only maintenance and
+  fixes is a patch, and a major bump is the workflow's `major` input; the
+  first release is `0.1.0`. Sections headed by a date alone are the releases
+  from before OpenV had version numbers — read, never written, because they
+  were announced under those names. A master whose notes name nothing newer
+  than what `release` already carries is refused. The API embeds the file:
+  `GET /api/v1/release` reports the running version and the parsed releases
+  (never the file itself, which also holds what has not shipped), the first
+  server to boot on a new release notifies every account
+  (`release_published`), and open tabs poll the version and offer a reload.
+  `scripts/release_notes.py` (stdlib Python) is the one implementation of
+  these rules: `check`, `check-pr`, `cut`, `check-release`, `version`,
+  `next`.
 - Rollback: `git push origin <known-good-sha>:release --force-with-lease`
   redeploys an earlier build (the API's schema migrations are forward-only,
   so only roll back across releases without new migrations), or use

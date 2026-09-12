@@ -1727,16 +1727,37 @@ export const qualityRulesAPI = {
     client.put<QualityRules>(`/api/v1/orgs/${orgId}/quality-rules`, payload),
 };
 
-// The running release (RELEASE_NOTES.md as built into the API): version,
-// its customer-facing bullets, and the whole history for the What's new
-// page. Uncached, so an open tab can notice a newer release behind the same
-// URL.
+// The running release as the API parsed it out of the notes it was built
+// with: the version, its bullets grouped for a reader, and every earlier
+// release for the What's new page. Uncached, so an open tab can notice a
+// newer release behind the same URL.
+/** One group of notes within a release: New features, Bug fixes, and so on. */
+export interface ReleaseCategory {
+  name: string;
+  notes: string[];
+}
+
+/** One release, as the server parsed it out of the notes it was built with. */
+export interface ReleaseEntry {
+  version: string;
+  date: string;
+  notes: string[];
+  categories: ReleaseCategory[];
+  markdown: string;
+}
+
 export interface ReleaseInfo {
   version: string;
   date: string;
   notes: string[];
+  categories: ReleaseCategory[];
   markdown: string;
-  history: string;
+  /**
+   * Every release, newest first. The server sends the parsed sections, not
+   * the notes file: the file also carries what has not shipped yet, which is
+   * nobody's business but a contributor's.
+   */
+  releases: ReleaseEntry[];
 }
 
 export const releaseAPI = {
