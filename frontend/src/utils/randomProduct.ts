@@ -213,13 +213,25 @@ const fromConcept = (concept: Concept): RandomProduct => {
 };
 
 /**
- * Roll a product. `extra` (typically the agent-invented products kept by
- * `loadInventedProducts`) joins the built-in concepts in one pool, so a good
- * invention keeps coming back on later rerolls instead of being seen once.
+ * Roll a product from `extra` — the shared pool plus the agent-invented
+ * products kept by `loadInventedProducts` — so a good invention keeps coming
+ * back on later rerolls instead of being seen once.
+ *
+ * `includeBuiltins` mixes in the concepts above, and the caller should pass it
+ * only when `extra` is empty. The same concepts are seeded into the shared
+ * pool server-side (internal/seeds/product_concepts.go), so on a working
+ * deployment they arrive as real rows that can be voted for; rendering them
+ * here as well would put a second, unvotable copy of the same product in the
+ * roll. They remain the fallback for the one case the pool cannot cover — an
+ * API that will not answer — where a duller card beats a blank one.
  */
-export const generateRandomProduct = (extra: RandomProduct[] = []): RandomProduct => {
-  const index = Math.floor(Math.random() * (CONCEPTS.length + extra.length));
-  return index < CONCEPTS.length ? fromConcept(CONCEPTS[index]) : { ...extra[index - CONCEPTS.length] };
+export const generateRandomProduct = (
+  extra: RandomProduct[] = [],
+  includeBuiltins = true
+): RandomProduct => {
+  const builtins = includeBuiltins ? CONCEPTS.length : 0;
+  const index = Math.floor(Math.random() * (builtins + extra.length));
+  return index < builtins ? fromConcept(CONCEPTS[index]) : { ...extra[index - builtins] };
 };
 
 // --------------------------------------------------------------------------

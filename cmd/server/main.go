@@ -328,6 +328,14 @@ func main() {
 		envInt("OPENV_SHARED_PRODUCT_DAILY_LIMIT", sharedproducts.DefaultDailyOrgLimit),
 		envInt("OPENV_SHARED_PRODUCT_POOL_LIMIT", sharedproducts.DefaultPoolLimit),
 	)
+
+	// The starter pool (REQ-118). Deployment-wide, so it runs here rather
+	// than in the per-org seeding below, and best-effort: an empty pool makes
+	// the random-product roller duller, never broken, so a failure here is
+	// logged and the server starts anyway.
+	if _, err := seeds.EnsureSharedProductPool(sharedProductRepo); err != nil {
+		slog.Warn("shared product pool: seeding incomplete", "error", err)
+	}
 	// Let the ReqIF export type enum attributes as ReqIF enumerations.
 	exportService.SetAttributeService(attributeService)
 	vvService := vv.NewDefaultService(vvRepo, artifactService, chatterService, bus)
