@@ -157,6 +157,13 @@ func (h *Handler) addOrInviteToOrg(r *http.Request, orgID, email, role string) (
 	if role == "" {
 		role = orgs.RoleMember
 	}
+	// One seat check covers both branches below. Whether this address ends up
+	// added outright or invited, it is a seat either way, and checking once
+	// here means the two paths cannot disagree about how full the workspace
+	// is.
+	if err := h.checkOrgSeats(orgID, 1); err != nil {
+		return nil, err
+	}
 	user, err := h.userService.FindByEmail(email)
 	if err != nil {
 		return nil, err
@@ -334,6 +341,11 @@ func (h *Handler) writeInvitationError(w http.ResponseWriter, r *http.Request, e
 	switch {
 	case errors.As(err, &throttled):
 		writeRateLimited(w, throttled.message, throttled.retryAfter)
+	case errors.Is(err, orgs.ErrLimitReached):
+		// A full workspace is not a bad request: the caller did nothing
+		// wrong, the workspace is simply out of seats, and the refusal
+		// carries the remedy.
+		h.writeLimitError(w, err)
 	case errors.Is(err, invitations.ErrInvalidEmail), errors.Is(err, orgs.ErrInvalidRole):
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 	case errors.Is(err, orgs.ErrPersonalOrgMembers):

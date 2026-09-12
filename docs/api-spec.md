@@ -473,6 +473,68 @@ hidden entry is out of every list and cannot be voted for either.
 | GET | `/api/v1/projects/{id}/vv/gaps` | Coverage gaps | viewer |
 | GET | `/api/v1/projects/{id}/vv/report` | V&V report | viewer |
 
+### Workspace limits
+
+| Method | Path | Purpose | Auth |
+|---|---|---|---|
+| GET | `/api/v1/orgs/{id}/limits` | Every limit the workspace is subject to, with usage where countable | member |
+
+Any member may read it: what the workspace allows is not privileged, and
+hiding it only produces a surprise at the moment somebody is refused. The
+response carries the plan, whether the deployment is self-hosted (which
+decides the remedy offered), and one entry per limit:
+
+```json
+{
+  "key": "max_members",
+  "label": "Workspace members",
+  "description": "How many people can be in this workspace. Pending invitations count towards it.",
+  "unit": "count",
+  "limit": 25,
+  "unlimited": false,
+  "used": 7
+}
+```
+
+`unlimited` is stated rather than implied, so a client never has to know that
+`0` is special. `used` is absent for limits whose usage cannot be counted.
+`fixed` marks a ceiling nothing raises — no plan, no setting — so a client can
+show it as a fact rather than as a warning that the workspace is full. A
+**personal workspace** reports `max_members` as `{"limit": 1, "fixed": true}`
+whatever its plan says: it is one person's by definition, and adding anybody to
+it is refused by `POST /orgs/{id}/members` and `/invitations` with `400`, not
+as a limit refusal.
+
+**When a limit stops a call**, the answer is `403` with
+`"code": "limit_reached"` and the arithmetic attached:
+
+```json
+{
+  "error": "Workspace members: this workspace allows 5 and already has 5 (including invitations not yet accepted). Upgrade the workspace's plan to raise this limit, or ask a workspace admin to.",
+  "code": "limit_reached",
+  "limit": "max_members",
+  "label": "Workspace members",
+  "used": 5,
+  "allowed": 5,
+  "remedy": "Upgrade the workspace's plan to raise this limit, or ask a workspace admin to."
+}
+```
+
+`error` is self-sufficient — a client that shows only that string still tells
+the person what stopped them and what to do. `remedy` is the same sentence on
+its own for clients that want to present it separately, and it differs by
+deployment: a self-hosted instance names the setting to change rather than
+offering a plan upgrade.
+
+`403` rather than `402`: Payment Required would be wrong on a deployment with
+no plan and nobody to pay, and one code has to serve both. Evidence uploads
+are the exception, answering `413` because there the refusal is about the size
+of the request.
+
+Limits are enforced when creating a shared workspace, bringing somebody into
+one (pending invitations count towards the seat total), and creating a
+project. `docs/operations.md` covers how an operator sets them.
+
 ### Evidence bundles
 
 A bundle is one physical or manual capture session — what was done, when, by

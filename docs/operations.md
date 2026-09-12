@@ -438,6 +438,36 @@ Notes:
   re-posting an unchanged invitation within an hour mails nothing at all).
   Body and upload caps:
   `OPENV_MAX_BODY_MB` (32) and `OPENV_MAX_UPLOAD_MB` (25).
+- **Workspace limits.** Every workspace resolves each limit through three
+  layers, most specific first: the workspace's own `limits` JSONB, then the
+  deployment's `OPENV_LIMITS`, then its plan's defaults. **Zero means
+  unlimited** for every limit, uniformly.
+  - `OPENV_SELF_HOSTED=true` is the one setting a self-hoster needs. It
+    creates new workspaces on the `self_host` plan, where nothing is capped,
+    and it changes what a limit refusal tells people to do — a hosted member
+    is offered a plan upgrade, which is nonsense on a deployment with no plan
+    and nobody to pay, so yours are told which setting to change instead.
+  - `OPENV_PLAN_DEFAULT` overrides just the plan new workspaces get
+    (`single`, `business_lite`, `business`, `enterprise`, `self_host`).
+  - `OPENV_LIMITS` is a JSON object retuning individual limits across the
+    whole deployment, e.g.
+    `OPENV_LIMITS='{"max_members": 25, "evidence_storage_mb": 51200}'`.
+    An unknown key or a non-numeric value **fails the boot** rather than being
+    ignored, because a typo that silently did nothing would look exactly like
+    a limit that does not work.
+  - To change one workspace only, set the key in its `limits` column; that
+    beats both layers above.
+  - The full list of keys, with what each one means, is in the manual's
+    workspace chapter and at `GET /api/v1/orgs/{id}/limits`.
+  - The count limits (`max_members`, `max_shared_workspaces`, `max_projects`)
+    ship at zero on every plan, so nothing is refused until somebody
+    deliberately sets one.
+  - The one exception is a **personal workspace, which always seats exactly
+    one person**. That is not a ration, so no plan, no `OPENV_LIMITS` and no
+    per-workspace setting raises it — a personal workspace with two people in
+    it would be a shared workspace nobody can leave. Working with other
+    people means a shared workspace.
+
 - **Test evidence storage.** Evidence files (the datasets behind physical and
   manual test results) have their own per-file cap, `OPENV_MAX_EVIDENCE_MB`
   (200), because the 25 MB figure cap is right for an image pasted into a

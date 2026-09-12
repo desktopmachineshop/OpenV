@@ -4,6 +4,7 @@ import { orgsAPI } from '../api/client';
 import { apiErrorMessage } from '../api/errors';
 import { useAppStore } from '../state/store';
 import { Navbar } from '../components/Navbar';
+import { OrgLimitsTab } from '../components/org/OrgLimitsTab';
 import { OrgMembersTab } from '../components/org/OrgMembersTab';
 import { OrgTeamsTab } from '../components/org/OrgTeamsTab';
 import { OrgProvidersTab } from '../components/org/OrgProvidersTab';
@@ -13,11 +14,12 @@ import { ErrorBanner } from '../components/ui';
 import { QualityRulesEditor } from '../components/QualityRulesEditor';
 import { useViewport } from '../hooks/useViewport';
 
-type Tab = 'general' | 'members' | 'teams' | 'providers' | 'worker-keys' | 'quality' | 'usage';
+type Tab = 'general' | 'members' | 'teams' | 'providers' | 'worker-keys' | 'quality' | 'usage' | 'limits';
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'general', label: 'General' },
   { key: 'members', label: 'Members' },
+  { key: 'limits', label: 'Limits' },
   { key: 'teams', label: 'Teams' },
   { key: 'providers', label: 'AI Providers' },
   { key: 'worker-keys', label: 'Runners' },
@@ -262,6 +264,7 @@ export const OrgSettings: React.FC = () => {
         )}
 
         {tab === 'members' && <OrgMembersTab org={org} isAdmin={isAdmin} currentUser={currentUser} />}
+        {tab === 'limits' && <OrgLimitsTab org={org} />}
         {tab === 'teams' && <OrgTeamsTab org={org} isAdmin={isAdmin} />}
         {tab === 'providers' && <OrgProvidersTab isAdmin={isAdmin} />}
         {tab === 'worker-keys' && <WorkerKeysTab org={org} isAdmin={isAdmin} />}

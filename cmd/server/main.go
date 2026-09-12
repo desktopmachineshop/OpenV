@@ -138,6 +138,34 @@ func main() {
 	// org-scoped keys minted in workspace settings.
 	workerKey := os.Getenv("WORKER_API_KEY")
 
+	// Workspace limits. A deployment somebody runs themselves owns its own
+	// hardware, so it sets its own ceilings: OPENV_SELF_HOSTED picks the plan
+	// new workspaces are created on AND the remedy a refusal offers, because
+	// telling a self-hoster to upgrade a plan they do not have would send
+	// them nowhere. OPENV_LIMITS then retunes any individual limit across the
+	// whole deployment without touching the database.
+	selfHosted := os.Getenv("OPENV_SELF_HOSTED") == "true"
+	orgs.SetSelfHosted(selfHosted)
+	defaultPlan := envOr("OPENV_PLAN_DEFAULT", "")
+	if defaultPlan == "" {
+		defaultPlan = orgs.PlanSingle
+		if selfHosted {
+			defaultPlan = orgs.PlanSelfHost
+		}
+	}
+	orgs.SetDefaultPlan(defaultPlan)
+	// A malformed OPENV_LIMITS is fatal rather than ignored: a typo that
+	// silently did nothing would be indistinguishable from a limit that does
+	// not work, and the operator would discover it when somebody was wrongly
+	// refused.
+	deploymentLimits, err := orgs.ParseLimits(os.Getenv("OPENV_LIMITS"))
+	if err != nil {
+		fatal("OPENV_LIMITS is not usable", err)
+	}
+	orgs.SetDeploymentLimits(deploymentLimits)
+	slog.Info("workspace limits configured",
+		"self_hosted", selfHosted, "default_plan", defaultPlan, "overrides", len(deploymentLimits))
+
 	if err := os.MkdirAll(uploadsDir, 0o755); err != nil {
 		fatal("failed to create uploads directory", err)
 	}

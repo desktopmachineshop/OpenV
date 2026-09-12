@@ -32,7 +32,11 @@ const (
 	// The three ways a password change refuses (REQ-99).
 	ErrCodeWeakPassword      = "weak_password"
 	ErrCodePasswordIncorrect = "password_incorrect"
-	ErrCodeNoPassword        = "no_password"
+	// ErrCodeLimitReached marks a refusal caused by a workspace limit rather
+	// than by permissions, so a client can offer the remedy that came with
+	// it instead of an access-denied message.
+	ErrCodeLimitReached = "limit_reached"
+	ErrCodeNoPassword   = "no_password"
 )
 
 // writeJSONErrorCode is writeJSONError with a machine-readable code.

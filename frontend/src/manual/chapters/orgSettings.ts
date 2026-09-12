@@ -83,6 +83,46 @@ On a server where the operator has closed public registration, an invitation
 is the only way in besides single sign-on — the sign-in page then says so
 instead of offering *Create a new account*.
 
+## Limits
+
+**Settings → Limits** shows everything this workspace is allowed to do, with
+how much of each is used. It is there so you find out before you are stopped,
+rather than at the moment something refuses you.
+
+| Limit | What it counts |
+| --- | --- |
+| Workspace members | People in the workspace. **Invitations you have sent but nobody has accepted count towards it**, so a seat is reserved from the moment you invite somebody. A **personal workspace always seats exactly one person** — you — and no plan changes that. |
+| Projects | Projects in this workspace. |
+| Shared workspaces | Shared workspaces you have created. Your personal workspace is never counted. |
+| Test evidence storage | Total size of the evidence files uploaded for physical and manual tests. |
+| Cloud runner lease | How long a leased cloud runner lasts before it is reclaimed. |
+| Cloud runner idle window | How long a leased cloud runner may sit unused before it is reclaimed. |
+| Hosted runner memory / CPUs | What an always-on hosted runner gets. |
+
+Anything shown as **No limit** has no ceiling at all. A bar turns amber at 80%
+and red when it is full — except where the number is simply a fact rather than
+a ration, like your personal workspace's single seat, which is shown in grey
+because nothing raises it.
+
+### When you hit one
+
+The message says what stopped you, how close you are, and what to do about it
+— for example *"Workspace members: this workspace allows 5 and already has 5
+(including invitations not yet accepted)."* Nothing is deleted and nobody
+loses access: a full workspace refuses the **next** member, project or upload,
+and everything already there keeps working exactly as before. The same is true
+if a limit is ever lowered beneath you.
+
+Your **personal workspace** is the exception: it is only ever you. Adding
+somebody to it is refused however much you pay, because a personal workspace
+with two people in it is a shared workspace. Create a shared workspace
+instead, and invite them there.
+
+On the hosted service, upgrading the workspace's plan raises these; if you are
+not an admin, the message tells you to ask one. On a self-hosted OpenV there
+is no plan — whoever runs the server sets the limits, and the message names
+the setting they need to change.
+
 ## Teams
 
 **Teams** are named groups of workspace members (e.g. "Design engineering",
