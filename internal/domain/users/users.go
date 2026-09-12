@@ -71,10 +71,10 @@ type EmailVerificationPolicy struct {
 
 // User is a platform account.
 type User struct {
-	ID           string `json:"id"`
-	Email        string `json:"email"`
-	Name         string `json:"name"`
-	AvatarURL    string `json:"avatar_url"`
+	ID        string `json:"id"`
+	Email     string `json:"email"`
+	Name      string `json:"name"`
+	AvatarURL string `json:"avatar_url"`
 	// AvatarPath and AvatarMime locate an uploaded profile picture on disk
 	// (under the uploads directory); both empty when none has been
 	// uploaded, in which case AvatarURL is whatever the identity provider
