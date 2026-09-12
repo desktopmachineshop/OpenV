@@ -43,7 +43,9 @@ interface GuidedChatPanelProps {
    * can record (and persist) what was applied. Returns one result per
    * suggestion: null on success, or a reason it could not be applied.
    */
-  onApplySuggestions?: (items: { suggestion: CopilotSuggestion; key: string }[]) => (string | null)[];
+  onApplySuggestions?: (
+    items: { suggestion: CopilotSuggestion; key: string }[]
+  ) => (string | null)[] | Promise<(string | null)[]>;
 }
 
 type Segment =
@@ -486,9 +488,9 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
 
   // Apply every not-yet-applied suggestion of one reply in a single batch.
   // The wizard records and persists which keys applied successfully.
-  const applyAll = (pending: { suggestion: CopilotSuggestion; key: string }[]) => {
+  const applyAll = async (pending: { suggestion: CopilotSuggestion; key: string }[]) => {
     if (!onApplySuggestions) return;
-    const results = onApplySuggestions(pending);
+    const results = await onApplySuggestions(pending);
     const errors = results.filter((r): r is string => r !== null);
     setSendError(
       errors.length > 0
@@ -572,7 +574,7 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
         )}
         {!canApply ? (
           <div style={{ fontSize: 11, color: 'var(--neutral)', fontStyle: 'italic' }}>
-            Open Guided Definition to add this to the wizard.
+            Open the project to add this.
           </div>
         ) : isAdded ? (
           <span style={{ fontSize: 12, color: 'var(--success)' }}>{doneLabel}</span>
@@ -580,8 +582,8 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
           <button
             className="button-secondary"
             style={{ padding: '4px 10px', fontSize: 12 }}
-            onClick={() => {
-              const reason = onApplySuggestions([{ suggestion: s, key }])[0];
+            onClick={async () => {
+              const reason = (await onApplySuggestions([{ suggestion: s, key }]))[0];
               setSendError(reason === null ? '' : reason);
             }}
           >

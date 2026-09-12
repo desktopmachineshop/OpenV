@@ -1932,6 +1932,12 @@ export const ModuleView: React.FC = () => {
                 onToggle={stacked ? () => setStackedPane('document') : cycleNotesMode}
                 modeLabel={stacked ? 'Notes' : panelModeLabel(notesMode)}
                 nextModeLabel={stacked ? 'Document' : panelModeLabel(nextPanelMode(notesMode))}
+                onArtifactsChanged={() => {
+                  // The assistant just added something: show it without
+                  // making the reader go and look for it.
+                  loadArtifacts();
+                  loadLinks();
+                }}
               />
             </div>
             )}
