@@ -369,6 +369,22 @@ func (r *EvidenceRepository) StorageUsedByOrg(orgID string) (int64, error) {
 	return total, err
 }
 
+// ProjectForResult resolves the project a recorded result sits in, by way of
+// its run. ("", nil) when no such result exists.
+func (r *EvidenceRepository) ProjectForResult(testResultID string) (string, error) {
+	var projectID string
+	err := r.db.QueryRow(`
+		SELECT tr.project_id
+		FROM test_results res
+		JOIN test_runs tr ON tr.id = res.run_id
+		WHERE res.id = $1
+	`, testResultID).Scan(&projectID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", nil
+	}
+	return projectID, err
+}
+
 // ProjectOrg resolves the workspace a project belongs to.
 func (r *EvidenceRepository) ProjectOrg(projectID string) (string, error) {
 	var orgID sql.NullString

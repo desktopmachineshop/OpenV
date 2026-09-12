@@ -27,6 +27,12 @@ const (
 	// LimitRunnerSessionIdleMinutes is how long a transient runner lease may
 	// go without run activity before it is reclaimed, in minutes.
 	LimitRunnerSessionIdleMinutes = "runner_session_idle_minutes"
+	// LimitEvidenceStorageMB caps the total size of the workspace's uploaded
+	// test evidence, in MiB. It is a workspace total rather than a per-project
+	// one because the disk it protects is a single shared volume: one
+	// campaign's captures could otherwise fill it and take the deployment
+	// down with it.
+	LimitEvidenceStorageMB = "evidence_storage_mb"
 )
 
 // PlanDefaults returns the default limits for a billing plan. The values are
@@ -40,6 +46,7 @@ func PlanDefaults(plan string) map[string]interface{} {
 			LimitRunnerCPUs:               2.0,
 			LimitRunnerSessionMinutes:     120,
 			LimitRunnerSessionIdleMinutes: 20,
+			LimitEvidenceStorageMB:        20480,
 		}
 	default: // PlanFree and anything unrecognized
 		return map[string]interface{}{
@@ -47,6 +54,7 @@ func PlanDefaults(plan string) map[string]interface{} {
 			LimitRunnerCPUs:               1.0,
 			LimitRunnerSessionMinutes:     60,
 			LimitRunnerSessionIdleMinutes: 15,
+			LimitEvidenceStorageMB:        2048,
 		}
 	}
 }

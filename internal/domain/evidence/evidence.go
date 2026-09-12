@@ -200,6 +200,10 @@ type Repository interface {
 	StorageUsedByOrg(orgID string) (int64, error)
 	// ProjectOrg resolves the workspace a project belongs to.
 	ProjectOrg(projectID string) (string, error)
+	// ProjectForResult resolves the project a recorded test result sits in,
+	// which is what an authorization check on a citation needs. Returns
+	// ("", nil) when no such result exists.
+	ProjectForResult(testResultID string) (string, error)
 }
 
 // Service is the evidence domain logic.
@@ -218,6 +222,8 @@ type Service interface {
 	GetFile(id string) (*File, error)
 	DeleteFile(id string) (*File, error)
 
+	// ProjectForResult resolves a result's project, for authorization.
+	ProjectForResult(testResultID string) (string, error)
 	Cite(testResultID, bundleID, note string) (*Citation, error)
 	Uncite(testResultID, bundleID string) error
 	CitationsForRun(runID string) (map[string][]*Citation, error)
@@ -432,6 +438,12 @@ func (s *DefaultService) DeleteFile(id string) (*File, error) {
 		return nil, ErrFileNotFound
 	}
 	return f, nil
+}
+
+// ProjectForResult resolves a result's project, so a caller can be checked
+// against it before citing or reading evidence.
+func (s *DefaultService) ProjectForResult(testResultID string) (string, error) {
+	return s.repo.ProjectForResult(testResultID)
 }
 
 // Cite records that a result rests on a bundle. Citing twice is not an error:
