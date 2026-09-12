@@ -278,10 +278,11 @@ func (h *Handler) UpdateOrg(w http.ResponseWriter, r *http.Request) {
 // than the attachment cap.
 const maxOrgLogoBytes = 2 * 1024 * 1024
 
-// orgLogoExtensions maps the accepted logo MIME types to the extension the
-// file is stored under. Only inert raster formats are accepted: an SVG can
-// carry script and is never rendered on the API origin.
-var orgLogoExtensions = map[string]string{
+// rasterImageExtensions maps the MIME types accepted for a workspace logo or
+// a profile picture to the extension the file is stored under. Only inert
+// raster formats are accepted: an SVG can carry script and is never rendered
+// on the API origin.
+var rasterImageExtensions = map[string]string{
 	"image/png":  ".png",
 	"image/jpeg": ".jpg",
 	"image/gif":  ".gif",
@@ -312,7 +313,7 @@ func (h *Handler) UploadOrgLogo(w http.ResponseWriter, r *http.Request) {
 	defer file.Close()
 
 	mimeType := header.Header.Get("Content-Type")
-	ext, ok := orgLogoExtensions[mimeType]
+	ext, ok := rasterImageExtensions[mimeType]
 	if !ok {
 		writeJSONError(w, http.StatusBadRequest, "Logo must be a PNG, JPEG, GIF or WebP image")
 		return

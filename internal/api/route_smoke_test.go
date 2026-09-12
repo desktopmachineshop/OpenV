@@ -24,6 +24,9 @@ func TestRegisterRoutesResolvesTheNewPaths(t *testing.T) {
 		{http.MethodPost, "/api/v1/orgs/org-1/invitations"},
 		{http.MethodDelete, "/api/v1/orgs/org-1/invitations/inv-1"},
 		{http.MethodPut, "/api/v1/me/password"},
+		{http.MethodPost, "/api/v1/me/avatar"},
+		{http.MethodDelete, "/api/v1/me/avatar"},
+		{http.MethodGet, "/api/v1/users/user-1/avatar"},
 	} {
 		var match mux.RouteMatch
 		if !router.Match(httptest.NewRequest(tc.method, tc.path, nil), &match) {

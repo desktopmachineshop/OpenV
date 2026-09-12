@@ -93,6 +93,13 @@ func (m *memRepo) SetEmailNotifications(string, bool) error {
 func (m *memRepo) SetPushNotifications(string, bool) error {
 	return nil
 }
+func (m *memRepo) SetAvatar(userID, path, mime, url string, at time.Time) error {
+	if u, ok := m.users[userID]; ok {
+		u.AvatarPath, u.AvatarMime, u.AvatarURL, u.UpdatedAt = path, mime, url, at
+		u.HasAvatar = path != ""
+	}
+	return nil
+}
 func (m *memRepo) SaveSession(s *Session) error { m.sessions[s.ID] = s; return nil }
 func (m *memRepo) FindSessionByTokenHash(hash string) (*Session, error) {
 	for _, s := range m.sessions {
@@ -167,6 +174,38 @@ func TestLoginWithSSOSameProviderProceeds(t *testing.T) {
 	}
 	if user.Name != "New Name" || user.AvatarURL != "http://av" {
 		t.Errorf("profile not refreshed: %+v", user)
+	}
+}
+
+// TestLoginWithSSOKeepsUploadedAvatar: a picture the member uploaded is not
+// overwritten by the provider's at the next sign-in; once it is cleared,
+// the provider's picture is taken again.
+func TestLoginWithSSOKeepsUploadedAvatar(t *testing.T) {
+	repo := newMemRepo()
+	svc := NewDefaultService(repo)
+	user, _, err := svc.LoginWithSSO(ProviderOIDC, "pic@example.com", "Pic", "http://idp/pic.png")
+	if err != nil {
+		t.Fatalf("first login: %v", err)
+	}
+	if _, err := svc.SetAvatar(user.ID, "/uploads/avatars/x.png", "image/png", "/api/v1/users/x/avatar?v=1"); err != nil {
+		t.Fatalf("SetAvatar: %v", err)
+	}
+	user, _, err = svc.LoginWithSSO(ProviderOIDC, "pic@example.com", "Pic", "http://idp/newer.png")
+	if err != nil {
+		t.Fatalf("second login: %v", err)
+	}
+	if user.AvatarURL != "/api/v1/users/x/avatar?v=1" {
+		t.Fatalf("uploaded picture overwritten by the provider: %q", user.AvatarURL)
+	}
+	if _, err := svc.ClearAvatar(user.ID); err != nil {
+		t.Fatalf("ClearAvatar: %v", err)
+	}
+	user, _, err = svc.LoginWithSSO(ProviderOIDC, "pic@example.com", "Pic", "http://idp/newer.png")
+	if err != nil {
+		t.Fatalf("third login: %v", err)
+	}
+	if user.AvatarURL != "http://idp/newer.png" {
+		t.Fatalf("provider picture not taken back after clearing: %q", user.AvatarURL)
 	}
 }
 

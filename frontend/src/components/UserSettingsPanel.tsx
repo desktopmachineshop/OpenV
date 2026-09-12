@@ -8,6 +8,7 @@ import {
   providerSettingsAPI,
   notificationPrefsAPI,
   passwordAPI,
+  avatarAPI,
   pushAPI,
   authAPI,
 } from '../api/client';
@@ -21,6 +22,7 @@ import {
   unsubscribeThisDevice,
 } from '../push/webPush';
 import { MyRunnerCard } from './org/MyRunnerCard';
+import { Avatar } from './Avatar';
 import { CloudRunnerCard } from './org/CloudRunnerCard';
 import { ProviderConnectCard } from './agents/ProviderConnectCard';
 import { ThemeSwitcher } from './ThemeSwitcher';
@@ -44,7 +46,39 @@ const CLI_PROVIDERS: { key: string; label: string }[] = [
 // always happens here.)
 export const UserSettingsPanel: React.FC<UserSettingsPanelProps> = ({ onClose }) => {
   const { isPhone } = useViewport();
-  const { currentUser, activeOrgId, orgs, emailVerificationRequired } = useAppStore();
+  const { currentUser, activeOrgId, orgs, emailVerificationRequired, setCurrentUser } = useAppStore();
+
+  // Profile picture. The server answers with the updated user, which goes
+  // straight into the store so every avatar on the page changes at once.
+  const [avatarBusy, setAvatarBusy] = useState(false);
+  const [avatarError, setAvatarError] = useState('');
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setAvatarBusy(true);
+    setAvatarError('');
+    try {
+      const res = await avatarAPI.upload(file);
+      setCurrentUser(res.data);
+    } catch (err) {
+      setAvatarError(`Failed to upload picture: ${apiErrorMessage(err)}`);
+    } finally {
+      setAvatarBusy(false);
+    }
+  };
+  const handleRemoveAvatar = async () => {
+    setAvatarBusy(true);
+    setAvatarError('');
+    try {
+      const res = await avatarAPI.remove();
+      setCurrentUser(res.data);
+    } catch (err) {
+      setAvatarError(`Failed to remove picture: ${apiErrorMessage(err)}`);
+    } finally {
+      setAvatarBusy(false);
+    }
+  };
   const activeOrg = orgs.find((o) => o.id === activeOrgId);
   const [providers, setProviders] = useState<ProviderSetting[]>([]);
 
@@ -307,26 +341,7 @@ export const UserSettingsPanel: React.FC<UserSettingsPanelProps> = ({ onClose })
         }
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-          {currentUser?.avatar_url ? (
-            <img src={currentUser.avatar_url} alt="" style={{ width: 40, height: 40, borderRadius: '50%' }} />
-          ) : (
-            <div
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: '50%',
-                background: 'var(--accent)',
-                color: 'var(--accent-fg)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: 17,
-                fontWeight: 700,
-              }}
-            >
-              {(currentUser?.name || currentUser?.email || '?').charAt(0).toUpperCase()}
-            </div>
-          )}
+          <Avatar src={currentUser?.avatar_url} name={currentUser?.name || currentUser?.email} size={40} />
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>
               {currentUser?.name || currentUser?.email || 'My settings'}
@@ -366,6 +381,36 @@ export const UserSettingsPanel: React.FC<UserSettingsPanelProps> = ({ onClose })
           >
             ✕
           </button>
+        </div>
+
+        <div className="card">
+          <h3 style={{ marginBottom: 4 }}>Profile picture</h3>
+          <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+            Shown beside your name in member lists and crews. PNG, JPG, GIF or WebP up to 2 MB.
+          </p>
+          <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
+            <Avatar src={currentUser?.avatar_url} name={currentUser?.name || currentUser?.email} size={64} />
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/gif,image/webp"
+                aria-label="Upload profile picture"
+                disabled={avatarBusy}
+                onChange={handleAvatarChange}
+                style={{ fontSize: 13 }}
+              />
+              {currentUser?.has_avatar && (
+                <button type="button" className="button-secondary" disabled={avatarBusy} onClick={handleRemoveAvatar}>
+                  {avatarBusy ? 'Working…' : 'Remove picture'}
+                </button>
+              )}
+            </div>
+          </div>
+          {avatarError && (
+            <p style={{ fontSize: 13, color: 'var(--danger-text, #c0392b)', marginBottom: 0, marginTop: 8 }}>
+              {avatarError}
+            </p>
+          )}
         </div>
 
         <div className="card">
