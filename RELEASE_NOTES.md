@@ -16,6 +16,8 @@ Section headings are the release version: the promotion date, with `.2`,
 
 ## Unreleased
 
+## 2026-09-12.3
+
 - The V&V Assistant's answers now read as they were written — lists as lists,
   emphasis as emphasis — instead of showing the raw markup around them. The
   same goes for the assistant in an interview.
