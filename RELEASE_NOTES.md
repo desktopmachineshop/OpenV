@@ -16,6 +16,8 @@ Section headings are the release version: the promotion date, with `.2`,
 
 ## Unreleased
 
+## 2026-09-12.2
+
 - Get a notification whenever OpenV is updated, with a summary of what
   changed, and read the full history under What's new in the account menu.
 - Open tabs learn about an update while they are open and offer a reload.
