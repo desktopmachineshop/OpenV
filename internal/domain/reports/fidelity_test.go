@@ -24,6 +24,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -329,6 +330,9 @@ func TestFidelityPDF(t *testing.T) {
 // drops the creation date. gofpdf builds its embedded-font subsets from map
 // iteration, so the font objects differ between two renders of identical
 // content; what a reader sees does not.
+//
+// Page objects reference images through the resources dictionary by name,
+// not by object number, so dropping the numbers loses nothing a reader sees.
 func pdfNormalise(s string) string {
 	s = regexp.MustCompile(`/CreationDate \([^)]*\)`).ReplaceAllString(s, "")
 	objs := regexp.MustCompile(`(?s)(\d+) 0 obj\n(.*?)\nendobj`)
@@ -351,13 +355,18 @@ func pdfNormalise(s string) string {
 			}
 		}
 	}
-	var out strings.Builder
+	// Object numbers are left out: gofpdf assigns them to fonts and images
+	// in map order, so two identical images can swap numbers between
+	// renders. Their bodies, and the page objects that reference them by
+	// content, are what must match.
+	var kept []string
 	for _, id := range ids {
 		if keep[id] {
-			out.WriteString(id + ":" + byID[id] + "\n")
+			kept = append(kept, byID[id])
 		}
 	}
-	return out.String()
+	sort.Strings(kept)
+	return strings.Join(kept, "\n")
 }
 
 func TestFidelityPDFSurvivesBadFigures(t *testing.T) {
