@@ -2,6 +2,7 @@ import React, { useCallback, useState, useEffect } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useAppStore } from '../state/store';
 import { artifactAPI, linkAPI, attachmentAPI, baselineAPI, qualityAPI, agentsAPI, Artifact, Link, Attachment, Baseline, ProjectExport } from '../api/client';
+import { baselineLabel } from '../utils/baselines';
 import type { ArtifactContextAction, QualityRowInfo } from '../components/ArtifactList';
 import { DropZone, planMove } from '../utils/artifactDrag';
 import { ImageLightbox } from '../components/ImageLightbox';
@@ -49,6 +50,12 @@ export const ModuleView: React.FC = () => {
   const [baselines, setBaselines] = useState<Baseline[]>([]);
   const [activeBaselineId, setActiveBaselineId] = useState<string>('live');
   const [baselineData, setBaselineData] = useState<ProjectExport | null>(null);
+  // A baseline snapshot is a whole project export — close to a megabyte of
+  // JSON for a real project — so on a phone it can take seconds to arrive.
+  // Without this the tree renders empty the moment a baseline is selected and
+  // only fills in when the fetch lands, which looks exactly like a project
+  // that lost all its requirements.
+  const [baselineLoading, setBaselineLoading] = useState(false);
   // Per-requirement quality scores keyed by artifact id (issue #217); drives
   // the score badge on requirement rows.
   const [qualityScores, setQualityScores] = useState<Record<string, QualityRowInfo>>({});
@@ -544,9 +551,12 @@ export const ModuleView: React.FC = () => {
 
     if (baselineId === 'live') {
       setBaselineData(null);
+      setBaselineLoading(false);
       return;
     }
 
+    setBaselineData(null);
+    setBaselineLoading(true);
     try {
       const response = await baselineAPI.get(baselineId);
       setBaselineData(response.data);
@@ -555,11 +565,22 @@ export const ModuleView: React.FC = () => {
       console.error('Failed to load baseline:', error);
       const errorMsg = apiErrorMessage(error, 'Unknown error');
       setError(`Failed to load baseline: ${errorMsg}`);
+      // Fall back to the live project rather than leaving the reader on a
+      // baseline view with nothing in it, which they would read as a baseline
+      // that captured nothing.
+      setActiveBaselineId('live');
+    } finally {
+      setBaselineLoading(false);
     }
   };
 
   const handleCaptureBaseline = async () => {
-    if (!projectId) return;
+    if (!projectId) {
+      // A click that does nothing and says nothing is indistinguishable from
+      // a broken button.
+      setError('No project is open, so there is nothing to capture.');
+      return;
+    }
     const name = await prompt({
       title: 'Capture baseline',
       label: 'Baseline name',
@@ -1128,7 +1149,7 @@ export const ModuleView: React.FC = () => {
           <option value="live">Live Project</option>
           {baselines.map((baseline) => (
             <option key={baseline.id} value={baseline.id}>
-              {baseline.name}
+              {baselineLabel(baseline)}
             </option>
           ))}
         </select>
@@ -1685,21 +1706,39 @@ export const ModuleView: React.FC = () => {
           />
         )}
 
-        <ArtifactList
-          artifacts={filteredArtifacts}
-          allArtifacts={artifacts}
-          selectedId={selectedArtifactId || undefined}
-          onSelect={handleSelectArtifact}
-          onReorder={handleReorderArtifact}
-          onContextMenuAction={handleArtifactContextMenu}
-          canPaste={!!clipboard}
-          defaultCollapsed
-          collapseAllTrigger={collapseAllToken}
-          expandAllTrigger={expandAllToken}
-          readOnly={isBaselineView}
-          qualityScores={isBaselineView ? undefined : qualityScores}
-          hideHeading={stacked}
-        /></div>
+        {isBaselineView && baselineLoading ? (
+          <div
+            role="status"
+            style={{
+              padding: '24px 16px',
+              textAlign: 'center',
+              color: 'var(--text-muted)',
+              fontSize: 14,
+            }}
+          >
+            Loading baseline…
+            <div style={{ fontSize: 13, marginTop: 4 }}>
+              A baseline holds the whole project, so this can take a moment.
+            </div>
+          </div>
+        ) : (
+          <ArtifactList
+            artifacts={filteredArtifacts}
+            allArtifacts={artifacts}
+            selectedId={selectedArtifactId || undefined}
+            onSelect={handleSelectArtifact}
+            onReorder={handleReorderArtifact}
+            onContextMenuAction={handleArtifactContextMenu}
+            canPaste={!!clipboard}
+            defaultCollapsed
+            collapseAllTrigger={collapseAllToken}
+            expandAllTrigger={expandAllToken}
+            readOnly={isBaselineView}
+            qualityScores={isBaselineView ? undefined : qualityScores}
+            hideHeading={stacked}
+          />
+        )}
+      </div>
 
       {/* Resize handle for left column */}
       {!stacked && (

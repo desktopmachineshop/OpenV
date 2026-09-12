@@ -930,7 +930,13 @@ export const GuidedWizard: React.FC = () => {
   };
 
   const handleCreateBaseline = async () => {
-    if (!projectId) return;
+    if (!projectId) {
+      // Returning silently here is what made this button look broken: the
+      // click produced no baseline, no error and no spinner, so there was
+      // nothing to tell a person whether it had worked.
+      setError('No project is open yet, so there is nothing to baseline.');
+      return;
+    }
     setBusy(true);
     try {
       await baselineAPI.create(projectId, 'Initial requirements');

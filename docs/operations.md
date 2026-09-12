@@ -438,6 +438,18 @@ Notes:
   re-posting an unchanged invitation within an hour mails nothing at all).
   Body and upload caps:
   `OPENV_MAX_BODY_MB` (32) and `OPENV_MAX_UPLOAD_MB` (25).
+- **Response compression.** Responses are gzipped for any client that offers
+  it, which matters most for the large ones: a baseline snapshot is a whole
+  project export and compresses by roughly ten to one, turning seconds of
+  apparent hang on a mobile connection into a normal load. There is nothing
+  to configure. Two exclusions are deliberate and must survive any change to
+  this middleware: **Server-Sent Events are never compressed** — the API
+  holds those connections open for minutes and a compressor would batch
+  events in its window instead of delivering them, which breaks streaming
+  silently rather than slowly — and responses below about 1.4 KB are left
+  alone, because the gzip header costs more than it saves. The decision is
+  made from the `Content-Type` the handler set, not from a list of paths, so
+  a new stream is protected without anybody remembering to add it.
 - **Workspace limits.** Every workspace resolves each limit through three
   layers, most specific first: the workspace's own `limits` JSONB, then the
   deployment's `OPENV_LIMITS`, then its plan's defaults. **Zero means

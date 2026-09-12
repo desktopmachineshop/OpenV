@@ -2043,7 +2043,10 @@ func (h *Handler) CreateBaseline(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	baseline, err := h.baselineService.CreateBaseline(projectID, name, data)
+	// CurrentUserID is nil when the caller is an automation holding a
+	// workspace key rather than a person, which the column records as an
+	// unattributed capture instead of blaming somebody.
+	baseline, err := h.baselineService.CreateBaseline(projectID, name, data, CurrentUserID(r))
 	if err != nil {
 		respondInternal(w, r, "failed to create baseline", err)
 		return

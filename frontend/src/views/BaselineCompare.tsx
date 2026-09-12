@@ -9,6 +9,7 @@ import {
   baselineAPI,
 } from '../api/client';
 import { apiErrorMessage } from '../api/errors';
+import { baselineLabel } from '../utils/baselines';
 import { ErrorBanner } from '../components/ui';
 
 const typeChipStyle: React.CSSProperties = {
@@ -249,7 +250,7 @@ export const BaselineCompare: React.FC = () => {
             .filter((b) => b.id !== baselineId)
             .map((b) => (
               <option key={b.id} value={b.id}>
-                {b.name}
+                {baselineLabel(b)}
               </option>
             ))}
         </select>

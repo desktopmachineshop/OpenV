@@ -75,7 +75,7 @@ JSONB, `is_default`, `org_id` (NULL = global built-in).
 
 ### users
 `email` (unique, case-insensitive), `name`, `avatar_url`, `avatar_path` +
-`avatar_mime` (0032: an uploaded profile picture under `UPLOADS_DIR`
+`avatar_mime` (0033: an uploaded profile picture under `UPLOADS_DIR`
 (`avatars/<user id>.<ext>`); while set, `avatar_url` is the API path that
 serves it and an SSO sign-in no longer overwrites it with the provider's
 picture), `auth_provider`

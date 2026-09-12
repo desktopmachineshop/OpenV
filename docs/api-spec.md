@@ -221,6 +221,21 @@ their own project, workers pass within their org) · `org member`/`org admin`
 | POST | `/api/v1/templates` | Save a project as a template | editor |
 | POST | `/api/v1/templates/{id}/projects` | Create project from template | user |
 
+**Baselines** carry `created_by` (the capturing account) and
+`created_by_name` (its display name, resolved server-side so a client never
+shows a bare id) on both the list and the create response. Both are absent
+when nobody is attributable: a baseline captured before authorship was
+recorded, one taken by an automation holding a workspace key, or one whose
+author has since deleted their account — deleting an account nulls the column
+rather than removing the baseline, because a project's history must outlive
+the people in it.
+
+`GET /api/v1/baselines/{id}` returns the snapshot itself — a whole project
+export, which is close to a megabyte of JSON for a real project. It is served
+gzipped to any client that offers it (see `docs/operations.md`), but a client
+should still show progress while it loads rather than rendering an empty
+project.
+
 **Export/import caveats** (`internal/domain/exports/export.go`):
 
 - The `?format=` on export accepts `json` (default), `csv`, `excel` and
