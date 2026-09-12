@@ -369,6 +369,38 @@ func main() {
 	// Let the ReqIF export type enum attributes as ReqIF enumerations.
 	exportService.SetAttributeService(attributeService)
 	vvService := vv.NewDefaultService(vvRepo, artifactService, chatterService, bus)
+	// The document downloads carry test evidence and the workspace logo when a
+	// reader asks for them; both come from live state beside the snapshot.
+	downloadService.SetEvidenceSource(func(projectID string) (map[string]*vv.TestResult, []*vv.TestRun, error) {
+		latest, err := vvService.LatestResults(projectID)
+		if err != nil {
+			return nil, nil, err
+		}
+		runs, err := vvService.ListRuns(projectID)
+		if err != nil {
+			return nil, nil, err
+		}
+		return latest, runs, nil
+	})
+	downloadService.SetWorkspaceSource(func(projectID string) (reports.Workspace, error) {
+		project, err := projectService.GetProject(projectID)
+		if err != nil || project == nil || project.OrgID == "" {
+			return reports.Workspace{}, err
+		}
+		org, err := orgService.Get(project.OrgID)
+		if err != nil || org == nil {
+			return reports.Workspace{}, err
+		}
+		ws := reports.Workspace{Name: org.Name}
+		if org.LogoPath != "" {
+			if logo, err := os.ReadFile(org.LogoPath); err == nil {
+				ws.Logo, ws.LogoMime = logo, org.LogoMime
+			} else {
+				slog.Warn("download: workspace logo could not be read", "org_id", org.ID, "error", err)
+			}
+		}
+		return ws, nil
+	})
 	evidenceService := evidence.NewDefaultService(evidenceRepo)
 	workItemService := workitems.NewDefaultService(workItemRepo, bus)
 	guidedService := guided.NewDefaultService(guidedRepo, artifactService, linkService, chatterService, productService, bus)

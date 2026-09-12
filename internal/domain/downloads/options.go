@@ -16,9 +16,19 @@ import (
 // "data files" to one that holds only figures, and a filter that returns
 // nothing is worse than no filter at all.
 func BuildOptions(data *exports.ProjectExport) *Options {
-	opts := &Options{Sections: []Section{}, Types: []TypeCount{}, Attachments: []exports.CategoryCount{}}
+	opts := &Options{
+		Sections:    []Section{},
+		Types:       []TypeCount{},
+		Attachments: []exports.CategoryCount{},
+		Fields:      []exports.FieldOption{},
+		Templates:   exports.Templates(),
+		Defaults:    exports.DefaultContent(),
+	}
 	if data == nil {
 		return opts
+	}
+	if fields := exports.Fields(data); fields != nil {
+		opts.Fields = fields
 	}
 
 	numbers := artifacts.SectionNumbers(data.Artifacts)

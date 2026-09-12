@@ -182,6 +182,16 @@ export interface DownloadOptions {
   sections: DownloadSection[];
   types: { type: string; count: number }[];
   attachments: { category: string; count: number; bytes: number }[];
+  /**
+   * The attribute keys present in the project, standard keys first. Only the
+   * PDF and Word documents honour a field choice; the data formats carry every
+   * attribute regardless.
+   */
+  fields?: DownloadField[];
+  /** The presets a reader can start from. */
+  templates?: DownloadTemplate[];
+  /** What the document holds when no switch is sent. */
+  defaults?: DownloadContent;
 }
 
 export interface DownloadSection {
@@ -192,12 +202,61 @@ export interface DownloadSection {
   artifacts: number;
 }
 
+/** One attribute key a document can show or hide. */
+export interface DownloadField {
+  key: string;
+  label: string;
+  /** How many artifacts carry a value for it. */
+  count: number;
+  /** A definition or discovered key, rather than one of the standard ones. */
+  custom: boolean;
+}
+
+/** What goes into the PDF and Word documents beyond the artifacts themselves. */
+export interface DownloadContent {
+  /** The preset the reader started from, recorded on the cover. */
+  template?: string;
+  /** Incoming and outgoing links under each artifact. */
+  traceability: boolean;
+  /** Figures embedded in the document with their captions. */
+  figures: boolean;
+  /** A table of contents. */
+  toc: boolean;
+  /** Every attribute, whatever `fields` says. */
+  all_fields: boolean;
+  /** When `all_fields` is false, the keys to show. Empty means none. */
+  fields?: string[];
+  /** The latest result per test case, plus a test-run appendix. */
+  test_results: boolean;
+  /** A verification rollup per requirement, with a coverage summary and gaps. */
+  vv_status: boolean;
+}
+
+/** A preset a reader can start a document from. */
+export interface DownloadTemplate {
+  key: string;
+  name: string;
+  description: string;
+  /** The artifact types the preset narrows to. Absent means all of them. */
+  types?: string[];
+  content: DownloadContent;
+}
+
 /** What a download contains. Empty lists mean "everything". */
 export interface DownloadSelection {
   sections: string[];
   types: string[];
   includeHeadings: boolean;
   attachments: string[];
+  /** The preset the reader started from, or '' when none was chosen. */
+  template: string;
+  traceability: boolean;
+  figures: boolean;
+  toc: boolean;
+  testResults: boolean;
+  vvStatus: boolean;
+  /** The attribute keys to show. Undefined means every one of them. */
+  fields?: string[];
 }
 
 export type DownloadFormat = 'json' | 'csv' | 'excel' | 'reqif' | 'pdf' | 'docx';
@@ -1252,6 +1311,8 @@ export interface Org {
   // Present on soft-deleted workspaces (listDeleted); restorable for 30 days
   // from this time, then permanently purged.
   deleted_at?: string;
+  // True when a workspace logo is stored; fetch it via orgsAPI.logoUrl.
+  has_logo?: boolean;
 }
 
 export interface OrgMember {
@@ -1398,6 +1459,17 @@ export const orgsAPI = {
   restore: (id: string) => client.post<Org>(`/api/v1/orgs/${id}/restore`),
   listDeleted: () => client.get<{ orgs: Org[] }>('/api/v1/orgs', { params: { deleted: 'true' } }),
   activate: (id: string) => client.post(`/api/v1/orgs/${id}/activate`),
+  // Workspace logo (shown in the app and on download cover pages). PNG,
+  // JPEG, GIF or WebP up to 2 MB; admins upload and remove, members view.
+  uploadLogo: (id: string, file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return client.post<Org>(`/api/v1/orgs/${id}/logo`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+  removeLogo: (id: string) => client.delete<Org>(`/api/v1/orgs/${id}/logo`),
+  logoUrl: (id: string) => `${API_BASE_URL}/api/v1/orgs/${id}/logo`,
   // Pending invitations to the workspace (admin). An address with no account
   // is invited rather than refused, so this is where an admin watches for
   // people who have not arrived yet.

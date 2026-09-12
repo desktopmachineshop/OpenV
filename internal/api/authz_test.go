@@ -63,6 +63,9 @@ type fakeOrgService struct {
 	updatedNames []*string
 	budgetCalls  []*float64
 	budgetErr    error
+
+	// Logo state recorded by SetLogo / ClearLogo and echoed by Get.
+	logoPath, logoMime string
 }
 
 func (f *fakeOrgService) RoleInOrg(orgID, userID string) (string, error) {
@@ -72,7 +75,16 @@ func (f *fakeOrgService) RoleInOrg(orgID, userID string) (string, error) {
 // Get answers the handlers that read a workspace's effective limits (e.g.
 // transient runner lease timings) with a plain free-plan workspace.
 func (f *fakeOrgService) Get(id string) (*orgs.Org, error) {
-	return &orgs.Org{ID: id, Plan: orgs.PlanFree}, nil
+	return &orgs.Org{ID: id, Plan: orgs.PlanFree, LogoPath: f.logoPath, LogoMime: f.logoMime, HasLogo: f.logoPath != ""}, nil
+}
+
+func (f *fakeOrgService) SetLogo(id, path, mime string) (*orgs.Org, error) {
+	f.logoPath, f.logoMime = path, mime
+	return f.Get(id)
+}
+
+func (f *fakeOrgService) ClearLogo(id string) (*orgs.Org, error) {
+	return f.SetLogo(id, "", "")
 }
 
 // Budget CRUD recording (issue #186). updatedNames captures UpdateOrg's name

@@ -164,6 +164,9 @@ their own project, workers pass within their org) · `org member`/`org admin`
 | DELETE | `/api/v1/projects/{id}/team-access/{teamId}` | Revoke a team grant | owner |
 | GET | `/api/v1/orgs/{id}/quality-rules` | Workspace requirement quality rules (house style every project inherits) | org member |
 | PUT | `/api/v1/orgs/{id}/quality-rules` | Set the house style; an empty body clears it back to the platform defaults | org admin |
+| GET | `/api/v1/orgs/{id}/logo` | The workspace logo image (served as its stored type, `Content-Disposition: inline`); `404` when none is set | org member |
+| POST | `/api/v1/orgs/{id}/logo` | Upload the workspace logo: multipart field `file`, PNG/JPEG/GIF/WebP whose bytes match the declared type, at most 2 MiB (`413` beyond). Replaces any previous logo; returns the org with `has_logo` | org admin |
+| DELETE | `/api/v1/orgs/{id}/logo` | Remove the workspace logo; returns the org with `has_logo:false` | org admin |
 
 ### Workers, runner keys, connector, hosted and transient runners
 
@@ -204,7 +207,9 @@ their own project, workers pass within their org) · `org member`/`org admin`
 | DELETE | `/api/v1/projects/{id}` | Delete project | owner |
 | GET | `/api/v1/projects/{id}/export` | Export project JSON | viewer |
 | POST | `/api/v1/projects/import` | Import a project export (JSON or ReqIF) | user |
-| GET | `/api/v1/projects/{id}/report` | Generate PDF report | viewer |
+| GET | `/api/v1/projects/{id}/report` | Legacy: PDF (`?format=pdf`) or Word (`?format=docx`) with the default content | viewer |
+| GET | `/api/v1/projects/{id}/download/options` | What a download can be narrowed to: sections, types, attachment categories, fields, template presets, defaults | viewer |
+| GET | `/api/v1/projects/{id}/download/{json,csv,excel,reqif,pdf,docx}` | One download in the chosen format; see the download parameters below | viewer |
 | POST | `/api/v1/projects/{id}/baselines` | Snapshot a baseline | editor |
 | GET | `/api/v1/projects/{id}/baselines` | List baselines | viewer |
 | GET | `/api/v1/baselines/{id}` | Baseline contents | viewer |
@@ -238,6 +243,17 @@ their own project, workers pass within their org) · `org member`/`org admin`
   **400**. Imported artifacts are remapped to fresh ids at version 1, with
   parent hierarchy, links, status, and attributes reconstructed. Bodies are
   carried as XHTML-typed values so hard line breaks survive the round trip.
+- **Downloads** (`internal/domain/downloads`, `docs/reports.md`): every
+  `/download/{format}` reads the same query. `baseline_id` picks a snapshot;
+  `sections`, `types`, `headings=0`, `attachments` narrow it (REQ-56). The
+  PDF and Word documents also read `template` (`standard`,
+  `requirements-review`, `test-planning`, `vv`), `toc`, `traceability`,
+  `figures`, `vv`, `results` (`0|1`) and `fields` (`all`, `none`, or a
+  comma-separated list of attribute keys); an explicit parameter wins over
+  the template. Any attachment category turns the response into a zip
+  holding the document and the files. The cover states whether the
+  document is a named baseline (with its id and capture time) or the live
+  project at the export time, and shows the workspace logo when one is set.
 - Exports include **attachment metadata only**, not the file bytes.
   Consequently attachments are **dropped on import** (JSON and ReqIF alike) — a
   re-imported project has its artifacts, links, and product profile, but no

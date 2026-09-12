@@ -9,7 +9,11 @@ import (
 	"time"
 
 	"github.com/phpdave11/gofpdf"
+	"golang.org/x/image/font/gofont/gobold"
+	"golang.org/x/image/font/gofont/goitalic"
+	"golang.org/x/image/font/gofont/goregular"
 
+	"github.com/openv/requirements-platform/internal/domain/artifacts"
 	"github.com/openv/requirements-platform/internal/domain/exports"
 	"github.com/openv/requirements-platform/internal/domain/vv"
 )
@@ -60,32 +64,6 @@ func (s *DefaultService) GenerateVVReport(projectID string, baselineID string, l
 	return pdf, filename, nil
 }
 
-// rollupDisplayOrder controls the summary/legend ordering of rollup states.
-var rollupDisplayOrder = []string{
-	vv.RollupPass,
-	vv.RollupFail,
-	vv.RollupBlocked,
-	vv.RollupUnrun,
-	vv.RollupUncovered,
-	vv.RollupVerifiedManually,
-	vv.RollupMethodMissing,
-}
-
-// rollupColor returns the fill color for a rollup cell.
-// pass #27ae60, fail #e74c3c, blocked #f39c12, everything else gray.
-func rollupColor(rollup string) (r, g, b int) {
-	switch rollup {
-	case vv.RollupPass:
-		return 39, 174, 96
-	case vv.RollupFail:
-		return 231, 76, 60
-	case vv.RollupBlocked:
-		return 243, 156, 18
-	default:
-		return 150, 150, 150
-	}
-}
-
 // truncateToWidth shortens text so it fits within width mm at the current font.
 func truncateToWidth(pdf *gofpdf.Fpdf, text string, width float64) string {
 	if pdf.GetStringWidth(text) <= width {
@@ -104,7 +82,7 @@ func truncateToWidth(pdf *gofpdf.Fpdf, text string, width float64) string {
 
 func vvSectionHeader(pdf *gofpdf.Fpdf, tr func(string) string, title string) {
 	ensureSpace(pdf, 14)
-	pdf.SetFont("Arial", "B", 13)
+	pdf.SetFont("Go", "B", 13)
 	pdf.SetTextColor(0, 0, 0)
 	pdf.CellFormat(0, 8, tr(title), "", 1, "L", false, 0, "")
 	pdf.Ln(1)
@@ -120,15 +98,19 @@ func buildVVReportPDF(
 	pdf := gofpdf.New("P", "mm", "A4", "")
 	pdf.SetMargins(15, 15, 15)
 	pdf.SetAutoPageBreak(true, 15)
+	pdf.AddUTF8FontFromBytes("Go", "", goregular.TTF)
+	pdf.AddUTF8FontFromBytes("Go", "B", gobold.TTF)
+	pdf.AddUTF8FontFromBytes("Go", "I", goitalic.TTF)
 	pdf.AddPage()
 
-	tr := pdf.UnicodeTranslatorFromDescriptor("")
+	// The Go fonts are embedded as UTF-8, so text needs no translation.
+	tr := func(s string) string { return s }
 
 	// Title header.
-	pdf.SetFont("Arial", "B", 16)
+	pdf.SetFont("Go", "B", 16)
 	pdf.CellFormat(0, 8, tr(fmt.Sprintf("V&V Status Report - %s", data.ProjectName)), "", 1, "C", false, 0, "")
 
-	pdf.SetFont("Arial", "", 9)
+	pdf.SetFont("Go", "", 9)
 	pdf.SetTextColor(120, 120, 120)
 	if baselineName != "" {
 		pdf.CellFormat(0, 5, tr(fmt.Sprintf("Baseline: %s", baselineName)), "", 1, "C", false, 0, "")
@@ -138,14 +120,17 @@ func buildVVReportPDF(
 	pdf.Ln(4)
 
 	// Resolve artifact IDs to titles for gap lists.
+	sectionNumbers := artifacts.SectionNumbers(data.Artifacts)
 	artifactTitles := map[string]string{}
+	refs := map[string]string{}
 	for _, artifact := range data.Artifacts {
-		artifactTitles[artifact.ID] = artifact.Title
+		artifactTitles[artifact.ID] = qualifiedTitle(artifact, sectionNumbers)
+		refs[artifact.ID] = artifact.Ref
 	}
 
 	// Summary block: counts per rollup.
 	vvSectionHeader(pdf, tr, "Summary")
-	pdf.SetFont("Arial", "", 10)
+	pdf.SetFont("Go", "", 10)
 	total := 0
 	for _, count := range coverage.Summary {
 		total += count
@@ -169,17 +154,19 @@ func buildVVReportPDF(
 	// Coverage table.
 	vvSectionHeader(pdf, tr, "Requirement Coverage")
 	const (
-		titleColWidth  = 100.0
-		methodColWidth = 35.0
-		rollupColWidth = 35.0
+		refColWidth    = 22.0
+		titleColWidth  = 86.0
+		methodColWidth = 34.0
+		rollupColWidth = 38.0
 		vvRowHeight    = 6.0
 	)
 
 	drawCoverageHeader := func() {
-		pdf.SetFont("Arial", "B", 9)
+		pdf.SetFont("Go", "B", 9)
 		pdf.SetFillColor(230, 230, 230)
 		pdf.SetTextColor(60, 60, 60)
 		pdf.SetDrawColor(200, 200, 200)
+		pdf.CellFormat(refColWidth, vvRowHeight, "Ref", "1", 0, "L", true, 0, "")
 		pdf.CellFormat(titleColWidth, vvRowHeight, "Requirement", "1", 0, "L", true, 0, "")
 		pdf.CellFormat(methodColWidth, vvRowHeight, "Method", "1", 0, "L", true, 0, "")
 		pdf.CellFormat(rollupColWidth, vvRowHeight, "Rollup", "1", 1, "L", true, 0, "")
@@ -188,34 +175,51 @@ func buildVVReportPDF(
 
 	drawCoverageHeader()
 	if len(coverage.Entries) == 0 {
-		pdf.SetFont("Arial", "I", 9)
-		pdf.CellFormat(titleColWidth+methodColWidth+rollupColWidth, vvRowHeight, "No requirements found.", "1", 1, "L", false, 0, "")
+		pdf.SetFont("Go", "I", 9)
+		pdf.CellFormat(refColWidth+titleColWidth+methodColWidth+rollupColWidth, vvRowHeight, "No requirements found.", "1", 1, "L", false, 0, "")
 	}
 	for _, entry := range coverage.Entries {
+		pdf.SetFont("Go", "", 9)
+		title := entry.Title
+		lines := pdf.SplitText(title, titleColWidth-2)
+		rowH := float64(len(lines)) * 4.6
+		if rowH < vvRowHeight {
+			rowH = vvRowHeight
+		}
 		_, pageH := pdf.GetPageSize()
-		if pdf.GetY()+vvRowHeight > pageH-15 {
+		if pdf.GetY()+rowH > pageH-15 {
 			pdf.AddPage()
 			drawCoverageHeader()
 		}
-
-		pdf.SetFont("Arial", "", 9)
-		title := tr(stripMarkdown(entry.Title))
-		title = truncateToWidth(pdf, title, titleColWidth-4)
 		method := entry.VerificationMethod
 		if method == "" {
 			method = "-"
 		}
-
+		y := pdf.GetY()
 		pdf.SetDrawColor(200, 200, 200)
-		pdf.CellFormat(titleColWidth, vvRowHeight, title, "1", 0, "L", false, 0, "")
-		pdf.CellFormat(methodColWidth, vvRowHeight, tr(method), "1", 0, "L", false, 0, "")
+		x := 15.0
+		for _, w := range []float64{refColWidth, titleColWidth, methodColWidth} {
+			pdf.Rect(x, y, w, rowH, "D")
+			x += w
+		}
+		pdf.SetXY(16, y+0.8)
+		pdf.CellFormat(refColWidth-2, 4.6, refs[entry.RequirementID], "", 0, "L", false, 0, "")
+		for i, line := range lines {
+			pdf.SetXY(15+refColWidth+1, y+0.8+float64(i)*4.6)
+			pdf.CellFormat(titleColWidth-2, 4.6, line, "", 0, "L", false, 0, "")
+		}
+		pdf.SetXY(15+refColWidth+titleColWidth+1, y+0.8)
+		pdf.CellFormat(methodColWidth-2, 4.6, tr(method), "", 0, "L", false, 0, "")
 
 		r, g, b := rollupColor(entry.Rollup)
 		pdf.SetFillColor(r, g, b)
+		pdf.Rect(15+refColWidth+titleColWidth+methodColWidth, y, rollupColWidth, rowH, "FD")
 		pdf.SetTextColor(255, 255, 255)
-		pdf.SetFont("Arial", "B", 9)
-		pdf.CellFormat(rollupColWidth, vvRowHeight, tr(entry.Rollup), "1", 1, "C", true, 0, "")
+		pdf.SetFont("Go", "B", 9)
+		pdf.SetXY(15+refColWidth+titleColWidth+methodColWidth, y+0.8)
+		pdf.CellFormat(rollupColWidth, 4.6, tr(entry.Rollup), "", 0, "C", false, 0, "")
 		pdf.SetTextColor(0, 0, 0)
+		pdf.SetY(y + rowH)
 	}
 	pdf.Ln(6)
 
@@ -240,10 +244,10 @@ func buildVVReportPDF(
 		}
 		anyGaps = true
 		ensureSpace(pdf, 10)
-		pdf.SetFont("Arial", "B", 10)
+		pdf.SetFont("Go", "B", 10)
 		pdf.SetTextColor(60, 60, 60)
 		pdf.CellFormat(0, 6, tr(fmt.Sprintf("%s (%d)", section.label, len(section.ids))), "", 1, "L", false, 0, "")
-		pdf.SetFont("Arial", "", 9)
+		pdf.SetFont("Go", "", 9)
 		pdf.SetTextColor(0, 0, 0)
 		for _, id := range section.ids {
 			title := artifactTitles[id]
@@ -257,7 +261,7 @@ func buildVVReportPDF(
 		pdf.Ln(2)
 	}
 	if !anyGaps {
-		pdf.SetFont("Arial", "I", 10)
+		pdf.SetFont("Go", "I", 10)
 		pdf.CellFormat(0, 6, "No gaps detected.", "", 1, "L", false, 0, "")
 	}
 	pdf.Ln(4)
@@ -265,7 +269,7 @@ func buildVVReportPDF(
 	// Test runs appendix.
 	vvSectionHeader(pdf, tr, "Test Runs")
 	if len(runs) == 0 {
-		pdf.SetFont("Arial", "I", 10)
+		pdf.SetFont("Go", "I", 10)
 		pdf.CellFormat(0, 6, "No test runs recorded.", "", 1, "L", false, 0, "")
 	}
 	for _, run := range runs {
@@ -273,9 +277,9 @@ func buildVVReportPDF(
 			continue
 		}
 		ensureSpace(pdf, 14)
-		pdf.SetFont("Arial", "B", 10)
+		pdf.SetFont("Go", "B", 10)
 		pdf.CellFormat(0, 6, tr(run.Name), "", 1, "L", false, 0, "")
-		pdf.SetFont("Arial", "", 9)
+		pdf.SetFont("Go", "", 9)
 		pdf.SetTextColor(90, 90, 90)
 		details := []string{
 			fmt.Sprintf("Status: %s", run.Status),
@@ -296,4 +300,12 @@ func buildVVReportPDF(
 	}
 
 	return buf.Bytes(), nil
+}
+
+// ensureSpace starts a new page when fewer than needed millimetres remain.
+func ensureSpace(pdf *gofpdf.Fpdf, needed float64) {
+	_, pageH := pdf.GetPageSize()
+	if pdf.GetY()+needed > pageH-15 {
+		pdf.AddPage()
+	}
 }

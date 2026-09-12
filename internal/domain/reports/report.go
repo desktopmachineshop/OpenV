@@ -1,3 +1,11 @@
+// Package reports renders a project snapshot as a document: the PDF
+// specification, the Word document, and the V&V status PDF.
+//
+// Every renderer walks the same reportModel, built once from a narrowed
+// exports.ProjectExport: the artifact tree in document order, section numbers,
+// qualified titles, each body parsed into doc blocks, figures decoded, links
+// sorted, and (when asked for) verification coverage and test evidence. The
+// renderers differ only in how they draw; what they say is decided here.
 package reports
 
 import (
@@ -5,13 +13,21 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"image"
+	_ "image/gif"
+	"image/jpeg"
+	"image/png"
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
+	"strconv"
 	"strings"
 	"time"
 
-	"github.com/phpdave11/gofpdf"
+	_ "golang.org/x/image/bmp"
+	_ "golang.org/x/image/tiff"
+	_ "golang.org/x/image/webp"
 
 	"github.com/openv/requirements-platform/internal/domain/artifacts"
 	"github.com/openv/requirements-platform/internal/domain/attachments"
@@ -19,186 +35,361 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/exports"
 	linksdomain "github.com/openv/requirements-platform/internal/domain/links"
 	"github.com/openv/requirements-platform/internal/domain/products"
+	"github.com/openv/requirements-platform/internal/domain/reports/doc"
 	"github.com/openv/requirements-platform/internal/domain/vv"
 )
+
+// Service defines report generation behavior.
+//
+// The Generate* methods load a project (or baseline) snapshot and render it
+// with the default content. The Render* methods render a snapshot the caller
+// already has — which is how a download renders the SAME narrowed snapshot as
+// a PDF and as a Word file without either renderer knowing what a filter is.
+type Service interface {
+	GenerateProjectReport(projectID string, baselineID string) ([]byte, string, error)
+	GenerateProjectReportDOCX(projectID string, baselineID string) ([]byte, string, error)
+	RenderProjectReport(data *exports.ProjectExport, opts RenderOptions) ([]byte, string, error)
+	RenderProjectReportDOCX(data *exports.ProjectExport, opts RenderOptions) ([]byte, string, error)
+	// LoadReportExport is the snapshot a report reads: the live project, or a
+	// baseline's stored snapshot, with what the document should say about it.
+	LoadReportExport(projectID string, baselineID string) (*exports.ProjectExport, Snapshot, error)
+	GenerateVVReport(projectID string, baselineID string, latest map[string]*vv.TestResult, runs []*vv.TestRun) ([]byte, string, error)
+}
+
+// DefaultService generates reports from project snapshots.
+type DefaultService struct {
+	exportService   exports.Service
+	baselineService baselines.Service
+}
+
+// NewService creates a new report service.
+func NewService(exportService exports.Service, baselineService baselines.Service) *DefaultService {
+	return &DefaultService{exportService: exportService, baselineService: baselineService}
+}
+
+// loadReportExport resolves the project export snapshot for a report, either
+// from a captured baseline or the live project.
+func (s *DefaultService) loadReportExport(projectID string, baselineID string) (*exports.ProjectExport, Snapshot, error) {
+	var data exports.ProjectExport
+	snap := Snapshot{ExportedAt: time.Now()}
+
+	if baselineID != "" && baselineID != "live" {
+		// Scoped load: a baseline from another project is baselines.ErrNotFound,
+		// so a foreign baseline ID cannot pull another project's snapshot into
+		// this project's report.
+		baseline, err := s.baselineService.GetProjectBaseline(projectID, baselineID)
+		if err != nil {
+			return nil, snap, err
+		}
+		snap.BaselineID = baseline.ID
+		snap.BaselineName = baseline.Name
+		snap.CapturedAt = baseline.CreatedAt
+		if err := json.Unmarshal(baseline.Snapshot, &data); err != nil {
+			return nil, snap, fmt.Errorf("failed to parse baseline snapshot: %w", err)
+		}
+	} else {
+		jsonData, _, err := s.exportService.ExportProject(projectID, exports.FormatJSON)
+		if err != nil {
+			return nil, snap, err
+		}
+		if err := json.Unmarshal(jsonData, &data); err != nil {
+			return nil, snap, fmt.Errorf("failed to parse export data: %w", err)
+		}
+	}
+	return &data, snap, nil
+}
+
+// GenerateProjectReport builds the specification PDF for a project or
+// baseline with the default content.
+func (s *DefaultService) GenerateProjectReport(projectID string, baselineID string) ([]byte, string, error) {
+	if projectID == "" {
+		return nil, "", errors.New("project_id is required")
+	}
+	data, snap, err := s.loadReportExport(projectID, baselineID)
+	if err != nil {
+		return nil, "", err
+	}
+	return s.RenderProjectReport(data, defaultRenderOptions(snap))
+}
+
+// RenderProjectReport builds a PDF from a snapshot the caller prepared.
+func (s *DefaultService) RenderProjectReport(data *exports.ProjectExport, opts RenderOptions) ([]byte, string, error) {
+	if data == nil {
+		return nil, "", errors.New("nothing to report on")
+	}
+	pdf, err := buildReportPDF(data, opts)
+	if err != nil {
+		return nil, "", err
+	}
+	return pdf, reportFilename(data.ProjectName, opts.Snapshot.BaselineName, "pdf"), nil
+}
+
+// GenerateProjectReportDOCX builds the Word document for a project or
+// baseline with the default content.
+func (s *DefaultService) GenerateProjectReportDOCX(projectID string, baselineID string) ([]byte, string, error) {
+	if projectID == "" {
+		return nil, "", errors.New("project_id is required")
+	}
+	data, snap, err := s.loadReportExport(projectID, baselineID)
+	if err != nil {
+		return nil, "", err
+	}
+	return s.RenderProjectReportDOCX(data, defaultRenderOptions(snap))
+}
+
+// RenderProjectReportDOCX builds a Word document from a prepared snapshot.
+func (s *DefaultService) RenderProjectReportDOCX(data *exports.ProjectExport, opts RenderOptions) ([]byte, string, error) {
+	if data == nil {
+		return nil, "", errors.New("nothing to report on")
+	}
+	docx, err := buildReportDOCX(data, opts)
+	if err != nil {
+		return nil, "", err
+	}
+	return docx, reportFilename(data.ProjectName, opts.Snapshot.BaselineName, "docx"), nil
+}
+
+// LoadReportExport exposes the snapshot load so a download can narrow it
+// before any renderer sees it.
+func (s *DefaultService) LoadReportExport(projectID string, baselineID string) (*exports.ProjectExport, Snapshot, error) {
+	if projectID == "" {
+		return nil, Snapshot{}, errors.New("project_id is required")
+	}
+	return s.loadReportExport(projectID, baselineID)
+}
+
+// --- Report model ------------------------------------------------------------
 
 type artifactNode struct {
 	artifact *artifacts.Artifact
 	children []*artifactNode
+	// depth is the nesting depth in the tree, 0 for a root.
+	depth int
 }
 
-type linkGroups struct {
-	outgoing map[string][]*linksdomain.Link
-	incoming map[string][]*linksdomain.Link
+// linkRow is one traceability row, already worded for the reader.
+type linkRow struct {
+	Direction    string // "Incoming" / "Outgoing"
+	Relationship string // "verified by", "derives from"
+	TargetID     string
+	TargetTitle  string
+	Suspect      bool
 }
 
-// stripMarkdown converts markdown text to plain text for PDF rendering
-// Handles common markdown syntax: headers, bold, italic, code, lists, links
-func stripMarkdown(text string) string {
-	// Remove code blocks (```...```) - preserve the content inside
-	codeBlockRe := regexp.MustCompile("(?s)```[a-zA-Z]*\n?(.*?)\n?```")
-	text = codeBlockRe.ReplaceAllString(text, "$1")
-
-	// Remove HTML tags (including sup, sub, etc.)
-	htmlTagRe := regexp.MustCompile(`<[^>]+>`)
-	text = htmlTagRe.ReplaceAllString(text, "")
-
-	// Remove horizontal rules (---, ___, ***)
-	hrRe := regexp.MustCompile(`(?m)^\s*[-_*]{3,}\s*$`)
-	text = hrRe.ReplaceAllString(text, "")
-
-	// Convert headers (# ## ###) to text - handle headers without space after #
-	headerRe := regexp.MustCompile(`(?m)^#{1,6}\s*(.+?)\s*$`)
-	text = headerRe.ReplaceAllString(text, "$1")
-
-	// Remove blockquotes (> or >>)
-	blockquoteRe := regexp.MustCompile(`(?m)^>+\s*`)
-	text = blockquoteRe.ReplaceAllString(text, "")
-
-	// Remove task list markers [x] and [ ]
-	taskListRe := regexp.MustCompile(`(?m)^(\s*)[-*+]\s+\[[ xX]\]\s+`)
-	text = taskListRe.ReplaceAllString(text, "$1- ")
-
-	// Convert bold+italic (***text*** or ___text___) first
-	boldItalicRe := regexp.MustCompile(`\*\*\*(.+?)\*\*\*|___(.+?)___`)
-	text = boldItalicRe.ReplaceAllString(text, "$1$2")
-
-	// Convert bold (**text** or __text__) to plain text
-	boldRe := regexp.MustCompile(`\*\*(.+?)\*\*|__(.+?)__`)
-	text = boldRe.ReplaceAllString(text, "$1$2")
-
-	// Convert italic (*text* or _text_) to plain text - be careful not to affect list markers
-	italicRe := regexp.MustCompile(`\*([^*\s][^*]*?)\*|_([^_\s][^_]*?)_`)
-	text = italicRe.ReplaceAllString(text, "$1$2")
-
-	// Convert inline code (`code`) to plain text
-	inlineCodeRe := regexp.MustCompile("`([^`]+)`")
-	text = inlineCodeRe.ReplaceAllString(text, "$1")
-
-	// Remove image syntax ![alt](url) - images are handled separately in PDF
-	imageRe := regexp.MustCompile(`!\[([^\]]*)\]\(([^)]+)\)`)
-	text = imageRe.ReplaceAllString(text, "")
-
-	// Convert links [text](url) to just text
-	linkRe := regexp.MustCompile(`\[([^\]]+)\]\(([^)]+)\)`)
-	text = linkRe.ReplaceAllString(text, "$1")
-
-	// Convert list markers (- or * or +) to simple dashes
-	listRe := regexp.MustCompile(`(?m)^([\s]*)[-*+]\s+`)
-	text = listRe.ReplaceAllString(text, "$1- ")
-
-	// Convert numbered lists (1. 2. etc) to simple indented text
-	numberedListRe := regexp.MustCompile(`(?m)^([\s]*)\d+\.\s+`)
-	text = numberedListRe.ReplaceAllString(text, "$1  ")
-
-	// Convert strikethrough ~~text~~ to plain text
-	strikeRe := regexp.MustCompile(`~~(.+?)~~`)
-	text = strikeRe.ReplaceAllString(text, "$1")
-
-	// Replace em dashes and special Unicode characters that may not be in Arial font
-	text = strings.ReplaceAll(text, "\u2014", "-")  // em dash
-	text = strings.ReplaceAll(text, "\u2013", "-")  // en dash
-	text = strings.ReplaceAll(text, "\u201C", "\"") // left double quote
-	text = strings.ReplaceAll(text, "\u201D", "\"") // right double quote
-	text = strings.ReplaceAll(text, "\u2018", "'")  // left single quote
-	text = strings.ReplaceAll(text, "\u2019", "'")  // right single quote
-
-	// Clean up excessive newlines (more than 2 in a row)
-	multiNewlineRe := regexp.MustCompile(`\n{3,}`)
-	text = multiNewlineRe.ReplaceAllString(text, "\n\n")
-
-	// Clean up excessive spaces
-	multiSpaceRe := regexp.MustCompile(` {2,}`)
-	text = multiSpaceRe.ReplaceAllString(text, " ")
-
-	return strings.TrimSpace(text)
+// fieldRow is one label/value pair of an artifact's details table.
+type fieldRow struct {
+	Label string
+	Value string
+	// Rollup is set on the V&V status row so a renderer can colour it.
+	Rollup string
 }
 
-type linkTypeLabel struct {
-	label        string
-	inverseLabel string
+// figure is an attachment ready to draw: decoded to a format the renderers
+// embed, or a placeholder sentence when it cannot be.
+type figure struct {
+	Attachment *attachments.Attachment
+	Caption    string
+	// JPEG holds the original bytes for a JPEG; PNG holds the image re-encoded
+	// as PNG for every other decodable format. Exactly one is set unless the
+	// figure is a placeholder.
+	JPEG, PNG     []byte
+	Width, Height int
+	Placeholder   string
 }
 
-var linkTypeLabels = buildLinkTypeLabels()
+// Renderable reports whether the figure has image bytes to embed.
+func (f figure) Renderable() bool { return len(f.JPEG) > 0 || len(f.PNG) > 0 }
 
-// Service defines report generation behavior.
-//
-// The Generate* methods load a project (or baseline) snapshot and render it.
-// The Render* methods render a snapshot the caller already has — which is how
-// a download renders the SAME narrowed snapshot as a PDF and as a Word file
-// without either renderer knowing what a filter is.
-type Service interface {
-	GenerateProjectReport(projectID string, baselineID string) ([]byte, string, error)
-	GenerateProjectReportDOCX(projectID string, baselineID string) ([]byte, string, error)
-	RenderProjectReport(data *exports.ProjectExport, baselineName string) ([]byte, string, error)
-	RenderProjectReportDOCX(data *exports.ProjectExport, baselineName string) ([]byte, string, error)
-	// LoadReportExport is the snapshot a report reads: the live project, or a
-	// baseline's stored snapshot with the baseline's name beside it.
-	LoadReportExport(projectID string, baselineID string) (*exports.ProjectExport, string, error)
-	GenerateVVReport(projectID string, baselineID string, latest map[string]*vv.TestResult, runs []*vv.TestRun) ([]byte, string, error)
+// evidenceRow is one test case's latest result.
+type evidenceRow struct {
+	TestCaseID string
+	Ref        string
+	Title      string
+	Status     string
+	ExecutedAt string
+	RunName    string
+	Notes      string
 }
 
-// reportModel is the rendered-report data model shared by every renderer
-// (PDF, DOCX). It is built once from a project export snapshot so that no
-// renderer duplicates the tree/link-group construction.
+// reportModel is the rendered-report data model shared by every renderer.
 type reportModel struct {
-	data          *exports.ProjectExport
-	baselineName  string
-	roots         []*artifactNode
-	attachmentMap map[string][]*attachments.Attachment
-	// sectionNumbers holds the derived document number ("1.2") for each
-	// heading; see artifacts.SectionNumbers. Empty for everything else.
+	data *exports.ProjectExport
+	opts RenderOptions
+
+	roots []*artifactNode
+	byID  map[string]*artifacts.Artifact
+	// order lists every node in document order; renderers walk it.
+	order []*artifactNode
+
 	sectionNumbers map[string]string
-	// artifactTitles is what a traceability row shows for a link target. It
-	// carries the stable ref, because a reader following a cross-reference
-	// needs the address, not just the words.
-	artifactTitles       map[string]string
-	linkGroupsByArtifact map[string]linkGroups
+	artifactTitles map[string]string
+	// refIndex maps a stable ref to its artifact id, figureIndex a figure ref
+	// to its attachment, so a citation in a body can become a link.
+	refIndex    map[string]string
+	figureIndex map[string]*attachments.Attachment
+
+	bodies  map[string][]doc.Block
+	figures map[string][]figure
+	links   map[string][]linkRow
+
+	fieldLabels map[string]string
+	fieldOrder  []string
+
+	coverage      *vv.CoverageReport
+	gaps          *vv.GapReport
+	coverageByReq map[string]*vv.CoverageEntry
+	evidence      []evidenceRow
+	runs          []*vv.TestRun
+
+	// counts summarises the snapshot for the cover.
+	counts map[string]int
 }
 
-// buildReportModel assembles the shared artifact tree, attachment index,
-// title lookup, and traceability link groups from an export snapshot. Both the
-// PDF and DOCX renderers consume the result.
-func buildReportModel(data *exports.ProjectExport, baselineName string) *reportModel {
-	attachmentMap := map[string][]*attachments.Attachment{}
-	for _, attachment := range data.Attachments {
-		attachmentMap[attachment.ArtifactID] = append(attachmentMap[attachment.ArtifactID], attachment)
+// buildReportModel assembles everything the renderers share.
+func buildReportModel(data *exports.ProjectExport, opts RenderOptions) *reportModel {
+	m := &reportModel{
+		data:           data,
+		opts:           opts,
+		byID:           map[string]*artifacts.Artifact{},
+		sectionNumbers: artifacts.SectionNumbers(data.Artifacts),
+		artifactTitles: map[string]string{},
+		refIndex:       map[string]string{},
+		figureIndex:    map[string]*attachments.Attachment{},
+		bodies:         map[string][]doc.Block{},
+		figures:        map[string][]figure{},
+		links:          map[string][]linkRow{},
+		fieldLabels:    map[string]string{},
+		counts:         map[string]int{},
+	}
+	if m.opts.Snapshot.ExportedAt.IsZero() {
+		m.opts.Snapshot.ExportedAt = time.Now()
 	}
 
-	sectionNumbers := artifacts.SectionNumbers(data.Artifacts)
-
-	artifactTitles := map[string]string{}
-	for _, artifact := range data.Artifacts {
-		artifactTitles[artifact.ID] = qualifiedTitle(artifact, sectionNumbers)
+	for _, a := range data.Artifacts {
+		if a == nil {
+			continue
+		}
+		m.byID[a.ID] = a
+		m.artifactTitles[a.ID] = qualifiedTitle(a, m.sectionNumbers)
+		if a.Ref != "" {
+			m.refIndex[a.Ref] = a.ID
+		}
+		m.bodies[a.ID] = doc.Parse(a.Body)
+		m.counts[a.Type]++
 	}
 
-	linkGroupsByArtifact := buildLinkGroups(data.Links)
-
-	nodes := make(map[string]*artifactNode)
-	var roots []*artifactNode
-	for _, artifact := range data.Artifacts {
-		nodes[artifact.ID] = &artifactNode{artifact: artifact}
+	// Tree in document order: children keep the snapshot's order, which the
+	// export writes by sort_order.
+	nodes := map[string]*artifactNode{}
+	for _, a := range data.Artifacts {
+		if a != nil {
+			nodes[a.ID] = &artifactNode{artifact: a}
+		}
 	}
-	for _, artifact := range data.Artifacts {
-		node := nodes[artifact.ID]
-		if artifact.ParentID != nil && *artifact.ParentID != "" {
-			if parent := nodes[*artifact.ParentID]; parent != nil {
+	for _, a := range data.Artifacts {
+		if a == nil {
+			continue
+		}
+		node := nodes[a.ID]
+		if a.ParentID != nil && *a.ParentID != "" {
+			if parent := nodes[*a.ParentID]; parent != nil && parent != node {
 				parent.children = append(parent.children, node)
 				continue
 			}
 		}
-		roots = append(roots, node)
+		m.roots = append(m.roots, node)
+	}
+	var walk func(n *artifactNode, depth int, seen map[string]bool)
+	walk = func(n *artifactNode, depth int, seen map[string]bool) {
+		if seen[n.artifact.ID] {
+			return
+		}
+		seen[n.artifact.ID] = true
+		n.depth = depth
+		m.order = append(m.order, n)
+		for _, c := range n.children {
+			walk(c, depth+1, seen)
+		}
+	}
+	seen := map[string]bool{}
+	for _, r := range m.roots {
+		walk(r, 0, seen)
 	}
 
-	return &reportModel{
-		data:                 data,
-		baselineName:         baselineName,
-		roots:                roots,
-		attachmentMap:        attachmentMap,
-		sectionNumbers:       sectionNumbers,
-		artifactTitles:       artifactTitles,
-		linkGroupsByArtifact: linkGroupsByArtifact,
+	// Figures, in upload order, decoded once.
+	for _, att := range data.Attachments {
+		if att == nil {
+			continue
+		}
+		if att.FigureRef != "" {
+			m.figureIndex[att.FigureRef] = att
+		}
+		if opts.Content.Figures {
+			m.figures[att.ArtifactID] = append(m.figures[att.ArtifactID], loadFigure(att))
+		}
 	}
+
+	// Traceability rows, deduplicated and sorted so two renders agree.
+	if opts.Content.Traceability {
+		m.links = buildLinkRows(data.Links, m.artifactTitles)
+	}
+
+	// Field labels: definitions name custom keys; standard keys have fixed
+	// wording.
+	for _, f := range exports.Fields(data) {
+		m.fieldLabels[f.Key] = f.Label
+		m.fieldOrder = append(m.fieldOrder, f.Key)
+	}
+
+	// Verification coverage and evidence.
+	if opts.Content.VVStatus {
+		m.coverage = vv.ComputeCoverage(data, opts.Latest)
+		m.gaps = vv.GapAnalysis(data, m.coverage)
+		m.coverageByReq = map[string]*vv.CoverageEntry{}
+		for i := range m.coverage.Entries {
+			e := &m.coverage.Entries[i]
+			m.coverageByReq[e.RequirementID] = e
+		}
+	}
+	if opts.Content.TestResults {
+		runsByID := map[string]*vv.TestRun{}
+		for _, r := range opts.Runs {
+			if r != nil {
+				runsByID[r.ID] = r
+			}
+		}
+		m.runs = append([]*vv.TestRun(nil), opts.Runs...)
+		sort.SliceStable(m.runs, func(i, j int) bool {
+			if m.runs[i] == nil || m.runs[j] == nil {
+				return m.runs[i] != nil
+			}
+			return m.runs[i].StartedAt.After(m.runs[j].StartedAt)
+		})
+		for _, n := range m.order {
+			a := n.artifact
+			if a.Type != artifacts.TypeTestCase {
+				continue
+			}
+			row := evidenceRow{TestCaseID: a.ID, Ref: a.Ref, Title: a.Title, Status: "not run"}
+			if r := opts.Latest[a.ID]; r != nil {
+				row.Status = r.Status
+				row.Notes = r.Notes
+				if r.ExecutedAt != nil {
+					row.ExecutedAt = r.ExecutedAt.UTC().Format("2006-01-02 15:04")
+				}
+				if run := runsByID[r.RunID]; run != nil {
+					row.RunName = run.Name
+				}
+			}
+			m.evidence = append(m.evidence, row)
+		}
+	}
+	return m
+}
+
+// title returns the display heading for an artifact in this report.
+func (m *reportModel) title(a *artifacts.Artifact) string {
+	return qualifiedTitle(a, m.sectionNumbers)
 }
 
 // qualifiedTitle renders the heading a reader sees, prefixed with whichever
@@ -206,9 +397,6 @@ func buildReportModel(data *exports.ProjectExport, baselineName string) *reportM
 //
 //	1.2 Background          — a section, numbered by position
 //	REQ-12 Brake within 2 m — everything else, addressed by its stable ref
-//
-// The two never both appear: a section's number IS its address in the
-// document, and a requirement's ref is the one that survives reordering.
 func qualifiedTitle(artifact *artifacts.Artifact, sectionNumbers map[string]string) string {
 	if artifact == nil {
 		return ""
@@ -222,172 +410,424 @@ func qualifiedTitle(artifact *artifacts.Artifact, sectionNumbers map[string]stri
 	return artifact.Title
 }
 
-// title returns the display heading for a node in this report.
-func (m *reportModel) title(artifact *artifacts.Artifact) string {
-	return qualifiedTitle(artifact, m.sectionNumbers)
+// headingLevel is the outline level of a node: headings nest by their tree
+// depth; everything else sits one level under its nearest heading.
+func (m *reportModel) headingLevel(n *artifactNode) int {
+	level := n.depth + 1
+	if level > 6 {
+		level = 6
+	}
+	return level
 }
 
-// loadReportExport resolves the project export snapshot for a report, either
-// from a captured baseline or the live project. Shared by every report format.
-func (s *DefaultService) loadReportExport(projectID string, baselineID string) (*exports.ProjectExport, string, error) {
-	var data exports.ProjectExport
-	var baselineName string
+// isProse reports whether an artifact renders as prose alone (no details
+// table): headings and descriptions.
+func isProse(a *artifacts.Artifact) bool {
+	return a.Type == artifacts.TypeHeading || a.Type == artifacts.TypeDescription
+}
 
-	if baselineID != "" && baselineID != "live" {
-		// Scoped load: a baseline from another project is baselines.ErrNotFound,
-		// so a foreign baseline ID cannot pull another project's snapshot into
-		// this project's report.
-		baseline, err := s.baselineService.GetProjectBaseline(projectID, baselineID)
+// fieldRows lists the details a non-heading artifact shows, in order:
+// reference, type, version, then the attributes the content asks for, then
+// verification status and the latest result when evidence was requested.
+func (m *reportModel) fieldRows(a *artifacts.Artifact) []fieldRow {
+	rows := []fieldRow{}
+	if a.Ref != "" {
+		rows = append(rows, fieldRow{Label: "Reference", Value: a.Ref})
+	}
+	rows = append(rows,
+		fieldRow{Label: "Type", Value: typeLabel(a.Type)},
+		fieldRow{Label: "Version", Value: fmt.Sprintf("v%d", a.Version)},
+	)
+	for _, key := range m.fieldOrder {
+		if !m.opts.Content.ShowsField(key) {
+			continue
+		}
+		v, ok := a.Attributes[key]
+		if !ok {
+			continue
+		}
+		text := attributeText(v)
+		if text == "" {
+			continue
+		}
+		rows = append(rows, fieldRow{Label: m.fieldLabels[key], Value: text})
+	}
+	if m.coverageByReq != nil && a.Type == artifacts.TypeRequirement {
+		if e := m.coverageByReq[a.ID]; e != nil {
+			rows = append(rows, fieldRow{Label: "V&V rollup", Value: rollupLabel(e.Rollup), Rollup: e.Rollup})
+		}
+	}
+	if m.opts.Content.TestResults && a.Type == artifacts.TypeTestCase {
+		for _, e := range m.evidence {
+			if e.TestCaseID == a.ID {
+				value := e.Status
+				if e.ExecutedAt != "" {
+					value += " · " + e.ExecutedAt
+				}
+				if e.RunName != "" {
+					value += " · " + e.RunName
+				}
+				rows = append(rows, fieldRow{Label: "Latest result", Value: value, Rollup: e.Status})
+				break
+			}
+		}
+	}
+	return rows
+}
+
+// typeLabel words an artifact type: "test-case" → "Test case".
+func typeLabel(t string) string {
+	return exports.FieldLabel(strings.ReplaceAll(t, "-", " "))
+}
+
+// rollupLabel words a rollup state for print.
+func rollupLabel(r string) string {
+	return strings.ReplaceAll(r, "-", " ")
+}
+
+// attributeText prints an attribute value: strings as they are, numbers and
+// booleans plainly, lists joined, anything else as JSON.
+func attributeText(v interface{}) string {
+	switch t := v.(type) {
+	case nil:
+		return ""
+	case string:
+		return strings.TrimSpace(t)
+	case bool:
+		if t {
+			return "yes"
+		}
+		return "no"
+	case float64:
+		return strconv.FormatFloat(t, 'f', -1, 64)
+	case int:
+		return strconv.Itoa(t)
+	case []interface{}:
+		parts := make([]string, 0, len(t))
+		for _, e := range t {
+			if s := attributeText(e); s != "" {
+				parts = append(parts, s)
+			}
+		}
+		return strings.Join(parts, ", ")
+	case []string:
+		return strings.Join(t, ", ")
+	default:
+		b, err := json.Marshal(t)
 		if err != nil {
-			return nil, "", err
+			return fmt.Sprint(t)
 		}
-		baselineName = baseline.Name
-		if err := json.Unmarshal(baseline.Snapshot, &data); err != nil {
-			return nil, "", fmt.Errorf("failed to parse baseline snapshot: %w", err)
+		return string(b)
+	}
+}
+
+// buildLinkRows turns the link list into per-artifact rows: incoming first,
+// then outgoing, each group ordered by relationship then target title, with
+// exact duplicates removed. Map iteration never reaches a renderer.
+func buildLinkRows(list []*linksdomain.Link, titles map[string]string) map[string][]linkRow {
+	out := map[string][]linkRow{}
+	seen := map[string]bool{}
+	for _, l := range list {
+		if l == nil {
+			continue
 		}
-	} else {
-		jsonData, _, err := s.exportService.ExportProject(projectID, exports.FormatJSON)
-		if err != nil {
-			return nil, "", err
+		key := l.FromID + ":" + l.ToID + ":" + l.Type
+		if seen[key] {
+			continue
 		}
-		if err := json.Unmarshal(jsonData, &data); err != nil {
-			return nil, "", fmt.Errorf("failed to parse export data: %w", err)
+		seen[key] = true
+		out[l.FromID] = append(out[l.FromID], linkRow{
+			Direction: "Outgoing", Relationship: linkTypeLabelForDirection(l.Type, false),
+			TargetID: l.ToID, TargetTitle: titleOr(titles, l.ToID), Suspect: l.Suspect,
+		})
+		out[l.ToID] = append(out[l.ToID], linkRow{
+			Direction: "Incoming", Relationship: linkTypeLabelForDirection(l.Type, true),
+			TargetID: l.FromID, TargetTitle: titleOr(titles, l.FromID), Suspect: l.Suspect,
+		})
+	}
+	for id, rows := range out {
+		sort.SliceStable(rows, func(i, j int) bool {
+			if rows[i].Direction != rows[j].Direction {
+				return rows[i].Direction == "Incoming"
+			}
+			if rows[i].Relationship != rows[j].Relationship {
+				return rows[i].Relationship < rows[j].Relationship
+			}
+			if rows[i].TargetTitle != rows[j].TargetTitle {
+				return rows[i].TargetTitle < rows[j].TargetTitle
+			}
+			return rows[i].TargetID < rows[j].TargetID
+		})
+		out[id] = rows
+	}
+	return out
+}
+
+func titleOr(titles map[string]string, id string) string {
+	if t := titles[id]; t != "" {
+		return t
+	}
+	return id
+}
+
+type linkTypeLabel struct {
+	label        string
+	inverseLabel string
+}
+
+var linkTypeLabels = buildLinkTypeLabels()
+
+func buildLinkTypeLabels() map[string]linkTypeLabel {
+	labels := make(map[string]linkTypeLabel)
+	for _, rule := range linksdomain.GetLinkTypeRules() {
+		labels[rule.Type] = linkTypeLabel{label: rule.Label, inverseLabel: rule.InverseLabel}
+	}
+	return labels
+}
+
+func linkTypeLabelForDirection(linkType string, isIncoming bool) string {
+	labels, ok := linkTypeLabels[linkType]
+	if !ok {
+		return linkType
+	}
+	if isIncoming {
+		if labels.inverseLabel != "" {
+			return labels.inverseLabel
 		}
+		return labels.label
 	}
-
-	return &data, baselineName, nil
+	if labels.label != "" {
+		return labels.label
+	}
+	return linkType
 }
 
-// DefaultService generates PDF reports from project snapshots.
-type DefaultService struct {
-	exportService   exports.Service
-	baselineService baselines.Service
-}
+// --- Figures -----------------------------------------------------------------
 
-// NewService creates a new report service.
-func NewService(exportService exports.Service, baselineService baselines.Service) *DefaultService {
-	return &DefaultService{
-		exportService:   exportService,
-		baselineService: baselineService,
+// maxFigurePixels bounds the decoded size so a huge upload cannot exhaust
+// memory while rendering; anything larger is rejected with a placeholder.
+const maxFigurePixels = 40_000_000
+
+// loadFigure reads an attachment and prepares it for embedding. A missing
+// file, an undecodable image or an SVG becomes a placeholder rather than an
+// error: one drawing must never deny the document.
+func loadFigure(att *attachments.Attachment) figure {
+	f := figure{Attachment: att, Caption: figureCaption(att)}
+	mime := strings.ToLower(strings.TrimSpace(att.MimeType))
+	if strings.HasPrefix(mime, "image/svg") || strings.EqualFold(filepath.Ext(att.FilePath), ".svg") {
+		f.Placeholder = f.Caption + " is an SVG drawing; open it from the attachments archive."
+		return f
 	}
-}
-
-// GenerateProjectReport builds a PDF report for a project or baseline.
-func (s *DefaultService) GenerateProjectReport(projectID string, baselineID string) ([]byte, string, error) {
-	if projectID == "" {
-		return nil, "", errors.New("project_id is required")
+	path, ok := resolveAttachmentPath(att.FilePath)
+	if !ok {
+		f.Placeholder = f.Caption + " could not be read from storage."
+		return f
 	}
-
-	data, baselineName, err := s.loadReportExport(projectID, baselineID)
+	raw, err := os.ReadFile(path)
 	if err != nil {
-		return nil, "", err
+		f.Placeholder = f.Caption + " could not be read from storage."
+		return f
 	}
-
-	return s.RenderProjectReport(data, baselineName)
+	return decodeFigure(f, raw)
 }
 
-// RenderProjectReport builds a PDF from a snapshot the caller prepared.
-func (s *DefaultService) RenderProjectReport(data *exports.ProjectExport, baselineName string) ([]byte, string, error) {
-	if data == nil {
-		return nil, "", errors.New("nothing to report on")
-	}
-
-	pdf, err := buildReportPDF(data, baselineName)
+// decodeFigure fills in the image bytes for a figure from its file contents.
+func decodeFigure(f figure, raw []byte) figure {
+	cfg, format, err := image.DecodeConfig(bytes.NewReader(raw))
 	if err != nil {
-		return nil, "", err
+		f.Placeholder = f.Caption + " is not an image the document can embed."
+		return f
 	}
-
-	return pdf, reportFilename(data.ProjectName, baselineName, "pdf"), nil
-}
-
-// GenerateProjectReportDOCX builds a Word (.docx) spec document for a project
-// or baseline over the same report model the PDF path uses.
-func (s *DefaultService) GenerateProjectReportDOCX(projectID string, baselineID string) ([]byte, string, error) {
-	if projectID == "" {
-		return nil, "", errors.New("project_id is required")
+	if cfg.Width <= 0 || cfg.Height <= 0 || cfg.Width*cfg.Height > maxFigurePixels {
+		f.Placeholder = f.Caption + " is too large to embed."
+		return f
 	}
-
-	data, baselineName, err := s.loadReportExport(projectID, baselineID)
+	f.Width, f.Height = cfg.Width, cfg.Height
+	if format == "jpeg" {
+		f.JPEG = raw
+		return f
+	}
+	img, _, err := image.Decode(bytes.NewReader(raw))
 	if err != nil {
-		return nil, "", err
+		f.Placeholder = f.Caption + " is not an image the document can embed."
+		return f
 	}
-
-	return s.RenderProjectReportDOCX(data, baselineName)
-}
-
-// RenderProjectReportDOCX builds a Word document from a prepared snapshot.
-func (s *DefaultService) RenderProjectReportDOCX(data *exports.ProjectExport, baselineName string) ([]byte, string, error) {
-	if data == nil {
-		return nil, "", errors.New("nothing to report on")
-	}
-
-	docx, err := buildReportDOCX(data, baselineName)
-	if err != nil {
-		return nil, "", err
-	}
-
-	return docx, reportFilename(data.ProjectName, baselineName, "docx"), nil
-}
-
-// LoadReportExport exposes the snapshot load so a download can narrow it
-// before any renderer sees it.
-func (s *DefaultService) LoadReportExport(projectID string, baselineID string) (*exports.ProjectExport, string, error) {
-	if projectID == "" {
-		return nil, "", errors.New("project_id is required")
-	}
-	return s.loadReportExport(projectID, baselineID)
-}
-
-func buildReportPDF(data *exports.ProjectExport, baselineName string) ([]byte, error) {
-	pdf := gofpdf.New("P", "mm", "A4", "")
-	pdf.SetMargins(15, 15, 15)
-	pdf.SetAutoPageBreak(true, 15)
-	pdf.AddPage()
-
-	// Use UTF-8 encoding translator for special characters
-	tr := pdf.UnicodeTranslatorFromDescriptor("")
-
-	pdf.SetFont("Arial", "B", 16)
-	pdf.CellFormat(0, 8, tr(data.ProjectName), "", 1, "C", false, 0, "")
-
-	if data.ProjectDesc != "" {
-		pdf.SetFont("Arial", "", 10)
-		plainDesc := stripMarkdown(data.ProjectDesc)
-		pdf.MultiCell(0, 5, tr(plainDesc), "", "C", false)
-		pdf.Ln(2)
-	}
-
-	pdf.SetFont("Arial", "", 9)
-	pdf.SetTextColor(120, 120, 120)
-	if baselineName != "" {
-		pdf.CellFormat(0, 5, fmt.Sprintf("Baseline: %s", baselineName), "", 1, "C", false, 0, "")
-	}
-	pdf.CellFormat(0, 5, fmt.Sprintf("Generated: %s", time.Now().Format("2006-01-02 15:04")), "", 1, "C", false, 0, "")
-	pdf.SetTextColor(0, 0, 0)
-	pdf.Ln(4)
-
-	renderProductDefinition(pdf, tr, data.ProductProfile)
-
-	model := buildReportModel(data, baselineName)
-	attachmentMap := model.attachmentMap
-	artifactTitles := model.artifactTitles
-	linkGroupsByArtifact := model.linkGroupsByArtifact
-
-	linkIDs := map[string]int{}
-	for _, artifact := range data.Artifacts {
-		linkIDs[artifact.ID] = pdf.AddLink()
-	}
-
-	for _, node := range model.roots {
-		renderArtifactNode(pdf, tr, node, 0, attachmentMap, linkGroupsByArtifact, artifactTitles, linkIDs)
-	}
-
 	var buf bytes.Buffer
-	if err := pdf.Output(&buf); err != nil {
-		return nil, err
+	if err := png.Encode(&buf, img); err != nil {
+		f.Placeholder = f.Caption + " could not be converted for the document."
+		return f
 	}
+	f.PNG = buf.Bytes()
+	return f
+}
 
-	return buf.Bytes(), nil
+// logoFigure prepares the workspace logo the same way as a figure.
+func logoFigure(ws Workspace) (figure, bool) {
+	if len(ws.Logo) == 0 {
+		return figure{}, false
+	}
+	f := decodeFigure(figure{Caption: ws.Name}, ws.Logo)
+	if !f.Renderable() {
+		return figure{}, false
+	}
+	return f, true
+}
+
+// figureCaption is the line under a figure: its reference and the name the
+// file was uploaded under, so a citation in the text finds its picture.
+func figureCaption(att *attachments.Attachment) string {
+	name := strings.TrimSpace(att.OriginalFilename)
+	if name == "" {
+		name = strings.TrimSpace(att.Filename)
+	}
+	if att.FigureRef != "" {
+		if name != "" {
+			return "Figure " + att.FigureRef + " — " + name
+		}
+		return "Figure " + att.FigureRef
+	}
+	if name != "" {
+		return "Image — " + name
+	}
+	return "Image"
+}
+
+// encodeJPEGQuality is used when a renderer needs JPEG bytes from a decoded
+// image (not currently; kept beside decodeFigure for symmetry).
+var _ = jpeg.Encode
+
+func resolveAttachmentPath(original string) (string, bool) {
+	if original == "" {
+		return "", false
+	}
+	paths := []string{original}
+	if strings.Contains(original, "\\") {
+		paths = append(paths, strings.ReplaceAll(original, "\\", "/"))
+	}
+	if !filepath.IsAbs(original) {
+		if abs, err := filepath.Abs(original); err == nil {
+			paths = append(paths, abs)
+		}
+		if uploadsDir := os.Getenv("UPLOADS_DIR"); uploadsDir != "" {
+			paths = append(paths, filepath.Join(uploadsDir, original))
+			paths = append(paths, filepath.Join(uploadsDir, filepath.Base(original)))
+		}
+	}
+	for _, candidate := range paths {
+		if _, err := os.Stat(candidate); err == nil {
+			return candidate, true
+		}
+	}
+	return "", false
+}
+
+// --- Cover and product profile ----------------------------------------------
+
+// coverLine is one label/value pair the cover prints under the title.
+type coverLine struct{ Label, Value string }
+
+// coverLines describes the snapshot and the content choices.
+func (m *reportModel) coverLines() []coverLine {
+	c := m.opts.Content
+	lines := []coverLine{}
+	if m.opts.Workspace.Name != "" {
+		lines = append(lines, coverLine{"Workspace", m.opts.Workspace.Name})
+	}
+	lines = append(lines, coverLine{"Generated", m.opts.Snapshot.ExportedAt.UTC().Format("2006-01-02 15:04 UTC")})
+	if c.Template != "" {
+		name := c.Template
+		if t, ok := exports.TemplateByKey(c.Template); ok {
+			name = t.Name
+		}
+		lines = append(lines, coverLine{"Template", name})
+	}
+	lines = append(lines, coverLine{"Contents", m.contentsSummary()})
+	var carries []string
+	if c.AllFields {
+		carries = append(carries, "all fields")
+	} else if len(c.Fields) > 0 {
+		labels := make([]string, 0, len(c.Fields))
+		for _, k := range c.Fields {
+			if l := m.fieldLabels[k]; l != "" {
+				labels = append(labels, l)
+			} else {
+				labels = append(labels, exports.FieldLabel(k))
+			}
+		}
+		carries = append(carries, "fields: "+strings.Join(labels, ", "))
+	} else {
+		carries = append(carries, "no custom fields")
+	}
+	if c.Traceability {
+		carries = append(carries, "traceability")
+	}
+	if c.Figures {
+		carries = append(carries, "figures")
+	}
+	if c.VVStatus {
+		carries = append(carries, "V&V status")
+	}
+	if c.TestResults {
+		carries = append(carries, "test results")
+	}
+	lines = append(lines, coverLine{"Includes", strings.Join(carries, "; ")})
+	return lines
+}
+
+// contentsSummary counts what the document holds: "241 artifacts: 110
+// requirements, 50 test cases, …".
+func (m *reportModel) contentsSummary() string {
+	total := 0
+	for _, n := range m.counts {
+		total += n
+	}
+	order := []string{
+		artifacts.TypeHeading, artifacts.TypeUserNeed, artifacts.TypeRequirement, artifacts.TypeDesignItem,
+		artifacts.TypeTestCase, artifacts.TypeHazard, artifacts.TypePersona, artifacts.TypeDescription, artifacts.TypeOther,
+	}
+	var parts []string
+	seen := map[string]bool{}
+	add := func(t string) {
+		if n := m.counts[t]; n > 0 && !seen[t] {
+			seen[t] = true
+			label := strings.ToLower(typeLabel(t))
+			if n != 1 {
+				label = pluralType(label)
+			}
+			parts = append(parts, fmt.Sprintf("%d %s", n, label))
+		}
+	}
+	for _, t := range order {
+		add(t)
+	}
+	var rest []string
+	for t := range m.counts {
+		if !seen[t] {
+			rest = append(rest, t)
+		}
+	}
+	sort.Strings(rest)
+	for _, t := range rest {
+		add(t)
+	}
+	noun := "artifacts"
+	if total == 1 {
+		noun = "artifact"
+	}
+	if len(parts) == 0 {
+		return fmt.Sprintf("%d %s", total, noun)
+	}
+	return fmt.Sprintf("%d %s: %s", total, noun, strings.Join(parts, ", "))
+}
+
+func pluralType(label string) string {
+	switch {
+	case strings.HasSuffix(label, "y"):
+		return label[:len(label)-1] + "ies"
+	case strings.HasSuffix(label, "s"):
+		return label
+	}
+	return label + "s"
 }
 
 // mapStringValue reads a string value from a generic map, "" if absent.
@@ -411,43 +851,28 @@ func productProfileHasContent(profile *products.ProductProfile) bool {
 		len(profile.SuccessMetrics) > 0 || len(profile.Constraints) > 0
 }
 
-// renderProductDefinition renders the "Product Definition" section from the
-// export's product profile snapshot. No-op when the profile is empty.
-func renderProductDefinition(pdf *gofpdf.Fpdf, tr func(string) string, profile *products.ProductProfile) {
+// profileSection is the product definition as blocks, so both renderers
+// print it the same way.
+type profileField struct {
+	Label  string
+	Blocks []doc.Block
+}
+
+func profileFields(profile *products.ProductProfile) []profileField {
 	if !productProfileHasContent(profile) {
-		return
+		return nil
 	}
-
-	ensureSpace(pdf, 20)
-	pdf.SetFont("Arial", "B", 13)
-	pdf.SetTextColor(0, 0, 0)
-	pdf.CellFormat(0, 8, "Product Definition", "", 1, "L", false, 0, "")
-
-	renderProfileParagraph := func(label, text string) {
-		if text == "" {
-			return
+	var out []profileField
+	add := func(label, text string) {
+		if strings.TrimSpace(text) != "" {
+			out = append(out, profileField{Label: label, Blocks: doc.Parse(text)})
 		}
-		ensureSpace(pdf, 12)
-		pdf.SetFont("Arial", "B", 10)
-		pdf.SetTextColor(60, 60, 60)
-		pdf.CellFormat(0, 5, label, "", 1, "L", false, 0, "")
-		pdf.SetFont("Arial", "", 10)
-		pdf.SetTextColor(0, 0, 0)
-		pdf.MultiCell(0, 5, tr(stripMarkdown(text)), "", "L", false)
-		pdf.Ln(1)
 	}
-
-	renderProfileParagraph("Vision", profile.Vision)
-	renderProfileParagraph("Problem Statement", profile.ProblemStatement)
-	renderProfileParagraph("Target Users", profile.TargetUsers)
-
+	add("Vision", profile.Vision)
+	add("Problem statement", profile.ProblemStatement)
+	add("Target users", profile.TargetUsers)
 	if len(profile.SuccessMetrics) > 0 {
-		ensureSpace(pdf, 12)
-		pdf.SetFont("Arial", "B", 10)
-		pdf.SetTextColor(60, 60, 60)
-		pdf.CellFormat(0, 5, "Success Metrics", "", 1, "L", false, 0, "")
-		pdf.SetFont("Arial", "", 10)
-		pdf.SetTextColor(0, 0, 0)
+		list := doc.List{}
 		for _, metric := range profile.SuccessMetrics {
 			name := mapStringValue(metric, "name", "title", "metric")
 			if name == "" {
@@ -460,1050 +885,32 @@ func renderProductDefinition(pdf *gofpdf.Fpdf, tr func(string) string, profile *
 			if current := mapStringValue(metric, "current"); current != "" {
 				line += fmt.Sprintf(" (%s)", current)
 			}
-			ensureSpace(pdf, 5)
-			pdf.SetX(19)
-			pdf.MultiCell(0, 5, tr(stripMarkdown(line)), "", "L", false)
+			list.Items = append(list.Items, doc.ListItem{Blocks: []doc.Block{doc.Paragraph{Inlines: []doc.Inline{{Text: line}}}}})
 		}
-		pdf.Ln(1)
+		out = append(out, profileField{Label: "Success metrics", Blocks: []doc.Block{list}})
 	}
-
 	if len(profile.Constraints) > 0 {
-		ensureSpace(pdf, 12)
-		pdf.SetFont("Arial", "B", 10)
-		pdf.SetTextColor(60, 60, 60)
-		pdf.CellFormat(0, 5, "Constraints", "", 1, "L", false, 0, "")
-		pdf.SetFont("Arial", "", 10)
-		pdf.SetTextColor(0, 0, 0)
+		list := doc.List{}
 		for _, constraint := range profile.Constraints {
 			text := mapStringValue(constraint, "text", "description", "name", "title")
 			if text == "" {
 				continue
 			}
-			ensureSpace(pdf, 5)
-			pdf.SetX(19)
-			pdf.MultiCell(0, 5, tr("- "+stripMarkdown(text)), "", "L", false)
+			list.Items = append(list.Items, doc.ListItem{Blocks: []doc.Block{doc.Paragraph{Inlines: []doc.Inline{{Text: text}}}}})
 		}
-		pdf.Ln(1)
+		if len(list.Items) > 0 {
+			out = append(out, profileField{Label: "Constraints", Blocks: []doc.Block{list}})
+		}
 	}
-
-	pdf.SetTextColor(0, 0, 0)
-	pdf.Ln(3)
+	return out
 }
 
-func buildLinkTypeLabels() map[string]linkTypeLabel {
-	labels := make(map[string]linkTypeLabel)
-	for _, rule := range linksdomain.GetLinkTypeRules() {
-		labels[rule.Type] = linkTypeLabel{
-			label:        rule.Label,
-			inverseLabel: rule.InverseLabel,
-		}
-	}
-	return labels
-}
-
-func linkTypeLabelForDirection(linkType string, isIncoming bool) string {
-	labels, ok := linkTypeLabels[linkType]
-	if !ok {
-		return linkType
-	}
-	if isIncoming {
-		if labels.inverseLabel != "" {
-			return labels.inverseLabel
-		}
-		return labels.label
-	}
-	if labels.label != "" {
-		return labels.label
-	}
-	return linkType
-}
-
-// nodeTitle is the qualified heading for a node ("1.2 Background",
-// "REQ-12 Brake within 2 m"), read from the shared title index that
-// buildReportModel populates and every renderer already carries.
-func nodeTitle(node *artifactNode, artifactTitles map[string]string) string {
-	if node == nil || node.artifact == nil {
-		return ""
-	}
-	if t := artifactTitles[node.artifact.ID]; t != "" {
-		return t
-	}
-	return node.artifact.Title
-}
-
-func renderArtifactNode(
-	pdf *gofpdf.Fpdf,
-	tr func(string) string,
-	node *artifactNode,
-	depth int,
-	attachmentMap map[string][]*attachments.Attachment,
-	linkGroupsByArtifact map[string]linkGroups,
-	artifactTitles map[string]string,
-	linkIDs map[string]int,
-) {
-	indent := float64(depth) * 6
-	xStart := 15 + indent
-
-	linkID := linkIDs[node.artifact.ID]
-
-	sectionHeight := calculateArtifactSectionHeight(pdf, node, xStart, indent, attachmentMap, linkGroupsByArtifact, artifactTitles)
-	_, pageHeight := pdf.GetPageSize()
-	safeMargin := 20.0 // minimum margin from bottom before forcing new page
-
-	// Check if artifact fits on current page
-	availableSpace := pageHeight - pdf.GetY() - 15 // 15mm bottom margin
-
-	// If artifact is small (fits on one page), keep it together
-	if sectionHeight+6 < availableSpace {
-		// Fits on current page - render normally
-		renderArtifactContent(pdf, tr, node, xStart, indent, attachmentMap, linkGroupsByArtifact, artifactTitles, linkIDs, linkID)
-	} else if sectionHeight+6 < pageHeight-30 {
-		// Artifact is medium-sized (fits on one page if started at top)
-		// Force to new page
-		pdf.AddPage()
-		renderArtifactContent(pdf, tr, node, xStart, indent, attachmentMap, linkGroupsByArtifact, artifactTitles, linkIDs, linkID)
-	} else {
-		// Artifact is too large for one page - need to split
-		// Start on new page with split-rendering logic
-		pdf.AddPage()
-		renderArtifactContentWithSplitting(pdf, tr, node, xStart, indent, attachmentMap, linkGroupsByArtifact, artifactTitles, linkIDs, linkID, pageHeight, safeMargin)
-	}
-
-	pdf.Ln(2)
-
-	for _, child := range node.children {
-		renderArtifactNode(pdf, tr, child, depth+1, attachmentMap, linkGroupsByArtifact, artifactTitles, linkIDs)
-	}
-}
-
-// renderArtifactContent renders the core content of an artifact (title, body, table, images)
-func renderArtifactContent(
-	pdf *gofpdf.Fpdf,
-	tr func(string) string,
-	node *artifactNode,
-	xStart float64,
-	indent float64,
-	attachmentMap map[string][]*attachments.Attachment,
-	linkGroupsByArtifact map[string]linkGroups,
-	artifactTitles map[string]string,
-	linkIDs map[string]int,
-	linkID int,
-) {
-	if node.artifact.Type == "heading" {
-		pdf.SetFont("Arial", "B", 13)
-	} else {
-		pdf.SetFont("Arial", "B", 11)
-	}
-
-	// Skip title for description artifacts, render only for headings and other types
-	if node.artifact.Type != "description" {
-		yStart := pdf.GetY()
-		pdf.SetX(xStart)
-		if linkID > 0 {
-			pdf.MultiCell(0, 6, tr(nodeTitle(node, artifactTitles)), "", "L", false)
-			pdf.SetLink(linkID, yStart, -1)
-		} else {
-			pdf.MultiCell(0, 6, tr(nodeTitle(node, artifactTitles)), "", "L", false)
-		}
-	}
-
-	// For headings and descriptions: just display body text and images (no table)
-	if node.artifact.Type == "heading" || node.artifact.Type == "description" {
-		if node.artifact.Body != "" {
-			pdf.SetFont("Arial", "", 10)
-			pdf.SetX(xStart)
-			// Convert markdown to plain text for PDF rendering
-			plainText := stripMarkdown(node.artifact.Body)
-			pdf.MultiCell(0, 5, tr(plainText), "", "L", false)
-		}
-	} else {
-		// For other artifact types: render details in table format with embedded links and images
-		renderArtifactDetailsTable(pdf, tr, node, xStart, indent, attachmentMap, linkGroupsByArtifact, artifactTitles, linkIDs)
-	}
-
-	// For headings and descriptions, render images below the title/description
-	if node.artifact.Type == "heading" || node.artifact.Type == "description" {
-		attachments := attachmentMap[node.artifact.ID]
-		for _, attachment := range attachments {
-			imageType := imageTypeFromMime(attachment.MimeType, attachment.FilePath)
-			if imageType == "" {
-				continue
-			}
-
-			imagePath, ok := resolveAttachmentPath(attachment.FilePath)
-			if !ok {
-				continue
-			}
-
-			options := gofpdf.ImageOptions{ImageType: imageType, ReadDpi: true}
-			info := pdf.RegisterImageOptions(imagePath, options)
-			if info == nil {
-				continue
-			}
-
-			maxWidth := 170.0 - indent
-			width := maxWidth
-			height := width * info.Height() / info.Width()
-			if height > 90 {
-				height = 90
-				width = height * info.Width() / info.Height()
-			}
-
-			ensureSpace(pdf, height+6)
-			pdf.SetX(xStart)
-			pdf.ImageOptions(imagePath, xStart, pdf.GetY(), width, height, false, options, 0, "")
-			pdf.Ln(height + 4)
-		}
-	}
-}
-
-// renderArtifactContentWithSplitting handles artifacts too large for one page
-func renderArtifactContentWithSplitting(
-	pdf *gofpdf.Fpdf,
-	tr func(string) string,
-	node *artifactNode,
-	xStart float64,
-	indent float64,
-	attachmentMap map[string][]*attachments.Attachment,
-	linkGroupsByArtifact map[string]linkGroups,
-	artifactTitles map[string]string,
-	linkIDs map[string]int,
-	linkID int,
-	pageHeight float64,
-	safeMargin float64,
-) {
-	// For split content, we still render the title and basic content
-	// but mark continuation sections properly
-	if node.artifact.Type == "heading" {
-		pdf.SetFont("Arial", "B", 13)
-	} else {
-		pdf.SetFont("Arial", "B", 11)
-	}
-
-	// Skip title for description artifacts
-	if node.artifact.Type != "description" {
-		yStart := pdf.GetY()
-		pdf.SetX(xStart)
-		if linkID > 0 {
-			pdf.MultiCell(0, 6, tr(nodeTitle(node, artifactTitles)), "", "L", false)
-			pdf.SetLink(linkID, yStart, -1)
-		} else {
-			pdf.MultiCell(0, 6, tr(nodeTitle(node, artifactTitles)), "", "L", false)
-		}
-	}
-
-	// For split rendering, call the table renderer with split flag
-	if node.artifact.Type != "heading" && node.artifact.Type != "description" {
-		renderArtifactDetailsTableWithSplitting(pdf, tr, node, xStart, indent, attachmentMap, linkGroupsByArtifact, artifactTitles, linkIDs, pageHeight, safeMargin)
-	}
-}
-
-// renderSingleTextField renders a text field that fits on one page
-func renderSingleTextField(pdf *gofpdf.Fpdf, tableX, tableWidth, labelColWidth, valueColWidth, rowHeight float64, label, text string) {
-	startY := pdf.GetY()
-
-	pdf.SetFont("Arial", "", 9)
-	textHeight := calculateTextHeight(pdf, text, valueColWidth, 9)
-	cellHeight := textHeight + 2
-
-	// Draw complete box border
-	pdf.SetDrawColor(200, 200, 200)
-	pdf.SetLineWidth(0.5)
-	pdf.Rect(tableX, startY, tableWidth, cellHeight, "")
-
-	// Draw vertical column separator
-	pdf.SetLineWidth(0.2)
-	pdf.Line(tableX+labelColWidth, startY, tableX+labelColWidth, startY+cellHeight)
-
-	// Label cell
-	pdf.SetXY(tableX, startY)
-	pdf.SetTextColor(60, 60, 60)
-	pdf.SetFont("Arial", "B", 9)
-	pdf.CellFormat(labelColWidth, cellHeight, label, "", 0, "TL", false, 0, "")
-
-	// Text value cell
-	pdf.SetXY(tableX+labelColWidth, startY)
-	pdf.SetTextColor(0, 0, 0)
-	pdf.SetFont("Arial", "", 9)
-	pdf.MultiCell(valueColWidth, rowHeight, text, "", "L", false)
-}
-
-// renderSplitTextField renders a text field that spans multiple pages
-func renderSplitTextField(pdf *gofpdf.Fpdf, tableX, tableWidth, labelColWidth, valueColWidth, rowHeight float64, label, text string, pageHeight, safeMargin float64) {
-	currentY := pdf.GetY()
-	availableHeight := pageHeight - currentY - safeMargin
-
-	// Split text into lines
-	pdf.SetFont("Arial", "", 9)
-	lines := pdf.SplitLines([]byte(text), valueColWidth)
-
-	// Calculate how many lines fit on current page
-	linesPerPage := int(availableHeight / rowHeight)
-	if linesPerPage < 1 {
-		// Not enough space, move to next page
-		pdf.AddPage()
-		renderSingleTextField(pdf, tableX, tableWidth, labelColWidth, valueColWidth, rowHeight, label, text)
-		return
-	}
-
-	// First part - on current page
-	firstPartLines := lines[:linesPerPage]
-	firstPartText := strings.Join(convertBytesToStrings(firstPartLines), "\n")
-	firstPartHeight := float64(len(firstPartLines)) * rowHeight
-
-	// Draw first part (no [continued] tag on first part)
-	pdf.SetXY(tableX, currentY)
-	pdf.SetDrawColor(200, 200, 200)
-	pdf.SetLineWidth(0.5)
-	pdf.Rect(tableX, currentY, tableWidth, firstPartHeight+2, "")
-	pdf.SetLineWidth(0.2)
-	pdf.Line(tableX+labelColWidth, currentY, tableX+labelColWidth, currentY+firstPartHeight+2)
-
-	pdf.SetTextColor(60, 60, 60)
-	pdf.SetFont("Arial", "B", 9)
-	pdf.CellFormat(labelColWidth, firstPartHeight, label, "", 0, "TL", false, 0, "")
-	pdf.SetTextColor(0, 0, 0)
-	pdf.SetFont("Arial", "", 9)
-	pdf.SetX(tableX + labelColWidth)
-	pdf.MultiCell(valueColWidth, rowHeight, firstPartText, "", "L", false)
-
-	currentY = pdf.GetY()
-	pdf.SetDrawColor(200, 200, 200)
-	pdf.SetLineWidth(0.2)
-	pdf.Line(tableX, currentY, tableX+tableWidth, currentY)
-
-	// Second part - on next page
-	if len(lines) > linesPerPage {
-		pdf.AddPage()
-		remainingLines := lines[linesPerPage:]
-		remainingText := strings.Join(convertBytesToStrings(remainingLines), "\n")
-		renderSingleTextField(pdf, tableX, tableWidth, labelColWidth, valueColWidth, rowHeight, label+" [continued]", remainingText)
-	}
-}
-
-// convertBytesToStrings converts [][]byte to []string
-func convertBytesToStrings(lines [][]byte) []string {
-	result := make([]string, len(lines))
-	for i, line := range lines {
-		result[i] = string(line)
-	}
-	return result
-}
-
-func renderArtifactDetailsTableWithSplitting(
-	pdf *gofpdf.Fpdf,
-	tr func(string) string,
-	node *artifactNode,
-	xStart float64,
-	indent float64,
-	attachmentMap map[string][]*attachments.Attachment,
-	linkGroupsByArtifact map[string]linkGroups,
-	artifactTitles map[string]string,
-	linkIDs map[string]int,
-	pageHeight float64,
-	safeMargin float64,
-) {
-	// Render the table row by row, checking for page breaks
-	tableX := xStart
-	tableWidth := 170.0 - indent
-	labelColWidth := 50.0
-	valueColWidth := tableWidth - labelColWidth
-	rowHeight := 5.0
-
-	// Description field
-	if node.artifact.Body != "" {
-		plainText := stripMarkdown(node.artifact.Body)
-		text := tr(plainText)
-		descriptionHeight := calculateTextHeight(pdf, text, valueColWidth, 9)
-		availableHeight := pageHeight - pdf.GetY() - safeMargin
-
-		if descriptionHeight > availableHeight && availableHeight > 15 {
-			// Text is too long for current page - split it
-			renderSplitTextField(pdf, tableX, tableWidth, labelColWidth, valueColWidth, rowHeight,
-				"Description:", text, pageHeight, safeMargin)
-		} else if descriptionHeight > availableHeight {
-			// Not enough space on current page - move to next page
-			pdf.AddPage()
-			renderSingleTextField(pdf, tableX, tableWidth, labelColWidth, valueColWidth, rowHeight,
-				"Description:", text)
-		} else {
-			// Fits on current page
-			renderSingleTextField(pdf, tableX, tableWidth, labelColWidth, valueColWidth, rowHeight,
-				"Description:", text)
-		}
-	}
-
-	// Type and Version rows
-	for _, fieldLabel := range []string{"Type:", "Version:"} {
-		if pdf.GetY()+4 > pageHeight-safeMargin {
-			pdf.AddPage()
-		}
-
-		startY := pdf.GetY()
-		rowHeight := 5.0
-
-		// Draw borders
-		pdf.SetDrawColor(200, 200, 200)
-		pdf.SetLineWidth(0.5)
-		pdf.Rect(tableX, startY, tableWidth, rowHeight, "")
-		pdf.SetLineWidth(0.2)
-		pdf.Line(tableX+labelColWidth, startY, tableX+labelColWidth, startY+rowHeight)
-
-		// Draw label
-		pdf.SetXY(tableX, startY)
-		pdf.SetTextColor(60, 60, 60)
-		pdf.SetFont("Arial", "B", 9)
-		pdf.CellFormat(labelColWidth, rowHeight, fieldLabel, "", 0, "CM", false, 0, "")
-
-		// Draw value
-		pdf.SetXY(tableX+labelColWidth, startY)
-		pdf.SetTextColor(0, 0, 0)
-		pdf.SetFont("Arial", "", 9)
-
-		var fieldValue string
-		if fieldLabel == "Type:" {
-			fieldValue = tr(node.artifact.Type)
-		} else {
-			fieldValue = fmt.Sprintf("v%d", node.artifact.Version)
-		}
-		pdf.CellFormat(valueColWidth, rowHeight, fieldValue, "", 0, "CM", false, 0, "")
-
-		// Draw bottom border
-		pdf.SetDrawColor(200, 200, 200)
-		pdf.SetLineWidth(0.2)
-		pdf.Line(tableX, startY+rowHeight, tableX+tableWidth, startY+rowHeight)
-
-		pdf.SetY(startY + rowHeight)
-	}
-
-	// Links section
-	if groups, ok := linkGroupsByArtifact[node.artifact.ID]; ok {
-		if len(groups.incoming) > 0 {
-			incomingHeight := calculateLinkRowHeight(pdf, valueColWidth, groups.incoming, artifactTitles, true)
-
-			if pdf.GetY()+incomingHeight > pageHeight-safeMargin {
-				pdf.AddPage()
-			}
-
-			pdf.SetXY(tableX, pdf.GetY())
-			pdf.SetTextColor(60, 60, 60)
-			pdf.SetFont("Arial", "B", 9)
-			pdf.CellFormat(labelColWidth, incomingHeight, "Incoming Links:", "", 0, "TL", false, 0, "")
-			pdf.SetTextColor(0, 0, 0)
-			pdf.SetFont("Arial", "", 9)
-			renderLinksWithHyperlinks(pdf, tableX+labelColWidth, pdf.GetY(), valueColWidth, groups.incoming, artifactTitles, linkIDs, true)
-			currentY := pdf.GetY()
-			pdf.SetDrawColor(200, 200, 200)
-			pdf.SetLineWidth(0.2)
-			pdf.Line(tableX, currentY, tableX+tableWidth, currentY)
-		}
-
-		if len(groups.outgoing) > 0 {
-			outgoingHeight := calculateLinkRowHeight(pdf, valueColWidth, groups.outgoing, artifactTitles, false)
-
-			if pdf.GetY()+outgoingHeight > pageHeight-safeMargin {
-				pdf.AddPage()
-			}
-
-			pdf.SetXY(tableX, pdf.GetY())
-			pdf.SetTextColor(60, 60, 60)
-			pdf.SetFont("Arial", "B", 9)
-			pdf.CellFormat(labelColWidth, outgoingHeight, "Outgoing Links:", "", 0, "TL", false, 0, "")
-			pdf.SetTextColor(0, 0, 0)
-			pdf.SetFont("Arial", "", 9)
-			renderLinksWithHyperlinks(pdf, tableX+labelColWidth, pdf.GetY(), valueColWidth, groups.outgoing, artifactTitles, linkIDs, false)
-			currentY := pdf.GetY()
-			pdf.SetDrawColor(200, 200, 200)
-			pdf.SetLineWidth(0.2)
-			pdf.Line(tableX, currentY, tableX+tableWidth, currentY)
-		}
-	}
-
-	// Images
-	for _, attachment := range attachmentMap[node.artifact.ID] {
-		imageType := imageTypeFromMime(attachment.MimeType, attachment.FilePath)
-		if imageType == "" {
-			continue
-		}
-
-		imagePath, ok := resolveAttachmentPath(attachment.FilePath)
-		if !ok {
-			continue
-		}
-
-		options := gofpdf.ImageOptions{ImageType: imageType, ReadDpi: true}
-		info := pdf.RegisterImageOptions(imagePath, options)
-		if info == nil {
-			continue
-		}
-
-		maxWidth := valueColWidth - 4
-		width, height := calculateImageSize(info, maxWidth)
-		imageRowHeight := height + 4
-
-		if pdf.GetY()+imageRowHeight > pageHeight-safeMargin {
-			pdf.AddPage()
-		}
-
-		pdf.SetXY(tableX, pdf.GetY())
-		pdf.SetTextColor(60, 60, 60)
-		pdf.SetFont("Arial", "B", 9)
-		pdf.CellFormat(labelColWidth, imageRowHeight, "Image:", "", 0, "TL", false, 0, "")
-
-		imageY := pdf.GetY() + 2.0
-		imageX := tableX + labelColWidth + 2.0
-		pdf.ImageOptions(imagePath, imageX, imageY, width, height, false, options, 0, "")
-
-		pdf.SetY(pdf.GetY() + imageRowHeight)
-		pdf.SetDrawColor(200, 200, 200)
-		pdf.SetLineWidth(0.2)
-		pdf.Line(tableX, pdf.GetY(), tableX+tableWidth, pdf.GetY())
-	}
-
-	// Reset
-	pdf.SetDrawColor(0, 0, 0)
-	pdf.SetLineWidth(0.2)
-	pdf.SetTextColor(0, 0, 0)
-	pdf.SetFont("Arial", "", 10)
-	pdf.Ln(2)
-}
-
-// calculateTextHeight estimates the height needed to render text with wrapping
-func calculateTextHeight(pdf *gofpdf.Fpdf, text string, width float64, fontSize float64) float64 {
-	pdf.SetFont("Arial", "", fontSize)
-	lines := pdf.SplitLines([]byte(text), width)
-	return float64(len(lines)) * 5.0 // 5mm per line
-}
-
-func renderArtifactDetailsTable(
-	pdf *gofpdf.Fpdf,
-	tr func(string) string,
-	node *artifactNode,
-	xStart float64,
-	indent float64,
-	attachmentMap map[string][]*attachments.Attachment,
-	linkGroupsByArtifact map[string]linkGroups,
-	artifactTitles map[string]string,
-	linkIDs map[string]int,
-) {
-	ensureSpace(pdf, 20)
-
-	tableX := xStart
-	tableWidth := 170.0 - indent
-	labelColWidth := 50.0
-	valueColWidth := tableWidth - labelColWidth
-
-	// Table border color (light grey)
-	pdf.SetDrawColor(200, 200, 200)
-	pdf.SetTextColor(0, 0, 0)
-	pdf.SetFont("Arial", "B", 9)
-
-	tableStartY := pdf.GetY()
-	rowHeight := 5.0
-	attachments := attachmentMap[node.artifact.ID]
-
-	totalHeight, descriptionHeight := calculateArtifactDetailsTableHeight(pdf, node.artifact, valueColWidth, attachmentMap, linkGroupsByArtifact, artifactTitles)
-
-	// Draw outer border (thicker)
-	pdf.SetLineWidth(0.5)
-	pdf.Rect(tableX, tableStartY, tableWidth, totalHeight, "")
-	// Draw label/value column separator
-	pdf.SetLineWidth(0.2)
-	pdf.Line(tableX+labelColWidth, tableStartY, tableX+labelColWidth, tableStartY+totalHeight)
-
-	// Draw inner lines (thinner)
-	pdf.SetLineWidth(0.2)
-	currentY := tableStartY
-
-	// Body field
-	if node.artifact.Body != "" {
-		pdf.SetXY(tableX, currentY)
-		pdf.SetTextColor(60, 60, 60)
-		pdf.SetFont("Arial", "B", 9)
-		pdf.CellFormat(labelColWidth, descriptionHeight, "Description:", "", 0, "L", false, 0, "")
-		pdf.SetTextColor(0, 0, 0)
-		pdf.SetFont("Arial", "", 9)
-		pdf.SetX(tableX + labelColWidth)
-		// Convert markdown to plain text for PDF rendering
-		plainText := stripMarkdown(node.artifact.Body)
-		pdf.MultiCell(valueColWidth, rowHeight, tr(plainText), "", "L", false)
-		currentY = currentY + descriptionHeight
-		pdf.SetDrawColor(200, 200, 200)
-		pdf.SetLineWidth(0.2)
-		pdf.Line(tableX, currentY, tableX+tableWidth, currentY)
-	}
-
-	// Type field
-	pdf.SetXY(tableX, currentY)
-	pdf.SetTextColor(60, 60, 60)
-	pdf.SetFont("Arial", "B", 9)
-	pdf.CellFormat(labelColWidth, rowHeight, "Type:", "", 0, "L", false, 0, "")
-	pdf.SetTextColor(0, 0, 0)
-	pdf.SetFont("Arial", "", 9)
-	pdf.SetX(tableX + labelColWidth)
-	pdf.CellFormat(valueColWidth, rowHeight, tr(node.artifact.Type), "", 1, "L", false, 0, "")
-	currentY = pdf.GetY()
-	pdf.SetDrawColor(200, 200, 200)
-	pdf.SetLineWidth(0.2)
-	pdf.Line(tableX, currentY, tableX+tableWidth, currentY)
-
-	// Version field
-	pdf.SetXY(tableX, currentY)
-	pdf.SetTextColor(60, 60, 60)
-	pdf.SetFont("Arial", "B", 9)
-	pdf.CellFormat(labelColWidth, rowHeight, "Version:", "", 0, "L", false, 0, "")
-	pdf.SetTextColor(0, 0, 0)
-	pdf.SetFont("Arial", "", 9)
-	pdf.SetX(tableX + labelColWidth)
-	pdf.CellFormat(valueColWidth, rowHeight, fmt.Sprintf("v%d", node.artifact.Version), "", 1, "L", false, 0, "")
-	currentY = pdf.GetY()
-	pdf.SetDrawColor(200, 200, 200)
-	pdf.SetLineWidth(0.2)
-	pdf.Line(tableX, currentY, tableX+tableWidth, currentY)
-
-	// No idea what attributes are so what was this doing?
-	// // Attributes (excluding links_snapshot)
-	// if len(node.artifact.Attributes) > 0 {
-	// 	filteredAttributes := make(map[string]interface{})
-	// 	for key, value := range node.artifact.Attributes {
-	// 		if key != "links_snapshot" {
-	// 			filteredAttributes[key] = value
-	// 		}
-	// 	}
-
-	// 	if len(filteredAttributes) > 0 {
-	// 		attributesJSON, _ := json.MarshalIndent(filteredAttributes, "", "  ")
-	// 		pdf.SetXY(tableX, currentY)
-	// 		pdf.SetTextColor(60, 60, 60)
-	// 		pdf.CellFormat(labelColWidth, 4, "Attributes:", "", 0, "L", false, 0, "")
-	// 		pdf.SetTextColor(80, 80, 80)
-	// 		pdf.SetFont("Arial", "", 8)
-	// 		pdf.SetX(tableX + labelColWidth)
-	// 		pdf.MultiCell(valueColWidth, 4, string(attributesJSON), "", "L", false)
-	// 		currentY = pdf.GetY()
-	// 		pdf.SetDrawColor(200, 200, 200)
-	// 		pdf.SetLineWidth(0.2)
-	// 		pdf.Line(tableX, currentY, tableX+tableWidth, currentY)
-	// 	}
-	// }
-
-	// Incoming Links row
-	if groups, ok := linkGroupsByArtifact[node.artifact.ID]; ok {
-		if len(groups.incoming) > 0 {
-			incomingHeight := calculateLinkRowHeight(pdf, valueColWidth, groups.incoming, artifactTitles, true)
-			pdf.SetXY(tableX, currentY)
-			pdf.SetTextColor(60, 60, 60)
-			pdf.SetFont("Arial", "B", 9)
-			pdf.CellFormat(labelColWidth, incomingHeight, "Incoming Links:", "", 0, "TL", false, 0, "")
-			pdf.SetTextColor(0, 0, 0)
-			pdf.SetFont("Arial", "", 9)
-			renderLinksWithHyperlinks(pdf, tableX+labelColWidth, currentY, valueColWidth, groups.incoming, artifactTitles, linkIDs, true)
-			currentY = currentY + incomingHeight
-			pdf.SetDrawColor(200, 200, 200)
-			pdf.SetLineWidth(0.2)
-			pdf.Line(tableX, currentY, tableX+tableWidth, currentY)
-		}
-
-		// Outgoing Links row
-		if len(groups.outgoing) > 0 {
-			outgoingHeight := calculateLinkRowHeight(pdf, valueColWidth, groups.outgoing, artifactTitles, false)
-			pdf.SetXY(tableX, currentY)
-			pdf.SetTextColor(60, 60, 60)
-			pdf.SetFont("Arial", "B", 9)
-			pdf.CellFormat(labelColWidth, outgoingHeight, "Outgoing Links:", "", 0, "TL", false, 0, "")
-			pdf.SetTextColor(0, 0, 0)
-			pdf.SetFont("Arial", "", 9)
-			renderLinksWithHyperlinks(pdf, tableX+labelColWidth, currentY, valueColWidth, groups.outgoing, artifactTitles, linkIDs, false)
-			currentY = currentY + outgoingHeight
-			pdf.SetDrawColor(200, 200, 200)
-			pdf.SetLineWidth(0.2)
-			pdf.Line(tableX, currentY, tableX+tableWidth, currentY)
-		}
-	}
-
-	// Images
-	for _, attachment := range attachments {
-		imageType := imageTypeFromMime(attachment.MimeType, attachment.FilePath)
-		if imageType == "" {
-			continue
-		}
-
-		imagePath, ok := resolveAttachmentPath(attachment.FilePath)
-		if !ok {
-			continue
-		}
-
-		options := gofpdf.ImageOptions{ImageType: imageType, ReadDpi: true}
-		info := pdf.RegisterImageOptions(imagePath, options)
-		if info == nil {
-			continue
-		}
-
-		// Calculate image size with constraints
-		maxWidth := valueColWidth - 4 // Leave 2mm padding on each side
-		width, height := calculateImageSize(info, maxWidth)
-
-		// Row height for image cell
-		imageRowHeight := height + 4 // 2mm padding top/bottom
-
-		pdf.SetXY(tableX, currentY)
-		pdf.SetTextColor(60, 60, 60)
-		pdf.SetFont("Arial", "B", 9)
-		pdf.CellFormat(labelColWidth, imageRowHeight, "Image:", "", 0, "TL", false, 0, "")
-
-		// Center image vertically in its cell with padding
-		imageY := currentY + 2.0
-		imageX := tableX + labelColWidth + 2.0
-		pdf.ImageOptions(imagePath, imageX, imageY, width, height, false, options, 0, "")
-
-		currentY = currentY + imageRowHeight
-		pdf.SetDrawColor(200, 200, 200)
-		pdf.SetLineWidth(0.2)
-		pdf.Line(tableX, currentY, tableX+tableWidth, currentY)
-	}
-
-	// Reset
-	pdf.SetDrawColor(0, 0, 0)
-	pdf.SetLineWidth(0.2)
-	pdf.SetTextColor(0, 0, 0)
-	pdf.SetFont("Arial", "", 10)
-	pdf.SetY(currentY)
-	pdf.Ln(2)
-}
-
-func calculateArtifactSectionHeight(
-	pdf *gofpdf.Fpdf,
-	node *artifactNode,
-	xStart float64,
-	indent float64,
-	attachmentMap map[string][]*attachments.Attachment,
-	linkGroupsByArtifact map[string]linkGroups,
-	artifactTitles map[string]string,
-) float64 {
-	sectionHeight := 0.0
-	pageW, _ := pdf.GetPageSize()
-	_, _, rightMargin, _ := pdf.GetMargins()
-	contentWidth := pageW - rightMargin - xStart
-	if contentWidth <= 0 {
-		contentWidth = 170.0 - indent
-	}
-
-	if node.artifact.Type != "description" && node.artifact.Title != "" {
-		lineHeight := 6.0
-		fontSize := 11.0
-		if node.artifact.Type == "heading" {
-			fontSize = 13.0
-		}
-		pdf.SetFont("Arial", "B", fontSize)
-		sectionHeight += estimateWrappedTextHeight(pdf, nodeTitle(node, artifactTitles), contentWidth, lineHeight)
-	}
-
-	if node.artifact.Type == "heading" || node.artifact.Type == "description" {
-		if node.artifact.Body != "" {
-			pdf.SetFont("Arial", "", 10)
-			// Convert markdown to plain text before estimating height
-			plainText := stripMarkdown(node.artifact.Body)
-			sectionHeight += estimateWrappedTextHeight(pdf, plainText, contentWidth, 5.0)
-		}
-	} else {
-		tableWidth := 170.0 - indent
-		labelColWidth := 50.0
-		valueColWidth := tableWidth - labelColWidth
-		tableHeight, _ := calculateArtifactDetailsTableHeight(pdf, node.artifact, valueColWidth, attachmentMap, linkGroupsByArtifact, artifactTitles)
-		sectionHeight += tableHeight
-	}
-
-	return sectionHeight
-}
-
-func calculateArtifactDetailsTableHeight(
-	pdf *gofpdf.Fpdf,
-	artifact *artifacts.Artifact,
-	valueColWidth float64,
-	attachmentMap map[string][]*attachments.Attachment,
-	linkGroupsByArtifact map[string]linkGroups,
-	artifactTitles map[string]string,
-) (float64, float64) {
-	rowHeight := 5.0
-	descriptionHeight := 0.0
-	if artifact.Body != "" {
-		pdf.SetFont("Arial", "", 9)
-		// Convert markdown to plain text before calculating height
-		plainText := stripMarkdown(artifact.Body)
-		wrapped := pdf.SplitLines([]byte(plainText), valueColWidth)
-		if len(wrapped) == 0 {
-			descriptionHeight = rowHeight
-		} else {
-			descriptionHeight = float64(len(wrapped)) * rowHeight
-		}
-	}
-
-	var totalHeight float64
-	if artifact.Body != "" {
-		totalHeight += descriptionHeight
-	}
-	totalHeight += rowHeight * 2 // Type and Version
-
-	if len(artifact.Attributes) > 0 {
-		filteredAttributes := make(map[string]interface{})
-		for key, value := range artifact.Attributes {
-			if key != "links_snapshot" {
-				filteredAttributes[key] = value
-			}
-		}
-		if len(filteredAttributes) > 0 {
-			attributesJSON, _ := json.MarshalIndent(filteredAttributes, "", "  ")
-			lines := strings.Count(string(attributesJSON), "\n") + 1
-			totalHeight += float64(lines) * 4.0
-		}
-	}
-
-	if groups, ok := linkGroupsByArtifact[artifact.ID]; ok {
-		if len(groups.incoming) > 0 {
-			incomingHeight := calculateLinkRowHeight(pdf, valueColWidth, groups.incoming, artifactTitles, true)
-			totalHeight += incomingHeight
-		}
-		if len(groups.outgoing) > 0 {
-			outgoingHeight := calculateLinkRowHeight(pdf, valueColWidth, groups.outgoing, artifactTitles, false)
-			totalHeight += outgoingHeight
-		}
-	}
-
-	attachments := attachmentMap[artifact.ID]
-	for _, attachment := range attachments {
-		imageType := imageTypeFromMime(attachment.MimeType, attachment.FilePath)
-		if imageType == "" {
-			continue
-		}
-
-		imagePath, ok := resolveAttachmentPath(attachment.FilePath)
-		if !ok {
-			continue
-		}
-
-		options := gofpdf.ImageOptions{ImageType: imageType, ReadDpi: true}
-		info := pdf.RegisterImageOptions(imagePath, options)
-		if info == nil {
-			continue
-		}
-		maxWidth := valueColWidth - 4
-		_, height := calculateImageSize(info, maxWidth)
-		totalHeight += height + 4
-	}
-
-	return totalHeight, descriptionHeight
-}
-
-func estimateWrappedTextHeight(pdf *gofpdf.Fpdf, text string, width float64, lineHeight float64) float64 {
-	if text == "" {
-		return 0
-	}
-	wrapped := pdf.SplitLines([]byte(text), width)
-	if len(wrapped) == 0 {
-		return lineHeight
-	}
-	return float64(len(wrapped)) * lineHeight
-}
-
-func renderLinksWithHyperlinks(pdf *gofpdf.Fpdf, xStart float64, yStart float64, width float64, linksByType map[string][]*linksdomain.Link, artifactTitles map[string]string, linkIDs map[string]int, isIncoming bool) {
-	currentY := yStart + linkRowPadding
-	lineHeight := linkLineHeight
-
-	lines := buildLinkLines(linksByType, artifactTitles, linkIDs, isIncoming)
-	for _, line := range lines {
-		if line.isHeader {
-			pdf.SetTextColor(60, 60, 60)
-			pdf.SetFont("Arial", "U", 9)
-		} else {
-			if line.linkID > 0 {
-				pdf.SetTextColor(0, 100, 200)
-			} else {
-				pdf.SetTextColor(0, 0, 0)
-			}
-			pdf.SetFont("Arial", "", 9)
-		}
-
-		wrapped := pdf.SplitLines([]byte(line.text), width)
-		for _, w := range wrapped {
-			pdf.SetXY(xStart, currentY)
-			pdf.CellFormat(width, lineHeight, string(w), "", 1, "L", false, line.linkID, "")
-			currentY += lineHeight
-		}
-	}
-
-	pdf.SetTextColor(0, 0, 0)
-	pdf.SetFont("Arial", "", 9)
-}
-
-type linkLine struct {
-	text     string
-	linkID   int
-	isHeader bool
-}
-
-func buildLinkLines(linksByType map[string][]*linksdomain.Link, artifactTitles map[string]string, linkIDs map[string]int, isIncoming bool) []linkLine {
-	var lines []linkLine
-	for linkType, items := range linksByType {
-		label := linkTypeLabelForDirection(linkType, isIncoming)
-		lines = append(lines, linkLine{
-			text:     fmt.Sprintf("%s (%d)", label, len(items)),
-			isHeader: true,
-		})
-		for _, link := range items {
-			targetID := link.ToID
-			if isIncoming {
-				targetID = link.FromID
-			}
-			title := artifactTitles[targetID]
-			if title == "" {
-				title = targetID
-			}
-			linkID := 0
-			if linkIDs != nil {
-				linkID = linkIDs[targetID]
-			}
-			lines = append(lines, linkLine{
-				text:   "  - " + title,
-				linkID: linkID,
-			})
-		}
-	}
-	return lines
-}
-
-func calculateLinkRowHeight(pdf *gofpdf.Fpdf, width float64, linksByType map[string][]*linksdomain.Link, artifactTitles map[string]string, isIncoming bool) float64 {
-	lines := buildLinkLines(linksByType, artifactTitles, nil, isIncoming)
-	if len(lines) == 0 {
-		return 0
-	}
-
-	// Use the same font metrics as the renderer to avoid undercounting.
-	pdf.SetFont("Arial", "", 9)
-	var lineCount float64
-	for _, line := range lines {
-		wrapped := pdf.SplitLines([]byte(line.text), width)
-		if len(wrapped) == 0 {
-			lineCount += 1
-			continue
-		}
-		lineCount += float64(len(wrapped))
-	}
-
-	return (lineCount * linkLineHeight) + (linkRowPadding * 2)
-}
-
-const (
-	linkLineHeight = 3.5
-	linkRowPadding = 1.0
-	imageMaxHeight = 35.0
-)
-
-func calculateImageSize(info *gofpdf.ImageInfoType, maxWidth float64) (float64, float64) {
-	width := maxWidth
-	height := width * info.Height() / info.Width()
-	if height > imageMaxHeight {
-		height = imageMaxHeight
-		width = height * info.Width() / info.Height()
-	}
-	if width > maxWidth {
-		width = maxWidth
-		height = width * info.Height() / info.Width()
-	}
-	return width, height
-}
-
-func formatLinksForTable(linksByType map[string][]*linksdomain.Link) string {
-	var result []string
-	for linkType, items := range linksByType {
-		result = append(result, fmt.Sprintf("%s (%d)", linkType, len(items)))
-	}
-	return strings.Join(result, ", ")
-}
-
-func buildLinkGroups(linkList []*linksdomain.Link) map[string]linkGroups {
-	groups := make(map[string]linkGroups)
-
-	// Track unique link relationships to avoid duplicates
-	// Key format: "fromID:toID:type"
-	seenLinks := make(map[string]bool)
-
-	for _, link := range linkList {
-		// Create unique key for this link relationship
-		linkKey := fmt.Sprintf("%s:%s:%s", link.FromID, link.ToID, link.Type)
-
-		// Skip if we've already seen this exact relationship
-		if seenLinks[linkKey] {
-			continue
-		}
-		seenLinks[linkKey] = true
-
-		outgoing, ok := groups[link.FromID]
-		if !ok {
-			outgoing = linkGroups{outgoing: map[string][]*linksdomain.Link{}, incoming: map[string][]*linksdomain.Link{}}
-		}
-		outgoing.outgoing[link.Type] = append(outgoing.outgoing[link.Type], link)
-		groups[link.FromID] = outgoing
-
-		incoming, ok := groups[link.ToID]
-		if !ok {
-			incoming = linkGroups{outgoing: map[string][]*linksdomain.Link{}, incoming: map[string][]*linksdomain.Link{}}
-		}
-		incoming.incoming[link.Type] = append(incoming.incoming[link.Type], link)
-		groups[link.ToID] = incoming
-	}
-	return groups
-}
-
-func renderLinkGroup(
-	pdf *gofpdf.Fpdf,
-	xStart float64,
-	label string,
-	linksByType map[string][]*linksdomain.Link,
-	artifactTitles map[string]string,
-	linkIDs map[string]int,
-) {
-	if len(linksByType) == 0 {
-		return
-	}
-
-	ensureSpace(pdf, 10)
-	pdf.SetFont("Arial", "B", 9)
-	pdf.SetTextColor(60, 60, 60)
-	pdf.SetX(xStart)
-	pdf.CellFormat(0, 5, fmt.Sprintf("%s Links", label), "", 1, "L", false, 0, "")
-
-	for linkType, items := range linksByType {
-		pdf.SetFont("Arial", "", 8)
-		pdf.SetTextColor(90, 90, 90)
-		pdf.SetX(xStart)
-		pdf.CellFormat(0, 4, fmt.Sprintf("- %s (%d)", linkType, len(items)), "", 1, "L", false, 0, "")
-
-		for _, link := range items {
-			targetID := link.ToID
-			if label == "Incoming" {
-				targetID = link.FromID
-			}
-			title := artifactTitles[targetID]
-			if title == "" {
-				title = targetID
-			}
-
-			pdf.SetX(xStart + 4)
-			pdf.SetTextColor(0, 0, 0)
-			pdf.SetFont("Arial", "", 9)
-			linkID := linkIDs[targetID]
-			pdf.CellFormat(0, 4, fmt.Sprintf("- %s", title), "", 1, "L", false, linkID, "")
-		}
-	}
-
-	pdf.SetTextColor(0, 0, 0)
-}
-
-func ensureSpace(pdf *gofpdf.Fpdf, needed float64) {
-	_, pageH := pdf.GetPageSize()
-	if pdf.GetY()+needed > pageH-15 {
-		pdf.AddPage()
-	}
+// --- Filenames and text helpers ---------------------------------------------
+
+// stripMarkdown flattens a markdown body to plain text through the document
+// model, for places that print one line (a table cell, a truncated title).
+func stripMarkdown(text string) string {
+	return doc.PlainText(doc.Parse(text))
 }
 
 func reportFilename(projectName string, baselineName string, ext string) string {
@@ -1516,55 +923,60 @@ func reportFilename(projectName string, baselineName string, ext string) string 
 	return fmt.Sprintf("project_report_%s_%s_%s.%s", sanitizedProject, sanitizedBaseline, timestamp, ext)
 }
 
+var unsafeFilenameChars = regexp.MustCompile(`[^a-zA-Z0-9_-]+`)
+
 func sanitizeFilename(value string) string {
 	if value == "" {
 		return "project"
 	}
-	value = strings.TrimSpace(value)
-	re := regexp.MustCompile(`[^a-zA-Z0-9_-]+`)
-	value = re.ReplaceAllString(value, "_")
+	value = unsafeFilenameChars.ReplaceAllString(strings.TrimSpace(value), "_")
 	return strings.Trim(value, "_")
 }
 
-func imageTypeFromMime(mimeType string, filePath string) string {
-	if strings.HasPrefix(mimeType, "image/") {
-		subtype := strings.TrimPrefix(mimeType, "image/")
-		subtype = strings.ToUpper(subtype)
-		subtype = strings.ReplaceAll(subtype, "JPEG", "JPG")
-		return subtype
+// rollupColor returns the fill colour for a rollup or result state:
+// pass green, fail red, blocked amber, everything else grey.
+func rollupColor(rollup string) (r, g, b int) {
+	switch rollup {
+	case vv.RollupPass:
+		return 39, 174, 96
+	case vv.RollupFail:
+		return 231, 76, 60
+	case vv.RollupBlocked:
+		return 243, 156, 18
+	default:
+		return 150, 150, 150
 	}
-	ext := strings.ToUpper(strings.TrimPrefix(filepath.Ext(filePath), "."))
-	ext = strings.ReplaceAll(ext, "JPEG", "JPG")
-	return ext
 }
 
-func resolveAttachmentPath(original string) (string, bool) {
-	if original == "" {
-		return "", false
+// rollupDisplayOrder controls the summary/legend ordering of rollup states.
+var rollupDisplayOrder = []string{
+	vv.RollupPass,
+	vv.RollupFail,
+	vv.RollupBlocked,
+	vv.RollupUnrun,
+	vv.RollupUncovered,
+	vv.RollupVerifiedManually,
+	vv.RollupMethodMissing,
+}
+
+// gapSections are the gap lists a V&V section prints, in order.
+func gapSections(gaps *vv.GapReport) []struct {
+	Label string
+	IDs   []string
+} {
+	if gaps == nil {
+		return nil
 	}
-
-	paths := []string{original}
-	if strings.Contains(original, "\\") {
-		paths = append(paths, strings.ReplaceAll(original, "\\", "/"))
+	return []struct {
+		Label string
+		IDs   []string
+	}{
+		{"Requirements without a verification method", gaps.RequirementsWithoutMethod},
+		{"Requirements without a test case", gaps.RequirementsWithoutTestCase},
+		{"Unverified (demonstration, analysis, inspection)", gaps.RequirementsUnverified},
+		{"Requirements with failing tests", gaps.RequirementsFailing},
+		{"Orphan test cases (verify nothing)", gaps.OrphanTestCases},
+		{"User needs without a derived requirement", gaps.NeedsWithoutRequirement},
+		{"Unmitigated hazards", gaps.HazardsUnmitigated},
 	}
-
-	if !filepath.IsAbs(original) {
-		if abs, err := filepath.Abs(original); err == nil {
-			paths = append(paths, abs)
-		}
-
-		uploadsDir := os.Getenv("UPLOADS_DIR")
-		if uploadsDir != "" {
-			paths = append(paths, filepath.Join(uploadsDir, original))
-			paths = append(paths, filepath.Join(uploadsDir, filepath.Base(original)))
-		}
-	}
-
-	for _, candidate := range paths {
-		if _, err := os.Stat(candidate); err == nil {
-			return candidate, true
-		}
-	}
-
-	return "", false
 }

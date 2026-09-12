@@ -77,3 +77,53 @@ func TestCsvParamIgnoresBlanks(t *testing.T) {
 		}
 	}
 }
+
+// The content switches: a template is a starting point, explicit parameters
+// win over it, and the fields parameter has three shapes.
+func TestSelectionFromQueryContentDefaults(t *testing.T) {
+	got := selectionFromQuery(queryRequest(t, ""))
+	c := got.Content
+	if !c.Traceability || !c.Figures || !c.TOC || !c.AllFields || c.TestResults || c.VVStatus || c.Template != "" {
+		t.Errorf("default content = %+v, want the specification defaults", c)
+	}
+}
+
+func TestSelectionFromQueryAppliesATemplate(t *testing.T) {
+	got := selectionFromQuery(queryRequest(t, "template=vv"))
+	if got.Content.Template != "vv" || !got.Content.TestResults || !got.Content.VVStatus {
+		t.Errorf("content = %+v, want the V&V preset", got.Content)
+	}
+	if len(got.Types) == 0 {
+		t.Error("the V&V preset narrows the types")
+	}
+	// Explicit parameters override the preset.
+	got = selectionFromQuery(queryRequest(t, "template=vv&results=0&types=requirement&figures=1"))
+	if got.Content.TestResults || !got.Content.VVStatus || !got.Content.Figures {
+		t.Errorf("content = %+v, want results off, figures on", got.Content)
+	}
+	if len(got.Types) != 1 || got.Types[0] != "requirement" {
+		t.Errorf("types = %v, want the explicit list", got.Types)
+	}
+	// An unknown template is recorded but changes nothing.
+	got = selectionFromQuery(queryRequest(t, "template=custom"))
+	if got.Content.Template != "custom" || got.Content.TestResults {
+		t.Errorf("content = %+v", got.Content)
+	}
+}
+
+func TestSelectionFromQueryReadsFields(t *testing.T) {
+	if c := selectionFromQuery(queryRequest(t, "fields=all")).Content; !c.AllFields {
+		t.Error("fields=all should show every field")
+	}
+	if c := selectionFromQuery(queryRequest(t, "fields=none")).Content; c.AllFields || len(c.Fields) != 0 {
+		t.Errorf("fields=none should show none: %+v", c)
+	}
+	c := selectionFromQuery(queryRequest(t, "fields=priority,status")).Content
+	if c.AllFields || len(c.Fields) != 2 || !c.ShowsField("status") || c.ShowsField("severity") {
+		t.Errorf("fields list not honoured: %+v", c)
+	}
+	c = selectionFromQuery(queryRequest(t, "traceability=false&toc=0&vv=1")).Content
+	if c.Traceability || c.TOC || !c.VVStatus {
+		t.Errorf("switches not honoured: %+v", c)
+	}
+}

@@ -57,7 +57,7 @@ func TestBuildReportDOCXStructure(t *testing.T) {
 		},
 	}
 
-	out, err := buildReportDOCX(data, "")
+	out, err := buildReportDOCX(data, defaultRenderOptions(Snapshot{}))
 	if err != nil {
 		t.Fatalf("buildReportDOCX: %v", err)
 	}
@@ -79,14 +79,14 @@ func TestBuildReportDOCXStructure(t *testing.T) {
 		}
 	}
 
-	// Project title as Heading1.
-	assertContains(`<w:pStyle w:val="Heading1"/>`)
+	// Project title in the Title style on the cover.
+	assertContains(`<w:pStyle w:val="Title"/>`)
 	assertContains("My Widget")
-	// Heading artifact as Heading2 (depth 0 -> level 2).
-	assertContains(`<w:pStyle w:val="Heading2"/>`)
+	// Heading artifact as Heading1 (depth 0 -> level 1).
+	assertContains(`<w:pStyle w:val="Heading1"/>`)
 	assertContains("Requirements")
-	// Nested requirement heading (depth 1 -> Heading3) and its body/type.
-	assertContains(`<w:pStyle w:val="Heading3"/>`)
+	// A requirement's title is an outline entry below the contents levels.
+	assertContains(`<w:pStyle w:val="Heading4"/>`)
 	assertContains("The system shall boot")
 	assertContains("Boots within 5 seconds.")
 	assertContains("requirement") // Type row value
@@ -109,7 +109,7 @@ func TestBuildReportDOCXEscaping(t *testing.T) {
 			{ID: "r", Type: "requirement", Title: `Handle "quotes" & <tags>`, Version: 1},
 		},
 	}
-	out, err := buildReportDOCX(data, "")
+	out, err := buildReportDOCX(data, defaultRenderOptions(Snapshot{}))
 	if err != nil {
 		t.Fatalf("buildReportDOCX: %v", err)
 	}
@@ -143,7 +143,7 @@ func TestReportShowsNumbersAndRefs(t *testing.T) {
 		},
 	}
 
-	out, err := buildReportDOCX(data, "")
+	out, err := buildReportDOCX(data, defaultRenderOptions(Snapshot{}))
 	if err != nil {
 		t.Fatalf("buildReportDOCX: %v", err)
 	}

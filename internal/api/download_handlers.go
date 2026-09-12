@@ -127,6 +127,48 @@ func selectionFromQuery(r *http.Request) exports.Selection {
 		Attachments: csvParam(q.Get("attachments")),
 		// Headings are in unless the caller says otherwise.
 		IncludeHeadings: q.Get("headings") != "0" && !strings.EqualFold(q.Get("headings"), "false"),
+		Content:         exports.DefaultContent(),
+	}
+
+	// A template is a starting point: it sets the types and the content
+	// switches, and anything the query names explicitly wins over it.
+	if key := strings.TrimSpace(q.Get("template")); key != "" {
+		if tmpl, ok := exports.TemplateByKey(key); ok {
+			sel.Content = tmpl.Content
+			sel.Content.Template = tmpl.Key
+			if sel.Types == nil && tmpl.Types != nil {
+				sel.Types = append([]string(nil), tmpl.Types...)
+			}
+		} else {
+			sel.Content.Template = key
+		}
+	}
+
+	flag := func(name string, current bool) bool {
+		v := strings.TrimSpace(q.Get(name))
+		if v == "" {
+			return current
+		}
+		return v != "0" && !strings.EqualFold(v, "false")
+	}
+	sel.Content.Traceability = flag("traceability", sel.Content.Traceability)
+	sel.Content.Figures = flag("figures", sel.Content.Figures)
+	sel.Content.TOC = flag("toc", sel.Content.TOC)
+	sel.Content.TestResults = flag("results", sel.Content.TestResults)
+	sel.Content.VVStatus = flag("vv", sel.Content.VVStatus)
+
+	// fields: absent keeps the template's choice; "all" shows every attribute;
+	// "none" shows none; otherwise the listed keys.
+	if _, present := q["fields"]; present {
+		raw := strings.TrimSpace(q.Get("fields"))
+		switch {
+		case strings.EqualFold(raw, "all"):
+			sel.Content.AllFields, sel.Content.Fields = true, nil
+		case strings.EqualFold(raw, "none"), raw == "":
+			sel.Content.AllFields, sel.Content.Fields = false, nil
+		default:
+			sel.Content.AllFields, sel.Content.Fields = false, csvParam(raw)
+		}
 	}
 	return sel
 }
