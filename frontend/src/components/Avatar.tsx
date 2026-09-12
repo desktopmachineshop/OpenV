@@ -1,4 +1,5 @@
 import React from 'react';
+import { resolveAvatarUrl } from '../api/baseURL';
 
 interface AvatarProps {
   /** Picture URL; falls back to an initial when empty. */
@@ -29,8 +30,9 @@ export const Avatar: React.FC<AvatarProps> = ({ src, name, size = 28 }) => {
     boxSizing: 'border-box',
   };
 
-  if (src) {
-    return <img src={src} alt="" style={{ ...box, objectFit: 'cover', display: 'block' }} />;
+  const resolved = resolveAvatarUrl(src);
+  if (resolved) {
+    return <img src={resolved} alt="" style={{ ...box, objectFit: 'cover', display: 'block' }} />;
   }
 
   return (

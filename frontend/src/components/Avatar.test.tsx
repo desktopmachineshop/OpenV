@@ -42,6 +42,12 @@ describe('Avatar', () => {
     expect(img.style.objectFit).toBe('cover');
   });
 
+  it('resolves an uploaded picture against the API base', () => {
+    act(() => root.render(<Avatar src="/api/v1/users/u1/avatar?v=7" name="dave" />));
+    const img = container.querySelector('img') as HTMLImageElement;
+    expect(img.src).toBe('http://localhost:8080/api/v1/users/u1/avatar?v=7');
+  });
+
   it('falls back to a question mark with no name', () => {
     act(() => root.render(<Avatar />));
     expect(container.textContent).toBe('?');

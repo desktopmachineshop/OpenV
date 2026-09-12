@@ -20,12 +20,12 @@ func NewUserRepository(db *sql.DB) *UserRepository {
 	return &UserRepository{db: db}
 }
 
-const userColumns = `id, email, name, avatar_url, auth_provider, COALESCE(password_hash, ''), is_admin, COALESCE(email_notifications, TRUE), COALESCE(push_notifications, FALSE), COALESCE(email_verified, FALSE), email_verified_at, created_at, updated_at`
+const userColumns = `id, email, name, avatar_url, COALESCE(avatar_path, ''), COALESCE(avatar_mime, ''), auth_provider, COALESCE(password_hash, ''), is_admin, COALESCE(email_notifications, TRUE), COALESCE(push_notifications, FALSE), COALESCE(email_verified, FALSE), email_verified_at, created_at, updated_at`
 
 func scanUser(row interface{ Scan(...interface{}) error }) (*users.User, error) {
 	u := new(users.User)
 	var verifiedAt sql.NullTime
-	err := row.Scan(&u.ID, &u.Email, &u.Name, &u.AvatarURL, &u.AuthProvider, &u.PasswordHash, &u.IsAdmin, &u.EmailNotifications, &u.PushNotifications, &u.EmailVerified, &verifiedAt, &u.CreatedAt, &u.UpdatedAt)
+	err := row.Scan(&u.ID, &u.Email, &u.Name, &u.AvatarURL, &u.AvatarPath, &u.AvatarMime, &u.AuthProvider, &u.PasswordHash, &u.IsAdmin, &u.EmailNotifications, &u.PushNotifications, &u.EmailVerified, &verifiedAt, &u.CreatedAt, &u.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -33,6 +33,7 @@ func scanUser(row interface{ Scan(...interface{}) error }) (*users.User, error) 
 		t := verifiedAt.Time
 		u.EmailVerifiedAt = &t
 	}
+	u.HasAvatar = u.AvatarPath != ""
 	return u, nil
 }
 
@@ -53,6 +54,17 @@ func (r *UserRepository) UpdateUser(u *users.User) error {
 		UPDATE users SET name = $2, avatar_url = $3, auth_provider = $4, password_hash = NULLIF($5, ''), is_admin = $6, updated_at = $7
 		WHERE id = $1
 	`, u.ID, u.Name, u.AvatarURL, u.AuthProvider, u.PasswordHash, u.IsAdmin, u.UpdatedAt)
+	return err
+}
+
+// SetAvatar writes only the avatar columns (empty strings clear them). An
+// SSO sign-in later rewrites avatar_url through UpdateUser, but only when
+// avatar_path is empty (see users.DefaultService.LoginWithSSO), so an
+// uploaded picture survives it.
+func (r *UserRepository) SetAvatar(userID, path, mime, url string, at time.Time) error {
+	_, err := r.db.Exec(`
+		UPDATE users SET avatar_path = $2, avatar_mime = $3, avatar_url = $4, updated_at = $5 WHERE id = $1
+	`, userID, path, mime, url, at)
 	return err
 }
 

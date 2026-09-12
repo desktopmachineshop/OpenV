@@ -4,28 +4,11 @@ import type { SharedProductPayload, toSharePayload } from '../utils/randomProduc
 import { downloadExtension, downloadQuery } from '../utils/downloadSelection';
 import { isPublicPath } from '../utils/publicPaths';
 
-// Determine API base URL.
-//
-// 1. REACT_APP_API_URL, baked in at build time: a split deployment where the
-//    browser talks to the API's own origin. Cookies are then third-party,
-//    which Safari/iOS block — prefer 2.
-// 2. Production builds default to the app's own origin: nginx proxies /api/
-//    to the API (frontend/nginx.conf), so the session cookie is first-party.
-// 3. The CRA dev server and tests fall back to port 8080 on the page's host,
-//    which is where the dev compose stack serves the API.
-export const getAPIBaseURL = (): string => {
-  const configured = (process.env.REACT_APP_API_URL || '').trim().replace(/\/+$/, '');
-  if (configured) {
-    return configured;
-  }
-  if (process.env.NODE_ENV === 'production') {
-    return '';
-  }
-  if (typeof window !== 'undefined' && window.location) {
-    return `${window.location.protocol}//${window.location.hostname}:8080`;
-  }
-  return 'http://localhost:8080';
-};
+import { getAPIBaseURL, resolveAvatarUrl } from './baseURL';
+
+// getAPIBaseURL and resolveAvatarUrl live in baseURL.ts; re-exported so
+// existing imports from the client keep working.
+export { getAPIBaseURL, resolveAvatarUrl };
 
 const API_BASE_URL = getAPIBaseURL();
 
@@ -617,7 +600,11 @@ export interface User {
   id: string;
   email: string;
   name: string;
+  // A picture: the identity provider's URL, or — once one is uploaded — a
+  // path on the API (resolve it with resolveAvatarUrl before rendering).
   avatar_url: string;
+  // True when an uploaded picture is stored; avatarAPI.remove clears it.
+  has_avatar?: boolean;
   auth_provider: string;
   is_admin: boolean;
   // Per-user email-notification opt-out (issue #187). Only has an effect when
@@ -1267,6 +1254,21 @@ export const passwordAPI = {
   change: (current_password: string, new_password: string) =>
     client.put('/api/v1/me/password', { current_password, new_password }),
 };
+
+// The account's own profile picture. PNG, JPEG, GIF or WebP up to 2 MB;
+// both calls answer the updated user, whose avatar_url then points at the
+// picture (or is empty again after a remove).
+export const avatarAPI = {
+  upload: (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return client.post<User>('/api/v1/me/avatar', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+  remove: () => client.delete<User>('/api/v1/me/avatar'),
+};
+
 
 // Per-user notification preferences: the email opt-out (issue #187) and the
 // web push opt-in (REQ-109). update() takes a partial — the server leaves any

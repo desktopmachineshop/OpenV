@@ -74,7 +74,11 @@ JSONB, `is_default`, `org_id` (NULL = global built-in).
 ## Users, sessions, membership (`schema_users.go`)
 
 ### users
-`email` (unique, case-insensitive), `name`, `avatar_url`, `auth_provider`
+`email` (unique, case-insensitive), `name`, `avatar_url`, `avatar_path` +
+`avatar_mime` (0032: an uploaded profile picture under `UPLOADS_DIR`
+(`avatars/<user id>.<ext>`); while set, `avatar_url` is the API path that
+serves it and an SSO sign-in no longer overwrites it with the provider's
+picture), `auth_provider`
 (`password` | `google` | `oidc`), `password_hash`, `is_admin` (the first
 registered user), `email_notifications` (opt-out for notification email,
 0013), `email_verified` + `email_verified_at` (0024: SSO accounts are

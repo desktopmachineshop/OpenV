@@ -428,6 +428,7 @@ func (h *Handler) RegisterRoutes(router *mux.Router) {
 	h.registerOrgRoutes(router)
 	h.registerInvitationRoutes(router)
 	h.registerPasswordRoutes(router)
+	h.registerAvatarRoutes(router)
 	h.registerRunnerSessionRoutes(router)
 	h.registerAttributeDefinitionRoutes(router)
 	h.registerSharedProductRoutes(router)

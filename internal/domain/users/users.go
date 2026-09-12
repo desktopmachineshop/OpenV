@@ -75,6 +75,15 @@ type User struct {
 	Email        string `json:"email"`
 	Name         string `json:"name"`
 	AvatarURL    string `json:"avatar_url"`
+	// AvatarPath and AvatarMime locate an uploaded profile picture on disk
+	// (under the uploads directory); both empty when none has been
+	// uploaded, in which case AvatarURL is whatever the identity provider
+	// supplied, or empty. Never serialised — clients learn only HasAvatar
+	// and fetch the bytes through AvatarURL.
+	AvatarPath string `json:"-"`
+	AvatarMime string `json:"-"`
+	// HasAvatar reports whether an uploaded picture is stored (AvatarPath != "").
+	HasAvatar    bool   `json:"has_avatar"`
 	AuthProvider string `json:"auth_provider"`
 	PasswordHash string `json:"-"`
 	IsAdmin      bool   `json:"is_admin"`
@@ -136,6 +145,9 @@ type Repository interface {
 	// SetPushNotifications flips one user's web-push opt-in. Scoped by id,
 	// same as the email flag.
 	SetPushNotifications(userID string, enabled bool) error
+	// SetAvatar writes only the three avatar columns (path, MIME type and
+	// the URL the picture is served at); empty strings clear them.
+	SetAvatar(userID, path, mime, url string, at time.Time) error
 	// SaveEmailVerification stores v after discarding the user's unused
 	// pending links, so at most one link is live per account.
 	SaveEmailVerification(v *EmailVerification) error
@@ -198,6 +210,13 @@ type Service interface {
 	SetEmailNotifications(userID string, enabled bool) error
 	// SetPushNotifications updates the caller's own web-push opt-in (REQ-109).
 	SetPushNotifications(userID string, enabled bool) error
+	// SetAvatar records an uploaded profile picture's on-disk path, MIME
+	// type and the URL it is served at, and returns the updated user.
+	SetAvatar(userID, path, mime, url string) (*User, error)
+	// ClearAvatar forgets an uploaded profile picture (the file is the
+	// caller's to remove) and returns the updated user. The account is left
+	// with no picture until its identity provider supplies one again.
+	ClearAvatar(userID string) (*User, error)
 	// IssueEmailVerification mints a fresh verification link for the user.
 	// email "" means the account's current address; any other address is a
 	// change request — the link goes there and the account's address changes
@@ -479,7 +498,11 @@ func (s *DefaultService) LoginWithSSO(provider, email, name, avatarURL string) (
 			return nil, "", ErrProviderMismatch
 		}
 		user.Name = name
-		user.AvatarURL = avatarURL
+		// A picture the member uploaded outranks the provider's: it is only
+		// refreshed from the provider while none is stored.
+		if user.AvatarPath == "" {
+			user.AvatarURL = avatarURL
+		}
 		user.UpdatedAt = time.Now()
 		if err := s.repo.UpdateUser(user); err != nil {
 			return nil, "", err
@@ -659,4 +682,18 @@ func (s *DefaultService) SetEmailNotifications(userID string, enabled bool) erro
 // SetPushNotifications updates a user's web-push opt-in.
 func (s *DefaultService) SetPushNotifications(userID string, enabled bool) error {
 	return s.repo.SetPushNotifications(userID, enabled)
+}
+
+// SetAvatar records an uploaded profile picture. The write touches only the
+// avatar columns, so it can never carry a stale copy of the rest of the row.
+func (s *DefaultService) SetAvatar(userID, path, mime, url string) (*User, error) {
+	if err := s.repo.SetAvatar(userID, path, mime, url, time.Now()); err != nil {
+		return nil, err
+	}
+	return s.repo.FindUserByID(userID)
+}
+
+// ClearAvatar forgets an uploaded profile picture, URL included.
+func (s *DefaultService) ClearAvatar(userID string) (*User, error) {
+	return s.SetAvatar(userID, "", "", "")
 }
