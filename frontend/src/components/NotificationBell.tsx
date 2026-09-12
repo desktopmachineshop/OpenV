@@ -33,6 +33,8 @@ const pathForNotification = (n: AppNotification): string => {
   // Workspace budget alerts are not project-scoped — deep-link to the
   // workspace usage tab where the budget lives.
   if (ref.kind === 'org_usage') return '/org/settings?tab=usage';
+  // A platform release is not scoped to anything: it opens the notes.
+  if (ref.kind === 'release') return '/whats-new';
   // Membership and privilege changes land on the people list they are about:
   // the workspace's members tab, or the project's own.
   if (ref.kind === 'membership') return '/org/settings?tab=members';

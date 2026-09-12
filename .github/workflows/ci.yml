@@ -69,10 +69,10 @@ jobs:
       # frontend/node_modules/flatted/golang (a Go package that ships inside
       # an npm dependency) and fail.
       - name: go vet
-        run: go vet ./cmd/... ./internal/...
+        run: go vet . ./cmd/... ./internal/...
 
       - name: go test
-        run: go test ./cmd/... ./internal/...
+        run: go test . ./cmd/... ./internal/...
 
   frontend:
     name: Frontend (tsc + test + build)
@@ -125,6 +125,37 @@ jobs:
   # (`!cancelled()`), so one red scanner never hides the other's result.
   # e2e/ is deliberately not audited: its package.json declares devDependencies
   # only (Playwright), so `npm audit --omit=dev` there has nothing to look at.
+  # Every pull request must tell the people who use OpenV what changed: a
+  # bullet under "## Unreleased" in RELEASE_NOTES.md (docs/railway.md,
+  # "Release pipeline"). The check compares the file with the base branch's
+  # copy; a change nobody can see carries the no-release-notes label instead.
+  # On master the file is only checked for shape, so a promotion never finds
+  # it unparseable.
+  release-notes:
+    name: Release notes
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Script self-test
+        run: python3 -m unittest scripts/release_notes_test.py
+
+      - name: Notes file is well-formed
+        run: python3 scripts/release_notes.py check RELEASE_NOTES.md
+
+      - name: Pull request adds a release note
+        if: github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'no-release-notes')
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          git fetch --no-tags --depth=1 origin "$BASE_SHA"
+          git show "$BASE_SHA:RELEASE_NOTES.md" > /tmp/base-release-notes.md 2>/dev/null || : > /tmp/base-release-notes.md
+          python3 scripts/release_notes.py check-pr --base /tmp/base-release-notes.md RELEASE_NOTES.md
+
+      - name: Skipped by label
+        if: github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'no-release-notes')
+        run: echo "no-release-notes label present; not requiring a note"
+
   vuln:
     name: Vulnerability scan
     runs-on: ubuntu-latest

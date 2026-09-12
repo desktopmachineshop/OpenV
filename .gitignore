@@ -11,3 +11,7 @@ vendor/
 *.iml
 temp_helpers/
 cmd/openv-connector/payload/
+
+# Python bytecode from the stdlib scripts
+__pycache__/
+*.pyc

@@ -19,6 +19,7 @@ import { ProjectSettings } from './views/ProjectSettings';
 import { OrgSettings } from './views/OrgSettings';
 import { InterviewChat } from './views/InterviewChat';
 import { DialogProvider } from './components/ui';
+import { ReleaseUpdateBanner } from './components/ReleaseUpdateBanner';
 import './index.css';
 
 // Route-level code splitting for the heavyweight views so their large
@@ -33,6 +34,7 @@ const ModuleView = lazy(() =>
 const ManualView = lazy(() =>
   import('./views/ManualView').then((m) => ({ default: m.ManualView }))
 );
+const WhatsNew = lazy(() => import('./views/WhatsNew').then((m) => ({ default: m.WhatsNew })));
 // Landing is the public front page; signed-in users never render it, so it
 // stays out of the main bundle they download.
 const Landing = lazy(() => import('./views/Landing').then((m) => ({ default: m.Landing })));
@@ -156,6 +158,7 @@ function App() {
   return (
     <div className="app-container">
       <DialogProvider>
+        {currentUser && !walled && <ReleaseUpdateBanner />}
         <Suspense fallback={<RouteFallback />}>
         <Routes>
         <Route path="/login" element={<Login />} />
@@ -173,6 +176,7 @@ function App() {
         <Route path="/org/settings" element={<OrgSettings />} />
         <Route path="/manual" element={<ManualView />} />
         <Route path="/manual/:chapterSlug" element={<ManualView />} />
+        <Route path="/whats-new" element={<WhatsNew />} />
         <Route path="/projects/:projectId" element={<ProjectLayout />}>
           <Route index element={<ProductOverview />} />
           <Route path="requirements" element={<ModuleView />} />
