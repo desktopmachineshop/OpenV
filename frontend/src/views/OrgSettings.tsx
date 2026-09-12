@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { orgsAPI } from '../api/client';
+import { orgsAPI, releaseAPI } from '../api/client';
 import { apiErrorMessage } from '../api/errors';
 import { useAppStore } from '../state/store';
 import { Navbar } from '../components/Navbar';
@@ -62,6 +62,24 @@ export const OrgSettings: React.FC = () => {
   const [logoBusy, setLogoBusy] = useState(false);
   const [logoError, setLogoError] = useState('');
   const [logoVersion, setLogoVersion] = useState(0);
+  // Release channel (REQ-136). The running release comes from the API so
+  // the card can say which release the workspace is on today.
+  const [channelSaving, setChannelSaving] = useState(false);
+  const [currentRelease, setCurrentRelease] = useState('');
+  useEffect(() => {
+    let cancelled = false;
+    releaseAPI
+      .current()
+      .then((res) => {
+        if (!cancelled) setCurrentRelease(res.data.version || '');
+      })
+      .catch(() => {
+        // The card still shows the channel without a release name.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (org) setNameDraft(org.name);
@@ -100,6 +118,21 @@ export const OrgSettings: React.FC = () => {
     } catch (err: any) {
       setError(`Failed to delete workspace: ${apiErrorMessage(err)}`);
       setDeleting(false);
+    }
+  };
+
+  const handleChannelChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const channel = e.target.value as 'nightly' | 'stable';
+    setChannelSaving(true);
+    setError('');
+    try {
+      const res = await orgsAPI.update(org.id, { release_channel: channel });
+      setOrgs(orgs.map((o) => (o.id === org.id ? { ...o, ...res.data } : o)));
+      flash(`Release channel set to ${channel}.`);
+    } catch (err: any) {
+      setError(`Failed to change the release channel: ${apiErrorMessage(err)}`);
+    } finally {
+      setChannelSaving(false);
     }
   };
 
@@ -290,6 +323,36 @@ export const OrgSettings: React.FC = () => {
               <p style={{ fontSize: 13, color: 'var(--text)', marginBottom: 0 }}>
                 Plan: <strong>{org.plan || 'Free'}</strong> — free during the alpha with every feature included. See <a href="/pricing" target="_blank" rel="noreferrer">what free means</a>.
               </p>
+            </div>
+
+            <div className="card">
+              <h3>Release channel</h3>
+              <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+                {org.release_channel === 'stable'
+                  ? 'Stable: new features turn on for this workspace at the monthly release. Fixes arrive with every nightly.'
+                  : 'Nightly: every release reaches this workspace the day it ships.'}
+                {org.release_channel_locked && ' This plan always runs the nightly channel.'}
+                {currentRelease && ` The platform is on release ${currentRelease}.`}
+              </p>
+              {isAdmin && !org.release_channel_locked ? (
+                <label style={{ fontSize: 13, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                  Channel
+                  <select
+                    value={org.release_channel || 'stable'}
+                    disabled={channelSaving}
+                    onChange={handleChannelChange}
+                    aria-label="Release channel"
+                    style={{ padding: '5px 8px', fontSize: 13 }}
+                  >
+                    <option value="stable">Stable (monthly)</option>
+                    <option value="nightly">Nightly (latest)</option>
+                  </select>
+                </label>
+              ) : (
+                <p style={{ fontSize: 13, color: 'var(--text)', marginBottom: 0 }}>
+                  Channel: <strong>{org.release_channel === 'stable' ? 'Stable' : 'Nightly'}</strong>
+                </p>
+              )}
             </div>
 
             <div className="card">

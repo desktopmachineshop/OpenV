@@ -19,10 +19,10 @@ func NewOrgRepository(db *sql.DB) *OrgRepository {
 	return &OrgRepository{db: db}
 }
 
-const orgColumns = `id, name, slug, org_type, plan, limits, created_by, created_at, updated_at, monthly_budget_usd, budget_alert_month, budget_alert_threshold, deleted_at, logo_path, logo_mime`
+const orgColumns = `id, name, slug, org_type, plan, limits, created_by, created_at, updated_at, monthly_budget_usd, budget_alert_month, budget_alert_threshold, deleted_at, logo_path, logo_mime, COALESCE(release_channel, '')`
 
 // orgColumnsQualified disambiguates joined queries (org_members also has created_at).
-const orgColumnsQualified = `o.id, o.name, o.slug, o.org_type, o.plan, o.limits, o.created_by, o.created_at, o.updated_at, o.monthly_budget_usd, o.budget_alert_month, o.budget_alert_threshold, o.deleted_at, o.logo_path, o.logo_mime`
+const orgColumnsQualified = `o.id, o.name, o.slug, o.org_type, o.plan, o.limits, o.created_by, o.created_at, o.updated_at, o.monthly_budget_usd, o.budget_alert_month, o.budget_alert_threshold, o.deleted_at, o.logo_path, o.logo_mime, COALESCE(o.release_channel, '')`
 
 func scanOrg(row interface{ Scan(...interface{}) error }, extra ...interface{}) (*orgs.Org, error) {
 	o := new(orgs.Org)
@@ -31,7 +31,7 @@ func scanOrg(row interface{ Scan(...interface{}) error }, extra ...interface{}) 
 	var budget sql.NullFloat64
 	var alertMonth sql.NullString
 	var deletedAt sql.NullTime
-	dest := []interface{}{&o.ID, &o.Name, &o.Slug, &o.OrgType, &o.Plan, &limits, &createdBy, &o.CreatedAt, &o.UpdatedAt, &budget, &alertMonth, &o.BudgetAlertThreshold, &deletedAt, &o.LogoPath, &o.LogoMime}
+	dest := []interface{}{&o.ID, &o.Name, &o.Slug, &o.OrgType, &o.Plan, &limits, &createdBy, &o.CreatedAt, &o.UpdatedAt, &budget, &alertMonth, &o.BudgetAlertThreshold, &deletedAt, &o.LogoPath, &o.LogoMime, &o.ReleaseChannelOverride}
 	dest = append(dest, extra...)
 	if err := row.Scan(dest...); err != nil {
 		return nil, err
@@ -55,6 +55,7 @@ func scanOrg(row interface{ Scan(...interface{}) error }, extra ...interface{}) 
 	if err := json.Unmarshal(limits, &o.Limits); err != nil || o.Limits == nil {
 		o.Limits = map[string]interface{}{}
 	}
+	o.ResolveReleaseChannel()
 	return o, nil
 }
 
@@ -89,6 +90,14 @@ func (r *OrgRepository) SetBudget(orgID string, budget *float64) error {
 	_, err := r.db.Exec(`
 		UPDATE organizations SET monthly_budget_usd = $2, updated_at = NOW() WHERE id = $1
 	`, orgID, budget)
+	return err
+}
+
+// SetReleaseChannel writes only release_channel ("" is the plan default).
+func (r *OrgRepository) SetReleaseChannel(orgID, channel string) error {
+	_, err := r.db.Exec(`
+		UPDATE organizations SET release_channel = $2, updated_at = NOW() WHERE id = $1
+	`, orgID, channel)
 	return err
 }
 

@@ -89,6 +89,13 @@ type Org struct {
 	// HasLogo reports whether a logo is stored (LogoPath != "").
 	HasLogo bool `json:"has_logo"`
 
+	// ReleaseChannelOverride is the channel an admin chose, stored; empty
+	// means the plan's default. Never serialised: clients see the effective
+	// ReleaseChannel and whether the plan lets them change it.
+	ReleaseChannelOverride string `json:"-"`
+	ReleaseChannel         string `json:"release_channel"`
+	ReleaseChannelLocked   bool   `json:"release_channel_locked"`
+
 	// Role is the requesting user's role, populated by ListForUser.
 	Role string `json:"role,omitempty"`
 }
@@ -114,6 +121,9 @@ type Repository interface {
 	SetBudget(orgID string, budget *float64) error
 	// SetLogo writes only logo_path and logo_mime (empty strings clear them).
 	SetLogo(id, path, mime string) error
+	// SetReleaseChannel writes only release_channel ("" returns the
+	// workspace to its plan's default).
+	SetReleaseChannel(id, channel string) error
 	// ClaimBudgetAlert atomically records that an alert for (month, threshold)
 	// is being sent, and reports whether THIS caller won the claim. It writes
 	// only when the row's recorded month differs or the new threshold is
@@ -157,6 +167,11 @@ type Service interface {
 	// ListAll returns every organization id (trusted boot-time callers only).
 	ListAll() ([]string, error)
 	UpdateOrg(id string, name *string) (*Org, error)
+	// SetReleaseChannel records the channel a company workspace's admin
+	// chose ("" returns it to the plan's default) and returns the updated
+	// workspace. ErrChannelLocked for a plan that always runs nightly,
+	// ErrInvalidChannel for an unknown name.
+	SetReleaseChannel(id, channel string) (*Org, error)
 	// SetMonthlyBudget sets (or clears, with nil) the workspace's monthly
 	// spend budget. Rejects a negative amount with ErrInvalidBudget.
 	SetMonthlyBudget(id string, budget *float64) (*Org, error)
@@ -302,6 +317,27 @@ func (s *DefaultService) UpdateOrg(id string, name *string) (*Org, error) {
 	if err := s.repo.UpdateOrg(org); err != nil {
 		return nil, err
 	}
+	return org, nil
+}
+
+// SetReleaseChannel implements Service.
+func (s *DefaultService) SetReleaseChannel(id, channel string) (*Org, error) {
+	org, err := s.Get(id)
+	if err != nil {
+		return nil, err
+	}
+	if !ChannelChoosable(org.Plan) {
+		return nil, ErrChannelLocked
+	}
+	if channel != "" && !ValidChannel(channel) {
+		return nil, ErrInvalidChannel
+	}
+	if err := s.repo.SetReleaseChannel(id, channel); err != nil {
+		return nil, err
+	}
+	org.ReleaseChannelOverride = channel
+	org.UpdatedAt = time.Now()
+	org.ResolveReleaseChannel()
 	return org, nil
 }
 

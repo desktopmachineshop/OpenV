@@ -1321,6 +1321,11 @@ export interface Org {
   deleted_at?: string;
   // True when a workspace logo is stored; fetch it via orgsAPI.logoUrl.
   has_logo?: boolean;
+  // Release channel (REQ-136): the effective channel, and whether the plan
+  // pins it. Company plans may set release_channel via orgsAPI.update
+  // ('nightly', 'stable', or '' for the plan default).
+  release_channel?: 'nightly' | 'stable';
+  release_channel_locked?: boolean;
 }
 
 export interface OrgMember {

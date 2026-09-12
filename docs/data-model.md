@@ -118,6 +118,13 @@ container, falling back to the plan's defaults — `orgs.PlanDefaults` — when
 unset; there is no API for editing `limits` yet, operators set keys directly
 in the database), `created_by`.
 
+Release channel (REQ-136, migration 0035): `release_channel` (TEXT, `''`
+by default) is the channel a company workspace's admin chose; empty means
+the plan's default (`orgs.ChannelForPlan`: `business`, `team` and
+`enterprise` run `stable`, everything else `nightly`). Personal-tier plans
+ignore the column and report `release_channel_locked`. See
+`docs/release-policy.md`.
+
 Spend budgets (issue #186, migration 0011): `monthly_budget_usd` (NUMERIC,
 nullable — NULL means no budget, the default) is the workspace's monthly agent
 spend cap, editable by org admins via `PUT /api/v1/orgs/{id}` (send

@@ -1224,6 +1224,16 @@ var migrations = []Migration{
 		`)
 		return err
 	}},
+	// 0035: the release channel a company workspace's admin chose (REQ-136).
+	// Empty means the plan's default (orgs.ChannelForPlan); personal-tier
+	// plans ignore the column because they always run nightly.
+	{Version: 35, Name: "org_release_channel", Run: func(tx *sql.Tx) error {
+		_, err := tx.Exec(`
+			ALTER TABLE organizations
+				ADD COLUMN IF NOT EXISTS release_channel TEXT NOT NULL DEFAULT ''
+		`)
+		return err
+	}},
 }
 
 // backfillRefPrefix is the type→prefix mapping frozen at the time migration

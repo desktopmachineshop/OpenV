@@ -68,6 +68,9 @@ Railway deploys the `release` branch, not `master`. Merges to `master`
 deploy nothing; shipping means running the **Promote to release** workflow
 (`.github/workflows/promote-release.yml`). See `docs/railway.md`.
 
+The release structure (nightly and stable channels, calendar versions,
+staging, what each plan gets) is `docs/release-policy.md`.
+
 Every pull request adds a customer-facing bullet under `## Unreleased` in
 `RELEASE_NOTES.md` (what a workspace member will notice, not how it was
 built); the *Release notes* CI job refuses one that does not, unless the PR

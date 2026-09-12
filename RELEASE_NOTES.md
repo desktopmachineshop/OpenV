@@ -16,6 +16,10 @@ Section headings are the release version: the promotion date, with `.2`,
 
 ## Unreleased
 
+- Workspace settings show the workspace's release channel: Business and
+  Enterprise workspaces are on the monthly stable channel and their admins
+  can switch to nightly; Personal and Lite workspaces run nightly.
+
 ## 2026-09-12.3
 
 - The V&V Assistant's answers now read as they were written — lists as lists,

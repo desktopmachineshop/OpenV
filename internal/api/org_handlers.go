@@ -237,6 +237,9 @@ func (h *Handler) UpdateOrg(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Name             *string         `json:"name"`
 		MonthlyBudgetUSD json.RawMessage `json:"monthly_budget_usd"`
+		// ReleaseChannel: "nightly", "stable", or "" for the plan's default.
+		// Only company plans may set it (REQ-136).
+		ReleaseChannel *string `json:"release_channel"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
@@ -263,6 +266,18 @@ func (h *Handler) UpdateOrg(w http.ResponseWriter, r *http.Request) {
 				writeJSONError(w, http.StatusBadRequest, err.Error())
 			} else {
 				respondInternal(w, r, "failed to update budget", err)
+			}
+			return
+		}
+	}
+
+	if req.ReleaseChannel != nil {
+		org, err = h.orgService.SetReleaseChannel(orgID, *req.ReleaseChannel)
+		if err != nil {
+			if errors.Is(err, orgs.ErrInvalidChannel) || errors.Is(err, orgs.ErrChannelLocked) {
+				writeJSONError(w, http.StatusBadRequest, err.Error())
+			} else {
+				respondInternal(w, r, "failed to update release channel", err)
 			}
 			return
 		}
