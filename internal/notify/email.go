@@ -151,6 +151,12 @@ func DefaultEmailTypes() []string {
 		notifications.TypeProposalPending,
 		notifications.TypeReviewRequested,
 		notifications.TypeBudgetThreshold,
+		// Access changes email because they are precisely the thing somebody
+		// needs to know while they are NOT looking at the app — being added to
+		// a workspace, or losing access to one, is not news that can wait for
+		// the next time they happen to open the bell.
+		notifications.TypeAccessChanged,
+		notifications.TypeMembershipChanged,
 	}
 }
 

@@ -24,6 +24,30 @@ member). Note the distinction:
 - **Project access** is granted per project (Project Settings → Access) —
   directly or via teams.
 
+### Who gets told
+
+Membership changes are not silent, because nobody should discover their
+access changed by noticing a button has gone.
+
+- **The person affected** is notified when they are added to a workspace or
+  project, when their role changes, and when they are removed. Someone who
+  leaves of their own accord is not told they left.
+- **Workspace admins** are notified when somebody joins, leaves, is invited,
+  or has their workspace role changed — who it was, and what changed. This is
+  a governance record, so it goes to every admin except the one who made the
+  change.
+- **Project** role changes reach the member but not the workspace admins:
+  they happen often enough that reporting them would bury the arrivals and
+  departures that matter.
+- An address with **no account yet** cannot be notified in the app — the
+  invitation email is their notification, and the admins are told the
+  invitation went out. They are told again when it is accepted, which is the
+  join.
+
+These notifications email by default as well as appearing in the bell, since
+losing access to a workspace is not news that can wait. Turn email off in
+personal settings if you would rather only see them in the app.
+
 ### Inviting someone who has no account yet
 
 Adding an email that already has an OpenV account joins that person straight

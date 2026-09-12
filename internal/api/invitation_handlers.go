@@ -35,6 +35,7 @@ import (
 
 	"github.com/gorilla/mux"
 
+	"github.com/openv/requirements-platform/internal/domain/events"
 	"github.com/openv/requirements-platform/internal/domain/invitations"
 	"github.com/openv/requirements-platform/internal/domain/orgs"
 	"github.com/openv/requirements-platform/internal/domain/users"
@@ -187,6 +188,10 @@ func (h *Handler) addOrInviteToOrg(r *http.Request, orgID, email, role string) (
 	if err := h.orgService.AddMember(orgID, user.ID, role); err != nil {
 		return nil, err
 	}
+	h.publishOrgEvent(r, events.OrgMemberAdded, orgID, user.ID, map[string]interface{}{
+		"user_id": user.ID,
+		"role":    role,
+	})
 	return &memberOrInvitation{Member: &orgs.Member{
 		OrgID:     orgID,
 		UserID:    user.ID,
@@ -242,6 +247,13 @@ func (h *Handler) inviteToOrg(r *http.Request, orgID, email, role string) (*invi
 		return nil, err
 	}
 	link := notify.InvitationLink(h.emailLinkBase, token)
+	// Admins are told an invitation went out. The invitee is not notified in
+	// app — the address usually has no account yet, so there is nobody to
+	// notify; the invitation email IS their notification.
+	h.publishOrgEvent(r, events.OrgInvitationSent, orgID, inv.ID, map[string]interface{}{
+		"email": email,
+		"role":  role,
+	})
 	return &invitationResponse{Invitation: inv, Link: link, Emailed: h.sendInvitationMailAsync(inv, link)}, nil
 }
 
@@ -489,6 +501,14 @@ func (h *Handler) AcceptInvitation(w http.ResponseWriter, r *http.Request) {
 		outcome = InviteOutcomeAlreadyMember
 	}
 	h.verifiedByInvitation(user, outcome)
+	// Taking up an invitation is the join, so this is what the admins see.
+	// Someone who was already a member joined nothing, so nothing is said.
+	if !acc.AlreadyMember {
+		h.publishOrgEvent(r, events.OrgInvitationAccepted, acc.Invitation.OrgID, user.ID, map[string]interface{}{
+			"user_id": user.ID,
+			"role":    acc.Role,
+		})
+	}
 	// role is what the account holds now, which is the invited role only
 	// when it was not already a member: an invitation never rewrites a role.
 	json.NewEncoder(w).Encode(map[string]any{
@@ -519,6 +539,16 @@ func (h *Handler) acceptInvitationsForProviderVerifiedEmail(userID, email string
 	if err != nil {
 		slog.Error("invitation: a provider-verified address could not join every workspace that invited it",
 			"user_id", userID, "error", err)
+	}
+	for _, acc := range accepted {
+		if acc == nil || acc.AlreadyMember || acc.Invitation == nil {
+			continue
+		}
+		h.publishOrgEventAs("user:"+userID, events.OrgInvitationAccepted,
+			acc.Invitation.OrgID, userID, map[string]interface{}{
+				"user_id": userID,
+				"role":    acc.Role,
+			})
 	}
 	if len(accepted) > 0 {
 		slog.Info("invitation: provider-verified address joined invited workspaces", "user_id", userID, "count", len(accepted))

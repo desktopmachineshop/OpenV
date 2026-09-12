@@ -13,6 +13,7 @@ import (
 
 	"github.com/gorilla/mux"
 
+	"github.com/openv/requirements-platform/internal/domain/events"
 	"github.com/openv/requirements-platform/internal/domain/hostedworkers"
 	"github.com/openv/requirements-platform/internal/domain/members"
 	"github.com/openv/requirements-platform/internal/domain/orgs"
@@ -329,6 +330,10 @@ func (h *Handler) UpdateOrgMember(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
+	// Read the role before changing it: "you are now an admin" is what the
+	// member needs, and "was a member" is what an admin reviewing the change
+	// needs, so both ends of the transition are carried on the event.
+	previous, _ := h.orgService.RoleInOrg(vars["id"], vars["userId"])
 	if err := h.orgService.SetMemberRole(vars["id"], vars["userId"], req.Role); err != nil {
 		if errors.Is(err, orgs.ErrInvalidRole) || errors.Is(err, orgs.ErrNotMember) {
 			writeJSONError(w, http.StatusBadRequest, err.Error())
@@ -337,6 +342,11 @@ func (h *Handler) UpdateOrgMember(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
+	h.publishOrgEvent(r, events.OrgMemberRoleChanged, vars["id"], vars["userId"], map[string]interface{}{
+		"user_id": vars["userId"],
+		"from":    previous,
+		"to":      req.Role,
+	})
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -359,6 +369,13 @@ func (h *Handler) RemoveOrgMember(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	// "self" separates leaving from being removed. They read completely
+	// differently to both audiences, and only one of them is news to the
+	// person it happened to.
+	h.publishOrgEvent(r, events.OrgMemberRemoved, vars["id"], vars["userId"], map[string]interface{}{
+		"user_id": vars["userId"],
+		"self":    user.ID == vars["userId"],
+	})
 	w.WriteHeader(http.StatusNoContent)
 }
 

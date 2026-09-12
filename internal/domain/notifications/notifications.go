@@ -25,6 +25,18 @@ const (
 	// crosses 80% or 100% of its monthly budget, alerting org admins (issue
 	// #186). One row per admin, deduped to once per threshold per month.
 	TypeBudgetThreshold = "budget_threshold"
+	// TypeAccessChanged tells one person what changed about their OWN access:
+	// added to a workspace or project, given a different role, or removed.
+	// One type rather than three, because it answers a single question —
+	// "what can I do now?" — and three would only make the preference list
+	// longer without making any of them separately worth muting.
+	TypeAccessChanged = "access_changed"
+	// TypeMembershipChanged tells a workspace's admins who joined, who left
+	// and whose role changed. Separate from TypeAccessChanged because the
+	// audience and the reason differ: this one is workspace governance, and
+	// an admin may reasonably want it when they do not want their own
+	// access notifications, or the other way round.
+	TypeMembershipChanged = "membership_changed"
 )
 
 // Notification is one inbox entry for one user. EntityRef points the

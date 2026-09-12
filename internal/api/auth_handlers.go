@@ -12,6 +12,7 @@ import (
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 
+	"github.com/openv/requirements-platform/internal/domain/events"
 	"github.com/openv/requirements-platform/internal/domain/invitations"
 	"github.com/openv/requirements-platform/internal/domain/members"
 	"github.com/openv/requirements-platform/internal/domain/users"
@@ -569,6 +570,10 @@ func (h *Handler) AddProjectMember(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
+	h.publish(r, events.ProjectMemberAdded, projectID, user.ID, map[string]interface{}{
+		"user_id": user.ID,
+		"role":    req.Role,
+	})
 	w.WriteHeader(http.StatusCreated)
 }
 
@@ -586,6 +591,7 @@ func (h *Handler) UpdateProjectMember(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
+	previous, _ := h.memberService.RoleFor(projectID, vars["userId"])
 	if err := h.memberService.SetRole(projectID, vars["userId"], req.Role); err != nil {
 		if errors.Is(err, members.ErrInvalidRole) {
 			writeJSONError(w, http.StatusBadRequest, err.Error())
@@ -594,6 +600,11 @@ func (h *Handler) UpdateProjectMember(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
+	h.publish(r, events.ProjectMemberRoleChanged, projectID, vars["userId"], map[string]interface{}{
+		"user_id": vars["userId"],
+		"from":    previous,
+		"to":      req.Role,
+	})
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -608,5 +619,13 @@ func (h *Handler) RemoveProjectMember(w http.ResponseWriter, r *http.Request) {
 		respondInternal(w, r, "failed to remove member", err)
 		return
 	}
+	self := false
+	if u := CurrentUser(r); u != nil {
+		self = u.ID == vars["userId"]
+	}
+	h.publish(r, events.ProjectMemberRemoved, projectID, vars["userId"], map[string]interface{}{
+		"user_id": vars["userId"],
+		"self":    self,
+	})
 	w.WriteHeader(http.StatusNoContent)
 }

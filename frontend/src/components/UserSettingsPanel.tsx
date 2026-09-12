@@ -389,7 +389,8 @@ export const UserSettingsPanel: React.FC<UserSettingsPanelProps> = ({ onClose })
               <h3 style={{ marginBottom: 4 }}>Notifications</h3>
               <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 0 }}>
                 Email me about high-signal events (failed runs, proposals awaiting review, review
-                requests, and workspace budget alerts). In-app notifications are always on.
+                requests, workspace budget alerts, and changes to who can access your workspaces
+                and projects). In-app notifications are always on.
                 Email requires the server to have SMTP configured.
               </p>
             </div>
