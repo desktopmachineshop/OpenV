@@ -71,7 +71,7 @@ export const ReleaseUpdateBanner: React.FC = () => {
       }}
     >
       <span>
-        OpenV has been updated ({newer}).{' '}
+        OpenV was upgraded to {newer}.{' '}
         <Link to="/whats-new" style={{ color: 'var(--accent)' }}>
           See what's new
         </Link>

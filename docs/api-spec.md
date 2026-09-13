@@ -382,7 +382,7 @@ pushes new items live.
 | `budget_threshold` | Month-to-date spend crosses 80% or 100% | Workspace admins |
 | `access_changed` | Your own workspace or project access changes | The affected member |
 | `membership_changed` | Somebody joins, leaves, is invited, or changes role | Workspace admins |
-| `release_published` | A server first boots on a new release (the top section of `RELEASE_NOTES.md`); `entity_ref.kind` is `release` and the body carries the release's first bullets | Every account, once per release (`release_announcements` claim) |
+| `release_published` | A server first boots on a new release (the top section of `RELEASE_NOTES.md`); `entity_ref.kind` is `release`, the title reads *OpenV version upgraded to 0.2.0* and the body carries the release's first bullets under their group headings | Every account, once per release (`release_announcements` claim) |
 
 `access_changed` and `membership_changed` are two audiences for the same
 events, and are separate types because the reasons differ: one answers "what
@@ -439,7 +439,7 @@ successful send clears.
 
 | Method | Path | Purpose | Auth |
 |---|---|---|---|
-| GET | `/api/v1/release` | The release this server runs, from the `RELEASE_NOTES.md` it was built with: `{version, date, notes: [...], markdown, history}` — `version` is the top dated section (`2026-09-12`, `2026-09-12.2`; empty when the notes name none yet), `notes` its bullets, `markdown` that section as written, `history` the whole file. `Cache-Control: no-store`: open tabs poll it to notice a newer release and offer a reload | user |
+| GET | `/api/v1/release` | The release this server runs, from the `RELEASE_NOTES.md` it was built with: `{version, date, notes: [...], categories: [{name, notes}], markdown, releases: [...]}` — `version` is the top section's semantic version (`0.2.0`; a date for the releases from before OpenV had version numbers; empty when the notes name none yet), `notes` its bullets flat, `categories` the same bullets grouped (`New features`, `Maintenance updates`, `Bug fixes`), `markdown` that section as written, and `releases` every release newest first in the same shape. The notes file itself is never served: it also holds what has not shipped yet. `Cache-Control: no-store`: open tabs poll it to notice a newer release and offer a reload | user |
 
 ### Shared demo products (community pool)
 

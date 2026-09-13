@@ -42,8 +42,15 @@ func TestGetReleaseAnswersCurrentAndHistory(t *testing.T) {
 	if resp.Version != "2026-09-13" || resp.Date != "2026-09-13" || len(resp.Notes) != 1 || resp.Notes[0] != "Shipped" {
 		t.Fatalf("resp = %+v", resp)
 	}
-	if resp.Markdown != "- Shipped" || resp.History != notes.Markdown {
-		t.Fatalf("markdown = %q, history matches file: %v", resp.Markdown, resp.History == notes.Markdown)
+	if resp.Markdown != "- Shipped" {
+		t.Fatalf("markdown = %q", resp.Markdown)
+	}
+	// The history is the parsed releases, not the file: the file also holds
+	// the Unreleased section, and serving it whole once put work that had not
+	// shipped in front of customers.
+	if len(resp.Releases) != 2 || resp.Releases[0].Version != "2026-09-13" ||
+		resp.Releases[1].Version != "2026-09-12" {
+		t.Fatalf("releases = %+v", resp.Releases)
 	}
 
 	w = httptest.NewRecorder()
@@ -66,5 +73,8 @@ func TestGetReleaseWithoutARelease(t *testing.T) {
 	}
 	if resp.Version != "" || resp.Notes == nil || len(resp.Notes) != 0 {
 		t.Fatalf("resp = %+v", resp)
+	}
+	if resp.Releases == nil || len(resp.Releases) != 0 {
+		t.Fatalf("releases = %+v, want an empty list rather than null", resp.Releases)
 	}
 }
