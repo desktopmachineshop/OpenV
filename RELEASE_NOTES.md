@@ -9,6 +9,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+## 0.5.1 — 2026-09-13
+
 ### Maintenance updates
 
 - OpenV's licence is now the Elastic License 2.0. Self-hosting stays free
