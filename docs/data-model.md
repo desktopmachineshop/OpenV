@@ -101,11 +101,18 @@ Cookie sessions: `user_id`, `token_hash` (unique), `expires_at`,
 effective project role is the max of this and any people-team grant.
 
 ### release_announcements
-`version` (primary key, the release named by the top dated section of
+`version` (primary key, the release named by the top section of
 `RELEASE_NOTES.md`) → `announced_at` (0034). The row is the claim that a
 release has been announced to every account: the first server to insert it
 wins and fans out `release_published`; a restart or another replica finds
-the row and stays quiet.
+the row and stays quiet. A dedicated instance uses the same table for its
+support-window warnings (`support-window:<stable>:<days>` keys).
+
+### release_schedule
+`(org_id, version)` → `announced_at`, `reminded_at`, `turned_on_at` (0037):
+what the stable scheduler has done for one workspace and one stable release.
+Each column is set only while NULL, so the cut notice, the reminder and the
+turn-on happen once each however many servers run.
 
 ## Multi-tenancy (`schema_orgs.go`)
 
@@ -117,6 +124,17 @@ personal orgs are auto-created at signup), `plan` and `limits` JSONB
 container, falling back to the plan's defaults — `orgs.PlanDefaults` — when
 unset; there is no API for editing `limits` yet, operators set keys directly
 in the database), `created_by`.
+
+Release channel (REQ-136, migration 0035): `release_channel` (TEXT, `''`
+by default) is the channel a company workspace's admin chose; empty means
+the plan's default (`orgs.ChannelForPlan`: `business`, `team` and
+`enterprise` run `stable`, everything else `nightly`). Personal-tier plans
+ignore the column and report `release_channel_locked`. Migration 0036
+adds `stable_release` (the stable release turned on for the workspace,
+`''` until the first one does), `upgrade_day` (1-28, 0 = at the cut),
+`upgrade_hour` and `upgrade_timezone` (REQ-137, REQ-138), and
+`org_members.preview_next_stable` (a member's own early switch). See
+`docs/release-policy.md`.
 
 Spend budgets (issue #186, migration 0011): `monthly_budget_usd` (NUMERIC,
 nullable — NULL means no budget, the default) is the workspace's monthly agent

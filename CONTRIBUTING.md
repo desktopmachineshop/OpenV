@@ -52,6 +52,15 @@ a patch, and a major release is asked for explicitly when the workflow is
 run. The app announces that version to every account and shows it under
 What's new (see `docs/railway.md`, "Release pipeline").
 
+The group also decides who sees the change when (`docs/release-policy.md`).
+Maintenance updates and bug fixes reach every workspace with the release
+that carries them. So does a new feature on the nightly channel, but a
+stable-channel workspace sees it only once the monthly stable release it
+has turned on is that release or a later one. A new feature therefore
+registers a key in `internal/domain/release/features.go` with the version
+it ships in (`scripts/release_notes.py next` prints it) and gates its code
+path and UI on that key (server: `featureEnabled`; client: `useFeature`).
+
 ## Licensing of contributions
 
 OpenV is licensed under the [GNU AGPL-3.0](LICENSE). By contributing, you

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { orgsAPI } from '../api/client';
+import { Org, OrgFeatures, orgsAPI, releaseAPI } from '../api/client';
 import { apiErrorMessage } from '../api/errors';
 import { useAppStore } from '../state/store';
 import { Navbar } from '../components/Navbar';
@@ -62,6 +62,59 @@ export const OrgSettings: React.FC = () => {
   const [logoBusy, setLogoBusy] = useState(false);
   const [logoError, setLogoError] = useState('');
   const [logoVersion, setLogoVersion] = useState(0);
+  // Release channel (REQ-136). The running release comes from the API so
+  // the card can say which release the workspace is on today.
+  const [channelSaving, setChannelSaving] = useState(false);
+  const [currentRelease, setCurrentRelease] = useState('');
+  useEffect(() => {
+    let cancelled = false;
+    releaseAPI
+      .current()
+      .then((res) => {
+        if (!cancelled) setCurrentRelease(res.data.version || '');
+      })
+      .catch(() => {
+        // The card still shows the channel without a release name.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  // Upgrade window and the caller's own preview (REQ-138). The gates come
+  // from the store (loaded per active workspace) when this is the active
+  // workspace, and are fetched here otherwise.
+  const { features: activeFeatures, setFeatures } = useAppStore();
+  const [windowDay, setWindowDay] = useState(0);
+  const [windowHour, setWindowHour] = useState(9);
+  const [windowTz, setWindowTz] = useState('');
+  const [windowSaving, setWindowSaving] = useState(false);
+  const [previewSaving, setPreviewSaving] = useState(false);
+  const [gates, setGates] = useState<OrgFeatures | null>(null);
+  useEffect(() => {
+    if (!org) return;
+    setWindowDay(org.upgrade_day || 0);
+    setWindowHour(org.upgrade_day ? org.upgrade_hour || 0 : 9);
+    setWindowTz(org.upgrade_timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC');
+  }, [org?.id, org?.upgrade_day, org?.upgrade_hour, org?.upgrade_timezone]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!org) return;
+    if (org.id === activeOrgId && activeFeatures) {
+      setGates(activeFeatures);
+      return;
+    }
+    let cancelled = false;
+    orgsAPI
+      .features(org.id)
+      .then((res) => {
+        if (!cancelled) setGates(res.data);
+      })
+      .catch(() => {
+        // The card shows the window without the schedule.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [org?.id, activeOrgId, activeFeatures]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (org) setNameDraft(org.name);
@@ -100,6 +153,57 @@ export const OrgSettings: React.FC = () => {
     } catch (err: any) {
       setError(`Failed to delete workspace: ${apiErrorMessage(err)}`);
       setDeleting(false);
+    }
+  };
+
+  const applyGates = (next: OrgFeatures) => {
+    setGates(next);
+    if (org && org.id === activeOrgId) setFeatures(next);
+  };
+  const handleSaveWindow = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setWindowSaving(true);
+    setError('');
+    try {
+      const res = await orgsAPI.update(org.id, {
+        upgrade_window: windowDay ? { day: windowDay, hour: windowHour, timezone: windowTz } : null,
+      } as Partial<Org>);
+      setOrgs(orgs.map((o) => (o.id === org.id ? { ...o, ...res.data } : o)));
+      flash(windowDay ? 'Upgrade window saved.' : 'Upgrade window cleared: stable releases turn on at the cut.');
+      const gatesRes = await orgsAPI.features(org.id);
+      applyGates(gatesRes.data);
+    } catch (err: any) {
+      setError(`Failed to save the upgrade window: ${apiErrorMessage(err)}`);
+    } finally {
+      setWindowSaving(false);
+    }
+  };
+  const handlePreviewToggle = async (enabled: boolean) => {
+    setPreviewSaving(true);
+    setError('');
+    try {
+      const res = await orgsAPI.setStablePreview(org.id, enabled);
+      applyGates(res.data);
+      flash(enabled ? 'You are now previewing the next stable release.' : 'Preview off.');
+    } catch (err: any) {
+      setError(`Failed to change the preview: ${apiErrorMessage(err)}`);
+    } finally {
+      setPreviewSaving(false);
+    }
+  };
+
+  const handleChannelChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const channel = e.target.value as 'nightly' | 'stable';
+    setChannelSaving(true);
+    setError('');
+    try {
+      const res = await orgsAPI.update(org.id, { release_channel: channel });
+      setOrgs(orgs.map((o) => (o.id === org.id ? { ...o, ...res.data } : o)));
+      flash(`Release channel set to ${channel}.`);
+    } catch (err: any) {
+      setError(`Failed to change the release channel: ${apiErrorMessage(err)}`);
+    } finally {
+      setChannelSaving(false);
     }
   };
 
@@ -290,6 +394,116 @@ export const OrgSettings: React.FC = () => {
               <p style={{ fontSize: 13, color: 'var(--text)', marginBottom: 0 }}>
                 Plan: <strong>{org.plan || 'Free'}</strong> — free during the alpha with every feature included. See <a href="/pricing" target="_blank" rel="noreferrer">what free means</a>.
               </p>
+            </div>
+
+            <div className="card">
+              <h3>Release channel</h3>
+              <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+                {org.release_channel === 'stable'
+                  ? 'Stable: new features turn on for this workspace at the monthly release. Fixes arrive with every nightly.'
+                  : 'Nightly: every release reaches this workspace the day it ships.'}
+                {org.release_channel_locked && ' This plan always runs the nightly channel.'}
+                {currentRelease && ` The platform is on release ${currentRelease}.`}
+              </p>
+              {isAdmin && !org.release_channel_locked ? (
+                <label style={{ fontSize: 13, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                  Channel
+                  <select
+                    value={org.release_channel || 'stable'}
+                    disabled={channelSaving}
+                    onChange={handleChannelChange}
+                    aria-label="Release channel"
+                    style={{ padding: '5px 8px', fontSize: 13 }}
+                  >
+                    <option value="stable">Stable (monthly)</option>
+                    <option value="nightly">Nightly (latest)</option>
+                  </select>
+                </label>
+              ) : (
+                <p style={{ fontSize: 13, color: 'var(--text)', marginBottom: 0 }}>
+                  Channel: <strong>{org.release_channel === 'stable' ? 'Stable' : 'Nightly'}</strong>
+                </p>
+              )}
+              {org.release_channel === 'stable' && (
+                <div style={{ marginTop: 14, borderTop: '1px solid var(--surface-inset)', paddingTop: 12 }}>
+                  <p style={{ fontSize: 13, color: 'var(--text)', marginTop: 0 }}>
+                    {org.stable_release
+                      ? `This workspace runs stable release ${org.stable_release}.`
+                      : 'No stable release has turned on for this workspace yet.'}
+                    {gates?.next_stable_release && gates.next_stable_at && (
+                      <>
+                        {' '}Stable release {gates.next_stable_release} turns on{' '}
+                        <strong>{new Date(gates.next_stable_at).toLocaleString()}</strong>.
+                      </>
+                    )}
+                  </p>
+                  {isAdmin && (
+                    <form onSubmit={handleSaveWindow} style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                      <div>
+                        <label style={{ fontSize: 12, display: 'block' }}>Upgrade window</label>
+                        <select
+                          value={windowDay}
+                          onChange={(e) => setWindowDay(Number(e.target.value))}
+                          aria-label="Upgrade day of month"
+                          style={{ padding: '5px 8px', fontSize: 13 }}
+                        >
+                          <option value={0}>At the cut</option>
+                          {Array.from({ length: 28 }, (_, i) => i + 1).map((d) => (
+                            <option key={d} value={d}>
+                              Day {d} of the month
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      {windowDay > 0 && (
+                        <>
+                          <div>
+                            <label style={{ fontSize: 12, display: 'block' }}>Hour</label>
+                            <select
+                              value={windowHour}
+                              onChange={(e) => setWindowHour(Number(e.target.value))}
+                              aria-label="Upgrade hour"
+                              style={{ padding: '5px 8px', fontSize: 13 }}
+                            >
+                              {Array.from({ length: 24 }, (_, i) => i).map((h) => (
+                                <option key={h} value={h}>
+                                  {String(h).padStart(2, '0')}:00
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <div style={{ flex: '1 1 180px', maxWidth: 260 }}>
+                            <label style={{ fontSize: 12, display: 'block' }}>Time zone</label>
+                            <input
+                              value={windowTz}
+                              onChange={(e) => setWindowTz(e.target.value)}
+                              aria-label="Upgrade time zone"
+                              placeholder="Europe/London"
+                              style={{ width: '100%', padding: '5px 8px', fontSize: 13 }}
+                            />
+                          </div>
+                        </>
+                      )}
+                      <button type="submit" className="button-primary" disabled={windowSaving}>
+                        {windowSaving ? 'Saving…' : 'Save window'}
+                      </button>
+                    </form>
+                  )}
+                  <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '8px 0 0' }}>
+                    A stable release turns on at the window that follows its cut, and no later than 14 days after it.
+                    Fixes reach every workspace with each nightly regardless.
+                  </p>
+                  <label style={{ fontSize: 13, display: 'flex', alignItems: 'center', gap: 8, marginTop: 10 }}>
+                    <input
+                      type="checkbox"
+                      checked={Boolean(gates?.preview)}
+                      disabled={previewSaving}
+                      onChange={(e) => void handlePreviewToggle(e.target.checked)}
+                    />
+                    Try the next stable release early for my account only
+                  </label>
+                </div>
+              )}
             </div>
 
             <div className="card">

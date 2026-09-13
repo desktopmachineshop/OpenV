@@ -149,7 +149,10 @@ OPENV_VAPID_SUBJECT=mailto:admin@example.com
 | `OPENV_VAPID_SUBJECT` | Operator contact, `mailto:` or `https:` only — anything else leaves push off |
 | `OPENV_PUSH_NOTIFICATION_TYPES` | Comma-separated type override (default: the four high-signal types) |
 
-`release_published` (a new release announced to every account) is in-app only by default; add it to either list to email or push it as well.
+`release_published`, `release_scheduled` and `release_support_window` (releases, their schedule and a dedicated instance's support window) are in-app only by default; add them to either list to email or push them as well.
+
+| `OPENV_DEPLOYMENT` | `shared` (default) or `dedicated`: a dedicated instance polls the release feed and warns admins before its support window closes (`docs/release-policy.md`) |
+| `OPENV_RELEASE_FEED_URL` | The feed a dedicated instance polls (default: the shared service's `/api/v1/public/release`) |
 | `OPENV_PUSH_ENDPOINT_HOSTS` | Comma-separated EXTRA push-service hosts accepted in a subscription endpoint (see below). Unset ⇒ the built-in list only |
 
 Edit `OPENV_VAPID_SUBJECT` to an address you actually read: push services use

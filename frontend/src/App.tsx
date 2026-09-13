@@ -78,8 +78,10 @@ function App() {
     setMeta,
     orgsLoaded,
     setOrgs,
+    activeOrgId,
     setActiveOrgId,
     setOrgsLoaded,
+    setFeatures,
     emailVerificationRequired,
     setEmailVerificationRequired,
   } = useAppStore();
@@ -141,6 +143,25 @@ function App() {
         setOrgsLoaded(true);
       });
   }, [currentUser, walled, setOrgs, setActiveOrgId, setOrgsLoaded]);
+
+  // Feature gates follow the active workspace (REQ-137). Cleared first so a
+  // switch never shows one workspace's gates against another's screens.
+  useEffect(() => {
+    if (!currentUser || walled || !activeOrgId) return;
+    let cancelled = false;
+    setFeatures(null);
+    orgsAPI
+      .features(activeOrgId)
+      .then((res) => {
+        if (!cancelled) setFeatures(res.data);
+      })
+      .catch(() => {
+        // Gates stay closed until the next load; nothing else is affected.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [currentUser, walled, activeOrgId, setFeatures]);
 
   useEffect(() => {
     if (!currentUser || walled || !orgsLoaded) return;

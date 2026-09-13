@@ -153,6 +153,64 @@ class CutTests(unittest.TestCase):
             rn.cut(cut_once, "2026-09-15")
 
 
+class StableTests(unittest.TestCase):
+    # Two numbered releases a week apart, the older one already stable.
+    TWO = SAMPLE.replace(
+        "## 0.1.0 — 2026-09-13\n",
+        "## 0.2.0 — 2026-09-20\n\n### New features\n\n- Newer\n\n## 0.1.0 — 2026-09-13\n\nStable channel release since 2026-09-20.\n",
+        1,
+    )
+
+    def test_the_marker_designates_a_release_and_is_not_a_note(self):
+        self.assertEqual(rn.stables(self.TWO), [("0.1.0", "2026-09-20")])
+        self.assertEqual(rn.current_stable(self.TWO), "0.1.0")
+        self.assertEqual(rn.current_stable(SAMPLE), "")
+        _, releases, _ = rn.parse(self.TWO)
+        self.assertEqual(releases[1][2], [(rn.MAINTENANCE, "Tidied")])
+
+    def test_cut_stable_takes_the_newest_release_that_has_soaked(self):
+        # 0.2.0 shipped on the 20th: on the 26th it has not soaked, on the 27th it has.
+        with self.assertRaises(rn.NotesError):
+            rn.cut_stable(self.TWO, "2026-09-26")
+        version, result = rn.cut_stable(self.TWO, "2026-09-27")
+        self.assertEqual(version, "0.2.0")
+        self.assertEqual(rn.stables(result), [("0.2.0", "2026-09-27"), ("0.1.0", "2026-09-20")])
+        self.assertIn("## 0.2.0 — 2026-09-20\n\nStable channel release since 2026-09-27.\n\n### New features", result)
+        self.assertNotIn("\n\n\n", result)
+        # The rest of the file is untouched: the same releases, the same notes.
+        self.assertEqual(rn.parse(result)[1], rn.parse(self.TWO)[1])
+
+    def test_a_fix_takes_the_newest_release_at_once(self):
+        version, _ = rn.cut_stable(self.TWO, "2026-09-21", fix=True)
+        self.assertEqual(version, "0.2.0")
+
+    def test_cut_stable_refuses_when_nothing_newer_has_soaked(self):
+        _, once = rn.cut_stable(self.TWO, "2026-09-27")
+        with self.assertRaises(rn.NotesError):
+            rn.cut_stable(once, "2026-10-05")
+        with self.assertRaises(rn.NotesError):
+            rn.cut_stable(LEGACY.replace("- Pending", "### Bug fixes\n\n- Pending"), "2026-10-05")
+
+    def test_cut_stable_command_honours_the_schedule(self):
+        fd, path = tempfile.mkstemp(suffix=".md")
+        with os.fdopen(fd, "w") as f:
+            f.write(self.TWO)
+        self.addCleanup(os.remove, path)
+        # Sunday 2026-09-27: a scheduled run does nothing and exits 0.
+        self.assertEqual(rn.main(["cut-stable", "--date", "2026-09-27", "--if-scheduled", path]), 0)
+        self.assertEqual(rn.current_stable(rn.read(path)), "0.1.0")
+        # Monday 2026-09-28, but September already has a stable release.
+        self.assertEqual(rn.main(["cut-stable", "--date", "2026-09-28", "--if-scheduled", path]), 0)
+        self.assertEqual(rn.current_stable(rn.read(path)), "0.1.0")
+        # Thursday 2026-10-01: October has none, so 0.2.0 is designated.
+        self.assertEqual(rn.main(["cut-stable", "--date", "2026-10-01", "--if-scheduled", path]), 0)
+        self.assertEqual(rn.current_stable(rn.read(path)), "0.2.0")
+        self.assertEqual(rn.main(["stable-version", path]), 0)
+        self.assertEqual(rn.main(["check", path]), 0)
+        # By hand, with nothing newer, the cut is refused.
+        self.assertEqual(rn.main(["cut-stable", "--date", "2026-10-02", path]), 1)
+
+
 class CliTests(unittest.TestCase):
     def write(self, text):
         fd, path = tempfile.mkstemp(suffix=".md")

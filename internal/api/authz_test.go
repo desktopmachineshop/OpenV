@@ -66,6 +66,40 @@ type fakeOrgService struct {
 
 	// Logo state recorded by SetLogo / ClearLogo and echoed by Get.
 	logoPath, logoMime string
+
+	// Release channel recording (REQ-136): the plan Get answers with, and
+	// the channels SetReleaseChannel was asked for.
+	plan         string
+	channelCalls []string
+	// Stable release and per-member previews (REQ-137, REQ-138).
+	stableRelease string
+	previews      map[string]bool
+}
+
+func (f *fakeOrgService) MemberPreview(orgID, userID string) (bool, error) {
+	return f.previews[orgID+"/"+userID], nil
+}
+
+func (f *fakeOrgService) SetMemberPreview(orgID, userID string, enabled bool) error {
+	if f.previews == nil {
+		f.previews = map[string]bool{}
+	}
+	f.previews[orgID+"/"+userID] = enabled
+	return nil
+}
+
+func (f *fakeOrgService) SetReleaseChannel(id, channel string) (*orgs.Org, error) {
+	o, _ := f.Get(id)
+	if !orgs.ChannelChoosable(o.Plan) {
+		return nil, orgs.ErrChannelLocked
+	}
+	if channel != "" && !orgs.ValidChannel(channel) {
+		return nil, orgs.ErrInvalidChannel
+	}
+	f.channelCalls = append(f.channelCalls, channel)
+	o.ReleaseChannelOverride = channel
+	o.ResolveReleaseChannel()
+	return o, nil
 }
 
 func (f *fakeOrgService) RoleInOrg(orgID, userID string) (string, error) {
@@ -75,7 +109,13 @@ func (f *fakeOrgService) RoleInOrg(orgID, userID string) (string, error) {
 // Get answers the handlers that read a workspace's effective limits (e.g.
 // transient runner lease timings) with a plain free-plan workspace.
 func (f *fakeOrgService) Get(id string) (*orgs.Org, error) {
-	return &orgs.Org{ID: id, Plan: orgs.PlanFree, LogoPath: f.logoPath, LogoMime: f.logoMime, HasLogo: f.logoPath != ""}, nil
+	plan := f.plan
+	if plan == "" {
+		plan = orgs.PlanFree
+	}
+	o := &orgs.Org{ID: id, Plan: plan, LogoPath: f.logoPath, LogoMime: f.logoMime, HasLogo: f.logoPath != "", StableRelease: f.stableRelease}
+	o.ResolveReleaseChannel()
+	return o, nil
 }
 
 func (f *fakeOrgService) SetLogo(id, path, mime string) (*orgs.Org, error) {

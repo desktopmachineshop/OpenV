@@ -89,6 +89,25 @@ type Org struct {
 	// HasLogo reports whether a logo is stored (LogoPath != "").
 	HasLogo bool `json:"has_logo"`
 
+	// ReleaseChannelOverride is the channel an admin chose, stored; empty
+	// means the plan's default. Never serialised: clients see the effective
+	// ReleaseChannel and whether the plan lets them change it.
+	ReleaseChannelOverride string `json:"-"`
+	ReleaseChannel         string `json:"release_channel"`
+	ReleaseChannelLocked   bool   `json:"release_channel_locked"`
+
+	// StableRelease is the stable release currently turned on for a
+	// stable-channel workspace (2026.09); empty until the first stable is
+	// cut and turns on. Gated features are resolved against it (REQ-137).
+	StableRelease string `json:"stable_release"`
+	// UpgradeDay (1-28, 0 = none) and UpgradeHour (0-23) in UpgradeTimezone
+	// (IANA name, empty = UTC) are the workspace's upgrade window: when a
+	// new stable release turns on for it, at most 14 days after the cut
+	// (REQ-138). Without a window a stable release turns on at the cut.
+	UpgradeDay      int    `json:"upgrade_day"`
+	UpgradeHour     int    `json:"upgrade_hour"`
+	UpgradeTimezone string `json:"upgrade_timezone"`
+
 	// Role is the requesting user's role, populated by ListForUser.
 	Role string `json:"role,omitempty"`
 }
@@ -114,6 +133,25 @@ type Repository interface {
 	SetBudget(orgID string, budget *float64) error
 	// SetLogo writes only logo_path and logo_mime (empty strings clear them).
 	SetLogo(id, path, mime string) error
+	// SetReleaseChannel writes only release_channel ("" returns the
+	// workspace to its plan's default).
+	SetReleaseChannel(id, channel string) error
+	// SetStableRelease writes only stable_release: the stable release now
+	// turned on for the workspace.
+	SetStableRelease(id, version string) error
+	// SetUpgradeWindow writes only the upgrade window columns (day 0 clears).
+	SetUpgradeWindow(id string, day, hour int, timezone string) error
+	// ListOrgsByChannel lists the live workspaces whose effective release
+	// channel is channel (plan default unless overridden on a company plan).
+	ListOrgsByChannel(channel string) ([]*Org, error)
+	// ListMemberUserIDsByChannel lists every account that belongs to at
+	// least one live workspace on channel.
+	ListMemberUserIDsByChannel(channel string) ([]string, error)
+	// MemberPreview reports whether a member turned the next stable release
+	// on early for their own account in this workspace (REQ-138).
+	MemberPreview(orgID, userID string) (bool, error)
+	// SetMemberPreview records that choice.
+	SetMemberPreview(orgID, userID string, enabled bool) error
 	// ClaimBudgetAlert atomically records that an alert for (month, threshold)
 	// is being sent, and reports whether THIS caller won the claim. It writes
 	// only when the row's recorded month differs or the new threshold is
@@ -157,6 +195,27 @@ type Service interface {
 	// ListAll returns every organization id (trusted boot-time callers only).
 	ListAll() ([]string, error)
 	UpdateOrg(id string, name *string) (*Org, error)
+	// SetReleaseChannel records the channel a company workspace's admin
+	// chose ("" returns it to the plan's default) and returns the updated
+	// workspace. ErrChannelLocked for a plan that always runs nightly,
+	// ErrInvalidChannel for an unknown name.
+	SetReleaseChannel(id, channel string) (*Org, error)
+	// SetUpgradeWindow records when stable releases turn on for a company
+	// workspace: day of month 1-28 and hour 0-23 in an IANA time zone; day
+	// 0 clears the window so releases turn on at the cut. ErrChannelLocked
+	// for a plan that cannot choose, ErrInvalidWindow for bad values.
+	SetUpgradeWindow(id string, day, hour int, timezone string) (*Org, error)
+	// SetStableRelease records the stable release now turned on for a
+	// workspace (used by the release scheduler).
+	SetStableRelease(id, version string) (*Org, error)
+	// ListOrgsByChannel lists live workspaces on a channel.
+	ListOrgsByChannel(channel string) ([]*Org, error)
+	// ListMemberUserIDsByChannel lists accounts with a workspace on channel.
+	ListMemberUserIDsByChannel(channel string) ([]string, error)
+	// MemberPreview and SetMemberPreview read and write a member's own
+	// early switch to the next stable release in one workspace.
+	MemberPreview(orgID, userID string) (bool, error)
+	SetMemberPreview(orgID, userID string, enabled bool) error
 	// SetMonthlyBudget sets (or clears, with nil) the workspace's monthly
 	// spend budget. Rejects a negative amount with ErrInvalidBudget.
 	SetMonthlyBudget(id string, budget *float64) (*Org, error)
@@ -303,6 +362,78 @@ func (s *DefaultService) UpdateOrg(id string, name *string) (*Org, error) {
 		return nil, err
 	}
 	return org, nil
+}
+
+// SetReleaseChannel implements Service.
+func (s *DefaultService) SetReleaseChannel(id, channel string) (*Org, error) {
+	org, err := s.Get(id)
+	if err != nil {
+		return nil, err
+	}
+	if !ChannelChoosable(org.Plan) {
+		return nil, ErrChannelLocked
+	}
+	if channel != "" && !ValidChannel(channel) {
+		return nil, ErrInvalidChannel
+	}
+	if err := s.repo.SetReleaseChannel(id, channel); err != nil {
+		return nil, err
+	}
+	org.ReleaseChannelOverride = channel
+	org.UpdatedAt = time.Now()
+	org.ResolveReleaseChannel()
+	return org, nil
+}
+
+// SetUpgradeWindow implements Service.
+func (s *DefaultService) SetUpgradeWindow(id string, day, hour int, timezone string) (*Org, error) {
+	org, err := s.Get(id)
+	if err != nil {
+		return nil, err
+	}
+	if !ChannelChoosable(org.Plan) {
+		return nil, ErrChannelLocked
+	}
+	if err := ValidateUpgradeWindow(day, hour, timezone); err != nil {
+		return nil, err
+	}
+	if day == 0 {
+		hour, timezone = 0, ""
+	}
+	if err := s.repo.SetUpgradeWindow(id, day, hour, timezone); err != nil {
+		return nil, err
+	}
+	org.UpgradeDay, org.UpgradeHour, org.UpgradeTimezone = day, hour, timezone
+	org.UpdatedAt = time.Now()
+	return org, nil
+}
+
+// SetStableRelease implements Service.
+func (s *DefaultService) SetStableRelease(id, version string) (*Org, error) {
+	if err := s.repo.SetStableRelease(id, version); err != nil {
+		return nil, err
+	}
+	return s.Get(id)
+}
+
+// ListOrgsByChannel implements Service.
+func (s *DefaultService) ListOrgsByChannel(channel string) ([]*Org, error) {
+	return s.repo.ListOrgsByChannel(channel)
+}
+
+// ListMemberUserIDsByChannel implements Service.
+func (s *DefaultService) ListMemberUserIDsByChannel(channel string) ([]string, error) {
+	return s.repo.ListMemberUserIDsByChannel(channel)
+}
+
+// MemberPreview implements Service.
+func (s *DefaultService) MemberPreview(orgID, userID string) (bool, error) {
+	return s.repo.MemberPreview(orgID, userID)
+}
+
+// SetMemberPreview implements Service.
+func (s *DefaultService) SetMemberPreview(orgID, userID string, enabled bool) error {
+	return s.repo.SetMemberPreview(orgID, userID, enabled)
 }
 
 // SetMonthlyBudget sets or clears (nil) the workspace's monthly spend budget.

@@ -9,6 +9,27 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### New features
+
+- Workspace settings show the workspace's release channel: Business and
+  Enterprise workspaces are on the monthly stable channel and their admins
+  can switch to nightly; Personal and Lite workspaces run nightly.
+- Stable-channel workspaces receive new features at a monthly stable
+  release instead of with every nightly; maintenance updates and bug fixes
+  still arrive with each nightly. Workspace admins choose the day and hour
+  the monthly release turns on, up to 14 days after it is designated, and
+  are told when it is designated and the day before it turns on.
+- Any member of a Business or Enterprise workspace can try the next stable
+  release early for their own account from workspace settings.
+- What's new opens with your workspace's own channel: the stable release it
+  runs and the one scheduled next, or the nightly it runs; stable releases
+  are marked in the history.
+- Release notifications follow the channel: nightly-channel members hear
+  about each release, stable-channel members when their monthly release
+  turns on.
+- Dedicated OpenV instances are warned 30 and 7 days before their support
+  window closes after a newer stable release, and again once it has.
+
 ## 0.1.0 — 2026-09-13
 
 ### New features

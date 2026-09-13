@@ -15,6 +15,12 @@ The next version is derived from the notes themselves. Anything under New
 features is a minor bump; a release of only maintenance and fixes is a patch;
 a major bump is deliberate (``cut --major``). The first release is 0.1.0.
 
+A stable release (docs/release-policy.md) is not a separate section: it is
+one of the releases designated by a marker line under its heading --
+``Stable channel release since 2026-10-08.`` -- once it has served the
+nightly channel for SOAK_DAYS. Stable-channel workspaces move to it, and
+its notes for them are every release since the previous stable one.
+
 Stdlib only, so it runs on any runner or machine with Python 3.
 
 Subcommands:
@@ -37,6 +43,14 @@ Subcommands:
                                the notes were cut by hand
   version [FILE]               print the current (top) version
   next [--major] [FILE]        print the version the next cut would produce
+  stable-version [FILE]        print the newest stable release ("" if none)
+  cut-stable [--date D] [--fix] [--if-scheduled] [FILE]
+                               designate the newest release that is at
+                               least SOAK_DAYS old and newer than the
+                               current stable as the stable release; --fix
+                               takes the newest release with no soak;
+                               --if-scheduled exits 0 without cutting on a
+                               weekend or when this month already has one
 """
 
 import argparse
@@ -64,6 +78,13 @@ GROUPS = (FEATURES, MAINTENANCE, FIXES)
 UNGROUPED = "Changes"
 
 FIRST_VERSION = "0.1.0"
+
+# The marker line that designates a release as the stable one, written by
+# cut-stable straight under the release heading.
+STABLE_MARKER = re.compile(r"^Stable channel release since (\d{4}-\d{2}-\d{2})\.?$")
+
+# How long a release serves the nightly channel before it may become stable.
+SOAK_DAYS = 7
 
 
 class NotesError(Exception):
@@ -242,6 +263,74 @@ def current_version(text, strict=True):
     return releases[0][0] if releases else ""
 
 
+def stable_since(lines):
+    """The date on a section's stable marker, or ""."""
+    for line in lines:
+        m = STABLE_MARKER.match(line.strip())
+        if m:
+            return m.group(1)
+    return ""
+
+
+def stables(text, strict=True):
+    """[(version, since)] for every designated release, newest first."""
+    _, _, sections = parse(text, strict=strict)
+    out = []
+    for heading, lines in sections:
+        m = VERSION.match(heading or "")
+        if m and stable_since(lines):
+            out.append((m.group(1), stable_since(lines)))
+    return out
+
+
+def current_stable(text, strict=True):
+    s = stables(text, strict=strict)
+    return s[0][0] if s else ""
+
+
+def cut_stable(text, date, fix=False):
+    """Designate a release as stable on date. Returns (version, new_text).
+
+    The candidate is the newest numbered release that shipped at least
+    SOAK_DAYS before date (any age with fix=True) and is newer than the
+    current stable; a release with no date on its heading has no known age
+    and is skipped unless fix=True.
+    """
+    _, releases, sections = parse(text)
+    numbered = [(v, d) for v, d, _ in releases if VERSION.match(v)]
+    if not numbered:
+        raise NotesError("no numbered release to designate as stable")
+    if fix:
+        eligible = numbered
+    else:
+        cutoff = (datetime.date.fromisoformat(date) - datetime.timedelta(days=SOAK_DAYS)).isoformat()
+        eligible = [(v, d) for v, d in numbered if d and d <= cutoff]
+        if not eligible:
+            raise NotesError(f"no release is {SOAK_DAYS} days old yet; nothing has soaked long enough to be stable")
+    candidate = max(eligible, key=lambda r: version_key(r[0]))[0]
+    current = current_stable(text)
+    if current and version_key(candidate) <= version_key(current):
+        raise NotesError(f"nothing to release: {current} is already the stable release and nothing newer has soaked")
+    out = []
+    for heading, lines in sections:
+        if heading is None:
+            out.extend(lines)
+            continue
+        out.append(f"## {heading}")
+        m = VERSION.match(heading)
+        if m and m.group(1) == candidate:
+            out.append("")
+            out.append(f"Stable channel release since {date}.")
+            if lines and lines[0].strip():
+                out.append("")
+        out.extend(lines)
+    result = "\n".join(out)
+    if not result.endswith("\n"):
+        result += "\n"
+    result = re.sub(r"\n{3,}", "\n\n", result)
+    return candidate, result
+
+
 def cmd_check(args):
     parse(read(args.file))
     print("release notes OK")
@@ -305,6 +394,28 @@ def cmd_next(args):
     print(next_version([v for v, _, _ in releases], unreleased, args.major))
 
 
+def cmd_stable_version(args):
+    print(current_stable(read(args.file)))
+
+
+def cmd_cut_stable(args):
+    date = args.date or datetime.date.today().isoformat()
+    if not re.match(r"^\d{4}-\d{2}-\d{2}$", date):
+        raise NotesError(f"--date must be YYYY-MM-DD, got {date!r}")
+    if args.if_scheduled and not args.fix:
+        day = datetime.date.fromisoformat(date)
+        if day.weekday() >= 5:
+            print(f"{date} is a weekend; not cutting a stable release")
+            return
+        if any(since[:7] == date[:7] for _, since in stables(read(args.file))):
+            print(f"a stable release was already designated in {date[:7]}; nothing to do")
+            return
+    version, result = cut_stable(read(args.file), date, fix=args.fix)
+    with open(args.file, "w", encoding="utf-8") as f:
+        f.write(result)
+    print(version)
+
+
 def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(dest="command", required=True)
@@ -323,6 +434,16 @@ def main(argv=None):
     add("check-release", cmd_check_release, **{"--released": {"default": ""}})
     add("version", cmd_version)
     add("next", cmd_next, **{"--major": major})
+    add("stable-version", cmd_stable_version)
+    add(
+        "cut-stable",
+        cmd_cut_stable,
+        **{
+            "--date": {"default": ""},
+            "--fix": {"action": "store_true", "help": "designate the newest release with no soak"},
+            "--if-scheduled": {"action": "store_true", "dest": "if_scheduled"},
+        },
+    )
     args = p.parse_args(argv)
     try:
         args.fn(args)

@@ -145,7 +145,9 @@ their own project, workers pass within their org) · `org member`/`org admin`
 | GET | `/api/v1/orgs` | List the caller's orgs (`?deleted=true` lists their soft-deleted ones) | user |
 | POST | `/api/v1/orgs` | Create a company workspace | user |
 | GET | `/api/v1/orgs/{id}` | Workspace details | org member |
-| PUT | `/api/v1/orgs/{id}` | Update name/settings/limits/`monthly_budget_usd` | org admin |
+| PUT | `/api/v1/orgs/{id}` | Update name/settings/limits/`monthly_budget_usd`/`release_channel` (`nightly`, `stable`, or `""` for the plan's default; `400` on a plan that always runs nightly)/`upgrade_window` (`{day 1-28, hour 0-23, timezone}` or `null` for "at the cut"; `400` for bad values or a plan that cannot choose). The workspace answers with its effective `release_channel`, `release_channel_locked`, `stable_release` and window | org admin |
+| GET | `/api/v1/orgs/{id}/features` | The caller's feature gates in the workspace: `{channel, stable_release, preview, features: {key: bool}, next_stable_release?, next_stable_at?}`. Gates are resolved from the channel and the stable release the workspace has turned on, or the newest stable when the caller previews it (REQ-137, REQ-138) | org member |
+| PUT | `/api/v1/orgs/{id}/members/me/preview` | `{enabled}`: switch the caller's own account to the newest stable release early in this workspace; answers the caller's gates. `400` on a plan that always runs nightly | org member |
 | DELETE | `/api/v1/orgs/{id}` | Soft-delete a company workspace: hidden and locked immediately, restorable for 30 days, then hard-deleted with all its data by a daily purge. Personal workspaces are refused. | org admin |
 | POST | `/api/v1/orgs/{id}/restore` | Restore a soft-deleted workspace within the grace period | org admin (of the deleted org) |
 | POST | `/api/v1/orgs/{id}/activate` | Set the session's active workspace | org member |
@@ -382,7 +384,9 @@ pushes new items live.
 | `budget_threshold` | Month-to-date spend crosses 80% or 100% | Workspace admins |
 | `access_changed` | Your own workspace or project access changes | The affected member |
 | `membership_changed` | Somebody joins, leaves, is invited, or changes role | Workspace admins |
-| `release_published` | A server first boots on a new release (the top section of `RELEASE_NOTES.md`); `entity_ref.kind` is `release`, the title reads *OpenV version upgraded to 0.2.0* and the body carries the release's first bullets under their group headings | Every account, once per release (`release_announcements` claim) |
+| `release_published` | A server first boots on a new release (the top section of `RELEASE_NOTES.md`); `entity_ref.kind` is `release`, the title reads *OpenV version upgraded to 0.2.0* and the body carries the release's first bullets under their group headings. Or a stable release turns on for a workspace at its upgrade window, with the notes since the previous stable | Nightly: every account with a nightly-channel workspace, once per release (`release_announcements` claim). Stable: the workspace's members, once per workspace and release (`release_schedule` claim) |
+| `release_scheduled` | A stable release is designated and will turn on for the workspace at its window, and again a day before it does | The workspace's admins |
+| `release_support_window` | On a dedicated instance: a newer stable exists on the shared service and the 90-day support window is 30 or 7 days from closing, or has closed | Every workspace's admins on that instance |
 
 `access_changed` and `membership_changed` are two audiences for the same
 events, and are separate types because the reasons differ: one answers "what
@@ -439,7 +443,8 @@ successful send clears.
 
 | Method | Path | Purpose | Auth |
 |---|---|---|---|
-| GET | `/api/v1/release` | The release this server runs, from the `RELEASE_NOTES.md` it was built with: `{version, date, notes: [...], categories: [{name, notes}], markdown, releases: [...]}` — `version` is the top section's semantic version (`0.2.0`; a date for the releases from before OpenV had version numbers; empty when the notes name none yet), `notes` its bullets flat, `categories` the same bullets grouped (`New features`, `Maintenance updates`, `Bug fixes`), `markdown` that section as written, and `releases` every release newest first in the same shape. The notes file itself is never served: it also holds what has not shipped yet. `Cache-Control: no-store`: open tabs poll it to notice a newer release and offer a reload | user |
+| GET | `/api/v1/release` | The release this server runs, from the `RELEASE_NOTES.md` it was built with: `{version, date, notes: [...], categories: [{name, notes}], markdown, releases: [...]}` — `version` is the top section's semantic version (`0.2.0`; a date for the releases from before OpenV had version numbers; empty when the notes name none yet), `notes` its bullets flat, `categories` the same bullets grouped (`New features`, `Maintenance updates`, `Bug fixes`), `markdown` that section as written, and `releases` every release newest first in the same shape (a stable release carries `stable_since`), plus `stable` — the newest stable release `{version, since, previous, notes, categories}` with the notes of every release since the previous stable merged, or `null` — and `deployment` (`shared` or `dedicated`). The notes file itself is never served: it also holds what has not shipped yet. `Cache-Control: no-store`: open tabs poll it to notice a newer release and offer a reload | user |
+| GET | `/api/v1/public/release` | The release feed dedicated instances poll: `{version, stable, stable_since}`, cacheable for five minutes | open |
 
 ### Shared demo products (community pool)
 

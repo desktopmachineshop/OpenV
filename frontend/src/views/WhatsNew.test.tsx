@@ -18,6 +18,13 @@ jest.mock('../components/Navbar', () => ({
   Navbar: ({ title }: any) => require('react').createElement('div', null, title),
 }));
 
+// No active workspace: the page has no channel to speak for, and the
+// releases stand on their own.
+const storeState: any = { orgs: [], activeOrgId: null, features: null };
+jest.mock('../state/store', () => ({
+  useAppStore: () => storeState,
+}));
+
 const current = releaseAPI.current as jest.Mock;
 
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
@@ -50,6 +57,8 @@ const release = {
       markdown: '',
     },
   ],
+  stable: null,
+  deployment: 'shared',
 };
 
 let container: HTMLDivElement;

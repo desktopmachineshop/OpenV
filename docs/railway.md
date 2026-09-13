@@ -291,11 +291,26 @@ branch instead:
   than what `release` already carries is refused. The API embeds the file:
   `GET /api/v1/release` reports the running version and the parsed releases
   (never the file itself, which also holds what has not shipped), the first
-  server to boot on a new release notifies every account
+  server to boot on a new release notifies every nightly-channel account
   (`release_published`), and open tabs poll the version and offer a reload.
   `scripts/release_notes.py` (stdlib Python) is the one implementation of
   these rules: `check`, `check-pr`, `cut`, `check-release`, `version`,
-  `next`.
+  `next`, `stable-version`, `cut-stable`.
+- **Stable releases** (`docs/release-policy.md`): a stable release is one
+  of the releases above, designated by a marker line under its heading —
+  `Stable channel release since 2026-10-01.` — once it has served the
+  nightly channel for seven days. The **Cut stable release** workflow
+  (`.github/workflows/cut-stable.yml`) runs at 06:00 UTC on the first
+  working day of the month: it cuts anything still under Unreleased as a
+  release first, designates the newest release that has soaked and is newer
+  than the current stable, commits to master and promotes. Run it by hand
+  with `fix: true` to designate the newest release at once. The API's
+  stable scheduler then moves each stable-channel workspace to it at that
+  workspace's upgrade window, with the notes of every release since the
+  previous stable merged group by group.
+- **Nightly automation**: the **Nightly promotion** workflow
+  (`.github/workflows/nightly-promote.yml`) runs at 03:00 UTC and is a
+  no-op until staging exists (below).
 - Rollback: `git push origin <known-good-sha>:release --force-with-lease`
   redeploys an earlier build (the API's schema migrations are forward-only,
   so only roll back across releases without new migrations), or use
@@ -305,6 +320,30 @@ Set each Railway service's **Settings → Source → Branch** to `release`
 (create the branch first: `git push origin master:release`). The
 promotion workflow needs no Railway-side configuration — Railway just sees
 a normal push to the connected branch.
+
+## Staging
+
+After the alpha, a second Railway environment named `staging` in the same
+project, with its own Postgres and volume, both services connected to
+`master`, and the same variables as production apart from its own
+`PUBLIC_URL`, `CORS_ORIGIN`, `API_UPSTREAM` and a raised
+`OPENV_REGISTER_IP_BURST` (the smoke suite registers its own users). Seed
+its database from an anonymised copy; never point it at production data.
+Then set the repository variable `STAGING_BASE_URL` to the staging
+frontend's origin: from that moment the nightly promotion smoke-tests
+master on staging every night and promotes when it passes and there is
+something new under Unreleased. Enterprise customers previewing a stable
+release use a staging copy of their own instance in the same way.
+
+## Dedicated instances
+
+A dedicated instance is this same deployment with `OPENV_DEPLOYMENT=dedicated`,
+connected to a stable release rather than `release` (check out the commit
+that designated it) and upgraded on the customer's date. It reads the
+shared service's public release feed (`OPENV_RELEASE_FEED_URL`, default
+`https://openv-production.up.railway.app/api/v1/public/release`) once a day
+and warns every workspace's admins 30 and 7 days before its 90-day support
+window closes, and once more when it has.
 
 ## Notes and limitations on Railway
 

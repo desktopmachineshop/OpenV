@@ -41,6 +41,14 @@ const (
 	// updated, with the release's customer-facing notes. One row per account
 	// per release, deduped by the release_announcements claim.
 	TypeReleasePublished = "release_published"
+	// TypeReleaseScheduled tells a stable-channel workspace's admins that a
+	// stable release has been cut and when it turns on for them, and again
+	// a day before it does (REQ-138).
+	TypeReleaseScheduled = "release_scheduled"
+	// TypeReleaseSupportWindow warns a dedicated instance's admins that a
+	// newer stable release exists and their support window is closing, or
+	// has closed (REQ-139).
+	TypeReleaseSupportWindow = "release_support_window"
 )
 
 // Notification is one inbox entry for one user. EntityRef points the

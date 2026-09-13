@@ -78,6 +78,14 @@ app announces to every account, and the group they are in decides the bump:
 a new feature is a minor release, maintenance and fixes alone are a patch.
 See `CONTRIBUTING.md` for the shape and `docs/railway.md` for the pipeline.
 
+The release structure (nightly and stable channels, staging, what each plan
+gets) is `docs/release-policy.md`. A bullet under `### New features` is a
+change stable-channel workspaces wait for: it registers a feature key in
+`internal/domain/release/features.go` with the version it ships in and
+gates its code and UI on that key. The monthly *Cut stable release*
+workflow designates a soaked release as the stable one by a marker line
+under its heading; nothing else about the notes changes.
+
 **Never run Promote to release without the maintainer explicitly asking for
 that release.** Each promotion rebuilds both Railway services, which
 currently costs more in build minutes than real usage does. Releases are

@@ -75,13 +75,15 @@ type HandlerDeps struct {
 	EmbeddingService     *embeddings.Service
 	UploadsDir           string
 
-	UserService         users.Service
-	MemberService       members.Service
-	ProductService      products.Service
-	VVService           vv.Service
-	EvidenceService     evidence.Service
-	SettingsService     settings.Service
-	ReleaseService      release.Service
+	UserService     users.Service
+	MemberService   members.Service
+	ProductService  products.Service
+	VVService       vv.Service
+	EvidenceService evidence.Service
+	SettingsService settings.Service
+	ReleaseService  release.Service
+	// DeploymentKind is "shared" (default) or "dedicated" (REQ-139).
+	DeploymentKind      string
 	WorkItemService     workitems.Service
 	GuidedService       guided.Service
 	InterviewService    interviews.Service
@@ -173,6 +175,7 @@ type Handler struct {
 	evidenceService      evidence.Service
 	settingsService      settings.Service
 	releaseService       release.Service
+	deploymentKind       string
 	workItemService      workitems.Service
 	guidedService        guided.Service
 	interviewService     interviews.Service
@@ -271,6 +274,7 @@ func NewHandler(deps HandlerDeps) *Handler {
 		productService:         deps.ProductService,
 		settingsService:        deps.SettingsService,
 		releaseService:         deps.ReleaseService,
+		deploymentKind:         deps.DeploymentKind,
 		vvService:              deps.VVService,
 		evidenceService:        deps.EvidenceService,
 		workItemService:        deps.WorkItemService,
@@ -434,6 +438,7 @@ func (h *Handler) RegisterRoutes(router *mux.Router) {
 	h.registerPasswordRoutes(router)
 	h.registerAvatarRoutes(router)
 	h.registerReleaseRoutes(router)
+	h.registerFeatureRoutes(router)
 	h.registerRunnerSessionRoutes(router)
 	h.registerAttributeDefinitionRoutes(router)
 	h.registerSharedProductRoutes(router)

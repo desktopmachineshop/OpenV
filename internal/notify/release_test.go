@@ -8,7 +8,6 @@ import (
 
 	"github.com/openv/requirements-platform/internal/domain/notifications"
 	"github.com/openv/requirements-platform/internal/domain/release"
-	"github.com/openv/requirements-platform/internal/domain/users"
 )
 
 type fakeClaimer struct {
@@ -27,9 +26,11 @@ func (f *fakeClaimer) ClaimReleaseAnnouncement(version string, _ time.Time) (boo
 	return true, nil
 }
 
-type fakeUserLister struct{ list []*users.User }
+type fakeChannelMembers struct{ byChannel map[string][]string }
 
-func (f fakeUserLister) ListUsers() ([]*users.User, error) { return f.list, nil }
+func (f fakeChannelMembers) ListMemberUserIDsByChannel(channel string) ([]string, error) {
+	return f.byChannel[channel], nil
+}
 
 type captureStore struct {
 	notifications.Service
@@ -51,13 +52,14 @@ func announcerFixture() (*ReleaseAnnouncer, *fakeClaimer, *captureStore, *captur
 	claims := &fakeClaimer{claimed: map[string]bool{}}
 	store := &captureStore{}
 	bc := &captureBroadcaster{}
-	lister := fakeUserLister{list: []*users.User{{ID: "u1"}, {ID: "u2"}}}
-	return NewReleaseAnnouncer(claims, lister, store, bc), claims, store, bc
+	members := fakeChannelMembers{byChannel: map[string][]string{"nightly": {"u1", "u2"}, "stable": {"u3"}}}
+	return NewReleaseAnnouncer(claims, members, store, bc), claims, store, bc
 }
 
-// TestAnnounceNotifiesEveryAccountOnce: every account gets one row for the
-// release, pushed live; a second announcement of the same version, as a
-// restart or another replica would make, does nothing.
+// TestAnnounceNotifiesEveryAccountOnce: every nightly-channel account gets
+// one row for the release, pushed live, and stable-only accounts get none;
+// a second announcement of the same version, as a restart or another
+// replica would make, does nothing.
 func TestAnnounceNotifiesEveryAccountOnce(t *testing.T) {
 	a, _, store, bc := announcerFixture()
 	rel := grouped("0.3.0", release.Category{Name: release.CategoryFeatures, Notes: []string{"Alpha", "Beta"}})
@@ -77,6 +79,11 @@ func TestAnnounceNotifiesEveryAccountOnce(t *testing.T) {
 	}
 	if !strings.Contains(row.Title, "0.3.0") || !strings.Contains(row.Body, "• Alpha\n• Beta") {
 		t.Fatalf("copy = %q / %q", row.Title, row.Body)
+	}
+	for _, r := range store.rows {
+		if r.UserID == "u3" {
+			t.Fatalf("a stable-only account was told about a nightly")
+		}
 	}
 	if bc.keys[0] != StreamKey("u1") {
 		t.Fatalf("broadcast key = %q", bc.keys[0])

@@ -1,0 +1,115 @@
+# Nightly promotion (docs/release-policy.md, REQ-135, REQ-141): once a
+# staging environment exists, every night at 03:00 UTC a green master with
+# new release notes is smoke-tested on staging and, if it passes, promoted
+# to `release` by the Promote to release workflow.
+#
+# Until staging exists this workflow is a no-op: it needs the repository
+# variable STAGING_BASE_URL (the staging frontend's origin, which Railway
+# deploys from master — see docs/railway.md, "Staging") and skips with a
+# note when it is unset. Manual runs behave the same way.
+#
+# The smoke suite registers its own users, so staging needs
+# OPENV_REGISTER_IP_BURST raised the way CI's compose stack does.
+
+name: Nightly promotion
+
+on:
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+  checks: read
+
+jobs:
+  gate:
+    name: Staging smoke and promote
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: master
+
+      - name: Staging configured?
+        id: staging
+        env:
+          STAGING_BASE_URL: ${{ vars.STAGING_BASE_URL }}
+        run: |
+          if [ -z "$STAGING_BASE_URL" ]; then
+            echo "STAGING_BASE_URL is not set; the nightly promotion stays manual until staging exists."
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Anything to release?
+        id: notes
+        if: steps.staging.outputs.enabled == 'true'
+        run: |
+          git fetch --no-tags --depth=1 origin release || true
+          git show origin/release:RELEASE_NOTES.md > /tmp/released-notes.md 2>/dev/null || : > /tmp/released-notes.md
+          if python3 - <<'EOF'
+          import sys
+          sys.path.insert(0, "scripts")
+          import release_notes as rn
+          head = rn.parse(rn.read("RELEASE_NOTES.md"))[0]
+          # What is deployed may predate a rule the notes now follow.
+          released = rn.parse(rn.read("/tmp/released-notes.md"), strict=False)[0] if open("/tmp/released-notes.md").read().strip() else []
+          sys.exit(0 if [b for b in head if b not in released] else 1)
+          EOF
+          then
+            echo "release=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Nothing under Unreleased that release does not already carry; no nightly tonight."
+            echo "release=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Master CI is green
+        if: steps.staging.outputs.enabled == 'true' && steps.notes.outputs.release == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          sha=$(git rev-parse HEAD)
+          not_green=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${sha}/check-runs" \
+            --jq '[.check_runs[] | select(.conclusion != "success" and .conclusion != "neutral" and .conclusion != "skipped")] | map(.name) | join(", ")')
+          if [ -n "$not_green" ]; then
+            echo "Checks not green on master head: $not_green" >&2
+            exit 1
+          fi
+
+      # Staging deploys from master (docs/railway.md), so the smoke run
+      # exercises this very commit: the API answered, so its migrations
+      # applied; the journey passed, so the build works end to end.
+      - name: Staging runs this commit
+        if: steps.staging.outputs.enabled == 'true' && steps.notes.outputs.release == 'true'
+        env:
+          STAGING_BASE_URL: ${{ vars.STAGING_BASE_URL }}
+        run: |
+          expected=$(python3 scripts/release_notes.py version RELEASE_NOTES.md)
+          timeout 900 bash -c 'until curl -fsS "$STAGING_BASE_URL/api/v1/release" -o /dev/null -w "%{http_code}" 2>/dev/null | grep -q 401; do sleep 15; done'
+          echo "Staging API is up; expecting nightly notes version $expected on it"
+
+      - uses: actions/setup-node@v4
+        if: steps.staging.outputs.enabled == 'true' && steps.notes.outputs.release == 'true'
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: e2e/package-lock.json
+
+      - name: Smoke test staging
+        if: steps.staging.outputs.enabled == 'true' && steps.notes.outputs.release == 'true'
+        working-directory: e2e
+        env:
+          BASE_URL: ${{ vars.STAGING_BASE_URL }}
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+          npx playwright test tests/smoke.spec.ts --project=chromium
+
+      - name: Promote
+        if: steps.staging.outputs.enabled == 'true' && steps.notes.outputs.release == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run promote-release.yml --ref master

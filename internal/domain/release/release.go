@@ -91,6 +91,10 @@ type Release struct {
 	Categories []Category `json:"categories"`
 	// Markdown is the section's body as written, bullets and all.
 	Markdown string `json:"markdown"`
+	// StableSince is set when the release is a stable release: the day it
+	// was designated one, from the marker line under its heading (see
+	// stable.go). Empty for a plain nightly.
+	StableSince string `json:"stable_since,omitempty"`
 }
 
 // Add files a bullet under a category, creating the group on first use so the
@@ -241,6 +245,14 @@ func Parse(markdown string) (*Notes, error) {
 			}
 			continue
 		}
+		if current != nil && current.StableSince == "" {
+			if m := stableMarkerPattern.FindStringSubmatch(strings.TrimSpace(line)); m != nil {
+				// The marker is metadata, not a note: it names the day the
+				// release became the stable one and stays out of the body.
+				current.StableSince = m[1]
+				continue
+			}
+		}
 		bullet, isBullet := bulletText(line)
 		continues := !isBullet && isContinuation(line)
 		switch {
@@ -283,8 +295,8 @@ func bulletText(line string) (string, bool) {
 	return "", false
 }
 
-// Service is what the API and the announcer need: the current release and
-// the whole history.
+// Service is what the API, the announcer and the stable scheduler need: the
+// current release, the whole history, and the stable releases within it.
 type Service interface {
 	// Current is the running release; nil when the notes have none.
 	Current() *Release
@@ -294,6 +306,12 @@ type Service interface {
 	// whatever guidance for contributors happens to sit at the top, and
 	// serving it whole once put both in front of customers.
 	Released() []Release
+	// CurrentStable is the newest stable release; nil until one is
+	// designated.
+	CurrentStable() *Stable
+	// Stable looks a stable release up by version; nil when the notes do
+	// not name it as one.
+	Stable(version string) *Stable
 }
 
 // DefaultService serves one parsed file.
@@ -328,3 +346,9 @@ func (s *DefaultService) Released() []Release {
 	copy(out, s.notes.Releases)
 	return out
 }
+
+// CurrentStable implements Service.
+func (s *DefaultService) CurrentStable() *Stable { return s.notes.CurrentStable() }
+
+// Stable implements Service.
+func (s *DefaultService) Stable(version string) *Stable { return s.notes.Stable(version) }
