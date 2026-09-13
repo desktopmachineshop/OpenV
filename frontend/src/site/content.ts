@@ -93,7 +93,7 @@ export const FAQ_GROUPS: FaqGroup[] = [
       },
       {
         q: 'Can I keep it entirely on my own hardware?',
-        a: 'Yes. Self-hosting is free forever under the AGPL-3.0, with every feature, and the Agent Connector runs agents on a machine you control. A JSON export from the hosted service restores into a self-hosted OpenV.',
+        a: 'Yes. Self-hosting is free forever under the Elastic License 2.0, with every feature, and the Agent Connector runs agents on a machine you control. A JSON export from the hosted service restores into a self-hosted OpenV.',
       },
     ],
   },

@@ -88,7 +88,9 @@ an agent's output, check there first.
 ## Is OpenV free? What happens to my data if that changes?
 
 The hosted service is free while OpenV is in alpha, with every feature
-included; self-hosting is free for good under the AGPL-3.0; and registered
+included; self-hosting is free for good under the Elastic License 2.0 (the
+one thing the licence forbids is selling OpenV to others as a hosted or
+managed service); and registered
 charities and open-source projects stay free on the hosted service (an
 open-source workspace's projects are published, as of their latest baseline,
 on the site's [open-source page](/open-source)). The

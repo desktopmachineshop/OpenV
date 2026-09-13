@@ -152,7 +152,7 @@ export const OTHER_TIERS: PricingTier[] = [
     name: 'Self-hosted',
     price: 'Free forever',
     available: true,
-    summary: 'AGPL-3.0. All features, your hardware, no limits from us.',
+    summary: 'Elastic License 2.0. All features, your hardware, no limits from us.',
     points: [
       'One command: git clone, docker compose up.',
       'Your data never leaves your machines.',
@@ -195,4 +195,12 @@ export const PRICING_FOOTNOTE =
 export const SELF_HOST_COMMANDS = ['git clone https://github.com/desktopmachineshop/OpenV.git', 'cd OpenV', 'docker compose up -d'];
 
 export const LICENSE_GLOSS =
-  'OpenV is licensed under the GNU AGPL-3.0. You can use, self-host, modify and redistribute it freely, solo, as a team or commercially. The AGPL asks only that if you run a modified version for others over a network, you offer those users the modified source. Just using OpenV obligates you to nothing.';
+  'OpenV is licensed under the Elastic License 2.0. Self-hosting is free for anyone, at any scale: read the source, fork it, change it, and run it on your own servers for your own teams with every feature. The one thing you may not do is sell OpenV to others as a hosted or managed service.';
+
+/** The licence in plain English, one line each; the README carries the same list. */
+export const LICENSE_INTENT: string[] = [
+  'Self-host free, at any scale, with every feature. No licence key, no phone-home, no seat count.',
+  'Read, fork and modify the source; keep your changes private or publish them.',
+  'Paid help is fine: a consultant or integrator can charge to install, customise or support a customer’s own OpenV.',
+  'Not allowed: offering OpenV, or a substantial part of it, to third parties as a hosted or managed service.',
+];

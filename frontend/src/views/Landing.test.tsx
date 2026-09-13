@@ -7,6 +7,7 @@ import {
   DATA_PROMISE,
   HOSTED_LIMITS,
   HOSTED_TIERS,
+  LICENSE_INTENT,
   OTHER_TIERS,
 } from '../landing/content';
 
@@ -65,7 +66,9 @@ describe('Landing', () => {
     }
     expect(text).toContain(DATA_PROMISE);
     expect(text).toContain('ReqIF');
-    expect(text).toContain('AGPL-3.0');
+    expect(text).toContain('Elastic License 2.0');
+    expect(text).not.toContain('AGPL');
+    for (const line of LICENSE_INTENT) expect(text).toContain(line);
   });
 
   it('marks exactly the three paid tiers as coming soon, with one free sign-up in the hosted row', async () => {

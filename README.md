@@ -47,7 +47,7 @@ Setup guide: [docs/agents.md](docs/agents.md)
   prices yet. The hosted-runner limits in force (2 GB / 1 CPU hosted runner,
   60-minute cloud-runner lease reclaimed after 15 idle minutes) are listed on
   the instance's `/pricing` page.
-- **Self-hosted**: free forever under the AGPL-3.0, all features, your hardware.
+- **Self-hosted**: free forever under the Elastic License 2.0, all features, your hardware.
 - **Charities and open-source projects**: free forever on the hosted service.
   Claim it with a [free-hosting issue](https://github.com/desktopmachineshop/OpenV/issues/new?template=free-hosting.md).
 
@@ -287,12 +287,23 @@ Contributions are welcome! Please follow these guidelines:
 
 ## Licensing
 
-OpenV is licensed under the [GNU AGPL-3.0](LICENSE).
+OpenV is licensed under the [Elastic License 2.0](LICENSE).
 
-In practice: you can use, self-host, modify, and redistribute OpenV freely —
-solo, as a team, commercially, whatever. The AGPL asks only that if you run a
-*modified* version for others over a network, you offer those users the
-modified source. Just using OpenV obligates you to nothing.
+### What that means in plain English
+
+- **Self-hosting is free, for anyone, at any scale.** A company can run OpenV
+  on its own servers for its own teams, for good, with every feature. There
+  is no licence key, no phone-home and no seat count.
+- **The source is open to read, fork and change.** Modify it, keep your
+  changes private or publish them, and contribute them back if you like.
+- **Paid help is fine.** A consultant or integrator can charge to install,
+  customise or support a customer's own OpenV.
+- **The one thing you may not do is sell OpenV as a service.** You may not
+  offer OpenV, or a substantial part of it, to third parties as a hosted or
+  managed service. Hosted OpenV is how the project is funded.
+
+The licence text is short and readable. Where this summary and the text
+disagree, the text wins.
 
 Contributions are accepted under the Developer Certificate of Origin — see
 [CONTRIBUTING.md](CONTRIBUTING.md).
