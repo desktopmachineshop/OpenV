@@ -9,6 +9,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+## 0.2.0 — 2026-09-13
+
 ### New features
 
 - Workspace settings show the workspace's release channel: Business and
