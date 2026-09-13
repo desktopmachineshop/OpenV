@@ -469,7 +469,9 @@ Notes:
     `open_source` — granted to an open-source project's workspace; it
     publishes every project's latest baseline on the site's open-source
     page, see `docs/sharing.md`). A platform admin moves a workspace
-    between plans with `PUT /api/v1/orgs/{id}/plan {"plan": ...}`, for
+    between plans from the Platform admin page (account menu; the same page
+    grants platform-admin standing to other accounts) or with
+    `PUT /api/v1/orgs/{id}/plan {"plan": ...}`, for
     example `python3 scripts/openv/sync.py api PUT /api/v1/orgs/<id>/plan
     '{"plan":"open_source"}'` with `OPENV_EMAIL`/`OPENV_PASSWORD` set to the
     admin account.

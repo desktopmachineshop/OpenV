@@ -81,8 +81,9 @@ to the bootstrap org).
 
 Enforced per-handler via `internal/api/authz.go`:
 
-- **Platform admin** (`users.is_admin`, the first registered user) passes
-  every check.
+- **Platform admin** (`users.is_admin`) passes every check. The first
+  registered user has it; a platform admin grants it to others from the
+  Platform admin page (`PUT /api/v1/admin/users/{id}/admin`, REQ-155).
 - **Org roles**: `admin` and `member` (`org_members.role`). Org admins of a
   project's org act as project owners.
 - **Project roles**: `owner` > `editor` > `reviewer` > `viewer`. A member's
@@ -479,6 +480,20 @@ same `404`.
 | GET | `/api/v1/public/open-source/projects/{id}` | That project's latest baseline in the share shape above, with `baseline` naming the snapshot; one `404` for a project that is private, unknown or unbaselined | open |
 | GET | `/api/v1/public/open-source/projects/{id}/page` | Unfurl page for the project, as for a share link; the frontend serves `/open-source/p/<id>` from here and the app opens at `/open-source/<id>` | open |
 | GET | `/api/v1/public/open-source/projects/{id}/preview.png` | Its preview card | open |
+
+### Platform administration
+
+The Platform admin page (account menu → Platform admin, REQ-155) for the
+deployment's operators. Platform admins only: `401` signed out, `403` for
+everybody else.
+
+| Method | Path | Purpose | Auth |
+|---|---|---|---|
+| GET | `/api/v1/admin/workspaces` | Every live workspace with its plan, channel and `members` count, oldest first | platform admin |
+| GET | `/api/v1/admin/users` | Every account: `[{id, name, email, auth_provider, is_admin, created_at}]`, admins first | platform admin |
+| PUT | `/api/v1/admin/users/{id}/admin` | Grant or remove platform-admin standing `{is_admin}` → the account. `400` when an admin tries to remove their own standing or the last admin's; `404` for an unknown account | platform admin |
+
+Plans are changed with `PUT /api/v1/orgs/{id}/plan` (above).
 
 ### Shared demo products (community pool)
 
