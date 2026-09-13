@@ -8,6 +8,7 @@ import {
   projectAPI,
   projectTeamAccessAPI,
   repoConnectionsAPI,
+  shareLinkAPI,
   ArtifactTypeDef,
   AttributeDataType,
   AttributeDefinition,
@@ -15,6 +16,8 @@ import {
   Project,
   ProjectMember,
   RepoConnection,
+  ShareLink,
+  ShareLinkRole,
   TeamGrant,
   Party,
 } from '../api/client';
@@ -92,6 +95,7 @@ export const ProjectSettings: React.FC = () => {
   // Both reach stable-channel workspaces at their next stable release.
   const flowDown = useFeature('flow-down');
   const ownersOn = useFeature('artifact-owners');
+  const shareLinksOn = useFeature('share-links');
 
   // The active tab lives in the URL (?tab=…) so refreshes and deep links keep
   // it; unknown values fall back to the first tab.
@@ -120,6 +124,17 @@ export const ProjectSettings: React.FC = () => {
   const [addEmail, setAddEmail] = useState('');
   const [addRole, setAddRole] = useState('editor');
   const [addingMember, setAddingMember] = useState(false);
+
+  // Share links (REQ-149)
+  const [shareLinks, setShareLinks] = useState<ShareLink[]>([]);
+  const [shareLinksLoading, setShareLinksLoading] = useState(true);
+  const [shareRole, setShareRole] = useState<ShareLinkRole>('public');
+  const [shareLabel, setShareLabel] = useState('');
+  const [shareExpires, setShareExpires] = useState('');
+  const [sharing, setSharing] = useState(false);
+  // The link just minted, shown once: the token is stored hashed.
+  const [freshLink, setFreshLink] = useState<ShareLink | null>(null);
+  const [copied, setCopied] = useState(false);
 
   // Team access
   const [teamGrants, setTeamGrants] = useState<TeamGrant[]>([]);
@@ -281,6 +296,68 @@ export const ProjectSettings: React.FC = () => {
     setPartyNote('');
   };
 
+  const loadShareLinks = useCallback(async () => {
+    if (!projectId) return;
+    setShareLinksLoading(true);
+    try {
+      const res = await shareLinkAPI.list(projectId);
+      setShareLinks(res.data || []);
+    } catch (err: any) {
+      // Only an owner may list links; anybody else sees the section empty.
+      if (err?.response?.status !== 403) setError(`Failed to load share links: ${apiErrorMessage(err)}`);
+      setShareLinks([]);
+    } finally {
+      setShareLinksLoading(false);
+    }
+  }, [projectId]);
+
+  const handleCreateShareLink = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!projectId) return;
+    setSharing(true);
+    setError('');
+    setCopied(false);
+    try {
+      const expiresAt = shareExpires ? new Date(shareExpires + 'T23:59:59').toISOString() : undefined;
+      const res = await shareLinkAPI.create(projectId, shareRole, shareLabel.trim(), expiresAt);
+      setFreshLink(res.data);
+      setShareLabel('');
+      setShareExpires('');
+      await loadShareLinks();
+    } catch (err: any) {
+      setError(`Failed to create the share link: ${apiErrorMessage(err)}`);
+    } finally {
+      setSharing(false);
+    }
+  };
+
+  const handleRevokeShareLink = async (link: ShareLink) => {
+    const ok = await confirm({
+      title: 'Revoke share link',
+      message: `Anyone holding "${link.label || link.role}" will lose access. Revoke it?`,
+      confirmLabel: 'Revoke',
+    });
+    if (!ok) return;
+    setError('');
+    try {
+      await shareLinkAPI.revoke(link.id);
+      if (freshLink?.id === link.id) setFreshLink(null);
+      await loadShareLinks();
+    } catch (err: any) {
+      setError(`Failed to revoke the share link: ${apiErrorMessage(err)}`);
+    }
+  };
+
+  const copyFreshLink = async () => {
+    if (!freshLink?.url) return;
+    try {
+      await navigator.clipboard.writeText(freshLink.url);
+      setCopied(true);
+    } catch {
+      setCopied(false);
+    }
+  };
+
   const loadTeamAccess = useCallback(async () => {
     if (!projectId) return;
     setTeamGrantsLoading(true);
@@ -325,6 +402,7 @@ export const ProjectSettings: React.FC = () => {
     loadMembers();
     loadRepos();
     loadTeamAccess();
+    loadShareLinks();
     loadOrgTeams();
     loadProject();
     loadAttrDefs();
@@ -332,7 +410,7 @@ export const ProjectSettings: React.FC = () => {
       .artifactTypes()
       .then((res) => setArtifactTypes(res.data || []))
       .catch(() => setArtifactTypes([]));
-  }, [loadMembers, loadRepos, loadTeamAccess, loadOrgTeams, loadProject, loadAttrDefs]);
+  }, [loadMembers, loadRepos, loadTeamAccess, loadShareLinks, loadOrgTeams, loadProject, loadAttrDefs]);
 
   // -------------------------------------------------------------------------
   // Members handlers
@@ -814,6 +892,7 @@ export const ProjectSettings: React.FC = () => {
                         >
                           <option value="owner">owner</option>
                           <option value="editor">editor</option>
+                          <option value="reviewer">reviewer</option>
                           <option value="viewer">viewer</option>
                         </select>
                       </td>
@@ -861,6 +940,7 @@ export const ProjectSettings: React.FC = () => {
                 <select value={addRole} onChange={(e) => setAddRole(e.target.value)}>
                   <option value="owner">owner</option>
                   <option value="editor">editor</option>
+                  <option value="reviewer">reviewer</option>
                   <option value="viewer">viewer</option>
                 </select>
               </div>
@@ -900,6 +980,7 @@ export const ProjectSettings: React.FC = () => {
                         >
                           <option value="owner">owner</option>
                           <option value="editor">editor</option>
+                          <option value="reviewer">reviewer</option>
                           <option value="viewer">viewer</option>
                         </select>
                       </td>
@@ -953,6 +1034,7 @@ export const ProjectSettings: React.FC = () => {
                 <select value={grantRole} onChange={(e) => setGrantRole(e.target.value)}>
                   <option value="owner">owner</option>
                   <option value="editor">editor</option>
+                  <option value="reviewer">reviewer</option>
                   <option value="viewer">viewer</option>
                 </select>
               </div>
@@ -963,9 +1045,125 @@ export const ProjectSettings: React.FC = () => {
 
             <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 14, marginBottom: 0 }}>
               Workspace admins always have owner access. A person's effective role is the highest of
-              their direct grant and any team grants.
+              their direct grant and any team grants. A reviewer reads everything and adds notes,
+              comments and mentions, but cannot change the text.
             </p>
           </div>
+
+          {shareLinksOn && (
+          <div className="card" style={{ marginTop: 16 }}>
+            <h3>Share links</h3>
+            <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 0 }}>
+              A <strong>public</strong> link opens the live project, read only, for anyone who holds
+              it, with no account. A <strong>reviewer</strong> link asks the holder to sign in and
+              makes them a reviewer. Links unfurl with a preview when pasted into Slack, Discord,
+              LinkedIn and the like. Revoke a link to close it.
+            </p>
+            {freshLink?.url && (
+              <div
+                style={{
+                  border: '1px solid var(--accent)',
+                  borderRadius: 6,
+                  padding: 12,
+                  marginBottom: 14,
+                  background: 'var(--accent-soft, rgba(44,142,240,0.08))',
+                }}
+              >
+                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>
+                  Your {freshLink.role} link is ready. Copy it now: it is not shown again.
+                </div>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                  <input
+                    readOnly
+                    value={freshLink.url}
+                    onFocus={(e) => e.currentTarget.select()}
+                    style={{ flex: 1, minWidth: 220, fontSize: 12 }}
+                    aria-label="Share link"
+                  />
+                  <button type="button" className="button" onClick={copyFreshLink} style={{ width: 'auto' }}>
+                    {copied ? 'Copied' : 'Copy link'}
+                  </button>
+                </div>
+              </div>
+            )}
+            <form
+              onSubmit={handleCreateShareLink}
+              style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap', marginBottom: 14 }}
+            >
+              <div style={{ width: 150 }}>
+                <label style={{ fontSize: 12 }}>Access</label>
+                <select value={shareRole} onChange={(e) => setShareRole(e.target.value as ShareLinkRole)}>
+                  <option value="public">public, view only</option>
+                  <option value="reviewer">reviewer</option>
+                </select>
+              </div>
+              <div style={{ flex: 1, minWidth: 160 }}>
+                <label style={{ fontSize: 12 }}>Label</label>
+                <input
+                  value={shareLabel}
+                  onChange={(e) => setShareLabel(e.target.value)}
+                  placeholder="Who this link is for"
+                />
+              </div>
+              <div style={{ width: 160 }}>
+                <label style={{ fontSize: 12 }}>Expires (optional)</label>
+                <input type="date" value={shareExpires} onChange={(e) => setShareExpires(e.target.value)} />
+              </div>
+              <button type="submit" className="button" disabled={sharing} style={{ width: 'auto' }}>
+                {sharing ? 'Creating…' : 'Create link'}
+              </button>
+            </form>
+            {shareLinksLoading ? (
+              <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Loading share links…</div>
+            ) : shareLinks.length === 0 ? (
+              <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>No share links yet.</div>
+            ) : (
+              <div className="table-scroll">
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr>
+                      <th style={th}>Label</th>
+                      <th style={{ ...th, width: 100 }}>Access</th>
+                      <th style={{ ...th, width: 120 }}>Created</th>
+                      <th style={{ ...th, width: 120 }}>Expires</th>
+                      <th style={{ ...th, width: 90 }}></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {shareLinks.map((l) => {
+                      const revoked = !!l.revoked_at;
+                      const expired = !!l.expires_at && new Date(l.expires_at) < new Date();
+                      return (
+                        <tr key={l.id} style={{ opacity: revoked || expired ? 0.55 : 1 }}>
+                          <td style={td}>{l.label || '—'}</td>
+                          <td style={td}>{l.role}</td>
+                          <td style={td}>{new Date(l.created_at).toLocaleDateString()}</td>
+                          <td style={td}>
+                            {revoked
+                              ? 'revoked'
+                              : l.expires_at
+                                ? `${expired ? 'expired ' : ''}${new Date(l.expires_at).toLocaleDateString()}`
+                                : 'never'}
+                          </td>
+                          <td style={{ ...td, textAlign: 'right' }}>
+                            {!revoked && (
+                              <button
+                                onClick={() => handleRevokeShareLink(l)}
+                                style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontSize: 13, width: 'auto', padding: '6px 8px', minHeight: 36 }}
+                              >
+                                Revoke
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+          )}
         </>
       )}
 

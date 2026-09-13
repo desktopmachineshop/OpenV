@@ -12,6 +12,13 @@ func TestRoleAtLeast(t *testing.T) {
 		{RoleEditor, RoleViewer, true},
 		{RoleEditor, RoleOwner, false},
 		{RoleViewer, RoleEditor, false},
+		// A reviewer (REQ-150) sits between viewer and editor: reads and
+		// comments, never edits.
+		{RoleReviewer, RoleViewer, true},
+		{RoleReviewer, RoleReviewer, true},
+		{RoleReviewer, RoleEditor, false},
+		{RoleEditor, RoleReviewer, true},
+		{RoleViewer, RoleReviewer, false},
 		{"", RoleViewer, false},
 		{"bogus", RoleViewer, false},
 	}
@@ -41,6 +48,8 @@ func TestEffectiveRolePicksHighest(t *testing.T) {
 		{[]string{RoleViewer, RoleEditor}, RoleEditor},
 		{[]string{RoleEditor, RoleOwner, RoleViewer}, RoleOwner},
 		{[]string{RoleViewer, RoleViewer}, RoleViewer},
+		{[]string{RoleViewer, RoleReviewer}, RoleReviewer},
+		{[]string{RoleReviewer, RoleEditor}, RoleEditor},
 	}
 	for _, c := range cases {
 		s := NewDefaultService(&fakeMemberRepo{roles: c.roles})

@@ -11,7 +11,6 @@ import {
   HOSTED_LIMITS,
   HOSTED_TIERS,
   IMPORT_FORMATS,
-  ISSUES_URL,
   LICENSE_GLOSS,
   LICENSE_URL,
   OTHER_TIERS,
@@ -23,78 +22,29 @@ import {
   SUBLINE,
   TAGLINE,
 } from '../landing/content';
+import { DEMOS } from '../site/content';
+import {
+  Card,
+  ExternalLink,
+  Eyebrow,
+  H2,
+  Lead,
+  Section,
+  SiteShell,
+  primaryButton,
+  secondaryButton,
+} from '../site/SiteShell';
 
 // The public landing page: what OpenV does, the hosting terms in force and
 // the promise that data leaves freely. Rendered at "/" for visitors without a
 // session (App.tsx sends signed-in users to /projects) and at "/pricing"
-// scrolled to the pricing section. Copy lives in landing/content.ts.
-//
-// Plain inline styles on the theme tokens, like the rest of the app: no
-// webfonts and no third-party scripts, which the frontend's CSP would block
-// anyway. The page must scroll, so it uses min-height rather than .app-shell.
+// scrolled to the pricing section. Copy lives in landing/content.ts; the
+// frame and building blocks in site/SiteShell.tsx, shared with the other
+// storefront pages.
 
 interface LandingProps {
   section?: 'pricing';
 }
-
-const maxWidth = 1080;
-
-const Section: React.FC<{
-  id?: string;
-  alt?: boolean;
-  compact: boolean;
-  children: React.ReactNode;
-}> = ({ id, alt, compact, children }) => (
-  <section
-    id={id}
-    style={{
-      background: alt ? 'var(--surface)' : 'var(--bg-app)',
-      borderTop: alt ? '1px solid var(--border-soft)' : 'none',
-      borderBottom: alt ? '1px solid var(--border-soft)' : 'none',
-      padding: compact ? '40px 16px' : '64px 24px',
-    }}
-  >
-    <div style={{ maxWidth, margin: '0 auto' }}>{children}</div>
-  </section>
-);
-
-const H2: React.FC<{ children: React.ReactNode; compact: boolean }> = ({ children, compact }) => (
-  <h2 style={{ margin: '0 0 12px', fontSize: compact ? 26 : 32, lineHeight: 1.2, color: 'var(--text)' }}>{children}</h2>
-);
-
-const Lead: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <p style={{ margin: '0 0 28px', fontSize: 17, lineHeight: 1.6, color: 'var(--text-body)', maxWidth: 720 }}>{children}</p>
-);
-
-const primaryButton: React.CSSProperties = {
-  display: 'inline-block',
-  background: 'var(--accent)',
-  color: 'var(--accent-fg)',
-  padding: '12px 22px',
-  borderRadius: 6,
-  fontSize: 16,
-  fontWeight: 600,
-  textDecoration: 'none',
-  minHeight: 44,
-  boxSizing: 'border-box',
-};
-
-const secondaryButton: React.CSSProperties = {
-  ...primaryButton,
-  background: 'transparent',
-  color: 'var(--text)',
-  border: '1px solid var(--border)',
-};
-
-const ExternalLink: React.FC<{ href: string; style?: React.CSSProperties; children: React.ReactNode }> = ({
-  href,
-  style,
-  children,
-}) => (
-  <a href={href} target="_blank" rel="noreferrer" style={style}>
-    {children}
-  </a>
-);
 
 const TierCard: React.FC<{ tier: PricingTier; compact: boolean }> = ({ tier, compact }) => (
   <article
@@ -165,66 +115,8 @@ export const Landing: React.FC<LandingProps> = ({ section }) => {
     }
   }, [section]);
 
-  const navLink: React.CSSProperties = {
-    color: 'var(--text-secondary)',
-    textDecoration: 'none',
-    fontSize: 15,
-    padding: '8px 4px',
-  };
-
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg-app)', color: 'var(--text)' }}>
-      <header
-        className="safe-area-top"
-        style={{
-          background: 'var(--surface)',
-          borderBottom: '1px solid var(--border)',
-          position: 'sticky',
-          top: 0,
-          zIndex: 10,
-        }}
-      >
-        <div
-          style={{
-            maxWidth,
-            margin: '0 auto',
-            padding: compact ? '10px 16px' : '12px 24px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: compact ? 12 : 24,
-            flexWrap: 'wrap',
-          }}
-        >
-          <Link to="/" aria-label="OpenV home" style={{ display: 'flex', alignItems: 'center' }}>
-            <img src="/Images/logo.png" alt="OpenV" className="app-logo" style={{ height: 36 }} />
-          </Link>
-          {!phone && (
-            <nav aria-label="Site" style={{ display: 'flex', gap: 18, alignItems: 'center' }}>
-              <a href="#pricing" style={navLink}>
-                Pricing
-              </a>
-              <Link to="/manual" style={navLink}>
-                Manual
-              </Link>
-              <ExternalLink href={REPO_URL} style={navLink}>
-                GitHub
-              </ExternalLink>
-            </nav>
-          )}
-          <div style={{ marginLeft: 'auto', display: 'flex', gap: 10, alignItems: 'center' }}>
-            <Link to="/login" style={{ ...secondaryButton, padding: '9px 16px', fontSize: 14 }}>
-              Sign in
-            </Link>
-            {!phone && (
-              <Link to="/login?mode=register" style={{ ...primaryButton, padding: '9px 16px', fontSize: 14 }}>
-                Create free account
-              </Link>
-            )}
-          </div>
-        </div>
-      </header>
-
-      <main>
+    <SiteShell>
         <Section compact={compact}>
           <div
             style={{
@@ -235,18 +127,7 @@ export const Landing: React.FC<LandingProps> = ({ section }) => {
             }}
           >
             <div>
-              <p
-                style={{
-                  margin: '0 0 14px',
-                  fontSize: 13,
-                  fontWeight: 700,
-                  letterSpacing: 1,
-                  textTransform: 'uppercase',
-                  color: 'var(--accent-text)',
-                }}
-              >
-                Open source · Free alpha · Bring your own AI
-              </p>
+              <Eyebrow>Open source · Free alpha · Bring your own AI</Eyebrow>
               <h1 style={{ margin: '0 0 16px', fontSize: compact ? 30 : 40, lineHeight: 1.15, color: 'var(--text)' }}>
                 {TAGLINE}
               </h1>
@@ -255,9 +136,9 @@ export const Landing: React.FC<LandingProps> = ({ section }) => {
                 <Link to="/login?mode=register" style={primaryButton}>
                   Create free account
                 </Link>
-                <a href="#pricing" style={secondaryButton}>
-                  See what free means
-                </a>
+                <Link to="/demos" style={secondaryButton}>
+                  Watch the demos
+                </Link>
               </div>
               <p style={{ margin: '18px 0 0', fontSize: 13, color: 'var(--text-muted)' }}>
                 No card. No trial clock. Export your data whenever you like.
@@ -283,7 +164,44 @@ export const Landing: React.FC<LandingProps> = ({ section }) => {
           </div>
         </Section>
 
-        <Section alt compact={compact} id="features">
+        <Section alt compact={compact} id="see-it">
+          <H2 compact={compact}>See it working</H2>
+          <Lead>
+            Five narrated recordings on the platform’s own requirements project, three on a desktop and two on a phone.
+            No slides, nothing staged.
+          </Lead>
+          <div style={{ display: 'grid', gridTemplateColumns: compact ? '1fr 1fr' : 'repeat(5, minmax(0, 1fr))', gap: 12 }}>
+            {DEMOS.map((demo) => (
+              <Link
+                key={demo.id}
+                to="/demos"
+                style={{ textDecoration: 'none', color: 'inherit', minWidth: 0 }}
+                aria-label={`Watch: ${demo.title}`}
+              >
+                <div
+                  style={{
+                    aspectRatio: '16 / 9',
+                    background: 'var(--sidebar-bg)',
+                    borderRadius: 8,
+                    overflow: 'hidden',
+                    border: '1px solid var(--border)',
+                    display: 'flex',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <img
+                    src={`/videos/${demo.id}.jpg`}
+                    alt=""
+                    style={{ height: '100%', width: demo.vertical ? 'auto' : '100%', objectFit: 'cover', display: 'block' }}
+                  />
+                </div>
+                <div style={{ fontSize: 13, lineHeight: 1.4, marginTop: 6, color: 'var(--text-body)' }}>{demo.title}</div>
+              </Link>
+            ))}
+          </div>
+        </Section>
+
+        <Section compact={compact} id="features">
           <H2 compact={compact}>What it does</H2>
           <Lead>
             One place for what your product must do, why, and the proof that it does. Every artifact has a stable ref, a
@@ -300,7 +218,7 @@ export const Landing: React.FC<LandingProps> = ({ section }) => {
               <div
                 key={f.title}
                 style={{
-                  background: 'var(--bg-app)',
+                  background: 'var(--surface)',
                   border: '1px solid var(--border)',
                   borderRadius: 8,
                   padding: 20,
@@ -310,6 +228,46 @@ export const Landing: React.FC<LandingProps> = ({ section }) => {
                 <p style={{ margin: 0, fontSize: 15, lineHeight: 1.6, color: 'var(--text-body)' }}>{f.body}</p>
               </div>
             ))}
+          </div>
+        </Section>
+
+        <Section alt compact={compact} id="how">
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: compact ? '1fr' : 'minmax(0, 1fr) minmax(0, 1fr)',
+              gap: compact ? 24 : 48,
+              alignItems: 'center',
+            }}
+          >
+            <div>
+              <H2 compact={compact}>How it fits together</H2>
+              <Lead>
+                Needs, requirements, design and tests in one typed graph; agents that propose and people who approve;
+                baselines, documents and share links to hand the result over. The diagrams are on one page.
+              </Lead>
+              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                <Link to="/how-it-works" style={primaryButton}>
+                  How it works
+                </Link>
+                <Link to="/faq" style={secondaryButton}>
+                  Security and FAQ
+                </Link>
+              </div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              {[
+                ['Share a link', 'A public link opens the live project read only, no account needed; a reviewer link lets someone comment without editing.'],
+                ['On a phone', 'Review, approve and comment with a thumb; install it and get notifications as pushes.'],
+                ['Flow-down', 'Subsystems and suppliers work in their own projects, refining the requirements above them.'],
+                ['Documents', 'PDF and Word with the sections and fields you choose, from the live project or a baseline.'],
+              ].map(([title, body]) => (
+                <Card key={title} style={{ background: 'var(--bg-app)', padding: 14 }}>
+                  <div style={{ fontWeight: 600, fontSize: 15, color: 'var(--text)', marginBottom: 4 }}>{title}</div>
+                  <div style={{ fontSize: 13, lineHeight: 1.5, color: 'var(--text-body)' }}>{body}</div>
+                </Card>
+              ))}
+            </div>
           </div>
         </Section>
 
@@ -407,7 +365,25 @@ export const Landing: React.FC<LandingProps> = ({ section }) => {
           </div>
         </Section>
 
-        <Section compact={compact} id="self-host">
+        <Section compact={compact} id="community">
+          <div style={{ display: 'grid', gridTemplateColumns: compact ? '1fr' : 'repeat(3, minmax(0, 1fr))', gap: 16 }}>
+            {[
+              ['Open-source projects', 'Open-source teams host free, and their latest baselines are public for anyone to read.', '/open-source', 'See the projects'],
+              ['Customer stories', 'Teams using OpenV, in their own words, as they come in.', '/customers', 'Read the stories'],
+              ['White papers', 'Longer reads on agents in the audit trail, flow-down and leaving DOORS.', '/white-papers', 'Browse the papers'],
+            ].map(([title, body, to, cta]) => (
+              <Card key={title} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <h3 style={{ margin: 0, fontSize: 18, color: 'var(--text)' }}>{title}</h3>
+                <p style={{ margin: 0, fontSize: 14, lineHeight: 1.55, color: 'var(--text-body)', flex: 1 }}>{body}</p>
+                <Link to={to} style={{ ...secondaryButton, fontSize: 14, padding: '8px 14px', alignSelf: 'flex-start' }}>
+                  {cta}
+                </Link>
+              </Card>
+            ))}
+          </div>
+        </Section>
+
+        <Section alt compact={compact} id="self-host">
           <div
             style={{
               display: 'grid',
@@ -443,7 +419,7 @@ export const Landing: React.FC<LandingProps> = ({ section }) => {
           </div>
         </Section>
 
-        <Section alt compact={compact} id="open-source">
+        <Section compact={compact} id="licence">
           <H2 compact={compact}>Open source, and built in the open</H2>
           <Lead>{LICENSE_GLOSS}</Lead>
           <p style={{ margin: '0 0 20px', fontSize: 15, lineHeight: 1.6, color: 'var(--text-body)', maxWidth: 720 }}>
@@ -463,46 +439,6 @@ export const Landing: React.FC<LandingProps> = ({ section }) => {
             </ExternalLink>
           </div>
         </Section>
-      </main>
-
-      <footer
-        className="safe-area-bottom"
-        style={{
-          padding: compact ? '24px 16px' : '32px 24px',
-          borderTop: '1px solid var(--border)',
-          background: 'var(--bg-app)',
-        }}
-      >
-        <div
-          style={{
-            maxWidth,
-            margin: '0 auto',
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: 18,
-            alignItems: 'center',
-            fontSize: 14,
-            color: 'var(--text-muted)',
-          }}
-        >
-          <span>OpenV · AGPL-3.0</span>
-          <Link to="/manual" style={navLink}>
-            Manual
-          </Link>
-          <a href="#pricing" style={navLink}>
-            Pricing
-          </a>
-          <ExternalLink href={REPO_URL} style={navLink}>
-            GitHub
-          </ExternalLink>
-          <ExternalLink href={ISSUES_URL} style={navLink}>
-            Issues
-          </ExternalLink>
-          <Link to="/login" style={navLink}>
-            Sign in
-          </Link>
-        </div>
-      </footer>
-    </div>
+    </SiteShell>
   );
 };

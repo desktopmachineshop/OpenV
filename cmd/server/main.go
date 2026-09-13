@@ -51,6 +51,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/runnersessions"
 	"github.com/openv/requirements-platform/internal/domain/settings"
 	"github.com/openv/requirements-platform/internal/domain/sharedproducts"
+	"github.com/openv/requirements-platform/internal/domain/sharelinks"
 	"github.com/openv/requirements-platform/internal/domain/teams"
 	"github.com/openv/requirements-platform/internal/domain/templates"
 	"github.com/openv/requirements-platform/internal/domain/users"
@@ -407,6 +408,7 @@ func main() {
 	workItemService := workitems.NewDefaultService(workItemRepo, bus)
 	guidedService := guided.NewDefaultService(guidedRepo, artifactService, linkService, chatterService, productService, bus)
 	interviewService := interviews.NewDefaultService(interviewRepo)
+	shareLinkService := sharelinks.NewService(postgres.NewShareLinkRepository(db))
 
 	// Agent engine services.
 	// The file sync backfills a definition that carries no allowlist (REQ-91),
@@ -748,6 +750,8 @@ func main() {
 		WorkItemService:      workItemService,
 		GuidedService:        guidedService,
 		InterviewService:     interviewService,
+		ShareLinkService:     shareLinkService,
+		FrontendURL:          envOr("FRONTEND_URL", envOr("PUBLIC_URL", "http://localhost:3000")),
 		AgentService:         agentService,
 		RunService:           runService,
 		AutomationService:    automationService,

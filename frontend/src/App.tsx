@@ -61,6 +61,17 @@ const BaselineCompare = lazy(() =>
   import('./views/BaselineCompare').then((m) => ({ default: m.BaselineCompare }))
 );
 // ReviewQueue is a focused reviewer view, split out of the main bundle.
+const HowItWorks = lazy(() => import('./site/HowItWorks').then((m) => ({ default: m.HowItWorks })));
+const Demos = lazy(() => import('./site/Demos').then((m) => ({ default: m.Demos })));
+const Faq = lazy(() => import('./site/Faq').then((m) => ({ default: m.Faq })));
+const OpenSourceProjects = lazy(() =>
+  import('./site/OpenSourceProjects').then((m) => ({ default: m.OpenSourceProjects }))
+);
+const Customers = lazy(() => import('./site/Customers').then((m) => ({ default: m.Customers })));
+const WhitePapers = lazy(() => import('./site/WhitePapers').then((m) => ({ default: m.WhitePapers })));
+const SharedProjectView = lazy(() =>
+  import('./views/SharedProjectView').then((m) => ({ default: m.SharedProjectView }))
+);
 const ReviewQueue = lazy(() =>
   import('./views/ReviewQueue').then((m) => ({ default: m.ReviewQueue }))
 );
@@ -185,10 +196,25 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/verify-email" element={<VerifyEmail />} />
         <Route path="/interview/:token" element={<InterviewChat />} />
+        {/* A share link opens without a session (REQ-149): /share/:token is
+            the link handed out (the deployed nginx sends unfurlers to the
+            API's preview page for it) and /s/:token is where the app takes
+            over. /open-source/:id is a published snapshot (REQ-151). */}
+        <Route path="/share/:token" element={<SharedProjectView source="share" />} />
+        <Route path="/s/:token" element={<SharedProjectView source="share" />} />
+        <Route path="/open-source/:id" element={<SharedProjectView source="open-source" />} />
         {/* The front page for visitors; a signed-in user goes straight to work.
             authChecked gates rendering above, so currentUser is settled here. */}
         <Route path="/" element={currentUser ? <Navigate to="/projects" replace /> : <Landing />} />
         <Route path="/pricing" element={<Landing section="pricing" />} />
+        {/* The storefront's other pages, public like the landing page. */}
+        <Route path="/how-it-works" element={<HowItWorks />} />
+        <Route path="/demos" element={<Demos />} />
+        <Route path="/faq" element={<Faq />} />
+        <Route path="/security" element={<Navigate to="/faq#security" replace />} />
+        <Route path="/open-source" element={<OpenSourceProjects />} />
+        <Route path="/customers" element={<Customers />} />
+        <Route path="/white-papers" element={<WhitePapers />} />
         {walled ? (
           <Route path="*" element={<Navigate to="/verify-email" replace />} />
         ) : (

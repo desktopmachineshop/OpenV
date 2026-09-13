@@ -29,6 +29,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/reports"
 	"github.com/openv/requirements-platform/internal/domain/settings"
 	"github.com/openv/requirements-platform/internal/domain/sharedproducts"
+	"github.com/openv/requirements-platform/internal/domain/sharelinks"
 	"github.com/openv/requirements-platform/internal/domain/templates"
 
 	"github.com/openv/requirements-platform/internal/domain/agentruns"
@@ -83,10 +84,15 @@ type HandlerDeps struct {
 	SettingsService settings.Service
 	ReleaseService  release.Service
 	// DeploymentKind is "shared" (default) or "dedicated" (REQ-139).
-	DeploymentKind      string
-	WorkItemService     workitems.Service
-	GuidedService       guided.Service
-	InterviewService    interviews.Service
+	DeploymentKind   string
+	WorkItemService  workitems.Service
+	GuidedService    guided.Service
+	InterviewService interviews.Service
+	// ShareLinkService mints and resolves project share links (REQ-149).
+	ShareLinkService sharelinks.Service
+	// FrontendURL is the origin the app is served from, for absolute links
+	// in social previews and share pages.
+	FrontendURL         string
 	AgentService        agents.Service
 	RunService          agentruns.Service
 	AutomationService   automations.Service
@@ -179,6 +185,8 @@ type Handler struct {
 	workItemService      workitems.Service
 	guidedService        guided.Service
 	interviewService     interviews.Service
+	shareLinkService     sharelinks.Service
+	frontendURL          string
 	agentService         agents.Service
 	runService           agentruns.Service
 	automationService    automations.Service
@@ -280,6 +288,8 @@ func NewHandler(deps HandlerDeps) *Handler {
 		workItemService:        deps.WorkItemService,
 		guidedService:          deps.GuidedService,
 		interviewService:       deps.InterviewService,
+		shareLinkService:       deps.ShareLinkService,
+		frontendURL:            strings.TrimRight(deps.FrontendURL, "/"),
 		agentService:           deps.AgentService,
 		runService:             deps.RunService,
 		automationService:      deps.AutomationService,
@@ -380,6 +390,7 @@ func (h *Handler) RegisterRoutes(router *mux.Router) {
 	h.registerDownloadRoutes(router)
 	router.HandleFunc("/api/v1/projects/{id}/ai-map", h.ProjectAIMap).Methods("GET")
 	router.HandleFunc("/api/v1/projects/{id}/children", h.ListChildProjects).Methods("GET")
+	h.registerShareRoutes(router)
 	router.HandleFunc("/api/v1/projects/{id}/linked-artifacts", h.ListLinkedArtifacts).Methods("GET")
 	router.HandleFunc("/api/v1/projects/{id}/review-queue", h.ReviewQueue).Methods("GET")
 	router.HandleFunc("/api/v1/projects/{id}/reindex-embeddings", h.ReindexEmbeddings).Methods("POST")
@@ -2886,7 +2897,8 @@ func (h *Handler) CreateChatterEntry(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !h.requireProjectRole(w, r, h.projectIDForArtifact(req.ArtifactID), members.RoleEditor) {
+	// A reviewer may comment: that is what the role is for.
+	if !h.requireProjectRole(w, r, h.projectIDForArtifact(req.ArtifactID), members.RoleReviewer) {
 		return
 	}
 

@@ -85,9 +85,12 @@ Enforced per-handler via `internal/api/authz.go`:
   every check.
 - **Org roles**: `admin` and `member` (`org_members.role`). Org admins of a
   project's org act as project owners.
-- **Project roles**: `owner` > `editor` > `viewer`. A member's effective role
-  is the highest of their direct grant (`project_members`) and any
-  people-team grant (`project_team_access` via `org_teams`).
+- **Project roles**: `owner` > `editor` > `reviewer` > `viewer`. A member's
+  effective role is the highest of their direct grant (`project_members`)
+  and any people-team grant (`project_team_access` via `org_teams`). A
+  `reviewer` (REQ-150) reads everything a viewer reads and may comment
+  (`POST /chatter`), and is refused every write an editor makes; it is the
+  role a reviewer share link grants (`docs/sharing.md`).
 - **Agent runs** count as editor within their own project; **workers** pass
   for any project in their org; **run access** (viewing logs/streams) is
   granted to the launcher, then by the project ladder, then org admin for
@@ -100,7 +103,7 @@ Enforced per-handler via `internal/api/authz.go`:
 Generated from the router registrations in `internal/api/*.go`
 (`RegisterRoutes` and the `register*Routes` helpers) as of commit `2d6cd72`.
 Auth column: `open` (no credentials) · `user` (any session) ·
-`viewer`/`editor`/`owner` (project role ladder; agent runs count as editor in
+`viewer`/`reviewer`/`editor`/`owner` (project role ladder; agent runs count as editor in
 their own project, workers pass within their org) · `org member`/`org admin`
 (workspace role) · `worker` (worker key) · `run` (run token) ·
 `token` (public one-time/invite token).
@@ -123,6 +126,7 @@ their own project, workers pass within their org) · `org member`/`org admin`
 | GET | `/api/v1/auth/policy` | The registration policy alone, plus the server's password rule: `{"registration":"open"\|"closed","min_password_length":8}`. Clients state `min_password_length` in their password forms rather than a copy of it, so the form and the server can never disagree | open |
 | POST | `/api/v1/auth/invitations/preview` | Preview an invite link `{token}` → `{email, org_name, role, expires_at}`; one `404` for every unusable link. The token travels in the body, never in the path: an invite link is a credential, and a URL is written into access logs, proxy logs, browser history and `Referer` headers. Throttled on its own bucket, not the sign-in one. Only an unusable link is `404`: a lookup that fails for any other reason answers `500`, because telling the invitee their link is invalid would send them off for a replacement that fails identically | open |
 | POST | `/api/v1/auth/invitations/accept` | Join the signed-in account to the invitation's workspace `{token}` → `{org_id, org_name, role, already_member}`. Converts only when the **session's own email is the invited address**; otherwise `403 {"code":"invitation_email_mismatch"}`, whose body never names the invited address (the preview already shows it to whoever holds the link). `404` when the link is unusable. An account that is already a member keeps its role — `role` reports the role it holds, `already_member` is `true`, and the invitation is spent. A successful accept (`already_member` included) **marks the account's address verified**: the token was mailed to that address and nowhere else, and it is the session's own address, so this is the same proof `POST /auth/register` accepts from an `invite_token` | user (cookie only, JSON body) |
+| POST | `/api/v1/auth/share/accept` | Take up a **reviewer share link** `{token}` → `{project_id, project_name, role}` for the signed-in account: it becomes a `reviewer` of the project, or keeps the stronger role it already holds (`role` reports what it holds afterwards). `400` for a public link (it needs no account), `404` for an unusable one, `429` on the share-link bucket. See `docs/sharing.md` | user (cookie only, JSON body) |
 | PUT | `/api/v1/me/password` | Change password `{current_password, new_password}`; `204` on success and every OTHER session of the account is invalidated. `400 weak_password`, `403 password_incorrect`, `409 no_password` (SSO-only account) | user |
 | POST | `/api/v1/me/avatar` | Upload the account's profile picture: multipart field `file`, PNG/JPEG/GIF/WebP whose bytes match the declared type, at most 2 MiB (`413` beyond). Replaces any previous picture; returns the user with `has_avatar:true` and an `avatar_url` on the API (`/api/v1/users/{id}/avatar?v=<upload time>`, relative to the API origin) that from then on outranks the identity provider's picture at sign-in | user |
 | DELETE | `/api/v1/me/avatar` | Remove the uploaded picture; returns the user with `has_avatar:false` and an empty `avatar_url` (an identity provider's picture returns at the next sign-in) | user |
@@ -223,6 +227,9 @@ their own project, workers pass within their org) · `org member`/`org admin`
 | GET | `/api/v1/projects/{id}/baselines` | List baselines | viewer |
 | GET | `/api/v1/baselines/{id}` | Baseline contents | viewer |
 | DELETE | `/api/v1/baselines/{id}` | Delete baseline | owner |
+| GET | `/api/v1/projects/{id}/share-links` | The project's share links (`docs/sharing.md`), tokens never included | owner |
+| POST | `/api/v1/projects/{id}/share-links` | Mint a share link `{role: "public"\|"reviewer", label, expires_at?}` → `201` with the link, its `token` and the `url` to hand out (`${FRONTEND_URL}/share/<token>`); the token is stored hashed and is in this answer and nowhere else. `400` for another role; `403 {"code":"feature_unavailable"}` on a stable-channel workspace whose release lacks `share-links` | owner |
+| DELETE | `/api/v1/share-links/{id}` | Revoke a link: it opens nothing from then on (idempotent) | owner of its project |
 | GET | `/api/v1/templates` | List templates (global + workspace) | user |
 | POST | `/api/v1/templates` | Save a project as a template | editor |
 | POST | `/api/v1/templates/{id}/projects` | Create project from template | user |
@@ -326,7 +333,7 @@ Every artifact carries two identifiers, and they answer different questions:
 | GET | `/api/v1/attachments/{id}/versions` | A figure's version history, newest first | viewer |
 | DELETE | `/api/v1/attachments/{id}` | Delete attachment | editor |
 | GET | `/api/v1/artifacts/{artifactID}/attachments` | List an artifact's attachments | viewer |
-| POST | `/api/v1/chatter` | Comment on an artifact | editor |
+| POST | `/api/v1/chatter` | Comment on an artifact (a reviewer may: that is what the role is for) | reviewer |
 | GET | `/api/v1/chatter` | List an artifact's activity feed | viewer |
 
 ### Figures
@@ -452,6 +459,25 @@ successful send clears.
 |---|---|---|---|
 | GET | `/api/v1/release` | The release this server runs, from the `RELEASE_NOTES.md` it was built with: `{version, date, notes: [...], categories: [{name, notes}], markdown, releases: [...]}` — `version` is the top section's semantic version (`0.2.0`; a date for the releases from before OpenV had version numbers; empty when the notes name none yet), `notes` its bullets flat, `categories` the same bullets grouped (`New features`, `Maintenance updates`, `Bug fixes`), `markdown` that section as written, and `releases` every release newest first in the same shape (a stable release carries `stable_since`), plus `stable` — the newest stable release `{version, since, previous, notes, categories}` with the notes of every release since the previous stable merged, or `null` — and `deployment` (`shared` or `dedicated`). The notes file itself is never served: it also holds what has not shipped yet. `Cache-Control: no-store`: open tabs poll it to notice a newer release and offer a reload | user |
 | GET | `/api/v1/public/release` | The release feed dedicated instances poll: `{version, stable, stable_since}`, cacheable for five minutes | open |
+
+### Share links and the open-source showcase
+
+Project share links (REQ-149) and the projects an open-source workspace
+publishes (REQ-151); `docs/sharing.md` explains both. Every path here is
+open: a share token is the credential, so the lookups are throttled per
+address on the invite-preview bucket and the token is redacted from the
+request log. Every unusable link — unknown, revoked, expired — gets the
+same `404`.
+
+| Method | Path | Purpose | Auth |
+|---|---|---|---|
+| GET | `/api/v1/public/share/{token}` | What the link shows: `{role, project: {id, name, description}, workspace, counts, snapshot?}`. A **public** link carries `snapshot`, the live project as a read-only export (artifacts, links; attachment metadata but no files), `Cache-Control: no-store`; a **reviewer** link carries the project's name only, since the holder signs in and uses the app | token |
+| GET | `/api/v1/public/share/{token}/page` | The page a link unfurler reads: HTML whose Open Graph and Twitter-card tags name the project and point at the preview image, with a refresh into the app at `${FRONTEND_URL}/s/<token>` for a browser. The frontend's nginx serves `/share/<token>` from here | token |
+| GET | `/api/v1/public/share/{token}/preview.png` | The 1200×630 preview card: project name, workspace, artifact counts, description; drawn on the API, cached 5 minutes | token |
+| GET | `/api/v1/public/open-source/projects` | Every project of a workspace on the `open_source` plan that has a baseline: `[{project_id, name, description, workspace, baseline_id, baseline, snapshot_at, counts}]`, newest snapshot first. A project with no baseline is not listed: what an open-source workspace publishes is its latest snapshot, never live work | open |
+| GET | `/api/v1/public/open-source/projects/{id}` | That project's latest baseline in the share shape above, with `baseline` naming the snapshot; one `404` for a project that is private, unknown or unbaselined | open |
+| GET | `/api/v1/public/open-source/projects/{id}/page` | Unfurl page for the project, as for a share link; the frontend serves `/open-source/p/<id>` from here and the app opens at `/open-source/<id>` | open |
+| GET | `/api/v1/public/open-source/projects/{id}/preview.png` | Its preview card | open |
 
 ### Shared demo products (community pool)
 

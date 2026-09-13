@@ -42,3 +42,31 @@ test('the manual is readable without a session', async ({ page }) => {
   await expect(page).toHaveURL(/\/manual/);
   await expect(page.getByRole('heading', { name: 'Getting started' }).first()).toBeVisible();
 });
+
+// The storefront's other pages (REQ-152): each is readable signed out, from
+// the header, and the demo page carries the five recordings.
+test('the site pages are reachable signed out and the demos page carries five videos', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('navigation', { name: 'Site' }).getByRole('link', { name: 'How it works' }).click();
+  await expect(page).toHaveURL(/\/how-it-works$/);
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('One graph from need to evidence');
+  await expect(page.getByRole('img', { name: /artifact graph/i })).toBeVisible();
+
+  await page.getByRole('navigation', { name: 'Site' }).getByRole('link', { name: 'Demos' }).click();
+  await expect(page).toHaveURL(/\/demos$/);
+  await expect(page.locator('video')).toHaveCount(5);
+
+  await page.getByRole('navigation', { name: 'Site' }).getByRole('link', { name: 'FAQ' }).click();
+  await expect(page).toHaveURL(/\/faq$/);
+  await expect(page.getByRole('heading', { name: 'Security, on every tier' })).toBeVisible();
+
+  await page.getByRole('navigation', { name: 'Site' }).getByRole('link', { name: 'Open source' }).click();
+  await expect(page).toHaveURL(/\/open-source$/);
+  await expect(page.getByRole('heading', { name: 'Published projects' })).toBeVisible();
+
+  for (const path of ['/customers', '/white-papers']) {
+    await page.goto(path);
+    await expect(page).toHaveURL(new RegExp(`${path}$`));
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  }
+});

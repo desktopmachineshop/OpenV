@@ -12,7 +12,7 @@ export const LICENSE_URL = `${REPO_URL}/blob/master/LICENSE`;
 export const TAGLINE = 'Requirements, traceability and V&V evidence, with AI agents that work inside the audit trail.';
 
 export const SUBLINE =
-  'DOORS-style rigour for teams that ship real products: typed artifacts, baselines, verification runs, and agents that propose changes for you to approve. Open source. Bring your own AI.';
+  'DOORS-grade rigour without the DOORS-grade licence: typed artifacts, stable references, baselines, verification runs, documents, and AI agents that propose changes for your team to approve. Open source. Bring your own AI.';
 
 /** What the platform does, one card each. */
 export const FEATURES: { title: string; body: string }[] = [
@@ -30,7 +30,15 @@ export const FEATURES: { title: string; body: string }[] = [
   },
   {
     title: 'Stakeholder interviews',
-    body: 'Share a link. An interviewer agent talks to the stakeholder and records candidate needs as draft artifacts for you to review.',
+    body: 'Share a link. An interviewer agent talks to the stakeholder and records candidate needs as draft artifacts for your team to review.',
+  },
+  {
+    title: 'Documents and hand-over',
+    body: 'PDF and Word specifications with the sections, fields and evidence you choose, from the live project or any baseline; ReqIF for the tool on the other side; a share link for anyone who only needs to read.',
+  },
+  {
+    title: 'Programmes, not just projects',
+    body: 'Subsystems and suppliers work in their own projects, refine the requirements above them, and verification rolls back up the tree. Owners and reference parties say who is responsible for what.',
   },
 ];
 
@@ -82,7 +90,7 @@ export const HOSTED_TIERS: PricingTier[] = [
     name: 'Single User',
     price: 'Free',
     available: true,
-    summary: 'The current offering. Bring your own AI.',
+    summary: 'The whole product for one person, free. Bring your own AI.',
     points: [
       'Requirements, V&V, traceability and interviews: the full product for one person.',
       'Agents run on your own AI subscription (Claude Code, Codex or Gemini) via the Agent Connector on your machine, or a leased cloud runner within the free limits.',
@@ -114,8 +122,9 @@ export const HOSTED_TIERS: PricingTier[] = [
     points: [
       'Everything in Business Lite.',
       'Shared company workspaces.',
-      'Teams and per-project access.',
+      'Teams, per-project access and the reviewer role.',
       'Workspace AI budget and usage reporting.',
+      'Monthly stable release channel, turned on at a time you choose.',
     ],
     cta: { label: 'Tell us you want this', href: interest('Business'), external: true },
   },
