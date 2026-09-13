@@ -15,3 +15,6 @@ cmd/openv-connector/payload/
 # Python bytecode from the stdlib scripts
 __pycache__/
 *.pyc
+
+# Runtime data the API writes when run from the checkout (DATA_DIR, default ./data): per-workspace agent files.
+/data/
