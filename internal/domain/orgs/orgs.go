@@ -23,8 +23,10 @@ const (
 )
 
 var (
-	ErrNotFound  = errors.New("organization not found")
-	ErrNotMember = errors.New("you are not a member of this organization")
+	ErrNotFound = errors.New("organization not found")
+	// ErrInvalidPlan is a plan name PlanDefaults knows nothing about.
+	ErrInvalidPlan = errors.New("unknown plan")
+	ErrNotMember   = errors.New("you are not a member of this organization")
 
 	// ErrInvalidRole flags an unknown role name in a membership write. API
 	// handlers use it to tell user-facing validation failures (400) apart
@@ -136,6 +138,8 @@ type Repository interface {
 	// SetReleaseChannel writes only release_channel ("" returns the
 	// workspace to its plan's default).
 	SetReleaseChannel(id, channel string) error
+	// SetPlan writes only plan.
+	SetPlan(id, plan string) error
 	// SetStableRelease writes only stable_release: the stable release now
 	// turned on for the workspace.
 	SetStableRelease(id, version string) error
@@ -200,6 +204,12 @@ type Service interface {
 	// workspace. ErrChannelLocked for a plan that always runs nightly,
 	// ErrInvalidChannel for an unknown name.
 	SetReleaseChannel(id, channel string) (*Org, error)
+	// SetPlan moves a workspace to another plan (REQ-154): a platform
+	// operator's act, since a plan decides limits, the release channel's
+	// default and, for the open-source plan, what is public. ErrInvalidPlan
+	// for a name PlanDefaults does not know. The channel override is kept;
+	// the resolved channel follows the new plan where the override is empty.
+	SetPlan(id, plan string) (*Org, error)
 	// SetUpgradeWindow records when stable releases turn on for a company
 	// workspace: day of month 1-28 and hour 0-23 in an IANA time zone; day
 	// 0 clears the window so releases turn on at the cut. ErrChannelLocked
@@ -380,6 +390,24 @@ func (s *DefaultService) SetReleaseChannel(id, channel string) (*Org, error) {
 		return nil, err
 	}
 	org.ReleaseChannelOverride = channel
+	org.UpdatedAt = time.Now()
+	org.ResolveReleaseChannel()
+	return org, nil
+}
+
+// SetPlan implements Service.
+func (s *DefaultService) SetPlan(id, plan string) (*Org, error) {
+	if !ValidPlan(plan) {
+		return nil, ErrInvalidPlan
+	}
+	org, err := s.Get(id)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.repo.SetPlan(id, plan); err != nil {
+		return nil, err
+	}
+	org.Plan = plan
 	org.UpdatedAt = time.Now()
 	org.ResolveReleaseChannel()
 	return org, nil

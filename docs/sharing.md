@@ -90,5 +90,6 @@ snapshot, newest first, and opens each at `/open-source/<id>` in the same
 read-only view a public share link uses, marked with the baseline it
 shows. A project with no baseline is not listed at all.
 
-The plan is granted by hand (operators set `orgs.plan`), and the listing
-is the plan's condition made visible: there is no per-project switch.
+The plan is granted by a platform admin (`PUT /api/v1/orgs/{id}/plan`
+with `{"plan": "open_source"}`, REQ-154), and the listing is the plan's
+condition made visible: there is no per-project switch.

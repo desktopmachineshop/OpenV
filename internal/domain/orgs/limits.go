@@ -293,6 +293,17 @@ func SetDefaultPlan(plan string) {
 // DefaultPlan is the plan new workspaces are created on.
 func DefaultPlan() string { return defaultPlan }
 
+// ValidPlan reports whether name is a plan a workspace can be put on: the
+// tiers, the self-host plan, the open-source plan (REQ-154) and the two
+// legacy aliases.
+func ValidPlan(name string) bool {
+	switch name {
+	case PlanSingle, PlanBusinessLite, PlanBusiness, PlanEnterprise, PlanSelfHost, PlanOpenSource, PlanFree, PlanTeam:
+		return true
+	}
+	return false
+}
+
 // deploymentLimits is the middle layer: a deployment-wide override read once
 // at boot from OPENV_LIMITS. Nil until SetDeploymentLimits is called, which is
 // the hosted service's state — it runs on plan defaults alone.

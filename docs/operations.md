@@ -466,9 +466,13 @@ Notes:
     and nobody to pay, so yours are told which setting to change instead.
   - `OPENV_PLAN_DEFAULT` overrides just the plan new workspaces get
     (`single`, `business_lite`, `business`, `enterprise`, `self_host`,
-    `open_source` — granted by hand to an open-source project's workspace;
-    it publishes every project's latest baseline on the site's open-source
-    page, see `docs/sharing.md`).
+    `open_source` — granted to an open-source project's workspace; it
+    publishes every project's latest baseline on the site's open-source
+    page, see `docs/sharing.md`). A platform admin moves a workspace
+    between plans with `PUT /api/v1/orgs/{id}/plan {"plan": ...}`, for
+    example `python3 scripts/openv/sync.py api PUT /api/v1/orgs/<id>/plan
+    '{"plan":"open_source"}'` with `OPENV_EMAIL`/`OPENV_PASSWORD` set to the
+    admin account.
   - `OPENV_LIMITS` is a JSON object retuning individual limits across the
     whole deployment, e.g.
     `OPENV_LIMITS='{"max_members": 25, "evidence_storage_mb": 51200}'`.
