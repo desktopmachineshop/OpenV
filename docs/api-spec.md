@@ -81,8 +81,9 @@ to the bootstrap org).
 
 Enforced per-handler via `internal/api/authz.go`:
 
-- **Platform admin** (`users.is_admin`, the first registered user) passes
-  every check.
+- **Platform admin** (`users.is_admin`) passes every check. The first
+  registered user has it; a platform admin grants it to others from the
+  Platform admin page (`PUT /api/v1/admin/users/{id}/admin`, REQ-155).
 - **Org roles**: `admin` and `member` (`org_members.role`). Org admins of a
   project's org act as project owners.
 - **Project roles**: `owner` > `editor` > `reviewer` > `viewer`. A member's
@@ -150,7 +151,7 @@ their own project, workers pass within their org) · `org member`/`org admin`
 | POST | `/api/v1/orgs` | Create a company workspace | user |
 | GET | `/api/v1/orgs/{id}` | Workspace details | org member |
 | PUT | `/api/v1/orgs/{id}` | Update name/settings/limits/`monthly_budget_usd`/`release_channel` (`nightly`, `stable`, or `""` for the plan's default; `400` on a plan that always runs nightly)/`upgrade_window` (`{day 1-28, hour 0-23, timezone}` or `null` for "at the cut"; `400` for bad values or a plan that cannot choose). The workspace answers with its effective `release_channel`, `release_channel_locked`, `stable_release` and window | org admin |
-| GET | `/api/v1/orgs/{id}/features` | The caller's feature gates in the workspace: `{channel, stable_release, preview, features: {key: bool}, next_stable_release?, next_stable_at?}`. Gates are resolved from the channel and the stable release the workspace has turned on, or the newest stable when the caller previews it (REQ-137, REQ-138) | org member |
+| GET | `/api/v1/orgs/{id}/features` | The caller's feature gates in the workspace: `{channel, stable_release, preview, features: {key: bool}, next_stable_release?, next_stable_at?}`. Keys today: `flow-down`, `artifact-owners`, `share-links`, `assistant-project-edits` (the V&V Assistant's new-artifact, edit and move cards). Gates are resolved from the channel and the stable release the workspace has turned on, or the newest stable when the caller previews it (REQ-137, REQ-138) | org member |
 | PUT | `/api/v1/orgs/{id}/plan` | Move a workspace to another plan `{plan}` → the workspace (REQ-154). Plans: `single`, `business_lite`, `business`, `enterprise`, `self_host`, `open_source` (plus the legacy aliases `free`, `team`); `400` for any other name, `404` for an unknown workspace. The channel override is kept and the effective channel follows the new plan's default where none is set. This is how the open-source tier is granted: `python3 scripts/openv/sync.py api PUT /api/v1/orgs/<id>/plan '{"plan":"open_source"}'` signed in as a platform admin (`OPENV_EMAIL`/`OPENV_PASSWORD`) | platform admin |
 | PUT | `/api/v1/orgs/{id}/members/me/preview` | `{enabled}`: switch the caller's own account to the newest stable release early in this workspace; answers the caller's gates. `400` on a plan that always runs nightly | org member |
 | DELETE | `/api/v1/orgs/{id}` | Soft-delete a company workspace: hidden and locked immediately, restorable for 30 days, then hard-deleted with all its data by a daily purge. Personal workspaces are refused. | org admin |
@@ -479,6 +480,20 @@ same `404`.
 | GET | `/api/v1/public/open-source/projects/{id}` | That project's latest baseline in the share shape above, with `baseline` naming the snapshot; one `404` for a project that is private, unknown or unbaselined | open |
 | GET | `/api/v1/public/open-source/projects/{id}/page` | Unfurl page for the project, as for a share link; the frontend serves `/open-source/p/<id>` from here and the app opens at `/open-source/<id>` | open |
 | GET | `/api/v1/public/open-source/projects/{id}/preview.png` | Its preview card | open |
+
+### Platform administration
+
+The Platform admin page (account menu → Platform admin, REQ-155) for the
+deployment's operators. Platform admins only: `401` signed out, `403` for
+everybody else.
+
+| Method | Path | Purpose | Auth |
+|---|---|---|---|
+| GET | `/api/v1/admin/workspaces` | Every live workspace with its plan, channel and `members` count, oldest first | platform admin |
+| GET | `/api/v1/admin/users` | Every account: `[{id, name, email, auth_provider, is_admin, created_at}]`, admins first | platform admin |
+| PUT | `/api/v1/admin/users/{id}/admin` | Grant or remove platform-admin standing `{is_admin}` → the account. `400` when an admin tries to remove their own standing or the last admin's; `404` for an unknown account | platform admin |
+
+Plans are changed with `PUT /api/v1/orgs/{id}/plan` (above).
 
 ### Shared demo products (community pool)
 

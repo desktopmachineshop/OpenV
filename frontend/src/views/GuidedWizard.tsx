@@ -14,6 +14,13 @@ import { StepShell } from '../components/wizard/StepShell';
 import { ErrorBanner, useConfirm } from '../components/ui';
 import { RepeatingCardList } from '../components/wizard/RepeatingCardList';
 import { GuidedChatPanel, GuidedChatPanelHandle, CopilotSuggestion } from '../components/wizard/GuidedChatPanel';
+import {
+  ASSISTANT_EDITS_FEATURE,
+  GATED_REASON,
+  applySuggestionsToProject,
+  isProjectEditKind,
+} from '../components/wizard/applySuggestion';
+import { useFeature } from '../hooks/useFeature';
 import { useViewport } from '../hooks/useViewport';
 import { useVisualViewport } from '../hooks/useVisualViewport';
 import {
@@ -137,6 +144,10 @@ export const GuidedWizard: React.FC = () => {
   // persisted in the session answers so Apply buttons stay disabled after a
   // remount and a re-click can never duplicate entries.
   const [appliedSuggestions, setAppliedSuggestions] = useState<Record<string, boolean>>({});
+  // Whether the assistant's project cards (a new artifact by place, an
+  // edit, a move) may be applied from here; gated by channel like any other
+  // new feature.
+  const projectEditsOn = useFeature(ASSISTANT_EDITS_FEATURE);
 
   const hydrateFromAnswers = useCallback((answers: Record<string, any>) => {
     const s1 = answers.step_1 || {};
@@ -517,9 +528,37 @@ export const GuidedWizard: React.FC = () => {
   // (entries + applied-suggestion keys) to the session, so applied state
   // survives navigating away and back. Returns one result per suggestion
   // (null = applied, string = reason it was skipped).
-  const handleApplySuggestions = (
+  const handleApplySuggestions = async (
     items: { suggestion: CopilotSuggestion; key: string }[]
-  ): (string | null)[] => {
+  ): Promise<(string | null)[]> => {
+    // A card that changes the project — an artifact by place, an edit, a
+    // move — goes to the project, exactly as it does from the notes panel:
+    // the wizard sits on top of a project and its locked entries are
+    // artifacts. Wizard-shaped cards fill the form as before. One result per
+    // card, in the order given.
+    const projectItems = items.filter((i) => isProjectEditKind(i.suggestion.kind) && !appliedSuggestions[i.key]);
+    const projectResults = new Map<string, string | null>();
+    if (projectItems.length > 0) {
+      if (!projectId) {
+        projectItems.forEach((i) => projectResults.set(i.key, 'No project is open.'));
+      } else if (!projectEditsOn) {
+        projectItems.forEach((i) => projectResults.set(i.key, GATED_REASON));
+      } else {
+        let artifacts: Artifact[] = [];
+        try {
+          artifacts = (await artifactAPI.list(projectId)).data || [];
+        } catch {
+          projectItems.forEach((i) => projectResults.set(i.key, 'The project could not be read, so nothing was changed.'));
+        }
+        if (projectResults.size === 0) {
+          const out = await applySuggestionsToProject(
+            { projectId, artifacts, onChanged: () => void loadDrafts() },
+            projectItems
+          );
+          projectItems.forEach((i, n) => projectResults.set(i.key, out[n]));
+        }
+      }
+    }
     const d: SuggestionDraft = {
       vision,
       problem,
@@ -534,9 +573,11 @@ export const GuidedWizard: React.FC = () => {
     };
     // A suggestion already applied in this session is a no-op success —
     // re-clicking (or a stale button after a remount) can never duplicate.
-    const results = items.map(({ suggestion, key }) =>
-      appliedSuggestions[key] ? null : applySuggestionToDraft(d, suggestion)
-    );
+    const results = items.map(({ suggestion, key }) => {
+      if (appliedSuggestions[key]) return null;
+      if (isProjectEditKind(suggestion.kind)) return projectResults.get(key) ?? 'The change could not be applied.';
+      return applySuggestionToDraft(d, suggestion);
+    });
     setVision(d.vision);
     setProblem(d.problem);
     setTargetUsers(d.targetUsers);

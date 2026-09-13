@@ -106,3 +106,71 @@ describe('the headings a suggestion lands under', () => {
     expect(headingsFor('invented:Category')).toEqual([]);
   });
 });
+
+// Beside the project the assistant has three more shapes: any artifact by
+// type and place, an edit, a move. Each is read into a plan the apply path
+// can act on, and each refusal says what was wrong.
+describe('what a project-mode suggestion means', () => {
+  it('reads an artifact of any type, placed by reference', () => {
+    const plan = planSuggestion({
+      kind: 'artifact',
+      type: 'test-case',
+      title: 'Estop stops the spindle',
+      body: '1. Press the estop.',
+      attributes: { execution_method: 'manual' },
+      parent: 'hdg-4',
+      after: 'tc-2',
+    });
+    if (plan.outcome !== 'artifact') throw new Error('expected an artifact');
+    expect(plan.draft.type).toBe('test-case');
+    expect(plan.draft.attributes).toEqual({ execution_method: 'manual' });
+    expect(plan.draft.sectionKey).toBe('');
+    // References are normalised the way they are minted.
+    expect(plan.draft.place).toEqual({ parentRef: 'HDG-4', afterRef: 'TC-2' });
+  });
+
+  it('refuses a type the catalogue does not have, and a title-less artifact', () => {
+    const bad = planSuggestion({ kind: 'artifact', type: 'widget', title: 'x' });
+    if (bad.outcome !== 'refused') throw new Error('expected a refusal');
+    expect(bad.reason).toContain('widget');
+    const untitled = planSuggestion({ kind: 'artifact', type: 'heading', title: ' ' });
+    expect(untitled.outcome).toBe('refused');
+  });
+
+  it('reads an edit as only the fields it names', () => {
+    const plan = planSuggestion({ kind: 'edit', ref: 'req-12', body: 'The system shall stop within 200 ms.' });
+    if (plan.outcome !== 'edit') throw new Error('expected an edit');
+    expect(plan.edit).toEqual({ ref: 'REQ-12', body: 'The system shall stop within 200 ms.' });
+    expect('title' in plan.edit).toBe(false);
+  });
+
+  // An edit that names no field, or empties the title, would be a card that
+  // either does nothing or breaks the artifact.
+  it('refuses an empty edit and an emptied title', () => {
+    expect(planSuggestion({ kind: 'edit', ref: 'REQ-12' }).outcome).toBe('refused');
+    expect(planSuggestion({ kind: 'edit', ref: 'REQ-12', attributes: {} }).outcome).toBe('refused');
+    expect(planSuggestion({ kind: 'edit', ref: 'REQ-12', title: '' }).outcome).toBe('refused');
+    expect(planSuggestion({ kind: 'edit', body: 'x' }).outcome).toBe('refused');
+  });
+
+  it('reads a move by parent, anchor or position', () => {
+    const under = planSuggestion({ kind: 'move', ref: 'REQ-12', parent: 'hdg-3' });
+    if (under.outcome !== 'move') throw new Error('expected a move');
+    expect(under.move).toEqual({ ref: 'REQ-12', parentRef: 'HDG-3' });
+
+    const top = planSuggestion({ kind: 'move', ref: 'REQ-12', parent: '', position: 'first' });
+    if (top.outcome !== 'move') throw new Error('expected a move');
+    expect(top.move).toEqual({ ref: 'REQ-12', parentRef: '', position: 'first' });
+
+    const beside = planSuggestion({ kind: 'move', ref: 'REQ-12', after: 'REQ-9' });
+    if (beside.outcome !== 'move') throw new Error('expected a move');
+    expect(beside.move).toEqual({ ref: 'REQ-12', afterRef: 'REQ-9' });
+    expect('parentRef' in beside.move).toBe(false);
+  });
+
+  it('refuses a move that says nowhere, or contradicts itself', () => {
+    expect(planSuggestion({ kind: 'move', ref: 'REQ-12' }).outcome).toBe('refused');
+    expect(planSuggestion({ kind: 'move', ref: 'REQ-12', before: 'A', after: 'B' }).outcome).toBe('refused');
+    expect(planSuggestion({ kind: 'move', ref: 'REQ-12', position: 'middle' }).outcome).toBe('refused');
+  });
+});

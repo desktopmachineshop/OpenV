@@ -30,7 +30,9 @@ The API creates and migrates its schema automatically on first boot.
 
 Open http://localhost:3000 and register with email + password.
 
-- The **first user registered becomes the platform admin**.
+- The **first user registered becomes the platform admin**. Further
+  platform admins are made from the account menu → Platform admin, which
+  also sets every workspace's plan.
 - With no SMTP configured (the default) the account is ready at once; a server
   with `OPENV_SMTP_*` set emails a verification link first.
 - A **personal workspace** (organization) is created for you automatically,

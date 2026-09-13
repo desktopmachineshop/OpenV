@@ -26,6 +26,23 @@ export interface CopilotSuggestionLike {
   [key: string]: any;
 }
 
+/**
+ * The artifact types a suggestion may create. Mirrors the server's catalogue
+ * (internal/domain/artifacts/types.go), which stays the authority — this list
+ * only lets a typo be refused with a reason instead of a 400.
+ */
+export const ARTIFACT_TYPES = [
+  'heading',
+  'description',
+  'persona',
+  'user-need',
+  'requirement',
+  'design-item',
+  'test-case',
+  'hazard',
+  'other',
+] as const;
+
 /** An artifact a suggestion asks for, ready to be created. */
 export interface SuggestionDraft {
   type: string;
@@ -35,9 +52,38 @@ export interface SuggestionDraft {
   /**
    * Heading the artifact belongs under, as a wizard section key
    * ("requirements", or "nfrs:Performance" for a category sub-heading). The
-   * caller resolves it to a real heading artifact.
+   * caller resolves it to a real heading artifact. Empty when the draft
+   * names its place by reference instead.
    */
   sectionKey: string;
+  /**
+   * Where the artifact goes when the assistant named a place rather than a
+   * kind: the parent heading's reference (empty for the top level) and,
+   * optionally, the sibling it follows. Absent when sectionKey applies.
+   */
+  place?: { parentRef: string; afterRef?: string };
+}
+
+/** A change to an artifact that already exists, named by its reference. */
+export interface ArtifactEdit {
+  ref: string;
+  title?: string;
+  body?: string;
+  /** Merged over the artifact's current attributes, never replacing them. */
+  attributes?: Record<string, any>;
+}
+
+/** A move of an existing artifact, named by references. */
+export interface ArtifactMove {
+  ref: string;
+  /**
+   * New parent heading's reference; "" for the top level; undefined keeps
+   * the current parent and only changes the position.
+   */
+  parentRef?: string;
+  beforeRef?: string;
+  afterRef?: string;
+  position?: 'first' | 'last';
 }
 
 /** A suggestion that edits the product framing rather than adding anything. */
@@ -49,6 +95,8 @@ export interface FramingUpdate {
 export type SuggestionPlan =
   | { outcome: 'artifact'; draft: SuggestionDraft }
   | { outcome: 'framing'; update: FramingUpdate }
+  | { outcome: 'edit'; edit: ArtifactEdit }
+  | { outcome: 'move'; move: ArtifactMove }
   | { outcome: 'refused'; reason: string };
 
 /** Artifact titles are a line, not a paragraph. */
@@ -56,6 +104,13 @@ const asTitle = (text: string, limit = 120): string =>
   text.length > limit ? `${text.slice(0, limit - 3)}…` : text;
 
 const text = (value: unknown): string => String(value ?? '').trim();
+
+/** A reference as the assistant wrote it, normalised the way refs are minted. */
+const ref = (value: unknown): string => text(value).toUpperCase();
+
+/** An attributes object, or nothing: a stray string here is not attributes. */
+const attributesOf = (value: unknown): Record<string, any> | undefined =>
+  value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, any>) : undefined;
 
 /**
  * What this suggestion means as a change to the project.
@@ -158,6 +213,67 @@ export const planSuggestion = (s: CopilotSuggestionLike): SuggestionPlan => {
           sectionKey: subSectionKey('hazards', category),
         },
       };
+    }
+
+    // The three shapes the assistant has beside the project rather than the
+    // wizard: any artifact by type and place, a change to one, a move of one.
+    case 'artifact': {
+      const type = text(s.type);
+      if (!(ARTIFACT_TYPES as readonly string[]).includes(type)) {
+        return { outcome: 'refused', reason: `"${type || '?'}" is not an artifact type.` };
+      }
+      const title = text(s.title);
+      if (!title) return { outcome: 'refused', reason: 'The artifact suggestion has no title.' };
+      const afterRef = ref(s.after);
+      return {
+        outcome: 'artifact',
+        draft: {
+          type,
+          title: asTitle(title),
+          body: text(s.body),
+          attributes: attributesOf(s.attributes) || {},
+          sectionKey: '',
+          place: { parentRef: ref(s.parent), ...(afterRef ? { afterRef } : {}) },
+        },
+      };
+    }
+
+    case 'edit': {
+      const target = ref(s.ref);
+      if (!target) return { outcome: 'refused', reason: 'The edit names no artifact.' };
+      const edit: ArtifactEdit = { ref: target };
+      if (s.title !== undefined) edit.title = asTitle(text(s.title));
+      if (s.body !== undefined) edit.body = String(s.body ?? '');
+      const attributes = attributesOf(s.attributes);
+      if (attributes && Object.keys(attributes).length > 0) edit.attributes = attributes;
+      if (edit.title === undefined && edit.body === undefined && !edit.attributes) {
+        return { outcome: 'refused', reason: `The edit to ${target} changes nothing.` };
+      }
+      if (edit.title === '') return { outcome: 'refused', reason: 'An artifact cannot have an empty title.' };
+      return { outcome: 'edit', edit };
+    }
+
+    case 'move': {
+      const target = ref(s.ref);
+      if (!target) return { outcome: 'refused', reason: 'The move names no artifact.' };
+      const move: ArtifactMove = { ref: target };
+      if (s.parent !== undefined) move.parentRef = ref(s.parent);
+      const before = ref(s.before);
+      const after = ref(s.after);
+      if (before && after) {
+        return { outcome: 'refused', reason: `The move of ${target} names both a before and an after.` };
+      }
+      if (before) move.beforeRef = before;
+      if (after) move.afterRef = after;
+      const position = text(s.position);
+      if (position && position !== 'first' && position !== 'last') {
+        return { outcome: 'refused', reason: `"${position}" is not a position; use first or last.` };
+      }
+      if (position) move.position = position as 'first' | 'last';
+      if (move.parentRef === undefined && !before && !after && !position) {
+        return { outcome: 'refused', reason: `The move of ${target} says nowhere to move it.` };
+      }
+      return { outcome: 'move', move };
     }
 
     default:

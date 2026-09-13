@@ -275,3 +275,70 @@ describe('GuidedChatPanel nudges', () => {
     }
   });
 });
+
+// Beside the project a card's button says what applying does there, and a
+// card that only the project can take is not offered to the wizard at all —
+// a "+ Add to wizard" button on a move would be a lie.
+describe('GuidedChatPanel suggestion cards by target', () => {
+  const reply = (content: string) => ({
+    id: 'm-1',
+    session_id: 'gs-1',
+    role: 'assistant',
+    content,
+    created_at: '2026-09-13T10:00:00Z',
+  });
+  const cards =
+    'Two changes.\n```openv-suggestion\n{"kind":"edit","ref":"REQ-12","body":"The system shall stop within 200 ms."}\n```\n' +
+    '```openv-suggestion\n{"kind":"move","ref":"REQ-12","parent":"HDG-3","position":"first"}\n```\n' +
+    '```openv-suggestion\n{"kind":"artifact","type":"test-case","title":"Estop test","parent":"HDG-4"}\n```';
+
+  it('labels project-mode cards by what they do', async () => {
+    const apply = jest.fn(async (items: any[]) => items.map(() => null));
+    await act(async () => {
+      root.render(<GuidedChatPanel sessionId="gs-1" applyTarget="project" onApplySuggestions={apply} />);
+    });
+    await act(async () => {
+      stream().emit('message', reply(cards));
+    });
+    const buttons = Array.from(container.querySelectorAll('button')).map((b) => b.textContent);
+    expect(buttons).toEqual(expect.arrayContaining(['Apply change', 'Move', '+ Add to project']));
+    expect(container.textContent).toContain('REQ-12');
+    expect(container.textContent).toContain('under HDG-3, first');
+    expect(container.textContent).toContain('Test case: Estop test');
+  });
+
+  // The wizard sits on top of a project — a resumed definition is over
+  // artifacts that already exist — so a card that changes the project is
+  // offered there too, and says what it does rather than "Add to wizard".
+  it('offers the wizard the project cards, labelled as project changes', async () => {
+    const apply = jest.fn(async (items: any[]) => items.map(() => null));
+    await act(async () => {
+      root.render(<GuidedChatPanel sessionId="gs-1" step={4} onApplySuggestions={apply} />);
+    });
+    await act(async () => {
+      stream().emit('message', reply(cards));
+    });
+    const buttons = Array.from(container.querySelectorAll('button')).map((b) => b.textContent);
+    expect(buttons).toEqual(expect.arrayContaining(['Apply change', 'Move', '+ Add to project']));
+    expect(buttons).not.toContain('+ Add to wizard');
+  });
+
+  // Applied cards flip to their done state from the `applied` map the host
+  // owns, so a remount cannot re-arm a button that already wrote.
+  it('shows a project card as done once its key is applied', async () => {
+    await act(async () => {
+      root.render(
+        <GuidedChatPanel
+          sessionId="gs-1"
+          applyTarget="project"
+          applied={{ 'm-1:1': true }}
+          onApplySuggestions={async (items) => items.map(() => null)}
+        />
+      );
+    });
+    await act(async () => {
+      stream().emit('message', reply(cards));
+    });
+    expect(container.textContent).toContain('✓ Changed');
+  });
+});

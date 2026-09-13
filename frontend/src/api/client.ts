@@ -2581,3 +2581,35 @@ export const openSourceAPI = {
   get: (projectId: string) =>
     client.get<SharedProject>(`/api/v1/public/open-source/projects/${projectId}`),
 };
+
+// --- Platform administration (REQ-154, REQ-155) -----------------------------
+
+export interface AdminWorkspace extends Org {
+  members: number;
+}
+
+export interface AdminUser {
+  id: string;
+  name: string;
+  email: string;
+  auth_provider: string;
+  is_admin: boolean;
+  created_at: string;
+}
+
+export const PLANS: { value: string; label: string }[] = [
+  { value: 'single', label: 'Single User' },
+  { value: 'business_lite', label: 'Business Lite' },
+  { value: 'business', label: 'Business' },
+  { value: 'enterprise', label: 'Enterprise' },
+  { value: 'open_source', label: 'Open source' },
+  { value: 'self_host', label: 'Self-hosted' },
+];
+
+export const adminAPI = {
+  workspaces: () => client.get<AdminWorkspace[]>('/api/v1/admin/workspaces'),
+  users: () => client.get<AdminUser[]>('/api/v1/admin/users'),
+  setPlan: (orgId: string, plan: string) => client.put<Org>(`/api/v1/orgs/${orgId}/plan`, { plan }),
+  setAdmin: (userId: string, isAdmin: boolean) =>
+    client.put<AdminUser>(`/api/v1/admin/users/${userId}/admin`, { is_admin: isAdmin }),
+};

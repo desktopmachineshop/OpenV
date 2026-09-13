@@ -17,6 +17,31 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   others as a hosted or managed service. The README, the site's licence
   section and the manual carry a plain-English summary.
 
+## 0.5.0 — 2026-09-13
+
+### New features
+
+- The V&V Assistant can now change the project, not just add to it — from
+  the notes panel and from the guided definition wizard alike. Ask it to
+  add a test case, a design item, a heading or any other kind of artifact
+  and it offers a card that files it where you said; ask it to rewrite or
+  restructure and it offers *Apply change* and *Move* cards that edit an
+  artifact's text or move it under another heading. It sees the whole
+  project's outline while you talk and can read any artifact in full, so
+  when you resume a definition it can work on what is already there, name
+  things by their reference, and tell a locked wizard entry from a new
+  one. Stable-channel workspaces get this with their next stable release.
+
+## 0.4.2 — 2026-09-13
+
+### Maintenance updates
+
+- Platform admins have a page of their own, under the account menu: every
+  workspace with its plan, changeable in place (which is how a workspace
+  is granted the open-source tier), and every account, where platform-admin
+  standing is granted or removed. Until now only the first account ever
+  registered could be a platform admin.
+
 ## 0.4.1 — 2026-09-13
 
 ### Maintenance updates
