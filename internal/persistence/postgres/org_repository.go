@@ -102,6 +102,12 @@ func (r *OrgRepository) SetReleaseChannel(orgID, channel string) error {
 	return err
 }
 
+// SetPlan writes only plan (REQ-154).
+func (r *OrgRepository) SetPlan(orgID, plan string) error {
+	_, err := r.db.Exec(`UPDATE organizations SET plan = $2, updated_at = NOW() WHERE id = $1`, orgID, plan)
+	return err
+}
+
 // SetStableRelease writes only stable_release.
 func (r *OrgRepository) SetStableRelease(orgID, version string) error {
 	_, err := r.db.Exec(`UPDATE organizations SET stable_release = $2, updated_at = NOW() WHERE id = $1`, orgID, version)

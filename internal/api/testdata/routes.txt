@@ -303,6 +303,7 @@ PUT /api/v1/org-teams/{id}
 PUT /api/v1/orgs/{id}
 PUT /api/v1/orgs/{id}/members/me/preview
 PUT /api/v1/orgs/{id}/members/{userId}
+PUT /api/v1/orgs/{id}/plan
 PUT /api/v1/orgs/{id}/quality-rules
 PUT /api/v1/projects/{id}
 PUT /api/v1/projects/{id}/members/{userId}

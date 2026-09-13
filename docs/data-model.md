@@ -142,7 +142,8 @@ personal orgs are auto-created at signup), `plan` (`single`,
 `business_lite`, `business`, `enterprise`, `self_host`, `free`, `team`, or
 `open_source` — the free tier for open-source projects, whose price is that
 every project's latest baseline is published on the site's open-source
-page, REQ-151) and `limits` JSONB
+page, REQ-151; a platform admin moves a workspace between plans with
+`PUT /api/v1/orgs/{id}/plan`, REQ-154) and `limits` JSONB
 (`limits.runner_grace_seconds` tunes run routing;
 `limits.runner_memory_mb` / `limits.runner_cpus` cap the hosted runner
 container, falling back to the plan's defaults — `orgs.PlanDefaults` — when

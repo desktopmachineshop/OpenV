@@ -9,6 +9,12 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Maintenance updates
+
+- A platform admin can move a workspace to another plan through the API,
+  which is how a workspace is granted the open-source tier; before, that
+  took a hand edit of the database.
+
 ## 0.4.0 — 2026-09-13
 
 ### New features
