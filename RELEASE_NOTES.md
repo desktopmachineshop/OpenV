@@ -9,6 +9,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+## 0.1.0 — 2026-09-13
+
 ### New features
 
 - OpenV releases are numbered now. What's new names the version you were
