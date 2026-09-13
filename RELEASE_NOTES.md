@@ -9,6 +9,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+## 0.5.0 — 2026-09-13
+
 ### New features
 
 - The V&V Assistant can now change the project, not just add to it — from
