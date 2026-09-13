@@ -66,6 +66,17 @@ describe('editing an artifact from a card', () => {
     expect(payload).toEqual({ body: 'New body', attributes: { verification_method: 'test', priority: 'must' } });
   });
 
+  // A locked wizard entry knows its artifact by id, not by reference, and
+  // the assistant is told it may name either.
+  it('accepts an artifact id where a reference is expected', async () => {
+    const results = await applySuggestionsToProject(
+      { projectId: 'p', artifacts: project() },
+      [{ key: 'k', suggestion: { kind: 'edit', ref: 'req-2', title: 'Renamed' } }]
+    );
+    expect(results).toEqual([null]);
+    expect(api.update.mock.calls[0][0]).toBe('req-2');
+  });
+
   it('says so when the reference names nothing', async () => {
     const results = await applySuggestionsToProject(
       { projectId: 'p', artifacts: project() },

@@ -53,8 +53,10 @@ interface GuidedChatPanelProps {
     items: { suggestion: CopilotSuggestion; key: string }[]
   ) => (string | null)[] | Promise<(string | null)[]>;
   /**
-   * What applying does, so the buttons say so: "Add to wizard" beside the
-   * form, "Add to project" / "Apply change" / "Move" beside the project.
+   * Where a wizard-shaped suggestion goes, so its button says so: "Add to
+   * wizard" beside the form, "Add to project" beside the project. A card
+   * that changes the project (a new artifact by place, an edit, a move)
+   * says so in both.
    */
   applyTarget?: ApplyTarget;
 }
@@ -235,17 +237,21 @@ const applyLabels = (
   target: ApplyTarget,
   isReplace: boolean
 ): { button: string; done: string } => {
+  // A change to the project says so wherever the card is shown: the wizard
+  // sits on top of a project too, and its locked entries are artifacts.
+  switch (s.kind) {
+    case 'edit':
+      return { button: 'Apply change', done: '✓ Changed' };
+    case 'move':
+      return { button: 'Move', done: '✓ Moved' };
+    case 'artifact':
+      return { button: '+ Add to project', done: '✓ Added to project' };
+    default:
+      break;
+  }
   if (target === 'project') {
-    switch (s.kind) {
-      case 'edit':
-        return { button: 'Apply change', done: '✓ Changed' };
-      case 'move':
-        return { button: 'Move', done: '✓ Moved' };
-      case 'framing':
-        return { button: 'Apply to project', done: '✓ Applied' };
-      default:
-        return { button: '+ Add to project', done: '✓ Added to project' };
-    }
+    if (s.kind === 'framing') return { button: 'Apply to project', done: '✓ Applied' };
+    return { button: '+ Add to project', done: '✓ Added to project' };
   }
   if (isReplace) return { button: 'Replace in wizard', done: '✓ Replaced in wizard' };
   if (s.kind === 'framing') return { button: 'Apply to wizard', done: '✓ Applied to wizard' };
@@ -656,10 +662,6 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
         {!canApply ? (
           <div style={{ fontSize: 12, color: 'var(--neutral)', fontStyle: 'italic' }}>
             Open the project to add this.
-          </div>
-        ) : applyTarget === 'wizard' && (s.kind === 'artifact' || s.kind === 'edit' || s.kind === 'move') ? (
-          <div style={{ fontSize: 12, color: 'var(--neutral)', fontStyle: 'italic' }}>
-            This changes the project, not the wizard — open the project to apply it.
           </div>
         ) : isAdded ? (
           <span style={{ fontSize: 12, color: 'var(--success)' }}>{doneLabel}</span>

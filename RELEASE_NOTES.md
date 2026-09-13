@@ -11,14 +11,16 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ### New features
 
-- The V&V Assistant can now change the project from the notes panel, not
-  just add to it. Ask it to add a test case, a design item, a heading or any
-  other kind of artifact and it offers a card that files it where you said;
-  ask it to rewrite or restructure and it offers *Apply change* and *Move*
-  cards that edit an artifact's text or move it under another heading. It
-  sees the project's outline while you talk, so it can name things by their
-  reference. Stable-channel workspaces get this with their next stable
-  release.
+- The V&V Assistant can now change the project, not just add to it — from
+  the notes panel and from the guided definition wizard alike. Ask it to
+  add a test case, a design item, a heading or any other kind of artifact
+  and it offers a card that files it where you said; ask it to rewrite or
+  restructure and it offers *Apply change* and *Move* cards that edit an
+  artifact's text or move it under another heading. It sees the whole
+  project's outline while you talk and can read any artifact in full, so
+  when you resume a definition it can work on what is already there, name
+  things by their reference, and tell a locked wizard entry from a new
+  one. Stable-channel workspaces get this with their next stable release.
 
 ## 0.3.0 — 2026-09-13
 

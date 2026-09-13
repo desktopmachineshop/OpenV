@@ -184,13 +184,43 @@ func TestGuidedCopilotPromptWithholdsEditsBehindTheGate(t *testing.T) {
 	}
 }
 
-// The wizard's turns are unchanged: no outline, no project-mode shapes, the
-// state fenced as before.
-func TestWizardTurnsCarryNoProjectOutline(t *testing.T) {
+// A wizard turn carries both: the form as the state, and the project the
+// form sits on top of as the outline — a resumed definition is over
+// artifacts that already exist, and the assistant is told how their locked
+// entries map to them and how to read their full text.
+func TestWizardTurnsCarryTheProjectOutlineToo(t *testing.T) {
+	session := &guided.Session{ID: "sess-1", ProjectID: "proj-1"}
+	outline := &projectOutline{Edits: true, Artifacts: []*artifacts.Artifact{
+		{ID: "req-1", Ref: "REQ-1", Type: "requirement", Title: "Stop within 200 ms"},
+	}}
+	prompt := buildGuidedCopilotPrompt(session, nil, nil, 2, "Personas", map[string]interface{}{"step_2": "x"}, "", nil, outline)
+	if !strings.Contains(prompt, "<<<WIZARD_STATE") {
+		t.Error("a wizard turn lost its state fence")
+	}
+	if !strings.Contains(prompt, "<<<PROJECT_OUTLINE") || !strings.Contains(prompt, "REQ-1") {
+		t.Error("a wizard turn does not see the project")
+	}
+	for _, shape := range []string{`"kind":"artifact"`, `"kind":"edit"`, `"kind":"move"`} {
+		if !strings.Contains(prompt, shape) {
+			t.Errorf("the wizard is not offered %s", shape)
+		}
+	}
+	if !strings.Contains(prompt, "artifact_id") || !strings.Contains(prompt, "cannot be replaced") {
+		t.Error("the legend does not say how a locked entry maps to its artifact")
+	}
+	// Titles only in the outline; the tools are how it reads the rest.
+	if !strings.Contains(prompt, "get_artifact") || !strings.Contains(prompt, "proj-1") {
+		t.Error("the assistant is not told how to read an artifact in full")
+	}
+}
+
+// A wizard turn with no outline (a listing that failed) is still a wizard
+// turn: state fenced, no project shapes offered.
+func TestWizardTurnsWithoutAnOutlineOfferNoProjectShapes(t *testing.T) {
 	session := &guided.Session{ID: "sess-1", ProjectID: "proj-1"}
 	prompt := buildGuidedCopilotPrompt(session, nil, nil, 2, "Personas", map[string]interface{}{"step_2": "x"}, "", nil, nil)
 	if strings.Contains(prompt, "PROJECT_OUTLINE") || strings.Contains(prompt, `"kind":"edit"`) {
-		t.Error("a wizard turn carries project-mode content")
+		t.Error("a wizard turn without an outline carries project content")
 	}
 	if !strings.Contains(prompt, "<<<WIZARD_STATE") {
 		t.Error("a wizard turn lost its state fence")

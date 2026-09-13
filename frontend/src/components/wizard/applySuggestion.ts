@@ -32,6 +32,19 @@ import {
  * same state.
  */
 
+/** Feature gate for the assistant's project changes (REQ-137). */
+export const ASSISTANT_EDITS_FEATURE = 'assistant-project-edits';
+
+/**
+ * The suggestion kinds that change the project rather than add a wizard
+ * entry to it. They wait for the workspace's stable release like any other
+ * new feature; until then their cards explain instead of acting.
+ */
+export const PROJECT_EDIT_KINDS: ReadonlySet<string> = new Set(['artifact', 'edit', 'move']);
+export const isProjectEditKind = (kind: unknown): boolean => PROJECT_EDIT_KINDS.has(String(kind));
+export const GATED_REASON =
+  'Editing and moving artifacts from the assistant reaches this workspace with its next stable release.';
+
 /** Everything an apply needs to know about where it is happening. */
 export interface ApplyContext {
   projectId: string;
@@ -102,11 +115,13 @@ const resolveSection = async (
 /**
  * The artifact a reference names, or null. References are minted upper-case
  * and the assistant is told to copy them, but a person reading the card
- * should not be failed by a "req-12".
+ * should not be failed by a "req-12". An artifact id is accepted too: a
+ * locked wizard entry knows its artifact by id, not by reference.
  */
 const byRef = (artifacts: Artifact[], reference: string): Artifact | null => {
-  const wanted = reference.trim().toUpperCase();
-  return artifacts.find((a) => (a.ref || '').toUpperCase() === wanted) || null;
+  const wanted = reference.trim();
+  const upper = wanted.toUpperCase();
+  return artifacts.find((a) => (a.ref || '').toUpperCase() === upper || a.id === wanted) || null;
 };
 
 /** The heading a place names, or an explanation of why it cannot be found. */

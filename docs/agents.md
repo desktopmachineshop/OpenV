@@ -841,18 +841,26 @@ is not treated as agent-executed, since a human signed off on it.
 
 ## The assistant beside the project
 
-Beside the wizard the V&V Assistant reads the form and proposes entries for
-it. Beside the project — the Notes panel's assistant tab, with or without an
-artifact selected — there is no form, so a turn carries the **project
-outline** instead: every artifact's reference, type and title, indented
-under its parent in document order, fenced as untrusted content like the
-wizard state (`<<<PROJECT_OUTLINE … PROJECT_OUTLINE>>>`, `outlineBudget`
-characters, cut in document order past that and told how much was left
-out). Titles only: the artifact on screen is the one whose text the
-assistant sees, and it is told not to rewrite a body it has not read.
+Every turn of the V&V Assistant carries the **project outline**: every
+artifact's reference, type and title, indented under its parent in document
+order, fenced as untrusted content like the wizard state
+(`<<<PROJECT_OUTLINE … PROJECT_OUTLINE>>>`, `outlineBudget` characters, cut
+in document order past that and told how much was left out). Beside the
+wizard it comes with the form's state — a resumed definition sits on top of
+artifacts that already exist, and the legend says that an entry carrying
+`artifact_id` is one of them (the green dot) and is changed with an edit or
+move card, never `replaces`. Beside the project — the Notes panel's
+assistant tab, with or without an artifact selected — the outline is the
+content. Titles only: the assistant carries `mcp__openv__*`, and the prompt
+names the project id and tells it to read an artifact in full with
+`get_artifact` (by reference or id) before proposing a change to its text,
+and to use `get_project_tree`, `search_artifacts` and
+`list_links_for_artifact` for more.
 
 With the outline the assistant has three shapes beyond the wizard's, each an
-`openv-suggestion` block the person applies with a click:
+`openv-suggestion` block the person applies with a click, in the wizard and
+in the notes panel alike (an artifact may be named by reference or by the
+`artifact_id` a locked entry carries):
 
 | Shape | What it does |
 |---|---|
@@ -861,10 +869,15 @@ With the outline the assistant has three shapes beyond the wizard's, each an
 | `{"kind":"move","ref":"REQ-12","parent":"HDG-3","before":"REQ-9"}` (or `"after"`, or `"position":"first\|last"`) | Moves or reorders. Planned by `utils/artifactOrder.ts` with the drag-and-drop rules — no move into its own subtree, an anchor must be under the destination, a move that changes nothing is not saved — and written the way a drag is: the sibling group renumbered 1..n. |
 
 The wizard's own shapes (persona, need, requirement, nfr, hazard) still
-work beside the project and land as drafts under the standard headings;
-`replaces` has nothing to point at outside the wizard, so the assistant is
-told to use `edit`. Within one batch the working copy of the project is
-updated after each write, so "add A, then move A" works.
+fill the form in the wizard and land as drafts under the standard headings
+beside the project; `replaces` reaches only unlocked wizard entries, so for
+anything already in the project the assistant is told to use `edit` or
+`move`. In the wizard, `GuidedWizard.handleApplySuggestions` routes the
+three project kinds through `applySuggestionsToProject` (against a fresh
+artifact list, refreshing the draft list afterwards) and the wizard kinds
+through the form, and records both in the session's applied keys. Within one
+batch the working copy of the project is updated after each write, so "add
+A, then move A" works.
 
 The three shapes are a **gated feature** (`assistant-project-edits`,
 `internal/domain/release/features.go`, REQ-137): a stable-channel workspace

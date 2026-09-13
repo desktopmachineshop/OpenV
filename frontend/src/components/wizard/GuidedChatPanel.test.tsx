@@ -307,7 +307,10 @@ describe('GuidedChatPanel suggestion cards by target', () => {
     expect(container.textContent).toContain('Test case: Estop test');
   });
 
-  it('does not offer the wizard a card only the project can take', async () => {
+  // The wizard sits on top of a project — a resumed definition is over
+  // artifacts that already exist — so a card that changes the project is
+  // offered there too, and says what it does rather than "Add to wizard".
+  it('offers the wizard the project cards, labelled as project changes', async () => {
     const apply = jest.fn(async (items: any[]) => items.map(() => null));
     await act(async () => {
       root.render(<GuidedChatPanel sessionId="gs-1" step={4} onApplySuggestions={apply} />);
@@ -316,8 +319,8 @@ describe('GuidedChatPanel suggestion cards by target', () => {
       stream().emit('message', reply(cards));
     });
     const buttons = Array.from(container.querySelectorAll('button')).map((b) => b.textContent);
-    expect(buttons).not.toEqual(expect.arrayContaining(['Apply change', 'Move', '+ Add to wizard']));
-    expect(container.textContent).toContain('open the project to apply it');
+    expect(buttons).toEqual(expect.arrayContaining(['Apply change', 'Move', '+ Add to project']));
+    expect(buttons).not.toContain('+ Add to wizard');
   });
 
   // Applied cards flip to their done state from the `applied` map the host
