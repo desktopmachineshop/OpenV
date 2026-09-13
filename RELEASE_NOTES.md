@@ -9,6 +9,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+## 0.4.1 — 2026-09-13
+
 ### Maintenance updates
 
 - A platform admin can move a workspace to another plan through the API,
