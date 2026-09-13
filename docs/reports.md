@@ -17,7 +17,7 @@ links and citations the editor shows.
 flowchart LR
   W[Download wizard] --> H["GET /projects/{id}/download/{format}"]
   H --> L[LoadReportExport<br/>live export or baseline snapshot<br/>+ Snapshot statement]
-  L --> A[exports.Apply<br/>sections · types · headings · attachments]
+  L --> A[exports.Apply<br/>sections · types · owners · headings · attachments]
   A --> J[JSON / CSV / XLSX / ReqIF]
   A --> M[reports.buildReportModel<br/>tree · numbers · titles · sorted links<br/>doc.Parse per body · figures decoded<br/>fields · coverage · evidence]
   E[Evidence: latest results, runs] -.-> M
@@ -59,6 +59,7 @@ The wizard's Content step, for the PDF and Word formats:
 |---|---|---|
 | Template preset | `template=standard\|requirements-review\|test-planning\|vv` | none |
 | Sections, artifact types, headings, attachment files | `sections`, `types`, `headings=0`, `attachments` | everything, headings in, no files |
+| One party's share of the project (REQ-148) | `owners=Landing gear supplier` | everyone |
 | Table of contents | `toc=0\|1` | on |
 | Traceability rows under each artifact | `traceability=0\|1` | on |
 | Figures embedded with captions | `figures=0\|1` | on |

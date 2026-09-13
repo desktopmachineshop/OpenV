@@ -125,8 +125,39 @@ export interface Project {
   // (workspace API key; overrides local sign-ins but still runs via the
   // member's OpenV connector/runner).
   agent_auth: 'user-account' | 'api-key';
+  /**
+   * The project this one refines (REQ-144): a subsystem or supplier project
+   * under the system it belongs to. '' for a top-level project.
+   */
+  parent_project_id: string;
   created_at: string;
   updated_at: string;
+}
+
+/** The far end of a link that crosses into another project (REQ-145). */
+export interface LinkedArtifact {
+  id: string;
+  project_id: string;
+  project_name: string;
+  ref: string;
+  type: string;
+  title: string;
+  status: string;
+}
+
+/** How a foreign artifact is cited: "Landing gear / REQ-12". */
+export const qualifiedRef = (l: LinkedArtifact): string =>
+  `${l.project_name ? `${l.project_name} / ` : ''}${l.ref || l.id.substring(0, 8)}`;
+
+/**
+ * A party a project recognises as an owner (REQ-147): an organisation, team
+ * or person, matched by name. The workspace's own company is always first
+ * and marked default.
+ */
+export interface Party {
+  name: string;
+  note?: string;
+  default?: boolean;
 }
 
 export interface Baseline {
@@ -177,6 +208,8 @@ export interface DownloadOptions {
    * attribute regardless.
    */
   fields?: DownloadField[];
+  /** The owners the project's artifacts name, most artifacts first (REQ-148). */
+  owners?: { owner: string; count: number }[];
   /** The presets a reader can start from. */
   templates?: DownloadTemplate[];
   /** What the document holds when no switch is sent. */
@@ -235,6 +268,8 @@ export interface DownloadTemplate {
 export interface DownloadSelection {
   sections: string[];
   types: string[];
+  /** Owners to keep; empty means everyone (REQ-148). */
+  owners: string[];
   includeHeadings: boolean;
   attachments: string[];
   /** The preset the reader started from, or '' when none was chosen. */
@@ -298,12 +333,13 @@ export const artifactAPI = {
   // callers can page until exhaustion.
   listPage: (
     projectId: string,
-    opts?: { type?: string; limit?: number; offset?: number; docNumbers?: boolean }
+    opts?: { type?: string; owner?: string; limit?: number; offset?: number; docNumbers?: boolean }
   ) =>
     client.get<Artifact[]>('/api/v1/artifacts', {
       params: {
         project_id: projectId,
         type: opts?.type,
+        owner: opts?.owner,
         limit: opts?.limit,
         offset: opts?.offset,
         // Opt-in: computing section numbers reads the whole project, which a
@@ -316,13 +352,14 @@ export const artifactAPI = {
   // full set to build hierarchy; most projects fit in one page. UI follow-up
   // (issue #136): render the tree incrementally (lazy-load subtrees) so huge
   // projects don't need this loop at all.
-  list: async (projectId: string, type?: string): Promise<{ data: Artifact[] }> => {
+  list: async (projectId: string, type?: string, owner?: string): Promise<{ data: Artifact[] }> => {
     const all: Artifact[] = [];
     for (;;) {
       const res = await client.get<Artifact[]>('/api/v1/artifacts', {
         params: {
           project_id: projectId,
           type,
+          owner,
           limit: ARTIFACT_PAGE_LIMIT,
           offset: all.length,
           // This is the whole-project read the tree view renders, so it is
@@ -433,6 +470,15 @@ export const projectAPI = {
     client.put<Project>(`/api/v1/projects/${id}`, payload),
   delete: (id: string) =>
     client.delete(`/api/v1/projects/${id}`),
+  /** The projects filed under this one (REQ-144). */
+  children: (id: string) => client.get<Project[]>(`/api/v1/projects/${id}/children`),
+  /** The far end of every link crossing out of the project (REQ-145). */
+  linkedArtifacts: (id: string) =>
+    client.get<LinkedArtifact[]>(`/api/v1/projects/${id}/linked-artifacts`),
+  /** The parties the project recognises as owners, the workspace first. */
+  parties: (id: string) => client.get<{ parties: Party[] }>(`/api/v1/projects/${id}/parties`),
+  setParties: (id: string, parties: Party[]) =>
+    client.put<{ parties: Party[] }>(`/api/v1/projects/${id}/parties`, { parties }),
   downloadOptions: (id: string, baselineId?: string) => {
     const params = baselineId && baselineId !== 'live' ? `?baseline_id=${encodeURIComponent(baselineId)}` : '';
     return client.get<DownloadOptions>(`/api/v1/projects/${id}/download/options${params}`);
@@ -817,6 +863,23 @@ export interface CoverageEntry {
   verification_status: string;
   test_case_ids: string[];
   latest_results: Record<string, string>;
+  rollup: string;
+  /**
+   * Child-project requirements refining this one (REQ-146), each with its
+   * own rollup; flow_down is the worst of them, and via_refinements says the
+   * rollup came from them because the requirement has no evidence of its own.
+   */
+  refinements?: Refinement[];
+  flow_down?: string;
+  via_refinements?: boolean;
+}
+
+export interface Refinement {
+  requirement_id: string;
+  project_id: string;
+  project_name: string;
+  ref: string;
+  title: string;
   rollup: string;
 }
 

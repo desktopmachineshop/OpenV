@@ -379,6 +379,8 @@ func (h *Handler) RegisterRoutes(router *mux.Router) {
 	// One download surface with a route per output; see download_handlers.go.
 	h.registerDownloadRoutes(router)
 	router.HandleFunc("/api/v1/projects/{id}/ai-map", h.ProjectAIMap).Methods("GET")
+	router.HandleFunc("/api/v1/projects/{id}/children", h.ListChildProjects).Methods("GET")
+	router.HandleFunc("/api/v1/projects/{id}/linked-artifacts", h.ListLinkedArtifacts).Methods("GET")
 	router.HandleFunc("/api/v1/projects/{id}/review-queue", h.ReviewQueue).Methods("GET")
 	router.HandleFunc("/api/v1/projects/{id}/reindex-embeddings", h.ReindexEmbeddings).Methods("POST")
 	router.HandleFunc("/api/v1/projects/{id}/duplicates", h.DuplicateCandidates).Methods("GET")
@@ -589,14 +591,15 @@ const (
 )
 
 // ListArtifacts lists artifacts by project and optional type filter, one page
-// at a time. Query params: project_id (required), type, limit (default and
-// cap 1000), offset. The response body stays a plain JSON array for
+// at a time. Query params: project_id (required), type, owner (the "owner"
+// attribute, exact match), limit (default and cap 1000), offset. The response body stays a plain JSON array for
 // compatibility; the total number of matching artifacts rides on the
 // X-Total-Count header so clients can page until exhaustion.
 func (h *Handler) ListArtifacts(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	projectID := q.Get("project_id")
 	artifactType := q.Get("type")
+	owner := strings.TrimSpace(q.Get("owner"))
 
 	if projectID == "" {
 		writeJSONError(w, http.StatusBadRequest, "project_id is required")
@@ -616,7 +619,7 @@ func (h *Handler) ListArtifacts(w http.ResponseWriter, r *http.Request) {
 		offset = 0
 	}
 
-	page, total, err := h.artifactService.ListArtifactsPage(projectID, artifactType, limit, offset)
+	page, total, err := h.artifactService.ListArtifactsPage(projectID, artifactType, owner, limit, offset)
 	if err != nil {
 		respondInternal(w, r, "failed to list artifacts", err)
 		return
@@ -1253,7 +1256,16 @@ func (h *Handler) CreateLink(w http.ResponseWriter, r *http.Request) {
 	// autoVersionLinkedArtifacts) and exposes its title, so a cross-project
 	// link needs editor rights on the target's project too. Only checkable for
 	// a known (non-ref) endpoint.
-	if toArtifact != nil && toArtifact.ProjectID != projectID && !h.requireProjectRole(w, r, toArtifact.ProjectID, members.RoleEditor) {
+	//
+	// The one exception is the flow-down link (REQ-145): a supplier working
+	// in a child project refines requirements it can only read, so "refines"
+	// crosses into the target's project with viewer rights there. What it
+	// writes on the parent side is the link snapshot, which is the point.
+	targetRole := members.RoleEditor
+	if req.Type == links.TypeRefines {
+		targetRole = members.RoleViewer
+	}
+	if toArtifact != nil && toArtifact.ProjectID != projectID && !h.requireProjectRole(w, r, toArtifact.ProjectID, targetRole) {
 		return
 	}
 	if fromArtifact != nil && fromArtifact.ProjectID != projectID && !h.requireProjectRole(w, r, fromArtifact.ProjectID, members.RoleEditor) {
@@ -1610,12 +1622,60 @@ func (h *Handler) UpdateProject(w http.ResponseWriter, r *http.Request) {
 
 	project, err := h.projectService.UpdateProject(id, req)
 	if err != nil {
-		respondInternal(w, r, "failed to update project", err)
+		switch {
+		case errors.Is(err, projects.ErrParentNotFound), errors.Is(err, projects.ErrParentOtherOrg),
+			errors.Is(err, projects.ErrParentIsSelf), errors.Is(err, projects.ErrParentIsDescendant):
+			writeJSONError(w, http.StatusBadRequest, err.Error())
+		default:
+			respondInternal(w, r, "failed to update project", err)
+		}
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(project)
+}
+
+// ListChildProjects answers the projects filed under this one (REQ-144),
+// for a settings page and for the flow-down picker. Viewer rights on the
+// parent suffice: the children's names are what the parent's members see
+// on every refined requirement anyway.
+func (h *Handler) ListChildProjects(w http.ResponseWriter, r *http.Request) {
+	id := mux.Vars(r)["id"]
+	if !h.requireProjectRole(w, r, id, members.RoleViewer) {
+		return
+	}
+	children, err := h.projectService.ListChildren(id)
+	if err != nil {
+		respondInternal(w, r, "failed to list child projects", err)
+		return
+	}
+	if children == nil {
+		children = []*projects.Project{}
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(children)
+}
+
+// ListLinkedArtifacts answers the far end of every link crossing out of the
+// project (REQ-145): the parent requirements local ones refine and the
+// child requirements refining local ones, named with their project, so the
+// module view can show them without rights on those projects.
+func (h *Handler) ListLinkedArtifacts(w http.ResponseWriter, r *http.Request) {
+	id := mux.Vars(r)["id"]
+	if !h.requireProjectRole(w, r, id, members.RoleViewer) {
+		return
+	}
+	linked, err := h.exportService.LinkedArtifacts(id)
+	if err != nil {
+		respondInternal(w, r, "failed to resolve linked artifacts", err)
+		return
+	}
+	if linked == nil {
+		linked = []*exports.LinkedArtifact{}
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(linked)
 }
 
 // DeleteProject deletes a project

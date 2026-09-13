@@ -57,6 +57,11 @@ type Service interface {
 	// alone, falling back to the defaults if settings cannot be read, so a
 	// storage hiccup degrades the report's wording rather than failing it.
 	EffectiveRuleSet(orgID, projectID string) quality.RuleSet
+	// ProjectParties is the stored list of reference parties a project
+	// recognises as owners (REQ-147), without the workspace's default.
+	ProjectParties(projectID string) ([]Party, error)
+	// SetProjectParties replaces that list; an empty list clears it.
+	SetProjectParties(projectID string, parties []Party) ([]Party, error)
 }
 
 // DefaultService is the standard Service.

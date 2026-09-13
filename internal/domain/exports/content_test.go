@@ -53,7 +53,9 @@ func TestFieldsListsWhatTheProjectHolds(t *testing.T) {
 	for _, f := range fields {
 		got = append(got, f.Key)
 	}
-	want := []string{"priority", "status", "verification_method", "owner", "unused", "zeta"}
+	// owner is a standard key now (REQ-147), so it sits with the others in
+	// their fixed order even though the project also defines it.
+	want := []string{"priority", "status", "owner", "verification_method", "unused", "zeta"}
 	if len(got) != len(want) {
 		t.Fatalf("fields = %v, want %v", got, want)
 	}
@@ -65,8 +67,9 @@ func TestFieldsListsWhatTheProjectHolds(t *testing.T) {
 	if fields[0].Count != 2 || fields[0].Custom || fields[0].Label != "Priority" {
 		t.Errorf("priority = %+v", fields[0])
 	}
-	if fields[3].Label != "Owning team" || !fields[3].Custom || fields[3].Count != 1 {
-		t.Errorf("owner = %+v", fields[3])
+	// A standard key keeps the label the project defined for it.
+	if fields[2].Label != "Owning team" || fields[2].Custom || fields[2].Count != 1 {
+		t.Errorf("owner = %+v", fields[2])
 	}
 	if fields[5].Label != "Zeta" || !fields[5].Custom {
 		t.Errorf("zeta = %+v", fields[5])

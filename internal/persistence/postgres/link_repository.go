@@ -188,13 +188,18 @@ func (r *LinkRepository) FindByToID(toID string) ([]*links.Link, error) {
 	return linkList, rows.Err()
 }
 
-// FindAll retrieves all current links in a project
+// FindAll retrieves all current links that touch a project: those between
+// two of its artifacts and those crossing to another project from either
+// end. A flow-down link (a child requirement refining a parent one) is
+// written from the child, and the parent's export, baseline, coverage and
+// map must see it too, so the join is on both ends (REQ-145).
 func (r *LinkRepository) FindAll(projectID string) ([]*links.Link, error) {
 	query := `
 		SELECT l.id, l.from_id, l.to_id, l.type, l.suspect, l.attributes, l.version, l.created_at, l.updated_at
 		FROM links l
-		INNER JOIN artifacts a ON l.from_id = a.id AND a.valid_to IS NULL
-		WHERE a.project_id = $1 AND l.valid_to IS NULL
+		INNER JOIN artifacts fa ON l.from_id = fa.id AND fa.valid_to IS NULL
+		INNER JOIN artifacts ta ON l.to_id = ta.id AND ta.valid_to IS NULL
+		WHERE (fa.project_id = $1 OR ta.project_id = $1) AND l.valid_to IS NULL
 		ORDER BY l.created_at DESC
 	`
 

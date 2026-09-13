@@ -84,6 +84,11 @@ type Selection struct {
 	// Types are the artifact types to keep ("requirement", "test-case"). It
 	// does not govern headings — IncludeHeadings does.
 	Types []string `json:"types,omitempty"`
+	// Owners are the owners to keep (REQ-148): the artifacts whose "owner"
+	// attribute is one of them, so a supplier's share of a project can be
+	// handed over on its own. Headings stay with IncludeHeadings so the
+	// subset keeps its structure.
+	Owners []string `json:"owners,omitempty"`
 	// IncludeHeadings keeps the headings that organise the document. With it
 	// off, a download is the artifacts alone.
 	IncludeHeadings bool `json:"include_headings"`
@@ -107,7 +112,7 @@ func Everything() Selection {
 // NarrowsArtifacts reports whether the selection leaves anything out of the
 // document itself. A selection that only adds attachments does not.
 func (s Selection) NarrowsArtifacts() bool {
-	return len(s.Sections) > 0 || len(s.Types) > 0 || !s.IncludeHeadings
+	return len(s.Sections) > 0 || len(s.Types) > 0 || len(s.Owners) > 0 || !s.IncludeHeadings
 }
 
 // WantsAttachment reports whether files of a category belong in the download.
@@ -184,6 +189,7 @@ func Apply(data *ProjectExport, sel Selection) *ProjectExport {
 
 	sections := inSections(data.Artifacts, toSet(sel.Sections))
 	types := toSet(sel.Types)
+	owners := toSet(sel.Owners)
 
 	kept := make([]*artifacts.Artifact, 0, len(data.Artifacts))
 	keptIDs := make(map[string]bool, len(data.Artifacts))
@@ -200,9 +206,19 @@ func Apply(data *ProjectExport, sel Selection) *ProjectExport {
 			}
 		} else if types != nil && !types[a.Type] {
 			continue
+		} else if owners != nil && !owners[OwnerOf(a)] {
+			continue
 		}
 		kept = append(kept, a)
 		keptIDs[a.ID] = true
+	}
+
+	// A foreign endpoint is never "left out" by a selection: the reader can
+	// still see it named, so a link to it survives with its local end.
+	for _, l := range data.LinkedArtifacts {
+		if l != nil {
+			keptIDs[l.ID] = true
+		}
 	}
 
 	out := *data

@@ -298,6 +298,28 @@ export const DownloadWizard: React.FC<DownloadWizardProps> = ({ projectId, basel
                 </section>
               )}
 
+              {(options.owners || []).length > 0 && (
+                <section style={{ marginBottom: 14 }}>
+                  <SectionHeading
+                    title="Owners"
+                    action={selection.owners.length > 0 ? 'Everyone' : undefined}
+                    onAction={() => setSelection((s) => ({ ...s, owners: [] }))}
+                  />
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 6 }}>
+                    Tick one or more owners to take only their artifacts, for handing a share of
+                    the project to a supplier. Nothing ticked means everyone.
+                  </div>
+                  {(options.owners || []).map((o) =>
+                    checkbox(
+                      selection.owners.includes(o.owner),
+                      o.owner,
+                      () => setSelection((s) => ({ ...s, owners: toggle(s.owners, o.owner) })),
+                      `${o.count}`
+                    )
+                  )}
+                </section>
+              )}
+
               {options.sections.length > 0 && (
                 <section style={{ marginBottom: 14 }}>
                   <SectionHeading

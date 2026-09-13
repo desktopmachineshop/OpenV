@@ -237,6 +237,15 @@ export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
             >
               {STATUS_META[displayStatus].label}
             </span>
+            {typeof displayArtifact.attributes?.owner === 'string' && displayArtifact.attributes.owner && (
+              <span
+                className="badge"
+                title="Owner"
+                style={{ fontSize: '12px', whiteSpace: 'nowrap' }}
+              >
+                {displayArtifact.attributes.owner}
+              </span>
+            )}
             <span style={{ fontSize: '12px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
               Version {displayArtifact.version}
             </span>

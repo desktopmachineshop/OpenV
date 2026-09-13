@@ -278,13 +278,13 @@ func TestValidateLinkTypeRejectsUnknownLinkTypes(t *testing.T) {
 		"",
 		"implements",
 		"traces-to",
-		"refines",
 		"VERIFIES",
 		"Verifies",
 		"verifies ",
 		" verifies",
 		"verifies\n",
 		"decomposes_to",
+		"refined-by",
 		wildcard,
 	}
 	for _, linkType := range unknown {

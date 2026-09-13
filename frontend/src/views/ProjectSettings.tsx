@@ -16,6 +16,7 @@ import {
   ProjectMember,
   RepoConnection,
   TeamGrant,
+  Party,
 } from '../api/client';
 import { apiErrorMessage } from '../api/errors';
 import { useAppStore } from '../state/store';
@@ -23,9 +24,10 @@ import { ErrorBanner, useConfirm } from '../components/ui';
 import { QualityRulesEditor } from '../components/QualityRulesEditor';
 import { Avatar } from '../components/Avatar';
 
-type Tab = 'members' | 'repos' | 'agents' | 'attributes' | 'quality' | 'danger';
+type Tab = 'general' | 'members' | 'repos' | 'agents' | 'attributes' | 'quality' | 'danger';
 
 const TABS: { key: Tab; label: string }[] = [
+  { key: 'general', label: 'General' },
   { key: 'members', label: 'Access' },
   { key: 'repos', label: 'Repositories' },
   { key: 'agents', label: 'Agents' },
@@ -137,6 +139,14 @@ export const ProjectSettings: React.FC = () => {
   const [project, setProject] = useState<Project | null>(null);
   const [savingAuth, setSavingAuth] = useState(false);
 
+  // General (REQ-144, REQ-147): the parent project and the reference parties.
+  const [allProjects, setAllProjects] = useState<Project[]>([]);
+  const [savingParent, setSavingParent] = useState(false);
+  const [parties, setParties] = useState<Party[]>([]);
+  const [partyName, setPartyName] = useState('');
+  const [partyNote, setPartyNote] = useState('');
+  const [savingParties, setSavingParties] = useState(false);
+
   // Attribute definitions (issue #219): project-scoped typed attributes.
   const [attrDefs, setAttrDefs] = useState<AttributeDefinition[]>([]);
   const [attrDefsLoading, setAttrDefsLoading] = useState(true);
@@ -188,7 +198,84 @@ export const ProjectSettings: React.FC = () => {
     } catch {
       // Non-fatal: the Agents tab just shows a loading state.
     }
+    // The other projects of the workspace, for the parent picker and the
+    // list of child projects; the parties this project recognises as owners.
+    try {
+      const res = await projectAPI.list();
+      setAllProjects(res.data || []);
+    } catch {
+      setAllProjects([]);
+    }
+    try {
+      const res = await projectAPI.parties(projectId);
+      setParties(res.data?.parties || []);
+    } catch {
+      setParties([]);
+    }
   }, [projectId]);
+
+  // Projects that cannot be this one's parent: itself and everything filed
+  // under it, since placing it under a descendant would close a loop.
+  const descendantIds = (() => {
+    const out = new Set<string>([projectId || '']);
+    let grew = true;
+    while (grew) {
+      grew = false;
+      for (const p of allProjects) {
+        if (p.parent_project_id && out.has(p.parent_project_id) && !out.has(p.id)) {
+          out.add(p.id);
+          grew = true;
+        }
+      }
+    }
+    return out;
+  })();
+  const parentCandidates = allProjects.filter(
+    (p) => !descendantIds.has(p.id) && (!project || p.org_id === project.org_id)
+  );
+  const childProjects = allProjects.filter((p) => p.parent_project_id === projectId);
+
+  const handleSetParent = async (parentId: string) => {
+    if (!projectId || !project) return;
+    setSavingParent(true);
+    setError('');
+    try {
+      const res = await projectAPI.update(projectId, { parent_project_id: parentId });
+      setProject(res.data);
+      flash(parentId ? 'Parent project set.' : 'Parent project cleared.');
+    } catch (err: any) {
+      setError(`Failed to set the parent project: ${apiErrorMessage(err)}`);
+    } finally {
+      setSavingParent(false);
+    }
+  };
+
+  const saveParties = async (next: Party[]) => {
+    if (!projectId) return;
+    setSavingParties(true);
+    setError('');
+    try {
+      const res = await projectAPI.setParties(
+        projectId,
+        next.filter((p) => !p.default)
+      );
+      setParties(res.data?.parties || []);
+      flash('Parties saved.');
+    } catch (err: any) {
+      setError(`Failed to save parties: ${apiErrorMessage(err)}`);
+    } finally {
+      setSavingParties(false);
+    }
+  };
+
+  const handleAddParty = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const name = partyName.trim();
+    if (!name) return;
+    await saveParties([...parties, { name, note: partyNote.trim() }]);
+    setPartyName('');
+    setPartyNote('');
+  };
 
   const loadTeamAccess = useCallback(async () => {
     if (!projectId) return;
@@ -561,6 +648,116 @@ export const ProjectSettings: React.FC = () => {
         >
           {notice}
         </div>
+      )}
+
+      {tab === 'general' && (
+        <>
+          <div className="card">
+            <h3>Parent project</h3>
+            <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+              A subsystem or supplier project sits under the system it belongs to. Requirements
+              here can then <em>refine</em> the parent's requirements, and the parent's V&amp;V
+              rolls those refinements up. A supplier works in the child project with editor
+              rights there and viewer rights on the parent.
+            </p>
+            {!project ? (
+              <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Loading project…</div>
+            ) : (
+              <div className="form-group" style={{ maxWidth: 420 }}>
+                <label htmlFor="parent-project">This project refines</label>
+                <select
+                  id="parent-project"
+                  value={project.parent_project_id || ''}
+                  disabled={savingParent}
+                  onChange={(e) => handleSetParent(e.target.value)}
+                >
+                  <option value="">None (top-level project)</option>
+                  {parentCandidates.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+            {childProjects.length > 0 && (
+              <div style={{ fontSize: 13, color: 'var(--text)' }}>
+                <div style={{ color: 'var(--text-muted)', marginBottom: 4 }}>Child projects</div>
+                <ul style={{ margin: 0, paddingLeft: '1.2em' }}>
+                  {childProjects.map((p) => (
+                    <li key={p.id}>
+                      <Link to={`/projects/${p.id}/settings?tab=general`}>{p.name}</Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+
+          <div className="card">
+            <h3>Reference parties</h3>
+            <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+              Who can own an artifact here besides the members: the organisations, teams and
+              suppliers this project works with. The workspace's own company is always first.
+              An artifact's owner is picked from this list and the members, and a download can be
+              narrowed to one owner's share of the project.
+            </p>
+            <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 12 }}>
+              <thead>
+                <tr>
+                  <th style={th}>Party</th>
+                  <th style={th}>Note</th>
+                  <th style={th} />
+                </tr>
+              </thead>
+              <tbody>
+                {parties.map((p) => (
+                  <tr key={p.name}>
+                    <td style={td}>
+                      {p.name}
+                      {p.default && (
+                        <span style={{ marginLeft: 8, fontSize: 11, color: 'var(--text-muted)' }}>
+                          this workspace
+                        </span>
+                      )}
+                    </td>
+                    <td style={td}>{p.note || ''}</td>
+                    <td style={{ ...td, textAlign: 'right' }}>
+                      {!p.default && (
+                        <button
+                          type="button"
+                          className="btn-secondary"
+                          style={{ width: 'auto', padding: '4px 10px', fontSize: 12 }}
+                          disabled={savingParties}
+                          onClick={() => saveParties(parties.filter((q) => q.name !== p.name))}
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <form onSubmit={handleAddParty} style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <input
+                placeholder="Party name, e.g. Landing gear supplier"
+                value={partyName}
+                onChange={(e) => setPartyName(e.target.value)}
+                style={{ flex: '1 1 200px' }}
+              />
+              <input
+                placeholder="Note (optional)"
+                value={partyNote}
+                onChange={(e) => setPartyNote(e.target.value)}
+                style={{ flex: '2 1 240px' }}
+              />
+              <button type="submit" className="btn-primary" style={{ width: 'auto' }} disabled={savingParties || !partyName.trim()}>
+                Add party
+              </button>
+            </form>
+          </div>
+        </>
       )}
 
       {tab === 'members' && (

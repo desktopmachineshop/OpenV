@@ -245,20 +245,21 @@ func (r *ArtifactRepository) FindByProjectAndStatus(projectID string, status str
 // artifactType "" means all types. The ordering matches FindByProjectID with
 // id as a final tiebreaker so offset pages are stable even when sibling
 // sort_order/created_at values collide.
-func (r *ArtifactRepository) FindPageByProject(projectID string, artifactType string, limit, offset int) ([]*artifacts.Artifact, error) {
+func (r *ArtifactRepository) FindPageByProject(projectID string, artifactType string, owner string, limit, offset int) ([]*artifacts.Artifact, error) {
 	query := `
 		SELECT id, project_id, parent_id, type, ref, title, body, sort_order, status, attributes, version, valid_from, valid_to, created_at, updated_at
 		FROM artifacts
 		WHERE project_id = $1 AND valid_to IS NULL
 		AND ($2 = '' OR type = $2)
+		AND ($3 = '' OR attributes->>'owner' = $3)
 		ORDER BY parent_id NULLS FIRST, sort_order ASC, created_at ASC, id ASC
-		LIMIT $3 OFFSET $4
+		LIMIT $4 OFFSET $5
 	`
 
 	ctx, cancel := stmtCtx()
 	defer cancel()
 
-	rows, err := r.db.QueryContext(ctx, query, projectID, artifactType, limit, offset)
+	rows, err := r.db.QueryContext(ctx, query, projectID, artifactType, owner, limit, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -268,7 +269,7 @@ func (r *ArtifactRepository) FindPageByProject(projectID string, artifactType st
 }
 
 // CountByProject counts a project's current artifacts (type "" = all).
-func (r *ArtifactRepository) CountByProject(projectID string, artifactType string) (int, error) {
+func (r *ArtifactRepository) CountByProject(projectID string, artifactType string, owner string) (int, error) {
 	ctx, cancel := stmtCtx()
 	defer cancel()
 
@@ -277,7 +278,8 @@ func (r *ArtifactRepository) CountByProject(projectID string, artifactType strin
 		SELECT COUNT(*) FROM artifacts
 		WHERE project_id = $1 AND valid_to IS NULL
 		AND ($2 = '' OR type = $2)
-	`, projectID, artifactType).Scan(&count)
+		AND ($3 = '' OR attributes->>'owner' = $3)
+	`, projectID, artifactType, owner).Scan(&count)
 	return count, err
 }
 

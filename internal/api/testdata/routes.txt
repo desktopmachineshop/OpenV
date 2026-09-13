@@ -110,6 +110,7 @@ GET /api/v1/projects
 GET /api/v1/projects/{id}
 GET /api/v1/projects/{id}/ai-map
 GET /api/v1/projects/{id}/baselines
+GET /api/v1/projects/{id}/children
 GET /api/v1/projects/{id}/download/csv
 GET /api/v1/projects/{id}/download/docx
 GET /api/v1/projects/{id}/download/excel
@@ -123,7 +124,9 @@ GET /api/v1/projects/{id}/export
 GET /api/v1/projects/{id}/impact
 GET /api/v1/projects/{id}/interview-sessions
 GET /api/v1/projects/{id}/interviews
+GET /api/v1/projects/{id}/linked-artifacts
 GET /api/v1/projects/{id}/members
+GET /api/v1/projects/{id}/parties
 GET /api/v1/projects/{id}/profile
 GET /api/v1/projects/{id}/quality
 GET /api/v1/projects/{id}/quality-rules
@@ -292,6 +295,7 @@ PUT /api/v1/orgs/{id}/members/{userId}
 PUT /api/v1/orgs/{id}/quality-rules
 PUT /api/v1/projects/{id}
 PUT /api/v1/projects/{id}/members/{userId}
+PUT /api/v1/projects/{id}/parties
 PUT /api/v1/projects/{id}/profile
 PUT /api/v1/projects/{id}/quality-rules
 PUT /api/v1/projects/{id}/team-access

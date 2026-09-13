@@ -1,7 +1,7 @@
 import React, { useCallback, useState, useEffect } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useAppStore } from '../state/store';
-import { artifactAPI, linkAPI, attachmentAPI, baselineAPI, qualityAPI, agentsAPI, Artifact, Link, Attachment, Baseline, ProjectExport } from '../api/client';
+import { artifactAPI, linkAPI, attachmentAPI, baselineAPI, qualityAPI, agentsAPI, Artifact, Link, Attachment, Baseline, ProjectExport, LinkedArtifact, Project, projectAPI } from '../api/client';
 import { baselineLabel } from '../utils/baselines';
 import type { ArtifactContextAction, QualityRowInfo } from '../components/ArtifactList';
 import { DropZone, planMove } from '../utils/artifactDrag';
@@ -35,6 +35,12 @@ export const ModuleView: React.FC = () => {
   const [editingArtifact, setEditingArtifact] = useState<Artifact | undefined>();
   const [error, setError] = useState<string>('');
   const [allLinks, setAllLinks] = useState<Link[]>([]);
+  // Flow-down (REQ-145): the far end of every link crossing into another
+  // project, and the parent project's requirements a requirement here may
+  // refine.
+  const [linkedArtifacts, setLinkedArtifacts] = useState<LinkedArtifact[]>([]);
+  const [parentProject, setParentProject] = useState<Project | null>(null);
+  const [parentArtifacts, setParentArtifacts] = useState<Artifact[]>([]);
   const [searchText, setSearchText] = useState<string>('');
   const [searchExact, setSearchExact] = useState<boolean>(false);
   const [filterLogic, setFilterLogic] = useState<'and' | 'or'>('and');
@@ -265,6 +271,41 @@ export const ModuleView: React.FC = () => {
       console.error('Failed to load links:', error);
       setAllLinks([]);
     }
+    // Best-effort: without it a cross-project link shows a bare id.
+    try {
+      const linked = await projectAPI.linkedArtifacts(projectId);
+      setLinkedArtifacts(linked.data || []);
+    } catch {
+      setLinkedArtifacts([]);
+    }
+  }, [projectId]);
+
+  // The parent project and its requirements, for the refines picker.
+  useEffect(() => {
+    let cancelled = false;
+    setParentProject(null);
+    setParentArtifacts([]);
+    if (!projectId) return;
+    (async () => {
+      try {
+        const me = await projectAPI.get(projectId);
+        const parentId = me.data?.parent_project_id;
+        if (!parentId || cancelled) return;
+        const [parent, reqs] = await Promise.all([
+          projectAPI.get(parentId),
+          artifactAPI.list(parentId, 'requirement'),
+        ]);
+        if (cancelled) return;
+        setParentProject(parent.data);
+        setParentArtifacts(reqs.data || []);
+      } catch {
+        // A member of the child project may not read the parent; the picker
+        // then offers local targets only.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [projectId]);
 
   // Load rule-based quality scores for the project's requirements. Best-effort:
@@ -892,6 +933,7 @@ export const ModuleView: React.FC = () => {
     { value: 'project_id', label: 'Project ID' },
     { value: 'parent_id', label: 'Parent ID' },
     { value: 'type', label: 'Type' },
+    { value: 'owner', label: 'Owner' },
     { value: 'title', label: 'Title' },
     { value: 'body', label: 'Body' },
     { value: 'attributes', label: 'Attributes' },
@@ -901,7 +943,7 @@ export const ModuleView: React.FC = () => {
   ];
 
   // Fields with finite selection options
-  const finiteFields = ['type'];
+  const finiteFields = ['type', 'owner'];
 
   // Get unique values for a field to populate selection dropdown
   const getFieldUniqueValues = (fieldName: string): string[] => {
@@ -923,6 +965,8 @@ export const ModuleView: React.FC = () => {
         return artifact.parent_id ?? '';
       case 'type':
         return artifact.type;
+      case 'owner':
+        return typeof artifact.attributes?.owner === 'string' ? artifact.attributes.owner : '';
       case 'title':
         return artifact.title;
       case 'body':
@@ -1787,6 +1831,9 @@ export const ModuleView: React.FC = () => {
             onDeleteAttachment={handleDeleteAttachment}
             isUploadLoading={uploadingAttachmentId === editingArtifact.id}
             links={allLinks}
+            linked={linkedArtifacts}
+            parentArtifacts={parentArtifacts}
+            parentProjectName={parentProject?.name}
             onCreateLink={handleCreateLink}
             onDeleteLink={(linkId) => {
               // Link deletion is now handled in edit mode
@@ -1811,6 +1858,7 @@ export const ModuleView: React.FC = () => {
             <ArtifactDetails 
               artifact={selectedArtifact} 
               links={activeLinks} 
+              linked={linkedArtifacts}
               artifacts={activeArtifacts}
               attachments={detailAttachments}
               onSelectArtifact={handleSelectArtifact}

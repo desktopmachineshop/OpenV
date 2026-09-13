@@ -103,6 +103,7 @@ describe('selectAll', () => {
     expect(selectAll(null)).toEqual({
       sections: [],
       types: [],
+      owners: [],
       includeHeadings: true,
       attachments: [],
       template: '',

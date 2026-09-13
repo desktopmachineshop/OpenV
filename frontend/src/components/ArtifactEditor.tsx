@@ -8,6 +8,9 @@ import {
   Link,
   executionMethodOf,
   metaAPI,
+  LinkedArtifact,
+  projectAPI,
+  membersAPI,
 } from '../api/client';
 import { ImageGallery } from './ImageGallery';
 import { LinkPanel } from './LinkPanel';
@@ -49,6 +52,11 @@ interface ArtifactEditorProps {
   links?: Link[];
   onCreateLink?: (link: Partial<Link>) => void;
   onDeleteLink?: (linkId: string) => void;
+  /** Far ends of cross-project links, so their titles can be shown. */
+  linked?: LinkedArtifact[];
+  /** The parent project's requirements a requirement here may refine. */
+  parentArtifacts?: Artifact[];
+  parentProjectName?: string;
 }
 
 export const ArtifactEditor: React.FC<ArtifactEditorProps> = ({
@@ -56,6 +64,9 @@ export const ArtifactEditor: React.FC<ArtifactEditorProps> = ({
   artifacts = [],
   projectId,
   initialData,
+  linked = [],
+  parentArtifacts = [],
+  parentProjectName = '',
   onSave,
   onCancel,
   attachments = [],
@@ -95,6 +106,23 @@ export const ArtifactEditor: React.FC<ArtifactEditorProps> = ({
   // for the project and filtered per artifact type when rendering.
   const [attributeDefs, setAttributeDefs] = useState<AttributeDefinition[]>([]);
   const effectiveProjectId = projectId || artifact?.project_id;
+  // Who can own an artifact (REQ-147): the project's parties (the workspace
+  // first) and its members, offered as suggestions; any name is accepted.
+  const [ownerOptions, setOwnerOptions] = useState<string[]>([]);
+  useEffect(() => {
+    if (!effectiveProjectId) return;
+    let cancelled = false;
+    Promise.all([
+      projectAPI.parties(effectiveProjectId).then((r) => r.data.parties.map((p) => p.name)).catch(() => [] as string[]),
+      membersAPI.list(effectiveProjectId).then((r) => (r.data || []).map((m) => m.user_name || m.user_email || '')).catch(() => [] as string[]),
+    ]).then(([parties, people]) => {
+      if (cancelled) return;
+      setOwnerOptions(Array.from(new Set([...parties, ...people].filter(Boolean))));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [effectiveProjectId]);
   useEffect(() => {
     if (!effectiveProjectId) {
       setAttributeDefs([]);
@@ -329,6 +357,28 @@ export const ArtifactEditor: React.FC<ArtifactEditorProps> = ({
             </select>
           </div>
 
+          <div className="form-group">
+            <label htmlFor="owner">Owner</label>
+            <input
+              id="owner"
+              name="owner"
+              list="artifact-owner-options"
+              value={(formData.attributes?.owner as string) || ''}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  attributes: { ...(formData.attributes || {}), owner: e.target.value },
+                })
+              }
+              placeholder="The party or member responsible for this artifact"
+            />
+            <datalist id="artifact-owner-options">
+              {ownerOptions.map((o) => (
+                <option key={o} value={o} />
+              ))}
+            </datalist>
+          </div>
+
           {formData.type === 'test-case' && (
             <div className="form-group">
               <label htmlFor="execution_method">How is this verified?</label>
@@ -469,6 +519,9 @@ export const ArtifactEditor: React.FC<ArtifactEditorProps> = ({
                 selectedArtifactId={artifact.id}
                 onCreateLink={handleCreateLinkFromEditor}
                 links={currentLinks}
+                linked={linked}
+                extraTargets={parentArtifacts}
+                extraTargetsLabel={parentProjectName}
                 title="Manage Links (Edit Mode)"
                 readOnly={false}
                 onSelectArtifact={() => {}}
