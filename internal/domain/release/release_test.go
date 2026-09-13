@@ -13,29 +13,45 @@ Preamble that is ignored.
 
 ## Unreleased
 
+### New features
+
 - Pending one
   wrapped onto a second line
-* fix: Pending fix
 
-## 2026.09
+### Bug fixes
 
-Cut on 2026-10-01 from 2026-09-12.2.
+- Pending fix
 
-### Changes
+## 0.3.0 — 2026-09-20
 
-- Second of the day
-  continued line
+### New features
 
-### Fixes
+- Third feature
+
+## 0.2.1 — 2026-09-16
+
+Stable channel release since 2026-09-23.
+
+### Bug fixes
 
 - A fix carried into stable
 
-## 2026-09-12.2
+## 0.2.0 — 2026-09-14
+
+### New features
 
 - Second of the day
   continued line
 
 Some prose in the section.
+
+## 0.1.0 — 2026-09-13
+
+Stable channel release since 2026-09-13.
+
+### Maintenance updates
+
+- Tidied
 
 ## 2026-09-12
 
@@ -48,48 +64,61 @@ func TestParseSectionsAndBullets(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Parse: %v", err)
 	}
-	if len(n.Unreleased) != 2 || n.Unreleased[0].Text != "Pending one wrapped onto a second line" || n.Unreleased[0].Fix {
+	if len(n.Unreleased) != 2 || n.Unreleased[0] != "Pending one wrapped onto a second line" || n.Unreleased[1] != "Pending fix" {
 		t.Fatalf("unreleased = %+v", n.Unreleased)
 	}
-	if !n.Unreleased[1].Fix || n.Unreleased[1].Text != "Pending fix" {
-		t.Fatalf("fix bullet = %+v", n.Unreleased[1])
-	}
-	if len(n.Releases) != 2 {
-		t.Fatalf("releases = %d, want 2", len(n.Releases))
+	if len(n.Releases) != 5 {
+		t.Fatalf("releases = %d, want 5", len(n.Releases))
 	}
 	cur := n.Current()
-	if cur == nil || cur.Version != "2026-09-12.2" || cur.Date != "2026-09-12" {
+	if cur == nil || cur.Version != "0.3.0" || cur.Date != "2026-09-20" || cur.StableSince != "" {
 		t.Fatalf("current = %+v", cur)
 	}
-	if len(cur.Notes) != 1 || cur.Notes[0].Text != "Second of the day continued line" {
-		t.Fatalf("current notes = %+v", cur.Notes)
+	second := n.Releases[2]
+	if len(second.Notes) != 1 || second.Notes[0] != "Second of the day continued line" {
+		t.Fatalf("0.2.0 notes = %+v", second.Notes)
 	}
-	if !strings.Contains(cur.Markdown, "Some prose in the section.") || strings.HasSuffix(cur.Markdown, "\n") {
-		t.Fatalf("current markdown = %q", cur.Markdown)
+	if !strings.Contains(second.Markdown, "Some prose in the section.") || strings.HasSuffix(second.Markdown, "\n") {
+		t.Fatalf("0.2.0 markdown = %q", second.Markdown)
 	}
-	older := n.Releases[1]
-	if older.Version != "2026-09-12" || len(older.Notes) != 2 || !older.Notes[1].Fix || older.Notes[1].Text != "another" {
+	older := n.Releases[4]
+	if older.Version != "2026-09-12" || len(older.Notes) != 2 || older.Notes[1] != "Fix: another" {
 		t.Fatalf("older release = %+v", older)
 	}
 }
 
-func TestParseStableSections(t *testing.T) {
+// TestParseStableMarker: the marker line designates a release as stable and
+// stays out of its notes and body; the stable's notes are every release
+// since the previous stable, merged group by group.
+func TestParseStableMarker(t *testing.T) {
 	n, err := Parse(sample)
 	if err != nil {
 		t.Fatalf("Parse: %v", err)
 	}
 	s := n.CurrentStable()
-	if s == nil || s.Version != "2026.09" || s.CutOn != "2026-10-01" || s.CutFrom != "2026-09-12.2" {
+	if s == nil || s.Version != "0.2.1" || s.Since != "2026-09-23" || s.Previous != "0.1.0" {
 		t.Fatalf("stable = %+v", s)
 	}
-	if len(s.Notes) != 2 || s.Notes[0].Text != "Second of the day continued line" || s.Notes[1].Text != "A fix carried into stable" {
-		t.Fatalf("stable notes = %+v", s.Notes)
+	if got := strings.Join(s.Notes, "|"); got != "Second of the day continued line|A fix carried into stable" {
+		t.Fatalf("stable notes = %q", got)
 	}
-	if n.Stable("2026.09") == nil || n.Stable("2026.08") != nil {
-		t.Fatalf("Stable lookup")
+	if len(s.Categories) != 2 || s.Categories[0].Name != CategoryFeatures || s.Categories[1].Name != CategoryFixes {
+		t.Fatalf("stable groups = %+v", s.Categories)
 	}
-	if _, err := Parse("## 2026.09\n\n- no cut line\n"); err == nil {
-		t.Fatalf("a stable without a cut line parsed")
+	marked := n.Releases[1]
+	if marked.StableSince != "2026-09-23" || strings.Contains(marked.Markdown, StableMarkerPrefix) || len(marked.Notes) != 1 {
+		t.Fatalf("marked release = %+v", marked)
+	}
+	// The first stable stops at the legacy releases: they predate the channel.
+	first := n.Stable("0.1.0")
+	if first == nil || first.Previous != "" || len(first.Notes) != 1 || first.Notes[0] != "Tidied" {
+		t.Fatalf("first stable = %+v", first)
+	}
+	if n.Stable("0.2.0") != nil || n.Stable("0.9.0") != nil {
+		t.Fatalf("an undesignated release was looked up as stable")
+	}
+	if StableMarker("2026-10-01") != "Stable channel release since 2026-10-01." {
+		t.Fatalf("StableMarker = %q", StableMarker("2026-10-01"))
 	}
 }
 
@@ -121,14 +150,20 @@ func TestParseNoReleaseYet(t *testing.T) {
 }
 
 func TestVersionOrdering(t *testing.T) {
-	if !NightlyAtOrBefore("2026-09-12", "2026-09-12.2") || NightlyAtOrBefore("2026-09-13", "2026-09-12.2") || !NightlyAtOrBefore("2026-09-12", "2026-09-12") {
-		t.Fatalf("NightlyAtOrBefore")
+	if !AtOrBefore("2026-09-12", "2026-09-12.2") || AtOrBefore("2026-09-13", "2026-09-12.2") || !AtOrBefore("2026-09-12", "2026-09-12") {
+		t.Fatalf("AtOrBefore on dated versions")
 	}
-	if NightlyAtOrBefore("garbage", "2026-09-12") {
+	if !AtOrBefore("0.2.0", "0.10.0") || AtOrBefore("1.0.0", "0.10.0") || !AtOrBefore("2026-09-12.3", "0.1.0") {
+		t.Fatalf("AtOrBefore on numbered versions")
+	}
+	if AtOrBefore("garbage", "0.1.0") || AtOrBefore("0.1.0", "garbage") {
 		t.Fatalf("unparseable version passed a gate")
 	}
-	if !StableNewer("2026.10", "2026.09") || !StableNewer("2026.09.1", "2026.09") || StableNewer("2026.09", "2026.09") || !StableNewer("2026.09", "") {
-		t.Fatalf("StableNewer")
+	if !Newer("0.2.0", "0.1.9") || !Newer("0.1.1", "0.1.0") || Newer("0.1.0", "0.1.0") || !Newer("0.1.0", "") || Newer("", "0.1.0") {
+		t.Fatalf("Newer")
+	}
+	if Compare("0.1.0", "2026-09-12.3") <= 0 {
+		t.Fatalf("a numbered release must outrank every dated one")
 	}
 }
 
@@ -142,7 +177,117 @@ func TestEmbeddedNotesParse(t *testing.T) {
 	if svc.Current() == nil {
 		t.Fatalf("RELEASE_NOTES.md names no release")
 	}
-	if svc.Markdown() != openv.ReleaseNotesMarkdown {
-		t.Fatalf("Markdown() is not the file")
+	// The served history is the parsed sections, never the file: the file
+	// also holds the Unreleased section and, historically, a block of
+	// instructions for contributors that customers were shown.
+	released := svc.Released()
+	if len(released) == 0 {
+		t.Fatalf("Released() names no release")
+	}
+	for _, r := range released {
+		if strings.Contains(r.Markdown, "pull request") {
+			t.Errorf("release %s carries contributor guidance: %q", r.Version, r.Markdown)
+		}
+	}
+}
+
+// The shape the notes are written in now: a semantic version and the day it
+// shipped, with the bullets grouped under the three headings a reader wants
+// to tell apart.
+const numbered = `# Notes
+
+## Unreleased
+
+### Bug fixes
+
+- Pending fix
+
+## 0.2.0 — 2026-09-14
+
+### New features
+
+- Export to Excel
+- Import from Excel
+
+### Bug fixes
+
+- Baselines load again
+
+## 2026-09-12
+
+- From before the numbering
+`
+
+func TestParseGroupsNotesUnderTheirHeadings(t *testing.T) {
+	n, err := Parse(numbered)
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	cur := n.Current()
+	if cur == nil || cur.Version != "0.2.0" || cur.Date != "2026-09-14" {
+		t.Fatalf("current = %+v", cur)
+	}
+	// Flat as well as grouped: the update banner and the notification want a
+	// plain list, in the order the file wrote them.
+	if got := strings.Join(cur.Notes, "|"); got != "Export to Excel|Import from Excel|Baselines load again" {
+		t.Fatalf("notes = %q", got)
+	}
+	if len(cur.Categories) != 2 {
+		t.Fatalf("categories = %+v", cur.Categories)
+	}
+	if cur.Categories[0].Name != CategoryFeatures || len(cur.Categories[0].Notes) != 2 {
+		t.Errorf("first group = %+v", cur.Categories[0])
+	}
+	if cur.Categories[1].Name != CategoryFixes || cur.Categories[1].Notes[0] != "Baselines load again" {
+		t.Errorf("second group = %+v", cur.Categories[1])
+	}
+	if len(n.UnreleasedCategories) != 1 || n.UnreleasedCategories[0].Name != CategoryFixes {
+		t.Errorf("unreleased groups = %+v", n.UnreleasedCategories)
+	}
+}
+
+// The releases from before OpenV had version numbers keep their date heading
+// and have no groups. Renaming them would announce them a second time to
+// every account, since the claim is keyed on the version string.
+func TestALegacySectionIsReadAsItWasWritten(t *testing.T) {
+	n, err := Parse(numbered)
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	old := n.Releases[1]
+	if old.Version != "2026-09-12" || old.Date != "2026-09-12" {
+		t.Fatalf("legacy release = %+v", old)
+	}
+	if len(old.Categories) != 1 || old.Categories[0].Name != UncategorizedNotes {
+		t.Fatalf("legacy groups = %+v", old.Categories)
+	}
+}
+
+// A group heading nobody recognises would put its bullets somewhere the app
+// never renders, so it is refused where it is cheap to fix.
+func TestParseRejectsAnUnknownGroup(t *testing.T) {
+	if _, err := Parse("## Unreleased\n\n### Improvements\n\n- x\n"); err == nil {
+		t.Fatal("Parse accepted an invented group heading")
+	}
+}
+
+// A group heading never leaks past the section it was written in.
+func TestAGroupDoesNotCarryIntoTheNextSection(t *testing.T) {
+	n, err := Parse("## 0.2.0\n\n### New features\n\n- New\n\n## 2026-09-12\n\n- Old\n")
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if n.Releases[1].Categories[0].Name != UncategorizedNotes {
+		t.Fatalf("the group leaked into the legacy section: %+v", n.Releases[1].Categories)
+	}
+}
+
+func TestHeadlineNamesAReleaseTheWayItIsAnnounced(t *testing.T) {
+	if got := Headline("0.2.0"); got != "OpenV version upgraded to 0.2.0" {
+		t.Errorf("Headline(0.2.0) = %q", got)
+	}
+	// "upgraded to 2026-09-12" reads as nonsense.
+	if got := Headline("2026-09-12.2"); got != "OpenV update 2026-09-12.2" {
+		t.Errorf("Headline of a legacy version = %q", got)
 	}
 }

@@ -19,16 +19,47 @@ saying what they will notice: what they can now do, what looks different,
 what they no longer have to do. Write for a workspace member, not a
 developer; the implementation belongs in the pull request. CI refuses a
 pull request that adds no bullet; a change nobody can see (CI, refactors,
-internal docs) carries the `no-release-notes` label instead. Start a
-bullet with `fix:` when it repairs something: fixes reach every workspace
-at the next nightly, while every other bullet is a change that stable-
-channel workspaces receive at the monthly release. A user-visible change
-also registers itself in `internal/domain/release/features.go` with the
-nightly it ships in and gates its code path and UI on that key (server:
-`featureEnabled`; client: `useFeature`), so stable-channel workspaces see
-it only once their monthly release carries it. The promotion to `release`
-turns the Unreleased bullets into the dated section the app announces
-(see `docs/release-policy.md` and `docs/railway.md`, "Release pipeline").
+internal docs) carries the `no-release-notes` label instead.
+
+Every bullet goes under one of three group headings, because that is how a
+reader tells them apart:
+
+```markdown
+## Unreleased
+
+### New features
+
+- Export a traceability matrix to Excel from the V&V tab.
+
+### Maintenance updates
+
+- Large baselines load faster.
+
+### Bug fixes
+
+- Member avatars keep their shape beside a long name on a phone.
+```
+
+`### Maintenance updates` is for something a member can still notice — it is
+faster, clearer, better documented — not for work with no visible effect;
+that is what the `no-release-notes` label is for. A bullet under no group is
+refused.
+
+The group also decides the version. Promotion cuts the Unreleased bullets
+into a new section headed by a semantic version and the date: anything under
+*New features* makes it a minor release, maintenance and fixes alone make it
+a patch, and a major release is asked for explicitly when the workflow is
+run. The app announces that version to every account and shows it under
+What's new (see `docs/railway.md`, "Release pipeline").
+
+The group also decides who sees the change when (`docs/release-policy.md`).
+Maintenance updates and bug fixes reach every workspace with the release
+that carries them. So does a new feature on the nightly channel, but a
+stable-channel workspace sees it only once the monthly stable release it
+has turned on is that release or a later one. A new feature therefore
+registers a key in `internal/domain/release/features.go` with the version
+it ships in (`scripts/release_notes.py next` prints it) and gates its code
+path and UI on that key (server: `featureEnabled`; client: `useFeature`).
 
 ## Licensing of contributions
 

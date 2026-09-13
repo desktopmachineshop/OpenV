@@ -16,7 +16,7 @@ import (
 // Dedicated instances and the support window (REQ-139).
 //
 // A dedicated instance runs the stable release its customer chose and is
-// supported for SupportWindowDays after the next stable is cut. It learns
+// supported for SupportWindowDays after the next stable is designated. It learns
 // about newer stables from the shared service's public release feed
 // (GET /api/v1/public/release) and warns every workspace's admins when the
 // window is about to close, and once more when it has closed. Each warning
@@ -32,10 +32,11 @@ var warningDays = []int{7, 30}
 
 // ReleaseFeed is the shared service's public answer.
 type ReleaseFeed struct {
-	Nightly string `json:"nightly"`
+	// Version is the release the shared service runs (its newest nightly).
+	Version string `json:"version"`
 	Stable  string `json:"stable"`
-	// StableCutOn is the date the stable was cut (YYYY-MM-DD).
-	StableCutOn string `json:"stable_cut_on"`
+	// StableSince is the day the stable release was designated (YYYY-MM-DD).
+	StableSince string `json:"stable_since"`
 }
 
 // WindowOrgs is the orgs slice: every workspace and its members.
@@ -130,12 +131,12 @@ func (w *SupportWindowWatcher) Run() {
 		slog.Warn("release: could not read the release feed", "url", w.feedURL, "error", err)
 		return
 	}
-	if feed.Stable == "" || !release.StableNewer(feed.Stable, own.Version) {
+	if feed.Stable == "" || !release.Newer(feed.Stable, own.Version) {
 		return
 	}
-	cutOn, err := time.Parse("2006-01-02", feed.StableCutOn)
+	cutOn, err := time.Parse("2006-01-02", feed.StableSince)
 	if err != nil {
-		slog.Warn("release: feed stable has no cut date", "stable", feed.Stable)
+		slog.Warn("release: feed stable has no designation date", "stable", feed.Stable)
 		return
 	}
 	closes := cutOn.Add(SupportWindowDays * 24 * time.Hour)

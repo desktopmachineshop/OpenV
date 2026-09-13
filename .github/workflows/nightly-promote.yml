@@ -55,7 +55,8 @@ jobs:
           sys.path.insert(0, "scripts")
           import release_notes as rn
           head = rn.parse(rn.read("RELEASE_NOTES.md"))[0]
-          released = rn.parse(rn.read("/tmp/released-notes.md"))[0] if open("/tmp/released-notes.md").read().strip() else []
+          # What is deployed may predate a rule the notes now follow.
+          released = rn.parse(rn.read("/tmp/released-notes.md"), strict=False)[0] if open("/tmp/released-notes.md").read().strip() else []
           sys.exit(0 if [b for b in head if b not in released] else 1)
           EOF
           then

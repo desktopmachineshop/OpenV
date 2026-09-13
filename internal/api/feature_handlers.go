@@ -46,9 +46,9 @@ func (h *Handler) resolveFeatures(org *orgs.Org, userID string) featuresResponse
 	if org.ReleaseChannel == orgs.ChannelStable {
 		resp.StableRelease = org.StableRelease
 		if h.releaseService != nil {
-			if s := h.releaseService.CurrentStable(); s != nil && release.StableNewer(s.Version, org.StableRelease) {
+			if s := h.releaseService.CurrentStable(); s != nil && release.Newer(s.Version, org.StableRelease) {
 				resp.NextStableRelease = s.Version
-				if cutOn, err := time.Parse("2006-01-02", s.CutOn); err == nil {
+				if cutOn, err := time.Parse("2006-01-02", s.Since); err == nil {
 					at := orgs.UpgradeTimeFor(cutOn, org.UpgradeDay, org.UpgradeHour, org.UpgradeTimezone)
 					resp.NextStableAt = &at
 				}
@@ -57,7 +57,7 @@ func (h *Handler) resolveFeatures(org *orgs.Org, userID string) featuresResponse
 		if on, err := h.orgService.MemberPreview(org.ID, userID); err == nil && on {
 			resp.Preview = true
 			if h.releaseService != nil {
-				if s := h.releaseService.CurrentStable(); s != nil && release.StableNewer(s.Version, resp.StableRelease) {
+				if s := h.releaseService.CurrentStable(); s != nil && release.Newer(s.Version, resp.StableRelease) {
 					resp.StableRelease = s.Version
 				}
 			}

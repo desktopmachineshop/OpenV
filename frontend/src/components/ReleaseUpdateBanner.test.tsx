@@ -17,7 +17,7 @@ jest.mock('react-router-dom', () => ({
 const current = releaseAPI.current as jest.Mock;
 
 const answer = (version: string) =>
-  Promise.resolve({ data: { version, date: version, notes: [], markdown: '', history: '' } });
+  Promise.resolve({ data: { version, date: version, notes: [], categories: [], markdown: '', releases: [] } });
 
 describe('ReleaseUpdateBanner', () => {
   let container: HTMLDivElement;
@@ -54,13 +54,13 @@ describe('ReleaseUpdateBanner', () => {
   });
 
   it('offers a reload once a poll reports a newer release', async () => {
-    current.mockImplementationOnce(() => answer('2026-09-12')).mockImplementation(() => answer('2026-09-13'));
+    current.mockImplementationOnce(() => answer('0.1.0')).mockImplementation(() => answer('0.2.0'));
     await mount();
     expect(container.textContent).toBe('');
     await act(async () => {
       jest.advanceTimersByTime(RELEASE_POLL_MS);
     });
-    expect(container.textContent).toContain('OpenV has been updated (2026-09-13)');
+    expect(container.textContent).toContain('OpenV was upgraded to 0.2.0');
     expect(container.querySelector('a')?.getAttribute('href')).toBe('/whats-new');
     expect(container.querySelector('button')?.textContent).toBe('Reload');
   });

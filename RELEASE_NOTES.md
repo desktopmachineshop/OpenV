@@ -1,43 +1,49 @@
 # OpenV release notes
 
-What changed for the people who use OpenV, one release at a time. This file
-is customer-facing: write for a member of a workspace, not for a developer
-(what they can now do, what looks different, what they no longer have to do),
-and keep the internals for the pull request.
+What changed for the people who use OpenV, newest release first. Each
+release is a version number and three groups: what you can now do, what
+quietly improved, and what stopped being broken.
 
-Every pull request adds at least one bullet under **Unreleased** (CI refuses
-one that does not, unless it carries the `no-release-notes` label). When
-master is promoted to `release`, the Unreleased bullets become a dated
-section, the API serves it at `GET /api/v1/release`, and every account is
-notified that the platform has been updated.
-
-Section headings are the release version: the promotion date, with `.2`,
-`.3` … appended when there is more than one release in a day, and once a
-month a stable release `YYYY.MM` (a fix release is `YYYY.MM.1`) whose section
-opens with "Cut on <date> from <nightly>." and merges the nightlies since
-the previous stable. A bullet that starts with `fix:` is a fix and reaches
-every workspace at the next nightly; every other bullet is a change that
-stable-channel workspaces wait for. See `docs/release-policy.md`.
+Contributors: how to add to this file, and what the promotion does with it,
+is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
+
+### New features
 
 - Workspace settings show the workspace's release channel: Business and
   Enterprise workspaces are on the monthly stable channel and their admins
   can switch to nightly; Personal and Lite workspaces run nightly.
 - Stable-channel workspaces receive new features at a monthly stable
-  release instead of with every nightly; fixes still arrive with each
-  nightly. Workspace admins choose the day and hour the monthly release
-  turns on, up to 14 days after it is cut, and are told when it is cut and
-  the day before it turns on.
+  release instead of with every nightly; maintenance updates and bug fixes
+  still arrive with each nightly. Workspace admins choose the day and hour
+  the monthly release turns on, up to 14 days after it is designated, and
+  are told when it is designated and the day before it turns on.
 - Any member of a Business or Enterprise workspace can try the next stable
   release early for their own account from workspace settings.
-- What's new shows your workspace's own channel first: the stable release
-  it runs and the one scheduled next, or the nightly it runs.
+- What's new opens with your workspace's own channel: the stable release it
+  runs and the one scheduled next, or the nightly it runs; stable releases
+  are marked in the history.
 - Release notifications follow the channel: nightly-channel members hear
-  about each nightly, stable-channel members when their monthly release
+  about each release, stable-channel members when their monthly release
   turns on.
 - Dedicated OpenV instances are warned 30 and 7 days before their support
   window closes after a newer stable release, and again once it has.
+
+## 0.1.0 — 2026-09-13
+
+### New features
+
+- OpenV releases are numbered now. What's new names the version you were
+  upgraded to and keeps new features, maintenance updates and bug fixes
+  apart instead of running them together in one list, and the notification
+  that announces a release is grouped the same way.
+
+### Bug fixes
+
+- What's new shows the releases and nothing else. It was also showing the
+  notes file's instructions to contributors, and changes that had not
+  shipped yet.
 
 ## 2026-09-12.3
 

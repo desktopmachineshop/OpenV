@@ -1,19 +1,23 @@
 // Package release reads the customer-facing release notes the binary was
 // built with (RELEASE_NOTES.md at the repository root) and tells the rest of
-// the platform which release this is, which stable release exists, and what
-// changed in each.
+// the platform which release this is and what changed in it.
 //
-// The file is the source of truth for all of it: the newest nightly section
-// names the running release, the newest stable section names the stable
-// release stable-channel workspaces move to at their upgrade time, and the
-// nightly a stable was cut from decides which gated features it carries
-// (see features.go and docs/release-policy.md).
+// The file is the source of truth for both: the top section names the running
+// release, so a deployment that carries no new section is not a new release as
+// far as members are concerned, and one that does gets announced to every
+// account exactly once (see internal/notify/release.go).
+//
+// A release is a semantic version, and its notes are grouped under the three
+// headings a reader actually wants to tell apart: what is new, what was
+// tidied, what was fixed. Only the parsed structure is ever served — never the
+// file itself — because the file also carries an Unreleased section and, at
+// one point, a block of instructions for contributors that customers had no
+// business reading.
 package release
 
 import (
 	"errors"
 	"regexp"
-	"strconv"
 	"strings"
 )
 
@@ -21,73 +25,106 @@ import (
 // Promotion turns it into a dated section.
 const UnreleasedHeading = "Unreleased"
 
-// FixPrefix marks a bullet as a fix rather than a change. Fixes reach every
-// channel at the next nightly; changes are what stable-channel workspaces
-// wait for.
-const FixPrefix = "fix:"
+// versionPattern is what a release section heading must look like: a semantic
+// version, optionally followed by an em-dashed date for a reader's benefit.
+var versionPattern = regexp.MustCompile(`^(\d+\.\d+\.\d+)(?:\s+[—-]\s+(\d{4}-\d{2}-\d{2}))?$`)
 
-var (
-	// nightlyPattern is a nightly release heading: the promotion date, with
-	// .N for a second release that day.
-	nightlyPattern = regexp.MustCompile(`^(\d{4})-(\d{2})-(\d{2})(?:\.(\d+))?$`)
-	// stablePattern is a stable release heading: year.month, with .P for a
-	// fix release.
-	stablePattern = regexp.MustCompile(`^(\d{4})\.(\d{2})(?:\.(\d+))?$`)
-	// cutLinePattern is the first line of a stable section, recording when
-	// it was cut and from which nightly.
-	cutLinePattern = regexp.MustCompile(`^Cut on (\d{4}-\d{2}-\d{2}) from (\d{4}-\d{2}-\d{2}(?:\.\d+)?)\.?\s*$`)
-	headingPattern = regexp.MustCompile(`^##\s+(.+?)\s*$`)
+// legacyVersionPattern matches the date headings used before OpenV had
+// version numbers. They are kept because those releases were announced under
+// those names and rewriting them would tell customers a different story than
+// the one they were already told; nothing new is ever written in this shape.
+var legacyVersionPattern = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}(\.\d+)?$`)
+
+// semverPattern is a version heading with no date in it: what every release
+// from 0.1.0 onwards is named.
+var semverPattern = regexp.MustCompile(`^\d+\.\d+\.\d+$`)
+
+// Headline names a release the way a member is told about it. Releases from
+// before OpenV had version numbers are named by their date, and "upgraded to
+// 2026-09-12" reads as nonsense, so those keep a plainer phrasing.
+func Headline(version string) string {
+	if semverPattern.MatchString(version) {
+		return "OpenV version upgraded to " + version
+	}
+	return "OpenV update " + version
+}
+
+// Category names, in the order a reader wants them: what can I now do, what
+// quietly improved, what stopped being broken.
+const (
+	CategoryFeatures    = "New features"
+	CategoryMaintenance = "Maintenance updates"
+	CategoryFixes       = "Bug fixes"
 )
 
-// Note is one bullet of a release.
-type Note struct {
-	Text string `json:"text"`
-	// Fix marks a bullet written as "fix: …": delivered to every channel at
-	// the next nightly rather than held for a stable release.
-	Fix bool `json:"fix"`
+// CategoryOrder is every category, in reading order. A section may use any
+// subset; empty ones are not rendered.
+var CategoryOrder = []string{CategoryFeatures, CategoryMaintenance, CategoryFixes}
+
+// categorySet is CategoryOrder as a lookup.
+var categorySet = map[string]bool{
+	CategoryFeatures: true, CategoryMaintenance: true, CategoryFixes: true,
 }
 
-// Release is one nightly section of the notes.
+// IsCategory reports whether a sub-heading names one of the three groups.
+func IsCategory(heading string) bool { return categorySet[heading] }
+
+// Category is one group of notes within a release.
+type Category struct {
+	Name  string   `json:"name"`
+	Notes []string `json:"notes"`
+}
+
+// Release is one section of the notes.
 type Release struct {
-	// Version is the heading text: 2026-09-12, or 2026-09-12.2.
+	// Version is the semantic version: 0.1.0. Releases from before OpenV had
+	// version numbers carry their original date heading instead.
 	Version string `json:"version"`
-	// Date is the version without its same-day suffix.
+	// Date is the day it was promoted, when the heading names one.
 	Date string `json:"date"`
-	// Notes are the section's bullet points, without the bullet marker.
-	Notes []Note `json:"notes"`
+	// Notes are every bullet in the section, in order, whatever group they
+	// sit in. Kept flat as well as grouped because the notification and the
+	// update banner want a plain list.
+	Notes []string `json:"notes"`
+	// Categories are the section's notes grouped under their headings, in
+	// reading order, omitting any group the release had nothing for.
+	Categories []Category `json:"categories"`
 	// Markdown is the section's body as written, bullets and all.
 	Markdown string `json:"markdown"`
+	// StableSince is set when the release is a stable release: the day it
+	// was designated one, from the marker line under its heading (see
+	// stable.go). Empty for a plain nightly.
+	StableSince string `json:"stable_since,omitempty"`
 }
 
-// Stable is one stable section of the notes: a month's release, or a fix
-// release of it.
-type Stable struct {
-	// Version is the heading text: 2026.09, or 2026.09.1 for a fix release.
-	Version string `json:"version"`
-	// CutOn is the date the release was cut, from the section's first line.
-	CutOn string `json:"cut_on"`
-	// CutFrom is the nightly the release was cut from: every nightly up to
-	// and including it is part of this stable release.
-	CutFrom string `json:"cut_from"`
-	Notes   []Note `json:"notes"`
-	// Markdown is the section's body as written.
-	Markdown string `json:"markdown"`
+// Add files a bullet under a category, creating the group on first use so the
+// order follows the file rather than CategoryOrder.
+func (r *Release) Add(category, note string) {
+	r.Notes = append(r.Notes, note)
+	for i := range r.Categories {
+		if r.Categories[i].Name == category {
+			r.Categories[i].Notes = append(r.Categories[i].Notes, note)
+			return
+		}
+	}
+	r.Categories = append(r.Categories, Category{Name: category, Notes: []string{note}})
 }
 
 // Notes is the parsed file.
 type Notes struct {
 	// Unreleased holds the bullets waiting for the next promotion.
-	Unreleased []Note
-	// Releases are the nightly sections, newest first as they appear in
-	// the file.
+	Unreleased []string
+	// UnreleasedCategories is the same bullets grouped, which is what decides
+	// the size of the next version bump.
+	UnreleasedCategories []Category
+	// Releases are the dated sections, newest first as they appear in the
+	// file.
 	Releases []Release
-	// Stables are the stable sections, newest first.
-	Stables []Stable
 	// Markdown is the whole file as written.
 	Markdown string
 }
 
-// Current is the release the binary belongs to: the newest nightly section.
+// Current is the release the binary belongs to: the first dated section.
 // nil when the file has none yet.
 func (n *Notes) Current() *Release {
 	if n == nil || len(n.Releases) == 0 {
@@ -97,62 +134,83 @@ func (n *Notes) Current() *Release {
 	return &r
 }
 
-// CurrentStable is the newest stable section; nil when none has been cut.
-func (n *Notes) CurrentStable() *Stable {
-	if n == nil || len(n.Stables) == 0 {
-		return nil
+// extendLast appends to the most recent bullet, in both the flat list and the
+// group it was filed under, so a wrapped line stays one note in each.
+func (r *Release) extendLast(text string) {
+	if len(r.Notes) == 0 {
+		return
 	}
-	s := n.Stables[0]
-	return &s
-}
-
-// Stable finds a stable section by version; nil when absent.
-func (n *Notes) Stable(version string) *Stable {
-	if n == nil {
-		return nil
-	}
-	for _, s := range n.Stables {
-		if s.Version == version {
-			s := s
-			return &s
+	r.Notes[len(r.Notes)-1] += text
+	if n := len(r.Categories); n > 0 {
+		last := &r.Categories[n-1]
+		if len(last.Notes) > 0 {
+			last.Notes[len(last.Notes)-1] += text
 		}
 	}
-	return nil
+}
+
+// UnreleasedBy files a pending bullet under its category.
+func (n *Notes) UnreleasedBy(category, note string) {
+	for i := range n.UnreleasedCategories {
+		if n.UnreleasedCategories[i].Name == category {
+			n.UnreleasedCategories[i].Notes = append(n.UnreleasedCategories[i].Notes, note)
+			return
+		}
+	}
+	n.UnreleasedCategories = append(n.UnreleasedCategories, Category{Name: category, Notes: []string{note}})
+}
+
+func (n *Notes) extendLastUnreleased(text string) {
+	if c := len(n.UnreleasedCategories); c > 0 {
+		last := &n.UnreleasedCategories[c-1]
+		if len(last.Notes) > 0 {
+			last.Notes[len(last.Notes)-1] += text
+		}
+	}
 }
 
 // ErrMalformed reports a notes file the platform cannot make sense of.
 var ErrMalformed = errors.New("malformed release notes")
 
+var headingPattern = regexp.MustCompile(`^##\s+(.+?)\s*$`)
+
+// categoryPattern matches the level-three heading that opens a group.
+var categoryPattern = regexp.MustCompile(`^###\s+(.+?)\s*$`)
+
+// UncategorizedNotes is where a bullet written before any category heading is
+// filed. Legacy sections are entirely uncategorized; a new one should not be,
+// and the release-notes check refuses a pull request that leaves one that way.
+const UncategorizedNotes = "Changes"
+
 // Parse reads the notes file. Only level-two headings structure it: one
-// "Unreleased" section, nightly sections and stable sections in any order
-// (newest first by convention). Anything above the first level-two heading
-// is preamble and ignored. A heading that is none of those is an error,
-// since the version is what the platform compares to decide whether it has
-// been updated.
+// "Unreleased" section and any number of version sections. Anything above
+// the first level-two heading is preamble and ignored. A heading that is
+// neither is an error, since the version is what the platform compares to
+// decide whether it has been updated, and a level-three heading that is not
+// one of the three categories is an error too — a note filed under an
+// invented group would simply not be shown.
 func Parse(markdown string) (*Notes, error) {
 	notes := &Notes{Markdown: markdown}
 	var (
-		nightly   *Release
-		stable    *Stable
+		current   *Release
 		inPending bool
 		seen      = map[string]bool{}
 	)
 	flush := func() {
-		if nightly != nil {
-			nightly.Markdown = strings.TrimSpace(nightly.Markdown)
-			notes.Releases = append(notes.Releases, *nightly)
-			nightly = nil
-		}
-		if stable != nil {
-			stable.Markdown = strings.TrimSpace(stable.Markdown)
-			notes.Stables = append(notes.Stables, *stable)
-			stable = nil
+		if current != nil {
+			current.Markdown = strings.TrimSpace(current.Markdown)
+			notes.Releases = append(notes.Releases, *current)
+			current = nil
 		}
 		inPending = false
 	}
+	// category is the group bullets are currently being filed under. It resets
+	// at every section, so a group heading never leaks across a release.
+	category := UncategorizedNotes
 	for _, line := range strings.Split(markdown, "\n") {
 		if m := headingPattern.FindStringSubmatch(line); m != nil {
 			flush()
+			category = UncategorizedNotes
 			heading := m[1]
 			switch {
 			case heading == UnreleasedHeading:
@@ -160,68 +218,64 @@ func Parse(markdown string) (*Notes, error) {
 					return nil, errors.New("release notes: more than one Unreleased section")
 				}
 				inPending = true
-			case nightlyPattern.MatchString(heading):
+			case versionPattern.MatchString(heading):
 				if seen[heading] {
 					return nil, errors.New("release notes: version " + heading + " appears twice")
 				}
-				nightly = &Release{Version: heading, Date: strings.SplitN(heading, ".", 2)[0]}
-			case stablePattern.MatchString(heading):
+				parts := versionPattern.FindStringSubmatch(heading)
+				current = &Release{Version: parts[1], Date: parts[2]}
+			case legacyVersionPattern.MatchString(heading):
 				if seen[heading] {
 					return nil, errors.New("release notes: version " + heading + " appears twice")
 				}
-				stable = &Stable{Version: heading}
+				current = &Release{Version: heading, Date: strings.SplitN(heading, ".", 2)[0]}
 			default:
-				return nil, errors.New("release notes: heading " + heading + " is neither Unreleased, a nightly date nor a stable version")
+				return nil, errors.New("release notes: heading " + heading + " is neither Unreleased nor a version")
 			}
 			seen[heading] = true
 			continue
 		}
+		if m := categoryPattern.FindStringSubmatch(line); m != nil {
+			if !IsCategory(m[1]) {
+				return nil, errors.New("release notes: " + m[1] + " is not one of " + strings.Join(CategoryOrder, ", "))
+			}
+			category = m[1]
+			if current != nil {
+				current.Markdown += line + "\n"
+			}
+			continue
+		}
+		if current != nil && current.StableSince == "" {
+			if m := stableMarkerPattern.FindStringSubmatch(strings.TrimSpace(line)); m != nil {
+				// The marker is metadata, not a note: it names the day the
+				// release became the stable one and stays out of the body.
+				current.StableSince = m[1]
+				continue
+			}
+		}
 		bullet, isBullet := bulletText(line)
 		continues := !isBullet && isContinuation(line)
 		switch {
-		case nightly != nil:
-			nightly.Markdown += line + "\n"
-			nightly.Notes = appendNote(nightly.Notes, bullet, isBullet, continues, line)
-		case stable != nil:
-			stable.Markdown += line + "\n"
-			if m := cutLinePattern.FindStringSubmatch(strings.TrimSpace(line)); m != nil && stable.CutOn == "" {
-				stable.CutOn, stable.CutFrom = m[1], m[2]
-				continue
+		case current != nil:
+			current.Markdown += line + "\n"
+			if isBullet {
+				current.Add(category, bullet)
+			} else if continues && len(current.Notes) > 0 {
+				current.extendLast(" " + strings.TrimSpace(line))
 			}
-			stable.Notes = appendNote(stable.Notes, bullet, isBullet, continues, line)
-		case inPending:
-			notes.Unreleased = appendNote(notes.Unreleased, bullet, isBullet, continues, line)
+		case inPending && isBullet:
+			notes.Unreleased = append(notes.Unreleased, bullet)
+			notes.UnreleasedBy(category, bullet)
+		case inPending && continues && len(notes.Unreleased) > 0:
+			notes.Unreleased[len(notes.Unreleased)-1] += " " + strings.TrimSpace(line)
+			notes.extendLastUnreleased(" " + strings.TrimSpace(line))
 		}
 	}
 	flush()
-	if len(notes.Releases) == 0 && len(notes.Stables) == 0 && !seen[UnreleasedHeading] {
+	if len(notes.Releases) == 0 && !seen[UnreleasedHeading] {
 		return nil, ErrMalformed
 	}
-	for _, s := range notes.Stables {
-		if s.CutFrom == "" {
-			return nil, errors.New("release notes: stable " + s.Version + " has no 'Cut on … from …' line")
-		}
-	}
 	return notes, nil
-}
-
-// appendNote adds a bullet, or joins a wrapped line onto the last one.
-func appendNote(notes []Note, bullet string, isBullet, continues bool, line string) []Note {
-	switch {
-	case isBullet:
-		return append(notes, classify(bullet))
-	case continues && len(notes) > 0:
-		notes[len(notes)-1].Text += " " + strings.TrimSpace(line)
-	}
-	return notes
-}
-
-// classify reads the fix marker off a bullet.
-func classify(text string) Note {
-	if len(text) >= len(FixPrefix) && strings.EqualFold(text[:len(FixPrefix)], FixPrefix) {
-		return Note{Text: strings.TrimSpace(text[len(FixPrefix):]), Fix: true}
-	}
-	return Note{Text: text}
 }
 
 // isContinuation reports whether a line carries on the bullet above it: a
@@ -241,83 +295,23 @@ func bulletText(line string) (string, bool) {
 	return "", false
 }
 
-// NightlyKey orders nightly versions: (year, month, day, n). ok is false
-// for anything that is not a nightly version.
-func NightlyKey(version string) (key [4]int, ok bool) {
-	m := nightlyPattern.FindStringSubmatch(version)
-	if m == nil {
-		return key, false
-	}
-	key[0], _ = strconv.Atoi(m[1])
-	key[1], _ = strconv.Atoi(m[2])
-	key[2], _ = strconv.Atoi(m[3])
-	key[3] = 1
-	if m[4] != "" {
-		key[3], _ = strconv.Atoi(m[4])
-	}
-	return key, true
-}
-
-// StableKey orders stable versions: (year, month, patch).
-func StableKey(version string) (key [3]int, ok bool) {
-	m := stablePattern.FindStringSubmatch(version)
-	if m == nil {
-		return key, false
-	}
-	key[0], _ = strconv.Atoi(m[1])
-	key[1], _ = strconv.Atoi(m[2])
-	if m[3] != "" {
-		key[2], _ = strconv.Atoi(m[3])
-	}
-	return key, true
-}
-
-// NightlyAtOrBefore reports whether nightly version a is the same as, or
-// older than, nightly version b. Unparseable versions compare as newer, so
-// a typo never sneaks a feature past a gate.
-func NightlyAtOrBefore(a, b string) bool {
-	ka, okA := NightlyKey(a)
-	kb, okB := NightlyKey(b)
-	if !okA || !okB {
-		return false
-	}
-	for i := range ka {
-		if ka[i] != kb[i] {
-			return ka[i] < kb[i]
-		}
-	}
-	return true
-}
-
-// StableNewer reports whether stable version a is newer than b. An empty
-// or unparseable b counts as older than any real a.
-func StableNewer(a, b string) bool {
-	ka, okA := StableKey(a)
-	if !okA {
-		return false
-	}
-	kb, okB := StableKey(b)
-	if !okB {
-		return true
-	}
-	for i := range ka {
-		if ka[i] != kb[i] {
-			return ka[i] > kb[i]
-		}
-	}
-	return false
-}
-
-// Service is what the API, the announcer and the feature gate need.
+// Service is what the API, the announcer and the stable scheduler need: the
+// current release, the whole history, and the stable releases within it.
 type Service interface {
-	// Current is the running nightly release; nil when the notes have none.
+	// Current is the running release; nil when the notes have none.
 	Current() *Release
-	// CurrentStable is the newest stable release; nil when none is cut.
+	// Released is every release, newest first, for a What's new page.
+	//
+	// Deliberately not the file: it also holds the Unreleased section and
+	// whatever guidance for contributors happens to sit at the top, and
+	// serving it whole once put both in front of customers.
+	Released() []Release
+	// CurrentStable is the newest stable release; nil until one is
+	// designated.
 	CurrentStable() *Stable
-	// Stable looks a stable release up by version; nil when absent.
+	// Stable looks a stable release up by version; nil when the notes do
+	// not name it as one.
 	Stable(version string) *Stable
-	// Markdown is the whole notes file, for a What's new page.
-	Markdown() string
 }
 
 // DefaultService serves one parsed file.
@@ -343,11 +337,18 @@ func Empty() *DefaultService { return &DefaultService{notes: &Notes{}} }
 // Current implements Service.
 func (s *DefaultService) Current() *Release { return s.notes.Current() }
 
+// Released implements Service.
+func (s *DefaultService) Released() []Release {
+	if s == nil || s.notes == nil {
+		return nil
+	}
+	out := make([]Release, len(s.notes.Releases))
+	copy(out, s.notes.Releases)
+	return out
+}
+
 // CurrentStable implements Service.
 func (s *DefaultService) CurrentStable() *Stable { return s.notes.CurrentStable() }
 
 // Stable implements Service.
 func (s *DefaultService) Stable(version string) *Stable { return s.notes.Stable(version) }
-
-// Markdown implements Service.
-func (s *DefaultService) Markdown() string { return s.notes.Markdown }

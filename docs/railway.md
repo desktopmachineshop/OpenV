@@ -277,29 +277,49 @@ branch instead:
   that push.
 - **Every release says what changed.** `RELEASE_NOTES.md` at the repository
   root is customer-facing: each pull request adds a bullet under
-  `## Unreleased` (the *Release notes* CI job refuses a PR that adds none,
-  unless it carries the `no-release-notes` label), and the promotion moves
-  those bullets into a dated section — `2026-09-12`, then `2026-09-12.2`
-  for a second release that day — committed to master before `release` is
-  pushed. A master whose notes name nothing newer than what `release`
-  already carries is refused. The API embeds the file: `GET /api/v1/release`
-  reports the running version and notes, the first server to boot on a new
-  release notifies every nightly-channel account (`release_published`),
-  and open tabs poll the version and offer a reload. `scripts/release_notes.py`
-  (stdlib Python) is the one implementation of these rules: `check`,
-  `check-pr`, `cut`, `check-release`, `version`, `stable-version`,
-  `cut-stable`.
-- **Stable releases** (`docs/release-policy.md`): the **Cut stable release**
-  workflow (`.github/workflows/cut-stable.yml`) runs at 06:00 UTC on the
-  first working day of the month, cuts `YYYY.MM` from the newest nightly
-  that has served for seven days, merges the nightlies' notes into its
-  section, commits to master and promotes. Run it by hand with `fix: true`
-  to cut `YYYY.MM.P` from the newest nightly at once. The API's stable
-  scheduler then moves each stable-channel workspace to it at that
-  workspace's upgrade window.
+  `## Unreleased`, grouped under `### New features`, `### Maintenance
+  updates` or `### Bug fixes` (the *Release notes* CI job refuses a PR that
+  adds none, unless it carries the `no-release-notes` label). The promotion
+  moves those bullets into a new section headed by a semantic version and
+  the date — `## 0.2.0 — 2026-09-13` — committed to master before `release`
+  is pushed. **The version is derived from the notes**: a release carrying
+  anything under *New features* is a minor bump, one of only maintenance and
+  fixes is a patch, and a major bump is the workflow's `major` input; the
+  first release is `0.1.0`. Sections headed by a date alone are the releases
+  from before OpenV had version numbers — read, never written, because they
+  were announced under those names. A master whose notes name nothing newer
+  than what `release` already carries is refused. The API embeds the file:
+  `GET /api/v1/release` reports the running version and the parsed releases
+  (never the file itself, which also holds what has not shipped), the first
+  server to boot on a new release notifies every nightly-channel account
+  (`release_published`), and open tabs poll the version and offer a reload.
+  `scripts/release_notes.py` (stdlib Python) is the one implementation of
+  these rules: `check`, `check-pr`, `cut`, `check-release`, `version`,
+  `next`, `stable-version`, `cut-stable`.
+- **Stable releases** (`docs/release-policy.md`): a stable release is one
+  of the releases above, designated by a marker line under its heading —
+  `Stable channel release since 2026-10-01.` — once it has served the
+  nightly channel for seven days. The **Cut stable release** workflow
+  (`.github/workflows/cut-stable.yml`) runs at 06:00 UTC on the first
+  working day of the month: it cuts anything still under Unreleased as a
+  release first, designates the newest release that has soaked and is newer
+  than the current stable, commits to master and promotes. Run it by hand
+  with `fix: true` to designate the newest release at once. The API's
+  stable scheduler then moves each stable-channel workspace to it at that
+  workspace's upgrade window, with the notes of every release since the
+  previous stable merged group by group.
 - **Nightly automation**: the **Nightly promotion** workflow
   (`.github/workflows/nightly-promote.yml`) runs at 03:00 UTC and is a
   no-op until staging exists (below).
+- Rollback: `git push origin <known-good-sha>:release --force-with-lease`
+  redeploys an earlier build (the API's schema migrations are forward-only,
+  so only roll back across releases without new migrations), or use
+  Railway's per-service deployment history to redeploy a previous image.
+
+Set each Railway service's **Settings → Source → Branch** to `release`
+(create the branch first: `git push origin master:release`). The
+promotion workflow needs no Railway-side configuration — Railway just sees
+a normal push to the connected branch.
 
 ## Staging
 
@@ -319,20 +339,11 @@ release use a staging copy of their own instance in the same way.
 
 A dedicated instance is this same deployment with `OPENV_DEPLOYMENT=dedicated`,
 connected to a stable release rather than `release` (check out the commit
-that cut it) and upgraded on the customer's date. It reads the shared
-service's public release feed (`OPENV_RELEASE_FEED_URL`, default
+that designated it) and upgraded on the customer's date. It reads the
+shared service's public release feed (`OPENV_RELEASE_FEED_URL`, default
 `https://openv-production.up.railway.app/api/v1/public/release`) once a day
 and warns every workspace's admins 30 and 7 days before its 90-day support
 window closes, and once more when it has.
-- Rollback: `git push origin <known-good-sha>:release --force-with-lease`
-  redeploys an earlier build (the API's schema migrations are forward-only,
-  so only roll back across releases without new migrations), or use
-  Railway's per-service deployment history to redeploy a previous image.
-
-Set each Railway service's **Settings → Source → Branch** to `release`
-(create the branch first: `git push origin master:release`). The
-promotion workflow needs no Railway-side configuration — Railway just sees
-a normal push to the connected branch.
 
 ## Notes and limitations on Railway
 

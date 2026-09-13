@@ -68,19 +68,23 @@ Railway deploys the `release` branch, not `master`. Merges to `master`
 deploy nothing; shipping means running the **Promote to release** workflow
 (`.github/workflows/promote-release.yml`). See `docs/railway.md`.
 
-The release structure (nightly and stable channels, calendar versions,
-staging, what each plan gets) is `docs/release-policy.md`.
-
 Every pull request adds a customer-facing bullet under `## Unreleased` in
 `RELEASE_NOTES.md` (what a workspace member will notice, not how it was
-built); the *Release notes* CI job refuses one that does not, unless the PR
-carries the `no-release-notes` label. A fix starts with `fix:`; any other
-bullet is a change, and a user-visible change registers a feature key in
-`internal/domain/release/features.go` with the nightly it ships in and
-gates its code and UI on it, so stable-channel workspaces receive it at
-their monthly release. Promotion cuts the bullets into the dated section
-the app announces; the monthly *Cut stable release* workflow cuts the
-stable release.
+built), filed under `### New features`, `### Maintenance updates` or
+`### Bug fixes`; the *Release notes* CI job refuses one that does not, or
+one that sits under no group, unless the PR carries the `no-release-notes`
+label. Promotion cuts those bullets into a new semantic-version section the
+app announces to every account, and the group they are in decides the bump:
+a new feature is a minor release, maintenance and fixes alone are a patch.
+See `CONTRIBUTING.md` for the shape and `docs/railway.md` for the pipeline.
+
+The release structure (nightly and stable channels, staging, what each plan
+gets) is `docs/release-policy.md`. A bullet under `### New features` is a
+change stable-channel workspaces wait for: it registers a feature key in
+`internal/domain/release/features.go` with the version it ships in and
+gates its code and UI on that key. The monthly *Cut stable release*
+workflow designates a soaked release as the stable one by a marker line
+under its heading; nothing else about the notes changes.
 
 **Never run Promote to release without the maintainer explicitly asking for
 that release.** Each promotion rebuilds both Railway services, which

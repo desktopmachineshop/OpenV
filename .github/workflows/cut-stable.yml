@@ -1,14 +1,15 @@
-# Stable release (docs/release-policy.md): once a month, the newest nightly
-# that has served the nightly channel for at least seven days becomes the
-# stable release YYYY.MM, with the notes of every nightly since the previous
-# stable merged into its section of RELEASE_NOTES.md. The cut is committed
-# to master and promoted, so the API boots on it and moves stable-channel
-# workspaces to it at their upgrade windows (REQ-135, REQ-138, REQ-140).
+# Stable release (docs/release-policy.md): once a month, the newest release
+# that has served the nightly channel for at least seven days is designated
+# the stable release by a marker line under its heading in RELEASE_NOTES.md
+# ("Stable channel release since <date>."). The designation is committed to
+# master and promoted, so the API boots on it and moves stable-channel
+# workspaces to it at their upgrade windows, with the notes of every release
+# since the previous stable (REQ-135, REQ-138, REQ-140).
 #
 # Schedule: 06:00 UTC on the 1st, 2nd and 3rd of the month; the script cuts
 # on the first of those that is a working day and is a no-op afterwards.
-# Manual runs cut on any day, and `fix: true` cuts YYYY.MM.P from the newest
-# nightly with no soak, for a security or urgent fix.
+# Manual runs designate on any day, and `fix: true` takes the newest release
+# with no soak, for a security or urgent fix.
 #
 # Guard rails are the promotion's: master CI must be green, and the push to
 # release is a fast-forward.
@@ -21,7 +22,7 @@ on:
   workflow_dispatch:
     inputs:
       fix:
-        description: "Cut a fix release (YYYY.MM.P) from the newest nightly, without the seven-day soak"
+        description: "Designate the newest release as stable at once, without the seven-day soak"
         type: boolean
         default: false
 
@@ -58,9 +59,10 @@ jobs:
             exit 1
           fi
 
-      # Anything still under Unreleased becomes a nightly first, so the
-      # stable's "cut from" nightly and the nightly channel agree on what
-      # exists; that nightly is too new to soak and waits for next month.
+      # Anything still under Unreleased becomes a release first, so the
+      # nightly channel and the stable designation agree on what exists;
+      # that release is too new to soak and waits for next month (a fix run
+      # takes it at once).
       - name: Cut the release notes
         id: cut
         env:
@@ -71,17 +73,17 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           if python3 scripts/release_notes.py cut RELEASE_NOTES.md; then
             git add RELEASE_NOTES.md
-            git commit -m "Cut release notes $(python3 scripts/release_notes.py version RELEASE_NOTES.md)"
+            git commit -m "Release $(python3 scripts/release_notes.py version RELEASE_NOTES.md)"
           fi
           before=$(python3 scripts/release_notes.py stable-version RELEASE_NOTES.md)
           python3 scripts/release_notes.py cut-stable $FIX $SCHEDULED RELEASE_NOTES.md
           after=$(python3 scripts/release_notes.py stable-version RELEASE_NOTES.md)
           if [ "$before" = "$after" ]; then
             echo "cut=false" >> "$GITHUB_OUTPUT"
-            echo "No stable release cut."
+            echo "No stable release designated."
           else
             git add RELEASE_NOTES.md
-            git commit -m "Cut stable release $after"
+            git commit -m "Stable release $after"
             echo "cut=true" >> "$GITHUB_OUTPUT"
           fi
 

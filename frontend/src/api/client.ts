@@ -1744,32 +1744,56 @@ export const qualityRulesAPI = {
     client.put<QualityRules>(`/api/v1/orgs/${orgId}/quality-rules`, payload),
 };
 
-// The running release (RELEASE_NOTES.md as built into the API): version,
-// its customer-facing bullets, and the whole history for the What's new
-// page. Uncached, so an open tab can notice a newer release behind the same
-// URL.
-export interface ReleaseNote {
-  text: string;
-  // A "fix:" bullet: delivered to every channel at the next nightly.
-  fix: boolean;
+// The running release as the API parsed it out of the notes it was built
+// with: the version, its bullets grouped for a reader, and every earlier
+// release for the What's new page. Uncached, so an open tab can notice a
+// newer release behind the same URL.
+/** One group of notes within a release: New features, Bug fixes, and so on. */
+export interface ReleaseCategory {
+  name: string;
+  notes: string[];
 }
 
+/** One release, as the server parsed it out of the notes it was built with. */
+export interface ReleaseEntry {
+  version: string;
+  date: string;
+  notes: string[];
+  categories: ReleaseCategory[];
+  markdown: string;
+  /** Set when the release is a stable release: the day it became one. */
+  stable_since?: string;
+}
+
+/**
+ * The newest stable release (docs/release-policy.md): one of the releases,
+ * designated once it has soaked, with the notes of every release since the
+ * previous stable one merged group by group.
+ */
 export interface StableRelease {
   version: string;
-  cut_on: string;
-  cut_from: string;
-  notes: ReleaseNote[];
-  markdown: string;
+  since: string;
+  previous: string;
+  notes: string[];
+  categories: ReleaseCategory[];
 }
 
 export interface ReleaseInfo {
   version: string;
   date: string;
-  notes: ReleaseNote[];
+  notes: string[];
+  categories: ReleaseCategory[];
   markdown: string;
-  history: string;
-  // The newest stable release; null until one is cut.
+  /**
+   * Every release, newest first. The server sends the parsed sections, not
+   * the notes file: the file also carries what has not shipped yet, which is
+   * nobody's business but a contributor's.
+   */
+  releases: ReleaseEntry[];
+  /** The newest stable release; null until one is designated. */
   stable: StableRelease | null;
+  /** Whether this is the shared service or a dedicated instance. */
+  deployment: 'shared' | 'dedicated';
 }
 
 // The caller's feature gates in one workspace (REQ-137): resolved from the

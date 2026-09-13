@@ -39,13 +39,13 @@ func watcherFixture(t *testing.T, feed string, own *release.Stable) (*SupportWin
 	return w, store, srv
 }
 
-// TestSupportWindowWarnsAt30And7DaysAndOnClose: with 2026.10 cut on
-// 2026-10-01 the window closes on 2026-12-30; an instance on 2026.09 is
+// TestSupportWindowWarnsAt30And7DaysAndOnClose: with 0.4.0 designated on
+// 2026-10-01 the window closes on 2026-12-30; an instance on 0.3.0 is
 // warned once inside 30 days, once inside 7, and once after the close, and
 // only its admins are.
 func TestSupportWindowWarnsAt30And7DaysAndOnClose(t *testing.T) {
-	feed := `{"nightly":"2026-10-15","stable":"2026.10","stable_cut_on":"2026-10-01"}`
-	w, store, _ := watcherFixture(t, feed, &release.Stable{Version: "2026.09", CutOn: "2026-09-01", CutFrom: "2026-08-25"})
+	feed := `{"version":"0.5.0","stable":"0.4.0","stable_since":"2026-10-01"}`
+	w, store, _ := watcherFixture(t, feed, &release.Stable{Version: "0.3.0", Since: "2026-09-01"})
 
 	w.now = func() time.Time { return time.Date(2026, 11, 15, 0, 0, 0, 0, time.UTC) }
 	w.Run()
@@ -74,8 +74,8 @@ func TestSupportWindowWarnsAt30And7DaysAndOnClose(t *testing.T) {
 // TestSupportWindowQuietWhenCurrent: an instance on the feed's stable, or
 // with no stable at all, is never warned.
 func TestSupportWindowQuietWhenCurrent(t *testing.T) {
-	feed := `{"nightly":"2026-10-15","stable":"2026.10","stable_cut_on":"2026-10-01"}`
-	w, store, _ := watcherFixture(t, feed, &release.Stable{Version: "2026.10", CutOn: "2026-10-01", CutFrom: "2026-09-24"})
+	feed := `{"version":"0.5.0","stable":"0.4.0","stable_since":"2026-10-01"}`
+	w, store, _ := watcherFixture(t, feed, &release.Stable{Version: "0.4.0", Since: "2026-10-01"})
 	w.now = func() time.Time { return time.Date(2027, 3, 1, 0, 0, 0, 0, time.UTC) }
 	w.Run()
 	if len(store.rows) != 0 {

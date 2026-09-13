@@ -44,9 +44,19 @@ func (f *fakeStableOrgs) SetStableRelease(id, version string) (*orgs.Org, error)
 type fakeReleases struct{ stable *release.Stable }
 
 func (f fakeReleases) Current() *release.Release      { return nil }
+func (f fakeReleases) Released() []release.Release    { return nil }
 func (f fakeReleases) CurrentStable() *release.Stable { return f.stable }
 func (f fakeReleases) Stable(string) *release.Stable  { return f.stable }
-func (f fakeReleases) Markdown() string               { return "" }
+
+// stableOf builds a stable the way the parser does: a merged, grouped set
+// of notes and the day it was designated.
+func stableOf(version, since string, groups ...release.Category) *release.Stable {
+	s := &release.Stable{Version: version, Since: since, Categories: groups}
+	for _, g := range groups {
+		s.Notes = append(s.Notes, g.Notes...)
+	}
+	return s
+}
 
 func schedulerFixture(stable *release.Stable, list []*orgs.Org) (*StableScheduler, *fakeStableOrgs, *captureStore) {
 	store := &captureStore{}
@@ -75,18 +85,18 @@ func rowsOf(store *captureStore, userID, ntype string) []*notifications.Notifica
 // moves at once; its admins get the cut notice, every member the release,
 // and a second run repeats nothing.
 func TestSchedulerTurnsOnAtTheCutWithoutAWindow(t *testing.T) {
-	stable := &release.Stable{Version: "2026.10", CutOn: "2026-10-01", CutFrom: "2026-09-24", Notes: []release.Note{{Text: "A"}, {Text: "B", Fix: true}}}
+	stable := stableOf("0.4.0", "2026-10-01", release.Category{Name: release.CategoryFeatures, Notes: []string{"A"}}, release.Category{Name: release.CategoryFixes, Notes: []string{"B"}})
 	org := &orgs.Org{ID: "o1", Name: "Acme", Plan: orgs.PlanBusiness}
 	s, o, store := schedulerFixture(stable, []*orgs.Org{org})
 	s.now = func() time.Time { return time.Date(2026, 10, 1, 9, 0, 0, 0, time.UTC) }
 	s.Run()
-	if o.turned["o1"] != "2026.10" {
+	if o.turned["o1"] != "0.4.0" {
 		t.Fatalf("not turned on: %v", o.turned)
 	}
-	if got := rowsOf(store, "o1-admin", notifications.TypeReleaseScheduled); len(got) != 1 || !strings.Contains(got[0].Body, "turns on for the workspace now") {
+	if got := rowsOf(store, "o1-admin", notifications.TypeReleaseScheduled); len(got) != 1 || !strings.Contains(got[0].Body, "turns on for the workspace now") || !strings.Contains(got[0].Body, "1 new feature(s) and 1 other change(s)") {
 		t.Fatalf("admin cut notice = %+v", got)
 	}
-	if got := rowsOf(store, "o1-member", notifications.TypeReleasePublished); len(got) != 1 || !strings.Contains(got[0].Title, "moved to stable release 2026.10") || !strings.Contains(got[0].Body, "• A\n• Fix: B") {
+	if got := rowsOf(store, "o1-member", notifications.TypeReleasePublished); len(got) != 1 || !strings.Contains(got[0].Title, "moved to stable release 0.4.0") || !strings.Contains(got[0].Body, "New features\n• A\nBug fixes\n• B") {
 		t.Fatalf("member release = %+v", got)
 	}
 	if got := rowsOf(store, "o1-member", notifications.TypeReleaseScheduled); len(got) != 0 {
@@ -103,7 +113,7 @@ func TestSchedulerTurnsOnAtTheCutWithoutAWindow(t *testing.T) {
 // Europe/London the release waits; the admins hear at the cut, are reminded
 // the day before, and the members hear at the turn-on. Nothing repeats.
 func TestSchedulerHonoursTheWindow(t *testing.T) {
-	stable := &release.Stable{Version: "2026.10", CutOn: "2026-10-01", CutFrom: "2026-09-24", Notes: []release.Note{{Text: "A"}}}
+	stable := stableOf("0.4.0", "2026-10-01", release.Category{Name: release.CategoryFeatures, Notes: []string{"A"}})
 	org := &orgs.Org{ID: "o1", Name: "Acme", Plan: orgs.PlanBusiness, UpgradeDay: 10, UpgradeHour: 9, UpgradeTimezone: "Europe/London"}
 	s, o, store := schedulerFixture(stable, []*orgs.Org{org})
 	london, _ := time.LoadLocation("Europe/London")
@@ -129,7 +139,7 @@ func TestSchedulerHonoursTheWindow(t *testing.T) {
 
 	s.now = func() time.Time { return time.Date(2026, 10, 10, 9, 0, 0, 0, london) }
 	s.Run()
-	if o.turned["o1"] != "2026.10" {
+	if o.turned["o1"] != "0.4.0" {
 		t.Fatalf("not turned on at the window")
 	}
 	if got := rowsOf(store, "o1-member", notifications.TypeReleasePublished); len(got) != 1 {
@@ -140,8 +150,8 @@ func TestSchedulerHonoursTheWindow(t *testing.T) {
 // TestSchedulerSkipsWorkspacesAlreadyOnTheRelease: nothing happens for a
 // workspace already on the newest stable, or when no stable exists.
 func TestSchedulerSkipsWorkspacesAlreadyOnTheRelease(t *testing.T) {
-	stable := &release.Stable{Version: "2026.10", CutOn: "2026-10-01", CutFrom: "2026-09-24"}
-	org := &orgs.Org{ID: "o1", Plan: orgs.PlanBusiness, StableRelease: "2026.10"}
+	stable := stableOf("0.4.0", "2026-10-01")
+	org := &orgs.Org{ID: "o1", Plan: orgs.PlanBusiness, StableRelease: "0.4.0"}
 	s, _, store := schedulerFixture(stable, []*orgs.Org{org})
 	s.Run()
 	if len(store.rows) != 0 {

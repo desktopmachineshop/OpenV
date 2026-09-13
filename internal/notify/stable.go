@@ -14,8 +14,9 @@ import (
 
 // Stable releases and the upgrade window (REQ-138, REQ-140).
 //
-// A stable release exists once the notes the binary was built with name it.
-// For every stable-channel workspace the scheduler then does three things,
+// A stable release exists once the notes the binary was built with mark a
+// release as one (release.StableMarker). For every stable-channel
+// workspace the scheduler then does three things,
 // each once (the release_schedule table holds the claims): tells the
 // admins the release is cut and when it turns on for them, reminds them a
 // day before, and at the turn-on time records the release on the workspace
@@ -89,9 +90,9 @@ func (s *StableScheduler) Run() {
 	if stable == nil {
 		return
 	}
-	cutOn, err := time.Parse("2006-01-02", stable.CutOn)
+	cutOn, err := time.Parse("2006-01-02", stable.Since)
 	if err != nil {
-		slog.Error("release: stable has no usable cut date", "version", stable.Version, "cut_on", stable.CutOn)
+		slog.Error("release: stable has no usable designation date", "version", stable.Version, "since", stable.Since)
 		return
 	}
 	list, err := s.orgs.ListOrgsByChannel(orgs.ChannelStable)
@@ -101,7 +102,7 @@ func (s *StableScheduler) Run() {
 	}
 	now := s.now()
 	for _, org := range list {
-		if !release.StableNewer(stable.Version, org.StableRelease) {
+		if !release.Newer(stable.Version, org.StableRelease) {
 			continue
 		}
 		turnOn := orgs.UpgradeTimeFor(cutOn, org.UpgradeDay, org.UpgradeHour, org.UpgradeTimezone)
@@ -160,8 +161,8 @@ func (s *StableScheduler) turnOn(org *orgs.Org, stable *release.Stable, now time
 		slog.Error("release: failed to list members for a stable release", "org_id", org.ID, "error", err)
 		return
 	}
-	title, body := ReleaseMessage(stable.Version, stable.Notes)
-	title = fmt.Sprintf("%s moved to stable release %s", org.Name, stable.Version)
+	_, body := ReleaseMessage(stable.Release())
+	title := fmt.Sprintf("%s moved to stable release %s", org.Name, stable.Version)
 	ref := map[string]interface{}{"kind": "release", "version": stable.Version, "org_id": org.ID}
 	count := 0
 	for _, m := range members {
@@ -204,23 +205,24 @@ func (s *StableScheduler) notifyAdmins(org *orgs.Org, ntype, title, body, versio
 	}
 }
 
-// previewLine is the one-line summary of what a stable release brings.
+// previewLine is the one-line summary of what a stable release brings:
+// how many new features, and how many other changes.
 func previewLine(stable *release.Stable) string {
-	changes := 0
-	fixes := 0
-	for _, n := range stable.Notes {
-		if n.Fix {
-			fixes++
+	features := 0
+	others := 0
+	for _, c := range stable.Categories {
+		if c.Name == release.CategoryFeatures {
+			features += len(c.Notes)
 		} else {
-			changes++
+			others += len(c.Notes)
 		}
 	}
 	parts := []string{}
-	if changes > 0 {
-		parts = append(parts, fmt.Sprintf("%d change(s)", changes))
+	if features > 0 {
+		parts = append(parts, fmt.Sprintf("%d new feature(s)", features))
 	}
-	if fixes > 0 {
-		parts = append(parts, fmt.Sprintf("%d fix(es)", fixes))
+	if others > 0 {
+		parts = append(parts, fmt.Sprintf("%d other change(s)", others))
 	}
 	if len(parts) == 0 {
 		return "See What's new for details."

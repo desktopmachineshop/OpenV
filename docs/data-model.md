@@ -101,7 +101,7 @@ Cookie sessions: `user_id`, `token_hash` (unique), `expires_at`,
 effective project role is the max of this and any people-team grant.
 
 ### release_announcements
-`version` (primary key, the release named by the top dated section of
+`version` (primary key, the release named by the top section of
 `RELEASE_NOTES.md`) → `announced_at` (0034). The row is the claim that a
 release has been announced to every account: the first server to insert it
 wins and fans out `release_published`; a restart or another replica finds
