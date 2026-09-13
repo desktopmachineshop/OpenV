@@ -15,6 +15,29 @@ import (
 
 func (h *Handler) registerReleaseRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/release", h.GetRelease).Methods("GET")
+	router.HandleFunc("/api/v1/public/release", h.GetPublicRelease).Methods("GET")
+}
+
+// GetPublicRelease is the release feed dedicated instances poll (REQ-139):
+// the running nightly and the newest stable with its cut date, and nothing
+// else. Open, since it says only what any member could read.
+func (h *Handler) GetPublicRelease(w http.ResponseWriter, r *http.Request) {
+	feed := struct {
+		Nightly     string `json:"nightly"`
+		Stable      string `json:"stable"`
+		StableCutOn string `json:"stable_cut_on"`
+	}{}
+	if h.releaseService != nil {
+		if cur := h.releaseService.Current(); cur != nil {
+			feed.Nightly = cur.Version
+		}
+		if s := h.releaseService.CurrentStable(); s != nil {
+			feed.Stable, feed.StableCutOn = s.Version, s.CutOn
+		}
+	}
+	w.Header().Set("Cache-Control", "public, max-age=300")
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(feed)
 }
 
 // releaseResponse is the current release plus the whole notes history.
@@ -28,6 +51,8 @@ type releaseResponse struct {
 	History  string `json:"history"`
 	// Stable is the newest stable release, nil until one is cut.
 	Stable *release.Stable `json:"stable"`
+	// Deployment is "shared" or "dedicated" (OPENV_DEPLOYMENT).
+	Deployment string `json:"deployment"`
 }
 
 // GetRelease answers the release the server is running and its notes.
@@ -36,7 +61,10 @@ func (h *Handler) GetRelease(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusUnauthorized, "authentication required")
 		return
 	}
-	resp := releaseResponse{Notes: []release.Note{}}
+	resp := releaseResponse{Notes: []release.Note{}, Deployment: h.deploymentKind}
+	if resp.Deployment == "" {
+		resp.Deployment = "shared"
+	}
 	if h.releaseService != nil {
 		resp.History = h.releaseService.Markdown()
 		if cur := h.releaseService.Current(); cur != nil {

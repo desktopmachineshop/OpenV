@@ -576,6 +576,8 @@ func main() {
 	// account is told about, once per release, when a server first boots on
 	// it. A notes file that fails to parse is logged and serves an empty
 	// release rather than keeping the API down over documentation.
+	deploymentKind := envOr("OPENV_DEPLOYMENT", "shared")
+	releaseFeedURL := envOr("OPENV_RELEASE_FEED_URL", "https://openv-production.up.railway.app/api/v1/public/release")
 	releaseService, err := release.NewService(openv.ReleaseNotesMarkdown)
 	if err != nil {
 		slog.Error("release notes failed to parse; serving no release", "error", err)
@@ -595,6 +597,15 @@ func main() {
 			SetEmailDispatcher(emailDispatcher).
 			SetPushDispatcher(pushDispatcher).
 			Start(ctx, time.Hour)
+		// A dedicated instance (OPENV_DEPLOYMENT=dedicated) is supported for
+		// 90 days after the next stable is cut on the shared service; it
+		// reads the public release feed daily and warns admins (REQ-139).
+		if deploymentKind == "dedicated" {
+			notify.NewSupportWindowWatcher(releaseFeedURL, releaseService, orgService, releaseRepo, notificationService, sseHub).
+				SetEmailDispatcher(emailDispatcher).
+				SetPushDispatcher(pushDispatcher).
+				Start(ctx, 24*time.Hour)
+		}
 	}
 
 	// Optional over-budget soft-block (default OFF — warn-only). When
@@ -733,6 +744,7 @@ func main() {
 		EvidenceService:      evidenceService,
 		SettingsService:      settingsService,
 		ReleaseService:       releaseService,
+		DeploymentKind:       deploymentKind,
 		WorkItemService:      workItemService,
 		GuidedService:        guidedService,
 		InterviewService:     interviewService,

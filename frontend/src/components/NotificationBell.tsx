@@ -35,6 +35,8 @@ const pathForNotification = (n: AppNotification): string => {
   if (ref.kind === 'org_usage') return '/org/settings?tab=usage';
   // A platform release is not scoped to anything: it opens the notes.
   if (ref.kind === 'release') return '/whats-new';
+  // A dedicated instance leaving its support window is a workspace matter.
+  if (ref.kind === 'support_window') return '/org/settings';
   // Membership and privilege changes land on the people list they are about:
   // the workspace's members tab, or the project's own.
   if (ref.kind === 'membership') return '/org/settings?tab=members';
