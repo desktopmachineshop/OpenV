@@ -1263,6 +1263,10 @@ func (h *Handler) CreateLink(w http.ResponseWriter, r *http.Request) {
 	// writes on the parent side is the link snapshot, which is the point.
 	targetRole := members.RoleEditor
 	if req.Type == links.TypeRefines {
+		if !h.projectFeatureEnabled(r, projectID, release.FeatureFlowDown) {
+			writeJSONError(w, http.StatusForbidden, featureGateMessage)
+			return
+		}
 		targetRole = members.RoleViewer
 	}
 	if toArtifact != nil && toArtifact.ProjectID != projectID && !h.requireProjectRole(w, r, toArtifact.ProjectID, targetRole) {
@@ -1617,6 +1621,10 @@ func (h *Handler) UpdateProject(w http.ResponseWriter, r *http.Request) {
 	var req projects.UpdateProjectRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if req.ParentProjectID != nil && !h.projectFeatureEnabled(r, id, release.FeatureFlowDown) {
+		writeJSONError(w, http.StatusForbidden, featureGateMessage)
 		return
 	}
 

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { useFeature } from '../hooks/useFeature';
 import {
   Artifact,
   AttributeDefinition,
@@ -109,6 +110,8 @@ export const ArtifactEditor: React.FC<ArtifactEditorProps> = ({
   // Who can own an artifact (REQ-147): the project's parties (the workspace
   // first) and its members, offered as suggestions; any name is accepted.
   const [ownerOptions, setOwnerOptions] = useState<string[]>([]);
+  const ownersOn = useFeature('artifact-owners');
+  const flowDown = useFeature('flow-down');
   useEffect(() => {
     if (!effectiveProjectId) return;
     let cancelled = false;
@@ -357,6 +360,7 @@ export const ArtifactEditor: React.FC<ArtifactEditorProps> = ({
             </select>
           </div>
 
+          {ownersOn && (
           <div className="form-group">
             <label htmlFor="owner">Owner</label>
             <input
@@ -378,6 +382,7 @@ export const ArtifactEditor: React.FC<ArtifactEditorProps> = ({
               ))}
             </datalist>
           </div>
+          )}
 
           {formData.type === 'test-case' && (
             <div className="form-group">
@@ -520,8 +525,9 @@ export const ArtifactEditor: React.FC<ArtifactEditorProps> = ({
                 onCreateLink={handleCreateLinkFromEditor}
                 links={currentLinks}
                 linked={linked}
-                extraTargets={parentArtifacts}
+                extraTargets={flowDown ? parentArtifacts : []}
                 extraTargetsLabel={parentProjectName}
+                hiddenLinkTypes={flowDown ? [] : ['refines']}
                 title="Manage Links (Edit Mode)"
                 readOnly={false}
                 onSelectArtifact={() => {}}

@@ -22,6 +22,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/members"
 	"github.com/openv/requirements-platform/internal/domain/products"
 	"github.com/openv/requirements-platform/internal/domain/quality"
+	"github.com/openv/requirements-platform/internal/domain/release"
 	"github.com/openv/requirements-platform/internal/domain/settings"
 	"github.com/openv/requirements-platform/internal/domain/vv"
 	"github.com/openv/requirements-platform/internal/domain/workitems"
@@ -169,6 +170,10 @@ func (h *Handler) GetProjectParties(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) UpdateProjectParties(w http.ResponseWriter, r *http.Request) {
 	projectID := mux.Vars(r)["id"]
 	if !h.requireProjectRole(w, r, projectID, members.RoleEditor) {
+		return
+	}
+	if !h.projectFeatureEnabled(r, projectID, release.FeatureOwners) {
+		writeJSONError(w, http.StatusForbidden, featureGateMessage)
 		return
 	}
 	var req partiesResponse

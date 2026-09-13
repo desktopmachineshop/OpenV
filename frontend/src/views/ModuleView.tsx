@@ -25,6 +25,7 @@ import { DownloadWizard } from '../components/DownloadWizard';
 import { ErrorBanner, Modal, useAlert, useConfirm, usePrompt } from '../components/ui';
 import { apiErrorMessage } from '../api/errors';
 import { useViewport } from '../hooks/useViewport';
+import { useFeature } from '../hooks/useFeature';
 
 export const ModuleView: React.FC = () => {
   const confirm = useConfirm();
@@ -39,6 +40,7 @@ export const ModuleView: React.FC = () => {
   // project, and the parent project's requirements a requirement here may
   // refine.
   const [linkedArtifacts, setLinkedArtifacts] = useState<LinkedArtifact[]>([]);
+  const ownersOn = useFeature('artifact-owners');
   const [parentProject, setParentProject] = useState<Project | null>(null);
   const [parentArtifacts, setParentArtifacts] = useState<Artifact[]>([]);
   const [searchText, setSearchText] = useState<string>('');
@@ -933,7 +935,7 @@ export const ModuleView: React.FC = () => {
     { value: 'project_id', label: 'Project ID' },
     { value: 'parent_id', label: 'Parent ID' },
     { value: 'type', label: 'Type' },
-    { value: 'owner', label: 'Owner' },
+    ...(ownersOn ? [{ value: 'owner', label: 'Owner' }] : []),
     { value: 'title', label: 'Title' },
     { value: 'body', label: 'Body' },
     { value: 'attributes', label: 'Attributes' },

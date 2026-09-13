@@ -20,6 +20,8 @@ interface LinkPanelProps {
    */
   extraTargets?: Artifact[];
   extraTargetsLabel?: string;
+  /** Link types not to offer, for a feature the workspace has not received. */
+  hiddenLinkTypes?: string[];
 }
 
 export const LinkPanel: React.FC<LinkPanelProps> = ({
@@ -34,6 +36,7 @@ export const LinkPanel: React.FC<LinkPanelProps> = ({
   linked = [],
   extraTargets = [],
   extraTargetsLabel = '',
+  hiddenLinkTypes = [],
 }) => {
   const alertDialog = useAlert();
   const [isCreating, setIsCreating] = useState(false);
@@ -66,7 +69,9 @@ export const LinkPanel: React.FC<LinkPanelProps> = ({
 
   // Get the source artifact to determine available link types
   const sourceArtifact = artifacts.find(a => a.id === selectedArtifactId);
-  const availableLinkTypes = sourceArtifact ? getAvailableLinkTypes(sourceArtifact.type) : [];
+  const availableLinkTypes = (sourceArtifact ? getAvailableLinkTypes(sourceArtifact.type) : []).filter(
+    (rule) => !hiddenLinkTypes.includes(rule.type)
+  );
   
   // Get allowed target types for selected link type
   const allowedTargetTypes = linkType ? getAllowedTargetTypes(linkType) : [];

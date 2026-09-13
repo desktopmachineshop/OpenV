@@ -23,6 +23,7 @@ import { useAppStore } from '../state/store';
 import { ErrorBanner, useConfirm } from '../components/ui';
 import { QualityRulesEditor } from '../components/QualityRulesEditor';
 import { Avatar } from '../components/Avatar';
+import { useFeature } from '../hooks/useFeature';
 
 type Tab = 'general' | 'members' | 'repos' | 'agents' | 'attributes' | 'quality' | 'danger';
 
@@ -88,6 +89,9 @@ export const ProjectSettings: React.FC = () => {
   const currentUser = useAppStore((s) => s.currentUser);
   const activeOrgId = useAppStore((s) => s.activeOrgId);
   const confirm = useConfirm();
+  // Both reach stable-channel workspaces at their next stable release.
+  const flowDown = useFeature('flow-down');
+  const ownersOn = useFeature('artifact-owners');
 
   // The active tab lives in the URL (?tab=…) so refreshes and deep links keep
   // it; unknown values fall back to the first tab.
@@ -650,8 +654,17 @@ export const ProjectSettings: React.FC = () => {
         </div>
       )}
 
-      {tab === 'general' && (
-        <>
+      {tab === 'general' && !flowDown && !ownersOn && (
+        <div className="card">
+          <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: 0 }}>
+            Parent projects and reference parties reach stable-channel workspaces at their next
+            stable release. Switch the workspace to nightly, or preview the next release, in
+            workspace settings to use them now.
+          </p>
+        </div>
+      )}
+
+      {tab === 'general' && flowDown && (
           <div className="card">
             <h3>Parent project</h3>
             <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
@@ -693,7 +706,9 @@ export const ProjectSettings: React.FC = () => {
               </div>
             )}
           </div>
+      )}
 
+      {tab === 'general' && ownersOn && (
           <div className="card">
             <h3>Reference parties</h3>
             <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
@@ -757,7 +772,6 @@ export const ProjectSettings: React.FC = () => {
               </button>
             </form>
           </div>
-        </>
       )}
 
       {tab === 'members' && (

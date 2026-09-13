@@ -1,3 +1,4 @@
+import { useFeature } from '../hooks/useFeature';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { DownloadFormat, DownloadOptions, projectAPI } from '../api/client';
 import { apiErrorMessage } from '../api/errors';
@@ -32,6 +33,7 @@ interface DownloadWizardProps {
 // types it holds, the attachment categories actually attached. A filter that
 // would return nothing is never offered.
 export const DownloadWizard: React.FC<DownloadWizardProps> = ({ projectId, baselineId, onClose }) => {
+  const ownersOn = useFeature('artifact-owners');
   const [step, setStep] = useState<'format' | 'content'>('format');
   const [format, setFormat] = useState<DownloadFormat>('pdf');
   const [options, setOptions] = useState<DownloadOptions | null>(null);
@@ -298,7 +300,7 @@ export const DownloadWizard: React.FC<DownloadWizardProps> = ({ projectId, basel
                 </section>
               )}
 
-              {(options.owners || []).length > 0 && (
+              {ownersOn && (options.owners || []).length > 0 && (
                 <section style={{ marginBottom: 14 }}>
                   <SectionHeading
                     title="Owners"
