@@ -83,6 +83,21 @@ func (h *Handler) featureEnabled(r *http.Request, orgID, key string) bool {
 	return h.resolveFeatures(org, user.ID).Features[key]
 }
 
+// memberFeatureEnabled is featureEnabled for work done on a member's behalf
+// outside their request — an agent run launched for them. A turn nobody
+// launched (a hook re-firing a parked nudge) has no member to gate on and
+// sees everything, as workers do.
+func (h *Handler) memberFeatureEnabled(orgID string, userID *string, key string) bool {
+	if userID == nil || h.orgService == nil {
+		return true
+	}
+	org, err := h.orgService.Get(orgID)
+	if err != nil || org == nil {
+		return false
+	}
+	return h.resolveFeatures(org, *userID).Features[key]
+}
+
 // projectFeatureEnabled is featureEnabled for a project: the gate is the
 // workspace's. A handler with no workspace service (a test, a stripped
 // deployment) has nothing to gate on and lets the feature through.

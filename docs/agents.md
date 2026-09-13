@@ -839,6 +839,53 @@ agent run tries to record for one (`403`). They stay in the run for a person to
 execute by hand in the same grid. A result applied from an approved *proposal*
 is not treated as agent-executed, since a human signed off on it.
 
+## The assistant beside the project
+
+Every turn of the V&V Assistant carries the **project outline**: every
+artifact's reference, type and title, indented under its parent in document
+order, fenced as untrusted content like the wizard state
+(`<<<PROJECT_OUTLINE … PROJECT_OUTLINE>>>`, `outlineBudget` characters, cut
+in document order past that and told how much was left out). Beside the
+wizard it comes with the form's state — a resumed definition sits on top of
+artifacts that already exist, and the legend says that an entry carrying
+`artifact_id` is one of them (the green dot) and is changed with an edit or
+move card, never `replaces`. Beside the project — the Notes panel's
+assistant tab, with or without an artifact selected — the outline is the
+content. Titles only: the assistant carries `mcp__openv__*`, and the prompt
+names the project id and tells it to read an artifact in full with
+`get_artifact` (by reference or id) before proposing a change to its text,
+and to use `get_project_tree`, `search_artifacts` and
+`list_links_for_artifact` for more.
+
+With the outline the assistant has three shapes beyond the wizard's, each an
+`openv-suggestion` block the person applies with a click, in the wizard and
+in the notes panel alike (an artifact may be named by reference or by the
+`artifact_id` a locked entry carries):
+
+| Shape | What it does |
+|---|---|
+| `{"kind":"artifact","type":…,"title":…,"body":…,"attributes":{…},"parent":"HDG-3","after":"REQ-9"}` | A new artifact of any catalogue type, as a draft, under the named heading (or the top level), after the named sibling (or last). |
+| `{"kind":"edit","ref":"REQ-12","title":…,"body":…,"attributes":{…}}` | Changes only the fields it names; title and body replace the field, attributes are merged over the current ones (the API replaces attributes wholesale, so the client reads first). |
+| `{"kind":"move","ref":"REQ-12","parent":"HDG-3","before":"REQ-9"}` (or `"after"`, or `"position":"first\|last"`) | Moves or reorders. Planned by `utils/artifactOrder.ts` with the drag-and-drop rules — no move into its own subtree, an anchor must be under the destination, a move that changes nothing is not saved — and written the way a drag is: the sibling group renumbered 1..n. |
+
+The wizard's own shapes (persona, need, requirement, nfr, hazard) still
+fill the form in the wizard and land as drafts under the standard headings
+beside the project; `replaces` reaches only unlocked wizard entries, so for
+anything already in the project the assistant is told to use `edit` or
+`move`. In the wizard, `GuidedWizard.handleApplySuggestions` routes the
+three project kinds through `applySuggestionsToProject` (against a fresh
+artifact list, refreshing the draft list afterwards) and the wizard kinds
+through the form, and records both in the session's applied keys. Within one
+batch the working copy of the project is updated after each write, so "add
+A, then move A" works.
+
+The three shapes are a **gated feature** (`assistant-project-edits`,
+`internal/domain/release/features.go`, REQ-137): a stable-channel workspace
+whose release predates it is not offered them — the prompt tells the
+assistant to describe the change instead — and the panel answers any such
+card that still reaches it (an older transcript, another member's channel)
+with the reason rather than a silent no-op.
+
 ## Streaming replies
 
 A conversational turn (the wizard's V&V Assistant, the notes panel, an

@@ -3,11 +3,17 @@ import { Link } from 'react-router-dom';
 import { guidedAPI, GuidedChatMessage } from '../../api/client';
 import { ChatMarkdown } from '../ChatMarkdown';
 
-/** One structured proposal embedded in a copilot reply. */
+/**
+ * One structured proposal embedded in a copilot reply: a wizard entry, or —
+ * beside the project — any artifact by type and place, an edit, or a move.
+ */
 export interface CopilotSuggestion {
-  kind: 'framing' | 'persona' | 'need' | 'requirement' | 'nfr' | 'hazard';
+  kind: 'framing' | 'persona' | 'need' | 'requirement' | 'nfr' | 'hazard' | 'artifact' | 'edit' | 'move';
   [key: string]: any;
 }
+
+/** Where an applied suggestion goes: the wizard's form, or the project itself. */
+export type ApplyTarget = 'wizard' | 'project';
 
 interface GuidedChatPanelProps {
   sessionId: string;
@@ -46,6 +52,13 @@ interface GuidedChatPanelProps {
   onApplySuggestions?: (
     items: { suggestion: CopilotSuggestion; key: string }[]
   ) => (string | null)[] | Promise<(string | null)[]>;
+  /**
+   * Where a wizard-shaped suggestion goes, so its button says so: "Add to
+   * wizard" beside the form, "Add to project" beside the project. A card
+   * that changes the project (a new artifact by place, an edit, a move)
+   * says so in both.
+   */
+  applyTarget?: ApplyTarget;
 }
 
 type Segment =
@@ -87,6 +100,44 @@ const KIND_LABELS: Record<string, string> = {
   requirement: 'Requirement',
   nfr: 'NFR',
   hazard: 'Hazard',
+  artifact: 'New artifact',
+  edit: 'Change',
+  move: 'Move',
+};
+
+/** The type catalogue's labels, for a new-artifact card. */
+const TYPE_LABELS: Record<string, string> = {
+  heading: 'Heading',
+  description: 'Description',
+  persona: 'Persona',
+  'user-need': 'User need',
+  requirement: 'Requirement',
+  'design-item': 'Design item',
+  'test-case': 'Test case',
+  hazard: 'Hazard',
+  other: 'Artifact',
+};
+
+/** Where a move card says the artifact is going. */
+const moveDestination = (s: CopilotSuggestion): string => {
+  const parts: string[] = [];
+  if (s.parent !== undefined) parts.push(String(s.parent || '').trim() ? `under ${String(s.parent).trim()}` : 'to the top level');
+  if (s.before) parts.push(`before ${String(s.before).trim()}`);
+  if (s.after) parts.push(`after ${String(s.after).trim()}`);
+  if (s.position) parts.push(String(s.position) === 'first' ? 'first' : 'last');
+  return parts.join(', ');
+};
+
+/** What an edit card changes, named field by field. */
+const editSummary = (s: CopilotSuggestion): string => {
+  const parts: string[] = [];
+  if (s.title !== undefined) parts.push(`title → ${String(s.title)}`);
+  if (s.body !== undefined) parts.push('body rewritten');
+  if (s.attributes && typeof s.attributes === 'object') {
+    const keys = Object.keys(s.attributes);
+    if (keys.length) parts.push(`${keys.join(', ')} changed`);
+  }
+  return parts.join(' · ');
 };
 
 const FRAMING_FIELD_LABELS: Record<string, string> = {
@@ -166,9 +217,45 @@ const suggestionSummary = (s: CopilotSuggestion): { title: string; detail: strin
       return { title: `[${s.category || '?'}] ${s.text || ''}`, detail: s.fit_criterion ? `Fit: ${s.fit_criterion}` : '' };
     case 'hazard':
       return { title: s.hazard || '', detail: `${s.harm || ''}${s.severity ? ` (${s.severity})` : ''}` };
+    case 'artifact':
+      return {
+        title: `${TYPE_LABELS[String(s.type)] || String(s.type || '')}: ${s.title || ''}`,
+        detail: s.parent ? `Under ${String(s.parent).trim()}${s.after ? `, after ${String(s.after).trim()}` : ''}` : 'At the top level',
+      };
+    case 'edit':
+      return { title: String(s.ref || ''), detail: editSummary(s) };
+    case 'move':
+      return { title: String(s.ref || ''), detail: moveDestination(s) };
     default:
       return { title: JSON.stringify(s), detail: '' };
   }
+};
+
+/** The button and done labels for one card, for the target it applies to. */
+const applyLabels = (
+  s: CopilotSuggestion,
+  target: ApplyTarget,
+  isReplace: boolean
+): { button: string; done: string } => {
+  // A change to the project says so wherever the card is shown: the wizard
+  // sits on top of a project too, and its locked entries are artifacts.
+  switch (s.kind) {
+    case 'edit':
+      return { button: 'Apply change', done: '✓ Changed' };
+    case 'move':
+      return { button: 'Move', done: '✓ Moved' };
+    case 'artifact':
+      return { button: '+ Add to project', done: '✓ Added to project' };
+    default:
+      break;
+  }
+  if (target === 'project') {
+    if (s.kind === 'framing') return { button: 'Apply to project', done: '✓ Applied' };
+    return { button: '+ Add to project', done: '✓ Added to project' };
+  }
+  if (isReplace) return { button: 'Replace in wizard', done: '✓ Replaced in wizard' };
+  if (s.kind === 'framing') return { button: 'Apply to wizard', done: '✓ Applied to wizard' };
+  return { button: '+ Add to wizard', done: '✓ Added to wizard' };
 };
 
 // Floor between two nudges sent from this panel. Wizard saves can come in
@@ -205,6 +292,7 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
   embedded = false,
   applied = {},
   onApplySuggestions,
+  applyTarget = 'wizard',
 }, ref) => {
   // Suggestions are applied into wizard entry sections. Beside an artifact
   // there is nowhere to put them, so the cards render without their buttons
@@ -530,7 +618,7 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
   const renderSuggestion = (seg: Segment & { type: 'suggestion' }, key: string) => {
     if (!seg.suggestion) {
       return (
-        <pre key={key} style={{ fontSize: 11, background: 'var(--surface-alt)', padding: 8, borderRadius: 4, overflowX: 'auto' }}>
+        <pre key={key} style={{ fontSize: 12, background: 'var(--surface-alt)', padding: 8, borderRadius: 4, overflowX: 'auto' }}>
           {seg.raw}
         </pre>
       );
@@ -549,8 +637,7 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
         isReplace = false;
       }
     }
-    const buttonLabel = isReplace ? 'Replace in wizard' : s.kind === 'framing' ? 'Apply to wizard' : '+ Add to wizard';
-    const doneLabel = isReplace ? '✓ Replaced in wizard' : s.kind === 'framing' ? '✓ Applied to wizard' : '✓ Added to wizard';
+    const { button: buttonLabel, done: doneLabel } = applyLabels(s, applyTarget, isReplace);
     return (
       <div
         key={key}
@@ -562,18 +649,18 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
           margin: '6px 0',
         }}
       >
-        <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', marginBottom: 3 }}>
+        <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', marginBottom: 3 }}>
           {KIND_LABELS[s.kind] || s.kind}
         </div>
         <div style={{ fontSize: 13, color: 'var(--text)', marginBottom: detail ? 2 : 6 }}>{title}</div>
         {detail && <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 6 }}>{detail}</div>}
         {s.replaces && (
-          <div style={{ fontSize: 11, color: 'var(--neutral)', fontStyle: 'italic', marginBottom: 6 }}>
+          <div style={{ fontSize: 12, color: 'var(--neutral)', fontStyle: 'italic', marginBottom: 6 }}>
             Replaces: {replacesLabel(s)}
           </div>
         )}
         {!canApply ? (
-          <div style={{ fontSize: 11, color: 'var(--neutral)', fontStyle: 'italic' }}>
+          <div style={{ fontSize: 12, color: 'var(--neutral)', fontStyle: 'italic' }}>
             Open the project to add this.
           </div>
         ) : isAdded ? (
@@ -581,7 +668,7 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
         ) : (
           <button
             className="button-secondary"
-            style={{ padding: '4px 10px', fontSize: 12 }}
+            style={{ padding: '5px 10px', fontSize: 12 }}
             onClick={async () => {
               const reason = (await onApplySuggestions([{ suggestion: s, key }]))[0];
               setSendError(reason === null ? '' : reason);
@@ -616,7 +703,7 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
     >
       <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--border)' }}>
         <div style={{ fontWeight: 700, color: 'var(--text)', fontSize: 14 }}>V&amp;V Assistant</div>
-        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{subtitle}</div>
+        <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{subtitle}</div>
       </div>
 
       <div ref={scrollerRef} style={{ flex: 1, overflowY: 'auto', padding: 12 }}>
@@ -636,7 +723,7 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
             }}
           >
             {m.role === 'system' ? (
-              <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--neutral)', textAlign: 'center' }}>
+              <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--neutral)', textAlign: 'center' }}>
                 {m.content}
               </div>
             ) : (
@@ -780,8 +867,8 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
                 border: '1px solid var(--tint-blue-border)',
                 color: 'var(--accent-strong)',
                 borderRadius: 12,
-                padding: '4px 10px',
-                fontSize: 11,
+                padding: '5px 10px',
+                fontSize: 12,
                 cursor: 'pointer',
                 width: 'auto',
                 whiteSpace: 'nowrap',
@@ -792,7 +879,7 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
             </button>
           ))}
         </div>
-        {sendError && <div style={{ color: 'var(--danger)', fontSize: 11, marginBottom: 6 }}>{sendError}</div>}
+        {sendError && <div style={{ color: 'var(--danger)', fontSize: 12, marginBottom: 6 }}>{sendError}</div>}
         <div style={{ display: 'flex', gap: 6, alignItems: 'flex-end' }}>
           <textarea
             value={composerText}

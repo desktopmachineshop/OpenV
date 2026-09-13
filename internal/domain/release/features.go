@@ -31,13 +31,15 @@ var Registry = []Feature{
 	{Key: FeatureFlowDown, ShippedIn: "0.3.0", Summary: "Parent projects, requirements that refine a parent project's, and verification rolled up from child projects"},
 	{Key: FeatureOwners, ShippedIn: "0.3.0", Summary: "Artifact owners, reference parties and owner-filtered downloads"},
 	{Key: FeatureShareLinks, ShippedIn: "0.4.0", Summary: "Share links: a public read-only view of a project, or reviewer access, from one link; the reviewer role"},
+	{Key: FeatureAssistantEdits, ShippedIn: "0.5.0", Summary: "The V&V Assistant adds any kind of artifact, edits one and moves one from the notes panel"},
 }
 
 // Feature keys the code gates on.
 const (
-	FeatureFlowDown   = "flow-down"
-	FeatureOwners     = "artifact-owners"
-	FeatureShareLinks = "share-links"
+	FeatureFlowDown       = "flow-down"
+	FeatureOwners         = "artifact-owners"
+	FeatureShareLinks     = "share-links"
+	FeatureAssistantEdits = "assistant-project-edits"
 )
 
 // Enabled reports whether a feature is on for a workspace on the given
