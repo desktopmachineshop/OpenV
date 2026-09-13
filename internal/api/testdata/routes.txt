@@ -144,6 +144,7 @@ GET /api/v1/provider-settings
 GET /api/v1/public/connector/download
 GET /api/v1/public/interviews/{token}
 GET /api/v1/public/interviews/{token}/stream
+GET /api/v1/public/release
 GET /api/v1/release
 GET /api/v1/search
 GET /api/v1/shared-products
