@@ -85,8 +85,14 @@ func (m *memRepo) FindUserByEmail(email string) (*User, error) {
 	return nil, nil
 }
 func (m *memRepo) FindUserByID(id string) (*User, error) { return m.users[id], nil }
-func (m *memRepo) ListUsers() ([]*User, error)           { return nil, nil }
-func (m *memRepo) CountUsers() (int, error)              { return len(m.users), nil }
+func (m *memRepo) ListUsers() ([]*User, error) {
+	var out []*User
+	for _, u := range m.users {
+		out = append(out, u)
+	}
+	return out, nil
+}
+func (m *memRepo) CountUsers() (int, error) { return len(m.users), nil }
 func (m *memRepo) SetEmailNotifications(string, bool) error {
 	return nil
 }
@@ -445,5 +451,34 @@ func TestWeakPasswordMessageNamesTheMinimum(t *testing.T) {
 	short := strings.Repeat("a", MinPasswordLength-1)
 	if _, err := svc.Register("short@example.com", short, "Short"); !errors.Is(err, ErrWeakPassword) {
 		t.Errorf("Register with %d characters returned %v, want ErrWeakPassword", len(short), err)
+	}
+}
+
+// SetAdmin (REQ-155): grants and revokes standing, never leaves the
+// deployment without a platform admin, and names an unknown account.
+func TestSetAdmin(t *testing.T) {
+	repo := newMemRepo()
+	repo.users["root"] = &User{ID: "root", Email: "root@example.com", IsAdmin: true, PasswordHash: "hash"}
+	repo.users["dave"] = &User{ID: "dave", Email: "dave@example.com"}
+	svc := NewDefaultService(repo)
+
+	if _, err := svc.SetAdmin("root", false); !errors.Is(err, ErrLastAdmin) {
+		t.Fatalf("demoting the only admin: err = %v, want ErrLastAdmin", err)
+	}
+	u, err := svc.SetAdmin("dave", true)
+	if err != nil || !u.IsAdmin || !repo.users["dave"].IsAdmin {
+		t.Fatalf("grant: user = %+v, err = %v", u, err)
+	}
+	if _, err := svc.SetAdmin("root", false); err != nil || repo.users["root"].IsAdmin {
+		t.Fatalf("revoke with another admin present: err = %v, admin = %v", err, repo.users["root"].IsAdmin)
+	}
+	if repo.users["root"].PasswordHash != "hash" {
+		t.Error("revoking standing lost the password hash")
+	}
+	if _, err := svc.SetAdmin("dave", true); err != nil {
+		t.Errorf("granting an admin again: %v", err)
+	}
+	if _, err := svc.SetAdmin("nobody", true); !errors.Is(err, ErrUserNotFound) {
+		t.Errorf("unknown account: err = %v", err)
 	}
 }

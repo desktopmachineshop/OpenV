@@ -33,6 +33,10 @@ const MinPasswordLength = 8
 const EmailVerificationTTL = 24 * time.Hour
 
 var (
+	// ErrLastAdmin refuses demoting the only platform admin (REQ-155).
+	ErrLastAdmin = errors.New("the last platform admin cannot be demoted")
+	// ErrUserNotFound names an unknown account id.
+	ErrUserNotFound       = errors.New("user not found")
 	ErrInvalidCredentials = errors.New("invalid email or password")
 	ErrEmailTaken         = errors.New("an account with this email already exists")
 	ErrSessionInvalid     = errors.New("session is invalid or expired")
@@ -206,6 +210,10 @@ type Service interface {
 	GetByID(id string) (*User, error)
 	FindByEmail(email string) (*User, error)
 	ListUsers() ([]*User, error)
+	// SetAdmin grants or removes platform-admin standing (REQ-155). The
+	// last platform admin cannot be demoted (ErrLastAdmin): a deployment
+	// with none would have nobody able to make one.
+	SetAdmin(id string, isAdmin bool) (*User, error)
 	// SetEmailNotifications updates the caller's own email opt-out (issue #187).
 	SetEmailNotifications(userID string, enabled bool) error
 	// SetPushNotifications updates the caller's own web-push opt-in (REQ-109).
@@ -672,6 +680,41 @@ func (s *DefaultService) FindByEmail(email string) (*User, error) {
 // ListUsers returns all users.
 func (s *DefaultService) ListUsers() ([]*User, error) {
 	return s.repo.ListUsers()
+}
+
+// SetAdmin implements Service.
+func (s *DefaultService) SetAdmin(id string, isAdmin bool) (*User, error) {
+	u, err := s.repo.FindUserByID(id)
+	if err != nil {
+		return nil, err
+	}
+	if u == nil {
+		return nil, ErrUserNotFound
+	}
+	if u.IsAdmin == isAdmin {
+		return u, nil
+	}
+	if !isAdmin {
+		all, err := s.repo.ListUsers()
+		if err != nil {
+			return nil, err
+		}
+		admins := 0
+		for _, other := range all {
+			if other.IsAdmin {
+				admins++
+			}
+		}
+		if admins <= 1 {
+			return nil, ErrLastAdmin
+		}
+	}
+	u.IsAdmin = isAdmin
+	u.UpdatedAt = time.Now()
+	if err := s.repo.UpdateUser(u); err != nil {
+		return nil, err
+	}
+	return u, nil
 }
 
 // SetEmailNotifications updates a user's email-notification opt-out.

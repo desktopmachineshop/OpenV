@@ -9,6 +9,14 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Maintenance updates
+
+- Platform admins have a page of their own, under the account menu: every
+  workspace with its plan, changeable in place (which is how a workspace
+  is granted the open-source tier), and every account, where platform-admin
+  standing is granted or removed. Until now only the first account ever
+  registered could be a platform admin.
+
 ## 0.4.1 — 2026-09-13
 
 ### Maintenance updates

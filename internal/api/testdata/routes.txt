@@ -36,6 +36,8 @@ DELETE /api/v1/teams/{id}
 DELETE /api/v1/test-results/{id}/citations/{bundleId}
 DELETE /api/v1/test-runs/{id}
 DELETE /api/v1/work-items/{id}
+GET /api/v1/admin/users
+GET /api/v1/admin/workspaces
 GET /api/v1/agent-runs
 GET /api/v1/agent-runs/delegate/{id}
 GET /api/v1/agent-runs/{id}
@@ -282,6 +284,7 @@ POST /api/v1/test-runs/{id}/agent-run
 POST /api/v1/test-runs/{id}/results
 POST /api/v1/work-items/{id}/comments
 POST /api/v1/work-items/{id}/move
+PUT /api/v1/admin/users/{id}/admin
 PUT /api/v1/agents/{slug}
 PUT /api/v1/agents/{slug}/raw
 PUT /api/v1/artifacts/{id}
