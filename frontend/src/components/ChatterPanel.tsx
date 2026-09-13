@@ -3,6 +3,19 @@ import { Artifact, ChatterEntry, artifactAPI, chatterAPI } from '../api/client';
 import { GuidedChatPanel } from './wizard/GuidedChatPanel';
 import { resolveAssistantSessionId } from './wizard/assistantSession';
 import { applySuggestionsToProject } from './wizard/applySuggestion';
+import { useFeature } from '../hooks/useFeature';
+
+/** Feature gate for the assistant's project edits (REQ-137). */
+export const ASSISTANT_EDITS_FEATURE = 'assistant-project-edits';
+
+/**
+ * The suggestion kinds that change the project rather than add a wizard
+ * entry to it. They wait for the workspace's stable release like any other
+ * new feature; until then their cards explain instead of acting.
+ */
+const PROJECT_EDIT_KINDS = new Set(['artifact', 'edit', 'move']);
+const GATED_REASON =
+  'Editing and moving artifacts from the assistant reaches this workspace with its next stable release.';
 
 interface ChatterPanelProps {
   /** The artifact whose notes these are; absent when nothing is selected. */
@@ -47,6 +60,11 @@ export const ChatterPanel: React.FC<ChatterPanelProps> = ({
   const [newMessage, setNewMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  // Which suggestions this panel has applied. The wizard persists its own in
+  // the session answers; here the project is the record, so remembering
+  // for the life of the panel is what stops a second click adding twice.
+  const [applied, setApplied] = useState<Record<string, boolean>>({});
+  const editsEnabled = useFeature(ASSISTANT_EDITS_FEATURE);
 
   const loadChatterEntries = useCallback(async () => {
     if (!artifactId) return;
@@ -116,12 +134,26 @@ export const ChatterPanel: React.FC<ChatterPanelProps> = ({
         // again. Refusing is better than quietly growing a second set.
         return items.map(() => 'The project could not be read, so nothing was added.');
       }
-      return applySuggestionsToProject(
+      // A gated kind is answered, not applied: the server does not offer
+      // these shapes to a gated workspace, but a transcript can carry one
+      // from before the gate closed, or from another member's channel.
+      const allowed = editsEnabled ? items : items.filter((i) => !PROJECT_EDIT_KINDS.has(String(i.suggestion?.kind)));
+      const applyResults = await applySuggestionsToProject(
         { projectId, artifacts, onChanged: onArtifactsChanged },
-        items
+        allowed
       );
+      const byKey = new Map(allowed.map((i, n) => [i.key, applyResults[n]]));
+      const results = items.map((i) => (byKey.has(i.key) ? byKey.get(i.key)! : GATED_REASON));
+      setApplied((prev) => {
+        const next = { ...prev };
+        items.forEach((i, n) => {
+          if (results[n] === null) next[i.key] = true;
+        });
+        return next;
+      });
+      return results;
     },
-    [projectId, onArtifactsChanged]
+    [projectId, onArtifactsChanged, editsEnabled]
   );
 
   const handleAddMessage = async () => {
@@ -347,6 +379,8 @@ export const ChatterPanel: React.FC<ChatterPanelProps> = ({
               sessionId={assistantSessionId}
               artifactId={artifactId}
               embedded
+              applied={applied}
+              applyTarget="project"
               onApplySuggestions={applySuggestions}
               subtitle={
                 artifactId

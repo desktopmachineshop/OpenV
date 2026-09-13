@@ -183,6 +183,10 @@ const routes = [
   [/\/api\/v1\/orgs\/[^/]+\/worker-keys/, []],
   [/\/api\/v1\/orgs\/[^/]+\/provider-keys/, []],
   [/\/api\/v1\/orgs\/[^/]+\/quality-rules/, { effective: { convention: 'shall', severities: {} }, workspace: null, project: null, summary: 'shall', catalog: { conventions: ['shall', 'rfc2119'], rules: [], severities: ['error', 'warning', 'info', 'off'], defaults: { convention: 'shall', severities: {} }, labels: {} } }],
+  // The workspace's feature gates, ahead of the org catch-all below, which
+  // would otherwise answer {} and crash every useFeature on the page. All
+  // on, so gated cards and controls render with their buttons.
+  [/\/api\/v1\/orgs\/[^/]+\/features/, { channel: 'nightly', stable_release: '', preview: false, features: { 'flow-down': true, 'artifact-owners': true, 'assistant-project-edits': true } }],
   [/\/api\/v1\/orgs\/org1$/, org],
   [/\/api\/v1\/orgs\//, {}],
   [/\/api\/v1\/meta\/artifact-types/, [{ type: 'requirement', label: 'Requirement' }, { type: 'heading', label: 'Heading' }, { type: 'user-need', label: 'User Need' }, { type: 'test-case', label: 'Test Case' }]],
@@ -204,6 +208,15 @@ const routes = [
       'Two things before you start adding:\n\n' +
       '1. I cannot re-parent needs myself — tell me the new needs per persona and I will draft each as a `need`.\n' +
       '2. Keep the wording testable.\n' },
+    { id: 'gm3', session_id: 'gs1', role: 'user', content: 'Tighten REQ-2, move it under the accuracy heading, and add a test for it.', created_at: now },
+    // Beside the project the assistant proposes changes as cards: an edit,
+    // a move and a new artifact of a type the wizard never had.
+    { id: 'gm4', session_id: 'gs1', role: 'assistant', created_at: now, content:
+      'Three changes, applied in order:\n\n' +
+      '```openv-suggestion\n{"kind":"edit","ref":"REQ-2","body":"The system shall position the tool within ±0.02 mm of the commanded point across the full work envelope.","attributes":{"verification_method":"test"}}\n```\n' +
+      '```openv-suggestion\n{"kind":"move","ref":"REQ-2","parent":"HDG-2","position":"first"}\n```\n' +
+      '```openv-suggestion\n{"kind":"artifact","type":"test-case","title":"Ballbar accuracy sweep at three feed rates","body":"1. Mount the ballbar.\\n2. Run the sweep at 500, 1500 and 3000 mm/min.\\n3. Record the radial error.","attributes":{"execution_method":"physical"},"parent":"HDG-3","after":"TC-1"}\n```\n' +
+      'Say the word and I will draft the evidence bundle the sweep should produce.' },
   ]],
   [/\/api\/v1\/guided-sessions/, [{ id: 'gs1', project_id: 'p1', status: 'in-progress', current_step: 1, answers: {}, created_at: now, updated_at: now }]],
   [/\/api\/v1\/projects\/p1\/guided/, []],
@@ -433,6 +446,15 @@ const SCREENS = [
   { tag: 'settings', path: '/projects/p1/settings' },
   { tag: 'settings-agents', path: '/projects/p1/settings?tab=agents' },
   { tag: 'settings-access', path: '/projects/p1/settings?tab=access' },
+  // The notes panel's assistant beside the project, showing the three
+  // project-mode cards (edit, move, new artifact) with their buttons. On a
+  // phone the panel is a stacked pane reached from the pane strip.
+  { tag: 'notes-assistant', path: '/projects/p1/requirements', open: async (p) => {
+    const pane = p.getByRole('button', { name: /^Notes$/ }).first();
+    if (await pane.count()) { await press(pane); await p.waitForTimeout(300); }
+    const tab = p.getByRole('button', { name: 'V&V Assistant' }).first();
+    if (await tab.count()) { await press(tab); await p.waitForTimeout(800); }
+  } },
   { tag: 'whats-new', path: '/whats-new' },
   { tag: 'org-settings', path: '/org/settings' },
   { tag: 'org-members', path: '/org/settings?tab=members' },
