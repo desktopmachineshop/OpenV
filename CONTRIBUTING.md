@@ -19,9 +19,16 @@ saying what they will notice: what they can now do, what looks different,
 what they no longer have to do. Write for a workspace member, not a
 developer; the implementation belongs in the pull request. CI refuses a
 pull request that adds no bullet; a change nobody can see (CI, refactors,
-internal docs) carries the `no-release-notes` label instead. The promotion
-to `release` turns the Unreleased bullets into the dated section the app
-announces to every account (see `docs/railway.md`, "Release pipeline").
+internal docs) carries the `no-release-notes` label instead. Start a
+bullet with `fix:` when it repairs something: fixes reach every workspace
+at the next nightly, while every other bullet is a change that stable-
+channel workspaces receive at the monthly release. A user-visible change
+also registers itself in `internal/domain/release/features.go` with the
+nightly it ships in and gates its code path and UI on that key (server:
+`featureEnabled`; client: `useFeature`), so stable-channel workspaces see
+it only once their monthly release carries it. The promotion to `release`
+turns the Unreleased bullets into the dated section the app announces
+(see `docs/release-policy.md` and `docs/railway.md`, "Release pipeline").
 
 ## Licensing of contributions
 

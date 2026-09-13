@@ -34,11 +34,11 @@ fix release the same day. No channel or upgrade window holds them back.
   workspace settings. Personal and Lite are on nightly and cannot change it:
   that is the trade for the lower tier, newest features first and the risk
   of a nightly with them.
-- **Upgrade window** (planned). The day of the month and hour, in the
-  workspace's time zone, at which each stable release turns on, up to 14
-  days after the cut; admins are notified at the cut and 24 hours before.
-- **Preview** (planned). An admin can turn the next stable on for their own
-  account alone to try it.
+- **Upgrade window.** The day of the month and hour, in the workspace's
+  time zone, at which each stable release turns on, up to 14 days after the
+  cut; admins are notified at the cut and 24 hours before.
+- **Preview.** Any member can turn the next stable on for their own account
+  alone to try it.
 
 ## Staging
 
@@ -54,10 +54,10 @@ release by hand before a monthly cut.
 |---|---|
 | Dated nightly releases, notes cut at promotion, announced to every account (REQ-134) | Shipped 2026-09-12 |
 | Workspace release channel by plan, admin-selectable on company plans, shown in settings (REQ-136) | Shipped |
-| Feature gating by channel; notes bullets marked change or fix (REQ-137) | Planned next: a `Gate(orgID, feature)` helper and a channel field on each bullet |
-| Per-channel notifications and What's new (REQ-140) | Planned with gating: stable-channel members are told at their upgrade time |
-| Stable cut in the promotion pipeline, `YYYY.MM` versions (REQ-135) | Planned |
-| Upgrade window and personal preview (REQ-138) | Planned |
-| Dedicated instance support window (REQ-139) | Planned; needs the single-tenant offer |
-| Staging environment and nightly automation (REQ-141, REQ-135) | After the alpha |
-| Compatibility and deprecation rule (REQ-143) | Policy in force; enforced by review |
+| Feature gating by channel; `fix:` bullets (REQ-137) | Shipped: `internal/domain/release/features.go` registry, `GET /orgs/{id}/features`, `useFeature` |
+| Per-channel notifications and What's new (REQ-140) | Shipped: nightly members at each nightly, stable members when their release turns on; What's new shows the workspace's channel first |
+| Stable cut in the pipeline, `YYYY.MM` versions (REQ-135) | Shipped: `scripts/release_notes.py cut-stable` and the *Cut stable release* workflow (first working day of the month, or `fix: true` by hand) |
+| Upgrade window and personal preview (REQ-138) | Shipped: window in workspace settings, admin notices at the cut and a day before, per-member preview |
+| Dedicated instance support window (REQ-139) | Shipped: `OPENV_DEPLOYMENT=dedicated` polls `GET /api/v1/public/release` and warns admins at 30 and 7 days and on close |
+| Staging environment and nightly automation (REQ-141, REQ-135) | Workflow in place (*Nightly promotion*, 03:00 UTC), a no-op until the `STAGING_BASE_URL` repository variable names a staging environment (after the alpha; see `docs/railway.md`, "Staging") |
+| Compatibility and deprecation rule (REQ-143) | Enforced: `internal/api/testdata/routes.txt` pins the HTTP surface; a route cannot be removed without regenerating it on purpose |

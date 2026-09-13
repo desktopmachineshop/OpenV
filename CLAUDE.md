@@ -74,8 +74,13 @@ staging, what each plan gets) is `docs/release-policy.md`.
 Every pull request adds a customer-facing bullet under `## Unreleased` in
 `RELEASE_NOTES.md` (what a workspace member will notice, not how it was
 built); the *Release notes* CI job refuses one that does not, unless the PR
-carries the `no-release-notes` label. Promotion cuts those bullets into the
-dated section the app announces to every account.
+carries the `no-release-notes` label. A fix starts with `fix:`; any other
+bullet is a change, and a user-visible change registers a feature key in
+`internal/domain/release/features.go` with the nightly it ships in and
+gates its code and UI on it, so stable-channel workspaces receive it at
+their monthly release. Promotion cuts the bullets into the dated section
+the app announces; the monthly *Cut stable release* workflow cuts the
+stable release.
 
 **Never run Promote to release without the maintainer explicitly asking for
 that release.** Each promotion rebuilds both Railway services, which
