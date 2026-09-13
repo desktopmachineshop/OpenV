@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/gorilla/mux"
 
@@ -32,6 +33,10 @@ type featuresResponse struct {
 	// Preview reports whether the caller has switched early.
 	Preview  bool            `json:"preview"`
 	Features map[string]bool `json:"features"`
+	// NextStableRelease and NextStableAt name a stable release that is cut
+	// but not yet turned on for the workspace, and when it will be.
+	NextStableRelease string     `json:"next_stable_release,omitempty"`
+	NextStableAt      *time.Time `json:"next_stable_at,omitempty"`
 }
 
 // resolveFeatures decides the stable release a member's gates resolve
@@ -40,6 +45,15 @@ func (h *Handler) resolveFeatures(org *orgs.Org, userID string) featuresResponse
 	resp := featuresResponse{Channel: org.ReleaseChannel, Features: map[string]bool{}}
 	if org.ReleaseChannel == orgs.ChannelStable {
 		resp.StableRelease = org.StableRelease
+		if h.releaseService != nil {
+			if s := h.releaseService.CurrentStable(); s != nil && release.StableNewer(s.Version, org.StableRelease) {
+				resp.NextStableRelease = s.Version
+				if cutOn, err := time.Parse("2006-01-02", s.CutOn); err == nil {
+					at := orgs.UpgradeTimeFor(cutOn, org.UpgradeDay, org.UpgradeHour, org.UpgradeTimezone)
+					resp.NextStableAt = &at
+				}
+			}
+		}
 		if on, err := h.orgService.MemberPreview(org.ID, userID); err == nil && on {
 			resp.Preview = true
 			if h.releaseService != nil {

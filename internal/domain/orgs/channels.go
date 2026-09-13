@@ -74,6 +74,36 @@ func ValidateUpgradeWindow(day, hour int, timezone string) error {
 	return nil
 }
 
+// UpgradeWindowDays is how long after a stable cut a workspace may wait
+// before the release turns on for it, whatever window it chose.
+const UpgradeWindowDays = 14
+
+// UpgradeTimeFor is when a stable release cut at cutOn turns on for a
+// workspace with the given window: at the cut when there is no window,
+// otherwise at the first day-of-month/hour in the zone after the cut, and
+// never later than UpgradeWindowDays after it. An unknown zone counts as
+// UTC.
+func UpgradeTimeFor(cutOn time.Time, day, hour int, timezone string) time.Time {
+	if day < 1 {
+		return cutOn
+	}
+	loc := time.UTC
+	if timezone != "" {
+		if l, err := time.LoadLocation(timezone); err == nil {
+			loc = l
+		}
+	}
+	local := cutOn.In(loc)
+	candidate := time.Date(local.Year(), local.Month(), day, hour, 0, 0, 0, loc)
+	if !candidate.After(cutOn) {
+		candidate = time.Date(local.Year(), local.Month()+1, day, hour, 0, 0, 0, loc)
+	}
+	if latest := cutOn.Add(UpgradeWindowDays * 24 * time.Hour); candidate.After(latest) {
+		return latest
+	}
+	return candidate
+}
+
 // ValidChannel reports whether name is a channel.
 func ValidChannel(name string) bool {
 	return name == ChannelNightly || name == ChannelStable

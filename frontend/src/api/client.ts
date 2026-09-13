@@ -1780,6 +1780,10 @@ export interface OrgFeatures {
   stable_release: string;
   preview: boolean;
   features: Record<string, boolean>;
+  // A stable release that is cut but not yet turned on for the workspace,
+  // and when it will be.
+  next_stable_release?: string;
+  next_stable_at?: string;
 }
 
 export const releaseAPI = {

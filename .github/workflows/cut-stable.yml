@@ -1,0 +1,92 @@
+# Stable release (docs/release-policy.md): once a month, the newest nightly
+# that has served the nightly channel for at least seven days becomes the
+# stable release YYYY.MM, with the notes of every nightly since the previous
+# stable merged into its section of RELEASE_NOTES.md. The cut is committed
+# to master and promoted, so the API boots on it and moves stable-channel
+# workspaces to it at their upgrade windows (REQ-135, REQ-138, REQ-140).
+#
+# Schedule: 06:00 UTC on the 1st, 2nd and 3rd of the month; the script cuts
+# on the first of those that is a working day and is a no-op afterwards.
+# Manual runs cut on any day, and `fix: true` cuts YYYY.MM.P from the newest
+# nightly with no soak, for a security or urgent fix.
+#
+# Guard rails are the promotion's: master CI must be green, and the push to
+# release is a fast-forward.
+
+name: Cut stable release
+
+on:
+  schedule:
+    - cron: "0 6 1-3 * *"
+  workflow_dispatch:
+    inputs:
+      fix:
+        description: "Cut a fix release (YYYY.MM.P) from the newest nightly, without the seven-day soak"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  checks: read
+
+jobs:
+  cut:
+    name: Cut stable and promote
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: master
+          fetch-depth: 0
+
+      - name: Verify master CI is green
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SELF: Cut stable and promote
+        run: |
+          sha=$(git rev-parse HEAD)
+          runs=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${sha}/check-runs" \
+            --jq '[.check_runs[] | select(.name != env.SELF)] | length')
+          if [ "$runs" = "0" ]; then
+            echo "No check runs found on master head — refusing to cut." >&2
+            exit 1
+          fi
+          not_green=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${sha}/check-runs" \
+            --jq '[.check_runs[] | select(.name != env.SELF) | select(.conclusion != "success" and .conclusion != "neutral" and .conclusion != "skipped")] | map(.name) | join(", ")')
+          if [ -n "$not_green" ]; then
+            echo "Checks not green on master head: $not_green" >&2
+            exit 1
+          fi
+
+      # Anything still under Unreleased becomes a nightly first, so the
+      # stable's "cut from" nightly and the nightly channel agree on what
+      # exists; that nightly is too new to soak and waits for next month.
+      - name: Cut the release notes
+        id: cut
+        env:
+          FIX: ${{ inputs.fix == true && '--fix' || '' }}
+          SCHEDULED: ${{ github.event_name == 'schedule' && '--if-scheduled' || '' }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if python3 scripts/release_notes.py cut RELEASE_NOTES.md; then
+            git add RELEASE_NOTES.md
+            git commit -m "Cut release notes $(python3 scripts/release_notes.py version RELEASE_NOTES.md)"
+          fi
+          before=$(python3 scripts/release_notes.py stable-version RELEASE_NOTES.md)
+          python3 scripts/release_notes.py cut-stable $FIX $SCHEDULED RELEASE_NOTES.md
+          after=$(python3 scripts/release_notes.py stable-version RELEASE_NOTES.md)
+          if [ "$before" = "$after" ]; then
+            echo "cut=false" >> "$GITHUB_OUTPUT"
+            echo "No stable release cut."
+          else
+            git add RELEASE_NOTES.md
+            git commit -m "Cut stable release $after"
+            echo "cut=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Push master and release
+        if: steps.cut.outputs.cut == 'true'
+        run: |
+          git push origin HEAD:master
+          git push origin HEAD:release

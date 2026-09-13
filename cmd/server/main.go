@@ -583,10 +583,18 @@ func main() {
 	}
 	if cur := releaseService.Current(); cur != nil {
 		slog.Info("release", "version", cur.Version)
-		announcer := notify.NewReleaseAnnouncer(postgres.NewReleaseRepository(db), orgService, notificationService, sseHub).
+		releaseRepo := postgres.NewReleaseRepository(db)
+		announcer := notify.NewReleaseAnnouncer(releaseRepo, orgService, notificationService, sseHub).
 			SetEmailDispatcher(emailDispatcher).
 			SetPushDispatcher(pushDispatcher)
 		go announcer.Announce(cur)
+		// Stable-channel workspaces move to a stable release at their own
+		// upgrade time: the scheduler tells their admins at the cut, reminds
+		// them a day before, and turns the release on (REQ-138, REQ-140).
+		notify.NewStableScheduler(releaseService, orgService, releaseRepo, notificationService, sseHub).
+			SetEmailDispatcher(emailDispatcher).
+			SetPushDispatcher(pushDispatcher).
+			Start(ctx, time.Hour)
 	}
 
 	// Optional over-budget soft-block (default OFF — warn-only). When

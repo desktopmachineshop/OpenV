@@ -240,6 +240,9 @@ func (h *Handler) UpdateOrg(w http.ResponseWriter, r *http.Request) {
 		// ReleaseChannel: "nightly", "stable", or "" for the plan's default.
 		// Only company plans may set it (REQ-136).
 		ReleaseChannel *string `json:"release_channel"`
+		// UpgradeWindow: when stable releases turn on (REQ-138); null
+		// clears it so they turn on at the cut. Company plans only.
+		UpgradeWindow json.RawMessage `json:"upgrade_window"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
@@ -278,6 +281,31 @@ func (h *Handler) UpdateOrg(w http.ResponseWriter, r *http.Request) {
 				writeJSONError(w, http.StatusBadRequest, err.Error())
 			} else {
 				respondInternal(w, r, "failed to update release channel", err)
+			}
+			return
+		}
+	}
+
+	if len(req.UpgradeWindow) > 0 {
+		var window *struct {
+			Day      int    `json:"day"`
+			Hour     int    `json:"hour"`
+			Timezone string `json:"timezone"`
+		}
+		if err := json.Unmarshal(req.UpgradeWindow, &window); err != nil {
+			writeJSONError(w, http.StatusBadRequest, "upgrade_window must be {day, hour, timezone} or null")
+			return
+		}
+		day, hour, tz := 0, 0, ""
+		if window != nil {
+			day, hour, tz = window.Day, window.Hour, window.Timezone
+		}
+		org, err = h.orgService.SetUpgradeWindow(orgID, day, hour, tz)
+		if err != nil {
+			if errors.Is(err, orgs.ErrInvalidWindow) || errors.Is(err, orgs.ErrChannelLocked) {
+				writeJSONError(w, http.StatusBadRequest, err.Error())
+			} else {
+				respondInternal(w, r, "failed to update upgrade window", err)
 			}
 			return
 		}
