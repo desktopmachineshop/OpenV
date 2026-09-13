@@ -9,6 +9,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+## 0.4.2 — 2026-09-13
+
 ### Maintenance updates
 
 - Platform admins have a page of their own, under the account menu: every
