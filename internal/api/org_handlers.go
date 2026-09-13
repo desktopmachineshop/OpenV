@@ -27,6 +27,7 @@ func (h *Handler) registerOrgRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/orgs/{id}", h.GetOrg).Methods("GET")
 	router.HandleFunc("/api/v1/orgs/{id}", h.UpdateOrg).Methods("PUT")
 	router.HandleFunc("/api/v1/orgs/{id}", h.DeleteOrg).Methods("DELETE")
+	router.HandleFunc("/api/v1/orgs/{id}/plan", h.SetOrgPlan).Methods("PUT")
 	router.HandleFunc("/api/v1/orgs/{id}/restore", h.RestoreOrg).Methods("POST")
 	router.HandleFunc("/api/v1/orgs/{id}/activate", h.ActivateOrg).Methods("POST")
 
@@ -135,6 +136,44 @@ func (h *Handler) DeleteOrg(w http.ResponseWriter, r *http.Request) {
 		"deleted_at":  org.DeletedAt,
 		"purge_after": org.DeletedAt.Add(orgs.DeletionGraceDays * 24 * time.Hour),
 	})
+}
+
+// SetOrgPlan moves a workspace to another plan (REQ-154): {"plan"} → the
+// workspace. Platform admins only: a plan is what the operator grants (the
+// open-source tier, a negotiated enterprise plan), never something a
+// workspace picks for itself, and a workspace admin who could raise their
+// own plan would be raising their own limits.
+func (h *Handler) SetOrgPlan(w http.ResponseWriter, r *http.Request) {
+	user := CurrentUser(r)
+	if user == nil {
+		writeJSONError(w, http.StatusUnauthorized, "authentication required")
+		return
+	}
+	if !user.IsAdmin {
+		writeJSONError(w, http.StatusForbidden, "only a platform admin can change a workspace's plan")
+		return
+	}
+	var req struct {
+		Plan string `json:"plan"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	org, err := h.orgService.SetPlan(mux.Vars(r)["id"], req.Plan)
+	if err != nil {
+		switch {
+		case errors.Is(err, orgs.ErrInvalidPlan):
+			writeJSONError(w, http.StatusBadRequest, "unknown plan: one of single, business_lite, business, enterprise, self_host, open_source")
+		case errors.Is(err, orgs.ErrNotFound):
+			writeJSONError(w, http.StatusNotFound, err.Error())
+		default:
+			respondInternal(w, r, "failed to set the workspace plan", err)
+		}
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(org)
 }
 
 // RestoreOrg brings a soft-deleted workspace back within the grace period.

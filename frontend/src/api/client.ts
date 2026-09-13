@@ -758,7 +758,9 @@ export interface PushSubscriptionRecord {
 export interface ProjectMember {
   project_id: string;
   user_id: string;
-  role: 'owner' | 'editor' | 'viewer';
+  // reviewer (REQ-150) reads like a viewer and may comment, but changes
+  // nothing.
+  role: 'owner' | 'editor' | 'reviewer' | 'viewer';
   user_name?: string;
   user_email?: string;
   avatar_url?: string;
@@ -1310,6 +1312,13 @@ export const authAPI = {
   acceptInvitation: (token: string) =>
     client.post<{ org_id: string; org_name: string; role: string; already_member: boolean }>(
       '/api/v1/auth/invitations/accept',
+      { token }
+    ),
+  // A reviewer share link (REQ-149), taken up by the signed-in account: it
+  // becomes a reviewer of the project, or keeps the stronger role it holds.
+  acceptShareLink: (token: string) =>
+    client.post<{ project_id: string; project_name: string; role: string }>(
+      '/api/v1/auth/share/accept',
       { token }
     ),
   googleLoginUrl: () => `${API_BASE_URL}/api/v1/auth/google`,
@@ -2510,3 +2519,65 @@ export const notificationsAPI = {
 };
 
 export default client;
+
+// --- Share links (REQ-149) and the open-source showcase (REQ-151) ----------
+
+export type ShareLinkRole = 'public' | 'reviewer';
+
+export interface ShareLink {
+  id: string;
+  project_id: string;
+  role: ShareLinkRole;
+  label: string;
+  created_by?: string;
+  created_at: string;
+  expires_at?: string | null;
+  revoked_at?: string | null;
+  // Only on the answer that minted the link: the token is stored hashed
+  // and cannot be shown again.
+  token?: string;
+  url?: string;
+}
+
+/** What a share link, or the open-source page, shows of a project. */
+export interface SharedProject {
+  role: 'public' | 'reviewer';
+  project: { id: string; name: string; description: string };
+  workspace: string;
+  baseline?: { id: string; name: string; created_at: string };
+  counts: Record<string, number>;
+  // The read-only snapshot; absent on a reviewer link, which opens the app.
+  snapshot?: ProjectExport;
+}
+
+export interface OpenSourceProject {
+  project_id: string;
+  name: string;
+  description: string;
+  workspace: string;
+  baseline_id: string;
+  baseline: string;
+  snapshot_at: string;
+  counts: Record<string, number>;
+}
+
+export const shareLinkAPI = {
+  list: (projectId: string) => client.get<ShareLink[]>(`/api/v1/projects/${projectId}/share-links`),
+  create: (projectId: string, role: ShareLinkRole, label: string, expiresAt?: string) =>
+    client.post<ShareLink>(`/api/v1/projects/${projectId}/share-links`, {
+      role,
+      label,
+      expires_at: expiresAt || null,
+    }),
+  revoke: (id: string) => client.delete(`/api/v1/share-links/${id}`),
+  // Open a link without a session. The token is in the path here, and only
+  // here: the link is the URL somebody was handed, and the API redacts it
+  // from its own log.
+  open: (token: string) => client.get<SharedProject>(`/api/v1/public/share/${token}`),
+};
+
+export const openSourceAPI = {
+  list: () => client.get<OpenSourceProject[]>('/api/v1/public/open-source/projects'),
+  get: (projectId: string) =>
+    client.get<SharedProject>(`/api/v1/public/open-source/projects/${projectId}`),
+};

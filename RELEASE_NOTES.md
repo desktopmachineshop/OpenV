@@ -22,6 +22,40 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   things by their reference, and tell a locked wizard entry from a new
   one. Stable-channel workspaces get this with their next stable release.
 
+## 0.4.1 — 2026-09-13
+
+### Maintenance updates
+
+- A platform admin can move a workspace to another plan through the API,
+  which is how a workspace is granted the open-source tier; before, that
+  took a hand edit of the database.
+
+## 0.4.0 — 2026-09-13
+
+### New features
+
+- Share a project from one link. Under Project settings → Access, an owner
+  mints a *public* link that opens the live project read only for anyone,
+  no account needed, or a *reviewer* link that asks the holder to sign in
+  and makes them a reviewer. Links can carry a label and an expiry, and can
+  be revoked. Pasted into Slack, Discord, LinkedIn and the like, a link
+  shows a preview card naming the project.
+- A new project role, *reviewer*: reads everything, adds notes, comments
+  and mentions, and changes nothing. It can be granted by name or team like
+  the other roles.
+- Workspaces on the open-source tier have every project's latest baseline
+  published on the site's open-source page, where anyone can read it; live
+  work stays private until the next baseline.
+
+### Maintenance updates
+
+- PDF and Word downloads put each requirement's description in its table,
+  under the reference and type, so it no longer gets lost between figures.
+- The site has grown from one page into a small storefront: how OpenV works
+  with diagrams, five narrated demo videos (two of them on a phone), a
+  security and subscription FAQ, an open-source projects page, and places
+  for customer stories and white papers.
+
 ## 0.3.0 — 2026-09-13
 
 ### New features

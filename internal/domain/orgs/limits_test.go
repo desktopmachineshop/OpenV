@@ -364,3 +364,16 @@ func TestThePersonalRefusalPointsAtASharedWorkspace(t *testing.T) {
 		t.Errorf("the refusal offers a remedy that does not exist: %q", msg)
 	}
 }
+
+func TestValidPlan(t *testing.T) {
+	for _, plan := range []string{PlanSingle, PlanBusinessLite, PlanBusiness, PlanEnterprise, PlanSelfHost, PlanOpenSource, PlanFree, PlanTeam} {
+		if !ValidPlan(plan) {
+			t.Errorf("%q should be a valid plan", plan)
+		}
+	}
+	for _, plan := range []string{"", "platinum", "Business", "open-source"} {
+		if ValidPlan(plan) {
+			t.Errorf("%q should not be a valid plan", plan)
+		}
+	}
+}

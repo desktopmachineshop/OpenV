@@ -54,6 +54,11 @@ const (
 	// PlanSelfHost is the default for a deployment somebody runs themselves:
 	// every limit unlimited, because the hardware is theirs.
 	PlanSelfHost = "self_host"
+	// PlanOpenSource is the hosted service free for open-source projects and
+	// charities (REQ-151): Business limits, and in return every project's
+	// latest baseline is public on the open-source page. Live work stays
+	// with the members and whoever they share it with.
+	PlanOpenSource = "open_source"
 
 	// PlanFree is the original name for what is now PlanSingle.
 	PlanFree = "free"
@@ -234,7 +239,7 @@ func PlanDefaults(plan string) map[string]interface{} {
 			LimitMaxSharedWorkspaces:      unlimited,
 			LimitMaxProjects:              unlimited,
 		}
-	case PlanBusiness, PlanTeam:
+	case PlanBusiness, PlanTeam, PlanOpenSource:
 		return map[string]interface{}{
 			LimitRunnerMemoryMB:           4096,
 			LimitRunnerCPUs:               2.0,
@@ -287,6 +292,17 @@ func SetDefaultPlan(plan string) {
 
 // DefaultPlan is the plan new workspaces are created on.
 func DefaultPlan() string { return defaultPlan }
+
+// ValidPlan reports whether name is a plan a workspace can be put on: the
+// tiers, the self-host plan, the open-source plan (REQ-154) and the two
+// legacy aliases.
+func ValidPlan(name string) bool {
+	switch name {
+	case PlanSingle, PlanBusinessLite, PlanBusiness, PlanEnterprise, PlanSelfHost, PlanOpenSource, PlanFree, PlanTeam:
+		return true
+	}
+	return false
+}
 
 // deploymentLimits is the middle layer: a deployment-wide override read once
 // at boot from OPENV_LIMITS. Nil until SetDeploymentLimits is called, which is

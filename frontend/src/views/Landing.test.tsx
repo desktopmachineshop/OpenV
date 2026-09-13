@@ -16,6 +16,7 @@ import {
 jest.mock('react-router-dom', () => ({
   Link: ({ to, children, ...rest }: any) => require('react').createElement('a', { href: String(to), ...rest }, children),
   useNavigate: () => jest.fn(),
+  useLocation: () => ({ pathname: '/', search: '', hash: '' }),
   useSearchParams: () => [new URLSearchParams((globalThis as any).__testSearch || ''), jest.fn()],
 }));
 

@@ -1290,6 +1290,28 @@ var migrations = []Migration{
 		_, err := tx.Exec(`CREATE INDEX IF NOT EXISTS idx_artifacts_owner ON artifacts(project_id, (attributes->>'owner')) WHERE valid_to IS NULL`)
 		return err
 	}},
+	// 0039: project share links (REQ-149, REQ-150). A public link shows the
+	// live project read-only to whoever holds it; a reviewer link grants the
+	// reviewer role to a signed-in account. The token is stored hashed.
+	{Version: 39, Name: "project_share_links", Run: func(tx *sql.Tx) error {
+		if _, err := tx.Exec(`
+			CREATE TABLE IF NOT EXISTS project_share_links (
+				id UUID PRIMARY KEY,
+				project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+				token_hash VARCHAR(128) NOT NULL UNIQUE,
+				role VARCHAR(16) NOT NULL,
+				label TEXT NOT NULL DEFAULT '',
+				created_by UUID,
+				created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+				expires_at TIMESTAMP,
+				revoked_at TIMESTAMP
+			)
+		`); err != nil {
+			return err
+		}
+		_, err := tx.Exec(`CREATE INDEX IF NOT EXISTS idx_project_share_links_project ON project_share_links(project_id)`)
+		return err
+	}},
 }
 
 // backfillRefPrefix is the type→prefix mapping frozen at the time migration

@@ -6,17 +6,21 @@ import (
 	"time"
 )
 
-// Roles, in ascending order of privilege.
+// Roles, in ascending order of privilege. A reviewer (REQ-150) reads like
+// a viewer and may comment, take notes and mention people, but changes no
+// artifact text: the role a stakeholder gets from a review share link.
 const (
-	RoleViewer = "viewer"
-	RoleEditor = "editor"
-	RoleOwner  = "owner"
+	RoleViewer   = "viewer"
+	RoleReviewer = "reviewer"
+	RoleEditor   = "editor"
+	RoleOwner    = "owner"
 )
 
 var roleRank = map[string]int{
-	RoleViewer: 1,
-	RoleEditor: 2,
-	RoleOwner:  3,
+	RoleViewer:   1,
+	RoleReviewer: 2,
+	RoleEditor:   3,
+	RoleOwner:    4,
 }
 
 // ErrForbidden is returned when a user lacks the required project role.

@@ -152,12 +152,35 @@ Project membership is managed in **Settings → Access** inside the project:
 - **Add a member by email.** The person must already have an OpenV account —
   if no account exists for that email you'll see a message asking them to sign
   up first.
-- Each member has a **role** — **viewer**, **editor**, or **owner** (the add
-  form defaults to editor; whoever creates a project becomes its owner) — you
-  can change it from the members table, and members can be removed.
+- Each member has a **role** — **viewer**, **reviewer**, **editor**, or
+  **owner** (the add form defaults to editor; whoever creates a project
+  becomes its owner) — you can change it from the members table, and members
+  can be removed. A **reviewer** reads everything a viewer reads and adds
+  notes, comments and mentions, but cannot change the text, the links, a
+  status or a setting.
 - **Team access** grants a whole workspace team access to the project at once,
   with a role per grant. Teams themselves are defined in Workspace settings —
   see *Workspace settings & teams*.
+
+## Share links
+
+Under **Settings → Access → Share links** an owner mints links for people
+who are not members:
+
+- A **public** link opens the live project **read only**, to anyone who
+  holds it, with no account: the tree, every artifact, its attributes and
+  traceability. Attachments and comments are not part of the shared view.
+- A **reviewer** link asks the holder to sign in (or create an account) and
+  then makes them a **reviewer** of the project. A member who already holds
+  a stronger role keeps it.
+
+Give each link a label saying who it is for and, if you like, an expiry.
+The link is shown **once**, when it is created — copy it then. **Revoke** a
+link and it stops opening anything for everyone who has it. Pasted into
+Slack, Discord, LinkedIn, Teams and the like, a link shows a preview card
+naming the project and its workspace.
+
+Contributor (editor) access is never a link: grant it by name or team above.
 
 ## Deleting a project
 

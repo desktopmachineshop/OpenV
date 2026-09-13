@@ -106,8 +106,19 @@ Cookie sessions: `user_id`, `token_hash` (unique), `expires_at`,
 `last_seen_at`, plus `active_org_id` (the stored active workspace).
 
 ### project_members
-`(project_id, user_id)` → `role` (`owner` | `editor` | `viewer`). A user's
-effective project role is the max of this and any people-team grant.
+`(project_id, user_id)` → `role` (`owner` | `editor` | `reviewer` |
+`viewer`). A user's effective project role is the max of this and any
+people-team grant. `reviewer` (REQ-150) reads and comments; it is what a
+reviewer share link grants.
+
+### project_share_links
+A link that opens a project without a membership (0039, REQ-149,
+`docs/sharing.md`): `id`, `project_id` (cascade), `token_hash` (unique,
+SHA-256 of the token, which is shown once at creation and never stored),
+`role` (`public` — the live project read only, no account — or `reviewer`
+— sign in and become a reviewer), `label`, `created_by`, `created_at`,
+`expires_at`, `revoked_at`. Revoking sets `revoked_at` once; an expired or
+revoked link resolves to the same 404 as an unknown token.
 
 ### release_announcements
 `version` (primary key, the release named by the top section of
@@ -127,7 +138,12 @@ turn-on happen once each however many servers run.
 
 ### organizations
 Workspaces: `name`, `slug` (unique), `org_type` (`company` | `personal` —
-personal orgs are auto-created at signup), `plan` and `limits` JSONB
+personal orgs are auto-created at signup), `plan` (`single`,
+`business_lite`, `business`, `enterprise`, `self_host`, `free`, `team`, or
+`open_source` — the free tier for open-source projects, whose price is that
+every project's latest baseline is published on the site's open-source
+page, REQ-151; a platform admin moves a workspace between plans with
+`PUT /api/v1/orgs/{id}/plan`, REQ-154) and `limits` JSONB
 (`limits.runner_grace_seconds` tunes run routing;
 `limits.runner_memory_mb` / `limits.runner_cpus` cap the hosted runner
 container, falling back to the plan's defaults — `orgs.PlanDefaults` — when

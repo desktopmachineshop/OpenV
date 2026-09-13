@@ -46,6 +46,10 @@ export const Login: React.FC = () => {
   const setEmailVerificationRequired = useAppStore((s) => s.setEmailVerificationRequired);
   const [verificationRequired, setVerificationRequired] = useState(false);
   const inviteToken = searchParams.get('invite') || '';
+  // A reviewer share link (REQ-149): once there is a session, the token is
+  // taken up and the project opens. A signed-in browser goes back to the
+  // link's own page, which offers the decision.
+  const shareToken = searchParams.get('share') || '';
   // The landing page links straight to registration with ?mode=register, and
   // an invite link means registration too — that is what the link is for.
   const [mode, setMode] = useState<'login' | 'register'>(
@@ -109,6 +113,10 @@ export const Login: React.FC = () => {
       .me()
       .then((res) => {
         setCurrentUser(res.data);
+        if (shareToken) {
+          navigate(`/s/${encodeURIComponent(shareToken)}`);
+          return;
+        }
         if (!inviteToken) {
           navigate('/projects');
           return;
@@ -116,7 +124,7 @@ export const Login: React.FC = () => {
         setSessionEmail(res.data.email);
       })
       .catch(() => {});
-  }, [navigate, setCurrentUser, setEmailVerificationRequired, inviteToken]);
+  }, [navigate, setCurrentUser, setEmailVerificationRequired, inviteToken, shareToken]);
 
   // Resolve the invite link so the form can name the workspace and prefill
   // the address it was sent to.
@@ -202,6 +210,23 @@ export const Login: React.FC = () => {
     }
   };
 
+  // afterSignIn names where a fresh session goes: the wall when the address
+  // is unverified, the reviewed project when a share link brought them here
+  // (the link is taken up first; a link that fails is reported but does not
+  // strand a signed-in person), and the project list otherwise.
+  const afterSignIn = async (walled: boolean): Promise<string> => {
+    if (walled) return '/verify-email';
+    if (shareToken) {
+      try {
+        const res = await authAPI.acceptShareLink(shareToken);
+        return `/projects/${res.data.project_id}/requirements`;
+      } catch {
+        return `/s/${encodeURIComponent(shareToken)}`;
+      }
+    }
+    return '/projects';
+  };
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -222,7 +247,7 @@ export const Login: React.FC = () => {
           );
           return;
         }
-        navigate(verificationRequired && !res.data.email_verified ? '/verify-email' : '/projects');
+        navigate(await afterSignIn(verificationRequired && !res.data.email_verified));
         return;
       }
       const res = await authAPI.login(email, password);
@@ -260,7 +285,7 @@ export const Login: React.FC = () => {
       }
       // On a server that sends verification links, an account that has not
       // clicked its link lands on the wall rather than the app.
-      navigate(verificationRequired && !res.data.email_verified ? '/verify-email' : '/projects');
+      navigate(await afterSignIn(verificationRequired && !res.data.email_verified));
     } catch (err: any) {
       setError(
         apiErrorMessage(err, activeMode === 'login' ? 'Sign-in failed' : 'Registration failed')
@@ -294,7 +319,11 @@ export const Login: React.FC = () => {
         <p style={{ color: 'var(--text-muted)', marginTop: 4, marginBottom: 24, fontSize: 14 }}>
           {decidingAsSignedIn
             ? 'You have an invitation'
-            : activeMode === 'login'
+            : shareToken
+              ? activeMode === 'login'
+                ? 'Sign in to review the shared project'
+                : 'Create an account to review the shared project'
+              : activeMode === 'login'
               ? 'Sign in to your workspace'
               : 'Create your account'}
         </p>

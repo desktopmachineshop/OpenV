@@ -91,7 +91,11 @@ func RequestLogMiddleware(next http.Handler) http.Handler {
 // interview invite token is the whole of a participant's access, so a log
 // line naming it would hand a live invite to anyone who can read logs.
 func redactPath(path string) string {
-	const prefix = "/api/v1/public/interviews/"
+	prefix := "/api/v1/public/interviews/"
+	if !strings.HasPrefix(path, prefix) {
+		// A share link's token is the same kind of credential.
+		prefix = "/api/v1/public/share/"
+	}
 	if !strings.HasPrefix(path, prefix) {
 		return path
 	}
