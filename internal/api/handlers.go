@@ -434,6 +434,7 @@ func (h *Handler) RegisterRoutes(router *mux.Router) {
 	h.registerPasswordRoutes(router)
 	h.registerAvatarRoutes(router)
 	h.registerReleaseRoutes(router)
+	h.registerFeatureRoutes(router)
 	h.registerRunnerSessionRoutes(router)
 	h.registerAttributeDefinitionRoutes(router)
 	h.registerSharedProductRoutes(router)

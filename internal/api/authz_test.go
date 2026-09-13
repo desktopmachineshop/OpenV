@@ -71,6 +71,21 @@ type fakeOrgService struct {
 	// the channels SetReleaseChannel was asked for.
 	plan         string
 	channelCalls []string
+	// Stable release and per-member previews (REQ-137, REQ-138).
+	stableRelease string
+	previews      map[string]bool
+}
+
+func (f *fakeOrgService) MemberPreview(orgID, userID string) (bool, error) {
+	return f.previews[orgID+"/"+userID], nil
+}
+
+func (f *fakeOrgService) SetMemberPreview(orgID, userID string, enabled bool) error {
+	if f.previews == nil {
+		f.previews = map[string]bool{}
+	}
+	f.previews[orgID+"/"+userID] = enabled
+	return nil
 }
 
 func (f *fakeOrgService) SetReleaseChannel(id, channel string) (*orgs.Org, error) {
@@ -98,7 +113,7 @@ func (f *fakeOrgService) Get(id string) (*orgs.Org, error) {
 	if plan == "" {
 		plan = orgs.PlanFree
 	}
-	o := &orgs.Org{ID: id, Plan: plan, LogoPath: f.logoPath, LogoMime: f.logoMime, HasLogo: f.logoPath != ""}
+	o := &orgs.Org{ID: id, Plan: plan, LogoPath: f.logoPath, LogoMime: f.logoMime, HasLogo: f.logoPath != "", StableRelease: f.stableRelease}
 	o.ResolveReleaseChannel()
 	return o, nil
 }

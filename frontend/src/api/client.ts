@@ -1326,6 +1326,13 @@ export interface Org {
   // ('nightly', 'stable', or '' for the plan default).
   release_channel?: 'nightly' | 'stable';
   release_channel_locked?: boolean;
+  // The stable release turned on for a stable-channel workspace ('' until
+  // the first stable is cut and turns on), and its upgrade window
+  // (upgrade_day 0 = releases turn on at the cut) (REQ-138).
+  stable_release?: string;
+  upgrade_day?: number;
+  upgrade_hour?: number;
+  upgrade_timezone?: string;
 }
 
 export interface OrgMember {
@@ -1465,6 +1472,11 @@ export const orgsAPI = {
   create: (name: string) => client.post<Org>('/api/v1/orgs', { name }),
   get: (id: string) => client.get<Org>(`/api/v1/orgs/${id}`),
   update: (id: string, payload: Partial<Org>) => client.put<Org>(`/api/v1/orgs/${id}`, payload),
+  // The caller's feature gates in the workspace, and the caller's own early
+  // switch to the next stable release.
+  features: (id: string) => client.get<OrgFeatures>(`/api/v1/orgs/${id}/features`),
+  setStablePreview: (id: string, enabled: boolean) =>
+    client.put<OrgFeatures>(`/api/v1/orgs/${id}/members/me/preview`, { enabled }),
   // Soft delete: the workspace is hidden and locked, restorable for 30 days,
   // then hard-deleted by the server's purge job.
   remove: (id: string) =>
@@ -1736,12 +1748,38 @@ export const qualityRulesAPI = {
 // its customer-facing bullets, and the whole history for the What's new
 // page. Uncached, so an open tab can notice a newer release behind the same
 // URL.
+export interface ReleaseNote {
+  text: string;
+  // A "fix:" bullet: delivered to every channel at the next nightly.
+  fix: boolean;
+}
+
+export interface StableRelease {
+  version: string;
+  cut_on: string;
+  cut_from: string;
+  notes: ReleaseNote[];
+  markdown: string;
+}
+
 export interface ReleaseInfo {
   version: string;
   date: string;
-  notes: string[];
+  notes: ReleaseNote[];
   markdown: string;
   history: string;
+  // The newest stable release; null until one is cut.
+  stable: StableRelease | null;
+}
+
+// The caller's feature gates in one workspace (REQ-137): resolved from the
+// workspace's channel and the stable release it has turned on, or the newest
+// stable when the caller previews it (REQ-138).
+export interface OrgFeatures {
+  channel: 'nightly' | 'stable';
+  stable_release: string;
+  preview: boolean;
+  features: Record<string, boolean>;
 }
 
 export const releaseAPI = {

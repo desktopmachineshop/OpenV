@@ -20,12 +20,14 @@ func (h *Handler) registerReleaseRoutes(router *mux.Router) {
 // releaseResponse is the current release plus the whole notes history.
 type releaseResponse struct {
 	// Version and Date are empty when the build names no release yet.
-	Version string   `json:"version"`
-	Date    string   `json:"date"`
-	Notes   []string `json:"notes"`
+	Version string         `json:"version"`
+	Date    string         `json:"date"`
+	Notes   []release.Note `json:"notes"`
 	// Markdown is the current release's section; History the whole file.
 	Markdown string `json:"markdown"`
 	History  string `json:"history"`
+	// Stable is the newest stable release, nil until one is cut.
+	Stable *release.Stable `json:"stable"`
 }
 
 // GetRelease answers the release the server is running and its notes.
@@ -34,13 +36,14 @@ func (h *Handler) GetRelease(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusUnauthorized, "authentication required")
 		return
 	}
-	resp := releaseResponse{Notes: []string{}}
+	resp := releaseResponse{Notes: []release.Note{}}
 	if h.releaseService != nil {
 		resp.History = h.releaseService.Markdown()
 		if cur := h.releaseService.Current(); cur != nil {
 			resp.Version, resp.Date, resp.Markdown = cur.Version, cur.Date, cur.Markdown
 			resp.Notes = append(resp.Notes, cur.Notes...)
 		}
+		resp.Stable = h.releaseService.CurrentStable()
 	}
 	// The version is what an open tab polls; a fresh answer every time is
 	// the point.
@@ -54,5 +57,7 @@ func (h *Handler) GetRelease(w http.ResponseWriter, r *http.Request) {
 // refusing to boot the API over a documentation file).
 type staticRelease struct{ notes *release.Notes }
 
-func (s staticRelease) Current() *release.Release { return s.notes.Current() }
-func (s staticRelease) Markdown() string          { return s.notes.Markdown }
+func (s staticRelease) Current() *release.Release             { return s.notes.Current() }
+func (s staticRelease) CurrentStable() *release.Stable        { return s.notes.CurrentStable() }
+func (s staticRelease) Stable(version string) *release.Stable { return s.notes.Stable(version) }
+func (s staticRelease) Markdown() string                      { return s.notes.Markdown }

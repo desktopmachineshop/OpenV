@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Artifact, ArtifactTypeDef, Link, LinkTypeRule, Org, Project, User } from '../api/client';
+import { Artifact, ArtifactTypeDef, Link, LinkTypeRule, Org, OrgFeatures, Project, User } from '../api/client';
 
 interface MetaState {
   artifactTypes: ArtifactTypeDef[];
@@ -28,6 +28,11 @@ interface AppState {
   setActiveOrgId: (id: string, opts?: { clearProjects?: boolean }) => void;
   orgsLoaded: boolean;
   setOrgsLoaded: (loaded: boolean) => void;
+  // The caller's feature gates in the active workspace (REQ-137); null
+  // until loaded, and reloaded on every workspace switch. useFeature reads
+  // it and answers false while it is null, so a gated UI never flashes on.
+  features: OrgFeatures | null;
+  setFeatures: (features: OrgFeatures | null) => void;
   projectId: string;
   setProjectId: (id: string) => void;
   projects: Project[];
@@ -61,6 +66,8 @@ export const useAppStore = create<AppState>((set) => ({
 
   orgs: [],
   setOrgs: (orgs: Org[]) => set({ orgs: orgs || [] }),
+  features: null,
+  setFeatures: (features: OrgFeatures | null) => set({ features }),
   activeOrgId: '',
   setActiveOrgId: (id: string, opts?: { clearProjects?: boolean }) => {
     try {

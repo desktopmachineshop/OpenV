@@ -8,7 +8,6 @@ import (
 
 	"github.com/openv/requirements-platform/internal/domain/notifications"
 	"github.com/openv/requirements-platform/internal/domain/release"
-	"github.com/openv/requirements-platform/internal/domain/users"
 )
 
 type fakeClaimer struct {
@@ -27,9 +26,11 @@ func (f *fakeClaimer) ClaimReleaseAnnouncement(version string, _ time.Time) (boo
 	return true, nil
 }
 
-type fakeUserLister struct{ list []*users.User }
+type fakeChannelMembers struct{ byChannel map[string][]string }
 
-func (f fakeUserLister) ListUsers() ([]*users.User, error) { return f.list, nil }
+func (f fakeChannelMembers) ListMemberUserIDsByChannel(channel string) ([]string, error) {
+	return f.byChannel[channel], nil
+}
 
 type captureStore struct {
 	notifications.Service
@@ -51,16 +52,17 @@ func announcerFixture() (*ReleaseAnnouncer, *fakeClaimer, *captureStore, *captur
 	claims := &fakeClaimer{claimed: map[string]bool{}}
 	store := &captureStore{}
 	bc := &captureBroadcaster{}
-	lister := fakeUserLister{list: []*users.User{{ID: "u1"}, {ID: "u2"}}}
-	return NewReleaseAnnouncer(claims, lister, store, bc), claims, store, bc
+	members := fakeChannelMembers{byChannel: map[string][]string{"nightly": {"u1", "u2"}, "stable": {"u3"}}}
+	return NewReleaseAnnouncer(claims, members, store, bc), claims, store, bc
 }
 
-// TestAnnounceNotifiesEveryAccountOnce: every account gets one row for the
-// release, pushed live; a second announcement of the same version, as a
-// restart or another replica would make, does nothing.
+// TestAnnounceNotifiesEveryAccountOnce: every nightly-channel account gets
+// one row for the release, pushed live, and stable-only accounts get none;
+// a second announcement of the same version, as a restart or another
+// replica would make, does nothing.
 func TestAnnounceNotifiesEveryAccountOnce(t *testing.T) {
 	a, _, store, bc := announcerFixture()
-	rel := &release.Release{Version: "2026-09-13", Date: "2026-09-13", Notes: []string{"Alpha", "Beta"}}
+	rel := &release.Release{Version: "2026-09-13", Date: "2026-09-13", Notes: []release.Note{{Text: "Alpha"}, {Text: "Beta", Fix: true}}}
 	if got := a.Announce(rel); got != 2 {
 		t.Fatalf("notified = %d, want 2", got)
 	}
@@ -74,8 +76,13 @@ func TestAnnounceNotifiesEveryAccountOnce(t *testing.T) {
 	if row.EntityRef["kind"] != "release" || row.EntityRef["version"] != "2026-09-13" {
 		t.Fatalf("entity_ref = %v", row.EntityRef)
 	}
-	if !strings.Contains(row.Title, "2026-09-13") || !strings.Contains(row.Body, "• Alpha\n• Beta") {
+	if !strings.Contains(row.Title, "2026-09-13") || !strings.Contains(row.Body, "• Alpha\n• Fix: Beta") {
 		t.Fatalf("copy = %q / %q", row.Title, row.Body)
+	}
+	for _, r := range store.rows {
+		if r.UserID == "u3" {
+			t.Fatalf("a stable-only account was told about a nightly")
+		}
 	}
 	if bc.keys[0] != StreamKey("u1") {
 		t.Fatalf("broadcast key = %q", bc.keys[0])
@@ -101,12 +108,15 @@ func TestAnnounceSkipsNilAndFailedClaim(t *testing.T) {
 // TestReleaseMessageCapsBullets: the body carries the first five bullets and
 // points at the rest; an empty release still says where to look.
 func TestReleaseMessageCapsBullets(t *testing.T) {
-	notes := []string{"a", "b", "c", "d", "e", "f", "g"}
-	_, body := ReleaseMessage(&release.Release{Version: "2026-09-13", Notes: notes})
+	var notes []release.Note
+	for _, t := range []string{"a", "b", "c", "d", "e", "f", "g"} {
+		notes = append(notes, release.Note{Text: t})
+	}
+	_, body := ReleaseMessage("2026-09-13", notes)
 	if strings.Count(body, "• ") != 5 || !strings.Contains(body, "…and more") {
 		t.Fatalf("body = %q", body)
 	}
-	_, body = ReleaseMessage(&release.Release{Version: "2026-09-13"})
+	_, body = ReleaseMessage("2026-09-13", nil)
 	if !strings.Contains(body, "What's new") {
 		t.Fatalf("empty body = %q", body)
 	}

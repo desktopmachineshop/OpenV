@@ -1,6 +1,9 @@
 package orgs
 
-import "errors"
+import (
+	"errors"
+	"time"
+)
 
 // Release channels (REQ-135, REQ-136). The shared service runs one build for
 // everyone; a workspace's channel decides when user-visible changes turn on
@@ -43,6 +46,32 @@ func ChannelChoosable(plan string) bool {
 	default:
 		return false
 	}
+}
+
+// ErrInvalidWindow is answered for an upgrade window outside day 1-28,
+// hour 0-23, or with a time zone the platform does not know.
+var ErrInvalidWindow = errors.New("upgrade window must be a day of the month from 1 to 28, an hour from 0 to 23, and a known time zone")
+
+// ChoosablePlans lists the plans whose admins pick the channel; persistence
+// needs the list to compute the effective channel in SQL.
+var ChoosablePlans = []string{PlanBusiness, PlanTeam, PlanEnterprise}
+
+// ValidateUpgradeWindow checks a window: day 0 means none; otherwise day
+// 1-28 (so it exists in every month), hour 0-23, and a loadable IANA zone
+// (empty means UTC).
+func ValidateUpgradeWindow(day, hour int, timezone string) error {
+	if day == 0 {
+		return nil
+	}
+	if day < 1 || day > 28 || hour < 0 || hour > 23 {
+		return ErrInvalidWindow
+	}
+	if timezone != "" {
+		if _, err := time.LoadLocation(timezone); err != nil {
+			return ErrInvalidWindow
+		}
+	}
+	return nil
 }
 
 // ValidChannel reports whether name is a channel.

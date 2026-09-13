@@ -583,7 +583,7 @@ func main() {
 	}
 	if cur := releaseService.Current(); cur != nil {
 		slog.Info("release", "version", cur.Version)
-		announcer := notify.NewReleaseAnnouncer(postgres.NewReleaseRepository(db), userService, notificationService, sseHub).
+		announcer := notify.NewReleaseAnnouncer(postgres.NewReleaseRepository(db), orgService, notificationService, sseHub).
 			SetEmailDispatcher(emailDispatcher).
 			SetPushDispatcher(pushDispatcher)
 		go announcer.Announce(cur)

@@ -39,7 +39,7 @@ func TestGetReleaseAnswersCurrentAndHistory(t *testing.T) {
 	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
 		t.Fatalf("decode: %v", err)
 	}
-	if resp.Version != "2026-09-13" || resp.Date != "2026-09-13" || len(resp.Notes) != 1 || resp.Notes[0] != "Shipped" {
+	if resp.Version != "2026-09-13" || resp.Date != "2026-09-13" || len(resp.Notes) != 1 || resp.Notes[0].Text != "Shipped" {
 		t.Fatalf("resp = %+v", resp)
 	}
 	if resp.Markdown != "- Shipped" || resp.History != notes.Markdown {
