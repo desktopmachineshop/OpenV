@@ -9,6 +9,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+## 0.4.0 — 2026-09-13
+
 ### New features
 
 - Share a project from one link. Under Project settings → Access, an owner
