@@ -63,7 +63,7 @@ path and UI on that key (server: `featureEnabled`; client: `useFeature`).
 
 ## Licensing of contributions
 
-OpenV is licensed under the [GNU AGPL-3.0](LICENSE). By contributing, you
+OpenV is licensed under the [Elastic License 2.0](LICENSE). By contributing, you
 agree that your contribution is licensed under the same terms.
 
 All commits must carry a **Developer Certificate of Origin (DCO)**
@@ -77,13 +77,15 @@ Signed-off-by: Your Name <your.email@example.com>
 `git commit -s` adds this automatically. PRs with unsigned commits will be
 asked to rebase with sign-offs before merging.
 
-The DCO also preserves the project's ability to offer the same code under
-additional licenses (e.g. commercial licensing for OEM embedding). Your
-contribution always remains available under the AGPL.
+The DCO certifies your right to submit the work; it does not transfer
+copyright. If the project ever needs to offer the code under different
+terms (e.g. commercial licensing for OEM embedding), it will ask
+contributors for that permission at the time. Your contribution always
+remains available under the Elastic License 2.0.
 
 ## Enterprise code
 
 Any future enterprise-only code will live in a clearly separated `ee/`
 directory under its own license, so the boundary between the open core and
 commercial extensions stays visible in the tree. Everything outside `ee/`
-is and remains AGPL.
+is and remains under the Elastic License 2.0.

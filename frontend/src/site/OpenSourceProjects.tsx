@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { OpenSourceProject, openSourceAPI } from '../api/client';
 import { apiErrorMessage } from '../api/errors';
 import { useViewport } from '../hooks/useViewport';
-import { LICENSE_GLOSS, REPO_URL } from '../landing/content';
+import { LICENSE_GLOSS, LICENSE_INTENT, REPO_URL } from '../landing/content';
 import { OPENV_OWN_PROJECT_NOTE, OPEN_SOURCE_CLAIM_URL, OPEN_SOURCE_INTRO } from './content';
 import { Card, ExternalLink, Eyebrow, Grid, H1, H2, Lead, Section, SiteShell, primaryButton, secondaryButton } from './SiteShell';
 
@@ -103,6 +103,11 @@ export const OpenSourceProjects: React.FC = () => {
       <Section compact={compact} id="openv">
         <H2 compact={compact}>OpenV is open source too</H2>
         <Lead>{LICENSE_GLOSS}</Lead>
+        <ul style={{ margin: '0 0 20px', paddingLeft: 20, fontSize: 15, lineHeight: 1.6, color: 'var(--text-body)', maxWidth: 720 }}>
+          {LICENSE_INTENT.map((line) => (
+            <li key={line}>{line}</li>
+          ))}
+        </ul>
         <p style={{ margin: '0 0 20px', fontSize: 15, lineHeight: 1.6, color: 'var(--text-body)', maxWidth: 720 }}>
           {OPENV_OWN_PROJECT_NOTE} Contributions are welcome under the Developer Certificate of Origin.
         </p>

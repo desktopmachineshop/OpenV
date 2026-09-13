@@ -9,6 +9,14 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Maintenance updates
+
+- OpenV's licence is now the Elastic License 2.0. Self-hosting stays free
+  for anyone at any scale, the source stays public, and paid installation
+  or support stays allowed; what is no longer allowed is offering OpenV to
+  others as a hosted or managed service. The README, the site's licence
+  section and the manual carry a plain-English summary.
+
 ## 0.5.0 — 2026-09-13
 
 ### New features

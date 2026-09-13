@@ -12,6 +12,7 @@ import {
   HOSTED_TIERS,
   IMPORT_FORMATS,
   LICENSE_GLOSS,
+  LICENSE_INTENT,
   LICENSE_URL,
   OTHER_TIERS,
   PRICING_FOOTNOTE,
@@ -422,6 +423,11 @@ export const Landing: React.FC<LandingProps> = ({ section }) => {
         <Section compact={compact} id="licence">
           <H2 compact={compact}>Open source, and built in the open</H2>
           <Lead>{LICENSE_GLOSS}</Lead>
+          <ul style={{ margin: '0 0 20px', paddingLeft: 20, fontSize: 15, lineHeight: 1.6, color: 'var(--text-body)', maxWidth: 720 }}>
+            {LICENSE_INTENT.map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
           <p style={{ margin: '0 0 20px', fontSize: 15, lineHeight: 1.6, color: 'var(--text-body)', maxWidth: 720 }}>
             OpenV manages its own requirements in OpenV: the live project holds every requirement the platform is built
             to, with traceability to the tests that prove it. Contributions are welcome under the Developer Certificate of

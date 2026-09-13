@@ -267,7 +267,7 @@ export const SiteShell: React.FC<SiteShellProps> = ({ title, children }) => {
           <div>
             <div style={{ fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>OpenV</div>
             <div>Requirements, traceability and V&amp;V evidence, with AI agents that work inside the audit trail.</div>
-            <div style={{ marginTop: 8 }}>AGPL-3.0 · built in the open</div>
+            <div style={{ marginTop: 8 }}>Elastic License 2.0 · built in the open</div>
           </div>
           <FooterColumn
             heading="Product"
