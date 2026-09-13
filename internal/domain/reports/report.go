@@ -427,8 +427,14 @@ func isProse(a *artifacts.Artifact) bool {
 }
 
 // fieldRows lists the details a non-heading artifact shows, in order:
-// reference, type, version, then the attributes the content asks for, then
-// verification status and the latest result when evidence was requested.
+// reference, type, version, the description, then the attributes the
+// content asks for, then verification status and the latest result when
+// evidence was requested.
+//
+// The description sits in the table as well as flowing below it: a
+// requirement's statement is the one thing a reviewer must not miss, and
+// between figures, lists and traceability rows it did. The table copy is
+// the body as plain text; the flowed copy keeps its formatting.
 func (m *reportModel) fieldRows(a *artifacts.Artifact) []fieldRow {
 	rows := []fieldRow{}
 	if a.Ref != "" {
@@ -438,6 +444,9 @@ func (m *reportModel) fieldRows(a *artifacts.Artifact) []fieldRow {
 		fieldRow{Label: "Type", Value: typeLabel(a.Type)},
 		fieldRow{Label: "Version", Value: fmt.Sprintf("v%d", a.Version)},
 	)
+	if text := doc.PlainText(m.bodies[a.ID]); text != "" {
+		rows = append(rows, fieldRow{Label: "Description", Value: text})
+	}
 	for _, key := range m.fieldOrder {
 		if !m.opts.Content.ShowsField(key) {
 			continue

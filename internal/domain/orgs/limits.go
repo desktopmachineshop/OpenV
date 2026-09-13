@@ -54,6 +54,11 @@ const (
 	// PlanSelfHost is the default for a deployment somebody runs themselves:
 	// every limit unlimited, because the hardware is theirs.
 	PlanSelfHost = "self_host"
+	// PlanOpenSource is the hosted service free for open-source projects and
+	// charities (REQ-151): Business limits, and in return every project's
+	// latest baseline is public on the open-source page. Live work stays
+	// with the members and whoever they share it with.
+	PlanOpenSource = "open_source"
 
 	// PlanFree is the original name for what is now PlanSingle.
 	PlanFree = "free"
@@ -234,7 +239,7 @@ func PlanDefaults(plan string) map[string]interface{} {
 			LimitMaxSharedWorkspaces:      unlimited,
 			LimitMaxProjects:              unlimited,
 		}
-	case PlanBusiness, PlanTeam:
+	case PlanBusiness, PlanTeam, PlanOpenSource:
 		return map[string]interface{}{
 			LimitRunnerMemoryMB:           4096,
 			LimitRunnerCPUs:               2.0,

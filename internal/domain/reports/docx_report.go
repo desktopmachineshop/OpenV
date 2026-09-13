@@ -211,12 +211,19 @@ func (r *docxRenderer) fieldsTable(rows []fieldRow) {
 	for _, row := range rows {
 		r.body.WriteString("<w:tr><w:trPr><w:cantSplit/></w:trPr>")
 		r.body.WriteString(docxCell(2400, "F7F7F7", docxParaXML(docxRunText(row.Label, docxRun{Bold: true, Color: "3C3C3C", Size: 18}), "Compact", "")))
-		value := docxRunText(row.Value, docxRun{Size: 18})
-		if row.Rollup != "" {
-			cr, cg, cb := rollupColor(row.Rollup)
-			value = docxRunText("■ ", docxRun{Color: fmt.Sprintf("%02X%02X%02X", cr, cg, cb), Size: 18}) + value
+		// A value may span lines (the description does); each line is its
+		// own paragraph so Word keeps the breaks.
+		lines := strings.Split(row.Value, "\n")
+		var cell strings.Builder
+		for i, line := range lines {
+			value := docxRunText(line, docxRun{Size: 18})
+			if i == 0 && row.Rollup != "" {
+				cr, cg, cb := rollupColor(row.Rollup)
+				value = docxRunText("■ ", docxRun{Color: fmt.Sprintf("%02X%02X%02X", cr, cg, cb), Size: 18}) + value
+			}
+			cell.WriteString(docxParaXML(value, "Compact", ""))
 		}
-		r.body.WriteString(docxCell(docxTextW-2400, "", docxParaXML(value, "Compact", "")))
+		r.body.WriteString(docxCell(docxTextW-2400, "", cell.String()))
 		r.body.WriteString("</w:tr>")
 	}
 	r.body.WriteString("</w:tbl>")

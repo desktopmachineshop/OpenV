@@ -411,7 +411,7 @@ func TestFieldRowsFollowContent(t *testing.T) {
 	for _, r := range rows {
 		labels = append(labels, r.Label)
 	}
-	want := "Reference Type Version Priority Status Verification method Verification status Custom owner V&V rollup"
+	want := "Reference Type Version Description Priority Status Verification method Verification status Custom owner V&V rollup"
 	if got := strings.Join(labels, " "); got != want {
 		t.Errorf("rows = %q, want %q", got, want)
 	}
