@@ -83,6 +83,24 @@ func (h *Handler) featureEnabled(r *http.Request, orgID, key string) bool {
 	return h.resolveFeatures(org, user.ID).Features[key]
 }
 
+// projectFeatureEnabled is featureEnabled for a project: the gate is the
+// workspace's. A handler with no workspace service (a test, a stripped
+// deployment) has nothing to gate on and lets the feature through.
+func (h *Handler) projectFeatureEnabled(r *http.Request, projectID, key string) bool {
+	if h.orgService == nil || h.projectService == nil {
+		return true
+	}
+	project, err := h.projectService.GetProject(projectID)
+	if err != nil || project == nil {
+		return false
+	}
+	return h.featureEnabled(r, project.OrgID, key)
+}
+
+// featureGateMessage is the answer to a write that a workspace's channel
+// has not received yet.
+const featureGateMessage = "this feature reaches stable-channel workspaces at their next stable release; switch the workspace to nightly, or preview the next release, in workspace settings"
+
 // GetOrgFeatures answers the caller's gates in one workspace.
 func (h *Handler) GetOrgFeatures(w http.ResponseWriter, r *http.Request) {
 	orgID := mux.Vars(r)["id"]

@@ -5,6 +5,7 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -24,6 +25,19 @@ type fakeArtifactService struct {
 
 func (f *fakeArtifactService) ListArtifacts(projectID, artifactType string) ([]*artifacts.Artifact, error) {
 	return f.byProject[projectID], nil
+}
+
+// GetArtifact resolves an id across every project the fake knows, the way
+// the far end of a cross-project link is read; unknown ids are an error.
+func (f *fakeArtifactService) GetArtifact(id string) (*artifacts.Artifact, error) {
+	for _, list := range f.byProject {
+		for _, a := range list {
+			if a != nil && a.ID == id {
+				return a, nil
+			}
+		}
+	}
+	return nil, fmt.Errorf("artifact not found")
 }
 
 type fakeLinkService struct {

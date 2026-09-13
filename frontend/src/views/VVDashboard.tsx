@@ -318,6 +318,18 @@ export const VVDashboard: React.FC = () => {
                   </td>
                   <td style={{ padding: '8px 10px', borderBottom: '1px solid var(--neutral-soft)' }}>
                     <span style={chipStyle(rollupColor(entry.rollup))}>{entry.rollup}</span>
+                    {(entry.refinements || []).length > 0 && (
+                      <div style={{ marginTop: 4, fontSize: 11, color: 'var(--text-muted)' }}>
+                        {entry.via_refinements ? 'From child projects: ' : 'Refined in child projects: '}
+                        {(entry.refinements || []).map((r, i) => (
+                          <span key={r.requirement_id}>
+                            {i > 0 ? ', ' : ''}
+                            {r.project_name} / {r.ref || r.title}{' '}
+                            <span style={{ color: rollupColor(r.rollup), fontWeight: 600 }}>({r.rollup})</span>
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))}

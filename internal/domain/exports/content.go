@@ -80,6 +80,7 @@ type Template struct {
 const (
 	FieldPriority           = "priority"
 	FieldStatus             = "status"
+	FieldOwner              = "owner"
 	FieldVerificationMethod = "verification_method"
 	FieldVerificationStatus = "verification_status"
 	FieldExecutionMethod    = "execution_method"
@@ -89,7 +90,51 @@ const (
 // StandardFields are the attribute keys the platform itself writes, shown
 // before any custom definition.
 var StandardFields = []string{
-	FieldPriority, FieldStatus, FieldVerificationMethod, FieldVerificationStatus, FieldExecutionMethod, FieldSeverity,
+	FieldPriority, FieldStatus, FieldOwner, FieldVerificationMethod, FieldVerificationStatus, FieldExecutionMethod, FieldSeverity,
+}
+
+// OwnerOf reads an artifact's owner (REQ-147): the person, team or supplier
+// responsible for it, kept in the "owner" attribute. "" when unowned.
+func OwnerOf(a *artifacts.Artifact) string {
+	if a == nil || a.Attributes == nil {
+		return ""
+	}
+	s, _ := a.Attributes[FieldOwner].(string)
+	return strings.TrimSpace(s)
+}
+
+// OwnerCount is one owner and how many artifacts carry it.
+type OwnerCount struct {
+	Owner string `json:"owner"`
+	Count int    `json:"count"`
+}
+
+// Owners lists the owners present in a snapshot, most artifacts first, then
+// alphabetically. Headings are not counted: they are structure, not work.
+func Owners(data *ProjectExport) []OwnerCount {
+	if data == nil {
+		return nil
+	}
+	counts := map[string]int{}
+	for _, a := range data.Artifacts {
+		if a == nil || a.Type == artifacts.TypeHeading {
+			continue
+		}
+		if o := OwnerOf(a); o != "" {
+			counts[o]++
+		}
+	}
+	out := make([]OwnerCount, 0, len(counts))
+	for o, n := range counts {
+		out = append(out, OwnerCount{Owner: o, Count: n})
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].Count != out[j].Count {
+			return out[i].Count > out[j].Count
+		}
+		return out[i].Owner < out[j].Owner
+	})
+	return out
 }
 
 // hiddenFields are attribute keys that are bookkeeping, never document
@@ -201,7 +246,13 @@ func Fields(data *ProjectExport) []FieldOption {
 	added := map[string]bool{}
 	for _, k := range StandardFields {
 		if counts[k] > 0 {
-			out = append(out, FieldOption{Key: k, Label: FieldLabel(k), Count: counts[k]})
+			// A project that defines a standard key (an "owner" it calls
+			// "Owning team") keeps its own label for it.
+			label := labels[k]
+			if label == "" {
+				label = FieldLabel(k)
+			}
+			out = append(out, FieldOption{Key: k, Label: label, Count: counts[k]})
 			added[k] = true
 		}
 	}

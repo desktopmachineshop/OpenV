@@ -60,6 +60,52 @@ type ProjectExport struct {
 	// attributes as ReqIF enumerations); JSON/CSV exports leave it nil so their
 	// output is unchanged.
 	AttributeDefs []*attributes.Definition `json:"attribute_definitions,omitempty"`
+	// LinkedArtifacts describes the far end of every link that crosses into
+	// another project (REQ-145): enough to name a parent requirement a local
+	// one refines, or the child requirements refining a local one, without
+	// carrying the other project's data. Empty when no link crosses.
+	LinkedArtifacts []*LinkedArtifact `json:"linked_artifacts,omitempty"`
+}
+
+// LinkedArtifact is an artifact of another project that one of this
+// project's links points at or comes from.
+type LinkedArtifact struct {
+	ID          string `json:"id"`
+	ProjectID   string `json:"project_id"`
+	ProjectName string `json:"project_name"`
+	Ref         string `json:"ref"`
+	Type        string `json:"type"`
+	Title       string `json:"title"`
+	Status      string `json:"status"`
+}
+
+// QualifiedRef is how a foreign artifact is cited: "Landing gear / REQ-12".
+func (l *LinkedArtifact) QualifiedRef() string {
+	if l == nil {
+		return ""
+	}
+	ref := l.Ref
+	if ref == "" {
+		ref = l.ID
+		if len(ref) > 8 {
+			ref = ref[:8]
+		}
+	}
+	if l.ProjectName == "" {
+		return ref
+	}
+	return l.ProjectName + " / " + ref
+}
+
+// LinkedByID indexes the foreign endpoints by artifact id.
+func (e *ProjectExport) LinkedByID() map[string]*LinkedArtifact {
+	out := make(map[string]*LinkedArtifact, len(e.LinkedArtifacts))
+	for _, l := range e.LinkedArtifacts {
+		if l != nil {
+			out[l.ID] = l
+		}
+	}
+	return out
 }
 
 // Service defines the export/import service interface
@@ -68,6 +114,9 @@ type Service interface {
 	// PrepareExport assembles the snapshot every output reads; RenderExport
 	// turns one into bytes. Downloads narrow the snapshot between the two.
 	PrepareExport(projectID string, withAttributeDefs bool) (*ProjectExport, error)
+	// LinkedArtifacts resolves the far end of every link that crosses out of
+	// the project, the same list PrepareExport embeds.
+	LinkedArtifacts(projectID string) ([]*LinkedArtifact, error)
 	RenderExport(data *ProjectExport, format ExportFormat) ([]byte, string, error)
 	ImportProject(data []byte, orgID string) (string, error)
 	ImportProjectWithOverrides(data []byte, nameOverride string, descOverride string, orgID string) (string, error)
@@ -195,14 +244,15 @@ func (s *DefaultService) PrepareExport(projectID string, withAttributeDefs bool)
 
 	// Create export data structure
 	exportData := &ProjectExport{
-		ExportedAt:  time.Now(),
-		Version:     "1.0",
-		ProjectID:   project.ID,
-		ProjectName: project.Name,
-		ProjectDesc: project.Description,
-		Artifacts:   artifactList,
-		Links:       linkList,
-		Attachments: allAttachments,
+		ExportedAt:      time.Now(),
+		Version:         "1.0",
+		ProjectID:       project.ID,
+		ProjectName:     project.Name,
+		ProjectDesc:     project.Description,
+		Artifacts:       artifactList,
+		Links:           linkList,
+		Attachments:     allAttachments,
+		LinkedArtifacts: s.resolveLinked(artifactList, linkList),
 	}
 
 	// Attach the product profile when a product service is wired.
@@ -230,6 +280,62 @@ func (s *DefaultService) PrepareExport(projectID string, withAttributeDefs bool)
 	}
 
 	return exportData, nil
+}
+
+// LinkedArtifacts implements Service.
+func (s *DefaultService) LinkedArtifacts(projectID string) ([]*LinkedArtifact, error) {
+	artifactList, err := s.artifactService.ListArtifacts(projectID, "")
+	if err != nil {
+		return nil, fmt.Errorf("failed to get artifacts: %w", err)
+	}
+	linkList, err := s.linkService.GetAllLinks(projectID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get links: %w", err)
+	}
+	return s.resolveLinked(artifactList, linkList), nil
+}
+
+// resolveLinked describes every link endpoint that is not one of the
+// project's own artifacts. Failures to read a far artifact leave it out: a
+// link to something that has since vanished is the review queue's business,
+// not the export's.
+func (s *DefaultService) resolveLinked(artifactList []*artifacts.Artifact, linkList []*links.Link) []*LinkedArtifact {
+	local := make(map[string]bool, len(artifactList))
+	for _, a := range artifactList {
+		if a != nil {
+			local[a.ID] = true
+		}
+	}
+	var out []*LinkedArtifact
+	seen := map[string]bool{}
+	names := map[string]string{}
+	for _, l := range linkList {
+		if l == nil {
+			continue
+		}
+		for _, id := range []string{l.FromID, l.ToID} {
+			if local[id] || seen[id] {
+				continue
+			}
+			seen[id] = true
+			a, err := s.artifactService.GetArtifact(id)
+			if err != nil || a == nil {
+				continue
+			}
+			name, ok := names[a.ProjectID]
+			if !ok {
+				if info, err := s.projectRepo.FindByID(a.ProjectID); err == nil && info != nil {
+					name = info.Name
+				}
+				names[a.ProjectID] = name
+			}
+			out = append(out, &LinkedArtifact{
+				ID: a.ID, ProjectID: a.ProjectID, ProjectName: name,
+				Ref: a.Ref, Type: a.Type, Title: a.Title, Status: a.Status,
+			})
+		}
+	}
+	return out
 }
 
 // RenderExport turns a prepared snapshot into one format's bytes and the

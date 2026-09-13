@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, Artifact, linkAPI } from '../api/client';
+import { Link, Artifact, linkAPI, LinkedArtifact, qualifiedRef } from '../api/client';
 import { getAvailableLinkTypes, getAllowedTargetTypes, getLinkTypeLabel } from '../config/linkTypeRules';
 import { useAlert } from './ui';
 
@@ -12,6 +12,16 @@ interface LinkPanelProps {
   readOnly?: boolean;
   onSelectArtifact?: (artifactId: string) => void;
   onDeleteLink?: (linkId: string) => void;
+  /** The far end of links that cross into other projects, for their titles. */
+  linked?: LinkedArtifact[];
+  /**
+   * Artifacts of the parent project a link may target (REQ-145): the
+   * requirements a requirement here can refine. Shown with their project.
+   */
+  extraTargets?: Artifact[];
+  extraTargetsLabel?: string;
+  /** Link types not to offer, for a feature the workspace has not received. */
+  hiddenLinkTypes?: string[];
 }
 
 export const LinkPanel: React.FC<LinkPanelProps> = ({
@@ -23,6 +33,10 @@ export const LinkPanel: React.FC<LinkPanelProps> = ({
   readOnly = false,
   onSelectArtifact,
   onDeleteLink,
+  linked = [],
+  extraTargets = [],
+  extraTargetsLabel = '',
+  hiddenLinkTypes = [],
 }) => {
   const alertDialog = useAlert();
   const [isCreating, setIsCreating] = useState(false);
@@ -55,14 +69,20 @@ export const LinkPanel: React.FC<LinkPanelProps> = ({
 
   // Get the source artifact to determine available link types
   const sourceArtifact = artifacts.find(a => a.id === selectedArtifactId);
-  const availableLinkTypes = sourceArtifact ? getAvailableLinkTypes(sourceArtifact.type) : [];
+  const availableLinkTypes = (sourceArtifact ? getAvailableLinkTypes(sourceArtifact.type) : []).filter(
+    (rule) => !hiddenLinkTypes.includes(rule.type)
+  );
   
   // Get allowed target types for selected link type
   const allowedTargetTypes = linkType ? getAllowedTargetTypes(linkType) : [];
 
   const getArtifactTitle = (id: string): string => {
     const art = artifacts.find((a) => a.id === id);
-    return art ? art.title : id.substring(0, 8);
+    if (art) return art.title;
+    const far = linked.find((l) => l.id === id) || extraTargets.find((a) => a.id === id);
+    if (far && 'project_name' in far) return `${far.title} (${qualifiedRef(far)})`;
+    if (far) return `${far.title} (${extraTargetsLabel || 'parent project'} / ${far.ref || ''})`;
+    return id.substring(0, 8);
   };
 
   const handleCreateLink = () => {
@@ -351,7 +371,9 @@ export const LinkPanel: React.FC<LinkPanelProps> = ({
                   }}
                 />
                 {showDropdown && (() => {
-                  const filteredArtifacts = artifacts.filter((a) => {
+                  const candidates = [...artifacts, ...extraTargets];
+                  const isForeign = (a: Artifact) => !artifacts.some((local) => local.id === a.id);
+                  const filteredArtifacts = candidates.filter((a) => {
                     if (a.id === selectedArtifactId) return false;
                     // Filter based on allowed target types for selected link type
                     if (!allowedTargetTypes.includes('*') && !allowedTargetTypes.includes(a.type)) {
@@ -413,6 +435,7 @@ export const LinkPanel: React.FC<LinkPanelProps> = ({
                           <div style={{ fontWeight: 'bold' }}>{artifact.title}</div>
                           <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>
                             {artifact.type} • {artifact.id.substring(0, 8)}...
+                            {isForeign(artifact) && ` • ${extraTargetsLabel || 'parent project'}${artifact.ref ? ` / ${artifact.ref}` : ''}`}
                           </div>
                         </div>
                       ))}

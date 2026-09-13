@@ -240,7 +240,9 @@ type Service interface {
 	// exhaustive callers (export, V&V, the module tree) should keep paging
 	// until they have `total` rows; ListArtifacts remains the
 	// fetch-everything path for in-process callers.
-	ListArtifactsPage(projectID string, artifactType string, limit, offset int) ([]*Artifact, int, error)
+	// owner "" means any owner; otherwise only artifacts whose "owner"
+	// attribute equals it (REQ-147).
+	ListArtifactsPage(projectID string, artifactType string, owner string, limit, offset int) ([]*Artifact, int, error)
 	GetArtifactVersions(id string) ([]*Artifact, error)
 	RestoreArtifactVersion(id string, version int) (*Artifact, error)
 	// SearchArtifacts finds current artifacts whose title or body contains
@@ -259,10 +261,11 @@ type Repository interface {
 	FindByProjectAndStatus(projectID string, status string) ([]*Artifact, error)
 	// FindPageByProject returns one page of a project's current artifacts in
 	// stable tree order (parent_id NULLS FIRST, sort_order, created_at, id);
-	// artifactType "" means all types.
-	FindPageByProject(projectID string, artifactType string, limit, offset int) ([]*Artifact, error)
-	// CountByProject counts a project's current artifacts (type "" = all).
-	CountByProject(projectID string, artifactType string) (int, error)
+	// artifactType "" means all types, owner "" any owner.
+	FindPageByProject(projectID string, artifactType string, owner string, limit, offset int) ([]*Artifact, error)
+	// CountByProject counts a project's current artifacts (type "" = all,
+	// owner "" = any).
+	CountByProject(projectID string, artifactType string, owner string) (int, error)
 	Update(artifact *Artifact) error
 	Delete(id string) error
 	NextSortOrder(projectID string, parentID *string) (int, error)
@@ -506,12 +509,12 @@ func (s *DefaultService) ListByStatus(projectID string, status string) ([]*Artif
 
 // ListArtifactsPage returns one page of a project's artifacts plus the total
 // count of artifacts matching the filter.
-func (s *DefaultService) ListArtifactsPage(projectID string, artifactType string, limit, offset int) ([]*Artifact, int, error) {
-	total, err := s.repo.CountByProject(projectID, artifactType)
+func (s *DefaultService) ListArtifactsPage(projectID string, artifactType string, owner string, limit, offset int) ([]*Artifact, int, error) {
+	total, err := s.repo.CountByProject(projectID, artifactType, owner)
 	if err != nil {
 		return nil, 0, err
 	}
-	page, err := s.repo.FindPageByProject(projectID, artifactType, limit, offset)
+	page, err := s.repo.FindPageByProject(projectID, artifactType, owner, limit, offset)
 	if err != nil {
 		return nil, 0, err
 	}

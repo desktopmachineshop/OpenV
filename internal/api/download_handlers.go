@@ -124,6 +124,7 @@ func selectionFromQuery(r *http.Request) exports.Selection {
 	sel := exports.Selection{
 		Sections:    csvParam(q.Get("sections")),
 		Types:       csvParam(q.Get("types")),
+		Owners:      csvParam(q.Get("owners")),
 		Attachments: csvParam(q.Get("attachments")),
 		// Headings are in unless the caller says otherwise.
 		IncludeHeadings: q.Get("headings") != "0" && !strings.EqualFold(q.Get("headings"), "false"),

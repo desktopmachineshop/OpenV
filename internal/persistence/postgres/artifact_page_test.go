@@ -63,14 +63,14 @@ func TestArtifactPageQueries(t *testing.T) {
 		t.Fatalf("Delete: %v", err)
 	}
 
-	count, err := repo.CountByProject(projectID, "")
+	count, err := repo.CountByProject(projectID, "", "")
 	if err != nil {
 		t.Fatalf("CountByProject: %v", err)
 	}
 	if count != total {
 		t.Errorf("CountByProject = %d, want %d", count, total)
 	}
-	tcCount, err := repo.CountByProject(projectID, "test-case")
+	tcCount, err := repo.CountByProject(projectID, "test-case", "")
 	if err != nil {
 		t.Fatalf("CountByProject(test-case): %v", err)
 	}
@@ -89,7 +89,7 @@ func TestArtifactPageQueries(t *testing.T) {
 	// Pages of 4 must partition the project without duplicates or gaps.
 	var paged []*artifacts.Artifact
 	for offset := 0; ; offset += 4 {
-		page, err := repo.FindPageByProject(projectID, "", 4, offset)
+		page, err := repo.FindPageByProject(projectID, "", "", 4, offset)
 		if err != nil {
 			t.Fatalf("FindPageByProject(offset=%d): %v", offset, err)
 		}
@@ -118,7 +118,7 @@ func TestArtifactPageQueries(t *testing.T) {
 	}
 
 	// Type filter pages too.
-	tcPage, err := repo.FindPageByProject(projectID, "test-case", 10, 0)
+	tcPage, err := repo.FindPageByProject(projectID, "test-case", "", 10, 0)
 	if err != nil {
 		t.Fatalf("FindPageByProject(test-case): %v", err)
 	}

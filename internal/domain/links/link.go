@@ -8,6 +8,10 @@ import (
 	"github.com/google/uuid"
 )
 
+// TypeRefines is the flow-down link (REQ-145): from a requirement in a child
+// project to the parent-project requirement it refines.
+const TypeRefines = "refines"
+
 // Link represents a traceability link between two artifacts
 type Link struct {
 	ID     string `json:"id"`

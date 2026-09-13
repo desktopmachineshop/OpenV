@@ -48,6 +48,19 @@ var linkTypeRules = []LinkTypeRule{
 		Description:      "A high-level requirement is broken down into more specific sub-requirements",
 	},
 	{
+		// Flow-down between projects (REQ-145): a requirement in a subsystem
+		// or supplier project refines a requirement of the parent project.
+		// The rule itself does not mention projects — the boundary is what
+		// makes the link a flow-down, and the API lets this type cross it
+		// with viewer rights on the parent side alone.
+		Type:             "refines",
+		Label:            "refines",
+		InverseLabel:     "refined by",
+		AllowedFromTypes: []string{"requirement"},
+		AllowedToTypes:   []string{"requirement"},
+		Description:      "A requirement in a subsystem or supplier project refines a requirement of its parent project; the parent's verification rolls the refinements up",
+	},
+	{
 		Type:             "derives-from",
 		Label:            "derives from",
 		InverseLabel:     "gives rise to",

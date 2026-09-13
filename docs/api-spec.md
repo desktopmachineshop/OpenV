@@ -208,12 +208,16 @@ their own project, workers pass within their org) · `org member`/`org admin`
 | POST | `/api/v1/projects` | Create project in active workspace (creator becomes owner) | user |
 | GET | `/api/v1/projects` | List projects the caller can access | user |
 | GET | `/api/v1/projects/{id}` | Project details | viewer |
-| PUT | `/api/v1/projects/{id}` | Update project | editor |
+| PUT | `/api/v1/projects/{id}` | Update project: `name`, `description`, `agent_auth`, `parent_project_id` (the project this one refines, `docs/flow-down.md`; `""` detaches; `400` for a parent in another workspace, the project itself or one of its descendants) | editor |
 | DELETE | `/api/v1/projects/{id}` | Delete project | owner |
+| GET | `/api/v1/projects/{id}/children` | The projects filed under this one | viewer |
+| GET | `/api/v1/projects/{id}/linked-artifacts` | The far end of every link crossing out of the project: `[{id, project_id, project_name, ref, type, title, status}]`, so a parent requirement a local one refines, or the child requirements refining a local one, can be named without rights on those projects | viewer |
+| GET | `/api/v1/projects/{id}/parties` | The reference parties the project recognises as owners: `{parties: [{name, note, default}]}`, the workspace's own company first and marked `default` | viewer |
+| PUT | `/api/v1/projects/{id}/parties` | Replace the project's own parties `{parties: [{name, note}]}`; the default is never stored; `400` for an empty or repeated name | editor |
 | GET | `/api/v1/projects/{id}/export` | Export project JSON | viewer |
 | POST | `/api/v1/projects/import` | Import a project export (JSON or ReqIF) | user |
 | GET | `/api/v1/projects/{id}/report` | Legacy: PDF (`?format=pdf`) or Word (`?format=docx`) with the default content | viewer |
-| GET | `/api/v1/projects/{id}/download/options` | What a download can be narrowed to: sections, types, attachment categories, fields, template presets, defaults | viewer |
+| GET | `/api/v1/projects/{id}/download/options` | What a download can be narrowed to: sections, types, owners (`{owner, count}`, most artifacts first), attachment categories, fields, template presets, defaults | viewer |
 | GET | `/api/v1/projects/{id}/download/{json,csv,excel,reqif,pdf,docx}` | One download in the chosen format; see the download parameters below | viewer |
 | POST | `/api/v1/projects/{id}/baselines` | Snapshot a baseline | editor |
 | GET | `/api/v1/projects/{id}/baselines` | List baselines | viewer |
@@ -265,7 +269,10 @@ project.
   carried as XHTML-typed values so hard line breaks survive the round trip.
 - **Downloads** (`internal/domain/downloads`, `docs/reports.md`): every
   `/download/{format}` reads the same query. `baseline_id` picks a snapshot;
-  `sections`, `types`, `headings=0`, `attachments` narrow it (REQ-56). The
+  `sections`, `types`, `owners` (a comma-separated list of owner names: only
+  the artifacts whose `owner` attribute is one of them, plus the headings,
+  so one party's share of a project can be handed over on its own — REQ-148),
+  `headings=0`, `attachments` narrow it (REQ-56). The
   PDF and Word documents also read `template` (`standard`,
   `requirements-review`, `test-planning`, `vv`), `toc`, `traceability`,
   `figures`, `vv`, `results` (`0|1`) and `fields` (`all`, `none`, or a
@@ -300,15 +307,15 @@ Every artifact carries two identifiers, and they answer different questions:
 | Method | Path | Purpose | Auth |
 |---|---|---|---|
 | POST | `/api/v1/artifacts` | Create artifact | editor |
-| GET | `/api/v1/artifacts` | List artifacts (`?project_id=&type=&doc_numbers=1`) | viewer |
+| GET | `/api/v1/artifacts` | List artifacts (`?project_id=&type=&owner=&doc_numbers=1`; `owner` matches the `owner` attribute exactly) | viewer |
 | GET | `/api/v1/artifacts/{id}` | Get artifact (current version) | viewer |
 | PUT | `/api/v1/artifacts/{id}` | Update (creates a new temporal version) | editor |
 | DELETE | `/api/v1/artifacts/{id}` | Soft-delete (history retained) | editor |
 | GET | `/api/v1/artifacts/{id}/versions` | Version history | viewer |
 | POST | `/api/v1/artifacts/{id}/restore` | Restore an older version | editor |
 | GET | `/api/v1/artifacts/{id}/links` | Links per artifact version | viewer |
-| POST | `/api/v1/links` | Create traceability link | editor |
-| GET | `/api/v1/links` | List links (`?project_id=`) | viewer |
+| POST | `/api/v1/links` | Create traceability link. A link may cross projects: the caller needs editor rights on both ends' projects, except for `refines` (the flow-down link, `docs/flow-down.md`), which needs editor rights on the source's project and viewer rights on the target's | editor |
+| GET | `/api/v1/links` | List links (`?project_id=`): every link that touches the project, from either end, so a flow-down link written from a child project is seen by the parent too | viewer |
 | GET | `/api/v1/links/{id}` | Get link | viewer |
 | PUT | `/api/v1/links/{id}` | Update link | editor |
 | DELETE | `/api/v1/links/{id}` | Delete link | editor |
@@ -514,7 +521,7 @@ hidden entry is out of every list and cannot be voted for either.
 | POST | `/api/v1/test-runs/{id}/results` | Record/overwrite a test result | editor |
 | GET | `/api/v1/test-runs/{id}/results` | List results | viewer |
 | GET | `/api/v1/test-runs/{id}/citations` | Evidence cited across the run, keyed by test result id | viewer |
-| GET | `/api/v1/projects/{id}/vv/coverage` | Verification coverage summary | viewer |
+| GET | `/api/v1/projects/{id}/vv/coverage` | Verification coverage summary. A requirement refined by requirements of child projects carries them as `refinements` (each with its own rollup in its project), `flow_down` (the worst of them) and, when it has no evidence of its own, takes the flow-down as its `rollup` with `via_refinements` set (REQ-146) | viewer |
 | GET | `/api/v1/projects/{id}/vv/matrix` | Traceability matrix | viewer |
 | GET | `/api/v1/projects/{id}/vv/gaps` | Coverage gaps | viewer |
 | GET | `/api/v1/projects/{id}/vv/report` | V&V report | viewer |

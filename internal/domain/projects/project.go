@@ -1,6 +1,7 @@
 package projects
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -26,13 +27,18 @@ func ValidAgentAuth(mode string) bool {
 
 // Project represents a project in the system
 type Project struct {
-	ID          string    `json:"id"`
-	OrgID       string    `json:"org_id"`
-	Name        string    `json:"name"`
-	Description string    `json:"description"`
-	AgentAuth   string    `json:"agent_auth"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	ID          string `json:"id"`
+	OrgID       string `json:"org_id"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	AgentAuth   string `json:"agent_auth"`
+	// ParentProjectID names the project this one refines (REQ-144): a
+	// subsystem or supplier project under the system it belongs to. Empty
+	// for a top-level project. Requirements here may "refine" requirements
+	// of the parent, and the parent's verification rolls those up.
+	ParentProjectID string    `json:"parent_project_id"`
+	CreatedAt       time.Time `json:"created_at"`
+	UpdatedAt       time.Time `json:"updated_at"`
 }
 
 // CreateProjectRequest represents the request to create a project
@@ -48,7 +54,18 @@ type UpdateProjectRequest struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
 	AgentAuth   string `json:"agent_auth"`
+	// ParentProjectID is tri-state: absent (nil) leaves the parent alone,
+	// "" detaches the project, an id attaches it under that project.
+	ParentProjectID *string `json:"parent_project_id"`
 }
+
+// Errors a parent assignment can fail with; the API answers 400 for each.
+var (
+	ErrParentNotFound     = errors.New("parent project not found")
+	ErrParentOtherOrg     = errors.New("a parent project must be in the same workspace")
+	ErrParentIsSelf       = errors.New("a project cannot be its own parent")
+	ErrParentIsDescendant = errors.New("a project cannot be placed under one of its own child projects")
+)
 
 // NewProject creates a new project
 func NewProject(req CreateProjectRequest) *Project {
@@ -76,6 +93,11 @@ type Service interface {
 	ListProjectsByOrg(orgID string) ([]*Project, error)
 	UpdateProject(id string, req UpdateProjectRequest) (*Project, error)
 	DeleteProject(id string) error
+	// ListChildren returns the projects whose parent is id, oldest first.
+	ListChildren(id string) ([]*Project, error)
+	// Ancestors returns the parent chain of id, nearest first. A cycle in
+	// stored data ends the walk rather than hanging.
+	Ancestors(id string) ([]*Project, error)
 }
 
 // DefaultService provides default implementation of Service
@@ -137,6 +159,12 @@ func (s *DefaultService) UpdateProject(id string, req UpdateProjectRequest) (*Pr
 		}
 		project.AgentAuth = req.AgentAuth
 	}
+	if req.ParentProjectID != nil {
+		if err := s.checkParent(project, *req.ParentProjectID); err != nil {
+			return nil, err
+		}
+		project.ParentProjectID = *req.ParentProjectID
+	}
 	project.UpdatedAt = time.Now()
 
 	err = s.repository.Update(project)
@@ -150,4 +178,57 @@ func (s *DefaultService) UpdateProject(id string, req UpdateProjectRequest) (*Pr
 // DeleteProject deletes a project
 func (s *DefaultService) DeleteProject(id string) error {
 	return s.repository.Delete(id)
+}
+
+// checkParent refuses a parent that is missing, in another workspace, the
+// project itself, or one of its descendants (which would close a loop).
+func (s *DefaultService) checkParent(project *Project, parentID string) error {
+	if parentID == "" {
+		return nil
+	}
+	if parentID == project.ID {
+		return ErrParentIsSelf
+	}
+	parent, err := s.repository.GetByID(parentID)
+	if err != nil || parent == nil {
+		return ErrParentNotFound
+	}
+	if parent.OrgID != project.OrgID {
+		return ErrParentOtherOrg
+	}
+	chain, err := s.Ancestors(parentID)
+	if err != nil {
+		return err
+	}
+	for _, p := range chain {
+		if p.ID == project.ID {
+			return ErrParentIsDescendant
+		}
+	}
+	return nil
+}
+
+// ListChildren implements Service.
+func (s *DefaultService) ListChildren(id string) ([]*Project, error) {
+	return s.repository.ListChildren(id)
+}
+
+// Ancestors implements Service.
+func (s *DefaultService) Ancestors(id string) ([]*Project, error) {
+	var chain []*Project
+	seen := map[string]bool{id: true}
+	cur, err := s.repository.GetByID(id)
+	if err != nil {
+		return nil, err
+	}
+	for cur.ParentProjectID != "" && !seen[cur.ParentProjectID] {
+		seen[cur.ParentProjectID] = true
+		parent, err := s.repository.GetByID(cur.ParentProjectID)
+		if err != nil || parent == nil {
+			break
+		}
+		chain = append(chain, parent)
+		cur = parent
+	}
+	return chain, nil
 }

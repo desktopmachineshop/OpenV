@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
-import { Artifact, Link, Attachment, QualityScore } from '../api/client';
+import { Artifact, Link, Attachment, QualityScore, LinkedArtifact, qualifiedRef } from '../api/client';
 import { linkAPI, qualityAPI } from '../api/client';
 import { ArtifactBody } from './ArtifactBody';
 import { ImageGallery } from './ImageGallery';
@@ -58,6 +58,8 @@ const QUALITY_LINTED_TYPES = new Set(['requirement', 'user-need']);
 interface ArtifactDetailsProps {
   artifact: Artifact;
   links?: Link[];
+  /** Far ends of links that cross into other projects (REQ-145). */
+  linked?: LinkedArtifact[];
   artifacts?: Artifact[];
   attachments?: Attachment[];
   /** Follow a "#REQ-12" citation in the description. */
@@ -90,6 +92,7 @@ interface ArtifactDetailsProps {
 }
 
 export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({ 
+  linked,
   artifact, 
   links = [], 
   artifacts = [],
@@ -242,7 +245,9 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
   // Get the title of an artifact by ID
   const getArtifactTitle = (id: string): string => {
     const art = artifacts.find((a) => a.id === id);
-    return art ? art.title : id.substring(0, 8);
+    if (art) return art.title;
+    const far = (linked || []).find((l) => l.id === id);
+    return far ? `${far.title} (${qualifiedRef(far)})` : id.substring(0, 8);
   };
 
   // Filter links related to current version

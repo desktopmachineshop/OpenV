@@ -322,15 +322,19 @@ func Tools() []Tool {
 		},
 		{
 			Name:        "list_artifacts",
-			Description: "List artifacts in a project, optionally filtered by type.",
+			Description: "List artifacts in a project, optionally filtered by type and by owner (the \"owner\" attribute: a person, team or supplier).",
 			InputSchema: schema([]string{"project_id"}, map[string]interface{}{
 				"project_id": str("Project ID"),
 				"type":       str("Optional artifact type filter"),
+				"owner":      str("Optional owner filter: only artifacts whose owner attribute equals this"),
 			}),
 			Handler: func(c *Client, args map[string]interface{}) (string, error) {
 				q := url.Values{"project_id": {strArg(args, "project_id")}}
 				if t := strArg(args, "type"); t != "" {
 					q.Set("type", t)
+				}
+				if o := strArg(args, "owner"); o != "" {
+					q.Set("owner", o)
 				}
 				out, _, err := c.request("GET", "/api/v1/artifacts", q, nil)
 				return out, err

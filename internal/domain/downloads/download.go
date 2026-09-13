@@ -83,6 +83,9 @@ type Options struct {
 	// Fields are the attribute keys the project's artifacts carry, standard
 	// ones first, so a form can offer each as a switch.
 	Fields []exports.FieldOption `json:"fields"`
+	// Owners are the owners the project's artifacts name (REQ-148), most
+	// artifacts first, so a form can offer one owner's share of the project.
+	Owners []exports.OwnerCount `json:"owners"`
 	// Templates are the presets a reader can start from.
 	Templates []exports.Template `json:"templates"`
 	// Defaults is the content a download carries when nothing is chosen.

@@ -25,6 +25,133 @@ type CoverageEntry struct {
 	TestCaseIDs        []string          `json:"test_case_ids"`
 	LatestResults      map[string]string `json:"latest_results"` // test_case_id -> status
 	Rollup             string            `json:"rollup"`
+	// Refinements are the requirements of child projects that refine this
+	// one (REQ-146), each with its own rollup in its own project. FlowDown
+	// is the worst of them, and when the requirement has no evidence of its
+	// own the flow-down is its rollup (ViaRefinements says so).
+	Refinements    []Refinement `json:"refinements,omitempty"`
+	FlowDown       string       `json:"flow_down,omitempty"`
+	ViaRefinements bool         `json:"via_refinements,omitempty"`
+}
+
+// Refinement is one child-project requirement refining a parent one.
+type Refinement struct {
+	RequirementID string `json:"requirement_id"`
+	ProjectID     string `json:"project_id"`
+	ProjectName   string `json:"project_name"`
+	Ref           string `json:"ref"`
+	Title         string `json:"title"`
+	// Rollup is the refinement's own verification rollup in its project;
+	// "uncovered" when that project could not be read.
+	Rollup string `json:"rollup"`
+}
+
+// rollupSeverity orders rollups for a flow-up: a failing refinement
+// outweighs a blocked one, which outweighs one not yet run, which outweighs
+// one with nothing behind it, and a pass or manual attestation weighs
+// nothing.
+func rollupSeverity(rollup string) int {
+	switch rollup {
+	case RollupFail:
+		return 4
+	case RollupBlocked:
+		return 3
+	case RollupUnrun:
+		return 2
+	case RollupUncovered, RollupMethodMissing, "":
+		return 1
+	default:
+		return 0
+	}
+}
+
+// RefinersByRequirement maps a local requirement to the foreign requirements
+// that refine it: "refines" links whose target is local and whose source is
+// one of the export's linked (other-project) artifacts.
+func RefinersByRequirement(export *exports.ProjectExport) map[string][]*exports.LinkedArtifact {
+	linked := export.LinkedByID()
+	if len(linked) == 0 {
+		return nil
+	}
+	out := map[string][]*exports.LinkedArtifact{}
+	for _, l := range export.Links {
+		if l == nil || l.Type != "refines" {
+			continue
+		}
+		if far, ok := linked[l.FromID]; ok && far.Type == "requirement" {
+			out[l.ToID] = append(out[l.ToID], far)
+		}
+	}
+	return out
+}
+
+// ChildProjectIDs lists the projects whose requirements refine this
+// project's, so a caller can compute their coverage for ApplyFlowDown.
+func ChildProjectIDs(export *exports.ProjectExport) []string {
+	seen := map[string]bool{}
+	var out []string
+	for _, refiners := range RefinersByRequirement(export) {
+		for _, far := range refiners {
+			if !seen[far.ProjectID] {
+				seen[far.ProjectID] = true
+				out = append(out, far.ProjectID)
+			}
+		}
+	}
+	return out
+}
+
+// ApplyFlowDown rolls child-project verification up into a coverage report
+// (REQ-146). childRollups maps a foreign requirement id to its rollup in its
+// own project; a refinement absent from it counts as uncovered. A
+// requirement with no evidence of its own takes the flow-down as its
+// rollup; one with evidence keeps the worse of the two; one with no
+// verification method keeps method-missing, since the method is still its
+// own to state. The summary is recomputed.
+func ApplyFlowDown(report *CoverageReport, export *exports.ProjectExport, childRollups map[string]string) {
+	if report == nil || export == nil {
+		return
+	}
+	refiners := RefinersByRequirement(export)
+	if len(refiners) == 0 {
+		return
+	}
+	for i := range report.Entries {
+		entry := &report.Entries[i]
+		fars := refiners[entry.RequirementID]
+		if len(fars) == 0 {
+			continue
+		}
+		worst := 0
+		flowDown := RollupPass
+		for _, far := range fars {
+			rollup := childRollups[far.ID]
+			if rollup == "" {
+				rollup = RollupUncovered
+			}
+			entry.Refinements = append(entry.Refinements, Refinement{
+				RequirementID: far.ID, ProjectID: far.ProjectID, ProjectName: far.ProjectName,
+				Ref: far.Ref, Title: far.Title, Rollup: rollup,
+			})
+			if s := rollupSeverity(rollup); s > worst {
+				worst, flowDown = s, rollup
+			}
+		}
+		entry.FlowDown = flowDown
+		switch {
+		case entry.Rollup == RollupMethodMissing:
+			// Still the parent's to fix.
+		case entry.Rollup == RollupUncovered:
+			entry.Rollup = flowDown
+			entry.ViaRefinements = true
+		case rollupSeverity(flowDown) > rollupSeverity(entry.Rollup):
+			entry.Rollup = flowDown
+		}
+	}
+	report.Summary = map[string]int{}
+	for _, e := range report.Entries {
+		report.Summary[e.Rollup]++
+	}
 }
 
 // CoverageReport aggregates coverage entries for a project.
@@ -290,7 +417,10 @@ func GapAnalysis(export *exports.ProjectExport, coverage *CoverageReport) *GapRe
 		if entry.Rollup == RollupMethodMissing {
 			report.RequirementsWithoutMethod = append(report.RequirementsWithoutMethod, entry.RequirementID)
 		}
-		if entry.VerificationMethod == MethodTest && len(entry.TestCaseIDs) == 0 {
+		// A requirement verified through the child-project requirements
+		// that refine it (REQ-146) needs no test case of its own: its
+		// evidence is theirs, and the rollup above already carries it.
+		if entry.VerificationMethod == MethodTest && len(entry.TestCaseIDs) == 0 && len(entry.Refinements) == 0 {
 			report.RequirementsWithoutTestCase = append(report.RequirementsWithoutTestCase, entry.RequirementID)
 		}
 		// A requirement whose method is anything but test is verified by an

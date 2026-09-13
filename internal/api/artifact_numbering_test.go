@@ -24,7 +24,7 @@ func (f *numberingArtifactService) ListArtifacts(projectID, artifactType string)
 	return f.all, nil
 }
 
-func (f *numberingArtifactService) ListArtifactsPage(projectID, artifactType string, limit, offset int) ([]*artifacts.Artifact, int, error) {
+func (f *numberingArtifactService) ListArtifactsPage(projectID, artifactType, owner string, limit, offset int) ([]*artifacts.Artifact, int, error) {
 	// Serve a page that deliberately omits the root section, so a handler
 	// that numbered from the page alone would get "1" wrong.
 	page := f.all[1:]

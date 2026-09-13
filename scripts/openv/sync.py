@@ -72,7 +72,9 @@ class Client:
         jar = http.cookiejar.CookieJar()
         self.opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar))
 
-    def call(self, method, path, body=None):
+    def call(self, method, path, body=None, raw=False):
+        """Call the API. raw=True returns the response bytes untouched, for
+        a file download; otherwise JSON is decoded and text returned as is."""
         req = urllib.request.Request(self.base + path, method=method)
         req.add_header("Content-Type", "application/json; charset=utf-8")
         if self.token:
@@ -82,16 +84,18 @@ class Client:
         data = json.dumps(body).encode() if body is not None else None
         try:
             with self.opener.open(req, data=data) as resp:
-                raw = resp.read()
+                raw_body = resp.read()
         except urllib.error.HTTPError as e:
             detail = e.read().decode(errors="replace")[:500]
             raise SystemExit(f"{method} {path} -> {e.code}: {detail}")
-        if not raw:
+        if raw:
+            return raw_body
+        if not raw_body:
             return None
         try:
-            return json.loads(raw)
+            return json.loads(raw_body)
         except json.JSONDecodeError:
-            return raw.decode(errors="replace")
+            return raw_body.decode(errors="replace")
 
     def login(self, email, password):
         self.call("POST", "/api/v1/auth/login", {"email": email, "password": password})
@@ -390,12 +394,36 @@ def cmd_status(args):
     print("coverage:", json.dumps((coverage or {}).get("summary"), separators=(",", ":")))
 
 
+EXPORT_EXTENSIONS = {"json": "json", "csv": "csv", "excel": "xlsx", "reqif": "reqif", "pdf": "pdf", "docx": "docx"}
+
+
 def cmd_export(args):
+    """Download the project, optionally one owner's share of it (REQ-148).
+
+    Without filters this is the whole project as JSON, as it always was.
+    --owner narrows to the artifacts whose owner attribute matches (repeat
+    it for several owners); --types narrows to artifact types; --format picks
+    any download format. Filters go through /download/<format>, the same
+    endpoint the download wizard uses, so a subset handed to a supplier is
+    the same file they would get from the app.
+    """
     c, project = connect(args)
-    out = args.out or f"openv-export-{date.today().isoformat()}.json"
-    data = c.call("GET", f"/api/v1/projects/{project['id']}/export")
-    with open(out, "w", encoding="utf-8") as f:
-        if isinstance(data, str):
+    fmt = args.format
+    out = args.out or f"openv-export-{date.today().isoformat()}.{EXPORT_EXTENSIONS[fmt]}"
+    params = []
+    if args.owner:
+        params.append("owners=" + urllib.parse.quote(",".join(args.owner)))
+    if args.types:
+        params.append("types=" + urllib.parse.quote(args.types))
+    if args.no_headings:
+        params.append("headings=0")
+    path = f"/api/v1/projects/{project['id']}/download/{fmt}"
+    if params:
+        path += "?" + "&".join(params)
+    data = c.call("GET", path, raw=fmt != "json")
+    mode = "wb" if isinstance(data, (bytes, bytearray)) else "w"
+    with open(out, mode, encoding=None if mode == "wb" else "utf-8") as f:
+        if isinstance(data, (bytes, bytearray, str)):
             f.write(data)
         else:
             json.dump(data, f, indent=2)
@@ -435,8 +463,12 @@ def main():
     s.add_argument("--def", dest="def_file", default=DEFAULT_DEF)
     s.set_defaults(fn=cmd_status)
 
-    s = sub.add_parser("export", help="download the live project export JSON")
+    s = sub.add_parser("export", help="download the live project, or one owner's share of it")
     s.add_argument("--out", default=None)
+    s.add_argument("--format", default="json", choices=sorted(EXPORT_EXTENSIONS))
+    s.add_argument("--owner", action="append", default=[], help="keep only artifacts with this owner (repeatable)")
+    s.add_argument("--types", default="", help="comma-separated artifact types to keep")
+    s.add_argument("--no-headings", action="store_true", help="leave the section headings out")
     s.set_defaults(fn=cmd_export)
 
     s = sub.add_parser("api", help="authenticated ad-hoc API call")

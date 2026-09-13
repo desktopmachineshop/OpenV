@@ -33,7 +33,11 @@ is frozen — new schema changes are appended to the registry in
 ### projects
 `id`, `org_id` (owning workspace), `name`, `description`,
 `agent_auth` (`user-account` | `api-key` — how agent runs authenticate to
-providers), timestamps.
+providers), `parent_project_id` (nullable, migration 0038: the project this
+one refines, same workspace, no cycles — `docs/flow-down.md`), `settings`
+JSONB (the quality rule set under `quality`; the reference parties a project
+recognises as owners under `parties`, `[{name, note}]`, the workspace's own
+company never stored because it is always implied), timestamps.
 
 ### artifacts
 Temporally versioned: **primary key `(id, version)`**; each update inserts a
@@ -41,12 +45,17 @@ new row and closes the old one (`valid_to`). Current version = `valid_to IS
 NULL` (unique partial index). Columns: `project_id`, `parent_id` (hierarchy),
 `type`, `title`, `body`, `sort_order`, `attributes` JSONB, `version`,
 `valid_from`/`valid_to`, `created_by`, timestamps. Types and link types are
-extensible catalogs served at `/api/v1/meta/*`.
+extensible catalogs served at `/api/v1/meta/*`. The `owner` attribute is a
+standard key (REQ-147): the party or member responsible, matched by name;
+migration 0038 indexes it for the list filter and owner-filtered downloads.
 
 ### links
 Traceability edges (`from_id` → `to_id`, `type`, `attributes` JSONB). Links
 are temporally versioned like artifacts (`valid_from`/`valid_to` with a
-unique active-row index).
+unique active-row index). A link carries no project of its own: a project's
+links are those whose `from_id` **or** `to_id` is one of its live artifacts,
+so a `refines` link written from a child project is part of the parent's
+export, baseline, coverage and map as well.
 
 ### link_artifacts
 Maps each link to the specific artifact **versions** it was created against

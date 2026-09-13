@@ -12,6 +12,9 @@ type ProjectRepository struct {
 	db *sql.DB
 }
 
+// cols is the column list every read shares.
+const cols = "SELECT id, COALESCE(org_id::text, ''), name, description, agent_auth, COALESCE(parent_project_id::text, ''), created_at, updated_at"
+
 // NewProjectRepository creates a new project repository
 func NewProjectRepository(db *sql.DB) projects.Repository {
 	return &ProjectRepository{db: db}
@@ -20,10 +23,10 @@ func NewProjectRepository(db *sql.DB) projects.Repository {
 // Create inserts a new project
 func (r *ProjectRepository) Create(project *projects.Project) error {
 	query := `
-		INSERT INTO projects (id, org_id, name, description, agent_auth, created_at, updated_at)
-		VALUES ($1, NULLIF($2, '')::uuid, $3, $4, $5, $6, $7)
+		INSERT INTO projects (id, org_id, name, description, agent_auth, parent_project_id, created_at, updated_at)
+		VALUES ($1, NULLIF($2, '')::uuid, $3, $4, $5, NULLIF($6, '')::uuid, $7, $8)
 	`
-	_, err := r.db.Exec(query, project.ID, project.OrgID, project.Name, project.Description, project.AgentAuth, project.CreatedAt, project.UpdatedAt)
+	_, err := r.db.Exec(query, project.ID, project.OrgID, project.Name, project.Description, project.AgentAuth, project.ParentProjectID, project.CreatedAt, project.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("failed to create project: %w", err)
 	}
@@ -32,11 +35,11 @@ func (r *ProjectRepository) Create(project *projects.Project) error {
 
 // GetByID retrieves a project by ID
 func (r *ProjectRepository) GetByID(id string) (*projects.Project, error) {
-	query := `SELECT id, COALESCE(org_id::text, ''), name, description, agent_auth, created_at, updated_at FROM projects WHERE id = $1`
+	query := `SELECT id, COALESCE(org_id::text, ''), name, description, agent_auth, COALESCE(parent_project_id::text, ''), created_at, updated_at FROM projects WHERE id = $1`
 	row := r.db.QueryRow(query, id)
 
 	project := &projects.Project{}
-	err := row.Scan(&project.ID, &project.OrgID, &project.Name, &project.Description, &project.AgentAuth, &project.CreatedAt, &project.UpdatedAt)
+	err := row.Scan(&project.ID, &project.OrgID, &project.Name, &project.Description, &project.AgentAuth, &project.ParentProjectID, &project.CreatedAt, &project.UpdatedAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("project not found")
@@ -49,7 +52,7 @@ func (r *ProjectRepository) GetByID(id string) (*projects.Project, error) {
 
 // GetAll retrieves all projects
 func (r *ProjectRepository) GetAll() ([]*projects.Project, error) {
-	query := `SELECT id, COALESCE(org_id::text, ''), name, description, agent_auth, created_at, updated_at FROM projects ORDER BY created_at DESC`
+	query := `SELECT id, COALESCE(org_id::text, ''), name, description, agent_auth, COALESCE(parent_project_id::text, ''), created_at, updated_at FROM projects ORDER BY created_at DESC`
 	rows, err := r.db.Query(query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query projects: %w", err)
@@ -59,7 +62,7 @@ func (r *ProjectRepository) GetAll() ([]*projects.Project, error) {
 	projectList := make([]*projects.Project, 0)
 	for rows.Next() {
 		project := &projects.Project{}
-		err := rows.Scan(&project.ID, &project.OrgID, &project.Name, &project.Description, &project.AgentAuth, &project.CreatedAt, &project.UpdatedAt)
+		err := rows.Scan(&project.ID, &project.OrgID, &project.Name, &project.Description, &project.AgentAuth, &project.ParentProjectID, &project.CreatedAt, &project.UpdatedAt)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan project: %w", err)
 		}
@@ -78,7 +81,7 @@ func (r *ProjectRepository) GetAll() ([]*projects.Project, error) {
 // resolved active workspace gets an empty list instead of every tenant's
 // projects. Mirrors EventRepository.List's org predicate.
 func (r *ProjectRepository) ListByOrg(orgID string) ([]*projects.Project, error) {
-	query := `SELECT id, COALESCE(org_id::text, ''), name, description, agent_auth, created_at, updated_at
+	query := `SELECT id, COALESCE(org_id::text, ''), name, description, agent_auth, COALESCE(parent_project_id::text, ''), created_at, updated_at
 		FROM projects WHERE org_id = NULLIF($1, '')::uuid ORDER BY created_at DESC`
 	rows, err := r.db.Query(query, orgID)
 	if err != nil {
@@ -89,7 +92,7 @@ func (r *ProjectRepository) ListByOrg(orgID string) ([]*projects.Project, error)
 	projectList := make([]*projects.Project, 0)
 	for rows.Next() {
 		project := &projects.Project{}
-		err := rows.Scan(&project.ID, &project.OrgID, &project.Name, &project.Description, &project.AgentAuth, &project.CreatedAt, &project.UpdatedAt)
+		err := rows.Scan(&project.ID, &project.OrgID, &project.Name, &project.Description, &project.AgentAuth, &project.ParentProjectID, &project.CreatedAt, &project.UpdatedAt)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan project: %w", err)
 		}
@@ -103,14 +106,35 @@ func (r *ProjectRepository) ListByOrg(orgID string) ([]*projects.Project, error)
 	return projectList, nil
 }
 
+// ListChildren returns the projects filed under one parent, oldest first so
+// a settings page lists them in the order they were attached.
+func (r *ProjectRepository) ListChildren(id string) ([]*projects.Project, error) {
+	query := cols + ` FROM projects WHERE parent_project_id = NULLIF($1, '')::uuid ORDER BY created_at ASC`
+	rows, err := r.db.Query(query, id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query child projects: %w", err)
+	}
+	defer rows.Close()
+
+	projectList := make([]*projects.Project, 0)
+	for rows.Next() {
+		project := &projects.Project{}
+		if err := rows.Scan(&project.ID, &project.OrgID, &project.Name, &project.Description, &project.AgentAuth, &project.ParentProjectID, &project.CreatedAt, &project.UpdatedAt); err != nil {
+			return nil, fmt.Errorf("failed to scan project: %w", err)
+		}
+		projectList = append(projectList, project)
+	}
+	return projectList, rows.Err()
+}
+
 // Update updates an existing project
 func (r *ProjectRepository) Update(project *projects.Project) error {
 	query := `
 		UPDATE projects
-		SET name = $1, description = $2, agent_auth = $3, updated_at = $4
-		WHERE id = $5
+		SET name = $1, description = $2, agent_auth = $3, parent_project_id = NULLIF($4, '')::uuid, updated_at = $5
+		WHERE id = $6
 	`
-	result, err := r.db.Exec(query, project.Name, project.Description, project.AgentAuth, project.UpdatedAt, project.ID)
+	result, err := r.db.Exec(query, project.Name, project.Description, project.AgentAuth, project.ParentProjectID, project.UpdatedAt, project.ID)
 	if err != nil {
 		return fmt.Errorf("failed to update project: %w", err)
 	}

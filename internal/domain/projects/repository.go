@@ -11,4 +11,6 @@ type Repository interface {
 	ListByOrg(orgID string) ([]*Project, error)
 	Update(project *Project) error
 	Delete(id string) error
+	// ListChildren returns the projects whose parent_project_id is id.
+	ListChildren(id string) ([]*Project, error)
 }

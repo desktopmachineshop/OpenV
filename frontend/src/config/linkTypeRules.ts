@@ -42,6 +42,16 @@ export const linkTypeRules: LinkTypeRule[] = [
     description: 'A high-level requirement is broken down into more specific sub-requirements',
   },
   {
+    // Flow-down between projects (REQ-145): a requirement in a subsystem or
+    // supplier project refines a requirement of its parent project.
+    type: 'refines',
+    label: 'refines',
+    inverseLabel: 'refined by',
+    allowedFromTypes: ['requirement'],
+    allowedToTypes: ['requirement'],
+    description: 'A requirement in a subsystem or supplier project refines a requirement of its parent project',
+  },
+  {
     type: 'derives-from',
     label: 'derives from',
     inverseLabel: 'gives rise to',

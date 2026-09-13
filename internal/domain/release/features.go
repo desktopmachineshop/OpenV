@@ -28,10 +28,15 @@ type Feature struct {
 // Registry lists every gated feature. Keep it sorted by ShippedIn so the
 // oldest gates are the easiest to find and retire.
 var Registry = []Feature{
-	// No gated feature has shipped yet. The next new feature adds itself
-	// here with the release it ships in, for example:
-	//   {Key: "example", ShippedIn: "0.3.0", Summary: "…"},
+	{Key: FeatureFlowDown, ShippedIn: "0.3.0", Summary: "Parent projects, requirements that refine a parent project's, and verification rolled up from child projects"},
+	{Key: FeatureOwners, ShippedIn: "0.3.0", Summary: "Artifact owners, reference parties and owner-filtered downloads"},
 }
+
+// Feature keys the code gates on.
+const (
+	FeatureFlowDown = "flow-down"
+	FeatureOwners   = "artifact-owners"
+)
 
 // Enabled reports whether a feature is on for a workspace on the given
 // channel whose turned-on stable release is stableRelease ("" when the

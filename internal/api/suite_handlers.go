@@ -22,6 +22,8 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/members"
 	"github.com/openv/requirements-platform/internal/domain/products"
 	"github.com/openv/requirements-platform/internal/domain/quality"
+	"github.com/openv/requirements-platform/internal/domain/release"
+	"github.com/openv/requirements-platform/internal/domain/settings"
 	"github.com/openv/requirements-platform/internal/domain/vv"
 	"github.com/openv/requirements-platform/internal/domain/workitems"
 )
@@ -52,6 +54,8 @@ func (h *Handler) registerSuiteRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/artifacts/{id}/quality", h.GetArtifactQuality).Methods("GET")
 	router.HandleFunc("/api/v1/projects/{id}/quality-rules", h.GetProjectQualityRules).Methods("GET")
 	router.HandleFunc("/api/v1/projects/{id}/quality-rules", h.UpdateProjectQualityRules).Methods("PUT")
+	router.HandleFunc("/api/v1/projects/{id}/parties", h.GetProjectParties).Methods("GET")
+	router.HandleFunc("/api/v1/projects/{id}/parties", h.UpdateProjectParties).Methods("PUT")
 
 	// Work items (kanban).
 	router.HandleFunc("/api/v1/projects/{id}/work-items", h.CreateWorkItem).Methods("POST")
@@ -120,6 +124,78 @@ func (h *Handler) projectExport(projectID, baselineID string) (*exports.ProjectE
 		return nil, err
 	}
 	return &data, nil
+}
+
+// --- Reference parties (REQ-147) ---
+
+// partiesResponse is the effective list: the workspace's own company first,
+// then what the project stores.
+type partiesResponse struct {
+	Parties []settings.Party `json:"parties"`
+}
+
+// effectiveParties resolves a project's parties with the workspace default.
+func (h *Handler) effectiveParties(projectID string) ([]settings.Party, error) {
+	stored, err := h.settingsService.ProjectParties(projectID)
+	if err != nil {
+		return nil, err
+	}
+	workspace := ""
+	if project, err := h.projectService.GetProject(projectID); err == nil && project != nil && h.orgService != nil {
+		if org, err := h.orgService.Get(project.OrgID); err == nil && org != nil {
+			workspace = org.Name
+		}
+	}
+	return settings.WithDefault(workspace, stored), nil
+}
+
+// GetProjectParties answers the parties a project recognises as owners.
+func (h *Handler) GetProjectParties(w http.ResponseWriter, r *http.Request) {
+	projectID := mux.Vars(r)["id"]
+	if !h.requireProjectRole(w, r, projectID, members.RoleViewer) {
+		return
+	}
+	parties, err := h.effectiveParties(projectID)
+	if err != nil {
+		respondInternal(w, r, "failed to load parties", err)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(partiesResponse{Parties: parties})
+}
+
+// UpdateProjectParties replaces the project's own parties: {"parties":
+// [{name, note}]}. The workspace default is never stored and cannot be
+// removed; 400 names an empty or repeated party.
+func (h *Handler) UpdateProjectParties(w http.ResponseWriter, r *http.Request) {
+	projectID := mux.Vars(r)["id"]
+	if !h.requireProjectRole(w, r, projectID, members.RoleEditor) {
+		return
+	}
+	if !h.projectFeatureEnabled(r, projectID, release.FeatureOwners) {
+		writeJSONError(w, http.StatusForbidden, featureGateMessage)
+		return
+	}
+	var req partiesResponse
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if _, err := h.settingsService.SetProjectParties(projectID, req.Parties); err != nil {
+		if errors.Is(err, settings.ErrInvalidParties) {
+			writeJSONError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		respondInternal(w, r, "failed to save parties", err)
+		return
+	}
+	parties, err := h.effectiveParties(projectID)
+	if err != nil {
+		respondInternal(w, r, "failed to load parties", err)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(partiesResponse{Parties: parties})
 }
 
 // --- Product profile ---
@@ -464,7 +540,47 @@ func (h *Handler) GetCoverage(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	json.NewEncoder(w).Encode(vv.ComputeCoverage(export, latest))
+	json.NewEncoder(w).Encode(h.coverageWithFlowDown(export, latest, nil))
+}
+
+// coverageWithFlowDown computes a project's coverage and rolls in the
+// verification of the child-project requirements that refine its own
+// (REQ-146). Each child project's live coverage is computed the same way,
+// so a refinement that is itself refined further down rolls all the way
+// up; seen guards against a loop in stored parents. No rights on the child
+// project are needed: what comes back is a rollup per requirement the
+// parent already links to, never the child's content.
+func (h *Handler) coverageWithFlowDown(export *exports.ProjectExport, latest map[string]*vv.TestResult, seen map[string]bool) *vv.CoverageReport {
+	report := vv.ComputeCoverage(export, latest)
+	children := vv.ChildProjectIDs(export)
+	if len(children) == 0 {
+		return report
+	}
+	if seen == nil {
+		seen = map[string]bool{}
+	}
+	seen[export.ProjectID] = true
+	rollups := map[string]string{}
+	for _, childID := range children {
+		if seen[childID] {
+			continue
+		}
+		childExport, err := h.projectExport(childID, "")
+		if err != nil {
+			slog.Warn("vv: could not read a child project for the flow-up", "project_id", childID, "error", err)
+			continue
+		}
+		childLatest, err := h.vvService.LatestResults(childID)
+		if err != nil {
+			slog.Warn("vv: could not read a child project's results", "project_id", childID, "error", err)
+			childLatest = map[string]*vv.TestResult{}
+		}
+		for _, e := range h.coverageWithFlowDown(childExport, childLatest, seen).Entries {
+			rollups[e.RequirementID] = e.Rollup
+		}
+	}
+	vv.ApplyFlowDown(report, export, rollups)
+	return report
 }
 
 func (h *Handler) GetMatrix(w http.ResponseWriter, r *http.Request) {
@@ -480,7 +596,7 @@ func (h *Handler) GetGaps(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	coverage := vv.ComputeCoverage(export, latest)
+	coverage := h.coverageWithFlowDown(export, latest, nil)
 	json.NewEncoder(w).Encode(vv.GapAnalysis(export, coverage))
 }
 

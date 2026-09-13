@@ -1,3 +1,4 @@
+import { useFeature } from '../hooks/useFeature';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { DownloadFormat, DownloadOptions, projectAPI } from '../api/client';
 import { apiErrorMessage } from '../api/errors';
@@ -32,6 +33,7 @@ interface DownloadWizardProps {
 // types it holds, the attachment categories actually attached. A filter that
 // would return nothing is never offered.
 export const DownloadWizard: React.FC<DownloadWizardProps> = ({ projectId, baselineId, onClose }) => {
+  const ownersOn = useFeature('artifact-owners');
   const [step, setStep] = useState<'format' | 'content'>('format');
   const [format, setFormat] = useState<DownloadFormat>('pdf');
   const [options, setOptions] = useState<DownloadOptions | null>(null);
@@ -293,6 +295,28 @@ export const DownloadWizard: React.FC<DownloadWizardProps> = ({ projectId, basel
                           return { ...s, allFields: false, fields: toggle(ticked, field.key) };
                         }),
                       `${field.count} artifact${field.count === 1 ? '' : 's'}${field.custom ? ' · custom' : ''}`
+                    )
+                  )}
+                </section>
+              )}
+
+              {ownersOn && (options.owners || []).length > 0 && (
+                <section style={{ marginBottom: 14 }}>
+                  <SectionHeading
+                    title="Owners"
+                    action={selection.owners.length > 0 ? 'Everyone' : undefined}
+                    onAction={() => setSelection((s) => ({ ...s, owners: [] }))}
+                  />
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 6 }}>
+                    Tick one or more owners to take only their artifacts, for handing a share of
+                    the project to a supplier. Nothing ticked means everyone.
+                  </div>
+                  {(options.owners || []).map((o) =>
+                    checkbox(
+                      selection.owners.includes(o.owner),
+                      o.owner,
+                      () => setSelection((s) => ({ ...s, owners: toggle(s.owners, o.owner) })),
+                      `${o.count}`
                     )
                   )}
                 </section>

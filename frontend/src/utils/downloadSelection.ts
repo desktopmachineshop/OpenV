@@ -110,6 +110,12 @@ export interface FormSelection {
   sections: string[];
   /** Ticked artifact types. */
   types: string[];
+  /**
+   * Ticked owners (REQ-148). Unlike the other lists, nothing ticked means
+   * everyone: the filter is for taking one party's share of the project,
+   * so it is off until a reader names a party.
+   */
+  owners: string[];
   includeHeadings: boolean;
   /** Ticked attachment categories. Untouched, no files travel. */
   attachments: string[];
@@ -159,6 +165,7 @@ export const selectAll = (options: DownloadOptions | null): FormSelection => {
   return {
     sections: (options?.sections || []).map((s) => s.id),
     types: (options?.types || []).map((t) => t.type),
+    owners: [],
     includeHeadings: true,
     attachments: [],
     template: opening ? opening.key : '',
@@ -232,6 +239,7 @@ export const toWire = (
   return {
     sections: complete(selection.sections, allSections) ? [] : selection.sections,
     types: complete(selection.types, allTypes) ? [] : selection.types,
+    owners: selection.owners,
     includeHeadings: selection.includeHeadings,
     attachments: selection.attachments,
     template: selection.template,
@@ -258,6 +266,7 @@ export const downloadQuery = (selection: DownloadSelection, baselineId?: string)
   const params = new URLSearchParams();
   if (selection.sections.length > 0) params.set('sections', selection.sections.join(','));
   if (selection.types.length > 0) params.set('types', selection.types.join(','));
+  if (selection.owners.length > 0) params.set('owners', selection.owners.join(','));
   if (!selection.includeHeadings) params.set('headings', '0');
   if (selection.attachments.length > 0) params.set('attachments', selection.attachments.join(','));
   if (baselineId && baselineId !== 'live') params.set('baseline_id', baselineId);
@@ -301,6 +310,7 @@ export const describeSelection = (
   if (types > 0 && selection.types.length < types) {
     parts.push(`${selection.types.join(', ')} only`);
   }
+  if (selection.owners.length > 0) parts.push(`owned by ${selection.owners.join(', ')}`);
   if (!selection.includeHeadings) parts.push('no headings');
   if (selection.attachments.length > 0) {
     parts.push(`with ${selection.attachments.map(attachmentLabel).join(' and ').toLowerCase()}`);

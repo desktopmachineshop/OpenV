@@ -21,6 +21,7 @@ func BuildOptions(data *exports.ProjectExport) *Options {
 		Types:       []TypeCount{},
 		Attachments: []exports.CategoryCount{},
 		Fields:      []exports.FieldOption{},
+		Owners:      []exports.OwnerCount{},
 		Templates:   exports.Templates(),
 		Defaults:    exports.DefaultContent(),
 	}
@@ -29,6 +30,9 @@ func BuildOptions(data *exports.ProjectExport) *Options {
 	}
 	if fields := exports.Fields(data); fields != nil {
 		opts.Fields = fields
+	}
+	if owners := exports.Owners(data); owners != nil {
+		opts.Owners = owners
 	}
 
 	numbers := artifacts.SectionNumbers(data.Artifacts)

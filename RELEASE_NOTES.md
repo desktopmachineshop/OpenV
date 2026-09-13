@@ -9,6 +9,22 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### New features
+
+- A project can name the project it refines, so a subsystem or a supplier
+  works in its own project under the system it belongs to. Set it under
+  Project settings → General.
+- A requirement can *refine* a requirement of the parent project. The link
+  is offered when editing a requirement, is seen from both projects, and the
+  parent's V&V shows each refined requirement's own result and rolls the
+  worst one up, so verification flows back up the tree.
+- Every artifact can have an owner: a member, or one of the reference
+  parties a project lists in its settings (your workspace is always one).
+  The owner shows on the artifact, and the module view, the API and the
+  agent tools can filter by it.
+- A download can be narrowed to one or more owners, in every format, so a
+  supplier's share of a project can be handed over on its own.
+
 ## 0.2.0 — 2026-09-13
 
 ### New features
