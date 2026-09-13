@@ -17,6 +17,7 @@ import interviews from './chapters/interviews';
 import vv from './chapters/vv';
 import orgSettings from './chapters/orgSettings';
 import troubleshooting from './chapters/troubleshooting';
+import platformAdmin from './chapters/platformAdmin';
 
 export interface ManualChapter {
   /** URL segment: /manual/<slug>. Stable — used for deep links. */
@@ -42,6 +43,7 @@ export const MANUAL_CHAPTERS: ManualChapter[] = [
   { slug: 'interviews', title: 'Interviews', content: interviews },
   { slug: 'vv', title: 'V&V & test runs', content: vv },
   { slug: 'org-settings', title: 'Workspace settings & teams', content: orgSettings },
+  { slug: 'platform-admin', title: 'Platform admin', content: platformAdmin },
   { slug: 'troubleshooting', title: 'Troubleshooting & FAQ', content: troubleshooting },
 ];
 

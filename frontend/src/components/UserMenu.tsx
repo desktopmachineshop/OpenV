@@ -164,6 +164,17 @@ export const UserMenu: React.FC<UserMenuProps> = ({ variant = 'light' }) => {
           >
             What's new
           </button>
+          {currentUser?.is_admin && (
+            <button
+              onClick={() => {
+                setMenuOpen(false);
+                navigate('/admin');
+              }}
+              style={itemStyle}
+            >
+              Platform admin
+            </button>
+          )}
           <button onClick={handleLogout} style={itemStyle}>
             Sign out
           </button>

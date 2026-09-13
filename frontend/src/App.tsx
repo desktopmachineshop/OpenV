@@ -35,6 +35,9 @@ const ManualView = lazy(() =>
   import('./views/ManualView').then((m) => ({ default: m.ManualView }))
 );
 const WhatsNew = lazy(() => import('./views/WhatsNew').then((m) => ({ default: m.WhatsNew })));
+const PlatformAdmin = lazy(() =>
+  import('./views/PlatformAdmin').then((m) => ({ default: m.PlatformAdmin }))
+);
 // Landing is the public front page; signed-in users never render it, so it
 // stays out of the main bundle they download.
 const Landing = lazy(() => import('./views/Landing').then((m) => ({ default: m.Landing })));
@@ -224,6 +227,7 @@ function App() {
         <Route path="/manual" element={<ManualView />} />
         <Route path="/manual/:chapterSlug" element={<ManualView />} />
         <Route path="/whats-new" element={<WhatsNew />} />
+        <Route path="/admin" element={<PlatformAdmin />} />
         <Route path="/projects/:projectId" element={<ProjectLayout />}>
           <Route index element={<ProductOverview />} />
           <Route path="requirements" element={<ModuleView />} />
