@@ -9,6 +9,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+## 0.3.0 — 2026-09-13
+
 ### New features
 
 - A project can name the project it refines, so a subsystem or a supplier
