@@ -820,7 +820,7 @@ export const ModuleView: React.FC = () => {
    * before or after it.
    */
   const pasteRelativeTo = async (
-    source: Pick<Artifact, 'type' | 'title' | 'body' | 'attributes'>,
+    source: Pick<Artifact, 'id' | 'type' | 'title' | 'body' | 'attributes'>,
     target: Artifact,
     position: 'before' | 'after'
   ) => {
@@ -836,6 +836,9 @@ export const ModuleView: React.FC = () => {
         title: `${source.title} (copy)`,
         body: source.body,
         attributes,
+        // The copy starts with no history of its own; the server writes the
+        // one note it should have, naming where it came from.
+        copied_from: source.id,
       });
       const created = response.data;
 

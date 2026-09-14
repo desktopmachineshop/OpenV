@@ -539,10 +539,37 @@ func (h *Handler) CreateArtifact(w http.ResponseWriter, r *http.Request) {
 		"artifact_type": artifact.Type,
 		"title":         artifact.Title,
 	})
+	h.noteCopiedFrom(r, artifact, req.CopiedFrom)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(artifact)
+}
+
+// noteCopiedFrom opens a copied artifact's feed with the one line its
+// history has: where it came from. A duplicate or a paste carries none of
+// the original's versions and none of its links (a copy that inherited
+// "verifies REQ-12" would assert a verification nobody made), so without
+// this a reader could not tell the two apart later. The source must be
+// readable by the caller, so the field cannot be used to probe another
+// project's artifacts; anything else leaves the copy without a note rather
+// than failing the create, which has already happened.
+func (h *Handler) noteCopiedFrom(r *http.Request, copy *artifacts.Artifact, sourceID string) {
+	if sourceID == "" || h.chatterService == nil {
+		return
+	}
+	source, err := h.artifactService.GetArtifact(sourceID)
+	if err != nil || source == nil {
+		return
+	}
+	if !h.requireProjectRole(discardResponse{}, r, source.ProjectID, members.RoleViewer) {
+		return
+	}
+	label := source.Ref
+	if label == "" {
+		label = source.Title
+	}
+	h.logAutoNote(r, copy.ID, fmt.Sprintf("Copied from %s (version %d).", label, source.Version), "copy")
 }
 
 // errAttributeDefinitionsUnavailable marks a definition-lookup failure on the
@@ -2327,7 +2354,13 @@ func (h *Handler) GetAttachmentMeta(w http.ResponseWriter, r *http.Request) {
 // where a reader looks to find out why a drawing changed, so a failure to write
 // one is logged rather than failing the upload that succeeded.
 func (h *Handler) logFigureNote(r *http.Request, artifactID, message string) {
-	entry := chatter.NewChatterEntry(artifactID, message, true, "figure-change")
+	h.logAutoNote(r, artifactID, message, "figure-change")
+}
+
+// logAutoNote writes a system note of the given type to an artifact's feed,
+// attributed to the caller when there is one.
+func (h *Handler) logAutoNote(r *http.Request, artifactID, message, entryType string) {
+	entry := chatter.NewChatterEntry(artifactID, message, true, entryType)
 	entry.AuthorName = "System"
 	if user := CurrentUser(r); user != nil {
 		entry.CreatedBy = &user.ID
@@ -2338,7 +2371,7 @@ func (h *Handler) logFigureNote(r *http.Request, artifactID, message string) {
 		}
 	}
 	if err := h.chatterService.CreateEntry(entry); err != nil {
-		slog.Warn("api: failed to log figure note", "artifact_id", artifactID, "error", err)
+		slog.Warn("api: failed to log note", "type", entryType, "artifact_id", artifactID, "error", err)
 	}
 }
 

@@ -30,6 +30,9 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ### Bug fixes
 
+- A duplicated or pasted artifact now says where it came from. Its history
+  starts with one note, *Copied from REQ-12 (version 3)*, instead of looking
+  like an artifact that was typed in from scratch.
 - PDF and Word downloads no longer print each requirement's description
   twice. It sits once, in the Description row of the fields table, and
   keeps its formatting there: lists, tables, code, links and emphasis all

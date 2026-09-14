@@ -40,7 +40,9 @@ link type definitions.
   **duplicate** (a copy placed directly after the original). A copy carries the
   type, title, body and attributes; links and figures stay with the original,
   because a copy that inherited "verifies REQ-12" would assert a verification
-  nobody made. Pasted artifacts are titled "… (copy)".
+  nobody made. Pasted artifacts are titled "… (copy)", and the copy's own
+  history starts with a single note — *Copied from REQ-12 (version 3)* — so
+  you can always tell where it came from.
 - **Drag an artifact** onto another to move it. Where you let go decides what
   happens: the **top half** drops it before that artifact, the **bottom left**
   after it, and the **bottom right** makes it a **child** of it. The row shows
