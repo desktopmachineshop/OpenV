@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { RunnerSessionPayload, cloudRunnerAPI } from '../../api/client';
+import { RunnerPoolStatus, RunnerSessionPayload, cloudRunnerAPI } from '../../api/client';
 import { apiErrorMessage } from '../../api/errors';
 import { ErrorBanner, useConfirm } from '../ui';
 import { useViewport } from '../../hooks/useViewport';
@@ -25,6 +25,58 @@ const formatRemaining = (seconds: number): string => {
     return `${hours}h ${mins % 60}m`;
   }
   return mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
+};
+
+// How busy the shared pool is, as a traffic light.
+//
+// The card deliberately does not print how many runners are free. A member
+// can hold one at a time, so the number is not theirs to act on, and the
+// figure would tell every account how much capacity the deployment has and
+// how much of it is taken. The band answers the only question they have:
+// will there be one for me if I ask now?
+//
+// Colour never carries the meaning on its own — the label says the same
+// thing — so it reads the same to a screen reader or a colour-blind eye.
+const POOL_LOAD: Record<RunnerPoolStatus, { color: string; label: string; hint: string }> = {
+  green: {
+    color: 'var(--success)',
+    label: 'Runners available',
+    hint: 'The cloud runner pool has plenty free.',
+  },
+  amber: {
+    color: 'var(--warning)',
+    label: 'Runners busy',
+    hint: 'The cloud runner pool is filling up; starting one should still work.',
+  },
+  red: {
+    color: 'var(--danger)',
+    label: 'All runners in use',
+    hint: 'Every cloud runner is leased right now. Try again in a few minutes.',
+  },
+  unavailable: {
+    color: 'var(--text-muted)',
+    label: 'No runners online',
+    hint: 'This deployment has no cloud runners online.',
+  },
+};
+
+const PoolLoadIndicator: React.FC<{ status: RunnerPoolStatus; fontSize: number }> = ({
+  status,
+  fontSize,
+}) => {
+  const band = POOL_LOAD[status];
+  if (!band) return null;
+  return (
+    <span
+      style={{ fontSize, color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: 5 }}
+      title={band.hint}
+    >
+      <span aria-hidden="true" style={{ color: band.color, fontSize: fontSize - 1 }}>
+        ●
+      </span>
+      {band.label}
+    </span>
+  );
 };
 
 // A transient runner: a pre-warmed runner in the cloud, leased to one member
@@ -117,14 +169,14 @@ export const CloudRunnerCard: React.FC<CloudRunnerCardProps> = ({ orgId, onChang
       setError('');
       onChanged?.();
     } catch (err: any) {
-      // A full pool answers 503 with the same payload shape; show its counts
-      // rather than a bare error.
+      // A full pool answers 503 with the same payload shape; say which of the
+      // two it is rather than a bare error, still without naming figures.
       const data = err?.response?.data as RunnerSessionPayload | undefined;
       if (data && typeof data.enabled === 'boolean') {
         applyPayload(data);
         setError(
-          data.pool && data.pool.total > 0
-            ? `Every cloud runner is in use right now (${data.pool.leased} of ${data.pool.total}). Try again in a few minutes.`
+          data.pool_load && data.pool_load.status !== 'unavailable'
+            ? 'Every cloud runner is in use right now. Try again in a few minutes.'
             : 'No cloud runners are available on this deployment yet.'
         );
       } else {
@@ -153,7 +205,7 @@ export const CloudRunnerCard: React.FC<CloudRunnerCardProps> = ({ orgId, onChang
     return null;
   }
 
-  const pool = payload?.pool;
+  const poolLoad = payload?.pool_load;
 
   return (
     <div className="card">
@@ -183,17 +235,15 @@ export const CloudRunnerCard: React.FC<CloudRunnerCardProps> = ({ orgId, onChang
             >
               {busy ? 'Starting…' : 'Start a cloud runner'}
             </button>
-            {pool && !isPhone && (
-              <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                {pool.idle} of {pool.total} free
-              </span>
+            {poolLoad && !isPhone && (
+              <PoolLoadIndicator status={poolLoad.status} fontSize={12} />
             )}
           </div>
-          {pool && isPhone && (
+          {poolLoad && isPhone && (
             // Under the button and at reading size, not a 12 px aside
             // squeezed beside it.
-            <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 10 }}>
-              {pool.idle} of {pool.total} free right now
+            <div style={{ marginTop: 10 }}>
+              <PoolLoadIndicator status={poolLoad.status} fontSize={13} />
             </div>
           )}
         </>
@@ -229,11 +279,11 @@ export const CloudRunnerCard: React.FC<CloudRunnerCardProps> = ({ orgId, onChang
                     {formatRemaining(remaining)}
                   </dd>
                 </div>
-                {pool && (
+                {poolLoad && (
                   <div>
                     <dt style={{ fontSize: 12, color: 'var(--text-muted)' }}>Pool</dt>
-                    <dd style={{ margin: 0, fontSize: 15, color: 'var(--text)' }}>
-                      {pool.idle} of {pool.total} free
+                    <dd style={{ margin: 0 }}>
+                      <PoolLoadIndicator status={poolLoad.status} fontSize={15} />
                     </dd>
                   </div>
                 )}

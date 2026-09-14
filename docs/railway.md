@@ -217,8 +217,11 @@ Service settings:
 - **Networking**: none. A pool node makes outbound calls only; do not generate
   a domain.
 - **Settings → Deploy → Replicas**: the number of members who can hold a cloud
-  runner at once. Start at 2 and raise it when members start seeing "every
-  cloud runner is in use".
+  runner at once — a node serves one lease at a time. Start at 2 and raise it
+  when members start seeing "every cloud runner is in use". The member card
+  shows the pool as a traffic light rather than a count, so the signal to
+  raise it is members reporting red, or the admin **Workspace settings →
+  Runners** view, which still reports the real occupancy.
 - **Volume**: none. A pool node's state is meant to be thrown away, and it is
   wiped between leases anyway.
 
@@ -355,8 +358,15 @@ window closes, and once more when it has.
   and gives members a runner without installing anything.
 - **Pool replicas are billed while idle.** Pre-warming is the point (a lease
   is ready in seconds), but an idle replica still costs what an idle
-  container costs. Size the pool to real concurrent use, and leave
-  `RUNNER_POOL_KEY` unset on deployments that do not want the feature.
+  container costs. An idle node is cheap — measured at roughly 20 MB and a
+  rounding error of CPU, since all it does between leases is heartbeat — so
+  the replica count is rarely the line that hurts; a *leased* node running
+  the vendor CLIs is an order of magnitude more. What does scale with the
+  replica count regardless of use is the heartbeat traffic: every node beats
+  every `NodeHeartbeatInterval` (5 s) and each beat is a write, so a large
+  idle pool is a constant write load on the API and its database. Size the
+  pool to real concurrent use, and leave `RUNNER_POOL_KEY` unset on
+  deployments that do not want the feature.
 - **One volume per service**: `/data` holds both agent definitions
   (`$OPENV_DATA_DIR/agents`) and uploads (`UPLOADS_DIR=/data/uploads`).
 - **Connector downloads** are baked into the API image (`Dockerfile.api`

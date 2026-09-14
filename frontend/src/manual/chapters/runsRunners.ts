@@ -70,11 +70,15 @@ The trade is that it doesn't last:
   Your next cloud runner starts by signing in again. Sign-ins on your own
   machine are untouched, as is your Agent Connector pairing.
 
-If every cloud runner is in use, the card says so: they're leased one member
-at a time, so you either wait or use your own machine.
+The card shows how busy the shared pool is as a traffic light rather than a
+count — **Runners available** (green), **Runners busy** (amber) or **All
+runners in use** (red). You can hold one runner at a time, so the only
+question it needs to answer is whether starting one now is likely to work. If
+every cloud runner is in use, the card says so: they're leased one member at
+a time, so you either wait or use your own machine.
 
 **On a phone** the whole lease is one column: the status, the countdown and
-how many runners are free, each under its own label, with **Start a cloud
+the pool's traffic light, each under its own label, with **Start a cloud
 runner** / **Extend the lease** / **End now** as full-width buttons you can
 hit with a thumb. The sign-in relay below it is built for a phone too — the
 **Open sign-in page** link hands the vendor's page to your browser, and the

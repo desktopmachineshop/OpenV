@@ -61,7 +61,7 @@ func memberRequest(method, path string) *http.Request {
 }
 
 // An empty pool is not an error the member caused: they get 503 and a payload
-// that says how the pool looks, so the UI can explain the wait.
+// that says how loaded the pool is, so the UI can explain the wait.
 func TestStartRunnerSessionWithEmptyPool(t *testing.T) {
 	svc := &fakeRunnerSessions{startErr: runnersessions.ErrNoNodes, counts: runnersessions.PoolCounts{Total: 2, Leased: 2}}
 	h := &Handler{runnerSessionService: svc, orgService: memberOrgService()}
@@ -76,9 +76,38 @@ func TestStartRunnerSessionWithEmptyPool(t *testing.T) {
 	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
 		t.Fatalf("decode: %v", err)
 	}
-	pool, ok := body["pool"].(map[string]interface{})
-	if !ok || pool["leased"].(float64) != 2 {
-		t.Errorf("payload did not report pool occupancy: %s", w.Body.String())
+	load, ok := body["pool_load"].(map[string]interface{})
+	if !ok || load["status"] != runnersessions.LoadRed {
+		t.Errorf("payload did not report the pool load band: %s", w.Body.String())
+	}
+}
+
+// The member payload carries a band and no figures. A member holds one
+// runner at a time, so the count is not theirs to act on, and the
+// deployment's capacity is not published to every account. Regression test
+// for the card that used to print "1 of 3 free".
+func TestRunnerSessionPayloadNamesNoCounts(t *testing.T) {
+	svc := &fakeRunnerSessions{counts: runnersessions.PoolCounts{Total: 5, Idle: 4, Leased: 1}}
+	h := &Handler{runnerSessionService: svc, orgService: memberOrgService()}
+
+	w := httptest.NewRecorder()
+	h.GetRunnerSession(w, memberRequest(http.MethodGet, "/api/v1/orgs/org-1/runner-session"))
+
+	var body map[string]interface{}
+	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if _, leaked := body["pool"]; leaked {
+		t.Errorf("the member payload still carries pool counts: %s", w.Body.String())
+	}
+	load, ok := body["pool_load"].(map[string]interface{})
+	if !ok || load["status"] != runnersessions.LoadGreen {
+		t.Fatalf("pool_load = %v, want a green band: %s", body["pool_load"], w.Body.String())
+	}
+	for _, figure := range []string{"total", "idle", "leased"} {
+		if _, leaked := load[figure]; leaked {
+			t.Errorf("the load band carries %q: %s", figure, w.Body.String())
+		}
 	}
 }
 

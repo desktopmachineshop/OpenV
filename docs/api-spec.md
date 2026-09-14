@@ -200,7 +200,7 @@ their own project, workers pass within their org) · `org member`/`org admin`
 | POST | `/api/v1/orgs/{id}/hosted-runner/stop` | Stop the container | org admin |
 | DELETE | `/api/v1/orgs/{id}/hosted-runner` | Delete (optionally `?purge=true` removes the volume) | org admin |
 | GET | `/api/v1/orgs/{id}/worker-status` | Live runner presence / queue depth | org member |
-| GET | `/api/v1/orgs/{id}/runner-session` | My transient runner lease (with deadline and pool occupancy) | org member |
+| GET | `/api/v1/orgs/{id}/runner-session` | My transient runner lease (with deadline and a `pool_load` band — `green` / `amber` / `red` / `unavailable`, never a count) | org member |
 | POST | `/api/v1/orgs/{id}/runner-session` | Lease a cloud runner (409-free: an existing lease is returned; 503 when the pool is full) | org member |
 | POST | `/api/v1/orgs/{id}/runner-session/extend` | Reset my lease's clocks (capped at 8h from its start) | org member |
 | DELETE | `/api/v1/orgs/{id}/runner-session` | End my lease now (the node is wiped) | org member |

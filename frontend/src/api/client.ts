@@ -1687,10 +1687,18 @@ export interface RunnerSession {
 }
 
 /** How busy the runner pool is right now. */
-export interface RunnerPoolCounts {
-  total: number;
-  idle: number;
-  leased: number;
+/**
+ * How busy the shared pool is, as a band rather than a count.
+ *
+ * A member can hold one runner at a time, so the exact number free is not
+ * something they can act on, and the deployment's capacity is not published
+ * to every account. `unavailable` means this deployment has no pool at all,
+ * which is a different thing from `red` (nodes exist, all taken).
+ */
+export type RunnerPoolStatus = 'green' | 'amber' | 'red' | 'unavailable';
+
+export interface RunnerPoolLoad {
+  status: RunnerPoolStatus;
 }
 
 export interface RunnerSessionPayload {
@@ -1698,7 +1706,7 @@ export interface RunnerSessionPayload {
   session: RunnerSession | null;
   deadline?: string;
   seconds_remaining?: number;
-  pool?: RunnerPoolCounts;
+  pool_load?: RunnerPoolLoad;
 }
 
 /**
