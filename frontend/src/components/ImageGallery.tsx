@@ -36,6 +36,11 @@ interface ImageGalleryProps {
   thumbnailSize?: number; // Custom thumbnail size in pixels (default 120)
 }
 
+// Every button here is type="button". The gallery is rendered inside the
+// artifact editor's <form>, where a button with no type is a submit
+// button: clicking "new version" or "delete" saved the artifact and closed
+// the editor before the file was even chosen, and the image never changed.
+
 /** What a figure is called: its reference where it has one, else its filename. */
 const figureLabel = (a: Attachment): string => a.figure_ref || a.filename;
 
@@ -270,6 +275,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
               <div className="gallery-overlay">
                 {canRename && (
                   <button
+                    type="button"
                     className="gallery-delete-btn"
                     onClick={(e) => startRename(e, attachment)}
                     title="Rename this figure"
@@ -280,6 +286,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
                 )}
                 {!readOnly && onUploadVersion && (
                   <button
+                    type="button"
                     className="gallery-delete-btn"
                     onClick={(e) => startVersionUpload(e, attachment.id)}
                     title="Upload a new version of this figure"
@@ -290,6 +297,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
                 )}
                 {attachment.version > 1 && (
                   <button
+                    type="button"
                     className="gallery-delete-btn"
                     onClick={(e) => openHistory(e, attachment)}
                     title="Figure history"
@@ -300,6 +308,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
                 )}
                 {!readOnly && (
                   <button
+                    type="button"
                     className="gallery-delete-btn"
                     onClick={(e) => handleDelete(e, attachment.id)}
                     title="Delete figure"
@@ -397,6 +406,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
             <div style={{ display: 'flex', alignItems: 'center', marginBottom: 10 }}>
               <h4 style={{ margin: 0, flex: 1 }}>{figureLabel(historyFor)} — history</h4>
               <button
+                type="button"
                 onClick={() => setHistoryFor(null)}
                 style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, width: 'auto' }}
                 aria-label="Close figure history"

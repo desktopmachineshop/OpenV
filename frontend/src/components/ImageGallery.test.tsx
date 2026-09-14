@@ -152,3 +152,41 @@ describe('history', () => {
     expect(versionKind(newest[2], undefined)).toBe('uploaded');
   });
 });
+
+describe('inside the editor form', () => {
+  // The gallery sits inside the artifact editor's <form>. A button with no
+  // type there is a submit button: "new version" saved the artifact and
+  // closed the editor before the file was chosen, and the image never
+  // changed. Every gallery button must be an explicit button.
+  it('never submits the form it is rendered in', async () => {
+    const onSubmit = jest.fn((e: any) => e.preventDefault());
+    act(() => {
+      root.render(
+        <form onSubmit={onSubmit}>
+          <ImageGallery
+            artifactId="a1"
+            attachments={[figure({ version: 2 })]}
+            onUploadVersion={jest.fn()}
+            onRename={jest.fn()}
+            onDelete={jest.fn()}
+            showUpload
+          />
+        </form>
+      );
+    });
+    const buttons = Array.from(container.querySelectorAll('button'));
+    expect(buttons.length).toBeGreaterThanOrEqual(4);
+    for (const b of buttons) {
+      expect(b.getAttribute('type')).toBe('button');
+    }
+    for (const label of ['Upload a new version of this figure', 'Figure history', 'Rename this figure']) {
+      const b = container.querySelector(`button[aria-label="${label}"]`) as HTMLButtonElement;
+      expect(b).not.toBeNull();
+      await act(async () => {
+        b.click();
+        await Promise.resolve();
+      });
+    }
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+});
