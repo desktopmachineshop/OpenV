@@ -104,6 +104,11 @@ type CreateArtifactRequest struct {
 	// lifted out of the payload into its own column when the write is diverted
 	// to the proposal queue (see proposals.DefaultService.Propose).
 	Ref string `json:"ref,omitempty"`
+	// CopiedFrom is the id of the artifact this one is a copy of, when the
+	// client duplicated or pasted one. The new artifact carries none of the
+	// original's versions or links; the API opens its feed with one note
+	// naming the source instead. NewArtifact never reads it.
+	CopiedFrom string `json:"copied_from,omitempty"`
 }
 
 // OptionalString is a JSON field that distinguishes all three payload

@@ -30,6 +30,10 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ### Bug fixes
 
+- A duplicated or pasted artifact now says where it came from. Its history
+  starts with one note, *Copied from REQ-12 (version 3)*, instead of looking
+  like an artifact that was typed in from scratch.
+
 - Uploading a new version of a figure works again. Pressing ⬆ (or the
   history, rename or delete buttons) on a figure used to save the artifact
   and leave the editor before the file was chosen, so the image never

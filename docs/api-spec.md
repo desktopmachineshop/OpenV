@@ -317,7 +317,7 @@ Every artifact carries two identifiers, and they answer different questions:
 
 | Method | Path | Purpose | Auth |
 |---|---|---|---|
-| POST | `/api/v1/artifacts` | Create artifact | editor |
+| POST | `/api/v1/artifacts` | Create artifact. `copied_from` (the id of an artifact the caller can read) marks a duplicate or a paste: the new artifact carries none of the source's versions or links, and its feed opens with one system note, *Copied from REQ-12 (version 3)*; an unreadable or unknown source leaves the copy without the note | editor |
 | GET | `/api/v1/artifacts` | List artifacts (`?project_id=&type=&owner=&doc_numbers=1`; `owner` matches the `owner` attribute exactly) | viewer |
 | GET | `/api/v1/artifacts/{id}` | Get artifact (current version) | viewer |
 | PUT | `/api/v1/artifacts/{id}` | Update (creates a new temporal version) | editor |

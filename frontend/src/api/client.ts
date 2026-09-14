@@ -333,7 +333,9 @@ export interface AttachmentVersion {
 const ARTIFACT_PAGE_LIMIT = 1000;
 
 export const artifactAPI = {
-  create: (payload: Partial<Artifact>) =>
+  // copied_from names the artifact a duplicate or a paste came from; the
+  // server opens the new artifact's feed with a "Copied from REQ-12" note.
+  create: (payload: Partial<Artifact> & { copied_from?: string }) =>
     client.post<Artifact>('/api/v1/artifacts', payload),
   get: (id: string) =>
     client.get<Artifact>(`/api/v1/artifacts/${id}`),
