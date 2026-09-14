@@ -180,6 +180,10 @@ type linkRow struct {
 type fieldRow struct {
 	Label string
 	Value string
+	// Blocks is set on the Description row: the body as parsed Markdown,
+	// which a renderer lays out inside the cell in place of Value so the
+	// statement keeps its lists, tables, code, links and emphasis.
+	Blocks []doc.Block
 	// Rollup is set on the V&V status row so a renderer can colour it.
 	Rollup string
 }
@@ -431,10 +435,14 @@ func isProse(a *artifacts.Artifact) bool {
 // content asks for, then verification status and the latest result when
 // evidence was requested.
 //
-// The description sits in the table as well as flowing below it: a
-// requirement's statement is the one thing a reviewer must not miss, and
-// between figures, lists and traceability rows it did. The table copy is
-// the body as plain text; the flowed copy keeps its formatting.
+// The description row carries the body as parsed blocks, which each
+// renderer lays out inside the cell with its formatting intact, and as
+// plain text for anything that only reads Value. It lives in the table
+// only: a requirement's statement is the one thing a reviewer must not
+// miss, and between figures and traceability rows it did, so it moved into
+// the table; flowing the body below the table as well printed every
+// requirement twice. Headings and descriptions have no table and still
+// flow as prose.
 func (m *reportModel) fieldRows(a *artifacts.Artifact) []fieldRow {
 	rows := []fieldRow{}
 	if a.Ref != "" {
@@ -445,7 +453,7 @@ func (m *reportModel) fieldRows(a *artifacts.Artifact) []fieldRow {
 		fieldRow{Label: "Version", Value: fmt.Sprintf("v%d", a.Version)},
 	)
 	if text := doc.PlainText(m.bodies[a.ID]); text != "" {
-		rows = append(rows, fieldRow{Label: "Description", Value: text})
+		rows = append(rows, fieldRow{Label: "Description", Value: text, Blocks: m.bodies[a.ID]})
 	}
 	for _, key := range m.fieldOrder {
 		if !m.opts.Content.ShowsField(key) {
