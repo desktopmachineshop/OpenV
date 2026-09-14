@@ -33,6 +33,7 @@ jest.mock('./org/MyRunnerCard', () => ({ MyRunnerCard: () => null }));
 jest.mock('./org/CloudRunnerCard', () => ({ CloudRunnerCard: () => null }));
 jest.mock('./agents/ProviderConnectCard', () => ({ ProviderConnectCard: () => null }));
 jest.mock('./ThemeSwitcher', () => ({ ThemeSwitcher: () => null }));
+jest.mock('../hooks/useFeature', () => ({ useFeature: () => false }));
 jest.mock('../hooks/useViewport', () => ({ useViewport: () => ({ isPhone: false, isCompact: false }) }));
 jest.mock('../state/store', () => ({
   useAppStore: () => ({

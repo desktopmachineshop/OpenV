@@ -1,4 +1,6 @@
 import { useViewport } from '../hooks/useViewport';
+import { useFeature } from '../hooks/useFeature';
+import { DEFAULT_WORKSPACE_FEATURE } from '../utils/activeOrg';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAppStore } from '../state/store';
@@ -11,6 +13,7 @@ import {
   avatarAPI,
   pushAPI,
   authAPI,
+  defaultWorkspaceAPI,
 } from '../api/client';
 import { apiErrorMessage } from '../api/errors';
 import {
@@ -80,6 +83,26 @@ export const UserSettingsPanel: React.FC<UserSettingsPanelProps> = ({ onClose })
     }
   };
   const activeOrg = orgs.find((o) => o.id === activeOrgId);
+  // The workspace a sign-in lands in (REQ-156). The personal workspace is
+  // the empty choice; a company workspace is offered only while the member
+  // belongs to it (the list is their memberships).
+  const defaultWorkspaceOn = useFeature(DEFAULT_WORKSPACE_FEATURE);
+  const [defaultOrgSaving, setDefaultOrgSaving] = useState(false);
+  const [defaultOrgError, setDefaultOrgError] = useState('');
+  const defaultOrgId = currentUser?.default_org_id || '';
+  const chooseDefaultWorkspace = async (orgId: string) => {
+    if (!currentUser || orgId === defaultOrgId) return;
+    setDefaultOrgSaving(true);
+    setDefaultOrgError('');
+    try {
+      const res = await defaultWorkspaceAPI.set(orgId);
+      setCurrentUser({ ...currentUser, default_org_id: res.data.org_id });
+    } catch (err: any) {
+      setDefaultOrgError(apiErrorMessage(err, 'The default workspace could not be saved.'));
+    } finally {
+      setDefaultOrgSaving(false);
+    }
+  };
   const [providers, setProviders] = useState<ProviderSetting[]>([]);
 
   // Email-notification opt-out (issue #187). Loaded from the server so the
@@ -426,6 +449,43 @@ export const UserSettingsPanel: React.FC<UserSettingsPanelProps> = ({ onClose })
             </div>
             <ThemeSwitcher />
           </div>
+        </div>
+
+        <div className="card">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+            <div style={{ flex: '1 1 220px', minWidth: 0 }}>
+              <h3 style={{ marginBottom: 4 }}>Default workspace</h3>
+              <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 0 }}>
+                The workspace OpenV opens in when you sign in. Switching workspaces during a
+                session works as before; this only decides where you start.
+              </p>
+            </div>
+            {defaultWorkspaceOn ? (
+              <select
+                aria-label="Default workspace"
+                value={orgs.some((o) => o.id === defaultOrgId && o.type !== 'personal') ? defaultOrgId : ''}
+                disabled={defaultOrgSaving}
+                onChange={(e) => void chooseDefaultWorkspace(e.target.value)}
+                style={{ minHeight: 40, flex: '0 1 260px', minWidth: 0 }}
+              >
+                <option value="">My personal workspace</option>
+                {orgs
+                  .filter((o) => o.type !== 'personal')
+                  .map((o) => (
+                    <option key={o.id} value={o.id}>
+                      {o.name}
+                    </option>
+                  ))}
+              </select>
+            ) : (
+              <span style={{ fontSize: 12, color: 'var(--text-muted)', flex: '0 1 260px' }}>
+                Reaches this workspace with its next stable release.
+              </span>
+            )}
+          </div>
+          {defaultOrgError && (
+            <p style={{ fontSize: 12, color: 'var(--danger)', margin: '8px 0 0' }}>{defaultOrgError}</p>
+          )}
         </div>
 
         <div className="card">

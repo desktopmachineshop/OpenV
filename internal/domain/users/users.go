@@ -100,6 +100,11 @@ type User struct {
 	// only reaches a device the member has explicitly granted permission on,
 	// so there is nothing to opt out of until they opt in.
 	PushNotifications bool `json:"push_notifications"`
+	// DefaultOrgID is the workspace a sign-in lands in when the member has
+	// chosen one (REQ-156); empty means the personal workspace. It is a
+	// choice, not a grant: membership is checked wherever it is used, so a
+	// member who has since left the workspace lands in their personal one.
+	DefaultOrgID string `json:"default_org_id"`
 	// EmailVerified says the account has proved control of Email by following
 	// an emailed link (or was created by an identity provider that asserted a
 	// verified address). The auth middleware refuses an unverified session
@@ -146,6 +151,9 @@ type Repository interface {
 	// SetEmailNotifications flips one user's email opt-out. Scoped by id so it
 	// can only ever touch that user's own row.
 	SetEmailNotifications(userID string, enabled bool) error
+	// SetDefaultOrg records the workspace one user's sign-in lands in; ""
+	// clears it.
+	SetDefaultOrg(userID, orgID string) error
 	// SetPushNotifications flips one user's web-push opt-in. Scoped by id,
 	// same as the email flag.
 	SetPushNotifications(userID string, enabled bool) error
@@ -218,6 +226,9 @@ type Service interface {
 	SetEmailNotifications(userID string, enabled bool) error
 	// SetPushNotifications updates the caller's own web-push opt-in (REQ-109).
 	SetPushNotifications(userID string, enabled bool) error
+	// SetDefaultOrg records the workspace the caller's sign-in lands in
+	// (REQ-156); "" means the personal workspace again.
+	SetDefaultOrg(userID, orgID string) error
 	// SetAvatar records an uploaded profile picture's on-disk path, MIME
 	// type and the URL it is served at, and returns the updated user.
 	SetAvatar(userID, path, mime, url string) (*User, error)
@@ -725,6 +736,13 @@ func (s *DefaultService) SetEmailNotifications(userID string, enabled bool) erro
 // SetPushNotifications updates a user's web-push opt-in.
 func (s *DefaultService) SetPushNotifications(userID string, enabled bool) error {
 	return s.repo.SetPushNotifications(userID, enabled)
+}
+
+// SetDefaultOrg records the workspace a user's sign-in lands in. Whether the
+// user may land there is the caller's check: this layer does not know
+// workspaces, only the choice.
+func (s *DefaultService) SetDefaultOrg(userID, orgID string) error {
+	return s.repo.SetDefaultOrg(userID, orgID)
 }
 
 // SetAvatar records an uploaded profile picture. The write touches only the

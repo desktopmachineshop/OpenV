@@ -203,6 +203,15 @@ func (m *AuthMiddleware) resolveActiveOrg(r *http.Request, sessionToken string, 
 			return session.ActiveOrgID
 		}
 	}
+	// A fresh sign-in has no session choice yet: the member's own default
+	// (REQ-156) decides, as long as they are still a member there. A choice
+	// that no longer holds falls through to the personal workspace rather
+	// than failing every request.
+	if user.DefaultOrgID != "" {
+		if ok, err := m.orgService.IsMember(user.DefaultOrgID, user.ID); err == nil && ok {
+			return user.DefaultOrgID
+		}
+	}
 	if personal, _, err := m.orgService.EnsurePersonalOrg(user.ID, user.Name); err == nil {
 		return personal.ID
 	}
