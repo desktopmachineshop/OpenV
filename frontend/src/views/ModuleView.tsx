@@ -455,6 +455,20 @@ export const ModuleView: React.FC = () => {
     }
   };
 
+  // Renaming a figure is a figure version and an artifact version, like a
+  // new image, so the artifact is reloaded the same way.
+  const handleRenameAttachment = async (attachmentId: string, title: string) => {
+    try {
+      const response = await attachmentAPI.rename(attachmentId, title);
+      setAttachments((prev) => prev.map((a) => (a.id === attachmentId ? response.data : a)));
+      setError('');
+      loadArtifacts();
+    } catch (error: any) {
+      console.error('Failed to rename figure:', error);
+      setError(`Failed to rename the figure: ${apiErrorMessage(error, 'Unknown error')}`);
+    }
+  };
+
   const handleDeleteAttachment = async (attachmentId: string) => {
     try {
       await attachmentAPI.delete(attachmentId);
@@ -1830,6 +1844,7 @@ export const ModuleView: React.FC = () => {
             attachments={attachments}
             onUploadAttachment={handleUploadAttachment}
             onUploadAttachmentVersion={handleUploadAttachmentVersion}
+            onRenameAttachment={handleRenameAttachment}
             onDeleteAttachment={handleDeleteAttachment}
             isUploadLoading={uploadingAttachmentId === editingArtifact.id}
             links={allLinks}

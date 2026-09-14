@@ -431,6 +431,7 @@ func (h *Handler) RegisterRoutes(router *mux.Router) {
 	// Attachment endpoints
 	router.HandleFunc("/api/v1/attachments/upload", h.UploadAttachment).Methods("POST")
 	router.HandleFunc("/api/v1/attachments/{id}", h.GetAttachmentMeta).Methods("GET")
+	router.HandleFunc("/api/v1/attachments/{id}", h.RenameAttachment).Methods("PUT")
 	router.HandleFunc("/api/v1/attachments/{id}/download", h.DownloadAttachment).Methods("GET")
 	router.HandleFunc("/api/v1/attachments/{id}/versions", h.UploadAttachmentVersion).Methods("POST")
 	router.HandleFunc("/api/v1/attachments/{id}/versions", h.ListAttachmentVersions).Methods("GET")
@@ -458,6 +459,7 @@ func (h *Handler) RegisterRoutes(router *mux.Router) {
 	h.registerAvatarRoutes(router)
 	h.registerReleaseRoutes(router)
 	h.registerFeatureRoutes(router)
+	h.registerDefaultWorkspaceRoutes(router)
 	h.registerRunnerSessionRoutes(router)
 	h.registerAttributeDefinitionRoutes(router)
 	h.registerSharedProductRoutes(router)
@@ -2267,10 +2269,20 @@ func (h *Handler) UploadAttachment(w http.ResponseWriter, r *http.Request) {
 		artifactRef = a.Ref
 	}
 
+	// An optional title names the figure from the start; it is bounded the
+	// same way a rename is.
+	title := strings.TrimSpace(r.FormValue("title"))
+	if len([]rune(title)) > attachments.MaxTitleLen {
+		_ = os.Remove(storedPath)
+		writeJSONError(w, http.StatusBadRequest, attachments.ErrTitleTooLong.Error())
+		return
+	}
+
 	attachment := attachments.NewAttachment(attachments.CreateAttachmentRequest{
 		ArtifactID:       artifactID,
 		Filename:         header.Filename,
 		OriginalFilename: header.Filename,
+		Title:            title,
 		MimeType:         mimeType,
 		FilePath:         storedPath,
 		FileSize:         len(fileData),
@@ -2285,7 +2297,7 @@ func (h *Handler) UploadAttachment(w http.ResponseWriter, r *http.Request) {
 
 	if attachment.FigureRef != "" {
 		h.logFigureNote(r, artifactID, fmt.Sprintf("Figure %s added (version 1) — %s.",
-			attachment.FigureRef, attachment.OriginalFilename))
+			attachment.FigureRef, attachment.Name()))
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -2424,6 +2436,88 @@ func (h *Handler) UploadAttachmentVersion(w http.ResponseWriter, r *http.Request
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(updated)
+}
+
+// RenameAttachment gives a figure a title (REQ-157).
+//
+// The name is part of what the document says under the picture, so it is
+// tracked the way the picture is: the figure takes a new version recording
+// the title, who set it and when; the artifact takes a new version through
+// the same attribute-free update a new image uses (no demotion, no suspect
+// links); and the notes record the old and new names. An unchanged title is
+// a no-op that writes nothing.
+func (h *Handler) RenameAttachment(w http.ResponseWriter, r *http.Request) {
+	id := mux.Vars(r)["id"]
+
+	existing, err := h.attachmentService.GetAttachment(id)
+	if err != nil || existing == nil {
+		writeJSONError(w, http.StatusNotFound, "Attachment not found")
+		return
+	}
+	projectID := h.projectIDForArtifact(existing.ArtifactID)
+	if !h.requireProjectRole(w, r, projectID, members.RoleEditor) {
+		return
+	}
+	if !h.projectFeatureEnabled(r, projectID, release.FeatureFigureTitles) {
+		writeJSONError(w, http.StatusForbidden, featureGateMessage)
+		return
+	}
+
+	var req struct {
+		Title string `json:"title"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSONError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+	title := strings.TrimSpace(req.Title)
+	if title == existing.Title {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(existing)
+		return
+	}
+
+	// Captured before the rename so the note names what the figure was
+	// called, whatever the service hands back afterwards.
+	was, previous := existing.Name(), existing.Version
+	next, err := h.attachmentService.RenameFigure(id, title, CurrentUserID(r))
+	if errors.Is(err, attachments.ErrTitleTooLong) {
+		writeJSONError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	if err != nil {
+		respondInternal(w, r, "Failed to rename the figure", err)
+		return
+	}
+	if next == 0 {
+		writeJSONError(w, http.StatusNotFound, "Attachment not found")
+		return
+	}
+
+	if _, err := h.artifactService.UpdateArtifact(existing.ArtifactID, artifacts.UpdateArtifactRequest{}); err != nil {
+		slog.Warn("api: failed to version artifact after a figure rename",
+			"artifact_id", existing.ArtifactID, "attachment_id", id, "error", err)
+	}
+
+	label := existing.FigureRef
+	if label == "" {
+		label = existing.Filename
+	}
+	now := title
+	if now == "" {
+		now = existing.OriginalFilename
+	}
+	h.logFigureNote(r, existing.ArtifactID, fmt.Sprintf(
+		"Figure %s renamed (version %d to %d) — %q is now %q.", label, previous, next, was, now))
+
+	updated, err := h.attachmentService.GetAttachment(id)
+	if err != nil || updated == nil {
+		updated = existing
+		updated.Title = title
+		updated.Version = next
+	}
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(updated)
 }
 

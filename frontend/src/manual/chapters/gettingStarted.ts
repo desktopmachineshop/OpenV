@@ -96,6 +96,17 @@ Click the workspace name to open the dropdown. It lists all your workspaces
 Switching workspaces returns you to the Projects page and shows that
 workspace's projects. Your choice is remembered between visits.
 
+### Where you start
+
+OpenV opens in your **personal workspace** unless you say otherwise. If you
+do most of your work in a company workspace, open the account menu →
+**Settings** → *Default workspace* and pick it: every sign-in then starts
+there. The list holds your personal workspace and every company workspace
+you belong to; leaving a workspace quietly returns your sign-in to your
+personal one. Switching workspaces during a session is unchanged, and a tab
+you reload stays in the workspace it was in. On a stable-channel workspace
+this setting arrives with the workspace's next stable release.
+
 ## Notifications
 
 The **bell** in the top bar is your inbox. It badges unread items and updates

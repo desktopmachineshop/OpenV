@@ -1,8 +1,12 @@
 import React, { useState, useRef } from 'react';
 import { Attachment, AttachmentVersion, attachmentAPI } from '../api/client';
 import { ImageLightbox } from './ImageLightbox';
-import { useAlert, useConfirm } from './ui';
+import { useAlert, useConfirm, usePrompt } from './ui';
+import { useFeature } from '../hooks/useFeature';
 import './ImageGallery.css';
+
+/** The feature key that gates renaming a figure (REQ-157). */
+export const FIGURE_TITLES_FEATURE = 'figure-titles';
 
 interface ImageGalleryProps {
   artifactId: string;
@@ -22,6 +26,11 @@ interface ImageGalleryProps {
    * read-only for versions — the figure history is still browsable.
    */
   onUploadVersion?: (attachmentId: string, file: File) => void;
+  /**
+   * Give a figure a title. Without it the gallery shows names but cannot
+   * change them.
+   */
+  onRename?: (attachmentId: string, title: string) => void;
   isUploadLoading?: boolean;
   showUpload?: boolean; // Controls whether upload box is displayed
   thumbnailSize?: number; // Custom thumbnail size in pixels (default 120)
@@ -30,6 +39,22 @@ interface ImageGalleryProps {
 /** What a figure is called: its reference where it has one, else its filename. */
 const figureLabel = (a: Attachment): string => a.figure_ref || a.filename;
 
+/** A figure's name to a reader: its title, else the name it was uploaded under. */
+export const figureName = (a: { title?: string; original_filename?: string; filename: string }): string =>
+  a.title?.trim() || a.original_filename || a.filename;
+
+/**
+ * What one history entry changed. The first version is the upload; a later
+ * one over the same file is a rename, and one with a new file is a new image.
+ */
+export const versionKind = (
+  v: AttachmentVersion,
+  older: AttachmentVersion | undefined
+): 'uploaded' | 'renamed' | 'new image' => {
+  if (!older) return 'uploaded';
+  return older.file_path === v.file_path ? 'renamed' : 'new image';
+};
+
 export const ImageGallery: React.FC<ImageGalleryProps> = ({
   artifactId,
   attachments,
@@ -37,12 +62,15 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
   readOnly = false,
   onUpload,
   onUploadVersion,
+  onRename,
   isUploadLoading = false,
   showUpload = false,
   thumbnailSize = 120,
 }) => {
   const confirm = useConfirm();
   const alertDialog = useAlert();
+  const prompt = usePrompt();
+  const canRename = useFeature(FIGURE_TITLES_FEATURE) && !readOnly && Boolean(onRename);
   const [selectedImage, setSelectedImage] = useState<Attachment | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   // One input serves every figure's "new version" button; the figure it is
@@ -64,6 +92,23 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
       return false;
     }
     return true;
+  };
+
+  const startRename = async (e: React.MouseEvent, attachment: Attachment) => {
+    e.stopPropagation();
+    const title = await prompt({
+      title: `Rename ${figureLabel(attachment)}`,
+      message: 'The name appears under the figure in documents. Clear it to go back to the uploaded filename.',
+      label: 'Title',
+      defaultValue: attachment.title || '',
+      placeholder: attachment.original_filename || attachment.filename,
+      confirmLabel: 'Rename',
+      allowEmpty: true,
+    });
+    if (title === null) return;
+    const next = title.trim();
+    if (next === (attachment.title || '')) return;
+    onRename?.(attachment.id, next);
   };
 
   const openHistory = async (e: React.MouseEvent, attachment: Attachment) => {
@@ -215,7 +260,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
               key={attachment.id}
               className="gallery-item"
               onClick={() => setSelectedImage(attachment)}
-              title={`${figureLabel(attachment)} (v${attachment.version}) — ${attachment.original_filename || attachment.filename}`}
+              title={`${figureLabel(attachment)} (v${attachment.version}) — ${figureName(attachment)}`}
             >
               <img
                 src={attachmentAPI.getDownloadUrl(attachment.id, attachment.version)}
@@ -223,6 +268,16 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
                 className="gallery-thumbnail"
               />
               <div className="gallery-overlay">
+                {canRename && (
+                  <button
+                    className="gallery-delete-btn"
+                    onClick={(e) => startRename(e, attachment)}
+                    title="Rename this figure"
+                    aria-label="Rename this figure"
+                  >
+                    ✎
+                  </button>
+                )}
                 {!readOnly && onUploadVersion && (
                   <button
                     className="gallery-delete-btn"
@@ -259,6 +314,9 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
                 {attachment.version > 1 && (
                   <span style={{ color: 'var(--text-muted)' }}> · v{attachment.version}</span>
                 )}
+              </p>
+              <p className="gallery-figure-name" title={figureName(attachment)}>
+                {figureName(attachment)}
               </p>
             </div>
           ))}
@@ -306,7 +364,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
       {selectedImage && (
         <ImageLightbox
           imageUrl={attachmentAPI.getDownloadUrl(selectedImage.id, selectedImage.version)}
-          filename={`${figureLabel(selectedImage)} (v${selectedImage.version})`}
+          filename={`${figureLabel(selectedImage)} (v${selectedImage.version}) — ${figureName(selectedImage)}`}
           onClose={() => setSelectedImage(null)}
         />
       )}
@@ -350,7 +408,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
             {!historyError && history.length === 0 && (
               <p style={{ color: 'var(--text-muted)', fontSize: 12 }}>Loading…</p>
             )}
-            {history.map((v) => (
+            {history.map((v, i) => (
               <div
                 key={v.id}
                 style={{
@@ -369,12 +427,15 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
                 <div style={{ flex: 1, fontSize: 12 }}>
                   <div style={{ fontWeight: 700 }}>
                     Version {v.version}
+                    <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}> · {versionKind(v, history[i + 1])}</span>
                     {v.version === historyFor.version && (
                       <span style={{ color: 'var(--success)', fontWeight: 400 }}> · current</span>
                     )}
                   </div>
+                  <div>{figureName(v)}</div>
                   <div style={{ color: 'var(--text-muted)' }}>
-                    {new Date(v.created_at).toLocaleString()} · {v.original_filename || v.filename}
+                    {new Date(v.created_at).toLocaleString()}
+                    {v.title && v.original_filename ? ` · ${v.original_filename}` : ''}
                   </div>
                 </div>
                 <a

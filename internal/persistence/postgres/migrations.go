@@ -1312,6 +1312,47 @@ var migrations = []Migration{
 		_, err := tx.Exec(`CREATE INDEX IF NOT EXISTS idx_project_share_links_project ON project_share_links(project_id)`)
 		return err
 	}},
+	// 0040: the workspace a member's sign-in lands in (REQ-156). Nullable:
+	// a member who has chosen none lands in their personal workspace as
+	// before. The reference clears itself when that workspace is purged, so
+	// a stale choice can never point at nothing.
+	{Version: 40, Name: "users_default_org", Run: func(tx *sql.Tx) error {
+		_, err := tx.Exec(`
+			DO $$
+			BEGIN
+				IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='default_org_id') THEN
+					ALTER TABLE users ADD COLUMN default_org_id UUID;
+				END IF;
+				BEGIN
+					ALTER TABLE users ADD CONSTRAINT users_default_org_id_fkey
+						FOREIGN KEY (default_org_id) REFERENCES organizations(id) ON DELETE SET NULL;
+				EXCEPTION WHEN duplicate_object THEN NULL;
+				END;
+			END $$;
+		`)
+		return err
+	}},
+	// 0041: figure titles (REQ-157).
+	//
+	// A figure's name was the filename it was uploaded under, which for a
+	// screenshot is a timestamp. attachments.title is the name a member gives
+	// it; attachment_versions.title records the name each version carried,
+	// so renaming a figure is a version like replacing its image is, with
+	// who and when. Empty means "not named": readers fall back to the
+	// uploaded filename, as before.
+	{Version: 41, Name: "attachment_titles", Run: func(tx *sql.Tx) error {
+		if _, err := tx.Exec(`
+			ALTER TABLE attachments
+				ADD COLUMN IF NOT EXISTS title VARCHAR(255) NOT NULL DEFAULT ''
+		`); err != nil {
+			return err
+		}
+		_, err := tx.Exec(`
+			ALTER TABLE attachment_versions
+				ADD COLUMN IF NOT EXISTS title VARCHAR(255) NOT NULL DEFAULT ''
+		`)
+		return err
+	}},
 	// 0042: password reset links (REQ-158).
 	//
 	// The same shape as email_verifications: a hashed single-use token with

@@ -85,6 +85,7 @@ GET /api/v1/interviews/{id}/invites
 GET /api/v1/interviews/{id}/sessions
 GET /api/v1/links
 GET /api/v1/links/{id}
+GET /api/v1/me/default-workspace
 GET /api/v1/me/notification-prefs
 GET /api/v1/me/push-subscriptions
 GET /api/v1/me/push/config
@@ -292,6 +293,7 @@ PUT /api/v1/agents/{slug}
 PUT /api/v1/agents/{slug}/raw
 PUT /api/v1/artifacts/{id}
 PUT /api/v1/artifacts/{id}/status
+PUT /api/v1/attachments/{id}
 PUT /api/v1/attribute-definitions/{id}
 PUT /api/v1/automations/{id}
 PUT /api/v1/crew-edges/{id}
@@ -302,6 +304,7 @@ PUT /api/v1/guided-sessions/{id}/step
 PUT /api/v1/interviews/{id}/persona
 PUT /api/v1/links/{id}
 PUT /api/v1/links/{id}/confirm
+PUT /api/v1/me/default-workspace
 PUT /api/v1/me/notification-prefs
 PUT /api/v1/me/password
 PUT /api/v1/notifications/{id}/flag

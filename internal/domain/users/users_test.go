@@ -119,6 +119,7 @@ func (m *memRepo) SetEmailNotifications(string, bool) error {
 func (m *memRepo) SetPushNotifications(string, bool) error {
 	return nil
 }
+func (m *memRepo) SetDefaultOrg(string, string) error { return nil }
 func (m *memRepo) SetAvatar(userID, path, mime, url string, at time.Time) error {
 	if u, ok := m.users[userID]; ok {
 		u.AvatarPath, u.AvatarMime, u.AvatarURL, u.UpdatedAt = path, mime, url, at

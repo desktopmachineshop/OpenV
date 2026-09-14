@@ -21,6 +21,7 @@ type fakeUserPrefService struct {
 	pushUser    string
 	pushEnabled bool
 	pushCalled  bool
+	defaultOrg  string
 }
 
 func (f *fakeUserPrefService) SetEmailNotifications(userID string, enabled bool) error {
@@ -30,6 +31,10 @@ func (f *fakeUserPrefService) SetEmailNotifications(userID string, enabled bool)
 
 func (f *fakeUserPrefService) SetPushNotifications(userID string, enabled bool) error {
 	f.pushUser, f.pushEnabled, f.pushCalled = userID, enabled, true
+	return nil
+}
+func (f *fakeUserPrefService) SetDefaultOrg(userID, orgID string) error {
+	f.defaultOrg = orgID
 	return nil
 }
 

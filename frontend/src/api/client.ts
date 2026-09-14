@@ -292,6 +292,12 @@ export interface Attachment {
   filename: string;
   /** The name the uploaded file had. */
   original_filename: string;
+  /**
+   * The name a member gave the figure; empty when it has none, in which
+   * case readers fall back to original_filename. Renaming is a figure
+   * version.
+   */
+  title: string;
   mime_type: string;
   file_path: string;
   file_size: number;
@@ -306,14 +312,17 @@ export interface Attachment {
   created_at: string;
 }
 
-/** One uploaded revision of a figure. */
+/** One revision of a figure: a new image, or a new title over the same one. */
 export interface AttachmentVersion {
   id: string;
   attachment_id: string;
   version: number;
   filename: string;
   original_filename: string;
+  /** The title the figure carried at this version. */
+  title: string;
   mime_type: string;
+  file_path: string;
   file_size: number;
   created_by?: string | null;
   created_at: string;
@@ -616,6 +625,9 @@ export const attachmentAPI = {
   },
   listVersions: (id: string) =>
     client.get<AttachmentVersion[]>(`/api/v1/attachments/${id}/versions`),
+  /** Give a figure a title; "" clears it. A change is a new figure version. */
+  rename: (id: string, title: string) =>
+    client.put<Attachment>(`/api/v1/attachments/${id}`, { title }),
   delete: (id: string) =>
     client.delete(`/api/v1/attachments/${id}`),
   listByArtifact: (artifactId: string) =>
@@ -667,6 +679,9 @@ export interface User {
   email_verified: boolean;
   email_verified_at?: string;
   created_at: string;
+  // The workspace a sign-in lands in when the member has chosen one
+  // (REQ-156); "" means the personal workspace.
+  default_org_id?: string;
 }
 
 export interface AuthConfig {
@@ -1366,6 +1381,18 @@ export const notificationPrefsAPI = {
   get: () => client.get<NotificationPrefs>('/api/v1/me/notification-prefs'),
   update: (prefs: Partial<NotificationPrefs>) =>
     client.put<NotificationPrefs>('/api/v1/me/notification-prefs', prefs),
+};
+
+// The workspace a sign-in lands in (REQ-156): the member's own choice, a
+// workspace they belong to, or "" for the personal workspace.
+export interface DefaultWorkspace {
+  org_id: string;
+}
+
+export const defaultWorkspaceAPI = {
+  get: () => client.get<DefaultWorkspace>('/api/v1/me/default-workspace'),
+  set: (orgId: string) =>
+    client.put<DefaultWorkspace>('/api/v1/me/default-workspace', { org_id: orgId }),
 };
 
 // Web push subscriptions (REQ-109). One subscription per device; the browser
