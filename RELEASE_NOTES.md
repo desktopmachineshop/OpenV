@@ -9,6 +9,15 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Bug fixes
+
+- Signing the Gemini CLI in from a runner works again, on a phone or a
+  desktop. The CLI now refuses to start unless it is told which kind of
+  Google account to use, so the sign-in failed before it could show you a
+  link — and headless Gemini runs failed the same way. OpenV names the mode
+  for it. Workspaces that run Gemini on an API key or on Vertex AI keep the
+  account they configured.
+
 ## 0.6.0 — 2026-09-14
 
 ### New features

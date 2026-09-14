@@ -66,9 +66,14 @@ func flowFor(provider string) (loginFlow, bool) {
 			browserDetail: "A sign-in page should have opened in a browser on the machine running agentd. Complete sign-in there; this page updates automatically.",
 		}, true
 	case providers.ProviderGeminiCLI:
+		// NO_BROWSER keeps the CLI from opening a browser the runner has no
+		// way to show. geminiOAuthEnv names Google-account OAuth, which this
+		// command is here to drive: without a named auth method the CLI
+		// exits 41 with "Please set an Auth method ..." instead of printing
+		// the URL whose code this flow pastes back.
 		return loginFlow{
 			command:   []string{"gemini", "-p", "Reply with OK."},
-			env:       []string{"NO_BROWSER=1"},
+			env:       []string{"NO_BROWSER=1", geminiOAuthEnv + "=" + geminiOAuthEnvValue},
 			pasteBack: true,
 		}, true
 	}

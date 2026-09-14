@@ -32,6 +32,75 @@ func geminiApprovalMode(spec RunSpec) string {
 	return geminiModeTrusted
 }
 
+// The Gemini CLI refuses to start non-interactively unless an auth method is
+// named. It prints "Please set an Auth method in your ~/.gemini/settings.json
+// or specify one of the following environment variables before running:
+// GEMINI_API_KEY, GOOGLE_GENAI_USE_VERTEXAI, GOOGLE_GENAI_USE_GCA" and exits
+// 41 — before the sign-in flow can print the URL it exists to print, and
+// before a run does any work. A transient runner hands every lease a fresh
+// HOME, so there is never a settings file there to have named one.
+//
+// The environment is the right lever rather than the isolated settings file
+// this adapter already writes: the CLI resolves the member's OWN
+// security.auth.selectedAuthType first and falls back to the environment only
+// when that is unset, so naming the mode here fills the gap instead of
+// overriding a choice they made.
+const (
+	// geminiOAuthEnv selects Google-account OAuth: the mode OpenV's
+	// paste-back sign-in drives, and the one the ~/.gemini credentials it
+	// leaves behind belong to.
+	geminiOAuthEnv = "GOOGLE_GENAI_USE_GCA"
+	// geminiOAuthEnvValue is exact — the CLI compares against "true", so "1"
+	// reads as no auth method at all.
+	geminiOAuthEnvValue = "true"
+)
+
+// geminiAuthEnvKeys are the variables that already name an auth mode. The
+// list mirrors the CLI's own resolver and adds GOOGLE_API_KEY, which Detect
+// reports as API-key mode. geminiOAuthEnv outranks every one of them in that
+// resolver, so adding it to a run that set one would quietly move the run
+// onto a different account — hence the check before it is added at all.
+var geminiAuthEnvKeys = []string{
+	geminiOAuthEnv,
+	"GOOGLE_GENAI_USE_VERTEXAI",
+	"GOOGLE_GEMINI_BASE_URL",
+	"GEMINI_API_KEY",
+	"GOOGLE_API_KEY",
+	"GEMINI_CLI_USE_COMPUTE_ADC",
+	"CLOUD_SHELL",
+}
+
+// geminiAuthNamed reports whether an auth mode is already named, reading the
+// run's own environment first and the process environment behind it — that is
+// where a hosted container's injected key lives, and startProc layers the
+// run's values over it the same way.
+func geminiAuthNamed(procEnv map[string]string) bool {
+	for _, key := range geminiAuthEnvKeys {
+		if v, ok := procEnv[key]; ok {
+			if v != "" {
+				return true
+			}
+			continue
+		}
+		if os.Getenv(key) != "" {
+			return true
+		}
+	}
+	return false
+}
+
+// geminiRunEnv is the environment one headless run adds: the isolated
+// settings file, and — when nothing else names one — the OAuth auth mode,
+// without which the CLI exits 41 instead of running.
+func geminiRunEnv(spec RunSpec, settingsPath string) map[string]string {
+	env := mergedProcEnv(spec)
+	env["GEMINI_CLI_SYSTEM_SETTINGS_PATH"] = settingsPath
+	if !geminiAuthNamed(env) {
+		env[geminiOAuthEnv] = geminiOAuthEnvValue
+	}
+	return env
+}
+
 // GeminiCLIAdapter runs Google's Gemini CLI in headless mode.
 type GeminiCLIAdapter struct{}
 
@@ -92,8 +161,7 @@ func (a *GeminiCLIAdapter) Start(ctx context.Context, spec RunSpec) (RunHandle, 
 	if err := writeGeminiSettings(settingsPath, spec.MCP, geminiApprovalMode(spec), spec.AllowedTools); err != nil {
 		return nil, err
 	}
-	procEnv := mergedProcEnv(spec)
-	procEnv["GEMINI_CLI_SYSTEM_SETTINGS_PATH"] = settingsPath
+	procEnv := geminiRunEnv(spec, settingsPath)
 
 	prompt := spec.Prompt
 	if spec.SystemPrompt != "" {

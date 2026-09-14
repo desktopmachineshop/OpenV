@@ -9,6 +9,8 @@ import (
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/openv/requirements-platform/internal/domain/providers"
 )
 
 func geminiSpec() RunSpec {
@@ -348,5 +350,79 @@ func TestGeminiParser_ValidResponse(t *testing.T) {
 	}
 	if res.FinalText != "the answer" {
 		t.Errorf("FinalText = %q, want %q", res.FinalText, "the answer")
+	}
+}
+
+// The Gemini CLI exits 41 before doing anything unless an auth method is
+// named, and a leased runner's fresh HOME never names one. A run therefore
+// names Google-account OAuth for itself — but only when nothing else has
+// named a mode, because GOOGLE_GENAI_USE_GCA outranks every other auth
+// variable and would otherwise move an API-key deployment onto OAuth.
+func TestGeminiRunEnvNamesOAuthOnlyWhenNothingElseDoes(t *testing.T) {
+	clearAmbientGeminiAuth := func(t *testing.T) {
+		t.Helper()
+		for _, key := range geminiAuthEnvKeys {
+			t.Setenv(key, "")
+		}
+	}
+
+	t.Run("nothing else names one", func(t *testing.T) {
+		clearAmbientGeminiAuth(t)
+		env := geminiRunEnv(geminiSpec(), "/work/.openv/gemini-settings.json")
+		if env[geminiOAuthEnv] != "true" {
+			t.Errorf("%s = %q, want \"true\" — the CLI compares against that exact string", geminiOAuthEnv, env[geminiOAuthEnv])
+		}
+		if env["GEMINI_CLI_SYSTEM_SETTINGS_PATH"] != "/work/.openv/gemini-settings.json" {
+			t.Errorf("settings path = %q", env["GEMINI_CLI_SYSTEM_SETTINGS_PATH"])
+		}
+		// The run's own wiring must survive untouched.
+		if env["OPENV_RUN_TOKEN"] != "super-secret-token-123" {
+			t.Errorf("run token lost: %q", env["OPENV_RUN_TOKEN"])
+		}
+	})
+
+	for _, key := range []string{"GEMINI_API_KEY", "GOOGLE_API_KEY", "GOOGLE_GENAI_USE_VERTEXAI", "GOOGLE_GEMINI_BASE_URL"} {
+		t.Run("spec env names "+key, func(t *testing.T) {
+			clearAmbientGeminiAuth(t)
+			spec := geminiSpec()
+			spec.Env = map[string]string{key: "already-set"}
+			if env := geminiRunEnv(spec, "/s.json"); env[geminiOAuthEnv] != "" {
+				t.Errorf("%s was added over %s — that silently moves the run onto another account", geminiOAuthEnv, key)
+			}
+		})
+
+		t.Run("process env names "+key, func(t *testing.T) {
+			clearAmbientGeminiAuth(t)
+			// Where a hosted container's injected key lives: the run does not
+			// set it, but the process it inherits from does.
+			t.Setenv(key, "already-set")
+			if env := geminiRunEnv(geminiSpec(), "/s.json"); env[geminiOAuthEnv] != "" {
+				t.Errorf("%s was added over an inherited %s", geminiOAuthEnv, key)
+			}
+		})
+	}
+}
+
+// The sign-in command exists to drive Google-account OAuth: it must name that
+// mode, or the CLI exits 41 with "Please set an Auth method ..." instead of
+// printing the URL whose code the flow pastes back.
+func TestGeminiLoginFlowNamesTheOAuthMode(t *testing.T) {
+	flow, ok := flowFor(providers.ProviderGeminiCLI)
+	if !ok {
+		t.Fatal("gemini has no sign-in flow")
+	}
+	if !flow.pasteBack {
+		t.Error("gemini sign-in is a paste-back flow")
+	}
+	want := map[string]bool{"NO_BROWSER=1": false, geminiOAuthEnv + "=true": false}
+	for _, entry := range flow.env {
+		if _, ok := want[entry]; ok {
+			want[entry] = true
+		}
+	}
+	for entry, found := range want {
+		if !found {
+			t.Errorf("sign-in env lacks %q; it has %v", entry, flow.env)
+		}
 	}
 }
