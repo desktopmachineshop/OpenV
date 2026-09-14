@@ -197,8 +197,9 @@ func (r *docxRenderer) artifact(n *artifactNode) {
 			level = 4
 		}
 		r.heading(a.ID, m.title(a), level)
+		// The statement is the table's Description row; flowing the body
+		// again below it printed every requirement twice.
 		r.fieldsTable(m.fieldRows(a))
-		r.blocks(m.bodies[a.ID], 0)
 		r.figures(a.ID)
 		if rows := m.links[a.ID]; len(rows) > 0 {
 			r.traceabilityTable(rows)
@@ -209,10 +210,20 @@ func (r *docxRenderer) artifact(n *artifactNode) {
 func (r *docxRenderer) fieldsTable(rows []fieldRow) {
 	r.body.WriteString(docxTableOpen(docxTextW, true))
 	for _, row := range rows {
+		if row.Blocks != nil {
+			// The description is laid out as body blocks inside its cell,
+			// so the statement keeps its formatting; the row may break
+			// across pages because a statement can run longer than one.
+			r.body.WriteString("<w:tr>")
+			r.body.WriteString(docxCell(2400, "F7F7F7", docxParaXML(docxRunText(row.Label, docxRun{Bold: true, Color: "3C3C3C", Size: 18}), "Compact", "")))
+			r.cellBlocks(docxTextW-2400, row.Blocks)
+			r.body.WriteString("</w:tr>")
+			continue
+		}
 		r.body.WriteString("<w:tr><w:trPr><w:cantSplit/></w:trPr>")
 		r.body.WriteString(docxCell(2400, "F7F7F7", docxParaXML(docxRunText(row.Label, docxRun{Bold: true, Color: "3C3C3C", Size: 18}), "Compact", "")))
-		// A value may span lines (the description does); each line is its
-		// own paragraph so Word keeps the breaks.
+		// A value may span lines; each line is its own paragraph so Word
+		// keeps the breaks.
 		lines := strings.Split(row.Value, "\n")
 		var cell strings.Builder
 		for i, line := range lines {
@@ -228,6 +239,20 @@ func (r *docxRenderer) fieldsTable(rows []fieldRow) {
 	}
 	r.body.WriteString("</w:tbl>")
 	r.para("", "Compact", "")
+}
+
+// cellBlocks writes a table cell whose content is body blocks, rendered in
+// place by the ordinary renderer so hyperlinks, images and list numbering
+// are registered as usual. A cell must end in a paragraph, which a trailing
+// nested table does not satisfy.
+func (r *docxRenderer) cellBlocks(widthDxa int, blocks []doc.Block) {
+	r.body.WriteString(fmt.Sprintf(`<w:tc><w:tcPr><w:tcW w:w="%d" w:type="dxa"/></w:tcPr>`, widthDxa))
+	start := r.body.Len()
+	r.blocks(blocks, 0)
+	if r.body.Len() == start || strings.HasSuffix(r.body.String(), "</w:tbl>") {
+		r.body.WriteString("<w:p/>")
+	}
+	r.body.WriteString("</w:tc>")
 }
 
 func (r *docxRenderer) traceabilityTable(rows []linkRow) {

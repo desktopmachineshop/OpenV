@@ -18,6 +18,14 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   session is unchanged. Stable-channel workspaces get this with their next
   stable release.
 
+### Bug fixes
+
+- PDF and Word downloads no longer print each requirement's description
+  twice. It sits once, in the Description row of the fields table, and
+  keeps its formatting there: lists, tables, code, links and emphasis all
+  survive, and a description longer than a page carries its row across
+  the break.
+
 ## 0.5.1 — 2026-09-13
 
 ### Maintenance updates
