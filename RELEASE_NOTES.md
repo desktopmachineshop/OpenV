@@ -9,6 +9,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+## 0.6.2 — 2026-09-14
+
 ### Maintenance updates
 
 - The **Cloud runner** card now shows how busy the shared pool is as a
