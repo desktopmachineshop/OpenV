@@ -17,6 +17,14 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   email does not arrive, a platform admin can make a reset link for your
   account from the Platform admin page and pass it to you.
 
+### Bug fixes
+
+- PDF and Word downloads no longer print each requirement's description
+  twice. It sits once, in the Description row of the fields table, and
+  keeps its formatting there: lists, tables, code, links and emphasis all
+  survive, and a description longer than a page carries its row across
+  the break.
+
 ## 0.5.1 — 2026-09-13
 
 ### Maintenance updates
