@@ -9,6 +9,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+## 0.6.0 — 2026-09-14
+
 ### New features
 
 - Choose the workspace OpenV opens in when you sign in. Personal settings →
