@@ -66,15 +66,20 @@ func flowFor(provider string) (loginFlow, bool) {
 			browserDetail: "A sign-in page should have opened in a browser on the machine running agentd. Complete sign-in there; this page updates automatically.",
 		}, true
 	case providers.ProviderGeminiCLI:
-		// NO_BROWSER keeps the CLI from opening a browser the runner has no
-		// way to show. geminiOAuthEnv names Google-account OAuth, which this
-		// command is here to drive: without a named auth method the CLI
-		// exits 41 with "Please set an Auth method ..." instead of printing
-		// the URL whose code this flow pastes back.
+		// Bare `gemini`, with no -p: the CLI will only do a manual
+		// authorization from a session it considers interactive, and
+		// -p/--prompt on the command line makes it call itself headless on
+		// its own — which is what geminiLoginEnv and the pseudo-terminal
+		// exist to avoid. A prompt would have been pointless anyway: this
+		// command is here to sign in, not to get an answer.
+		//
+		// That makes it the TUI, so it needs a real terminal for the same
+		// reason the Claude flow above does, and it relays its URL and takes
+		// its code back over that terminal.
 		return loginFlow{
-			command:   []string{"gemini", "-p", "Reply with OK."},
-			env:       []string{"NO_BROWSER=1", geminiOAuthEnv + "=" + geminiOAuthEnvValue},
-			pasteBack: true,
+			command:     []string{"gemini"},
+			env:         geminiLoginEnv(),
+			interactive: true,
 		}, true
 	}
 	return loginFlow{}, false

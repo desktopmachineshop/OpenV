@@ -9,6 +9,16 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Bug fixes
+
+- Signing the Gemini CLI in from a cloud runner works again. The CLI will
+  only complete a sign-in from a session it considers interactive, and it
+  counted the runner's as automated on three separate grounds — so it stopped
+  with "Manual authorization is required but the current session is
+  non-interactive" before showing the link. It now gets a real terminal and
+  the sign-in link appears as it should. It also no longer refuses the
+  runner's workspace as untrusted.
+
 ## 0.6.2 — 2026-09-14
 
 ### Maintenance updates

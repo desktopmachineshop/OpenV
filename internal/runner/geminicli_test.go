@@ -411,10 +411,17 @@ func TestGeminiLoginFlowNamesTheOAuthMode(t *testing.T) {
 	if !ok {
 		t.Fatal("gemini has no sign-in flow")
 	}
-	if !flow.pasteBack {
-		t.Error("gemini sign-in is a paste-back flow")
+	// The CLI will only do a manual authorization from a session it calls
+	// interactive, which means a real terminal — so this runs over a
+	// pseudo-terminal, not over pipes.
+	if !flow.interactive {
+		t.Error("gemini sign-in needs a terminal; it is an interactive flow")
 	}
-	want := map[string]bool{"NO_BROWSER=1": false, geminiOAuthEnv + "=true": false}
+	want := map[string]bool{
+		"NO_BROWSER=1":           false,
+		geminiOAuthEnv + "=true": false,
+		geminiTrustEnv + "=true": false,
+	}
 	for _, entry := range flow.env {
 		if _, ok := want[entry]; ok {
 			want[entry] = true
@@ -424,5 +431,69 @@ func TestGeminiLoginFlowNamesTheOAuthMode(t *testing.T) {
 		if !found {
 			t.Errorf("sign-in env lacks %q; it has %v", entry, flow.env)
 		}
+	}
+}
+
+// The three things that made the CLI call the sign-in headless, each of
+// which alone was enough to kill it with "Manual authorization is required
+// but the current session is non-interactive".
+func TestGeminiLoginFlowIsNotHeadless(t *testing.T) {
+	flow, ok := flowFor(providers.ProviderGeminiCLI)
+	if !ok {
+		t.Fatal("gemini has no sign-in flow")
+	}
+
+	// 1. The command line: -p/--prompt makes the CLI headless by itself,
+	// whatever terminal it is on.
+	for _, arg := range flow.command[1:] {
+		if arg == "-p" || arg == "--prompt" {
+			t.Errorf("sign-in command carries %q, which forces headless mode: %v", arg, flow.command)
+		}
+	}
+
+	// 2. The terminal: pipes are not a TTY, so the flow must ask for one.
+	if !flow.interactive {
+		t.Error("sign-in does not ask for a terminal, so stdin/stdout are pipes and the CLI reads that as headless")
+	}
+
+	// 3. The environment: CI and GITHUB_ACTIONS are read as == "true", so
+	// the sign-in has to override an inherited one with an empty value.
+	cleared := map[string]bool{}
+	for _, entry := range flow.env {
+		for _, key := range geminiHeadlessEnvKeys {
+			if entry == key+"=" {
+				cleared[key] = true
+			}
+		}
+	}
+	for _, key := range geminiHeadlessEnvKeys {
+		if !cleared[key] {
+			t.Errorf("sign-in env does not clear %q, so an inherited %q=true would force headless mode: %v", key, key, flow.env)
+		}
+	}
+}
+
+// A workspace the CLI has no trust record for is refused outright. A lease
+// makes its workspace fresh, so the record can never exist and the
+// environment is the only lever.
+func TestGeminiLoginFlowTrustsTheWorkspace(t *testing.T) {
+	flow, ok := flowFor(providers.ProviderGeminiCLI)
+	if !ok {
+		t.Fatal("gemini has no sign-in flow")
+	}
+	for _, entry := range flow.env {
+		if entry == geminiTrustEnv+"="+geminiTrustEnvValue {
+			return
+		}
+	}
+	t.Errorf("sign-in env does not trust the workspace; it has %v", flow.env)
+}
+
+// The value has to be exactly "true": the CLI compares against that string,
+// so "1" would read as no answer at all — the same trap the auth-mode
+// variable set.
+func TestGeminiTrustEnvValueIsExact(t *testing.T) {
+	if geminiTrustEnvValue != "true" {
+		t.Errorf("geminiTrustEnvValue = %q, want \"true\"", geminiTrustEnvValue)
 	}
 }
