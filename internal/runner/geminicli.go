@@ -53,7 +53,47 @@ const (
 	// geminiOAuthEnvValue is exact — the CLI compares against "true", so "1"
 	// reads as no auth method at all.
 	geminiOAuthEnvValue = "true"
+	// geminiTrustEnv marks the workspace trusted. The CLI refuses to run in
+	// an untrusted directory and names three ways out — trust it in
+	// interactive mode, pass --skip-trust, or set this. Only the last suits
+	// a lease: its workspace is created fresh for the sign-in, so no trust
+	// record for it can exist yet.
+	geminiTrustEnv      = "GEMINI_CLI_TRUST_WORKSPACE"
+	geminiTrustEnvValue = "true"
 )
+
+// geminiHeadlessEnvKeys are the variables whose value makes the CLI call
+// itself headless whatever terminal it is on. A sign-in must be interactive
+// (see geminiLoginEnv), so the sign-in command clears them.
+//
+// The CLI reads each as == "true", so an empty value is as good as unset —
+// which is what this can do, since the child's environment is the parent's
+// with these appended and the later entry winning.
+var geminiHeadlessEnvKeys = []string{"CI", "GITHUB_ACTIONS"}
+
+// geminiLoginEnv is the environment the sign-in command runs under.
+//
+// The CLI refuses a manual authorization unless it believes the session is
+// interactive: with the browser suppressed it throws "Manual authorization
+// is required but the current session is non-interactive" and dies, instead
+// of printing the URL the sign-in exists to relay. Its own isHeadlessMode()
+// decides, and answers yes when CI or GITHUB_ACTIONS is "true", when stdin
+// or stdout is not a terminal, or when the command line carries -p/--prompt.
+// Three causes, three fixes: the pseudo-terminal settles the second, dropping
+// -p from the command settles the third, and this settles the first.
+func geminiLoginEnv() []string {
+	env := []string{
+		// There is no browser the runner could show, so the CLI prints a
+		// URL and takes a code back instead.
+		"NO_BROWSER=1",
+		geminiOAuthEnv + "=" + geminiOAuthEnvValue,
+		geminiTrustEnv + "=" + geminiTrustEnvValue,
+	}
+	for _, key := range geminiHeadlessEnvKeys {
+		env = append(env, key+"=")
+	}
+	return env
+}
 
 // geminiAuthEnvKeys are the variables that already name an auth mode. The
 // list mirrors the CLI's own resolver and adds GOOGLE_API_KEY, which Detect
