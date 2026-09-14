@@ -63,6 +63,9 @@ type pdfRenderer struct {
 	tocPages int
 	// tocKnown is the page map from the measuring pass.
 	tocKnown map[string]int
+	// rightInset narrows the content width while blocks are laid out
+	// inside a table cell, so they stop short of the cell's right border.
+	rightInset float64
 }
 
 // tocEntry is one line of the table of contents.
@@ -393,11 +396,9 @@ func (r *pdfRenderer) artifact(n *artifactNode) {
 		pdf.SetTextColor(0, 0, 0)
 		pdf.MultiCell(0, 6, m.title(a), "", "L", false)
 		pdf.Ln(0.5)
+		// The statement is the table's Description row; flowing the body
+		// again below it printed every requirement twice.
 		r.fieldsTable(m.fieldRows(a))
-		if len(m.bodies[a.ID]) > 0 {
-			pdf.Ln(1.5)
-			r.blocks(m.bodies[a.ID], pdfMarginL)
-		}
 		r.figures(a.ID)
 		if rows := m.links[a.ID]; len(rows) > 0 {
 			r.traceabilityTable(rows)
@@ -436,6 +437,10 @@ func (r *pdfRenderer) fieldsTable(rows []fieldRow) {
 	pdf.SetDrawColor(205, 205, 205)
 	pdf.SetLineWidth(0.2)
 	for _, row := range rows {
+		if row.Blocks != nil {
+			r.blocksRow(row)
+			continue
+		}
 		pdf.SetFont("Go", "", 9)
 		lines := pdf.SplitText(row.Value, valueW-2*pdfCellPad)
 		h := float64(maxInt(len(lines), 1))*4.4 + 2*pdfCellPad
@@ -462,6 +467,55 @@ func (r *pdfRenderer) fieldsTable(rows []fieldRow) {
 		pdf.SetY(y + h)
 	}
 	pdf.SetDrawColor(0, 0, 0)
+}
+
+// blocksRow draws a details row whose value is body blocks: the blocks are
+// laid out in the value column with the ordinary block renderer, which
+// breaks pages as it goes, and the label cell and borders are drawn
+// afterwards on every page the row covered.
+func (r *pdfRenderer) blocksRow(row fieldRow) {
+	pdf := r.pdf
+	width := r.contentWidth()
+	valueW := width - pdfLabelW
+	r.ensureSpace(4.4*2 + 2*pdfCellPad)
+	startPage, startY := pdf.PageNo(), pdf.GetY()
+	pdf.SetY(startY + pdfCellPad)
+	r.rightInset = pdfCellPad
+	pdf.SetRightMargin(pdfMarginR + pdfCellPad)
+	r.blocks(row.Blocks, pdfMarginL+pdfLabelW+pdfCellPad)
+	pdf.SetRightMargin(pdfMarginR)
+	r.rightInset = 0
+	endPage := pdf.PageNo()
+	// Blocks end with their own spacing; the last of it is the cell's
+	// bottom padding.
+	endY := pdf.GetY()
+	if endY < startY+pdfCellPad+4.4+pdfCellPad && endPage == startPage {
+		endY = startY + pdfCellPad + 4.4 + pdfCellPad
+	}
+	pdf.SetDrawColor(205, 205, 205)
+	pdf.SetLineWidth(0.2)
+	pdf.SetFillColor(247, 247, 247)
+	for page := startPage; page <= endPage; page++ {
+		pdf.SetPage(page)
+		top, bottom := pdfMarginT, 297-pdfMarginB
+		if page == startPage {
+			top = startY
+		}
+		if page == endPage {
+			bottom = endY
+		}
+		pdf.Rect(pdfMarginL, top, pdfLabelW, bottom-top, "FD")
+		pdf.Rect(pdfMarginL+pdfLabelW, top, valueW, bottom-top, "D")
+		if page == startPage {
+			pdf.SetXY(pdfMarginL+pdfCellPad, top+pdfCellPad)
+			pdf.SetFont("Go", "B", 9)
+			pdf.SetTextColor(60, 60, 60)
+			pdf.CellFormat(pdfLabelW-2*pdfCellPad, 4.4, row.Label, "", 0, "L", false, 0, "")
+			pdf.SetTextColor(0, 0, 0)
+		}
+	}
+	pdf.SetPage(endPage)
+	pdf.SetXY(pdfMarginL, endY)
 }
 
 // traceabilityTable draws the links table with its header repeated on every
@@ -1241,7 +1295,7 @@ func (r *pdfRenderer) testResults() {
 // --- Helpers -----------------------------------------------------------------
 
 func (r *pdfRenderer) contentWidth() float64 {
-	return 210 - pdfMarginL - pdfMarginR
+	return 210 - pdfMarginL - pdfMarginR - r.rightInset
 }
 
 // ensureSpace starts a new page when fewer than needed millimetres remain.

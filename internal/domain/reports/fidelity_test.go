@@ -17,6 +17,7 @@ package reports
 import (
 	"archive/zip"
 	"bytes"
+	"github.com/openv/requirements-platform/internal/domain/reports/doc"
 	"image"
 	"image/color"
 	"image/png"
@@ -417,5 +418,32 @@ func TestFieldRowsFollowContent(t *testing.T) {
 	}
 	if rows[len(rows)-1].Rollup != "pass" {
 		t.Errorf("rollup for a verified requirement with a passing test = %q", rows[len(rows)-1].Rollup)
+	}
+}
+
+// A tabled artifact's statement is printed once: in the table's Description
+// row. It used to flow below the table as well, so every requirement in a
+// downloaded document read twice.
+func TestTabledArtifactsPrintTheirStatementOnce(t *testing.T) {
+	data, opts := fidelityFixture(t)
+	req := data.Artifacts[0]
+	for _, a := range data.Artifacts {
+		if a.ID == "req1" {
+			req = a
+		}
+	}
+	statement := doc.PlainText(doc.Parse(req.Body))
+	if statement == "" {
+		t.Fatal("fixture requirement has no body")
+	}
+	first := strings.SplitN(statement, "\n", 2)[0]
+
+	out, err := buildReportDOCX(data, opts)
+	if err != nil {
+		t.Fatalf("docx: %v", err)
+	}
+	text := docxText(docxPart(t, out, "word/document.xml"))
+	if n := strings.Count(text, first); n != 1 {
+		t.Errorf("docx prints the statement %d times, want 1: %q", n, first)
 	}
 }
