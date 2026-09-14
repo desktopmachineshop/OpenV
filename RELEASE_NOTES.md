@@ -9,6 +9,13 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Bug fixes
+
+- Uploading a new version of a figure works again. Pressing ⬆ (or the
+  history, rename or delete buttons) on a figure used to save the artifact
+  and leave the editor before the file was chosen, so the image never
+  changed; the buttons no longer submit the editing form.
+
 ### New features
 
 - Choose the workspace OpenV opens in when you sign in. Personal settings →
