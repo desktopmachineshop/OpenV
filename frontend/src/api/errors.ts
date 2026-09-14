@@ -45,6 +45,13 @@ export function limitRefusal(err: unknown): LimitRefusal | null {
   };
 }
 
+/** The stable `code` field of an API error body, or '' when there is none. */
+export function apiErrorCode(err: unknown): string {
+  const anyErr = err as { response?: { data?: { code?: unknown } } } | null;
+  const code = anyErr?.response?.data?.code;
+  return typeof code === 'string' ? code : '';
+}
+
 /** Seconds the API asked the client to wait, from a 429's Retry-After header. */
 export function retryAfterSeconds(err: unknown): number | null {
   const anyErr = err as { response?: { headers?: Record<string, unknown> } } | null;

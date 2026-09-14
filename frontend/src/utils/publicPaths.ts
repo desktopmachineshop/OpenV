@@ -3,16 +3,17 @@
 // bounce a visitor off a public page. Matching is by path segment: "/manual"
 // covers "/manual/getting-started" but not "/manual-not", and the root is an
 // exact match, since every signed-in route starts with a segment of its own.
-// /verify-email is public because the emailed link may be opened in a
-// browser that holds no session. /share, /s and /open-source are project
-// views that need no account (REQ-149, REQ-151); the rest are the site's
-// own pages.
+// /verify-email and /reset-password are public because the emailed link
+// may be opened in a browser that holds no session. /share, /s and
+// /open-source are project views that need no account (REQ-149, REQ-151);
+// the rest are the site's own pages.
 const PUBLIC_SEGMENTS = [
   '/login',
   '/pricing',
   '/manual',
   '/interview',
   '/verify-email',
+  '/reset-password',
   '/share',
   '/s',
   '/open-source',

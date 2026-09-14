@@ -161,6 +161,10 @@ func (m *memUserRepo) SaveEmailVerification(*users.EmailVerification) error {
 func (m *memUserRepo) ConsumeEmailVerification(string, time.Time) (*users.User, error) {
 	return nil, nil
 }
+func (m *memUserRepo) SavePasswordReset(*users.PasswordReset) error { return nil }
+func (m *memUserRepo) ConsumePasswordReset(string, time.Time) (*users.PasswordReset, error) {
+	return nil, nil
+}
 func (m *memUserRepo) MarkEmailVerified(userID string, at time.Time) error {
 	if u := m.users[userID]; u != nil {
 		u.EmailVerified = true

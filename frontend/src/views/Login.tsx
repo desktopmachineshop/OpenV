@@ -6,7 +6,7 @@ import {
   InvitationPreview,
   authAPI,
 } from '../api/client';
-import { apiErrorMessage } from '../api/errors';
+import { apiErrorCode, apiErrorMessage, retryAfterSeconds } from '../api/errors';
 import { useAppStore } from '../state/store';
 
 // Login renders email/password sign-in plus optional Google SSO, and a
@@ -52,9 +52,20 @@ export const Login: React.FC = () => {
   const shareToken = searchParams.get('share') || '';
   // The landing page links straight to registration with ?mode=register, and
   // an invite link means registration too — that is what the link is for.
-  const [mode, setMode] = useState<'login' | 'register'>(
-    searchParams.get('mode') === 'register' || inviteToken ? 'register' : 'login'
+  const [mode, setMode] = useState<'login' | 'register' | 'forgot'>(
+    searchParams.get('mode') === 'register' || inviteToken
+      ? 'register'
+      : searchParams.get('mode') === 'forgot'
+        ? 'forgot'
+        : 'login'
   );
+  // A reset page sends the person here once the password is set, so the
+  // page says so instead of looking like they never left (REQ-158).
+  const resetDone = searchParams.get('reset') === 'done';
+  // Whether the server can email a reset link; without a mailer the page
+  // points at the administrator instead.
+  const [resetByEmail, setResetByEmail] = useState(true);
+  const [resetSentTo, setResetSentTo] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
@@ -91,6 +102,7 @@ export const Login: React.FC = () => {
         setVerificationRequired(!!res.data.email_verification_required);
         setEmailVerificationRequired(!!res.data.email_verification_required);
         setRegistrationClosed(res.data.registration === 'closed');
+        setResetByEmail(res.data.password_reset_email !== false);
       })
       .catch(() => {
         setGoogleEnabled(false);
@@ -152,7 +164,8 @@ export const Login: React.FC = () => {
   const signUpAvailable = !registrationClosed || !!invite;
   // Whatever ?mode= asked for, there is no sign-up form where there is no
   // sign-up: the view falls back to signing in.
-  const activeMode: 'login' | 'register' = signUpAvailable ? mode : 'login';
+  const activeMode: 'login' | 'register' | 'forgot' =
+    mode === 'register' && !signUpAvailable ? 'login' : mode;
   // Addresses are compared the way the server folds them.
   const sameAddress = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
   // A signed-in browser on an invite link decides about the invitation
@@ -225,6 +238,32 @@ export const Login: React.FC = () => {
       }
     }
     return '/projects';
+  };
+
+  // requestReset asks for an emailed link. The server answers the same way
+  // for every address, so the page says the same thing for every address:
+  // what to look for, and how long the link lasts.
+  const requestReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setBusy(true);
+    try {
+      const res = await authAPI.requestPasswordReset(email);
+      setResetSentTo(res.data.sent_to || email);
+    } catch (err: any) {
+      const wait = retryAfterSeconds(err);
+      if (apiErrorCode(err) === 'reset_email_unavailable') {
+        setResetByEmail(false);
+      } else {
+        setError(
+          wait
+            ? `Too many reset emails requested. Try again in ${wait} seconds.`
+            : apiErrorMessage(err, 'The reset email could not be sent')
+        );
+      }
+    } finally {
+      setBusy(false);
+    }
   };
 
   const submit = async (e: React.FormEvent) => {
@@ -325,8 +364,26 @@ export const Login: React.FC = () => {
                 : 'Create an account to review the shared project'
               : activeMode === 'login'
               ? 'Sign in to your workspace'
-              : 'Create your account'}
+              : activeMode === 'forgot'
+                ? 'Reset your password'
+                : 'Create your account'}
         </p>
+        {resetDone && activeMode === 'login' && (
+          <div
+            role="status"
+            style={{
+              background: 'var(--tint-green, var(--tint-blue))',
+              border: '1px solid var(--success)',
+              borderRadius: 4,
+              padding: '10px 12px',
+              marginBottom: 16,
+              fontSize: 13,
+              color: 'var(--text)',
+            }}
+          >
+            Your password has been changed. Sign in with the new one.
+          </div>
+        )}
         {/* Signed in, on an invite link: the invitation is shown and the
             person decides. Nothing has been accepted on their behalf. */}
         {decidingAsSignedIn && !invite && (
@@ -433,7 +490,61 @@ export const Login: React.FC = () => {
         {/* The credentials form and the sign-in methods are for a
             browser with no session. A signed-in one is only here to
             decide about the invitation above. */}
-        {!decidingAsSignedIn && (
+        {!decidingAsSignedIn && activeMode === 'forgot' && (
+          <>
+            {!resetByEmail ? (
+              <p style={{ fontSize: 13, color: 'var(--text-body)', lineHeight: 1.5, marginTop: 0 }}>
+                This server cannot send email, so it cannot send you a reset link. Ask your OpenV
+                administrator: a platform admin can make a reset link for your account and pass it
+                to you.
+              </p>
+            ) : resetSentTo ? (
+              <p role="status" style={{ fontSize: 13, color: 'var(--text-body)', lineHeight: 1.5, marginTop: 0 }}>
+                If <strong style={{ overflowWrap: 'anywhere' }}>{resetSentTo}</strong> has an OpenV account with a
+                password, a reset link is on its way. It works once and expires after an hour. If nothing
+                arrives, check the address and your spam folder, or ask your OpenV administrator for a
+                link.
+              </p>
+            ) : (
+              <form onSubmit={requestReset}>
+                <p style={{ fontSize: 13, color: 'var(--text-body)', lineHeight: 1.5, marginTop: 0 }}>
+                  Enter the address you sign in with and we will email you a link to set a new password.
+                </p>
+                <div className="form-group" style={{ marginBottom: 16 }}>
+                  <input
+                    type="email"
+                    placeholder="Email"
+                    autoComplete="email"
+                    inputMode="email"
+                    value={email}
+                    required
+                    onChange={(e) => setEmail(e.target.value)}
+                    style={{ width: '100%', padding: 10, boxSizing: 'border-box' }}
+                  />
+                </div>
+                {error && (
+                  <div style={{ color: 'var(--danger)', fontSize: 13, marginBottom: 12 }}>{String(error)}</div>
+                )}
+                <button className="button" type="submit" disabled={busy} style={{ width: '100%' }}>
+                  {busy ? 'Please wait…' : 'Send reset link'}
+                </button>
+              </form>
+            )}
+            <button
+              type="button"
+              className="button-secondary button"
+              style={{ width: '100%', marginTop: 12 }}
+              onClick={() => {
+                setMode('login');
+                setError('');
+                setResetSentTo('');
+              }}
+            >
+              Back to sign in
+            </button>
+          </>
+        )}
+        {!decidingAsSignedIn && activeMode !== 'forgot' && (
           <>
             {inviteError && (
               <div style={{ color: 'var(--danger)', fontSize: 13, marginBottom: 12 }}>{inviteError}</div>
@@ -503,6 +614,28 @@ export const Login: React.FC = () => {
               <button className="button" type="submit" disabled={busy} style={{ width: '100%' }}>
                 {busy ? 'Please wait…' : activeMode === 'login' ? 'Sign in' : 'Create account'}
               </button>
+              {activeMode === 'login' && (
+                <div style={{ textAlign: 'center', marginTop: 10 }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMode('forgot');
+                      setError('');
+                    }}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: 'var(--text-muted)',
+                      cursor: 'pointer',
+                      fontSize: 13,
+                      minHeight: 36,
+                      width: 'auto',
+                    }}
+                  >
+                    Forgot your password?
+                  </button>
+                </div>
+              )}
             </form>
             {/* The credentials worked and the invitation did not: they are
                 signed in, and the way on must not be a dead end. */}

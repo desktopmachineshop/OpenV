@@ -123,7 +123,7 @@ their own project, workers pass within their org) · `org member`/`org admin`
 | POST | `/api/v1/auth/login` | Password login, sets session cookie | open |
 | POST | `/api/v1/auth/logout` | End session, clear cookie | open |
 | GET | `/api/v1/auth/me` | Current user profile | user |
-| GET | `/api/v1/auth/config` | Which sign-in methods are enabled (Google, OIDC), whether `email_verification_required`, and the `registration` policy | open |
+| GET | `/api/v1/auth/config` | Which sign-in methods are enabled (Google, OIDC), whether `email_verification_required`, whether `password_reset_email` can be offered (a mailer is configured), and the `registration` policy | open |
 | GET | `/api/v1/auth/policy` | The registration policy alone, plus the server's password rule: `{"registration":"open"\|"closed","min_password_length":8}`. Clients state `min_password_length` in their password forms rather than a copy of it, so the form and the server can never disagree | open |
 | POST | `/api/v1/auth/invitations/preview` | Preview an invite link `{token}` → `{email, org_name, role, expires_at}`; one `404` for every unusable link. The token travels in the body, never in the path: an invite link is a credential, and a URL is written into access logs, proxy logs, browser history and `Referer` headers. Throttled on its own bucket, not the sign-in one. Only an unusable link is `404`: a lookup that fails for any other reason answers `500`, because telling the invitee their link is invalid would send them off for a replacement that fails identically | open |
 | POST | `/api/v1/auth/invitations/accept` | Join the signed-in account to the invitation's workspace `{token}` → `{org_id, org_name, role, already_member}`. Converts only when the **session's own email is the invited address**; otherwise `403 {"code":"invitation_email_mismatch"}`, whose body never names the invited address (the preview already shows it to whoever holds the link). `404` when the link is unusable. An account that is already a member keeps its role — `role` reports the role it holds, `already_member` is `true`, and the invitation is spent. A successful accept (`already_member` included) **marks the account's address verified**: the token was mailed to that address and nowhere else, and it is the session's own address, so this is the same proof `POST /auth/register` accepts from an `invite_token` | user (cookie only, JSON body) |
@@ -135,6 +135,8 @@ their own project, workers pass within their org) · `org member`/`org admin`
 | POST | `/api/v1/auth/verify-email` | Confirm an emailed link `{token}`; returns the user (`400` invalid/expired, `409` address taken). Grants **no** workspace membership: the address it confirms is one the account asked the mail to be sent to, so it is not evidence that the account is the person an admin invited | open |
 | POST | `/api/v1/auth/verify-email/resend` | Email a fresh link to the session's account (`202 {sent_to}`; `409` already verified; `502` mail failed) | user (cookie only, JSON body) |
 | POST | `/api/v1/auth/verify-email/change` | Email a fresh link to a corrected address `{email}`; the account's address changes when that link is confirmed | user (cookie only, JSON body) |
+| POST | `/api/v1/auth/password-reset` | Email a password reset link `{email}` (REQ-158). Answers `202 {sent_to}` for **every** well-formed address, known or not, and does the lookup and the send after answering, so neither the status nor the timing says whether an account exists; an address with no account, or an SSO-only one, is simply sent nothing. `409 {"code":"reset_email_unavailable"}` on a deployment with no mailer (server configuration, not account state); `429` per client address and per address asked for. The link is valid for one hour and works once | open |
+| POST | `/api/v1/auth/password-reset/confirm` | Spend a reset link `{token, new_password}`: sets the password and ends **every** session of the account, and marks the address verified when the link was emailed (it reached that inbox). `204`; `400 weak_password` (checked before the link is spent, so a weak password does not cost it), `400 reset_invalid` (unknown, spent or expired). No session is created: the person signs in with the new password | open |
 | GET | `/api/v1/auth/google` | Start Google OIDC flow | open |
 | GET | `/api/v1/auth/google/callback` | OIDC callback, creates/logs in user | open |
 | GET | `/api/v1/users` | List users (for member pickers) | user |
@@ -494,6 +496,7 @@ everybody else.
 |---|---|---|---|
 | GET | `/api/v1/admin/workspaces` | Every live workspace with its plan, channel and `members` count, oldest first | platform admin |
 | GET | `/api/v1/admin/users` | Every account: `[{id, name, email, auth_provider, is_admin, created_at}]`, admins first | platform admin |
+| POST | `/api/v1/admin/users/{id}/password-reset` | Mint a password reset link for an account and answer it **once**: `{link, expires_at}`, valid 24 hours, works once (REQ-158). Nothing is emailed: the admin passes the link on however they talk to the person, which is the support path and the only path on a deployment with no mailer. Following it verifies nothing about the mailbox. `404` unknown account; `409 no_password` for an account that signs in through an identity provider. Logged with the admin's id | platform admin |
 | PUT | `/api/v1/admin/users/{id}/admin` | Grant or remove platform-admin standing `{is_admin}` → the account. `400` when an admin tries to remove their own standing or the last admin's; `404` for an unknown account | platform admin |
 
 Plans are changed with `PUT /api/v1/orgs/{id}/plan` (above).
@@ -925,6 +928,12 @@ routes are throttled per invite and per address. A throttled request is
 answered `429` with a JSON `error` and a `Retry-After` header in seconds.
 Verification resend and change-of-address are throttled per account
 (`OPENV_VERIFY_RESEND_BURST` 3, `OPENV_VERIFY_RESEND_REFILL_PER_HOUR` 6).
+Asking for a password reset email (`POST /auth/password-reset`) is throttled
+per client address on the sign-in bucket and per address asked for
+(`OPENV_PASSWORD_RESET_BURST` 3, `OPENV_PASSWORD_RESET_REFILL_PER_HOUR` 6),
+whether or not that address has an account, so the bucket cannot be read
+for existence either; confirming a link draws on the sign-in bucket per
+client address only, since the token itself is unguessable.
 Previewing an invite link (`POST /auth/invitations/preview`) has its own
 generous per-address bucket (`OPENV_INVITE_PREVIEW_BURST` 60,
 `OPENV_INVITE_PREVIEW_REFILL_PER_HOUR` 240) and deliberately does **not**
@@ -959,7 +968,8 @@ authenticated request, so shortening either applies to sessions that already
 exist, and a background sweep deletes the rows. An expired session is
 answered like any other invalid one (`401`). A successful `PUT /me/password`
 invalidates every other session of the account immediately; the caller's own
-survives. See [operations.md](operations.md) for the variables.
+survives. A password reset (`POST /auth/password-reset/confirm`) invalidates
+**every** session, including any the resetting browser held. See [operations.md](operations.md) for the variables.
 Request bodies are capped at 32 MB and attachment uploads at 25 MB (`413`
 when exceeded); an upload whose bytes do not match the declared image type
 is refused with `400`, and an SVG attachment is always served as a download.

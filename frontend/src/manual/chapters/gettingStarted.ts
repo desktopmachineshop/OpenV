@@ -47,6 +47,23 @@ which is what you want if you are changing it because the old one may have
 leaked; the browser you are using stays signed in. Accounts that sign in with
 Google or single sign-on have no password here — change it at that provider.
 
+### Forgot your password?
+
+On the sign-in screen, **Forgot your password?** asks for the address you sign
+in with and emails it a link to set a new password. The link works once and
+expires after an hour; the page says the same thing whether or not the
+address has an account, so it cannot be used to find out who has one. Setting
+the new password signs the account out everywhere, and you sign in again with
+it. If nothing arrives, check the address and your spam folder.
+
+On a server that cannot send email the screen says so, and the way in is your
+**OpenV administrator**: a platform admin can make a reset link for your
+account (see the *Platform admin* chapter) and pass it to you. That link lasts
+a day and works once.
+
+Accounts that sign in with Google or single sign-on have no password to
+reset — sign in there.
+
 Sessions do not last forever: one expires a set time after you sign in, and
 sooner if you stop using it. Your server's administrator sets both limits
 (30 days and 7 days unless they shortened them), and you simply sign in again.
