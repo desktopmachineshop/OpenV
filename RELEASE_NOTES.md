@@ -9,6 +9,14 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Maintenance updates
+
+- The **Cloud runner** card now shows how busy the shared pool is as a
+  traffic light — *Runners available*, *Runners busy*, *All runners in use* —
+  instead of printing how many runners are free. You can hold one runner at a
+  time, so the count was never something you could act on, and the deployment's
+  capacity is no longer published to every account.
+
 ## 0.6.1 — 2026-09-14
 
 ### Bug fixes
