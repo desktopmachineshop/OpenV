@@ -9,6 +9,7 @@ const FALLBACK_PROVIDERS = [
   'claude-code',
   'codex-cli',
   'gemini-cli',
+  'antigravity-cli',
   'anthropic-api',
   'openai-api',
   'google-api',

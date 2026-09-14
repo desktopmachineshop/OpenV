@@ -281,7 +281,8 @@ func (w *Worker) finishLogin(ctx context.Context, login *providers.LoginRequest,
 	}
 	if waitErr != nil {
 		w.loginProgress(login.ID, providers.LoginFailed, "",
-			"sign-in command failed: "+waitErr.Error()+" — output tail: "+tail.String())
+			signInFailure(login.Provider,
+				"sign-in command failed: "+waitErr.Error()+" — output tail: "+tail.String()))
 		return
 	}
 	w.loginProgress(login.ID, providers.LoginCompleted, "", "Signed in successfully.")

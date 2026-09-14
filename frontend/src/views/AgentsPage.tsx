@@ -15,6 +15,7 @@ const providerBadgeColor = (provider: string): string => {
     case 'openai-api':
       return '#10a37f';
     case 'gemini-cli':
+    case 'antigravity-cli':
     case 'google-api':
       return '#4285f4';
     default:

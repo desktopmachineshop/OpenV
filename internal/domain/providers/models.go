@@ -52,6 +52,13 @@ var modelCatalog = map[string][]Model{
 		{ID: "gemini-2.5-flash", Label: "Gemini 2.5 Flash"},
 		{ID: "gemini-2.0-flash", Label: "Gemini 2.0 Flash"},
 	},
+	// Antigravity names models by slug and lists them with `agy models`;
+	// only the slug Google's headless documentation shows by name is
+	// catalogued here, rather than guessing at the rest of a closed-source
+	// CLI's line-up. A member may type any slug the CLI accepts.
+	ProviderAntigravityCLI: {
+		{ID: "gemini-3.5-flash-medium", Label: "Gemini 3.5 Flash (medium)"},
+	},
 	ProviderGoogleAPI: {
 		{ID: "gemini-2.5-pro", Label: "Gemini 2.5 Pro"},
 		{ID: "gemini-2.5-flash", Label: "Gemini 2.5 Flash"},

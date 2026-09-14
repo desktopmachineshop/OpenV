@@ -39,6 +39,7 @@ var Registry = []Feature{
 	// features endpoint and What's new list it, and the flow itself is
 	// unconditional.
 	{Key: FeaturePasswordReset, ShippedIn: "0.6.0", Summary: "Forgot your password? An emailed reset link from the sign-in page, or one a platform admin makes for you"},
+	{Key: FeatureAntigravity, ShippedIn: "0.7.0", Summary: "Antigravity CLI as an agent provider: Google's successor to the Gemini CLI, run from a workspace Gemini API key"},
 }
 
 // Feature keys the code gates on.
@@ -52,6 +53,9 @@ const (
 	FeatureDefaultWorkspace = "default-workspace"
 	FeatureFigureTitles     = "figure-titles"
 	FeaturePasswordReset    = "password-reset"
+	// FeatureAntigravity is the antigravity-cli agent provider. Google moved
+	// the consumer Gemini tiers onto this CLI on 18 June 2026.
+	FeatureAntigravity = "antigravity-cli"
 )
 
 // Enabled reports whether a feature is on for a workspace on the given

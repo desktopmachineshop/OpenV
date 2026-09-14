@@ -62,6 +62,31 @@ const (
 	geminiTrustEnvValue = "true"
 )
 
+// geminiTierNote explains the wall a Gemini sign-in now meets that no amount
+// of getting the flow right can clear.
+//
+// On 18 June 2026 Google stopped serving Gemini CLI for the free, Google One,
+// AI Pro and AI Ultra tiers and moved them to Antigravity CLI; a Gemini Code
+// Assist Standard or Enterprise licence, Google Cloud, and paid API keys are
+// still served. The sign-in drives Code Assist OAuth, so on an unentitled
+// account it fails at Google's end, after everything on this side has worked.
+//
+// The refusal is the server's, and its wording is not ours to predict, so
+// this is appended to every failed Gemini sign-in rather than matched
+// against a string that may not appear. It is phrased to stay true when the
+// cause is something else entirely.
+const geminiTierNote = "Note: since 18 June 2026 the Gemini CLI signs in only Google accounts " +
+	"on a Gemini Code Assist Standard or Enterprise licence — the free, Google One, AI Pro and " +
+	"AI Ultra tiers moved to Antigravity CLI. If this account is on one of those, no sign-in here " +
+	"can succeed; set a Gemini API key on the workspace instead, which is still served."
+
+// geminiSignInFailure annotates a failed Gemini sign-in with the tier note,
+// keeping the original cause: the member needs the raw failure to report, and
+// the note to know whether reporting it is worth anything.
+func geminiSignInFailure(detail string) string {
+	return detail + " — " + geminiTierNote
+}
+
 // geminiHeadlessEnvKeys are the variables whose value makes the CLI call
 // itself headless whatever terminal it is on. A sign-in must be interactive
 // (see geminiLoginEnv), so the sign-in command clears them.

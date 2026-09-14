@@ -9,6 +9,27 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### New features
+
+- **Antigravity CLI** is available as an agent provider. Google moved the
+  free, Google One, AI Pro and AI Ultra tiers off the Gemini CLI and onto
+  Antigravity on 18 June 2026, so agents can now run on it. It runs from a
+  Gemini API key set on the workspace rather than a personal sign-in, because
+  the CLI keeps its sign-in in the computer's keyring and a cloud runner has
+  none. Agents that edit a connected repository still need Claude Code.
+
+### Maintenance updates
+
+- The floating **?** help button no longer sits on top of the buttons in the
+  bottom-right corner of a page. On the V&V dashboard it covered the
+  *Complete* and *Abort* buttons of the last test run, which could not be
+  clicked at all once the table reached the bottom of the window.
+- A failed **Gemini CLI** sign-in now explains the likeliest reason: since
+  18 June 2026 the Gemini CLI signs in only Google accounts on a Gemini Code
+  Assist Standard or Enterprise licence, and other tiers need an API key
+  instead. The message used to be the CLI's raw output with no hint that no
+  amount of retrying would help.
+
 ## 0.6.3 — 2026-09-14
 
 ### Bug fixes
