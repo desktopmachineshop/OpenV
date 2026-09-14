@@ -9,6 +9,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+## 0.6.3 — 2026-09-14
+
 ### Bug fixes
 
 - Signing the Gemini CLI in from a cloud runner works again. The CLI will
