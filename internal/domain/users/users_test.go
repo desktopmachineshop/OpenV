@@ -13,6 +13,7 @@ type memRepo struct {
 	users         map[string]*User
 	sessions      map[string]*Session
 	verifications map[string]*EmailVerification // by token hash
+	resets        map[string]*PasswordReset     // by token hash
 	// touches counts TouchSession calls, so the session tests can assert
 	// that last_seen_at is not rewritten on every single request.
 	touches int
@@ -24,7 +25,26 @@ type memRepo struct {
 }
 
 func newMemRepo() *memRepo {
-	return &memRepo{users: map[string]*User{}, sessions: map[string]*Session{}, verifications: map[string]*EmailVerification{}}
+	return &memRepo{users: map[string]*User{}, sessions: map[string]*Session{}, verifications: map[string]*EmailVerification{}, resets: map[string]*PasswordReset{}}
+}
+
+func (m *memRepo) SavePasswordReset(v *PasswordReset) error {
+	for hash, existing := range m.resets {
+		if existing.UserID == v.UserID && !existing.Used {
+			delete(m.resets, hash)
+		}
+	}
+	m.resets[v.TokenHash] = v
+	return nil
+}
+
+func (m *memRepo) ConsumePasswordReset(tokenHash string, now time.Time) (*PasswordReset, error) {
+	v := m.resets[tokenHash]
+	if v == nil || v.Used || !v.ExpiresAt.After(now) {
+		return nil, nil
+	}
+	v.Used = true
+	return v, nil
 }
 
 func (m *memRepo) SaveEmailVerification(v *EmailVerification) error {

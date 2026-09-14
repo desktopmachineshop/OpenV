@@ -674,6 +674,9 @@ export interface AuthConfig {
   oidc_enabled: boolean;
   oidc_provider_name: string;
   email_verification_required: boolean;
+  // Whether the sign-in page can email a password reset link (REQ-158).
+  // Without a mailer, a platform admin mints the link instead.
+  password_reset_email?: boolean;
   // Whether this deployment still has a public sign-up door (REQ-95). When
   // 'closed', new accounts arrive only by invitation or through SSO.
   registration?: 'open' | 'closed';
@@ -1290,6 +1293,14 @@ export const authAPI = {
     client.post<{ sent_to: string }>('/api/v1/auth/verify-email/resend', {}),
   changeVerificationEmail: (email: string) =>
     client.post<{ sent_to: string }>('/api/v1/auth/verify-email/change', { email }),
+  // Password reset (REQ-158): ask for an emailed link (202 whether or not
+  // the address has an account; 409 reset_email_unavailable when the server
+  // cannot send mail), then spend the link with a new password (204; 400
+  // reset_invalid or weak_password).
+  requestPasswordReset: (email: string) =>
+    client.post<{ sent_to: string }>('/api/v1/auth/password-reset', { email }),
+  confirmPasswordReset: (token: string, newPassword: string) =>
+    client.post('/api/v1/auth/password-reset/confirm', { token, new_password: newPassword }),
   // Registration policy on its own, for a caller that needs nothing else.
   // min_password_length is the server's own rule, so a password form states
   // the length that will actually be enforced rather than a copy of it.
@@ -2612,4 +2623,8 @@ export const adminAPI = {
   setPlan: (orgId: string, plan: string) => client.put<Org>(`/api/v1/orgs/${orgId}/plan`, { plan }),
   setAdmin: (userId: string, isAdmin: boolean) =>
     client.put<AdminUser>(`/api/v1/admin/users/${userId}/admin`, { is_admin: isAdmin }),
+  // Mint a password reset link for an account and get it back once
+  // (REQ-158). Nothing is emailed: the admin hands the link over.
+  issuePasswordReset: (userId: string) =>
+    client.post<{ link: string; expires_at: string }>(`/api/v1/admin/users/${userId}/password-reset`, {}),
 };

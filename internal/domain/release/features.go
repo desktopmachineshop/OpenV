@@ -32,6 +32,11 @@ var Registry = []Feature{
 	{Key: FeatureOwners, ShippedIn: "0.3.0", Summary: "Artifact owners, reference parties and owner-filtered downloads"},
 	{Key: FeatureShareLinks, ShippedIn: "0.4.0", Summary: "Share links: a public read-only view of a project, or reviewer access, from one link; the reviewer role"},
 	{Key: FeatureAssistantEdits, ShippedIn: "0.5.0", Summary: "The V&V Assistant adds any kind of artifact, edits one and moves one from the notes panel"},
+	// Password reset happens before there is a session, so there is no
+	// workspace whose channel could gate it: the key is registered so the
+	// features endpoint and What's new list it, and the flow itself is
+	// unconditional.
+	{Key: FeaturePasswordReset, ShippedIn: "0.6.0", Summary: "Forgot your password? An emailed reset link from the sign-in page, or one a platform admin makes for you"},
 }
 
 // Feature keys the code gates on.
@@ -40,6 +45,7 @@ const (
 	FeatureOwners         = "artifact-owners"
 	FeatureShareLinks     = "share-links"
 	FeatureAssistantEdits = "assistant-project-edits"
+	FeaturePasswordReset  = "password-reset"
 )
 
 // Enabled reports whether a feature is on for a workspace on the given

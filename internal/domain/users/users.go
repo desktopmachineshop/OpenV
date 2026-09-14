@@ -110,6 +110,50 @@ type User struct {
 	UpdatedAt       time.Time  `json:"updated_at"`
 }
 
+// Password reset (REQ-158). A reset link is a single-use token, stored
+// hashed like a verification link, that lets whoever holds it set a new
+// password for one account. It reaches a person one of two ways:
+//
+//   - emailed, from the sign-in page, on a deployment that can send mail:
+//     the link goes only to the account's own address, so following it is
+//     also proof of control of that address;
+//   - minted by a platform admin and handed over out of band, which is the
+//     support path, and the only path on a deployment with no mailer. It
+//     proves nothing about the mailbox, so it verifies nothing.
+//
+// Setting the password through either ends every session of the account:
+// the reason to reset a password is usually that somebody else may hold the
+// old one.
+const (
+	// PasswordResetTTL is how long an emailed reset link stays valid.
+	PasswordResetTTL = time.Hour
+	// AdminPasswordResetTTL is how long an admin-minted link stays valid: it
+	// travels through a support conversation, which takes longer than an
+	// inbox.
+	AdminPasswordResetTTL = 24 * time.Hour
+
+	ResetDeliveryEmail = "email"
+	ResetDeliveryAdmin = "admin"
+)
+
+// ErrResetInvalid covers every way a reset link can fail — unknown, spent,
+// expired — in one answer, so a probe learns nothing about which.
+var ErrResetInvalid = errors.New("password reset link is invalid or has expired")
+
+// PasswordReset is one reset link. The raw token is never stored.
+type PasswordReset struct {
+	ID        string
+	UserID    string
+	TokenHash string
+	// Delivery is ResetDeliveryEmail or ResetDeliveryAdmin; IssuedBy is the
+	// platform admin who minted an admin link.
+	Delivery  string
+	IssuedBy  *string
+	ExpiresAt time.Time
+	Used      bool
+	CreatedAt time.Time
+}
+
 // EmailVerification is one emailed verification link. The raw token is never
 // stored, only its hash; Email is the address the link was sent to, which
 // becomes the account's address when the link is confirmed (that is how a
@@ -166,6 +210,13 @@ type Repository interface {
 	// when the hash is unknown, spent or expired; ErrEmailTaken when the
 	// address now belongs to another account.
 	ConsumeEmailVerification(tokenHash string, now time.Time) (*User, error)
+	// SavePasswordReset stores a reset link after discarding the user's
+	// unused pending ones, so at most one link is live per account.
+	SavePasswordReset(v *PasswordReset) error
+	// ConsumePasswordReset atomically spends the link with this hash
+	// (unused, unexpired at now) and returns it; nil, nil when the hash is
+	// unknown, spent or expired.
+	ConsumePasswordReset(tokenHash string, now time.Time) (*PasswordReset, error)
 
 	SaveSession(s *Session) error
 	FindSessionByTokenHash(hash string) (*Session, error)
@@ -243,6 +294,19 @@ type Service interface {
 	// unknown, used or expired; ErrEmailTaken when the address was claimed
 	// by another account in the meantime.
 	ConfirmEmailVerification(token string) (*User, error)
+	// IssuePasswordReset mints a reset link for a password account (REQ-158):
+	// delivery is ResetDeliveryEmail (valid PasswordResetTTL) or
+	// ResetDeliveryAdmin (valid AdminPasswordResetTTL, issuedBy the admin).
+	// Returns the raw token and when it expires. ErrUserNotFound for an
+	// unknown id; ErrNoPassword for an account that signs in through an
+	// identity provider, which has no password to reset.
+	IssuePasswordReset(userID, delivery string, issuedBy *string) (token string, expiresAt time.Time, err error)
+	// ResetPassword spends a raw reset token and sets the new password,
+	// ending every session of the account. The password rule is checked
+	// before the token is spent, so a weak password does not cost the
+	// link. An emailed link also marks the address verified. Errors:
+	// ErrWeakPassword, ErrResetInvalid.
+	ResetPassword(token, newPassword string) (*User, error)
 }
 
 // DefaultService implements Service.
@@ -402,6 +466,92 @@ func (s *DefaultService) ConfirmEmailVerification(token string) (*User, error) {
 	}
 	if user == nil {
 		return nil, ErrVerificationInvalid
+	}
+	return user, nil
+}
+
+// IssuePasswordReset mints a reset link; see the Service interface.
+func (s *DefaultService) IssuePasswordReset(userID, delivery string, issuedBy *string) (string, time.Time, error) {
+	user, err := s.repo.FindUserByID(userID)
+	if err != nil {
+		return "", time.Time{}, err
+	}
+	if user == nil {
+		return "", time.Time{}, ErrUserNotFound
+	}
+	if user.PasswordHash == "" {
+		return "", time.Time{}, ErrNoPassword
+	}
+	ttl := PasswordResetTTL
+	if delivery == ResetDeliveryAdmin {
+		ttl = AdminPasswordResetTTL
+	} else {
+		delivery = ResetDeliveryEmail
+	}
+	token, err := NewToken()
+	if err != nil {
+		return "", time.Time{}, err
+	}
+	now := time.Now()
+	v := &PasswordReset{
+		ID:        uuid.New().String(),
+		UserID:    user.ID,
+		TokenHash: HashToken(token),
+		Delivery:  delivery,
+		IssuedBy:  issuedBy,
+		ExpiresAt: now.Add(ttl),
+		CreatedAt: now,
+	}
+	if err := s.repo.SavePasswordReset(v); err != nil {
+		return "", time.Time{}, err
+	}
+	return token, v.ExpiresAt, nil
+}
+
+// ResetPassword spends a reset token and sets the password; see the
+// Service interface.
+func (s *DefaultService) ResetPassword(token, newPassword string) (*User, error) {
+	token = strings.TrimSpace(token)
+	if token == "" {
+		return nil, ErrResetInvalid
+	}
+	if len(newPassword) < MinPasswordLength {
+		return nil, ErrWeakPassword
+	}
+	now := time.Now()
+	reset, err := s.repo.ConsumePasswordReset(HashToken(token), now)
+	if err != nil {
+		return nil, err
+	}
+	if reset == nil {
+		return nil, ErrResetInvalid
+	}
+	hash, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.repo.SetPasswordHash(reset.UserID, string(hash), now); err != nil {
+		return nil, err
+	}
+	// Whoever held the old password is signed out everywhere; the person
+	// resetting signs in fresh with the new one. As with a change, the
+	// password DID change, so a sweep that failed is logged, not reported.
+	if err := s.repo.DeleteSessionsForUser(reset.UserID, ""); err != nil {
+		slog.Error("password reset but sessions were not signed out", "user_id", reset.UserID, "error", err)
+	}
+	// An emailed link reached the account's own inbox, which is exactly
+	// what verification asks for. An admin link proves nothing of the kind.
+	if reset.Delivery == ResetDeliveryEmail {
+		if err := s.repo.MarkEmailVerified(reset.UserID, now); err != nil {
+			slog.Warn("password reset: could not mark the address verified", "user_id", reset.UserID, "error", err)
+		}
+	}
+	user, err := s.repo.FindUserByID(reset.UserID)
+	if err != nil {
+		return nil, err
+	}
+	if user == nil {
+		return nil, ErrResetInvalid
 	}
 	return user, nil
 }

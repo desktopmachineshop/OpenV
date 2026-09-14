@@ -231,6 +231,9 @@ type Handler struct {
 	// verifyResendLimiter bounds verification mails per account (resend and
 	// change of address share it).
 	verifyResendLimiter *rateLimiter
+	// passwordResetLimiter bounds reset mails per address (REQ-158), so
+	// the sign-in page cannot be used to flood one inbox.
+	passwordResetLimiter *rateLimiter
 	// invitePreviewLimiter bounds invite-link previews per address. Separate
 	// from authIPLimiter on purpose: opening an invite link must never spend
 	// somebody's sign-in budget (see ratelimit.go).
@@ -325,6 +328,7 @@ func NewHandler(deps HandlerDeps) *Handler {
 		registerIPLimiter:      newRateLimiterFromEnv(envRegisterIPBurst, envRegisterIPRefill, defaultRegisterIPBurst, defaultRegisterIPRefill),
 		ssoIPLimiter:           newRateLimiterFromEnv(envSSOIPBurst, envSSOIPRefill, defaultSSOIPBurst, defaultSSOIPRefill),
 		verifyResendLimiter:    newRateLimiterFromEnv(envVerifyResendBurst, envVerifyResendRefill, defaultVerifyResendBurst, defaultVerifyResendRefill),
+		passwordResetLimiter:   newRateLimiterFromEnv(envPasswordResetBurst, envPasswordResetRefill, defaultPasswordResetBurst, defaultPasswordResetRefill),
 		invitePreviewLimiter:   newRateLimiterFromEnv(envInvitePreviewBurst, envInvitePreviewRefill, defaultInvitePreviewBurst, defaultInvitePreviewRefill),
 		inviteLimiter:          newRateLimiterFromEnv(envInviteBurst, envInviteRefill, defaultInviteBurst, defaultInviteRefill),
 		mailer:                 deps.Mailer,
@@ -450,6 +454,7 @@ func (h *Handler) RegisterRoutes(router *mux.Router) {
 	h.registerOrgRoutes(router)
 	h.registerInvitationRoutes(router)
 	h.registerPasswordRoutes(router)
+	h.registerPasswordResetRoutes(router)
 	h.registerAvatarRoutes(router)
 	h.registerReleaseRoutes(router)
 	h.registerFeatureRoutes(router)

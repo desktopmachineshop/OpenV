@@ -28,6 +28,7 @@ type Calls = {
   register: any[][];
   acceptInvitation: any[][];
   logout: any[][];
+  requestPasswordReset: any[][];
 };
 
 const authFixtures: {
@@ -42,6 +43,8 @@ const authFixtures: {
   // fails — the two ways a conversion can not happen.
   registerOutcome: string | null;
   acceptError: any;
+  // What requestPasswordReset answers with when it rejects; null resolves.
+  resetError: any;
   calls: Calls;
 } = {
   config: null,
@@ -51,7 +54,8 @@ const authFixtures: {
   me: null,
   registerOutcome: null,
   acceptError: null,
-  calls: { login: [], register: [], acceptInvitation: [], logout: [] },
+  resetError: null,
+  calls: { login: [], register: [], acceptInvitation: [], logout: [], requestPasswordReset: [] },
 };
 
 const record = (name: keyof Calls, data: any) => (...args: any[]) => {
@@ -93,6 +97,12 @@ jest.mock('../api/client', () => ({
       })(...args),
     oidcLoginUrl: () => '/oidc',
     googleLoginUrl: () => '/google',
+    requestPasswordReset: (...args: any[]) => {
+      authFixtures.calls.requestPasswordReset.push(args);
+      return authFixtures.resetError
+        ? Promise.reject(authFixtures.resetError)
+        : Promise.resolve({ data: { sent_to: String(args[0]).trim().toLowerCase() } });
+    },
   },
 }));
 
@@ -109,7 +119,8 @@ beforeEach(() => {
   authFixtures.me = null;
   authFixtures.registerOutcome = null;
   authFixtures.acceptError = null;
-  authFixtures.calls = { login: [], register: [], acceptInvitation: [], logout: [] };
+  authFixtures.resetError = null;
+  authFixtures.calls = { login: [], register: [], acceptInvitation: [], logout: [], requestPasswordReset: [] };
   container = document.createElement('div');
   document.body.appendChild(container);
   act(() => {
@@ -535,5 +546,52 @@ describe('Login', () => {
     await render('/login?mode=register');
     const field = container.querySelector('input[type="password"]') as HTMLInputElement;
     expect(field.placeholder).toBe('Password (min 12 characters)');
+  });
+
+  // Password reset (REQ-158).
+  const clickText = async (text: string) => {
+    const button = Array.from(container.querySelectorAll('button')).find((b) => b.textContent?.trim() === text);
+    if (!button) throw new Error(`no button "${text}" in: ${container.textContent}`);
+    await act(async () => {
+      button.click();
+    });
+  };
+  const typeEmail = async (value: string) => {
+    const field = container.querySelector('input[type="email"]') as HTMLInputElement;
+    const setValue = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')!.set!;
+    await act(async () => {
+      setValue.call(field, value);
+      field.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+  };
+
+  it('offers a forgotten-password link that asks for an emailed reset', async () => {
+    authFixtures.config = { google_enabled: false, oidc_enabled: false, registration: 'open', password_reset_email: true };
+    await render('/login');
+    await clickText('Forgot your password?');
+    expect(container.textContent).toContain('Reset your password');
+    expect(container.querySelector('input[type="password"]')).toBeNull();
+    await typeEmail(' Owner@Example.com ');
+    await act(async () => {
+      container.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    });
+    expect(authFixtures.calls.requestPasswordReset).toEqual([['Owner@Example.com']]);
+    expect(container.textContent).toContain('owner@example.com');
+    expect(container.textContent).toContain('a reset link is on its way');
+    await clickText('Back to sign in');
+    expect(container.textContent).toContain('Sign in to your workspace');
+  });
+
+  it('points at the administrator when the server cannot send email', async () => {
+    authFixtures.config = { google_enabled: false, oidc_enabled: false, registration: 'open', password_reset_email: false };
+    await render('/login?mode=forgot');
+    expect(container.textContent).toContain('cannot send email');
+    expect(container.textContent).toContain('platform admin');
+    expect(container.querySelector('input[type="email"]')).toBeNull();
+  });
+
+  it('says so after a reset landed the person back here', async () => {
+    await render('/login?reset=done');
+    expect(container.textContent).toContain('Your password has been changed');
   });
 });

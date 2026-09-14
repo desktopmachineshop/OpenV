@@ -40,6 +40,10 @@ export const PlatformAdmin: React.FC = () => {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState<string>('');
+  // A reset link minted for one account (REQ-158): shown once, here, for
+  // the admin to pass on; the server never repeats it.
+  const [resetLink, setResetLink] = useState<{ user: AdminUser; link: string; expiresAt: string } | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -106,6 +110,36 @@ export const PlatformAdmin: React.FC = () => {
       setError(`Could not update platform-admin standing: ${apiErrorMessage(err)}`);
     } finally {
       setBusy('');
+    }
+  };
+
+  const issueResetLink = async (u: AdminUser) => {
+    const ok = await confirm({
+      title: 'Make a password reset link',
+      message: `A link that lets whoever holds it set a new password for ${u.name || u.email}. It works once and expires after 24 hours. Pass it to the person yourself; nothing is emailed.`,
+      confirmLabel: 'Make link',
+    });
+    if (!ok) return;
+    setBusy(u.id);
+    setError('');
+    setCopied(false);
+    try {
+      const res = await adminAPI.issuePasswordReset(u.id);
+      setResetLink({ user: u, link: res.data.link, expiresAt: res.data.expires_at });
+    } catch (err: any) {
+      setError(`Could not make a reset link: ${apiErrorMessage(err)}`);
+    } finally {
+      setBusy('');
+    }
+  };
+
+  const copyResetLink = async () => {
+    if (!resetLink) return;
+    try {
+      await navigator.clipboard.writeText(resetLink.link);
+      setCopied(true);
+    } catch {
+      setCopied(false);
     }
   };
 
@@ -201,6 +235,38 @@ export const PlatformAdmin: React.FC = () => {
             registered on a deployment is one; grant it sparingly. You cannot remove your own standing, and the last
             admin cannot be removed.
           </p>
+          <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 0 }}>
+            <em>Reset link</em> makes a one-time password reset link for a password account, for when the person
+            cannot use the emailed one or the server sends no mail.
+          </p>
+          {resetLink && (
+            <div
+              role="status"
+              className="card"
+              style={{ padding: '12px 14px', marginBottom: 12, background: 'var(--tint-blue)', border: '1px solid var(--accent)' }}
+            >
+              <div style={{ fontSize: 13, marginBottom: 6 }}>
+                Reset link for <strong>{resetLink.user.name || resetLink.user.email}</strong>, valid until{' '}
+                {new Date(resetLink.expiresAt).toLocaleString()}. It is shown once: copy it now and pass it on.
+              </div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <input
+                  type="text"
+                  readOnly
+                  value={resetLink.link}
+                  aria-label="Password reset link"
+                  onFocus={(e) => e.currentTarget.select()}
+                  style={{ flex: '1 1 240px', padding: '6px 8px', fontSize: 12, fontFamily: 'var(--font-mono, monospace)' }}
+                />
+                <button type="button" onClick={copyResetLink} style={linkButton}>
+                  {copied ? 'Copied' : 'Copy'}
+                </button>
+                <button type="button" onClick={() => setResetLink(null)} style={linkButton}>
+                  Done
+                </button>
+              </div>
+            </div>
+          )}
           {users === null ? (
             <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Loading…</div>
           ) : (
@@ -212,6 +278,7 @@ export const PlatformAdmin: React.FC = () => {
                     <th style={th}>Email</th>
                     <th style={{ ...th, width: 110 }}>Sign-in</th>
                     <th style={{ ...th, width: 150 }}>Platform admin</th>
+                    <th style={{ ...th, width: 120 }}>Password</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -239,6 +306,21 @@ export const PlatformAdmin: React.FC = () => {
                           <button type="button" onClick={() => toggleAdmin(u)} disabled={busy === u.id} style={linkButton}>
                             Make admin
                           </button>
+                        )}
+                      </td>
+                      <td style={td}>
+                        {!u.auth_provider || u.auth_provider === 'password' ? (
+                          <button
+                            type="button"
+                            onClick={() => issueResetLink(u)}
+                            disabled={busy === u.id}
+                            style={linkButton}
+                            aria-label={`Make a password reset link for ${u.name || u.email}`}
+                          >
+                            Reset link
+                          </button>
+                        ) : (
+                          <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>via {u.auth_provider}</span>
                         )}
                       </td>
                     </tr>

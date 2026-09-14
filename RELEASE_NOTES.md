@@ -9,6 +9,14 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### New features
+
+- Forgot your password? The sign-in screen can now email you a link to set
+  a new one: it works once and lasts an hour, and setting the password signs
+  the account out everywhere. On a server that sends no mail, or when the
+  email does not arrive, a platform admin can make a reset link for your
+  account from the Platform admin page and pass it to you.
+
 ## 0.5.1 — 2026-09-13
 
 ### Maintenance updates
