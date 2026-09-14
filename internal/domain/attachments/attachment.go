@@ -83,9 +83,13 @@ type Attachment struct {
 	Filename string `json:"filename"`
 	// OriginalFilename is the name the uploader's file had.
 	OriginalFilename string `json:"original_filename"`
-	MimeType         string `json:"mime_type"`
-	FilePath         string `json:"file_path"`
-	FileSize         int    `json:"file_size"`
+	// Title is the name a member gave the figure; empty when it has none,
+	// in which case Name falls back to the uploaded filename. Every change
+	// of title is a version of the figure.
+	Title    string `json:"title"`
+	MimeType string `json:"mime_type"`
+	FilePath string `json:"file_path"`
+	FileSize int    `json:"file_size"`
 	// FigureRef is the citable reference ("REQ-17-FIG-1"); FigureNum is its
 	// number within the artifact. Both are empty/zero only on rows whose
 	// artifact has no reference to build on.
@@ -96,15 +100,32 @@ type Attachment struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
-// Version is one uploaded revision of a figure. The newest matches the
-// attachment's own file fields; older ones stay on disk so a superseded
-// drawing can still be retrieved.
+// Name is what a figure is called to a reader: its title when a member has
+// given it one, else the name its file was uploaded under.
+func (a *Attachment) Name() string {
+	if t := strings.TrimSpace(a.Title); t != "" {
+		return t
+	}
+	if n := strings.TrimSpace(a.OriginalFilename); n != "" {
+		return n
+	}
+	return strings.TrimSpace(a.Filename)
+}
+
+// MaxTitleLen bounds a figure title.
+const MaxTitleLen = 255
+
+// Version is one revision of a figure: a new image, or a new title over the
+// same image. The newest matches the attachment's own fields; older ones
+// stay on disk so a superseded drawing can still be retrieved, and each
+// records the title the figure carried at that version.
 type Version struct {
 	ID               string    `json:"id"`
 	AttachmentID     string    `json:"attachment_id"`
 	Version          int       `json:"version"`
 	Filename         string    `json:"filename"`
 	OriginalFilename string    `json:"original_filename"`
+	Title            string    `json:"title"`
 	MimeType         string    `json:"mime_type"`
 	FilePath         string    `json:"file_path"`
 	FileSize         int       `json:"file_size"`
@@ -117,6 +138,7 @@ type CreateAttachmentRequest struct {
 	ArtifactID       string
 	Filename         string
 	OriginalFilename string
+	Title            string
 	MimeType         string
 	FilePath         string
 	FileSize         int
@@ -130,6 +152,7 @@ func NewAttachment(req CreateAttachmentRequest) *Attachment {
 		ArtifactID:       req.ArtifactID,
 		Filename:         req.Filename,
 		OriginalFilename: req.OriginalFilename,
+		Title:            strings.TrimSpace(req.Title),
 		MimeType:         req.MimeType,
 		FilePath:         req.FilePath,
 		FileSize:         req.FileSize,
@@ -158,6 +181,10 @@ type Repository interface {
 	// AddVersion replaces the figure's current file with a new version and
 	// records it, returning the version number written.
 	AddVersion(attachmentID string, v *Version) (int, error)
+	// Rename gives the figure a new title as a new version over the same
+	// image, recording who did it, and returns the version number written
+	// (0 when there is no such figure).
+	Rename(attachmentID, title string, by *string) (int, error)
 	// ListVersions returns a figure's versions, newest first.
 	ListVersions(attachmentID string) ([]*Version, error)
 	// FindVersion returns one version of a figure.
@@ -179,11 +206,18 @@ type Service interface {
 	// AddVersion supersedes a figure's file with a new version, returning the
 	// version number written.
 	AddVersion(attachmentID string, v *Version) (int, error)
+	// RenameFigure gives a figure a new title as a new version over the same
+	// image, returning the version number written (0 for no such figure).
+	// The title is trimmed and bounded; ErrTitleTooLong refuses a longer one.
+	RenameFigure(attachmentID, title string, by *string) (int, error)
 	// GetVersions returns a figure's versions, newest first.
 	GetVersions(attachmentID string) ([]*Version, error)
 	// GetVersion returns one version of a figure.
 	GetVersion(attachmentID string, version int) (*Version, error)
 }
+
+// ErrTitleTooLong refuses a figure title over MaxTitleLen characters.
+var ErrTitleTooLong = fmt.Errorf("figure title is longer than %d characters", MaxTitleLen)
 
 // DefaultService implements the Service interface
 type DefaultService struct {
@@ -229,6 +263,15 @@ func (s *DefaultService) CreateFigure(attachment *Attachment, artifactRef string
 // AddVersion supersedes a figure's file with a new version.
 func (s *DefaultService) AddVersion(attachmentID string, v *Version) (int, error) {
 	return s.repository.AddVersion(attachmentID, v)
+}
+
+// RenameFigure gives a figure a new title as a new version.
+func (s *DefaultService) RenameFigure(attachmentID, title string, by *string) (int, error) {
+	title = strings.TrimSpace(title)
+	if len([]rune(title)) > MaxTitleLen {
+		return 0, ErrTitleTooLong
+	}
+	return s.repository.Rename(attachmentID, title, by)
 }
 
 // GetVersions returns a figure's versions, newest first.

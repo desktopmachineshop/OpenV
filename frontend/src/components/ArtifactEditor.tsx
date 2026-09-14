@@ -48,6 +48,7 @@ interface ArtifactEditorProps {
   attachments?: Attachment[];
   onUploadAttachment?: (file: File) => void;
   onUploadAttachmentVersion?: (attachmentId: string, file: File) => void;
+  onRenameAttachment?: (attachmentId: string, title: string) => void;
   onDeleteAttachment?: (attachmentId: string) => void;
   isUploadLoading?: boolean;
   links?: Link[];
@@ -73,6 +74,7 @@ export const ArtifactEditor: React.FC<ArtifactEditorProps> = ({
   attachments = [],
   onUploadAttachment,
   onUploadAttachmentVersion,
+  onRenameAttachment,
   onDeleteAttachment,
   isUploadLoading,
   links = [],
@@ -511,6 +513,7 @@ export const ArtifactEditor: React.FC<ArtifactEditorProps> = ({
               attachments={attachments}
               onUpload={onUploadAttachment || (() => {})}
               onUploadVersion={onUploadAttachmentVersion}
+              onRename={onRenameAttachment}
               onDelete={onDeleteAttachment || (() => {})}
               isUploadLoading={isUploadLoading}
               showUpload={true}

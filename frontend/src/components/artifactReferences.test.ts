@@ -37,6 +37,7 @@ const link = (from_id: string, to_id: string, type = 'verifies'): Link => ({
 const attachment = (over: Partial<Attachment> & { id: string; artifact_id: string }): Attachment => ({
   filename: 'f.png',
   original_filename: 'f.png',
+  title: '',
   mime_type: 'image/png',
   file_path: '/tmp/f.png',
   file_size: 1,

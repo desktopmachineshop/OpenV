@@ -17,6 +17,11 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   there instead of in your personal space. Switching workspaces during a
   session is unchanged. Stable-channel workspaces get this with their next
   stable release.
+- Figures can be renamed. A screenshot arrives called something like
+  `Screenshot 2026-09-14 at 09.12.33.png`; use ✎ on the figure while editing
+  to give it a name that says what it shows. The name appears under the
+  figure and in PDF and Word documents, and every rename is a figure
+  version, with who changed it and when, alongside the image history.
 
 ### Bug fixes
 

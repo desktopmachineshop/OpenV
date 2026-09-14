@@ -292,6 +292,12 @@ export interface Attachment {
   filename: string;
   /** The name the uploaded file had. */
   original_filename: string;
+  /**
+   * The name a member gave the figure; empty when it has none, in which
+   * case readers fall back to original_filename. Renaming is a figure
+   * version.
+   */
+  title: string;
   mime_type: string;
   file_path: string;
   file_size: number;
@@ -306,14 +312,17 @@ export interface Attachment {
   created_at: string;
 }
 
-/** One uploaded revision of a figure. */
+/** One revision of a figure: a new image, or a new title over the same one. */
 export interface AttachmentVersion {
   id: string;
   attachment_id: string;
   version: number;
   filename: string;
   original_filename: string;
+  /** The title the figure carried at this version. */
+  title: string;
   mime_type: string;
+  file_path: string;
   file_size: number;
   created_by?: string | null;
   created_at: string;
@@ -616,6 +625,9 @@ export const attachmentAPI = {
   },
   listVersions: (id: string) =>
     client.get<AttachmentVersion[]>(`/api/v1/attachments/${id}/versions`),
+  /** Give a figure a title; "" clears it. A change is a new figure version. */
+  rename: (id: string, title: string) =>
+    client.put<Attachment>(`/api/v1/attachments/${id}`, { title }),
   delete: (id: string) =>
     client.delete(`/api/v1/attachments/${id}`),
   listByArtifact: (artifactId: string) =>

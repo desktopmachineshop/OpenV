@@ -290,6 +290,7 @@ PUT /api/v1/agents/{slug}
 PUT /api/v1/agents/{slug}/raw
 PUT /api/v1/artifacts/{id}
 PUT /api/v1/artifacts/{id}/status
+PUT /api/v1/attachments/{id}
 PUT /api/v1/attribute-definitions/{id}
 PUT /api/v1/automations/{id}
 PUT /api/v1/crew-edges/{id}
