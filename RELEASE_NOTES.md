@@ -9,6 +9,15 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### New features
+
+- Choose the workspace OpenV opens in when you sign in. Personal settings →
+  *Default workspace* lists your personal workspace and every company
+  workspace you belong to; pick the one you work in and each sign-in starts
+  there instead of in your personal space. Switching workspaces during a
+  session is unchanged. Stable-channel workspaces get this with their next
+  stable release.
+
 ### Bug fixes
 
 - PDF and Word downloads no longer print each requirement's description

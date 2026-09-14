@@ -123,6 +123,11 @@ revoked link resolves to the same 404 as an unknown token.
 ### release_announcements
 `version` (primary key, the release named by the top section of
 `RELEASE_NOTES.md`) → `announced_at` (0034). The row is the claim that a
+
+`users.default_org_id` (0040, nullable, `ON DELETE SET NULL`) is the workspace
+a member's sign-in lands in (REQ-156); NULL means the personal workspace. It
+is a choice, not a grant: the auth middleware re-checks membership before
+using it, and a purged workspace clears it.
 release has been announced to every account: the first server to insert it
 wins and fans out `release_published`; a restart or another replica finds
 the row and stays quiet. A dedicated instance uses the same table for its

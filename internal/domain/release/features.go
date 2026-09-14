@@ -32,6 +32,7 @@ var Registry = []Feature{
 	{Key: FeatureOwners, ShippedIn: "0.3.0", Summary: "Artifact owners, reference parties and owner-filtered downloads"},
 	{Key: FeatureShareLinks, ShippedIn: "0.4.0", Summary: "Share links: a public read-only view of a project, or reviewer access, from one link; the reviewer role"},
 	{Key: FeatureAssistantEdits, ShippedIn: "0.5.0", Summary: "The V&V Assistant adds any kind of artifact, edits one and moves one from the notes panel"},
+	{Key: FeatureDefaultWorkspace, ShippedIn: "0.6.0", Summary: "A member chooses the workspace OpenV opens in when they sign in"},
 }
 
 // Feature keys the code gates on.
@@ -40,6 +41,9 @@ const (
 	FeatureOwners         = "artifact-owners"
 	FeatureShareLinks     = "share-links"
 	FeatureAssistantEdits = "assistant-project-edits"
+	// FeatureDefaultWorkspace is the per-member choice of the workspace a
+	// sign-in lands in, instead of always the personal one.
+	FeatureDefaultWorkspace = "default-workspace"
 )
 
 // Enabled reports whether a feature is on for a workspace on the given
