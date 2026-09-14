@@ -34,6 +34,11 @@ var Registry = []Feature{
 	{Key: FeatureAssistantEdits, ShippedIn: "0.5.0", Summary: "The V&V Assistant adds any kind of artifact, edits one and moves one from the notes panel"},
 	{Key: FeatureDefaultWorkspace, ShippedIn: "0.6.0", Summary: "A member chooses the workspace OpenV opens in when they sign in"},
 	{Key: FeatureFigureTitles, ShippedIn: "0.6.0", Summary: "Figures carry a title of their own: rename one and the change is a tracked figure version"},
+	// Password reset happens before there is a session, so there is no
+	// workspace whose channel could gate it: the key is registered so the
+	// features endpoint and What's new list it, and the flow itself is
+	// unconditional.
+	{Key: FeaturePasswordReset, ShippedIn: "0.6.0", Summary: "Forgot your password? An emailed reset link from the sign-in page, or one a platform admin makes for you"},
 }
 
 // Feature keys the code gates on.
@@ -46,6 +51,7 @@ const (
 	// sign-in lands in, instead of always the personal one.
 	FeatureDefaultWorkspace = "default-workspace"
 	FeatureFigureTitles     = "figure-titles"
+	FeaturePasswordReset    = "password-reset"
 )
 
 // Enabled reports whether a feature is on for a workspace on the given

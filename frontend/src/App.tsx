@@ -7,6 +7,7 @@ import { ProjectList } from './components/ProjectList';
 import { ProjectLayout } from './components/ProjectLayout';
 import { Login } from './views/Login';
 import { VerifyEmail } from './views/VerifyEmail';
+import { ResetPassword } from './views/ResetPassword';
 import { ProductOverview } from './views/ProductOverview';
 import { InterviewsPage } from './views/InterviewsPage';
 import { GuidedWizard } from './views/GuidedWizard';
@@ -192,6 +193,7 @@ function App() {
         <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/verify-email" element={<VerifyEmail />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/interview/:token" element={<InterviewChat />} />
         {/* A share link opens without a session (REQ-149): /share/:token is
             the link handed out (the deployed nginx sends unfurlers to the

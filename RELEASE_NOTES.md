@@ -22,6 +22,11 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   to give it a name that says what it shows. The name appears under the
   figure and in PDF and Word documents, and every rename is a figure
   version, with who changed it and when, alongside the image history.
+- Forgot your password? The sign-in screen can now email you a link to set
+  a new one: it works once and lasts an hour, and setting the password signs
+  the account out everywhere. On a server that sends no mail, or when the
+  email does not arrive, a platform admin can make a reset link for your
+  account from the Platform admin page and pass it to you.
 
 ### Bug fixes
 

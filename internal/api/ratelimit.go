@@ -103,6 +103,8 @@ const (
 	envSSOIPRefill             = "OPENV_SSO_IP_REFILL_PER_HOUR"
 	envVerifyResendBurst       = "OPENV_VERIFY_RESEND_BURST"
 	envVerifyResendRefill      = "OPENV_VERIFY_RESEND_REFILL_PER_HOUR"
+	envPasswordResetBurst      = "OPENV_PASSWORD_RESET_BURST"
+	envPasswordResetRefill     = "OPENV_PASSWORD_RESET_REFILL_PER_HOUR"
 	envInvitePreviewBurst      = "OPENV_INVITE_PREVIEW_BURST"
 	envInvitePreviewRefill     = "OPENV_INVITE_PREVIEW_REFILL_PER_HOUR"
 	envInviteBurst             = "OPENV_INVITE_BURST"
@@ -117,6 +119,8 @@ const (
 	defaultSSOIPRefill         = 60.0
 	defaultVerifyResendBurst   = 3
 	defaultVerifyResendRefill  = 6.0
+	defaultPasswordResetBurst  = 3
+	defaultPasswordResetRefill = 6.0
 	defaultInvitePreviewBurst  = 60
 	defaultInvitePreviewRefill = 240.0
 	defaultInviteBurst         = 20
