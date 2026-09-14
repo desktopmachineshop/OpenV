@@ -11,6 +11,12 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ### New features
 
+- Choose the workspace OpenV opens in when you sign in. Personal settings →
+  *Default workspace* lists your personal workspace and every company
+  workspace you belong to; pick the one you work in and each sign-in starts
+  there instead of in your personal space. Switching workspaces during a
+  session is unchanged. Stable-channel workspaces get this with their next
+  stable release.
 - Figures can be renamed. A screenshot arrives called something like
   `Screenshot 2026-09-14 at 09.12.33.png`; use ✎ on the figure while editing
   to give it a name that says what it shows. The name appears under the

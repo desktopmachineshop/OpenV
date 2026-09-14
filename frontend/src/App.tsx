@@ -2,6 +2,7 @@ import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { authAPI, metaAPI, orgsAPI } from './api/client';
 import { useAppStore } from './state/store';
+import { pickActiveOrg } from './utils/activeOrg';
 import { ProjectList } from './components/ProjectList';
 import { ProjectLayout } from './components/ProjectLayout';
 import { Login } from './views/Login';
@@ -132,22 +133,15 @@ function App() {
       .list()
       .then((res) => {
         const orgs = res.data.orgs || [];
-        let stored = '';
+        let tabOrg = '';
+        let lastUsed = '';
         try {
-          stored =
-            sessionStorage.getItem('openv_active_org') ||
-            localStorage.getItem('openv_active_org') ||
-            '';
+          tabOrg = sessionStorage.getItem('openv_active_org') || '';
+          lastUsed = localStorage.getItem('openv_active_org') || '';
         } catch {
-          stored = '';
+          // storage unavailable: the server's answer decides
         }
-        const personal = orgs.find((o) => o.type === 'personal');
-        const active =
-          (stored && orgs.some((o) => o.id === stored) && stored) ||
-          (res.data.active_org && orgs.some((o) => o.id === res.data.active_org) && res.data.active_org) ||
-          personal?.id ||
-          orgs[0]?.id ||
-          '';
+        const active = pickActiveOrg(orgs, tabOrg, res.data.active_org || '', lastUsed);
         setOrgs(orgs);
         if (active) setActiveOrgId(active, { clearProjects: false });
         setOrgsLoaded(true);

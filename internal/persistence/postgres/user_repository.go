@@ -20,12 +20,12 @@ func NewUserRepository(db *sql.DB) *UserRepository {
 	return &UserRepository{db: db}
 }
 
-const userColumns = `id, email, name, avatar_url, COALESCE(avatar_path, ''), COALESCE(avatar_mime, ''), auth_provider, COALESCE(password_hash, ''), is_admin, COALESCE(email_notifications, TRUE), COALESCE(push_notifications, FALSE), COALESCE(email_verified, FALSE), email_verified_at, created_at, updated_at`
+const userColumns = `id, email, name, avatar_url, COALESCE(avatar_path, ''), COALESCE(avatar_mime, ''), auth_provider, COALESCE(password_hash, ''), is_admin, COALESCE(email_notifications, TRUE), COALESCE(push_notifications, FALSE), COALESCE(email_verified, FALSE), email_verified_at, COALESCE(default_org_id::text, ''), created_at, updated_at`
 
 func scanUser(row interface{ Scan(...interface{}) error }) (*users.User, error) {
 	u := new(users.User)
 	var verifiedAt sql.NullTime
-	err := row.Scan(&u.ID, &u.Email, &u.Name, &u.AvatarURL, &u.AvatarPath, &u.AvatarMime, &u.AuthProvider, &u.PasswordHash, &u.IsAdmin, &u.EmailNotifications, &u.PushNotifications, &u.EmailVerified, &verifiedAt, &u.CreatedAt, &u.UpdatedAt)
+	err := row.Scan(&u.ID, &u.Email, &u.Name, &u.AvatarURL, &u.AvatarPath, &u.AvatarMime, &u.AuthProvider, &u.PasswordHash, &u.IsAdmin, &u.EmailNotifications, &u.PushNotifications, &u.EmailVerified, &verifiedAt, &u.DefaultOrgID, &u.CreatedAt, &u.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -122,6 +122,14 @@ func (r *UserRepository) SetEmailNotifications(userID string, enabled bool) erro
 	_, err := r.db.Exec(
 		`UPDATE users SET email_notifications = $2, updated_at = NOW() WHERE id = $1`,
 		userID, enabled)
+	return err
+}
+
+// SetDefaultOrg records the workspace a user's sign-in lands in; "" clears it.
+func (r *UserRepository) SetDefaultOrg(userID, orgID string) error {
+	_, err := r.db.Exec(
+		`UPDATE users SET default_org_id = NULLIF($2, '')::uuid, updated_at = NOW() WHERE id = $1`,
+		userID, orgID)
 	return err
 }
 

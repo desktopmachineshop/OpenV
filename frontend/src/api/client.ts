@@ -679,6 +679,9 @@ export interface User {
   email_verified: boolean;
   email_verified_at?: string;
   created_at: string;
+  // The workspace a sign-in lands in when the member has chosen one
+  // (REQ-156); "" means the personal workspace.
+  default_org_id?: string;
 }
 
 export interface AuthConfig {
@@ -1367,6 +1370,18 @@ export const notificationPrefsAPI = {
   get: () => client.get<NotificationPrefs>('/api/v1/me/notification-prefs'),
   update: (prefs: Partial<NotificationPrefs>) =>
     client.put<NotificationPrefs>('/api/v1/me/notification-prefs', prefs),
+};
+
+// The workspace a sign-in lands in (REQ-156): the member's own choice, a
+// workspace they belong to, or "" for the personal workspace.
+export interface DefaultWorkspace {
+  org_id: string;
+}
+
+export const defaultWorkspaceAPI = {
+  get: () => client.get<DefaultWorkspace>('/api/v1/me/default-workspace'),
+  set: (orgId: string) =>
+    client.put<DefaultWorkspace>('/api/v1/me/default-workspace', { org_id: orgId }),
 };
 
 // Web push subscriptions (REQ-109). One subscription per device; the browser
