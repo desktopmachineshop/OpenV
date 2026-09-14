@@ -682,13 +682,11 @@ func logoFigure(ws Workspace) (figure, bool) {
 	return f, true
 }
 
-// figureCaption is the line under a figure: its reference and the name the
-// file was uploaded under, so a citation in the text finds its picture.
+// figureCaption is the line under a figure: its reference and its name (the
+// title a member gave it, else the name the file was uploaded under), so a
+// citation in the text finds its picture.
 func figureCaption(att *attachments.Attachment) string {
-	name := strings.TrimSpace(att.OriginalFilename)
-	if name == "" {
-		name = strings.TrimSpace(att.Filename)
-	}
+	name := att.Name()
 	if att.FigureRef != "" {
 		if name != "" {
 			return "Figure " + att.FigureRef + " — " + name

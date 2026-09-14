@@ -126,6 +126,15 @@ reading. Use **⬆** on a figure to upload a new version: the figure keeps its
 reference, the artifact takes a new version, and the notes record the change.
 **🕘** shows the history, and every superseded version stays viewable.
 
+A figure also has a **name**, shown under its reference and printed under
+the picture in PDF and Word documents. Until you give it one, the name is
+the filename it was uploaded with — which for a screenshot is usually a
+timestamp. Use **✎** on a figure to rename it: the new name is a figure
+version like a new image is, with who set it and when, so the history shows
+every name the figure has had, and the artifact takes a new version with a
+note recording the change. Clearing the name goes back to the uploaded
+filename.
+
 On the details view figures are read-only, with the lightbox for a closer look.
 
 ## Comments (Chatter)
