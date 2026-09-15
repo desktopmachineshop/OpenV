@@ -323,7 +323,7 @@ describe('referenceUrlTransform', () => {
   });
 
   it('hands every other URL to the renderer own sanitiser', () => {
-    const sanitiser = jest.fn(() => 'sanitised');
+    const sanitiser = vi.fn(() => 'sanitised');
     expect(referenceUrlTransform('javascript:alert(1)', 'href', null, sanitiser)).toBe('sanitised');
     expect(sanitiser).toHaveBeenCalledWith('javascript:alert(1)', 'href', null);
   });

@@ -5,14 +5,19 @@
 //    which Safari/iOS block — prefer 2.
 // 2. Production builds default to the app's own origin: nginx proxies /api/
 //    to the API (frontend/nginx.conf), so the session cookie is first-party.
-// 3. The CRA dev server and tests fall back to port 8080 on the page's host,
+// 3. The dev server and tests fall back to port 8080 on the page's host,
 //    which is where the dev compose stack serves the API.
+//
+// The values come from import.meta.env rather than process.env because Vite
+// replaces them at build time and does not shim process in the browser. The
+// REACT_APP_ prefix is unchanged and still read from the same build argument
+// (see vite.config.ts).
 export const getAPIBaseURL = (): string => {
-  const configured = (process.env.REACT_APP_API_URL || '').trim().replace(/\/+$/, '');
+  const configured = (import.meta.env.REACT_APP_API_URL || '').trim().replace(/\/+$/, '');
   if (configured) {
     return configured;
   }
-  if (process.env.NODE_ENV === 'production') {
+  if (import.meta.env.MODE === 'production') {
     return '';
   }
   if (typeof window !== 'undefined' && window.location) {

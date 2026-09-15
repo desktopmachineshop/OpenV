@@ -6,12 +6,12 @@ import { applySuggestionsToProject } from './applySuggestion';
 // must renumber only what changed, a placed artifact must land where the
 // card said, and a batch must see its own earlier writes.
 
-jest.mock('../../api/client', () => ({
-  artifactAPI: { create: jest.fn(), update: jest.fn() },
-  productProfileAPI: { get: jest.fn(), update: jest.fn() },
+vi.mock('../../api/client', () => ({
+  artifactAPI: { create: vi.fn(), update: vi.fn() },
+  productProfileAPI: { get: vi.fn(), update: vi.fn() },
 }));
 
-const api = artifactAPI as jest.Mocked<typeof artifactAPI>;
+const api = vi.mocked(artifactAPI);
 
 const art = (id: string, parent: string | null, order: number, extra: Partial<Artifact> = {}): Artifact =>
   ({
@@ -40,7 +40,7 @@ const project = () => [
 ];
 
 beforeEach(() => {
-  jest.clearAllMocks();
+  vi.clearAllMocks();
   // The server echoes what it was sent, with the id kept.
   // The mocks answer with the data the code reads; the rest of an axios
   // response is not consulted.

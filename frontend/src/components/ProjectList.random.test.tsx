@@ -9,52 +9,54 @@ import { sharedProductsAPI, projectAPI, templateAPI, workerStatusAPI } from '../
 // Everything the page talks to is mocked — the api module builds an axios
 // client at import time, and the point here is the pool, not the projects
 // list around it.
-jest.mock('../api/client', () => ({
-  agentRunsAPI: { get: jest.fn() },
-  agentsAPI: { list: jest.fn().mockResolvedValue({ data: [] }), launchRun: jest.fn() },
-  guidedAPI: { start: jest.fn(), saveStep: jest.fn() },
-  projectAPI: { list: jest.fn(), create: jest.fn(), update: jest.fn(), delete: jest.fn(), import: jest.fn() },
-  sharedProductsAPI: { list: jest.fn(), publish: jest.fn(), report: jest.fn(), vote: jest.fn(), unvote: jest.fn() },
-  templateAPI: { list: jest.fn(), create: jest.fn(), createProject: jest.fn() },
-  workerStatusAPI: { get: jest.fn() },
+vi.mock('../api/client', () => ({
+  agentRunsAPI: { get: vi.fn() },
+  agentsAPI: { list: vi.fn().mockResolvedValue({ data: [] }), launchRun: vi.fn() },
+  guidedAPI: { start: vi.fn(), saveStep: vi.fn() },
+  projectAPI: { list: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn(), import: vi.fn() },
+  sharedProductsAPI: { list: vi.fn(), publish: vi.fn(), report: vi.fn(), vote: vi.fn(), unvote: vi.fn() },
+  templateAPI: { list: vi.fn(), create: vi.fn(), createProject: vi.fn() },
+  workerStatusAPI: { get: vi.fn() },
 }));
 
 // The list reads the query string as well as navigating (the settings tabs
 // open by ?tab=), so the router double has to answer both.
-jest.mock('react-router-dom', () => ({
-  useNavigate: () => jest.fn(),
+vi.mock('react-router-dom', () => ({
+  useNavigate: () => vi.fn(),
   useSearchParams: () => [new URLSearchParams(), () => {}],
 }));
 
-jest.mock('../state/store', () => ({
+vi.mock('../state/store', () => ({
   useAppStore: () => ({
     projectId: null,
-    setProjectId: jest.fn(),
+    setProjectId: vi.fn(),
     projects: [],
-    setProjects: jest.fn(),
-    addProject: jest.fn(),
-    updateProject: jest.fn(),
-    removeProject: jest.fn(),
+    setProjects: vi.fn(),
+    addProject: vi.fn(),
+    updateProject: vi.fn(),
+    removeProject: vi.fn(),
     orgs: [{ id: 'org1', name: 'Sam Space', type: 'company' }],
     activeOrgId: 'org1',
   }),
 }));
 
 // The chrome around the form is not what this test is about.
-jest.mock('./Navbar', () => ({ Navbar: () => null }));
-jest.mock('./HelpSidebar', () => ({ HelpSidebar: () => null }));
-jest.mock('./DownloadWizard', () => ({ DownloadWizard: () => null }));
-jest.mock('./CreateOrgModal', () => ({ CreateOrgModal: () => null }));
+vi.mock('./Navbar', () => ({ Navbar: () => null }));
+vi.mock('./HelpSidebar', () => ({ HelpSidebar: () => null }));
+vi.mock('./DownloadWizard', () => ({ DownloadWizard: () => null }));
+vi.mock('./CreateOrgModal', () => ({ CreateOrgModal: () => null }));
 
 // The real SegmentedControl is the filter under test; only the dialog hooks
 // (which need a provider) are stubbed.
-jest.mock('./ui', () => ({
-  ...jest.requireActual('./ui'),
-  useConfirm: () => jest.fn(),
-  usePrompt: () => jest.fn(),
+// vi.importActual is async, so the factory is too — the vitest equivalent of
+// jest.requireActual inside a synchronous factory.
+vi.mock('./ui', async () => ({
+  ...(await vi.importActual<typeof import('./ui')>('./ui')),
+  useConfirm: () => vi.fn(),
+  usePrompt: () => vi.fn(),
 }));
 
-const api = sharedProductsAPI as jest.Mocked<typeof sharedProductsAPI>;
+const api = vi.mocked(sharedProductsAPI);
 
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -75,10 +77,10 @@ let container: HTMLDivElement;
 let root: Root;
 
 beforeEach(() => {
-  jest.clearAllMocks();
-  (projectAPI.list as jest.Mock).mockResolvedValue({ data: [] });
-  (templateAPI.list as jest.Mock).mockResolvedValue({ data: [] });
-  (workerStatusAPI.get as jest.Mock).mockResolvedValue({ data: { workers: [] } });
+  vi.clearAllMocks();
+  vi.mocked(projectAPI.list, { partial: true, deep: true }).mockResolvedValue({ data: [] });
+  vi.mocked(templateAPI.list, { partial: true, deep: true }).mockResolvedValue({ data: [] });
+  vi.mocked(workerStatusAPI.get, { partial: true, deep: true }).mockResolvedValue({ data: { workers: [] } });
   // The default read (the roller's own pool) and the leaderboards are the
   // same endpoint with different parameters.
   api.list.mockImplementation((params?: { sort?: string; limit?: number }) => {

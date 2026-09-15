@@ -3,18 +3,18 @@ import { createRoot, Root } from 'react-dom/client';
 import { ReleaseUpdateBanner, RELEASE_POLL_MS } from './ReleaseUpdateBanner';
 import { releaseAPI } from '../api/client';
 
-jest.mock('../api/client', () => ({
-  releaseAPI: { current: jest.fn() },
+vi.mock('../api/client', () => ({
+  releaseAPI: { current: vi.fn() },
 }));
 
-jest.mock('react-router-dom', () => ({
+vi.mock('react-router-dom', () => ({
   Link: ({ to, children, ...rest }: any) =>
     require('react').createElement('a', { href: String(to), ...rest }, children),
 }));
 
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 
-const current = releaseAPI.current as jest.Mock;
+const current = vi.mocked(releaseAPI.current, { partial: true, deep: true });
 
 const answer = (version: string) =>
   Promise.resolve({ data: { version, date: version, notes: [], categories: [], markdown: '', releases: [] } });
@@ -24,7 +24,7 @@ describe('ReleaseUpdateBanner', () => {
   let root: Root;
 
   beforeEach(() => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     current.mockReset();
     container = document.createElement('div');
     document.body.appendChild(container);
@@ -34,7 +34,7 @@ describe('ReleaseUpdateBanner', () => {
   afterEach(() => {
     act(() => root.unmount());
     container.remove();
-    jest.useRealTimers();
+    vi.useRealTimers();
   });
 
   const mount = async () => {
@@ -47,7 +47,7 @@ describe('ReleaseUpdateBanner', () => {
     current.mockImplementation(() => answer('2026-09-12'));
     await mount();
     await act(async () => {
-      jest.advanceTimersByTime(RELEASE_POLL_MS);
+      vi.advanceTimersByTime(RELEASE_POLL_MS);
     });
     expect(current).toHaveBeenCalledTimes(2);
     expect(container.textContent).toBe('');
@@ -58,7 +58,7 @@ describe('ReleaseUpdateBanner', () => {
     await mount();
     expect(container.textContent).toBe('');
     await act(async () => {
-      jest.advanceTimersByTime(RELEASE_POLL_MS);
+      vi.advanceTimersByTime(RELEASE_POLL_MS);
     });
     expect(container.textContent).toContain('OpenV was upgraded to 0.2.0');
     expect(container.querySelector('a')?.getAttribute('href')).toBe('/whats-new');

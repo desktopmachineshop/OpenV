@@ -2,19 +2,18 @@ import React, { act } from 'react';
 import { createRoot, Root } from 'react-dom/client';
 import { Login } from './Login';
 
-// CRA's Jest cannot resolve react-router v7's package exports, so the router
-// is mocked with the two pieces the view uses: Link renders a plain anchor
+// The router is mocked with the two pieces the view uses: Link renders a plain anchor
 // and the hooks return inert values. useNavigate hands back the SAME
 // function every render, as the real one does — a fresh identity would make
 // every effect that depends on it re-run on every render, which is not how
 // the view behaves in the app.
-jest.mock('react-router-dom', () => {
-  const navigate = jest.fn();
+vi.mock('react-router-dom', () => {
+  const navigate = vi.fn();
   return {
     Link: ({ to, children, ...rest }: any) =>
       require('react').createElement('a', { href: String(to), ...rest }, children),
     useNavigate: () => navigate,
-    useSearchParams: () => [new URLSearchParams((globalThis as any).__testSearch || ''), jest.fn()],
+    useSearchParams: () => [new URLSearchParams((globalThis as any).__testSearch || ''), vi.fn()],
   };
 });
 
@@ -63,7 +62,7 @@ const record = (name: keyof Calls, data: any) => (...args: any[]) => {
   return Promise.resolve({ data });
 };
 
-jest.mock('../api/client', () => ({
+vi.mock('../api/client', () => ({
   DEFAULT_MIN_PASSWORD_LENGTH: 8,
   authAPI: {
     policy: () => Promise.resolve({ data: authFixtures.policy }),

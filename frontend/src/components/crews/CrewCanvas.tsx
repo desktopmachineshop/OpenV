@@ -352,7 +352,6 @@ export const CrewCanvas: React.FC<CrewCanvasProps> = ({
       cy.destroy();
       cyRef.current = null;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [graph, view, filter, agents, members, themeVersion]);
 
   // Reflect active runs without rebuilding. Live-status dots apply to agent

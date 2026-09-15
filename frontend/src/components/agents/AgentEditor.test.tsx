@@ -5,13 +5,13 @@ import { agentsAPI, providerSettingsAPI, AgentDef } from '../../api/client';
 
 // The editor talks to the agents and provider-settings endpoints; the client
 // module builds an axios instance at import time, so it is mocked wholesale.
-jest.mock('../../api/client', () => ({
-  agentsAPI: { create: jest.fn(), update: jest.fn(), raw: jest.fn() },
-  providerSettingsAPI: { list: jest.fn() },
+vi.mock('../../api/client', () => ({
+  agentsAPI: { create: vi.fn(), update: vi.fn(), raw: vi.fn() },
+  providerSettingsAPI: { list: vi.fn() },
 }));
 
-const agents = agentsAPI as jest.Mocked<typeof agentsAPI>;
-const providers = providerSettingsAPI as jest.Mocked<typeof providerSettingsAPI>;
+const agents = vi.mocked(agentsAPI);
+const providers = vi.mocked(providerSettingsAPI);
 
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -19,7 +19,7 @@ let container: HTMLDivElement;
 let root: Root;
 
 beforeEach(() => {
-  jest.clearAllMocks();
+  vi.clearAllMocks();
   providers.list.mockResolvedValue({ data: [] } as any);
   agents.create.mockResolvedValue({ data: {} } as any);
   agents.update.mockResolvedValue({ data: {} } as any);
@@ -83,7 +83,7 @@ const type = (input: HTMLInputElement, value: string) => {
 // REQ-91: an agent with no tool allowlist cannot be saved. An empty list is
 // not "no tools" — it is every tool the vendor CLI has.
 test('save is blocked while the allowed-tools field is empty', async () => {
-  await render(<AgentEditor agent={agentFixture([])} onSaved={jest.fn()} onCancel={jest.fn()} />);
+  await render(<AgentEditor agent={agentFixture([])} onSaved={vi.fn()} onCancel={vi.fn()} />);
 
   expect(saveButton().disabled).toBe(true);
   expect(toolsInput().getAttribute('aria-invalid')).toBe('true');
@@ -109,7 +109,7 @@ test('save is blocked while the allowed-tools field is empty', async () => {
 test('shows the API message when the server refuses the definition', async () => {
   agents.update.mockRejectedValue({ response: { data: { error: ALLOWED_TOOLS_REQUIRED } } });
   await render(
-    <AgentEditor agent={agentFixture(['mcp__openv__*'])} onSaved={jest.fn()} onCancel={jest.fn()} />
+    <AgentEditor agent={agentFixture(['mcp__openv__*'])} onSaved={vi.fn()} onCancel={vi.fn()} />
   );
 
   await act(async () => {
