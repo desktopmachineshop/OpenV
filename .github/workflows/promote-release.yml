@@ -13,6 +13,9 @@
 #   `release` already carries is refused (scripts/release_notes.py)
 # - the push is a plain fast-forward; if `release` somehow has commits that
 #   master lacks, the push is rejected instead of overwriting them
+# - the shipped commit is tagged `v<version>`, so a release is a point in
+#   history you can check out and compare against rather than only a branch
+#   position and a notes section
 
 name: Promote to release
 
@@ -90,3 +93,35 @@ jobs:
         run: |
           git push origin HEAD:master
           git push origin HEAD:release
+
+      # Tag what shipped. Without this a release is only a branch position
+      # and a section of RELEASE_NOTES.md: you cannot check one out, compare
+      # two of them, or point at one from an incident — and `release` itself
+      # only ever shows the newest.
+      #
+      # After the push, deliberately: a tag should exist only for a release
+      # that actually shipped, and the push is the step that can still be
+      # rejected. Annotated so it carries when it was cut and by what.
+      - name: Tag the release
+        run: |
+          version=$(python3 scripts/release_notes.py version RELEASE_NOTES.md)
+          if [ -z "$version" ]; then
+            echo "No version in the notes to tag." >&2
+            exit 1
+          fi
+          tag="v${version}"
+
+          # A promotion that re-ships a version someone cut by hand, or a
+          # re-run of this job, must not fail here: the release is already
+          # out by this point, and a red workflow would say otherwise.
+          if git ls-remote --exit-code --tags origin "refs/tags/${tag}" >/dev/null 2>&1; then
+            echo "::warning::${tag} already exists on origin; leaving it as it is."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$tag" -m "OpenV $version"
+          git push origin "refs/tags/${tag}"
+          echo "Tagged $(git rev-parse --short HEAD) as ${tag}"
+          echo "Tagged \`${tag}\` at \`$(git rev-parse --short HEAD)\`" >> "$GITHUB_STEP_SUMMARY"
