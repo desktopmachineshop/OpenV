@@ -649,6 +649,25 @@ export interface ChatterEntry {
   author_name?: string;
   created_at: string;
   updated_at: string;
+  // Resolved by the API when the feed is read, never stored: who the note's
+  // @names address, and the to-do raised from it with its status as it
+  // stands now.
+  mentions?: NoteMention[];
+  todo?: NoteTodo;
+}
+
+export interface NoteMention {
+  user_id: string;
+  name: string;
+}
+
+export interface NoteTodo {
+  work_item_id: string;
+  title: string;
+  /** The board column the to-do sits in. */
+  status: string;
+  assignee_id?: string | null;
+  assignee_name?: string;
 }
 
 export const chatterAPI = {
@@ -985,6 +1004,8 @@ export interface WorkItem {
   agent_run_id?: string | null;
   artifact_ids: string[];
   due_date?: string | null;
+  /** The note this to-do was raised from, when it was raised from one. */
+  source_chatter_id?: string | null;
   created_at: string;
   updated_at: string;
 }

@@ -339,7 +339,7 @@ Every artifact carries two identifiers, and they answer different questions:
 | DELETE | `/api/v1/attachments/{id}` | Delete attachment | editor |
 | GET | `/api/v1/artifacts/{artifactID}/attachments` | List an artifact's attachments | viewer |
 | POST | `/api/v1/chatter` | Comment on an artifact (a reviewer may: that is what the role is for) | reviewer |
-| GET | `/api/v1/chatter` | List an artifact's activity feed | viewer |
+| GET | `/api/v1/chatter` | List an artifact's activity feed. Each entry carries `mentions` (the project members its @names resolve to) and `todo` (the work item raised from it, with its current status) — both composed at read time, neither stored | viewer |
 
 ### Figures
 
@@ -716,7 +716,7 @@ conventions.
 
 | Method | Path | Purpose | Auth |
 |---|---|---|---|
-| POST | `/api/v1/projects/{id}/work-items` | Create card | editor |
+| POST | `/api/v1/projects/{id}/work-items` | Create card. `source_chatter_id` raises it from a note (that note must be in the same project, else 400) | editor |
 | GET | `/api/v1/projects/{id}/work-items` | List board | viewer |
 | GET | `/api/v1/work-items/{id}` | Card + activity | viewer |
 | PUT | `/api/v1/work-items/{id}` | Edit card | editor |

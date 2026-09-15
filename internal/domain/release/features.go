@@ -40,6 +40,7 @@ var Registry = []Feature{
 	// unconditional.
 	{Key: FeaturePasswordReset, ShippedIn: "0.6.0", Summary: "Forgot your password? An emailed reset link from the sign-in page, or one a platform admin makes for you"},
 	{Key: FeatureAntigravity, ShippedIn: "0.7.0", Summary: "Antigravity CLI as an agent provider: Google's successor to the Gemini CLI, run from a workspace Gemini API key"},
+	{Key: FeatureTodoList, ShippedIn: "0.8.0", Summary: "To-dos: raise one from a note that names someone, and see who owes what on a page of its own under Plan"},
 }
 
 // Feature keys the code gates on.
@@ -56,6 +57,9 @@ const (
 	// FeatureAntigravity is the antigravity-cli agent provider. Google moved
 	// the consumer Gemini tiers onto this CLI on 18 June 2026.
 	FeatureAntigravity = "antigravity-cli"
+	// FeatureTodoList is the To-dos page and the to-do a note raises for
+	// the person it names.
+	FeatureTodoList = "todo-list"
 )
 
 // Enabled reports whether a feature is on for a workspace on the given

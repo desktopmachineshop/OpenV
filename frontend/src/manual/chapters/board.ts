@@ -55,6 +55,47 @@ runs are locked.
 Work items can also be **created by crews**: when a crew edge hands work off
 to (or requests review from) a *person*, a board card assigned to that person
 appears automatically — see *Crews*.
+
+## To-dos: the same work, by person
+
+**Plan → To-dos** lists the project's work items under the person each one
+belongs to, instead of under the column it sits in. It is a different
+arrangement of the board, not a second list: move a card on the board and
+the To-dos page says so, and vice versa.
+
+- Everyone with access to the project gets a section, including people who
+  owe nothing — that is what makes it answer *who owes what*.
+- Each row shows the item's **status**, its due date if it has one, and
+  whether it came from a note. Anything overdue is called out.
+- **Just mine** narrows the page to your own list. **Show done** brings
+  finished work back into view; by default the page shows only what is
+  still open.
+- Click a row to open the same **card drawer** the board uses.
+- Work assigned to an agent or a team is gathered under *Agents and teams*,
+  and anything with no assignee under *Unassigned*, so nothing is hidden by
+  having nobody's name on it.
+
+### Raising a to-do from a note
+
+Mentioning someone with **@name** in a note on an artifact tells them about
+it — it does not create work for them. To turn the ask into something
+tracked, use **+ Add to-do** on the note:
+
+- Whoever the note names is filled in as the assignee, and the note's first
+  line as the title. Both can be changed, and you can set a due date.
+- The full note becomes the to-do's description, and the artifact the note
+  is on is linked to it, so the card arrives with its context.
+- The to-do lands in **To Do** and appears on the board and on the To-dos
+  page straight away.
+
+Afterwards the note carries a small link to the to-do showing its **current
+status** — so a thread from three weeks ago tells you whether the thing
+being discussed ever got done, without going to look. The status is read
+from the card each time, not copied, so moving the card updates the note.
+
+A note can raise one to-do. System and agent entries in the feed do not
+offer the control: those are a record of what happened, not somebody asking
+for something.
 `;
 
 export default content;

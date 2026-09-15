@@ -16,16 +16,11 @@ import {
 } from '../api/client';
 import { useAppStore } from '../state/store';
 import { WorkItemDrawer } from '../components/kanban/WorkItemDrawer';
+import { BOARD_COLUMNS } from '../components/kanban/columns';
 import { ArtifactPicker, ErrorBanner, Modal, SegmentedControl } from '../components/ui';
 import { useViewport } from '../hooks/useViewport';
 
-const COLUMNS: { key: string; label: string; color: string }[] = [
-  { key: 'backlog', label: 'Backlog', color: 'var(--neutral)' },
-  { key: 'todo', label: 'To Do', color: 'var(--accent)' },
-  { key: 'in-progress', label: 'In Progress', color: 'var(--warning)' },
-  { key: 'review', label: 'Review', color: 'var(--purple-soft)' },
-  { key: 'done', label: 'Done', color: 'var(--success)' },
-];
+const COLUMNS = BOARD_COLUMNS;
 
 const LIVE_STATUSES = ['queued', 'claimed', 'running'];
 

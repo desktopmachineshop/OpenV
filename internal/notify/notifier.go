@@ -8,12 +8,11 @@ package notify
 import (
 	"fmt"
 	"log/slog"
-	"regexp"
-	"strings"
 
 	"github.com/openv/requirements-platform/internal/domain/artifacts"
 	domainevents "github.com/openv/requirements-platform/internal/domain/events"
 	"github.com/openv/requirements-platform/internal/domain/members"
+	"github.com/openv/requirements-platform/internal/domain/mentions"
 	"github.com/openv/requirements-platform/internal/domain/notifications"
 )
 
@@ -177,23 +176,12 @@ func (n *Notifier) fanOutToEditors(e domainevents.Event, ntype, title, body stri
 	}
 }
 
-// mentionPattern captures the token after an "@": word characters plus the
-// dot/dash/underscore that commonly appear in handles.
-var mentionPattern = regexp.MustCompile(`@([\w.-]+)`)
-
 // handleMentions scans a comment for @name tokens and notifies matched
-// project members. Matching is intentionally cheap and local: a token
-// matches a member when it equals (case-insensitively) their full name with
-// spaces removed, their first name, or the local part of their email.
+// project members. The matching rules live in the mentions package, which
+// the notes panel also uses to work out who a note is addressed to.
 func (n *Notifier) handleMentions(e domainevents.Event) {
 	message := payloadString(e, "message")
-	if !strings.Contains(message, "@") {
-		return
-	}
-	tokens := map[string]bool{}
-	for _, m := range mentionPattern.FindAllStringSubmatch(message, -1) {
-		tokens[strings.ToLower(m[1])] = true
-	}
+	tokens := mentions.Tokens(message)
 	if len(tokens) == 0 {
 		return
 	}
@@ -211,33 +199,13 @@ func (n *Notifier) handleMentions(e domainevents.Event) {
 		"project_id":  e.ProjectID,
 	}
 	for _, m := range list {
-		if !mentioned(tokens, m) {
+		if !mentions.Matches(tokens, m) {
 			continue
 		}
 		n.deliver(e, m.UserID, notifications.TypeMention,
 			"You were mentioned in a comment",
 			truncate(message, 160), ref)
 	}
-}
-
-// mentioned reports whether any @token addresses the member.
-func mentioned(tokens map[string]bool, m *members.Member) bool {
-	var handles []string
-	if name := strings.TrimSpace(m.UserName); name != "" {
-		handles = append(handles, strings.ReplaceAll(strings.ToLower(name), " ", ""))
-		if first := strings.Fields(strings.ToLower(name)); len(first) > 0 {
-			handles = append(handles, first[0])
-		}
-	}
-	if at := strings.IndexByte(m.UserEmail, '@'); at > 0 {
-		handles = append(handles, strings.ToLower(m.UserEmail[:at]))
-	}
-	for _, h := range handles {
-		if tokens[h] {
-			return true
-		}
-	}
-	return false
 }
 
 // deliver stores one notification and pushes it on the recipient's SSE

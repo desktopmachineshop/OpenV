@@ -9,6 +9,22 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### New features
+
+- **To-dos**, under *Plan*, lists the project's work under the person it
+  belongs to rather than the column it sits in — everyone with access gets a
+  section, including those who owe nothing, so the page answers who owes
+  what. It is the board's work rearranged, not a second list: move a card
+  and this page says so. *Just mine* narrows it to you, and finished work is
+  hidden until you ask for it.
+- **Raise a to-do from a note.** A note that mentions someone with @name now
+  offers *Add to-do*, which fills in the person it named and the note's
+  first line, links the artifact and carries the whole note across as the
+  description. Afterwards the note shows a small link to the to-do with its
+  current status, so an old thread tells you whether the thing being
+  discussed ever got done. Mentioning someone still just tells them: nothing
+  is added to the board unless you ask for it.
+
 ### Bug fixes
 
 - Antigravity agents no longer stop five minutes in. The CLI applies its own
