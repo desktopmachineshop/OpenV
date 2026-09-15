@@ -9,6 +9,13 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Bug fixes
+
+- 0.8.0 could not start against an existing database, taking the service
+  down until this release. Nothing was lost and no data was touched — the
+  server refused to start rather than run a schema change it could not
+  complete — but OpenV was unreachable in the meantime.
+
 ## 0.8.0 — 2026-09-15
 
 ### New features

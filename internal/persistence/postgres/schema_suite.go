@@ -100,9 +100,13 @@ func InitSuiteSchema(db *sql.DB) error {
 
 	CREATE INDEX IF NOT EXISTS idx_work_items_project_id ON work_items(project_id);
 	CREATE INDEX IF NOT EXISTS idx_work_items_column ON work_items(project_id, board_column, sort_order);
-	-- Partial: only items raised from a note carry one, and the notes panel
-	-- is the only thing that looks them up.
-	CREATE INDEX IF NOT EXISTS idx_work_items_source_chatter ON work_items(source_chatter_id) WHERE source_chatter_id IS NOT NULL;
+	-- No index on source_chatter_id here. This whole block is CREATE ... IF
+	-- NOT EXISTS, so on a database that already has work_items the table
+	-- statement is a no-op and the column above is NOT added — while an index
+	-- naming it would still run, and fail. Migration 43 adds the column and
+	-- its index together, which is correct for both a fresh database and an
+	-- existing one.
+
 
 	CREATE TABLE IF NOT EXISTS work_item_activity (
 		id UUID PRIMARY KEY,
