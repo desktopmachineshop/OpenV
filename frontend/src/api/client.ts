@@ -326,6 +326,12 @@ export interface AttachmentVersion {
   file_size: number;
   created_by?: string | null;
   created_at: string;
+  /**
+   * The older version this one brought back, when it was written by a
+   * restore. A restore reuses the older version's stored file, so this is
+   * the only thing that tells it apart from a re-upload of the same image.
+   */
+  restored_from?: number | null;
 }
 
 // Server-side page size for artifact listings (the backend defaults to and
@@ -627,6 +633,12 @@ export const attachmentAPI = {
   },
   listVersions: (id: string) =>
     client.get<AttachmentVersion[]>(`/api/v1/attachments/${id}/versions`),
+  /**
+   * Bring an older version back as a new one. Nothing is deleted: the
+   * restore is itself a version, and the history keeps every step.
+   */
+  restoreVersion: (id: string, version: number) =>
+    client.post<AttachmentVersion>(`/api/v1/attachments/${id}/versions/${version}/restore`),
   /** Give a figure a title; "" clears it. A change is a new figure version. */
   rename: (id: string, title: string) =>
     client.put<Attachment>(`/api/v1/attachments/${id}`, { title }),
@@ -649,6 +661,25 @@ export interface ChatterEntry {
   author_name?: string;
   created_at: string;
   updated_at: string;
+  // Resolved by the API when the feed is read, never stored: who the note's
+  // @names address, and the to-do raised from it with its status as it
+  // stands now.
+  mentions?: NoteMention[];
+  todo?: NoteTodo;
+}
+
+export interface NoteMention {
+  user_id: string;
+  name: string;
+}
+
+export interface NoteTodo {
+  work_item_id: string;
+  title: string;
+  /** The board column the to-do sits in. */
+  status: string;
+  assignee_id?: string | null;
+  assignee_name?: string;
 }
 
 export const chatterAPI = {
@@ -985,6 +1016,8 @@ export interface WorkItem {
   agent_run_id?: string | null;
   artifact_ids: string[];
   due_date?: string | null;
+  /** The note this to-do was raised from, when it was raised from one. */
+  source_chatter_id?: string | null;
   created_at: string;
   updated_at: string;
 }

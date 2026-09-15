@@ -128,6 +128,22 @@ reading. Use **⬆** on a figure to upload a new version: the figure keeps its
 reference, the artifact takes a new version, and the notes record the change.
 **🕘** shows the history, and every superseded version stays viewable.
 
+From that history you can **Restore** any earlier version. The figure goes
+back to the image *and* the name it had then — a restore that brought back
+the drawing but left a later rename in place would show one figure under
+another's name.
+
+Restoring works the way it does for an artifact: it is recorded as a **new
+version** with the old content, and nothing is deleted. So the history after
+restoring version 1 over version 3 reads v1, v2, v3, v4 — with v4 marked
+*restored from v1* — and version 3's drawing is still there to open. That
+matters when a requirement was reviewed, or a baseline captured, against
+what the figure used to show: rewinding and discarding would destroy the
+record of what the reviewer actually saw.
+
+Restoring is an editor's action, and the version already showing cannot be
+restored over itself.
+
 A figure also has a **name**, shown under its reference and printed under
 the picture in PDF and Word documents. Until you give it one, the name is
 the filename it was uploaded with — which for a screenshot is usually a

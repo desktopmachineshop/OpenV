@@ -14,6 +14,7 @@ import { GuidedWizard } from './views/GuidedWizard';
 import { EvidenceView } from './views/EvidenceView';
 import { VVDashboard } from './views/VVDashboard';
 import { KanbanBoard } from './views/KanbanBoard';
+import { TodoList } from './views/TodoList';
 import { AutomationsPage } from './views/AutomationsPage';
 import { AgentRunsPage } from './views/AgentRunsPage';
 import { AgentsPage } from './views/AgentsPage';
@@ -237,6 +238,7 @@ function App() {
           <Route path="impact" element={<ImpactView />} />
           <Route path="review" element={<ReviewQueue />} />
           <Route path="board" element={<KanbanBoard />} />
+          <Route path="todos" element={<TodoList />} />
           <Route path="crew" element={<CrewBuilder />} />
           <Route path="crew/network" element={<CrewBuilder />} />
           {/* Legacy "team" URLs redirect to the renamed "crew" routes. */}

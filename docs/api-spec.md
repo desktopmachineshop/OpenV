@@ -335,11 +335,12 @@ Every artifact carries two identifiers, and they answer different questions:
 | PUT | `/api/v1/attachments/{id}` | Rename a figure: `{title}` (trimmed, up to 255 characters, `""` clears it). A change is a new figure version over the same image and a new artifact version, recorded in the notes; an unchanged title writes nothing. `403` with the remedy while the workspace's channel has not received `figure-titles` (REQ-157) | editor |
 | GET | `/api/v1/attachments/{id}/download` | Download the file (`?version=N` for a superseded one) | viewer |
 | POST | `/api/v1/attachments/{id}/versions` | Replace a figure's image with a new version (multipart) | editor |
+| POST | `/api/v1/attachments/{id}/versions/{version}/restore` | Bring an older version's image and title back as a NEW version; nothing is deleted. 404 for a version the figure never had, 409 for the one already current | editor |
 | GET | `/api/v1/attachments/{id}/versions` | A figure's version history, newest first; each entry carries the file and the `title` the figure had at that version, so a rename and a new image read alike | viewer |
 | DELETE | `/api/v1/attachments/{id}` | Delete attachment | editor |
 | GET | `/api/v1/artifacts/{artifactID}/attachments` | List an artifact's attachments | viewer |
 | POST | `/api/v1/chatter` | Comment on an artifact (a reviewer may: that is what the role is for) | reviewer |
-| GET | `/api/v1/chatter` | List an artifact's activity feed | viewer |
+| GET | `/api/v1/chatter` | List an artifact's activity feed. Each entry carries `mentions` (the project members its @names resolve to) and `todo` (the work item raised from it, with its current status) — both composed at read time, neither stored | viewer |
 
 ### Figures
 
@@ -716,7 +717,7 @@ conventions.
 
 | Method | Path | Purpose | Auth |
 |---|---|---|---|
-| POST | `/api/v1/projects/{id}/work-items` | Create card | editor |
+| POST | `/api/v1/projects/{id}/work-items` | Create card. `source_chatter_id` raises it from a note (that note must be in the same project, else 400) | editor |
 | GET | `/api/v1/projects/{id}/work-items` | List board | viewer |
 | GET | `/api/v1/work-items/{id}` | Card + activity | viewer |
 | PUT | `/api/v1/work-items/{id}` | Edit card | editor |

@@ -249,3 +249,144 @@ func TestFigureVersionsSupersedeAndKeepHistory(t *testing.T) {
 		t.Errorf("AddVersion on a missing attachment = %d, %v; want 0, nil", n, err)
 	}
 }
+
+// TestRestoreVersion exercises reverting a figure to an older version.
+//
+// The invariant that matters is that a restore is forward-only: it writes a
+// NEW version carrying the older image and title, and everything that came
+// before is still there afterwards. Someone opening a baseline must still be
+// able to fetch the drawing a requirement was reviewed against, which a
+// destructive rewind would have deleted. Postgres-gated
+// (OPENV_TEST_DATABASE_URL).
+func TestRestoreVersion(t *testing.T) {
+	db := testDB(t)
+	initTestSchema(t, db)
+
+	repo := NewAttachmentRepository(db)
+	artifactID := uuid.New().String()
+
+	att := attachments.NewAttachment(attachments.CreateAttachmentRequest{
+		ArtifactID:       artifactID,
+		Filename:         "seal.png",
+		OriginalFilename: "seal.png",
+		Title:            "Seal, first cut",
+		MimeType:         "image/png",
+		FilePath:         "/tmp/seal-v1.png",
+		FileSize:         111,
+	})
+	if err := repo.SaveWithFigureRef(att, "REQ-9"); err != nil {
+		t.Fatalf("SaveWithFigureRef: %v", err)
+	}
+
+	// v2: a different drawing under a different name.
+	if _, err := repo.AddVersion(att.ID, &attachments.Version{
+		OriginalFilename: "seal-rev-b.png",
+		MimeType:         "image/png",
+		FilePath:         "/tmp/seal-v2.png",
+		FileSize:         222,
+	}); err != nil {
+		t.Fatalf("AddVersion: %v", err)
+	}
+	// v3: renamed, same drawing as v2.
+	if _, err := repo.Rename(att.ID, "Seal, revision B", nil); err != nil {
+		t.Fatalf("Rename: %v", err)
+	}
+
+	who := uuid.New().String()
+	restored, err := repo.Restore(att.ID, 1, &who)
+	if err != nil {
+		t.Fatalf("Restore: %v", err)
+	}
+
+	if restored.Version != 4 {
+		t.Errorf("restore wrote version %d, want 4 — a restore moves forward", restored.Version)
+	}
+	if restored.RestoredFrom == nil || *restored.RestoredFrom != 1 {
+		t.Errorf("restored_from = %v, want 1", restored.RestoredFrom)
+	}
+	if restored.FilePath != "/tmp/seal-v1.png" {
+		t.Errorf("restored file = %q, want v1's", restored.FilePath)
+	}
+	// The title travels with the image: leaving v3's name over v1's drawing
+	// would show one figure under another figure's name.
+	if restored.Title != "Seal, first cut" {
+		t.Errorf("restored title = %q, want v1's", restored.Title)
+	}
+	if restored.CreatedBy == nil || *restored.CreatedBy != who {
+		t.Errorf("restore did not record who did it: %v", restored.CreatedBy)
+	}
+
+	// The attachment itself now shows the restored content.
+	current, err := repo.FindByID(att.ID)
+	if err != nil {
+		t.Fatalf("FindByID: %v", err)
+	}
+	if current.Version != 4 || current.FilePath != "/tmp/seal-v1.png" || current.Title != "Seal, first cut" {
+		t.Errorf("figure after restore = v%d %q %q, want v4 with v1's file and title",
+			current.Version, current.FilePath, current.Title)
+	}
+	if current.FileSize != 111 {
+		t.Errorf("file size = %d, want v1's 111", current.FileSize)
+	}
+
+	// Nothing was destroyed.
+	versions, err := repo.ListVersions(att.ID)
+	if err != nil {
+		t.Fatalf("ListVersions: %v", err)
+	}
+	if len(versions) != 4 {
+		t.Fatalf("history has %d versions after a restore, want 4 — nothing may be deleted", len(versions))
+	}
+	for i, want := range []int{4, 3, 2, 1} {
+		if versions[i].Version != want {
+			t.Errorf("history[%d] = v%d, want v%d (newest first)", i, versions[i].Version, want)
+		}
+	}
+	// The superseded drawing is still fetchable, which is the whole point.
+	v2, err := repo.FindVersion(att.ID, 2)
+	if err != nil || v2 == nil {
+		t.Fatalf("FindVersion(2) after restore: %v, %v", v2, err)
+	}
+	if v2.FilePath != "/tmp/seal-v2.png" {
+		t.Errorf("v2 file = %q, want it untouched", v2.FilePath)
+	}
+}
+
+// A restore must refuse the two asks that would write a version changing
+// nothing, or name one that never existed.
+func TestRestoreVersionRefusals(t *testing.T) {
+	db := testDB(t)
+	initTestSchema(t, db)
+
+	repo := NewAttachmentRepository(db)
+	att := attachments.NewAttachment(attachments.CreateAttachmentRequest{
+		ArtifactID:       uuid.New().String(),
+		Filename:         "only.png",
+		OriginalFilename: "only.png",
+		MimeType:         "image/png",
+		FilePath:         "/tmp/only.png",
+		FileSize:         10,
+	})
+	if err := repo.SaveWithFigureRef(att, "REQ-10"); err != nil {
+		t.Fatalf("SaveWithFigureRef: %v", err)
+	}
+
+	if _, err := repo.Restore(att.ID, 1, nil); err != attachments.ErrAlreadyCurrent {
+		t.Errorf("restoring the current version: err = %v, want ErrAlreadyCurrent", err)
+	}
+	if _, err := repo.Restore(att.ID, 7, nil); err != attachments.ErrNoSuchVersion {
+		t.Errorf("restoring a version that never existed: err = %v, want ErrNoSuchVersion", err)
+	}
+	if _, err := repo.Restore(uuid.New().String(), 1, nil); err != attachments.ErrNoSuchVersion {
+		t.Errorf("restoring on a figure that does not exist: err = %v, want ErrNoSuchVersion", err)
+	}
+
+	// None of the refusals may have advanced the figure.
+	current, err := repo.FindByID(att.ID)
+	if err != nil {
+		t.Fatalf("FindByID: %v", err)
+	}
+	if current.Version != 1 {
+		t.Errorf("figure is at v%d after three refused restores, want v1", current.Version)
+	}
+}

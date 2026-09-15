@@ -228,6 +228,9 @@ one, and that is a deliberate consequence of how it stores credentials:
   supports. The CLI does not appear in the personal sign-in list.
 - **Runs.** `agy -p <prompt> --output-format json`, plus `--model` and
   `--effort` (three rungs: OpenV's `xhigh` and `max` cap to `high`).
+  `--print-timeout` is set from the agent's own `timeout_seconds`: the CLI
+  otherwise applies a five-minute cap of its own and ends a longer run there,
+  reporting the partial output as the answer.
 - **Tools.** The allowlist is enforced at the OpenV MCP server via
   `OPENV_MCP_TOOLS`; OpenV widens nothing on this provider. The CLI's
   auto-approve-everything flag (`--dangerously-skip-permissions`) is never
@@ -237,16 +240,23 @@ one, and that is a deliberate consequence of how it stores credentials:
   CLI launches the stdio server as a child, so the run token is inherited from
   the process environment rather than left on disk inside what may be a
   repository clone.
-- **Repository access is refused.** The CLI's file-write approvals live in a
-  settings file under `HOME` with no documented per-run override, and OpenV
-  will neither write a member's global settings nor skip permissions. Use
-  `claude-code` for repo-editing agents, which can name the editing tools
-  individually.
+- **Repository access is refused**, for now by choice rather than by
+  necessity. The CLI does carry `--mode accept-edits` and a `--sandbox` flag,
+  so a repo-editing path is likely available; neither has been exercised
+  against a real repository from a runner, and what `accept-edits` approves
+  is not documented anywhere OpenV can point at. Granting write access to a
+  member's repository on an untested reading of an undocumented flag is not a
+  trade worth making, so the adapter refuses until someone has run it and can
+  say what it does. Use `claude-code` for repo-editing agents meanwhile: it
+  can name the editing tools individually.
 
-Everything above is derived from Google's published CLI documentation: `agy`
-is a closed-source binary. Where the documentation is silent the adapter fails
-closed — an unrecognised result envelope is reported as a failure rather than
-passed off as the agent's answer.
+`agy` is a closed-source binary, so this adapter is built from Google's
+published CLI documentation plus the `--help` output of the exact pinned
+release the runner image installs (see `Dockerfile.worker`). The result
+envelope's field names are published in neither, so the adapter reads the
+answer from the first of several plausible keys and fails closed on an
+envelope matching none of them, rather than passing unparsed output off as
+the agent's answer.
 
 ### Gemini CLI: what Google still serves
 

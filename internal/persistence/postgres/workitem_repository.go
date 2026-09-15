@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"encoding/json"
 
+	"github.com/lib/pq"
+
 	"github.com/openv/requirements-platform/internal/domain/workitems"
 )
 
@@ -30,8 +32,8 @@ func (r *WorkItemRepository) Save(item *workitems.WorkItem) error {
 	}
 
 	query := `
-		INSERT INTO work_items (id, project_id, title, description, board_column, sort_order, assignee_type, assignee_id, agent_run_id, artifact_ids, due_date, created_by, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+		INSERT INTO work_items (id, project_id, title, description, board_column, sort_order, assignee_type, assignee_id, agent_run_id, artifact_ids, due_date, source_chatter_id, created_by, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
 	`
 
 	_, err = r.db.Exec(
@@ -47,6 +49,7 @@ func (r *WorkItemRepository) Save(item *workitems.WorkItem) error {
 		item.AgentRunID,
 		artifactIDsJSON,
 		item.DueDate,
+		item.SourceChatterID,
 		item.CreatedBy,
 		item.CreatedAt,
 		item.UpdatedAt,
@@ -107,6 +110,7 @@ func scanWorkItem(scan func(dest ...interface{}) error) (*workitems.WorkItem, er
 		&item.AgentRunID,
 		&artifactIDsJSON,
 		&item.DueDate,
+		&item.SourceChatterID,
 		&item.CreatedBy,
 		&item.CreatedAt,
 		&item.UpdatedAt,
@@ -128,7 +132,7 @@ func scanWorkItem(scan func(dest ...interface{}) error) (*workitems.WorkItem, er
 // FindByID retrieves a work item by ID
 func (r *WorkItemRepository) FindByID(id string) (*workitems.WorkItem, error) {
 	query := `
-		SELECT id, project_id, title, description, board_column, sort_order, assignee_type, assignee_id, agent_run_id, artifact_ids, due_date, created_by, created_at, updated_at
+		SELECT id, project_id, title, description, board_column, sort_order, assignee_type, assignee_id, agent_run_id, artifact_ids, due_date, source_chatter_id, created_by, created_at, updated_at
 		FROM work_items
 		WHERE id = $1
 	`
@@ -148,13 +152,45 @@ func (r *WorkItemRepository) FindByID(id string) (*workitems.WorkItem, error) {
 // ListByProject retrieves all work items for a project ordered by board position
 func (r *WorkItemRepository) ListByProject(projectID string) ([]*workitems.WorkItem, error) {
 	query := `
-		SELECT id, project_id, title, description, board_column, sort_order, assignee_type, assignee_id, agent_run_id, artifact_ids, due_date, created_by, created_at, updated_at
+		SELECT id, project_id, title, description, board_column, sort_order, assignee_type, assignee_id, agent_run_id, artifact_ids, due_date, source_chatter_id, created_by, created_at, updated_at
 		FROM work_items
 		WHERE project_id = $1
 		ORDER BY board_column ASC, sort_order ASC, created_at ASC
 	`
 
 	rows, err := r.db.Query(query, projectID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var items []*workitems.WorkItem
+	for rows.Next() {
+		item, err := scanWorkItem(rows.Scan)
+		if err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+
+	return items, rows.Err()
+}
+
+// ListBySourceChatterIDs retrieves the work items raised from the given
+// notes. One query for a whole notes panel: the alternative is a lookup per
+// note, which is what makes a comment feed slow once it is long.
+func (r *WorkItemRepository) ListBySourceChatterIDs(chatterIDs []string) ([]*workitems.WorkItem, error) {
+	if len(chatterIDs) == 0 {
+		return nil, nil
+	}
+
+	query := `
+		SELECT id, project_id, title, description, board_column, sort_order, assignee_type, assignee_id, agent_run_id, artifact_ids, due_date, source_chatter_id, created_by, created_at, updated_at
+		FROM work_items
+		WHERE source_chatter_id = ANY($1)
+	`
+
+	rows, err := r.db.Query(query, pq.Array(chatterIDs))
 	if err != nil {
 		return nil, err
 	}

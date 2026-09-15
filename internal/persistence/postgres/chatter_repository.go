@@ -46,6 +46,35 @@ func (r *ChatterRepository) Save(entry *chatter.ChatterEntry) error {
 }
 
 // FindByArtifactID retrieves all chatter entries for an artifact, ordered by creation date
+// FindByID retrieves one chatter entry.
+func (r *ChatterRepository) FindByID(id string) (*chatter.ChatterEntry, error) {
+	query := `
+		SELECT id, artifact_id, message, is_auto_entry, entry_type, created_by, author_name, created_at, updated_at
+		FROM chatter
+		WHERE id = $1
+	`
+
+	entry := new(chatter.ChatterEntry)
+	err := r.db.QueryRow(query, id).Scan(
+		&entry.ID,
+		&entry.ArtifactID,
+		&entry.Message,
+		&entry.IsAutoEntry,
+		&entry.EntryType,
+		&entry.CreatedBy,
+		&entry.AuthorName,
+		&entry.CreatedAt,
+		&entry.UpdatedAt,
+	)
+	if err == sql.ErrNoRows {
+		return nil, chatter.ErrNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	return entry, nil
+}
+
 func (r *ChatterRepository) FindByArtifactID(artifactID string) ([]*chatter.ChatterEntry, error) {
 	query := `
 		SELECT id, artifact_id, message, is_auto_entry, entry_type, created_by, author_name, created_at, updated_at

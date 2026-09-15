@@ -9,6 +9,46 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### New features
+
+- **To-dos**, under *Plan*, lists the project's work under the person it
+  belongs to rather than the column it sits in — everyone with access gets a
+  section, including those who owe nothing, so the page answers who owes
+  what. It is the board's work rearranged, not a second list: move a card
+  and this page says so. *Just mine* narrows it to you, and finished work is
+  hidden until you ask for it.
+- **Raise a to-do from a note.** A note that mentions someone with @name now
+  offers *Add to-do*, which fills in the person it named and the note's
+  first line, links the artifact and carries the whole note across as the
+  description. Afterwards the note shows a small link to the to-do with its
+  current status, so an old thread tells you whether the thing being
+  discussed ever got done. Mentioning someone still just tells them: nothing
+  is added to the board unless you ask for it.
+- **Restore an older version of a figure.** Its history now offers *Restore*
+  on any earlier version: the figure goes back to the image and the name it
+  had then. Like restoring an artifact, it is recorded as a new version and
+  nothing is deleted — the superseded drawing stays in the history and stays
+  openable, which is what you need when a requirement was reviewed against
+  what the figure used to show. The history entry says which version it
+  brought back.
+
+### Bug fixes
+
+- Antigravity agents no longer stop five minutes in. The CLI applies its own
+  five-minute cap to a single-prompt run and ends it there regardless of the
+  timeout set on the agent — which defaults to thirty minutes — so a longer
+  piece of work was cut off and whatever had been produced so far was
+  reported as the answer. The agent's own timeout is now the only one that
+  applies.
+
+### Maintenance updates
+
+- Cloud runners now build with a fixed, checksum-verified copy of the
+  Antigravity CLI rather than fetching whichever version is current at build
+  time. Two rebuilds of the same commit now give runners the same CLI, and a
+  version change is a visible edit to this repository instead of something
+  that happens quietly between builds.
+
 ## 0.7.1 — 2026-09-15
 
 ### Maintenance updates

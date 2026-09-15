@@ -135,6 +135,14 @@ func buildAntigravityArgs(spec RunSpec) ([]string, error) {
 		prompt = "System instructions:\n" + spec.SystemPrompt + "\n\nTask:\n" + spec.Prompt
 	}
 	args := []string{"-p", prompt, "--output-format", "json"}
+	// `agy` applies its own five-minute cap to print mode and kills the run
+	// when it lapses, so leaving this unset silently truncates anything
+	// longer than that — the default agent allows 1800s. The harness in
+	// startProc stays the real bound; this only stops the CLI cutting in
+	// first, which is why it is set from the same number.
+	if spec.TimeoutSec > 0 {
+		args = append(args, "--print-timeout", strconv.Itoa(spec.TimeoutSec)+"s")
+	}
 	if spec.Model != "" {
 		args = append(args, "--model", spec.Model)
 	}

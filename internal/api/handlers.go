@@ -42,6 +42,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/interviews"
 	"github.com/openv/requirements-platform/internal/domain/invitations"
 	"github.com/openv/requirements-platform/internal/domain/members"
+	"github.com/openv/requirements-platform/internal/domain/mentions"
 	"github.com/openv/requirements-platform/internal/domain/notifications"
 	"github.com/openv/requirements-platform/internal/domain/orgs"
 	"github.com/openv/requirements-platform/internal/domain/products"
@@ -435,6 +436,7 @@ func (h *Handler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/attachments/{id}/download", h.DownloadAttachment).Methods("GET")
 	router.HandleFunc("/api/v1/attachments/{id}/versions", h.UploadAttachmentVersion).Methods("POST")
 	router.HandleFunc("/api/v1/attachments/{id}/versions", h.ListAttachmentVersions).Methods("GET")
+	router.HandleFunc("/api/v1/attachments/{id}/versions/{version}/restore", h.RestoreAttachmentVersion).Methods("POST")
 	router.HandleFunc("/api/v1/attachments/{id}", h.DeleteAttachment).Methods("DELETE")
 	router.HandleFunc("/api/v1/artifacts/{artifactID}/attachments", h.ListArtifactAttachments).Methods("GET")
 
@@ -2579,6 +2581,48 @@ func (h *Handler) ListAttachmentVersions(w http.ResponseWriter, r *http.Request)
 	json.NewEncoder(w).Encode(versions)
 }
 
+// RestoreAttachmentVersion brings an older version of a figure back as a new
+// version. Editor role, like uploading one: it changes what the figure
+// shows.
+func (h *Handler) RestoreAttachmentVersion(w http.ResponseWriter, r *http.Request) {
+	id := mux.Vars(r)["id"]
+
+	version, err := strconv.Atoi(mux.Vars(r)["version"])
+	if err != nil || version < 1 {
+		writeJSONError(w, http.StatusBadRequest, "version must be a positive whole number")
+		return
+	}
+
+	attachment, err := h.attachmentService.GetAttachment(id)
+	if err != nil || attachment == nil {
+		writeJSONError(w, http.StatusNotFound, "Attachment not found")
+		return
+	}
+	if !h.requireProjectRole(w, r, h.projectIDForArtifact(attachment.ArtifactID), members.RoleEditor) {
+		return
+	}
+
+	restored, err := h.attachmentService.RestoreVersion(id, version, CurrentUserID(r))
+	switch {
+	case errors.Is(err, attachments.ErrNoSuchVersion):
+		writeJSONError(w, http.StatusNotFound, fmt.Sprintf("This figure has no version %d", version))
+		return
+	case errors.Is(err, attachments.ErrAlreadyCurrent):
+		// Not an error the member made: they asked for the state the figure
+		// is already in. Say so rather than writing a version that changes
+		// nothing.
+		writeJSONError(w, http.StatusConflict, fmt.Sprintf("Version %d is already the current one", version))
+		return
+	case err != nil:
+		respondInternal(w, r, "Failed to restore the figure version", err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(restored)
+}
+
 // DownloadAttachment serves the attachment file
 func (h *Handler) DownloadAttachment(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
@@ -3092,6 +3136,104 @@ func (h *Handler) ListChatterEntries(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	h.decorateChatterEntries(h.projectIDForArtifact(artifactID), entries)
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(entries)
+}
+
+// decorateChatterEntries fills in the display-only fields of a notes feed:
+// who each note names, and the to-do raised from it if there is one.
+//
+// Both are looked up once for the whole feed rather than per note, and a
+// failure on either leaves the feed intact: a missing mention chip or
+// to-do link is a worse page, while a 500 is no page at all, and neither
+// is worth failing a comment thread over.
+func (h *Handler) decorateChatterEntries(projectID string, entries []*chatter.ChatterEntry) {
+	if len(entries) == 0 {
+		return
+	}
+
+	// One membership read serves both halves: who the notes name, and what
+	// to call the person a to-do is assigned to.
+	var list []*members.Member
+	if projectID != "" && h.memberService != nil {
+		var err error
+		if list, err = h.memberService.ListMembers(projectID); err != nil {
+			slog.Error("chatter: failed to list members for mentions",
+				"project_id", projectID, "error", err)
+			list = nil
+		}
+	}
+	names := make(map[string]string, len(list))
+	for _, m := range list {
+		names[m.UserID] = memberDisplayName(m)
+	}
+	for _, e := range entries {
+		for _, m := range mentions.Resolve(e.Message, list) {
+			e.Mentions = append(e.Mentions, chatter.MentionRef{
+				UserID: m.UserID,
+				Name:   names[m.UserID],
+			})
+		}
+	}
+
+	if h.workItemService == nil {
+		return
+	}
+	ids := make([]string, 0, len(entries))
+	for _, e := range entries {
+		ids = append(ids, e.ID)
+	}
+	items, err := h.workItemService.ListBySourceChatterIDs(ids)
+	if err != nil {
+		slog.Error("chatter: failed to load to-dos raised from notes",
+			"project_id", projectID, "error", err)
+		return
+	}
+	if len(items) == 0 {
+		return
+	}
+
+	// An item assigned to an agent or a team, or to someone since removed
+	// from the project, shows its status without a name rather than not
+	// showing at all.
+	byChatter := make(map[string]*chatter.TodoRef, len(items))
+	for _, item := range items {
+		if item.SourceChatterID == nil {
+			continue
+		}
+		// A note only ever shows a to-do from its own project. The write
+		// path refuses a foreign note id, so this cannot normally happen;
+		// it is here because the cost of being wrong is one project's work
+		// item title rendered inside another's, which is not a mistake to
+		// leave to a single check.
+		if projectID != "" && item.ProjectID != projectID {
+			continue
+		}
+		ref := &chatter.TodoRef{
+			WorkItemID: item.ID,
+			Title:      item.Title,
+			Status:     item.Column,
+			AssigneeID: item.AssigneeID,
+		}
+		if item.AssigneeType == workitems.AssigneeUser && item.AssigneeID != nil {
+			ref.AssigneeName = names[*item.AssigneeID]
+		}
+		byChatter[*item.SourceChatterID] = ref
+	}
+	for _, e := range entries {
+		if ref, ok := byChatter[e.ID]; ok {
+			e.Todo = ref
+		}
+	}
+}
+
+// memberDisplayName is the label a person is shown by: their name, or the
+// email they signed up with when they have not set one.
+func memberDisplayName(m *members.Member) string {
+	if name := strings.TrimSpace(m.UserName); name != "" {
+		return name
+	}
+	return m.UserEmail
 }

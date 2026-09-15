@@ -28,11 +28,14 @@ import { HelpSidebar } from './HelpSidebar';
 import { NotificationBell } from './NotificationBell';
 import { OrgSwitcher } from './OrgSwitcher';
 import { UserMenu } from './UserMenu';
+import { TODO_LIST_FEATURE } from '../views/TodoList';
 
 interface NavItem {
   to: string;
   label: string;
   end?: boolean;
+  /** Hide the entry until this gated feature is on for the workspace. */
+  feature?: string;
 }
 
 // The sidebar is grouped by what the user is doing: defining the product,
@@ -59,7 +62,10 @@ const navSections: { label?: string; items: NavItem[] }[] = [
   },
   {
     label: 'Plan',
-    items: [{ to: 'board', label: 'Board' }],
+    items: [
+      { to: 'board', label: 'Board' },
+      { to: 'todos', label: 'To-dos', feature: TODO_LIST_FEATURE },
+    ],
   },
   {
     label: 'Agents',
@@ -85,6 +91,10 @@ export const ProjectLayout: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { setProjectId, orgs, activeOrgId, setActiveOrgId } = useAppStore();
+  // Read the whole gate map rather than one key: the menu filters on
+  // whatever a nav entry declares, so a future gated page needs no change
+  // here.
+  const features = useAppStore((s) => s.features);
   const [project, setProject] = useState<Project | null>(null);
   // Once a guided definition has been worked on, the nav entry disappears —
   // the wizard is then reached only through the Overview page's adaptive CTA
@@ -384,7 +394,9 @@ export const ProjectLayout: React.FC = () => {
         <nav style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '8px 0' }}>
           {navSections.map((section, i) => {
             const items = section.items.filter(
-              (item) => item.to !== 'guided' || !hasGuidedSession
+              (item) =>
+                (item.to !== 'guided' || !hasGuidedSession) &&
+                (!item.feature || Boolean(features?.features[item.feature]))
             );
             // An unlabelled group has no header to click, so it never collapses.
             const label = section.label;

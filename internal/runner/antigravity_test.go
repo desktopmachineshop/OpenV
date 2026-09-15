@@ -82,6 +82,40 @@ func TestAntigravityEffort(t *testing.T) {
 
 // A system prompt has no flag of its own, so it is prefixed — and must still
 // reach the CLI rather than being dropped.
+// `agy --print-timeout` defaults to 5m0s and kills print mode when it lapses.
+// The default agent allows 1800s, so an argv without the flag truncates most
+// real runs about twenty-five minutes early — and reports whatever partial
+// output it had as the answer.
+func TestBuildAntigravityArgs_CarriesTheRunTimeout(t *testing.T) {
+	spec := antigravitySpec()
+	spec.TimeoutSec = 1800
+	args, err := buildAntigravityArgs(spec)
+	if err != nil {
+		t.Fatalf("buildAntigravityArgs: %v", err)
+	}
+	i := slices.Index(args, "--print-timeout")
+	if i < 0 || i+1 >= len(args) {
+		t.Fatalf("argv leaves agy on its own five-minute cap: %v", args)
+	}
+	if args[i+1] != "1800s" {
+		t.Errorf("print timeout = %q, want the run's own bound 1800s", args[i+1])
+	}
+}
+
+// A spec with no bound of its own must not invent one: an empty value would
+// be a parse error, and "0s" would end the run immediately.
+func TestBuildAntigravityArgs_OmitsAnUnsetTimeout(t *testing.T) {
+	spec := antigravitySpec()
+	spec.TimeoutSec = 0
+	args, err := buildAntigravityArgs(spec)
+	if err != nil {
+		t.Fatalf("buildAntigravityArgs: %v", err)
+	}
+	if slices.Contains(args, "--print-timeout") {
+		t.Errorf("argv invented a timeout the spec did not set: %v", args)
+	}
+}
+
 func TestBuildAntigravityArgs_CarriesTheSystemPrompt(t *testing.T) {
 	spec := antigravitySpec()
 	spec.SystemPrompt = "be terse"
