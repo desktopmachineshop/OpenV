@@ -9,6 +9,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+## 0.9.1 — 2026-09-15
+
 ### Maintenance updates
 
 - Releases are no longer held up by the dependency robot failing to write its
