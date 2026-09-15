@@ -9,6 +9,15 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Maintenance updates
+
+- Releases are no longer held up by the dependency robot failing to write its
+  own update. It reports a failure when a flagged package has no upgrade path
+  available, which is a fact about that package rather than anything wrong
+  with the release — so fixes and features reach you on time instead of
+  waiting behind it. The checks that actually test OpenV still gate every
+  release, as does the separate scan of the packages OpenV depends on.
+
 ## 0.9.0 — 2026-09-15
 
 ### New features
