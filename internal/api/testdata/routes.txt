@@ -192,6 +192,7 @@ POST /api/v1/artifacts
 POST /api/v1/artifacts/{id}/restore
 POST /api/v1/attachments/upload
 POST /api/v1/attachments/{id}/versions
+POST /api/v1/attachments/{id}/versions/{version}/restore
 POST /api/v1/attribute-definitions
 POST /api/v1/auth/invitations/accept
 POST /api/v1/auth/invitations/preview

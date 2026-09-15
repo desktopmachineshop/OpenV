@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { Attachment, AttachmentVersion, attachmentAPI } from '../api/client';
 import { ImageLightbox } from './ImageLightbox';
 import { useAlert, useConfirm, usePrompt } from './ui';
@@ -7,6 +7,9 @@ import './ImageGallery.css';
 
 /** The feature key that gates renaming a figure (REQ-157). */
 export const FIGURE_TITLES_FEATURE = 'figure-titles';
+
+/** Restoring an older version of a figure sits behind this gate. */
+export const FIGURE_REVERT_FEATURE = 'figure-revert';
 
 interface ImageGalleryProps {
   artifactId: string;
@@ -26,6 +29,12 @@ interface ImageGalleryProps {
    * read-only for versions — the figure history is still browsable.
    */
   onUploadVersion?: (attachmentId: string, file: File) => void;
+  /**
+   * Called after an older version has been restored, so the caller can
+   * reload the artifact's figures. Without it the restore still happens and
+   * the history dialog updates; only the thumbnails behind it go stale.
+   */
+  onRestored?: () => void;
   /**
    * Give a figure a title. Without it the gallery shows names but cannot
    * change them.
@@ -51,11 +60,17 @@ export const figureName = (a: { title?: string; original_filename?: string; file
 /**
  * What one history entry changed. The first version is the upload; a later
  * one over the same file is a rename, and one with a new file is a new image.
+ *
+ * A restore is checked first and on its own field. It reuses the stored file
+ * of the version it brings back, so by path alone it looks like a new image
+ * — or, if the figure had been renamed and then restored to a version with
+ * the same picture, like a rename. Neither describes what happened.
  */
 export const versionKind = (
   v: AttachmentVersion,
   older: AttachmentVersion | undefined
-): 'uploaded' | 'renamed' | 'new image' => {
+): string => {
+  if (v.restored_from) return `restored from v${v.restored_from}`;
   if (!older) return 'uploaded';
   return older.file_path === v.file_path ? 'renamed' : 'new image';
 };
@@ -67,6 +82,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
   readOnly = false,
   onUpload,
   onUploadVersion,
+  onRestored,
   onRename,
   isUploadLoading = false,
   showUpload = false,
@@ -76,6 +92,10 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
   const alertDialog = useAlert();
   const prompt = usePrompt();
   const canRename = useFeature(FIGURE_TITLES_FEATURE) && !readOnly && Boolean(onRename);
+  // Restoring changes what the figure shows, so it needs the same write
+  // access as uploading a version — hence onUploadVersion, which is only
+  // passed where the caller can write.
+  const canRestore = useFeature(FIGURE_REVERT_FEATURE) && !readOnly && Boolean(onUploadVersion);
   const [selectedImage, setSelectedImage] = useState<Attachment | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   // One input serves every figure's "new version" button; the figure it is
@@ -86,6 +106,9 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
   const [historyFor, setHistoryFor] = useState<Attachment | null>(null);
   const [history, setHistory] = useState<AttachmentVersion[]>([]);
   const [historyError, setHistoryError] = useState('');
+  // Which version is being restored, so its own button can say so without
+  // every row in the dialog going busy.
+  const [restoring, setRestoring] = useState<number | null>(null);
 
   const validImage = (file: File): boolean => {
     if (!file.type.startsWith('image/')) {
@@ -116,16 +139,57 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
     onRename?.(attachment.id, next);
   };
 
+  const loadHistory = useCallback(async (attachmentId: string) => {
+    setHistoryError('');
+    try {
+      const res = await attachmentAPI.listVersions(attachmentId);
+      setHistory(res.data || []);
+    } catch {
+      setHistoryError('Failed to load the figure history.');
+    }
+  }, []);
+
   const openHistory = async (e: React.MouseEvent, attachment: Attachment) => {
     e.stopPropagation();
     setHistoryFor(attachment);
     setHistory([]);
+    await loadHistory(attachment.id);
+  };
+
+  const restoreVersion = async (version: number) => {
+    if (!historyFor) return;
+    const ok = await confirm({
+      title: `Restore version ${version}`,
+      message:
+        `${figureLabel(historyFor)} goes back to the image and name it had at version ${version}. ` +
+        'Nothing is deleted: this is recorded as a new version, and every version stays in the history.',
+      confirmLabel: 'Restore',
+    });
+    if (!ok) return;
+
+    setRestoring(version);
     setHistoryError('');
     try {
-      const res = await attachmentAPI.listVersions(attachment.id);
-      setHistory(res.data || []);
-    } catch {
-      setHistoryError('Failed to load the figure history.');
+      const res = await attachmentAPI.restoreVersion(historyFor.id, version);
+      // The figure's own row must catch up too, or the gallery keeps showing
+      // the superseded thumbnail behind the open dialog.
+      setHistoryFor({
+        ...historyFor,
+        version: res.data.version,
+        title: res.data.title,
+        original_filename: res.data.original_filename,
+        filename: res.data.filename,
+      });
+      await loadHistory(historyFor.id);
+      onRestored?.();
+    } catch (err: any) {
+      setHistoryError(
+        err?.response?.status === 409
+          ? 'That version is already the current one.'
+          : 'Failed to restore that version.'
+      );
+    } finally {
+      setRestoring(null);
     }
   };
 
@@ -448,14 +512,38 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
                     {v.title && v.original_filename ? ` · ${v.original_filename}` : ''}
                   </div>
                 </div>
-                <a
-                  href={attachmentAPI.getDownloadUrl(historyFor.id, v.version)}
-                  target="_blank"
-                  rel="noreferrer"
-                  style={{ fontSize: 12 }}
-                >
-                  Open
-                </a>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <a
+                    href={attachmentAPI.getDownloadUrl(historyFor.id, v.version)}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ fontSize: 12 }}
+                  >
+                    Open
+                  </a>
+                  {/* The current version has nothing to restore to. */}
+                  {canRestore && v.version !== historyFor.version && (
+                    <button
+                      type="button"
+                      onClick={() => restoreVersion(v.version)}
+                      disabled={restoring !== null}
+                      title={`Bring ${figureLabel(historyFor)} back to version ${v.version}`}
+                      style={{
+                        minHeight: 32,
+                        padding: '0 10px',
+                        width: 'auto',
+                        background: 'none',
+                        border: '1px solid var(--border)',
+                        borderRadius: 4,
+                        color: 'var(--text)',
+                        fontSize: 12,
+                        cursor: restoring !== null ? 'not-allowed' : 'pointer',
+                      }}
+                    >
+                      {restoring === v.version ? 'Restoring…' : 'Restore'}
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
           </div>

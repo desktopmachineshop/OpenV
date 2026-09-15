@@ -41,6 +41,7 @@ var Registry = []Feature{
 	{Key: FeaturePasswordReset, ShippedIn: "0.6.0", Summary: "Forgot your password? An emailed reset link from the sign-in page, or one a platform admin makes for you"},
 	{Key: FeatureAntigravity, ShippedIn: "0.7.0", Summary: "Antigravity CLI as an agent provider: Google's successor to the Gemini CLI, run from a workspace Gemini API key"},
 	{Key: FeatureTodoList, ShippedIn: "0.8.0", Summary: "To-dos: raise one from a note that names someone, and see who owes what on a page of its own under Plan"},
+	{Key: FeatureFigureRevert, ShippedIn: "0.8.0", Summary: "Restore an older version of a figure from its history, recorded as a new version so nothing is lost"},
 }
 
 // Feature keys the code gates on.
@@ -60,6 +61,8 @@ const (
 	// FeatureTodoList is the To-dos page and the to-do a note raises for
 	// the person it names.
 	FeatureTodoList = "todo-list"
+	// FeatureFigureRevert is restoring an older version of a figure.
+	FeatureFigureRevert = "figure-revert"
 )
 
 // Enabled reports whether a feature is on for a workspace on the given

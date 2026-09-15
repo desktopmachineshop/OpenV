@@ -1390,6 +1390,13 @@ var migrations = []Migration{
 		_, err := tx.Exec(`CREATE INDEX IF NOT EXISTS idx_work_items_source_chatter ON work_items(source_chatter_id) WHERE source_chatter_id IS NOT NULL`)
 		return err
 	}},
+	// A restored figure version records which version it brought back, so the
+	// history can say so. A restore reuses the older version's stored file,
+	// which means file paths alone cannot tell a restore from a re-upload.
+	{Version: 44, Name: "attachment_version_restored_from", Run: func(tx *sql.Tx) error {
+		_, err := tx.Exec(`ALTER TABLE attachment_versions ADD COLUMN IF NOT EXISTS restored_from INT`)
+		return err
+	}},
 }
 
 // backfillRefPrefix is the type→prefix mapping frozen at the time migration

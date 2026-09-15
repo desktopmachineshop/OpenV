@@ -326,6 +326,12 @@ export interface AttachmentVersion {
   file_size: number;
   created_by?: string | null;
   created_at: string;
+  /**
+   * The older version this one brought back, when it was written by a
+   * restore. A restore reuses the older version's stored file, so this is
+   * the only thing that tells it apart from a re-upload of the same image.
+   */
+  restored_from?: number | null;
 }
 
 // Server-side page size for artifact listings (the backend defaults to and
@@ -627,6 +633,12 @@ export const attachmentAPI = {
   },
   listVersions: (id: string) =>
     client.get<AttachmentVersion[]>(`/api/v1/attachments/${id}/versions`),
+  /**
+   * Bring an older version back as a new one. Nothing is deleted: the
+   * restore is itself a version, and the history keeps every step.
+   */
+  restoreVersion: (id: string, version: number) =>
+    client.post<AttachmentVersion>(`/api/v1/attachments/${id}/versions/${version}/restore`),
   /** Give a figure a title; "" clears it. A change is a new figure version. */
   rename: (id: string, title: string) =>
     client.put<Attachment>(`/api/v1/attachments/${id}`, { title }),

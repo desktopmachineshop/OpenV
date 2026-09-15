@@ -1,6 +1,7 @@
 package attachments
 
 import (
+	"errors"
 	"fmt"
 	"path"
 	"regexp"
@@ -131,7 +132,20 @@ type Version struct {
 	FileSize         int       `json:"file_size"`
 	CreatedBy        *string   `json:"created_by,omitempty"`
 	CreatedAt        time.Time `json:"created_at"`
+	// RestoredFrom names the older version this one brings back, when it was
+	// written by a restore. It is what lets the history say "restored from
+	// v2" rather than leaving a reader to work out why an old drawing
+	// reappeared — and it is why a restore cannot be told apart from a fresh
+	// upload by comparing file paths alone.
+	RestoredFrom *int `json:"restored_from,omitempty"`
 }
+
+// ErrNoSuchVersion reports a restore naming a version the figure never had.
+var ErrNoSuchVersion = errors.New("no such figure version")
+
+// ErrAlreadyCurrent reports a restore of the version the figure is already
+// showing. Writing it again would add a version that changed nothing.
+var ErrAlreadyCurrent = errors.New("that version is already current")
 
 // CreateAttachmentRequest is the payload for creating an attachment
 type CreateAttachmentRequest struct {
@@ -189,6 +203,11 @@ type Repository interface {
 	ListVersions(attachmentID string) ([]*Version, error)
 	// FindVersion returns one version of a figure.
 	FindVersion(attachmentID string, version int) (*Version, error)
+	// Restore brings an older version's image and title back as a NEW
+	// version, leaving every existing version in place. It returns the
+	// version written, ErrNoSuchVersion when the figure never had that
+	// version, or ErrAlreadyCurrent when it is the one already showing.
+	Restore(attachmentID string, version int, by *string) (*Version, error)
 }
 
 // Service defines the attachment domain logic
@@ -214,6 +233,9 @@ type Service interface {
 	GetVersions(attachmentID string) ([]*Version, error)
 	// GetVersion returns one version of a figure.
 	GetVersion(attachmentID string, version int) (*Version, error)
+	// RestoreVersion brings an older version back as a new one (see
+	// Repository.Restore).
+	RestoreVersion(attachmentID string, version int, by *string) (*Version, error)
 }
 
 // ErrTitleTooLong refuses a figure title over MaxTitleLen characters.
@@ -282,4 +304,19 @@ func (s *DefaultService) GetVersions(attachmentID string) ([]*Version, error) {
 // GetVersion returns one version of a figure.
 func (s *DefaultService) GetVersion(attachmentID string, version int) (*Version, error) {
 	return s.repository.FindVersion(attachmentID, version)
+}
+
+// RestoreVersion brings an older version of a figure back as a new version.
+//
+// Forward-only, deliberately: the older versions stay exactly where they
+// were and the restore is itself a version. Rewinding the counter and
+// dropping what came after would be the other way to read "revert", and it
+// would quietly destroy the record of what the figure showed while a
+// requirement was being reviewed against it — which is the one thing this
+// product exists to keep.
+func (s *DefaultService) RestoreVersion(attachmentID string, version int, by *string) (*Version, error) {
+	if version < 1 {
+		return nil, ErrNoSuchVersion
+	}
+	return s.repository.Restore(attachmentID, version, by)
 }

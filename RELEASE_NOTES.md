@@ -24,6 +24,13 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   current status, so an old thread tells you whether the thing being
   discussed ever got done. Mentioning someone still just tells them: nothing
   is added to the board unless you ask for it.
+- **Restore an older version of a figure.** Its history now offers *Restore*
+  on any earlier version: the figure goes back to the image and the name it
+  had then. Like restoring an artifact, it is recorded as a new version and
+  nothing is deleted — the superseded drawing stays in the history and stays
+  openable, which is what you need when a requirement was reviewed against
+  what the figure used to show. The history entry says which version it
+  brought back.
 
 ### Bug fixes
 

@@ -469,6 +469,17 @@ export const ModuleView: React.FC = () => {
     }
   };
 
+  // A restore rewrites the figure's current image and title, so the editor's
+  // copy has to be refetched — the gallery only knows what it did, not what
+  // the artifact's other readers now show.
+  const handleAttachmentRestored = () => {
+    // Same artifact the figures were loaded for — the editor's when one is
+    // open, else the selected row.
+    const artifactId = editingArtifact?.id || selectedArtifactId;
+    if (artifactId) loadAttachments(artifactId);
+    loadArtifacts();
+  };
+
   const handleDeleteAttachment = async (attachmentId: string) => {
     try {
       await attachmentAPI.delete(attachmentId);
@@ -1848,6 +1859,7 @@ export const ModuleView: React.FC = () => {
             onUploadAttachment={handleUploadAttachment}
             onUploadAttachmentVersion={handleUploadAttachmentVersion}
             onRenameAttachment={handleRenameAttachment}
+            onAttachmentRestored={handleAttachmentRestored}
             onDeleteAttachment={handleDeleteAttachment}
             isUploadLoading={uploadingAttachmentId === editingArtifact.id}
             links={allLinks}

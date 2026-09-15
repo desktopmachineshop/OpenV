@@ -436,6 +436,7 @@ func (h *Handler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/attachments/{id}/download", h.DownloadAttachment).Methods("GET")
 	router.HandleFunc("/api/v1/attachments/{id}/versions", h.UploadAttachmentVersion).Methods("POST")
 	router.HandleFunc("/api/v1/attachments/{id}/versions", h.ListAttachmentVersions).Methods("GET")
+	router.HandleFunc("/api/v1/attachments/{id}/versions/{version}/restore", h.RestoreAttachmentVersion).Methods("POST")
 	router.HandleFunc("/api/v1/attachments/{id}", h.DeleteAttachment).Methods("DELETE")
 	router.HandleFunc("/api/v1/artifacts/{artifactID}/attachments", h.ListArtifactAttachments).Methods("GET")
 
@@ -2578,6 +2579,48 @@ func (h *Handler) ListAttachmentVersions(w http.ResponseWriter, r *http.Request)
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(versions)
+}
+
+// RestoreAttachmentVersion brings an older version of a figure back as a new
+// version. Editor role, like uploading one: it changes what the figure
+// shows.
+func (h *Handler) RestoreAttachmentVersion(w http.ResponseWriter, r *http.Request) {
+	id := mux.Vars(r)["id"]
+
+	version, err := strconv.Atoi(mux.Vars(r)["version"])
+	if err != nil || version < 1 {
+		writeJSONError(w, http.StatusBadRequest, "version must be a positive whole number")
+		return
+	}
+
+	attachment, err := h.attachmentService.GetAttachment(id)
+	if err != nil || attachment == nil {
+		writeJSONError(w, http.StatusNotFound, "Attachment not found")
+		return
+	}
+	if !h.requireProjectRole(w, r, h.projectIDForArtifact(attachment.ArtifactID), members.RoleEditor) {
+		return
+	}
+
+	restored, err := h.attachmentService.RestoreVersion(id, version, CurrentUserID(r))
+	switch {
+	case errors.Is(err, attachments.ErrNoSuchVersion):
+		writeJSONError(w, http.StatusNotFound, fmt.Sprintf("This figure has no version %d", version))
+		return
+	case errors.Is(err, attachments.ErrAlreadyCurrent):
+		// Not an error the member made: they asked for the state the figure
+		// is already in. Say so rather than writing a version that changes
+		// nothing.
+		writeJSONError(w, http.StatusConflict, fmt.Sprintf("Version %d is already the current one", version))
+		return
+	case err != nil:
+		respondInternal(w, r, "Failed to restore the figure version", err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(restored)
 }
 
 // DownloadAttachment serves the attachment file

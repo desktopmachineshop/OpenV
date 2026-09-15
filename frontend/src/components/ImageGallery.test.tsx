@@ -151,6 +151,27 @@ describe('history', () => {
     expect(versionKind(newest[1], newest[2])).toBe('renamed');
     expect(versionKind(newest[2], undefined)).toBe('uploaded');
   });
+
+  it('names the version a restore brought back', () => {
+    const restored = { ...v(4, '/u/one.png', ''), restored_from: 1 };
+
+    expect(versionKind(restored, v(3, '/u/two.png', 'Pump curve'))).toBe('restored from v1');
+  });
+
+  it('calls a restore a restore even when it looks like a rename', () => {
+    // A restore reuses the stored file of the version it brings back. Where
+    // that file is the one already showing, comparing paths would read the
+    // entry as a rename and say nothing about where the content came from.
+    const restored = { ...v(4, '/u/one.png', 'Pump curve, rev A'), restored_from: 2 };
+
+    expect(versionKind(restored, v(3, '/u/one.png', 'Pump curve'))).toBe('restored from v2');
+  });
+
+  it('leaves ordinary versions alone when restored_from is absent or null', () => {
+    const plain = { ...v(2, '/u/two.png', ''), restored_from: null };
+
+    expect(versionKind(plain, v(1, '/u/one.png', ''))).toBe('new image');
+  });
 });
 
 describe('inside the editor form', () => {
