@@ -9,6 +9,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+## 0.8.0 — 2026-09-15
+
 ### New features
 
 - **To-dos**, under *Plan*, lists the project's work under the person it
