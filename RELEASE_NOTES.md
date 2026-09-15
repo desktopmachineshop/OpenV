@@ -9,6 +9,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+## 0.8.2 — 2026-09-15
+
 ### Maintenance updates
 
 - Every release from now on is tagged in the source repository as
