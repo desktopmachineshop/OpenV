@@ -47,6 +47,27 @@
   background: var(--accent-strong);
 }
 
+/* Clearance for the floating ? button.
+ *
+ * The button is 60px square, inset 20px from the bottom-right corner, and
+ * fixed to the viewport — so it sits on top of whatever the page puts in
+ * that corner. On the V&V dashboard that is the runs table's action column,
+ * whose Complete and Abort buttons ended up underneath it and could not be
+ * clicked at all once the table reached the bottom of the window.
+ *
+ * Phones already avoided this by moving the button into the top bar (see
+ * HelpSidebar.tsx); desktop keeps the floating button, so the scrolling
+ * region reserves the corner instead. Padding inside the scroll box rather
+ * than a margin outside it: the last row then scrolls clear of the button
+ * instead of stopping under it.
+ *
+ * Applied to the scrolling region by whoever mounts the button, so it
+ * follows the button rather than being repeated per page.
+ */
+.help-toggle-clearance {
+  padding-bottom: 88px;
+}
+
 .help-content {
   padding: 80px 20px 20px 20px;
   height: 100%;

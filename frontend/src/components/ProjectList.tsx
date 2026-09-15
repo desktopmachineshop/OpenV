@@ -567,7 +567,7 @@ export const ProjectList: React.FC = () => {
           onClose={() => setDownloadProjectId(null)}
         />
       )}
-      <div className="project-list-container">
+      <div className="project-list-container help-toggle-clearance">
 
       {/* An installed-app shortcut that could not guess the project says so
           rather than silently dropping the member on the plain project list. */}

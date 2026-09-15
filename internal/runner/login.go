@@ -41,6 +41,15 @@ type loginFlow struct {
 	browserDetail string
 }
 
+// signInFailure annotates a failed sign-in with anything provider-specific
+// the member needs in order to tell "try again" from "this cannot work".
+func signInFailure(provider, detail string) string {
+	if provider == providers.ProviderGeminiCLI {
+		return geminiSignInFailure(detail)
+	}
+	return detail
+}
+
 func flowFor(provider string) (loginFlow, bool) {
 	switch provider {
 	case providers.ProviderClaudeCode:
@@ -278,7 +287,7 @@ func (w *Worker) handleInteractiveLogin(ctx context.Context, login *providers.Lo
 		case err := <-done:
 			if err != nil {
 				w.loginProgress(login.ID, providers.LoginFailed, "",
-					"the sign-in terminal closed without completing: "+err.Error())
+					signInFailure(login.Provider, "the sign-in terminal closed without completing: "+err.Error()))
 				return
 			}
 			w.loginProgress(login.ID, providers.LoginCompleted, "", "Signed in successfully.")

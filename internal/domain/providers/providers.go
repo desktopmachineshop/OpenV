@@ -10,12 +10,15 @@ import (
 
 // Known provider names.
 const (
-	ProviderClaudeCode   = "claude-code"
-	ProviderCodexCLI     = "codex-cli"
-	ProviderGeminiCLI    = "gemini-cli"
-	ProviderAnthropicAPI = "anthropic-api"
-	ProviderOpenAIAPI    = "openai-api"
-	ProviderGoogleAPI    = "google-api"
+	ProviderClaudeCode = "claude-code"
+	ProviderCodexCLI   = "codex-cli"
+	ProviderGeminiCLI  = "gemini-cli"
+	// ProviderAntigravityCLI is Google's successor to the Gemini CLI: on
+	// 18 June 2026 the consumer tiers were moved onto it.
+	ProviderAntigravityCLI = "antigravity-cli"
+	ProviderAnthropicAPI   = "anthropic-api"
+	ProviderOpenAIAPI      = "openai-api"
+	ProviderGoogleAPI      = "google-api"
 )
 
 // Auth modes.
@@ -39,7 +42,7 @@ func DefaultAPIKeyEnv(provider string) string {
 		return "ANTHROPIC_API_KEY"
 	case ProviderCodexCLI, ProviderOpenAIAPI:
 		return "OPENAI_API_KEY"
-	case ProviderGeminiCLI, ProviderGoogleAPI:
+	case ProviderGeminiCLI, ProviderAntigravityCLI, ProviderGoogleAPI:
 		return "GEMINI_API_KEY"
 	}
 	return ""
@@ -76,6 +79,7 @@ func KnownProviders() []string {
 		ProviderClaudeCode,
 		ProviderCodexCLI,
 		ProviderGeminiCLI,
+		ProviderAntigravityCLI,
 		ProviderAnthropicAPI,
 		ProviderOpenAIAPI,
 		ProviderGoogleAPI,

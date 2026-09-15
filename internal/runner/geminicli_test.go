@@ -497,3 +497,34 @@ func TestGeminiTrustEnvValueIsExact(t *testing.T) {
 		t.Errorf("geminiTrustEnvValue = %q, want \"true\"", geminiTrustEnvValue)
 	}
 }
+
+// A failed Gemini sign-in keeps its cause and gains the tier note: the
+// member needs the raw failure to report and the note to know whether
+// reporting it is worth anything.
+func TestGeminiSignInFailureKeepsTheCauseAndExplainsTheTier(t *testing.T) {
+	raw := "sign-in command failed: exit status 55 — output tail: something went wrong"
+	got := geminiSignInFailure(raw)
+
+	if !strings.Contains(got, raw) {
+		t.Errorf("the original cause was dropped: %q", got)
+	}
+	for _, want := range []string{"Code Assist", "Antigravity", "API key"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("the note does not mention %q: %q", want, got)
+		}
+	}
+}
+
+// Only Gemini gets the note; the other providers are unaffected by Google's
+// tier change and should not carry an explanation about it.
+func TestSignInFailureAnnotatesOnlyGemini(t *testing.T) {
+	const raw = "sign-in command failed: exit status 1"
+	if got := signInFailure(providers.ProviderGeminiCLI, raw); got == raw {
+		t.Error("a gemini sign-in failure should carry the tier note")
+	}
+	for _, provider := range []string{providers.ProviderClaudeCode, providers.ProviderCodexCLI} {
+		if got := signInFailure(provider, raw); got != raw {
+			t.Errorf("%s failure was annotated: %q", provider, got)
+		}
+	}
+}

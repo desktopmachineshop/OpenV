@@ -506,7 +506,13 @@ export const ProjectLayout: React.FC = () => {
           )}
         </div>
       </aside>
-      <main style={{ flex: 1, minWidth: 0, minHeight: 0, overflow: 'auto', background: 'var(--bg-app)' }}>
+      {/* The clearance class only where the floating ? button is actually
+          rendered: on a phone it lives in the top bar instead, so reserving
+          the corner there would be dead space above the composer. */}
+      <main
+        className={compact ? undefined : 'help-toggle-clearance'}
+        style={{ flex: 1, minWidth: 0, minHeight: 0, overflow: 'auto', background: 'var(--bg-app)' }}
+      >
         <Outlet />
       </main>
       {/* Floating context-aware help — mounted once here so the ? button is

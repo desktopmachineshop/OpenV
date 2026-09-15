@@ -35,6 +35,10 @@ interface UserSettingsPanelProps {
 }
 
 // CLI providers that support local subscription sign-in.
+// The CLIs a member can sign in to from here. Antigravity CLI is deliberately
+// absent: it keeps its sign-in in the operating system keyring, which a runner
+// container does not have, so it runs from a workspace Gemini API key instead
+// of a personal sign-in (docs/agents.md).
 const CLI_PROVIDERS: { key: string; label: string }[] = [
   { key: 'claude-code', label: 'Claude Code' },
   { key: 'codex-cli', label: 'Codex CLI' },
