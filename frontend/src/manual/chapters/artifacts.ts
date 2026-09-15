@@ -57,14 +57,22 @@ Type **\`#\`** in an artifact's description to cite something: its own figures
 choose with the arrow keys or the mouse, and the reference is inserted as
 \`#REQ-17-FIG-1\`.
 
-Outside edit mode a reference is a link: clicking an artifact reference selects
-that artifact, and clicking a figure reference opens the figure where you are,
-so following a citation never loses your place.
+Type **\`##\`** to cite a figure on **any** artifact in the project. The menu
+lists this artifact's own figures first, then everyone else's with the artifact
+each belongs to, and the citation is written \`##REQ-99-FIG-2\` so a reader can
+see at a glance that it reaches outside what they are reading.
 
-The list is deliberately short. It offers only what this artifact is already
-connected to, because a description citing a requirement it has no link to is
-a claim the traceability matrix cannot see — link it first, and it appears in
-the menu.
+Outside edit mode a reference is a link: clicking an artifact reference selects
+that artifact, and clicking a figure reference opens the figure itself — the
+drawing, the datasheet, the model — wherever in the project it lives, so
+following a citation never loses your place.
+
+The single-\`#\` list is deliberately short. It offers only what this artifact
+is already connected to, because a description citing a requirement it has no
+link to is a claim the traceability matrix cannot see — link it first, and it
+appears in the menu. Figures are the exception \`##\` makes: pointing a reader
+at a drawing asserts nothing about how two artifacts relate, so it needs no
+link to justify it.
 
 ## Making room
 
@@ -114,11 +122,36 @@ Select an artifact to see its details; **Edit** opens the editor.
 
 ## Figures
 
-Images attached to an artifact are **figures**. Each is numbered from the
+Files attached to an artifact are **figures**. Each is numbered from the
 artifact's own reference — \`REQ-17-FIG-1\` — and that number is never reissued,
 so it stays a safe citation even after the figure it named is deleted. The
 stored file takes the figure's name too, so downloading one saves
 \`REQ-17-FIG-1.png\` rather than whatever the camera called it.
+
+### What can be attached
+
+- **Images** — PNG, JPEG, GIF, WebP, SVG, TIFF, BMP.
+- **PDFs** — a supplier datasheet, a standard, a test report.
+- **CAD** — STEP, IGES, STL, 3MF, OBJ, PLY, glTF, DXF, DWG, and the common
+  native formats (SolidWorks, Inventor, CATIA, Fusion, Parasolid, Rhino).
+
+One figure may be up to 25 MB. Attach the file your team actually works from,
+so the requirement points at the real thing rather than a picture of it.
+
+### Looking at one
+
+Clicking a figure opens it. An image is shown full size, a PDF opens in a
+reader with the pages scrollable, and an **STL** is drawn as a 3D preview you
+can drag to turn, with its triangle count and bounding box underneath.
+
+Other CAD formats are **not** previewed: a STEP file or a native part needs a
+geometry kernel to interpret, and an approximation of a part is worse than
+none because a reviewer would trust it. Those open a panel naming the format
+and its size, with a Download button — open it in the tool that owns it.
+
+Every figure, previewable or not, has that Download button.
+
+### Changing one
 
 Figures are added, replaced and removed **while editing** the artifact — what
 the document shows changes by a deliberate edit, not a stray click while
@@ -126,7 +159,18 @@ reading. Use **⬆** on a figure to upload a new version: the figure keeps its
 reference, the artifact takes a new version, and the notes record the change.
 **🕘** shows the history, and every superseded version stays viewable.
 
-On the details view figures are read-only, with the lightbox for a closer look.
+A figure may change format between versions — a sketch replaced by the real
+drawing, a screenshot replaced by the STEP file — and keeps its number.
+
+### In generated documents
+
+Only images are laid into a generated PDF or Word document. A datasheet or a
+model has nothing to draw, so it is listed and citable rather than printed as
+an apology in the middle of the specification; its file rides along in a
+download's zip, under the **Models** or **Documents** group rather than
+**Figures**.
+
+On the details view figures are read-only, with the viewer for a closer look.
 
 ## Comments (Chatter)
 

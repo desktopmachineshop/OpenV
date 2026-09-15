@@ -161,3 +161,37 @@
     font-size: 12px;
   }
 }
+
+/* A tile for a figure with nothing to draw: a PDF, a CAD model. It fills the
+   same square an image thumbnail does, so a mixed gallery stays one grid, and
+   spends that square saying what the file is rather than showing a generic
+   page icon at thumbnail size. */
+.gallery-thumbnail-file {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 6px;
+  text-align: center;
+  background: var(--neutral-soft);
+  box-sizing: border-box;
+}
+
+.gallery-file-glyph {
+  font-size: 26px;
+  line-height: 1;
+}
+
+.gallery-file-format {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.gallery-file-size {
+  font-size: 10px;
+  color: var(--text-muted);
+}

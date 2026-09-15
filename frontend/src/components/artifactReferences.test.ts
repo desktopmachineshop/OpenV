@@ -3,10 +3,13 @@ import {
   REFERENCE_SCHEME,
   activeReferenceQuery,
   applyReference,
+  artifactRefOfFigure,
+  isFigureRef,
   linkifyReferences,
   matchReferences,
   referenceCandidates,
   referenceFromHref,
+  referenceUrlTransform,
 } from './artifactReferences';
 
 const artifact = (over: Partial<Artifact> & { id: string }): Artifact => ({
@@ -40,6 +43,7 @@ const attachment = (over: Partial<Attachment> & { id: string; artifact_id: strin
   mime_type: 'image/png',
   file_path: '/tmp/f.png',
   file_size: 1,
+  kind: 'image',
   version: 1,
   created_at: '',
   ...over,
@@ -98,10 +102,25 @@ describe('referenceCandidates', () => {
 
 describe('activeReferenceQuery', () => {
   it('opens on a # at the start of a word and tracks what follows', () => {
-    expect(activeReferenceQuery('see #', 5)).toEqual({ start: 4, query: '' });
-    expect(activeReferenceQuery('see #REQ', 8)).toEqual({ start: 4, query: 'REQ' });
-    expect(activeReferenceQuery('#REQ', 4)).toEqual({ start: 0, query: 'REQ' });
-    expect(activeReferenceQuery('line\n#TC', 8)).toEqual({ start: 5, query: 'TC' });
+    expect(activeReferenceQuery('see #', 5)).toEqual({ start: 4, query: '', scope: 'local' });
+    expect(activeReferenceQuery('see #REQ', 8)).toEqual({ start: 4, query: 'REQ', scope: 'local' });
+    expect(activeReferenceQuery('#REQ', 4)).toEqual({ start: 0, query: 'REQ', scope: 'local' });
+    expect(activeReferenceQuery('line\n#TC', 8)).toEqual({ start: 5, query: 'TC', scope: 'local' });
+  });
+
+  it('reads a doubled # as the project-wide scope, marker and all', () => {
+    expect(activeReferenceQuery('see ##', 6)).toEqual({ start: 4, query: '', scope: 'project' });
+    expect(activeReferenceQuery('see ##REQ-17', 12)).toEqual({
+      start: 4,
+      query: 'REQ-17',
+      scope: 'project',
+    });
+    expect(activeReferenceQuery('##TC', 4)).toEqual({ start: 0, query: 'TC', scope: 'project' });
+  });
+
+  it('leaves a third-level heading alone: three hashes are not a marker', () => {
+    expect(activeReferenceQuery('###', 3)).toBeNull();
+    expect(activeReferenceQuery('####REQ', 7)).toBeNull();
   });
 
   it('ignores a # inside a word, so URLs and "PR#12" are left alone', () => {
@@ -116,7 +135,11 @@ describe('activeReferenceQuery', () => {
 
   it('reads from the caret, not the end of the text', () => {
     // Caret sits just after "#RE" while more text follows.
-    expect(activeReferenceQuery('see #REQ-17 and more', 7)).toEqual({ start: 4, query: 'RE' });
+    expect(activeReferenceQuery('see #REQ-17 and more', 7)).toEqual({
+      start: 4,
+      query: 'RE',
+      scope: 'local',
+    });
   });
 });
 
@@ -204,5 +227,103 @@ describe('referenceFromHref', () => {
   it('reports nothing for an ordinary link', () => {
     expect(referenceFromHref('https://example.com')).toBe('');
     expect(referenceFromHref(undefined)).toBe('');
+  });
+});
+
+// "##" is the wider marker: figures anywhere in the project, whether or not
+// this artifact is linked to the one holding them.
+describe('referenceCandidates under the project scope', () => {
+  const me = artifact({ id: 'me', ref: 'REQ-17', title: 'Pump control' });
+  const elsewhere = artifact({ id: 'far', ref: 'REQ-99', title: 'Hydraulic schedule' });
+  const mine = attachment({
+    id: 'a1',
+    artifact_id: 'me',
+    figure_ref: 'REQ-17-FIG-1',
+    original_filename: 'pump.png',
+  });
+  const theirs = attachment({
+    id: 'a2',
+    artifact_id: 'far',
+    figure_ref: 'REQ-99-FIG-2',
+    original_filename: 'manifold.pdf',
+  });
+
+  it('offers figures from every artifact, this one first', () => {
+    const got = referenceCandidates(me, [], [me, elsewhere], [theirs, mine], 'project');
+    expect(got.map((c) => c.ref)).toEqual(['REQ-17-FIG-1', 'REQ-99-FIG-2']);
+  });
+
+  it('names the artifact a figure belongs to, and only when it is another one', () => {
+    const got = referenceCandidates(me, [], [me, elsewhere], [mine, theirs], 'project');
+    expect(got[0].owner).toBeUndefined();
+    expect(got[1]).toMatchObject({ owner: 'Hydraulic schedule', label: 'manifold.pdf' });
+  });
+
+  it('offers no artifacts: a bare citation is the one that needs a link behind it', () => {
+    const got = referenceCandidates(me, [link('far', 'me')], [me, elsewhere], [mine], 'project');
+    expect(got.every((c) => c.kind === 'figure')).toBe(true);
+  });
+
+  it('needs no link to the artifact holding the figure', () => {
+    const got = referenceCandidates(me, [], [me, elsewhere], [theirs], 'project');
+    expect(got.map((c) => c.ref)).toEqual(['REQ-99-FIG-2']);
+  });
+});
+
+describe('applyReference with the project marker', () => {
+  it('writes back both hashes', () => {
+    const text = 'see ##man';
+    const query = activeReferenceQuery(text, text.length)!;
+    const got = applyReference(text, query, text.length, 'REQ-99-FIG-2');
+    expect(got.text).toBe('see ##REQ-99-FIG-2 ');
+    expect(got.caret).toBe(got.text.length);
+  });
+});
+
+describe('linkifyReferences across artifacts', () => {
+  it('links a ## citation, keeping the marker in the text and out of the target', () => {
+    expect(linkifyReferences('as built in ##REQ-99-FIG-2 there')).toBe(
+      `as built in [##REQ-99-FIG-2](${REFERENCE_SCHEME}REQ-99-FIG-2) there`
+    );
+  });
+
+  it('still leaves a second-level heading alone', () => {
+    expect(linkifyReferences('## Interfaces')).toBe('## Interfaces');
+    expect(linkifyReferences('### Verification')).toBe('### Verification');
+  });
+});
+
+describe('artifactRefOfFigure', () => {
+  it('names the artifact a figure hangs on', () => {
+    expect(artifactRefOfFigure('REQ-17-FIG-1')).toBe('REQ-17');
+    expect(artifactRefOfFigure('HAZ-2-FIG-30')).toBe('HAZ-2');
+  });
+
+  it('leaves an artifact reference as it is', () => {
+    expect(artifactRefOfFigure('REQ-17')).toBe('REQ-17');
+  });
+
+  it('agrees with isFigureRef about what is a figure', () => {
+    expect(isFigureRef('REQ-17-FIG-1')).toBe(true);
+    expect(isFigureRef('REQ-17')).toBe(false);
+  });
+});
+
+// The renderer blanks the href of any scheme it does not know, which turned
+// every citation into an anchor with no target — clicking one re-opened the
+// page the reader was already on.
+describe('referenceUrlTransform', () => {
+  const fallback = () => '';
+
+  it('passes a reference through untouched', () => {
+    expect(referenceUrlTransform(`${REFERENCE_SCHEME}REQ-17-FIG-1`, 'href', null, fallback)).toBe(
+      `${REFERENCE_SCHEME}REQ-17-FIG-1`
+    );
+  });
+
+  it('hands every other URL to the renderer own sanitiser', () => {
+    const sanitiser = jest.fn(() => 'sanitised');
+    expect(referenceUrlTransform('javascript:alert(1)', 'href', null, sanitiser)).toBe('sanitised');
+    expect(sanitiser).toHaveBeenCalledWith('javascript:alert(1)', 'href', null);
   });
 });

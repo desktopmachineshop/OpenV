@@ -9,6 +9,22 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### New features
+
+- Attach more than pictures to an artifact. A figure can now be a **PDF** —
+  a supplier datasheet, a standard, a test report — or a **CAD file**: STEP,
+  IGES, STL, 3MF, OBJ, PLY, glTF, DXF, DWG and the common native part
+  formats. Clicking one opens it: a PDF in a reader, an STL as a 3D preview
+  you can drag to turn, and every other format in a panel naming it with a
+  Download button. Figures keep one numbering sequence whatever the format,
+  so `REQ-17-FIG-2` may be a drawing today and the STEP model tomorrow.
+- Cite a figure on **any** artifact in the project by typing `##` in a
+  description. A single `#` still offers this artifact's own figures and the
+  artifacts it is linked to; `##` offers every figure in the project, naming
+  the artifact each belongs to, and writes the citation as
+  `##REQ-99-FIG-2` so a reader can see it reaches outside what they are
+  reading.
+
 ### Maintenance updates
 
 - OpenV's licence is now the Elastic License 2.0. Self-hosting stays free
@@ -16,6 +32,13 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   or support stays allowed; what is no longer allowed is offering OpenV to
   others as a hosted or managed service. The README, the site's licence
   section and the manual carry a plain-English summary.
+
+### Bug fixes
+
+- Clicking a figure or artifact citation in a description works again. Every
+  citation had been rendering as a link with no destination, so following one
+  opened a new tab showing the page you were already on instead of the figure
+  or artifact it named.
 
 ## 0.5.0 — 2026-09-13
 

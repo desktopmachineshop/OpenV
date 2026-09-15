@@ -432,6 +432,7 @@ func (h *Handler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/attachments/{id}/versions", h.ListAttachmentVersions).Methods("GET")
 	router.HandleFunc("/api/v1/attachments/{id}", h.DeleteAttachment).Methods("DELETE")
 	router.HandleFunc("/api/v1/artifacts/{artifactID}/attachments", h.ListArtifactAttachments).Methods("GET")
+	router.HandleFunc("/api/v1/projects/{projectID}/attachments", h.ListProjectAttachments).Methods("GET")
 
 	// Chatter endpoints
 	router.HandleFunc("/api/v1/chatter", h.CreateChatterEntry).Methods("POST")
@@ -2209,7 +2210,12 @@ func (h *Handler) DeleteBaseline(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// UploadAttachment uploads an image attachment for an artifact
+// UploadAttachment attaches a file to an artifact as a numbered figure.
+//
+// What may be attached is the catalogue in the attachments domain: pictures,
+// PDFs and CAD files. The type the platform records comes from there rather
+// than from the browser, which reports application/octet-stream for most CAD
+// formats and cannot be trusted to name one.
 func (h *Handler) UploadAttachment(w http.ResponseWriter, r *http.Request) {
 	artifactID := r.FormValue("artifact_id")
 	if artifactID == "" {
@@ -2228,10 +2234,13 @@ func (h *Handler) UploadAttachment(w http.ResponseWriter, r *http.Request) {
 	}
 	defer file.Close()
 
-	// Validate file is an image
-	mimeType := header.Header.Get("Content-Type")
-	if !isImageMimeType(mimeType) {
-		writeJSONError(w, http.StatusBadRequest, "File must be an image")
+	mimeType, kind, accepted := attachments.AcceptUpload(header.Header.Get("Content-Type"), header.Filename)
+	if !accepted {
+		writeJSONError(w, http.StatusBadRequest, unsupportedFigureMessage)
+		return
+	}
+	if !h.mayAttachKind(r, artifactID, kind) {
+		writeJSONError(w, http.StatusBadRequest, nonImageGateMessage)
 		return
 	}
 
@@ -2240,8 +2249,8 @@ func (h *Handler) UploadAttachment(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	if !uploadLooksLikeImage(mimeType, fileData) {
-		writeJSONError(w, http.StatusBadRequest, "File content does not match an image of the declared type")
+	if !uploadLooksLikeFigure(mimeType, header.Filename, fileData) {
+		writeJSONError(w, http.StatusBadRequest, "File content does not match the format its name gives it")
 		return
 	}
 
@@ -2350,9 +2359,13 @@ func (h *Handler) UploadAttachmentVersion(w http.ResponseWriter, r *http.Request
 	}
 	defer file.Close()
 
-	mimeType := header.Header.Get("Content-Type")
-	if !isImageMimeType(mimeType) {
-		writeJSONError(w, http.StatusBadRequest, "File must be an image")
+	mimeType, kind, accepted := attachments.AcceptUpload(header.Header.Get("Content-Type"), header.Filename)
+	if !accepted {
+		writeJSONError(w, http.StatusBadRequest, unsupportedFigureMessage)
+		return
+	}
+	if !h.mayAttachKind(r, existing.ArtifactID, kind) {
+		writeJSONError(w, http.StatusBadRequest, nonImageGateMessage)
 		return
 	}
 
@@ -2360,8 +2373,8 @@ func (h *Handler) UploadAttachmentVersion(w http.ResponseWriter, r *http.Request
 	if !ok {
 		return
 	}
-	if !uploadLooksLikeImage(mimeType, fileData) {
-		writeJSONError(w, http.StatusBadRequest, "File content does not match an image of the declared type")
+	if !uploadLooksLikeFigure(mimeType, header.Filename, fileData) {
+		writeJSONError(w, http.StatusBadRequest, "File content does not match the format its name gives it")
 		return
 	}
 
@@ -2524,6 +2537,34 @@ func (h *Handler) DeleteAttachment(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// ListProjectAttachments lists every figure in a project.
+//
+// It exists for cross-artifact figure references: the editor has to offer the
+// project's figures under "##" before the writer has any idea which artifact
+// holds the one they want, and a reader following such a citation has to be
+// able to open a figure that hangs on an artifact they are not looking at.
+// Fetching them one artifact at a time would be a request per artifact for
+// what is one small list.
+func (h *Handler) ListProjectAttachments(w http.ResponseWriter, r *http.Request) {
+	projectID := mux.Vars(r)["projectID"]
+
+	if !h.requireProjectRole(w, r, projectID, members.RoleViewer) {
+		return
+	}
+
+	list, err := h.attachmentService.GetAttachmentsByProject(projectID)
+	if err != nil {
+		respondInternal(w, r, "failed to list the project's attachments", err)
+		return
+	}
+	if list == nil {
+		list = []*attachments.Attachment{}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(list)
+}
+
 // ListArtifactAttachments lists all attachments for an artifact
 func (h *Handler) ListArtifactAttachments(w http.ResponseWriter, r *http.Request) {
 	artifactID := mux.Vars(r)["artifactID"]
@@ -2542,7 +2583,33 @@ func (h *Handler) ListArtifactAttachments(w http.ResponseWriter, r *http.Request
 	json.NewEncoder(w).Encode(attachmentList)
 }
 
-// isImageMimeType checks if the mime type is a valid image type
+// unsupportedFigureMessage names what went wrong in terms an uploader can act
+// on. The catalogue is long enough that listing it here would be noise, so it
+// names the families instead and leaves the detail to the manual.
+// nonImageGateMessage answers a workspace that has not received the wider
+// catalogue yet. It is deliberately about the release rather than the format:
+// the file is fine, the workspace's channel is what has not caught up.
+const nonImageGateMessage = "Attaching PDFs and CAD files " + featureGateMessage
+
+const unsupportedFigureMessage = "That file type cannot be attached. Figures may be images (PNG, JPEG, GIF, WebP, SVG, TIFF, BMP), PDFs, or CAD files (STEP, IGES, STL, 3MF, OBJ, glTF, DXF, DWG and the common native formats)."
+
+// mayAttachKind gates the formats beyond images (REQ-137).
+//
+// Only what may be ATTACHED is gated. Reading is not: a figure a colleague on
+// the nightly channel attached opens for everybody, because a gate that made
+// an existing file unreadable would be a regression dressed as a release
+// policy. An image is always attachable — that is what the feature widened
+// FROM, not something it introduced.
+func (h *Handler) mayAttachKind(r *http.Request, artifactID string, kind attachments.Kind) bool {
+	if kind == attachments.KindImage {
+		return true
+	}
+	return h.projectFeatureEnabled(r, h.projectIDForArtifact(artifactID), release.FeatureAttachmentFormats)
+}
+
+// isImageMimeType checks if the mime type is a valid image type. Figures no
+// longer go through it — they use the attachments catalogue — but avatars and
+// workspace logos still do, and those must stay pictures.
 func isImageMimeType(mimeType string) bool {
 	validTypes := map[string]bool{
 		"image/jpeg":    true,

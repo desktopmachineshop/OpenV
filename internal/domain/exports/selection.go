@@ -32,18 +32,24 @@ const (
 	CategoryDocuments = "documents"
 	// CategoryData is tabular or structured data: CSV, spreadsheets, JSON, XML.
 	CategoryData = "data"
+	// CategoryModels is CAD: a solid model, an assembly or a drawing file.
+	CategoryModels = "models"
 	// CategoryOther is everything else, so nothing attached is unreachable.
 	CategoryOther = "other"
 )
 
-// AttachmentCategory names the kind of file an attachment holds. The figure
-// number wins over the mime type: a numbered drawing is a figure whatever
-// format it was uploaded in.
+// AttachmentCategory names the kind of file an attachment holds.
+//
+// A figure number makes something a figure only when it is a picture. Every
+// attachment carries one — that is how a file is cited — so left unqualified
+// this would file a supplier datasheet or a STEP model under "figures", and
+// somebody asking a download for the figures would get a zip of CAD. The
+// format decides; the number only names.
 func AttachmentCategory(a *attachments.Attachment) string {
 	if a == nil {
 		return CategoryOther
 	}
-	if a.FigureRef != "" {
+	if a.FigureRef != "" && attachments.IsImage(a.MimeType) {
 		return CategoryFigures
 	}
 	mime := strings.ToLower(strings.TrimSpace(a.MimeType))
@@ -51,6 +57,8 @@ func AttachmentCategory(a *attachments.Attachment) string {
 		mime = strings.TrimSpace(mime[:i])
 	}
 	switch {
+	case attachments.KindForMime(mime) == attachments.KindModel:
+		return CategoryModels
 	case strings.HasPrefix(mime, "image/"):
 		return CategoryImages
 	case mime == "application/pdf",
@@ -245,7 +253,7 @@ func Categories(list []*attachments.Attachment) []CategoryCount {
 		counts[c].Count++
 		counts[c].Bytes += a.FileSize
 	}
-	order := []string{CategoryFigures, CategoryImages, CategoryDocuments, CategoryData, CategoryOther}
+	order := []string{CategoryFigures, CategoryImages, CategoryDocuments, CategoryModels, CategoryData, CategoryOther}
 	rank := map[string]int{}
 	for i, c := range order {
 		rank[c] = i

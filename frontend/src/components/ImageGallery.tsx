@@ -1,6 +1,17 @@
 import React, { useState, useRef } from 'react';
 import { Attachment, AttachmentVersion, attachmentAPI } from '../api/client';
-import { ImageLightbox } from './ImageLightbox';
+import { AttachmentViewer } from './AttachmentViewer';
+import {
+  ACCEPTED_UPLOAD_TYPES,
+  ATTACHMENT_FORMATS_FEATURE,
+  UNSUPPORTED_UPLOAD_MESSAGE,
+  attachmentLabel,
+  formatFileSize,
+  formatLabel,
+  isAcceptedUpload,
+  kindGlyph,
+} from './attachmentKinds';
+import { useFeature } from '../hooks/useFeature';
 import { useAlert, useConfirm } from './ui';
 import './ImageGallery.css';
 
@@ -27,8 +38,12 @@ interface ImageGalleryProps {
   thumbnailSize?: number; // Custom thumbnail size in pixels (default 120)
 }
 
-/** What a figure is called: its reference where it has one, else its filename. */
-const figureLabel = (a: Attachment): string => a.figure_ref || a.filename;
+// What a figure is called, and how big an upload may be, both live in one
+// place: attachmentKinds.ts for the naming, and here for the cap, which
+// mirrors the server's OPENV_MAX_UPLOAD_MB default. CAD files are the reason
+// it is not the 10 MB it once was — an assembly clears that on its own.
+const figureLabel = attachmentLabel;
+const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
 
 export const ImageGallery: React.FC<ImageGalleryProps> = ({
   artifactId,
@@ -43,6 +58,11 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
 }) => {
   const confirm = useConfirm();
   const alertDialog = useAlert();
+  // What may be ATTACHED is gated (REQ-137); what may be opened never is, so
+  // a workspace still on the previous stable release reads every figure a
+  // colleague attached and is simply offered images to add.
+  const wideFormats = useFeature(ATTACHMENT_FORMATS_FEATURE);
+  const acceptTypes = wideFormats ? ACCEPTED_UPLOAD_TYPES : 'image/*';
   const [selectedImage, setSelectedImage] = useState<Attachment | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   // One input serves every figure's "new version" button; the figure it is
@@ -54,13 +74,24 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
   const [history, setHistory] = useState<AttachmentVersion[]>([]);
   const [historyError, setHistoryError] = useState('');
 
-  const validImage = (file: File): boolean => {
-    if (!file.type.startsWith('image/')) {
-      void alertDialog({ title: 'Upload figure', message: 'Please select an image file.' });
+  const validUpload = (file: File, verb: string): boolean => {
+    if (!wideFormats && !file.type.startsWith('image/')) {
+      void alertDialog({
+        title: 'Attach a figure',
+        message:
+          'Attaching PDFs and CAD files reaches stable-channel workspaces at their next stable release. Switch the workspace to nightly, or preview the next release, in workspace settings.',
+      });
       return false;
     }
-    if (file.size > 10 * 1024 * 1024) {
-      void alertDialog({ title: 'Upload figure', message: 'File size must be less than 10MB.' });
+    if (!isAcceptedUpload(file)) {
+      void alertDialog({ title: 'Attach a figure', message: `${verb} ${UNSUPPORTED_UPLOAD_MESSAGE}` });
+      return false;
+    }
+    if (file.size > MAX_UPLOAD_BYTES) {
+      void alertDialog({
+        title: 'Attach a figure',
+        message: `That file is ${formatFileSize(file.size)}. The limit is ${formatFileSize(MAX_UPLOAD_BYTES)}.`,
+      });
       return false;
     }
     return true;
@@ -90,7 +121,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
     const target = versionTargetRef.current;
     e.target.value = '';
     versionTargetRef.current = '';
-    if (file && target && validImage(file)) {
+    if (file && target && validUpload(file, 'Choose another file.')) {
       onUploadVersion?.(target, file);
     }
   };
@@ -110,18 +141,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      if (!file.type.startsWith('image/')) {
-        void alertDialog({ title: 'Upload figure', message: 'Please select an image file.' });
-        return;
-      }
-
-      const maxSize = 10 * 1024 * 1024;
-      if (file.size > maxSize) {
-        void alertDialog({ title: 'Upload figure', message: 'File size must be less than 10MB.' });
-        return;
-      }
-
+    if (file && validUpload(file, 'Choose another file.')) {
       onUpload?.(file);
       e.target.value = '';
     }
@@ -141,18 +161,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
     e.currentTarget.classList.remove('drag-over');
 
     const file = e.dataTransfer.files?.[0];
-    if (file) {
-      if (!file.type.startsWith('image/')) {
-        void alertDialog({ title: 'Upload figure', message: 'Please drop an image file.' });
-        return;
-      }
-
-      const maxSize = 10 * 1024 * 1024;
-      if (file.size > maxSize) {
-        void alertDialog({ title: 'Upload figure', message: 'File size must be less than 10MB.' });
-        return;
-      }
-
+    if (file && validUpload(file, 'Drop another file.')) {
       onUpload?.(file);
     }
   };
@@ -184,15 +193,17 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/*"
+              accept={acceptTypes}
               onChange={handleFileChange}
               disabled={isUploadLoading}
               className="gallery-upload-input"
-              aria-label="Upload a figure"
+              aria-label="Attach a figure"
             />
             <div className="gallery-upload-content">
-              <div className="upload-icon">📷</div>
-              <p className="upload-text">{isUploadLoading ? 'Uploading...' : 'Drag figures here or click'}</p>
+              <div className="upload-icon">📎</div>
+              <p className="upload-text">
+                {isUploadLoading ? 'Uploading...' : 'Drag an image, PDF or CAD file here, or click'}
+              </p>
             </div>
           </div>
         </div>
@@ -217,11 +228,24 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
               onClick={() => setSelectedImage(attachment)}
               title={`${figureLabel(attachment)} (v${attachment.version}) — ${attachment.original_filename || attachment.filename}`}
             >
-              <img
-                src={attachmentAPI.getDownloadUrl(attachment.id, attachment.version)}
-                alt={figureLabel(attachment)}
-                className="gallery-thumbnail"
-              />
+              {attachment.kind === 'image' ? (
+                <img
+                  src={attachmentAPI.getDownloadUrl(attachment.id, attachment.version)}
+                  alt={figureLabel(attachment)}
+                  className="gallery-thumbnail"
+                />
+              ) : (
+                // Nothing can draw a thumbnail of a PDF or a solid model, so
+                // the tile says what the file is and how big it is instead —
+                // which is what a reviewer needs before deciding to open it.
+                <div className="gallery-thumbnail gallery-thumbnail-file">
+                  <span className="gallery-file-glyph" aria-hidden="true">
+                    {kindGlyph(attachment.kind)}
+                  </span>
+                  <span className="gallery-file-format">{formatLabel(attachment)}</span>
+                  <span className="gallery-file-size">{formatFileSize(attachment.file_size)}</span>
+                </div>
+              )}
               <div className="gallery-overlay">
                 {!readOnly && onUploadVersion && (
                   <button
@@ -296,7 +320,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
       <input
         ref={versionInputRef}
         type="file"
-        accept="image/*"
+        accept={acceptTypes}
         onChange={handleVersionFileChange}
         style={{ display: 'none' }}
         aria-hidden="true"
@@ -304,11 +328,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
       />
 
       {selectedImage && (
-        <ImageLightbox
-          imageUrl={attachmentAPI.getDownloadUrl(selectedImage.id, selectedImage.version)}
-          filename={`${figureLabel(selectedImage)} (v${selectedImage.version})`}
-          onClose={() => setSelectedImage(null)}
-        />
+        <AttachmentViewer attachment={selectedImage} onClose={() => setSelectedImage(null)} />
       )}
 
       {historyFor && (
@@ -361,11 +381,30 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
                   borderBottom: '1px solid var(--border-soft)',
                 }}
               >
-                <img
-                  src={attachmentAPI.getDownloadUrl(historyFor.id, v.version)}
-                  alt={`${figureLabel(historyFor)} version ${v.version}`}
-                  style={{ width: 56, height: 56, objectFit: 'cover', borderRadius: 4, border: '1px solid var(--border)' }}
-                />
+                {v.kind === 'image' ? (
+                  <img
+                    src={attachmentAPI.getDownloadUrl(historyFor.id, v.version)}
+                    alt={`${figureLabel(historyFor)} version ${v.version}`}
+                    style={{ width: 56, height: 56, objectFit: 'cover', borderRadius: 4, border: '1px solid var(--border)' }}
+                  />
+                ) : (
+                  <div
+                    aria-hidden="true"
+                    style={{
+                      width: 56,
+                      height: 56,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: 22,
+                      borderRadius: 4,
+                      border: '1px solid var(--border)',
+                      background: 'var(--neutral-soft)',
+                    }}
+                  >
+                    {kindGlyph(v.kind)}
+                  </div>
+                )}
                 <div style={{ flex: 1, fontSize: 12 }}>
                   <div style={{ fontWeight: 700 }}>
                     Version {v.version}
@@ -374,7 +413,8 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
                     )}
                   </div>
                   <div style={{ color: 'var(--text-muted)' }}>
-                    {new Date(v.created_at).toLocaleString()} · {v.original_filename || v.filename}
+                    {new Date(v.created_at).toLocaleString()} · {v.original_filename || v.filename} ·{' '}
+                    {formatFileSize(v.file_size)}
                   </div>
                 </div>
                 <a

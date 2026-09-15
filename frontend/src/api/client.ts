@@ -285,6 +285,14 @@ export interface DownloadSelection {
 
 export type DownloadFormat = 'json' | 'csv' | 'excel' | 'reqif' | 'pdf' | 'docx';
 
+/**
+ * What a figure's file can be done with. Derived server-side from the MIME
+ * type so that "can I show this?" has one answer rather than one per screen:
+ * an image renders, a document opens in the viewer, a model is downloaded and
+ * opened in the tool that owns the format.
+ */
+export type AttachmentKind = 'image' | 'document' | 'model' | 'other';
+
 export interface Attachment {
   id: string;
   artifact_id: string;
@@ -301,6 +309,8 @@ export interface Attachment {
    */
   figure_ref?: string;
   figure_num?: number;
+  /** The family the file belongs to, from its MIME type. */
+  kind: AttachmentKind;
   /** The figure's current version, starting at 1. */
   version: number;
   created_at: string;
@@ -315,6 +325,8 @@ export interface AttachmentVersion {
   original_filename: string;
   mime_type: string;
   file_size: number;
+  /** A figure can change format between versions, so each one says which. */
+  kind: AttachmentKind;
   created_by?: string | null;
   created_at: string;
 }
@@ -620,6 +632,24 @@ export const attachmentAPI = {
     client.delete(`/api/v1/attachments/${id}`),
   listByArtifact: (artifactId: string) =>
     client.get<Attachment[]>(`/api/v1/artifacts/${artifactId}/attachments`),
+  // Every figure in the project, for the citations that reach across
+  // artifacts: the "##" menu offers them, and following one opens a figure
+  // whose artifact the reader is not looking at.
+  listByProject: (projectId: string) =>
+    client.get<Attachment[]>(`/api/v1/projects/${projectId}/attachments`),
+  /**
+   * The file itself, as bytes.
+   *
+   * A PDF or a model is previewed from the app's own origin rather than by
+   * pointing a frame at the API: the API refuses to be framed and serves
+   * everything but a plain picture under a policy that permits nothing, which
+   * is exactly what makes storing those formats safe. Fetching the bytes and
+   * rendering them here needs none of that relaxed.
+   */
+  fetchFile: (id: string, version?: number) =>
+    client.get<Blob>(`/api/v1/attachments/${id}/download${version ? `?version=${version}` : ''}`, {
+      responseType: 'blob',
+    }),
 };
 
 export interface ChatterEntry {

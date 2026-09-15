@@ -5,8 +5,8 @@ import { artifactAPI, linkAPI, attachmentAPI, baselineAPI, qualityAPI, agentsAPI
 import { baselineLabel } from '../utils/baselines';
 import type { ArtifactContextAction, QualityRowInfo } from '../components/ArtifactList';
 import { DropZone, planMove } from '../utils/artifactDrag';
-import { ImageLightbox } from '../components/ImageLightbox';
-import { isFigureRef } from '../components/artifactReferences';
+import { AttachmentViewer } from '../components/AttachmentViewer';
+import { artifactRefOfFigure, isFigureRef } from '../components/artifactReferences';
 import {
   PanelMode,
   loadPanelMode,
@@ -54,6 +54,11 @@ export const ModuleView: React.FC = () => {
   const [selectedPreset, setSelectedPreset] = useState<string>('');
   const [showFilterPanel, setShowFilterPanel] = useState<boolean>(false);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
+  // Every figure in the project, as opposed to the selected artifact's. It is
+  // what lets a "##" citation be offered while writing and opened while
+  // reading, neither of which can wait to find out which artifact holds the
+  // figure in question.
+  const [projectAttachments, setProjectAttachments] = useState<Attachment[]>([]);
   const [uploadingAttachmentId, setUploadingAttachmentId] = useState<string | null>(null);
   const [baselines, setBaselines] = useState<Baseline[]>([]);
   const [activeBaselineId, setActiveBaselineId] = useState<string>('live');
@@ -342,6 +347,23 @@ export const ModuleView: React.FC = () => {
     }
   }, [projectId]);
 
+  const loadProjectAttachments = useCallback(async () => {
+    if (!projectId) {
+      setProjectAttachments([]);
+      return;
+    }
+    try {
+      const response = await attachmentAPI.listByProject(projectId);
+      setProjectAttachments(response.data || []);
+    } catch (error: any) {
+      // A citation that cannot be resolved falls back to the selected
+      // artifact's own figures and then to an explanatory message, so this is
+      // a degraded menu rather than a broken screen.
+      console.error('Failed to load the project figures:', error);
+      setProjectAttachments([]);
+    }
+  }, [projectId]);
+
   const loadAttachments = useCallback(async (artifactId: string) => {
     try {
       const response = await attachmentAPI.listByArtifact(artifactId);
@@ -359,10 +381,11 @@ export const ModuleView: React.FC = () => {
       loadLinks();
       loadBaselines();
       loadQuality();
+      loadProjectAttachments();
       setActiveBaselineId('live');
       setBaselineData(null);
     }
-  }, [projectId, loadArtifacts, loadLinks, loadBaselines, loadQuality]);
+  }, [projectId, loadArtifacts, loadLinks, loadBaselines, loadQuality, loadProjectAttachments]);
 
   // Load attachments when artifact is selected or when editing
   useEffect(() => {
@@ -428,11 +451,14 @@ export const ModuleView: React.FC = () => {
     try {
       const response = await attachmentAPI.upload(selectedArtifactId, file);
       setAttachments([...attachments, response.data]);
+      // The project's figure list is what "##" offers and what a citation
+      // resolves against, so a new figure has to reach it too.
+      setProjectAttachments((prev) => [...prev, response.data]);
       setError('');
     } catch (error: any) {
-      console.error('Failed to upload attachment:', error);
+      console.error('Failed to attach the file:', error);
       const errorMsg = apiErrorMessage(error, 'Unknown error');
-      setError(`Failed to upload image: ${errorMsg}`);
+      setError(`Failed to attach the file: ${errorMsg}`);
     } finally {
       setUploadingAttachmentId(null);
     }
@@ -445,6 +471,9 @@ export const ModuleView: React.FC = () => {
     try {
       const response = await attachmentAPI.uploadVersion(attachmentId, file);
       setAttachments((prev) => prev.map((a) => (a.id === attachmentId ? response.data : a)));
+      setProjectAttachments((prev) =>
+        prev.map((a) => (a.id === attachmentId ? response.data : a))
+      );
       setError('');
       loadArtifacts();
     } catch (error: any) {
@@ -459,6 +488,7 @@ export const ModuleView: React.FC = () => {
     try {
       await attachmentAPI.delete(attachmentId);
       setAttachments(attachments.filter((a) => a.id !== attachmentId));
+      setProjectAttachments((prev) => prev.filter((a) => a.id !== attachmentId));
       setError('');
     } catch (error: any) {
       console.error('Failed to delete attachment:', error);
@@ -842,7 +872,8 @@ export const ModuleView: React.FC = () => {
 
   // A citation clicked in a description. A figure opens where it is — the
   // reader wanted to see the drawing, not navigate away from the sentence
-  // citing it — and an artifact reference selects that artifact.
+  // citing it, and least of all to be sent to the artifact the drawing happens
+  // to hang on — and an artifact reference selects that artifact.
   const [figureInView, setFigureInView] = useState<Attachment | null>(null);
 
   const notesOpen = panelIsOpen(notesMode, notesHovered, notesRevealed);
@@ -869,11 +900,29 @@ export const ModuleView: React.FC = () => {
 
   const handleReferenceClick = (ref: string) => {
     if (isFigureRef(ref)) {
-      const figure = attachments.find((a) => a.figure_ref === ref);
+      // Whichever artifact holds it: a reader who clicked a figure wants the
+      // figure. Falling through to the artifact would open the requirement
+      // the figure hangs on, which for a citation of one's own figure is the
+      // page already on screen.
+      const figure =
+        projectAttachments.find((a) => a.figure_ref === ref) ||
+        attachments.find((a) => a.figure_ref === ref);
       if (figure) {
         setFigureInView(figure);
         return;
       }
+      // The figure is gone, or the project's figures never loaded. Going to
+      // the artifact that would hold it beats a dead end.
+      const holder = artifacts.find((a) => a.ref === artifactRefOfFigure(ref));
+      if (holder) {
+        setSelectedArtifactId(holder.id);
+        setIsEditing(false);
+        setIsCreating(false);
+        setError(`${ref} is no longer on ${holder.ref}. Showing the artifact instead.`);
+        return;
+      }
+      setError(`${ref} is not in this project — it may have been deleted.`);
+      return;
     }
     const target = artifacts.find((a) => a.ref === ref);
     if (target) {
@@ -1828,6 +1877,7 @@ export const ModuleView: React.FC = () => {
               setEditingArtifact(undefined);
             }}
             attachments={attachments}
+            projectAttachments={projectAttachments}
             onUploadAttachment={handleUploadAttachment}
             onUploadAttachmentVersion={handleUploadAttachmentVersion}
             onDeleteAttachment={handleDeleteAttachment}
@@ -2004,11 +2054,7 @@ export const ModuleView: React.FC = () => {
 
       {/* A figure opened by clicking its citation in a description. */}
       {figureInView && (
-        <ImageLightbox
-          imageUrl={attachmentAPI.getDownloadUrl(figureInView.id, figureInView.version)}
-          filename={`${figureInView.figure_ref || figureInView.filename} (v${figureInView.version})`}
-          onClose={() => setFigureInView(null)}
-        />
+        <AttachmentViewer attachment={figureInView} onClose={() => setFigureInView(null)} />
       )}
     </div>
   );

@@ -331,26 +331,59 @@ Every artifact carries two identifiers, and they answer different questions:
 | POST | `/api/v1/attachments/upload` | Upload a file (multipart) to an artifact or test result | editor |
 | GET | `/api/v1/attachments/{id}` | Attachment metadata | viewer |
 | GET | `/api/v1/attachments/{id}/download` | Download the file (`?version=N` for a superseded one) | viewer |
-| POST | `/api/v1/attachments/{id}/versions` | Replace a figure's image with a new version (multipart) | editor |
+| POST | `/api/v1/attachments/{id}/versions` | Replace a figure's file with a new version (multipart) | editor |
 | GET | `/api/v1/attachments/{id}/versions` | A figure's version history, newest first | viewer |
 | DELETE | `/api/v1/attachments/{id}` | Delete attachment | editor |
 | GET | `/api/v1/artifacts/{artifactID}/attachments` | List an artifact's attachments | viewer |
+| GET | `/api/v1/projects/{projectID}/attachments` | Every attachment in the project, in artifact order then figure number. Serves cross-artifact figure citations, which need the project's figures as one list | viewer |
 | POST | `/api/v1/chatter` | Comment on an artifact (a reviewer may: that is what the role is for) | reviewer |
 | GET | `/api/v1/chatter` | List an artifact's activity feed | viewer |
 
 ### Figures
 
-An image attached to an artifact is a **figure**, and carries a reference of
+A file attached to an artifact is a **figure**, and carries a reference of
 its own — `REQ-17-FIG-1` — built from the artifact's stable reference and a
 per-artifact counter.
+
+**What may be attached** is the catalogue in
+`internal/domain/attachments/kind.go`: images (PNG, JPEG, GIF, WebP, SVG,
+TIFF, BMP), PDF, and CAD (STEP, IGES, STL, 3MF, OBJ, PLY, glTF, DXF, DWG and
+the common native part formats). Anything else is refused with `400`.
+
+The **extension decides the recorded type**, not the uploaded
+`Content-Type`: browsers send `application/octet-stream` for most CAD
+formats. A declared image type is honoured for a file whose name says
+nothing. Bytes are checked against the format's signature where it has one
+(`%PDF-`, `ISO-10303-21`, `PK` …); formats with no dependable signature —
+binary STL, native part files — pass on their extension, because nothing
+rests on that check (see below).
+
+Every attachment carries a **`kind`** in its JSON: `image`, `document`,
+`model` or `other`, derived from the MIME type rather than stored, so a
+client asks it instead of pattern-matching types of its own. `image/vnd.dxf`
+and `image/vnd.dwg` are `model`: their registered types begin `image/` and
+nothing can render them as pictures.
+
+**Serving is an allowlist of one.** Only a raster image is served
+`Content-Disposition: inline`. SVG, PDF, CAD and everything else is handed
+over as a download under `Content-Security-Policy: sandbox; default-src
+'none'; frame-ancestors 'none'`, and the API-wide `X-Frame-Options: DENY`
+stands on every response. That is what makes storing a PDF or an opaque CAD
+file safe without trusting its contents, and it is why the app previews those
+formats by fetching the bytes with the member's session and rendering them on
+its own origin rather than pointing a frame at the API.
+
+**Only images reach a generated document.** A report embeds `kind: image`
+attachments and nothing else; a download's attachment groups file non-images
+under `documents`, `models` or `data` rather than `figures`.
 
 - The number is minted once and **never reissued**: the counter only moves
   forward, so deleting a figure does not free its number, and two concurrent
   uploads cannot be handed the same one. A partial unique index on
   `figure_ref` backstops the counter.
-- The stored name is the figure's (`REQ-17-FIG-1.png`), and a download is
-  served under it, so saving an image lands a file named for what the document
-  calls it. The name the uploader's file had is kept as `original_filename`,
+- The stored name is the figure's (`REQ-17-FIG-1.png`, `REQ-17-FIG-2.step`),
+  and a download is served under it, so saving one lands a file named for what
+  the document calls it. The name the uploader's file had is kept as `original_filename`,
   and the on-disk path stays UUID-unique: the uploads directory is flat across
   projects, figure references are unique only within one, and each version
   needs a file of its own.
@@ -358,7 +391,8 @@ per-artifact counter.
   bare `FIG-1` that would collide once the artifact got one.
 
 Uploading a **new version** keeps the figure's reference and supersedes its
-file. Because the artifact now shows something different, that upload also
+file, and may change its format — a sketch replaced by the real drawing — so
+each version carries its own `kind`. Because the artifact now shows something different, that upload also
 takes the artifact to a new version and writes a note to its feed
 ("Figure REQ-17-FIG-1 updated from version 1 to 2 — …"). Superseded versions
 stay retrievable through `?version=N`. The artifact's new version is an

@@ -144,6 +144,7 @@ GET /api/v1/projects/{id}/vv/gaps
 GET /api/v1/projects/{id}/vv/matrix
 GET /api/v1/projects/{id}/vv/report
 GET /api/v1/projects/{id}/work-items
+GET /api/v1/projects/{projectID}/attachments
 GET /api/v1/proposals
 GET /api/v1/provider-logins/{id}
 GET /api/v1/provider-logins/{id}/full

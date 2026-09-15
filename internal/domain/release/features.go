@@ -32,6 +32,8 @@ var Registry = []Feature{
 	{Key: FeatureOwners, ShippedIn: "0.3.0", Summary: "Artifact owners, reference parties and owner-filtered downloads"},
 	{Key: FeatureShareLinks, ShippedIn: "0.4.0", Summary: "Share links: a public read-only view of a project, or reviewer access, from one link; the reviewer role"},
 	{Key: FeatureAssistantEdits, ShippedIn: "0.5.0", Summary: "The V&V Assistant adds any kind of artifact, edits one and moves one from the notes panel"},
+	{Key: FeatureAttachmentFormats, ShippedIn: "0.6.0", Summary: "Attach PDFs and CAD files to an artifact, with a PDF reader and a 3D preview for STL"},
+	{Key: FeatureFigureCitations, ShippedIn: "0.6.0", Summary: "Cite a figure on any artifact in the project with \"##\""},
 }
 
 // Feature keys the code gates on.
@@ -40,6 +42,16 @@ const (
 	FeatureOwners         = "artifact-owners"
 	FeatureShareLinks     = "share-links"
 	FeatureAssistantEdits = "assistant-project-edits"
+	// FeatureAttachmentFormats gates what may be ATTACHED, never what may be
+	// read: a workspace that has not received it yet must still be able to
+	// open a PDF a colleague on the nightly channel attached, or the gate
+	// would turn a released feature into missing files.
+	FeatureAttachmentFormats = "attachment-formats"
+	// FeatureFigureCitations gates the "##" menu, and likewise only the
+	// writing of one. A "##" citation already in a description resolves for
+	// everybody, because a gate that broke existing prose would be worse than
+	// no gate at all.
+	FeatureFigureCitations = "figure-citations"
 )
 
 // Enabled reports whether a feature is on for a workspace on the given

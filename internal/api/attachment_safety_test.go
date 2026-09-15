@@ -62,3 +62,72 @@ func TestSVGIsServedAsASandboxedDownload(t *testing.T) {
 		t.Fatalf("png headers: %v", rec.Header())
 	}
 }
+
+// Widening what can be attached must not widen what the API will render. Only
+// an inert picture is served inline; everything else is handed over as a file
+// under a policy that permits nothing, which is what makes storing a PDF or a
+// CAD model safe without trusting its contents.
+func TestOnlyInertPicturesAreServedInline(t *testing.T) {
+	inline := []string{"image/png", "image/jpeg", "image/gif", "image/webp", "image/tiff", "image/bmp"}
+	for _, mime := range inline {
+		if got := attachmentDisposition(mime); got != "inline" {
+			t.Errorf("attachmentDisposition(%q) = %q, want inline", mime, got)
+		}
+	}
+	download := []string{
+		"image/svg+xml",   // a document that can carry script
+		"application/pdf", // likewise
+		"model/step", "model/stl", "model/3mf",
+		"image/vnd.dxf", // registered under image/, renderable by nothing
+		"application/octet-stream",
+	}
+	for _, mime := range download {
+		if got := attachmentDisposition(mime); got != "attachment" {
+			t.Errorf("attachmentDisposition(%q) = %q, want attachment", mime, got)
+		}
+	}
+}
+
+func TestNonPicturesAreServedUnderASandbox(t *testing.T) {
+	for _, mime := range []string{"application/pdf", "model/step", "image/svg+xml", "image/vnd.dxf"} {
+		w := httptest.NewRecorder()
+		setAttachmentSecurityHeaders(w, mime)
+		csp := w.Header().Get("Content-Security-Policy")
+		if !strings.Contains(csp, "sandbox") || !strings.Contains(csp, "default-src 'none'") {
+			t.Errorf("%s served under %q; want a sandbox that permits nothing", mime, csp)
+		}
+		if !strings.Contains(csp, "frame-ancestors 'none'") {
+			t.Errorf("%s may be framed: %q", mime, csp)
+		}
+		if w.Header().Get("X-Content-Type-Options") != "nosniff" {
+			t.Errorf("%s may be sniffed into another type", mime)
+		}
+	}
+
+	w := httptest.NewRecorder()
+	setAttachmentSecurityHeaders(w, "image/png")
+	if csp := w.Header().Get("Content-Security-Policy"); !strings.Contains(csp, "img-src 'self'") {
+		t.Errorf("a picture should still be renderable as one: %q", csp)
+	}
+}
+
+// The image sniff is shared with avatars and workspace logos, which must stay
+// pictures; the figure sniff is the one that knows about the wider catalogue.
+func TestFigureSniffAcceptsTheCatalogueAndTheImageSniffDoesNot(t *testing.T) {
+	pdf := []byte("%PDF-1.7\nnot really, but the header is what is checked")
+	if uploadLooksLikeImage("application/pdf", pdf) {
+		t.Error("the image sniff accepted a PDF; avatars and logos depend on it refusing one")
+	}
+	if !uploadLooksLikeFigure("application/pdf", "datasheet.pdf", pdf) {
+		t.Error("the figure sniff refused a PDF")
+	}
+	if uploadLooksLikeFigure("application/pdf", "datasheet.pdf", []byte("<html>")) {
+		t.Error("the figure sniff accepted a mis-named PDF")
+	}
+	if !uploadLooksLikeFigure("image/png", "pump.png", []byte("\x89PNG\r\n\x1a\n")) {
+		t.Error("the figure sniff refused a real PNG")
+	}
+	if uploadLooksLikeFigure("image/png", "pump.png", []byte("%PDF-1.7")) {
+		t.Error("the figure sniff let a PDF through as a PNG; it would be served inline")
+	}
+}
