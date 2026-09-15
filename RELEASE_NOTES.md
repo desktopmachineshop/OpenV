@@ -9,6 +9,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+## 0.8.1 — 2026-09-15
+
 ### Bug fixes
 
 - 0.8.0 could not start against an existing database, taking the service
