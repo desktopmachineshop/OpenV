@@ -134,6 +134,9 @@ func (h *Handler) AuthConfig(w http.ResponseWriter, r *http.Request) {
 		// Tells the SPA whether an unverified account meets the wall, so it
 		// never walls anyone on a deployment that cannot send the link.
 		"email_verification_required": h.emailVerification.Required,
+		// Whether the sign-in page can offer an emailed password reset
+		// (REQ-158); without a mailer a platform admin mints the link.
+		"password_reset_email": h.mailer != nil && h.mailer.Enabled(),
 		// Whether the page should offer a sign-up form at all (REQ-95).
 		"registration": h.registrationPolicy(),
 	}

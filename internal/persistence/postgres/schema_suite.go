@@ -92,6 +92,7 @@ func InitSuiteSchema(db *sql.DB) error {
 		agent_run_id UUID,
 		artifact_ids JSONB NOT NULL DEFAULT '[]',
 		due_date TIMESTAMP,
+		source_chatter_id UUID,
 		created_by UUID,
 		created_at TIMESTAMP NOT NULL DEFAULT NOW(),
 		updated_at TIMESTAMP NOT NULL DEFAULT NOW()
@@ -99,6 +100,13 @@ func InitSuiteSchema(db *sql.DB) error {
 
 	CREATE INDEX IF NOT EXISTS idx_work_items_project_id ON work_items(project_id);
 	CREATE INDEX IF NOT EXISTS idx_work_items_column ON work_items(project_id, board_column, sort_order);
+	-- No index on source_chatter_id here. This whole block is CREATE ... IF
+	-- NOT EXISTS, so on a database that already has work_items the table
+	-- statement is a no-op and the column above is NOT added — while an index
+	-- naming it would still run, and fail. Migration 43 adds the column and
+	-- its index together, which is correct for both a fresh database and an
+	-- existing one.
+
 
 	CREATE TABLE IF NOT EXISTS work_item_activity (
 		id UUID PRIMARY KEY,

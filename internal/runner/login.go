@@ -41,6 +41,15 @@ type loginFlow struct {
 	browserDetail string
 }
 
+// signInFailure annotates a failed sign-in with anything provider-specific
+// the member needs in order to tell "try again" from "this cannot work".
+func signInFailure(provider, detail string) string {
+	if provider == providers.ProviderGeminiCLI {
+		return geminiSignInFailure(detail)
+	}
+	return detail
+}
+
 func flowFor(provider string) (loginFlow, bool) {
 	switch provider {
 	case providers.ProviderClaudeCode:
@@ -66,10 +75,20 @@ func flowFor(provider string) (loginFlow, bool) {
 			browserDetail: "A sign-in page should have opened in a browser on the machine running agentd. Complete sign-in there; this page updates automatically.",
 		}, true
 	case providers.ProviderGeminiCLI:
+		// Bare `gemini`, with no -p: the CLI will only do a manual
+		// authorization from a session it considers interactive, and
+		// -p/--prompt on the command line makes it call itself headless on
+		// its own — which is what geminiLoginEnv and the pseudo-terminal
+		// exist to avoid. A prompt would have been pointless anyway: this
+		// command is here to sign in, not to get an answer.
+		//
+		// That makes it the TUI, so it needs a real terminal for the same
+		// reason the Claude flow above does, and it relays its URL and takes
+		// its code back over that terminal.
 		return loginFlow{
-			command:   []string{"gemini", "-p", "Reply with OK."},
-			env:       []string{"NO_BROWSER=1"},
-			pasteBack: true,
+			command:     []string{"gemini"},
+			env:         geminiLoginEnv(),
+			interactive: true,
 		}, true
 	}
 	return loginFlow{}, false
@@ -268,7 +287,7 @@ func (w *Worker) handleInteractiveLogin(ctx context.Context, login *providers.Lo
 		case err := <-done:
 			if err != nil {
 				w.loginProgress(login.ID, providers.LoginFailed, "",
-					"the sign-in terminal closed without completing: "+err.Error())
+					signInFailure(login.Provider, "the sign-in terminal closed without completing: "+err.Error()))
 				return
 			}
 			w.loginProgress(login.ID, providers.LoginCompleted, "", "Signed in successfully.")

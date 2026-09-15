@@ -300,6 +300,12 @@ export interface Attachment {
   filename: string;
   /** The name the uploaded file had. */
   original_filename: string;
+  /**
+   * The name a member gave the figure; empty when it has none, in which
+   * case readers fall back to original_filename. Renaming is a figure
+   * version.
+   */
+  title: string;
   mime_type: string;
   file_path: string;
   file_size: number;
@@ -316,19 +322,28 @@ export interface Attachment {
   created_at: string;
 }
 
-/** One uploaded revision of a figure. */
+/** One revision of a figure: a new image, or a new title over the same one. */
 export interface AttachmentVersion {
   id: string;
   attachment_id: string;
   version: number;
   filename: string;
   original_filename: string;
+  /** The title the figure carried at this version. */
+  title: string;
   mime_type: string;
+  file_path: string;
   file_size: number;
   /** A figure can change format between versions, so each one says which. */
   kind: AttachmentKind;
   created_by?: string | null;
   created_at: string;
+  /**
+   * The older version this one brought back, when it was written by a
+   * restore. A restore reuses the older version's stored file, so this is
+   * the only thing that tells it apart from a re-upload of the same image.
+   */
+  restored_from?: number | null;
 }
 
 // Server-side page size for artifact listings (the backend defaults to and
@@ -336,7 +351,9 @@ export interface AttachmentVersion {
 const ARTIFACT_PAGE_LIMIT = 1000;
 
 export const artifactAPI = {
-  create: (payload: Partial<Artifact>) =>
+  // copied_from names the artifact a duplicate or a paste came from; the
+  // server opens the new artifact's feed with a "Copied from REQ-12" note.
+  create: (payload: Partial<Artifact> & { copied_from?: string }) =>
     client.post<Artifact>('/api/v1/artifacts', payload),
   get: (id: string) =>
     client.get<Artifact>(`/api/v1/artifacts/${id}`),
@@ -628,6 +645,15 @@ export const attachmentAPI = {
   },
   listVersions: (id: string) =>
     client.get<AttachmentVersion[]>(`/api/v1/attachments/${id}/versions`),
+  /**
+   * Bring an older version back as a new one. Nothing is deleted: the
+   * restore is itself a version, and the history keeps every step.
+   */
+  restoreVersion: (id: string, version: number) =>
+    client.post<AttachmentVersion>(`/api/v1/attachments/${id}/versions/${version}/restore`),
+  /** Give a figure a title; "" clears it. A change is a new figure version. */
+  rename: (id: string, title: string) =>
+    client.put<Attachment>(`/api/v1/attachments/${id}`, { title }),
   delete: (id: string) =>
     client.delete(`/api/v1/attachments/${id}`),
   listByArtifact: (artifactId: string) =>
@@ -665,6 +691,25 @@ export interface ChatterEntry {
   author_name?: string;
   created_at: string;
   updated_at: string;
+  // Resolved by the API when the feed is read, never stored: who the note's
+  // @names address, and the to-do raised from it with its status as it
+  // stands now.
+  mentions?: NoteMention[];
+  todo?: NoteTodo;
+}
+
+export interface NoteMention {
+  user_id: string;
+  name: string;
+}
+
+export interface NoteTodo {
+  work_item_id: string;
+  title: string;
+  /** The board column the to-do sits in. */
+  status: string;
+  assignee_id?: string | null;
+  assignee_name?: string;
 }
 
 export const chatterAPI = {
@@ -697,6 +742,9 @@ export interface User {
   email_verified: boolean;
   email_verified_at?: string;
   created_at: string;
+  // The workspace a sign-in lands in when the member has chosen one
+  // (REQ-156); "" means the personal workspace.
+  default_org_id?: string;
 }
 
 export interface AuthConfig {
@@ -704,6 +752,9 @@ export interface AuthConfig {
   oidc_enabled: boolean;
   oidc_provider_name: string;
   email_verification_required: boolean;
+  // Whether the sign-in page can email a password reset link (REQ-158).
+  // Without a mailer, a platform admin mints the link instead.
+  password_reset_email?: boolean;
   // Whether this deployment still has a public sign-up door (REQ-95). When
   // 'closed', new accounts arrive only by invitation or through SSO.
   registration?: 'open' | 'closed';
@@ -995,6 +1046,8 @@ export interface WorkItem {
   agent_run_id?: string | null;
   artifact_ids: string[];
   due_date?: string | null;
+  /** The note this to-do was raised from, when it was raised from one. */
+  source_chatter_id?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -1320,6 +1373,14 @@ export const authAPI = {
     client.post<{ sent_to: string }>('/api/v1/auth/verify-email/resend', {}),
   changeVerificationEmail: (email: string) =>
     client.post<{ sent_to: string }>('/api/v1/auth/verify-email/change', { email }),
+  // Password reset (REQ-158): ask for an emailed link (202 whether or not
+  // the address has an account; 409 reset_email_unavailable when the server
+  // cannot send mail), then spend the link with a new password (204; 400
+  // reset_invalid or weak_password).
+  requestPasswordReset: (email: string) =>
+    client.post<{ sent_to: string }>('/api/v1/auth/password-reset', { email }),
+  confirmPasswordReset: (token: string, newPassword: string) =>
+    client.post('/api/v1/auth/password-reset/confirm', { token, new_password: newPassword }),
   // Registration policy on its own, for a caller that needs nothing else.
   // min_password_length is the server's own rule, so a password form states
   // the length that will actually be enforced rather than a copy of it.
@@ -1385,6 +1446,18 @@ export const notificationPrefsAPI = {
   get: () => client.get<NotificationPrefs>('/api/v1/me/notification-prefs'),
   update: (prefs: Partial<NotificationPrefs>) =>
     client.put<NotificationPrefs>('/api/v1/me/notification-prefs', prefs),
+};
+
+// The workspace a sign-in lands in (REQ-156): the member's own choice, a
+// workspace they belong to, or "" for the personal workspace.
+export interface DefaultWorkspace {
+  org_id: string;
+}
+
+export const defaultWorkspaceAPI = {
+  get: () => client.get<DefaultWorkspace>('/api/v1/me/default-workspace'),
+  set: (orgId: string) =>
+    client.put<DefaultWorkspace>('/api/v1/me/default-workspace', { org_id: orgId }),
 };
 
 // Web push subscriptions (REQ-109). One subscription per device; the browser
@@ -1677,10 +1750,18 @@ export interface RunnerSession {
 }
 
 /** How busy the runner pool is right now. */
-export interface RunnerPoolCounts {
-  total: number;
-  idle: number;
-  leased: number;
+/**
+ * How busy the shared pool is, as a band rather than a count.
+ *
+ * A member can hold one runner at a time, so the exact number free is not
+ * something they can act on, and the deployment's capacity is not published
+ * to every account. `unavailable` means this deployment has no pool at all,
+ * which is a different thing from `red` (nodes exist, all taken).
+ */
+export type RunnerPoolStatus = 'green' | 'amber' | 'red' | 'unavailable';
+
+export interface RunnerPoolLoad {
+  status: RunnerPoolStatus;
 }
 
 export interface RunnerSessionPayload {
@@ -1688,7 +1769,7 @@ export interface RunnerSessionPayload {
   session: RunnerSession | null;
   deadline?: string;
   seconds_remaining?: number;
-  pool?: RunnerPoolCounts;
+  pool_load?: RunnerPoolLoad;
 }
 
 /**
@@ -2642,4 +2723,8 @@ export const adminAPI = {
   setPlan: (orgId: string, plan: string) => client.put<Org>(`/api/v1/orgs/${orgId}/plan`, { plan }),
   setAdmin: (userId: string, isAdmin: boolean) =>
     client.put<AdminUser>(`/api/v1/admin/users/${userId}/admin`, { is_admin: isAdmin }),
+  // Mint a password reset link for an account and get it back once
+  // (REQ-158). Nothing is emailed: the admin hands the link over.
+  issuePasswordReset: (userId: string) =>
+    client.post<{ link: string; expires_at: string }>(`/api/v1/admin/users/${userId}/password-reset`, {}),
 };

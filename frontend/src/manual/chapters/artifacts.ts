@@ -26,7 +26,7 @@ remembered):
 - **Center** — the selected artifact: header, body, links, attachments.
 - **Right** — the **Chatter** panel: comments on the selected artifact.
 
-A floating **?** button opens a quick-reference help sidebar with artifact and
+The **?** button beside the notification bell opens a quick-reference help sidebar with artifact and
 link type definitions.
 
 ## Creating and organizing artifacts
@@ -40,7 +40,9 @@ link type definitions.
   **duplicate** (a copy placed directly after the original). A copy carries the
   type, title, body and attributes; links and figures stay with the original,
   because a copy that inherited "verifies REQ-12" would assert a verification
-  nobody made. Pasted artifacts are titled "… (copy)".
+  nobody made. Pasted artifacts are titled "… (copy)", and the copy's own
+  history starts with a single note — *Copied from REQ-12 (version 3)* — so
+  you can always tell where it came from.
 - **Drag an artifact** onto another to move it. Where you let go decides what
   happens: the **top half** drops it before that artifact, the **bottom left**
   after it, and the **bottom right** makes it a **child** of it. The row shows
@@ -161,6 +163,31 @@ reference, the artifact takes a new version, and the notes record the change.
 
 A figure may change format between versions — a sketch replaced by the real
 drawing, a screenshot replaced by the STEP file — and keeps its number.
+
+From that history you can **Restore** any earlier version. The figure goes
+back to the image *and* the name it had then — a restore that brought back
+the drawing but left a later rename in place would show one figure under
+another's name.
+
+Restoring works the way it does for an artifact: it is recorded as a **new
+version** with the old content, and nothing is deleted. So the history after
+restoring version 1 over version 3 reads v1, v2, v3, v4 — with v4 marked
+*restored from v1* — and version 3's drawing is still there to open. That
+matters when a requirement was reviewed, or a baseline captured, against
+what the figure used to show: rewinding and discarding would destroy the
+record of what the reviewer actually saw.
+
+Restoring is an editor's action, and the version already showing cannot be
+restored over itself.
+
+A figure also has a **name**, shown under its reference and printed under
+the picture in PDF and Word documents. Until you give it one, the name is
+the filename it was uploaded with — which for a screenshot is usually a
+timestamp. Use **✎** on a figure to rename it: the new name is a figure
+version like a new image is, with who set it and when, so the history shows
+every name the figure has had, and the artifact takes a new version with a
+note recording the change. Clearing the name goes back to the uploaded
+filename.
 
 ### In generated documents
 

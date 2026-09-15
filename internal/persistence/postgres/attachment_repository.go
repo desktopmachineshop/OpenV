@@ -15,7 +15,7 @@ import (
 // figureColumns is the attachment projection every read shares. figure_ref and
 // figure_num are NULL on rows whose artifact had no reference to build on, so
 // both scan through nullable holders.
-const figureColumns = `id, artifact_id, filename, original_filename, mime_type, file_path, file_size, figure_ref, figure_num, version, created_at`
+const figureColumns = `id, artifact_id, filename, original_filename, title, mime_type, file_path, file_size, figure_ref, figure_num, version, created_at`
 
 // prefixedFigureColumns is figureColumns qualified by a table alias, for the
 // queries that join attachments to artifacts and so cannot use bare names.
@@ -32,7 +32,7 @@ func scanAttachment(scan func(...interface{}) error) (*attachments.Attachment, e
 	var figureRef sql.NullString
 	var figureNum sql.NullInt64
 	if err := scan(
-		&a.ID, &a.ArtifactID, &a.Filename, &a.OriginalFilename, &a.MimeType,
+		&a.ID, &a.ArtifactID, &a.Filename, &a.OriginalFilename, &a.Title, &a.MimeType,
 		&a.FilePath, &a.FileSize, &figureRef, &figureNum, &a.Version, &a.CreatedAt,
 	); err != nil {
 		return nil, err
@@ -55,8 +55,8 @@ func NewAttachmentRepository(db *sql.DB) attachments.Repository {
 // Save persists an attachment
 func (r *AttachmentRepository) Save(attachment *attachments.Attachment) error {
 	query := `
-		INSERT INTO attachments (id, artifact_id, filename, original_filename, mime_type, file_path, file_size, version, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		INSERT INTO attachments (id, artifact_id, filename, original_filename, title, mime_type, file_path, file_size, version, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 	`
 	if attachment.Version < 1 {
 		attachment.Version = 1
@@ -66,6 +66,7 @@ func (r *AttachmentRepository) Save(attachment *attachments.Attachment) error {
 		attachment.ArtifactID,
 		attachment.Filename,
 		attachment.OriginalFilename,
+		attachment.Title,
 		attachment.MimeType,
 		attachment.FilePath,
 		attachment.FileSize,
@@ -241,11 +242,11 @@ func (r *AttachmentRepository) SaveWithFigureRef(attachment *attachments.Attachm
 
 	if _, err := tx.Exec(`
 		INSERT INTO attachments
-			(id, artifact_id, filename, original_filename, mime_type, file_path, file_size, figure_ref, figure_num, version, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+			(id, artifact_id, filename, original_filename, title, mime_type, file_path, file_size, figure_ref, figure_num, version, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 	`,
 		attachment.ID, attachment.ArtifactID, attachment.Filename, attachment.OriginalFilename,
-		attachment.MimeType, attachment.FilePath, attachment.FileSize,
+		attachment.Title, attachment.MimeType, attachment.FilePath, attachment.FileSize,
 		nullString(attachment.FigureRef), nullInt(attachment.FigureNum),
 		attachment.Version, attachment.CreatedAt,
 	); err != nil {
@@ -254,11 +255,11 @@ func (r *AttachmentRepository) SaveWithFigureRef(attachment *attachments.Attachm
 
 	if _, err := tx.Exec(`
 		INSERT INTO attachment_versions
-			(id, attachment_id, version, filename, original_filename, mime_type, file_path, file_size, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+			(id, attachment_id, version, filename, original_filename, title, mime_type, file_path, file_size, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 	`,
 		uuid.New().String(), attachment.ID, attachment.Version, attachment.Filename,
-		attachment.OriginalFilename, attachment.MimeType, attachment.FilePath,
+		attachment.OriginalFilename, attachment.Title, attachment.MimeType, attachment.FilePath,
 		attachment.FileSize, attachment.CreatedAt,
 	); err != nil {
 		return fmt.Errorf("failed to record the figure's first version: %w", err)
@@ -288,8 +289,8 @@ func (r *AttachmentRepository) AddVersion(attachmentID string, v *attachments.Ve
 		    file_path = $4,
 		    file_size = $5
 		WHERE id = $1
-		RETURNING version, figure_ref
-	`, attachmentID, v.OriginalFilename, v.MimeType, v.FilePath, v.FileSize).Scan(&next, &figureRef); err != nil {
+		RETURNING version, figure_ref, title
+	`, attachmentID, v.OriginalFilename, v.MimeType, v.FilePath, v.FileSize).Scan(&next, &figureRef, &v.Title); err != nil {
 		if err == sql.ErrNoRows {
 			return 0, nil
 		}
@@ -313,15 +314,8 @@ func (r *AttachmentRepository) AddVersion(attachmentID string, v *attachments.Ve
 	v.AttachmentID = attachmentID
 	v.Version = next
 	v.Filename = filename
-	if _, err := tx.Exec(`
-		INSERT INTO attachment_versions
-			(id, attachment_id, version, filename, original_filename, mime_type, file_path, file_size, created_by, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-	`,
-		v.ID, v.AttachmentID, v.Version, v.Filename, v.OriginalFilename,
-		v.MimeType, v.FilePath, v.FileSize, v.CreatedBy, v.CreatedAt,
-	); err != nil {
-		return 0, fmt.Errorf("failed to record figure version: %w", err)
+	if err := insertVersion(tx, v); err != nil {
+		return 0, err
 	}
 
 	if err := tx.Commit(); err != nil {
@@ -330,20 +324,73 @@ func (r *AttachmentRepository) AddVersion(attachmentID string, v *attachments.Ve
 	return next, nil
 }
 
-const versionColumns = `id, attachment_id, version, filename, original_filename, mime_type, file_path, file_size, created_by, created_at`
+// Rename records a new title as a new version over the figure's current
+// image: the attachment's version advances and the version row copies the
+// current file fields, so the history reads as one line per change whether
+// the change was the picture or the name.
+func (r *AttachmentRepository) Rename(attachmentID, title string, by *string) (int, error) {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return 0, fmt.Errorf("failed to begin figure rename transaction: %w", err)
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	v := &attachments.Version{AttachmentID: attachmentID, Title: title, CreatedBy: by, CreatedAt: time.Now()}
+	if err := tx.QueryRow(`
+		UPDATE attachments
+		SET version = version + 1,
+		    title = $2
+		WHERE id = $1
+		RETURNING version, filename, original_filename, mime_type, file_path, file_size
+	`, attachmentID, title).Scan(&v.Version, &v.Filename, &v.OriginalFilename, &v.MimeType, &v.FilePath, &v.FileSize); err != nil {
+		if err == sql.ErrNoRows {
+			return 0, nil
+		}
+		return 0, fmt.Errorf("failed to rename figure: %w", err)
+	}
+	v.ID = uuid.New().String()
+	if err := insertVersion(tx, v); err != nil {
+		return 0, err
+	}
+	if err := tx.Commit(); err != nil {
+		return 0, err
+	}
+	return v.Version, nil
+}
+
+func insertVersion(tx *sql.Tx, v *attachments.Version) error {
+	if _, err := tx.Exec(`
+		INSERT INTO attachment_versions
+			(id, attachment_id, version, filename, original_filename, title, mime_type, file_path, file_size, created_by, created_at, restored_from)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+	`,
+		v.ID, v.AttachmentID, v.Version, v.Filename, v.OriginalFilename, v.Title,
+		v.MimeType, v.FilePath, v.FileSize, v.CreatedBy, v.CreatedAt, v.RestoredFrom,
+	); err != nil {
+		return fmt.Errorf("failed to record figure version: %w", err)
+	}
+	return nil
+}
+
+const versionColumns = `id, attachment_id, version, filename, original_filename, title, mime_type, file_path, file_size, created_by, created_at, restored_from`
 
 func scanVersion(scan func(...interface{}) error) (*attachments.Version, error) {
 	v := new(attachments.Version)
 	var createdBy sql.NullString
+	var restoredFrom sql.NullInt64
 	if err := scan(
-		&v.ID, &v.AttachmentID, &v.Version, &v.Filename, &v.OriginalFilename,
-		&v.MimeType, &v.FilePath, &v.FileSize, &createdBy, &v.CreatedAt,
+		&v.ID, &v.AttachmentID, &v.Version, &v.Filename, &v.OriginalFilename, &v.Title,
+		&v.MimeType, &v.FilePath, &v.FileSize, &createdBy, &v.CreatedAt, &restoredFrom,
 	); err != nil {
 		return nil, err
 	}
 	if createdBy.Valid {
 		id := createdBy.String
 		v.CreatedBy = &id
+	}
+	if restoredFrom.Valid {
+		n := int(restoredFrom.Int64)
+		v.RestoredFrom = &n
 	}
 	return v, nil
 }
@@ -390,6 +437,106 @@ func (r *AttachmentRepository) FindVersion(attachmentID string, version int) (*a
 		return nil, fmt.Errorf("failed to find figure version: %w", err)
 	}
 	return v, nil
+}
+
+// Restore brings an older version's image and title back as a new version.
+//
+// It reuses the older version's stored file rather than copying it: every
+// version's file is already kept on disk for the life of the figure and
+// nothing deletes them individually, so two version rows pointing at one
+// path is cheaper and cannot drift. The consequence is that a restore and a
+// re-upload of the same file look identical by path, which is why the new
+// row records restored_from.
+//
+// The whole thing is one transaction: a figure whose attachment row moved
+// on without a matching version row would be a figure with no record of
+// what it currently shows.
+func (r *AttachmentRepository) Restore(attachmentID string, version int, by *string) (*attachments.Version, error) {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return nil, fmt.Errorf("failed to begin figure restore transaction: %w", err)
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	// Lock the figure first so a concurrent upload cannot advance the
+	// version between the check below and the write.
+	var current int
+	var figureRef sql.NullString
+	if err := tx.QueryRow(`
+		SELECT version, figure_ref FROM attachments WHERE id = $1 FOR UPDATE
+	`, attachmentID).Scan(&current, &figureRef); err != nil {
+		if err == sql.ErrNoRows {
+			return nil, attachments.ErrNoSuchVersion
+		}
+		return nil, fmt.Errorf("failed to read figure for restore: %w", err)
+	}
+	if version == current {
+		return nil, attachments.ErrAlreadyCurrent
+	}
+
+	source, err := scanVersion(tx.QueryRow(`
+		SELECT `+versionColumns+`
+		FROM attachment_versions
+		WHERE attachment_id = $1 AND version = $2
+	`, attachmentID, version).Scan)
+	if err == sql.ErrNoRows {
+		return nil, attachments.ErrNoSuchVersion
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to read the version being restored: %w", err)
+	}
+
+	// Title travels with the image. A restore that brought back the drawing
+	// but left a later rename in place would show one figure under another
+	// figure's name.
+	var next int
+	if err := tx.QueryRow(`
+		UPDATE attachments
+		SET version = version + 1,
+		    original_filename = $2,
+		    title = $3,
+		    mime_type = $4,
+		    file_path = $5,
+		    file_size = $6
+		WHERE id = $1
+		RETURNING version
+	`, attachmentID, source.OriginalFilename, source.Title, source.MimeType,
+		source.FilePath, source.FileSize).Scan(&next); err != nil {
+		return nil, fmt.Errorf("failed to advance figure version on restore: %w", err)
+	}
+
+	// The stored name follows the figure, as it does for an upload, so every
+	// version is served under the same name.
+	filename := source.Filename
+	if figureRef.String != "" {
+		filename = attachments.FigureFilename(figureRef.String, source.OriginalFilename)
+		if _, err := tx.Exec(`UPDATE attachments SET filename = $2 WHERE id = $1`, attachmentID, filename); err != nil {
+			return nil, fmt.Errorf("failed to rename figure on restore: %w", err)
+		}
+	}
+
+	restored := &attachments.Version{
+		ID:               uuid.New().String(),
+		AttachmentID:     attachmentID,
+		Version:          next,
+		Filename:         filename,
+		OriginalFilename: source.OriginalFilename,
+		Title:            source.Title,
+		MimeType:         source.MimeType,
+		FilePath:         source.FilePath,
+		FileSize:         source.FileSize,
+		CreatedBy:        by,
+		CreatedAt:        time.Now(),
+		RestoredFrom:     &version,
+	}
+	if err := insertVersion(tx, restored); err != nil {
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+	return restored, nil
 }
 
 func nullString(s string) interface{} {

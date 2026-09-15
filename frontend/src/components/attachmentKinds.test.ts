@@ -15,6 +15,7 @@ const att = (over: Partial<Attachment>): Attachment => ({
   artifact_id: 'r1',
   filename: 'REQ-17-FIG-1.png',
   original_filename: 'pump.png',
+  title: '',
   mime_type: 'image/png',
   file_path: '/uploads/x',
   file_size: 1024,

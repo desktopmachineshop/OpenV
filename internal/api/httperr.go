@@ -37,6 +37,11 @@ const (
 	// it instead of an access-denied message.
 	ErrCodeLimitReached = "limit_reached"
 	ErrCodeNoPassword   = "no_password"
+	// ErrCodeResetInvalid answers a reset link that is unknown, spent or
+	// expired; ErrCodeResetEmailUnavailable a request for an emailed reset
+	// on a deployment with no mailer (REQ-158).
+	ErrCodeResetInvalid          = "reset_invalid"
+	ErrCodeResetEmailUnavailable = "reset_email_unavailable"
 )
 
 // writeJSONErrorCode is writeJSONError with a machine-readable code.

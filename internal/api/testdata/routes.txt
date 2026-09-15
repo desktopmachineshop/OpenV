@@ -85,6 +85,7 @@ GET /api/v1/interviews/{id}/invites
 GET /api/v1/interviews/{id}/sessions
 GET /api/v1/links
 GET /api/v1/links/{id}
+GET /api/v1/me/default-workspace
 GET /api/v1/me/notification-prefs
 GET /api/v1/me/push-subscriptions
 GET /api/v1/me/push/config
@@ -176,6 +177,7 @@ GET /api/v1/users/{id}/avatar
 GET /api/v1/work-items/{id}
 GET /health
 HEAD /api/v1/public/connector/download
+POST /api/v1/admin/users/{id}/password-reset
 POST /api/v1/agent-runs/claim
 POST /api/v1/agent-runs/delegate
 POST /api/v1/agent-runs/{id}/cancel
@@ -191,11 +193,14 @@ POST /api/v1/artifacts
 POST /api/v1/artifacts/{id}/restore
 POST /api/v1/attachments/upload
 POST /api/v1/attachments/{id}/versions
+POST /api/v1/attachments/{id}/versions/{version}/restore
 POST /api/v1/attribute-definitions
 POST /api/v1/auth/invitations/accept
 POST /api/v1/auth/invitations/preview
 POST /api/v1/auth/login
 POST /api/v1/auth/logout
+POST /api/v1/auth/password-reset
+POST /api/v1/auth/password-reset/confirm
 POST /api/v1/auth/register
 POST /api/v1/auth/share/accept
 POST /api/v1/auth/verify-email
@@ -290,6 +295,7 @@ PUT /api/v1/agents/{slug}
 PUT /api/v1/agents/{slug}/raw
 PUT /api/v1/artifacts/{id}
 PUT /api/v1/artifacts/{id}/status
+PUT /api/v1/attachments/{id}
 PUT /api/v1/attribute-definitions/{id}
 PUT /api/v1/automations/{id}
 PUT /api/v1/crew-edges/{id}
@@ -300,6 +306,7 @@ PUT /api/v1/guided-sessions/{id}/step
 PUT /api/v1/interviews/{id}/persona
 PUT /api/v1/links/{id}
 PUT /api/v1/links/{id}/confirm
+PUT /api/v1/me/default-workspace
 PUT /api/v1/me/notification-prefs
 PUT /api/v1/me/password
 PUT /api/v1/notifications/{id}/flag

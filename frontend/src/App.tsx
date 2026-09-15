@@ -2,16 +2,19 @@ import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { authAPI, metaAPI, orgsAPI } from './api/client';
 import { useAppStore } from './state/store';
+import { pickActiveOrg } from './utils/activeOrg';
 import { ProjectList } from './components/ProjectList';
 import { ProjectLayout } from './components/ProjectLayout';
 import { Login } from './views/Login';
 import { VerifyEmail } from './views/VerifyEmail';
+import { ResetPassword } from './views/ResetPassword';
 import { ProductOverview } from './views/ProductOverview';
 import { InterviewsPage } from './views/InterviewsPage';
 import { GuidedWizard } from './views/GuidedWizard';
 import { EvidenceView } from './views/EvidenceView';
 import { VVDashboard } from './views/VVDashboard';
 import { KanbanBoard } from './views/KanbanBoard';
+import { TodoList } from './views/TodoList';
 import { AutomationsPage } from './views/AutomationsPage';
 import { AgentRunsPage } from './views/AgentRunsPage';
 import { AgentsPage } from './views/AgentsPage';
@@ -132,22 +135,15 @@ function App() {
       .list()
       .then((res) => {
         const orgs = res.data.orgs || [];
-        let stored = '';
+        let tabOrg = '';
+        let lastUsed = '';
         try {
-          stored =
-            sessionStorage.getItem('openv_active_org') ||
-            localStorage.getItem('openv_active_org') ||
-            '';
+          tabOrg = sessionStorage.getItem('openv_active_org') || '';
+          lastUsed = localStorage.getItem('openv_active_org') || '';
         } catch {
-          stored = '';
+          // storage unavailable: the server's answer decides
         }
-        const personal = orgs.find((o) => o.type === 'personal');
-        const active =
-          (stored && orgs.some((o) => o.id === stored) && stored) ||
-          (res.data.active_org && orgs.some((o) => o.id === res.data.active_org) && res.data.active_org) ||
-          personal?.id ||
-          orgs[0]?.id ||
-          '';
+        const active = pickActiveOrg(orgs, tabOrg, res.data.active_org || '', lastUsed);
         setOrgs(orgs);
         if (active) setActiveOrgId(active, { clearProjects: false });
         setOrgsLoaded(true);
@@ -198,6 +194,7 @@ function App() {
         <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/verify-email" element={<VerifyEmail />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/interview/:token" element={<InterviewChat />} />
         {/* A share link opens without a session (REQ-149): /share/:token is
             the link handed out (the deployed nginx sends unfurlers to the
@@ -241,6 +238,7 @@ function App() {
           <Route path="impact" element={<ImpactView />} />
           <Route path="review" element={<ReviewQueue />} />
           <Route path="board" element={<KanbanBoard />} />
+          <Route path="todos" element={<TodoList />} />
           <Route path="crew" element={<CrewBuilder />} />
           <Route path="crew/network" element={<CrewBuilder />} />
           {/* Legacy "team" URLs redirect to the renamed "crew" routes. */}

@@ -123,7 +123,7 @@ their own project, workers pass within their org) · `org member`/`org admin`
 | POST | `/api/v1/auth/login` | Password login, sets session cookie | open |
 | POST | `/api/v1/auth/logout` | End session, clear cookie | open |
 | GET | `/api/v1/auth/me` | Current user profile | user |
-| GET | `/api/v1/auth/config` | Which sign-in methods are enabled (Google, OIDC), whether `email_verification_required`, and the `registration` policy | open |
+| GET | `/api/v1/auth/config` | Which sign-in methods are enabled (Google, OIDC), whether `email_verification_required`, whether `password_reset_email` can be offered (a mailer is configured), and the `registration` policy | open |
 | GET | `/api/v1/auth/policy` | The registration policy alone, plus the server's password rule: `{"registration":"open"\|"closed","min_password_length":8}`. Clients state `min_password_length` in their password forms rather than a copy of it, so the form and the server can never disagree | open |
 | POST | `/api/v1/auth/invitations/preview` | Preview an invite link `{token}` → `{email, org_name, role, expires_at}`; one `404` for every unusable link. The token travels in the body, never in the path: an invite link is a credential, and a URL is written into access logs, proxy logs, browser history and `Referer` headers. Throttled on its own bucket, not the sign-in one. Only an unusable link is `404`: a lookup that fails for any other reason answers `500`, because telling the invitee their link is invalid would send them off for a replacement that fails identically | open |
 | POST | `/api/v1/auth/invitations/accept` | Join the signed-in account to the invitation's workspace `{token}` → `{org_id, org_name, role, already_member}`. Converts only when the **session's own email is the invited address**; otherwise `403 {"code":"invitation_email_mismatch"}`, whose body never names the invited address (the preview already shows it to whoever holds the link). `404` when the link is unusable. An account that is already a member keeps its role — `role` reports the role it holds, `already_member` is `true`, and the invitation is spent. A successful accept (`already_member` included) **marks the account's address verified**: the token was mailed to that address and nowhere else, and it is the session's own address, so this is the same proof `POST /auth/register` accepts from an `invite_token` | user (cookie only, JSON body) |
@@ -135,6 +135,8 @@ their own project, workers pass within their org) · `org member`/`org admin`
 | POST | `/api/v1/auth/verify-email` | Confirm an emailed link `{token}`; returns the user (`400` invalid/expired, `409` address taken). Grants **no** workspace membership: the address it confirms is one the account asked the mail to be sent to, so it is not evidence that the account is the person an admin invited | open |
 | POST | `/api/v1/auth/verify-email/resend` | Email a fresh link to the session's account (`202 {sent_to}`; `409` already verified; `502` mail failed) | user (cookie only, JSON body) |
 | POST | `/api/v1/auth/verify-email/change` | Email a fresh link to a corrected address `{email}`; the account's address changes when that link is confirmed | user (cookie only, JSON body) |
+| POST | `/api/v1/auth/password-reset` | Email a password reset link `{email}` (REQ-158). Answers `202 {sent_to}` for **every** well-formed address, known or not, and does the lookup and the send after answering, so neither the status nor the timing says whether an account exists; an address with no account, or an SSO-only one, is simply sent nothing. `409 {"code":"reset_email_unavailable"}` on a deployment with no mailer (server configuration, not account state); `429` per client address and per address asked for. The link is valid for one hour and works once | open |
+| POST | `/api/v1/auth/password-reset/confirm` | Spend a reset link `{token, new_password}`: sets the password and ends **every** session of the account, and marks the address verified when the link was emailed (it reached that inbox). `204`; `400 weak_password` (checked before the link is spent, so a weak password does not cost it), `400 reset_invalid` (unknown, spent or expired). No session is created: the person signs in with the new password | open |
 | GET | `/api/v1/auth/google` | Start Google OIDC flow | open |
 | GET | `/api/v1/auth/google/callback` | OIDC callback, creates/logs in user | open |
 | GET | `/api/v1/users` | List users (for member pickers) | user |
@@ -151,7 +153,7 @@ their own project, workers pass within their org) · `org member`/`org admin`
 | POST | `/api/v1/orgs` | Create a company workspace | user |
 | GET | `/api/v1/orgs/{id}` | Workspace details | org member |
 | PUT | `/api/v1/orgs/{id}` | Update name/settings/limits/`monthly_budget_usd`/`release_channel` (`nightly`, `stable`, or `""` for the plan's default; `400` on a plan that always runs nightly)/`upgrade_window` (`{day 1-28, hour 0-23, timezone}` or `null` for "at the cut"; `400` for bad values or a plan that cannot choose). The workspace answers with its effective `release_channel`, `release_channel_locked`, `stable_release` and window | org admin |
-| GET | `/api/v1/orgs/{id}/features` | The caller's feature gates in the workspace: `{channel, stable_release, preview, features: {key: bool}, next_stable_release?, next_stable_at?}`. Keys today: `flow-down`, `artifact-owners`, `share-links`, `assistant-project-edits` (the V&V Assistant's new-artifact, edit and move cards). Gates are resolved from the channel and the stable release the workspace has turned on, or the newest stable when the caller previews it (REQ-137, REQ-138) | org member |
+| GET | `/api/v1/orgs/{id}/features` | The caller's feature gates in the workspace: `{channel, stable_release, preview, features: {key: bool}, next_stable_release?, next_stable_at?}`. Keys today: `flow-down`, `artifact-owners`, `share-links`, `assistant-project-edits` (the V&V Assistant's new-artifact, edit and move cards), `default-workspace` (choosing the workspace a sign-in lands in), `figure-titles` (renaming a figure). Gates are resolved from the channel and the stable release the workspace has turned on, or the newest stable when the caller previews it (REQ-137, REQ-138) | org member |
 | PUT | `/api/v1/orgs/{id}/plan` | Move a workspace to another plan `{plan}` → the workspace (REQ-154). Plans: `single`, `business_lite`, `business`, `enterprise`, `self_host`, `open_source` (plus the legacy aliases `free`, `team`); `400` for any other name, `404` for an unknown workspace. The channel override is kept and the effective channel follows the new plan's default where none is set. This is how the open-source tier is granted: `python3 scripts/openv/sync.py api PUT /api/v1/orgs/<id>/plan '{"plan":"open_source"}'` signed in as a platform admin (`OPENV_EMAIL`/`OPENV_PASSWORD`) | platform admin |
 | PUT | `/api/v1/orgs/{id}/members/me/preview` | `{enabled}`: switch the caller's own account to the newest stable release early in this workspace; answers the caller's gates. `400` on a plan that always runs nightly | org member |
 | DELETE | `/api/v1/orgs/{id}` | Soft-delete a company workspace: hidden and locked immediately, restorable for 30 days, then hard-deleted with all its data by a daily purge. Personal workspaces are refused. | org admin |
@@ -198,7 +200,7 @@ their own project, workers pass within their org) · `org member`/`org admin`
 | POST | `/api/v1/orgs/{id}/hosted-runner/stop` | Stop the container | org admin |
 | DELETE | `/api/v1/orgs/{id}/hosted-runner` | Delete (optionally `?purge=true` removes the volume) | org admin |
 | GET | `/api/v1/orgs/{id}/worker-status` | Live runner presence / queue depth | org member |
-| GET | `/api/v1/orgs/{id}/runner-session` | My transient runner lease (with deadline and pool occupancy) | org member |
+| GET | `/api/v1/orgs/{id}/runner-session` | My transient runner lease (with deadline and a `pool_load` band — `green` / `amber` / `red` / `unavailable`, never a count) | org member |
 | POST | `/api/v1/orgs/{id}/runner-session` | Lease a cloud runner (409-free: an existing lease is returned; 503 when the pool is full) | org member |
 | POST | `/api/v1/orgs/{id}/runner-session/extend` | Reset my lease's clocks (capped at 8h from its start) | org member |
 | DELETE | `/api/v1/orgs/{id}/runner-session` | End my lease now (the node is wiped) | org member |
@@ -315,7 +317,7 @@ Every artifact carries two identifiers, and they answer different questions:
 
 | Method | Path | Purpose | Auth |
 |---|---|---|---|
-| POST | `/api/v1/artifacts` | Create artifact | editor |
+| POST | `/api/v1/artifacts` | Create artifact. `copied_from` (the id of an artifact the caller can read) marks a duplicate or a paste: the new artifact carries none of the source's versions or links, and its feed opens with one system note, *Copied from REQ-12 (version 3)*; an unreadable or unknown source leaves the copy without the note | editor |
 | GET | `/api/v1/artifacts` | List artifacts (`?project_id=&type=&owner=&doc_numbers=1`; `owner` matches the `owner` attribute exactly) | viewer |
 | GET | `/api/v1/artifacts/{id}` | Get artifact (current version) | viewer |
 | PUT | `/api/v1/artifacts/{id}` | Update (creates a new temporal version) | editor |
@@ -329,15 +331,17 @@ Every artifact carries two identifiers, and they answer different questions:
 | PUT | `/api/v1/links/{id}` | Update link | editor |
 | DELETE | `/api/v1/links/{id}` | Delete link | editor |
 | POST | `/api/v1/attachments/upload` | Upload a file (multipart) to an artifact or test result | editor |
-| GET | `/api/v1/attachments/{id}` | Attachment metadata | viewer |
+| GET | `/api/v1/attachments/{id}` | Attachment metadata (`title` is the name a member gave the figure, empty when none; readers fall back to `original_filename`) | viewer |
+| PUT | `/api/v1/attachments/{id}` | Rename a figure: `{title}` (trimmed, up to 255 characters, `""` clears it). A change is a new figure version over the same image and a new artifact version, recorded in the notes; an unchanged title writes nothing. `403` with the remedy while the workspace's channel has not received `figure-titles` (REQ-157) | editor |
 | GET | `/api/v1/attachments/{id}/download` | Download the file (`?version=N` for a superseded one) | viewer |
 | POST | `/api/v1/attachments/{id}/versions` | Replace a figure's file with a new version (multipart) | editor |
-| GET | `/api/v1/attachments/{id}/versions` | A figure's version history, newest first | viewer |
+| POST | `/api/v1/attachments/{id}/versions/{version}/restore` | Bring an older version's file and title back as a NEW version; nothing is deleted. 404 for a version the figure never had, 409 for the one already current | editor |
+| GET | `/api/v1/attachments/{id}/versions` | A figure's version history, newest first; each entry carries the file, its `kind` and the `title` the figure had at that version, so a rename and a new file read alike | viewer |
 | DELETE | `/api/v1/attachments/{id}` | Delete attachment | editor |
 | GET | `/api/v1/artifacts/{artifactID}/attachments` | List an artifact's attachments | viewer |
 | GET | `/api/v1/projects/{projectID}/attachments` | Every attachment in the project, in artifact order then figure number. Serves cross-artifact figure citations, which need the project's figures as one list | viewer |
 | POST | `/api/v1/chatter` | Comment on an artifact (a reviewer may: that is what the role is for) | reviewer |
-| GET | `/api/v1/chatter` | List an artifact's activity feed | viewer |
+| GET | `/api/v1/chatter` | List an artifact's activity feed. Each entry carries `mentions` (the project members its @names resolve to) and `todo` (the work item raised from it, with its current status) — both composed at read time, neither stored | viewer |
 
 ### Figures
 
@@ -421,6 +425,8 @@ pushes new items live.
 | GET | `/api/v1/notifications/stream` | SSE stream of new notifications | user |
 | GET | `/api/v1/me/notification-prefs` | Get the caller's email opt-out and push opt-in | user |
 | PUT | `/api/v1/me/notification-prefs` | Update either preference (`email_notifications`, `push_notifications`); an absent field is left as it was | user |
+| GET | `/api/v1/me/default-workspace` | The workspace the caller's sign-in lands in: `{org_id}`, `""` for the personal workspace (REQ-156) | user |
+| PUT | `/api/v1/me/default-workspace` | Choose it: `{org_id}` names a workspace the caller belongs to (`404` otherwise, the same answer as an unknown one), `""` or the personal workspace's id means the personal workspace. A stable-channel workspace whose release predates the feature answers `403` with the remedy (`default-workspace` gate). The choice is re-checked against membership on every sign-in: a member who has left the workspace lands in their personal one | user |
 
 #### Notification types
 
@@ -525,6 +531,7 @@ everybody else.
 |---|---|---|---|
 | GET | `/api/v1/admin/workspaces` | Every live workspace with its plan, channel and `members` count, oldest first | platform admin |
 | GET | `/api/v1/admin/users` | Every account: `[{id, name, email, auth_provider, is_admin, created_at}]`, admins first | platform admin |
+| POST | `/api/v1/admin/users/{id}/password-reset` | Mint a password reset link for an account and answer it **once**: `{link, expires_at}`, valid 24 hours, works once (REQ-158). Nothing is emailed: the admin passes the link on however they talk to the person, which is the support path and the only path on a deployment with no mailer. Following it verifies nothing about the mailbox. `404` unknown account; `409 no_password` for an account that signs in through an identity provider. Logged with the admin's id | platform admin |
 | PUT | `/api/v1/admin/users/{id}/admin` | Grant or remove platform-admin standing `{is_admin}` → the account. `400` when an admin tries to remove their own standing or the last admin's; `404` for an unknown account | platform admin |
 
 Plans are changed with `PUT /api/v1/orgs/{id}/plan` (above).
@@ -744,7 +751,7 @@ conventions.
 
 | Method | Path | Purpose | Auth |
 |---|---|---|---|
-| POST | `/api/v1/projects/{id}/work-items` | Create card | editor |
+| POST | `/api/v1/projects/{id}/work-items` | Create card. `source_chatter_id` raises it from a note (that note must be in the same project, else 400) | editor |
 | GET | `/api/v1/projects/{id}/work-items` | List board | viewer |
 | GET | `/api/v1/work-items/{id}` | Card + activity | viewer |
 | PUT | `/api/v1/work-items/{id}` | Edit card | editor |
@@ -956,6 +963,12 @@ routes are throttled per invite and per address. A throttled request is
 answered `429` with a JSON `error` and a `Retry-After` header in seconds.
 Verification resend and change-of-address are throttled per account
 (`OPENV_VERIFY_RESEND_BURST` 3, `OPENV_VERIFY_RESEND_REFILL_PER_HOUR` 6).
+Asking for a password reset email (`POST /auth/password-reset`) is throttled
+per client address on the sign-in bucket and per address asked for
+(`OPENV_PASSWORD_RESET_BURST` 3, `OPENV_PASSWORD_RESET_REFILL_PER_HOUR` 6),
+whether or not that address has an account, so the bucket cannot be read
+for existence either; confirming a link draws on the sign-in bucket per
+client address only, since the token itself is unguessable.
 Previewing an invite link (`POST /auth/invitations/preview`) has its own
 generous per-address bucket (`OPENV_INVITE_PREVIEW_BURST` 60,
 `OPENV_INVITE_PREVIEW_REFILL_PER_HOUR` 240) and deliberately does **not**
@@ -990,7 +1003,8 @@ authenticated request, so shortening either applies to sessions that already
 exist, and a background sweep deletes the rows. An expired session is
 answered like any other invalid one (`401`). A successful `PUT /me/password`
 invalidates every other session of the account immediately; the caller's own
-survives. See [operations.md](operations.md) for the variables.
+survives. A password reset (`POST /auth/password-reset/confirm`) invalidates
+**every** session, including any the resetting browser held. See [operations.md](operations.md) for the variables.
 Request bodies are capped at 32 MB and attachment uploads at 25 MB (`413`
 when exceeded); an upload whose bytes do not match the declared image type
 is refused with `400`, and an SVG attachment is always served as a download.

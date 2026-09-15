@@ -55,6 +55,9 @@ interface ArtifactEditorProps {
   projectAttachments?: Attachment[];
   onUploadAttachment?: (file: File) => void;
   onUploadAttachmentVersion?: (attachmentId: string, file: File) => void;
+  onRenameAttachment?: (attachmentId: string, title: string) => void;
+  /** Reload the figures after one has been restored to an older version. */
+  onAttachmentRestored?: () => void;
   onDeleteAttachment?: (attachmentId: string) => void;
   isUploadLoading?: boolean;
   links?: Link[];
@@ -81,6 +84,8 @@ export const ArtifactEditor: React.FC<ArtifactEditorProps> = ({
   projectAttachments = [],
   onUploadAttachment,
   onUploadAttachmentVersion,
+  onRenameAttachment,
+  onAttachmentRestored,
   onDeleteAttachment,
   isUploadLoading,
   links = [],
@@ -543,6 +548,8 @@ export const ArtifactEditor: React.FC<ArtifactEditorProps> = ({
               attachments={attachments}
               onUpload={onUploadAttachment || (() => {})}
               onUploadVersion={onUploadAttachmentVersion}
+              onRename={onRenameAttachment}
+              onRestored={onAttachmentRestored}
               onDelete={onDeleteAttachment || (() => {})}
               isUploadLoading={isUploadLoading}
               showUpload={true}

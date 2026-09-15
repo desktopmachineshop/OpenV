@@ -1312,6 +1312,91 @@ var migrations = []Migration{
 		_, err := tx.Exec(`CREATE INDEX IF NOT EXISTS idx_project_share_links_project ON project_share_links(project_id)`)
 		return err
 	}},
+	// 0040: the workspace a member's sign-in lands in (REQ-156). Nullable:
+	// a member who has chosen none lands in their personal workspace as
+	// before. The reference clears itself when that workspace is purged, so
+	// a stale choice can never point at nothing.
+	{Version: 40, Name: "users_default_org", Run: func(tx *sql.Tx) error {
+		_, err := tx.Exec(`
+			DO $$
+			BEGIN
+				IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='default_org_id') THEN
+					ALTER TABLE users ADD COLUMN default_org_id UUID;
+				END IF;
+				BEGIN
+					ALTER TABLE users ADD CONSTRAINT users_default_org_id_fkey
+						FOREIGN KEY (default_org_id) REFERENCES organizations(id) ON DELETE SET NULL;
+				EXCEPTION WHEN duplicate_object THEN NULL;
+				END;
+			END $$;
+		`)
+		return err
+	}},
+	// 0041: figure titles (REQ-157).
+	//
+	// A figure's name was the filename it was uploaded under, which for a
+	// screenshot is a timestamp. attachments.title is the name a member gives
+	// it; attachment_versions.title records the name each version carried,
+	// so renaming a figure is a version like replacing its image is, with
+	// who and when. Empty means "not named": readers fall back to the
+	// uploaded filename, as before.
+	{Version: 41, Name: "attachment_titles", Run: func(tx *sql.Tx) error {
+		if _, err := tx.Exec(`
+			ALTER TABLE attachments
+				ADD COLUMN IF NOT EXISTS title VARCHAR(255) NOT NULL DEFAULT ''
+		`); err != nil {
+			return err
+		}
+		_, err := tx.Exec(`
+			ALTER TABLE attachment_versions
+				ADD COLUMN IF NOT EXISTS title VARCHAR(255) NOT NULL DEFAULT ''
+		`)
+		return err
+	}},
+	// 0042: password reset links (REQ-158).
+	//
+	// The same shape as email_verifications: a hashed single-use token with
+	// an expiry, at most one live per account. delivery says how the link
+	// reached its holder — emailed to the account's own address, or minted
+	// by a platform admin (issued_by) and handed over out of band — because
+	// only the first is proof of the mailbox.
+	{Version: 42, Name: "password_resets", Run: func(tx *sql.Tx) error {
+		if _, err := tx.Exec(`
+			CREATE TABLE IF NOT EXISTS password_resets (
+				id UUID PRIMARY KEY,
+				user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+				token_hash VARCHAR(128) NOT NULL,
+				delivery VARCHAR(16) NOT NULL DEFAULT 'email',
+				issued_by UUID,
+				expires_at TIMESTAMP NOT NULL,
+				used BOOLEAN NOT NULL DEFAULT FALSE,
+				created_at TIMESTAMP NOT NULL DEFAULT NOW()
+			)
+		`); err != nil {
+			return err
+		}
+		if _, err := tx.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_password_resets_token ON password_resets(token_hash)`); err != nil {
+			return err
+		}
+		_, err := tx.Exec(`CREATE INDEX IF NOT EXISTS idx_password_resets_user ON password_resets(user_id)`)
+		return err
+	}},
+	// A to-do raised from a note remembers which note it came from, so the
+	// note can show its live status instead of a copy that goes stale.
+	{Version: 43, Name: "work_item_source_note", Run: func(tx *sql.Tx) error {
+		if _, err := tx.Exec(`ALTER TABLE work_items ADD COLUMN IF NOT EXISTS source_chatter_id UUID`); err != nil {
+			return err
+		}
+		_, err := tx.Exec(`CREATE INDEX IF NOT EXISTS idx_work_items_source_chatter ON work_items(source_chatter_id) WHERE source_chatter_id IS NOT NULL`)
+		return err
+	}},
+	// A restored figure version records which version it brought back, so the
+	// history can say so. A restore reuses the older version's stored file,
+	// which means file paths alone cannot tell a restore from a re-upload.
+	{Version: 44, Name: "attachment_version_restored_from", Run: func(tx *sql.Tx) error {
+		_, err := tx.Exec(`ALTER TABLE attachment_versions ADD COLUMN IF NOT EXISTS restored_from INT`)
+		return err
+	}},
 }
 
 // backfillRefPrefix is the type→prefix mapping frozen at the time migration

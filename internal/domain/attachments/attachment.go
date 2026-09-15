@@ -2,6 +2,7 @@ package attachments
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"path"
 	"regexp"
@@ -87,9 +88,13 @@ type Attachment struct {
 	Filename string `json:"filename"`
 	// OriginalFilename is the name the uploader's file had.
 	OriginalFilename string `json:"original_filename"`
-	MimeType         string `json:"mime_type"`
-	FilePath         string `json:"file_path"`
-	FileSize         int    `json:"file_size"`
+	// Title is the name a member gave the figure; empty when it has none,
+	// in which case Name falls back to the uploaded filename. Every change
+	// of title is a version of the figure.
+	Title    string `json:"title"`
+	MimeType string `json:"mime_type"`
+	FilePath string `json:"file_path"`
+	FileSize int    `json:"file_size"`
 	// FigureRef is the citable reference ("REQ-17-FIG-1"); FigureNum is its
 	// number within the artifact. Both are empty/zero only on rows whose
 	// artifact has no reference to build on.
@@ -117,20 +122,43 @@ func (a Attachment) MarshalJSON() ([]byte, error) {
 // Kind is the family this figure's file belongs to.
 func (a Attachment) Kind() Kind { return KindForMime(a.MimeType) }
 
-// Version is one uploaded revision of a figure. The newest matches the
-// attachment's own file fields; older ones stay on disk so a superseded
-// drawing can still be retrieved.
+// Name is what a figure is called to a reader: its title when a member has
+// given it one, else the name its file was uploaded under.
+func (a *Attachment) Name() string {
+	if t := strings.TrimSpace(a.Title); t != "" {
+		return t
+	}
+	if n := strings.TrimSpace(a.OriginalFilename); n != "" {
+		return n
+	}
+	return strings.TrimSpace(a.Filename)
+}
+
+// MaxTitleLen bounds a figure title.
+const MaxTitleLen = 255
+
+// Version is one revision of a figure: a new image, or a new title over the
+// same image. The newest matches the attachment's own fields; older ones
+// stay on disk so a superseded drawing can still be retrieved, and each
+// records the title the figure carried at that version.
 type Version struct {
 	ID               string    `json:"id"`
 	AttachmentID     string    `json:"attachment_id"`
 	Version          int       `json:"version"`
 	Filename         string    `json:"filename"`
 	OriginalFilename string    `json:"original_filename"`
+	Title            string    `json:"title"`
 	MimeType         string    `json:"mime_type"`
 	FilePath         string    `json:"file_path"`
 	FileSize         int       `json:"file_size"`
 	CreatedBy        *string   `json:"created_by,omitempty"`
 	CreatedAt        time.Time `json:"created_at"`
+	// RestoredFrom names the older version this one brings back, when it was
+	// written by a restore. It is what lets the history say "restored from
+	// v2" rather than leaving a reader to work out why an old drawing
+	// reappeared — and it is why a restore cannot be told apart from a fresh
+	// upload by comparing file paths alone.
+	RestoredFrom *int `json:"restored_from,omitempty"`
 }
 
 // MarshalJSON adds the version's kind, as for an attachment: a figure can
@@ -144,11 +172,19 @@ func (v Version) MarshalJSON() ([]byte, error) {
 	}{wire(v), KindForMime(v.MimeType)})
 }
 
+// ErrNoSuchVersion reports a restore naming a version the figure never had.
+var ErrNoSuchVersion = errors.New("no such figure version")
+
+// ErrAlreadyCurrent reports a restore of the version the figure is already
+// showing. Writing it again would add a version that changed nothing.
+var ErrAlreadyCurrent = errors.New("that version is already current")
+
 // CreateAttachmentRequest is the payload for creating an attachment
 type CreateAttachmentRequest struct {
 	ArtifactID       string
 	Filename         string
 	OriginalFilename string
+	Title            string
 	MimeType         string
 	FilePath         string
 	FileSize         int
@@ -162,6 +198,7 @@ func NewAttachment(req CreateAttachmentRequest) *Attachment {
 		ArtifactID:       req.ArtifactID,
 		Filename:         req.Filename,
 		OriginalFilename: req.OriginalFilename,
+		Title:            strings.TrimSpace(req.Title),
 		MimeType:         req.MimeType,
 		FilePath:         req.FilePath,
 		FileSize:         req.FileSize,
@@ -194,10 +231,19 @@ type Repository interface {
 	// AddVersion replaces the figure's current file with a new version and
 	// records it, returning the version number written.
 	AddVersion(attachmentID string, v *Version) (int, error)
+	// Rename gives the figure a new title as a new version over the same
+	// image, recording who did it, and returns the version number written
+	// (0 when there is no such figure).
+	Rename(attachmentID, title string, by *string) (int, error)
 	// ListVersions returns a figure's versions, newest first.
 	ListVersions(attachmentID string) ([]*Version, error)
 	// FindVersion returns one version of a figure.
 	FindVersion(attachmentID string, version int) (*Version, error)
+	// Restore brings an older version's image and title back as a NEW
+	// version, leaving every existing version in place. It returns the
+	// version written, ErrNoSuchVersion when the figure never had that
+	// version, or ErrAlreadyCurrent when it is the one already showing.
+	Restore(attachmentID string, version int, by *string) (*Version, error)
 }
 
 // Service defines the attachment domain logic
@@ -218,11 +264,21 @@ type Service interface {
 	// AddVersion supersedes a figure's file with a new version, returning the
 	// version number written.
 	AddVersion(attachmentID string, v *Version) (int, error)
+	// RenameFigure gives a figure a new title as a new version over the same
+	// image, returning the version number written (0 for no such figure).
+	// The title is trimmed and bounded; ErrTitleTooLong refuses a longer one.
+	RenameFigure(attachmentID, title string, by *string) (int, error)
 	// GetVersions returns a figure's versions, newest first.
 	GetVersions(attachmentID string) ([]*Version, error)
 	// GetVersion returns one version of a figure.
 	GetVersion(attachmentID string, version int) (*Version, error)
+	// RestoreVersion brings an older version back as a new one (see
+	// Repository.Restore).
+	RestoreVersion(attachmentID string, version int, by *string) (*Version, error)
 }
+
+// ErrTitleTooLong refuses a figure title over MaxTitleLen characters.
+var ErrTitleTooLong = fmt.Errorf("figure title is longer than %d characters", MaxTitleLen)
 
 // DefaultService implements the Service interface
 type DefaultService struct {
@@ -275,6 +331,15 @@ func (s *DefaultService) AddVersion(attachmentID string, v *Version) (int, error
 	return s.repository.AddVersion(attachmentID, v)
 }
 
+// RenameFigure gives a figure a new title as a new version.
+func (s *DefaultService) RenameFigure(attachmentID, title string, by *string) (int, error) {
+	title = strings.TrimSpace(title)
+	if len([]rune(title)) > MaxTitleLen {
+		return 0, ErrTitleTooLong
+	}
+	return s.repository.Rename(attachmentID, title, by)
+}
+
 // GetVersions returns a figure's versions, newest first.
 func (s *DefaultService) GetVersions(attachmentID string) ([]*Version, error) {
 	return s.repository.ListVersions(attachmentID)
@@ -283,4 +348,19 @@ func (s *DefaultService) GetVersions(attachmentID string) ([]*Version, error) {
 // GetVersion returns one version of a figure.
 func (s *DefaultService) GetVersion(attachmentID string, version int) (*Version, error) {
 	return s.repository.FindVersion(attachmentID, version)
+}
+
+// RestoreVersion brings an older version of a figure back as a new version.
+//
+// Forward-only, deliberately: the older versions stay exactly where they
+// were and the restore is itself a version. Rewinding the counter and
+// dropping what came after would be the other way to read "revert", and it
+// would quietly destroy the record of what the figure showed while a
+// requirement was being reviewed against it — which is the one thing this
+// product exists to keep.
+func (s *DefaultService) RestoreVersion(attachmentID string, version int, by *string) (*Version, error) {
+	if version < 1 {
+		return nil, ErrNoSuchVersion
+	}
+	return s.repository.Restore(attachmentID, version, by)
 }

@@ -31,15 +31,59 @@ FROM node:20.20-bookworm-slim
 
 # git is needed by pool nodes, which do run repo-access agents (cloning the
 # connection's repository URL — a leased runner has no local checkout to point
-# at). Hosted runners refuse those runs and never clone.
+# at). Hosted runners refuse those runs and never clone. curl fetches the
+# pinned Antigravity release below.
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends git ca-certificates && \
+    apt-get install -y --no-install-recommends git ca-certificates curl && \
     rm -rf /var/lib/apt/lists/*
 
-# All three vendor CLIs are baked in: a member leasing a transient runner
-# cannot install anything on it, so whatever is not in this image is not a
-# provider they can sign into.
+# Every vendor CLI is baked in: a member leasing a transient runner cannot
+# install anything on it, so whatever is not in this image is not a provider
+# they can use.
 RUN npm install -g @anthropic-ai/claude-code @openai/codex @google/gemini-cli
+
+# Antigravity CLI (`agy`), Google's successor to the Gemini CLI — pinned, not
+# piped.
+#
+# Google documents `curl -fsSL https://antigravity.google/cli/install.sh | bash`.
+# That script asks a manifest endpoint for whatever release is current at build
+# time, so the image would carry a different CLI on every rebuild with nothing
+# recording which — the opposite of the base-image policy at the top of this
+# file. The steps below are the installer's own, with the moving part frozen:
+# the release it resolved on 2026-09-15, and the SHA-512 the installer itself
+# verifies. Nothing is executed from the network; the tarball is checksummed
+# before it is unpacked.
+#
+# To bump, read the manifest for each platform and copy the three values:
+#   .../manifests/linux_amd64.json and .../manifests/linux_arm64.json at
+#   https://antigravity-cli-auto-updater-974169037036.us-central1.run.app
+#
+# Both architectures are pinned because the base image is multi-arch: an
+# arm64 build (a laptop running `make worker-image`) must not silently get an
+# amd64 binary, and TARGETARCH is what distinguishes them.
+#
+# The binary self-updates in the background on a normal machine. Here it
+# cannot: it is installed root-owned into /usr/local/bin and every run is the
+# non-root `worker` user created below, so the pin is enforced by the
+# filesystem rather than by trusting the CLI to leave itself alone.
+ARG TARGETARCH
+ARG AGY_VERSION=1.2.3
+ARG AGY_URL_AMD64=https://storage.googleapis.com/antigravity-public/antigravity-cli/1.2.3-5101874907578368/linux-x64/cli_linux_x64.tar.gz
+ARG AGY_SHA512_AMD64=ec74dc5ce20e64623a4d68e73a8957e468c026bdb3d07b15c5291490323133970c735d985af839eab057b52b1bfd1b2e91ff49abeebef032ffae6dded8e2a763
+ARG AGY_URL_ARM64=https://storage.googleapis.com/antigravity-public/antigravity-cli/1.2.3-5101874907578368/linux-arm/cli_linux_arm64.tar.gz
+ARG AGY_SHA512_ARM64=bdab1bcdd4fea79eae663239a06e8e7964d9905ec6fa072076644f7506c7ce73cf2eb8563eb7060366bdb68ad815e5fc5bddf38ab621f39aff576a90899a3ac6
+RUN set -eux; \
+    case "${TARGETARCH:-amd64}" in \
+      amd64) agy_url="$AGY_URL_AMD64"; agy_sha="$AGY_SHA512_AMD64" ;; \
+      arm64) agy_url="$AGY_URL_ARM64"; agy_sha="$AGY_SHA512_ARM64" ;; \
+      *) echo "no pinned Antigravity build for TARGETARCH=$TARGETARCH" >&2; exit 1 ;; \
+    esac; \
+    curl -fsSL "$agy_url" -o /tmp/agy.tar.gz; \
+    echo "$agy_sha  /tmp/agy.tar.gz" | sha512sum -c -; \
+    tar -xzf /tmp/agy.tar.gz -C /tmp; \
+    install -m 0755 /tmp/antigravity /usr/local/bin/agy; \
+    rm -rf /tmp/agy.tar.gz /tmp/antigravity; \
+    test "$(agy --version)" = "$AGY_VERSION"
 
 # Dedicated non-root user with HOME on the /data volume so CLI state
 # (credentials, caches) survives container replacement. The base image's

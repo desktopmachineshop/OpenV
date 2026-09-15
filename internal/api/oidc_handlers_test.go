@@ -147,6 +147,7 @@ func (m *memUserRepo) ListUsers() ([]*users.User, error)           { return nil,
 func (m *memUserRepo) CountUsers() (int, error)                    { return len(m.users), nil }
 func (m *memUserRepo) SetEmailNotifications(string, bool) error    { return nil }
 func (m *memUserRepo) SetPushNotifications(string, bool) error     { return nil }
+func (m *memUserRepo) SetDefaultOrg(string, string) error          { return nil }
 func (m *memUserRepo) SetAvatar(userID, path, mime, url string, _ time.Time) error {
 	if u, ok := m.users[userID]; ok {
 		u.AvatarPath, u.AvatarMime, u.AvatarURL = path, mime, url
@@ -158,6 +159,10 @@ func (m *memUserRepo) SaveEmailVerification(*users.EmailVerification) error {
 	return nil
 }
 func (m *memUserRepo) ConsumeEmailVerification(string, time.Time) (*users.User, error) {
+	return nil, nil
+}
+func (m *memUserRepo) SavePasswordReset(*users.PasswordReset) error { return nil }
+func (m *memUserRepo) ConsumePasswordReset(string, time.Time) (*users.PasswordReset, error) {
 	return nil, nil
 }
 func (m *memUserRepo) MarkEmailVerified(userID string, at time.Time) error {

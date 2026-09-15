@@ -42,6 +42,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/interviews"
 	"github.com/openv/requirements-platform/internal/domain/invitations"
 	"github.com/openv/requirements-platform/internal/domain/members"
+	"github.com/openv/requirements-platform/internal/domain/mentions"
 	"github.com/openv/requirements-platform/internal/domain/notifications"
 	"github.com/openv/requirements-platform/internal/domain/orgs"
 	"github.com/openv/requirements-platform/internal/domain/products"
@@ -231,6 +232,9 @@ type Handler struct {
 	// verifyResendLimiter bounds verification mails per account (resend and
 	// change of address share it).
 	verifyResendLimiter *rateLimiter
+	// passwordResetLimiter bounds reset mails per address (REQ-158), so
+	// the sign-in page cannot be used to flood one inbox.
+	passwordResetLimiter *rateLimiter
 	// invitePreviewLimiter bounds invite-link previews per address. Separate
 	// from authIPLimiter on purpose: opening an invite link must never spend
 	// somebody's sign-in budget (see ratelimit.go).
@@ -325,6 +329,7 @@ func NewHandler(deps HandlerDeps) *Handler {
 		registerIPLimiter:      newRateLimiterFromEnv(envRegisterIPBurst, envRegisterIPRefill, defaultRegisterIPBurst, defaultRegisterIPRefill),
 		ssoIPLimiter:           newRateLimiterFromEnv(envSSOIPBurst, envSSOIPRefill, defaultSSOIPBurst, defaultSSOIPRefill),
 		verifyResendLimiter:    newRateLimiterFromEnv(envVerifyResendBurst, envVerifyResendRefill, defaultVerifyResendBurst, defaultVerifyResendRefill),
+		passwordResetLimiter:   newRateLimiterFromEnv(envPasswordResetBurst, envPasswordResetRefill, defaultPasswordResetBurst, defaultPasswordResetRefill),
 		invitePreviewLimiter:   newRateLimiterFromEnv(envInvitePreviewBurst, envInvitePreviewRefill, defaultInvitePreviewBurst, defaultInvitePreviewRefill),
 		inviteLimiter:          newRateLimiterFromEnv(envInviteBurst, envInviteRefill, defaultInviteBurst, defaultInviteRefill),
 		mailer:                 deps.Mailer,
@@ -427,9 +432,11 @@ func (h *Handler) RegisterRoutes(router *mux.Router) {
 	// Attachment endpoints
 	router.HandleFunc("/api/v1/attachments/upload", h.UploadAttachment).Methods("POST")
 	router.HandleFunc("/api/v1/attachments/{id}", h.GetAttachmentMeta).Methods("GET")
+	router.HandleFunc("/api/v1/attachments/{id}", h.RenameAttachment).Methods("PUT")
 	router.HandleFunc("/api/v1/attachments/{id}/download", h.DownloadAttachment).Methods("GET")
 	router.HandleFunc("/api/v1/attachments/{id}/versions", h.UploadAttachmentVersion).Methods("POST")
 	router.HandleFunc("/api/v1/attachments/{id}/versions", h.ListAttachmentVersions).Methods("GET")
+	router.HandleFunc("/api/v1/attachments/{id}/versions/{version}/restore", h.RestoreAttachmentVersion).Methods("POST")
 	router.HandleFunc("/api/v1/attachments/{id}", h.DeleteAttachment).Methods("DELETE")
 	router.HandleFunc("/api/v1/artifacts/{artifactID}/attachments", h.ListArtifactAttachments).Methods("GET")
 	router.HandleFunc("/api/v1/projects/{projectID}/attachments", h.ListProjectAttachments).Methods("GET")
@@ -451,9 +458,11 @@ func (h *Handler) RegisterRoutes(router *mux.Router) {
 	h.registerOrgRoutes(router)
 	h.registerInvitationRoutes(router)
 	h.registerPasswordRoutes(router)
+	h.registerPasswordResetRoutes(router)
 	h.registerAvatarRoutes(router)
 	h.registerReleaseRoutes(router)
 	h.registerFeatureRoutes(router)
+	h.registerDefaultWorkspaceRoutes(router)
 	h.registerRunnerSessionRoutes(router)
 	h.registerAttributeDefinitionRoutes(router)
 	h.registerSharedProductRoutes(router)
@@ -533,10 +542,37 @@ func (h *Handler) CreateArtifact(w http.ResponseWriter, r *http.Request) {
 		"artifact_type": artifact.Type,
 		"title":         artifact.Title,
 	})
+	h.noteCopiedFrom(r, artifact, req.CopiedFrom)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(artifact)
+}
+
+// noteCopiedFrom opens a copied artifact's feed with the one line its
+// history has: where it came from. A duplicate or a paste carries none of
+// the original's versions and none of its links (a copy that inherited
+// "verifies REQ-12" would assert a verification nobody made), so without
+// this a reader could not tell the two apart later. The source must be
+// readable by the caller, so the field cannot be used to probe another
+// project's artifacts; anything else leaves the copy without a note rather
+// than failing the create, which has already happened.
+func (h *Handler) noteCopiedFrom(r *http.Request, copy *artifacts.Artifact, sourceID string) {
+	if sourceID == "" || h.chatterService == nil {
+		return
+	}
+	source, err := h.artifactService.GetArtifact(sourceID)
+	if err != nil || source == nil {
+		return
+	}
+	if !h.requireProjectRole(discardResponse{}, r, source.ProjectID, members.RoleViewer) {
+		return
+	}
+	label := source.Ref
+	if label == "" {
+		label = source.Title
+	}
+	h.logAutoNote(r, copy.ID, fmt.Sprintf("Copied from %s (version %d).", label, source.Version), "copy")
 }
 
 // errAttributeDefinitionsUnavailable marks a definition-lookup failure on the
@@ -2271,10 +2307,20 @@ func (h *Handler) UploadAttachment(w http.ResponseWriter, r *http.Request) {
 		artifactRef = a.Ref
 	}
 
+	// An optional title names the figure from the start; it is bounded the
+	// same way a rename is.
+	title := strings.TrimSpace(r.FormValue("title"))
+	if len([]rune(title)) > attachments.MaxTitleLen {
+		_ = os.Remove(storedPath)
+		writeJSONError(w, http.StatusBadRequest, attachments.ErrTitleTooLong.Error())
+		return
+	}
+
 	attachment := attachments.NewAttachment(attachments.CreateAttachmentRequest{
 		ArtifactID:       artifactID,
 		Filename:         header.Filename,
 		OriginalFilename: header.Filename,
+		Title:            title,
 		MimeType:         mimeType,
 		FilePath:         storedPath,
 		FileSize:         len(fileData),
@@ -2289,7 +2335,7 @@ func (h *Handler) UploadAttachment(w http.ResponseWriter, r *http.Request) {
 
 	if attachment.FigureRef != "" {
 		h.logFigureNote(r, artifactID, fmt.Sprintf("Figure %s added (version 1) — %s.",
-			attachment.FigureRef, attachment.OriginalFilename))
+			attachment.FigureRef, attachment.Name()))
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -2319,7 +2365,13 @@ func (h *Handler) GetAttachmentMeta(w http.ResponseWriter, r *http.Request) {
 // where a reader looks to find out why a drawing changed, so a failure to write
 // one is logged rather than failing the upload that succeeded.
 func (h *Handler) logFigureNote(r *http.Request, artifactID, message string) {
-	entry := chatter.NewChatterEntry(artifactID, message, true, "figure-change")
+	h.logAutoNote(r, artifactID, message, "figure-change")
+}
+
+// logAutoNote writes a system note of the given type to an artifact's feed,
+// attributed to the caller when there is one.
+func (h *Handler) logAutoNote(r *http.Request, artifactID, message, entryType string) {
+	entry := chatter.NewChatterEntry(artifactID, message, true, entryType)
 	entry.AuthorName = "System"
 	if user := CurrentUser(r); user != nil {
 		entry.CreatedBy = &user.ID
@@ -2330,7 +2382,7 @@ func (h *Handler) logFigureNote(r *http.Request, artifactID, message string) {
 		}
 	}
 	if err := h.chatterService.CreateEntry(entry); err != nil {
-		slog.Warn("api: failed to log figure note", "artifact_id", artifactID, "error", err)
+		slog.Warn("api: failed to log note", "type", entryType, "artifact_id", artifactID, "error", err)
 	}
 }
 
@@ -2435,6 +2487,88 @@ func (h *Handler) UploadAttachmentVersion(w http.ResponseWriter, r *http.Request
 	json.NewEncoder(w).Encode(updated)
 }
 
+// RenameAttachment gives a figure a title (REQ-157).
+//
+// The name is part of what the document says under the picture, so it is
+// tracked the way the picture is: the figure takes a new version recording
+// the title, who set it and when; the artifact takes a new version through
+// the same attribute-free update a new image uses (no demotion, no suspect
+// links); and the notes record the old and new names. An unchanged title is
+// a no-op that writes nothing.
+func (h *Handler) RenameAttachment(w http.ResponseWriter, r *http.Request) {
+	id := mux.Vars(r)["id"]
+
+	existing, err := h.attachmentService.GetAttachment(id)
+	if err != nil || existing == nil {
+		writeJSONError(w, http.StatusNotFound, "Attachment not found")
+		return
+	}
+	projectID := h.projectIDForArtifact(existing.ArtifactID)
+	if !h.requireProjectRole(w, r, projectID, members.RoleEditor) {
+		return
+	}
+	if !h.projectFeatureEnabled(r, projectID, release.FeatureFigureTitles) {
+		writeJSONError(w, http.StatusForbidden, featureGateMessage)
+		return
+	}
+
+	var req struct {
+		Title string `json:"title"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSONError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+	title := strings.TrimSpace(req.Title)
+	if title == existing.Title {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(existing)
+		return
+	}
+
+	// Captured before the rename so the note names what the figure was
+	// called, whatever the service hands back afterwards.
+	was, previous := existing.Name(), existing.Version
+	next, err := h.attachmentService.RenameFigure(id, title, CurrentUserID(r))
+	if errors.Is(err, attachments.ErrTitleTooLong) {
+		writeJSONError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	if err != nil {
+		respondInternal(w, r, "Failed to rename the figure", err)
+		return
+	}
+	if next == 0 {
+		writeJSONError(w, http.StatusNotFound, "Attachment not found")
+		return
+	}
+
+	if _, err := h.artifactService.UpdateArtifact(existing.ArtifactID, artifacts.UpdateArtifactRequest{}); err != nil {
+		slog.Warn("api: failed to version artifact after a figure rename",
+			"artifact_id", existing.ArtifactID, "attachment_id", id, "error", err)
+	}
+
+	label := existing.FigureRef
+	if label == "" {
+		label = existing.Filename
+	}
+	now := title
+	if now == "" {
+		now = existing.OriginalFilename
+	}
+	h.logFigureNote(r, existing.ArtifactID, fmt.Sprintf(
+		"Figure %s renamed (version %d to %d) — %q is now %q.", label, previous, next, was, now))
+
+	updated, err := h.attachmentService.GetAttachment(id)
+	if err != nil || updated == nil {
+		updated = existing
+		updated.Title = title
+		updated.Version = next
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(updated)
+}
+
 // ListAttachmentVersions returns a figure's version history, newest first.
 func (h *Handler) ListAttachmentVersions(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
@@ -2458,6 +2592,48 @@ func (h *Handler) ListAttachmentVersions(w http.ResponseWriter, r *http.Request)
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(versions)
+}
+
+// RestoreAttachmentVersion brings an older version of a figure back as a new
+// version. Editor role, like uploading one: it changes what the figure
+// shows.
+func (h *Handler) RestoreAttachmentVersion(w http.ResponseWriter, r *http.Request) {
+	id := mux.Vars(r)["id"]
+
+	version, err := strconv.Atoi(mux.Vars(r)["version"])
+	if err != nil || version < 1 {
+		writeJSONError(w, http.StatusBadRequest, "version must be a positive whole number")
+		return
+	}
+
+	attachment, err := h.attachmentService.GetAttachment(id)
+	if err != nil || attachment == nil {
+		writeJSONError(w, http.StatusNotFound, "Attachment not found")
+		return
+	}
+	if !h.requireProjectRole(w, r, h.projectIDForArtifact(attachment.ArtifactID), members.RoleEditor) {
+		return
+	}
+
+	restored, err := h.attachmentService.RestoreVersion(id, version, CurrentUserID(r))
+	switch {
+	case errors.Is(err, attachments.ErrNoSuchVersion):
+		writeJSONError(w, http.StatusNotFound, fmt.Sprintf("This figure has no version %d", version))
+		return
+	case errors.Is(err, attachments.ErrAlreadyCurrent):
+		// Not an error the member made: they asked for the state the figure
+		// is already in. Say so rather than writing a version that changes
+		// nothing.
+		writeJSONError(w, http.StatusConflict, fmt.Sprintf("Version %d is already the current one", version))
+		return
+	case err != nil:
+		respondInternal(w, r, "Failed to restore the figure version", err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(restored)
 }
 
 // DownloadAttachment serves the attachment file
@@ -3027,6 +3203,104 @@ func (h *Handler) ListChatterEntries(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	h.decorateChatterEntries(h.projectIDForArtifact(artifactID), entries)
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(entries)
+}
+
+// decorateChatterEntries fills in the display-only fields of a notes feed:
+// who each note names, and the to-do raised from it if there is one.
+//
+// Both are looked up once for the whole feed rather than per note, and a
+// failure on either leaves the feed intact: a missing mention chip or
+// to-do link is a worse page, while a 500 is no page at all, and neither
+// is worth failing a comment thread over.
+func (h *Handler) decorateChatterEntries(projectID string, entries []*chatter.ChatterEntry) {
+	if len(entries) == 0 {
+		return
+	}
+
+	// One membership read serves both halves: who the notes name, and what
+	// to call the person a to-do is assigned to.
+	var list []*members.Member
+	if projectID != "" && h.memberService != nil {
+		var err error
+		if list, err = h.memberService.ListMembers(projectID); err != nil {
+			slog.Error("chatter: failed to list members for mentions",
+				"project_id", projectID, "error", err)
+			list = nil
+		}
+	}
+	names := make(map[string]string, len(list))
+	for _, m := range list {
+		names[m.UserID] = memberDisplayName(m)
+	}
+	for _, e := range entries {
+		for _, m := range mentions.Resolve(e.Message, list) {
+			e.Mentions = append(e.Mentions, chatter.MentionRef{
+				UserID: m.UserID,
+				Name:   names[m.UserID],
+			})
+		}
+	}
+
+	if h.workItemService == nil {
+		return
+	}
+	ids := make([]string, 0, len(entries))
+	for _, e := range entries {
+		ids = append(ids, e.ID)
+	}
+	items, err := h.workItemService.ListBySourceChatterIDs(ids)
+	if err != nil {
+		slog.Error("chatter: failed to load to-dos raised from notes",
+			"project_id", projectID, "error", err)
+		return
+	}
+	if len(items) == 0 {
+		return
+	}
+
+	// An item assigned to an agent or a team, or to someone since removed
+	// from the project, shows its status without a name rather than not
+	// showing at all.
+	byChatter := make(map[string]*chatter.TodoRef, len(items))
+	for _, item := range items {
+		if item.SourceChatterID == nil {
+			continue
+		}
+		// A note only ever shows a to-do from its own project. The write
+		// path refuses a foreign note id, so this cannot normally happen;
+		// it is here because the cost of being wrong is one project's work
+		// item title rendered inside another's, which is not a mistake to
+		// leave to a single check.
+		if projectID != "" && item.ProjectID != projectID {
+			continue
+		}
+		ref := &chatter.TodoRef{
+			WorkItemID: item.ID,
+			Title:      item.Title,
+			Status:     item.Column,
+			AssigneeID: item.AssigneeID,
+		}
+		if item.AssigneeType == workitems.AssigneeUser && item.AssigneeID != nil {
+			ref.AssigneeName = names[*item.AssigneeID]
+		}
+		byChatter[*item.SourceChatterID] = ref
+	}
+	for _, e := range entries {
+		if ref, ok := byChatter[e.ID]; ok {
+			e.Todo = ref
+		}
+	}
+}
+
+// memberDisplayName is the label a person is shown by: their name, or the
+// email they signed up with when they have not set one.
+func memberDisplayName(m *members.Member) string {
+	if name := strings.TrimSpace(m.UserName); name != "" {
+		return name
+	}
+	return m.UserEmail
 }

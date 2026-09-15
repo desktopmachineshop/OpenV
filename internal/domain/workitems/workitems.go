@@ -57,9 +57,13 @@ type WorkItem struct {
 	AgentRunID   *string    `json:"agent_run_id,omitempty"`
 	ArtifactIDs  []string   `json:"artifact_ids"`
 	DueDate      *time.Time `json:"due_date,omitempty"`
-	CreatedBy    *string    `json:"created_by,omitempty"`
-	CreatedAt    time.Time  `json:"created_at"`
-	UpdatedAt    time.Time  `json:"updated_at"`
+	// SourceChatterID is the note this item was raised from, when it was
+	// raised from one. It is what lets the note show the item's live status
+	// without the note having to store a copy of it.
+	SourceChatterID *string   `json:"source_chatter_id,omitempty"`
+	CreatedBy       *string   `json:"created_by,omitempty"`
+	CreatedAt       time.Time `json:"created_at"`
+	UpdatedAt       time.Time `json:"updated_at"`
 }
 
 // Activity is an audit entry on a work item.
@@ -83,6 +87,9 @@ type CreateWorkItemRequest struct {
 	AssigneeID   *string    `json:"assignee_id,omitempty"`
 	ArtifactIDs  []string   `json:"artifact_ids"`
 	DueDate      *time.Time `json:"due_date,omitempty"`
+	// SourceChatterID raises the item from a note. Set by the "Add to-do"
+	// control in the notes panel; empty for items created on the board.
+	SourceChatterID *string `json:"source_chatter_id,omitempty"`
 }
 
 // UpdateWorkItemRequest is the payload for updating a work item.
@@ -116,6 +123,7 @@ type Repository interface {
 	Update(item *WorkItem) error
 	FindByID(id string) (*WorkItem, error)
 	ListByProject(projectID string) ([]*WorkItem, error)
+	ListBySourceChatterIDs(chatterIDs []string) ([]*WorkItem, error)
 	Delete(id string) error
 	SaveActivity(a *Activity) error
 	ListActivity(workItemID string) ([]*Activity, error)
@@ -128,6 +136,9 @@ type Service interface {
 	Get(id string) (*WorkItem, error)
 	GetWithActivity(id string) (*WorkItem, []*Activity, error)
 	ListByProject(projectID string) ([]*WorkItem, error)
+	// ListBySourceChatterIDs returns the items raised from the given notes,
+	// for a notes feed that wants each note's to-do beside it.
+	ListBySourceChatterIDs(chatterIDs []string) ([]*WorkItem, error)
 	Update(id string, req UpdateWorkItemRequest, actor string) (*WorkItem, error)
 	Move(id string, req MoveRequest, actor string) (*WorkItem, error)
 	Delete(id string) error
@@ -190,9 +201,11 @@ func (s *DefaultService) Create(req CreateWorkItemRequest, createdBy *string, ac
 		AssigneeID:   req.AssigneeID,
 		ArtifactIDs:  artifactIDs,
 		DueDate:      req.DueDate,
-		CreatedBy:    createdBy,
-		CreatedAt:    now,
-		UpdatedAt:    now,
+
+		SourceChatterID: req.SourceChatterID,
+		CreatedBy:       createdBy,
+		CreatedAt:       now,
+		UpdatedAt:       now,
 	}
 
 	if err := s.repo.Save(item); err != nil {
@@ -235,6 +248,14 @@ func (s *DefaultService) GetWithActivity(id string) (*WorkItem, []*Activity, err
 // ListByProject retrieves all work items for a project.
 func (s *DefaultService) ListByProject(projectID string) ([]*WorkItem, error) {
 	return s.repo.ListByProject(projectID)
+}
+
+// ListBySourceChatterIDs returns the work items raised from the given notes.
+func (s *DefaultService) ListBySourceChatterIDs(chatterIDs []string) ([]*WorkItem, error) {
+	if len(chatterIDs) == 0 {
+		return nil, nil
+	}
+	return s.repo.ListBySourceChatterIDs(chatterIDs)
 }
 
 // Update replaces the editable fields of a work item.

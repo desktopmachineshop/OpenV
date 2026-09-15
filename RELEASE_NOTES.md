@@ -27,11 +27,10 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ### Maintenance updates
 
-- OpenV's licence is now the Elastic License 2.0. Self-hosting stays free
-  for anyone at any scale, the source stays public, and paid installation
-  or support stays allowed; what is no longer allowed is offering OpenV to
-  others as a hosted or managed service. The README, the site's licence
-  section and the manual carry a plain-English summary.
+- OpenV's own source code is now scanned by CodeQL on every change, on every
+  release, and weekly against an updated set of rules. It looks for bugs we
+  wrote — injection, path traversal and similar — which is the half that the
+  existing dependency scanning cannot see.
 
 ### Bug fixes
 
@@ -39,6 +38,183 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   citation had been rendering as a link with no destination, so following one
   opened a new tab showing the page you were already on instead of the figure
   or artifact it named.
+
+## 0.8.2 — 2026-09-15
+
+### Maintenance updates
+
+- Every release from now on is tagged in the source repository as
+  `v<version>`, so the exact code behind a version number can be found,
+  compared against another release, or checked out. That matters when you
+  are self-hosting, and when pinning down which release a problem started
+  in. Releases up to 0.8.1 predate this and are untagged.
+
+## 0.8.1 — 2026-09-15
+
+### Bug fixes
+
+- 0.8.0 could not start against an existing database, taking the service
+  down until this release. Nothing was lost and no data was touched — the
+  server refused to start rather than run a schema change it could not
+  complete — but OpenV was unreachable in the meantime.
+
+## 0.8.0 — 2026-09-15
+
+### New features
+
+- **To-dos**, under *Plan*, lists the project's work under the person it
+  belongs to rather than the column it sits in — everyone with access gets a
+  section, including those who owe nothing, so the page answers who owes
+  what. It is the board's work rearranged, not a second list: move a card
+  and this page says so. *Just mine* narrows it to you, and finished work is
+  hidden until you ask for it.
+- **Raise a to-do from a note.** A note that mentions someone with @name now
+  offers *Add to-do*, which fills in the person it named and the note's
+  first line, links the artifact and carries the whole note across as the
+  description. Afterwards the note shows a small link to the to-do with its
+  current status, so an old thread tells you whether the thing being
+  discussed ever got done. Mentioning someone still just tells them: nothing
+  is added to the board unless you ask for it.
+- **Restore an older version of a figure.** Its history now offers *Restore*
+  on any earlier version: the figure goes back to the image and the name it
+  had then. Like restoring an artifact, it is recorded as a new version and
+  nothing is deleted — the superseded drawing stays in the history and stays
+  openable, which is what you need when a requirement was reviewed against
+  what the figure used to show. The history entry says which version it
+  brought back.
+
+### Bug fixes
+
+- Antigravity agents no longer stop five minutes in. The CLI applies its own
+  five-minute cap to a single-prompt run and ends it there regardless of the
+  timeout set on the agent — which defaults to thirty minutes — so a longer
+  piece of work was cut off and whatever had been produced so far was
+  reported as the answer. The agent's own timeout is now the only one that
+  applies.
+
+### Maintenance updates
+
+- Cloud runners now build with a fixed, checksum-verified copy of the
+  Antigravity CLI rather than fetching whichever version is current at build
+  time. Two rebuilds of the same commit now give runners the same CLI, and a
+  version change is a visible edit to this repository instead of something
+  that happens quietly between builds.
+
+## 0.7.1 — 2026-09-15
+
+### Maintenance updates
+
+- The **?** help button now sits beside the notification bell instead of
+  floating over the bottom-right corner of the page. It used to cover
+  whatever the page put in that corner — on the V&V dashboard, the *Complete*
+  and *Abort* buttons of the last test run — and the first attempt at fixing
+  that reserved the corner instead, which left an empty strip along the
+  bottom of every page. Neither now: it is in the bar with the other controls
+  that are about you rather than the page, which is where phones have had it
+  all along.
+
+## 0.7.0 — 2026-09-15
+
+### New features
+
+- **Antigravity CLI** is available as an agent provider. Google moved the
+  free, Google One, AI Pro and AI Ultra tiers off the Gemini CLI and onto
+  Antigravity on 18 June 2026, so agents can now run on it. It runs from a
+  Gemini API key set on the workspace rather than a personal sign-in, because
+  the CLI keeps its sign-in in the computer's keyring and a cloud runner has
+  none. Agents that edit a connected repository still need Claude Code.
+
+### Maintenance updates
+
+- The floating **?** help button no longer sits on top of the buttons in the
+  bottom-right corner of a page. On the V&V dashboard it covered the
+  *Complete* and *Abort* buttons of the last test run, which could not be
+  clicked at all once the table reached the bottom of the window.
+- A failed **Gemini CLI** sign-in now explains the likeliest reason: since
+  18 June 2026 the Gemini CLI signs in only Google accounts on a Gemini Code
+  Assist Standard or Enterprise licence, and other tiers need an API key
+  instead. The message used to be the CLI's raw output with no hint that no
+  amount of retrying would help.
+
+## 0.6.3 — 2026-09-14
+
+### Bug fixes
+
+- Signing the Gemini CLI in from a cloud runner works again. The CLI will
+  only complete a sign-in from a session it considers interactive, and it
+  counted the runner's as automated on three separate grounds — so it stopped
+  with "Manual authorization is required but the current session is
+  non-interactive" before showing the link. It now gets a real terminal and
+  the sign-in link appears as it should. It also no longer refuses the
+  runner's workspace as untrusted.
+
+## 0.6.2 — 2026-09-14
+
+### Maintenance updates
+
+- The **Cloud runner** card now shows how busy the shared pool is as a
+  traffic light — *Runners available*, *Runners busy*, *All runners in use* —
+  instead of printing how many runners are free. You can hold one runner at a
+  time, so the count was never something you could act on, and the deployment's
+  capacity is no longer published to every account.
+
+## 0.6.1 — 2026-09-14
+
+### Bug fixes
+
+- Signing the Gemini CLI in from a runner works again, on a phone or a
+  desktop. The CLI now refuses to start unless it is told which kind of
+  Google account to use, so the sign-in failed before it could show you a
+  link — and headless Gemini runs failed the same way. OpenV names the mode
+  for it. Workspaces that run Gemini on an API key or on Vertex AI keep the
+  account they configured.
+
+## 0.6.0 — 2026-09-14
+
+### New features
+
+- Choose the workspace OpenV opens in when you sign in. Personal settings →
+  *Default workspace* lists your personal workspace and every company
+  workspace you belong to; pick the one you work in and each sign-in starts
+  there instead of in your personal space. Switching workspaces during a
+  session is unchanged. Stable-channel workspaces get this with their next
+  stable release.
+- Figures can be renamed. A screenshot arrives called something like
+  `Screenshot 2026-09-14 at 09.12.33.png`; use ✎ on the figure while editing
+  to give it a name that says what it shows. The name appears under the
+  figure and in PDF and Word documents, and every rename is a figure
+  version, with who changed it and when, alongside the image history.
+- Forgot your password? The sign-in screen can now email you a link to set
+  a new one: it works once and lasts an hour, and setting the password signs
+  the account out everywhere. On a server that sends no mail, or when the
+  email does not arrive, a platform admin can make a reset link for your
+  account from the Platform admin page and pass it to you.
+
+### Bug fixes
+
+- A duplicated or pasted artifact now says where it came from. Its history
+  starts with one note, *Copied from REQ-12 (version 3)*, instead of looking
+  like an artifact that was typed in from scratch.
+
+- Uploading a new version of a figure works again. Pressing ⬆ (or the
+  history, rename or delete buttons) on a figure used to save the artifact
+  and leave the editor before the file was chosen, so the image never
+  changed; the buttons no longer submit the editing form.
+- PDF and Word downloads no longer print each requirement's description
+  twice. It sits once, in the Description row of the fields table, and
+  keeps its formatting there: lists, tables, code, links and emphasis all
+  survive, and a description longer than a page carries its row across
+  the break.
+
+## 0.5.1 — 2026-09-13
+
+### Maintenance updates
+
+- OpenV's licence is now the Elastic License 2.0. Self-hosting stays free
+  for anyone at any scale, the source stays public, and paid installation
+  or support stays allowed; what is no longer allowed is offering OpenV to
+  others as a hosted or managed service. The README, the site's licence
+  section and the manual carry a plain-English summary.
 
 ## 0.5.0 — 2026-09-13
 

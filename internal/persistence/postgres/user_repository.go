@@ -20,12 +20,12 @@ func NewUserRepository(db *sql.DB) *UserRepository {
 	return &UserRepository{db: db}
 }
 
-const userColumns = `id, email, name, avatar_url, COALESCE(avatar_path, ''), COALESCE(avatar_mime, ''), auth_provider, COALESCE(password_hash, ''), is_admin, COALESCE(email_notifications, TRUE), COALESCE(push_notifications, FALSE), COALESCE(email_verified, FALSE), email_verified_at, created_at, updated_at`
+const userColumns = `id, email, name, avatar_url, COALESCE(avatar_path, ''), COALESCE(avatar_mime, ''), auth_provider, COALESCE(password_hash, ''), is_admin, COALESCE(email_notifications, TRUE), COALESCE(push_notifications, FALSE), COALESCE(email_verified, FALSE), email_verified_at, COALESCE(default_org_id::text, ''), created_at, updated_at`
 
 func scanUser(row interface{ Scan(...interface{}) error }) (*users.User, error) {
 	u := new(users.User)
 	var verifiedAt sql.NullTime
-	err := row.Scan(&u.ID, &u.Email, &u.Name, &u.AvatarURL, &u.AvatarPath, &u.AvatarMime, &u.AuthProvider, &u.PasswordHash, &u.IsAdmin, &u.EmailNotifications, &u.PushNotifications, &u.EmailVerified, &verifiedAt, &u.CreatedAt, &u.UpdatedAt)
+	err := row.Scan(&u.ID, &u.Email, &u.Name, &u.AvatarURL, &u.AvatarPath, &u.AvatarMime, &u.AuthProvider, &u.PasswordHash, &u.IsAdmin, &u.EmailNotifications, &u.PushNotifications, &u.EmailVerified, &verifiedAt, &u.DefaultOrgID, &u.CreatedAt, &u.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -125,6 +125,14 @@ func (r *UserRepository) SetEmailNotifications(userID string, enabled bool) erro
 	return err
 }
 
+// SetDefaultOrg records the workspace a user's sign-in lands in; "" clears it.
+func (r *UserRepository) SetDefaultOrg(userID, orgID string) error {
+	_, err := r.db.Exec(
+		`UPDATE users SET default_org_id = NULLIF($2, '')::uuid, updated_at = NOW() WHERE id = $1`,
+		userID, orgID)
+	return err
+}
+
 // SetPushNotifications flips one user's web-push opt-in.
 func (r *UserRepository) SetPushNotifications(userID string, enabled bool) error {
 	_, err := r.db.Exec(
@@ -206,6 +214,50 @@ func (r *UserRepository) ConsumeEmailVerification(tokenHash string, now time.Tim
 		return nil, err
 	}
 	return u, nil
+}
+
+// SavePasswordReset stores a reset link after discarding the user's unused
+// pending ones, so one link is live per account.
+func (r *UserRepository) SavePasswordReset(v *users.PasswordReset) error {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if _, err := tx.Exec(`DELETE FROM password_resets WHERE user_id = $1 AND NOT used`, v.UserID); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(`
+		INSERT INTO password_resets (id, user_id, token_hash, delivery, issued_by, expires_at, used, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, FALSE, $7)
+	`, v.ID, v.UserID, v.TokenHash, v.Delivery, v.IssuedBy, v.ExpiresAt, v.CreatedAt); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+// ConsumePasswordReset spends a reset link. The UPDATE ... RETURNING is the
+// single-use guard: two racing confirms of one link see one row flip and
+// one no-op.
+func (r *UserRepository) ConsumePasswordReset(tokenHash string, now time.Time) (*users.PasswordReset, error) {
+	v := &users.PasswordReset{TokenHash: tokenHash, Used: true}
+	var issuedBy sql.NullString
+	err := r.db.QueryRow(`
+		UPDATE password_resets SET used = TRUE
+		WHERE token_hash = $1 AND NOT used AND expires_at > $2
+		RETURNING id, user_id, delivery, issued_by, expires_at, created_at
+	`, tokenHash, now).Scan(&v.ID, &v.UserID, &v.Delivery, &issuedBy, &v.ExpiresAt, &v.CreatedAt)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	if issuedBy.Valid {
+		id := issuedBy.String
+		v.IssuedBy = &id
+	}
+	return v, nil
 }
 
 // DeleteSpentEmailVerifications removes used links and links that expired

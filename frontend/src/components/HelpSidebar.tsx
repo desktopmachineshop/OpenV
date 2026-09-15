@@ -15,8 +15,9 @@ import './HelpSidebar.css';
 // deep-linked as /manual/<slug>.
 
 interface HelpSidebarProps {
-  /** Controlled open state (the compact shell keeps it, with the button in
-   *  its top bar); omit for the floating button to manage it. */
+  /** Controlled open state. Every shell keeps it now, with the ? button in
+   *  its own bar beside the notification bell; omitting it falls back to a
+   *  floating button, which no shell in the app asks for any more. */
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
 }
@@ -34,8 +35,16 @@ export const HelpSidebar: React.FC<HelpSidebarProps> = ({ open, onOpenChange }) 
 
   return (
     <div className={`help-sidebar ${isExpanded ? 'expanded' : 'collapsed'}`}>
-      {/* Controlled by the shell's own button on phones: a floating button
-          there lands on whatever composer sits at the bottom of the page. */}
+      {/* Controlled by the shell's own ? button, beside the notification
+          bell. A floating button was the old arrangement and it cost the
+          bottom-right corner of every page: on a phone it landed on the
+          composer, and on a desktop it sat on whatever the page put there —
+          the V&V runs table's Complete and Abort buttons, among others.
+          Reserving that corner instead just moved the cost to a dead strip
+          along the bottom of every page, so the button moved to the bar
+          where the other per-person controls already live. What remains
+          here is the ✕ that closes the panel, drawn only while it is open
+          and inside the panel's own area. */}
       {(!controlled || isExpanded) && (
         <button
           className="help-toggle"

@@ -64,8 +64,15 @@ baselines can reconstruct exact link states.
 
 ### attachments
 Uploaded files: `artifact_id` (nullable) **or** `test_result_id` (test
-evidence), `filename`, `mime_type`, `file_path` (under `UPLOADS_DIR`),
-`file_size`.
+evidence), `filename`, `original_filename`, `title` (the name a member gave
+the figure; `''` when none), `mime_type`, `file_path` (under
+`UPLOADS_DIR`), `file_size`, `figure_ref`, `figure_num`, `version`.
+
+### attachment_versions
+One row per version of a figure — a new image, or a new title over the
+same image — with the file fields and `title` as they stood at that
+version, `created_by` and `created_at`. The attachment row holds the
+current version; superseded files stay on disk.
 
 ### chatter
 Per-artifact activity feed: `artifact_id`, `message`, `is_auto_entry`
@@ -123,6 +130,11 @@ revoked link resolves to the same 404 as an unknown token.
 ### release_announcements
 `version` (primary key, the release named by the top section of
 `RELEASE_NOTES.md`) → `announced_at` (0034). The row is the claim that a
+
+`users.default_org_id` (0040, nullable, `ON DELETE SET NULL`) is the workspace
+a member's sign-in lands in (REQ-156); NULL means the personal workspace. It
+is a choice, not a grant: the auth middleware re-checks membership before
+using it, and a purged workspace clears it.
 release has been announced to every account: the first server to insert it
 wins and fans out `release_published`; a restart or another replica finds
 the row and stays quiet. A dedicated instance uses the same table for its

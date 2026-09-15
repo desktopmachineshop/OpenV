@@ -1,6 +1,9 @@
 package attachments
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 // A figure reference is a citation: it appears in a report, a review comment
 // or a conversation months later. Formatting and parsing have to round-trip,
@@ -120,5 +123,27 @@ func TestNewAttachmentStartsAtVersionOne(t *testing.T) {
 	}
 	if a.OriginalFilename != "photo.png" {
 		t.Errorf("original filename = %q, want the uploaded name", a.OriginalFilename)
+	}
+}
+
+func TestFigureNameFallsBackToTheUploadedFilename(t *testing.T) {
+	a := &Attachment{Filename: "REQ-1-FIG-1.png", OriginalFilename: "Screenshot 1234.png"}
+	if a.Name() != "Screenshot 1234.png" {
+		t.Errorf("unnamed figure = %q, want the uploaded filename", a.Name())
+	}
+	a.Title = "  Pump curve  "
+	if a.Name() != "Pump curve" {
+		t.Errorf("named figure = %q, want the trimmed title", a.Name())
+	}
+	b := &Attachment{Filename: "REQ-1-FIG-2.png"}
+	if b.Name() != "REQ-1-FIG-2.png" {
+		t.Errorf("figure with no upload name = %q, want the stored filename", b.Name())
+	}
+}
+
+func TestRenameFigureBoundsTheTitle(t *testing.T) {
+	svc := NewDefaultService(nil)
+	if _, err := svc.RenameFigure("f", strings.Repeat("x", MaxTitleLen+1), nil); err != ErrTitleTooLong {
+		t.Errorf("over-long title: err = %v, want ErrTitleTooLong", err)
 	}
 }

@@ -207,12 +207,68 @@ type Repository interface {
 	ListLiveSessions(orgID string) ([]*Session, error)
 }
 
-// PoolCounts summarizes a pool for the UI: whether leasing one now would
-// succeed, and how many members are already out there.
+// PoolCounts summarizes a pool for an operator: whether leasing one now
+// would succeed, and how many members are already out there. These are
+// deployment-wide figures, so they are for workspace admins looking at the
+// pool, not for the member card — see PoolLoad.
 type PoolCounts struct {
 	Total  int `json:"total"`
 	Idle   int `json:"idle"`
 	Leased int `json:"leased"`
+}
+
+// Load bands. A member can hold exactly one runner at a time, so the exact
+// free count tells them nothing they can act on — the only question their
+// card answers is "is there likely to be one for me?". Publishing the real
+// figures to every account would instead advertise the deployment's total
+// capacity and how much of it is spoken for, which is nobody's business but
+// the operator's.
+const (
+	// LoadUnavailable: this deployment has no pool nodes online at all.
+	// Distinct from Red, which means nodes exist and are all taken.
+	LoadUnavailable = "unavailable"
+	// LoadGreen: more than 30% of the pool is free.
+	LoadGreen = "green"
+	// LoadAmber: between 5% and 30% free — leasing will probably work, but
+	// the pool is filling up.
+	LoadAmber = "amber"
+	// LoadRed: under 5% free. In a small pool that is nothing free at all.
+	LoadRed = "red"
+)
+
+// Load band thresholds, as a fraction of the pool that is idle.
+const (
+	loadGreenAbove = 0.30
+	loadRedBelow   = 0.05
+)
+
+// PoolLoad is what a member's card is told about the pool: a band, never a
+// count.
+type PoolLoad struct {
+	Status string `json:"status"`
+}
+
+// Load reduces the counts to the band the member card shows.
+//
+// The bands the maintainer set are green above 30% free and red below 5%,
+// with amber named at "under 10%". Amber therefore covers everything in
+// between rather than only 5-10%: at the pool sizes this runs at, the gap
+// would otherwise be a hole. With five nodes, for instance, one free node is
+// 20% — not green, and not under 10% either — and "the pool is nearly full"
+// is exactly what a member should be told at that point.
+func (c PoolCounts) Load() PoolLoad {
+	if c.Total <= 0 {
+		return PoolLoad{Status: LoadUnavailable}
+	}
+	free := float64(c.Idle) / float64(c.Total)
+	switch {
+	case free > loadGreenAbove:
+		return PoolLoad{Status: LoadGreen}
+	case free < loadRedBelow:
+		return PoolLoad{Status: LoadRed}
+	default:
+		return PoolLoad{Status: LoadAmber}
+	}
 }
 
 // Service defines transient-runner logic.

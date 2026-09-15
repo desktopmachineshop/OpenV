@@ -9,6 +9,8 @@ import (
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/openv/requirements-platform/internal/domain/providers"
 )
 
 func geminiSpec() RunSpec {
@@ -348,5 +350,181 @@ func TestGeminiParser_ValidResponse(t *testing.T) {
 	}
 	if res.FinalText != "the answer" {
 		t.Errorf("FinalText = %q, want %q", res.FinalText, "the answer")
+	}
+}
+
+// The Gemini CLI exits 41 before doing anything unless an auth method is
+// named, and a leased runner's fresh HOME never names one. A run therefore
+// names Google-account OAuth for itself — but only when nothing else has
+// named a mode, because GOOGLE_GENAI_USE_GCA outranks every other auth
+// variable and would otherwise move an API-key deployment onto OAuth.
+func TestGeminiRunEnvNamesOAuthOnlyWhenNothingElseDoes(t *testing.T) {
+	clearAmbientGeminiAuth := func(t *testing.T) {
+		t.Helper()
+		for _, key := range geminiAuthEnvKeys {
+			t.Setenv(key, "")
+		}
+	}
+
+	t.Run("nothing else names one", func(t *testing.T) {
+		clearAmbientGeminiAuth(t)
+		env := geminiRunEnv(geminiSpec(), "/work/.openv/gemini-settings.json")
+		if env[geminiOAuthEnv] != "true" {
+			t.Errorf("%s = %q, want \"true\" — the CLI compares against that exact string", geminiOAuthEnv, env[geminiOAuthEnv])
+		}
+		if env["GEMINI_CLI_SYSTEM_SETTINGS_PATH"] != "/work/.openv/gemini-settings.json" {
+			t.Errorf("settings path = %q", env["GEMINI_CLI_SYSTEM_SETTINGS_PATH"])
+		}
+		// The run's own wiring must survive untouched.
+		if env["OPENV_RUN_TOKEN"] != "super-secret-token-123" {
+			t.Errorf("run token lost: %q", env["OPENV_RUN_TOKEN"])
+		}
+	})
+
+	for _, key := range []string{"GEMINI_API_KEY", "GOOGLE_API_KEY", "GOOGLE_GENAI_USE_VERTEXAI", "GOOGLE_GEMINI_BASE_URL"} {
+		t.Run("spec env names "+key, func(t *testing.T) {
+			clearAmbientGeminiAuth(t)
+			spec := geminiSpec()
+			spec.Env = map[string]string{key: "already-set"}
+			if env := geminiRunEnv(spec, "/s.json"); env[geminiOAuthEnv] != "" {
+				t.Errorf("%s was added over %s — that silently moves the run onto another account", geminiOAuthEnv, key)
+			}
+		})
+
+		t.Run("process env names "+key, func(t *testing.T) {
+			clearAmbientGeminiAuth(t)
+			// Where a hosted container's injected key lives: the run does not
+			// set it, but the process it inherits from does.
+			t.Setenv(key, "already-set")
+			if env := geminiRunEnv(geminiSpec(), "/s.json"); env[geminiOAuthEnv] != "" {
+				t.Errorf("%s was added over an inherited %s", geminiOAuthEnv, key)
+			}
+		})
+	}
+}
+
+// The sign-in command exists to drive Google-account OAuth: it must name that
+// mode, or the CLI exits 41 with "Please set an Auth method ..." instead of
+// printing the URL whose code the flow pastes back.
+func TestGeminiLoginFlowNamesTheOAuthMode(t *testing.T) {
+	flow, ok := flowFor(providers.ProviderGeminiCLI)
+	if !ok {
+		t.Fatal("gemini has no sign-in flow")
+	}
+	// The CLI will only do a manual authorization from a session it calls
+	// interactive, which means a real terminal — so this runs over a
+	// pseudo-terminal, not over pipes.
+	if !flow.interactive {
+		t.Error("gemini sign-in needs a terminal; it is an interactive flow")
+	}
+	want := map[string]bool{
+		"NO_BROWSER=1":           false,
+		geminiOAuthEnv + "=true": false,
+		geminiTrustEnv + "=true": false,
+	}
+	for _, entry := range flow.env {
+		if _, ok := want[entry]; ok {
+			want[entry] = true
+		}
+	}
+	for entry, found := range want {
+		if !found {
+			t.Errorf("sign-in env lacks %q; it has %v", entry, flow.env)
+		}
+	}
+}
+
+// The three things that made the CLI call the sign-in headless, each of
+// which alone was enough to kill it with "Manual authorization is required
+// but the current session is non-interactive".
+func TestGeminiLoginFlowIsNotHeadless(t *testing.T) {
+	flow, ok := flowFor(providers.ProviderGeminiCLI)
+	if !ok {
+		t.Fatal("gemini has no sign-in flow")
+	}
+
+	// 1. The command line: -p/--prompt makes the CLI headless by itself,
+	// whatever terminal it is on.
+	for _, arg := range flow.command[1:] {
+		if arg == "-p" || arg == "--prompt" {
+			t.Errorf("sign-in command carries %q, which forces headless mode: %v", arg, flow.command)
+		}
+	}
+
+	// 2. The terminal: pipes are not a TTY, so the flow must ask for one.
+	if !flow.interactive {
+		t.Error("sign-in does not ask for a terminal, so stdin/stdout are pipes and the CLI reads that as headless")
+	}
+
+	// 3. The environment: CI and GITHUB_ACTIONS are read as == "true", so
+	// the sign-in has to override an inherited one with an empty value.
+	cleared := map[string]bool{}
+	for _, entry := range flow.env {
+		for _, key := range geminiHeadlessEnvKeys {
+			if entry == key+"=" {
+				cleared[key] = true
+			}
+		}
+	}
+	for _, key := range geminiHeadlessEnvKeys {
+		if !cleared[key] {
+			t.Errorf("sign-in env does not clear %q, so an inherited %q=true would force headless mode: %v", key, key, flow.env)
+		}
+	}
+}
+
+// A workspace the CLI has no trust record for is refused outright. A lease
+// makes its workspace fresh, so the record can never exist and the
+// environment is the only lever.
+func TestGeminiLoginFlowTrustsTheWorkspace(t *testing.T) {
+	flow, ok := flowFor(providers.ProviderGeminiCLI)
+	if !ok {
+		t.Fatal("gemini has no sign-in flow")
+	}
+	for _, entry := range flow.env {
+		if entry == geminiTrustEnv+"="+geminiTrustEnvValue {
+			return
+		}
+	}
+	t.Errorf("sign-in env does not trust the workspace; it has %v", flow.env)
+}
+
+// The value has to be exactly "true": the CLI compares against that string,
+// so "1" would read as no answer at all — the same trap the auth-mode
+// variable set.
+func TestGeminiTrustEnvValueIsExact(t *testing.T) {
+	if geminiTrustEnvValue != "true" {
+		t.Errorf("geminiTrustEnvValue = %q, want \"true\"", geminiTrustEnvValue)
+	}
+}
+
+// A failed Gemini sign-in keeps its cause and gains the tier note: the
+// member needs the raw failure to report and the note to know whether
+// reporting it is worth anything.
+func TestGeminiSignInFailureKeepsTheCauseAndExplainsTheTier(t *testing.T) {
+	raw := "sign-in command failed: exit status 55 — output tail: something went wrong"
+	got := geminiSignInFailure(raw)
+
+	if !strings.Contains(got, raw) {
+		t.Errorf("the original cause was dropped: %q", got)
+	}
+	for _, want := range []string{"Code Assist", "Antigravity", "API key"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("the note does not mention %q: %q", want, got)
+		}
+	}
+}
+
+// Only Gemini gets the note; the other providers are unaffected by Google's
+// tier change and should not carry an explanation about it.
+func TestSignInFailureAnnotatesOnlyGemini(t *testing.T) {
+	const raw = "sign-in command failed: exit status 1"
+	if got := signInFailure(providers.ProviderGeminiCLI, raw); got == raw {
+		t.Error("a gemini sign-in failure should carry the tier note")
+	}
+	for _, provider := range []string{providers.ProviderClaudeCode, providers.ProviderCodexCLI} {
+		if got := signInFailure(provider, raw); got != raw {
+			t.Errorf("%s failure was annotated: %q", provider, got)
+		}
 	}
 }

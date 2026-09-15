@@ -67,6 +67,36 @@ func RenderVerificationEmail(name, link string, ttl time.Duration) (subject, bod
 	return "Verify your email for OpenV", b.String()
 }
 
+// PasswordResetLink is the URL in a reset email: the frontend's reset page
+// with the raw token as a query parameter (REQ-158).
+func PasswordResetLink(linkBase, token string) string {
+	return strings.TrimRight(strings.TrimSpace(linkBase), "/") + "/reset-password?token=" + url.QueryEscape(token)
+}
+
+// RenderPasswordResetEmail returns the plain-text subject and body of a
+// reset mail. It never says whether the request came from the account's
+// owner, only what to do if it did not.
+func RenderPasswordResetEmail(name, link string, ttl time.Duration) (subject, body string) {
+	greeting := "Hi,"
+	if n := strings.TrimSpace(name); n != "" {
+		greeting = "Hi " + n + ","
+	}
+	var b strings.Builder
+	b.WriteString(greeting)
+	b.WriteString("\n\nSomebody asked to reset the password of your OpenV account. Set a new one here:\n\n")
+	b.WriteString(link)
+	b.WriteString("\n\n")
+	fmt.Fprintf(&b, "The link is valid for %s and works once. If you did not ask for this, ignore this message: your password stays as it is.\n", describeTTL(ttl))
+	return "Reset your OpenV password", b.String()
+}
+
+func describeTTL(ttl time.Duration) string {
+	if ttl < 2*time.Hour {
+		return fmt.Sprintf("%d minutes", int(ttl.Minutes()))
+	}
+	return fmt.Sprintf("%d hours", int(ttl.Hours()))
+}
+
 // SendWithTimeout delivers one message and gives up waiting after timeout.
 func SendWithTimeout(m Mailer, to, subject, body string, timeout time.Duration) error {
 	done := make(chan error, 1)

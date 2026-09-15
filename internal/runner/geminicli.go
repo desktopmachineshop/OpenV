@@ -32,6 +32,140 @@ func geminiApprovalMode(spec RunSpec) string {
 	return geminiModeTrusted
 }
 
+// The Gemini CLI refuses to start non-interactively unless an auth method is
+// named. It prints "Please set an Auth method in your ~/.gemini/settings.json
+// or specify one of the following environment variables before running:
+// GEMINI_API_KEY, GOOGLE_GENAI_USE_VERTEXAI, GOOGLE_GENAI_USE_GCA" and exits
+// 41 — before the sign-in flow can print the URL it exists to print, and
+// before a run does any work. A transient runner hands every lease a fresh
+// HOME, so there is never a settings file there to have named one.
+//
+// The environment is the right lever rather than the isolated settings file
+// this adapter already writes: the CLI resolves the member's OWN
+// security.auth.selectedAuthType first and falls back to the environment only
+// when that is unset, so naming the mode here fills the gap instead of
+// overriding a choice they made.
+const (
+	// geminiOAuthEnv selects Google-account OAuth: the mode OpenV's
+	// paste-back sign-in drives, and the one the ~/.gemini credentials it
+	// leaves behind belong to.
+	geminiOAuthEnv = "GOOGLE_GENAI_USE_GCA"
+	// geminiOAuthEnvValue is exact — the CLI compares against "true", so "1"
+	// reads as no auth method at all.
+	geminiOAuthEnvValue = "true"
+	// geminiTrustEnv marks the workspace trusted. The CLI refuses to run in
+	// an untrusted directory and names three ways out — trust it in
+	// interactive mode, pass --skip-trust, or set this. Only the last suits
+	// a lease: its workspace is created fresh for the sign-in, so no trust
+	// record for it can exist yet.
+	geminiTrustEnv      = "GEMINI_CLI_TRUST_WORKSPACE"
+	geminiTrustEnvValue = "true"
+)
+
+// geminiTierNote explains the wall a Gemini sign-in now meets that no amount
+// of getting the flow right can clear.
+//
+// On 18 June 2026 Google stopped serving Gemini CLI for the free, Google One,
+// AI Pro and AI Ultra tiers and moved them to Antigravity CLI; a Gemini Code
+// Assist Standard or Enterprise licence, Google Cloud, and paid API keys are
+// still served. The sign-in drives Code Assist OAuth, so on an unentitled
+// account it fails at Google's end, after everything on this side has worked.
+//
+// The refusal is the server's, and its wording is not ours to predict, so
+// this is appended to every failed Gemini sign-in rather than matched
+// against a string that may not appear. It is phrased to stay true when the
+// cause is something else entirely.
+const geminiTierNote = "Note: since 18 June 2026 the Gemini CLI signs in only Google accounts " +
+	"on a Gemini Code Assist Standard or Enterprise licence — the free, Google One, AI Pro and " +
+	"AI Ultra tiers moved to Antigravity CLI. If this account is on one of those, no sign-in here " +
+	"can succeed; set a Gemini API key on the workspace instead, which is still served."
+
+// geminiSignInFailure annotates a failed Gemini sign-in with the tier note,
+// keeping the original cause: the member needs the raw failure to report, and
+// the note to know whether reporting it is worth anything.
+func geminiSignInFailure(detail string) string {
+	return detail + " — " + geminiTierNote
+}
+
+// geminiHeadlessEnvKeys are the variables whose value makes the CLI call
+// itself headless whatever terminal it is on. A sign-in must be interactive
+// (see geminiLoginEnv), so the sign-in command clears them.
+//
+// The CLI reads each as == "true", so an empty value is as good as unset —
+// which is what this can do, since the child's environment is the parent's
+// with these appended and the later entry winning.
+var geminiHeadlessEnvKeys = []string{"CI", "GITHUB_ACTIONS"}
+
+// geminiLoginEnv is the environment the sign-in command runs under.
+//
+// The CLI refuses a manual authorization unless it believes the session is
+// interactive: with the browser suppressed it throws "Manual authorization
+// is required but the current session is non-interactive" and dies, instead
+// of printing the URL the sign-in exists to relay. Its own isHeadlessMode()
+// decides, and answers yes when CI or GITHUB_ACTIONS is "true", when stdin
+// or stdout is not a terminal, or when the command line carries -p/--prompt.
+// Three causes, three fixes: the pseudo-terminal settles the second, dropping
+// -p from the command settles the third, and this settles the first.
+func geminiLoginEnv() []string {
+	env := []string{
+		// There is no browser the runner could show, so the CLI prints a
+		// URL and takes a code back instead.
+		"NO_BROWSER=1",
+		geminiOAuthEnv + "=" + geminiOAuthEnvValue,
+		geminiTrustEnv + "=" + geminiTrustEnvValue,
+	}
+	for _, key := range geminiHeadlessEnvKeys {
+		env = append(env, key+"=")
+	}
+	return env
+}
+
+// geminiAuthEnvKeys are the variables that already name an auth mode. The
+// list mirrors the CLI's own resolver and adds GOOGLE_API_KEY, which Detect
+// reports as API-key mode. geminiOAuthEnv outranks every one of them in that
+// resolver, so adding it to a run that set one would quietly move the run
+// onto a different account — hence the check before it is added at all.
+var geminiAuthEnvKeys = []string{
+	geminiOAuthEnv,
+	"GOOGLE_GENAI_USE_VERTEXAI",
+	"GOOGLE_GEMINI_BASE_URL",
+	"GEMINI_API_KEY",
+	"GOOGLE_API_KEY",
+	"GEMINI_CLI_USE_COMPUTE_ADC",
+	"CLOUD_SHELL",
+}
+
+// geminiAuthNamed reports whether an auth mode is already named, reading the
+// run's own environment first and the process environment behind it — that is
+// where a hosted container's injected key lives, and startProc layers the
+// run's values over it the same way.
+func geminiAuthNamed(procEnv map[string]string) bool {
+	for _, key := range geminiAuthEnvKeys {
+		if v, ok := procEnv[key]; ok {
+			if v != "" {
+				return true
+			}
+			continue
+		}
+		if os.Getenv(key) != "" {
+			return true
+		}
+	}
+	return false
+}
+
+// geminiRunEnv is the environment one headless run adds: the isolated
+// settings file, and — when nothing else names one — the OAuth auth mode,
+// without which the CLI exits 41 instead of running.
+func geminiRunEnv(spec RunSpec, settingsPath string) map[string]string {
+	env := mergedProcEnv(spec)
+	env["GEMINI_CLI_SYSTEM_SETTINGS_PATH"] = settingsPath
+	if !geminiAuthNamed(env) {
+		env[geminiOAuthEnv] = geminiOAuthEnvValue
+	}
+	return env
+}
+
 // GeminiCLIAdapter runs Google's Gemini CLI in headless mode.
 type GeminiCLIAdapter struct{}
 
@@ -92,8 +226,7 @@ func (a *GeminiCLIAdapter) Start(ctx context.Context, spec RunSpec) (RunHandle, 
 	if err := writeGeminiSettings(settingsPath, spec.MCP, geminiApprovalMode(spec), spec.AllowedTools); err != nil {
 		return nil, err
 	}
-	procEnv := mergedProcEnv(spec)
-	procEnv["GEMINI_CLI_SYSTEM_SETTINGS_PATH"] = settingsPath
+	procEnv := geminiRunEnv(spec, settingsPath)
 
 	prompt := spec.Prompt
 	if spec.SystemPrompt != "" {

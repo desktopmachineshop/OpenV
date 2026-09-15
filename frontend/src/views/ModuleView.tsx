@@ -484,6 +484,31 @@ export const ModuleView: React.FC = () => {
     }
   };
 
+  // Renaming a figure is a figure version and an artifact version, like a
+  // new image, so the artifact is reloaded the same way.
+  const handleRenameAttachment = async (attachmentId: string, title: string) => {
+    try {
+      const response = await attachmentAPI.rename(attachmentId, title);
+      setAttachments((prev) => prev.map((a) => (a.id === attachmentId ? response.data : a)));
+      setError('');
+      loadArtifacts();
+    } catch (error: any) {
+      console.error('Failed to rename figure:', error);
+      setError(`Failed to rename the figure: ${apiErrorMessage(error, 'Unknown error')}`);
+    }
+  };
+
+  // A restore rewrites the figure's current image and title, so the editor's
+  // copy has to be refetched — the gallery only knows what it did, not what
+  // the artifact's other readers now show.
+  const handleAttachmentRestored = () => {
+    // Same artifact the figures were loaded for — the editor's when one is
+    // open, else the selected row.
+    const artifactId = editingArtifact?.id || selectedArtifactId;
+    if (artifactId) loadAttachments(artifactId);
+    loadArtifacts();
+  };
+
   const handleDeleteAttachment = async (attachmentId: string) => {
     try {
       await attachmentAPI.delete(attachmentId);
@@ -836,7 +861,7 @@ export const ModuleView: React.FC = () => {
    * before or after it.
    */
   const pasteRelativeTo = async (
-    source: Pick<Artifact, 'type' | 'title' | 'body' | 'attributes'>,
+    source: Pick<Artifact, 'id' | 'type' | 'title' | 'body' | 'attributes'>,
     target: Artifact,
     position: 'before' | 'after'
   ) => {
@@ -852,6 +877,9 @@ export const ModuleView: React.FC = () => {
         title: `${source.title} (copy)`,
         body: source.body,
         attributes,
+        // The copy starts with no history of its own; the server writes the
+        // one note it should have, naming where it came from.
+        copied_from: source.id,
       });
       const created = response.data;
 
@@ -1880,6 +1908,8 @@ export const ModuleView: React.FC = () => {
             projectAttachments={projectAttachments}
             onUploadAttachment={handleUploadAttachment}
             onUploadAttachmentVersion={handleUploadAttachmentVersion}
+            onRenameAttachment={handleRenameAttachment}
+            onAttachmentRestored={handleAttachmentRestored}
             onDeleteAttachment={handleDeleteAttachment}
             isUploadLoading={uploadingAttachmentId === editingArtifact.id}
             links={allLinks}

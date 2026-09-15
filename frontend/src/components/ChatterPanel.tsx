@@ -9,6 +9,8 @@ import {
   isProjectEditKind,
 } from './wizard/applySuggestion';
 import { useFeature } from '../hooks/useFeature';
+import { AddTodoControl, NoteTodoChip } from './NoteTodo';
+import { TODO_LIST_FEATURE } from '../views/TodoList';
 
 interface ChatterPanelProps {
   /** The artifact whose notes these are; absent when nothing is selected. */
@@ -58,6 +60,7 @@ export const ChatterPanel: React.FC<ChatterPanelProps> = ({
   // for the life of the panel is what stops a second click adding twice.
   const [applied, setApplied] = useState<Record<string, boolean>>({});
   const editsEnabled = useFeature(ASSISTANT_EDITS_FEATURE);
+  const todosEnabled = useFeature(TODO_LIST_FEATURE);
 
   const loadChatterEntries = useCallback(async () => {
     if (!artifactId) return;
@@ -297,6 +300,21 @@ export const ChatterPanel: React.FC<ChatterPanelProps> = ({
             >
               {entry.message}
             </div>
+            {/* A note carries at most one to-do: once it has one it shows
+                its live status, and until then it offers to raise one for
+                whoever the note names. System and agent entries are not
+                somebody asking for something, so they get neither. */}
+            {todosEnabled && projectId && !entry.is_auto_entry && (
+              entry.todo ? (
+                <NoteTodoChip projectId={projectId} todo={entry.todo} />
+              ) : (
+                <AddTodoControl
+                  projectId={projectId}
+                  entry={entry}
+                  onCreated={loadChatterEntries}
+                />
+              )
+            )}
           </div>
         ))}
       </div>

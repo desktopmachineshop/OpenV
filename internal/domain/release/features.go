@@ -32,8 +32,18 @@ var Registry = []Feature{
 	{Key: FeatureOwners, ShippedIn: "0.3.0", Summary: "Artifact owners, reference parties and owner-filtered downloads"},
 	{Key: FeatureShareLinks, ShippedIn: "0.4.0", Summary: "Share links: a public read-only view of a project, or reviewer access, from one link; the reviewer role"},
 	{Key: FeatureAssistantEdits, ShippedIn: "0.5.0", Summary: "The V&V Assistant adds any kind of artifact, edits one and moves one from the notes panel"},
-	{Key: FeatureAttachmentFormats, ShippedIn: "0.6.0", Summary: "Attach PDFs and CAD files to an artifact, with a PDF reader and a 3D preview for STL"},
-	{Key: FeatureFigureCitations, ShippedIn: "0.6.0", Summary: "Cite a figure on any artifact in the project with \"##\""},
+	{Key: FeatureDefaultWorkspace, ShippedIn: "0.6.0", Summary: "A member chooses the workspace OpenV opens in when they sign in"},
+	{Key: FeatureFigureTitles, ShippedIn: "0.6.0", Summary: "Figures carry a title of their own: rename one and the change is a tracked figure version"},
+	// Password reset happens before there is a session, so there is no
+	// workspace whose channel could gate it: the key is registered so the
+	// features endpoint and What's new list it, and the flow itself is
+	// unconditional.
+	{Key: FeaturePasswordReset, ShippedIn: "0.6.0", Summary: "Forgot your password? An emailed reset link from the sign-in page, or one a platform admin makes for you"},
+	{Key: FeatureAntigravity, ShippedIn: "0.7.0", Summary: "Antigravity CLI as an agent provider: Google's successor to the Gemini CLI, run from a workspace Gemini API key"},
+	{Key: FeatureTodoList, ShippedIn: "0.8.0", Summary: "To-dos: raise one from a note that names someone, and see who owes what on a page of its own under Plan"},
+	{Key: FeatureFigureRevert, ShippedIn: "0.8.0", Summary: "Restore an older version of a figure from its history, recorded as a new version so nothing is lost"},
+	{Key: FeatureAttachmentFormats, ShippedIn: "0.9.0", Summary: "Attach PDFs and CAD files to an artifact, with a PDF reader and a 3D preview for STL"},
+	{Key: FeatureFigureCitations, ShippedIn: "0.9.0", Summary: "Cite a figure on any artifact in the project with \"##\""},
 }
 
 // Feature keys the code gates on.
@@ -42,6 +52,19 @@ const (
 	FeatureOwners         = "artifact-owners"
 	FeatureShareLinks     = "share-links"
 	FeatureAssistantEdits = "assistant-project-edits"
+	// FeatureDefaultWorkspace is the per-member choice of the workspace a
+	// sign-in lands in, instead of always the personal one.
+	FeatureDefaultWorkspace = "default-workspace"
+	FeatureFigureTitles     = "figure-titles"
+	FeaturePasswordReset    = "password-reset"
+	// FeatureAntigravity is the antigravity-cli agent provider. Google moved
+	// the consumer Gemini tiers onto this CLI on 18 June 2026.
+	FeatureAntigravity = "antigravity-cli"
+	// FeatureTodoList is the To-dos page and the to-do a note raises for
+	// the person it names.
+	FeatureTodoList = "todo-list"
+	// FeatureFigureRevert is restoring an older version of a figure.
+	FeatureFigureRevert = "figure-revert"
 	// FeatureAttachmentFormats gates what may be ATTACHED, never what may be
 	// read: a workspace that has not received it yet must still be able to
 	// open a PDF a colleague on the nightly channel attached, or the gate

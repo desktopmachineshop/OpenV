@@ -734,6 +734,18 @@ func (h *Handler) CreateWorkItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	req.ProjectID = projectID
+	// A to-do may be raised from a note, and says which one so the note can
+	// show its status. The claim is checked rather than trusted: an id
+	// belonging to another project would put this project's work item title
+	// on that project's note.
+	if req.SourceChatterID != nil {
+		if *req.SourceChatterID == "" {
+			req.SourceChatterID = nil
+		} else if !h.noteBelongsToProject(*req.SourceChatterID, projectID) {
+			writeJSONError(w, http.StatusBadRequest, "source note is not in this project")
+			return
+		}
+	}
 	item, err := h.workItemService.Create(req, CurrentUserID(r), Actor(r))
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
@@ -741,6 +753,20 @@ func (h *Handler) CreateWorkItem(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(item)
+}
+
+// noteBelongsToProject reports whether a chatter entry exists and hangs off
+// an artifact in the given project. A lookup failure answers no: refusing a
+// link OpenV cannot vouch for is the safe direction.
+func (h *Handler) noteBelongsToProject(chatterID, projectID string) bool {
+	if h.chatterService == nil {
+		return false
+	}
+	entry, err := h.chatterService.GetEntry(chatterID)
+	if err != nil || entry == nil {
+		return false
+	}
+	return h.projectIDForArtifact(entry.ArtifactID) == projectID
 }
 
 func (h *Handler) ListWorkItems(w http.ResponseWriter, r *http.Request) {

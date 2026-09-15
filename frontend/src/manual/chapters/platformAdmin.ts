@@ -15,6 +15,20 @@ few people. It is separate from being a workspace admin.
   **Make admin**. **Remove** takes it away again. You cannot remove your
   own standing, and the last platform admin cannot be removed.
 
+## Password reset links for support
+
+Somebody who cannot get back into a password account — the reset email did
+not arrive, the address was mistyped, or the server sends no mail at all —
+asks you. In the *Platform admins* table, every password account has a
+**Reset link** button. Confirm, and the page shows a link **once**: copy it
+and pass it to the person however you talk to them. It works once, expires
+after 24 hours, and lets whoever holds it set a new password for that
+account, which signs the account out everywhere. Because the link did not
+go through the person's inbox it proves nothing about their address, so
+hand it to somebody you have identified. Each link you make is written to
+the server log with your account. Accounts that sign in through Google or
+single sign-on have no password, so they have no button.
+
 ## Workspaces and plans
 
 The *Workspaces* table lists every workspace on the deployment with its

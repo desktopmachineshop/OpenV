@@ -255,6 +255,18 @@ cannot be delivered. Resend and change-of-address are throttled per account
 default 6). Worker keys, run tokens and the runner pool key never meet the
 gate: only browser sessions do.
 
+### Password resets
+
+With `OPENV_SMTP_HOST` set, the sign-in page offers *Forgot your password?*:
+the account's address gets a one-hour, single-use link (REQ-158), throttled
+per address asked for (`OPENV_PASSWORD_RESET_BURST`, default 3;
+`OPENV_PASSWORD_RESET_REFILL_PER_HOUR`, default 6). Without a mailer the page
+says to ask the administrator instead. Either way a **platform admin** can
+make a reset link for any password account from *Platform admin* → the
+person's row → *Reset link*: it is shown once, lasts 24 hours, and is passed
+on out of band; the boot log records who made it for whom. Setting a
+password through a link signs the account out everywhere.
+
 ### Who may create an account
 
 `OPENV_REGISTRATION` decides whether the deployment has a public sign-up door

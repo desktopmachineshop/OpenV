@@ -1,6 +1,7 @@
 package chatter
 
 import (
+	"errors"
 	"time"
 
 	"github.com/google/uuid"
@@ -23,6 +24,31 @@ type ChatterEntry struct {
 	AuthorName string    `json:"author_name"`
 	CreatedAt  time.Time `json:"created_at"`
 	UpdatedAt  time.Time `json:"updated_at"`
+
+	// Mentions and Todo are resolved for display and never stored: the
+	// note's text is the record of who it names, and the work item is the
+	// record of the to-do. Both are composed by the API when a feed is
+	// read, so a status shown beside a note is the item's status now
+	// rather than a copy taken when the note was written.
+	Mentions []MentionRef `json:"mentions,omitempty"`
+	Todo     *TodoRef     `json:"todo,omitempty"`
+}
+
+// MentionRef is a project member a note addresses by @name.
+type MentionRef struct {
+	UserID string `json:"user_id"`
+	Name   string `json:"name"`
+}
+
+// TodoRef is the to-do raised from a note, as much of it as the note needs
+// to show a link and a status.
+type TodoRef struct {
+	WorkItemID string `json:"work_item_id"`
+	Title      string `json:"title"`
+	// Status is the board column the item sits in.
+	Status       string  `json:"status"`
+	AssigneeID   *string `json:"assignee_id,omitempty"`
+	AssigneeName string  `json:"assignee_name,omitempty"`
 }
 
 // CreateChatterEntryRequest is the payload for creating a chatter entry
@@ -49,12 +75,16 @@ func NewChatterEntry(artifactID, message string, isAutoEntry bool, entryType str
 type Service interface {
 	CreateEntry(entry *ChatterEntry) error
 	GetEntriesByArtifactID(artifactID string) ([]*ChatterEntry, error)
+	// GetEntry returns one note. Used to check that a note a to-do claims
+	// to come from exists and belongs to the same project.
+	GetEntry(id string) (*ChatterEntry, error)
 }
 
 // Repository defines persistence operations for chatter
 type Repository interface {
 	Save(entry *ChatterEntry) error
 	FindByArtifactID(artifactID string) ([]*ChatterEntry, error)
+	FindByID(id string) (*ChatterEntry, error)
 	Delete(id string) error
 }
 
@@ -76,4 +106,12 @@ func (s *DefaultService) CreateEntry(entry *ChatterEntry) error {
 // GetEntriesByArtifactID retrieves all chatter entries for an artifact
 func (s *DefaultService) GetEntriesByArtifactID(artifactID string) ([]*ChatterEntry, error) {
 	return s.repo.FindByArtifactID(artifactID)
+}
+
+// ErrNotFound reports a note that does not exist.
+var ErrNotFound = errors.New("chatter entry not found")
+
+// GetEntry returns one note by id.
+func (s *DefaultService) GetEntry(id string) (*ChatterEntry, error) {
+	return s.repo.FindByID(id)
 }

@@ -207,11 +207,82 @@ OAuth redirect, so each vendor's flow is relayed to the member's own browser:
 | Provider | How it is relayed |
 | --- | --- |
 | **Claude Code** | `claude auth login` is a terminal UI that renders nothing over pipes, so it is driven over a **pseudo-terminal** inside the runner. The URL it prints is scraped out and shown as a link; the code the member pastes back is typed into that terminal. Not `claude setup-token`: that asks only for `user:inference` and mints a long-lived token for headless use, leaving the CLI itself signed out — runs after it fail with "Not logged in". Needs a CLI new enough to have `claude auth login` (`auth status` likewise, which is how a runner's sign-in state is read). |
-| **Gemini CLI** | Already a paste-back flow (`NO_BROWSER=1`): URL out, code in. Unchanged. |
+| **Gemini CLI** | A paste-back flow over a **pseudo-terminal** (`NO_BROWSER=1`): URL out, code in. The command is bare `gemini`, not `gemini -p ...`, because the CLI will only perform a manual authorization from a session its own `isHeadlessMode()` calls interactive, and that answers "headless" on any of three counts, each fatal on its own: `CI` or `GITHUB_ACTIONS` set to `true`, stdin/stdout not being a TTY, or `-p`/`--prompt` on the command line. So the sign-in gets a terminal, drops the prompt flag, and clears those two variables; otherwise it dies with "Manual authorization is required but the current session is non-interactive". It also sets `GEMINI_CLI_TRUST_WORKSPACE=true` — the CLI refuses an untrusted directory, and a lease builds its workspace fresh, so no trust record for it can exist. It names the auth mode (`GOOGLE_GENAI_USE_GCA=true`) as well, because the CLI refuses to start unless one is named — "Please set an Auth method in your `~/.gemini/settings.json` ...", exit 41 — and a leased runner's fresh `HOME` has no settings file that could have named it. Headless **runs** name the same mode, unless the environment already names another (`GEMINI_API_KEY`, `GOOGLE_GENAI_USE_VERTEXAI`, ...), since `GOOGLE_GENAI_USE_GCA` outranks those in the CLI's own order. A member's own `security.auth.selectedAuthType` outranks the environment either way. **Tier gate:** since 18 June 2026 this sign-in only serves Google accounts on a Gemini Code Assist Standard or Enterprise licence — see the note below the table. |
 | **Codex CLI** | `codex login` completes against a **loopback port on the runner**, which the member's browser cannot reach. So after authorizing, the member's browser shows a connection error — they copy that whole address out of the address bar and paste it back, and the runner replays it against its own listener. Only the path and query of the paste are used, always against the port the CLI itself advertised, so a paste naming another host cannot make the runner fetch it. |
 
 All three surface in the same **Agent sign-ins** cards. Sign-ins on a leased
 runner last exactly as long as the lease.
+
+
+### Antigravity CLI
+
+`agy` is Google's successor to the Gemini CLI and is where the consumer tiers
+went on 18 June 2026. OpenV runs it as an **API-key provider**, not a sign-in
+one, and that is a deliberate consequence of how it stores credentials:
+
+- **Authentication.** `agy` keeps an OAuth session in the operating system's
+  native keyring (Keychain, Linux Secret Service/dbus, Windows Credential
+  Manager). A runner container has no keyring service, so an OAuth sign-in has
+  nowhere to persist even if it completed. Google documents `GEMINI_API_KEY`
+  for exactly this case — no browser, no keyring — and that is the path OpenV
+  supports. The CLI does not appear in the personal sign-in list.
+- **Runs.** `agy -p <prompt> --output-format json`, plus `--model` and
+  `--effort` (three rungs: OpenV's `xhigh` and `max` cap to `high`).
+  `--print-timeout` is set from the agent's own `timeout_seconds`: the CLI
+  otherwise applies a five-minute cap of its own and ends a longer run there,
+  reporting the partial output as the answer.
+- **Tools.** The allowlist is enforced at the OpenV MCP server via
+  `OPENV_MCP_TOOLS`; OpenV widens nothing on this provider. The CLI's
+  auto-approve-everything flag (`--dangerously-skip-permissions`) is never
+  passed — it is this CLI's `--yolo`.
+- **MCP.** Wired through the **workspace** config `.agents/mcp_config.json`,
+  never the member's global file under `HOME`. No `env` block is written: the
+  CLI launches the stdio server as a child, so the run token is inherited from
+  the process environment rather than left on disk inside what may be a
+  repository clone.
+- **Repository access is refused**, for now by choice rather than by
+  necessity. The CLI does carry `--mode accept-edits` and a `--sandbox` flag,
+  so a repo-editing path is likely available; neither has been exercised
+  against a real repository from a runner, and what `accept-edits` approves
+  is not documented anywhere OpenV can point at. Granting write access to a
+  member's repository on an untested reading of an undocumented flag is not a
+  trade worth making, so the adapter refuses until someone has run it and can
+  say what it does. Use `claude-code` for repo-editing agents meanwhile: it
+  can name the editing tools individually.
+
+`agy` is a closed-source binary, so this adapter is built from Google's
+published CLI documentation plus the `--help` output of the exact pinned
+release the runner image installs (see `Dockerfile.worker`). The result
+envelope's field names are published in neither, so the adapter reads the
+answer from the first of several plausible keys and fails closed on an
+envelope matching none of them, rather than passing unparsed output off as
+the agent's answer.
+
+### Gemini CLI: what Google still serves
+
+On **18 June 2026** Google retired Gemini CLI for the free, Google One, AI Pro
+and AI Ultra tiers and moved them to **Antigravity CLI**. What remains served,
+in Google's own words, is "a Gemini Code Assist Standard or Enterprise license,
+or through Google Cloud", plus "paid Gemini and Gemini Enterprise Agent
+Platform API keys".
+
+This matters here because the two paths are affected differently:
+
+| Path | Status |
+|---|---|
+| **Browser sign-in on a leased runner** (`GOOGLE_GENAI_USE_GCA`, Code Assist OAuth) | Only for Code Assist **Standard or Enterprise** accounts. Every other tier is refused by Google, whatever this side does. |
+| **Runs with a workspace API key** (`GEMINI_API_KEY`) | Still served on a paid key. This is the path to point members at. |
+| **Runs on Vertex / Google Cloud** (`GOOGLE_GENAI_USE_VERTEXAI`) | Still served. |
+
+So a Gemini sign-in failing on an unentitled account is **not a bug in the
+sign-in flow** — the flow is exercised and correct up to the point Google
+refuses. `geminiSignInFailure` appends a note saying so to every failed Gemini
+sign-in, because the refusal is the server's and its wording is not ours to
+predict. Before changing anything in `flowFor`'s gemini case or
+`geminiLoginEnv`, check the account's tier.
+
+The npm package is still published and current, and its OAuth code is intact —
+the client works; the entitlement is what changed.
 
 ## Per-project agent auth
 

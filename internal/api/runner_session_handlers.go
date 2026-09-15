@@ -143,8 +143,12 @@ func (h *Handler) runnerSessionPayload(session *runnersessions.Session) map[stri
 		payload["deadline"] = deadline
 		payload["seconds_remaining"] = int(time.Until(deadline).Seconds())
 	}
+	// A band, not the figures. The member holds at most one runner, so the
+	// exact free count is not theirs to act on, and publishing the
+	// deployment's capacity to every account is not something this endpoint
+	// should do. The admin pool endpoint still reports the real counts.
 	if counts, err := h.runnerSessionService.Counts(runnersessions.DefaultPool); err == nil {
-		payload["pool"] = counts
+		payload["pool_load"] = counts.Load()
 	}
 	return payload
 }

@@ -1,0 +1,101 @@
+# CodeQL: static analysis for bugs in OpenV's own code.
+#
+# This complements the Vulnerability scan job in ci.yml rather than replacing
+# it. That gate is about *dependencies* — govulncheck for reachable Go
+# advisories, npm audit for the browser tree. CodeQL is about the code this
+# repository writes: injection, path traversal, unsafe deserialisation, and
+# the dataflow-reachable mistakes that no dependency scanner can see.
+#
+# Advanced setup (this file) rather than GitHub's one-click default setup,
+# because the default cannot trigger on tags and per-release scanning is half
+# the point: every `v<version>` tag gets a scan of exactly what shipped.
+#
+# Free here because the repository is public — code scanning on a private
+# repository needs a GitHub Code Security licence.
+#
+# Note for whoever promotes next: the promote workflow refuses while any
+# check on the master head is failing or still running, so a master-branch
+# CodeQL run now sits between a merge and a promotion. That is deliberate —
+# shipping unscanned code is the thing worth preventing — but it does add a
+# few minutes, and a CodeQL check that goes red will block a release until
+# the finding is triaged.
+
+name: CodeQL
+
+on:
+  push:
+    branches: [master]
+    # Every released version is scanned as itself, which is what lets a
+    # release say when it was last analysed. See docs/railway.md.
+    tags: ["v*"]
+  pull_request:
+    branches: [master]
+  schedule:
+    # Weekly, not monthly. A scheduled run re-analyses code that has not
+    # changed against a query pack that has: it is how a newly published
+    # class of bug gets found in old code. Monthly would leave that window
+    # four times wider for no saving — Actions minutes are free on a public
+    # repository.
+    - cron: "27 4 * * 1"
+
+# Least privilege at the top; the job widens only what it needs.
+permissions:
+  contents: read
+
+concurrency:
+  group: codeql-${{ github.ref }}
+  # Superseding a push on a pull request is free; cancelling a scan of master,
+  # a tag or the weekly sweep would lose the result that gets published.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  analyze:
+    name: Analyze ${{ matrix.language }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    permissions:
+      # Uploading the SARIF results is the whole job.
+      security-events: write
+      actions: read
+      contents: read
+
+    strategy:
+      # One language failing must not hide the other's findings.
+      fail-fast: false
+      matrix:
+        include:
+          # Go is compiled, so CodeQL needs a build to observe it. autobuild
+          # runs `go build ./...`, which is how this repository builds; build
+          # mode "none" is not offered for Go.
+          - language: go
+            build-mode: autobuild
+          # TypeScript is read from source — nothing to build, and building
+          # the CRA bundle would only slow the scan down.
+          - language: javascript-typescript
+            build-mode: none
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Before init, so autobuild compiles with the toolchain the product
+      # actually ships on rather than whatever the runner happens to carry.
+      # Same reasoning as the vulnerability gate — see docs/DEVELOPMENT.md.
+      - uses: actions/setup-go@v5
+        if: matrix.language == 'go'
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+
+      - name: Analyze
+        uses: github/codeql-action/analyze@v4
+        with:
+          # Keeps each language's results a separate set, so one language's
+          # findings are never mistaken for the other's being resolved.
+          category: "/language:${{ matrix.language }}"

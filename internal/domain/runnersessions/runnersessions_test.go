@@ -1,6 +1,7 @@
 package runnersessions
 
 import (
+	"encoding/json"
 	"errors"
 	"testing"
 	"time"
@@ -504,5 +505,56 @@ func TestDeadlineIsTheEarlierClock(t *testing.T) {
 	session.LastActivityAt = now.Add(50 * time.Minute)
 	if got := session.Deadline(); !got.Equal(session.ExpiresAt) {
 		t.Errorf("Deadline = %v, want the hard expiry %v", got, session.ExpiresAt)
+	}
+}
+
+// The load bands the member card shows. A member leases one runner at a
+// time, so what they need is "is there likely to be one for me", not a
+// capacity figure — and the bands have to stay sensible at the small pool
+// sizes this actually runs at, where one free node out of five is 20%.
+func TestPoolCountsLoadBands(t *testing.T) {
+	cases := []struct {
+		name  string
+		total int
+		idle  int
+		want  string
+	}{
+		{"no pool at all", 0, 0, LoadUnavailable},
+		{"empty pool with nodes offline", 0, 0, LoadUnavailable},
+		{"everything free", 5, 5, LoadGreen},
+		{"half free", 10, 5, LoadGreen},
+		{"just over the green line", 10, 4, LoadGreen},
+		{"exactly 30% is not green", 10, 3, LoadAmber},
+		{"one of five free", 5, 1, LoadAmber},
+		{"exactly a twentieth free is still amber", 20, 1, LoadAmber},
+		{"under a twentieth free", 40, 1, LoadRed},
+		{"nothing free in a big pool", 40, 0, LoadRed},
+		{"nothing free in a small pool", 5, 0, LoadRed},
+		{"the only node is leased", 1, 0, LoadRed},
+		{"the only node is free", 1, 1, LoadGreen},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			counts := PoolCounts{Total: tc.total, Idle: tc.idle, Leased: tc.total - tc.idle}
+			if got := counts.Load().Status; got != tc.want {
+				t.Errorf("Load() = %q, want %q for %d idle of %d", got, tc.want, tc.idle, tc.total)
+			}
+		})
+	}
+}
+
+// The band is the whole payload: publishing the figures beside it would
+// undo the point of reducing them.
+func TestPoolLoadCarriesNoFigures(t *testing.T) {
+	blob, err := json.Marshal(PoolCounts{Total: 9, Idle: 8, Leased: 1}.Load())
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	var fields map[string]interface{}
+	if err := json.Unmarshal(blob, &fields); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if len(fields) != 1 || fields["status"] != LoadGreen {
+		t.Errorf("serialized load = %s, want only a status", blob)
 	}
 }

@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Attachment, attachmentAPI } from '../api/client';
 import { StlPreview, StlModel, parseStl } from './StlPreview';
+import { figureName } from './ImageGallery';
 import { attachmentLabel, formatFileSize, formatLabel, isStl } from './attachmentKinds';
 import './ImageLightbox.css';
 
@@ -100,7 +101,9 @@ export const AttachmentViewer: React.FC<AttachmentViewerProps> = ({
   }, [onClose]);
 
   const title = `${attachmentLabel(attachment)} (v${shown})`;
-  const original = attachment.original_filename || attachment.filename;
+  // What the figure is called to a reader: its title where a member has given
+  // it one, else the name it was uploaded under.
+  const name = figureName(attachment);
 
   return (
     <div
@@ -140,7 +143,7 @@ export const AttachmentViewer: React.FC<AttachmentViewerProps> = ({
             textAlign: 'center',
           }}
         >
-          {original} · {formatLabel(attachment)} · {formatFileSize(attachment.file_size)}
+          {name} · {formatLabel(attachment)} · {formatFileSize(attachment.file_size)}
         </p>
       </div>
     </div>
