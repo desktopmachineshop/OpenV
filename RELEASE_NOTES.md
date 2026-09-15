@@ -9,6 +9,14 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Maintenance updates
+
+- Every release from now on is tagged in the source repository as
+  `v<version>`, so the exact code behind a version number can be found,
+  compared against another release, or checked out. That matters when you
+  are self-hosting, and when pinning down which release a problem started
+  in. Releases up to 0.8.1 predate this and are untagged.
+
 ## 0.8.1 — 2026-09-15
 
 ### Bug fixes

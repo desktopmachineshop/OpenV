@@ -278,6 +278,16 @@ branch instead:
   any check on the master head is failing or still running, cuts the
   release notes (below), then fast-forwards `release`, and Railway deploys
   that push.
+- **Every release is tagged `v<version>`** — `v0.8.1` — by the same
+  workflow, after the push, so a tag exists only for a release that actually
+  shipped. The tag is what makes a release a point in history: `release`
+  only ever shows the newest one, and the notes say what changed without
+  giving you anything to check out, diff against, or name in an incident.
+  Tagging is the last step and never fails a promotion that has already
+  gone out: a version already tagged (a re-run, or notes cut by hand) logs
+  a warning and leaves the existing tag alone. Releases before 0.8.2 are
+  untagged — they predate this, and their cut points are the commits titled
+  `Release <version>` on `master`.
 - **Every release says what changed.** `RELEASE_NOTES.md` at the repository
   root is customer-facing: each pull request adds a bullet under
   `## Unreleased`, grouped under `### New features`, `### Maintenance
