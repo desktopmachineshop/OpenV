@@ -1,7 +1,12 @@
 import React, { useMemo } from 'react';
-import ReactMarkdown from 'react-markdown';
+import ReactMarkdown, { defaultUrlTransform } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { linkifyReferences, referenceFromHref } from './artifactReferences';
+import {
+  isFigureRef,
+  linkifyReferences,
+  referenceFromHref,
+  referenceUrlTransform,
+} from './artifactReferences';
 import { remarkSoftBreaks } from './markdownSoftBreaks';
 
 interface ArtifactBodyProps {
@@ -20,7 +25,10 @@ interface ArtifactBodyProps {
  *
  * The references are rewritten to markdown links before rendering and the
  * anchor is intercepted here, so following a citation moves within the project
- * rather than navigating the browser away from it.
+ * rather than navigating the browser away from it. `urlTransform` is what
+ * carries the reference scheme past the renderer's URL sanitiser; without it
+ * the anchors arrive here with an empty href and click through to the page the
+ * reader is already on.
  */
 export const ArtifactBody: React.FC<ArtifactBodyProps> = ({ body, onReferenceClick }) => {
   const source = useMemo(
@@ -32,6 +40,7 @@ export const ArtifactBody: React.FC<ArtifactBodyProps> = ({ body, onReferenceCli
     <div className="markdown-content">
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkSoftBreaks]}
+        urlTransform={(url, key, node) => referenceUrlTransform(url, key, node, defaultUrlTransform)}
         components={{
           a: ({ href, children, ...rest }) => {
             const ref = referenceFromHref(href);
@@ -47,7 +56,7 @@ export const ArtifactBody: React.FC<ArtifactBodyProps> = ({ body, onReferenceCli
             return (
               <a
                 href={href}
-                title={`Go to ${ref}`}
+                title={isFigureRef(ref) ? `Open ${ref}` : `Go to ${ref}`}
                 onClick={(e) => {
                   e.preventDefault();
                   onReferenceClick(ref);

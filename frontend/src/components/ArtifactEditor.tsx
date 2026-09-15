@@ -20,6 +20,7 @@ import {
   createPendingLinkId,
   serializePendingAdds,
 } from '../utils/pendingLinks';
+import { FIGURE_CITATIONS_FEATURE } from './attachmentKinds';
 import {
   ReferenceCandidate,
   ReferenceQuery,
@@ -46,6 +47,12 @@ interface ArtifactEditorProps {
   onSave: (artifact: Partial<Artifact>) => void;
   onCancel: () => void;
   attachments?: Attachment[];
+  /**
+   * Every figure in the project, for the "##" citations that reach across
+   * artifacts. Left empty the wider menu simply offers nothing, which is the
+   * right degradation: a writer is never shown a figure they cannot cite.
+   */
+  projectAttachments?: Attachment[];
   onUploadAttachment?: (file: File) => void;
   onUploadAttachmentVersion?: (attachmentId: string, file: File) => void;
   onRenameAttachment?: (attachmentId: string, title: string) => void;
@@ -74,6 +81,7 @@ export const ArtifactEditor: React.FC<ArtifactEditorProps> = ({
   onSave,
   onCancel,
   attachments = [],
+  projectAttachments = [],
   onUploadAttachment,
   onUploadAttachmentVersion,
   onRenameAttachment,
@@ -195,10 +203,26 @@ export const ArtifactEditor: React.FC<ArtifactEditorProps> = ({
   const [refQuery, setRefQuery] = useState<ReferenceQuery | null>(null);
   const [refHighlight, setRefHighlight] = useState(0);
 
-  const candidates = useMemo(
+  // Two menus behind one keystroke: "#" offers what this artifact is already
+  // connected to, "##" offers the project's figures. Both are computed so that
+  // switching between them is a re-render rather than a fetch.
+  const localCandidates = useMemo(
     () => referenceCandidates(artifact, links, artifacts, attachments),
     [artifact, links, artifacts, attachments]
   );
+  // "##" is gated (REQ-137): a stable-channel workspace is not offered the
+  // wider menu until it has the release. Reading is never gated — a "##"
+  // citation already in a description resolves for everybody, because a gate
+  // that broke existing prose would be worse than no gate.
+  const crossArtifactFigures = useFeature(FIGURE_CITATIONS_FEATURE);
+  const projectCandidates = useMemo(
+    () =>
+      crossArtifactFigures
+        ? referenceCandidates(artifact, links, artifacts, projectAttachments, 'project')
+        : [],
+    [artifact, links, artifacts, projectAttachments, crossArtifactFigures]
+  );
+  const candidates = refQuery?.scope === 'project' ? projectCandidates : localCandidates;
   const refMatches = useMemo(
     () => (refQuery ? matchReferences(candidates, refQuery.query).slice(0, 8) : []),
     [candidates, refQuery]
@@ -206,14 +230,19 @@ export const ArtifactEditor: React.FC<ArtifactEditorProps> = ({
 
   // Recompute from the caret after every keystroke or cursor move, so the menu
   // opens, filters and closes with the writer rather than lagging behind.
+  //
+  // The marker is read before the candidates are, because which list is on
+  // offer depends on which marker was typed — and typing the second "#" has to
+  // swap the menu rather than close it.
   const syncReferenceMenu = () => {
     const el = bodyRef.current;
-    if (!el || candidates.length === 0) {
+    if (!el) {
       setRefQuery(null);
       return;
     }
     const next = activeReferenceQuery(el.value, el.selectionStart ?? 0);
-    setRefQuery(next);
+    const available = next?.scope === 'project' ? projectCandidates : localCandidates;
+    setRefQuery(available.length > 0 ? next : null);
     setRefHighlight(0);
   };
 
@@ -449,7 +478,9 @@ export const ArtifactEditor: React.FC<ArtifactEditorProps> = ({
               onClick={syncReferenceMenu}
               onBlur={() => setRefQuery(null)}
               placeholder={
-                candidates.length > 0
+                projectCandidates.length > 0
+                  ? 'Enter artifact description (markdown supported) — # to reference a figure or linked artifact, ## for a figure anywhere in the project'
+                  : localCandidates.length > 0
                   ? 'Enter artifact description (markdown supported) — # to reference a figure or linked artifact'
                   : 'Enter artifact description (markdown supported)'
               }
@@ -490,6 +521,7 @@ export const ArtifactEditor: React.FC<ArtifactEditorProps> = ({
                     <span style={{ color: 'var(--text-muted)' }}>
                       {' '}
                       · {c.kind === 'figure' ? 'figure' : c.relation || 'linked'} · {c.label}
+                      {c.owner ? ` · on ${c.owner}` : ''}
                     </span>
                   </div>
                 ))}

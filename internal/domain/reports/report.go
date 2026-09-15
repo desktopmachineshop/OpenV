@@ -321,6 +321,13 @@ func buildReportModel(data *exports.ProjectExport, opts RenderOptions) *reportMo
 	}
 
 	// Figures, in upload order, decoded once.
+	//
+	// Only pictures are laid into the document. An artifact may also carry a
+	// datasheet or a CAD model, and there is nothing to draw for either: run
+	// through loadFigure they would each print "is not an image the document
+	// can embed" in the middle of the specification, which tells a reader
+	// less than saying nothing. They are still indexed, so a citation of one
+	// in the prose still resolves to the artifact holding it.
 	for _, att := range data.Attachments {
 		if att == nil {
 			continue
@@ -328,7 +335,7 @@ func buildReportModel(data *exports.ProjectExport, opts RenderOptions) *reportMo
 		if att.FigureRef != "" {
 			m.figureIndex[att.FigureRef] = att
 		}
-		if opts.Content.Figures {
+		if opts.Content.Figures && attachments.IsImage(att.MimeType) {
 			m.figures[att.ArtifactID] = append(m.figures[att.ArtifactID], loadFigure(att))
 		}
 	}

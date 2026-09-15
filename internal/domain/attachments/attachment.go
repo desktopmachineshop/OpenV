@@ -1,6 +1,7 @@
 package attachments
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"path"
@@ -14,19 +15,22 @@ import (
 
 // Figures.
 //
-// An image attached to an artifact is a numbered figure: REQ-17-FIG-1, built
-// from the artifact's own stable reference and a per-artifact counter. The
+// A file attached to an artifact is a numbered figure: REQ-17-FIG-1, built
+// from the artifact's own stable reference and a per-artifact counter. It may
+// be a drawing, a datasheet or a CAD model — see kind.go for what the platform
+// accepts and what it will do with each — but the numbering is one sequence,
+// because what a reader needs is a stable name for one attached file. The
 // number is minted once and never reissued — deleting a figure does not free
 // it — so a figure reference in a report, a review comment or a conversation
 // months later still names the one image it named then. That is the contract
 // artifact refs carry, and figures inherit it because they are cited the same
 // way.
 //
-// The reference is also the stored filename: an image uploaded as
+// The reference is also the stored filename: a file uploaded as
 // "Screenshot 2026-09-03 at 14.22.31.png" is stored as "REQ-17-FIG-1.png", so
 // what a reader downloads is named for what the document calls it. The name
 // the uploader chose is kept alongside, because it is sometimes the only clue
-// to what a drawing was.
+// to what a drawing was — and for a CAD file it is often the part number.
 
 // figureSuffix separates an artifact reference from its figure number.
 const figureSuffix = "-FIG-"
@@ -101,6 +105,23 @@ type Attachment struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
+// MarshalJSON adds the figure's kind to every response.
+//
+// It is derived from the MIME type rather than stored, so it cannot drift from
+// it and no migration is needed for rows written before there was more than
+// one kind. A client reads "kind" instead of pattern-matching MIME types of
+// its own, which is what keeps one answer to "is this something I can show?"
+func (a Attachment) MarshalJSON() ([]byte, error) {
+	type wire Attachment
+	return json.Marshal(struct {
+		wire
+		Kind Kind `json:"kind"`
+	}{wire(a), KindForMime(a.MimeType)})
+}
+
+// Kind is the family this figure's file belongs to.
+func (a Attachment) Kind() Kind { return KindForMime(a.MimeType) }
+
 // Name is what a figure is called to a reader: its title when a member has
 // given it one, else the name its file was uploaded under.
 func (a *Attachment) Name() string {
@@ -138,6 +159,17 @@ type Version struct {
 	// reappeared — and it is why a restore cannot be told apart from a fresh
 	// upload by comparing file paths alone.
 	RestoredFrom *int `json:"restored_from,omitempty"`
+}
+
+// MarshalJSON adds the version's kind, as for an attachment: a figure can
+// change format between versions (a sketch replaced by the real drawing), so
+// the history has to say what each one was.
+func (v Version) MarshalJSON() ([]byte, error) {
+	type wire Version
+	return json.Marshal(struct {
+		wire
+		Kind Kind `json:"kind"`
+	}{wire(v), KindForMime(v.MimeType)})
 }
 
 // ErrNoSuchVersion reports a restore naming a version the figure never had.
@@ -185,6 +217,10 @@ type Repository interface {
 	// absent from the map. It exists to kill the per-artifact N+1 in bulk
 	// readers such as project export.
 	FindByArtifactIDs(artifactIDs []string) (map[string][]*Attachment, error)
+	// FindByProjectID fetches every attachment in a project as one list, in
+	// the order a reader meets them. Cross-artifact figure references need
+	// the project's figures without knowing which artifact holds each.
+	FindByProjectID(projectID string) ([]*Attachment, error)
 	Delete(id string) error
 
 	// SaveWithFigureRef stores a new attachment, minting its figure number
@@ -218,6 +254,9 @@ type Service interface {
 	// GetAttachmentsByArtifacts returns the attachments for many artifacts in a
 	// single query, grouped by artifact ID (see Repository.FindByArtifactIDs).
 	GetAttachmentsByArtifacts(artifactIDs []string) (map[string][]*Attachment, error)
+	// GetAttachmentsByProject returns every attachment in a project as one
+	// list (see Repository.FindByProjectID).
+	GetAttachmentsByProject(projectID string) ([]*Attachment, error)
 	DeleteAttachment(id string) error
 
 	// CreateFigure stores a new figure on an artifact, allocating its number.
@@ -270,6 +309,11 @@ func (s *DefaultService) GetAttachmentsByArtifact(artifactID string) ([]*Attachm
 // query, grouped by artifact ID.
 func (s *DefaultService) GetAttachmentsByArtifacts(artifactIDs []string) (map[string][]*Attachment, error) {
 	return s.repository.FindByArtifactIDs(artifactIDs)
+}
+
+// GetAttachmentsByProject retrieves every attachment in a project as one list.
+func (s *DefaultService) GetAttachmentsByProject(projectID string) ([]*Attachment, error) {
+	return s.repository.FindByProjectID(projectID)
 }
 
 // DeleteAttachment deletes an attachment

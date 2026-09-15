@@ -3,6 +3,7 @@ package postgres
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -15,6 +16,16 @@ import (
 // figure_num are NULL on rows whose artifact had no reference to build on, so
 // both scan through nullable holders.
 const figureColumns = `id, artifact_id, filename, original_filename, title, mime_type, file_path, file_size, figure_ref, figure_num, version, created_at`
+
+// prefixedFigureColumns is figureColumns qualified by a table alias, for the
+// queries that join attachments to artifacts and so cannot use bare names.
+func prefixedFigureColumns(alias string) string {
+	cols := strings.Split(figureColumns, ", ")
+	for i, c := range cols {
+		cols[i] = alias + "." + c
+	}
+	return strings.Join(cols, ", ")
+}
 
 func scanAttachment(scan func(...interface{}) error) (*attachments.Attachment, error) {
 	a := new(attachments.Attachment)
@@ -147,6 +158,40 @@ func (r *AttachmentRepository) FindByArtifactIDs(artifactIDs []string) (map[stri
 		return nil, fmt.Errorf("attachment rows error: %w", err)
 	}
 
+	return result, nil
+}
+
+// FindByProjectID retrieves every attachment in a project, joined through the
+// artifacts that hold them, in the order a reader meets them: artifact
+// document order, then figure number.
+//
+// It serves cross-artifact figure references, which need the project's figures
+// as one list rather than one artifact's at a time.
+func (r *AttachmentRepository) FindByProjectID(projectID string) ([]*attachments.Attachment, error) {
+	query := `
+		SELECT ` + prefixedFigureColumns("a") + `
+		FROM attachments a
+		JOIN artifacts art ON art.id = a.artifact_id
+		WHERE art.project_id = $1 AND art.valid_to IS NULL
+		ORDER BY art.sort_order, art.created_at, a.figure_num NULLS LAST, a.created_at
+	`
+	rows, err := r.db.Query(query, projectID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to find the project's attachments: %w", err)
+	}
+	defer rows.Close()
+
+	var result []*attachments.Attachment
+	for rows.Next() {
+		attachment, err := scanAttachment(rows.Scan)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan attachment: %w", err)
+		}
+		result = append(result, attachment)
+	}
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("attachment rows error: %w", err)
+	}
 	return result, nil
 }
 

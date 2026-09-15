@@ -11,6 +11,7 @@ import {
 import { apiErrorMessage } from '../api/errors';
 import { ArtifactList } from '../components/ArtifactList';
 import { ArtifactBody } from '../components/ArtifactBody';
+import { artifactRefOfFigure } from '../components/artifactReferences';
 import { useViewport } from '../hooks/useViewport';
 
 // SharedProjectView is a project for somebody with no account (REQ-149,
@@ -137,7 +138,11 @@ const ReadOnlyDetails: React.FC<{
         <ArtifactBody
           body={artifact.body}
           onReferenceClick={(ref) => {
-            const target = artifacts.find((a) => a.ref === ref);
+            // A shared snapshot carries no attachments, so a figure citation
+            // opens the artifact holding it rather than doing nothing — the
+            // nearest thing to what the writer pointed at that this view has.
+            const wanted = artifactRefOfFigure(ref);
+            const target = artifacts.find((a) => a.ref === wanted);
             if (target) onSelect(target.id);
           }}
         />

@@ -42,6 +42,8 @@ var Registry = []Feature{
 	{Key: FeatureAntigravity, ShippedIn: "0.7.0", Summary: "Antigravity CLI as an agent provider: Google's successor to the Gemini CLI, run from a workspace Gemini API key"},
 	{Key: FeatureTodoList, ShippedIn: "0.8.0", Summary: "To-dos: raise one from a note that names someone, and see who owes what on a page of its own under Plan"},
 	{Key: FeatureFigureRevert, ShippedIn: "0.8.0", Summary: "Restore an older version of a figure from its history, recorded as a new version so nothing is lost"},
+	{Key: FeatureAttachmentFormats, ShippedIn: "0.9.0", Summary: "Attach PDFs and CAD files to an artifact, with a PDF reader and a 3D preview for STL"},
+	{Key: FeatureFigureCitations, ShippedIn: "0.9.0", Summary: "Cite a figure on any artifact in the project with \"##\""},
 }
 
 // Feature keys the code gates on.
@@ -63,6 +65,16 @@ const (
 	FeatureTodoList = "todo-list"
 	// FeatureFigureRevert is restoring an older version of a figure.
 	FeatureFigureRevert = "figure-revert"
+	// FeatureAttachmentFormats gates what may be ATTACHED, never what may be
+	// read: a workspace that has not received it yet must still be able to
+	// open a PDF a colleague on the nightly channel attached, or the gate
+	// would turn a released feature into missing files.
+	FeatureAttachmentFormats = "attachment-formats"
+	// FeatureFigureCitations gates the "##" menu, and likewise only the
+	// writing of one. A "##" citation already in a description resolves for
+	// everybody, because a gate that broke existing prose would be worse than
+	// no gate at all.
+	FeatureFigureCitations = "figure-citations"
 )
 
 // Enabled reports whether a feature is on for a workspace on the given
