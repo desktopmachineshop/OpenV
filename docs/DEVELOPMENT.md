@@ -173,6 +173,47 @@ Findings are not suppressed. There is no allow-list and no
 `--ignore`/`audit-level` escape hatch beyond the documented `high` threshold:
 a reachable advisory either gets fixed or the gate stays red.
 
+### CodeQL
+
+`.github/workflows/codeql.yml` scans **this repository's own code**, which is
+the half the vulnerability gate cannot see. govulncheck and npm audit answer
+"is a dependency we use known to be vulnerable"; CodeQL answers "did we write
+a bug" — injection, path traversal, unsafe deserialisation, and the other
+mistakes that show up as dataflow from an untrusted source to a sensitive
+sink. Neither scanner substitutes for the other.
+
+Two languages, analysed separately: `go` with build mode `autobuild` (Go is
+compiled, so CodeQL needs a build to observe it — autobuild runs
+`go build ./...`, and build mode `none` is not offered for Go) and
+`javascript-typescript` with `none` (read from source; building the CRA
+bundle would only slow the scan). `fail-fast` is off so one language failing
+never hides the other's findings, and each uploads under its own category so
+one language's results are never read as the other's being fixed.
+
+It runs on four triggers:
+
+- **pull requests** into `master` — the only point where a finding is cheap.
+- **pushes to `master`** — the baseline the Security tab reflects.
+- **`v*` tags** — every released version is scanned as itself, so a release
+  can say when it was last analysed.
+- **weekly**, Mondays at 04:27 UTC. This is the trigger the other three
+  cannot replace: it re-analyses unchanged code against an updated query
+  pack, which is how a newly published class of bug is found in old code.
+  Monthly would widen that window fourfold for no saving — Actions minutes
+  are free on a public repository, which is also why CodeQL costs nothing
+  here at all. A private repository would need a GitHub Code Security
+  licence.
+
+**It interacts with promotion.** The promote workflow refuses while any check
+on the master head is failing or still running, so a master CodeQL run now
+sits between a merge and a promotion — a few minutes, and a red CodeQL check
+will hold a release until the finding is triaged. That is the intended
+trade: not shipping unscanned code is worth more than a faster promotion.
+
+CodeQL cannot be run locally the way `make vuln` can — it needs the CodeQL
+CLI and uploads its results to GitHub — so the pull request itself is the
+first place a change to the workflow is exercised.
+
 The hosted-runner provisioner in `internal/hosting` talks to the Docker
 daemon through `github.com/moby/moby/client` (the renamed, still-maintained
 Moby engine client), which is where the fixes for GO-2026-4887 and

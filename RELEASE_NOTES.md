@@ -9,6 +9,13 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Maintenance updates
+
+- OpenV's own source code is now scanned by CodeQL on every change, on every
+  release, and weekly against an updated set of rules. It looks for bugs we
+  wrote — injection, path traversal and similar — which is the half that the
+  existing dependency scanning cannot see.
+
 ## 0.8.2 — 2026-09-15
 
 ### Maintenance updates
