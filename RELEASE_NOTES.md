@@ -9,6 +9,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+## 0.7.1 — 2026-09-15
+
 ### Maintenance updates
 
 - The **?** help button now sits beside the notification bell instead of
