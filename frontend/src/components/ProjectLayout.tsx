@@ -474,6 +474,32 @@ export const ProjectLayout: React.FC = () => {
             <div style={{ flex: 1, minWidth: 0 }}>
               <UserMenu variant="dark" />
             </div>
+            {/* The ? sits with the bell for the same reason the bell sits
+                with the account controls: both are about the person, not the
+                project. It used to float over the bottom-right corner of the
+                page, where it covered whatever the page put there. */}
+            {!compact && (
+              <button
+                type="button"
+                aria-label="Help"
+                aria-expanded={helpOpen}
+                onClick={() => setHelpOpen((o) => !o)}
+                title="Help for this page"
+                style={{
+                  width: 32,
+                  height: 32,
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--sidebar-text)',
+                  fontSize: 18,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  flexShrink: 0,
+                }}
+              >
+                ?
+              </button>
+            )}
             <NotificationBell variant="dark" />
           </div>
           {!compact && (
@@ -506,18 +532,13 @@ export const ProjectLayout: React.FC = () => {
           )}
         </div>
       </aside>
-      {/* The clearance class only where the floating ? button is actually
-          rendered: on a phone it lives in the top bar instead, so reserving
-          the corner there would be dead space above the composer. */}
-      <main
-        className={compact ? undefined : 'help-toggle-clearance'}
-        style={{ flex: 1, minWidth: 0, minHeight: 0, overflow: 'auto', background: 'var(--bg-app)' }}
-      >
+      <main style={{ flex: 1, minWidth: 0, minHeight: 0, overflow: 'auto', background: 'var(--bg-app)' }}>
         <Outlet />
       </main>
-      {/* Floating context-aware help — mounted once here so the ? button is
-          available on every project page (issue #162). */}
-      {compact ? <HelpSidebar open={helpOpen} onOpenChange={setHelpOpen} /> : <HelpSidebar />}
+      {/* Context-aware help — mounted once here so it is available on every
+          project page (issue #162). Controlled from whichever bar this shell
+          is showing: the compact top bar, or the sidebar's account row. */}
+      <HelpSidebar open={helpOpen} onOpenChange={setHelpOpen} />
     </div>
   );
 };

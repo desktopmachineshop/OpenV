@@ -8,11 +8,18 @@ interface NavbarProps {
   title?: React.ReactNode;
   /** Show the workspace switcher (next to the logo) and the user menu (far right). */
   showWorkspaceControls?: boolean;
+  /** Page help. Pass both to put a ? button beside the notification bell —
+   *  the two belong together, being about the person rather than the page.
+   *  Omitted on bars whose page mounts no help panel. */
+  helpOpen?: boolean;
+  onHelpToggle?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
   title,
   showWorkspaceControls = false,
+  helpOpen,
+  onHelpToggle,
 }) => {
   const { isPhone } = useViewport();
   return (
@@ -60,6 +67,28 @@ export const Navbar: React.FC<NavbarProps> = ({
       )}
 
       <div style={{ display: 'flex', alignItems: 'center', gap: isPhone ? 4 : '10px', flexShrink: 0 }}>
+        {onHelpToggle && (
+          <button
+            type="button"
+            aria-label="Help"
+            aria-expanded={!!helpOpen}
+            onClick={onHelpToggle}
+            title="Help for this page"
+            style={{
+              width: 44,
+              height: 44,
+              background: 'none',
+              border: 'none',
+              color: 'var(--text)',
+              fontSize: 20,
+              fontWeight: 700,
+              cursor: 'pointer',
+              flexShrink: 0,
+            }}
+          >
+            ?
+          </button>
+        )}
         {showWorkspaceControls && <NotificationBell variant="light" />}
         {showWorkspaceControls && <UserMenu variant="light" />}
       </div>

@@ -9,6 +9,17 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Maintenance updates
+
+- The **?** help button now sits beside the notification bell instead of
+  floating over the bottom-right corner of the page. It used to cover
+  whatever the page put in that corner — on the V&V dashboard, the *Complete*
+  and *Abort* buttons of the last test run — and the first attempt at fixing
+  that reserved the corner instead, which left an empty strip along the
+  bottom of every page. Neither now: it is in the bar with the other controls
+  that are about you rather than the page, which is where phones have had it
+  all along.
+
 ## 0.7.0 — 2026-09-15
 
 ### New features

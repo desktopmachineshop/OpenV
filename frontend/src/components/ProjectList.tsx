@@ -66,6 +66,9 @@ export const ProjectList: React.FC = () => {
     navigate(projectPathFor(id, target));
   };
   const [error, setError] = useState<string>('');
+  // The ? button sits in the navbar beside the bell, so this page owns the
+  // panel's open state rather than a floating button owning it.
+  const [helpOpen, setHelpOpen] = useState<boolean>(false);
   // The project whose download wizard is open, if any.
   const [downloadProjectId, setDownloadProjectId] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -555,19 +558,24 @@ export const ProjectList: React.FC = () => {
 
   return (
     <>
-      <Navbar title="Projects" showWorkspaceControls />
+      <Navbar
+        title="Projects"
+        showWorkspaceControls
+        helpOpen={helpOpen}
+        onHelpToggle={() => setHelpOpen((o) => !o)}
+      />
       {/* The same floating, context-aware help bubble every project page
           carries, rather than a one-off link to the manual index: on this
           page it explains creating, importing, templating and exporting
           projects. */}
-      <HelpSidebar />
+      <HelpSidebar open={helpOpen} onOpenChange={setHelpOpen} />
       {downloadProjectId && (
         <DownloadWizard
           projectId={downloadProjectId}
           onClose={() => setDownloadProjectId(null)}
         />
       )}
-      <div className="project-list-container help-toggle-clearance">
+      <div className="project-list-container">
 
       {/* An installed-app shortcut that could not guess the project says so
           rather than silently dropping the member on the plain project list. */}
