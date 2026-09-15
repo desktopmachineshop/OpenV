@@ -26,7 +26,7 @@ remembered):
 - **Center** — the selected artifact: header, body, links, attachments.
 - **Right** — the **Chatter** panel: comments on the selected artifact.
 
-A floating **?** button opens a quick-reference help sidebar with artifact and
+The **?** button beside the notification bell opens a quick-reference help sidebar with artifact and
 link type definitions.
 
 ## Creating and organizing artifacts
