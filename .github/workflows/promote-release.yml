@@ -5,10 +5,11 @@
 # integration picks up the push and deploys.
 #
 # Guard rails:
-# - refuses to promote if any check run that judges the master head is
-#   failing or still in progress (master's own CI gates every promotion).
-#   Dependabot's own updater check is not one of those — see the step for
-#   why a bot's housekeeping must not hold up a release.
+# - refuses to promote if any workflow this repository defines is failing or
+#   still running on the master head, or any check posted by another app is
+#   (master's own CI gates every promotion). Dependabot's updater jobs are
+#   not among them — see the step for why a bot's housekeeping must not hold
+#   up a release, and how they are told apart.
 # - every release says what changed: the Unreleased bullets of
 #   RELEASE_NOTES.md are cut into a new version section (committed to master
 #   by this workflow), and a master whose notes name nothing newer than what
@@ -46,36 +47,61 @@ jobs:
       - name: Verify master CI is green
         env:
           GH_TOKEN: ${{ github.token }}
-          # This promote job itself appears as a check run on the master head
-          # (in progress now; failed/succeeded from earlier attempts), so it
-          # must be excluded from the gate or promotion can never pass.
-          SELF: Fast-forward release to master
+          # This workflow's own run is attached to the master head too (in
+          # progress now; failed or succeeded from earlier attempts), so it
+          # must be excluded or promotion can never pass.
+          SELF_PATH: .github/workflows/promote-release.yml
         run: |
           sha=$(git rev-parse HEAD)
           echo "Promoting master commit $sha"
-          # Read once, so the count and the verdict cannot disagree about a
-          # check that changed between the two calls, and ask for a full page:
-          # the default is 30, and silently judging only the first 30 checks
-          # of a longer list would be worse than refusing outright.
+
+          # Judge the commit by the workflows *this repository* defines.
+          #
+          # Dependabot's updater jobs attach check runs to the head as well,
+          # and they go red whenever a flagged package has no upgrade path —
+          # a standing fact about the dependency tree that no release can
+          # change and none should wait on. They cannot be told apart by app
+          # (GitHub Actions runs them, like everything else here) or safely by
+          # name, but they do not come from this repository: their workflow
+          # path is `dynamic/dependabot/dependabot-updates`, not
+          # `.github/workflows/`. That is the distinction the gate uses.
+          #
+          # Whether the dependencies themselves are sound is gated separately,
+          # by the Vulnerability scan job in ci.yml, which runs on master like
+          # every other check here.
+          #
+          # per_page covers a head with more checks than the API's default
+          # page of 30 — silently judging only the first 30 of a longer list
+          # would be worse than refusing outright.
+          gh api "repos/${GITHUB_REPOSITORY}/actions/runs?head_sha=${sha}&per_page=100" > /tmp/runs.json
+          jq --arg self "$SELF_PATH" \
+            '[.workflow_runs[]
+              | select(.path | startswith(".github/workflows/"))
+              | select(.path != $self)
+              | {name, status, conclusion}]' /tmp/runs.json > /tmp/judging-runs.json
+
+          # Checks posted by other apps — code scanning, for one — are check
+          # runs rather than workflow runs, so they are collected separately.
+          # GitHub Actions' own check runs are already covered above, and
+          # counting them twice would just repeat the same verdict.
           gh api "repos/${GITHUB_REPOSITORY}/commits/${sha}/check-runs?per_page=100" > /tmp/check-runs.json
-          # Dependabot's check run says whether its own updater could compute
-          # an update. It goes red when a vulnerable transitive dependency has
-          # no fix path — a standing fact about the dependency tree that no
-          # release can change and none should wait on. This gate asks whether
-          # *this commit* is sound, so judge it by the checks that examined
-          # it. The dependency tree has its own gate: the Vulnerability scan
-          # job in ci.yml, which runs on master like everything else here.
-          jq --arg self "$SELF" \
-            '[.check_runs[] | select(.name != $self and (.app.slug // "") != "dependabot")]' \
-            /tmp/check-runs.json > /tmp/judging.json
+          jq '[.check_runs[]
+                | select((.app.slug // "") != "github-actions")
+                | {name, status, conclusion}]' /tmp/check-runs.json > /tmp/judging-checks.json
+
+          jq -s 'add' /tmp/judging-runs.json /tmp/judging-checks.json > /tmp/judging.json
           echo "Judging this commit by: $(jq -r 'map(.name) | join(", ")' /tmp/judging.json)"
           if [ "$(jq 'length' /tmp/judging.json)" = "0" ]; then
-            echo "No check runs found on master head — refusing to promote." >&2
+            echo "No checks found on master head — refusing to promote." >&2
             exit 1
           fi
-          # A check still running has a null conclusion, so it counts as not
-          # green too: promotion waits for it rather than racing it.
-          not_green=$(jq -r '[.[] | select(.conclusion != "success" and .conclusion != "neutral" and .conclusion != "skipped")] | map(.name) | join(", ")' /tmp/judging.json)
+
+          # Anything not finished counts as not green, so promotion waits for
+          # a run still going rather than racing it.
+          not_green=$(jq -r '[.[]
+            | select(.status != "completed"
+                     or (.conclusion != "success" and .conclusion != "neutral" and .conclusion != "skipped"))]
+            | map(.name) | join(", ")' /tmp/judging.json)
           if [ -n "$not_green" ]; then
             echo "Checks not green on master head: $not_green" >&2
             exit 1

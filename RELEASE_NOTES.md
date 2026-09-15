@@ -15,8 +15,9 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   own update. It reports a failure when a flagged package has no upgrade path
   available, which is a fact about that package rather than anything wrong
   with the release — so fixes and features reach you on time instead of
-  waiting behind it. The checks that actually test OpenV still gate every
-  release, as does the separate scan of the packages OpenV depends on.
+  waiting behind it. Every test OpenV runs against itself still has to pass
+  before a release goes out, as does the separate scan of the packages OpenV
+  depends on and the scan of OpenV's own code.
 
 ## 0.9.0 — 2026-09-15
 
