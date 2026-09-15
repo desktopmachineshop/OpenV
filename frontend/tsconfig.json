@@ -18,7 +18,8 @@
     "baseUrl": "./src",
     "types": [
       "vite/client",
-      "vitest/globals"
+      "vitest/globals",
+      "node"
     ],
     "noEmit": true,
     "isolatedModules": true
