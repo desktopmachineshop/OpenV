@@ -5,8 +5,10 @@
 # integration picks up the push and deploys.
 #
 # Guard rails:
-# - refuses to promote if any check run on the master head is failing or
-#   still in progress (master's own CI gates every promotion)
+# - refuses to promote if any check run that judges the master head is
+#   failing or still in progress (master's own CI gates every promotion).
+#   Dependabot's own updater check is not one of those — see the step for
+#   why a bot's housekeeping must not hold up a release.
 # - every release says what changed: the Unreleased bullets of
 #   RELEASE_NOTES.md are cut into a new version section (committed to master
 #   by this workflow), and a master whose notes name nothing newer than what
@@ -51,14 +53,29 @@ jobs:
         run: |
           sha=$(git rev-parse HEAD)
           echo "Promoting master commit $sha"
-          runs=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${sha}/check-runs" \
-            --jq '[.check_runs[] | select(.name != env.SELF)] | length')
-          if [ "$runs" = "0" ]; then
+          # Read once, so the count and the verdict cannot disagree about a
+          # check that changed between the two calls, and ask for a full page:
+          # the default is 30, and silently judging only the first 30 checks
+          # of a longer list would be worse than refusing outright.
+          gh api "repos/${GITHUB_REPOSITORY}/commits/${sha}/check-runs?per_page=100" > /tmp/check-runs.json
+          # Dependabot's check run says whether its own updater could compute
+          # an update. It goes red when a vulnerable transitive dependency has
+          # no fix path — a standing fact about the dependency tree that no
+          # release can change and none should wait on. This gate asks whether
+          # *this commit* is sound, so judge it by the checks that examined
+          # it. The dependency tree has its own gate: the Vulnerability scan
+          # job in ci.yml, which runs on master like everything else here.
+          jq --arg self "$SELF" \
+            '[.check_runs[] | select(.name != $self and (.app.slug // "") != "dependabot")]' \
+            /tmp/check-runs.json > /tmp/judging.json
+          echo "Judging this commit by: $(jq -r 'map(.name) | join(", ")' /tmp/judging.json)"
+          if [ "$(jq 'length' /tmp/judging.json)" = "0" ]; then
             echo "No check runs found on master head — refusing to promote." >&2
             exit 1
           fi
-          not_green=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${sha}/check-runs" \
-            --jq '[.check_runs[] | select(.name != env.SELF) | select(.conclusion != "success" and .conclusion != "neutral" and .conclusion != "skipped")] | map(.name) | join(", ")')
+          # A check still running has a null conclusion, so it counts as not
+          # green too: promotion waits for it rather than racing it.
+          not_green=$(jq -r '[.[] | select(.conclusion != "success" and .conclusion != "neutral" and .conclusion != "skipped")] | map(.name) | join(", ")' /tmp/judging.json)
           if [ -n "$not_green" ]; then
             echo "Checks not green on master head: $not_green" >&2
             exit 1
