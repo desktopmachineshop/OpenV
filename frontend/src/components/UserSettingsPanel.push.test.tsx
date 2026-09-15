@@ -4,9 +4,9 @@ import { UserSettingsPanel } from './UserSettingsPanel';
 import { notificationPrefsAPI, providerSettingsAPI, pushAPI } from '../api/client';
 import { SERVICE_WORKER_READY_TIMEOUT_MS } from '../push/webPush';
 
-// Same recipe as Login.test.tsx: CRA's Jest cannot resolve react-router v7's
-// package exports, so the router is mocked with the one piece this panel uses.
-jest.mock('react-router-dom', () => ({
+// Same recipe as Login.test.tsx: the router is mocked with the one piece
+// this panel uses, so the test does not need a router provider.
+vi.mock('react-router-dom', () => ({
   Link: ({ to, children, ...rest }: any) =>
     require('react').createElement('a', { href: String(to), ...rest }, children),
 }));
@@ -14,28 +14,28 @@ jest.mock('react-router-dom', () => ({
 // The panel's own dependencies, mocked down to what the push toggle needs:
 // the client module builds an axios instance at import time, and the runner /
 // provider cards fetch on mount and are irrelevant here.
-jest.mock('../api/client', () => ({
-  notificationPrefsAPI: { get: jest.fn(), update: jest.fn() },
-  providerSettingsAPI: { list: jest.fn() },
-  pushAPI: { config: jest.fn(), list: jest.fn(), subscribe: jest.fn(), unsubscribe: jest.fn() },
+vi.mock('../api/client', () => ({
+  notificationPrefsAPI: { get: vi.fn(), update: vi.fn() },
+  providerSettingsAPI: { list: vi.fn() },
+  pushAPI: { config: vi.fn(), list: vi.fn(), subscribe: vi.fn(), unsubscribe: vi.fn() },
   // The panel also carries the change-password form (REQ-99), which asks the
   // server for its own minimum length on mount. These tests are about push, so
   // the policy call is stubbed rather than asserted — but it has to exist, or
   // the effect throws and takes the whole panel down with it.
   DEFAULT_MIN_PASSWORD_LENGTH: 8,
-  passwordAPI: { change: jest.fn() },
-  // A plain function, not jest.fn(): CRA resets mocks between tests, which
+  passwordAPI: { change: vi.fn() },
+  // A plain function, not vi.fn(): mocks are cleared between tests, which
   // would strip a factory-set resolved value and leave the effect awaiting
   // undefined.
   authAPI: { policy: () => Promise.resolve({ data: { min_password_length: 8 } }) },
 }));
-jest.mock('./org/MyRunnerCard', () => ({ MyRunnerCard: () => null }));
-jest.mock('./org/CloudRunnerCard', () => ({ CloudRunnerCard: () => null }));
-jest.mock('./agents/ProviderConnectCard', () => ({ ProviderConnectCard: () => null }));
-jest.mock('./ThemeSwitcher', () => ({ ThemeSwitcher: () => null }));
-jest.mock('../hooks/useFeature', () => ({ useFeature: () => false }));
-jest.mock('../hooks/useViewport', () => ({ useViewport: () => ({ isPhone: false, isCompact: false }) }));
-jest.mock('../state/store', () => ({
+vi.mock('./org/MyRunnerCard', () => ({ MyRunnerCard: () => null }));
+vi.mock('./org/CloudRunnerCard', () => ({ CloudRunnerCard: () => null }));
+vi.mock('./agents/ProviderConnectCard', () => ({ ProviderConnectCard: () => null }));
+vi.mock('./ThemeSwitcher', () => ({ ThemeSwitcher: () => null }));
+vi.mock('../hooks/useFeature', () => ({ useFeature: () => false }));
+vi.mock('../hooks/useViewport', () => ({ useViewport: () => ({ isPhone: false, isCompact: false }) }));
+vi.mock('../state/store', () => ({
   useAppStore: () => ({
     currentUser: { id: 'u-1', email: 'sam@example.com', name: 'Sam' },
     activeOrgId: null,
@@ -44,9 +44,9 @@ jest.mock('../state/store', () => ({
   }),
 }));
 
-const prefs = notificationPrefsAPI as jest.Mocked<typeof notificationPrefsAPI>;
-const providers = providerSettingsAPI as jest.Mocked<typeof providerSettingsAPI>;
-const push = pushAPI as jest.Mocked<typeof pushAPI>;
+const prefs = vi.mocked(notificationPrefsAPI);
+const providers = vi.mocked(providerSettingsAPI);
+const push = vi.mocked(pushAPI);
 
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -59,7 +59,7 @@ const subscription = {
   endpoint: 'https://push.example.com/abc',
   options: { applicationServerKey: null },
   toJSON: () => ({ endpoint: 'https://push.example.com/abc', keys: { p256dh: 'p', auth: 'a' } }),
-  unsubscribe: jest.fn().mockResolvedValue(true),
+  unsubscribe: vi.fn().mockResolvedValue(true),
 };
 
 // installBrowser fakes the push APIs the toggle feature-detects. Passing
@@ -77,21 +77,21 @@ const installBrowser = (opts: {
     delete (window as any).Notification;
     delete (window as any).PushManager;
     Object.defineProperty(window.navigator, 'serviceWorker', { configurable: true, value: undefined });
-    return { subscribe: jest.fn(), getSubscription: jest.fn() };
+    return { subscribe: vi.fn(), getSubscription: vi.fn() };
   }
-  const subscribe = jest.fn().mockResolvedValue(subscription);
-  const getSubscription = jest.fn().mockResolvedValue(opts.existing ?? null);
+  const subscribe = vi.fn().mockResolvedValue(subscription);
+  const getSubscription = vi.fn().mockResolvedValue(opts.existing ?? null);
   const registration = { pushManager: { subscribe, getSubscription } };
   (window as any).Notification = {
     permission: opts.permission || 'default',
-    requestPermission: jest.fn().mockResolvedValue(opts.requestPermission || 'granted'),
+    requestPermission: vi.fn().mockResolvedValue(opts.requestPermission || 'granted'),
   };
   (window as any).PushManager = function PushManager() {};
   Object.defineProperty(window.navigator, 'serviceWorker', {
     configurable: true,
     value: {
       ready: opts.readyHangs ? new Promise(() => {}) : Promise.resolve(registration),
-      getRegistration: jest.fn().mockResolvedValue(opts.readyHangs ? undefined : registration),
+      getRegistration: vi.fn().mockResolvedValue(opts.readyHangs ? undefined : registration),
     },
   });
   return { subscribe, getSubscription };
@@ -101,7 +101,6 @@ const installBrowser = (opts: {
 // fetch, the registration, getSubscription, and the device list.
 const settle = async () => {
   for (let i = 0; i < 8; i += 1) {
-    // eslint-disable-next-line no-await-in-loop
     await act(async () => {
       await Promise.resolve();
     });
@@ -126,7 +125,7 @@ const pushToggle = (): HTMLInputElement => {
 const panelText = () => container.textContent || '';
 
 beforeEach(() => {
-  jest.clearAllMocks();
+  vi.clearAllMocks();
   subscription.unsubscribe.mockClear();
   prefs.get.mockResolvedValue({ data: { email_notifications: true, push_notifications: false } } as any);
   prefs.update.mockResolvedValue({ data: { email_notifications: true, push_notifications: true } } as any);
@@ -225,7 +224,7 @@ it('shows off, and offers to re-register, when the server does not know this dev
 });
 
 it('explains that the service worker is unavailable instead of waiting forever', async () => {
-  jest.useFakeTimers();
+  vi.useFakeTimers();
   try {
     installBrowser({ permission: 'granted', existing: subscription, readyHangs: true });
     push.config.mockResolvedValue({ data: { enabled: true, public_key: PUBLIC_KEY } } as any);
@@ -235,7 +234,7 @@ it('explains that the service worker is unavailable instead of waiting forever',
     });
     await settle();
     await act(async () => {
-      jest.advanceTimersByTime(SERVICE_WORKER_READY_TIMEOUT_MS);
+      vi.advanceTimersByTime(SERVICE_WORKER_READY_TIMEOUT_MS);
     });
     await settle();
 
@@ -243,7 +242,7 @@ it('explains that the service worker is unavailable instead of waiting forever',
     expect(pushToggle().checked).toBe(false);
     expect(panelText()).toMatch(/service worker for this site is unavailable/i);
   } finally {
-    jest.useRealTimers();
+    vi.useRealTimers();
   }
 });
 

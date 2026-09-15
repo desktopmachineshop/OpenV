@@ -53,8 +53,8 @@ const buttonByText = (text: string): HTMLButtonElement => {
 
 describe('ConfirmDialog', () => {
   it('renders the title and message and resolves confirm', () => {
-    const onConfirm = jest.fn();
-    const onCancel = jest.fn();
+    const onConfirm = vi.fn();
+    const onCancel = vi.fn();
     render(
       <ConfirmDialog
         title="Delete thing"
@@ -73,8 +73,8 @@ describe('ConfirmDialog', () => {
   });
 
   it('cancels via the Cancel button and via Escape', () => {
-    const onConfirm = jest.fn();
-    const onCancel = jest.fn();
+    const onConfirm = vi.fn();
+    const onCancel = vi.fn();
     render(<ConfirmDialog message="Sure?" onConfirm={onConfirm} onCancel={onCancel} />);
     click(buttonByText('Cancel'));
     expect(onCancel).toHaveBeenCalledTimes(1);
@@ -85,7 +85,7 @@ describe('ConfirmDialog', () => {
   });
 
   it('confirms on Enter and focuses the confirm button on mount', () => {
-    const onConfirm = jest.fn();
+    const onConfirm = vi.fn();
     render(<ConfirmDialog message="Go?" onConfirm={onConfirm} onCancel={() => undefined} />);
     const confirmBtn = buttonByText('Confirm');
     expect(document.activeElement).toBe(confirmBtn);
@@ -97,8 +97,8 @@ describe('ConfirmDialog', () => {
     // Regression (#142): the overlay used to intercept Enter and call
     // onConfirm unconditionally, so a keyboard user who tabbed to Cancel and
     // pressed Enter fired the destructive action.
-    const onConfirm = jest.fn();
-    const onCancel = jest.fn();
+    const onConfirm = vi.fn();
+    const onCancel = vi.fn();
     render(
       <ConfirmDialog
         message="Really delete?"
@@ -133,7 +133,7 @@ describe('ConfirmDialog', () => {
 
 describe('PromptDialog', () => {
   it('submits the default value and disables OK when empty', () => {
-    const onSubmit = jest.fn();
+    const onSubmit = vi.fn();
     render(
       <PromptDialog
         title="Name it"
@@ -156,7 +156,7 @@ describe('PromptDialog', () => {
   });
 
   it('allows empty submits with allowEmpty', () => {
-    const onSubmit = jest.fn();
+    const onSubmit = vi.fn();
     render(<PromptDialog allowEmpty onSubmit={onSubmit} onCancel={() => undefined} />);
     const ok = buttonByText('OK');
     expect(ok.disabled).toBe(false);
@@ -165,7 +165,7 @@ describe('PromptDialog', () => {
   });
 
   it('cancels via Escape', () => {
-    const onCancel = jest.fn();
+    const onCancel = vi.fn();
     render(<PromptDialog onSubmit={() => undefined} onCancel={onCancel} />);
     const input = container.querySelector('input');
     expect(input).toBeTruthy();

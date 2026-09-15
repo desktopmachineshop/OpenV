@@ -41,21 +41,21 @@ const anchors = () => Array.from(container.querySelectorAll('a'));
 
 describe('ArtifactBody references', () => {
   it('keeps the reference in the href instead of blanking it', async () => {
-    await render(<ArtifactBody body="as shown in #REQ-17-FIG-1 above" onReferenceClick={jest.fn()} />);
+    await render(<ArtifactBody body="as shown in #REQ-17-FIG-1 above" onReferenceClick={vi.fn()} />);
     const [link] = anchors();
     expect(link).toBeDefined();
     expect(link.getAttribute('href')).toBe(`${REFERENCE_SCHEME}REQ-17-FIG-1`);
   });
 
   it('never opens a reference in a new tab', async () => {
-    await render(<ArtifactBody body="see #REQ-12 and ##REQ-99-FIG-2" onReferenceClick={jest.fn()} />);
+    await render(<ArtifactBody body="see #REQ-12 and ##REQ-99-FIG-2" onReferenceClick={vi.fn()} />);
     for (const link of anchors()) {
       expect(link.getAttribute('target')).toBeNull();
     }
   });
 
   it('hands the reference to the app rather than navigating', async () => {
-    const onReferenceClick = jest.fn();
+    const onReferenceClick = vi.fn();
     await render(<ArtifactBody body="as shown in #REQ-17-FIG-1" onReferenceClick={onReferenceClick} />);
     const [link] = anchors();
     const event = new MouseEvent('click', { bubbles: true, cancelable: true });
@@ -67,7 +67,7 @@ describe('ArtifactBody references', () => {
   });
 
   it('follows a figure on another artifact, marker and all', async () => {
-    const onReferenceClick = jest.fn();
+    const onReferenceClick = vi.fn();
     await render(<ArtifactBody body="as built in ##REQ-99-FIG-2" onReferenceClick={onReferenceClick} />);
     const [link] = anchors();
     // The reader sees which citation reaches outside the artifact.
@@ -81,7 +81,7 @@ describe('ArtifactBody references', () => {
 
   it('still sanitises an ordinary link, and still opens it in a new tab', async () => {
     await render(
-      <ArtifactBody body="[docs](https://example.com) and [bad](javascript:alert(1))" onReferenceClick={jest.fn()} />
+      <ArtifactBody body="[docs](https://example.com) and [bad](javascript:alert(1))" onReferenceClick={vi.fn()} />
     );
     const [ok, bad] = anchors();
     expect(ok.getAttribute('href')).toBe('https://example.com');
@@ -96,7 +96,7 @@ describe('ArtifactBody references', () => {
   });
 
   it('leaves markdown headings as headings', async () => {
-    await render(<ArtifactBody body={'## Interfaces\n\nbody'} onReferenceClick={jest.fn()} />);
+    await render(<ArtifactBody body={'## Interfaces\n\nbody'} onReferenceClick={vi.fn()} />);
     expect(container.querySelector('h2')?.textContent).toBe('Interfaces');
     expect(anchors()).toHaveLength(0);
   });

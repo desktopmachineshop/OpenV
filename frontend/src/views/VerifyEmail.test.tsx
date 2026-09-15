@@ -3,18 +3,18 @@ import { createRoot, Root } from 'react-dom/client';
 import { VerifyEmail } from './VerifyEmail';
 import { useAppStore } from '../state/store';
 
-// Same recipe as Login.test.tsx: CRA's Jest cannot resolve react-router v7,
+// Same recipe as Login.test.tsx: the router is mocked,
 // so the router pieces the view uses are mocked; Navigate renders a marker
 // so a redirect is visible in the DOM.
-jest.mock('react-router-dom', () => ({
+vi.mock('react-router-dom', () => ({
   Link: ({ to, children, ...rest }: any) => require('react').createElement('a', { href: String(to), ...rest }, children),
   Navigate: ({ to }: any) => require('react').createElement('div', { 'data-navigate': String(to) }),
-  useNavigate: () => jest.fn(),
-  useSearchParams: () => [new URLSearchParams((globalThis as any).__testSearch || ''), jest.fn()],
+  useNavigate: () => vi.fn(),
+  useSearchParams: () => [new URLSearchParams((globalThis as any).__testSearch || ''), vi.fn()],
 }));
 
 const calls: string[] = [];
-jest.mock('../api/client', () => ({
+vi.mock('../api/client', () => ({
   authAPI: {
     me: () => new Promise(() => {}),
     verifyEmail: (token: string) => {

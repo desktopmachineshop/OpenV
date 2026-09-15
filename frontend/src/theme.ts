@@ -5,8 +5,10 @@ import { useEffect, useState } from 'react';
 // data-theme attribute on <html> that overrides the media query).
 //
 // The explicit choice is persisted in localStorage under THEME_STORAGE_KEY and
-// re-applied before first paint by an inline script in public/index.html (kept
-// in sync with this module) to avoid a flash of the wrong theme.
+// re-applied before first paint by public/theme-init.js, which index.html loads
+// as a separate file (kept in sync with this module) to avoid a flash of the
+// wrong theme. A separate file rather than an inline script because the
+// production Content-Security-Policy is script-src 'self'.
 
 export type ThemePreference = 'system' | 'light' | 'dark';
 
