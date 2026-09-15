@@ -9,6 +9,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+## 0.9.0 — 2026-09-15
+
 ### New features
 
 - Attach more than pictures to an artifact. A figure can now be a **PDF** —
