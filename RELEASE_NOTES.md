@@ -9,6 +9,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+## 0.7.0 — 2026-09-15
+
 ### New features
 
 - **Antigravity CLI** is available as an agent provider. Google moved the
