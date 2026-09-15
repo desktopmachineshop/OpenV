@@ -9,6 +9,23 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Bug fixes
+
+- Antigravity agents no longer stop five minutes in. The CLI applies its own
+  five-minute cap to a single-prompt run and ends it there regardless of the
+  timeout set on the agent — which defaults to thirty minutes — so a longer
+  piece of work was cut off and whatever had been produced so far was
+  reported as the answer. The agent's own timeout is now the only one that
+  applies.
+
+### Maintenance updates
+
+- Cloud runners now build with a fixed, checksum-verified copy of the
+  Antigravity CLI rather than fetching whichever version is current at build
+  time. Two rebuilds of the same commit now give runners the same CLI, and a
+  version change is a visible edit to this repository instead of something
+  that happens quietly between builds.
+
 ## 0.7.1 — 2026-09-15
 
 ### Maintenance updates
