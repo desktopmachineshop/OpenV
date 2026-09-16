@@ -59,22 +59,35 @@ Type **\`#\`** in an artifact's description to cite something: its own figures
 choose with the arrow keys or the mouse, and the reference is inserted as
 \`#REQ-17-FIG-1\`.
 
-Type **\`##\`** to cite a figure on **any** artifact in the project. The menu
-lists this artifact's own figures first, then everyone else's with the artifact
-each belongs to, and the citation is written \`##REQ-99-FIG-2\` so a reader can
-see at a glance that it reaches outside what they are reading.
+Type **\`##\`** to reach the **whole project**: every figure, and every other
+artifact, whether or not this one is linked to it. The menu lists this
+artifact's own figures first, then everyone else's with the artifact each
+belongs to, then the project's artifacts. The citation is written
+\`##REQ-99-FIG-2\` so a reader can see at a glance that it reaches outside what
+they are reading.
 
 Outside edit mode a reference is a link: clicking an artifact reference selects
 that artifact, and clicking a figure reference opens the figure itself — the
 drawing, the datasheet, the model — wherever in the project it lives, so
 following a citation never loses your place.
 
-The single-\`#\` list is deliberately short. It offers only what this artifact
-is already connected to, because a description citing a requirement it has no
-link to is a claim the traceability matrix cannot see — link it first, and it
-appears in the menu. Figures are the exception \`##\` makes: pointing a reader
-at a drawing asserts nothing about how two artifacts relate, so it needs no
-link to justify it.
+**The two markers mean different things, and that is the point.** A single
+\`#\` offers only what this artifact is already connected to, so a citation
+written with one marker is a claim the traceability matrix can see. \`##\`
+says out loud, in the text as well as in the menu, that the citation reaches
+outside those connections — useful for pointing at a drawing or a neighbouring
+requirement, but not a substitute for linking two artifacts that genuinely
+relate. If the relationship matters, link it, and it appears under \`#\`.
+
+**The quality linter checks this for you.** Citing an artifact you have no
+traceability link to raises **Citation with no link**, an error carrying the
+same weight as unfinished placeholder text: the description claims a
+connection the matrix does not hold, so coverage and impact analyses reading
+the links will disagree with the requirement as written. Link the two
+artifacts and the finding goes. Citing a **figure** never raises it — a
+drawing is evidence, not a claim about how two artifacts relate. If your
+project wants the check quieter, its severity is yours to set in the quality
+rules, down to off.
 
 ## Making room
 
@@ -226,10 +239,34 @@ Three buttons above the list decide what you are reading:
   what, and when.
 - **Comments** — only what people wrote. This is the review discussion.
 
+The panel opens on **Comments**, which is what most people come to it for; the
+recorded changes are the backdrop.
+
 Add a comment in the box at the foot of the panel. Use it for review discussion
 rather than editing the requirement text itself — the text is the requirement,
 the comment is what you think of it. Writing one while reading **Changes**
-switches you back to **All**, so you can see what you just added.
+switches you back to **Comments**, so you can see what you just added.
+
+### Tagging inside a comment
+
+A comment can name people and point at things, with the same two-marker
+convention the descriptions use.
+
+- **\`@\`** offers the people on the project. Choosing one writes the name
+  the mention resolves to, which matters: a handle typed from memory can name
+  nobody at all, and there is nothing to see when it does. The person is
+  notified.
+- **\`@@\`** names someone **and raises a to-do for them** as the comment is
+  posted — the comment becomes the card, assigned to whoever it named, linked
+  to this artifact and carrying the whole note as its description. Use it when
+  you already know you are asking for work rather than talking.
+- **\`#\`** and **\`##\`** cite a figure or an artifact, exactly as they do in
+  a description, and the citation is a link a reader can follow.
+
+Raising a to-do **after** a comment is posted still works and has not changed:
+the **Add to-do** control on a comment that names somebody lets you set the
+title, the person and a due date. \`@@\` is the shortcut, not a replacement —
+it takes the note's first line as the title and no due date.
 
 ## Baselines
 

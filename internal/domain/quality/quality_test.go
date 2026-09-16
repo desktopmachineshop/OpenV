@@ -80,7 +80,7 @@ func TestRulesFireOnBadExamples(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got := LintArtifact(tc.art, DefaultRuleSet())
+			got := LintArtifact(tc.art, DefaultRuleSet(), Context{})
 			if !hasRule(got.Findings, tc.rule) {
 				t.Fatalf("expected rule %q to fire; findings: %+v", tc.rule, got.Findings)
 			}
@@ -94,7 +94,7 @@ func TestCleanRequirementScoresHigh(t *testing.T) {
 	clean := mkReq("ok",
 		"Render latency",
 		"The system shall render the requirements list within 500 ms for projects of up to 5000 artifacts.")
-	got := LintArtifact(clean, DefaultRuleSet())
+	got := LintArtifact(clean, DefaultRuleSet(), Context{})
 	if len(got.Findings) != 0 {
 		t.Fatalf("clean requirement produced findings: %+v", got.Findings)
 	}
@@ -112,7 +112,7 @@ func TestScoreMonotonicAndBands(t *testing.T) {
 	// Two weak words + passive voice + no measurable: several deductions.
 	messy := mkReq("bad", "UX",
 		"The interface should be intuitive and the layout should be adequate and pleasant for the user.")
-	got := LintArtifact(messy, DefaultRuleSet())
+	got := LintArtifact(messy, DefaultRuleSet(), Context{})
 	if got.Score >= 100 {
 		t.Fatalf("messy requirement should lose points, got %d", got.Score)
 	}
@@ -129,8 +129,8 @@ func TestScoreMonotonicAndBands(t *testing.T) {
 func TestDeterministic(t *testing.T) {
 	art := mkReq("d1", "Mixed",
 		"The system should quickly process several requests. TODO: confirm the exact limit.")
-	a := LintArtifact(art, DefaultRuleSet())
-	b := LintArtifact(art, DefaultRuleSet())
+	a := LintArtifact(art, DefaultRuleSet(), Context{})
+	b := LintArtifact(art, DefaultRuleSet(), Context{})
 	if a.Score != b.Score || len(a.Findings) != len(b.Findings) {
 		t.Fatalf("non-deterministic score/len: %+v vs %+v", a, b)
 	}
@@ -152,7 +152,7 @@ func TestDeterministic(t *testing.T) {
 func TestFindingSpansPointAtMatch(t *testing.T) {
 	art := mkReq("s1", "Speed", "The system shall be fast for 2 users.")
 	text := combinedText(art.Title, art.Body)
-	got := LintArtifact(art, DefaultRuleSet())
+	got := LintArtifact(art, DefaultRuleSet(), Context{})
 	var found bool
 	for _, f := range got.Findings {
 		if f.Rule == RuleWeakWord {
@@ -200,7 +200,7 @@ func TestLintProjectSkipsNonRequirements(t *testing.T) {
 // TestPlaceholderIsError locks in that placeholders carry the heaviest penalty.
 func TestPlaceholderIsError(t *testing.T) {
 	art := mkReq("p1", "Auth", "The system shall lock the account after 3 attempts. TBD threshold.")
-	got := LintArtifact(art, DefaultRuleSet())
+	got := LintArtifact(art, DefaultRuleSet(), Context{})
 	if countRule(got.Findings, RulePlaceholder) == 0 {
 		t.Fatal("expected a placeholder finding")
 	}

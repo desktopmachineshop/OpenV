@@ -21,6 +21,7 @@ import {
   serializePendingAdds,
 } from '../utils/pendingLinks';
 import { FIGURE_CITATIONS_FEATURE } from './attachmentKinds';
+import { TokenMenu } from './ui/TokenMenu';
 import {
   ReferenceCandidate,
   ReferenceQuery,
@@ -485,47 +486,22 @@ export const ArtifactEditor: React.FC<ArtifactEditorProps> = ({
                   : 'Enter artifact description (markdown supported)'
               }
             />
-            {refQuery && refMatches.length > 0 && (
-              // onMouseDown, not onClick: blur fires first and would close the
-              // menu before a click could land.
-              <div
-                style={{
-                  position: 'absolute',
-                  left: 8,
-                  right: 8,
-                  zIndex: 20,
-                  background: 'var(--surface)',
-                  border: '1px solid var(--border)',
-                  borderRadius: 4,
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                  maxHeight: 220,
-                  overflowY: 'auto',
-                }}
-              >
-                {refMatches.map((c, i) => (
-                  <div
-                    key={c.ref}
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      insertReference(c);
-                    }}
-                    onMouseEnter={() => setRefHighlight(i)}
-                    style={{
-                      padding: '6px 10px',
-                      cursor: 'pointer',
-                      fontSize: 12,
-                      background: i === refHighlight ? 'var(--tint-blue)' : 'transparent',
-                    }}
-                  >
-                    <span style={{ fontWeight: 700 }}>{c.ref}</span>
-                    <span style={{ color: 'var(--text-muted)' }}>
-                      {' '}
-                      · {c.kind === 'figure' ? 'figure' : c.relation || 'linked'} · {c.label}
-                      {c.owner ? ` · on ${c.owner}` : ''}
-                    </span>
-                  </div>
-                ))}
-              </div>
+            {refQuery && (
+              <TokenMenu
+                aria-label="Reference suggestions"
+                rows={refMatches.map((c) => ({
+                  key: c.ref,
+                  primary: c.ref,
+                  // Under "#" a linked artifact names its link type. Under
+                  // "##" there is no link to name, so it says what it is.
+                  secondary:
+                    `${c.kind === 'figure' ? 'figure' : c.relation || 'artifact'} · ${c.label}` +
+                    (c.owner ? ` · on ${c.owner}` : ''),
+                }))}
+                highlight={refHighlight}
+                onHighlight={setRefHighlight}
+                onChoose={(i) => insertReference(refMatches[i])}
+              />
             )}
           </div>
 

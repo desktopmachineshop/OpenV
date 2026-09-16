@@ -2059,6 +2059,7 @@ export const ModuleView: React.FC = () => {
                 artifactId={selectedArtifact?.id}
                 projectId={projectId || undefined}
                 isOpen={true}
+                onReferenceClick={handleReferenceClick}
                 onToggle={stacked ? () => setStackedPane('document') : cycleNotesMode}
                 modeLabel={stacked ? 'Notes' : panelModeLabel(notesMode)}
                 nextModeLabel={stacked ? 'Document' : panelModeLabel(nextPanelMode(notesMode))}

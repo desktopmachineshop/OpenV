@@ -36,6 +36,7 @@ const ruleNames: Record<string, string> = {
   'long-sentence': 'Over-long sentence',
   'not-testable': 'Not testable',
   'off-convention': 'Off-convention keyword',
+  'unlinked-citation': 'Citation with no link',
 };
 
 const severityNames: Record<QualitySeverity, string> = {

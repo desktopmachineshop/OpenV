@@ -35,19 +35,21 @@ var conventionLabels = map[string]string{
 // ruleLabels describe what each rule looks for, for the UI and for agents
 // reading the rule set before they draft anything.
 var ruleLabels = map[string]string{
-	RuleWeakWord:        "weak or subjective wording",
-	RulePassiveVoice:    "passive voice hiding the actor",
-	RuleNotTestable:     "no imperative or measurable criterion",
-	RuleVagueQuantifier: "vague quantifier instead of a number",
-	RulePlaceholder:     "TBD/TODO placeholder text",
-	RuleLongSentence:    fmt.Sprintf("sentence longer than %d words", longSentenceWords),
-	RuleOffConvention:   "normative keyword from the other convention",
+	RuleWeakWord:         "weak or subjective wording",
+	RulePassiveVoice:     "passive voice hiding the actor",
+	RuleNotTestable:      "no imperative or measurable criterion",
+	RuleVagueQuantifier:  "vague quantifier instead of a number",
+	RulePlaceholder:      "TBD/TODO placeholder text",
+	RuleLongSentence:     fmt.Sprintf("sentence longer than %d words", longSentenceWords),
+	RuleOffConvention:    "normative keyword from the other convention",
+	RuleUnlinkedCitation: "cites an artifact with no traceability link to it",
 }
 
 // Rules lists every rule identifier in report order.
 var Rules = []string{
 	RuleWeakWord, RuleVagueQuantifier, RulePlaceholder,
 	RulePassiveVoice, RuleLongSentence, RuleNotTestable, RuleOffConvention,
+	RuleUnlinkedCitation,
 }
 
 // defaultSeverities is the out-of-the-box severity per rule. Placeholder text
@@ -62,6 +64,11 @@ var defaultSeverities = map[string]string{
 	RuleLongSentence:    SeverityWarning,
 	RuleNotTestable:     SeverityWarning,
 	RuleOffConvention:   SeverityInfo,
+	// An untraceable citation is an error, not a style point: the text claims
+	// a connection the traceability matrix does not hold, so a coverage or
+	// impact analysis reading the links will silently disagree with the
+	// requirement as written. It carries the same weight as placeholder text.
+	RuleUnlinkedCitation: SeverityError,
 }
 
 // RuleSet is the resolved quality configuration a project is linted against:

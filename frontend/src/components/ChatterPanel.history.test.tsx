@@ -85,10 +85,17 @@ describe('ChatterPanel history', () => {
     expect(tabs).toContain('History');
   });
 
-  it('shows changes and comments together by default', async () => {
+  it('opens on the comments, not the recorded changes', async () => {
     await mount([CHANGE, COMMENT]);
-    expect(container.textContent).toContain('Version 2 saved');
     expect(container.textContent).toContain('Checked against the datasheet');
+    expect(container.textContent).not.toContain('Version 2 saved');
+  });
+
+  it('offers the filters in the order comments, changes, all', async () => {
+    await mount([CHANGE, COMMENT]);
+    const group = container.querySelector('[aria-label="Filter history"]') as HTMLElement;
+    const labels = Array.from(group.querySelectorAll('button')).map((b) => b.textContent);
+    expect(labels).toEqual(['Comments', 'Changes', 'All']);
   });
 
   it('narrows to changes', async () => {
@@ -98,21 +105,21 @@ describe('ChatterPanel history', () => {
     expect(container.textContent).not.toContain('Checked against the datasheet');
   });
 
-  it('narrows to comments', async () => {
+  it('widens to everything', async () => {
     await mount([CHANGE, COMMENT]);
-    await click('Comments');
+    await click('All');
+    expect(container.textContent).toContain('Version 2 saved');
     expect(container.textContent).toContain('Checked against the datasheet');
-    expect(container.textContent).not.toContain('Version 2 saved');
   });
 
   it('says why a filtered list is empty rather than showing nothing', async () => {
     await mount([CHANGE]);
-    await click('Comments');
     expect(container.textContent).toContain('No comments yet');
   });
 
   it('says so when the artifact has no history at all', async () => {
     await mount([]);
+    await click('All');
     expect(container.textContent).toContain('Nothing yet');
   });
 
