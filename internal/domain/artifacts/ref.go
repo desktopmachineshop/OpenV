@@ -11,7 +11,14 @@ import (
 // UUIDs cost ~10 tokens each and mean nothing to a model, while refs are
 // 2-4 tokens and carry the artifact type in the prefix. Refs are assigned
 // server-side on create (per-project, per-prefix counters — see
-// ArtifactRepository.Save) and never change or get reused afterwards.
+// ArtifactRepository.Save) and never change or get reused afterwards, with
+// one exception: DefaultService.UpdateArtifact clears Ref when an edit
+// changes the artifact's type to one with a different prefix, so the ref
+// keeps telling the truth about what the artifact now is instead of citing
+// it under the type it used to be (e.g. a heading created by mistake and
+// retyped to a requirement). ArtifactRepository.Update then mints a
+// replacement from the new prefix's counter exactly as Save would for a new
+// artifact; the retired number is never reused.
 //
 // This is unrelated to CreateArtifactRequest.Ref, the proposal-mode
 // temporary token (issue #235) that only names a not-yet-created artifact

@@ -428,6 +428,22 @@ func (s *DefaultService) UpdateArtifact(id string, req UpdateArtifactRequest) (*
 		(req.Title != nil && artifact.Title != *req.Title) ||
 		(req.Body != nil && artifact.Body != *req.Body)
 
+	// A ref's prefix carries the artifact's type ("REQ-12" is a requirement) —
+	// see ref.go. That's only true as long as the type doesn't change out from
+	// under it, which happens most often when an artifact was created as the
+	// wrong type by mistake (a heading picked instead of a requirement) and
+	// gets retyped moments later: without this, it would keep showing "HDG-12"
+	// forever on something that is now a requirement, misleading exactly the
+	// citations refs exist to make trustworthy. When the new type maps to a
+	// different prefix, clear Ref so Update mints a fresh one from the new
+	// prefix's counter; the old number is retired, never reused, same as a
+	// deleted artifact's.
+	if req.Type != nil && artifact.Type != *req.Type {
+		if prefix, _, ok := ParseRef(artifact.Ref); ok && prefix != RefPrefix(*req.Type) {
+			artifact.Ref = ""
+		}
+	}
+
 	if req.ParentID.Present {
 		artifact.ParentID = req.ParentID.Value
 	}
