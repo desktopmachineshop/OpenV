@@ -9,6 +9,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+## 0.11.0 — 2026-09-16
+
 ### New features
 
 - **Tag people and artifacts inside a note.** Typing `@` in the notes panel
