@@ -9,6 +9,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+## 0.9.2 — 2026-09-16
+
 ### Maintenance updates
 
 - OpenV is now at **openv.app**. The old `*.up.railway.app` addresses keep
