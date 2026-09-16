@@ -714,11 +714,53 @@ func (h *Handler) GetArtifactQuality(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	rs := h.qualityRuleSetFor(artifact.ProjectID)
+	refs, known := h.linkedRefsFor(artifact.ID)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(struct {
 		quality.ArtifactScore
 		RuleSet quality.RuleSet `json:"rule_set"`
-	}{ArtifactScore: quality.LintArtifact(artifact, rs), RuleSet: rs})
+	}{
+		ArtifactScore: quality.LintArtifact(artifact, rs,
+			quality.Context{LinkedRefs: refs, LinksKnown: known}),
+		RuleSet: rs,
+	})
+}
+
+// linkedRefsFor collects the refs an artifact is linked to, in either
+// direction. ok is false when the links could not be read, which the linter
+// treats as "not checked" rather than "nothing is linked" — the difference
+// decides whether every citation in the artifact is flagged as untraceable.
+func (h *Handler) linkedRefsFor(artifactID string) (map[string]bool, bool) {
+	if h.linkService == nil || h.artifactService == nil {
+		return nil, false
+	}
+	outgoing, err := h.linkService.GetLinksFrom(artifactID)
+	if err != nil {
+		return nil, false
+	}
+	incoming, err := h.linkService.GetLinksTo(artifactID)
+	if err != nil {
+		return nil, false
+	}
+	refs := map[string]bool{}
+	for _, l := range append(outgoing, incoming...) {
+		if l == nil {
+			continue
+		}
+		other := l.ToID
+		if other == artifactID {
+			other = l.FromID
+		}
+		if other == "" || other == artifactID {
+			continue
+		}
+		// A counterpart that cannot be read leaves its ref out rather than
+		// failing the lint: the other links still judge correctly.
+		if a, err := h.artifactService.GetArtifact(other); err == nil && a != nil && a.Ref != "" {
+			refs[strings.ToUpper(a.Ref)] = true
+		}
+	}
+	return refs, true
 }
 
 // --- Work items ---

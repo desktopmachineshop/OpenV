@@ -43,6 +43,11 @@ const (
 	RulePlaceholder     = "placeholder"
 	RuleLongSentence    = "long-sentence"
 	RuleOffConvention   = "off-convention"
+	// RuleUnlinkedCitation fires on a citation to an artifact this one has no
+	// traceability link to. It is the safeguard on the two-hash marker: "##"
+	// lets an author cite anything in the project, and this is what keeps
+	// that from quietly becoming a claim the matrix cannot see.
+	RuleUnlinkedCitation = "unlinked-citation"
 )
 
 // Score bands. Band maps a 0-100 score to one of these.
@@ -238,6 +243,75 @@ func wordListRegexp(words []string) *regexp.Regexp {
 	return regexp.MustCompile(`(?i)\b(?:` + strings.Join(escaped, "|") + `)\b`)
 }
 
+// Context is what the linter cannot read out of an artifact's own text.
+//
+// The package stays pure: the caller does the lookups and hands the answers
+// in, so identical input still yields identical output.
+type Context struct {
+	// LinkedRefs holds the refs this artifact is linked to, in either
+	// direction, uppercased. A figure's holding artifact counts as linked
+	// only if the artifacts themselves are.
+	LinkedRefs map[string]bool
+	// LinksKnown reports that the caller established LinkedRefs.
+	//
+	// This is not the same as an empty map, and conflating the two would be a
+	// bug with teeth: a caller that could not read the links would otherwise
+	// look exactly like an artifact with none, and every citation in the
+	// project would be flagged as untraceable. When this is false the
+	// unlinked-citation rule stays silent.
+	LinksKnown bool
+}
+
+// citationPattern matches a reference written in prose: one hash or two at a
+// word boundary, then the reference. It mirrors the inlineReferencePattern the
+// frontend renders with, so the linter judges exactly what a reader sees as a
+// citation.
+var citationPattern = regexp.MustCompile(`(^|\s)(#{1,2})([A-Za-z][A-Za-z0-9]*-\d+(?:-FIG-\d+)?)`)
+
+// figureRefPattern recognises a figure reference ("REQ-17-FIG-1").
+var figureRefPattern = regexp.MustCompile(`-FIG-\d+$`)
+
+// unlinkedCitationFindings flags every citation to an artifact this one has no
+// link to.
+//
+// Figure citations are left alone on purpose. Pointing a reader at a drawing
+// asserts nothing about how two artifacts relate — it is evidence, not a
+// claim — so it needs no link to justify it. An artifact citation is the one
+// that says these two things are connected, and that is the claim the
+// traceability matrix has to be able to see.
+//
+// A citation to the artifact being linted is its own, and never a finding.
+func unlinkedCitationFindings(text, selfRef, severity string, ctx Context) []Finding {
+	if !ctx.LinksKnown {
+		return nil
+	}
+	findings := []Finding{}
+	seen := map[string]bool{}
+	self := strings.ToUpper(strings.TrimSpace(selfRef))
+	for _, m := range citationPattern.FindAllStringSubmatchIndex(text, -1) {
+		marker := text[m[4]:m[5]]
+		ref := text[m[6]:m[7]]
+		if figureRefPattern.MatchString(ref) {
+			continue
+		}
+		upper := strings.ToUpper(ref)
+		if upper == self || ctx.LinkedRefs[upper] || seen[upper] {
+			continue
+		}
+		seen[upper] = true
+		findings = append(findings, Finding{
+			Rule:     RuleUnlinkedCitation,
+			Severity: severity,
+			Message: "cites " + ref + " with no traceability link to it — " +
+				"link the two artifacts, or the citation is a claim the matrix cannot see",
+			Start: m[4],
+			End:   m[7],
+			Match: marker + ref,
+		})
+	}
+	return findings
+}
+
 // combinedText joins title and body into the single string the rules scan.
 // The two-newline separator keeps the title a distinct "sentence" so a title
 // without terminal punctuation does not merge into the first body sentence.
@@ -248,7 +322,11 @@ func combinedText(title, body string) string {
 // LintArtifact runs every enabled rule over one artifact's title and body
 // against the given rule set, and returns its score and findings. It is pure:
 // no I/O, no clock, no randomness.
-func LintArtifact(a *artifacts.Artifact, rs RuleSet) ArtifactScore {
+//
+// ctx carries what the text alone cannot say — currently the artifact's
+// links, which the unlinked-citation rule judges against. A caller with no
+// link knowledge passes the zero Context and that rule stays silent.
+func LintArtifact(a *artifacts.Artifact, rs RuleSet, ctx Context) ArtifactScore {
 	text := combinedText(a.Title, a.Body)
 	patterns := patternsFor(rs.Convention)
 	findings := []Finding{}
@@ -275,6 +353,10 @@ func LintArtifact(a *artifacts.Artifact, rs RuleSet) ArtifactScore {
 	}
 	if rs.Enabled(RuleNotTestable) {
 		findings = append(findings, notTestableFindings(text, patterns, rs.SeverityFor(RuleNotTestable))...)
+	}
+	if rs.Enabled(RuleUnlinkedCitation) {
+		findings = append(findings,
+			unlinkedCitationFindings(text, a.Ref, rs.SeverityFor(RuleUnlinkedCitation), ctx)...)
 	}
 
 	// Stable order: by start offset, then rule name. Rules already emit in
@@ -396,13 +478,49 @@ func LintProject(export *exports.ProjectExport, rs RuleSet) *Report {
 		Summary:   map[string]int{BandGood: 0, BandFair: 0, BandPoor: 0},
 		RuleSet:   rs,
 	}
+	linked := LinkedRefsByArtifact(export)
 	for _, a := range export.Artifacts {
 		if a == nil || !IsRequirementType(a.Type) {
 			continue
 		}
-		entry := LintArtifact(a, rs)
+		// The export carries the whole link graph, so every artifact's links
+		// are known here even when it has none of its own.
+		entry := LintArtifact(a, rs, Context{LinkedRefs: linked[a.ID], LinksKnown: true})
 		report.Entries = append(report.Entries, entry)
 		report.Summary[entry.Band]++
 	}
 	return report
+}
+
+// LinkedRefsByArtifact maps each artifact id to the set of refs it is linked
+// to, in either direction and uppercased.
+//
+// Exported because the single-artifact endpoint needs the same rule applied
+// the same way: a citation judged untraceable in the project report and fine
+// on the artifact's own page would be worse than no rule at all.
+func LinkedRefsByArtifact(export *exports.ProjectExport) map[string]map[string]bool {
+	refByID := make(map[string]string, len(export.Artifacts))
+	for _, a := range export.Artifacts {
+		if a != nil && a.Ref != "" {
+			refByID[a.ID] = strings.ToUpper(a.Ref)
+		}
+	}
+	out := make(map[string]map[string]bool, len(export.Artifacts))
+	add := func(id, ref string) {
+		if id == "" || ref == "" {
+			return
+		}
+		if out[id] == nil {
+			out[id] = map[string]bool{}
+		}
+		out[id][ref] = true
+	}
+	for _, l := range export.Links {
+		if l == nil {
+			continue
+		}
+		add(l.FromID, refByID[l.ToID])
+		add(l.ToID, refByID[l.FromID])
+	}
+	return out
 }

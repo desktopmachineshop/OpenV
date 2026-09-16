@@ -31,14 +31,14 @@ func rules(findings []Finding, rule string) []Finding {
 func TestConventionDecidesWeakWords(t *testing.T) {
 	art := req("Retry", "The runner should retry a failed claim within 30 seconds.")
 
-	shall := LintArtifact(art, DefaultRuleSet())
+	shall := LintArtifact(art, DefaultRuleSet(), Context{})
 	if len(rules(shall.Findings, RuleWeakWord)) == 0 {
 		t.Error("under 'shall', 'should' must read as weak wording")
 	}
 
 	rfc := DefaultRuleSet()
 	rfc.Convention = ConventionRFC2119
-	got := LintArtifact(art, rfc)
+	got := LintArtifact(art, rfc, Context{})
 	if n := len(rules(got.Findings, RuleWeakWord)); n != 0 {
 		t.Errorf("under RFC 2119, 'should' is normative; got %d weak-word findings", n)
 	}
@@ -66,7 +66,7 @@ func TestOffConventionFlagsTheOtherVocabulary(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got := len(rules(LintArtifact(req("Lockout", tc.body), tc.rs).Findings, RuleOffConvention)) > 0
+			got := len(rules(LintArtifact(req("Lockout", tc.body), tc.rs, Context{}).Findings, RuleOffConvention)) > 0
 			if got != tc.want {
 				t.Errorf("off-convention fired = %v, want %v", got, tc.want)
 			}
@@ -78,14 +78,14 @@ func TestOffConventionFlagsTheOtherVocabulary(t *testing.T) {
 func TestSeverityOverridesAndOff(t *testing.T) {
 	art := req("UX", "The interface shall be intuitive for 3 operators.")
 
-	base := LintArtifact(art, DefaultRuleSet())
+	base := LintArtifact(art, DefaultRuleSet(), Context{})
 	if len(rules(base.Findings, RuleWeakWord)) == 0 {
 		t.Fatal("expected a weak-word finding to re-grade")
 	}
 
 	regraded := DefaultRuleSet()
 	regraded.Severities[RuleWeakWord] = SeverityError
-	got := LintArtifact(art, regraded)
+	got := LintArtifact(art, regraded, Context{})
 	for _, f := range rules(got.Findings, RuleWeakWord) {
 		if f.Severity != SeverityError {
 			t.Errorf("severity = %q, want error", f.Severity)
@@ -97,7 +97,7 @@ func TestSeverityOverridesAndOff(t *testing.T) {
 
 	off := DefaultRuleSet()
 	off.Severities[RuleWeakWord] = SeverityOff
-	if n := len(rules(LintArtifact(art, off).Findings, RuleWeakWord)); n != 0 {
+	if n := len(rules(LintArtifact(art, off, Context{}).Findings, RuleWeakWord)); n != 0 {
 		t.Errorf("disabled rule still produced %d findings", n)
 	}
 }

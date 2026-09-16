@@ -29,6 +29,15 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   what says the citation reaches outside what this artifact is connected to, in
   the text as well as in the menu, so a single `#` still means a link the
   traceability matrix can see.
+- **The quality linter flags a citation with no link behind it**, as an
+  **error** — the same weight as unfinished placeholder text. A description
+  that cites REQ-99 without a traceability link to it claims a connection the
+  matrix does not hold, so a coverage or impact analysis reading the links will
+  quietly disagree with the requirement as written. The finding names the
+  artifact and asks you to link the two. Figure citations are not flagged:
+  pointing at a drawing asserts nothing about how two artifacts relate. Set
+  **Citation with no link** to a lower severity, or off, in the quality rules
+  if your project wants it quieter.
 
 ### Maintenance updates
 

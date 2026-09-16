@@ -79,6 +79,16 @@ outside those connections — useful for pointing at a drawing or a neighbouring
 requirement, but not a substitute for linking two artifacts that genuinely
 relate. If the relationship matters, link it, and it appears under \`#\`.
 
+**The quality linter checks this for you.** Citing an artifact you have no
+traceability link to raises **Citation with no link**, an error carrying the
+same weight as unfinished placeholder text: the description claims a
+connection the matrix does not hold, so coverage and impact analyses reading
+the links will disagree with the requirement as written. Link the two
+artifacts and the finding goes. Citing a **figure** never raises it — a
+drawing is evidence, not a claim about how two artifacts relate. If your
+project wants the check quieter, its severity is yours to set in the quality
+rules, down to off.
+
 ## Making room
 
 The **project menu** and the **Notes** panel each have three states, chosen
