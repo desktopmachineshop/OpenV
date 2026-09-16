@@ -9,6 +9,15 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Maintenance updates
+
+- The web app is built with a current, maintained toolchain. The previous one
+  had its last release in 2022 and has since been retired by its authors,
+  which meant a slowly growing list of security advisories that nobody could
+  act on, because no fixed version was ever going to be published. Nothing
+  about the app looks or behaves differently — the same pages load the same
+  way — but the ground it is built on is supported again.
+
 ### Bug fixes
 
 - Retyping an artifact now gives it a matching reference. A heading created

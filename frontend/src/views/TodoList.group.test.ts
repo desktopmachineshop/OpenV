@@ -1,16 +1,15 @@
 import { ProjectMember, WorkItem } from '../api/client';
 
-// react-router-dom v7's CJS entry reaches for a subpath jest's resolver
-// cannot follow, so it is mocked here as it is in the other view tests.
-// This suite exercises a pure function, so inert stand-ins are enough.
-jest.mock('react-router-dom', () => ({
+// The router is mocked here as it is in the other view tests: this suite
+// exercises a pure function, so inert stand-ins keep the module graph small
+// and the test independent of routing.
+vi.mock('react-router-dom', () => ({
   Link: ({ to, children, ...rest }: any) =>
     require('react').createElement('a', { href: String(to), ...rest }, children),
   useParams: () => ({ projectId: 'p1' }),
-  useSearchParams: () => [new URLSearchParams(''), jest.fn()],
+  useSearchParams: () => [new URLSearchParams(''), vi.fn()],
 }));
 
-// eslint-disable-next-line import/first
 import { groupByAssignee } from './TodoList';
 
 const item = (over: Partial<WorkItem>): WorkItem => ({

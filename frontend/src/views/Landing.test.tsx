@@ -11,14 +11,13 @@ import {
   OTHER_TIERS,
 } from '../landing/content';
 
-// CRA's Jest cannot resolve react-router v7's package exports, so the router
-// is mocked with the two pieces the view uses: Link renders a plain anchor
+// The router is mocked with the two pieces the view uses: Link renders a plain anchor
 // and the hooks return inert values.
-jest.mock('react-router-dom', () => ({
+vi.mock('react-router-dom', () => ({
   Link: ({ to, children, ...rest }: any) => require('react').createElement('a', { href: String(to), ...rest }, children),
-  useNavigate: () => jest.fn(),
+  useNavigate: () => vi.fn(),
   useLocation: () => ({ pathname: '/', search: '', hash: '' }),
-  useSearchParams: () => [new URLSearchParams((globalThis as any).__testSearch || ''), jest.fn()],
+  useSearchParams: () => [new URLSearchParams((globalThis as any).__testSearch || ''), vi.fn()],
 }));
 
 // The landing page is static copy; what matters is that the hosting terms,

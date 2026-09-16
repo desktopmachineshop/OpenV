@@ -8,15 +8,15 @@ import { defaultWorkspaceAPI } from '../api/client';
 // being the empty choice, and the choice is saved through the API and
 // reflected on the signed-in user.
 
-jest.mock('react-router-dom', () => ({
+vi.mock('react-router-dom', () => ({
   Link: ({ to, children, ...rest }: any) =>
     require('react').createElement('a', { href: String(to), ...rest }, children),
 }));
 
-// Plain functions, not jest.fn(): CRA resets mocks before every test, which
+// Plain functions, not vi.fn(): mocks are cleared between tests, which
 // would strip a factory-set implementation and leave the panel's mount
 // effects awaiting undefined (the push test explains the same trap).
-jest.mock('../api/client', () => ({
+vi.mock('../api/client', () => ({
   notificationPrefsAPI: {
     get: () => Promise.resolve({ data: { email_notifications: true, push_notifications: false } }),
     update: () => Promise.resolve({ data: {} }),
@@ -29,22 +29,22 @@ jest.mock('../api/client', () => ({
     unsubscribe: () => Promise.resolve({ data: {} }),
   },
   DEFAULT_MIN_PASSWORD_LENGTH: 8,
-  passwordAPI: { change: jest.fn() },
+  passwordAPI: { change: vi.fn() },
   authAPI: { policy: () => Promise.resolve({ data: { min_password_length: 8 } }) },
-  defaultWorkspaceAPI: { get: jest.fn(), set: jest.fn() },
+  defaultWorkspaceAPI: { get: vi.fn(), set: vi.fn() },
 }));
-jest.mock('./org/MyRunnerCard', () => ({ MyRunnerCard: () => null }));
-jest.mock('./org/CloudRunnerCard', () => ({ CloudRunnerCard: () => null }));
-jest.mock('./agents/ProviderConnectCard', () => ({ ProviderConnectCard: () => null }));
-jest.mock('./ThemeSwitcher', () => ({ ThemeSwitcher: () => null }));
-jest.mock('../hooks/useViewport', () => ({ useViewport: () => ({ isPhone: false, isCompact: false }) }));
+vi.mock('./org/MyRunnerCard', () => ({ MyRunnerCard: () => null }));
+vi.mock('./org/CloudRunnerCard', () => ({ CloudRunnerCard: () => null }));
+vi.mock('./agents/ProviderConnectCard', () => ({ ProviderConnectCard: () => null }));
+vi.mock('./ThemeSwitcher', () => ({ ThemeSwitcher: () => null }));
+vi.mock('../hooks/useViewport', () => ({ useViewport: () => ({ isPhone: false, isCompact: false }) }));
 
 let mockGateOn = true;
-jest.mock('../hooks/useFeature', () => ({ useFeature: () => mockGateOn }));
+vi.mock('../hooks/useFeature', () => ({ useFeature: () => mockGateOn }));
 
-const mockSetCurrentUser = jest.fn();
+const mockSetCurrentUser = vi.fn();
 let mockCurrentUser: any;
-jest.mock('../state/store', () => ({
+vi.mock('../state/store', () => ({
   useAppStore: () => ({
     currentUser: mockCurrentUser,
     activeOrgId: 'personal',
@@ -57,7 +57,7 @@ jest.mock('../state/store', () => ({
   }),
 }));
 
-const api = defaultWorkspaceAPI as jest.Mocked<typeof defaultWorkspaceAPI>;
+const api = vi.mocked(defaultWorkspaceAPI);
 
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -65,7 +65,7 @@ let container: HTMLDivElement;
 let root: Root;
 
 beforeEach(() => {
-  jest.clearAllMocks();
+  vi.clearAllMocks();
   mockGateOn = true;
   mockCurrentUser = { id: 'u-1', email: 'sam@example.com', name: 'Sam', default_org_id: '' };
   container = document.createElement('div');

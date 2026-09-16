@@ -4,22 +4,22 @@ import { CloudRunnerCard } from './CloudRunnerCard';
 import { cloudRunnerAPI } from '../../api/client';
 
 // The card's dependencies, mocked down to what the pool indicator needs.
-jest.mock('../../api/client', () => ({
-  cloudRunnerAPI: { get: jest.fn(), start: jest.fn(), extend: jest.fn(), end: jest.fn() },
+vi.mock('../../api/client', () => ({
+  cloudRunnerAPI: { get: vi.fn(), start: vi.fn(), extend: vi.fn(), end: vi.fn() },
 }));
-jest.mock('../ui', () => ({
+vi.mock('../ui', () => ({
   ErrorBanner: ({ message }: any) =>
     message ? require('react').createElement('div', { role: 'alert' }, message) : null,
   useConfirm: () => () => Promise.resolve(true),
 }));
-jest.mock('../../hooks/useViewport', () => ({
+vi.mock('../../hooks/useViewport', () => ({
   useViewport: () => ({ isPhone: mockIsPhone, isCompact: false }),
 }));
 
 // Factory-referenced, so it has to be named mock*.
 let mockIsPhone = false;
 
-const api = cloudRunnerAPI as jest.Mocked<typeof cloudRunnerAPI>;
+const api = vi.mocked(cloudRunnerAPI);
 
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 

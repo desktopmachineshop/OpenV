@@ -3,7 +3,7 @@
 # security rebuilds from upstream; bump versions here deliberately.
 
 # Build stage
-FROM node:20.20-alpine AS builder
+FROM node:24.21-alpine AS builder
 
 WORKDIR /app
 
@@ -11,7 +11,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install dependencies
-RUN npm ci --legacy-peer-deps
+RUN npm ci
 
 # Copy source files
 COPY . .
@@ -24,10 +24,11 @@ COPY . .
 ARG REACT_APP_API_URL=""
 ENV REACT_APP_API_URL=$REACT_APP_API_URL
 
-# The content security policy allows scripts from the app's own origin only,
-# so the runtime chunk must be a file rather than the inline script CRA
-# writes into index.html by default.
-ENV INLINE_RUNTIME_CHUNK=false
+# The content security policy allows scripts from the app's own origin only
+# (security-headers.conf), so nothing may be inlined into index.html. Vite
+# emits external <script type="module"> tags and vite.config.ts pins
+# assetsInlineLimit to 0, which is what CRA's INLINE_RUNTIME_CHUNK=false was
+# for.
 
 # Build the React app
 RUN npm run build

@@ -2,13 +2,12 @@
 
 ## Toolchain
 
-The project targets **Go 1.25** (`go.mod`) and **Node 20** (frontend,
-Create React App). The standard development toolchain is **Docker only** —
-neither Go nor Node needs to be installed on the host. Every build target in
-the `Makefile` runs inside `golang:1.25`, and the frontend image builds on
-`node:20-alpine`.
+The project targets **Go 1.25** (`go.mod`) and **Node 24** (frontend, Vite).
+The standard development toolchain is **Docker only** — neither Go nor Node
+needs to be installed on the host. Every build target in the `Makefile` runs
+inside `golang:1.25`, and the frontend image builds on `node:24-alpine`.
 
-If you do have a local Go 1.25+ / Node 20+ install, the commands below work
+If you do have a local Go 1.25+ / Node 24+ install, the commands below work
 directly on the host too, but Docker is the supported path.
 
 ## Running the stack
@@ -96,17 +95,35 @@ directory on disk).
 
 ## Frontend development
 
-The frontend is a CRA app in `frontend/`. Its dependencies have peer-dep
-conflicts under npm's default resolver, so **`--legacy-peer-deps` is
-required** (the `frontend/Dockerfile` already does this):
+The frontend is a **Vite** app in `frontend/`. It installs with a plain
+`npm ci` — the `--legacy-peer-deps` that used to be required everywhere was
+a workaround for Create React App peer-requiring TypeScript 4 against this
+project's TypeScript 5, and went with it.
 
 ```bash
-docker run --rm -v "$(pwd)/frontend:/app" -w /app node:20 \
-  npm install --legacy-peer-deps
+docker run --rm -v "$(pwd)/frontend:/app" -w /app node:24 npm ci
 
 docker run --rm -v "$(pwd)/frontend:/app" -w /app -p 3000:3000 \
-  -e REACT_APP_API_URL=http://localhost:8080 node:20 npm start
+  -e REACT_APP_API_URL=http://localhost:8080 node:24 npm start
 ```
+
+The `REACT_APP_` prefix is unchanged: `vite.config.ts` sets `envPrefix` to it
+so the Dockerfiles, compose files and deployment docs kept working across the
+move. Values are read through `import.meta.env` rather than `process.env`,
+which Vite does not shim in the browser.
+
+Four commands make up the frontend gate, and CI runs all four:
+
+```bash
+npx tsc --noEmit    # types
+npm run lint        # eslint — see frontend/eslint.config.js
+npm test            # vitest, once (npm run test:watch to iterate)
+npm run build       # vite build, into frontend/build/
+```
+
+`npm run lint` exists because CRA used to run eslint inside the build and
+fail on warnings when `CI=true`; Vite does not, so the gate is a step of its
+own.
 
 In the composed stack the frontend container runs `npm start` itself; for
 quick iteration, `docker compose build frontend && docker compose up -d
@@ -150,7 +167,7 @@ request, required by REQ-98. It runs two scanners:
   calls. It exits non-zero as soon as one is reachable.
 - `npm audit --omit=dev --audit-level=high` in `frontend/`. `--omit=dev`
   keeps the gate on code that reaches a browser; a build-time-only advisory
-  in the `react-scripts` tree does not fail a PR. `e2e/` is not audited — it
+  in the toolchain does not fail a PR. `e2e/` is not audited — it
   declares devDependencies only, so there is nothing for `--omit=dev` to see.
 
 Run the same two checks before pushing:
@@ -185,7 +202,7 @@ sink. Neither scanner substitutes for the other.
 Two languages, analysed separately: `go` with build mode `autobuild` (Go is
 compiled, so CodeQL needs a build to observe it — autobuild runs
 `go build ./...`, and build mode `none` is not offered for Go) and
-`javascript-typescript` with `none` (read from source; building the CRA
+`javascript-typescript` with `none` (read from source; building the browser
 bundle would only slow the scan). `fail-fast` is off so one language failing
 never hides the other's findings, and each uploads under its own category so
 one language's results are never read as the other's being fixed.

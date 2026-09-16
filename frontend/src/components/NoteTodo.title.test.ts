@@ -1,12 +1,11 @@
-// react-router-dom v7's CJS entry reaches for a subpath jest's resolver
-// cannot follow, so it is mocked as it is in the view tests. This suite
-// exercises a pure function; Link never renders here.
-jest.mock('react-router-dom', () => ({
+// The router is mocked as it is in the view tests: this suite exercises a
+// pure function and Link never renders here, so an inert stand-in keeps the
+// module graph small.
+vi.mock('react-router-dom', () => ({
   Link: ({ to, children, ...rest }: any) =>
     require('react').createElement('a', { href: String(to), ...rest }, children),
 }));
 
-// eslint-disable-next-line import/first
 import { noteTitle } from './NoteTodo';
 
 describe('noteTitle', () => {
