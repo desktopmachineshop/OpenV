@@ -9,7 +9,7 @@ import { ProviderConnectCard, pasteKind } from './ProviderConnectCard';
 // covered by e2e/tools/phone-audit.js; what is asserted here is the input
 // contract, which is the same at every width.
 
-// Prefixed with "mock" so Jest allows the module factory below to close
+// Prefixed with "mock" so the hoisted module factory below may close
 // over them.
 const mockSubmitted: string[] = [];
 const mockLogin: { status: string; detail: string; paste_kind?: 'code' | 'url' } = {
@@ -33,7 +33,7 @@ const mockStarted = () => ({
   updated_at: '',
 });
 
-jest.mock('../../api/client', () => ({
+vi.mock('../../api/client', () => ({
   providerLoginsAPI: {
     start: () => Promise.resolve({ data: mockStarted() }),
     get: () => (mockPoll.data ? Promise.resolve({ data: mockPoll.data }) : new Promise(() => {})),
@@ -195,7 +195,7 @@ test('the keyboard follows the worker’s paste kind, not its prose', async () =
 });
 
 test('a refused code hands the field back', async () => {
-  jest.useFakeTimers();
+  vi.useFakeTimers();
   try {
     await render();
     await connect();
@@ -211,7 +211,7 @@ test('a refused code hands the field back', async () => {
     // the code is still on its way to the CLI.
     mockPoll.data = { ...mockStarted(), status: 'awaiting_code' };
     await act(async () => {
-      jest.advanceTimersByTime(2000);
+      vi.advanceTimersByTime(2000);
     });
     expect(field().disabled).toBe(true);
 
@@ -223,7 +223,7 @@ test('a refused code hands the field back', async () => {
       detail: 'OAuth error: Invalid code — paste the code again, in full, to retry.',
     };
     await act(async () => {
-      jest.advanceTimersByTime(2000);
+      vi.advanceTimersByTime(2000);
     });
 
     expect(field().disabled).toBe(false);
@@ -236,6 +236,6 @@ test('a refused code hands the field back', async () => {
     });
     expect(mockSubmitted).toEqual(['pl1:first-code', 'pl1:first-code']);
   } finally {
-    jest.useRealTimers();
+    vi.useRealTimers();
   }
 });

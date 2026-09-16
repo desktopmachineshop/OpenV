@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import {
   NO_SERVICE_WORKER_MESSAGE,
   SERVICE_WORKER_READY_TIMEOUT_MS,
@@ -15,16 +16,16 @@ import { pushAPI } from '../api/client';
 
 // The client module builds an axios instance at import time, so it is mocked
 // wholesale; only the push endpoints matter here.
-jest.mock('../api/client', () => ({
+vi.mock('../api/client', () => ({
   pushAPI: {
-    config: jest.fn(),
-    list: jest.fn(),
-    subscribe: jest.fn(),
-    unsubscribe: jest.fn(),
+    config: vi.fn(),
+    list: vi.fn(),
+    subscribe: vi.fn(),
+    unsubscribe: vi.fn(),
   },
 }));
 
-const api = pushAPI as jest.Mocked<typeof pushAPI>;
+const api = vi.mocked(pushAPI);
 
 // A public key with every base64url character class in it, so the padding and
 // the -/_ → +// substitutions are actually exercised.
@@ -34,14 +35,14 @@ type FakeSubscription = {
   endpoint: string;
   options?: { applicationServerKey?: ArrayBuffer | null };
   toJSON: () => { endpoint: string; keys: { p256dh: string; auth: string } };
-  unsubscribe: jest.Mock;
+  unsubscribe: Mock;
 };
 
 const fakeSubscription = (endpoint = 'https://push.example.com/abc'): FakeSubscription => ({
   endpoint,
   options: { applicationServerKey: urlBase64ToUint8Array(PUBLIC_KEY).buffer },
   toJSON: () => ({ endpoint, keys: { p256dh: 'the-p256dh', auth: 'the-auth' } }),
-  unsubscribe: jest.fn().mockResolvedValue(true),
+  unsubscribe: vi.fn().mockResolvedValue(true),
 });
 
 // installPushAPIs fakes the three browser APIs webPush feature-detects.
@@ -60,9 +61,9 @@ const installPushAPIs = (opts: {
   readyHangs?: boolean;
   hasGetRegistration?: boolean;
 }) => {
-  const subscribe = jest.fn().mockResolvedValue(opts.subscribeResult || fakeSubscription());
-  const getSubscription = jest.fn().mockResolvedValue(opts.existing ?? null);
-  const requestPermission = jest.fn().mockResolvedValue(opts.requestPermission || 'granted');
+  const subscribe = vi.fn().mockResolvedValue(opts.subscribeResult || fakeSubscription());
+  const getSubscription = vi.fn().mockResolvedValue(opts.existing ?? null);
+  const requestPermission = vi.fn().mockResolvedValue(opts.requestPermission || 'granted');
   const registration = { pushManager: { subscribe, getSubscription } };
 
   (window as any).Notification = {
@@ -73,7 +74,7 @@ const installPushAPIs = (opts: {
   const container: any = {
     ready: opts.readyHangs ? new Promise(() => {}) : Promise.resolve(registration),
   };
-  const getRegistration = jest
+  const getRegistration = vi
     .fn()
     .mockResolvedValue(opts.registered === false ? undefined : registration);
   if (opts.hasGetRegistration !== false) container.getRegistration = getRegistration;
@@ -96,7 +97,7 @@ const removePushAPIs = () => {
 };
 
 beforeEach(() => {
-  jest.clearAllMocks();
+  vi.clearAllMocks();
   api.subscribe.mockResolvedValue({ data: {} } as any);
   api.unsubscribe.mockResolvedValue({ data: undefined } as any);
   api.list.mockResolvedValue({ data: { subscriptions: [] } } as any);
@@ -161,15 +162,15 @@ describe('getServiceWorkerRegistration', () => {
   // The defect this guards: `ready` never settles when registration failed or
   // was blocked, so awaiting it hung the caller forever with nothing to show.
   it('gives up on a ready that never settles instead of hanging', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     try {
       installPushAPIs({ registered: false, readyHangs: true });
       const pending = getServiceWorkerRegistration();
       await flushMicrotasks();
-      jest.advanceTimersByTime(SERVICE_WORKER_READY_TIMEOUT_MS);
+      vi.advanceTimersByTime(SERVICE_WORKER_READY_TIMEOUT_MS);
       await expect(pending).resolves.toBeNull();
     } finally {
-      jest.useRealTimers();
+      vi.useRealTimers();
     }
   });
 });
@@ -187,15 +188,15 @@ describe('getExistingSubscription', () => {
   });
 
   it('answers null, rather than hanging, when no service worker turns up', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     try {
       installPushAPIs({ existing: fakeSubscription(), registered: false, readyHangs: true });
       const pending = getExistingSubscription();
       await flushMicrotasks();
-      jest.advanceTimersByTime(SERVICE_WORKER_READY_TIMEOUT_MS);
+      vi.advanceTimersByTime(SERVICE_WORKER_READY_TIMEOUT_MS);
       await expect(pending).resolves.toBeNull();
     } finally {
-      jest.useRealTimers();
+      vi.useRealTimers();
     }
   });
 });
@@ -256,18 +257,18 @@ describe('reconcileThisDevice', () => {
       reason: 'unsupported',
     });
 
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     try {
       installPushAPIs({ registered: false, readyHangs: true });
       const pending = reconcileThisDevice(PUBLIC_KEY);
       await flushMicrotasks();
-      jest.advanceTimersByTime(SERVICE_WORKER_READY_TIMEOUT_MS);
+      vi.advanceTimersByTime(SERVICE_WORKER_READY_TIMEOUT_MS);
       await expect(pending).resolves.toEqual({
         status: 'unavailable',
         reason: 'no-service-worker',
       });
     } finally {
-      jest.useRealTimers();
+      vi.useRealTimers();
     }
   });
 });
@@ -315,17 +316,17 @@ describe('subscribeThisDevice', () => {
   });
 
   it('says the service worker is unavailable rather than hanging', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     try {
       const { subscribe } = installPushAPIs({ registered: false, readyHangs: true });
       const pending = subscribeThisDevice(PUBLIC_KEY);
       await flushMicrotasks();
-      jest.advanceTimersByTime(SERVICE_WORKER_READY_TIMEOUT_MS);
+      vi.advanceTimersByTime(SERVICE_WORKER_READY_TIMEOUT_MS);
       await expect(pending).rejects.toThrow(NO_SERVICE_WORKER_MESSAGE);
       expect(subscribe).not.toHaveBeenCalled();
       expect(api.subscribe).not.toHaveBeenCalled();
     } finally {
-      jest.useRealTimers();
+      vi.useRealTimers();
     }
   });
 

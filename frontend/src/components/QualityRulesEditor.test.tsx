@@ -5,17 +5,17 @@ import { qualityRulesAPI, QualityRules, QualityRuleSet } from '../api/client';
 
 // The editor talks to the quality-rules endpoints; the module also builds an
 // axios client at import time, so it is mocked wholesale.
-jest.mock('../api/client', () => ({
+vi.mock('../api/client', () => ({
   qualityRulesAPI: {
-    forWorkspace: jest.fn(),
-    forProject: jest.fn(),
-    setForWorkspace: jest.fn(),
-    setForProject: jest.fn(),
+    forWorkspace: vi.fn(),
+    forProject: vi.fn(),
+    setForWorkspace: vi.fn(),
+    setForProject: vi.fn(),
   },
 }));
 
-// jest.mock is hoisted above the imports, so the imported binding is the mock.
-const api = qualityRulesAPI as jest.Mocked<typeof qualityRulesAPI>;
+// vi.mock is hoisted above the imports, so the imported binding is the mock.
+const api = vi.mocked(qualityRulesAPI);
 
 // React 18 requires this flag when driving createRoot through act().
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
@@ -56,7 +56,7 @@ let container: HTMLDivElement;
 let root: Root;
 
 beforeEach(() => {
-  jest.clearAllMocks();
+  vi.clearAllMocks();
   container = document.createElement('div');
   document.body.appendChild(container);
   act(() => {

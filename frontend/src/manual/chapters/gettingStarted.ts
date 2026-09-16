@@ -1,5 +1,5 @@
 // User manual chapter: Getting started. Markdown shipped as a TS module
-// because CRA cannot raw-import .md files without ejecting.
+// as a TS module so it is typed and bundled with the rest of the manual.
 const content = `
 # Getting started
 

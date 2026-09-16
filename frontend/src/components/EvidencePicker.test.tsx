@@ -4,21 +4,21 @@ import { EvidencePicker } from './EvidencePicker';
 import { evidenceAPI } from '../api/client';
 import { parseConditions, formatConditions, humanBytes } from '../utils/evidence';
 
-jest.mock('../api/client', () => ({
+vi.mock('../api/client', () => ({
   evidenceAPI: {
-    cite: jest.fn(),
-    uncite: jest.fn(),
+    cite: vi.fn(),
+    uncite: vi.fn(),
   },
 }));
 
-jest.mock('./ui', () => ({
+vi.mock('./ui', () => ({
   Modal: ({ children }: any) => <div>{children}</div>,
   ErrorBanner: ({ message }: any) => (message ? <div role="alert">{message}</div> : null),
 }));
 
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 
-const api = evidenceAPI as jest.Mocked<typeof evidenceAPI>;
+const api = vi.mocked(evidenceAPI);
 
 const bundle = (id: string, ref: string, over: Partial<any> = {}) => ({
   id,
@@ -40,7 +40,7 @@ let container: HTMLDivElement;
 let root: Root;
 
 beforeEach(() => {
-  jest.clearAllMocks();
+  vi.clearAllMocks();
   container = document.createElement('div');
   document.body.appendChild(container);
   act(() => {
@@ -72,7 +72,7 @@ const click = async (el: HTMLElement) => {
 };
 
 const render = async (props: Partial<React.ComponentProps<typeof EvidencePicker>> = {}) => {
-  const onChanged = props.onChanged || jest.fn();
+  const onChanged = props.onChanged || vi.fn();
   await act(async () => {
     root.render(
       <EvidencePicker
@@ -80,7 +80,7 @@ const render = async (props: Partial<React.ComponentProps<typeof EvidencePicker>
         testCaseTitle="Idle noise"
         bundles={[bundle('b-1', 'EVD-1'), bundle('b-2', 'EVD-2')]}
         cited={[]}
-        onClose={jest.fn()}
+        onClose={vi.fn()}
         onChanged={onChanged}
         {...props}
       />

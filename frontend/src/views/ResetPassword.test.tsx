@@ -5,16 +5,16 @@ import { ResetPassword } from './ResetPassword';
 // Password reset landing (REQ-158). Same router recipe as VerifyEmail.test:
 // Navigate renders a marker, useNavigate hands back one recording function.
 const navigations: string[] = [];
-jest.mock('react-router-dom', () => ({
+vi.mock('react-router-dom', () => ({
   Link: ({ to, children, ...rest }: any) => require('react').createElement('a', { href: String(to), ...rest }, children),
   Navigate: ({ to }: any) => require('react').createElement('div', { 'data-navigate': String(to) }),
   useNavigate: () => (to: string) => navigations.push(to),
-  useSearchParams: () => [new URLSearchParams((globalThis as any).__testSearch || ''), jest.fn()],
+  useSearchParams: () => [new URLSearchParams((globalThis as any).__testSearch || ''), vi.fn()],
 }));
 
 const calls: any[][] = [];
 let mockConfirmError: any = null;
-jest.mock('../api/client', () => ({
+vi.mock('../api/client', () => ({
   DEFAULT_MIN_PASSWORD_LENGTH: 8,
   authAPI: {
     policy: () => Promise.resolve({ data: { registration: 'open', min_password_length: 10 } }),

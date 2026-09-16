@@ -6,18 +6,18 @@ import { useAppStore } from '../state/store';
 // The admin-minted password reset link (REQ-158): offered for password
 // accounts only, shown once with its expiry after a confirmation.
 
-jest.mock('react-router-dom', () => ({
+vi.mock('react-router-dom', () => ({
   Navigate: ({ to }: any) => require('react').createElement('div', { 'data-navigate': String(to) }),
 }));
-jest.mock('../components/Navbar', () => ({ Navbar: () => null }));
-jest.mock('../hooks/useViewport', () => ({ useViewport: () => ({ isCompact: false }) }));
-jest.mock('../components/ui', () => ({
+vi.mock('../components/Navbar', () => ({ Navbar: () => null }));
+vi.mock('../hooks/useViewport', () => ({ useViewport: () => ({ isCompact: false }) }));
+vi.mock('../components/ui', () => ({
   ErrorBanner: ({ message }: any) => (message ? <div role="alert">{message}</div> : null),
   useConfirm: () => () => Promise.resolve(true),
 }));
 
 const issued: string[] = [];
-jest.mock('../api/client', () => ({
+vi.mock('../api/client', () => ({
   PLANS: [{ value: 'business', label: 'Business' }],
   adminAPI: {
     workspaces: () => Promise.resolve({ data: [] }),
@@ -83,7 +83,6 @@ describe('PlatformAdmin reset links', () => {
     });
     await flush();
     expect(issued).toEqual(['dave']);
-    // eslint-disable-next-line no-console
     const status = container.querySelector('[role="status"]');
     expect(status?.textContent).toContain('Reset link for Dave');
     expect((container.querySelector('input[aria-label="Password reset link"]') as HTMLInputElement).value).toBe(

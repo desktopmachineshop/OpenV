@@ -11,14 +11,14 @@ let mockFeatureOn = true;
 let mockPromptAnswer: string | null = null;
 const mockPromptCalls: any[] = [];
 
-jest.mock('../api/client', () => ({
+vi.mock('../api/client', () => ({
   attachmentAPI: {
     getDownloadUrl: (id: string, v?: number) => `/dl/${id}/${v || ''}`,
     listVersions: () => Promise.resolve({ data: [] }),
   },
 }));
 
-jest.mock('./ui', () => ({
+vi.mock('./ui', () => ({
   useAlert: () => () => Promise.resolve(),
   useConfirm: () => () => Promise.resolve(true),
   usePrompt: () => (opts: any) => {
@@ -27,7 +27,7 @@ jest.mock('./ui', () => ({
   },
 }));
 
-jest.mock('../hooks/useFeature', () => ({
+vi.mock('../hooks/useFeature', () => ({
   useFeature: () => mockFeatureOn,
 }));
 
@@ -101,7 +101,7 @@ describe('figure names', () => {
 
 describe('renaming', () => {
   it('asks for a title and hands the trimmed answer to onRename', async () => {
-    const onRename = jest.fn();
+    const onRename = vi.fn();
     mockPromptAnswer = '  Pump curve at 50 Hz ';
     render({ onRename });
     expect(renameButton()).not.toBeNull();
@@ -112,7 +112,7 @@ describe('renaming', () => {
   });
 
   it('does nothing when the prompt is cancelled or the title is unchanged', async () => {
-    const onRename = jest.fn();
+    const onRename = vi.fn();
     render({ onRename, attachments: [figure({ title: 'Pump curve' })] });
     mockPromptAnswer = null;
     await clickRename();
@@ -122,12 +122,12 @@ describe('renaming', () => {
   });
 
   it('is offered only while editing, with a handler, and where the feature is on', () => {
-    render({ onRename: jest.fn(), readOnly: true });
+    render({ onRename: vi.fn(), readOnly: true });
     expect(renameButton()).toBeNull();
     render({});
     expect(renameButton()).toBeNull();
     mockFeatureOn = false;
-    render({ onRename: jest.fn() });
+    render({ onRename: vi.fn() });
     expect(renameButton()).toBeNull();
   });
 });
@@ -182,16 +182,16 @@ describe('inside the editor form', () => {
   // closed the editor before the file was chosen, and the image never
   // changed. Every gallery button must be an explicit button.
   it('never submits the form it is rendered in', async () => {
-    const onSubmit = jest.fn((e: any) => e.preventDefault());
+    const onSubmit = vi.fn((e: any) => e.preventDefault());
     act(() => {
       root.render(
         <form onSubmit={onSubmit}>
           <ImageGallery
             artifactId="a1"
             attachments={[figure({ version: 2 })]}
-            onUploadVersion={jest.fn()}
-            onRename={jest.fn()}
-            onDelete={jest.fn()}
+            onUploadVersion={vi.fn()}
+            onRename={vi.fn()}
+            onDelete={vi.fn()}
             showUpload
           />
         </form>
