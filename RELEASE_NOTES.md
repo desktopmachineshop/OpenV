@@ -9,6 +9,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+## 0.10.1 — 2026-09-16
+
 ### Maintenance updates
 
 - The notes panel's **Comments** tab is now called **History**, which is what it
