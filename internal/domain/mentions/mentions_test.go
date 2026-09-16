@@ -56,6 +56,40 @@ func TestHandlesWithoutAName(t *testing.T) {
 	}
 }
 
+// TestHandlesOrderMatchesTheComposer pins the exact list, in order, that the
+// note composer mirrors in frontend/src/components/noteMentions.ts. The
+// composer picks the handle it writes into a note from this sequence, so a
+// change here that is not made there produces mentions that name nobody —
+// silently, because an unmatched @token is indistinguishable from prose.
+//
+// Change one side and this test fails; change both and it passes. That is the
+// whole point of it.
+func TestHandlesOrderMatchesTheComposer(t *testing.T) {
+	cases := []struct {
+		name, email string
+		want        []string
+	}{
+		{"Dana Okoro", "dana.okoro@example.com", []string{"danaokoro", "dana", "dana.okoro"}},
+		{"", "jo@example.com", []string{"jo"}},
+		{"Dana Okoro", "not-an-email", []string{"danaokoro", "dana"}},
+		// An apostrophe survives here but the @([\w.-]+) pattern stops at it,
+		// so the composer skips this handle and writes the next one instead.
+		{"Ciara O'Brien", "ciara.obrien@example.com", []string{"ciarao'brien", "ciara", "ciara.obrien"}},
+	}
+	for _, c := range cases {
+		got := Handles(c.name, c.email)
+		if len(got) != len(c.want) {
+			t.Errorf("Handles(%q, %q) = %v, want %v", c.name, c.email, got, c.want)
+			continue
+		}
+		for i := range got {
+			if got[i] != c.want[i] {
+				t.Errorf("Handles(%q, %q)[%d] = %q, want %q", c.name, c.email, i, got[i], c.want[i])
+			}
+		}
+	}
+}
+
 func member(id, name, email string) *members.Member {
 	return &members.Member{UserID: id, UserName: name, UserEmail: email}
 }

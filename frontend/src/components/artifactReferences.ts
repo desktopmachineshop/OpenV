@@ -6,12 +6,21 @@
 // traceability link to it is a claim the matrix cannot see, so the menu never
 // invites one — it only names what the artifact is already connected to.
 //
-// "##" widens that to figures alone, anywhere in the project. A drawing is
-// evidence rather than a claim: pointing a reader at the pump assembly on
-// REQ-17 asserts nothing about how this artifact relates to REQ-17, so it
-// needs no traceability link to justify it. The doubled marker keeps the two
-// apart in the text as well as in the menu, so a reader can see at a glance
-// that a citation reaches outside the artifact they are reading.
+// "##" widens that to the whole project: every figure, and every other
+// artifact, whether or not this one is linked to it.
+//
+// The doubled marker is what makes that safe to offer. A single "#" stays the
+// narrow, link-backed menu, so a citation written with one marker is still a
+// claim the traceability matrix can see. "##" says out loud, in the text and
+// in the menu, that the citation reaches outside what this artifact is
+// connected to — a reader can tell the two apart at a glance, and so can a
+// reviewer reading the rendered body.
+//
+// This is a deliberate widening of an earlier rule that kept artifacts out of
+// the project-wide menu, on the grounds that a citation without a link is an
+// untraceable claim. That concern is real and is now carried by the marker
+// rather than by refusing the citation: people were writing the reference by
+// hand anyway, where nothing marked it at all.
 //
 // The logic here is pure so it can be tested without a textarea: what to
 // offer, whether the caret sits in a reference being typed, and what the text
@@ -51,10 +60,11 @@ export const scopeMarker = (scope: ReferenceScope): string => (scope === 'projec
  * What "#" may offer while editing `artifact`: its own figures first — they
  * belong to the text being written — then the artifacts it is linked to.
  *
- * Under the "project" scope the offer is every figure in `attachments`
- * instead, this artifact's own first so the nearest drawings stay nearest;
- * artifacts are left out, because a bare artifact citation is the claim that
- * needs a traceability link behind it.
+ * Under the "project" scope the offer widens to the whole project: every
+ * figure in `attachments`, this artifact's own first so the nearest drawings
+ * stay nearest, then every other artifact that has a reference. The artifact
+ * being edited is left out of its own menu — a body citing itself says
+ * nothing.
  *
  * An artifact with no reference cannot be cited and is left out; so is a link
  * pointing at something not in `artifacts` (a different project, or not
@@ -75,12 +85,23 @@ export const referenceCandidates = (
     const cited = attachments.filter((a) => !!a.figure_ref);
     const own = cited.filter((a) => a.artifact_id === artifact.id);
     const elsewhere = cited.filter((a) => a.artifact_id !== artifact.id);
-    return [...own, ...elsewhere].map((a) => ({
+    const figures: ReferenceCandidate[] = [...own, ...elsewhere].map((a) => ({
       ref: a.figure_ref as string,
       label: a.original_filename || a.filename,
       kind: 'figure' as const,
       owner: a.artifact_id === artifact.id ? undefined : byId.get(a.artifact_id)?.title,
     }));
+    // Every other artifact with a reference, of any type. No relation is set:
+    // unlike the "#" menu there is no link to name, and claiming one would be
+    // worse than saying nothing.
+    const others: ReferenceCandidate[] = artifacts
+      .filter((a) => a.id !== artifact.id && !!a.ref)
+      .map((a) => ({
+        ref: a.ref as string,
+        label: a.title,
+        kind: 'artifact' as const,
+      }));
+    return [...figures, ...others];
   }
 
   const figures: ReferenceCandidate[] = attachments

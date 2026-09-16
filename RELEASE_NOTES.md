@@ -9,6 +9,34 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### New features
+
+- **Tag people and artifacts inside a note.** Typing `@` in the notes panel
+  offers the people on the project and writes the name the mention will
+  actually resolve to, so a comment reaches the person you meant instead of
+  quietly naming nobody. Typing `@@` does the same and **raises a to-do for
+  them as the note is posted** — the note becomes the card, assigned to whoever
+  it named. Raising one afterwards from the note still works exactly as before;
+  `@@` is the shortcut for when you already know it is work.
+- **Cite a figure or an artifact from a note**, the way you already can from a
+  description. `#` offers this artifact's own figures and the artifacts it is
+  linked to; `##` reaches the whole project. Citations in a note are links: a
+  reader follows `#REQ-12` to the requirement, or `##REQ-17-FIG-1` to the
+  drawing, without going to look for it.
+- **`##` now offers any artifact in the project**, not only figures. Citing
+  something this artifact is not linked to used to mean typing the reference by
+  hand, where nothing marked it as a citation at all. The doubled marker is
+  what says the citation reaches outside what this artifact is connected to, in
+  the text as well as in the menu, so a single `#` still means a link the
+  traceability matrix can see.
+
+### Maintenance updates
+
+- The notes panel opens on **Comments** rather than the whole history, and the
+  filters read **Comments, Changes, All** — the panel is where people talk to
+  each other, and the recorded changes are the backdrop to that rather than the
+  reason to open it.
+
 ## 0.10.1 — 2026-09-16
 
 ### Maintenance updates

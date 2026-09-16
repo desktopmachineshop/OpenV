@@ -45,6 +45,7 @@ var Registry = []Feature{
 	{Key: FeatureAttachmentFormats, ShippedIn: "0.9.0", Summary: "Attach PDFs and CAD files to an artifact, with a PDF reader and a 3D preview for STL"},
 	{Key: FeatureFigureCitations, ShippedIn: "0.9.0", Summary: "Cite a figure on any artifact in the project with \"##\""},
 	{Key: FeatureSearchByRef, ShippedIn: "0.10.0", Summary: "Search finds an artifact by its ref: type REQ-30 and get REQ-30, and every result shows the ref beside its title"},
+	{Key: FeatureNoteTagging, ShippedIn: "0.11.0", Summary: "Tag people and references inside a note: @name, @@name to raise a to-do, and # / ## to cite a figure or an artifact"},
 }
 
 // Feature keys the code gates on.
@@ -82,6 +83,12 @@ const (
 	// gate narrows what search finds rather than hiding anything a colleague
 	// has written.
 	FeatureSearchByRef = "search-by-ref"
+	// FeatureNoteTagging gates the tagging menus in the notes composer and
+	// the "@@" to-do shortcut. Reading is never gated: a note already written
+	// with "@@dana" or "##REQ-12" renders its tags for everybody, because a
+	// gate that broke prose people had already written would be worse than no
+	// gate at all.
+	FeatureNoteTagging = "note-tagging"
 )
 
 // Enabled reports whether a feature is on for a workspace on the given

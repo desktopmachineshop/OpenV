@@ -94,6 +94,31 @@ interface AddTodoProps {
 }
 
 /**
+ * Raise a to-do from a note.
+ *
+ * Shared by the two ways of doing it — the control below, and the "@@name"
+ * shortcut the composer applies as a note is posted — so the card they
+ * produce is the same one. The note is carried across in full as the
+ * description: the title is a summary of it, and the detail should not be
+ * lost on the way to the board.
+ */
+export const createNoteTodo = (
+  projectId: string,
+  entry: Pick<ChatterEntry, 'id' | 'artifact_id' | 'message'>,
+  options: { title?: string; assigneeId?: string | null; dueDate?: string | null } = {}
+) =>
+  workItemsAPI.create(projectId, {
+    title: options.title || noteTitle(entry.message),
+    description: entry.message,
+    column: DEFAULT_TODO_COLUMN,
+    assignee_type: 'user',
+    assignee_id: options.assigneeId || null,
+    artifact_ids: [entry.artifact_id],
+    source_chatter_id: entry.id,
+    due_date: options.dueDate || null,
+  });
+
+/**
  * The "Add to-do" control on a note.
  *
  * Deliberately a control and not an automatic rule: an @mention is how
@@ -148,17 +173,10 @@ export const AddTodoControl: React.FC<AddTodoProps> = ({ projectId, entry, onCre
     setSaving(true);
     setError('');
     try {
-      await workItemsAPI.create(projectId, {
+      await createNoteTodo(projectId, entry, {
         title: trimmed,
-        // The note is the description, in full: the title is a summary of
-        // it and the detail should not be lost on the way to the board.
-        description: entry.message,
-        column: DEFAULT_TODO_COLUMN,
-        assignee_type: 'user',
-        assignee_id: assignee || null,
-        artifact_ids: [entry.artifact_id],
-        source_chatter_id: entry.id,
-        due_date: due ? new Date(`${due}T00:00:00`).toISOString() : null,
+        assigneeId: assignee || null,
+        dueDate: due ? new Date(`${due}T00:00:00`).toISOString() : null,
       });
       setOpen(false);
       onCreated();

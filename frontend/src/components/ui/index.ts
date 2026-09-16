@@ -13,3 +13,5 @@ export { Sheet } from './Sheet';
 export { SegmentedControl } from './SegmentedControl';
 export type { SegmentedOption } from './SegmentedControl';
 export { ArtifactPicker } from './ArtifactPicker';
+export { TokenMenu } from './TokenMenu';
+export type { TokenMenuRow } from './TokenMenu';

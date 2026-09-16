@@ -251,7 +251,8 @@ describe('referenceCandidates under the project scope', () => {
 
   it('offers figures from every artifact, this one first', () => {
     const got = referenceCandidates(me, [], [me, elsewhere], [theirs, mine], 'project');
-    expect(got.map((c) => c.ref)).toEqual(['REQ-17-FIG-1', 'REQ-99-FIG-2']);
+    const figures = got.filter((c) => c.kind === 'figure');
+    expect(figures.map((c) => c.ref)).toEqual(['REQ-17-FIG-1', 'REQ-99-FIG-2']);
   });
 
   it('names the artifact a figure belongs to, and only when it is another one', () => {
@@ -260,14 +261,38 @@ describe('referenceCandidates under the project scope', () => {
     expect(got[1]).toMatchObject({ owner: 'Hydraulic schedule', label: 'manifold.pdf' });
   });
 
-  it('offers no artifacts: a bare citation is the one that needs a link behind it', () => {
-    const got = referenceCandidates(me, [link('far', 'me')], [me, elsewhere], [mine], 'project');
-    expect(got.every((c) => c.kind === 'figure')).toBe(true);
+  it('offers any artifact in the project, linked or not', () => {
+    // No link between me and `elsewhere`: the doubled marker is what says the
+    // citation reaches outside what this artifact is connected to, so the
+    // menu no longer refuses it.
+    const got = referenceCandidates(me, [], [me, elsewhere], [], 'project');
+    expect(got.map((c) => c.ref)).toEqual(['REQ-99']);
+    expect(got[0]).toMatchObject({ kind: 'artifact', label: 'Hydraulic schedule' });
+  });
+
+  it('claims no relation for an artifact it is not linked to', () => {
+    // The "#" menu names the link type; here there is none to name, and
+    // inventing one would be worse than saying nothing.
+    const got = referenceCandidates(me, [], [me, elsewhere], [], 'project');
+    expect(got[0].relation).toBeUndefined();
+  });
+
+  it('leaves the artifact being edited out of its own menu', () => {
+    const got = referenceCandidates(me, [], [me, elsewhere], [], 'project');
+    expect(got.some((c) => c.ref === 'REQ-17')).toBe(false);
   });
 
   it('needs no link to the artifact holding the figure', () => {
     const got = referenceCandidates(me, [], [me, elsewhere], [theirs], 'project');
-    expect(got.map((c) => c.ref)).toEqual(['REQ-99-FIG-2']);
+    const figures = got.filter((c) => c.kind === 'figure');
+    expect(figures.map((c) => c.ref)).toEqual(['REQ-99-FIG-2']);
+  });
+
+  it('puts figures before artifacts, so the nearest evidence stays nearest', () => {
+    const got = referenceCandidates(me, [], [me, elsewhere], [mine, theirs], 'project');
+    const firstArtifact = got.findIndex((c) => c.kind === 'artifact');
+    const lastFigure = got.map((c) => c.kind).lastIndexOf('figure');
+    expect(lastFigure).toBeLessThan(firstArtifact);
   });
 });
 
