@@ -579,7 +579,7 @@ func main() {
 	// it. A notes file that fails to parse is logged and serves an empty
 	// release rather than keeping the API down over documentation.
 	deploymentKind := envOr("OPENV_DEPLOYMENT", "shared")
-	releaseFeedURL := envOr("OPENV_RELEASE_FEED_URL", "https://openv-production.up.railway.app/api/v1/public/release")
+	releaseFeedURL := envOr("OPENV_RELEASE_FEED_URL", "https://api.openv.app/api/v1/public/release")
 	releaseService, err := release.NewService(openv.ReleaseNotesMarkdown)
 	if err != nil {
 		slog.Error("release notes failed to parse; serving no release", "error", err)

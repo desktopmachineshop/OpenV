@@ -5,7 +5,7 @@
 The live OpenV instance is the source of truth for **what** this platform
 must do:
 
-- **Instance**: https://openv-production.up.railway.app
+- **Instance**: https://openv.app (API: https://api.openv.app)
 - **Workspace**: Desktop Machine Shop
 - **Project**: OpenV Platform (requirements, traceability links, V&V evidence)
 

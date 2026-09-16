@@ -199,6 +199,42 @@ section 2 for why that cannot sign in on iOS.
 Generate the frontend domain first, since the API's `CORS_ORIGIN`,
 `PUBLIC_URL` and `FRONTEND_URL` all name it; then let both services deploy.
 
+### Custom domains
+
+The shared instance is served from **openv.app**, with the API also reachable
+at **api.openv.app**. Two custom domains, one per service:
+
+| Domain | Service | Target port | What it is for |
+|---|---|---|---|
+| `openv.app` | OpenV Frontend | 8080 | Everything a browser does. `/api/` is proxied to the API over the private network, so the session cookie stays first-party. |
+| `api.openv.app` | OpenV | 8080 | `OPENV_API_URL` for the MCP server, `sync.py`, agent connectors and the dedicated-instance release feed. Not what a browser uses. |
+
+Attach each in **Settings → Networking → Custom Domain**, then create the
+CNAME Railway asks for. Railway keeps the generated `*.up.railway.app`
+domains working alongside them, so nothing breaks while DNS propagates.
+
+The API's three URL variables all name the **frontend** domain, as above:
+
+```dotenv
+CORS_ORIGIN=https://openv.app
+PUBLIC_URL=https://openv.app
+FRONTEND_URL=https://openv.app
+```
+
+**On Cloudflare**, create the CNAME **DNS-only** (grey cloud). Railway
+validates domain ownership and issues the certificate itself, and the orange
+cloud intercepts that exchange. Once the certificate is issued you may turn
+the proxy on, but only after setting **SSL/TLS → Encryption mode** to **Full
+(strict)**: Railway's edge redirects HTTP to HTTPS, and Cloudflare's
+*Flexible* mode talks to the origin over HTTP, which is an infinite redirect
+([Cloudflare: Too Many
+Redirects](https://developers.cloudflare.com/ssl/troubleshooting/too-many-redirects/)).
+Railway presents a valid Let's Encrypt certificate, which is what *Full
+(strict)* requires.
+
+A root domain needs a CNAME at the apex, which Cloudflare serves through
+CNAME flattening; no A record is needed.
+
 ## 4. Runner pool service (optional — transient runners)
 
 Transient runners let a member lease a pre-warmed cloud runner from the UI and
@@ -354,7 +390,7 @@ A dedicated instance is this same deployment with `OPENV_DEPLOYMENT=dedicated`,
 connected to a stable release rather than `release` (check out the commit
 that designated it) and upgraded on the customer's date. It reads the
 shared service's public release feed (`OPENV_RELEASE_FEED_URL`, default
-`https://openv-production.up.railway.app/api/v1/public/release`) once a day
+`https://api.openv.app/api/v1/public/release`) once a day
 and warns every workspace's admins 30 and 7 days before its 90-day support
 window closes, and once more when it has.
 

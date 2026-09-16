@@ -8,7 +8,7 @@ any environment with Python 3 — no PowerShell, no extra dependencies.
 
 Configuration (environment variables, overridable by flags):
 
-  OPENV_API_URL     e.g. https://openv-production.up.railway.app
+  OPENV_API_URL     e.g. https://api.openv.app
   OPENV_API_TOKEN   workspace runner key (preferred). Minted in OpenV under
                     Settings -> Runners -> Workspace keys. Scoped to that one
                     workspace, stored only as a hash, revocable in a click.
