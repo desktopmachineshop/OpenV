@@ -11,7 +11,7 @@ Registered charities and open-source projects use the hosted OpenV service free,
 <!-- Charity: name and registration number or register link. Open-source project: repository link and licence. -->
 
 **OpenV workspace name**
-<!-- The workspace you created at https://openv-frontend-production-ddb0.up.railway.app (Settings shows the name). -->
+<!-- The workspace you created at https://openv.app (Settings shows the name). -->
 
 **Anything else**
 <!-- Optional: what you plan to use OpenV for. It helps us prioritise features. -->

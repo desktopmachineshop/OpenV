@@ -5,7 +5,7 @@ project, and from the moment that project exists it is the **source of
 truth** for what the platform must do. Repo files (`CLAUDE.md`,
 `.github/instructions/*.md`) only define how to work.
 
-- **Instance**: https://openv-production.up.railway.app
+- **Instance**: https://openv.app (API: https://api.openv.app)
 - **Workspace**: Desktop Machine Shop (primary admin: the founder account)
 - **Project**: OpenV Platform
 
@@ -15,7 +15,7 @@ truth** for what the platform must do. Repo files (`CLAUDE.md`,
 anywhere: Windows PowerShell, Linux, CI, or an agent sandbox.
 
 ```bash
-export OPENV_API_URL=https://openv-production.up.railway.app
+export OPENV_API_URL=https://api.openv.app
 export OPENV_API_TOKEN=...    # workspace runner key (preferred)
 python3 scripts/openv/sync.py <command>
 ```

@@ -9,6 +9,13 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Maintenance updates
+
+- OpenV is now at **openv.app**. The old `*.up.railway.app` addresses keep
+  working, so nothing you have bookmarked or configured breaks, but the new
+  one is the address to use and to share. Agent connectors, the MCP server
+  and `sync.py` reach the API at `https://api.openv.app`.
+
 ## 0.9.1 — 2026-09-15
 
 ### Maintenance updates
