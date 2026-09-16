@@ -102,3 +102,19 @@ func ParseRef(ref string) (prefix string, num int, ok bool) {
 func FormatRef(prefix string, num int) string {
 	return prefix + "-" + strconv.Itoa(num)
 }
+
+// NormalizeRef turns what somebody typed into the canonical ref it names, or
+// "" when it does not name one. Refs are stored uppercase, so "req-30",
+// " Req-30 " and "REQ-30" all normalise to "REQ-30".
+//
+// Search uses this to tell an address from a phrase: a query that names a ref
+// is a request for that one artifact, while anything else is a phrase to match
+// against titles and bodies.
+func NormalizeRef(query string) string {
+	candidate := strings.ToUpper(strings.TrimSpace(query))
+	prefix, num, ok := ParseRef(candidate)
+	if !ok {
+		return ""
+	}
+	return FormatRef(prefix, num)
+}

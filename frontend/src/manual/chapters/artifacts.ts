@@ -103,7 +103,19 @@ pushing anything off the bottom.
 
 ## Search & filters
 
-The search box matches title, body, type, IDs and attributes. The ⚙ button
+Two boxes search, and they do different jobs. The one in the **sidebar**
+searches every project you can see; the one above the **tree** narrows the
+project you are in.
+
+The sidebar box matches titles and bodies, and it also matches **refs**: type
+**REQ-30** and REQ-30 comes back first, ahead of anything that merely mentions
+it. Case does not matter, so **req-30** works, and a ref pasted out of a
+report with spaces around it still finds its artifact. Every result shows its
+ref beside the title, which is what tells two similarly named requirements
+apart. A longer ref that contains what you typed still appears below the exact
+match: **REQ-3** finds REQ-3 first and leaves REQ-30 further down.
+
+The tree box matches title, body, type, IDs and attributes. The ⚙ button
 opens the filter panel:
 
 - **Filter rows** — combine conditions on any field (Type, Title, Body,

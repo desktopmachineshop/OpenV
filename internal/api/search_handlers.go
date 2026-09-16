@@ -11,6 +11,7 @@ import (
 
 	"github.com/openv/requirements-platform/internal/domain/artifacts"
 	"github.com/openv/requirements-platform/internal/domain/embeddings"
+	"github.com/openv/requirements-platform/internal/domain/release"
 )
 
 const (
@@ -88,13 +89,23 @@ func (h *Handler) GlobalSearch(w http.ResponseWriter, r *http.Request) {
 		modeUsed string
 		err      error
 	)
-	switch mode {
-	case modeSemantic:
-		hits, modeUsed, err = h.semanticSearch(projectIDs, query, limit)
-	case modeHybrid:
-		hits, modeUsed, err = h.hybridSearch(projectIDs, query, limit)
+	// A query that names a ref ("REQ-30") is an address, not a phrase: the
+	// caller wants that artifact. Nearest-neighbour ranking has nothing useful
+	// to say about an identifier, so the keyword path — which matches refs and
+	// ranks an exact one first — serves it whatever mode was asked for.
+	opts := artifacts.SearchOptions{
+		MatchRefs: h.featureEnabled(r, ActiveOrg(r), release.FeatureSearchByRef),
+	}
+	switch {
+	case opts.MatchRefs && artifacts.NormalizeRef(query) != "":
+		hits, err = h.keywordSearch(projectIDs, query, limit, opts)
+		modeUsed = modeKeyword
+	case mode == modeSemantic:
+		hits, modeUsed, err = h.semanticSearch(projectIDs, query, limit, opts)
+	case mode == modeHybrid:
+		hits, modeUsed, err = h.hybridSearch(projectIDs, query, limit, opts)
 	default:
-		hits, err = h.keywordSearch(projectIDs, query, limit)
+		hits, err = h.keywordSearch(projectIDs, query, limit, opts)
 		modeUsed = modeKeyword
 	}
 	if err != nil {
@@ -160,9 +171,10 @@ func (h *Handler) searchableProjects(w http.ResponseWriter, r *http.Request) ([]
 	return projectIDs, names, true
 }
 
-// keywordSearch is the original trigram/ILIKE path.
-func (h *Handler) keywordSearch(projectIDs []string, query string, limit int) ([]*artifacts.SearchHit, error) {
-	hits, err := h.artifactService.SearchArtifacts(projectIDs, query, limit)
+// keywordSearch is the original trigram/ILIKE path. opts carries the ref gate:
+// it is threaded through every mode because hybrid runs this path too.
+func (h *Handler) keywordSearch(projectIDs []string, query string, limit int, opts artifacts.SearchOptions) ([]*artifacts.SearchHit, error) {
+	hits, err := h.artifactService.SearchArtifacts(projectIDs, query, limit, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -175,9 +187,9 @@ func (h *Handler) keywordSearch(projectIDs []string, query string, limit int) ([
 // semanticSearch runs the nearest-neighbour path, degrading to keyword when
 // embeddings are unconfigured or the vector store is unavailable. It returns
 // the mode that actually ran.
-func (h *Handler) semanticSearch(projectIDs []string, query string, limit int) ([]*artifacts.SearchHit, string, error) {
+func (h *Handler) semanticSearch(projectIDs []string, query string, limit int, opts artifacts.SearchOptions) ([]*artifacts.SearchHit, string, error) {
 	if h.embeddingService == nil || !h.embeddingService.Enabled() {
-		hits, err := h.keywordSearch(projectIDs, query, limit)
+		hits, err := h.keywordSearch(projectIDs, query, limit, opts)
 		return hits, modeKeyword, err
 	}
 	near, err := h.embeddingService.SemanticSearch(projectIDs, query, limit)
@@ -191,7 +203,7 @@ func (h *Handler) semanticSearch(projectIDs []string, query string, limit int) (
 		if !errors.Is(err, embeddings.ErrDisabled) && !errors.Is(err, embeddings.ErrVectorUnavailable) {
 			slog.Warn("search: semantic query failed; falling back to keyword", "error", err)
 		}
-		hits, kerr := h.keywordSearch(projectIDs, query, limit)
+		hits, kerr := h.keywordSearch(projectIDs, query, limit, opts)
 		return hits, modeKeyword, kerr
 	}
 	return nearestToHits(near, query), modeSemantic, nil
@@ -200,8 +212,8 @@ func (h *Handler) semanticSearch(projectIDs []string, query string, limit int) (
 // hybridSearch blends the keyword and semantic result sets, deduping by
 // artifact and ranking by a combined score. When embeddings are unavailable it
 // degrades to the keyword result reported as mode keyword.
-func (h *Handler) hybridSearch(projectIDs []string, query string, limit int) ([]*artifacts.SearchHit, string, error) {
-	keywordHits, err := h.keywordSearch(projectIDs, query, limit)
+func (h *Handler) hybridSearch(projectIDs []string, query string, limit int, opts artifacts.SearchOptions) ([]*artifacts.SearchHit, string, error) {
+	keywordHits, err := h.keywordSearch(projectIDs, query, limit, opts)
 	if err != nil {
 		return nil, "", err
 	}

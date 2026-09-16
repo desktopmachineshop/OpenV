@@ -62,6 +62,13 @@ func TestToolRequests(t *testing.T) {
 		{"id":"a1","type":"requirement","title":"Fast Boot","body":"boots in 2s","parent_id":null,"sort_order":1,"extra":"x"},
 		{"id":"a2","type":"risk","title":"Overheat","body":"THERMAL runaway","parent_id":"a1","sort_order":2,"extra":"y"}
 	]`
+	// Refs are how a model addresses an artifact, so search has to match them.
+	// REQ-3 and REQ-30 both exist so an exact match has to beat a substring.
+	refArtifactList := `[
+		{"id":"a30","type":"requirement","ref":"REQ-30","title":"Noise limit","body":"below 60 dB"},
+		{"id":"a3","type":"requirement","ref":"REQ-3","title":"Seal integrity","body":"holds to 6 bar"},
+		{"id":"a77","type":"requirement","ref":"REQ-77","title":"Acoustics plan","body":"verifies REQ-30 on the rig"}
+	]`
 	linkList := `[
 		{"id":"l1","from_id":"a1","to_id":"a2","type":"mitigates"},
 		{"id":"l2","from_id":"a3","to_id":"a4","type":"refines"}
@@ -176,6 +183,44 @@ func TestToolRequests(t *testing.T) {
 				_ = json.Unmarshal([]byte(out), &matches)
 				if len(matches) != 1 || matches[0]["id"] != "a1" {
 					t.Fatalf("matches = %v, want just a1", matches)
+				}
+			},
+		},
+		{
+			tool:       "search_artifacts",
+			args:       map[string]interface{}{"project_id": "p1", "query": "req-30"},
+			status:     200,
+			response:   refArtifactList,
+			wantMethod: "GET",
+			wantPath:   "/api/v1/artifacts",
+			checkOut: func(t *testing.T, out string) {
+				var matches []map[string]interface{}
+				if err := json.Unmarshal([]byte(out), &matches); err != nil {
+					t.Fatalf("bad JSON: %v", err)
+				}
+				// REQ-30 itself first, then the artifact that only cites it.
+				if len(matches) != 2 {
+					t.Fatalf("matches = %v, want REQ-30 and the one citing it", matches)
+				}
+				if matches[0]["id"] != "a30" {
+					t.Errorf("first match = %v, want REQ-30", matches[0]["ref"])
+				}
+			},
+		},
+		{
+			tool:       "search_artifacts",
+			args:       map[string]interface{}{"project_id": "p1", "query": "REQ-3"},
+			status:     200,
+			response:   refArtifactList,
+			wantMethod: "GET",
+			wantPath:   "/api/v1/artifacts",
+			checkOut: func(t *testing.T, out string) {
+				var matches []map[string]interface{}
+				_ = json.Unmarshal([]byte(out), &matches)
+				// REQ-3 is a substring of REQ-30 and of the body citing it, so
+				// all three match; the exact ref has to be the one on top.
+				if len(matches) == 0 || matches[0]["id"] != "a3" {
+					t.Fatalf("matches = %v, want REQ-3 first", matches)
 				}
 			},
 		},
