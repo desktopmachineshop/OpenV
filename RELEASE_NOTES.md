@@ -9,6 +9,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+## 0.10.0 — 2026-09-16
+
 ### New features
 
 - **Search finds an artifact by its ref.** Typing `REQ-30` into the search box
