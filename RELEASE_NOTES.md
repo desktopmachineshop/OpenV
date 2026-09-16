@@ -9,6 +9,13 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Bug fixes
+
+- Retyping an artifact now gives it a matching reference. A heading created
+  by accident and switched to a requirement (or any other type) picks up a
+  fresh reference in that type's own numbering instead of keeping the
+  heading's old one.
+
 ## 0.9.1 — 2026-09-15
 
 ### Maintenance updates

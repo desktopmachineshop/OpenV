@@ -344,6 +344,16 @@ func (r *ArtifactRepository) Update(artifact *artifacts.Artifact) error {
 	}
 	defer tx.Rollback()
 
+	// The ref normally rides along unchanged from the loaded current version
+	// — a ref is stable across an artifact's history. The one exception is a
+	// type change that no longer matches the old ref's prefix: DefaultService
+	// .UpdateArtifact clears Ref in that case, and ensureRef mints a fresh one
+	// from the new type's counter here, exactly as Save does for a brand-new
+	// artifact.
+	if err := ensureRef(ctx, tx, artifact); err != nil {
+		return err
+	}
+
 	// Mark the current version as archived
 	archiveQuery := `UPDATE artifacts SET valid_to = $1 WHERE id = $2 AND valid_to IS NULL`
 	_, err = tx.ExecContext(ctx, archiveQuery, artifact.ValidFrom, artifact.ID)
@@ -351,10 +361,9 @@ func (r *ArtifactRepository) Update(artifact *artifacts.Artifact) error {
 		return err
 	}
 
-	// Insert the new version. The ref rides along unchanged from the loaded
-	// current version — a ref is stable across an artifact's history. NULLIF
-	// keeps a still-unset ref NULL rather than "" so the partial unique
-	// index never sees two empty-string refs in one project.
+	// Insert the new version. NULLIF keeps a still-unset ref NULL rather than
+	// "" so the partial unique index never sees two empty-string refs in one
+	// project (should ensureRef somehow leave it empty).
 	insertQuery := `
 		INSERT INTO artifacts (id, project_id, parent_id, type, ref, title, body, sort_order, status, attributes, version, valid_from, valid_to, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, NULLIF($5, ''), $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)

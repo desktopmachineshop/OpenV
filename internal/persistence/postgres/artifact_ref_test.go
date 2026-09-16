@@ -98,6 +98,61 @@ func TestArtifactRefAssignment(t *testing.T) {
 	}
 }
 
+// TestArtifactRefReassignedOnTypeChange: a heading created by mistake and
+// retyped to a requirement must stop citing under "HDG-N" — Update mints a
+// fresh REQ- ref when it finds Ref cleared (DefaultService.UpdateArtifact
+// clears it whenever a type change no longer matches the old prefix). A type
+// change that keeps the same prefix, or no type change at all, must not
+// disturb the ref.
+func TestArtifactRefReassignedOnTypeChange(t *testing.T) {
+	db := testDB(t)
+	if err := Migrate(db); err != nil {
+		t.Fatalf("Migrate: %v", err)
+	}
+	repo := NewArtifactRepository(db)
+	projectID := uuid.New().String()
+
+	h := newTestArtifact(projectID, artifacts.TypeHeading, "Accidental heading")
+	if err := repo.Save(h); err != nil {
+		t.Fatalf("Save(heading): %v", err)
+	}
+	if h.Ref != "HDG-1" {
+		t.Fatalf("heading ref = %q, want HDG-1", h.Ref)
+	}
+
+	// Simulate DefaultService.UpdateArtifact retyping it to a requirement:
+	// the ref is cleared because its prefix no longer matches the new type.
+	h.Type = artifacts.TypeRequirement
+	h.Ref = ""
+	h.Version = 2
+	h.ValidFrom = time.Now()
+	h.UpdatedAt = time.Now()
+	if err := repo.Update(h); err != nil {
+		t.Fatalf("Update(retyped to requirement): %v", err)
+	}
+	if h.Ref != "REQ-1" {
+		t.Fatalf("ref after retype = %q, want REQ-1", h.Ref)
+	}
+
+	reloaded, err := repo.FindByID(h.ID)
+	if err != nil {
+		t.Fatalf("FindByID: %v", err)
+	}
+	if reloaded.Ref != "REQ-1" || reloaded.Type != artifacts.TypeRequirement {
+		t.Fatalf("reloaded ref=%q type=%q, want REQ-1/requirement", reloaded.Ref, reloaded.Type)
+	}
+
+	// A later heading in the same project draws its own number, unaffected
+	// by the number retired above.
+	h2 := newTestArtifact(projectID, artifacts.TypeHeading, "Another heading")
+	if err := repo.Save(h2); err != nil {
+		t.Fatalf("Save(second heading): %v", err)
+	}
+	if h2.Ref != "HDG-2" {
+		t.Fatalf("second heading ref = %q, want HDG-2", h2.Ref)
+	}
+}
+
 // TestArtifactRefBackfill: migration 0018 stamps refs onto a pre-existing
 // database's current artifacts in stable tree order and seeds the counters
 // so post-migration creates continue the numbering.
