@@ -44,6 +44,7 @@ var Registry = []Feature{
 	{Key: FeatureFigureRevert, ShippedIn: "0.8.0", Summary: "Restore an older version of a figure from its history, recorded as a new version so nothing is lost"},
 	{Key: FeatureAttachmentFormats, ShippedIn: "0.9.0", Summary: "Attach PDFs and CAD files to an artifact, with a PDF reader and a 3D preview for STL"},
 	{Key: FeatureFigureCitations, ShippedIn: "0.9.0", Summary: "Cite a figure on any artifact in the project with \"##\""},
+	{Key: FeatureSearchByRef, ShippedIn: "0.10.0", Summary: "Search finds an artifact by its ref: type REQ-30 and get REQ-30, and every result shows the ref beside its title"},
 }
 
 // Feature keys the code gates on.
@@ -75,6 +76,12 @@ const (
 	// everybody, because a gate that broke existing prose would be worse than
 	// no gate at all.
 	FeatureFigureCitations = "figure-citations"
+	// FeatureSearchByRef gates searching by a stable ref: matching refs,
+	// ranking an exact one first, and showing each result's ref. A workspace
+	// that has not received it searches titles and bodies as before, so the
+	// gate narrows what search finds rather than hiding anything a colleague
+	// has written.
+	FeatureSearchByRef = "search-by-ref"
 )
 
 // Enabled reports whether a feature is on for a workspace on the given

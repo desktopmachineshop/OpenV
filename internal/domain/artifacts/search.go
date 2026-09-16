@@ -14,10 +14,24 @@ type SearchHit struct {
 	Type        string `json:"type"`
 	Title       string `json:"title"`
 	Snippet     string `json:"snippet"`
+	// Ref is the artifact's stable short ref ("REQ-30"). Carried so a result
+	// list can show what someone searching by ref was looking for. Empty for
+	// hits from the semantic path, which reads vectors rather than rows.
+	Ref string `json:"ref,omitempty"`
 	// Score is the semantic-similarity score (0..1, higher is closer) for hits
 	// from the semantic/hybrid modes. It is omitted for pure keyword hits,
 	// which have no vector distance.
 	Score float64 `json:"score,omitempty"`
+}
+
+// SearchOptions varies what a search matches.
+type SearchOptions struct {
+	// MatchRefs makes a search match stable refs as well as titles and
+	// bodies, rank an exact ref first, and carry each hit's ref back. It is
+	// off for a workspace whose release channel has not reached the release
+	// that shipped searching by ref (release.FeatureSearchByRef), which then
+	// gets exactly the title/body search it had before.
+	MatchRefs bool
 }
 
 // snippetRadius is how many runes of context Snippet keeps on each side of

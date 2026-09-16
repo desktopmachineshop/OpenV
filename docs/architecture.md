@@ -148,7 +148,10 @@ type Repository interface {
 - **PostgreSQL**: Primary relational database
 - **JSONB**: Flexible attribute storage
 - **Trigram search** (`pg_trgm`): index-assisted cross-project artifact search,
-  with a sequential-scan fallback when the extension is unavailable
+  with a sequential-scan fallback when the extension is unavailable. A query
+  that names a stable ref ("REQ-30") is matched against `artifacts.ref` as
+  well and ranked first, served by the unique `(project_id, ref)` index rather
+  than a trigram one
 - **Local filesystem** (`UPLOADS_DIR`): file attachments (S3/MinIO remains a
   future option)
 

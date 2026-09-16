@@ -9,6 +9,17 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### New features
+
+- **Search finds an artifact by its ref.** Typing `REQ-30` into the search box
+  now brings back REQ-30 itself, at the top, instead of whatever happens to
+  mention it — and `req-30` works just as well, so a ref pasted out of a
+  report or a chat message finds its artifact without being tidied up first.
+  Every result now shows its ref beside the title, so a list of similar
+  titles is finally possible to tell apart. A longer ref that merely contains
+  what you typed still appears, below the exact match: searching `REQ-3` puts
+  REQ-3 first and leaves REQ-30 further down.
+
 ## 0.9.2 — 2026-09-16
 
 ### Maintenance updates

@@ -252,7 +252,8 @@ type Service interface {
 	RestoreArtifactVersion(id string, version int) (*Artifact, error)
 	// SearchArtifacts finds current artifacts whose title or body contains
 	// query (case-insensitive) within the given projects, title matches first.
-	SearchArtifacts(projectIDs []string, query string, limit int) ([]*SearchHit, error)
+	// opts.MatchRefs additionally matches and ranks stable refs.
+	SearchArtifacts(projectIDs []string, query string, limit int, opts SearchOptions) ([]*SearchHit, error)
 }
 
 // Repository defines persistence operations for artifacts
@@ -277,7 +278,7 @@ type Repository interface {
 	FindVersionsByID(id string) ([]*Artifact, error)
 	// SearchInProjects performs the title/body substring search behind
 	// Service.SearchArtifacts (SearchHit.ProjectName is left empty).
-	SearchInProjects(projectIDs []string, query string, limit int) ([]*SearchHit, error)
+	SearchInProjects(projectIDs []string, query string, limit int, opts SearchOptions) ([]*SearchHit, error)
 }
 
 // LinkSuspector flags and clears link suspicion for an artifact (issue
@@ -543,11 +544,11 @@ func (s *DefaultService) ListArtifactsPage(projectID string, artifactType string
 }
 
 // SearchArtifacts finds current artifacts matching query in the given projects.
-func (s *DefaultService) SearchArtifacts(projectIDs []string, query string, limit int) ([]*SearchHit, error) {
+func (s *DefaultService) SearchArtifacts(projectIDs []string, query string, limit int, opts SearchOptions) ([]*SearchHit, error) {
 	if len(projectIDs) == 0 || strings.TrimSpace(query) == "" {
 		return []*SearchHit{}, nil
 	}
-	return s.repo.SearchInProjects(projectIDs, query, limit)
+	return s.repo.SearchInProjects(projectIDs, query, limit, opts)
 }
 
 // GetArtifactVersions retrieves all versions of an artifact

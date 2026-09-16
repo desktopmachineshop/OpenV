@@ -2524,6 +2524,10 @@ export interface SearchHit {
   type: string;
   title: string;
   snippet: string;
+  // The artifact's stable short ref ("REQ-30"), so a result can be identified
+  // by the address people cite it with. Absent on semantic hits, which are
+  // read from the vector store rather than the artifact rows.
+  ref?: string;
   // Semantic-similarity score (0..1); present only for semantic/hybrid hits.
   score?: number;
 }

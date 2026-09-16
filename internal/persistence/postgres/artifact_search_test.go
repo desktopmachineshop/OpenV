@@ -55,7 +55,7 @@ func TestArtifactSearchInProjects(t *testing.T) {
 	scope := []string{projA, projB}
 
 	t.Run("scopes to the given projects with titles ranked first", func(t *testing.T) {
-		hits, err := repo.SearchInProjects(scope, "login", 20)
+		hits, err := repo.SearchInProjects(scope, "login", 20, artifacts.SearchOptions{})
 		if err != nil {
 			t.Fatalf("SearchInProjects: %v", err)
 		}
@@ -74,7 +74,7 @@ func TestArtifactSearchInProjects(t *testing.T) {
 	})
 
 	t.Run("limit caps the result set", func(t *testing.T) {
-		hits, err := repo.SearchInProjects(scope, "login", 1)
+		hits, err := repo.SearchInProjects(scope, "login", 1, artifacts.SearchOptions{})
 		if err != nil {
 			t.Fatalf("SearchInProjects: %v", err)
 		}
@@ -84,14 +84,14 @@ func TestArtifactSearchInProjects(t *testing.T) {
 	})
 
 	t.Run("wildcards are matched literally", func(t *testing.T) {
-		hits, err := repo.SearchInProjects(scope, "100%", 20)
+		hits, err := repo.SearchInProjects(scope, "100%", 20, artifacts.SearchOptions{})
 		if err != nil {
 			t.Fatalf("SearchInProjects: %v", err)
 		}
 		if len(hits) != 1 || hits[0].ArtifactID != pct.ID {
 			t.Fatalf("got %+v, want only the literal 100%% match", hits)
 		}
-		hits, err = repo.SearchInProjects(scope, "100%x", 20)
+		hits, err = repo.SearchInProjects(scope, "100%x", 20, artifacts.SearchOptions{})
 		if err != nil {
 			t.Fatalf("SearchInProjects: %v", err)
 		}
@@ -101,7 +101,7 @@ func TestArtifactSearchInProjects(t *testing.T) {
 	})
 
 	t.Run("empty scope returns nothing", func(t *testing.T) {
-		hits, err := repo.SearchInProjects(nil, "login", 20)
+		hits, err := repo.SearchInProjects(nil, "login", 20, artifacts.SearchOptions{})
 		if err != nil {
 			t.Fatalf("SearchInProjects: %v", err)
 		}

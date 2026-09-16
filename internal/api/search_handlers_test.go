@@ -183,6 +183,76 @@ func TestGlobalSearchModes(t *testing.T) {
 			t.Fatalf("hybrid leaked an out-of-scope semantic hit: %+v", hits)
 		}
 	})
+
+	t.Run("a ref query takes the keyword path whatever mode was asked for", func(t *testing.T) {
+		// "REQ-30" is an address, not a phrase. Nearest-neighbour ranking has
+		// nothing to say about an identifier, so semantic and hybrid both hand
+		// it to the keyword path, which is the one that matches refs.
+		for _, suffix := range []string{"?q=REQ-30&mode=semantic", "?q=req-30&mode=hybrid", "?q=REQ-30"} {
+			h, artifactSvc := newHandler(enabledSvc)
+			mode, hits := do(t, h, suffix)
+			if mode != "keyword" {
+				t.Errorf("%s: mode_used = %q, want keyword", suffix, mode)
+			}
+			if artifactSvc.calls != 1 {
+				t.Errorf("%s: keyword service called %d times, want 1", suffix, artifactSvc.calls)
+			}
+			for _, hit := range hits {
+				if hit.ArtifactID == "sem-1" {
+					t.Errorf("%s: semantic hit in results, want the keyword path only", suffix)
+				}
+			}
+		}
+	})
+
+	t.Run("a workspace without the feature keeps the mode it asked for", func(t *testing.T) {
+		// A stable-channel workspace still on 0.9.2 has not received
+		// search-by-ref, so "REQ-30" is just a phrase: semantic mode stays
+		// semantic and the keyword path is told not to match refs.
+		onOldStable := &fakeOrgService{
+			roles:         map[string]map[string]string{orgID: {"admin": orgs.RoleAdmin}},
+			plan:          orgs.PlanTeam,
+			stableRelease: "0.9.2",
+		}
+
+		h, _ := newHandler(enabledSvc)
+		h.orgService = onOldStable
+		if mode, _ := do(t, h, "?q=REQ-30&mode=semantic"); mode != "semantic" {
+			t.Errorf("mode_used = %q, want semantic — the ref routing is gated", mode)
+		}
+
+		h, artifactSvc := newHandler(enabledSvc)
+		h.orgService = onOldStable
+		do(t, h, "?q=REQ-30")
+		if artifactSvc.gotOpts.MatchRefs {
+			t.Error("keyword search asked to match refs for a workspace without the feature")
+		}
+	})
+
+	t.Run("the feature asks the keyword path to match refs", func(t *testing.T) {
+		h, artifactSvc := newHandler(enabledSvc)
+		do(t, h, "?q=REQ-30")
+		if !artifactSvc.gotOpts.MatchRefs {
+			t.Error("keyword search not asked to match refs for a workspace that has the feature")
+		}
+	})
+
+	t.Run("a ref-shaped phrase still searches text", func(t *testing.T) {
+		// "ISO-9001" parses as a ref even though no artifact has that ref, so it
+		// routes to keyword too. That has to stay lossless: keyword matches
+		// titles and bodies as well as refs, so a phrase search still works.
+		h, artifactSvc := newHandler(enabledSvc)
+		mode, hits := do(t, h, "?q=ISO-9001")
+		if mode != "keyword" {
+			t.Fatalf("mode_used = %q, want keyword", mode)
+		}
+		if artifactSvc.gotQuery != "ISO-9001" {
+			t.Errorf("keyword query = %q, want the phrase passed through unchanged", artifactSvc.gotQuery)
+		}
+		if len(hits) != 1 || hits[0].ArtifactID != "art-1" {
+			t.Errorf("hits = %+v, want the text match", hits)
+		}
+	})
 }
 
 // errEmbedProvider is an enabled provider whose Embed always fails with a
@@ -296,11 +366,13 @@ type searchArtifactService struct {
 	gotProjectIDs []string
 	gotQuery      string
 	gotLimit      int
+	gotOpts       artifacts.SearchOptions
 	calls         int
 }
 
-func (f *searchArtifactService) SearchArtifacts(projectIDs []string, query string, limit int) ([]*artifacts.SearchHit, error) {
+func (f *searchArtifactService) SearchArtifacts(projectIDs []string, query string, limit int, opts artifacts.SearchOptions) ([]*artifacts.SearchHit, error) {
 	f.calls++
+	f.gotOpts = opts
 	f.gotProjectIDs = projectIDs
 	f.gotQuery = query
 	f.gotLimit = limit

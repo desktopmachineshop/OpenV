@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/lib/pq"
@@ -425,36 +426,66 @@ func (r *ArtifactRepository) NextSortOrder(projectID string, parentID *string) (
 	return next, nil
 }
 
-// SearchInProjects finds current artifacts whose title or body contains the
-// query (case-insensitive) within the given projects. Title matches rank
-// before body-only matches; ties break on most recently updated. ProjectName
-// is left empty — the API layer resolves it.
-func (r *ArtifactRepository) SearchInProjects(projectIDs []string, query string, limit int) ([]*artifacts.SearchHit, error) {
+// SearchInProjects finds current artifacts whose ref, title or body contains
+// the query (case-insensitive) within the given projects. An exact ref match
+// ranks first, then title matches, then body-only matches; ties break on most
+// recently updated. ProjectName is left empty — the API layer resolves it.
+func (r *ArtifactRepository) SearchInProjects(projectIDs []string, query string, limit int, opts artifacts.SearchOptions) ([]*artifacts.SearchHit, error) {
 	if len(projectIDs) == 0 {
 		return []*artifacts.SearchHit{}, nil
 	}
 
+	// Whitespace around a query is never part of what someone is looking for,
+	// and a padded ref ("  REQ-30  ") is the common case: refs get pasted out
+	// of a document or a chat line. Trim once here so the pattern, the ref
+	// comparison and the snippet all see the same text. The API handler also
+	// trims, but the service is reachable from the MCP tools, which do not.
+	query = strings.TrimSpace(query)
+
 	pattern := artifacts.LikePattern(query)
-	// The two ILIKE predicates are backed by the pg_trgm GIN indexes
+	// The title/body ILIKE predicates are backed by the pg_trgm GIN indexes
 	// idx_artifacts_{title,body}_trgm (migration 0008): gin_trgm_ops supports
-	// ILIKE directly, so the planner bitmap-ORs the two index scans instead of
+	// ILIKE directly, so the planner bitmap-ORs the index scans instead of
 	// sequentially scanning artifacts. Queries shorter than a trigram, or a
 	// database where the pg_trgm extension could not be created, fall back to a
 	// sequential scan — the query stays correct either way.
+	args := []interface{}{pq.Array(projectIDs), pattern, limit}
+
+	// Without MatchRefs this is the title/body search exactly as it was before
+	// refs became searchable: same predicate, same ranking, no fourth
+	// parameter — postgres rejects a bind that supplies one the statement does
+	// not use.
+	refPredicate, refRanking := "", ""
+	if opts.MatchRefs {
+		// Someone typing a ref means that artifact, not a phrase that
+		// resembles it, so an exact ref match ranks above everything else.
+		// Refs are stored uppercase (artifacts/ref.go) and NormalizeRef
+		// upper-cases, so "req-30" finds REQ-30. A query that is not
+		// ref-shaped normalises to "", which matches no ref because a ref is
+		// never blank — the ranking term is then simply always false.
+		//
+		// The ref predicate has no trigram index but is served by the unique
+		// (project_id, ref) index for the exact case, and is cheap regardless:
+		// refs are short and there are few of them.
+		refPredicate = "ref ILIKE $2 OR "
+		refRanking = "(ref = $4) DESC, "
+		args = append(args, artifacts.NormalizeRef(query))
+	}
+
 	sqlQuery := `
-		SELECT id, project_id, type, title, body
+		SELECT id, project_id, type, title, body, COALESCE(ref, '')
 		FROM artifacts
 		WHERE valid_to IS NULL
 		AND project_id = ANY($1)
-		AND (title ILIKE $2 OR body ILIKE $2)
-		ORDER BY (title ILIKE $2) DESC, updated_at DESC
+		AND (` + refPredicate + `title ILIKE $2 OR body ILIKE $2)
+		ORDER BY ` + refRanking + `(title ILIKE $2) DESC, updated_at DESC
 		LIMIT $3
 	`
 
 	ctx, cancel := stmtCtx()
 	defer cancel()
 
-	rows, err := r.db.QueryContext(ctx, sqlQuery, pq.Array(projectIDs), pattern, limit)
+	rows, err := r.db.QueryContext(ctx, sqlQuery, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -464,8 +495,13 @@ func (r *ArtifactRepository) SearchInProjects(projectIDs []string, query string,
 	for rows.Next() {
 		hit := new(artifacts.SearchHit)
 		var body string
-		if err := rows.Scan(&hit.ArtifactID, &hit.ProjectID, &hit.Type, &hit.Title, &body); err != nil {
+		if err := rows.Scan(&hit.ArtifactID, &hit.ProjectID, &hit.Type, &hit.Title, &body, &hit.Ref); err != nil {
 			return nil, err
+		}
+		if !opts.MatchRefs {
+			// A hit's ref is part of searching by ref; a workspace that does
+			// not have that yet should not start seeing refs in its results.
+			hit.Ref = ""
 		}
 		hit.Snippet = artifacts.Snippet(body, query)
 		hits = append(hits, hit)

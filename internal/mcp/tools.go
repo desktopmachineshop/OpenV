@@ -16,6 +16,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/openv/requirements-platform/internal/domain/artifacts"
 )
 
 // Client calls the OpenV API as the agent (run-token auth).
@@ -415,10 +417,10 @@ func Tools() []Tool {
 		},
 		{
 			Name:        "search_artifacts",
-			Description: "Case-insensitive substring search over artifact titles and bodies in a project.",
+			Description: "Case-insensitive substring search over artifact refs, titles and bodies in a project. A query that is a ref (\"REQ-30\", case-insensitive) returns that artifact first.",
 			InputSchema: schema([]string{"project_id", "query"}, map[string]interface{}{
 				"project_id": str("Project ID"),
-				"query":      str("Substring to search for"),
+				"query":      str("Substring to search for, or a ref such as REQ-30"),
 			}),
 			Handler: func(c *Client, args map[string]interface{}) (string, error) {
 				q := url.Values{"project_id": {strArg(args, "project_id")}}
@@ -430,20 +432,34 @@ func Tools() []Tool {
 				if err != nil {
 					return "", err
 				}
-				needle := strings.ToLower(strArg(args, "query"))
+				raw := strings.TrimSpace(strArg(args, "query"))
+				needle := strings.ToLower(raw)
+				// Refs are how artifacts are addressed in prose and in every
+				// tool that takes one, so a model searching "REQ-30" means
+				// that artifact. Match refs as well as text, and put an exact
+				// ref first: "REQ-3" must not be buried under "REQ-30".
+				exactRef := artifacts.NormalizeRef(raw)
 				matches := []map[string]interface{}{}
 				for _, a := range list {
 					title, _ := a["title"].(string)
 					body, _ := a["body"].(string)
-					if strings.Contains(strings.ToLower(title), needle) ||
-						strings.Contains(strings.ToLower(body), needle) {
-						matches = append(matches, map[string]interface{}{
-							"id":    a["id"],
-							"ref":   a["ref"],
-							"type":  a["type"],
-							"title": a["title"],
-						})
+					ref, _ := a["ref"].(string)
+					if !strings.Contains(strings.ToLower(ref), needle) &&
+						!strings.Contains(strings.ToLower(title), needle) &&
+						!strings.Contains(strings.ToLower(body), needle) {
+						continue
 					}
+					hit := map[string]interface{}{
+						"id":    a["id"],
+						"ref":   a["ref"],
+						"type":  a["type"],
+						"title": a["title"],
+					}
+					if exactRef != "" && ref == exactRef {
+						matches = append([]map[string]interface{}{hit}, matches...)
+						continue
+					}
+					matches = append(matches, hit)
 				}
 				return toJSON(matches)
 			},

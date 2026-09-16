@@ -1,6 +1,13 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { searchAPI, SearchHit, SearchMode } from '../api/client';
+import { useFeature } from '../hooks/useFeature';
+
+// SEARCH_BY_REF_FEATURE gates matching an artifact by its ref. The server
+// gates the search itself; this gates what the box says it can do, so a
+// workspace that has not received it is not invited to type a ref that will
+// not be found.
+export const SEARCH_BY_REF_FEATURE = 'search-by-ref';
 
 // GlobalSearch is the workspace-wide artifact search box (issue #128). It
 // lives in the project sidebar header, queries GET /api/v1/search (debounced),
@@ -9,6 +16,7 @@ import { searchAPI, SearchHit, SearchMode } from '../api/client';
 // selection param handled by ModuleView).
 export const GlobalSearch: React.FC = () => {
   const navigate = useNavigate();
+  const refSearchOn = useFeature(SEARCH_BY_REF_FEATURE);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchHit[]>([]);
   const [mode, setMode] = useState<SearchMode>('keyword');
@@ -124,8 +132,12 @@ export const GlobalSearch: React.FC = () => {
         ref={inputRef}
         type="search"
         value={query}
-        placeholder="Search artifacts…"
-        aria-label="Search artifacts across projects"
+        placeholder={refSearchOn ? 'Search artifacts or REQ-12…' : 'Search artifacts…'}
+        aria-label={
+          refSearchOn
+            ? 'Search artifacts across projects by text or ref'
+            : 'Search artifacts across projects'
+        }
         onChange={(e) => {
           setQuery(e.target.value);
           setOpen(true);
@@ -259,6 +271,19 @@ export const GlobalSearch: React.FC = () => {
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                        {hit.ref && (
+                          <span
+                            style={{
+                              fontSize: 10,
+                              fontWeight: 700,
+                              fontFamily: 'var(--font-mono, monospace)',
+                              color: 'var(--text-muted)',
+                              flexShrink: 0,
+                            }}
+                          >
+                            {hit.ref}
+                          </span>
+                        )}
                         <span
                           style={{
                             fontSize: 13,
