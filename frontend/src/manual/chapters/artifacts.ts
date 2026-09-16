@@ -211,10 +211,25 @@ download's zip, under the **Models** or **Documents** group rather than
 
 On the details view figures are read-only, with the viewer for a closer look.
 
-## Comments (Chatter)
+## History
 
-The right-hand Chatter panel holds a comment thread per artifact — use it for
-review discussion instead of editing the requirement text itself.
+The **History** tab in the right-hand Notes panel is the artifact's record: what
+OpenV wrote down each time the artifact changed, and what people have said about
+it, newest first. A new version, a status move, a link added or removed, a figure
+replaced, a test result recorded — each leaves an entry, alongside the notes
+members write themselves.
+
+Three buttons above the list decide what you are reading:
+
+- **All** — the whole record, changes and comments interleaved.
+- **Changes** — only what OpenV recorded. This is the audit trail: who changed
+  what, and when.
+- **Comments** — only what people wrote. This is the review discussion.
+
+Add a comment in the box at the foot of the panel. Use it for review discussion
+rather than editing the requirement text itself — the text is the requirement,
+the comment is what you think of it. Writing one while reading **Changes**
+switches you back to **All**, so you can see what you just added.
 
 ## Baselines
 

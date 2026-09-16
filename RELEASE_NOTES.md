@@ -9,6 +9,17 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Maintenance updates
+
+- The notes panel's **Comments** tab is now called **History**, which is what it
+  has always held: every version, status move, link, figure and test result
+  OpenV recorded against the artifact, alongside the notes people wrote. Three
+  buttons above the list narrow it — **All**, **Changes** for the audit trail
+  alone, **Comments** for the discussion alone — so you can follow what happened
+  to a requirement without reading past the conversation about it, or the other
+  way round. An empty list now says what would appear in it instead of showing
+  nothing at all.
+
 ## 0.10.0 — 2026-09-16
 
 ### New features

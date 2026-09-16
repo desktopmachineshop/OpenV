@@ -76,11 +76,12 @@ everything you've entered so far.
   follows along with context.
 
 The same assistant is also in the **Notes** panel on the Requirements page,
-under its own tab beside Comments. It is one conversation per project, so what
+under its own tab beside History. It is one conversation per project, so what
 you asked in the wizard is there in the notes and the other way round. With an
 artifact selected the assistant is told which one you are reading and answers
-about it; with nothing selected it answers for the project as a whole. Comments
-stay where they were — they belong to an artifact, the conversation does not.
+about it; with nothing selected it answers for the project as a whole. An
+artifact's history stays where it was — it belongs to that artifact, the
+conversation does not.
 
 Suggestion cards appear in the notes chat too, but they can only be added from
 the wizard, which is where the entry sections they fill in live.

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Artifact, ChatterEntry, artifactAPI, chatterAPI } from '../api/client';
 import { GuidedChatPanel } from './wizard/GuidedChatPanel';
 import { resolveAssistantSessionId } from './wizard/assistantSession';
@@ -9,6 +9,7 @@ import {
   isProjectEditKind,
 } from './wizard/applySuggestion';
 import { useFeature } from '../hooks/useFeature';
+import { SegmentedControl } from './ui/SegmentedControl';
 import { AddTodoControl, NoteTodoChip } from './NoteTodo';
 import { TODO_LIST_FEATURE } from '../views/TodoList';
 
@@ -32,7 +33,27 @@ interface ChatterPanelProps {
   onArtifactsChanged?: () => void;
 }
 
-type Tab = 'comments' | 'assistant';
+type Tab = 'history' | 'assistant';
+
+// The feed has always carried two kinds of entry: what the system recorded
+// when the artifact changed (is_auto_entry) and what a person wrote. The
+// filter is that same split, so it needs nothing the feed does not already
+// say.
+type HistoryFilter = 'all' | 'changes' | 'comments';
+
+const HISTORY_FILTERS: { value: HistoryFilter; label: string; title: string }[] = [
+  { value: 'all', label: 'All', title: 'Changes and comments, newest first' },
+  { value: 'changes', label: 'Changes', title: 'Only what the system recorded' },
+  { value: 'comments', label: 'Comments', title: 'Only what people wrote' },
+];
+
+// Empty is a normal state once the feed can be filtered, and a blank panel
+// reads as broken. Each filter says what would appear here.
+const EMPTY_HISTORY: Record<HistoryFilter, string> = {
+  all: 'Nothing yet. Edits to this artifact are recorded here, and your notes join them.',
+  changes: 'No changes recorded yet. Editing this artifact, its links or its figures adds to this list.',
+  comments: 'No comments yet. Add the first one below.',
+};
 
 export const ChatterPanel: React.FC<ChatterPanelProps> = ({
   artifactId,
@@ -43,9 +64,11 @@ export const ChatterPanel: React.FC<ChatterPanelProps> = ({
   nextModeLabel,
   onArtifactsChanged,
 }) => {
-  // Comments belong to an artifact; the assistant does not, so with nothing
-  // selected the panel opens on the tab that still has something to show.
-  const [tab, setTab] = useState<Tab>(artifactId ? 'comments' : 'assistant');
+  // The history belongs to an artifact; the assistant does not, so with
+  // nothing selected the panel opens on the tab that still has something to
+  // show.
+  const [tab, setTab] = useState<Tab>(artifactId ? 'history' : 'assistant');
+  const [historyFilter, setHistoryFilter] = useState<HistoryFilter>('all');
   // Resolved lazily and only for the assistant tab: finding the conversation
   // can create a guided session, which should not happen just because someone
   // opened an artifact.
@@ -85,7 +108,7 @@ export const ChatterPanel: React.FC<ChatterPanelProps> = ({
     }
   }, [artifactId, isOpen, loadChatterEntries]);
 
-  // With no artifact there are no comments to show, so keep the panel on the
+  // With no artifact there is no history to show, so keep the panel on the
   // assistant rather than an empty tab.
   useEffect(() => {
     if (!artifactId) setTab('assistant');
@@ -152,6 +175,12 @@ export const ChatterPanel: React.FC<ChatterPanelProps> = ({
     [projectId, onArtifactsChanged, editsEnabled]
   );
 
+  const visibleEntries = useMemo(() => {
+    if (historyFilter === 'all') return entries;
+    const wantAuto = historyFilter === 'changes';
+    return entries.filter((entry) => entry.is_auto_entry === wantAuto);
+  }, [entries, historyFilter]);
+
   const handleAddMessage = async () => {
     if (!newMessage.trim() || !artifactId) {
       return;
@@ -167,6 +196,9 @@ export const ChatterPanel: React.FC<ChatterPanelProps> = ({
       // Add the new entry to the top of the list
       setEntries([response.data, ...entries]);
       setNewMessage('');
+      // Writing a comment while reading the changes would file it somewhere
+      // the writer cannot see, which reads as the button having failed.
+      if (historyFilter === 'changes') setHistoryFilter('all');
     } catch (err: any) {
       console.error('Failed to add chatter entry:', err);
       setError(`Failed to add message: ${err.message}`);
@@ -228,20 +260,20 @@ export const ChatterPanel: React.FC<ChatterPanelProps> = ({
         </button>
       </div>
 
-      {/* Tabs: the artifact's own comments, and the project's assistant. */}
+      {/* Tabs: the artifact's own history, and the project's assistant. */}
       <div style={{ display: 'flex', borderBottom: '1px solid var(--neutral-soft)' }}>
         {([
-          { id: 'comments' as Tab, label: 'Comments' },
+          { id: 'history' as Tab, label: 'History' },
           { id: 'assistant' as Tab, label: 'V&V Assistant' },
         ]).map((t) => {
           const active = tab === t.id;
-          const disabled = t.id === 'comments' && !artifactId;
+          const disabled = t.id === 'history' && !artifactId;
           return (
             <button
               key={t.id}
               onClick={() => !disabled && setTab(t.id)}
               disabled={disabled}
-              title={disabled ? 'Select an artifact to read and add its comments' : undefined}
+              title={disabled ? 'Select an artifact to read its history and add comments' : undefined}
               style={{
                 flex: 1,
                 padding: '8px 6px',
@@ -260,8 +292,26 @@ export const ChatterPanel: React.FC<ChatterPanelProps> = ({
         })}
       </div>
 
-      {tab === 'comments' ? (
+      {tab === 'history' ? (
         <>
+      {/* What to show: everything, only recorded changes, or only what
+          people wrote. */}
+      <div
+        style={{
+          padding: '8px 10px',
+          borderBottom: '1px solid var(--neutral-soft)',
+          backgroundColor: 'var(--surface-alt)',
+        }}
+      >
+        <SegmentedControl
+          aria-label="Filter history"
+          options={HISTORY_FILTERS}
+          value={historyFilter}
+          onChange={setHistoryFilter}
+          style={{ width: '100%' }}
+        />
+      </div>
+
       {/* Entries list */}
       <div
         style={{
@@ -272,7 +322,12 @@ export const ChatterPanel: React.FC<ChatterPanelProps> = ({
       >
         {isLoading && <p style={{ fontSize: '12px', color: 'var(--text-body)' }}>Loading notes...</p>}
         {error && <p style={{ fontSize: '12px', color: 'var(--danger)' }}>{error}</p>}
-        {entries.map((entry) => (
+        {!isLoading && !error && visibleEntries.length === 0 && (
+          <p style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.5 }}>
+            {EMPTY_HISTORY[historyFilter]}
+          </p>
+        )}
+        {visibleEntries.map((entry) => (
           <div
             key={entry.id}
             style={{
