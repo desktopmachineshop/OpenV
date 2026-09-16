@@ -7,11 +7,11 @@ import { TopSharedProducts, voteDisabledReason } from './SharedProductVotes';
 // The two pieces of the vote UI that have rules of their own: which products
 // can be voted for (and what to say about the ones that cannot), and a
 // leaderboard whose fetches race each other when the filter is switched.
-jest.mock('../api/client', () => ({
-  sharedProductsAPI: { list: jest.fn(), vote: jest.fn(), unvote: jest.fn() },
+vi.mock('../api/client', () => ({
+  sharedProductsAPI: { list: vi.fn(), vote: vi.fn(), unvote: vi.fn() },
 }));
 
-const api = sharedProductsAPI as jest.Mocked<typeof sharedProductsAPI>;
+const api = vi.mocked(sharedProductsAPI);
 
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -71,7 +71,7 @@ describe('TopSharedProducts', () => {
   let root: Root;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     container = document.createElement('div');
     document.body.appendChild(container);
     act(() => {
@@ -110,11 +110,11 @@ describe('TopSharedProducts', () => {
     );
 
     await act(async () => {
-      root.render(<TopSharedProducts sort="top" onUse={jest.fn()} />);
+      root.render(<TopSharedProducts sort="top" onUse={vi.fn()} />);
     });
     // Switch filters before the first read has answered.
     await act(async () => {
-      root.render(<TopSharedProducts sort="top_week" onUse={jest.fn()} />);
+      root.render(<TopSharedProducts sort="top_week" onUse={vi.fn()} />);
     });
 
     // The newer request answers first...
@@ -149,10 +149,10 @@ describe('TopSharedProducts', () => {
     );
 
     await act(async () => {
-      root.render(<TopSharedProducts sort="top" onUse={jest.fn()} />);
+      root.render(<TopSharedProducts sort="top" onUse={vi.fn()} />);
     });
     await act(async () => {
-      root.render(<TopSharedProducts sort="top_week" onUse={jest.fn()} />);
+      root.render(<TopSharedProducts sort="top_week" onUse={vi.fn()} />);
     });
     await flush();
 

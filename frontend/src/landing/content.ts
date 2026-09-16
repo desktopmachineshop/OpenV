@@ -1,5 +1,5 @@
 // Copy for the public landing page (views/Landing.tsx). It lives apart from
-// the view so the Jest test and the manual FAQ read the same words, and so the
+// the view so the unit test and the manual FAQ read the same words, and so the
 // facts below have one place to change.
 
 export const REPO_URL = 'https://github.com/desktopmachineshop/OpenV';

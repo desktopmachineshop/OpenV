@@ -1,5 +1,5 @@
 // The in-app user manual: an ordered registry of chapters. Content is plain
-// markdown shipped as TS modules (CRA cannot raw-import .md files), rendered
+// markdown shipped as TS modules, rendered
 // with react-markdown in the Manual view. Chapter slugs are stable — they are
 // deep-linkable as /manual/<slug> so features can link to specific chapters.
 import gettingStarted from './chapters/gettingStarted';

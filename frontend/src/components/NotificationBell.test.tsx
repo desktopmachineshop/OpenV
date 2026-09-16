@@ -5,32 +5,32 @@ import { notificationsAPI } from '../api/client';
 
 // The notification panel: three views, the flag that survives a clear, the
 // two bulk actions, and paging through the history.
-jest.mock('../api/client', () => ({
+vi.mock('../api/client', () => ({
   notificationsAPI: {
-    list: jest.fn(),
-    markRead: jest.fn(),
-    markAllRead: jest.fn(),
-    clearAll: jest.fn(),
-    deleteCleared: jest.fn(),
-    setFlagged: jest.fn(),
+    list: vi.fn(),
+    markRead: vi.fn(),
+    markAllRead: vi.fn(),
+    clearAll: vi.fn(),
+    deleteCleared: vi.fn(),
+    setFlagged: vi.fn(),
     streamUrl: () => 'http://localhost/api/v1/notifications/stream',
   },
 }));
 
-jest.mock('react-router-dom', () => ({
-  useNavigate: () => jest.fn(),
+vi.mock('react-router-dom', () => ({
+  useNavigate: () => vi.fn(),
   useSearchParams: () => [new URLSearchParams(), () => {}],
 }));
 
-jest.mock('../hooks/useViewport', () => ({
+vi.mock('../hooks/useViewport', () => ({
   useViewport: () => ({ isPhone: false, isCompact: false }),
 }));
 
-// jest.mock factories are hoisted above the file, so anything they close over
-// has to be mock-prefixed for Jest to allow the access.
+// vi.mock factories are hoisted above the file, so anything they close over
+// has to be mock-prefixed for the hoisted factory to allow the access.
 let mockConfirmAnswer = true;
 let mockConfirmOptions: any = null;
-jest.mock('./ui', () => ({
+vi.mock('./ui', () => ({
   useConfirm: () => (opts: any) => {
     mockConfirmOptions = opts;
     return Promise.resolve(mockConfirmAnswer);
@@ -45,7 +45,7 @@ class FakeEventSource {
 (globalThis as any).EventSource = FakeEventSource;
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 
-const api = notificationsAPI as jest.Mocked<typeof notificationsAPI>;
+const api = vi.mocked(notificationsAPI);
 
 const notification = (id: string, over: Partial<any> = {}) => ({
   id,
@@ -71,7 +71,7 @@ let container: HTMLDivElement;
 let root: Root;
 
 beforeEach(() => {
-  jest.clearAllMocks();
+  vi.clearAllMocks();
   mockConfirmAnswer = true;
   mockConfirmOptions = null;
   api.list.mockImplementation((params?: any) => {

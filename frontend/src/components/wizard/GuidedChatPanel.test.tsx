@@ -3,24 +3,24 @@ import { createRoot, Root } from 'react-dom/client';
 import { GuidedChatPanel } from './GuidedChatPanel';
 import { guidedAPI } from '../../api/client';
 
-// CRA's Jest cannot resolve react-router v7's package exports; the panel only
+// The router is stubbed rather than provided: the panel only
 // uses Link (in the "no runner" notice).
-jest.mock('react-router-dom', () => ({
+vi.mock('react-router-dom', () => ({
   Link: ({ to, children, ...rest }: any) =>
     require('react').createElement('a', { href: String(to), ...rest }, children),
 }));
 
-jest.mock('../../api/client', () => ({
+vi.mock('../../api/client', () => ({
   guidedAPI: {
-    listMessages: jest.fn(),
-    kickoffChat: jest.fn(),
-    nudgeChat: jest.fn(),
-    sendMessage: jest.fn(),
+    listMessages: vi.fn(),
+    kickoffChat: vi.fn(),
+    nudgeChat: vi.fn(),
+    sendMessage: vi.fn(),
     chatStreamUrl: (id: string) => `/stream/${id}`,
   },
 }));
 
-const api = guidedAPI as jest.Mocked<typeof guidedAPI>;
+const api = vi.mocked(guidedAPI);
 
 // A minimal EventSource the test drives: the panel subscribes to `message`
 // and `assistant_partial`, and the test emits them by hand.
@@ -52,7 +52,7 @@ let container: HTMLDivElement;
 let root: Root;
 
 beforeEach(() => {
-  jest.clearAllMocks();
+  vi.clearAllMocks();
   MockEventSource.last = null;
   api.listMessages.mockResolvedValue({ data: [] } as any);
   api.kickoffChat.mockResolvedValue({ data: { status: 'launched', runner_online: true } } as any);
@@ -63,7 +63,7 @@ beforeEach(() => {
     root = createRoot(container);
   });
   // jsdom has no scrollTo on elements.
-  (Element.prototype as any).scrollTo = jest.fn();
+  (Element.prototype as any).scrollTo = vi.fn();
 });
 
 afterEach(() => {
@@ -202,7 +202,7 @@ describe('GuidedChatPanel nudges', () => {
   // The freshest wizard state must reach the server: a nudge inside the
   // window waits for it to open instead of being thrown away.
   it('defers the newest nudge of a burst instead of dropping it', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     try {
       const ref = await renderWithRef();
 
@@ -226,7 +226,7 @@ describe('GuidedChatPanel nudges', () => {
       expect(api.nudgeChat).toHaveBeenCalledTimes(1);
 
       await act(async () => {
-        jest.advanceTimersByTime(1000);
+        vi.advanceTimersByTime(1000);
       });
       expect(api.nudgeChat).toHaveBeenCalledTimes(2);
       expect(api.nudgeChat).toHaveBeenLastCalledWith(
@@ -238,11 +238,11 @@ describe('GuidedChatPanel nudges', () => {
 
       // And nothing else goes out afterwards.
       await act(async () => {
-        jest.advanceTimersByTime(5000);
+        vi.advanceTimersByTime(5000);
       });
       expect(api.nudgeChat).toHaveBeenCalledTimes(2);
     } finally {
-      jest.useRealTimers();
+      vi.useRealTimers();
     }
   });
 
@@ -250,7 +250,7 @@ describe('GuidedChatPanel nudges', () => {
   // not claim the assistant is answering.
   it('does not show the thinking indicator for a nudge that was only deferred', async () => {
     api.nudgeChat.mockResolvedValue({ data: { status: 'unavailable', runner_online: true } } as any);
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     try {
       const ref = await renderWithRef();
 
@@ -267,11 +267,11 @@ describe('GuidedChatPanel nudges', () => {
 
       // Once it actually goes out, the indicator behaves as usual.
       await act(async () => {
-        jest.advanceTimersByTime(1000);
+        vi.advanceTimersByTime(1000);
       });
       expect(api.nudgeChat).toHaveBeenCalledTimes(2);
     } finally {
-      jest.useRealTimers();
+      vi.useRealTimers();
     }
   });
 });
@@ -293,7 +293,7 @@ describe('GuidedChatPanel suggestion cards by target', () => {
     '```openv-suggestion\n{"kind":"artifact","type":"test-case","title":"Estop test","parent":"HDG-4"}\n```';
 
   it('labels project-mode cards by what they do', async () => {
-    const apply = jest.fn(async (items: any[]) => items.map(() => null));
+    const apply = vi.fn(async (items: any[]) => items.map(() => null));
     await act(async () => {
       root.render(<GuidedChatPanel sessionId="gs-1" applyTarget="project" onApplySuggestions={apply} />);
     });
@@ -311,7 +311,7 @@ describe('GuidedChatPanel suggestion cards by target', () => {
   // artifacts that already exist — so a card that changes the project is
   // offered there too, and says what it does rather than "Add to wizard".
   it('offers the wizard the project cards, labelled as project changes', async () => {
-    const apply = jest.fn(async (items: any[]) => items.map(() => null));
+    const apply = vi.fn(async (items: any[]) => items.map(() => null));
     await act(async () => {
       root.render(<GuidedChatPanel sessionId="gs-1" step={4} onApplySuggestions={apply} />);
     });

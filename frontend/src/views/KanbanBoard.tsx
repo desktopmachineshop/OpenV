@@ -107,7 +107,6 @@ export const KanbanBoard: React.FC = () => {
         .catch(() => setArtifactMap({}));
     }
     // activeOrgId: same X-Org-ID refetch rationale as loadItems (issue #99).
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId, activeOrgId]);
 
   // Poll agent runs every 5s to show live indicators
@@ -138,7 +137,6 @@ export const KanbanBoard: React.FC = () => {
       window.clearInterval(timer);
     };
     // activeOrgId: same X-Org-ID refetch rationale as loadItems (issue #99).
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId, activeOrgId]);
 
   const agentById = useMemo(() => {

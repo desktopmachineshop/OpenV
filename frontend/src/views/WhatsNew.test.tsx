@@ -10,22 +10,22 @@ import { releaseAPI } from '../api/client';
 // page was asked for: the version you were upgraded to, then what is new,
 // what was tidied and what was fixed, kept apart.
 
-jest.mock('../api/client', () => ({
-  releaseAPI: { current: jest.fn() },
+vi.mock('../api/client', () => ({
+  releaseAPI: { current: vi.fn() },
 }));
 
-jest.mock('../components/Navbar', () => ({
+vi.mock('../components/Navbar', () => ({
   Navbar: ({ title }: any) => require('react').createElement('div', null, title),
 }));
 
 // No active workspace: the page has no channel to speak for, and the
 // releases stand on their own.
 const storeState: any = { orgs: [], activeOrgId: null, features: null };
-jest.mock('../state/store', () => ({
+vi.mock('../state/store', () => ({
   useAppStore: () => storeState,
 }));
 
-const current = releaseAPI.current as jest.Mock;
+const current = vi.mocked(releaseAPI.current, { partial: true, deep: true });
 
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -58,7 +58,7 @@ const release = {
     },
   ],
   stable: null,
-  deployment: 'shared',
+  deployment: 'shared' as const,
 };
 
 let container: HTMLDivElement;

@@ -6,8 +6,9 @@ import './index.css';
 import App from './App';
 import { applyThemePreference, getThemePreference } from './theme';
 
-// Re-apply the stored theme before render. public/index.html applies it with an
-// inline script before first paint; this covers any entry path that misses it.
+// Re-apply the stored theme before render. index.html loads
+// public/theme-init.js before first paint; this covers any entry path that
+// misses it.
 applyThemePreference(getThemePreference());
 
 const root = ReactDOM.createRoot(
@@ -30,7 +31,9 @@ root.render(
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker
-      .register(`${process.env.PUBLIC_URL || ''}/sw.js`)
+      // BASE_URL is Vite's equivalent of CRA's PUBLIC_URL and always ends in
+      // a slash, so the filename is appended directly.
+      .register(`${import.meta.env.BASE_URL}sw.js`)
       .catch(() => {
         // Non-fatal: the app works identically without it.
       });

@@ -85,28 +85,27 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "24"
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
       - name: Install dependencies
-        run: npm ci --legacy-peer-deps
+        run: npm ci
 
       - name: Type check
         run: npx tsc --noEmit
 
-      - name: Unit tests
-        run: npm test -- --watchAll=false
-        env:
-          CI: "true"
+      # CRA used to fail the build on eslint warnings when CI=true. Vite does
+      # not run eslint, so the gate is explicit: see frontend/eslint.config.js
+      # for which rules it keeps and why.
+      - name: Lint
+        run: npm run lint
 
-      # CI=true makes CRA (react-scripts) treat eslint warnings (unused vars,
-      # exhaustive-deps) as errors, so the build fails on any new warning.
-      # Set explicitly to keep that strictness even if the runner default changes.
+      - name: Unit tests
+        run: npm test
+
       - name: Build
         run: npm run build
-        env:
-          CI: "true"
 
   # REQ-98: a supply-chain gate on every pull request. Two scanners, one job.
   #
@@ -187,14 +186,14 @@ jobs:
       - uses: actions/setup-node@v4
         if: ${{ !cancelled() }}
         with:
-          node-version: "20"
+          node-version: "24"
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
       - name: Install frontend dependencies
         if: ${{ !cancelled() }}
         working-directory: frontend
-        run: npm ci --legacy-peer-deps
+        run: npm ci
 
       # --omit=dev keeps the gate on what ships to a browser; build-time-only
       # advisories (react-scripts and its tree) are noise here and are not
