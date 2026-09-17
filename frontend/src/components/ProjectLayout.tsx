@@ -9,7 +9,10 @@ import {
   nextPanelMode,
   panelIsOpen,
   panelModeLabel,
+  panelStripLabel,
+  panelStripWidth,
   panelTakesSpace,
+  revealAfterModeChange,
   savePanelMode,
 } from './panelMode';
 import {
@@ -194,7 +197,7 @@ export const ProjectLayout: React.FC = () => {
     ? navRevealed
     : panelIsOpen(navMode, navHovered && !viewport.coarsePointer, navRevealed);
   const takesSpace = compact ? false : panelTakesSpace(navMode);
-  const stripWidth = viewport.coarsePointer ? 24 : 10;
+  const stripWidth = panelStripWidth(viewport.coarsePointer);
 
   return (
     <div
@@ -273,32 +276,38 @@ export const ProjectLayout: React.FC = () => {
       {/* The edge strip is what brings a hidden or auto-hiding nav back: with
           the nav gone there would otherwise be nothing left to click. */}
       {!compact && !takesSpace && (
-        <div
+        <button
+          type="button"
           className="panel-edge-strip"
+          aria-label={panelStripLabel('the project menu', open)}
+          aria-expanded={open}
           onMouseEnter={() => !viewport.coarsePointer && setNavHovered(true)}
           onMouseLeave={() => setNavHovered(false)}
           style={{
             width: stripWidth,
             minWidth: stripWidth,
             background: 'var(--sidebar-bg)',
+            border: 'none',
+            padding: 0,
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'flex-start',
             justifyContent: 'center',
             paddingTop: 12,
             color: 'var(--sidebar-text-dim)',
-            fontSize: 12,
           }}
-          title={`Project menu: ${panelModeLabel(navMode)} — click to ${
-            open ? 'hide' : 'show'
-          }, then the button inside to change the mode`}
+          title={`${panelStripLabel('the project menu', open)} (${panelModeLabel(
+            navMode
+          )}) — the button inside the menu changes the mode`}
           onClick={() => setNavRevealed((shown) => !shown)}
         >
-          ›
-        </div>
+          <span className="panel-edge-strip-knob" aria-hidden="true">
+            {open ? '\u2039' : '\u203a'}
+          </span>
+        </button>
       )}
       {/* Clicking away closes a menu that was revealed on purpose: an overlay
-          with no way out but the same 10px strip is a trap. */}
+          with no way out but the edge strip is a trap. */}
       {navRevealed && !takesSpace && (
         <div
           onClick={() => setNavRevealed(false)}
@@ -521,7 +530,9 @@ export const ProjectLayout: React.FC = () => {
               setNavMode(next);
               savePanelMode('project-nav', next);
               setNavHovered(false);
-              setNavRevealed(false);
+              // Keep the menu on screen while its mode is being chosen, so
+              // this button does not vanish mid-cycle (issue #362).
+              setNavRevealed(revealAfterModeChange(next));
             }}
             title={`Project menu: ${panelModeLabel(navMode)} — click for ${panelModeLabel(
               nextPanelMode(navMode)

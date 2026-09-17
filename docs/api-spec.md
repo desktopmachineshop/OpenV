@@ -1005,9 +1005,11 @@ answered like any other invalid one (`401`). A successful `PUT /me/password`
 invalidates every other session of the account immediately; the caller's own
 survives. A password reset (`POST /auth/password-reset/confirm`) invalidates
 **every** session, including any the resetting browser held. See [operations.md](operations.md) for the variables.
-Request bodies are capped at 32 MB and attachment uploads at 25 MB (`413`
-when exceeded); an upload whose bytes do not match the declared image type
-is refused with `400`, and an SVG attachment is always served as a download.
+JSON request bodies are capped at 32 MB. An attachment upload is capped by
+the workspace's `max_upload_mb` limit instead (free 128 MB, Business Lite
+512 MB, Business 1 GB), answered with `413` and the workspace's own number
+when exceeded. An upload whose bytes do not match the declared image type is
+refused with `400`, and an SVG attachment is always served as a download.
 
 ## Error responses
 

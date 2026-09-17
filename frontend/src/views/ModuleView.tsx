@@ -13,7 +13,10 @@ import {
   nextPanelMode,
   panelIsOpen,
   panelModeLabel,
+  panelStripLabel,
+  panelStripWidth,
   panelTakesSpace,
+  revealAfterModeChange,
   savePanelMode,
 } from '../components/panelMode';
 import { ArtifactEditor } from '../components/ArtifactEditor';
@@ -912,7 +915,9 @@ export const ModuleView: React.FC = () => {
     setNotesMode(next);
     savePanelMode('artifact-notes', next);
     setNotesHovered(false);
-    setNotesRevealed(false);
+    // Keep the panel on screen while its mode is being chosen, so the button
+    // doing the choosing does not disappear mid-cycle (issue #362).
+    setNotesRevealed(revealAfterModeChange(next));
   };
 
   // Escape dismisses a revealed notes panel, the same key that closes every
@@ -1973,29 +1978,38 @@ export const ModuleView: React.FC = () => {
             only spent when pinned — auto-hide floats it over the document on
             hover, and hidden leaves just the strip that brings it back. */}
         {!stacked && !notesPinned && (
-          <div
+          <button
+            type="button"
             className="panel-edge-strip"
+            aria-label={panelStripLabel('the notes panel', notesOpen)}
+            aria-expanded={notesOpen}
             onMouseEnter={() => !viewport.coarsePointer && setNotesHovered(true)}
             onMouseLeave={() => setNotesHovered(false)}
             onClick={() => setNotesRevealed((shown) => !shown)}
-            title={`Notes: ${panelModeLabel(notesMode)} — click to ${
-              notesOpen ? 'hide' : 'show'
-            }, then the button inside to change the mode`}
+            title={`${panelStripLabel('the notes panel', notesOpen)} (${panelModeLabel(
+              notesMode
+            )}) — the button inside the panel changes the mode`}
             style={{
-              width: viewport.coarsePointer ? 24 : 10,
-              minWidth: viewport.coarsePointer ? 24 : 10,
+              width: panelStripWidth(viewport.coarsePointer),
+              minWidth: panelStripWidth(viewport.coarsePointer),
               borderLeft: '1px solid var(--border)',
+              borderTop: 'none',
+              borderRight: 'none',
+              borderBottom: 'none',
+              padding: 0,
               background: 'var(--surface-alt)',
               cursor: 'pointer',
               display: 'flex',
+              alignItems: 'flex-start',
               justifyContent: 'center',
               paddingTop: 12,
-              fontSize: 12,
               color: 'var(--text-muted)',
             }}
           >
-            ‹
-          </div>
+            <span className="panel-edge-strip-knob" aria-hidden="true">
+              {notesOpen ? '\u203a' : '\u2039'}
+            </span>
+          </button>
         )}
             {/* Resize handle — only a pinned column has a width to drag. */}
             {!stacked && notesPinned && (
@@ -2023,7 +2037,7 @@ export const ModuleView: React.FC = () => {
             />
             )}
             {/* Clicking away closes a panel that was revealed on purpose: an
-                overlay with no way out but the same 10px strip is a trap. */}
+                overlay with no way out but the edge strip is a trap. */}
             {!stacked && notesRevealed && !notesPinned && (
               <div
                 onClick={() => setNotesRevealed(false)}
@@ -2045,7 +2059,7 @@ export const ModuleView: React.FC = () => {
                   ? {}
                   : {
                       position: 'fixed',
-                      right: 10,
+                      right: panelStripWidth(viewport.coarsePointer),
                       top: 0,
                       bottom: 0,
                       zIndex: 900,

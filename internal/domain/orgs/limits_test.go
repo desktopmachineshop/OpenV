@@ -3,6 +3,7 @@ package orgs
 import (
 	"encoding/json"
 	"errors"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -374,6 +375,62 @@ func TestValidPlan(t *testing.T) {
 	for _, plan := range []string{"", "platinum", "Business", "open-source"} {
 		if ValidPlan(plan) {
 			t.Errorf("%q should not be a valid plan", plan)
+		}
+	}
+}
+
+// Issue #361: Business is sold as everything in Business Lite and more, but
+// every cloud-runner number in it was byte-identical to Business Lite's, so
+// the tier bought company features and not one minute of extra runner.
+func TestBusinessRunnerLimitsExceedBusinessLite(t *testing.T) {
+	lite := PlanDefaults(PlanBusinessLite)
+	business := PlanDefaults(PlanBusiness)
+
+	for _, key := range []string{
+		LimitRunnerMemoryMB,
+		LimitRunnerCPUs,
+		LimitRunnerSessionMinutes,
+		LimitRunnerSessionIdleMinutes,
+		LimitEvidenceStorageMB,
+		LimitMaxUploadMB,
+	} {
+		liteValue, _ := LimitFloat(lite, key)
+		businessValue, _ := LimitFloat(business, key)
+		if businessValue <= liteValue {
+			t.Errorf("%s: Business allows %v, Business Lite allows %v — the tier buys nothing",
+				key, businessValue, liteValue)
+		}
+	}
+
+	// And Business Lite still has to be worth more than free.
+	free, _ := LimitFloat(PlanDefaults(PlanSingle), LimitRunnerSessionMinutes)
+	liteMinutes, _ := LimitFloat(lite, LimitRunnerSessionMinutes)
+	if liteMinutes <= free {
+		t.Errorf("Business Lite leases %v minutes, free leases %v", liteMinutes, free)
+	}
+}
+
+// The legacy plan names must resolve to the tier they are aliases for, or a
+// workspace created before the rename quietly loses what it had.
+func TestLegacyPlanAliasesTrackTheirTier(t *testing.T) {
+	if !reflect.DeepEqual(PlanDefaults(PlanTeam), PlanDefaults(PlanBusiness)) {
+		t.Error("the team alias no longer matches Business")
+	}
+	if !reflect.DeepEqual(PlanDefaults(PlanFree), PlanDefaults(PlanSingle)) {
+		t.Error("the free alias no longer matches Single User")
+	}
+}
+
+// MaxPlanUploadMB bounds an upload request before the workspace is known, so
+// it must never be smaller than something a plan actually permits.
+func TestMaxPlanUploadCoversEveryCappedPlan(t *testing.T) {
+	ceiling := MaxPlanUploadMB()
+	if ceiling <= 0 {
+		t.Fatalf("hosted deployments need a ceiling, got %d", ceiling)
+	}
+	for _, plan := range allPlans {
+		if mb, ok := LimitInt(PlanDefaults(plan), LimitMaxUploadMB); ok && mb > ceiling {
+			t.Errorf("plan %s allows %d MB, over the %d MB request ceiling", plan, mb, ceiling)
 		}
 	}
 }

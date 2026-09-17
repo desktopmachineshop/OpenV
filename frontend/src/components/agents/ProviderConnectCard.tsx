@@ -13,6 +13,10 @@ interface Props {
   target?: 'workspace' | 'user';
   // Optional heading override (default "Subscription sign-in").
   title?: string;
+  // Something the member should know BEFORE they start, not after the vendor
+  // refuses them. Rendered above the Connect button, so a sign-in that cannot
+  // succeed for this account says so while there is still time not to try it.
+  caution?: React.ReactNode;
 }
 
 /**
@@ -49,6 +53,7 @@ export const ProviderConnectCard: React.FC<Props> = ({
   onComplete,
   target = 'workspace',
   title = 'Subscription sign-in',
+  caution,
 }) => {
   const { isPhone } = useViewport();
   const [login, setLogin] = useState<ProviderLogin | null>(null);
@@ -226,6 +231,23 @@ export const ProviderConnectCard: React.FC<Props> = ({
         borderRadius: 6,
       }}
     >
+      {caution && !active && (
+        <div
+          role="note"
+          style={{
+            marginBottom: 10,
+            padding: '8px 10px',
+            background: 'var(--tint-yellow)',
+            border: '1px solid var(--tint-yellow-border)',
+            borderRadius: 5,
+            fontSize: 12.5,
+            lineHeight: 1.5,
+            color: 'var(--text-body)',
+          }}
+        >
+          {caution}
+        </div>
+      )}
       <div
         style={
           isPhone

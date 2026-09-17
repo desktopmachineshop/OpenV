@@ -55,8 +55,16 @@ func (h *Handler) UploadAvatar(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusUnauthorized, "authentication required")
 		return
 	}
+	// The API-wide body cap skips a multipart request so that an upload
+	// handler's own cap is the one in force, which means setting it here
+	// before the form is parsed and spooled to disk.
+	r.Body = http.MaxBytesReader(w, r.Body, maxAvatarBytes+multipartOverheadBytes)
+
 	file, header, err := r.FormFile("file")
 	if err != nil {
+		if uploadReadRefused(w, err) {
+			return
+		}
 		writeJSONError(w, http.StatusBadRequest, "Failed to get file from request")
 		return
 	}

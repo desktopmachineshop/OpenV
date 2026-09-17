@@ -19,7 +19,8 @@ func TestEvidenceUploadCapIsSeparateFromTheFigureCap(t *testing.T) {
 	if got := maxEvidenceBytes(); got != defaultMaxEvidenceMB*1024*1024 {
 		t.Fatalf("default evidence cap is %d, want %d MB", got, defaultMaxEvidenceMB)
 	}
-	if maxEvidenceBytes() == maxUploadBytes() {
+	h := &Handler{}
+	if maxEvidenceBytes() == h.uploadLimitBytes("") {
 		t.Fatal("the evidence cap collapsed onto the figure cap")
 	}
 

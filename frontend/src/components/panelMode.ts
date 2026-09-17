@@ -74,3 +74,40 @@ export const savePanelMode = (panel: string, mode: PanelMode): void => {
     /* a preference that cannot be stored is not worth an error */
   }
 };
+
+/**
+ * How wide the edge strip that brings a panel back should be.
+ *
+ * A strip is the ONLY way back from `hidden`, so it has to read as a control
+ * rather than as a border. Ten pixels of chrome with a 12px chevron in it was
+ * neither: people could not find it, and those who did had to aim at it
+ * (issue #363). It is now a comfortable click target on a mouse and a
+ * comfortable tap target on a touch screen, where there is no hover to hint
+ * that anything is there at all.
+ */
+export const panelStripWidth = (coarsePointer: boolean): number => (coarsePointer ? 32 : 24);
+
+/**
+ * What the strip says it will do, for its tooltip and its accessible name.
+ * The panel's name is the subject because the strip sits away from the panel
+ * it controls — once the panel is hidden there is nothing beside it to say
+ * what "show" means.
+ */
+export const panelStripLabel = (panelName: string, open: boolean): string =>
+  `${open ? 'Hide' : 'Show'} ${panelName}`;
+
+/**
+ * What a mode-cycling click should leave the panel doing.
+ *
+ * Cycling used to close the panel on the spot, which took the button that
+ * does the cycling off the screen with it: choosing "Auto-hide" or "Hidden"
+ * ended the cycle whether or not that was the mode you wanted, and getting to
+ * the third option meant hunting for the edge strip first (issue #362). So a
+ * panel that would close stays revealed instead — the button keeps its place
+ * under the pointer, and the reader dismisses the panel when they are done
+ * choosing, by clicking away, pressing Escape, or clicking the strip.
+ *
+ * Pinned needs no reveal: it is open by definition, and carrying a stale
+ * `revealed` into it would leave the next cycle unable to close anything.
+ */
+export const revealAfterModeChange = (next: PanelMode): boolean => next !== 'pinned';

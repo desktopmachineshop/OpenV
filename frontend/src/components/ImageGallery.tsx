@@ -1,6 +1,7 @@
 import React, { useCallback, useRef, useState } from 'react';
 import { Attachment, AttachmentVersion, attachmentAPI } from '../api/client';
 import { AttachmentViewer } from './AttachmentViewer';
+import { useUploadLimit } from '../hooks/useUploadLimit';
 import {
   ACCEPTED_UPLOAD_TYPES,
   ATTACHMENT_FORMATS_FEATURE,
@@ -62,12 +63,8 @@ interface ImageGalleryProps {
 /** What a figure is called: its reference where it has one, else its filename. */
 const figureLabel = (a: Attachment): string => a.figure_ref || a.filename;
 
-/**
- * The most one figure may weigh, mirroring the server's OPENV_MAX_UPLOAD_MB
- * default. CAD is why it is no longer the 10 MB it was for images alone: an
- * assembly clears that on its own.
- */
-const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
+/* The most one figure may weigh is the WORKSPACE's limit, read from the server
+   by useUploadLimit — see that hook for why it is not a constant here. */
 
 /** A figure's name to a reader: its title, else the name it was uploaded under. */
 export const figureName = (a: { title?: string; original_filename?: string; filename: string }): string =>
@@ -106,6 +103,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
 }) => {
   const confirm = useConfirm();
   const alertDialog = useAlert();
+  const maxUploadBytes = useUploadLimit();
   const prompt = usePrompt();
   const canRename = useFeature(FIGURE_TITLES_FEATURE) && !readOnly && Boolean(onRename);
   // Restoring changes what the figure shows, so it needs the same write
@@ -144,10 +142,12 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
       void alertDialog({ title: 'Attach a figure', message: UNSUPPORTED_UPLOAD_MESSAGE });
       return false;
     }
-    if (file.size > MAX_UPLOAD_BYTES) {
+    if (file.size > maxUploadBytes) {
       void alertDialog({
         title: 'Attach a figure',
-        message: `That file is ${formatFileSize(file.size)}. The limit is ${formatFileSize(MAX_UPLOAD_BYTES)}.`,
+        message: `That file is ${formatFileSize(file.size)}. The limit is ${formatFileSize(
+          maxUploadBytes
+        )}.`,
       });
       return false;
     }
