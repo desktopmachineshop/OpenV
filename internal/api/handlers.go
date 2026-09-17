@@ -2253,6 +2253,12 @@ func (h *Handler) DeleteBaseline(w http.ResponseWriter, r *http.Request) {
 // than from the browser, which reports application/octet-stream for most CAD
 // formats and cannot be trusted to name one.
 func (h *Handler) UploadAttachment(w http.ResponseWriter, r *http.Request) {
+	// Before anything reads the form: FormValue parses the whole multipart
+	// body and spools its parts to temp files, so the request has to be
+	// bounded while the workspace it belongs to is still unknown. The
+	// workspace's own limit is applied to the bytes below.
+	r.Body = http.MaxBytesReader(w, r.Body, h.uploadRequestCeilingBytes())
+
 	artifactID := r.FormValue("artifact_id")
 	if artifactID == "" {
 		writeJSONError(w, http.StatusBadRequest, "artifact_id is required")
@@ -2263,8 +2269,13 @@ func (h *Handler) UploadAttachment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	limit := h.uploadLimitBytes(h.orgIDForProject(h.projectIDForArtifact(artifactID)))
+
 	file, header, err := r.FormFile("file")
 	if err != nil {
+		if uploadReadRefused(w, err) {
+			return
+		}
 		writeJSONError(w, http.StatusBadRequest, "Failed to get file from request")
 		return
 	}
@@ -2280,23 +2291,18 @@ func (h *Handler) UploadAttachment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Read file content
-	fileData, ok := readUpload(w, r, file)
-	if !ok {
-		return
-	}
-	if !uploadLooksLikeFigure(mimeType, header.Filename, fileData) {
-		writeJSONError(w, http.StatusBadRequest, "File content does not match the format its name gives it")
-		return
-	}
-
 	// On-disk names stay UUID-unique: the uploads directory is flat across
 	// every project, figure references are only unique within one, and each
 	// version of a figure needs a file of its own. The figure's name is what
 	// the record carries and what a download is served as.
 	storedPath := filepath.Join(h.uploadsDir, fmt.Sprintf("%s_%s", uuid.New().String(), header.Filename))
-	if err := os.WriteFile(storedPath, fileData, 0644); err != nil {
-		respondInternal(w, r, "Failed to save file", err)
+	head, fileSize, ok := storeUpload(w, r, file, storedPath, limit)
+	if !ok {
+		return
+	}
+	if !uploadLooksLikeFigure(mimeType, header.Filename, head) {
+		_ = os.Remove(storedPath)
+		writeJSONError(w, http.StatusBadRequest, "File content does not match the format its name gives it")
 		return
 	}
 
@@ -2323,7 +2329,7 @@ func (h *Handler) UploadAttachment(w http.ResponseWriter, r *http.Request) {
 		Title:            title,
 		MimeType:         mimeType,
 		FilePath:         storedPath,
-		FileSize:         len(fileData),
+		FileSize:         int(fileSize),
 	})
 
 	if err := h.attachmentService.CreateFigure(attachment, artifactRef); err != nil {
@@ -2404,8 +2410,16 @@ func (h *Handler) UploadAttachmentVersion(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	// The workspace is known here (the attachment named it), so the request
+	// is bounded by its own limit rather than by the deployment's ceiling.
+	limit := h.uploadLimitBytes(h.orgIDForProject(h.projectIDForArtifact(existing.ArtifactID)))
+	r.Body = http.MaxBytesReader(w, r.Body, limit+multipartOverheadBytes)
+
 	file, header, err := r.FormFile("file")
 	if err != nil {
+		if uploadReadRefused(w, err) {
+			return
+		}
 		writeJSONError(w, http.StatusBadRequest, "Failed to get file from request")
 		return
 	}
@@ -2421,20 +2435,16 @@ func (h *Handler) UploadAttachmentVersion(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	fileData, ok := readUpload(w, r, file)
-	if !ok {
-		return
-	}
-	if !uploadLooksLikeFigure(mimeType, header.Filename, fileData) {
-		writeJSONError(w, http.StatusBadRequest, "File content does not match the format its name gives it")
-		return
-	}
-
 	// A new file, not a rewrite of the old one: the superseded version must
 	// stay readable.
 	storedPath := filepath.Join(h.uploadsDir, fmt.Sprintf("%s_%s", uuid.New().String(), header.Filename))
-	if err := os.WriteFile(storedPath, fileData, 0644); err != nil {
-		respondInternal(w, r, "Failed to save file", err)
+	head, fileSize, ok := storeUpload(w, r, file, storedPath, limit)
+	if !ok {
+		return
+	}
+	if !uploadLooksLikeFigure(mimeType, header.Filename, head) {
+		_ = os.Remove(storedPath)
+		writeJSONError(w, http.StatusBadRequest, "File content does not match the format its name gives it")
 		return
 	}
 
@@ -2443,7 +2453,7 @@ func (h *Handler) UploadAttachmentVersion(w http.ResponseWriter, r *http.Request
 		OriginalFilename: header.Filename,
 		MimeType:         mimeType,
 		FilePath:         storedPath,
-		FileSize:         len(fileData),
+		FileSize:         int(fileSize),
 	}
 	if user := CurrentUser(r); user != nil {
 		version.CreatedBy = &user.ID

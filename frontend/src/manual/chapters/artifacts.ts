@@ -162,8 +162,11 @@ stored file takes the figure's name too, so downloading one saves
 - **CAD** — STEP, IGES, STL, 3MF, OBJ, PLY, glTF, DXF, DWG, and the common
   native formats (SolidWorks, Inventor, CATIA, Fusion, Parasolid, Rhino).
 
-One figure may be up to 25 MB. Attach the file your team actually works from,
-so the requirement points at the real thing rather than a picture of it.
+How big one figure may be follows your workspace's plan — the **Limits** tab
+in workspace settings gives the number, under *Largest figure*. It is measured
+in hundreds of megabytes, because a CAD assembly is a figure like any other.
+Attach the file your team actually works from, so the requirement points at
+the real thing rather than a picture of it.
 
 ### Looking at one
 

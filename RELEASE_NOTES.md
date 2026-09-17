@@ -9,6 +9,37 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Bug fixes
+
+- **Attach the CAD file you actually work from.** A figure was capped at
+  25 MB, which turned away most real geometry and made the CAD formats the
+  uploader offers a promise it could not keep. The ceiling is now a workspace
+  limit that follows your plan — 128 MB free, 512 MB on Business Lite, 1 GB on
+  Business, and nothing imposed on a self-hosted OpenV. Workspace settings →
+  **Limits** shows your number under *Largest figure*, and a refusal now names
+  it instead of saying only that the file is too big.
+- **Business workspaces get the bigger cloud runner they were sold.** Every
+  runner figure on the Business tier was identical to Business Lite's, so the
+  tier bought company features and not one minute of extra runner. Business
+  now leases 8 GB and 4 CPUs for four hours, reclaimed after 30 idle minutes,
+  and the pricing page states each tier's numbers rather than leaving
+  Business's to be guessed from the tier below it.
+- **Choosing how a side panel behaves no longer closes it mid-choice.**
+  Clicking *Pinned → Auto-hide → Hidden* on the project menu or the notes
+  panel shut the panel the moment the mode changed, taking the button that
+  changes it off the screen; getting to the third option meant finding the
+  edge strip first. The panel now stays put while you cycle, and closes when
+  you click away or press Escape.
+- **The strip that brings a hidden panel back is now something you can see and
+  hit.** It was ten pixels wide with a chevron most people never found. It is
+  wider, carries a chevron that looks like the button it is, and reaches the
+  keyboard.
+- **A Gemini CLI sign-in says what it will run into before you start it.**
+  Google no longer serves Gemini CLI to free, Google One, AI Pro or AI Ultra
+  accounts, so a sign-in from one of those lands on a deprecation page. The
+  sign-in card now says so up front, and points at the workspace Gemini API
+  key that still works.
+
 ## 0.11.0 — 2026-09-16
 
 ### New features

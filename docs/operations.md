@@ -506,14 +506,25 @@ Notes:
     it would be a shared workspace nobody can leave. Working with other
     people means a shared workspace.
 
+- **Figure uploads.** How big one attached file may be is the workspace limit
+  `max_upload_mb` (free 128 MB, Business Lite 512 MB, Business 1024 MB,
+  self-hosted and enterprise unrestricted). `OPENV_MAX_UPLOAD_MB` still
+  overrides it deployment-wide where it is set, so an existing pin keeps
+  working. The API-wide `OPENV_MAX_BODY_MB` does **not** apply to a file
+  upload: it is sized for JSON, and one `MaxBytesReader` inside another
+  enforces the tighter of the two, so leaving it in force would silently cap
+  every upload at 32 MB whatever the workspace is allowed. Each upload
+  handler bounds its own request instead. Figures share `UPLOADS_DIR` with
+  evidence, so the same advice applies: watch the volume's free space.
+
 - **Test evidence storage.** Evidence files (the datasets behind physical and
   manual test results) have their own per-file cap, `OPENV_MAX_EVIDENCE_MB`
-  (200), because the 25 MB figure cap is right for an image pasted into a
-  requirement and useless for an instrument capture. They are written to
+  (200), because a figure's cap and an instrument capture's cap are different
+  questions and must not share a setting. They are written to
   `UPLOADS_DIR` like everything else, so they share the deployment's single
   volume: watch its free space, and cap each workspace with the
-  `evidence_storage_mb` org limit (free 2048, team 20480) rather than relying
-  on the per-file cap alone. One campaign's captures can otherwise fill the
+  `evidence_storage_mb` org limit (free 2048, Business Lite 10240, Business
+  20480) rather than relying on the per-file cap alone. One campaign's captures can otherwise fill the
   volume and take the deployment down with it. Evidence is included in the
   volume backup along with figures.
 - Set `OPENV_METRICS_TOKEN` so `/metrics` needs a bearer token; without it

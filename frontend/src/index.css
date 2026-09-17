@@ -542,14 +542,37 @@ textarea {
   max-width: var(--measure-field);
 }
 
-/* The 10px strip left behind by a hidden or auto-hiding side panel. It is now
-   the only way back from hidden, so it has to answer "is this a button?" —
-   widening the arrow and lifting the ground on hover says yes without
-   spending any layout width. */
+/* The strip left behind by a hidden or auto-hiding side panel. It is the only
+   way back from hidden, so it has to answer "is this a button?" before anybody
+   hovers it: a 10px sliver with a 12px chevron read as chrome and people could
+   not find it (issue #363). The strip is wide enough to aim at, and carries a
+   knob — a bordered, rounded chevron — that looks like a control whether or not
+   the pointer is anywhere near it. */
 .panel-edge-strip {
   transition: background-color 0.15s, color 0.15s;
 }
 .panel-edge-strip:hover {
   background-color: var(--accent);
   color: #fff;
+}
+.panel-edge-strip:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.panel-edge-strip-knob {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 28px;
+  border: 1px solid currentColor;
+  border-radius: 5px;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1;
+  opacity: 0.75;
+  transition: opacity 0.15s;
+}
+.panel-edge-strip:hover .panel-edge-strip-knob {
+  opacity: 1;
 }

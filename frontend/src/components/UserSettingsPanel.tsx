@@ -28,6 +28,7 @@ import { MyRunnerCard } from './org/MyRunnerCard';
 import { Avatar } from './Avatar';
 import { CloudRunnerCard } from './org/CloudRunnerCard';
 import { ProviderConnectCard } from './agents/ProviderConnectCard';
+import { providerCaution } from './agents/providerCautions';
 import { ThemeSwitcher } from './ThemeSwitcher';
 
 interface UserSettingsPanelProps {
@@ -670,6 +671,7 @@ export const UserSettingsPanel: React.FC<UserSettingsPanelProps> = ({ onClose })
                   loggedIn={loggedInFor(p.key)}
                   target="user"
                   title={p.label}
+                  caution={providerCaution(p.key)}
                   onComplete={loadProviders}
                 />
               ))}

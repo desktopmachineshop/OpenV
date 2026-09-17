@@ -63,6 +63,7 @@ export const DATA_PROMISE =
 export const HOSTED_LIMITS: string[] = [
   'Hosted runner: 2 GB memory, 1 CPU.',
   'Cloud runner lease: 60 minutes, reclaimed after 15 idle minutes.',
+  'Largest figure you can attach: 128 MB.',
   'Cloud runners come from a shared pool, so at busy times you may wait for one.',
   'Hosted runners cannot reach code repositories. Run the Agent Connector on your own machine for that.',
   'Agent runs use your own AI subscription (Claude Code, Codex or Gemini) or your workspace’s own API keys. OpenV does not resell AI.',
@@ -108,6 +109,7 @@ export const HOSTED_TIERS: PricingTier[] = [
     points: [
       'Everything in Single User.',
       'Higher cloud runner limits: 4 GB memory, 2 CPUs, 120-minute lease reclaimed after 20 idle minutes.',
+      'Attach figures up to 512 MB, so a CAD assembly goes on the requirement it belongs to.',
       'Agents on your own API keys instead of a signed-in CLI.',
       'Always-on agents: a hosted runner that keeps cron and event automations running unattended.',
     ],
@@ -121,6 +123,8 @@ export const HOSTED_TIERS: PricingTier[] = [
     summary: 'For companies working on the same products together.',
     points: [
       'Everything in Business Lite.',
+      'Cloud runners again: 8 GB memory, 4 CPUs, a 4-hour lease reclaimed after 30 idle minutes.',
+      'Attach figures up to 1 GB.',
       'Shared company workspaces.',
       'Teams, per-project access and the reviewer role.',
       'Workspace AI budget and usage reporting.',
@@ -182,11 +186,23 @@ export const PRICING_TIERS: PricingTier[] = [...HOSTED_TIERS, ...OTHER_TIERS];
 export const ALPHA_NOTE =
   'While OpenV is in alpha, every workspace has every tier’s features, free. When tiers launch you keep what you have until we announce otherwise, and export never depends on a plan.';
 
-/** Business Lite quotes the team plan in internal/domain/orgs/limits.go;
- *  change both together. */
+/** What each paid tier raises the free limits to. Quotes the plans in
+ *  internal/domain/orgs/limits.go; change both together.
+ *
+ *  Business is stated rather than left as "everything in Business Lite":
+ *  the two tiers used to have byte-identical runner limits, so a reader
+ *  comparing them found nothing to compare (issue #361). A tier that raises
+ *  a number says which number. */
 export const BUSINESS_LITE_LIMITS: string[] = [
   'Cloud runner: 4 GB memory, 2 CPUs.',
   'Cloud runner lease: 120 minutes, reclaimed after 20 idle minutes.',
+  'Largest figure: 512 MB.',
+];
+
+export const BUSINESS_LIMITS: string[] = [
+  'Cloud runner: 8 GB memory, 4 CPUs.',
+  'Cloud runner lease: 240 minutes, reclaimed after 30 idle minutes.',
+  'Largest figure: 1 GB.',
 ];
 
 export const PRICING_FOOTNOTE =

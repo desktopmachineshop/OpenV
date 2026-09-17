@@ -20,7 +20,8 @@ func TestResourceLimitsForOrgPlanDefaults(t *testing.T) {
 		wantNano int64
 	}{
 		{orgs.PlanFree, 2048, 1e9},
-		{orgs.PlanTeam, 4096, 2e9},
+		{orgs.PlanBusinessLite, 4096, 2e9},
+		{orgs.PlanTeam, 8192, 4e9},
 		{"mystery-plan", 2048, 1e9},
 	}
 	for _, tc := range cases {

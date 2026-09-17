@@ -95,6 +95,7 @@ rather than at the moment something refuses you.
 | Projects | Projects in this workspace. |
 | Shared workspaces | Shared workspaces you have created. Your personal workspace is never counted. |
 | Test evidence storage | Total size of the evidence files uploaded for physical and manual tests. |
+| Largest figure | The biggest single file you can attach to an artifact — a drawing, a datasheet or a CAD model. |
 | Cloud runner lease | How long a leased cloud runner lasts before it is reclaimed. |
 | Cloud runner idle window | How long a leased cloud runner may sit unused before it is reclaimed. |
 | Hosted runner memory / CPUs | What an always-on hosted runner gets. |

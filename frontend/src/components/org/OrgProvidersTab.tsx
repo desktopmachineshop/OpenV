@@ -3,6 +3,7 @@ import { ProviderSetting, providerSettingsAPI } from '../../api/client';
 import { apiErrorMessage } from '../../api/errors';
 import { ModelSelect } from '../agents/ModelSelect';
 import { ProviderConnectCard } from '../agents/ProviderConnectCard';
+import { providerCaution } from '../agents/providerCautions';
 import { ErrorBanner } from '../ui';
 
 const chipStyle = (bg: string, color = '#fff'): React.CSSProperties => ({
@@ -189,6 +190,7 @@ export const OrgProvidersTab: React.FC<OrgProvidersTabProps> = ({ isAdmin }) => 
               <ProviderConnectCard
                 provider={p.provider}
                 loggedIn={Boolean((p.last_detected || {})['logged_in'])}
+                caution={providerCaution(p.provider)}
                 onComplete={loadProviders}
               />
             )}

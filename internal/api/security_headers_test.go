@@ -1,6 +1,7 @@
 package api
 
 import (
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -106,5 +107,43 @@ func TestBodyLimitRejectsOversizedBody(t *testing.T) {
 	h.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/", strings.NewReader(strings.Repeat("x", 100))))
 	if rec.Code != http.StatusRequestEntityTooLarge {
 		t.Fatalf("oversized body: %d", rec.Code)
+	}
+}
+
+// Issue #364: a MaxBytesReader wrapped around another one enforces the
+// tighter of the two, so the JSON-sized cap here used to override whatever an
+// upload handler asked for — the figure limit could not be raised past it, and
+// the evidence handler's own 200 MB cap had never been reachable. A multipart
+// body now passes through untouched, to a handler that bounds it itself.
+func TestBodyLimitLeavesFileUploadsToTheirHandler(t *testing.T) {
+	var read int
+	sink := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		n, err := io.Copy(io.Discard, r.Body)
+		read = int(n)
+		if err != nil {
+			w.WriteHeader(http.StatusRequestEntityTooLarge)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	})
+	h := BodyLimitMiddleware(16)(sink)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/attachments/upload",
+		strings.NewReader(strings.Repeat("x", 100)))
+	req.Header.Set("Content-Type", "multipart/form-data; boundary=abc")
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK || read != 100 {
+		t.Fatalf("multipart body was clamped: code=%d read=%d", rec.Code, read)
+	}
+
+	// Anything that is not a file upload is still held to the cap.
+	req = httptest.NewRequest(http.MethodPost, "/api/v1/artifacts",
+		strings.NewReader(strings.Repeat("x", 100)))
+	req.Header.Set("Content-Type", "application/json")
+	rec = httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	if rec.Code != http.StatusRequestEntityTooLarge {
+		t.Fatalf("a JSON body escaped the cap: %d", rec.Code)
 	}
 }

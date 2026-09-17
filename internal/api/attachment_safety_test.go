@@ -3,8 +3,12 @@ package api
 import (
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/openv/requirements-platform/internal/domain/orgs"
 )
 
 func TestUploadLooksLikeImage(t *testing.T) {
@@ -33,17 +37,89 @@ func TestUploadLooksLikeImage(t *testing.T) {
 	}
 }
 
-func TestReadUploadEnforcesTheCap(t *testing.T) {
-	t.Setenv(envMaxUploadMB, "1")
+func TestStoreUploadEnforcesTheCap(t *testing.T) {
+	dir := t.TempDir()
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/attachments/upload", nil)
-	if _, ok := readUpload(rec, req, strings.NewReader(strings.Repeat("x", 1024*1024+1))); ok || rec.Code != http.StatusRequestEntityTooLarge {
+	limit := int64(1024 * 1024)
+
+	over := filepath.Join(dir, "over")
+	if _, _, ok := storeUpload(rec, req, strings.NewReader(strings.Repeat("x", int(limit)+1)), over, limit); ok ||
+		rec.Code != http.StatusRequestEntityTooLarge {
 		t.Fatalf("oversized upload accepted: ok=%v code=%d", ok, rec.Code)
 	}
+	// A refusal leaves nothing behind for a cleanup job to find later.
+	if _, err := os.Stat(over); !os.IsNotExist(err) {
+		t.Fatalf("a refused upload left its partial file at %s", over)
+	}
+
 	rec = httptest.NewRecorder()
-	data, ok := readUpload(rec, req, strings.NewReader("small"))
-	if !ok || string(data) != "small" {
-		t.Fatalf("small upload refused: ok=%v data=%q", ok, data)
+	under := filepath.Join(dir, "under")
+	head, size, ok := storeUpload(rec, req, strings.NewReader("small"), under, limit)
+	if !ok || size != 5 || string(head) != "small" {
+		t.Fatalf("small upload refused: ok=%v size=%d head=%q", ok, size, head)
+	}
+	stored, err := os.ReadFile(under)
+	if err != nil || string(stored) != "small" {
+		t.Fatalf("stored file is %q (%v)", stored, err)
+	}
+}
+
+// The head is what the format checks read, and a file larger than the peek
+// window must still hand back a full 512 bytes of it.
+func TestStoreUploadAnswersTheHeadOfALargeFile(t *testing.T) {
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/attachments/upload", nil)
+	path := filepath.Join(t.TempDir(), "big")
+	body := "\x89PNG\r\n\x1a\n" + strings.Repeat("y", 4096)
+
+	head, size, ok := storeUpload(rec, req, strings.NewReader(body), path, int64(len(body)))
+	if !ok {
+		t.Fatalf("upload at exactly the limit refused: code=%d", rec.Code)
+	}
+	if len(head) != uploadHeadBytes {
+		t.Fatalf("head is %d bytes, want %d", len(head), uploadHeadBytes)
+	}
+	if size != int64(len(body)) {
+		t.Fatalf("size is %d, want %d", size, len(body))
+	}
+	if !strings.HasPrefix(string(head), "\x89PNG") {
+		t.Fatalf("head does not start at the start of the file: %q", head[:8])
+	}
+}
+
+// The figure cap is a workspace limit now (issue #364): it follows the plan
+// where no operator override is set, and the override still wins where it is.
+func TestUploadLimitFollowsTheWorkspacePlan(t *testing.T) {
+	h := &Handler{}
+	t.Setenv(envMaxUploadMB, "")
+	if got, want := h.uploadLimitBytes(""), int64(defaultMaxUploadMB)*bytesPerMB; got != want {
+		t.Fatalf("no workspace gave %d, want the free plan's %d", got, want)
+	}
+	t.Setenv(envMaxUploadMB, "7")
+	if got, want := h.uploadLimitBytes(""), int64(7)*bytesPerMB; got != want {
+		t.Fatalf("OPENV_MAX_UPLOAD_MB=7 gave %d, want %d", got, want)
+	}
+	// Nonsense is ignored rather than read as "no cap".
+	t.Setenv(envMaxUploadMB, "banana")
+	if got, want := h.uploadLimitBytes(""), int64(defaultMaxUploadMB)*bytesPerMB; got != want {
+		t.Fatalf("a bad override gave %d, want %d", got, want)
+	}
+}
+
+// Every plan must allow a real CAD file, which is what the 25 MB this shipped
+// with did not (issue #364).
+func TestEveryPlanAllowsAFigureWorthUploading(t *testing.T) {
+	for _, plan := range []string{orgs.PlanSingle, orgs.PlanBusinessLite, orgs.PlanBusiness, orgs.PlanOpenSource} {
+		mb, ok := orgs.LimitInt(orgs.PlanDefaults(plan), orgs.LimitMaxUploadMB)
+		if !ok || mb < 100 {
+			t.Errorf("plan %s caps a figure at %d MB", plan, mb)
+		}
+	}
+	for _, plan := range []string{orgs.PlanSelfHost, orgs.PlanEnterprise} {
+		if mb, _ := orgs.LimitInt(orgs.PlanDefaults(plan), orgs.LimitMaxUploadMB); mb != 0 {
+			t.Errorf("plan %s should ration nothing, got %d MB", plan, mb)
+		}
 	}
 }
 

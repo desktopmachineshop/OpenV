@@ -1,6 +1,7 @@
 import React, { act } from 'react';
 import { createRoot, Root } from 'react-dom/client';
 import { ProviderConnectCard, pasteKind } from './ProviderConnectCard';
+import { providerCaution } from './providerCautions';
 
 // The relayed sign-in has to work on a phone (REQ-108): the paste-back field
 // takes a paste from a password manager, opens the right keyboard and submits
@@ -238,4 +239,34 @@ test('a refused code hands the field back', async () => {
   } finally {
     vi.useRealTimers();
   }
+});
+
+// Issue #360: a Gemini sign-in from a free, Google One, AI Pro or AI Ultra
+// account lands on Google's deprecation page. The member has to be told while
+// they can still choose the API key instead, not after Google refuses them.
+test('a provider with a caution says so before the sign-in is started', async () => {
+  await act(async () => {
+    root.render(
+      <ProviderConnectCard
+        provider="gemini-cli"
+        loggedIn={false}
+        target="user"
+        caution={providerCaution('gemini-cli')}
+        onComplete={() => {}}
+      />
+    );
+  });
+
+  const note = container.querySelector('[role="note"]');
+  expect(note).toBeTruthy();
+  expect(note!.textContent).toContain('Gemini Code Assist Standard or Enterprise');
+  expect(note!.textContent).toContain('Gemini API key');
+  // And it is there before anything is in flight: the Connect button has not
+  // been pressed.
+  expect(button('Connect')).toBeTruthy();
+});
+
+test('a provider with nothing to warn about carries no note', async () => {
+  await render();
+  expect(container.querySelector('[role="note"]')).toBeNull();
 });

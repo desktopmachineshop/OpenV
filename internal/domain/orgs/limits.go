@@ -86,6 +86,17 @@ const (
 	// test evidence, in MiB. A workspace total rather than a per-project one
 	// because the disk it protects is a single shared volume.
 	LimitEvidenceStorageMB = "evidence_storage_mb"
+	// LimitMaxUploadMB caps ONE uploaded figure — a drawing, a datasheet, a
+	// CAD model — in MiB.
+	//
+	// It is a resource limit, not a product gate: the file lands on the same
+	// shared volume as everything else. But 25 MB, the figure the platform
+	// shipped with, was chosen when a figure meant a screenshot, and it makes
+	// the CAD formats the catalogue accepts useless — a mid-sized assembly
+	// clears it on its own (issue #364). Every tier is now measured in
+	// hundreds of megabytes, with the paid tiers further up because that is
+	// where the storage is paid for.
+	LimitMaxUploadMB = "max_upload_mb"
 
 	// LimitMaxMembers caps the people in one workspace. Pending invitations
 	// count: an admin who could issue fifty invitations against five seats
@@ -148,6 +159,10 @@ var catalog = []Definition{
 	{
 		Key: LimitEvidenceStorageMB, Label: "Test evidence storage", Unit: UnitMB, Countable: true,
 		Description: "Total size of the test evidence files this workspace has uploaded.",
+	},
+	{
+		Key: LimitMaxUploadMB, Label: "Largest figure", Unit: UnitMB,
+		Description: "The biggest single file you can attach to an artifact — a drawing, a datasheet or a CAD model.",
 	},
 	{
 		Key: LimitRunnerSessionMinutes, Label: "Cloud runner lease", Unit: UnitMinutes,
@@ -235,17 +250,26 @@ func PlanDefaults(plan string) map[string]interface{} {
 			LimitRunnerSessionMinutes:     unlimited,
 			LimitRunnerSessionIdleMinutes: unlimited,
 			LimitEvidenceStorageMB:        unlimited,
+			LimitMaxUploadMB:              unlimited,
 			LimitMaxMembers:               unlimited,
 			LimitMaxSharedWorkspaces:      unlimited,
 			LimitMaxProjects:              unlimited,
 		}
 	case PlanBusiness, PlanTeam, PlanOpenSource:
+		// Business is sold as a strict superset of Business Lite, and until
+		// now its cloud runner was the same machine for the same time (issue
+		// #361): every runner number was byte-identical, so the tier bought
+		// company features and nothing else. The lease is the figure that
+		// matters to somebody running an agent over a real repository, so it
+		// is the one that moves — four hours rather than two, on twice the
+		// memory, with a longer idle window to match.
 		return map[string]interface{}{
-			LimitRunnerMemoryMB:           4096,
-			LimitRunnerCPUs:               2.0,
-			LimitRunnerSessionMinutes:     120,
-			LimitRunnerSessionIdleMinutes: 20,
+			LimitRunnerMemoryMB:           8192,
+			LimitRunnerCPUs:               4.0,
+			LimitRunnerSessionMinutes:     240,
+			LimitRunnerSessionIdleMinutes: 30,
 			LimitEvidenceStorageMB:        20480,
+			LimitMaxUploadMB:              1024,
 			LimitMaxMembers:               unlimited,
 			LimitMaxSharedWorkspaces:      unlimited,
 			LimitMaxProjects:              unlimited,
@@ -257,6 +281,7 @@ func PlanDefaults(plan string) map[string]interface{} {
 			LimitRunnerSessionMinutes:     120,
 			LimitRunnerSessionIdleMinutes: 20,
 			LimitEvidenceStorageMB:        10240,
+			LimitMaxUploadMB:              512,
 			LimitMaxMembers:               unlimited,
 			LimitMaxSharedWorkspaces:      unlimited,
 			LimitMaxProjects:              unlimited,
@@ -268,11 +293,47 @@ func PlanDefaults(plan string) map[string]interface{} {
 			LimitRunnerSessionMinutes:     60,
 			LimitRunnerSessionIdleMinutes: 15,
 			LimitEvidenceStorageMB:        2048,
+			LimitMaxUploadMB:              128,
 			LimitMaxMembers:               unlimited,
 			LimitMaxSharedWorkspaces:      unlimited,
 			LimitMaxProjects:              unlimited,
 		}
 	}
+}
+
+// allPlans is every plan a workspace can be on, for the derived readings
+// below. It is the same list ValidPlan accepts.
+var allPlans = []string{
+	PlanSingle, PlanBusinessLite, PlanBusiness, PlanEnterprise,
+	PlanSelfHost, PlanOpenSource, PlanFree, PlanTeam,
+}
+
+// MaxPlanUploadMB is the largest per-file upload any CAPPED plan allows, or 0
+// where no plan on this deployment has a ceiling.
+//
+// It is derived from PlanDefaults rather than written down a second time, so
+// raising a tier's ceiling cannot leave a bound elsewhere quietly refusing
+// what the tier now permits. An upload handler uses it to bound a request
+// BEFORE it knows which workspace the upload is for: parsing a multipart body
+// spools every part to disk, so something has to say how much disk one request
+// may take while the answer is still unknown. What the bytes are finally
+// measured against is the workspace's own limit.
+//
+// The uncapped plans (self-host, enterprise) are skipped rather than collapsing
+// the answer to "no bound". A plan with no ceiling means OpenV rations nothing,
+// not that one HTTP request may be any size at all; a deployment that is itself
+// self-hosted reports 0 and leaves the bound to the operator.
+func MaxPlanUploadMB() int {
+	if selfHosted {
+		return 0
+	}
+	largest := 0
+	for _, plan := range allPlans {
+		if mb, ok := LimitInt(PlanDefaults(plan), LimitMaxUploadMB); ok && mb > largest {
+			largest = mb
+		}
+	}
+	return largest
 }
 
 // defaultPlan is the plan new workspaces are created on. The hosted service

@@ -507,8 +507,16 @@ Every API request authenticates as one of four principals; only `/health`,
   callbacks per address (`OPENV_AUTH_*`, `OPENV_REGISTER_*`, `OPENV_SSO_*`).
   Behind a proxy, set `OPENV_TRUST_PROXY=1` so limits key on the real client
   IP.
-- **Request and upload caps**: every body is capped at `OPENV_MAX_BODY_MB`
-  (32 MB) and an attachment at `OPENV_MAX_UPLOAD_MB` (25 MB). An upload's
+- **Request and upload caps**: every JSON body is capped at
+  `OPENV_MAX_BODY_MB` (32 MB). A **file upload is exempt from that cap and
+  bounded by its own handler** — nesting one `MaxBytesReader` inside another
+  enforces the tighter of the two, so the API-wide number would otherwise
+  override whatever an upload asked for. A figure is capped by the
+  **workspace limit `max_upload_mb`** (free 128 MB, Business Lite 512 MB,
+  Business 1 GB, self-hosted and enterprise unrestricted), which
+  `OPENV_MAX_UPLOAD_MB` still overrides where an operator sets it; the bytes
+  are streamed to disk rather than buffered, and only the leading 512 bytes
+  are read for the format check. An upload's
   bytes must sniff as the image type the uploader declared
   (`internal/api/attachment_safety.go`), and an SVG — a document that can
   carry script — is always served as a download inside a sandboxing CSP
