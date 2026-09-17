@@ -9,6 +9,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+## 0.11.1 — 2026-09-17
+
 ### Bug fixes
 
 - **Attach the CAD file you actually work from.** A figure was capped at
