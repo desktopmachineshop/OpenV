@@ -9,6 +9,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+## 0.14.1 — 2026-09-18
+
 ### Maintenance updates
 
 - **Every deployment can now say which build it is running.** The service
