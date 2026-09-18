@@ -455,15 +455,21 @@ first account):
    invitation link — which is how an Enterprise customer previewing a
    release is admitted.
 
-**Which commit is running.** The API reports its commit at `/health` and the
-frontend serves the same at `/build.json`, both from
-`RAILWAY_GIT_COMMIT_SHA`. They are separate builds that finish at different
-times, so both are worth checking:
+**Which commit is running.** The API reports its commit at
+`/api/v1/public/build` and the frontend serves the same at `/build.json`,
+both from `RAILWAY_GIT_COMMIT_SHA`. They are separate builds that finish at
+different times, so both are worth checking:
 
 ```console
-$ curl -s https://staging.openv.app/health | jq -r .commit
+$ curl -s https://staging.openv.app/api/v1/public/build | jq -r .commit
 $ curl -s https://staging.openv.app/build.json | jq -r .commit
 ```
+
+On the **frontend's** origin the API is reachable only under `/api/`: nginx
+answers `/health` itself with plain `healthy` and never proxies it, so
+`https://staging.openv.app/health` tells you nothing about the API. The API's
+`/health` does carry the same commit, but only where you can reach the API
+directly — its own `*.up.railway.app` domain, or Railway's healthcheck.
 
 **The smoke run.** Set the repository variables `STAGING_URL`
 (`https://staging.openv.app`) and `SMOKE_EMAIL`, and the repository secret

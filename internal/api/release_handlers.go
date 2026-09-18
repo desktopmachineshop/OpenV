@@ -17,6 +17,27 @@ import (
 func (h *Handler) registerReleaseRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/release", h.GetRelease).Methods("GET")
 	router.HandleFunc("/api/v1/public/release", h.GetPublicRelease).Methods("GET")
+	router.HandleFunc("/api/v1/public/build", h.GetPublicBuild).Methods("GET")
+}
+
+// GetPublicBuild names the commit this binary was built from, for whoever
+// needs to match a running deployment to a revision: the staging smoke gate
+// waits for it to equal the commit under test before running, so a green run
+// cannot be a stale build's (REQ-141).
+//
+// It sits under /api/ rather than on /health because the frontend serves a
+// /health of its own (`return 200 "healthy"` in frontend/nginx.conf) and
+// never proxies it, so the API's /health is unreachable on the origin the
+// browser and the gate use. Everything under /api/ is proxied through.
+//
+// Uncached, unlike the release feed beside it: the whole point is to notice a
+// deploy that has just landed. Public because CI reads it with no credentials,
+// and a commit hash of an open repository is not a secret.
+func (h *Handler) GetPublicBuild(w http.ResponseWriter, r *http.Request) {
+	body := map[string]string{"commit": h.buildSHA}
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(body)
 }
 
 // releaseResponse is the current release plus every earlier one.

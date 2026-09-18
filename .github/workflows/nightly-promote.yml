@@ -91,9 +91,14 @@ jobs:
       # "This very commit" has to be checked, not assumed. Waiting for the
       # API to merely answer would accept a staging box still running last
       # week's build and promote a commit nothing ever tested, so both
-      # services are asked which commit they are (/health, /build.json) and
-      # both must say this one. They are separate Railway builds that finish
-      # at different times, hence both.
+      # services are asked which commit they are and both must say this one.
+      # They are separate Railway builds that finish at different times,
+      # hence both.
+      #
+      # The API is asked at /api/v1/public/build, not /health: this URL is the
+      # FRONTEND's origin, and the frontend answers /health itself
+      # (frontend/nginx.conf) while proxying only /api/, so the API's own
+      # /health is unreachable from here.
       - name: Staging runs this commit
         if: steps.staging.outputs.enabled == 'true' && steps.notes.outputs.release == 'true'
         env:
@@ -106,7 +111,7 @@ jobs:
           }
           deadline=$(( $(date +%s) + 900 ))
           while :; do
-            api=$(probe /health)
+            api=$(probe /api/v1/public/build)
             web=$(probe /build.json)
             if [ "$api" = "$SHA" ] && [ "$web" = "$SHA" ]; then
               echo "Staging is running $SHA; expecting notes version $(python3 scripts/release_notes.py version RELEASE_NOTES.md)"

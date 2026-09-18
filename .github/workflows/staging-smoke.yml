@@ -64,6 +64,11 @@ jobs:
       # The API and the frontend are separate Railway builds that finish at
       # different times, so both are checked: a new API behind the previous
       # frontend would fail the journey on a UI string this commit changed.
+      #
+      # The API is asked at /api/v1/public/build, not /health: STAGING_URL is
+      # the FRONTEND's origin, and the frontend answers /health itself
+      # (frontend/nginx.conf) while proxying only /api/, so the API's own
+      # /health never reaches a caller here.
       - name: Staging runs this commit
         if: steps.staging.outputs.enabled == 'true'
         env:
@@ -77,7 +82,7 @@ jobs:
           }
           deadline=$(( $(date +%s) + 900 ))
           while :; do
-            api=$(probe /health)
+            api=$(probe /api/v1/public/build)
             web=$(probe /build.json)
             if [ "$api" = "$SHA" ] && [ "$web" = "$SHA" ]; then
               echo "Staging is running $SHA (api and frontend)."
