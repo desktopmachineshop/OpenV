@@ -147,6 +147,36 @@ Select an artifact to see its details; **Edit** opens the editor.
   preview any previous version and **restore** it. Restoring creates a new
   version with the old content; nothing is lost.
 
+## Review status
+
+Every artifact carries a review status: **draft**, **in review**, **approved**
+or **superseded**. Draft goes to in review when somebody submits it, in review
+goes back to draft or on to approved, and approved artifacts are eventually
+superseded. Editing an **approved** artifact's type, title or body puts the
+new version back into draft — the approval was of the words that changed, and
+the approved version itself stays in the artifact's history untouched.
+
+### Sending the whole project for review
+
+Submitting a hundred requirements one at a time is nobody's idea of a review
+process, so the **Review Queue** has a **Send project for review** button that
+moves every draft artifact in the project into review at once. Headings and
+descriptions are left alone — there is nothing in them to sign off — and
+naming the types you want covers the case where you do want them.
+
+Run it again whenever a review cycle comes round. The second run is where the
+work is saved:
+
+- an approved requirement nobody has touched **stays approved**, so nobody is
+  asked to sign off the same words twice;
+- one that was **edited since it was approved** is back in draft, so the run
+  pulls it into review again;
+- anything still waiting on a reviewer is left where it is.
+
+What comes back says how many artifacts were sent and how many stayed
+approved, so a quiet cycle is visibly quiet rather than indistinguishable from
+a button that did nothing.
+
 ## Figures
 
 Files attached to an artifact are **figures**. Each is numbered from the

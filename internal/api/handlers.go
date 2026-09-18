@@ -399,6 +399,7 @@ func (h *Handler) RegisterRoutes(router *mux.Router) {
 	h.registerAdminRoutes(router)
 	router.HandleFunc("/api/v1/projects/{id}/linked-artifacts", h.ListLinkedArtifacts).Methods("GET")
 	router.HandleFunc("/api/v1/projects/{id}/review-queue", h.ReviewQueue).Methods("GET")
+	router.HandleFunc("/api/v1/projects/{id}/review-round", h.StartProjectReview).Methods("POST")
 	router.HandleFunc("/api/v1/projects/{id}/reindex-embeddings", h.ReindexEmbeddings).Methods("POST")
 	router.HandleFunc("/api/v1/projects/{id}/duplicates", h.DuplicateCandidates).Methods("GET")
 	router.HandleFunc("/api/v1/projects/{id}/baselines", h.CreateBaseline).Methods("POST")

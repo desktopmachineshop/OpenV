@@ -257,6 +257,7 @@ POST /api/v1/projects/{id}/interviews
 POST /api/v1/projects/{id}/members
 POST /api/v1/projects/{id}/reindex-embeddings
 POST /api/v1/projects/{id}/repo-connections
+POST /api/v1/projects/{id}/review-round
 POST /api/v1/projects/{id}/share-links
 POST /api/v1/projects/{id}/test-runs
 POST /api/v1/projects/{id}/work-items

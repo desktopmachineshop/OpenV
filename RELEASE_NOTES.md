@@ -9,6 +9,21 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### New features
+
+- **Send a whole project for review in one action.** Putting a project through
+  review meant opening each requirement and submitting it by hand, which is a
+  chore on a project of ten and not a process at all on a project of two
+  hundred. The Review Queue now has **Send project for review**: every
+  artifact still in draft goes into review at once, and headings and
+  descriptions — which have nothing to sign off — are left alone. It is built
+  to be run again each cycle rather than once: an approved requirement nobody
+  has touched stays approved, so nobody is asked to sign the same words twice,
+  and one that was edited since it was approved comes back for a fresh
+  sign-off. What comes back says how many were sent and how many stayed
+  approved, so a quiet cycle looks quiet instead of looking like a button that
+  did nothing.
+
 ### Bug fixes
 
 - **Large figures and evidence files upload again.** An upload was given the

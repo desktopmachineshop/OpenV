@@ -46,6 +46,7 @@ var Registry = []Feature{
 	{Key: FeatureFigureCitations, ShippedIn: "0.9.0", Summary: "Cite a figure on any artifact in the project with \"##\""},
 	{Key: FeatureSearchByRef, ShippedIn: "0.10.0", Summary: "Search finds an artifact by its ref: type REQ-30 and get REQ-30, and every result shows the ref beside its title"},
 	{Key: FeatureNoteTagging, ShippedIn: "0.11.0", Summary: "Tag people and references inside a note: @name, @@name to raise a to-do, and # / ## to cite a figure or an artifact"},
+	{Key: FeatureProjectReviewRound, ShippedIn: "0.12.0", Summary: "Send a whole project for review in one action, and run it again later to pick up only what changed"},
 }
 
 // Feature keys the code gates on.
@@ -89,6 +90,12 @@ const (
 	// gate that broke prose people had already written would be worse than no
 	// gate at all.
 	FeatureNoteTagging = "note-tagging"
+	// FeatureProjectReviewRound is the project-wide review round: the Start
+	// review action on the review queue and the endpoint behind it. It gates
+	// only STARTING a round — the statuses a round leaves behind are ordinary
+	// review states every workspace already reads and acts on, so a gate on
+	// anything more would hide a colleague's work rather than a feature.
+	FeatureProjectReviewRound = "project-review-round"
 )
 
 // Enabled reports whether a feature is on for a workspace on the given

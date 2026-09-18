@@ -1,5 +1,11 @@
 package artifacts
 
+import "errors"
+
+// ErrInvalidType is returned when a caller names an artifact type that is not
+// in the catalog. The API maps it to 400.
+var ErrInvalidType = errors.New("invalid artifact type")
+
 // ArtifactTypeDef describes one artifact type for UIs and validation.
 // This catalog is the single Go-side source of truth for the type
 // vocabulary; the frontend fetches it via /api/v1/meta/artifact-types.
