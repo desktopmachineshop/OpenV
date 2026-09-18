@@ -17,6 +17,31 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   deployment can be matched to an exact revision when something needs
   chasing down, and it is what lets a test run prove which build it tested.
 
+## 0.14.0 — 2026-09-18
+
+### New features
+
+- **Read a project straight through.** Getting from one requirement to the next
+  meant going back to the tree, finding your place in it, and clicking the row
+  below — on a project of any size the tree became somewhere you lived rather
+  than somewhere you looked. An artifact now carries **‹** and **›** and says
+  where you are: *12 of 148*. They walk the project in the order the tree shows
+  it — a heading, then what is under it, then the next heading — across whatever
+  your search and filters have left in view, so a narrowed tree reads as its own
+  short document.
+- **J and K on a keyboard, a swipe on a phone.** **J** moves to the next
+  artifact and **K** to the previous one, from anywhere except a field, an open
+  editor or a dialog. On a phone, swipe the document sideways instead: left for
+  the next artifact, right for the one before. A table or code block wide enough
+  to scroll keeps its own sideways swipe, scrolling up and down is never
+  interrupted, and the Tree / Document / Notes buttons still switch panes.
+- **The tree opens itself to wherever you are.** Arriving at an artifact from a
+  link, a citation, the review queue or the new ‹ / › controls could leave its
+  row hidden inside a section you had collapsed: the artifact was on screen and
+  the tree gave no sign of where it sat. The path from the artifact up to the
+  top is now opened for you — and only that path, so a section you closed on
+  purpose stays closed.
+
 ## 0.13.0 — 2026-09-18
 
 ### New features

@@ -29,6 +29,16 @@ import { ErrorBanner, Modal, useAlert, useConfirm, usePrompt } from '../componen
 import { apiErrorMessage } from '../api/errors';
 import { useViewport } from '../hooks/useViewport';
 import { useFeature } from '../hooks/useFeature';
+import { ARTIFACT_STEPPING_FEATURE } from '../components/ArtifactStepper';
+import {
+  compareArtifacts,
+  documentOrder,
+  normalizeParentId,
+  sequencePosition,
+  stepArtifact,
+} from '../utils/artifactSequence';
+import { overlayIsOpen, readingStepFor } from '../hooks/readingKeys';
+import { useHorizontalSwipe } from '../hooks/useSwipe';
 
 export const ModuleView: React.FC = () => {
   const confirm = useConfirm();
@@ -44,6 +54,7 @@ export const ModuleView: React.FC = () => {
   // refine.
   const [linkedArtifacts, setLinkedArtifacts] = useState<LinkedArtifact[]>([]);
   const ownersOn = useFeature('artifact-owners');
+  const steppingOn = useFeature(ARTIFACT_STEPPING_FEATURE);
   const [parentProject, setParentProject] = useState<Project | null>(null);
   const [parentArtifacts, setParentArtifacts] = useState<Artifact[]>([]);
   const [searchText, setSearchText] = useState<string>('');
@@ -136,6 +147,10 @@ export const ModuleView: React.FC = () => {
     return saved ? parseInt(saved) : 320;
   });
   const [isResizing, setIsResizing] = useState<'left' | 'right' | null>(null);
+  // The document pane. A step has to start the next artifact at its top: the
+  // pane keeps its scroll position across a selection change, so otherwise the
+  // next requirement opens at whatever offset the last one was left at.
+  const documentPaneRef = React.useRef<HTMLDivElement | null>(null);
   // The tree column as drawn: the saved width, clamped so the document keeps
   // at least 420px beside the project sidebar and a pinned notes column. The
   // saved value is untouched — a wider window gets it back.
@@ -179,25 +194,6 @@ export const ModuleView: React.FC = () => {
   const urlArtifactId = searchParams.get('artifact');
 
   const isBaselineView = activeBaselineId !== 'live';
-
-  const normalizeParentId = (parentId?: string | null): string | null => parentId ?? null;
-
-  const compareArtifacts = (left: Artifact, right: Artifact): number => {
-    const leftOrder = left.sort_order ?? 0;
-    const rightOrder = right.sort_order ?? 0;
-    const leftHasOrder = leftOrder > 0;
-    const rightHasOrder = rightOrder > 0;
-
-    if (leftHasOrder && rightHasOrder) {
-      return leftOrder - rightOrder;
-    }
-
-    if (!leftHasOrder && !rightHasOrder) {
-      return new Date(left.created_at).getTime() - new Date(right.created_at).getTime();
-    }
-
-    return leftHasOrder ? -1 : 1;
-  };
 
   // Start a column resize: record where the drag began so the move handler can
   // work in deltas. preventDefault keeps the browser from starting a text
@@ -1167,6 +1163,78 @@ export const ModuleView: React.FC = () => {
     (artifact) => matchesSearch(artifact, searchText) && matchesFieldFilters(artifact)
   );
 
+  // Reading order for ‹ ›, J / K and the swipe: the tree's own order, over what
+  // the search and the filters have left in view, so a narrowed tree reads as
+  // its own short document and a step never lands on a row the tree is not
+  // drawing.
+  //
+  // Collapsed rows are still in it. A closed parent hides its children on
+  // screen; it does not take them out of the document, and the tree opens
+  // itself onto wherever a step lands.
+  //
+  // Deliberately not memoized: filteredArtifacts is a fresh array every render,
+  // so a memo keyed on it would never hit and would only add a dependency to
+  // get wrong.
+  const readingOrder = documentOrder(filteredArtifacts);
+  const readingPlace = sequencePosition(readingOrder, selectedArtifactId);
+
+  const stepToArtifact = (delta: 1 | -1) => {
+    const target = stepArtifact(readingOrder, selectedArtifactId, delta);
+    if (!target) return;
+    handleSelectArtifact(target.id);
+    // Optional call: scrollTo is missing on elements in jsdom and in older
+    // browsers, and failing to scroll must not cost the step.
+    documentPaneRef.current?.scrollTo?.({ top: 0 });
+  };
+
+  // What the key listener needs to know changes every render — readingOrder is
+  // a new array each time — so it reads the current answer from a ref instead
+  // of being torn down and re-added. Written in an effect rather than during
+  // render so a discarded render cannot leave a stale step behind.
+  const readingRef = React.useRef<{ enabled: boolean; step: (delta: 1 | -1) => void }>({
+    enabled: false,
+    step: () => {},
+  });
+  useEffect(() => {
+    readingRef.current = {
+      enabled: steppingOn && readingOrder.length > 1 && !isEditing && !isCreating,
+      step: stepToArtifact,
+    };
+  });
+
+  // J is next, K is previous: the keys a reader of anything paged already has
+  // in their fingers, and bare, because stepping through a review happens a
+  // hundred times in a sitting and a modifier turns that into work. Every way
+  // they could have been meant as letters is excluded — see readingStepFor —
+  // and anything that handled the key first and said so keeps it.
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.defaultPrevented) return;
+      const step = readingStepFor({
+        key: event.key,
+        target: event.target,
+        altKey: event.altKey,
+        ctrlKey: event.ctrlKey,
+        metaKey: event.metaKey,
+        shiftKey: event.shiftKey,
+        busy: !readingRef.current.enabled || overlayIsOpen(),
+      });
+      if (!step) return;
+      event.preventDefault();
+      readingRef.current.step(step === 'next' ? 1 : -1);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  // A phone has one pane and no keyboard, so the gesture is the affordance.
+  // Pane switching stays on the Tree / Document / Notes control: a swipe here
+  // turns the page, it does not change which pane is on it.
+  const documentSwipe = useHorizontalSwipe(
+    steppingOn && viewport.coarsePointer && readingOrder.length > 1 && !isEditing,
+    (direction) => stepToArtifact(direction === 'next' ? 1 : -1)
+  );
+
   const buildFilterSummary = (): string => {
     const parts: string[] = [];
 
@@ -1902,7 +1970,13 @@ export const ModuleView: React.FC = () => {
       )}
 
       <div style={{ display: stacked && stackedPane === 'tree' ? 'none' : 'flex', flex: 1, gap: '0', minWidth: 0, overflow: 'hidden' }}>
-        <div style={{ flex: 1, minWidth: 0, overflow: 'auto', display: stacked && stackedPane !== 'document' ? 'none' : 'flex', flexDirection: 'column', paddingLeft: stacked ? 0 : '10px', paddingRight: stacked ? 0 : selectedArtifact ? '5px' : '10px' }}>
+        <div
+          ref={documentPaneRef}
+          role="region"
+          aria-label="Artifact document"
+          {...documentSwipe}
+          style={{ flex: 1, minWidth: 0, overflow: 'auto', display: stacked && stackedPane !== 'document' ? 'none' : 'flex', flexDirection: 'column', paddingLeft: stacked ? 0 : '10px', paddingRight: stacked ? 0 : selectedArtifact ? '5px' : '10px' }}
+        >
         {/* The document and its editor read at the measure on a wide screen;
             the column itself keeps the notes handle at the window's edge. */}
         <div className={stacked ? undefined : 'measure'} style={{ width: '100%' }}>
@@ -1941,6 +2015,21 @@ export const ModuleView: React.FC = () => {
           <>
             <ArtifactHeader
               artifact={selectedArtifact}
+              // The gate covers the controls only. Without them the artifact
+              // reads exactly as it does now, and an ?artifact= link from a
+              // colleague on the nightly channel still opens everywhere.
+              nav={
+                steppingOn && readingPlace && readingPlace.total > 1
+                  ? {
+                      position: readingPlace.position,
+                      total: readingPlace.total,
+                      label: selectedArtifact.ref
+                        ? `${selectedArtifact.ref} ${selectedArtifact.title}`
+                        : selectedArtifact.title,
+                      onStep: stepToArtifact,
+                    }
+                  : undefined
+              }
               onEdit={handleEditArtifact}
               onDelete={handleDeleteArtifact}
               onRestore={(restored) => {

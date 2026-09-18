@@ -48,6 +48,7 @@ var Registry = []Feature{
 	{Key: FeatureNoteTagging, ShippedIn: "0.11.0", Summary: "Tag people and references inside a note: @name, @@name to raise a to-do, and # / ## to cite a figure or an artifact"},
 	{Key: FeatureProjectReviewRound, ShippedIn: "0.12.0", Summary: "Send a whole project for review in one action, and run it again later to pick up only what changed"},
 	{Key: FeatureReviewDecisions, ShippedIn: "0.13.0", Summary: "Approve or send back from the review queue itself, one row at a time or a whole selection, with the reason posted as a note"},
+	{Key: FeatureArtifactStepping, ShippedIn: "0.14.0", Summary: "Step from one artifact to the next in document order: the ‹ / › controls and the position, J and K on a keyboard, and a sideways swipe on a phone"},
 }
 
 // Feature keys the code gates on.
@@ -104,6 +105,13 @@ const (
 	// note, which every workspace already has, so a decision a colleague on
 	// nightly made is readable everywhere.
 	FeatureReviewDecisions = "review-queue-decisions"
+	// FeatureArtifactStepping is stepping through the document from the artifact
+	// being read: the ‹ / › controls and the position beside them, J and K, and
+	// the sideways swipe on a phone. There is no endpoint behind it — a step
+	// selects an artifact the workspace could already open, and writes the same
+	// ?artifact= the tree does — so the gate covers the CONTROLS only, and a
+	// link shared from a nightly workspace opens everywhere.
+	FeatureArtifactStepping = "artifact-stepping"
 )
 
 // Enabled reports whether a feature is on for a workspace on the given

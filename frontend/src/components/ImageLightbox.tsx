@@ -19,7 +19,16 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
   };
 
   return (
-    <div className="lightbox-backdrop" onClick={handleBackdropClick}>
+    // role and aria-modal like every other overlay in the app: it is what tells
+    // a screen reader this has taken over, and what the reading keys and the
+    // swipe check before claiming a keystroke or a gesture behind it.
+    <div
+      className="lightbox-backdrop"
+      role="dialog"
+      aria-modal="true"
+      aria-label={filename}
+      onClick={handleBackdropClick}
+    >
       <div className="lightbox-container">
         <div className="lightbox-header">
           <h3 className="lightbox-title">{filename}</h3>
