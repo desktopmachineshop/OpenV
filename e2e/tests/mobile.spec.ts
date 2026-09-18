@@ -117,7 +117,9 @@ test('stepping between artifacts works by control and by swipe', async () => {
 
   await page.getByText(reqTitle, { exact: true }).first().click();
   await expect(panes.getByRole('tab', { name: 'Document' })).toHaveAttribute('aria-selected', 'true');
-  await expect(page.getByText('1 of 2')).toBeVisible();
+  // Exactly: the stepper renders the count visibly and again in the
+  // screen-reader live region, which also names the artifact.
+  await expect(page.getByText('1 of 2', { exact: true })).toBeVisible();
   await expectNoHorizontalScroll(page);
 
   // The control: big enough for a thumb, and it turns the page.
@@ -125,7 +127,7 @@ test('stepping between artifacts works by control and by swipe', async () => {
   const box = await next.boundingBox();
   expect(box?.height ?? 0).toBeGreaterThanOrEqual(40);
   await next.click();
-  await expect(page.getByText('2 of 2')).toBeVisible();
+  await expect(page.getByText('2 of 2', { exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { name: second }).first()).toBeVisible();
   // Stepping stays on the document; it is not a pane switch.
   await expect(panes.getByRole('tab', { name: 'Document' })).toHaveAttribute('aria-selected', 'true');
@@ -135,10 +137,10 @@ test('stepping between artifacts works by control and by swipe', async () => {
   const swiped = await swipeRegion(page, 'Artifact document', 140);
   if (swiped) {
     // Rightwards is back to the artifact before.
-    await expect(page.getByText('1 of 2')).toBeVisible();
+    await expect(page.getByText('1 of 2', { exact: true })).toBeVisible();
     await expect(page.getByRole('heading', { name: reqTitle }).first()).toBeVisible();
     await swipeRegion(page, 'Artifact document', -140);
-    await expect(page.getByText('2 of 2')).toBeVisible();
+    await expect(page.getByText('2 of 2', { exact: true })).toBeVisible();
   }
   await expectNoHorizontalScroll(page);
 });

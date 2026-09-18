@@ -90,29 +90,32 @@ test.describe('stepping through the document', () => {
     await createRequirement(page, third, 'The system shall be the third artifact.');
 
     // Back to the first of the three: nothing before it.
+    // The count is asserted exactly: the stepper renders it twice, once
+    // visibly and once inside the screen-reader live region that also names
+    // the artifact, and a substring match would find both.
     await page.getByText(reqTitle, { exact: true }).first().click();
-    await expect(page.getByText('1 of 3')).toBeVisible();
+    await expect(page.getByText('1 of 3', { exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Previous artifact' })).toBeDisabled();
 
     await page.getByRole('button', { name: 'Next artifact' }).click();
-    await expect(page.getByText('2 of 3')).toBeVisible();
+    await expect(page.getByText('2 of 3', { exact: true })).toBeVisible();
     await expect(page.getByRole('heading', { name: second }).first()).toBeVisible();
 
     // J and K, from the page rather than from a control.
     await page.keyboard.press('j');
-    await expect(page.getByText('3 of 3')).toBeVisible();
+    await expect(page.getByText('3 of 3', { exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Next artifact' })).toBeDisabled();
     await page.keyboard.press('k');
-    await expect(page.getByText('2 of 3')).toBeVisible();
+    await expect(page.getByText('2 of 3', { exact: true })).toBeVisible();
 
     // The guard that matters most: a j typed into a field is a j.
     await page.getByPlaceholder('Search...').fill('j');
-    await expect(page.getByText('2 of 3')).toBeVisible();
+    await expect(page.getByText('2 of 3', { exact: true })).toBeVisible();
     await page.getByPlaceholder('Search...').fill('');
 
     // The selection survives a reload, and so does its place in the document.
     await page.reload();
-    await expect(page.getByText('2 of 3')).toBeVisible();
+    await expect(page.getByText('2 of 3', { exact: true })).toBeVisible();
     await expectNoHorizontalScroll(page);
   });
 });
