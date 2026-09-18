@@ -47,6 +47,7 @@ var Registry = []Feature{
 	{Key: FeatureSearchByRef, ShippedIn: "0.10.0", Summary: "Search finds an artifact by its ref: type REQ-30 and get REQ-30, and every result shows the ref beside its title"},
 	{Key: FeatureNoteTagging, ShippedIn: "0.11.0", Summary: "Tag people and references inside a note: @name, @@name to raise a to-do, and # / ## to cite a figure or an artifact"},
 	{Key: FeatureProjectReviewRound, ShippedIn: "0.12.0", Summary: "Send a whole project for review in one action, and run it again later to pick up only what changed"},
+	{Key: FeatureReviewDecisions, ShippedIn: "0.13.0", Summary: "Approve or send back from the review queue itself, one row at a time or a whole selection, with the reason posted as a note"},
 }
 
 // Feature keys the code gates on.
@@ -96,6 +97,13 @@ const (
 	// review states every workspace already reads and acts on, so a gate on
 	// anything more would hide a colleague's work rather than a feature.
 	FeatureProjectReviewRound = "project-review-round"
+	// FeatureReviewDecisions is deciding a review from the queue: the figure
+	// previews and description on each row, the inline Approve / Send back,
+	// the selection and the bulk actions. It gates the QUEUE's controls only.
+	// The writes behind them are the ordinary status change and the ordinary
+	// note, which every workspace already has, so a decision a colleague on
+	// nightly made is readable everywhere.
+	FeatureReviewDecisions = "review-queue-decisions"
 )
 
 // Enabled reports whether a feature is on for a workspace on the given

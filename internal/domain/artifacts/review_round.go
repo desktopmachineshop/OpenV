@@ -25,26 +25,23 @@ import (
 // that nobody has touched is unchanged by definition, and a round that reset
 // it would ask reviewers to sign the same words twice a cycle.
 
-// Round scope defaults. A heading and a description carry no claim to sign
-// off on — they title and narrate the artifacts that do — so a round that
-// swept them in would bury the requirements under structure in the reviewer's
-// queue. They stay reviewable individually, and a caller that wants them in a
-// round asks for them by type.
-var defaultRoundTypes = []string{
-	TypeRequirement,
-	TypeUserNeed,
-	TypePersona,
-	TypeTestCase,
-	TypeHazard,
-	TypeDesignItem,
-	TypeOther,
-}
-
 // DefaultRoundTypes returns the artifact types a review round covers when the
-// caller names none, in catalog order.
+// caller names none: EVERY type in the catalog, headings and descriptions
+// included.
+//
+// An earlier version left structure out, on the theory that a heading carries
+// no claim to sign off. That was wrong about what a review is: a reviewer
+// signs off the document, and a heading in the wrong place or a description
+// that contradicts the requirements under it is exactly the kind of thing a
+// review is for. Leaving them out also left them permanently in draft, which
+// made a "reviewed" project one that still had unreviewed artifacts in it.
+// A caller that wants a narrower round still names its types.
 func DefaultRoundTypes() []string {
-	out := make([]string, len(defaultRoundTypes))
-	copy(out, defaultRoundTypes)
+	catalog := TypeCatalog()
+	out := make([]string, 0, len(catalog))
+	for _, t := range catalog {
+		out = append(out, t.Value)
+	}
 	return out
 }
 
