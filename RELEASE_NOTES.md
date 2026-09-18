@@ -9,6 +9,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+## 0.14.0 — 2026-09-18
+
 ### New features
 
 - **Read a project straight through.** Getting from one requirement to the next
