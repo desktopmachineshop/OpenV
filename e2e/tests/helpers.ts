@@ -121,3 +121,56 @@ export async function openArtifactForEdit(page: Page, title: string): Promise<vo
   await expect(page.getByRole('heading', { name: title }).first()).toBeVisible();
   await page.getByRole('button', { name: 'Edit', exact: true }).click();
 }
+
+/**
+ * A horizontal swipe across a labelled region.
+ *
+ * Playwright's touchscreen only taps, so the three touch events are built and
+ * dispatched in the page. The region is addressed by its accessible name, like
+ * every other selector in this pack.
+ *
+ * Returns false when the browser has no constructible Touch — WebKit is the
+ * weak link here — so a caller can skip rather than fail: the gesture's real
+ * coverage is the component suite, and the control beside it is what this pack
+ * must prove on every engine.
+ */
+export async function swipeRegion(page: Page, label: string, dx: number): Promise<boolean> {
+  return page.evaluate(
+    ({ label, dx }) => {
+      const region = document.querySelector(`[aria-label="${label}"]`);
+      if (!region) throw new Error(`no region labelled ${label}`);
+      const box = region.getBoundingClientRect();
+      // Away from the edges, where the browser's own back gesture lives.
+      const y = box.top + box.height / 2;
+      const from = box.left + box.width / 2 - dx / 2;
+
+      const at = (x: number) => {
+        try {
+          return new Touch({ identifier: 1, target: region, clientX: x, clientY: y });
+        } catch {
+          return null;
+        }
+      };
+      const start = at(from);
+      if (!start) return false;
+
+      const fire = (type: string, x: number) => {
+        const touch = at(x)!;
+        region.dispatchEvent(
+          new TouchEvent(type, {
+            bubbles: true,
+            cancelable: true,
+            touches: type === 'touchend' ? [] : [touch],
+            changedTouches: [touch],
+            targetTouches: type === 'touchend' ? [] : [touch],
+          })
+        );
+      };
+      fire('touchstart', from);
+      fire('touchmove', from + dx / 2);
+      fire('touchend', from + dx);
+      return true;
+    },
+    { label, dx }
+  );
+}
