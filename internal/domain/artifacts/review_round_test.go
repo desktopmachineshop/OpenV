@@ -2,6 +2,7 @@ package artifacts
 
 import (
 	"errors"
+	"slices"
 	"testing"
 )
 
@@ -169,9 +170,10 @@ func TestStartProjectReviewIsIdempotent(t *testing.T) {
 	}
 }
 
-// TestStartProjectReviewScope: headings and descriptions are structure and
-// narration, not claims to sign off, so the default scope leaves them alone —
-// and a caller that wants them names them.
+// TestStartProjectReviewScope: a round covers the WHOLE document by default,
+// headings and descriptions included — leaving them out left them permanently
+// in draft and made a "reviewed" project one that still had unreviewed
+// artifacts in it. A caller that wants less still names its types.
 func TestStartProjectReviewScope(t *testing.T) {
 	newRepo := func() *fakeRoundRepo {
 		return &fakeRoundRepo{all: []*Artifact{
@@ -181,21 +183,31 @@ func TestStartProjectReviewScope(t *testing.T) {
 		}}
 	}
 
-	t.Run("default scope skips structure", func(t *testing.T) {
+	t.Run("the default scope takes structure too", func(t *testing.T) {
 		repo := newRepo()
 		result, err := NewDefaultService(repo).StartProjectReview("p1", ReviewRoundRequest{})
 		if err != nil {
 			t.Fatalf("StartProjectReview: %v", err)
 		}
-		got := repo.statuses()
-		if got["h1"] != StatusDraft || got["d1"] != StatusDraft {
-			t.Errorf("structure statuses = %v, want both still draft", got)
+		for id, status := range repo.statuses() {
+			if status != StatusInReview {
+				t.Errorf("%s = %q, want in_review — a round covers the whole document", id, status)
+			}
 		}
-		if got["r1"] != StatusInReview {
-			t.Errorf("r1 = %q, want in_review", got["r1"])
+		if result.OutOfScope != 0 {
+			t.Errorf("out_of_scope = %d, want 0", result.OutOfScope)
 		}
-		if result.OutOfScope != 2 {
-			t.Errorf("out_of_scope = %d, want 2", result.OutOfScope)
+		if len(result.Moved) != 3 {
+			t.Errorf("moved %d, want 3", len(result.Moved))
+		}
+	})
+
+	t.Run("every catalog type is in the default scope", func(t *testing.T) {
+		got := DefaultRoundTypes()
+		for _, def := range TypeCatalog() {
+			if !slices.Contains(got, def.Value) {
+				t.Errorf("default scope %v is missing %q", got, def.Value)
+			}
 		}
 	})
 

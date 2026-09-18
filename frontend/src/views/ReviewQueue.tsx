@@ -1,14 +1,36 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { Artifact, linkAPI, reviewAPI, SuspectLink } from '../api/client';
+import {
+  Artifact,
+  Attachment,
+  ArtifactStatus,
+  artifactAPI,
+  attachmentAPI,
+  linkAPI,
+  reviewAPI,
+  SuspectLink,
+} from '../api/client';
 import { apiErrorMessage } from '../api/errors';
 import { useAppStore } from '../state/store';
-import { ErrorBanner, SegmentedControl, useConfirm } from '../components/ui';
+import { ErrorBanner, Modal, SegmentedControl, useConfirm } from '../components/ui';
+import { NoteComposer, postNote } from '../components/NoteComposer';
+import { NOTE_TAGGING_FEATURE } from '../components/noteTagging';
 import { useFeature } from '../hooks/useFeature';
 import { useViewport } from '../hooks/useViewport';
+import {
+  artifactLabel,
+  attachmentLabel,
+  groupAttachments,
+  previewText,
+} from './reviewArtifacts';
 
 // The project-wide review round is gated until a stable release carries it.
 export const REVIEW_ROUND_FEATURE = 'project-review-round';
+// Deciding a review from the queue — previews, inline Approve / Send back,
+// selection and bulk actions — is gated the same way. What it writes is the
+// ordinary status change and the ordinary note, so a decision made on nightly
+// reads correctly in a workspace that has not received the controls yet.
+export const REVIEW_DECISIONS_FEATURE = 'review-queue-decisions';
 
 type Section = 'all' | 'links' | 'artifacts';
 
@@ -31,6 +53,186 @@ const cardStyle: React.CSSProperties = {
   borderRadius: 6,
   padding: 16,
   marginBottom: 24,
+};
+
+/**
+ * One artifact as a reviewer reads it: what it is, what it is called, and
+ * enough of what it says to judge without opening it. The title links to the
+ * artifact for the times a preview is not enough.
+ */
+const ArtifactSummary: React.FC<{ artifact: Artifact; figures: Attachment[] }> = ({
+  artifact,
+  figures,
+}) => {
+  const preview = previewText(artifact.body || '');
+  return (
+    <div style={{ minWidth: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+        <span style={typeChip(artifact.type)}>{artifact.type}</span>
+        {artifact.ref && (
+          <span style={{ color: 'var(--text-muted)', fontSize: 12, fontWeight: 600 }}>
+            {artifact.ref}
+          </span>
+        )}
+        <Link
+          to={`../requirements?artifact=${artifact.id}`}
+          style={{ color: 'var(--accent)', textDecoration: 'none' }}
+        >
+          {artifactLabel(artifact)}
+        </Link>
+      </div>
+      {preview ? (
+        <p style={{ margin: '6px 0 0', color: 'var(--text-muted)', fontSize: 13, lineHeight: 1.45 }}>
+          {preview}
+        </p>
+      ) : (
+        <p style={{ margin: '6px 0 0', color: 'var(--text-muted)', fontSize: 13, fontStyle: 'italic' }}>
+          No description.
+        </p>
+      )}
+      {/* On a phone the figures ride along under the text; the table gives
+          them a column of their own. */}
+      {figures.length > 0 && (
+        <div style={{ marginTop: 8 }}>
+          <FigureStrip figures={figures} />
+        </div>
+      )}
+    </div>
+  );
+};
+
+/**
+ * Small previews of an artifact's figures.
+ *
+ * A picture is shown as one; a PDF or a CAD file has nothing to show at this
+ * size, so it gets a chip naming it instead of a broken thumbnail. Both link
+ * to the file itself. Four at most: the point is to recognise the artifact,
+ * not to review the drawings here.
+ */
+const FigureStrip: React.FC<{ figures: Attachment[] }> = ({ figures }) => {
+  if (figures.length === 0) return null;
+  const shown = figures.slice(0, 4);
+  const rest = figures.length - shown.length;
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+      {shown.map((f) => {
+        const href = attachmentAPI.getDownloadUrl(f.id, f.version);
+        const label = attachmentLabel(f);
+        return f.kind === 'image' ? (
+          <a key={f.id} href={href} target="_blank" rel="noreferrer" title={label}>
+            <img
+              src={href}
+              alt={label}
+              loading="lazy"
+              style={{
+                width: 40,
+                height: 40,
+                objectFit: 'cover',
+                borderRadius: 4,
+                border: '1px solid var(--border)',
+                display: 'block',
+                background: 'var(--surface-alt, var(--surface))',
+              }}
+            />
+          </a>
+        ) : (
+          <a
+            key={f.id}
+            href={href}
+            target="_blank"
+            rel="noreferrer"
+            title={label}
+            style={{ ...typeChip(f.kind), textDecoration: 'none', padding: '4px 8px' }}
+          >
+            {f.figure_ref || f.kind}
+          </a>
+        );
+      })}
+      {rest > 0 && (
+        <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>+{rest}</span>
+      )}
+    </div>
+  );
+};
+
+/**
+ * Ask for the reason before sending work back.
+ *
+ * A rejection with no reason is the worst thing a review queue can produce:
+ * the author sees an artifact back in draft and has to come and ask what was
+ * wrong with it. So the comment is required, and it is written in the SAME
+ * composer the notes panel uses — "@name" reaches a person, "@@name" raises
+ * them a to-do, "#REQ-12" cites — and posted through the same path, so the
+ * reason lands in the artifact's feed as an ordinary note rather than as some
+ * second-class rejection field only this screen knows how to read.
+ */
+const RejectDialog: React.FC<{
+  artifacts: Artifact[];
+  projectId?: string;
+  busy: boolean;
+  onCancel: () => void;
+  onSubmit: (comment: string) => void;
+}> = ({ artifacts, projectId, busy, onCancel, onSubmit }) => {
+  const [comment, setComment] = useState('');
+  const taggingEnabled = useFeature(NOTE_TAGGING_FEATURE);
+  const many = artifacts.length > 1;
+  const submit = () => {
+    if (comment.trim() && !busy) onSubmit(comment.trim());
+  };
+
+  return (
+    <Modal
+      title={many ? `Send ${artifacts.length} artifacts back` : 'Send back for changes'}
+      width={560}
+      onClose={onCancel}
+    >
+      <p style={{ color: 'var(--text-muted)', fontSize: 13, marginTop: 0 }}>
+        {many
+          ? 'Each of these goes back to draft, and your comment is posted on every one of them.'
+          : 'This goes back to draft and your comment is posted on its feed.'}
+      </p>
+      {many && (
+        <ul
+          style={{
+            margin: '0 0 12px',
+            paddingLeft: 18,
+            color: 'var(--text)',
+            fontSize: 13,
+            maxHeight: 120,
+            overflowY: 'auto',
+          }}
+        >
+          {artifacts.map((a) => (
+            <li key={a.id}>{a.ref ? `${a.ref} — ${artifactLabel(a)}` : artifactLabel(a)}</li>
+          ))}
+        </ul>
+      )}
+      <NoteComposer
+        projectId={projectId}
+        artifactId={artifacts.length === 1 ? artifacts[0].id : undefined}
+        value={comment}
+        onChange={setComment}
+        onSubmit={submit}
+        autoFocus
+        minHeight={96}
+        ariaLabel="Reason for sending back"
+        placeholder={
+          taggingEnabled
+            ? 'What needs to change? @name, @@name for a to-do, #REQ-12'
+            : 'What needs to change?'
+        }
+      />
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
+        <button className="button-secondary" onClick={onCancel} disabled={busy}>
+          Cancel
+        </button>
+        <button className="button-primary" onClick={submit} disabled={busy || !comment.trim()}>
+          {busy ? 'Sending back…' : 'Send back'}
+        </button>
+      </div>
+    </Modal>
+  );
 };
 
 /**
@@ -67,6 +269,18 @@ export const ReviewQueue: React.FC = () => {
   // What the last round did, shown until the reviewer starts working.
   const [roundSummary, setRoundSummary] = useState('');
   const roundEnabled = useFeature(REVIEW_ROUND_FEATURE);
+  const decisionsEnabled = useFeature(REVIEW_DECISIONS_FEATURE);
+  const taggingEnabled = useFeature(NOTE_TAGGING_FEATURE);
+  // The project's figures, so a reviewer can see what an artifact shows
+  // without opening it. Grouped by artifact; a failure leaves the previews
+  // out rather than the queue.
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [selectedArtifacts, setSelectedArtifacts] = useState<Record<string, boolean>>({});
+  // Artifacts with a decision in flight, so their own buttons disable.
+  const [deciding, setDeciding] = useState<Record<string, boolean>>({});
+  // The artifacts a rejection is being written for; empty means no dialog.
+  const [rejecting, setRejecting] = useState<Artifact[]>([]);
+  const [rejectBusy, setRejectBusy] = useState(false);
 
   const load = useCallback(() => {
     if (!projectId) return;
@@ -80,6 +294,12 @@ export const ReviewQueue: React.FC = () => {
       })
       .catch((err) => setError(apiErrorMessage(err, 'Failed to load the review queue')))
       .finally(() => setLoading(false));
+    // Previews are an enrichment, not the queue: if the figures cannot be
+    // read, the reviewer still gets the work.
+    attachmentAPI
+      .listByProject(projectId)
+      .then((res) => setAttachments(res.data || []))
+      .catch(() => setAttachments([]));
   }, [projectId]);
 
   useEffect(() => {
@@ -175,6 +395,134 @@ export const ReviewQueue: React.FC = () => {
       setStartingRound(false);
     }
   }, [confirm, load, projectId]);
+
+  const attachmentsByArtifact = useMemo(() => groupAttachments(attachments), [attachments]);
+
+  const selectedArtifactIds = useMemo(
+    () => inReview.filter((a) => selectedArtifacts[a.id]).map((a) => a.id),
+    [inReview, selectedArtifacts],
+  );
+  const allArtifactsSelected =
+    inReview.length > 0 && selectedArtifactIds.length === inReview.length;
+
+  const toggleAllArtifacts = () => {
+    if (allArtifactsSelected) {
+      setSelectedArtifacts({});
+      return;
+    }
+    const next: Record<string, boolean> = {};
+    inReview.forEach((a) => {
+      next[a.id] = true;
+    });
+    setSelectedArtifacts(next);
+  };
+
+  // Drop the decided artifacts from the list and from the selection, so the
+  // queue shows what is still waiting without a round trip.
+  const settleDecided = useCallback((ids: string[]) => {
+    const done = new Set(ids);
+    setInReview((list) => list.filter((a) => !done.has(a.id)));
+    setSelectedArtifacts((sel) => {
+      const next = { ...sel };
+      done.forEach((id) => delete next[id]);
+      return next;
+    });
+  }, []);
+
+  /**
+   * Approve one or more artifacts.
+   *
+   * Each is its own state-machine transition, so one refusal (a viewer, a
+   * status someone else already moved) costs only that artifact: the rest
+   * still go through and the failures are counted rather than swallowed.
+   */
+  const approve = useCallback(
+    async (ids: string[]) => {
+      if (ids.length === 0) return;
+      setDeciding((d) => ({ ...d, ...Object.fromEntries(ids.map((id) => [id, true])) }));
+      const results = await Promise.allSettled(
+        ids.map((id) => artifactAPI.changeStatus(id, 'approved' as ArtifactStatus)),
+      );
+      const approved = ids.filter((_, i) => results[i].status === 'fulfilled');
+      const failed = results.length - approved.length;
+      settleDecided(approved);
+      setDeciding((d) => {
+        const next = { ...d };
+        ids.forEach((id) => delete next[id]);
+        return next;
+      });
+      setError(
+        failed > 0
+          ? `${failed} artifact${failed === 1 ? '' : 's'} could not be approved.`
+          : '',
+      );
+    },
+    [settleDecided],
+  );
+
+  /**
+   * Send artifacts back to draft with the reviewer's reason.
+   *
+   * The note is posted BEFORE the status moves, deliberately. If the note
+   * fails, nothing has been rejected and the reviewer can try again; if the
+   * order were reversed, a failure would leave the author with an artifact
+   * back in draft and no word on what was wrong with it, which is the one
+   * outcome a rejection must never produce.
+   */
+  const reject = useCallback(
+    async (artifacts: Artifact[], comment: string) => {
+      setRejectBusy(true);
+      const rejected: string[] = [];
+      let failures = 0;
+      for (const artifact of artifacts) {
+        try {
+          await postNote({
+            artifactId: artifact.id,
+            message: comment,
+            projectId,
+            taggingEnabled,
+            onTodoError: setError,
+          });
+          await artifactAPI.changeStatus(artifact.id, 'draft' as ArtifactStatus);
+          rejected.push(artifact.id);
+        } catch {
+          failures += 1;
+        }
+      }
+      settleDecided(rejected);
+      setRejectBusy(false);
+      setRejecting([]);
+      if (failures > 0) {
+        setError(
+          `${failures} artifact${failures === 1 ? '' : 's'} could not be sent back; ` +
+            'their comments may have been posted, so check before trying again.',
+        );
+      }
+    },
+    [projectId, settleDecided, taggingEnabled],
+  );
+
+  const selectedArtifactRows = useMemo(
+    () => inReview.filter((a) => selectedArtifacts[a.id]),
+    [inReview, selectedArtifacts],
+  );
+
+  const approveSelected = useCallback(async () => {
+    if (selectedArtifactIds.length === 0) return;
+    const ok = await confirm({
+      title: 'Approve selected',
+      message: `Approve ${selectedArtifactIds.length} artifact${
+        selectedArtifactIds.length === 1 ? '' : 's'
+      }? This signs off their current content, and clears the suspect flag on the links that touch them.`,
+      confirmLabel: 'Approve',
+    });
+    if (!ok) return;
+    await approve(selectedArtifactIds);
+  }, [approve, confirm, selectedArtifactIds]);
+
+  const rejectSelected = useCallback(() => {
+    if (selectedArtifactRows.length > 0) setRejecting(selectedArtifactRows);
+  }, [selectedArtifactRows]);
 
   const toggleAll = () => {
     if (allSelected) {
@@ -377,15 +725,41 @@ export const ReviewQueue: React.FC = () => {
                   In review
                 </h3>
                 <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>
-                  Artifacts submitted for review. Open one to approve or send it back.
+                  {decisionsEnabled
+                    ? 'Approve what reads right, or send it back with a reason.'
+                    : 'Artifacts submitted for review. Open one to approve or send it back.'}
                 </span>
+                <div style={{ flex: 1 }} />
+                {/* Bulk actions act on the selection and say how big it is,
+                    so nobody approves forty artifacts thinking it was four. */}
+                {decisionsEnabled && inReview.length > 0 && (
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    <button
+                      className="button-secondary"
+                      onClick={approveSelected}
+                      disabled={selectedArtifactIds.length === 0}
+                    >
+                      Approve selected ({selectedArtifactIds.length})
+                    </button>
+                    <button
+                      className="button-secondary"
+                      onClick={rejectSelected}
+                      disabled={selectedArtifactIds.length === 0}
+                    >
+                      Send back selected ({selectedArtifactIds.length})
+                    </button>
+                  </div>
+                )}
               </div>
 
               {inReview.length === 0 ? (
                 <div style={{ color: 'var(--text-muted)', fontSize: 14 }}>
                   Nothing is in review right now.
                 </div>
-              ) : (
+              ) : !decisionsEnabled ? (
+                /* Until the controls reach this workspace the queue is what it
+                   was: the list of what is waiting, each opening its artifact
+                   where the same decisions have always been available. */
                 <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
                   {inReview.map((a) => (
                     <li
@@ -403,15 +777,131 @@ export const ReviewQueue: React.FC = () => {
                         to={`../requirements?artifact=${a.id}`}
                         style={{ color: 'var(--accent)', textDecoration: 'none', flex: 1 }}
                       >
-                        {a.title || '(untitled)'}
+                        {artifactLabel(a)}
                       </Link>
                     </li>
                   ))}
                 </ul>
+              ) : phone ? (
+                <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+                  {inReview.map((a) => (
+                    <li
+                      key={a.id}
+                      style={{
+                        display: 'flex',
+                        gap: 10,
+                        alignItems: 'flex-start',
+                        padding: '12px 0',
+                        borderTop: '1px solid var(--border)',
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={!!selectedArtifacts[a.id]}
+                        aria-label={`Select ${artifactLabel(a)}`}
+                        onChange={(e) =>
+                          setSelectedArtifacts((sel) => ({ ...sel, [a.id]: e.target.checked }))
+                        }
+                        style={{ width: 22, height: 22, marginTop: 2, flexShrink: 0 }}
+                      />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <ArtifactSummary artifact={a} figures={attachmentsByArtifact[a.id] || []} />
+                        <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                          <button
+                            className="button-secondary"
+                            onClick={() => approve([a.id])}
+                            disabled={!!deciding[a.id]}
+                            style={{ minHeight: 44 }}
+                          >
+                            {deciding[a.id] ? 'Approving…' : 'Approve'}
+                          </button>
+                          <button
+                            className="button-secondary"
+                            onClick={() => setRejecting([a])}
+                            disabled={!!deciding[a.id]}
+                            style={{ minHeight: 44 }}
+                          >
+                            Send back
+                          </button>
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <div className="table-scroll">
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+                    <thead>
+                      <tr style={{ textAlign: 'left', color: 'var(--text-muted)', fontSize: 12 }}>
+                        <th style={{ padding: '6px 8px', width: 28 }}>
+                          <input
+                            type="checkbox"
+                            checked={allArtifactsSelected}
+                            aria-label="Select all artifacts in review"
+                            onChange={toggleAllArtifacts}
+                          />
+                        </th>
+                        <th style={{ padding: '6px 8px' }}>Artifact</th>
+                        <th style={{ padding: '6px 8px', width: 190 }}>Figures</th>
+                        <th style={{ padding: '6px 8px', width: 190 }} />
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {inReview.map((a) => (
+                        <tr key={a.id} style={{ borderTop: '1px solid var(--border)' }}>
+                          <td style={{ padding: '8px', verticalAlign: 'top' }}>
+                            <input
+                              type="checkbox"
+                              checked={!!selectedArtifacts[a.id]}
+                              aria-label={`Select ${artifactLabel(a)}`}
+                              onChange={(e) =>
+                                setSelectedArtifacts((sel) => ({ ...sel, [a.id]: e.target.checked }))
+                              }
+                            />
+                          </td>
+                          <td style={{ padding: '8px', verticalAlign: 'top' }}>
+                            <ArtifactSummary artifact={a} figures={[]} />
+                          </td>
+                          <td style={{ padding: '8px', verticalAlign: 'top' }}>
+                            <FigureStrip figures={attachmentsByArtifact[a.id] || []} />
+                          </td>
+                          <td style={{ padding: '8px', textAlign: 'right', verticalAlign: 'top' }}>
+                            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                              <button
+                                className="button-secondary"
+                                onClick={() => approve([a.id])}
+                                disabled={!!deciding[a.id]}
+                              >
+                                {deciding[a.id] ? 'Approving…' : 'Approve'}
+                              </button>
+                              <button
+                                className="button-secondary"
+                                onClick={() => setRejecting([a])}
+                                disabled={!!deciding[a.id]}
+                              >
+                                Send back
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </section>
           )}
         </>
+      )}
+
+      {rejecting.length > 0 && (
+        <RejectDialog
+          artifacts={rejecting}
+          projectId={projectId}
+          busy={rejectBusy}
+          onCancel={() => setRejecting([])}
+          onSubmit={(comment) => reject(rejecting, comment)}
+        />
       )}
     </div>
   );

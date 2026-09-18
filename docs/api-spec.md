@@ -430,15 +430,35 @@ POST /api/v1/projects/{id}/review-round
 ```
 
 `types` is optional and must name artifact types from the catalog; an unknown
-one is a 400 and nothing is written. Omitted, the scope is every type except
-`heading` and `description`, which carry no claim to sign off. Proposal-mode
-agent runs are refused (403): the proposal vocabulary has no status op, and a
-review-gated agent starting the review would defeat the gate.
+one is a 400 and nothing is written. Omitted, the scope is **every type in the
+catalog**, headings and descriptions included: a reviewer signs off the
+document, and structure left out of every round would sit in draft for ever,
+making a "reviewed" project one that still had unreviewed artifacts in it.
+Proposal-mode agent runs are refused (403): the proposal vocabulary has no
+status op, and a review-gated agent starting the review would defeat the gate.
 
 The response reports what the run did — `moved` (the artifacts, in full) plus
 `already_in_review`, `approved`, `superseded` and `out_of_scope` counts that
 together account for every current artifact in the project, and `types`, the
 scope actually used.
+
+#### Deciding a review
+
+The queue itself has no decision endpoint: approving and rejecting are the
+ordinary status transitions, so a decision made from the queue and one made on
+the artifact are the same write and land in the same history.
+
+| Decision | Call |
+|---|---|
+| Approve | `PUT /api/v1/artifacts/{id}/status` with `{"status":"approved"}` |
+| Send back | `POST /api/v1/chatter` with the reason, then `PUT …/status` with `{"status":"draft"}` |
+
+A rejection is two calls, **in that order**. The reason is posted first: if
+the note fails, nothing has been rejected and the reviewer can try again,
+whereas the reverse order can leave an author with an artifact back in draft
+and no word on what was wrong with it. The reason goes in as an ordinary note,
+so `@name` mentions notify, `@@name` raises a to-do and `#REQ-12` cites,
+exactly as they do from the notes panel.
 
 ### Notifications
 

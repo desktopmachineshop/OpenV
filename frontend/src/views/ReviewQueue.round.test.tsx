@@ -7,6 +7,18 @@ import { linkAPI, reviewAPI } from '../api/client';
 vi.mock('../api/client', () => ({
   reviewAPI: { get: vi.fn(), startRound: vi.fn() },
   linkAPI: { confirm: vi.fn() },
+  artifactAPI: { changeStatus: vi.fn() },
+  attachmentAPI: {
+    listByProject: vi.fn(() => Promise.resolve({ data: [] })),
+    getDownloadUrl: (id: string) => `/dl/${id}`,
+  },
+}));
+
+// The rejection dialog's composer is the notes panel's; it is exercised in
+// ReviewQueue.decisions.test.tsx and only gets in the way here.
+vi.mock('../components/NoteComposer', () => ({
+  NoteComposer: () => null,
+  postNote: vi.fn(),
 }));
 
 // The page reads the active project from the store when the route has none.

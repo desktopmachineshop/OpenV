@@ -160,9 +160,10 @@ the approved version itself stays in the artifact's history untouched.
 
 Submitting a hundred requirements one at a time is nobody's idea of a review
 process, so the **Review Queue** has a **Send project for review** button that
-moves every draft artifact in the project into review at once. Headings and
-descriptions are left alone — there is nothing in them to sign off — and
-naming the types you want covers the case where you do want them.
+moves every draft artifact in the project into review at once. It covers the
+whole document — headings and descriptions included, because a heading in the
+wrong place or a description that contradicts the requirements under it is
+exactly what a review is for.
 
 Run it again whenever a review cycle comes round. The second run is where the
 work is saved:
@@ -176,6 +177,37 @@ work is saved:
 What comes back says how many artifacts were sent and how many stayed
 approved, so a quiet cycle is visibly quiet rather than indistinguishable from
 a button that did nothing.
+
+### Working the queue
+
+The **In review** table is where the reviewing happens. Each row carries what
+you need to judge without opening anything: the type and reference, the title,
+the start of the description, and small previews of the artifact's figures —
+pictures as thumbnails, PDFs and CAD files as chips naming them. Any of them
+opens the full file; the title opens the artifact.
+
+Two buttons sit on every row:
+
+- **Approve** signs the artifact off as it stands. Approving also clears the
+  suspect flag on every link that touches it, because you have just vouched
+  for the artifact its links were made from.
+- **Send back** asks what needs to change before it does anything. The comment
+  is required, and it is written in the same composer the notes panel uses —
+  \`@name\` reaches a person, \`@@name\` raises them a to-do, \`#REQ-12\`
+  cites — and it lands on the artifact's feed as an ordinary note. Then the
+  artifact goes back to draft. Nobody gets work returned without being told
+  why.
+
+### Deciding several at once
+
+Tick the box on any row, or the box in the header to take the whole table, and
+the two buttons above it act on everything selected: **Approve selected** asks
+once and signs them all off, **Send back selected** asks for one reason and
+posts it on every one of them.
+
+Anything that could not be decided — a refused permission, an artifact
+somebody else moved while you were reading — is counted and reported, and
+stays in the table. The rest still go through.
 
 ## Figures
 

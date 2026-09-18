@@ -9,6 +9,34 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### New features
+
+- **Approve or send back from the review queue itself.** The In review list
+  was a list of links: every decision meant opening the artifact, changing its
+  status and coming back. Each row is now something you can act on. It shows
+  the type, the reference, the title, the start of the description and small
+  previews of the artifact's figures — pictures as thumbnails, PDFs and CAD
+  files as chips — so you can judge most things without opening anything, and
+  carries **Approve** and **Send back** buttons of its own.
+- **A rejection now has to say why.** *Send back* asks what needs to change
+  before it moves anything, and the comment goes onto the artifact's feed as an
+  ordinary note — `@name` reaches a person, `@@name` raises them a to-do,
+  `#REQ-12` cites, exactly as in the notes panel. The reason is posted before
+  the artifact moves, so nobody ever finds work back in their drafts with no
+  word on what was wrong with it.
+- **Decide a batch at once.** Tick rows, or the box in the header to take the
+  whole table, and approve everything selected or send it all back with one
+  shared reason. Anything that could not be decided is reported and stays in
+  the queue.
+
+### Bug fixes
+
+- **Sending a project for review no longer skips its headings.** A review
+  round covered requirements, needs, test cases and the rest but deliberately
+  left headings and descriptions out, which meant they sat in draft for ever
+  and a project that had been through review still had unreviewed artifacts in
+  it. A round now covers the whole document.
+
 ## 0.12.0 — 2026-09-18
 
 ### New features
