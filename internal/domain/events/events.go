@@ -19,12 +19,17 @@ const (
 	LinkUpdated           = "link.updated"
 	LinkDeleted           = "link.deleted"
 	BaselineCaptured      = "baseline.captured"
-	ChatterCreated        = "chatter.created"
-	TestRunRecorded       = "testrun.recorded"
-	WorkItemCreated       = "workitem.created"
-	WorkItemMoved         = "workitem.moved"
-	WorkItemUpdated       = "workitem.updated"
-	RunFinished           = "agentrun.finished"
+	// ReviewRoundStarted fires once per run of a project's review process
+	// (the bulk form of ArtifactStatusChanged); payload carries the round's
+	// counts and its type scope. EntityID is the project: the round is not a
+	// stored entity of its own.
+	ReviewRoundStarted = "project.review_round_started"
+	ChatterCreated     = "chatter.created"
+	TestRunRecorded    = "testrun.recorded"
+	WorkItemCreated    = "workitem.created"
+	WorkItemMoved      = "workitem.moved"
+	WorkItemUpdated    = "workitem.updated"
+	RunFinished        = "agentrun.finished"
 	// ProposalCreated fires when a proposal-mode agent write is diverted
 	// into the review queue; payload carries {op, run_id}.
 	ProposalCreated = "proposal.created"

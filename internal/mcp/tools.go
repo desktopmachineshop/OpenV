@@ -679,6 +679,20 @@ func Tools() []Tool {
 			},
 		},
 		{
+			Name:        "start_project_review",
+			Description: "Start a review round for a whole project: every artifact still in draft moves to in_review in one action. Re-runnable and safe to repeat — an approved artifact nobody has changed stays approved, while one whose content was edited since it was approved is already back in draft and so is pulled into review again. Covers requirements, needs, personas, test cases, hazards, design items and other by default; pass types to narrow it, or to include headings and descriptions.",
+			InputSchema: schema([]string{"project_id"}, map[string]interface{}{
+				"project_id": str("Project ID"),
+				"types":      strList("Optional artifact types to review (default: everything except headings and descriptions)"),
+			}),
+			Handler: func(c *Client, args map[string]interface{}) (string, error) {
+				out, _, err := c.request("POST", "/api/v1/projects/"+strArg(args, "project_id")+"/review-round", nil, map[string]interface{}{
+					"types": strListArg(args, "types"),
+				})
+				return out, err
+			},
+		},
+		{
 			Name:        "create_test_run",
 			Description: "Create a test run in a project.",
 			InputSchema: schema([]string{"project_id", "name"}, map[string]interface{}{

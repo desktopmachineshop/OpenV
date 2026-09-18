@@ -233,6 +233,11 @@ type Service interface {
 	// unknown target and ErrInvalidStatusTransition for a move the state
 	// machine forbids.
 	ChangeStatus(id string, status string) (*Artifact, error)
+	// StartProjectReview runs one round of a project's review process:
+	// every in-scope draft moves to in_review, approved artifacts stay
+	// approved, and nothing else is touched. Re-runnable; see
+	// review_round.go for why a re-run picks up exactly what changed.
+	StartProjectReview(projectID string, req ReviewRoundRequest) (*ReviewRoundResult, error)
 	DeleteArtifact(id string) error
 	ListArtifacts(projectID string, artifactType string) ([]*Artifact, error)
 	// ListByStatus returns a project's current artifacts in the given review

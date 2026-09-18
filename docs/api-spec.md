@@ -408,6 +408,37 @@ links suspect, because nothing the artifact *says* changed.
 | Method | Path | Purpose | Auth |
 |---|---|---|---|
 | GET | `/api/v1/projects/{id}/review-queue` | Suspect links + `in_review` artifacts awaiting review | viewer |
+| POST | `/api/v1/projects/{id}/review-round` | Start a review round: every in-scope draft moves to `in_review` | editor |
+
+A **review round** is the bulk form of the single-artifact status change: it
+walks the project's current artifacts and moves each one in `draft` to
+`in_review`, leaving every other status exactly as it is. Each move publishes
+the same `artifact.status_changed` event and writes the same feed note it
+would have one at a time, so an artifact's own history explains how it entered
+review; the round itself also publishes one
+`project.review_round_started` event against the project.
+
+The round carries no stored state, which is what makes running it each cycle
+do the right thing: an `approved` artifact is left approved, because approval
+was of that exact content, while one whose content was edited since approval
+is already back in `draft` (see the status rules above) and so is picked up.
+Running it twice with nothing in between writes nothing the second time.
+
+```json
+POST /api/v1/projects/{id}/review-round
+{ "types": ["requirement", "test-case"] }
+```
+
+`types` is optional and must name artifact types from the catalog; an unknown
+one is a 400 and nothing is written. Omitted, the scope is every type except
+`heading` and `description`, which carry no claim to sign off. Proposal-mode
+agent runs are refused (403): the proposal vocabulary has no status op, and a
+review-gated agent starting the review would defeat the gate.
+
+The response reports what the run did — `moved` (the artifacts, in full) plus
+`already_in_review`, `approved`, `superseded` and `out_of_scope` counts that
+together account for every current artifact in the project, and `types`, the
+scope actually used.
 
 ### Notifications
 

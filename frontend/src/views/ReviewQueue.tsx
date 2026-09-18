@@ -4,7 +4,11 @@ import { Artifact, linkAPI, reviewAPI, SuspectLink } from '../api/client';
 import { apiErrorMessage } from '../api/errors';
 import { useAppStore } from '../state/store';
 import { ErrorBanner, SegmentedControl, useConfirm } from '../components/ui';
+import { useFeature } from '../hooks/useFeature';
 import { useViewport } from '../hooks/useViewport';
+
+// The project-wide review round is gated until a stable release carries it.
+export const REVIEW_ROUND_FEATURE = 'project-review-round';
 
 type Section = 'all' | 'links' | 'artifacts';
 
@@ -35,6 +39,12 @@ const cardStyle: React.CSSProperties = {
  * place. Suspect links can be cleared one at a time or in bulk (both reuse
  * linkAPI.confirm); in-review artifacts deep-link into the requirements module
  * via ?artifact= so the reviewer can open and sign them off.
+ *
+ * Send everything for review starts a round over the whole project instead of
+ * submitting artifact by artifact. It is meant to be run again each cycle: an
+ * approved requirement nobody has touched stays approved, and one edited since
+ * it was approved is back in draft, so the re-run asks for exactly the
+ * sign-offs that are missing.
  */
 export const ReviewQueue: React.FC = () => {
   // Phones: a five-column table of links is unreadable at 390px; each link
@@ -53,6 +63,10 @@ export const ReviewQueue: React.FC = () => {
   // Ids currently being confirmed, so their row buttons disable individually.
   const [confirming, setConfirming] = useState<Record<string, boolean>>({});
   const [selected, setSelected] = useState<Record<string, boolean>>({});
+  const [startingRound, setStartingRound] = useState(false);
+  // What the last round did, shown until the reviewer starts working.
+  const [roundSummary, setRoundSummary] = useState('');
+  const roundEnabled = useFeature(REVIEW_ROUND_FEATURE);
 
   const load = useCallback(() => {
     if (!projectId) return;
@@ -130,6 +144,38 @@ export const ReviewQueue: React.FC = () => {
     setError(failures > 0 ? `${failures} link${failures === 1 ? '' : 's'} could not be confirmed.` : '');
   }, [confirm, selectedIds]);
 
+  // Start a round over the whole project. The confirmation spells out the
+  // re-run promise, because "send everything for review" reads like it would
+  // undo sign-offs people already gave, and it does not.
+  const startRound = useCallback(async () => {
+    if (!projectId) return;
+    const ok = await confirm({
+      title: 'Send the project for review',
+      message:
+        'Move every requirement, need, test case and other artifact still in draft into review. ' +
+        'Anything already approved stays approved — only something edited since it was approved comes back for a fresh sign-off.',
+      confirmLabel: 'Send for review',
+    });
+    if (!ok) return;
+
+    setStartingRound(true);
+    try {
+      const { data } = await reviewAPI.startRound(projectId);
+      const moved = data.moved?.length ?? 0;
+      setRoundSummary(
+        moved === 0
+          ? `Nothing new to review: ${data.already_in_review} already in review, ${data.approved} approved and unchanged.`
+          : `Sent ${moved} artifact${moved === 1 ? '' : 's'} for review. ${data.approved} stayed approved, unchanged since sign-off.`,
+      );
+      setError('');
+      load();
+    } catch (err) {
+      setError(apiErrorMessage(err, 'Failed to start the project review'));
+    } finally {
+      setStartingRound(false);
+    }
+  }, [confirm, load, projectId]);
+
   const toggleAll = () => {
     if (allSelected) {
       setSelected({});
@@ -160,12 +206,41 @@ export const ReviewQueue: React.FC = () => {
           ]}
         />
         <div style={{ flex: 1 }} />
+        {roundEnabled && (
+          <button className="button-primary" onClick={startRound} disabled={startingRound || loading}>
+            {startingRound ? 'Sending…' : 'Send project for review'}
+          </button>
+        )}
         <button className="button-secondary" onClick={load} disabled={loading}>
           Refresh
         </button>
       </div>
 
       <ErrorBanner message={error} onDismiss={() => setError('')} />
+
+      {roundSummary && (
+        <div
+          role="status"
+          style={{
+            background: 'var(--surface)',
+            border: '1px solid var(--border)',
+            borderLeft: '3px solid var(--accent)',
+            borderRadius: 6,
+            padding: '10px 14px',
+            marginBottom: 16,
+            color: 'var(--text)',
+            fontSize: 14,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+          }}
+        >
+          <span style={{ flex: 1 }}>{roundSummary}</span>
+          <button className="button-secondary" onClick={() => setRoundSummary('')}>
+            Dismiss
+          </button>
+        </div>
+      )}
 
       {loading ? (
         <div style={{ color: 'var(--text-muted)' }}>Loading…</div>

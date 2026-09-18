@@ -504,11 +504,31 @@ export interface ReviewQueue {
   in_review_artifacts: Artifact[];
 }
 
+// What one run of a project's review process did. The counts account for
+// every artifact in the project, so the UI can report "12 sent for review,
+// 30 already approved" from the response alone.
+export interface ReviewRoundResult {
+  moved: Artifact[];
+  already_in_review: number;
+  approved: number;
+  superseded: number;
+  out_of_scope: number;
+  types: string[];
+}
+
 export const reviewAPI = {
   // The reviewer's daily driver: suspect links + in-review artifacts for one
   // project, in a single round trip. Viewer role suffices to read it.
   get: (projectId: string) =>
     client.get<ReviewQueue>(`/api/v1/projects/${projectId}/review-queue`),
+  // Start a review round for the whole project: every draft in scope goes to
+  // in_review at once. Editor role. Safe to run again — an approved artifact
+  // nobody has changed stays approved, and one edited since it was approved
+  // is already back in draft, so the re-run picks up exactly what changed.
+  // Omit types for the default scope (everything but headings and
+  // descriptions).
+  startRound: (projectId: string, types?: string[]) =>
+    client.post<ReviewRoundResult>(`/api/v1/projects/${projectId}/review-round`, { types }),
 };
 
 // Hand the browser a file to save. One copy of the anchor dance, used by every
