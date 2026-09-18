@@ -52,6 +52,28 @@ link type definitions.
   artifact can never be dropped into its own subtree.
 - **Collapse all / Expand all** manage the tree at once.
 
+## Moving through the document
+
+The artifact you are reading carries **‹** and **›** and its place in the
+project — *12 of 148*. They step through it in the order the tree shows: a
+heading, then what is under it, then the next heading. They follow whatever your
+search and filters have left in view, so narrowing the tree to one type or one
+owner turns ‹ / › into a reader for just those.
+
+On a keyboard, **J** goes to the next artifact and **K** to the previous one.
+They work from anywhere on the page except inside a field, an open editor or a
+dialog — so typing a *j* into the search box stays a *j*. (They are the physical
+J and K keys on a standard layout; on a layout that puts those letters elsewhere,
+use the ‹ / › buttons.)
+
+On a phone or tablet, swipe the document sideways: **left** for the next
+artifact, **right** for the one before. Scrolling up and down is never
+interrupted, and a table or code block wide enough to scroll keeps its own
+sideways swipe. The **Tree / Document / Notes** buttons still switch panes.
+
+Wherever a step lands, the tree opens the sections above it so you can see where
+you are — and only those, so a section you collapsed on purpose stays shut.
+
 ## Referencing figures and linked artifacts
 
 Type **\`#\`** in an artifact's description to cite something: its own figures

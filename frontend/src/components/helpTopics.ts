@@ -68,6 +68,7 @@ const HELP_TOPICS: Record<string, HelpTopic> = {
       'The ⚙ button opens filter rows you can combine with AND/OR and save as named presets.',
       'Capture a baseline before big changes — baselines are read-only snapshots you can compare and report on.',
       'Use the Chatter panel on the right for review discussion instead of editing the requirement text itself.',
+      '‹ / › beside an artifact read the project in tree order — J and K do the same from the keyboard, and a sideways swipe does it on a phone.',
     ],
     chapter: { slug: 'artifacts', title: 'Requirements & artifacts' },
     also: [{ slug: 'links', title: 'Traceability links' }],

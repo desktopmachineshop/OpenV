@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Artifact, ArtifactStatus, artifactAPI } from '../api/client';
 import { useAlert, useConfirm } from './ui';
 import { useViewport } from '../hooks/useViewport';
+import { ArtifactStepper, ArtifactStepperProps } from './ArtifactStepper';
 
 // Review state machine (mirrors internal/domain/artifacts/status.go):
 // draft <-> in_review -> approved -> superseded. The server is authoritative;
@@ -44,6 +45,12 @@ interface ArtifactHeaderProps {
   // version a status change creates. Without it the header keeps its own
   // local status so the chip stays fresh either way.
   onStatusChange?: (artifact: Artifact) => void;
+  /**
+   * Stepping to the artifact before or after this one in the document. Absent
+   * when there is nothing to step through — one artifact in view, or a
+   * workspace that has not received the controls yet.
+   */
+  nav?: ArtifactStepperProps;
 }
 
 export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
@@ -54,13 +61,14 @@ export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
   onPreviewChange,
   previewVersion,
   onStatusChange,
+  nav,
 }) => {
   const confirm = useConfirm();
   const alertDialog = useAlert();
   const [versions, setVersions] = useState<Artifact[]>([artifact]);
   // On a phone the Edit / Delete / History column moves under the title as
   // a row of full-width buttons instead of squeezing the title.
-  const { isPhone } = useViewport();
+  const { isPhone, coarsePointer: touch } = useViewport();
   const [showVersions, setShowVersions] = useState(false);
   const [loadingVersions, setLoadingVersions] = useState(false);
   const [localPreviewVersion, setLocalPreviewVersion] = useState<Artifact | null>(previewVersion || null);
@@ -177,6 +185,12 @@ export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
 
   return (
     <div className="card" style={{ marginBottom: '20px' }}>
+      {/* Above the title, in its own row. The title row below already reflows
+          to a column on a phone and already carries Edit / Delete / History;
+          putting the stepper in it would fight the title for width on a desktop
+          and land under those buttons on a phone, which is the opposite of
+          where a thumb is. */}
+      {nav && <ArtifactStepper {...nav} touch={touch} showKeyHints={!touch} />}
       <div
         style={{
           display: 'flex',

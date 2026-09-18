@@ -79,6 +79,44 @@ test.describe('a 1024 px laptop', () => {
   });
 });
 
+test.describe('stepping through the document', () => {
+  test.use({ viewport: { width: 1440, height: 900 } });
+
+  test('the controls and the reading keys walk the project', async ({ page }) => {
+    const { reqTitle } = await journey(page, 'stepping');
+    const second = `${reqTitle} second`;
+    const third = `${reqTitle} third`;
+    await createRequirement(page, second, 'The system shall be the second artifact.');
+    await createRequirement(page, third, 'The system shall be the third artifact.');
+
+    // Back to the first of the three: nothing before it.
+    await page.getByText(reqTitle, { exact: true }).first().click();
+    await expect(page.getByText('1 of 3')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Previous artifact' })).toBeDisabled();
+
+    await page.getByRole('button', { name: 'Next artifact' }).click();
+    await expect(page.getByText('2 of 3')).toBeVisible();
+    await expect(page.getByRole('heading', { name: second }).first()).toBeVisible();
+
+    // J and K, from the page rather than from a control.
+    await page.keyboard.press('j');
+    await expect(page.getByText('3 of 3')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Next artifact' })).toBeDisabled();
+    await page.keyboard.press('k');
+    await expect(page.getByText('2 of 3')).toBeVisible();
+
+    // The guard that matters most: a j typed into a field is a j.
+    await page.getByPlaceholder('Search...').fill('j');
+    await expect(page.getByText('2 of 3')).toBeVisible();
+    await page.getByPlaceholder('Search...').fill('');
+
+    // The selection survives a reload, and so does its place in the document.
+    await page.reload();
+    await expect(page.getByText('2 of 3')).toBeVisible();
+    await expectNoHorizontalScroll(page);
+  });
+});
+
 test.describe('a 2560 px display', () => {
   test.use({ viewport: { width: 2560, height: 1440 } });
 

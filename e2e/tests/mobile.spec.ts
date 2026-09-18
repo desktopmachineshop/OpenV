@@ -1,5 +1,12 @@
 import { test, expect, Page } from '@playwright/test';
-import { createProject, expectNoHorizontalScroll, makeRunId, makeUser, registerUser } from './helpers';
+import {
+  createProject,
+  expectNoHorizontalScroll,
+  makeRunId,
+  makeUser,
+  registerUser,
+  swipeRegion,
+} from './helpers';
 
 // Mobile journey (docs/plans/mobile-support.md, REQ-101..REQ-105).
 //
@@ -95,6 +102,45 @@ test('the requirements module stacks into tree, document and notes panes', async
   // And back to the tree, which kept its state.
   await panes.getByRole('tab', { name: 'Tree' }).click();
   await expect(page.getByText(reqTitle, { exact: true }).first()).toBeVisible();
+});
+
+test('stepping between artifacts works by control and by swipe', async () => {
+  const second = `${reqTitle} second`;
+  const panes = page.getByRole('tablist', { name: 'Requirements panes' });
+
+  // A second artifact, so there is somewhere to step to.
+  await page.getByRole('button', { name: '+ New Artifact' }).click();
+  await page.locator('#type').selectOption('requirement');
+  await page.locator('#title').fill(second);
+  await page.locator('#body').fill('The system shall be the artifact after the first.');
+  await page.getByRole('button', { name: 'Create', exact: true }).click();
+
+  await page.getByText(reqTitle, { exact: true }).first().click();
+  await expect(panes.getByRole('tab', { name: 'Document' })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByText('1 of 2')).toBeVisible();
+  await expectNoHorizontalScroll(page);
+
+  // The control: big enough for a thumb, and it turns the page.
+  const next = page.getByRole('button', { name: 'Next artifact' });
+  const box = await next.boundingBox();
+  expect(box?.height ?? 0).toBeGreaterThanOrEqual(40);
+  await next.click();
+  await expect(page.getByText('2 of 2')).toBeVisible();
+  await expect(page.getByRole('heading', { name: second }).first()).toBeVisible();
+  // Stepping stays on the document; it is not a pane switch.
+  await expect(panes.getByRole('tab', { name: 'Document' })).toHaveAttribute('aria-selected', 'true');
+  await expectNoHorizontalScroll(page);
+
+  // The gesture, where the engine can build one.
+  const swiped = await swipeRegion(page, 'Artifact document', 140);
+  if (swiped) {
+    // Rightwards is back to the artifact before.
+    await expect(page.getByText('1 of 2')).toBeVisible();
+    await expect(page.getByRole('heading', { name: reqTitle }).first()).toBeVisible();
+    await swipeRegion(page, 'Artifact document', -140);
+    await expect(page.getByText('2 of 2')).toBeVisible();
+  }
+  await expectNoHorizontalScroll(page);
 });
 
 test('the project list and settings pages fit the phone', async () => {

@@ -1,6 +1,14 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Artifact } from '../api/client';
 import { DropZone, dropZoneFor, planMove } from '../utils/artifactDrag';
+import {
+  ArtifactTreeNode,
+  ancestorIds,
+  buildHierarchy,
+  compareArtifacts,
+  documentOrder,
+  normalizeParentId,
+} from '../utils/artifactSequence';
 import { QualityBadge } from './QualityBadge';
 import { Modal } from './ui/Modal';
 import { useViewport } from '../hooks/useViewport';
@@ -48,59 +56,6 @@ interface ArtifactListProps {
   /** Quality scores by artifact id; a badge is shown on rows present here. */
   qualityScores?: Record<string, QualityRowInfo>;
 }
-
-interface ArtifactTreeNode {
-  artifact: Artifact;
-  children: ArtifactTreeNode[];
-}
-
-const normalizeParentId = (parentId?: string | null): string | null => parentId ?? null;
-
-const compareArtifacts = (left: Artifact, right: Artifact): number => {
-  const leftOrder = left.sort_order ?? 0;
-  const rightOrder = right.sort_order ?? 0;
-  const leftHasOrder = leftOrder > 0;
-  const rightHasOrder = rightOrder > 0;
-
-  if (leftHasOrder && rightHasOrder) {
-    return leftOrder - rightOrder;
-  }
-
-  if (!leftHasOrder && !rightHasOrder) {
-    return new Date(left.created_at).getTime() - new Date(right.created_at).getTime();
-  }
-
-  return leftHasOrder ? -1 : 1;
-};
-
-const buildHierarchy = (artifacts: Artifact[]): ArtifactTreeNode[] => {
-  const nodeMap = new Map<string, ArtifactTreeNode>();
-  const roots: ArtifactTreeNode[] = [];
-
-  // Create nodes for all artifacts
-  artifacts.forEach((artifact) => {
-    nodeMap.set(artifact.id, { artifact, children: [] });
-  });
-
-  // Build tree structure
-  artifacts.forEach((artifact) => {
-    const node = nodeMap.get(artifact.id)!;
-    if (artifact.parent_id && nodeMap.has(artifact.parent_id)) {
-      nodeMap.get(artifact.parent_id)!.children.push(node);
-    } else {
-      roots.push(node);
-    }
-  });
-
-  const sortNodes = (nodes: ArtifactTreeNode[]): void => {
-    nodes.sort((left, right) => compareArtifacts(left.artifact, right.artifact));
-    nodes.forEach((node) => sortNodes(node.children));
-  };
-
-  sortNodes(roots);
-
-  return roots;
-};
 
 export const ArtifactList: React.FC<ArtifactListProps> = ({
   artifacts,
@@ -172,6 +127,39 @@ export const ArtifactList: React.FC<ArtifactListProps> = ({
     setCollapsedIds(new Set());
   }, [expandAllTrigger]);
 
+  // A selection can arrive from outside the tree — a deep link, a citation, the
+  // review queue, the ‹ / › stepper, J / K, a swipe — and land on a row inside a
+  // parent the reader collapsed, which says the artifact is selected while
+  // showing no sign of it. So the chain from the selection up to the root is
+  // opened.
+  //
+  // Only that chain, and only when the chain itself changes: a section closed
+  // on purpose stays closed unless the selection moves into it, and re-filtering
+  // (which rebuilds `artifacts` on every keystroke) re-opens nothing. An
+  // ancestor the filter excluded is not in the tree either — its child is drawn
+  // as a root — so walking the filtered set simply finds nothing to open.
+  const revealIds = selectedId ? ancestorIds(artifacts, selectedId) : [];
+  const revealKey = revealIds.join(' ');
+  // revealIds is re-derived every render, because `artifacts` is a new array
+  // every render; the ref keeps the effect's dependency down to the value that
+  // actually changed.
+  const revealRef = useRef<string[]>(revealIds);
+  useEffect(() => {
+    revealRef.current = revealIds;
+  });
+  useEffect(() => {
+    if (!revealKey) return;
+    setCollapsedIds((prev) => {
+      const closed = revealRef.current.filter((id) => prev.has(id));
+      // Returning the same set keeps the identity, so nothing re-renders when
+      // the path is already open — which is the common case.
+      if (closed.length === 0) return prev;
+      const next = new Set(prev);
+      closed.forEach((id) => next.delete(id));
+      return next;
+    });
+  }, [revealKey]);
+
   const getSiblingOrder = (artifact: Artifact): Artifact[] => {
     const parentId = normalizeParentId(artifact.parent_id);
     return allArtifacts
@@ -227,18 +215,10 @@ export const ArtifactList: React.FC<ArtifactListProps> = ({
   };
 
   // Every artifact in document order with its depth, for the Move to…
-  // picker: a flat list the native select can show with indentation.
-  const flattened = useMemo(() => {
-    const out: { artifact: Artifact; depth: number }[] = [];
-    const walk = (nodes: ArtifactTreeNode[], depth: number) => {
-      nodes.forEach((node) => {
-        out.push({ artifact: node.artifact, depth });
-        walk(node.children, depth + 1);
-      });
-    };
-    walk(buildHierarchy(allArtifacts), 0);
-    return out;
-  }, [allArtifacts]);
+  // picker: a flat list the native select can show with indentation. Built
+  // from allArtifacts, not the filtered set: a move has to be able to target a
+  // heading the current filter is hiding.
+  const flattened = useMemo(() => documentOrder(allArtifacts), [allArtifacts]);
 
   const renderArtifact = (node: ArtifactTreeNode, depth: number = 0): React.ReactNode => {
     const { artifact } = node;
