@@ -3,13 +3,18 @@
 # new release notes is smoke-tested on staging and, if it passes, promoted
 # to `release` by the Promote to release workflow.
 #
-# Until staging exists this workflow is a no-op: it needs the repository
-# variable STAGING_BASE_URL (the staging frontend's origin, which Railway
-# deploys from master — see docs/railway.md, "Staging") and skips with a
-# note when it is unset. Manual runs behave the same way.
+# This workflow is a no-op until the repository variable STAGING_BASE_URL is
+# set, and that variable is what ARMS AUTOMATIC PROMOTION — setting it means
+# a green master goes to production without anyone asking. It is deliberately
+# unset today: promotions are batched and human-initiated (CLAUDE.md). The
+# separate staging-smoke.yml runs the same journey on every merge and only
+# reports, which is what staging is for meanwhile; it reads STAGING_URL, a
+# different variable, precisely so that smoke-testing staging cannot arm this.
 #
-# The smoke suite registers its own users, so staging needs
-# OPENV_REGISTER_IP_BURST raised the way CI's compose stack does.
+# Staging has public sign-up closed (REQ-141), so the smoke suite signs in as
+# a pre-provisioned account: repository variable SMOKE_EMAIL and repository
+# secret SMOKE_PASSWORD. Staging also wants OPENV_AUTH_ACCOUNT_BURST raised,
+# since that one account signs in on every run (the default is 5 per hour).
 
 name: Nightly promotion
 
@@ -82,14 +87,37 @@ jobs:
       # Staging deploys from master (docs/railway.md), so the smoke run
       # exercises this very commit: the API answered, so its migrations
       # applied; the journey passed, so the build works end to end.
+      #
+      # "This very commit" has to be checked, not assumed. Waiting for the
+      # API to merely answer would accept a staging box still running last
+      # week's build and promote a commit nothing ever tested, so both
+      # services are asked which commit they are (/health, /build.json) and
+      # both must say this one. They are separate Railway builds that finish
+      # at different times, hence both.
       - name: Staging runs this commit
         if: steps.staging.outputs.enabled == 'true' && steps.notes.outputs.release == 'true'
         env:
           STAGING_BASE_URL: ${{ vars.STAGING_BASE_URL }}
+          SHA: ${{ github.sha }}
         run: |
-          expected=$(python3 scripts/release_notes.py version RELEASE_NOTES.md)
-          timeout 900 bash -c 'until curl -fsS "$STAGING_BASE_URL/api/v1/release" -o /dev/null -w "%{http_code}" 2>/dev/null | grep -q 401; do sleep 15; done'
-          echo "Staging API is up; expecting nightly notes version $expected on it"
+          probe() {
+            curl -fsS --max-time 20 "$STAGING_BASE_URL$1" 2>/dev/null \
+              | python3 -c 'import json,sys; print(json.load(sys.stdin).get("commit",""))' 2>/dev/null || true
+          }
+          deadline=$(( $(date +%s) + 900 ))
+          while :; do
+            api=$(probe /health)
+            web=$(probe /build.json)
+            if [ "$api" = "$SHA" ] && [ "$web" = "$SHA" ]; then
+              echo "Staging is running $SHA; expecting notes version $(python3 scripts/release_notes.py version RELEASE_NOTES.md)"
+              break
+            fi
+            if [ "$(date +%s)" -ge "$deadline" ]; then
+              echo "::error::Staging did not reach $SHA within 15 minutes (api=${api:-unknown}, frontend=${web:-unknown}); not promoting."
+              exit 1
+            fi
+            sleep 15
+          done
 
       - uses: actions/setup-node@v4
         if: steps.staging.outputs.enabled == 'true' && steps.notes.outputs.release == 'true'
@@ -103,6 +131,8 @@ jobs:
         working-directory: e2e
         env:
           BASE_URL: ${{ vars.STAGING_BASE_URL }}
+          SMOKE_EMAIL: ${{ vars.SMOKE_EMAIL }}
+          SMOKE_PASSWORD: ${{ secrets.SMOKE_PASSWORD }}
         run: |
           npm ci
           npx playwright install --with-deps chromium

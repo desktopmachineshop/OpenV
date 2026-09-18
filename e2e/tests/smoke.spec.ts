@@ -18,10 +18,22 @@ import { openModule } from './helpers';
 // half-finished one.
 const runId = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 
+// How the journey gets a session. A deployment with public sign-up open (the
+// compose stack, CI) registers a throwaway user per run and owes the suite
+// nothing afterwards. Staging has sign-up CLOSED — REQ-141 admits only the
+// maintainers and the customers previewing a release — so there the suite
+// signs in as one pre-provisioned account named by SMOKE_EMAIL /
+// SMOKE_PASSWORD. Everything after this point is scoped to runId either way,
+// so a long-lived account just accumulates uniquely named projects and the
+// journey stays additive.
+const smokeEmail = process.env.SMOKE_EMAIL;
+const smokePassword = process.env.SMOKE_PASSWORD;
+const signsIn = !!(smokeEmail && smokePassword);
+
 const user = {
   name: `E2E Smoke ${runId}`,
-  email: `e2e-${runId}@example.com`,
-  password: `e2e-pass-${runId}`,
+  email: smokeEmail || `e2e-${runId}@example.com`,
+  password: smokePassword || `e2e-pass-${runId}`,
 };
 const projectName = `E2E Project ${runId}`;
 const reqTitle = `E2E REQ ${runId}`;
@@ -41,8 +53,30 @@ test.afterAll(async () => {
   await page?.close();
 });
 
-test('registers a fresh user and lands in the personal workspace', async () => {
+test('signs in and lands in a workspace', async () => {
   await page.goto('/login');
+
+  if (signsIn) {
+    await page.getByPlaceholder('Email').fill(user.email);
+    await page.getByPlaceholder('Password', { exact: true }).fill(user.password);
+    // exact: the page also offers "Sign in with Google" / "Sign in with
+    // <provider>" where SSO is configured, and getByRole matches a substring
+    // by default.
+    await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+    await expect(page).toHaveURL(/\/projects$/);
+    // The account's real display name, which later steps assert against (a
+    // baseline says who captured it). The suite picked the name on the
+    // register path; here the deployment owns it.
+    const me = await page.request.get('/api/v1/auth/me');
+    expect(me.ok()).toBeTruthy();
+    user.name = (await me.json()).name;
+    expect(user.name).toBeTruthy();
+    // Nothing is asserted about which workspace: a pre-provisioned account
+    // may have been invited to others, and which one it lands in is not what
+    // this journey is testing.
+    return;
+  }
+
   await page.getByRole('button', { name: 'Create a new account' }).click();
   await page.getByPlaceholder('Your name').fill(user.name);
   await page.getByPlaceholder('Email').fill(user.email);
@@ -51,7 +85,8 @@ test('registers a fresh user and lands in the personal workspace', async () => {
 
   await expect(page).toHaveURL(/\/projects$/);
   // Registration auto-provisions "<name>'s Space" as a personal workspace;
-  // the org switcher shows it with a "personal" pill.
+  // the org switcher shows it with a "personal" pill. Only a freshly
+  // registered account is known to have exactly that.
   await expect(page.getByText(`${user.name}'s Space`)).toBeVisible();
   await expect(page.getByText('personal', { exact: true })).toBeVisible();
 });

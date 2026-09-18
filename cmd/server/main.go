@@ -580,6 +580,11 @@ func main() {
 	// release rather than keeping the API down over documentation.
 	deploymentKind := envOr("OPENV_DEPLOYMENT", "shared")
 	releaseFeedURL := envOr("OPENV_RELEASE_FEED_URL", "https://api.openv.app/api/v1/public/release")
+	// The commit this binary was built from, reported by /health so a running
+	// deployment can be matched to a revision (REQ-141). Railway injects
+	// RAILWAY_GIT_COMMIT_SHA; OPENV_BUILD_SHA overrides it for platforms that
+	// do not, and both being unset simply leaves the commit out of /health.
+	buildSHA := envOr("OPENV_BUILD_SHA", os.Getenv("RAILWAY_GIT_COMMIT_SHA"))
 	releaseService, err := release.NewService(openv.ReleaseNotesMarkdown)
 	if err != nil {
 		slog.Error("release notes failed to parse; serving no release", "error", err)
@@ -747,6 +752,7 @@ func main() {
 		SettingsService:      settingsService,
 		ReleaseService:       releaseService,
 		DeploymentKind:       deploymentKind,
+		BuildSHA:             buildSHA,
 		WorkItemService:      workItemService,
 		GuidedService:        guidedService,
 		InterviewService:     interviewService,

@@ -9,6 +9,14 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Maintenance updates
+
+- **Every deployment can now say which build it is running.** The service
+  health check reports the commit it was built from, and the web app serves
+  the same at `/build.json`. Nothing changes in the app itself; it means a
+  deployment can be matched to an exact revision when something needs
+  chasing down, and it is what lets a test run prove which build it tested.
+
 ## 0.13.0 — 2026-09-18
 
 ### New features

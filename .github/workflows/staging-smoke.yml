@@ -1,0 +1,119 @@
+# Staging smoke (docs/railway.md "Staging", REQ-141).
+#
+# Staging deploys from master, so every merge lands there first. This
+# workflow waits for staging to report the very commit that was merged, then
+# runs the smoke journey against it.
+#
+# It REPORTS ONLY. Promotion to production stays manual — the maintainer runs
+# "Promote to release" when they want a release (CLAUDE.md). The separate
+# nightly-promote.yml is what would promote automatically, and it stays a
+# no-op until the STAGING_BASE_URL repository variable arms it; this workflow
+# deliberately reads a DIFFERENT variable so that running smoke on staging
+# does not arm nightly promotion as a side effect.
+#
+# Until staging exists this workflow is a no-op: it needs the repository
+# variable STAGING_URL (the staging frontend's origin). Manual runs behave
+# the same way.
+#
+# Staging has public sign-up closed, so the suite signs in as a
+# pre-provisioned account: repository variable SMOKE_EMAIL and repository
+# secret SMOKE_PASSWORD (see e2e/tests/smoke.spec.ts).
+
+name: Staging smoke
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A second merge supersedes the first: Railway builds the newer commit, so an
+# older run would poll for a SHA that never arrives and fail on the timeout
+# rather than on anything real.
+concurrency:
+  group: staging-smoke
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    name: Smoke test staging
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Staging configured?
+        id: staging
+        env:
+          STAGING_URL: ${{ vars.STAGING_URL }}
+        run: |
+          if [ -z "$STAGING_URL" ]; then
+            echo "STAGING_URL is not set; staging does not exist yet." >> "$GITHUB_STEP_SUMMARY"
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # The gate. Staging deploys from master, so this commit is on its way
+      # there; waiting for it to be the RUNNING one is what makes the smoke
+      # result attributable. The API answering at all also means its
+      # migrations applied — they run on boot, and a failure there is a
+      # failure to boot (cmd/server/main.go, MigrateAndBackfill).
+      #
+      # The API and the frontend are separate Railway builds that finish at
+      # different times, so both are checked: a new API behind the previous
+      # frontend would fail the journey on a UI string this commit changed.
+      - name: Staging runs this commit
+        if: steps.staging.outputs.enabled == 'true'
+        env:
+          STAGING_URL: ${{ vars.STAGING_URL }}
+          SHA: ${{ github.sha }}
+        run: |
+          probe() {
+            # $1 path, $2 what it is. Empty output = not there yet.
+            curl -fsS --max-time 20 "$STAGING_URL$1" 2>/dev/null \
+              | python3 -c 'import json,sys; print(json.load(sys.stdin).get("commit",""))' 2>/dev/null || true
+          }
+          deadline=$(( $(date +%s) + 900 ))
+          while :; do
+            api=$(probe /health)
+            web=$(probe /build.json)
+            if [ "$api" = "$SHA" ] && [ "$web" = "$SHA" ]; then
+              echo "Staging is running $SHA (api and frontend)."
+              break
+            fi
+            if [ "$(date +%s)" -ge "$deadline" ]; then
+              echo "::error::Staging did not reach $SHA within 15 minutes (api=${api:-unknown}, frontend=${web:-unknown})."
+              echo "A build may have failed, or the services may not be connected to master." >&2
+              exit 1
+            fi
+            sleep 15
+          done
+
+      - uses: actions/setup-node@v4
+        if: steps.staging.outputs.enabled == 'true'
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: e2e/package-lock.json
+
+      - name: Smoke test
+        if: steps.staging.outputs.enabled == 'true'
+        working-directory: e2e
+        env:
+          BASE_URL: ${{ vars.STAGING_URL }}
+          SMOKE_EMAIL: ${{ vars.SMOKE_EMAIL }}
+          SMOKE_PASSWORD: ${{ secrets.SMOKE_PASSWORD }}
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+          npx playwright test tests/smoke.spec.ts --project=chromium
+
+      - name: Upload the report on failure
+        if: failure() && steps.staging.outputs.enabled == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: staging-smoke-report
+          path: e2e/playwright-report
+          retention-days: 7
