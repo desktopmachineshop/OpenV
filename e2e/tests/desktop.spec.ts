@@ -108,10 +108,19 @@ test.describe('stepping through the document', () => {
     await page.keyboard.press('k');
     await expect(page.getByText('2 of 3', { exact: true })).toBeVisible();
 
-    // The guard that matters most: a j typed into a field is a j.
-    await page.getByPlaceholder('Search...').fill('j');
+    // The guard that matters most: a j typed into a field is a j, not a step.
+    // Pressed rather than filled, because fill() sets the value without ever
+    // dispatching the keystroke the guard exists to refuse. The assertion is on
+    // the artifact rather than the count: typing also narrows the tree, and the
+    // sequence deliberately follows the filter, so the count may legitimately
+    // change or go away while the selection stays exactly where it was.
+    const search = page.getByPlaceholder('Search...');
+    await search.click();
+    await page.keyboard.press('j');
+    await expect(search).toHaveValue('j');
+    await expect(page.getByRole('heading', { name: second }).first()).toBeVisible();
+    await search.fill('');
     await expect(page.getByText('2 of 3', { exact: true })).toBeVisible();
-    await page.getByPlaceholder('Search...').fill('');
 
     // The selection survives a reload, and so does its place in the document.
     await page.reload();
