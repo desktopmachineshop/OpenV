@@ -150,6 +150,7 @@ GET /api/v1/proposals
 GET /api/v1/provider-logins/{id}
 GET /api/v1/provider-logins/{id}/full
 GET /api/v1/provider-settings
+GET /api/v1/public/build
 GET /api/v1/public/connector/download
 GET /api/v1/public/interviews/{token}
 GET /api/v1/public/interviews/{token}/stream

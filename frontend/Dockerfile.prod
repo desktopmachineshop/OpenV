@@ -52,17 +52,36 @@ COPY security-headers.conf /etc/nginx/security-headers.conf
 # meaningful here and covers a compose stack whose API service is `api`.
 COPY docker-entrypoint.d/40-openv-api-proxy.sh /docker-entrypoint.d/40-openv-api-proxy.sh
 COPY openv-nginx/api-proxy.conf /etc/nginx/openv/api-proxy.conf
+# X-Robots-Tag: rewritten from OPENV_NOINDEX at start the same way. The
+# build-time default is indexable, and is what makes the `nginx -t` below
+# (and the shared instance) see a file where security-headers.conf includes
+# one.
+COPY docker-entrypoint.d/45-openv-noindex.sh /docker-entrypoint.d/45-openv-noindex.sh
+COPY openv-nginx/noindex.conf /etc/nginx/openv/noindex.conf
 RUN api_origin="${REACT_APP_API_URL%/}" && \
     if [ -n "$api_origin" ]; then \
         sed -i "s|__API_ORIGIN__|${api_origin}|g" /etc/nginx/security-headers.conf; \
     else \
         sed -i "s| __API_ORIGIN__||g" /etc/nginx/security-headers.conf; \
     fi && \
-    chmod +x /docker-entrypoint.d/40-openv-api-proxy.sh && \
+    chmod +x /docker-entrypoint.d/40-openv-api-proxy.sh /docker-entrypoint.d/45-openv-noindex.sh && \
     nginx -t
 
 # Copy built assets from builder stage
 COPY --from=builder /app/build /usr/share/nginx/html
+
+# The commit this image was built from, served at /build.json. The API
+# reports the same thing on /health, and the staging smoke gate waits for
+# BOTH to equal the commit under test before it runs: the two services build
+# independently and finish at different times, so gating on the API alone can
+# put a new API behind a last-deploy frontend (REQ-141). Railway passes
+# RAILWAY_GIT_COMMIT_SHA; empty everywhere else, and an empty commit is what
+# tells the gate this build cannot be identified rather than that it matches.
+#
+# Declared after the build stage on purpose: the SHA changes on every commit,
+# and a build argument consumed up there would miss the npm cache every time.
+ARG RAILWAY_GIT_COMMIT_SHA=""
+RUN printf '{"commit":"%s"}\n' "$RAILWAY_GIT_COMMIT_SHA" > /usr/share/nginx/html/build.json
 
 # Run as the unprivileged nginx user that ships with the base image.
 # Give it ownership of the paths nginx writes to. (Do not add a custom

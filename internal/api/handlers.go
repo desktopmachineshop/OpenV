@@ -85,7 +85,13 @@ type HandlerDeps struct {
 	SettingsService settings.Service
 	ReleaseService  release.Service
 	// DeploymentKind is "shared" (default) or "dedicated" (REQ-139).
-	DeploymentKind   string
+	DeploymentKind string
+	// BuildSHA is the git commit this binary was built from, empty where
+	// nothing told it (a local `go run`, the compose stack). /health reports
+	// it so a deployment can be matched to a commit — which is what lets the
+	// staging smoke gate prove it tested the commit it thinks it did
+	// (REQ-141).
+	BuildSHA         string
 	WorkItemService  workitems.Service
 	GuidedService    guided.Service
 	InterviewService interviews.Service
@@ -183,6 +189,7 @@ type Handler struct {
 	settingsService      settings.Service
 	releaseService       release.Service
 	deploymentKind       string
+	buildSHA             string
 	workItemService      workitems.Service
 	guidedService        guided.Service
 	interviewService     interviews.Service
@@ -287,6 +294,7 @@ func NewHandler(deps HandlerDeps) *Handler {
 		settingsService:        deps.SettingsService,
 		releaseService:         deps.ReleaseService,
 		deploymentKind:         deps.DeploymentKind,
+		buildSHA:               deps.BuildSHA,
 		vvService:              deps.VVService,
 		evidenceService:        deps.EvidenceService,
 		workItemService:        deps.WorkItemService,
@@ -473,10 +481,24 @@ func (h *Handler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/health", h.Health).Methods("GET")
 }
 
-// Health returns the health status
+// Health returns the health status, and the commit this binary was built
+// from where the build told it one. The commit is what lets a deployment be
+// matched to a revision: the staging smoke gate waits for it to equal the
+// commit under test before running, so a green run cannot be a stale build's
+// (REQ-141). It is omitted entirely when unknown, leaving the answer exactly
+// as it was for local runs and the compose stack.
+//
+// This lives on /health rather than the release feed because /health is
+// already unauthenticated (authmiddleware.go), unlogged (requestlog.go) and
+// uncached, while GET /api/v1/public/release is deliberately cached for five
+// minutes for the dedicated instances that poll it.
 func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
+	body := map[string]string{"status": "ok"}
+	if h.buildSHA != "" {
+		body["commit"] = h.buildSHA
+	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+	json.NewEncoder(w).Encode(body)
 }
 
 // CreateArtifact creates a new artifact

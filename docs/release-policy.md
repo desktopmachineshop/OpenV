@@ -45,11 +45,24 @@ same day. No channel or upgrade window holds them back.
 
 ## Staging
 
-After the alpha, every merge to master deploys to a staging environment
-with its own anonymised database. The nightly promotion is gated on that
-commit's smoke tests and migrations passing there. Staging is also where an
-enterprise previews its next stable and where the maintainer checks a
-release by hand before a monthly cut.
+Every merge to master deploys to a staging environment with its own
+database, holding no production data. The smoke journey runs there against
+that exact commit — both services report the commit they were built from, and
+the run waits for them to match — so a green result is attributable to the
+merge that caused it, and the API having booted at all means its migrations
+applied.
+
+Smoke on staging **reports**; it does not promote. Promotion to production
+stays a human decision (see `docs/railway.md`): the nightly automation that
+would promote a green master by itself is written and deliberately unarmed.
+Gating promotion on staging is what arming it would add, and the two read
+different repository variables so that one cannot turn on the other by
+accident.
+
+Staging is also where an enterprise previews its next stable and where the
+maintainer checks a release by hand before a monthly cut — every master
+commit already has a staging deployment, and Railway's deployment history
+brings any of them back.
 
 ## Implementation status
 
@@ -62,5 +75,6 @@ release by hand before a monthly cut.
 | Stable designation in the pipeline (REQ-135) | Shipped: `scripts/release_notes.py cut-stable` and the *Cut stable release* workflow (first working day of the month, or `fix: true` by hand) |
 | Upgrade window and personal preview (REQ-138) | Shipped: window in workspace settings, admin notices at the designation and a day before, per-member preview |
 | Dedicated instance support window (REQ-139) | Shipped: `OPENV_DEPLOYMENT=dedicated` polls `GET /api/v1/public/release` and warns admins at 30 and 7 days and on close |
-| Staging environment and nightly automation (REQ-141, REQ-135) | Workflow in place (*Nightly promotion*, 03:00 UTC), a no-op until the `STAGING_BASE_URL` repository variable names a staging environment (after the alpha; see `docs/railway.md`, "Staging") |
+| Staging environment (REQ-141) | Repository side shipped: `/health` and `/build.json` name the running commit, and *Staging smoke* runs the journey on every merge once `STAGING_URL` names a staging environment. Needs the Railway environment built (see `docs/railway.md`, "Staging") |
+| Nightly automation (REQ-141, REQ-135) | Workflow in place (*Nightly promotion*, 03:00 UTC) and deliberately unarmed: promotion stays a human decision, so the `STAGING_BASE_URL` repository variable that would gate and automate it is left unset |
 | Compatibility and deprecation rule (REQ-143) | Enforced: `internal/api/testdata/routes.txt` pins the HTTP surface; a route cannot be removed without regenerating it on purpose |

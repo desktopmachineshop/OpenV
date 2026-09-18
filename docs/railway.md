@@ -372,17 +372,126 @@ a normal push to the connected branch.
 
 ## Staging
 
-After the alpha, a second Railway environment named `staging` in the same
-project, with its own Postgres and volume, both services connected to
-`master`, and the same variables as production apart from its own
-`PUBLIC_URL`, `CORS_ORIGIN`, `API_UPSTREAM` and a raised
-`OPENV_REGISTER_IP_BURST` (the smoke suite registers its own users). Seed
-its database from an anonymised copy; never point it at production data.
-Then set the repository variable `STAGING_BASE_URL` to the staging
-frontend's origin: from that moment the nightly promotion smoke-tests
-master on staging every night and promotes when it passes and there is
-something new under Unreleased. Enterprise customers previewing a stable
-release use a staging copy of their own instance in the same way.
+A second Railway **environment** named `staging` in the same project, with
+its own Postgres and its own volume, and all three repo-backed services
+connected to **`master`** rather than `release`. Every merge to master lands
+there; production still moves only when someone runs *Promote to release*.
+
+Staging carries **no production data**. It is not a copy of the live
+database and must never be pointed at one: it starts empty and fills with
+whatever is created on it. That is also its limitation — a migration that
+backfills existing rows is exercised against a nearly empty table here, so
+staging proves a migration *applies*, not that it transforms real data
+correctly.
+
+**Services.** Fork the `production` environment so the Dockerfile paths,
+healthchecks and volumes carry over, then per service in the staging
+environment only:
+
+| Service | Branch | Notes |
+|---|---|---|
+| API | `master` | own volume at `/data` |
+| Frontend | `master` | root directory `frontend` |
+| Runner pool | `master` | 1 replica is enough to exercise a lease |
+
+Check every variable that is meant to be a **reference** still reads as one
+(`${{Postgres.DATABASE_URL}}?sslmode=disable`,
+`${{OpenV.RAILWAY_PRIVATE_DOMAIN}}`, `${{OpenV.RUNNER_POOL_KEY}}`) before
+the first deploy. A fork copies variables verbatim: a rendered
+`postgresql://…` literal pasted into production at some point would make
+staging boot against the production database — and the API migrates on
+boot.
+
+**Variables that differ** from production, on the staging API:
+
+```dotenv
+CORS_ORIGIN=https://staging.openv.app
+PUBLIC_URL=https://staging.openv.app
+FRONTEND_URL=https://staging.openv.app
+
+# Sign-in throttles: one smoke account signs in on every merge, and the
+# per-account default is 5 an hour.
+OPENV_AUTH_ACCOUNT_BURST=100
+OPENV_AUTH_IP_BURST=100
+
+# Set after the bootstrap below, not before.
+OPENV_REGISTRATION=closed
+
+# Never shared with production — mint fresh ones.
+WORKER_API_KEY=<long random string>
+RUNNER_POOL_KEY=<long random string>
+OPENV_METRICS_TOKEN=<long random string>
+```
+
+and on the staging frontend:
+
+```dotenv
+# Keeps staging out of search results: every response carries
+# X-Robots-Tag: noindex, nofollow, noarchive.
+OPENV_NOINDEX=1
+```
+
+**Leave unset on staging**: every `OPENV_SMTP_*` and every `OPENV_VAPID_*`
+variable — that is what guarantees no email and no web push can escape a
+test run — and `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`, whose redirect
+URI is registered for openv.app only. Email and push flows therefore cannot
+be tested on staging. Leave `OPENV_DEPLOYMENT` at its default `shared`;
+`dedicated` would start the support-window watcher.
+
+**Domain.** `staging.openv.app` on the frontend service, attached the same
+way as the production domains above. Session cookies are host-only, so a
+session on staging is never presented to openv.app or the reverse. Do not
+give the staging API a custom domain: nothing — no connector, no dedicated
+instance's `OPENV_RELEASE_FEED_URL` — should have a memorable address for it.
+
+**Bootstrap, in two steps** (a closed deployment has no way to make its
+first account):
+
+1. Deploy with `OPENV_REGISTRATION` unset, and register the maintainer
+   account plus one smoke account through the sign-up form.
+2. Set `OPENV_REGISTRATION=closed` and redeploy the API. The login page
+   reads the policy from `GET /api/v1/auth/policy` at run time, so the
+   frontend needs no rebuild. Everyone after that arrives by workspace
+   invitation link — which is how an Enterprise customer previewing a
+   release is admitted.
+
+**Which commit is running.** The API reports its commit at
+`/api/v1/public/build` and the frontend serves the same at `/build.json`,
+both from `RAILWAY_GIT_COMMIT_SHA`. They are separate builds that finish at
+different times, so both are worth checking:
+
+```console
+$ curl -s https://staging.openv.app/api/v1/public/build | jq -r .commit
+$ curl -s https://staging.openv.app/build.json | jq -r .commit
+```
+
+On the **frontend's** origin the API is reachable only under `/api/`: nginx
+answers `/health` itself with plain `healthy` and never proxies it, so
+`https://staging.openv.app/health` tells you nothing about the API. The API's
+`/health` does carry the same commit, but only where you can reach the API
+directly — its own `*.up.railway.app` domain, or Railway's healthcheck.
+
+**The smoke run.** Set the repository variables `STAGING_URL`
+(`https://staging.openv.app`) and `SMOKE_EMAIL`, and the repository secret
+`SMOKE_PASSWORD`. The *Staging smoke* workflow
+(`.github/workflows/staging-smoke.yml`) then runs on every merge to master:
+it waits for both commits above to equal the merged commit, then signs in as
+the smoke account and runs the journey. It **reports only** — it never
+promotes.
+
+**Automatic promotion is a separate, deliberate switch.** Setting the
+repository variable `STAGING_BASE_URL` arms *Nightly promotion*
+(`.github/workflows/nightly-promote.yml`), which promotes a green master to
+production at 03:00 UTC without anyone asking. It is unset, and should stay
+unset until the maintainer wants that; see the release-pipeline note above
+on why promotions are batched. The two workflows read different variables so
+that running smoke on staging cannot arm promotion by accident.
+
+A release candidate can be run on staging by hand without a second branch:
+every master commit has a staging deployment already, and Railway's
+per-service deployment history redeploys any of them. Enterprise customers
+previewing a stable release use a staging copy of their own instance in the
+same way.
 
 ## Dedicated instances
 

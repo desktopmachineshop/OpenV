@@ -329,6 +329,7 @@ Every artifact carries two identifiers, and they answer different questions:
 | GET | `/api/v1/links` | List links (`?project_id=`): every link that touches the project, from either end, so a flow-down link written from a child project is seen by the parent too | viewer |
 | GET | `/api/v1/links/{id}` | Get link | viewer |
 | PUT | `/api/v1/links/{id}` | Update link | editor |
+| PUT | `/api/v1/links/{id}/confirm` | Clear the suspect flag: an editor vouches that the trace still holds after an artifact at one end changed. Idempotent — confirming a link that is not suspect changes nothing. Refused `403` for a proposal-mode agent run rather than diverted to a proposal: this is a human sign-off, and routing it through a proposal would defeat the review the flag exists to trigger | editor |
 | DELETE | `/api/v1/links/{id}` | Delete link | editor |
 | POST | `/api/v1/attachments/upload` | Upload a file (multipart) to an artifact or test result | editor |
 | GET | `/api/v1/attachments/{id}` | Attachment metadata (`title` is the name a member gave the figure, empty when none; readers fall back to `original_filename`) | viewer |

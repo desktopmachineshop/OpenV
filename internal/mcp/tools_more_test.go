@@ -311,6 +311,17 @@ func TestToolRequests(t *testing.T) {
 			wantOut:    "link deleted",
 		},
 		{
+			// No body: the id is the whole request, and the API answers with
+			// the link as it now stands so the caller sees suspect cleared.
+			tool:       "confirm_link",
+			args:       map[string]interface{}{"id": "l1"},
+			status:     200,
+			response:   `{"id":"l1","suspect":false}`,
+			wantMethod: "PUT",
+			wantPath:   "/api/v1/links/l1/confirm",
+			wantOut:    `{"id":"l1","suspect":false}`,
+		},
+		{
 			tool:       "list_links_for_artifact",
 			args:       map[string]interface{}{"artifact_id": "a1", "project_id": "p1"},
 			status:     200,

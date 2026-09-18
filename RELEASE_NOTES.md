@@ -9,6 +9,21 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Maintenance updates
+
+- **Every deployment can now say which build it is running.** The service
+  health check reports the commit it was built from, and the web app serves
+  the same at `/build.json`. Nothing changes in the app itself; it means a
+  deployment can be matched to an exact revision when something needs
+  chasing down, and it is what lets a test run prove which build it tested.
+- **Agents can clear a suspect link.** Editing an artifact marks the links
+  touching it suspect, and until now an agent could see the flag but not act
+  on it — someone had to open the app and confirm each one by hand, even
+  where the agent had just re-read both ends. The connector's tools now
+  include confirming a link, the same action the link panel offers. Agents
+  held to proposal review are still refused it: vouching that a trace holds
+  is a sign-off, and it stays with the people who do the signing off.
+
 ## 0.14.0 — 2026-09-18
 
 ### New features

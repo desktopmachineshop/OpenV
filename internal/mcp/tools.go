@@ -595,6 +595,17 @@ func Tools() []Tool {
 			},
 		},
 		{
+			Name:        "confirm_link",
+			Description: "Clear the suspect flag on one link, vouching that the trace still holds after an artifact at one of its ends changed. Re-read both ends before calling it: the flag exists to make someone look, and clearing it is the assertion that they did. Idempotent — confirming a link that is not suspect changes nothing. list_links_for_artifact reports `suspect` per link, which is how you find the ones waiting. Proposal-mode agent runs are refused (403) rather than diverted to a proposal: this is a human sign-off, and routing it through a proposal would defeat the review the flag is there to trigger.",
+			InputSchema: schema([]string{"id"}, map[string]interface{}{
+				"id": str("Link ID"),
+			}),
+			Handler: func(c *Client, args map[string]interface{}) (string, error) {
+				out, _, err := c.request("PUT", "/api/v1/links/"+strArg(args, "id")+"/confirm", nil, nil)
+				return out, err
+			},
+		},
+		{
 			Name:        "list_links_for_artifact",
 			Description: "List all links touching one artifact.",
 			InputSchema: schema([]string{"artifact_id", "project_id"}, map[string]interface{}{
