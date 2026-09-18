@@ -1,5 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
-import { openModule } from './helpers';
+import { makeRunId, openModule } from './helpers';
 
 // OpenV E2E smoke journey (issue #135).
 //
@@ -15,8 +15,10 @@ import { openModule } from './helpers';
 
 // Unique per worker process. A serial-group retry runs in a fresh worker, so
 // a retried journey registers a brand-new user instead of colliding with the
-// half-finished one.
-const runId = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+// half-finished one. Shared with every other spec rather than inlined here:
+// the id ends up in a registered account's password, so where it comes from
+// is worth having in one place.
+const runId = makeRunId();
 
 // How the journey gets a session. A deployment with public sign-up open (the
 // compose stack, CI) registers a throwaway user per run and owes the suite

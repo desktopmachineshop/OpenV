@@ -1,4 +1,5 @@
 import { Page, expect } from '@playwright/test';
+import { randomBytes } from 'node:crypto';
 
 // Shared journey helpers (issue #189).
 //
@@ -22,9 +23,15 @@ export interface TestUser {
 
 /** Per-run unique id. A serial-group retry runs in a fresh worker, so a retried
  *  journey regenerates this and registers a brand-new user rather than
- *  colliding with the half-finished one. */
+ *  colliding with the half-finished one.
+ *
+ *  randomBytes rather than Math.random: makeUser below puts this id straight
+ *  into a password, and the account it registers is a real one on whatever
+ *  deployment the suite is pointed at, however throwaway it is meant to be.
+ *  A password anyone can recompute from the run's timestamp is not one
+ *  (CodeQL js/insecure-randomness). */
 export function makeRunId(): string {
-  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+  return `${Date.now().toString(36)}-${randomBytes(4).toString('hex')}`;
 }
 
 /** A fresh user whose email/password are unique to this run. */
