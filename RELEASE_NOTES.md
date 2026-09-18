@@ -9,6 +9,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+## 0.13.0 — 2026-09-18
+
 ### New features
 
 - **Approve or send back from the review queue itself.** The In review list
