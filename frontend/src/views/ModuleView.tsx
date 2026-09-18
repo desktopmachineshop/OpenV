@@ -63,6 +63,9 @@ export const ModuleView: React.FC = () => {
   // figure in question.
   const [projectAttachments, setProjectAttachments] = useState<Attachment[]>([]);
   const [uploadingAttachmentId, setUploadingAttachmentId] = useState<string | null>(null);
+  // How far the figure currently uploading has got. Null both when nothing is
+  // uploading and when the browser cannot measure the body.
+  const [uploadPercent, setUploadPercent] = useState<number | null>(null);
   const [baselines, setBaselines] = useState<Baseline[]>([]);
   const [activeBaselineId, setActiveBaselineId] = useState<string>('live');
   const [baselineData, setBaselineData] = useState<ProjectExport | null>(null);
@@ -451,8 +454,9 @@ export const ModuleView: React.FC = () => {
     }
 
     setUploadingAttachmentId(selectedArtifactId);
+    setUploadPercent(0);
     try {
-      const response = await attachmentAPI.upload(selectedArtifactId, file);
+      const response = await attachmentAPI.upload(selectedArtifactId, file, setUploadPercent);
       setAttachments([...attachments, response.data]);
       // The project's figure list is what "##" offers and what a citation
       // resolves against, so a new figure has to reach it too.
@@ -464,6 +468,7 @@ export const ModuleView: React.FC = () => {
       setError(`Failed to attach the file: ${errorMsg}`);
     } finally {
       setUploadingAttachmentId(null);
+      setUploadPercent(null);
     }
   };
 
@@ -471,8 +476,9 @@ export const ModuleView: React.FC = () => {
   // writes a note, so the artifact is reloaded rather than patched locally.
   const handleUploadAttachmentVersion = async (attachmentId: string, file: File) => {
     setUploadingAttachmentId(attachmentId);
+    setUploadPercent(0);
     try {
-      const response = await attachmentAPI.uploadVersion(attachmentId, file);
+      const response = await attachmentAPI.uploadVersion(attachmentId, file, setUploadPercent);
       setAttachments((prev) => prev.map((a) => (a.id === attachmentId ? response.data : a)));
       setProjectAttachments((prev) =>
         prev.map((a) => (a.id === attachmentId ? response.data : a))
@@ -484,6 +490,7 @@ export const ModuleView: React.FC = () => {
       setError(`Failed to upload the new figure version: ${apiErrorMessage(error, 'Unknown error')}`);
     } finally {
       setUploadingAttachmentId(null);
+      setUploadPercent(null);
     }
   };
 
@@ -1917,6 +1924,7 @@ export const ModuleView: React.FC = () => {
             onAttachmentRestored={handleAttachmentRestored}
             onDeleteAttachment={handleDeleteAttachment}
             isUploadLoading={uploadingAttachmentId === editingArtifact.id}
+            uploadPercent={uploadPercent}
             links={allLinks}
             linked={linkedArtifacts}
             parentArtifacts={parentArtifacts}

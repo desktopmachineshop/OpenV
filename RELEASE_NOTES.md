@@ -9,6 +9,21 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Bug fixes
+
+- **Large figures and evidence files upload again.** An upload was given the
+  same 60-second deadline as an ordinary click, and because that deadline
+  covers sending the file as well as waiting for the answer, it quietly became
+  a limit on how fast your connection was rather than on how big the file was:
+  anything that took over a minute to send failed with a timeout before OpenV
+  had seen it, however far inside your plan's limit it was. A separate 32 MB
+  ceiling in front of the API turned away bigger files on top of that, so the
+  128 MB / 512 MB / 1 GB figure limits your plan advertises were unreachable.
+  Uploads now run to completion, and what refuses a file is your workspace's
+  own limit, which says what it is. Adding a figure or an evidence file also
+  shows a percentage as it goes, so a long upload no longer looks like a
+  frozen screen.
+
 ## 0.11.1 — 2026-09-17
 
 ### Bug fixes

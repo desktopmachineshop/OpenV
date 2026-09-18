@@ -407,24 +407,38 @@ const BundleDetail: React.FC<BundleDetailProps> = ({
   onChanged,
 }) => {
   const [uploading, setUploading] = useState(false);
+  // What the button says while files are in flight. An evidence capture runs
+  // to hundreds of megabytes, which is minutes on a normal uplink, so the
+  // button reports which file it is on and how far that one has got — without
+  // it a long upload is indistinguishable from a stuck one.
+  const [uploadLabel, setUploadLabel] = useState('');
   const [error, setError] = useState('');
   const confirm = useConfirm();
 
   const upload = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
+    const queue = Array.from(files);
     setUploading(true);
+    setUploadLabel('Uploading…');
     setError('');
     try {
       // One at a time: a rejection (too large, workspace full) then names the
       // file it was about instead of failing the whole selection anonymously.
-      for (const file of Array.from(files)) {
-        await evidenceAPI.uploadFile(bundle.id, file);
+      for (const [index, file] of queue.entries()) {
+        const position = queue.length > 1 ? ` ${index + 1}/${queue.length}` : '';
+        setUploadLabel(`Uploading…${position} 0%`);
+        await evidenceAPI.uploadFile(bundle.id, file, (percent) => {
+          setUploadLabel(
+            percent === null ? `Uploading…${position}` : `Uploading…${position} ${percent}%`
+          );
+        });
       }
       await onChanged();
     } catch (err: any) {
       setError(`Upload failed: ${apiErrorMessage(err)}`);
     } finally {
       setUploading(false);
+      setUploadLabel('');
     }
   };
 
@@ -526,7 +540,7 @@ const BundleDetail: React.FC<BundleDetailProps> = ({
         className="button-secondary"
         style={{ display: 'inline-block', marginTop: 12, cursor: 'pointer' }}
       >
-        {uploading ? 'Uploading…' : 'Add files'}
+        {uploading ? uploadLabel || 'Uploading…' : 'Add files'}
         <input
           type="file"
           multiple

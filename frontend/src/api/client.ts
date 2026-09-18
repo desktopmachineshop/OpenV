@@ -1,4 +1,4 @@
-import axios, { AxiosInstance } from 'axios';
+import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
 import { filenameFromContentDisposition } from './contentDisposition';
 import type { SharedProductPayload, toSharePayload } from '../utils/randomProduct';
 import { downloadExtension, downloadQuery } from '../utils/downloadSelection';
@@ -36,6 +36,43 @@ client.interceptors.request.use((config) => {
     // storage unavailable (private mode etc.) — proceed without the header
   }
   return config;
+});
+
+/**
+ * How far a file upload has got, as a whole percentage, or null where the
+ * browser cannot say how big the body is. Progress matters because an upload
+ * is the one call whose duration is the member's bandwidth rather than the
+ * server's speed: a minute of no feedback reads as a hang.
+ */
+export type UploadProgressHandler = (percent: number | null) => void;
+
+/**
+ * The config every multipart upload in this client shares.
+ *
+ * `timeout: 0` is the point of it. The instance-wide 60 s above is sized for
+ * JSON, and axios counts its timeout as wall-clock across the WHOLE request —
+ * the request body included — so on an upload it was never a server deadline
+ * but a cap on how long the member's connection had to push the file. That
+ * made the real ceiling their upstream bandwidth rather than any limit OpenV
+ * publishes: a file well inside the workspace's plan died at
+ * "timeout of 60000ms exceeded" without the API ever seeing the request.
+ * What may be uploaded is a SIZE, and the API is what decides it — see
+ * uploadLimitBytes, which answers with the workspace's own number.
+ */
+const uploadConfig = (onProgress?: UploadProgressHandler): AxiosRequestConfig => ({
+  headers: { 'Content-Type': 'multipart/form-data' },
+  timeout: 0,
+  onUploadProgress: onProgress
+    ? (event) => {
+        // event.total is absent when the body's length is unknown; report
+        // null rather than a percentage computed against nothing.
+        if (!event.total) {
+          onProgress(null);
+          return;
+        }
+        onProgress(Math.min(100, Math.round((event.loaded * 100) / event.total)));
+      }
+    : undefined,
 });
 
 // Add response interceptor for better error handling + auth redirects
@@ -619,15 +656,15 @@ export const templateAPI = {
 };
 
 export const attachmentAPI = {
-  upload: (artifactId: string, file: File) => {
+  upload: (artifactId: string, file: File, onProgress?: UploadProgressHandler) => {
     const formData = new FormData();
     formData.append('artifact_id', artifactId);
     formData.append('file', file);
-    return client.post<Attachment>('/api/v1/attachments/upload', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+    return client.post<Attachment>(
+      '/api/v1/attachments/upload',
+      formData,
+      uploadConfig(onProgress)
+    );
   },
   getMeta: (id: string) =>
     client.get<Attachment>(`/api/v1/attachments/${id}`),
@@ -636,12 +673,14 @@ export const attachmentAPI = {
   // version stays addressable.
   getDownloadUrl: (id: string, version?: number) =>
     `${API_BASE_URL}/api/v1/attachments/${id}/download${version ? `?version=${version}` : ''}`,
-  uploadVersion: (id: string, file: File) => {
+  uploadVersion: (id: string, file: File, onProgress?: UploadProgressHandler) => {
     const formData = new FormData();
     formData.append('file', file);
-    return client.post<Attachment>(`/api/v1/attachments/${id}/versions`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+    return client.post<Attachment>(
+      `/api/v1/attachments/${id}/versions`,
+      formData,
+      uploadConfig(onProgress)
+    );
   },
   listVersions: (id: string) =>
     client.get<AttachmentVersion[]>(`/api/v1/attachments/${id}/versions`),
@@ -1431,9 +1470,7 @@ export const avatarAPI = {
   upload: (file: File) => {
     const formData = new FormData();
     formData.append('file', file);
-    return client.post<User>('/api/v1/me/avatar', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+    return client.post<User>('/api/v1/me/avatar', formData, uploadConfig());
   },
   remove: () => client.delete<User>('/api/v1/me/avatar'),
 };
@@ -1664,9 +1701,7 @@ export const orgsAPI = {
   uploadLogo: (id: string, file: File) => {
     const formData = new FormData();
     formData.append('file', file);
-    return client.post<Org>(`/api/v1/orgs/${id}/logo`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+    return client.post<Org>(`/api/v1/orgs/${id}/logo`, formData, uploadConfig());
   },
   removeLogo: (id: string) => client.delete<Org>(`/api/v1/orgs/${id}/logo`),
   logoUrl: (id: string) => `${API_BASE_URL}/api/v1/orgs/${id}/logo`,
@@ -2121,10 +2156,14 @@ export const evidenceAPI = {
     client.put<EvidenceBundle>(`/api/v1/evidence-bundles/${id}`, payload),
   remove: (id: string) => client.delete(`/api/v1/evidence-bundles/${id}`),
 
-  uploadFile: (bundleId: string, file: File) => {
+  uploadFile: (bundleId: string, file: File, onProgress?: UploadProgressHandler) => {
     const form = new FormData();
     form.append('file', file);
-    return client.post<EvidenceFile>(`/api/v1/evidence-bundles/${bundleId}/files`, form);
+    return client.post<EvidenceFile>(
+      `/api/v1/evidence-bundles/${bundleId}/files`,
+      form,
+      uploadConfig(onProgress)
+    );
   },
   deleteFile: (fileId: string) => client.delete(`/api/v1/evidence-files/${fileId}`),
   /** The server always answers as a download, so this is a plain link target. */

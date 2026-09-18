@@ -61,6 +61,7 @@ interface ArtifactEditorProps {
   onAttachmentRestored?: () => void;
   onDeleteAttachment?: (attachmentId: string) => void;
   isUploadLoading?: boolean;
+  uploadPercent?: number | null;
   links?: Link[];
   onCreateLink?: (link: Partial<Link>) => void;
   onDeleteLink?: (linkId: string) => void;
@@ -89,6 +90,7 @@ export const ArtifactEditor: React.FC<ArtifactEditorProps> = ({
   onAttachmentRestored,
   onDeleteAttachment,
   isUploadLoading,
+  uploadPercent,
   links = [],
   onCreateLink,
   onDeleteLink,
@@ -528,6 +530,7 @@ export const ArtifactEditor: React.FC<ArtifactEditorProps> = ({
               onRestored={onAttachmentRestored}
               onDelete={onDeleteAttachment || (() => {})}
               isUploadLoading={isUploadLoading}
+              uploadPercent={uploadPercent}
               showUpload={true}
             />
           )}

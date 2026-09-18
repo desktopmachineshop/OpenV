@@ -51,9 +51,24 @@ interface ImageGalleryProps {
    */
   onRename?: (attachmentId: string, title: string) => void;
   isUploadLoading?: boolean;
+  /**
+   * How far the upload in flight has got, 0-100, or null while the size is
+   * unknown. A large figure is a minute or more of the member's uplink, and
+   * "Uploading..." on its own is indistinguishable from a hang.
+   */
+  uploadPercent?: number | null;
   showUpload?: boolean; // Controls whether upload box is displayed
   thumbnailSize?: number; // Custom thumbnail size in pixels (default 120)
 }
+
+/**
+ * What the uploader says while a file is in flight. A large figure is minutes
+ * of the member's uplink, so the percentage is the only thing distinguishing
+ * a slow upload from a stuck one; without a measurable body size there is
+ * nothing honest to put after the word.
+ */
+const uploadingLabel = (percent: number | null): string =>
+  percent === null ? 'Uploading...' : `Uploading... ${percent}%`;
 
 // Every button here is type="button". The gallery is rendered inside the
 // artifact editor's <form>, where a button with no type is a submit
@@ -98,6 +113,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
   onRestored,
   onRename,
   isUploadLoading = false,
+  uploadPercent = null,
   showUpload = false,
   thumbnailSize = 120,
 }) => {
@@ -318,7 +334,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
               <div className="upload-icon">{wideFormats ? '📎' : '📷'}</div>
               <p className="upload-text">
                 {isUploadLoading
-                  ? 'Uploading...'
+                  ? uploadingLabel(uploadPercent)
                   : wideFormats
                   ? 'Drag an image, PDF or CAD file here, or click'
                   : 'Drag figures here or click'}
@@ -444,7 +460,9 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
               />
               <div className="gallery-upload-content">
                 <div className="upload-icon">➕</div>
-                <p className="upload-text">{isUploadLoading ? 'Uploading...' : 'Click or drag'}</p>
+                <p className="upload-text">
+                  {isUploadLoading ? uploadingLabel(uploadPercent) : 'Click or drag'}
+                </p>
               </div>
             </div>
           )}
