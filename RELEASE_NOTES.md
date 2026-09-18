@@ -9,6 +9,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+## 0.12.0 — 2026-09-18
+
 ### New features
 
 - **Send a whole project for review in one action.** Putting a project through
