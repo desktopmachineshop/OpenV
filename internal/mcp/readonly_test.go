@@ -23,7 +23,7 @@ func TestReadOnlyToolsExist(t *testing.T) {
 // handler's HTTP method from here, so this pins the naming convention the
 // table follows: writers are named for what they change.
 func TestReadOnlyToolsExcludeWriters(t *testing.T) {
-	writerPrefixes := []string{"create_", "update_", "delete_", "record_", "close_", "add_", "delegate_"}
+	writerPrefixes := []string{"create_", "update_", "delete_", "record_", "close_", "add_", "delegate_", "confirm_"}
 	for name := range readOnlyTools {
 		for _, p := range writerPrefixes {
 			if strings.HasPrefix(name, p) {
@@ -55,8 +55,10 @@ func TestReadOnlyToolNames(t *testing.T) {
 			t.Fatalf("order is not stable: %v vs %v", names, again)
 		}
 	}
-	// A writer is not read-only, prefixed or not.
-	for _, w := range []string{"create_artifact", ToolPrefix + "record_candidate_need", ToolPrefix + "delegate_to_agent"} {
+	// A writer is not read-only, prefixed or not. confirm_link especially:
+	// clearing a suspect flag is the assertion that someone re-read the trace,
+	// which is the last thing a least-privilege agent should be able to do.
+	for _, w := range []string{"create_artifact", "confirm_link", ToolPrefix + "record_candidate_need", ToolPrefix + "delegate_to_agent"} {
 		if ReadOnly(w) {
 			t.Errorf("ReadOnly(%q) = true, want false", w)
 		}

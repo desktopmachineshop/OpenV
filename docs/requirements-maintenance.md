@@ -73,6 +73,14 @@ tools — `get_project_map` to orient, `create_artifact` / `update_artifact` /
 V&V, `start_project_review` to put a cycle's worth of drafts into review in one
 call, `create_baseline` to snapshot.
 
+Editing an artifact marks every link touching it **suspect**, which is the
+platform asking whether the trace still holds now the wording has moved.
+`list_links_for_artifact` reports the flag; `confirm_link` clears one, and
+calling it is the assertion that both ends were re-read and still agree — so
+read them, and leave the flag alone where you are not the one to judge.
+Clearing your own edits' flags is the case to be most careful with: it is the
+review the flag exists to trigger, answered by the person who caused it.
+
 Bulk **export stays out of the tool surface** on purpose: it is a file-level
 backup, and a tool that returns a whole project invites agents to spend their
 context on it. Use `sync.py export` for that.
