@@ -429,7 +429,19 @@ and on the staging frontend:
 # Keeps staging out of search results: every response carries
 # X-Robots-Tag: noindex, nofollow, noarchive.
 OPENV_NOINDEX=1
+
+# Installs as its own app: "OpenV (Staging)", amber icons, amber theme.
+# Without it staging and the live service both install as a white "OpenV"
+# tile and the one you reach for on a phone is a coin toss.
+OPENV_APP_VARIANT=staging
 ```
+
+`OPENV_APP_VARIANT=<name>` is resolved by convention at container start:
+the app shell's manifest, apple-touch-icon and title are pointed at
+`manifest.<name>.json` and `apple-touch-icon-<name>.png` in the built app,
+and the installed name and theme colour are read out of that manifest. Only
+`staging` ships today. A variant with no manifest in the build logs a warning
+and leaves the app exactly as built, so a typo cannot serve a broken app.
 
 **Leave unset on staging**: every `OPENV_SMTP_*` and every `OPENV_VAPID_*`
 variable — that is what guarantees no email and no web push can escape a
