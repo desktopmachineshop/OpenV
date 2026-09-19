@@ -58,13 +58,20 @@ COPY openv-nginx/api-proxy.conf /etc/nginx/openv/api-proxy.conf
 # one.
 COPY docker-entrypoint.d/45-openv-noindex.sh /docker-entrypoint.d/45-openv-noindex.sh
 COPY openv-nginx/noindex.conf /etc/nginx/openv/noindex.conf
+# Installed-app identity: OPENV_APP_VARIANT rewrites the app shell's manifest,
+# icon and title links at start so a non-production copy installs as its own
+# app. It edits files under the web root rather than nginx config, so there is
+# nothing for `nginx -t` below to check.
+COPY docker-entrypoint.d/50-openv-app-identity.sh /docker-entrypoint.d/50-openv-app-identity.sh
 RUN api_origin="${REACT_APP_API_URL%/}" && \
     if [ -n "$api_origin" ]; then \
         sed -i "s|__API_ORIGIN__|${api_origin}|g" /etc/nginx/security-headers.conf; \
     else \
         sed -i "s| __API_ORIGIN__||g" /etc/nginx/security-headers.conf; \
     fi && \
-    chmod +x /docker-entrypoint.d/40-openv-api-proxy.sh /docker-entrypoint.d/45-openv-noindex.sh && \
+    chmod +x /docker-entrypoint.d/40-openv-api-proxy.sh \
+             /docker-entrypoint.d/45-openv-noindex.sh \
+             /docker-entrypoint.d/50-openv-app-identity.sh && \
     nginx -t
 
 # Copy built assets from builder stage

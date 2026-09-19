@@ -9,6 +9,15 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Maintenance updates
+
+- **A test copy of OpenV installs as its own app.** Installing the app from a
+  staging or preview deployment put a second white *OpenV* tile on the home
+  screen, identical to the live one, so which you opened was a guess. A
+  non-production deployment can now carry its own installed name, icon and
+  theme colour — staging installs as amber *OpenV (Staging)*. The live
+  service is unchanged.
+
 ## 0.14.1 — 2026-09-18
 
 ### Maintenance updates
