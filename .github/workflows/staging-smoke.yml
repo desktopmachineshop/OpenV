@@ -96,6 +96,40 @@ jobs:
             sleep 15
           done
 
+      # The journey registers its own user unless SMOKE_EMAIL and
+      # SMOKE_PASSWORD are set, and a staging with sign-up closed refuses
+      # that. Missing credentials then surface as the journey failing on
+      # "expected /projects, got /login" — a config mistake wearing the
+      # costume of a product bug, which is how the first real run of this
+      # workflow was spent. Ask the deployment which it is and say so plainly.
+      #
+      # Only closed deployments are held to it: a staging that still has
+      # sign-up open is mid-bootstrap and the register path is correct there.
+      - name: Smoke credentials match the deployment
+        if: steps.staging.outputs.enabled == 'true'
+        env:
+          STAGING_URL: ${{ vars.STAGING_URL }}
+          SMOKE_EMAIL: ${{ vars.SMOKE_EMAIL }}
+          SMOKE_PASSWORD: ${{ secrets.SMOKE_PASSWORD }}
+        run: |
+          registration=$(curl -fsS --max-time 20 "$STAGING_URL/api/v1/auth/policy" 2>/dev/null \
+            | python3 -c 'import json,sys; print(json.load(sys.stdin).get("registration",""))' 2>/dev/null || true)
+          if [ "$registration" != "closed" ]; then
+            echo "Sign-up is open on staging (registration=${registration:-unknown}); the journey will register its own user."
+            exit 0
+          fi
+          missing=""
+          [ -n "$SMOKE_EMAIL" ] || missing="SMOKE_EMAIL (a repository VARIABLE)"
+          if [ -z "$SMOKE_PASSWORD" ]; then
+            [ -z "$missing" ] || missing="$missing and "
+            missing="${missing}SMOKE_PASSWORD (a repository SECRET)"
+          fi
+          if [ -n "$missing" ]; then
+            echo "::error::Staging has sign-up closed, so the journey must sign in — but $missing is not set. Note which is a variable and which is a secret: setting either in the wrong place reads back empty here."
+            exit 1
+          fi
+          echo "Sign-up is closed and both smoke credentials are set; the journey will sign in."
+
       - uses: actions/setup-node@v4
         if: steps.staging.outputs.enabled == 'true'
         with:
