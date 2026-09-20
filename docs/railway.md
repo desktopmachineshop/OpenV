@@ -394,6 +394,19 @@ environment only:
 | Frontend | `master` | root directory `frontend` |
 | Runner pool | `master` | 1 replica is enough to exercise a lease |
 
+**Turn "Wait for CI" OFF on all three** (Settings → Source; Railway calls it
+`checkSuites`). Left on, staging deadlocks and never deploys again: Railway
+holds the deploy until every check suite on the commit finishes, *Staging
+smoke* is one of those suites, and it spends its fifteen minutes waiting for
+staging to run the very commit Railway is refusing to deploy. Each waits for
+the other, the smoke times out red, and a red *Staging smoke* then blocks
+promotion too. Production already has it off.
+
+Nothing is lost by turning it off. Staging is where a commit is tested, so
+refusing to deploy one until CI passed is the wrong way round — and the smoke
+gate already gives the stronger guarantee, since it refuses to *test* a
+commit staging is not running.
+
 Check every variable that is meant to be a **reference** still reads as one
 (`${{Postgres.DATABASE_URL}}?sslmode=disable`,
 `${{OpenV.RAILWAY_PRIVATE_DOMAIN}}`, `${{OpenV.RUNNER_POOL_KEY}}`) before
