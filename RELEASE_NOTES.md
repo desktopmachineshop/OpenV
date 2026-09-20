@@ -9,6 +9,14 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Bug fixes
+
+- **The browser tab shows the OpenV mark again.** `favicon.ico` was never an
+  image — it was a placeholder text file saying a real one should go there —
+  so every tab, bookmark and history entry fell back to the browser's blank
+  page icon. It is now the round check mark, at the four sizes browsers ask
+  for. A staging deployment gets the amber version, matching its app icon.
+
 ### Maintenance updates
 
 - **A test copy of OpenV installs as its own app.** Installing the app from a
