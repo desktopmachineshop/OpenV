@@ -9,6 +9,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+## 0.14.2 — 2026-09-20
+
 ### Bug fixes
 
 - **The browser tab shows the OpenV mark again.** `favicon.ico` was never an
