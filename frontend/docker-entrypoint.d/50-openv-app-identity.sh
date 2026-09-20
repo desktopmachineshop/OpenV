@@ -35,6 +35,8 @@ name=$(sed -n 's/.*"name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$root/$ma
 theme=$(sed -n 's/.*"theme_color"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$root/$manifest" | head -n 1)
 touch_icon="apple-touch-icon-${variant}.png"
 [ -f "$root/$touch_icon" ] || touch_icon="apple-touch-icon.png"
+favicon="favicon-${variant}.ico"
+[ -f "$root/$favicon" ] || favicon="favicon.ico"
 
 # Every substitution replaces the whole attribute rather than appending to it,
 # so re-running the entrypoint on a restarted container is a no-op instead of
@@ -43,6 +45,7 @@ tmp=$(mktemp)
 sed \
     -e "s|<link rel=\"manifest\" href=\"[^\"]*\"|<link rel=\"manifest\" href=\"/$manifest\"|" \
     -e "s|<link rel=\"apple-touch-icon\" href=\"[^\"]*\"|<link rel=\"apple-touch-icon\" href=\"/$touch_icon\"|" \
+    -e "s|<link rel=\"icon\" href=\"[^\"]*\"|<link rel=\"icon\" href=\"/$favicon\"|" \
     -e "s|<meta name=\"apple-mobile-web-app-title\" content=\"[^\"]*\"|<meta name=\"apple-mobile-web-app-title\" content=\"$name\"|" \
     -e "s|<meta name=\"theme-color\" content=\"[^\"]*\"|<meta name=\"theme-color\" content=\"$theme\"|" \
     -e "s|<title>[^<]*</title>|<title>$name</title>|" \
