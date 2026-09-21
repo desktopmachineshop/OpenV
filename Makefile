@@ -10,7 +10,11 @@ GO_IMAGE := golang:1.25
 # .github/workflows/ci.yml so `make vuln` and CI scan with the same tool.
 GOVULNCHECK_VERSION := v1.8.0
 
-.PHONY: build up down prod-up prod-down worker worker-unix worker-image runner-pool-up runner-pool-down connector-dist mcp vapid-keys test vuln backup restore
+# Keep in step with GITLEAKS_VERSION in the `secrets` job of
+# .github/workflows/ci.yml so `make secrets` and CI scan with the same tool.
+GITLEAKS_VERSION := 8.21.2
+
+.PHONY: build up down prod-up prod-down worker worker-unix worker-image runner-pool-up runner-pool-down connector-dist mcp vapid-keys test vuln secrets backup restore
 
 ## Build all Docker images.
 build:
@@ -46,6 +50,18 @@ vuln:
 	@rc=0; \
 	"$$(go env GOPATH)/bin/govulncheck" ./cmd/... ./internal/... || rc=1; \
 	(cd frontend && npm audit --omit=dev --audit-level=high) || rc=1; \
+	exit $$rc
+
+## Run the CI secret-scan gate locally (the `secrets` job in
+## .github/workflows/ci.yml): gitleaks over the commit history and the working
+## tree, with the same pinned version CI uses. Any finding fails the target.
+## Needs gitleaks on PATH — install it with:
+##   go install github.com/gitleaks/gitleaks/v8@v$(GITLEAKS_VERSION)
+## or `brew install gitleaks` (see https://github.com/gitleaks/gitleaks).
+secrets:
+	@rc=0; \
+	gitleaks git --redact --verbose . || rc=1; \
+	gitleaks dir --redact --verbose . || rc=1; \
 	exit $$rc
 
 ## Back up the openv database plus the openv-data and uploads volumes into a

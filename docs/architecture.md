@@ -505,8 +505,10 @@ Every API request authenticates as one of four principals; only `/health`,
   credential endpoints — every sign-in attempt per client address, failed
   sign-ins per account, registrations per address, and SSO starts and
   callbacks per address (`OPENV_AUTH_*`, `OPENV_REGISTER_*`, `OPENV_SSO_*`).
-  Behind a proxy, set `OPENV_TRUST_PROXY=1` so limits key on the real client
-  IP.
+  Behind a proxy, set `OPENV_CLIENT_IP_HEADER` (e.g. `CF-Connecting-IP`) or
+  `OPENV_TRUSTED_PROXY_HOPS=<n>` so limits key on the real client IP; the hop
+  count reads `X-Forwarded-For` from the right, so a client-prepended entry
+  cannot choose its own bucket. `OPENV_TRUST_PROXY=1` remains a one-hop alias.
 - **Request and upload caps**: every JSON body is capped at
   `OPENV_MAX_BODY_MB` (32 MB). A **file upload is exempt from that cap and
   bounded by its own handler** — nesting one `MaxBytesReader` inside another

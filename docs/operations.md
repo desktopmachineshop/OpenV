@@ -419,14 +419,24 @@ Notes:
 
 - The overlay terminates plain HTTP. For TLS put a reverse proxy (Caddy,
   Traefik, nginx) in front of the frontend and API ports.
-- When the API does sit behind a reverse proxy, also set `OPENV_TRUST_PROXY=1`
-  on the api service so per-IP rate limiting — on the public interview
-  endpoints and on sign-in, registration and SSO — keys on the real client
-  address from `X-Forwarded-For`/`X-Real-IP` (make sure the proxy overwrites
-  those headers). Leave it unset when clients reach
-  the API directly: the headers are client-supplied, and trusting them would
-  let anyone dodge per-IP limits — or exhaust another client's bucket — by
-  spoofing a header.
+- When the API sits behind a reverse proxy, tell it what to trust so per-IP
+  rate limiting — on the public interview endpoints and on sign-in,
+  registration and SSO — keys on the real client rather than the edge. Two
+  ways, most robust first:
+  - `OPENV_CLIENT_IP_HEADER=<name>` — a header the outermost proxy sets to the
+    real client and that a client cannot forge through it (Cloudflare's
+    `CF-Connecting-IP`, Akamai's `True-Client-IP`). It wins regardless of chain
+    depth.
+  - `OPENV_TRUSTED_PROXY_HOPS=<n>` — the number of proxies that append to
+    `X-Forwarded-For`. The client is read that many hops **from the right**;
+    entries a client prepended stay on the left and are ignored. The legacy
+    `OPENV_TRUST_PROXY=1` is the same as one hop.
+
+  Leave all three unset when clients reach the API directly: the headers are
+  client-supplied, and trusting them would let anyone dodge per-IP limits — or
+  exhaust another client's bucket — by spoofing a header. Trusting the
+  *leftmost* `X-Forwarded-For` entry is the classic form of that mistake, which
+  is why the hop count reads from the right.
 - The frontend container proxies `/api/` to the API (`frontend/nginx.conf`;
   the upstream comes from `API_UPSTREAM`, `api:8080` in compose, and is
   re-resolved through the container's DNS so an API restart with a new

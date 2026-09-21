@@ -91,10 +91,18 @@ HOSTED_RUNNERS=off
 # which Safari and iOS refuse: the app cannot sign in on an iPhone that way.
 SECURE_COOKIES=true
 
-# Railway's edge terminates TLS and forwards the client address in
-# X-Forwarded-For; without this the per-address throttles on sign-in,
-# registration and the public interview routes key on the edge instead.
-OPENV_TRUST_PROXY=1
+# Cloudflare and Railway's edge sit in front of the API, so the client address
+# arrives in a forwarding header rather than the TCP peer. Behind Cloudflare the
+# robust choice is CF-Connecting-IP: Cloudflare overwrites it with the real
+# client on every request, so it cannot be forged the way an X-Forwarded-For
+# ENTRY can (a client prepends a fake, the proxies append the real one on the
+# right). With this set, the per-address throttles on sign-in, registration and
+# the public interview routes key on the real client instead of the edge.
+OPENV_CLIENT_IP_HEADER=CF-Connecting-IP
+# Without a CDN header, declare how many trusted proxies append to
+# X-Forwarded-For and the client is read that many hops from the right. The
+# legacy OPENV_TRUST_PROXY=1 still means one trusted hop.
+# OPENV_TRUSTED_PROXY_HOPS=2
 
 # /metrics is open to anyone otherwise. openssl rand -hex 32
 OPENV_METRICS_TOKEN=<long random string>

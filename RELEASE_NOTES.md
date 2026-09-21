@@ -9,6 +9,16 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Maintenance updates
+
+- **Per-address rate limits read the real client more carefully behind a
+  proxy.** A self-hosted deployment can now name the header its CDN sets to the
+  real client (`OPENV_CLIENT_IP_HEADER`, e.g. Cloudflare's `CF-Connecting-IP`)
+  or declare how many proxies it sits behind (`OPENV_TRUSTED_PROXY_HOPS`); the
+  forwarded-for chain is read from the right so a caller cannot pick its own
+  rate-limit bucket by prepending a header. The existing `OPENV_TRUST_PROXY=1`
+  keeps working as a single-hop setting. Hosted workspaces are unaffected.
+
 ## 0.14.2 — 2026-09-20
 
 ### Bug fixes
