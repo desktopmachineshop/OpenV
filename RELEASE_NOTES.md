@@ -9,6 +9,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+## 0.14.3 — 2026-09-21
+
 ### Maintenance updates
 
 - **Per-address rate limits read the real client more carefully behind a
