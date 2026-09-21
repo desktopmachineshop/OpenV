@@ -1,5 +1,10 @@
 # Subscriptions, signup, and membership tier — with Odoo as the billing system
 
+> **Superseded, 2026-09-21.** The billing design is now
+> [`docs/plans/billing-stripe.md`](plans/billing-stripe.md): Stripe direct,
+> in the app, with no Odoo in the loop. This file is kept as the record of
+> the alternative that was considered and why; nothing below is planned.
+
 How OpenV can sell and enforce paid workspaces without growing a billing
 system of its own: **Odoo owns the commercial record, OpenV owns identity and
 entitlements, and the marketing site stays in this repository** so it can be
