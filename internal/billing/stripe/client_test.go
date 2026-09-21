@@ -105,16 +105,26 @@ func TestAWriteWithoutAKeyIsNeverRepeatedAndAKeyedOneIs(t *testing.T) {
 		atomic.AddInt32(&calls, 1)
 		w.WriteHeader(http.StatusBadGateway)
 	})
-	// cancel_at_period_end is a keyed POST: retried.
-	if err := c.CancelSubscription(context.Background(), "sub_1", true); err == nil {
+	// cancel_at_period_end is a keyed POST: retried, on one key.
+	if err := c.SetCancelAtPeriodEnd(context.Background(), "sub_1", true); err == nil {
 		t.Fatal("a persistent 502 should fail")
 	}
 	if calls != maxAttempts {
 		t.Fatalf("a keyed write was tried %d times, want %d", calls, maxAttempts)
 	}
 	rec := (*log)[0]
-	if rec.method != http.MethodPost || rec.body != "cancel_at_period_end=true" || rec.idem != "openv:cancel-at-end:sub_1" {
+	if rec.method != http.MethodPost || rec.body != "cancel_at_period_end=true" || !strings.HasPrefix(rec.idem, "openv:cancel-at-end:sub_1:") {
 		t.Fatalf("cancel request = %+v", rec)
+	}
+	if (*log)[1].idem != rec.idem {
+		t.Fatal("a retry of one attempt changed its idempotency key")
+	}
+	// A second attempt is a new intent with a new key: the first answer
+	// must not be replayed over it.
+	calls = 0
+	_ = c.SetCancelAtPeriodEnd(context.Background(), "sub_1", false)
+	if (*log)[len(*log)-1].idem == rec.idem || (*log)[len(*log)-1].body != "cancel_at_period_end=false" {
+		t.Fatalf("toggling reused a key or lost its value: %+v", (*log)[len(*log)-1])
 	}
 	// An unkeyed write through do() is sent once.
 	calls = 0
@@ -135,7 +145,7 @@ func TestA404IsNotFoundAndImmediateCancelIsADelete(t *testing.T) {
 		t.Fatalf("a 404 should be ErrNotFound: %v", err)
 	}
 	// Cancelling something already gone is done, not an error.
-	if err := c.CancelSubscription(context.Background(), "sub_missing", false); err != nil {
+	if err := c.CancelSubscription(context.Background(), "sub_missing"); err != nil {
 		t.Fatalf("delete of a missing subscription: %v", err)
 	}
 	last := (*log)[len(*log)-1]

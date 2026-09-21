@@ -91,8 +91,11 @@ type Provider interface {
 	// ListSubscriptions pages through every subscription, terminal ones
 	// included, returning the cursor for the next page or "" at the end.
 	ListSubscriptions(ctx context.Context, startingAfter string) ([]*Subscription, string, error)
-	// CancelSubscription cancels at the period's end, or immediately.
-	CancelSubscription(ctx context.Context, id string, atPeriodEnd bool) error
+	// CancelSubscription ends a subscription now.
+	CancelSubscription(ctx context.Context, id string) error
+	// SetCancelAtPeriodEnd schedules (or unschedules) cancellation for the
+	// end of the paid period.
+	SetCancelAtPeriodEnd(ctx context.Context, id string, on bool) error
 	ListOpenDisputes(ctx context.Context) ([]Dispute, error)
 }
 

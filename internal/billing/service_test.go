@@ -25,6 +25,7 @@ type fakeProvider struct {
 	getErr    error
 	disputes  []Dispute
 	cancelled []string
+	scheduled []string
 	getCalls  []string
 }
 
@@ -79,8 +80,13 @@ func (f *fakeProvider) ListSubscriptions(_ context.Context, after string) ([]*Su
 	return page, next, nil
 }
 
-func (f *fakeProvider) CancelSubscription(_ context.Context, id string, atPeriodEnd bool) error {
+func (f *fakeProvider) CancelSubscription(_ context.Context, id string) error {
 	f.cancelled = append(f.cancelled, id)
+	return nil
+}
+
+func (f *fakeProvider) SetCancelAtPeriodEnd(_ context.Context, id string, on bool) error {
+	f.scheduled = append(f.scheduled, id+"="+map[bool]string{true: "on", false: "off"}[on])
 	return nil
 }
 
@@ -408,6 +414,31 @@ func TestRefreshPricesConfirmsAndKeepsLastGood(t *testing.T) {
 	if err := s.RefreshPrices(context.Background()); err == nil {
 		t.Fatal("a metered price was accepted")
 	}
+}
+
+// Deleting a workspace schedules its subscription to end with the paid
+// period; restoring it takes that back. Neither touches a workspace with no
+// live subscription, and neither runs without a provider.
+func TestDeleteAndRestoreScheduleAndResumeCancellation(t *testing.T) {
+	p := &fakeProvider{}
+	s, _ := newTestService(p, &fakeOrgs{orgs: map[string]*orgs.Org{}})
+	live := &orgs.Org{ID: "o1", Billing: orgs.Billing{Status: orgs.PlanStatusActive, SubscriptionRef: "sub_1"}}
+	lapsed := &orgs.Org{ID: "o2", Billing: orgs.Billing{Status: orgs.PlanStatusCanceled, SubscriptionRef: "sub_2"}}
+	none := &orgs.Org{ID: "o3"}
+
+	for _, o := range []*orgs.Org{live, lapsed, none, nil} {
+		s.OnWorkspaceDeleted(context.Background(), o)
+	}
+	if len(p.scheduled) != 1 || p.scheduled[0] != "sub_1=on" {
+		t.Fatalf("scheduled = %v", p.scheduled)
+	}
+	s.OnWorkspaceRestored(context.Background(), live)
+	s.OnWorkspaceRestored(context.Background(), lapsed)
+	if len(p.scheduled) != 2 || p.scheduled[1] != "sub_1=off" {
+		t.Fatalf("scheduled = %v", p.scheduled)
+	}
+	off := New(nil, &fakeOrgs{}, nil, nil)
+	off.OnWorkspaceDeleted(context.Background(), live) // must not touch the nil provider
 }
 
 func TestStalenessReportsTheOldestSnapshot(t *testing.T) {

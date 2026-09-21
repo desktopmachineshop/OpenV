@@ -76,6 +76,11 @@ export interface PricingTier {
   price: string;
   /** False for tiers that exist on the page but cannot be had yet. */
   available: boolean;
+  /** The plan key the platform sells this tier under (business_lite,
+   *  business), for reading a live price from GET /api/v1/public/plans.
+   *  Page ids are hyphenated; plan keys are not. Absent on tiers that are
+   *  never bought. */
+  planKey?: string;
   summary: string;
   points: string[];
   cta: { label: string; href: string; external?: boolean };
@@ -105,6 +110,7 @@ export const HOSTED_TIERS: PricingTier[] = [
     name: 'Business Lite',
     price: 'Coming soon',
     available: false,
+    planKey: 'business_lite',
     summary: 'For one person who wants agents working while the laptop is closed.',
     points: [
       'Everything in Single User.',
@@ -120,6 +126,7 @@ export const HOSTED_TIERS: PricingTier[] = [
     name: 'Business',
     price: 'Coming soon',
     available: false,
+    planKey: 'business',
     summary: 'For companies working on the same products together.',
     points: [
       'Everything in Business Lite.',

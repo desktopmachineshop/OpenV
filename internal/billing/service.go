@@ -181,6 +181,33 @@ func (s *Service) Reconcile(ctx context.Context) {
 	}
 }
 
+// OnWorkspaceDeleted schedules the subscription's cancellation for the end
+// of the paid period when a workspace is soft-deleted: the customer keeps
+// what they paid for until then, and a restore inside the grace period can
+// take it back. Best effort — the reconcile loop shows the real state either
+// way, and a purged workspace's subscription is cancelled outright by it.
+func (s *Service) OnWorkspaceDeleted(ctx context.Context, org *orgs.Org) {
+	if !s.Enabled() || org == nil || org.Billing.SubscriptionRef == "" || !org.Billing.Live() {
+		return
+	}
+	if err := s.provider.SetCancelAtPeriodEnd(ctx, org.Billing.SubscriptionRef, true); err != nil {
+		s.log.Error("could not schedule cancellation for a deleted workspace", "org_id", org.ID, "subscription", org.Billing.SubscriptionRef, "error", err)
+	}
+}
+
+// OnWorkspaceRestored takes back the cancellation OnWorkspaceDeleted
+// scheduled. A live subscription is always resumed rather than only one
+// the platform itself scheduled: what the snapshot says about the flag may
+// be a reconcile interval old.
+func (s *Service) OnWorkspaceRestored(ctx context.Context, org *orgs.Org) {
+	if !s.Enabled() || org == nil || org.Billing.SubscriptionRef == "" || !org.Billing.Live() {
+		return
+	}
+	if err := s.provider.SetCancelAtPeriodEnd(ctx, org.Billing.SubscriptionRef, false); err != nil {
+		s.log.Error("could not resume the subscription of a restored workspace", "org_id", org.ID, "subscription", org.Billing.SubscriptionRef, "error", err)
+	}
+}
+
 // apply writes one subscription snapshot to the workspace it belongs to.
 //
 // The workspace is found by the stored subscription ref first, then by the
@@ -219,7 +246,7 @@ func (s *Service) apply(ctx context.Context, sub *Subscription, disputed map[str
 	if org == nil {
 		if MapStatus(sub.Status) != orgs.PlanStatusCanceled && MapStatus(sub.Status) != orgs.PlanStatusIncomplete {
 			s.log.Error("live subscription belongs to no workspace; cancelling it", "subscription", sub.ID, "status", sub.Status)
-			if err := s.provider.CancelSubscription(ctx, sub.ID, false); err != nil {
+			if err := s.provider.CancelSubscription(ctx, sub.ID); err != nil {
 				s.log.Error("could not cancel orphaned subscription", "subscription", sub.ID, "error", err)
 			}
 		}

@@ -14,8 +14,11 @@ import (
 	"math/rand"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
+
+	"github.com/google/uuid"
 
 	"github.com/openv/requirements-platform/internal/billing"
 )
@@ -266,22 +269,25 @@ func (c *Client) ListSubscriptions(ctx context.Context, startingAfter string) ([
 	return out, next, nil
 }
 
-// CancelSubscription implements billing.Provider. Cancelling at the period's
-// end is an update carrying a deterministic idempotency key (the intent is
-// the same however often it is sent); cancelling now is a DELETE, which is
-// idempotent by nature.
-func (c *Client) CancelSubscription(ctx context.Context, id string, atPeriodEnd bool) error {
-	path := "/v1/subscriptions/" + url.PathEscape(id)
-	if atPeriodEnd {
-		form := url.Values{}
-		form.Set("cancel_at_period_end", "true")
-		return c.do(ctx, "cancel_subscription", http.MethodPost, path, form, "openv:cancel-at-end:"+id, nil)
-	}
-	err := c.do(ctx, "cancel_subscription", http.MethodDelete, path, nil, "", nil)
+// CancelSubscription implements billing.Provider: a DELETE, idempotent by
+// nature, and already-gone is done rather than an error.
+func (c *Client) CancelSubscription(ctx context.Context, id string) error {
+	err := c.do(ctx, "cancel_subscription", http.MethodDelete, "/v1/subscriptions/"+url.PathEscape(id), nil, "", nil)
 	if errors.Is(err, billing.ErrNotFound) {
-		return nil // already gone
+		return nil
 	}
 	return err
+}
+
+// SetCancelAtPeriodEnd implements billing.Provider. The idempotency key is
+// fresh per attempt on purpose: Stripe replays a reused key's ORIGINAL
+// answer for a day without re-executing, so a deterministic key would make
+// on → off → on stick at off. The key only has to cover one retry burst.
+func (c *Client) SetCancelAtPeriodEnd(ctx context.Context, id string, on bool) error {
+	form := url.Values{}
+	form.Set("cancel_at_period_end", strconv.FormatBool(on))
+	key := "openv:cancel-at-end:" + id + ":" + uuid.NewString()
+	return c.do(ctx, "set_cancel_at_period_end", http.MethodPost, "/v1/subscriptions/"+url.PathEscape(id), form, key, nil)
 }
 
 // openDisputeStatuses are the statuses under which a chargeback is still

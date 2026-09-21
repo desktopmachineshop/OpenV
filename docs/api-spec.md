@@ -723,6 +723,48 @@ Limits are enforced when creating a shared workspace, bringing somebody into
 one (pending invitations count towards the seat total), and creating a
 project. `docs/operations.md` covers how an operator sets them.
 
+
+### Billing
+
+| Method | Path | Purpose | Auth |
+|---|---|---|---|
+| GET | `/api/v1/public/plans` | The plans for sale with their confirmed amounts per currency | open |
+| GET | `/api/v1/orgs/{id}/billing` | The workspace's billed plan, entitled plan and subscription snapshot | admin |
+| POST | `/api/v1/orgs/{id}/billing/refresh` | Re-read the workspace's subscription from the provider now | admin, rate limited |
+
+Billing is an optional module (`docs/plans/billing-stripe.md`). With no
+provider configured — every self-hosted deployment — the public catalogue
+answers `{"billing_enabled": false, "plans": []}` and the workspace routes
+answer `404` with `code: "billing_unavailable"`. The routes are registered
+either way, so the surface is the same on every deployment.
+
+The catalogue is served from the last reading the reconcile job confirmed
+against the provider, never from a live call: an open endpoint cannot be
+made to spend the provider's rate limit, and an outage never blanks the
+pricing page. Amounts are in the currency's minor unit (pence, cents):
+
+```json
+{
+  "billing_enabled": true,
+  "as_of": "2026-09-21T22:00:00Z",
+  "currencies": ["eur", "gbp", "usd"],
+  "plans": [
+    {"plan": "business", "per_seat": true,
+     "intervals": {"month": {"amounts": {"gbp": 1200, "usd": 1500, "eur": 1400}, "tax_behavior": "exclusive"}}}
+  ]
+}
+```
+
+The workspace state carries `plan` (billed), `entitled_plan` (what the
+limits resolve from — the free tier once a subscription lapses), `granted`
+(a platform admin's plan, nothing to buy) and `billing` (status, interval,
+seats, period end, cancel-at-period-end, grandfathered, synced-at). Provider
+object ids never reach a client. A refresh reads from the provider and can
+grant nothing it does not hold; a provider failure is `503` with
+`code: "billing_upstream"` and `Retry-After`, the workspace left as it was.
+The limits response likewise carries `entitled_plan`, `plan_status` and
+`grandfathered`, so a member can see there is a payment problem without
+seeing anything about money.
 ### Evidence bundles
 
 A bundle is one physical or manual capture session — what was done, when, by

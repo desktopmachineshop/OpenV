@@ -1687,11 +1687,47 @@ export interface LimitUsage {
 
 export interface WorkspaceLimits {
   org_id: string;
+  /** The billed plan. */
   plan: string;
+  /** The plan the limits were resolved from: the billed plan while a
+   *  subscription is in good standing, the free tier once it lapses. */
+  entitled_plan: string;
+  /** none | trialing | active | past_due | canceled | … — a member sees that
+   *  there is a payment problem without seeing anything about money. */
+  plan_status: string;
+  /** Keeps the alpha terms through its own limit overrides. */
+  grandfathered: boolean;
   /** Decides which remedy to offer: a plan upgrade, or a setting to change. */
   self_hosted: boolean;
   limits: LimitUsage[];
 }
+
+/** One interval's amounts per lowercase currency code, in minor units. */
+export interface PublicPrice {
+  amounts: Record<string, number>;
+  tax_behavior?: string;
+}
+
+export interface PublicPlan {
+  plan: string;
+  /** The amount is per member; a flat plan bills once. */
+  per_seat: boolean;
+  intervals: Record<string, PublicPrice>;
+}
+
+/** The pricing page's catalogue: what is for sale, as the platform last
+ *  confirmed it with the billing provider. billing_enabled is false where
+ *  no provider is configured, and the page shows its usual copy. */
+export interface PublicPlans {
+  billing_enabled: boolean;
+  as_of?: string;
+  currencies: string[];
+  plans: PublicPlan[];
+}
+
+export const billingAPI = {
+  publicPlans: () => client.get<PublicPlans>('/api/v1/public/plans'),
+};
 
 export const orgsAPI = {
   list: () => client.get<{ orgs: Org[]; active_org: string }>('/api/v1/orgs'),

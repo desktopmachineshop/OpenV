@@ -20,6 +20,8 @@ import (
 	openv "github.com/openv/requirements-platform"
 	"github.com/openv/requirements-platform/internal/api"
 	"github.com/openv/requirements-platform/internal/automation"
+	"github.com/openv/requirements-platform/internal/billing"
+	"github.com/openv/requirements-platform/internal/billing/stripe"
 	"github.com/openv/requirements-platform/internal/domain/agentruns"
 	"github.com/openv/requirements-platform/internal/domain/agents"
 	"github.com/openv/requirements-platform/internal/domain/artifacts"
@@ -729,6 +731,30 @@ func main() {
 	}
 
 	// Handler.
+	// Billing (docs/plans/billing-stripe.md). Off — nothing started, nothing
+	// dialled, every billing route answering 404 — unless STRIPE_SECRET_KEY
+	// is set. A malformed OPENV_STRIPE_PRICES is fatal like OPENV_LIMITS: a
+	// typo that silently sold nothing would look exactly like a price that
+	// does not work. The prices themselves are confirmed against the
+	// provider on the first reconcile, not here: boot never waits on it. On
+	// a self-hosted deployment a key is ignored with a warning rather than
+	// refused, so a copied env template cannot lock somebody out of their
+	// own install — and such a deployment must never dial a provider.
+	billingCfg, err := billing.ConfigFromEnv(os.Getenv)
+	if err != nil {
+		fatal("billing configuration is not usable", err)
+	}
+	var billingService *billing.Service
+	switch {
+	case billingCfg.Enabled() && selfHosted:
+		slog.Warn("STRIPE_SECRET_KEY is set on a self-hosted deployment (OPENV_SELF_HOSTED=true); billing stays off")
+	case billingCfg.Enabled():
+		provider := stripe.New(billingCfg.SecretKey, stripe.WithAPIVersion(billingCfg.APIVersion), stripe.WithMetrics(metricsCollector))
+		billingService = billing.New(provider, orgService, billingCfg.Registry, metricsCollector)
+		billingService.Start(ctx, billingCfg.ReconcileInterval)
+		slog.Info("billing enabled", "provider", provider.Name(), "prices", billingCfg.Registry.Len(), "reconcile_every", billingCfg.ReconcileInterval)
+	}
+
 	handler := api.NewHandler(api.HandlerDeps{
 		ArtifactService:      artifactService,
 		LinkService:          linkService,
@@ -791,6 +817,7 @@ func main() {
 		EmailLinkBase:     emailLinkBase,
 		EmailVerification: emailVerification,
 		InvitationService: invitationService,
+		BillingService:    billingService,
 		Registration:      registrationPolicy,
 		SessionPolicy:     sessionPolicy,
 	})
