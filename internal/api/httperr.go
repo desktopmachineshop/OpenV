@@ -42,6 +42,12 @@ const (
 	// on a deployment with no mailer (REQ-158).
 	ErrCodeResetInvalid          = "reset_invalid"
 	ErrCodeResetEmailUnavailable = "reset_email_unavailable"
+	// ErrCodeBillingUnavailable answers every billing route on a deployment
+	// with no billing provider configured — every self-hosted one.
+	ErrCodeBillingUnavailable = "billing_unavailable"
+	// ErrCodeBillingUpstream marks a 503 where the billing provider did not
+	// answer; the workspace's plan was left exactly as it was.
+	ErrCodeBillingUpstream = "billing_upstream"
 )
 
 // writeJSONErrorCode is writeJSONError with a machine-readable code.

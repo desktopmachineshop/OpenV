@@ -96,6 +96,7 @@ GET /api/v1/notifications
 GET /api/v1/notifications/stream
 GET /api/v1/orgs
 GET /api/v1/orgs/{id}
+GET /api/v1/orgs/{id}/billing
 GET /api/v1/orgs/{id}/features
 GET /api/v1/orgs/{id}/hosted-runner
 GET /api/v1/orgs/{id}/invitations
@@ -158,6 +159,7 @@ GET /api/v1/public/open-source/projects
 GET /api/v1/public/open-source/projects/{id}
 GET /api/v1/public/open-source/projects/{id}/page
 GET /api/v1/public/open-source/projects/{id}/preview.png
+GET /api/v1/public/plans
 GET /api/v1/public/release
 GET /api/v1/public/share/{token}
 GET /api/v1/public/share/{token}/page
@@ -236,6 +238,7 @@ POST /api/v1/notifications/read-all
 POST /api/v1/org-teams/{id}/members/{userId}
 POST /api/v1/orgs
 POST /api/v1/orgs/{id}/activate
+POST /api/v1/orgs/{id}/billing/refresh
 POST /api/v1/orgs/{id}/connector-pairing
 POST /api/v1/orgs/{id}/hosted-runner
 POST /api/v1/orgs/{id}/hosted-runner/start
