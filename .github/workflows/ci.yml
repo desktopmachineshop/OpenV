@@ -204,6 +204,46 @@ jobs:
         working-directory: frontend
         run: npm audit --omit=dev --audit-level=high
 
+  secrets:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    steps:
+      # fetch-depth: 0 gives gitleaks the whole history, so a credential added
+      # in any commit on the branch is caught, not only one still present in the
+      # working tree. A rewritten/removed secret must still be rotated — the
+      # scan flags it until history is rewritten — which is the point.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Pinned, not @latest, so a gitleaks release cannot turn a green PR red on
+      # its own; bump this deliberately alongside GITLEAKS_VERSION in the
+      # Makefile (`make secrets`). Installed as a binary rather than via
+      # gitleaks/gitleaks-action to avoid that action's org-license key prompt
+      # and keep the scan self-contained.
+      - name: Install gitleaks
+        env:
+          GITLEAKS_VERSION: 8.21.2
+        run: |
+          curl -sSL -o /tmp/gitleaks.tar.gz \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          mkdir -p "$RUNNER_TEMP/bin"
+          tar -xzf /tmp/gitleaks.tar.gz -C "$RUNNER_TEMP/bin" gitleaks
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+          "$RUNNER_TEMP/bin/gitleaks" version
+
+      # `git` scans commit history; a non-zero exit means a secret was found.
+      # --redact keeps the secret itself out of the public CI log — the finding
+      # names the file, rule and commit, which is enough to act on.
+      - name: Scan history for committed secrets
+        run: gitleaks git --redact --verbose .
+
+      # `dir` scans the checked-out tree, catching a secret staged in a file
+      # that is not yet its own commit (e.g. added to an existing file).
+      - name: Scan the working tree
+        if: ${{ !cancelled() }}
+        run: gitleaks dir --redact --verbose .
+
   docker:
     name: Docker builds
     runs-on: ubuntu-latest

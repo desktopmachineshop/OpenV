@@ -295,36 +295,106 @@ func (l *rateLimiter) maybeCleanupLocked(now time.Time) {
 // X-Forwarded-For / X-Real-IP are ordinary request headers any direct client
 // can set, so trusting them unconditionally would let a caller evade the
 // per-IP limits (or pollute another client's bucket) by spoofing a header.
-// Set OPENV_TRUST_PROXY=1 only when the API is deployed behind a reverse
-// proxy that overwrites these headers (see docs/operations.md); any other
-// value — including unset — keys limits on the TCP peer address.
-const envTrustProxy = "OPENV_TRUST_PROXY"
+//
+// X-Forwarded-For grows LEFT to RIGHT: every proxy appends the address it saw
+// the connection arrive from, so the entries a client can forge are the
+// leftmost ones (whatever it sent before the first trusted proxy appended the
+// real peer). Trusting the leftmost entry therefore trusts the attacker — the
+// bug this resolver is written to avoid. The trustworthy client address is the
+// entry N hops in from the RIGHT, where N is the number of proxies between the
+// app and the internet.
+//
+//	OPENV_TRUSTED_PROXY_HOPS  number of trusted proxies in front of the app.
+//	                          The client is the X-Forwarded-For entry this many
+//	                          hops from the right; 0 or unset trusts no header
+//	                          and keys on the TCP peer address.
+//	OPENV_CLIENT_IP_HEADER    a single header the OUTERMOST trusted proxy sets
+//	                          to the real client and that a client cannot forge
+//	                          THROUGH it — Cloudflare's CF-Connecting-IP, Akamai's
+//	                          True-Client-IP. When set it wins, which is the
+//	                          robust choice behind a CDN that rewrites it on
+//	                          every request regardless of chain depth.
+//	OPENV_TRUST_PROXY=1       legacy alias for one trusted hop; still honored,
+//	                          now counting from the right like the rest, so a
+//	                          single trusted proxy keeps working and extra
+//	                          client-supplied entries no longer shift the key.
+const (
+	envTrustProxy     = "OPENV_TRUST_PROXY"
+	envTrustedHops    = "OPENV_TRUSTED_PROXY_HOPS"
+	envClientIPHeader = "OPENV_CLIENT_IP_HEADER"
+)
 
-// clientIP extracts the requesting client's IP: the usual proxy headers when
-// the operator has declared them trustworthy (OPENV_TRUST_PROXY=1), otherwise
-// the connection's remote address.
-func clientIP(r *http.Request) string {
-	return clientIPTrusting(r, os.Getenv(envTrustProxy) == "1")
+// proxyTrust is the operator's declaration of what sits in front of the app.
+type proxyTrust struct {
+	hops         int    // trusted proxies between the app and the internet
+	clientHeader string // a proxy-set header naming the real client, if any
 }
 
-// clientIPTrusting is clientIP with the trust decision injected for tests.
-func clientIPTrusting(r *http.Request, trustProxy bool) string {
-	if trustProxy {
-		if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-			// First hop is the original client.
-			if first, _, ok := strings.Cut(xff, ","); ok {
-				return strings.TrimSpace(first)
-			}
-			return strings.TrimSpace(xff)
-		}
-		if rip := r.Header.Get("X-Real-IP"); rip != "" {
-			return strings.TrimSpace(rip)
+// proxyTrustFromEnv reads the trust declaration. An explicit hop count wins;
+// the legacy OPENV_TRUST_PROXY=1 is honored as a single hop.
+func proxyTrustFromEnv() proxyTrust {
+	t := proxyTrust{clientHeader: strings.TrimSpace(os.Getenv(envClientIPHeader))}
+	if n, err := strconv.Atoi(strings.TrimSpace(os.Getenv(envTrustedHops))); err == nil && n > 0 {
+		t.hops = n
+	} else if os.Getenv(envTrustProxy) == "1" {
+		t.hops = 1
+	}
+	return t
+}
+
+// clientIP extracts the requesting client's IP under the deployment's declared
+// proxy trust (see proxyTrust). With no trust declared it returns the TCP peer
+// address, so a direct client cannot shift its own rate-limit key by sending a
+// forwarding header.
+func clientIP(r *http.Request) string {
+	return clientIPWithTrust(r, proxyTrustFromEnv())
+}
+
+// clientIPWithTrust is clientIP with the trust declaration injected for tests.
+func clientIPWithTrust(r *http.Request, t proxyTrust) string {
+	// An unforgeable proxy-set header (CF-Connecting-IP and the like) is the
+	// most robust source: the outermost proxy overwrites it on every request,
+	// so its value never depends on counting a variable-length header.
+	if t.clientHeader != "" {
+		if v := strings.TrimSpace(r.Header.Get(t.clientHeader)); v != "" {
+			return stripPort(v)
 		}
 	}
-	if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
+	if t.hops > 0 {
+		if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+			parts := strings.Split(xff, ",")
+			// The rightmost entry was appended by the proxy nearest the app;
+			// step in one place per trusted hop to reach the address the
+			// outermost trusted proxy saw. Entries left of that are
+			// client-supplied and ignored.
+			if idx := len(parts) - t.hops; idx >= 0 {
+				if ip := strings.TrimSpace(parts[idx]); ip != "" {
+					return stripPort(ip)
+				}
+			}
+			// Fewer hops arrived than declared: the request did not traverse
+			// the expected chain, so nothing in the header is trustworthy.
+			return stripPort(r.RemoteAddr)
+		}
+		// A single trusted proxy that forwards X-Real-IP instead.
+		if t.hops == 1 {
+			if rip := strings.TrimSpace(r.Header.Get("X-Real-IP")); rip != "" {
+				return stripPort(rip)
+			}
+		}
+	}
+	return stripPort(r.RemoteAddr)
+}
+
+// stripPort returns s without a trailing :port. A bare IP (the usual
+// X-Forwarded-For entry) and a bracketed IPv6 literal both pass through
+// unchanged; only a host:port pair is trimmed.
+func stripPort(s string) string {
+	s = strings.TrimSpace(s)
+	if host, _, err := net.SplitHostPort(s); err == nil {
 		return host
 	}
-	return r.RemoteAddr
+	return s
 }
 
 // writeRateLimited answers 429 with a JSON body the interview chat UI can
