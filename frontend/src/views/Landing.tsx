@@ -1,5 +1,6 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { billingAPI, PublicPlans } from '../api/client';
 import { useViewport } from '../hooks/useViewport';
 import {
   ALPHA_NOTE,
@@ -48,7 +49,39 @@ interface LandingProps {
   section?: 'pricing';
 }
 
-const TierCard: React.FC<{ tier: PricingTier; compact: boolean }> = ({ tier, compact }) => (
+/** A tier's live price, when the platform has one confirmed for it. */
+interface LivePrice {
+  text: string;
+  perSeat: boolean;
+  taxNote: string;
+}
+
+const formatAmount = (minor: number, currency: string): string =>
+  new Intl.NumberFormat(undefined, {
+    style: 'currency',
+    currency: currency.toUpperCase(),
+    minimumFractionDigits: minor % 100 === 0 ? 0 : 2,
+    maximumFractionDigits: 2,
+  }).format(minor / 100);
+
+/** The monthly price to show for a tier: the plan's month interval in GBP
+ *  where offered, else the first currency it is offered in. No price in
+ *  the repository — this reads what the provider confirmed. */
+export function livePrice(plans: PublicPlans | null, tier: PricingTier): LivePrice | null {
+  if (!plans?.billing_enabled || !tier.planKey) return null;
+  const plan = plans.plans.find((p) => p.plan === tier.planKey);
+  const month = plan?.intervals?.month;
+  if (!plan || !month) return null;
+  const currency = 'gbp' in month.amounts ? 'gbp' : Object.keys(month.amounts)[0];
+  if (!currency) return null;
+  return {
+    text: formatAmount(month.amounts[currency], currency),
+    perSeat: plan.per_seat,
+    taxNote: month.tax_behavior === 'exclusive' ? 'excluding VAT' : '',
+  };
+}
+
+const TierCard: React.FC<{ tier: PricingTier; compact: boolean; live?: LivePrice | null }> = ({ tier, compact, live }) => (
   <article
     aria-labelledby={`tier-${tier.id}`}
     style={{
@@ -67,6 +100,14 @@ const TierCard: React.FC<{ tier: PricingTier; compact: boolean }> = ({ tier, com
     </h3>
     {tier.available ? (
       <div style={{ fontSize: 28, fontWeight: 700, color: 'var(--success-text)' }}>{tier.price}</div>
+    ) : live ? (
+      <div data-testid={`live-price-${tier.id}`}>
+        <span style={{ fontSize: 28, fontWeight: 700, color: 'var(--text)' }}>{live.text}</span>
+        <span style={{ fontSize: 14, color: 'var(--text-muted)' }}>
+          {' '}
+          / {live.perSeat ? 'member / ' : ''}month{live.taxNote ? `, ${live.taxNote}` : ''}
+        </span>
+      </div>
     ) : (
       <div>
         <span
@@ -108,6 +149,24 @@ export const Landing: React.FC<LandingProps> = ({ section }) => {
   const viewport = useViewport();
   const compact = viewport.isCompact;
   const phone = viewport.isPhone;
+
+  // Live prices, when the platform has some: the catalogue is served from
+  // the platform's own cache, and a page with no answer shows its usual copy.
+  const [plans, setPlans] = useState<PublicPlans | null>(null);
+  useEffect(() => {
+    let alive = true;
+    billingAPI
+      .publicPlans()
+      .then((res) => {
+        if (alive) setPlans(res.data);
+      })
+      .catch(() => {
+        /* the page reads exactly as it does with no provider */
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (section === 'pricing') {
@@ -324,7 +383,7 @@ export const Landing: React.FC<LandingProps> = ({ section }) => {
             }}
           >
             {HOSTED_TIERS.map((tier) => (
-              <TierCard key={tier.id} tier={tier} compact={compact} />
+              <TierCard key={tier.id} tier={tier} compact={compact} live={livePrice(plans, tier)} />
             ))}
           </div>
 

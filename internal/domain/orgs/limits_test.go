@@ -34,7 +34,7 @@ func TestZeroMeansUnlimitedEverywhere(t *testing.T) {
 func TestLimitsResolveOrgOverDeploymentOverPlan(t *testing.T) {
 	t.Cleanup(func() { SetDeploymentLimits(nil) })
 
-	org := &Org{Plan: PlanSingle}
+	org := &Org{BilledPlan: PlanSingle}
 	if got, _ := LimitInt(org.EffectiveLimits(), LimitEvidenceStorageMB); got != 2048 {
 		t.Fatalf("plan default is %d, want 2048", got)
 	}
@@ -63,7 +63,7 @@ func TestEffectiveLimitsDoesNotMutateItsSources(t *testing.T) {
 	t.Cleanup(func() { SetDeploymentLimits(nil) })
 	SetDeploymentLimits(map[string]interface{}{LimitMaxMembers: 10})
 
-	org := &Org{Plan: PlanSingle, Limits: map[string]interface{}{LimitMaxMembers: 3}}
+	org := &Org{BilledPlan: PlanSingle, Limits: map[string]interface{}{LimitMaxMembers: 3}}
 	_ = org.EffectiveLimits()
 
 	if got, _ := LimitInt(DeploymentLimits(), LimitMaxMembers); got != 10 {
@@ -72,7 +72,7 @@ func TestEffectiveLimitsDoesNotMutateItsSources(t *testing.T) {
 	if got, _ := LimitInt(org.Limits, LimitMaxMembers); got != 3 {
 		t.Errorf("the workspace's own limits were mutated to %d", got)
 	}
-	other := &Org{Plan: PlanSingle}
+	other := &Org{BilledPlan: PlanSingle}
 	if got, _ := LimitInt(other.EffectiveLimits(), LimitMaxMembers); got != 10 {
 		t.Errorf("another workspace saw %d; one workspace's override leaked", got)
 	}
@@ -82,7 +82,7 @@ func TestEffectiveLimitsDoesNotMutateItsSources(t *testing.T) {
 // defaults, never on unlimited: a typo in the column cannot become free rein.
 func TestAnUnknownPlanIsNotUnlimited(t *testing.T) {
 	for _, plan := range []string{"", "gold", "TEAM"} {
-		org := &Org{Plan: plan}
+		org := &Org{BilledPlan: plan}
 		got, _ := LimitInt(org.EffectiveLimits(), LimitEvidenceStorageMB)
 		if got != 2048 {
 			t.Errorf("plan %q got %d MB of storage, want the restrictive 2048", plan, got)
@@ -173,8 +173,18 @@ func TestEveryCataloguedLimitIsDescribed(t *testing.T) {
 		if def.Label == "" || def.Description == "" {
 			t.Errorf("%s is catalogued without a label or description: %+v", def.Key, def)
 		}
-		if def.Unit == UnitUnknown {
-			t.Errorf("%s has no unit, so its number cannot be rendered", def.Key)
+		switch def.Kind {
+		case KindResource, KindCount:
+			if def.Unit == UnitUnknown {
+				t.Errorf("%s has no unit, so its number cannot be rendered", def.Key)
+			}
+		case KindFlag:
+			// A flag has no number; a unit on it would be a lie.
+			if def.Unit != UnitUnknown || def.Countable {
+				t.Errorf("%s is a flag but carries a unit or a count: %+v", def.Key, def)
+			}
+		default:
+			t.Errorf("%s has no kind, so nobody knows whether it is a number or a flag", def.Key)
 		}
 	}
 	// And every key a plan sets must be in the catalogue, or it is a limit
@@ -292,7 +302,7 @@ func TestLimitFloatCoercions(t *testing.T) {
 func TestSelfHostedIgnoresTheStoredPlan(t *testing.T) {
 	t.Cleanup(func() { SetSelfHosted(false); SetDeploymentLimits(nil) })
 
-	existing := &Org{Plan: PlanSingle}
+	existing := &Org{BilledPlan: PlanSingle}
 	if _, capped := Ceiling(existing.EffectiveLimits(), LimitEvidenceStorageMB); !capped {
 		t.Fatal("a hosted workspace is uncapped before the flag; the test proves nothing")
 	}
@@ -324,7 +334,7 @@ func TestAPersonalWorkspaceSeatsOnePerson(t *testing.T) {
 		SetSelfHosted(false)
 	})
 
-	personal := &Org{OrgType: TypePersonal, Plan: PlanEnterprise}
+	personal := &Org{OrgType: TypePersonal, BilledPlan: PlanEnterprise}
 	if got, capped := Ceiling(personal.EffectiveLimits(), LimitMaxMembers); !capped || got != 1 {
 		t.Fatalf("an enterprise personal workspace allows %d members (capped=%v), want 1", got, capped)
 	}
@@ -346,7 +356,7 @@ func TestAPersonalWorkspaceSeatsOnePerson(t *testing.T) {
 	}
 
 	// And a shared workspace is untouched by any of it.
-	shared := &Org{OrgType: TypeCompany, Plan: PlanSingle}
+	shared := &Org{OrgType: TypeCompany, BilledPlan: PlanSingle}
 	if _, capped := Ceiling(shared.EffectiveLimits(), LimitMaxMembers); !capped {
 		t.Error("the deployment override stopped applying to shared workspaces")
 	}

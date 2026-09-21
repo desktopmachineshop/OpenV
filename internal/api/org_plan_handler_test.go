@@ -60,7 +60,7 @@ func TestSetOrgPlan(t *testing.T) {
 	if err := json.Unmarshal(w.Body.Bytes(), &o); err != nil {
 		t.Fatal(err)
 	}
-	if o.Plan != orgs.PlanOpenSource || len(svc.setPlans) != 1 {
+	if o.BilledPlan != orgs.PlanOpenSource || len(svc.setPlans) != 1 {
 		t.Fatalf("answer = %+v, writes = %v", o, svc.setPlans)
 	}
 

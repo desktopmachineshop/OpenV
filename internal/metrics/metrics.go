@@ -34,6 +34,13 @@ type Metrics struct {
 	queued  prometheus.Gauge
 	running prometheus.Gauge
 
+	// Billing: provider calls, subscriptions that map to no plan, and how
+	// stale the oldest mirrored snapshot is. All zero on a deployment with
+	// no billing provider.
+	billingRequests     *prometheus.CounterVec
+	billingUnknownPrice prometheus.Counter
+	billingSyncStale    prometheus.Gauge
+
 	// lastState tracks the last-observed status of in-flight runs so a
 	// transition can decrement the gauge bucket the run is leaving. Runs are
 	// dropped once they reach a terminal (or awaiting_approval) status, so the
@@ -75,8 +82,21 @@ func New() *Metrics {
 			Name: "agent_runs_running",
 			Help: "Agent runs currently running, observed via status transitions.",
 		}),
+		billingRequests: prometheus.NewCounterVec(prometheus.CounterOpts{
+			Name: "billing_provider_requests_total",
+			Help: "Calls to the billing provider by operation and HTTP status (0 = transport failure).",
+		}, []string{"op", "status"}),
+		billingUnknownPrice: prometheus.NewCounter(prometheus.CounterOpts{
+			Name: "billing_unknown_price_total",
+			Help: "Subscriptions whose price maps to no plan, or with more than one item; the workspace was left as it was. Alert on any increase.",
+		}),
+		billingSyncStale: prometheus.NewGauge(prometheus.GaugeOpts{
+			Name: "billing_sync_stale_seconds",
+			Help: "Age of the oldest mirrored subscription snapshot after the last reconcile. Alert above three times the reconcile interval.",
+		}),
 	}
-	reg.MustRegister(m.httpRequests, m.httpDuration, m.agentRuns, m.queued, m.running)
+	reg.MustRegister(m.httpRequests, m.httpDuration, m.agentRuns, m.queued, m.running,
+		m.billingRequests, m.billingUnknownPrice, m.billingSyncStale)
 	reg.MustRegister(
 		collectors.NewGoCollector(),
 		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
@@ -105,6 +125,17 @@ func (m *Metrics) Handler(token string) http.Handler {
 		h.ServeHTTP(w, r)
 	})
 }
+
+// ProviderRequest implements billing.Metrics.
+func (m *Metrics) ProviderRequest(op string, status int) {
+	m.billingRequests.WithLabelValues(op, strconv.Itoa(status)).Inc()
+}
+
+// UnknownPrice implements billing.Metrics.
+func (m *Metrics) UnknownPrice() { m.billingUnknownPrice.Inc() }
+
+// SyncStaleSeconds implements billing.Metrics.
+func (m *Metrics) SyncStaleSeconds(seconds float64) { m.billingSyncStale.Set(seconds) }
 
 // WatchSSEConnections registers a gauge that reports the current SSE listener
 // count by calling fn on each scrape.

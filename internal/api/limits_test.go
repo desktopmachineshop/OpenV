@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http/httptest"
 	"strings"
 	"testing"
@@ -93,7 +94,7 @@ func TestNothingIsEnforcedOutOfTheBox(t *testing.T) {
 	orgs.SetDeploymentLimits(nil)
 
 	for _, plan := range []string{orgs.PlanSingle, orgs.PlanFree, orgs.PlanBusiness, orgs.PlanSelfHost} {
-		org := &orgs.Org{Plan: plan}
+		org := &orgs.Org{BilledPlan: plan}
 		limits := org.EffectiveLimits()
 		for _, key := range []string{orgs.LimitMaxMembers, orgs.LimitMaxProjects, orgs.LimitMaxSharedWorkspaces} {
 			if err := orgs.CheckCeiling(limits, key, 10_000, 1); err != nil {
@@ -108,7 +109,7 @@ func TestNothingIsEnforcedOutOfTheBox(t *testing.T) {
 func TestTheDeploymentOverrideTakesEffectWithoutTouchingAWorkspace(t *testing.T) {
 	t.Cleanup(func() { orgs.SetDeploymentLimits(nil) })
 
-	org := &orgs.Org{Plan: orgs.PlanSelfHost}
+	org := &orgs.Org{BilledPlan: orgs.PlanSelfHost}
 	if err := orgs.CheckCeiling(org.EffectiveLimits(), orgs.LimitMaxMembers, 3, 1); err != nil {
 		t.Fatalf("self-host refused before any override: %v", err)
 	}
@@ -154,7 +155,7 @@ func TestTheSeatCheckDefersToThePersonalWorkspaceRefusal(t *testing.T) {
 		orgs.SetSelfHosted(mode)
 		h := NewHandler(HandlerDeps{})
 		h.orgService = &seatedOrgService{
-			org:     &orgs.Org{ID: "org-1", OrgType: orgs.TypePersonal, Plan: orgs.PlanBusiness},
+			org:     &orgs.Org{ID: "org-1", OrgType: orgs.TypePersonal, BilledPlan: orgs.PlanBusiness},
 			members: []*orgs.Member{{OrgID: "org-1", UserID: "u1", Role: orgs.RoleAdmin}},
 		}
 		if err := h.checkOrgSeats("org-1", 1); err != nil {
@@ -178,7 +179,7 @@ func TestTheSeatCheckDefersToThePersonalWorkspaceRefusal(t *testing.T) {
 func TestThePersonalSeatReadsAsAFactNotAWarning(t *testing.T) {
 	h := NewHandler(HandlerDeps{})
 	h.orgService = &seatedOrgService{
-		org:     &orgs.Org{ID: "org-1", OrgType: orgs.TypePersonal, Plan: orgs.PlanSingle},
+		org:     &orgs.Org{ID: "org-1", OrgType: orgs.TypePersonal, BilledPlan: orgs.PlanSingle},
 		members: []*orgs.Member{{OrgID: "org-1", UserID: "u1", Role: orgs.RoleAdmin}},
 	}
 
@@ -206,5 +207,50 @@ func TestThePersonalSeatReadsAsAFactNotAWarning(t *testing.T) {
 	}
 	if !strings.Contains(seats.Description, "shared workspace") {
 		t.Errorf("the description does not say what to do instead: %q", seats.Description)
+	}
+}
+
+// createdOrgService answers ListForUser with a fixed set of workspaces, so
+// the shared-workspace check can be read against who created what.
+type createdOrgService struct {
+	orgs.Service
+	list []*orgs.Org
+}
+
+func (s *createdOrgService) ListForUser(userID string) ([]*orgs.Org, error) { return s.list, nil }
+
+// The shared-workspace ceiling counts workspaces the person CREATED against
+// their own personal workspace's plan. Being invited into somebody else's
+// workspace neither uses up the allowance nor lifts it.
+func TestSharedWorkspacesAreCountedByCreatorAgainstTheirOwnPlan(t *testing.T) {
+	me, them := "u1", "u2"
+	personal := &orgs.Org{ID: "p", OrgType: orgs.TypePersonal, CreatedBy: &me, BilledPlan: orgs.PlanSingle,
+		Limits: map[string]interface{}{orgs.LimitMaxSharedWorkspaces: 1}}
+	mine := &orgs.Org{ID: "a", OrgType: orgs.TypeCompany, CreatedBy: &me, BilledPlan: orgs.PlanSingle}
+	// A Business workspace I was invited into: unlimited, but not mine.
+	theirs := &orgs.Org{ID: "b", OrgType: orgs.TypeCompany, CreatedBy: &them, BilledPlan: orgs.PlanBusiness}
+
+	h := NewHandler(HandlerDeps{})
+	h.orgService = &createdOrgService{list: []*orgs.Org{personal, theirs}}
+	if err := h.checkSharedWorkspaceCount(me); err != nil {
+		t.Fatalf("an invitation used up my allowance: %v", err)
+	}
+	h.orgService = &createdOrgService{list: []*orgs.Org{personal, mine, theirs}}
+	err := h.checkSharedWorkspaceCount(me)
+	if err == nil {
+		t.Fatal("a second creation was allowed past a ceiling of one; membership in a Business workspace lifted it")
+	}
+	if !errors.Is(err, orgs.ErrLimitReached) {
+		t.Fatalf("err = %v", err)
+	}
+	// Raising my own plan's ceiling is what lets me create another.
+	personal.Limits[orgs.LimitMaxSharedWorkspaces] = 2
+	if err := h.checkSharedWorkspaceCount(me); err != nil {
+		t.Fatalf("a raised ceiling still refused: %v", err)
+	}
+	// Somebody with no personal workspace is not limited here.
+	h.orgService = &createdOrgService{list: []*orgs.Org{mine}}
+	if err := h.checkSharedWorkspaceCount(me); err != nil {
+		t.Fatalf("no personal workspace: %v", err)
 	}
 }

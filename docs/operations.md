@@ -509,7 +509,32 @@ Notes:
     workspace chapter and at `GET /api/v1/orgs/{id}/limits`.
   - The count limits (`max_members`, `max_shared_workspaces`, `max_projects`)
     ship at zero on every plan, so nothing is refused until somebody
-    deliberately sets one.
+    deliberately sets one. The flags (`hosted_automation`, `teams`,
+    `workspace_budget`) are limits whose value is `true` or `false` rather
+    than a number, resolved through the same three layers; they ship on for
+    every plan.
+- **Billing** (`docs/plans/billing-stripe.md`) is off unless
+  `STRIPE_SECRET_KEY` is set, and off with a warning on a self-hosted
+  deployment even then: nothing starts, nothing dials out, and the billing
+  routes answer `404`. The variables live on the API service only — never
+  the frontend, an agent run or a runner.
+  - `OPENV_STRIPE_PRICES` is a JSON array mapping each provider price to
+    the plan and interval it sells, e.g.
+    `[{"price":"price_…","plan":"business","interval":"month"}]`. Only
+    `business_lite` and `business`, `month` and `year`, one price per pair;
+    anything else **fails the boot**. This map is the only thing that turns
+    a subscription into a plan — a product's name in the provider never is —
+    so the prices differ per environment (test-mode ids on staging).
+  - `OPENV_BILLING_RECONCILE_MINUTES` (default 5) is how often every
+    subscription is re-read and applied. A failed read never changes a plan;
+    `billing_sync_stale_seconds` on `/metrics` says how old the oldest
+    snapshot is, and is worth an alert above three times the interval.
+    `billing_unknown_price_total` counts subscriptions on a price the map
+    does not know, and is worth an alert on any increase.
+  - `OPENV_STRIPE_API_VERSION` pins the provider API version on every
+    request; unset, the account's own pinned version applies.
+  - `OPENV_BILLING_REFRESH_BURST` / `_REFILL_PER_HOUR` bound the
+    synchronous refresh per workspace (default 10, then 120 an hour).
   - The one exception is a **personal workspace, which always seats exactly
     one person**. That is not a ration, so no plan, no `OPENV_LIMITS` and no
     per-workspace setting raises it — a personal workspace with two people in

@@ -25,7 +25,7 @@ func TestResourceLimitsForOrgPlanDefaults(t *testing.T) {
 		{"mystery-plan", 2048, 1e9},
 	}
 	for _, tc := range cases {
-		rl := ResourceLimitsForOrg(&orgs.Org{Plan: tc.plan, Limits: map[string]interface{}{}})
+		rl := ResourceLimitsForOrg(&orgs.Org{BilledPlan: tc.plan, Limits: map[string]interface{}{}})
 		if rl.MemoryMB != tc.wantMem || rl.NanoCPUs != tc.wantNano {
 			t.Errorf("plan %q: limits = %+v, want mem %d nano %d", tc.plan, rl, tc.wantMem, tc.wantNano)
 		}
@@ -36,7 +36,7 @@ func TestResourceLimitsForOrgPlanDefaults(t *testing.T) {
 // i.e. float64) override the plan defaults, including fractional CPUs.
 func TestResourceLimitsForOrgOverrides(t *testing.T) {
 	rl := ResourceLimitsForOrg(&orgs.Org{
-		Plan: orgs.PlanFree,
+		BilledPlan: orgs.PlanFree,
 		Limits: map[string]interface{}{
 			orgs.LimitRunnerMemoryMB: float64(8192),
 			orgs.LimitRunnerCPUs:     0.5,
@@ -55,7 +55,7 @@ func TestResourceLimitsForOrgOverrides(t *testing.T) {
 // explicit non-positive number is the deliberate "no cap" opt-out.
 func TestResourceLimitsForOrgBadValues(t *testing.T) {
 	rl := ResourceLimitsForOrg(&orgs.Org{
-		Plan: orgs.PlanFree,
+		BilledPlan: orgs.PlanFree,
 		Limits: map[string]interface{}{
 			orgs.LimitRunnerMemoryMB: "lots",     // garbage -> plan default
 			orgs.LimitRunnerCPUs:     float64(0), // explicit opt-out -> no cap

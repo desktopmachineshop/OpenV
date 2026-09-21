@@ -12,6 +12,16 @@ import {
   OTHER_TIERS,
 } from '../landing/content';
 
+// The billing catalogue the page reads. By default there is no provider,
+// which is every self-hosted deployment and every CI run; a test that wants
+// live prices swaps the answer.
+const catalogue = vi.hoisted(() => ({
+  value: { billing_enabled: false, currencies: [] as string[], plans: [] as any[] } as any,
+}));
+vi.mock('../api/client', () => ({
+  billingAPI: { publicPlans: () => Promise.resolve({ data: catalogue.value }) },
+}));
+
 // The router is mocked with the two pieces the view uses: Link renders a plain anchor
 // and the hooks return inert values.
 vi.mock('react-router-dom', () => ({
@@ -82,6 +92,39 @@ describe('Landing', () => {
       Array.from(card.querySelectorAll('a')).some((a) => a.getAttribute('href') === '/login?mode=register')
     );
     expect(signUps).toHaveLength(1);
+  });
+
+  it('shows a confirmed price in place of "coming soon", and only for tiers the platform prices', async () => {
+    catalogue.value = {
+      billing_enabled: true,
+      currencies: ['eur', 'gbp', 'usd'],
+      plans: [
+        { plan: 'business', per_seat: true, intervals: { month: { amounts: { gbp: 1200, usd: 1500, eur: 1400 }, tax_behavior: 'exclusive' } } },
+        { plan: 'business_lite', per_seat: false, intervals: { month: { amounts: { usd: 950 } } } },
+      ],
+    };
+    try {
+      await render(<Landing />);
+      await act(async () => {
+        await Promise.resolve();
+      });
+      const pricing = container.querySelector('#pricing') as HTMLElement;
+      const business = pricing.querySelector('[data-testid="live-price-business"]') as HTMLElement;
+      expect(business).not.toBeNull();
+      expect(business.textContent).toContain('£12');
+      expect(business.textContent).toContain('/ member / month');
+      expect(business.textContent).toContain('excluding VAT');
+      // Lite is flat and only priced in dollars: falls back to the first
+      // currency offered, and never says "per member".
+      const lite = pricing.querySelector('[data-testid="live-price-business-lite"]') as HTMLElement;
+      expect(lite.textContent).toContain('$9.50');
+      expect(lite.textContent).not.toContain('member');
+      // Enterprise is never for sale, so it alone still says coming soon.
+      const chips = Array.from(pricing.querySelectorAll('span')).filter((el) => el.textContent === 'Coming soon');
+      expect(chips).toHaveLength(1);
+    } finally {
+      catalogue.value = { billing_enabled: false, currencies: [], plans: [] };
+    }
   });
 
   it('links sign-in and registration to the login screen', async () => {

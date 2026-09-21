@@ -32,6 +32,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/sharelinks"
 	"github.com/openv/requirements-platform/internal/domain/templates"
 
+	"github.com/openv/requirements-platform/internal/billing"
 	"github.com/openv/requirements-platform/internal/domain/agentruns"
 	"github.com/openv/requirements-platform/internal/domain/agents"
 	"github.com/openv/requirements-platform/internal/domain/automations"
@@ -145,6 +146,9 @@ type HandlerDeps struct {
 	// InvitationService backs workspace invitations; nil leaves the
 	// endpoints answering 404 and registration unable to see an invitation.
 	InvitationService invitations.Service
+	// BillingService is the subscription sync path; nil or disabled where
+	// no provider is configured.
+	BillingService *billing.Service
 	// Registration is the deployment's sign-up policy ("open" or "closed",
 	// see RegistrationPolicyFromEnv); empty means open.
 	Registration string
@@ -246,6 +250,13 @@ type Handler struct {
 	// from authIPLimiter on purpose: opening an invite link must never spend
 	// somebody's sign-in budget (see ratelimit.go).
 	invitePreviewLimiter *rateLimiter
+	// billingRefreshLimiter bounds synchronous subscription re-reads per
+	// workspace (see ratelimit.go).
+	billingRefreshLimiter *rateLimiter
+	// billing is the subscription sync path; nil, or disabled, on a
+	// deployment with no billing provider, where every billing route
+	// answers 404 billing_unavailable.
+	billing *billing.Service
 	// inviteLimiter bounds invitations per INVITING ACCOUNT: creating one
 	// mails an address the sender chose, so the endpoint is a mail relay
 	// (see ratelimit.go).
@@ -339,6 +350,8 @@ func NewHandler(deps HandlerDeps) *Handler {
 		verifyResendLimiter:    newRateLimiterFromEnv(envVerifyResendBurst, envVerifyResendRefill, defaultVerifyResendBurst, defaultVerifyResendRefill),
 		passwordResetLimiter:   newRateLimiterFromEnv(envPasswordResetBurst, envPasswordResetRefill, defaultPasswordResetBurst, defaultPasswordResetRefill),
 		invitePreviewLimiter:   newRateLimiterFromEnv(envInvitePreviewBurst, envInvitePreviewRefill, defaultInvitePreviewBurst, defaultInvitePreviewRefill),
+		billingRefreshLimiter:  newRateLimiterFromEnv(envBillingRefreshBurst, envBillingRefreshRefill, defaultBillingRefreshBurst, defaultBillingRefreshRefill),
+		billing:                deps.BillingService,
 		inviteLimiter:          newRateLimiterFromEnv(envInviteBurst, envInviteRefill, defaultInviteBurst, defaultInviteRefill),
 		mailer:                 deps.Mailer,
 		emailLinkBase:          deps.EmailLinkBase,
@@ -405,6 +418,7 @@ func (h *Handler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/projects/{id}/children", h.ListChildProjects).Methods("GET")
 	h.registerShareRoutes(router)
 	h.registerAdminRoutes(router)
+	h.registerBillingRoutes(router)
 	router.HandleFunc("/api/v1/projects/{id}/linked-artifacts", h.ListLinkedArtifacts).Methods("GET")
 	router.HandleFunc("/api/v1/projects/{id}/review-queue", h.ReviewQueue).Methods("GET")
 	router.HandleFunc("/api/v1/projects/{id}/review-round", h.StartProjectReview).Methods("POST")

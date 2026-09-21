@@ -44,7 +44,15 @@ type LimitUsage struct {
 // limitsResponse is the whole picture of what a workspace may do.
 type limitsResponse struct {
 	OrgID string `json:"org_id"`
-	Plan  string `json:"plan"`
+	// Plan is the billed plan; EntitledPlan is the one the limits below
+	// were resolved from, which differs once a subscription lapses.
+	Plan         string `json:"plan"`
+	EntitledPlan string `json:"entitled_plan"`
+	// PlanStatus lets a member see that there is a payment problem — "ask
+	// an admin" — without seeing anything about money.
+	PlanStatus string `json:"plan_status"`
+	// Grandfathered marks a workspace that keeps the alpha terms.
+	Grandfathered bool `json:"grandfathered"`
 	// SelfHosted tells the UI which remedy to offer when something is full.
 	SelfHosted bool         `json:"self_hosted"`
 	Limits     []LimitUsage `json:"limits"`
@@ -172,14 +180,16 @@ func (h *Handler) checkProjectCount(orgID string) error {
 	return orgs.CheckCeiling(limits, orgs.LimitMaxProjects, len(list), 1)
 }
 
-// checkSharedWorkspaceCount refuses when this account has created as many
-// shared workspaces as its limit allows.
+// checkSharedWorkspaceCount refuses creating another shared workspace once
+// the person has created as many as their own plan allows.
 //
-// The account's own limits come from the workspaces it is already in: there is
-// no per-user plan, so the most generous workspace the person belongs to
-// decides. That is the forgiving reading, and the right one — somebody who has
-// been given a seat in a paid workspace should not be held to the free tier's
-// ceiling by their personal workspace.
+// The count is of workspaces the person CREATED, not ones they belong to,
+// and the ceiling is their personal workspace's — the one that is theirs to
+// upgrade. Counting memberships instead would refuse somebody who did
+// nothing but accept an invitation, and taking the most generous workspace
+// they belong to would let one Business membership mint unlimited free
+// workspaces for everybody in it. A person with no personal workspace (a
+// service account, say) is not limited here.
 func (h *Handler) checkSharedWorkspaceCount(userID string) error {
 	if h.orgService == nil || userID == "" {
 		return nil
@@ -188,27 +198,21 @@ func (h *Handler) checkSharedWorkspaceCount(userID string) error {
 	if err != nil {
 		return nil
 	}
-	shared := 0
-	best := map[string]interface{}(nil)
-	bestCap := -1
+	created := 0
+	var personal *orgs.Org
 	for _, org := range list {
-		if org.OrgType != orgs.TypePersonal {
-			shared++
+		if org.OrgType == orgs.TypePersonal {
+			personal = org
+			continue
 		}
-		limits := org.EffectiveLimits()
-		cap, capped := orgs.Ceiling(limits, orgs.LimitMaxSharedWorkspaces)
-		if !capped {
-			// One unlimited workspace is enough to lift the ceiling.
-			return nil
-		}
-		if cap > bestCap {
-			bestCap, best = cap, limits
+		if org.CreatedBy != nil && *org.CreatedBy == userID {
+			created++
 		}
 	}
-	if best == nil {
+	if personal == nil {
 		return nil
 	}
-	return orgs.CheckCeiling(best, orgs.LimitMaxSharedWorkspaces, shared, 1)
+	return orgs.CheckCeiling(personal.EffectiveLimits(), orgs.LimitMaxSharedWorkspaces, created, 1)
 }
 
 // buildLimitsResponse renders every catalogued limit for one workspace, with
@@ -223,8 +227,23 @@ func (h *Handler) buildLimitsResponse(orgID string) (*limitsResponse, error) {
 	}
 	limits := org.EffectiveLimits()
 
-	out := &limitsResponse{OrgID: orgID, Plan: org.Plan, SelfHosted: orgs.SelfHosted()}
+	out := &limitsResponse{
+		OrgID:         orgID,
+		Plan:          org.BilledPlan,
+		EntitledPlan:  org.EntitledPlan(),
+		PlanStatus:    org.Billing.Status,
+		Grandfathered: org.Billing.Grandfathered,
+		SelfHosted:    orgs.SelfHosted(),
+	}
+	if out.PlanStatus == "" {
+		out.PlanStatus = orgs.PlanStatusNone
+	}
 	for _, def := range orgs.Catalog() {
+		if def.Kind == orgs.KindFlag {
+			// Flags are not numbers and the panel has nothing to draw for
+			// one yet; they join the response when their gates do.
+			continue
+		}
 		cap, capped := orgs.Ceiling(limits, def.Key)
 		description, fixed := def.Description, false
 		if def.Key == orgs.LimitMaxMembers && org.OrgType == orgs.TypePersonal {
@@ -275,6 +294,8 @@ func (h *Handler) countFor(key string, org *orgs.Org) (int, bool) {
 		}
 		return len(list), true
 	case orgs.LimitMaxSharedWorkspaces:
+		// The same reading the creation check makes: workspaces this
+		// person created, not ones they were invited into.
 		if org.CreatedBy == nil {
 			return 0, false
 		}
@@ -282,13 +303,13 @@ func (h *Handler) countFor(key string, org *orgs.Org) (int, bool) {
 		if err != nil {
 			return 0, false
 		}
-		shared := 0
+		created := 0
 		for _, o := range list {
-			if o.OrgType != orgs.TypePersonal {
-				shared++
+			if o.OrgType != orgs.TypePersonal && o.CreatedBy != nil && *o.CreatedBy == *org.CreatedBy {
+				created++
 			}
 		}
-		return shared, true
+		return created, true
 	case orgs.LimitEvidenceStorageMB:
 		if h.evidenceService == nil {
 			return 0, false

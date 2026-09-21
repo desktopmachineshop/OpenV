@@ -26,7 +26,7 @@ func (f *fakeDefaultOrgs) Get(id string) (*orgs.Org, error) {
 	if !ok {
 		return nil, orgs.ErrNotFound
 	}
-	o := &orgs.Org{ID: id, Plan: plan, OrgType: f.types[id]}
+	o := &orgs.Org{ID: id, BilledPlan: plan, OrgType: f.types[id]}
 	o.ResolveReleaseChannel()
 	return o, nil
 }

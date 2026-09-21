@@ -51,6 +51,18 @@ const (
 	defaultInterviewStreamRefill = 120.0
 )
 
+// Throttling for the billing refresh. The post-checkout return page calls
+// it once, and a person staring at a slow page calls it again; it re-reads
+// the workspace's subscription from the provider, so it is bounded per
+// workspace to keep a stuck client from spending the provider's rate limit.
+const (
+	envBillingRefreshBurst  = "OPENV_BILLING_REFRESH_BURST"
+	envBillingRefreshRefill = "OPENV_BILLING_REFRESH_REFILL_PER_HOUR"
+
+	defaultBillingRefreshBurst  = 10
+	defaultBillingRefreshRefill = 120.0
+)
+
 // Throttling for the credential endpoints. bcrypt makes each password guess
 // expensive for the server but nothing stopped a client from making them
 // back to back; these buckets do. Sign-in charges every attempt against the

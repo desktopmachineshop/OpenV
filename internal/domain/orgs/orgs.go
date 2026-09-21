@@ -57,15 +57,25 @@ const DeletionGraceDays = 30
 
 // Org is a tenant: a personal space or a company workspace.
 type Org struct {
-	ID        string                 `json:"id"`
-	Name      string                 `json:"name"`
-	Slug      string                 `json:"slug"`
-	OrgType   string                 `json:"type"`
-	Plan      string                 `json:"plan"`
-	Limits    map[string]interface{} `json:"limits"`
-	CreatedBy *string                `json:"created_by,omitempty"`
-	CreatedAt time.Time              `json:"created_at"`
-	UpdatedAt time.Time              `json:"updated_at"`
+	ID      string `json:"id"`
+	Name    string `json:"name"`
+	Slug    string `json:"slug"`
+	OrgType string `json:"type"`
+	// BilledPlan is the plan the workspace is on commercially: what a
+	// platform admin granted or what a subscription bought. Never read it to
+	// decide what a workspace may do — read EffectiveLimits(), which resolves
+	// the plan through Billing.Status. A past-due workspace's BilledPlan is
+	// business and it is entitled to it; a canceled workspace's BilledPlan is
+	// also business and it is not.
+	BilledPlan string                 `json:"plan"`
+	Limits     map[string]interface{} `json:"limits"`
+	// Billing is the mirrored subscription snapshot: never money, only what
+	// decides entitlement and what the Billing tab shows. Writable only by
+	// the billing sync path and the platform-admin plan endpoint.
+	Billing   Billing   `json:"billing"`
+	CreatedBy *string   `json:"created_by,omitempty"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 
 	// DeletedAt marks a soft-deleted workspace: hidden and locked, restorable
 	// until the purge job hard-deletes it DeletionGraceDays after this time.
@@ -162,6 +172,38 @@ type Repository interface {
 	// higher than the recorded one, so an alert fires exactly once per
 	// threshold per month even under concurrent finishers or replicas.
 	ClaimBudgetAlert(orgID, month string, threshold int) (bool, error)
+
+	// Billing writers. Each touches only the billing columns it names; the
+	// plan column is written only by SetPlan and ApplyBillingState.
+	//
+	// SetBillingCustomer records the provider's customer and the currency
+	// that customer is locked to.
+	SetBillingCustomer(orgID, customerRef, currency string) error
+	// ApplyBillingState writes one subscription snapshot atomically and
+	// reports whether it was applied: a snapshot read earlier than the
+	// row's plan_synced_at loses, which is a success, not an error. It
+	// never moves a granted plan (enterprise, open_source), and it writes a
+	// nightly release-channel override when a workspace first moves from a
+	// nightly-only plan to a channel-choosing one, so nothing gated by the
+	// stable channel disappears from under a new subscriber.
+	ApplyBillingState(orgID string, state BillingState) (bool, error)
+	// SetBilledSeats writes only plan_seats.
+	SetBilledSeats(orgID string, seats int) error
+	// ClearBillingSubscription forgets the subscription and item refs and
+	// marks the status canceled, keeping the customer ref for a later
+	// checkout.
+	ClearBillingSubscription(orgID string) error
+	// SetGrandfathered writes only plan_grandfathered.
+	SetGrandfathered(orgID string, on bool) error
+	// FindOrgByBillingRef finds the workspace holding a customer or
+	// subscription ref (kind BillingRefCustomer / BillingRefSubscription),
+	// deleted ones included; nil when none does.
+	FindOrgByBillingRef(kind, ref string) (*Org, error)
+	// ListBillingOrgs lists workspaces with a subscription ref, least
+	// recently synced first, deleted ones included so a lapsed workspace's
+	// subscription can still be cancelled.
+	ListBillingOrgs(limit int) ([]*Org, error)
+
 	FindOrgByID(id string) (*Org, error)
 	ListOrgsForUser(userID string) ([]*Org, error)
 	FindPersonalOrgForUser(userID string) (*Org, error)
@@ -239,6 +281,15 @@ type Service interface {
 	// subscriber; see Repository.ClaimBudgetAlert.
 	ClaimBudgetAlert(orgID, month string, threshold int) (bool, error)
 
+	// Billing pass-throughs; see Repository.
+	SetBillingCustomer(orgID, customerRef, currency string) error
+	ApplyBillingState(orgID string, state BillingState) (bool, error)
+	SetBilledSeats(orgID string, seats int) error
+	ClearBillingSubscription(orgID string) error
+	SetGrandfathered(orgID string, on bool) error
+	FindOrgByBillingRef(kind, ref string) (*Org, error)
+	ListBillingOrgs(limit int) ([]*Org, error)
+
 	// DeleteOrg soft-deletes a company workspace: hidden and locked, restorable
 	// for DeletionGraceDays, then hard-deleted by PurgeExpired. Personal
 	// workspaces are refused with ErrPersonalOrgDelete. Idempotent.
@@ -296,14 +347,14 @@ func (s *DefaultService) CreateOrg(name, orgType string, createdBy string) (*Org
 	}
 	now := time.Now()
 	org := &Org{
-		ID:        uuid.New().String(),
-		Name:      name,
-		OrgType:   orgType,
-		Plan:      DefaultPlan(),
-		Limits:    map[string]interface{}{},
-		CreatedBy: &createdBy,
-		CreatedAt: now,
-		UpdatedAt: now,
+		ID:         uuid.New().String(),
+		Name:       name,
+		OrgType:    orgType,
+		BilledPlan: DefaultPlan(),
+		Limits:     map[string]interface{}{},
+		CreatedBy:  &createdBy,
+		CreatedAt:  now,
+		UpdatedAt:  now,
 	}
 	org.Slug = makeSlug(name, org.ID)
 	if err := s.repo.SaveOrg(org); err != nil {
@@ -380,7 +431,7 @@ func (s *DefaultService) SetReleaseChannel(id, channel string) (*Org, error) {
 	if err != nil {
 		return nil, err
 	}
-	if !ChannelChoosable(org.Plan) {
+	if !ChannelChoosable(org.BilledPlan) {
 		return nil, ErrChannelLocked
 	}
 	if channel != "" && !ValidChannel(channel) {
@@ -404,10 +455,17 @@ func (s *DefaultService) SetPlan(id, plan string) (*Org, error) {
 	if err != nil {
 		return nil, err
 	}
+	// A grant and a subscription cannot both decide the plan. Moving a
+	// workspace with a live subscription onto a granted plan would leave the
+	// subscription billing for a tier the grant now overrides; the operator
+	// cancels it in the billing provider first.
+	if GrantedPlan(plan) && org.Billing.Live() {
+		return nil, ErrBillingActive
+	}
 	if err := s.repo.SetPlan(id, plan); err != nil {
 		return nil, err
 	}
-	org.Plan = plan
+	org.BilledPlan = plan
 	org.UpdatedAt = time.Now()
 	org.ResolveReleaseChannel()
 	return org, nil
@@ -419,7 +477,7 @@ func (s *DefaultService) SetUpgradeWindow(id string, day, hour int, timezone str
 	if err != nil {
 		return nil, err
 	}
-	if !ChannelChoosable(org.Plan) {
+	if !ChannelChoosable(org.BilledPlan) {
 		return nil, ErrChannelLocked
 	}
 	if err := ValidateUpgradeWindow(day, hour, timezone); err != nil {
@@ -457,6 +515,41 @@ func (s *DefaultService) ListMemberUserIDsByChannel(channel string) ([]string, e
 // MemberPreview implements Service.
 func (s *DefaultService) MemberPreview(orgID, userID string) (bool, error) {
 	return s.repo.MemberPreview(orgID, userID)
+}
+
+// SetBillingCustomer implements Service.
+func (s *DefaultService) SetBillingCustomer(orgID, customerRef, currency string) error {
+	return s.repo.SetBillingCustomer(orgID, customerRef, currency)
+}
+
+// ApplyBillingState implements Service.
+func (s *DefaultService) ApplyBillingState(orgID string, state BillingState) (bool, error) {
+	return s.repo.ApplyBillingState(orgID, state)
+}
+
+// SetBilledSeats implements Service.
+func (s *DefaultService) SetBilledSeats(orgID string, seats int) error {
+	return s.repo.SetBilledSeats(orgID, seats)
+}
+
+// ClearBillingSubscription implements Service.
+func (s *DefaultService) ClearBillingSubscription(orgID string) error {
+	return s.repo.ClearBillingSubscription(orgID)
+}
+
+// SetGrandfathered implements Service.
+func (s *DefaultService) SetGrandfathered(orgID string, on bool) error {
+	return s.repo.SetGrandfathered(orgID, on)
+}
+
+// FindOrgByBillingRef implements Service.
+func (s *DefaultService) FindOrgByBillingRef(kind, ref string) (*Org, error) {
+	return s.repo.FindOrgByBillingRef(kind, ref)
+}
+
+// ListBillingOrgs implements Service.
+func (s *DefaultService) ListBillingOrgs(limit int) ([]*Org, error) {
+	return s.repo.ListBillingOrgs(limit)
 }
 
 // SetMemberPreview implements Service.

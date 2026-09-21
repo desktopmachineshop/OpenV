@@ -22,17 +22,17 @@ func TestChannelForPlan(t *testing.T) {
 // admin choose; a personal-tier row that somehow carries one still resolves
 // to nightly and reports itself locked.
 func TestResolveReleaseChannel(t *testing.T) {
-	o := &Org{Plan: PlanBusiness, ReleaseChannelOverride: ChannelNightly}
+	o := &Org{BilledPlan: PlanBusiness, ReleaseChannelOverride: ChannelNightly}
 	o.ResolveReleaseChannel()
 	if o.ReleaseChannel != ChannelNightly || o.ReleaseChannelLocked {
 		t.Fatalf("business override: %+v", o)
 	}
-	o = &Org{Plan: PlanBusiness}
+	o = &Org{BilledPlan: PlanBusiness}
 	o.ResolveReleaseChannel()
 	if o.ReleaseChannel != ChannelStable {
 		t.Fatalf("business default: %+v", o)
 	}
-	o = &Org{Plan: PlanSingle, ReleaseChannelOverride: ChannelStable}
+	o = &Org{BilledPlan: PlanSingle, ReleaseChannelOverride: ChannelStable}
 	o.ResolveReleaseChannel()
 	if o.ReleaseChannel != ChannelNightly || !o.ReleaseChannelLocked {
 		t.Fatalf("single with stray override: %+v", o)

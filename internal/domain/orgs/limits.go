@@ -111,6 +111,34 @@ const (
 	// is set at all: this is a ceiling against runaway automation, not a
 	// reason to make somebody choose which of their products to track.
 	LimitMaxProjects = "max_projects"
+
+	// The flags. A flag is a limit whose value is a bool rather than a
+	// number: whether a tier includes something, not how much of it. They
+	// live in the same catalogue and resolve through the same three layers,
+	// so a per-workspace override — the grandfathering mechanism — and the
+	// deployment layer cover them exactly as they cover a number.
+	//
+	// LimitHostedAutomation is unattended agents on platform hardware: the
+	// always-on hosted runner and runs claimed by it. Runs on a member's own
+	// machine through the Agent Connector are never behind it.
+	LimitHostedAutomation = "hosted_automation"
+	// LimitTeams is people-teams and per-project access grants.
+	LimitTeams = "teams"
+	// LimitWorkspaceBudget is the workspace-wide spend rollup and the
+	// monthly budget; a member's own runs and costs are always theirs to see.
+	LimitWorkspaceBudget = "workspace_budget"
+)
+
+// Kind says what shape a limit's value takes. A resource limit and a count
+// limit are both numbers where 0 means unlimited; a flag is a bool, and it
+// has to be its own kind because a 0/1 number would collide with that
+// sentinel — "off" and "unlimited" cannot share a spelling.
+type Kind string
+
+const (
+	KindResource Kind = "resource"
+	KindCount    Kind = "count"
+	KindFlag     Kind = "flag"
 )
 
 // Unit describes how a limit's number should be read, so one catalogue can
@@ -134,7 +162,9 @@ type Definition struct {
 	// Description is written for the person who hits the limit, not for the
 	// operator who sets it.
 	Description string `json:"description"`
-	Unit        Unit   `json:"unit"`
+	// Kind is the value's shape; a number unless KindFlag.
+	Kind Kind `json:"kind"`
+	Unit Unit `json:"unit"`
 	// Countable marks a limit whose usage can be measured and shown beside
 	// it ("3 of 10 used"). A runner's memory ceiling has no such reading.
 	Countable bool `json:"countable"`
@@ -145,40 +175,52 @@ type Definition struct {
 // cannot be added and left undocumented.
 var catalog = []Definition{
 	{
-		Key: LimitMaxMembers, Label: "Workspace members", Unit: UnitCount, Countable: true,
+		Key: LimitMaxMembers, Label: "Workspace members", Kind: KindCount, Unit: UnitCount, Countable: true,
 		Description: "How many people can be in this workspace. Pending invitations count towards it.",
 	},
 	{
-		Key: LimitMaxProjects, Label: "Projects", Unit: UnitCount, Countable: true,
+		Key: LimitMaxProjects, Label: "Projects", Kind: KindCount, Unit: UnitCount, Countable: true,
 		Description: "How many projects this workspace can hold.",
 	},
 	{
-		Key: LimitMaxSharedWorkspaces, Label: "Shared workspaces", Unit: UnitCount, Countable: true,
+		Key: LimitMaxSharedWorkspaces, Label: "Shared workspaces", Kind: KindCount, Unit: UnitCount, Countable: true,
 		Description: "How many shared workspaces you can create. Your personal workspace is never counted.",
 	},
 	{
-		Key: LimitEvidenceStorageMB, Label: "Test evidence storage", Unit: UnitMB, Countable: true,
+		Key: LimitEvidenceStorageMB, Label: "Test evidence storage", Kind: KindResource, Unit: UnitMB, Countable: true,
 		Description: "Total size of the test evidence files this workspace has uploaded.",
 	},
 	{
-		Key: LimitMaxUploadMB, Label: "Largest figure", Unit: UnitMB,
+		Key: LimitMaxUploadMB, Label: "Largest figure", Kind: KindResource, Unit: UnitMB,
 		Description: "The biggest single file you can attach to an artifact — a drawing, a datasheet or a CAD model.",
 	},
 	{
-		Key: LimitRunnerSessionMinutes, Label: "Cloud runner lease", Unit: UnitMinutes,
+		Key: LimitRunnerSessionMinutes, Label: "Cloud runner lease", Kind: KindResource, Unit: UnitMinutes,
 		Description: "How long a leased cloud runner lasts before it is reclaimed.",
 	},
 	{
-		Key: LimitRunnerSessionIdleMinutes, Label: "Cloud runner idle window", Unit: UnitMinutes,
+		Key: LimitRunnerSessionIdleMinutes, Label: "Cloud runner idle window", Kind: KindResource, Unit: UnitMinutes,
 		Description: "How long a leased cloud runner may sit unused before it is reclaimed.",
 	},
 	{
-		Key: LimitRunnerMemoryMB, Label: "Hosted runner memory", Unit: UnitMB,
+		Key: LimitRunnerMemoryMB, Label: "Hosted runner memory", Kind: KindResource, Unit: UnitMB,
 		Description: "Memory available to this workspace's always-on hosted runner.",
 	},
 	{
-		Key: LimitRunnerCPUs, Label: "Hosted runner CPUs", Unit: UnitCPUs,
+		Key: LimitRunnerCPUs, Label: "Hosted runner CPUs", Kind: KindResource, Unit: UnitCPUs,
 		Description: "CPU available to this workspace's always-on hosted runner.",
+	},
+	{
+		Key: LimitHostedAutomation, Label: "Always-on hosted agents", Kind: KindFlag,
+		Description: "An always-on hosted runner on OpenV's hardware, so cron and event automations run while nobody is signed in. Agents on your own machine through the Agent Connector never depend on this.",
+	},
+	{
+		Key: LimitTeams, Label: "Teams and per-project access", Kind: KindFlag,
+		Description: "People-teams and per-project access grants, so a company can decide who works on what.",
+	},
+	{
+		Key: LimitWorkspaceBudget, Label: "Workspace AI budget", Kind: KindFlag,
+		Description: "A workspace-wide spend rollup and monthly budget. Your own runs and their cost are always yours to see.",
 	},
 }
 
@@ -254,6 +296,9 @@ func PlanDefaults(plan string) map[string]interface{} {
 			LimitMaxMembers:               unlimited,
 			LimitMaxSharedWorkspaces:      unlimited,
 			LimitMaxProjects:              unlimited,
+			LimitHostedAutomation:         true,
+			LimitTeams:                    true,
+			LimitWorkspaceBudget:          true,
 		}
 	case PlanBusiness, PlanTeam, PlanOpenSource:
 		// Business is sold as a strict superset of Business Lite, and until
@@ -273,6 +318,9 @@ func PlanDefaults(plan string) map[string]interface{} {
 			LimitMaxMembers:               unlimited,
 			LimitMaxSharedWorkspaces:      unlimited,
 			LimitMaxProjects:              unlimited,
+			LimitHostedAutomation:         true,
+			LimitTeams:                    true,
+			LimitWorkspaceBudget:          true,
 		}
 	case PlanBusinessLite:
 		return map[string]interface{}{
@@ -285,6 +333,9 @@ func PlanDefaults(plan string) map[string]interface{} {
 			LimitMaxMembers:               unlimited,
 			LimitMaxSharedWorkspaces:      unlimited,
 			LimitMaxProjects:              unlimited,
+			LimitHostedAutomation:         true,
+			LimitTeams:                    true,
+			LimitWorkspaceBudget:          true,
 		}
 	default: // PlanSingle, PlanFree and anything unrecognized
 		return map[string]interface{}{
@@ -297,6 +348,12 @@ func PlanDefaults(plan string) map[string]interface{} {
 			LimitMaxMembers:               unlimited,
 			LimitMaxSharedWorkspaces:      unlimited,
 			LimitMaxProjects:              unlimited,
+			// The flags ship ON for every plan, as the counts ship at
+			// zero: the mechanism lands and is proven before any tier
+			// turns one off, and turning one off is then a value change.
+			LimitHostedAutomation: true,
+			LimitTeams:            true,
+			LimitWorkspaceBudget:  true,
 		}
 	}
 }
@@ -399,8 +456,17 @@ func ParseLimits(raw string) (map[string]interface{}, error) {
 	}
 	out := map[string]interface{}{}
 	for key, value := range parsed {
-		if _, known := Describe(key); !known {
+		def, known := Describe(key)
+		if !known {
 			return nil, fmt.Errorf("unknown limit %q (known limits: %v)", key, KnownLimitKeys())
+		}
+		if def.Kind == KindFlag {
+			flag, ok := value.(bool)
+			if !ok {
+				return nil, fmt.Errorf("limit %q is a flag and must be true or false, got %T", key, value)
+			}
+			out[key] = flag
+			continue
 		}
 		number, ok := numeric(value)
 		if !ok {
@@ -425,7 +491,12 @@ func (o *Org) EffectiveLimits() map[string]interface{} {
 	// on the hosted tier's ceilings, which is precisely the population the
 	// setting exists for, and "no limits from us" would stay false for them.
 	// The layers above still apply, so an operator can cap a workspace.
-	plan := o.Plan
+	//
+	// Otherwise the base is the ENTITLED plan: the billed plan while the
+	// subscription is in good standing, the free tier once it is not. That
+	// is the only place billing status touches enforcement, so every check
+	// that reads limits follows it without knowing billing exists.
+	plan := o.EntitledPlan()
 	if selfHosted {
 		plan = PlanSelfHost
 	}
@@ -475,6 +546,18 @@ func Ceiling(limits map[string]interface{}, key string) (cap int, capped bool) {
 		return 0, false
 	}
 	return v, true
+}
+
+// Allowed reads a flag. An absent or unreadable flag is allowed: a limit
+// check must never be the reason a legitimate action fails, and every plan's
+// defaults name every flag, so absence only happens on a map that was never
+// resolved through EffectiveLimits.
+func Allowed(limits map[string]interface{}, key string) bool {
+	flag, ok := limits[key].(bool)
+	if !ok {
+		return true
+	}
+	return flag
 }
 
 func numeric(value interface{}) (float64, bool) {

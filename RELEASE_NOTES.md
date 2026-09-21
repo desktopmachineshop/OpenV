@@ -9,6 +9,17 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Maintenance updates
+
+- **Workspace plans now carry a billing status, and the pricing page can
+  read live prices.** A workspace's limits resolve from the plan it is
+  entitled to, which is its plan while a subscription (there is none yet) is
+  in good standing and the free tier once one lapses; the limits panel names
+  the entitled plan and the status. The pricing page reads confirmed prices
+  from the platform when a billing provider is configured and shows its
+  usual copy otherwise. Nothing is for sale yet, no workspace's limits
+  change, and a self-hosted deployment is unaffected.
+
 ## 0.14.3 — 2026-09-21
 
 ### Maintenance updates
