@@ -1,10 +1,11 @@
 # Stripe billing in-app, and making the tiers real
 
-Status: approved 2026-09-21, nothing implemented yet. This plan supersedes
-`docs/billing-odoo.md`, which proposed Odoo as the billing system of record;
-that file is kept as the record of the rejected alternative. Requirements,
-design items and test cases land in the OpenV Platform project phase by
-phase alongside the code, per `CLAUDE.md`.
+Status: approved 2026-09-21, nothing implemented yet. Recorded in the OpenV
+Platform project as **DSC-9** (Billing and tiers plan 2026-09-21). This plan
+supersedes `docs/billing-odoo.md`, which proposed Odoo as the billing system
+of record; that file is kept as the record of the rejected alternative.
+Requirements, design items and test cases land in the OpenV Platform project
+phase by phase alongside the code, per `CLAUDE.md`.
 
 ## 1. Where we are
 
