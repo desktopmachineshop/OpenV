@@ -86,7 +86,7 @@ func rowsOf(store *captureStore, userID, ntype string) []*notifications.Notifica
 // and a second run repeats nothing.
 func TestSchedulerTurnsOnAtTheCutWithoutAWindow(t *testing.T) {
 	stable := stableOf("0.4.0", "2026-10-01", release.Category{Name: release.CategoryFeatures, Notes: []string{"A"}}, release.Category{Name: release.CategoryFixes, Notes: []string{"B"}})
-	org := &orgs.Org{ID: "o1", Name: "Acme", Plan: orgs.PlanBusiness}
+	org := &orgs.Org{ID: "o1", Name: "Acme", BilledPlan: orgs.PlanBusiness}
 	s, o, store := schedulerFixture(stable, []*orgs.Org{org})
 	s.now = func() time.Time { return time.Date(2026, 10, 1, 9, 0, 0, 0, time.UTC) }
 	s.Run()
@@ -114,7 +114,7 @@ func TestSchedulerTurnsOnAtTheCutWithoutAWindow(t *testing.T) {
 // the day before, and the members hear at the turn-on. Nothing repeats.
 func TestSchedulerHonoursTheWindow(t *testing.T) {
 	stable := stableOf("0.4.0", "2026-10-01", release.Category{Name: release.CategoryFeatures, Notes: []string{"A"}})
-	org := &orgs.Org{ID: "o1", Name: "Acme", Plan: orgs.PlanBusiness, UpgradeDay: 10, UpgradeHour: 9, UpgradeTimezone: "Europe/London"}
+	org := &orgs.Org{ID: "o1", Name: "Acme", BilledPlan: orgs.PlanBusiness, UpgradeDay: 10, UpgradeHour: 9, UpgradeTimezone: "Europe/London"}
 	s, o, store := schedulerFixture(stable, []*orgs.Org{org})
 	london, _ := time.LoadLocation("Europe/London")
 
@@ -151,7 +151,7 @@ func TestSchedulerHonoursTheWindow(t *testing.T) {
 // workspace already on the newest stable, or when no stable exists.
 func TestSchedulerSkipsWorkspacesAlreadyOnTheRelease(t *testing.T) {
 	stable := stableOf("0.4.0", "2026-10-01")
-	org := &orgs.Org{ID: "o1", Plan: orgs.PlanBusiness, StableRelease: "0.4.0"}
+	org := &orgs.Org{ID: "o1", BilledPlan: orgs.PlanBusiness, StableRelease: "0.4.0"}
 	s, _, store := schedulerFixture(stable, []*orgs.Org{org})
 	s.Run()
 	if len(store.rows) != 0 {

@@ -223,7 +223,7 @@ func (h *Handler) buildLimitsResponse(orgID string) (*limitsResponse, error) {
 	}
 	limits := org.EffectiveLimits()
 
-	out := &limitsResponse{OrgID: orgID, Plan: org.Plan, SelfHosted: orgs.SelfHosted()}
+	out := &limitsResponse{OrgID: orgID, Plan: org.BilledPlan, SelfHosted: orgs.SelfHosted()}
 	for _, def := range orgs.Catalog() {
 		cap, capped := orgs.Ceiling(limits, def.Key)
 		description, fixed := def.Description, false

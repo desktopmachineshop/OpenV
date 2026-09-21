@@ -90,7 +90,7 @@ func (f *fakeOrgService) SetMemberPreview(orgID, userID string, enabled bool) er
 
 func (f *fakeOrgService) SetReleaseChannel(id, channel string) (*orgs.Org, error) {
 	o, _ := f.Get(id)
-	if !orgs.ChannelChoosable(o.Plan) {
+	if !orgs.ChannelChoosable(o.BilledPlan) {
 		return nil, orgs.ErrChannelLocked
 	}
 	if channel != "" && !orgs.ValidChannel(channel) {
@@ -113,7 +113,7 @@ func (f *fakeOrgService) Get(id string) (*orgs.Org, error) {
 	if plan == "" {
 		plan = orgs.PlanFree
 	}
-	o := &orgs.Org{ID: id, Plan: plan, LogoPath: f.logoPath, LogoMime: f.logoMime, HasLogo: f.logoPath != "", StableRelease: f.stableRelease}
+	o := &orgs.Org{ID: id, BilledPlan: plan, LogoPath: f.logoPath, LogoMime: f.logoMime, HasLogo: f.logoPath != "", StableRelease: f.stableRelease}
 	o.ResolveReleaseChannel()
 	return o, nil
 }

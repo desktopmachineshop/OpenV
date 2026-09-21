@@ -117,7 +117,7 @@ func TestAdminListWorkspacesAndUsers(t *testing.T) {
 	if err := json.Unmarshal(w.Body.Bytes(), &wsList); err != nil {
 		t.Fatal(err)
 	}
-	if len(wsList) != 2 || wsList[0].Members != 2 || wsList[0].Plan != orgs.PlanBusiness {
+	if len(wsList) != 2 || wsList[0].Members != 2 || wsList[0].BilledPlan != orgs.PlanBusiness {
 		t.Errorf("workspaces = %+v", wsList)
 	}
 

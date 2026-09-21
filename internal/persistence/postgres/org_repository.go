@@ -20,10 +20,10 @@ func NewOrgRepository(db *sql.DB) *OrgRepository {
 	return &OrgRepository{db: db}
 }
 
-const orgColumns = `id, name, slug, org_type, plan, limits, created_by, created_at, updated_at, monthly_budget_usd, budget_alert_month, budget_alert_threshold, deleted_at, logo_path, logo_mime, COALESCE(release_channel, ''), COALESCE(stable_release, ''), COALESCE(upgrade_day, 0), COALESCE(upgrade_hour, 0), COALESCE(upgrade_timezone, '')`
+const orgColumns = `id, name, slug, org_type, plan, limits, created_by, created_at, updated_at, monthly_budget_usd, budget_alert_month, budget_alert_threshold, deleted_at, logo_path, logo_mime, COALESCE(release_channel, ''), COALESCE(stable_release, ''), COALESCE(upgrade_day, 0), COALESCE(upgrade_hour, 0), COALESCE(upgrade_timezone, ''), COALESCE(billing_customer_ref, ''), COALESCE(billing_subscription_ref, ''), COALESCE(billing_item_ref, ''), COALESCE(billing_currency, ''), COALESCE(plan_status, 'none'), COALESCE(plan_interval, ''), COALESCE(plan_seats, 0), COALESCE(plan_cancel_at_period_end, FALSE), COALESCE(plan_grandfathered, FALSE), plan_period_end, plan_synced_at`
 
 // orgColumnsQualified disambiguates joined queries (org_members also has created_at).
-const orgColumnsQualified = `o.id, o.name, o.slug, o.org_type, o.plan, o.limits, o.created_by, o.created_at, o.updated_at, o.monthly_budget_usd, o.budget_alert_month, o.budget_alert_threshold, o.deleted_at, o.logo_path, o.logo_mime, COALESCE(o.release_channel, ''), COALESCE(o.stable_release, ''), COALESCE(o.upgrade_day, 0), COALESCE(o.upgrade_hour, 0), COALESCE(o.upgrade_timezone, '')`
+const orgColumnsQualified = `o.id, o.name, o.slug, o.org_type, o.plan, o.limits, o.created_by, o.created_at, o.updated_at, o.monthly_budget_usd, o.budget_alert_month, o.budget_alert_threshold, o.deleted_at, o.logo_path, o.logo_mime, COALESCE(o.release_channel, ''), COALESCE(o.stable_release, ''), COALESCE(o.upgrade_day, 0), COALESCE(o.upgrade_hour, 0), COALESCE(o.upgrade_timezone, ''), COALESCE(o.billing_customer_ref, ''), COALESCE(o.billing_subscription_ref, ''), COALESCE(o.billing_item_ref, ''), COALESCE(o.billing_currency, ''), COALESCE(o.plan_status, 'none'), COALESCE(o.plan_interval, ''), COALESCE(o.plan_seats, 0), COALESCE(o.plan_cancel_at_period_end, FALSE), COALESCE(o.plan_grandfathered, FALSE), o.plan_period_end, o.plan_synced_at`
 
 func scanOrg(row interface{ Scan(...interface{}) error }, extra ...interface{}) (*orgs.Org, error) {
 	o := new(orgs.Org)
@@ -32,10 +32,23 @@ func scanOrg(row interface{ Scan(...interface{}) error }, extra ...interface{}) 
 	var budget sql.NullFloat64
 	var alertMonth sql.NullString
 	var deletedAt sql.NullTime
-	dest := []interface{}{&o.ID, &o.Name, &o.Slug, &o.OrgType, &o.Plan, &limits, &createdBy, &o.CreatedAt, &o.UpdatedAt, &budget, &alertMonth, &o.BudgetAlertThreshold, &deletedAt, &o.LogoPath, &o.LogoMime, &o.ReleaseChannelOverride, &o.StableRelease, &o.UpgradeDay, &o.UpgradeHour, &o.UpgradeTimezone}
+	var periodEnd, syncedAt sql.NullTime
+	b := &o.Billing
+	dest := []interface{}{&o.ID, &o.Name, &o.Slug, &o.OrgType, &o.BilledPlan, &limits, &createdBy, &o.CreatedAt, &o.UpdatedAt, &budget, &alertMonth, &o.BudgetAlertThreshold, &deletedAt, &o.LogoPath, &o.LogoMime, &o.ReleaseChannelOverride, &o.StableRelease, &o.UpgradeDay, &o.UpgradeHour, &o.UpgradeTimezone,
+		// Billing columns (migration 45). Appended, never inserted: the
+		// extra tail below is positional.
+		&b.CustomerRef, &b.SubscriptionRef, &b.ItemRef, &b.Currency, &b.Status, &b.Interval, &b.Seats, &b.CancelAtPeriodEnd, &b.Grandfathered, &periodEnd, &syncedAt}
 	dest = append(dest, extra...)
 	if err := row.Scan(dest...); err != nil {
 		return nil, err
+	}
+	if periodEnd.Valid {
+		v := periodEnd.Time
+		b.PeriodEnd = &v
+	}
+	if syncedAt.Valid {
+		v := syncedAt.Time
+		b.SyncedAt = &v
 	}
 	if createdBy.Valid {
 		v := createdBy.String
@@ -69,19 +82,20 @@ func (r *OrgRepository) SaveOrg(o *orgs.Org) error {
 	_, err = r.db.Exec(`
 		INSERT INTO organizations (id, name, slug, org_type, plan, limits, created_by, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-	`, o.ID, o.Name, o.Slug, o.OrgType, o.Plan, limits, o.CreatedBy, o.CreatedAt, o.UpdatedAt)
+	`, o.ID, o.Name, o.Slug, o.OrgType, o.BilledPlan, limits, o.CreatedBy, o.CreatedAt, o.UpdatedAt)
 	return err
 }
 
-// UpdateOrg rewrites mutable org fields.
+// UpdateOrg rewrites the fields a workspace admin may change: the name.
+//
+// It used to rewrite plan and limits from the in-memory struct as well, a
+// read-modify-write that could put a stale plan back over one the billing
+// sync had just written. The plan column is written only by SetPlan and
+// ApplyBillingState; limits by nothing here yet.
 func (r *OrgRepository) UpdateOrg(o *orgs.Org) error {
-	limits, err := json.Marshal(o.Limits)
-	if err != nil {
-		return err
-	}
-	_, err = r.db.Exec(`
-		UPDATE organizations SET name = $2, plan = $3, limits = $4, updated_at = $5 WHERE id = $1
-	`, o.ID, o.Name, o.Plan, limits, o.UpdatedAt)
+	_, err := r.db.Exec(`
+		UPDATE organizations SET name = $2, updated_at = $3 WHERE id = $1
+	`, o.ID, o.Name, o.UpdatedAt)
 	return err
 }
 
@@ -221,6 +235,132 @@ func (r *OrgRepository) ClaimBudgetAlert(orgID, month string, threshold int) (bo
 		return false, err
 	}
 	return n > 0, nil
+}
+
+// --- billing (migration 45) ---
+
+// SetBillingCustomer writes the provider's customer ref and the currency the
+// customer is locked to.
+func (r *OrgRepository) SetBillingCustomer(orgID, customerRef, currency string) error {
+	_, err := r.db.Exec(`
+		UPDATE organizations SET billing_customer_ref = $2, billing_currency = $3, updated_at = NOW() WHERE id = $1
+	`, orgID, customerRef, currency)
+	return err
+}
+
+// ApplyBillingState writes one subscription snapshot atomically.
+//
+// Three rules live in the SQL so no caller can forget one:
+//
+//   - The WHERE on plan_synced_at makes an older read lose to a newer one.
+//     A slow refresh holding a snapshot from before the last reconcile
+//     writes nothing, and reports so; that is a success.
+//   - A granted plan (enterprise, open_source) keeps its plan column: a
+//     grant wins over a subscription. Every other column still follows the
+//     snapshot, so the tab can say what the provider believes.
+//   - A workspace moving from a nightly-only plan onto a channel-choosing
+//     one with no channel override gets 'nightly' written as its override.
+//     Without it the plan flip would put the new subscriber on the stable
+//     channel with no stable release turned on, which closes every gated
+//     feature at once — including the Billing tab they just used. The
+//     SET expressions see the row's OLD values, which is what makes the
+//     comparison between the old plan and the new one possible here.
+func (r *OrgRepository) ApplyBillingState(orgID string, st orgs.BillingState) (bool, error) {
+	var periodEnd interface{}
+	if st.PeriodEnd != nil {
+		periodEnd = st.PeriodEnd.UTC()
+	}
+	res, err := r.db.Exec(`
+		UPDATE organizations SET
+			plan = CASE WHEN plan = ANY($11) THEN plan ELSE $2 END,
+			release_channel = CASE
+				WHEN COALESCE(release_channel, '') = '' AND NOT (plan = ANY($12)) AND $2 = ANY($12) THEN 'nightly'
+				ELSE release_channel END,
+			plan_status = $3,
+			plan_interval = $4,
+			plan_seats = $5,
+			plan_period_end = $6,
+			plan_cancel_at_period_end = $7,
+			billing_subscription_ref = $8,
+			billing_item_ref = $9,
+			plan_synced_at = $10,
+			updated_at = NOW()
+		WHERE id = $1 AND (plan_synced_at IS NULL OR plan_synced_at <= $10)
+	`, orgID, st.Plan, st.Status, st.Interval, st.Seats, periodEnd, st.CancelAtPeriodEnd,
+		st.SubscriptionRef, st.ItemRef, st.ReadAt.UTC(),
+		pq.Array([]string{orgs.PlanEnterprise, orgs.PlanOpenSource}), pq.Array(orgs.ChoosablePlans))
+	if err != nil {
+		return false, err
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return false, err
+	}
+	return n > 0, nil
+}
+
+// SetBilledSeats writes only plan_seats.
+func (r *OrgRepository) SetBilledSeats(orgID string, seats int) error {
+	_, err := r.db.Exec(`UPDATE organizations SET plan_seats = $2, updated_at = NOW() WHERE id = $1`, orgID, seats)
+	return err
+}
+
+// ClearBillingSubscription forgets the subscription, keeping the customer.
+func (r *OrgRepository) ClearBillingSubscription(orgID string) error {
+	_, err := r.db.Exec(`
+		UPDATE organizations SET billing_subscription_ref = '', billing_item_ref = '',
+			plan_status = $2, plan_seats = 0, plan_cancel_at_period_end = FALSE, plan_synced_at = NOW(), updated_at = NOW()
+		WHERE id = $1
+	`, orgID, orgs.PlanStatusCanceled)
+	return err
+}
+
+// SetGrandfathered writes only plan_grandfathered.
+func (r *OrgRepository) SetGrandfathered(orgID string, on bool) error {
+	_, err := r.db.Exec(`UPDATE organizations SET plan_grandfathered = $2, updated_at = NOW() WHERE id = $1`, orgID, on)
+	return err
+}
+
+// FindOrgByBillingRef finds the workspace holding a provider ref, deleted
+// ones included: a subscription on a deleted workspace is exactly the one
+// the sync path needs to find so it can cancel it.
+func (r *OrgRepository) FindOrgByBillingRef(kind, ref string) (*orgs.Org, error) {
+	if ref == "" {
+		return nil, nil
+	}
+	column := "billing_subscription_ref"
+	if kind == orgs.BillingRefCustomer {
+		column = "billing_customer_ref"
+	}
+	o, err := scanOrg(r.db.QueryRow(`SELECT `+orgColumns+` FROM organizations WHERE `+column+` = $1`, ref))
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	return o, err
+}
+
+// ListBillingOrgs lists workspaces with a subscription, least recently
+// synced first, deleted ones included.
+func (r *OrgRepository) ListBillingOrgs(limit int) ([]*orgs.Org, error) {
+	rows, err := r.db.Query(`
+		SELECT `+orgColumns+` FROM organizations
+		WHERE COALESCE(billing_subscription_ref, '') <> ''
+		ORDER BY plan_synced_at NULLS FIRST, created_at
+		LIMIT $1
+	`, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []*orgs.Org
+	for rows.Next() {
+		o, err := scanOrg(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, o)
+	}
+	return out, rows.Err()
 }
 
 // FindOrgByID returns an org, or nil.

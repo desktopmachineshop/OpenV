@@ -431,7 +431,7 @@ func (h *Handler) openSourceOrgs() ([]*orgs.Org, error) {
 	var out []*orgs.Org
 	for _, id := range ids {
 		org, err := h.orgService.Get(id)
-		if err != nil || org == nil || org.Plan != orgs.PlanOpenSource {
+		if err != nil || org == nil || org.BilledPlan != orgs.PlanOpenSource {
 			continue
 		}
 		out = append(out, org)
@@ -500,7 +500,7 @@ func (h *Handler) openSourceProject(w http.ResponseWriter, r *http.Request) (*pr
 		return nil, nil, sharedProject{}
 	}
 	org, err := h.orgService.Get(project.OrgID)
-	if err != nil || org == nil || org.Plan != orgs.PlanOpenSource {
+	if err != nil || org == nil || org.BilledPlan != orgs.PlanOpenSource {
 		writeJSONError(w, http.StatusNotFound, "project not found")
 		return nil, nil, sharedProject{}
 	}

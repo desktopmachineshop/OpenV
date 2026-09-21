@@ -30,7 +30,7 @@ type ResourceLimits struct {
 // "unlimited".
 func ResourceLimitsForOrg(o *orgs.Org) ResourceLimits {
 	eff := o.EffectiveLimits()
-	defaults := orgs.PlanDefaults(o.Plan)
+	defaults := orgs.PlanDefaults(o.EntitledPlan())
 	read := func(key string) float64 {
 		v, ok := orgs.LimitFloat(eff, key)
 		if !ok {

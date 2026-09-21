@@ -113,10 +113,10 @@ func ValidChannel(name string) bool {
 // override and the plan. Persistence calls it after a scan and the service
 // after a write, so a client always sees the effective channel.
 func (o *Org) ResolveReleaseChannel() {
-	if o.ReleaseChannelOverride != "" && ChannelChoosable(o.Plan) {
+	if o.ReleaseChannelOverride != "" && ChannelChoosable(o.BilledPlan) {
 		o.ReleaseChannel = o.ReleaseChannelOverride
 	} else {
-		o.ReleaseChannel = ChannelForPlan(o.Plan)
+		o.ReleaseChannel = ChannelForPlan(o.BilledPlan)
 	}
-	o.ReleaseChannelLocked = !ChannelChoosable(o.Plan)
+	o.ReleaseChannelLocked = !ChannelChoosable(o.BilledPlan)
 }

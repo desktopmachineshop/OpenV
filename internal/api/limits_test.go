@@ -93,7 +93,7 @@ func TestNothingIsEnforcedOutOfTheBox(t *testing.T) {
 	orgs.SetDeploymentLimits(nil)
 
 	for _, plan := range []string{orgs.PlanSingle, orgs.PlanFree, orgs.PlanBusiness, orgs.PlanSelfHost} {
-		org := &orgs.Org{Plan: plan}
+		org := &orgs.Org{BilledPlan: plan}
 		limits := org.EffectiveLimits()
 		for _, key := range []string{orgs.LimitMaxMembers, orgs.LimitMaxProjects, orgs.LimitMaxSharedWorkspaces} {
 			if err := orgs.CheckCeiling(limits, key, 10_000, 1); err != nil {
@@ -108,7 +108,7 @@ func TestNothingIsEnforcedOutOfTheBox(t *testing.T) {
 func TestTheDeploymentOverrideTakesEffectWithoutTouchingAWorkspace(t *testing.T) {
 	t.Cleanup(func() { orgs.SetDeploymentLimits(nil) })
 
-	org := &orgs.Org{Plan: orgs.PlanSelfHost}
+	org := &orgs.Org{BilledPlan: orgs.PlanSelfHost}
 	if err := orgs.CheckCeiling(org.EffectiveLimits(), orgs.LimitMaxMembers, 3, 1); err != nil {
 		t.Fatalf("self-host refused before any override: %v", err)
 	}
@@ -154,7 +154,7 @@ func TestTheSeatCheckDefersToThePersonalWorkspaceRefusal(t *testing.T) {
 		orgs.SetSelfHosted(mode)
 		h := NewHandler(HandlerDeps{})
 		h.orgService = &seatedOrgService{
-			org:     &orgs.Org{ID: "org-1", OrgType: orgs.TypePersonal, Plan: orgs.PlanBusiness},
+			org:     &orgs.Org{ID: "org-1", OrgType: orgs.TypePersonal, BilledPlan: orgs.PlanBusiness},
 			members: []*orgs.Member{{OrgID: "org-1", UserID: "u1", Role: orgs.RoleAdmin}},
 		}
 		if err := h.checkOrgSeats("org-1", 1); err != nil {
@@ -178,7 +178,7 @@ func TestTheSeatCheckDefersToThePersonalWorkspaceRefusal(t *testing.T) {
 func TestThePersonalSeatReadsAsAFactNotAWarning(t *testing.T) {
 	h := NewHandler(HandlerDeps{})
 	h.orgService = &seatedOrgService{
-		org:     &orgs.Org{ID: "org-1", OrgType: orgs.TypePersonal, Plan: orgs.PlanSingle},
+		org:     &orgs.Org{ID: "org-1", OrgType: orgs.TypePersonal, BilledPlan: orgs.PlanSingle},
 		members: []*orgs.Member{{OrgID: "org-1", UserID: "u1", Role: orgs.RoleAdmin}},
 	}
 
