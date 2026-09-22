@@ -9,6 +9,23 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### New features
+
+- **A workspace admin can subscribe to Business Lite or Business from the
+  new Billing tab in workspace settings.** Pick the plan, monthly or yearly,
+  in GBP, USD or EUR, and pay on Stripe's checkout page; the workspace is on
+  its plan by the time the tab reloads. A first subscription starts with a
+  14-day trial, promotion codes work at checkout, VAT is worked out there
+  and a business VAT number is accepted. The same tab changes plan in place
+  (prorated), and *Manage billing* opens Stripe's portal for invoices, the
+  card, the billing address and cancellation. Nothing about a card ever
+  reaches OpenV. Workspaces created before the date announced with the first
+  live price keep every tier's features free, for good; the tiers' limits
+  apply only to workspaces created after it, and only from the release that
+  turns them on. Feature key `workspace-billing` (0.15.0): the plan picker
+  waits for a stable release on stable-channel workspaces; a workspace that
+  already holds a subscription always sees its Billing tab.
+
 ### Maintenance updates
 
 - **Workspace plans now carry a billing status, and the pricing page can

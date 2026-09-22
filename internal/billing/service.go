@@ -21,6 +21,13 @@ type Service struct {
 	interval time.Duration
 	now      func() time.Time
 	log      *slog.Logger
+
+	// The purchase path's collaborators; see checkout.go.
+	users        Users
+	seats        func(orgID string) (int, error)
+	returnURL    string
+	portalConfig string
+	trialDays    int
 }
 
 // New wires a service. A nil provider is the off switch: Enabled reports
@@ -33,13 +40,14 @@ func New(provider Provider, orgSvc Orgs, registry *Registry, m Metrics) *Service
 		registry, _ = ParseRegistry("")
 	}
 	return &Service{
-		provider: provider,
-		orgs:     orgSvc,
-		registry: registry,
-		metrics:  m,
-		interval: 5 * time.Minute,
-		now:      time.Now,
-		log:      slog.Default().With("component", "billing"),
+		provider:  provider,
+		orgs:      orgSvc,
+		registry:  registry,
+		metrics:   m,
+		interval:  5 * time.Minute,
+		now:       time.Now,
+		log:       slog.Default().With("component", "billing"),
+		trialDays: DefaultTrialDays,
 	}
 }
 

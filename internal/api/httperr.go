@@ -48,6 +48,13 @@ const (
 	// ErrCodeBillingUpstream marks a 503 where the billing provider did not
 	// answer; the workspace's plan was left exactly as it was.
 	ErrCodeBillingUpstream = "billing_upstream"
+	// The purchase refusals a client branches on.
+	ErrCodeUnknownPlan       = "unknown_plan"
+	ErrCodeAlreadySubscribed = "already_subscribed"
+	ErrCodeNoSubscription    = "no_subscription"
+	ErrCodeGrantedPlan       = "granted_plan"
+	ErrCodeNoCustomer        = "no_customer"
+	ErrCodeCheckoutMismatch  = "checkout_mismatch"
 )
 
 // writeJSONErrorCode is writeJSONError with a machine-readable code.

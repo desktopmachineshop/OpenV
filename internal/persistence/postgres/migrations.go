@@ -1438,6 +1438,13 @@ var migrations = []Migration{
 		`)
 		return err
 	}},
+	// 0046: one free trial per buyer. A person can create workspaces
+	// freely, each its own billing customer, so the trial has to be keyed
+	// on the human rather than the workspace.
+	{Version: 46, Name: "users_billing_trial", Run: func(tx *sql.Tx) error {
+		_, err := tx.Exec(`ALTER TABLE users ADD COLUMN IF NOT EXISTS billing_trial_used_at TIMESTAMP`)
+		return err
+	}},
 }
 
 // backfillRefPrefix is the type→prefix mapping frozen at the time migration

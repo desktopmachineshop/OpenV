@@ -49,6 +49,7 @@ var Registry = []Feature{
 	{Key: FeatureProjectReviewRound, ShippedIn: "0.12.0", Summary: "Send a whole project for review in one action, and run it again later to pick up only what changed"},
 	{Key: FeatureReviewDecisions, ShippedIn: "0.13.0", Summary: "Approve or send back from the review queue itself, one row at a time or a whole selection, with the reason posted as a note"},
 	{Key: FeatureArtifactStepping, ShippedIn: "0.14.0", Summary: "Step from one artifact to the next in document order: the ‹ / › controls and the position, J and K on a keyboard, and a sideways swipe on a phone"},
+	{Key: FeatureWorkspaceBilling, ShippedIn: "0.15.0", Summary: "Subscribe a workspace to Business Lite or Business from workspace settings, monthly or yearly; payment, VAT and invoices handled by Stripe"},
 }
 
 // Feature keys the code gates on.
@@ -92,6 +93,12 @@ const (
 	// gate that broke prose people had already written would be worse than no
 	// gate at all.
 	FeatureNoteTagging = "note-tagging"
+	// FeatureWorkspaceBilling gates STARTING a subscription: the plan picker
+	// on the Billing tab and the checkout route. It never gates the tab for
+	// a workspace that already holds a subscription, nor the sync path —
+	// a stable-channel subscriber must keep being synced whatever its
+	// channel says.
+	FeatureWorkspaceBilling = "workspace-billing"
 	// FeatureProjectReviewRound is the project-wide review round: the Start
 	// review action on the review queue and the endpoint behind it. It gates
 	// only STARTING a round — the statuses a round leaves behind are ordinary

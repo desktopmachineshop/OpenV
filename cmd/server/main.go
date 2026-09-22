@@ -751,6 +751,12 @@ func main() {
 	case billingCfg.Enabled():
 		provider := stripe.New(billingCfg.SecretKey, stripe.WithAPIVersion(billingCfg.APIVersion), stripe.WithMetrics(metricsCollector))
 		billingService = billing.New(provider, orgService, billingCfg.Registry, metricsCollector)
+		billingService.SetUsers(userService)
+		billingService.SetPortalConfig(billingCfg.PortalConfig)
+		billingService.SetTrialDays(billingCfg.TrialDays)
+		if billingCfg.ReturnURL != "" {
+			billingService.SetReturnURL(billingCfg.ReturnURL)
+		}
 		billingService.Start(ctx, billingCfg.ReconcileInterval)
 		slog.Info("billing enabled", "provider", provider.Name(), "prices", billingCfg.Registry.Len(), "reconcile_every", billingCfg.ReconcileInterval)
 	}

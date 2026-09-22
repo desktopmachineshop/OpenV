@@ -61,6 +61,14 @@ const (
 
 	defaultBillingRefreshBurst  = 10
 	defaultBillingRefreshRefill = 120.0
+
+	// The purchase writes — checkout, plan change, portal — each create a
+	// provider object, so a compromised admin session cannot spam them.
+	envBillingWriteBurst  = "OPENV_BILLING_WRITE_BURST"
+	envBillingWriteRefill = "OPENV_BILLING_WRITE_REFILL_PER_HOUR"
+
+	defaultBillingWriteBurst  = 5
+	defaultBillingWriteRefill = 20.0
 )
 
 // Throttling for the credential endpoints. bcrypt makes each password guess

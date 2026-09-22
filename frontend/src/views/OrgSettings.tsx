@@ -5,6 +5,7 @@ import { apiErrorMessage } from '../api/errors';
 import { useAppStore } from '../state/store';
 import { Navbar } from '../components/Navbar';
 import { OrgLimitsTab } from '../components/org/OrgLimitsTab';
+import { OrgBillingTab } from '../components/org/OrgBillingTab';
 import { OrgMembersTab } from '../components/org/OrgMembersTab';
 import { OrgTeamsTab } from '../components/org/OrgTeamsTab';
 import { OrgProvidersTab } from '../components/org/OrgProvidersTab';
@@ -14,12 +15,13 @@ import { ErrorBanner } from '../components/ui';
 import { QualityRulesEditor } from '../components/QualityRulesEditor';
 import { useViewport } from '../hooks/useViewport';
 
-type Tab = 'general' | 'members' | 'teams' | 'providers' | 'worker-keys' | 'quality' | 'usage' | 'limits';
+type Tab = 'general' | 'members' | 'teams' | 'providers' | 'worker-keys' | 'quality' | 'usage' | 'limits' | 'billing';
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'general', label: 'General' },
   { key: 'members', label: 'Members' },
   { key: 'limits', label: 'Limits' },
+  { key: 'billing', label: 'Billing' },
   { key: 'teams', label: 'Teams' },
   { key: 'providers', label: 'AI Providers' },
   { key: 'worker-keys', label: 'Runners' },
@@ -392,7 +394,16 @@ export const OrgSettings: React.FC = () => {
             <div className="card">
               <h3>Plan</h3>
               <p style={{ fontSize: 13, color: 'var(--text)', marginBottom: 0 }}>
-                Plan: <strong>{org.plan || 'Free'}</strong> — free during the alpha with every feature included. See <a href="/pricing" target="_blank" rel="noreferrer">what free means</a>.
+                Plan: <strong>{org.plan || 'Free'}</strong>
+                {org.billing?.grandfathered ? ' — keeps the alpha terms' : ''}. Subscriptions, invoices and the payment card are on the{' '}
+                <button
+                  type="button"
+                  onClick={() => setTab('billing')}
+                  style={{ background: 'none', border: 'none', padding: 0, font: 'inherit', color: 'var(--primary)', cursor: 'pointer', textDecoration: 'underline', width: 'auto' }}
+                >
+                  Billing tab
+                </button>
+                ; see <a href="/pricing" target="_blank" rel="noreferrer">the tiers</a>.
               </p>
             </div>
 
@@ -561,6 +572,7 @@ export const OrgSettings: React.FC = () => {
 
         {tab === 'members' && <OrgMembersTab org={org} isAdmin={isAdmin} currentUser={currentUser} />}
         {tab === 'limits' && <OrgLimitsTab org={org} />}
+        {tab === 'billing' && <OrgBillingTab org={org} isAdmin={isAdmin} />}
         {tab === 'teams' && <OrgTeamsTab org={org} isAdmin={isAdmin} />}
         {tab === 'providers' && <OrgProvidersTab isAdmin={isAdmin} />}
         {tab === 'worker-keys' && <WorkerKeysTab org={org} isAdmin={isAdmin} />}

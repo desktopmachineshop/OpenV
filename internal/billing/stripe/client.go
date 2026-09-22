@@ -332,4 +332,114 @@ func (c *Client) ListOpenDisputes(ctx context.Context) ([]billing.Dispute, error
 	return out, nil
 }
 
+// CreateCustomer implements billing.Provider.
+func (c *Client) CreateCustomer(ctx context.Context, name, email string, metadata map[string]string, idempotencyKey string) (string, error) {
+	form := url.Values{}
+	form.Set("name", name)
+	if email != "" {
+		form.Set("email", email)
+	}
+	for k, v := range metadata {
+		form.Set("metadata["+k+"]", v)
+	}
+	var out customer
+	if err := c.do(ctx, "create_customer", http.MethodPost, "/v1/customers", form, idempotencyKey, &out); err != nil {
+		return "", err
+	}
+	return out.ID, nil
+}
+
+// CreateCheckoutSession implements billing.Provider. Tax is calculated by
+// the provider, business tax ids are collected for reverse charge, the
+// billing address is required because tax determination needs it, and
+// promotion codes are allowed so a discount never needs a deploy.
+func (c *Client) CreateCheckoutSession(ctx context.Context, req billing.CheckoutRequest) (*billing.CheckoutSession, error) {
+	form := url.Values{}
+	form.Set("mode", "subscription")
+	form.Set("customer", req.CustomerID)
+	form.Set("client_reference_id", req.ClientReferenceID)
+	form.Set("line_items[0][price]", req.PriceID)
+	form.Set("line_items[0][quantity]", strconv.Itoa(req.Quantity))
+	if req.Currency != "" {
+		form.Set("currency", req.Currency)
+	}
+	form.Set("success_url", req.SuccessURL)
+	form.Set("cancel_url", req.CancelURL)
+	form.Set("allow_promotion_codes", "true")
+	form.Set("automatic_tax[enabled]", "true")
+	form.Set("tax_id_collection[enabled]", "true")
+	form.Set("billing_address_collection", "required")
+	form.Set("customer_update[address]", "auto")
+	form.Set("customer_update[name]", "auto")
+	if req.TrialDays > 0 {
+		form.Set("subscription_data[trial_period_days]", strconv.Itoa(req.TrialDays))
+	}
+	for k, v := range req.Metadata {
+		form.Set("metadata["+k+"]", v)
+		form.Set("subscription_data[metadata]["+k+"]", v)
+	}
+	var out checkoutSession
+	if err := c.do(ctx, "create_checkout_session", http.MethodPost, "/v1/checkout/sessions", form, req.IdempotencyKey, &out); err != nil {
+		return nil, err
+	}
+	return convertCheckoutSession(&out), nil
+}
+
+func convertCheckoutSession(s *checkoutSession) *billing.CheckoutSession {
+	return &billing.CheckoutSession{
+		ID: s.ID, URL: s.URL, ClientReferenceID: s.ClientReferenceID, CustomerID: s.Customer,
+		SubscriptionID: s.Subscription, Status: s.Status, Metadata: s.Metadata,
+	}
+}
+
+// GetCheckoutSession implements billing.Provider.
+func (c *Client) GetCheckoutSession(ctx context.Context, id string) (*billing.CheckoutSession, error) {
+	var out checkoutSession
+	if err := c.do(ctx, "get_checkout_session", http.MethodGet, "/v1/checkout/sessions/"+url.PathEscape(id), nil, "", &out); err != nil {
+		return nil, err
+	}
+	return convertCheckoutSession(&out), nil
+}
+
+// CreatePortalSession implements billing.Provider.
+func (c *Client) CreatePortalSession(ctx context.Context, customerID, returnURL, configuration string) (string, error) {
+	form := url.Values{}
+	form.Set("customer", customerID)
+	form.Set("return_url", returnURL)
+	if configuration != "" {
+		form.Set("configuration", configuration)
+	}
+	var out portalSession
+	// Unkeyed on purpose: a portal session is worthless if lost and a
+	// duplicate costs nothing, so a retry would only ever hurt.
+	if err := c.do(ctx, "create_portal_session", http.MethodPost, "/v1/billing_portal/sessions", form, "", &out); err != nil {
+		return "", err
+	}
+	return out.URL, nil
+}
+
+// UpdateSubscriptionItem implements billing.Provider: a plan change on one
+// subscription, prorated. Fresh key per attempt, as for every toggle.
+func (c *Client) UpdateSubscriptionItem(ctx context.Context, subscriptionID, itemID, priceID string, quantity int) error {
+	form := url.Values{}
+	form.Set("items[0][id]", itemID)
+	form.Set("items[0][price]", priceID)
+	form.Set("items[0][quantity]", strconv.Itoa(quantity))
+	form.Set("proration_behavior", "create_prorations")
+	key := "openv:change:" + subscriptionID + ":" + uuid.NewString()
+	return c.do(ctx, "update_subscription", http.MethodPost, "/v1/subscriptions/"+url.PathEscape(subscriptionID), form, key, nil)
+}
+
+// SetItemQuantity implements billing.Provider. The key is fresh per attempt
+// on purpose: a deterministic key carrying the quantity would be replayed
+// for a day, so 7 → 8 → 7 would stick at 8. Setting a quantity is naturally
+// idempotent; the key only has to cover one retry burst.
+func (c *Client) SetItemQuantity(ctx context.Context, itemID string, quantity int) error {
+	form := url.Values{}
+	form.Set("quantity", strconv.Itoa(quantity))
+	form.Set("proration_behavior", "create_prorations")
+	key := "openv:seats:" + itemID + ":" + uuid.NewString()
+	return c.do(ctx, "set_item_quantity", http.MethodPost, "/v1/subscription_items/"+url.PathEscape(itemID), form, key, nil)
+}
+
 var _ billing.Provider = (*Client)(nil)

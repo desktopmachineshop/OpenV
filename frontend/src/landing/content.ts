@@ -56,7 +56,7 @@ export const IMPORT_FORMATS = 'JSON and ReqIF';
 
 /** The commitment, verbatim on the page and in the manual. */
 export const DATA_PROMISE =
-  'If hosted OpenV ever charges, your data will not be behind the paywall. Export and import stay available on every plan, and a JSON export restores into a self-hosted OpenV.';
+  'Your data is never behind the paywall. Export and import stay available on every plan, whatever its state, and a JSON export restores into a self-hosted OpenV.';
 
 /** Single User (free plan) limits in force. Mirrors the free plan in
  *  internal/domain/orgs/limits.go; change both together. */
@@ -191,7 +191,7 @@ export const OTHER_TIERS: PricingTier[] = [
 export const PRICING_TIERS: PricingTier[] = [...HOSTED_TIERS, ...OTHER_TIERS];
 
 export const ALPHA_NOTE =
-  'While OpenV is in alpha, every workspace has every tier’s features, free. When tiers launch you keep what you have until we announce otherwise, and export never depends on a plan.';
+  'Workspaces created during the alpha keep every tier’s features, free, with no member limits — that does not change when tiers turn on. Workspaces created after that are on the tiers below. Export never depends on a plan.';
 
 /** What each paid tier raises the free limits to. Quotes the plans in
  *  internal/domain/orgs/limits.go; change both together.
@@ -213,7 +213,7 @@ export const BUSINESS_LIMITS: string[] = [
 ];
 
 export const PRICING_FOOTNOTE =
-  'There is no billing in the product today and nothing to buy. What is free stays free until announced otherwise, and export never depends on a plan.';
+  'Prices are per workspace, monthly or yearly, and shown excluding VAT; VAT is added at checkout where it applies, and a business VAT number is accepted. What is free stays free for the workspaces that have it, and export never depends on a plan.';
 
 export const SELF_HOST_COMMANDS = ['git clone https://github.com/desktopmachineshop/OpenV.git', 'cd OpenV', 'docker compose up -d'];
 

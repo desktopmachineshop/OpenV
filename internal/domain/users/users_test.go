@@ -503,3 +503,5 @@ func TestSetAdmin(t *testing.T) {
 		t.Errorf("unknown account: err = %v", err)
 	}
 }
+
+func (m *memRepo) SetBillingTrialUsed(userID string, at time.Time) error { return nil }

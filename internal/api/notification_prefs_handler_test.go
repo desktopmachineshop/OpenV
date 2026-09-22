@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/openv/requirements-platform/internal/domain/users"
 )
@@ -185,3 +186,5 @@ func TestNotificationPrefsCarryPushFlag(t *testing.T) {
 		t.Fatalf("SetEmailNotifications(enabled=%v called=%v)", svc.setEnabled, svc.setCalled)
 	}
 }
+
+func (f *fakeUserPrefService) SetBillingTrialUsed(userID string, at time.Time) error { return nil }

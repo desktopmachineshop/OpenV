@@ -19,9 +19,9 @@ test('the pricing section states the three tiers, the limits and the data promis
     await expect(pricing.getByRole('heading', { name, exact: true })).toBeVisible();
   }
   await expect(pricing.getByText('Coming soon', { exact: true })).toHaveCount(3);
-  await expect(pricing.getByText('While OpenV is in alpha, every workspace has every tier', { exact: false })).toBeVisible();
+  await expect(pricing.getByText('Workspaces created during the alpha keep every tier', { exact: false })).toBeVisible();
   await expect(pricing.getByText('Hosted runner: 2 GB memory, 1 CPU.')).toBeVisible();
-  await expect(page.getByText('If hosted OpenV ever charges, your data will not be behind the paywall.', { exact: false })).toBeVisible();
+  await expect(page.getByText('Your data is never behind the paywall.', { exact: false })).toBeVisible();
   await expect(page.getByText('ReqIF interchange')).toBeVisible();
 });
 

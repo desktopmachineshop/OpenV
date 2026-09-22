@@ -730,7 +730,10 @@ project. `docs/operations.md` covers how an operator sets them.
 |---|---|---|---|
 | GET | `/api/v1/public/plans` | The plans for sale with their confirmed amounts per currency | open |
 | GET | `/api/v1/orgs/{id}/billing` | The workspace's billed plan, entitled plan and subscription snapshot | admin |
-| POST | `/api/v1/orgs/{id}/billing/refresh` | Re-read the workspace's subscription from the provider now | admin, rate limited |
+| POST | `/api/v1/orgs/{id}/billing/refresh` | Re-read the workspace's subscription from the provider now; `{"session_id"}` binds a just-completed checkout | admin, rate limited |
+| POST | `/api/v1/orgs/{id}/billing/checkout` | `{"plan","interval","currency"}` → `{"url"}`, the provider's checkout page | admin, rate limited, channel gated |
+| POST | `/api/v1/orgs/{id}/billing/change` | `{"plan","interval"}` → the state; moves the live subscription in place, prorated | admin, rate limited |
+| POST | `/api/v1/orgs/{id}/billing/portal` | `{"url"}`, the provider's self-service portal (card, address, VAT number, invoices, cancel) | admin, rate limited |
 
 Billing is an optional module (`docs/plans/billing-stripe.md`). With no
 provider configured — every self-hosted deployment — the public catalogue
@@ -765,6 +768,22 @@ grant nothing it does not hold; a provider failure is `503` with
 The limits response likewise carries `entitled_plan`, `plan_status` and
 `grandfathered`, so a member can see there is a payment problem without
 seeing anything about money.
+
+A purchase is a redirect: `checkout` answers with a page of the provider's
+and the browser returns to the Billing tab with `?checkout=done&session_id=`,
+which the tab hands to `refresh`; the platform verifies the session belongs
+to that workspace (`403 checkout_mismatch` otherwise), records the
+subscription, and marks the buyer's one trial used. `checkout` answers `400
+unknown_plan` for a plan, interval or currency not on sale, or a currency
+other than the one the workspace's first purchase fixed; `409
+already_subscribed` while a subscription is live, `409 granted_plan` where
+a platform admin set the plan, and `400` for `business` on a personal
+workspace. Where two admins complete two checkouts, the second is cancelled
+at bind and the tab says so. `change` keeps one subscription per workspace
+(`409 no_subscription` without one): `business_lite` bills a quantity of
+one, `business` the workspace's seats. `portal` needs a customer record
+(`409 no_customer`). Writes are limited to a burst of 5 then 20 an hour per
+workspace (`OPENV_BILLING_WRITE_BURST` / `_REFILL_PER_HOUR`).
 ### Evidence bundles
 
 A bundle is one physical or manual capture session — what was done, when, by

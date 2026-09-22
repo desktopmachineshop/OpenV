@@ -50,6 +50,24 @@ type subscription struct {
 	Items             listPage[subscriptionItem] `json:"items"`
 }
 
+type customer struct {
+	ID string `json:"id"`
+}
+
+type checkoutSession struct {
+	ID                string            `json:"id"`
+	URL               string            `json:"url"`
+	ClientReferenceID string            `json:"client_reference_id"`
+	Customer          string            `json:"customer"`
+	Subscription      string            `json:"subscription"`
+	Status            string            `json:"status"`
+	Metadata          map[string]string `json:"metadata"`
+}
+
+type portalSession struct {
+	URL string `json:"url"`
+}
+
 // dispute carries the charge expanded through to its invoice, which is the
 // only route from a chargeback to the subscription it concerns.
 type dispute struct {

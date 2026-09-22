@@ -133,7 +133,11 @@ const TierCard: React.FC<{ tier: PricingTier; compact: boolean; live?: LivePrice
         <li key={p}>{p}</li>
       ))}
     </ul>
-    {tier.cta.external ? (
+    {live ? (
+      <Link to="/login?mode=register" style={{ ...secondaryButton, textAlign: 'center', fontSize: 14, padding: '10px 14px' }}>
+        Start on {tier.name}
+      </Link>
+    ) : tier.cta.external ? (
       <ExternalLink href={tier.cta.href} style={{ ...secondaryButton, textAlign: 'center', fontSize: 14, padding: '10px 14px' }}>
         {tier.cta.label}
       </ExternalLink>

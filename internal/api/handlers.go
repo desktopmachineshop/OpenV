@@ -251,8 +251,10 @@ type Handler struct {
 	// somebody's sign-in budget (see ratelimit.go).
 	invitePreviewLimiter *rateLimiter
 	// billingRefreshLimiter bounds synchronous subscription re-reads per
-	// workspace (see ratelimit.go).
+	// workspace; billingWriteLimiter bounds the purchase writes (see
+	// ratelimit.go).
 	billingRefreshLimiter *rateLimiter
+	billingWriteLimiter   *rateLimiter
 	// billing is the subscription sync path; nil, or disabled, on a
 	// deployment with no billing provider, where every billing route
 	// answers 404 billing_unavailable.
@@ -284,7 +286,7 @@ func NewHandler(deps HandlerDeps) *Handler {
 		cookieSameSite = http.SameSiteNoneMode
 		secureCookies = true
 	}
-	return &Handler{
+	h := &Handler{
 		artifactService:        deps.ArtifactService,
 		linkService:            deps.LinkService,
 		projectService:         deps.ProjectService,
@@ -351,6 +353,7 @@ func NewHandler(deps HandlerDeps) *Handler {
 		passwordResetLimiter:   newRateLimiterFromEnv(envPasswordResetBurst, envPasswordResetRefill, defaultPasswordResetBurst, defaultPasswordResetRefill),
 		invitePreviewLimiter:   newRateLimiterFromEnv(envInvitePreviewBurst, envInvitePreviewRefill, defaultInvitePreviewBurst, defaultInvitePreviewRefill),
 		billingRefreshLimiter:  newRateLimiterFromEnv(envBillingRefreshBurst, envBillingRefreshRefill, defaultBillingRefreshBurst, defaultBillingRefreshRefill),
+		billingWriteLimiter:    newRateLimiterFromEnv(envBillingWriteBurst, envBillingWriteRefill, defaultBillingWriteBurst, defaultBillingWriteRefill),
 		billing:                deps.BillingService,
 		inviteLimiter:          newRateLimiterFromEnv(envInviteBurst, envInviteRefill, defaultInviteBurst, defaultInviteRefill),
 		mailer:                 deps.Mailer,
@@ -360,6 +363,13 @@ func NewHandler(deps HandlerDeps) *Handler {
 		registration:           deps.Registration,
 		sessionPolicy:          deps.SessionPolicy,
 	}
+	if h.billing != nil {
+		// Billed seats are the seat limit's own reading, and the return
+		// origin is the app's unless the operator named another.
+		h.billing.SetSeatCounter(h.countOrgSeats)
+		h.billing.DefaultReturnURL(h.frontendURL)
+	}
+	return h
 }
 
 // publish emits a domain event when a bus is wired (nil-safe), stamped with

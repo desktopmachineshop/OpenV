@@ -534,7 +534,20 @@ Notes:
   - `OPENV_STRIPE_API_VERSION` pins the provider API version on every
     request; unset, the account's own pinned version applies.
   - `OPENV_BILLING_REFRESH_BURST` / `_REFILL_PER_HOUR` bound the
-    synchronous refresh per workspace (default 10, then 120 an hour).
+    synchronous refresh per workspace (default 10, then 120 an hour);
+    `OPENV_BILLING_WRITE_BURST` / `_REFILL_PER_HOUR` bound checkout, plan
+    change and portal (default 5, then 20 an hour).
+  - `OPENV_BILLING_RETURN_URL` is where the provider sends the browser back
+    after checkout and the portal (default: the frontend URL). It must be
+    the origin the Billing tab is served from.
+  - `OPENV_BILLING_PORTAL_CONFIG` names the provider's portal configuration
+    to open: one with payment method, address, tax id, email, invoices and
+    cancel-at-period-end on, and **product switching off** (a plan change
+    goes through the platform so the seat quantity follows). Unset, the
+    account's default configuration opens.
+  - `OPENV_BILLING_TRIAL_DAYS` (default 14) is the trial a buyer's first
+    subscription starts with; a buyer gets one trial across every workspace
+    they create. `0` turns trials off.
   - The one exception is a **personal workspace, which always seats exactly
     one person**. That is not a ration, so no plan, no `OPENV_LIMITS` and no
     per-workspace setting raises it — a personal workspace with two people in

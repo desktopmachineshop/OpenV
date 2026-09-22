@@ -56,6 +56,21 @@ func (c *catalog) set(entries []PriceEntry, prices map[string]*Price, at time.Ti
 	c.entries, c.prices, c.asOf, c.ok = entries, prices, at, true
 }
 
+// amounts returns a confirmed price's amounts per currency, and whether the
+// catalogue has been confirmed at all.
+func (c *catalog) amounts(priceID string) (map[string]int64, bool) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	if !c.ok {
+		return nil, false
+	}
+	p, ok := c.prices[priceID]
+	if !ok {
+		return map[string]int64{}, true
+	}
+	return p.Amounts, true
+}
+
 // render builds the public answer from the last confirmed reading.
 func (c *catalog) render(enabled bool) PublicPlans {
 	c.mu.RLock()
