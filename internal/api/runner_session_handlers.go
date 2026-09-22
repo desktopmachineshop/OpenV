@@ -199,6 +199,13 @@ func (h *Handler) StartRunnerSession(w http.ResponseWriter, r *http.Request) {
 	}
 	user := CurrentUser(r)
 	sessionMinutes, idleMinutes := h.sessionLimits(orgID)
+	// The month's allowance is hard: a lease is shortened to what is left
+	// and refused once nothing is.
+	sessionMinutes, err := h.leaseMinutesAllowed(orgID, sessionMinutes)
+	if err != nil {
+		h.writeLimitError(w, err)
+		return
+	}
 	session, err := h.runnerSessionService.Start(orgID, user.ID, sessionMinutes, idleMinutes)
 	if err != nil {
 		if errors.Is(err, runnersessions.ErrNoNodes) {
@@ -211,6 +218,7 @@ func (h *Handler) StartRunnerSession(w http.ResponseWriter, r *http.Request) {
 		respondInternal(w, r, "failed to start a runner session", err)
 		return
 	}
+	h.minutesAlerts.Check(orgID)
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(h.runnerSessionPayload(session))
 }
@@ -232,11 +240,17 @@ func (h *Handler) ExtendRunnerSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	sessionMinutes, _ := h.sessionLimits(orgID)
+	sessionMinutes, err = h.leaseMinutesAllowed(orgID, sessionMinutes)
+	if err != nil {
+		h.writeLimitError(w, err)
+		return
+	}
 	extended, err := h.runnerSessionService.Extend(session.ID, sessionMinutes)
 	if err != nil {
 		respondError(w, r, http.StatusBadRequest, "failed to extend the runner session", err)
 		return
 	}
+	h.minutesAlerts.Check(orgID)
 	json.NewEncoder(w).Encode(h.runnerSessionPayload(extended))
 }
 

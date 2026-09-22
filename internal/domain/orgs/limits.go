@@ -111,6 +111,11 @@ const (
 	// is set at all: this is a ceiling against runaway automation, not a
 	// reason to make somebody choose which of their products to track.
 	LimitMaxProjects = "max_projects"
+	// LimitHostedRunnerMinutesMonth caps the cloud-runner minutes a
+	// workspace may lease in a calendar month. It meters platform hardware
+	// only: a run on a member's own machine through the Agent Connector
+	// is never counted, whatever the plan.
+	LimitHostedRunnerMinutesMonth = "hosted_runner_minutes_month"
 
 	// The flags. A flag is a limit whose value is a bool rather than a
 	// number: whether a tier includes something, not how much of it. They
@@ -193,6 +198,10 @@ var catalog = []Definition{
 	{
 		Key: LimitMaxUploadMB, Label: "Largest figure", Kind: KindResource, Unit: UnitMB,
 		Description: "The biggest single file you can attach to an artifact — a drawing, a datasheet or a CAD model.",
+	},
+	{
+		Key: LimitHostedRunnerMinutesMonth, Label: "Cloud runner minutes this month", Kind: KindResource, Unit: UnitMinutes, Countable: true,
+		Description: "How many minutes of leased cloud runner this workspace can use in a calendar month. Agents on your own machine through the Agent Connector are never counted.",
 	},
 	{
 		Key: LimitRunnerSessionMinutes, Label: "Cloud runner lease", Kind: KindResource, Unit: UnitMinutes,
@@ -296,6 +305,7 @@ func PlanDefaults(plan string) map[string]interface{} {
 			LimitMaxMembers:               unlimited,
 			LimitMaxSharedWorkspaces:      unlimited,
 			LimitMaxProjects:              unlimited,
+			LimitHostedRunnerMinutesMonth: unlimited,
 			LimitHostedAutomation:         true,
 			LimitTeams:                    true,
 			LimitWorkspaceBudget:          true,
@@ -308,7 +318,7 @@ func PlanDefaults(plan string) map[string]interface{} {
 		// matters to somebody running an agent over a real repository, so it
 		// is the one that moves — four hours rather than two, on twice the
 		// memory, with a longer idle window to match.
-		return map[string]interface{}{
+		return tiered(plan, map[string]interface{}{
 			LimitRunnerMemoryMB:           8192,
 			LimitRunnerCPUs:               4.0,
 			LimitRunnerSessionMinutes:     240,
@@ -318,12 +328,13 @@ func PlanDefaults(plan string) map[string]interface{} {
 			LimitMaxMembers:               unlimited,
 			LimitMaxSharedWorkspaces:      unlimited,
 			LimitMaxProjects:              unlimited,
+			LimitHostedRunnerMinutesMonth: unlimited,
 			LimitHostedAutomation:         true,
 			LimitTeams:                    true,
 			LimitWorkspaceBudget:          true,
-		}
+		})
 	case PlanBusinessLite:
-		return map[string]interface{}{
+		return tiered(plan, map[string]interface{}{
 			LimitRunnerMemoryMB:           4096,
 			LimitRunnerCPUs:               2.0,
 			LimitRunnerSessionMinutes:     120,
@@ -333,12 +344,13 @@ func PlanDefaults(plan string) map[string]interface{} {
 			LimitMaxMembers:               unlimited,
 			LimitMaxSharedWorkspaces:      unlimited,
 			LimitMaxProjects:              unlimited,
+			LimitHostedRunnerMinutesMonth: unlimited,
 			LimitHostedAutomation:         true,
 			LimitTeams:                    true,
 			LimitWorkspaceBudget:          true,
-		}
+		})
 	default: // PlanSingle, PlanFree and anything unrecognized
-		return map[string]interface{}{
+		return tiered(plan, map[string]interface{}{
 			LimitRunnerMemoryMB:           2048,
 			LimitRunnerCPUs:               1.0,
 			LimitRunnerSessionMinutes:     60,
@@ -348,15 +360,115 @@ func PlanDefaults(plan string) map[string]interface{} {
 			LimitMaxMembers:               unlimited,
 			LimitMaxSharedWorkspaces:      unlimited,
 			LimitMaxProjects:              unlimited,
+			LimitHostedRunnerMinutesMonth: unlimited,
 			// The flags ship ON for every plan, as the counts ship at
 			// zero: the mechanism lands and is proven before any tier
 			// turns one off, and turning one off is then a value change.
 			LimitHostedAutomation: true,
 			LimitTeams:            true,
 			LimitWorkspaceBudget:  true,
-		}
+		})
 	}
 }
+
+// tiersEnforced is the switch between the alpha terms — every count open,
+// every flag on, for everybody — and the tiers as sold. It is thrown by
+// OPENV_BILLING_GRANDFATHER_BEFORE: naming the date is what turns the tiers
+// on, and the same boot grandfathers every workspace created before it, so
+// the two can never be out of step.
+var tiersEnforced bool
+
+// SetTiersEnforced turns the tier values on or off. Called once at boot.
+func SetTiersEnforced(on bool) { tiersEnforced = on }
+
+// TiersEnforced reports whether the tier values are in force.
+func TiersEnforced() bool { return tiersEnforced }
+
+// FreeHostedRunnerMinutes is the free tier's monthly cloud-runner allowance
+// once the tiers are in force.
+const FreeHostedRunnerMinutes = 300
+
+// tiered lays the tier's counts and flags over a plan's alpha defaults when
+// the tiers are in force. The paid tiers pay for the company layer, not the
+// product: what moves is seats, shared workspaces, the flags and hosted
+// minutes; every product limit stays as it was.
+//
+//	plan             members  shared  projects  hosted_automation  teams  budget  minutes
+//	single / free    2        1       200       off                off    off     300
+//	business_lite    2        1       500       on                 off    off     unlimited
+//	business & co    0        0       1000      on                 on     on      unlimited
+//
+// Business keeps members unlimited: nobody caps seats on a plan billed per
+// seat. Lite gets the free tier's counts, not fewer. The project caps are
+// abuse ceilings, high enough that nobody chooses which product to track.
+func tiered(plan string, m map[string]interface{}) map[string]interface{} {
+	if !tiersEnforced {
+		return m
+	}
+	switch plan {
+	case PlanBusiness, PlanTeam, PlanOpenSource:
+		m[LimitMaxProjects] = 1000
+	case PlanBusinessLite:
+		m[LimitMaxMembers] = 2
+		m[LimitMaxSharedWorkspaces] = 1
+		m[LimitMaxProjects] = 500
+		m[LimitTeams] = false
+		m[LimitWorkspaceBudget] = false
+	default:
+		m[LimitMaxMembers] = 2
+		m[LimitMaxSharedWorkspaces] = 1
+		m[LimitMaxProjects] = 200
+		m[LimitHostedRunnerMinutesMonth] = FreeHostedRunnerMinutes
+		m[LimitHostedAutomation] = false
+		m[LimitTeams] = false
+		m[LimitWorkspaceBudget] = false
+	}
+	return m
+}
+
+// AlphaTerms is the per-workspace override that keeps a grandfathered
+// workspace on the alpha terms whatever its plan: every count open, every
+// flag on, hosted minutes unmetered. Written into org.Limits, the most
+// specific layer, it is the published promise enforced by the same data the
+// enforcement reads.
+func AlphaTerms() map[string]interface{} {
+	return map[string]interface{}{
+		LimitMaxMembers:               unlimited,
+		LimitMaxSharedWorkspaces:      unlimited,
+		LimitMaxProjects:              unlimited,
+		LimitHostedRunnerMinutesMonth: unlimited,
+		LimitHostedAutomation:         true,
+		LimitTeams:                    true,
+		LimitWorkspaceBudget:          true,
+	}
+}
+
+// OverPlan names the count limits a workspace is already past, given the
+// current usage per key. A workspace over its plan is read-only (see
+// ReadOnlyRemedy) until it upgrades or trims; nothing is ever deleted for
+// it. A key with no usage reading is never over.
+func OverPlan(limits map[string]interface{}, usage map[string]int) []string {
+	var over []string
+	for _, def := range catalog {
+		if def.Kind != KindCount {
+			continue
+		}
+		used, ok := usage[def.Key]
+		if !ok {
+			continue
+		}
+		if allowed, capped := Ceiling(limits, def.Key); capped && used > allowed {
+			over = append(over, def.Key)
+		}
+	}
+	return over
+}
+
+// ReadOnlyRemedy is what a workspace over its plan is told on every write it
+// is refused. Reading and export are never refused, in any state.
+const ReadOnlyRemedy = "This workspace has more than its plan allows, so it is read-only until it is " +
+	"brought under the plan's limits or moved to a plan that fits. Everything in it stays readable and exportable. " +
+	"A workspace admin can subscribe from the Billing tab in workspace settings, remove members or delete projects."
 
 // allPlans is every plan a workspace can be on, for the derived readings
 // below. It is the same list ValidPlan accepts.

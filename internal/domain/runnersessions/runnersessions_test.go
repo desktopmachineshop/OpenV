@@ -20,6 +20,21 @@ func newFakeRepo() *fakeRepo {
 	return &fakeRepo{nodes: map[string]*Node{}, sessions: map[string]*Session{}}
 }
 
+func (r *fakeRepo) MinutesUsed(orgID string, since time.Time) (int, error) {
+	total := 0
+	for _, s := range r.sessions {
+		if s.OrgID != orgID || s.StartedAt.Before(since) {
+			continue
+		}
+		end := time.Now()
+		if s.EndedAt != nil {
+			end = *s.EndedAt
+		}
+		total += int(end.Sub(s.StartedAt).Minutes())
+	}
+	return total, nil
+}
+
 func (r *fakeRepo) SaveNode(n *Node) error {
 	copied := *n
 	r.nodes[n.ID] = &copied

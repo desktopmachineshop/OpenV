@@ -213,3 +213,81 @@ func TestUpdateOrgWritesOnlyTheName(t *testing.T) {
 		t.Fatalf("UpdateOrg wrote more than the name: %+v", got)
 	}
 }
+
+// The grandfather step (Phase 4): a workspace created before the announced
+// date keeps the alpha terms through its own limits, deleted ones included,
+// a key the operator already pinned is kept, a workspace created after it
+// is untouched, and a second run changes nothing.
+func TestGrandfatherBeforeKeepsTheAlphaTerms(t *testing.T) {
+	f := newClaimFixture(t)
+	repo := NewOrgRepository(f.db)
+	// A date in the past, so the fixture's own workspace (created now) is
+	// on the "after" side with the one seeded there.
+	cutoff := time.Now().UTC().Add(-24 * time.Hour)
+
+	before := seedBillingOrg(t, f, orgs.PlanSingle)
+	pinned := seedBillingOrg(t, f, orgs.PlanSingle)
+	deleted := seedBillingOrg(t, f, orgs.PlanSingle)
+	after := seedBillingOrg(t, f, orgs.PlanSingle)
+	for _, id := range []string{before, pinned, deleted} {
+		if _, err := f.db.Exec(`UPDATE organizations SET created_at = $2 WHERE id = $1`, id, cutoff.Add(-time.Hour)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := f.db.Exec(`UPDATE organizations SET limits = '{"max_projects": 7}' WHERE id = $1`, pinned); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.db.Exec(`UPDATE organizations SET deleted_at = NOW() WHERE id = $1`, deleted); err != nil {
+		t.Fatal(err)
+	}
+
+	n, err := repo.GrandfatherBefore(cutoff, orgs.AlphaTerms())
+	if err != nil || n != 3 {
+		t.Fatalf("GrandfatherBefore = %d, %v; want 3", n, err)
+	}
+
+	// FindOrgByID skips deleted rows, so read every row the same direct way.
+	read := func(id string) *orgs.Org {
+		rows, err := f.db.Query(`SELECT `+orgColumns+` FROM organizations WHERE id = $1`, id)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer rows.Close()
+		if !rows.Next() {
+			t.Fatalf("no row for %s", id)
+		}
+		o, err := scanOrg(rows)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return o
+	}
+
+	for _, id := range []string{before, deleted} {
+		o := read(id)
+		if !o.Billing.Grandfathered {
+			t.Errorf("%s not marked grandfathered", id)
+		}
+		if v, _ := orgs.LimitInt(o.Limits, orgs.LimitMaxMembers); v != 0 {
+			t.Errorf("%s members override = %d, want 0 (unlimited)", id, v)
+		}
+		if !orgs.Allowed(o.Limits, orgs.LimitTeams) {
+			t.Errorf("%s lost teams", id)
+		}
+	}
+	if o := read(pinned); !o.Billing.Grandfathered {
+		t.Error("pinned workspace not grandfathered")
+	} else if v, _ := orgs.LimitInt(o.Limits, orgs.LimitMaxProjects); v != 7 {
+		t.Errorf("the operator's pin was overwritten: max_projects = %d", v)
+	} else if v, _ := orgs.LimitInt(o.Limits, orgs.LimitMaxMembers); v != 0 {
+		t.Errorf("pinned workspace did not get the other terms: %d", v)
+	}
+	if o := read(after); o.Billing.Grandfathered || len(o.Limits) != 0 {
+		t.Errorf("a workspace created after the date was touched: %+v", o.Limits)
+	}
+
+	// Idempotent: the same boot again changes nothing.
+	if n, err := repo.GrandfatherBefore(cutoff, orgs.AlphaTerms()); err != nil || n != 0 {
+		t.Fatalf("second run changed %d rows, %v", n, err)
+	}
+}

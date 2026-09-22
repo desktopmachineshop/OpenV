@@ -26,12 +26,12 @@ import (
 func (h *Handler) registerBillingRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/public/plans", h.GetPublicPlans).Methods("GET")
 	router.HandleFunc("/api/v1/orgs/{id}/billing", h.GetOrgBilling).Methods("GET")
-	router.HandleFunc("/api/v1/orgs/{id}/billing/refresh", h.RefreshOrgBilling).Methods("POST")
+	router.HandleFunc("/api/v1/orgs/{id}/billing/refresh", h.alwaysWritable(h.RefreshOrgBilling)).Methods("POST")
 	// The purchase path: admin only, rate limited, every provider value
 	// decided by the server.
-	router.HandleFunc("/api/v1/orgs/{id}/billing/checkout", h.CheckoutOrgBilling).Methods("POST")
-	router.HandleFunc("/api/v1/orgs/{id}/billing/change", h.ChangeOrgBillingPlan).Methods("POST")
-	router.HandleFunc("/api/v1/orgs/{id}/billing/portal", h.OpenOrgBillingPortal).Methods("POST")
+	router.HandleFunc("/api/v1/orgs/{id}/billing/checkout", h.alwaysWritable(h.CheckoutOrgBilling)).Methods("POST")
+	router.HandleFunc("/api/v1/orgs/{id}/billing/change", h.alwaysWritable(h.ChangeOrgBillingPlan)).Methods("POST")
+	router.HandleFunc("/api/v1/orgs/{id}/billing/portal", h.alwaysWritable(h.OpenOrgBillingPortal)).Methods("POST")
 }
 
 // writeBillingError answers a purchase-path refusal with the status and code

@@ -33,6 +33,7 @@ export const formatLimit = (value: number, unit: LimitUsage['unit']): string => 
 /** The one-line reading of a limit: how much of it is gone, or that there is
  *  no ceiling at all. */
 export const limitSummary = (limit: LimitUsage): string => {
+  if (limit.kind === 'flag') return limit.included ? 'Included' : 'Not on this plan';
   if (limit.unlimited) {
     return limit.used === undefined
       ? 'No limit'
@@ -45,7 +46,7 @@ export const limitSummary = (limit: LimitUsage): string => {
 /** Fraction of a capped limit that is used, or null when there is nothing to
  *  draw a bar for. */
 export const usedFraction = (limit: LimitUsage): number | null => {
-  if (limit.unlimited || limit.used === undefined || limit.limit <= 0) return null;
+  if (limit.kind === 'flag' || limit.unlimited || limit.used === undefined || limit.limit <= 0) return null;
   return Math.min(1, limit.used / limit.limit);
 };
 
@@ -120,6 +121,21 @@ export const OrgLimitsTab: React.FC<OrgLimitsTabProps> = ({ org }) => {
 
       <ErrorBanner message={error} onDismiss={() => setError('')} style={{ marginBottom: 16 }} />
 
+      {data?.read_only && (
+        <div role="alert" className="card" style={{ padding: 14, marginBottom: 16, borderLeft: '4px solid var(--danger)' }}>
+          <strong>This workspace is read-only.</strong>
+          <p style={{ margin: '6px 0 0', fontSize: 14 }}>
+            It holds more than its plan allows ({data.over_plan?.map((key) => data.limits.find((l) => l.key === key)?.label || key).join(', ')}).
+            Everything stays readable and exportable; nothing can be changed until the workspace is under its limits again or on a plan that fits.
+            {!data.self_hosted && (
+              <>
+                {' '}A workspace admin can subscribe on the <a href="/org/settings?tab=billing">Billing tab</a>, or remove members or delete projects.
+              </>
+            )}
+          </p>
+        </div>
+      )}
+
       {loading ? (
         <p style={{ color: 'var(--text-muted)' }}>Loading…</p>
       ) : !data ? null : (
@@ -142,7 +158,11 @@ export const OrgLimitsTab: React.FC<OrgLimitsTabProps> = ({ org }) => {
                   <span
                     style={{
                       fontSize: 13,
-                      color: alarming ? barColour(fraction as number, limit) : 'var(--text-muted)',
+                      color: alarming
+                        ? barColour(fraction as number, limit)
+                        : limit.kind === 'flag' && limit.included === false
+                          ? 'var(--text)'
+                          : 'var(--text-muted)',
                       fontWeight: alarming ? 600 : 400,
                     }}
                   >

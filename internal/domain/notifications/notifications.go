@@ -25,6 +25,10 @@ const (
 	// crosses 80% or 100% of its monthly budget, alerting org admins (issue
 	// #186). One row per admin, deduped to once per threshold per month.
 	TypeBudgetThreshold = "budget_threshold"
+	// TypeHostedMinutes fires when a workspace's leased cloud-runner
+	// minutes cross 80% or 100% of its monthly allowance, alerting org
+	// admins once per threshold per month.
+	TypeHostedMinutes = "hosted_minutes"
 	// TypeAccessChanged tells one person what changed about their OWN access:
 	// added to a workspace or project, given a different role, or removed.
 	// One type rather than three, because it answers a single question —

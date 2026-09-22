@@ -26,6 +26,25 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   waits for a stable release on stable-channel workspaces; a workspace that
   already holds a subscription always sees its Billing tab.
 
+- **The tiers are now real, and every workspace from the alpha keeps
+  everything.** On the date announced with the first live price, a
+  workspace created before it is marked as keeping the alpha terms — every
+  feature, no member or workspace caps, unmetered cloud runners — for good,
+  whatever plan it is on; the Limits tab says so. A workspace created after
+  it is on its tier: the free tier seats two people in one shared
+  workspace and 300 minutes of leased cloud runner a month; Business Lite
+  adds an always-on hosted runner and unmetered cloud runners; Business
+  adds teams, per-project team access, the workspace budget and usage
+  rollup, and as many members and shared workspaces as it bills for. A
+  refusal names the Billing tab. A workspace that holds more than its plan
+  allows — after a lapsed subscription, say — becomes read-only rather
+  than losing anything: everything stays readable and exportable, and
+  removing members or deleting projects, or subscribing, makes it writable
+  again. Admins are told when leased cloud-runner minutes reach 80% and
+  100% of the month's allowance. No feature key: the values are plan
+  defaults with no channel in scope, and the plans they cap are always on
+  the nightly channel, so a key would gate nothing.
+
 ### Maintenance updates
 
 - **A Business subscription's seat count follows the Members tab on its

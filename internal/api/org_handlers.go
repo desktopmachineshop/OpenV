@@ -26,7 +26,7 @@ func (h *Handler) registerOrgRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/orgs", h.CreateOrg).Methods("POST")
 	router.HandleFunc("/api/v1/orgs/{id}", h.GetOrg).Methods("GET")
 	router.HandleFunc("/api/v1/orgs/{id}", h.UpdateOrg).Methods("PUT")
-	router.HandleFunc("/api/v1/orgs/{id}", h.DeleteOrg).Methods("DELETE")
+	router.HandleFunc("/api/v1/orgs/{id}", h.alwaysWritable(h.DeleteOrg)).Methods("DELETE")
 	router.HandleFunc("/api/v1/orgs/{id}/plan", h.SetOrgPlan).Methods("PUT")
 	router.HandleFunc("/api/v1/orgs/{id}/restore", h.RestoreOrg).Methods("POST")
 	router.HandleFunc("/api/v1/orgs/{id}/activate", h.ActivateOrg).Methods("POST")
@@ -41,7 +41,7 @@ func (h *Handler) registerOrgRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/orgs/{id}/members", h.ListOrgMembers).Methods("GET")
 	router.HandleFunc("/api/v1/orgs/{id}/members", h.AddOrgMember).Methods("POST")
 	router.HandleFunc("/api/v1/orgs/{id}/members/{userId}", h.UpdateOrgMember).Methods("PUT")
-	router.HandleFunc("/api/v1/orgs/{id}/members/{userId}", h.RemoveOrgMember).Methods("DELETE")
+	router.HandleFunc("/api/v1/orgs/{id}/members/{userId}", h.alwaysWritable(h.RemoveOrgMember)).Methods("DELETE")
 
 	router.HandleFunc("/api/v1/orgs/{id}/teams", h.ListOrgTeams).Methods("GET")
 	router.HandleFunc("/api/v1/orgs/{id}/teams", h.CreateOrgTeam).Methods("POST")
@@ -304,6 +304,10 @@ func (h *Handler) UpdateOrg(w http.ResponseWriter, r *http.Request) {
 		var budget *float64
 		if err := json.Unmarshal(req.MonthlyBudgetUSD, &budget); err != nil {
 			writeJSONError(w, http.StatusBadRequest, "monthly_budget_usd must be a number or null")
+			return
+		}
+		if err := h.checkFlag(orgID, orgs.LimitWorkspaceBudget); err != nil {
+			h.writeLimitError(w, err)
 			return
 		}
 		org, err = h.orgService.SetMonthlyBudget(orgID, budget)
@@ -675,6 +679,10 @@ func (h *Handler) CreateOrgTeam(w http.ResponseWriter, r *http.Request) {
 	if !h.requireOrgRole(w, r, orgID, orgs.RoleAdmin) {
 		return
 	}
+	if err := h.checkFlag(orgID, orgs.LimitTeams); err != nil {
+		h.writeLimitError(w, err)
+		return
+	}
 	var req struct {
 		Name        string `json:"name"`
 		Description string `json:"description"`
@@ -968,6 +976,10 @@ func (h *Handler) CreateHostedRunner(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "hosted runners are not enabled on this deployment")
 		return
 	}
+	if err := h.checkFlag(orgID, orgs.LimitHostedAutomation); err != nil {
+		h.writeLimitError(w, err)
+		return
+	}
 	var req struct {
 		ProviderKeys map[string]string `json:"provider_keys"`
 	}
@@ -1176,6 +1188,12 @@ func (h *Handler) GetOrgUsage(w http.ResponseWriter, r *http.Request) {
 	if !h.requireOrgRole(w, r, orgID, orgs.RoleMember) {
 		return
 	}
+	// The workspace-wide rollup is the gated thing; a member's own runs
+	// and their cost stay on the runs list whatever the plan.
+	if err := h.checkFlag(orgID, orgs.LimitWorkspaceBudget); err != nil {
+		h.writeLimitError(w, err)
+		return
+	}
 	days := defaultUsageDays
 	if raw := r.URL.Query().Get("days"); raw != "" {
 		parsed, err := strconv.Atoi(raw)
@@ -1363,6 +1381,10 @@ func (h *Handler) GrantProjectTeamAccess(w http.ResponseWriter, r *http.Request)
 	}
 	if project.OrgID != "" && team.OrgID != project.OrgID {
 		writeJSONError(w, http.StatusBadRequest, "team belongs to a different workspace")
+		return
+	}
+	if err := h.checkFlag(team.OrgID, orgs.LimitTeams); err != nil {
+		h.writeLimitError(w, err)
 		return
 	}
 	if err := h.memberService.GrantTeam(projectID, req.OrgTeamID, req.Role); err != nil {

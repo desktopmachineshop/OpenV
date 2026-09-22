@@ -131,6 +131,7 @@ export const OrgBillingTab: React.FC<OrgBillingTabProps> = ({ org, isAdmin }) =>
   const [searchParams, setSearchParams] = useSearchParams();
   const [state, setState] = useState<BillingState | null>(null);
   const [seats, setSeats] = useState<number>(1);
+  const [readOnly, setReadOnly] = useState(false);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -206,6 +207,7 @@ export const OrgBillingTab: React.FC<OrgBillingTabProps> = ({ org, isAdmin }) =>
         if (cancelled) return;
         const members = res.data?.limits?.find((l) => l.key === 'max_members');
         if (members?.used !== undefined) setSeats(Math.max(1, members.used));
+        setReadOnly(Boolean(res.data?.read_only));
       })
       .catch(() => undefined);
     return () => {
@@ -341,6 +343,12 @@ export const OrgBillingTab: React.FC<OrgBillingTabProps> = ({ org, isAdmin }) =>
       </p>
 
       <ErrorBanner message={error} onDismiss={() => setError('')} style={{ marginBottom: 16 }} />
+      {readOnly && (
+        <div role="alert" className="card" style={{ padding: 12, marginBottom: 16, borderLeft: '4px solid var(--danger)', fontSize: 14 }}>
+          <strong>This workspace is read-only:</strong> it holds more than its plan allows. Subscribing below, or trimming members or projects on their
+          tabs, makes it writable again. Everything stays readable and exportable meanwhile.
+        </div>
+      )}
       {notice && (
         <div role="status" className="card" style={{ padding: 12, marginBottom: 16, borderLeft: '4px solid var(--success-text)', fontSize: 14 }}>
           {notice}

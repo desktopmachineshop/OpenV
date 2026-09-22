@@ -36,6 +36,9 @@ const (
 	// than by permissions, so a client can offer the remedy that came with
 	// it instead of an access-denied message.
 	ErrCodeLimitReached = "limit_reached"
+	// ErrCodePlanReadOnly marks a write refused because the workspace holds
+	// more than its plan allows; reads and export are never refused.
+	ErrCodePlanReadOnly = "plan_read_only"
 	ErrCodeNoPassword   = "no_password"
 	// ErrCodeResetInvalid answers a reset link that is unknown, spent or
 	// expired; ErrCodeResetEmailUnavailable a request for an emailed reset

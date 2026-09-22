@@ -61,6 +61,7 @@ export const DATA_PROMISE =
 /** Single User (free plan) limits in force. Mirrors the free plan in
  *  internal/domain/orgs/limits.go; change both together. */
 export const HOSTED_LIMITS: string[] = [
+  'One shared workspace you create, with one other person; leased cloud runners for 300 minutes a month.',
   'Hosted runner: 2 GB memory, 1 CPU.',
   'Cloud runner lease: 60 minutes, reclaimed after 15 idle minutes.',
   'Largest figure you can attach: 128 MB.',
@@ -100,7 +101,7 @@ export const HOSTED_TIERS: PricingTier[] = [
     points: [
       'Requirements, V&V, traceability and interviews: the full product for one person.',
       'Agents run on your own AI subscription (Claude Code, Codex or Gemini) via the Agent Connector on your machine, or a leased cloud runner within the free limits.',
-      'Personal workspace.',
+      'Personal workspace, plus one shared workspace with one other person.',
       'Export everything, always.',
     ],
     cta: { label: 'Create free account', href: '/login?mode=register' },
@@ -201,12 +202,14 @@ export const ALPHA_NOTE =
  *  comparing them found nothing to compare (issue #361). A tier that raises
  *  a number says which number. */
 export const BUSINESS_LITE_LIMITS: string[] = [
+  'Leased cloud runners: no monthly cap.',
   'Cloud runner: 4 GB memory, 2 CPUs.',
   'Cloud runner lease: 120 minutes, reclaimed after 20 idle minutes.',
   'Largest figure: 512 MB.',
 ];
 
 export const BUSINESS_LIMITS: string[] = [
+  'As many shared workspaces and members as you need; members are what is billed.',
   'Cloud runner: 8 GB memory, 4 CPUs.',
   'Cloud runner lease: 240 minutes, reclaimed after 30 idle minutes.',
   'Largest figure: 1 GB.',

@@ -379,3 +379,44 @@ func TestSessionKeysDoNotShadowConnectorKeys(t *testing.T) {
 		t.Errorf("HasOnlinePersonalKey = %v, %v; a live cloud runner should count as the member's runner", online, err)
 	}
 }
+
+// The month's leased minutes: an ended session to its end, a live one to
+// now, nothing from before the month started.
+func TestMinutesUsedCountsEndedAndLiveLeases(t *testing.T) {
+	f := newRunnerPoolFixture(t)
+	node := f.registerNode(t, "pool-1")
+	now := time.Now()
+	monthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
+
+	// Ended: 30 minutes, this month (started now, ended 30 minutes later
+	// — the clock is what the columns say, not when the test runs).
+	ended := f.lease(t, uuid.New().String(), node.ID, now.Add(2*time.Hour), 15)
+	endedAt := ended.StartedAt.Add(30 * time.Minute)
+	ended.Status = runnersessions.StatusEnded
+	ended.EndedAt = &endedAt
+	if err := f.repo.UpdateSession(ended); err != nil {
+		t.Fatal(err)
+	}
+	// Live: started 10 minutes ago, measured to now.
+	live := f.lease(t, uuid.New().String(), node.ID, now.Add(2*time.Hour), 15)
+	if _, err := f.db.Exec(`UPDATE runner_sessions SET started_at = $2 WHERE id = $1`, live.ID, now.Add(-10*time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	// Last month: never counted.
+	old := f.lease(t, uuid.New().String(), node.ID, now.Add(2*time.Hour), 15)
+	if _, err := f.db.Exec(`UPDATE runner_sessions SET started_at = $2, ended_at = $3, status = 'ended' WHERE id = $1`,
+		old.ID, monthStart.Add(-48*time.Hour), monthStart.Add(-47*time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+
+	used, err := f.repo.MinutesUsed(f.orgID, monthStart)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if used < 39 || used > 41 {
+		t.Fatalf("minutes used = %d, want about 40 (30 ended + 10 live)", used)
+	}
+	if other, _ := f.repo.MinutesUsed(uuid.New().String(), monthStart); other != 0 {
+		t.Fatalf("another workspace's minutes = %d", other)
+	}
+}

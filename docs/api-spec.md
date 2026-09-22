@@ -767,7 +767,26 @@ grant nothing it does not hold; a provider failure is `503` with
 `code: "billing_upstream"` and `Retry-After`, the workspace left as it was.
 The limits response likewise carries `entitled_plan`, `plan_status` and
 `grandfathered`, so a member can see there is a payment problem without
-seeing anything about money.
+seeing anything about money. Each flag (`hosted_automation`, `teams`,
+`workspace_budget`) is listed with `kind: "flag"` and `included`, and
+`hosted_runner_minutes_month` with the month's leased minutes as `used`.
+
+**Read-only over plan.** `read_only` is true, and `over_plan` names the
+limits, while a workspace holds more than its plan allows (more members
+than `max_members`, more projects than `max_projects`) — after a lapsed
+subscription, say. Every mutating request scoped to that workspace or its
+projects then answers `403` with `code: "plan_read_only"`, `over` and
+`remedy`, except the writes that bring it back under plan or out: removing
+a member or leaving, revoking an invitation, deleting a project or the
+workspace, the billing endpoints, and import. Reads, and export in every
+format, are never refused in any state. A flag the plan does not include
+is refused with `403 limit_reached` naming the flag, at: creating a hosted
+runner and a hosted worker's run claim (`hosted_automation`; a claim by the
+member's own Agent Connector is never gated), creating a people-team and
+granting a team on a project (`teams`), and the workspace usage rollup and
+budget (`workspace_budget`). A cloud-runner lease is cut to the month's
+remaining `hosted_runner_minutes_month` and refused with `limit_reached`
+once none is left.
 
 A purchase is a redirect: `checkout` answers with a page of the provider's
 and the browser returns to the Billing tab with `?checkout=done&session_id=`,

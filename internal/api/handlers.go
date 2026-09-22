@@ -149,6 +149,9 @@ type HandlerDeps struct {
 	// BillingService is the subscription sync path; nil or disabled where
 	// no provider is configured.
 	BillingService *billing.Service
+	// MinutesAlerts tells workspace admins when leased cloud-runner minutes
+	// near or reach the month's allowance; nil means no alerts.
+	MinutesAlerts *notify.MinutesMonitor
 	// Registration is the deployment's sign-up policy ("open" or "closed",
 	// see RegistrationPolicyFromEnv); empty means open.
 	Registration string
@@ -259,6 +262,8 @@ type Handler struct {
 	// deployment with no billing provider, where every billing route
 	// answers 404 billing_unavailable.
 	billing *billing.Service
+	// minutesAlerts is nil-safe; see notify.MinutesMonitor.Check.
+	minutesAlerts *notify.MinutesMonitor
 	// inviteLimiter bounds invitations per INVITING ACCOUNT: creating one
 	// mails an address the sender chose, so the endpoint is a mail relay
 	// (see ratelimit.go).
@@ -355,6 +360,7 @@ func NewHandler(deps HandlerDeps) *Handler {
 		billingRefreshLimiter:  newRateLimiterFromEnv(envBillingRefreshBurst, envBillingRefreshRefill, defaultBillingRefreshBurst, defaultBillingRefreshRefill),
 		billingWriteLimiter:    newRateLimiterFromEnv(envBillingWriteBurst, envBillingWriteRefill, defaultBillingWriteBurst, defaultBillingWriteRefill),
 		billing:                deps.BillingService,
+		minutesAlerts:          deps.MinutesAlerts,
 		inviteLimiter:          newRateLimiterFromEnv(envInviteBurst, envInviteRefill, defaultInviteBurst, defaultInviteRefill),
 		mailer:                 deps.Mailer,
 		emailLinkBase:          deps.EmailLinkBase,
@@ -418,9 +424,9 @@ func (h *Handler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/projects", h.ListProjects).Methods("GET")
 	router.HandleFunc("/api/v1/projects/{id}", h.GetProject).Methods("GET")
 	router.HandleFunc("/api/v1/projects/{id}", h.UpdateProject).Methods("PUT")
-	router.HandleFunc("/api/v1/projects/{id}", h.DeleteProject).Methods("DELETE")
+	router.HandleFunc("/api/v1/projects/{id}", h.alwaysWritable(h.DeleteProject)).Methods("DELETE")
 	router.HandleFunc("/api/v1/projects/{id}/export", h.ExportProject).Methods("GET")
-	router.HandleFunc("/api/v1/projects/import", h.ImportProject).Methods("POST")
+	router.HandleFunc("/api/v1/projects/import", h.alwaysWritable(h.ImportProject)).Methods("POST")
 	router.HandleFunc("/api/v1/projects/{id}/report", h.GenerateReport).Methods("GET")
 	// One download surface with a route per output; see download_handlers.go.
 	h.registerDownloadRoutes(router)

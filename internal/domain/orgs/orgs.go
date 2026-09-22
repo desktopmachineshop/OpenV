@@ -172,6 +172,9 @@ type Repository interface {
 	// higher than the recorded one, so an alert fires exactly once per
 	// threshold per month even under concurrent finishers or replicas.
 	ClaimBudgetAlert(orgID, month string, threshold int) (bool, error)
+	// ClaimMinutesAlert is the same dedupe claim for the hosted-minutes
+	// allowance (migration 47).
+	ClaimMinutesAlert(orgID, month string, threshold int) (bool, error)
 
 	// Billing writers. Each touches only the billing columns it names; the
 	// plan column is written only by SetPlan and ApplyBillingState.
@@ -195,6 +198,12 @@ type Repository interface {
 	ClearBillingSubscription(orgID string) error
 	// SetGrandfathered writes only plan_grandfathered.
 	SetGrandfathered(orgID string, on bool) error
+	// GrandfatherBefore lays the given overrides under the limits of every
+	// workspace created before cutoff that is not yet grandfathered — soft-
+	// deleted ones included, so a restore comes back to the terms it left
+	// under — and marks them. A key the workspace already sets is kept.
+	// Returns how many rows it changed; a second run changes none.
+	GrandfatherBefore(cutoff time.Time, overrides map[string]interface{}) (int64, error)
 	// FindOrgByBillingRef finds the workspace holding a customer or
 	// subscription ref (kind BillingRefCustomer / BillingRefSubscription),
 	// deleted ones included; nil when none does.
@@ -280,6 +289,9 @@ type Service interface {
 	// ClaimBudgetAlert is the atomic dedupe claim used by the budget-alert
 	// subscriber; see Repository.ClaimBudgetAlert.
 	ClaimBudgetAlert(orgID, month string, threshold int) (bool, error)
+	// ClaimMinutesAlert is the same dedupe claim for the hosted-minutes
+	// allowance (migration 47).
+	ClaimMinutesAlert(orgID, month string, threshold int) (bool, error)
 
 	// Billing pass-throughs; see Repository.
 	SetBillingCustomer(orgID, customerRef, currency string) error
@@ -287,6 +299,9 @@ type Service interface {
 	SetBilledSeats(orgID string, seats int) error
 	ClearBillingSubscription(orgID string) error
 	SetGrandfathered(orgID string, on bool) error
+	// GrandfatherBefore keeps every workspace created before cutoff on the
+	// alpha terms; see Repository.GrandfatherBefore.
+	GrandfatherBefore(cutoff time.Time) (int64, error)
 	FindOrgByBillingRef(kind, ref string) (*Org, error)
 	ListBillingOrgs(limit int) ([]*Org, error)
 
@@ -542,6 +557,12 @@ func (s *DefaultService) SetGrandfathered(orgID string, on bool) error {
 	return s.repo.SetGrandfathered(orgID, on)
 }
 
+// GrandfatherBefore implements Service: every workspace created before the
+// announced date keeps the alpha terms (AlphaTerms), for good.
+func (s *DefaultService) GrandfatherBefore(cutoff time.Time) (int64, error) {
+	return s.repo.GrandfatherBefore(cutoff, AlphaTerms())
+}
+
 // FindOrgByBillingRef implements Service.
 func (s *DefaultService) FindOrgByBillingRef(kind, ref string) (*Org, error) {
 	return s.repo.FindOrgByBillingRef(kind, ref)
@@ -603,6 +624,11 @@ func (s *DefaultService) ClearLogo(id string) (*Org, error) {
 // to the repository (see Repository.ClaimBudgetAlert).
 func (s *DefaultService) ClaimBudgetAlert(orgID, month string, threshold int) (bool, error) {
 	return s.repo.ClaimBudgetAlert(orgID, month, threshold)
+}
+
+// ClaimMinutesAlert delegates the hosted-minutes alert dedupe claim.
+func (s *DefaultService) ClaimMinutesAlert(orgID, month string, threshold int) (bool, error) {
+	return s.repo.ClaimMinutesAlert(orgID, month, threshold)
 }
 
 // DeleteOrg soft-deletes a company workspace. Refuses personal workspaces;

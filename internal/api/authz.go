@@ -23,6 +23,19 @@ import (
 // editor-equivalent inside their own project only; workers pass only for
 // projects belonging to their own org.
 func (h *Handler) requireProjectRole(w http.ResponseWriter, r *http.Request, projectID string, minRole string) bool {
+	if !h.projectAccess(w, r, projectID, minRole) {
+		return false
+	}
+	// Access decided, one more question for a write: is the workspace
+	// over its plan? A read-only workspace refuses every write but the
+	// ones that bring it back under plan (limits.go, requireWritable).
+	if mutating(r.Method) {
+		return h.requireWritable(w, r, h.orgIDForProject(projectID))
+	}
+	return true
+}
+
+func (h *Handler) projectAccess(w http.ResponseWriter, r *http.Request, projectID string, minRole string) bool {
 	if projectID == "" {
 		writeJSONError(w, http.StatusNotFound, "project not found")
 		return false
@@ -82,6 +95,13 @@ func (h *Handler) requireProjectRole(w http.ResponseWriter, r *http.Request, pro
 // requireOrgRole enforces workspace access: platform admins pass; org admins
 // satisfy any minRole; members satisfy "member". Writes 401/403 on failure.
 func (h *Handler) requireOrgRole(w http.ResponseWriter, r *http.Request, orgID string, minRole string) bool {
+	if !h.orgAccess(w, r, orgID, minRole) {
+		return false
+	}
+	return h.requireWritable(w, r, orgID)
+}
+
+func (h *Handler) orgAccess(w http.ResponseWriter, r *http.Request, orgID string, minRole string) bool {
 	if orgID == "" {
 		writeJSONError(w, http.StatusNotFound, "workspace not found")
 		return false

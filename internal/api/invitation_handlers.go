@@ -45,7 +45,7 @@ import (
 func (h *Handler) registerInvitationRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/orgs/{id}/invitations", h.ListOrgInvitations).Methods("GET")
 	router.HandleFunc("/api/v1/orgs/{id}/invitations", h.CreateOrgInvitation).Methods("POST")
-	router.HandleFunc("/api/v1/orgs/{id}/invitations/{invId}", h.RevokeOrgInvitation).Methods("DELETE")
+	router.HandleFunc("/api/v1/orgs/{id}/invitations/{invId}", h.alwaysWritable(h.RevokeOrgInvitation)).Methods("DELETE")
 }
 
 // invitationResponse is what an admin gets back when an invitation is

@@ -648,6 +648,16 @@ func (h *Handler) ClaimAgentRun(w http.ResponseWriter, r *http.Request) {
 	// A transient runner's idle clock measures work, not polling: claiming a
 	// run is what counts as use.
 	h.touchRunnerSession(r)
+	// Unattended hosted compute is a plan flag. The gate is here, at the
+	// hosted claim, and not at the automation: the same queued run claimed
+	// by the member's own machine through the Agent Connector is exactly
+	// the run that is never gated.
+	if req.Hosted {
+		if err := h.checkFlag(WorkerOrg(r), orgs.LimitHostedAutomation); err != nil {
+			h.writeLimitError(w, err)
+			return
+		}
+	}
 	// Hosted runners never execute repo-access agents.
 	run, err := h.runService.Claim(req.WorkerID, WorkerOrg(r), WorkerUser(r), req.Providers, req.MinPriority, req.Hosted)
 	if err != nil {

@@ -283,6 +283,25 @@ func (r *RunnerSessionRepository) ListLiveSessions(orgID string) ([]*runnersessi
 	return collectSessions(rows)
 }
 
+// MinutesUsed implements runnersessions.Repository. A session is attributed
+// whole to the month it started in; a live one is measured to now, so an
+// allowance cannot be outrun by a lease that never ends.
+func (r *RunnerSessionRepository) MinutesUsed(orgID string, since time.Time) (int, error) {
+	var minutes sql.NullFloat64
+	err := r.db.QueryRow(`
+		SELECT COALESCE(SUM(EXTRACT(EPOCH FROM (COALESCE(ended_at, LEAST(NOW(), expires_at)) - started_at)) / 60), 0)
+		FROM runner_sessions
+		WHERE org_id = $1 AND started_at >= $2
+	`, orgID, since.UTC()).Scan(&minutes)
+	if err != nil {
+		return 0, err
+	}
+	if !minutes.Valid || minutes.Float64 < 0 {
+		return 0, nil
+	}
+	return int(minutes.Float64 + 0.5), nil
+}
+
 func collectSessions(rows *sql.Rows) ([]*runnersessions.Session, error) {
 	var result []*runnersessions.Session
 	for rows.Next() {

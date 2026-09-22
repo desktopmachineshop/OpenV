@@ -507,12 +507,33 @@ Notes:
     beats both layers above.
   - The full list of keys, with what each one means, is in the manual's
     workspace chapter and at `GET /api/v1/orgs/{id}/limits`.
-  - The count limits (`max_members`, `max_shared_workspaces`, `max_projects`)
-    ship at zero on every plan, so nothing is refused until somebody
-    deliberately sets one. The flags (`hosted_automation`, `teams`,
-    `workspace_budget`) are limits whose value is `true` or `false` rather
-    than a number, resolved through the same three layers; they ship on for
-    every plan.
+  - The count limits (`max_members`, `max_shared_workspaces`, `max_projects`,
+    `hosted_runner_minutes_month`) and the flags (`hosted_automation`,
+    `teams`, `workspace_budget` — limits whose value is `true` or `false`,
+    resolved through the same three layers) are on the **alpha terms** —
+    every count open, every flag on, for every plan — until
+    `OPENV_BILLING_GRANDFATHER_BEFORE` is set. Setting it (an RFC 3339
+    date-time, the date announced with the first live price) does two things
+    at every boot, in this order: it writes the alpha terms into the own
+    limits of every workspace created before that date that is not yet
+    marked grandfathered (soft-deleted ones included; a key the workspace
+    already sets is kept; a second boot changes nothing), and it turns the
+    tier values on for everyone else. The step is fatal if it fails, so the
+    tiers can never be on with the promise unkept. Self-hosted deployments
+    ignore it. The tier values:
+
+    | plan | members | shared workspaces | projects | hosted automation | teams | budget | cloud-runner minutes/month |
+    |---|---|---|---|---|---|---|---|
+    | `single` / `free` | 2 | 1 | 200 | off | off | off | 300 |
+    | `business_lite` | 2 | 1 | 500 | on | off | off | unlimited |
+    | `business` / `team` / `open_source` | unlimited | unlimited | 1000 | on | on | on | unlimited |
+    | `enterprise` / `self_host` | unlimited | unlimited | unlimited | on | on | on | unlimited |
+
+    A workspace over its plan's counts is read-only until it trims or
+    upgrades (see the API spec, *Read-only over plan*); reads and export are
+    never refused. Leased cloud-runner minutes are counted per workspace per
+    calendar month from `runner_sessions`; admins are notified at 80% and
+    100% of the allowance once per month (`hosted_minutes` notifications).
 - **Billing** (`docs/plans/billing-stripe.md`) is off unless
   `STRIPE_SECRET_KEY` is set, and off with a warning on a self-hosted
   deployment even then: nothing starts, nothing dials out, and the billing

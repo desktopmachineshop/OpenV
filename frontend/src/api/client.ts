@@ -1686,6 +1686,10 @@ export interface LimitUsage {
   /** A ceiling nothing raises — no plan, no setting. Shown as a fact rather
    *  than as a warning that the workspace is full. */
   fixed?: boolean;
+  /** resource | count | flag. A flag has no number, only `included`. */
+  kind?: 'resource' | 'count' | 'flag';
+  /** A flag's reading: whether the plan includes the thing. */
+  included?: boolean;
 }
 
 export interface WorkspaceLimits {
@@ -1700,6 +1704,11 @@ export interface WorkspaceLimits {
   plan_status: string;
   /** Keeps the alpha terms through its own limit overrides. */
   grandfathered: boolean;
+  /** True while the workspace holds more than its plan allows: every write
+   *  is refused until it upgrades or trims; reads and export never are. */
+  read_only?: boolean;
+  /** The limits it is past, by key. */
+  over_plan?: string[];
   /** Decides which remedy to offer: a plan upgrade, or a setting to change. */
   self_hosted: boolean;
   limits: LimitUsage[];

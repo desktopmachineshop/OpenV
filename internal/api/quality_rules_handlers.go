@@ -145,6 +145,9 @@ func (h *Handler) UpdateWorkspaceQualityRules(w http.ResponseWriter, r *http.Req
 // be loaded — the settings service then resolves the project level alone
 // rather than failing a read that is only advisory.
 func (h *Handler) orgIDForProject(projectID string) string {
+	if h.projectService == nil || projectID == "" {
+		return ""
+	}
 	project, err := h.projectService.GetProject(projectID)
 	if err != nil || project == nil {
 		return ""
