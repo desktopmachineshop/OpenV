@@ -754,6 +754,7 @@ func main() {
 		billingService.SetUsers(userService)
 		billingService.SetPortalConfig(billingCfg.PortalConfig)
 		billingService.SetTrialDays(billingCfg.TrialDays)
+		billingService.SetMaxSeats(billingCfg.MaxSeats)
 		if billingCfg.ReturnURL != "" {
 			billingService.SetReturnURL(billingCfg.ReturnURL)
 		}

@@ -28,6 +28,12 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ### Maintenance updates
 
+- **A Business subscription's seat count follows the Members tab on its
+  own.** Adding, inviting, removing or revoking updates the billed quantity
+  within a few seconds, prorated on the next invoice, and the Billing tab
+  shows the seats billed beside the members counted. A membership change
+  never waits on, or fails because of, the billing provider; a missed
+  update is caught within minutes.
 - **Workspace plans now carry a billing status, and the pricing page can
   read live prices.** A workspace's limits resolve from the plan it is
   entitled to, which is its plan while a subscription (there is none yet) is

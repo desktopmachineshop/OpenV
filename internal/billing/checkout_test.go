@@ -59,7 +59,10 @@ func itoa(n int) string { return strconv.Itoa(n) }
 
 type trialUsers struct{ marked []string }
 
-func (u *trialUsers) MarkBillingTrialUsed(id string) error { u.marked = append(u.marked, id); return nil }
+func (u *trialUsers) MarkBillingTrialUsed(id string) error {
+	u.marked = append(u.marked, id)
+	return nil
+}
 
 func (f *fakeOrgs) SetBillingCustomer(orgID, ref, currency string) error {
 	o, ok := f.orgs[orgID]
@@ -148,10 +151,10 @@ func TestCheckoutRefusesWhatCannotBeSold(t *testing.T) {
 	ctx := context.Background()
 
 	cases := []struct {
-		name string
-		org  *orgs.Org
+		name                     string
+		org                      *orgs.Org
 		plan, interval, currency string
-		want error
+		want                     error
 	}{
 		{"unknown plan", personal, orgs.PlanEnterprise, IntervalMonth, "", ErrUnknownPlan},
 		{"unknown interval", personal, orgs.PlanBusiness, "week", "", ErrUnknownPlan},

@@ -644,6 +644,7 @@ func (h *Handler) RemoveOrgMember(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	h.seatsChanged(vars["id"])
 	// "self" separates leaving from being removed. They read completely
 	// differently to both audiences, and only one of them is news to the
 	// person it happened to.

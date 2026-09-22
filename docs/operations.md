@@ -548,6 +548,16 @@ Notes:
   - `OPENV_BILLING_TRIAL_DAYS` (default 14) is the trial a buyer's first
     subscription starts with; a buyer gets one trial across every workspace
     they create. `0` turns trials off.
+  - A Business subscription's quantity follows the workspace's seats
+    (members plus pending invitations). A membership change commits first
+    and queues the push; pushes coalesce for a couple of seconds so a bulk
+    invite is one proration, and a push the provider refused or a full queue
+    lost is repaired on the next reconcile tick, which reports
+    `billing_seat_drift` (how many workspaces differed). Above
+    `OPENV_BILLING_MAX_SEATS` (default 500) the quantity is **not** pushed and
+    `billing_seat_push_refused_total` increments — the workspace is
+    under-billed until an operator looks, which beats a runaway invitation
+    loop charging a five-figure invoice. Business Lite is never synced.
   - The one exception is a **personal workspace, which always seats exactly
     one person**. That is not a ration, so no plan, no `OPENV_LIMITS` and no
     per-workspace setting raises it — a personal workspace with two people in

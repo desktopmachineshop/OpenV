@@ -15,6 +15,7 @@ func (s *Service) Start(ctx context.Context, interval time.Duration) {
 	if interval > 0 {
 		s.interval = interval
 	}
+	s.startSeatSync(ctx)
 	go func() {
 		s.Reconcile(ctx)
 		ticker := time.NewTicker(s.interval)

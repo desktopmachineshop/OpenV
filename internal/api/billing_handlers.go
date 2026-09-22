@@ -159,6 +159,17 @@ func (h *Handler) OpenOrgBillingPortal(w http.ResponseWriter, r *http.Request) {
 // orgBillingResponse is what the Billing tab reads: the billed and entitled
 // plans, the mirrored subscription snapshot (never a provider id), and the
 // catalogue so the tab can offer what is for sale.
+// seatsChanged tells the billing service a workspace's seat count may have
+// moved, after the local write committed. Never inline and never a failure
+// the caller sees: a membership change must not wait on, or fail because
+// of, the billing provider. Accepting an invitation is not a change — the
+// invitation was already a seat — so acceptance does not call this.
+func (h *Handler) seatsChanged(orgID string) {
+	if h.billing != nil {
+		h.billing.SeatsChanged(orgID)
+	}
+}
+
 type orgBillingResponse struct {
 	OrgID        string `json:"org_id"`
 	Plan         string `json:"plan"`

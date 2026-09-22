@@ -40,6 +40,8 @@ type Metrics struct {
 	billingRequests     *prometheus.CounterVec
 	billingUnknownPrice prometheus.Counter
 	billingSyncStale    prometheus.Gauge
+	billingSeatDrift    prometheus.Gauge
+	billingSeatRefused  prometheus.Counter
 
 	// lastState tracks the last-observed status of in-flight runs so a
 	// transition can decrement the gauge bucket the run is leaving. Runs are
@@ -94,9 +96,17 @@ func New() *Metrics {
 			Name: "billing_sync_stale_seconds",
 			Help: "Age of the oldest mirrored subscription snapshot after the last reconcile. Alert above three times the reconcile interval.",
 		}),
+		billingSeatDrift: prometheus.NewGauge(prometheus.GaugeOpts{
+			Name: "billing_seat_drift",
+			Help: "Business workspaces whose billed quantity differed from their seat count at the start of the last reconcile.",
+		}),
+		billingSeatRefused: prometheus.NewCounter(prometheus.CounterOpts{
+			Name: "billing_seat_push_refused_total",
+			Help: "Seat quantities refused for being above OPENV_BILLING_MAX_SEATS; the workspace is under-billed. Alert on any increase.",
+		}),
 	}
 	reg.MustRegister(m.httpRequests, m.httpDuration, m.agentRuns, m.queued, m.running,
-		m.billingRequests, m.billingUnknownPrice, m.billingSyncStale)
+		m.billingRequests, m.billingUnknownPrice, m.billingSyncStale, m.billingSeatDrift, m.billingSeatRefused)
 	reg.MustRegister(
 		collectors.NewGoCollector(),
 		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
@@ -136,6 +146,12 @@ func (m *Metrics) UnknownPrice() { m.billingUnknownPrice.Inc() }
 
 // SyncStaleSeconds implements billing.Metrics.
 func (m *Metrics) SyncStaleSeconds(seconds float64) { m.billingSyncStale.Set(seconds) }
+
+// SeatDrift implements billing.Metrics.
+func (m *Metrics) SeatDrift(count int) { m.billingSeatDrift.Set(float64(count)) }
+
+// SeatPushRefused implements billing.Metrics.
+func (m *Metrics) SeatPushRefused() { m.billingSeatRefused.Inc() }
 
 // WatchSSEConnections registers a gauge that reports the current SSE listener
 // count by calling fn on each scrape.

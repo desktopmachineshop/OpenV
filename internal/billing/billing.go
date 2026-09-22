@@ -199,6 +199,12 @@ type Metrics interface {
 	// SyncStaleSeconds is the age of the oldest snapshot across billed
 	// workspaces after a reconcile. Alert above three times the interval.
 	SyncStaleSeconds(seconds float64)
+	// SeatDrift is how many Business workspaces' billed quantity differed
+	// from their seat count at the start of a reconcile.
+	SeatDrift(count int)
+	// SeatPushRefused counts a quantity refused for being above the
+	// ceiling. Alert on any increase: somebody is under-billed.
+	SeatPushRefused()
 }
 
 // NoMetrics is the Metrics that reports nothing.
@@ -207,6 +213,8 @@ type NoMetrics struct{}
 func (NoMetrics) ProviderRequest(string, int) {}
 func (NoMetrics) UnknownPrice()               {}
 func (NoMetrics) SyncStaleSeconds(float64)    {}
+func (NoMetrics) SeatDrift(int)               {}
+func (NoMetrics) SeatPushRefused()            {}
 
 // MapStatus turns a provider status into a PlanStatus. Unrecognised values
 // pass through unchanged, and EntitledPlan treats anything it does not
@@ -250,6 +258,8 @@ type Config struct {
 	PortalConfig string
 	// TrialDays is the first-time buyer's trial; 0 disables trials.
 	TrialDays int
+	// MaxSeats is the quantity above which a seat push is refused.
+	MaxSeats int
 }
 
 // Enabled reports whether a provider is configured.
@@ -267,6 +277,14 @@ func ConfigFromEnv(getenv func(string) string) (Config, error) {
 		ReturnURL:         strings.TrimRight(strings.TrimSpace(getenv("OPENV_BILLING_RETURN_URL")), "/"),
 		PortalConfig:      strings.TrimSpace(getenv("OPENV_BILLING_PORTAL_CONFIG")),
 		TrialDays:         DefaultTrialDays,
+		MaxSeats:          DefaultMaxSeats,
+	}
+	if raw := strings.TrimSpace(getenv("OPENV_BILLING_MAX_SEATS")); raw != "" {
+		var n int
+		if _, err := fmt.Sscanf(raw, "%d", &n); err != nil || n < 1 {
+			return cfg, fmt.Errorf("OPENV_BILLING_MAX_SEATS must be a whole number of seats, got %q", raw)
+		}
+		cfg.MaxSeats = n
 	}
 	if raw := strings.TrimSpace(getenv("OPENV_BILLING_TRIAL_DAYS")); raw != "" {
 		var days int

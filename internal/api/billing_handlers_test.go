@@ -211,11 +211,12 @@ func contains(s, sub string) bool {
 
 type purchaseProviderFake struct {
 	billing.Provider
-	prices    map[string]*billing.Price
-	sessions  map[string]*billing.CheckoutSession
-	subs      map[string]*billing.Subscription
-	checkouts int
-	portals   int
+	prices     map[string]*billing.Price
+	sessions   map[string]*billing.CheckoutSession
+	subs       map[string]*billing.Subscription
+	checkouts  int
+	portals    int
+	quantities []int
 }
 
 func (p *purchaseProviderFake) Name() string { return "fake" }
@@ -244,6 +245,10 @@ func (p *purchaseProviderFake) GetSubscription(_ context.Context, id string) (*b
 	}
 	return nil, billing.ErrNotFound
 }
+func (p *purchaseProviderFake) SetItemQuantity(_ context.Context, itemID string, qty int) error {
+	p.quantities = append(p.quantities, qty)
+	return errors.New("stripe is down")
+}
 func (p *purchaseProviderFake) CreatePortalSession(context.Context, string, string, string) (string, error) {
 	p.portals++
 	return "https://portal.example/cus_1", nil
@@ -255,6 +260,7 @@ type purchaseOrgFake struct {
 	orgType  string
 	billing  orgs.Billing
 	customer string
+	removed  []string
 }
 
 func (f *purchaseOrgFake) Get(id string) (*orgs.Org, error) {
@@ -265,6 +271,10 @@ func (f *purchaseOrgFake) Get(id string) (*orgs.Org, error) {
 	o.OrgType = f.orgType
 	o.Billing = f.billing
 	return o, nil
+}
+func (f *purchaseOrgFake) RemoveMember(orgID, userID string) error {
+	f.removed = append(f.removed, userID)
+	return nil
 }
 func (f *purchaseOrgFake) ListMembers(orgID string) ([]*orgs.Member, error) {
 	return []*orgs.Member{{OrgID: orgID, UserID: "admin", Role: orgs.RoleAdmin}, {OrgID: orgID, UserID: "member", Role: orgs.RoleMember}}, nil
@@ -418,5 +428,36 @@ func TestRefreshBindsThroughTheSessionAndRefusesAnotherWorkspaces(t *testing.T) 
 	_ = json.Unmarshal(w.Body.Bytes(), &out)
 	if out.Plan != orgs.PlanBusiness || out.Billing.Status != orgs.PlanStatusTrialing || svc.billing.SubscriptionRef != "sub_1" {
 		t.Fatalf("bound state = %+v", out)
+	}
+}
+
+// The load-bearing property of seat sync: a membership change commits and
+// answers before the provider is asked anything, and a provider that is
+// down changes nothing about the answer. The push happens on the queue's
+// drain, and its failure is the reconciler's to repair.
+func TestMembershipChangeSucceedsWhenTheProviderIsDown(t *testing.T) {
+	h, svc, provider := purchaseHandler(t, orgs.TypeCompany)
+	svc.plan = orgs.PlanBusiness
+	svc.billing = orgs.Billing{Status: orgs.PlanStatusActive, Seats: 5, SubscriptionRef: "sub_1", ItemRef: "si_1", CustomerRef: "cus_1"}
+	admin := &users.User{ID: "admin", Email: "admin@example.com", Name: "Admin"}
+
+	r := httptest.NewRequest(http.MethodDelete, "/api/v1/orgs/org-1/members/member", nil)
+	r = r.WithContext(context.WithValue(r.Context(), ctxUser, admin))
+	r = mux.SetURLVars(r, map[string]string{"id": "org-1", "userId": "member"})
+	w := httptest.NewRecorder()
+	h.RemoveOrgMember(w, r)
+	if w.Code != http.StatusNoContent || len(svc.removed) != 1 {
+		t.Fatalf("remove: %d %s removed=%v", w.Code, w.Body.String(), svc.removed)
+	}
+	if len(provider.quantities) != 0 {
+		t.Fatalf("the handler waited on the provider: %v", provider.quantities)
+	}
+	if n := h.billing.FlushSeats(context.Background()); n != 1 {
+		t.Fatalf("queued %d workspaces, want 1", n)
+	}
+	// The drain tried — with the seat count the members panel reads — and
+	// the provider's failure went nowhere near the member.
+	if len(provider.quantities) != 1 || provider.quantities[0] != 2 {
+		t.Fatalf("pushed %v, want [2]", provider.quantities)
 	}
 }

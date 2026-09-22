@@ -28,6 +28,11 @@ type Service struct {
 	returnURL    string
 	portalConfig string
 	trialDays    int
+
+	// Seat sync; see seats.go.
+	seatQueue chan string
+	seatDelay time.Duration
+	maxSeats  int
 }
 
 // New wires a service. A nil provider is the off switch: Enabled reports
@@ -48,6 +53,9 @@ func New(provider Provider, orgSvc Orgs, registry *Registry, m Metrics) *Service
 		now:       time.Now,
 		log:       slog.Default().With("component", "billing"),
 		trialDays: DefaultTrialDays,
+		seatQueue: make(chan string, 1024),
+		seatDelay: 2 * time.Second,
+		maxSeats:  DefaultMaxSeats,
 	}
 }
 
@@ -183,6 +191,7 @@ func (s *Service) Reconcile(ctx context.Context) {
 		}
 	}
 	s.metrics.SyncStaleSeconds(oldest.Seconds())
+	s.repairSeatDrift(ctx, billed)
 
 	if err := s.RefreshPrices(ctx); err != nil {
 		s.log.Warn("prices not confirmed; the pricing page keeps its last reading", "error", err)
