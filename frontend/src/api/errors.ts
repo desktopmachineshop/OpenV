@@ -45,6 +45,14 @@ export function limitRefusal(err: unknown): LimitRefusal | null {
   };
 }
 
+/** True when the API refused a write because the workspace is over its
+ *  plan and read-only. The message already says what to do; this lets the
+ *  UI point at the Billing tab. */
+export function isPlanReadOnlyError(err: unknown): boolean {
+  const anyErr = err as { response?: { status?: number; data?: { code?: unknown } } } | null;
+  return anyErr?.response?.status === 403 && anyErr?.response?.data?.code === 'plan_read_only';
+}
+
 /** The stable `code` field of an API error body, or '' when there is none. */
 export function apiErrorCode(err: unknown): string {
   const anyErr = err as { response?: { data?: { code?: unknown } } } | null;

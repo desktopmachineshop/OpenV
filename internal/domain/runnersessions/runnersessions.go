@@ -205,6 +205,10 @@ type Repository interface {
 	// their idle window, plus ones stuck in "starting".
 	ListLapsedSessions(now time.Time) ([]*Session, error)
 	ListLiveSessions(orgID string) ([]*Session, error)
+	// MinutesUsed is how many minutes of lease the workspace's sessions
+	// started since `since` have consumed: ended sessions to their end,
+	// live ones to now. What the monthly allowance is measured against.
+	MinutesUsed(orgID string, since time.Time) (int, error)
 }
 
 // PoolCounts summarizes a pool for an operator: whether leasing one now
@@ -302,6 +306,9 @@ type Service interface {
 	// Sweep ends lapsed sessions and offline nodes. Returns the sessions it
 	// ended, so the caller can revoke their keys.
 	Sweep(now time.Time) ([]*Session, error)
+	// MinutesUsed is the workspace's lease minutes since a moment; see
+	// Repository.MinutesUsed.
+	MinutesUsed(orgID string, since time.Time) (int, error)
 	// Counts summarizes the pool.
 	Counts(pool string) (PoolCounts, error)
 	// ListLive returns a workspace's current leases.
@@ -598,6 +605,11 @@ func (s *DefaultService) Touch(sessionID string) error {
 // ListLive returns a workspace's current leases.
 func (s *DefaultService) ListLive(orgID string) ([]*Session, error) {
 	return s.repo.ListLiveSessions(orgID)
+}
+
+// MinutesUsed implements Service.
+func (s *DefaultService) MinutesUsed(orgID string, since time.Time) (int, error) {
+	return s.repo.MinutesUsed(orgID, since)
 }
 
 // Sweep ends every lapsed lease and every session whose node went away.

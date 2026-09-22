@@ -149,6 +149,9 @@ type HandlerDeps struct {
 	// BillingService is the subscription sync path; nil or disabled where
 	// no provider is configured.
 	BillingService *billing.Service
+	// MinutesAlerts tells workspace admins when leased cloud-runner minutes
+	// near or reach the month's allowance; nil means no alerts.
+	MinutesAlerts *notify.MinutesMonitor
 	// Registration is the deployment's sign-up policy ("open" or "closed",
 	// see RegistrationPolicyFromEnv); empty means open.
 	Registration string
@@ -251,12 +254,16 @@ type Handler struct {
 	// somebody's sign-in budget (see ratelimit.go).
 	invitePreviewLimiter *rateLimiter
 	// billingRefreshLimiter bounds synchronous subscription re-reads per
-	// workspace (see ratelimit.go).
+	// workspace; billingWriteLimiter bounds the purchase writes (see
+	// ratelimit.go).
 	billingRefreshLimiter *rateLimiter
+	billingWriteLimiter   *rateLimiter
 	// billing is the subscription sync path; nil, or disabled, on a
 	// deployment with no billing provider, where every billing route
 	// answers 404 billing_unavailable.
 	billing *billing.Service
+	// minutesAlerts is nil-safe; see notify.MinutesMonitor.Check.
+	minutesAlerts *notify.MinutesMonitor
 	// inviteLimiter bounds invitations per INVITING ACCOUNT: creating one
 	// mails an address the sender chose, so the endpoint is a mail relay
 	// (see ratelimit.go).
@@ -284,7 +291,7 @@ func NewHandler(deps HandlerDeps) *Handler {
 		cookieSameSite = http.SameSiteNoneMode
 		secureCookies = true
 	}
-	return &Handler{
+	h := &Handler{
 		artifactService:        deps.ArtifactService,
 		linkService:            deps.LinkService,
 		projectService:         deps.ProjectService,
@@ -351,7 +358,9 @@ func NewHandler(deps HandlerDeps) *Handler {
 		passwordResetLimiter:   newRateLimiterFromEnv(envPasswordResetBurst, envPasswordResetRefill, defaultPasswordResetBurst, defaultPasswordResetRefill),
 		invitePreviewLimiter:   newRateLimiterFromEnv(envInvitePreviewBurst, envInvitePreviewRefill, defaultInvitePreviewBurst, defaultInvitePreviewRefill),
 		billingRefreshLimiter:  newRateLimiterFromEnv(envBillingRefreshBurst, envBillingRefreshRefill, defaultBillingRefreshBurst, defaultBillingRefreshRefill),
+		billingWriteLimiter:    newRateLimiterFromEnv(envBillingWriteBurst, envBillingWriteRefill, defaultBillingWriteBurst, defaultBillingWriteRefill),
 		billing:                deps.BillingService,
+		minutesAlerts:          deps.MinutesAlerts,
 		inviteLimiter:          newRateLimiterFromEnv(envInviteBurst, envInviteRefill, defaultInviteBurst, defaultInviteRefill),
 		mailer:                 deps.Mailer,
 		emailLinkBase:          deps.EmailLinkBase,
@@ -360,6 +369,13 @@ func NewHandler(deps HandlerDeps) *Handler {
 		registration:           deps.Registration,
 		sessionPolicy:          deps.SessionPolicy,
 	}
+	if h.billing != nil {
+		// Billed seats are the seat limit's own reading, and the return
+		// origin is the app's unless the operator named another.
+		h.billing.SetSeatCounter(h.countOrgSeats)
+		h.billing.DefaultReturnURL(h.frontendURL)
+	}
+	return h
 }
 
 // publish emits a domain event when a bus is wired (nil-safe), stamped with
@@ -408,9 +424,9 @@ func (h *Handler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/projects", h.ListProjects).Methods("GET")
 	router.HandleFunc("/api/v1/projects/{id}", h.GetProject).Methods("GET")
 	router.HandleFunc("/api/v1/projects/{id}", h.UpdateProject).Methods("PUT")
-	router.HandleFunc("/api/v1/projects/{id}", h.DeleteProject).Methods("DELETE")
+	router.HandleFunc("/api/v1/projects/{id}", h.alwaysWritable(h.DeleteProject)).Methods("DELETE")
 	router.HandleFunc("/api/v1/projects/{id}/export", h.ExportProject).Methods("GET")
-	router.HandleFunc("/api/v1/projects/import", h.ImportProject).Methods("POST")
+	router.HandleFunc("/api/v1/projects/import", h.alwaysWritable(h.ImportProject)).Methods("POST")
 	router.HandleFunc("/api/v1/projects/{id}/report", h.GenerateReport).Methods("GET")
 	// One download surface with a route per output; see download_handlers.go.
 	h.registerDownloadRoutes(router)

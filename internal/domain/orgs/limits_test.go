@@ -230,8 +230,8 @@ func TestALimitRefusalSaysWhatAndHowClose(t *testing.T) {
 			t.Errorf("the refusal is missing %q: %s", want, msg)
 		}
 	}
-	if !strings.Contains(msg, "Upgrade") {
-		t.Errorf("a hosted refusal does not offer the upgrade: %s", msg)
+	if !strings.Contains(msg, "Billing tab") {
+		t.Errorf("a hosted refusal does not point at the Billing tab: %s", msg)
 	}
 }
 
@@ -442,5 +442,126 @@ func TestMaxPlanUploadCoversEveryCappedPlan(t *testing.T) {
 		if mb, ok := LimitInt(PlanDefaults(plan), LimitMaxUploadMB); ok && mb > ceiling {
 			t.Errorf("plan %s allows %d MB, over the %d MB request ceiling", plan, mb, ceiling)
 		}
+	}
+}
+
+// The tier values are a switch, not a deployment: unset, every plan keeps
+// the alpha terms; set, the company layer is what a paid plan buys and the
+// product limits do not move.
+func TestTierValuesApplyOnlyWhenEnforced(t *testing.T) {
+	t.Cleanup(func() { SetTiersEnforced(false) })
+
+	SetTiersEnforced(false)
+	for _, plan := range allPlans {
+		d := PlanDefaults(plan)
+		for _, key := range []string{LimitMaxMembers, LimitMaxSharedWorkspaces, LimitMaxProjects, LimitHostedRunnerMinutesMonth} {
+			if _, capped := Ceiling(d, key); capped {
+				t.Errorf("alpha terms: %s caps %s", plan, key)
+			}
+		}
+		for _, key := range []string{LimitHostedAutomation, LimitTeams, LimitWorkspaceBudget} {
+			if !Allowed(d, key) {
+				t.Errorf("alpha terms: %s withholds %s", plan, key)
+			}
+		}
+	}
+
+	SetTiersEnforced(true)
+	type want struct {
+		members, shared, projects, minutes int
+		hosted, teams, budget              bool
+	}
+	table := map[string]want{
+		PlanSingle:       {2, 1, 200, FreeHostedRunnerMinutes, false, false, false},
+		PlanFree:         {2, 1, 200, FreeHostedRunnerMinutes, false, false, false},
+		PlanBusinessLite: {2, 1, 500, 0, true, false, false},
+		PlanBusiness:     {0, 0, 1000, 0, true, true, true},
+		PlanTeam:         {0, 0, 1000, 0, true, true, true},
+		PlanOpenSource:   {0, 0, 1000, 0, true, true, true},
+		PlanEnterprise:   {0, 0, 0, 0, true, true, true},
+		PlanSelfHost:     {0, 0, 0, 0, true, true, true},
+	}
+	for plan, w := range table {
+		d := PlanDefaults(plan)
+		got := want{}
+		got.members, _ = LimitInt(d, LimitMaxMembers)
+		got.shared, _ = LimitInt(d, LimitMaxSharedWorkspaces)
+		got.projects, _ = LimitInt(d, LimitMaxProjects)
+		got.minutes, _ = LimitInt(d, LimitHostedRunnerMinutesMonth)
+		got.hosted, got.teams, got.budget = Allowed(d, LimitHostedAutomation), Allowed(d, LimitTeams), Allowed(d, LimitWorkspaceBudget)
+		if got != w {
+			t.Errorf("%s: %+v, want %+v", plan, got, w)
+		}
+	}
+	// The product limits are not what a tier buys.
+	if a, _ := LimitInt(PlanDefaults(PlanSingle), LimitEvidenceStorageMB); a != 2048 {
+		t.Errorf("a product limit moved with the tiers: %d", a)
+	}
+	// Business bills per seat, so it never caps seats.
+	if _, capped := Ceiling(PlanDefaults(PlanBusiness), LimitMaxMembers); capped {
+		t.Error("Business caps the seats it bills for")
+	}
+}
+
+// A grandfathered workspace is on the alpha terms through its own limits,
+// whatever its plan and whatever the switch: the promise is data the
+// enforcement reads, not a code path.
+func TestAlphaTermsKeepAGrandfatheredWorkspaceOpen(t *testing.T) {
+	t.Cleanup(func() { SetTiersEnforced(false) })
+	SetTiersEnforced(true)
+
+	org := &Org{BilledPlan: PlanSingle, OrgType: TypeCompany, Limits: AlphaTerms()}
+	limits := org.EffectiveLimits()
+	for _, key := range []string{LimitMaxMembers, LimitMaxSharedWorkspaces, LimitMaxProjects, LimitHostedRunnerMinutesMonth} {
+		if _, capped := Ceiling(limits, key); capped {
+			t.Errorf("grandfathered workspace is capped on %s", key)
+		}
+	}
+	for _, key := range []string{LimitHostedAutomation, LimitTeams, LimitWorkspaceBudget} {
+		if !Allowed(limits, key) {
+			t.Errorf("grandfathered workspace lost %s", key)
+		}
+	}
+	if len(OverPlan(limits, map[string]int{LimitMaxMembers: 40, LimitMaxProjects: 900})) != 0 {
+		t.Error("a grandfathered workspace can be over plan")
+	}
+}
+
+func TestOverPlanNamesOnlyTheCountsPast(t *testing.T) {
+	limits := map[string]interface{}{LimitMaxMembers: 2, LimitMaxProjects: 200, LimitEvidenceStorageMB: 10}
+	got := OverPlan(limits, map[string]int{LimitMaxMembers: 3, LimitMaxProjects: 200, LimitEvidenceStorageMB: 999})
+	if len(got) != 1 || got[0] != LimitMaxMembers {
+		t.Fatalf("over = %v, want just the members (at the cap is not over; a resource is not a count)", got)
+	}
+	if got := OverPlan(limits, map[string]int{LimitMaxMembers: 2}); len(got) != 0 {
+		t.Fatalf("at the ceiling reads as over: %v", got)
+	}
+	if got := OverPlan(limits, nil); len(got) != 0 {
+		t.Fatalf("no reading reads as over: %v", got)
+	}
+}
+
+func TestAFlagRefusalNamesTheThingAndTheBillingTab(t *testing.T) {
+	t.Cleanup(func() { SetSelfHosted(false) })
+	limits := map[string]interface{}{LimitTeams: false, LimitHostedAutomation: true}
+	if err := CheckFlag(limits, LimitHostedAutomation); err != nil {
+		t.Fatalf("an included flag refused: %v", err)
+	}
+	if err := CheckFlag(limits, "never_catalogued"); err != nil {
+		t.Fatalf("an absent flag refused: %v", err)
+	}
+	err := CheckFlag(limits, LimitTeams)
+	if !errors.Is(err, ErrLimitReached) {
+		t.Fatalf("a flag refusal is not a limit refusal: %v", err)
+	}
+	msg := err.Error()
+	for _, want := range []string{"Teams and per-project access", "not included", "Billing tab"} {
+		if !strings.Contains(msg, want) {
+			t.Errorf("flag refusal is missing %q: %s", want, msg)
+		}
+	}
+	SetSelfHosted(true)
+	if msg := CheckFlag(limits, LimitTeams).Error(); !strings.Contains(msg, "OPENV_LIMITS") {
+		t.Errorf("a self-hosted flag refusal sells a plan: %s", msg)
 	}
 }

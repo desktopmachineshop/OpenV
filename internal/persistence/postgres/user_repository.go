@@ -20,18 +20,22 @@ func NewUserRepository(db *sql.DB) *UserRepository {
 	return &UserRepository{db: db}
 }
 
-const userColumns = `id, email, name, avatar_url, COALESCE(avatar_path, ''), COALESCE(avatar_mime, ''), auth_provider, COALESCE(password_hash, ''), is_admin, COALESCE(email_notifications, TRUE), COALESCE(push_notifications, FALSE), COALESCE(email_verified, FALSE), email_verified_at, COALESCE(default_org_id::text, ''), created_at, updated_at`
+const userColumns = `id, email, name, avatar_url, COALESCE(avatar_path, ''), COALESCE(avatar_mime, ''), auth_provider, COALESCE(password_hash, ''), is_admin, COALESCE(email_notifications, TRUE), COALESCE(push_notifications, FALSE), COALESCE(email_verified, FALSE), email_verified_at, COALESCE(default_org_id::text, ''), created_at, updated_at, billing_trial_used_at`
 
 func scanUser(row interface{ Scan(...interface{}) error }) (*users.User, error) {
 	u := new(users.User)
-	var verifiedAt sql.NullTime
-	err := row.Scan(&u.ID, &u.Email, &u.Name, &u.AvatarURL, &u.AvatarPath, &u.AvatarMime, &u.AuthProvider, &u.PasswordHash, &u.IsAdmin, &u.EmailNotifications, &u.PushNotifications, &u.EmailVerified, &verifiedAt, &u.DefaultOrgID, &u.CreatedAt, &u.UpdatedAt)
+	var verifiedAt, trialAt sql.NullTime
+	err := row.Scan(&u.ID, &u.Email, &u.Name, &u.AvatarURL, &u.AvatarPath, &u.AvatarMime, &u.AuthProvider, &u.PasswordHash, &u.IsAdmin, &u.EmailNotifications, &u.PushNotifications, &u.EmailVerified, &verifiedAt, &u.DefaultOrgID, &u.CreatedAt, &u.UpdatedAt, &trialAt)
 	if err != nil {
 		return nil, err
 	}
 	if verifiedAt.Valid {
 		t := verifiedAt.Time
 		u.EmailVerifiedAt = &t
+	}
+	if trialAt.Valid {
+		t := trialAt.Time
+		u.BillingTrialUsedAt = &t
 	}
 	u.HasAvatar = u.AvatarPath != ""
 	return u, nil
@@ -126,6 +130,15 @@ func (r *UserRepository) SetEmailNotifications(userID string, enabled bool) erro
 }
 
 // SetDefaultOrg records the workspace a user's sign-in lands in; "" clears it.
+// SetBillingTrialUsed records that the user's one free trial is spent. It
+// never moves an earlier stamp: the first trial is the one that counts.
+func (r *UserRepository) SetBillingTrialUsed(userID string, at time.Time) error {
+	_, err := r.db.Exec(
+		`UPDATE users SET billing_trial_used_at = COALESCE(billing_trial_used_at, $2), updated_at = NOW() WHERE id = $1`,
+		userID, at.UTC())
+	return err
+}
+
 func (r *UserRepository) SetDefaultOrg(userID, orgID string) error {
 	_, err := r.db.Exec(
 		`UPDATE users SET default_org_id = NULLIF($2, '')::uuid, updated_at = NOW() WHERE id = $1`,

@@ -237,6 +237,25 @@ func (r *OrgRepository) ClaimBudgetAlert(orgID, month string, threshold int) (bo
 	return n > 0, nil
 }
 
+// ClaimMinutesAlert is ClaimBudgetAlert for the hosted-minutes allowance
+// (migration 47): true once per (month, threshold) per workspace.
+func (r *OrgRepository) ClaimMinutesAlert(orgID, month string, threshold int) (bool, error) {
+	res, err := r.db.Exec(`
+		UPDATE organizations
+		SET minutes_alert_month = $2, minutes_alert_threshold = $3, updated_at = NOW()
+		WHERE id = $1
+		  AND (COALESCE(minutes_alert_month, '') <> $2 OR $3 > minutes_alert_threshold)
+	`, orgID, month, threshold)
+	if err != nil {
+		return false, err
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return false, err
+	}
+	return n > 0, nil
+}
+
 // --- billing (migration 45) ---
 
 // SetBillingCustomer writes the provider's customer ref and the currency the
@@ -319,6 +338,28 @@ func (r *OrgRepository) ClearBillingSubscription(orgID string) error {
 func (r *OrgRepository) SetGrandfathered(orgID string, on bool) error {
 	_, err := r.db.Exec(`UPDATE organizations SET plan_grandfathered = $2, updated_at = NOW() WHERE id = $1`, orgID, on)
 	return err
+}
+
+// GrandfatherBefore implements orgs.Repository. The overrides go UNDER the
+// workspace's own limits (jsonb || keeps the right-hand side's keys), so an
+// operator's per-workspace pin survives; the flag makes the step idempotent
+// and is what the tab and the limits panel read. No deleted_at predicate on
+// purpose: a workspace restored after the date comes back to the terms it
+// left under.
+func (r *OrgRepository) GrandfatherBefore(cutoff time.Time, overrides map[string]interface{}) (int64, error) {
+	raw, err := json.Marshal(overrides)
+	if err != nil {
+		return 0, err
+	}
+	res, err := r.db.Exec(`
+		UPDATE organizations
+		SET limits = $2::jsonb || COALESCE(limits, '{}'::jsonb), plan_grandfathered = TRUE, updated_at = NOW()
+		WHERE created_at < $1 AND plan_grandfathered = FALSE
+	`, cutoff.UTC(), string(raw))
+	if err != nil {
+		return 0, err
+	}
+	return res.RowsAffected()
 }
 
 // FindOrgByBillingRef finds the workspace holding a provider ref, deleted

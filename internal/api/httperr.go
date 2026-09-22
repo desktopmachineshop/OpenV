@@ -36,6 +36,9 @@ const (
 	// than by permissions, so a client can offer the remedy that came with
 	// it instead of an access-denied message.
 	ErrCodeLimitReached = "limit_reached"
+	// ErrCodePlanReadOnly marks a write refused because the workspace holds
+	// more than its plan allows; reads and export are never refused.
+	ErrCodePlanReadOnly = "plan_read_only"
 	ErrCodeNoPassword   = "no_password"
 	// ErrCodeResetInvalid answers a reset link that is unknown, spent or
 	// expired; ErrCodeResetEmailUnavailable a request for an emailed reset
@@ -48,6 +51,13 @@ const (
 	// ErrCodeBillingUpstream marks a 503 where the billing provider did not
 	// answer; the workspace's plan was left exactly as it was.
 	ErrCodeBillingUpstream = "billing_upstream"
+	// The purchase refusals a client branches on.
+	ErrCodeUnknownPlan       = "unknown_plan"
+	ErrCodeAlreadySubscribed = "already_subscribed"
+	ErrCodeNoSubscription    = "no_subscription"
+	ErrCodeGrantedPlan       = "granted_plan"
+	ErrCodeNoCustomer        = "no_customer"
+	ErrCodeCheckoutMismatch  = "checkout_mismatch"
 )
 
 // writeJSONErrorCode is writeJSONError with a machine-readable code.

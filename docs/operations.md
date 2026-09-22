@@ -507,12 +507,33 @@ Notes:
     beats both layers above.
   - The full list of keys, with what each one means, is in the manual's
     workspace chapter and at `GET /api/v1/orgs/{id}/limits`.
-  - The count limits (`max_members`, `max_shared_workspaces`, `max_projects`)
-    ship at zero on every plan, so nothing is refused until somebody
-    deliberately sets one. The flags (`hosted_automation`, `teams`,
-    `workspace_budget`) are limits whose value is `true` or `false` rather
-    than a number, resolved through the same three layers; they ship on for
-    every plan.
+  - The count limits (`max_members`, `max_shared_workspaces`, `max_projects`,
+    `hosted_runner_minutes_month`) and the flags (`hosted_automation`,
+    `teams`, `workspace_budget` — limits whose value is `true` or `false`,
+    resolved through the same three layers) are on the **alpha terms** —
+    every count open, every flag on, for every plan — until
+    `OPENV_BILLING_GRANDFATHER_BEFORE` is set. Setting it (an RFC 3339
+    date-time, the date announced with the first live price) does two things
+    at every boot, in this order: it writes the alpha terms into the own
+    limits of every workspace created before that date that is not yet
+    marked grandfathered (soft-deleted ones included; a key the workspace
+    already sets is kept; a second boot changes nothing), and it turns the
+    tier values on for everyone else. The step is fatal if it fails, so the
+    tiers can never be on with the promise unkept. Self-hosted deployments
+    ignore it. The tier values:
+
+    | plan | members | shared workspaces | projects | hosted automation | teams | budget | cloud-runner minutes/month |
+    |---|---|---|---|---|---|---|---|
+    | `single` / `free` | 2 | 1 | 200 | off | off | off | 300 |
+    | `business_lite` | 2 | 1 | 500 | on | off | off | unlimited |
+    | `business` / `team` / `open_source` | unlimited | unlimited | 1000 | on | on | on | unlimited |
+    | `enterprise` / `self_host` | unlimited | unlimited | unlimited | on | on | on | unlimited |
+
+    A workspace over its plan's counts is read-only until it trims or
+    upgrades (see the API spec, *Read-only over plan*); reads and export are
+    never refused. Leased cloud-runner minutes are counted per workspace per
+    calendar month from `runner_sessions`; admins are notified at 80% and
+    100% of the allowance once per month (`hosted_minutes` notifications).
 - **Billing** (`docs/plans/billing-stripe.md`) is off unless
   `STRIPE_SECRET_KEY` is set, and off with a warning on a self-hosted
   deployment even then: nothing starts, nothing dials out, and the billing
@@ -534,7 +555,30 @@ Notes:
   - `OPENV_STRIPE_API_VERSION` pins the provider API version on every
     request; unset, the account's own pinned version applies.
   - `OPENV_BILLING_REFRESH_BURST` / `_REFILL_PER_HOUR` bound the
-    synchronous refresh per workspace (default 10, then 120 an hour).
+    synchronous refresh per workspace (default 10, then 120 an hour);
+    `OPENV_BILLING_WRITE_BURST` / `_REFILL_PER_HOUR` bound checkout, plan
+    change and portal (default 5, then 20 an hour).
+  - `OPENV_BILLING_RETURN_URL` is where the provider sends the browser back
+    after checkout and the portal (default: the frontend URL). It must be
+    the origin the Billing tab is served from.
+  - `OPENV_BILLING_PORTAL_CONFIG` names the provider's portal configuration
+    to open: one with payment method, address, tax id, email, invoices and
+    cancel-at-period-end on, and **product switching off** (a plan change
+    goes through the platform so the seat quantity follows). Unset, the
+    account's default configuration opens.
+  - `OPENV_BILLING_TRIAL_DAYS` (default 14) is the trial a buyer's first
+    subscription starts with; a buyer gets one trial across every workspace
+    they create. `0` turns trials off.
+  - A Business subscription's quantity follows the workspace's seats
+    (members plus pending invitations). A membership change commits first
+    and queues the push; pushes coalesce for a couple of seconds so a bulk
+    invite is one proration, and a push the provider refused or a full queue
+    lost is repaired on the next reconcile tick, which reports
+    `billing_seat_drift` (how many workspaces differed). Above
+    `OPENV_BILLING_MAX_SEATS` (default 500) the quantity is **not** pushed and
+    `billing_seat_push_refused_total` increments — the workspace is
+    under-billed until an operator looks, which beats a runaway invitation
+    loop charging a five-figure invoice. Business Lite is never synced.
   - The one exception is a **personal workspace, which always seats exactly
     one person**. That is not a ration, so no plan, no `OPENV_LIMITS` and no
     per-workspace setting raises it — a personal workspace with two people in

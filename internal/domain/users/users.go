@@ -105,6 +105,11 @@ type User struct {
 	// choice, not a grant: membership is checked wherever it is used, so a
 	// member who has since left the workspace lands in their personal one.
 	DefaultOrgID string `json:"default_org_id"`
+	// BillingTrialUsedAt is when this person first bought a subscription
+	// with a free trial, on any workspace; nil until then. One trial per
+	// buyer: a person can create workspaces freely, each its own billing
+	// customer, so the trial is keyed on the human. Never serialised.
+	BillingTrialUsedAt *time.Time `json:"-"`
 	// EmailVerified says the account has proved control of Email by following
 	// an emailed link (or was created by an identity provider that asserted a
 	// verified address). The auth middleware refuses an unverified session
@@ -198,6 +203,8 @@ type Repository interface {
 	// SetDefaultOrg records the workspace one user's sign-in lands in; ""
 	// clears it.
 	SetDefaultOrg(userID, orgID string) error
+	// SetBillingTrialUsed records that the user's one free trial is spent.
+	SetBillingTrialUsed(userID string, at time.Time) error
 	// SetPushNotifications flips one user's web-push opt-in. Scoped by id,
 	// same as the email flag.
 	SetPushNotifications(userID string, enabled bool) error
@@ -280,6 +287,8 @@ type Service interface {
 	// SetDefaultOrg records the workspace the caller's sign-in lands in
 	// (REQ-156); "" means the personal workspace again.
 	SetDefaultOrg(userID, orgID string) error
+	// MarkBillingTrialUsed records that the caller's one free trial is spent.
+	MarkBillingTrialUsed(userID string) error
 	// SetAvatar records an uploaded profile picture's on-disk path, MIME
 	// type and the URL it is served at, and returns the updated user.
 	SetAvatar(userID, path, mime, url string) (*User, error)
@@ -881,6 +890,11 @@ func (s *DefaultService) SetAdmin(id string, isAdmin bool) (*User, error) {
 // SetEmailNotifications updates a user's email-notification opt-out.
 func (s *DefaultService) SetEmailNotifications(userID string, enabled bool) error {
 	return s.repo.SetEmailNotifications(userID, enabled)
+}
+
+// MarkBillingTrialUsed implements Service.
+func (s *DefaultService) MarkBillingTrialUsed(userID string) error {
+	return s.repo.SetBillingTrialUsed(userID, time.Now().UTC())
 }
 
 // SetPushNotifications updates a user's web-push opt-in.

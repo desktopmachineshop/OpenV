@@ -125,6 +125,10 @@ export const FAQ_GROUPS: FaqGroup[] = [
         q: 'Charities and open-source projects',
         a: 'The hosted service, free for as long as it exists. For an open-source project the deal is public by design: the latest baseline of every project in the workspace is published on the open-source page, while live work stays private until the next baseline.',
       },
+      {
+        q: 'How billing works',
+        a: 'A workspace admin subscribes from the Billing tab in workspace settings: Business Lite is a flat price, Business is per member, both monthly or yearly, in GBP, USD or EUR. Payment goes through Stripe on a page of theirs, so no card detail ever reaches OpenV; VAT is worked out at checkout and a business VAT number is accepted. Invoices, the payment card and cancellation are managed in the same place. A first subscription starts with a 14-day trial. If a subscription lapses, everything in the workspace stays readable and exportable.',
+      },
     ],
   },
   {

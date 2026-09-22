@@ -238,6 +238,9 @@ POST /api/v1/notifications/read-all
 POST /api/v1/org-teams/{id}/members/{userId}
 POST /api/v1/orgs
 POST /api/v1/orgs/{id}/activate
+POST /api/v1/orgs/{id}/billing/change
+POST /api/v1/orgs/{id}/billing/checkout
+POST /api/v1/orgs/{id}/billing/portal
 POST /api/v1/orgs/{id}/billing/refresh
 POST /api/v1/orgs/{id}/connector-pairing
 POST /api/v1/orgs/{id}/hosted-runner

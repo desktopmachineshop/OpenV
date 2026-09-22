@@ -36,6 +36,32 @@ const OrgMetadataKey = "openv_org_id"
 // ErrNotFound is what a provider returns for an object it does not have.
 var ErrNotFound = errors.New("billing: not found")
 
+// Refusals a purchase can meet. Each maps to one HTTP answer in the API.
+var (
+	ErrNotConfigured     = errors.New("billing is not available on this deployment")
+	ErrUnknownPlan       = errors.New("that plan and interval are not for sale")
+	ErrUnknownCurrency   = errors.New("that currency is not offered for this plan")
+	ErrCurrencyLocked    = errors.New("this workspace already pays in another currency")
+	ErrPricesUnconfirmed = errors.New("prices have not been confirmed with the billing provider yet")
+	ErrAlreadySubscribed = errors.New("this workspace already has a live subscription")
+	ErrNoSubscription    = errors.New("this workspace has no live subscription")
+	ErrGrantedPlan       = errors.New("this workspace is on a plan a platform admin granted; there is nothing to buy")
+	ErrPersonalWorkspace = errors.New("a personal workspace is one person; Business is for a shared workspace")
+	ErrNoCustomer        = errors.New("this workspace has no billing customer yet")
+	ErrSessionMismatch   = errors.New("that checkout belongs to another workspace")
+)
+
+// Metadata keys written on provider objects. openv_org_id names the
+// workspace; openv_trial_buyer names the person whose one trial a checkout
+// spends, so binding the subscription can record it.
+const (
+	TrialBuyerMetadataKey = "openv_trial_buyer"
+	PlanMetadataKey       = "openv_plan"
+)
+
+// DefaultTrialDays is the trial a first-time buyer gets, card up front.
+const DefaultTrialDays = 14
+
 // Subscription is the slice of a provider subscription the platform reads.
 // Only these fields are ever parsed: the plan is decided by PriceID through
 // the registry, never by a product's name, nickname or metadata.
@@ -74,6 +100,38 @@ type Price struct {
 	TaxBehavior string
 }
 
+// CheckoutRequest is what a hosted checkout is created from. The server
+// fills every field: a client never sends a price, a customer, a quantity or
+// a currency.
+type CheckoutRequest struct {
+	CustomerID string
+	PriceID    string
+	Quantity   int
+	Currency   string
+	// TrialDays is 0 for no trial.
+	TrialDays int
+	// ClientReferenceID is the workspace id, echoed back on the session so
+	// a bind can check the session names the workspace it claims.
+	ClientReferenceID string
+	// Metadata is written on the session and on the subscription it makes.
+	Metadata       map[string]string
+	SuccessURL     string
+	CancelURL      string
+	IdempotencyKey string
+}
+
+// CheckoutSession is the slice of a provider checkout the platform reads.
+type CheckoutSession struct {
+	ID                string
+	URL               string
+	ClientReferenceID string
+	CustomerID        string
+	// SubscriptionID is empty until the checkout completes.
+	SubscriptionID string
+	Status         string
+	Metadata       map[string]string
+}
+
 // Dispute is an open chargeback and the subscription it concerns.
 type Dispute struct {
 	ID             string
@@ -97,6 +155,28 @@ type Provider interface {
 	// end of the paid period.
 	SetCancelAtPeriodEnd(ctx context.Context, id string, on bool) error
 	ListOpenDisputes(ctx context.Context) ([]Dispute, error)
+
+	// CreateCustomer makes the provider's customer for a workspace and
+	// returns its id. The idempotency key makes a retry return the same
+	// customer rather than a second one.
+	CreateCustomer(ctx context.Context, name, email string, metadata map[string]string, idempotencyKey string) (string, error)
+	// CreateCheckoutSession starts a hosted checkout and returns it with
+	// the URL the browser is sent to.
+	CreateCheckoutSession(ctx context.Context, req CheckoutRequest) (*CheckoutSession, error)
+	GetCheckoutSession(ctx context.Context, id string) (*CheckoutSession, error)
+	// CreatePortalSession returns the URL of the provider's self-service
+	// portal for a customer; configuration may be empty for the default.
+	CreatePortalSession(ctx context.Context, customerID, returnURL, configuration string) (string, error)
+	// UpdateSubscriptionItem moves a subscription's single item to another
+	// price and quantity, prorating — a plan change on one subscription.
+	UpdateSubscriptionItem(ctx context.Context, subscriptionID, itemID, priceID string, quantity int) error
+	// SetItemQuantity changes the billed quantity, prorating.
+	SetItemQuantity(ctx context.Context, itemID string, quantity int) error
+}
+
+// Users is the slice of the user service the purchase path needs.
+type Users interface {
+	MarkBillingTrialUsed(userID string) error
 }
 
 // Orgs is the slice of the workspace service the sync path needs.
@@ -105,6 +185,7 @@ type Orgs interface {
 	FindOrgByBillingRef(kind, ref string) (*orgs.Org, error)
 	ListBillingOrgs(limit int) ([]*orgs.Org, error)
 	ApplyBillingState(orgID string, state orgs.BillingState) (bool, error)
+	SetBillingCustomer(orgID, customerRef, currency string) error
 }
 
 // Metrics is what the package reports; internal/metrics implements it.
@@ -118,6 +199,12 @@ type Metrics interface {
 	// SyncStaleSeconds is the age of the oldest snapshot across billed
 	// workspaces after a reconcile. Alert above three times the interval.
 	SyncStaleSeconds(seconds float64)
+	// SeatDrift is how many Business workspaces' billed quantity differed
+	// from their seat count at the start of a reconcile.
+	SeatDrift(count int)
+	// SeatPushRefused counts a quantity refused for being above the
+	// ceiling. Alert on any increase: somebody is under-billed.
+	SeatPushRefused()
 }
 
 // NoMetrics is the Metrics that reports nothing.
@@ -126,6 +213,8 @@ type NoMetrics struct{}
 func (NoMetrics) ProviderRequest(string, int) {}
 func (NoMetrics) UnknownPrice()               {}
 func (NoMetrics) SyncStaleSeconds(float64)    {}
+func (NoMetrics) SeatDrift(int)               {}
+func (NoMetrics) SeatPushRefused()            {}
 
 // MapStatus turns a provider status into a PlanStatus. Unrecognised values
 // pass through unchanged, and EntitledPlan treats anything it does not
@@ -161,6 +250,16 @@ type Config struct {
 	Registry *Registry
 	// ReconcileInterval is how often subscriptions are re-read.
 	ReconcileInterval time.Duration
+	// ReturnURL is the app origin the provider's pages send people back to;
+	// empty means the deployment's frontend URL.
+	ReturnURL string
+	// PortalConfig is the provider's portal configuration id; empty means
+	// the account default.
+	PortalConfig string
+	// TrialDays is the first-time buyer's trial; 0 disables trials.
+	TrialDays int
+	// MaxSeats is the quantity above which a seat push is refused.
+	MaxSeats int
 }
 
 // Enabled reports whether a provider is configured.
@@ -175,6 +274,24 @@ func ConfigFromEnv(getenv func(string) string) (Config, error) {
 		SecretKey:         strings.TrimSpace(getenv("STRIPE_SECRET_KEY")),
 		APIVersion:        strings.TrimSpace(getenv("OPENV_STRIPE_API_VERSION")),
 		ReconcileInterval: 5 * time.Minute,
+		ReturnURL:         strings.TrimRight(strings.TrimSpace(getenv("OPENV_BILLING_RETURN_URL")), "/"),
+		PortalConfig:      strings.TrimSpace(getenv("OPENV_BILLING_PORTAL_CONFIG")),
+		TrialDays:         DefaultTrialDays,
+		MaxSeats:          DefaultMaxSeats,
+	}
+	if raw := strings.TrimSpace(getenv("OPENV_BILLING_MAX_SEATS")); raw != "" {
+		var n int
+		if _, err := fmt.Sscanf(raw, "%d", &n); err != nil || n < 1 {
+			return cfg, fmt.Errorf("OPENV_BILLING_MAX_SEATS must be a whole number of seats, got %q", raw)
+		}
+		cfg.MaxSeats = n
+	}
+	if raw := strings.TrimSpace(getenv("OPENV_BILLING_TRIAL_DAYS")); raw != "" {
+		var days int
+		if _, err := fmt.Sscanf(raw, "%d", &days); err != nil || days < 0 {
+			return cfg, fmt.Errorf("OPENV_BILLING_TRIAL_DAYS must be a whole number of days, got %q", raw)
+		}
+		cfg.TrialDays = days
 	}
 	reg, err := ParseRegistry(getenv("OPENV_STRIPE_PRICES"))
 	if err != nil {
@@ -202,6 +319,7 @@ type PriceEntry struct {
 // interval. It is the ONLY thing that turns a subscription into a plan.
 type Registry struct {
 	byPrice map[string]PriceEntry
+	byPlan  map[string]PriceEntry // plan + "/" + interval
 	entries []PriceEntry
 }
 
@@ -213,7 +331,7 @@ var sellablePlans = map[string]bool{orgs.PlanBusinessLite: true, orgs.PlanBusine
 // ParseRegistry reads the JSON array OPENV_STRIPE_PRICES holds. An empty
 // value is an empty registry: billing may be on with nothing yet for sale.
 func ParseRegistry(raw string) (*Registry, error) {
-	r := &Registry{byPrice: map[string]PriceEntry{}}
+	r := &Registry{byPrice: map[string]PriceEntry{}, byPlan: map[string]PriceEntry{}}
 	raw = strings.TrimSpace(raw)
 	if raw == "" {
 		return r, nil
@@ -243,6 +361,7 @@ func ParseRegistry(raw string) (*Registry, error) {
 		}
 		seenPlan[key] = true
 		r.byPrice[e.Price] = e
+		r.byPlan[key] = e
 		r.entries = append(r.entries, e)
 	}
 	sort.Slice(r.entries, func(i, j int) bool {
@@ -260,6 +379,15 @@ func (r *Registry) Lookup(priceID string) (PriceEntry, bool) {
 		return PriceEntry{}, false
 	}
 	e, ok := r.byPrice[priceID]
+	return e, ok
+}
+
+// Price finds the price that sells a plan for an interval.
+func (r *Registry) Price(plan, interval string) (PriceEntry, bool) {
+	if r == nil {
+		return PriceEntry{}, false
+	}
+	e, ok := r.byPlan[plan+"/"+interval]
 	return e, ok
 }
 

@@ -546,3 +546,5 @@ func TestAuthConfigReportsOIDC(t *testing.T) {
 		t.Errorf("oidc_enabled should be false when unconfigured: %s", rec2.Body.String())
 	}
 }
+
+func (m *memUserRepo) SetBillingTrialUsed(userID string, at time.Time) error { return nil }

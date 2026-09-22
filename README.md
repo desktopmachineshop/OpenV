@@ -37,24 +37,23 @@ Setup guide: [docs/agents.md](docs/agents.md)
 
 ## Pricing
 
-- **Hosted service**: free while OpenV is in alpha, every feature included,
-  no card and no trial clock. Four tiers are planned: **Single User** (free,
-  bring your own AI subscription), **Business Lite** (higher cloud-runner
-  limits, agents on your own API keys, always-on agents), **Business**
-  (shared company workspaces, teams and per-project access) and
+- **Hosted service**: four tiers. **Single User** (free, bring your own AI
+  subscription), **Business Lite** (higher cloud-runner limits, agents on
+  your own API keys, always-on agents), **Business** (shared company
+  workspaces, teams and per-project access, billed per member) and
   **Enterprise** (run on your own servers with our support, SSO/OIDC setup,
-  custom integrations, support SLA). The paid tiers are coming soon with no
-  prices yet. The hosted-runner limits in force (2 GB / 1 CPU hosted runner,
-  60-minute cloud-runner lease reclaimed after 15 idle minutes) are listed on
-  the instance's `/pricing` page.
+  custom integrations, support SLA; by arrangement). Prices, where the
+  instance has them, are on its `/pricing` page, and a workspace admin
+  subscribes from workspace settings; payment goes through Stripe.
+  Workspaces created during the alpha keep every tier's features free. The
+  free-tier limits in force are listed on the same page.
 - **Self-hosted**: free forever under the Elastic License 2.0, all features, your hardware.
 - **Charities and open-source projects**: free forever on the hosted service.
   Claim it with a [free-hosting issue](https://github.com/desktopmachineshop/OpenV/issues/new?template=free-hosting.md).
 
-If hosted OpenV ever charges, your data will not be behind the paywall:
-export (JSON, CSV, Excel, ReqIF, PDF, Word) and import (JSON, ReqIF) stay available
-on every plan, and a JSON export restores into a self-hosted OpenV. There is
-no billing in the product today.
+Your data is never behind the paywall: export (JSON, CSV, Excel, ReqIF, PDF,
+Word) and import (JSON, ReqIF) stay available on every plan whatever its
+state, and a JSON export restores into a self-hosted OpenV.
 
 ## Quick Start
 

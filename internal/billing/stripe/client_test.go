@@ -231,3 +231,94 @@ func TestATransportFailureIsRetriedThenReported(t *testing.T) {
 		t.Fatal("a cancelled context should fail")
 	}
 }
+
+// The purchase calls: what each one tells Stripe, and that the server's
+// decisions — tax, tax ids, address, promo codes, trial, metadata on both
+// the session and the subscription — are all on the wire.
+func TestCreateCheckoutSessionCarriesEveryServerDecision(t *testing.T) {
+	_, c, log := newServer(t, func(w http.ResponseWriter, r *http.Request, rec recorded) {
+		w.Write([]byte(`{"id":"cs_1","url":"https://checkout.stripe.com/c/cs_1","client_reference_id":"org-1","customer":"cus_1","status":"open","metadata":{"openv_org_id":"org-1"}}`))
+	})
+	sess, err := c.CreateCheckoutSession(context.Background(), billing.CheckoutRequest{
+		CustomerID: "cus_1", PriceID: "price_bm", Quantity: 7, Currency: "gbp", TrialDays: 14, ClientReferenceID: "org-1",
+		Metadata:   map[string]string{"openv_org_id": "org-1", "openv_trial_buyer": "u1"},
+		SuccessURL: "https://app/ok?session_id={CHECKOUT_SESSION_ID}", CancelURL: "https://app/no", IdempotencyKey: "openv:co:1",
+	})
+	if err != nil || sess.URL != "https://checkout.stripe.com/c/cs_1" || sess.ClientReferenceID != "org-1" || sess.Metadata["openv_org_id"] != "org-1" {
+		t.Fatalf("session = %+v %v", sess, err)
+	}
+	rec := (*log)[0]
+	if rec.method != http.MethodPost || rec.path != "/v1/checkout/sessions" || rec.idem != "openv:co:1" {
+		t.Fatalf("request = %+v", rec)
+	}
+	for _, want := range []string{
+		"mode=subscription", "customer=cus_1", "client_reference_id=org-1",
+		"line_items%5B0%5D%5Bprice%5D=price_bm", "line_items%5B0%5D%5Bquantity%5D=7", "currency=gbp",
+		"automatic_tax%5Benabled%5D=true", "tax_id_collection%5Benabled%5D=true", "billing_address_collection=required",
+		"customer_update%5Baddress%5D=auto", "allow_promotion_codes=true",
+		"subscription_data%5Btrial_period_days%5D=14",
+		"metadata%5Bopenv_org_id%5D=org-1", "subscription_data%5Bmetadata%5D%5Bopenv_org_id%5D=org-1",
+		"subscription_data%5Bmetadata%5D%5Bopenv_trial_buyer%5D=u1",
+		"success_url=https%3A%2F%2Fapp%2Fok%3Fsession_id%3D%7BCHECKOUT_SESSION_ID%7D",
+	} {
+		if !strings.Contains(rec.body, want) {
+			t.Errorf("body lacks %s: %s", want, rec.body)
+		}
+	}
+	// No trial: the field is absent rather than zero.
+	_, _ = c.CreateCheckoutSession(context.Background(), billing.CheckoutRequest{CustomerID: "cus_1", PriceID: "p", Quantity: 1})
+	if strings.Contains((*log)[1].body, "trial_period_days") {
+		t.Fatal("a zero trial was sent")
+	}
+}
+
+func TestCustomerPortalAndChangeCalls(t *testing.T) {
+	_, c, log := newServer(t, func(w http.ResponseWriter, r *http.Request, rec recorded) {
+		switch rec.path {
+		case "/v1/customers":
+			w.Write([]byte(`{"id":"cus_9"}`))
+		case "/v1/billing_portal/sessions":
+			w.Write([]byte(`{"url":"https://billing.stripe.com/p/s"}`))
+		default:
+			w.Write([]byte(`{"id":"x"}`))
+		}
+	})
+	id, err := c.CreateCustomer(context.Background(), "Acme", "dana@example.com", map[string]string{"openv_org_id": "org-1"}, "openv:cust:org-1:v1")
+	if err != nil || id != "cus_9" {
+		t.Fatalf("customer = %q %v", id, err)
+	}
+	if rec := (*log)[0]; rec.idem != "openv:cust:org-1:v1" || !strings.Contains(rec.body, "name=Acme") || !strings.Contains(rec.body, "email=dana%40example.com") || !strings.Contains(rec.body, "metadata%5Bopenv_org_id%5D=org-1") {
+		t.Fatalf("customer request = %+v", rec)
+	}
+	url, err := c.CreatePortalSession(context.Background(), "cus_9", "https://app/back", "bpc_1")
+	if err != nil || url != "https://billing.stripe.com/p/s" {
+		t.Fatalf("portal = %q %v", url, err)
+	}
+	if rec := (*log)[1]; rec.idem != "" || !strings.Contains(rec.body, "customer=cus_9") || !strings.Contains(rec.body, "configuration=bpc_1") {
+		t.Fatalf("portal request = %+v", rec)
+	}
+	if err := c.UpdateSubscriptionItem(context.Background(), "sub_1", "si_1", "price_bm", 7); err != nil {
+		t.Fatal(err)
+	}
+	if rec := (*log)[2]; rec.path != "/v1/subscriptions/sub_1" || !strings.HasPrefix(rec.idem, "openv:change:sub_1:") ||
+		!strings.Contains(rec.body, "items%5B0%5D%5Bid%5D=si_1") || !strings.Contains(rec.body, "items%5B0%5D%5Bprice%5D=price_bm") ||
+		!strings.Contains(rec.body, "items%5B0%5D%5Bquantity%5D=7") || !strings.Contains(rec.body, "proration_behavior=create_prorations") {
+		t.Fatalf("change request = %+v", rec)
+	}
+	if err := c.SetItemQuantity(context.Background(), "si_1", 8); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.SetItemQuantity(context.Background(), "si_1", 8); err != nil {
+		t.Fatal(err)
+	}
+	a, b := (*log)[3], (*log)[4]
+	if a.path != "/v1/subscription_items/si_1" || !strings.Contains(a.body, "quantity=8") || a.idem == b.idem || !strings.HasPrefix(a.idem, "openv:seats:si_1:") {
+		t.Fatalf("quantity requests = %+v %+v", a, b)
+	}
+	if _, err := c.GetCheckoutSession(context.Background(), "cs_1"); err != nil {
+		t.Fatal(err)
+	}
+	if rec := (*log)[5]; rec.method != http.MethodGet || rec.path != "/v1/checkout/sessions/cs_1" {
+		t.Fatalf("get session = %+v", rec)
+	}
+}

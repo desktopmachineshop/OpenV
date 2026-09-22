@@ -1558,6 +1558,9 @@ export interface Org {
   // ('nightly', 'stable', or '' for the plan default).
   release_channel?: 'nightly' | 'stable';
   release_channel_locked?: boolean;
+  /** The subscription snapshot; status "none" where there is no billing
+   *  relationship, which is every workspace on a self-hosted deployment. */
+  billing?: BillingSnapshot;
   // The stable release turned on for a stable-channel workspace ('' until
   // the first stable is cut and turns on), and its upgrade window
   // (upgrade_day 0 = releases turn on at the cut) (REQ-138).
@@ -1683,6 +1686,10 @@ export interface LimitUsage {
   /** A ceiling nothing raises — no plan, no setting. Shown as a fact rather
    *  than as a warning that the workspace is full. */
   fixed?: boolean;
+  /** resource | count | flag. A flag has no number, only `included`. */
+  kind?: 'resource' | 'count' | 'flag';
+  /** A flag's reading: whether the plan includes the thing. */
+  included?: boolean;
 }
 
 export interface WorkspaceLimits {
@@ -1697,6 +1704,11 @@ export interface WorkspaceLimits {
   plan_status: string;
   /** Keeps the alpha terms through its own limit overrides. */
   grandfathered: boolean;
+  /** True while the workspace holds more than its plan allows: every write
+   *  is refused until it upgrades or trims; reads and export never are. */
+  read_only?: boolean;
+  /** The limits it is past, by key. */
+  over_plan?: string[];
   /** Decides which remedy to offer: a plan upgrade, or a setting to change. */
   self_hosted: boolean;
   limits: LimitUsage[];
@@ -1725,8 +1737,47 @@ export interface PublicPlans {
   plans: PublicPlan[];
 }
 
+/** The mirrored subscription snapshot on a workspace. Never money, never a
+ *  provider id: what decides entitlement and what the Billing tab shows. */
+export interface BillingSnapshot {
+  /** none | trialing | active | past_due | unpaid | paused | canceled | incomplete | disputed */
+  status: string;
+  interval?: string;
+  seats?: number;
+  period_end?: string;
+  cancel_at_period_end?: boolean;
+  grandfathered?: boolean;
+  synced_at?: string;
+}
+
+/** What the Billing tab reads. */
+export interface BillingState {
+  org_id: string;
+  /** The billed plan. */
+  plan: string;
+  /** The plan the limits resolve from now. */
+  entitled_plan: string;
+  /** A platform admin's plan: nothing to buy. */
+  granted: boolean;
+  billing: BillingSnapshot;
+  self_hosted: boolean;
+  plans: PublicPlans;
+}
+
 export const billingAPI = {
   publicPlans: () => client.get<PublicPlans>('/api/v1/public/plans'),
+  state: (orgId: string) => client.get<BillingState>(`/api/v1/orgs/${orgId}/billing`),
+  /** Starts a hosted checkout; the answer is the URL to send the browser to. */
+  checkout: (orgId: string, plan: string, interval: string, currency?: string) =>
+    client.post<{ url: string }>(`/api/v1/orgs/${orgId}/billing/checkout`, { plan, interval, currency: currency || '' }),
+  /** Moves the live subscription to another plan or interval in place. */
+  change: (orgId: string, plan: string, interval: string) =>
+    client.post<BillingState>(`/api/v1/orgs/${orgId}/billing/change`, { plan, interval }),
+  /** The provider's self-service portal; the answer is a URL. */
+  portal: (orgId: string) => client.post<{ url: string }>(`/api/v1/orgs/${orgId}/billing/portal`, {}),
+  /** Re-reads the subscription now; with a session id, binds a just-completed checkout. */
+  refresh: (orgId: string, sessionId?: string) =>
+    client.post<BillingState>(`/api/v1/orgs/${orgId}/billing/refresh`, sessionId ? { session_id: sessionId } : {}),
 };
 
 export const orgsAPI = {

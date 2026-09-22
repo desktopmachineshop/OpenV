@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/gorilla/mux"
 
@@ -24,9 +25,14 @@ type fakeRunnerSessions struct {
 	session  *runnersessions.Session
 	counts   runnersessions.PoolCounts
 	touched  []string
+	// minutesUsed is what the month's allowance is measured against;
+	// startedWith is the lease length the handler asked for.
+	minutesUsed int
+	startedWith int
 }
 
 func (f *fakeRunnerSessions) Start(orgID, userID string, sessionMinutes, idleMinutes int) (*runnersessions.Session, error) {
+	f.startedWith = sessionMinutes
 	if f.startErr != nil {
 		return nil, f.startErr
 	}
@@ -35,6 +41,10 @@ func (f *fakeRunnerSessions) Start(orgID, userID string, sessionMinutes, idleMin
 
 func (f *fakeRunnerSessions) Get(orgID, userID string) (*runnersessions.Session, error) {
 	return f.session, nil
+}
+
+func (f *fakeRunnerSessions) MinutesUsed(orgID string, since time.Time) (int, error) {
+	return f.minutesUsed, nil
 }
 
 func (f *fakeRunnerSessions) Counts(pool string) (runnersessions.PoolCounts, error) {

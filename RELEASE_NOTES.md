@@ -9,8 +9,50 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### New features
+
+- **A workspace admin can subscribe to Business Lite or Business from the
+  new Billing tab in workspace settings.** Pick the plan, monthly or yearly,
+  in GBP, USD or EUR, and pay on Stripe's checkout page; the workspace is on
+  its plan by the time the tab reloads. A first subscription starts with a
+  14-day trial, promotion codes work at checkout, VAT is worked out there
+  and a business VAT number is accepted. The same tab changes plan in place
+  (prorated), and *Manage billing* opens Stripe's portal for invoices, the
+  card, the billing address and cancellation. Nothing about a card ever
+  reaches OpenV. Workspaces created before the date announced with the first
+  live price keep every tier's features free, for good; the tiers' limits
+  apply only to workspaces created after it, and only from the release that
+  turns them on. Feature key `workspace-billing` (0.15.0): the plan picker
+  waits for a stable release on stable-channel workspaces; a workspace that
+  already holds a subscription always sees its Billing tab.
+
+- **The tiers are now real, and every workspace from the alpha keeps
+  everything.** On the date announced with the first live price, a
+  workspace created before it is marked as keeping the alpha terms — every
+  feature, no member or workspace caps, unmetered cloud runners — for good,
+  whatever plan it is on; the Limits tab says so. A workspace created after
+  it is on its tier: the free tier seats two people in one shared
+  workspace and 300 minutes of leased cloud runner a month; Business Lite
+  adds an always-on hosted runner and unmetered cloud runners; Business
+  adds teams, per-project team access, the workspace budget and usage
+  rollup, and as many members and shared workspaces as it bills for. A
+  refusal names the Billing tab. A workspace that holds more than its plan
+  allows — after a lapsed subscription, say — becomes read-only rather
+  than losing anything: everything stays readable and exportable, and
+  removing members or deleting projects, or subscribing, makes it writable
+  again. Admins are told when leased cloud-runner minutes reach 80% and
+  100% of the month's allowance. No feature key: the values are plan
+  defaults with no channel in scope, and the plans they cap are always on
+  the nightly channel, so a key would gate nothing.
+
 ### Maintenance updates
 
+- **A Business subscription's seat count follows the Members tab on its
+  own.** Adding, inviting, removing or revoking updates the billed quantity
+  within a few seconds, prorated on the next invoice, and the Billing tab
+  shows the seats billed beside the members counted. A membership change
+  never waits on, or fails because of, the billing provider; a missed
+  update is caught within minutes.
 - **Workspace plans now carry a billing status, and the pricing page can
   read live prices.** A workspace's limits resolve from the plan it is
   entitled to, which is its plan while a subscription (there is none yet) is

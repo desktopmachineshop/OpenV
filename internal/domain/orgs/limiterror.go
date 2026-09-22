@@ -48,6 +48,27 @@ type LimitError struct {
 	// Detail is an optional clause explaining what counts towards Used, for
 	// limits where that is not obvious.
 	Detail string
+	// Flag marks a refusal on a flag rather than a number: the plan does
+	// not include the thing at all, so there are no figures to show.
+	Flag bool
+}
+
+// NewFlagError builds a refusal for a flag the plan does not include.
+func NewFlagError(key string) *LimitError {
+	e := &LimitError{Key: key, Label: key, Flag: true}
+	if def, ok := Describe(key); ok {
+		e.Label = def.Label
+	}
+	return e
+}
+
+// CheckFlag refuses when the workspace's plan does not include a flag.
+// Absent flags are allowed, as Allowed reads them.
+func CheckFlag(limits map[string]interface{}, key string) error {
+	if Allowed(limits, key) {
+		return nil
+	}
+	return NewFlagError(key)
 }
 
 // NewLimitError builds a refusal for one catalogued limit.
@@ -72,6 +93,9 @@ func (e *LimitError) Is(target error) bool { return target == ErrLimitReached }
 // Error is the whole message a person reads: what stopped them, the numbers,
 // and what to do next.
 func (e *LimitError) Error() string {
+	if e.Flag {
+		return fmt.Sprintf("%s: not included in this workspace's plan. %s", e.Label, e.Remedy())
+	}
 	msg := fmt.Sprintf("%s: this workspace allows %s and already has %s",
 		e.Label, e.amount(e.Allowed), e.amount(e.Used))
 	if e.Detail != "" {
@@ -88,7 +112,10 @@ func (e *LimitError) Remedy() string {
 			"This deployment sets its own limits: raise %s in OPENV_LIMITS to change it everywhere, "+
 				"or set it on this workspace alone to change it here.", e.Key)
 	}
-	return "Upgrade the workspace's plan to raise this limit, or ask a workspace admin to."
+	if e.Flag {
+		return "A workspace admin can add it from the Billing tab in workspace settings; the pricing page says which plan includes it."
+	}
+	return "A workspace admin can raise this limit from the Billing tab in workspace settings, by moving the workspace to a plan that allows more."
 }
 
 // amount renders a number in the limit's unit, so a storage refusal does not

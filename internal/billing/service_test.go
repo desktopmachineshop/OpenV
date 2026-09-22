@@ -3,6 +3,7 @@ package billing
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -27,6 +28,21 @@ type fakeProvider struct {
 	cancelled []string
 	scheduled []string
 	getCalls  []string
+	quantity  []string
+	qtyErr    error
+}
+
+func (f *fakeProvider) SetItemQuantity(_ context.Context, itemID string, qty int) error {
+	f.quantity = append(f.quantity, fmt.Sprintf("%s=%d", itemID, qty))
+	if f.qtyErr != nil {
+		return f.qtyErr
+	}
+	for _, s := range f.subs {
+		if s.ItemID == itemID {
+			s.Quantity = qty
+		}
+	}
+	return nil
 }
 
 func (f *fakeProvider) Name() string { return "fake" }
@@ -156,10 +172,14 @@ type countingMetrics struct {
 	NoMetrics
 	unknown int
 	stale   float64
+	drift   int
+	refused int
 }
 
 func (m *countingMetrics) UnknownPrice()              { m.unknown++ }
 func (m *countingMetrics) SyncStaleSeconds(s float64) { m.stale = s }
+func (m *countingMetrics) SeatDrift(n int)            { m.drift = n }
+func (m *countingMetrics) SeatPushRefused()           { m.refused++ }
 
 var testRegistry, _ = ParseRegistry(`[
 	{"price":"price_bm","plan":"business","interval":"month"},

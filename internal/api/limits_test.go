@@ -42,13 +42,13 @@ func TestALimitRefusalCarriesItsNumbersAndRemedy(t *testing.T) {
 		t.Errorf("the arithmetic is missing: used=%v allowed=%v", body["used"], body["allowed"])
 	}
 	remedy, _ := body["remedy"].(string)
-	if !strings.Contains(remedy, "Upgrade") {
-		t.Errorf("a hosted refusal does not offer the upgrade: %q", remedy)
+	if !strings.Contains(remedy, "Billing tab") {
+		t.Errorf("a hosted refusal does not point at the Billing tab: %q", remedy)
 	}
 	// The prose message stands on its own too, for anything that only shows
 	// `error`.
 	msg, _ := body["error"].(string)
-	if !strings.Contains(msg, "already has 5") || !strings.Contains(msg, "Upgrade") {
+	if !strings.Contains(msg, "already has 5") || !strings.Contains(msg, "Billing tab") {
 		t.Errorf("the message is not self-sufficient: %q", msg)
 	}
 }

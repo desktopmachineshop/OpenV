@@ -270,6 +270,28 @@ func main() {
 	userService := users.NewDefaultService(userRepo)
 	memberService := members.NewDefaultService(memberRepo)
 	orgService := orgs.NewDefaultService(orgRepo)
+
+	// The tiers turn on by naming the date before which a workspace keeps
+	// the alpha terms (OPENV_BILLING_GRANDFATHER_BEFORE, RFC 3339). The same
+	// boot writes those terms into every earlier workspace's own limits,
+	// once, so the promise and the enforcement can never be out of step:
+	// unset, everyone is on the alpha terms and nothing is grandfathered;
+	// set, the tier values apply to workspaces created after it. A failed
+	// grandfather step is fatal — booting with the tiers on and the promise
+	// unkept is the one outcome that must not happen. Self-hosted
+	// deployments are on their own plan and are left alone.
+	if raw := strings.TrimSpace(os.Getenv("OPENV_BILLING_GRANDFATHER_BEFORE")); raw != "" && !selfHosted {
+		cutoff, err := time.Parse(time.RFC3339, raw)
+		if err != nil {
+			fatal("OPENV_BILLING_GRANDFATHER_BEFORE must be an RFC 3339 date-time", err)
+		}
+		n, err := orgService.GrandfatherBefore(cutoff)
+		if err != nil {
+			fatal("could not grandfather workspaces created before the announced date", err)
+		}
+		orgs.SetTiersEnforced(true)
+		slog.Info("plan tiers in force", "grandfathered_before", cutoff.UTC().Format(time.RFC3339), "newly_grandfathered", n)
+	}
 	orgTeamService := orgs.NewTeamService(orgRepo, orgService)
 	// Workspace invitations (REQ-95): the only way into a workspace for
 	// someone with no account, and the prerequisite for closing self-service
@@ -575,6 +597,16 @@ func main() {
 		SetPushDispatcher(pushDispatcher).
 		Start(bus)
 
+	// Hosted-minutes alerts: the lease handlers ask the monitor after every
+	// lease starts or extends; nil where there is no runner pool to lease
+	// from, and the handlers are nil-safe.
+	var minutesMonitor *notify.MinutesMonitor
+	if runnerSessionService != nil {
+		minutesMonitor = notify.NewMinutesMonitor(orgService, runnerSessionService, notificationService, sseHub).
+			SetEmailDispatcher(emailDispatcher).
+			SetPushDispatcher(pushDispatcher)
+	}
+
 	// The running release: RELEASE_NOTES.md as built into this binary. Its
 	// top dated section is what GET /api/v1/release reports and what every
 	// account is told about, once per release, when a server first boots on
@@ -751,6 +783,13 @@ func main() {
 	case billingCfg.Enabled():
 		provider := stripe.New(billingCfg.SecretKey, stripe.WithAPIVersion(billingCfg.APIVersion), stripe.WithMetrics(metricsCollector))
 		billingService = billing.New(provider, orgService, billingCfg.Registry, metricsCollector)
+		billingService.SetUsers(userService)
+		billingService.SetPortalConfig(billingCfg.PortalConfig)
+		billingService.SetTrialDays(billingCfg.TrialDays)
+		billingService.SetMaxSeats(billingCfg.MaxSeats)
+		if billingCfg.ReturnURL != "" {
+			billingService.SetReturnURL(billingCfg.ReturnURL)
+		}
 		billingService.Start(ctx, billingCfg.ReconcileInterval)
 		slog.Info("billing enabled", "provider", provider.Name(), "prices", billingCfg.Registry.Len(), "reconcile_every", billingCfg.ReconcileInterval)
 	}
@@ -818,6 +857,7 @@ func main() {
 		EmailVerification: emailVerification,
 		InvitationService: invitationService,
 		BillingService:    billingService,
+		MinutesAlerts:     minutesMonitor,
 		Registration:      registrationPolicy,
 		SessionPolicy:     sessionPolicy,
 	})

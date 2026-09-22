@@ -45,7 +45,7 @@ import (
 func (h *Handler) registerInvitationRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/orgs/{id}/invitations", h.ListOrgInvitations).Methods("GET")
 	router.HandleFunc("/api/v1/orgs/{id}/invitations", h.CreateOrgInvitation).Methods("POST")
-	router.HandleFunc("/api/v1/orgs/{id}/invitations/{invId}", h.RevokeOrgInvitation).Methods("DELETE")
+	router.HandleFunc("/api/v1/orgs/{id}/invitations/{invId}", h.alwaysWritable(h.RevokeOrgInvitation)).Methods("DELETE")
 }
 
 // invitationResponse is what an admin gets back when an invitation is
@@ -173,6 +173,7 @@ func (h *Handler) addOrInviteToOrg(r *http.Request, orgID, email, role string) (
 		if err != nil {
 			return nil, err
 		}
+		h.seatsChanged(orgID)
 		return &memberOrInvitation{Invitation: resp}, nil
 	}
 	if h.orgService == nil {
@@ -190,11 +191,13 @@ func (h *Handler) addOrInviteToOrg(r *http.Request, orgID, email, role string) (
 		if err != nil {
 			return nil, err
 		}
+		h.seatsChanged(orgID)
 		return &memberOrInvitation{Invitation: resp}, nil
 	}
 	if err := h.orgService.AddMember(orgID, user.ID, role); err != nil {
 		return nil, err
 	}
+	h.seatsChanged(orgID)
 	h.publishOrgEvent(r, events.OrgMemberAdded, orgID, user.ID, map[string]interface{}{
 		"user_id": user.ID,
 		"role":    role,
@@ -398,6 +401,7 @@ func (h *Handler) RevokeOrgInvitation(w http.ResponseWriter, r *http.Request) {
 		h.writeInvitationError(w, r, err)
 		return
 	}
+	h.seatsChanged(vars["id"])
 	w.WriteHeader(http.StatusNoContent)
 }
 

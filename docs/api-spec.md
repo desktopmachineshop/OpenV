@@ -730,7 +730,10 @@ project. `docs/operations.md` covers how an operator sets them.
 |---|---|---|---|
 | GET | `/api/v1/public/plans` | The plans for sale with their confirmed amounts per currency | open |
 | GET | `/api/v1/orgs/{id}/billing` | The workspace's billed plan, entitled plan and subscription snapshot | admin |
-| POST | `/api/v1/orgs/{id}/billing/refresh` | Re-read the workspace's subscription from the provider now | admin, rate limited |
+| POST | `/api/v1/orgs/{id}/billing/refresh` | Re-read the workspace's subscription from the provider now; `{"session_id"}` binds a just-completed checkout | admin, rate limited |
+| POST | `/api/v1/orgs/{id}/billing/checkout` | `{"plan","interval","currency"}` → `{"url"}`, the provider's checkout page | admin, rate limited, channel gated |
+| POST | `/api/v1/orgs/{id}/billing/change` | `{"plan","interval"}` → the state; moves the live subscription in place, prorated | admin, rate limited |
+| POST | `/api/v1/orgs/{id}/billing/portal` | `{"url"}`, the provider's self-service portal (card, address, VAT number, invoices, cancel) | admin, rate limited |
 
 Billing is an optional module (`docs/plans/billing-stripe.md`). With no
 provider configured — every self-hosted deployment — the public catalogue
@@ -764,7 +767,42 @@ grant nothing it does not hold; a provider failure is `503` with
 `code: "billing_upstream"` and `Retry-After`, the workspace left as it was.
 The limits response likewise carries `entitled_plan`, `plan_status` and
 `grandfathered`, so a member can see there is a payment problem without
-seeing anything about money.
+seeing anything about money. Each flag (`hosted_automation`, `teams`,
+`workspace_budget`) is listed with `kind: "flag"` and `included`, and
+`hosted_runner_minutes_month` with the month's leased minutes as `used`.
+
+**Read-only over plan.** `read_only` is true, and `over_plan` names the
+limits, while a workspace holds more than its plan allows (more members
+than `max_members`, more projects than `max_projects`) — after a lapsed
+subscription, say. Every mutating request scoped to that workspace or its
+projects then answers `403` with `code: "plan_read_only"`, `over` and
+`remedy`, except the writes that bring it back under plan or out: removing
+a member or leaving, revoking an invitation, deleting a project or the
+workspace, the billing endpoints, and import. Reads, and export in every
+format, are never refused in any state. A flag the plan does not include
+is refused with `403 limit_reached` naming the flag, at: creating a hosted
+runner and a hosted worker's run claim (`hosted_automation`; a claim by the
+member's own Agent Connector is never gated), creating a people-team and
+granting a team on a project (`teams`), and the workspace usage rollup and
+budget (`workspace_budget`). A cloud-runner lease is cut to the month's
+remaining `hosted_runner_minutes_month` and refused with `limit_reached`
+once none is left.
+
+A purchase is a redirect: `checkout` answers with a page of the provider's
+and the browser returns to the Billing tab with `?checkout=done&session_id=`,
+which the tab hands to `refresh`; the platform verifies the session belongs
+to that workspace (`403 checkout_mismatch` otherwise), records the
+subscription, and marks the buyer's one trial used. `checkout` answers `400
+unknown_plan` for a plan, interval or currency not on sale, or a currency
+other than the one the workspace's first purchase fixed; `409
+already_subscribed` while a subscription is live, `409 granted_plan` where
+a platform admin set the plan, and `400` for `business` on a personal
+workspace. Where two admins complete two checkouts, the second is cancelled
+at bind and the tab says so. `change` keeps one subscription per workspace
+(`409 no_subscription` without one): `business_lite` bills a quantity of
+one, `business` the workspace's seats. `portal` needs a customer record
+(`409 no_customer`). Writes are limited to a burst of 5 then 20 an hour per
+workspace (`OPENV_BILLING_WRITE_BURST` / `_REFILL_PER_HOUR`).
 ### Evidence bundles
 
 A bundle is one physical or manual capture session — what was done, when, by

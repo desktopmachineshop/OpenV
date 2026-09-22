@@ -1,8 +1,10 @@
 package api
 
 import (
+	"context"
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/openv/requirements-platform/internal/domain/orgs"
 )
@@ -39,6 +41,10 @@ type LimitUsage struct {
 	// "this is how it is" rather than warning that the workspace is full,
 	// which is the difference between a fact and an alarm.
 	Fixed bool `json:"fixed,omitempty"`
+	// Kind is the value's shape: a flag has no number, only Included.
+	Kind orgs.Kind `json:"kind"`
+	// Included is a flag's reading: whether the plan includes the thing.
+	Included *bool `json:"included,omitempty"`
 }
 
 // limitsResponse is the whole picture of what a workspace may do.
@@ -56,6 +62,158 @@ type limitsResponse struct {
 	// SelfHosted tells the UI which remedy to offer when something is full.
 	SelfHosted bool         `json:"self_hosted"`
 	Limits     []LimitUsage `json:"limits"`
+	// ReadOnly is true while the workspace holds more than its plan allows;
+	// OverPlan names the limits it is past. Every write is refused with
+	// plan_read_only until it upgrades or trims; reads and export never are.
+	ReadOnly bool     `json:"read_only"`
+	OverPlan []string `json:"over_plan,omitempty"`
+}
+
+// checkFlag refuses when the workspace's plan does not include a flag. A
+// workspace that cannot be read is not refused, as with every limit.
+func (h *Handler) checkFlag(orgID, key string) error {
+	limits := h.effectiveLimits(orgID)
+	if limits == nil {
+		return nil
+	}
+	return orgs.CheckFlag(limits, key)
+}
+
+// overPlan names the count limits a workspace is already past. It counts
+// only where a ceiling applies, so a workspace on the alpha terms, a paid
+// plan or a self-hosted deployment costs one read and no counting.
+func (h *Handler) overPlan(org *orgs.Org) []string {
+	if org == nil || org.OrgType == orgs.TypePersonal {
+		return nil
+	}
+	limits := org.EffectiveLimits()
+	usage := map[string]int{}
+	if _, capped := orgs.Ceiling(limits, orgs.LimitMaxMembers); capped {
+		if n, err := h.countOrgSeats(org.ID); err == nil {
+			usage[orgs.LimitMaxMembers] = n
+		}
+	}
+	if _, capped := orgs.Ceiling(limits, orgs.LimitMaxProjects); capped && h.projectService != nil {
+		if list, err := h.projectService.ListProjectsByOrg(org.ID); err == nil {
+			usage[orgs.LimitMaxProjects] = len(list)
+		}
+	}
+	return orgs.OverPlan(limits, usage)
+}
+
+// ctxAlwaysWritable marks a request for one of the few writes a read-only
+// workspace may still make: the ones that bring it back under its plan or
+// out of the platform (remove a member, revoke an invitation, delete a
+// project or the workspace), the billing endpoints, and import.
+const ctxAlwaysWritable contextKey = "openv-always-writable"
+
+// alwaysWritable wraps a handler whose write is never refused for being
+// over plan.
+func (h *Handler) alwaysWritable(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		next(w, r.WithContext(context.WithValue(r.Context(), ctxAlwaysWritable, true)))
+	}
+}
+
+func mutating(method string) bool {
+	switch method {
+	case http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete:
+		return true
+	}
+	return false
+}
+
+// requireWritable refuses a mutating request scoped to a workspace that
+// holds more than its plan allows, with 403 plan_read_only and the remedy.
+// Reads pass untouched, as do the requests alwaysWritable marks. A
+// workspace that cannot be read is writable: a limit check must never be
+// the reason a legitimate action fails.
+func (h *Handler) requireWritable(w http.ResponseWriter, r *http.Request, orgID string) bool {
+	if orgID == "" || !mutating(r.Method) {
+		return true
+	}
+	if on, _ := r.Context().Value(ctxAlwaysWritable).(bool); on {
+		return true
+	}
+	over := h.overPlan(h.orgForLimits(orgID))
+	if len(over) == 0 {
+		return true
+	}
+	labels := make([]string, 0, len(over))
+	for _, key := range over {
+		if def, ok := orgs.Describe(key); ok {
+			labels = append(labels, def.Label)
+		} else {
+			labels = append(labels, key)
+		}
+	}
+	msg := "This workspace is read-only: it is over its plan's limit on " + joinAnd(labels) + ". " + orgs.ReadOnlyRemedy
+	respondJSON(w, http.StatusForbidden, map[string]interface{}{
+		"error":  msg,
+		"code":   ErrCodePlanReadOnly,
+		"over":   over,
+		"remedy": orgs.ReadOnlyRemedy,
+	})
+	return false
+}
+
+func joinAnd(items []string) string {
+	switch len(items) {
+	case 0:
+		return ""
+	case 1:
+		return items[0]
+	}
+	out := ""
+	for i, item := range items {
+		switch {
+		case i == 0:
+			out = item
+		case i == len(items)-1:
+			out += " and " + item
+		default:
+			out += ", " + item
+		}
+	}
+	return out
+}
+
+// hostedMinutes reads the workspace's monthly cloud-runner allowance and
+// what it has used. capped is false where no ceiling applies or the usage
+// cannot be read, and nothing is then enforced.
+func (h *Handler) hostedMinutes(orgID string) (used, allowance int, capped bool) {
+	limits := h.effectiveLimits(orgID)
+	allowance, capped = orgs.Ceiling(limits, orgs.LimitHostedRunnerMinutesMonth)
+	if !capped || h.runnerSessionService == nil {
+		return 0, 0, false
+	}
+	now := time.Now().UTC()
+	monthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
+	used, err := h.runnerSessionService.MinutesUsed(orgID, monthStart)
+	if err != nil {
+		return 0, 0, false
+	}
+	return used, allowance, true
+}
+
+// leaseMinutesAllowed fits a lease of `want` minutes under the month's
+// remaining allowance: the whole lease where there is room, a shorter one
+// where only part of it fits, and a limit refusal once nothing does. The
+// allowance is hard: a lease never runs past it.
+func (h *Handler) leaseMinutesAllowed(orgID string, want int) (int, error) {
+	used, allowance, capped := h.hostedMinutes(orgID)
+	if !capped {
+		return want, nil
+	}
+	left := allowance - used
+	if left <= 0 {
+		return 0, orgs.NewLimitError(orgs.LimitHostedRunnerMinutesMonth, used, allowance).
+			WithDetail("agents on your own machine through the Agent Connector are never counted")
+	}
+	if want > left {
+		return left, nil
+	}
+	return want, nil
 }
 
 // writeLimitError answers a limit refusal with the numbers and the remedy
@@ -238,10 +396,15 @@ func (h *Handler) buildLimitsResponse(orgID string) (*limitsResponse, error) {
 	if out.PlanStatus == "" {
 		out.PlanStatus = orgs.PlanStatusNone
 	}
+	out.OverPlan = h.overPlan(org)
+	out.ReadOnly = len(out.OverPlan) > 0
 	for _, def := range orgs.Catalog() {
 		if def.Kind == orgs.KindFlag {
-			// Flags are not numbers and the panel has nothing to draw for
-			// one yet; they join the response when their gates do.
+			included := orgs.Allowed(limits, def.Key)
+			out.Limits = append(out.Limits, LimitUsage{
+				Key: def.Key, Label: def.Label, Description: def.Description, Unit: def.Unit,
+				Kind: def.Kind, Included: &included, Unlimited: included,
+			})
 			continue
 		}
 		cap, capped := orgs.Ceiling(limits, def.Key)
@@ -259,6 +422,7 @@ func (h *Handler) buildLimitsResponse(orgID string) (*limitsResponse, error) {
 			Label:       def.Label,
 			Description: description,
 			Unit:        def.Unit,
+			Kind:        def.Kind,
 			Limit:       cap,
 			Unlimited:   !capped,
 			Fixed:       fixed,
@@ -310,6 +474,16 @@ func (h *Handler) countFor(key string, org *orgs.Org) (int, bool) {
 			}
 		}
 		return created, true
+	case orgs.LimitHostedRunnerMinutesMonth:
+		if h.runnerSessionService == nil {
+			return 0, false
+		}
+		now := time.Now().UTC()
+		used, err := h.runnerSessionService.MinutesUsed(org.ID, time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC))
+		if err != nil {
+			return 0, false
+		}
+		return used, true
 	case orgs.LimitEvidenceStorageMB:
 		if h.evidenceService == nil {
 			return 0, false
