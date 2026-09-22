@@ -2,10 +2,14 @@
 
 Status: approved 2026-09-21; Phase 1 (entitlement plumbing, the price
 registry, the Stripe client, the reconcile loop, the public catalogue and
-the three read-only routes) implemented in PR #376 — nothing for sale yet.
-Recorded in the OpenV Platform project as **DSC-9** (Billing and tiers plan
-2026-09-21), with Phase 1's requirements REQ-168 … REQ-171, design items
-DES-68 and DES-69, and test cases TC-99 and TC-100. This plan
+the three read-only routes) implemented in PR #376. Phases 2, 3 and 4
+(checkout, seat sync, and the tiers behind `OPENV_BILLING_GRANDFATHER_BEFORE`)
+implemented in the following PR, one commit per phase; the tier values stay
+off until the operator names the grandfather date, which is the one
+deviation from "Phase 4 ships alone on the announced date". Recorded in the
+OpenV Platform project as **DSC-9** (Billing and tiers plan 2026-09-21),
+with requirements REQ-168 … REQ-179, design items DES-68 … DES-72, and test
+cases TC-99 … TC-104. This plan
 supersedes `docs/billing-odoo.md`, which proposed Odoo as the billing system
 of record; that file is kept as the record of the rejected alternative.
 Requirements, design items and test cases land in the OpenV Platform project
