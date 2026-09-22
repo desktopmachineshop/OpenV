@@ -9,6 +9,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+## 0.15.0 — 2026-09-22
+
 ### New features
 
 - **A workspace admin can subscribe to Business Lite or Business from the
