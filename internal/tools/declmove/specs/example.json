@@ -1,0 +1,18 @@
+{
+  "description": "Example spec, in the shape of M1's class-A commit: the helpers leave cmd/server/main.go for config.go, logging.go and http.go. Preview it with: go run ./internal/tools/declmove -n -spec internal/tools/declmove/specs/example.json",
+  "package": "cmd/server",
+  "targets": [
+    {
+      "file": "config.go",
+      "decls": ["envOr", "envInt"]
+    },
+    {
+      "file": "logging.go",
+      "decls": ["initLogging", "fatal"]
+    },
+    {
+      "file": "http.go",
+      "decls": ["maxRequestBodyBytes"]
+    }
+  ]
+}

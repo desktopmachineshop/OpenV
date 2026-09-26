@@ -1,0 +1,19 @@
+{
+  "description": "declmove's test spec over testdata/fixture: a new file with a header, a grouped const declaration, an existing file with a one-line import, and a file left empty.",
+  "package": "fixture",
+  "targets": [
+    {
+      "file": "handlers.go",
+      "header": "// Request handling, moved out of server.go.",
+      "decls": ["(*Server).Handle", "render"]
+    },
+    {
+      "file": "modes.go",
+      "decls": ["Mode", "ModeOff", "ModeOn", "ModeLoud"]
+    },
+    {
+      "file": "small.go",
+      "decls": ["helper", "errEmpty", "helperSorted"]
+    }
+  ]
+}
