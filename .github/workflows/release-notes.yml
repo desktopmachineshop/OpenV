@@ -1,0 +1,68 @@
+name: Release notes
+
+# Every pull request must tell the people who use OpenV what changed: a
+# bullet under "## Unreleased" in RELEASE_NOTES.md (docs/railway.md,
+# "Release pipeline"). The check compares the file with the copy on the
+# base that GitHub merged the pull request onto (the first parent of the
+# merge commit it checks out); a change nobody can see carries the
+# no-release-notes label instead.
+# On master the file is only checked for shape, so a promotion never finds
+# it unparseable.
+#
+# This job lives apart from ci.yml so that it can also run when a label
+# changes: the label often goes on after the pull request is opened, and a
+# label change re-runs only this job, not the rest of CI. It reads the
+# labels from the API when it runs, not from the event that triggered it.
+# A run started before the label went on, and finished before the label's
+# own run could cancel it, would otherwise stay red beside the green one,
+# and re-running it would replay the same event, labels and all.
+on:
+  push:
+    branches: [master]
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+# One result per pull request: a later push or label change supersedes a run
+# still in flight on the same pull request. On master, as in ci.yml, a newer
+# push supersedes the older one.
+concurrency:
+  group: release-notes-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  release-notes:
+    name: Release notes
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # On a pull request this is GitHub's merge commit; depth 2 brings in
+          # its parents, and HEAD^1 is the base it was built on. The event's
+          # base.sha can be older than that, and would then count another
+          # pull request's bullet as this one's.
+          fetch-depth: 2
+
+      - name: Script self-test
+        run: python3 -m unittest scripts/release_notes_test.py
+
+      - name: Notes file is well-formed
+        run: python3 scripts/release_notes.py check RELEASE_NOTES.md
+
+      - name: Pull request adds a release note
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          labels=$(gh api "repos/$REPO/pulls/$PR" --jq '.labels[].name')
+          if grep -qx 'no-release-notes' <<<"$labels"; then
+            echo "no-release-notes label present; not requiring a note"
+            exit 0
+          fi
+          git show HEAD^1:RELEASE_NOTES.md > /tmp/base-release-notes.md
+          python3 scripts/release_notes.py check-pr --base /tmp/base-release-notes.md RELEASE_NOTES.md

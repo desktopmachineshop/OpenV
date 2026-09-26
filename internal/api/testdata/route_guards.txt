@@ -1,0 +1,347 @@
+# The require* guards each route's handler visibly calls, directly or through
+# one helper, as canonical kinds in call order; "-" when it calls none. A list
+# names every call found, and a branch may make only some of them. The kinds
+# are documented at guardHelpers in the internal/api tests. This records what
+# the code visibly does; it is not an authorization proof.
+# Regenerate: UPDATE_ROUTES=1 go test ./internal/api -count=1 -v -run 'TestRouteInventory|TestRouteBinding'
+DELETE /api/v1/agents/{slug}: org:admin
+DELETE /api/v1/artifacts/{id}: project:editor
+DELETE /api/v1/attachments/{id}: project:editor
+DELETE /api/v1/attribute-definitions/{id}: scoped-write
+DELETE /api/v1/automations/{id}: session, scoped-write
+DELETE /api/v1/baselines/{id}: project:owner
+DELETE /api/v1/crew-edges/{id}: session, scoped-write
+DELETE /api/v1/crew-nodes/{id}: session, scoped-write
+DELETE /api/v1/crews/{id}: session, scoped-write
+DELETE /api/v1/evidence-bundles/{id}: project:editor
+DELETE /api/v1/evidence-files/{id}: project:editor
+DELETE /api/v1/links/{id}: project:editor
+DELETE /api/v1/me/avatar: -
+DELETE /api/v1/me/push-subscriptions: session
+DELETE /api/v1/notifications/cleared: session
+DELETE /api/v1/org-teams/{id}: org:admin
+DELETE /api/v1/org-teams/{id}/members/{userId}: org:admin
+DELETE /api/v1/orgs/{id}: org:admin
+DELETE /api/v1/orgs/{id}/hosted-runner: org:admin
+DELETE /api/v1/orgs/{id}/invitations/{invId}: org:admin
+DELETE /api/v1/orgs/{id}/logo: org:admin
+DELETE /api/v1/orgs/{id}/members/{userId}: org:admin|org:member
+DELETE /api/v1/orgs/{id}/my-runner-key: org:member
+DELETE /api/v1/orgs/{id}/runner-session: org:member, runner-sessions
+DELETE /api/v1/orgs/{id}/worker-keys/{keyId}: org:admin
+DELETE /api/v1/projects/{id}: project:owner
+DELETE /api/v1/projects/{id}/members/{userId}: project:owner
+DELETE /api/v1/projects/{id}/team-access/{teamId}: project:owner
+DELETE /api/v1/repo-connections/{id}: project:owner
+DELETE /api/v1/share-links/{id}: project:owner
+DELETE /api/v1/shared-products/{id}: -
+DELETE /api/v1/shared-products/{id}/vote: -
+DELETE /api/v1/team-edges/{id}: session, scoped-write
+DELETE /api/v1/team-nodes/{id}: session, scoped-write
+DELETE /api/v1/teams/{id}: session, scoped-write
+DELETE /api/v1/test-results/{id}/citations/{bundleId}: project:editor
+DELETE /api/v1/test-runs/{id}: project:editor
+DELETE /api/v1/work-items/{id}: project:editor
+GET /api/v1/admin/users: platform-admin
+GET /api/v1/admin/workspaces: platform-admin
+GET /api/v1/agent-runs: session, project:viewer
+GET /api/v1/agent-runs/delegate/{id}: -
+GET /api/v1/agent-runs/{id}: session, run:viewer
+GET /api/v1/agent-runs/{id}/logs: session, run:viewer
+GET /api/v1/agent-runs/{id}/stream: session, run:viewer
+GET /api/v1/agent-runs/{id}/tree: session, run:viewer
+GET /api/v1/agents: session
+GET /api/v1/agents/{slug}: session
+GET /api/v1/agents/{slug}/raw: session
+GET /api/v1/artifacts: project:viewer
+GET /api/v1/artifacts/{artifactID}/attachments: project:viewer
+GET /api/v1/artifacts/{id}: project:viewer
+GET /api/v1/artifacts/{id}/links: project:viewer
+GET /api/v1/artifacts/{id}/quality: project:viewer
+GET /api/v1/artifacts/{id}/versions: project:viewer
+GET /api/v1/attachments/{id}: project:viewer
+GET /api/v1/attachments/{id}/download: project:viewer
+GET /api/v1/attachments/{id}/versions: project:viewer
+GET /api/v1/attribute-definitions: project:viewer, org:member
+GET /api/v1/auth/config: -
+GET /api/v1/auth/google: -
+GET /api/v1/auth/google/callback: -
+GET /api/v1/auth/me: -
+GET /api/v1/auth/oidc/callback: -
+GET /api/v1/auth/oidc/login: -
+GET /api/v1/auth/policy: -
+GET /api/v1/automations: session
+GET /api/v1/automations/{id}: session, org:member
+GET /api/v1/baselines/{id}: project:viewer
+GET /api/v1/baselines/{id}/diff: project:viewer
+GET /api/v1/chatter: project:viewer
+GET /api/v1/crew-templates: session
+GET /api/v1/crews: session
+GET /api/v1/crews/{id}: session, org:member
+GET /api/v1/crews/{id}/export: session, org:member
+GET /api/v1/events: session, project:viewer
+GET /api/v1/evidence-bundles/{id}: project:viewer
+GET /api/v1/evidence-files/{id}/download: project:viewer
+GET /api/v1/guided-sessions: project:viewer
+GET /api/v1/guided-sessions/{id}: project:viewer
+GET /api/v1/guided-sessions/{id}/chat/stream: project:viewer
+GET /api/v1/guided-sessions/{id}/messages: project:viewer
+GET /api/v1/interview-sessions/{id}/transcript: session, project:viewer
+GET /api/v1/interviews/{id}/invites: project:viewer
+GET /api/v1/interviews/{id}/sessions: project:viewer
+GET /api/v1/links: project:viewer
+GET /api/v1/links/{id}: project:viewer
+GET /api/v1/me/default-workspace: -
+GET /api/v1/me/notification-prefs: -
+GET /api/v1/me/push-subscriptions: session
+GET /api/v1/me/push/config: session
+GET /api/v1/meta/artifact-types: -
+GET /api/v1/meta/attribute-definitions: project:viewer, org:member
+GET /api/v1/meta/link-types: -
+GET /api/v1/notifications: session
+GET /api/v1/notifications/stream: session
+GET /api/v1/orgs: -
+GET /api/v1/orgs/{id}: org:member
+GET /api/v1/orgs/{id}/billing: org:admin
+GET /api/v1/orgs/{id}/features: org:member
+GET /api/v1/orgs/{id}/hosted-runner: org:admin
+GET /api/v1/orgs/{id}/invitations: org:admin
+GET /api/v1/orgs/{id}/limits: org:member
+GET /api/v1/orgs/{id}/logo: org:member
+GET /api/v1/orgs/{id}/members: org:member
+GET /api/v1/orgs/{id}/my-runner-key: org:member
+GET /api/v1/orgs/{id}/quality-rules: org:member
+GET /api/v1/orgs/{id}/runner-pool: org:admin
+GET /api/v1/orgs/{id}/runner-session: org:member
+GET /api/v1/orgs/{id}/teams: org:member
+GET /api/v1/orgs/{id}/usage: org:member
+GET /api/v1/orgs/{id}/worker-keys: org:admin
+GET /api/v1/orgs/{id}/worker-status: org:member
+GET /api/v1/projects: -
+GET /api/v1/projects/{id}: project:viewer
+GET /api/v1/projects/{id}/ai-map: project:viewer
+GET /api/v1/projects/{id}/baselines: project:viewer
+GET /api/v1/projects/{id}/children: project:viewer
+GET /api/v1/projects/{id}/download/csv: project:viewer
+GET /api/v1/projects/{id}/download/docx: project:viewer
+GET /api/v1/projects/{id}/download/excel: project:viewer
+GET /api/v1/projects/{id}/download/json: project:viewer
+GET /api/v1/projects/{id}/download/options: project:viewer
+GET /api/v1/projects/{id}/download/pdf: project:viewer
+GET /api/v1/projects/{id}/download/reqif: project:viewer
+GET /api/v1/projects/{id}/duplicates: project:viewer
+GET /api/v1/projects/{id}/evidence-bundles: project:viewer
+GET /api/v1/projects/{id}/export: project:viewer
+GET /api/v1/projects/{id}/impact: project:viewer
+GET /api/v1/projects/{id}/interview-sessions: project:viewer
+GET /api/v1/projects/{id}/interviews: project:viewer
+GET /api/v1/projects/{id}/linked-artifacts: project:viewer
+GET /api/v1/projects/{id}/members: project:viewer
+GET /api/v1/projects/{id}/parties: project:viewer
+GET /api/v1/projects/{id}/profile: project:viewer
+GET /api/v1/projects/{id}/quality: project:viewer
+GET /api/v1/projects/{id}/quality-rules: project:viewer
+GET /api/v1/projects/{id}/repo-connections: project:viewer
+GET /api/v1/projects/{id}/report: project:viewer
+GET /api/v1/projects/{id}/review-queue: project:viewer
+GET /api/v1/projects/{id}/share-links: project:owner
+GET /api/v1/projects/{id}/team-access: project:viewer
+GET /api/v1/projects/{id}/test-runs: project:viewer
+GET /api/v1/projects/{id}/vv/coverage: project:viewer
+GET /api/v1/projects/{id}/vv/gaps: project:viewer
+GET /api/v1/projects/{id}/vv/matrix: project:viewer
+GET /api/v1/projects/{id}/vv/report: project:viewer
+GET /api/v1/projects/{id}/work-items: project:viewer
+GET /api/v1/projects/{projectID}/attachments: project:viewer
+GET /api/v1/proposals: session, project:viewer
+GET /api/v1/provider-logins/{id}: -
+GET /api/v1/provider-logins/{id}/full: worker
+GET /api/v1/provider-settings: session
+GET /api/v1/public/build: -
+GET /api/v1/public/connector/download: -
+GET /api/v1/public/interviews/{token}: -
+GET /api/v1/public/interviews/{token}/stream: -
+GET /api/v1/public/open-source/projects: -
+GET /api/v1/public/open-source/projects/{id}: -
+GET /api/v1/public/open-source/projects/{id}/page: -
+GET /api/v1/public/open-source/projects/{id}/preview.png: -
+GET /api/v1/public/plans: -
+GET /api/v1/public/release: -
+GET /api/v1/public/share/{token}: -
+GET /api/v1/public/share/{token}/page: -
+GET /api/v1/public/share/{token}/preview.png: -
+GET /api/v1/release: -
+GET /api/v1/search: session
+GET /api/v1/shared-products: -
+GET /api/v1/teams: session
+GET /api/v1/teams/{id}: session, org:member
+GET /api/v1/teams/{id}/export: session, org:member
+GET /api/v1/templates: -
+GET /api/v1/test-results/{id}/citations: project:viewer
+GET /api/v1/test-runs/{id}: project:viewer
+GET /api/v1/test-runs/{id}/citations: project:viewer
+GET /api/v1/test-runs/{id}/results: project:viewer
+GET /api/v1/users: -
+GET /api/v1/users/{id}/avatar: -
+GET /api/v1/work-items/{id}: project:viewer
+GET /health: -
+HEAD /api/v1/public/connector/download: -
+POST /api/v1/admin/users/{id}/password-reset: platform-admin
+POST /api/v1/agent-runs/claim: worker
+POST /api/v1/agent-runs/delegate: -
+POST /api/v1/agent-runs/{id}/cancel: session, run:editor
+POST /api/v1/agent-runs/{id}/finish: worker, worker-run
+POST /api/v1/agent-runs/{id}/logs: worker, worker-run
+POST /api/v1/agent-runs/{id}/release: worker, worker-run
+POST /api/v1/agent-runs/{id}/retry: session, run:editor
+POST /api/v1/agent-runs/{id}/start: worker, worker-run
+POST /api/v1/agents: org:admin
+POST /api/v1/agents/sync: org:admin
+POST /api/v1/agents/{slug}/runs: project:editor
+POST /api/v1/artifacts: project:editor, project:viewer
+POST /api/v1/artifacts/{id}/restore: project:editor
+POST /api/v1/attachments/upload: project:editor
+POST /api/v1/attachments/{id}/versions: project:editor
+POST /api/v1/attachments/{id}/versions/{version}/restore: project:editor
+POST /api/v1/attribute-definitions: scoped-write
+POST /api/v1/auth/invitations/accept: json-body
+POST /api/v1/auth/invitations/preview: -
+POST /api/v1/auth/login: -
+POST /api/v1/auth/logout: -
+POST /api/v1/auth/password-reset: -
+POST /api/v1/auth/password-reset/confirm: -
+POST /api/v1/auth/register: -
+POST /api/v1/auth/share/accept: -
+POST /api/v1/auth/verify-email: -
+POST /api/v1/auth/verify-email/change: json-body, json-body
+POST /api/v1/auth/verify-email/resend: json-body
+POST /api/v1/automations: session, scoped-write
+POST /api/v1/automations/{id}/run-now: session, scoped-write
+POST /api/v1/chatter: project:reviewer
+POST /api/v1/crews: session, project:editor, org:admin
+POST /api/v1/crews/import: session, project:editor, org:admin
+POST /api/v1/crews/{id}/clone: session, scoped-write
+POST /api/v1/crews/{id}/edges: session, scoped-write
+POST /api/v1/crews/{id}/nodes: session, scoped-write
+POST /api/v1/crews/{id}/runs: project:editor, org:admin, project:editor
+POST /api/v1/evidence-bundles/{id}/files: project:editor
+POST /api/v1/guided-sessions: project:editor
+POST /api/v1/guided-sessions/{id}/abandon: project:editor
+POST /api/v1/guided-sessions/{id}/chat/kickoff: project:editor
+POST /api/v1/guided-sessions/{id}/chat/nudge: project:editor
+POST /api/v1/guided-sessions/{id}/commit: project:editor
+POST /api/v1/guided-sessions/{id}/drafts: project:editor
+POST /api/v1/guided-sessions/{id}/messages: project:editor
+POST /api/v1/interview-invites/{id}/revoke: session, project:editor
+POST /api/v1/interviews/{id}/close: project:editor
+POST /api/v1/interviews/{id}/invites: project:editor
+POST /api/v1/links: project:editor, project:editor|project:viewer, project:editor
+POST /api/v1/me/avatar: -
+POST /api/v1/me/push-subscriptions: session
+POST /api/v1/notifications/clear: session
+POST /api/v1/notifications/read: session
+POST /api/v1/notifications/read-all: session
+POST /api/v1/org-teams/{id}/members/{userId}: org:admin
+POST /api/v1/orgs: -
+POST /api/v1/orgs/{id}/activate: org:member
+POST /api/v1/orgs/{id}/billing/change: org:admin
+POST /api/v1/orgs/{id}/billing/checkout: org:admin
+POST /api/v1/orgs/{id}/billing/portal: org:admin
+POST /api/v1/orgs/{id}/billing/refresh: org:admin
+POST /api/v1/orgs/{id}/connector-pairing: org:member
+POST /api/v1/orgs/{id}/hosted-runner: org:admin
+POST /api/v1/orgs/{id}/hosted-runner/start: org:admin
+POST /api/v1/orgs/{id}/hosted-runner/stop: org:admin
+POST /api/v1/orgs/{id}/invitations: org:admin
+POST /api/v1/orgs/{id}/logo: org:admin
+POST /api/v1/orgs/{id}/members: org:admin
+POST /api/v1/orgs/{id}/my-runner-key: org:member
+POST /api/v1/orgs/{id}/restore: -
+POST /api/v1/orgs/{id}/runner-session: org:member, runner-sessions
+POST /api/v1/orgs/{id}/runner-session/extend: org:member, runner-sessions
+POST /api/v1/orgs/{id}/teams: org:admin
+POST /api/v1/orgs/{id}/worker-keys: org:admin
+POST /api/v1/projects: -
+POST /api/v1/projects/import: -
+POST /api/v1/projects/{id}/baselines: project:editor
+POST /api/v1/projects/{id}/draft-test-cases: project:editor
+POST /api/v1/projects/{id}/evidence-bundles: project:editor
+POST /api/v1/projects/{id}/interviews: project:editor
+POST /api/v1/projects/{id}/members: project:owner
+POST /api/v1/projects/{id}/reindex-embeddings: project:owner
+POST /api/v1/projects/{id}/repo-connections: project:owner
+POST /api/v1/projects/{id}/review-round: project:editor
+POST /api/v1/projects/{id}/share-links: project:owner
+POST /api/v1/projects/{id}/test-runs: project:editor
+POST /api/v1/projects/{id}/work-items: project:editor
+POST /api/v1/proposals/bulk: session, project:editor
+POST /api/v1/proposals/{id}/approve: project:editor
+POST /api/v1/proposals/{id}/reject: project:editor
+POST /api/v1/provider-logins: org:admin|org:member
+POST /api/v1/provider-logins/claim: worker
+POST /api/v1/provider-logins/{id}/cancel: -
+POST /api/v1/provider-logins/{id}/code: -
+POST /api/v1/provider-logins/{id}/progress: worker
+POST /api/v1/provider-settings/detect: worker
+POST /api/v1/public/connector/pair: -
+POST /api/v1/public/interviews/{token}/finish: -
+POST /api/v1/public/interviews/{token}/messages: -
+POST /api/v1/runner-pool/nodes: pool-node, runner-sessions
+POST /api/v1/runner-pool/nodes/{id}/heartbeat: pool-node, runner-sessions
+POST /api/v1/runner-pool/nodes/{id}/release: pool-node, runner-sessions
+POST /api/v1/shared-products: org:member
+POST /api/v1/shared-products/{id}/report: -
+POST /api/v1/teams: session, project:editor, org:admin
+POST /api/v1/teams/import: session, project:editor, org:admin
+POST /api/v1/teams/{id}/clone: session, scoped-write
+POST /api/v1/teams/{id}/edges: session, scoped-write
+POST /api/v1/teams/{id}/nodes: session, scoped-write
+POST /api/v1/teams/{id}/runs: project:editor, org:admin, project:editor
+POST /api/v1/templates: project:editor
+POST /api/v1/templates/{id}/projects: -
+POST /api/v1/test-results/{id}/citations: project:editor, project:viewer
+POST /api/v1/test-runs/{id}/agent-run: project:editor
+POST /api/v1/test-runs/{id}/results: project:editor
+POST /api/v1/work-items/{id}/comments: project:viewer
+POST /api/v1/work-items/{id}/move: project:editor
+PUT /api/v1/admin/users/{id}/admin: platform-admin
+PUT /api/v1/agents/{slug}: org:admin
+PUT /api/v1/agents/{slug}/raw: org:admin
+PUT /api/v1/artifacts/{id}: project:editor
+PUT /api/v1/artifacts/{id}/status: project:editor
+PUT /api/v1/attachments/{id}: project:editor
+PUT /api/v1/attribute-definitions/{id}: scoped-write
+PUT /api/v1/automations/{id}: session, scoped-write
+PUT /api/v1/crew-edges/{id}: session, scoped-write
+PUT /api/v1/crew-nodes/{id}: session, scoped-write
+PUT /api/v1/crews/{id}: session, scoped-write
+PUT /api/v1/evidence-bundles/{id}: project:editor
+PUT /api/v1/guided-sessions/{id}/step: project:editor
+PUT /api/v1/interviews/{id}/persona: project:editor
+PUT /api/v1/links/{id}: project:editor
+PUT /api/v1/links/{id}/confirm: project:editor
+PUT /api/v1/me/default-workspace: -
+PUT /api/v1/me/notification-prefs: -
+PUT /api/v1/me/password: -
+PUT /api/v1/notifications/{id}/flag: session
+PUT /api/v1/org-teams/{id}: org:admin
+PUT /api/v1/orgs/{id}: org:admin
+PUT /api/v1/orgs/{id}/members/me/preview: org:member
+PUT /api/v1/orgs/{id}/members/{userId}: org:admin
+PUT /api/v1/orgs/{id}/plan: -
+PUT /api/v1/orgs/{id}/quality-rules: org:admin
+PUT /api/v1/projects/{id}: project:editor
+PUT /api/v1/projects/{id}/members/{userId}: project:owner
+PUT /api/v1/projects/{id}/parties: project:editor
+PUT /api/v1/projects/{id}/profile: project:editor
+PUT /api/v1/projects/{id}/quality-rules: project:editor
+PUT /api/v1/projects/{id}/team-access: project:owner
+PUT /api/v1/provider-settings: org:admin
+PUT /api/v1/repo-connections/{id}: project:owner
+PUT /api/v1/repo-connections/{id}/my-path: session, project:viewer
+PUT /api/v1/shared-products/{id}/vote: -
+PUT /api/v1/team-edges/{id}: session, scoped-write
+PUT /api/v1/team-nodes/{id}: session, scoped-write
+PUT /api/v1/teams/{id}: session, scoped-write
+PUT /api/v1/test-runs/{id}: project:editor
+PUT /api/v1/work-items/{id}: project:editor

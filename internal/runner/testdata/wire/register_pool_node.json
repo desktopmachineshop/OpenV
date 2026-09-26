@@ -1,0 +1,112 @@
+{
+  "method": "Client.RegisterPoolNode",
+  "cases": [
+    {
+      "name": "announces the node and its providers; 201 carries the node",
+      "calls": [
+        {
+          "call": "RegisterPoolNode(\"pool-node-a\", \"default\", [\"claude-code\"])",
+          "http": [
+            {
+              "request": {
+                "method": "POST",
+                "path": "/api/v1/runner-pool/nodes",
+                "route": "POST /api/v1/runner-pool/nodes",
+                "authorization": "Bearer <pool-key>",
+                "content_type": "application/json",
+                "body": "{\"name\":\"pool-node-a\",\"pool\":\"default\",\"providers\":[\"claude-code\"]}"
+              },
+              "response": {
+                "status": 201,
+                "body": "{\"id\":\"<node-id>\",\"name\":\"pool-node-a\",\"pool\":\"default\",\"providers\":[\"claude-code\"],\"status\":\"idle\",\"last_seen_at\":\"<time>\",\"created_at\":\"<time>\"}\n"
+              }
+            }
+          ],
+          "returned": {
+            "id": "<node-id>",
+            "name": "pool-node-a",
+            "pool": "default",
+            "status": "idle"
+          },
+          "error": null
+        }
+      ]
+    },
+    {
+      "name": "a node with no CLI installed sends providers null",
+      "calls": [
+        {
+          "call": "RegisterPoolNode(\"pool-node-a\", \"default\", nil)",
+          "http": [
+            {
+              "request": {
+                "method": "POST",
+                "path": "/api/v1/runner-pool/nodes",
+                "route": "POST /api/v1/runner-pool/nodes",
+                "authorization": "Bearer <pool-key>",
+                "content_type": "application/json",
+                "body": "{\"name\":\"pool-node-a\",\"pool\":\"default\",\"providers\":null}"
+              },
+              "response": {
+                "status": 201,
+                "body": "{\"id\":\"<node-id>\",\"name\":\"pool-node-a\",\"pool\":\"default\",\"providers\":[\"claude-code\"],\"status\":\"idle\",\"last_seen_at\":\"<time>\",\"created_at\":\"<time>\"}\n"
+              }
+            }
+          ],
+          "returned": {
+            "id": "<node-id>",
+            "name": "pool-node-a",
+            "pool": "default",
+            "status": "idle"
+          },
+          "error": null
+        }
+      ]
+    },
+    {
+      "name": "a 5xx is retried after a backoff",
+      "calls": [
+        {
+          "call": "RegisterPoolNode(\"pool-node-a\", \"default\", [\"claude-code\"])",
+          "http": [
+            {
+              "request": {
+                "method": "POST",
+                "path": "/api/v1/runner-pool/nodes",
+                "route": "POST /api/v1/runner-pool/nodes",
+                "authorization": "Bearer <pool-key>",
+                "content_type": "application/json",
+                "body": "{\"name\":\"pool-node-a\",\"pool\":\"default\",\"providers\":[\"claude-code\"]}"
+              },
+              "response": {
+                "status": 503,
+                "body": "{\"error\":\"runner sessions are not enabled\"}\n"
+              }
+            },
+            {
+              "request": {
+                "method": "POST",
+                "path": "/api/v1/runner-pool/nodes",
+                "route": "POST /api/v1/runner-pool/nodes",
+                "authorization": "Bearer <pool-key>",
+                "content_type": "application/json",
+                "body": "{\"name\":\"pool-node-a\",\"pool\":\"default\",\"providers\":[\"claude-code\"]}"
+              },
+              "response": {
+                "status": 201,
+                "body": "{\"id\":\"<node-id>\",\"name\":\"pool-node-a\",\"pool\":\"default\",\"providers\":[\"claude-code\"],\"status\":\"idle\",\"last_seen_at\":\"<time>\",\"created_at\":\"<time>\"}\n"
+              }
+            }
+          ],
+          "returned": {
+            "id": "<node-id>",
+            "name": "pool-node-a",
+            "pool": "default",
+            "status": "idle"
+          },
+          "error": null
+        }
+      ]
+    }
+  ]
+}

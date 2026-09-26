@@ -1,0 +1,57 @@
+{
+  "method": "Client.ReportDetection",
+  "cases": [
+    {
+      "name": "availability per provider; 204 is success",
+      "calls": [
+        {
+          "call": "ReportDetection({claude-code: installed and signed in, codex-cli: missing})",
+          "http": [
+            {
+              "request": {
+                "method": "POST",
+                "path": "/api/v1/provider-settings/detect",
+                "route": "POST /api/v1/provider-settings/detect",
+                "authorization": "Bearer <worker-key>",
+                "content_type": "application/json",
+                "body": "{\"claude-code\":{\"detail\":\"\",\"installed\":true,\"logged_in\":true,\"version\":\"2.0.14\"},\"codex-cli\":{\"detail\":\"codex not found on PATH\",\"installed\":false,\"logged_in\":false,\"version\":\"\"}}"
+              },
+              "response": {
+                "status": 204,
+                "body": ""
+              }
+            }
+          ],
+          "returned": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "name": "a server error is returned at once, not retried",
+      "calls": [
+        {
+          "call": "ReportDetection({claude-code: installed and signed in, codex-cli: missing})",
+          "http": [
+            {
+              "request": {
+                "method": "POST",
+                "path": "/api/v1/provider-settings/detect",
+                "route": "POST /api/v1/provider-settings/detect",
+                "authorization": "Bearer <worker-key>",
+                "content_type": "application/json",
+                "body": "{\"claude-code\":{\"detail\":\"\",\"installed\":true,\"logged_in\":true,\"version\":\"2.0.14\"},\"codex-cli\":{\"detail\":\"codex not found on PATH\",\"installed\":false,\"logged_in\":false,\"version\":\"\"}}"
+              },
+              "response": {
+                "status": 500,
+                "body": "{\"error\":\"failed to record detection\"}\n"
+              }
+            }
+          ],
+          "returned": null,
+          "error": "api returned 500: {\"error\":\"failed to record detection\"}"
+        }
+      ]
+    }
+  ]
+}

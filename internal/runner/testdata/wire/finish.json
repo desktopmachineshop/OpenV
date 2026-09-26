@@ -1,0 +1,123 @@
+{
+  "method": "Client.Finish",
+  "cases": [
+    {
+      "name": "a failed run with every field set",
+      "calls": [
+        {
+          "call": "Finish(\"<run-id>\", {failed, exit 1, agent_error, cost 0.0125})",
+          "http": [
+            {
+              "request": {
+                "method": "POST",
+                "path": "/api/v1/agent-runs/<run-id>/finish",
+                "route": "POST /api/v1/agent-runs/{id}/finish",
+                "authorization": "Bearer <worker-key>",
+                "content_type": "application/json",
+                "body": "{\"status\":\"failed\",\"exit_code\":1,\"final_text\":\"Drafted one of three.\",\"error\":\"claude exited with status 1\",\"error_class\":\"agent_error\",\"tokens_in\":1200,\"tokens_out\":340,\"cost_usd\":0.0125}"
+              },
+              "response": {
+                "status": 200,
+                "body": "{\"id\":\"<run-id>\",\"status\":\"failed\"}\n"
+              }
+            }
+          ],
+          "returned": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "name": "a succeeded run leaves out exit_code, error_class and cost_usd",
+      "calls": [
+        {
+          "call": "Finish(\"<run-id>\", {succeeded})",
+          "http": [
+            {
+              "request": {
+                "method": "POST",
+                "path": "/api/v1/agent-runs/<run-id>/finish",
+                "route": "POST /api/v1/agent-runs/{id}/finish",
+                "authorization": "Bearer <worker-key>",
+                "content_type": "application/json",
+                "body": "{\"status\":\"succeeded\",\"final_text\":\"Drafted 3 test cases.\",\"error\":\"\",\"tokens_in\":5,\"tokens_out\":7}"
+              },
+              "response": {
+                "status": 200,
+                "body": "{\"id\":\"<run-id>\",\"status\":\"succeeded\"}\n"
+              }
+            }
+          ],
+          "returned": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "name": "a 409 already-finished conflict is returned at once, not retried",
+      "calls": [
+        {
+          "call": "Finish(\"<run-id>\", {succeeded})",
+          "http": [
+            {
+              "request": {
+                "method": "POST",
+                "path": "/api/v1/agent-runs/<run-id>/finish",
+                "route": "POST /api/v1/agent-runs/{id}/finish",
+                "authorization": "Bearer <worker-key>",
+                "content_type": "application/json",
+                "body": "{\"status\":\"succeeded\",\"final_text\":\"Drafted 3 test cases.\",\"error\":\"\",\"tokens_in\":5,\"tokens_out\":7}"
+              },
+              "response": {
+                "status": 409,
+                "body": "{\"error\":\"invalid run status transition\"}\n"
+              }
+            }
+          ],
+          "returned": null,
+          "error": "api returned 409: {\"error\":\"invalid run status transition\"}"
+        }
+      ]
+    },
+    {
+      "name": "a 5xx is retried after a backoff",
+      "calls": [
+        {
+          "call": "Finish(\"<run-id>\", {failed, exit 1, agent_error, cost 0.0125})",
+          "http": [
+            {
+              "request": {
+                "method": "POST",
+                "path": "/api/v1/agent-runs/<run-id>/finish",
+                "route": "POST /api/v1/agent-runs/{id}/finish",
+                "authorization": "Bearer <worker-key>",
+                "content_type": "application/json",
+                "body": "{\"status\":\"failed\",\"exit_code\":1,\"final_text\":\"Drafted one of three.\",\"error\":\"claude exited with status 1\",\"error_class\":\"agent_error\",\"tokens_in\":1200,\"tokens_out\":340,\"cost_usd\":0.0125}"
+              },
+              "response": {
+                "status": 500,
+                "body": "{\"error\":\"failed to finish run\"}\n"
+              }
+            },
+            {
+              "request": {
+                "method": "POST",
+                "path": "/api/v1/agent-runs/<run-id>/finish",
+                "route": "POST /api/v1/agent-runs/{id}/finish",
+                "authorization": "Bearer <worker-key>",
+                "content_type": "application/json",
+                "body": "{\"status\":\"failed\",\"exit_code\":1,\"final_text\":\"Drafted one of three.\",\"error\":\"claude exited with status 1\",\"error_class\":\"agent_error\",\"tokens_in\":1200,\"tokens_out\":340,\"cost_usd\":0.0125}"
+              },
+              "response": {
+                "status": 200,
+                "body": "{\"id\":\"<run-id>\",\"status\":\"failed\"}\n"
+              }
+            }
+          ],
+          "returned": null,
+          "error": null
+        }
+      ]
+    }
+  ]
+}
