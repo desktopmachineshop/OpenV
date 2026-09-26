@@ -52,11 +52,14 @@ shrink.
 | `env_reads` | [Direct env reads](#direct-env-reads) | a ceiling per package |
 
 Any PR may lower or remove an entry. A refactor PR never raises or adds
-one (the plan's Refactor guard job, S14b, is to refuse it). Outside a
-refactor, adding an entry by hand is an architecture decision made in
-review; the usual case is an import edge to a new package, which must
-still pass K7. A ceiling is never raised to make a PR pass: change the
-code instead.
+one (the plan's Refactor guard job, S14b, is to refuse it), with one
+exception: a class D PR may add `import_edges` entries that point into the
+package it creates, and only if that package imports no package of this
+module. Everything else in the file may only shrink, in that PR too.
+Outside a refactor, adding an entry by hand is an architecture decision
+made in review; the usual cases are an import edge to a new package, which
+must still pass K7, and the entry of a new client binary. A ceiling is
+never raised to make a PR pass: change the code instead.
 
 ## Regenerating
 
@@ -68,9 +71,22 @@ rewrites `ratchets.json` with every entry tightened to the tree: counts
 lowered to today's value, size ceilings lowered to the current size plus
 headroom (never above the old ceiling), and entries no longer needed
 removed. It never raises or adds anything: when any rule fails it writes
-nothing and fails. Run it when the log says an entry "can be tightened";
-the test passes either way, so parallel PRs do not collide on the file.
-Commit the result with the change that caused it.
+nothing and fails. Commit the result with the change that caused it.
+
+Run it when an entry "can be tightened". `go test` hides a passing test's
+log, so that note shows only with `go test -v ./internal/archtest`. An
+untightened file still passes, so a loose entry lets code grow back up to
+it; the plan's Refactor guard job (S14b) is to require refactor PRs to
+commit the tightened file.
+
+Tightening can race with a parallel PR. If one PR removes the last use of
+an edge, or shrinks a count or a file, and tightens, while another PR adds
+that edge or uses the old headroom, each PR is green alone, `ratchets.json`
+merges without a conflict, and master goes red. So merge the latest master
+into a tightening PR and re-run this test just before merging it. If master
+does go red this way, restore the removed entry, or the previous ceiling,
+by hand in a non-refactor PR: that restores master's prior state and is not
+a raise.
 
 `UPDATE_RATCHETS=bootstrap` creates the file from the tree, with R6
 headroom on the size ceilings, and only when the file is missing. It was
@@ -95,7 +111,8 @@ listed in `import_edges`. At `d11dee8` there are 227 edges between 63
 packages. Imports made only by test files are not edges.
 
 **Why.** K7: the layering can only improve if nothing new appears
-unnoticed, and a class D move must show the list shrinking.
+unnoticed, and a class D move adds no edge except into the new leaf
+package it creates (see [ratchets.json](#ratchetsjson)).
 
 **Fix.** Drop the new import: declare the interface you need on the
 consumer side, or move the code to a package that may import it. A
@@ -103,17 +120,24 @@ deliberate new dependency in a feature PR (a new domain package that
 `internal/api` and `cmd/server` import, say) is added to `import_edges` by
 hand, and K7 still applies to it.
 
-**Regenerate.** When an edge disappears the log says so; the regenerate
-command removes it.
+**Regenerate.** When an edge disappears, `go test -v` logs it; the
+regenerate command removes it. Until then the stale entry lets the edge
+come back.
 
 ## K7 layering
 
 **Enforces.** Over the production edges: a package under `internal/domain`
-imports only other `internal/domain` packages (besides the standard library
-and third-party modules); `internal/persistence` imports only
-`internal/domain` and itself; `internal/api` never imports
-`internal/persistence`. Nothing breaks this today, so
-`layering_exceptions` is empty.
+imports only other `internal/domain` packages and the types-only leaves
+(besides the standard library and third-party modules);
+`internal/persistence` imports only `internal/domain` and itself;
+`internal/api` never imports `internal/persistence`; a types-only leaf
+imports no package of this module. The types-only leaves are `typesLeaves`
+in `graph_test.go`: `internal/workerproto` only, the package of worker wire
+types P3 creates, whose `FinishRequest` `agentruns` then aliases. A leaf is
+not a domain package, so it counts in no client binary's list. A new leaf
+joins `typesLeaves` in a class T commit, in review. Nothing breaks this
+today, so `layering_exceptions` is empty. `TestLayeringRule` pins the
+rule.
 
 **Why.** Dependencies point inward, and the domain stays testable without a
 database or HTTP. The layering violations the analysis found are all closed
@@ -127,9 +151,11 @@ this keeps it so.
 
 ## Client binaries
 
-**Enforces.** For each binary in `client_domain_deps` (every binary but
-`cmd/server` when the file was created), the set of `internal/domain`
-packages it links, directly or not, may only shrink. `cmd/agentd` links 8
+**Enforces.** For each binary under `cmd/` but `cmd/server`, the set of
+`internal/domain` packages it links, directly or not, may only shrink from
+its entry in `client_domain_deps`. A new binary fails until its entry, with
+the domain packages it links, is added by hand in review
+(`TestClientBinaryDiscovery` proves this on a fixture). `cmd/agentd` links 8
 (agentruns, agents, artifacts, events, providers, repoconns,
 runnersessions, users), `cmd/openv-mcp` links artifacts, and
 `cmd/openv-connector` and `cmd/openv-vapid` link none. The walk is the
@@ -143,7 +169,8 @@ shrink `cmd/agentd`'s list.
 it, usually by moving the shared type to a leaf package with no domain
 imports (`internal/workerproto`, `internal/mcp/toolnames`).
 
-**Regenerate.** When a package drops out, run the regenerate command.
+**Regenerate.** When a package drops out, run the regenerate command;
+until then the stale entry lets it come back.
 
 ## Domain reflection
 
@@ -166,7 +193,9 @@ with a ceiling of their size plus R6 headroom: 10%, at most 150 lines.
 `internal/api/handlers.go`, 3,369 lines, may reach 3,519.
 
 **Why.** K14: small files are findable and conflict less. Headroom means a
-feature PR touching a giant is never blocked; the ceiling only falls, so a
+feature PR touching a giant is never blocked. The ceiling never rises; it
+falls when the regenerate command is run after a file shrinks, and the
+plan's Refactor guard job (S14b) is to require that of refactor PRs, so a
 split file cannot grow back.
 
 **Fix.** Split the file by concern within its package (a class A move). A
@@ -236,9 +265,12 @@ regenerate command.
 
 ## One router
 
-**Enforces.** No `.Subrouter(...)`, `.PathPrefix(...)`, `NotFoundHandler`
-or `MethodNotAllowedHandler` (set on a value or in a composite literal) in
-production code. There is none today.
+**Enforces.** One router: the one `mux.NewRouter()` call in `cmd/server`
+(`main.go` today). In production code a second `mux.NewRouter()`, in
+`cmd/server` or anywhere else, and any `http.NewServeMux()` fail, as do
+`.Subrouter(...)`, `.PathPrefix(...)`, `NotFoundHandler` and
+`MethodNotAllowedHandler` (set on a value or in a composite literal). There
+is none today. `TestRouterRules` proves the rule on a fixture.
 
 **Why.** I2 and K2: there is one gorilla/mux router, every route is a full
 template registered on it in an order the route goldens pin, and 404 and
@@ -251,11 +283,15 @@ no allowlist.
 
 ## HandleFunc outside registrars
 
-**Enforces.** Counts route registrations, a two-argument `.HandleFunc(...)`
-or `.Handle(...)` call, in production code outside a registrar: a function
-named `register<Area>Routes`. The ceiling `counts.handle_func_outside_registrars`
-is 53 at `d11dee8`: the 52 routes `RegisterRoutes` registers inline,
-`/health` included, and `/metrics` in `cmd/server/main.go`.
+**Enforces.** Counts route registrations in production code outside a
+registrar, a function named `register<Area>Routes`. A registration is a
+two-argument `.HandleFunc(...)` or `.Handle(...)` call, or a one-argument
+`.HandlerFunc(...)` or `.Handler(...)` that ends a route-builder chain
+(`r.Path(p).Methods(m).HandlerFunc(h)`, `r.NewRoute().Handler(h)`); a
+conversion such as `http.HandlerFunc(fn)` is not. The ceiling
+`counts.handle_func_outside_registrars` is 53 at `d11dee8`: the 52 routes
+`RegisterRoutes` registers inline, `/health` included, and `/metrics` in
+`cmd/server/main.go`.
 
 **Why.** K1: an area's routes live in its registrar, and `RegisterRoutes`
 is only the ordered list of registrar calls. M6 moves the inline routes.
@@ -330,14 +366,15 @@ read in one file.
 
 ## Direct env reads
 
-**Enforces.** Counts `os.Getenv`, `os.LookupEnv` and `os.Environ` calls in
+**Enforces.** Counts references to `os.Getenv`, `os.LookupEnv`,
+`os.ExpandEnv`, `os.Environ`, `syscall.Getenv` and `syscall.Environ` in
 production code under `internal/`, per package, against `env_reads`; a
-package not listed may make none. At `d11dee8` there are 44 calls in 8
-packages: 39 `Getenv`/`LookupEnv` calls on 38 lines
-(`runner/geminicli.go:187` has two) and 5 `os.Environ` calls in
-`internal/runner`. (The plan's figures, 38 and 43, count lines.) A function
-value such as `os.LookupEnv` passed to a loader is not a call and is not
-counted.
+package not listed may make none. A reference is a call or a function value
+(`var getenv = os.Getenv`, `os.Expand(s, os.Getenv)`); a call counts once.
+At `d11dee8` there are 44, all calls, in 8 packages: 39
+`Getenv`/`LookupEnv` calls on 38 lines (`runner/geminicli.go:187` has two)
+and 5 `os.Environ` calls in `internal/runner`. (The plan's figures, 38 and
+43, count lines.) `TestEnvReadForms` proves the forms on a fixture.
 
 **Why.** K8: configuration is read in `internal/config` and
 `cmd/*/config.go`, apart from S8's reasoned exemptions (per-request reads,
@@ -360,10 +397,17 @@ list: `decodeAliasTypes` in `decode_test.go`. Writing means a call in the
 error (`err.Error()`, or `err` passed to `fmt.Sprint*` or `fmt.Errorf`).
 Passing `err` itself to `respondError`, which logs it and answers a fixed
 message, is fine. The check follows local variables, struct fields and the
-module's named types, not values passed through helper functions. The list
-is empty today; P1 adds `ProjectExport` and P3 `FinishRequest`, each in a
-class T commit before its move. `TestDecodeAliasRule` proves the check on a
-fixture.
+module's named types. It does not follow a value through a helper function;
+instead `decodeErrorSources`, also in `decode_test.go`, maps the name of a
+function or method whose returned error carries such a decode error to the
+alias type, and an error assigned from a call by that name counts as the
+decode's. Today those sites are `Handler.projectExport`
+(`suite_handlers.go`), and the export service's `ImportProject`
+(`handlers.go:1892`) and `ImportProjectWithOverrides` (`handlers.go:2168`),
+which decode in `internal/domain/exports`, outside `internal/api`. Both
+lists are empty today; P1 adds `ProjectExport` with those three names and
+P3 `FinishRequest`, each in a class T commit before its move, and X14 adds
+`snapshot`'s `Load`. `TestDecodeAliasRule` proves the check on a fixture.
 
 **Why.** R8: encoding/json's errors name the Go type, package qualified, so
 moving a type behind an alias would change response bytes.
@@ -382,7 +426,9 @@ directory where `go build` runs, and the `go build` targets of its `RUN`
 lines. Every non-test file of every package a target links, every
 `//go:embed` pattern in those packages, and `go.mod` and `go.sum` must lie
 inside those paths. For `Dockerfile.api` so must every `//go:embed` pattern
-in the module, and its targets must include `cmd/server`. Today
+in the module, and its targets must include `cmd/server`. A linked package
+outside the root package, `cmd/` and `internal/` fails whatever the `COPY`
+list says, because archtest does not read its files. Today
 `Dockerfile.api` copies `go.mod`, `go.sum`, `cmd`, `internal`, `examples`,
 `release_notes.go` and `RELEASE_NOTES.md` and builds `cmd/server`,
 `cmd/agentd`, `cmd/openv-mcp` and `cmd/openv-connector`;
@@ -394,7 +440,7 @@ parser.
 never build the images, so a new top-level package, root file or embedded
 asset would break only the Docker build.
 
-**Fix.** Keep Go code under `cmd/` or `internal/`, or add the path to the
-Dockerfile's `COPY` list.
+**Fix.** Keep Go code under `cmd/` or `internal/`. For a root file or an
+embedded asset, add its path to the Dockerfile's `COPY` list.
 
 **Regenerate.** Nothing to regenerate: the `COPY` list is the allowlist.

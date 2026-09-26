@@ -108,6 +108,16 @@ type check struct {
 	loose     []string
 }
 
+// runRule runs one rule against a fixture module and stored ratchets, and
+// returns its violations.
+func runRule(t *testing.T, m *module, stored *ratchets, run func(*check)) []string {
+	t.Helper()
+	stored.normalise()
+	c := &check{t: t, m: m, stored: stored, next: stored.clone()}
+	run(c)
+	return c.bad
+}
+
 // violation records something the rule forbids.
 func (c *check) violation(format string, args ...any) {
 	c.bad = append(c.bad, fmt.Sprintf(format, args...))

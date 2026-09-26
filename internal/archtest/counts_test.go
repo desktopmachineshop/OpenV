@@ -5,6 +5,8 @@ import (
 	"go/token"
 	"regexp"
 	"strconv"
+	"strings"
+	"testing"
 )
 
 // Count ratchets. Each counts one legacy idiom; the ceiling in ratchets.json
@@ -14,11 +16,11 @@ import (
 
 var registrarRe = regexp.MustCompile(`^register[A-Z][A-Za-z0-9]*Routes$`)
 
-// checkHandleFuncOutsideRegistrars counts route registrations, a
-// two-argument .HandleFunc or .Handle call, made in production code outside
-// a registrar: a function named register<Area>Routes (K1). RegisterRoutes is
-// the ordered list of registrar calls, so the routes it registers inline
-// count, and so does /metrics in cmd/server.
+// checkHandleFuncOutsideRegistrars counts route registrations made in
+// production code outside a registrar: a function named
+// register<Area>Routes (K1). RegisterRoutes is the ordered list of registrar
+// calls, so the routes it registers inline count, and so does /metrics in
+// cmd/server.
 func checkHandleFuncOutsideRegistrars(c *check) {
 	var hits []hit
 	for _, f := range c.m.production() {
@@ -28,16 +30,35 @@ func checkHandleFuncOutsideRegistrars(c *check) {
 				continue
 			}
 			ast.Inspect(fd.Body, func(n ast.Node) bool {
-				if call, ok := n.(*ast.CallExpr); ok && len(call.Args) == 2 {
-					if sel, ok := call.Fun.(*ast.SelectorExpr); ok && (sel.Sel.Name == "HandleFunc" || sel.Sel.Name == "Handle") {
-						hits = append(hits, hit{f.pkg.name, c.m.pos(call)})
-					}
+				if call, ok := n.(*ast.CallExpr); ok && registersRoute(call) {
+					hits = append(hits, hit{f.pkg.name, c.m.pos(call)})
 				}
 				return true
 			})
 		}
 	}
 	c.judgeCount("handle_func_outside_registrars", "route registrations outside register<Area>Routes functions", hits)
+}
+
+// registersRoute reports whether call registers a route: a two-argument
+// .HandleFunc(path, h) or .Handle(path, h), or a one-argument .HandlerFunc(h)
+// or .Handler(h) ending a route-builder chain, such as
+// r.Path(p).Methods(m).HandlerFunc(h) or r.NewRoute().Handler(h). Requiring
+// the chain skips conversions such as http.HandlerFunc(fn) and methods of a
+// plain value, such as collector.Handler(next).
+func registersRoute(call *ast.CallExpr) bool {
+	sel, ok := call.Fun.(*ast.SelectorExpr)
+	if !ok {
+		return false
+	}
+	switch sel.Sel.Name {
+	case "HandleFunc", "Handle":
+		return len(call.Args) == 2
+	case "HandlerFunc", "Handler":
+		_, chained := sel.X.(*ast.CallExpr)
+		return len(call.Args) == 1 && chained
+	}
+	return false
 }
 
 // checkHandlerLiterals counts api.Handler composite literals (&Handler{...}
@@ -140,10 +161,18 @@ func checkRequireOutsideAuthz(c *check) {
 	c.judgeCount("require_outside_authz", "require* helpers declared in internal/api outside authz.go", hits)
 }
 
-// checkEnvReads counts os.Getenv, os.LookupEnv and os.Environ calls in
-// production code under internal/, per package (K8: configuration is read
-// in internal/config and cmd/*/config.go, apart from S8's reasoned
-// exemptions). A package not listed may read none.
+// envReaders are the functions that read the process environment, keyed
+// "importpath.Name".
+var envReaders = setOf([]string{
+	"os.Getenv", "os.LookupEnv", "os.ExpandEnv", "os.Environ", "syscall.Getenv", "syscall.Environ",
+})
+
+// checkEnvReads counts references to the envReaders in production code under
+// internal/, per package (K8: configuration is read in internal/config and
+// cmd/*/config.go, apart from S8's reasoned exemptions). A reference is a
+// call or a function value (var getenv = os.Getenv; os.Expand(s,
+// os.Getenv)); a call counts once, at its selector. A package not listed
+// may read none.
 func checkEnvReads(c *check) {
 	var hits []hit
 	getenv, lines := 0, map[string]bool{}
@@ -152,18 +181,63 @@ func checkEnvReads(c *check) {
 			continue
 		}
 		ast.Inspect(f.ast, func(n ast.Node) bool {
-			if call, ok := n.(*ast.CallExpr); ok && f.isPkgFunc(call, "os", "Getenv", "LookupEnv", "Environ") {
-				h := hit{f.pkg.name, c.m.pos(call)}
-				hits = append(hits, h)
-				if !f.isPkgFunc(call, "os", "Environ") {
-					getenv++
-					lines[h.pos] = true
-				}
+			sel, ok := n.(*ast.SelectorExpr)
+			if !ok || !envReaders[f.selectorPkg(sel)+"."+sel.Sel.Name] {
+				return true
+			}
+			h := hit{f.pkg.name, c.m.pos(sel)}
+			hits = append(hits, h)
+			if sel.Sel.Name != "Environ" {
+				getenv++
+				lines[h.pos] = true
 			}
 			return true
 		})
 	}
-	c.baseline("%d direct env reads under internal/: %d os.Getenv/os.LookupEnv calls on %d lines, plus %d os.Environ calls",
+	c.baseline("%d direct env reads under internal/: %d Getenv/LookupEnv/ExpandEnv references on %d lines, plus %d Environ references",
 		len(hits), getenv, len(lines), len(hits)-getenv)
 	c.next.EnvReads = c.judgePackages(c.stored.EnvReads, hits, "direct env reads")
 }
+
+// TestEnvReadForms proves on a fixture that the env-read rule counts every
+// reference to an env reader under internal/, called or passed as a value,
+// and nothing under cmd/.
+func TestEnvReadForms(t *testing.T) {
+	root := writeFixture(t, map[string]string{
+		"go.mod":                   "module example.com/fixture\n\ngo 1.25\n",
+		"cmd/tool/main.go":         "package main\n\nimport \"os\"\n\nfunc main() { _ = os.Getenv(\"A\") }\n",
+		"internal/domain/x/env.go": envFixture,
+	})
+	m, err := parseModule(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := runRule(t, m, &ratchets{}, checkEnvReads)
+	want := "internal/domain/x: 7 direct env reads, above its ceiling of 0:\n" + strings.Join([]string{
+		"internal/domain/x/env.go:9", "internal/domain/x/env.go:12", "internal/domain/x/env.go:13", "internal/domain/x/env.go:14",
+		"internal/domain/x/env.go:15", "internal/domain/x/env.go:16", "internal/domain/x/env.go:17"}, "\n")
+	if len(got) != 1 || got[0] != want {
+		t.Errorf("violations = %q, want %q", got, want)
+	}
+}
+
+const envFixture = `package x
+
+import (
+	"os"
+	"strings"
+	"syscall"
+)
+
+var getenv = os.Getenv
+
+func read() {
+	_ = os.Getenv("A")
+	_ = os.ExpandEnv("$X")
+	_ = os.Expand("$Y", os.Getenv)
+	_, _ = syscall.Getenv("Z")
+	_ = syscall.Environ()
+	_ = len(os.Environ())
+	_ = strings.ToUpper("os.Getenv")
+}
+`

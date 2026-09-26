@@ -76,8 +76,15 @@ func contextViolations(m *module, df *dockerfile, allEmbeds bool) []string {
 				continue
 			}
 			checked[name] = true
+			p := m.pkgs[name]
+			if p == nil {
+				// Not parsed, so its files cannot be checked: fail, never skip.
+				out = append(out, fmt.Sprintf("%s builds %s, which links %s (%s), a package outside the root package, cmd/ and internal/, "+
+					"which archtest does not read: keep Go code under cmd/ or internal/", df.name, target, name, chain(parent, name)))
+				continue
+			}
 			var missing []string
-			for _, f := range m.pkgs[name].files {
+			for _, f := range p.files {
 				if !df.covers(f.rel) {
 					missing = append(missing, f.rel)
 				}
@@ -87,7 +94,7 @@ func contextViolations(m *module, df *dockerfile, allEmbeds bool) []string {
 					df.name, target, name, chain(parent, name), strings.Join(missing, ", "), copied))
 			}
 			if !allEmbeds {
-				out = append(out, df.embedViolations(m.pkgs[name].files, copied)...)
+				out = append(out, df.embedViolations(p.files, copied)...)
 			}
 		}
 	}
@@ -203,7 +210,11 @@ func parseDockerfile(root, name, content string) *dockerfile {
 		case "FROM":
 			workdir = "/"
 		case "WORKDIR":
-			workdir = path.Join(workdir, rest)
+			if path.IsAbs(rest) {
+				workdir = path.Clean(rest)
+			} else {
+				workdir = path.Join(workdir, rest)
+			}
 		case "COPY", "ADD":
 			srcs, dest, ok := copyArgs(rest)
 			if !ok {
@@ -321,7 +332,7 @@ var goBuildFlagsWithValue = setOf([]string{
 func goBuildTargets(run string) []string {
 	var out []string
 	for _, cmd := range strings.FieldsFunc(run, func(r rune) bool { return r == '&' || r == ';' || r == '|' }) {
-		words := strings.Fields(cmd)
+		words := shellWords(cmd)
 		i := slices.Index(words, "go")
 		if i < 0 || i+1 >= len(words) || words[i+1] != "build" {
 			continue
@@ -343,6 +354,37 @@ func goBuildTargets(run string) []string {
 	return out
 }
 
+// shellWords splits a command into words, keeping a single- or
+// double-quoted span inside one word and dropping the quotes.
+func shellWords(s string) []string {
+	var out []string
+	var cur strings.Builder
+	in, quote := false, rune(0)
+	for _, r := range s {
+		switch {
+		case quote != 0 && r == quote:
+			quote = 0
+		case quote != 0:
+			cur.WriteRune(r)
+		case r == '"' || r == '\'':
+			quote, in = r, true
+		case r == ' ' || r == '\t':
+			if in {
+				out = append(out, cur.String())
+				cur.Reset()
+				in = false
+			}
+		default:
+			cur.WriteRune(r)
+			in = true
+		}
+	}
+	if in {
+		out = append(out, cur.String())
+	}
+	return out
+}
+
 func pkgNameOfDir(dir string) string {
 	if dir = path.Clean(strings.TrimPrefix(dir, "./")); dir == "." {
 		return rootName
@@ -351,14 +393,15 @@ func pkgNameOfDir(dir string) string {
 }
 
 // TestDockerfileParsing pins how the build-context rule reads a Dockerfile,
-// and that a linked package or embed pattern outside the COPY list fails.
+// and that a linked package or embed pattern outside the COPY list fails, as
+// does a linked package outside the directories archtest reads.
 func TestDockerfileParsing(t *testing.T) {
 	root := writeFixture(t, map[string]string{
 		"go.mod":            "module example.com/fixture\n\ngo 1.25\n",
 		"go.sum":            "",
 		"root.go":           "package fixture\n\nimport _ \"embed\"\n\n//go:embed NOTES.md\nvar notes string\n",
 		"NOTES.md":          "notes\n",
-		"cmd/app/main.go":   "package main\n\nimport (\n\t_ \"example.com/fixture\"\n\t_ \"example.com/fixture/internal/x\"\n)\n\nfunc main() {}\n",
+		"cmd/app/main.go":   "package main\n\nimport (\n\t_ \"example.com/fixture\"\n\t_ \"example.com/fixture/internal/x\"\n\t_ \"example.com/fixture/misc\"\n)\n\nfunc main() {}\n",
 		"cmd/other/main.go": "package main\n\nfunc main() {}\n",
 		"internal/x/x.go":   "package x\n\nimport \"embed\"\n\n//go:embed \"data\" all:static/*.json\nvar FS embed.FS\n",
 		"misc/tool.go":      "package misc\n",
@@ -372,24 +415,26 @@ func TestDockerfileParsing(t *testing.T) {
 		`COPY ["internal", "internal"]`,
 		"COPY misc/tool.go ./",
 		"COPY --from=build /out /out",
+		"WORKDIR /src",
 		`RUN CGO_ENABLED=0 go build -a -o /out/app -tags x \`,
-		"    -ldflags=-s ./cmd/app && go build cmd/other/main.go; go build ./internal/...",
+		`    -ldflags "-s -w -X main.version=1" ./cmd/app && go build -ldflags=-s cmd/other/main.go; go build -tags 'a b' ./internal/...`,
 	}, "\n")
 	df := parseDockerfile(root, "Dockerfile.fixture", content)
 	if got, want := strings.Join(df.copies, " "), "go.mod go.sum cmd internal"; got != want {
-		t.Errorf("copies = %q, want %q (misc/tool.go lands at /src/tool.go, not its own path)", got, want)
+		t.Errorf("copies = %q, want %q (misc/tool.go lands at /src/tool.go, not its own path; a repeated absolute WORKDIR stays /src)", got, want)
 	}
 	if got, want := strings.Join(df.targets, " "), "cmd/app cmd/other internal/..."; got != want {
-		t.Errorf("targets = %q, want %q", got, want)
+		t.Errorf("targets = %q, want %q (a quoted flag value is one word)", got, want)
 	}
 	m, err := parseModule(root)
 	if err != nil {
 		t.Fatal(err)
 	}
 	got := contextViolations(m, df, false)
-	if len(got) != 2 || !strings.Contains(got[0], "links (root) (cmd/app -> (root)), but root.go lies outside") ||
-		!strings.Contains(got[1], "root.go: //go:embed NOTES.md resolves to NOTES.md, outside") {
-		t.Errorf("violations = %q, want the unlinked root package and its embed", got)
+	if len(got) != 3 || !strings.Contains(got[0], "links (root) (cmd/app -> (root)), but root.go lies outside") ||
+		!strings.Contains(got[1], "root.go: //go:embed NOTES.md resolves to NOTES.md, outside") ||
+		!strings.Contains(got[2], "links misc (cmd/app -> misc), a package outside the root package, cmd/ and internal/") {
+		t.Errorf("violations = %q, want the uncopied root package, its embed, and misc, which archtest does not read", got)
 	}
 	if pats := embedPatterns(m.pkgs["internal/x"].files[0]); strings.Join(pats, " ") != "data static/*.json" {
 		t.Errorf("embed patterns = %q", pats)

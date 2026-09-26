@@ -19,8 +19,18 @@ import (
 // in a class T commit before its move. The list only grows.
 var decodeAliasTypes = []string{}
 
+// decodeErrorSources maps the name of a function or method whose returned
+// error can carry the decode error of an alias-list type to that type, for
+// decodes the rule cannot see: those in a helper or outside internal/api.
+// An error assigned from a call by that name counts as the decode's error.
+// Today's sites return an exports.ProjectExport decode error:
+// Handler.projectExport (suite_handlers.go), and the export service's
+// ImportProject and ImportProjectWithOverrides (handlers.go). P1 adds those
+// three names with the ProjectExport entry, and X14 adds snapshot's Load.
+var decodeErrorSources = map[string]string{}
+
 func checkDecodeAliases(c *check) {
-	leaks := decodeLeaks(c.m, decodeAliasTypes)
+	leaks := decodeLeaks(c.m, decodeAliasTypes, decodeErrorSources)
 	c.baseline("%d types on the alias list; %d handlers write their decode errors", len(decodeAliasTypes), len(leaks))
 	for _, l := range leaks {
 		c.violation("%s", l)
@@ -33,8 +43,10 @@ func checkDecodeAliases(c *check) {
 // error (err.Error(), or err passed to fmt.Sprint*/Errorf). Passing err
 // itself to a writer that logs it, such as respondError, is fine. The
 // analysis is syntactic: it follows local variables, struct fields and the
-// module's named types, not values passed through helper functions.
-func decodeLeaks(m *module, aliases []string) []string {
+// module's named types, not values passed through helper functions, except
+// the error returned by a call named in sources (function or method name ->
+// alias type).
+func decodeLeaks(m *module, aliases []string, sources map[string]string) []string {
 	if len(aliases) == 0 {
 		return nil
 	}
@@ -42,7 +54,7 @@ func decodeLeaks(m *module, aliases []string) []string {
 	for _, f := range apiFiles(m) {
 		for _, d := range f.ast.Decls {
 			if fd, ok := d.(*ast.FuncDecl); ok && fd.Body != nil {
-				s := newDecodeScope(m, f, fd, setOf(aliases))
+				s := newDecodeScope(m, f, fd, setOf(aliases), sources)
 				out = append(out, s.leaks...)
 			}
 		}
@@ -62,14 +74,15 @@ type decodeScope struct {
 	f        *file
 	fn       *ast.FuncDecl
 	targets  map[string]bool
+	sources  map[string]string     // callee name -> alias type its error carries
 	vars     map[string][]ast.Expr // local variable -> declared or literal types
 	writers  map[string]bool       // http.ResponseWriter parameters
 	decoders map[string]bool       // variables holding json.NewDecoder(...)
 	leaks    []string
 }
 
-func newDecodeScope(m *module, f *file, fd *ast.FuncDecl, targets map[string]bool) *decodeScope {
-	s := &decodeScope{m: m, f: f, fn: fd, targets: targets, vars: map[string][]ast.Expr{},
+func newDecodeScope(m *module, f *file, fd *ast.FuncDecl, targets map[string]bool, sources map[string]string) *decodeScope {
+	s := &decodeScope{m: m, f: f, fn: fd, targets: targets, sources: sources, vars: map[string][]ast.Expr{},
 		writers: map[string]bool{}, decoders: map[string]bool{}}
 	s.params(fd.Type)
 	ast.Inspect(fd.Body, s.collect)
@@ -178,7 +191,8 @@ func (s *decodeScope) scan(list []ast.Stmt) {
 }
 
 // decodeAssign returns the error variable and the alias type when as is
-// err := <JSON decode into a type containing an alias-list type>.
+// err := <JSON decode into a type containing an alias-list type>, or
+// ..., err := <call of a decodeErrorSources name>.
 func (s *decodeScope) decodeAssign(as *ast.AssignStmt) (string, string) {
 	if len(as.Rhs) != 1 {
 		return "", ""
@@ -187,12 +201,15 @@ func (s *decodeScope) decodeAssign(as *ast.AssignStmt) (string, string) {
 	if !ok {
 		return "", ""
 	}
-	target := s.decodeTarget(call)
-	if target == nil {
-		return "", ""
-	}
 	id, ok := as.Lhs[len(as.Lhs)-1].(*ast.Ident)
 	if !ok || id.Name == "_" {
+		return "", ""
+	}
+	if alias := s.sources[calleeName(call)]; alias != "" && s.targets[alias] {
+		return id.Name, alias
+	}
+	target := s.decodeTarget(call)
+	if target == nil {
 		return "", ""
 	}
 	for _, t := range s.targetTypes(target) {
@@ -201,6 +218,17 @@ func (s *decodeScope) decodeAssign(as *ast.AssignStmt) (string, string) {
 		}
 	}
 	return "", ""
+}
+
+// calleeName returns the function or method name a call names, or "".
+func calleeName(call *ast.CallExpr) string {
+	switch x := ast.Unparen(call.Fun).(type) {
+	case *ast.Ident:
+		return x.Name
+	case *ast.SelectorExpr:
+		return x.Sel.Name
+	}
+	return ""
 }
 
 // decodeTarget returns v in json.Unmarshal(data, v) or <decoder>.Decode(v).
@@ -418,10 +446,11 @@ func mentionsAny(list []ast.Expr, name string) bool {
 	return false
 }
 
-// TestDecodeAliasRule proves the R8 check on a fixture module: three
+// TestDecodeAliasRule proves the R8 check on a fixture module: four
 // handlers leak a decode error of an alias-list type (directly, nested in a
-// literal struct, and through a named type with a decoder variable), two do
-// not (a fixed message; a type not on the list).
+// literal struct, through a named type with a decoder variable, and from a
+// helper named in the error sources), three do not (a fixed message; a type
+// not on the list; a helper's error answered with a fixed message).
 func TestDecodeAliasRule(t *testing.T) {
 	root := writeFixture(t, map[string]string{
 		"go.mod":                              "module example.com/fixture\n\ngo 1.25\n",
@@ -435,11 +464,12 @@ func TestDecodeAliasRule(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if leaks := decodeLeaks(m, nil); len(leaks) != 0 {
+	sources := map[string]string{"loadExport": "internal/domain/exports.ProjectExport"}
+	if leaks := decodeLeaks(m, nil, sources); len(leaks) != 0 {
 		t.Fatalf("an empty alias list must find nothing, found %v", leaks)
 	}
-	leaks := decodeLeaks(m, []string{"internal/domain/exports.ProjectExport"})
-	want := []string{"Handler.LeakDirect", "Handler.LeakNested", "Handler.LeakThroughNamedType"}
+	leaks := decodeLeaks(m, []string{"internal/domain/exports.ProjectExport"}, sources)
+	want := []string{"Handler.LeakDirect", "Handler.LeakNested", "Handler.LeakThroughNamedType", "Handler.LeakThroughHelper"}
 	if len(leaks) != len(want) {
 		t.Fatalf("found %d leaks, want %d:\n%s", len(leaks), len(want), strings.Join(leaks, "\n"))
 	}
@@ -505,6 +535,31 @@ func (h *Handler) OtherType(w http.ResponseWriter, r *http.Request) {
 	var in struct{ Name string }
 	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
+	}
+}
+
+func (h *Handler) loadExport(data []byte) (*exports.ProjectExport, error) {
+	var out exports.ProjectExport
+	if err := json.Unmarshal(data, &out); err != nil {
+		return nil, fmt.Errorf("parse export: %w", err)
+	}
+	return &out, nil
+}
+
+func (h *Handler) LeakThroughHelper(w http.ResponseWriter, r *http.Request) {
+	data, _ := io.ReadAll(r.Body)
+	export, err := h.loadExport(data)
+	if err != nil {
+		writeJSONError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	_ = export
+}
+
+func (h *Handler) HelperFixedMessage(w http.ResponseWriter, r *http.Request) {
+	data, _ := io.ReadAll(r.Body)
+	if _, err := h.loadExport(data); err != nil {
+		writeJSONError(w, http.StatusBadRequest, "invalid export")
 	}
 }
 `
