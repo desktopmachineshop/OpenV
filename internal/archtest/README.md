@@ -52,13 +52,17 @@ shrink.
 | `env_reads` | [Direct env reads](#direct-env-reads) | a ceiling per package |
 
 Any PR may lower or remove an entry. A refactor PR never raises or adds
-one (the plan's Refactor guard job, S14b, is to refuse it), with one
-exception: a class D PR may add `import_edges` entries into the package it
-creates, and from it to packages the moved declarations' old home already
-imports (the moved code's own dependencies: for P1, `snapshot` to
-`artifacts`, `attachments`, `attributes`, `links` and `products`, which
-`exports` imports today). The new package must still pass K7. Everything
-else in the file may only shrink, in that PR too.
+one (the plan's Refactor guard job, S14b, is to refuse it), with the
+exceptions S14b lists. A class D PR may add entries for the package it
+creates: `import_edges` into it, and from it to packages the moved
+declarations' old home already imports (the moved code's own dependencies:
+for P1, `snapshot` to `artifacts`, `attachments`, `attributes`, `links` and
+`products`, which `exports` imports today), and, for a new domain package,
+its name in the `client_domain_deps` of a binary that linked the old
+package (P2b's `tokens` for `cmd/agentd`). The new package must still pass
+K7. A class T commit that adds a rule may add that rule's key, holding only
+what the tree has (M5's K3 allowlist). Everything else in the file may only
+shrink, in that PR too.
 Outside a refactor, adding an entry by hand is an architecture decision
 made in review; the usual cases are an import edge to a new package, which
 must still pass K7, and the entry of a new client binary. A ceiling is
