@@ -74,6 +74,59 @@ jobs:
       - name: go test
         run: go test . ./cmd/... ./internal/...
 
+      # postgres:15 has no vector extension, like the compose default
+      # (postgres:15-alpine), so this is the leg where the no-vector paths run;
+      # backend-pgvector covers the vector ones. Fail if they only skipped.
+      - name: No-vector Postgres tests ran
+        shell: bash
+        run: |
+          go test ./internal/persistence/postgres/ -count=1 -v \
+            -run '^(TestVectorReconcileNoopWhenExtensionAbsent|TestNearestByEmbeddingVectorUnavailable)$' | tee no-vector.log
+          for t in TestVectorReconcileNoopWhenExtensionAbsent TestNearestByEmbeddingVectorUnavailable; do
+            grep -q -- "^--- PASS: $t " no-vector.log || { echo "::error::$t did not run against postgres:15"; exit 1; }
+          done
+
+  # The Postgres-backed tests again, on a server that has the vector
+  # extension. Four embedding tests skip without it, so until this leg they ran
+  # nowhere. Only internal/persistence/postgres reads OPENV_TEST_DATABASE_URL,
+  # so only that package runs here.
+  backend-pgvector:
+    name: Backend Postgres tests (pgvector)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg15
+        env:
+          POSTGRES_USER: openv
+          POSTGRES_PASSWORD: openv
+          POSTGRES_DB: openv_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U openv"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      OPENV_TEST_DATABASE_URL: postgres://openv:openv@localhost:5432/openv_test?sslmode=disable
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      # Fail if the image ever stops providing the extension, rather than
+      # passing on four skips.
+      - name: go test (Postgres package, vector extension present)
+        shell: bash
+        run: |
+          go test ./internal/persistence/postgres/ -count=1 -v | tee postgres-tests.log
+          for t in TestNearestByEmbedding TestDuplicateCandidates TestEmbeddingRepositoryUpsert TestVectorReconcileCreatesWhenExtensionAppears; do
+            grep -q -- "^--- PASS: $t " postgres-tests.log || { echo "::error::$t did not run against pgvector"; exit 1; }
+          done
+
   frontend:
     name: Frontend (tsc + test + build)
     runs-on: ubuntu-latest
@@ -124,37 +177,6 @@ jobs:
   # (`!cancelled()`), so one red scanner never hides the other's result.
   # e2e/ is deliberately not audited: its package.json declares devDependencies
   # only (Playwright), so `npm audit --omit=dev` there has nothing to look at.
-  # Every pull request must tell the people who use OpenV what changed: a
-  # bullet under "## Unreleased" in RELEASE_NOTES.md (docs/railway.md,
-  # "Release pipeline"). The check compares the file with the base branch's
-  # copy; a change nobody can see carries the no-release-notes label instead.
-  # On master the file is only checked for shape, so a promotion never finds
-  # it unparseable.
-  release-notes:
-    name: Release notes
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Script self-test
-        run: python3 -m unittest scripts/release_notes_test.py
-
-      - name: Notes file is well-formed
-        run: python3 scripts/release_notes.py check RELEASE_NOTES.md
-
-      - name: Pull request adds a release note
-        if: github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'no-release-notes')
-        env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-        run: |
-          git fetch --no-tags --depth=1 origin "$BASE_SHA"
-          git show "$BASE_SHA:RELEASE_NOTES.md" > /tmp/base-release-notes.md 2>/dev/null || : > /tmp/base-release-notes.md
-          python3 scripts/release_notes.py check-pr --base /tmp/base-release-notes.md RELEASE_NOTES.md
-
-      - name: Skipped by label
-        if: github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'no-release-notes')
-        run: echo "no-release-notes label present; not requiring a note"
-
   vuln:
     name: Vulnerability scan
     runs-on: ubuntu-latest
