@@ -8,7 +8,8 @@ import { agentRunsAPI } from '../../api/client';
 // panel opens the run's stream from the last seq it has, and reads the three
 // events SSEHub sends on a run's stream, in the shapes it sends them
 // (internal/api/sse.go): `log` carries one log entry, `partial` {run_id,
-// text} and `status` {run_id, status}.
+// text} and `status` {run_id, status}. Below, the reconnect policy the same
+// move turns into a hook parameter (plan Q21).
 
 vi.mock('../../api/client', () => ({
   agentRunsAPI: {
@@ -23,11 +24,15 @@ vi.mock('../../api/client', () => ({
 
 const api = vi.mocked(agentRunsAPI);
 
-// A minimal EventSource the test drives by hand.
+// A minimal EventSource the test drives by hand. Like the real one, an event
+// reaches both its addEventListener listeners and its on<event> property, so
+// the test does not fix which of the two the panel (or X15b's hook) uses.
 class MockEventSource {
   static all: MockEventSource[] = [];
   listeners: Record<string, ((e: MessageEvent) => void)[]> = {};
-  onerror: (() => void) | null = null;
+  onopen: ((e: MessageEvent) => void) | null = null;
+  onmessage: ((e: MessageEvent) => void) | null = null;
+  onerror: ((e: MessageEvent) => void) | null = null;
   closed = false;
 
   constructor(
@@ -42,10 +47,29 @@ class MockEventSource {
   close() {
     this.closed = true;
   }
-  emit(type: string, data: unknown) {
-    (this.listeners[type] || []).forEach((fn) => fn({ data: JSON.stringify(data) } as MessageEvent));
+  emit(type: string, data?: unknown) {
+    const event = { type, data: data === undefined ? undefined : JSON.stringify(data) } as MessageEvent;
+    const handler = (this as any)[`on${type}`];
+    if (typeof handler === 'function') handler(event);
+    (this.listeners[type] || []).forEach((fn) => fn(event));
+  }
+  /** Whether anything receives an event of this type. */
+  handles(type: string) {
+    return typeof (this as any)[`on${type}`] === 'function' || (this.listeners[type] || []).length > 0;
   }
 }
+
+/**
+ * EventSource's connection events: the panel handles `error` (a drop, or the
+ * server's own error event), and a hook may also handle `open`; either may be
+ * attached as a listener or a property, so neither counts among the server
+ * events the stream is opened for.
+ */
+const CONNECTION_EVENTS = ['open', 'error'];
+const serverListeners = (es: MockEventSource) =>
+  Object.keys(es.listeners)
+    .filter((type) => !CONNECTION_EVENTS.includes(type))
+    .sort();
 
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 (globalThis as any).EventSource = MockEventSource as any;
@@ -70,6 +94,7 @@ const logEntry = (seq: number, text: string) => ({
 
 let container: HTMLDivElement;
 let root: Root;
+let mounted = false;
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -84,15 +109,21 @@ beforeEach(() => {
   act(() => {
     root = createRoot(container);
   });
+  mounted = true;
 });
 
 afterEach(() => {
-  act(() => {
-    root.unmount();
-  });
+  if (mounted) unmount();
   container.remove();
   vi.useRealTimers();
 });
+
+const unmount = () => {
+  act(() => {
+    root.unmount();
+  });
+  mounted = false;
+};
 
 const render = async () => {
   await act(async () => {
@@ -106,11 +137,14 @@ const stream = (): MockEventSource => {
   return es;
 };
 
-const emit = async (type: string, data: unknown) => {
+const emit = async (type: string, data?: unknown) => {
   await act(async () => {
     stream().emit(type, data);
   });
 };
+
+/** The stream drops: EventSource fires `error`. */
+const drop = () => emit('error');
 
 describe('RunDetailPanel live stream', () => {
   it('opens the run stream with credentials, from seq 0, listening for log, partial and status', async () => {
@@ -118,8 +152,8 @@ describe('RunDetailPanel live stream', () => {
     expect(MockEventSource.all).toHaveLength(1);
     expect(stream().url).toBe('/stream/run-1?after_seq=0');
     expect(stream().init).toEqual({ withCredentials: true });
-    expect(Object.keys(stream().listeners).sort()).toEqual(['log', 'partial', 'status']);
-    expect(stream().onerror).toBeInstanceOf(Function);
+    expect(serverListeners(stream())).toEqual(['log', 'partial', 'status']);
+    expect(stream().handles('error')).toBe(true);
   });
 
   it('appends each log event once, in seq order', async () => {
@@ -171,9 +205,7 @@ describe('RunDetailPanel live stream', () => {
     await render();
     await emit('log', logEntry(7, 'seventh line'));
 
-    await act(async () => {
-      stream().onerror!();
-    });
+    await drop();
     expect(stream().closed).toBe(true);
     expect(api.logs).toHaveBeenCalledWith('run-1', 7);
 
@@ -182,6 +214,128 @@ describe('RunDetailPanel live stream', () => {
     });
     expect(MockEventSource.all).toHaveLength(2);
     expect(stream().url).toBe('/stream/run-1?after_seq=7');
-    expect(Object.keys(stream().listeners).sort()).toEqual(['log', 'partial', 'status']);
+    expect(serverListeners(stream())).toEqual(['log', 'partial', 'status']);
+  });
+});
+
+// The run stream's reconnect policy, which X15b moves into
+// hooks/useEventStream as a named policy (plan Q21): after a drop, a
+// catch-up read of the logs and up to 3 retries at 1000 * 2^n ms, each from
+// the last seq; then polling the logs and the run every 3000 ms until the run
+// is terminal. Only a live event (log, partial or status) restores the retry
+// budget; a stream that opens and drops again does not. A run already
+// terminal is neither reconnected nor polled, and unmounting stops it all.
+describe('RunDetailPanel reconnect policy', () => {
+  const tick = async (ms: number) => {
+    await act(async () => {
+      vi.advanceTimersByTime(ms);
+    });
+  };
+
+  /** A new stream opens exactly ms from now, not a millisecond sooner. */
+  const reconnectsAfter = async (ms: number) => {
+    const opened = MockEventSource.all.length;
+    await tick(ms - 1);
+    expect(MockEventSource.all).toHaveLength(opened);
+    await tick(1);
+    expect(MockEventSource.all).toHaveLength(opened + 1);
+    expect(stream().init).toEqual({ withCredentials: true });
+    expect(serverListeners(stream())).toEqual(['log', 'partial', 'status']);
+  };
+
+  it('retries after 1000, 2000 and 4000 ms, each after a catch-up, then polls every 3000 ms', async () => {
+    vi.useFakeTimers();
+    await render();
+    for (const [i, delay] of [1000, 2000, 4000].entries()) {
+      // Each stream opens before it drops: an open alone restores nothing.
+      await emit('open');
+      await drop();
+      expect(api.logs).toHaveBeenCalledTimes(i + 1);
+      expect(api.logs).toHaveBeenLastCalledWith('run-1', 0);
+      await reconnectsAfter(delay);
+    }
+    expect(api.get).toHaveBeenCalledTimes(1);
+
+    // The fourth drop has no retry left: poll at once, then every 3000 ms.
+    await emit('open');
+    await drop();
+    expect(api.logs).toHaveBeenCalledTimes(4);
+    expect(api.get).toHaveBeenCalledTimes(2);
+    await tick(2999);
+    expect(api.logs).toHaveBeenCalledTimes(4);
+    await tick(1);
+    expect(api.logs).toHaveBeenCalledTimes(5);
+    expect(api.get).toHaveBeenCalledTimes(3);
+
+    // A terminal status ends the polling; no stream is opened again.
+    api.get.mockResolvedValue({ data: { ...RUN, status: 'succeeded' } } as any);
+    await tick(3000);
+    expect(api.logs).toHaveBeenCalledTimes(6);
+    expect(api.get).toHaveBeenCalledTimes(4);
+    await tick(30000);
+    expect(api.logs).toHaveBeenCalledTimes(6);
+    expect(api.get).toHaveBeenCalledTimes(4);
+    expect(MockEventSource.all).toHaveLength(4);
+  });
+
+  it.each([
+    ['log', logEntry(3, 'third line')],
+    ['partial', { run_id: 'run-1', text: 'so far' }],
+    ['status', { run_id: 'run-1', status: 'running' }],
+  ])('a %s event restores the full retry budget', async (type, data) => {
+    vi.useFakeTimers();
+    await render();
+    await drop();
+    await reconnectsAfter(1000);
+    await drop();
+    await reconnectsAfter(2000);
+    await emit(type, data);
+    await drop();
+    await reconnectsAfter(1000);
+  });
+
+  it('neither reconnects nor polls a run that is already terminal', async () => {
+    vi.useFakeTimers();
+    api.get.mockResolvedValue({ data: { ...RUN, status: 'failed' } } as any);
+    await render();
+    await drop();
+    await tick(60000);
+    expect(MockEventSource.all).toHaveLength(1);
+    expect(api.logs).not.toHaveBeenCalled();
+    expect(api.get).toHaveBeenCalledTimes(1);
+  });
+
+  it('closes the stream on unmount', async () => {
+    await render();
+    const es = stream();
+    expect(es.closed).toBe(false);
+    unmount();
+    expect(es.closed).toBe(true);
+  });
+
+  it('opens no stream after unmount, even with a retry pending', async () => {
+    vi.useFakeTimers();
+    await render();
+    await drop();
+    unmount();
+    await tick(60000);
+    expect(MockEventSource.all).toHaveLength(1);
+  });
+
+  it('stops polling on unmount', async () => {
+    vi.useFakeTimers();
+    await render();
+    for (const delay of [1000, 2000, 4000]) {
+      await drop();
+      await tick(delay);
+    }
+    await drop();
+    await tick(3000);
+    const logs = api.logs.mock.calls.length;
+    const gets = api.get.mock.calls.length;
+    unmount();
+    await tick(30000);
+    expect(api.logs).toHaveBeenCalledTimes(logs);
+    expect(api.get).toHaveBeenCalledTimes(gets);
   });
 });

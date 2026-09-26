@@ -16,7 +16,10 @@ import (
 // The source scan behind TestSSEContract (refactor plan step S6): where an
 // SSE event name enters a stream, and on which stream keys. It reads syntax
 // only, like internal/archtest, so it gives the same answer on every host,
-// and it fails rather than guess when a name is not a literal.
+// and it fails rather than guess when a name is not a literal, or when what
+// carries a name is used as a value it cannot follow: a replay's emit passed
+// on or stored, or BroadcastSession (or the hub's broadcast) taken as a
+// method value.
 
 // sseSite is one place an event name enters a stream.
 type sseSite struct {
@@ -267,6 +270,12 @@ func (s *sseScanner) scanFunc(f goSource, fd *ast.FuncDecl) {
 			s.visitCall(f, fd, n, stack)
 		case *ast.CompositeLit:
 			s.visitEventLit(f, fd, n, stack)
+		case *ast.SelectorExpr:
+			if n.Sel.Name == "BroadcastSession" || (n.Sel.Name == "broadcast" && f.dir == "internal/api") {
+				if c, ok := stack[len(stack)-1].(*ast.CallExpr); !ok || c.Fun != ast.Expr(n) {
+					s.fail(n, "%s used as a value rather than called directly", n.Sel.Name)
+				}
+			}
 		}
 		stack = append(stack, n)
 		return true
@@ -368,12 +377,21 @@ func (s *sseScanner) visitServeStream(f goSource, fd *ast.FuncDecl, call *ast.Ca
 		for _, key := range streams {
 			s.scan.served = append(s.scan.served, sseStream{Key: key, Replay: true})
 		}
+		called := map[ast.Expr]bool{}
 		ast.Inspect(replay.Body, func(n ast.Node) bool {
 			if c, ok := n.(*ast.CallExpr); ok && isIdent(c.Fun, emit) {
+				called[c.Fun] = true
 				if len(c.Args) != 2 {
 					s.fail(c, "%s called with %d arguments", emit, len(c.Args))
 				}
 				s.add(sseSite{event: s.eventName(f, c.Args[0]), streams: streams, how: "emit", pos: s.pos(c)})
+			}
+			return true
+		})
+		// emit passed on or stored would take its names out of the scan's sight.
+		ast.Inspect(replay.Body, func(n ast.Node) bool {
+			if id, ok := n.(*ast.Ident); ok && id.Name == emit && !called[id] {
+				s.fail(id, "the replay's %s is used other than as a direct call inside the replay literal", emit)
 			}
 			return true
 		})

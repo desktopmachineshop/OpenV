@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -20,7 +21,10 @@ import (
 // pinned in testdata/event_payload_types.txt. The test swaps a recording bus
 // into a handler, drives every path that publishes (event_payload_drives_test.go),
 // and writes one row per event type, payload key and publisher with the
-// value's Go type (%T).
+// value's Go type (%T), plus the actor and org the publisher stamps. The
+// actor matters on paths no black-box test reaches, such as an invitation
+// taken up during an OIDC sign-in: the notifier skips the actor
+// (notify/notifier.go), so a changed actor changes who is told.
 //
 // The JSON an API client reads (S5d's events golden) cannot see these types,
 // but in-process subscribers can: they type-assert payload values
@@ -31,7 +35,9 @@ import (
 //
 // TestEventPayloadDrivesReachEveryPublisher keeps the drive list complete:
 // every call in the module that passes an event type constant is reached by
-// a drive that publishes that type.
+// a drive that publishes that type. It fails on any other use of a constant
+// it cannot follow (a composite literal field, a variable, a table), so a
+// publisher passes the constant straight to the publishing call.
 
 const payloadTypesGolden = "testdata/event_payload_types.txt"
 
@@ -107,6 +113,18 @@ func TestEventPayloadTypes(t *testing.T) {
 	published := runPayloadDrives(t)
 	rows := map[string]bool{}
 	for _, p := range published {
+		// Raw, never normalised: subscribers branch on the actor, and the
+		// fixture's ids are fixed.
+		actor := p.event.Actor
+		if actor == "" {
+			actor = "(none)"
+		}
+		rows[payloadRow(p.event.EventType, "(actor)", actor, p.via)] = true
+		org := p.event.OrgID
+		if org == "" {
+			org = "-" // left for DefaultBus to fill from the project
+		}
+		rows[payloadRow(p.event.EventType, "(org)", org, p.via)] = true
 		if len(p.event.Payload) == 0 {
 			rows[payloadRow(p.event.EventType, "(empty)", "-", p.via)] = true
 		}
@@ -131,7 +149,12 @@ func TestEventPayloadTypes(t *testing.T) {
 		"payload key and the Go type of its value (%T). In-process subscribers type-assert these values",
 		"(notify/membership.go, orchestration/hooks.go) and the trigger matcher compares them through %v, so a",
 		"changed Go type changes behavior even where the JSON (S5d) does not. Written by TestEventPayloadTypes.",
-		"Columns: event type, payload key, Go type, published by (the route driven, or the in-process path).",
+		"Columns: event type, payload key, Go type, and the drive that published it (a route, or an in-process",
+		"path). A publishing function several paths reach is listed under the drives that reach it, not under",
+		"every caller: TestEventPayloadDrivesReachEveryPublisher asks for one drive per publishing call.",
+		"The (actor) and (org) rows give, in the Go type column, the Actor and OrgID the publisher stamps (- when",
+		"it leaves OrgID for DefaultBus to fill from the project). Subscribers branch on the actor",
+		"(notify/notifier.go, orchestration/hooks.go, automation/triggers.go).",
 		"Regenerate: UPDATE_GOLDEN=1 go test ./internal/api -count=1 -run '^TestEventPayloadTypes$'",
 	} {
 		b.WriteString("# " + h + "\n")
@@ -158,7 +181,9 @@ func payloadRow(eventType, key, goType, via string) string {
 // production code that passes a domain event type constant (h.publish(r,
 // events.ArtifactCreated, ...), events.New(events.RunFinished, ...)) and
 // requires a drive to have published that type with the call's function on
-// the stack. A new publisher without a drive fails here.
+// the stack. A new publisher without a drive fails here, and so does a
+// constant used any other way than as a direct call argument, a case label
+// or an ==/!= operand, since the scan could not tell whether it publishes.
 func TestEventPayloadDrivesReachEveryPublisher(t *testing.T) {
 	published := runPayloadDrives(t)
 	sites := eventTypeCallSites(t)
@@ -196,7 +221,13 @@ type eventSite struct {
 const eventsImportSuffix = "/internal/domain/events"
 
 // eventTypeCallSites lists every call in production code with a direct
-// argument naming an event type constant of internal/domain/events.
+// argument naming an event type constant of internal/domain/events. It
+// reads every declaration, package-level ones too, and fails on a constant
+// used other than as such an argument, a case label (a subscriber's switch)
+// or an ==/!= operand: held in a variable, a table or an events.Event{...}
+// field, the constant would reach a publisher the scan cannot see. It also
+// fails on an event type written as a string literal outside the events
+// package, for the same reason.
 func eventTypeCallSites(t *testing.T) []eventSite {
 	t.Helper()
 	mod := loadModuleSources(t)
@@ -204,38 +235,78 @@ func eventTypeCallSites(t *testing.T) []eventSite {
 	for _, c := range eventTypeConsts(t, mod) {
 		types[c[0]] = c[1]
 	}
+	values := map[string]bool{}
+	for _, v := range types {
+		values[v] = true
+	}
 	var sites []eventSite
+	var unfollowed []string
 	for _, f := range mod.files {
-		local := importName(f.file, mod.path+eventsImportSuffix)
-		if local == "" {
-			continue
-		}
-		for _, d := range f.file.Decls {
-			fd, ok := d.(*ast.FuncDecl)
-			if !ok || fd.Body == nil {
-				continue
-			}
-			fn := runtimeFuncName(mod.path, f.dir, fd)
-			ast.Inspect(fd.Body, func(n ast.Node) bool {
-				call, ok := n.(*ast.CallExpr)
-				if !ok {
-					return true
-				}
-				for _, arg := range call.Args {
-					sel, ok := arg.(*ast.SelectorExpr)
-					if !ok || !isIdent(sel.X, local) {
-						continue
-					}
-					if value, ok := types[sel.Sel.Name]; ok {
-						p := mod.fset.Position(call.Pos())
-						sites = append(sites, eventSite{eventType: value, function: fn, pos: fmt.Sprintf("%s:%d", p.Filename, p.Line)})
+		// An event type spelled as a string literal outside the events
+		// package is a publisher or subscriber the scan cannot tie to a constant.
+		if !strings.HasSuffix(mod.path+"/"+f.dir, eventsImportSuffix) {
+			ast.Inspect(f.file, func(n ast.Node) bool {
+				if lit, ok := n.(*ast.BasicLit); ok {
+					if v, ok := stringLit(lit); ok && values[v] {
+						p := mod.fset.Position(lit.Pos())
+						unfollowed = append(unfollowed, fmt.Sprintf("%s:%d %s", p.Filename, p.Line, lit.Value))
 					}
 				}
 				return true
 			})
 		}
+		local := importName(f.file, mod.path+eventsImportSuffix)
+		if local == "" {
+			continue
+		}
+		for _, d := range f.file.Decls {
+			fd, _ := d.(*ast.FuncDecl)
+			var stack []ast.Node
+			ast.Inspect(d, func(n ast.Node) bool {
+				if n == nil {
+					stack = stack[:len(stack)-1]
+					return true
+				}
+				if sel, ok := n.(*ast.SelectorExpr); ok && isIdent(sel.X, local) && len(stack) > 0 {
+					if value, ok := types[sel.Sel.Name]; ok {
+						switch parent := stack[len(stack)-1].(type) {
+						case *ast.CallExpr:
+							if fd != nil && slices.Contains(parent.Args, ast.Expr(sel)) {
+								p := mod.fset.Position(parent.Pos())
+								sites = append(sites, eventSite{
+									eventType: value, function: runtimeFuncName(mod.path, f.dir, fd),
+									pos: fmt.Sprintf("%s:%d", p.Filename, p.Line),
+								})
+								break
+							}
+							unfollowed = append(unfollowed, constUse(mod, sel, local))
+						case *ast.CaseClause:
+						case *ast.BinaryExpr:
+							if parent.Op != token.EQL && parent.Op != token.NEQ {
+								unfollowed = append(unfollowed, constUse(mod, sel, local))
+							}
+						default:
+							unfollowed = append(unfollowed, constUse(mod, sel, local))
+						}
+					}
+				}
+				stack = append(stack, n)
+				return true
+			})
+		}
+	}
+	if len(unfollowed) > 0 {
+		t.Fatalf("event types written as a string literal, or constants used other than as a direct call argument, "+
+			"a case label or an ==/!= operand; the publisher scan cannot follow them, so pass the constant of "+
+			"internal/domain/events straight to the publishing call:\n  %s",
+			strings.Join(unfollowed, "\n  "))
 	}
 	return sites
+}
+
+func constUse(mod *moduleSources, sel *ast.SelectorExpr, local string) string {
+	p := mod.fset.Position(sel.Pos())
+	return fmt.Sprintf("%s:%d %s.%s", p.Filename, p.Line, local, sel.Sel.Name)
 }
 
 // eventTypeConsts reads the event type constants (name, value) from

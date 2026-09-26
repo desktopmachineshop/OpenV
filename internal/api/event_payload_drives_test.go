@@ -219,8 +219,11 @@ func proposalRun() *agentruns.Run {
 func newPayloadFixture(t *testing.T) *payloadFixture {
 	t.Helper()
 	h, logins, invites := newRegistrationHandler("")
+	// The services are set through HandlerDeps's exported names, which a
+	// rename of Handler's private fields (plan M14) leaves alone.
+	var deps HandlerDeps
 	bus := &payloadBus{}
-	h.bus = bus
+	deps.Bus = bus
 
 	known := &users.User{ID: "u-known", Email: "known@example.com", Name: "Known", EmailVerified: true}
 	logins.accounts = map[string]*users.User{"known@example.com": known}
@@ -234,43 +237,45 @@ func newPayloadFixture(t *testing.T) *payloadFixture {
 		"art-gone": {ID: "art-gone", ProjectID: payloadProject, Type: "requirement", Title: "Gone", Version: 1},
 	}}}
 	chatterSvc := &fakeChatterService{}
-	h.artifactService = arts
-	h.linkService = &applierLinkService{byID: map[string]*links.Link{
+	deps.ArtifactService = arts
+	deps.LinkService = &applierLinkService{byID: map[string]*links.Link{
 		"link-1": {ID: "link-1", FromID: "art-tc", ToID: "art-req", Type: "verifies"},
 	}}
-	h.projectService = &fakeProjectService{byID: map[string]*projects.Project{
+	deps.ProjectService = &fakeProjectService{byID: map[string]*projects.Project{
 		payloadProject: {ID: payloadProject, OrgID: payloadOrg, Name: "Project"},
 	}}
-	h.chatterService = chatterSvc
-	h.exportService = &fakeExportService{data: []byte(`{"artifacts":[]}`)}
-	h.baselineService = &payloadBaselines{}
-	h.memberService = &payloadMembers{}
-	h.orgService = &payloadOrgs{fakeMemberOrgs: &fakeMemberOrgs{roles: map[string]string{}}}
-	h.agentService = &fakeAgentService{byID: map[string]*agents.Agent{
+	deps.ChatterService = chatterSvc
+	deps.ExportService = &fakeExportService{data: []byte(`{"artifacts":[]}`)}
+	deps.BaselineService = &payloadBaselines{}
+	deps.MemberService = &payloadMembers{}
+	deps.OrgService = &payloadOrgs{fakeMemberOrgs: &fakeMemberOrgs{roles: map[string]string{}}}
+	deps.AgentService = &fakeAgentService{byID: map[string]*agents.Agent{
 		"agent-proposal": {ID: "agent-proposal", OrgID: payloadOrg, WriteMode: agents.WriteModeProposal},
 	}}
-	h.proposalService = &payloadProposals{}
+	deps.ProposalService = &payloadProposals{}
 	project := payloadProject
-	h.interviewService = &payloadInterviews{fakeInterviewService: &fakeInterviewService{
+	deps.InterviewService = &payloadInterviews{fakeInterviewService: &fakeInterviewService{
 		interview: &interviews.Interview{ID: "iv-1", ProjectID: project},
 		invite:    &interviews.Invite{ID: "invite-1", InterviewID: "iv-1"},
 		session:   &interviews.Session{ID: "session-1", InviteID: "invite-1", InterviewID: "iv-1"},
 	}}
 
 	agentID := "agent-1"
-	h.workItemService = workitems.NewDefaultService(&payloadWorkItems{items: map[string]*workitems.WorkItem{
+	deps.WorkItemService = workitems.NewDefaultService(&payloadWorkItems{items: map[string]*workitems.WorkItem{
 		"wi-assigned": {ID: "wi-assigned", ProjectID: payloadProject, Title: "Assigned", Column: workitems.ColumnBacklog,
 			AssigneeType: workitems.AssigneeAgent, AssigneeID: &agentID, ArtifactIDs: []string{}},
 		"wi-open": {ID: "wi-open", ProjectID: payloadProject, Title: "Open", Column: workitems.ColumnTodo,
 			AssigneeType: workitems.AssigneeUser, ArtifactIDs: []string{}},
 	}}, bus)
-	h.vvService = vv.NewDefaultService(&payloadTestRuns{run: &vv.TestRun{ID: "tr-1", ProjectID: payloadProject, Name: "Run 1"}},
+	deps.VVService = vv.NewDefaultService(&payloadTestRuns{run: &vv.TestRun{ID: "tr-1", ProjectID: payloadProject, Name: "Run 1"}},
 		arts, chatterSvc, bus)
 	launchedBy := "u-launcher"
-	h.runService = agentruns.NewDefaultService(&payloadRuns{run: &agentruns.Run{
+	deps.RunService = agentruns.NewDefaultService(&payloadRuns{run: &agentruns.Run{
 		ID: "run-live", OrgID: payloadOrg, AgentID: "agent-1", ProjectID: &project, LaunchedBy: &launchedBy,
 		Status: agentruns.StatusRunning,
 	}}, nil, bus)
+
+	setTestServices(h, deps)
 
 	router := mux.NewRouter()
 	h.RegisterRoutes(router)

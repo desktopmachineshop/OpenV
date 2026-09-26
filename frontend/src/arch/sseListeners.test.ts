@@ -5,15 +5,19 @@
 // The SSE events the frontend listens for (refactor plan S6, invariant I9):
 // every addEventListener call, and every onmessage, onerror and onopen
 // handler, on a value the type checker types as EventSource, across the
-// production sources. Each name is resolved by the checker (a literal, a
-// const, a string-literal type, or a parameter bound at each call of its
-// function), and each server event must be one the server sends:
+// production sources. Each name is resolved by the checker: a literal; a
+// name the function's callers bind (a parameter, or the key of an
+// Object.keys or Object.entries loop over a parameter), read at every call
+// from that call's argument and never from the declared type, so a helper
+// such as X15's hooks/useEventStream listens for exactly the names its
+// callers pass and, with no callers yet, for none; otherwise a const or a
+// string-literal type. Each server event must be one the server sends:
 // contracts/sse-events.json, which TestSSEContract writes from the Go
 // sources. A rename on either side fails here or there. The snapshot holds
-// names only, never a file, so moving a listener into another module (X15's
-// hooks/useEventStream) leaves it unchanged while each name still resolves;
-// the files appear in failure messages instead. onerror also receives the
-// server's own "error" event, so it counts as a listener for it.
+// names only, never a file, so moving a listener into another module leaves
+// it unchanged while each name still resolves; the files appear in failure
+// messages instead. onerror also receives the server's own "error" event, so
+// it counts as a listener for it.
 import ts from 'typescript';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { REGENERATE, lineOf, literalText, productionSources, readRepoFile, srcRel, tsProgram, walk } from './repo';
@@ -58,42 +62,128 @@ function isEventSource(expr: ts.Expression): boolean {
 }
 
 /**
- * The event names an expression can hold: a literal, a value of a string
- * literal type or a union of them (a const, say), or a parameter, read at
- * every call of its function with that call's argument. null when the scan
- * cannot tell.
+ * The event names an expression can hold: a literal; a name its function's
+ * callers bind (a parameter, or a key of Object.keys/Object.entries over a
+ * parameter), read at every call with that call's argument; otherwise a value
+ * of a string literal type or a union of them (a const, say). A caller-bound
+ * name is never read from its declared type, which lists every name the
+ * function could take rather than the ones its callers pass. null when the
+ * scan cannot tell.
  */
 function resolveNames(expr: ts.Expression, depth = 0): string[] | null {
   const lit = literalText(expr);
   if (lit !== null) return [lit];
+  if (depth >= 4) return null;
+  const bound = ts.isIdentifier(expr) ? callerBound(expr, depth) : undefined;
+  if (bound !== undefined) return bound;
   const type = checker.getTypeAtLocation(expr);
   if (type.isStringLiteral()) return [type.value];
   if (type.isUnion() && type.types.every((t) => t.isStringLiteral())) {
     return type.types.map((t) => (t as ts.StringLiteralType).value);
   }
-  if (depth >= 4 || !ts.isIdentifier(expr)) return null;
-  const decl = symbolOf(expr)?.valueDeclaration;
+  return null;
+}
+
+const unwrap = (e: ts.Expression): ts.Expression => {
+  while (
+    ts.isParenthesizedExpression(e) ||
+    ts.isAsExpression(e) ||
+    ts.isSatisfiesExpression(e) ||
+    ts.isNonNullExpression(e)
+  ) {
+    e = e.expression;
+  }
+  return e;
+};
+
+/** A parameter's function and the parameter's position in it, or null. */
+function paramOf(id: ts.Identifier): { fn: ts.SignatureDeclaration; index: number } | null {
+  const decl = symbolOf(id)?.valueDeclaration;
   if (!decl || !ts.isParameter(decl) || !ts.isFunctionLike(decl.parent)) return null;
-  const fn = decl.parent;
-  const index = fn.parameters.indexOf(decl);
+  return { fn: decl.parent, index: decl.parent.parameters.indexOf(decl) };
+}
+
+/**
+ * Every call of a function in the production sources. null when the function
+ * has no name to find its calls by, or is referenced other than as a callee
+ * (passed as a value), since its arguments are then out of sight.
+ */
+function callsOf(fn: ts.SignatureDeclaration): ts.CallExpression[] | null {
   const nameNode = ts.isVariableDeclaration(fn.parent) ? fn.parent.name : (fn as ts.FunctionDeclaration).name;
   const target = nameNode && symbolOf(nameNode);
-  if (!target) return null;
-  const names: string[] = [];
-  let calls = 0;
+  if (!nameNode || !target) return null;
+  const calls: ts.CallExpression[] = [];
+  let escaped = false;
   for (const sf of sources) {
-    let failed = false;
     walk(sf, (node) => {
-      if (failed || !ts.isCallExpression(node) || symbolOf(node.expression) !== target) return;
-      calls += 1;
-      const arg = node.arguments[index];
-      const got = arg ? resolveNames(arg, depth + 1) : null;
-      if (got === null) failed = true;
-      else names.push(...got);
+      if (!ts.isIdentifier(node) || node === nameNode || symbolOf(node) !== target) return;
+      const p = node.parent;
+      if (ts.isImportSpecifier(p) || ts.isImportClause(p) || ts.isExportSpecifier(p)) return;
+      if (ts.isCallExpression(p) && p.expression === node) calls.push(p);
+      else escaped = true;
     });
-    if (failed) return null;
   }
-  return calls > 0 ? names : null;
+  return escaped ? null : calls;
+}
+
+/**
+ * The names a caller-bound identifier takes across every call, or undefined
+ * when the identifier is not caller-bound. A function nobody calls binds none.
+ */
+function callerBound(id: ts.Identifier, depth: number): string[] | null | undefined {
+  const param = paramOf(id);
+  if (param) {
+    const calls = callsOf(param.fn);
+    if (!calls) return null;
+    const names: string[] = [];
+    for (const call of calls) {
+      const arg = call.arguments[param.index];
+      const got = arg ? resolveNames(arg, depth + 1) : null;
+      if (got === null) return null;
+      names.push(...got);
+    }
+    return names;
+  }
+  // for (const name of Object.keys(p)) / for (const [name] of Object.entries(p))
+  const decl = symbolOf(id)?.valueDeclaration;
+  if (!decl) return undefined;
+  let v: ts.Node = decl;
+  let viaEntries = false;
+  if (ts.isBindingElement(v) && ts.isArrayBindingPattern(v.parent) && v.parent.elements.indexOf(v) === 0) {
+    viaEntries = true;
+    v = v.parent.parent;
+  }
+  const loop = ts.isVariableDeclaration(v) && ts.isVariableDeclarationList(v.parent) ? v.parent.parent : undefined;
+  if (!loop || !ts.isForOfStatement(loop)) return undefined;
+  const over = unwrap(loop.expression);
+  if (
+    !ts.isCallExpression(over) ||
+    !ts.isPropertyAccessExpression(over.expression) ||
+    over.expression.expression.getText() !== 'Object' ||
+    over.expression.name.text !== (viaEntries ? 'entries' : 'keys')
+  ) {
+    return undefined;
+  }
+  const source = over.arguments[0] && unwrap(over.arguments[0]);
+  const sourceParam = source && ts.isIdentifier(source) ? paramOf(source) : null;
+  if (!sourceParam) return null;
+  const calls = callsOf(sourceParam.fn);
+  if (!calls) return null;
+  const names: string[] = [];
+  for (const call of calls) {
+    const arg = call.arguments[sourceParam.index];
+    const obj = arg && unwrap(arg);
+    if (!obj || !ts.isObjectLiteralExpression(obj)) return null;
+    for (const prop of obj.properties) {
+      const keyed =
+        ts.isPropertyAssignment(prop) || ts.isShorthandPropertyAssignment(prop) || ts.isMethodDeclaration(prop);
+      if (!keyed) return null;
+      const key = ts.isIdentifier(prop.name) ? prop.name.text : literalText(prop.name);
+      if (key === null) return null;
+      names.push(key);
+    }
+  }
+  return names;
 }
 
 function collectListeners(): Listener[] {
@@ -153,7 +243,8 @@ describe('SSE listeners', () => {
     const unresolved = listeners().filter((l) => l.name.startsWith('<unresolved'));
     expect(
       unresolved.map((l) => `${l.at}  ${l.name}`),
-      'name each event with a literal, a const or a string-literal type the checker can read'
+      'name each event with a literal, a const or a string-literal type the checker can read, or take it from ' +
+        'callers that pass a literal (as an argument, or as the keys of an object literal a helper loops over)'
     ).toEqual([]);
   });
 

@@ -1,6 +1,7 @@
 package api
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -12,6 +13,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/openv/requirements-platform/internal/domain/agentruns"
 )
 
 // The SSE wire contract (refactor plan step S6, invariant I9), pinned in
@@ -186,6 +189,68 @@ func TestServeStreamSendsErrorOnlyWhenReplayFails(t *testing.T) {
 
 	if none := serveOnce(t, nil); none != "" {
 		t.Errorf("a stream without replay wrote %q before any event, want nothing", none)
+	}
+}
+
+// TestSSELiveFramesMatchContract reads broadcasts off a connected stream: the
+// live loop writes each one in the contract's frame, as a replay does, with
+// the data SSEHub's run-stream methods and BroadcastSession send. The other
+// observations below end at the replay, so this is the one that sees the
+// live branch of ServeStream.
+func TestSSELiveFramesMatchContract(t *testing.T) {
+	raw, err := os.ReadFile(filepath.Join("..", "..", filepath.FromSlash(sseContractFile)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var c sseContract
+	if err := json.Unmarshal(raw, &c); err != nil {
+		t.Fatalf("%s: %v", sseContractFile, err)
+	}
+	frame := func(name, data string) string {
+		return strings.NewReplacer("<name>", name, "<json>", data).Replace(c.Frame)
+	}
+
+	hub := NewSSEHub()
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hub.ServeStream(w, r, "run-s6", nil)
+	}))
+	defer srv.Close()
+	client := srv.Client()
+	client.Timeout = 10 * time.Second // bounds the reads below
+	resp, err := client.Get(srv.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	// ServeStream subscribes before its first flush sends the headers, so
+	// the stream is listening once the response has arrived.
+	run := &agentruns.Run{ID: "run-s6", Status: "running"}
+	hub.BroadcastSession("run-s6", "s6-name", "s6-data")
+	hub.RunLogsAppended(run, []agentruns.LogEntry{{RunID: "run-s6", Seq: 1, Kind: "k", CreatedAt: time.Unix(0, 0).UTC()}})
+	hub.RunPartialText(run, "so far")
+	hub.RunStatusChanged(run)
+	want := frame("s6-name", `"s6-data"`) +
+		frame("log", `{"run_id":"run-s6","seq":1,"kind":"k","payload":null,"created_at":"1970-01-01T00:00:00Z"}`) +
+		frame("partial", `{"run_id":"run-s6","text":"so far"}`) +
+		frame("status", `{"run_id":"run-s6","status":"running"}`)
+
+	// Read up to the fourth blank line, so a frame that loses its event:
+	// line fails at once rather than waiting on keepalives.
+	var got strings.Builder
+	br := bufio.NewReader(resp.Body)
+	for frames := 0; frames < 4; {
+		line, err := br.ReadString('\n')
+		if err != nil {
+			t.Fatalf("the stream ended after %q: %v", got.String(), err)
+		}
+		got.WriteString(line)
+		if line == "\n" {
+			frames++
+		}
+	}
+	if got.String() != want {
+		t.Fatalf("live broadcasts wrote\n%q\nwant\n%q", got.String(), want)
 	}
 }
 
