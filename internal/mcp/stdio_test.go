@@ -217,22 +217,17 @@ func TestServeStdioHandshakeToolsListAndShutdown(t *testing.T) {
 		t.Fatalf("ping response = id %s err %+v, want id \"2\" and no error", resp.ID, resp.Error)
 	}
 
-	// tools/list mirrors the tool table.
+	// tools/list serves the tool table pinned in testdata/tools.json: every
+	// tool's name, description and input schema, in table order.
 	s.send("3", "tools/list", nil)
 	resp = s.recv()
 	if idString(t, resp.ID) != `"3"` || resp.Error != nil {
 		t.Fatalf("tools/list response = id %s err %+v", resp.ID, resp.Error)
 	}
 	list, _ := resp.Result["tools"].([]interface{})
-	want := Tools()
-	if len(list) != len(want) {
-		t.Fatalf("tools/list returned %d tools, want %d", len(list), len(want))
-	}
-	for i, raw := range list {
+	checkToolsListAgainstGolden(t, list)
+	for _, raw := range list {
 		entry, _ := raw.(map[string]interface{})
-		if entry["name"] != want[i].Name {
-			t.Errorf("tool %d name = %v, want %s", i, entry["name"], want[i].Name)
-		}
 		if desc, _ := entry["description"].(string); desc == "" {
 			t.Errorf("tool %v has no description", entry["name"])
 		}

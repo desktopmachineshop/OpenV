@@ -1,0 +1,71 @@
+{
+  "method": "Client.ReleasePoolNode",
+  "cases": [
+    {
+      "name": "reports the wiped lease; 204 is success",
+      "calls": [
+        {
+          "call": "ReleasePoolNode(\"<node-id>\", \"<session-id>\")",
+          "http": [
+            {
+              "request": {
+                "method": "POST",
+                "path": "/api/v1/runner-pool/nodes/<node-id>/release",
+                "route": "POST /api/v1/runner-pool/nodes/{id}/release",
+                "authorization": "Bearer <pool-key>",
+                "content_type": "application/json",
+                "body": "{\"session_id\":\"<session-id>\"}"
+              },
+              "response": {
+                "status": 204,
+                "body": ""
+              }
+            }
+          ],
+          "returned": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "name": "a 5xx is retried after a backoff",
+      "calls": [
+        {
+          "call": "ReleasePoolNode(\"<node-id>\", \"<session-id>\")",
+          "http": [
+            {
+              "request": {
+                "method": "POST",
+                "path": "/api/v1/runner-pool/nodes/<node-id>/release",
+                "route": "POST /api/v1/runner-pool/nodes/{id}/release",
+                "authorization": "Bearer <pool-key>",
+                "content_type": "application/json",
+                "body": "{\"session_id\":\"<session-id>\"}"
+              },
+              "response": {
+                "status": 500,
+                "body": "{\"error\":\"failed to release pool node\"}\n"
+              }
+            },
+            {
+              "request": {
+                "method": "POST",
+                "path": "/api/v1/runner-pool/nodes/<node-id>/release",
+                "route": "POST /api/v1/runner-pool/nodes/{id}/release",
+                "authorization": "Bearer <pool-key>",
+                "content_type": "application/json",
+                "body": "{\"session_id\":\"<session-id>\"}"
+              },
+              "response": {
+                "status": 204,
+                "body": ""
+              }
+            }
+          ],
+          "returned": null,
+          "error": null
+        }
+      ]
+    }
+  ]
+}
