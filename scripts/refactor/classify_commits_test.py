@@ -110,7 +110,8 @@ class GitTest(unittest.TestCase):
         self.addCleanup(shutil.rmtree, self.dir)
 
     def git(self, *args):
-        subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@example.com"] + list(args),
+        subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@example.com", "-c", "commit.gpgsign=false",
+                        "-c", "core.hooksPath=/dev/null"] + list(args),
                        cwd=self.dir, check=True, capture_output=True)
 
     def commit(self, files, message):
