@@ -1,0 +1,312 @@
+# METHOD PATH pairs the frontend API layer calls, matched to internal/api/testdata/routes.txt (invariant I23).
+# Regenerate: npx vitest run src/arch -u
+
+call sites: 294
+  axios instance calls: 283 (DELETE 34, GET 112, HEAD 1, POST 98, PUT 38)
+  helper calls (a function that passes its argument to the instance): 2
+  plain URLs built on API_BASE_URL (streams, downloads, logo, sign-in): 9
+  needing normalisation: 6 (4 of them axios calls)
+distinct METHOD PATH lines below: 294; server routes reached: 294
+
+GET     /api/v1/admin/users                                               adminAPI.users
+PUT     /api/v1/admin/users/{id}/admin                                    adminAPI.setAdmin
+POST    /api/v1/admin/users/{id}/password-reset                           adminAPI.issuePasswordReset
+GET     /api/v1/admin/workspaces                                          adminAPI.workspaces
+GET     /api/v1/agent-runs                                                agentRunsAPI.list
+GET     /api/v1/agent-runs/{id}                                           agentRunsAPI.get
+POST    /api/v1/agent-runs/{id}/cancel                                    agentRunsAPI.cancel
+GET     /api/v1/agent-runs/{id}/logs                                      agentRunsAPI.logs
+POST    /api/v1/agent-runs/{id}/retry                                     agentRunsAPI.retry
+GET     /api/v1/agent-runs/{id}/stream                                    agentRunsAPI.streamUrl (url)
+GET     /api/v1/agent-runs/{id}/tree                                      agentRunsAPI.tree
+GET     /api/v1/agents                                                    agentsAPI.list
+POST    /api/v1/agents                                                    agentsAPI.create
+POST    /api/v1/agents/sync                                               agentsAPI.sync
+DELETE  /api/v1/agents/{slug}                                             agentsAPI.remove
+GET     /api/v1/agents/{slug}                                             agentsAPI.get
+PUT     /api/v1/agents/{slug}                                             agentsAPI.update
+GET     /api/v1/agents/{slug}/raw                                         agentsAPI.raw
+PUT     /api/v1/agents/{slug}/raw                                         agentsAPI.saveRaw
+POST    /api/v1/agents/{slug}/runs                                        agentsAPI.launchRun
+GET     /api/v1/artifacts                                                 artifactAPI.list, artifactAPI.listPage
+POST    /api/v1/artifacts                                                 artifactAPI.create
+GET     /api/v1/artifacts/{artifactID}/attachments                        attachmentAPI.listByArtifact
+DELETE  /api/v1/artifacts/{id}                                            artifactAPI.delete
+GET     /api/v1/artifacts/{id}                                            artifactAPI.get
+PUT     /api/v1/artifacts/{id}                                            artifactAPI.update
+GET     /api/v1/artifacts/{id}/links                                      linkAPI.listForArtifact, linkAPI.listForArtifactVersion
+GET     /api/v1/artifacts/{id}/quality                                    qualityAPI.artifact
+POST    /api/v1/artifacts/{id}/restore                                    artifactAPI.restoreVersion
+PUT     /api/v1/artifacts/{id}/status                                     artifactAPI.changeStatus
+GET     /api/v1/artifacts/{id}/versions                                   artifactAPI.getVersions
+POST    /api/v1/attachments/upload                                        attachmentAPI.upload
+DELETE  /api/v1/attachments/{id}                                          attachmentAPI.delete
+GET     /api/v1/attachments/{id}                                          attachmentAPI.getMeta
+PUT     /api/v1/attachments/{id}                                          attachmentAPI.rename
+GET     /api/v1/attachments/{id}/download                                 attachmentAPI.fetchFile, attachmentAPI.getDownloadUrl (url)
+GET     /api/v1/attachments/{id}/versions                                 attachmentAPI.listVersions
+POST    /api/v1/attachments/{id}/versions                                 attachmentAPI.uploadVersion
+POST    /api/v1/attachments/{id}/versions/{version}/restore               attachmentAPI.restoreVersion
+GET     /api/v1/attribute-definitions                                     attributeDefinitionAPI.listByOrg, attributeDefinitionAPI.listByProject
+POST    /api/v1/attribute-definitions                                     attributeDefinitionAPI.create
+DELETE  /api/v1/attribute-definitions/{id}                                attributeDefinitionAPI.remove
+PUT     /api/v1/attribute-definitions/{id}                                attributeDefinitionAPI.update
+GET     /api/v1/auth/config                                               authAPI.config
+GET     /api/v1/auth/google                                               authAPI.googleLoginUrl (url)
+POST    /api/v1/auth/invitations/accept                                   authAPI.acceptInvitation
+POST    /api/v1/auth/invitations/preview                                  authAPI.invitation
+POST    /api/v1/auth/login                                                authAPI.login
+POST    /api/v1/auth/logout                                               authAPI.logout
+GET     /api/v1/auth/me                                                   authAPI.me
+GET     /api/v1/auth/oidc/login                                           authAPI.oidcLoginUrl (url)
+POST    /api/v1/auth/password-reset                                       authAPI.requestPasswordReset
+POST    /api/v1/auth/password-reset/confirm                               authAPI.confirmPasswordReset
+GET     /api/v1/auth/policy                                               authAPI.policy
+POST    /api/v1/auth/register                                             authAPI.register
+POST    /api/v1/auth/share/accept                                         authAPI.acceptShareLink
+POST    /api/v1/auth/verify-email                                         authAPI.verifyEmail
+POST    /api/v1/auth/verify-email/change                                  authAPI.changeVerificationEmail
+POST    /api/v1/auth/verify-email/resend                                  authAPI.resendVerification
+GET     /api/v1/automations                                               automationsAPI.list
+POST    /api/v1/automations                                               automationsAPI.create
+DELETE  /api/v1/automations/{id}                                          automationsAPI.remove
+GET     /api/v1/automations/{id}                                          automationsAPI.get
+PUT     /api/v1/automations/{id}                                          automationsAPI.update
+POST    /api/v1/automations/{id}/run-now                                  automationsAPI.runNow
+DELETE  /api/v1/baselines/{id}                                            baselineAPI.delete
+GET     /api/v1/baselines/{id}                                            baselineAPI.get
+GET     /api/v1/baselines/{id}/diff                                       baselineAPI.diff
+GET     /api/v1/chatter                                                   chatterAPI.list
+POST    /api/v1/chatter                                                   chatterAPI.create
+DELETE  /api/v1/crew-edges/{id}                                           crewsAPI.removeEdge
+PUT     /api/v1/crew-edges/{id}                                           crewsAPI.updateEdge
+DELETE  /api/v1/crew-nodes/{id}                                           crewsAPI.removeNode
+PUT     /api/v1/crew-nodes/{id}                                           crewsAPI.updateNode
+GET     /api/v1/crew-templates                                            crewTemplatesAPI.list
+GET     /api/v1/crews                                                     crewsAPI.list
+POST    /api/v1/crews                                                     crewsAPI.create
+POST    /api/v1/crews/import                                              crewsAPI.import
+DELETE  /api/v1/crews/{id}                                                crewsAPI.remove
+GET     /api/v1/crews/{id}                                                crewsAPI.get
+PUT     /api/v1/crews/{id}                                                crewsAPI.update
+POST    /api/v1/crews/{id}/clone                                          crewsAPI.clone
+POST    /api/v1/crews/{id}/edges                                          crewsAPI.addEdge
+GET     /api/v1/crews/{id}/export                                         crewsAPI.exportDownload (helper)
+POST    /api/v1/crews/{id}/nodes                                          crewsAPI.addNode
+POST    /api/v1/crews/{id}/runs                                           crewsAPI.launchRun
+GET     /api/v1/events                                                    eventsAPI.list
+DELETE  /api/v1/evidence-bundles/{id}                                     evidenceAPI.remove
+GET     /api/v1/evidence-bundles/{id}                                     evidenceAPI.get
+PUT     /api/v1/evidence-bundles/{id}                                     evidenceAPI.update
+POST    /api/v1/evidence-bundles/{id}/files                               evidenceAPI.uploadFile
+DELETE  /api/v1/evidence-files/{id}                                       evidenceAPI.deleteFile
+GET     /api/v1/evidence-files/{id}/download                              evidenceAPI.downloadUrl (url)
+GET     /api/v1/guided-sessions                                           guidedAPI.list
+POST    /api/v1/guided-sessions                                           guidedAPI.start
+GET     /api/v1/guided-sessions/{id}                                      guidedAPI.get
+POST    /api/v1/guided-sessions/{id}/abandon                              guidedAPI.abandon
+POST    /api/v1/guided-sessions/{id}/chat/kickoff                         guidedAPI.kickoffChat
+POST    /api/v1/guided-sessions/{id}/chat/nudge                           guidedAPI.nudgeChat
+GET     /api/v1/guided-sessions/{id}/chat/stream                          guidedAPI.chatStreamUrl (url)
+POST    /api/v1/guided-sessions/{id}/commit                               guidedAPI.commit
+POST    /api/v1/guided-sessions/{id}/drafts                               guidedAPI.materializeDrafts
+GET     /api/v1/guided-sessions/{id}/messages                             guidedAPI.listMessages
+POST    /api/v1/guided-sessions/{id}/messages                             guidedAPI.sendMessage
+PUT     /api/v1/guided-sessions/{id}/step                                 guidedAPI.saveStep
+POST    /api/v1/interview-invites/{id}/revoke                             interviewsAPI.revokeInvite
+GET     /api/v1/interview-sessions/{id}/transcript                        interviewsAPI.transcript
+POST    /api/v1/interviews/{id}/close                                     interviewsAPI.close
+GET     /api/v1/interviews/{id}/invites                                   interviewsAPI.listInvites
+POST    /api/v1/interviews/{id}/invites                                   interviewsAPI.createInvite
+PUT     /api/v1/interviews/{id}/persona                                   interviewsAPI.setPersona
+GET     /api/v1/interviews/{id}/sessions                                  interviewsAPI.listSessions
+GET     /api/v1/links                                                     linkAPI.list
+POST    /api/v1/links                                                     linkAPI.create
+DELETE  /api/v1/links/{id}                                                linkAPI.delete
+GET     /api/v1/links/{id}                                                linkAPI.get
+PUT     /api/v1/links/{id}                                                linkAPI.update
+PUT     /api/v1/links/{id}/confirm                                        linkAPI.confirm
+DELETE  /api/v1/me/avatar                                                 avatarAPI.remove
+POST    /api/v1/me/avatar                                                 avatarAPI.upload
+GET     /api/v1/me/default-workspace                                      defaultWorkspaceAPI.get
+PUT     /api/v1/me/default-workspace                                      defaultWorkspaceAPI.set
+GET     /api/v1/me/notification-prefs                                     notificationPrefsAPI.get
+PUT     /api/v1/me/notification-prefs                                     notificationPrefsAPI.update
+PUT     /api/v1/me/password                                               passwordAPI.change
+DELETE  /api/v1/me/push-subscriptions                                     pushAPI.unsubscribe
+GET     /api/v1/me/push-subscriptions                                     pushAPI.list
+POST    /api/v1/me/push-subscriptions                                     pushAPI.subscribe
+GET     /api/v1/me/push/config                                            pushAPI.config
+GET     /api/v1/meta/artifact-types                                       metaAPI.artifactTypes
+GET     /api/v1/meta/attribute-definitions                                metaAPI.attributeDefinitions
+GET     /api/v1/meta/link-types                                           metaAPI.linkTypes
+GET     /api/v1/notifications                                             notificationsAPI.list
+POST    /api/v1/notifications/clear                                       notificationsAPI.clearAll
+DELETE  /api/v1/notifications/cleared                                     notificationsAPI.deleteCleared
+POST    /api/v1/notifications/read                                        notificationsAPI.markRead
+POST    /api/v1/notifications/read-all                                    notificationsAPI.markAllRead
+GET     /api/v1/notifications/stream                                      notificationsAPI.streamUrl (url)
+PUT     /api/v1/notifications/{id}/flag                                   notificationsAPI.setFlagged
+DELETE  /api/v1/org-teams/{id}                                            orgTeamsAPI.remove
+PUT     /api/v1/org-teams/{id}                                            orgTeamsAPI.update
+DELETE  /api/v1/org-teams/{id}/members/{userId}                           orgTeamsAPI.removeMember
+POST    /api/v1/org-teams/{id}/members/{userId}                           orgTeamsAPI.addMember
+GET     /api/v1/orgs                                                      orgsAPI.list, orgsAPI.listDeleted
+POST    /api/v1/orgs                                                      orgsAPI.create
+DELETE  /api/v1/orgs/{id}                                                 orgsAPI.remove
+GET     /api/v1/orgs/{id}                                                 orgsAPI.get
+PUT     /api/v1/orgs/{id}                                                 orgsAPI.update
+POST    /api/v1/orgs/{id}/activate                                        orgsAPI.activate
+GET     /api/v1/orgs/{id}/billing                                         billingAPI.state
+POST    /api/v1/orgs/{id}/billing/change                                  billingAPI.change
+POST    /api/v1/orgs/{id}/billing/checkout                                billingAPI.checkout
+POST    /api/v1/orgs/{id}/billing/portal                                  billingAPI.portal
+POST    /api/v1/orgs/{id}/billing/refresh                                 billingAPI.refresh
+POST    /api/v1/orgs/{id}/connector-pairing                               connectorAPI.createPairing
+GET     /api/v1/orgs/{id}/features                                        orgsAPI.features
+DELETE  /api/v1/orgs/{id}/hosted-runner                                   hostedRunnerAPI.remove
+GET     /api/v1/orgs/{id}/hosted-runner                                   hostedRunnerAPI.get
+POST    /api/v1/orgs/{id}/hosted-runner                                   hostedRunnerAPI.enable
+POST    /api/v1/orgs/{id}/hosted-runner/start                             hostedRunnerAPI.start
+POST    /api/v1/orgs/{id}/hosted-runner/stop                              hostedRunnerAPI.stop
+GET     /api/v1/orgs/{id}/invitations                                     orgsAPI.invitations.list
+POST    /api/v1/orgs/{id}/invitations                                     orgsAPI.invitations.create
+DELETE  /api/v1/orgs/{id}/invitations/{invId}                             orgsAPI.invitations.revoke
+GET     /api/v1/orgs/{id}/limits                                          orgsAPI.limits
+DELETE  /api/v1/orgs/{id}/logo                                            orgsAPI.removeLogo
+GET     /api/v1/orgs/{id}/logo                                            orgsAPI.logoUrl (url)
+POST    /api/v1/orgs/{id}/logo                                            orgsAPI.uploadLogo
+GET     /api/v1/orgs/{id}/members                                         orgsAPI.members.list
+POST    /api/v1/orgs/{id}/members                                         orgsAPI.members.add
+PUT     /api/v1/orgs/{id}/members/me/preview                              orgsAPI.setStablePreview
+DELETE  /api/v1/orgs/{id}/members/{userId}                                orgsAPI.members.remove
+PUT     /api/v1/orgs/{id}/members/{userId}                                orgsAPI.members.setRole
+DELETE  /api/v1/orgs/{id}/my-runner-key                                   myRunnerKeyAPI.revoke
+GET     /api/v1/orgs/{id}/my-runner-key                                   myRunnerKeyAPI.get
+POST    /api/v1/orgs/{id}/my-runner-key                                   myRunnerKeyAPI.create
+PUT     /api/v1/orgs/{id}/plan                                            adminAPI.setPlan
+GET     /api/v1/orgs/{id}/quality-rules                                   qualityRulesAPI.forWorkspace
+PUT     /api/v1/orgs/{id}/quality-rules                                   qualityRulesAPI.setForWorkspace
+POST    /api/v1/orgs/{id}/restore                                         orgsAPI.restore
+DELETE  /api/v1/orgs/{id}/runner-session                                  cloudRunnerAPI.end
+GET     /api/v1/orgs/{id}/runner-session                                  cloudRunnerAPI.get
+POST    /api/v1/orgs/{id}/runner-session                                  cloudRunnerAPI.start
+POST    /api/v1/orgs/{id}/runner-session/extend                           cloudRunnerAPI.extend
+GET     /api/v1/orgs/{id}/teams                                           orgTeamsAPI.list
+POST    /api/v1/orgs/{id}/teams                                           orgTeamsAPI.create
+GET     /api/v1/orgs/{id}/usage                                           orgsAPI.usage
+GET     /api/v1/orgs/{id}/worker-keys                                     workerKeysAPI.list
+POST    /api/v1/orgs/{id}/worker-keys                                     workerKeysAPI.create
+DELETE  /api/v1/orgs/{id}/worker-keys/{keyId}                             workerKeysAPI.revoke
+GET     /api/v1/orgs/{id}/worker-status                                   workerStatusAPI.get
+GET     /api/v1/projects                                                  projectAPI.list
+POST    /api/v1/projects                                                  projectAPI.create
+POST    /api/v1/projects/import                                           projectAPI.import
+DELETE  /api/v1/projects/{id}                                             projectAPI.delete
+GET     /api/v1/projects/{id}                                             projectAPI.get
+PUT     /api/v1/projects/{id}                                             projectAPI.update
+GET     /api/v1/projects/{id}/baselines                                   baselineAPI.list
+POST    /api/v1/projects/{id}/baselines                                   baselineAPI.create
+GET     /api/v1/projects/{id}/children                                    projectAPI.children
+GET     /api/v1/projects/{id}/download/csv                                projectAPI.download
+GET     /api/v1/projects/{id}/download/docx                               projectAPI.download
+GET     /api/v1/projects/{id}/download/excel                              projectAPI.download
+GET     /api/v1/projects/{id}/download/json                               projectAPI.download
+GET     /api/v1/projects/{id}/download/options                            projectAPI.downloadOptions
+GET     /api/v1/projects/{id}/download/pdf                                projectAPI.download
+GET     /api/v1/projects/{id}/download/reqif                              projectAPI.download
+POST    /api/v1/projects/{id}/draft-test-cases                            agentsAPI.draftTestCases
+GET     /api/v1/projects/{id}/duplicates                                  duplicatesAPI.forProject
+GET     /api/v1/projects/{id}/evidence-bundles                            evidenceAPI.list
+POST    /api/v1/projects/{id}/evidence-bundles                            evidenceAPI.create
+GET     /api/v1/projects/{id}/impact                                      vvAPI.impact
+GET     /api/v1/projects/{id}/interview-sessions                          interviewsAPI.listProjectSessions
+GET     /api/v1/projects/{id}/interviews                                  interviewsAPI.list
+POST    /api/v1/projects/{id}/interviews                                  interviewsAPI.create
+GET     /api/v1/projects/{id}/linked-artifacts                            projectAPI.linkedArtifacts
+GET     /api/v1/projects/{id}/members                                     membersAPI.list
+POST    /api/v1/projects/{id}/members                                     membersAPI.add
+DELETE  /api/v1/projects/{id}/members/{userId}                            membersAPI.remove
+PUT     /api/v1/projects/{id}/members/{userId}                            membersAPI.setRole
+GET     /api/v1/projects/{id}/parties                                     projectAPI.parties
+PUT     /api/v1/projects/{id}/parties                                     projectAPI.setParties
+GET     /api/v1/projects/{id}/profile                                     productProfileAPI.get
+PUT     /api/v1/projects/{id}/profile                                     productProfileAPI.update
+GET     /api/v1/projects/{id}/quality                                     qualityAPI.project
+GET     /api/v1/projects/{id}/quality-rules                               qualityRulesAPI.forProject
+PUT     /api/v1/projects/{id}/quality-rules                               qualityRulesAPI.setForProject
+GET     /api/v1/projects/{id}/repo-connections                            repoConnectionsAPI.list
+POST    /api/v1/projects/{id}/repo-connections                            repoConnectionsAPI.create
+GET     /api/v1/projects/{id}/review-queue                                reviewAPI.get
+POST    /api/v1/projects/{id}/review-round                                reviewAPI.startRound
+GET     /api/v1/projects/{id}/share-links                                 shareLinkAPI.list
+POST    /api/v1/projects/{id}/share-links                                 shareLinkAPI.create
+GET     /api/v1/projects/{id}/team-access                                 projectTeamAccessAPI.list
+PUT     /api/v1/projects/{id}/team-access                                 projectTeamAccessAPI.grant
+DELETE  /api/v1/projects/{id}/team-access/{teamId}                        projectTeamAccessAPI.revoke
+GET     /api/v1/projects/{id}/test-runs                                   vvAPI.listRuns
+POST    /api/v1/projects/{id}/test-runs                                   vvAPI.createRun
+GET     /api/v1/projects/{id}/vv/coverage                                 vvAPI.coverage
+GET     /api/v1/projects/{id}/vv/gaps                                     vvAPI.gaps
+GET     /api/v1/projects/{id}/vv/matrix                                   vvAPI.matrix
+GET     /api/v1/projects/{id}/vv/report                                   vvAPI.report (helper)
+GET     /api/v1/projects/{id}/work-items                                  workItemsAPI.list
+POST    /api/v1/projects/{id}/work-items                                  workItemsAPI.create
+GET     /api/v1/projects/{projectID}/attachments                          attachmentAPI.listByProject
+GET     /api/v1/proposals                                                 proposalsAPI.list
+POST    /api/v1/proposals/bulk                                            proposalsAPI.bulkReview
+POST    /api/v1/proposals/{id}/approve                                    proposalsAPI.approve
+POST    /api/v1/proposals/{id}/reject                                     proposalsAPI.reject
+POST    /api/v1/provider-logins                                           providerLoginsAPI.start
+GET     /api/v1/provider-logins/{id}                                      providerLoginsAPI.get
+POST    /api/v1/provider-logins/{id}/cancel                               providerLoginsAPI.cancel
+POST    /api/v1/provider-logins/{id}/code                                 providerLoginsAPI.submitCode
+GET     /api/v1/provider-settings                                         providerSettingsAPI.list
+PUT     /api/v1/provider-settings                                         providerSettingsAPI.upsert
+HEAD    /api/v1/public/connector/download                                 connectorAPI.downloadAvailable
+GET     /api/v1/public/interviews/{token}                                 publicInterviewAPI.intro
+POST    /api/v1/public/interviews/{token}/finish                          publicInterviewAPI.finish
+POST    /api/v1/public/interviews/{token}/messages                        publicInterviewAPI.sendMessage
+GET     /api/v1/public/interviews/{token}/stream                          publicInterviewAPI.streamUrl (url)
+GET     /api/v1/public/open-source/projects                               openSourceAPI.list
+GET     /api/v1/public/open-source/projects/{id}                          openSourceAPI.get
+GET     /api/v1/public/plans                                              billingAPI.publicPlans
+GET     /api/v1/public/share/{token}                                      shareLinkAPI.open
+GET     /api/v1/release                                                   releaseAPI.current
+DELETE  /api/v1/repo-connections/{id}                                     repoConnectionsAPI.remove
+PUT     /api/v1/repo-connections/{id}                                     repoConnectionsAPI.update
+PUT     /api/v1/repo-connections/{id}/my-path                             repoConnectionsAPI.setMyPath
+GET     /api/v1/search                                                    searchAPI.global
+DELETE  /api/v1/share-links/{id}                                          shareLinkAPI.revoke
+GET     /api/v1/shared-products                                           sharedProductsAPI.list
+POST    /api/v1/shared-products                                           sharedProductsAPI.publish
+POST    /api/v1/shared-products/{id}/report                               sharedProductsAPI.report
+DELETE  /api/v1/shared-products/{id}/vote                                 sharedProductsAPI.unvote
+PUT     /api/v1/shared-products/{id}/vote                                 sharedProductsAPI.vote
+GET     /api/v1/templates                                                 templateAPI.list
+POST    /api/v1/templates                                                 templateAPI.create
+POST    /api/v1/templates/{id}/projects                                   templateAPI.createProject
+GET     /api/v1/test-results/{id}/citations                               evidenceAPI.citationsForResult
+POST    /api/v1/test-results/{id}/citations                               evidenceAPI.cite
+DELETE  /api/v1/test-results/{id}/citations/{bundleId}                    evidenceAPI.uncite
+DELETE  /api/v1/test-runs/{id}                                            vvAPI.deleteRun
+GET     /api/v1/test-runs/{id}                                            vvAPI.getRun
+PUT     /api/v1/test-runs/{id}                                            vvAPI.updateRun
+POST    /api/v1/test-runs/{id}/agent-run                                  vvAPI.launchAgentRun
+GET     /api/v1/test-runs/{id}/citations                                  evidenceAPI.citationsForRun
+GET     /api/v1/test-runs/{id}/results                                    vvAPI.listResults
+POST    /api/v1/test-runs/{id}/results                                    vvAPI.upsertResult
+GET     /api/v1/users                                                     authAPI.listUsers
+DELETE  /api/v1/work-items/{id}                                           workItemsAPI.remove
+GET     /api/v1/work-items/{id}                                           workItemsAPI.get
+PUT     /api/v1/work-items/{id}                                           workItemsAPI.update
+POST    /api/v1/work-items/{id}/comments                                  workItemsAPI.comment
+POST    /api/v1/work-items/{id}/move                                      workItemsAPI.move
+
+## Normalised call sites (the path the client writes is not literally a route template)
+  attachmentAPI.fetchFile: ${version ? `?version=${version}` : ''} is a query-string suffix
+  attachmentAPI.getDownloadUrl (url): ${version ? `?version=${version}` : ''} is a query-string suffix
+  crewsAPI.import: ${projectId ? `?project_id=${encodeURIComponent(projectId)}` : ''} is a query-string suffix
+  projectAPI.download: ${format} is one of csv|docx|excel|json|pdf|reqif; ${query ? `?${query}` : ''} is a query-string suffix
+  projectAPI.downloadOptions: ${params} is a query-string suffix
+  vvAPI.report (helper): ${baselineId ? `?baseline_id=${baselineId}` : ''} is a query-string suffix
