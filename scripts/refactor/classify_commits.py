@@ -3,15 +3,20 @@
 
 The refactor plan (docs/plans/codebase-refactor.md, A§9) measures how
 changes spread: how many layers a commit touches, how many files, and how
-often it edits one of the five hub files every kind of work passes through.
-This script takes those measurements over any range of commits, so the same
-numbers can be compared before and after the refactor.
+often it edits one of the hub files every kind of work passes through
+(the five of A§9 plus their successor, internal/api/routes.go). This
+script takes those measurements over any range of commits, so the same
+numbers can be compared before and after the refactor. The plan's G1
+metric is the "any hub" and "2 or more hubs" rates of code commits: those
+that change non-test Go, or TypeScript or CSS under frontend/src. Run it on
+a full clone: it refuses a range that reaches a shallow clone's boundary.
 
 Usage:
   python3 scripts/refactor/classify_commits.py [-n N] [--first-parent] [--json] [--files] [REV...]
 
 REV arguments are passed to `git log` (default HEAD), so `origin/master`,
-`-n 50 origin/master` or `v0.14.0..v0.15.0` all work. Merge commits are
+`-n 50 origin/master` or `v0.14.0..v0.15.0` all work; -n counts every
+commit, so "the next 60 code commits" is a range ending at the 60th. Merge commits are
 skipped and their commits classified one by one; with --first-parent each
 merge is one unit, classified by its diff against its first parent.
 
@@ -30,6 +35,7 @@ Standard library only; run the tests with
 import argparse
 import fnmatch
 import json
+import os
 import re
 import statistics
 import subprocess
@@ -41,6 +47,9 @@ HUBS = [
     "internal/persistence/postgres/migrations.go",
     "frontend/src/api/client.ts",
     "frontend/src/App.tsx",
+    # The successor registration point M6 creates (plan §10); the migration
+    # registry and the client.ts barrel keep their file names.
+    "internal/api/routes.go",
 ]
 
 LAYERS = [
@@ -100,7 +109,14 @@ CONTENT_RULES = [
     ("types", r"^[[:space:]]*(export[[:space:]]+)?(interface|type)[[:space:]]+[A-Za-z_]", ["frontend/src"]),
 ]
 
-SOURCE_EXCLUDED = {"docs", "release notes"}
+
+def is_code(path):
+    """A non-test Go file, or TypeScript or CSS under frontend/src: a "code
+    commit" (A§9.2, plan §10) touches at least one."""
+    if classify_path(path) == "tests":
+        return False
+    return path.endswith(".go") or (
+        path.startswith("frontend/src/") and path.endswith((".ts", ".tsx", ".css")))
 
 
 def classify_path(path):
@@ -137,6 +153,17 @@ def parse_log(text):
     return commits
 
 
+def shallow_boundary(cwd=None):
+    """The commits a shallow clone grafted as roots: git shows each as adding
+    every file of the tree."""
+    path = git(["rev-parse", "--git-path", "shallow"], cwd=cwd).strip()
+    try:
+        with open(os.path.join(cwd or ".", path)) as f:
+            return set(f.read().split())
+    except FileNotFoundError:
+        return set()
+
+
 def content_hits(revs, max_count, first_parent, cwd=None):
     """Maps each content-rule layer to the set of commits whose diffs match."""
     hits = {}
@@ -159,7 +186,7 @@ def classify(commits, hits=None):
                 layers.add(layer)
         c["layers"] = [l for l in LAYERS if l in layers]
         c["hubs"] = [h for h in HUBS if h in c["files"]]
-        c["source"] = any(classify_path(f) not in SOURCE_EXCLUDED for f in c["files"])
+        c["source"] = any(is_code(f) for f in c["files"])
     return commits
 
 
@@ -182,6 +209,8 @@ def summarize(commits):
         "hubs": {h: sum(1 for c in commits if h in c["hubs"]) for h in HUBS},
         "any_hub": sum(1 for c in commits if c["hubs"]),
         "any_hub_source": sum(1 for c in source if c["hubs"]),
+        "two_hubs": sum(1 for c in commits if len(c["hubs"]) >= 2),
+        "two_hubs_source": sum(1 for c in source if len(c["hubs"]) >= 2),
     }
 
 
@@ -194,7 +223,7 @@ def render(commits, summary, what, show_files=False):
     s = summary["source_commits"]
     fpc = summary["files_per_commit"]
     out = [
-        f"Commits: {n} ({what}); {s} change source (anything but docs and release notes)",
+        f"Commits: {n} ({what}); {s} change code (non-test Go, or TS/CSS under frontend/src)",
         f"Files per commit: mean {fpc['mean']}, median {fpc['median']}, max {fpc['max']}; "
         f"layers per commit: mean {summary['layers_per_commit']}",
         "",
@@ -206,8 +235,10 @@ def render(commits, summary, what, show_files=False):
     for hub, k in summary["hubs"].items():
         out.append(f"  {hub:<45} {k:>4}  {pct(k, n):>4}")
     out.append(f"  {'any hub':<45} {summary['any_hub']:>4}  {pct(summary['any_hub'], n):>4}")
-    out.append(f"  {'any hub, of commits that change source':<45} {summary['any_hub_source']:>4}  "
+    out.append(f"  {'any hub, of code commits':<45} {summary['any_hub_source']:>4}  "
                f"{pct(summary['any_hub_source'], s):>4}")
+    out.append(f"  {'2 or more hubs, of code commits':<45} {summary['two_hubs_source']:>4}  "
+               f"{pct(summary['two_hubs_source'], s):>4}")
     out += ["", "Per commit:"]
     for c in commits:
         hubs = f"  hubs: {', '.join(h.rsplit('/', 1)[-1] for h in c['hubs'])}" if c["hubs"] else ""
@@ -229,9 +260,17 @@ def main(argv=None):
     try:
         commits = parse_log(git(log_args(args.revs, args.max_count, args.first_parent)))
         hits = content_hits(args.revs, args.max_count, args.first_parent)
+        grafted = shallow_boundary() & {c["sha"] for c in commits}
     except subprocess.CalledProcessError as e:
         print(f"classify_commits: {e.stderr.strip()}", file=sys.stderr)
         return 2
+    if grafted:
+        print(f"classify_commits: the range reaches {len(grafted)} shallow-clone boundary commit(s), which git "
+              "shows as adding every file; run `git fetch --unshallow` first", file=sys.stderr)
+        return 2
+    if args.max_count and len(commits) < args.max_count:
+        print(f"classify_commits: warning: only {len(commits)} of {args.max_count} commits in range",
+              file=sys.stderr)
     classify(commits, hits)
     summary = summarize(commits)
     if args.json:

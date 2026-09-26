@@ -165,10 +165,13 @@ func TestMoveWithPinnedGoimports(t *testing.T) {
 	if testing.Short() {
 		t.Skip("-short: go run " + goimportsPkg + " may download it")
 	}
-	probe := filepath.Join(t.TempDir(), "probe.go")
-	writeFile(t, probe, "package probe\n")
-	if err := runGoimports(filepath.Dir(probe), []string{probe}); err != nil {
-		t.Skipf("goimports is unavailable here (%v); TestMoveWithoutGoimports covers the move itself", err)
+	// Skip only when the pinned module cannot be fetched here. Once it is
+	// here, goimports failing to build or run fails the test.
+	mod, ver, _ := strings.Cut(goimportsPkg, "@")
+	dl := exec.Command("go", "mod", "download", strings.TrimSuffix(mod, "/cmd/goimports")+"@"+ver)
+	dl.Dir = t.TempDir() // outside the repository's module: go.mod is untouched
+	if out, err := dl.CombinedOutput(); err != nil {
+		t.Skipf("cannot fetch %s here (%v: %s); TestMoveWithoutGoimports covers the move itself", goimportsPkg, err, bytes.TrimSpace(out))
 	}
 	proveMove(t, runGoimports)
 }
@@ -237,13 +240,18 @@ func TestRefusals(t *testing.T) {
 
 func TestPicksADuplicateByNumberAndMovesTests(t *testing.T) {
 	dir := copyFixture(t)
+	// boot.go sorts before server.go, so small.go's init would run first.
 	sp := &spec{Package: "fixture", Targets: []target{{File: "boot.go", Decls: []string{"init#2"}}}}
+	if _, err := apply(dir, sp, options{}); err == nil || !strings.Contains(err.Error(), "(init order)") {
+		t.Fatalf("an init moved ahead of another: %v", err)
+	}
+	sp = &spec{Package: "fixture", Targets: []target{{File: "startup.go", Decls: []string{"init#2"}}}}
 	if _, err := apply(dir, sp, options{}); err != nil {
 		t.Fatal(err)
 	}
 	files := readFiles(t, dir)
-	if !strings.Contains(files["boot.go"], `"small"`) || strings.Contains(files["small.go"], "func init") {
-		t.Fatalf("init#2 is small.go's init; boot.go:\n%s", files["boot.go"])
+	if !strings.Contains(files["startup.go"], `"small"`) || strings.Contains(files["small.go"], "func init") {
+		t.Fatalf("init#2 is small.go's init; startup.go:\n%s", files["startup.go"])
 	}
 	sp = &spec{Package: "fixture", Tests: true, Targets: []target{{File: "handle_test.go", Decls: []string{"TestHandle"}}}}
 	if _, err := apply(dir, sp, options{}); err != nil {

@@ -74,6 +74,12 @@ jobs:
       - name: go test
         run: go test . ./cmd/... ./internal/...
 
+      # The refactor tools outside Go (S14a): classify_commits. The Go tools
+      # (internal/tools) run in go test above; the Node ones in the frontend
+      # job. unittest takes the path from the repository root.
+      - name: Refactor tool tests (Python)
+        run: python3 -m unittest scripts/refactor/classify_commits_test.py
+
       # postgres:15 has no vector extension, like the compose default
       # (postgres:15-alpine), so this is the leg where the no-vector paths run;
       # backend-pgvector covers the vector ones. Fail if they only skipped.
@@ -156,6 +162,11 @@ jobs:
 
       - name: Unit tests
         run: npm test
+
+      # tsdeclhash and tsmovecheck (S14a), the class-A proof for TypeScript
+      # moves: vitest, tsc and eslint reach only src/.
+      - name: Refactor tool tests (Node)
+        run: node --test 'scripts/*.test.mjs'
 
       - name: Build
         run: npm run build

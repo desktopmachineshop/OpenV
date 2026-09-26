@@ -163,7 +163,7 @@ func apply(dir string, sp *spec, opts options) (*result, error) {
 		return res, err
 	}
 	before := p.manifest(res.label)
-	res.decls = len(before)
+	res.decls = len(p.decls)
 	backup := map[string][]byte{}
 	for _, f := range p.files {
 		if _, ok := contents[f.name]; ok {

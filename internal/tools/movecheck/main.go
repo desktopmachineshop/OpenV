@@ -1,6 +1,7 @@
 // Command movecheck shows where a package's declarations live, and how a
-// move changed that; with -flatten it proves that a function split into
-// stages (refactor class B, M4) still runs the same statements.
+// move changed that; with -flatten it inlines a function split into stages
+// (refactor class B, M4) back into one statement list, and fails on the
+// stage shapes that would change when statements run.
 //
 //	go run ./internal/tools/movecheck [-tests] [-head <ref>] <pkg dir>
 //	go run ./internal/tools/movecheck [-tests] -base <ref> [-head <ref>] <pkg dir>
@@ -19,13 +20,20 @@
 // stage's body, and an assignment takes the expressions of the stage's
 // final return. Stage calls nested in blocks are inlined too; any other
 // stage call (in defer, go, a function literal or an expression) fails. So
-// does a stage that contains defer, recover or a return other than its
-// last statement, outside function literals: those would run when the
+// does a stage with a value receiver (its field writes would go to a
+// copy), and a stage that contains defer, recover or a return other than
+// its last statement, outside function literals: those would run when the
 // stage returns rather than when the function does. With -base it prints a
-// diff of the flattened statements at the ref against the head side.
+// diff of the flattened statements at the ref against the head side, for
+// review. That diff does not fail: locals that became a.field show as
+// changed lines, so it does not by itself prove that only such renames
+// differ. Normalising those renames, and failing on what is left, is an
+// open follow-up that must land with S14c's stageextract, before M4.
 //
-// Exit status: 0 on success, 1 when -flatten finds a violation, 2 on a
-// usage or read error.
+// Exit status: 0 on success (a -flatten -base diff included), 1 when
+// -flatten finds a violation, 2 on a
+// usage or read error, or when the directory holds no declaration on any
+// side (a mistyped path, or a ./... pattern, which is not expanded).
 package main
 
 import (
@@ -83,7 +91,12 @@ func run(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "movecheck:", err)
 		return 2
 	}
+	noDecls := fmt.Sprintf("movecheck: %s holds no Go declarations; name a package directory (./... is not expanded)\n", dir)
 	if *base == "" {
+		if len(h.decls) == 0 {
+			fmt.Fprint(stderr, noDecls)
+			return 2
+		}
 		for _, d := range h.decls {
 			fmt.Fprintf(stdout, "%s -> %s\n", d.key, d.file.name)
 		}
@@ -92,6 +105,10 @@ func run(args []string, stdout, stderr io.Writer) int {
 	b, err := load(*base, *tests)
 	if err != nil {
 		fmt.Fprintln(stderr, "movecheck:", err)
+		return 2
+	}
+	if len(b.decls)+len(h.decls) == 0 {
+		fmt.Fprint(stderr, noDecls)
 		return 2
 	}
 	lines, total := moved(b, h)

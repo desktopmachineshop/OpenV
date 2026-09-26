@@ -66,6 +66,7 @@ test('declarations are keyed by module and name, imports and exports excluded', 
     ].join('\n'),
   });
   assert.deepEqual(keys(lines), [
+    'src/m.tsx\t(import src/m.css)',
     'src/m.tsx\t(statement)',
     'src/m.tsx\tC',
     'src/m.tsx\tE',
@@ -129,6 +130,22 @@ test('re-exports and module paths in calls resolve by content', () => {
     'changed\t(statement)',
     'changed\tV',
   ]);
+});
+
+test('a module split behind a barrel keeps the module paths that name it', () => {
+  const base = {
+    'src/api/client.ts': 'const save = () => 1;\n\nexport const api = { save };\n',
+    'src/v.test.ts': "vi.mock('./api/client', () => ({ api: {} }));\n",
+  };
+  const head = {
+    'src/api/http.ts': 'const save = () => 1;\n\nexport { save };\n',
+    'src/api/client.ts': "import { save } from './http';\n\nexport const api = { save };\n",
+    'src/v.test.ts': base['src/v.test.ts'],
+  };
+  assert.deepEqual(diffManifests(hashes(base, { noModule: true }), hashes(head, { noModule: true })).diffs, []);
+  // The barrel no longer exporting api changes what the module path names.
+  const shrunk = { ...head, 'src/api/client.ts': "import { save } from './http';\n\nconst api = { save };\n" };
+  assert.deepEqual(diffManifests(hashes(base, { noModule: true }), hashes(shrunk, { noModule: true })).diffs, ['changed\t(statement)', 'changed\tapi']);
 });
 
 test('the command line writes a manifest and compares two', () => {

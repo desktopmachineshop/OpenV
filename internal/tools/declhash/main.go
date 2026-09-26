@@ -1,7 +1,8 @@
 // Command declhash proves a pure move (refactor class A): it hashes every
-// package-level declaration of Go packages, so that moving declarations
-// between the files of a package leaves the manifest unchanged and any
-// other edit changes it.
+// package-level declaration of Go packages, and what the package does at
+// initialisation, so that moving declarations between the files of a
+// package leaves the manifest unchanged and an edit to any declaration, to
+// the blank imports or to the order initialisation runs in changes it.
 //
 //	go run ./internal/tools/declhash [-o manifest] [-tests=false] <pkg dir>...
 //	go run ./internal/tools/declhash -compare base.txt head.txt
@@ -13,9 +14,14 @@
 // the expression uses iota. An entry's hash covers its go/printer rendering
 // with its doc and inner comments, its file's build constraints, and the
 // import path of each package qualifier it uses. File names and import
-// blocks are not part of it. The manifest is sorted
-// "package<TAB>declaration<TAB>sha256" lines; a _test.go file's
-// declarations are listed under "package (test)" or "package (xtest)".
+// blocks are not part of it. Two package-wide entries cover what no single
+// declaration shows (effects.go): "(blank imports)", the side-effect
+// imports with their files' build constraints, and "(init order)", the
+// order of the init functions and of the package-level variables whose
+// initialisers may have side effects, with every variable those read. The
+// manifest is sorted "package<TAB>declaration<TAB>sha256" lines; a
+// _test.go file's declarations are listed under "package (test)" or
+// "package (xtest)".
 //
 // -compare and -base report every added, removed or changed declaration and
 // exit 1 on any difference. -base reads the packages at a git ref (without
@@ -66,7 +72,10 @@ func run(args []string, stdout, stderr io.Writer) int {
 	case *base != "":
 		return compareRefs(*base, *head, fs.Args(), *tests, stdout, stderr)
 	}
-	lines, err := manifestAt("", fs.Args(), *tests)
+	lines, empty, err := manifestAt("", fs.Args(), *tests)
+	if err == nil {
+		err = noDecls(fs.Args(), empty, nil)
+	}
 	if err != nil {
 		fmt.Fprintln(stderr, "declhash:", err)
 		return 2
@@ -84,9 +93,10 @@ func run(args []string, stdout, stderr io.Writer) int {
 }
 
 // manifestAt builds the manifest of the package directories, read from the
-// working tree when ref is empty and from git otherwise.
-func manifestAt(ref string, dirs []string, tests bool) ([]string, error) {
-	var lines []string
+// working tree when ref is empty and from git otherwise. empty holds the
+// directories that yielded no declaration.
+func manifestAt(ref string, dirs []string, tests bool) (lines []string, empty map[string]bool, err error) {
+	empty = map[string]bool{}
 	for _, dir := range dirs {
 		var srcs []source
 		var err error
@@ -96,25 +106,45 @@ func manifestAt(ref string, dirs []string, tests bool) ([]string, error) {
 			srcs, err = readGitDir(ref, dir)
 		}
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		p, err := parsePackage(srcs, tests)
 		if err != nil {
-			return nil, fmt.Errorf("%s: %w", dir, err)
+			return nil, nil, fmt.Errorf("%s: %w", dir, err)
 		}
-		lines = append(lines, p.manifest(moduleLabel(dir))...)
+		m := p.manifest(moduleLabel(dir))
+		if len(m) == 0 {
+			empty[dir] = true
+		}
+		lines = append(lines, m...)
 	}
 	sort.Strings(lines)
-	return lines, nil
+	return lines, empty, nil
+}
+
+// noDecls fails for a directory that yielded no declaration on every side:
+// a mistyped path, a ./... pattern or a directory of subpackages would
+// otherwise compare nothing and pass. One empty side is a package that was
+// created or deleted.
+func noDecls(dirs []string, a, b map[string]bool) error {
+	for _, dir := range dirs {
+		if a[dir] && (b == nil || b[dir]) {
+			return fmt.Errorf("%s holds no Go declarations; name each package directory (./... is not expanded)", dir)
+		}
+	}
+	return nil
 }
 
 func compareRefs(base, head string, dirs []string, tests bool, stdout, stderr io.Writer) int {
-	b, err := manifestAt(base, dirs, tests)
+	b, bEmpty, err := manifestAt(base, dirs, tests)
 	if err != nil {
 		fmt.Fprintln(stderr, "declhash:", err)
 		return 2
 	}
-	h, err := manifestAt(head, dirs, tests)
+	h, hEmpty, err := manifestAt(head, dirs, tests)
+	if err == nil {
+		err = noDecls(dirs, bEmpty, hEmpty)
+	}
 	if err != nil {
 		fmt.Fprintln(stderr, "declhash:", err)
 		return 2
@@ -144,6 +174,10 @@ func compareFiles(basePath, headPath string, stdout, stderr io.Writer) int {
 			}
 			sides[i] = append(sides[i], line)
 		}
+	}
+	if len(sides[0])+len(sides[1]) == 0 {
+		fmt.Fprintf(stderr, "declhash: %s and %s list no declarations\n", basePath, headPath)
+		return 2
 	}
 	return report(sides[0], sides[1], basePath+" and "+headPath, stdout)
 }

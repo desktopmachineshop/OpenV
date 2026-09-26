@@ -229,14 +229,17 @@ func (fl *flattener) inline(c *call) []ast.Stmt {
 	return out
 }
 
-// check fails a stage that contains defer, recover or a return before its
-// last statement. Function literals are not searched: they run on their own
+// check fails a stage that has a value receiver, or that contains defer,
+// recover or a return before its last statement. Function literals are not searched: they run on their own
 // frames (goroutines, callbacks), so their defers and returns are theirs.
 func (fl *flattener) check(st *stage) {
 	if st.checked {
 		return
 	}
 	st.checked = true
+	if _, ok := st.fd.Recv.List[0].Type.(*ast.StarExpr); !ok {
+		fl.fail(st.fd.Pos(), "stage %s has a value receiver; its field writes would go to a copy, so a stage needs a pointer receiver", funcKey(st.fd))
+	}
 	body := st.fd.Body.List
 	for i, s := range body {
 		last := i == len(body)-1

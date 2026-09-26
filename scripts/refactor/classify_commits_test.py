@@ -90,10 +90,12 @@ class SummaryTest(unittest.TestCase):
         self.assertEqual(s["source_commits"], 2)
         self.assertEqual(s["any_hub"], 1)
         self.assertEqual(s["any_hub_source"], 1)
+        self.assertEqual(s["two_hubs_source"], 1)
         self.assertEqual(s["hubs"]["frontend/src/App.tsx"], 0)
         self.assertEqual(s["files_per_commit"], {"mean": 2.0, "median": 1, "max": 4})
         text = cc.render(commits, s, "test")
-        self.assertIn("any hub, of commits that change source", text)
+        self.assertIn("any hub, of code commits", text)
+        self.assertIn("2 or more hubs, of code commits", text)
         self.assertIn("50%", text)
         self.assertIn("hubs: handlers.go, client.ts", text)
 
@@ -143,6 +145,31 @@ class GitTest(unittest.TestCase):
         self.assertIn("[route registration, handler]  hubs: handlers.go  route", text)
         self.assertIn("[types, frontend other]", text)
         self.assertIn('"any_hub": 1', js.getvalue())
+
+    def test_refuses_a_shallow_boundary(self):
+        self.git("init", "-q")
+        self.commit({"a.go": "package a\n"}, "one")
+        self.commit({"b.go": "package a\n"}, "two")
+        root = subprocess.run(["git", "rev-parse", "HEAD~1"], cwd=self.dir, check=True, capture_output=True,
+                              text=True).stdout.strip()
+        with open(os.path.join(self.dir, ".git", "shallow"), "w") as f:
+            f.write(root + "\n")
+        cwd = os.getcwd()
+        os.chdir(self.dir)
+        try:
+            with redirect_stdout(io.StringIO()):
+                self.assertEqual(cc.main(["-n", "1"]), 0)
+                self.assertEqual(cc.main([]), 2)
+        finally:
+            os.chdir(cwd)
+
+    def test_code_commits(self):
+        self.assertTrue(cc.is_code("internal/api/handlers.go"))
+        self.assertTrue(cc.is_code("frontend/src/index.css"))
+        self.assertFalse(cc.is_code("internal/api/handlers_test.go"))
+        self.assertFalse(cc.is_code("frontend/src/views/X.test.tsx"))
+        self.assertFalse(cc.is_code("scripts/refactor/classify_commits.py"))
+        self.assertFalse(cc.is_code("frontend/package.json"))
 
 
 if __name__ == "__main__":

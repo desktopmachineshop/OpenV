@@ -42,16 +42,18 @@ type goFile struct {
 	build   string            // the file's //go:build expression and file-name constraint
 	imports map[string]string // local name -> import path, for plain and named imports
 	dots    []string          // dot-imported paths
+	blanks  []string          // blank-imported paths
 }
 
 // decl is one package-level declaration: a function or method, or one name
 // declared by a const, var or type spec.
 type decl struct {
-	key  string // Name; a method is (*T).Name or T.Name
-	kind string // func, method, const, var or type
-	file *goFile
-	node ast.Decl // the *ast.FuncDecl, or the *ast.GenDecl holding the spec
-	hash string   // hex sha256 of the declaration's canonical text
+	key   string // Name; a method is (*T).Name or T.Name
+	kind  string // func, method, const, var or type
+	file  *goFile
+	node  ast.Decl   // the *ast.FuncDecl, or the *ast.GenDecl holding the spec
+	hash  string     // hex sha256 of the declaration's canonical text
+	exprs []ast.Node // a var's type and initialiser
 }
 
 // pkgInfo is the parsed content of one package directory.
@@ -70,12 +72,14 @@ func setLabel(label, set string) string {
 }
 
 // manifest returns one "package<TAB>key<TAB>hash" line per declaration,
-// sorted. File names are not part of it.
+// and the package-wide entries of effects (effects.go), sorted. File names
+// are not part of it.
 func (p *pkgInfo) manifest(label string) []string {
-	out := make([]string, 0, len(p.decls))
+	out := make([]string, 0, len(p.decls)+2)
 	for _, d := range p.decls {
 		out = append(out, setLabel(label, d.file.set)+"\t"+d.key+"\t"+d.hash)
 	}
+	out = append(out, p.effects(label)...)
 	sort.Strings(out)
 	return out
 }
@@ -266,6 +270,7 @@ func parsePackage(srcs []source, tests bool) (*pkgInfo, error) {
 			}
 			switch name {
 			case "_":
+				f.blanks = append(f.blanks, ip)
 			case ".":
 				f.dots = append(f.dots, ip)
 			default:
@@ -322,7 +327,11 @@ func genDecls(fset *token.FileSet, f *goFile, gd *ast.GenDecl) []*decl {
 			}
 			for j, id := range sp.Names {
 				text, nodes := valueText(fset, f, gd.Tok, sp, j, typ, values, i)
-				out = append(out, newDecl(f, gd, id.Name, gd.Tok.String(), doc+text, qualifiers(f, nodes...)))
+				d := newDecl(f, gd, id.Name, gd.Tok.String(), doc+text, qualifiers(f, nodes...))
+				if gd.Tok == token.VAR {
+					d.exprs = nodes
+				}
+				out = append(out, d)
 			}
 		}
 	}

@@ -97,6 +97,16 @@ func TestBaseListsWhatMoved(t *testing.T) {
 	if _, out3, _ := runTool("-head", "HEAD~1", pkg); !strings.HasPrefix(out3, "F -> a.go\nG -> a.go\n") {
 		t.Fatalf("map at a ref:\n%s", out3)
 	}
+	// A path that names no package on either side is an error, not an
+	// empty map.
+	for _, arg := range []string{pkg + "/...", filepath.Join(repo, "nope"), repo} {
+		if code, out, errs := runTool("-base", "HEAD", arg); code != 2 || !strings.Contains(errs, "no Go declarations") {
+			t.Errorf("-base %s: exit %d, want 2\n%s%s", arg, code, out, errs)
+		}
+		if code, _, _ := runTool(arg); code != 2 {
+			t.Errorf("map of %s: exit %d, want 2", arg, code)
+		}
+	}
 }
 
 func TestFlattenInlinesStages(t *testing.T) {
@@ -143,8 +153,9 @@ func TestFlattenFailsOnDeferRecoverAndEarlyReturn(t *testing.T) {
 }
 
 func TestFlattenRefusesStageCallsItCannotInline(t *testing.T) {
-	stages := "package main\n\ntype app struct{ n int }\n\nfunc (a *app) one() int { return 1 }\n\nfunc (a *app) arg(n int) { a.n = n }\n\nfunc (a *app) none() {}\n"
+	stages := "package main\n\ntype app struct{ n int }\n\nfunc (a *app) one() int { return 1 }\n\nfunc (a *app) arg(n int) { a.n = n }\n\nfunc (a *app) none() {}\n\nfunc (a app) val() { a.n = 1 }\n"
 	cases := map[string]string{
+		"value receiver": "a.val()",
 		"deferred":       "defer a.none()",
 		"in a goroutine": "go func() { a.none() }()",
 		"in a condition": "if a.one() > 0 {\n\t}",

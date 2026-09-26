@@ -2,7 +2,8 @@
 // tsmovecheck: prove a TypeScript pure move (refactor class A). It fails
 // unless the only differences between a base ref and the head side are
 // wiring (import declarations, re-exports, export lists) and declarations
-// that moved between modules unchanged.
+// that moved between modules unchanged, and module evaluation still runs
+// what it ran in the same order.
 //
 //   node frontend/scripts/tsmovecheck.mjs [--root dir] [--head <git-ref>] <base-ref> [path...]
 //
@@ -15,19 +16,37 @@
 // changed, and each declaration that was added, removed or changed (a
 // declaration whose text is the same but whose names now refer to other
 // declarations says which); any of the last kind exits 1. Exit 2 is a
-// usage or read error.
+// usage or read error, or a path with no .ts/.tsx file on either side.
+//
+// Evaluation order is part of the proof, and so each of these fails too:
+//   - "reordered": runtime statements (all but functions, interfaces, type
+//     aliases and `declare`s; side-effect imports included) that share a
+//     module on both sides and changed their relative order, and modules a
+//     module imports on both sides that it now loads in another order (as
+//     compiled: type-only imports do not count);
+//   - "new import cycle": a runtime import cycle the base did not have, in
+//     which a module can read a binding before it is initialised;
+//   - "moved ... changes when it runs": a statement that may have side
+//     effects (any call not known to be pure, `new`, assignment, and so on,
+//     outside function bodies; a side-effect import of a script) moved to
+//     another module, except a module's whole set of them moving in order
+//     to a new module that the old one loads. The tool cannot prove other
+//     such moves and refuses them. CSS cascade order across modules is
+//     S12b's; getters are assumed pure.
 
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { FRONTEND_DIR, load, parseArgs } from './tsdeclhash.mjs';
+import { FRONTEND_DIR, load, parseArgs, requireSources, runtimeCycles, runtimeImports } from './tsdeclhash.mjs';
 
 const byText = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
 
 /** Compares two analysed trees. */
 export function moveCheck(base, head) {
   const entries = (mods) =>
-    [...mods.values()].flatMap((m) => m.decls.map((d) => ({ module: m.path, name: d.name, own: d.own, hash: d.hash, bindings: d.bindings })));
+    [...mods.values()].flatMap((m) =>
+      m.decls.map((d) => ({ module: m.path, name: d.name, own: d.own, hash: d.hash, bindings: d.bindings, pos: d.pos, runtime: d.runtime, effectful: d.effectful })),
+    );
   const take = (pool, key) => {
     const list = pool.get(key);
     return list && list.length ? list.shift() : null;
@@ -47,7 +66,14 @@ export function moveCheck(base, head) {
   // 1. Same module, same declaration.
   const inPlace = group(entries(base), (e) => `${e.module}\t${e.name}\t${e.hash}`);
   let unchanged = 0;
-  let rest = headEntries.filter((e) => (take(inPlace, `${e.module}\t${e.name}\t${e.hash}`) ? (unchanged++, false) : true));
+  const pairs = []; // [base, head] of every unchanged or moved declaration
+  let rest = headEntries.filter((e) => {
+    const b = take(inPlace, `${e.module}\t${e.name}\t${e.hash}`);
+    if (!b) return true;
+    unchanged++;
+    pairs.push([b, e]);
+    return false;
+  });
   // 2. The same declaration in another module: a move.
   const pool = group([...inPlace.values()].flat(), (e) => `${e.name}\t${e.hash}`);
   const moved = [];
@@ -55,6 +81,7 @@ export function moveCheck(base, head) {
     const from = take(pool, `${e.name}\t${e.hash}`);
     if (!from) return true;
     moved.push(`moved ${e.name}: ${from.module} -> ${e.module}`);
+    pairs.push([from, e]);
     return false;
   });
   // 3. What is left differs.
@@ -75,6 +102,10 @@ export function moveCheck(base, head) {
     else failures.push(`added ${e.module} ${e.name}`);
   }
   for (const b of left) failures.push(`removed ${b.module} ${b.name}`);
+  // 4. Evaluation order.
+  failures.push(...reorders(pairs), ...effectMoves(base, head, pairs), ...importOrder(base, head));
+  const baseCycles = new Set(runtimeCycles(base));
+  for (const c of runtimeCycles(head)) if (!baseCycles.has(c)) failures.push(`new import cycle ${c}`);
 
   const wiring = (mods) => new Map([...mods.values()].map((m) => [m.path, m.wiring.join('\n')]));
   const bw = wiring(base);
@@ -84,6 +115,85 @@ export function moveCheck(base, head) {
     .sort()
     .map((p) => `rewired ${p}`);
   return { unchanged, moved: moved.sort(), rewired, failures: failures.sort() };
+}
+
+/** A module runs its statements in source order: runtime statements that
+ * share a module on both sides keep their relative order. */
+function reorders(pairs) {
+  const groups = new Map();
+  for (const [b, h] of pairs) {
+    if (!b.runtime) continue;
+    const k = `${b.module}\t${h.module}`;
+    if (!groups.has(k)) groups.set(k, []);
+    groups.get(k).push([b, h]);
+  }
+  const out = [];
+  for (const list of groups.values()) {
+    list.sort(([b1, h1], [b2, h2]) => h1.pos - h2.pos || b1.pos - b2.pos);
+    let latest = null;
+    for (const [b, h] of list) {
+      if (latest && b.pos < latest[0].pos) out.push(`reordered ${h.module} ${h.name}: now runs after ${latest[1].name}`);
+      else latest = [b, h];
+    }
+  }
+  return out;
+}
+
+/** A statement that may have a side effect runs when its module is
+ * evaluated, so moving it to another module changes when it runs relative
+ * to everything else. The one move proved safe is a module's whole set of
+ * such statements moving, in order (reorders), to a module new on the head
+ * side that holds nothing else of the kind and that the old module (if it
+ * is still there) imports, directly or not: the statements then run
+ * together as the old module is loaded, before its body. Any other move
+ * of one fails: the tool refuses to certify what it cannot prove. */
+function effectMoves(base, head, pairs) {
+  const reach = (from, to) => {
+    const seen = new Set([from]);
+    const work = [from];
+    while (work.length) {
+      const m = head.get(work.pop());
+      for (const k of m ? runtimeImports(head, m) : []) {
+        if (k === to) return true;
+        if (!seen.has(k)) seen.add(k), work.push(k);
+      }
+    }
+    return false;
+  };
+  const effects = (mod) => (mod ? mod.decls.filter((d) => d.effectful).length : 0);
+  const groups = new Map(); // "from\tto" -> the effectful pairs moved between them
+  for (const [b, h] of pairs) {
+    if (!b.effectful || b.module === h.module) continue;
+    const k = `${b.module}\t${h.module}`;
+    if (!groups.has(k)) groups.set(k, []);
+    groups.get(k).push(h);
+  }
+  const out = [];
+  for (const [k, list] of groups) {
+    const [from, to] = k.split('\t');
+    const whole = list.length === effects(base.get(from)) && list.length === effects(head.get(to));
+    if (whole && !base.has(to) && (!head.has(from) || reach(from, to))) continue;
+    for (const h of list) out.push(`moved ${h.name}: ${from} -> ${to} changes when it runs (it may have side effects; see tsmovecheck's header)`);
+  }
+  return out;
+}
+
+/** A module evaluates the modules it imports in import order: the ones it
+ * imports on both sides keep their relative order. */
+function importOrder(base, head) {
+  const out = [];
+  for (const [p, hm] of head) {
+    const bm = base.get(p);
+    if (!bm) continue;
+    const bi = runtimeImports(base, bm);
+    const hi = runtimeImports(head, hm);
+    const common = (list, other) => list.filter((k) => other.includes(k));
+    const bc = common(bi, hi);
+    const hc = common(hi, bi);
+    const i = bc.findIndex((k, j) => k !== hc[j]);
+    if (i >= 0) out.push(`reordered imports of ${p}: ${hc[i]} now loads before ${bc[i]}`);
+  }
+  return out;
 }
 
 /** Names the bindings that differ when a declaration's text did not. */
@@ -114,7 +224,9 @@ function main(argv) {
   const paths = (rest.length ? rest : [path.join(root, 'src')]).map((p) => path.resolve(p));
   let result;
   try {
-    result = moveCheck(load(root, baseRef, paths), load(root, opts.head, paths));
+    const [b, h] = [baseRef, opts.head].map((ref) => load(root, ref, paths));
+    requireSources(root, paths, b, h);
+    result = moveCheck(b, h);
   } catch (e) {
     process.stderr.write(`tsmovecheck: ${e.stderr ? e.stderr.toString().trim() : e.message}\n`);
     return 2;

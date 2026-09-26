@@ -26,7 +26,16 @@
 //     name to another declaration with the same name therefore shows, and so
 //     does every user of a declaration whose text changed;
 //   - each relative module path it passes to a call (import('./x'),
-//     vi.mock('../api/client')), by the content of the module it resolves to.
+//     vi.mock('../api/client')), by what each name that module exports
+//     resolves to, so a module split behind a barrel that re-exports the
+//     same names keeps it. A declaration that becomes importable from its
+//     new module is exported with an `export { name }` list: adding the
+//     `export` modifier changes its text.
+//
+// Evaluation order: a side-effect import (`import './x.css'`) is a
+// declaration named "(import <module>)", not wiring, and each declaration
+// records its position and whether it runs when the module is evaluated
+// and may have side effects; tsmovecheck checks the order (see there).
 //
 // --compare and --base print every added, removed or changed declaration
 // and exit 1 on any difference; exit 2 is a usage or read error.
@@ -203,13 +212,30 @@ function declared(st) {
   return [{ name: '(statement)', exportedAs: [] }];
 }
 
+// Statements that do nothing when the module is evaluated: hoisted
+// functions and erased types.
+const HOISTED_OR_ERASED = new Set([ts.SyntaxKind.FunctionDeclaration, ts.SyntaxKind.InterfaceDeclaration, ts.SyntaxKind.TypeAliasDeclaration]);
+
+// Stylesheets: their order is S12b's CSS-bytes pin, not a script effect.
+const STYLE = /\.(css|scss|sass|less)$/;
+
 /** Parses one module into its imports, exports and declarations. */
 export function analyzeModule(modPath, source) {
   const text = source.replace(/\r\n/g, '\n');
   const kind = modPath.endsWith('.tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS;
   const sf = ts.createSourceFile(modPath, text, ts.ScriptTarget.Latest, true, kind);
-  const mod = { path: modPath, imports: new Map(), reexports: [], localExports: new Map(), wiring: [], decls: [] };
-  for (const st of sf.statements) {
+  const mod = { path: modPath, text, imports: new Map(), reexports: [], localExports: new Map(), wiring: [], decls: [] };
+  const nodes = new Map(); // decl -> statement, for the effect pass below
+  for (const [pos, st] of sf.statements.entries()) {
+    if (ts.isImportDeclaration(st) && !st.importClause) {
+      // A side-effect import runs its module at this point: a statement to
+      // keep, not wiring to rewrite.
+      const spec = st.moduleSpecifier.text;
+      const name = `(import ${isRelative(spec) ? path.posix.normalize(path.posix.join(path.posix.dirname(modPath), spec)) : spec})`;
+      const own = sha(`ImportDeclaration ${name}`);
+      mod.decls.push({ name, exportedAs: [], own, refs: new Set(), selfNames: new Set([name]), moduleRefs: [], hash: '', bindings: [], pos, runtime: true, effectful: !STYLE.test(spec) });
+      continue;
+    }
     if (ts.isImportDeclaration(st) || ts.isImportEqualsDeclaration(st)) {
       mod.wiring.push(st.getText(sf));
       addImport(mod, st);
@@ -238,12 +264,72 @@ export function analyzeModule(modPath, source) {
     const { text: body, refs, moduleRefs } = statementText(sf, st);
     const kindName = ts.SyntaxKind[st.kind];
     const selfNames = new Set(names.map((n) => n.name));
+    const runtime = !HOISTED_OR_ERASED.has(st.kind) && !hasModifier(st, ts.SyntaxKind.DeclareKeyword);
     for (const { name, exportedAs } of names) {
       const own = sha(`${kindName} ${name}\n${body}`);
-      mod.decls.push({ name, exportedAs, own, refs, selfNames, moduleRefs, hash: '', bindings: [] });
+      const d = { name, exportedAs, own, refs, selfNames, moduleRefs, hash: '', bindings: [], pos, runtime, effectful: false };
+      if (runtime) nodes.set(d, st);
+      mod.decls.push(d);
     }
   }
+  const shadowed = new Set([...mod.imports.keys(), ...mod.decls.map((d) => d.name)]);
+  for (const [d, st] of nodes) d.effectful = mayHaveEffects(st, mod, shadowed);
   return mod;
+}
+
+// Calls known to have no side effect: globals (unless a module-level name
+// shadows them) and React's component and context constructors.
+const PURE_GLOBAL_CALLS = new Set([
+  'Symbol', 'String', 'Number', 'Boolean', 'BigInt',
+  'Object.freeze', 'Object.keys', 'Object.values', 'Object.entries', 'Object.fromEntries',
+  'Array.from', 'Array.isArray', 'Array.of',
+]);
+const PURE_GLOBAL_NEWS = new Set(['Set', 'Map', 'WeakMap', 'WeakSet', 'RegExp', 'Error', 'URLSearchParams']);
+const PURE_REACT = new Set(['lazy', 'createContext', 'memo', 'forwardRef']);
+
+/** Whether evaluating a top-level statement may have a side effect, so the
+ * point where it runs matters. Function bodies, non-static class members
+ * and types run later or never; any call not known to be pure, `new`,
+ * tagged template, await, assignment, increment, delete or decorator
+ * counts. Property reads (getters) do not. */
+function mayHaveEffects(st, mod, shadowed) {
+  const pureCall = (n) => {
+    const e = n.expression;
+    if (ts.isIdentifier(e)) {
+      const im = mod.imports.get(e.text);
+      if (im) return im.spec === 'react' && PURE_REACT.has(im.imported);
+      return !shadowed.has(e.text) && (ts.isNewExpression(n) ? PURE_GLOBAL_NEWS : PURE_GLOBAL_CALLS).has(e.text);
+    }
+    if (ts.isPropertyAccessExpression(e) && ts.isIdentifier(e.expression)) {
+      const head = e.expression.text;
+      const im = mod.imports.get(head);
+      if (im) return im.spec === 'react' && (im.imported === '*' || im.imported === 'default') && PURE_REACT.has(e.name.text);
+      return !shadowed.has(head) && !ts.isNewExpression(n) && PURE_GLOBAL_CALLS.has(`${head}.${e.name.text}`);
+    }
+    return false;
+  };
+  let found = false;
+  const visit = (n) => {
+    if (found || (ts.isTypeNode(n) && !ts.isExpressionWithTypeArguments(n))) return;
+    if (ts.isFunctionLike(n) && !ts.isClassStaticBlockDeclaration(n)) return; // runs when called
+    if (ts.isPropertyDeclaration(n) && !hasModifier(n, ts.SyntaxKind.StaticKeyword)) return; // runs per instance
+    if (ts.isCallExpression(n) || ts.isNewExpression(n)) {
+      if (!pureCall(n)) found = true; // import() included
+    } else if (ts.isTaggedTemplateExpression(n) || ts.isAwaitExpression(n) || ts.isDeleteExpression(n) || ts.isDecorator(n)) {
+      found = true;
+    } else if (ts.isBinaryExpression(n) && n.operatorToken.kind >= ts.SyntaxKind.FirstAssignment && n.operatorToken.kind <= ts.SyntaxKind.LastAssignment) {
+      found = true;
+    } else if ((ts.isPrefixUnaryExpression(n) || ts.isPostfixUnaryExpression(n)) && (n.operator === ts.SyntaxKind.PlusPlusToken || n.operator === ts.SyntaxKind.MinusMinusToken)) {
+      found = true;
+    }
+    if (!found) ts.forEachChild(n, visit);
+  };
+  if (ts.isVariableStatement(st)) {
+    // The declared names are not assignments.
+    for (const d of st.declarationList.declarations) if (d.initializer) visit(d.initializer);
+    for (const d of st.declarationList.declarations) if (!ts.isIdentifier(d.name)) visit(d.name);
+  } else visit(st);
+  return found;
 }
 
 function addImport(mod, st) {
@@ -279,13 +365,33 @@ function localIdentity(mod, name) {
   return 'decl:' + sha(mod.decls.filter((d) => d.name === name).map((d) => d.own).sort().join(','));
 }
 
-/** A module's identity: its declarations' own text and its re-exports. */
+/** The names a module exports: its exported declarations, export lists
+ * and re-exports, following `export *` to the modules it names. */
+function exportedNames(ctx, mod, seen = new Set()) {
+  if (seen.has(mod.path)) return new Set();
+  seen.add(mod.path);
+  const names = new Set();
+  for (const d of mod.decls) for (const n of d.exportedAs) names.add(n);
+  for (const n of mod.localExports.keys()) names.add(n);
+  for (const re of mod.reexports) {
+    if (!re.star) names.add(re.exported);
+    else if (isRelative(re.spec)) {
+      const target = resolveModule(ctx.modules, mod.path, re.spec);
+      if (target) for (const n of exportedNames(ctx, target, seen)) if (n !== 'default') names.add(n);
+    } else names.add(`* ${re.spec}`);
+  }
+  return names;
+}
+
+/** A module's identity: what each name it exports is bound to, so a module
+ * whose declarations moved behind re-exports keeps it. */
 function moduleIdentity(ctx, mod) {
   if (!ctx.moduleIds.has(mod.path)) {
-    const parts = mod.decls.map((d) => `${d.name}:${d.own}`);
-    for (const re of mod.reexports) parts.push(re.star ? `* ${re.spec}` : `${re.exported}<-${re.spec}#${re.imported}`);
-    for (const [exported, local] of mod.localExports) parts.push(`${exported}=${local}`);
-    ctx.moduleIds.set(mod.path, sha(parts.sort().join('\n')));
+    ctx.moduleIds.set(mod.path, `cycle:${mod.path}`);
+    const parts = [...exportedNames(ctx, mod)]
+      .sort()
+      .map((n) => (n.startsWith('* ') ? n : `${n}=${exportIdentity(ctx, mod, n, new Set())}`));
+    ctx.moduleIds.set(mod.path, sha(parts.join('\n')));
   }
   return ctx.moduleIds.get(mod.path);
 }
@@ -354,6 +460,72 @@ export function analyzeTree(files) {
   return modules;
 }
 
+/** The modules a module's evaluation runs first, in order: its static
+ * imports and re-exports as they survive compilation. Each module is
+ * transpiled alone, as Vite's esbuild does, so imports used only as types
+ * drop out. A relative specifier is named by the module it resolves to (or
+ * its path), a package by its specifier. */
+export function runtimeImports(modules, mod) {
+  if (mod.runtimeImports) return mod.runtimeImports;
+  const out = [];
+  if (!mod.path.endsWith('.d.ts')) {
+    const js = ts.transpileModule(mod.text, {
+      fileName: mod.path,
+      compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2020, jsx: ts.JsxEmit.ReactJSX, isolatedModules: true },
+    }).outputText;
+    for (const st of ts.createSourceFile(`${mod.path}.js`, js, ts.ScriptTarget.Latest, false, ts.ScriptKind.JS).statements) {
+      if (!(ts.isImportDeclaration(st) || ts.isExportDeclaration(st)) || !st.moduleSpecifier) continue;
+      const spec = st.moduleSpecifier.text;
+      let key = spec;
+      if (isRelative(spec)) {
+        const target = resolveModule(modules, mod.path, spec);
+        key = target ? target.path : path.posix.normalize(path.posix.join(path.posix.dirname(mod.path), spec));
+      }
+      if (!out.includes(key)) out.push(key);
+    }
+  }
+  mod.runtimeImports = out;
+  return out;
+}
+
+/** The import cycles that survive compilation (see runtimeImports), each
+ * as its sorted module paths joined by spaces. In a cycle a module can read
+ * another's binding before it is initialised. */
+export function runtimeCycles(modules) {
+  const graph = new Map();
+  for (const mod of modules.values()) graph.set(mod.path, runtimeImports(modules, mod).filter((k) => modules.has(k)));
+  // Tarjan's strongly connected components.
+  let next = 0;
+  const index = new Map();
+  const low = new Map();
+  const stack = [];
+  const onStack = new Set();
+  const cycles = [];
+  const visit = (v) => {
+    index.set(v, next);
+    low.set(v, next++);
+    stack.push(v);
+    onStack.add(v);
+    for (const w of graph.get(v)) {
+      if (!index.has(w)) {
+        visit(w);
+        low.set(v, Math.min(low.get(v), low.get(w)));
+      } else if (onStack.has(w)) low.set(v, Math.min(low.get(v), index.get(w)));
+    }
+    if (low.get(v) !== index.get(v)) return;
+    const scc = [];
+    let w;
+    do {
+      w = stack.pop();
+      onStack.delete(w);
+      scc.push(w);
+    } while (w !== v);
+    if (scc.length > 1 || graph.get(v).includes(v)) cycles.push(scc.sort().join(' '));
+  };
+  for (const v of graph.keys()) if (!index.has(v)) visit(v);
+  return cycles.sort();
+}
+
 /** The sorted manifest lines of analysed modules. */
 export function manifest(modules, { noModule = false } = {}) {
   const lines = [];
@@ -418,6 +590,17 @@ export function load(root, ref, absPaths) {
   return analyzeTree(ref ? readGitTree(root, ref, absPaths) : readWorkingTree(root, absPaths));
 }
 
+/** Throws for a path with no source file on any side: a mistyped path, a
+ * path relative to frontend/ given from another directory, or an unexpanded
+ * glob would otherwise compare nothing and pass. */
+export function requireSources(root, absPaths, ...sides) {
+  for (const p of absPaths) {
+    const rel = posix(path.relative(root, p));
+    const under = (k) => rel === '' || k === rel || k.startsWith(`${rel}/`);
+    if (!sides.some((mods) => [...mods.keys()].some(under))) throw new Error(`${p}: no .ts/.tsx files on either side`);
+  }
+}
+
 function main(argv) {
   const usage =
     'usage: tsdeclhash.mjs [--root dir] [--no-module] [-o manifest] [path...]\n' +
@@ -451,13 +634,17 @@ function main(argv) {
         return 2;
       }
       const read = (p) => fs.readFileSync(p, 'utf8').split('\n').filter(Boolean);
-      return report(read(opts.rest[0]), read(opts.rest[1]), `${opts.rest[0]} and ${opts.rest[1]}`);
+      const [b, h] = opts.rest.map(read);
+      if (b.length + h.length === 0) throw new Error(`${opts.rest[0]} and ${opts.rest[1]} list no declarations`);
+      return report(b, h, `${opts.rest[0]} and ${opts.rest[1]}`);
     }
     const root = path.resolve(opts.root ?? FRONTEND_DIR);
     const paths = (opts.rest.length ? opts.rest : [path.join(root, 'src')]).map((p) => path.resolve(p));
-    const m = (ref) => manifest(load(root, ref, paths), { noModule: !!opts['no-module'] });
-    if (opts.base) return report(m(opts.base), m(opts.head), `${opts.base} and ${opts.head ?? 'the working tree'}`);
-    const text = m(undefined).join('\n') + '\n';
+    const sides = (opts.base ? [opts.base, opts.head] : [undefined]).map((ref) => load(root, ref, paths));
+    requireSources(root, paths, ...sides);
+    const [b, h] = sides.map((mods) => manifest(mods, { noModule: !!opts['no-module'] }));
+    if (opts.base) return report(b, h, `${opts.base} and ${opts.head ?? 'the working tree'}`);
+    const text = b.join('\n') + '\n';
     if (opts.o) fs.writeFileSync(opts.o, text);
     else process.stdout.write(text);
     return 0;

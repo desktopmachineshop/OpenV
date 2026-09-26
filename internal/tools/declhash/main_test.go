@@ -136,7 +136,7 @@ func TestMovingBetweenFilesKeepsTheManifest(t *testing.T) {
 		t.Fatalf("a pure move changed the manifest:\n%s", strings.Join(diffs, "\n"))
 	}
 	want := []string{
-		"pkg\t(*T).Get", "pkg\tKind", "pkg\tKindA", "pkg\tKindB", "pkg\tKindC", "pkg\tT", "pkg\tT.Name",
+		"pkg\t(*T).Get", "pkg\t(init order)", "pkg\tKind", "pkg\tKindA", "pkg\tKindB", "pkg\tKindC", "pkg\tT", "pkg\tT.Name",
 		"pkg\t_", "pkg\tinit", "pkg\tlimit", "pkg\tnames", "pkg\tpair1", "pkg\tsplit", "pkg\tx", "pkg\ty",
 	}
 	if got := keysOf(a); strings.Join(got, "\n") != strings.Join(want, "\n") {
@@ -232,13 +232,79 @@ func TestDuplicateKeysCompareAsAMultiset(t *testing.T) {
 		"a.go": "package pkg\n\nfunc init() { println(2) }\n\nvar _ = 2\n",
 		"c.go": "package pkg\n\nfunc init() { println(1) }\n\nvar _ = 1\n",
 	})
-	if diffs, _ := diffManifests(a, b); len(diffs) > 0 {
-		t.Fatalf("moving init functions between files changed: %v", diffs)
+	if diffs, _ := diffManifests(a, b); strings.Join(diffs, "\n") != "changed\tpkg\t(init order)" {
+		t.Fatalf("init functions that now run 2, 1: %v", diffs)
+	}
+	same := manifestOf(t, map[string]string{
+		"a.go": "package pkg\n\nfunc init() { println(1) }\n\nvar _ = 2\n",
+		"c.go": "package pkg\n\nfunc init() { println(2) }\n\nvar _ = 1\n",
+	})
+	if diffs, _ := diffManifests(a, same); len(diffs) > 0 {
+		t.Fatalf("moving declarations without reordering the inits: %v", diffs)
 	}
 	c := manifestOf(t, map[string]string{"a.go": "package pkg\n\nfunc init() { println(1) }\n\nvar _ = 1\n"})
 	diffs, _ := diffManifests(a, c)
-	if strings.Join(diffs, "\n") != "changed\tpkg\t_\nchanged\tpkg\tinit" {
+	if strings.Join(diffs, "\n") != "removed\tpkg\t(init order)\nchanged\tpkg\t_\nchanged\tpkg\tinit" {
 		t.Fatalf("dropping one init: %v", diffs)
+	}
+}
+
+func TestBlankImportsArePartOfTheManifest(t *testing.T) {
+	two := manifestOf(t, map[string]string{
+		"a.go": "package pkg\n\nimport _ \"image/gif\"\n\nfunc F() {}\n",
+		"b.go": "package pkg\n\nfunc G() {}\n",
+	})
+	moved := manifestOf(t, map[string]string{
+		"a.go": "package pkg\n\nimport _ \"image/gif\"\n",
+		"b.go": "package pkg\n\nfunc G() {}\n\nfunc F() {}\n",
+	})
+	if diffs, _ := diffManifests(two, moved); len(diffs) > 0 {
+		t.Fatalf("a move that keeps the blank import: %v", diffs)
+	}
+	dropped := manifestOf(t, map[string]string{"b.go": "package pkg\n\nfunc G() {}\n\nfunc F() {}\n"})
+	if diffs, _ := diffManifests(two, dropped); strings.Join(diffs, "\n") != "removed\tpkg\t(blank imports)" {
+		t.Fatalf("dropping a blank import: %v", diffs)
+	}
+	linux := manifestOf(t, map[string]string{
+		"a_linux.go": "package pkg\n\nimport _ \"image/gif\"\n",
+		"b.go":       "package pkg\n\nfunc G() {}\n\nfunc F() {}\n",
+	})
+	if diffs, _ := diffManifests(two, linux); strings.Join(diffs, "\n") != "changed\tpkg\t(blank imports)" {
+		t.Fatalf("a blank import moved into a linux-only file: %v", diffs)
+	}
+}
+
+func TestVariableInitialisationOrder(t *testing.T) {
+	// open and dial may have side effects, so they keep their order; they
+	// read name, which must still be initialised before them.
+	base := manifestOf(t, map[string]string{
+		"a.go": "package pkg\n\nimport \"errors\"\n\nvar errA = errors.New(\"a\")\n\nvar first = open(name)\n\nvar name = \"x\"\n",
+		"b.go": "package pkg\n\nvar second = dial()\n\nfunc open(s string) int { return len(s) }\n\nfunc dial() int { return size }\n\nvar size = 3\n",
+	})
+	for what, c := range map[string]struct {
+		files map[string]string
+		want  string
+	}{
+		"a pure variable moved": {map[string]string{
+			"a.go": "package pkg\n\nvar first = open(name)\n\nvar name = \"x\"\n",
+			"b.go": "package pkg\n\nvar second = dial()\n\nfunc open(s string) int { return len(s) }\n\nfunc dial() int { return size }\n\nvar size = 3\n",
+			"z.go": "package pkg\n\nimport \"errors\"\n\nvar errA = errors.New(\"a\")\n",
+		}, ""},
+		"side effects reordered": {map[string]string{
+			"a.go": "package pkg\n\nimport \"errors\"\n\nvar errA = errors.New(\"a\")\n\nvar name = \"x\"\n",
+			"b.go": "package pkg\n\nvar second = dial()\n\nfunc open(s string) int { return len(s) }\n\nfunc dial() int { return size }\n\nvar size = 3\n",
+			"c.go": "package pkg\n\nvar first = open(name)\n",
+		}, "changed\tpkg\t(init order)"},
+		// Go initialises size before second either way, but size now comes
+		// before first as well; the entry keeps every read variable's place.
+		"a variable a side effect reads moved": {map[string]string{
+			"a.go": "package pkg\n\nimport \"errors\"\n\nvar size = 3\n\nvar errA = errors.New(\"a\")\n\nvar first = open(name)\n\nvar name = \"x\"\n",
+			"b.go": "package pkg\n\nvar second = dial()\n\nfunc open(s string) int { return len(s) }\n\nfunc dial() int { return size }\n",
+		}, "changed\tpkg\t(init order)"},
+	} {
+		if diffs, _ := diffManifests(base, manifestOf(t, c.files)); strings.Join(diffs, "\n") != c.want {
+			t.Errorf("%s: %q, want %q", what, diffs, c.want)
+		}
 	}
 }
 
@@ -304,7 +370,7 @@ func TestManifestAndCompareFiles(t *testing.T) {
 	writeFiles(t, pkg, map[string]string{"t.go": edited + "\nfunc Extra() {}\n"})
 	runTool("-o", headFile, pkg)
 	code, out, _ := runTool("-compare", baseFile, headFile)
-	for _, want := range []string{"changed\t", "\t(*T).Get\n", "removed\t", "\tT.Name\n", "added\t", "\tExtra\n", "3 of 16 declarations differ"} {
+	for _, want := range []string{"changed\t", "\t(*T).Get\n", "removed\t", "\tT.Name\n", "added\t", "\tExtra\n", "3 of 17 declarations differ"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("compare output lacks %q:\n%s", want, out)
 		}
@@ -355,21 +421,39 @@ func TestBaseRefComparesAgainstGit(t *testing.T) {
 	if code, _, errs := runTool("-base", "no-such-ref", pkg); code != 2 {
 		t.Fatalf("bad ref: exit %d, want 2 (%s)", code, errs)
 	}
+
+	// A path that names no package on either side is an error, not a pass.
+	for _, arg := range []string{pkg + "/...", filepath.Join(repo, "nope"), repo} {
+		if code, out, errs := runTool("-base", "HEAD", arg); code != 2 || !strings.Contains(errs, "no Go declarations") {
+			t.Errorf("%s: exit %d, want 2\n%s%s", arg, code, out, errs)
+		}
+		if code, _, _ := runTool(arg); code != 2 {
+			t.Errorf("manifest of %s: exit %d, want 2", arg, code)
+		}
+	}
+	// A package that exists on one side only is an addition, not an error.
+	writeFiles(t, filepath.Join(repo, "fresh"), map[string]string{"f.go": "package fresh\n\nfunc F() {}\n"})
+	if code, out, errs := runTool("-base", "HEAD", filepath.Join(repo, "fresh")); code != 1 || !strings.Contains(out, "added\tfresh\tF\n") {
+		t.Errorf("new package: exit %d, want 1\n%s%s", code, out, errs)
+	}
 }
 
-// TestSharedFileIsIdentical keeps the three copies of decls.go in step.
+// TestSharedFileIsIdentical keeps the three copies of decls.go and
+// effects.go in step.
 func TestSharedFileIsIdentical(t *testing.T) {
-	want, err := os.ReadFile("decls.go")
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, other := range []string{"../declmove/decls.go", "../movecheck/decls.go"} {
-		got, err := os.ReadFile(other)
+	for _, name := range []string{"decls.go", "effects.go"} {
+		want, err := os.ReadFile(name)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if !bytes.Equal(got, want) {
-			t.Errorf("%s differs from declhash/decls.go; copy declhash/decls.go over it", other)
+		for _, tool := range []string{"declmove", "movecheck"} {
+			got, err := os.ReadFile(filepath.Join("..", tool, name))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !bytes.Equal(got, want) {
+				t.Errorf("%s/%s differs from declhash/%s; copy declhash/%s over it", tool, name, name, name)
+			}
 		}
 	}
 }
