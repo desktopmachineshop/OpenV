@@ -14,7 +14,12 @@ GOVULNCHECK_VERSION := v1.8.0
 # .github/workflows/ci.yml so `make secrets` and CI scan with the same tool.
 GITLEAKS_VERSION := 8.21.2
 
-.PHONY: build up down prod-up prod-down worker worker-unix worker-image runner-pool-up runner-pool-down connector-dist mcp vapid-keys test vuln secrets backup restore
+# What `make check` and `make check-fast` compare the working tree with, by
+# its merge base with HEAD: the release-notes check wants a new bullet
+# relative to that, and check-fast tests the Go packages changed since then.
+BASE_REF ?= origin/master
+
+.PHONY: build up down prod-up prod-down worker worker-unix worker-image runner-pool-up runner-pool-down connector-dist mcp vapid-keys test check check-fast vuln secrets backup restore
 
 ## Build all Docker images.
 build:
@@ -152,3 +157,102 @@ connector-dist:
 ## Run the Go test suite in Docker.
 test:
 	docker run --rm -v "$(CURDIR):/app" -w /app $(GO_IMAGE) sh -c 'go test ./...'
+
+## Run the gates CI runs on a pull request, in their order, before pushing.
+## From .github/workflows/ci.yml: the backend job (gofmt over ./cmd
+## ./internal; go vet and go test over the root, ./cmd/... and ./internal/...;
+## the refactor tools' Python tests; the Postgres vector assertion) and the
+## frontend job (tsc, lint, vitest, the refactor tools' Node tests, vite
+## build). From .github/workflows/release-notes.yml: the release-notes job.
+## The Postgres-backed Go tests run only when OPENV_TEST_DATABASE_URL points
+## at a database, as it does in CI; they skip otherwise. CI runs them twice,
+## on postgres:15 (no vector extension) and on pgvector (backend-pgvector),
+## and fails if either variant only skipped; locally there is one server, so
+## the assertion requires whichever variant that server supports to have run.
+## The release-notes job requires a new bullet relative to the merge base
+## with BASE_REF, which is what CI's comparison of the merge commit with its
+## first parent amounts to; set NO_RELEASE_NOTES=1 for a pull request that
+## carries the no-release-notes label. Needs a host Go toolchain, Node with
+## `npm ci` run in frontend/, Python 3 and git; no Docker. The Docker builds,
+## e2e and security scans stay in CI (`make vuln` and `make secrets` run the
+## last two locally).
+check:
+	@unformatted="$$(gofmt -l ./cmd ./internal)"; \
+	if [ -n "$$unformatted" ]; then \
+		echo "The following files are not gofmt-formatted:"; echo "$$unformatted"; \
+		echo "Run 'gofmt -w ./cmd ./internal' to fix."; exit 1; \
+	fi
+	go vet . ./cmd/... ./internal/...
+	go test . ./cmd/... ./internal/...
+	python3 -m unittest scripts/refactor/classify_commits_test.py
+	@if [ -z "$$OPENV_TEST_DATABASE_URL" ]; then \
+		echo "OPENV_TEST_DATABASE_URL is unset: the Postgres-backed tests skipped (CI runs them)"; \
+	else \
+		log="$$(mktemp)"; \
+		go test ./internal/persistence/postgres/ -count=1 -v \
+			-run '^(TestVectorReconcileNoopWhenExtensionAbsent|TestNearestByEmbeddingVectorUnavailable|TestNearestByEmbedding|TestDuplicateCandidates|TestEmbeddingRepositoryUpsert|TestVectorReconcileCreatesWhenExtensionAppears)$$' > "$$log"; rc=$$?; \
+		ran() { for t in "$$@"; do grep -q -- "^--- PASS: $$t " "$$log" || return 1; done; }; \
+		if [ $$rc -ne 0 ]; then cat "$$log"; \
+		elif ran TestVectorReconcileNoopWhenExtensionAbsent TestNearestByEmbeddingVectorUnavailable; then \
+			echo "Postgres tests ran without the vector extension (CI's postgres:15 leg)"; \
+		elif ran TestNearestByEmbedding TestDuplicateCandidates TestEmbeddingRepositoryUpsert TestVectorReconcileCreatesWhenExtensionAppears; then \
+			echo "Postgres tests ran with the vector extension (CI's backend-pgvector leg)"; \
+		else cat "$$log"; echo "neither the vector nor the no-vector Postgres tests ran; they only skipped"; rc=1; fi; \
+		rm -f "$$log"; exit $$rc; \
+	fi
+	python3 -m unittest scripts/release_notes_test.py
+	python3 scripts/release_notes.py check RELEASE_NOTES.md
+	@if [ -n "$(NO_RELEASE_NOTES)" ]; then \
+		echo "NO_RELEASE_NOTES is set: not requiring a release note (the no-release-notes label)"; \
+	else \
+		base="$$(git merge-base "$(BASE_REF)" HEAD)" || { \
+			echo "cannot find where HEAD left $(BASE_REF): run 'git fetch origin master' or set BASE_REF"; exit 1; }; \
+		base_notes="$$(mktemp)"; \
+		if ! git show "$$base:RELEASE_NOTES.md" > "$$base_notes"; then rm -f "$$base_notes"; exit 1; fi; \
+		python3 scripts/release_notes.py check-pr --base "$$base_notes" RELEASE_NOTES.md; rc=$$?; \
+		rm -f "$$base_notes"; exit $$rc; \
+	fi
+	cd frontend && npx tsc --noEmit
+	cd frontend && npm run lint
+	cd frontend && npm test
+	cd frontend && node --test 'scripts/*.test.mjs'
+	cd frontend && npm run build
+
+## A quick gate to run while working, well under a minute and without Docker:
+## gofmt over ./cmd ./internal, go vet over the module, go test -short on the
+## Go packages changed (committed or not) since the merge base with BASE_REF
+## (a change under a package's testdata counts for that package) and on the
+## packages that import one of them (their tests included), so a golden in a
+## dependent package is checked too; then the whole-tree architecture
+## ratchets in internal/archtest (import edges, size budgets, env reads,
+## bans), and the frontend type check. `make check` is still the gate before
+## pushing.
+check-fast:
+	@unformatted="$$(gofmt -l ./cmd ./internal)"; \
+	if [ -n "$$unformatted" ]; then \
+		echo "The following files are not gofmt-formatted:"; echo "$$unformatted"; \
+		echo "Run 'gofmt -w ./cmd ./internal' to fix."; exit 1; \
+	fi
+	go vet . ./cmd/... ./internal/...
+	@base="$$(git merge-base "$(BASE_REF)" HEAD 2>/dev/null || echo HEAD)"; \
+	pkgs="$$( { git diff --name-only "$$base" -- '*.go' cmd internal; \
+		git ls-files --others --exclude-standard -- '*.go' cmd internal; } \
+		| while read -r f; do \
+			case "$$f" in */testdata/*) d="$${f%%/testdata/*}" ;; */*) d="$${f%/*}" ;; *) d=. ;; esac; \
+			case "$$d" in .|cmd/*|internal/*) ;; *) continue ;; esac; \
+			if ls "$$d"/*.go >/dev/null 2>&1; then [ "$$d" = . ] && echo . || echo "./$$d"; fi; \
+		done | sort -u)"; \
+	if [ -z "$$pkgs" ]; then \
+		echo "go test -short: no Go package changed since $$base"; \
+	else \
+		mod="$$(go list -m)"; \
+		pkgs="$$( { echo "$$pkgs"; \
+			go list -f '{{.ImportPath}} {{join .Imports " "}} {{join .TestImports " "}} {{join .XTestImports " "}}' . ./cmd/... ./internal/... \
+			| awk -v mod="$$mod" -v changed="$$(echo $$pkgs)" ' \
+				BEGIN { n = split(changed, c, " "); for (i = 1; i <= n; i++) want[c[i] == "." ? mod : mod "/" substr(c[i], 3)] = 1 } \
+				{ for (i = 2; i <= NF; i++) if ($$i in want) { print ($$1 == mod ? "." : "./" substr($$1, length(mod) + 2)); break } }'; \
+			} | sort -u)"; \
+		echo "go test -short" $$pkgs; go test -short $$pkgs; \
+	fi
+	go test ./internal/archtest
+	cd frontend && npx tsc --noEmit
