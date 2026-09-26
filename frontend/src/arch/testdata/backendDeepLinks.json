@@ -1,0 +1,126 @@
+{
+  "about": "In-app URLs the Go backend builds (emails, web push, share links, interview invites, SSO and Stripe returns), as of d11dee8. `source` is where each is built (file:line at d11dee8, for reading); the guard checks that the file still contains `goLiteral`, and that `url` resolves to a route in src/App.tsx. Placeholders stand in for tokens and ids. `spa: false` marks a URL nginx serves from the API rather than the app.",
+  "links": [
+    {
+      "url": "/login?invite=TOKEN",
+      "what": "workspace invitation email",
+      "source": "internal/notify/invitation.go:19",
+      "goLiteral": "\"/login?invite=\""
+    },
+    {
+      "url": "/verify-email?token=TOKEN",
+      "what": "sign-up email verification",
+      "source": "internal/notify/verification.go:51",
+      "goLiteral": "\"/verify-email?token=\""
+    },
+    {
+      "url": "/reset-password?token=TOKEN",
+      "what": "password reset email",
+      "source": "internal/notify/verification.go:73",
+      "goLiteral": "\"/reset-password?token=\""
+    },
+    {
+      "url": "/org/settings?tab=usage",
+      "what": "notification email and push: workspace budget alert (kind org_usage)",
+      "source": "internal/notify/email.go:257",
+      "goLiteral": "\"/org/settings?tab=usage\""
+    },
+    {
+      "url": "/projects",
+      "what": "notification email and push: no project in the entity ref",
+      "source": "internal/notify/email.go:261",
+      "goLiteral": "return \"/projects\""
+    },
+    {
+      "url": "/projects/PROJECT/agent-runs?run=RUN",
+      "what": "notification email and push: run or proposal with a run id",
+      "source": "internal/notify/email.go:266",
+      "goLiteral": "\"/projects/%s/agent-runs?run=%s\""
+    },
+    {
+      "url": "/projects/PROJECT/agent-runs",
+      "what": "notification email and push: run or proposal without a run id",
+      "source": "internal/notify/email.go:268",
+      "goLiteral": "\"/projects/%s/agent-runs\""
+    },
+    {
+      "url": "/projects/PROJECT/interviews",
+      "what": "notification email and push: interview",
+      "source": "internal/notify/email.go:270",
+      "goLiteral": "\"/projects/%s/interviews\""
+    },
+    {
+      "url": "/projects/PROJECT/requirements",
+      "what": "notification email and push: artifact",
+      "source": "internal/notify/email.go:272",
+      "goLiteral": "\"/projects/%s/requirements\""
+    },
+    {
+      "url": "/projects/PROJECT",
+      "what": "notification email and push: any other project-scoped kind",
+      "source": "internal/notify/email.go:274",
+      "goLiteral": "\"/projects/%s\""
+    },
+    {
+      "url": "/share/TOKEN",
+      "what": "share link handed out (nginx answers it with the API's unfurl page in production; the dev server renders the app route)",
+      "source": "internal/api/share_handlers.go:62",
+      "goLiteral": "\"/share/\" + token"
+    },
+    {
+      "url": "/s/TOKEN",
+      "what": "where the share link's unfurl page sends a browser",
+      "source": "internal/api/share_handlers.go:368",
+      "goLiteral": "h.frontendURL+\"/s/\"+token"
+    },
+    {
+      "url": "/open-source/PROJECT",
+      "what": "where a published open-source project's unfurl page sends a browser",
+      "source": "internal/api/share_handlers.go:547",
+      "goLiteral": "h.frontendURL + \"/open-source/\" + project.ID"
+    },
+    {
+      "url": "/open-source/p/PROJECT",
+      "what": "canonical page URL of a published open-source project; nginx proxies it to the API's unfurl page",
+      "source": "internal/api/share_handlers.go:549",
+      "goLiteral": "h.frontendURL+\"/open-source/p/\"+project.ID",
+      "spa": false
+    },
+    {
+      "url": "/interview/TOKEN",
+      "what": "interview invite path returned when an invite is created",
+      "source": "internal/api/suite_handlers.go:1568",
+      "goLiteral": "\"/interview/\" + token"
+    },
+    {
+      "url": "/org/settings?tab=billing&checkout=done&session_id={CHECKOUT_SESSION_ID}",
+      "what": "Stripe Checkout success return",
+      "source": "internal/billing/checkout.go:143",
+      "goLiteral": "\"/org/settings?tab=billing&checkout=done&session_id={CHECKOUT_SESSION_ID}\""
+    },
+    {
+      "url": "/org/settings?tab=billing&checkout=cancelled",
+      "what": "Stripe Checkout cancel return",
+      "source": "internal/billing/checkout.go:144",
+      "goLiteral": "\"/org/settings?tab=billing&checkout=cancelled\""
+    },
+    {
+      "url": "/org/settings?tab=billing",
+      "what": "Stripe billing portal return",
+      "source": "internal/billing/checkout.go:256",
+      "goLiteral": "\"/org/settings?tab=billing\""
+    },
+    {
+      "url": "/",
+      "what": "Google sign-in redirect when FRONTEND_URL is empty (otherwise FRONTEND_URL itself, the same root)",
+      "source": "internal/api/auth_handlers.go:500",
+      "goLiteral": "dest = \"/\""
+    },
+    {
+      "url": "/",
+      "what": "OIDC sign-in redirect when FRONTEND_URL is empty (otherwise FRONTEND_URL itself, the same root)",
+      "source": "internal/api/oidc_handlers.go:247",
+      "goLiteral": "dest = \"/\""
+    }
+  ]
+}

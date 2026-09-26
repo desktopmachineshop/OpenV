@@ -1,0 +1,42 @@
+# Browser storage keys: every getItem/setItem/removeItem on localStorage or sessionStorage (invariant I22).
+# Regenerate: npx vitest run src/arch -u. Never rename a key: it holds members' preferences and workspace choice.
+
+keys: 10
+
+artifactFilterPresets
+  localStorage    getItem    views/ModuleView.tsx
+  localStorage    setItem    views/ModuleView.tsx
+openv-connector-downloaded
+  localStorage    getItem    components/RunnerConnectPrompt.tsx
+  localStorage    setItem    components/RunnerConnectPrompt.tsx
+openv-invented-products
+  localStorage    getItem    utils/randomProduct.ts
+  localStorage    removeItem utils/randomProduct.ts
+  localStorage    setItem    utils/randomProduct.ts
+openv-leftColumnWidth
+  localStorage    getItem    views/ModuleView.tsx
+  localStorage    setItem    views/ModuleView.tsx
+openv-nav-sections
+  localStorage    getItem    components/navSections.ts
+  localStorage    setItem    components/navSections.ts
+openv-panel-mode-<panel>
+  localStorage    getItem    components/panelMode.ts
+  localStorage    setItem    components/panelMode.ts
+openv-rightColumnWidth
+  localStorage    getItem    views/ModuleView.tsx
+  localStorage    setItem    views/ModuleView.tsx
+openv-theme
+  localStorage    getItem    ../public/theme-init.js
+  localStorage    getItem    theme.ts
+  localStorage    removeItem theme.ts
+  localStorage    setItem    theme.ts
+openv_active_org
+  localStorage    getItem    App.tsx
+  localStorage    getItem    api/client.ts
+  localStorage    setItem    state/store.ts
+  sessionStorage  getItem    App.tsx
+  sessionStorage  getItem    api/client.ts
+  sessionStorage  setItem    state/store.ts
+openv_last_project
+  localStorage    getItem    appShortcuts.ts
+  localStorage    setItem    appShortcuts.ts

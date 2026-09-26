@@ -1,0 +1,107 @@
+# Query parameters (invariant I19): the URL parameters pages read and write, the ones in-app links carry,
+# and the query strings built with URLSearchParams for API calls.
+# Regenerate: npx vitest run src/arch -u. Emails, pushes, Stripe returns, shortcuts and bookmarks carry these names.
+
+page parameters read: 14 (against, artifact, checkout, go, invite, item, mode, panel, reset, run, session_id, share, tab, token)
+page parameters written: 8
+parameters carried by in-app links: 7
+API query parameters built with URLSearchParams: 9
+
+## Page URL parameters (modules using useSearchParams)
+against
+  get          views/BaselineCompare.tsx
+  set (object) views/BaselineCompare.tsx
+artifact
+  delete       views/ImpactView.tsx
+  delete       views/ModuleView.tsx
+  get          views/ImpactView.tsx
+  get          views/ModuleView.tsx
+  set          views/ImpactView.tsx
+  set          views/ModuleView.tsx
+checkout
+  delete       components/org/OrgBillingTab.tsx
+  get          components/org/OrgBillingTab.tsx
+go
+  get          components/ProjectList.tsx
+invite
+  get          views/Login.tsx
+item
+  delete       views/TodoList.tsx
+  get          views/TodoList.tsx
+mode
+  get          views/Login.tsx
+panel
+  delete       components/NotificationBell.tsx
+  get          components/NotificationBell.tsx
+reset
+  get          views/Login.tsx
+run
+  delete       views/AgentRunsPage.tsx
+  get          views/AgentRunsPage.tsx
+  set          views/AgentRunsPage.tsx
+session_id
+  delete       components/org/OrgBillingTab.tsx
+  get          components/org/OrgBillingTab.tsx
+share
+  get          views/Login.tsx
+tab
+  get          views/OrgSettings.tsx
+  get          views/ProjectSettings.tsx
+  set          views/OrgSettings.tsx
+  set          views/ProjectSettings.tsx
+token
+  get          views/ResetPassword.tsx
+  get          views/VerifyEmail.tsx
+
+## Parameters written into in-app links
+artifact
+  /projects/{}/impact?artifact={}              components/ArtifactDetails.tsx
+  /projects/{}/impact?artifact={}              views/TraceabilityMatrix.tsx
+  /projects/{}/requirements?artifact={}        components/GlobalSearch.tsx
+  /projects/{}/requirements?artifact={}        components/kanban/WorkItemDrawer.tsx
+  /projects/{}/requirements?artifact={}        views/ImpactView.tsx
+  /projects/{}/requirements?artifact={}        views/TraceabilityMatrix.tsx
+item
+  /projects/{}/todos?item={}                   components/NoteTodo.tsx
+mode
+  /login?mode=forgot                           views/ResetPassword.tsx
+  /login?mode=register                         landing/content.ts
+  /login?mode=register                         site/Demos.tsx
+  /login?mode=register                         site/HowItWorks.tsx
+  /login?mode=register                         site/SiteShell.tsx
+  /login?mode=register                         views/Landing.tsx
+  /login?mode=register                         views/SharedProjectView.tsx
+reset
+  /login?reset=done                            views/ResetPassword.tsx
+run
+  /projects/{}/agent-runs?run={}               components/kanban/WorkItemDrawer.tsx
+  /projects/{}/agent-runs?run={}               views/AutomationsPage.tsx
+share
+  /login?share={}                              views/SharedProjectView.tsx
+tab
+  /org/settings?tab=billing                    components/org/OrgLimitsTab.tsx
+  /org/settings?tab=members                    components/NotificationBell.tsx
+  /org/settings?tab=usage                      components/NotificationBell.tsx
+  /org/settings?tab=worker-keys                views/AgentRunsPage.tsx
+  /projects/{}/settings?tab=general            views/ProjectSettings.tsx
+  /projects/{}/settings?tab=members            components/NotificationBell.tsx
+
+## API query strings built with URLSearchParams
+<name>
+  set          utils/downloadSelection.ts
+attachments
+  set          utils/downloadSelection.ts
+baseline_id
+  set          utils/downloadSelection.ts
+fields
+  set          utils/downloadSelection.ts
+headings
+  set          utils/downloadSelection.ts
+owners
+  set          utils/downloadSelection.ts
+sections
+  set          utils/downloadSelection.ts
+template
+  set          utils/downloadSelection.ts
+types
+  set          utils/downloadSelection.ts
