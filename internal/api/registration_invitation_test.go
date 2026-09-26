@@ -49,6 +49,11 @@ type fakeInviteService struct {
 	// goroutine — so it, and every read of it, is taken under mu.
 	mu      sync.Mutex
 	emailed map[string]time.Time
+	// markedEmailed, when a test sets it, receives the invitation ID after
+	// MarkEmailed has stamped the row. The test mailer signals from inside
+	// Send, before the goroutine gets to MarkEmailed, so a test asserting the
+	// stamp waits here instead.
+	markedEmailed chan string
 }
 
 func newFakeInviteService() *fakeInviteService {
@@ -83,8 +88,12 @@ func (f *fakeInviteService) FindPending(orgID, email string) (*invitations.Invit
 // gone out.
 func (f *fakeInviteService) MarkEmailed(invID string, at time.Time) error {
 	f.mu.Lock()
-	defer f.mu.Unlock()
 	f.emailed[invID] = at
+	stamped := f.markedEmailed
+	f.mu.Unlock()
+	if stamped != nil {
+		stamped <- invID
+	}
 	return nil
 }
 
@@ -1575,6 +1584,7 @@ func TestReInvitingResendsWhenTheFirstMailNeverLanded(t *testing.T) {
 	// leaves behind.
 	pending := invites.invite("org-1", "waiting@example.com", orgs.RoleMember)
 	pending.CreatedAt = time.Now().Add(-5 * time.Minute)
+	invites.markedEmailed = make(chan string, 1)
 
 	rec := httptest.NewRecorder()
 	h.CreateOrgInvitation(rec, asUser(muxReq(http.MethodPost, "/api/v1/orgs/org-1/invitations",
@@ -1594,8 +1604,13 @@ func TestReInvitingResendsWhenTheFirstMailNeverLanded(t *testing.T) {
 	}
 
 	// The send is off the request path, and only a send that SUCCEEDS stamps
-	// the row — that stamp is what suppresses the next click.
-	<-mailer.sent
+	// the row — that stamp is what suppresses the next click. Wait for the
+	// stamp itself: the mailer is called before the goroutine records it.
+	select {
+	case <-invites.markedEmailed:
+	case <-time.After(5 * time.Second):
+		t.Fatal("a delivered link left no last_emailed_at behind")
+	}
 	if !invites.wasEmailed(resp.Invitation.ID) {
 		t.Error("a delivered link left no last_emailed_at behind")
 	}
