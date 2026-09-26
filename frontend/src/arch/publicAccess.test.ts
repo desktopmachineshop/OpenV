@@ -9,14 +9,16 @@
 //     answers without a session.
 // This guard checks each public route of App.tsx against isPublicPath, and
 // every API call a public page's module graph can make against isOpenPath
-// (parsed from the Go source, so a change on either side is seen).
+// (parsed from the Go source, so a change on either side is seen). Both sides
+// are read strictly: isOpenPath only in its `if <test> { return true }` shape,
+// and a use of api/client the walk cannot follow counts as a closed call.
 import path from 'node:path';
 import ts from 'typescript';
 import { describe, expect, it, vi } from 'vitest';
 import { isPublicPath } from '../utils/publicPaths';
 import { componentsOf, flattenRoutes, parseAppRoutes, type FlatRoute } from './appRoutes';
 import { clientCallSites } from './clientCalls';
-import { REGENERATE, SRC, literalText, parseFile, productionSources, readRepoFile, resolveModule, srcRel, walk } from './repo';
+import { REGENERATE, SRC, lineOf, literalText, parseFile, productionSources, readRepoFile, resolveModule, srcRel, walk } from './repo';
 
 const GO_FILE = 'internal/api/authmiddleware.go';
 const CLIENT = path.join(SRC, 'api/client.ts');
@@ -26,8 +28,19 @@ function goOpenRule(): { exact: string[]; prefixes: string[] } {
   const src = readRepoFile(GO_FILE);
   const body = src.match(/func isOpenPath\(path string\) bool \{\n([\s\S]*?)\n\}/);
   if (!body) throw new Error(`${GO_FILE}: func isOpenPath not found`);
-  const exact = [...body[1].matchAll(/path == "([^"]*)"/g)].map((m) => m[1]);
-  const prefixes = [...body[1].matchAll(/strings\.HasPrefix\(path, "([^"]*)"\)/g)].map((m) => m[1]);
+  // Read it only in the shape it has: `if <one test> { return true }` blocks,
+  // then `return false`. Any other shape (a negation, an extra condition, a
+  // branch returning false) fails here rather than being read as open.
+  const exact: string[] = [];
+  const prefixes: string[] = [];
+  const branch = /^if (?:path == "([^"]*)"|strings\.HasPrefix\(path, "([^"]*)"\)) \{\s*return true\s*\}\s*/;
+  let rest = body[1].replace(/^\s*\/\/.*$/gm, '').trim();
+  for (let m = rest.match(branch); m; m = rest.match(branch)) {
+    if (m[1] !== undefined) exact.push(m[1]);
+    else prefixes.push(m[2]);
+    rest = rest.slice(m[0].length);
+  }
+  if (rest !== 'return false') throw new Error(`${GO_FILE}: isOpenPath has a shape this guard cannot read: ${rest.split('\n')[0]}`);
   return { exact, prefixes };
 }
 
@@ -50,7 +63,13 @@ function publicSegments(): string[] {
 /** A concrete URL for a route pattern: each :param becomes "x". */
 const example = (fullPath: string) => fullPath.replace(/:[^/]+/g, 'x');
 
-/** Every `xxxAPI.member` a module and its local imports (src/api excluded) reference. */
+/**
+ * Every `xxxAPI.member` a module and its local imports (src/api excluded)
+ * reference, named as api/client exports it, so an aliased or a namespace
+ * import reads the same. A use this cannot follow (a re-export, a default or
+ * dynamic import, a destructured or passed-on object) comes back as
+ * `<unfollowed: ...>`, which the closed-call check reports.
+ */
 function apiReferences(entry: string): Set<string> {
   const refs = new Set<string>();
   const seen = new Set<string>();
@@ -60,23 +79,48 @@ function apiReferences(entry: string): Set<string> {
     if (seen.has(file)) continue;
     seen.add(file);
     const sf = parseFile(file);
-    const fromClient = new Set<string>();
+    const unfollowed = (node: ts.Node) =>
+      refs.add(`<unfollowed: ${srcRel(file)}:${lineOf(node)} ${node.getText().replace(/\s+/g, ' ').slice(0, 60)}>`);
+    // local name -> the export it names ('' for a namespace import)
+    const fromClient = new Map<string, string>();
     walk(sf, (node) => {
       let spec: string | null = null;
       if ((ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) && node.moduleSpecifier) spec = literalText(node.moduleSpecifier);
       if (ts.isCallExpression(node) && node.expression.kind === ts.SyntaxKind.ImportKeyword) spec = literalText(node.arguments[0]);
       const target = spec ? resolveModule(file, spec) : null;
       if (!target) return;
-      if (target === CLIENT && ts.isImportDeclaration(node)) {
-        const nb = node.importClause?.namedBindings;
-        if (nb && ts.isNamedImports(nb)) nb.elements.forEach((el) => fromClient.add(el.name.text));
-      } else if (!target.startsWith(path.join(SRC, 'api') + path.sep)) {
-        queue.push(target);
+      if (target !== CLIENT) {
+        if (!target.startsWith(path.join(SRC, 'api') + path.sep)) queue.push(target);
+        return;
+      }
+      const clause = ts.isImportDeclaration(node) ? node.importClause : undefined;
+      if (clause?.isTypeOnly) return;
+      const nb = clause?.namedBindings;
+      if (!clause || clause.name || !nb) {
+        unfollowed(node);
+      } else if (ts.isNamespaceImport(nb)) {
+        fromClient.set(nb.name.text, '');
+      } else {
+        for (const el of nb.elements) {
+          const exported = (el.propertyName ?? el.name).text;
+          // Types and constants such as DEFAULT_MIN_PASSWORD_LENGTH make no call.
+          if (!el.isTypeOnly && /API$/.test(exported)) fromClient.set(el.name.text, exported);
+        }
       }
     });
     walk(sf, (node) => {
-      if (ts.isPropertyAccessExpression(node) && ts.isIdentifier(node.expression) && fromClient.has(node.expression.text)) {
-        refs.add(`${node.expression.text}.${node.name.text}`);
+      if (!ts.isIdentifier(node) || !fromClient.has(node.text)) return;
+      const p = node.parent;
+      if (ts.isImportSpecifier(p) || ts.isNamespaceImport(p)) return;
+      if (ts.isPropertyAccessExpression(p) && p.name === node) return; // x.authAPI: some other object's member
+      const exported = fromClient.get(node.text)!;
+      const member = ts.isPropertyAccessExpression(p) && p.expression === node ? p : null;
+      if (member && exported) {
+        refs.add(`${exported}.${member.name.text}`);
+      } else if (member && ts.isPropertyAccessExpression(member.parent) && member.parent.expression === member) {
+        refs.add(`${member.name.text}.${member.parent.name.text}`); // api.authAPI.me
+      } else {
+        unfollowed(p);
       }
     });
   }
@@ -101,7 +145,9 @@ function publicPages(flat: FlatRoute[]): PublicPage[] {
       if (!byModule.has(module)) {
         const calls = [...apiReferences(file)]
           .flatMap((owner) =>
-            sites.filter((s) => s.owner === owner).map((s) => ({ owner, method: s.method, path: s.template, open: isOpenApiPath(s.template) }))
+            owner.startsWith('<')
+              ? [{ owner, method: '?', path: '?', open: false }]
+              : sites.filter((s) => s.owner === owner).map((s) => ({ owner, method: s.method, path: s.template, open: isOpenApiPath(s.template) }))
           )
           .sort((a, b) => (a.path === b.path ? (a.method < b.method ? -1 : 1) : a.path < b.path ? -1 : 1));
         byModule.set(module, { module, routes: [], calls });

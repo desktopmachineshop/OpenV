@@ -230,28 +230,17 @@ export function serverRoutes(): Route[] {
 const isParam = (seg: string) => /^\{[^}]*\}$/.test(seg);
 
 /**
- * The server routes a call can reach. Exact first: literal equals literal
- * and a client {} equals a route {param}. Only when nothing matches exactly
- * are a client {} against a route literal, or a client literal against a
- * route {param}, accepted, and each is reported as a normalisation.
+ * The server routes a call can reach: literal equals literal and a client {}
+ * equals a route {param}. Nothing looser: a client {} never stands for a route
+ * literal and a client literal never fills a route {param}, so a removed or
+ * mistyped route is missing here rather than matched to a neighbour
+ * (GET /api/v1/agent-runs/{}/logs would otherwise land on .../delegate/{id}).
  */
 export function matchSite(site: CallSite, routes: Route[]): { paths: string[]; normalised: string[] } {
   const client = site.template.split('/');
-  const candidates = routes.filter((r) => r.method === site.method && r.path.split('/').length === client.length);
-  const exact = candidates.filter((r) =>
-    r.path.split('/').every((seg, i) => (isParam(seg) ? client[i] === '{}' : seg === client[i]))
-  );
-  if (exact.length) return { paths: exact.map((r) => r.path), normalised: site.normalised };
-  const loose = candidates.filter((r) =>
-    r.path.split('/').every((seg, i) => isParam(seg) || client[i] === '{}' || seg === client[i])
-  );
-  const extra: string[] = [];
-  if (loose.length) {
-    client.forEach((seg, i) => {
-      const options = [...new Set(loose.map((r) => r.path.split('/')[i]))];
-      if (seg === '{}' && options.some((o) => !isParam(o))) extra.push(`{} at segment ${i} stands for ${options.join('|')}`);
-      if (seg !== '{}' && options.some(isParam)) extra.push(`literal "${seg}" fills ${options.join('|')}`);
-    });
-  }
-  return { paths: loose.map((r) => r.path), normalised: [...site.normalised, ...extra] };
+  const paths = routes
+    .filter((r) => r.method === site.method && r.path.split('/').length === client.length)
+    .filter((r) => r.path.split('/').every((seg, i) => (isParam(seg) ? client[i] === '{}' : seg === client[i])))
+    .map((r) => r.path);
+  return { paths, normalised: site.normalised };
 }

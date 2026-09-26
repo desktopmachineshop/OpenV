@@ -9,14 +9,18 @@
 //     was to /api/v1/auth/ (so signing in can fail without a bounce);
 //   - a 403 with code email_unverified sends the page to /verify-email,
 //     unless it is already there;
-//   - the error still reaches the caller either way.
+//   - the error still reaches the caller either way;
+//   - the instance defaults: the session cookie (withCredentials), JSON
+//     Content-Type, a 60 s timeout and the API base URL.
 // The network is replaced by an axios adapter; window.location by a plain
 // object, because jsdom does not implement navigation.
 import { AxiosError, type AxiosAdapter, type InternalAxiosRequestConfig } from 'axios';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import client from '../api/client';
+import client, { getAPIBaseURL } from '../api/client';
 
 const ORG_KEY = 'openv_active_org';
+// Read before any test stubs window.location, as the client does at import.
+const API_BASE = getAPIBaseURL();
 
 type Reply = { status: number; data?: unknown };
 let reply: Reply = { status: 200, data: {} };
@@ -66,6 +70,17 @@ afterEach(() => {
   vi.restoreAllMocks();
   sessionStorage.clear();
   localStorage.clear();
+});
+
+describe('instance defaults', () => {
+  it('sends the session cookie, JSON, a 60 s timeout, to the API origin', async () => {
+    await call('/api/v1/projects', { status: 200 });
+    const config = seen[0];
+    expect(config.withCredentials).toBe(true);
+    expect(config.timeout).toBe(60000);
+    expect(config.headers['Content-Type']).toBe('application/json');
+    expect(config.baseURL).toBe(API_BASE);
+  });
 });
 
 describe('X-Org-ID request header', () => {

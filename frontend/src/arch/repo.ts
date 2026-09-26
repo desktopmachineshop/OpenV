@@ -1,6 +1,8 @@
 // Test-only helpers for the src/arch guards: where the repository is, and a
 // deterministic list of the frontend's production source files. Nothing in
-// the app imports this module; it exists for the *.test.ts files beside it.
+// the app imports this module or any other in src/arch (the import-boundaries
+// rule in eslint.config.js reports one that does); they exist for the
+// *.test.ts files beside them and count as test files (refactor plan §4.2).
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -20,6 +22,26 @@ export function srcRel(abs: string): string {
 
 export function readRepoFile(relToRepo: string): string {
   return fs.readFileSync(path.join(REPO, relToRepo), 'utf8');
+}
+
+/**
+ * The non-test .go files under a repository directory, its subdirectories
+ * included and testdata left out, sorted and relative to the repository.
+ */
+export function goSources(relDir: string): string[] {
+  const out: string[] = [];
+  const walkDir = (rel: string) => {
+    for (const entry of fs.readdirSync(path.join(REPO, rel), { withFileTypes: true })) {
+      const child = `${rel}/${entry.name}`;
+      if (entry.isDirectory()) {
+        if (entry.name !== 'testdata') walkDir(child);
+      } else if (entry.name.endsWith('.go') && !entry.name.endsWith('_test.go')) {
+        out.push(child);
+      }
+    }
+  };
+  walkDir(relDir);
+  return out.sort();
 }
 
 const isTestFile = (name: string) => /\.(test|spec)\.tsx?$/.test(name);

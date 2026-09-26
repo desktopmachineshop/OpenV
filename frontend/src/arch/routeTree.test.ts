@@ -4,7 +4,10 @@
 // Pins the UI route table (invariant I19): every <Route> in App.tsx with its
 // path, nesting, the JSX branch it sits in, what it renders, and whether that
 // component loads eagerly or through lazy(); the relative redirects; and the
-// order of App.tsx's imports, which decides the eager CSS cascade. Parsed
+// relative order of App.tsx's side-effect imports and of the imports that
+// bring in an eager route component, which decides the eager CSS cascade.
+// Other imports and their bindings are left out, so an import added for a
+// helper (F3's state/activeOrgStorage) leaves the snapshot unchanged. Parsed
 // with the TypeScript compiler API, so a reformatted file reads the same.
 import { describe, expect, it, vi } from 'vitest';
 import { componentsOf, describeElement, flattenRoutes, parseAppRoutes, type RouteNode } from './appRoutes';
@@ -26,21 +29,15 @@ function render(): string {
     `  redirects only: ${redirects}`,
     `index routes: ${flat.filter(({ node }) => node.index).length}`,
     '',
-    '## App.tsx imports, in order',
+    '## App.tsx side-effect imports and imports of eager route components, in order',
   ];
+  const routeModules = new Set(
+    flat.flatMap(({ node }) => componentsOf(node.element).flatMap((c) => (c.source?.load === 'eager' ? [c.source.module] : [])))
+  );
   lines.push(
-    ...table(
-      app.imports.map((imp, i) => [
-        String(i + 1).padStart(2),
-        imp.module,
-        imp.sideEffect
-          ? '(side effect)'
-          : imp.bindings
-              .map((b) => (b.imported === b.local ? b.local : `${b.imported} as ${b.local}`) + (b.typeOnly ? ' (type)' : ''))
-              .join(', '),
-      ]),
-      '  '
-    )
+    ...app.imports
+      .filter((imp) => imp.sideEffect || routeModules.has(imp.module))
+      .map((imp) => `  ${imp.module}${imp.sideEffect ? '  (side effect)' : ''}`)
   );
   lines.push('', '## lazy() components, in declaration order');
   lines.push(...table(app.lazy.map((l) => [l.local, `${l.module}#${l.exportName}`]), '  '));

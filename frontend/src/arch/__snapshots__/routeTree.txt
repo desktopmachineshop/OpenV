@@ -7,33 +7,26 @@
   redirects only: 5
 index routes: 1
 
-## App.tsx imports, in order
-   1  react                             default as React, Suspense, lazy, useEffect, useState
-   2  react-router-dom                  Navigate, Route, Routes
-   3  ./api/client                      authAPI, metaAPI, orgsAPI
-   4  ./state/store                     useAppStore
-   5  ./utils/activeOrg                 pickActiveOrg
-   6  ./components/ProjectList          ProjectList
-   7  ./components/ProjectLayout        ProjectLayout
-   8  ./views/Login                     Login
-   9  ./views/VerifyEmail               VerifyEmail
-  10  ./views/ResetPassword             ResetPassword
-  11  ./views/ProductOverview           ProductOverview
-  12  ./views/InterviewsPage            InterviewsPage
-  13  ./views/GuidedWizard              GuidedWizard
-  14  ./views/EvidenceView              EvidenceView
-  15  ./views/VVDashboard               VVDashboard
-  16  ./views/KanbanBoard               KanbanBoard
-  17  ./views/TodoList                  TodoList
-  18  ./views/AutomationsPage           AutomationsPage
-  19  ./views/AgentRunsPage             AgentRunsPage
-  20  ./views/AgentsPage                AgentsPage
-  21  ./views/ProjectSettings           ProjectSettings
-  22  ./views/OrgSettings               OrgSettings
-  23  ./views/InterviewChat             InterviewChat
-  24  ./components/ui                   DialogProvider
-  25  ./components/ReleaseUpdateBanner  ReleaseUpdateBanner
-  26  ./index.css                       (side effect)
+## App.tsx side-effect imports and imports of eager route components, in order
+  ./components/ProjectList
+  ./components/ProjectLayout
+  ./views/Login
+  ./views/VerifyEmail
+  ./views/ResetPassword
+  ./views/ProductOverview
+  ./views/InterviewsPage
+  ./views/GuidedWizard
+  ./views/EvidenceView
+  ./views/VVDashboard
+  ./views/KanbanBoard
+  ./views/TodoList
+  ./views/AutomationsPage
+  ./views/AgentRunsPage
+  ./views/AgentsPage
+  ./views/ProjectSettings
+  ./views/OrgSettings
+  ./views/InterviewChat
+  ./index.css  (side effect)
 
 ## lazy() components, in declaration order
   ModuleView          ./views/ModuleView#ModuleView

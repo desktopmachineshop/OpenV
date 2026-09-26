@@ -11,7 +11,10 @@
 //                    setSearchParams calls, and the parameters that in-app
 //                    links write into their URLs (invariant I19)
 // A renamed key or parameter changes a snapshot: persisted preferences and
-// emailed or bookmarked links depend on the old names.
+// emailed or bookmarked links depend on the old names. The rows hold names and
+// operations only, never the file a use sits in, so a pure move (F1's
+// api/http.ts, F3's state/activeOrgStorage.ts, F6's tab files) leaves both
+// snapshots unchanged; the files appear in the failure messages instead.
 import path from 'node:path';
 import ts from 'typescript';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
@@ -31,25 +34,29 @@ beforeAll(() => {
 
 const typeName = (e: ts.Expression) => checker.typeToString(checker.getTypeAtLocation(e));
 
+/** Parameter declarations bound to the value a call passes for them. */
+type Env = Map<ts.Node, string>;
+
 /**
  * What string an expression evaluates to, as far as the code says: a literal,
  * a const (followed across imports), a template whose unknown parts read as
- * <expression>, or a call to a one-expression function whose parameters read
+ * <expression>, or a call to a one-expression function with its parameters
+ * bound to the call's arguments. A parameter reads as its value in env, else
  * as <parameter>. Anything else is <dynamic: expression>.
  */
-function resolveKey(expr: ts.Expression, depth = 0): string {
+function resolveKey(expr: ts.Expression, depth = 0, env: Env = new Map()): string {
   const lit = literalText(expr);
   if (lit !== null) return lit;
   if (depth > 5) return `<dynamic: ${expr.getText()}>`;
   const type = checker.getTypeAtLocation(expr);
   if (type.isStringLiteral()) return type.value;
-  if (ts.isParenthesizedExpression(expr)) return resolveKey(expr.expression, depth + 1);
+  if (ts.isParenthesizedExpression(expr)) return resolveKey(expr.expression, depth + 1, env);
   if (ts.isTemplateExpression(expr)) {
     return (
       expr.head.text +
       expr.templateSpans
         .map((s) => {
-          const inner = resolveKey(s.expression, depth + 1);
+          const inner = resolveKey(s.expression, depth + 1, env);
           return (inner.startsWith('<dynamic: ') ? `<${s.expression.getText()}>` : inner) + s.literal.text;
         })
         .join('')
@@ -59,9 +66,9 @@ function resolveKey(expr: ts.Expression, depth = 0): string {
     let sym = checker.getSymbolAtLocation(expr);
     if (sym && sym.flags & ts.SymbolFlags.Alias) sym = checker.getAliasedSymbol(sym);
     const decl = sym?.valueDeclaration;
-    if (decl && ts.isParameter(decl)) return `<${decl.name.getText()}>`;
+    if (decl && ts.isParameter(decl)) return env.get(decl) ?? `<${decl.name.getText()}>`;
     if (decl && ts.isVariableDeclaration(decl) && decl.initializer && ts.getCombinedNodeFlags(decl) & ts.NodeFlags.Const) {
-      return resolveKey(decl.initializer, depth + 1);
+      return resolveKey(decl.initializer, depth + 1, env);
     }
   }
   if (ts.isCallExpression(expr)) {
@@ -74,10 +81,50 @@ function resolveKey(expr: ts.Expression, depth = 0): string {
       if (ts.isBlock(body) && body.statements.length === 1 && ts.isReturnStatement(body.statements[0])) {
         body = body.statements[0].expression ?? body;
       }
-      if (!ts.isBlock(body)) return resolveKey(body as ts.Expression, depth + 1);
+      if (!ts.isBlock(body)) return resolveKey(body as ts.Expression, depth + 1, bind(fn, expr.arguments, env, depth + 1));
     }
   }
   return `<dynamic: ${expr.getText().replace(/\s+/g, ' ')}>`;
+}
+
+/** env plus fn's parameters bound to the arguments of one call of fn. */
+function bind(fn: ts.SignatureDeclaration, args: ts.NodeArray<ts.Expression>, env: Env, depth: number): Env {
+  const bound: Env = new Map(env);
+  fn.parameters.forEach((p, i) => {
+    if (args[i]) bound.set(p, resolveKey(args[i], depth, env));
+  });
+  return bound;
+}
+
+const symbolOf = (e: ts.Node) => {
+  const sym = checker.getSymbolAtLocation(e);
+  return sym && sym.flags & ts.SymbolFlags.Alias ? checker.getAliasedSymbol(sym) : sym;
+};
+
+/**
+ * A key built from a parameter of the function around the storage call
+ * (loadPanelMode(panel) reads `openv-panel-mode-${panel}`) resolves once per
+ * call of that function, with the call's arguments bound: a renamed panel id
+ * is a renamed key. `via` names the file of that call.
+ */
+function resolveThroughCallers(arg: ts.Expression): { key: string; via?: string }[] {
+  const key = resolveKey(arg);
+  if (!key.includes('<')) return [{ key }];
+  let fn: ts.Node | undefined = arg.parent;
+  while (fn && !ts.isFunctionLike(fn)) fn = fn.parent;
+  if (!fn || !ts.isFunctionLike(fn)) return [{ key }];
+  const holder = fn;
+  const nameNode = ts.isVariableDeclaration(holder.parent) ? holder.parent.name : holder.name;
+  const target = nameNode && symbolOf(nameNode);
+  if (!target) return [{ key }];
+  const out: { key: string; via?: string }[] = [];
+  for (const sf of sources) {
+    walk(sf, (node) => {
+      if (!ts.isCallExpression(node) || symbolOf(node.expression) !== target) return;
+      out.push({ key: resolveKey(arg, 0, bind(holder, node.arguments, new Map(), 0)), via: srcRel(sf.fileName) });
+    });
+  }
+  return out.length ? out : [{ key }];
 }
 
 const receiverOf = (call: ts.CallExpression) =>
@@ -86,6 +133,7 @@ const receiverOf = (call: ts.CallExpression) =>
 // ---------------------------------------------------------------- storage
 
 const STORAGE_METHODS = new Set(['getItem', 'setItem', 'removeItem', 'clear', 'key']);
+const THEME_INIT = '../public/theme-init.js';
 
 interface StorageUse {
   key: string;
@@ -102,12 +150,15 @@ function collectStorageUses(): StorageUse[] {
       const access = receiverOf(node);
       if (!access || !STORAGE_METHODS.has(access.name.text) || typeName(access.expression) !== 'Storage') return;
       const arg = node.arguments[0];
-      uses.push({
-        key: access.name.text === 'clear' ? '(every key)' : arg ? resolveKey(arg) : '(no key)',
-        storage: access.expression.getText().replace(/^window\./, ''),
-        op: access.name.text,
-        file: srcRel(sf.fileName),
-      });
+      const keys = access.name.text === 'clear' ? [{ key: '(every key)' }] : arg ? resolveThroughCallers(arg) : [{ key: '(no key)' }];
+      for (const { key, via } of keys) {
+        uses.push({
+          key,
+          storage: access.expression.getText().replace(/^window\./, ''),
+          op: access.name.text,
+          file: srcRel(sf.fileName) + (via ? ` (via ${via})` : ''),
+        });
+      }
     });
   }
   // The pre-paint theme script is plain JS served from public/ (no program).
@@ -122,7 +173,7 @@ function collectStorageUses(): StorageUse[] {
       key: literalText(node.arguments[0]) ?? `<dynamic: ${node.arguments[0]?.getText()}>`,
       storage,
       op: access.name.text,
-      file: '../public/theme-init.js',
+      file: THEME_INIT,
     });
   });
   return uses;
@@ -182,15 +233,31 @@ interface LinkParam {
   file: string;
 }
 
-/** Parameters written into in-app links: '/login?mode=register', `/x?run=${id}`. */
+/**
+ * A template's text with {} for each computed part, except that a query-string
+ * fragment (`?run=${id}`, possibly behind a conditional) is spliced in as text.
+ */
+function templateText(node: ts.TemplateExpression): string {
+  return node.head.text + node.templateSpans.map((s) => `${queryFragment(s.expression) ?? '{}'}${s.literal.text}`).join('');
+}
+
+function queryFragment(e: ts.Expression): string | null {
+  if (ts.isParenthesizedExpression(e)) return queryFragment(e.expression);
+  if (ts.isConditionalExpression(e)) return queryFragment(e.whenTrue) ?? queryFragment(e.whenFalse);
+  const text = literalText(e) ?? (ts.isTemplateExpression(e) ? templateText(e) : null);
+  return text !== null && /^[?&][A-Za-z_]+=/.test(text) ? text : null;
+}
+
+/**
+ * Parameters written into in-app links: '/login?mode=register', `/x?run=${id}`,
+ * and `/x${id ? `?run=${id}` : ''}`.
+ */
 function collectLinkParams(): LinkParam[] {
   const out: LinkParam[] = [];
   for (const sf of sources) {
     walk(sf, (node) => {
       let text: string | null = literalText(node);
-      if (text === null && ts.isTemplateExpression(node)) {
-        text = node.head.text + node.templateSpans.map((s) => `{}${s.literal.text}`).join('');
-      }
+      if (text === null && ts.isTemplateExpression(node)) text = templateText(node);
       if (text === null || !/^\/(?!api\/)[^\s?]*\?[A-Za-z_]+=/.test(text)) return;
       const [p, query] = text.split('?');
       for (const pair of query.split('&')) {
@@ -223,6 +290,10 @@ function groupBy<T>(items: T[], key: (t: T) => string, row: (t: T) => string): s
 // Parsing and type-checking the source tree takes seconds; allow for a loaded CI runner.
 vi.setConfig({ testTimeout: 60_000 });
 
+/** Storage and operation; public/theme-init.js runs before the app, so its uses stay marked. */
+const storageRow = (u: StorageUse) =>
+  `${u.storage.padEnd(15)} ${u.op.padEnd(10)} ${u.file === THEME_INIT ? '(public/theme-init.js)' : ''}`.trimEnd();
+
 describe('browser storage keys', () => {
   it('matches the pinned inventory', async () => {
     const uses = storageUses();
@@ -233,13 +304,13 @@ describe('browser storage keys', () => {
       '',
       `keys: ${keys.length}`,
       '',
-      ...groupBy(uses, (u) => u.key, (u) => `${u.storage.padEnd(15)} ${u.op.padEnd(10)} ${u.file}`),
+      ...groupBy(uses, (u) => u.key, storageRow),
     ].join('\n');
     await expect(text + '\n').toMatchFileSnapshot('./__snapshots__/storageKeys.txt');
   });
 
   it('resolves every key to a name', () => {
-    expect(storageUses().filter((u) => u.key.startsWith('<dynamic'))).toEqual([]);
+    expect(storageUses().filter((u) => u.key.includes('<'))).toEqual([]);
   });
 
   it('reads the active workspace from both storages and writes both', () => {
@@ -268,19 +339,19 @@ describe('query parameters', () => {
       `API query parameters built with URLSearchParams: ${uniq(api.map((u) => u.name)).length}`,
       '',
       '## Page URL parameters (modules using useSearchParams)',
-      ...groupBy(page, (u) => u.name, (u) => `${u.op.padEnd(12)} ${u.file}`),
+      ...groupBy(page, (u) => u.name, (u) => u.op),
       '',
       '## Parameters written into in-app links',
-      ...groupBy(links, (l) => l.name, (l) => `${l.link.padEnd(44)} ${l.file}`),
+      ...groupBy(links, (l) => l.name, (l) => l.link),
       '',
       '## API query strings built with URLSearchParams',
-      ...groupBy(api, (u) => u.name, (u) => `${u.op.padEnd(12)} ${u.file}`),
+      ...groupBy(api, (u) => u.name, (u) => u.op),
     ].join('\n');
     await expect(text + '\n').toMatchFileSnapshot('./__snapshots__/queryParams.txt');
   });
 
   it('resolves SHORTCUT_PARAM to "go"', () => {
-    expect(paramUses().some((u) => u.name === 'go' && u.op === 'get' && u.file === 'components/ProjectList.tsx')).toBe(true);
+    expect(paramUses().some((u) => u.name === 'go' && u.op === 'get' && u.scope === 'page')).toBe(true);
   });
 
   it('reads every parameter an in-app link or a backend deep link carries', () => {

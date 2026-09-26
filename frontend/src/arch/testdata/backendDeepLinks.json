@@ -1,5 +1,5 @@
 {
-  "about": "In-app URLs the Go backend builds (emails, web push, share links, interview invites, SSO and Stripe returns), as of d11dee8. `source` is where each is built (file:line at d11dee8, for reading); the guard checks that the file still contains `goLiteral`, and that `url` resolves to a route in src/App.tsx. Placeholders stand in for tokens and ids. `spa: false` marks a URL nginx serves from the API rather than the app.",
+  "about": "In-app URLs the Go backend builds (emails, web push, share links, interview invites, SSO and Stripe returns), as of d11dee8. `source` is where each was built at d11dee8 (file:line, for reading and failure messages only); the guard checks that the non-test Go files under that file's directory (subdirectories included, testdata excluded) still contain `goLiteral` exactly as many times as this fixture lists it, and that `url` resolves to a route in src/App.tsx. Placeholders stand in for tokens and ids. `spa: false` marks a URL nginx serves from the API rather than the app.",
   "links": [
     {
       "url": "/login?invite=TOKEN",

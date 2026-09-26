@@ -9,99 +9,83 @@ API query parameters built with URLSearchParams: 9
 
 ## Page URL parameters (modules using useSearchParams)
 against
-  get          views/BaselineCompare.tsx
-  set (object) views/BaselineCompare.tsx
+  get
+  set (object)
 artifact
-  delete       views/ImpactView.tsx
-  delete       views/ModuleView.tsx
-  get          views/ImpactView.tsx
-  get          views/ModuleView.tsx
-  set          views/ImpactView.tsx
-  set          views/ModuleView.tsx
+  delete
+  get
+  set
 checkout
-  delete       components/org/OrgBillingTab.tsx
-  get          components/org/OrgBillingTab.tsx
+  delete
+  get
 go
-  get          components/ProjectList.tsx
+  get
 invite
-  get          views/Login.tsx
+  get
 item
-  delete       views/TodoList.tsx
-  get          views/TodoList.tsx
+  delete
+  get
 mode
-  get          views/Login.tsx
+  get
 panel
-  delete       components/NotificationBell.tsx
-  get          components/NotificationBell.tsx
+  delete
+  get
 reset
-  get          views/Login.tsx
+  get
 run
-  delete       views/AgentRunsPage.tsx
-  get          views/AgentRunsPage.tsx
-  set          views/AgentRunsPage.tsx
+  delete
+  get
+  set
 session_id
-  delete       components/org/OrgBillingTab.tsx
-  get          components/org/OrgBillingTab.tsx
+  delete
+  get
 share
-  get          views/Login.tsx
+  get
 tab
-  get          views/OrgSettings.tsx
-  get          views/ProjectSettings.tsx
-  set          views/OrgSettings.tsx
-  set          views/ProjectSettings.tsx
+  get
+  set
 token
-  get          views/ResetPassword.tsx
-  get          views/VerifyEmail.tsx
+  get
 
 ## Parameters written into in-app links
 artifact
-  /projects/{}/impact?artifact={}              components/ArtifactDetails.tsx
-  /projects/{}/impact?artifact={}              views/TraceabilityMatrix.tsx
-  /projects/{}/requirements?artifact={}        components/GlobalSearch.tsx
-  /projects/{}/requirements?artifact={}        components/kanban/WorkItemDrawer.tsx
-  /projects/{}/requirements?artifact={}        views/ImpactView.tsx
-  /projects/{}/requirements?artifact={}        views/TraceabilityMatrix.tsx
+  /projects/{}/impact?artifact={}
+  /projects/{}/requirements?artifact={}
 item
-  /projects/{}/todos?item={}                   components/NoteTodo.tsx
+  /projects/{}/todos?item={}
 mode
-  /login?mode=forgot                           views/ResetPassword.tsx
-  /login?mode=register                         landing/content.ts
-  /login?mode=register                         site/Demos.tsx
-  /login?mode=register                         site/HowItWorks.tsx
-  /login?mode=register                         site/SiteShell.tsx
-  /login?mode=register                         views/Landing.tsx
-  /login?mode=register                         views/SharedProjectView.tsx
+  /login?mode=forgot
+  /login?mode=register
 reset
-  /login?reset=done                            views/ResetPassword.tsx
+  /login?reset=done
 run
-  /projects/{}/agent-runs?run={}               components/kanban/WorkItemDrawer.tsx
-  /projects/{}/agent-runs?run={}               views/AutomationsPage.tsx
+  /projects/{}/agent-runs?run={}
 share
-  /login?share={}                              views/SharedProjectView.tsx
+  /login?share={}
 tab
-  /org/settings?tab=billing                    components/org/OrgLimitsTab.tsx
-  /org/settings?tab=members                    components/NotificationBell.tsx
-  /org/settings?tab=usage                      components/NotificationBell.tsx
-  /org/settings?tab=worker-keys                views/AgentRunsPage.tsx
-  /projects/{}/settings?tab=general            views/ProjectSettings.tsx
-  /projects/{}/settings?tab=members            components/NotificationBell.tsx
+  /org/settings?tab=billing
+  /org/settings?tab=members
+  /org/settings?tab=usage
+  /org/settings?tab=worker-keys
+  /projects/{}/settings?tab=general
+  /projects/{}/settings?tab=members
 
 ## API query strings built with URLSearchParams
 <name>
-  set          utils/downloadSelection.ts
+  set
 attachments
-  set          utils/downloadSelection.ts
+  set
 baseline_id
-  set          utils/downloadSelection.ts
+  set
 fields
-  set          utils/downloadSelection.ts
+  set
 headings
-  set          utils/downloadSelection.ts
+  set
 owners
-  set          utils/downloadSelection.ts
+  set
 sections
-  set          utils/downloadSelection.ts
+  set
 template
-  set          utils/downloadSelection.ts
+  set
 types
-  set          utils/downloadSelection.ts
+  set

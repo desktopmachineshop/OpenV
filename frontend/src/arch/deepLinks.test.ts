@@ -6,11 +6,14 @@
 // react-router's own matchRoutes against the route objects parsed from
 // App.tsx, for a visitor or member who is not behind the verification wall.
 // A link that only reaches the catch-all would silently redirect to
-// /projects, so it counts as broken.
+// /projects, so it counts as broken. The snapshot holds URLs and routes only:
+// where the Go code builds a link is in the fixture and in failure messages,
+// so a file split on the Go side (M8) leaves it unchanged.
+import path from 'node:path';
 import { matchRoutes } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
-import { loadDeepLinks, parseAppRoutes, toRouteObjects } from './appRoutes';
-import { REGENERATE, readRepoFile, table } from './repo';
+import { loadDeepLinks, parseAppRoutes, toRouteObjects, type DeepLink } from './appRoutes';
+import { REGENERATE, goSources, readRepoFile, table } from './repo';
 
 const CATCH_ALL = '/*';
 
@@ -28,11 +31,33 @@ vi.setConfig({ testTimeout: 60_000 });
 describe('backend-built deep links', () => {
   const links = loadDeepLinks();
 
-  it('are still built by the Go code the fixture names', () => {
-    const missing = links
-      .filter((l) => !readRepoFile(l.source.replace(/:\d+$/, '')).includes(l.goLiteral))
-      .map((l) => `${l.source}: ${l.goLiteral}`);
-    expect(missing).toEqual([]);
+  // Bound to the directory of the file the fixture names, not the file, so a
+  // class A split (M8 moves the interview handlers out of suite_handlers.go)
+  // leaves the guard green. Counting keeps it exact: `dest = "/"` is built
+  // twice in internal/api, and the fixture lists both.
+  it('are still built by the Go code under the directory the fixture names', () => {
+    const listed = new Map<string, DeepLink[]>();
+    for (const l of links) {
+      const key = `${path.posix.dirname(l.source)}\t${l.goLiteral}`;
+      listed.set(key, [...(listed.get(key) || []), l]);
+    }
+    const wrong = [...listed].flatMap(([key, entries]) => {
+      const [dir, literal] = key.split('\t');
+      const found = goSources(dir).flatMap((file) => {
+        const text = readRepoFile(file);
+        const at: string[] = [];
+        for (let i = text.indexOf(literal); i >= 0; i = text.indexOf(literal, i + literal.length)) {
+          at.push(`${file}:${text.slice(0, i).split('\n').length}`);
+        }
+        return at;
+      });
+      if (found.length === entries.length) return [];
+      return [
+        `${literal} is built ${found.length}x under ${dir} (${found.join(', ') || 'nowhere'}); ` +
+          `the fixture lists it ${entries.length}x (${entries.map((l) => l.source).join(', ')})`,
+      ];
+    });
+    expect(wrong).toEqual([]);
   });
 
   it('each resolve to an app route (and the nginx-only ones to none)', () => {
@@ -43,7 +68,7 @@ describe('backend-built deep links', () => {
   });
 
   it('matches the pinned resolution table', async () => {
-    const rows = links.map((l) => [l.url, `-> ${resolve(l.url).chain.join(' > ')}`, l.source]);
+    const rows = links.map((l) => [l.url, `-> ${resolve(l.url).chain.join(' > ')}`]);
     const text = [
       '# Backend-built deep links resolved with matchRoutes against App.tsx (invariant I19).',
       `# Fixture: src/arch/testdata/backendDeepLinks.json. Regenerate: ${REGENERATE}`,
