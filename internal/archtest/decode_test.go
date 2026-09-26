@@ -23,10 +23,15 @@ var decodeAliasTypes = []string{}
 // error can carry the decode error of an alias-list type to that type, for
 // decodes the rule cannot see: those in a helper or outside internal/api.
 // An error assigned from a call by that name counts as the decode's error.
-// Today's sites return an exports.ProjectExport decode error:
-// Handler.projectExport (suite_handlers.go), and the export service's
-// ImportProject and ImportProjectWithOverrides (handlers.go). P1 adds those
-// three names with the ProjectExport entry, and X14 adds snapshot's Load.
+// The sites known today that return an exports.ProjectExport decode error
+// to a handler are Handler.projectExport (suite_handlers.go), the export
+// service's ImportProject and ImportProjectWithOverrides (handlers.go), and
+// the report service's GenerateProjectReport, GenerateProjectReportDOCX and
+// GenerateVVReport; P1 adds those six names with the ProjectExport entry,
+// after checking for others, and X14 adds snapshot's Load. The scan follows
+// an error only through later statements of the list it was assigned in, so
+// Handler.GenerateReport, which assigns it inside a switch case and tests it
+// after the switch, stays out of its reach.
 var decodeErrorSources = map[string]string{}
 
 func checkDecodeAliases(c *check) {
@@ -446,10 +451,11 @@ func mentionsAny(list []ast.Expr, name string) bool {
 	return false
 }
 
-// TestDecodeAliasRule proves the R8 check on a fixture module: four
+// TestDecodeAliasRule proves the R8 check on a fixture module: five
 // handlers leak a decode error of an alias-list type (directly, nested in a
 // literal struct, through a named type with a decoder variable, and from a
-// helper named in the error sources), three do not (a fixed message; a type
+// helper method and a plain function named in the error sources), three do
+// not (a fixed message; a type
 // not on the list; a helper's error answered with a fixed message).
 func TestDecodeAliasRule(t *testing.T) {
 	root := writeFixture(t, map[string]string{
@@ -464,12 +470,15 @@ func TestDecodeAliasRule(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	sources := map[string]string{"loadExport": "internal/domain/exports.ProjectExport"}
+	sources := map[string]string{
+		"loadExport":   "internal/domain/exports.ProjectExport",
+		"loadExportFn": "internal/domain/exports.ProjectExport",
+	}
 	if leaks := decodeLeaks(m, nil, sources); len(leaks) != 0 {
 		t.Fatalf("an empty alias list must find nothing, found %v", leaks)
 	}
 	leaks := decodeLeaks(m, []string{"internal/domain/exports.ProjectExport"}, sources)
-	want := []string{"Handler.LeakDirect", "Handler.LeakNested", "Handler.LeakThroughNamedType", "Handler.LeakThroughHelper"}
+	want := []string{"Handler.LeakDirect", "Handler.LeakNested", "Handler.LeakThroughNamedType", "Handler.LeakThroughHelper", "Handler.LeakThroughFunc"}
 	if len(leaks) != len(want) {
 		t.Fatalf("found %d leaks, want %d:\n%s", len(leaks), len(want), strings.Join(leaks, "\n"))
 	}
@@ -549,6 +558,24 @@ func (h *Handler) loadExport(data []byte) (*exports.ProjectExport, error) {
 func (h *Handler) LeakThroughHelper(w http.ResponseWriter, r *http.Request) {
 	data, _ := io.ReadAll(r.Body)
 	export, err := h.loadExport(data)
+	if err != nil {
+		writeJSONError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	_ = export
+}
+
+func loadExportFn(data []byte) (*exports.ProjectExport, error) {
+	var out exports.ProjectExport
+	if err := json.Unmarshal(data, &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (h *Handler) LeakThroughFunc(w http.ResponseWriter, r *http.Request) {
+	data, _ := io.ReadAll(r.Body)
+	export, err := loadExportFn(data)
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return

@@ -53,9 +53,12 @@ shrink.
 
 Any PR may lower or remove an entry. A refactor PR never raises or adds
 one (the plan's Refactor guard job, S14b, is to refuse it), with one
-exception: a class D PR may add `import_edges` entries that point into the
-package it creates, and only if that package imports no package of this
-module. Everything else in the file may only shrink, in that PR too.
+exception: a class D PR may add `import_edges` entries into the package it
+creates, and from it to packages the moved declarations' old home already
+imports (the moved code's own dependencies: for P1, `snapshot` to
+`artifacts`, `attachments`, `attributes`, `links` and `products`, which
+`exports` imports today). The new package must still pass K7. Everything
+else in the file may only shrink, in that PR too.
 Outside a refactor, adding an entry by hand is an architecture decision
 made in review; the usual cases are an import edge to a new package, which
 must still pass K7, and the entry of a new client binary. A ceiling is
@@ -111,8 +114,9 @@ listed in `import_edges`. At `d11dee8` there are 227 edges between 63
 packages. Imports made only by test files are not edges.
 
 **Why.** K7: the layering can only improve if nothing new appears
-unnoticed, and a class D move adds no edge except into the new leaf
-package it creates (see [ratchets.json](#ratchetsjson)).
+unnoticed, and a class D move adds no edge except into the package it
+creates and from it to its moved code's existing dependencies (see
+[ratchets.json](#ratchetsjson)).
 
 **Fix.** Drop the new import: declare the interface you need on the
 consumer side, or move the code to a package that may import it. A
@@ -401,13 +405,20 @@ module's named types. It does not follow a value through a helper function;
 instead `decodeErrorSources`, also in `decode_test.go`, maps the name of a
 function or method whose returned error carries such a decode error to the
 alias type, and an error assigned from a call by that name counts as the
-decode's. Today those sites are `Handler.projectExport`
-(`suite_handlers.go`), and the export service's `ImportProject`
+decode's. The sites known today are `Handler.projectExport`
+(`suite_handlers.go`); the export service's `ImportProject`
 (`handlers.go:1892`) and `ImportProjectWithOverrides` (`handlers.go:2168`),
-which decode in `internal/domain/exports`, outside `internal/api`. Both
-lists are empty today; P1 adds `ProjectExport` with those three names and
-P3 `FinishRequest`, each in a class T commit before its move, and X14 adds
-`snapshot`'s `Load`. `TestDecodeAliasRule` proves the check on a fixture.
+which decode in `internal/domain/exports`, outside `internal/api`; and the
+report service's `GenerateProjectReport` and `GenerateProjectReportDOCX`
+(through `loadReportExport`) and `GenerateVVReport`. Both lists are empty
+today; P1 adds `ProjectExport` with those six names, after checking for
+others, and P3 `FinishRequest`, each in a class T commit before its move,
+and X14 adds `snapshot`'s `Load`. The scan follows an error only through the
+later statements of the list it was assigned in, so it cannot follow
+`Handler.GenerateReport`, which assigns the error inside a `switch` case
+and tests it after the switch; that site answers with a fixed message
+(`respondError` or `respondInternal`) today and must keep doing so. `TestDecodeAliasRule` proves the check on a
+fixture.
 
 **Why.** R8: encoding/json's errors name the Go type, package qualified, so
 moving a type behind an alias would change response bytes.
