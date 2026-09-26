@@ -18,23 +18,25 @@ import (
 // the compatibility promise (REQ-143). The runner package keeps its own copy
 // of the same helpers for the worker wire goldens.
 
-// updateGoldenEnv rewrites the goldens from the current code instead of
-// comparing against them. Only a deliberate behavior change regenerates a
-// golden; a refactor never does.
+// updateGoldenEnv set to exactly 1 rewrites the goldens from the current code
+// instead of comparing against them; any other value compares. Only a
+// deliberate behavior change regenerates a golden; a refactor never does.
 const updateGoldenEnv = "UPDATE_GOLDEN"
 
-func updatingGoldens() bool { return os.Getenv(updateGoldenEnv) != "" }
+func updatingGoldens() bool { return os.Getenv(updateGoldenEnv) == "1" }
 
-// regenerateCommand is the one command that rewrites the golden a test owns.
+// regenerateCommand is the one command that rewrites the golden a test owns,
+// with a reminder that no other value of UPDATE_GOLDEN does.
 func regenerateCommand(test string) string {
-	return updateGoldenEnv + "=1 go test ./internal/mcp ./internal/runner -run " + test
+	return updateGoldenEnv + "=1 go test ./internal/mcp ./internal/runner -run " + test +
+		"\n(only " + updateGoldenEnv + "=1 regenerates; any other value compares)"
 }
 
 // goldenPkgDir is how failure messages name this package's golden files.
 const goldenPkgDir = "internal/mcp"
 
 // checkGolden compares got with the golden file at path (relative to this
-// package), or rewrites the file when UPDATE_GOLDEN is set.
+// package), or rewrites the file when UPDATE_GOLDEN is 1.
 func checkGolden(t *testing.T, path string, got []byte, test string) {
 	t.Helper()
 	shown := filepath.ToSlash(filepath.Join(goldenPkgDir, path))

@@ -24,15 +24,15 @@
           ],
           "returned": [
             {
-              "id": "<repo-id>",
-              "project_id": "<project-id>",
-              "name": "firmware",
-              "remote_url": "git@github.com:acme/firmware.git",
-              "default_branch": "main",
-              "credential_strategy": "host",
               "created_at": "<time>",
-              "updated_at": "<time>",
-              "my_local_path": "/home/dev/firmware"
+              "credential_strategy": "host",
+              "default_branch": "main",
+              "id": "<repo-id>",
+              "my_local_path": "/home/dev/firmware",
+              "name": "firmware",
+              "project_id": "<project-id>",
+              "remote_url": "git@github.com:acme/firmware.git",
+              "updated_at": "<time>"
             }
           ],
           "error": null

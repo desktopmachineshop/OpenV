@@ -23,7 +23,6 @@
             }
           ],
           "returned": {
-            "assignment": null,
             "is_err_pool_node_unknown": false
           },
           "error": null
@@ -53,12 +52,12 @@
           ],
           "returned": {
             "assignment": {
-              "session_id": "<session-id>",
+              "expires_at": "<expires>",
               "org_id": "<org-id>",
+              "session_id": "<session-id>",
               "user_id": "<user-id>",
               "user_name": "Dana",
-              "worker_key": "<session-key>",
-              "expires_at": "<expires>"
+              "worker_key": "<session-key>"
             },
             "is_err_pool_node_unknown": false
           },
@@ -88,7 +87,6 @@
             }
           ],
           "returned": {
-            "assignment": null,
             "is_err_pool_node_unknown": true
           },
           "error": "pool node is not registered"
@@ -117,7 +115,6 @@
             }
           ],
           "returned": {
-            "assignment": null,
             "is_err_pool_node_unknown": false
           },
           "error": "api returned 503: {\"error\":\"failed to record pool heartbeat\"}"

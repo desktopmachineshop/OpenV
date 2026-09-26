@@ -23,16 +23,16 @@
             }
           ],
           "returned": {
+            "auth_url": "https://claude.ai/oauth/authorize?code=true&state=s1",
+            "code": "4/0AbCdEf",
+            "created_at": "<time>",
+            "detail": "Open the link and paste the code.",
             "id": "<login-id>",
             "org_id": "<org-id>",
             "provider": "claude-code",
-            "target": "user",
-            "status": "awaiting_code",
-            "auth_url": "https://claude.ai/oauth/authorize?code=true&state=s1",
-            "code": "4/0AbCdEf",
-            "detail": "Open the link and paste the code.",
             "requested_by": "<user-id>",
-            "created_at": "<time>",
+            "status": "awaiting_code",
+            "target": "user",
             "updated_at": "<time>"
           },
           "error": null

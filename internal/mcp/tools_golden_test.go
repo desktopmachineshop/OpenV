@@ -41,11 +41,16 @@ type toolGolden struct {
 	// Calls are the REST requests the handler makes, in order, each as its
 	// line in internal/api/testdata/routes.txt.
 	Calls []string `json:"calls"`
+	// Requests are the same requests exactly as sent: method, path with the
+	// ids the recording drove and the query, and the JSON body when there is
+	// one. They pin which id went where, the query parameters and the body
+	// fields, which a route line cannot show.
+	Requests []string `json:"requests"`
 }
 
 // TestMCPToolsGolden pins every tool in Tools() order: its name, read-only
-// flag, description, input schema and the REST routes its handler calls,
-// plus the order of ReadOnlyToolNames. Each tool runs against a stub API with
+// flag, description, input schema and the REST routes its handler calls, with
+// each request's query and body, plus the order of ReadOnlyToolNames. Each tool runs against a stub API with
 // arguments that reach every call it makes, and every call has to be a route
 // in the API's inventory. A renamed or reordered tool, a changed schema or
 // description, a moved read-only flag or a retargeted path fails here.
@@ -70,7 +75,6 @@ func TestMCPToolsGolden(t *testing.T) {
 const (
 	goldenProjectID       = "11111111-1111-4111-8111-111111111111"
 	goldenArtifactID      = "22222222-2222-4222-8222-222222222222"
-	goldenArtifactRef     = "REQ-7"
 	goldenOtherArtifactID = "33333333-3333-4333-8333-333333333333"
 	goldenLinkID          = "44444444-4444-4444-8444-444444444444"
 	goldenBaselineID      = "55555555-5555-4555-8555-555555555555"
@@ -82,10 +86,15 @@ const (
 	goldenAgentID         = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
 )
 
+// goldenArtifactRef is goldenArtifactID's stable ref. A ref is not an id:
+// every tool resolves it to a UUID before it reaches a path, so a path segment
+// carrying it matches no route and fails the recording.
+const goldenArtifactRef = "REQ-7"
+
 func toolGoldenIDs() map[string]bool {
 	ids := map[string]bool{}
 	for _, id := range []string{
-		goldenProjectID, goldenArtifactID, goldenArtifactRef, goldenOtherArtifactID,
+		goldenProjectID, goldenArtifactID, goldenOtherArtifactID,
 		goldenLinkID, goldenBaselineID, goldenTestRunID, goldenTestCaseID,
 		goldenWorkItemID, goldenDelegateRunID, goldenAttachmentID, goldenAgentID,
 	} {
@@ -151,7 +160,7 @@ func toolStubBodies() map[string]string {
 
 // toolStubAPI is the OpenV API the recording runs against. Each tool
 // authenticates with its own token, so the stub files every request under
-// the tool that made it, as the inventory line it resolves to.
+// the tool that made it, as the inventory line it resolves to and as sent.
 type toolStubAPI struct {
 	routes []string
 	ids    map[string]bool
@@ -159,6 +168,7 @@ type toolStubAPI struct {
 
 	mu     sync.Mutex
 	calls  map[string][]string // tool name -> calls in order
+	reqs   map[string][]string // tool name -> requests as sent, in order
 	misses map[string][]string // tool name -> requests no inventory route matches
 }
 
@@ -167,7 +177,12 @@ const toolTokenPrefix = "golden-"
 func (s *toolStubAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	tool := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer "+toolTokenPrefix)
 	route, ok := matchRoute(s.routes, r.Method, r.URL.Path, func(seg string) bool { return s.ids[seg] })
+	sent := r.Method + " " + r.URL.RequestURI()
+	if body, _ := io.ReadAll(r.Body); len(body) > 0 {
+		sent += " " + string(body)
+	}
 	s.mu.Lock()
+	s.reqs[tool] = append(s.reqs[tool], sent)
 	if ok {
 		s.calls[tool] = append(s.calls[tool], route)
 	} else {
@@ -197,6 +212,7 @@ func buildToolsGolden(t *testing.T) toolsGolden {
 		ids:    toolGoldenIDs(),
 		bodies: toolStubBodies(),
 		calls:  map[string][]string{},
+		reqs:   map[string][]string{},
 		misses: map[string][]string{},
 	}
 	srv := httptest.NewServer(api)
@@ -230,9 +246,9 @@ func buildToolsGolden(t *testing.T) toolsGolden {
 		for _, miss := range api.misses[tool.Name] {
 			t.Errorf("tool %q calls %s, which is not a route in %s", tool.Name, miss, routeInventoryShown)
 		}
-		calls := api.calls[tool.Name]
+		calls, reqs := api.calls[tool.Name], api.reqs[tool.Name]
 		if calls == nil {
-			calls = []string{}
+			calls, reqs = []string{}, []string{}
 		}
 		doc.Tools = append(doc.Tools, toolGolden{
 			Name:        tool.Name,
@@ -240,6 +256,7 @@ func buildToolsGolden(t *testing.T) toolsGolden {
 			Description: tool.Description,
 			InputSchema: schemaJSON(t, tool.InputSchema),
 			Calls:       calls,
+			Requests:    reqs,
 		})
 	}
 	for name := range args {
@@ -265,7 +282,7 @@ func schemaJSON(t *testing.T, schema map[string]interface{}) json.RawMessage {
 
 // checkToolsListAgainstGolden compares a tools/list result served from the
 // whole table with testdata/tools.json: every tool's name, description and
-// input schema, in order. Under UPDATE_GOLDEN the file may be rewritten by
+// input schema, in order. Under UPDATE_GOLDEN=1 the file may be rewritten by
 // TestMCPToolsGolden in the same run, so the table is compared with itself
 // instead.
 func checkToolsListAgainstGolden(t *testing.T, served []interface{}) {
@@ -297,9 +314,11 @@ func checkToolsListAgainstGolden(t *testing.T, served []interface{}) {
 	}
 }
 
-// TestMCPToolsGoldenArgsCoverSchemas keeps the recording honest: an argument
-// the recording sets must be one the tool's schema declares, so a renamed
-// property cannot leave the recording driving a path the tool no longer takes.
+// TestMCPToolsGoldenArgsCoverSchemas keeps the recording honest in both
+// directions: an argument the recording sets must be one the tool's schema
+// declares, so a renamed property cannot leave the recording driving a path
+// the tool no longer takes; and every property the schema declares must be
+// set, so a new optional argument cannot add a call the recording never makes.
 func TestMCPToolsGoldenArgsCoverSchemas(t *testing.T) {
 	args := toolGoldenArgs()
 	for _, tool := range Tools() {
@@ -313,6 +332,16 @@ func TestMCPToolsGoldenArgsCoverSchemas(t *testing.T) {
 		sort.Strings(unknown)
 		if len(unknown) > 0 {
 			t.Errorf("toolGoldenArgs sets %v for %q, which its input schema does not declare", unknown, tool.Name)
+		}
+		var unset []string
+		for key := range props {
+			if _, ok := args[tool.Name][key]; !ok {
+				unset = append(unset, key)
+			}
+		}
+		sort.Strings(unset)
+		if len(unset) > 0 {
+			t.Errorf("toolGoldenArgs leaves %v unset for %q: set every property its input schema declares, so the recording reaches every call", unset, tool.Name)
 		}
 	}
 }

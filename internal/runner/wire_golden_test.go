@@ -191,16 +191,51 @@ func runWireCase(t *testing.T, routes []string, wc wireCase) wireGoldenCase {
 	return out
 }
 
-// wireReturned is what a method returned, as normalised JSON.
+// wireReturned is what a method returned, as normalised JSON with object
+// keys sorted and null-valued keys dropped. "returned" pins the decoded
+// values, not the Go declaration order or omitempty of decode-only types, so
+// aliasing them to workerproto (refactor plan step P3) keeps it unchanged,
+// while a changed JSON tag or decoded value still fails. A method that
+// returned nil records null.
 func wireReturned(t *testing.T, v interface{}) json.RawMessage {
 	t.Helper()
+	raw, err := json.Marshal(v)
+	if err != nil {
+		t.Fatalf("encode the returned value: %v", err)
+	}
+	dec := json.NewDecoder(bytes.NewReader(raw))
+	dec.UseNumber() // keep number literals exact
+	var tree interface{}
+	if err := dec.Decode(&tree); err != nil {
+		t.Fatalf("re-read the returned value: %v", err)
+	}
 	var buf bytes.Buffer
 	enc := json.NewEncoder(&buf)
 	enc.SetEscapeHTML(false)
-	if err := enc.Encode(v); err != nil {
+	if err := enc.Encode(dropNullKeys(tree)); err != nil { // map keys come out sorted
 		t.Fatalf("encode the returned value: %v", err)
 	}
 	return json.RawMessage(wireNormalise(strings.TrimSpace(buf.String())))
+}
+
+// dropNullKeys removes every object key whose value is null, at any depth.
+// Array elements and a top-level null stay.
+func dropNullKeys(v interface{}) interface{} {
+	switch v := v.(type) {
+	case map[string]interface{}:
+		for key, item := range v {
+			if item == nil {
+				delete(v, key)
+				continue
+			}
+			v[key] = dropNullKeys(item)
+		}
+	case []interface{}:
+		for i, item := range v {
+			v[i] = dropNullKeys(item)
+		}
+	}
+	return v
 }
 
 // wireStub answers each request with the next canned response and keeps
@@ -299,20 +334,22 @@ func wireDenormalise(s string) string {
 // --- Golden files, diffs and the route inventory. internal/mcp keeps the
 // same helpers for its goldens; test files cannot be shared across packages.
 
-// updateGoldenEnv rewrites the goldens from the current code instead of
-// comparing against them. Only a deliberate behavior change regenerates a
-// golden; a refactor never does.
+// updateGoldenEnv set to exactly 1 rewrites the goldens from the current code
+// instead of comparing against them; any other value compares. Only a
+// deliberate behavior change regenerates a golden; a refactor never does.
 const updateGoldenEnv = "UPDATE_GOLDEN"
 
-func updatingGoldens() bool { return os.Getenv(updateGoldenEnv) != "" }
+func updatingGoldens() bool { return os.Getenv(updateGoldenEnv) == "1" }
 
-// regenerateCommand is the one command that rewrites the golden a test owns.
+// regenerateCommand is the one command that rewrites the golden a test owns,
+// with a reminder that no other value of UPDATE_GOLDEN does.
 func regenerateCommand(test string) string {
-	return updateGoldenEnv + "=1 go test ./internal/mcp ./internal/runner -run " + test
+	return updateGoldenEnv + "=1 go test ./internal/mcp ./internal/runner -run " + test +
+		"\n(only " + updateGoldenEnv + "=1 regenerates; any other value compares)"
 }
 
 // checkGolden compares got with the golden file at path (relative to this
-// package), or rewrites the file when UPDATE_GOLDEN is set.
+// package), or rewrites the file when UPDATE_GOLDEN is 1.
 func checkGolden(t *testing.T, path string, got []byte, test string) {
 	t.Helper()
 	shown := "internal/runner/" + filepath.ToSlash(path)
