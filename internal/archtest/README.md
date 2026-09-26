@@ -377,8 +377,8 @@ package not listed may make none. A reference is a call or a function value
 (`var getenv = os.Getenv`, `os.Expand(s, os.Getenv)`); a call counts once.
 At `d11dee8` there are 44, all calls, in 8 packages: 39
 `Getenv`/`LookupEnv` calls on 38 lines (`runner/geminicli.go:187` has two)
-and 5 `os.Environ` calls in `internal/runner`. (The plan's figures, 38 and
-43, count lines.) `TestEnvReadForms` proves the forms on a fixture.
+and 5 `os.Environ` calls in `internal/runner`. `TestEnvReadForms` proves
+the forms on a fixture.
 
 **Why.** K8: configuration is read in `internal/config` and
 `cmd/*/config.go`, apart from S8's reasoned exemptions (per-request reads,
