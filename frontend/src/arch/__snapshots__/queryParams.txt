@@ -1,0 +1,91 @@
+# Query parameters (invariant I19): the URL parameters pages read and write, the ones in-app links carry,
+# and the query strings built with URLSearchParams for API calls.
+# Regenerate: npx vitest run src/arch -u. Emails, pushes, Stripe returns, shortcuts and bookmarks carry these names.
+
+page parameters read: 14 (against, artifact, checkout, go, invite, item, mode, panel, reset, run, session_id, share, tab, token)
+page parameters written: 8
+parameters carried by in-app links: 7
+API query parameters built with URLSearchParams: 9
+
+## Page URL parameters (modules using useSearchParams)
+against
+  get
+  set (object)
+artifact
+  delete
+  get
+  set
+checkout
+  delete
+  get
+go
+  get
+invite
+  get
+item
+  delete
+  get
+mode
+  get
+panel
+  delete
+  get
+reset
+  get
+run
+  delete
+  get
+  set
+session_id
+  delete
+  get
+share
+  get
+tab
+  get
+  set
+token
+  get
+
+## Parameters written into in-app links
+artifact
+  /projects/{}/impact?artifact={}
+  /projects/{}/requirements?artifact={}
+item
+  /projects/{}/todos?item={}
+mode
+  /login?mode=forgot
+  /login?mode=register
+reset
+  /login?reset=done
+run
+  /projects/{}/agent-runs?run={}
+share
+  /login?share={}
+tab
+  /org/settings?tab=billing
+  /org/settings?tab=members
+  /org/settings?tab=usage
+  /org/settings?tab=worker-keys
+  /projects/{}/settings?tab=general
+  /projects/{}/settings?tab=members
+
+## API query strings built with URLSearchParams
+<name>
+  set
+attachments
+  set
+baseline_id
+  set
+fields
+  set
+headings
+  set
+owners
+  set
+sections
+  set
+template
+  set
+types
+  set
