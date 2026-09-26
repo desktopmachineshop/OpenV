@@ -1,0 +1,398 @@
+{
+  "about": "Shrink-only ceilings and allowlists for internal/archtest; see README.md there. Regenerate with UPDATE_RATCHETS=1 go test ./internal/archtest, which only lowers or removes entries.",
+  "import_edges": {
+    "cmd/agentd": [
+      "internal/runner"
+    ],
+    "cmd/openv-mcp": [
+      "internal/mcp"
+    ],
+    "cmd/server": [
+      "(root)",
+      "internal/api",
+      "internal/automation",
+      "internal/billing",
+      "internal/billing/stripe",
+      "internal/domain/agentruns",
+      "internal/domain/agents",
+      "internal/domain/artifacts",
+      "internal/domain/attachments",
+      "internal/domain/attributes",
+      "internal/domain/automations",
+      "internal/domain/baselines",
+      "internal/domain/chatter",
+      "internal/domain/downloads",
+      "internal/domain/embeddings",
+      "internal/domain/evidence",
+      "internal/domain/exports",
+      "internal/domain/guided",
+      "internal/domain/hostedworkers",
+      "internal/domain/interviews",
+      "internal/domain/invitations",
+      "internal/domain/links",
+      "internal/domain/members",
+      "internal/domain/notifications",
+      "internal/domain/orgs",
+      "internal/domain/products",
+      "internal/domain/projects",
+      "internal/domain/proposals",
+      "internal/domain/providers",
+      "internal/domain/pushsubs",
+      "internal/domain/release",
+      "internal/domain/repoconns",
+      "internal/domain/reports",
+      "internal/domain/runnersessions",
+      "internal/domain/settings",
+      "internal/domain/sharedproducts",
+      "internal/domain/sharelinks",
+      "internal/domain/teams",
+      "internal/domain/templates",
+      "internal/domain/users",
+      "internal/domain/vv",
+      "internal/domain/workerkeys",
+      "internal/domain/workitems",
+      "internal/events",
+      "internal/hosting",
+      "internal/metrics",
+      "internal/notify",
+      "internal/orchestration",
+      "internal/persistence/postgres",
+      "internal/scheduler",
+      "internal/seeds"
+    ],
+    "internal/api": [
+      "internal/billing",
+      "internal/domain/agentruns",
+      "internal/domain/agents",
+      "internal/domain/artifacts",
+      "internal/domain/attachments",
+      "internal/domain/attributes",
+      "internal/domain/automations",
+      "internal/domain/baselines",
+      "internal/domain/chatter",
+      "internal/domain/crewtemplates",
+      "internal/domain/downloads",
+      "internal/domain/embeddings",
+      "internal/domain/events",
+      "internal/domain/evidence",
+      "internal/domain/exports",
+      "internal/domain/guided",
+      "internal/domain/hostedworkers",
+      "internal/domain/interviews",
+      "internal/domain/invitations",
+      "internal/domain/links",
+      "internal/domain/members",
+      "internal/domain/mentions",
+      "internal/domain/notifications",
+      "internal/domain/orgs",
+      "internal/domain/products",
+      "internal/domain/projects",
+      "internal/domain/proposals",
+      "internal/domain/providers",
+      "internal/domain/pushsubs",
+      "internal/domain/quality",
+      "internal/domain/release",
+      "internal/domain/repoconns",
+      "internal/domain/reports",
+      "internal/domain/runnersessions",
+      "internal/domain/settings",
+      "internal/domain/sharedproducts",
+      "internal/domain/sharelinks",
+      "internal/domain/teams",
+      "internal/domain/templates",
+      "internal/domain/users",
+      "internal/domain/vv",
+      "internal/domain/workerkeys",
+      "internal/domain/workitems",
+      "internal/hosting",
+      "internal/notify",
+      "internal/scheduler",
+      "internal/seeds"
+    ],
+    "internal/automation": [
+      "internal/domain/agentruns",
+      "internal/domain/automations",
+      "internal/domain/events",
+      "internal/domain/teams",
+      "internal/scheduler"
+    ],
+    "internal/billing": [
+      "internal/domain/orgs"
+    ],
+    "internal/billing/stripe": [
+      "internal/billing"
+    ],
+    "internal/domain/agentruns": [
+      "internal/domain/agents",
+      "internal/domain/events",
+      "internal/domain/users"
+    ],
+    "internal/domain/agents": [
+      "internal/domain/providers"
+    ],
+    "internal/domain/baselines": [
+      "internal/domain/artifacts",
+      "internal/domain/exports"
+    ],
+    "internal/domain/crewtemplates": [
+      "internal/domain/agents",
+      "internal/domain/teams"
+    ],
+    "internal/domain/downloads": [
+      "internal/domain/artifacts",
+      "internal/domain/attachments",
+      "internal/domain/exports",
+      "internal/domain/reports",
+      "internal/domain/vv"
+    ],
+    "internal/domain/embeddings": [
+      "internal/domain/artifacts"
+    ],
+    "internal/domain/exports": [
+      "internal/domain/artifacts",
+      "internal/domain/attachments",
+      "internal/domain/attributes",
+      "internal/domain/links",
+      "internal/domain/products",
+      "internal/domain/projects"
+    ],
+    "internal/domain/guided": [
+      "internal/domain/artifacts",
+      "internal/domain/chatter",
+      "internal/domain/events",
+      "internal/domain/links",
+      "internal/domain/products"
+    ],
+    "internal/domain/invitations": [
+      "internal/domain/orgs",
+      "internal/domain/users"
+    ],
+    "internal/domain/mentions": [
+      "internal/domain/members"
+    ],
+    "internal/domain/quality": [
+      "internal/domain/artifacts",
+      "internal/domain/exports"
+    ],
+    "internal/domain/reports": [
+      "internal/domain/artifacts",
+      "internal/domain/attachments",
+      "internal/domain/baselines",
+      "internal/domain/exports",
+      "internal/domain/links",
+      "internal/domain/products",
+      "internal/domain/reports/doc",
+      "internal/domain/vv"
+    ],
+    "internal/domain/settings": [
+      "internal/domain/quality"
+    ],
+    "internal/domain/sharelinks": [
+      "internal/domain/users"
+    ],
+    "internal/domain/templates": [
+      "internal/domain/artifacts",
+      "internal/domain/attachments",
+      "internal/domain/exports",
+      "internal/domain/links"
+    ],
+    "internal/domain/vv": [
+      "internal/domain/artifacts",
+      "internal/domain/chatter",
+      "internal/domain/events",
+      "internal/domain/exports"
+    ],
+    "internal/domain/workerkeys": [
+      "internal/domain/users"
+    ],
+    "internal/domain/workitems": [
+      "internal/domain/events"
+    ],
+    "internal/events": [
+      "internal/domain/events"
+    ],
+    "internal/hosting": [
+      "internal/domain/orgs"
+    ],
+    "internal/mcp": [
+      "internal/domain/artifacts"
+    ],
+    "internal/metrics": [
+      "internal/domain/agentruns"
+    ],
+    "internal/notify": [
+      "internal/domain/artifacts",
+      "internal/domain/events",
+      "internal/domain/members",
+      "internal/domain/mentions",
+      "internal/domain/notifications",
+      "internal/domain/orgs",
+      "internal/domain/pushsubs",
+      "internal/domain/release",
+      "internal/domain/users"
+    ],
+    "internal/orchestration": [
+      "internal/domain/agentruns",
+      "internal/domain/automations",
+      "internal/domain/events",
+      "internal/domain/guided",
+      "internal/domain/interviews",
+      "internal/domain/projects",
+      "internal/domain/teams",
+      "internal/domain/workitems"
+    ],
+    "internal/persistence/postgres": [
+      "internal/domain/agentruns",
+      "internal/domain/agents",
+      "internal/domain/artifacts",
+      "internal/domain/attachments",
+      "internal/domain/attributes",
+      "internal/domain/automations",
+      "internal/domain/baselines",
+      "internal/domain/chatter",
+      "internal/domain/embeddings",
+      "internal/domain/events",
+      "internal/domain/evidence",
+      "internal/domain/exports",
+      "internal/domain/guided",
+      "internal/domain/hostedworkers",
+      "internal/domain/interviews",
+      "internal/domain/invitations",
+      "internal/domain/links",
+      "internal/domain/members",
+      "internal/domain/notifications",
+      "internal/domain/orgs",
+      "internal/domain/products",
+      "internal/domain/projects",
+      "internal/domain/proposals",
+      "internal/domain/providers",
+      "internal/domain/pushsubs",
+      "internal/domain/repoconns",
+      "internal/domain/runnersessions",
+      "internal/domain/settings",
+      "internal/domain/sharedproducts",
+      "internal/domain/sharelinks",
+      "internal/domain/teams",
+      "internal/domain/templates",
+      "internal/domain/users",
+      "internal/domain/vv",
+      "internal/domain/workerkeys",
+      "internal/domain/workitems"
+    ],
+    "internal/runner": [
+      "internal/domain/agentruns",
+      "internal/domain/agents",
+      "internal/domain/providers",
+      "internal/domain/repoconns",
+      "internal/domain/runnersessions",
+      "internal/mcp"
+    ],
+    "internal/scheduler": [
+      "internal/domain/agentruns",
+      "internal/domain/automations",
+      "internal/domain/teams"
+    ],
+    "internal/seeds": [
+      "internal/domain/agents",
+      "internal/domain/sharedproducts",
+      "internal/domain/teams",
+      "internal/mcp"
+    ]
+  },
+  "layering_exceptions": [],
+  "client_domain_deps": {
+    "cmd/agentd": [
+      "internal/domain/agentruns",
+      "internal/domain/agents",
+      "internal/domain/artifacts",
+      "internal/domain/events",
+      "internal/domain/providers",
+      "internal/domain/repoconns",
+      "internal/domain/runnersessions",
+      "internal/domain/users"
+    ],
+    "cmd/openv-connector": [],
+    "cmd/openv-mcp": [
+      "internal/domain/artifacts"
+    ],
+    "cmd/openv-vapid": []
+  },
+  "domain_reflect": [
+    "internal/domain/links"
+  ],
+  "file_lines": {
+    "cmd/server/main.go": 1081,
+    "internal/api/agent_handlers.go": 2420,
+    "internal/api/handlers.go": 3519,
+    "internal/api/org_handlers.go": 1552,
+    "internal/api/suite_handlers.go": 2245,
+    "internal/domain/agentruns/agentruns.go": 1346,
+    "internal/domain/exports/reqif.go": 958,
+    "internal/domain/reports/docx_report.go": 1193,
+    "internal/domain/reports/pdf_report.go": 1463,
+    "internal/domain/reports/report.go": 1104,
+    "internal/domain/users/users.go": 1016,
+    "internal/mcp/tools.go": 1281,
+    "internal/persistence/postgres/migrations.go": 1950
+  },
+  "func_lines": {
+    "cmd/server:main": 938,
+    "internal/api:Handler.CreateLink": 115,
+    "internal/api:Handler.OIDCCallback": 115,
+    "internal/api:Handler.UpdateArtifact": 168,
+    "internal/api:Handler.buildChangesList": 114,
+    "internal/api:Handler.processManagedLinkChanges": 143,
+    "internal/api:Handler.registerAgentRoutes": 112,
+    "internal/api:buildAIMap": 132,
+    "internal/api:buildGuidedCopilotPrompt": 140,
+    "internal/domain/artifacts:DefaultService.UpdateArtifact": 115,
+    "internal/domain/exports:DefaultService.importArtifactsAndLinks": 143,
+    "internal/domain/exports:buildReqIF": 394,
+    "internal/domain/exports:parseReqIF": 217,
+    "internal/domain/reports:buildReportModel": 161,
+    "internal/domain/reports:buildVVReportPDF": 234,
+    "internal/domain/reports:pdfRenderer.table": 129,
+    "internal/domain/reports:pdfRenderer.testResults": 112,
+    "internal/domain/reports:pdfRenderer.vvSummary": 147,
+    "internal/domain/templates:buildGuidedProductSkeletonSnapshot": 125,
+    "internal/mcp:Tools": 789,
+    "internal/mcp:buildContextBundle": 151,
+    "internal/mcp:serve": 113,
+    "internal/persistence/postgres:BackfillOrgs": 146,
+    "internal/persistence/postgres:InitAgentSchema": 397,
+    "internal/persistence/postgres:InitOrgSchema": 261,
+    "internal/persistence/postgres:InitSchema": 260,
+    "internal/persistence/postgres:InitSuiteSchema": 257,
+    "internal/runner:Worker.execute": 287,
+    "internal/runner:Worker.handleLogin": 159,
+    "internal/runner:Worker.handlePTYLogin": 157,
+    "internal/runner:startProc": 184,
+    "internal/seeds:EnsureOrgDefaults": 117,
+    "internal/seeds:builtinProducts": 136,
+    "internal/seeds:defaultAgents": 144
+  },
+  "side_effect_vars": [
+    "internal/domain/quality:conventionPatterns",
+    "internal/domain/quality:placeholderRe",
+    "internal/domain/quality:vagueQuantifierRe",
+    "internal/domain/reports/doc:parser",
+    "internal/domain/reports:linkTypeLabels"
+  ],
+  "counts": {
+    "handle_func_outside_registrars": 53,
+    "handler_literals_in_tests": 137,
+    "invalid_request_body_literals": 106,
+    "raw_json_encodes": 249,
+    "require_outside_authz": 10
+  },
+  "env_reads": {
+    "internal/api": 10,
+    "internal/domain/embeddings": 3,
+    "internal/domain/reports": 1,
+    "internal/domain/users": 1,
+    "internal/hosting": 4,
+    "internal/mcp": 1,
+    "internal/notify": 10,
+    "internal/runner": 14
+  }
+}
