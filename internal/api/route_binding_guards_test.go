@@ -146,9 +146,11 @@ func checkGuardHelpers(t *testing.T, src *apiSource) {
 //   - an operand of a return, which hands the result to the caller, as the
 //     helpers in authz.go do;
 //   - the sole value of an assignment or var declaration that names the
-//     helper's last result, the one that says whether to go on, as in
-//     caller := h.requirePlatformAdmin(w, r) or
-//     _, ok := h.requireHumanUser(w, r).
+//     helper's last result, the one that says whether to go on, when that
+//     name is then tested by an if of the first shape: the if the
+//     assignment opens, or the statement right after it, as in
+//     caller := h.requirePlatformAdmin(w, r); if caller == nil { return } or
+//     if _, ok := h.requireHumanUser(w, r); !ok { return }.
 func checkGuardResultsUsed(t *testing.T, src *apiSource) {
 	t.Helper()
 	type use struct {
@@ -215,13 +217,79 @@ func guardResultUsed(call *ast.CallExpr, decl *ast.FuncDecl, parents []ast.Node)
 	case *ast.ReturnStmt:
 		return true
 	case *ast.AssignStmt:
-		return len(p.Rhs) == 1 && p.Rhs[0] == call && namesLastResult(p.Lhs, decl)
+		name := lastResultName(p.Lhs, decl)
+		if len(p.Rhs) != 1 || p.Rhs[0] != call || name == "" || i == 0 {
+			return false
+		}
+		if opened, ok := parents[i-1].(*ast.IfStmt); ok && opened.Init == ast.Stmt(p) {
+			return stopsOn(opened, name)
+		}
+		return stopsOn(nextStmt(parents[i-1], p), name)
 	case *ast.ValueSpec:
 		lhs := make([]ast.Expr, len(p.Names))
 		for k, id := range p.Names {
 			lhs[k] = id
 		}
-		return len(p.Values) == 1 && p.Values[0] == call && namesLastResult(lhs, decl)
+		name := lastResultName(lhs, decl)
+		// A var declaration sits in a GenDecl in a DeclStmt in a block.
+		if len(p.Values) != 1 || p.Values[0] != call || name == "" || i < 3 {
+			return false
+		}
+		stmt, ok := parents[i-2].(*ast.DeclStmt)
+		return ok && stopsOn(nextStmt(parents[i-3], stmt), name)
+	}
+	return false
+}
+
+// nextStmt returns the statement after stmt in the statement list of block
+// (a block or a case clause), or nil.
+func nextStmt(block ast.Node, stmt ast.Stmt) ast.Stmt {
+	var list []ast.Stmt
+	switch b := block.(type) {
+	case *ast.BlockStmt:
+		list = b.List
+	case *ast.CaseClause:
+		list = b.Body
+	case *ast.CommClause:
+		list = b.Body
+	}
+	for k, s := range list {
+		if s == stmt && k+1 < len(list) {
+			return list[k+1]
+		}
+	}
+	return nil
+}
+
+// stopsOn reports whether stmt is an if whose condition tests name, seen
+// through the operators keepsGuardResult allows, and whose body ends in a
+// return.
+func stopsOn(stmt ast.Stmt, name string) bool {
+	ifs, ok := stmt.(*ast.IfStmt)
+	if !ok || len(ifs.Body.List) == 0 || !testsName(ifs.Cond, name) {
+		return false
+	}
+	_, returns := ifs.Body.List[len(ifs.Body.List)-1].(*ast.ReturnStmt)
+	return returns
+}
+
+// testsName reports whether cond decides on the variable name through only
+// !, parentheses, || and &&, and a comparison with nil.
+func testsName(cond ast.Expr, name string) bool {
+	switch e := cond.(type) {
+	case *ast.Ident:
+		return e.Name == name
+	case *ast.ParenExpr:
+		return testsName(e.X, name)
+	case *ast.UnaryExpr:
+		return e.Op == token.NOT && testsName(e.X, name)
+	case *ast.BinaryExpr:
+		switch e.Op {
+		case token.LOR, token.LAND:
+			return testsName(e.X, name) || testsName(e.Y, name)
+		case token.EQL, token.NEQ:
+			return isIdent(e.Y, "nil") && testsName(e.X, name) || isIdent(e.X, "nil") && testsName(e.Y, name)
+		}
 	}
 	return false
 }
@@ -246,9 +314,9 @@ func keepsGuardResult(n ast.Node) bool {
 	return false
 }
 
-// namesLastResult reports whether lhs, assigned from a call to decl, gives
-// decl's last result a name other than "_".
-func namesLastResult(lhs []ast.Expr, decl *ast.FuncDecl) bool {
+// lastResultName returns the name lhs, assigned from a call to decl, gives
+// decl's last result, or "" when it gives it none or "_".
+func lastResultName(lhs []ast.Expr, decl *ast.FuncDecl) string {
 	results := 0
 	if decl.Type.Results != nil {
 		for _, field := range decl.Type.Results.List {
@@ -256,10 +324,12 @@ func namesLastResult(lhs []ast.Expr, decl *ast.FuncDecl) bool {
 		}
 	}
 	if results == 0 || results != len(lhs) {
-		return false
+		return ""
 	}
-	id, ok := lhs[results-1].(*ast.Ident)
-	return ok && id.Name != "_"
+	if id, ok := lhs[results-1].(*ast.Ident); ok && id.Name != "_" {
+		return id.Name
+	}
+	return ""
 }
 
 // guardsOf lists the canonical kinds of the guards a handler visibly calls,
