@@ -1,0 +1,289 @@
+{
+  "method": "Client.Claim",
+  "cases": [
+    {
+      "name": "a run for a normal slot, on the runner's own CLI sign-in",
+      "calls": [
+        {
+          "call": "Claim(\"<worker-id>\", [\"claude-code\" \"codex-cli\"], 0, false)",
+          "http": [
+            {
+              "request": {
+                "method": "POST",
+                "path": "/api/v1/agent-runs/claim",
+                "route": "POST /api/v1/agent-runs/claim",
+                "authorization": "Bearer <worker-key>",
+                "content_type": "application/json",
+                "body": "{\"hosted\":false,\"min_priority\":0,\"providers\":[\"claude-code\",\"codex-cli\"],\"worker_id\":\"<worker-id>\"}"
+              },
+              "response": {
+                "status": 200,
+                "body": "{\"agent\":{\"id\":\"<agent-id>\",\"org_id\":\"<org-id>\",\"slug\":\"test-drafter\",\"name\":\"Test drafter\",\"description\":\"Drafts test cases from requirements.\",\"provider\":\"claude-code\",\"model\":\"claude-sonnet-4-5\",\"effort\":\"medium\",\"allowed_tools\":[\"mcp__openv__get_artifact\",\"mcp__openv__create_artifact\"],\"write_mode\":\"proposal\",\"repo_access\":false,\"max_turns\":30,\"timeout_seconds\":1800,\"config\":{},\"system_prompt\":\"You draft test cases.\",\"locked\":false,\"file_path\":\"agents/test-drafter.md\",\"content_hash\":\"9b1c2d3e4f5a\",\"created_at\":\"<time>\",\"updated_at\":\"<time>\"},\"auth\":{\"mode\":\"user-account\"},\"run\":{\"id\":\"<run-id>\",\"org_id\":\"<org-id>\",\"agent_id\":\"<agent-id>\",\"project_id\":\"<project-id>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Draft test cases for REQ-12.\",\"worker_id\":\"<worker-id>\",\"heartbeat_at\":\"<time>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":null,\"launched_by\":\"<user-id>\",\"created_at\":\"<time>\",\"agent_content_hash\":\"9b1c2d3e4f5a\",\"agent_model\":\"claude-sonnet-4-5\",\"agent_effort\":\"medium\"},\"run_token\":\"<run-token>\"}\n"
+              }
+            }
+          ],
+          "returned": {
+            "run": {
+              "id": "<run-id>",
+              "org_id": "<org-id>",
+              "agent_id": "<agent-id>",
+              "project_id": "<project-id>",
+              "status": "claimed",
+              "cancel_requested": false,
+              "priority": 0,
+              "prompt": "Draft test cases for REQ-12.",
+              "worker_id": "<worker-id>",
+              "heartbeat_at": "<time>",
+              "final_text": "",
+              "error": "",
+              "attempt_count": 1,
+              "max_attempts": 3,
+              "tokens_in": 0,
+              "tokens_out": 0,
+              "artifacts_touched": null,
+              "launched_by": "<user-id>",
+              "created_at": "<time>",
+              "agent_content_hash": "9b1c2d3e4f5a",
+              "agent_model": "claude-sonnet-4-5",
+              "agent_effort": "medium"
+            },
+            "agent": {
+              "id": "<agent-id>",
+              "org_id": "<org-id>",
+              "slug": "test-drafter",
+              "name": "Test drafter",
+              "description": "Drafts test cases from requirements.",
+              "provider": "claude-code",
+              "model": "claude-sonnet-4-5",
+              "effort": "medium",
+              "allowed_tools": [
+                "mcp__openv__get_artifact",
+                "mcp__openv__create_artifact"
+              ],
+              "write_mode": "proposal",
+              "repo_access": false,
+              "max_turns": 30,
+              "timeout_seconds": 1800,
+              "config": {},
+              "system_prompt": "You draft test cases.",
+              "locked": false,
+              "file_path": "agents/test-drafter.md",
+              "content_hash": "9b1c2d3e4f5a",
+              "created_at": "<time>",
+              "updated_at": "<time>"
+            },
+            "run_token": "<run-token>",
+            "auth": {
+              "mode": "user-account"
+            }
+          },
+          "error": null
+        }
+      ]
+    },
+    {
+      "name": "a project on api-key auth names the variable that holds the key",
+      "calls": [
+        {
+          "call": "Claim(\"<worker-id>\", [\"claude-code\"], 0, false)",
+          "http": [
+            {
+              "request": {
+                "method": "POST",
+                "path": "/api/v1/agent-runs/claim",
+                "route": "POST /api/v1/agent-runs/claim",
+                "authorization": "Bearer <worker-key>",
+                "content_type": "application/json",
+                "body": "{\"hosted\":false,\"min_priority\":0,\"providers\":[\"claude-code\"],\"worker_id\":\"<worker-id>\"}"
+              },
+              "response": {
+                "status": 200,
+                "body": "{\"agent\":{\"id\":\"<agent-id>\",\"org_id\":\"<org-id>\",\"slug\":\"test-drafter\",\"name\":\"Test drafter\",\"description\":\"Drafts test cases from requirements.\",\"provider\":\"claude-code\",\"model\":\"claude-sonnet-4-5\",\"effort\":\"medium\",\"allowed_tools\":[\"mcp__openv__get_artifact\",\"mcp__openv__create_artifact\"],\"write_mode\":\"proposal\",\"repo_access\":false,\"max_turns\":30,\"timeout_seconds\":1800,\"config\":{},\"system_prompt\":\"You draft test cases.\",\"locked\":false,\"file_path\":\"agents/test-drafter.md\",\"content_hash\":\"9b1c2d3e4f5a\",\"created_at\":\"<time>\",\"updated_at\":\"<time>\"},\"auth\":{\"api_key_env\":\"ANTHROPIC_API_KEY\",\"mode\":\"api-key\"},\"run\":{\"id\":\"<run-id>\",\"org_id\":\"<org-id>\",\"agent_id\":\"<agent-id>\",\"project_id\":\"<project-id>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Draft test cases for REQ-12.\",\"worker_id\":\"<worker-id>\",\"heartbeat_at\":\"<time>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":null,\"launched_by\":\"<user-id>\",\"created_at\":\"<time>\",\"agent_content_hash\":\"9b1c2d3e4f5a\",\"agent_model\":\"claude-sonnet-4-5\",\"agent_effort\":\"medium\"},\"run_token\":\"<run-token>\"}\n"
+              }
+            }
+          ],
+          "returned": {
+            "run": {
+              "id": "<run-id>",
+              "org_id": "<org-id>",
+              "agent_id": "<agent-id>",
+              "project_id": "<project-id>",
+              "status": "claimed",
+              "cancel_requested": false,
+              "priority": 0,
+              "prompt": "Draft test cases for REQ-12.",
+              "worker_id": "<worker-id>",
+              "heartbeat_at": "<time>",
+              "final_text": "",
+              "error": "",
+              "attempt_count": 1,
+              "max_attempts": 3,
+              "tokens_in": 0,
+              "tokens_out": 0,
+              "artifacts_touched": null,
+              "launched_by": "<user-id>",
+              "created_at": "<time>",
+              "agent_content_hash": "9b1c2d3e4f5a",
+              "agent_model": "claude-sonnet-4-5",
+              "agent_effort": "medium"
+            },
+            "agent": {
+              "id": "<agent-id>",
+              "org_id": "<org-id>",
+              "slug": "test-drafter",
+              "name": "Test drafter",
+              "description": "Drafts test cases from requirements.",
+              "provider": "claude-code",
+              "model": "claude-sonnet-4-5",
+              "effort": "medium",
+              "allowed_tools": [
+                "mcp__openv__get_artifact",
+                "mcp__openv__create_artifact"
+              ],
+              "write_mode": "proposal",
+              "repo_access": false,
+              "max_turns": 30,
+              "timeout_seconds": 1800,
+              "config": {},
+              "system_prompt": "You draft test cases.",
+              "locked": false,
+              "file_path": "agents/test-drafter.md",
+              "content_hash": "9b1c2d3e4f5a",
+              "created_at": "<time>",
+              "updated_at": "<time>"
+            },
+            "run_token": "<run-token>",
+            "auth": {
+              "mode": "api-key",
+              "api_key_env": "ANTHROPIC_API_KEY"
+            }
+          },
+          "error": null
+        }
+      ]
+    },
+    {
+      "name": "\"auth\":null decodes to no auth; a hosted runner's child slot",
+      "calls": [
+        {
+          "call": "Claim(\"<worker-id>\", [\"claude-code\"], 10, true)",
+          "http": [
+            {
+              "request": {
+                "method": "POST",
+                "path": "/api/v1/agent-runs/claim",
+                "route": "POST /api/v1/agent-runs/claim",
+                "authorization": "Bearer <worker-key>",
+                "content_type": "application/json",
+                "body": "{\"hosted\":true,\"min_priority\":10,\"providers\":[\"claude-code\"],\"worker_id\":\"<worker-id>\"}"
+              },
+              "response": {
+                "status": 200,
+                "body": "{\"agent\":{\"id\":\"<agent-id>\",\"org_id\":\"<org-id>\",\"slug\":\"test-drafter\",\"name\":\"Test drafter\",\"description\":\"Drafts test cases from requirements.\",\"provider\":\"claude-code\",\"model\":\"claude-sonnet-4-5\",\"effort\":\"medium\",\"allowed_tools\":[\"mcp__openv__get_artifact\",\"mcp__openv__create_artifact\"],\"write_mode\":\"proposal\",\"repo_access\":false,\"max_turns\":30,\"timeout_seconds\":1800,\"config\":{},\"system_prompt\":\"You draft test cases.\",\"locked\":false,\"file_path\":\"agents/test-drafter.md\",\"content_hash\":\"9b1c2d3e4f5a\",\"created_at\":\"<time>\",\"updated_at\":\"<time>\"},\"auth\":null,\"run\":{\"id\":\"<run-id>\",\"org_id\":\"<org-id>\",\"agent_id\":\"<agent-id>\",\"interview_session_id\":\"<interview-id>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":20,\"prompt\":\"Interviewee: the seal leaks after a week.\",\"worker_id\":\"<worker-id>\",\"heartbeat_at\":\"<time>\",\"final_text\":\"\",\"error\":\"\",\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":null,\"created_at\":\"<time>\"},\"run_token\":\"<run-token>\"}\n"
+              }
+            }
+          ],
+          "returned": {
+            "run": {
+              "id": "<run-id>",
+              "org_id": "<org-id>",
+              "agent_id": "<agent-id>",
+              "interview_session_id": "<interview-id>",
+              "status": "claimed",
+              "cancel_requested": false,
+              "priority": 20,
+              "prompt": "Interviewee: the seal leaks after a week.",
+              "worker_id": "<worker-id>",
+              "heartbeat_at": "<time>",
+              "final_text": "",
+              "error": "",
+              "tokens_in": 0,
+              "tokens_out": 0,
+              "artifacts_touched": null,
+              "created_at": "<time>"
+            },
+            "agent": {
+              "id": "<agent-id>",
+              "org_id": "<org-id>",
+              "slug": "test-drafter",
+              "name": "Test drafter",
+              "description": "Drafts test cases from requirements.",
+              "provider": "claude-code",
+              "model": "claude-sonnet-4-5",
+              "effort": "medium",
+              "allowed_tools": [
+                "mcp__openv__get_artifact",
+                "mcp__openv__create_artifact"
+              ],
+              "write_mode": "proposal",
+              "repo_access": false,
+              "max_turns": 30,
+              "timeout_seconds": 1800,
+              "config": {},
+              "system_prompt": "You draft test cases.",
+              "locked": false,
+              "file_path": "agents/test-drafter.md",
+              "content_hash": "9b1c2d3e4f5a",
+              "created_at": "<time>",
+              "updated_at": "<time>"
+            },
+            "run_token": "<run-token>"
+          },
+          "error": null
+        }
+      ]
+    },
+    {
+      "name": "an empty queue answers 204: no run and no error; no providers is sent as null",
+      "calls": [
+        {
+          "call": "Claim(\"<worker-id>\", nil, 0, false)",
+          "http": [
+            {
+              "request": {
+                "method": "POST",
+                "path": "/api/v1/agent-runs/claim",
+                "route": "POST /api/v1/agent-runs/claim",
+                "authorization": "Bearer <worker-key>",
+                "content_type": "application/json",
+                "body": "{\"hosted\":false,\"min_priority\":0,\"providers\":null,\"worker_id\":\"<worker-id>\"}"
+              },
+              "response": {
+                "status": 204,
+                "body": ""
+              }
+            }
+          ],
+          "returned": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "name": "a server error is returned at once, not retried",
+      "calls": [
+        {
+          "call": "Claim(\"<worker-id>\", [\"claude-code\"], 0, false)",
+          "http": [
+            {
+              "request": {
+                "method": "POST",
+                "path": "/api/v1/agent-runs/claim",
+                "route": "POST /api/v1/agent-runs/claim",
+                "authorization": "Bearer <worker-key>",
+                "content_type": "application/json",
+                "body": "{\"hosted\":false,\"min_priority\":0,\"providers\":[\"claude-code\"],\"worker_id\":\"<worker-id>\"}"
+              },
+              "response": {
+                "status": 503,
+                "body": "{\"error\":\"failed to claim a run\"}\n"
+              }
+            }
+          ],
+          "returned": null,
+          "error": "api returned 503: {\"error\":\"failed to claim a run\"}"
+        }
+      ]
+    }
+  ]
+}

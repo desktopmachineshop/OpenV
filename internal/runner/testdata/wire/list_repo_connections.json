@@ -1,0 +1,95 @@
+{
+  "method": "Client.ListRepoConnections",
+  "cases": [
+    {
+      "name": "a project's connections, with the caller's checkout path",
+      "calls": [
+        {
+          "call": "ListRepoConnections(\"<project-id>\")",
+          "http": [
+            {
+              "request": {
+                "method": "GET",
+                "path": "/api/v1/projects/<project-id>/repo-connections",
+                "route": "GET /api/v1/projects/{id}/repo-connections",
+                "authorization": "Bearer <worker-key>",
+                "content_type": "",
+                "body": ""
+              },
+              "response": {
+                "status": 200,
+                "body": "[{\"id\":\"<repo-id>\",\"project_id\":\"<project-id>\",\"name\":\"firmware\",\"remote_url\":\"git@github.com:acme/firmware.git\",\"default_branch\":\"main\",\"credential_strategy\":\"host\",\"created_at\":\"<time>\",\"updated_at\":\"<time>\",\"my_local_path\":\"/home/dev/firmware\"}]\n"
+              }
+            }
+          ],
+          "returned": [
+            {
+              "id": "<repo-id>",
+              "project_id": "<project-id>",
+              "name": "firmware",
+              "remote_url": "git@github.com:acme/firmware.git",
+              "default_branch": "main",
+              "credential_strategy": "host",
+              "created_at": "<time>",
+              "updated_at": "<time>",
+              "my_local_path": "/home/dev/firmware"
+            }
+          ],
+          "error": null
+        }
+      ]
+    },
+    {
+      "name": "null decodes to no connections and no error",
+      "calls": [
+        {
+          "call": "ListRepoConnections(\"<project-id>\")",
+          "http": [
+            {
+              "request": {
+                "method": "GET",
+                "path": "/api/v1/projects/<project-id>/repo-connections",
+                "route": "GET /api/v1/projects/{id}/repo-connections",
+                "authorization": "Bearer <worker-key>",
+                "content_type": "",
+                "body": ""
+              },
+              "response": {
+                "status": 200,
+                "body": "null\n"
+              }
+            }
+          ],
+          "returned": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "name": "a server error is returned at once, not retried",
+      "calls": [
+        {
+          "call": "ListRepoConnections(\"<project-id>\")",
+          "http": [
+            {
+              "request": {
+                "method": "GET",
+                "path": "/api/v1/projects/<project-id>/repo-connections",
+                "route": "GET /api/v1/projects/{id}/repo-connections",
+                "authorization": "Bearer <worker-key>",
+                "content_type": "",
+                "body": ""
+              },
+              "response": {
+                "status": 500,
+                "body": "{\"error\":\"failed to list repo connections\"}\n"
+              }
+            }
+          ],
+          "returned": null,
+          "error": "api returned 500: {\"error\":\"failed to list repo connections\"}"
+        }
+      ]
+    }
+  ]
+}
