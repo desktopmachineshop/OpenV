@@ -14,7 +14,12 @@ GOVULNCHECK_VERSION := v1.8.0
 # .github/workflows/ci.yml so `make secrets` and CI scan with the same tool.
 GITLEAKS_VERSION := 8.21.2
 
-.PHONY: build up down prod-up prod-down worker worker-unix worker-image runner-pool-up runner-pool-down connector-dist mcp vapid-keys test vuln secrets backup restore
+# What `make check` and `make check-fast` compare the working tree with: the
+# release-notes check wants a new bullet relative to it, and check-fast tests
+# only the Go packages changed since its merge base with HEAD.
+BASE_REF ?= origin/master
+
+.PHONY: build up down prod-up prod-down worker worker-unix worker-image runner-pool-up runner-pool-down connector-dist mcp vapid-keys test check check-fast vuln secrets backup restore
 
 ## Build all Docker images.
 build:
@@ -152,3 +157,67 @@ connector-dist:
 ## Run the Go test suite in Docker.
 test:
 	docker run --rm -v "$(CURDIR):/app" -w /app $(GO_IMAGE) sh -c 'go test ./...'
+
+## Run the gates CI runs on a pull request (.github/workflows/ci.yml), in its
+## order, before pushing: the backend job (gofmt over ./cmd ./internal; go vet
+## and go test over the root, ./cmd/... and ./internal/...), the release-notes
+## job, and the frontend job (tsc, lint, vitest, vite build); then the tests of
+## the refactor tools that live outside Go (frontend/scripts, scripts/refactor).
+## The Postgres-backed Go tests run only when OPENV_TEST_DATABASE_URL points
+## at a database, as it does in CI; they skip otherwise. The release-notes job
+## requires a new bullet relative to BASE_REF; set NO_RELEASE_NOTES=1 for a
+## pull request that carries the no-release-notes label. Needs a host Go
+## toolchain, Node with `npm ci` run in frontend/, Python 3 and git; no Docker.
+## The Docker builds, e2e and security scans stay in CI (`make vuln` and
+## `make secrets` run the last two locally).
+check:
+	@unformatted="$$(gofmt -l ./cmd ./internal)"; \
+	if [ -n "$$unformatted" ]; then \
+		echo "The following files are not gofmt-formatted:"; echo "$$unformatted"; \
+		echo "Run 'gofmt -w ./cmd ./internal' to fix."; exit 1; \
+	fi
+	go vet . ./cmd/... ./internal/...
+	go test . ./cmd/... ./internal/...
+	python3 -m unittest scripts/release_notes_test.py
+	python3 scripts/release_notes.py check RELEASE_NOTES.md
+	@if [ -n "$(NO_RELEASE_NOTES)" ]; then \
+		echo "NO_RELEASE_NOTES is set: not requiring a release note (the no-release-notes label)"; \
+	else \
+		base_notes="$$(mktemp)"; \
+		git show "$(BASE_REF):RELEASE_NOTES.md" > "$$base_notes" 2>/dev/null || : > "$$base_notes"; \
+		python3 scripts/release_notes.py check-pr --base "$$base_notes" RELEASE_NOTES.md; rc=$$?; \
+		rm -f "$$base_notes"; exit $$rc; \
+	fi
+	cd frontend && npx tsc --noEmit
+	cd frontend && npm run lint
+	cd frontend && npm test
+	cd frontend && npm run build
+	cd frontend && node --test 'scripts/*.test.mjs'
+	python3 -m unittest scripts/refactor/classify_commits_test.py
+
+## A quick gate to run while working, well under a minute and without Docker:
+## gofmt over ./cmd ./internal, go vet over the module, go test -short on the
+## Go packages changed (committed or not) since the merge base with BASE_REF
+## (a change under a package's testdata counts for that package), and the
+## frontend type check. `make check` is still the gate before pushing.
+check-fast:
+	@unformatted="$$(gofmt -l ./cmd ./internal)"; \
+	if [ -n "$$unformatted" ]; then \
+		echo "The following files are not gofmt-formatted:"; echo "$$unformatted"; \
+		echo "Run 'gofmt -w ./cmd ./internal' to fix."; exit 1; \
+	fi
+	go vet . ./cmd/... ./internal/...
+	@base="$$(git merge-base "$(BASE_REF)" HEAD 2>/dev/null || echo HEAD)"; \
+	pkgs="$$( { git diff --name-only "$$base" -- '*.go' cmd internal; \
+		git ls-files --others --exclude-standard -- '*.go' cmd internal; } \
+		| while read -r f; do \
+			case "$$f" in */testdata/*) d="$${f%%/testdata/*}" ;; */*) d="$${f%/*}" ;; *) d=. ;; esac; \
+			case "$$d" in .|cmd/*|internal/*) ;; *) continue ;; esac; \
+			if ls "$$d"/*.go >/dev/null 2>&1; then [ "$$d" = . ] && echo . || echo "./$$d"; fi; \
+		done | sort -u)"; \
+	if [ -z "$$pkgs" ]; then \
+		echo "go test -short: no Go package changed since $$base"; \
+	else \
+		echo "go test -short" $$pkgs; go test -short $$pkgs; \
+	fi
+	cd frontend && npx tsc --noEmit
