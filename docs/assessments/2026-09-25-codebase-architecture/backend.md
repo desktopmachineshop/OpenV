@@ -99,7 +99,7 @@ between the layers are in §4.2.
 | Application services | `notify` 2,247; `billing` 1,286 and `billing/stripe` 526; `seeds` 771; `orchestration` 543; `hosting` 367; `metrics` 284; `scheduler` 170; `automation` 159 | 6,353 | Background delivery, automations, billing, provisioning | §4.6 |
 | Event bus | `internal/events` | 106 | Persists every domain event, then dispatches it in process | §4.6, §5.9 |
 | Client libraries | `internal/runner` 4,979; `internal/mcp` 1,355 | 6,334 | Code behind `cmd/agentd` and `cmd/openv-mcp` | §4.7 |
-| Other binaries | `cmd/agentd` 149; `cmd/openv-mcp` 41; `cmd/openv-connector` 708 in 8 files; `cmd/openv-vapid` 36 | 934 | `main` packages; the connector is a stand-alone installer | §2, §4.7 |
+| Other binaries | `cmd/agentd` 149; `cmd/openv-mcp` 41; `cmd/openv-connector` 708 in 8 files; `cmd/openv-vapid` 36 | 934 | `main` packages; the connector is a stand-alone installer | §1.4, §4.7 |
 
 Three name collisions trip newcomers. `internal/events` is the bus
 implementation and `internal/domain/events` holds the `Event` type and the
@@ -122,9 +122,11 @@ reflection. The file is 983 lines. Five small helpers sit around one
 (:82-89), `initLogging` (:94-110), `fatal` (:113-116) and
 `maxRequestBodyBytes` (:975-983). Inside `main()` there are 38
 `postgres.New*Repository` calls, 40 domain-service constructor calls, about
-15 notify and infrastructure components, 27 plain setter calls plus 14
-fluent notify setters, 4 `go` statements, 7 `Start(...)` calls, 10 `fatal`
-exits and reads of 42 distinct environment variables (Appendix A).
+15 notify and infrastructure components, 27 plain setter calls (4 of them
+set the `orgs` package globals, leaving the 23 plain post-construction
+setters that §9.3.2 counts) plus 14 fluent notify setters, 4 `go`
+statements, 7 `Start(...)` calls, 10 `fatal` exits and reads of 42
+distinct environment variables (Appendix A).
 
 The order of the stages is the order of the source lines, and parts of it
 are load-bearing (see the editing notes). The flowchart follows the file
@@ -212,7 +214,7 @@ else is attached afterwards. The table lists the setter calls in `main()`.
 | worker keys | `SetPairingRepository(workerKeyRepo)` (301) | Passes the same repository a second time |
 | exports | `SetProductService` (373), `SetAttributeService` (397) | Construction order only: exports is built at :259, products at :372 |
 | downloads | `SetEvidenceSource` (401), `SetWorkspaceSource` (412) | Closures over vv, projects and orgs |
-| agent runs | `SetRoutingPolicy` (452), `SetRetryPolicy` (477), `SetBudgetGuard` (657) | Policy closures; each setter is documented "call during wiring only", and `AddSubscriber` also as not concurrency-safe (`internal/domain/agentruns/agentruns.go:537-564`) |
+| agent runs | `SetRoutingPolicy` (452), `SetRetryPolicy` (477), `SetBudgetGuard` (657) | Policy closures; each setter is documented "call during wiring only", and `AddSubscriber` also as not concurrency-safe (`internal/domain/agentruns/agentruns.go:537-566`) |
 | crews | `teamService.SetMemberValidator` (484) | Closure over `orgService.IsMember` |
 | users | `SetEmailVerificationPolicy` (546), `SetSessionPolicy` (550) | The same policies also go to the handler and the auth middleware |
 | billing | `SetUsers`, `SetPortalConfig`, `SetTrialDays`, `SetMaxSeats` (786-789), `SetReturnURL` (791) | Optional configuration |
@@ -703,7 +705,8 @@ overlap: `/api/v1/agent-runs/delegate/{id}` and
 `GET /api/v1/agent-runs/delegate/tree` reaches `DelegateStatus` only because
 the delegate route is registered first. File names do not predict where a
 route lives: `/api/v1/projects/*` routes come from eight files, and
-`registerAgentRoutes` alone covers about sixteen resource families (§9.2).
+`registerAgentRoutes` alone registers routes under sixteen top-level
+`/api/v1/` prefixes (§9.3.1).
 
 #### Handler, HandlerDeps and how handlers reach services
 
@@ -784,7 +787,7 @@ Other guards live in feature files: `requireUser` and `requireWorker`
   Success responses have no single writer: 249 `json.NewEncoder(w).Encode`
   calls against 92 explicit `Content-Type: application/json` headers, so
   many endpoints are served as `text/plain` or, when gzipped, with no
-  content type (§9.3).
+  content type (§9.3.4).
 - **Plan read-only gate** (`limits.go`): `requireWritable` (:131) refuses
   writes to a workspace over its plan, deciding with `orgs.OverPlan` on usage
   counts the API gathers itself; a workspace that cannot be read is treated
@@ -1085,8 +1088,8 @@ paths are orchestrated in handlers.
 | Artifact type | nowhere on write | `ValidType` (`types.go:50`) is called only by review rounds (`review_round.go:96`) and as the attributes `TypeValidator` |
 | Attribute values against definitions | `attributes.ValidateAttributes` (`attributes.go:311`) | Invoked from the API before the service call (`handlers.go:572`, :780-789) |
 | Link-type rules | `links.ValidateLinkType` (`validation.go:108`) | Invoked from `CreateLink`, the managed link edits in `UpdateArtifact` and the proposal appliers, which enforce it differently |
-| Link snapshots, auto-versioning, change-summary notes | `internal/api/handlers.go:2866-3194` | Not in any domain package (§9.3) |
-| V&V coverage, matrix, gaps, impact | pure functions in `vv/coverage.go` and `vv/impact.go` | The child-project flow-down recursion (a parent project's coverage also counting its child projects) is in `internal/api/suite_handlers.go:553-583` |
+| Link snapshots, auto-versioning, change-summary notes | `internal/api/handlers.go:2866-3194` | Not in any domain package (§9.3.3) |
+| V&V coverage, matrix, gaps, impact | pure functions in `vv/coverage.go` and `vv/impact.go` | The child-project flow-down recursion (a parent project's coverage also counting its child projects) is in `internal/api/suite_handlers.go:553-584` |
 | Evidence bounds, project hierarchy, crew graph, shared-product sanitising | `evidence.Validate` (`evidence.go:239`), `projects` `checkParent` (`project.go:185`), `teams.ValidateGraph` (`teams.go:209`), `sharedproducts.Sanitize` (`sharedproducts.go:376`) | Validated inside the domain package |
 | Plan ceilings and over-plan decision | `orgs.OverPlan` (`limits.go:450`), `orgs.CheckCeiling` and `CheckFlag` (`limiterror.go:142`, :67) | The usage counts they judge are gathered in `internal/api/limits.go` |
 | Release-channel feature gates | `release.FeaturesFor` (`features.go:141`) | Preview selection in `internal/api/feature_handlers.go:44-71` |
@@ -1399,7 +1402,7 @@ ORM.
 | Writes to missing rows | Most `UPDATE`/`DELETE` succeed silently; 30 `RowsAffected` checks in total | `org_repository.go:104` |
 | NULL handling | Nullable UUIDs cross as Go strings through `COALESCE(x::text, '')` (34 sites) and `NULLIF($n, '')::uuid` (39), or as `sql.NullString` to `*string`. `COALESCE` defaults are visible in the API (`plan_status 'none'`, `email_notifications TRUE`) | `orgColumns`, `userColumns` |
 | Optional filters | In SQL as `($n = '' OR col = $n)` (events, runs, artifacts) or by string concatenation with computed placeholder numbers (notifications) | `event_repository.go`; `notification_repository.go:65-70` |
-| Workspace scoping | 56 of 369 methods take an `orgID` and filter `org_id` in SQL; project-, artifact- and run-scoped finders load by id and the service or API compares the workspace afterwards | `agent_run_repository.go:213` |
+| Workspace scoping | 56 of the 369 methods take an `orgID` parameter (a `go/ast` count of parameter names), most of them to filter by workspace in SQL; project-, artifact- and run-scoped finders load by id and the service or API compares the workspace afterwards | `agent_run_repository.go:213` |
 | Stable numbering | Atomic counter upserts `INSERT ... ON CONFLICT DO UPDATE SET next_num = next_num + 1 RETURNING next_num - 1`, in the same transaction as the insert: artifact refs and `EVD` refs share `artifact_ref_counters`; figure numbers use `attachment_figure_counters` | `artifact_repository.go:103-110`; `evidence_repository.go:64-71`; `attachment_repository.go:229-234` |
 | Exactly-once work | Claim rows decided by `RowsAffected` or a primary-key insert (budget, minutes, release and stable-step claims) and `FOR UPDATE SKIP LOCKED` queue claims (each claimer skips rows another transaction has locked, so two claimers never take the same row: runs, scheduled automations) | `org_repository.go:223-257`; `agent_run_repository.go:206-243`; `automation_repository.go:230` |
 | Versioned rows | Artifacts and links are temporal: a new row per version, `valid_to` set on the old one, reads filter `valid_to IS NULL`, deletes tombstone | `artifact_repository.go:333-371`, :399 |
@@ -1408,8 +1411,9 @@ ORM.
 The workspace purge is the one place that deletes across contexts:
 `OrgRepository.PurgeOrg` (`org_repository.go:580-631`) probes
 `to_regclass('artifact_embeddings')`, deletes embeddings when the table
-exists, then runs a hand-ordered list of 22 `DELETE` statements and relies on
-`ON DELETE CASCADE` for the rest. Nothing ties a new table to that list.
+exists (:596), then runs a hand-ordered list of 22 `DELETE` statements
+(:602-623) and relies on `ON DELETE CASCADE` for the rest. Nothing ties a
+new table to that list.
 
 #### How a table or column is added today
 
@@ -1929,7 +1933,7 @@ each a thin REST call through `Client.request` (`tools.go:40-75`) with the
 token as Bearer; a 202 from a proposal-mode write becomes "Proposal created
 (pending human review, not yet applied)". `OPENV_MCP_TOOLS` filters the
 table (unset: all; set but empty: none; `EnvFilteredTools`, `tools.go:153`).
-The 17 read-only tools (`tools.go:168-187`) plus `record_candidate_need` are
+The 17 read-only tools (`tools.go:168-186`) plus `record_candidate_need` are
 what the seeded interviewer agent is granted (`internal/seeds/seeds.go:37-39`).
 
 | Area | Tools | REST endpoints |

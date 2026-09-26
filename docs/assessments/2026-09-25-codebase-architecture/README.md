@@ -18,7 +18,8 @@ points put to verification, one was refuted; the verifiers added 80, so the
 [register](pain-points.md) holds **284 verified pain points — 58 high, 155
 medium, 71 low**. Seven cross-cutting studies ran alongside: the Go import
 graph, end-to-end traces of eleven request flows (two studies, one for the
-core flows and one for the agent suite), the test safety net
+core flows and one for the agent suite; §5 presents them as ten), the test
+safety net
 (including a local run of every suite), duplication and Go–TypeScript
 contract drift, configuration and deployment, and change amplification
 (how many files one change has to touch) measured over the full commit
@@ -31,7 +32,7 @@ against the code and every figure in them re-measured at `d11dee8`.
 |---|---|
 | This file | [1 The system at a glance](#1-the-system-at-a-glance) · [2 Runtime and deployment topology](#2-runtime-and-deployment-topology) · [3 Size and shape](#3-size-and-shape) |
 | [backend.md](backend.md) | 4 Backend architecture: 4.1 Composition root · 4.2 Package layering and the import graph · 4.3 API layer · 4.4 Domain layer · 4.5 Persistence · 4.6 Background and cross-cutting services · 4.7 Agent execution |
-| [flows.md](flows.md) | 5 Key flows: 5.1 Sign-in and workspace selection · 5.2 Editing an artifact and linking it · 5.3 Recording a test run and V&V coverage · 5.4 Reports, export and import · 5.5 Inviting a member · 5.6 Agent run lifecycle and proposals · 5.7 Crews, delegation and automations · 5.8 Runner pool leases and hosted workers · 5.9 Notification fan-out · 5.10 Billing webhook to plan limits |
+| [flows.md](flows.md) | 5 Key flows: 5.1 Sign-in and workspace selection · 5.2 Editing an artifact and linking it · 5.3 Recording a test run and V&V coverage · 5.4 Reports, export and import · 5.5 Inviting a member · 5.6 Agent run lifecycle and proposals · 5.7 Crews, delegation and automations · 5.8 Runner pool leases and hosted workers · 5.9 Notification fan-out · 5.10 Billing sync to plan limits |
 | [frontend-data-tooling.md](frontend-data-tooling.md) | 6 Frontend architecture · 7 Data model overview · 8 Tooling, CI and release process |
 | [assessment.md](assessment.md) | 9 Where editing is hard today · 10 What already works well · Appendix A Environment variable inventory · Appendix B Glossary |
 | [pain-points.md](pain-points.md) | The register of all 284 verified pain points with stable IDs, which the refactor plan cites |
@@ -104,7 +105,7 @@ workspace is on a release channel, nightly or stable
 | Part | Technology | Where |
 |---|---|---|
 | API server | Go 1.25.14, gorilla/mux, lib/pq, one binary | `cmd/server`, `internal/` |
-| Database | PostgreSQL (15 in compose and CI), 47 numbered migrations applied at boot, optional `pg_trgm` (trigram text search) and `vector` (pgvector, semantic search) extensions | `internal/persistence/postgres/migrations.go` |
+| Database | PostgreSQL (15 in compose and CI), 47 ledger migrations (the 0001 baseline plus 0002-0047) applied at boot, optional `pg_trgm` (trigram text search) and `vector` (pgvector, semantic search) extensions | `internal/persistence/postgres/migrations.go` |
 | Web app | React 18, TypeScript, Vite 8, react-router 7, zustand 4, axios; one single-page app (SPA) that also carries the public site and the manual | `frontend/src` |
 | Runners | `agentd` plus `openv-mcp` plus vendor CLIs | `cmd/agentd`, `cmd/openv-mcp`, `internal/runner`, `internal/mcp`, `Dockerfile.worker` |
 | Hosting | Railway (production and staging), docker compose (development and self-hosting) | `docs/railway.md`, `docker-compose*.yml` |
@@ -610,7 +611,7 @@ Traps a refactor or feature change must respect:
 - **Empty means unset.** The compose files pass many variables as empty
   strings, and every reader treats `""` as unset. A configuration loader that
   distinguishes set-but-empty changes the development and CI stacks. Each
-  variable also has its own parsing rule; see Appendix A and §9.3.
+  variable also has its own parsing rule; see Appendix A and §9.3.9.
 - **The frontend origin answers `/health` itself.** Anything that needs the
   API's health or commit from `openv.app` must use `/api/v1/public/build`,
   as the staging gate does.
@@ -630,7 +631,7 @@ Traps a refactor or feature change must respect:
   `OPENV_API_URL` or `--api` (`cmd/agentd/main.go:94`); `RUNNER_API_URL` is
   the API-side hosted-runner setting (`internal/hosting/docker.go:53`).
   `docker-compose.prod.yml:55` says the hosted-runner PID limit defaults to
-  256; the code default is 1024 (`internal/hosting/docker.go:73`; §9.3).
+  256; the code default is 1024 (`internal/hosting/docker.go:73`; §9.3.11).
 
 ## 3. Size and shape
 
@@ -762,7 +763,7 @@ tool table (12). §9.2 covers how often each changes.
 | Internal packages linked into `server` / `agentd` / `openv-mcp` / `openv-connector` / `openv-vapid` | 56 / 10 / 2 / 0 / 0 | `go list -deps ./cmd/<name>` |
 | Direct Go module dependencies | 19 | `go.mod` |
 | HTTP method-and-path pairs pinned by the route inventory | 341 (plus `/metrics`) | `internal/api/testdata/routes.txt` |
-| Database migrations | 47 | `internal/persistence/postgres/migrations.go` |
+| Database migrations (the 0001 baseline plus 0002-0047) | 47 | `internal/persistence/postgres/migrations.go` |
 | MCP tools | 31 | `internal/mcp/tools.go` |
 | Page components in `frontend/src/views` (non-test `.tsx`) | 29 | plus 2 helper `.ts` files; routes also render `components/ProjectList.tsx`, `ProjectLayout.tsx` and `site/*` (§6.1) |
 | Playwright tests | 40, plus 1 skipped | `e2e/tests/*.spec.ts` |

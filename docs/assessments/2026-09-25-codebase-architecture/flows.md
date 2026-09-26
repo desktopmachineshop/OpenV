@@ -34,7 +34,7 @@ axios instance (`frontend/src/api/client.ts:15`, `withCredentials: true`,
 on a 401 (except on public pages and for `/api/v1/auth/` calls) and to
 `/verify-email` on a 403 with code `email_unverified`
 (`client.ts:79-111`). On the server the request passes the chain built in
-`cmd/server/main.go:874-919` (see §4.3): security headers, body limit, CORS
+`cmd/server/main.go:875-920` (see §4.3): security headers, body limit, CORS
 (which answers every `OPTIONS` itself), gzip compression for bodies of
 1,400 bytes or more, request log, metrics, then `AuthMiddleware.Wrap`, then
 the gorilla/mux router. The diagrams draw that chain as one participant,
@@ -177,7 +177,7 @@ Hops:
   `OrgSwitcher` swallows the error, so the tab still switches through the
   header while the session default stays as it was.
 - *Response headers.* `Login`, `Me` and `ListOrgs` never set
-  `Content-Type`, so the header depends on body size (§9.3).
+  `Content-Type`, so the header depends on body size (§9.3.4).
 
 **Editing notes.**
 
@@ -1343,11 +1343,11 @@ Hops:
    month's spend and claims each 80 % and 100 % alert once per month before
    alerting admins (`:143-171`).
 7. Direct callers repeat the same store, SSE, email, push sequence:
-   `MinutesMonitor.Check` from the lease handlers (`minutes.go:113-121`),
-   the release announcer once at boot (`main.go:630-633`, `release.go:94-103`),
-   the stable scheduler hourly (`main.go:637`, `stable.go:170-179`,
-   `:196-204`) and the support-window watcher on dedicated deployments
-   (`main.go:645`, `dedicated.go:182-189`).
+   `MinutesMonitor.Check` from the lease handlers (`minutes.go:112-121`),
+   the release announcer once at boot (`main.go:630-633`, `release.go:93-103`),
+   the stable scheduler hourly (`main.go:637`, `stable.go:169-179`,
+   `:195-204`) and the support-window watcher on dedicated deployments
+   (`main.go:645`, `dedicated.go:181-189`).
 
 **What varies.**
 
@@ -1382,17 +1382,20 @@ Hops:
 - Subscriber order and the panic guard per subscriber are wiring details in
   `main.go` with no test.
 
-### 5.10 Billing webhook to plan limits
+### 5.10 Billing sync to plan limits
 
 A workspace admin chooses a plan and pays on Stripe's hosted checkout;
 afterwards the workspace's limits follow the paid plan, and a workspace over
 its plan becomes read-only. **There is no Stripe webhook receiver.** Billing
-state reaches the database by polling: a reconcile loop every 5 minutes, and
-a synchronous refresh when the checkout return page loads. The design
+state reaches the database only when the server asks Stripe: a reconcile
+loop every 5 minutes, and synchronous reads inside the API's own billing
+calls, namely the refresh the checkout return page posts
+(`BindCheckoutSession`, or `RefreshOrg` without a session id,
+`billing_handlers.go:275-278`) and a plan change, which applies the updated
+subscription at once (`ChangePlan`, `checkout.go:221-245`). The design
 document records this as deliberate (`docs/plans/billing-stripe.md:69`:
 "Poll-only at launch … No webhook receiver until the staleness metric says
-the poll cannot keep up"). The flow below is therefore "checkout and poll
-to plan limits"; the heading keeps the document-wide name.
+the poll cannot keep up").
 
 ```mermaid
 sequenceDiagram
@@ -1479,7 +1482,7 @@ Hops:
   is gated, including `ActivateOrg` (§5.1) and lease start (§5.8), unless
   it is registered with `alwaysWritable`.
 - *Response encoding.* Billing handlers use `respondJSON`, which sets
-  `application/json`; most other handlers encode directly (§9.3).
+  `application/json`; most other handlers encode directly (§9.3.4).
 - *Month arithmetic.* The start-of-month computation is repeated in six
   places (`budgets.go:104`, `minutes.go:73`, `limits.go:191`, `:482`,
   `org_handlers.go:1219`, `main.go:663`).

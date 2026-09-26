@@ -296,7 +296,7 @@ Modelled on Evidence bundles (3 commits, 24 files, 3,592 lines):
 7. `routes.txt`.
 8. Cross-area hooks: plan limits (`orgs/limits.go`), other domains (`vv`),
    events and notifications, export, import and baseline decisions, and the
-   org purge list (`org_repository.go:601-624`, §9.3.5).
+   org purge list (`org_repository.go:602-623`, §9.3.5).
 9. Frontend: `client.ts` types and API object, the view, a lazy import and
    `<Route>` in `App.tsx`, `navSections` in `ProjectLayout.tsx:46`, a help
    topic in `helpTopics.ts` (skipped for Evidence: there is no `evidence`
@@ -412,11 +412,12 @@ small registrations made on behalf of unrelated features:
 | `internal/domain/release/features.go` (registry) | 16 | 1 | 14 | 1 |
 
 **Hub statistics.** Of the 285 commits that change non-test Go or frontend
-source, **152 (53%) touch at least one hub, 87 (31%) touch two or more, and
-46 touch three or more.** The study that first measured this (284 commits by
-its own filter) found 54% and 31%, and 56% and 37% over the most recent 120
-commits: the concentration is not falling. Features that met in
-`handlers.go` since 2026-09-01 include billing phases 2 and 4, staging build
+source (TypeScript and CSS under `frontend/src`; 284 if CSS is left out,
+with the same hub counts), **152 (53%) touch at least one hub, 87 (31%)
+touch two or more, and 46 touch three or more.** The study that first
+measured this (284 commits by its own filter) found 54% and 31%, and 56%
+and 37% over the most recent 120 commits: the concentration is not
+falling. Features that met in `handlers.go` since 2026-09-01 include billing phases 2 and 4, staging build
 SHA, review rounds, figure formats, to-dos, the duplicated-artifact feed,
 password reset, figure titles and default workspace; in `main.go`, billing
 four times, staging, share links, the support window, stable releases,
@@ -603,7 +604,7 @@ wiring.
 | `boot-5` | Hidden init order: mutable package globals and 37 post-construction setters (23 plain, 14 chained notify setters) | `orgs` globals set at `main.go:153`, `:161`, `:170` and `:292`; `SetTiersEnforced(true)` must follow `GrandfatherBefore` (`:283-292`); the agent file sync must precede org seeding, enforced only by a comment (`:437-441`) |
 | `domain-platform-2` | The `orgs` globals drive entity behaviour and depend on boot order | `selfHosted`, `tiersEnforced`, `defaultPlan`, `deploymentLimits` (`limiterror.go:23-30`, `limits.go:379-385`, `:511-524`, `:540-553`) are read by `Org.EffectiveLimits` (`limits.go:598-631`) and by API code; tests reset them with `t.Cleanup` and so cannot run in parallel |
 | `domain-requirements-2` | `links` reaches `artifacts` through `interface{}`, reflection and a JSON round-trip | `SetArtifactService(interface{})` is part of the `links.Service` interface (`link.go:97`); `reflect.ValueOf(...).MethodByName("GetArtifact")` at `link.go:171` is the only production use of `reflect` |
-| `services-3` | The single-goroutine bus serialises every subscriber, and SMTP sends run on it | `internal/events/bus.go:88-106`; the queue holds 256 events and drops for every subscriber when full (`:59-73`); `notifier.go:228` sends email inline; subscriber order is statement order in `main` (`:530`, `:576-591`, `:595-598`, `:675`) |
+| `services-3` | The single-goroutine bus serialises every subscriber, and SMTP sends run on it | `internal/events/bus.go:88-106`; the queue holds 256 events and drops for every subscriber when full (`:59-72`); `notifier.go:228` sends email inline; subscriber order is statement order in `main` (`:530`, `:576-591`, `:595-598`, `:675`) |
 
 Medium (11): `boot-8`, `boot-9`, `boot-11`, `boot-v1`, `boot-v2`,
 `boot-v3`, `api-suite-org-4`, `domain-requirements-7`, `agent-exec-9`,
@@ -669,7 +670,7 @@ codes, headers, messages), so consolidating them has to keep each one
 
 | ID | Finding | Evidence |
 |---|---|---|
-| `api-core-2` | `Handler` is a god object: 76 private fields copied from a 63-field `HandlerDeps`, reachable from every handler file | `HandlerDeps` `handlers.go:65-170`, `Handler` `:173-284` (45 services, 13 rate limiters), `NewHandler` `:287-379`; 137 `&Handler{...}` literals in 60 test files set 61 distinct private fields |
+| `api-core-2` | `Handler` is a god object: 76 private fields copied from a 63-field `HandlerDeps`, reachable from every handler file | `HandlerDeps` `handlers.go:65-170`, `Handler` `:173-284` (41 services, 13 rate limiters), `NewHandler` `:287-379`; 137 `&Handler{...}` literals in 60 test files set 61 distinct private fields |
 | `api-suite-org-2` | The same object seen from the suite handlers: 498 methods, and tests coupled to its private fields | 498 methods on `*Handler` across 36 files; `suite_handlers.go` alone uses 20 services; `guidedRunnerOnline` (`suite_handlers.go:1058`) reaches into `workerKeyService` |
 | `api-core-3` | No single response writer; 145 handler functions encode JSON without setting `Content-Type` | 249 `json.NewEncoder(w).Encode` calls against 92 explicit `application/json` headers; such a response goes out as `text/plain`, or with no `Content-Type` once gzip applies (about 1,400 bytes or more), although `docs/api-spec.md:9-12` promises JSON |
 | `domain-requirements-4` | Loading a live project or a baseline as a `ProjectExport` is re-implemented at least 7 times, each via a JSON round-trip | for example `suite_handlers.go:106-128`, `reports/report.go:72-100`, `reports/vv_report.go:29-53`, `baseline_diff_handlers.go:41-72`, `ai_map_handlers.go:35-59` |
@@ -708,7 +709,7 @@ purge, is a hand-kept list. The 0.8.0 outage came from this theme.
 |---|---|---|
 | `persistence-1` | `migrations.go` is a 1,800-line file whose registry is one 1,396-line slice literal | `migrations.go:63-1458` holds 47 inline closures; versions 36 and 37 are both named `release_schedule`; `organizations` is created in the baseline and altered by 8 migrations (11, 19, 22, 31, 35, 36, 45, 47), so no single place shows its current shape |
 | `persistence-v1` | The every-boot baseline runs before the numbered migrations and silently co-evolves with them | `runMigrations` applies version 1 (`applyEveryBoot`, re-running `InitSchema` and the `schema_*.go` chain) before versions 2 to 47 on every boot (`migrations.go:1707-1732`); a baseline edit crash-looped 0.8.0 on existing databases (fixed in `888dc64`) |
-| `persistence-4` | `PurgeOrg`'s hand-maintained delete list silently drifts from the schema | 22 literal `DELETE`s ordered by hand (`org_repository.go:601-624`); `attachment_figure_counters` is missing, so a purge leaves orphan rows; 65 tables exist and nothing ties a new one to the list |
+| `persistence-4` | `PurgeOrg`'s hand-maintained delete list silently drifts from the schema | 22 literal `DELETE`s ordered by hand (`org_repository.go:602-623`, after a separate `artifact_embeddings` delete at `:596`); `attachment_figure_counters` is missing, so a purge leaves orphan rows; 65 tables exist and nothing ties a new one to the list |
 
 Medium (2): `persistence-2`, `persistence-v2`. Low (2): `persistence-13`,
 `persistence-v6`. The baseline is a chain of idempotent `Init*` functions,
@@ -731,7 +732,7 @@ in sync.
 | `fe-requirements-4` | Domain vocabularies are hand-copied from Go while the server's own copies go unused | `config/linkTypeRules.ts:11-86` duplicates `links/validation.go:17-95`; `App.tsx:178` loads `/api/v1/meta/link-types` and `/meta/artifact-types` into `store.meta`, which no component reads; artifact types are hard-coded at `ArtifactEditor.tsx:384-396` |
 | `fe-suite-org-4` | Untyped wizard answers and the assistant protocol are string contracts shared with Go and the LLM prompt | answers are `Record<string, any>` (`GuidedWizard.tsx:493-523`) with keys `step_1` to `step_7`, `section_ids` and `copilot_applied` stored as data; the same keys are described to the model at `suite_handlers.go:1983`; step labels are copied into Go at `:1093-1097` |
 | `agent-exec-7` | The worker-API wire contract is implicit: anonymous structs on both sides, and domain JSON tags shared with deployed runners | the claim request is a map in the runner (`client.go:123-128`) and an anonymous struct in the API (`agent_handlers.go:638-643`); the claim response is a typed struct in one and a `map[string]interface{}` in the other (`agent_handlers.go:687-733`) |
-| `tooling-2` | The `RELEASE_NOTES.md` grammar is implemented twice, in Python and Go, with no shared fixtures | `scripts/release_notes.py:61-87` against `internal/domain/release/release.go:28-66` and `stable.go:27-29`; measured divergences in continuation lines, bullet markers and ungrouped bullets; `docs/railway.md:352-354` calls the Python one "the one implementation" |
+| `tooling-2` | The `RELEASE_NOTES.md` grammar is implemented twice, in Python and Go, with no shared fixtures | `scripts/release_notes.py:61-87` against `internal/domain/release/release.go:28-66` and `stable.go:27-29`; measured divergences in continuation lines, bullet markers and ungrouped bullets; `docs/railway.md:353-354` calls the Python one "the one implementation" |
 
 Medium (22): `api-core-7`, `api-requirements-10`, `api-suite-org-11`,
 `api-suite-org-v2`, `domain-requirements-8`, `domain-requirements-9`,
@@ -760,8 +761,8 @@ state.
 |---|---|---|
 | `fe-shell-1` | `api/client.ts` is a 2,880-line module mixing transport, 145 wire types, 291 endpoint methods, DOM side effects and UI constants | the axios instance and interceptors (`client.ts:15-110`), two blob-download implementations (`:537-546`, `:2178-2191`), presentation data such as `PLANS` (`:2861-2868`); 127 importing files (92 source, 35 tests), 27 whole-module `vi.mock`s, 101 commits |
 | `fe-shell-2` | The active workspace travels from the store to browser storage to the axios interceptor through a repeated magic key | `openv_active_org` is written at `state/store.ts:74-75`, re-read on every request to set `X-Org-ID` (`client.ts:29-30`) and read again at boot (`App.tsx:141-142`) |
-| `fe-shell-3` | No data-fetching abstraction: every view hand-rolls fetch, loading, error, cancellation and polling | 159 `useEffect` calls in 79 files, 26 loading and 56 error state pairs, 31 `let cancelled` flags, no `AbortController`, 14 `setInterval` pollers in 11 files; the only cache is a module-level `Map` (`hooks/useUploadLimit.ts:24`) |
-| `fe-requirements-3` | Every view re-fetches the same project data with ad hoc loading, error and race handling | the whole-project `artifactAPI.list` is called from 10 files and `projectAPI.get` from 3; the `params.projectId \|\| storeProjectId` resolution is repeated in 16 views; `TraceabilityMatrix.tsx:70-112` and `VVDashboard.tsx:90-125` keep whichever response lands last |
+| `fe-shell-3` | No data-fetching abstraction: every view hand-rolls fetch, loading, error, cancellation and polling | 159 `useEffect` calls in 79 files, 26 loading and 56 error state pairs, 31 `let cancelled` flags, no `AbortController`, 11 `setInterval` pollers in 10 files; the only cache is a module-level `Map` (`hooks/useUploadLimit.ts:24`) |
+| `fe-requirements-3` | Every view re-fetches the same project data with ad hoc loading, error and race handling | the whole-project `artifactAPI.list` is called at 14 sites in 12 files (10 views and 2 components) and `projectAPI.get` from 3 files; the `params.projectId \|\| storeProjectId` resolution is repeated in 16 views; `TraceabilityMatrix.tsx:70-112` and `VVDashboard.tsx:90-125` keep whichever response lands last |
 
 Medium (11): `fe-shell-4`, `fe-shell-9`, `fe-shell-10`, `fe-shell-v1`,
 `fe-requirements-9`, `fe-requirements-11`, `fe-requirements-v4`,
@@ -780,8 +781,8 @@ functions (`ModuleView`, `GuidedWizard`, `ProjectSettings`,
 `ProjectList`), with the state and fetches of unrelated concerns side by
 side, pure functions defined inside render bodies, and props drilled
 several levels down. Styling is mostly inline (2,403 `style={{` against 590
-`className=`), the shared UI primitives exist but are bypassed, and adding
-a page means editing several parallel lists (recipe (e) in §9.1).
+`className=` across `frontend/src`), the shared UI primitives exist but
+are bypassed, and adding a page means editing several parallel lists (recipe (e) in §9.1).
 
 | ID | Finding | Evidence |
 |---|---|---|
@@ -800,7 +801,7 @@ Medium (18): `fe-shell-6`, `fe-shell-7`, `fe-shell-v3`, `fe-shell-v4`,
 `fe-requirements-13`, `fe-requirements-17`, `fe-requirements-v6`,
 `fe-suite-org-v4`, `fe-suite-org-v5`, `fe-suite-org-v6`. They include the
 1,093-line `ProjectList`, route knowledge spread over about eight places
-with 23 hand-built project URLs, labels and status colours re-implemented
+with 28 hand-built project URLs, labels and status colours re-implemented
 per view, sibling ordering with three different comparators, overlay
 detection by a global DOM query, two apply-suggestion orchestrators with
 different gating, and breakpoints defined twice with different values.
@@ -841,7 +842,7 @@ not pinned.
 
 | ID | Finding | Evidence |
 |---|---|---|
-| `boot-10` | The composition root and the middleware order have no automated test | no test file in `cmd/server`; the chain is assembled only at `main.go:875-921`; `/metrics` is registered outside `RegisterRoutes` (`:883`) and is absent from `routes.txt`; only the compose e2e job and the staging smoke boot the real wiring |
+| `boot-10` | The composition root and the middleware order have no automated test | no test file in `cmd/server`; the chain is assembled only at `main.go:875-920`; `/metrics` is registered outside `RegisterRoutes` (`:883`) and is absent from `routes.txt`; only the compose e2e job and the staging smoke boot the real wiring |
 | `api-requirements-15` | Large untested surface in the handlers most likely to be refactored | `internal/api` 47.3% statement coverage; 40 of the 68 functions in `handlers.go` at 0% (attachments, project CRUD, baselines, chatter, templates); every evidence handler and every `Download*` handler at 0% |
 | `api-suite-org-15` | Test gaps and brittle scaffolding in the agent, suite and org handlers | 134 of 224 exported handlers in scope are never named in a test (for example `LaunchAgentRun`, `RunAutomationNow`, `CreateHostedRunner`); 47 hand-written fakes against wide interfaces; no test asserts `Content-Type` or full JSON key sets |
 | `persistence-11` | Integration tests run only with Postgres; 15 repositories and the vector path are untested in CI | without `OPENV_TEST_DATABASE_URL`, 144 of the package's 145 tests skip; no test constructs 15 of the repositories; CI's `postgres:15` image has no pgvector, so the 4 embedding tests never run |
@@ -897,10 +898,10 @@ and the document should change:
 | `docs/operations.md:99,113-126`, `docker-compose.yml:56` | four email and push notification types | seven (`internal/notify/email.go:148-160`) |
 | `docker-compose.prod.yml:55` | the hosted-runner PID limit defaults to 256 | 1024 (`internal/hosting/docker.go:73`) |
 | `docs/railway.md:544` | host workers set `RUNNER_API_URL` | `agentd` reads `OPENV_API_URL` or `--api` (`cmd/agentd/main.go:94`) |
-| `docs/railway.md:352-354` | `scripts/release_notes.py` is the one implementation of the notes rules | Go parses the same file (`internal/domain/release/release.go`) |
+| `docs/railway.md:353-354` | `scripts/release_notes.py` is the one implementation of the notes rules | Go parses the same file (`internal/domain/release/release.go`) |
 | `docs/release-policy.md:80` | compatibility is "Enforced" | only the route list is pinned (§9.5) |
 | `README.md:9-15` | "MVP (v0.1.0)"; link types such as `implements` | 31 numbered releases; `implements` and `depends-on` are not link types |
-| `Dockerfile.api:59-65` | 6 runtime variables | the server reads about 100 (Appendix A) |
+| `Dockerfile.api:59-65` | 6 runtime variables | the API server reads 104 of the 126 names in Appendix A (A.1 to A.4) |
 | `.github/workflows/ci.yml:309` | "the CRA dev server" | Vite |
 | `internal/domain/embeddings/provider.go:39` | documents `OPENV_EMBEDDING_PROVIDER` | nothing reads it |
 
@@ -938,10 +939,10 @@ that TypeScript (or Python) copies. Counts are non-test code at `d11dee8`.
 | JSON helper in the wrong file | `respondJSON`, defined at `evidence_handlers.go:51` and also called from `billing_handlers.go`, `limits.go` and `org_handlers.go` | 18 occurrences in 4 files |
 | Guards | `require*` guard functions; the files they are spread over | 15; 8 |
 | Path parameters | `mux.Vars(r)` lookups; distinct path-parameter names in `routes.txt`, 8 of them spellings of an id (`{id}`, `{userId}`, `{projectID}`, `{artifactID}` and others) | 216; 11 |
-| Row scanning | `.Scan(` calls; `rows.Next()` loops; repository files with a columns constant | 125; 81; 18 of 38 |
+| Row scanning | `.Scan(` calls and `rows.Next()` loops in all non-test files of `internal/persistence/postgres` (§4.5 counts 77 `for rows.Next()` loops in the repository files alone); repository files with a columns constant | 125; 81; 18 of 38 |
 | Frontend fetching | `useEffect` calls; `let cancelled` flags; `AbortController` | 159 in 79 files; 31; 0 |
 | Frontend errors | `apiErrorMessage(` calls; inline `response?.data?.error` chains | 156; 54 in 19 files |
-| Frontend styling | `style={{` against `className=` | 2,403 against 590 |
+| Frontend styling | `style={{` against `className=` in all of `frontend/src` (§6.5 counts `components/` and `views/` alone: 2,322 against 586) | 2,403 against 590 |
 
 #### Ranked consolidation opportunities
 
@@ -1089,9 +1090,9 @@ Fourteen Go packages, 2,956 lines, have no test file. The largest are
 `cmd/server` (983 lines), `internal/domain/workitems` (389),
 `internal/domain/notifications` (227), `internal/domain/repoconns` (210),
 `internal/scheduler` (170), `internal/automation` (159) and `cmd/agentd`
-(149). On the frontend, about 23,000 lines of views and components (60 to
-70 files, depending on whether a test that only imports a component counts)
-have no test file of their own; the largest are `GuidedWizard.tsx` (1,858), `ProjectSettings.tsx`
+(149). On the frontend, 71 view and component files, about 23,200 lines, have no
+test file of their own (§6.6; 10 of them are at least imported by another
+file's test); the largest are `GuidedWizard.tsx` (1,858), `ProjectSettings.tsx`
 (1,585), `CrewBuilder.tsx` (849), `ArtifactDetails.tsx` (697),
 `ArtifactEditor.tsx` (646) and `KanbanBoard.tsx` (645).
 
@@ -1191,7 +1192,7 @@ depends on how a reference is matched: 213 in the safety-net study, 204 to
 |---|---|---|---|
 | HTTP route table (method and path) | **pinned** | `route_inventory_test.go` and `testdata/routes.txt` | `/metrics` is registered in `main.go:883`, outside the golden; the golden does not record the handler bound to a route, its minimum role, the 9 `alwaysWritable` read-only exemptions, or registration order (the delegate-before-`{id}` rule) |
 | Error envelope `{error, code}` | pinned | `httperr_test.go`; `errorBody` decoded 15 times in tests | |
-| Security headers, CORS, body limit, compression, session cookie | pinned per middleware | `security_headers_test.go`, `compression_test.go`, `session_cookie_test.go` | the assembled chain order (`main.go:875-921`) is untested; the cookie name is asserted against its own constant |
+| Security headers, CORS, body limit, compression, session cookie | pinned per middleware | `security_headers_test.go`, `compression_test.go`, `session_cookie_test.go` | the assembled chain order (`main.go:875-920`) is untested; the cookie name is asserted against its own constant |
 | Public (unauthenticated) paths | partial | Go `isOpenPath` and TypeScript `PUBLIC_SEGMENTS`, each tested separately | no cross-check between the two lists |
 | Per-route authorization | **not pinned** | `TestRequireProjectRole` tests only the helper | the 184 inline `h.requireProjectRole` and `h.requireOrgRole` calls can change silently |
 | Read-only over plan (REQ-177) | partial | `plan_gates_test.go` | the set of 9 exempt routes is not snapshotted |

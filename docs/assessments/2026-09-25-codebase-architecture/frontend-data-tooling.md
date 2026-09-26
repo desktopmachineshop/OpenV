@@ -208,8 +208,8 @@ application) route directly.
 | Panel modes | `components/navSections.ts`, `panelMode.ts` | Group collapse state (`openv-nav-sections`) and pinned, auto-hide or hidden panel (`openv-panel-mode-<panel>`), both pure and tested |
 | Widgets | `:273` to `:564` | `NotificationBell` (`:273` in the compact top bar, `:524` in the sidebar), `OrgSwitcher` `:364`, `GlobalSearch` `:397`, `UserMenu` `:496`, `<Outlet/>` `:559`, `HelpSidebar` `:564` |
 
-The component itself is one 476-line function (`:92-567`) with 26 inline
-style attributes (`fe-shell-7`). On viewports of 900 px or less the compact
+The component itself is one 476-line function (`:92-567`) with 26 `style`
+attributes, 25 of them inline object literals (`fe-shell-7`). On viewports of 900 px or less the compact
 top bar renders a second `NotificationBell` (`:273`) while the one inside
 the always-mounted sidebar (`:524`) stays mounted, so two bells each fetch
 the inbox and open their own SSE stream (`fe-shell-9`).
@@ -358,9 +358,10 @@ importing axios.
 | `retryAfterSeconds` | `:64` | a 429's `Retry-After` header |
 | `apiErrorMessage` | `:71` | a plain-string body, then `{error}`, then `{message}`, then the axios message, then a fallback |
 
-41 production files import `errors.ts`. Beside it, 53 inline
-`err.response?.data?.error` expressions in 18 files (51 of them the `||
-err.message ||` chain; 11 in `views/CrewBuilder.tsx` alone) extract the
+41 production files import `errors.ts`. Beside it, 54 inline
+`response?.data?.error` expressions in 19 files (51 of them the
+`err.response?.data?.error || err.message ||` chain; 11 in
+`views/CrewBuilder.tsx` alone) extract the
 message differently: for a `text/plain` body, as Go's `http.Error` writes,
 `apiErrorMessage` shows the body text while the inline chain shows axios'
 "Request failed with status code N" (`fe-shell-4`). The error codes these
@@ -397,8 +398,8 @@ every hand-mirrored constant.
   interview stream opens with `withCredentials: false`
   (`views/InterviewChat.tsx:51`); the other three use `true`.
 - **Do not reroute `artifactAPI.list` callers to `listPage`** or drop
-  `doc_numbers=1`: its nine call sites in seven files rely on section
-  numbers and on the full set.
+  `doc_numbers=1`: its 14 call sites in 12 files rely on section numbers
+  and on the full set.
 - **Switching an inline error chain to `apiErrorMessage`** changes the text
   shown for plain-text and `{message}` bodies; treat it as a visible change.
 - **The active workspace header is read from storage at request time**, not
@@ -491,7 +492,8 @@ The usual shape is a `useCallback` loader that sets loading, calls one or
 more `xxxAPI` methods, stores the result or an error, and runs from an
 effect keyed on the project id (for example
 `views/VVDashboard.tsx:108-130`). The same resource is fetched independently
-by several pages: `artifactAPI.list` in 7 files, `membersAPI.list` in 4.
+by several pages: `artifactAPI.list` at 14 sites in 12 files,
+`membersAPI.list` in 5 files.
 Whether a page refetches after a workspace switch depends on it listing
 `activeOrgId` in its effect dependencies, a convention stated in a comment
 (`ProjectLayout.tsx:159-169`) and several times enforced by suppressing the
@@ -629,9 +631,9 @@ one scope.
 
 | Component | Lines | Shape | What it mixes | Pain point |
 |---|---:|---|---|---|
-| `views/ModuleView.tsx` | 2,205 | one function `:43-2203`; 42 `useState`, 9 `useEffect`, 59 `style={` | seven loaders, `?artifact=` selection sync, artifact, link, attachment and baseline CRUD, drag-and-drop and clipboard ordering, a search and filter engine with saved presets, J/K and swipe stepping, resizable columns, the notes panel, the toolbar, and the desktop and phone layouts | `fe-requirements-1` |
-| `views/GuidedWizard.tsx` | 1,858 | 26 `useState`, a 600-line render switch | session lifecycle, 8 steps of form state, draft-artifact creation per step (a materialise-and-persist block repeated five times), baseline creation, the assistant dock | `fe-suite-org-1`, `fe-suite-org-2` |
-| `views/ProjectSettings.tsx` | 1,585 | one component `:87-1585`; 42 `useState`, 159 `style={` | seven tabs whose state is shared (the Quality tab's edit right comes from the Access tab's member list); opening it fires about 10 requests | `fe-requirements-2` |
+| `views/ModuleView.tsx` | 2,205 | one function `:43-2203`; 42 `useState`, 9 `useEffect`, 58 inline `style={{` objects (59 `style={` attributes) | seven loaders, `?artifact=` selection sync, artifact, link, attachment and baseline CRUD, drag-and-drop and clipboard ordering, a search and filter engine with saved presets, J/K and swipe stepping, resizable columns, the notes panel, the toolbar, and the desktop and phone layouts | `fe-requirements-1` |
+| `views/GuidedWizard.tsx` | 1,858 | one component `:90-1858`; 26 `useState`, a 596-line render switch (`renderStepContent`, `:1117-1712`) | session lifecycle, 8 steps of form state, draft-artifact creation per step (a materialise-and-persist block repeated five times), baseline creation, the assistant dock | `fe-suite-org-1`, `fe-suite-org-2` |
+| `views/ProjectSettings.tsx` | 1,585 | one component `:87-1585`; 42 `useState`, 131 inline `style={{` objects (159 `style={` attributes) | seven tabs whose state is shared (the Quality tab's edit right comes from the Access tab's member list); opening it fires about 10 requests | `fe-requirements-2` |
 | `components/ProjectList.tsx` | 1,093 | 25 `useState` | the signed-in home page: project CRUD, import and templates, the installed-app shortcut redirect, the random and agent-invented product generator, shared-product voting | `fe-shell-v4`, `fe-requirements-12` |
 | `components/wizard/GuidedChatPanel.tsx` | 918 | a 631-line component | transcript, SSE, nudge throttling, quick actions, suggestion-card parsing; wizard or notes mode chosen implicitly by optional props | `fe-suite-org-v2` |
 | `views/ReviewQueue.tsx` | 910 | a 660-line component | suspect links and in-review artifacts as two parallel bulk-selection tables, plus the review round | `fe-requirements-v6` |
@@ -785,7 +787,7 @@ flowchart LR
 
 #### Component stylesheets and inline styles
 
-| Measure (`components/` and `views/` `.tsx`) | Value |
+| Measure (`components/` and `views/` `.tsx`; all of `frontend/src` has 2,403 and 590, §9.4) | Value |
 |---|---:|
 | `style={{` inline objects | 2,322 |
 | `className=` attributes | 586 |
@@ -796,7 +798,7 @@ flowchart LR
 
 The most repeated inline object is muted small text: `fontSize` 12 or 13
 with `color: 'var(--text-muted)'`, in either key order, appears 117 times
-([§9.4](assessment.md)). Two cascade traps sit in the CSS: `.button`
+([§9.4](assessment.md) ranks its consolidation, rank 10). Two cascade traps sit in the CSS: `.button`
 and `.button-secondary` are defined in both `index.css:76-104` and
 `components/ProjectList.css:303-330` with different values, and because
 `ProjectList` is imported eagerly the `ProjectList.css` rules win app-wide;
@@ -1458,8 +1460,8 @@ built-in template). The ten added later have no foreign key to
 and `attribute_definitions` have one. Everything project-owned (artifacts,
 links, baselines, attachments, test runs, evidence, work items, interviews)
 is scoped only through `project_id` to `projects.org_id`, and most finders
-load by id and let the service compare the workspace afterwards: 58 of the
-369 repository methods take an org id ([§4.5](backend.md)). The promotion
+load by id and let the service compare the workspace afterwards: 56 of the
+369 repository methods take an `orgID` parameter ([§4.5](backend.md)). The promotion
 also depends on boot history: on a database with no users `BackfillOrgs`
 returns before it, and the integration tests run `Migrate` without the
 backfill, so test databases keep those columns nullable.
@@ -1646,8 +1648,8 @@ staging environment (`docs/railway.md`, "Staging"). It waits up to 15
 minutes until staging's `/api/v1/public/build` and `/build.json` both report
 the merged commit, checks the smoke account against the registration policy,
 and runs `smoke.spec.ts` on Chromium against the staging deployment (the
-production nginx image). It reports and never promotes; recent runs take
-about 3.5 minutes ([§2.4](README.md)).
+production nginx image). It reports and never promotes ([§2.4](README.md)
+has its trigger and arming conditions).
 
 **The Playwright pack** (`e2e/`) runs against an already-running stack
 (`BASE_URL`, default `http://localhost:3000`):
@@ -1680,7 +1682,7 @@ workspace runner key (a worker key scoped to one workspace, Appendix B) in
 | Tool | What it is | Notes |
 |---|---|---|
 | `.mcp.json` and `scripts/openv/mcp-server.sh` (38 lines) | Starts the `openv` MCP (Model Context Protocol) server (`bin/openv-mcp`, the same server `agentd` runs beside a vendor CLI) for a Claude Code session; `OPENV_API_URL` defaults to `https://api.openv.app` | Refuses to start without `OPENV_API_TOKEN` or `OPENV_RUN_TOKEN`; rebuilds the binary only when files under `cmd/openv-mcp` or `internal/mcp` are newer, although it also depends on `internal/domain/artifacts` and `go.mod`, so it can serve a stale binary (`tooling-11`). [§4.7](backend.md) describes the server and its 31 tools |
-| `scripts/openv/sync.py` (490 lines, stdlib Python 3) | `register`, `bootstrap` (seed load, a 103-line function), `vv` (a hard-coded V&V table), `status`, `export`, and `api METHOD PATH [JSON]` for any endpoint | No tests. `bootstrap` overwrites a live artifact's body, type and seed attributes when they differ from the seed, although `docs/requirements-maintenance.md:144-147` says it never destroys live edits (`tooling-7`, `tooling-10`). A compiled `sync.cpython-311.pyc` is tracked by mistake |
+| `scripts/openv/sync.py` (490 lines, stdlib Python 3) | `register`, `bootstrap` (seed load, a 103-line function), `vv` (a hard-coded V&V table), `status`, `export`, and `api METHOD PATH [JSON]` for any endpoint | No tests. `bootstrap` overwrites a live artifact's body, type and seed attributes when they differ from the seed, although `docs/requirements-maintenance.md:144-147` says it never destroys live edits (`tooling-7`, `tooling-10`). A stale compiled copy, `__pycache__/sync.cpython-311.pyc`, is tracked by mistake (§8.7) |
 
 `.claude/settings.json` pre-approves `go test`, `go build`, `go vet`,
 `gofmt`, `npx tsc --noEmit`, seven read-only `openv` MCP tools and one
@@ -1710,10 +1712,10 @@ There is no single target that runs all the CI gates (`tooling-13`).
 | [`CLAUDE.md`](../../../CLAUDE.md) | 95 | 2026-09-16 | current | the working rules this analysis follows; names the release-notes groups, the promotion rule and the MCP workflow |
 | `CONTRIBUTING.md` | 91 | 2026-09-14 | current | release-note shape; its `#release-notes` heading is linked from `RELEASE_NOTES.md:7-8` |
 | `README.md` | 319 | 2026-09-22 | stale | "MVP (v0.1.0)"; names link types `implements` and `depends-on` that do not exist; lists Web Push as future; 11 of 341 routes; omits `DATABASE_URL` (`tooling-6`) |
-| [`docs/railway.md`](../../railway.md) | 571 | 2026-09-21 | current, two errors | authoritative for the release pipeline and Railway services; `:544` tells host workers to set `RUNNER_API_URL` (agentd reads `OPENV_API_URL`); `:353-355` calls `release_notes.py` "the one implementation" |
+| [`docs/railway.md`](../../railway.md) | 571 | 2026-09-21 | current, two errors | authoritative for the release pipeline and Railway services; `:544` tells host workers to set `RUNNER_API_URL` (agentd reads `OPENV_API_URL`); `:353-354` calls `release_notes.py` "the one implementation" |
 | [`docs/release-policy.md`](../../release-policy.md) | 80 | 2026-09-18 | current | the channel policy the workflows implement |
 | [`docs/requirements-maintenance.md`](../../requirements-maintenance.md) | 161 | 2026-09-18 | current, two errors | `:56` says 26 MCP tools (there are 31); `:144-147` misdescribes `bootstrap` (§8.5) |
-| [`docs/api-spec.md`](../../api-spec.md) | 1,151 | 2026-09-22 | mostly current | billing routes added with the feature; 33 of the 253 distinct paths in `routes.txt` do not appear in it literally (`tooling-8`) |
+| [`docs/api-spec.md`](../../api-spec.md) | 1,151 | 2026-09-22 | mostly current | billing routes added with the feature; 33 of the 253 distinct paths in `routes.txt` do not appear in it literally (`tooling-8`); counted by method and path, 46 of the 341 pairs are missing ([§9.3.11](assessment.md)) |
 | [`docs/operations.md`](../../operations.md) | 869 | 2026-09-22 | mostly current | `:467` says `OPENV_MAX_UPLOAD_MB` defaults to 25 (code: 128 or the plan's limit); `:446` ties the nginx body cap to `OPENV_MAX_BODY_MB` (nginx now sets 0); lists four notification types where the code has seven ([§9.3.11](assessment.md)) |
 | [`docs/agents.md`](../../agents.md) | 1,052 | 2026-09-15 | current | linked from the sign-in page copy (`Login.tsx:674`) |
 | [`docs/reports.md`](../../reports.md), [`sharing.md`](../../sharing.md), [`flow-down.md`](../../flow-down.md) | 113, 96, 88 | 2026-09-14 | current | feature write-ups tied to REQ ids; no contradiction found |
@@ -1753,5 +1755,11 @@ cite.
 - **Refactor-only pull requests still need a release-notes decision**:
   either a *Maintenance updates* bullet describing what a member will
   notice, or the `no-release-notes` label when nothing visible changed.
+- **`scripts/openv/__pycache__/sync.cpython-311.pyc` is tracked**
+  (`git ls-files scripts/openv`) although `.gitignore:16-17` ignores
+  `__pycache__/` and `*.pyc`; nothing reads it, and it was compiled from an
+  older `sync.py` (committed 2026-09-14, the script last changed on
+  2026-09-16), so untrack it with `git rm --cached` rather than keeping it
+  in step.
 
 [Index](README.md) · [4 Backend](backend.md) · [5 Key flows](flows.md) · [6–8 Frontend, data, tooling](frontend-data-tooling.md) · [9–10 Assessment](assessment.md) · [Pain-point register](pain-points.md) · [Refactor plan](../../plans/codebase-refactor.md)
