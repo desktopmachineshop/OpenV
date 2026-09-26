@@ -1,0 +1,97 @@
+{
+  "method": "Client.Start",
+  "cases": [
+    {
+      "name": "no body and no content type; 204 is success",
+      "calls": [
+        {
+          "call": "Start(\"<run-id>\")",
+          "http": [
+            {
+              "request": {
+                "method": "POST",
+                "path": "/api/v1/agent-runs/<run-id>/start",
+                "route": "POST /api/v1/agent-runs/{id}/start",
+                "authorization": "Bearer <worker-key>",
+                "content_type": "",
+                "body": ""
+              },
+              "response": {
+                "status": 204,
+                "body": ""
+              }
+            }
+          ],
+          "returned": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "name": "a 409 conflict is returned at once, not retried",
+      "calls": [
+        {
+          "call": "Start(\"<run-id>\")",
+          "http": [
+            {
+              "request": {
+                "method": "POST",
+                "path": "/api/v1/agent-runs/<run-id>/start",
+                "route": "POST /api/v1/agent-runs/{id}/start",
+                "authorization": "Bearer <worker-key>",
+                "content_type": "",
+                "body": ""
+              },
+              "response": {
+                "status": 409,
+                "body": "{\"error\":\"invalid run status transition\"}\n"
+              }
+            }
+          ],
+          "returned": null,
+          "error": "api returned 409: {\"error\":\"invalid run status transition\"}"
+        }
+      ]
+    },
+    {
+      "name": "a 5xx is retried after a backoff",
+      "calls": [
+        {
+          "call": "Start(\"<run-id>\")",
+          "http": [
+            {
+              "request": {
+                "method": "POST",
+                "path": "/api/v1/agent-runs/<run-id>/start",
+                "route": "POST /api/v1/agent-runs/{id}/start",
+                "authorization": "Bearer <worker-key>",
+                "content_type": "",
+                "body": ""
+              },
+              "response": {
+                "status": 503,
+                "body": "{\"error\":\"failed to start run\"}\n"
+              }
+            },
+            {
+              "request": {
+                "method": "POST",
+                "path": "/api/v1/agent-runs/<run-id>/start",
+                "route": "POST /api/v1/agent-runs/{id}/start",
+                "authorization": "Bearer <worker-key>",
+                "content_type": "",
+                "body": ""
+              },
+              "response": {
+                "status": 204,
+                "body": ""
+              }
+            }
+          ],
+          "returned": null,
+          "error": null
+        }
+      ]
+    }
+  ]
+}
