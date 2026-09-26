@@ -45,11 +45,29 @@ import (
 // same order. Any disagreement, or a registration shape the reader does not
 // know, fails the test instead of producing a wrong golden.
 //
-// The goldens change only by regeneration. A change to any of them changes
-// routing, binding or guards, so it is never part of a refactor:
+// The goldens change only by regeneration. Adding or removing a route
+// changes testdata/routes.txt (route_inventory_test.go) as well, so one
+// command rewrites all four and names each file it writes:
 //
-//	UPDATE_ROUTES=1 go test ./internal/api -run TestRouteBinding
-const regenerateRouteGoldens = "UPDATE_ROUTES=1 go test ./internal/api -run TestRouteBinding"
+//	UPDATE_ROUTES=1 go test ./internal/api -count=1 -v -run 'TestRouteInventory|TestRouteBinding'
+//
+// A change to route_handlers.txt or route_overlaps.txt changes routing or
+// binding, so it is never part of a refactor. A change to route_guards.txt
+// is either an authorization change or a change in call shape only, such as
+// an inline refusal becoming a require* helper. This test cannot tell the
+// two apart; the black-box authorization matrix (step S5e of
+// docs/plans/codebase-refactor.md), unchanged, is what shows it is the
+// second.
+const regenerateRouteGoldens = "UPDATE_ROUTES=1 go test ./internal/api -count=1 -v -run 'TestRouteInventory|TestRouteBinding'"
+
+// What a changed golden means, as its failure message says it.
+const (
+	bindingChange = "A change to this golden changes routing or binding, so it is never a refactor."
+	guardsChange  = "A change to this golden is either an authorization change or a change in call shape only, " +
+		"such as an inline refusal becoming a require* helper. This test cannot tell the two apart; " +
+		"the black-box authorization matrix (step S5e of docs/plans/codebase-refactor.md), unchanged, " +
+		"is what shows it is the second."
+)
 
 func TestRouteBinding(t *testing.T) {
 	src := parseAPISource(t)
@@ -57,13 +75,13 @@ func TestRouteBinding(t *testing.T) {
 	routes := bindRoutes(t, src, router)
 
 	t.Run("handlers", func(t *testing.T) {
-		checkRouteGolden(t, "route_handlers.txt", handlersHeader, handlerLines(routes))
+		checkRouteGolden(t, "route_handlers.txt", handlersHeader, bindingChange, handlerLines(routes))
 	})
 	t.Run("overlaps", func(t *testing.T) {
-		checkRouteGolden(t, "route_overlaps.txt", overlapsHeader, overlapLines(t, router, routes))
+		checkRouteGolden(t, "route_overlaps.txt", overlapsHeader, bindingChange, overlapLines(t, router, routes))
 	})
 	t.Run("guards", func(t *testing.T) {
-		checkRouteGolden(t, "route_guards.txt", guardsHeader, guardLines(t, src, routes))
+		checkRouteGolden(t, "route_guards.txt", guardsHeader, guardsChange, guardLines(t, src, routes))
 	})
 }
 
@@ -515,9 +533,10 @@ func describeOverlap(t *testing.T, router *mux.Router, routes []boundRoute, meth
 // ---- Golden files ----
 
 // checkRouteGolden compares lines, under a "# " header, with
-// testdata/<name>. With UPDATE_ROUTES set it rewrites the file instead,
-// which is the only way these goldens change.
-func checkRouteGolden(t *testing.T, name string, header, lines []string) {
+// testdata/<name>, and on a mismatch says what a change means. With
+// UPDATE_ROUTES set it rewrites the file instead, which is the only way
+// these goldens change.
+func checkRouteGolden(t *testing.T, name string, header []string, meaning string, lines []string) {
 	t.Helper()
 	var b strings.Builder
 	for _, h := range header {
@@ -533,6 +552,7 @@ func checkRouteGolden(t *testing.T, name string, header, lines []string) {
 		if err := os.WriteFile(file, []byte(current), 0o644); err != nil {
 			t.Fatalf("write %s: %v", file, err)
 		}
+		t.Logf("wrote %s", file)
 		return
 	}
 	raw, err := os.ReadFile(file)
@@ -544,8 +564,8 @@ func checkRouteGolden(t *testing.T, name string, header, lines []string) {
 		return
 	}
 	t.Fatalf("%s does not match the code; first differences (- pinned, + current, by line):\n%s\n"+
-		"A changed golden changes routing, binding or guards, so it is never a refactor. If the change is intended, regenerate with:\n  %s",
-		file, strings.Join(lineDiff(pinned, current, 12), "\n"), regenerateRouteGoldens)
+		"%s If the change is intended, regenerate with:\n  %s",
+		file, strings.Join(lineDiff(pinned, current, 12), "\n"), meaning, regenerateRouteGoldens)
 }
 
 // lineDiff returns up to limit lines of a minimal line diff of two texts, as

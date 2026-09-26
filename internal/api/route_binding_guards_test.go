@@ -2,6 +2,7 @@ package api
 
 import (
 	"go/ast"
+	"go/token"
 	"slices"
 	"sort"
 	"strings"
@@ -84,6 +85,7 @@ var roleConstants = map[string]string{
 func guardLines(t *testing.T, src *apiSource, routes []boundRoute) []string {
 	t.Helper()
 	checkGuardHelpers(t, src)
+	checkGuardResultsUsed(t, src)
 	type row struct{ key, line string }
 	var rows []row
 	for _, r := range routes {
@@ -132,17 +134,148 @@ func checkGuardHelpers(t *testing.T, src *apiSource) {
 	}
 }
 
+// checkGuardResultsUsed fails when the result of a require* call does not
+// decide whether its caller goes on, so that route_guards.txt never counts a
+// guard that guards nothing. Every such call in package api, closures
+// included, must take one of these shapes; anything else, such as a bare
+// h.requireUser(w, r), a "_ =" or an if without a return, fails:
+//
+//   - the condition of an if whose body ends in a return, seen through !,
+//     parentheses, || and &&, and a comparison with nil, as in
+//     if !h.requireProjectRole(...) { return };
+//   - an operand of a return, which hands the result to the caller, as the
+//     helpers in authz.go do;
+//   - the sole value of an assignment or var declaration that names the
+//     helper's last result, the one that says whether to go on, as in
+//     caller := h.requirePlatformAdmin(w, r) or
+//     _, ok := h.requireHumanUser(w, r).
+func checkGuardResultsUsed(t *testing.T, src *apiSource) {
+	t.Helper()
+	type use struct {
+		at   token.Position
+		name string
+	}
+	var bad []use
+	for _, m := range []map[string]*ast.FuncDecl{src.funcs, src.methods} {
+		for _, fn := range m {
+			recv := receiverName(fn)
+			var parents []ast.Node
+			ast.Inspect(fn.Body, func(n ast.Node) bool {
+				if n == nil {
+					parents = parents[:len(parents)-1]
+					return true
+				}
+				if call, ok := n.(*ast.CallExpr); ok {
+					name, decl := src.callee(call, recv)
+					if _, guard := guardHelpers[name]; guard && decl != nil && !guardResultUsed(call, decl, parents) {
+						bad = append(bad, use{src.pos(call), name})
+					}
+				}
+				parents = append(parents, n)
+				return true
+			})
+		}
+	}
+	if len(bad) == 0 {
+		return
+	}
+	sort.Slice(bad, func(i, j int) bool {
+		a, b := bad[i].at, bad[j].at
+		return a.Filename < b.Filename || a.Filename == b.Filename && a.Offset < b.Offset
+	})
+	lines := make([]string, len(bad))
+	for i, u := range bad {
+		lines[i] = u.at.String() + ": " + u.name
+	}
+	t.Fatalf("the result of a require* guard is not checked:\n  %s\n"+
+		"A guard must stop the handler, as in if !h.requireProjectRole(...) { return }; checkGuardResultsUsed lists the accepted shapes",
+		strings.Join(lines, "\n  "))
+}
+
+// guardResultUsed reports whether call, a call to the require* helper decl
+// under parents (outermost first), takes a shape checkGuardResultsUsed
+// accepts.
+func guardResultUsed(call *ast.CallExpr, decl *ast.FuncDecl, parents []ast.Node) bool {
+	var child ast.Expr = call
+	i := len(parents) - 1
+	for ; i >= 0 && keepsGuardResult(parents[i]); i-- {
+		child = parents[i].(ast.Expr)
+	}
+	if i < 0 {
+		return false
+	}
+	switch p := parents[i].(type) {
+	case *ast.IfStmt:
+		body := p.Body.List
+		if p.Cond != child || len(body) == 0 {
+			return false
+		}
+		_, returns := body[len(body)-1].(*ast.ReturnStmt)
+		return returns
+	case *ast.ReturnStmt:
+		return true
+	case *ast.AssignStmt:
+		return len(p.Rhs) == 1 && p.Rhs[0] == call && namesLastResult(p.Lhs, decl)
+	case *ast.ValueSpec:
+		lhs := make([]ast.Expr, len(p.Names))
+		for k, id := range p.Names {
+			lhs[k] = id
+		}
+		return len(p.Values) == 1 && p.Values[0] == call && namesLastResult(lhs, decl)
+	}
+	return false
+}
+
+// keepsGuardResult reports whether a guard's result, as an operand of n,
+// still decides the outcome: !, parentheses, || and &&, and a comparison
+// with nil.
+func keepsGuardResult(n ast.Node) bool {
+	switch n := n.(type) {
+	case *ast.ParenExpr:
+		return true
+	case *ast.UnaryExpr:
+		return n.Op == token.NOT
+	case *ast.BinaryExpr:
+		switch n.Op {
+		case token.LOR, token.LAND:
+			return true
+		case token.EQL, token.NEQ:
+			return isIdent(n.X, "nil") || isIdent(n.Y, "nil")
+		}
+	}
+	return false
+}
+
+// namesLastResult reports whether lhs, assigned from a call to decl, gives
+// decl's last result a name other than "_".
+func namesLastResult(lhs []ast.Expr, decl *ast.FuncDecl) bool {
+	results := 0
+	if decl.Type.Results != nil {
+		for _, field := range decl.Type.Results.List {
+			results += max(1, len(field.Names))
+		}
+	}
+	if results == 0 || results != len(lhs) {
+		return false
+	}
+	id, ok := lhs[results-1].(*ast.Ident)
+	return ok && id.Name != "_"
+}
+
 // guardsOf lists the canonical kinds of the guards a handler visibly calls,
-// in source order of first appearance. It records the require* calls in
-// the handler's own body, including closures in it, and those directly in
-// the body of any package function or *Handler method the handler calls
-// (one level: hasProjectRole and helpers such as evidenceBundleChecked,
-// whose role parameter is bound to the handler's argument). It does not
-// follow calls two levels down, calls through function values or other
-// receivers, or the guards inside a require* helper, and it does not
-// record inline checks: CurrentUser(r) == nil, IsWorker(r), sessionUser,
-// isOrgAdmin, feature gates, rate limits or maybePropose. Who may call a
-// route is proved black-box, not here.
+// in source order, one entry per call: a kind called twice appears twice,
+// so removing one of two identical checks changes the list. It records the
+// require* calls in the handler's own body, including closures in it, and
+// those directly in the body of any package function or *Handler method the
+// handler calls (one level: hasProjectRole and helpers such as
+// evidenceBundleChecked, whose role parameter is bound to the handler's
+// argument). It does not follow calls two levels down, calls through
+// function values or other receivers, or the guards inside a require*
+// helper, and it does not record inline checks: CurrentUser(r) == nil,
+// IsWorker(r), sessionUser, isOrgAdmin, feature gates, rate limits or
+// maybePropose. A call whose result does not stop the handler is not
+// counted: checkGuardResultsUsed fails on it first. Who may call a route is
+// proved black-box, not here.
 func (s *apiSource) guardsOf(t *testing.T, handler string) []string {
 	t.Helper()
 	fn := s.methods[handler]
@@ -150,11 +283,7 @@ func (s *apiSource) guardsOf(t *testing.T, handler string) []string {
 		t.Fatalf("handler %s is not a method on *Handler", handler)
 	}
 	var kinds []string
-	add := func(kind string) {
-		if !slices.Contains(kinds, kind) {
-			kinds = append(kinds, kind)
-		}
-	}
+	add := func(kind string) { kinds = append(kinds, kind) }
 	recv, top := receiverName(fn), &roleScope{fn: fn}
 	ast.Inspect(fn.Body, func(n ast.Node) bool {
 		call, ok := n.(*ast.CallExpr)

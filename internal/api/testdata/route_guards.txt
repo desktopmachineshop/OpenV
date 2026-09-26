@@ -3,7 +3,7 @@
 # names every call found, and a branch may make only some of them. The kinds
 # are documented at guardHelpers in the internal/api tests. This records what
 # the code visibly does; it is not an authorization proof.
-# Regenerate: UPDATE_ROUTES=1 go test ./internal/api -run TestRouteBinding
+# Regenerate: UPDATE_ROUTES=1 go test ./internal/api -count=1 -v -run 'TestRouteInventory|TestRouteBinding'
 DELETE /api/v1/agents/{slug}: org:admin
 DELETE /api/v1/artifacts/{id}: project:editor
 DELETE /api/v1/attachments/{id}: project:editor
@@ -213,7 +213,7 @@ POST /api/v1/auth/password-reset/confirm: -
 POST /api/v1/auth/register: -
 POST /api/v1/auth/share/accept: -
 POST /api/v1/auth/verify-email: -
-POST /api/v1/auth/verify-email/change: json-body
+POST /api/v1/auth/verify-email/change: json-body, json-body
 POST /api/v1/auth/verify-email/resend: json-body
 POST /api/v1/automations: session, scoped-write
 POST /api/v1/automations/{id}/run-now: session, scoped-write
@@ -223,7 +223,7 @@ POST /api/v1/crews/import: session, project:editor, org:admin
 POST /api/v1/crews/{id}/clone: session, scoped-write
 POST /api/v1/crews/{id}/edges: session, scoped-write
 POST /api/v1/crews/{id}/nodes: session, scoped-write
-POST /api/v1/crews/{id}/runs: project:editor, org:admin
+POST /api/v1/crews/{id}/runs: project:editor, org:admin, project:editor
 POST /api/v1/evidence-bundles/{id}/files: project:editor
 POST /api/v1/guided-sessions: project:editor
 POST /api/v1/guided-sessions/{id}/abandon: project:editor
@@ -235,7 +235,7 @@ POST /api/v1/guided-sessions/{id}/messages: project:editor
 POST /api/v1/interview-invites/{id}/revoke: session, project:editor
 POST /api/v1/interviews/{id}/close: project:editor
 POST /api/v1/interviews/{id}/invites: project:editor
-POST /api/v1/links: project:editor, project:editor|project:viewer
+POST /api/v1/links: project:editor, project:editor|project:viewer, project:editor
 POST /api/v1/me/avatar: -
 POST /api/v1/me/push-subscriptions: session
 POST /api/v1/notifications/clear: session
@@ -296,7 +296,7 @@ POST /api/v1/teams/import: session, project:editor, org:admin
 POST /api/v1/teams/{id}/clone: session, scoped-write
 POST /api/v1/teams/{id}/edges: session, scoped-write
 POST /api/v1/teams/{id}/nodes: session, scoped-write
-POST /api/v1/teams/{id}/runs: project:editor, org:admin
+POST /api/v1/teams/{id}/runs: project:editor, org:admin, project:editor
 POST /api/v1/templates: project:editor
 POST /api/v1/templates/{id}/projects: -
 POST /api/v1/test-results/{id}/citations: project:editor, project:viewer

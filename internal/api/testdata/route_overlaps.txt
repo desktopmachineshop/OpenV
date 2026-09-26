@@ -1,6 +1,6 @@
 # Same-method templates that one request path can match: the path, the route
 # router.Match picks for it, and the routes it shadows, in registration order.
-# Regenerate: UPDATE_ROUTES=1 go test ./internal/api -run TestRouteBinding
+# Regenerate: UPDATE_ROUTES=1 go test ./internal/api -count=1 -v -run 'TestRouteInventory|TestRouteBinding'
 GET /api/v1/agent-runs/delegate/tree -> DelegateStatus (/api/v1/agent-runs/delegate/{id}), shadows GetAgentRunTree (/api/v1/agent-runs/{id}/tree)
 GET /api/v1/agent-runs/delegate/logs -> DelegateStatus (/api/v1/agent-runs/delegate/{id}), shadows GetAgentRunLogs (/api/v1/agent-runs/{id}/logs)
 GET /api/v1/agent-runs/delegate/stream -> DelegateStatus (/api/v1/agent-runs/delegate/{id}), shadows StreamAgentRun (/api/v1/agent-runs/{id}/stream)

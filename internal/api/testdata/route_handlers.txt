@@ -1,7 +1,7 @@
 # Route registration order and handler binding, one line per registration in
 # the order RegisterRoutes makes it: METHODS PATH -> Handler [wrappers].
 # gorilla/mux serves the first registered match, so the order is the contract.
-# Regenerate: UPDATE_ROUTES=1 go test ./internal/api -run TestRouteBinding
+# Regenerate: UPDATE_ROUTES=1 go test ./internal/api -count=1 -v -run 'TestRouteInventory|TestRouteBinding'
 POST /api/v1/projects -> CreateProject
 GET /api/v1/projects -> ListProjects
 GET /api/v1/projects/{id} -> GetProject
