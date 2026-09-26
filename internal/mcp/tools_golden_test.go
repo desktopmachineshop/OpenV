@@ -50,9 +50,9 @@ type toolGolden struct {
 
 // TestMCPToolsGolden pins every tool in Tools() order: its name, read-only
 // flag, description, input schema and the REST routes its handler calls, with
-// each request's query and body, plus the order of ReadOnlyToolNames. Each tool runs against a stub API with
-// arguments that reach every call it makes, and every call has to be a route
-// in the API's inventory. A renamed or reordered tool, a changed schema or
+// each request's query and body, plus the order of ReadOnlyToolNames. Each
+// tool runs against a stub API with arguments that reach every call it makes,
+// and every call has to be a route in the API's inventory. A renamed or reordered tool, a changed schema or
 // description, a moved read-only flag or a retargeted path fails here.
 func TestMCPToolsGolden(t *testing.T) {
 	t.Parallel() // delegate_to_agent sleeps 5s before its first status poll
