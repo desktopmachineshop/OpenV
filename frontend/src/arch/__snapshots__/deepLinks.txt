@@ -1,0 +1,24 @@
+# Backend-built deep links resolved with matchRoutes against App.tsx (invariant I19).
+# Fixture: src/arch/testdata/backendDeepLinks.json. Regenerate: npx vitest run src/arch -u
+# 20 links; 1 served by nginx from the API, not the app.
+
+/login?invite=TOKEN                                                       -> /login                                                    internal/notify/invitation.go:19
+/verify-email?token=TOKEN                                                 -> /verify-email                                             internal/notify/verification.go:51
+/reset-password?token=TOKEN                                               -> /reset-password                                           internal/notify/verification.go:73
+/org/settings?tab=usage                                                   -> /org/settings                                             internal/notify/email.go:257
+/projects                                                                 -> /projects                                                 internal/notify/email.go:261
+/projects/PROJECT/agent-runs?run=RUN                                      -> /projects/:projectId > /projects/:projectId/agent-runs    internal/notify/email.go:266
+/projects/PROJECT/agent-runs                                              -> /projects/:projectId > /projects/:projectId/agent-runs    internal/notify/email.go:268
+/projects/PROJECT/interviews                                              -> /projects/:projectId > /projects/:projectId/interviews    internal/notify/email.go:270
+/projects/PROJECT/requirements                                            -> /projects/:projectId > /projects/:projectId/requirements  internal/notify/email.go:272
+/projects/PROJECT                                                         -> /projects/:projectId > /projects/:projectId (index)       internal/notify/email.go:274
+/share/TOKEN                                                              -> /share/:token                                             internal/api/share_handlers.go:62
+/s/TOKEN                                                                  -> /s/:token                                                 internal/api/share_handlers.go:368
+/open-source/PROJECT                                                      -> /open-source/:id                                          internal/api/share_handlers.go:547
+/open-source/p/PROJECT                                                    -> /*                                                        internal/api/share_handlers.go:549
+/interview/TOKEN                                                          -> /interview/:token                                         internal/api/suite_handlers.go:1568
+/org/settings?tab=billing&checkout=done&session_id={CHECKOUT_SESSION_ID}  -> /org/settings                                             internal/billing/checkout.go:143
+/org/settings?tab=billing&checkout=cancelled                              -> /org/settings                                             internal/billing/checkout.go:144
+/org/settings?tab=billing                                                 -> /org/settings                                             internal/billing/checkout.go:256
+/                                                                         -> /                                                         internal/api/auth_handlers.go:500
+/                                                                         -> /                                                         internal/api/oidc_handlers.go:247

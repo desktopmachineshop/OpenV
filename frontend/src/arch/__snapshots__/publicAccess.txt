@@ -1,0 +1,104 @@
+# Which pages are public (utils/publicPaths.ts isPublicPath) and which API paths their module graph
+# calls, checked against internal/api/authmiddleware.go isOpenPath (OpenV REQ-114). Regenerate: npx vitest run src/arch -u
+
+isOpenPath exact: /health, /metrics
+isOpenPath prefixes: /api/v1/auth/, /api/v1/public/
+401 interceptor exempts calls under: /api/v1/auth/
+PUBLIC_SEGMENTS: /login, /pricing, /manual, /interview, /verify-email, /reset-password, /share, /s, /open-source, /how-it-works, /demos, /faq, /customers, /white-papers, /security
+
+## Routes (example URL, :param as x)
+  public   /login
+  public   /verify-email
+  public   /reset-password
+  public   /interview/:token
+  public   /share/:token
+  public   /s/:token
+  public   /open-source/:id
+  public   /
+  public   /pricing
+  public   /how-it-works
+  public   /demos
+  public   /faq
+  public   /security
+  public   /open-source
+  public   /customers
+  public   /white-papers
+  session  /projects
+  session  /org/settings
+  public   /manual
+  public   /manual/:chapterSlug
+  session  /whats-new
+  session  /admin
+  session  /projects/:projectId
+  session  /projects/:projectId (index)
+  session  /projects/:projectId/requirements
+  session  /projects/:projectId/baselines/:baselineId/compare
+  session  /projects/:projectId/guided
+  session  /projects/:projectId/interviews
+  session  /projects/:projectId/vv
+  session  /projects/:projectId/evidence
+  session  /projects/:projectId/vv/runs/:runId
+  session  /projects/:projectId/matrix
+  session  /projects/:projectId/impact
+  session  /projects/:projectId/review
+  session  /projects/:projectId/board
+  session  /projects/:projectId/todos
+  session  /projects/:projectId/crew
+  session  /projects/:projectId/crew/network
+  session  /projects/:projectId/team
+  session  /projects/:projectId/team/network
+  session  /projects/:projectId/automations
+  session  /projects/:projectId/agent-runs
+  session  /projects/:projectId/agents
+  session  /projects/:projectId/activity
+  session  /projects/:projectId/settings
+
+## API calls reachable from each public page module (open = isOpenPath)
+site/Customers.tsx  <- /customers
+  (no API calls)
+site/Demos.tsx  <- /demos
+  (no API calls)
+site/Faq.tsx  <- /faq
+  (no API calls)
+site/HowItWorks.tsx  <- /how-it-works
+  (no API calls)
+site/OpenSourceProjects.tsx  <- /open-source
+  open   GET    /api/v1/public/open-source/projects              openSourceAPI.list
+site/WhitePapers.tsx  <- /white-papers
+  (no API calls)
+views/InterviewChat.tsx  <- /interview/:token
+  open   GET    /api/v1/public/interviews/{}                     publicInterviewAPI.intro
+  open   POST   /api/v1/public/interviews/{}/finish              publicInterviewAPI.finish
+  open   POST   /api/v1/public/interviews/{}/messages            publicInterviewAPI.sendMessage
+  open   GET    /api/v1/public/interviews/{}/stream              publicInterviewAPI.streamUrl
+views/Landing.tsx  <- /, /pricing
+  open   GET    /api/v1/public/plans                             billingAPI.publicPlans
+views/Login.tsx  <- /login
+  open   GET    /api/v1/auth/config                              authAPI.config
+  open   GET    /api/v1/auth/google                              authAPI.googleLoginUrl
+  open   POST   /api/v1/auth/invitations/accept                  authAPI.acceptInvitation
+  open   POST   /api/v1/auth/invitations/preview                 authAPI.invitation
+  open   POST   /api/v1/auth/login                               authAPI.login
+  open   POST   /api/v1/auth/logout                              authAPI.logout
+  open   GET    /api/v1/auth/me                                  authAPI.me
+  open   GET    /api/v1/auth/oidc/login                          authAPI.oidcLoginUrl
+  open   POST   /api/v1/auth/password-reset                      authAPI.requestPasswordReset
+  open   GET    /api/v1/auth/policy                              authAPI.policy
+  open   POST   /api/v1/auth/register                            authAPI.register
+  open   POST   /api/v1/auth/share/accept                        authAPI.acceptShareLink
+views/ManualView.tsx  <- /manual, /manual/:chapterSlug
+  (no API calls)
+views/ResetPassword.tsx  <- /reset-password
+  open   POST   /api/v1/auth/password-reset/confirm              authAPI.confirmPasswordReset
+  open   GET    /api/v1/auth/policy                              authAPI.policy
+views/SharedProjectView.tsx  <- /share/:token, /s/:token, /open-source/:id
+  open   GET    /api/v1/auth/me                                  authAPI.me
+  open   POST   /api/v1/auth/share/accept                        authAPI.acceptShareLink
+  open   GET    /api/v1/public/open-source/projects/{}           openSourceAPI.get
+  open   GET    /api/v1/public/share/{}                          shareLinkAPI.open
+views/VerifyEmail.tsx  <- /verify-email
+  open   POST   /api/v1/auth/logout                              authAPI.logout
+  open   GET    /api/v1/auth/me                                  authAPI.me
+  open   POST   /api/v1/auth/verify-email                        authAPI.verifyEmail
+  open   POST   /api/v1/auth/verify-email/change                 authAPI.changeVerificationEmail
+  open   POST   /api/v1/auth/verify-email/resend                 authAPI.resendVerification
