@@ -65,7 +65,7 @@ function isEventSource(expr: ts.Expression): boolean {
  * The event names an expression can hold: a literal; a name its function's
  * callers bind (a parameter, or a key of Object.keys/Object.entries over a
  * parameter), read at every call with that call's argument; otherwise a value
- * of a string literal type or a union of them (a const, say). A caller-bound
+ * of a single string literal type (a const, say), never a union of them. A caller-bound
  * name is never read from its declared type, which lists every name the
  * function could take rather than the ones its callers pass. null when the
  * scan cannot tell.
@@ -76,11 +76,12 @@ function resolveNames(expr: ts.Expression, depth = 0): string[] | null {
   if (depth >= 4) return null;
   const bound = ts.isIdentifier(expr) ? callerBound(expr, depth) : undefined;
   if (bound !== undefined) return bound;
+  // A single string-literal type (a const, say) names one event. A union of
+  // them is not read: it lists every name a value could hold, not the ones
+  // this listener takes, so a hook casting its keys to the server-event union
+  // would pass whatever its callers listen for.
   const type = checker.getTypeAtLocation(expr);
   if (type.isStringLiteral()) return [type.value];
-  if (type.isUnion() && type.types.every((t) => t.isStringLiteral())) {
-    return type.types.map((t) => (t as ts.StringLiteralType).value);
-  }
   return null;
 }
 
