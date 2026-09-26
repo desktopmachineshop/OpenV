@@ -1606,10 +1606,17 @@ func TestReInvitingResendsWhenTheFirstMailNeverLanded(t *testing.T) {
 	// The send is off the request path, and only a send that SUCCEEDS stamps
 	// the row — that stamp is what suppresses the next click. Wait for the
 	// stamp itself: the mailer is called before the goroutine records it.
+	// The stamp follows the send, so the mail is on record by then.
 	select {
 	case <-invites.markedEmailed:
 	case <-time.After(5 * time.Second):
-		t.Fatal("a delivered link left no last_emailed_at behind")
+		t.Fatal("MarkEmailed was not called within 5s")
+	}
+	mailer.mu.Lock()
+	to := append([]string(nil), mailer.to...)
+	mailer.mu.Unlock()
+	if len(to) != 1 || to[0] != "waiting@example.com" {
+		t.Errorf("resend went to %v, want waiting@example.com", to)
 	}
 	if !invites.wasEmailed(resp.Invitation.ID) {
 		t.Error("a delivered link left no last_emailed_at behind")
@@ -1625,6 +1632,7 @@ func TestAFailedInvitationSendLeavesTheRowUnstamped(t *testing.T) {
 	mailer.err = errors.New("smtp down")
 	h.mailer = mailer
 	admin := &users.User{ID: "u-admin", Email: "admin@example.com", Name: "Ada Admin", IsAdmin: true}
+	invites.markedEmailed = make(chan string, 1)
 
 	rec := httptest.NewRecorder()
 	h.CreateOrgInvitation(rec, asUser(muxReq(http.MethodPost, "/api/v1/orgs/org-1/invitations",
@@ -1639,7 +1647,15 @@ func TestAFailedInvitationSendLeavesTheRowUnstamped(t *testing.T) {
 	if !resp.Emailed {
 		t.Error("emailed reports a queued send, which this was")
 	}
+	// Send signals before it returns its error, so the goroutine has not yet
+	// decided whether to stamp. Give a wrong stamp time to land before
+	// asserting there is none.
 	<-mailer.sent
+	select {
+	case id := <-invites.markedEmailed:
+		t.Errorf("a failed send stamped %s", id)
+	case <-time.After(200 * time.Millisecond):
+	}
 	if invites.wasEmailed(resp.Invitation.ID) {
 		t.Error("a failed send must not stamp the row")
 	}
