@@ -323,6 +323,29 @@ func newRegistrationHandler(policy string) (*Handler, *fakeLoginService, *fakeIn
 	}, svc, invites
 }
 
+// setTestServices copies the services a test built into HandlerDeps onto a
+// handler, as NewHandler does, without NewHandler's other wiring. It keeps
+// the private field names out of the tests that call it (the S6 payload
+// fixture in event_payload_drives_test.go), so a rename of those fields
+// edits this file only.
+func setTestServices(h *Handler, d HandlerDeps) {
+	h.bus = d.Bus
+	h.artifactService = d.ArtifactService
+	h.linkService = d.LinkService
+	h.projectService = d.ProjectService
+	h.chatterService = d.ChatterService
+	h.exportService = d.ExportService
+	h.baselineService = d.BaselineService
+	h.memberService = d.MemberService
+	h.orgService = d.OrgService
+	h.agentService = d.AgentService
+	h.proposalService = d.ProposalService
+	h.interviewService = d.InterviewService
+	h.workItemService = d.WorkItemService
+	h.vvService = d.VVService
+	h.runService = d.RunService
+}
+
 func TestRegistrationOpenByDefault(t *testing.T) {
 	h, svc, _ := newRegistrationHandler("")
 	rec := httptest.NewRecorder()

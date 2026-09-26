@@ -165,4 +165,6 @@ in its *Refactor tool tests (Python)* step, and the Node ones in the frontend
 job's *Refactor tool tests (Node)* step. `make check-fast` is the
 under-a-minute loop: gofmt, vet, `go test -short` on the packages changed
 since the merge base with `BASE_REF` and the packages that import them,
-`go test ./internal/archtest`, and tsc.
+`go test ./internal/archtest`, the S6 source scans in `internal/api`
+(`-run '^(TestSSE|TestEventPayload)'`, which read every package whether or
+not `internal/api` imports it), and tsc.

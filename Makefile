@@ -225,8 +225,10 @@ check:
 ## packages that import one of them (their tests included), so a golden in a
 ## dependent package is checked too; then the whole-tree architecture
 ## ratchets in internal/archtest (import edges, size budgets, env reads,
-## bans), and the frontend type check. `make check` is still the gate before
-## pushing.
+## bans), the S6 SSE and domain-event tests in internal/api, which read every
+## package's sources whether or not internal/api imports it (an event name
+## sent from internal/orchestration, say), and the frontend type check.
+## `make check` is still the gate before pushing.
 check-fast:
 	@unformatted="$$(gofmt -l ./cmd ./internal)"; \
 	if [ -n "$$unformatted" ]; then \
@@ -255,4 +257,5 @@ check-fast:
 		echo "go test -short" $$pkgs; go test -short $$pkgs; \
 	fi
 	go test ./internal/archtest
+	go test -short -run '^(TestSSE|TestEventPayload)' ./internal/api
 	cd frontend && npx tsc --noEmit
