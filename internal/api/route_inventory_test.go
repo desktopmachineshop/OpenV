@@ -16,14 +16,16 @@ import (
 // backward compatible from one stable release to the next, and a removal is
 // announced in two consecutive stable releases before it happens. This test
 // pins the registered routes to testdata/routes.txt so that a route cannot
-// disappear by accident. Adding a route is fine and only needs the file
-// regenerated (UPDATE_ROUTES=1 go test ./internal/api -run TestRouteInventory);
-// removing one fails until the file is regenerated deliberately, which is
-// the moment to write the deprecation note in RELEASE_NOTES.md.
+// disappear by accident. Adding a route is fine and only needs the route
+// goldens regenerated, this file and the binding goldens of
+// route_binding_test.go together (regenerateRouteGoldens):
+//
+//	UPDATE_ROUTES=1 go test ./internal/api -count=1 -v -run 'TestRouteInventory|TestRouteBinding'
+//
+// Removing one fails until they are regenerated deliberately, which is the
+// moment to write the deprecation note in RELEASE_NOTES.md.
 func TestRouteInventoryIsBackwardCompatible(t *testing.T) {
-	h := &Handler{}
-	router := mux.NewRouter()
-	h.RegisterRoutes(router)
+	router := routeTable()
 
 	var lines []string
 	err := router.Walk(func(route *mux.Route, _ *mux.Router, _ []*mux.Route) error {
@@ -52,11 +54,12 @@ func TestRouteInventoryIsBackwardCompatible(t *testing.T) {
 		if err := os.WriteFile(file, []byte(current), 0o644); err != nil {
 			t.Fatalf("write %s: %v", file, err)
 		}
+		t.Logf("wrote %s", file)
 		return
 	}
 	pinned, err := os.ReadFile(file)
 	if err != nil {
-		t.Fatalf("read %s: %v (run with UPDATE_ROUTES=1 to create it)", file, err)
+		t.Fatalf("read %s: %v\nCreate it with: %s", file, err, regenerateRouteGoldens)
 	}
 	if bytes.Equal(pinned, []byte(current)) {
 		return
@@ -73,10 +76,20 @@ func TestRouteInventoryIsBackwardCompatible(t *testing.T) {
 	}
 	if len(removed) > 0 {
 		t.Fatalf("routes removed from the API surface:\n  %s\nA removal must be announced in two consecutive stable releases first (REQ-143). "+
-			"Once it is, regenerate with UPDATE_ROUTES=1 go test ./internal/api -run TestRouteInventory",
-			strings.Join(removed, "\n  "))
+			"Once it is, regenerate the route goldens with:\n  %s",
+			strings.Join(removed, "\n  "), regenerateRouteGoldens)
 	}
-	t.Fatalf("routes were added; regenerate the inventory with UPDATE_ROUTES=1 go test ./internal/api -run TestRouteInventory")
+	t.Fatalf("routes were added; regenerate the route goldens with:\n  %s", regenerateRouteGoldens)
+}
+
+// routeTable builds the router the route goldens read: a zero Handler, a
+// fresh mux router and RegisterRoutes. The inventory above and the binding
+// goldens (route_binding_test.go) walk the same table.
+func routeTable() *mux.Router {
+	h := &Handler{}
+	router := mux.NewRouter()
+	h.RegisterRoutes(router)
+	return router
 }
 
 func dedupe(sorted []string) []string {

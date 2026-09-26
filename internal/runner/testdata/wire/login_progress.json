@@ -1,0 +1,57 @@
+{
+  "method": "Client.LoginProgress",
+  "cases": [
+    {
+      "name": "reports the step, the link and what the member pastes back",
+      "calls": [
+        {
+          "call": "LoginProgress(\"<login-id>\", \"awaiting_code\", <auth url>, \"Open the link and paste the code.\", \"code\")",
+          "http": [
+            {
+              "request": {
+                "method": "POST",
+                "path": "/api/v1/provider-logins/<login-id>/progress",
+                "route": "POST /api/v1/provider-logins/{id}/progress",
+                "authorization": "Bearer <worker-key>",
+                "content_type": "application/json",
+                "body": "{\"auth_url\":\"https://claude.ai/oauth/authorize?code=true\\u0026state=s1\",\"detail\":\"Open the link and paste the code.\",\"paste_kind\":\"code\",\"status\":\"awaiting_code\"}"
+              },
+              "response": {
+                "status": 200,
+                "body": "{\"id\":\"<login-id>\",\"org_id\":\"<org-id>\",\"provider\":\"claude-code\",\"target\":\"user\",\"status\":\"awaiting_code\",\"auth_url\":\"https://claude.ai/oauth/authorize?code=true&state=s1\",\"detail\":\"Open the link and paste the code.\",\"requested_by\":\"<user-id>\",\"created_at\":\"<time>\",\"updated_at\":\"<time>\"}\n"
+              }
+            }
+          ],
+          "returned": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "name": "a refused step is returned as an error",
+      "calls": [
+        {
+          "call": "LoginProgress(\"<login-id>\", \"awaiting_code\", <auth url>, \"Open the link and paste the code.\", \"code\")",
+          "http": [
+            {
+              "request": {
+                "method": "POST",
+                "path": "/api/v1/provider-logins/<login-id>/progress",
+                "route": "POST /api/v1/provider-logins/{id}/progress",
+                "authorization": "Bearer <worker-key>",
+                "content_type": "application/json",
+                "body": "{\"auth_url\":\"https://claude.ai/oauth/authorize?code=true\\u0026state=s1\",\"detail\":\"Open the link and paste the code.\",\"paste_kind\":\"code\",\"status\":\"awaiting_code\"}"
+              },
+              "response": {
+                "status": 400,
+                "body": "{\"error\":\"login request is no longer active\"}\n"
+              }
+            }
+          ],
+          "returned": null,
+          "error": "api returned 400: {\"error\":\"login request is no longer active\"}"
+        }
+      ]
+    }
+  ]
+}

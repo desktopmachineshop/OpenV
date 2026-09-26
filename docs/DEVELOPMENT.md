@@ -152,7 +152,10 @@ make test   # go test ./... inside golang:1.25
 
 CI runs on GitHub Actions (`.github/workflows/ci.yml`): Go vet/test scoped
 to `./cmd/... ./internal/...` with a Postgres service (`OPENV_TEST_DATABASE_URL`
-enables the integration tests), a frontend `npm ci` + `tsc` + build, Docker
+enables the integration tests), the Postgres-backed tests again on
+`pgvector/pgvector:pg15` so the embedding tests that need the vector
+extension run too (the main job's plain `postgres:15` covers the paths
+without it), a frontend `npm ci` + `tsc` + build, Docker
 image builds, a Playwright smoke journey against the composed stack, and the
 vulnerability scan below. Still run `make test` locally before pushing.
 

@@ -1,0 +1,94 @@
+{
+  "method": "Client.ClaimLogin",
+  "cases": [
+    {
+      "name": "nothing pending answers 204: no request and no error",
+      "calls": [
+        {
+          "call": "ClaimLogin()",
+          "http": [
+            {
+              "request": {
+                "method": "POST",
+                "path": "/api/v1/provider-logins/claim",
+                "route": "POST /api/v1/provider-logins/claim",
+                "authorization": "Bearer <worker-key>",
+                "content_type": "",
+                "body": ""
+              },
+              "response": {
+                "status": 204,
+                "body": ""
+              }
+            }
+          ],
+          "returned": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "name": "a pending sign-in is claimed with no body",
+      "calls": [
+        {
+          "call": "ClaimLogin()",
+          "http": [
+            {
+              "request": {
+                "method": "POST",
+                "path": "/api/v1/provider-logins/claim",
+                "route": "POST /api/v1/provider-logins/claim",
+                "authorization": "Bearer <worker-key>",
+                "content_type": "",
+                "body": ""
+              },
+              "response": {
+                "status": 200,
+                "body": "{\"id\":\"<login-id>\",\"org_id\":\"<org-id>\",\"provider\":\"claude-code\",\"target\":\"user\",\"status\":\"claimed\",\"auth_url\":\"https://claude.ai/oauth/authorize?code=true&state=s1\",\"detail\":\"Open the link and paste the code.\",\"requested_by\":\"<user-id>\",\"created_at\":\"<time>\",\"updated_at\":\"<time>\"}\n"
+              }
+            }
+          ],
+          "returned": {
+            "auth_url": "https://claude.ai/oauth/authorize?code=true&state=s1",
+            "created_at": "<time>",
+            "detail": "Open the link and paste the code.",
+            "id": "<login-id>",
+            "org_id": "<org-id>",
+            "provider": "claude-code",
+            "requested_by": "<user-id>",
+            "status": "claimed",
+            "target": "user",
+            "updated_at": "<time>"
+          },
+          "error": null
+        }
+      ]
+    },
+    {
+      "name": "a server error is returned at once, not retried",
+      "calls": [
+        {
+          "call": "ClaimLogin()",
+          "http": [
+            {
+              "request": {
+                "method": "POST",
+                "path": "/api/v1/provider-logins/claim",
+                "route": "POST /api/v1/provider-logins/claim",
+                "authorization": "Bearer <worker-key>",
+                "content_type": "",
+                "body": ""
+              },
+              "response": {
+                "status": 500,
+                "body": "{\"error\":\"failed to claim login request\"}\n"
+              }
+            }
+          ],
+          "returned": null,
+          "error": "api returned 500: {\"error\":\"failed to claim login request\"}"
+        }
+      ]
+    }
+  ]
+}

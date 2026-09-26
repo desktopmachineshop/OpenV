@@ -1,0 +1,173 @@
+{
+  "method": "Client.PushLogs",
+  "cases": [
+    {
+      "name": "the streaming body carries the entries and the whole answer so far",
+      "calls": [
+        {
+          "call": "PushLogs(\"<run-id>\", [2 entries], \"The seal holds\")",
+          "http": [
+            {
+              "request": {
+                "method": "POST",
+                "path": "/api/v1/agent-runs/<run-id>/logs",
+                "route": "POST /api/v1/agent-runs/{id}/logs",
+                "authorization": "Bearer <worker-key>",
+                "content_type": "application/json",
+                "body": "{\"entries\":[{\"run_id\":\"<run-id>\",\"seq\":1,\"kind\":\"text\",\"payload\":{\"text\":\"Reading REQ-12 \\u0026 REQ-13 \\u003cdraft\\u003e\"},\"created_at\":\"0001-01-01T00:00:00Z\"},{\"run_id\":\"<run-id>\",\"seq\":2,\"kind\":\"tool_call\",\"payload\":{\"input\":{\"id\":\"REQ-12\"},\"name\":\"mcp__openv__get_artifact\"},\"created_at\":\"0001-01-01T00:00:00Z\"}],\"partial_text\":\"The seal holds\"}"
+              },
+              "response": {
+                "status": 200,
+                "body": "{\"cancel_requested\":false,\"status\":\"running\"}\n"
+              }
+            }
+          ],
+          "returned": {
+            "cancel_requested": false,
+            "status": "running"
+          },
+          "error": null
+        }
+      ]
+    },
+    {
+      "name": "a heartbeat sends an empty list, never null, and reads cancel_requested back",
+      "calls": [
+        {
+          "call": "PushLogs(\"<run-id>\", nil, \"\")",
+          "http": [
+            {
+              "request": {
+                "method": "POST",
+                "path": "/api/v1/agent-runs/<run-id>/logs",
+                "route": "POST /api/v1/agent-runs/{id}/logs",
+                "authorization": "Bearer <worker-key>",
+                "content_type": "application/json",
+                "body": "{\"entries\":[],\"partial_text\":\"\"}"
+              },
+              "response": {
+                "status": 200,
+                "body": "{\"cancel_requested\":true,\"status\":\"running\"}\n"
+              }
+            }
+          ],
+          "returned": {
+            "cancel_requested": true,
+            "status": "running"
+          },
+          "error": null
+        }
+      ]
+    },
+    {
+      "name": "an API older than the streaming body answers 400: the batch is resent as the legacy bare array, and the client keeps that shape",
+      "calls": [
+        {
+          "call": "PushLogs(\"<run-id>\", [2 entries], \"half an answer\")",
+          "http": [
+            {
+              "request": {
+                "method": "POST",
+                "path": "/api/v1/agent-runs/<run-id>/logs",
+                "route": "POST /api/v1/agent-runs/{id}/logs",
+                "authorization": "Bearer <worker-key>",
+                "content_type": "application/json",
+                "body": "{\"entries\":[{\"run_id\":\"<run-id>\",\"seq\":1,\"kind\":\"text\",\"payload\":{\"text\":\"Reading REQ-12 \\u0026 REQ-13 \\u003cdraft\\u003e\"},\"created_at\":\"0001-01-01T00:00:00Z\"},{\"run_id\":\"<run-id>\",\"seq\":2,\"kind\":\"tool_call\",\"payload\":{\"input\":{\"id\":\"REQ-12\"},\"name\":\"mcp__openv__get_artifact\"},\"created_at\":\"0001-01-01T00:00:00Z\"}],\"partial_text\":\"half an answer\"}"
+              },
+              "response": {
+                "status": 400,
+                "body": "{\"error\":\"invalid request body\"}\n"
+              }
+            },
+            {
+              "request": {
+                "method": "POST",
+                "path": "/api/v1/agent-runs/<run-id>/logs",
+                "route": "POST /api/v1/agent-runs/{id}/logs",
+                "authorization": "Bearer <worker-key>",
+                "content_type": "application/json",
+                "body": "[{\"run_id\":\"<run-id>\",\"seq\":1,\"kind\":\"text\",\"payload\":{\"text\":\"Reading REQ-12 \\u0026 REQ-13 \\u003cdraft\\u003e\"},\"created_at\":\"0001-01-01T00:00:00Z\"},{\"run_id\":\"<run-id>\",\"seq\":2,\"kind\":\"tool_call\",\"payload\":{\"input\":{\"id\":\"REQ-12\"},\"name\":\"mcp__openv__get_artifact\"},\"created_at\":\"0001-01-01T00:00:00Z\"}]"
+              },
+              "response": {
+                "status": 200,
+                "body": "{\"cancel_requested\":false,\"status\":\"running\"}\n"
+              }
+            }
+          ],
+          "returned": {
+            "cancel_requested": false,
+            "status": "running"
+          },
+          "error": null
+        },
+        {
+          "call": "PushLogs(\"<run-id>\", [2 entries], \"more of the answer\")",
+          "http": [
+            {
+              "request": {
+                "method": "POST",
+                "path": "/api/v1/agent-runs/<run-id>/logs",
+                "route": "POST /api/v1/agent-runs/{id}/logs",
+                "authorization": "Bearer <worker-key>",
+                "content_type": "application/json",
+                "body": "[{\"run_id\":\"<run-id>\",\"seq\":1,\"kind\":\"text\",\"payload\":{\"text\":\"Reading REQ-12 \\u0026 REQ-13 \\u003cdraft\\u003e\"},\"created_at\":\"0001-01-01T00:00:00Z\"},{\"run_id\":\"<run-id>\",\"seq\":2,\"kind\":\"tool_call\",\"payload\":{\"input\":{\"id\":\"REQ-12\"},\"name\":\"mcp__openv__get_artifact\"},\"created_at\":\"0001-01-01T00:00:00Z\"}]"
+              },
+              "response": {
+                "status": 200,
+                "body": "{\"cancel_requested\":false,\"status\":\"running\"}\n"
+              }
+            }
+          ],
+          "returned": {
+            "cancel_requested": false,
+            "status": "running"
+          },
+          "error": null
+        }
+      ]
+    },
+    {
+      "name": "a 5xx is retried after a backoff",
+      "calls": [
+        {
+          "call": "PushLogs(\"<run-id>\", nil, \"\")",
+          "http": [
+            {
+              "request": {
+                "method": "POST",
+                "path": "/api/v1/agent-runs/<run-id>/logs",
+                "route": "POST /api/v1/agent-runs/{id}/logs",
+                "authorization": "Bearer <worker-key>",
+                "content_type": "application/json",
+                "body": "{\"entries\":[],\"partial_text\":\"\"}"
+              },
+              "response": {
+                "status": 502,
+                "body": "bad gateway\n"
+              }
+            },
+            {
+              "request": {
+                "method": "POST",
+                "path": "/api/v1/agent-runs/<run-id>/logs",
+                "route": "POST /api/v1/agent-runs/{id}/logs",
+                "authorization": "Bearer <worker-key>",
+                "content_type": "application/json",
+                "body": "{\"entries\":[],\"partial_text\":\"\"}"
+              },
+              "response": {
+                "status": 200,
+                "body": "{\"cancel_requested\":false,\"status\":\"running\"}\n"
+              }
+            }
+          ],
+          "returned": {
+            "cancel_requested": false,
+            "status": "running"
+          },
+          "error": null
+        }
+      ]
+    }
+  ]
+}

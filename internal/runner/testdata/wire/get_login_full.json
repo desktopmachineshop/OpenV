@@ -1,0 +1,69 @@
+{
+  "method": "Client.GetLoginFull",
+  "cases": [
+    {
+      "name": "the request with the pasted code",
+      "calls": [
+        {
+          "call": "GetLoginFull(\"<login-id>\")",
+          "http": [
+            {
+              "request": {
+                "method": "GET",
+                "path": "/api/v1/provider-logins/<login-id>/full",
+                "route": "GET /api/v1/provider-logins/{id}/full",
+                "authorization": "Bearer <worker-key>",
+                "content_type": "",
+                "body": ""
+              },
+              "response": {
+                "status": 200,
+                "body": "{\"id\":\"<login-id>\",\"org_id\":\"<org-id>\",\"provider\":\"claude-code\",\"target\":\"user\",\"status\":\"awaiting_code\",\"auth_url\":\"https://claude.ai/oauth/authorize?code=true&state=s1\",\"code\":\"4/0AbCdEf\",\"detail\":\"Open the link and paste the code.\",\"requested_by\":\"<user-id>\",\"created_at\":\"<time>\",\"updated_at\":\"<time>\"}\n"
+              }
+            }
+          ],
+          "returned": {
+            "auth_url": "https://claude.ai/oauth/authorize?code=true&state=s1",
+            "code": "4/0AbCdEf",
+            "created_at": "<time>",
+            "detail": "Open the link and paste the code.",
+            "id": "<login-id>",
+            "org_id": "<org-id>",
+            "provider": "claude-code",
+            "requested_by": "<user-id>",
+            "status": "awaiting_code",
+            "target": "user",
+            "updated_at": "<time>"
+          },
+          "error": null
+        }
+      ]
+    },
+    {
+      "name": "a request of another workspace answers 404",
+      "calls": [
+        {
+          "call": "GetLoginFull(\"<login-id>\")",
+          "http": [
+            {
+              "request": {
+                "method": "GET",
+                "path": "/api/v1/provider-logins/<login-id>/full",
+                "route": "GET /api/v1/provider-logins/{id}/full",
+                "authorization": "Bearer <worker-key>",
+                "content_type": "",
+                "body": ""
+              },
+              "response": {
+                "status": 404,
+                "body": "{\"error\":\"login request not found\"}\n"
+              }
+            }
+          ],
+          "returned": null,
+          "error": "api returned 404: {\"error\":\"login request not found\"}"
+        }
+      ]
+    }
+  ]
+}

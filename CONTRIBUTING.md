@@ -19,7 +19,9 @@ saying what they will notice: what they can now do, what looks different,
 what they no longer have to do. Write for a workspace member, not a
 developer; the implementation belongs in the pull request. CI refuses a
 pull request that adds no bullet; a change nobody can see (CI, refactors,
-internal docs) carries the `no-release-notes` label instead.
+internal docs) carries the `no-release-notes` label instead. Adding or
+removing that label re-runs the check, so it can go on after the pull
+request is opened.
 
 Every bullet goes under one of three group headings, because that is how a
 reader tells them apart:

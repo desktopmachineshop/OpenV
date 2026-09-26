@@ -1,0 +1,594 @@
+{
+  "tools": [
+    {
+      "name": "list_projects",
+      "read_only": true,
+      "description": "List all projects visible to this agent.",
+      "input_schema": {
+        "properties": {},
+        "required": [],
+        "type": "object"
+      },
+      "calls": ["GET /api/v1/projects"],
+      "requests": ["GET /api/v1/projects"]
+    },
+    {
+      "name": "list_artifacts",
+      "read_only": true,
+      "description": "List artifacts in a project, optionally filtered by type and by owner (the \"owner\" attribute: a person, team or supplier).",
+      "input_schema": {
+        "properties": {
+          "owner": {
+            "description": "Optional owner filter: only artifacts whose owner attribute equals this",
+            "type": "string"
+          },
+          "project_id": {"description": "Project ID", "type": "string"},
+          "type": {"description": "Optional artifact type filter", "type": "string"}
+        },
+        "required": ["project_id"],
+        "type": "object"
+      },
+      "calls": ["GET /api/v1/artifacts"],
+      "requests": [
+        "GET /api/v1/artifacts?owner=QA&project_id=11111111-1111-4111-8111-111111111111&type=requirement"
+      ]
+    },
+    {
+      "name": "get_artifact",
+      "read_only": true,
+      "description": "Get a single artifact by ID, including its body. Accepts a stable ref (e.g. \"REQ-12\") instead of a UUID when project_id is also given.",
+      "input_schema": {
+        "properties": {
+          "id": {
+            "description": "Artifact ID (UUID), or a stable ref like REQ-12 (requires project_id)",
+            "type": "string"
+          },
+          "project_id": {
+            "description": "Project ID; required only when id is a stable ref",
+            "type": "string"
+          }
+        },
+        "required": ["id"],
+        "type": "object"
+      },
+      "calls": ["GET /api/v1/artifacts", "GET /api/v1/artifacts/{id}"],
+      "requests": [
+        "GET /api/v1/artifacts?project_id=11111111-1111-4111-8111-111111111111",
+        "GET /api/v1/artifacts/22222222-2222-4222-8222-222222222222"
+      ]
+    },
+    {
+      "name": "get_project_map",
+      "read_only": true,
+      "description": "The project's AI map: every artifact as one outline line — stable ref, title, status, hierarchy, and inline link annotations, no bodies. Roughly 10x fewer tokens than list_artifacts; use it to orient, then pull bodies for specific artifacts with get_artifact or get_context. Pass baseline_id for the map as of a baseline/release.",
+      "input_schema": {
+        "properties": {
+          "baseline_id": {
+            "description": "Optional baseline ID to render the map from that snapshot",
+            "type": "string"
+          },
+          "project_id": {"description": "Project ID", "type": "string"}
+        },
+        "required": ["project_id"],
+        "type": "object"
+      },
+      "calls": ["GET /api/v1/projects/{id}/ai-map"],
+      "requests": [
+        "GET /api/v1/projects/11111111-1111-4111-8111-111111111111/ai-map?baseline_id=55555555-5555-4555-8555-555555555555"
+      ]
+    },
+    {
+      "name": "get_context",
+      "read_only": true,
+      "description": "One-call context bundle for an artifact: full body, ancestor path, children, and every linked artifact with a short excerpt — addressed by stable ref (REQ-12) or UUID. Replaces a get_artifact + list_links_for_artifact + N more get_artifact round trip.",
+      "input_schema": {
+        "properties": {
+          "id": {"description": "Artifact stable ref (e.g. REQ-12) or UUID", "type": "string"},
+          "project_id": {"description": "Project ID", "type": "string"}
+        },
+        "required": ["project_id", "id"],
+        "type": "object"
+      },
+      "calls": ["GET /api/v1/artifacts", "GET /api/v1/links"],
+      "requests": [
+        "GET /api/v1/artifacts?project_id=11111111-1111-4111-8111-111111111111",
+        "GET /api/v1/links?project_id=11111111-1111-4111-8111-111111111111"
+      ]
+    },
+    {
+      "name": "get_project_tree",
+      "read_only": true,
+      "description": "Get the project's artifact tree: id, type, title, parent_id, sort_order per artifact (no bodies).",
+      "input_schema": {
+        "properties": {
+          "project_id": {"description": "Project ID", "type": "string"}
+        },
+        "required": ["project_id"],
+        "type": "object"
+      },
+      "calls": ["GET /api/v1/artifacts"],
+      "requests": ["GET /api/v1/artifacts?project_id=11111111-1111-4111-8111-111111111111"]
+    },
+    {
+      "name": "search_artifacts",
+      "read_only": true,
+      "description": "Case-insensitive substring search over artifact refs, titles and bodies in a project. A query that is a ref (\"REQ-30\", case-insensitive) returns that artifact first.",
+      "input_schema": {
+        "properties": {
+          "project_id": {"description": "Project ID", "type": "string"},
+          "query": {
+            "description": "Substring to search for, or a ref such as REQ-30",
+            "type": "string"
+          }
+        },
+        "required": ["project_id", "query"],
+        "type": "object"
+      },
+      "calls": ["GET /api/v1/artifacts"],
+      "requests": ["GET /api/v1/artifacts?project_id=11111111-1111-4111-8111-111111111111"]
+    },
+    {
+      "name": "create_artifact",
+      "read_only": false,
+      "description": "Create an artifact. A 202 response means the change was diverted to a proposal pending human review. In proposal mode you may pass a `ref`: a temporary token you choose (e.g. \"t1\") that names this not-yet-created artifact so a create_link in the SAME run can point at it via from_id/to_id. The token resolves to the real artifact id when the artifact proposal is approved.",
+      "input_schema": {
+        "properties": {
+          "attributes": {"description": "Optional attributes object", "type": "object"},
+          "body": {"description": "Optional markdown body", "type": "string"},
+          "parent_id": {"description": "Optional parent artifact ID", "type": "string"},
+          "project_id": {"description": "Project ID", "type": "string"},
+          "ref": {
+            "description": "Optional temporary reference token (proposal mode only) to name this artifact for a sibling create_link in the same run",
+            "type": "string"
+          },
+          "title": {"description": "Title", "type": "string"},
+          "type": {"description": "Artifact type", "type": "string"}
+        },
+        "required": ["project_id", "type", "title"],
+        "type": "object"
+      },
+      "calls": ["POST /api/v1/artifacts"],
+      "requests": [
+        "POST /api/v1/artifacts {\"attributes\":{\"priority\":\"must\"},\"body\":\"Holds 6 bar.\",\"parent_id\":\"22222222-2222-4222-8222-222222222222\",\"project_id\":\"11111111-1111-4111-8111-111111111111\",\"ref\":\"t1\",\"title\":\"Seal integrity\",\"type\":\"requirement\"}"
+      ]
+    },
+    {
+      "name": "update_artifact",
+      "read_only": false,
+      "description": "Update an artifact. Omitted optional fields are left unchanged. A 202 response means the change was diverted to a proposal pending human review.",
+      "input_schema": {
+        "properties": {
+          "attributes": {
+            "description": "Optional attributes object (omit to keep current)",
+            "type": "object"
+          },
+          "body": {
+            "description": "Optional markdown body (omit to keep current; pass \"\" to clear)",
+            "type": "string"
+          },
+          "id": {"description": "Artifact ID", "type": "string"},
+          "parent_id": {
+            "description": "Optional new parent artifact ID (omit to keep current; pass \"\" to move to the top level)",
+            "type": "string"
+          },
+          "title": {"description": "Optional title (omit to keep current)", "type": "string"},
+          "type": {"description": "Optional artifact type (omit to keep current)", "type": "string"}
+        },
+        "required": ["id"],
+        "type": "object"
+      },
+      "calls": ["PUT /api/v1/artifacts/{id}"],
+      "requests": [
+        "PUT /api/v1/artifacts/22222222-2222-4222-8222-222222222222 {\"attributes\":{\"priority\":\"should\"},\"body\":\"\",\"parent_id\":null,\"title\":\"Seal integrity\",\"type\":\"requirement\"}"
+      ]
+    },
+    {
+      "name": "create_link",
+      "read_only": false,
+      "description": "Create a typed link between two artifacts. In proposal mode from_id and/or to_id may be a temporary ref token that a create_artifact in the SAME run assigned via its `ref` argument, letting you link to an artifact whose own proposal is not yet approved; the token resolves to the real id when both proposals are approved (the artifact one first). A 202 response means the link was diverted to a proposal pending human review.",
+      "input_schema": {
+        "properties": {
+          "from_id": {
+            "description": "Source artifact ID, or a ref token from a create_artifact in this run",
+            "type": "string"
+          },
+          "to_id": {
+            "description": "Target artifact ID, or a ref token from a create_artifact in this run",
+            "type": "string"
+          },
+          "type": {"description": "Link type", "type": "string"}
+        },
+        "required": ["from_id", "to_id", "type"],
+        "type": "object"
+      },
+      "calls": ["POST /api/v1/links"],
+      "requests": [
+        "POST /api/v1/links {\"from_id\":\"22222222-2222-4222-8222-222222222222\",\"to_id\":\"33333333-3333-4333-8333-333333333333\",\"type\":\"verifies\"}"
+      ]
+    },
+    {
+      "name": "delete_link",
+      "read_only": false,
+      "description": "Delete a link by ID.",
+      "input_schema": {
+        "properties": {
+          "id": {"description": "Link ID", "type": "string"}
+        },
+        "required": ["id"],
+        "type": "object"
+      },
+      "calls": ["DELETE /api/v1/links/{id}"],
+      "requests": ["DELETE /api/v1/links/44444444-4444-4444-8444-444444444444"]
+    },
+    {
+      "name": "confirm_link",
+      "read_only": false,
+      "description": "Clear the suspect flag on one link, vouching that the trace still holds after an artifact at one of its ends changed. Re-read both ends before calling it: the flag exists to make someone look, and clearing it is the assertion that they did. Idempotent — confirming a link that is not suspect changes nothing. list_links_for_artifact reports `suspect` per link, which is how you find the ones waiting. Proposal-mode agent runs are refused (403) rather than diverted to a proposal: this is a human sign-off, and routing it through a proposal would defeat the review the flag is there to trigger.",
+      "input_schema": {
+        "properties": {
+          "id": {"description": "Link ID", "type": "string"}
+        },
+        "required": ["id"],
+        "type": "object"
+      },
+      "calls": ["PUT /api/v1/links/{id}/confirm"],
+      "requests": ["PUT /api/v1/links/44444444-4444-4444-8444-444444444444/confirm"]
+    },
+    {
+      "name": "list_links_for_artifact",
+      "read_only": true,
+      "description": "List all links touching one artifact.",
+      "input_schema": {
+        "properties": {
+          "artifact_id": {"description": "Artifact ID", "type": "string"},
+          "project_id": {"description": "Project ID", "type": "string"}
+        },
+        "required": ["artifact_id", "project_id"],
+        "type": "object"
+      },
+      "calls": ["GET /api/v1/links"],
+      "requests": ["GET /api/v1/links?project_id=11111111-1111-4111-8111-111111111111"]
+    },
+    {
+      "name": "add_comment",
+      "read_only": false,
+      "description": "Add a chatter comment to an artifact.",
+      "input_schema": {
+        "properties": {
+          "artifact_id": {"description": "Artifact ID", "type": "string"},
+          "message": {"description": "Comment text", "type": "string"}
+        },
+        "required": ["artifact_id", "message"],
+        "type": "object"
+      },
+      "calls": ["POST /api/v1/chatter"],
+      "requests": [
+        "POST /api/v1/chatter {\"artifact_id\":\"22222222-2222-4222-8222-222222222222\",\"message\":\"Checked on the rig.\"}"
+      ]
+    },
+    {
+      "name": "list_baselines",
+      "read_only": true,
+      "description": "List a project's baselines.",
+      "input_schema": {
+        "properties": {
+          "project_id": {"description": "Project ID", "type": "string"}
+        },
+        "required": ["project_id"],
+        "type": "object"
+      },
+      "calls": ["GET /api/v1/projects/{id}/baselines"],
+      "requests": ["GET /api/v1/projects/11111111-1111-4111-8111-111111111111/baselines"]
+    },
+    {
+      "name": "get_baseline",
+      "read_only": true,
+      "description": "Get a baseline's details by ID (name and capture time). The snapshot itself is not returned — read a baseline's content with get_project_map, passing baseline_id.",
+      "input_schema": {
+        "properties": {
+          "id": {"description": "Baseline ID", "type": "string"}
+        },
+        "required": ["id"],
+        "type": "object"
+      },
+      "calls": ["GET /api/v1/baselines/{id}"],
+      "requests": ["GET /api/v1/baselines/55555555-5555-4555-8555-555555555555"]
+    },
+    {
+      "name": "create_baseline",
+      "read_only": false,
+      "description": "Capture a baseline: an immutable snapshot of the project's artifacts and links. Capture one after a coherent set of changes has landed, so later work can be compared against it.",
+      "input_schema": {
+        "properties": {
+          "name": {
+            "description": "Optional baseline name (the server names a dated one when omitted)",
+            "type": "string"
+          },
+          "project_id": {"description": "Project ID", "type": "string"}
+        },
+        "required": ["project_id"],
+        "type": "object"
+      },
+      "calls": ["POST /api/v1/projects/{id}/baselines"],
+      "requests": [
+        "POST /api/v1/projects/11111111-1111-4111-8111-111111111111/baselines {\"name\":\"B1\"}"
+      ]
+    },
+    {
+      "name": "start_project_review",
+      "read_only": false,
+      "description": "Start a review round for a whole project: every artifact still in draft moves to in_review in one action. Re-runnable and safe to repeat — an approved artifact nobody has changed stays approved, while one whose content was edited since it was approved is already back in draft and so is pulled into review again. Covers every artifact type by default, headings and descriptions included; pass types to narrow it.",
+      "input_schema": {
+        "properties": {
+          "project_id": {"description": "Project ID", "type": "string"},
+          "types": {
+            "description": "Optional artifact types to review (default: every type in the catalog)",
+            "items": {"type": "string"},
+            "type": "array"
+          }
+        },
+        "required": ["project_id"],
+        "type": "object"
+      },
+      "calls": ["POST /api/v1/projects/{id}/review-round"],
+      "requests": [
+        "POST /api/v1/projects/11111111-1111-4111-8111-111111111111/review-round {\"types\":[\"requirement\"]}"
+      ]
+    },
+    {
+      "name": "create_test_run",
+      "read_only": false,
+      "description": "Create a test run in a project.",
+      "input_schema": {
+        "properties": {
+          "description": {"description": "Optional description", "type": "string"},
+          "name": {"description": "Test run name", "type": "string"},
+          "project_id": {"description": "Project ID", "type": "string"}
+        },
+        "required": ["project_id", "name"],
+        "type": "object"
+      },
+      "calls": ["POST /api/v1/projects/{id}/test-runs"],
+      "requests": [
+        "POST /api/v1/projects/11111111-1111-4111-8111-111111111111/test-runs {\"description\":\"Rig 2\",\"name\":\"Bench run\"}"
+      ]
+    },
+    {
+      "name": "record_test_result",
+      "read_only": false,
+      "description": "Record one test case result in a test run.",
+      "input_schema": {
+        "properties": {
+          "evidence": {
+            "description": "Optional evidence attachment IDs",
+            "items": {"type": "string"},
+            "type": "array"
+          },
+          "notes": {"description": "Optional notes", "type": "string"},
+          "run_id": {"description": "Test run ID", "type": "string"},
+          "status": {"description": "Result status (e.g. pass, fail, blocked)", "type": "string"},
+          "test_case_id": {"description": "Test case artifact ID", "type": "string"}
+        },
+        "required": ["run_id", "test_case_id", "status"],
+        "type": "object"
+      },
+      "calls": ["POST /api/v1/test-runs/{id}/results"],
+      "requests": [
+        "POST /api/v1/test-runs/66666666-6666-4666-8666-666666666666/results {\"evidence\":[\"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa\"],\"notes\":\"ok\",\"status\":\"pass\",\"test_case_id\":\"77777777-7777-4777-8777-777777777777\"}"
+      ]
+    },
+    {
+      "name": "close_test_run",
+      "read_only": false,
+      "description": "Close a test run once its results are recorded: status \"completed\", or \"aborted\" for a run that was abandoned. Only an in-progress run can be closed.",
+      "input_schema": {
+        "properties": {
+          "run_id": {"description": "Test run ID", "type": "string"},
+          "status": {"description": "completed or aborted", "type": "string"}
+        },
+        "required": ["run_id", "status"],
+        "type": "object"
+      },
+      "calls": ["PUT /api/v1/test-runs/{id}"],
+      "requests": [
+        "PUT /api/v1/test-runs/66666666-6666-4666-8666-666666666666 {\"status\":\"completed\"}"
+      ]
+    },
+    {
+      "name": "get_quality_rules",
+      "read_only": true,
+      "description": "The requirement quality rules this project is judged against: its normative convention (\"shall\" or RFC 2119 must/should/may) and the severity of each lint rule, plus a one-sentence summary. Read this before drafting or rewording a requirement so the wording matches the project's house style.",
+      "input_schema": {
+        "properties": {
+          "project_id": {"description": "Project ID", "type": "string"}
+        },
+        "required": ["project_id"],
+        "type": "object"
+      },
+      "calls": ["GET /api/v1/projects/{id}/quality-rules"],
+      "requests": ["GET /api/v1/projects/11111111-1111-4111-8111-111111111111/quality-rules"]
+    },
+    {
+      "name": "get_quality_findings",
+      "read_only": true,
+      "description": "Lint one requirement or user need against the project's quality rules: a 0-100 score, its band, and one finding per wording problem (weak words, vague quantifiers, placeholders, passive voice, off-convention keywords, over-long sentences, untestable phrasing). Advisory — findings never block a write.",
+      "input_schema": {
+        "properties": {
+          "artifact_id": {
+            "description": "Artifact ID or stable ref (pass project_id to resolve a ref)",
+            "type": "string"
+          },
+          "project_id": {
+            "description": "Project ID, required when artifact_id is a stable ref",
+            "type": "string"
+          }
+        },
+        "required": ["artifact_id"],
+        "type": "object"
+      },
+      "calls": ["GET /api/v1/artifacts", "GET /api/v1/artifacts/{id}/quality"],
+      "requests": [
+        "GET /api/v1/artifacts?project_id=11111111-1111-4111-8111-111111111111",
+        "GET /api/v1/artifacts/22222222-2222-4222-8222-222222222222/quality"
+      ]
+    },
+    {
+      "name": "get_vv_coverage",
+      "read_only": true,
+      "description": "Verification coverage for a project: the rollup summary plus one line per requirement (verification method, status, rollup). Pass detail=true for the full report, which also carries each requirement's test cases and their latest results.",
+      "input_schema": {
+        "properties": {
+          "detail": {
+            "description": "Return the full report instead of the per-requirement summary lines",
+            "type": "boolean"
+          },
+          "project_id": {"description": "Project ID", "type": "string"}
+        },
+        "required": ["project_id"],
+        "type": "object"
+      },
+      "calls": ["GET /api/v1/projects/{id}/vv/coverage"],
+      "requests": ["GET /api/v1/projects/11111111-1111-4111-8111-111111111111/vv/coverage"]
+    },
+    {
+      "name": "get_vv_gaps",
+      "read_only": true,
+      "description": "Traceability and verification gaps in a project: requirements with no verification method, with no test case, unverified (requirements_unverified — method demonstration, analysis or inspection and not yet marked verified), or whose latest results fail, plus orphan test cases, user needs no requirement derives from, and unmitigated hazards. Each is a list of artifact IDs.",
+      "input_schema": {
+        "properties": {
+          "project_id": {"description": "Project ID", "type": "string"}
+        },
+        "required": ["project_id"],
+        "type": "object"
+      },
+      "calls": ["GET /api/v1/projects/{id}/vv/gaps"],
+      "requests": ["GET /api/v1/projects/11111111-1111-4111-8111-111111111111/vv/gaps"]
+    },
+    {
+      "name": "list_work_items",
+      "read_only": true,
+      "description": "List a project's kanban board cards sorted by column and position (no descriptions or activity — use get_work_item for a card's detail). Optionally filter by board column and/or assignee ID.",
+      "input_schema": {
+        "properties": {
+          "assignee_id": {
+            "description": "Optional assignee ID filter (agent, user or team ID)",
+            "type": "string"
+          },
+          "column": {
+            "description": "Optional board column filter: backlog, todo, in-progress, review or done",
+            "type": "string"
+          },
+          "project_id": {"description": "Project ID", "type": "string"}
+        },
+        "required": ["project_id"],
+        "type": "object"
+      },
+      "calls": ["GET /api/v1/projects/{id}/work-items"],
+      "requests": ["GET /api/v1/projects/11111111-1111-4111-8111-111111111111/work-items"]
+    },
+    {
+      "name": "get_work_item",
+      "read_only": true,
+      "description": "Get a kanban work item with its activity.",
+      "input_schema": {
+        "properties": {
+          "id": {"description": "Work item ID", "type": "string"}
+        },
+        "required": ["id"],
+        "type": "object"
+      },
+      "calls": ["GET /api/v1/work-items/{id}"],
+      "requests": ["GET /api/v1/work-items/88888888-8888-4888-8888-888888888888"]
+    },
+    {
+      "name": "get_work_item_history",
+      "read_only": true,
+      "description": "Get just the activity history of a work item.",
+      "input_schema": {
+        "properties": {
+          "id": {"description": "Work item ID", "type": "string"}
+        },
+        "required": ["id"],
+        "type": "object"
+      },
+      "calls": ["GET /api/v1/work-items/{id}"],
+      "requests": ["GET /api/v1/work-items/88888888-8888-4888-8888-888888888888"]
+    },
+    {
+      "name": "update_work_item",
+      "read_only": false,
+      "description": "Add a progress comment to a work item.",
+      "input_schema": {
+        "properties": {
+          "comment": {"description": "Comment text", "type": "string"},
+          "id": {"description": "Work item ID", "type": "string"}
+        },
+        "required": ["id", "comment"],
+        "type": "object"
+      },
+      "calls": ["POST /api/v1/work-items/{id}/comments"],
+      "requests": [
+        "POST /api/v1/work-items/88888888-8888-4888-8888-888888888888/comments {\"comment\":\"Started.\"}"
+      ]
+    },
+    {
+      "name": "record_candidate_need",
+      "read_only": false,
+      "description": "Record a candidate user need discovered during an interview. Stored as a draft user-need artifact for later review.",
+      "input_schema": {
+        "properties": {
+          "need": {"description": "Short statement of the user need", "type": "string"},
+          "project_id": {"description": "Project ID", "type": "string"},
+          "quote": {
+            "description": "Optional supporting quote from the interviewee",
+            "type": "string"
+          },
+          "rationale": {"description": "Optional rationale", "type": "string"}
+        },
+        "required": ["project_id", "need"],
+        "type": "object"
+      },
+      "calls": ["POST /api/v1/artifacts"],
+      "requests": [
+        "POST /api/v1/artifacts {\"body\":\"Rationale: Downtime\\n\\nQuote: \\\"We only find out when it leaks.\\\"\",\"project_id\":\"11111111-1111-4111-8111-111111111111\",\"title\":\"Operators see seal wear early\",\"type\":\"user-need\"}"
+      ]
+    },
+    {
+      "name": "delegate_to_agent",
+      "read_only": false,
+      "description": "Delegate a task to one of this agent's team delegates by role label, then wait for the result (polls up to 30 minutes).",
+      "input_schema": {
+        "properties": {
+          "prompt": {"description": "Task prompt for the delegate", "type": "string"},
+          "role_label": {"description": "Delegate's role label in the team", "type": "string"}
+        },
+        "required": ["role_label", "prompt"],
+        "type": "object"
+      },
+      "calls": ["POST /api/v1/agent-runs/delegate", "GET /api/v1/agent-runs/delegate/{id}"],
+      "requests": [
+        "POST /api/v1/agent-runs/delegate {\"prompt\":\"Draft the test cases.\",\"role_label\":\"builder\"}",
+        "GET /api/v1/agent-runs/delegate/99999999-9999-4999-8999-999999999999"
+      ]
+    }
+  ],
+  "read_only_tool_names": [
+    "mcp__openv__list_projects",
+    "mcp__openv__list_artifacts",
+    "mcp__openv__get_artifact",
+    "mcp__openv__get_project_map",
+    "mcp__openv__get_context",
+    "mcp__openv__get_project_tree",
+    "mcp__openv__search_artifacts",
+    "mcp__openv__list_links_for_artifact",
+    "mcp__openv__list_baselines",
+    "mcp__openv__get_baseline",
+    "mcp__openv__get_quality_rules",
+    "mcp__openv__get_quality_findings",
+    "mcp__openv__get_vv_coverage",
+    "mcp__openv__get_vv_gaps",
+    "mcp__openv__list_work_items",
+    "mcp__openv__get_work_item",
+    "mcp__openv__get_work_item_history"
+  ]
+}

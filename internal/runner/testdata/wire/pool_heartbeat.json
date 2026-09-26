@@ -1,0 +1,125 @@
+{
+  "method": "Client.PoolHeartbeat",
+  "cases": [
+    {
+      "name": "an idle node: assignment null decodes to no lease",
+      "calls": [
+        {
+          "call": "PoolHeartbeat(\"<node-id>\")",
+          "http": [
+            {
+              "request": {
+                "method": "POST",
+                "path": "/api/v1/runner-pool/nodes/<node-id>/heartbeat",
+                "route": "POST /api/v1/runner-pool/nodes/{id}/heartbeat",
+                "authorization": "Bearer <pool-key>",
+                "content_type": "application/json",
+                "body": "{}"
+              },
+              "response": {
+                "status": 200,
+                "body": "{\"assignment\":null,\"node\":{\"id\":\"<node-id>\",\"name\":\"pool-node-a\",\"pool\":\"default\",\"providers\":[\"claude-code\"],\"status\":\"idle\",\"last_seen_at\":\"<time>\",\"created_at\":\"<time>\"}}\n"
+              }
+            }
+          ],
+          "returned": {
+            "is_err_pool_node_unknown": false
+          },
+          "error": null
+        }
+      ]
+    },
+    {
+      "name": "the beat that picks a lease up carries the session's worker key",
+      "calls": [
+        {
+          "call": "PoolHeartbeat(\"<node-id>\")",
+          "http": [
+            {
+              "request": {
+                "method": "POST",
+                "path": "/api/v1/runner-pool/nodes/<node-id>/heartbeat",
+                "route": "POST /api/v1/runner-pool/nodes/{id}/heartbeat",
+                "authorization": "Bearer <pool-key>",
+                "content_type": "application/json",
+                "body": "{}"
+              },
+              "response": {
+                "status": 200,
+                "body": "{\"assignment\":{\"session_id\":\"<session-id>\",\"org_id\":\"<org-id>\",\"user_id\":\"<user-id>\",\"user_name\":\"Dana\",\"worker_key\":\"<session-key>\",\"expires_at\":\"<expires>\"},\"node\":{\"id\":\"<node-id>\",\"name\":\"pool-node-a\",\"pool\":\"default\",\"providers\":[\"claude-code\"],\"status\":\"idle\",\"last_seen_at\":\"<time>\",\"created_at\":\"<time>\"}}\n"
+              }
+            }
+          ],
+          "returned": {
+            "assignment": {
+              "expires_at": "<expires>",
+              "org_id": "<org-id>",
+              "session_id": "<session-id>",
+              "user_id": "<user-id>",
+              "user_name": "Dana",
+              "worker_key": "<session-key>"
+            },
+            "is_err_pool_node_unknown": false
+          },
+          "error": null
+        }
+      ]
+    },
+    {
+      "name": "an unknown node answers 404: ErrPoolNodeUnknown, so the node registers again",
+      "calls": [
+        {
+          "call": "PoolHeartbeat(\"<node-id>\")",
+          "http": [
+            {
+              "request": {
+                "method": "POST",
+                "path": "/api/v1/runner-pool/nodes/<node-id>/heartbeat",
+                "route": "POST /api/v1/runner-pool/nodes/{id}/heartbeat",
+                "authorization": "Bearer <pool-key>",
+                "content_type": "application/json",
+                "body": "{}"
+              },
+              "response": {
+                "status": 404,
+                "body": "{\"error\":\"pool node is not registered\"}\n"
+              }
+            }
+          ],
+          "returned": {
+            "is_err_pool_node_unknown": true
+          },
+          "error": "pool node is not registered"
+        }
+      ]
+    },
+    {
+      "name": "a server error is returned at once, not retried",
+      "calls": [
+        {
+          "call": "PoolHeartbeat(\"<node-id>\")",
+          "http": [
+            {
+              "request": {
+                "method": "POST",
+                "path": "/api/v1/runner-pool/nodes/<node-id>/heartbeat",
+                "route": "POST /api/v1/runner-pool/nodes/{id}/heartbeat",
+                "authorization": "Bearer <pool-key>",
+                "content_type": "application/json",
+                "body": "{}"
+              },
+              "response": {
+                "status": 503,
+                "body": "{\"error\":\"failed to record pool heartbeat\"}\n"
+              }
+            }
+          ],
+          "returned": {
+            "is_err_pool_node_unknown": false
+          },
+          "error": "api returned 503: {\"error\":\"failed to record pool heartbeat\"}"
+        }
+      ]
+    }
+  ]
+}

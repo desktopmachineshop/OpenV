@@ -1,0 +1,57 @@
+{
+  "method": "Client.Release",
+  "cases": [
+    {
+      "name": "hands the run back with the worker id; 204 is success",
+      "calls": [
+        {
+          "call": "Release(\"<run-id>\", \"<worker-id>\")",
+          "http": [
+            {
+              "request": {
+                "method": "POST",
+                "path": "/api/v1/agent-runs/<run-id>/release",
+                "route": "POST /api/v1/agent-runs/{id}/release",
+                "authorization": "Bearer <worker-key>",
+                "content_type": "application/json",
+                "body": "{\"worker_id\":\"<worker-id>\"}"
+              },
+              "response": {
+                "status": 204,
+                "body": ""
+              }
+            }
+          ],
+          "returned": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "name": "a server error is returned at once, not retried",
+      "calls": [
+        {
+          "call": "Release(\"<run-id>\", \"<worker-id>\")",
+          "http": [
+            {
+              "request": {
+                "method": "POST",
+                "path": "/api/v1/agent-runs/<run-id>/release",
+                "route": "POST /api/v1/agent-runs/{id}/release",
+                "authorization": "Bearer <worker-key>",
+                "content_type": "application/json",
+                "body": "{\"worker_id\":\"<worker-id>\"}"
+              },
+              "response": {
+                "status": 500,
+                "body": "{\"error\":\"failed to release run\"}\n"
+              }
+            }
+          ],
+          "returned": null,
+          "error": "api returned 500: {\"error\":\"failed to release run\"}"
+        }
+      ]
+    }
+  ]
+}
