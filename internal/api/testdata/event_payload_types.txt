@@ -1,0 +1,95 @@
+# Domain event payloads (refactor plan S6, invariant I10): for every path that publishes an event, each
+# payload key and the Go type of its value (%T). In-process subscribers type-assert these values
+# (notify/membership.go, orchestration/hooks.go) and the trigger matcher compares them through %v, so a
+# changed Go type changes behavior even where the JSON (S5d) does not. Written by TestEventPayloadTypes.
+# Columns: event type, payload key, Go type, published by (the route driven, or the in-process path).
+# Regenerate: UPDATE_GOLDEN=1 go test ./internal/api -count=1 -run '^TestEventPayloadTypes$'
+agentrun.finished             agent_id           string                   POST /api/v1/agent-runs/{id}/finish
+agentrun.finished             launched_by        string                   POST /api/v1/agent-runs/{id}/finish
+agentrun.finished             status             string                   POST /api/v1/agent-runs/{id}/finish
+artifact.created              artifact_type      string                   POST /api/v1/artifacts
+artifact.created              artifact_type      string                   proposal applier CreateArtifact
+artifact.created              title              string                   POST /api/v1/artifacts
+artifact.created              title              string                   proposal applier CreateArtifact
+artifact.created              version            int                      proposal applier CreateArtifact
+artifact.deleted              (empty)            -                        DELETE /api/v1/artifacts/{id}
+artifact.deleted              artifact_type      string                   proposal applier DeleteArtifact
+artifact.deleted              title              string                   proposal applier DeleteArtifact
+artifact.status_changed       artifact_type      string                   POST /api/v1/projects/{id}/review-round
+artifact.status_changed       artifact_type      string                   PUT /api/v1/artifacts/{id}/status
+artifact.status_changed       from               string                   POST /api/v1/projects/{id}/review-round
+artifact.status_changed       from               string                   PUT /api/v1/artifacts/{id}/status
+artifact.status_changed       review_round       bool                     POST /api/v1/projects/{id}/review-round
+artifact.status_changed       title              string                   POST /api/v1/projects/{id}/review-round
+artifact.status_changed       title              string                   PUT /api/v1/artifacts/{id}/status
+artifact.status_changed       to                 string                   POST /api/v1/projects/{id}/review-round
+artifact.status_changed       to                 string                   PUT /api/v1/artifacts/{id}/status
+artifact.status_changed       version            int                      POST /api/v1/projects/{id}/review-round
+artifact.status_changed       version            int                      PUT /api/v1/artifacts/{id}/status
+artifact.updated              artifact_type      string                   PUT /api/v1/artifacts/{id}
+artifact.updated              artifact_type      string                   proposal applier UpdateArtifact
+artifact.updated              title              string                   PUT /api/v1/artifacts/{id}
+artifact.updated              title              string                   proposal applier UpdateArtifact
+artifact.updated              version            int                      PUT /api/v1/artifacts/{id}
+artifact.updated              version            int                      proposal applier UpdateArtifact
+baseline.captured             name               string                   POST /api/v1/projects/{id}/baselines
+chatter.created               artifact_id        string                   POST /api/v1/chatter
+chatter.created               entry_type         string                   POST /api/v1/chatter
+chatter.created               kind               string                   POST /api/v1/public/interviews/{token}/finish
+chatter.created               message            string                   POST /api/v1/chatter
+link.created                  from_id            string                   POST /api/v1/links
+link.created                  from_id            string                   proposal applier CreateLink
+link.created                  link_type          string                   POST /api/v1/links
+link.created                  link_type          string                   proposal applier CreateLink
+link.created                  to_id              string                   POST /api/v1/links
+link.created                  to_id              string                   proposal applier CreateLink
+link.deleted                  from_id            string                   DELETE /api/v1/links/{id}
+link.deleted                  from_id            string                   proposal applier DeleteLink
+link.deleted                  link_type          string                   DELETE /api/v1/links/{id}
+link.deleted                  link_type          string                   proposal applier DeleteLink
+link.deleted                  to_id              string                   DELETE /api/v1/links/{id}
+link.deleted                  to_id              string                   proposal applier DeleteLink
+org.invitation_accepted       role               string                   OIDC sign-in with a provider-verified address
+org.invitation_accepted       role               string                   POST /api/v1/auth/invitations/accept
+org.invitation_accepted       user_id            string                   OIDC sign-in with a provider-verified address
+org.invitation_accepted       user_id            string                   POST /api/v1/auth/invitations/accept
+org.invitation_sent           email              string                   POST /api/v1/orgs/{id}/invitations
+org.invitation_sent           email              string                   POST /api/v1/orgs/{id}/members (address without an account)
+org.invitation_sent           role               string                   POST /api/v1/orgs/{id}/invitations
+org.invitation_sent           role               string                   POST /api/v1/orgs/{id}/members (address without an account)
+org.member_added              role               string                   POST /api/v1/orgs/{id}/members (address with an account)
+org.member_added              user_id            string                   POST /api/v1/orgs/{id}/members (address with an account)
+org.member_removed            self               bool                     DELETE /api/v1/orgs/{id}/members/{userId}
+org.member_removed            user_id            string                   DELETE /api/v1/orgs/{id}/members/{userId}
+org.member_role_changed       from               string                   PUT /api/v1/orgs/{id}/members/{userId}
+org.member_role_changed       to                 string                   PUT /api/v1/orgs/{id}/members/{userId}
+org.member_role_changed       user_id            string                   PUT /api/v1/orgs/{id}/members/{userId}
+project.member_added          role               string                   POST /api/v1/projects/{id}/members
+project.member_added          user_id            string                   POST /api/v1/projects/{id}/members
+project.member_removed        self               bool                     DELETE /api/v1/projects/{id}/members/{userId}
+project.member_removed        user_id            string                   DELETE /api/v1/projects/{id}/members/{userId}
+project.member_role_changed   from               string                   PUT /api/v1/projects/{id}/members/{userId}
+project.member_role_changed   to                 string                   PUT /api/v1/projects/{id}/members/{userId}
+project.member_role_changed   user_id            string                   PUT /api/v1/projects/{id}/members/{userId}
+project.review_round_started  already_in_review  int                      POST /api/v1/projects/{id}/review-round
+project.review_round_started  approved           int                      POST /api/v1/projects/{id}/review-round
+project.review_round_started  moved              int                      POST /api/v1/projects/{id}/review-round
+project.review_round_started  types              []string                 POST /api/v1/projects/{id}/review-round
+proposal.created              op                 string                   POST /api/v1/artifacts (proposal-mode agent run)
+proposal.created              run_id             string                   POST /api/v1/artifacts (proposal-mode agent run)
+testrun.recorded              run_id             string                   POST /api/v1/test-runs/{id}/results
+testrun.recorded              run_id             string                   proposal applier RecordTestResult
+testrun.recorded              status             string                   POST /api/v1/test-runs/{id}/results
+testrun.recorded              status             string                   proposal applier RecordTestResult
+testrun.recorded              test_case_id       string                   POST /api/v1/test-runs/{id}/results
+testrun.recorded              test_case_id       string                   proposal applier RecordTestResult
+workitem.created              column             string                   POST /api/v1/projects/{id}/work-items
+workitem.created              title              string                   POST /api/v1/projects/{id}/work-items
+workitem.moved                assignee_id        string                   POST /api/v1/work-items/{id}/move (assigned card)
+workitem.moved                assignee_type      string                   POST /api/v1/work-items/{id}/move (assigned card)
+workitem.moved                assignee_type      string                   POST /api/v1/work-items/{id}/move (unassigned card)
+workitem.moved                column             string                   POST /api/v1/work-items/{id}/move (assigned card)
+workitem.moved                column             string                   POST /api/v1/work-items/{id}/move (unassigned card)
+workitem.updated              title              string                   PUT /api/v1/work-items/{id}
+# Event types nothing publishes today:
+link.updated                  (no publisher)     -                        -

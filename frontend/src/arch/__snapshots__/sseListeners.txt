@@ -1,0 +1,14 @@
+# SSE events the frontend listens for (invariant I9): each addEventListener, onmessage, onerror and onopen
+# on an EventSource, by event name. Every server event must be in contracts/sse-events.json.
+# Regenerate: npx vitest run src/arch -u. Deployed servers send these names; renaming one silently drops its events.
+
+events: 8
+
+assistant_partial
+error
+log
+message
+notification
+open  (EventSource connection event)
+partial
+status

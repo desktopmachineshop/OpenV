@@ -1,0 +1,79 @@
+{
+  "about": "SSE wire contract (refactor plan S6, invariant I9): the event names the server sends and the stream keys each goes on (<id> is the variable part; a bare <id> is an agent run's stream), the streams ServeStream serves, and the bytes and headers a stream writes. Written by TestSSEContract (internal/api/sse_contract_test.go); frontend/src/arch/sseListeners.test.ts checks every EventSource listener against it. Regenerate only for a deliberate change: UPDATE_GOLDEN=1 go test ./internal/api -count=1 -run '^TestSSEContract$'",
+  "events": [
+    {
+      "name": "assistant_partial",
+      "streams": [
+        "guided:<id>",
+        "interview:<id>"
+      ]
+    },
+    {
+      "name": "error",
+      "streams": [
+        "<id>",
+        "guided:<id>",
+        "interview:<id>"
+      ]
+    },
+    {
+      "name": "log",
+      "streams": [
+        "<id>"
+      ]
+    },
+    {
+      "name": "message",
+      "streams": [
+        "guided:<id>",
+        "interview:<id>"
+      ]
+    },
+    {
+      "name": "notification",
+      "streams": [
+        "notify:<id>"
+      ]
+    },
+    {
+      "name": "partial",
+      "streams": [
+        "<id>"
+      ]
+    },
+    {
+      "name": "status",
+      "streams": [
+        "<id>"
+      ]
+    }
+  ],
+  "streams": [
+    {
+      "key": "<id>",
+      "replay": true
+    },
+    {
+      "key": "guided:<id>",
+      "replay": true
+    },
+    {
+      "key": "interview:<id>",
+      "replay": true
+    },
+    {
+      "key": "notify:<id>",
+      "replay": false
+    }
+  ],
+  "headers": {
+    "Cache-Control": "no-cache",
+    "Connection": "keep-alive",
+    "Content-Type": "text/event-stream",
+    "X-Accel-Buffering": "no"
+  },
+  "frame": "event: <name>\ndata: <json>\n\n",
+  "keepalive": ": keepalive\n\n",
+  "keepalive_interval": "25s",
+  "replay_failure": "event: error\ndata: {\"error\":\"stream unavailable\"}\n\n"
+}

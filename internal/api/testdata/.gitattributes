@@ -1,0 +1,3 @@
+# Byte-compared goldens (refactor plan steps S2 and S6): a checkout with CRLF
+# line endings would fail every comparison, so they stay LF on every platform.
+* text eol=lf
