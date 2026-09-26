@@ -21,9 +21,7 @@ import (
 // removing one fails until the file is regenerated deliberately, which is
 // the moment to write the deprecation note in RELEASE_NOTES.md.
 func TestRouteInventoryIsBackwardCompatible(t *testing.T) {
-	h := &Handler{}
-	router := mux.NewRouter()
-	h.RegisterRoutes(router)
+	router := routeTable()
 
 	var lines []string
 	err := router.Walk(func(route *mux.Route, _ *mux.Router, _ []*mux.Route) error {
@@ -77,6 +75,16 @@ func TestRouteInventoryIsBackwardCompatible(t *testing.T) {
 			strings.Join(removed, "\n  "))
 	}
 	t.Fatalf("routes were added; regenerate the inventory with UPDATE_ROUTES=1 go test ./internal/api -run TestRouteInventory")
+}
+
+// routeTable builds the router the route goldens read: a zero Handler, a
+// fresh mux router and RegisterRoutes. The inventory above and the binding
+// goldens (route_binding_test.go) walk the same table.
+func routeTable() *mux.Router {
+	h := &Handler{}
+	router := mux.NewRouter()
+	h.RegisterRoutes(router)
+	return router
 }
 
 func dedupe(sorted []string) []string {
