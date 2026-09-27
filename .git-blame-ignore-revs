@@ -1,0 +1,17 @@
+# Commits that git blame skips: generated moves and scripted rewrites that
+# change where code lives or what it is called, not what it does.
+#
+# The refactor plan (docs/plans/codebase-refactor.md §6.9) lists here the
+# merged commit of every class A pure move and class R scripted rewrite.
+# After such a pull request merges, a class T follow-up adds that commit's
+# full SHA, one per line with a comment naming the step. A move regenerated
+# before it merged has a new SHA, so only the one that merged is listed. A
+# squash merge lists the squashed commit.
+#
+# GitHub's blame view reads this file on its own. Locally, turn it on once
+# per clone:
+#
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+#
+# or for one run: git blame --ignore-revs-file .git-blame-ignore-revs <file>.
+# `git log --follow` still shows every commit.

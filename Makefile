@@ -174,7 +174,15 @@ test:
 ## The release-notes job requires a new bullet relative to the merge base
 ## with BASE_REF, which is what CI's comparison of the merge commit with its
 ## first parent amounts to; set NO_RELEASE_NOTES=1 for a pull request that
-## carries the no-release-notes label. Needs a host Go toolchain, Node with
+## carries the no-release-notes label. From
+## .github/workflows/refactor-guard.yml: the Refactor guard job, over the
+## commits since that merge base, with the labels the pull request will carry
+## in LABELS (space-separated): `make check LABELS="refactor refactor:tooling
+## no-release-notes"` runs the refactor class checks and, as CI does for a
+## refactor, fails if internal/archtest/ratchets.json can be tightened (the
+## tightened file is left in the working tree to commit). Like the job, it
+## runs the merge base's copy of refactor_guard.py when there is one. It
+## reads commits, so commit first. Needs a host Go toolchain, Node with
 ## `npm ci` run in frontend/, Python 3 and git; no Docker. The Docker builds,
 ## e2e and security scans stay in CI (`make vuln` and `make secrets` run the
 ## last two locally).
@@ -186,7 +194,7 @@ check:
 	fi
 	go vet . ./cmd/... ./internal/...
 	go test . ./cmd/... ./internal/...
-	python3 -m unittest scripts/refactor/classify_commits_test.py
+	python3 -m unittest scripts/refactor/classify_commits_test.py scripts/refactor/refactor_guard_test.py
 	@if [ -z "$$OPENV_TEST_DATABASE_URL" ]; then \
 		echo "OPENV_TEST_DATABASE_URL is unset: the Postgres-backed tests skipped (CI runs them)"; \
 	else \
@@ -214,6 +222,23 @@ check:
 		python3 scripts/release_notes.py check-pr --base "$$base_notes" RELEASE_NOTES.md; rc=$$?; \
 		rm -f "$$base_notes"; exit $$rc; \
 	fi
+	@base="$$(git merge-base "$(BASE_REF)" HEAD)" || { \
+		echo "cannot find where HEAD left $(BASE_REF): run 'git fetch origin master' or set BASE_REF"; exit 1; }; \
+	guard=scripts/refactor/refactor_guard.py; tmp=""; \
+	if git cat-file -e "$$base:$$guard" 2>/dev/null; then \
+		tmp="$$(mktemp -d)" && mkdir -p "$$tmp/scripts/refactor" && git show "$$base:$$guard" > "$$tmp/$$guard" && \
+		{ ! git cat-file -e "$$base:scripts/release_notes.py" 2>/dev/null || \
+			git show "$$base:scripts/release_notes.py" > "$$tmp/scripts/release_notes.py"; } || \
+		{ rm -rf "$$tmp"; exit 1; }; \
+		guard="$$tmp/$$guard"; \
+	fi; \
+	python3 "$$guard" --base "$$base" --head HEAD --summary "" $(foreach l,$(LABELS),--label '$(l)'); rc=$$?; \
+	[ -z "$$tmp" ] || rm -rf "$$tmp"; exit $$rc
+	@case " $(LABELS) " in *" refactor "*|*" refactor:"*) \
+		UPDATE_RATCHETS=1 go test -count=1 -run '^TestArchitecture$$' ./internal/archtest && \
+		{ git diff --exit-code -- internal/archtest/ratchets.json || { \
+			echo "ratchets.json can be tightened: commit the regenerated file above (a refactor may not leave it loose)"; exit 1; }; } ;; \
+	esac
 	cd frontend && npx tsc --noEmit
 	cd frontend && npm run lint
 	cd frontend && npm test

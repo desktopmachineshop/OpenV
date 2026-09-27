@@ -1,0 +1,134 @@
+name: Refactor guard
+
+# The refactor plan's gate (docs/plans/codebase-refactor.md, S14b; the
+# author's guide is CONTRIBUTING.md, "Refactor PRs"). It runs on every pull
+# request:
+#
+#   (1) a golden on the list in scripts/refactor/refactor_guard.py changed
+#       (modified or deleted) needs a RELEASE_NOTES.md bullet or the
+#       maintainer's behavior-change label, and an inline snapshot added to a
+#       test fails;
+#   (2) a pull request labelled `refactor` or `refactor:*` also gets the
+#       per-commit class checks (the Refactor-Class trailer), the frozen and
+#       protected paths, the guard-code rule, and the ratchet and lint
+#       allowlist rules, and may carry neither a golden change nor
+#       behavior-change;
+#   (3) stale ratchets: after regenerating internal/archtest/ratchets.json, a
+#       refactor pull request fails if the file could be tightened; any other
+#       pull request gets a warning.
+#
+# Like release-notes.yml, it lives in its own workflow so that a label change
+# re-runs it, reads the labels from the API when it runs rather than from
+# the triggering event, and takes the pull request's change against the
+# first parent of the merge commit it checks out (HEAD^1), the base GitHub
+# merged it onto. HEAD^2 is the pull request's head; its commits are
+# HEAD^1..HEAD^2. It judges them with the base's copy of the script.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled, ready_for_review]
+
+# One result per pull request: a later push or label change supersedes a run
+# still in flight.
+concurrency:
+  group: refactor-guard-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  refactor-guard:
+    name: Refactor guard
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The whole history: the checks walk every commit of the pull
+          # request (HEAD^1..HEAD^2), whatever its length, and class A and R
+          # read each commit's parent.
+          fetch-depth: 0
+
+      # Class A runs declhash with `go run`, class R may run Go tools, and
+      # the stale-ratchet step runs archtest.
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Script self-test
+        run: python3 -m unittest scripts/refactor/refactor_guard_test.py
+
+      - name: Read the labels
+        id: labels
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          labels=$(gh api "repos/$REPO/pulls/$PR" --jq '.labels[].name')
+          echo "Labels: $(tr '\n' ' ' <<<"$labels")"
+          delim="labels_$RANDOM$RANDOM"
+          { echo "names<<$delim"; echo "$labels"; echo "$delim"; } >> "$GITHUB_OUTPUT"
+          if grep -Eqx 'refactor|refactor:.*' <<<"$labels"; then refactor=true; else refactor=false; fi
+          echo "refactor=$refactor" >> "$GITHUB_OUTPUT"
+          # tsdeclhash and tsmovecheck (class A for TypeScript) need the
+          # frontend's node_modules; install them only when they can run.
+          ts=false
+          if [ "$refactor" = true ] && ! git diff --quiet HEAD^1 HEAD -- 'frontend/src/*.ts' 'frontend/src/*.tsx'; then
+            ts=true
+          fi
+          echo "ts=$ts" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-node@v4
+        if: steps.labels.outputs.ts == 'true'
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Frontend dependencies for the TypeScript move proofs
+        if: steps.labels.outputs.ts == 'true'
+        working-directory: frontend
+        run: npm ci
+
+      # The checks and their lists are the base's copy of the script, so a
+      # pull request that edits them (dropping a guard-code or protected-path
+      # entry, say) is judged by what it started from; its edits take effect
+      # once it merges. The self-test above tests the pull request's own copy.
+      # The pull request that adds the script falls back to its own.
+      - name: Goldens, classes and guard code
+        env:
+          LABELS: ${{ steps.labels.outputs.names }}
+        run: |
+          guard=scripts/refactor/refactor_guard.py
+          if git cat-file -e "HEAD^1:$guard" 2>/dev/null; then
+            mkdir -p "$RUNNER_TEMP/base/scripts/refactor"
+            git show "HEAD^1:$guard" > "$RUNNER_TEMP/base/$guard"
+            if git cat-file -e HEAD^1:scripts/release_notes.py 2>/dev/null; then
+              git show HEAD^1:scripts/release_notes.py > "$RUNNER_TEMP/base/scripts/release_notes.py"
+            fi
+            guard="$RUNNER_TEMP/base/$guard"
+          fi
+          echo "Running $guard"
+          python3 "$guard" --labels "$LABELS"
+
+      # Rule (3). A one-line deletion in a grandfathered file already loosens
+      # its entry, so a refactor must commit the tightened file; other pull
+      # requests are only told. Runs even when the step above failed, so both
+      # results show.
+      - name: Stale ratchets
+        if: ${{ !cancelled() && steps.labels.outcome == 'success' }}
+        env:
+          REFACTOR: ${{ steps.labels.outputs.refactor }}
+        run: |
+          UPDATE_RATCHETS=1 go test -count=1 -run '^TestArchitecture$' ./internal/archtest
+          if [ "$REFACTOR" = true ]; then
+            if ! git diff --exit-code -- internal/archtest/ratchets.json; then
+              echo "::error file=internal/archtest/ratchets.json::ratchets.json can be tightened, and a refactor pull request commits the tightened file: run UPDATE_RATCHETS=1 go test ./internal/archtest and commit it (class T, or with the commit that shrank the code)"
+              exit 1
+            fi
+          else
+            git diff --quiet -- internal/archtest/ratchets.json || echo "::warning file=internal/archtest/ratchets.json::ratchets.json can be tightened; run UPDATE_RATCHETS=1 go test ./internal/archtest and commit it"
+          fi

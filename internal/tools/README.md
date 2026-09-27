@@ -152,6 +152,31 @@ that reaches a shallow clone's boundary, whose commits git shows as adding
 every file (`git fetch --unshallow` first), and `-n` counts every commit,
 so "the next 60 code commits" is given as a range.
 
+## scripts/refactor/refactor_guard.py
+
+```
+python3 scripts/refactor/refactor_guard.py [--labels TEXT] [--label NAME]... [--merge REV] [--base REV --head REV]
+```
+
+The checks of the *Refactor guard* job (S14b,
+`.github/workflows/refactor-guard.yml`; CONTRIBUTING.md, "Refactor PRs"),
+run on GitHub's merge commit (`HEAD^1` the base, `HEAD^2` the pull
+request's head) or on `--base`/`--head`. On every pull request a modified or
+deleted golden needs a release note or the `behavior-change` label, and an
+added inline snapshot fails; on a `refactor` or `refactor:*` pull request it
+adds the frozen and protected paths, the guard-code rule, the ratchet,
+lint-allowlist and ceiling rules, and the per-commit class checks read from
+the `Refactor-Class:` trailer. Class A runs `declhash` above and, for
+TypeScript, `tsdeclhash` and `tsmovecheck` below; class R re-runs the
+`Refactor-Script:` in a scratch worktree of the commit's parent. The golden
+list, the frozen and protected paths and the guard-code list sit at the top
+of the script, each entry naming the plan step that owns it; a later step
+adds its entries there in a class T commit. The job, and `make check`, run
+the base's copy of the script, so those entries take effect once that pull
+request merges (`X2B_CALL_SHAPE_CHANGES` is read from the pull request). The
+job's next step, not the script, fails a refactor whose `ratchets.json` can
+be tightened.
+
 ## make check and make check-fast
 
 `make check` runs CI's pull-request gates locally, in CI's order: the
@@ -163,8 +188,11 @@ the release-notes job (against the merge base with `BASE_REF`,
 `origin/master`) and the frontend job (tsc, lint, vitest, the Node tests of
 `frontend/scripts`, build). The tests of every tool here are part of CI's
 gates: the Go ones in the backend job's `go test`, `classify_commits_test.py`
-in its *Refactor tool tests (Python)* step, and the Node ones in the frontend
-job's *Refactor tool tests (Node)* step. `make check-fast` is the
+and `refactor_guard_test.py` in its *Refactor tool tests (Python)* step (the
+Refactor guard job runs the latter again before using the script), and the
+Node ones in the frontend job's *Refactor tool tests (Node)* step. `make
+check` also runs the Refactor guard over the commits since the merge base,
+with the labels given in `LABELS`. `make check-fast` is the
 under-a-minute loop: gofmt, vet, `go test -short` on the packages changed
 since the merge base with `BASE_REF` and the packages that import them,
 `go test ./internal/archtest`, the S6 source scans in `internal/api`
