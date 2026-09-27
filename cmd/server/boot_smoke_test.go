@@ -47,9 +47,10 @@ import (
 //     timeout.
 //
 // A profile is a set of variables on top of the harness's fixed environment
-// (harness_test.go); S4b adds one per setting the plan lists. This step
-// boots two: the default, and OPENV_METRICS_TOKEN set, which is the only way
-// to see /metrics refuse a request.
+// (harness_test.go). This test boots two: the default, and
+// OPENV_METRICS_TOKEN set, which is the only way to see /metrics refuse a
+// request. S4b's profiles, one per setting the plan lists, boot through the
+// same runBootProfile in TestBootProfiles (boot_profiles_test.go).
 func TestBootSmoke(t *testing.T) {
 	if os.Getenv(testDatabaseURLEnv) == "" {
 		t.Skipf("%s not set; skipping the boot harness (it needs a Postgres server)", testDatabaseURLEnv)
@@ -60,7 +61,7 @@ func TestBootSmoke(t *testing.T) {
 		t.Run(p.name, func(t *testing.T) {
 			t.Parallel()
 			start := time.Now()
-			got := runBootProfile(t, bin, p)
+			got := runBootProfile(t, bin, p, bootGoldenHeader)
 			checkGolden(t, filepath.Join("testdata", "boot", p.name+".txt"), got, bootSmokeRegenerate)
 			took := time.Since(start)
 			if took > bootProfileBudget {
@@ -86,6 +87,24 @@ type bootProfile struct {
 	name  string
 	about string
 	env   map[string]string
+
+	// The fields below serve S4b's profiles (boot_profiles_test.go). The S4a
+	// profiles leave them zero, and then neither their boot nor their golden
+	// differs from what S4a wrote.
+
+	// proxy sets HTTP_PROXY and HTTPS_PROXY to a recordingProxy, shown as
+	// proxyPlaceholder, and closes the golden with what it saw.
+	proxy bool
+	// async lists the messages this profile's boot logs from goroutines
+	// besides bootAsyncMessages: they are awaited before the first probe
+	// and listed apart, like those.
+	async []string
+	// signUp makes the account the later probes use on a profile whose
+	// register answers without a session; the register probe then records
+	// the refusal in full.
+	signUp func(r *probeRun) *http.Cookie
+	// extra probes run after bootProbes and before the drain.
+	extra []probe
 }
 
 // metricsTestToken is OPENV_METRICS_TOKEN in the metrics_token profile, and
@@ -125,8 +144,11 @@ type probeRun struct {
 	t       *testing.T
 	s       *serverProcess
 	p       bootProfile
+	db      testDatabase
+	env     map[string]string // the variables the profile booted with, proxy included
 	session *http.Cookie
 	project string
+	org     string // the account's workspace (S4b's billing probes)
 
 	start int      // stderr offset when this probe began
 	keys  []string // "METHOD path" of each request it made
@@ -174,6 +196,11 @@ var bootProbes = []probe{
 		req := r.request("POST", "/api/v1/auth/register", bytes.NewReader(body))
 		req.Header.Set("Content-Type", "application/json")
 		resp, data := r.send(req)
+		if r.p.signUp != nil {
+			r.recordText(resp, data)
+			r.session = r.p.signUp(r)
+			return
+		}
 		r.recordHeadAs(resp, false)
 		r.line("body not recorded (the new account; S5c pins it)")
 		for _, c := range resp.Cookies() {
@@ -266,25 +293,35 @@ var bootProbes = []probe{
 	}},
 }
 
-// runBootProfile boots one profile, runs the probes and the drain, and
-// writes its golden text.
-func runBootProfile(t *testing.T, bin string, p bootProfile) []byte {
-	s, db := bootServer(t, bin, p.env)
-	s.waitForAsyncLines()
-	shared := &probeRun{t: t, s: s, p: p}
+// runBootProfile boots one profile, runs the probes (bootProbes, then the
+// profile's extra ones) and the drain, and writes its golden text under
+// header.
+func runBootProfile(t *testing.T, bin string, p bootProfile, header string) []byte {
+	env := p.env
+	var proxy *recordingProxy
+	if p.proxy {
+		proxy = startRecordingProxy(t)
+		env = proxy.env(p.env)
+	}
+	s, db := bootServer(t, bin, env)
+	s.waitForAsyncLines(p.async)
+	probes := append(append([]probe(nil), bootProbes...), p.extra...)
+	shared := &probeRun{}
 	var runs []*probeRun
-	for _, pr := range bootProbes {
-		r := &probeRun{t: t, s: s, p: p, session: shared.session, project: shared.project, start: s.stderr.Len()}
+	for _, pr := range probes {
+		r := &probeRun{t: t, s: s, p: p, db: db, env: env, session: shared.session, project: shared.project, org: shared.org,
+			start: s.stderr.Len()}
 		pr.run(r)
-		shared.session, shared.project = r.session, r.project
+		shared.session, shared.project, shared.org = r.session, r.project, r.org
 		runs = append(runs, r)
 	}
-	drain := &probeRun{t: t, s: s, p: p, session: shared.session, start: s.stderr.Len()}
+	drain := &probeRun{t: t, s: s, p: p, db: db, env: env, session: shared.session, start: s.stderr.Len()}
 	sigterm, exitLines := runDrain(drain)
 	if testing.Verbose() {
 		logCoverage(t, s)
 	}
-	return renderBootGolden(t, s, db, p, runs, drain, sigterm, exitLines)
+	g := bootGolden{header: header, probes: probes, runs: runs, drain: drain, sigterm: sigterm, exit: exitLines, proxy: proxy}
+	return g.render(t, s, db, p)
 }
 
 // logCoverage logs how much of cmd/server's code the boot ran, from the
@@ -348,14 +385,26 @@ func runDrain(r *probeRun) (int, []string) {
 	}
 }
 
-// renderBootGolden sorts the server's log into the boot log, the lines of
-// each probe and the shutdown log, and writes the golden text.
-func renderBootGolden(t *testing.T, s *serverProcess, db testDatabase, p bootProfile, runs []*probeRun, drain *probeRun,
-	sigterm int, exitLines []string) []byte {
-	lines := s.logLines()
+// bootGolden is what a profile's golden is written from, besides the
+// server's own output.
+type bootGolden struct {
+	header  string
+	probes  []probe     // bootProbes, then the profile's extra ones
+	runs    []*probeRun // one per probe
+	drain   *probeRun
+	sigterm int // the stderr offset at SIGTERM
+	exit    []string
+	proxy   *recordingProxy // nil unless the profile sets proxy
+}
+
+// withoutVectorWarning takes the no-vector warning out of a boot's log
+// lines, after checking that it is there exactly as often as it should be:
+// want times on a server without the vector extension, never on one with it.
+func withoutVectorWarning(t *testing.T, s *serverProcess, db testDatabase, want int) []logLine {
+	t.Helper()
 	var kept []logLine
 	vectorWarnings := 0
-	for _, l := range lines {
+	for _, l := range s.logLines() {
 		if strings.HasPrefix(l.text, noVectorWarning) {
 			vectorWarnings++
 			continue
@@ -365,15 +414,23 @@ func renderBootGolden(t *testing.T, s *serverProcess, db testDatabase, p bootPro
 	switch {
 	case db.vector && vectorWarnings != 0:
 		t.Errorf("the server has the vector extension, yet the boot log warns it is unavailable\n%s", s.output())
-	case !db.vector && vectorWarnings != 1:
-		t.Errorf("the server lacks the vector extension, so the boot log should warn once that it is unavailable; it did %d times\n%s",
-			vectorWarnings, s.output())
+	case !db.vector && vectorWarnings != want:
+		t.Errorf("the server lacks the vector extension, so the boot log should warn %d time(s) that it is unavailable; it did %d times\n%s",
+			want, vectorWarnings, s.output())
 	}
+	return kept
+}
+
+// render sorts the server's log into the boot log, the lines of each probe
+// and the shutdown log, and writes the golden text.
+func (g bootGolden) render(t *testing.T, s *serverProcess, db testDatabase, p bootProfile) []byte {
+	kept := withoutVectorWarning(t, s, db, 1)
+	runs, drain, sigterm := g.runs, g.drain, g.sigterm
 
 	all := append(append([]*probeRun(nil), runs...), drain)
 	claimed := map[int]bool{}
 	for i, r := range all {
-		stream := r == drain || bootProbes[i].stream
+		stream := r == drain || g.probes[i].stream
 		if !stream {
 			continue
 		}
@@ -391,7 +448,7 @@ func renderBootGolden(t *testing.T, s *serverProcess, db testDatabase, p bootPro
 	for j, l := range kept {
 		switch {
 		case claimed[j]:
-		case isAsync(l.text):
+		case isAsync(l.text, p.async):
 			async = append(async, l.text)
 		case l.offset < all[0].start:
 			boot = append(boot, l.text)
@@ -409,45 +466,72 @@ func renderBootGolden(t *testing.T, s *serverProcess, db testDatabase, p bootPro
 	}
 	sort.Strings(async)
 
-	var g strings.Builder
-	g.WriteString(bootGoldenHeader)
-	fmt.Fprintf(&g, "== profile %s: %s\n", p.name, p.about)
-	if len(p.env) == 0 {
-		g.WriteString("(no variables beyond the harness's)\n")
+	var w goldenWriter
+	w.WriteString(g.header)
+	w.profileHead("profile", p.name, p.about, p.env, g.proxy != nil)
+	w.section("boot log, in order", boot)
+	w.section("boot log lines from goroutines, sorted", async)
+	w.section("stdout", stdoutLines(s))
+	for i, r := range runs {
+		w.section("probe "+g.probes[i].name+": "+g.probes[i].title, append(r.lines, logSection(r.logs)...))
 	}
-	keys := make([]string, 0, len(p.env))
-	for k := range p.env {
+	w.section("drain: SIGTERM with GET /api/v1/notifications/stream open", append(drain.lines, logSection(drain.logs)...))
+	w.section("shutdown log, in order", shutdown)
+	w.section("exit", g.exit)
+	if g.proxy != nil {
+		w.section("outbound requests (the recording proxy, after exit)", g.proxy.summary())
+	}
+	return []byte(w.String())
+}
+
+// goldenWriter writes a boot golden's text.
+type goldenWriter struct{ strings.Builder }
+
+// profileHead writes the line naming the boot and the variables it set on
+// top of the harness's, sorted; with proxy, HTTP_PROXY and HTTPS_PROXY
+// among them, as proxyPlaceholder.
+func (w *goldenWriter) profileHead(kind, name, about string, env map[string]string, proxy bool) {
+	fmt.Fprintf(w, "== %s %s: %s\n", kind, name, about)
+	shown := map[string]string{}
+	for k, v := range env {
+		shown[k] = v
+	}
+	if proxy {
+		shown["HTTP_PROXY"], shown["HTTPS_PROXY"] = proxyPlaceholder, proxyPlaceholder
+	}
+	if len(shown) == 0 {
+		w.WriteString("(no variables beyond the harness's)\n")
+	}
+	keys := make([]string, 0, len(shown))
+	for k := range shown {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
 	for _, k := range keys {
-		fmt.Fprintf(&g, "%s=%s\n", k, p.env[k])
+		fmt.Fprintf(w, "%s=%s\n", k, shown[k])
 	}
-	section := func(title string, lines []string) {
-		fmt.Fprintf(&g, "\n== %s\n", title)
-		if len(lines) == 0 {
-			g.WriteString("(none)\n")
-		}
-		for _, l := range lines {
-			g.WriteString(l + "\n")
-		}
+}
+
+// section writes a titled block of lines, or (none).
+func (w *goldenWriter) section(title string, lines []string) {
+	fmt.Fprintf(w, "\n== %s\n", title)
+	if len(lines) == 0 {
+		w.WriteString("(none)\n")
 	}
-	section("boot log, in order", boot)
-	section("boot log lines from goroutines, sorted", async)
-	var stdout []string
+	for _, l := range lines {
+		w.WriteString(l + "\n")
+	}
+}
+
+// stdoutLines is what the server wrote to standard output, normalised.
+func stdoutLines(s *serverProcess) []string {
+	var out []string
 	for _, l := range strings.Split(strings.TrimSuffix(string(s.stdout.Bytes()), "\n"), "\n") {
 		if l != "" {
-			stdout = append(stdout, s.normaliseLine(l))
+			out = append(out, s.normaliseLine(l))
 		}
 	}
-	section("stdout", stdout)
-	for i, r := range runs {
-		section("probe "+bootProbes[i].name+": "+bootProbes[i].title, append(r.lines, logSection(r.logs)...))
-	}
-	section("drain: SIGTERM with GET /api/v1/notifications/stream open", append(drain.lines, logSection(drain.logs)...))
-	section("shutdown log, in order", shutdown)
-	section("exit", exitLines)
-	return []byte(g.String())
+	return out
 }
 
 func logSection(logs []string) []string {

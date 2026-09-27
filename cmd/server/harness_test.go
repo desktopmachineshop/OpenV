@@ -3,12 +3,14 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"crypto/rand"
 	"database/sql"
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"net/url"
@@ -58,6 +60,12 @@ import (
 // root, as in the image, where the project templates are read from
 // examples/. No SMTP, VAPID or SSO variable is set, so mail, web push and
 // sign-on are off, as on a fresh deployment.
+//
+// The S4b boots (boot_profiles_test.go, boot_misconfigured_test.go) also set
+// HTTP_PROXY and HTTPS_PROXY to a recordingProxy of the test's own, which
+// refuses every request and notes where it was going, so that no request a
+// profile's server makes (billing's, above all) leaves the machine, and the
+// golden says which it tried. The S4a profiles run without it.
 
 // testDatabaseURLEnv enables the boot tests; see above.
 const testDatabaseURLEnv = "OPENV_TEST_DATABASE_URL"
@@ -437,20 +445,28 @@ var bootAsyncMessages = []string{
 }
 
 // waitForAsyncLines waits until the server has logged every
-// bootAsyncMessages line. main() starts their goroutines before it listens,
-// so once /health answers they are running.
-func (s *serverProcess) waitForAsyncLines() {
+// bootAsyncMessages line, and each of a profile's own (bootProfile.async).
+// main() starts their goroutines before it listens, so once /health answers
+// they are running. The deadline allows for the billing reconcile, whose
+// provider calls each retry twice with backoff before they give up.
+func (s *serverProcess) waitForAsyncLines(profile []string) {
 	s.t.Helper()
-	deadline := time.Now().Add(10 * time.Second)
-	for _, m := range bootAsyncMessages {
+	deadline := time.Now().Add(asyncDeadline)
+	for _, m := range append(append([]string(nil), bootAsyncMessages...), profile...) {
 		for !strings.Contains(string(s.stderr.Bytes()), m) {
 			if time.Now().After(deadline) {
-				s.t.Fatalf("the server did not log %s within 10 s of answering /health\n%s", m, s.output())
+				s.t.Fatalf("the server did not log %s within %s of answering /health. UPDATE_GOLDEN=1 does not "+
+					"change this: if the message was reworded or dropped on purpose, edit bootAsyncMessages "+
+					"(cmd/server/harness_test.go) or the profile's own async list (billingReconcileMessages, "+
+					"cmd/server/boot_profiles_test.go) in the same change\n%s", m, asyncDeadline, s.output())
 			}
 			time.Sleep(20 * time.Millisecond)
 		}
 	}
 }
+
+// asyncDeadline bounds waitForAsyncLines.
+const asyncDeadline = 30 * time.Second
 
 // noVectorWarning is the one line a server without the vector extension
 // adds to the boot log, up to its error attribute, whose text is the
@@ -501,8 +517,10 @@ func (s *serverProcess) logLines() []logLine {
 	return out
 }
 
-func isAsync(line string) bool {
-	for _, m := range bootAsyncMessages {
+// isAsync reports whether line is one of bootAsyncMessages or of a
+// profile's own.
+func isAsync(line string, profile []string) bool {
+	for _, m := range append(append([]string(nil), bootAsyncMessages...), profile...) {
 		if strings.Contains(line, m) {
 			return true
 		}
@@ -534,4 +552,115 @@ func logField(line, key string) string {
 // probeContext bounds one request.
 func probeContext() (context.Context, context.CancelFunc) {
 	return context.WithTimeout(context.Background(), 60*time.Second)
+}
+
+// ----------------------------------------------------------------------------
+// The recording proxy (S4b)
+
+// recordingProxy is the forward proxy an S4b boot's HTTP_PROXY and
+// HTTPS_PROXY name: a listener of the test's own that reads each request's
+// head, notes where it was going, and answers 403 before a byte is sent
+// anywhere else. Go's proxy-aware transports (http.DefaultTransport, which
+// the billing provider's client uses, and any other that takes its proxy
+// from the environment) send every request to a host other than localhost
+// through it, so what it noted is every such request the server tried, and
+// nothing it tried left the machine. A connection dialled without a proxy
+// would pass it by; the server dials none in these profiles.
+type recordingProxy struct {
+	ln   net.Listener
+	wg   sync.WaitGroup
+	mu   sync.Mutex
+	seen []string // "CONNECT host:port", or "METHOD scheme://host" for plain HTTP
+}
+
+// proxyRefusal is the reason phrase of the proxy's 403, which Go's
+// transport reports as the request's error text.
+const proxyRefusal = "refused by the boot harness proxy"
+
+// proxyPlaceholder stands for the proxy's address in a golden.
+const proxyPlaceholder = "http://127.0.0.1:<recording proxy port>"
+
+func startRecordingProxy(t *testing.T) *recordingProxy {
+	t.Helper()
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("start the recording proxy: %v", err)
+	}
+	p := &recordingProxy{ln: ln}
+	p.wg.Add(1)
+	go func() {
+		defer p.wg.Done()
+		for {
+			conn, err := ln.Accept()
+			if err != nil {
+				return
+			}
+			p.wg.Add(1)
+			go func() {
+				defer p.wg.Done()
+				p.refuse(conn)
+			}()
+		}
+	}()
+	t.Cleanup(func() {
+		_ = ln.Close()
+		p.wg.Wait()
+	})
+	return p
+}
+
+// url is the proxy's address, for HTTP_PROXY and HTTPS_PROXY.
+func (p *recordingProxy) url() string { return "http://" + p.ln.Addr().String() }
+
+// env adds HTTP_PROXY and HTTPS_PROXY, naming this proxy, to a copy of env.
+func (p *recordingProxy) env(env map[string]string) map[string]string {
+	out := map[string]string{"HTTP_PROXY": p.url(), "HTTPS_PROXY": p.url()}
+	for k, v := range env {
+		out[k] = v
+	}
+	return out
+}
+
+// refuse notes one request and answers it 403. The note is taken before the
+// answer is written, so the server cannot see its request fail before the
+// proxy has recorded it.
+func (p *recordingProxy) refuse(conn net.Conn) {
+	defer conn.Close()
+	_ = conn.SetDeadline(time.Now().Add(10 * time.Second))
+	what := "a request the proxy could not read"
+	if req, err := http.ReadRequest(bufio.NewReader(conn)); err == nil {
+		if req.Method == http.MethodConnect {
+			what = "CONNECT " + req.Host
+		} else {
+			what = req.Method + " " + req.URL.Scheme + "://" + req.URL.Host
+		}
+	}
+	p.mu.Lock()
+	p.seen = append(p.seen, what)
+	p.mu.Unlock()
+	_, _ = io.WriteString(conn, "HTTP/1.1 403 "+proxyRefusal+"\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")
+}
+
+// summary lists where the server's requests were going, with how many
+// times each was tried, sorted.
+func (p *recordingProxy) summary() []string {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if len(p.seen) == 0 {
+		return []string{"none: the server sent no request through HTTP_PROXY or HTTPS_PROXY"}
+	}
+	counts := map[string]int{}
+	for _, s := range p.seen {
+		counts[s]++
+	}
+	keys := make([]string, 0, len(counts))
+	for k := range counts {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	out := make([]string, 0, len(keys))
+	for _, k := range keys {
+		out = append(out, fmt.Sprintf("%s: %d tried, each answered 403 %q and sent no further", k, counts[k], proxyRefusal))
+	}
+	return out
 }
