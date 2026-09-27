@@ -210,6 +210,14 @@ prints:
   `-run '^TestBootMisconfigured$'` for the boots that must refuse to start,
   and `UPDATE_GOLDEN=1 go test ./cmd/server -count=1 -run '^TestBootSteps$'`
   for the order of `main()`'s wiring
+- API tour (S5): `OPENV_TEST_DATABASE_URL=<server URL> UPDATE_GOLDEN=1 go test ./cmd/server -count=1 -run '^TestTourS5aAttachments$'`
+  for one area (each golden under `cmd/server/testdata/tour/<slice>/` names
+  its test in `"test"`, and a failure prints its command), or
+  `-run '^TestTour'` for every area (a server with or without pgvector); an
+  area's run also rewrites its slice's `coverage.txt`, and
+  `UPDATE_GOLDEN=1 go test ./cmd/server -count=1 -run '^TestTourCoverage$'`
+  rewrites `coverage.txt` alone, with no database. Two area commits combined
+  conflict there: regenerate it, never merge it by hand
 - SSE and event payloads (S6): `UPDATE_GOLDEN=1 go test ./internal/api -count=1 -run '^TestSSEContract$'`
   and `-run '^TestEventPayloadTypes$'`
 - MCP and worker wire (S7): `UPDATE_GOLDEN=1 go test ./internal/mcp ./internal/runner -run <Test>`

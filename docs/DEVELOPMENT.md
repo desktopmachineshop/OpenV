@@ -211,6 +211,34 @@ check a boot in `misconfiguredBoots` (`boot_misconfigured_test.go`), each
 with its golden; `TestBootGoldensAreClaimed` fails on a golden no boot
 writes.
 
+The API tour beside it (refactor plan steps S5a–S5e) boots the same binary
+once per area, on a database of its own, with `TZ=UTC` and the recording
+proxy, registers its accounts through the API and drives the area's routes:
+each request's status, whether a `Content-Type` is set (also on the gzip
+variant of each GET), the headers, the body as bytes with only the values
+that change from run to run replaced by tokens (a time the server minted is
+written with the request it was minted in, `<time@step 12>`), and the domain
+events the request published (type, actor, and each payload key with its
+JSON type and normalised value), one golden per area under
+`cmd/server/testdata/tour/<slice>/`. S5a covers the requirements
+core (projects, templates, artifacts, attribute definitions, links with the
+managed edits of `PUT /artifacts/{id}`, review, chatter, search,
+attachments with Range requests, baselines, share links and the public views
+they open, and every export, import, report and `/download/*` format).
+`coverage.txt` beside the goldens lists the routes the slice's steps reached,
+marking those that answered only errors, and `/metrics` must count every
+request under the route template the tour declared. A change to what one of
+those routes answers changes its golden; regenerate in the same pull
+request with the command the failure prints,
+`OPENV_TEST_DATABASE_URL=<server URL> UPDATE_GOLDEN=1 go test ./cmd/server -count=1 -run '^TestTourS5a<Area>$'`
+for one area or `-run '^TestTour'` for all (a server with or without the
+vector extension, running in UTC on the same host's clock), which also rewrites
+`coverage.txt`; `UPDATE_GOLDEN=1 go test ./cmd/server -count=1 -run '^TestTourCoverage$'`
+rewrites `coverage.txt` alone with no database. An area is one file,
+`cmd/server/tour_<slice>_<key>_test.go`, with its golden; the areas in
+`tour_s5a_*_test.go` are the worked examples, and
+`TestTourGoldensAreClaimed` fails on a golden no area writes.
+
 ### The vulnerability gate
 
 The **Vulnerability scan** job (`vuln`) is a supply-chain gate on every pull

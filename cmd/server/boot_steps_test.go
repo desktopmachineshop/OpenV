@@ -122,17 +122,40 @@ func checkGolden(t *testing.T, path string, got []byte, regenerate string) {
 	}
 }
 
+// lineDiff's table is quadratic in the lines it spans: the lines both texts
+// share at the start and at the end stay out of it, and past lineDiffCells
+// cells (4 bytes each, so 64 MiB) it compares only the first lineDiffSpan
+// lines of each side's changed middle, far more than the 80 printed lines
+// show. A tour golden runs to 20,000 lines, and changes may lie far apart.
+const (
+	lineDiffCells = 1 << 24
+	lineDiffSpan  = 4000
+)
+
 // lineDiff is a longest-common-subsequence line diff of two goldens, with
 // two lines of context around each change and a cap on what it prints.
 func lineDiff(want, got string) string {
 	a, b := strings.Split(want, "\n"), strings.Split(got, "\n")
-	lcs := make([][]int, len(a)+1)
-	for i := range lcs {
-		lcs[i] = make([]int, len(b)+1)
+	pre := 0
+	for pre < len(a) && pre < len(b) && a[pre] == b[pre] {
+		pre++
 	}
-	for i := len(a) - 1; i >= 0; i-- {
-		for j := len(b) - 1; j >= 0; j-- {
-			if a[i] == b[j] {
+	suf := 0
+	for suf < len(a)-pre && suf < len(b)-pre && a[len(a)-1-suf] == b[len(b)-1-suf] {
+		suf++
+	}
+	ma, mb := a[pre:len(a)-suf], b[pre:len(b)-suf]
+	cut := (len(ma)+1)*(len(mb)+1) > lineDiffCells
+	if cut {
+		ma, mb = ma[:min(len(ma), lineDiffSpan)], mb[:min(len(mb), lineDiffSpan)]
+	}
+	lcs := make([][]int32, len(ma)+1)
+	for i := range lcs {
+		lcs[i] = make([]int32, len(mb)+1)
+	}
+	for i := len(ma) - 1; i >= 0; i-- {
+		for j := len(mb) - 1; j >= 0; j-- {
+			if ma[i] == mb[j] {
 				lcs[i][j] = lcs[i+1][j+1] + 1
 			} else {
 				lcs[i][j] = max(lcs[i+1][j], lcs[i][j+1])
@@ -145,18 +168,29 @@ func lineDiff(want, got string) string {
 		line int
 	}
 	var ops []op
+	for k := 0; k < pre; k++ {
+		ops = append(ops, op{' ', a[k], k + 1})
+	}
 	i, j := 0, 0
-	for i < len(a) || j < len(b) {
+	for i < len(ma) || j < len(mb) {
 		switch {
-		case i < len(a) && j < len(b) && a[i] == b[j]:
-			ops = append(ops, op{' ', a[i], i + 1})
+		case i < len(ma) && j < len(mb) && ma[i] == mb[j]:
+			ops = append(ops, op{' ', ma[i], pre + i + 1})
 			i, j = i+1, j+1
-		case j < len(b) && (i == len(a) || lcs[i][j+1] >= lcs[i+1][j]):
-			ops = append(ops, op{'+', b[j], i + 1})
+		case j < len(mb) && (i == len(ma) || lcs[i][j+1] >= lcs[i+1][j]):
+			ops = append(ops, op{'+', mb[j], pre + i + 1})
 			j++
 		default:
-			ops = append(ops, op{'-', a[i], i + 1})
+			ops = append(ops, op{'-', ma[i], pre + i + 1})
 			i++
+		}
+	}
+	if cut {
+		ops = append(ops, op{'.', fmt.Sprintf("... (diff cut: the changes span more than the %d lines it compares)",
+			lineDiffSpan), pre + i + 1})
+	} else {
+		for k := len(a) - suf; k < len(a); k++ {
+			ops = append(ops, op{' ', a[k], k + 1})
 		}
 	}
 	show := make([]bool, len(ops))
@@ -175,6 +209,10 @@ func lineDiff(want, got string) string {
 		}
 		if printed == 80 {
 			out.WriteString("... (diff truncated)\n")
+			break
+		}
+		if o.kind == '.' {
+			out.WriteString(o.text + "\n")
 			break
 		}
 		if k == 0 || !show[k-1] {

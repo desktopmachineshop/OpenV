@@ -1,0 +1,3414 @@
+{
+  "golden": "cmd/server/testdata/tour/s5a/review_chatter_search.json",
+  "test": "TestTourS5aReviewChatterSearch",
+  "about": "Review (status transitions one artifact at a time, the project review round and its re-runs, the review queue with a suspect link), chatter (notes, @mentions, the auto notes of status changes) and search (ref ranking, modes, the Q8 limit, workspace scope), with the semantic-search routes answering that embeddings are off.",
+  "regenerate": [
+    "OPENV_TEST_DATABASE_URL=<server URL> UPDATE_GOLDEN=1 go test ./cmd/server -count=1 -run '^TestTourS5aReviewChatterSearch$' (which also rewrites the slice's coverage.txt)",
+    "UPDATE_GOLDEN=1 go test ./cmd/server -count=1 -run '^TestTourCoverage$' (coverage.txt alone, no database)"
+  ],
+  "normalised": [
+    "<name>: a value the tour registered under that name (an account's id, its .session token and .workspace; an id a step captured)",
+    "<uuid:N>, <hex64:N>: another random UUID (version 4) or 64-hex token, numbered by first appearance in this golden",
+    "<time@step N>: an RFC 3339 timestamp the server minted during step N (<time@before step N>: during a request the tour sent after step N-1 and records no step for; <time@boot>: before the tour's first request)",
+    "<time>: any other RFC 3339 timestamp (one the tour sent, one to come such as an expiry, or a whole second on a route the area declared to write whole seconds); <datetime>: a wall-clock YYYY-MM-DD hh:mm[:ss]; <date>: YYYY-MM-DD",
+    "<http-date>, <pdf-date>, _<stamp> (a filename's _YYYYMMDD_hhmmss), <boundary> (a multipart boundary)",
+    "<tmp>: the test's temporary directory; 127.0.0.1:<port>, localhost:<port>: the server's own port",
+    "<release-version>, <stable-version>: the release the server reports (GET /api/v1/public/release)",
+    "version-5 and nil UUIDs are not random and stay as they are",
+    "bodies are the server's bytes otherwise: key order, escapes, null against [] and the trailing newline are kept",
+    "a GET or HEAD is sent twice: plain, then with Accept-Encoding: gzip (the gzip field); a write is sent once",
+    "a signed-in actor's requests carry its session cookie and X-Org-ID: its workspace, or acting_in when the step names another; neither header is listed per request",
+    "events: those the step published, oldest first (ties on created_at in the order of their lines), each payload value as its JSON type, then its JSON text, normalised",
+    "0001-01-01T00:00:00Z kept as it is: the zero time, which links_snapshot entries carry as valid_from"
+  ],
+  "env": [
+    "(beyond the harness's fixed environment, cmd/server/harness_test.go)",
+    "HTTPS_PROXY=http://127.0.0.1:<recording proxy port>",
+    "HTTP_PROXY=http://127.0.0.1:<recording proxy port>",
+    "TZ=UTC"
+  ],
+  "actors": [
+    {
+      "name": "admin",
+      "email": "tour-admin@example.com",
+      "account_name": "Tour Admin",
+      "workspace": "<admin.workspace>",
+      "about": "the first account registered, so the platform admin; used only for admin setup"
+    },
+    {
+      "name": "owner",
+      "email": "tour-owner@example.com",
+      "account_name": "Tour Owner",
+      "workspace": "<owner.workspace>",
+      "about": "an ordinary account that owns its personal workspace (nightly channel); reads the events after each step"
+    },
+    {
+      "name": "reviewer",
+      "email": "tour-reviewer@example.com",
+      "account_name": "Tour Reviewer",
+      "workspace": "<reviewer.workspace>",
+      "about": "a member of project P only: a viewer, then a reviewer (named by an @mention in a note), then an editor"
+    },
+    {
+      "name": "anonymous",
+      "about": "no session cookie"
+    }
+  ],
+  "standard_security_headers": [
+    "Content-Security-Policy: default-src 'none'; frame-ancestors 'none'",
+    "Referrer-Policy: strict-origin-when-cross-origin",
+    "X-Content-Type-Options: nosniff",
+    "X-Frame-Options: DENY"
+  ],
+  "steps": [
+    {
+      "n": 1,
+      "title": "P's review queue before anything is in review: both lists [], never null",
+      "actor": "owner",
+      "route": "GET /api/v1/projects/{id}/review-queue",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/projects/<p>/review-queue"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 46,
+      "kind": "json",
+      "body": [
+        "{\"in_review_artifacts\":[],\"suspect_links\":[]}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "in_review_artifacts": [],
+        "suspect_links": []
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 2,
+      "title": "the notes of an artifact that has none: null (Q14)",
+      "actor": "owner",
+      "route": "GET /api/v1/chatter",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/chatter",
+        "query": "artifact_id=<need>"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 5,
+      "kind": "json",
+      "body": [
+        "null"
+      ],
+      "trailing_newline": true,
+      "parsed": null,
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 3,
+      "title": "P's duplicate candidates with no embedding key: enabled false, a note and []",
+      "actor": "owner",
+      "route": "GET /api/v1/projects/{id}/duplicates",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/projects/<p>/duplicates"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 120,
+      "kind": "json",
+      "body": [
+        "{\"enabled\":false,\"note\":\"semantic-search embeddings are not configured; duplicate detection is unavailable\",\"pairs\":[]}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "enabled": false,
+        "note": "semantic-search embeddings are not configured; duplicate detection is unavailable",
+        "pairs": []
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 4,
+      "title": "the duplicate candidates of a project that does not exist",
+      "actor": "owner",
+      "route": "GET /api/v1/projects/{id}/duplicates",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/projects/<phantom>/duplicates"
+      },
+      "notes": [
+        "the project guard runs before any lookup: 403, not 404"
+      ],
+      "status": 403,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 51,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"you do not have access to this project\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "you do not have access to this project"
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 5,
+      "title": "reindex P's embeddings with no embedding key: 200, nothing queued, no event",
+      "actor": "owner",
+      "route": "POST /api/v1/projects/{id}/reindex-embeddings",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/projects/<p>/reindex-embeddings"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 91,
+      "kind": "json",
+      "body": [
+        "{\"enabled\":false,\"note\":\"semantic-search embedding is not configured; nothing to reindex\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "enabled": false,
+        "note": "semantic-search embedding is not configured; nothing to reindex"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 6,
+      "title": "reindex the embeddings of a project that does not exist",
+      "actor": "owner",
+      "route": "POST /api/v1/projects/{id}/reindex-embeddings",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/projects/<phantom>/reindex-embeddings"
+      },
+      "status": 403,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 51,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"you do not have access to this project\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "you do not have access to this project"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 7,
+      "title": "the review queue: the suspect link, with both ends' titles and types",
+      "actor": "owner",
+      "route": "GET /api/v1/projects/{id}/review-queue",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/projects/<p>/review-queue"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"in_review_artifacts\":[],\"suspect_links\":[{\"id\":\"<link>\",\"type\":\"verifies\",\"from_id\":\"<tc>\",\"from_title\":\"Check REQ-1 timing\",\"from_type\":\"test-case\",\"to_id\":\"<req1>\",\"to_title\":\"Answer in time\",\"to_type\":\"requirement\",\"updated_at\":\"<time@before step 1>\"}]}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "in_review_artifacts": [],
+        "suspect_links": [
+          {
+            "id": "<link>",
+            "type": "verifies",
+            "from_id": "<tc>",
+            "from_title": "Check REQ-1 timing",
+            "from_type": "test-case",
+            "to_id": "<req1>",
+            "to_title": "Answer in time",
+            "to_type": "requirement",
+            "updated_at": "<time@before step 1>"
+          }
+        ]
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 8,
+      "title": "the review queue of a project that does not exist",
+      "actor": "owner",
+      "route": "GET /api/v1/projects/{id}/review-queue",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/projects/<phantom>/review-queue"
+      },
+      "status": 403,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 51,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"you do not have access to this project\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "you do not have access to this project"
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 9,
+      "title": "submit the second requirement for review: artifact.status_changed",
+      "actor": "owner",
+      "route": "PUT /api/v1/artifacts/{id}/status",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/artifacts/<req2>/status",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"status\":\"in_review\"}"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"id\":\"<req2>\",\"project_id\":\"<p>\",\"parent_id\":\"<heading>\",\"type\":\"requirement\",\"ref\":\"REQ-2\",\"title\":\"Audit trail\",\"body\":\"The system shall record 99% of answers in the audit trail within 5 s.\",\"sort_order\":3,\"status\":\"in_review\",\"attributes\":{\"status\":\"in_review\"},\"version\":2,\"valid_from\":\"<time@step 9>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 9>\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "id": "<req2>",
+        "project_id": "<p>",
+        "parent_id": "<heading>",
+        "type": "requirement",
+        "ref": "REQ-2",
+        "title": "Audit trail",
+        "body": "The system shall record 99% of answers in the audit trail within 5 s.",
+        "sort_order": 3,
+        "status": "in_review",
+        "attributes": {
+          "status": "in_review"
+        },
+        "version": 2,
+        "valid_from": "<time@step 9>",
+        "valid_to": null,
+        "created_at": "<time@before step 1>",
+        "updated_at": "<time@step 9>"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": [
+        {
+          "type": "artifact.status_changed",
+          "actor": "user:<owner>",
+          "project": "<p>",
+          "entity": "<req2>",
+          "payload": {
+            "artifact_type": "string \"requirement\"",
+            "from": "string \"draft\"",
+            "title": "string \"Audit trail\"",
+            "to": "string \"in_review\"",
+            "version": "number 2"
+          }
+        }
+      ]
+    },
+    {
+      "n": 10,
+      "title": "approve a draft directly: 409, the \">\" escaped",
+      "actor": "owner",
+      "route": "PUT /api/v1/artifacts/{id}/status",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/artifacts/<need>/status",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"status\":\"approved\"}"
+      },
+      "status": 409,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 71,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"invalid artifact status transition: draft -\\u003e approved\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "invalid artifact status transition: draft -\u003e approved"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 11,
+      "title": "a status the state machine does not know",
+      "actor": "owner",
+      "route": "PUT /api/v1/artifacts/{id}/status",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/artifacts/<need>/status",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"status\":\"bogus\"}"
+      },
+      "status": 400,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 47,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"invalid artifact status: \\\"bogus\\\"\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "invalid artifact status: \"bogus\""
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 12,
+      "title": "the status of an artifact that does not exist",
+      "actor": "owner",
+      "route": "PUT /api/v1/artifacts/{id}/status",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/artifacts/<phantom>/status",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"status\":\"in_review\"}"
+      },
+      "notes": [
+        "the handler looks the artifact up before the project guard, so a phantom id answers 404"
+      ],
+      "status": 404,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 31,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"artifact not found\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "artifact not found"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 13,
+      "title": "a status change with a malformed body",
+      "actor": "owner",
+      "route": "PUT /api/v1/artifacts/{id}/status",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/artifacts/<need>/status",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"status\":"
+      },
+      "status": 400,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 33,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"invalid request body\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "invalid request body"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 14,
+      "title": "the reviewer, a viewer, changes a status: editors only",
+      "actor": "reviewer",
+      "route": "PUT /api/v1/artifacts/{id}/status",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/artifacts/<req2>/status",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"status\":\"approved\"}"
+      },
+      "status": 403,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 51,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"you do not have access to this project\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "you do not have access to this project"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 15,
+      "title": "the review queue: the second requirement in review beside the suspect link",
+      "actor": "owner",
+      "route": "GET /api/v1/projects/{id}/review-queue",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/projects/<p>/review-queue"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"in_review_artifacts\":[{\"id\":\"<req2>\",\"project_id\":\"<p>\",\"parent_id\":\"<heading>\",\"type\":\"requirement\",\"ref\":\"REQ-2\",\"title\":\"Audit trail\",\"body\":\"The system shall record 99% of answers in the audit trail within 5 s.\",\"sort_order\":3,\"status\":\"in_review\",\"attributes\":{\"status\":\"in_review\"},\"version\":2,\"valid_from\":\"<time@step 9>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 9>\"}],\"suspect_links\":[{\"id\":\"<link>\",\"type\":\"verifies\",\"from_id\":\"<tc>\",\"from_title\":\"Check REQ-1 timing\",\"from_type\":\"test-case\",\"to_id\":\"<req1>\",\"to_title\":\"Answer in time\",\"to_type\":\"requirement\",\"updated_at\":\"<time@before step 1>\"}]}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "in_review_artifacts": [
+          {
+            "id": "<req2>",
+            "project_id": "<p>",
+            "parent_id": "<heading>",
+            "type": "requirement",
+            "ref": "REQ-2",
+            "title": "Audit trail",
+            "body": "The system shall record 99% of answers in the audit trail within 5 s.",
+            "sort_order": 3,
+            "status": "in_review",
+            "attributes": {
+              "status": "in_review"
+            },
+            "version": 2,
+            "valid_from": "<time@step 9>",
+            "valid_to": null,
+            "created_at": "<time@before step 1>",
+            "updated_at": "<time@step 9>"
+          }
+        ],
+        "suspect_links": [
+          {
+            "id": "<link>",
+            "type": "verifies",
+            "from_id": "<tc>",
+            "from_title": "Check REQ-1 timing",
+            "from_type": "test-case",
+            "to_id": "<req1>",
+            "to_title": "Answer in time",
+            "to_type": "requirement",
+            "updated_at": "<time@before step 1>"
+          }
+        ]
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 16,
+      "title": "approve the second requirement",
+      "actor": "owner",
+      "route": "PUT /api/v1/artifacts/{id}/status",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/artifacts/<req2>/status",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"status\":\"approved\"}"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"id\":\"<req2>\",\"project_id\":\"<p>\",\"parent_id\":\"<heading>\",\"type\":\"requirement\",\"ref\":\"REQ-2\",\"title\":\"Audit trail\",\"body\":\"The system shall record 99% of answers in the audit trail within 5 s.\",\"sort_order\":3,\"status\":\"approved\",\"attributes\":{\"status\":\"approved\"},\"version\":3,\"valid_from\":\"<time@step 16>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 16>\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "id": "<req2>",
+        "project_id": "<p>",
+        "parent_id": "<heading>",
+        "type": "requirement",
+        "ref": "REQ-2",
+        "title": "Audit trail",
+        "body": "The system shall record 99% of answers in the audit trail within 5 s.",
+        "sort_order": 3,
+        "status": "approved",
+        "attributes": {
+          "status": "approved"
+        },
+        "version": 3,
+        "valid_from": "<time@step 16>",
+        "valid_to": null,
+        "created_at": "<time@before step 1>",
+        "updated_at": "<time@step 16>"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": [
+        {
+          "type": "artifact.status_changed",
+          "actor": "user:<owner>",
+          "project": "<p>",
+          "entity": "<req2>",
+          "payload": {
+            "artifact_type": "string \"requirement\"",
+            "from": "string \"in_review\"",
+            "title": "string \"Audit trail\"",
+            "to": "string \"approved\"",
+            "version": "number 3"
+          }
+        }
+      ]
+    },
+    {
+      "n": 17,
+      "title": "approve it again: approved -> approved is no transition",
+      "actor": "owner",
+      "route": "PUT /api/v1/artifacts/{id}/status",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/artifacts/<req2>/status",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"status\":\"approved\"}"
+      },
+      "status": 409,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 74,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"invalid artifact status transition: approved -\\u003e approved\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "invalid artifact status transition: approved -\u003e approved"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 18,
+      "title": "submit the test case",
+      "actor": "owner",
+      "route": "PUT /api/v1/artifacts/{id}/status",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/artifacts/<tc>/status",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"status\":\"in_review\"}"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"id\":\"<tc>\",\"project_id\":\"<p>\",\"parent_id\":\"<heading>\",\"type\":\"test-case\",\"ref\":\"TC-1\",\"title\":\"Check REQ-1 timing\",\"body\":\"Measure the answer time of REQ-1 over a thousand queries.\",\"sort_order\":4,\"status\":\"in_review\",\"attributes\":{\"links_snapshot\":[{\"attributes\":null,\"created_at\":\"<time@before step 1>\",\"from_id\":\"<tc>\",\"id\":\"<link>\",\"suspect\":false,\"to_id\":\"<req1>\",\"type\":\"verifies\",\"updated_at\":\"<time@before step 1>\",\"valid_from\":\"0001-01-01T00:00:00Z\",\"valid_to\":null,\"version\":1}],\"status\":\"in_review\"},\"version\":3,\"valid_from\":\"<time@step 18>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 18>\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "id": "<tc>",
+        "project_id": "<p>",
+        "parent_id": "<heading>",
+        "type": "test-case",
+        "ref": "TC-1",
+        "title": "Check REQ-1 timing",
+        "body": "Measure the answer time of REQ-1 over a thousand queries.",
+        "sort_order": 4,
+        "status": "in_review",
+        "attributes": {
+          "links_snapshot": [
+            {
+              "attributes": null,
+              "created_at": "<time@before step 1>",
+              "from_id": "<tc>",
+              "id": "<link>",
+              "suspect": false,
+              "to_id": "<req1>",
+              "type": "verifies",
+              "updated_at": "<time@before step 1>",
+              "valid_from": "0001-01-01T00:00:00Z",
+              "valid_to": null,
+              "version": 1
+            }
+          ],
+          "status": "in_review"
+        },
+        "version": 3,
+        "valid_from": "<time@step 18>",
+        "valid_to": null,
+        "created_at": "<time@before step 1>",
+        "updated_at": "<time@step 18>"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": [
+        {
+          "type": "artifact.status_changed",
+          "actor": "user:<owner>",
+          "project": "<p>",
+          "entity": "<tc>",
+          "payload": {
+            "artifact_type": "string \"test-case\"",
+            "from": "string \"draft\"",
+            "title": "string \"Check REQ-1 timing\"",
+            "to": "string \"in_review\"",
+            "version": "number 3"
+          }
+        }
+      ]
+    },
+    {
+      "n": 19,
+      "title": "withdraw it to draft: in_review -> draft",
+      "actor": "owner",
+      "route": "PUT /api/v1/artifacts/{id}/status",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/artifacts/<tc>/status",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"status\":\"draft\"}"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"id\":\"<tc>\",\"project_id\":\"<p>\",\"parent_id\":\"<heading>\",\"type\":\"test-case\",\"ref\":\"TC-1\",\"title\":\"Check REQ-1 timing\",\"body\":\"Measure the answer time of REQ-1 over a thousand queries.\",\"sort_order\":4,\"status\":\"draft\",\"attributes\":{\"links_snapshot\":[{\"attributes\":null,\"created_at\":\"<time@before step 1>\",\"from_id\":\"<tc>\",\"id\":\"<link>\",\"suspect\":false,\"to_id\":\"<req1>\",\"type\":\"verifies\",\"updated_at\":\"<time@before step 1>\",\"valid_from\":\"0001-01-01T00:00:00Z\",\"valid_to\":null,\"version\":1}],\"status\":\"draft\"},\"version\":4,\"valid_from\":\"<time@step 19>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 19>\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "id": "<tc>",
+        "project_id": "<p>",
+        "parent_id": "<heading>",
+        "type": "test-case",
+        "ref": "TC-1",
+        "title": "Check REQ-1 timing",
+        "body": "Measure the answer time of REQ-1 over a thousand queries.",
+        "sort_order": 4,
+        "status": "draft",
+        "attributes": {
+          "links_snapshot": [
+            {
+              "attributes": null,
+              "created_at": "<time@before step 1>",
+              "from_id": "<tc>",
+              "id": "<link>",
+              "suspect": false,
+              "to_id": "<req1>",
+              "type": "verifies",
+              "updated_at": "<time@before step 1>",
+              "valid_from": "0001-01-01T00:00:00Z",
+              "valid_to": null,
+              "version": 1
+            }
+          ],
+          "status": "draft"
+        },
+        "version": 4,
+        "valid_from": "<time@step 19>",
+        "valid_to": null,
+        "created_at": "<time@before step 1>",
+        "updated_at": "<time@step 19>"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": [
+        {
+          "type": "artifact.status_changed",
+          "actor": "user:<owner>",
+          "project": "<p>",
+          "entity": "<tc>",
+          "payload": {
+            "artifact_type": "string \"test-case\"",
+            "from": "string \"in_review\"",
+            "title": "string \"Check REQ-1 timing\"",
+            "to": "string \"draft\"",
+            "version": "number 4"
+          }
+        }
+      ]
+    },
+    {
+      "n": 20,
+      "title": "a review round naming a type the catalogue does not have",
+      "actor": "owner",
+      "route": "POST /api/v1/projects/{id}/review-round",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/projects/<p>/review-round",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"types\":[\"requirement\",\"bogus\"]}"
+      },
+      "status": 400,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 45,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"invalid artifact type: \\\"bogus\\\"\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "invalid artifact type: \"bogus\""
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 21,
+      "title": "a review round with a malformed body",
+      "actor": "owner",
+      "route": "POST /api/v1/projects/{id}/review-round",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/projects/<p>/review-round",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"types\":"
+      },
+      "status": 400,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 33,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"invalid request body\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "invalid request body"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 22,
+      "title": "a review round of a project that does not exist",
+      "actor": "owner",
+      "route": "POST /api/v1/projects/{id}/review-round",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/projects/<phantom>/review-round"
+      },
+      "status": 403,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 51,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"you do not have access to this project\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "you do not have access to this project"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 23,
+      "title": "the reviewer, a viewer, starts a review round: editors only",
+      "actor": "reviewer",
+      "route": "POST /api/v1/projects/{id}/review-round",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/projects/<p>/review-round"
+      },
+      "status": 403,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 51,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"you do not have access to this project\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "you do not have access to this project"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 24,
+      "title": "a round of the requirements only: the draft one moves, the approved one stays",
+      "actor": "owner",
+      "route": "POST /api/v1/projects/{id}/review-round",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/projects/<p>/review-round",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"types\":[\"requirement\"]}"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"moved\":[{\"id\":\"<req1>\",\"project_id\":\"<p>\",\"parent_id\":\"<heading>\",\"type\":\"requirement\",\"ref\":\"REQ-1\",\"title\":\"Answer in time\",\"body\":\"The system shall answer every operator query within 2 s.\",\"sort_order\":2,\"status\":\"in_review\",\"attributes\":{\"links_snapshot\":[{\"attributes\":null,\"created_at\":\"<time@before step 1>\",\"from_id\":\"<tc>\",\"id\":\"<link>\",\"suspect\":false,\"to_id\":\"<req1>\",\"type\":\"verifies\",\"updated_at\":\"<time@before step 1>\",\"valid_from\":\"0001-01-01T00:00:00Z\",\"valid_to\":null,\"version\":1}],\"status\":\"in_review\"},\"version\":4,\"valid_from\":\"<time@step 24>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 24>\"}],\"already_in_review\":0,\"approved\":1,\"superseded\":0,\"out_of_scope\":4,\"types\":[\"requirement\"]}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "moved": [
+          {
+            "id": "<req1>",
+            "project_id": "<p>",
+            "parent_id": "<heading>",
+            "type": "requirement",
+            "ref": "REQ-1",
+            "title": "Answer in time",
+            "body": "The system shall answer every operator query within 2 s.",
+            "sort_order": 2,
+            "status": "in_review",
+            "attributes": {
+              "links_snapshot": [
+                {
+                  "attributes": null,
+                  "created_at": "<time@before step 1>",
+                  "from_id": "<tc>",
+                  "id": "<link>",
+                  "suspect": false,
+                  "to_id": "<req1>",
+                  "type": "verifies",
+                  "updated_at": "<time@before step 1>",
+                  "valid_from": "0001-01-01T00:00:00Z",
+                  "valid_to": null,
+                  "version": 1
+                }
+              ],
+              "status": "in_review"
+            },
+            "version": 4,
+            "valid_from": "<time@step 24>",
+            "valid_to": null,
+            "created_at": "<time@before step 1>",
+            "updated_at": "<time@step 24>"
+          }
+        ],
+        "already_in_review": 0,
+        "approved": 1,
+        "superseded": 0,
+        "out_of_scope": 4,
+        "types": [
+          "requirement"
+        ]
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": [
+        {
+          "type": "artifact.status_changed",
+          "actor": "user:<owner>",
+          "project": "<p>",
+          "entity": "<req1>",
+          "payload": {
+            "artifact_type": "string \"requirement\"",
+            "from": "string \"draft\"",
+            "review_round": "boolean true",
+            "title": "string \"Answer in time\"",
+            "to": "string \"in_review\"",
+            "version": "number 4"
+          }
+        },
+        {
+          "type": "project.review_round_started",
+          "actor": "user:<owner>",
+          "project": "<p>",
+          "entity": "<p>",
+          "payload": {
+            "already_in_review": "number 0",
+            "approved": "number 1",
+            "moved": "number 1",
+            "types": "array[string] [\"requirement\"]"
+          }
+        }
+      ]
+    },
+    {
+      "n": 25,
+      "title": "a round with no body: every type of the catalogue; the drafts move in list order",
+      "actor": "owner",
+      "route": "POST /api/v1/projects/{id}/review-round",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/projects/<p>/review-round"
+      },
+      "notes": [
+        "moved follows the artifact list: the heading (no parent) first, then its children by sort_order; with two parents below the root that order would follow their random ids"
+      ],
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"moved\":[{\"id\":\"<heading>\",\"project_id\":\"<p>\",\"type\":\"heading\",\"ref\":\"HDG-1\",\"title\":\"Scope\",\"body\":\"What the review tour covers.\",\"sort_order\":1,\"status\":\"in_review\",\"attributes\":{\"status\":\"in_review\"},\"version\":2,\"valid_from\":\"<time@step 25>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 25>\"},{\"id\":\"<need>\",\"project_id\":\"<p>\",\"parent_id\":\"<heading>\",\"type\":\"user-need\",\"ref\":\"NEED-1\",\"title\":\"Operator need\",\"body\":\"Operators work shifts of twelve hours at a console that shows every alarm the plant raises, and they act on what it tells them. They need answers they can trust at the end of a long shift, when attention is lowest and a wrong call costs the most, so every figure on the screen has to be traceable.\",\"sort_order\":1,\"status\":\"in_review\",\"attributes\":{\"status\":\"in_review\"},\"version\":2,\"valid_from\":\"<time@step 25>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 25>\"},{\"id\":\"<tc>\",\"project_id\":\"<p>\",\"parent_id\":\"<heading>\",\"type\":\"test-case\",\"ref\":\"TC-1\",\"title\":\"Check REQ-1 timing\",\"body\":\"Measure the answer time of REQ-1 over a thousand queries.\",\"sort_order\":4,\"status\":\"in_review\",\"attributes\":{\"links_snapshot\":[{\"attributes\":null,\"created_at\":\"<time@before step 1>\",\"from_id\":\"<tc>\",\"id\":\"<link>\",\"suspect\":false,\"to_id\":\"<req1>\",\"type\":\"verifies\",\"updated_at\":\"<time@before step 1>\",\"valid_from\":\"0001-01-01T00:00:00Z\",\"valid_to\":null,\"version\":1}],\"status\":\"in_review\"},\"version\":5,\"valid_from\":\"<time@step 25>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 25>\"},{\"id\":\"<di>\",\"project_id\":\"<p>\",\"parent_id\":\"<heading>\",\"type\":\"design-item\",\"ref\":\"DES-1\",\"title\":\"Answer cache\",\"body\":\"A read-through cache in front of the query engine keeps the last thousand results warm, and it is flushed whenever the plant model changes, so a stale figure never reaches the console.\",\"sort_order\":5,\"status\":\"in_review\",\"attributes\":{\"status\":\"in_review\"},\"version\":2,\"valid_from\":\"<time@step 25>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 25>\"}],\"already_in_review\":1,\"approved\":1,\"superseded\":0,\"out_of_scope\":0,\"types\":[\"heading\",\"description\",\"persona\",\"user-need\",\"requirement\",\"design-item\",\"test-case\",\"hazard\",\"other\"]}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "moved": [
+          {
+            "id": "<heading>",
+            "project_id": "<p>",
+            "type": "heading",
+            "ref": "HDG-1",
+            "title": "Scope",
+            "body": "What the review tour covers.",
+            "sort_order": 1,
+            "status": "in_review",
+            "attributes": {
+              "status": "in_review"
+            },
+            "version": 2,
+            "valid_from": "<time@step 25>",
+            "valid_to": null,
+            "created_at": "<time@before step 1>",
+            "updated_at": "<time@step 25>"
+          },
+          {
+            "id": "<need>",
+            "project_id": "<p>",
+            "parent_id": "<heading>",
+            "type": "user-need",
+            "ref": "NEED-1",
+            "title": "Operator need",
+            "body": "Operators work shifts of twelve hours at a console that shows every alarm the plant raises, and they act on what it tells them. They need answers they can trust at the end of a long shift, when attention is lowest and a wrong call costs the most, so every figure on the screen has to be traceable.",
+            "sort_order": 1,
+            "status": "in_review",
+            "attributes": {
+              "status": "in_review"
+            },
+            "version": 2,
+            "valid_from": "<time@step 25>",
+            "valid_to": null,
+            "created_at": "<time@before step 1>",
+            "updated_at": "<time@step 25>"
+          },
+          {
+            "id": "<tc>",
+            "project_id": "<p>",
+            "parent_id": "<heading>",
+            "type": "test-case",
+            "ref": "TC-1",
+            "title": "Check REQ-1 timing",
+            "body": "Measure the answer time of REQ-1 over a thousand queries.",
+            "sort_order": 4,
+            "status": "in_review",
+            "attributes": {
+              "links_snapshot": [
+                {
+                  "attributes": null,
+                  "created_at": "<time@before step 1>",
+                  "from_id": "<tc>",
+                  "id": "<link>",
+                  "suspect": false,
+                  "to_id": "<req1>",
+                  "type": "verifies",
+                  "updated_at": "<time@before step 1>",
+                  "valid_from": "0001-01-01T00:00:00Z",
+                  "valid_to": null,
+                  "version": 1
+                }
+              ],
+              "status": "in_review"
+            },
+            "version": 5,
+            "valid_from": "<time@step 25>",
+            "valid_to": null,
+            "created_at": "<time@before step 1>",
+            "updated_at": "<time@step 25>"
+          },
+          {
+            "id": "<di>",
+            "project_id": "<p>",
+            "parent_id": "<heading>",
+            "type": "design-item",
+            "ref": "DES-1",
+            "title": "Answer cache",
+            "body": "A read-through cache in front of the query engine keeps the last thousand results warm, and it is flushed whenever the plant model changes, so a stale figure never reaches the console.",
+            "sort_order": 5,
+            "status": "in_review",
+            "attributes": {
+              "status": "in_review"
+            },
+            "version": 2,
+            "valid_from": "<time@step 25>",
+            "valid_to": null,
+            "created_at": "<time@before step 1>",
+            "updated_at": "<time@step 25>"
+          }
+        ],
+        "already_in_review": 1,
+        "approved": 1,
+        "superseded": 0,
+        "out_of_scope": 0,
+        "types": [
+          "heading",
+          "description",
+          "persona",
+          "user-need",
+          "requirement",
+          "design-item",
+          "test-case",
+          "hazard",
+          "other"
+        ]
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": [
+        {
+          "type": "artifact.status_changed",
+          "actor": "user:<owner>",
+          "project": "<p>",
+          "entity": "<heading>",
+          "payload": {
+            "artifact_type": "string \"heading\"",
+            "from": "string \"draft\"",
+            "review_round": "boolean true",
+            "title": "string \"Scope\"",
+            "to": "string \"in_review\"",
+            "version": "number 2"
+          }
+        },
+        {
+          "type": "artifact.status_changed",
+          "actor": "user:<owner>",
+          "project": "<p>",
+          "entity": "<need>",
+          "payload": {
+            "artifact_type": "string \"user-need\"",
+            "from": "string \"draft\"",
+            "review_round": "boolean true",
+            "title": "string \"Operator need\"",
+            "to": "string \"in_review\"",
+            "version": "number 2"
+          }
+        },
+        {
+          "type": "artifact.status_changed",
+          "actor": "user:<owner>",
+          "project": "<p>",
+          "entity": "<tc>",
+          "payload": {
+            "artifact_type": "string \"test-case\"",
+            "from": "string \"draft\"",
+            "review_round": "boolean true",
+            "title": "string \"Check REQ-1 timing\"",
+            "to": "string \"in_review\"",
+            "version": "number 5"
+          }
+        },
+        {
+          "type": "artifact.status_changed",
+          "actor": "user:<owner>",
+          "project": "<p>",
+          "entity": "<di>",
+          "payload": {
+            "artifact_type": "string \"design-item\"",
+            "from": "string \"draft\"",
+            "review_round": "boolean true",
+            "title": "string \"Answer cache\"",
+            "to": "string \"in_review\"",
+            "version": "number 2"
+          }
+        },
+        {
+          "type": "project.review_round_started",
+          "actor": "user:<owner>",
+          "project": "<p>",
+          "entity": "<p>",
+          "payload": {
+            "already_in_review": "number 1",
+            "approved": "number 1",
+            "moved": "number 4",
+            "types": "array[string] [\"heading\",\"description\",\"persona\",\"user-need\",\"requirement\",\"design-item\",\"test-case\",\"hazard\",\"other\"]"
+          }
+        }
+      ]
+    },
+    {
+      "n": 26,
+      "title": "supersede the approved requirement",
+      "actor": "owner",
+      "route": "PUT /api/v1/artifacts/{id}/status",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/artifacts/<req2>/status",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"status\":\"superseded\"}"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"id\":\"<req2>\",\"project_id\":\"<p>\",\"parent_id\":\"<heading>\",\"type\":\"requirement\",\"ref\":\"REQ-2\",\"title\":\"Audit trail\",\"body\":\"The system shall record 99% of answers in the audit trail within 5 s.\",\"sort_order\":3,\"status\":\"superseded\",\"attributes\":{\"status\":\"superseded\"},\"version\":4,\"valid_from\":\"<time@step 26>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 26>\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "id": "<req2>",
+        "project_id": "<p>",
+        "parent_id": "<heading>",
+        "type": "requirement",
+        "ref": "REQ-2",
+        "title": "Audit trail",
+        "body": "The system shall record 99% of answers in the audit trail within 5 s.",
+        "sort_order": 3,
+        "status": "superseded",
+        "attributes": {
+          "status": "superseded"
+        },
+        "version": 4,
+        "valid_from": "<time@step 26>",
+        "valid_to": null,
+        "created_at": "<time@before step 1>",
+        "updated_at": "<time@step 26>"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": [
+        {
+          "type": "artifact.status_changed",
+          "actor": "user:<owner>",
+          "project": "<p>",
+          "entity": "<req2>",
+          "payload": {
+            "artifact_type": "string \"requirement\"",
+            "from": "string \"approved\"",
+            "title": "string \"Audit trail\"",
+            "to": "string \"superseded\"",
+            "version": "number 4"
+          }
+        }
+      ]
+    },
+    {
+      "n": 27,
+      "title": "superseded is terminal",
+      "actor": "owner",
+      "route": "PUT /api/v1/artifacts/{id}/status",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/artifacts/<req2>/status",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"status\":\"draft\"}"
+      },
+      "status": 409,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 73,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"invalid artifact status transition: superseded -\\u003e draft\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "invalid artifact status transition: superseded -\u003e draft"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 28,
+      "title": "the round again: nothing is a draft, so nothing moves",
+      "actor": "owner",
+      "route": "POST /api/v1/projects/{id}/review-round",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/projects/<p>/review-round"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 193,
+      "kind": "json",
+      "body": [
+        "{\"moved\":[],\"already_in_review\":5,\"approved\":0,\"superseded\":1,\"out_of_scope\":0,\"types\":[\"heading\",\"description\",\"persona\",\"user-need\",\"requirement\",\"design-item\",\"test-case\",\"hazard\",\"other\"]}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "moved": [],
+        "already_in_review": 5,
+        "approved": 0,
+        "superseded": 1,
+        "out_of_scope": 0,
+        "types": [
+          "heading",
+          "description",
+          "persona",
+          "user-need",
+          "requirement",
+          "design-item",
+          "test-case",
+          "hazard",
+          "other"
+        ]
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": [
+        {
+          "type": "project.review_round_started",
+          "actor": "user:<owner>",
+          "project": "<p>",
+          "entity": "<p>",
+          "payload": {
+            "already_in_review": "number 5",
+            "approved": "number 0",
+            "moved": "number 0",
+            "types": "array[string] [\"heading\",\"description\",\"persona\",\"user-need\",\"requirement\",\"design-item\",\"test-case\",\"hazard\",\"other\"]"
+          }
+        }
+      ]
+    },
+    {
+      "n": 29,
+      "title": "the review queue: five in review, newest change first, and the suspect link",
+      "actor": "owner",
+      "route": "GET /api/v1/projects/{id}/review-queue",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/projects/<p>/review-queue"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"in_review_artifacts\":[{\"id\":\"<di>\",\"project_id\":\"<p>\",\"parent_id\":\"<heading>\",\"type\":\"design-item\",\"ref\":\"DES-1\",\"title\":\"Answer cache\",\"body\":\"A read-through cache in front of the query engine keeps the last thousand results warm, and it is flushed whenever the plant model changes, so a stale figure never reaches the console.\",\"sort_order\":5,\"status\":\"in_review\",\"attributes\":{\"status\":\"in_review\"},\"version\":2,\"valid_from\":\"<time@step 25>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 25>\"},{\"id\":\"<tc>\",\"project_id\":\"<p>\",\"parent_id\":\"<heading>\",\"type\":\"test-case\",\"ref\":\"TC-1\",\"title\":\"Check REQ-1 timing\",\"body\":\"Measure the answer time of REQ-1 over a thousand queries.\",\"sort_order\":4,\"status\":\"in_review\",\"attributes\":{\"links_snapshot\":[{\"attributes\":null,\"created_at\":\"<time@before step 1>\",\"from_id\":\"<tc>\",\"id\":\"<link>\",\"suspect\":false,\"to_id\":\"<req1>\",\"type\":\"verifies\",\"updated_at\":\"<time@before step 1>\",\"valid_from\":\"0001-01-01T00:00:00Z\",\"valid_to\":null,\"version\":1}],\"status\":\"in_review\"},\"version\":5,\"valid_from\":\"<time@step 25>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 25>\"},{\"id\":\"<need>\",\"project_id\":\"<p>\",\"parent_id\":\"<heading>\",\"type\":\"user-need\",\"ref\":\"NEED-1\",\"title\":\"Operator need\",\"body\":\"Operators work shifts of twelve hours at a console that shows every alarm the plant raises, and they act on what it tells them. They need answers they can trust at the end of a long shift, when attention is lowest and a wrong call costs the most, so every figure on the screen has to be traceable.\",\"sort_order\":1,\"status\":\"in_review\",\"attributes\":{\"status\":\"in_review\"},\"version\":2,\"valid_from\":\"<time@step 25>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 25>\"},{\"id\":\"<heading>\",\"project_id\":\"<p>\",\"type\":\"heading\",\"ref\":\"HDG-1\",\"title\":\"Scope\",\"body\":\"What the review tour covers.\",\"sort_order\":1,\"status\":\"in_review\",\"attributes\":{\"status\":\"in_review\"},\"version\":2,\"valid_from\":\"<time@step 25>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 25>\"},{\"id\":\"<req1>\",\"project_id\":\"<p>\",\"parent_id\":\"<heading>\",\"type\":\"requirement\",\"ref\":\"REQ-1\",\"title\":\"Answer in time\",\"body\":\"The system shall answer every operator query within 2 s.\",\"sort_order\":2,\"status\":\"in_review\",\"attributes\":{\"links_snapshot\":[{\"attributes\":null,\"created_at\":\"<time@before step 1>\",\"from_id\":\"<tc>\",\"id\":\"<link>\",\"suspect\":false,\"to_id\":\"<req1>\",\"type\":\"verifies\",\"updated_at\":\"<time@before step 1>\",\"valid_from\":\"0001-01-01T00:00:00Z\",\"valid_to\":null,\"version\":1}],\"status\":\"in_review\"},\"version\":4,\"valid_from\":\"<time@step 24>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 24>\"}],\"suspect_links\":[{\"id\":\"<link>\",\"type\":\"verifies\",\"from_id\":\"<tc>\",\"from_title\":\"Check REQ-1 timing\",\"from_type\":\"test-case\",\"to_id\":\"<req1>\",\"to_title\":\"Answer in time\",\"to_type\":\"requirement\",\"updated_at\":\"<time@before step 1>\"}]}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "in_review_artifacts": [
+          {
+            "id": "<di>",
+            "project_id": "<p>",
+            "parent_id": "<heading>",
+            "type": "design-item",
+            "ref": "DES-1",
+            "title": "Answer cache",
+            "body": "A read-through cache in front of the query engine keeps the last thousand results warm, and it is flushed whenever the plant model changes, so a stale figure never reaches the console.",
+            "sort_order": 5,
+            "status": "in_review",
+            "attributes": {
+              "status": "in_review"
+            },
+            "version": 2,
+            "valid_from": "<time@step 25>",
+            "valid_to": null,
+            "created_at": "<time@before step 1>",
+            "updated_at": "<time@step 25>"
+          },
+          {
+            "id": "<tc>",
+            "project_id": "<p>",
+            "parent_id": "<heading>",
+            "type": "test-case",
+            "ref": "TC-1",
+            "title": "Check REQ-1 timing",
+            "body": "Measure the answer time of REQ-1 over a thousand queries.",
+            "sort_order": 4,
+            "status": "in_review",
+            "attributes": {
+              "links_snapshot": [
+                {
+                  "attributes": null,
+                  "created_at": "<time@before step 1>",
+                  "from_id": "<tc>",
+                  "id": "<link>",
+                  "suspect": false,
+                  "to_id": "<req1>",
+                  "type": "verifies",
+                  "updated_at": "<time@before step 1>",
+                  "valid_from": "0001-01-01T00:00:00Z",
+                  "valid_to": null,
+                  "version": 1
+                }
+              ],
+              "status": "in_review"
+            },
+            "version": 5,
+            "valid_from": "<time@step 25>",
+            "valid_to": null,
+            "created_at": "<time@before step 1>",
+            "updated_at": "<time@step 25>"
+          },
+          {
+            "id": "<need>",
+            "project_id": "<p>",
+            "parent_id": "<heading>",
+            "type": "user-need",
+            "ref": "NEED-1",
+            "title": "Operator need",
+            "body": "Operators work shifts of twelve hours at a console that shows every alarm the plant raises, and they act on what it tells them. They need answers they can trust at the end of a long shift, when attention is lowest and a wrong call costs the most, so every figure on the screen has to be traceable.",
+            "sort_order": 1,
+            "status": "in_review",
+            "attributes": {
+              "status": "in_review"
+            },
+            "version": 2,
+            "valid_from": "<time@step 25>",
+            "valid_to": null,
+            "created_at": "<time@before step 1>",
+            "updated_at": "<time@step 25>"
+          },
+          {
+            "id": "<heading>",
+            "project_id": "<p>",
+            "type": "heading",
+            "ref": "HDG-1",
+            "title": "Scope",
+            "body": "What the review tour covers.",
+            "sort_order": 1,
+            "status": "in_review",
+            "attributes": {
+              "status": "in_review"
+            },
+            "version": 2,
+            "valid_from": "<time@step 25>",
+            "valid_to": null,
+            "created_at": "<time@before step 1>",
+            "updated_at": "<time@step 25>"
+          },
+          {
+            "id": "<req1>",
+            "project_id": "<p>",
+            "parent_id": "<heading>",
+            "type": "requirement",
+            "ref": "REQ-1",
+            "title": "Answer in time",
+            "body": "The system shall answer every operator query within 2 s.",
+            "sort_order": 2,
+            "status": "in_review",
+            "attributes": {
+              "links_snapshot": [
+                {
+                  "attributes": null,
+                  "created_at": "<time@before step 1>",
+                  "from_id": "<tc>",
+                  "id": "<link>",
+                  "suspect": false,
+                  "to_id": "<req1>",
+                  "type": "verifies",
+                  "updated_at": "<time@before step 1>",
+                  "valid_from": "0001-01-01T00:00:00Z",
+                  "valid_to": null,
+                  "version": 1
+                }
+              ],
+              "status": "in_review"
+            },
+            "version": 4,
+            "valid_from": "<time@step 24>",
+            "valid_to": null,
+            "created_at": "<time@before step 1>",
+            "updated_at": "<time@step 24>"
+          }
+        ],
+        "suspect_links": [
+          {
+            "id": "<link>",
+            "type": "verifies",
+            "from_id": "<tc>",
+            "from_title": "Check REQ-1 timing",
+            "from_type": "test-case",
+            "to_id": "<req1>",
+            "to_title": "Answer in time",
+            "to_type": "requirement",
+            "updated_at": "<time@before step 1>"
+          }
+        ]
+      },
+      "gzip": {
+        "content_encoding": "gzip",
+        "content_type": "application/json",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "n": 30,
+      "title": "approve the first requirement: the suspicion on its link is cleared",
+      "actor": "owner",
+      "route": "PUT /api/v1/artifacts/{id}/status",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/artifacts/<req1>/status",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"status\":\"approved\"}"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"id\":\"<req1>\",\"project_id\":\"<p>\",\"parent_id\":\"<heading>\",\"type\":\"requirement\",\"ref\":\"REQ-1\",\"title\":\"Answer in time\",\"body\":\"The system shall answer every operator query within 2 s.\",\"sort_order\":2,\"status\":\"approved\",\"attributes\":{\"links_snapshot\":[{\"attributes\":null,\"created_at\":\"<time@before step 1>\",\"from_id\":\"<tc>\",\"id\":\"<link>\",\"suspect\":false,\"to_id\":\"<req1>\",\"type\":\"verifies\",\"updated_at\":\"<time@before step 1>\",\"valid_from\":\"0001-01-01T00:00:00Z\",\"valid_to\":null,\"version\":1}],\"status\":\"approved\"},\"version\":5,\"valid_from\":\"<time@step 30>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 30>\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "id": "<req1>",
+        "project_id": "<p>",
+        "parent_id": "<heading>",
+        "type": "requirement",
+        "ref": "REQ-1",
+        "title": "Answer in time",
+        "body": "The system shall answer every operator query within 2 s.",
+        "sort_order": 2,
+        "status": "approved",
+        "attributes": {
+          "links_snapshot": [
+            {
+              "attributes": null,
+              "created_at": "<time@before step 1>",
+              "from_id": "<tc>",
+              "id": "<link>",
+              "suspect": false,
+              "to_id": "<req1>",
+              "type": "verifies",
+              "updated_at": "<time@before step 1>",
+              "valid_from": "0001-01-01T00:00:00Z",
+              "valid_to": null,
+              "version": 1
+            }
+          ],
+          "status": "approved"
+        },
+        "version": 5,
+        "valid_from": "<time@step 30>",
+        "valid_to": null,
+        "created_at": "<time@before step 1>",
+        "updated_at": "<time@step 30>"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": [
+        {
+          "type": "artifact.status_changed",
+          "actor": "user:<owner>",
+          "project": "<p>",
+          "entity": "<req1>",
+          "payload": {
+            "artifact_type": "string \"requirement\"",
+            "from": "string \"in_review\"",
+            "title": "string \"Answer in time\"",
+            "to": "string \"approved\"",
+            "version": "number 5"
+          }
+        }
+      ]
+    },
+    {
+      "n": 31,
+      "title": "the review queue: four in review, no suspect link",
+      "actor": "owner",
+      "route": "GET /api/v1/projects/{id}/review-queue",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/projects/<p>/review-queue"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"in_review_artifacts\":[{\"id\":\"<di>\",\"project_id\":\"<p>\",\"parent_id\":\"<heading>\",\"type\":\"design-item\",\"ref\":\"DES-1\",\"title\":\"Answer cache\",\"body\":\"A read-through cache in front of the query engine keeps the last thousand results warm, and it is flushed whenever the plant model changes, so a stale figure never reaches the console.\",\"sort_order\":5,\"status\":\"in_review\",\"attributes\":{\"status\":\"in_review\"},\"version\":2,\"valid_from\":\"<time@step 25>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 25>\"},{\"id\":\"<tc>\",\"project_id\":\"<p>\",\"parent_id\":\"<heading>\",\"type\":\"test-case\",\"ref\":\"TC-1\",\"title\":\"Check REQ-1 timing\",\"body\":\"Measure the answer time of REQ-1 over a thousand queries.\",\"sort_order\":4,\"status\":\"in_review\",\"attributes\":{\"links_snapshot\":[{\"attributes\":null,\"created_at\":\"<time@before step 1>\",\"from_id\":\"<tc>\",\"id\":\"<link>\",\"suspect\":false,\"to_id\":\"<req1>\",\"type\":\"verifies\",\"updated_at\":\"<time@before step 1>\",\"valid_from\":\"0001-01-01T00:00:00Z\",\"valid_to\":null,\"version\":1}],\"status\":\"in_review\"},\"version\":5,\"valid_from\":\"<time@step 25>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 25>\"},{\"id\":\"<need>\",\"project_id\":\"<p>\",\"parent_id\":\"<heading>\",\"type\":\"user-need\",\"ref\":\"NEED-1\",\"title\":\"Operator need\",\"body\":\"Operators work shifts of twelve hours at a console that shows every alarm the plant raises, and they act on what it tells them. They need answers they can trust at the end of a long shift, when attention is lowest and a wrong call costs the most, so every figure on the screen has to be traceable.\",\"sort_order\":1,\"status\":\"in_review\",\"attributes\":{\"status\":\"in_review\"},\"version\":2,\"valid_from\":\"<time@step 25>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 25>\"},{\"id\":\"<heading>\",\"project_id\":\"<p>\",\"type\":\"heading\",\"ref\":\"HDG-1\",\"title\":\"Scope\",\"body\":\"What the review tour covers.\",\"sort_order\":1,\"status\":\"in_review\",\"attributes\":{\"status\":\"in_review\"},\"version\":2,\"valid_from\":\"<time@step 25>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 25>\"}],\"suspect_links\":[]}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "in_review_artifacts": [
+          {
+            "id": "<di>",
+            "project_id": "<p>",
+            "parent_id": "<heading>",
+            "type": "design-item",
+            "ref": "DES-1",
+            "title": "Answer cache",
+            "body": "A read-through cache in front of the query engine keeps the last thousand results warm, and it is flushed whenever the plant model changes, so a stale figure never reaches the console.",
+            "sort_order": 5,
+            "status": "in_review",
+            "attributes": {
+              "status": "in_review"
+            },
+            "version": 2,
+            "valid_from": "<time@step 25>",
+            "valid_to": null,
+            "created_at": "<time@before step 1>",
+            "updated_at": "<time@step 25>"
+          },
+          {
+            "id": "<tc>",
+            "project_id": "<p>",
+            "parent_id": "<heading>",
+            "type": "test-case",
+            "ref": "TC-1",
+            "title": "Check REQ-1 timing",
+            "body": "Measure the answer time of REQ-1 over a thousand queries.",
+            "sort_order": 4,
+            "status": "in_review",
+            "attributes": {
+              "links_snapshot": [
+                {
+                  "attributes": null,
+                  "created_at": "<time@before step 1>",
+                  "from_id": "<tc>",
+                  "id": "<link>",
+                  "suspect": false,
+                  "to_id": "<req1>",
+                  "type": "verifies",
+                  "updated_at": "<time@before step 1>",
+                  "valid_from": "0001-01-01T00:00:00Z",
+                  "valid_to": null,
+                  "version": 1
+                }
+              ],
+              "status": "in_review"
+            },
+            "version": 5,
+            "valid_from": "<time@step 25>",
+            "valid_to": null,
+            "created_at": "<time@before step 1>",
+            "updated_at": "<time@step 25>"
+          },
+          {
+            "id": "<need>",
+            "project_id": "<p>",
+            "parent_id": "<heading>",
+            "type": "user-need",
+            "ref": "NEED-1",
+            "title": "Operator need",
+            "body": "Operators work shifts of twelve hours at a console that shows every alarm the plant raises, and they act on what it tells them. They need answers they can trust at the end of a long shift, when attention is lowest and a wrong call costs the most, so every figure on the screen has to be traceable.",
+            "sort_order": 1,
+            "status": "in_review",
+            "attributes": {
+              "status": "in_review"
+            },
+            "version": 2,
+            "valid_from": "<time@step 25>",
+            "valid_to": null,
+            "created_at": "<time@before step 1>",
+            "updated_at": "<time@step 25>"
+          },
+          {
+            "id": "<heading>",
+            "project_id": "<p>",
+            "type": "heading",
+            "ref": "HDG-1",
+            "title": "Scope",
+            "body": "What the review tour covers.",
+            "sort_order": 1,
+            "status": "in_review",
+            "attributes": {
+              "status": "in_review"
+            },
+            "version": 2,
+            "valid_from": "<time@step 25>",
+            "valid_to": null,
+            "created_at": "<time@before step 1>",
+            "updated_at": "<time@step 25>"
+          }
+        ],
+        "suspect_links": []
+      },
+      "gzip": {
+        "content_encoding": "gzip",
+        "content_type": "application/json",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "n": 32,
+      "title": "the round again: only the changed requirement moves",
+      "actor": "owner",
+      "route": "POST /api/v1/projects/{id}/review-round",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/projects/<p>/review-round",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{}"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"moved\":[{\"id\":\"<req1>\",\"project_id\":\"<p>\",\"parent_id\":\"<heading>\",\"type\":\"requirement\",\"ref\":\"REQ-1\",\"title\":\"Answer in time\",\"body\":\"The system shall answer every operator query within 3 s.\",\"sort_order\":2,\"status\":\"in_review\",\"attributes\":{\"links_snapshot\":[{\"attributes\":null,\"created_at\":\"<time@before step 1>\",\"from_id\":\"<tc>\",\"id\":\"<link>\",\"suspect\":false,\"to_id\":\"<req1>\",\"type\":\"verifies\",\"updated_at\":\"<time@before step 1>\",\"valid_from\":\"0001-01-01T00:00:00Z\",\"valid_to\":null,\"version\":1}],\"status\":\"in_review\"},\"version\":7,\"valid_from\":\"<time@step 32>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 32>\"}],\"already_in_review\":4,\"approved\":0,\"superseded\":1,\"out_of_scope\":0,\"types\":[\"heading\",\"description\",\"persona\",\"user-need\",\"requirement\",\"design-item\",\"test-case\",\"hazard\",\"other\"]}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "moved": [
+          {
+            "id": "<req1>",
+            "project_id": "<p>",
+            "parent_id": "<heading>",
+            "type": "requirement",
+            "ref": "REQ-1",
+            "title": "Answer in time",
+            "body": "The system shall answer every operator query within 3 s.",
+            "sort_order": 2,
+            "status": "in_review",
+            "attributes": {
+              "links_snapshot": [
+                {
+                  "attributes": null,
+                  "created_at": "<time@before step 1>",
+                  "from_id": "<tc>",
+                  "id": "<link>",
+                  "suspect": false,
+                  "to_id": "<req1>",
+                  "type": "verifies",
+                  "updated_at": "<time@before step 1>",
+                  "valid_from": "0001-01-01T00:00:00Z",
+                  "valid_to": null,
+                  "version": 1
+                }
+              ],
+              "status": "in_review"
+            },
+            "version": 7,
+            "valid_from": "<time@step 32>",
+            "valid_to": null,
+            "created_at": "<time@before step 1>",
+            "updated_at": "<time@step 32>"
+          }
+        ],
+        "already_in_review": 4,
+        "approved": 0,
+        "superseded": 1,
+        "out_of_scope": 0,
+        "types": [
+          "heading",
+          "description",
+          "persona",
+          "user-need",
+          "requirement",
+          "design-item",
+          "test-case",
+          "hazard",
+          "other"
+        ]
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": [
+        {
+          "type": "artifact.status_changed",
+          "actor": "user:<owner>",
+          "project": "<p>",
+          "entity": "<req1>",
+          "payload": {
+            "artifact_type": "string \"requirement\"",
+            "from": "string \"draft\"",
+            "review_round": "boolean true",
+            "title": "string \"Answer in time\"",
+            "to": "string \"in_review\"",
+            "version": "number 7"
+          }
+        },
+        {
+          "type": "project.review_round_started",
+          "actor": "user:<owner>",
+          "project": "<p>",
+          "entity": "<p>",
+          "payload": {
+            "already_in_review": "number 4",
+            "approved": "number 0",
+            "moved": "number 1",
+            "types": "array[string] [\"heading\",\"description\",\"persona\",\"user-need\",\"requirement\",\"design-item\",\"test-case\",\"hazard\",\"other\"]"
+          }
+        }
+      ]
+    },
+    {
+      "n": 33,
+      "title": "the reviewer, a viewer, writes a note: reviewers and up only",
+      "actor": "reviewer",
+      "route": "POST /api/v1/chatter",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/chatter",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"artifact_id\":\"<req1>\",\"message\":\"Viewed only.\"}"
+      },
+      "status": 403,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 51,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"you do not have access to this project\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "you do not have access to this project"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 34,
+      "title": "the owner's note names the reviewer, with markup the JSON escapes: chatter.created",
+      "actor": "owner",
+      "route": "POST /api/v1/chatter",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/chatter",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"artifact_id\":\"<req1>\",\"message\":\"Please check the new limit, @tourreviewer: <b>3 s</b> & no more\"}"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"id\":\"<note_owner>\",\"artifact_id\":\"<req1>\",\"message\":\"Please check the new limit, @tourreviewer: \\u003cb\\u003e3 s\\u003c/b\\u003e \\u0026 no more\",\"is_auto_entry\":false,\"entry_type\":\"comment\",\"created_by\":\"<owner>\",\"author_name\":\"Tour Owner\",\"created_at\":\"<time@step 34>\",\"updated_at\":\"<time@step 34>\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "id": "<note_owner>",
+        "artifact_id": "<req1>",
+        "message": "Please check the new limit, @tourreviewer: \u003cb\u003e3 s\u003c/b\u003e \u0026 no more",
+        "is_auto_entry": false,
+        "entry_type": "comment",
+        "created_by": "<owner>",
+        "author_name": "Tour Owner",
+        "created_at": "<time@step 34>",
+        "updated_at": "<time@step 34>"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": [
+        {
+          "type": "chatter.created",
+          "actor": "user:<owner>",
+          "project": "<p>",
+          "entity": "<note_owner>",
+          "payload": {
+            "artifact_id": "string \"<req1>\"",
+            "entry_type": "string \"comment\"",
+            "message": "string \"Please check the new limit, @tourreviewer: <b>3 s</b> & no more\""
+          }
+        }
+      ]
+    },
+    {
+      "n": 35,
+      "title": "the reviewer answers, naming the owner and someone who is not a member",
+      "actor": "reviewer",
+      "route": "POST /api/v1/chatter",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/chatter",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"artifact_id\":\"<req1>\",\"message\":\"Agreed, @tour-owner; @nobody need not look\"}"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"id\":\"<note_reviewer>\",\"artifact_id\":\"<req1>\",\"message\":\"Agreed, @tour-owner; @nobody need not look\",\"is_auto_entry\":false,\"entry_type\":\"comment\",\"created_by\":\"<reviewer>\",\"author_name\":\"Tour Reviewer\",\"created_at\":\"<time@step 35>\",\"updated_at\":\"<time@step 35>\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "id": "<note_reviewer>",
+        "artifact_id": "<req1>",
+        "message": "Agreed, @tour-owner; @nobody need not look",
+        "is_auto_entry": false,
+        "entry_type": "comment",
+        "created_by": "<reviewer>",
+        "author_name": "Tour Reviewer",
+        "created_at": "<time@step 35>",
+        "updated_at": "<time@step 35>"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": [
+        {
+          "type": "chatter.created",
+          "actor": "user:<reviewer>",
+          "project": "<p>",
+          "entity": "<note_reviewer>",
+          "payload": {
+            "artifact_id": "string \"<req1>\"",
+            "entry_type": "string \"comment\"",
+            "message": "string \"Agreed, @tour-owner; @nobody need not look\""
+          }
+        }
+      ]
+    },
+    {
+      "n": 36,
+      "title": "a note with a malformed body",
+      "actor": "owner",
+      "route": "POST /api/v1/chatter",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/chatter",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"artifact_id\":"
+      },
+      "status": 400,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 33,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"invalid request body\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "invalid request body"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 37,
+      "title": "a note on an artifact that does not exist",
+      "actor": "owner",
+      "route": "POST /api/v1/chatter",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/chatter",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"artifact_id\":\"<phantom>\",\"message\":\"Nobody reads this.\"}"
+      },
+      "notes": [
+        "an artifact with no project resolves to no project, which the guard answers 404"
+      ],
+      "status": 404,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 30,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"project not found\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "project not found"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 38,
+      "title": "the notes with no artifact_id",
+      "actor": "owner",
+      "route": "GET /api/v1/chatter",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/chatter"
+      },
+      "status": 400,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 36,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"artifact_id is required\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "artifact_id is required"
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 39,
+      "title": "the notes of an artifact that does not exist",
+      "actor": "owner",
+      "route": "GET /api/v1/chatter",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/chatter",
+        "query": "artifact_id=<phantom>"
+      },
+      "status": 404,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 30,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"project not found\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "project not found"
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 40,
+      "title": "the first requirement's notes, newest first: mentions resolved against P's members",
+      "actor": "owner",
+      "route": "GET /api/v1/chatter",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/chatter",
+        "query": "artifact_id=<req1>"
+      },
+      "notes": [
+        "an entry lists the members it names (by name without spaces, first name or email local part), in the order of P's members; @nobody names no member"
+      ],
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "[{\"id\":\"<note_reviewer>\",\"artifact_id\":\"<req1>\",\"message\":\"Agreed, @tour-owner; @nobody need not look\",\"is_auto_entry\":false,\"entry_type\":\"comment\",\"created_by\":\"<reviewer>\",\"author_name\":\"Tour Reviewer\",\"created_at\":\"<time@step 35>\",\"updated_at\":\"<time@step 35>\",\"mentions\":[{\"user_id\":\"<owner>\",\"name\":\"Tour Owner\"}]},{\"id\":\"<note_owner>\",\"artifact_id\":\"<req1>\",\"message\":\"Please check the new limit, @tourreviewer: \\u003cb\\u003e3 s\\u003c/b\\u003e \\u0026 no more\",\"is_auto_entry\":false,\"entry_type\":\"comment\",\"created_by\":\"<owner>\",\"author_name\":\"Tour Owner\",\"created_at\":\"<time@step 34>\",\"updated_at\":\"<time@step 34>\",\"mentions\":[{\"user_id\":\"<reviewer>\",\"name\":\"Tour Reviewer\"}]},{\"id\":\"<uuid:1>\",\"artifact_id\":\"<req1>\",\"message\":\"Status changed: draft → in_review (project review)\",\"is_auto_entry\":true,\"entry_type\":\"status-change\",\"author_name\":\"\",\"created_at\":\"<time@step 32>\",\"updated_at\":\"<time@step 32>\"},{\"id\":\"<uuid:2>\",\"artifact_id\":\"<req1>\",\"message\":\"Updated to version 6\\n\\nChanges:\\n- Body: \\\"The system shall answer every operator query within 2 s.\\\" → \\\"The system shall answer every operator query within 3 s.\\\"\\n\",\"is_auto_entry\":true,\"entry_type\":\"version-change\",\"author_name\":\"\",\"created_at\":\"<time@before step 32>\",\"updated_at\":\"<time@before step 32>\"},{\"id\":\"<uuid:3>\",\"artifact_id\":\"<req1>\",\"message\":\"Status changed: in_review → approved\",\"is_auto_entry\":true,\"entry_type\":\"status-change\",\"author_name\":\"\",\"created_at\":\"<time@step 30>\",\"updated_at\":\"<time@step 30>\"},{\"id\":\"<uuid:4>\",\"artifact_id\":\"<req1>\",\"message\":\"Status changed: draft → in_review (project review)\",\"is_auto_entry\":true,\"entry_type\":\"status-change\",\"author_name\":\"\",\"created_at\":\"<time@step 24>\",\"updated_at\":\"<time@step 24>\"},{\"id\":\"<uuid:5>\",\"artifact_id\":\"<req1>\",\"message\":\"Updated to version 3\\n\\nChanges:\\n- Body: \\\"The system shall answer every operator query within 1 s.\\\" → \\\"The system shall answer every operator query within 2 s.\\\"\\n\",\"is_auto_entry\":true,\"entry_type\":\"version-change\",\"author_name\":\"\",\"created_at\":\"<time@before step 7>\",\"updated_at\":\"<time@before step 7>\"},{\"id\":\"<uuid:6>\",\"artifact_id\":\"<req1>\",\"message\":\"Auto-updated to version 2 due to link changes\",\"is_auto_entry\":true,\"entry_type\":\"link-change\",\"author_name\":\"\",\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"}]"
+      ],
+      "trailing_newline": true,
+      "parsed": [
+        {
+          "id": "<note_reviewer>",
+          "artifact_id": "<req1>",
+          "message": "Agreed, @tour-owner; @nobody need not look",
+          "is_auto_entry": false,
+          "entry_type": "comment",
+          "created_by": "<reviewer>",
+          "author_name": "Tour Reviewer",
+          "created_at": "<time@step 35>",
+          "updated_at": "<time@step 35>",
+          "mentions": [
+            {
+              "user_id": "<owner>",
+              "name": "Tour Owner"
+            }
+          ]
+        },
+        {
+          "id": "<note_owner>",
+          "artifact_id": "<req1>",
+          "message": "Please check the new limit, @tourreviewer: \u003cb\u003e3 s\u003c/b\u003e \u0026 no more",
+          "is_auto_entry": false,
+          "entry_type": "comment",
+          "created_by": "<owner>",
+          "author_name": "Tour Owner",
+          "created_at": "<time@step 34>",
+          "updated_at": "<time@step 34>",
+          "mentions": [
+            {
+              "user_id": "<reviewer>",
+              "name": "Tour Reviewer"
+            }
+          ]
+        },
+        {
+          "id": "<uuid:1>",
+          "artifact_id": "<req1>",
+          "message": "Status changed: draft → in_review (project review)",
+          "is_auto_entry": true,
+          "entry_type": "status-change",
+          "author_name": "",
+          "created_at": "<time@step 32>",
+          "updated_at": "<time@step 32>"
+        },
+        {
+          "id": "<uuid:2>",
+          "artifact_id": "<req1>",
+          "message": "Updated to version 6\n\nChanges:\n- Body: \"The system shall answer every operator query within 2 s.\" → \"The system shall answer every operator query within 3 s.\"\n",
+          "is_auto_entry": true,
+          "entry_type": "version-change",
+          "author_name": "",
+          "created_at": "<time@before step 32>",
+          "updated_at": "<time@before step 32>"
+        },
+        {
+          "id": "<uuid:3>",
+          "artifact_id": "<req1>",
+          "message": "Status changed: in_review → approved",
+          "is_auto_entry": true,
+          "entry_type": "status-change",
+          "author_name": "",
+          "created_at": "<time@step 30>",
+          "updated_at": "<time@step 30>"
+        },
+        {
+          "id": "<uuid:4>",
+          "artifact_id": "<req1>",
+          "message": "Status changed: draft → in_review (project review)",
+          "is_auto_entry": true,
+          "entry_type": "status-change",
+          "author_name": "",
+          "created_at": "<time@step 24>",
+          "updated_at": "<time@step 24>"
+        },
+        {
+          "id": "<uuid:5>",
+          "artifact_id": "<req1>",
+          "message": "Updated to version 3\n\nChanges:\n- Body: \"The system shall answer every operator query within 1 s.\" → \"The system shall answer every operator query within 2 s.\"\n",
+          "is_auto_entry": true,
+          "entry_type": "version-change",
+          "author_name": "",
+          "created_at": "<time@before step 7>",
+          "updated_at": "<time@before step 7>"
+        },
+        {
+          "id": "<uuid:6>",
+          "artifact_id": "<req1>",
+          "message": "Auto-updated to version 2 due to link changes",
+          "is_auto_entry": true,
+          "entry_type": "link-change",
+          "author_name": "",
+          "created_at": "<time@before step 1>",
+          "updated_at": "<time@before step 1>"
+        }
+      ],
+      "gzip": {
+        "content_encoding": "gzip",
+        "content_type": "application/json",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "n": 41,
+      "title": "the user need's notes: the round's status change",
+      "actor": "reviewer",
+      "route": "GET /api/v1/chatter",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/chatter",
+        "query": "artifact_id=<need>"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "[{\"id\":\"<uuid:7>\",\"artifact_id\":\"<need>\",\"message\":\"Status changed: draft → in_review (project review)\",\"is_auto_entry\":true,\"entry_type\":\"status-change\",\"author_name\":\"\",\"created_at\":\"<time@step 25>\",\"updated_at\":\"<time@step 25>\"}]"
+      ],
+      "trailing_newline": true,
+      "parsed": [
+        {
+          "id": "<uuid:7>",
+          "artifact_id": "<need>",
+          "message": "Status changed: draft → in_review (project review)",
+          "is_auto_entry": true,
+          "entry_type": "status-change",
+          "author_name": "",
+          "created_at": "<time@step 25>",
+          "updated_at": "<time@step 25>"
+        }
+      ],
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 42,
+      "title": "search with no session",
+      "actor": "anonymous",
+      "route": "GET /api/v1/search",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/search",
+        "query": "q=answer"
+      },
+      "notes": [
+        "the auth middleware answers before routing"
+      ],
+      "status": 401,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 36,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"authentication required\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "authentication required"
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 43,
+      "title": "search with an empty query",
+      "actor": "owner",
+      "route": "GET /api/v1/search",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/search",
+        "query": "q="
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 34,
+      "kind": "json",
+      "body": [
+        "{\"mode_used\":\"keyword\",\"hits\":[]}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "mode_used": "keyword",
+        "hits": []
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 44,
+      "title": "search by ref: the exact ref first, then a title that names it",
+      "actor": "owner",
+      "route": "GET /api/v1/search",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/search",
+        "query": "q=REQ-1"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 565,
+      "kind": "json",
+      "body": [
+        "{\"mode_used\":\"keyword\",\"hits\":[{\"artifact_id\":\"<req1>\",\"project_id\":\"<p>\",\"project_name\":\"Review tour\",\"type\":\"requirement\",\"title\":\"Answer in time\",\"snippet\":\"The system shall answer every operator query within 3 s.\",\"ref\":\"REQ-1\"},{\"artifact_id\":\"<tc>\",\"project_id\":\"<p>\",\"project_name\":\"Review tour\",\"type\":\"test-case\",\"title\":\"Check REQ-1 timing\",\"snippet\":\"Measure the answer time of REQ-1 over a thousand queries.\",\"ref\":\"TC-1\"}]}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "mode_used": "keyword",
+        "hits": [
+          {
+            "artifact_id": "<req1>",
+            "project_id": "<p>",
+            "project_name": "Review tour",
+            "type": "requirement",
+            "title": "Answer in time",
+            "snippet": "The system shall answer every operator query within 3 s.",
+            "ref": "REQ-1"
+          },
+          {
+            "artifact_id": "<tc>",
+            "project_id": "<p>",
+            "project_name": "Review tour",
+            "type": "test-case",
+            "title": "Check REQ-1 timing",
+            "snippet": "Measure the answer time of REQ-1 over a thousand queries.",
+            "ref": "TC-1"
+          }
+        ]
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 45,
+      "title": "search by ref in lower case, asking for semantic: a ref query always runs keyword",
+      "actor": "owner",
+      "route": "GET /api/v1/search",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/search",
+        "query": "q=req-1&mode=semantic"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 565,
+      "kind": "json",
+      "body": [
+        "{\"mode_used\":\"keyword\",\"hits\":[{\"artifact_id\":\"<req1>\",\"project_id\":\"<p>\",\"project_name\":\"Review tour\",\"type\":\"requirement\",\"title\":\"Answer in time\",\"snippet\":\"The system shall answer every operator query within 3 s.\",\"ref\":\"REQ-1\"},{\"artifact_id\":\"<tc>\",\"project_id\":\"<p>\",\"project_name\":\"Review tour\",\"type\":\"test-case\",\"title\":\"Check REQ-1 timing\",\"snippet\":\"Measure the answer time of REQ-1 over a thousand queries.\",\"ref\":\"TC-1\"}]}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "mode_used": "keyword",
+        "hits": [
+          {
+            "artifact_id": "<req1>",
+            "project_id": "<p>",
+            "project_name": "Review tour",
+            "type": "requirement",
+            "title": "Answer in time",
+            "snippet": "The system shall answer every operator query within 3 s.",
+            "ref": "REQ-1"
+          },
+          {
+            "artifact_id": "<tc>",
+            "project_id": "<p>",
+            "project_name": "Review tour",
+            "type": "test-case",
+            "title": "Check REQ-1 timing",
+            "snippet": "Measure the answer time of REQ-1 over a thousand queries.",
+            "ref": "TC-1"
+          }
+        ]
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 46,
+      "title": "search a phrase: title matches first, then body matches, each newest change first",
+      "actor": "owner",
+      "route": "GET /api/v1/search",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/search",
+        "query": "q=answer"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 1589,
+      "kind": "json",
+      "body": [
+        "{\"mode_used\":\"keyword\",\"hits\":[{\"artifact_id\":\"<req1>\",\"project_id\":\"<p>\",\"project_name\":\"Review tour\",\"type\":\"requirement\",\"title\":\"Answer in time\",\"snippet\":\"The system shall answer every operator query within 3 s.\",\"ref\":\"REQ-1\"},{\"artifact_id\":\"<di>\",\"project_id\":\"<p>\",\"project_name\":\"Review tour\",\"type\":\"design-item\",\"title\":\"Answer cache\",\"snippet\":\"A read-through cache in front of the query engine keeps the last thousand results warm, and it is flushed whenever the plant model changes, so a stale figure ne…\",\"ref\":\"DES-1\"},{\"artifact_id\":\"<req2>\",\"project_id\":\"<p>\",\"project_name\":\"Review tour\",\"type\":\"requirement\",\"title\":\"Audit trail\",\"snippet\":\"The system shall record 99% of answers in the audit trail within 5 s.\",\"ref\":\"REQ-2\"},{\"artifact_id\":\"<tc>\",\"project_id\":\"<p>\",\"project_name\":\"Review tour\",\"type\":\"test-case\",\"title\":\"Check REQ-1 timing\",\"snippet\":\"Measure the answer time of REQ-1 over a thousand queries.\",\"ref\":\"TC-1\"},{\"artifact_id\":\"<need>\",\"project_id\":\"<p>\",\"project_name\":\"Review tour\",\"type\":\"user-need\",\"title\":\"Operator need\",\"snippet\":\"…ows every alarm the plant raises, and they act on what it tells them. They need answers they can trust at the end of a long shift, when attention is lowest and a wron…\",\"ref\":\"NEED-1\"}]}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "mode_used": "keyword",
+        "hits": [
+          {
+            "artifact_id": "<req1>",
+            "project_id": "<p>",
+            "project_name": "Review tour",
+            "type": "requirement",
+            "title": "Answer in time",
+            "snippet": "The system shall answer every operator query within 3 s.",
+            "ref": "REQ-1"
+          },
+          {
+            "artifact_id": "<di>",
+            "project_id": "<p>",
+            "project_name": "Review tour",
+            "type": "design-item",
+            "title": "Answer cache",
+            "snippet": "A read-through cache in front of the query engine keeps the last thousand results warm, and it is flushed whenever the plant model changes, so a stale figure ne…",
+            "ref": "DES-1"
+          },
+          {
+            "artifact_id": "<req2>",
+            "project_id": "<p>",
+            "project_name": "Review tour",
+            "type": "requirement",
+            "title": "Audit trail",
+            "snippet": "The system shall record 99% of answers in the audit trail within 5 s.",
+            "ref": "REQ-2"
+          },
+          {
+            "artifact_id": "<tc>",
+            "project_id": "<p>",
+            "project_name": "Review tour",
+            "type": "test-case",
+            "title": "Check REQ-1 timing",
+            "snippet": "Measure the answer time of REQ-1 over a thousand queries.",
+            "ref": "TC-1"
+          },
+          {
+            "artifact_id": "<need>",
+            "project_id": "<p>",
+            "project_name": "Review tour",
+            "type": "user-need",
+            "title": "Operator need",
+            "snippet": "…ows every alarm the plant raises, and they act on what it tells them. They need answers they can trust at the end of a long shift, when attention is lowest and a wron…",
+            "ref": "NEED-1"
+          }
+        ]
+      },
+      "gzip": {
+        "content_encoding": "gzip",
+        "content_type": "application/json",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "n": 47,
+      "title": "the same, mode semantic: no embeddings, so keyword",
+      "actor": "owner",
+      "route": "GET /api/v1/search",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/search",
+        "query": "q=answer&mode=semantic"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 1589,
+      "kind": "json",
+      "body": [
+        "{\"mode_used\":\"keyword\",\"hits\":[{\"artifact_id\":\"<req1>\",\"project_id\":\"<p>\",\"project_name\":\"Review tour\",\"type\":\"requirement\",\"title\":\"Answer in time\",\"snippet\":\"The system shall answer every operator query within 3 s.\",\"ref\":\"REQ-1\"},{\"artifact_id\":\"<di>\",\"project_id\":\"<p>\",\"project_name\":\"Review tour\",\"type\":\"design-item\",\"title\":\"Answer cache\",\"snippet\":\"A read-through cache in front of the query engine keeps the last thousand results warm, and it is flushed whenever the plant model changes, so a stale figure ne…\",\"ref\":\"DES-1\"},{\"artifact_id\":\"<req2>\",\"project_id\":\"<p>\",\"project_name\":\"Review tour\",\"type\":\"requirement\",\"title\":\"Audit trail\",\"snippet\":\"The system shall record 99% of answers in the audit trail within 5 s.\",\"ref\":\"REQ-2\"},{\"artifact_id\":\"<tc>\",\"project_id\":\"<p>\",\"project_name\":\"Review tour\",\"type\":\"test-case\",\"title\":\"Check REQ-1 timing\",\"snippet\":\"Measure the answer time of REQ-1 over a thousand queries.\",\"ref\":\"TC-1\"},{\"artifact_id\":\"<need>\",\"project_id\":\"<p>\",\"project_name\":\"Review tour\",\"type\":\"user-need\",\"title\":\"Operator need\",\"snippet\":\"…ows every alarm the plant raises, and they act on what it tells them. They need answers they can trust at the end of a long shift, when attention is lowest and a wron…\",\"ref\":\"NEED-1\"}]}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "mode_used": "keyword",
+        "hits": [
+          {
+            "artifact_id": "<req1>",
+            "project_id": "<p>",
+            "project_name": "Review tour",
+            "type": "requirement",
+            "title": "Answer in time",
+            "snippet": "The system shall answer every operator query within 3 s.",
+            "ref": "REQ-1"
+          },
+          {
+            "artifact_id": "<di>",
+            "project_id": "<p>",
+            "project_name": "Review tour",
+            "type": "design-item",
+            "title": "Answer cache",
+            "snippet": "A read-through cache in front of the query engine keeps the last thousand results warm, and it is flushed whenever the plant model changes, so a stale figure ne…",
+            "ref": "DES-1"
+          },
+          {
+            "artifact_id": "<req2>",
+            "project_id": "<p>",
+            "project_name": "Review tour",
+            "type": "requirement",
+            "title": "Audit trail",
+            "snippet": "The system shall record 99% of answers in the audit trail within 5 s.",
+            "ref": "REQ-2"
+          },
+          {
+            "artifact_id": "<tc>",
+            "project_id": "<p>",
+            "project_name": "Review tour",
+            "type": "test-case",
+            "title": "Check REQ-1 timing",
+            "snippet": "Measure the answer time of REQ-1 over a thousand queries.",
+            "ref": "TC-1"
+          },
+          {
+            "artifact_id": "<need>",
+            "project_id": "<p>",
+            "project_name": "Review tour",
+            "type": "user-need",
+            "title": "Operator need",
+            "snippet": "…ows every alarm the plant raises, and they act on what it tells them. They need answers they can trust at the end of a long shift, when attention is lowest and a wron…",
+            "ref": "NEED-1"
+          }
+        ]
+      },
+      "gzip": {
+        "content_encoding": "gzip",
+        "content_type": "application/json",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "n": 48,
+      "title": "the same, mode hybrid: no embeddings, so keyword",
+      "actor": "owner",
+      "route": "GET /api/v1/search",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/search",
+        "query": "q=answer&mode=hybrid"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 1589,
+      "kind": "json",
+      "body": [
+        "{\"mode_used\":\"keyword\",\"hits\":[{\"artifact_id\":\"<req1>\",\"project_id\":\"<p>\",\"project_name\":\"Review tour\",\"type\":\"requirement\",\"title\":\"Answer in time\",\"snippet\":\"The system shall answer every operator query within 3 s.\",\"ref\":\"REQ-1\"},{\"artifact_id\":\"<di>\",\"project_id\":\"<p>\",\"project_name\":\"Review tour\",\"type\":\"design-item\",\"title\":\"Answer cache\",\"snippet\":\"A read-through cache in front of the query engine keeps the last thousand results warm, and it is flushed whenever the plant model changes, so a stale figure ne…\",\"ref\":\"DES-1\"},{\"artifact_id\":\"<req2>\",\"project_id\":\"<p>\",\"project_name\":\"Review tour\",\"type\":\"requirement\",\"title\":\"Audit trail\",\"snippet\":\"The system shall record 99% of answers in the audit trail within 5 s.\",\"ref\":\"REQ-2\"},{\"artifact_id\":\"<tc>\",\"project_id\":\"<p>\",\"project_name\":\"Review tour\",\"type\":\"test-case\",\"title\":\"Check REQ-1 timing\",\"snippet\":\"Measure the answer time of REQ-1 over a thousand queries.\",\"ref\":\"TC-1\"},{\"artifact_id\":\"<need>\",\"project_id\":\"<p>\",\"project_name\":\"Review tour\",\"type\":\"user-need\",\"title\":\"Operator need\",\"snippet\":\"…ows every alarm the plant raises, and they act on what it tells them. They need answers they can trust at the end of a long shift, when attention is lowest and a wron…\",\"ref\":\"NEED-1\"}]}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "mode_used": "keyword",
+        "hits": [
+          {
+            "artifact_id": "<req1>",
+            "project_id": "<p>",
+            "project_name": "Review tour",
+            "type": "requirement",
+            "title": "Answer in time",
+            "snippet": "The system shall answer every operator query within 3 s.",
+            "ref": "REQ-1"
+          },
+          {
+            "artifact_id": "<di>",
+            "project_id": "<p>",
+            "project_name": "Review tour",
+            "type": "design-item",
+            "title": "Answer cache",
+            "snippet": "A read-through cache in front of the query engine keeps the last thousand results warm, and it is flushed whenever the plant model changes, so a stale figure ne…",
+            "ref": "DES-1"
+          },
+          {
+            "artifact_id": "<req2>",
+            "project_id": "<p>",
+            "project_name": "Review tour",
+            "type": "requirement",
+            "title": "Audit trail",
+            "snippet": "The system shall record 99% of answers in the audit trail within 5 s.",
+            "ref": "REQ-2"
+          },
+          {
+            "artifact_id": "<tc>",
+            "project_id": "<p>",
+            "project_name": "Review tour",
+            "type": "test-case",
+            "title": "Check REQ-1 timing",
+            "snippet": "Measure the answer time of REQ-1 over a thousand queries.",
+            "ref": "TC-1"
+          },
+          {
+            "artifact_id": "<need>",
+            "project_id": "<p>",
+            "project_name": "Review tour",
+            "type": "user-need",
+            "title": "Operator need",
+            "snippet": "…ows every alarm the plant raises, and they act on what it tells them. They need answers they can trust at the end of a long shift, when attention is lowest and a wron…",
+            "ref": "NEED-1"
+          }
+        ]
+      },
+      "gzip": {
+        "content_encoding": "gzip",
+        "content_type": "application/json",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "n": 49,
+      "title": "the same, limit 1",
+      "actor": "owner",
+      "route": "GET /api/v1/search",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/search",
+        "query": "q=answer&limit=1"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 298,
+      "kind": "json",
+      "body": [
+        "{\"mode_used\":\"keyword\",\"hits\":[{\"artifact_id\":\"<req1>\",\"project_id\":\"<p>\",\"project_name\":\"Review tour\",\"type\":\"requirement\",\"title\":\"Answer in time\",\"snippet\":\"The system shall answer every operator query within 3 s.\",\"ref\":\"REQ-1\"}]}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "mode_used": "keyword",
+        "hits": [
+          {
+            "artifact_id": "<req1>",
+            "project_id": "<p>",
+            "project_name": "Review tour",
+            "type": "requirement",
+            "title": "Answer in time",
+            "snippet": "The system shall answer every operator query within 3 s.",
+            "ref": "REQ-1"
+          }
+        ]
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 50,
+      "title": "a query that is a LIKE wildcard matches it literally",
+      "actor": "owner",
+      "route": "GET /api/v1/search",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/search",
+        "query": "q=%25"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 308,
+      "kind": "json",
+      "body": [
+        "{\"mode_used\":\"keyword\",\"hits\":[{\"artifact_id\":\"<req2>\",\"project_id\":\"<p>\",\"project_name\":\"Review tour\",\"type\":\"requirement\",\"title\":\"Audit trail\",\"snippet\":\"The system shall record 99% of answers in the audit trail within 5 s.\",\"ref\":\"REQ-2\"}]}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "mode_used": "keyword",
+        "hits": [
+          {
+            "artifact_id": "<req2>",
+            "project_id": "<p>",
+            "project_name": "Review tour",
+            "type": "requirement",
+            "title": "Audit trail",
+            "snippet": "The system shall record 99% of answers in the audit trail within 5 s.",
+            "ref": "REQ-2"
+          }
+        ]
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 51,
+      "title": "limit 0 means the default, 20 (Q8)",
+      "actor": "owner",
+      "route": "GET /api/v1/search",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/search",
+        "query": "q=bulk&limit=0"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": null,
+      "kind": "json",
+      "body": [
+        "{\"mode_used\":\"keyword\",\"hits\":[{\"artifact_id\":\"<bulk_51>\",\"project_id\":\"<b>\",\"project_name\":\"Bulk tour\",\"type\":\"other\",\"title\":\"Bulk item 51\",\"snippet\":\"\",\"ref\":\"ART-51\"},{\"artifact_id\":\"<bulk_50>\",\"project_id\":\"<b>\",\"project_name\":\"Bulk tour\",\"type\":\"other\",\"title\":\"Bulk item 50\",\"snippet\":\"\",\"ref\":\"ART-50\"},{\"artifact_id\":\"<bulk_49>\",\"project_id\":\"<b>\",\"project_name\":\"Bulk tour\",\"type\":\"other\",\"title\":\"Bulk item 49\",\"snippet\":\"\",\"ref\":\"ART-49\"},{\"artifact_id\":\"<bulk_48>\",\"project_id\":\"<b>\",\"project_name\":\"Bulk tour\",\"type\":\"other\",\"title\":\"Bulk item 48\",\"snippet\":\"\",\"ref\":\"ART-48\"},{\"artifact_id\":\"<bulk_47>\",\"project_id\":\"<b>\",\"project_name\":\"Bulk tour\",\"type\":\"other\",\"title\":\"Bulk item 47\",\"snippet\":\"\",\"ref\":\"ART-47\"},{\"artifact_id\":\"<bulk_46>\",\"project_id\":\"<b>\",\"project_name\":\"Bulk tour\",\"type\":\"other\",\"title\":\"Bulk item 46\",\"snippet\":\"\",\"ref\":\"ART-46\"},{\"artifact_id\":\"<bulk_45>\",\"project_id\":\"<b>\",\"project_name\":\"Bulk tour\",\"type\":\"other\",\"title\":\"Bulk item 45\",\"snippet\":\"\",\"ref\":\"ART-45\"},{\"artifact_id\":\"<bulk_44>\",\"project_id\":\"<b>\",\"project_name\":\"Bulk tour\",\"type\":\"other\",\"title\":\"Bulk item 44\",\"snippet\":\"\",\"ref\":\"ART-44\"},{\"artifact_id\":\"<bulk_43>\",\"project_id\":\"<b>\",\"project_name\":\"Bulk tour\",\"type\":\"other\",\"title\":\"Bulk item 43\",\"snippet\":\"\",\"ref\":\"ART-43\"},{\"artifact_id\":\"<bulk_42>\",\"project_id\":\"<b>\",\"project_name\":\"Bulk tour\",\"type\":\"other\",\"title\":\"Bulk item 42\",\"snippet\":\"\",\"ref\":\"ART-42\"},{\"artifact_id\":\"<bulk_41>\",\"project_id\":\"<b>\",\"project_name\":\"Bulk tour\",\"type\":\"other\",\"title\":\"Bulk item 41\",\"snippet\":\"\",\"ref\":\"ART-41\"},{\"artifact_id\":\"<bulk_40>\",\"project_id\":\"<b>\",\"project_name\":\"Bulk tour\",\"type\":\"other\",\"title\":\"Bulk item 40\",\"snippet\":\"\",\"ref\":\"ART-40\"},{\"artifact_id\":\"<bulk_39>\",\"project_id\":\"<b>\",\"project_name\":\"Bulk tour\",\"type\":\"other\",\"title\":\"Bulk item 39\",\"snippet\":\"\",\"ref\":\"ART-39\"},{\"artifact_id\":\"<bulk_38>\",\"project_id\":\"<b>\",\"project_name\":\"Bulk tour\",\"type\":\"other\",\"title\":\"Bulk item 38\",\"snippet\":\"\",\"ref\":\"ART-38\"},{\"artifact_id\":\"<bulk_37>\",\"project_id\":\"<b>\",\"project_name\":\"Bulk tour\",\"type\":\"other\",\"title\":\"Bulk item 37\",\"snippet\":\"\",\"ref\":\"ART-37\"},{\"artifact_id\":\"<bulk_36>\",\"project_id\":\"<b>\",\"project_name\":\"Bulk tour\",\"type\":\"other\",\"title\":\"Bulk item 36\",\"snippet\":\"\",\"ref\":\"ART-36\"},{\"artifact_id\":\"<bulk_35>\",\"project_id\":\"<b>\",\"project_name\":\"Bulk tour\",\"type\":\"other\",\"title\":\"Bulk item 35\",\"snippet\":\"\",\"ref\":\"ART-35\"},{\"artifact_id\":\"<bulk_34>\",\"project_id\":\"<b>\",\"project_name\":\"Bulk tour\",\"type\":\"other\",\"title\":\"Bulk item 34\",\"snippet\":\"\",\"ref\":\"ART-34\"},{\"artifact_id\":\"<bulk_33>\",\"project_id\":\"<b>\",\"project_name\":\"Bulk tour\",\"type\":\"other\",\"title\":\"Bulk item 33\",\"snippet\":\"\",\"ref\":\"ART-33\"},{\"artifact_id\":\"<bulk_32>\",\"project_id\":\"<b>\",\"project_name\":\"Bulk tour\",\"type\":\"other\",\"title\":\"Bulk item 32\",\"snippet\":\"\",\"ref\":\"ART-32\"}]}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "mode_used": "keyword",
+        "hits": [
+          {
+            "artifact_id": "<bulk_51>",
+            "project_id": "<b>",
+            "project_name": "Bulk tour",
+            "type": "other",
+            "title": "Bulk item 51",
+            "snippet": "",
+            "ref": "ART-51"
+          },
+          {
+            "artifact_id": "<bulk_50>",
+            "project_id": "<b>",
+            "project_name": "Bulk tour",
+            "type": "other",
+            "title": "Bulk item 50",
+            "snippet": "",
+            "ref": "ART-50"
+          },
+          {
+            "artifact_id": "<bulk_49>",
+            "project_id": "<b>",
+            "project_name": "Bulk tour",
+            "type": "other",
+            "title": "Bulk item 49",
+            "snippet": "",
+            "ref": "ART-49"
+          },
+          {
+            "artifact_id": "<bulk_48>",
+            "project_id": "<b>",
+            "project_name": "Bulk tour",
+            "type": "other",
+            "title": "Bulk item 48",
+            "snippet": "",
+            "ref": "ART-48"
+          },
+          {
+            "artifact_id": "<bulk_47>",
+            "project_id": "<b>",
+            "project_name": "Bulk tour",
+            "type": "other",
+            "title": "Bulk item 47",
+            "snippet": "",
+            "ref": "ART-47"
+          },
+          {
+            "artifact_id": "<bulk_46>",
+            "project_id": "<b>",
+            "project_name": "Bulk tour",
+            "type": "other",
+            "title": "Bulk item 46",
+            "snippet": "",
+            "ref": "ART-46"
+          },
+          {
+            "artifact_id": "<bulk_45>",
+            "project_id": "<b>",
+            "project_name": "Bulk tour",
+            "type": "other",
+            "title": "Bulk item 45",
+            "snippet": "",
+            "ref": "ART-45"
+          },
+          {
+            "artifact_id": "<bulk_44>",
+            "project_id": "<b>",
+            "project_name": "Bulk tour",
+            "type": "other",
+            "title": "Bulk item 44",
+            "snippet": "",
+            "ref": "ART-44"
+          },
+          {
+            "artifact_id": "<bulk_43>",
+            "project_id": "<b>",
+            "project_name": "Bulk tour",
+            "type": "other",
+            "title": "Bulk item 43",
+            "snippet": "",
+            "ref": "ART-43"
+          },
+          {
+            "artifact_id": "<bulk_42>",
+            "project_id": "<b>",
+            "project_name": "Bulk tour",
+            "type": "other",
+            "title": "Bulk item 42",
+            "snippet": "",
+            "ref": "ART-42"
+          },
+          {
+            "artifact_id": "<bulk_41>",
+            "project_id": "<b>",
+            "project_name": "Bulk tour",
+            "type": "other",
+            "title": "Bulk item 41",
+            "snippet": "",
+            "ref": "ART-41"
+          },
+          {
+            "artifact_id": "<bulk_40>",
+            "project_id": "<b>",
+            "project_name": "Bulk tour",
+            "type": "other",
+            "title": "Bulk item 40",
+            "snippet": "",
+            "ref": "ART-40"
+          },
+          {
+            "artifact_id": "<bulk_39>",
+            "project_id": "<b>",
+            "project_name": "Bulk tour",
+            "type": "other",
+            "title": "Bulk item 39",
+            "snippet": "",
+            "ref": "ART-39"
+          },
+          {
+            "artifact_id": "<bulk_38>",
+            "project_id": "<b>",
+            "project_name": "Bulk tour",
+            "type": "other",
+            "title": "Bulk item 38",
+            "snippet": "",
+            "ref": "ART-38"
+          },
+          {
+            "artifact_id": "<bulk_37>",
+            "project_id": "<b>",
+            "project_name": "Bulk tour",
+            "type": "other",
+            "title": "Bulk item 37",
+            "snippet": "",
+            "ref": "ART-37"
+          },
+          {
+            "artifact_id": "<bulk_36>",
+            "project_id": "<b>",
+            "project_name": "Bulk tour",
+            "type": "other",
+            "title": "Bulk item 36",
+            "snippet": "",
+            "ref": "ART-36"
+          },
+          {
+            "artifact_id": "<bulk_35>",
+            "project_id": "<b>",
+            "project_name": "Bulk tour",
+            "type": "other",
+            "title": "Bulk item 35",
+            "snippet": "",
+            "ref": "ART-35"
+          },
+          {
+            "artifact_id": "<bulk_34>",
+            "project_id": "<b>",
+            "project_name": "Bulk tour",
+            "type": "other",
+            "title": "Bulk item 34",
+            "snippet": "",
+            "ref": "ART-34"
+          },
+          {
+            "artifact_id": "<bulk_33>",
+            "project_id": "<b>",
+            "project_name": "Bulk tour",
+            "type": "other",
+            "title": "Bulk item 33",
+            "snippet": "",
+            "ref": "ART-33"
+          },
+          {
+            "artifact_id": "<bulk_32>",
+            "project_id": "<b>",
+            "project_name": "Bulk tour",
+            "type": "other",
+            "title": "Bulk item 32",
+            "snippet": "",
+            "ref": "ART-32"
+          }
+        ]
+      },
+      "gzip": {
+        "content_encoding": "gzip",
+        "content_type": "application/json",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "n": 52,
+      "title": "limit 51 is capped at 50 (Q8)",
+      "actor": "owner",
+      "route": "GET /api/v1/search",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/search",
+        "query": "q=bulk&limit=51"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": null,
+      "kind": "json",
+      "body": [
+        "{\"mode_used\":\"keyword\",\"hits\":[{\"artifact_id\":\"<bulk_51>\",\"project_id\":\"<b>\",\"project_name\":\"Bulk tour\",\"type\":\"other\",\"title\":\"Bulk item 51\",\"snippet\":\"\",\"ref\":\"ART-51\"},{\"artifact_id\":\"<bulk_50>\",\"project_id\":\"<b>\",\"project_name\":\"Bulk tour\",\"type\":\"other\",\"title\":\"Bulk item 50\",\"snippet\":\"\",\"ref\":\"ART-50\"},{\"artifact_id\":\"<bulk_49>\",\"project_id\":\"<b>\",\"project_name\":\"Bulk tour\",\"type\":\"other\",\"title\":\"Bulk item 49\",\"snippet\":\"\",\"ref\":\"ART-49\"},{\"artifact_id\":\"<bulk_48>\",\"project_id\":\"<b>\",\"project_name\":\"Bulk tour\",\"type\":\"other\",\"title\":\"Bulk item 48\",\"snippet\":\"\",\"ref\":\"ART-48\"},{\"artifact_id\":\"<bulk_47>\",\"project_id\":\"<b>\",\"project_name\":\"Bulk tour\",\"type\":\"other\",\"title\":\"Bulk item 47\",\"snippet\":\"\",\"ref\":\"ART-47\"},{\"artifact_id\":\"<bulk_46>\",\"project_id\":\"<b>\",\"project_name\":\"Bulk tour\",\"type\":\"other\",\"title\":\"Bulk item 46\",\"snippet\":\"\",\"ref\":\"ART-46\"},{\"artifact_id\":\"<bulk_45>\",\"project_id\":\"<b>\",\"project_name\":\"Bulk tour\",\"type\":\"other\",\"title\":\"Bulk item 45\",\"snippet\":\"\",\"ref\":\"ART-45\"},{\"artifact_id\":\"<bulk_44>\",\"project_id\":\"<b>\",\"project_name\":\"Bulk tour\",\"type\":\"other\",\"title\":\"Bulk item 44\",\"snippet\":\"\",\"ref\":\"ART-44\"},{\"artifact_id\":\"<bulk_43>\",\"project_id\":\"<b>\",\"project_name\":\"Bulk tour\",\"type\":\"other\",\"title\":\"Bulk item 43\",\"snippet\":\"\",\"ref\":\"ART-43\"},{\"artifact_id\":\"<bulk_42>\",\"project_id\":\"<b>\",\"project_name\":\"Bulk tour\",\"type\":\"other\",\"title\":\"Bulk item 42\",\"snippet\":\"\",\"ref\":\"ART-42\"},{\"artifact_id\":\"<bulk_41>\",\"project_id\":\"<b>\",\"project_name\":\"Bulk tour\",\"type\":\"other\",\"title\":\"Bulk item 41\",\"snippet\":\"\",\"ref\":\"ART-41\"},{\"artifact_id\":\"<bulk_40>\",\"project_id\":\"<b>\",\"project_name\":\"Bulk tour\",\"type\":\"other\",\"title\":\"Bulk item 40\",\"snippet\":\"\",\"ref\":\"ART-40\"},{\"artifact_id\":\"<bulk_39>\",\"project_id\":\"<b>\",\"project_name\":\"Bulk tour\",\"type\":\"other\",\"title\":\"Bulk item 39\",\"snippet\":\"\",\"ref\":\"ART-39\"},{\"artifact_id\":\"<bulk_38>\",\"project_id\":\"<b>\",\"project_name\":\"Bulk tour\",\"type\":\"other\",\"title\":\"Bulk item 38\",\"snippet\":\"\",\"ref\":\"ART-38\"},{\"artifact_id\":\"<bulk_37>\",\"project_id\":\"<b>\",\"project_name\":\"Bulk tour\",\"type\":\"other\",\"title\":\"Bulk item 37\",\"snippet\":\"\",\"ref\":\"ART-37\"},{\"artifact_id\":\"<bulk_36>\",\"project_id\":\"<b>\",\"project_name\":\"Bulk tour\",\"type\":\"other\",\"title\":\"Bulk item 36\",\"snippet\":\"\",\"ref\":\"ART-36\"},{\"artifact_id\":\"<bulk_35>\",\"project_id\":\"<b>\",\"project_name\":\"Bulk tour\",\"type\":\"other\",\"title\":\"Bulk item 35\",\"snippet\":\"\",\"ref\":\"ART-35\"},{\"artifact_id\":\"<bulk_34>\",\"project_id\":\"<b>\",\"project_name\":\"Bulk tour\",\"type\":\"other\",\"title\":\"Bulk item 34\",\"snippet\":\"\",\"ref\":\"ART-34\"},{\"artifact_id\":\"<bulk_33>\",\"project_id\":\"<b>\",\"project_name\":\"Bulk tour\",\"type\":\"other\",\"title\":\"Bulk item 33\",\"snippet\":\"\",\"ref\":\"ART-33\"},{\"artifact_id\":\"<bulk_32>\",\"project_id\":\"<b>\",\"project_name\":\"Bulk tour\",\"type\":\"other\",\"title\":\"Bulk item 32\",\"snippet\":\"\",\"ref\":\"ART-32\"},{\"artifact_id\":\"<bulk_31>\",\"project_id\":\"<b>\",\"project_name\":\"Bulk tour\",\"type\":\"other\",\"title\":\"Bulk item 31\",\"snippet\":\"\",\"ref\":\"ART-31\"},{\"artifact_id\":\"<bulk_30>\",\"project_id\":\"<b>\",\"project_name\":\"Bulk tour\",\"type\":\"other\",\"title\":\"Bulk item 30\",\"snippet\":\"\",\"ref\":\"ART-30\"},{\"artifact_id\":\"<bulk_29>\",\"project_id\":\"<b>\",\"project_name\":\"Bulk tour\",\"type\":\"other\",\"title\":\"Bulk item 29\",\"snippet\":\"\",\"ref\":\"ART-29\"},{\"artifact_id\":\"<bulk_28>\",\"project_id\":\"<b>\",\"project_name\":\"Bulk tour\",\"type\":\"other\",\"title\":\"Bulk item 28\",\"snippet\":\"\",\"ref\":\"ART-28\"},{\"artifact_id\":\"<bulk_27>\",\"project_id\":\"<b>\",\"project_name\":\"Bulk tour\",\"type\":\"other\",\"title\":\"Bulk item 27\",\"snippet\":\"\",\"ref\":\"ART-27\"},{\"artifact_id\":\"<bulk_26>\",\"project_id\":\"<b>\",\"project_name\":\"Bulk tour\",\"type\":\"other\",\"title\":\"Bulk item 26\",\"snippet\":\"\",\"ref\":\"ART-26\"},{\"artifact_id\":\"<bulk_25>\",\"project_id\":\"<b>\",\"project_name\":\"Bulk tour\",\"type\":\"other\",\"title\":\"Bulk item 25\",\"snippet\":\"\",\"ref\":\"ART-25\"},{\"artifact_id\":\"<bulk_24>\",\"project_id\":\"<b>\",\"project_name\":\"Bulk tour\",\"type\":\"other\",\"title\":\"Bulk item 24\",\"snippet\":\"\",\"ref\":\"ART-24\"},{\"artifact_id\":\"<bulk_23>\",\"project_id\":\"<b>\",\"project_name\":\"Bulk tour\",\"type\":\"other\",\"title\":\"Bulk item 23\",\"snippet\":\"\",\"ref\":\"ART-23\"},{\"artifact_id\":\"<bulk_22>\",\"project_id\":\"<b>\",\"project_name\":\"Bulk tour\",\"type\":\"other\",\"title\":\"Bulk item 22\",\"snippet\":\"\",\"ref\":\"ART-22\"},{\"artifact_id\":\"<bulk_21>\",\"project_id\":\"<b>\",\"project_name\":\"Bulk tour\",\"type\":\"other\",\"title\":\"Bulk item 21\",\"snippet\":\"\",\"ref\":\"ART-21\"},{\"artifact_id\":\"<bulk_20>\",\"project_id\":\"<b>\",\"project_name\":\"Bulk tour\",\"type\":\"other\",\"title\":\"Bulk item 20\",\"snippet\":\"\",\"ref\":\"ART-20\"},{\"artifact_id\":\"<bulk_19>\",\"project_id\":\"<b>\",\"project_name\":\"Bulk tour\",\"type\":\"other\",\"title\":\"Bulk item 19\",\"snippet\":\"\",\"ref\":\"ART-19\"},{\"artifact_id\":\"<bulk_18>\",\"project_id\":\"<b>\",\"project_name\":\"Bulk tour\",\"type\":\"other\",\"title\":\"Bulk item 18\",\"snippet\":\"\",\"ref\":\"ART-18\"},{\"artifact_id\":\"<bulk_17>\",\"project_id\":\"<b>\",\"project_name\":\"Bulk tour\",\"type\":\"other\",\"title\":\"Bulk item 17\",\"snippet\":\"\",\"ref\":\"ART-17\"},{\"artifact_id\":\"<bulk_16>\",\"project_id\":\"<b>\",\"project_name\":\"Bulk tour\",\"type\":\"other\",\"title\":\"Bulk item 16\",\"snippet\":\"\",\"ref\":\"ART-16\"},{\"artifact_id\":\"<bulk_15>\",\"project_id\":\"<b>\",\"project_name\":\"Bulk tour\",\"type\":\"other\",\"title\":\"Bulk item 15\",\"snippet\":\"\",\"ref\":\"ART-15\"},{\"artifact_id\":\"<bulk_14>\",\"project_id\":\"<b>\",\"project_name\":\"Bulk tour\",\"type\":\"other\",\"title\":\"Bulk item 14\",\"snippet\":\"\",\"ref\":\"ART-14\"},{\"artifact_id\":\"<bulk_13>\",\"project_id\":\"<b>\",\"project_name\":\"Bulk tour\",\"type\":\"other\",\"title\":\"Bulk item 13\",\"snippet\":\"\",\"ref\":\"ART-13\"},{\"artifact_id\":\"<bulk_12>\",\"project_id\":\"<b>\",\"project_name\":\"Bulk tour\",\"type\":\"other\",\"title\":\"Bulk item 12\",\"snippet\":\"\",\"ref\":\"ART-12\"},{\"artifact_id\":\"<bulk_11>\",\"project_id\":\"<b>\",\"project_name\":\"Bulk tour\",\"type\":\"other\",\"title\":\"Bulk item 11\",\"snippet\":\"\",\"ref\":\"ART-11\"},{\"artifact_id\":\"<bulk_10>\",\"project_id\":\"<b>\",\"project_name\":\"Bulk tour\",\"type\":\"other\",\"title\":\"Bulk item 10\",\"snippet\":\"\",\"ref\":\"ART-10\"},{\"artifact_id\":\"<bulk_09>\",\"project_id\":\"<b>\",\"project_name\":\"Bulk tour\",\"type\":\"other\",\"title\":\"Bulk item 09\",\"snippet\":\"\",\"ref\":\"ART-9\"},{\"artifact_id\":\"<bulk_08>\",\"project_id\":\"<b>\",\"project_name\":\"Bulk tour\",\"type\":\"other\",\"title\":\"Bulk item 08\",\"snippet\":\"\",\"ref\":\"ART-8\"},{\"artifact_id\":\"<bulk_07>\",\"project_id\":\"<b>\",\"project_name\":\"Bulk tour\",\"type\":\"other\",\"title\":\"Bulk item 07\",\"snippet\":\"\",\"ref\":\"ART-7\"},{\"artifact_id\":\"<bulk_06>\",\"project_id\":\"<b>\",\"project_name\":\"Bulk tour\",\"type\":\"other\",\"title\":\"Bulk item 06\",\"snippet\":\"\",\"ref\":\"ART-6\"},{\"artifact_id\":\"<bulk_05>\",\"project_id\":\"<b>\",\"project_name\":\"Bulk tour\",\"type\":\"other\",\"title\":\"Bulk item 05\",\"snippet\":\"\",\"ref\":\"ART-5\"},{\"artifact_id\":\"<bulk_04>\",\"project_id\":\"<b>\",\"project_name\":\"Bulk tour\",\"type\":\"other\",\"title\":\"Bulk item 04\",\"snippet\":\"\",\"ref\":\"ART-4\"},{\"artifact_id\":\"<bulk_03>\",\"project_id\":\"<b>\",\"project_name\":\"Bulk tour\",\"type\":\"other\",\"title\":\"Bulk item 03\",\"snippet\":\"\",\"ref\":\"ART-3\"},{\"artifact_id\":\"<bulk_02>\",\"project_id\":\"<b>\",\"project_name\":\"Bulk tour\",\"type\":\"other\",\"title\":\"Bulk item 02\",\"snippet\":\"\",\"ref\":\"ART-2\"}]}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "mode_used": "keyword",
+        "hits": [
+          {
+            "artifact_id": "<bulk_51>",
+            "project_id": "<b>",
+            "project_name": "Bulk tour",
+            "type": "other",
+            "title": "Bulk item 51",
+            "snippet": "",
+            "ref": "ART-51"
+          },
+          {
+            "artifact_id": "<bulk_50>",
+            "project_id": "<b>",
+            "project_name": "Bulk tour",
+            "type": "other",
+            "title": "Bulk item 50",
+            "snippet": "",
+            "ref": "ART-50"
+          },
+          {
+            "artifact_id": "<bulk_49>",
+            "project_id": "<b>",
+            "project_name": "Bulk tour",
+            "type": "other",
+            "title": "Bulk item 49",
+            "snippet": "",
+            "ref": "ART-49"
+          },
+          {
+            "artifact_id": "<bulk_48>",
+            "project_id": "<b>",
+            "project_name": "Bulk tour",
+            "type": "other",
+            "title": "Bulk item 48",
+            "snippet": "",
+            "ref": "ART-48"
+          },
+          {
+            "artifact_id": "<bulk_47>",
+            "project_id": "<b>",
+            "project_name": "Bulk tour",
+            "type": "other",
+            "title": "Bulk item 47",
+            "snippet": "",
+            "ref": "ART-47"
+          },
+          {
+            "artifact_id": "<bulk_46>",
+            "project_id": "<b>",
+            "project_name": "Bulk tour",
+            "type": "other",
+            "title": "Bulk item 46",
+            "snippet": "",
+            "ref": "ART-46"
+          },
+          {
+            "artifact_id": "<bulk_45>",
+            "project_id": "<b>",
+            "project_name": "Bulk tour",
+            "type": "other",
+            "title": "Bulk item 45",
+            "snippet": "",
+            "ref": "ART-45"
+          },
+          {
+            "artifact_id": "<bulk_44>",
+            "project_id": "<b>",
+            "project_name": "Bulk tour",
+            "type": "other",
+            "title": "Bulk item 44",
+            "snippet": "",
+            "ref": "ART-44"
+          },
+          {
+            "artifact_id": "<bulk_43>",
+            "project_id": "<b>",
+            "project_name": "Bulk tour",
+            "type": "other",
+            "title": "Bulk item 43",
+            "snippet": "",
+            "ref": "ART-43"
+          },
+          {
+            "artifact_id": "<bulk_42>",
+            "project_id": "<b>",
+            "project_name": "Bulk tour",
+            "type": "other",
+            "title": "Bulk item 42",
+            "snippet": "",
+            "ref": "ART-42"
+          },
+          {
+            "artifact_id": "<bulk_41>",
+            "project_id": "<b>",
+            "project_name": "Bulk tour",
+            "type": "other",
+            "title": "Bulk item 41",
+            "snippet": "",
+            "ref": "ART-41"
+          },
+          {
+            "artifact_id": "<bulk_40>",
+            "project_id": "<b>",
+            "project_name": "Bulk tour",
+            "type": "other",
+            "title": "Bulk item 40",
+            "snippet": "",
+            "ref": "ART-40"
+          },
+          {
+            "artifact_id": "<bulk_39>",
+            "project_id": "<b>",
+            "project_name": "Bulk tour",
+            "type": "other",
+            "title": "Bulk item 39",
+            "snippet": "",
+            "ref": "ART-39"
+          },
+          {
+            "artifact_id": "<bulk_38>",
+            "project_id": "<b>",
+            "project_name": "Bulk tour",
+            "type": "other",
+            "title": "Bulk item 38",
+            "snippet": "",
+            "ref": "ART-38"
+          },
+          {
+            "artifact_id": "<bulk_37>",
+            "project_id": "<b>",
+            "project_name": "Bulk tour",
+            "type": "other",
+            "title": "Bulk item 37",
+            "snippet": "",
+            "ref": "ART-37"
+          },
+          {
+            "artifact_id": "<bulk_36>",
+            "project_id": "<b>",
+            "project_name": "Bulk tour",
+            "type": "other",
+            "title": "Bulk item 36",
+            "snippet": "",
+            "ref": "ART-36"
+          },
+          {
+            "artifact_id": "<bulk_35>",
+            "project_id": "<b>",
+            "project_name": "Bulk tour",
+            "type": "other",
+            "title": "Bulk item 35",
+            "snippet": "",
+            "ref": "ART-35"
+          },
+          {
+            "artifact_id": "<bulk_34>",
+            "project_id": "<b>",
+            "project_name": "Bulk tour",
+            "type": "other",
+            "title": "Bulk item 34",
+            "snippet": "",
+            "ref": "ART-34"
+          },
+          {
+            "artifact_id": "<bulk_33>",
+            "project_id": "<b>",
+            "project_name": "Bulk tour",
+            "type": "other",
+            "title": "Bulk item 33",
+            "snippet": "",
+            "ref": "ART-33"
+          },
+          {
+            "artifact_id": "<bulk_32>",
+            "project_id": "<b>",
+            "project_name": "Bulk tour",
+            "type": "other",
+            "title": "Bulk item 32",
+            "snippet": "",
+            "ref": "ART-32"
+          },
+          {
+            "artifact_id": "<bulk_31>",
+            "project_id": "<b>",
+            "project_name": "Bulk tour",
+            "type": "other",
+            "title": "Bulk item 31",
+            "snippet": "",
+            "ref": "ART-31"
+          },
+          {
+            "artifact_id": "<bulk_30>",
+            "project_id": "<b>",
+            "project_name": "Bulk tour",
+            "type": "other",
+            "title": "Bulk item 30",
+            "snippet": "",
+            "ref": "ART-30"
+          },
+          {
+            "artifact_id": "<bulk_29>",
+            "project_id": "<b>",
+            "project_name": "Bulk tour",
+            "type": "other",
+            "title": "Bulk item 29",
+            "snippet": "",
+            "ref": "ART-29"
+          },
+          {
+            "artifact_id": "<bulk_28>",
+            "project_id": "<b>",
+            "project_name": "Bulk tour",
+            "type": "other",
+            "title": "Bulk item 28",
+            "snippet": "",
+            "ref": "ART-28"
+          },
+          {
+            "artifact_id": "<bulk_27>",
+            "project_id": "<b>",
+            "project_name": "Bulk tour",
+            "type": "other",
+            "title": "Bulk item 27",
+            "snippet": "",
+            "ref": "ART-27"
+          },
+          {
+            "artifact_id": "<bulk_26>",
+            "project_id": "<b>",
+            "project_name": "Bulk tour",
+            "type": "other",
+            "title": "Bulk item 26",
+            "snippet": "",
+            "ref": "ART-26"
+          },
+          {
+            "artifact_id": "<bulk_25>",
+            "project_id": "<b>",
+            "project_name": "Bulk tour",
+            "type": "other",
+            "title": "Bulk item 25",
+            "snippet": "",
+            "ref": "ART-25"
+          },
+          {
+            "artifact_id": "<bulk_24>",
+            "project_id": "<b>",
+            "project_name": "Bulk tour",
+            "type": "other",
+            "title": "Bulk item 24",
+            "snippet": "",
+            "ref": "ART-24"
+          },
+          {
+            "artifact_id": "<bulk_23>",
+            "project_id": "<b>",
+            "project_name": "Bulk tour",
+            "type": "other",
+            "title": "Bulk item 23",
+            "snippet": "",
+            "ref": "ART-23"
+          },
+          {
+            "artifact_id": "<bulk_22>",
+            "project_id": "<b>",
+            "project_name": "Bulk tour",
+            "type": "other",
+            "title": "Bulk item 22",
+            "snippet": "",
+            "ref": "ART-22"
+          },
+          {
+            "artifact_id": "<bulk_21>",
+            "project_id": "<b>",
+            "project_name": "Bulk tour",
+            "type": "other",
+            "title": "Bulk item 21",
+            "snippet": "",
+            "ref": "ART-21"
+          },
+          {
+            "artifact_id": "<bulk_20>",
+            "project_id": "<b>",
+            "project_name": "Bulk tour",
+            "type": "other",
+            "title": "Bulk item 20",
+            "snippet": "",
+            "ref": "ART-20"
+          },
+          {
+            "artifact_id": "<bulk_19>",
+            "project_id": "<b>",
+            "project_name": "Bulk tour",
+            "type": "other",
+            "title": "Bulk item 19",
+            "snippet": "",
+            "ref": "ART-19"
+          },
+          {
+            "artifact_id": "<bulk_18>",
+            "project_id": "<b>",
+            "project_name": "Bulk tour",
+            "type": "other",
+            "title": "Bulk item 18",
+            "snippet": "",
+            "ref": "ART-18"
+          },
+          {
+            "artifact_id": "<bulk_17>",
+            "project_id": "<b>",
+            "project_name": "Bulk tour",
+            "type": "other",
+            "title": "Bulk item 17",
+            "snippet": "",
+            "ref": "ART-17"
+          },
+          {
+            "artifact_id": "<bulk_16>",
+            "project_id": "<b>",
+            "project_name": "Bulk tour",
+            "type": "other",
+            "title": "Bulk item 16",
+            "snippet": "",
+            "ref": "ART-16"
+          },
+          {
+            "artifact_id": "<bulk_15>",
+            "project_id": "<b>",
+            "project_name": "Bulk tour",
+            "type": "other",
+            "title": "Bulk item 15",
+            "snippet": "",
+            "ref": "ART-15"
+          },
+          {
+            "artifact_id": "<bulk_14>",
+            "project_id": "<b>",
+            "project_name": "Bulk tour",
+            "type": "other",
+            "title": "Bulk item 14",
+            "snippet": "",
+            "ref": "ART-14"
+          },
+          {
+            "artifact_id": "<bulk_13>",
+            "project_id": "<b>",
+            "project_name": "Bulk tour",
+            "type": "other",
+            "title": "Bulk item 13",
+            "snippet": "",
+            "ref": "ART-13"
+          },
+          {
+            "artifact_id": "<bulk_12>",
+            "project_id": "<b>",
+            "project_name": "Bulk tour",
+            "type": "other",
+            "title": "Bulk item 12",
+            "snippet": "",
+            "ref": "ART-12"
+          },
+          {
+            "artifact_id": "<bulk_11>",
+            "project_id": "<b>",
+            "project_name": "Bulk tour",
+            "type": "other",
+            "title": "Bulk item 11",
+            "snippet": "",
+            "ref": "ART-11"
+          },
+          {
+            "artifact_id": "<bulk_10>",
+            "project_id": "<b>",
+            "project_name": "Bulk tour",
+            "type": "other",
+            "title": "Bulk item 10",
+            "snippet": "",
+            "ref": "ART-10"
+          },
+          {
+            "artifact_id": "<bulk_09>",
+            "project_id": "<b>",
+            "project_name": "Bulk tour",
+            "type": "other",
+            "title": "Bulk item 09",
+            "snippet": "",
+            "ref": "ART-9"
+          },
+          {
+            "artifact_id": "<bulk_08>",
+            "project_id": "<b>",
+            "project_name": "Bulk tour",
+            "type": "other",
+            "title": "Bulk item 08",
+            "snippet": "",
+            "ref": "ART-8"
+          },
+          {
+            "artifact_id": "<bulk_07>",
+            "project_id": "<b>",
+            "project_name": "Bulk tour",
+            "type": "other",
+            "title": "Bulk item 07",
+            "snippet": "",
+            "ref": "ART-7"
+          },
+          {
+            "artifact_id": "<bulk_06>",
+            "project_id": "<b>",
+            "project_name": "Bulk tour",
+            "type": "other",
+            "title": "Bulk item 06",
+            "snippet": "",
+            "ref": "ART-6"
+          },
+          {
+            "artifact_id": "<bulk_05>",
+            "project_id": "<b>",
+            "project_name": "Bulk tour",
+            "type": "other",
+            "title": "Bulk item 05",
+            "snippet": "",
+            "ref": "ART-5"
+          },
+          {
+            "artifact_id": "<bulk_04>",
+            "project_id": "<b>",
+            "project_name": "Bulk tour",
+            "type": "other",
+            "title": "Bulk item 04",
+            "snippet": "",
+            "ref": "ART-4"
+          },
+          {
+            "artifact_id": "<bulk_03>",
+            "project_id": "<b>",
+            "project_name": "Bulk tour",
+            "type": "other",
+            "title": "Bulk item 03",
+            "snippet": "",
+            "ref": "ART-3"
+          },
+          {
+            "artifact_id": "<bulk_02>",
+            "project_id": "<b>",
+            "project_name": "Bulk tour",
+            "type": "other",
+            "title": "Bulk item 02",
+            "snippet": "",
+            "ref": "ART-2"
+          }
+        ]
+      },
+      "gzip": {
+        "content_encoding": "gzip",
+        "content_type": "application/json",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "n": 53,
+      "title": "the reviewer searches: P is not in the reviewer's workspace",
+      "actor": "reviewer",
+      "route": "GET /api/v1/search",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/search",
+        "query": "q=answer"
+      },
+      "notes": [
+        "search covers the caller's active workspace only, whatever projects it is a member of"
+      ],
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 34,
+      "kind": "json",
+      "body": [
+        "{\"mode_used\":\"keyword\",\"hits\":[]}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "mode_used": "keyword",
+        "hits": []
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 54,
+      "title": "the reviewer's search acting in the owner's workspace, of which it is no member",
+      "actor": "reviewer",
+      "acting_in": "<owner.workspace>",
+      "route": "GET /api/v1/search",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/search",
+        "query": "q=answer"
+      },
+      "notes": [
+        "an X-Org-ID the caller is no member of falls back to its own workspace"
+      ],
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 34,
+      "kind": "json",
+      "body": [
+        "{\"mode_used\":\"keyword\",\"hits\":[]}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "mode_used": "keyword",
+        "hits": []
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 55,
+      "title": "the reviewer, now an editor, reindexes P's embeddings: owners only",
+      "actor": "reviewer",
+      "route": "POST /api/v1/projects/{id}/reindex-embeddings",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/projects/<p>/reindex-embeddings"
+      },
+      "status": 403,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 51,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"you do not have access to this project\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "you do not have access to this project"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    }
+  ],
+  "uploads": [],
+  "outbound_requests": [
+    "none: the server sent no request through HTTP_PROXY or HTTPS_PROXY"
+  ]
+}

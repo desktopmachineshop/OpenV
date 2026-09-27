@@ -32,10 +32,18 @@ the Phase 3 consolidations that give quirks their names.
   answers `text/plain`, and a gzipped body carries no type.
   `ContentTypeMiddleware` (`internal/api/handlers.go:1594`) sets no type
   despite its name.
-- **Pinned by, named as:** S5 *(planned)*; `writeJSONBare` (X1)
-  *(planned)*. Pain points api-core-3, api-suite-org-8.
-- **Pinned today:** S1 counts the raw encodes, so none is added; the header
-  itself waits for S5.
+- **Pinned by, named as:** S5 (S5a for the requirements core; S5b–S5d
+  *(planned)* for the rest); `writeJSONBare` (X1) *(planned)*. Pain points
+  api-core-3, api-suite-org-8.
+- **Pinned today:** S1 counts the raw encodes, so none is added. Every step
+  of the S5a tour records whether its answer, and the gzip variant of each
+  GET, carries a `Content-Type`, so a handler that starts or stops setting
+  one changes a golden. Of the core's routes, the two static catalogues are
+  bare encodes: `GET /api/v1/meta/artifact-types` (1,060 bytes) answers
+  `text/plain` with or without gzip, and `GET /api/v1/meta/link-types`
+  (1,902 bytes) answers `text/plain` plain and no `Content-Type` gzipped
+  (steps 1 and 2 of `cmd/server/testdata/tour/s5a/artifacts_attributes.json`). The other
+  sites wait for S5b–S5d.
 
 ## Q2. A mid-request delete answers 500
 
@@ -47,7 +55,13 @@ the Phase 3 consolidations that give quirks their names.
   `respondInternal`.
 - **Pinned by, named as:** documented here; X13 keeps each repository's
   not-found convention *(planned)*. Pain point domain-requirements-11.
-- **Pinned today:** nothing beyond this entry.
+- **Pinned today:** the delete landing mid-request cannot be timed from
+  outside, so no test reaches the 500 itself. The S5a tour pins its
+  deterministic neighbours: `PUT /api/v1/artifacts/{id}` and
+  `POST /api/v1/artifacts/{id}/restore` on an id no artifact has answer 500,
+  since they load the artifact before their guard, where the `GET`, the
+  versions and the `DELETE` answer 404 (steps 37 and 47 of
+  `cmd/server/testdata/tour/s5a/artifacts_attributes.json`).
 
 ## Q3. Managed link edits in `PUT /artifacts/{id}` take their own path
 
@@ -59,9 +73,19 @@ the Phase 3 consolidations that give quirks their names.
   `:1582`), silently skips an invalid add (`continue` at `:3033`–`:3079`),
   and the version note lists the *requested* links
   (`linksFromPendingAdds`, `:824`), not the ones created.
-- **Pinned by, named as:** X11a *(planned)*; explicit `Policy` flags in X11b
-  *(planned)*. Pain point api-requirements-3.
-- **Pinned today:** nothing beyond this entry.
+- **Pinned by, named as:** S5a; X11a *(planned)*; explicit `Policy` flags in
+  X11b *(planned)*. Pain point api-requirements-3.
+- **Pinned today:** the S5a tour, `cmd/server/testdata/tour/s5a/links_managed_edits.json`:
+  one managed edit adds a valid and an invalid link and removes a link
+  between two other artifacts (step 49): the invalid add is skipped without
+  a word, only `artifact.updated` is published, and the removed link's
+  source gets no auto-version (steps 54–56); the note lists the requested
+  links, the skipped one too (step 50); a supplier's managed `refines` add
+  into a project it only views is skipped, where `POST /api/v1/links` lets
+  the same link through (steps 62–64). The FeatureFlowDown half is not
+  pinned yet: the tour's workspaces are on the nightly channel, where every
+  feature is on, so neither path refuses; it needs a stable-channel
+  workspace.
 
 ## Q4. `links_snapshot` and auto-version numbering
 
@@ -70,8 +94,12 @@ the Phase 3 consolidations that give quirks their names.
   `autoVersionLinkedArtifacts` (`:3117`) always writes it; the chatter note
   names auto-version N as the version read before the update plus 1
   (`:3182`).
-- **Pinned by, named as:** X11a *(planned)*.
-- **Pinned today:** nothing beyond this entry.
+- **Pinned by, named as:** S5a; X11a *(planned)*.
+- **Pinned today:** the S5a tour, `cmd/server/testdata/tour/s5a/links_managed_edits.json`: a
+  managed removal that leaves no link carries the previous `links_snapshot`
+  forward (steps 57–59), while `autoVersionLinkedArtifacts` writes an empty
+  one (step 48); every auto-version note names the version read before the
+  update plus 1, and the versions it names are the ones made (steps 65–67).
 
 ## Q5. `POST /api/v1/orgs` returns unresolved derived fields
 
@@ -122,9 +150,18 @@ the Phase 3 consolidations that give quirks their names.
   100 instead of clamping it
   (`internal/persistence/postgres/event_repository.go:39-41`,
   `agent_run_repository.go:147-149`).
-- **Pinned by, named as:** S5 *(planned)*; named `limitPolicy` values (X3)
-  *(planned)*. Pain point persistence-v3.
-- **Pinned today:** nothing beyond this entry.
+- **Pinned by, named as:** S5 (S5a for `ListArtifacts` and `GlobalSearch`;
+  the event and run resets and the other parsers S5b–S5d *(planned)*); named
+  `limitPolicy` values (X3) *(planned)*. Pain point persistence-v3.
+- **Pinned today:** the S5a tour: `GET /api/v1/artifacts` answers limit 0
+  and a limit over 1,000 with all 201 artifacts of a 201-artifact project,
+  which none of the other six parsers' policies would (the largest, shared
+  products', is 200 and 500), and reads a negative or non-numeric offset as
+  0, with `X-Total-Count` (steps 31–34 of
+  `cmd/server/testdata/tour/s5a/artifacts_attributes.json`; the exact 1,000
+  would take 1,001 artifacts, and is X3a's table test's); `GET /api/v1/search` reads limit 0 as
+  20 and caps 51 at 50 (steps 51 and 52 of
+  `cmd/server/testdata/tour/s5a/review_chatter_search.json`).
 
 ## Q9. `ErrBudgetExceeded` answers 402, 400 or 500 by route
 
@@ -206,8 +243,18 @@ the Phase 3 consolidations that give quirks their names.
   `internal/api/agent_handlers.go:163`) answers `null` for a workspace with no
   agents, while the project repository's lists start from an empty slice
   (`project_repository.go:62`) and answer `[]`.
-- **Pinned by, named as:** S5a *(planned)*. Pain point api-suite-org-v6.
-- **Pinned today:** nothing beyond this entry.
+- **Pinned by, named as:** S5a (the requirements core; later slices pin
+  their own lists). Pain point api-suite-org-v6.
+- **Pinned today:** the S5a tour records each empty list as the bytes the
+  server sends. `null`: an artifact's figures (`GET
+  /api/v1/artifacts/{artifactID}/attachments`), its chatter, a project's
+  links (`GET /api/v1/links`), a version with no `links_snapshot`, a
+  project's baselines, and the empty project's export (`artifacts`, `links`
+  and `attachments`, also inside a baseline's snapshot). `[]`: projects,
+  children, artifacts, attribute definitions, current links, linked
+  artifacts, a project's figures, share links, the open-source showcase and
+  a download's selection. See the steps titled "null (Q14)" in
+  `cmd/server/testdata/tour/s5a/{attachments,baselines_documents,exports_imports,links_managed_edits,review_chatter_search}.json`.
 
 ## Q15. An unknown protected path answers 401; OPTIONS answers 200 unlogged
 
@@ -253,9 +300,18 @@ the Phase 3 consolidations that give quirks their names.
   (`internal/api/email_verification_handlers.go:52`) and by password reset
   (`internal/api/password_reset_handlers.go:66`, `:121`), besides `Login`
   (`internal/api/auth_handlers.go:328`).
+  Likewise `invitePreviewLimiter` (`internal/api/handlers.go:255`), the
+  invitation-preview budget, is also spent by every share-link token lookup
+  and share accept (`allowPublicShare`, `internal/api/share_handlers.go:199`),
+  which answer its 429 with no `Retry-After`.
 - **Pinned by, named as:** S5c's shared-bucket probe, which exercises the
-  real call sites *(planned)*. Pain point api-core-v2.
-- **Pinned today:** nothing beyond this entry.
+  real call sites *(planned)*; S5a for the share routes. Pain point
+  api-core-v2.
+- **Pinned today:** the S5a tour drains `invitePreviewLimiter` through
+  invitation previews, then the share routes answer 429 with no
+  `Retry-After` (steps 46–49 of
+  `cmd/server/testdata/tour/s5a/share_links_public.json`), so a share
+  bucket of its own would change that golden. `authIPLimiter` waits for S5c.
 
 ## Q19. Three error-message conventions
 
@@ -264,10 +320,15 @@ the Phase 3 consolidations that give quirks their names.
   `internal/api` pass `err.Error()` through (the same count as at
   `d11dee8`); 58 sites map any error to 404 (the plan's count at `d11dee8`,
   not re-counted here).
-- **Pinned by, named as:** S5 *(planned)*; `decodeJSONMsg` (X1)
-  *(planned)*; the other call sites stay untouched.
+- **Pinned by, named as:** S5 (S5a for its routes; S5b–S5d *(planned)*);
+  `decodeJSONMsg` (X1) *(planned)*; the other call sites stay untouched.
 - **Pinned today:** S1's `invalid_request_body_literals` ratchet counts the
-  lowercase literal (106).
+  lowercase literal (106). The S5a tour pins every error message its routes
+  answer, byte for byte: the capital `"Invalid request body"` of
+  `RenameAttachment` (step 28 of `cmd/server/testdata/tour/s5a/attachments.json`) beside the
+  lowercase one elsewhere, and `err.Error()` passed through, such as
+  `encoding/xml`'s text for a truncated ReqIF import (step 46 of
+  `cmd/server/testdata/tour/s5a/exports_imports.json`).
 
 ## Q20. Inline error chains render string bodies differently
 

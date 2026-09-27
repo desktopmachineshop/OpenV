@@ -1,0 +1,3024 @@
+{
+  "golden": "cmd/server/testdata/tour/s5a/attachments.json",
+  "test": "TestTourS5aAttachments",
+  "about": "Attachments, which the API calls figures: upload and its refusals, metadata, download (Range, If-Modified-Since, ?version, the per-file security policy), versions and restore, rename, the artifact and project lists, the figure notes, and delete.",
+  "regenerate": [
+    "OPENV_TEST_DATABASE_URL=<server URL> UPDATE_GOLDEN=1 go test ./cmd/server -count=1 -run '^TestTourS5aAttachments$' (which also rewrites the slice's coverage.txt)",
+    "UPDATE_GOLDEN=1 go test ./cmd/server -count=1 -run '^TestTourCoverage$' (coverage.txt alone, no database)"
+  ],
+  "normalised": [
+    "<name>: a value the tour registered under that name (an account's id, its .session token and .workspace; an id a step captured)",
+    "<uuid:N>, <hex64:N>: another random UUID (version 4) or 64-hex token, numbered by first appearance in this golden",
+    "<time@step N>: an RFC 3339 timestamp the server minted during step N (<time@before step N>: during a request the tour sent after step N-1 and records no step for; <time@boot>: before the tour's first request)",
+    "<time>: any other RFC 3339 timestamp (one the tour sent, one to come such as an expiry, or a whole second on a route the area declared to write whole seconds); <datetime>: a wall-clock YYYY-MM-DD hh:mm[:ss]; <date>: YYYY-MM-DD",
+    "<http-date>, <pdf-date>, _<stamp> (a filename's _YYYYMMDD_hhmmss), <boundary> (a multipart boundary)",
+    "<tmp>: the test's temporary directory; 127.0.0.1:<port>, localhost:<port>: the server's own port",
+    "<release-version>, <stable-version>: the release the server reports (GET /api/v1/public/release)",
+    "version-5 and nil UUIDs are not random and stay as they are",
+    "bodies are the server's bytes otherwise: key order, escapes, null against [] and the trailing newline are kept",
+    "a GET or HEAD is sent twice: plain, then with Accept-Encoding: gzip (the gzip field); a write is sent once",
+    "a signed-in actor's requests carry its session cookie and X-Org-ID: its workspace, or acting_in when the step names another; neither header is listed per request",
+    "events: those the step published, oldest first (ties on created_at in the order of their lines), each payload value as its JSON type, then its JSON text, normalised",
+    "0001-01-01T00:00:00Z kept as it is: the zero time, which links_snapshot entries carry as valid_from"
+  ],
+  "env": [
+    "(beyond the harness's fixed environment, cmd/server/harness_test.go)",
+    "HTTPS_PROXY=http://127.0.0.1:<recording proxy port>",
+    "HTTP_PROXY=http://127.0.0.1:<recording proxy port>",
+    "TZ=UTC"
+  ],
+  "actors": [
+    {
+      "name": "admin",
+      "email": "tour-admin@example.com",
+      "account_name": "Tour Admin",
+      "workspace": "<admin.workspace>",
+      "about": "the first account registered, so the platform admin; used only for admin setup"
+    },
+    {
+      "name": "owner",
+      "email": "tour-owner@example.com",
+      "account_name": "Tour Owner",
+      "workspace": "<owner.workspace>",
+      "about": "an ordinary account that owns its personal workspace (nightly channel); reads the events after each step"
+    },
+    {
+      "name": "outsider",
+      "email": "tour-outsider@example.com",
+      "account_name": "Tour Outsider",
+      "workspace": "<outsider.workspace>",
+      "about": "an ordinary account in a workspace of its own, not a member of the owner's project"
+    },
+    {
+      "name": "anonymous",
+      "about": "no session cookie"
+    }
+  ],
+  "standard_security_headers": [
+    "Content-Security-Policy: default-src 'none'; frame-ancestors 'none'",
+    "Referrer-Policy: strict-origin-when-cross-origin",
+    "X-Content-Type-Options: nosniff",
+    "X-Frame-Options: DENY"
+  ],
+  "steps": [
+    {
+      "n": 1,
+      "title": "REQ-1's figures before any exists: null (Q14)",
+      "actor": "owner",
+      "route": "GET /api/v1/artifacts/{artifactID}/attachments",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/artifacts/<req>/attachments"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 5,
+      "kind": "json",
+      "body": [
+        "null"
+      ],
+      "trailing_newline": true,
+      "parsed": null,
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 2,
+      "title": "the project's figures before any exists: []",
+      "actor": "owner",
+      "route": "GET /api/v1/projects/{projectID}/attachments",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/projects/<project>/attachments"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 3,
+      "kind": "json",
+      "body": [
+        "[]"
+      ],
+      "trailing_newline": true,
+      "parsed": [],
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 3,
+      "title": "upload with no artifact_id",
+      "actor": "owner",
+      "route": "POST /api/v1/attachments/upload",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/attachments/upload",
+        "headers": [
+          "Content-Type: multipart/form-data; boundary=TourFormBoundary7MA4YWxkTrZu0gW"
+        ],
+        "body": {
+          "kind": "multipart",
+          "summary": [
+            {
+              "headers": [
+                "Content-Disposition: form-data; name=\"file\"; filename=\"fig.png\"",
+                "Content-Type: image/png"
+              ],
+              "body_base64": "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAEklEQVR42mP4z8DAAMIM/4EAAB/uBfvxq7p3AAAAAElFTkSuQmCC"
+            }
+          ]
+        }
+      },
+      "status": 400,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 36,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"artifact_id is required\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "artifact_id is required"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 4,
+      "title": "upload with no file",
+      "actor": "owner",
+      "route": "POST /api/v1/attachments/upload",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/attachments/upload",
+        "headers": [
+          "Content-Type: multipart/form-data; boundary=TourFormBoundary7MA4YWxkTrZu0gW"
+        ],
+        "body": {
+          "kind": "multipart",
+          "summary": [
+            {
+              "headers": [
+                "Content-Disposition: form-data; name=\"artifact_id\""
+              ],
+              "body": "<req>"
+            }
+          ]
+        }
+      },
+      "status": 400,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 44,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"Failed to get file from request\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "Failed to get file from request"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 5,
+      "title": "upload a text file: not in the catalogue",
+      "actor": "owner",
+      "route": "POST /api/v1/attachments/upload",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/attachments/upload",
+        "headers": [
+          "Content-Type: multipart/form-data; boundary=TourFormBoundary7MA4YWxkTrZu0gW"
+        ],
+        "body": {
+          "kind": "multipart",
+          "summary": [
+            {
+              "headers": [
+                "Content-Disposition: form-data; name=\"artifact_id\""
+              ],
+              "body": "<req>"
+            },
+            {
+              "headers": [
+                "Content-Disposition: form-data; name=\"file\"; filename=\"notes.txt\"",
+                "Content-Type: text/plain"
+              ],
+              "body": "Some notes.\n"
+            }
+          ]
+        }
+      },
+      "status": 400,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 203,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"That file type cannot be attached. Figures may be images (PNG, JPEG, GIF, WebP, SVG, TIFF, BMP), PDFs, or CAD files (STEP, IGES, STL, 3MF, OBJ, glTF, DXF, DWG and the common native formats).\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "That file type cannot be attached. Figures may be images (PNG, JPEG, GIF, WebP, SVG, TIFF, BMP), PDFs, or CAD files (STEP, IGES, STL, 3MF, OBJ, glTF, DXF, DWG and the common native formats)."
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 6,
+      "title": "upload a .png that holds text: the content sniff refuses it",
+      "actor": "owner",
+      "route": "POST /api/v1/attachments/upload",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/attachments/upload",
+        "headers": [
+          "Content-Type: multipart/form-data; boundary=TourFormBoundary7MA4YWxkTrZu0gW"
+        ],
+        "body": {
+          "kind": "multipart",
+          "summary": [
+            {
+              "headers": [
+                "Content-Disposition: form-data; name=\"artifact_id\""
+              ],
+              "body": "<req>"
+            },
+            {
+              "headers": [
+                "Content-Disposition: form-data; name=\"file\"; filename=\"fig.png\"",
+                "Content-Type: image/png"
+              ],
+              "body": "hello"
+            }
+          ]
+        }
+      },
+      "status": 400,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 69,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"File content does not match the format its name gives it\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "File content does not match the format its name gives it"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 7,
+      "title": "upload a .step without the STEP signature",
+      "actor": "owner",
+      "route": "POST /api/v1/attachments/upload",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/attachments/upload",
+        "headers": [
+          "Content-Type: multipart/form-data; boundary=TourFormBoundary7MA4YWxkTrZu0gW"
+        ],
+        "body": {
+          "kind": "multipart",
+          "summary": [
+            {
+              "headers": [
+                "Content-Disposition: form-data; name=\"artifact_id\""
+              ],
+              "body": "<req>"
+            },
+            {
+              "headers": [
+                "Content-Disposition: form-data; name=\"file\"; filename=\"part.step\"",
+                "Content-Type: application/octet-stream"
+              ],
+              "body": "hello"
+            }
+          ]
+        }
+      },
+      "notes": [
+        "a non-image is checked against its format's signature where it has one"
+      ],
+      "status": 400,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 69,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"File content does not match the format its name gives it\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "File content does not match the format its name gives it"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 8,
+      "title": "upload with a title of 256 characters",
+      "actor": "owner",
+      "route": "POST /api/v1/attachments/upload",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/attachments/upload",
+        "headers": [
+          "Content-Type: multipart/form-data; boundary=TourFormBoundary7MA4YWxkTrZu0gW"
+        ],
+        "body": {
+          "kind": "multipart",
+          "summary": [
+            {
+              "headers": [
+                "Content-Disposition: form-data; name=\"artifact_id\""
+              ],
+              "body": "<req>"
+            },
+            {
+              "headers": [
+                "Content-Disposition: form-data; name=\"title\""
+              ],
+              "body": "éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé"
+            },
+            {
+              "headers": [
+                "Content-Disposition: form-data; name=\"file\"; filename=\"fig.png\"",
+                "Content-Type: image/png"
+              ],
+              "body_base64": "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAEklEQVR42mP4z8DAAMIM/4EAAB/uBfvxq7p3AAAAAElFTkSuQmCC"
+            }
+          ]
+        }
+      },
+      "notes": [
+        "the title is checked after the file is stored, and the stored file is removed: uploads[] holds no file of this step"
+      ],
+      "status": 400,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 55,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"figure title is longer than 255 characters\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "figure title is longer than 255 characters"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 9,
+      "title": "upload to an artifact that does not exist",
+      "actor": "owner",
+      "route": "POST /api/v1/attachments/upload",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/attachments/upload",
+        "headers": [
+          "Content-Type: multipart/form-data; boundary=TourFormBoundary7MA4YWxkTrZu0gW"
+        ],
+        "body": {
+          "kind": "multipart",
+          "summary": [
+            {
+              "headers": [
+                "Content-Disposition: form-data; name=\"artifact_id\""
+              ],
+              "body": "<phantom>"
+            },
+            {
+              "headers": [
+                "Content-Disposition: form-data; name=\"file\"; filename=\"fig.png\"",
+                "Content-Type: image/png"
+              ],
+              "body_base64": "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAEklEQVR42mP4z8DAAMIM/4EAAB/uBfvxq7p3AAAAAElFTkSuQmCC"
+            }
+          ]
+        }
+      },
+      "status": 404,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 30,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"project not found\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "project not found"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 10,
+      "title": "an outsider uploads to REQ-1",
+      "actor": "outsider",
+      "route": "POST /api/v1/attachments/upload",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/attachments/upload",
+        "headers": [
+          "Content-Type: multipart/form-data; boundary=TourFormBoundary7MA4YWxkTrZu0gW"
+        ],
+        "body": {
+          "kind": "multipart",
+          "summary": [
+            {
+              "headers": [
+                "Content-Disposition: form-data; name=\"artifact_id\""
+              ],
+              "body": "<req>"
+            },
+            {
+              "headers": [
+                "Content-Disposition: form-data; name=\"file\"; filename=\"fig.png\"",
+                "Content-Type: image/png"
+              ],
+              "body_base64": "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAEklEQVR42mP4z8DAAMIM/4EAAB/uBfvxq7p3AAAAAElFTkSuQmCC"
+            }
+          ]
+        }
+      },
+      "status": 403,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 51,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"you do not have access to this project\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "you do not have access to this project"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 11,
+      "title": "upload fig.png to REQ-1: figure REQ-1-FIG-1",
+      "actor": "owner",
+      "route": "POST /api/v1/attachments/upload",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/attachments/upload",
+        "headers": [
+          "Content-Type: multipart/form-data; boundary=TourFormBoundary7MA4YWxkTrZu0gW"
+        ],
+        "body": {
+          "kind": "multipart",
+          "summary": [
+            {
+              "headers": [
+                "Content-Disposition: form-data; name=\"artifact_id\""
+              ],
+              "body": "<req>"
+            },
+            {
+              "headers": [
+                "Content-Disposition: form-data; name=\"file\"; filename=\"fig.png\"",
+                "Content-Type: image/png"
+              ],
+              "body_base64": "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAEklEQVR42mP4z8DAAMIM/4EAAB/uBfvxq7p3AAAAAElFTkSuQmCC"
+            }
+          ]
+        }
+      },
+      "notes": [
+        "the file is stored as UPLOADS_DIR/<random uuid>_<uploaded name> (I16); the figure is served as <figure ref><extension>"
+      ],
+      "status": 201,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"id\":\"<fig>\",\"artifact_id\":\"<req>\",\"filename\":\"REQ-1-FIG-1.png\",\"original_filename\":\"fig.png\",\"title\":\"\",\"mime_type\":\"image/png\",\"file_path\":\"<tmp>/uploads/<uuid:1>_fig.png\",\"file_size\":75,\"figure_ref\":\"REQ-1-FIG-1\",\"figure_num\":1,\"version\":1,\"created_at\":\"<time@step 11>\",\"kind\":\"image\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "id": "<fig>",
+        "artifact_id": "<req>",
+        "filename": "REQ-1-FIG-1.png",
+        "original_filename": "fig.png",
+        "title": "",
+        "mime_type": "image/png",
+        "file_path": "<tmp>/uploads/<uuid:1>_fig.png",
+        "file_size": 75,
+        "figure_ref": "REQ-1-FIG-1",
+        "figure_num": 1,
+        "version": 1,
+        "created_at": "<time@step 11>",
+        "kind": "image"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 12,
+      "title": "its metadata",
+      "actor": "owner",
+      "route": "GET /api/v1/attachments/{id}",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/attachments/<fig>"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"id\":\"<fig>\",\"artifact_id\":\"<req>\",\"filename\":\"REQ-1-FIG-1.png\",\"original_filename\":\"fig.png\",\"title\":\"\",\"mime_type\":\"image/png\",\"file_path\":\"<tmp>/uploads/<uuid:1>_fig.png\",\"file_size\":75,\"figure_ref\":\"REQ-1-FIG-1\",\"figure_num\":1,\"version\":1,\"created_at\":\"<time@step 11>\",\"kind\":\"image\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "id": "<fig>",
+        "artifact_id": "<req>",
+        "filename": "REQ-1-FIG-1.png",
+        "original_filename": "fig.png",
+        "title": "",
+        "mime_type": "image/png",
+        "file_path": "<tmp>/uploads/<uuid:1>_fig.png",
+        "file_size": 75,
+        "figure_ref": "REQ-1-FIG-1",
+        "figure_num": 1,
+        "version": 1,
+        "created_at": "<time@step 11>",
+        "kind": "image"
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 13,
+      "title": "download it: served inline, with the raster image policy",
+      "actor": "owner",
+      "route": "GET /api/v1/attachments/{id}/download",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/attachments/<fig>/download"
+      },
+      "notes": [
+        "the file is served as a static file: Accept-Ranges, and Last-Modified from the stored file's mtime"
+      ],
+      "status": 200,
+      "content_type": "image/png",
+      "headers": [
+        "Accept-Ranges: bytes",
+        "Cache-Control: public, max-age=31536000",
+        "Content-Disposition: inline; filename=\"REQ-1-FIG-1.png\"",
+        "Last-Modified: <http-date>"
+      ],
+      "security_headers": [
+        "Content-Security-Policy: default-src 'none'; img-src 'self'; frame-ancestors 'none'",
+        "Referrer-Policy: strict-origin-when-cross-origin",
+        "X-Content-Type-Options: nosniff",
+        "X-Frame-Options: DENY"
+      ],
+      "content_length": 75,
+      "kind": "png",
+      "summary": {
+        "width": 2,
+        "height": 2,
+        "color_model": "rgba",
+        "pixels_sha256": "c21b35e3f28e676cedf24c13575a7346682e101a2d26aad9598d0cdbcee9ee3b"
+      },
+      "body_base64": "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAEklEQVR42mP4z8DAAMIM/4EAAB/uBfvxq7p3AAAAAElFTkSuQmCC",
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 14,
+      "title": "download its first 8 bytes (Range)",
+      "actor": "owner",
+      "route": "GET /api/v1/attachments/{id}/download",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/attachments/<fig>/download",
+        "headers": [
+          "Range: bytes=0-7"
+        ]
+      },
+      "status": 206,
+      "content_type": "image/png",
+      "headers": [
+        "Accept-Ranges: bytes",
+        "Cache-Control: public, max-age=31536000",
+        "Content-Disposition: inline; filename=\"REQ-1-FIG-1.png\"",
+        "Content-Range: bytes 0-7/75",
+        "Last-Modified: <http-date>"
+      ],
+      "security_headers": [
+        "Content-Security-Policy: default-src 'none'; img-src 'self'; frame-ancestors 'none'",
+        "Referrer-Policy: strict-origin-when-cross-origin",
+        "X-Content-Type-Options: nosniff",
+        "X-Frame-Options: DENY"
+      ],
+      "content_length": 8,
+      "kind": "bytes",
+      "body_base64": "iVBORw0KGgo=",
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 15,
+      "title": "download two ranges: multipart/byteranges",
+      "actor": "owner",
+      "route": "GET /api/v1/attachments/{id}/download",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/attachments/<fig>/download",
+        "headers": [
+          "Range: bytes=0-1,4-5"
+        ]
+      },
+      "notes": [
+        "the boundary is 60 random hex characters, in the Content-Type and between the parts"
+      ],
+      "status": 206,
+      "content_type": "multipart/byteranges; boundary=<boundary>",
+      "headers": [
+        "Accept-Ranges: bytes",
+        "Cache-Control: public, max-age=31536000",
+        "Content-Disposition: inline; filename=\"REQ-1-FIG-1.png\"",
+        "Last-Modified: <http-date>"
+      ],
+      "security_headers": [
+        "Content-Security-Policy: default-src 'none'; img-src 'self'; frame-ancestors 'none'",
+        "Referrer-Policy: strict-origin-when-cross-origin",
+        "X-Content-Type-Options: nosniff",
+        "X-Frame-Options: DENY"
+      ],
+      "content_length": 314,
+      "kind": "multipart",
+      "summary": [
+        {
+          "headers": [
+            "Content-Range: bytes 0-1/75",
+            "Content-Type: image/png"
+          ],
+          "body_base64": "iVA="
+        },
+        {
+          "headers": [
+            "Content-Range: bytes 4-5/75",
+            "Content-Type: image/png"
+          ],
+          "body_base64": "DQo="
+        }
+      ],
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 16,
+      "title": "download a range past the end",
+      "actor": "owner",
+      "route": "GET /api/v1/attachments/{id}/download",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/attachments/<fig>/download",
+        "headers": [
+          "Range: bytes=100-200"
+        ]
+      },
+      "status": 416,
+      "content_type": "text/plain; charset=utf-8",
+      "headers": [
+        "Content-Disposition: inline; filename=\"REQ-1-FIG-1.png\"",
+        "Content-Range: bytes */75"
+      ],
+      "security_headers": [
+        "Content-Security-Policy: default-src 'none'; img-src 'self'; frame-ancestors 'none'",
+        "Referrer-Policy: strict-origin-when-cross-origin",
+        "X-Content-Type-Options: nosniff",
+        "X-Frame-Options: DENY"
+      ],
+      "content_length": 33,
+      "kind": "text",
+      "body": [
+        "invalid range: failed to overlap"
+      ],
+      "trailing_newline": true,
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 17,
+      "title": "download it again with If-Modified-Since its Last-Modified",
+      "actor": "owner",
+      "route": "GET /api/v1/attachments/{id}/download",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/attachments/<fig>/download",
+        "headers": [
+          "If-Modified-Since: <http-date>"
+        ]
+      },
+      "status": 304,
+      "content_type": null,
+      "headers": [
+        "Cache-Control: public, max-age=31536000",
+        "Content-Disposition: inline; filename=\"REQ-1-FIG-1.png\"",
+        "Last-Modified: <http-date>"
+      ],
+      "security_headers": [
+        "Content-Security-Policy: default-src 'none'; img-src 'self'; frame-ancestors 'none'",
+        "Referrer-Policy: strict-origin-when-cross-origin",
+        "X-Content-Type-Options: nosniff",
+        "X-Frame-Options: DENY"
+      ],
+      "content_length": null,
+      "kind": "empty",
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 18,
+      "title": "upload a new version with no file",
+      "actor": "owner",
+      "route": "POST /api/v1/attachments/{id}/versions",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/attachments/<fig>/versions",
+        "headers": [
+          "Content-Type: multipart/form-data; boundary=TourFormBoundary7MA4YWxkTrZu0gW"
+        ],
+        "body": {
+          "kind": "multipart",
+          "summary": null
+        }
+      },
+      "status": 400,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 44,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"Failed to get file from request\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "Failed to get file from request"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 19,
+      "title": "upload a text file as a new version",
+      "actor": "owner",
+      "route": "POST /api/v1/attachments/{id}/versions",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/attachments/<fig>/versions",
+        "headers": [
+          "Content-Type: multipart/form-data; boundary=TourFormBoundary7MA4YWxkTrZu0gW"
+        ],
+        "body": {
+          "kind": "multipart",
+          "summary": [
+            {
+              "headers": [
+                "Content-Disposition: form-data; name=\"file\"; filename=\"notes.txt\"",
+                "Content-Type: text/plain"
+              ],
+              "body": "Some notes.\n"
+            }
+          ]
+        }
+      },
+      "status": 400,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 203,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"That file type cannot be attached. Figures may be images (PNG, JPEG, GIF, WebP, SVG, TIFF, BMP), PDFs, or CAD files (STEP, IGES, STL, 3MF, OBJ, glTF, DXF, DWG and the common native formats).\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "That file type cannot be attached. Figures may be images (PNG, JPEG, GIF, WebP, SVG, TIFF, BMP), PDFs, or CAD files (STEP, IGES, STL, 3MF, OBJ, glTF, DXF, DWG and the common native formats)."
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 20,
+      "title": "upload a .png that holds text as a new version",
+      "actor": "owner",
+      "route": "POST /api/v1/attachments/{id}/versions",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/attachments/<fig>/versions",
+        "headers": [
+          "Content-Type: multipart/form-data; boundary=TourFormBoundary7MA4YWxkTrZu0gW"
+        ],
+        "body": {
+          "kind": "multipart",
+          "summary": [
+            {
+              "headers": [
+                "Content-Disposition: form-data; name=\"file\"; filename=\"fig2.png\"",
+                "Content-Type: image/png"
+              ],
+              "body": "hello"
+            }
+          ]
+        }
+      },
+      "status": 400,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 69,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"File content does not match the format its name gives it\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "File content does not match the format its name gives it"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 21,
+      "title": "upload fig2.png as version 2: the figure keeps its ref and its served name",
+      "actor": "owner",
+      "route": "POST /api/v1/attachments/{id}/versions",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/attachments/<fig>/versions",
+        "headers": [
+          "Content-Type: multipart/form-data; boundary=TourFormBoundary7MA4YWxkTrZu0gW"
+        ],
+        "body": {
+          "kind": "multipart",
+          "summary": [
+            {
+              "headers": [
+                "Content-Disposition: form-data; name=\"file\"; filename=\"fig2.png\"",
+                "Content-Type: image/png"
+              ],
+              "body_base64": "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAHnRFWHRDb21tZW50AHRvdXIgZmlndXJlLCB2ZXJzaW9uIDJhu/1HAAAAEklEQVR42mP4z8DAAMIM/4EAAB/uBfvxq7p3AAAAAElFTkSuQmCC"
+            }
+          ]
+        }
+      },
+      "notes": [
+        "the artifact takes a new version too, through an update that changes nothing it says"
+      ],
+      "status": 201,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"id\":\"<fig>\",\"artifact_id\":\"<req>\",\"filename\":\"REQ-1-FIG-1.png\",\"original_filename\":\"fig2.png\",\"title\":\"\",\"mime_type\":\"image/png\",\"file_path\":\"<tmp>/uploads/<uuid:2>_fig2.png\",\"file_size\":117,\"figure_ref\":\"REQ-1-FIG-1\",\"figure_num\":1,\"version\":2,\"created_at\":\"<time@step 11>\",\"kind\":\"image\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "id": "<fig>",
+        "artifact_id": "<req>",
+        "filename": "REQ-1-FIG-1.png",
+        "original_filename": "fig2.png",
+        "title": "",
+        "mime_type": "image/png",
+        "file_path": "<tmp>/uploads/<uuid:2>_fig2.png",
+        "file_size": 117,
+        "figure_ref": "REQ-1-FIG-1",
+        "figure_num": 1,
+        "version": 2,
+        "created_at": "<time@step 11>",
+        "kind": "image"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 22,
+      "title": "the versions, newest first",
+      "actor": "owner",
+      "route": "GET /api/v1/attachments/{id}/versions",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/attachments/<fig>/versions"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "[{\"id\":\"<uuid:3>\",\"attachment_id\":\"<fig>\",\"version\":2,\"filename\":\"REQ-1-FIG-1.png\",\"original_filename\":\"fig2.png\",\"title\":\"\",\"mime_type\":\"image/png\",\"file_path\":\"<tmp>/uploads/<uuid:2>_fig2.png\",\"file_size\":117,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 21>\",\"kind\":\"image\"},{\"id\":\"<uuid:4>\",\"attachment_id\":\"<fig>\",\"version\":1,\"filename\":\"REQ-1-FIG-1.png\",\"original_filename\":\"fig.png\",\"title\":\"\",\"mime_type\":\"image/png\",\"file_path\":\"<tmp>/uploads/<uuid:1>_fig.png\",\"file_size\":75,\"created_at\":\"<time@step 11>\",\"kind\":\"image\"}]"
+      ],
+      "trailing_newline": true,
+      "parsed": [
+        {
+          "id": "<uuid:3>",
+          "attachment_id": "<fig>",
+          "version": 2,
+          "filename": "REQ-1-FIG-1.png",
+          "original_filename": "fig2.png",
+          "title": "",
+          "mime_type": "image/png",
+          "file_path": "<tmp>/uploads/<uuid:2>_fig2.png",
+          "file_size": 117,
+          "created_by": "<owner>",
+          "created_at": "<time@step 21>",
+          "kind": "image"
+        },
+        {
+          "id": "<uuid:4>",
+          "attachment_id": "<fig>",
+          "version": 1,
+          "filename": "REQ-1-FIG-1.png",
+          "original_filename": "fig.png",
+          "title": "",
+          "mime_type": "image/png",
+          "file_path": "<tmp>/uploads/<uuid:1>_fig.png",
+          "file_size": 75,
+          "created_at": "<time@step 11>",
+          "kind": "image"
+        }
+      ],
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 23,
+      "title": "download it: version 2's bytes",
+      "actor": "owner",
+      "route": "GET /api/v1/attachments/{id}/download",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/attachments/<fig>/download"
+      },
+      "status": 200,
+      "content_type": "image/png",
+      "headers": [
+        "Accept-Ranges: bytes",
+        "Cache-Control: public, max-age=31536000",
+        "Content-Disposition: inline; filename=\"REQ-1-FIG-1.png\"",
+        "Last-Modified: <http-date>"
+      ],
+      "security_headers": [
+        "Content-Security-Policy: default-src 'none'; img-src 'self'; frame-ancestors 'none'",
+        "Referrer-Policy: strict-origin-when-cross-origin",
+        "X-Content-Type-Options: nosniff",
+        "X-Frame-Options: DENY"
+      ],
+      "content_length": 117,
+      "kind": "png",
+      "summary": {
+        "width": 2,
+        "height": 2,
+        "color_model": "rgba",
+        "pixels_sha256": "c21b35e3f28e676cedf24c13575a7346682e101a2d26aad9598d0cdbcee9ee3b"
+      },
+      "body_base64": "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAHnRFWHRDb21tZW50AHRvdXIgZmlndXJlLCB2ZXJzaW9uIDJhu/1HAAAAEklEQVR42mP4z8DAAMIM/4EAAB/uBfvxq7p3AAAAAElFTkSuQmCC",
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 24,
+      "title": "download version 1",
+      "actor": "owner",
+      "route": "GET /api/v1/attachments/{id}/download",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/attachments/<fig>/download",
+        "query": "version=1"
+      },
+      "status": 200,
+      "content_type": "image/png",
+      "headers": [
+        "Accept-Ranges: bytes",
+        "Cache-Control: public, max-age=31536000",
+        "Content-Disposition: inline; filename=\"REQ-1-FIG-1.png\"",
+        "Last-Modified: <http-date>"
+      ],
+      "security_headers": [
+        "Content-Security-Policy: default-src 'none'; img-src 'self'; frame-ancestors 'none'",
+        "Referrer-Policy: strict-origin-when-cross-origin",
+        "X-Content-Type-Options: nosniff",
+        "X-Frame-Options: DENY"
+      ],
+      "content_length": 75,
+      "kind": "png",
+      "summary": {
+        "width": 2,
+        "height": 2,
+        "color_model": "rgba",
+        "pixels_sha256": "c21b35e3f28e676cedf24c13575a7346682e101a2d26aad9598d0cdbcee9ee3b"
+      },
+      "body_base64": "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAEklEQVR42mP4z8DAAMIM/4EAAB/uBfvxq7p3AAAAAElFTkSuQmCC",
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 25,
+      "title": "download version 0",
+      "actor": "owner",
+      "route": "GET /api/v1/attachments/{id}/download",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/attachments/<fig>/download",
+        "query": "version=0"
+      },
+      "status": 400,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 46,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"version must be a positive number\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "version must be a positive number"
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 26,
+      "title": "download version x",
+      "actor": "owner",
+      "route": "GET /api/v1/attachments/{id}/download",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/attachments/<fig>/download",
+        "query": "version=x"
+      },
+      "status": 400,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 46,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"version must be a positive number\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "version must be a positive number"
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 27,
+      "title": "download a version the figure never had",
+      "actor": "owner",
+      "route": "GET /api/v1/attachments/{id}/download",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/attachments/<fig>/download",
+        "query": "version=99"
+      },
+      "status": 404,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 53,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"That version of the figure was not found\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "That version of the figure was not found"
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 28,
+      "title": "rename with a malformed body: \"Invalid request body\", capital I (Q19)",
+      "actor": "owner",
+      "route": "PUT /api/v1/attachments/{id}",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/attachments/<fig>",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"title\":"
+      },
+      "notes": [
+        "the one site that writes \"Invalid request body\" where the others write \"invalid request body\" (Q19)"
+      ],
+      "status": 400,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 33,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"Invalid request body\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "Invalid request body"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 29,
+      "title": "rename to a title of 256 characters",
+      "actor": "owner",
+      "route": "PUT /api/v1/attachments/{id}",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/attachments/<fig>",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"title\":\"éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé\"}"
+      },
+      "status": 400,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 55,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"figure title is longer than 255 characters\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "figure title is longer than 255 characters"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 30,
+      "title": "rename it: version 3, over version 2's file",
+      "actor": "owner",
+      "route": "PUT /api/v1/attachments/{id}",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/attachments/<fig>",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"title\":\"  Wiring diagram  \"}"
+      },
+      "notes": [
+        "the title is trimmed"
+      ],
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"id\":\"<fig>\",\"artifact_id\":\"<req>\",\"filename\":\"REQ-1-FIG-1.png\",\"original_filename\":\"fig2.png\",\"title\":\"Wiring diagram\",\"mime_type\":\"image/png\",\"file_path\":\"<tmp>/uploads/<uuid:2>_fig2.png\",\"file_size\":117,\"figure_ref\":\"REQ-1-FIG-1\",\"figure_num\":1,\"version\":3,\"created_at\":\"<time@step 11>\",\"kind\":\"image\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "id": "<fig>",
+        "artifact_id": "<req>",
+        "filename": "REQ-1-FIG-1.png",
+        "original_filename": "fig2.png",
+        "title": "Wiring diagram",
+        "mime_type": "image/png",
+        "file_path": "<tmp>/uploads/<uuid:2>_fig2.png",
+        "file_size": 117,
+        "figure_ref": "REQ-1-FIG-1",
+        "figure_num": 1,
+        "version": 3,
+        "created_at": "<time@step 11>",
+        "kind": "image"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 31,
+      "title": "rename it to the title it has: a no-op",
+      "actor": "owner",
+      "route": "PUT /api/v1/attachments/{id}",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/attachments/<fig>",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"title\":\"Wiring diagram\"}"
+      },
+      "notes": [
+        "no new version, no note, and no artifact version"
+      ],
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"id\":\"<fig>\",\"artifact_id\":\"<req>\",\"filename\":\"REQ-1-FIG-1.png\",\"original_filename\":\"fig2.png\",\"title\":\"Wiring diagram\",\"mime_type\":\"image/png\",\"file_path\":\"<tmp>/uploads/<uuid:2>_fig2.png\",\"file_size\":117,\"figure_ref\":\"REQ-1-FIG-1\",\"figure_num\":1,\"version\":3,\"created_at\":\"<time@step 11>\",\"kind\":\"image\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "id": "<fig>",
+        "artifact_id": "<req>",
+        "filename": "REQ-1-FIG-1.png",
+        "original_filename": "fig2.png",
+        "title": "Wiring diagram",
+        "mime_type": "image/png",
+        "file_path": "<tmp>/uploads/<uuid:2>_fig2.png",
+        "file_size": 117,
+        "figure_ref": "REQ-1-FIG-1",
+        "figure_num": 1,
+        "version": 3,
+        "created_at": "<time@step 11>",
+        "kind": "image"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 32,
+      "title": "REQ-1 after a new figure version and a rename: version 3",
+      "actor": "owner",
+      "route": "GET /api/v1/artifacts/{id}",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/artifacts/<req>"
+      },
+      "notes": [
+        "an upload of a new figure does not version the artifact; see the artifact restore below, which answers version 4 after four more uploads"
+      ],
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"id\":\"<req>\",\"project_id\":\"<project>\",\"type\":\"requirement\",\"ref\":\"REQ-1\",\"title\":\"Show the wiring\",\"body\":\"The system shall show its wiring diagram.\",\"sort_order\":1,\"status\":\"draft\",\"attributes\":{\"status\":\"draft\"},\"version\":3,\"valid_from\":\"<time@step 30>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 30>\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "id": "<req>",
+        "project_id": "<project>",
+        "type": "requirement",
+        "ref": "REQ-1",
+        "title": "Show the wiring",
+        "body": "The system shall show its wiring diagram.",
+        "sort_order": 1,
+        "status": "draft",
+        "attributes": {
+          "status": "draft"
+        },
+        "version": 3,
+        "valid_from": "<time@step 30>",
+        "valid_to": null,
+        "created_at": "<time@before step 1>",
+        "updated_at": "<time@step 30>"
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 33,
+      "title": "restore version x",
+      "actor": "owner",
+      "route": "POST /api/v1/attachments/{id}/versions/{version}/restore",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/attachments/<fig>/versions/x/restore"
+      },
+      "status": 400,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 52,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"version must be a positive whole number\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "version must be a positive whole number"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 34,
+      "title": "restore a version the figure never had",
+      "actor": "owner",
+      "route": "POST /api/v1/attachments/{id}/versions/{version}/restore",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/attachments/<fig>/versions/99/restore"
+      },
+      "status": 404,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 42,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"This figure has no version 99\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "This figure has no version 99"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 35,
+      "title": "restore the current version",
+      "actor": "owner",
+      "route": "POST /api/v1/attachments/{id}/versions/{version}/restore",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/attachments/<fig>/versions/3/restore"
+      },
+      "status": 409,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 49,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"Version 3 is already the current one\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "Version 3 is already the current one"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 36,
+      "title": "restore version 1: version 4, restored_from 1, answering the version",
+      "actor": "owner",
+      "route": "POST /api/v1/attachments/{id}/versions/{version}/restore",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/attachments/<fig>/versions/1/restore"
+      },
+      "notes": [
+        "the title travels with the image, so the rename is undone; the restore reuses version 1's file, writes no figure note and takes no artifact version"
+      ],
+      "status": 201,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"id\":\"<uuid:5>\",\"attachment_id\":\"<fig>\",\"version\":4,\"filename\":\"REQ-1-FIG-1.png\",\"original_filename\":\"fig.png\",\"title\":\"\",\"mime_type\":\"image/png\",\"file_path\":\"<tmp>/uploads/<uuid:1>_fig.png\",\"file_size\":75,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 36>\",\"restored_from\":1,\"kind\":\"image\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "id": "<uuid:5>",
+        "attachment_id": "<fig>",
+        "version": 4,
+        "filename": "REQ-1-FIG-1.png",
+        "original_filename": "fig.png",
+        "title": "",
+        "mime_type": "image/png",
+        "file_path": "<tmp>/uploads/<uuid:1>_fig.png",
+        "file_size": 75,
+        "created_by": "<owner>",
+        "created_at": "<time@step 36>",
+        "restored_from": 1,
+        "kind": "image"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 37,
+      "title": "its metadata after the restore",
+      "actor": "owner",
+      "route": "GET /api/v1/attachments/{id}",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/attachments/<fig>"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"id\":\"<fig>\",\"artifact_id\":\"<req>\",\"filename\":\"REQ-1-FIG-1.png\",\"original_filename\":\"fig.png\",\"title\":\"\",\"mime_type\":\"image/png\",\"file_path\":\"<tmp>/uploads/<uuid:1>_fig.png\",\"file_size\":75,\"figure_ref\":\"REQ-1-FIG-1\",\"figure_num\":1,\"version\":4,\"created_at\":\"<time@step 11>\",\"kind\":\"image\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "id": "<fig>",
+        "artifact_id": "<req>",
+        "filename": "REQ-1-FIG-1.png",
+        "original_filename": "fig.png",
+        "title": "",
+        "mime_type": "image/png",
+        "file_path": "<tmp>/uploads/<uuid:1>_fig.png",
+        "file_size": 75,
+        "figure_ref": "REQ-1-FIG-1",
+        "figure_num": 1,
+        "version": 4,
+        "created_at": "<time@step 11>",
+        "kind": "image"
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 38,
+      "title": "the versions after the restore",
+      "actor": "owner",
+      "route": "GET /api/v1/attachments/{id}/versions",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/attachments/<fig>/versions"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "[{\"id\":\"<uuid:5>\",\"attachment_id\":\"<fig>\",\"version\":4,\"filename\":\"REQ-1-FIG-1.png\",\"original_filename\":\"fig.png\",\"title\":\"\",\"mime_type\":\"image/png\",\"file_path\":\"<tmp>/uploads/<uuid:1>_fig.png\",\"file_size\":75,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 36>\",\"restored_from\":1,\"kind\":\"image\"},{\"id\":\"<uuid:6>\",\"attachment_id\":\"<fig>\",\"version\":3,\"filename\":\"REQ-1-FIG-1.png\",\"original_filename\":\"fig2.png\",\"title\":\"Wiring diagram\",\"mime_type\":\"image/png\",\"file_path\":\"<tmp>/uploads/<uuid:2>_fig2.png\",\"file_size\":117,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 30>\",\"kind\":\"image\"},{\"id\":\"<uuid:3>\",\"attachment_id\":\"<fig>\",\"version\":2,\"filename\":\"REQ-1-FIG-1.png\",\"original_filename\":\"fig2.png\",\"title\":\"\",\"mime_type\":\"image/png\",\"file_path\":\"<tmp>/uploads/<uuid:2>_fig2.png\",\"file_size\":117,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 21>\",\"kind\":\"image\"},{\"id\":\"<uuid:4>\",\"attachment_id\":\"<fig>\",\"version\":1,\"filename\":\"REQ-1-FIG-1.png\",\"original_filename\":\"fig.png\",\"title\":\"\",\"mime_type\":\"image/png\",\"file_path\":\"<tmp>/uploads/<uuid:1>_fig.png\",\"file_size\":75,\"created_at\":\"<time@step 11>\",\"kind\":\"image\"}]"
+      ],
+      "trailing_newline": true,
+      "parsed": [
+        {
+          "id": "<uuid:5>",
+          "attachment_id": "<fig>",
+          "version": 4,
+          "filename": "REQ-1-FIG-1.png",
+          "original_filename": "fig.png",
+          "title": "",
+          "mime_type": "image/png",
+          "file_path": "<tmp>/uploads/<uuid:1>_fig.png",
+          "file_size": 75,
+          "created_by": "<owner>",
+          "created_at": "<time@step 36>",
+          "restored_from": 1,
+          "kind": "image"
+        },
+        {
+          "id": "<uuid:6>",
+          "attachment_id": "<fig>",
+          "version": 3,
+          "filename": "REQ-1-FIG-1.png",
+          "original_filename": "fig2.png",
+          "title": "Wiring diagram",
+          "mime_type": "image/png",
+          "file_path": "<tmp>/uploads/<uuid:2>_fig2.png",
+          "file_size": 117,
+          "created_by": "<owner>",
+          "created_at": "<time@step 30>",
+          "kind": "image"
+        },
+        {
+          "id": "<uuid:3>",
+          "attachment_id": "<fig>",
+          "version": 2,
+          "filename": "REQ-1-FIG-1.png",
+          "original_filename": "fig2.png",
+          "title": "",
+          "mime_type": "image/png",
+          "file_path": "<tmp>/uploads/<uuid:2>_fig2.png",
+          "file_size": 117,
+          "created_by": "<owner>",
+          "created_at": "<time@step 21>",
+          "kind": "image"
+        },
+        {
+          "id": "<uuid:4>",
+          "attachment_id": "<fig>",
+          "version": 1,
+          "filename": "REQ-1-FIG-1.png",
+          "original_filename": "fig.png",
+          "title": "",
+          "mime_type": "image/png",
+          "file_path": "<tmp>/uploads/<uuid:1>_fig.png",
+          "file_size": 75,
+          "created_at": "<time@step 11>",
+          "kind": "image"
+        }
+      ],
+      "gzip": {
+        "content_encoding": "gzip",
+        "content_type": "application/json",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "n": 39,
+      "title": "download it: version 1's bytes again",
+      "actor": "owner",
+      "route": "GET /api/v1/attachments/{id}/download",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/attachments/<fig>/download"
+      },
+      "status": 200,
+      "content_type": "image/png",
+      "headers": [
+        "Accept-Ranges: bytes",
+        "Cache-Control: public, max-age=31536000",
+        "Content-Disposition: inline; filename=\"REQ-1-FIG-1.png\"",
+        "Last-Modified: <http-date>"
+      ],
+      "security_headers": [
+        "Content-Security-Policy: default-src 'none'; img-src 'self'; frame-ancestors 'none'",
+        "Referrer-Policy: strict-origin-when-cross-origin",
+        "X-Content-Type-Options: nosniff",
+        "X-Frame-Options: DENY"
+      ],
+      "content_length": 75,
+      "kind": "png",
+      "summary": {
+        "width": 2,
+        "height": 2,
+        "color_model": "rgba",
+        "pixels_sha256": "c21b35e3f28e676cedf24c13575a7346682e101a2d26aad9598d0cdbcee9ee3b"
+      },
+      "body_base64": "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAEklEQVR42mP4z8DAAMIM/4EAAB/uBfvxq7p3AAAAAElFTkSuQmCC",
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 40,
+      "title": "REQ-1 after the restore: still version 3",
+      "actor": "owner",
+      "route": "GET /api/v1/artifacts/{id}",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/artifacts/<req>"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"id\":\"<req>\",\"project_id\":\"<project>\",\"type\":\"requirement\",\"ref\":\"REQ-1\",\"title\":\"Show the wiring\",\"body\":\"The system shall show its wiring diagram.\",\"sort_order\":1,\"status\":\"draft\",\"attributes\":{\"status\":\"draft\"},\"version\":3,\"valid_from\":\"<time@step 30>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 30>\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "id": "<req>",
+        "project_id": "<project>",
+        "type": "requirement",
+        "ref": "REQ-1",
+        "title": "Show the wiring",
+        "body": "The system shall show its wiring diagram.",
+        "sort_order": 1,
+        "status": "draft",
+        "attributes": {
+          "status": "draft"
+        },
+        "version": 3,
+        "valid_from": "<time@step 30>",
+        "valid_to": null,
+        "created_at": "<time@before step 1>",
+        "updated_at": "<time@step 30>"
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 41,
+      "title": "upload a PDF: figure 2, kind document",
+      "actor": "owner",
+      "route": "POST /api/v1/attachments/upload",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/attachments/upload",
+        "headers": [
+          "Content-Type: multipart/form-data; boundary=TourFormBoundary7MA4YWxkTrZu0gW"
+        ],
+        "body": {
+          "kind": "multipart",
+          "summary": [
+            {
+              "headers": [
+                "Content-Disposition: form-data; name=\"artifact_id\""
+              ],
+              "body": "<req>"
+            },
+            {
+              "headers": [
+                "Content-Disposition: form-data; name=\"file\"; filename=\"spec.pdf\"",
+                "Content-Type: application/pdf"
+              ],
+              "body": "%PDF-1.4\n%%EOF\n"
+            }
+          ]
+        }
+      },
+      "status": 201,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"id\":\"<pdf>\",\"artifact_id\":\"<req>\",\"filename\":\"REQ-1-FIG-2.pdf\",\"original_filename\":\"spec.pdf\",\"title\":\"\",\"mime_type\":\"application/pdf\",\"file_path\":\"<tmp>/uploads/<uuid:7>_spec.pdf\",\"file_size\":15,\"figure_ref\":\"REQ-1-FIG-2\",\"figure_num\":2,\"version\":1,\"created_at\":\"<time@step 41>\",\"kind\":\"document\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "id": "<pdf>",
+        "artifact_id": "<req>",
+        "filename": "REQ-1-FIG-2.pdf",
+        "original_filename": "spec.pdf",
+        "title": "",
+        "mime_type": "application/pdf",
+        "file_path": "<tmp>/uploads/<uuid:7>_spec.pdf",
+        "file_size": 15,
+        "figure_ref": "REQ-1-FIG-2",
+        "figure_num": 2,
+        "version": 1,
+        "created_at": "<time@step 41>",
+        "kind": "document"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 42,
+      "title": "download the PDF: an attachment, sandboxed",
+      "actor": "owner",
+      "route": "GET /api/v1/attachments/{id}/download",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/attachments/<pdf>/download"
+      },
+      "status": 200,
+      "content_type": "application/pdf",
+      "headers": [
+        "Accept-Ranges: bytes",
+        "Cache-Control: public, max-age=31536000",
+        "Content-Disposition: attachment; filename=\"REQ-1-FIG-2.pdf\"",
+        "Last-Modified: <http-date>"
+      ],
+      "security_headers": [
+        "Content-Security-Policy: sandbox; default-src 'none'; frame-ancestors 'none'",
+        "Referrer-Policy: strict-origin-when-cross-origin",
+        "X-Content-Type-Options: nosniff",
+        "X-Frame-Options: DENY"
+      ],
+      "content_length": 15,
+      "kind": "text",
+      "body": [
+        "%PDF-1.4",
+        "%%EOF"
+      ],
+      "trailing_newline": true,
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 43,
+      "title": "upload an SVG: figure 3, kind image",
+      "actor": "owner",
+      "route": "POST /api/v1/attachments/upload",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/attachments/upload",
+        "headers": [
+          "Content-Type: multipart/form-data; boundary=TourFormBoundary7MA4YWxkTrZu0gW"
+        ],
+        "body": {
+          "kind": "multipart",
+          "summary": [
+            {
+              "headers": [
+                "Content-Disposition: form-data; name=\"artifact_id\""
+              ],
+              "body": "<req>"
+            },
+            {
+              "headers": [
+                "Content-Disposition: form-data; name=\"file\"; filename=\"outline.svg\"",
+                "Content-Type: image/svg+xml"
+              ],
+              "body": "<svg xmlns=\"http://www.w3.org/2000/svg\"></svg>"
+            }
+          ]
+        }
+      },
+      "status": 201,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"id\":\"<svg>\",\"artifact_id\":\"<req>\",\"filename\":\"REQ-1-FIG-3.svg\",\"original_filename\":\"outline.svg\",\"title\":\"\",\"mime_type\":\"image/svg+xml\",\"file_path\":\"<tmp>/uploads/<uuid:8>_outline.svg\",\"file_size\":46,\"figure_ref\":\"REQ-1-FIG-3\",\"figure_num\":3,\"version\":1,\"created_at\":\"<time@step 43>\",\"kind\":\"image\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "id": "<svg>",
+        "artifact_id": "<req>",
+        "filename": "REQ-1-FIG-3.svg",
+        "original_filename": "outline.svg",
+        "title": "",
+        "mime_type": "image/svg+xml",
+        "file_path": "<tmp>/uploads/<uuid:8>_outline.svg",
+        "file_size": 46,
+        "figure_ref": "REQ-1-FIG-3",
+        "figure_num": 3,
+        "version": 1,
+        "created_at": "<time@step 43>",
+        "kind": "image"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 44,
+      "title": "download the SVG: an image, but an attachment, sandboxed",
+      "actor": "owner",
+      "route": "GET /api/v1/attachments/{id}/download",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/attachments/<svg>/download"
+      },
+      "notes": [
+        "an SVG can carry script, so it is never rendered on the API's origin"
+      ],
+      "status": 200,
+      "content_type": "image/svg+xml",
+      "headers": [
+        "Accept-Ranges: bytes",
+        "Cache-Control: public, max-age=31536000",
+        "Content-Disposition: attachment; filename=\"REQ-1-FIG-3.svg\"",
+        "Last-Modified: <http-date>"
+      ],
+      "security_headers": [
+        "Content-Security-Policy: sandbox; default-src 'none'; frame-ancestors 'none'",
+        "Referrer-Policy: strict-origin-when-cross-origin",
+        "X-Content-Type-Options: nosniff",
+        "X-Frame-Options: DENY"
+      ],
+      "content_length": 46,
+      "kind": "text",
+      "body": [
+        "<svg xmlns=\"http://www.w3.org/2000/svg\"></svg>"
+      ],
+      "trailing_newline": false,
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 45,
+      "title": "upload a STEP model sent as application/octet-stream: figure 4, kind model",
+      "actor": "owner",
+      "route": "POST /api/v1/attachments/upload",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/attachments/upload",
+        "headers": [
+          "Content-Type: multipart/form-data; boundary=TourFormBoundary7MA4YWxkTrZu0gW"
+        ],
+        "body": {
+          "kind": "multipart",
+          "summary": [
+            {
+              "headers": [
+                "Content-Disposition: form-data; name=\"artifact_id\""
+              ],
+              "body": "<req>"
+            },
+            {
+              "headers": [
+                "Content-Disposition: form-data; name=\"file\"; filename=\"part.step\"",
+                "Content-Type: application/octet-stream"
+              ],
+              "body": "ISO-10303-21;\nHEADER;\nENDSEC;\nDATA;\nENDSEC;\nEND-ISO-10303-21;\n"
+            }
+          ]
+        }
+      },
+      "notes": [
+        "the extension decides the recorded type, not what the browser declared"
+      ],
+      "status": 201,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"id\":\"<step>\",\"artifact_id\":\"<req>\",\"filename\":\"REQ-1-FIG-4.step\",\"original_filename\":\"part.step\",\"title\":\"\",\"mime_type\":\"model/step\",\"file_path\":\"<tmp>/uploads/<uuid:9>_part.step\",\"file_size\":62,\"figure_ref\":\"REQ-1-FIG-4\",\"figure_num\":4,\"version\":1,\"created_at\":\"<time@step 45>\",\"kind\":\"model\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "id": "<step>",
+        "artifact_id": "<req>",
+        "filename": "REQ-1-FIG-4.step",
+        "original_filename": "part.step",
+        "title": "",
+        "mime_type": "model/step",
+        "file_path": "<tmp>/uploads/<uuid:9>_part.step",
+        "file_size": 62,
+        "figure_ref": "REQ-1-FIG-4",
+        "figure_num": 4,
+        "version": 1,
+        "created_at": "<time@step 45>",
+        "kind": "model"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 46,
+      "title": "download the STEP model: an attachment, sandboxed",
+      "actor": "owner",
+      "route": "GET /api/v1/attachments/{id}/download",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/attachments/<step>/download"
+      },
+      "status": 200,
+      "content_type": "model/step",
+      "headers": [
+        "Accept-Ranges: bytes",
+        "Cache-Control: public, max-age=31536000",
+        "Content-Disposition: attachment; filename=\"REQ-1-FIG-4.step\"",
+        "Last-Modified: <http-date>"
+      ],
+      "security_headers": [
+        "Content-Security-Policy: sandbox; default-src 'none'; frame-ancestors 'none'",
+        "Referrer-Policy: strict-origin-when-cross-origin",
+        "X-Content-Type-Options: nosniff",
+        "X-Frame-Options: DENY"
+      ],
+      "content_length": 62,
+      "kind": "text",
+      "body": [
+        "ISO-10303-21;",
+        "HEADER;",
+        "ENDSEC;",
+        "DATA;",
+        "ENDSEC;",
+        "END-ISO-10303-21;"
+      ],
+      "trailing_newline": true,
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 47,
+      "title": "upload a PNG with a title: figure 5",
+      "actor": "owner",
+      "route": "POST /api/v1/attachments/upload",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/attachments/upload",
+        "headers": [
+          "Content-Type: multipart/form-data; boundary=TourFormBoundary7MA4YWxkTrZu0gW"
+        ],
+        "body": {
+          "kind": "multipart",
+          "summary": [
+            {
+              "headers": [
+                "Content-Disposition: form-data; name=\"artifact_id\""
+              ],
+              "body": "<req>"
+            },
+            {
+              "headers": [
+                "Content-Disposition: form-data; name=\"title\""
+              ],
+              "body": "Front view"
+            },
+            {
+              "headers": [
+                "Content-Disposition: form-data; name=\"file\"; filename=\"front.png\"",
+                "Content-Type: image/png"
+              ],
+              "body_base64": "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAEklEQVR42mP4z8DAAMIM/4EAAB/uBfvxq7p3AAAAAElFTkSuQmCC"
+            }
+          ]
+        }
+      },
+      "status": 201,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"id\":\"<front>\",\"artifact_id\":\"<req>\",\"filename\":\"REQ-1-FIG-5.png\",\"original_filename\":\"front.png\",\"title\":\"Front view\",\"mime_type\":\"image/png\",\"file_path\":\"<tmp>/uploads/<uuid:10>_front.png\",\"file_size\":75,\"figure_ref\":\"REQ-1-FIG-5\",\"figure_num\":5,\"version\":1,\"created_at\":\"<time@step 47>\",\"kind\":\"image\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "id": "<front>",
+        "artifact_id": "<req>",
+        "filename": "REQ-1-FIG-5.png",
+        "original_filename": "front.png",
+        "title": "Front view",
+        "mime_type": "image/png",
+        "file_path": "<tmp>/uploads/<uuid:10>_front.png",
+        "file_size": 75,
+        "figure_ref": "REQ-1-FIG-5",
+        "figure_num": 5,
+        "version": 1,
+        "created_at": "<time@step 47>",
+        "kind": "image"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 48,
+      "title": "upload a PNG to TC-1: its own figure 1",
+      "actor": "owner",
+      "route": "POST /api/v1/attachments/upload",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/attachments/upload",
+        "headers": [
+          "Content-Type: multipart/form-data; boundary=TourFormBoundary7MA4YWxkTrZu0gW"
+        ],
+        "body": {
+          "kind": "multipart",
+          "summary": [
+            {
+              "headers": [
+                "Content-Disposition: form-data; name=\"artifact_id\""
+              ],
+              "body": "<tc>"
+            },
+            {
+              "headers": [
+                "Content-Disposition: form-data; name=\"file\"; filename=\"bench.png\"",
+                "Content-Type: image/png"
+              ],
+              "body_base64": "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAEklEQVR42mP4z8DAAMIM/4EAAB/uBfvxq7p3AAAAAElFTkSuQmCC"
+            }
+          ]
+        }
+      },
+      "status": 201,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"id\":\"<bench>\",\"artifact_id\":\"<tc>\",\"filename\":\"TC-1-FIG-1.png\",\"original_filename\":\"bench.png\",\"title\":\"\",\"mime_type\":\"image/png\",\"file_path\":\"<tmp>/uploads/<uuid:11>_bench.png\",\"file_size\":75,\"figure_ref\":\"TC-1-FIG-1\",\"figure_num\":1,\"version\":1,\"created_at\":\"<time@step 48>\",\"kind\":\"image\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "id": "<bench>",
+        "artifact_id": "<tc>",
+        "filename": "TC-1-FIG-1.png",
+        "original_filename": "bench.png",
+        "title": "",
+        "mime_type": "image/png",
+        "file_path": "<tmp>/uploads/<uuid:11>_bench.png",
+        "file_size": 75,
+        "figure_ref": "TC-1-FIG-1",
+        "figure_num": 1,
+        "version": 1,
+        "created_at": "<time@step 48>",
+        "kind": "image"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 49,
+      "title": "REQ-1's figures, in figure order",
+      "actor": "owner",
+      "route": "GET /api/v1/artifacts/{artifactID}/attachments",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/artifacts/<req>/attachments"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "[{\"id\":\"<fig>\",\"artifact_id\":\"<req>\",\"filename\":\"REQ-1-FIG-1.png\",\"original_filename\":\"fig.png\",\"title\":\"\",\"mime_type\":\"image/png\",\"file_path\":\"<tmp>/uploads/<uuid:1>_fig.png\",\"file_size\":75,\"figure_ref\":\"REQ-1-FIG-1\",\"figure_num\":1,\"version\":4,\"created_at\":\"<time@step 11>\",\"kind\":\"image\"},{\"id\":\"<pdf>\",\"artifact_id\":\"<req>\",\"filename\":\"REQ-1-FIG-2.pdf\",\"original_filename\":\"spec.pdf\",\"title\":\"\",\"mime_type\":\"application/pdf\",\"file_path\":\"<tmp>/uploads/<uuid:7>_spec.pdf\",\"file_size\":15,\"figure_ref\":\"REQ-1-FIG-2\",\"figure_num\":2,\"version\":1,\"created_at\":\"<time@step 41>\",\"kind\":\"document\"},{\"id\":\"<svg>\",\"artifact_id\":\"<req>\",\"filename\":\"REQ-1-FIG-3.svg\",\"original_filename\":\"outline.svg\",\"title\":\"\",\"mime_type\":\"image/svg+xml\",\"file_path\":\"<tmp>/uploads/<uuid:8>_outline.svg\",\"file_size\":46,\"figure_ref\":\"REQ-1-FIG-3\",\"figure_num\":3,\"version\":1,\"created_at\":\"<time@step 43>\",\"kind\":\"image\"},{\"id\":\"<step>\",\"artifact_id\":\"<req>\",\"filename\":\"REQ-1-FIG-4.step\",\"original_filename\":\"part.step\",\"title\":\"\",\"mime_type\":\"model/step\",\"file_path\":\"<tmp>/uploads/<uuid:9>_part.step\",\"file_size\":62,\"figure_ref\":\"REQ-1-FIG-4\",\"figure_num\":4,\"version\":1,\"created_at\":\"<time@step 45>\",\"kind\":\"model\"},{\"id\":\"<front>\",\"artifact_id\":\"<req>\",\"filename\":\"REQ-1-FIG-5.png\",\"original_filename\":\"front.png\",\"title\":\"Front view\",\"mime_type\":\"image/png\",\"file_path\":\"<tmp>/uploads/<uuid:10>_front.png\",\"file_size\":75,\"figure_ref\":\"REQ-1-FIG-5\",\"figure_num\":5,\"version\":1,\"created_at\":\"<time@step 47>\",\"kind\":\"image\"}]"
+      ],
+      "trailing_newline": true,
+      "parsed": [
+        {
+          "id": "<fig>",
+          "artifact_id": "<req>",
+          "filename": "REQ-1-FIG-1.png",
+          "original_filename": "fig.png",
+          "title": "",
+          "mime_type": "image/png",
+          "file_path": "<tmp>/uploads/<uuid:1>_fig.png",
+          "file_size": 75,
+          "figure_ref": "REQ-1-FIG-1",
+          "figure_num": 1,
+          "version": 4,
+          "created_at": "<time@step 11>",
+          "kind": "image"
+        },
+        {
+          "id": "<pdf>",
+          "artifact_id": "<req>",
+          "filename": "REQ-1-FIG-2.pdf",
+          "original_filename": "spec.pdf",
+          "title": "",
+          "mime_type": "application/pdf",
+          "file_path": "<tmp>/uploads/<uuid:7>_spec.pdf",
+          "file_size": 15,
+          "figure_ref": "REQ-1-FIG-2",
+          "figure_num": 2,
+          "version": 1,
+          "created_at": "<time@step 41>",
+          "kind": "document"
+        },
+        {
+          "id": "<svg>",
+          "artifact_id": "<req>",
+          "filename": "REQ-1-FIG-3.svg",
+          "original_filename": "outline.svg",
+          "title": "",
+          "mime_type": "image/svg+xml",
+          "file_path": "<tmp>/uploads/<uuid:8>_outline.svg",
+          "file_size": 46,
+          "figure_ref": "REQ-1-FIG-3",
+          "figure_num": 3,
+          "version": 1,
+          "created_at": "<time@step 43>",
+          "kind": "image"
+        },
+        {
+          "id": "<step>",
+          "artifact_id": "<req>",
+          "filename": "REQ-1-FIG-4.step",
+          "original_filename": "part.step",
+          "title": "",
+          "mime_type": "model/step",
+          "file_path": "<tmp>/uploads/<uuid:9>_part.step",
+          "file_size": 62,
+          "figure_ref": "REQ-1-FIG-4",
+          "figure_num": 4,
+          "version": 1,
+          "created_at": "<time@step 45>",
+          "kind": "model"
+        },
+        {
+          "id": "<front>",
+          "artifact_id": "<req>",
+          "filename": "REQ-1-FIG-5.png",
+          "original_filename": "front.png",
+          "title": "Front view",
+          "mime_type": "image/png",
+          "file_path": "<tmp>/uploads/<uuid:10>_front.png",
+          "file_size": 75,
+          "figure_ref": "REQ-1-FIG-5",
+          "figure_num": 5,
+          "version": 1,
+          "created_at": "<time@step 47>",
+          "kind": "image"
+        }
+      ],
+      "gzip": {
+        "content_encoding": "gzip",
+        "content_type": "application/json",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "n": 50,
+      "title": "REQ-2's figures: still null (Q14)",
+      "actor": "owner",
+      "route": "GET /api/v1/artifacts/{artifactID}/attachments",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/artifacts/<bare>/attachments"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 5,
+      "kind": "json",
+      "body": [
+        "null"
+      ],
+      "trailing_newline": true,
+      "parsed": null,
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 51,
+      "title": "the project's figures: by artifact (sort order, then creation), then figure number",
+      "actor": "owner",
+      "route": "GET /api/v1/projects/{projectID}/attachments",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/projects/<project>/attachments"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "[{\"id\":\"<fig>\",\"artifact_id\":\"<req>\",\"filename\":\"REQ-1-FIG-1.png\",\"original_filename\":\"fig.png\",\"title\":\"\",\"mime_type\":\"image/png\",\"file_path\":\"<tmp>/uploads/<uuid:1>_fig.png\",\"file_size\":75,\"figure_ref\":\"REQ-1-FIG-1\",\"figure_num\":1,\"version\":4,\"created_at\":\"<time@step 11>\",\"kind\":\"image\"},{\"id\":\"<pdf>\",\"artifact_id\":\"<req>\",\"filename\":\"REQ-1-FIG-2.pdf\",\"original_filename\":\"spec.pdf\",\"title\":\"\",\"mime_type\":\"application/pdf\",\"file_path\":\"<tmp>/uploads/<uuid:7>_spec.pdf\",\"file_size\":15,\"figure_ref\":\"REQ-1-FIG-2\",\"figure_num\":2,\"version\":1,\"created_at\":\"<time@step 41>\",\"kind\":\"document\"},{\"id\":\"<svg>\",\"artifact_id\":\"<req>\",\"filename\":\"REQ-1-FIG-3.svg\",\"original_filename\":\"outline.svg\",\"title\":\"\",\"mime_type\":\"image/svg+xml\",\"file_path\":\"<tmp>/uploads/<uuid:8>_outline.svg\",\"file_size\":46,\"figure_ref\":\"REQ-1-FIG-3\",\"figure_num\":3,\"version\":1,\"created_at\":\"<time@step 43>\",\"kind\":\"image\"},{\"id\":\"<step>\",\"artifact_id\":\"<req>\",\"filename\":\"REQ-1-FIG-4.step\",\"original_filename\":\"part.step\",\"title\":\"\",\"mime_type\":\"model/step\",\"file_path\":\"<tmp>/uploads/<uuid:9>_part.step\",\"file_size\":62,\"figure_ref\":\"REQ-1-FIG-4\",\"figure_num\":4,\"version\":1,\"created_at\":\"<time@step 45>\",\"kind\":\"model\"},{\"id\":\"<front>\",\"artifact_id\":\"<req>\",\"filename\":\"REQ-1-FIG-5.png\",\"original_filename\":\"front.png\",\"title\":\"Front view\",\"mime_type\":\"image/png\",\"file_path\":\"<tmp>/uploads/<uuid:10>_front.png\",\"file_size\":75,\"figure_ref\":\"REQ-1-FIG-5\",\"figure_num\":5,\"version\":1,\"created_at\":\"<time@step 47>\",\"kind\":\"image\"},{\"id\":\"<bench>\",\"artifact_id\":\"<tc>\",\"filename\":\"TC-1-FIG-1.png\",\"original_filename\":\"bench.png\",\"title\":\"\",\"mime_type\":\"image/png\",\"file_path\":\"<tmp>/uploads/<uuid:11>_bench.png\",\"file_size\":75,\"figure_ref\":\"TC-1-FIG-1\",\"figure_num\":1,\"version\":1,\"created_at\":\"<time@step 48>\",\"kind\":\"image\"}]"
+      ],
+      "trailing_newline": true,
+      "parsed": [
+        {
+          "id": "<fig>",
+          "artifact_id": "<req>",
+          "filename": "REQ-1-FIG-1.png",
+          "original_filename": "fig.png",
+          "title": "",
+          "mime_type": "image/png",
+          "file_path": "<tmp>/uploads/<uuid:1>_fig.png",
+          "file_size": 75,
+          "figure_ref": "REQ-1-FIG-1",
+          "figure_num": 1,
+          "version": 4,
+          "created_at": "<time@step 11>",
+          "kind": "image"
+        },
+        {
+          "id": "<pdf>",
+          "artifact_id": "<req>",
+          "filename": "REQ-1-FIG-2.pdf",
+          "original_filename": "spec.pdf",
+          "title": "",
+          "mime_type": "application/pdf",
+          "file_path": "<tmp>/uploads/<uuid:7>_spec.pdf",
+          "file_size": 15,
+          "figure_ref": "REQ-1-FIG-2",
+          "figure_num": 2,
+          "version": 1,
+          "created_at": "<time@step 41>",
+          "kind": "document"
+        },
+        {
+          "id": "<svg>",
+          "artifact_id": "<req>",
+          "filename": "REQ-1-FIG-3.svg",
+          "original_filename": "outline.svg",
+          "title": "",
+          "mime_type": "image/svg+xml",
+          "file_path": "<tmp>/uploads/<uuid:8>_outline.svg",
+          "file_size": 46,
+          "figure_ref": "REQ-1-FIG-3",
+          "figure_num": 3,
+          "version": 1,
+          "created_at": "<time@step 43>",
+          "kind": "image"
+        },
+        {
+          "id": "<step>",
+          "artifact_id": "<req>",
+          "filename": "REQ-1-FIG-4.step",
+          "original_filename": "part.step",
+          "title": "",
+          "mime_type": "model/step",
+          "file_path": "<tmp>/uploads/<uuid:9>_part.step",
+          "file_size": 62,
+          "figure_ref": "REQ-1-FIG-4",
+          "figure_num": 4,
+          "version": 1,
+          "created_at": "<time@step 45>",
+          "kind": "model"
+        },
+        {
+          "id": "<front>",
+          "artifact_id": "<req>",
+          "filename": "REQ-1-FIG-5.png",
+          "original_filename": "front.png",
+          "title": "Front view",
+          "mime_type": "image/png",
+          "file_path": "<tmp>/uploads/<uuid:10>_front.png",
+          "file_size": 75,
+          "figure_ref": "REQ-1-FIG-5",
+          "figure_num": 5,
+          "version": 1,
+          "created_at": "<time@step 47>",
+          "kind": "image"
+        },
+        {
+          "id": "<bench>",
+          "artifact_id": "<tc>",
+          "filename": "TC-1-FIG-1.png",
+          "original_filename": "bench.png",
+          "title": "",
+          "mime_type": "image/png",
+          "file_path": "<tmp>/uploads/<uuid:11>_bench.png",
+          "file_size": 75,
+          "figure_ref": "TC-1-FIG-1",
+          "figure_num": 1,
+          "version": 1,
+          "created_at": "<time@step 48>",
+          "kind": "image"
+        }
+      ],
+      "gzip": {
+        "content_encoding": "gzip",
+        "content_type": "application/json",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "n": 52,
+      "title": "REQ-1's notes: one per figure added, new version and rename, newest first",
+      "actor": "owner",
+      "route": "GET /api/v1/chatter",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/chatter",
+        "query": "artifact_id=<req>"
+      },
+      "notes": [
+        "the restore wrote none"
+      ],
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "[{\"id\":\"<uuid:12>\",\"artifact_id\":\"<req>\",\"message\":\"Figure REQ-1-FIG-5 added (version 1) — Front view.\",\"is_auto_entry\":true,\"entry_type\":\"figure-change\",\"created_by\":\"<owner>\",\"author_name\":\"Tour Owner\",\"created_at\":\"<time@step 47>\",\"updated_at\":\"<time@step 47>\"},{\"id\":\"<uuid:13>\",\"artifact_id\":\"<req>\",\"message\":\"Figure REQ-1-FIG-4 added (version 1) — part.step.\",\"is_auto_entry\":true,\"entry_type\":\"figure-change\",\"created_by\":\"<owner>\",\"author_name\":\"Tour Owner\",\"created_at\":\"<time@step 45>\",\"updated_at\":\"<time@step 45>\"},{\"id\":\"<uuid:14>\",\"artifact_id\":\"<req>\",\"message\":\"Figure REQ-1-FIG-3 added (version 1) — outline.svg.\",\"is_auto_entry\":true,\"entry_type\":\"figure-change\",\"created_by\":\"<owner>\",\"author_name\":\"Tour Owner\",\"created_at\":\"<time@step 43>\",\"updated_at\":\"<time@step 43>\"},{\"id\":\"<uuid:15>\",\"artifact_id\":\"<req>\",\"message\":\"Figure REQ-1-FIG-2 added (version 1) — spec.pdf.\",\"is_auto_entry\":true,\"entry_type\":\"figure-change\",\"created_by\":\"<owner>\",\"author_name\":\"Tour Owner\",\"created_at\":\"<time@step 41>\",\"updated_at\":\"<time@step 41>\"},{\"id\":\"<uuid:16>\",\"artifact_id\":\"<req>\",\"message\":\"Figure REQ-1-FIG-1 renamed (version 2 to 3) — \\\"fig2.png\\\" is now \\\"Wiring diagram\\\".\",\"is_auto_entry\":true,\"entry_type\":\"figure-change\",\"created_by\":\"<owner>\",\"author_name\":\"Tour Owner\",\"created_at\":\"<time@step 30>\",\"updated_at\":\"<time@step 30>\"},{\"id\":\"<uuid:17>\",\"artifact_id\":\"<req>\",\"message\":\"Figure REQ-1-FIG-1 updated from version 1 to 2 — fig2.png.\",\"is_auto_entry\":true,\"entry_type\":\"figure-change\",\"created_by\":\"<owner>\",\"author_name\":\"Tour Owner\",\"created_at\":\"<time@step 21>\",\"updated_at\":\"<time@step 21>\"},{\"id\":\"<uuid:18>\",\"artifact_id\":\"<req>\",\"message\":\"Figure REQ-1-FIG-1 added (version 1) — fig.png.\",\"is_auto_entry\":true,\"entry_type\":\"figure-change\",\"created_by\":\"<owner>\",\"author_name\":\"Tour Owner\",\"created_at\":\"<time@step 11>\",\"updated_at\":\"<time@step 11>\"}]"
+      ],
+      "trailing_newline": true,
+      "parsed": [
+        {
+          "id": "<uuid:12>",
+          "artifact_id": "<req>",
+          "message": "Figure REQ-1-FIG-5 added (version 1) — Front view.",
+          "is_auto_entry": true,
+          "entry_type": "figure-change",
+          "created_by": "<owner>",
+          "author_name": "Tour Owner",
+          "created_at": "<time@step 47>",
+          "updated_at": "<time@step 47>"
+        },
+        {
+          "id": "<uuid:13>",
+          "artifact_id": "<req>",
+          "message": "Figure REQ-1-FIG-4 added (version 1) — part.step.",
+          "is_auto_entry": true,
+          "entry_type": "figure-change",
+          "created_by": "<owner>",
+          "author_name": "Tour Owner",
+          "created_at": "<time@step 45>",
+          "updated_at": "<time@step 45>"
+        },
+        {
+          "id": "<uuid:14>",
+          "artifact_id": "<req>",
+          "message": "Figure REQ-1-FIG-3 added (version 1) — outline.svg.",
+          "is_auto_entry": true,
+          "entry_type": "figure-change",
+          "created_by": "<owner>",
+          "author_name": "Tour Owner",
+          "created_at": "<time@step 43>",
+          "updated_at": "<time@step 43>"
+        },
+        {
+          "id": "<uuid:15>",
+          "artifact_id": "<req>",
+          "message": "Figure REQ-1-FIG-2 added (version 1) — spec.pdf.",
+          "is_auto_entry": true,
+          "entry_type": "figure-change",
+          "created_by": "<owner>",
+          "author_name": "Tour Owner",
+          "created_at": "<time@step 41>",
+          "updated_at": "<time@step 41>"
+        },
+        {
+          "id": "<uuid:16>",
+          "artifact_id": "<req>",
+          "message": "Figure REQ-1-FIG-1 renamed (version 2 to 3) — \"fig2.png\" is now \"Wiring diagram\".",
+          "is_auto_entry": true,
+          "entry_type": "figure-change",
+          "created_by": "<owner>",
+          "author_name": "Tour Owner",
+          "created_at": "<time@step 30>",
+          "updated_at": "<time@step 30>"
+        },
+        {
+          "id": "<uuid:17>",
+          "artifact_id": "<req>",
+          "message": "Figure REQ-1-FIG-1 updated from version 1 to 2 — fig2.png.",
+          "is_auto_entry": true,
+          "entry_type": "figure-change",
+          "created_by": "<owner>",
+          "author_name": "Tour Owner",
+          "created_at": "<time@step 21>",
+          "updated_at": "<time@step 21>"
+        },
+        {
+          "id": "<uuid:18>",
+          "artifact_id": "<req>",
+          "message": "Figure REQ-1-FIG-1 added (version 1) — fig.png.",
+          "is_auto_entry": true,
+          "entry_type": "figure-change",
+          "created_by": "<owner>",
+          "author_name": "Tour Owner",
+          "created_at": "<time@step 11>",
+          "updated_at": "<time@step 11>"
+        }
+      ],
+      "gzip": {
+        "content_encoding": "gzip",
+        "content_type": "application/json",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "n": 53,
+      "title": "an outsider reads the figure's metadata",
+      "actor": "outsider",
+      "route": "GET /api/v1/attachments/{id}",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/attachments/<fig>"
+      },
+      "status": 403,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 51,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"you do not have access to this project\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "you do not have access to this project"
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 54,
+      "title": "an outsider downloads the figure",
+      "actor": "outsider",
+      "route": "GET /api/v1/attachments/{id}/download",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/attachments/<fig>/download"
+      },
+      "status": 403,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 51,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"you do not have access to this project\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "you do not have access to this project"
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 55,
+      "title": "an outsider lists the project's figures",
+      "actor": "outsider",
+      "route": "GET /api/v1/projects/{projectID}/attachments",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/projects/<project>/attachments"
+      },
+      "status": 403,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 51,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"you do not have access to this project\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "you do not have access to this project"
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 56,
+      "title": "a download with no session",
+      "actor": "anonymous",
+      "route": "GET /api/v1/attachments/{id}/download",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/attachments/<fig>/download"
+      },
+      "notes": [
+        "the auth middleware answers before routing; an <img> tag's request carries the session cookie"
+      ],
+      "status": 401,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 36,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"authentication required\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "authentication required"
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 57,
+      "title": "the metadata of a figure that does not exist",
+      "actor": "owner",
+      "route": "GET /api/v1/attachments/{id}",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/attachments/<phantom>"
+      },
+      "status": 404,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 33,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"Attachment not found\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "Attachment not found"
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 58,
+      "title": "download a figure that does not exist",
+      "actor": "owner",
+      "route": "GET /api/v1/attachments/{id}/download",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/attachments/<phantom>/download"
+      },
+      "status": 404,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 33,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"Attachment not found\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "Attachment not found"
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 59,
+      "title": "the versions of a figure that does not exist",
+      "actor": "owner",
+      "route": "GET /api/v1/attachments/{id}/versions",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/attachments/<phantom>/versions"
+      },
+      "status": 404,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 33,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"Attachment not found\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "Attachment not found"
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 60,
+      "title": "a new version of a figure that does not exist",
+      "actor": "owner",
+      "route": "POST /api/v1/attachments/{id}/versions",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/attachments/<phantom>/versions",
+        "headers": [
+          "Content-Type: multipart/form-data; boundary=TourFormBoundary7MA4YWxkTrZu0gW"
+        ],
+        "body": {
+          "kind": "multipart",
+          "summary": [
+            {
+              "headers": [
+                "Content-Disposition: form-data; name=\"file\"; filename=\"fig.png\"",
+                "Content-Type: image/png"
+              ],
+              "body_base64": "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAEklEQVR42mP4z8DAAMIM/4EAAB/uBfvxq7p3AAAAAElFTkSuQmCC"
+            }
+          ]
+        }
+      },
+      "status": 404,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 33,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"Attachment not found\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "Attachment not found"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 61,
+      "title": "rename a figure that does not exist",
+      "actor": "owner",
+      "route": "PUT /api/v1/attachments/{id}",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/attachments/<phantom>",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"title\":\"Nothing\"}"
+      },
+      "status": 404,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 33,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"Attachment not found\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "Attachment not found"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 62,
+      "title": "restore a version of a figure that does not exist",
+      "actor": "owner",
+      "route": "POST /api/v1/attachments/{id}/versions/{version}/restore",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/attachments/<phantom>/versions/1/restore"
+      },
+      "status": 404,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 33,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"Attachment not found\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "Attachment not found"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 63,
+      "title": "delete a figure that does not exist",
+      "actor": "owner",
+      "route": "DELETE /api/v1/attachments/{id}",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/attachments/<phantom>"
+      },
+      "status": 404,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 33,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"Attachment not found\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "Attachment not found"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 64,
+      "title": "the figures of an artifact that does not exist",
+      "actor": "owner",
+      "route": "GET /api/v1/artifacts/{artifactID}/attachments",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/artifacts/<phantom>/attachments"
+      },
+      "status": 404,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 30,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"project not found\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "project not found"
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 65,
+      "title": "the figures of a project that does not exist",
+      "actor": "owner",
+      "route": "GET /api/v1/projects/{projectID}/attachments",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/projects/<phantom>/attachments"
+      },
+      "status": 403,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 51,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"you do not have access to this project\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "you do not have access to this project"
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 66,
+      "title": "restore REQ-1 to its version 1: the restore draws it a new ref, REQ-3",
+      "actor": "owner",
+      "route": "POST /api/v1/artifacts/{id}/restore",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/artifacts/<req>/restore",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"version\":1}"
+      },
+      "notes": [
+        "the artifacts area pins this route; it is here for what it does to the figures' refs"
+      ],
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"id\":\"<req>\",\"project_id\":\"<project>\",\"type\":\"requirement\",\"ref\":\"REQ-3\",\"title\":\"Show the wiring\",\"body\":\"The system shall show its wiring diagram.\",\"sort_order\":1,\"status\":\"draft\",\"attributes\":{\"status\":\"draft\"},\"version\":4,\"valid_from\":\"<time@step 66>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@step 66>\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "id": "<req>",
+        "project_id": "<project>",
+        "type": "requirement",
+        "ref": "REQ-3",
+        "title": "Show the wiring",
+        "body": "The system shall show its wiring diagram.",
+        "sort_order": 1,
+        "status": "draft",
+        "attributes": {
+          "status": "draft"
+        },
+        "version": 4,
+        "valid_from": "<time@step 66>",
+        "valid_to": null,
+        "created_at": "<time@before step 1>",
+        "updated_at": "<time@step 66>"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 67,
+      "title": "figure 1 after the artifact's restore: still REQ-1-FIG-1",
+      "actor": "owner",
+      "route": "GET /api/v1/attachments/{id}",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/attachments/<fig>"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"id\":\"<fig>\",\"artifact_id\":\"<req>\",\"filename\":\"REQ-1-FIG-1.png\",\"original_filename\":\"fig.png\",\"title\":\"\",\"mime_type\":\"image/png\",\"file_path\":\"<tmp>/uploads/<uuid:1>_fig.png\",\"file_size\":75,\"figure_ref\":\"REQ-1-FIG-1\",\"figure_num\":1,\"version\":4,\"created_at\":\"<time@step 11>\",\"kind\":\"image\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "id": "<fig>",
+        "artifact_id": "<req>",
+        "filename": "REQ-1-FIG-1.png",
+        "original_filename": "fig.png",
+        "title": "",
+        "mime_type": "image/png",
+        "file_path": "<tmp>/uploads/<uuid:1>_fig.png",
+        "file_size": 75,
+        "figure_ref": "REQ-1-FIG-1",
+        "figure_num": 1,
+        "version": 4,
+        "created_at": "<time@step 11>",
+        "kind": "image"
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 68,
+      "title": "a figure uploaded after the restore: REQ-3-FIG-6",
+      "actor": "owner",
+      "route": "POST /api/v1/attachments/upload",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/attachments/upload",
+        "headers": [
+          "Content-Type: multipart/form-data; boundary=TourFormBoundary7MA4YWxkTrZu0gW"
+        ],
+        "body": {
+          "kind": "multipart",
+          "summary": [
+            {
+              "headers": [
+                "Content-Disposition: form-data; name=\"artifact_id\""
+              ],
+              "body": "<req>"
+            },
+            {
+              "headers": [
+                "Content-Disposition: form-data; name=\"file\"; filename=\"after.png\"",
+                "Content-Type: image/png"
+              ],
+              "body_base64": "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAEklEQVR42mP4z8DAAMIM/4EAAB/uBfvxq7p3AAAAAElFTkSuQmCC"
+            }
+          ]
+        }
+      },
+      "status": 201,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"id\":\"<after>\",\"artifact_id\":\"<req>\",\"filename\":\"REQ-3-FIG-6.png\",\"original_filename\":\"after.png\",\"title\":\"\",\"mime_type\":\"image/png\",\"file_path\":\"<tmp>/uploads/<uuid:19>_after.png\",\"file_size\":75,\"figure_ref\":\"REQ-3-FIG-6\",\"figure_num\":6,\"version\":1,\"created_at\":\"<time@step 68>\",\"kind\":\"image\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "id": "<after>",
+        "artifact_id": "<req>",
+        "filename": "REQ-3-FIG-6.png",
+        "original_filename": "after.png",
+        "title": "",
+        "mime_type": "image/png",
+        "file_path": "<tmp>/uploads/<uuid:19>_after.png",
+        "file_size": 75,
+        "figure_ref": "REQ-3-FIG-6",
+        "figure_num": 6,
+        "version": 1,
+        "created_at": "<time@step 68>",
+        "kind": "image"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 69,
+      "title": "rename the SVG to 255 two-byte characters: accepted",
+      "actor": "owner",
+      "route": "PUT /api/v1/attachments/{id}",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/attachments/<svg>",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"title\":\"ééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé\"}"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"id\":\"<svg>\",\"artifact_id\":\"<req>\",\"filename\":\"REQ-1-FIG-3.svg\",\"original_filename\":\"outline.svg\",\"title\":\"ééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé\",\"mime_type\":\"image/svg+xml\",\"file_path\":\"<tmp>/uploads/<uuid:8>_outline.svg\",\"file_size\":46,\"figure_ref\":\"REQ-1-FIG-3\",\"figure_num\":3,\"version\":2,\"created_at\":\"<time@step 43>\",\"kind\":\"image\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "id": "<svg>",
+        "artifact_id": "<req>",
+        "filename": "REQ-1-FIG-3.svg",
+        "original_filename": "outline.svg",
+        "title": "ééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé",
+        "mime_type": "image/svg+xml",
+        "file_path": "<tmp>/uploads/<uuid:8>_outline.svg",
+        "file_size": 46,
+        "figure_ref": "REQ-1-FIG-3",
+        "figure_num": 3,
+        "version": 2,
+        "created_at": "<time@step 43>",
+        "kind": "image"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 70,
+      "title": "delete figure 1",
+      "actor": "owner",
+      "route": "DELETE /api/v1/attachments/{id}",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/attachments/<fig>"
+      },
+      "notes": [
+        "the current version's file is removed; a superseded version's file stays on disk (uploads[])"
+      ],
+      "status": 204,
+      "content_type": null,
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": null,
+      "kind": "empty",
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 71,
+      "title": "its metadata once deleted",
+      "actor": "owner",
+      "route": "GET /api/v1/attachments/{id}",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/attachments/<fig>"
+      },
+      "status": 404,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 33,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"Attachment not found\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "Attachment not found"
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 72,
+      "title": "download it once deleted",
+      "actor": "owner",
+      "route": "GET /api/v1/attachments/{id}/download",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/attachments/<fig>/download"
+      },
+      "status": 404,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 33,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"Attachment not found\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "Attachment not found"
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 73,
+      "title": "its versions once deleted",
+      "actor": "owner",
+      "route": "GET /api/v1/attachments/{id}/versions",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/attachments/<fig>/versions"
+      },
+      "status": 404,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 33,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"Attachment not found\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "Attachment not found"
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 74,
+      "title": "REQ-1's figures once all are deleted: null again (Q14)",
+      "actor": "owner",
+      "route": "GET /api/v1/artifacts/{artifactID}/attachments",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/artifacts/<req>/attachments"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 5,
+      "kind": "json",
+      "body": [
+        "null"
+      ],
+      "trailing_newline": true,
+      "parsed": null,
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 75,
+      "title": "the project's figures once all are deleted: []",
+      "actor": "owner",
+      "route": "GET /api/v1/projects/{projectID}/attachments",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/projects/<project>/attachments"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 3,
+      "kind": "json",
+      "body": [
+        "[]"
+      ],
+      "trailing_newline": true,
+      "parsed": [],
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    }
+  ],
+  "uploads": [
+    "<uuid:2>_fig2.png (117 bytes)"
+  ],
+  "outbound_requests": [
+    "none: the server sent no request through HTTP_PROXY or HTTPS_PROXY"
+  ]
+}

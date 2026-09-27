@@ -222,12 +222,12 @@ class DataTest(unittest.TestCase):
         # renaming a golden or its directory cannot drop it from the list
         # unnoticed. A new fixture beside a golden is not one, so this does
         # not list every file under those directories.
-        merged = {"I1, pre-S2", "S2", "S3", "S4", "S6", "S6, S13", "S7", "S12, S12b, S16"}
+        merged = {"I1, pre-S2", "S2", "S3", "S4", "S5", "S6", "S6, S13", "S7", "S12, S12b, S16"}
         files = subprocess.run(["git", "ls-files"], cwd=REPO, capture_output=True, text=True,
                                check=True).stdout.split("\n")
         files = [f for f in files if f and not f.endswith(".gitattributes")]
         entries = [(step, what, patterns) for step, what, patterns in rg.GOLDEN_LIST if step in merged]
-        self.assertEqual(len(entries), 14)
+        self.assertEqual(len(entries), 15)
         for step, what, patterns in entries:
             with self.subTest(step=step, golden=what):
                 self.assertTrue(any(rg.matches(f, patterns) for f in files),
@@ -236,7 +236,7 @@ class DataTest(unittest.TestCase):
     def test_merged_guard_code_exists(self):
         # A literal guard-code path of a merged step that no longer exists
         # would protect nothing; rename it here in the same commit.
-        merged = {"S1", "I1, S2", "S3", "S4a", "S4b", "S6", "S7", "S12", "S14a", "S14b"}
+        merged = {"S1", "I1, S2", "S3", "S4a", "S4b", "S5a-S5e", "S6", "S7", "S12", "S14a", "S14b"}
         for step, patterns in rg.GUARD_CODE:
             for p in patterns:
                 if step in merged and "*" not in p:

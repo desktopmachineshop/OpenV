@@ -1,0 +1,5 @@
+# Byte-compared goldens of the API tour (refactor plan step S5a-S5e): a
+# checkout with CRLF line endings would fail every comparison, so they stay
+# LF on every platform. Fixture bytes (PNG, PDF) live in Go source
+# (cmd/server/tour_fixtures_test.go), never here.
+* text eol=lf
