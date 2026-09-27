@@ -1,0 +1,1067 @@
+# Stored-data freeze, part (c) (refactor plan S3, invariant I16; OpenV REQ-89): the schema
+# after Migrate on a fresh database (also what the first MigrateAndBackfill leaves, with no user yet).
+# From pg_catalog, sorted by name: extensions, types, sequences, tables (row count, columns in
+# column order, constraints, indexes, triggers), views, functions and the migration ledger.
+# A line ending in @requires(x) exists only where extension x is installed; the plain postgres:15
+# CI leg (no vector) expects those lines absent and every other line as written.
+# Regenerate (a behavior change only) with every S3 golden, so that a new migration's body is frozen too,
+# against a server with the vector and pg_trgm extensions:
+# UPDATE_GOLDEN=1 go test ./internal/persistence/postgres -count=1 -run '^(TestMigrationFreeze|TestEveryBootFreeze|TestSchemaGolden|TestPurgeCatalog)$'
+extension pg_trgm  @requires(pg_trgm)
+extension plpgsql
+extension vector  @requires(vector)
+sequence agent_run_logs_id_seq bigint start 1 increment 1 min 1 max 9223372036854775807 cache 1 owned by agent_run_logs.id
+table agent_proposals rows 0
+  column id uuid NOT NULL
+  column run_id uuid NOT NULL
+  column project_id uuid NOT NULL
+  column op character varying(32) NOT NULL
+  column target_id uuid
+  column payload jsonb NOT NULL DEFAULT '{}'::jsonb
+  column status character varying(32) NOT NULL DEFAULT 'pending'::character varying
+  column review_note text NOT NULL DEFAULT ''::text
+  column applied_entity_id uuid
+  column reviewed_by uuid
+  column created_at timestamp without time zone NOT NULL DEFAULT now()
+  column reviewed_at timestamp without time zone
+  column ref text NOT NULL DEFAULT ''::text
+  constraint agent_proposals_pkey PRIMARY KEY (id)
+  constraint agent_proposals_run_id_fkey FOREIGN KEY (run_id) REFERENCES agent_runs(id) ON DELETE CASCADE
+  index agent_proposals_pkey CREATE UNIQUE INDEX agent_proposals_pkey ON public.agent_proposals USING btree (id)
+  index idx_agent_proposals_project CREATE INDEX idx_agent_proposals_project ON public.agent_proposals USING btree (project_id)
+  index idx_agent_proposals_run CREATE INDEX idx_agent_proposals_run ON public.agent_proposals USING btree (run_id)
+  index idx_agent_proposals_status CREATE INDEX idx_agent_proposals_status ON public.agent_proposals USING btree (status, project_id)
+table agent_run_logs rows 0
+  column id bigint NOT NULL DEFAULT nextval('agent_run_logs_id_seq'::regclass)
+  column run_id uuid NOT NULL
+  column seq integer NOT NULL
+  column kind character varying(32) NOT NULL
+  column payload jsonb NOT NULL DEFAULT '{}'::jsonb
+  column created_at timestamp without time zone NOT NULL DEFAULT now()
+  constraint agent_run_logs_pkey PRIMARY KEY (id)
+  constraint agent_run_logs_run_id_fkey FOREIGN KEY (run_id) REFERENCES agent_runs(id) ON DELETE CASCADE
+  constraint agent_run_logs_run_id_seq_key UNIQUE (run_id, seq)
+  index agent_run_logs_pkey CREATE UNIQUE INDEX agent_run_logs_pkey ON public.agent_run_logs USING btree (id)
+  index agent_run_logs_run_id_seq_key CREATE UNIQUE INDEX agent_run_logs_run_id_seq_key ON public.agent_run_logs USING btree (run_id, seq)
+  index idx_agent_run_logs_run CREATE INDEX idx_agent_run_logs_run ON public.agent_run_logs USING btree (run_id, seq)
+table agent_runs rows 0
+  column id uuid NOT NULL
+  column agent_id uuid NOT NULL
+  column project_id uuid
+  column automation_id uuid
+  column trigger_event_id uuid
+  column team_id uuid
+  column team_node_id uuid
+  column parent_run_id uuid
+  column work_item_id uuid
+  column interview_session_id uuid
+  column guided_session_id uuid
+  column status character varying(32) NOT NULL DEFAULT 'queued'::character varying
+  column cancel_requested boolean NOT NULL DEFAULT false
+  column priority integer NOT NULL DEFAULT 0
+  column prompt text NOT NULL
+  column run_token_hash character varying(128) NOT NULL DEFAULT ''::character varying
+  column worker_id character varying(128) NOT NULL DEFAULT ''::character varying
+  column heartbeat_at timestamp without time zone
+  column started_at timestamp without time zone
+  column finished_at timestamp without time zone
+  column exit_code integer
+  column final_text text NOT NULL DEFAULT ''::text
+  column error text NOT NULL DEFAULT ''::text
+  column tokens_in bigint NOT NULL DEFAULT 0
+  column tokens_out bigint NOT NULL DEFAULT 0
+  column cost_usd numeric(10,4)
+  column artifacts_touched jsonb NOT NULL DEFAULT '[]'::jsonb
+  column launched_by uuid
+  column created_at timestamp without time zone NOT NULL DEFAULT now()
+  column org_id uuid
+  column preferred_user_id uuid
+  column hosted_after timestamp without time zone
+  column retried_from_run_id uuid
+  column error_class character varying(32) NOT NULL DEFAULT ''::character varying
+  column attempt_count integer NOT NULL DEFAULT 1
+  column max_attempts integer NOT NULL DEFAULT 1
+  column next_attempt_at timestamp without time zone
+  column agent_content_hash character varying NOT NULL DEFAULT ''::character varying
+  column agent_model character varying NOT NULL DEFAULT ''::character varying
+  column agent_effort character varying NOT NULL DEFAULT ''::character varying
+  column partial_text text NOT NULL DEFAULT ''::text
+  constraint agent_runs_agent_id_fkey FOREIGN KEY (agent_id) REFERENCES agents(id) ON DELETE CASCADE
+  constraint agent_runs_pkey PRIMARY KEY (id)
+  index agent_runs_pkey CREATE UNIQUE INDEX agent_runs_pkey ON public.agent_runs USING btree (id)
+  index idx_agent_runs_agent_id CREATE INDEX idx_agent_runs_agent_id ON public.agent_runs USING btree (agent_id)
+  index idx_agent_runs_automation CREATE INDEX idx_agent_runs_automation ON public.agent_runs USING btree (automation_id, created_at)
+  index idx_agent_runs_created_at CREATE INDEX idx_agent_runs_created_at ON public.agent_runs USING btree (created_at)
+  index idx_agent_runs_launched_by CREATE INDEX idx_agent_runs_launched_by ON public.agent_runs USING btree (launched_by)
+  index idx_agent_runs_org CREATE INDEX idx_agent_runs_org ON public.agent_runs USING btree (org_id, created_at)
+  index idx_agent_runs_parent CREATE INDEX idx_agent_runs_parent ON public.agent_runs USING btree (parent_run_id)
+  index idx_agent_runs_project_id CREATE INDEX idx_agent_runs_project_id ON public.agent_runs USING btree (project_id)
+  index idx_agent_runs_queued_claim CREATE INDEX idx_agent_runs_queued_claim ON public.agent_runs USING btree (org_id, priority DESC, created_at) WHERE ((status)::text = 'queued'::text)
+  index idx_agent_runs_status CREATE INDEX idx_agent_runs_status ON public.agent_runs USING btree (status)
+  index idx_agent_runs_token_hash CREATE INDEX idx_agent_runs_token_hash ON public.agent_runs USING btree (run_token_hash)
+table agent_team_edges rows 0
+  column id uuid NOT NULL
+  column team_id uuid NOT NULL
+  column from_node_id uuid NOT NULL
+  column to_node_id uuid NOT NULL
+  column edge_type character varying(32) NOT NULL
+  column config jsonb NOT NULL DEFAULT '{}'::jsonb
+  column created_at timestamp without time zone NOT NULL DEFAULT now()
+  constraint agent_team_edges_from_node_id_fkey FOREIGN KEY (from_node_id) REFERENCES agent_team_nodes(id) ON DELETE CASCADE
+  constraint agent_team_edges_pkey PRIMARY KEY (id)
+  constraint agent_team_edges_team_id_fkey FOREIGN KEY (team_id) REFERENCES agent_teams(id) ON DELETE CASCADE
+  constraint agent_team_edges_team_id_from_node_id_to_node_id_edge_type_key UNIQUE (team_id, from_node_id, to_node_id, edge_type)
+  constraint agent_team_edges_to_node_id_fkey FOREIGN KEY (to_node_id) REFERENCES agent_team_nodes(id) ON DELETE CASCADE
+  index agent_team_edges_pkey CREATE UNIQUE INDEX agent_team_edges_pkey ON public.agent_team_edges USING btree (id)
+  index agent_team_edges_team_id_from_node_id_to_node_id_edge_type_key CREATE UNIQUE INDEX agent_team_edges_team_id_from_node_id_to_node_id_edge_type_key ON public.agent_team_edges USING btree (team_id, from_node_id, to_node_id, edge_type)
+  index idx_agent_team_edges_from CREATE INDEX idx_agent_team_edges_from ON public.agent_team_edges USING btree (from_node_id, edge_type)
+  index idx_agent_team_edges_team CREATE INDEX idx_agent_team_edges_team ON public.agent_team_edges USING btree (team_id)
+table agent_team_nodes rows 0
+  column id uuid NOT NULL
+  column team_id uuid NOT NULL
+  column agent_id uuid
+  column label character varying(255) NOT NULL
+  column department character varying(255) NOT NULL DEFAULT ''::character varying
+  column position jsonb NOT NULL DEFAULT '{}'::jsonb
+  column created_at timestamp without time zone NOT NULL DEFAULT now()
+  column node_type character varying(16) NOT NULL DEFAULT 'agent'::character varying
+  column user_id uuid
+  constraint agent_team_nodes_agent_id_fkey FOREIGN KEY (agent_id) REFERENCES agents(id) ON DELETE CASCADE
+  constraint agent_team_nodes_pkey PRIMARY KEY (id)
+  constraint agent_team_nodes_team_id_fkey FOREIGN KEY (team_id) REFERENCES agent_teams(id) ON DELETE CASCADE
+  constraint agent_team_nodes_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  constraint chk_crew_node_identity CHECK (((((node_type)::text = 'agent'::text) AND (agent_id IS NOT NULL) AND (user_id IS NULL)) OR (((node_type)::text = 'human'::text) AND (user_id IS NOT NULL) AND (agent_id IS NULL))))
+  index agent_team_nodes_pkey CREATE UNIQUE INDEX agent_team_nodes_pkey ON public.agent_team_nodes USING btree (id)
+  index idx_agent_team_nodes_agent CREATE INDEX idx_agent_team_nodes_agent ON public.agent_team_nodes USING btree (agent_id)
+  index idx_agent_team_nodes_team CREATE INDEX idx_agent_team_nodes_team ON public.agent_team_nodes USING btree (team_id)
+table agent_teams rows 0
+  column id uuid NOT NULL
+  column name character varying(512) NOT NULL
+  column description text NOT NULL DEFAULT ''::text
+  column project_id uuid
+  column entry_node_id uuid
+  column is_default boolean NOT NULL DEFAULT false
+  column created_at timestamp without time zone NOT NULL DEFAULT now()
+  column updated_at timestamp without time zone NOT NULL DEFAULT now()
+  column org_id uuid
+  constraint agent_teams_pkey PRIMARY KEY (id)
+  index agent_teams_pkey CREATE UNIQUE INDEX agent_teams_pkey ON public.agent_teams USING btree (id)
+table agents rows 0
+  column id uuid NOT NULL
+  column slug character varying(128) NOT NULL
+  column name character varying(512) NOT NULL
+  column description text NOT NULL DEFAULT ''::text
+  column provider character varying(64) NOT NULL
+  column model character varying(128) NOT NULL DEFAULT ''::character varying
+  column effort character varying(16) NOT NULL DEFAULT ''::character varying
+  column allowed_tools jsonb NOT NULL DEFAULT '[]'::jsonb
+  column write_mode character varying(32) NOT NULL DEFAULT 'proposal'::character varying
+  column repo_access boolean NOT NULL DEFAULT false
+  column max_turns integer NOT NULL DEFAULT 50
+  column timeout_seconds integer NOT NULL DEFAULT 1800
+  column config jsonb NOT NULL DEFAULT '{}'::jsonb
+  column locked boolean NOT NULL DEFAULT false
+  column system_prompt text NOT NULL DEFAULT ''::text
+  column file_path character varying(1024) NOT NULL DEFAULT ''::character varying
+  column content_hash character varying(128) NOT NULL DEFAULT ''::character varying
+  column synced_at timestamp without time zone
+  column created_at timestamp without time zone NOT NULL DEFAULT now()
+  column updated_at timestamp without time zone NOT NULL DEFAULT now()
+  column org_id uuid
+  constraint agents_pkey PRIMARY KEY (id)
+  index agents_pkey CREATE UNIQUE INDEX agents_pkey ON public.agents USING btree (id)
+  index idx_agents_org_slug CREATE UNIQUE INDEX idx_agents_org_slug ON public.agents USING btree (org_id, slug)
+  index idx_agents_slug_lookup CREATE INDEX idx_agents_slug_lookup ON public.agents USING btree (slug)
+table artifact_embeddings rows 0  @requires(vector)
+  column artifact_id uuid NOT NULL  @requires(vector)
+  column artifact_version integer NOT NULL  @requires(vector)
+  column embedding vector(1536) NOT NULL  @requires(vector)
+  column model character varying NOT NULL  @requires(vector)
+  column content_hash character varying NOT NULL  @requires(vector)
+  column created_at timestamp with time zone NOT NULL DEFAULT now()  @requires(vector)
+  constraint artifact_embeddings_pkey PRIMARY KEY (artifact_id)  @requires(vector)
+  index artifact_embeddings_pkey CREATE UNIQUE INDEX artifact_embeddings_pkey ON public.artifact_embeddings USING btree (artifact_id)  @requires(vector)
+  index idx_artifact_embeddings_hnsw CREATE INDEX idx_artifact_embeddings_hnsw ON public.artifact_embeddings USING hnsw (embedding vector_cosine_ops)  @requires(vector)
+table artifact_ref_counters rows 0
+  column project_id uuid NOT NULL
+  column prefix character varying(16) NOT NULL
+  column next_num integer NOT NULL
+  constraint artifact_ref_counters_pkey PRIMARY KEY (project_id, prefix)
+  index artifact_ref_counters_pkey CREATE UNIQUE INDEX artifact_ref_counters_pkey ON public.artifact_ref_counters USING btree (project_id, prefix)
+table artifacts rows 0
+  column id uuid NOT NULL
+  column project_id uuid NOT NULL
+  column parent_id uuid
+  column type character varying(255) NOT NULL
+  column title character varying(512) NOT NULL
+  column body text
+  column sort_order integer NOT NULL DEFAULT 0
+  column attributes jsonb DEFAULT '{}'::jsonb
+  column version integer NOT NULL DEFAULT 1
+  column valid_from timestamp without time zone NOT NULL DEFAULT now()
+  column valid_to timestamp without time zone
+  column created_at timestamp without time zone NOT NULL DEFAULT now()
+  column updated_at timestamp without time zone NOT NULL DEFAULT now()
+  column created_by uuid
+  column status character varying(32) NOT NULL DEFAULT 'draft'::character varying
+  column ref character varying(32)
+  constraint artifacts_pkey PRIMARY KEY (id, version)
+  index artifacts_pkey CREATE UNIQUE INDEX artifacts_pkey ON public.artifacts USING btree (id, version)
+  index idx_artifacts_body_trgm CREATE INDEX idx_artifacts_body_trgm ON public.artifacts USING gin (body gin_trgm_ops)  @requires(pg_trgm)
+  index idx_artifacts_id_active CREATE UNIQUE INDEX idx_artifacts_id_active ON public.artifacts USING btree (id) WHERE (valid_to IS NULL)
+  index idx_artifacts_owner CREATE INDEX idx_artifacts_owner ON public.artifacts USING btree (project_id, ((attributes ->> 'owner'::text))) WHERE (valid_to IS NULL)
+  index idx_artifacts_parent_id CREATE INDEX idx_artifacts_parent_id ON public.artifacts USING btree (parent_id)
+  index idx_artifacts_project_active CREATE INDEX idx_artifacts_project_active ON public.artifacts USING btree (project_id) WHERE (valid_to IS NULL)
+  index idx_artifacts_project_id CREATE INDEX idx_artifacts_project_id ON public.artifacts USING btree (project_id)
+  index idx_artifacts_project_ref CREATE UNIQUE INDEX idx_artifacts_project_ref ON public.artifacts USING btree (project_id, ref) WHERE (valid_to IS NULL)
+  index idx_artifacts_project_status CREATE INDEX idx_artifacts_project_status ON public.artifacts USING btree (project_id, status) WHERE (valid_to IS NULL)
+  index idx_artifacts_sort_order CREATE INDEX idx_artifacts_sort_order ON public.artifacts USING btree (sort_order)
+  index idx_artifacts_title_trgm CREATE INDEX idx_artifacts_title_trgm ON public.artifacts USING gin (title gin_trgm_ops)  @requires(pg_trgm)
+  index idx_artifacts_type CREATE INDEX idx_artifacts_type ON public.artifacts USING btree (type)
+  index idx_artifacts_valid_to CREATE INDEX idx_artifacts_valid_to ON public.artifacts USING btree (valid_to)
+table attachment_figure_counters rows 0
+  column artifact_id uuid NOT NULL
+  column next_num integer NOT NULL
+  constraint attachment_figure_counters_pkey PRIMARY KEY (artifact_id)
+  index attachment_figure_counters_pkey CREATE UNIQUE INDEX attachment_figure_counters_pkey ON public.attachment_figure_counters USING btree (artifact_id)
+table attachment_versions rows 0
+  column id uuid NOT NULL
+  column attachment_id uuid NOT NULL
+  column version integer NOT NULL
+  column filename character varying(512) NOT NULL
+  column original_filename character varying(512) NOT NULL DEFAULT ''::character varying
+  column mime_type character varying(128) NOT NULL
+  column file_path character varying(1024) NOT NULL
+  column file_size integer NOT NULL
+  column created_by uuid
+  column created_at timestamp without time zone NOT NULL DEFAULT now()
+  column title character varying(255) NOT NULL DEFAULT ''::character varying
+  column restored_from integer
+  constraint attachment_versions_attachment_id_fkey FOREIGN KEY (attachment_id) REFERENCES attachments(id) ON DELETE CASCADE
+  constraint attachment_versions_attachment_id_version_key UNIQUE (attachment_id, version)
+  constraint attachment_versions_pkey PRIMARY KEY (id)
+  index attachment_versions_attachment_id_version_key CREATE UNIQUE INDEX attachment_versions_attachment_id_version_key ON public.attachment_versions USING btree (attachment_id, version)
+  index attachment_versions_pkey CREATE UNIQUE INDEX attachment_versions_pkey ON public.attachment_versions USING btree (id)
+  index idx_attachment_versions_attachment CREATE INDEX idx_attachment_versions_attachment ON public.attachment_versions USING btree (attachment_id, version DESC)
+table attachments rows 0
+  column id uuid NOT NULL
+  column artifact_id uuid
+  column filename character varying(512) NOT NULL
+  column mime_type character varying(128) NOT NULL
+  column file_path character varying(1024) NOT NULL
+  column file_size integer NOT NULL
+  column created_at timestamp without time zone NOT NULL DEFAULT now()
+  column test_result_id uuid
+  column figure_ref character varying(64)
+  column figure_num integer
+  column version integer NOT NULL DEFAULT 1
+  column original_filename character varying(512) NOT NULL DEFAULT ''::character varying
+  column title character varying(255) NOT NULL DEFAULT ''::character varying
+  constraint attachments_pkey PRIMARY KEY (id)
+  index attachments_pkey CREATE UNIQUE INDEX attachments_pkey ON public.attachments USING btree (id)
+  index idx_attachments_artifact_id CREATE INDEX idx_attachments_artifact_id ON public.attachments USING btree (artifact_id)
+  index idx_attachments_figure_ref CREATE UNIQUE INDEX idx_attachments_figure_ref ON public.attachments USING btree (figure_ref) WHERE (figure_ref IS NOT NULL)
+  index idx_attachments_test_result_id CREATE INDEX idx_attachments_test_result_id ON public.attachments USING btree (test_result_id)
+table attribute_definitions rows 0
+  column id uuid NOT NULL
+  column org_id uuid
+  column project_id uuid
+  column key character varying(64) NOT NULL
+  column label text NOT NULL DEFAULT ''::text
+  column data_type character varying(16) NOT NULL
+  column enum_values jsonb NOT NULL DEFAULT '[]'::jsonb
+  column applies_to_type character varying(64) NOT NULL DEFAULT ''::character varying
+  column required boolean NOT NULL DEFAULT false
+  column sort_order integer NOT NULL DEFAULT 0
+  column created_at timestamp with time zone NOT NULL DEFAULT now()
+  constraint attribute_definitions_pkey PRIMARY KEY (id)
+  index attribute_definitions_pkey CREATE UNIQUE INDEX attribute_definitions_pkey ON public.attribute_definitions USING btree (id)
+  index idx_attribute_definitions_org CREATE INDEX idx_attribute_definitions_org ON public.attribute_definitions USING btree (org_id) WHERE (project_id IS NULL)
+  index idx_attribute_definitions_project CREATE INDEX idx_attribute_definitions_project ON public.attribute_definitions USING btree (project_id) WHERE (project_id IS NOT NULL)
+table automations rows 0
+  column id uuid NOT NULL
+  column name character varying(512) NOT NULL
+  column agent_id uuid
+  column team_id uuid
+  column project_id uuid
+  column kind character varying(32) NOT NULL
+  column enabled boolean NOT NULL DEFAULT true
+  column prompt_template text NOT NULL DEFAULT ''::text
+  column cron_expr character varying(128) NOT NULL DEFAULT ''::character varying
+  column catch_up boolean NOT NULL DEFAULT false
+  column next_run_at timestamp without time zone
+  column last_run_at timestamp without time zone
+  column event_type character varying(64) NOT NULL DEFAULT ''::character varying
+  column event_filter jsonb NOT NULL DEFAULT '{}'::jsonb
+  column cooldown_seconds integer NOT NULL DEFAULT 60
+  column max_runs_per_hour integer NOT NULL DEFAULT 10
+  column created_by uuid
+  column created_at timestamp without time zone NOT NULL DEFAULT now()
+  column updated_at timestamp without time zone NOT NULL DEFAULT now()
+  column org_id uuid
+  constraint automations_agent_id_fkey FOREIGN KEY (agent_id) REFERENCES agents(id) ON DELETE CASCADE
+  constraint automations_pkey PRIMARY KEY (id)
+  index automations_pkey CREATE UNIQUE INDEX automations_pkey ON public.automations USING btree (id)
+  index idx_automations_event CREATE INDEX idx_automations_event ON public.automations USING btree (event_type) WHERE (enabled AND ((kind)::text = 'triggered'::text))
+  index idx_automations_next_run CREATE INDEX idx_automations_next_run ON public.automations USING btree (next_run_at) WHERE (enabled AND ((kind)::text = 'scheduled'::text))
+table baselines rows 0
+  column id uuid NOT NULL
+  column project_id uuid NOT NULL
+  column name character varying(512) NOT NULL
+  column snapshot jsonb NOT NULL
+  column created_at timestamp without time zone NOT NULL DEFAULT now()
+  column created_by uuid
+  constraint baselines_created_by_fkey FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+  constraint baselines_pkey PRIMARY KEY (id)
+  constraint baselines_project_id_fkey FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+  index baselines_pkey CREATE UNIQUE INDEX baselines_pkey ON public.baselines USING btree (id)
+  index idx_baselines_project_id CREATE INDEX idx_baselines_project_id ON public.baselines USING btree (project_id)
+table chatter rows 0
+  column id uuid NOT NULL
+  column artifact_id uuid NOT NULL
+  column message text NOT NULL
+  column is_auto_entry boolean NOT NULL DEFAULT false
+  column entry_type character varying(64) NOT NULL DEFAULT 'comment'::character varying
+  column created_at timestamp without time zone NOT NULL DEFAULT now()
+  column updated_at timestamp without time zone NOT NULL DEFAULT now()
+  column created_by uuid
+  column author_name character varying(255) NOT NULL DEFAULT ''::character varying
+  constraint chatter_pkey PRIMARY KEY (id)
+  index chatter_pkey CREATE UNIQUE INDEX chatter_pkey ON public.chatter USING btree (id)
+  index idx_chatter_artifact_id CREATE INDEX idx_chatter_artifact_id ON public.chatter USING btree (artifact_id)
+  index idx_chatter_created_at CREATE INDEX idx_chatter_created_at ON public.chatter USING btree (created_at)
+table connector_pairings rows 0
+  column id uuid NOT NULL
+  column org_id uuid NOT NULL
+  column user_id uuid NOT NULL
+  column code_hash character varying(128) NOT NULL
+  column expires_at timestamp without time zone NOT NULL
+  column used boolean NOT NULL DEFAULT false
+  column created_at timestamp without time zone NOT NULL DEFAULT now()
+  constraint connector_pairings_org_id_fkey FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE
+  constraint connector_pairings_pkey PRIMARY KEY (id)
+  constraint connector_pairings_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  index connector_pairings_pkey CREATE UNIQUE INDEX connector_pairings_pkey ON public.connector_pairings USING btree (id)
+  index idx_connector_pairings_code CREATE UNIQUE INDEX idx_connector_pairings_code ON public.connector_pairings USING btree (code_hash)
+table domain_events rows 0
+  column id uuid NOT NULL
+  column event_type character varying(64) NOT NULL
+  column project_id uuid
+  column entity_id uuid
+  column actor character varying(160) NOT NULL DEFAULT 'system'::character varying
+  column payload jsonb NOT NULL DEFAULT '{}'::jsonb
+  column created_at timestamp without time zone NOT NULL DEFAULT now()
+  column org_id uuid
+  constraint domain_events_pkey PRIMARY KEY (id)
+  index domain_events_pkey CREATE UNIQUE INDEX domain_events_pkey ON public.domain_events USING btree (id)
+  index idx_domain_events_org CREATE INDEX idx_domain_events_org ON public.domain_events USING btree (org_id, created_at)
+  index idx_domain_events_project CREATE INDEX idx_domain_events_project ON public.domain_events USING btree (project_id, created_at)
+  index idx_domain_events_type CREATE INDEX idx_domain_events_type ON public.domain_events USING btree (event_type, created_at)
+table email_verifications rows 0
+  column id uuid NOT NULL
+  column user_id uuid NOT NULL
+  column email character varying(320) NOT NULL
+  column token_hash character varying(128) NOT NULL
+  column expires_at timestamp without time zone NOT NULL
+  column used boolean NOT NULL DEFAULT false
+  column created_at timestamp without time zone NOT NULL DEFAULT now()
+  constraint email_verifications_pkey PRIMARY KEY (id)
+  constraint email_verifications_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  index email_verifications_pkey CREATE UNIQUE INDEX email_verifications_pkey ON public.email_verifications USING btree (id)
+  index idx_email_verifications_token CREATE UNIQUE INDEX idx_email_verifications_token ON public.email_verifications USING btree (token_hash)
+  index idx_email_verifications_user CREATE INDEX idx_email_verifications_user ON public.email_verifications USING btree (user_id)
+table evidence_bundles rows 0
+  column id uuid NOT NULL
+  column project_id uuid NOT NULL
+  column ref character varying(32) NOT NULL
+  column title character varying(200) NOT NULL
+  column summary text NOT NULL DEFAULT ''::text
+  column captured_at timestamp without time zone
+  column captured_by character varying(200) NOT NULL DEFAULT ''::character varying
+  column conditions jsonb NOT NULL DEFAULT '{}'::jsonb
+  column created_by uuid
+  column created_at timestamp without time zone NOT NULL
+  column updated_at timestamp without time zone NOT NULL
+  constraint evidence_bundles_pkey PRIMARY KEY (id)
+  constraint evidence_bundles_project_id_fkey FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+  index evidence_bundles_pkey CREATE UNIQUE INDEX evidence_bundles_pkey ON public.evidence_bundles USING btree (id)
+  index idx_evidence_bundles_project CREATE INDEX idx_evidence_bundles_project ON public.evidence_bundles USING btree (project_id, COALESCE(captured_at, created_at) DESC)
+  index idx_evidence_bundles_ref CREATE UNIQUE INDEX idx_evidence_bundles_ref ON public.evidence_bundles USING btree (project_id, ref)
+table evidence_citations rows 0
+  column id uuid NOT NULL
+  column bundle_id uuid NOT NULL
+  column test_result_id uuid NOT NULL
+  column note text NOT NULL DEFAULT ''::text
+  column created_at timestamp without time zone NOT NULL
+  constraint evidence_citations_bundle_id_fkey FOREIGN KEY (bundle_id) REFERENCES evidence_bundles(id) ON DELETE CASCADE
+  constraint evidence_citations_pkey PRIMARY KEY (id)
+  constraint evidence_citations_test_result_id_fkey FOREIGN KEY (test_result_id) REFERENCES test_results(id) ON DELETE CASCADE
+  index evidence_citations_pkey CREATE UNIQUE INDEX evidence_citations_pkey ON public.evidence_citations USING btree (id)
+  index idx_evidence_citations_pair CREATE UNIQUE INDEX idx_evidence_citations_pair ON public.evidence_citations USING btree (bundle_id, test_result_id)
+  index idx_evidence_citations_result CREATE INDEX idx_evidence_citations_result ON public.evidence_citations USING btree (test_result_id)
+table evidence_files rows 0
+  column id uuid NOT NULL
+  column bundle_id uuid NOT NULL
+  column filename character varying(512) NOT NULL
+  column mime_type character varying(255) NOT NULL DEFAULT ''::character varying
+  column file_path text NOT NULL
+  column file_size bigint NOT NULL DEFAULT 0
+  column sha256 character varying(64) NOT NULL DEFAULT ''::character varying
+  column uploaded_by uuid
+  column created_at timestamp without time zone NOT NULL
+  constraint evidence_files_bundle_id_fkey FOREIGN KEY (bundle_id) REFERENCES evidence_bundles(id) ON DELETE CASCADE
+  constraint evidence_files_pkey PRIMARY KEY (id)
+  index evidence_files_pkey CREATE UNIQUE INDEX evidence_files_pkey ON public.evidence_files USING btree (id)
+  index idx_evidence_files_bundle CREATE INDEX idx_evidence_files_bundle ON public.evidence_files USING btree (bundle_id, created_at)
+table guided_session_messages rows 0
+  column id uuid NOT NULL
+  column session_id uuid NOT NULL
+  column role character varying(32) NOT NULL
+  column content text NOT NULL
+  column created_at timestamp without time zone NOT NULL DEFAULT now()
+  constraint guided_session_messages_pkey PRIMARY KEY (id)
+  constraint guided_session_messages_session_id_fkey FOREIGN KEY (session_id) REFERENCES guided_sessions(id) ON DELETE CASCADE
+  index guided_session_messages_pkey CREATE UNIQUE INDEX guided_session_messages_pkey ON public.guided_session_messages USING btree (id)
+  index idx_guided_session_messages_session CREATE INDEX idx_guided_session_messages_session ON public.guided_session_messages USING btree (session_id, created_at)
+table guided_sessions rows 0
+  column id uuid NOT NULL
+  column project_id uuid
+  column status character varying(32) NOT NULL DEFAULT 'in-progress'::character varying
+  column current_step integer NOT NULL DEFAULT 0
+  column answers jsonb NOT NULL DEFAULT '{}'::jsonb
+  column draft_artifact_ids jsonb NOT NULL DEFAULT '[]'::jsonb
+  column agent_run_id uuid
+  column created_by uuid
+  column created_at timestamp without time zone NOT NULL DEFAULT now()
+  column updated_at timestamp without time zone NOT NULL DEFAULT now()
+  column org_id uuid
+  column pending_nudge jsonb
+  constraint guided_sessions_pkey PRIMARY KEY (id)
+  index guided_sessions_pkey CREATE UNIQUE INDEX guided_sessions_pkey ON public.guided_sessions USING btree (id)
+  index idx_guided_sessions_project_id CREATE INDEX idx_guided_sessions_project_id ON public.guided_sessions USING btree (project_id)
+table hosted_workers rows 0
+  column id uuid NOT NULL
+  column org_id uuid NOT NULL
+  column container_name character varying(255) NOT NULL
+  column worker_key_id uuid
+  column status character varying(32) NOT NULL DEFAULT 'provisioning'::character varying
+  column detail text NOT NULL DEFAULT ''::text
+  column created_by uuid
+  column created_at timestamp without time zone NOT NULL DEFAULT now()
+  column updated_at timestamp without time zone NOT NULL DEFAULT now()
+  constraint hosted_workers_org_id_fkey FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE
+  constraint hosted_workers_org_id_key UNIQUE (org_id)
+  constraint hosted_workers_pkey PRIMARY KEY (id)
+  index hosted_workers_org_id_key CREATE UNIQUE INDEX hosted_workers_org_id_key ON public.hosted_workers USING btree (org_id)
+  index hosted_workers_pkey CREATE UNIQUE INDEX hosted_workers_pkey ON public.hosted_workers USING btree (id)
+table interview_invites rows 0
+  column id uuid NOT NULL
+  column interview_id uuid NOT NULL
+  column token_hash character varying(128) NOT NULL
+  column invitee_label character varying(255) NOT NULL DEFAULT ''::character varying
+  column expires_at timestamp without time zone
+  column revoked boolean NOT NULL DEFAULT false
+  column created_at timestamp without time zone NOT NULL DEFAULT now()
+  constraint interview_invites_interview_id_fkey FOREIGN KEY (interview_id) REFERENCES interviews(id) ON DELETE CASCADE
+  constraint interview_invites_pkey PRIMARY KEY (id)
+  index idx_interview_invites_interview CREATE INDEX idx_interview_invites_interview ON public.interview_invites USING btree (interview_id)
+  index idx_interview_invites_token CREATE UNIQUE INDEX idx_interview_invites_token ON public.interview_invites USING btree (token_hash)
+  index interview_invites_pkey CREATE UNIQUE INDEX interview_invites_pkey ON public.interview_invites USING btree (id)
+table interview_messages rows 0
+  column id uuid NOT NULL
+  column session_id uuid NOT NULL
+  column role character varying(32) NOT NULL
+  column content text NOT NULL
+  column created_at timestamp without time zone NOT NULL DEFAULT now()
+  constraint interview_messages_pkey PRIMARY KEY (id)
+  constraint interview_messages_session_id_fkey FOREIGN KEY (session_id) REFERENCES interview_sessions(id) ON DELETE CASCADE
+  index idx_interview_messages_session CREATE INDEX idx_interview_messages_session ON public.interview_messages USING btree (session_id, created_at)
+  index interview_messages_pkey CREATE UNIQUE INDEX interview_messages_pkey ON public.interview_messages USING btree (id)
+table interview_sessions rows 0
+  column id uuid NOT NULL
+  column interview_id uuid NOT NULL
+  column invite_id uuid NOT NULL
+  column participant_name character varying(255) NOT NULL DEFAULT ''::character varying
+  column status character varying(32) NOT NULL DEFAULT 'active'::character varying
+  column summary text NOT NULL DEFAULT ''::text
+  column started_at timestamp without time zone NOT NULL DEFAULT now()
+  column ended_at timestamp without time zone
+  constraint interview_sessions_interview_id_fkey FOREIGN KEY (interview_id) REFERENCES interviews(id) ON DELETE CASCADE
+  constraint interview_sessions_pkey PRIMARY KEY (id)
+  index idx_interview_sessions_interview CREATE INDEX idx_interview_sessions_interview ON public.interview_sessions USING btree (interview_id)
+  index idx_interview_sessions_invite CREATE INDEX idx_interview_sessions_invite ON public.interview_sessions USING btree (invite_id)
+  index interview_sessions_pkey CREATE UNIQUE INDEX interview_sessions_pkey ON public.interview_sessions USING btree (id)
+table interviews rows 0
+  column id uuid NOT NULL
+  column project_id uuid NOT NULL
+  column guided_session_id uuid
+  column persona_artifact_id uuid
+  column name character varying(512) NOT NULL
+  column brief text NOT NULL DEFAULT ''::text
+  column agent_id uuid
+  column status character varying(32) NOT NULL DEFAULT 'open'::character varying
+  column expires_at timestamp without time zone
+  column created_by uuid
+  column created_at timestamp without time zone NOT NULL DEFAULT now()
+  column updated_at timestamp without time zone NOT NULL DEFAULT now()
+  constraint interviews_pkey PRIMARY KEY (id)
+  index idx_interviews_persona CREATE INDEX idx_interviews_persona ON public.interviews USING btree (persona_artifact_id)
+  index idx_interviews_project_id CREATE INDEX idx_interviews_project_id ON public.interviews USING btree (project_id)
+  index interviews_pkey CREATE UNIQUE INDEX interviews_pkey ON public.interviews USING btree (id)
+table link_artifacts rows 0
+  column link_id uuid NOT NULL
+  column artifact_id uuid NOT NULL
+  column artifact_version integer NOT NULL
+  column active boolean DEFAULT true
+  column created_at timestamp without time zone NOT NULL DEFAULT now()
+  constraint link_artifacts_pkey PRIMARY KEY (link_id, artifact_id, artifact_version)
+  index idx_link_artifacts_artifact CREATE INDEX idx_link_artifacts_artifact ON public.link_artifacts USING btree (artifact_id, artifact_version)
+  index link_artifacts_pkey CREATE UNIQUE INDEX link_artifacts_pkey ON public.link_artifacts USING btree (link_id, artifact_id, artifact_version)
+table links rows 0
+  column id uuid NOT NULL
+  column from_id uuid NOT NULL
+  column to_id uuid NOT NULL
+  column type character varying(255) NOT NULL
+  column attributes jsonb DEFAULT '{}'::jsonb
+  column version integer NOT NULL DEFAULT 1
+  column created_at timestamp without time zone NOT NULL DEFAULT now()
+  column updated_at timestamp without time zone NOT NULL DEFAULT now()
+  column valid_from timestamp without time zone NOT NULL DEFAULT now()
+  column valid_to timestamp without time zone
+  column suspect boolean NOT NULL DEFAULT false
+  constraint links_pkey PRIMARY KEY (id)
+  index idx_links_from_active CREATE INDEX idx_links_from_active ON public.links USING btree (from_id) WHERE (valid_to IS NULL)
+  index idx_links_from_id CREATE INDEX idx_links_from_id ON public.links USING btree (from_id)
+  index idx_links_suspect CREATE INDEX idx_links_suspect ON public.links USING btree (suspect) WHERE ((valid_to IS NULL) AND suspect)
+  index idx_links_to_active CREATE INDEX idx_links_to_active ON public.links USING btree (to_id) WHERE (valid_to IS NULL)
+  index idx_links_to_id CREATE INDEX idx_links_to_id ON public.links USING btree (to_id)
+  index idx_links_type CREATE INDEX idx_links_type ON public.links USING btree (type)
+  index idx_links_valid_to CREATE INDEX idx_links_valid_to ON public.links USING btree (valid_to)
+  index links_pkey CREATE UNIQUE INDEX links_pkey ON public.links USING btree (id)
+table notifications rows 0
+  column id uuid NOT NULL
+  column org_id uuid
+  column user_id uuid NOT NULL
+  column type character varying(64) NOT NULL
+  column title text NOT NULL
+  column body text NOT NULL DEFAULT ''::text
+  column entity_ref jsonb NOT NULL DEFAULT '{}'::jsonb
+  column read boolean NOT NULL DEFAULT false
+  column created_at timestamp with time zone NOT NULL DEFAULT now()
+  column cleared_at timestamp without time zone
+  column flagged boolean NOT NULL DEFAULT false
+  constraint notifications_pkey PRIMARY KEY (id)
+  index idx_notifications_flagged CREATE INDEX idx_notifications_flagged ON public.notifications USING btree (user_id, created_at DESC) WHERE flagged
+  index idx_notifications_inbox CREATE INDEX idx_notifications_inbox ON public.notifications USING btree (user_id, created_at DESC) WHERE (cleared_at IS NULL)
+  index idx_notifications_user_created CREATE INDEX idx_notifications_user_created ON public.notifications USING btree (user_id, created_at DESC)
+  index idx_notifications_user_unread CREATE INDEX idx_notifications_user_unread ON public.notifications USING btree (user_id) WHERE (NOT read)
+  index idx_notifications_user_unread_created CREATE INDEX idx_notifications_user_unread_created ON public.notifications USING btree (user_id, created_at DESC) WHERE (NOT read)
+  index notifications_pkey CREATE UNIQUE INDEX notifications_pkey ON public.notifications USING btree (id)
+table org_invitations rows 0
+  column id uuid NOT NULL
+  column org_id uuid NOT NULL
+  column email character varying(320) NOT NULL
+  column role character varying(32) NOT NULL DEFAULT 'member'::character varying
+  column token_hash character varying(128) NOT NULL
+  column invited_by uuid
+  column expires_at timestamp without time zone NOT NULL
+  column accepted_at timestamp without time zone
+  column created_at timestamp without time zone NOT NULL DEFAULT now()
+  column last_emailed_at timestamp without time zone
+  constraint org_invitations_invited_by_fkey FOREIGN KEY (invited_by) REFERENCES users(id) ON DELETE SET NULL
+  constraint org_invitations_org_id_fkey FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE
+  constraint org_invitations_pkey PRIMARY KEY (id)
+  index idx_org_invitations_email CREATE INDEX idx_org_invitations_email ON public.org_invitations USING btree (email)
+  index idx_org_invitations_pending CREATE UNIQUE INDEX idx_org_invitations_pending ON public.org_invitations USING btree (org_id, email) WHERE (accepted_at IS NULL)
+  index idx_org_invitations_token CREATE UNIQUE INDEX idx_org_invitations_token ON public.org_invitations USING btree (token_hash)
+  index org_invitations_pkey CREATE UNIQUE INDEX org_invitations_pkey ON public.org_invitations USING btree (id)
+table org_members rows 0
+  column org_id uuid NOT NULL
+  column user_id uuid NOT NULL
+  column role character varying(16) NOT NULL DEFAULT 'member'::character varying
+  column created_at timestamp without time zone NOT NULL DEFAULT now()
+  column preview_next_stable boolean NOT NULL DEFAULT false
+  constraint org_members_org_id_fkey FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE
+  constraint org_members_pkey PRIMARY KEY (org_id, user_id)
+  constraint org_members_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  index idx_org_members_user CREATE INDEX idx_org_members_user ON public.org_members USING btree (user_id)
+  index org_members_pkey CREATE UNIQUE INDEX org_members_pkey ON public.org_members USING btree (org_id, user_id)
+table org_team_members rows 0
+  column org_team_id uuid NOT NULL
+  column user_id uuid NOT NULL
+  column created_at timestamp without time zone NOT NULL DEFAULT now()
+  constraint org_team_members_org_team_id_fkey FOREIGN KEY (org_team_id) REFERENCES org_teams(id) ON DELETE CASCADE
+  constraint org_team_members_pkey PRIMARY KEY (org_team_id, user_id)
+  constraint org_team_members_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  index idx_org_team_members_user CREATE INDEX idx_org_team_members_user ON public.org_team_members USING btree (user_id)
+  index org_team_members_pkey CREATE UNIQUE INDEX org_team_members_pkey ON public.org_team_members USING btree (org_team_id, user_id)
+table org_teams rows 0
+  column id uuid NOT NULL
+  column org_id uuid NOT NULL
+  column name character varying(255) NOT NULL
+  column description text NOT NULL DEFAULT ''::text
+  column created_by uuid
+  column created_at timestamp without time zone NOT NULL DEFAULT now()
+  column updated_at timestamp without time zone NOT NULL DEFAULT now()
+  constraint org_teams_org_id_fkey FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE
+  constraint org_teams_pkey PRIMARY KEY (id)
+  index idx_org_teams_org CREATE INDEX idx_org_teams_org ON public.org_teams USING btree (org_id)
+  index org_teams_pkey CREATE UNIQUE INDEX org_teams_pkey ON public.org_teams USING btree (id)
+table organizations rows 0
+  column id uuid NOT NULL
+  column name character varying(255) NOT NULL
+  column slug character varying(128) NOT NULL
+  column org_type character varying(16) NOT NULL DEFAULT 'company'::character varying
+  column plan character varying(64) NOT NULL DEFAULT 'free'::character varying
+  column limits jsonb NOT NULL DEFAULT '{}'::jsonb
+  column settings jsonb NOT NULL DEFAULT '{}'::jsonb
+  column created_by uuid
+  column created_at timestamp without time zone NOT NULL DEFAULT now()
+  column updated_at timestamp without time zone NOT NULL DEFAULT now()
+  column monthly_budget_usd numeric
+  column budget_alert_month character varying(7)
+  column budget_alert_threshold integer NOT NULL DEFAULT 0
+  column deleted_at timestamp without time zone
+  column logo_path text NOT NULL DEFAULT ''::text
+  column logo_mime text NOT NULL DEFAULT ''::text
+  column release_channel text NOT NULL DEFAULT ''::text
+  column stable_release text NOT NULL DEFAULT ''::text
+  column upgrade_day integer NOT NULL DEFAULT 0
+  column upgrade_hour integer NOT NULL DEFAULT 0
+  column upgrade_timezone text NOT NULL DEFAULT ''::text
+  column billing_customer_ref character varying(255) NOT NULL DEFAULT ''::character varying
+  column billing_subscription_ref character varying(255) NOT NULL DEFAULT ''::character varying
+  column billing_item_ref character varying(255) NOT NULL DEFAULT ''::character varying
+  column billing_currency character varying(3) NOT NULL DEFAULT ''::character varying
+  column plan_status character varying(32) NOT NULL DEFAULT 'none'::character varying
+  column plan_interval character varying(8) NOT NULL DEFAULT ''::character varying
+  column plan_seats integer NOT NULL DEFAULT 0
+  column plan_cancel_at_period_end boolean NOT NULL DEFAULT false
+  column plan_grandfathered boolean NOT NULL DEFAULT false
+  column plan_period_end timestamp without time zone
+  column plan_synced_at timestamp without time zone
+  column minutes_alert_month character varying(7)
+  column minutes_alert_threshold integer NOT NULL DEFAULT 0
+  constraint organizations_pkey PRIMARY KEY (id)
+  index idx_organizations_deleted_at CREATE INDEX idx_organizations_deleted_at ON public.organizations USING btree (deleted_at) WHERE (deleted_at IS NOT NULL)
+  index idx_organizations_personal_owner CREATE UNIQUE INDEX idx_organizations_personal_owner ON public.organizations USING btree (created_by) WHERE ((org_type)::text = 'personal'::text)
+  index idx_organizations_slug CREATE UNIQUE INDEX idx_organizations_slug ON public.organizations USING btree (slug)
+  index idx_orgs_billing_customer CREATE UNIQUE INDEX idx_orgs_billing_customer ON public.organizations USING btree (billing_customer_ref) WHERE ((billing_customer_ref)::text <> ''::text)
+  index idx_orgs_billing_subscription CREATE UNIQUE INDEX idx_orgs_billing_subscription ON public.organizations USING btree (billing_subscription_ref) WHERE ((billing_subscription_ref)::text <> ''::text)
+  index organizations_pkey CREATE UNIQUE INDEX organizations_pkey ON public.organizations USING btree (id)
+table password_resets rows 0
+  column id uuid NOT NULL
+  column user_id uuid NOT NULL
+  column token_hash character varying(128) NOT NULL
+  column delivery character varying(16) NOT NULL DEFAULT 'email'::character varying
+  column issued_by uuid
+  column expires_at timestamp without time zone NOT NULL
+  column used boolean NOT NULL DEFAULT false
+  column created_at timestamp without time zone NOT NULL DEFAULT now()
+  constraint password_resets_pkey PRIMARY KEY (id)
+  constraint password_resets_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  index idx_password_resets_token CREATE UNIQUE INDEX idx_password_resets_token ON public.password_resets USING btree (token_hash)
+  index idx_password_resets_user CREATE INDEX idx_password_resets_user ON public.password_resets USING btree (user_id)
+  index password_resets_pkey CREATE UNIQUE INDEX password_resets_pkey ON public.password_resets USING btree (id)
+table product_profiles rows 0
+  column project_id uuid NOT NULL
+  column vision text NOT NULL DEFAULT ''::text
+  column problem_statement text NOT NULL DEFAULT ''::text
+  column target_users text NOT NULL DEFAULT ''::text
+  column constraints jsonb NOT NULL DEFAULT '[]'::jsonb
+  column success_metrics jsonb NOT NULL DEFAULT '[]'::jsonb
+  column settings jsonb NOT NULL DEFAULT '{}'::jsonb
+  column created_at timestamp without time zone NOT NULL DEFAULT now()
+  column updated_at timestamp without time zone NOT NULL DEFAULT now()
+  constraint product_profiles_pkey PRIMARY KEY (project_id)
+  constraint product_profiles_project_id_fkey FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+  index product_profiles_pkey CREATE UNIQUE INDEX product_profiles_pkey ON public.product_profiles USING btree (project_id)
+table project_members rows 0
+  column project_id uuid NOT NULL
+  column user_id uuid NOT NULL
+  column role character varying(32) NOT NULL DEFAULT 'viewer'::character varying
+  column created_at timestamp without time zone NOT NULL DEFAULT now()
+  constraint project_members_pkey PRIMARY KEY (project_id, user_id)
+  constraint project_members_project_id_fkey FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+  constraint project_members_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  index idx_project_members_user_id CREATE INDEX idx_project_members_user_id ON public.project_members USING btree (user_id)
+  index project_members_pkey CREATE UNIQUE INDEX project_members_pkey ON public.project_members USING btree (project_id, user_id)
+table project_share_links rows 0
+  column id uuid NOT NULL
+  column project_id uuid NOT NULL
+  column token_hash character varying(128) NOT NULL
+  column role character varying(16) NOT NULL
+  column label text NOT NULL DEFAULT ''::text
+  column created_by uuid
+  column created_at timestamp without time zone NOT NULL DEFAULT now()
+  column expires_at timestamp without time zone
+  column revoked_at timestamp without time zone
+  constraint project_share_links_pkey PRIMARY KEY (id)
+  constraint project_share_links_project_id_fkey FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+  constraint project_share_links_token_hash_key UNIQUE (token_hash)
+  index idx_project_share_links_project CREATE INDEX idx_project_share_links_project ON public.project_share_links USING btree (project_id)
+  index project_share_links_pkey CREATE UNIQUE INDEX project_share_links_pkey ON public.project_share_links USING btree (id)
+  index project_share_links_token_hash_key CREATE UNIQUE INDEX project_share_links_token_hash_key ON public.project_share_links USING btree (token_hash)
+table project_team_access rows 0
+  column project_id uuid NOT NULL
+  column org_team_id uuid NOT NULL
+  column role character varying(32) NOT NULL DEFAULT 'viewer'::character varying
+  column created_at timestamp without time zone NOT NULL DEFAULT now()
+  constraint project_team_access_org_team_id_fkey FOREIGN KEY (org_team_id) REFERENCES org_teams(id) ON DELETE CASCADE
+  constraint project_team_access_pkey PRIMARY KEY (project_id, org_team_id)
+  constraint project_team_access_project_id_fkey FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+  index project_team_access_pkey CREATE UNIQUE INDEX project_team_access_pkey ON public.project_team_access USING btree (project_id, org_team_id)
+table projects rows 0
+  column id uuid NOT NULL
+  column name character varying(512) NOT NULL
+  column description text
+  column agent_auth character varying(32) NOT NULL DEFAULT 'user-account'::character varying
+  column settings jsonb NOT NULL DEFAULT '{}'::jsonb
+  column created_at timestamp without time zone NOT NULL DEFAULT now()
+  column updated_at timestamp without time zone NOT NULL DEFAULT now()
+  column org_id uuid
+  column parent_project_id uuid
+  constraint projects_parent_project_id_fkey FOREIGN KEY (parent_project_id) REFERENCES projects(id) ON DELETE SET NULL
+  constraint projects_pkey PRIMARY KEY (id)
+  index idx_projects_org CREATE INDEX idx_projects_org ON public.projects USING btree (org_id)
+  index idx_projects_parent CREATE INDEX idx_projects_parent ON public.projects USING btree (parent_project_id) WHERE (parent_project_id IS NOT NULL)
+  index projects_pkey CREATE UNIQUE INDEX projects_pkey ON public.projects USING btree (id)
+table provider_logins rows 0
+  column id uuid NOT NULL
+  column provider character varying(64) NOT NULL
+  column target character varying(32) NOT NULL DEFAULT 'workspace'::character varying
+  column status character varying(32) NOT NULL DEFAULT 'pending'::character varying
+  column auth_url text NOT NULL DEFAULT ''::text
+  column code text NOT NULL DEFAULT ''::text
+  column detail text NOT NULL DEFAULT ''::text
+  column paste_kind character varying(16) NOT NULL DEFAULT ''::character varying
+  column requested_by uuid
+  column created_at timestamp without time zone NOT NULL DEFAULT now()
+  column updated_at timestamp without time zone NOT NULL DEFAULT now()
+  column org_id uuid
+  constraint provider_logins_pkey PRIMARY KEY (id)
+  index idx_provider_logins_org CREATE INDEX idx_provider_logins_org ON public.provider_logins USING btree (org_id, status, created_at)
+  index idx_provider_logins_provider CREATE INDEX idx_provider_logins_provider ON public.provider_logins USING btree (provider, updated_at)
+  index idx_provider_logins_status CREATE INDEX idx_provider_logins_status ON public.provider_logins USING btree (status, created_at)
+  index provider_logins_pkey CREATE UNIQUE INDEX provider_logins_pkey ON public.provider_logins USING btree (id)
+table provider_settings rows 0
+  column id uuid NOT NULL
+  column provider character varying(64) NOT NULL
+  column auth_mode character varying(32) NOT NULL DEFAULT 'subscription-cli'::character varying
+  column api_key_env character varying(128) NOT NULL DEFAULT ''::character varying
+  column default_model character varying(128) NOT NULL DEFAULT ''::character varying
+  column enabled boolean NOT NULL DEFAULT true
+  column last_detected jsonb NOT NULL DEFAULT '{}'::jsonb
+  column updated_at timestamp without time zone NOT NULL DEFAULT now()
+  column org_id uuid
+  constraint provider_settings_pkey PRIMARY KEY (id)
+  index idx_provider_settings_lookup CREATE INDEX idx_provider_settings_lookup ON public.provider_settings USING btree (provider)
+  index idx_provider_settings_org_provider CREATE UNIQUE INDEX idx_provider_settings_org_provider ON public.provider_settings USING btree (org_id, provider)
+  index provider_settings_pkey CREATE UNIQUE INDEX provider_settings_pkey ON public.provider_settings USING btree (id)
+table push_subscriptions rows 0
+  column id uuid NOT NULL
+  column user_id uuid NOT NULL
+  column endpoint text NOT NULL
+  column p256dh text NOT NULL
+  column auth text NOT NULL
+  column user_agent text NOT NULL DEFAULT ''::text
+  column created_at timestamp without time zone NOT NULL DEFAULT now()
+  column last_used_at timestamp without time zone
+  column failed_at timestamp without time zone
+  constraint push_subscriptions_pkey PRIMARY KEY (id)
+  constraint push_subscriptions_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  index idx_push_subscriptions_endpoint CREATE UNIQUE INDEX idx_push_subscriptions_endpoint ON public.push_subscriptions USING btree (endpoint)
+  index idx_push_subscriptions_user CREATE INDEX idx_push_subscriptions_user ON public.push_subscriptions USING btree (user_id)
+  index push_subscriptions_pkey CREATE UNIQUE INDEX push_subscriptions_pkey ON public.push_subscriptions USING btree (id)
+table release_announcements rows 0
+  column version text NOT NULL
+  column announced_at timestamp without time zone NOT NULL DEFAULT now()
+  constraint release_announcements_pkey PRIMARY KEY (version)
+  index release_announcements_pkey CREATE UNIQUE INDEX release_announcements_pkey ON public.release_announcements USING btree (version)
+table release_schedule rows 0
+  column org_id uuid NOT NULL
+  column version text NOT NULL
+  column announced_at timestamp without time zone
+  column reminded_at timestamp without time zone
+  column turned_on_at timestamp without time zone
+  constraint release_schedule_org_id_fkey FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE
+  constraint release_schedule_pkey PRIMARY KEY (org_id, version)
+  index release_schedule_pkey CREATE UNIQUE INDEX release_schedule_pkey ON public.release_schedule USING btree (org_id, version)
+table repo_connections rows 0
+  column id uuid NOT NULL
+  column project_id uuid NOT NULL
+  column name character varying(512) NOT NULL
+  column remote_url character varying(1024) NOT NULL DEFAULT ''::character varying
+  column default_branch character varying(128) NOT NULL DEFAULT 'main'::character varying
+  column credential_strategy character varying(32) NOT NULL DEFAULT 'host'::character varying
+  column created_at timestamp without time zone NOT NULL DEFAULT now()
+  column updated_at timestamp without time zone NOT NULL DEFAULT now()
+  constraint repo_connections_pkey PRIMARY KEY (id)
+  constraint repo_connections_project_id_fkey FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+  index idx_repo_connections_project CREATE INDEX idx_repo_connections_project ON public.repo_connections USING btree (project_id)
+  index repo_connections_pkey CREATE UNIQUE INDEX repo_connections_pkey ON public.repo_connections USING btree (id)
+table runner_pool_nodes rows 0
+  column id uuid NOT NULL
+  column pool character varying(64) NOT NULL DEFAULT 'default'::character varying
+  column name character varying(255) NOT NULL
+  column providers text NOT NULL DEFAULT ''::text
+  column status character varying(32) NOT NULL DEFAULT 'idle'::character varying
+  column session_id uuid
+  column last_seen_at timestamp without time zone NOT NULL DEFAULT now()
+  column created_at timestamp without time zone NOT NULL DEFAULT now()
+  constraint runner_pool_nodes_pkey PRIMARY KEY (id)
+  index idx_runner_pool_nodes_free CREATE INDEX idx_runner_pool_nodes_free ON public.runner_pool_nodes USING btree (pool, status, last_seen_at)
+  index idx_runner_pool_nodes_name CREATE UNIQUE INDEX idx_runner_pool_nodes_name ON public.runner_pool_nodes USING btree (pool, name)
+  index runner_pool_nodes_pkey CREATE UNIQUE INDEX runner_pool_nodes_pkey ON public.runner_pool_nodes USING btree (id)
+table runner_sessions rows 0
+  column id uuid NOT NULL
+  column org_id uuid NOT NULL
+  column user_id uuid NOT NULL
+  column node_id uuid
+  column worker_key_id uuid
+  column status character varying(32) NOT NULL DEFAULT 'starting'::character varying
+  column started_at timestamp without time zone NOT NULL DEFAULT now()
+  column expires_at timestamp without time zone NOT NULL
+  column last_activity_at timestamp without time zone NOT NULL DEFAULT now()
+  column ended_at timestamp without time zone
+  column end_reason character varying(32) NOT NULL DEFAULT ''::character varying
+  column idle_minutes integer NOT NULL DEFAULT 15
+  constraint runner_sessions_org_id_fkey FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE
+  constraint runner_sessions_pkey PRIMARY KEY (id)
+  constraint runner_sessions_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  index idx_runner_sessions_key CREATE INDEX idx_runner_sessions_key ON public.runner_sessions USING btree (worker_key_id)
+  index idx_runner_sessions_live CREATE INDEX idx_runner_sessions_live ON public.runner_sessions USING btree (org_id, user_id, status)
+  index idx_runner_sessions_sweep CREATE INDEX idx_runner_sessions_sweep ON public.runner_sessions USING btree (status, expires_at)
+  index runner_sessions_pkey CREATE UNIQUE INDEX runner_sessions_pkey ON public.runner_sessions USING btree (id)
+table schema_migrations rows 47
+  column version integer NOT NULL
+  column name text NOT NULL
+  column applied_at timestamp with time zone NOT NULL DEFAULT now()
+  constraint schema_migrations_pkey PRIMARY KEY (version)
+  index schema_migrations_pkey CREATE UNIQUE INDEX schema_migrations_pkey ON public.schema_migrations USING btree (version)
+table sessions rows 0
+  column id uuid NOT NULL
+  column user_id uuid NOT NULL
+  column token_hash character varying(128) NOT NULL
+  column expires_at timestamp without time zone NOT NULL
+  column created_at timestamp without time zone NOT NULL DEFAULT now()
+  column last_seen_at timestamp without time zone NOT NULL DEFAULT now()
+  column active_org_id uuid
+  constraint sessions_pkey PRIMARY KEY (id)
+  constraint sessions_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  index idx_sessions_expires_at CREATE INDEX idx_sessions_expires_at ON public.sessions USING btree (expires_at)
+  index idx_sessions_last_seen_at CREATE INDEX idx_sessions_last_seen_at ON public.sessions USING btree (last_seen_at)
+  index idx_sessions_token_hash CREATE UNIQUE INDEX idx_sessions_token_hash ON public.sessions USING btree (token_hash)
+  index idx_sessions_user_id CREATE INDEX idx_sessions_user_id ON public.sessions USING btree (user_id)
+  index sessions_pkey CREATE UNIQUE INDEX sessions_pkey ON public.sessions USING btree (id)
+table shared_product_reports rows 0
+  column product_id uuid NOT NULL
+  column user_id uuid NOT NULL
+  column created_at timestamp without time zone NOT NULL DEFAULT now()
+  constraint shared_product_reports_pkey PRIMARY KEY (product_id, user_id)
+  constraint shared_product_reports_product_id_fkey FOREIGN KEY (product_id) REFERENCES shared_products(id) ON DELETE CASCADE
+  index shared_product_reports_pkey CREATE UNIQUE INDEX shared_product_reports_pkey ON public.shared_product_reports USING btree (product_id, user_id)
+table shared_product_votes rows 0
+  column product_id uuid NOT NULL
+  column user_id uuid NOT NULL
+  column created_at timestamp without time zone NOT NULL DEFAULT now()
+  constraint shared_product_votes_pkey PRIMARY KEY (product_id, user_id)
+  constraint shared_product_votes_product_id_fkey FOREIGN KEY (product_id) REFERENCES shared_products(id) ON DELETE CASCADE
+  index idx_shared_product_votes_created CREATE INDEX idx_shared_product_votes_created ON public.shared_product_votes USING btree (created_at)
+  index shared_product_votes_pkey CREATE UNIQUE INDEX shared_product_votes_pkey ON public.shared_product_votes USING btree (product_id, user_id)
+table shared_products rows 0
+  column id uuid NOT NULL
+  column name_key text NOT NULL
+  column category text NOT NULL
+  column name text NOT NULL
+  column description text NOT NULL
+  column vision text NOT NULL
+  column problem text NOT NULL
+  column target_users text NOT NULL
+  column created_by_org uuid
+  column created_by_user uuid
+  column reports integer NOT NULL DEFAULT 0
+  column hidden boolean NOT NULL DEFAULT false
+  column created_at timestamp without time zone NOT NULL DEFAULT now()
+  column votes integer NOT NULL DEFAULT 0
+  constraint shared_products_name_key_key UNIQUE (name_key)
+  constraint shared_products_pkey PRIMARY KEY (id)
+  index idx_shared_products_org_created CREATE INDEX idx_shared_products_org_created ON public.shared_products USING btree (created_by_org, created_at DESC)
+  index idx_shared_products_top CREATE INDEX idx_shared_products_top ON public.shared_products USING btree (votes DESC, created_at DESC) WHERE (hidden = false)
+  index idx_shared_products_visible CREATE INDEX idx_shared_products_visible ON public.shared_products USING btree (created_at DESC) WHERE (hidden = false)
+  index shared_products_name_key_key CREATE UNIQUE INDEX shared_products_name_key_key ON public.shared_products USING btree (name_key)
+  index shared_products_pkey CREATE UNIQUE INDEX shared_products_pkey ON public.shared_products USING btree (id)
+table templates rows 0
+  column id uuid NOT NULL
+  column template_key character varying(128)
+  column name character varying(512) NOT NULL
+  column description text
+  column snapshot jsonb NOT NULL
+  column is_default boolean NOT NULL DEFAULT false
+  column created_at timestamp without time zone NOT NULL DEFAULT now()
+  column org_id uuid
+  constraint templates_pkey PRIMARY KEY (id)
+  index idx_templates_key CREATE UNIQUE INDEX idx_templates_key ON public.templates USING btree (template_key)
+  index templates_pkey CREATE UNIQUE INDEX templates_pkey ON public.templates USING btree (id)
+table test_results rows 0
+  column id uuid NOT NULL
+  column run_id uuid NOT NULL
+  column test_case_id uuid NOT NULL
+  column test_case_version integer NOT NULL DEFAULT 1
+  column status character varying(32) NOT NULL DEFAULT 'not-run'::character varying
+  column notes text NOT NULL DEFAULT ''::text
+  column evidence jsonb NOT NULL DEFAULT '[]'::jsonb
+  column executed_at timestamp without time zone
+  column executed_by uuid
+  column executed_by_agent_run_id uuid
+  column created_at timestamp without time zone NOT NULL DEFAULT now()
+  column updated_at timestamp without time zone NOT NULL DEFAULT now()
+  constraint test_results_pkey PRIMARY KEY (id)
+  constraint test_results_run_id_fkey FOREIGN KEY (run_id) REFERENCES test_runs(id) ON DELETE CASCADE
+  index idx_test_results_case CREATE INDEX idx_test_results_case ON public.test_results USING btree (test_case_id)
+  index idx_test_results_run_case CREATE UNIQUE INDEX idx_test_results_run_case ON public.test_results USING btree (run_id, test_case_id)
+  index test_results_pkey CREATE UNIQUE INDEX test_results_pkey ON public.test_results USING btree (id)
+table test_runs rows 0
+  column id uuid NOT NULL
+  column project_id uuid NOT NULL
+  column name character varying(512) NOT NULL
+  column description text NOT NULL DEFAULT ''::text
+  column baseline_id uuid
+  column status character varying(32) NOT NULL DEFAULT 'in-progress'::character varying
+  column started_at timestamp without time zone NOT NULL DEFAULT now()
+  column completed_at timestamp without time zone
+  column created_by uuid
+  column created_at timestamp without time zone NOT NULL DEFAULT now()
+  column updated_at timestamp without time zone NOT NULL DEFAULT now()
+  constraint test_runs_pkey PRIMARY KEY (id)
+  index idx_test_runs_project_id CREATE INDEX idx_test_runs_project_id ON public.test_runs USING btree (project_id)
+  index test_runs_pkey CREATE UNIQUE INDEX test_runs_pkey ON public.test_runs USING btree (id)
+table user_repo_paths rows 0
+  column user_id uuid NOT NULL
+  column repo_connection_id uuid NOT NULL
+  column local_path character varying(1024) NOT NULL
+  column updated_at timestamp without time zone NOT NULL DEFAULT now()
+  constraint user_repo_paths_pkey PRIMARY KEY (user_id, repo_connection_id)
+  constraint user_repo_paths_repo_connection_id_fkey FOREIGN KEY (repo_connection_id) REFERENCES repo_connections(id) ON DELETE CASCADE
+  constraint user_repo_paths_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  index user_repo_paths_pkey CREATE UNIQUE INDEX user_repo_paths_pkey ON public.user_repo_paths USING btree (user_id, repo_connection_id)
+table users rows 0
+  column id uuid NOT NULL
+  column email character varying(320) NOT NULL
+  column name character varying(255) NOT NULL DEFAULT ''::character varying
+  column avatar_url character varying(1024) NOT NULL DEFAULT ''::character varying
+  column auth_provider character varying(32) NOT NULL DEFAULT 'password'::character varying
+  column password_hash character varying(255)
+  column is_admin boolean NOT NULL DEFAULT false
+  column created_at timestamp without time zone NOT NULL DEFAULT now()
+  column updated_at timestamp without time zone NOT NULL DEFAULT now()
+  column email_notifications boolean NOT NULL DEFAULT true
+  column email_verified boolean NOT NULL DEFAULT false
+  column email_verified_at timestamp without time zone
+  column push_notifications boolean NOT NULL DEFAULT false
+  column avatar_path text NOT NULL DEFAULT ''::text
+  column avatar_mime text NOT NULL DEFAULT ''::text
+  column default_org_id uuid
+  column billing_trial_used_at timestamp without time zone
+  constraint users_default_org_id_fkey FOREIGN KEY (default_org_id) REFERENCES organizations(id) ON DELETE SET NULL
+  constraint users_pkey PRIMARY KEY (id)
+  index idx_users_email CREATE UNIQUE INDEX idx_users_email ON public.users USING btree (lower((email)::text))
+  index users_pkey CREATE UNIQUE INDEX users_pkey ON public.users USING btree (id)
+table work_item_activity rows 0
+  column id uuid NOT NULL
+  column work_item_id uuid NOT NULL
+  column kind character varying(32) NOT NULL
+  column actor character varying(160) NOT NULL DEFAULT 'system'::character varying
+  column content text NOT NULL DEFAULT ''::text
+  column payload jsonb NOT NULL DEFAULT '{}'::jsonb
+  column created_at timestamp without time zone NOT NULL DEFAULT now()
+  constraint work_item_activity_pkey PRIMARY KEY (id)
+  constraint work_item_activity_work_item_id_fkey FOREIGN KEY (work_item_id) REFERENCES work_items(id) ON DELETE CASCADE
+  index idx_work_item_activity_item CREATE INDEX idx_work_item_activity_item ON public.work_item_activity USING btree (work_item_id, created_at)
+  index work_item_activity_pkey CREATE UNIQUE INDEX work_item_activity_pkey ON public.work_item_activity USING btree (id)
+table work_items rows 0
+  column id uuid NOT NULL
+  column project_id uuid NOT NULL
+  column title character varying(512) NOT NULL
+  column description text NOT NULL DEFAULT ''::text
+  column board_column character varying(32) NOT NULL DEFAULT 'backlog'::character varying
+  column sort_order integer NOT NULL DEFAULT 0
+  column assignee_type character varying(32) NOT NULL DEFAULT 'user'::character varying
+  column assignee_id uuid
+  column agent_run_id uuid
+  column artifact_ids jsonb NOT NULL DEFAULT '[]'::jsonb
+  column due_date timestamp without time zone
+  column source_chatter_id uuid
+  column created_by uuid
+  column created_at timestamp without time zone NOT NULL DEFAULT now()
+  column updated_at timestamp without time zone NOT NULL DEFAULT now()
+  constraint work_items_pkey PRIMARY KEY (id)
+  index idx_work_items_column CREATE INDEX idx_work_items_column ON public.work_items USING btree (project_id, board_column, sort_order)
+  index idx_work_items_project_id CREATE INDEX idx_work_items_project_id ON public.work_items USING btree (project_id)
+  index idx_work_items_source_chatter CREATE INDEX idx_work_items_source_chatter ON public.work_items USING btree (source_chatter_id) WHERE (source_chatter_id IS NOT NULL)
+  index work_items_pkey CREATE UNIQUE INDEX work_items_pkey ON public.work_items USING btree (id)
+table worker_keys rows 0
+  column id uuid NOT NULL
+  column org_id uuid NOT NULL
+  column name character varying(255) NOT NULL
+  column key_hash character varying(128) NOT NULL
+  column created_by uuid
+  column revoked boolean NOT NULL DEFAULT false
+  column last_used_at timestamp without time zone
+  column created_at timestamp without time zone NOT NULL DEFAULT now()
+  column user_id uuid
+  column session_id uuid
+  constraint worker_keys_org_id_fkey FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE
+  constraint worker_keys_pkey PRIMARY KEY (id)
+  constraint worker_keys_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  index idx_worker_keys_hash CREATE UNIQUE INDEX idx_worker_keys_hash ON public.worker_keys USING btree (key_hash)
+  index idx_worker_keys_org CREATE INDEX idx_worker_keys_org ON public.worker_keys USING btree (org_id)
+  index idx_worker_keys_user CREATE INDEX idx_worker_keys_user ON public.worker_keys USING btree (org_id, user_id)
+  index worker_keys_pkey CREATE UNIQUE INDEX worker_keys_pkey ON public.worker_keys USING btree (id)
+ledger 0001 baseline
+ledger 0002 unique_personal_org_per_user
+ledger 0003 agent_runs_retried_from
+ledger 0004 artifact_status_column
+ledger 0005 links_suspect
+ledger 0006 notifications
+ledger 0007 review_queue_indexes
+ledger 0008 hot_path_indexes
+ledger 0009 artifact_trgm_search
+ledger 0010 drop_redundant_idx_links_active
+ledger 0011 org_monthly_budget
+ledger 0012 agent_run_failure_taxonomy
+ledger 0013 users_email_notifications
+ledger 0014 agent_run_reproducibility_snapshot
+ledger 0015 attribute_definitions
+ledger 0016 pgvector_artifact_embeddings
+ledger 0017 agent_proposal_ref
+ledger 0018 artifact_stable_refs
+ledger 0019 org_soft_delete
+ledger 0020 drop_cnc_mill_default_template
+ledger 0021 shared_products
+ledger 0022 workspace_project_settings
+ledger 0023 artifact_figures
+ledger 0024 users_email_verification
+ledger 0025 org_invitations_and_session_idle
+ledger 0026 push_subscriptions
+ledger 0027 run_partial_text_and_pending_nudge
+ledger 0028 shared_product_votes
+ledger 0029 notification_history
+ledger 0030 evidence_bundles
+ledger 0031 org_logo
+ledger 0032 baseline_created_by
+ledger 0033 user_avatar
+ledger 0034 release_announcements
+ledger 0035 org_release_channel
+ledger 0036 release_schedule
+ledger 0037 release_schedule
+ledger 0038 project_hierarchy_and_owner
+ledger 0039 project_share_links
+ledger 0040 users_default_org
+ledger 0041 attachment_titles
+ledger 0042 password_resets
+ledger 0043 work_item_source_note
+ledger 0044 attachment_version_restored_from
+ledger 0045 organizations_billing
+ledger 0046 users_billing_trial
+ledger 0047 organizations_minutes_alert

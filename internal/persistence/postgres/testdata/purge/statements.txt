@@ -1,0 +1,61 @@
+# Stored-data freeze, part (d) (refactor plan S3, invariant I16, quirk Q17): the SQL
+# OrgRepository.PurgeOrg sends, in order, as a recording database/sql connector sees it, when the
+# artifact_embeddings table exists and when it does not. $org is the purged workspace's id. A
+# statement sent outside a transaction would read "autocommit exec" or "autocommit query", and a
+# begin with a non-default isolation level, read-only or a context deadline would say so.
+# Regenerate (a behavior change only) with every S3 golden, against a server with the vector and
+# pg_trgm extensions:
+# UPDATE_GOLDEN=1 go test ./internal/persistence/postgres -count=1 -run '^(TestMigrationFreeze|TestEveryBootFreeze|TestSchemaGolden|TestPurgeCatalog)$'
+with artifact_embeddings
+  begin
+  query SELECT to_regclass('artifact_embeddings')::text
+  exec DELETE FROM artifact_embeddings WHERE artifact_id IN (SELECT DISTINCT id FROM artifacts WHERE project_id IN (SELECT id FROM projects WHERE org_id = $1)) args $org
+  exec DELETE FROM chatter WHERE artifact_id IN (SELECT DISTINCT id FROM artifacts WHERE project_id IN (SELECT id FROM projects WHERE org_id = $1)) args $org
+  exec DELETE FROM attachments WHERE artifact_id IN (SELECT DISTINCT id FROM artifacts WHERE project_id IN (SELECT id FROM projects WHERE org_id = $1)) args $org
+  exec DELETE FROM link_artifacts WHERE artifact_id IN (SELECT DISTINCT id FROM artifacts WHERE project_id IN (SELECT id FROM projects WHERE org_id = $1)) args $org
+  exec DELETE FROM links WHERE from_id IN (SELECT DISTINCT id FROM artifacts WHERE project_id IN (SELECT id FROM projects WHERE org_id = $1)) OR to_id IN (SELECT DISTINCT id FROM artifacts WHERE project_id IN (SELECT id FROM projects WHERE org_id = $1)) args $org
+  exec DELETE FROM test_runs WHERE project_id IN (SELECT id FROM projects WHERE org_id = $1) args $org
+  exec DELETE FROM work_items WHERE project_id IN (SELECT id FROM projects WHERE org_id = $1) args $org
+  exec DELETE FROM interviews WHERE project_id IN (SELECT id FROM projects WHERE org_id = $1) args $org
+  exec DELETE FROM attribute_definitions WHERE org_id = $1 OR project_id IN (SELECT id FROM projects WHERE org_id = $1) args $org
+  exec DELETE FROM artifact_ref_counters WHERE project_id IN (SELECT id FROM projects WHERE org_id = $1) args $org
+  exec DELETE FROM artifacts WHERE project_id IN (SELECT id FROM projects WHERE org_id = $1) args $org
+  exec DELETE FROM projects WHERE org_id = $1 args $org
+  exec DELETE FROM agent_runs WHERE org_id = $1 args $org
+  exec DELETE FROM agents WHERE org_id = $1 args $org
+  exec DELETE FROM agent_teams WHERE org_id = $1 args $org
+  exec DELETE FROM automations WHERE org_id = $1 args $org
+  exec DELETE FROM guided_sessions WHERE org_id = $1 args $org
+  exec DELETE FROM domain_events WHERE org_id = $1 args $org
+  exec DELETE FROM notifications WHERE org_id = $1 args $org
+  exec DELETE FROM provider_settings WHERE org_id = $1 args $org
+  exec DELETE FROM provider_logins WHERE org_id = $1 args $org
+  exec DELETE FROM templates WHERE org_id = $1 args $org
+  exec DELETE FROM organizations WHERE id = $1 args $org
+  commit
+without artifact_embeddings
+  begin
+  query SELECT to_regclass('artifact_embeddings')::text
+  exec DELETE FROM chatter WHERE artifact_id IN (SELECT DISTINCT id FROM artifacts WHERE project_id IN (SELECT id FROM projects WHERE org_id = $1)) args $org
+  exec DELETE FROM attachments WHERE artifact_id IN (SELECT DISTINCT id FROM artifacts WHERE project_id IN (SELECT id FROM projects WHERE org_id = $1)) args $org
+  exec DELETE FROM link_artifacts WHERE artifact_id IN (SELECT DISTINCT id FROM artifacts WHERE project_id IN (SELECT id FROM projects WHERE org_id = $1)) args $org
+  exec DELETE FROM links WHERE from_id IN (SELECT DISTINCT id FROM artifacts WHERE project_id IN (SELECT id FROM projects WHERE org_id = $1)) OR to_id IN (SELECT DISTINCT id FROM artifacts WHERE project_id IN (SELECT id FROM projects WHERE org_id = $1)) args $org
+  exec DELETE FROM test_runs WHERE project_id IN (SELECT id FROM projects WHERE org_id = $1) args $org
+  exec DELETE FROM work_items WHERE project_id IN (SELECT id FROM projects WHERE org_id = $1) args $org
+  exec DELETE FROM interviews WHERE project_id IN (SELECT id FROM projects WHERE org_id = $1) args $org
+  exec DELETE FROM attribute_definitions WHERE org_id = $1 OR project_id IN (SELECT id FROM projects WHERE org_id = $1) args $org
+  exec DELETE FROM artifact_ref_counters WHERE project_id IN (SELECT id FROM projects WHERE org_id = $1) args $org
+  exec DELETE FROM artifacts WHERE project_id IN (SELECT id FROM projects WHERE org_id = $1) args $org
+  exec DELETE FROM projects WHERE org_id = $1 args $org
+  exec DELETE FROM agent_runs WHERE org_id = $1 args $org
+  exec DELETE FROM agents WHERE org_id = $1 args $org
+  exec DELETE FROM agent_teams WHERE org_id = $1 args $org
+  exec DELETE FROM automations WHERE org_id = $1 args $org
+  exec DELETE FROM guided_sessions WHERE org_id = $1 args $org
+  exec DELETE FROM domain_events WHERE org_id = $1 args $org
+  exec DELETE FROM notifications WHERE org_id = $1 args $org
+  exec DELETE FROM provider_settings WHERE org_id = $1 args $org
+  exec DELETE FROM provider_logins WHERE org_id = $1 args $org
+  exec DELETE FROM templates WHERE org_id = $1 args $org
+  exec DELETE FROM organizations WHERE id = $1 args $org
+  commit

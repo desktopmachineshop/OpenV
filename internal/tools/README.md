@@ -156,7 +156,9 @@ so "the next 60 code commits" is given as a range.
 
 `make check` runs CI's pull-request gates locally, in CI's order: the
 backend job (gofmt, vet, test, the refactor tools' Python tests, the Postgres
-vector assertion against whichever server `OPENV_TEST_DATABASE_URL` names),
+vector assertion against whichever server `OPENV_TEST_DATABASE_URL` names,
+which also requires the S3 schema and purge goldens to have run there, with
+no subtest skipped),
 the release-notes job (against the merge base with `BASE_REF`,
 `origin/master`) and the frontend job (tsc, lint, vitest, the Node tests of
 `frontend/scripts`, build). The tests of every tool here are part of CI's

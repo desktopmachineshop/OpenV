@@ -1,0 +1,4 @@
+# Byte-compared goldens of the stored-data freeze (refactor plan step S3):
+# a checkout with CRLF line endings would fail every comparison, so they stay
+# LF on every platform.
+* text eol=lf

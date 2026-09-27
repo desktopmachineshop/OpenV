@@ -1,0 +1,75 @@
+# Stored-data freeze, part (d) (refactor plan S3, invariant I16, quirk Q17): every table after
+# Migrate, the columns that tie its rows to a workspace (org_id, project_id, artifact_id), and how
+# PurgeOrg reaches it: "deleted" by a statement, "cascade from" tables that are reached (a NOT NULL
+# ON DELETE CASCADE foreign key; a nullable one misses rows whose key is NULL, so it does not count),
+# "not reached" (no such column), or GAP: a scoped table a purge leaves rows in, which must be on
+# purgeGapAllowlist in migration_freeze_purge_test.go (it may only shrink).
+# A line ending in @requires(x) exists only where extension x is installed.
+# Regenerate (a behavior change only) with every S3 golden, against a server with the vector and
+# pg_trgm extensions:
+# UPDATE_GOLDEN=1 go test ./internal/persistence/postgres -count=1 -run '^(TestMigrationFreeze|TestEveryBootFreeze|TestSchemaGolden|TestPurgeCatalog)$'
+agent_proposals scope project_id cascade from agent_runs
+agent_run_logs scope - cascade from agent_runs
+agent_runs scope org_id,project_id deleted
+agent_team_edges scope - cascade from agent_team_nodes,agent_teams
+agent_team_nodes scope - cascade from agent_teams
+agent_teams scope org_id,project_id deleted
+agents scope org_id deleted
+artifact_embeddings scope artifact_id deleted  @requires(vector)
+artifact_ref_counters scope project_id deleted
+artifacts scope project_id deleted
+attachment_figure_counters scope artifact_id GAP
+attachment_versions scope - cascade from attachments
+attachments scope artifact_id deleted
+attribute_definitions scope org_id,project_id deleted
+automations scope org_id,project_id deleted
+baselines scope project_id cascade from projects
+chatter scope artifact_id deleted
+connector_pairings scope org_id cascade from organizations
+domain_events scope org_id,project_id deleted
+email_verifications scope - not reached
+evidence_bundles scope project_id cascade from projects
+evidence_citations scope - cascade from evidence_bundles,test_results
+evidence_files scope - cascade from evidence_bundles
+guided_session_messages scope - cascade from guided_sessions
+guided_sessions scope org_id,project_id deleted
+hosted_workers scope org_id cascade from organizations
+interview_invites scope - cascade from interviews
+interview_messages scope - cascade from interview_sessions
+interview_sessions scope - cascade from interviews
+interviews scope project_id deleted
+link_artifacts scope artifact_id deleted
+links scope - deleted
+notifications scope org_id deleted
+org_invitations scope org_id cascade from organizations
+org_members scope org_id cascade from organizations
+org_team_members scope - cascade from org_teams
+org_teams scope org_id cascade from organizations
+organizations scope - deleted
+password_resets scope - not reached
+product_profiles scope project_id cascade from projects
+project_members scope project_id cascade from projects
+project_share_links scope project_id cascade from projects
+project_team_access scope project_id cascade from org_teams,projects
+projects scope org_id deleted
+provider_logins scope org_id deleted
+provider_settings scope org_id deleted
+push_subscriptions scope - not reached
+release_announcements scope - not reached
+release_schedule scope org_id cascade from organizations
+repo_connections scope project_id cascade from projects
+runner_pool_nodes scope - not reached
+runner_sessions scope org_id cascade from organizations
+schema_migrations scope - not reached
+sessions scope - not reached
+shared_product_reports scope - not reached
+shared_product_votes scope - not reached
+shared_products scope - not reached
+templates scope org_id deleted
+test_results scope - cascade from test_runs
+test_runs scope project_id deleted
+user_repo_paths scope - cascade from repo_connections
+users scope - not reached
+work_item_activity scope - cascade from work_items
+work_items scope project_id deleted
+worker_keys scope org_id cascade from organizations

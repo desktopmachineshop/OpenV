@@ -159,6 +159,22 @@ without it), a frontend `npm ci` + `tsc` + build, Docker
 image builds, a Playwright smoke journey against the composed stack, and the
 vulnerability scan below. Still run `make test` locally before pushing.
 
+A new migration changes the stored-data goldens under
+`internal/persistence/postgres/testdata/` (refactor plan step S3): the
+schema after both boot paths, the migration freeze and the purge catalogue.
+Regenerate them in the same pull request, against a Postgres that has the
+vector and pg_trgm extensions (`pgvector/pgvector:pg15`, as CI's pgvector leg
+runs), with
+`UPDATE_GOLDEN=1 go test ./internal/persistence/postgres -count=1 -run '^(TestMigrationFreeze|TestEveryBootFreeze|TestSchemaGolden|TestPurgeCatalog)$'`.
+A shipped migration is never edited: the freeze appends new migrations and
+refuses to rewrite an old one, and fails if the schema goldens record a
+migration it has not frozen, so the one command above is the way to
+regenerate them. A new table with an `org_id`, `project_id` or `artifact_id`
+column must go when its workspace is purged, through `PurgeOrg`'s list or an
+`ON DELETE CASCADE` foreign key whose columns are `NOT NULL` (a nullable one
+leaves the rows whose key is NULL); the list of tables a purge misses may
+only shrink.
+
 ### The vulnerability gate
 
 The **Vulnerability scan** job (`vuln`) is a supply-chain gate on every pull
