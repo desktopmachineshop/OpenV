@@ -52,7 +52,7 @@ shrink.
 | `env_reads` | [Direct env reads](#direct-env-reads) | a ceiling per package |
 
 Any PR may lower or remove an entry. A refactor PR never raises or adds
-one (the plan's Refactor guard job, S14b, is to refuse it), with the
+one (the Refactor guard job, S14b, refuses it), with the
 exceptions S14b lists. A class D PR may add entries for the package it
 creates: `import_edges` into it, and from it to packages the moved
 declarations' old home already imports (the moved code's own dependencies:
@@ -83,7 +83,7 @@ nothing and fails. Commit the result with the change that caused it.
 Run it when an entry "can be tightened". `go test` hides a passing test's
 log, so that note shows only with `go test -v ./internal/archtest`. An
 untightened file still passes, so a loose entry lets code grow back up to
-it; the plan's Refactor guard job (S14b) is to require refactor PRs to
+it; the Refactor guard job (S14b) requires refactor PRs to
 commit the tightened file.
 
 Tightening can race with a parallel PR. If one PR removes the last use of
@@ -203,7 +203,7 @@ with a ceiling of their size plus R6 headroom: 10%, at most 150 lines.
 **Why.** K14: small files are findable and conflict less. Headroom means a
 feature PR touching a giant is never blocked. The ceiling never rises; it
 falls when the regenerate command is run after a file shrinks, and the
-plan's Refactor guard job (S14b) is to require that of refactor PRs, so a
+Refactor guard job (S14b) requires that of refactor PRs, so a
 split file cannot grow back.
 
 **Fix.** Split the file by concern within its package (a class A move). A
