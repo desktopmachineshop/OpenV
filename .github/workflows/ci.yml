@@ -118,11 +118,31 @@ jobs:
             grep -Eq -- "^ +--- PASS: TestBoot(Smoke|Profiles|Misconfigured)/$b " boot-harness.log || { echo "::error::no boot passed against postgres:15 for $g"; exit 1; }
           done
 
+      # The API tour (refactor plan S5a-S5e) boots one server per area, each on
+      # a database of its own on this server, and pins what every request of
+      # the area answers; its goldens under cmd/server/testdata/tour/ hold for
+      # a server with or without the vector extension. Fail if a tour test
+      # only skipped, or if a golden there has no area test that passed: each
+      # golden names its test ("test"), which TestTourGoldensAreClaimed ties
+      # to the area file that writes it.
+      - name: API tour ran
+        shell: bash
+        run: |
+          go test ./cmd/server/ -count=1 -v -run '^TestTour' | tee api-tour.log
+          ! grep -Eq -- "--- SKIP: TestTour" api-tour.log || { echo "::error::a tour test only skipped against postgres:15"; exit 1; }
+          for t in TestTourCoverage TestTourGoldensAreClaimed; do
+            grep -q -- "^--- PASS: $t " api-tour.log || { echo "::error::$t did not pass against postgres:15"; exit 1; }
+          done
+          for g in cmd/server/testdata/tour/*/*.json; do
+            t="$(sed -n 's/^  "test": "\(TestTour[A-Za-z0-9]*\)",$/\1/p' "$g")"
+            { [ -n "$t" ] && grep -q -- "^--- PASS: $t " api-tour.log; } || { echo "::error::no tour area passed against postgres:15 for $g"; exit 1; }
+          done
+
   # The Postgres-backed tests again, on a server that has the vector
   # extension. Four embedding tests skip without it, so until this leg they ran
-  # nowhere. Only internal/persistence/postgres and the boot harness in
-  # cmd/server (refactor plan S4) read OPENV_TEST_DATABASE_URL, so only those
-  # run here.
+  # nowhere. Only internal/persistence/postgres and the boot harness and API
+  # tour in cmd/server (refactor plan S4, S5) read OPENV_TEST_DATABASE_URL, so
+  # only those run here.
   backend-pgvector:
     name: Backend Postgres tests (pgvector)
     runs-on: ubuntu-latest
@@ -175,6 +195,22 @@ jobs:
           for g in cmd/server/testdata/boot/*.txt; do
             b="$(basename "$g" .txt)"
             grep -Eq -- "^ +--- PASS: TestBoot(Smoke|Profiles|Misconfigured)/$b " boot-harness.log || { echo "::error::no boot passed against pgvector for $g"; exit 1; }
+          done
+
+      # The API tour (refactor plan S5a-S5e) on a server with the vector
+      # extension, against the same goldens as on postgres:15, with the same
+      # checks: no tour test skipped, and a passing area for every golden.
+      - name: API tour (vector extension present)
+        shell: bash
+        run: |
+          go test ./cmd/server/ -count=1 -v -run '^TestTour' | tee api-tour.log
+          ! grep -Eq -- "--- SKIP: TestTour" api-tour.log || { echo "::error::a tour test only skipped against pgvector"; exit 1; }
+          for t in TestTourCoverage TestTourGoldensAreClaimed; do
+            grep -q -- "^--- PASS: $t " api-tour.log || { echo "::error::$t did not pass against pgvector"; exit 1; }
+          done
+          for g in cmd/server/testdata/tour/*/*.json; do
+            t="$(sed -n 's/^  "test": "\(TestTour[A-Za-z0-9]*\)",$/\1/p' "$g")"
+            { [ -n "$t" ] && grep -q -- "^--- PASS: $t " api-tour.log; } || { echo "::error::no tour area passed against pgvector for $g"; exit 1; }
           done
 
   frontend:

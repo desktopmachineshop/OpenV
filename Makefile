@@ -174,7 +174,10 @@ test:
 ## plan S4a's profiles, S4b's environment matrix and misconfigured boots)
 ## reads the same variable, and runs on both CI legs; with it set, check
 ## fails if any of its tests or boots only skipped, or if a golden under
-## cmd/server/testdata/boot/ has no boot that passed.
+## cmd/server/testdata/boot/ has no boot that passed. So does the API tour
+## beside it (refactor plan S5a-S5e): check fails if a tour test only
+## skipped, or if a golden under cmd/server/testdata/tour/ has no area test
+## (the one its "test" field names) that passed.
 ## The release-notes job requires a new bullet relative to the merge base
 ## with BASE_REF, which is what CI's comparison of the merge commit with its
 ## first parent amounts to; set NO_RELEASE_NOTES=1 for a pull request that
@@ -225,6 +228,23 @@ check:
 		elif ran && booted; then \
 			echo "the boot harness ran, every boot of it (refactor plan S4)"; \
 		else cat "$$log"; echo "the boot harness, or a boot of it, only skipped"; rc=1; fi; \
+		rm -f "$$log"; exit $$rc; \
+	fi
+	@if [ -z "$$OPENV_TEST_DATABASE_URL" ]; then \
+		echo "OPENV_TEST_DATABASE_URL is unset: the API tour (cmd/server, refactor plan S5) skipped (CI runs it)"; \
+	else \
+		log="$$(mktemp)"; \
+		go test ./cmd/server/ -count=1 -v -run '^TestTour' > "$$log"; rc=$$?; \
+		toured() { ! grep -Eq -- "--- SKIP: TestTour" "$$log" || return 1; \
+			for t in TestTourCoverage TestTourGoldensAreClaimed; do grep -q -- "^--- PASS: $$t " "$$log" || return 1; done; \
+			for g in cmd/server/testdata/tour/*/*.json; do \
+				t="$$(sed -n 's/^  "test": "\(TestTour[A-Za-z0-9]*\)",$$/\1/p' "$$g")"; \
+				{ [ -n "$$t" ] && grep -q -- "^--- PASS: $$t " "$$log"; } || { echo "no tour area passed for $$g"; return 1; }; \
+			done; }; \
+		if [ $$rc -ne 0 ]; then cat "$$log"; \
+		elif toured; then \
+			echo "the API tour ran, every area of it (refactor plan S5)"; \
+		else cat "$$log"; echo "the API tour, or an area of it, only skipped"; rc=1; fi; \
 		rm -f "$$log"; exit $$rc; \
 	fi
 	python3 -m unittest scripts/release_notes_test.py

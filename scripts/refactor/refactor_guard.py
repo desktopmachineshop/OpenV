@@ -181,7 +181,10 @@ GUARD_CODE = [
             "internal/persistence/postgres/migration_freeze_purge_test.go"]),
     ("S4a", ["cmd/server/harness_test.go", "cmd/server/boot_smoke_test.go", "cmd/server/boot_steps_test.go"]),
     ("S4b", ["cmd/server/boot_profiles_test.go", "cmd/server/boot_misconfigured_test.go"]),
-    ("S5a-S5e", []),  # slot: the tour and matrix tests with their normalisers
+    # The tour's framework (S5a: tour_test.go, its normaliser, bodies and
+    # fixtures) and every area, cmd/server/tour_<slice>_<key>_test.go, so the
+    # areas S5b-S5e add are covered once they merge.
+    ("S5a-S5e", ["cmd/server/tour_test.go", "cmd/server/tour_*_test.go"]),
     ("S6", ["internal/api/sse_contract_test.go", "internal/api/sse_scan_test.go",
             "internal/api/event_payload_types_test.go", "internal/api/event_payload_drives_test.go",
             "internal/domain/events/event_types_test.go", "frontend/src/components/agents/RunDetailPanel.test.tsx",
