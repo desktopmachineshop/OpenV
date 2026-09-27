@@ -38,7 +38,8 @@ it; ratchets, allowlists and ceilings are judged against the base as well as
 the commit's parent, so a pull request may restore what the base had. A file
 of the base deleted in one commit and re-added in a later one is judged
 against the base: the re-add counts as an edit unless it restores the base's
-bytes.
+bytes. Growth is judged per entry, so an entry removed in one commit and
+re-added higher in a later one counts as raised against the base.
 (3) Stale ratchets is the job's next step, not this script: it runs
 `UPDATE_RATCHETS=1 go test -count=1 -run '^TestArchitecture$' ./internal/archtest`
 and diffs ratchets.json.
@@ -596,18 +597,22 @@ def x2b_changes_in(text):
 
 def allowlist_growth(old_text, new_text):
     """[(allowlist, description)] for every entry added or raised."""
+    return [(name, desc) for name, _, desc in allowlist_growth_keyed(old_text, new_text)]
+
+
+def allowlist_growth_keyed(old_text, new_text):
     out = []
     for name, kind in LINT_ALLOWLISTS.items():
         old, new = parse_allowlist(old_text, name, kind), parse_allowlist(new_text, name, kind)
         for key, value in new.items():
             if key not in old:
-                out.append((name, f"adds '{key}'"))
+                out.append((name, key, f"adds '{key}'"))
             elif kind == "count" and value > old[key]:
-                out.append((name, f"raises '{key}' from {old[key]} to {value}"))
+                out.append((name, key, f"raises '{key}' from {old[key]} to {value}"))
             elif kind == "list":
                 for target in value:
                     if target not in old[key]:
-                        out.append((name, f"adds '{target}' to '{key}'"))
+                        out.append((name, key, f"adds '{target}' to '{key}'"))
     return out
 
 
@@ -1180,11 +1185,11 @@ class Guard:
             except ValueError:
                 old = {}
             growth = [g for g in ratchet_growth(old, new) if not self.ratchet_exception(c, parent, old, new, g)]
-            per_parent.append({(g[0], g[1]): g for g in growth})
+            per_parent.append({g[0]: g for g in growth})
         # Raised or added only when more than in every tree judged against.
         keys = set.intersection(*(set(d) for d in per_parent)) if per_parent else set()
-        for key in sorted(keys, key=lambda k: (keypath(k[0]), k[1])):
-            kp, kind, detail = per_parent[0][key]
+        for key in sorted(keys, key=keypath):
+            kp, kind, detail = per_parent[-1][key]
             what = {"added": "adds", "raised": "raises", "shape": "changes the shape of"}[kind]
             self.fail("(2) ratchets", f"{what} ratchets.json entry {keypath(kp)}" + (f" ({detail})" if detail else ""),
                       "a refactor only lowers or removes ratchet entries (R6): change the code so the entry is not "
@@ -1242,8 +1247,9 @@ class Guard:
         # A tree without the file (deleted earlier in this pull request) judges
         # nothing; the base, which has it, still does.
         olds = [self.git.text(tree, LINT_ALLOWLIST_FILE) for tree in self.judged_against(c)]
-        per_parent = [set(allowlist_growth(old, new)) for old in olds if old is not None]
-        for name, desc in sorted(g for g in set.intersection(*per_parent) if g[0] in frozen):
+        per_parent = [{(n, k): d for n, k, d in allowlist_growth_keyed(old, new)} for old in olds if old is not None]
+        for name, key in sorted(k for k in set.intersection(*(set(d) for d in per_parent)) if k[0] in frozen):
+            desc = per_parent[-1][(name, key)]
             self.fail("(2) lint allowlist", f"{desc} in {name}", "S12's allowlists only shrink: fix the import or "
                       "open the stream through the shared hook instead (§6.4 S12)", commit=c,
                       path=LINT_ALLOWLIST_FILE)
@@ -1261,8 +1267,8 @@ class Guard:
                     continue  # created by this pull request
                 olds = [self.git.text(tree, path) for tree in self.judged_against(c)]
                 before = [find_constant(old, name) for old in olds if old is not None]
-                if all(b is not None and now[1] > b[1] for b in before):
-                    self.fail("(2) guard ceiling", f"raises {name} from {max(b[1] for b in before)} to {now[1]}",
+                if all(b is None or now[1] > b[1] for b in before):
+                    self.fail("(2) guard ceiling", f"raises {name} from {max(b[1] for b in before if b)} to {now[1]}",
                               "this ceiling only falls: fix the code that pushed the count up instead", commit=c,
                               path=path)
 

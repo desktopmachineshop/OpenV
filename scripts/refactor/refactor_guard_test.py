@@ -814,6 +814,65 @@ class ReAddTest(RepoTest):
                                  "raises 'src/views/InterviewChat.tsx' from 1 to 5")
         self.assertEqual(f.commit[1], "back")
 
+    # An entry removed in one commit and re-added higher in the next is
+    # 'added' against the parent and 'raised' against the base: both count.
+
+    def ratchets_with(self, edit):
+        r = json.loads(json.dumps(RATCHETS))
+        edit(r)
+        return json.dumps(r, indent=2) + "\n"
+
+    def test_ratchet_entry_removed_then_re_added_raised(self):
+        self.commit("drop", {"internal/archtest/ratchets.json":
+                             self.ratchets_with(lambda r: r["file_lines"].pop("internal/api/handlers.go"))},
+                    trailers("B"))
+        self.commit("back", {"internal/archtest/ratchets.json":
+                             self.ratchets_with(lambda r: r["file_lines"].update({"internal/api/handlers.go": 3671}))},
+                    trailers("B"))
+        f = self.assertFailsWith(self.guard(*REFACTOR), "(2) ratchets",
+                                 "raises ratchets.json entry file_lines.internal/api/handlers.go (3519 -> 3671)")
+        self.assertEqual(f.commit[1], "back")
+
+    def test_ratchet_count_removed_then_re_added_raised(self):
+        self.commit("drop", {"internal/archtest/ratchets.json":
+                             self.ratchets_with(lambda r: r["counts"].pop("raw_json_encodes"))}, trailers("B"))
+        self.commit("back", {"internal/archtest/ratchets.json":
+                             self.ratchets_with(lambda r: r["counts"].update({"raw_json_encodes": 400}))},
+                    trailers("B"))
+        self.assertFailsWith(self.guard(*REFACTOR), "(2) ratchets",
+                             "raises ratchets.json entry counts.raw_json_encodes (249 -> 400)")
+
+    def test_ratchet_entry_removed_then_restored_passes(self):
+        self.commit("drop", {"internal/archtest/ratchets.json":
+                             self.ratchets_with(lambda r: r["file_lines"].pop("internal/api/handlers.go"))},
+                    trailers("B"))
+        self.commit("back", {"internal/archtest/ratchets.json": json.dumps(RATCHETS, indent=2) + "\n"},
+                    trailers("B"))
+        self.assertPasses(self.guard(*REFACTOR))
+
+    def test_allowlist_entry_removed_then_re_added_raised(self):
+        entry = "  'src/views/InterviewChat.tsx': 1,\n"
+        self.commit("drop", {"frontend/eslint.config.js": ESLINT.replace(entry, "")}, trailers("B"))
+        self.commit("back", {"frontend/eslint.config.js": ESLINT.replace(entry, entry.replace("1", "5"))},
+                    trailers("B"))
+        f = self.assertFailsWith(self.guard(*REFACTOR), "(2) lint allowlist",
+                                 "raises 'src/views/InterviewChat.tsx' from 1 to 5")
+        self.assertEqual(f.commit[1], "back")
+
+    def test_allowlist_entry_removed_then_restored_passes(self):
+        entry = "  'src/views/InterviewChat.tsx': 1,\n"
+        self.commit("drop", {"frontend/eslint.config.js": ESLINT.replace(entry, "")}, trailers("B"))
+        self.commit("back", {"frontend/eslint.config.js": ESLINT}, trailers("B"))
+        self.assertPasses(self.guard(*REFACTOR))
+
+    def test_ceiling_line_removed_then_re_added_raised(self):
+        dropped = ERROR_CHAINS.replace("const CEILING = 53;\n", "")
+        self.commit("drop", {"frontend/src/arch/errorChains.test.ts": dropped}, trailers("C"))
+        self.commit("back", {"frontend/src/arch/errorChains.test.ts": ERROR_CHAINS.replace("53", "90")},
+                    trailers("C"))
+        f = self.assertFailsWith(self.guard("refactor", "refactor:test"), "(2) guard ceiling", "from 53 to 90")
+        self.assertEqual(f.commit[1], "back")
+
 
 class ScriptTest(RepoTest):
     RENAME = ("import pathlib, sys\n"

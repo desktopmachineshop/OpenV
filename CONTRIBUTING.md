@@ -162,7 +162,9 @@ On a **refactor** pull request, also:
    deletes and a later one re-adds is judged against the base: re-adding
    guard code counts as editing it unless the bytes are the base's, and a
    re-added `ratchets.json`, allowlist or ceiling may not be above the
-   base's. Then the class checks above run on every commit.
+   base's. The same holds for a single entry: one removed in one commit and
+   re-added higher in a later one counts as raised. Then the class checks
+   above run on every commit.
 3. **Stale ratchets.** The job runs
    `UPDATE_RATCHETS=1 go test -count=1 -run '^TestArchitecture$' ./internal/archtest`;
    a refactor pull request fails if that changes `ratchets.json`, so commit
