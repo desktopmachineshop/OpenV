@@ -219,38 +219,151 @@ func harnessEnv(db testDatabase, port int, tmp string, extra map[string]string) 
 	return out
 }
 
-// handedOut is every port freePort has returned in this test process, so
-// that boots running in parallel never get the same one: the kernel may offer
-// a port it has released again before the first server listens on it, and
-// then the losing boot's /health probes would reach the winning server.
-var handedOut struct {
+// portRegistry is every port handed to a server or held by a
+// recordingProxy in this test process, so that boots running in parallel never
+// get the same port and no proxy sits on a server's: the kernel may offer a
+// port it has released again before a server listens on it, and then the
+// losing boot's /health probes would reach the winning server, or a proxy,
+// which would record them as outbound requests. listen is how it asks the
+// kernel for a port; tests script it.
+type portRegistry struct {
 	sync.Mutex
-	ports map[int]bool
+	ports  map[int]bool
+	listen func() (net.Listener, error)
 }
 
-// freePort asks the kernel for a free port that it has not handed out
-// before, and releases it for the server.
-func freePort(t *testing.T) int {
+// handedOut is the registry of the whole test process.
+var handedOut = &portRegistry{listen: func() (net.Listener, error) { return net.Listen("tcp", "127.0.0.1:0") }}
+
+// freePort asks the kernel for a free port that no server or proxy has had
+// in this process, and releases it for the server.
+func freePort(t *testing.T) int { t.Helper(); return handedOut.free(t) }
+
+// listenUnhanded listens on such a port and keeps it, for a recordingProxy.
+func listenUnhanded(t *testing.T) net.Listener { t.Helper(); return handedOut.hold(t) }
+
+func (r *portRegistry) free(t *testing.T) int {
 	t.Helper()
-	handedOut.Lock()
-	defer handedOut.Unlock()
-	if handedOut.ports == nil {
-		handedOut.ports = map[int]bool{}
+	l := r.take(t, "find a free port")
+	port := l.Addr().(*net.TCPAddr).Port
+	_ = l.Close()
+	return port
+}
+
+func (r *portRegistry) hold(t *testing.T) net.Listener {
+	t.Helper()
+	return r.take(t, "listen on a free port")
+}
+
+// take listens on a port the registry has not seen and records it. Refused
+// listeners stay open until a good one is found, so the kernel cannot offer
+// the same port again meanwhile.
+func (r *portRegistry) take(t *testing.T, what string) net.Listener {
+	t.Helper()
+	r.Lock()
+	defer r.Unlock()
+	if r.ports == nil {
+		r.ports = map[int]bool{}
 	}
+	var refused []net.Listener
+	defer func() {
+		for _, l := range refused {
+			_ = l.Close()
+		}
+	}()
 	for range 100 {
-		l, err := net.Listen("tcp", "127.0.0.1:0")
+		l, err := r.listen()
 		if err != nil {
-			t.Fatalf("find a free port: %v", err)
+			t.Fatalf("%s: %v", what, err)
 		}
 		port := l.Addr().(*net.TCPAddr).Port
-		_ = l.Close()
-		if !handedOut.ports[port] {
-			handedOut.ports[port] = true
-			return port
+		if !r.ports[port] {
+			r.ports[port] = true
+			return l
 		}
+		refused = append(refused, l)
 	}
-	t.Fatal("find a free port: the kernel offered only ports already handed out")
-	return 0
+	t.Fatalf("%s: the kernel offered only ports already handed out", what)
+	return nil
+}
+
+// scriptedListener stands in for a kernel-chosen listener on a given port.
+type scriptedListener struct{ port int }
+
+func (l scriptedListener) Accept() (net.Conn, error) { return nil, net.ErrClosed }
+func (l scriptedListener) Close() error              { return nil }
+func (l scriptedListener) Addr() net.Addr {
+	return &net.TCPAddr{IP: net.IPv4(127, 0, 0, 1), Port: l.port}
+}
+
+// TestPortsAreNeverShared scripts the kernel offering a released port again:
+// a proxy may not take a port a server was given, and a server may not be
+// given a port a proxy holds.
+func TestPortsAreNeverShared(t *testing.T) {
+	offers := []int{40001, 40001, 40002, 40002, 40001, 40003}
+	r := &portRegistry{listen: func() (net.Listener, error) {
+		if len(offers) == 0 {
+			return nil, errors.New("the script offers no more ports")
+		}
+		p := offers[0]
+		offers = offers[1:]
+		return scriptedListener{port: p}, nil
+	}}
+	if got := r.free(t); got != 40001 {
+		t.Fatalf("first server port = %d, want 40001", got)
+	}
+	if got := r.hold(t).Addr().(*net.TCPAddr).Port; got != 40002 {
+		t.Fatalf("the proxy took port %d; want 40002, since 40001 was handed to a server", got)
+	}
+	if got := r.free(t); got != 40003 {
+		t.Fatalf("second server port = %d; want 40003, since 40002 is the proxy's and 40001 a server's", got)
+	}
+}
+
+// TestHarnessPortsGoThroughTheRegistry: the recording proxy's port and a
+// server's are both taken through handedOut, so TestPortsAreNeverShared's
+// rules hold for the harness itself.
+func TestHarnessPortsGoThroughTheRegistry(t *testing.T) {
+	proxy := startRecordingProxy(t).ln.Addr().(*net.TCPAddr).Port
+	server := freePort(t)
+	handedOut.Lock()
+	defer handedOut.Unlock()
+	if !handedOut.ports[proxy] || !handedOut.ports[server] {
+		t.Fatalf("in the registry: the recording proxy's port %d %v, freePort's %d %v; both must be",
+			proxy, handedOut.ports[proxy], server, handedOut.ports[server])
+	}
+}
+
+// TestRecordingProxyIgnoresMisdirectedRequests: a request in origin form
+// ("GET /health"), which only a client talking to a server on this port
+// sends, answers 421 and is not recorded; a request in proxy form still is.
+func TestRecordingProxyIgnoresMisdirectedRequests(t *testing.T) {
+	p := startRecordingProxy(t)
+	noProxy := &http.Client{Transport: &http.Transport{Proxy: nil}}
+	direct, err := noProxy.Get("http://" + p.ln.Addr().String() + "/health")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = direct.Body.Close()
+	if direct.StatusCode != http.StatusMisdirectedRequest {
+		t.Fatalf("GET /health sent straight to the proxy answered %d, want 421", direct.StatusCode)
+	}
+	if got := p.summary(); len(got) != 1 || !strings.HasPrefix(got[0], "none:") {
+		t.Fatalf("a misdirected request was recorded: %q", got)
+	}
+	proxyURL, err := url.Parse(p.url())
+	if err != nil {
+		t.Fatal(err)
+	}
+	client := &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxyURL)}}
+	viaProxy, err := client.Get("http://example.invalid/x")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = viaProxy.Body.Close()
+	if got := p.summary(); len(got) != 1 || !strings.HasPrefix(got[0], "GET http://example.invalid: 1 tried") {
+		t.Fatalf("a request through the proxy was not recorded as sent: %q", got)
+	}
 }
 
 // bootServer boots the binary on a fresh database and waits until /health
@@ -582,10 +695,7 @@ const proxyPlaceholder = "http://127.0.0.1:<recording proxy port>"
 
 func startRecordingProxy(t *testing.T) *recordingProxy {
 	t.Helper()
-	ln, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatalf("start the recording proxy: %v", err)
-	}
+	ln := listenUnhanded(t)
 	p := &recordingProxy{ln: ln}
 	p.wg.Add(1)
 	go func() {
@@ -629,10 +739,19 @@ func (p *recordingProxy) refuse(conn net.Conn) {
 	_ = conn.SetDeadline(time.Now().Add(10 * time.Second))
 	what := "a request the proxy could not read"
 	if req, err := http.ReadRequest(bufio.NewReader(conn)); err == nil {
-		if req.Method == http.MethodConnect {
+		switch {
+		case req.Method == http.MethodConnect:
 			what = "CONNECT " + req.Host
-		} else {
+		case req.URL.IsAbs():
 			what = req.Method + " " + req.URL.Scheme + "://" + req.URL.Host
+		default:
+			// A proxy-aware client never sends an origin-form request
+			// ("GET /health") to its proxy: this one was meant for a server
+			// on this port, such as a readiness poll of a boot whose released
+			// port the kernel gave this proxy, which handedOut cannot prevent
+			// when the boot runs in another test process. It is not recorded.
+			_, _ = io.WriteString(conn, "HTTP/1.1 421 Misdirected Request\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")
+			return
 		}
 	}
 	p.mu.Lock()
