@@ -156,10 +156,14 @@ the Phase 3 consolidations that give quirks their names.
   goroutines, then `api.NewHandler` (`:797`) calls `SetSeatCounter` and
   `DefaultReturnURL` on it (`internal/api/handlers.go:372-377`; the plan's
   I17 row cites `:373-379` at `d11dee8`).
-- **Pinned by, named as:** S4 `boot_steps.txt` (statement order) and the S4
-  billing profile's boot log *(planned)*; X12 keeps the point *(planned)*.
-  Pain point boot-v1.
-- **Pinned today:** nothing beyond this entry.
+- **Pinned by, named as:** S4a `boot_steps.txt` (statement order) and the
+  S4b billing profile's boot log *(planned)*; X12 keeps the point
+  *(planned)*. Pain point boot-v1.
+- **Pinned today:** S4a's `TestBootSteps` (`cmd/server/boot_steps_test.go`)
+  fails if `(*internal/billing.Service).Start` moves past
+  `inline internal/api.NewHandler` and its `SetSeatCounter` and
+  `DefaultReturnURL` in `cmd/server/testdata/boot_steps.txt`; the billing-on
+  boot log waits for S4b.
 
 ## Q12. `FRONTEND_URL` has two fallback chains; reports read raw `UPLOADS_DIR`
 
@@ -202,8 +206,11 @@ the Phase 3 consolidations that give quirks their names.
   401, not 404, unless it is public. `CORSMiddleware` answers every
   `OPTIONS` with 200 itself (`internal/api/security_headers.go:58-61`),
   outside the request log. The chain is built at `cmd/server/main.go:874-920`.
-- **Pinned by, named as:** S4 *(planned)*. Pain point boot-v4.
-- **Pinned today:** nothing beyond this entry.
+- **Pinned by, named as:** S4a. Pain point boot-v4.
+- **Pinned today:** S4a's `TestBootSmoke` (`cmd/server/boot_smoke_test.go`):
+  the `auth-before-routing` probe (401 on `GET /api/v1/no-such-route`) and
+  the `preflight-allowed` and `preflight-refused` probes (200, `log (none)`)
+  in `cmd/server/testdata/boot/{default,metrics_token}.txt`.
 
 ## Q16. The wizard and the notes panel build different artifact text
 

@@ -1,0 +1,167 @@
+# The call statements of cmd/server main() and of internal/api.NewHandler, in
+# source order, from the syntax tree (refactor plan §6.4 S4a; invariants I10
+# and I17). Written by TestBootSteps (cmd/server/boot_steps_test.go, which
+# gives the rules in full); regenerate with
+#   UPDATE_GOLDEN=1 go test ./cmd/server -count=1 -run '^TestBootSteps$'
+#
+#   call X       an expression statement calling X (a chain lists each call,
+#                innermost first), a call assigned only to blank identifiers,
+#                or a call of which an error result is kept, whatever else
+#                it keeps (a call keeping only other results is no step)
+#   go, defer    a go or defer statement: with X, it starts X; without, the
+#                steps of the code it starts follow, indented
+#   defer.inner  a defer in an inlined function, run when that one returns
+#   inline F     F's own steps follow, indented (internal/api.NewHandler)
+#   value v      a call of the function value in variable v
+#   (T).M        method M called on a receiver of static type T; after an
+#                AddSubscriber or Subscribe*, its arguments' static types
+#   if, else, switch, case, default, for, select
+#                blocks with a step inside, by nesting, without conditions
+#
+# Package-level functions of cmd/server, the a.<stage>() methods of its
+# wire_*.go files and closures bound to a variable are inlined where a
+# statement calls them, and so are internal/api's functions and *Handler
+# methods inside NewHandler; a call an inlined function returns counts as made
+# by the statement that called it. Calls into log and log/slog are left out.
+# No file name, line number, argument or condition appears: moving code
+# between files, into helpers or into stages leaves this file as it is;
+# moving a step past another one changes it. Being arguments, timer and
+# ticker durations (the purge's 24 h, the reaper's first tick at 30 s) are
+# not pinned here.
+
+func main()
+  defer value stop
+  call internal/domain/orgs.SetSelfHosted
+  call internal/domain/orgs.SetDefaultPlan
+  call internal/domain/orgs.ParseLimits
+  if
+    call os.Exit
+  call internal/domain/orgs.SetDeploymentLimits
+  call os.MkdirAll
+  if
+    call os.Exit
+  call internal/persistence/postgres.Connect
+  if
+    call os.Exit
+  defer (*database/sql.DB).Close
+  call internal/persistence/postgres.MigrateAndBackfill
+  if
+    call os.Exit
+  call (*internal/domain/links.DefaultService).SetArtifactService
+  call (*internal/domain/artifacts.DefaultService).SetLinkSuspector
+  call (*internal/domain/artifacts.DefaultService).SetEmbeddingIndexer
+  call (*internal/domain/templates.DefaultService).SeedDefaults
+  if
+    call time.Parse
+    if
+      call os.Exit
+    call (*internal/domain/orgs.DefaultService).GrandfatherBefore
+    if
+      call os.Exit
+    call internal/domain/orgs.SetTiersEnforced
+  call (*internal/domain/workerkeys.DefaultService).SetPairingRepository
+  if
+    call (*internal/domain/hostedworkers.DefaultService).ListAll
+    if
+    else
+      for
+        call (internal/hosting.Provisioner).ContainerState
+        if
+          call (*internal/domain/hostedworkers.DefaultService).SetStatus
+  if
+    call (*database/sql.DB).QueryRow -> (*database/sql.Row).Scan
+    if
+      call (*internal/domain/workerkeys.DefaultService).EnsureBootstrapKey
+  call (*internal/domain/exports.DefaultService).SetProductService
+  call internal/seeds.EnsureSharedProductPool
+  call (*internal/domain/exports.DefaultService).SetAttributeService
+  call (*internal/domain/downloads.DefaultService).SetEvidenceSource
+  call (*internal/domain/downloads.DefaultService).SetWorkspaceSource
+  call internal/domain/agents.NewFileService
+  if
+    call os.Exit
+  call (*internal/domain/agents.FileService).SyncAllFromDisk
+  call (*internal/domain/agentruns.DefaultService).SetRoutingPolicy
+  call strconv.Atoi
+  call (*internal/domain/agentruns.DefaultService).SetRetryPolicy
+  call (*internal/domain/teams.DefaultService).SetMemberValidator
+  call (*internal/domain/proposals.DefaultService).OnResolved
+  call (*internal/domain/orgs.DefaultService).ListAll
+  if
+  else
+    for
+      call internal/seeds.EnsureOrgDefaults
+  call (*internal/domain/agentruns.DefaultService).AddSubscriber(*internal/metrics.Metrics)
+  call (*internal/domain/agentruns.DefaultService).AddSubscriber(*internal/api.SSEHub)
+  call (*internal/metrics.Metrics).WatchSSEConnections
+  call (*internal/domain/agentruns.DefaultService).AddSubscriber(*internal/orchestration.Hooks)
+  call (*internal/orchestration.Hooks).SubscribeBus(*internal/events.DefaultBus)
+  call (*internal/domain/users.DefaultService).SetEmailVerificationPolicy
+  call (*internal/domain/users.DefaultService).SetSessionPolicy
+  call internal/notify.NewNotifier -> (*internal/notify.Notifier).SetEmailDispatcher -> (*internal/notify.Notifier).SetPushDispatcher -> (*internal/notify.Notifier).SetOrgService -> (*internal/notify.Notifier).SetUserNamer -> (*internal/notify.Notifier).Start
+  call internal/notify.NewBudgetMonitor -> (*internal/notify.BudgetMonitor).SetEmailDispatcher -> (*internal/notify.BudgetMonitor).SetPushDispatcher -> (*internal/notify.BudgetMonitor).Start
+  call internal/domain/release.NewService
+  if
+    go (*internal/notify.ReleaseAnnouncer).Announce
+    call internal/notify.NewStableScheduler -> (*internal/notify.StableScheduler).SetEmailDispatcher -> (*internal/notify.StableScheduler).SetPushDispatcher -> (*internal/notify.StableScheduler).Start
+    if
+      call internal/notify.NewSupportWindowWatcher -> (*internal/notify.SupportWindowWatcher).SetEmailDispatcher -> (*internal/notify.SupportWindowWatcher).SetPushDispatcher -> (*internal/notify.SupportWindowWatcher).Start
+  if
+    call (*internal/domain/agentruns.DefaultService).SetBudgetGuard
+  call internal/automation.NewTriggerMatcher -> (*internal/automation.TriggerMatcher).Start
+  call internal/scheduler.New -> (*internal/scheduler.Scheduler).Start
+  go
+    call (*internal/domain/orgs.DefaultService).PurgeExpired
+    defer (*time.Ticker).Stop
+    for
+      select
+        case
+          call (*internal/domain/orgs.DefaultService).PurgeExpired
+  go
+    defer (*time.Ticker).Stop
+    for
+      select
+        case
+          call (*internal/domain/agentruns.DefaultService).FailStale
+          call (*internal/persistence/postgres.UserRepository).DeleteExpiredSessions
+          call (*internal/domain/invitations.DefaultService).PurgeExpired
+          if
+            call (internal/domain/runnersessions.Service).Sweep
+  call internal/billing.ConfigFromEnv
+  if
+    call os.Exit
+  switch
+    case
+      call (*internal/billing.Service).SetUsers
+      call (*internal/billing.Service).SetPortalConfig
+      call (*internal/billing.Service).SetTrialDays
+      call (*internal/billing.Service).SetMaxSeats
+      if
+        call (*internal/billing.Service).SetReturnURL
+      call (*internal/billing.Service).Start
+  inline internal/api.NewHandler
+    if
+      call (*internal/billing.Service).SetSeatCounter
+      call (*internal/billing.Service).DefaultReturnURL
+  call (*internal/domain/proposals.DefaultService).SetAppliers
+  call (*internal/orchestration.Hooks).SetGuidedNudgeLauncher
+  call (*github.com/gorilla/mux.Router).Use
+  call (*internal/api.Handler).RegisterRoutes
+  call (*github.com/gorilla/mux.Router).Handle -> (*github.com/gorilla/mux.Route).Methods
+  call (*internal/api.AuthMiddleware).SetPoolKey
+  call (*internal/api.AuthMiddleware).SetEmailVerificationPolicy
+  call internal/api.CORSMiddleware
+  if
+    call os.Exit
+  go
+    call (*net/http.Server).ListenAndServe
+  select
+    case
+      if
+        call os.Exit
+    case
+      call value stop
+      defer value cancel
+      call (*net/http.Server).Shutdown
+      if
+        call (*net/http.Server).Close

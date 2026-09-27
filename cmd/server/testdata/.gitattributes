@@ -1,0 +1,4 @@
+# Byte-compared goldens of the boot harness (refactor plan step S4a): a
+# checkout with CRLF line endings would fail every comparison, so they stay
+# LF on every platform.
+* text eol=lf

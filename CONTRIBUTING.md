@@ -203,6 +203,10 @@ prints:
 - routes: `UPDATE_ROUTES=1 go test ./internal/api -count=1 -v -run 'TestRouteInventory|TestRouteBinding'`
 - stored data (S3): `UPDATE_GOLDEN=1 go test ./internal/persistence/postgres -count=1 -run '^(TestMigrationFreeze|TestEveryBootFreeze|TestSchemaGolden|TestPurgeCatalog)$'`
   (against a server with pgvector)
+- boot (S4): `OPENV_TEST_DATABASE_URL=<server URL> UPDATE_GOLDEN=1 go test ./cmd/server -count=1 -run '^TestBootSmoke$'`
+  for the boot and middleware probes (a server with or without pgvector),
+  and `UPDATE_GOLDEN=1 go test ./cmd/server -count=1 -run '^TestBootSteps$'`
+  for the order of `main()`'s wiring
 - SSE and event payloads (S6): `UPDATE_GOLDEN=1 go test ./internal/api -count=1 -run '^TestSSEContract$'`
   and `-run '^TestEventPayloadTypes$'`
 - MCP and worker wire (S7): `UPDATE_GOLDEN=1 go test ./internal/mcp ./internal/runner -run <Test>`

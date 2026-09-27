@@ -175,6 +175,21 @@ column must go when its workspace is purged, through `PurgeOrg`'s list or an
 leaves the rows whose key is NULL); the list of tables a purge misses may
 only shrink.
 
+The boot harness in `cmd/server` (refactor plan step S4a) builds the server
+binary with `-cover`, boots it on a database of its own on the server
+`OPENV_TEST_DATABASE_URL` names, with an environment it builds from nothing,
+and probes it from outside: the boot log, the middleware answers (security
+headers, CORS, the body cap, gzip, the mux's 404, 405 and 301), `/metrics`
+and a SIGTERM drain, one golden per profile under
+`cmd/server/testdata/boot/`. `cmd/server/testdata/boot_steps.txt` holds the
+order of `main()`'s wiring (setters, subscriptions, `Start` calls, the
+calls whose error it checks, goroutines, defers), read from the source. A
+change to what the server logs at boot, to a middleware, or to that order
+changes them; regenerate in the same pull request with
+`OPENV_TEST_DATABASE_URL=<server URL> UPDATE_GOLDEN=1 go test ./cmd/server -count=1 -run '^TestBootSmoke$'`
+(a server with or without the vector extension) and
+`UPDATE_GOLDEN=1 go test ./cmd/server -count=1 -run '^TestBootSteps$'`.
+
 ### The vulnerability gate
 
 The **Vulnerability scan** job (`vuln`) is a supply-chain gate on every pull
