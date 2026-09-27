@@ -27,8 +27,9 @@ import (
 // invitation previews); the area spends what is left of it and pins the 429
 // the share routes answer (no Retry-After). Last, the open-source showcase,
 // before and after the admin, the platform admin, puts the owner's
-// workspace on the open_source plan: today it lists nothing and opens
-// nothing even then, since the baseline list it reads carries no snapshot.
+// workspace on the open_source plan: once it is on the plan, the showcase
+// lists the project and opens its newest baseline as JSON, as the unfurl
+// page and as the preview card.
 func TestTourS5aShareLinksPublic(t *testing.T) {
 	runTourArea(t, tourArea{
 		slice: "s5a",
@@ -224,9 +225,9 @@ func shareLinksPublicTour(tr *tour) {
 	if got := plan.value("/plan"); got != "open_source" {
 		tr.t.Fatalf("the owner's workspace is on plan %q after the admin set open_source", got)
 	}
-	openSource := "the workspace is on the open_source plan and the project has a baseline, yet the showcase " +
-		"reads the newest baseline from the baseline list, which carries no snapshot, so it finds none"
-	tr.step("the open-source projects once the workspace is on the plan: still none", anon,
+	openSource := "the workspace is on the open_source plan and the project has a baseline, so the showcase " +
+		"publishes the project as of its newest baseline, which it loads by id: the baseline list carries no snapshot"
+	tr.step("the open-source projects once the workspace is on the plan", anon,
 		"GET /api/v1/public/open-source/projects", note(openSource))
 	tr.step("the project on the open-source plan", anon, "GET /api/v1/public/open-source/projects/{id}",
 		at("id", "{{shared_project}}"), note(openSource))

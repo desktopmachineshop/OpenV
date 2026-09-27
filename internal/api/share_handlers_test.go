@@ -1,10 +1,14 @@
 package api
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -74,13 +78,45 @@ type shareOrgFake struct {
 
 func (f *shareOrgFake) ListAll() ([]string, error) { return f.ids, nil }
 
-type shareBaselineFake struct {
-	baselines.Service
-	list []*baselines.Baseline
+// shareBaselineRepo backs the real baselines.DefaultService and answers as
+// the Postgres BaselineRepository does: the list is a project's baselines
+// newest first without their snapshots (ListByProjectID selects no snapshot
+// column), and only GetByID carries one. A fake whose list carried the
+// snapshots hid the showcase reading them from the list, where production
+// has none, so every project was skipped (REQ-151). listErr and getErr
+// fail the list or the load, as a database can.
+type shareBaselineRepo struct {
+	baselines.Repository
+	rows            []*baselines.Baseline
+	listErr, getErr error
 }
 
-func (f *shareBaselineFake) ListBaselines(projectID string) ([]*baselines.Baseline, error) {
-	return f.list, nil
+func (f *shareBaselineRepo) ListByProjectID(projectID string) ([]*baselines.Baseline, error) {
+	if f.listErr != nil {
+		return nil, f.listErr
+	}
+	var out []*baselines.Baseline
+	for _, b := range f.rows {
+		if b.ProjectID == projectID {
+			summary := *b
+			summary.Snapshot = nil
+			out = append(out, &summary)
+		}
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].CreatedAt.After(out[j].CreatedAt) })
+	return out, nil
+}
+
+func (f *shareBaselineRepo) GetByID(id string) (*baselines.Baseline, error) {
+	if f.getErr != nil {
+		return nil, f.getErr
+	}
+	for _, b := range f.rows {
+		if b.ID == id {
+			return b, nil
+		}
+	}
+	return nil, errors.New("baseline not found")
 }
 
 func shareExport() *exports.ProjectExport {
@@ -113,7 +149,7 @@ func shareHandler(t *testing.T) (*Handler, *shareMemberFake) {
 		exportService:   &shareExportFake{export: shareExport()},
 		memberService:   member,
 		userService:     &shareUserFake{user: &users.User{ID: "u1", Email: "r@example.com"}},
-		baselineService: &shareBaselineFake{},
+		baselineService: baselines.NewService(&shareBaselineRepo{}),
 	}
 	return h, member
 }
@@ -263,34 +299,179 @@ func TestOpenSourceListingTakesBaselinedProjectsOfOpenSourceWorkspaces(t *testin
 		_ = json.Unmarshal(w.Body.Bytes(), &out)
 		return out
 	}
+	openID := func(serve http.HandlerFunc, id, path string) *httptest.ResponseRecorder {
+		r := httptest.NewRequest(http.MethodGet, "/api/v1/public/open-source/projects/"+id+path, nil)
+		w := httptest.NewRecorder()
+		serve(w, mux.SetURLVars(r, map[string]string{"id": id}))
+		return w
+	}
+	open := func(serve http.HandlerFunc, path string) *httptest.ResponseRecorder { return openID(serve, "p1", path) }
+	routes := map[string]http.HandlerFunc{
+		"": h.GetOpenSourceProject, "/page": h.OpenSourceProjectPage, "/preview.png": h.OpenSourceProjectPreview,
+	}
+	// A project with no baseline, or outside an open-source workspace, gets
+	// an unknown project's 404 on every route: nothing is published, the
+	// live state least of all, and nothing tells it from a missing project
+	// (REQ-151). The message leaves the body out: a preview served by
+	// mistake would print a PNG.
+	notFound := func(when string) {
+		t.Helper()
+		for path, serve := range routes {
+			unknown := openID(serve, "nope", path)
+			if w := open(serve, path); w.Code != http.StatusNotFound || unknown.Code != http.StatusNotFound || w.Body.String() != unknown.Body.String() {
+				t.Errorf("%s %q: status = %d type = %s, want the unknown project's 404 %s", when, path, w.Code, w.Header().Get("Content-Type"), unknown.Body.String())
+			}
+		}
+	}
 	if got := list(); len(got) != 0 {
 		t.Errorf("no baseline: listed %d", len(got))
 	}
+	notFound("no baseline")
 
-	snapshot, _ := json.Marshal(shareExport())
-	h.baselineService = &shareBaselineFake{list: []*baselines.Baseline{
-		{ID: "b1", ProjectID: "p1", Name: "Design review", Snapshot: snapshot, CreatedAt: time.Now()},
+	// Two baselines: the showcase shows the newer one, whose snapshot it
+	// has to load by id, since the list carries none. The newer one names
+	// the project as it was then, and one of its requirements is refined
+	// by a project of another workspace.
+	kickoff, _ := json.Marshal(&exports.ProjectExport{ProjectName: "OpenV Platform", Artifacts: []*artifacts.Artifact{
+		{ID: "r1", Type: "requirement", Title: "One"},
+	}})
+	reviewed := shareExport()
+	reviewed.ProjectDesc = "The requirements of OpenV, as reviewed."
+	reviewed.LinkedArtifacts = []*exports.LinkedArtifact{{
+		ID: "x1", ProjectID: "q1", ProjectName: "ACME Motor Program", Ref: "REQ-7", Type: "requirement", Title: "Torque from vendor X", Status: "draft",
 	}}
+	review, _ := json.Marshal(reviewed)
+	now := time.Now()
+	h.baselineService = baselines.NewService(&shareBaselineRepo{rows: []*baselines.Baseline{
+		{ID: "b1", ProjectID: "p1", Name: "Kick-off", Snapshot: kickoff, CreatedAt: now.Add(-time.Hour)},
+		{ID: "b2", ProjectID: "p1", Name: "Design review", Snapshot: review, CreatedAt: now},
+	}})
+	// Since then the project was renamed and described anew: live work,
+	// which stays private until the next baseline like the rest.
+	h.projectService = &fakeProjectService{byID: map[string]*projects.Project{
+		"p1": {ID: "p1", OrgID: "o1", Name: "Renamed Platform", Description: "A roadmap drafted since the review."},
+	}}
+	// published fails a body that carries the live name or description, or
+	// the other workspace's project and requirement.
+	published := func(what, body string) {
+		t.Helper()
+		for _, private := range []string{"Renamed", "roadmap", "ACME", "vendor X"} {
+			if strings.Contains(body, private) {
+				t.Errorf("%s publishes %q: %s", what, private, body)
+			}
+		}
+	}
+	w := httptest.NewRecorder()
+	h.ListOpenSourceProjects(w, httptest.NewRequest(http.MethodGet, "/api/v1/public/open-source/projects", nil))
+	published("listing", w.Body.String())
 	got := list()
-	if len(got) != 1 || got[0].Baseline != "Design review" || got[0].Counts["requirement"] != 2 {
-		t.Fatalf("listed = %+v", got)
+	if len(got) != 1 || got[0].BaselineID != "b2" || got[0].Baseline != "Design review" || got[0].Counts["requirement"] != 2 ||
+		got[0].Name != "OpenV Platform" || got[0].Description != reviewed.ProjectDesc {
+		t.Errorf("listed = %+v", got)
 	}
 
-	// The snapshot endpoint answers the same project, and 404s a private one.
-	r := httptest.NewRequest(http.MethodGet, "/api/v1/public/open-source/projects/p1", nil)
-	w := httptest.NewRecorder()
-	h.GetOpenSourceProject(w, mux.SetURLVars(r, map[string]string{"id": "p1"}))
-	if w.Code != http.StatusOK || !strings.Contains(w.Body.String(), `"baseline":{"id":"b1"`) {
+	// The project's public address answers that snapshot as JSON, as the
+	// unfurl page and as the card, and 404s once the workspace leaves the
+	// open-source plan.
+	w = open(h.GetOpenSourceProject, "")
+	var view sharedProject
+	_ = json.Unmarshal(w.Body.Bytes(), &view)
+	if w.Code != http.StatusOK || view.Baseline == nil || view.Baseline.ID != "b2" || view.Snapshot == nil || len(view.Snapshot.Artifacts) != 4 {
 		t.Errorf("snapshot: status = %d body = %s", w.Code, w.Body.String())
+	}
+	if view.Project.Name != "OpenV Platform" || view.Project.Description != reviewed.ProjectDesc {
+		t.Errorf("snapshot: project = %+v, want the baseline's name and description", view.Project)
+	}
+	published("snapshot", w.Body.String())
+	w = open(h.OpenSourceProjectPage, "/page")
+	if w.Code != http.StatusOK || !strings.Contains(w.Body.String(), "2 requirements · 1 test case") ||
+		!strings.Contains(w.Body.String(), "OpenV Platform · ") || !strings.Contains(w.Body.String(), reviewed.ProjectDesc) {
+		t.Errorf("page: status = %d body = %s", w.Code, w.Body.String())
+	}
+	published("page", w.Body.String())
+	// The card is drawn from the baseline too: exactly this card.
+	card, err := renderPreview(previewCard{
+		Eyebrow: "Open-source project", Title: "OpenV Platform",
+		Lines:  []string{"2 requirements · 1 test case", reviewed.ProjectDesc},
+		Footer: "Latest snapshot · Design review",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if w := open(h.OpenSourceProjectPreview, "/preview.png"); w.Code != http.StatusOK || w.Header().Get("Content-Type") != "image/png" || !bytes.Equal(w.Body.Bytes(), card) {
+		t.Errorf("preview: status = %d type = %s, want the card of the baseline's name and description", w.Code, w.Header().Get("Content-Type"))
 	}
 	h.orgService = &shareOrgFake{fakeOrgService: fakeOrgService{plan: orgs.PlanBusiness}, ids: []string{"o1"}}
 	if got := list(); len(got) != 0 {
 		t.Errorf("business workspace listed %d", len(got))
 	}
-	w = httptest.NewRecorder()
-	h.GetOpenSourceProject(w, mux.SetURLVars(r, map[string]string{"id": "p1"}))
-	if w.Code != http.StatusNotFound {
-		t.Errorf("private project: status = %d", w.Code)
+	notFound("private project")
+}
+
+// An open-source project is named as its baseline names it. The current
+// description never stands in, not even for a baseline taken while the
+// project had none; the current name only for a snapshot that names no
+// project.
+func TestOpenSourceNamesAProjectAsItsBaselineDoes(t *testing.T) {
+	live := &projects.Project{ID: "p1", Name: "Renamed Platform", Description: "A roadmap drafted since the review."}
+	for _, tc := range []struct {
+		snapshot          exports.ProjectExport
+		name, description string
+	}{
+		{exports.ProjectExport{ProjectName: "OpenV Platform", ProjectDesc: "As reviewed."}, "OpenV Platform", "As reviewed."},
+		{exports.ProjectExport{ProjectName: "OpenV Platform"}, "OpenV Platform", ""},
+		{exports.ProjectExport{}, "Renamed Platform", ""},
+	} {
+		if name, description := baselinedIdentity(live, &tc.snapshot); name != tc.name || description != tc.description {
+			t.Errorf("snapshot naming %q/%q: published %q/%q, want %q/%q",
+				tc.snapshot.ProjectName, tc.snapshot.ProjectDesc, name, description, tc.name, tc.description)
+		}
+	}
+}
+
+// A baseline the showcase cannot read leaves its project unpublished, and
+// the server log says which one and why: skipping it silently is how the
+// showcase listed nothing without anyone noticing.
+func TestOpenSourceLogsABaselineItCannotRead(t *testing.T) {
+	var buf bytes.Buffer
+	prev := slog.Default()
+	slog.SetDefault(slog.New(slog.NewTextHandler(&buf, nil)))
+	defer slog.SetDefault(prev)
+
+	stored := func() []*baselines.Baseline {
+		snapshot, _ := json.Marshal(shareExport())
+		return []*baselines.Baseline{{ID: "b1", ProjectID: "p1", Name: "Design review", Snapshot: snapshot, CreatedAt: time.Now()}}
+	}
+	unreadable := stored()
+	unreadable[0].Snapshot = json.RawMessage(`{"artifacts": 1}`)
+	for name, tc := range map[string]struct {
+		repo *shareBaselineRepo
+		want []string
+	}{
+		"list fails":          {&shareBaselineRepo{rows: stored(), listErr: errors.New("connection refused")}, []string{"connection refused"}},
+		"baseline load fails": {&shareBaselineRepo{rows: stored(), getErr: errors.New("connection reset")}, []string{"baseline_id=b1"}},
+		"snapshot unreadable": {&shareBaselineRepo{rows: unreadable}, []string{"baseline_id=b1", "cannot unmarshal"}},
+	} {
+		buf.Reset()
+		h, _ := shareHandler(t)
+		h.baselineService = baselines.NewService(tc.repo)
+		w := httptest.NewRecorder()
+		h.ListOpenSourceProjects(w, httptest.NewRequest(http.MethodGet, "/api/v1/public/open-source/projects", nil))
+		if w.Code != http.StatusOK || strings.TrimSpace(w.Body.String()) != "[]" {
+			t.Errorf("%s: listing status = %d body = %s", name, w.Code, w.Body.String())
+		}
+		r := httptest.NewRequest(http.MethodGet, "/api/v1/public/open-source/projects/p1", nil)
+		w = httptest.NewRecorder()
+		h.GetOpenSourceProject(w, mux.SetURLVars(r, map[string]string{"id": "p1"}))
+		if w.Code != http.StatusNotFound {
+			t.Errorf("%s: address status = %d", name, w.Code)
+		}
+		logged := buf.String()
+		for _, want := range append([]string{"level=ERROR", "project_id=p1"}, tc.want...) {
+			if !strings.Contains(logged, want) {
+				t.Errorf("%s: log lacks %q: %s", name, want, logged)
+			}
+		}
 	}
 }
 

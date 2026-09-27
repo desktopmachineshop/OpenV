@@ -1777,7 +1777,7 @@
     },
     {
       "n": 53,
-      "title": "the open-source projects once the workspace is on the plan: still none",
+      "title": "the open-source projects once the workspace is on the plan",
       "actor": "anonymous",
       "route": "GET /api/v1/public/open-source/projects",
       "request": {
@@ -1785,7 +1785,7 @@
         "path": "/api/v1/public/open-source/projects"
       },
       "notes": [
-        "the workspace is on the open_source plan and the project has a baseline, yet the showcase reads the newest baseline from the baseline list, which carries no snapshot, so it finds none"
+        "the workspace is on the open_source plan and the project has a baseline, so the showcase publishes the project as of its newest baseline, which it loads by id: the baseline list carries no snapshot"
       ],
       "status": 200,
       "content_type": "application/json",
@@ -1793,13 +1793,30 @@
         "Cache-Control: public, max-age=300"
       ],
       "security_headers": "standard",
-      "content_length": 3,
+      "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[]"
+        "[{\"project_id\":\"<shared_project>\",\"name\":\"Tour \\u003cspec\\u003e \\u0026 \\\"Co's\\\"\",\"description\":\"The tour's shared \\u003cspec\\u003e \\u0026 its \\\"quoted\\\" words: what an assessor reads before a review, with enough text that the unfurl page cuts it at a word before 180 bytes and the preview card cuts it sooner, before 120, each with an ellipsis.\",\"workspace\":\"Tour Owner's Space\",\"baseline_id\":\"<shared_baseline>\",\"baseline\":\"Tour baseline 1\",\"snapshot_at\":\"<time@before step 1>\",\"counts\":{\"design-item\":1,\"persona\":1,\"requirement\":2,\"test-case\":1,\"user-need\":1}}]"
       ],
       "trailing_newline": true,
-      "parsed": [],
+      "parsed": [
+        {
+          "project_id": "<shared_project>",
+          "name": "Tour \u003cspec\u003e \u0026 \"Co's\"",
+          "description": "The tour's shared \u003cspec\u003e \u0026 its \"quoted\" words: what an assessor reads before a review, with enough text that the unfurl page cuts it at a word before 180 bytes and the preview card cuts it sooner, before 120, each with an ellipsis.",
+          "workspace": "Tour Owner's Space",
+          "baseline_id": "<shared_baseline>",
+          "baseline": "Tour baseline 1",
+          "snapshot_at": "<time@before step 1>",
+          "counts": {
+            "design-item": 1,
+            "persona": 1,
+            "requirement": 2,
+            "test-case": 1,
+            "user-need": 1
+          }
+        }
+      ],
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
@@ -1812,22 +1829,244 @@
         "path": "/api/v1/public/open-source/projects/<shared_project>"
       },
       "notes": [
-        "the workspace is on the open_source plan and the project has a baseline, yet the showcase reads the newest baseline from the baseline list, which carries no snapshot, so it finds none"
+        "the workspace is on the open_source plan and the project has a baseline, so the showcase publishes the project as of its newest baseline, which it loads by id: the baseline list carries no snapshot"
       ],
-      "status": 404,
+      "status": 200,
       "content_type": "application/json",
-      "headers": [],
+      "headers": [
+        "Cache-Control: public, max-age=300"
+      ],
       "security_headers": "standard",
-      "content_length": 30,
+      "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"error\":\"project not found\"}"
+        "{\"role\":\"public\",\"project\":{\"id\":\"<shared_project>\",\"name\":\"Tour \\u003cspec\\u003e \\u0026 \\\"Co's\\\"\",\"description\":\"The tour's shared \\u003cspec\\u003e \\u0026 its \\\"quoted\\\" words: what an assessor reads before a review, with enough text that the unfurl page cuts it at a word before 180 bytes and the preview card cuts it sooner, before 120, each with an ellipsis.\"},\"workspace\":\"Tour Owner's Space\",\"baseline\":{\"id\":\"<shared_baseline>\",\"name\":\"Tour baseline 1\",\"created_at\":\"<time@before step 1>\"},\"counts\":{\"design-item\":1,\"persona\":1,\"requirement\":2,\"test-case\":1,\"user-need\":1},\"snapshot\":{\"exported_at\":\"<time@before step 1>\",\"version\":\"1.0\",\"project_id\":\"<shared_project>\",\"project_name\":\"Tour \\u003cspec\\u003e \\u0026 \\\"Co's\\\"\",\"project_description\":\"The tour's shared \\u003cspec\\u003e \\u0026 its \\\"quoted\\\" words: what an assessor reads before a review, with enough text that the unfurl page cuts it at a word before 180 bytes and the preview card cuts it sooner, before 120, each with an ellipsis.\",\"artifacts\":[{\"id\":\"<scope_heading>\",\"project_id\":\"<shared_project>\",\"type\":\"heading\",\"ref\":\"HDG-1\",\"title\":\"Scope\",\"body\":\"What the share shows.\",\"sort_order\":1,\"status\":\"draft\",\"attributes\":{\"status\":\"draft\"},\"version\":1,\"valid_from\":\"<time@before step 1>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},{\"id\":\"<need>\",\"project_id\":\"<shared_project>\",\"parent_id\":\"<scope_heading>\",\"type\":\"user-need\",\"ref\":\"NEED-1\",\"title\":\"Know the state\",\"body\":\"The assessor needs to know the state of the work.\",\"sort_order\":1,\"status\":\"draft\",\"attributes\":{\"status\":\"draft\"},\"version\":1,\"valid_from\":\"<time@before step 1>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},{\"id\":\"<answer_req>\",\"project_id\":\"<shared_project>\",\"parent_id\":\"<scope_heading>\",\"type\":\"requirement\",\"ref\":\"REQ-1\",\"title\":\"Answer in time\",\"body\":\"The system shall answer within 2 s.\",\"sort_order\":2,\"status\":\"draft\",\"attributes\":{\"links_snapshot\":[{\"attributes\":null,\"created_at\":\"<time@before step 1>\",\"from_id\":\"<timing_test>\",\"id\":\"<shared_link>\",\"suspect\":false,\"to_id\":\"<answer_req>\",\"type\":\"verifies\",\"updated_at\":\"<time@before step 1>\",\"valid_from\":\"0001-01-01T00:00:00Z\",\"valid_to\":null,\"version\":1}],\"status\":\"draft\"},\"version\":2,\"valid_from\":\"<time@before step 1>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},{\"id\":\"<audit_req>\",\"project_id\":\"<shared_project>\",\"parent_id\":\"<scope_heading>\",\"type\":\"requirement\",\"ref\":\"REQ-2\",\"title\":\"Keep an audit trail\",\"body\":\"The system shall record who changed what.\",\"sort_order\":3,\"status\":\"draft\",\"attributes\":{\"status\":\"draft\"},\"version\":1,\"valid_from\":\"<time@before step 1>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},{\"id\":\"<design>\",\"project_id\":\"<shared_project>\",\"parent_id\":\"<scope_heading>\",\"type\":\"design-item\",\"ref\":\"DES-1\",\"title\":\"Log every write\",\"body\":\"Each write appends to the audit log.\",\"sort_order\":4,\"status\":\"draft\",\"attributes\":{\"status\":\"draft\"},\"version\":1,\"valid_from\":\"<time@before step 1>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},{\"id\":\"<timing_test>\",\"project_id\":\"<shared_project>\",\"parent_id\":\"<scope_heading>\",\"type\":\"test-case\",\"ref\":\"TC-1\",\"title\":\"Time the answer\",\"body\":\"Measure the answer time.\",\"sort_order\":5,\"status\":\"draft\",\"attributes\":{\"links_snapshot\":[{\"attributes\":null,\"created_at\":\"<time@before step 1>\",\"from_id\":\"<timing_test>\",\"id\":\"<shared_link>\",\"suspect\":false,\"to_id\":\"<answer_req>\",\"type\":\"verifies\",\"updated_at\":\"<time@before step 1>\",\"valid_from\":\"0001-01-01T00:00:00Z\",\"valid_to\":null,\"version\":1}],\"status\":\"draft\"},\"version\":2,\"valid_from\":\"<time@before step 1>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},{\"id\":\"<persona>\",\"project_id\":\"<shared_project>\",\"parent_id\":\"<scope_heading>\",\"type\":\"persona\",\"ref\":\"PER-1\",\"title\":\"Assessor\",\"body\":\"Reads the specification, never edits it.\",\"sort_order\":6,\"status\":\"draft\",\"attributes\":{\"status\":\"draft\"},\"version\":1,\"valid_from\":\"<time@before step 1>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"}],\"links\":[{\"id\":\"<shared_link>\",\"from_id\":\"<timing_test>\",\"to_id\":\"<answer_req>\",\"type\":\"verifies\",\"suspect\":false,\"attributes\":null,\"version\":1,\"valid_from\":\"0001-01-01T00:00:00Z\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"}],\"attachments\":null,\"product_profile\":{\"project_id\":\"<shared_project>\",\"vision\":\"\",\"problem_statement\":\"\",\"target_users\":\"\",\"constraints\":[],\"success_metrics\":[],\"settings\":{},\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"}}}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "project not found"
+        "role": "public",
+        "project": {
+          "id": "<shared_project>",
+          "name": "Tour \u003cspec\u003e \u0026 \"Co's\"",
+          "description": "The tour's shared \u003cspec\u003e \u0026 its \"quoted\" words: what an assessor reads before a review, with enough text that the unfurl page cuts it at a word before 180 bytes and the preview card cuts it sooner, before 120, each with an ellipsis."
+        },
+        "workspace": "Tour Owner's Space",
+        "baseline": {
+          "id": "<shared_baseline>",
+          "name": "Tour baseline 1",
+          "created_at": "<time@before step 1>"
+        },
+        "counts": {
+          "design-item": 1,
+          "persona": 1,
+          "requirement": 2,
+          "test-case": 1,
+          "user-need": 1
+        },
+        "snapshot": {
+          "exported_at": "<time@before step 1>",
+          "version": "1.0",
+          "project_id": "<shared_project>",
+          "project_name": "Tour \u003cspec\u003e \u0026 \"Co's\"",
+          "project_description": "The tour's shared \u003cspec\u003e \u0026 its \"quoted\" words: what an assessor reads before a review, with enough text that the unfurl page cuts it at a word before 180 bytes and the preview card cuts it sooner, before 120, each with an ellipsis.",
+          "artifacts": [
+            {
+              "id": "<scope_heading>",
+              "project_id": "<shared_project>",
+              "type": "heading",
+              "ref": "HDG-1",
+              "title": "Scope",
+              "body": "What the share shows.",
+              "sort_order": 1,
+              "status": "draft",
+              "attributes": {
+                "status": "draft"
+              },
+              "version": 1,
+              "valid_from": "<time@before step 1>",
+              "valid_to": null,
+              "created_at": "<time@before step 1>",
+              "updated_at": "<time@before step 1>"
+            },
+            {
+              "id": "<need>",
+              "project_id": "<shared_project>",
+              "parent_id": "<scope_heading>",
+              "type": "user-need",
+              "ref": "NEED-1",
+              "title": "Know the state",
+              "body": "The assessor needs to know the state of the work.",
+              "sort_order": 1,
+              "status": "draft",
+              "attributes": {
+                "status": "draft"
+              },
+              "version": 1,
+              "valid_from": "<time@before step 1>",
+              "valid_to": null,
+              "created_at": "<time@before step 1>",
+              "updated_at": "<time@before step 1>"
+            },
+            {
+              "id": "<answer_req>",
+              "project_id": "<shared_project>",
+              "parent_id": "<scope_heading>",
+              "type": "requirement",
+              "ref": "REQ-1",
+              "title": "Answer in time",
+              "body": "The system shall answer within 2 s.",
+              "sort_order": 2,
+              "status": "draft",
+              "attributes": {
+                "links_snapshot": [
+                  {
+                    "attributes": null,
+                    "created_at": "<time@before step 1>",
+                    "from_id": "<timing_test>",
+                    "id": "<shared_link>",
+                    "suspect": false,
+                    "to_id": "<answer_req>",
+                    "type": "verifies",
+                    "updated_at": "<time@before step 1>",
+                    "valid_from": "0001-01-01T00:00:00Z",
+                    "valid_to": null,
+                    "version": 1
+                  }
+                ],
+                "status": "draft"
+              },
+              "version": 2,
+              "valid_from": "<time@before step 1>",
+              "valid_to": null,
+              "created_at": "<time@before step 1>",
+              "updated_at": "<time@before step 1>"
+            },
+            {
+              "id": "<audit_req>",
+              "project_id": "<shared_project>",
+              "parent_id": "<scope_heading>",
+              "type": "requirement",
+              "ref": "REQ-2",
+              "title": "Keep an audit trail",
+              "body": "The system shall record who changed what.",
+              "sort_order": 3,
+              "status": "draft",
+              "attributes": {
+                "status": "draft"
+              },
+              "version": 1,
+              "valid_from": "<time@before step 1>",
+              "valid_to": null,
+              "created_at": "<time@before step 1>",
+              "updated_at": "<time@before step 1>"
+            },
+            {
+              "id": "<design>",
+              "project_id": "<shared_project>",
+              "parent_id": "<scope_heading>",
+              "type": "design-item",
+              "ref": "DES-1",
+              "title": "Log every write",
+              "body": "Each write appends to the audit log.",
+              "sort_order": 4,
+              "status": "draft",
+              "attributes": {
+                "status": "draft"
+              },
+              "version": 1,
+              "valid_from": "<time@before step 1>",
+              "valid_to": null,
+              "created_at": "<time@before step 1>",
+              "updated_at": "<time@before step 1>"
+            },
+            {
+              "id": "<timing_test>",
+              "project_id": "<shared_project>",
+              "parent_id": "<scope_heading>",
+              "type": "test-case",
+              "ref": "TC-1",
+              "title": "Time the answer",
+              "body": "Measure the answer time.",
+              "sort_order": 5,
+              "status": "draft",
+              "attributes": {
+                "links_snapshot": [
+                  {
+                    "attributes": null,
+                    "created_at": "<time@before step 1>",
+                    "from_id": "<timing_test>",
+                    "id": "<shared_link>",
+                    "suspect": false,
+                    "to_id": "<answer_req>",
+                    "type": "verifies",
+                    "updated_at": "<time@before step 1>",
+                    "valid_from": "0001-01-01T00:00:00Z",
+                    "valid_to": null,
+                    "version": 1
+                  }
+                ],
+                "status": "draft"
+              },
+              "version": 2,
+              "valid_from": "<time@before step 1>",
+              "valid_to": null,
+              "created_at": "<time@before step 1>",
+              "updated_at": "<time@before step 1>"
+            },
+            {
+              "id": "<persona>",
+              "project_id": "<shared_project>",
+              "parent_id": "<scope_heading>",
+              "type": "persona",
+              "ref": "PER-1",
+              "title": "Assessor",
+              "body": "Reads the specification, never edits it.",
+              "sort_order": 6,
+              "status": "draft",
+              "attributes": {
+                "status": "draft"
+              },
+              "version": 1,
+              "valid_from": "<time@before step 1>",
+              "valid_to": null,
+              "created_at": "<time@before step 1>",
+              "updated_at": "<time@before step 1>"
+            }
+          ],
+          "links": [
+            {
+              "id": "<shared_link>",
+              "from_id": "<timing_test>",
+              "to_id": "<answer_req>",
+              "type": "verifies",
+              "suspect": false,
+              "attributes": null,
+              "version": 1,
+              "valid_from": "0001-01-01T00:00:00Z",
+              "valid_to": null,
+              "created_at": "<time@before step 1>",
+              "updated_at": "<time@before step 1>"
+            }
+          ],
+          "attachments": null,
+          "product_profile": {
+            "project_id": "<shared_project>",
+            "vision": "",
+            "problem_statement": "",
+            "target_users": "",
+            "constraints": [],
+            "success_metrics": [],
+            "settings": {},
+            "created_at": "<time@before step 1>",
+            "updated_at": "<time@before step 1>"
+          }
+        }
       },
-      "gzip": "not compressed: the same answer as without Accept-Encoding"
+      "gzip": {
+        "content_encoding": "gzip",
+        "content_type": "application/json",
+        "vary": "Accept-Encoding"
+      }
     },
     {
       "n": 55,
@@ -1838,20 +2077,23 @@
         "method": "GET",
         "path": "/api/v1/public/open-source/projects/<shared_project>/page"
       },
-      "status": 404,
-      "content_type": "application/json",
-      "headers": [],
-      "security_headers": "standard",
-      "content_length": 30,
-      "kind": "json",
-      "body": [
-        "{\"error\":\"project not found\"}"
+      "status": 200,
+      "content_type": "text/html; charset=utf-8",
+      "headers": [
+        "Cache-Control: public, max-age=300"
       ],
-      "trailing_newline": true,
-      "parsed": {
-        "error": "project not found"
-      },
-      "gzip": "not compressed: the same answer as without Accept-Encoding"
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "text",
+      "body": [
+        "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><meta name=\"robots\" content=\"noindex\"><title>Tour &lt;spec&gt; &amp; &#34;Co&#39;s&#34; · Tour Owner&#39;s Space</title><meta name=\"description\" content=\"The tour&#39;s shared &lt;spec&gt; &amp; its &#34;quoted&#34; words: what an assessor reads before a review, with enough text that the unfurl page cuts it at a word before 180 bytes and the preview… — Open-source project on OpenV: 2 requirements · 1 need · 1 design item · 1 test case\"><meta property=\"og:type\" content=\"website\"><meta property=\"og:site_name\" content=\"OpenV\"><meta property=\"og:title\" content=\"Tour &lt;spec&gt; &amp; &#34;Co&#39;s&#34; · Tour Owner&#39;s Space\"><meta property=\"og:description\" content=\"The tour&#39;s shared &lt;spec&gt; &amp; its &#34;quoted&#34; words: what an assessor reads before a review, with enough text that the unfurl page cuts it at a word before 180 bytes and the preview… — Open-source project on OpenV: 2 requirements · 1 need · 1 design item · 1 test case\"><meta property=\"og:url\" content=\"http://localhost:3000/open-source/p/<shared_project>\"><meta property=\"og:image\" content=\"http://localhost:<port>/api/v1/public/open-source/projects/<shared_project>/preview.png\"><meta property=\"og:image:width\" content=\"1200\"><meta property=\"og:image:height\" content=\"630\"><meta name=\"twitter:card\" content=\"summary_large_image\"><meta name=\"twitter:title\" content=\"Tour &lt;spec&gt; &amp; &#34;Co&#39;s&#34; · Tour Owner&#39;s Space\"><meta name=\"twitter:description\" content=\"The tour&#39;s shared &lt;spec&gt; &amp; its &#34;quoted&#34; words: what an assessor reads before a review, with enough text that the unfurl page cuts it at a word before 180 bytes and the preview… — Open-source project on OpenV: 2 requirements · 1 need · 1 design item · 1 test case\"><meta name=\"twitter:image\" content=\"http://localhost:<port>/api/v1/public/open-source/projects/<shared_project>/preview.png\"><meta http-equiv=\"refresh\" content=\"0; url=http://localhost:3000/open-source/<shared_project>\"></head><body style=\"font-family: system-ui, sans-serif; padding: 24px; color: #1f2d3d\"><p>Tour &lt;spec&gt; &amp; &#34;Co&#39;s&#34; · Tour Owner&#39;s Space</p><p>The tour&#39;s shared &lt;spec&gt; &amp; its &#34;quoted&#34; words: what an assessor reads before a review, with enough text that the unfurl page cuts it at a word before 180 bytes and the preview… — Open-source project on OpenV: 2 requirements · 1 need · 1 design item · 1 test case</p><p><a href=\"http://localhost:3000/open-source/<shared_project>\">Open in OpenV</a></p></body></html>"
+      ],
+      "trailing_newline": false,
+      "gzip": {
+        "content_encoding": "gzip",
+        "content_type": "text/html; charset=utf-8",
+        "vary": "Accept-Encoding"
+      }
     },
     {
       "n": 56,
@@ -1862,20 +2104,25 @@
         "method": "GET",
         "path": "/api/v1/public/open-source/projects/<shared_project>/preview.png"
       },
-      "status": 404,
-      "content_type": "application/json",
-      "headers": [],
-      "security_headers": "standard",
-      "content_length": 30,
-      "kind": "json",
-      "body": [
-        "{\"error\":\"project not found\"}"
+      "status": 200,
+      "content_type": "image/png",
+      "headers": [
+        "Cache-Control: public, max-age=300"
       ],
-      "trailing_newline": true,
-      "parsed": {
-        "error": "project not found"
+      "security_headers": "standard",
+      "content_length": null,
+      "kind": "png",
+      "summary": {
+        "width": 1200,
+        "height": 630,
+        "color_model": "rgba",
+        "pixels_sha256": "ca16216143bb219747ff40e482dc8a7afbf8de6a42b4035c9da067d71048c064"
       },
-      "gzip": "not compressed: the same answer as without Accept-Encoding"
+      "gzip": {
+        "content_encoding": "gzip",
+        "content_type": "image/png",
+        "vary": "Accept-Encoding"
+      }
     },
     {
       "n": 57,

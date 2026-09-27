@@ -165,3 +165,52 @@ func TestDeletingTheAuthorLeavesTheBaselineStanding(t *testing.T) {
 		t.Errorf("name = %q", got.Name)
 	}
 }
+
+// The list is where a person picks a baseline, not where one is read: it
+// carries no snapshot, which can run to megabytes per baseline, and a caller
+// that needs one loads it by id. The API's unit fake (shareBaselineRepo in
+// internal/api) answers the same way, since a fake whose list carried the
+// snapshots hid the open-source showcase reading them from here (REQ-151).
+func TestTheBaselineListCarriesNoSnapshots(t *testing.T) {
+	db := testDB(t)
+	initTestSchema(t, db)
+	repo := NewBaselineRepository(db)
+
+	projectID := seedProject(t, repo)
+	now := time.Now().Truncate(time.Millisecond)
+	for i, name := range []string{"Kick-off", "Design review"} {
+		if err := repo.Create(&baselines.Baseline{
+			ID:        uuid.New().String(),
+			ProjectID: projectID,
+			Name:      name,
+			Snapshot:  json.RawMessage(`{"project_name":"` + name + `"}`),
+			CreatedAt: now.Add(time.Duration(i-1) * time.Hour),
+		}); err != nil {
+			t.Fatalf("create %s: %v", name, err)
+		}
+	}
+
+	list, err := repo.ListByProjectID(projectID)
+	if err != nil {
+		t.Fatalf("list: %v", err)
+	}
+	if len(list) != 2 || list[0].Name != "Design review" || list[1].Name != "Kick-off" {
+		t.Fatalf("the list is not the project's baselines newest first: %+v", list)
+	}
+	for _, b := range list {
+		if b.Snapshot != nil {
+			t.Errorf("the list carries %s's snapshot: %s", b.Name, b.Snapshot)
+		}
+	}
+
+	got, err := repo.GetByID(list[0].ID)
+	if err != nil {
+		t.Fatalf("get: %v", err)
+	}
+	var snapshot struct {
+		ProjectName string `json:"project_name"`
+	}
+	if err := json.Unmarshal(got.Snapshot, &snapshot); err != nil || snapshot.ProjectName != "Design review" {
+		t.Errorf("GetByID does not carry the snapshot: %s (%v)", got.Snapshot, err)
+	}
+}
