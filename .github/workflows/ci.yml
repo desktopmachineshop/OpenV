@@ -82,14 +82,18 @@ jobs:
 
       # postgres:15 has no vector extension, like the compose default
       # (postgres:15-alpine), so this is the leg where the no-vector paths run;
-      # backend-pgvector covers the vector ones. Fail if they only skipped.
+      # backend-pgvector covers the vector ones. Fail if they, or any of their
+      # subtests, skipped (a parent whose subtests all skip still reports PASS).
+      # The stored-data freeze's schema and purge goldens (refactor plan S3)
+      # run on both legs; here every line marked @requires(vector) must be
+      # absent and every other line as recorded.
       - name: No-vector Postgres tests ran
         shell: bash
         run: |
           go test ./internal/persistence/postgres/ -count=1 -v \
-            -run '^(TestVectorReconcileNoopWhenExtensionAbsent|TestNearestByEmbeddingVectorUnavailable)$' | tee no-vector.log
-          for t in TestVectorReconcileNoopWhenExtensionAbsent TestNearestByEmbeddingVectorUnavailable; do
-            grep -q -- "^--- PASS: $t " no-vector.log || { echo "::error::$t did not run against postgres:15"; exit 1; }
+            -run '^(TestVectorReconcileNoopWhenExtensionAbsent|TestNearestByEmbeddingVectorUnavailable|TestSchemaGolden|TestPurgeCatalog)$' | tee no-vector.log
+          for t in TestVectorReconcileNoopWhenExtensionAbsent TestNearestByEmbeddingVectorUnavailable TestSchemaGolden TestPurgeCatalog; do
+            { grep -q -- "^--- PASS: $t " no-vector.log && ! grep -Eq -- "--- SKIP: $t( |/)" no-vector.log; } || { echo "::error::$t did not run against postgres:15"; exit 1; }
           done
 
   # The Postgres-backed tests again, on a server that has the vector
@@ -124,13 +128,15 @@ jobs:
           cache: true
 
       # Fail if the image ever stops providing the extension, rather than
-      # passing on four skips.
+      # passing on four skips, and if the stored-data freeze's schema and
+      # purge goldens (refactor plan S3), recorded with the extension, skip;
+      # a skipped subtest of a listed test counts as a skip.
       - name: go test (Postgres package, vector extension present)
         shell: bash
         run: |
           go test ./internal/persistence/postgres/ -count=1 -v | tee postgres-tests.log
-          for t in TestNearestByEmbedding TestDuplicateCandidates TestEmbeddingRepositoryUpsert TestVectorReconcileCreatesWhenExtensionAppears; do
-            grep -q -- "^--- PASS: $t " postgres-tests.log || { echo "::error::$t did not run against pgvector"; exit 1; }
+          for t in TestNearestByEmbedding TestDuplicateCandidates TestEmbeddingRepositoryUpsert TestVectorReconcileCreatesWhenExtensionAppears TestSchemaGolden TestPurgeCatalog; do
+            { grep -q -- "^--- PASS: $t " postgres-tests.log && ! grep -Eq -- "--- SKIP: $t( |/)" postgres-tests.log; } || { echo "::error::$t did not run against pgvector"; exit 1; }
           done
 
   frontend:
