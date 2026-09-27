@@ -170,7 +170,9 @@ test:
 ## and fails if either variant only skipped (a skipped subtest counts), the
 ## stored-data freeze's schema and purge goldens (refactor plan S3) included;
 ## locally there is one server, so the assertion requires whichever variant
-## that server supports to have run.
+## that server supports to have run. The boot harness in cmd/server (refactor
+## plan S4a) reads the same variable, and runs on both CI legs; with it set,
+## check fails if the harness only skipped.
 ## The release-notes job requires a new bullet relative to the merge base
 ## with BASE_REF, which is what CI's comparison of the merge commit with its
 ## first parent amounts to; set NO_RELEASE_NOTES=1 for a pull request that
@@ -208,6 +210,17 @@ check:
 		elif ran TestNearestByEmbedding TestDuplicateCandidates TestEmbeddingRepositoryUpsert TestVectorReconcileCreatesWhenExtensionAppears TestSchemaGolden TestPurgeCatalog; then \
 			echo "Postgres tests ran with the vector extension (CI's backend-pgvector leg)"; \
 		else cat "$$log"; echo "neither the vector nor the no-vector Postgres tests ran; they only skipped"; rc=1; fi; \
+		rm -f "$$log"; exit $$rc; \
+	fi
+	@if [ -z "$$OPENV_TEST_DATABASE_URL" ]; then \
+		echo "OPENV_TEST_DATABASE_URL is unset: the boot harness (cmd/server, refactor plan S4a) skipped (CI runs it)"; \
+	else \
+		log="$$(mktemp)"; \
+		go test ./cmd/server/ -count=1 -v -run '^TestBootSmoke$$' > "$$log"; rc=$$?; \
+		if [ $$rc -ne 0 ]; then cat "$$log"; \
+		elif grep -q -- "^--- PASS: TestBootSmoke " "$$log" && ! grep -Eq -- "--- SKIP: TestBootSmoke( |/)" "$$log"; then \
+			echo "the boot harness ran (refactor plan S4a)"; \
+		else cat "$$log"; echo "the boot harness only skipped"; rc=1; fi; \
 		rm -f "$$log"; exit $$rc; \
 	fi
 	python3 -m unittest scripts/release_notes_test.py

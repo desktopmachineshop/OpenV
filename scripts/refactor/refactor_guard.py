@@ -179,7 +179,7 @@ GUARD_CODE = [
     ("S3", ["internal/persistence/postgres/migration_freeze_test.go",
             "internal/persistence/postgres/migration_freeze_schema_test.go",
             "internal/persistence/postgres/migration_freeze_purge_test.go"]),
-    ("S4a", ["cmd/server/harness_test.go", "cmd/server/boot_smoke_test.go"]),
+    ("S4a", ["cmd/server/harness_test.go", "cmd/server/boot_smoke_test.go", "cmd/server/boot_steps_test.go"]),
     ("S4b", []),  # slot: the env-profile matrix tests
     ("S5a-S5e", []),  # slot: the tour and matrix tests with their normalisers
     ("S6", ["internal/api/sse_contract_test.go", "internal/api/sse_scan_test.go",

@@ -98,10 +98,22 @@ jobs:
             { grep -q -- "^--- PASS: $t " no-vector.log && ! grep -Eq -- "--- SKIP: $t( |/)" no-vector.log; } || { echo "::error::$t did not run against postgres:15"; exit 1; }
           done
 
+      # The black-box boot harness (refactor plan S4a) builds the server with
+      # -cover and boots it on a database of its own on this server, once per
+      # profile; its goldens under cmd/server/testdata/boot/ hold for a server
+      # with or without the vector extension. Fail if it, or any profile,
+      # only skipped.
+      - name: Boot harness ran
+        shell: bash
+        run: |
+          go test ./cmd/server/ -count=1 -v -run '^TestBootSmoke$' | tee boot-harness.log
+          { grep -q -- "^--- PASS: TestBootSmoke " boot-harness.log && ! grep -Eq -- "--- SKIP: TestBootSmoke( |/)" boot-harness.log; } || { echo "::error::TestBootSmoke did not run against postgres:15"; exit 1; }
+
   # The Postgres-backed tests again, on a server that has the vector
   # extension. Four embedding tests skip without it, so until this leg they ran
-  # nowhere. Only internal/persistence/postgres reads OPENV_TEST_DATABASE_URL,
-  # so only that package runs here.
+  # nowhere. Only internal/persistence/postgres and the boot harness in
+  # cmd/server (refactor plan S4a) read OPENV_TEST_DATABASE_URL, so only those
+  # run here.
   backend-pgvector:
     name: Backend Postgres tests (pgvector)
     runs-on: ubuntu-latest
@@ -140,6 +152,14 @@ jobs:
           for t in TestNearestByEmbedding TestDuplicateCandidates TestEmbeddingRepositoryUpsert TestVectorReconcileCreatesWhenExtensionAppears TestSchemaGolden TestPurgeCatalog; do
             { grep -q -- "^--- PASS: $t " postgres-tests.log && ! grep -Eq -- "--- SKIP: $t( |/)" postgres-tests.log; } || { echo "::error::$t did not run against pgvector"; exit 1; }
           done
+
+      # The boot harness (refactor plan S4a) on a server with the vector
+      # extension, against the same goldens as on postgres:15.
+      - name: Boot harness (vector extension present)
+        shell: bash
+        run: |
+          go test ./cmd/server/ -count=1 -v -run '^TestBootSmoke$' | tee boot-harness.log
+          { grep -q -- "^--- PASS: TestBootSmoke " boot-harness.log && ! grep -Eq -- "--- SKIP: TestBootSmoke( |/)" boot-harness.log; } || { echo "::error::TestBootSmoke did not run against pgvector"; exit 1; }
 
   frontend:
     name: Frontend (tsc + test + build)
