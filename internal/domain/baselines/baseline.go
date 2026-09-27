@@ -34,6 +34,8 @@ type Baseline struct {
 // Repository defines baseline persistence operations.
 type Repository interface {
 	Create(baseline *Baseline) error
+	// ListByProjectID lists a project's baselines newest first, without
+	// their snapshots; GetByID loads one with its snapshot.
 	ListByProjectID(projectID string) ([]*Baseline, error)
 	GetByID(id string) (*Baseline, error)
 	Delete(id string) error
@@ -42,6 +44,8 @@ type Repository interface {
 // Service defines baseline business logic.
 type Service interface {
 	CreateBaseline(projectID string, name string, snapshot []byte, createdBy *string) (*Baseline, error)
+	// ListBaselines lists a project's baselines newest first, without their
+	// snapshots: a caller that needs one loads it with GetProjectBaseline.
 	ListBaselines(projectID string) ([]*Baseline, error)
 	GetBaseline(id string) (*Baseline, error)
 	// GetProjectBaseline loads a baseline by ID, scoped to a project: a

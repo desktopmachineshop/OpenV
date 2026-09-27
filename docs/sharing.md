@@ -88,7 +88,12 @@ so an open-source team can draft in private and publish by capturing a
 baseline. The site's open-source page lists every such project with a
 snapshot, newest first, and opens each at `/open-source/<id>` in the same
 read-only view a public share link uses, marked with the baseline it
-shows. A project with no baseline is not listed at all.
+shows. A project with no baseline is not listed at all. The listing, the
+page and its preview card name the project as the baseline recorded it, so
+a new name or description is live work too and goes public with the next
+baseline. What is published is the project's own: the snapshot leaves out
+the other projects its links reach (`linked_artifacts`), whose refs and
+titles may belong to a private workspace.
 
 The plan is granted by a platform admin, from the Platform admin page
 (account menu) or with `PUT /api/v1/orgs/{id}/plan` and

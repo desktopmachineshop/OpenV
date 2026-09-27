@@ -9,6 +9,17 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Bug fixes
+
+- **Open-source projects now show on the open-source page.** A workspace on
+  the open-source tier found none of its projects listed there, and each
+  project's public address answered *not found*, even after a baseline was
+  taken. Every project with a baseline is now listed, and its address opens
+  the latest baseline for anyone, no account needed, with a preview card
+  when the link is shared. Work since the last baseline stays private, a
+  new name or description included, and so do the other projects its
+  requirements are linked to.
+
 ## 0.15.0 — 2026-09-22
 
 ### New features

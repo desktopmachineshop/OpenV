@@ -18,6 +18,7 @@ import (
 	"errors"
 	"fmt"
 	"html"
+	"log/slog"
 	"net/http"
 	"sort"
 	"strings"
@@ -439,10 +440,18 @@ func (h *Handler) openSourceOrgs() ([]*orgs.Org, error) {
 	return out, nil
 }
 
-// latestSnapshot reads a project's newest baseline, nil when it has none.
+// latestSnapshot reads a project's newest baseline, nil when it has none
+// or it cannot be read; the log says which and why, since a project left
+// out for a failure looks the same as one with no baseline. The baseline
+// list carries no snapshots, so the newest is loaded by id: one snapshot
+// read per project, however many baselines it has.
 func (h *Handler) latestSnapshot(projectID string) (id, name string, at time.Time, snapshot *exports.ProjectExport) {
 	list, err := h.baselineService.ListBaselines(projectID)
-	if err != nil || len(list) == 0 {
+	if err != nil {
+		slog.Error("open source: failed to list a project's baselines; it is not published", "project_id", projectID, "error", err)
+		return "", "", time.Time{}, nil
+	}
+	if len(list) == 0 {
 		return "", "", time.Time{}, nil
 	}
 	latest := list[0]
@@ -452,10 +461,27 @@ func (h *Handler) latestSnapshot(projectID string) (id, name string, at time.Tim
 		}
 	}
 	var data exports.ProjectExport
-	if err := json.Unmarshal(latest.Snapshot, &data); err != nil {
+	full, err := h.baselineService.GetProjectBaseline(projectID, latest.ID)
+	if err == nil {
+		err = json.Unmarshal(full.Snapshot, &data)
+	}
+	if err != nil {
+		slog.Error("open source: failed to read a project's latest baseline; it is not published", "project_id", projectID, "baseline_id", latest.ID, "error", err)
 		return "", "", time.Time{}, nil
 	}
 	return latest.ID, latest.Name, latest.CreatedAt, &data
+}
+
+// baselinedIdentity is the name and description a project had when its
+// baseline was taken: renaming or redescribing it is live work, private
+// until the next baseline like the rest. The current name stands in only
+// for a snapshot that names no project; the description never does.
+func baselinedIdentity(project *projects.Project, snapshot *exports.ProjectExport) (name, description string) {
+	name, description = snapshot.ProjectName, snapshot.ProjectDesc
+	if name == "" {
+		name = project.Name
+	}
+	return name, description
 }
 
 // ListOpenSourceProjects lists every project of an open-source workspace
@@ -474,13 +500,14 @@ func (h *Handler) ListOpenSourceProjects(w http.ResponseWriter, r *http.Request)
 			continue
 		}
 		for _, p := range list {
-			id, name, at, snapshot := h.latestSnapshot(p.ID)
+			id, baseline, at, snapshot := h.latestSnapshot(p.ID)
 			if snapshot == nil {
 				continue
 			}
+			name, description := baselinedIdentity(p, snapshot)
 			out = append(out, openSourceEntry{
-				ProjectID: p.ID, Name: p.Name, Description: p.Description, Workspace: org.Name,
-				BaselineID: id, Baseline: name, SnapshotAt: at, Counts: artifactCounts(snapshot),
+				ProjectID: p.ID, Name: name, Description: description, Workspace: org.Name,
+				BaselineID: id, Baseline: baseline, SnapshotAt: at, Counts: artifactCounts(snapshot),
 			})
 		}
 	}
@@ -492,7 +519,10 @@ func (h *Handler) ListOpenSourceProjects(w http.ResponseWriter, r *http.Request)
 
 // openSourceProject resolves a project that is public by its workspace's
 // plan, with its latest snapshot; 404 otherwise, one message for every
-// reason so a project id learns nothing about private projects.
+// reason so a project id learns nothing about private projects. The view
+// names the project as the snapshot does, and leaves out the snapshot's
+// linked artifacts: those are other projects' refs and titles, possibly of
+// a private workspace, and not this project's to publish.
 func (h *Handler) openSourceProject(w http.ResponseWriter, r *http.Request) (*projects.Project, *orgs.Org, sharedProject) {
 	project, err := h.projectService.GetProject(mux.Vars(r)["id"])
 	if err != nil || project == nil || project.OrgID == "" || h.orgService == nil {
@@ -510,6 +540,7 @@ func (h *Handler) openSourceProject(w http.ResponseWriter, r *http.Request) (*pr
 		return nil, nil, sharedProject{}
 	}
 	view := h.describeProject(project)
+	view.Project.Name, view.Project.Description = baselinedIdentity(project, snapshot)
 	view.Role = sharelinks.RolePublic
 	view.Baseline = &struct {
 		ID        string    `json:"id"`
@@ -517,6 +548,7 @@ func (h *Handler) openSourceProject(w http.ResponseWriter, r *http.Request) (*pr
 		CreatedAt time.Time `json:"created_at"`
 	}{ID: id, Name: name, CreatedAt: at}
 	view.Counts = artifactCounts(snapshot)
+	snapshot.LinkedArtifacts = nil
 	view.Snapshot = snapshot
 	return project, org, view
 }
@@ -539,14 +571,14 @@ func (h *Handler) OpenSourceProjectPage(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	description := "Open-source project on OpenV: " + countsLine(view.Counts)
-	if project.Description != "" {
-		description = truncateWords(project.Description, 180) + " — " + description
+	if view.Project.Description != "" {
+		description = truncateWords(view.Project.Description, 180) + " — " + description
 	}
 	// The link handed out is /open-source/p/{id}, which the frontend's
 	// nginx routes here; the app itself lives at /open-source/{id}.
 	appURL := h.frontendURL + "/open-source/" + project.ID
 	base := h.publicAPIBase(r)
-	page := previewPage(project.Name+" · "+org.Name, description, h.frontendURL+"/open-source/p/"+project.ID, base+"/api/v1/public/open-source/projects/"+project.ID+"/preview.png", appURL)
+	page := previewPage(view.Project.Name+" · "+org.Name, description, h.frontendURL+"/open-source/p/"+project.ID, base+"/api/v1/public/open-source/projects/"+project.ID+"/preview.png", appURL)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "public, max-age=300")
 	w.Write([]byte(page))
@@ -559,8 +591,8 @@ func (h *Handler) OpenSourceProjectPreview(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	lines := []string{countsLine(view.Counts)}
-	if project.Description != "" {
-		lines = append(lines, truncateWords(project.Description, 120))
+	if view.Project.Description != "" {
+		lines = append(lines, truncateWords(view.Project.Description, 120))
 	}
-	h.writePreview(w, previewCard{Eyebrow: "Open-source project", Title: project.Name, Subtitle: org.Name, Lines: lines, Footer: "Latest snapshot · " + view.Baseline.Name})
+	h.writePreview(w, previewCard{Eyebrow: "Open-source project", Title: view.Project.Name, Subtitle: org.Name, Lines: lines, Footer: "Latest snapshot · " + view.Baseline.Name})
 }
