@@ -171,8 +171,11 @@ TypeScript, `tsdeclhash` and `tsmovecheck` below; class R re-runs the
 `Refactor-Script:` in a scratch worktree of the commit's parent. The golden
 list, the frozen and protected paths and the guard-code list sit at the top
 of the script, each entry naming the plan step that owns it; a later step
-adds its entries there in a class T commit. The job's next step, not the
-script, fails a refactor whose `ratchets.json` can be tightened.
+adds its entries there in a class T commit. The job, and `make check`, run
+the base's copy of the script, so those entries take effect once that pull
+request merges (`X2B_CALL_SHAPE_CHANGES` is read from the pull request). The
+job's next step, not the script, fails a refactor whose `ratchets.json` can
+be tightened.
 
 ## make check and make check-fast
 

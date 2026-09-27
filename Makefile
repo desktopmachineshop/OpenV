@@ -180,8 +180,9 @@ test:
 ## in LABELS (space-separated): `make check LABELS="refactor refactor:tooling
 ## no-release-notes"` runs the refactor class checks and, as CI does for a
 ## refactor, fails if internal/archtest/ratchets.json can be tightened (the
-## tightened file is left in the working tree to commit). It reads commits,
-## so commit first. Needs a host Go toolchain, Node with
+## tightened file is left in the working tree to commit). Like the job, it
+## runs the merge base's copy of refactor_guard.py when there is one. It
+## reads commits, so commit first. Needs a host Go toolchain, Node with
 ## `npm ci` run in frontend/, Python 3 and git; no Docker. The Docker builds,
 ## e2e and security scans stay in CI (`make vuln` and `make secrets` run the
 ## last two locally).
@@ -223,7 +224,16 @@ check:
 	fi
 	@base="$$(git merge-base "$(BASE_REF)" HEAD)" || { \
 		echo "cannot find where HEAD left $(BASE_REF): run 'git fetch origin master' or set BASE_REF"; exit 1; }; \
-	python3 scripts/refactor/refactor_guard.py --base "$$base" --head HEAD --summary "" $(foreach l,$(LABELS),--label '$(l)')
+	guard=scripts/refactor/refactor_guard.py; tmp=""; \
+	if git cat-file -e "$$base:$$guard" 2>/dev/null; then \
+		tmp="$$(mktemp -d)" && mkdir -p "$$tmp/scripts/refactor" && git show "$$base:$$guard" > "$$tmp/$$guard" && \
+		{ ! git cat-file -e "$$base:scripts/release_notes.py" 2>/dev/null || \
+			git show "$$base:scripts/release_notes.py" > "$$tmp/scripts/release_notes.py"; } || \
+		{ rm -rf "$$tmp"; exit 1; }; \
+		guard="$$tmp/$$guard"; \
+	fi; \
+	python3 "$$guard" --base "$$base" --head HEAD --summary "" $(foreach l,$(LABELS),--label '$(l)'); rc=$$?; \
+	[ -z "$$tmp" ] || rm -rf "$$tmp"; exit $$rc
 	@case " $(LABELS) " in *" refactor "*|*" refactor:"*) \
 		UPDATE_RATCHETS=1 go test -count=1 -run '^TestArchitecture$$' ./internal/archtest && \
 		{ git diff --exit-code -- internal/archtest/ratchets.json || { \

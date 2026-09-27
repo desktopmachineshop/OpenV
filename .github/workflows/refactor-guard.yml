@@ -22,7 +22,7 @@ name: Refactor guard
 # the triggering event, and takes the pull request's change against the
 # first parent of the merge commit it checks out (HEAD^1), the base GitHub
 # merged it onto. HEAD^2 is the pull request's head; its commits are
-# HEAD^1..HEAD^2.
+# HEAD^1..HEAD^2. It judges them with the base's copy of the script.
 on:
   pull_request:
     types: [opened, synchronize, reopened, labeled, unlabeled, ready_for_review]
@@ -93,10 +93,26 @@ jobs:
         working-directory: frontend
         run: npm ci
 
+      # The checks and their lists are the base's copy of the script, so a
+      # pull request that edits them (dropping a guard-code or protected-path
+      # entry, say) is judged by what it started from; its edits take effect
+      # once it merges. The self-test above tests the pull request's own copy.
+      # The pull request that adds the script falls back to its own.
       - name: Goldens, classes and guard code
         env:
           LABELS: ${{ steps.labels.outputs.names }}
-        run: python3 scripts/refactor/refactor_guard.py --labels "$LABELS"
+        run: |
+          guard=scripts/refactor/refactor_guard.py
+          if git cat-file -e "HEAD^1:$guard" 2>/dev/null; then
+            mkdir -p "$RUNNER_TEMP/base/scripts/refactor"
+            git show "HEAD^1:$guard" > "$RUNNER_TEMP/base/$guard"
+            if git cat-file -e HEAD^1:scripts/release_notes.py 2>/dev/null; then
+              git show HEAD^1:scripts/release_notes.py > "$RUNNER_TEMP/base/scripts/release_notes.py"
+            fi
+            guard="$RUNNER_TEMP/base/$guard"
+          fi
+          echo "Running $guard"
+          python3 "$guard" --labels "$LABELS"
 
       # Rule (3). A one-line deletion in a grandfathered file already loosens
       # its entry, so a refactor must commit the tightened file; other pull

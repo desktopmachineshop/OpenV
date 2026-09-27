@@ -11,6 +11,7 @@ Go or Node toolchain runs here; the job itself runs the real ones.
 import io
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -124,6 +125,9 @@ class RepoTest(unittest.TestCase):
             "internal/domain/exports/testdata/in.json": "{}\n",
             "scripts/refactor/refactor_guard.py": GUARD_PY,
             "go.mod": "module example.com/x\n",
+            "frontend/package.json": "{\"name\": \"x\"}\n",
+            "frontend/package-lock.json": "{\"lockfileVersion\": 3}\n",
+            "examples/x/project.json": "{}\n",
             "Dockerfile.api": "RUN go build -o server cmd/server/main.go\n",
             "docs/guide.md": "# Guide\n",
         })
@@ -132,11 +136,11 @@ class RepoTest(unittest.TestCase):
 
     # ---- repository helpers
 
-    def git(self, *args):
+    def git(self, *args, may_fail=False):
         p = subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@example.com", "-c", "commit.gpgsign=false",
                             "-c", "core.hooksPath=/dev/null", "-c", "gc.auto=0", "-c", "maintenance.auto=false"]
                            + list(args), cwd=self.dir, capture_output=True, text=True)
-        if p.returncode != 0:
+        if p.returncode != 0 and not may_fail:
             raise AssertionError(f"git {' '.join(args)}: {p.stderr}")
         return p.stdout.strip()
 
@@ -213,18 +217,21 @@ class DataTest(unittest.TestCase):
             with self.subTest(pattern=pattern, path=path):
                 self.assertEqual(rg.matches(path, [pattern]), want)
 
-    def test_every_golden_on_master_is_listed(self):
-        # Every file the merged guard steps wrote under their golden
-        # directories is on the list, so a later rename cannot drop one.
-        files = subprocess.run(["git", "ls-files", "internal/api/testdata", "internal/persistence/postgres/testdata",
-                                "internal/mcp/testdata", "internal/runner/testdata/wire", "contracts",
-                                "frontend/src/arch/__snapshots__"],
-                               cwd=REPO, capture_output=True, text=True, check=True).stdout.split()
-        files = [f for f in files if not f.endswith(".gitattributes")]
-        self.assertGreater(len(files), 30)
-        for f in files:
-            with self.subTest(path=f):
-                self.assertIsNotNone(rg.golden_entry(f))
+    def test_every_merged_golden_is_on_master(self):
+        # Each entry of a merged guard step still matches a tracked golden, so
+        # renaming a golden or its directory cannot drop it from the list
+        # unnoticed. A new fixture beside a golden is not one, so this does
+        # not list every file under those directories.
+        merged = {"I1, pre-S2", "S2", "S3", "S6", "S6, S13", "S7", "S12, S12b, S16"}
+        files = subprocess.run(["git", "ls-files"], cwd=REPO, capture_output=True, text=True,
+                               check=True).stdout.split("\n")
+        files = [f for f in files if f and not f.endswith(".gitattributes")]
+        entries = [(step, what, patterns) for step, what, patterns in rg.GOLDEN_LIST if step in merged]
+        self.assertEqual(len(entries), 12)
+        for step, what, patterns in entries:
+            with self.subTest(step=step, golden=what):
+                self.assertTrue(any(rg.matches(f, patterns) for f in files),
+                                f"no tracked file matches {patterns}: rename the entry with its golden")
 
     def test_merged_guard_code_exists(self):
         # A literal guard-code path of a merged step that no longer exists
@@ -248,46 +255,79 @@ class DataTest(unittest.TestCase):
         self.assertEqual(rg.golden_entry("internal/domain/exports/testdata/formats/x.csv")[0], "S9")
         self.assertIsNone(rg.golden_entry("frontend/src/arch/testdata/backendDeepLinks.json"))
 
+    # The next three read live files that later steps shrink in commits that
+    # may not edit this file (class E may not edit guard code, and is alone in
+    # its pull request): X4b and X15b-X15e remove allowlist entries, X2b fills
+    # X2B_CALL_SHAPE_CHANGES, M4 drops cmd/server/main.go from ratchets.json.
+    # So they check the shape and pick their entries at run time.
+
     def test_real_lint_allowlists_parse(self):
         with open(os.path.join(REPO, rg.LINT_ALLOWLIST_FILE)) as f:
             text = f.read()
-        views = rg.parse_allowlist(text, "COMPONENTS_IMPORTING_VIEWS", "list")
-        sites = rg.parse_allowlist(text, "EVENT_SOURCE_SITES", "count")
-        self.assertEqual(views, {"src/components/ChatterPanel.tsx": ["src/views/TodoList"],
-                                 "src/components/ProjectLayout.tsx": ["src/views/TodoList"]})
-        self.assertEqual(len(sites), 4)
-        self.assertTrue(all(n == 1 for n in sites.values()))
-        # Removing an entry leaves the rest of the file as it was.
-        shrunk = text.replace("  'src/views/InterviewChat.tsx': 1,\n", "")
-        self.assertNotEqual(shrunk, text)
-        self.assertEqual(rg.blank_blocks(shrunk, rg.LINT_ALLOWLISTS), rg.blank_blocks(text, rg.LINT_ALLOWLISTS))
-        self.assertEqual(rg.allowlist_growth(text, shrunk), [])
-        grown = text.replace("'src/views/InterviewChat.tsx': 1", "'src/views/InterviewChat.tsx': 2")
-        self.assertEqual(rg.allowlist_growth(text, grown),
-                         [("EVENT_SOURCE_SITES", "raises 'src/views/InterviewChat.tsx' from 1 to 2")])
+        lines = text.split("\n")
+        entry = re.compile(r"""^\s*(['"])([^'"]+)\1\s*:""")
+        for name, kind in rg.LINT_ALLOWLISTS.items():
+            with self.subTest(allowlist=name):
+                span = rg.find_block(text, name)
+                self.assertIsNotNone(span, f"{rg.LINT_ALLOWLIST_FILE} has no {name} literal")
+                entries = rg.parse_allowlist(text, name, kind)
+                keyed = [i for i in range(span[0], span[1] + 1) if entry.match(lines[i])]
+                self.assertEqual(len(entries), len(keyed), f"an entry of {name} does not parse: {entries}")
+                if kind == "count":
+                    self.assertTrue(all(n >= 1 for n in entries.values()), entries)
+                else:
+                    self.assertTrue(all(v and all(t.startswith("src/views/") for t in v) for v in entries.values()),
+                                    entries)
+                if not keyed:
+                    continue  # emptied (X4b, X15e): nothing left to remove
+                i = keyed[0]
+                key = entry.match(lines[i]).group(2)
+                # Removing an entry leaves the rest of the file as it was.
+                shrunk = "\n".join(lines[:i] + lines[i + 1:])
+                self.assertEqual(rg.blank_blocks(shrunk, rg.LINT_ALLOWLISTS),
+                                 rg.blank_blocks(text, rg.LINT_ALLOWLISTS))
+                self.assertEqual(rg.allowlist_growth(text, shrunk), [])
+                self.assertEqual(rg.allowlist_growth(shrunk, text), [(name, f"adds '{key}'")])
+                if kind == "count":
+                    n = entries[key]
+                    grown = "\n".join(lines[:i] + [lines[i].replace(f": {n}", f": {n + 1}", 1)] + lines[i + 1:])
+                    self.assertEqual(rg.allowlist_growth(text, grown),
+                                     [(name, f"raises '{key}' from {n} to {n + 1}")])
 
     def test_own_x2b_block_is_found(self):
         with open(os.path.join(REPO, "scripts/refactor/refactor_guard.py")) as f:
             text = f.read()
-        self.assertIsNotNone(rg.find_block(text, "X2B_CALL_SHAPE_CHANGES"))
-        filled = text.replace("X2B_CALL_SHAPE_CHANGES = [\n]",
-                              'X2B_CALL_SHAPE_CHANGES = [\n    ("GET /x: -", "GET /x: session"),\n]')
+        span = rg.find_block(text, "X2B_CALL_SHAPE_CHANGES")
+        self.assertIsNotNone(span)
+        lines = text.split("\n")
+        # Filled the way X2b fills it, whatever it holds by then.
+        filled = "\n".join(lines[:span[0]] + ["X2B_CALL_SHAPE_CHANGES = [", '    ("GET /x: -", "GET /x: session"),',
+                                              "]"] + lines[span[1] + 1:])
         self.assertNotEqual(filled, text)
         self.assertEqual(rg.blank_blocks(filled, ["X2B_CALL_SHAPE_CHANGES"]),
                          rg.blank_blocks(text, ["X2B_CALL_SHAPE_CHANGES"]))
+        # The job reads the list from the pull request's copy of this file.
+        self.assertIsInstance(rg.x2b_changes_in(text), list)
+        self.assertEqual(rg.x2b_changes_in(filled), [("GET /x: -", "GET /x: session")])
 
     def test_ratchet_growth(self):
         with open(os.path.join(REPO, rg.RATCHETS_FILE)) as f:
             real = json.load(f)
         self.assertEqual(rg.ratchet_growth(real, real), [])
         raised = json.loads(json.dumps(real))
-        raised["counts"]["raw_json_encodes"] += 1
-        raised["import_edges"]["cmd/agentd"].append("internal/api")
         raised["about"] = "changed text is fine"
-        del raised["file_lines"]["cmd/server/main.go"]
+        for key in list(raised["file_lines"])[:1]:
+            del raised["file_lines"][key]  # removing is fine
+        want = {("file_lines.internal/zz_not_a_package/new.go", "added")}
+        raised["file_lines"]["internal/zz_not_a_package/new.go"] = 900
+        for count in list(raised["counts"])[:1]:
+            raised["counts"][count] += 1
+            want.add((f"counts.{count}", "raised"))
+        for pkg in list(raised["import_edges"])[:1]:
+            raised["import_edges"][pkg].append("internal/zz_not_a_package")
+            want.add((f"import_edges.{pkg}.internal/zz_not_a_package", "added"))
         got = {(rg.keypath(kp), kind) for kp, kind, _ in rg.ratchet_growth(real, raised)}
-        self.assertEqual(got, {("counts.raw_json_encodes", "raised"),
-                               ("import_edges.cmd/agentd.internal/api", "added")})
+        self.assertEqual(got, want)
 
 
 class WorkflowTest(unittest.TestCase):
@@ -310,7 +350,13 @@ class WorkflowTest(unittest.TestCase):
             "          go-version-file: go.mod",
             "        run: python3 -m unittest scripts/refactor/refactor_guard_test.py",
             "          labels=$(gh api \"repos/$REPO/pulls/$PR\" --jq '.labels[].name')",
-            "        run: python3 scripts/refactor/refactor_guard.py --labels \"$LABELS\"",
+            # The base's copy judges the pull request (its own when the base has none).
+            "          guard=scripts/refactor/refactor_guard.py",
+            "          if git cat-file -e \"HEAD^1:$guard\" 2>/dev/null; then",
+            "            git show \"HEAD^1:$guard\" > \"$RUNNER_TEMP/base/$guard\"",
+            "              git show HEAD^1:scripts/release_notes.py > \"$RUNNER_TEMP/base/scripts/release_notes.py\"",
+            "            guard=\"$RUNNER_TEMP/base/$guard\"",
+            "          python3 \"$guard\" --labels \"$LABELS\"",
             "          UPDATE_RATCHETS=1 go test -count=1 -run '^TestArchitecture$' ./internal/archtest",
             "            if ! git diff --exit-code -- internal/archtest/ratchets.json; then",
             "            git diff --quiet -- internal/archtest/ratchets.json || echo \"::warning "
@@ -369,26 +415,51 @@ class GoldenTest(RepoTest):
         f = self.assertFailsWith(self.guard("no-release-notes"), "K16 inline snapshot", "toMatchInlineSnapshot")
         self.assertEqual(f.path, "frontend/src/views/App.test.tsx")
 
+    def test_inline_snapshot_found_whatever_the_color_config(self):
+        # make check runs with the user's git config.
+        self.git("config", "color.ui", "always")
+        self.git("config", "color.diff", "always")
+        self.commit("test", {"frontend/src/views/App.test.tsx": "expect(x).toMatchInlineSnapshot(`1`);\n"})
+        self.assertFailsWith(self.guard("no-release-notes"), "K16 inline snapshot", "toMatchInlineSnapshot")
+
     def test_x2b_exception_is_empty_until_filled(self):
         self.commit("x2b", {"internal/api/testdata/route_guards.txt": "GET /a: session\nGET /b: session\n"},
                     trailers("E", Refactor_Characterization="internal/api/handlers_test.go"))
         self.assertFailsWith(self.guard(*REFACTOR), "(1) golden freeze", "route_guards")
 
+    X2B_FILLED = GUARD_PY.replace("X2B_CALL_SHAPE_CHANGES = [\n]",
+                                  'X2B_CALL_SHAPE_CHANGES = [\n    ("GET /b: -", "GET /b: session"),\n]')
+
     def test_x2b_listed_lines_are_exempt_in_class_e(self):
-        self.addCleanup(setattr, rg, "X2B_CALL_SHAPE_CHANGES", rg.X2B_CALL_SHAPE_CHANGES)
-        rg.X2B_CALL_SHAPE_CHANGES = [("GET /b: -", "GET /b: session")]
-        self.commit("x2b", {"internal/api/testdata/route_guards.txt": "GET /a: session\nGET /b: session\n"},
+        # X2b fills the list in its own class E commit, and the job, which
+        # runs the base's copy of the script, reads it from the pull request.
+        self.commit("x2b", {"internal/api/testdata/route_guards.txt": "GET /a: session\nGET /b: session\n",
+                            "scripts/refactor/refactor_guard.py": self.X2B_FILLED},
                     trailers("E", Refactor_Characterization="internal/api/handlers_test.go"))
         g = self.guard(*REFACTOR)
         self.assertPasses(g)
         self.assertTrue(any("X2b" in n for n in g.notes))
 
-    def test_x2b_exception_does_not_cover_other_lines(self):
+    def test_x2b_list_is_the_pull_requests_not_the_running_scripts(self):
         self.addCleanup(setattr, rg, "X2B_CALL_SHAPE_CHANGES", rg.X2B_CALL_SHAPE_CHANGES)
         rg.X2B_CALL_SHAPE_CHANGES = [("GET /b: -", "GET /b: session")]
-        self.commit("x2b", {"internal/api/testdata/route_guards.txt": "GET /a: -\nGET /b: session\n"},
+        self.commit("x2b", {"internal/api/testdata/route_guards.txt": "GET /a: session\nGET /b: session\n"},
                     trailers("E", Refactor_Characterization="internal/api/handlers_test.go"))
         self.assertFailsWith(self.guard(*REFACTOR), "(1) golden freeze", "route_guards")
+
+    def test_x2b_exception_does_not_cover_other_lines(self):
+        self.commit("x2b", {"internal/api/testdata/route_guards.txt": "GET /a: -\nGET /b: session\n",
+                            "scripts/refactor/refactor_guard.py": self.X2B_FILLED},
+                    trailers("E", Refactor_Characterization="internal/api/handlers_test.go"))
+        self.assertFailsWith(self.guard(*REFACTOR), "(1) golden freeze", "route_guards")
+
+    def test_x2b_list_that_does_not_parse_counts_as_empty(self):
+        self.commit("x2b", {"internal/api/testdata/route_guards.txt": "GET /a: session\nGET /b: session\n",
+                            "scripts/refactor/refactor_guard.py": self.X2B_FILLED.replace('"),', '")+1,')},
+                    trailers("E", Refactor_Characterization="internal/api/handlers_test.go"))
+        g = self.guard(*REFACTOR)
+        self.assertFailsWith(g, "(1) golden freeze", "route_guards")
+        self.assertTrue(any("X2B_CALL_SHAPE_CHANGES" in w for w in g.warnings), g.warnings)
 
 
 class ClassTest(RepoTest):
@@ -396,6 +467,12 @@ class ClassTest(RepoTest):
         self.commit("tidy", {"docs/guide.md": "# Guide\n\nx\n"})
         f = self.assertFailsWith(self.guard(*REFACTOR), "R2 class trailer", "no Refactor-Class")
         self.assertEqual(f.commit[1], "tidy")
+
+    def test_class_line_outside_the_trailer_block(self):
+        self.commit("tidy", {"docs/guide.md": "# Guide\n\nx\n"},
+                    "Refactor-Class: T\n\nSigned-off-by: T <t@example.com>")
+        f = self.assertFailsWith(self.guard(*REFACTOR), "R2 class trailer", "outside its trailer block")
+        self.assertNotIn("has no Refactor-Class", f.message)
 
     def test_unknown_and_double_class(self):
         self.commit("one", {"docs/guide.md": "a\n"}, trailers("X"))
@@ -488,6 +565,19 @@ class ClassTest(RepoTest):
         self.assertFailsWith(g, "(2) protected path", "go.mod")
         # Dockerfile.api is protected only once the base builds by package path (M1).
         self.assertFalse(any(f.path == "Dockerfile.api" for f in g.failures))
+
+    def test_protected_package_files_and_templates(self):
+        self.commit("deps", {"frontend/package.json": "{\"name\": \"x\", \"dependencies\": {\"left-pad\": \"1\"}}\n",
+                             "frontend/package-lock.json": "{\"lockfileVersion\": 3, \"packages\": {}}\n",
+                             "examples/x/project.json": "{\"name\": \"x\"}\n"}, trailers("B"))
+        g = self.guard(*REFACTOR)
+        for path in ("frontend/package.json", "frontend/package-lock.json", "examples/x/project.json"):
+            with self.subTest(path=path):
+                self.assertEqual(self.assertFailsWith(g, "(2) protected path", path).path, path)
+        # Only a refactor is held to them.
+        other = rg.Guard(g.git, g.base, g.head, g.merge, ["no-release-notes"], StubHashers())
+        other.run()
+        self.assertPasses(other)
 
     def test_dockerfile_protected_after_m1(self):
         self.git("checkout", "-q", "main")
@@ -679,6 +769,52 @@ class CeilingTest(RepoTest):
             self.assertIsNotNone(rg.find_constant(f.read(), "CEILING"))
 
 
+class ReAddTest(RepoTest):
+    """A file deleted in one commit and re-added in the next is judged
+    against the base, which still has it, not against the empty parent."""
+
+    def test_ratchets_deleted_then_re_added_raised(self):
+        self.commit("grow", {"internal/api/handlers.go": "package api\n\nfunc A() {}\n\nfunc B() {}\n",
+                             "internal/archtest/ratchets.json": None}, trailers("B"))
+        r = json.loads(json.dumps(RATCHETS))
+        r["counts"]["raw_json_encodes"] = 300
+        r["import_edges"]["internal/api"].append("internal/domain/links")
+        self.commit("bootstrap", {"internal/archtest/ratchets.json": json.dumps(r, indent=2) + "\n"}, trailers("B"))
+        g = self.guard(*REFACTOR)
+        f = self.assertFailsWith(g, "(2) ratchets", "raises ratchets.json entry counts.raw_json_encodes (249 -> 300)")
+        self.assertEqual(f.commit[1], "bootstrap")
+        self.assertFailsWith(g, "(2) ratchets", "import_edges.internal/api.internal/domain/links")
+
+    def test_guard_code_deleted_in_c_then_re_added_changed_in_b(self):
+        self.commit("drop", {"internal/api/route_binding_test.go": None}, trailers("C"))
+        self.commit("adapt", {"internal/api/route_binding_test.go": "package api\n\n// looser guard\n",
+                              "internal/api/handlers.go": "package api\n\nfunc A() { _ = 1 }\n"}, trailers("B"))
+        f = self.assertFailsWith(self.guard(*REFACTOR), "(2) guard code", "route_binding_test.go")
+        self.assertIn("re-adds, changed from the base, guard code (I1, S2) in a class B commit", f.message)
+
+    def test_guard_code_restored_byte_identical_passes(self):
+        self.commit("drop", {"internal/api/route_binding_test.go": None}, trailers("C"))
+        self.commit("restore", {"internal/api/route_binding_test.go": "package api\n\n// guard\n",
+                                "internal/api/handlers.go": "package api\n\nfunc A() { _ = 1 }\n"}, trailers("B"))
+        self.assertPasses(self.guard("refactor", "refactor:test", "no-release-notes"))
+
+    def test_ceiling_deleted_then_re_added_raised(self):
+        self.commit("drop", {"frontend/src/arch/errorChains.test.ts": None}, trailers("C"))
+        self.commit("back", {"frontend/src/arch/errorChains.test.ts": ERROR_CHAINS.replace("53", "90")},
+                    trailers("C"))
+        f = self.assertFailsWith(self.guard("refactor", "refactor:test"), "(2) guard ceiling", "from 53 to 90")
+        self.assertEqual(f.commit[1], "back")
+
+    def test_allowlist_deleted_then_re_added_raised(self):
+        self.commit("drop", {"frontend/eslint.config.js": None}, trailers("T"))
+        self.commit("back", {"frontend/eslint.config.js": ESLINT.replace("'src/views/InterviewChat.tsx': 1",
+                                                                         "'src/views/InterviewChat.tsx': 5")},
+                    trailers("T"))
+        f = self.assertFailsWith(self.guard("refactor", "refactor:tooling"), "(2) lint allowlist",
+                                 "raises 'src/views/InterviewChat.tsx' from 1 to 5")
+        self.assertEqual(f.commit[1], "back")
+
+
 class ScriptTest(RepoTest):
     RENAME = ("import pathlib, sys\n"
               "old, new = sys.argv[1], sys.argv[2]\n"
@@ -732,8 +868,57 @@ class MergeTest(RepoTest):
         self.write({"internal/api/handlers.go": "package api\n\nfunc Evil() {}\n"})
         self.git("add", "-A")
         self.git("commit", "-q", "--no-edit")
-        f = self.assertFailsWith(self.guard("refactor", "refactor:tooling"), "R2 class trailer", "combined diff")
+        f = self.assertFailsWith(self.guard("refactor", "refactor:tooling"), "R2 class trailer",
+                                 "git's own merge of its parents")
         self.assertIn("Merge", f.commit[1])
+        self.assertIn("internal/api/handlers.go", f.message)
+
+    def conflict(self):
+        """A class B commit on the branch and a master commit that both edit
+        handlers.go, then a merge of master into the branch that stops on
+        the conflict."""
+        self.commit("extract", {"internal/api/handlers.go": "package api\n\nfunc A() { b() }\n\nfunc b() {}\n"},
+                    trailers("B"))
+        self.git("checkout", "-q", "main")
+        self.commit("fix", {"internal/api/handlers.go": "package api\n\nfunc A() { fixed() }\n\nfunc fixed() {}\n",
+                            "docs/other.md": "y\n"})
+        self.git("checkout", "-q", "pr")
+        self.git("merge", "-q", "--no-edit", "main", may_fail=True)
+        self.assertIn("internal/api/handlers.go", self.git("diff", "--name-only", "--diff-filter=U"))
+
+    def test_a_conflict_settled_with_the_branch_side_is_a_change(self):
+        # --cc shows nothing when the result equals one parent, yet this
+        # drops master's fix from the pull request's net change.
+        self.conflict()
+        self.git("checkout", "--ours", "internal/api/handlers.go")
+        self.git("add", "-A")
+        self.git("commit", "-q", "--no-edit")
+        self.assertEqual(self.git("diff-tree", "-r", "--cc", "--no-commit-id", "HEAD"), "")
+        f = self.assertFailsWith(self.guard(*REFACTOR), "R2 class trailer", "git's own merge of its parents")
+        self.assertIn("Merge", f.commit[1])
+        self.assertIn("internal/api/handlers.go", f.message)
+        self.assertNotIn("docs/other.md", f.message)
+
+    def test_a_merge_with_strategy_ours_is_a_change(self):
+        # Reverts master's guard-code change in a pull request whose only
+        # commit is class B.
+        self.commit("extract", {"internal/api/handlers.go": "package api\n\nfunc A() { b() }\n\nfunc b() {}\n"},
+                    trailers("B"))
+        self.git("checkout", "-q", "main")
+        self.commit("guard", {"internal/api/route_binding_test.go": "package api\n\n// stricter guard\n"})
+        self.git("checkout", "-q", "pr")
+        self.git("merge", "-q", "--no-edit", "-s", "ours", "main")
+        f = self.assertFailsWith(self.guard(*REFACTOR), "R2 class trailer", "git's own merge of its parents")
+        self.assertIn("internal/api/route_binding_test.go", f.message)
+
+    def test_a_conflict_settled_with_masters_copy_needs_no_trailer(self):
+        self.conflict()
+        self.git("checkout", "--theirs", "internal/api/handlers.go")
+        self.git("add", "-A")
+        self.git("commit", "-q", "--no-edit")
+        g = self.guard(*REFACTOR)
+        self.assertPasses(g)
+        self.assertEqual([g.row(c) for c in g.commits], [("B", "ok"), ("-", "merge")])
 
 
 class CliTest(RepoTest):

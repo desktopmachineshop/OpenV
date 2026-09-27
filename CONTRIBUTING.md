@@ -108,11 +108,14 @@ Signed-off-by: Your Name <you@example.com>
 | R scripted rewrite | what the script writes | a `Refactor-Script: <path> [args…]` trailer names a script that is already in the commit's parent (commit it, and any tool it drives, in an earlier class T commit); the job runs it in a scratch worktree of the parent and requires the result to equal the commit byte for byte |
 | E semantic extraction | anything | one or more `Refactor-Characterization: <test file>` trailers name tests that are on the base and unchanged by the pull request; two reviewers, one of them the maintainer |
 
-A merge of `master` into the branch needs no trailer when git resolved it on
-its own (its combined diff is empty). A merge that carries a change of its
-own, such as a conflict resolved by hand, is checked like a commit and needs
-a trailer; a move or scripted rewrite is never resolved in a merge but
-regenerated on the latest `master` (R4).
+A merge of `master` into the branch needs no trailer when its tree is what
+git's own merge of its two parents gives (`git merge-tree`), apart from files
+that take `master`'s copy. A merge that carries a change of its own, such as
+a conflict resolved by hand or settled with the branch's side
+(`git checkout --ours`, `git merge -s ours`), which drops what `master`
+changed there, is checked like a commit and needs a trailer; a move or
+scripted rewrite is never resolved in a merge but regenerated on the latest
+`master` (R4).
 
 ### What the Refactor guard job checks
 
@@ -133,8 +136,10 @@ On a **refactor** pull request, also:
    `testdata/`, `__snapshots__/`, `frontend/src/generated/` or
    `docs/exports/*.json`, or of a protected path: `RELEASE_NOTES.md`,
    `internal/domain/release/features.go`, `go.mod`, `go.sum`,
-   `Dockerfile.api` (once M1 builds it by package path), and the frontend
-   image's files (`frontend/public/**`, `index.html`,
+   `Dockerfile.api` (once M1 builds it by package path), the project
+   templates the API image serves (`examples/**`), and the frontend image's
+   files (`frontend/package.json` and `package-lock.json`, the npm
+   counterpart of `go.mod` and `go.sum`; `frontend/public/**`, `index.html`,
    `docker-entrypoint.d/**`, `nginx.conf`, `security-headers.conf`,
    `openv-nginx/**`, `Dockerfile.prod`, `railway.json`, `vite.config.ts`).
    Guard code (`GUARD_CODE`: the Phase 0 guard tests, `internal/archtest/**`,
@@ -153,8 +158,11 @@ On a **refactor** pull request, also:
    any of those is allowed in any class and is not a guard-code edit.
    Something the pull request itself adds (a golden and the guard test that
    writes it, say) is not frozen until it merges, so a later commit of the
-   same pull request may still refine it. Then the class checks above run on
-   every commit.
+   same pull request may still refine it. A file of the base that one commit
+   deletes and a later one re-adds is judged against the base: re-adding
+   guard code counts as editing it unless the bytes are the base's, and a
+   re-added `ratchets.json`, allowlist or ceiling may not be above the
+   base's. Then the class checks above run on every commit.
 3. **Stale ratchets.** The job runs
    `UPDATE_RATCHETS=1 go test -count=1 -run '^TestArchitecture$' ./internal/archtest`;
    a refactor pull request fails if that changes `ratchets.json`, so commit
@@ -172,6 +180,16 @@ in a class T commit of its own pull request. X2b fills
 `X2B_CALL_SHAPE_CHANGES`, the one named exception (plan §8.3), in its class
 E commit; until then every `route_guards.txt` change is an authorization
 change.
+
+The job judges a pull request with the **base's** copy of
+`refactor_guard.py` (its *Script self-test* step tests the pull request's
+own copy), so a pull request's edits to the lists and rules take effect only
+once it merges: a pull request that drops a guard-code or protected-path
+entry is still judged by that entry. A step that needs a new exception, such
+as P5's import edges or S12b's class T rule for TypeScript the build erases,
+lands it in an earlier pull request. `X2B_CALL_SHAPE_CHANGES` is the one
+list the job reads from the pull request, since X2b fills it in its own.
+`make check` does the same with the merge base's copy.
 
 ### Goldens are regenerated only for a behavior change
 

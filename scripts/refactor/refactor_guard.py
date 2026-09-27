@@ -7,7 +7,9 @@ CONTRIBUTING.md, "Refactor PRs", is the author's guide. The job
 (.github/workflows/refactor-guard.yml) checks out GitHub's merge commit, so
 HEAD^1 is the base the pull request was merged onto and HEAD^2 its head.
 The pull request's change is HEAD^1..HEAD, and its commits are
-HEAD^1..HEAD^2.
+HEAD^1..HEAD^2. The job runs the base's copy of this script, so a pull
+request's edits to the lists and rules below take effect once it merges;
+X2B_CALL_SHAPE_CHANGES alone is read from the pull request's tree.
 
 Every pull request:
   (1) golden freeze: an M or D on the golden list (GOLDEN_LIST, 20 entries)
@@ -33,7 +35,10 @@ A pull request labelled `refactor` or `refactor:<anything>` also fails on:
 Something the pull request itself adds (a golden, a guard test, an
 allowlist) is not frozen until it merges, so its later commits may refine
 it; ratchets, allowlists and ceilings are judged against the base as well as
-the commit's parent, so a pull request may restore what the base had.
+the commit's parent, so a pull request may restore what the base had. A file
+of the base deleted in one commit and re-added in a later one is judged
+against the base: the re-add counts as an edit unless it restores the base's
+bytes.
 (3) Stale ratchets is the job's next step, not this script: it runs
 `UPDATE_RATCHETS=1 go test -count=1 -run '^TestArchitecture$' ./internal/archtest`
 and diffs ratchets.json.
@@ -61,6 +66,7 @@ Standard library only. Tests:
 """
 
 import argparse
+import ast
 import importlib.util
 import json
 import os
@@ -133,12 +139,18 @@ FROZEN_DATA = [
 # (2) Protected paths (§3 I25-I27): (invariant, pattern, condition). A
 # condition is a function of the guard; the path is protected when it
 # returns True. Dockerfile.api is protected once M1 has changed its build
-# to a package path, which M1's own class T commit does.
+# to a package path, which M1's own class T commit does. Beyond the plan's
+# list: the frontend's package manifest and lockfile, which decide what its
+# image installs and builds, and examples/**, which the API image copies and
+# serves as project templates (both I26).
 PROTECTED_PATHS = [
     ("I25", "RELEASE_NOTES.md", None),
     ("I25", "internal/domain/release/features.go", None),
     ("I26", "go.mod", None),
     ("I26", "go.sum", None),
+    ("I26", "frontend/package.json", None),  # the npm counterpart of go.mod and go.sum
+    ("I26", "frontend/package-lock.json", None),
+    ("I26", "examples/**", None),  # copied by Dockerfile.api and served as project templates
     ("I26, after M1", "Dockerfile.api", lambda g: g.base_builds_by_package_path()),
     ("I26", "frontend/public/**", None),
     ("I26", "frontend/index.html", None),
@@ -156,7 +168,9 @@ PROTECTED_PATHS = [
 # slot: the plan names no file for that step's guard code yet, and the step
 # fills its slot in a class T commit when it lands. S14a and S14b are not in
 # the plan's list: they are the tools that prove class A and this guard, so a
-# commit of another class editing them could pass itself.
+# commit of another class may not edit them either. Since the job runs the
+# base's copy of this script, a pull request that also drops rows here is
+# still judged by the rows it started from.
 GUARD_CODE = [
     ("S1", ["internal/archtest/**"]),
     ("I1, S2", ["internal/api/route_inventory_test.go", "internal/api/route_binding_test.go",
@@ -204,7 +218,10 @@ RATCHET_RULE_CODE = "internal/archtest/*.go"
 # A route_guards.txt change made of exactly these replacements, in class E
 # commits of a refactor pull request, does not count as a golden change.
 # Until X2b fills it, every route_guards.txt change is an authorization
-# change.
+# change. The guard reads the list from the pull request's copy of this file
+# (GUARD_SCRIPT), since the job runs the base's copy and X2b fills the list
+# in its own pull request.
+GUARD_SCRIPT = "scripts/refactor/refactor_guard.py"
 ROUTE_GUARDS_FILE = "internal/api/testdata/route_guards.txt"
 X2B_CALL_SHAPE_CHANGES = [
 ]
@@ -222,7 +239,7 @@ GUARD_CODE_CEILINGS = {"frontend/src/arch/errorChains.test.ts": ["CEILING"]}
 # constant.
 GUARD_CODE_CARVE_OUTS = {
     LINT_ALLOWLIST_FILE: {name: "*" for name in LINT_ALLOWLISTS},
-    "scripts/refactor/refactor_guard.py": {"X2B_CALL_SHAPE_CHANGES": "E"},
+    GUARD_SCRIPT: {"X2B_CALL_SHAPE_CHANGES": "E"},
     **{path: {name: "*" for name in names} for path, names in GUARD_CODE_CEILINGS.items()},
 }
 
@@ -325,6 +342,12 @@ class GitError(Exception):
     pass
 
 
+# git diff as the guard parses it, whatever the user's config says:
+# color.ui=always would hide every added line behind an escape code, and
+# an external diff driver would replace the patch.
+PLAIN_DIFF = ("--no-renames", "--no-color", "--no-ext-diff")
+
+
 class Git:
     """git in one work tree. Maintenance stays off: the guard never needs it,
     and a detached gc would race a test's temporary repository cleanup."""
@@ -357,14 +380,32 @@ class Git:
 
     def changes(self, a, b):
         """[(status, path)] between two commits; renames are a D and an A."""
-        raw = self.out("diff", "--no-renames", "--name-status", "-z", a, b)
+        raw = self.out("diff", *PLAIN_DIFF, "--name-status", "-z", a, b)
         parts = raw.split("\0")
         return [(parts[i][0], parts[i + 1]) for i in range(0, len(parts) - 1, 2)]
 
-    def combined_changes(self, merge):
-        """[(status, path)] of a merge commit's own change: the files whose
-        combined diff (git diff-tree --cc) is not empty, that is, where the
-        merge differs from every parent in a way no parent explains."""
+    def is_ancestor(self, a, b):
+        return self.run("merge-base", "--is-ancestor", a, b, check=False).returncode == 0
+
+    def combined_changes(self, merge, base=None):
+        """[(status, path)] of a merge commit's own change: the files where
+        its tree differs from git's own merge of its two parents (git
+        merge-tree, which leaves a conflict's markers in), apart from a file
+        that takes the upstream parent's copy (the one parent on base), since
+        that hides nothing from the pull request's net change. So a conflict
+        settled with the branch's side wholesale (`git checkout --ours`,
+        `git merge -s ours`), which drops what master changed there, is a
+        change of its own. An octopus merge, or a git older than 2.38, falls
+        back to the combined diff (git diff-tree --cc)."""
+        parents = self.parents(merge)
+        if len(parents) == 2:
+            p = self.run("merge-tree", "--write-tree", "--no-messages", *parents, check=False)
+            if p.returncode in (0, 1):  # 0 clean, 1 conflicted
+                auto = p.stdout.split("\n", 1)[0].strip()
+                upstream = [q for q in parents if base and self.is_ancestor(q, base)]
+                take = upstream[0] if len(upstream) == 1 else None
+                return [(s, path) for s, path in self.changes(auto, merge)
+                        if take is None or self.show(take, path) != self.show(merge, path)]
         patch = self.out("diff-tree", "-r", "--cc", "--no-commit-id", "-p", merge)
         paths = []
         for line in patch.split("\n"):
@@ -406,6 +447,9 @@ class Git:
     def subject(self, sha):
         return self.out("log", "-1", "--format=%s", sha).strip()
 
+    def message(self, sha):
+        return self.out("log", "-1", "--format=%B", sha)
+
     def trailers(self, sha):
         """[(key, value)] of the commit's trailer block, keys as written."""
         out = []
@@ -420,7 +464,7 @@ class Git:
         return self.out("log", "--reverse", "--format=%H", "--full-history", f"{base}..{head}", "--", path).split()
 
     def added_lines(self, a, b, path):
-        diff = self.out("diff", "--no-renames", "-U0", a, b, "--", path)
+        diff = self.out("diff", *PLAIN_DIFF, "-U0", a, b, "--", path)
         return [line[1:] for line in diff.split("\n") if line.startswith("+") and not line.startswith("+++")]
 
 
@@ -532,6 +576,22 @@ def parse_allowlist(text, name, kind):
         else:
             entries[key] = [t[1] for t in re.findall(r"""(['"])([^'"]*)\1""", value)]
     return entries
+
+
+def x2b_changes_in(text):
+    """X2B_CALL_SHAPE_CHANGES as a copy of this script holds it, a list of
+    (before, after) string pairs, or None when the literal is missing or is
+    not such a list."""
+    block = block_text(text or "", "X2B_CALL_SHAPE_CHANGES")
+    if "=" not in block:
+        return None
+    try:
+        value = ast.literal_eval(block.split("=", 1)[1])
+    except (ValueError, SyntaxError):
+        return None
+    pairs = isinstance(value, list) and all(
+        isinstance(p, tuple) and len(p) == 2 and all(isinstance(x, str) for x in p) for p in value)
+    return value if pairs else None
 
 
 def allowlist_growth(old_text, new_text):
@@ -700,8 +760,10 @@ class Guard:
         for sha in self.git.commits(self.base, self.head):
             parents = self.git.parents(sha)
             merge = len(parents) > 1
-            changes = self.git.combined_changes(sha) if merge else self.git.changes(parents[0] if parents else
-                                                                                      self.empty_tree(), sha)
+            if merge:
+                changes = self.git.combined_changes(sha, self.base)
+            else:
+                changes = self.git.changes(parents[0] if parents else self.empty_tree(), sha)
             self.commits.append(Commit(sha, self.git.short(sha), self.git.subject(sha), parents, changes, merge,
                                        merge and not changes, self.git.trailers(sha)))
 
@@ -713,12 +775,20 @@ class Guard:
     def x2b_exempt(self):
         """True when the route_guards.txt change is exactly X2b's listed
         call-shape replacements, made in class E commits of a refactor pull
-        request (§8.3)."""
-        if not self.refactor or not X2B_CALL_SHAPE_CHANGES:
+        request (§8.3). The list is the pull request's copy (GUARD_SCRIPT in
+        the merge commit), not this module's, which is the base's in CI."""
+        if not self.refactor:
+            return False
+        listed = x2b_changes_in(self.git.text(self.merge, GUARD_SCRIPT))
+        if listed is None:
+            self.warnings.append(f"X2B_CALL_SHAPE_CHANGES in {GUARD_SCRIPT} is missing or not a list of "
+                                 "(before, after) string pairs; counting no X2b exception")
+            return False
+        if not listed:
             return False
         old = (self.git.text(self.base, ROUTE_GUARDS_FILE) or "").split("\n")
         new = (self.git.text(self.merge, ROUTE_GUARDS_FILE) or "").split("\n")
-        allowed = {before: after for before, after in X2B_CALL_SHAPE_CHANGES}
+        allowed = {before: after for before, after in listed}
         replaced = [allowed.get(line, line) for line in old]
         if replaced != new:
             return False
@@ -845,8 +915,20 @@ class Guard:
             return
         values = c.trailer_values(CLASS_TRAILER)
         if not values:
-            self.fail("R2 class trailer", f"has no {CLASS_TRAILER} trailer" +
-                      (" (a merge whose combined diff is not empty is a change of its own)" if c.merge else ""),
+            own = ""
+            if c.merge:
+                paths = [p for _, p in c.changes]
+                own = (" (a merge that differs from git's own merge of its parents, other than by taking master's "
+                       "copy of a file, is a change of its own: " + ", ".join(paths[:5]) +
+                       (f" and {len(paths) - 5} more" if len(paths) > 5 else "") + ")")
+            if re.search(rf"(?im)^\s*{CLASS_TRAILER}\s*:", self.git.message(c.sha)):
+                self.fail("R2 class trailer", f"has a {CLASS_TRAILER} line outside its trailer block: git reads "
+                          "trailers only from the message's last paragraph, and only while every line there is a "
+                          "trailer", f"move the {CLASS_TRAILER} line into the last paragraph with Signed-off-by, "
+                          "with no blank line or other text among the trailers (git commit --amend, or git rebase "
+                          "with 'reword')", commit=c)
+                return
+            self.fail("R2 class trailer", f"has no {CLASS_TRAILER} trailer" + own,
                       f"end the message with '{CLASS_TRAILER}: <{'|'.join(CLASSES)}>' before Signed-off-by "
                       "(git commit --amend, or git rebase with 'reword'); a commit with two classes is split into "
                       "one commit per class", commit=c)
@@ -1006,7 +1088,7 @@ class Guard:
                 return False, f"cannot record what the script wrote: {e}"
             want = self.git.tree(commit)
             if got != want:
-                stat = self.git.out("diff", "--no-renames", "--stat", got, want)
+                stat = self.git.out("diff", *PLAIN_DIFF, "--stat", got, want)
                 return False, ("re-running the script on the parent does not reproduce the commit (script output "
                                "-> commit):\n" + indent(stat))
             return True, ""
@@ -1060,15 +1142,18 @@ class Guard:
         golden_modified = any(modifies(s) and golden_entry(p) and self.on_base(p) for s, p in c.changes)
         for s, p in c.changes:
             step = guard_code_step(p)
-            if not step or not modifies(s) or not self.on_base(p):
-                continue  # not guard code, added, or added by this pull request
+            if not step or not self.on_base(p):
+                continue  # not guard code, or added by this pull request
+            if not modifies(s) and self.git.show(self.base, p) == self.git.show(c.sha, p):
+                continue  # deleted earlier in this pull request and re-added as the base has it
             if s == "M" and self.carved_out_only(c, p):
                 continue
             if c.klass in ("C", "T") and not golden_modified:
                 continue
             why = (f"a class {c.klass} commit" if c.klass not in ("C", "T")
                    else f"a class {c.klass} commit that also modifies or deletes a golden")
-            self.fail("(2) guard code", f"{'deletes' if s == 'D' else 'modifies'} guard code ({step}) in {why}",
+            verb = {"D": "deletes", "A": "re-adds, changed from the base,"}.get(s, "modifies")
+            self.fail("(2) guard code", f"{verb} guard code ({step}) in {why}",
                       "change guard code only in its own class C or T commit that changes no golden, green against "
                       "the production code of its parent (R3)", commit=c, path=p)
 
@@ -1088,6 +1173,8 @@ class Guard:
         per_parent = []
         for parent in self.judged_against(c):
             old_text = self.git.text(parent, RATCHETS_FILE)
+            if old_text is None:
+                continue  # deleted earlier in this pull request: the base still judges it
             try:
                 old = json.loads(old_text) if old_text else {}
             except ValueError:
@@ -1149,9 +1236,13 @@ class Guard:
             return
         base_text = self.git.text(self.base, LINT_ALLOWLIST_FILE) or ""
         frozen = {name for name in LINT_ALLOWLISTS if find_block(base_text, name)}  # S12 created them
+        if not frozen:
+            return
         new = self.git.text(c.sha, LINT_ALLOWLIST_FILE) or ""
-        per_parent = [set(allowlist_growth(self.git.text(parent, LINT_ALLOWLIST_FILE) or "", new))
-                      for parent in self.judged_against(c)]
+        # A tree without the file (deleted earlier in this pull request) judges
+        # nothing; the base, which has it, still does.
+        olds = [self.git.text(tree, LINT_ALLOWLIST_FILE) for tree in self.judged_against(c)]
+        per_parent = [set(allowlist_growth(old, new)) for old in olds if old is not None]
         for name, desc in sorted(g for g in set.intersection(*per_parent) if g[0] in frozen):
             self.fail("(2) lint allowlist", f"{desc} in {name}", "S12's allowlists only shrink: fix the import or "
                       "open the stream through the shared hook instead (§6.4 S12)", commit=c,
@@ -1159,8 +1250,8 @@ class Guard:
 
     def check_guard_ceilings(self, c):
         for path, names in GUARD_CODE_CEILINGS.items():
-            if not any(p == path and s == "M" for s, p in c.changes):
-                continue
+            if not any(p == path and s in ("M", "A") for s, p in c.changes):
+                continue  # an A is a re-add when the base has the constant
             new = self.git.text(c.sha, path) or ""
             for name in names:
                 now = find_constant(new, name)
@@ -1168,8 +1259,8 @@ class Guard:
                     continue  # renamed or gone: the guard-code rule judges the edit
                 if not find_constant(self.git.text(self.base, path) or "", name):
                     continue  # created by this pull request
-                before = [find_constant(self.git.text(parent, path) or "", name)
-                          for parent in self.judged_against(c)]
+                olds = [self.git.text(tree, path) for tree in self.judged_against(c)]
+                before = [find_constant(old, name) for old in olds if old is not None]
                 if all(b is not None and now[1] > b[1] for b in before):
                     self.fail("(2) guard ceiling", f"raises {name} from {max(b[1] for b in before)} to {now[1]}",
                               "this ceiling only falls: fix the code that pushed the count up instead", commit=c,
