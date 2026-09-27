@@ -157,13 +157,20 @@ the Phase 3 consolidations that give quirks their names.
   `DefaultReturnURL` on it (`internal/api/handlers.go:372-377`; the plan's
   I17 row cites `:373-379` at `d11dee8`).
 - **Pinned by, named as:** S4a `boot_steps.txt` (statement order) and the
-  S4b billing profile's boot log *(planned)*; X12 keeps the point
-  *(planned)*. Pain point boot-v1.
+  S4b billing profile's boot log; X12 keeps the point *(planned)*. Pain
+  point boot-v1.
 - **Pinned today:** S4a's `TestBootSteps` (`cmd/server/boot_steps_test.go`)
   fails if `(*internal/billing.Service).Start` moves past
   `inline internal/api.NewHandler` and its `SetSeatCounter` and
-  `DefaultReturnURL` in `cmd/server/testdata/boot_steps.txt`; the billing-on
-  boot log waits for S4b.
+  `DefaultReturnURL` in `cmd/server/testdata/boot_steps.txt`. S4b's
+  `TestBootProfiles` (`cmd/server/boot_profiles_test.go`) pins the billing
+  profile's boot in `cmd/server/testdata/boot/billing.txt`: `billing
+  enabled` logged between `release` and `starting server`, the reconcile
+  `Start` runs at once (its three warnings among the lines from goroutines,
+  awaited before the first probe), and the provider calls it made (three
+  operations, three attempts each, all refused by the test's proxy). The
+  rewiring itself leaves no trace in a log line or a response, so its order
+  against `Start` is `boot_steps.txt`'s alone.
 
 ## Q12. `FRONTEND_URL` has two fallback chains; reports read raw `UPLOADS_DIR`
 
@@ -184,9 +191,12 @@ the Phase 3 consolidations that give quirks their names.
 - **Where:** `checkProjectCount` (`internal/api/limits.go:326`) has one
   caller, `CreateProject` (`internal/api/handlers.go:1618`); the other
   project-creation paths do not count.
-- **Pinned by, named as:** S5e's over-plan pass under the S4 tiers-on
-  profile *(planned)*. Pain point api-requirements-v1.
-- **Pinned today:** nothing beyond this entry.
+- **Pinned by, named as:** S5e's over-plan pass *(planned)* under the S4
+  tiers-on profile. Pain point api-requirements-v1.
+- **Pinned today:** nothing beyond this entry. The tiers-on profile exists
+  since S4b (`OPENV_BILLING_GRANDFATHER_BEFORE` set;
+  `cmd/server/testdata/boot/tiers_on.txt`), and its one project create
+  answers 201; the over-plan pass is S5e's.
 
 ## Q14. Some list endpoints encode `null` for an empty list
 

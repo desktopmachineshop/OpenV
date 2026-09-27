@@ -183,7 +183,8 @@ be tightened.
 backend job (gofmt, vet, test, the refactor tools' Python tests, the Postgres
 vector assertion against whichever server `OPENV_TEST_DATABASE_URL` names,
 which also requires the S3 schema and purge goldens to have run there, with
-no subtest skipped, and the same for the S4a boot harness in `cmd/server`),
+no subtest skipped, and the same for the S4 boot harness in `cmd/server`,
+whose every golden needs a boot that passed),
 the release-notes job (against the merge base with `BASE_REF`,
 `origin/master`) and the frontend job (tsc, lint, vitest, the Node tests of
 `frontend/scripts`, build). The tests of every tool here are part of CI's

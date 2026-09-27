@@ -205,6 +205,9 @@ prints:
   (against a server with pgvector)
 - boot (S4): `OPENV_TEST_DATABASE_URL=<server URL> UPDATE_GOLDEN=1 go test ./cmd/server -count=1 -run '^TestBootSmoke$'`
   for the boot and middleware probes (a server with or without pgvector),
+  `-run '^TestBootProfiles$'` for the same under each environment profile
+  (cookies, self-hosted, tiers, registration, limits, build SHA, billing),
+  `-run '^TestBootMisconfigured$'` for the boots that must refuse to start,
   and `UPDATE_GOLDEN=1 go test ./cmd/server -count=1 -run '^TestBootSteps$'`
   for the order of `main()`'s wiring
 - SSE and event payloads (S6): `UPDATE_GOLDEN=1 go test ./internal/api -count=1 -run '^TestSSEContract$'`

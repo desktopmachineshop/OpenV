@@ -98,21 +98,30 @@ jobs:
             { grep -q -- "^--- PASS: $t " no-vector.log && ! grep -Eq -- "--- SKIP: $t( |/)" no-vector.log; } || { echo "::error::$t did not run against postgres:15"; exit 1; }
           done
 
-      # The black-box boot harness (refactor plan S4a) builds the server with
+      # The black-box boot harness (refactor plan S4) builds the server with
       # -cover and boots it on a database of its own on this server, once per
-      # profile; its goldens under cmd/server/testdata/boot/ hold for a server
-      # with or without the vector extension. Fail if it, or any profile,
-      # only skipped.
+      # profile (S4a's two, S4b's environment matrix) and once per
+      # misconfigured boot (S4b); its goldens under cmd/server/testdata/boot/
+      # hold for a server with or without the vector extension. Fail if a
+      # test, or any of its boots, only skipped, or if a golden there has no
+      # boot that passed (TestBootGoldensAreClaimed ties each golden to one
+      # boot of these tests, named after it).
       - name: Boot harness ran
         shell: bash
         run: |
-          go test ./cmd/server/ -count=1 -v -run '^TestBootSmoke$' | tee boot-harness.log
-          { grep -q -- "^--- PASS: TestBootSmoke " boot-harness.log && ! grep -Eq -- "--- SKIP: TestBootSmoke( |/)" boot-harness.log; } || { echo "::error::TestBootSmoke did not run against postgres:15"; exit 1; }
+          go test ./cmd/server/ -count=1 -v -run '^(TestBootSmoke|TestBootProfiles|TestBootMisconfigured)$' | tee boot-harness.log
+          for t in TestBootSmoke TestBootProfiles TestBootMisconfigured; do
+            { grep -q -- "^--- PASS: $t " boot-harness.log && ! grep -Eq -- "--- SKIP: $t( |/)" boot-harness.log; } || { echo "::error::$t did not run against postgres:15"; exit 1; }
+          done
+          for g in cmd/server/testdata/boot/*.txt; do
+            b="$(basename "$g" .txt)"
+            grep -Eq -- "^ +--- PASS: TestBoot(Smoke|Profiles|Misconfigured)/$b " boot-harness.log || { echo "::error::no boot passed against postgres:15 for $g"; exit 1; }
+          done
 
   # The Postgres-backed tests again, on a server that has the vector
   # extension. Four embedding tests skip without it, so until this leg they ran
   # nowhere. Only internal/persistence/postgres and the boot harness in
-  # cmd/server (refactor plan S4a) read OPENV_TEST_DATABASE_URL, so only those
+  # cmd/server (refactor plan S4) read OPENV_TEST_DATABASE_URL, so only those
   # run here.
   backend-pgvector:
     name: Backend Postgres tests (pgvector)
@@ -153,13 +162,20 @@ jobs:
             { grep -q -- "^--- PASS: $t " postgres-tests.log && ! grep -Eq -- "--- SKIP: $t( |/)" postgres-tests.log; } || { echo "::error::$t did not run against pgvector"; exit 1; }
           done
 
-      # The boot harness (refactor plan S4a) on a server with the vector
-      # extension, against the same goldens as on postgres:15.
+      # The boot harness (refactor plan S4) on a server with the vector
+      # extension, against the same goldens as on postgres:15, with the same
+      # checks: no test or boot skipped, and a passing boot for every golden.
       - name: Boot harness (vector extension present)
         shell: bash
         run: |
-          go test ./cmd/server/ -count=1 -v -run '^TestBootSmoke$' | tee boot-harness.log
-          { grep -q -- "^--- PASS: TestBootSmoke " boot-harness.log && ! grep -Eq -- "--- SKIP: TestBootSmoke( |/)" boot-harness.log; } || { echo "::error::TestBootSmoke did not run against pgvector"; exit 1; }
+          go test ./cmd/server/ -count=1 -v -run '^(TestBootSmoke|TestBootProfiles|TestBootMisconfigured)$' | tee boot-harness.log
+          for t in TestBootSmoke TestBootProfiles TestBootMisconfigured; do
+            { grep -q -- "^--- PASS: $t " boot-harness.log && ! grep -Eq -- "--- SKIP: $t( |/)" boot-harness.log; } || { echo "::error::$t did not run against pgvector"; exit 1; }
+          done
+          for g in cmd/server/testdata/boot/*.txt; do
+            b="$(basename "$g" .txt)"
+            grep -Eq -- "^ +--- PASS: TestBoot(Smoke|Profiles|Misconfigured)/$b " boot-harness.log || { echo "::error::no boot passed against pgvector for $g"; exit 1; }
+          done
 
   frontend:
     name: Frontend (tsc + test + build)

@@ -171,8 +171,10 @@ test:
 ## stored-data freeze's schema and purge goldens (refactor plan S3) included;
 ## locally there is one server, so the assertion requires whichever variant
 ## that server supports to have run. The boot harness in cmd/server (refactor
-## plan S4a) reads the same variable, and runs on both CI legs; with it set,
-## check fails if the harness only skipped.
+## plan S4a's profiles, S4b's environment matrix and misconfigured boots)
+## reads the same variable, and runs on both CI legs; with it set, check
+## fails if any of its tests or boots only skipped, or if a golden under
+## cmd/server/testdata/boot/ has no boot that passed.
 ## The release-notes job requires a new bullet relative to the merge base
 ## with BASE_REF, which is what CI's comparison of the merge commit with its
 ## first parent amounts to; set NO_RELEASE_NOTES=1 for a pull request that
@@ -213,14 +215,16 @@ check:
 		rm -f "$$log"; exit $$rc; \
 	fi
 	@if [ -z "$$OPENV_TEST_DATABASE_URL" ]; then \
-		echo "OPENV_TEST_DATABASE_URL is unset: the boot harness (cmd/server, refactor plan S4a) skipped (CI runs it)"; \
+		echo "OPENV_TEST_DATABASE_URL is unset: the boot harness (cmd/server, refactor plan S4) skipped (CI runs it)"; \
 	else \
 		log="$$(mktemp)"; \
-		go test ./cmd/server/ -count=1 -v -run '^TestBootSmoke$$' > "$$log"; rc=$$?; \
+		go test ./cmd/server/ -count=1 -v -run '^(TestBootSmoke|TestBootProfiles|TestBootMisconfigured)$$' > "$$log"; rc=$$?; \
+		ran() { for t in TestBootSmoke TestBootProfiles TestBootMisconfigured; do grep -q -- "^--- PASS: $$t " "$$log" && ! grep -Eq -- "--- SKIP: $$t( |/)" "$$log" || return 1; done; }; \
+		booted() { for g in cmd/server/testdata/boot/*.txt; do grep -Eq -- "^ +--- PASS: TestBoot(Smoke|Profiles|Misconfigured)/$$(basename "$$g" .txt) " "$$log" || { echo "no boot passed for $$g"; return 1; }; done; }; \
 		if [ $$rc -ne 0 ]; then cat "$$log"; \
-		elif grep -q -- "^--- PASS: TestBootSmoke " "$$log" && ! grep -Eq -- "--- SKIP: TestBootSmoke( |/)" "$$log"; then \
-			echo "the boot harness ran (refactor plan S4a)"; \
-		else cat "$$log"; echo "the boot harness only skipped"; rc=1; fi; \
+		elif ran && booted; then \
+			echo "the boot harness ran, every boot of it (refactor plan S4)"; \
+		else cat "$$log"; echo "the boot harness, or a boot of it, only skipped"; rc=1; fi; \
 		rm -f "$$log"; exit $$rc; \
 	fi
 	python3 -m unittest scripts/release_notes_test.py
