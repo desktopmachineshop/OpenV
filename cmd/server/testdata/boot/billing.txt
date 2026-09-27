@@ -1,0 +1,448 @@
+# The server binary (go build -cover ./cmd/server) booted on a fresh
+# database under one environment profile and probed from outside (refactor
+# plan §6.4 S4b; invariants I8, I13, I17; quirk Q11). Written by
+# TestBootProfiles (cmd/server/boot_profiles_test.go) through the S4a harness
+# and probes (cmd/server/{harness,boot_smoke}_test.go), then the S4b billing
+# probes; the server's HTTP_PROXY and HTTPS_PROXY are the test's recording
+# proxy, which refuses everything. Regenerate with
+#   OPENV_TEST_DATABASE_URL=<server URL> UPDATE_GOLDEN=1 go test ./cmd/server -count=1 -run '^TestBootProfiles$'
+# against a server with or without the vector extension.
+# Normalised: log timestamps dropped; durations, ports, the release version,
+# UUIDs, the temporary directory, the session token and its expiry replaced
+# by <...>; the Date header dropped; a no-vector server's warning taken out;
+# the recording proxy's address shown as <recording proxy port>.
+
+== profile billing: billing on: a Stripe test key and a one-entry price map, the provider unreachable
+HTTPS_PROXY=http://127.0.0.1:<recording proxy port>
+HTTP_PROXY=http://127.0.0.1:<recording proxy port>
+OPENV_STRIPE_PRICES=[{"price":"price_boot_harness_business_lite_month","plan":"business_lite","interval":"month"}]
+STRIPE_SECRET_KEY=sk_test_boot_harness_no_such_account
+
+== boot log, in order
+level=INFO msg="using DATABASE_URL (Railway.app mode)"
+level=INFO msg="workspace limits configured" self_hosted=false default_plan=single overrides=0
+level=INFO msg="embeddings: OPENV_EMBEDDING_API_KEY unset; semantic-search embedding disabled (create/update and existing search are unaffected)"
+level=INFO msg="transient runners disabled (set RUNNER_POOL_KEY to enable)"
+level=INFO msg="Hosted runners disabled (HOSTED_RUNNERS=off)"
+level=INFO msg="shared product pool seeded" added=15 of=15
+level=INFO msg="email: OPENV_SMTP_HOST unset; email notifications disabled (in-app + SSE delivery unaffected)"
+level=INFO msg="email verification: disabled (no OPENV_SMTP_HOST; accounts are verified at sign-up)"
+level=INFO msg="session lifetime" max_age=720h0m0s idle=168h0m0s
+level=INFO msg="registration: open (set OPENV_REGISTRATION=closed to require an invitation)"
+level=INFO msg="push: OPENV_VAPID_PUBLIC_KEY unset; web push disabled (in-app + SSE delivery unaffected)"
+level=INFO msg=release version=<version>
+level=INFO msg="billing enabled" provider=stripe prices=1 reconcile_every=5m0s
+level=INFO msg="starting server" port=<port>
+
+== boot log lines from goroutines, sorted
+level=INFO msg="release: announced" version=<version> accounts=0
+level=WARN msg="could not list disputes; none marked this tick" component=billing error="Get \"https://api.stripe.com/v1/disputes?expand%5B%5D=data.charge.invoice&limit=100\": refused by the boot harness proxy"
+level=WARN msg="could not list subscriptions; entitlements left as they were" component=billing error="Get \"https://api.stripe.com/v1/subscriptions?limit=100&status=all\": refused by the boot harness proxy"
+level=WARN msg="prices not confirmed; the pricing page keeps its last reading" component=billing error="price price_boot_harness_business_lite_month (business_lite month): Get \"https://api.stripe.com/v1/prices/price_boot_harness_business_lite_month?expand%5B%5D=currency_options\": refused by the boot harness proxy"
+
+== stdout
+(none)
+
+== probe health: GET /health
+status 200 OK
+header Content-Length: 16
+header Content-Security-Policy: default-src 'none'; frame-ancestors 'none'
+header Content-Type: application/json
+header Referrer-Policy: strict-origin-when-cross-origin
+header X-Content-Type-Options: nosniff
+header X-Frame-Options: DENY
+body "{\"status\":\"ok\"}\n"
+log (none)
+
+== probe build: GET /api/v1/public/build
+status 200 OK
+header Cache-Control: no-store
+header Content-Length: 14
+header Content-Security-Policy: default-src 'none'; frame-ancestors 'none'
+header Content-Type: application/json
+header Referrer-Policy: strict-origin-when-cross-origin
+header X-Content-Type-Options: nosniff
+header X-Frame-Options: DENY
+body "{\"commit\":\"\"}\n"
+log level=INFO msg="http request" method=GET path=/api/v1/public/build status=200 duration=<duration>
+
+== probe preflight-allowed: OPTIONS /api/v1/projects from the allowed origin
+status 200 OK
+header Access-Control-Allow-Credentials: true
+header Access-Control-Allow-Headers: Content-Type, Authorization, X-Org-ID
+header Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS
+header Access-Control-Allow-Origin: http://localhost:3000
+header Access-Control-Expose-Headers: X-Total-Count, X-Next-Cursor, Content-Disposition
+header Access-Control-Max-Age: 3600
+header Content-Length: 0
+header Content-Security-Policy: default-src 'none'; frame-ancestors 'none'
+header Referrer-Policy: strict-origin-when-cross-origin
+header Vary: Origin
+header X-Content-Type-Options: nosniff
+header X-Frame-Options: DENY
+body empty
+log (none)
+
+== probe preflight-refused: OPTIONS /api/v1/projects from another origin
+status 200 OK
+header Content-Length: 0
+header Content-Security-Policy: default-src 'none'; frame-ancestors 'none'
+header Referrer-Policy: strict-origin-when-cross-origin
+header X-Content-Type-Options: nosniff
+header X-Frame-Options: DENY
+body empty
+log (none)
+
+== probe auth-required: GET /api/v1/projects with no session
+status 401 Unauthorized
+header Content-Length: 36
+header Content-Security-Policy: default-src 'none'; frame-ancestors 'none'
+header Content-Type: application/json
+header Referrer-Policy: strict-origin-when-cross-origin
+header X-Content-Type-Options: nosniff
+header X-Frame-Options: DENY
+body "{\"error\":\"authentication required\"}\n"
+log level=WARN msg="http request" method=GET path=/api/v1/projects status=401 duration=<duration>
+
+== probe auth-before-routing: GET /api/v1/no-such-route with no session
+status 401 Unauthorized
+header Content-Length: 36
+header Content-Security-Policy: default-src 'none'; frame-ancestors 'none'
+header Content-Type: application/json
+header Referrer-Policy: strict-origin-when-cross-origin
+header X-Content-Type-Options: nosniff
+header X-Frame-Options: DENY
+body "{\"error\":\"authentication required\"}\n"
+log level=WARN msg="http request" method=GET path=/api/v1/no-such-route status=401 duration=<duration>
+
+== probe mux-404: GET /api/v1/public/no-such-route (an open path)
+status 404 Not Found
+header Content-Length: 19
+header Content-Security-Policy: default-src 'none'; frame-ancestors 'none'
+header Content-Type: text/plain; charset=utf-8
+header Referrer-Policy: strict-origin-when-cross-origin
+header X-Content-Type-Options: nosniff
+header X-Frame-Options: DENY
+body "404 page not found\n"
+log level=WARN msg="http request" method=GET path=/api/v1/public/no-such-route status=404 duration=<duration>
+
+== probe mux-405: DELETE /health
+status 405 Method Not Allowed
+header Content-Length: 0
+header Content-Security-Policy: default-src 'none'; frame-ancestors 'none'
+header Referrer-Policy: strict-origin-when-cross-origin
+header X-Content-Type-Options: nosniff
+header X-Frame-Options: DENY
+body empty
+log level=WARN msg="http request" method=DELETE path=/health status=405 duration=<duration>
+
+== probe mux-301: GET /api/v1/public//build
+status 301 Moved Permanently
+header Content-Length: 0
+header Content-Security-Policy: default-src 'none'; frame-ancestors 'none'
+header Location: /api/v1/public/build
+header Referrer-Policy: strict-origin-when-cross-origin
+header X-Content-Type-Options: nosniff
+header X-Frame-Options: DENY
+body empty
+log level=INFO msg="http request" method=GET path=/api/v1/public//build status=301 duration=<duration>
+
+== probe register: POST /api/v1/auth/register (the session the later probes use)
+status 200 OK
+header Content-Length: <not recorded>
+header Content-Security-Policy: default-src 'none'; frame-ancestors 'none'
+header Content-Type: text/plain; charset=utf-8
+header Referrer-Policy: strict-origin-when-cross-origin
+header Set-Cookie: openv_session=<token>; Path=/; Expires=<expires>; Max-Age=2592000; HttpOnly; SameSite=Lax
+header X-Content-Type-Options: nosniff
+header X-Frame-Options: DENY
+body not recorded (the new account; S5c pins it)
+log level=INFO msg="seeds: created default agent \"chief-of-staff\" for org <uuid>"
+log level=INFO msg="seeds: created default agent \"requirements-analyst\" for org <uuid>"
+log level=INFO msg="seeds: created default agent \"vv-engineer\" for org <uuid>"
+log level=INFO msg="seeds: created default agent \"developer\" for org <uuid>"
+log level=INFO msg="seeds: created default agent \"reviewer\" for org <uuid>"
+log level=INFO msg="seeds: created default agent \"test-case-author\" for org <uuid>"
+log level=INFO msg="seeds: created default agent \"requirements-copilot\" for org <uuid>"
+log level=INFO msg="seeds: created default agent \"requirements-interviewer\" for org <uuid>"
+log level=INFO msg="seeds: created default team \"Founder's Dev Team\" for org <uuid>"
+log level=INFO msg="http request" method=POST path=/api/v1/auth/register status=200 duration=<duration>
+
+== probe project: POST /api/v1/projects (the project the export probes use)
+status 201 Created
+header Content-Length: <not recorded>
+header Content-Security-Policy: default-src 'none'; frame-ancestors 'none'
+header Content-Type: application/json
+header Referrer-Policy: strict-origin-when-cross-origin
+header X-Content-Type-Options: nosniff
+header X-Frame-Options: DENY
+body not recorded (the new project; S5a pins it)
+log level=INFO msg="http request" method=POST path=/api/v1/projects status=201 duration=<duration> org_id=<uuid> user_id=<uuid> auth=user
+
+== probe body-cap-at: POST /api/v1/auth/login, a JSON body of exactly the cap
+request body 33554432 bytes
+status 401 Unauthorized
+header Content-Length: 38
+header Content-Security-Policy: default-src 'none'; frame-ancestors 'none'
+header Content-Type: application/json
+header Referrer-Policy: strict-origin-when-cross-origin
+header X-Content-Type-Options: nosniff
+header X-Frame-Options: DENY
+body "{\"error\":\"invalid email or password\"}\n"
+log level=WARN msg="http request" method=POST path=/api/v1/auth/login status=401 duration=<duration>
+
+== probe body-cap-over: POST /api/v1/auth/login, a JSON body one byte over the cap
+request body 33554433 bytes
+status 400 Bad Request
+connection close (the server ends the connection after this answer)
+header Content-Length: 33
+header Content-Security-Policy: default-src 'none'; frame-ancestors 'none'
+header Content-Type: application/json
+header Referrer-Policy: strict-origin-when-cross-origin
+header X-Content-Type-Options: nosniff
+header X-Frame-Options: DENY
+body "{\"error\":\"invalid request body\"}\n"
+log level=WARN msg="http request" method=POST path=/api/v1/auth/login status=400 duration=<duration>
+
+== probe multipart-exempt: POST /api/v1/attachments/upload, a multipart body 1 MiB over the JSON cap, for a phantom artifact
+the handler answers only once it has read the whole form (r.FormValue); over the JSON cap, it would see no artifact_id
+status 404 Not Found
+header Content-Length: 30
+header Content-Security-Policy: default-src 'none'; frame-ancestors 'none'
+header Content-Type: application/json
+header Referrer-Policy: strict-origin-when-cross-origin
+header X-Content-Type-Options: nosniff
+header X-Frame-Options: DENY
+body "{\"error\":\"project not found\"}\n"
+log level=WARN msg="http request" method=POST path=/api/v1/attachments/upload status=404 duration=<duration> org_id=<uuid> user_id=<uuid> auth=user
+
+== probe upload-413: POST /api/v1/me/avatar, a multipart body 1 KiB over the avatar upload's own 3 MiB bound
+status 413 Request Entity Too Large
+header Content-Length: 49
+header Content-Security-Policy: default-src 'none'; frame-ancestors 'none'
+header Content-Type: application/json
+header Referrer-Policy: strict-origin-when-cross-origin
+header X-Content-Type-Options: nosniff
+header X-Frame-Options: DENY
+body "{\"error\":\"File is larger than the upload limit\"}\n"
+log level=WARN msg="http request" method=POST path=/api/v1/me/avatar status=413 duration=<duration> org_id=<uuid> user_id=<uuid> auth=user
+
+== probe gzip-1399: a 1,399-byte answer accepting gzip (GET /api/v1/projects/{id}/export with an unknown format)
+status 400 Bad Request
+header Content-Length: 1399
+header Content-Security-Policy: default-src 'none'; frame-ancestors 'none'
+header Content-Type: application/json
+header Referrer-Policy: strict-origin-when-cross-origin
+header X-Content-Type-Options: nosniff
+header X-Frame-Options: DENY
+body 1399 bytes, sha256 d045a5b4f5b158fe, beginning "{\"error\":\"unsupported export format: aaaaaaaaaaaaaaaaaaaaaaa"
+the body is the export route's error for the 1359-letter format, 1399 bytes
+log level=WARN msg="http request" method=GET path=/api/v1/projects/<uuid>/export status=400 duration=<duration> org_id=<uuid> user_id=<uuid> auth=user
+
+== probe gzip-1400: a 1,400-byte answer accepting gzip (the same, one byte longer)
+status 400 Bad Request
+header Content-Encoding: gzip
+header Content-Length: <not recorded>
+header Content-Security-Policy: default-src 'none'; frame-ancestors 'none'
+header Content-Type: application/json
+header Referrer-Policy: strict-origin-when-cross-origin
+header Vary: Accept-Encoding
+header X-Content-Type-Options: nosniff
+header X-Frame-Options: DENY
+body (gzip-decoded) 1400 bytes, sha256 05f41e6e7d80fd42, beginning "{\"error\":\"unsupported export format: aaaaaaaaaaaaaaaaaaaaaaa"
+the body is the export route's error for the 1360-letter format, 1400 bytes
+log level=WARN msg="http request" method=GET path=/api/v1/projects/<uuid>/export status=400 duration=<duration> org_id=<uuid> user_id=<uuid> auth=user
+
+== probe gzip-event-stream: GET /api/v1/notifications/stream accepting gzip
+status 200 OK
+transfer-encoding chunked
+header Cache-Control: no-cache
+header Connection: keep-alive
+header Content-Security-Policy: default-src 'none'; frame-ancestors 'none'
+header Content-Type: text/event-stream
+header Referrer-Policy: strict-origin-when-cross-origin
+header X-Accel-Buffering: no
+header X-Content-Type-Options: nosniff
+header X-Frame-Options: DENY
+body not read: the stream stays open until the client leaves
+log level=INFO msg="http request" method=GET path=/api/v1/notifications/stream status=200 duration=<duration> org_id=<uuid> user_id=<uuid> auth=user
+
+== probe metrics: GET /metrics with no token, a wrong one and the configured one
+-- no Authorization header
+status 200 OK
+transfer-encoding chunked
+header Content-Security-Policy: default-src 'none'; frame-ancestors 'none'
+header Content-Type: text/plain; version=0.0.4; charset=utf-8; escaping=underscores
+header Referrer-Policy: strict-origin-when-cross-origin
+header X-Content-Type-Options: nosniff
+header X-Frame-Options: DENY
+body not recorded (Prometheus text)
+route labels counted so far (method, route, status):
+  DELETE unmatched 405
+  GET /api/v1/notifications/stream 200
+  GET /api/v1/projects 401
+  GET /api/v1/projects/{id}/export 400
+  GET /api/v1/public/build 200
+  GET /health 200
+  GET unmatched 301
+  GET unmatched 401
+  GET unmatched 404
+  POST /api/v1/attachments/upload 404
+  POST /api/v1/auth/login 400
+  POST /api/v1/auth/login 401
+  POST /api/v1/auth/register 200
+  POST /api/v1/me/avatar 413
+  POST /api/v1/projects 201
+-- Authorization: Bearer wrong-token
+status 200 OK
+transfer-encoding chunked
+header Content-Security-Policy: default-src 'none'; frame-ancestors 'none'
+header Content-Type: text/plain; version=0.0.4; charset=utf-8; escaping=underscores
+header Referrer-Policy: strict-origin-when-cross-origin
+header X-Content-Type-Options: nosniff
+header X-Frame-Options: DENY
+body not recorded (Prometheus text)
+-- Authorization: Bearer boot-harness-metrics-token
+status 200 OK
+transfer-encoding chunked
+header Content-Security-Policy: default-src 'none'; frame-ancestors 'none'
+header Content-Type: text/plain; version=0.0.4; charset=utf-8; escaping=underscores
+header Referrer-Policy: strict-origin-when-cross-origin
+header X-Content-Type-Options: nosniff
+header X-Frame-Options: DENY
+body not recorded (Prometheus text)
+log level=INFO msg="http request" method=GET path=/metrics status=200 duration=<duration>
+log level=INFO msg="http request" method=GET path=/metrics status=200 duration=<duration>
+log level=INFO msg="http request" method=GET path=/metrics status=200 duration=<duration>
+
+== probe workspace: GET /api/v1/orgs (the account's active workspace, which the probes below use)
+status 200 OK
+header Content-Length: <not recorded>
+header Content-Security-Policy: default-src 'none'; frame-ancestors 'none'
+header Content-Type: text/plain; charset=utf-8
+header Referrer-Policy: strict-origin-when-cross-origin
+header X-Content-Type-Options: nosniff
+header X-Frame-Options: DENY
+body not recorded (the account's workspaces; S5c pins them)
+log level=INFO msg="http request" method=GET path=/api/v1/orgs status=200 duration=<duration> org_id=<uuid> user_id=<uuid> auth=user
+
+== probe workspace-limits: GET /api/v1/orgs/{id}/limits: the effective values, not the copy
+status 200 OK
+body summarised: the plan, then each limit's key and value, in the answer's order (labels and descriptions left out)
+  plan single, entitled single, status none, grandfathered false, self-hosted false, read-only false, over plan []
+  max_members: 1 (fixed), used 1
+  max_projects: unlimited, used 1
+  max_shared_workspaces: unlimited, used 0
+  evidence_storage_mb: 2048, used 0
+  max_upload_mb: 128
+  hosted_runner_minutes_month: unlimited
+  runner_session_minutes: 60
+  runner_session_idle_minutes: 15
+  runner_memory_mb: 2048
+  runner_cpus: 1
+  hosted_automation: included
+  teams: included
+  workspace_budget: included
+log level=INFO msg="http request" method=GET path=/api/v1/orgs/<uuid>/limits status=200 duration=<duration> org_id=<uuid> user_id=<uuid> auth=user
+
+== probe billing-plans: GET /api/v1/public/plans with no session
+status 200 OK
+header Cache-Control: public, max-age=300
+header Content-Length: 53
+header Content-Security-Policy: default-src 'none'; frame-ancestors 'none'
+header Content-Type: application/json
+header Referrer-Policy: strict-origin-when-cross-origin
+header X-Content-Type-Options: nosniff
+header X-Frame-Options: DENY
+body "{\"billing_enabled\":false,\"currencies\":[],\"plans\":[]}\n"
+log level=INFO msg="http request" method=GET path=/api/v1/public/plans status=200 duration=<duration>
+
+== probe billing-read: GET /api/v1/orgs/{id}/billing
+status 200 OK
+header Content-Length: 216
+header Content-Security-Policy: default-src 'none'; frame-ancestors 'none'
+header Content-Type: application/json
+header Referrer-Policy: strict-origin-when-cross-origin
+header X-Content-Type-Options: nosniff
+header X-Frame-Options: DENY
+body "{\"org_id\":\"<uuid>\",\"plan\":\"single\",\"entitled_plan\":\"single\",\"granted\":false,\"billing\":{\"status\":\"none\"},\"self_hosted\":false,\"plans\":{\"billing_enabled\":false,\"currencies\":[],\"plans\":[]}}\n"
+log level=INFO msg="http request" method=GET path=/api/v1/orgs/<uuid>/billing status=200 duration=<duration> org_id=<uuid> user_id=<uuid> auth=user
+
+== probe billing-refresh: POST /api/v1/orgs/{id}/billing/refresh with no body
+status 200 OK
+header Content-Length: 216
+header Content-Security-Policy: default-src 'none'; frame-ancestors 'none'
+header Content-Type: application/json
+header Referrer-Policy: strict-origin-when-cross-origin
+header X-Content-Type-Options: nosniff
+header X-Frame-Options: DENY
+body "{\"org_id\":\"<uuid>\",\"plan\":\"single\",\"entitled_plan\":\"single\",\"granted\":false,\"billing\":{\"status\":\"none\"},\"self_hosted\":false,\"plans\":{\"billing_enabled\":false,\"currencies\":[],\"plans\":[]}}\n"
+log level=INFO msg="http request" method=POST path=/api/v1/orgs/<uuid>/billing/refresh status=200 duration=<duration> org_id=<uuid> user_id=<uuid> auth=user
+
+== probe billing-checkout: POST /api/v1/orgs/{id}/billing/checkout {"plan":"business_lite","interval":"month"}
+status 503 Service Unavailable
+header Content-Length: 108
+header Content-Security-Policy: default-src 'none'; frame-ancestors 'none'
+header Content-Type: application/json
+header Referrer-Policy: strict-origin-when-cross-origin
+header Retry-After: 30
+header X-Content-Type-Options: nosniff
+header X-Frame-Options: DENY
+body "{\"error\":\"the billing provider did not answer; the workspace was left as it was\",\"code\":\"billing_upstream\"}\n"
+log level=WARN msg="billing: provider did not answer" path=/api/v1/orgs/<uuid>/billing/checkout org_id=<uuid> error="prices have not been confirmed with the billing provider yet"
+log level=ERROR msg="http request" method=POST path=/api/v1/orgs/<uuid>/billing/checkout status=503 duration=<duration> org_id=<uuid> user_id=<uuid> auth=user
+
+== probe billing-change: POST /api/v1/orgs/{id}/billing/change {"plan":"business_lite","interval":"month"}
+status 409 Conflict
+header Content-Length: 77
+header Content-Security-Policy: default-src 'none'; frame-ancestors 'none'
+header Content-Type: application/json
+header Referrer-Policy: strict-origin-when-cross-origin
+header X-Content-Type-Options: nosniff
+header X-Frame-Options: DENY
+body "{\"error\":\"this workspace has no live subscription\",\"code\":\"no_subscription\"}\n"
+log level=WARN msg="http request" method=POST path=/api/v1/orgs/<uuid>/billing/change status=409 duration=<duration> org_id=<uuid> user_id=<uuid> auth=user
+
+== probe billing-portal: POST /api/v1/orgs/{id}/billing/portal
+status 409 Conflict
+header Content-Length: 76
+header Content-Security-Policy: default-src 'none'; frame-ancestors 'none'
+header Content-Type: application/json
+header Referrer-Policy: strict-origin-when-cross-origin
+header X-Content-Type-Options: nosniff
+header X-Frame-Options: DENY
+body "{\"error\":\"this workspace has no billing customer yet\",\"code\":\"no_customer\"}\n"
+log level=WARN msg="http request" method=POST path=/api/v1/orgs/<uuid>/billing/portal status=409 duration=<duration> org_id=<uuid> user_id=<uuid> auth=user
+
+== probe billing-metrics: GET /metrics: the billing provider calls the server counted
+status 200 OK
+billing_provider_requests_total (operation, HTTP status; 0 is a transport failure), with counts:
+  billing_provider_requests_total{op="get_price",status="0"} 3
+  billing_provider_requests_total{op="list_disputes",status="0"} 3
+  billing_provider_requests_total{op="list_subscriptions",status="0"} 3
+log level=INFO msg="http request" method=GET path=/metrics status=200 duration=<duration>
+
+== drain: SIGTERM with GET /api/v1/notifications/stream open
+status 200 OK
+transfer-encoding chunked
+header Cache-Control: no-cache
+header Connection: keep-alive
+header Content-Security-Policy: default-src 'none'; frame-ancestors 'none'
+header Content-Type: text/event-stream
+header Referrer-Policy: strict-origin-when-cross-origin
+header X-Accel-Buffering: no
+header X-Content-Type-Options: nosniff
+header X-Frame-Options: DENY
+after SIGTERM: the stream ended cleanly (EOF) after 0 more bytes
+log level=INFO msg="http request" method=GET path=/api/v1/notifications/stream status=200 duration=<duration> org_id=<uuid> user_id=<uuid> auth=user
+
+== shutdown log, in order
+level=INFO msg="shutdown signal received; draining connections"
+level=INFO msg="server stopped"
+
+== exit
+exit status 0
+exited within the 15 s drain timeout: yes
+
+== outbound requests (the recording proxy, after exit)
+CONNECT api.stripe.com:443: 9 tried, each answered 403 "refused by the boot harness proxy" and sent no further

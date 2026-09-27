@@ -236,7 +236,7 @@ class DataTest(unittest.TestCase):
     def test_merged_guard_code_exists(self):
         # A literal guard-code path of a merged step that no longer exists
         # would protect nothing; rename it here in the same commit.
-        merged = {"S1", "I1, S2", "S3", "S4a", "S6", "S7", "S12", "S14a", "S14b"}
+        merged = {"S1", "I1, S2", "S3", "S4a", "S4b", "S6", "S7", "S12", "S14a", "S14b"}
         for step, patterns in rg.GUARD_CODE:
             for p in patterns:
                 if step in merged and "*" not in p:

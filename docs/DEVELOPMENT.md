@@ -175,20 +175,41 @@ column must go when its workspace is purged, through `PurgeOrg`'s list or an
 leaves the rows whose key is NULL); the list of tables a purge misses may
 only shrink.
 
-The boot harness in `cmd/server` (refactor plan step S4a) builds the server
-binary with `-cover`, boots it on a database of its own on the server
-`OPENV_TEST_DATABASE_URL` names, with an environment it builds from nothing,
-and probes it from outside: the boot log, the middleware answers (security
-headers, CORS, the body cap, gzip, the mux's 404, 405 and 301), `/metrics`
-and a SIGTERM drain, one golden per profile under
-`cmd/server/testdata/boot/`. `cmd/server/testdata/boot_steps.txt` holds the
-order of `main()`'s wiring (setters, subscriptions, `Start` calls, the
-calls whose error it checks, goroutines, defers), read from the source. A
-change to what the server logs at boot, to a middleware, or to that order
-changes them; regenerate in the same pull request with
-`OPENV_TEST_DATABASE_URL=<server URL> UPDATE_GOLDEN=1 go test ./cmd/server -count=1 -run '^TestBootSmoke$'`
+The boot harness in `cmd/server` (refactor plan steps S4a and S4b) builds
+the server binary with `-cover`, boots it on a database of its own on the
+server `OPENV_TEST_DATABASE_URL` names, with an environment it builds from
+nothing, and probes it from outside: the boot log, the middleware answers
+(security headers, CORS, the body cap, gzip, the mux's 404, 405 and 301),
+`/metrics` and a SIGTERM drain, one golden per profile under
+`cmd/server/testdata/boot/`. `TestBootSmoke` boots the default profile and
+one with a metrics token; `TestBootProfiles` boots one profile per setting
+that changes what the server does (`SECURE_COOKIES`, `CROSS_SITE_COOKIES`,
+`OPENV_SELF_HOSTED`, the plan tiers, `OPENV_REGISTRATION=closed`,
+`OPENV_LIMITS`, `OPENV_BUILD_SHA`, billing on, billing configured on a
+self-hosted install, and a malformed grandfather date on one), adds the
+workspace's effective limits and every billing route to the probes, and
+points `HTTP_PROXY` and `HTTPS_PROXY` at a proxy of the test's own that
+refuses and records every request, so no request leaves the machine and
+the golden lists what the server tried;
+`TestBootMisconfigured` boots once per fatal setting (`OPENV_LIMITS`, the
+grandfather date, the billing price map, `CORS_ORIGIN`), and again where a
+condition matters (`OPENV_LIMITS` with no database to reach, the price map
+with billing off and on a self-hosted install), and records the exit, the
+fatal message and whether the migrations ran first.
+`cmd/server/testdata/boot_steps.txt` holds the order of `main()`'s wiring
+(setters, subscriptions, `Start` calls, the calls whose error it checks,
+goroutines, defers), read from the source. A change to what the server
+logs at boot, to a middleware, to what a setting does, to which settings
+are fatal, or to that order changes them; regenerate in the same pull
+request with
+`OPENV_TEST_DATABASE_URL=<server URL> UPDATE_GOLDEN=1 go test ./cmd/server -count=1 -run '^(TestBootSmoke|TestBootProfiles|TestBootMisconfigured)$'`
 (a server with or without the vector extension) and
 `UPDATE_GOLDEN=1 go test ./cmd/server -count=1 -run '^TestBootSteps$'`.
+A new environment setting that changes what the server does gets a profile
+in `s4bProfiles` (`cmd/server/boot_profiles_test.go`), and a new fatal
+check a boot in `misconfiguredBoots` (`boot_misconfigured_test.go`), each
+with its golden; `TestBootGoldensAreClaimed` fails on a golden no boot
+writes.
 
 ### The vulnerability gate
 
