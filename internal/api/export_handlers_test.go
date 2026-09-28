@@ -22,12 +22,26 @@ type fakeExportService struct {
 	data      []byte
 	filename  string
 	err       error
+	// byProject, when set, answers each project with its own export, as the
+	// real service does (a project it does not name is not found), so a
+	// parent's flow-down reads its child projects' exports and not its own;
+	// exported records the projects asked for.
+	byProject map[string][]byte
+	exported  []string
 }
 
 func (f *fakeExportService) ExportProject(projectID string, format exports.ExportFormat) ([]byte, string, error) {
 	f.requested = append(f.requested, format)
+	f.exported = append(f.exported, projectID)
 	if f.err != nil {
 		return nil, "", f.err
+	}
+	if f.byProject != nil {
+		data, ok := f.byProject[projectID]
+		if !ok {
+			return nil, "", fmt.Errorf("project %s not found", projectID)
+		}
+		return data, "project_" + projectID + ".json", nil
 	}
 	return f.data, f.filename, nil
 }

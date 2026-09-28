@@ -1921,7 +1921,7 @@
     },
     {
       "n": 24,
-      "title": "P's V&V report: a PDF with no flow-down, so the refined requirements are uncovered",
+      "title": "P's V&V report: a PDF with the flow-down, so the refined requirements take their child projects' rollups",
       "actor": "owner",
       "route": "GET /api/v1/projects/{id}/vv/report",
       "request": {
@@ -1929,7 +1929,7 @@
         "path": "/api/v1/projects/<p>/vv/report"
       },
       "notes": [
-        "unlike /vv/coverage and /vv/gaps, the report computes coverage without the child projects: the requirements C and C2 refine are uncovered here and listed under \"Requirements without a test case\"",
+        "the report reads the coverage /vv/coverage answers, so a requirement verified through a child project is not listed under \"Requirements without a test case\" (REQ-146)",
         "the filename is not quoted, unlike the /download routes', and carries the day it was rendered"
       ],
       "status": 200,
@@ -1950,10 +1950,10 @@
         "pages": 2,
         "page_text": [
           {
-            "text": "V&V Status Report - Tour V&V: coverage Generated: <datetime> Summary Requirements: 12 pass: 1 fail: 2 blocked: 1 unrun: 1 uncovered: 5 verified-manually: 1 method-missing: 1 Requirement Coverage Ref Requirement Method Rollup REQ-1 Answer in time test pass REQ-2 Log each answer test fail REQ-3 Survive a restart test blocked REQ-4 Export the log test unrun REQ-5 Meet the supplier timing test uncovered REQ-6 Label the enclosure inspection verified-manually REQ-7 Stay within the power budget analysis uncovered REQ-8 Look tidy on the shelf - method-missing REQ-9 Keep the clock in step test fail REQ-10 Share the timing budget test uncovered REQ-11 Meet the sub-supplier timing test uncovered REQ-12 Added after B1 test uncovered Gap Analysis Requirements without a verification method (1) - REQ-8 Look tidy on the shelf Requirements without a test case (4) - REQ-5 Meet the supplier timing - REQ-10 Share the timing budget - REQ-11 Meet the sub-supplier timing - REQ-12 Added after B1 Unverified (demonstration, analysis, inspection) (1) - REQ-7 Stay within the power budget Requirements with failing tests (2) - REQ-2 Log each answer - REQ-9 Keep the clock in step Orphan test cases (verify nothing) (1) - TC-5 Spare check User needs without a derived requirement (1)"
+            "text": "V&V Status Report - Tour V&V: coverage Generated: <datetime> Summary Requirements: 12 pass: 3 fail: 3 blocked: 1 unrun: 1 uncovered: 2 verified-manually: 1 method-missing: 1 Requirement Coverage Ref Requirement Method Rollup REQ-1 Answer in time test pass REQ-2 Log each answer test fail REQ-3 Survive a restart test blocked REQ-4 Export the log test unrun REQ-5 Meet the supplier timing test pass REQ-6 Label the enclosure inspection verified-manually REQ-7 Stay within the power budget analysis uncovered REQ-8 Look tidy on the shelf - method-missing REQ-9 Keep the clock in step test fail REQ-10 Share the timing budget test fail REQ-11 Meet the sub-supplier timing test pass REQ-12 Added after B1 test uncovered Gap Analysis Requirements without a verification method (1) - REQ-8 Look tidy on the shelf Requirements without a test case (1) - REQ-12 Added after B1 Unverified (demonstration, analysis, inspection) (1) - REQ-7 Stay within the power budget Requirements with failing tests (3) - REQ-2 Log each answer - REQ-9 Keep the clock in step - REQ-10 Share the timing budget Orphan test cases (verify nothing) (1) - TC-5 Spare check User needs without a derived requirement (1) - NEED-2 See every past answer"
           },
           {
-            "text": "- NEED-2 See every past answer Unmitigated hazards (1) - HAZ-2 Lost record Test Runs Run 2 Status: aborted Started: <datetime> Completed: <datetime> Run 1 Status: completed Started: <datetime> Completed: <datetime> Run 0 Status: completed Started: <datetime> Completed: <datetime>"
+            "text": "Unmitigated hazards (1) - HAZ-2 Lost record Test Runs Run 2 Status: aborted Started: <datetime> Completed: <datetime> Run 1 Status: completed Started: <datetime> Completed: <datetime> Run 0 Status: completed Started: <datetime> Completed: <datetime>"
           }
         ],
         "images": 0,
@@ -1994,10 +1994,10 @@
         "pages": 2,
         "page_text": [
           {
-            "text": "V&V Status Report - Tour V&V: coverage Generated: <datetime> Summary Requirements: 12 pass: 1 fail: 2 blocked: 1 unrun: 1 uncovered: 5 verified-manually: 1 method-missing: 1 Requirement Coverage Ref Requirement Method Rollup REQ-1 Answer in time test pass REQ-2 Log each answer test fail REQ-3 Survive a restart test blocked REQ-4 Export the log test unrun REQ-5 Meet the supplier timing test uncovered REQ-6 Label the enclosure inspection verified-manually REQ-7 Stay within the power budget analysis uncovered REQ-8 Look tidy on the shelf - method-missing REQ-9 Keep the clock in step test fail REQ-10 Share the timing budget test uncovered REQ-11 Meet the sub-supplier timing test uncovered REQ-12 Added after B1 test uncovered Gap Analysis Requirements without a verification method (1) - REQ-8 Look tidy on the shelf Requirements without a test case (4) - REQ-5 Meet the supplier timing - REQ-10 Share the timing budget - REQ-11 Meet the sub-supplier timing - REQ-12 Added after B1 Unverified (demonstration, analysis, inspection) (1) - REQ-7 Stay within the power budget Requirements with failing tests (2) - REQ-2 Log each answer - REQ-9 Keep the clock in step Orphan test cases (verify nothing) (1) - TC-5 Spare check User needs without a derived requirement (1)"
+            "text": "V&V Status Report - Tour V&V: coverage Generated: <datetime> Summary Requirements: 12 pass: 3 fail: 3 blocked: 1 unrun: 1 uncovered: 2 verified-manually: 1 method-missing: 1 Requirement Coverage Ref Requirement Method Rollup REQ-1 Answer in time test pass REQ-2 Log each answer test fail REQ-3 Survive a restart test blocked REQ-4 Export the log test unrun REQ-5 Meet the supplier timing test pass REQ-6 Label the enclosure inspection verified-manually REQ-7 Stay within the power budget analysis uncovered REQ-8 Look tidy on the shelf - method-missing REQ-9 Keep the clock in step test fail REQ-10 Share the timing budget test fail REQ-11 Meet the sub-supplier timing test pass REQ-12 Added after B1 test uncovered Gap Analysis Requirements without a verification method (1) - REQ-8 Look tidy on the shelf Requirements without a test case (1) - REQ-12 Added after B1 Unverified (demonstration, analysis, inspection) (1) - REQ-7 Stay within the power budget Requirements with failing tests (3) - REQ-2 Log each answer - REQ-9 Keep the clock in step - REQ-10 Share the timing budget Orphan test cases (verify nothing) (1) - TC-5 Spare check User needs without a derived requirement (1) - NEED-2 See every past answer"
           },
           {
-            "text": "- NEED-2 See every past answer Unmitigated hazards (1) - HAZ-2 Lost record Test Runs Run 2 Status: aborted Started: <datetime> Completed: <datetime> Run 1 Status: completed Started: <datetime> Completed: <datetime> Run 0 Status: completed Started: <datetime> Completed: <datetime>"
+            "text": "Unmitigated hazards (1) - HAZ-2 Lost record Test Runs Run 2 Status: aborted Started: <datetime> Completed: <datetime> Run 1 Status: completed Started: <datetime> Completed: <datetime> Run 0 Status: completed Started: <datetime> Completed: <datetime>"
           }
         ],
         "images": 0,
@@ -2043,10 +2043,10 @@
         "pages": 2,
         "page_text": [
           {
-            "text": "V&V Status Report - Tour V&V: coverage Generated: <datetime> Summary Requirements: 12 pass: 1 fail: 2 blocked: 1 unrun: 1 uncovered: 5 verified-manually: 1 method-missing: 1 Requirement Coverage Ref Requirement Method Rollup REQ-1 Answer in time test pass REQ-2 Log each answer test fail REQ-3 Survive a restart test blocked REQ-4 Export the log test unrun REQ-5 Meet the supplier timing test uncovered REQ-6 Label the enclosure inspection verified-manually REQ-7 Stay within the power budget analysis uncovered REQ-8 Look tidy on the shelf - method-missing REQ-9 Keep the clock in step test fail REQ-10 Share the timing budget test uncovered REQ-11 Meet the sub-supplier timing test uncovered REQ-12 Added after B1 test uncovered Gap Analysis Requirements without a verification method (1) - REQ-8 Look tidy on the shelf Requirements without a test case (4) - REQ-5 Meet the supplier timing - REQ-10 Share the timing budget - REQ-11 Meet the sub-supplier timing - REQ-12 Added after B1 Unverified (demonstration, analysis, inspection) (1) - REQ-7 Stay within the power budget Requirements with failing tests (2) - REQ-2 Log each answer - REQ-9 Keep the clock in step Orphan test cases (verify nothing) (1) - TC-5 Spare check User needs without a derived requirement (1)"
+            "text": "V&V Status Report - Tour V&V: coverage Generated: <datetime> Summary Requirements: 12 pass: 3 fail: 3 blocked: 1 unrun: 1 uncovered: 2 verified-manually: 1 method-missing: 1 Requirement Coverage Ref Requirement Method Rollup REQ-1 Answer in time test pass REQ-2 Log each answer test fail REQ-3 Survive a restart test blocked REQ-4 Export the log test unrun REQ-5 Meet the supplier timing test pass REQ-6 Label the enclosure inspection verified-manually REQ-7 Stay within the power budget analysis uncovered REQ-8 Look tidy on the shelf - method-missing REQ-9 Keep the clock in step test fail REQ-10 Share the timing budget test fail REQ-11 Meet the sub-supplier timing test pass REQ-12 Added after B1 test uncovered Gap Analysis Requirements without a verification method (1) - REQ-8 Look tidy on the shelf Requirements without a test case (1) - REQ-12 Added after B1 Unverified (demonstration, analysis, inspection) (1) - REQ-7 Stay within the power budget Requirements with failing tests (3) - REQ-2 Log each answer - REQ-9 Keep the clock in step - REQ-10 Share the timing budget Orphan test cases (verify nothing) (1) - TC-5 Spare check User needs without a derived requirement (1) - NEED-2 See every past answer"
           },
           {
-            "text": "- NEED-2 See every past answer Unmitigated hazards (1) - HAZ-2 Lost record Test Runs Run 2 Status: aborted Started: <datetime> Completed: <datetime> Run 1 Status: completed Started: <datetime> Completed: <datetime> Run 0 Status: completed Started: <datetime> Completed: <datetime>"
+            "text": "Unmitigated hazards (1) - HAZ-2 Lost record Test Runs Run 2 Status: aborted Started: <datetime> Completed: <datetime> Run 1 Status: completed Started: <datetime> Completed: <datetime> Run 0 Status: completed Started: <datetime> Completed: <datetime>"
           }
         ],
         "images": 0,
@@ -2087,10 +2087,10 @@
         "pages": 2,
         "page_text": [
           {
-            "text": "V&V Status Report - Tour V&V: coverage Baseline: B1 before the late requirement Generated: <datetime> Summary Requirements: 11 pass: 1 fail: 2 blocked: 1 unrun: 1 uncovered: 4 verified-manually: 1 method-missing: 1 Requirement Coverage Ref Requirement Method Rollup REQ-1 Answer in time test pass REQ-2 Log each answer test fail REQ-3 Survive a restart test blocked REQ-4 Export the log test unrun REQ-5 Meet the supplier timing test uncovered REQ-6 Label the enclosure inspection verified-manually REQ-7 Stay within the power budget analysis uncovered REQ-8 Look tidy on the shelf - method-missing REQ-9 Keep the clock in step test fail REQ-10 Share the timing budget test uncovered REQ-11 Meet the sub-supplier timing test uncovered Gap Analysis Requirements without a verification method (1) - REQ-8 Look tidy on the shelf Requirements without a test case (3) - REQ-5 Meet the supplier timing - REQ-10 Share the timing budget - REQ-11 Meet the sub-supplier timing Unverified (demonstration, analysis, inspection) (1) - REQ-7 Stay within the power budget Requirements with failing tests (2) - REQ-2 Log each answer - REQ-9 Keep the clock in step Orphan test cases (verify nothing) (1) - TC-5 Spare check User needs without a derived requirement (1) - NEED-2 See every past answer"
+            "text": "V&V Status Report - Tour V&V: coverage Baseline: B1 before the late requirement Generated: <datetime> Summary Requirements: 11 pass: 3 fail: 3 blocked: 1 unrun: 1 uncovered: 1 verified-manually: 1 method-missing: 1 Requirement Coverage Ref Requirement Method Rollup REQ-1 Answer in time test pass REQ-2 Log each answer test fail REQ-3 Survive a restart test blocked REQ-4 Export the log test unrun REQ-5 Meet the supplier timing test pass REQ-6 Label the enclosure inspection verified-manually REQ-7 Stay within the power budget analysis uncovered REQ-8 Look tidy on the shelf - method-missing REQ-9 Keep the clock in step test fail REQ-10 Share the timing budget test fail REQ-11 Meet the sub-supplier timing test pass Gap Analysis Requirements without a verification method (1) - REQ-8 Look tidy on the shelf Unverified (demonstration, analysis, inspection) (1) - REQ-7 Stay within the power budget Requirements with failing tests (3) - REQ-2 Log each answer - REQ-9 Keep the clock in step - REQ-10 Share the timing budget Orphan test cases (verify nothing) (1) - TC-5 Spare check User needs without a derived requirement (1) - NEED-2 See every past answer Unmitigated hazards (1) - HAZ-2 Lost record"
           },
           {
-            "text": "Unmitigated hazards (1) - HAZ-2 Lost record Test Runs Run 2 Status: aborted Started: <datetime> Completed: <datetime> Run 1 Status: completed Started: <datetime> Completed: <datetime> Run 0 Status: completed Started: <datetime> Completed: <datetime>"
+            "text": "Test Runs Run 2 Status: aborted Started: <datetime> Completed: <datetime> Run 1 Status: completed Started: <datetime> Completed: <datetime> Run 0 Status: completed Started: <datetime> Completed: <datetime>"
           }
         ],
         "images": 0,
@@ -2244,10 +2244,10 @@
         "pages": 2,
         "page_text": [
           {
-            "text": "V&V Status Report - Tour V&V: coverage Generated: <datetime> Summary Requirements: 12 pass: 1 fail: 2 blocked: 1 unrun: 1 uncovered: 5 verified-manually: 1 method-missing: 1 Requirement Coverage Ref Requirement Method Rollup REQ-1 Answer in time test pass REQ-2 Log each answer test fail REQ-3 Survive a restart test blocked REQ-4 Export the log test unrun REQ-5 Meet the supplier timing test uncovered REQ-6 Label the enclosure inspection verified-manually REQ-7 Stay within the power budget analysis uncovered REQ-8 Look tidy on the shelf - method-missing REQ-9 Keep the clock in step test fail REQ-10 Share the timing budget test uncovered REQ-11 Meet the sub-supplier timing test uncovered REQ-12 Added after B1 test uncovered Gap Analysis Requirements without a verification method (1) - REQ-8 Look tidy on the shelf Requirements without a test case (4) - REQ-5 Meet the supplier timing - REQ-10 Share the timing budget - REQ-11 Meet the sub-supplier timing - REQ-12 Added after B1 Unverified (demonstration, analysis, inspection) (1) - REQ-7 Stay within the power budget Requirements with failing tests (2) - REQ-2 Log each answer - REQ-9 Keep the clock in step Orphan test cases (verify nothing) (1) - TC-5 Spare check User needs without a derived requirement (1)"
+            "text": "V&V Status Report - Tour V&V: coverage Generated: <datetime> Summary Requirements: 12 pass: 3 fail: 3 blocked: 1 unrun: 1 uncovered: 2 verified-manually: 1 method-missing: 1 Requirement Coverage Ref Requirement Method Rollup REQ-1 Answer in time test pass REQ-2 Log each answer test fail REQ-3 Survive a restart test blocked REQ-4 Export the log test unrun REQ-5 Meet the supplier timing test pass REQ-6 Label the enclosure inspection verified-manually REQ-7 Stay within the power budget analysis uncovered REQ-8 Look tidy on the shelf - method-missing REQ-9 Keep the clock in step test fail REQ-10 Share the timing budget test fail REQ-11 Meet the sub-supplier timing test pass REQ-12 Added after B1 test uncovered Gap Analysis Requirements without a verification method (1) - REQ-8 Look tidy on the shelf Requirements without a test case (1) - REQ-12 Added after B1 Unverified (demonstration, analysis, inspection) (1) - REQ-7 Stay within the power budget Requirements with failing tests (3) - REQ-2 Log each answer - REQ-9 Keep the clock in step - REQ-10 Share the timing budget Orphan test cases (verify nothing) (1) - TC-5 Spare check User needs without a derived requirement (1) - NEED-2 See every past answer"
           },
           {
-            "text": "- NEED-2 See every past answer Unmitigated hazards (1) - HAZ-2 Lost record Test Runs Run 2 Status: aborted Started: <datetime> Completed: <datetime> Run 1 Status: completed Started: <datetime> Completed: <datetime> Run 0 Status: completed Started: <datetime> Completed: <datetime>"
+            "text": "Unmitigated hazards (1) - HAZ-2 Lost record Test Runs Run 2 Status: aborted Started: <datetime> Completed: <datetime> Run 1 Status: completed Started: <datetime> Completed: <datetime> Run 0 Status: completed Started: <datetime> Completed: <datetime>"
           }
         ],
         "images": 0,
@@ -3266,7 +3266,7 @@
       },
       "notes": [
         "an S5a route: the latest results and the runs come from live state beside the snapshot",
-        "the vv template leaves design items out, and with them the link that mitigates H1, so its gaps list both hazards as unmitigated where /vv/gaps lists H2 alone; like the V&V report it applies no flow-down, and it names the child projects' requirements, which the snapshot does not hold, by their ids"
+        "the vv template leaves design items out, and with them the link that mitigates H1, so its gaps list both hazards as unmitigated where /vv/gaps lists H2 alone; like the V&V report it applies the flow-down, and it names the child projects' requirements, which the snapshot does not hold, by their ids"
       ],
       "status": 200,
       "content_type": "application/pdf",
@@ -3302,13 +3302,13 @@
             "text": "NEED-1 Get an answer fast Reference NEED-1 Type User need Version v2 Status draft Traceability Direction Relationship Artifact Incoming gives rise to REQ-1 Answer in time NEED-2 See every past answer Reference NEED-2 Type User need Version v1 Status draft REQ-1 Answer in time Reference REQ-1 Type Requirement Version v5 Status draft Verification method test V&V rollup pass Traceability Direction Relationship Artifact Incoming verified by TC-1 Time the answer Outgoing derives from NEED-1 Get an answer fast REQ-2 Log each answer Reference REQ-2 Type Requirement Version v2 Status draft Verification method test V&V rollup fail Traceability Direction Relationship Artifact Incoming verified by TC-2 Read the log back Tour V&V: coverage · Live <datetime> UTC Page 4 of 12"
           },
           {
-            "text": "REQ-3 Survive a restart Reference REQ-3 Type Requirement Version v2 Status draft Verification method test V&V rollup blocked Traceability Direction Relationship Artifact Incoming verified by TC-3 Restart the rig REQ-4 Export the log Reference REQ-4 Type Requirement Version v2 Status draft Verification method test V&V rollup unrun Traceability Direction Relationship Artifact Incoming verified by TC-4 Compare the export REQ-5 Meet the supplier timing Reference REQ-5 Type Requirement Version v2 Status draft Verification method test V&V rollup uncovered Traceability Direction Relationship Artifact Incoming refined by <c_r> REQ-6 Label the enclosure Reference REQ-6 Type Requirement Version v1 Tour V&V: coverage · Live <datetime> UTC Page 5 of 12"
+            "text": "REQ-3 Survive a restart Reference REQ-3 Type Requirement Version v2 Status draft Verification method test V&V rollup blocked Traceability Direction Relationship Artifact Incoming verified by TC-3 Restart the rig REQ-4 Export the log Reference REQ-4 Type Requirement Version v2 Status draft Verification method test V&V rollup unrun Traceability Direction Relationship Artifact Incoming verified by TC-4 Compare the export REQ-5 Meet the supplier timing Reference REQ-5 Type Requirement Version v2 Status draft Verification method test V&V rollup pass Traceability Direction Relationship Artifact Incoming refined by <c_r> REQ-6 Label the enclosure Reference REQ-6 Type Requirement Version v1 Tour V&V: coverage · Live <datetime> UTC Page 5 of 12"
           },
           {
             "text": "Status draft Verification method inspection Verification status verified V&V rollup verified manually REQ-7 Stay within the power budget Reference REQ-7 Type Requirement Version v1 Status draft Verification method analysis V&V rollup uncovered REQ-8 Look tidy on the shelf Reference REQ-8 Type Requirement Version v1 Status draft V&V rollup method missing REQ-9 Keep the clock in step Reference REQ-9 Type Requirement Version v3 Status draft Verification method test V&V rollup fail Traceability Direction Relationship Artifact Incoming verified by TC-6 Check the clock drift Incoming verified by TC-7 Check the clock sync REQ-10 Share the timing budget Reference REQ-10 Type Requirement Version v2 Status draft Tour V&V: coverage · Live <datetime> UTC Page 6 of 12"
           },
           {
-            "text": "Verification method test V&V rollup uncovered Traceability Direction Relationship Artifact Incoming refined by <c2_split> REQ-11 Meet the sub-supplier timing Reference REQ-11 Type Requirement Version v2 Status draft Verification method test V&V rollup uncovered Traceability Direction Relationship Artifact Incoming refined by <c_deep> HAZ-1 Late answer Reference HAZ-1 Type Hazard Version v2 Status draft HAZ-2 Lost record Reference HAZ-2 Type Hazard Version v1 Status draft TC-1 Time the answer Reference TC-1 Type Test case Version v2 Status draft Latest result pass · <datetime> · Run 1 Traceability Direction Relationship Artifact Tour V&V: coverage · Live <datetime> UTC Page 7 of 12"
+            "text": "Verification method test V&V rollup fail Traceability Direction Relationship Artifact Incoming refined by <c2_split> REQ-11 Meet the sub-supplier timing Reference REQ-11 Type Requirement Version v2 Status draft Verification method test V&V rollup pass Traceability Direction Relationship Artifact Incoming refined by <c_deep> HAZ-1 Late answer Reference HAZ-1 Type Hazard Version v2 Status draft HAZ-2 Lost record Reference HAZ-2 Type Hazard Version v1 Status draft TC-1 Time the answer Reference TC-1 Type Test case Version v2 Status draft Latest result pass · <datetime> · Run 1 Traceability Direction Relationship Artifact Tour V&V: coverage · Live <datetime> UTC Page 7 of 12"
           },
           {
             "text": "Direction Relationship Artifact Outgoing verifies REQ-1 Answer in time TC-2 Read the log back Reference TC-2 Type Test case Version v2 Status draft Latest result fail · <datetime> · Run 1 Traceability Direction Relationship Artifact Outgoing verifies REQ-2 Log each answer TC-3 Restart the rig Reference TC-3 Type Test case Version v2 Status draft Latest result blocked · <datetime> · Run 1 Traceability Direction Relationship Artifact Outgoing verifies REQ-3 Survive a restart TC-4 Compare the export Reference TC-4 Type Test case Version v2 Status draft Latest result not run Traceability Direction Relationship Artifact Outgoing verifies REQ-4 Export the log TC-5 Spare check Reference TC-5 Type Test case Version v1 Tour V&V: coverage · Live <datetime> UTC Page 8 of 12"
@@ -3317,10 +3317,10 @@
             "text": "Status draft Latest result not run TC-6 Check the clock drift Reference TC-6 Type Test case Version v2 Status draft Latest result blocked · <datetime> · Run 1 Traceability Direction Relationship Artifact Outgoing verifies REQ-9 Keep the clock in step TC-7 Check the clock sync Reference TC-7 Type Test case Version v2 Status draft Latest result fail · <datetime> · Run 1 Traceability Direction Relationship Artifact Outgoing verifies REQ-9 Keep the clock in step REQ-12 Added after B1 Reference REQ-12 Type Requirement Version v1 Status draft Verification method test V&V rollup uncovered Tour V&V: coverage · Live <datetime> UTC Page 9 of 12"
           },
           {
-            "text": "Verification summary Requirements: 12 pass: 1 fail: 2 blocked: 1 unrun: 1 uncovered: 5 verified manually: 1 method missing: 1 Requirement coverage Ref Requirement Method Rollup REQ-1 Answer in time test pass REQ-2 Log each answer test fail REQ-3 Survive a restart test blocked REQ-4 Export the log test unrun REQ-5 Meet the supplier timing test uncovered REQ-6 Label the enclosure inspection verified manually REQ-7 Stay within the power budget analysis uncovered REQ-8 Look tidy on the shelf - method missing REQ-9 Keep the clock in step test fail REQ-10 Share the timing budget test uncovered REQ-11 Meet the sub-supplier timing test uncovered REQ-12 Added after B1 test uncovered Gaps Requirements without a verification method (1) • REQ-8 Look tidy on the shelf Requirements without a test case (4) • REQ-5 Meet the supplier timing • REQ-10 Share the timing budget • REQ-11 Meet the sub-supplier timing • REQ-12 Added after B1 Unverified (demonstration, analysis, inspection) (1) • REQ-7 Stay within the power budget Requirements with failing tests (2) • REQ-2 Log each answer • REQ-9 Keep the clock in step Orphan test cases (verify nothing) (1) • TC-5 Spare check Tour V&V: coverage · Live <datetime> UTC Page 10 of 12"
+            "text": "Verification summary Requirements: 12 pass: 3 fail: 3 blocked: 1 unrun: 1 uncovered: 2 verified manually: 1 method missing: 1 Requirement coverage Ref Requirement Method Rollup REQ-1 Answer in time test pass REQ-2 Log each answer test fail REQ-3 Survive a restart test blocked REQ-4 Export the log test unrun REQ-5 Meet the supplier timing test pass REQ-6 Label the enclosure inspection verified manually REQ-7 Stay within the power budget analysis uncovered REQ-8 Look tidy on the shelf - method missing REQ-9 Keep the clock in step test fail REQ-10 Share the timing budget test fail REQ-11 Meet the sub-supplier timing test pass REQ-12 Added after B1 test uncovered Gaps Requirements without a verification method (1) • REQ-8 Look tidy on the shelf Requirements without a test case (1) • REQ-12 Added after B1 Unverified (demonstration, analysis, inspection) (1) • REQ-7 Stay within the power budget Requirements with failing tests (3) • REQ-2 Log each answer • REQ-9 Keep the clock in step • REQ-10 Share the timing budget Orphan test cases (verify nothing) (1) • TC-5 Spare check User needs without a derived requirement (1) • NEED-2 See every past answer Tour V&V: coverage · Live <datetime> UTC Page 10 of 12"
           },
           {
-            "text": "User needs without a derived requirement (1) • NEED-2 See every past answer Unmitigated hazards (2) • HAZ-1 Late answer • HAZ-2 Lost record Tour V&V: coverage · Live <datetime> UTC Page 11 of 12"
+            "text": "Unmitigated hazards (2) • HAZ-1 Late answer • HAZ-2 Lost record Tour V&V: coverage · Live <datetime> UTC Page 11 of 12"
           },
           {
             "text": "Test results Ref Test case Result Executed Run TC-1 Time the answer pass <datetime> Run 1 TC-2 Read the log back fail <datetime> Run 1 TC-3 Restart the rig blocked <datetime> Run 1 TC-4 Compare the export not run TC-5 Spare check not run TC-6 Check the clock drift blocked <datetime> Run 1 TC-7 Check the clock sync fail <datetime> Run 1 Test runs Run 2 Status: aborted Started: <datetime> Completed: <datetime> A retry, abandoned. Run 1 Status: completed Started: <datetime> Completed: <datetime> The first pass over P. Run 0 Status: completed Started: <datetime> Completed: <datetime> An early pass over P. Tour V&V: coverage · Live <datetime> UTC Page 12 of 12"
@@ -7282,7 +7282,7 @@
               "</w:pPr>",
               "<w:r>",
               "<w:rPr>",
-              "<w:color w:val=\"969696\"/>",
+              "<w:color w:val=\"27AE60\"/>",
               "<w:sz w:val=\"18\"/>",
               "<w:szCs w:val=\"18\"/>",
               "</w:rPr>",
@@ -7293,7 +7293,7 @@
               "<w:sz w:val=\"18\"/>",
               "<w:szCs w:val=\"18\"/>",
               "</w:rPr>",
-              "<w:t xml:space=\"preserve\">uncovered</w:t>",
+              "<w:t xml:space=\"preserve\">pass</w:t>",
               "</w:r>",
               "</w:p>",
               "</w:tc>",
@@ -9157,7 +9157,7 @@
               "</w:pPr>",
               "<w:r>",
               "<w:rPr>",
-              "<w:color w:val=\"969696\"/>",
+              "<w:color w:val=\"E74C3C\"/>",
               "<w:sz w:val=\"18\"/>",
               "<w:szCs w:val=\"18\"/>",
               "</w:rPr>",
@@ -9168,7 +9168,7 @@
               "<w:sz w:val=\"18\"/>",
               "<w:szCs w:val=\"18\"/>",
               "</w:rPr>",
-              "<w:t xml:space=\"preserve\">uncovered</w:t>",
+              "<w:t xml:space=\"preserve\">fail</w:t>",
               "</w:r>",
               "</w:p>",
               "</w:tc>",
@@ -9618,7 +9618,7 @@
               "</w:pPr>",
               "<w:r>",
               "<w:rPr>",
-              "<w:color w:val=\"969696\"/>",
+              "<w:color w:val=\"27AE60\"/>",
               "<w:sz w:val=\"18\"/>",
               "<w:szCs w:val=\"18\"/>",
               "</w:rPr>",
@@ -9629,7 +9629,7 @@
               "<w:sz w:val=\"18\"/>",
               "<w:szCs w:val=\"18\"/>",
               "</w:rPr>",
-              "<w:t xml:space=\"preserve\">uncovered</w:t>",
+              "<w:t xml:space=\"preserve\">pass</w:t>",
               "</w:r>",
               "</w:p>",
               "</w:tc>",
@@ -14291,7 +14291,7 @@
               "<w:t xml:space=\"preserve\">■ </w:t>",
               "</w:r>",
               "<w:r>",
-              "<w:t xml:space=\"preserve\">pass: 1</w:t>",
+              "<w:t xml:space=\"preserve\">pass: 3</w:t>",
               "</w:r>",
               "</w:p>",
               "<w:p>",
@@ -14305,7 +14305,7 @@
               "<w:t xml:space=\"preserve\">■ </w:t>",
               "</w:r>",
               "<w:r>",
-              "<w:t xml:space=\"preserve\">fail: 2</w:t>",
+              "<w:t xml:space=\"preserve\">fail: 3</w:t>",
               "</w:r>",
               "</w:p>",
               "<w:p>",
@@ -14347,7 +14347,7 @@
               "<w:t xml:space=\"preserve\">■ </w:t>",
               "</w:r>",
               "<w:r>",
-              "<w:t xml:space=\"preserve\">uncovered: 5</w:t>",
+              "<w:t xml:space=\"preserve\">uncovered: 2</w:t>",
               "</w:r>",
               "</w:p>",
               "<w:p>",
@@ -14887,7 +14887,7 @@
               "<w:tc>",
               "<w:tcPr>",
               "<w:tcW w:w=\"2200\" w:type=\"dxa\"/>",
-              "<w:shd w:val=\"clear\" w:color=\"auto\" w:fill=\"969696\"/>",
+              "<w:shd w:val=\"clear\" w:color=\"auto\" w:fill=\"27AE60\"/>",
               "</w:tcPr>",
               "<w:p>",
               "<w:pPr>",
@@ -14901,7 +14901,7 @@
               "<w:sz w:val=\"17\"/>",
               "<w:szCs w:val=\"17\"/>",
               "</w:rPr>",
-              "<w:t xml:space=\"preserve\">uncovered</w:t>",
+              "<w:t xml:space=\"preserve\">pass</w:t>",
               "</w:r>",
               "</w:p>",
               "</w:tc>",
@@ -15292,7 +15292,7 @@
               "<w:tc>",
               "<w:tcPr>",
               "<w:tcW w:w=\"2200\" w:type=\"dxa\"/>",
-              "<w:shd w:val=\"clear\" w:color=\"auto\" w:fill=\"969696\"/>",
+              "<w:shd w:val=\"clear\" w:color=\"auto\" w:fill=\"E74C3C\"/>",
               "</w:tcPr>",
               "<w:p>",
               "<w:pPr>",
@@ -15306,7 +15306,7 @@
               "<w:sz w:val=\"17\"/>",
               "<w:szCs w:val=\"17\"/>",
               "</w:rPr>",
-              "<w:t xml:space=\"preserve\">uncovered</w:t>",
+              "<w:t xml:space=\"preserve\">fail</w:t>",
               "</w:r>",
               "</w:p>",
               "</w:tc>",
@@ -15373,7 +15373,7 @@
               "<w:tc>",
               "<w:tcPr>",
               "<w:tcW w:w=\"2200\" w:type=\"dxa\"/>",
-              "<w:shd w:val=\"clear\" w:color=\"auto\" w:fill=\"969696\"/>",
+              "<w:shd w:val=\"clear\" w:color=\"auto\" w:fill=\"27AE60\"/>",
               "</w:tcPr>",
               "<w:p>",
               "<w:pPr>",
@@ -15387,7 +15387,7 @@
               "<w:sz w:val=\"17\"/>",
               "<w:szCs w:val=\"17\"/>",
               "</w:rPr>",
-              "<w:t xml:space=\"preserve\">uncovered</w:t>",
+              "<w:t xml:space=\"preserve\">pass</w:t>",
               "</w:r>",
               "</w:p>",
               "</w:tc>",
@@ -15531,62 +15531,8 @@
               "<w:b/>",
               "<w:color w:val=\"3C3C3C\"/>",
               "</w:rPr>",
-              "<w:t xml:space=\"preserve\">Requirements without a test case (4)</w:t>",
+              "<w:t xml:space=\"preserve\">Requirements without a test case (1)</w:t>",
               "</w:r>",
-              "</w:p>",
-              "<w:p>",
-              "<w:pPr>",
-              "<w:pStyle w:val=\"ListParagraph\"/>",
-              "<w:numPr>",
-              "<w:ilvl w:val=\"0\"/>",
-              "<w:numId w:val=\"1\"/>",
-              "</w:numPr>",
-              "</w:pPr>",
-              "<w:hyperlink w:anchor=\"a_<r_nocase>\">",
-              "<w:r>",
-              "<w:rPr>",
-              "<w:rStyle w:val=\"Hyperlink\"/>",
-              "<w:color w:val=\"145AAA\"/>",
-              "</w:rPr>",
-              "<w:t xml:space=\"preserve\">REQ-5 Meet the supplier timing</w:t>",
-              "</w:r>",
-              "</w:hyperlink>",
-              "</w:p>",
-              "<w:p>",
-              "<w:pPr>",
-              "<w:pStyle w:val=\"ListParagraph\"/>",
-              "<w:numPr>",
-              "<w:ilvl w:val=\"0\"/>",
-              "<w:numId w:val=\"1\"/>",
-              "</w:numPr>",
-              "</w:pPr>",
-              "<w:hyperlink w:anchor=\"a_<r_split>\">",
-              "<w:r>",
-              "<w:rPr>",
-              "<w:rStyle w:val=\"Hyperlink\"/>",
-              "<w:color w:val=\"145AAA\"/>",
-              "</w:rPr>",
-              "<w:t xml:space=\"preserve\">REQ-10 Share the timing budget</w:t>",
-              "</w:r>",
-              "</w:hyperlink>",
-              "</w:p>",
-              "<w:p>",
-              "<w:pPr>",
-              "<w:pStyle w:val=\"ListParagraph\"/>",
-              "<w:numPr>",
-              "<w:ilvl w:val=\"0\"/>",
-              "<w:numId w:val=\"1\"/>",
-              "</w:numPr>",
-              "</w:pPr>",
-              "<w:hyperlink w:anchor=\"a_<r_deep>\">",
-              "<w:r>",
-              "<w:rPr>",
-              "<w:rStyle w:val=\"Hyperlink\"/>",
-              "<w:color w:val=\"145AAA\"/>",
-              "</w:rPr>",
-              "<w:t xml:space=\"preserve\">REQ-11 Meet the sub-supplier timing</w:t>",
-              "</w:r>",
-              "</w:hyperlink>",
               "</w:p>",
               "<w:p>",
               "<w:pPr>",
@@ -15647,7 +15593,7 @@
               "<w:b/>",
               "<w:color w:val=\"3C3C3C\"/>",
               "</w:rPr>",
-              "<w:t xml:space=\"preserve\">Requirements with failing tests (2)</w:t>",
+              "<w:t xml:space=\"preserve\">Requirements with failing tests (3)</w:t>",
               "</w:r>",
               "</w:p>",
               "<w:p>",
@@ -15683,6 +15629,24 @@
               "<w:color w:val=\"145AAA\"/>",
               "</w:rPr>",
               "<w:t xml:space=\"preserve\">REQ-9 Keep the clock in step</w:t>",
+              "</w:r>",
+              "</w:hyperlink>",
+              "</w:p>",
+              "<w:p>",
+              "<w:pPr>",
+              "<w:pStyle w:val=\"ListParagraph\"/>",
+              "<w:numPr>",
+              "<w:ilvl w:val=\"0\"/>",
+              "<w:numId w:val=\"1\"/>",
+              "</w:numPr>",
+              "</w:pPr>",
+              "<w:hyperlink w:anchor=\"a_<r_split>\">",
+              "<w:r>",
+              "<w:rPr>",
+              "<w:rStyle w:val=\"Hyperlink\"/>",
+              "<w:color w:val=\"145AAA\"/>",
+              "</w:rPr>",
+              "<w:t xml:space=\"preserve\">REQ-10 Share the timing budget</w:t>",
               "</w:r>",
               "</w:hyperlink>",
               "</w:p>",

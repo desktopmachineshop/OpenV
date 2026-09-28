@@ -12,6 +12,7 @@ import (
 	"github.com/gorilla/mux"
 
 	"github.com/openv/requirements-platform/internal/domain/baselines"
+	"github.com/openv/requirements-platform/internal/domain/exports"
 	"github.com/openv/requirements-platform/internal/domain/members"
 	"github.com/openv/requirements-platform/internal/domain/projects"
 	"github.com/openv/requirements-platform/internal/domain/reports"
@@ -34,13 +35,36 @@ func (f *fakeBaselineRepo) GetByID(id string) (*baselines.Baseline, error) {
 }
 
 // fakeVVService is declared in vv_result_handler_test.go; the baseline-scope
-// endpoints additionally read latest results and runs.
+// endpoints additionally read latest results and runs. Results are the
+// project's own, so a child project's coverage (REQ-146) reads its results
+// and not the parent's.
 func (f *fakeVVService) LatestResults(projectID string) (map[string]*vv.TestResult, error) {
+	if latest, ok := f.latest[projectID]; ok {
+		return latest, nil
+	}
 	return map[string]*vv.TestResult{}, nil
 }
 
 func (f *fakeVVService) ListRuns(projectID string) ([]*vv.TestRun, error) {
 	return nil, nil
+}
+
+// vvRoutesHandler serves the V&V, report and download routes for tests: the
+// projects by id (workspace org-1 has no admins), each project's member
+// roles, and the services those routes read, with the real report service
+// over exportSvc and baselineSvc. A nil service is one the test never
+// reaches.
+func vvRoutesHandler(byID map[string]*projects.Project, roles map[string]map[string]string,
+	exportSvc exports.Service, baselineSvc baselines.Service, vvSvc *fakeVVService) *Handler {
+	return &Handler{
+		projectService:  &fakeProjectService{byID: byID},
+		orgService:      &fakeOrgService{roles: map[string]map[string]string{"org-1": {}}},
+		memberService:   &fakeMemberService{roles: roles},
+		exportService:   exportSvc,
+		baselineService: baselineSvc,
+		vvService:       vvSvc,
+		reportService:   reports.NewService(exportSvc, baselineSvc),
+	}
 }
 
 // TestBaselineLoadsScopedToProject locks in that every endpoint resolving a
@@ -66,19 +90,12 @@ func TestBaselineLoadsScopedToProject(t *testing.T) {
 				Snapshot:  json.RawMessage(`{"project_name":"` + canary + `"}`),
 			},
 		}})
-		return &Handler{
-			projectService: &fakeProjectService{byID: map[string]*projects.Project{
-				"proj-a": {ID: "proj-a", OrgID: "org-1"},
-				"proj-b": {ID: "proj-b", OrgID: "org-2"},
-			}},
-			orgService: &fakeOrgService{roles: map[string]map[string]string{"org-1": {}}},
-			memberService: &fakeMemberService{roles: map[string]map[string]string{
-				"proj-a": {"viewer-a": members.RoleViewer},
-			}},
-			baselineService: baselineSvc,
-			vvService:       &fakeVVService{},
-			reportService:   reports.NewService(nil, baselineSvc),
-		}
+		return vvRoutesHandler(map[string]*projects.Project{
+			"proj-a": {ID: "proj-a", OrgID: "org-1"},
+			"proj-b": {ID: "proj-b", OrgID: "org-2"},
+		}, map[string]map[string]string{
+			"proj-a": {"viewer-a": members.RoleViewer},
+		}, nil, baselineSvc, &fakeVVService{})
 	}
 
 	endpoints := []struct {

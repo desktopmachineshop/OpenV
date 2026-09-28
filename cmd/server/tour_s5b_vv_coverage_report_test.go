@@ -55,15 +55,16 @@ import (
 //   - a baseline read uses B1's artifacts and links with the live results
 //     (and the child projects' live coverage); E answers entries [] and
 //     summary {}, and every gap list is [] when empty, never null;
-//   - the V&V report is a PDF that applies no flow-down: the refined
-//     requirements are uncovered there and listed under "Requirements without
-//     a test case", which is the divergence from the JSON coverage the
-//     golden pins; a baseline report prints "Baseline: <name>" and still
-//     uses the live results and runs; the empty project renders "No
-//     requirements found.", "No gaps detected." and "No test runs
-//     recorded."; the filename is unquoted, unlike the /download routes'
-//     (I8), and carries the day it was rendered, an area pattern; a Range
-//     request gets the whole PDF with a 200;
+//   - the V&V report is a PDF with the JSON coverage's flow-down: the
+//     refined requirements take their child projects' rollups there too
+//     (r_nocase and r_deep pass, r_split fails), and so none of them is
+//     listed under "Requirements without a test case"; a baseline report
+//     prints "Baseline: <name>" and still uses the live results and runs;
+//     the empty project renders "No requirements found.", "No gaps
+//     detected." and "No test runs recorded."; the filename is unquoted,
+//     unlike the /download routes' (I8), and carries the day it was
+//     rendered, an area pattern; a Range request gets the whole PDF with a
+//     200;
 //   - impact walks the link graph from one artifact, downstream, upstream or
 //     both (anything else is both), lists the nodes of a type by title (the
 //     two design items at one link from the passing requirement), and
@@ -359,10 +360,10 @@ func vvCoverageReportMatrixGaps(tr *tour, viewer *tourActor) {
 // vvCoverageReportReport pins GET /vv/report, the V&V status PDF.
 func vvCoverageReportReport(tr *tour, viewer *tourActor) {
 	o := tr.owner
-	tr.step("P's V&V report: a PDF with no flow-down, so the refined requirements are uncovered", o,
-		"GET /api/v1/projects/{id}/vv/report", at("id", "{{p}}"),
-		note("unlike /vv/coverage and /vv/gaps, the report computes coverage without the child projects: the "+
-			"requirements C and C2 refine are uncovered here and listed under \"Requirements without a test case\""),
+	tr.step("P's V&V report: a PDF with the flow-down, so the refined requirements take their child projects' rollups",
+		o, "GET /api/v1/projects/{id}/vv/report", at("id", "{{p}}"),
+		note("the report reads the coverage /vv/coverage answers, so a requirement verified through a child project "+
+			"is not listed under \"Requirements without a test case\" (REQ-146)"),
 		note("the filename is not quoted, unlike the /download routes', and carries the day it was rendered"))
 	tr.step("P's V&V report with baseline_id=live", o, "GET /api/v1/projects/{id}/vv/report", at("id", "{{p}}"),
 		query("baseline_id=live"))
@@ -433,7 +434,7 @@ func vvCoverageReportDownloads(tr *tour) {
 		"GET /api/v1/projects/{id}/download/pdf", at("id", "{{p}}"), query("template=vv"),
 		note("an S5a route: the latest results and the runs come from live state beside the snapshot"),
 		note("the vv template leaves design items out, and with them the link that mitigates H1, so its gaps list "+
-			"both hazards as unmitigated where /vv/gaps lists H2 alone; like the V&V report it applies no flow-down, "+
+			"both hazards as unmitigated where /vv/gaps lists H2 alone; like the V&V report it applies the flow-down, "+
 			"and it names the child projects' requirements, which the snapshot does not hold, by their ids"))
 	tr.step("download P's Word file with results and V&V on", o, "GET /api/v1/projects/{id}/download/docx",
 		at("id", "{{p}}"), query("results=1&vv=1"), note("an S5a route, read with test runs recorded"))

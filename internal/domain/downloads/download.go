@@ -63,6 +63,12 @@ type Request struct {
 	BaselineID string
 	Format     Format
 	Selection  exports.Selection
+	// Coverage is the flow-down coverage of a project (REQ-146), which the
+	// document's V&V status takes for each requirement another project
+	// refines; nil reads the narrowed snapshot alone. It is given the
+	// snapshot as loaded, not narrowed, since a selection can leave out a
+	// requirement's own test cases (see coverageAsLoaded).
+	Coverage reports.CoverageFunc
 }
 
 // Result is the file to serve.
@@ -166,23 +172,25 @@ func (s *DefaultService) SetWorkspaceSource(src WorkspaceSource) {
 
 // prepare loads the snapshot for a request and narrows it. Every format goes
 // through here, which is what makes "no headings" mean the same thing in a PDF
-// and in a CSV.
-func (s *DefaultService) prepare(req Request) (*exports.ProjectExport, reports.Snapshot, error) {
+// and in a CSV. It returns the snapshot as loaded beside the narrowed copy,
+// which is the one every format renders.
+func (s *DefaultService) prepare(req Request) (loaded, narrowed *exports.ProjectExport, snap reports.Snapshot, err error) {
 	if req.ProjectID == "" {
-		return nil, reports.Snapshot{}, errors.New("project_id is required")
+		return nil, nil, reports.Snapshot{}, errors.New("project_id is required")
 	}
-	data, snap, err := s.reportService.LoadReportExport(req.ProjectID, req.BaselineID)
+	loaded, snap, err = s.reportService.LoadReportExport(req.ProjectID, req.BaselineID)
 	if err != nil {
-		return nil, reports.Snapshot{}, err
+		return nil, nil, reports.Snapshot{}, err
 	}
-	return exports.Apply(data, req.Selection), snap, nil
+	return loaded, exports.Apply(loaded, req.Selection), snap, nil
 }
 
 // renderOptions assembles what the document renderers need beside the
 // snapshot. Evidence and the workspace are best-effort: a document is still
 // worth having when the logo cannot be read.
-func (s *DefaultService) renderOptions(req Request, snap reports.Snapshot) (reports.RenderOptions, error) {
-	opts := reports.RenderOptions{Snapshot: snap, Content: req.Selection.Content}
+func (s *DefaultService) renderOptions(req Request, snap reports.Snapshot, loaded *exports.ProjectExport) (reports.RenderOptions, error) {
+	opts := reports.RenderOptions{Snapshot: snap, Content: req.Selection.Content,
+		Coverage: coverageAsLoaded(req.Coverage, loaded)}
 	if req.Selection.Content.NeedsEvidence() && s.evidence != nil {
 		latest, runs, err := s.evidence(req.ProjectID)
 		if err != nil {
@@ -196,6 +204,41 @@ func (s *DefaultService) renderOptions(req Request, snap reports.Snapshot) (repo
 		}
 	}
 	return opts, nil
+}
+
+// coverageAsLoaded is the V&V status a narrowed document reports: flowDown
+// computed on the snapshot as loaded for each requirement another project
+// refines, and the narrowed snapshot's own coverage for every other one, as
+// before the flow-down reached the documents. A selection that leaves out a
+// requirement's test cases (a types, sections or owners choice, the
+// Requirements review template with V&V status on) drops their verifies
+// links, and the flow-down would read what is left as no evidence of its
+// own and give the requirement its refinements' result: a pass for one
+// whose own test fails (REQ-146 wants the worse of the two). nil stays nil.
+func coverageAsLoaded(flowDown reports.CoverageFunc, loaded *exports.ProjectExport) reports.CoverageFunc {
+	if flowDown == nil {
+		return nil
+	}
+	return func(narrowed *exports.ProjectExport, latest map[string]*vv.TestResult) *vv.CoverageReport {
+		report := vv.ComputeCoverage(narrowed, latest)
+		refined := map[string]vv.CoverageEntry{}
+		for _, e := range flowDown(loaded, latest).Entries {
+			if len(e.Refinements) > 0 {
+				refined[e.RequirementID] = e
+			}
+		}
+		if len(refined) == 0 {
+			return report
+		}
+		report.Summary = map[string]int{}
+		for i := range report.Entries {
+			if e, ok := refined[report.Entries[i].RequirementID]; ok {
+				report.Entries[i] = e
+			}
+			report.Summary[report.Entries[i].Rollup]++
+		}
+		return report
+	}
 }
 
 // Options reports what this project offers a download form.
@@ -218,7 +261,7 @@ func (s *DefaultService) Download(req Request) (*Result, error) {
 		return nil, fmt.Errorf("%w: %s", ErrUnsupportedFormat, req.Format)
 	}
 
-	data, snap, err := s.prepare(req)
+	loaded, data, snap, err := s.prepare(req)
 	if err != nil {
 		return nil, err
 	}
@@ -243,7 +286,7 @@ func (s *DefaultService) Download(req Request) (*Result, error) {
 		body, filename, err = s.exportService.RenderExport(data, exports.FormatReqIF)
 	case FormatPDF, FormatDOCX:
 		var opts reports.RenderOptions
-		opts, err = s.renderOptions(req, snap)
+		opts, err = s.renderOptions(req, snap, loaded)
 		if err != nil {
 			return nil, err
 		}
