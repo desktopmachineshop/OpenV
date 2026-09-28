@@ -11,6 +11,20 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ### Bug fixes
 
+- **Committing a guided definition approves its drafts.** The wizard's last
+  step said every draft was now live, but the personas, needs, requirements,
+  hazards and test stubs it had created stayed drafts: Requirements showed
+  them as drafts, and the next *Modify guided definition* listed them for
+  review all over again. *Commit* now approves each one as an approval by
+  hand does: its history shows it going through review to approved, with a
+  note for each step, and the project's *Activity* page records who approved
+  it. A reopened definition that adds nothing new can still be committed,
+  with *Commit definition*. Drafts left by a definition committed before this
+  release stay drafts, and committing a later *Modify guided definition* does
+  not approve them: submit each for review and approve it from its status in
+  Requirements, or send the project for review and approve them from the
+  Review Queue.
+
 - **Open-source projects now show on the open-source page.** A workspace on
   the open-source tier found none of its projects listed there, and each
   project's public address answered *not found*, even after a baseline was

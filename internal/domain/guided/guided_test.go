@@ -68,10 +68,11 @@ func newNudgeFixture() (*DefaultService, *fakeRepo) {
 func TestCommitClearsTheParkedNudge(t *testing.T) {
 	svc, repo := newNudgeFixture()
 
-	session, err := svc.Commit("gs-1")
+	result, err := svc.Commit("gs-1")
 	if err != nil {
 		t.Fatalf("Commit: %v", err)
 	}
+	session := result.Session
 	if session.Status != StatusCommitted {
 		t.Fatalf("status = %s, want committed", session.Status)
 	}

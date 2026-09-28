@@ -908,7 +908,7 @@ to that turn's prompt as fenced, untrusted content. The wizard sends none.
 | GET | `/api/v1/guided-sessions/{id}` | Session state | viewer |
 | PUT | `/api/v1/guided-sessions/{id}/step` | Save a step's answers | editor |
 | POST | `/api/v1/guided-sessions/{id}/drafts` | Materialize draft artifacts | editor |
-| POST | `/api/v1/guided-sessions/{id}/commit` | Commit session (drafts become real) | editor |
+| POST | `/api/v1/guided-sessions/{id}/commit` | Commit session: each of its drafts is approved through the review states (`draft` → `in_review` → `approved`, a version and a `status-change` note per step), and the session closes. Each approval publishes the `artifact.status_changed` event a status change does, with the committing user as actor and the session id as `guided_session`; the step into review publishes none, so editors are not asked to review it. Refused `403` for a proposal-mode agent run, like a status change | editor |
 | POST | `/api/v1/guided-sessions/{id}/abandon` | Abandon session | editor |
 | GET | `/api/v1/guided-sessions/{id}/messages` | Assistant chat history | viewer |
 | POST | `/api/v1/guided-sessions/{id}/messages` | Send a chat message (launches an assistant turn; optional `artifact_id`) | editor |

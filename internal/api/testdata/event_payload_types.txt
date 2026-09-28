@@ -30,19 +30,27 @@ artifact.deleted              (org)              org-1                    DELETE
 artifact.deleted              (org)              org-1                    proposal applier DeleteArtifact
 artifact.deleted              artifact_type      string                   proposal applier DeleteArtifact
 artifact.deleted              title              string                   proposal applier DeleteArtifact
+artifact.status_changed       (actor)            user:u-admin             POST /api/v1/guided-sessions/{id}/commit
 artifact.status_changed       (actor)            user:u-admin             POST /api/v1/projects/{id}/review-round
 artifact.status_changed       (actor)            user:u-admin             PUT /api/v1/artifacts/{id}/status
+artifact.status_changed       (org)              org-1                    POST /api/v1/guided-sessions/{id}/commit
 artifact.status_changed       (org)              org-1                    POST /api/v1/projects/{id}/review-round
 artifact.status_changed       (org)              org-1                    PUT /api/v1/artifacts/{id}/status
+artifact.status_changed       artifact_type      string                   POST /api/v1/guided-sessions/{id}/commit
 artifact.status_changed       artifact_type      string                   POST /api/v1/projects/{id}/review-round
 artifact.status_changed       artifact_type      string                   PUT /api/v1/artifacts/{id}/status
+artifact.status_changed       from               string                   POST /api/v1/guided-sessions/{id}/commit
 artifact.status_changed       from               string                   POST /api/v1/projects/{id}/review-round
 artifact.status_changed       from               string                   PUT /api/v1/artifacts/{id}/status
+artifact.status_changed       guided_session     string                   POST /api/v1/guided-sessions/{id}/commit
 artifact.status_changed       review_round       bool                     POST /api/v1/projects/{id}/review-round
+artifact.status_changed       title              string                   POST /api/v1/guided-sessions/{id}/commit
 artifact.status_changed       title              string                   POST /api/v1/projects/{id}/review-round
 artifact.status_changed       title              string                   PUT /api/v1/artifacts/{id}/status
+artifact.status_changed       to                 string                   POST /api/v1/guided-sessions/{id}/commit
 artifact.status_changed       to                 string                   POST /api/v1/projects/{id}/review-round
 artifact.status_changed       to                 string                   PUT /api/v1/artifacts/{id}/status
+artifact.status_changed       version            int                      POST /api/v1/guided-sessions/{id}/commit
 artifact.status_changed       version            int                      POST /api/v1/projects/{id}/review-round
 artifact.status_changed       version            int                      PUT /api/v1/artifacts/{id}/status
 artifact.updated              (actor)            system                   proposal applier UpdateArtifact

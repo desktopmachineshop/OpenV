@@ -48,7 +48,8 @@ has a shortcut whose label reflects where you are: *Start*, *Resume*, or
    requirement it verifies.
 8. **Review & commit** — all draft artifacts created during the flow, grouped
    by type. **Discard** any you don't want, then **Commit** to make them all
-   live.
+   live. A reopened definition that adds nothing new has no drafts to review;
+   **Commit definition** still closes it.
 
 Moving **Next** from a step saves it and materializes any new entries as
 **draft artifacts** — you'll see a green dot appear next to each one, and its
