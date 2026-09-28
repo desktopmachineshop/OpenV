@@ -116,8 +116,8 @@ PUT /api/v1/notifications/{id}/flag: 200, 400, 401, 404, 500; notifications_push
 PUT /api/v1/org-teams/{id}: 200, 400, 403, 404; members_teams
 PUT /api/v1/orgs/{id}: 200, 400, 403; tiers_secure_runner_sessions, workspaces_logo
 PUT /api/v1/orgs/{id}/members/me/preview: 200, 400, 403, 404; workspaces_logo
-PUT /api/v1/orgs/{id}/members/{userId}: 204, 400, 403, 500; members_teams
-PUT /api/v1/orgs/{id}/plan: 200, 400, 403, 404, 500; billing, tiers_secure_runner_sessions, workspaces_logo
+PUT /api/v1/orgs/{id}/members/{userId}: 204, 400, 403; members_teams
+PUT /api/v1/orgs/{id}/plan: 200, 400, 403, 404, 409; billing, tiers_secure_runner_sessions, workspaces_logo
 PUT /api/v1/projects/{id}/members/{userId}: 204, 400, 403, 500; members_teams
 PUT /api/v1/projects/{id}/team-access: 201, 400, 403, 404; members_teams, tiers_secure_runner_sessions
 

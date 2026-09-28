@@ -459,8 +459,11 @@ the Phase 3 consolidations that give quirks their names.
   text passed through as a 400 for a worker key's name over 255 characters
   and a revoke of a malformed key id (steps 6 and 16 of
   `cmd/server/testdata/tour/s5c/runner_keys_connector.json`); the domain's
-  text as it is, a blank workspace name and the last admin leaving (step 4
-  of `workspaces_logo.json`, step 21 of `members_teams.json`); a
+  text as it is, a blank workspace name, the last admin leaving or demoted,
+  and a role change for or removal of an account that is not a member, in
+  `ErrNotMember`'s words, which address the caller, not the account the path
+  names (step 4 of `workspaces_logo.json`, steps 20, 21, 24, 25 and 111 of
+  `members_teams.json`); a
   not-found passed through as a 400 (step 101 of `workspaces_logo.json`);
   and a lookup's error answered as a 500 where the path or body names
   something that is not an id: the default workspace, the platform admin's

@@ -16,7 +16,9 @@ import (
 
 // The plan endpoint (REQ-154): a platform admin moves a workspace to
 // another plan; a workspace admin, a member and a visitor are refused; an
-// unknown plan is 400 and writes nothing.
+// unknown plan is 400 and writes nothing; a grant over a live subscription
+// is 409 already_subscribed, the checkout's answer for the same state, and
+// writes nothing (REQ-168).
 
 type planOrgFake struct {
 	fakeOrgService
@@ -29,6 +31,9 @@ func (f *planOrgFake) SetPlan(id, plan string) (*orgs.Org, error) {
 	}
 	if id == "missing" {
 		return nil, orgs.ErrNotFound
+	}
+	if id == "subscribed" && orgs.GrantedPlan(plan) {
+		return nil, orgs.ErrBillingActive
 	}
 	f.setPlans = append(f.setPlans, plan)
 	f.plan = plan
@@ -89,6 +94,13 @@ func TestSetOrgPlan(t *testing.T) {
 	h.SetOrgPlan(w, planReq("missing", `{"plan":"single"}`, root))
 	if w.Code != http.StatusNotFound {
 		t.Errorf("unknown workspace: status = %d", w.Code)
+	}
+	w = httptest.NewRecorder()
+	h.SetOrgPlan(w, planReq("subscribed", `{"plan":"open_source"}`, root))
+	var refusal errorBody
+	_ = json.Unmarshal(w.Body.Bytes(), &refusal)
+	if w.Code != http.StatusConflict || refusal.Code != ErrCodeAlreadySubscribed || refusal.Error != orgs.ErrBillingActive.Error() {
+		t.Errorf("a grant over a live subscription: status = %d (body %q)", w.Code, w.Body.String())
 	}
 	if len(svc.setPlans) != 1 {
 		t.Errorf("refused calls wrote plans: %v", svc.setPlans)
