@@ -176,10 +176,17 @@ test:
 ## fails if any of its tests or boots only skipped, or if a golden under
 ## cmd/server/testdata/boot/ has no boot that passed. So does the API tour
 ## beside it (refactor plan S5a-S5e): check fails if a tour test only
-## skipped, if TestTourCoverage, TestTourGoldensAreClaimed or TestTourStream
-## (the event-stream reader S5b's areas use) did not pass, or if a golden
-## under cmd/server/testdata/tour/<slice>/ has no area test (the one its
-## "test" field names) that passed.
+## skipped, if TestTourCoverage, TestTourGoldensAreClaimed, TestTourStream
+## (the event-stream reader S5b's areas use), TestTourAccountOptions,
+## TestTourMailCatcher or TestTourStandIns (what S5c's areas rely on: adopted
+## accounts and server settings, the mail catcher, the stand-ins) did not
+## pass, or if a golden under cmd/server/testdata/tour/<slice>/ has no area
+## test (the one its "test" field names) that passed. On macOS, where Go
+## ignores SSL_CERT_FILE, TestTourStandIns and the areas with stand-ins (their
+## goldens carry the tour's test certificate authority) skip, and check
+## accepts exactly those skips and names them. With the variable set, the
+## plain go test skips the tour and the three boot tests, so that each runs
+## once, in its own block.
 ## The release-notes job requires a new bullet relative to the merge base
 ## with BASE_REF, which is what CI's comparison of the merge commit with its
 ## first parent amounts to; set NO_RELEASE_NOTES=1 for a pull request that
@@ -202,7 +209,12 @@ check:
 		echo "Run 'gofmt -w ./cmd ./internal' to fix."; exit 1; \
 	fi
 	go vet . ./cmd/... ./internal/...
-	go test . ./cmd/... ./internal/...
+	@if [ -z "$$OPENV_TEST_DATABASE_URL" ]; then \
+		echo "go test . ./cmd/... ./internal/..."; go test . ./cmd/... ./internal/...; \
+	else \
+		echo "go test -skip '^(TestTour.*|TestBootSmoke|TestBootProfiles|TestBootMisconfigured)\$$' . ./cmd/... ./internal/... (the tour and boots run below)"; \
+		go test -skip '^(TestTour.*|TestBootSmoke|TestBootProfiles|TestBootMisconfigured)$$' . ./cmd/... ./internal/...; \
+	fi
 	python3 -m unittest scripts/refactor/classify_commits_test.py scripts/refactor/refactor_guard_test.py
 	@if [ -z "$$OPENV_TEST_DATABASE_URL" ]; then \
 		echo "OPENV_TEST_DATABASE_URL is unset: the Postgres-backed tests skipped (CI runs them)"; \
@@ -237,15 +249,23 @@ check:
 	else \
 		log="$$(mktemp)"; \
 		go test ./cmd/server/ -count=1 -v -run '^TestTour' > "$$log"; rc=$$?; \
-		toured() { ! grep -Eq -- "--- SKIP: TestTour" "$$log" || return 1; \
-			for t in TestTourCoverage TestTourGoldensAreClaimed TestTourStream; do grep -q -- "^--- PASS: $$t " "$$log" || return 1; done; \
+		linux=" "; if [ "$$(uname -s)" = Darwin ]; then linux=" TestTourStandIns "; \
+			for g in $$(grep -l -- "SSL_CERT_FILE=<the tour's test certificate authority>" cmd/server/testdata/tour/*/*.json); do \
+				linux="$$linux$$(sed -n 's/^  "test": "\(TestTour[A-Za-z0-9]*\)",$$/\1/p' "$$g") "; done; fi; \
+		toured() { for s in $$(sed -n 's/^ *--- SKIP: \(TestTour[A-Za-z0-9]*\).*/\1/p' "$$log"); do \
+				case "$$linux" in *" $$s "*) ;; *) return 1;; esac; done; \
+			for t in TestTourCoverage TestTourGoldensAreClaimed TestTourStream TestTourAccountOptions TestTourMailCatcher \
+				TestTourStandIns; do case "$$linux" in *" $$t "*) continue;; esac; \
+				grep -q -- "^--- PASS: $$t " "$$log" || return 1; done; \
 			for g in cmd/server/testdata/tour/*/*.json; do \
 				t="$$(sed -n 's/^  "test": "\(TestTour[A-Za-z0-9]*\)",$$/\1/p' "$$g")"; \
+				case "$$linux" in *" $$t "*) continue;; esac; \
 				{ [ -n "$$t" ] && grep -q -- "^--- PASS: $$t " "$$log"; } || { echo "no tour area passed for $$g"; return 1; }; \
 			done; }; \
 		if [ $$rc -ne 0 ]; then cat "$$log"; \
 		elif toured; then \
 			echo "the API tour ran, every area of it (refactor plan S5)"; \
+			[ "$$linux" = " " ] || echo "except on this macOS host, where Go ignores SSL_CERT_FILE: run$${linux}on Linux (CI does)"; \
 		else cat "$$log"; echo "the API tour, or an area of it, only skipped"; rc=1; fi; \
 		rm -f "$$log"; exit $$rc; \
 	fi

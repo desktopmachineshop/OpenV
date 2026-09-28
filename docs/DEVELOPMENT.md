@@ -261,6 +261,38 @@ Regenerate one area with
 `OPENV_TEST_DATABASE_URL=<server URL> UPDATE_GOLDEN=1 go test ./cmd/server -count=1 -run '^TestTourS5b<Area>$'`,
 or the slice with `-run '^TestTourS5b'`.
 
+S5c, the third slice (`cmd/server/testdata/tour/s5c/`, areas
+`tour_s5c_*_test.go`, tests `TestTourS5c<Area>`), covers identity and the
+workspace: registration, sign-in and sign-out, the session cookie and the
+workspace a request with no `X-Org-ID` resolves to, Google and OIDC
+sign-on, email verification and password reset (with the mail they send),
+the password, avatar and default workspace, the platform admin's lists,
+invitations with registration closed, workspaces with their logo, plan,
+features, limits, members, roles and teams, a project's members and team
+grants, worker keys, runner keys, connector pairing and download, hosted
+runners and runner sessions, notifications and web push, and billing. Its
+areas boot under S4b's profiles where those change an answer (secure and
+cross-site cookies, registration closed, self-hosted, tiers on), and the
+rate-limit buckets that several routes share are drained through one route
+and read through another. `tour_s5c_sessions_auth_test.go` is its worked
+example. It added to the framework, in `tour_accounts_test.go`,
+`tour_mail_test.go` and `tour_standin_test.go`: accounts that recorded
+steps make (`tour.adopt`, `tour.session`), a signed-in request with no
+`X-Org-ID` (`noOrgHeader`), waits for what the server does after it answers
+(`tour.await`, `awaitOutbound`, `awaitMail`), values whose length varies by
+design (`elide`, `tour.patternVarying`), an area's S4b profiles, a second
+server to sign up on and files of its own (`tourArea.profiles`,
+`signUpWithout`, `files`), a mail catcher that records every mail in the
+golden, and stand-ins for Stripe, Google and an OIDC identity provider that
+the recording proxy answers itself over TLS the server trusts, so that a
+request that would leave the machine is answered and recorded instead.
+Regenerate one area with
+`OPENV_TEST_DATABASE_URL=<server URL> UPDATE_GOLDEN=1 go test ./cmd/server -count=1 -run '^TestTourS5c<Area>$'`,
+or the slice with `-run '^TestTourS5c'`; an area with stand-ins needs a
+platform where Go reads `SSL_CERT_FILE` (Linux, the BSDs) and skips on macOS,
+where `make check` accepts exactly those skips (`TestTourStandIns` and the
+three stand-in areas) and names them; CI runs them on Linux.
+
 ### The vulnerability gate
 
 The **Vulnerability scan** job (`vuln`) is a supply-chain gate on every pull
