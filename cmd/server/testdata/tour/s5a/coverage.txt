@@ -55,9 +55,9 @@ GET /api/v1/projects/{id}/review-queue: 200, 403; review_chatter_search
 GET /api/v1/projects/{id}/share-links: 200, 401, 403; share_links_public
 GET /api/v1/projects/{projectID}/attachments: 200, 403; attachments
 GET /api/v1/public/open-source/projects: 200; share_links_public
-GET /api/v1/public/open-source/projects/{id}: 404; share_links_public (errors only)
-GET /api/v1/public/open-source/projects/{id}/page: 404; share_links_public (errors only)
-GET /api/v1/public/open-source/projects/{id}/preview.png: 404; share_links_public (errors only)
+GET /api/v1/public/open-source/projects/{id}: 200, 404; share_links_public
+GET /api/v1/public/open-source/projects/{id}/page: 200; share_links_public
+GET /api/v1/public/open-source/projects/{id}/preview.png: 200; share_links_public
 GET /api/v1/public/share/{token}: 200, 404, 429; share_links_public
 GET /api/v1/public/share/{token}/page: 200, 404, 429; share_links_public
 GET /api/v1/public/share/{token}/preview.png: 200, 404, 429; share_links_public
@@ -88,4 +88,4 @@ PUT /api/v1/links/{id}: 200, 400, 404; links_managed_edits
 PUT /api/v1/links/{id}/confirm: 200, 404; links_managed_edits
 PUT /api/v1/projects/{id}: 200, 400; projects_templates
 
-s5a: 76 of 341 routes reached (22.3%), 73 with a 2xx or 3xx answer (21.4%)
+s5a: 76 of 341 routes reached (22.3%), 76 with a 2xx or 3xx answer (22.3%)
