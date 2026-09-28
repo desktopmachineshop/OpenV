@@ -120,17 +120,19 @@ jobs:
 
       # The API tour (refactor plan S5a-S5e) boots one server per area, each on
       # a database of its own on this server, and pins what every request of
-      # the area answers; its goldens under cmd/server/testdata/tour/ hold for
-      # a server with or without the vector extension. Fail if a tour test
-      # only skipped, or if a golden there has no area test that passed: each
-      # golden names its test ("test"), which TestTourGoldensAreClaimed ties
-      # to the area file that writes it.
+      # the area answers; its goldens under cmd/server/testdata/tour/<slice>/
+      # (s5a, s5b, ...) hold for a server with or without the vector
+      # extension. Fail if a tour test only skipped, if one of the tests that
+      # tie the goldens together or read the event streams of S5b's areas
+      # (TestTourStream) did not pass, or if a golden there has no area test
+      # that passed: each golden names its test ("test"), which
+      # TestTourGoldensAreClaimed ties to the area file that writes it.
       - name: API tour ran
         shell: bash
         run: |
           go test ./cmd/server/ -count=1 -v -run '^TestTour' | tee api-tour.log
           ! grep -Eq -- "--- SKIP: TestTour" api-tour.log || { echo "::error::a tour test only skipped against postgres:15"; exit 1; }
-          for t in TestTourCoverage TestTourGoldensAreClaimed; do
+          for t in TestTourCoverage TestTourGoldensAreClaimed TestTourStream; do
             grep -q -- "^--- PASS: $t " api-tour.log || { echo "::error::$t did not pass against postgres:15"; exit 1; }
           done
           for g in cmd/server/testdata/tour/*/*.json; do
@@ -199,13 +201,15 @@ jobs:
 
       # The API tour (refactor plan S5a-S5e) on a server with the vector
       # extension, against the same goldens as on postgres:15, with the same
-      # checks: no tour test skipped, and a passing area for every golden.
+      # checks: no tour test skipped, the tests that tie the goldens together
+      # and read event streams passed, and a passing area for every golden of
+      # every slice.
       - name: API tour (vector extension present)
         shell: bash
         run: |
           go test ./cmd/server/ -count=1 -v -run '^TestTour' | tee api-tour.log
           ! grep -Eq -- "--- SKIP: TestTour" api-tour.log || { echo "::error::a tour test only skipped against pgvector"; exit 1; }
-          for t in TestTourCoverage TestTourGoldensAreClaimed; do
+          for t in TestTourCoverage TestTourGoldensAreClaimed TestTourStream; do
             grep -q -- "^--- PASS: $t " api-tour.log || { echo "::error::$t did not pass against pgvector"; exit 1; }
           done
           for g in cmd/server/testdata/tour/*/*.json; do
