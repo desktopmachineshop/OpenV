@@ -4,7 +4,8 @@
 - Pinned commit: `ce26fc25c0e5e8cab638f883de62d9a86ee5e45b` (2026-09-26; upstream has no tags or releases)
 - Contents: the full tree at that commit, exported with `git archive`, unmodified.
 - `SKILL.md` at this folder's root is a copy of `skills/taste-skill/SKILL.md`, so Claude Code discovers the
-  main skill (`design-taste-frontend`). The other skills under `skills/` are not auto-discovered.
+  main skill (`design-taste-frontend`). Every other skill under `skills/` is exposed by a symlink in
+  `.claude/skills/` named after its folder (e.g. `.claude/skills/brandkit -> taste-skill/skills/brandkit/`).
 
 ## Updating
 
