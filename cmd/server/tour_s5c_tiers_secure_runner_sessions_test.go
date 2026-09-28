@@ -38,8 +38,8 @@ import (
 // takes the second, and an invitation or a member past it are refused, the
 // refusal counting invitations not yet accepted); the flags (a team, a
 // budget and the usage rollup refused; a plain rename still passes, while a
-// rename sent with a budget is stored before the budget is refused, pinned
-// as it is); the hosted runner, which answers that hosted runners are off on
+// rename sent with a budget is refused with the budget and stores nothing);
+// the hosted runner, which answers that hosted runners are off on
 // this deployment before it reads the flag, so the flag's refusal cannot be
 // reached; the platform admin's plan change to business, where a team, the
 // usage rollup and a project's grant to the team pass, and back to single,
@@ -186,10 +186,11 @@ func tiersSecureRunnerSessionsTour(tr *tour) {
 		at("id", "{{w}}"), jsonBody(`{"monthly_budget_usd":100}`))
 	tr.step("rename W: a plain rename is no budget, and passes", o, "PUT /api/v1/orgs/{id}", at("id", "{{w}}"),
 		jsonBody(`{"name":"Tour Tiers Renamed"}`))
-	tr.step("rename W and set a budget in one request: the budget is refused, after the rename was stored", o,
+	tr.step("rename W and set a budget in one request: the budget is refused, and the rename with it", o,
 		"PUT /api/v1/orgs/{id}", at("id", "{{w}}"), jsonBody(`{"name":"Tour Tiers Budgeted","monthly_budget_usd":100}`),
-		note("pinned as it is: UpdateOrg stores the name before it checks the budget's flag"))
-	tr.step("W as it now is: the name the refused request sent", o, "GET /api/v1/orgs/{id}", at("id", "{{w}}"))
+		note("UpdateOrg checks the budget's flag, with every other part of the request, before it writes any"))
+	tr.step("W as it now is: the name of the plain rename, which the refused request left", o, "GET /api/v1/orgs/{id}",
+		at("id", "{{w}}"))
 	tr.step("the workspace's usage rollup: the workspace budget's flag again", o, "GET /api/v1/orgs/{id}/usage",
 		at("id", "{{w}}"))
 	tr.step("create a hosted runner: hosted runners are off on this deployment, which the handler answers before "+

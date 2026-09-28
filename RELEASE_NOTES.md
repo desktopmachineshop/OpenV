@@ -70,6 +70,43 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   a citation a different note, remove it and cite the evidence again with the
   new note.
 
+- **A workspace update refused through the API no longer saves part of the
+  request.** A `PUT /api/v1/orgs/{id}` refused for one of its settings, such
+  as a monthly budget the workspace's plan does not include or a release
+  channel it cannot choose, could still save other settings sent with it, a
+  new name among them. A refused update now changes nothing. Workspace
+  settings in the app save one setting at a time and were not affected.
+
+- **Uploading a logo for a workspace that does not exist answers *workspace
+  not found*.** A platform admin's logo upload through the API for an
+  unknown workspace id answered with a server error and left the file on
+  the server. It now answers 404 and stores nothing.
+
+- **Switching to a workspace that does not exist is refused.** A platform
+  admin's `POST /api/v1/orgs/{id}/activate` for an unknown workspace id
+  answered as though the session had switched to it. It now answers 404
+  *workspace not found*, and the session stays in the workspace it was in.
+
+- **Previewing the next stable release is refused in a workspace you are
+  not a member of.** A platform admin who turned the preview on in a
+  workspace they do not belong to was answered as though it had worked,
+  with the preview still off. The preview belongs to a member's own place in
+  the workspace, so the request is now refused with *you are not a member of
+  this organization*.
+
+- **Restoring a deleted workspace answers with the workspace as restored.**
+  The answer gave the workspace's last-updated time as the time it was
+  deleted; it is now the time of the restore, as reading the workspace
+  afterwards shows.
+
+- **Profile pictures and workspace logos must be the image type they claim
+  to be.** A picture of one image type named as another, such as a GIF
+  saved as `.png`, or a BMP or icon file renamed to `.png`, was accepted and
+  then served as the type its name claimed. It is now refused with *File
+  content does not match an image of the declared type*: save the picture
+  as a real PNG, JPEG, GIF or WebP file and upload it again. Pictures and
+  logos uploaded before this release are left as they are.
+
 ## 0.15.0 — 2026-09-22
 
 ### New features

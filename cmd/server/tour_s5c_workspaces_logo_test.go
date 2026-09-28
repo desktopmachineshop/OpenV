@@ -28,21 +28,24 @@ import (
 // I3) and to an id that is not one; the settings a workspace admin changes
 // on the single plan (a rename, the monthly budget as a number, null and a
 // string, and the release channel and upgrade window that plan locks), with
-// the rename a refused budget still stores; the feature gates on the
-// nightly channel (every one on) and the stable-release preview the single
-// plan refuses; the limits under the alpha terms, for a shared and a
-// personal workspace; the plan a platform admin sets (business), each
-// refusal of it, and what business changes: the stable channel, the
-// channel and upgrade window its admin may now choose, and the preview a
-// member turns on for itself alone; the logo in every raster format, each
-// replacing the last and its file, each refusal, removal, and the
-// uploads directory at the end; switching the session's active workspace;
-// the answers of routes other areas own that this default environment
+// a rename sent with a budget refused, which stores nothing either; the
+// feature gates on the nightly channel (every one on) and the
+// stable-release preview the single plan refuses; the limits under the
+// alpha terms, for a shared and a personal workspace; the plan a platform
+// admin sets (business), each refusal of it, and what business changes:
+// the stable channel, the channel and upgrade window its admin may now
+// choose, and the preview a member turns on for itself alone, which a
+// platform admin that is no member is refused; the logo in every raster
+// format, each replacing the last and its file, each refusal (an image of a
+// type other than the one declared among them), removal, and the uploads
+// directory at the end; switching the session's active workspace; the
+// answers of routes other areas own that this default environment
 // makes: billing off (the public plans and every workspace billing route:
 // 404 billing_unavailable) and Google sign-on not configured; deleting the
 // workspace, its answer and what it hides, and restoring it; and last a
 // workspace that does not exist, named by the platform admin, whom no
-// workspace guard stops, so that each handler's own lookup answers.
+// workspace guard stops, so that each handler's own lookup answers (the
+// logo upload's and the activation's before they write anything).
 //
 // Actors: admin (the platform admin) sets plans, and reaches what only a
 // caller the guards let by reaches (a platform admin passes every workspace
@@ -50,19 +53,11 @@ import (
 // administers W; member is a plain member of W, for the admin-only refusals;
 // outsider belongs to no workspace but its own, for the non-member refusals.
 //
-// Pinned as they are, each a bug whose fix is a release-noted bug-fix pull
-// request of its own that regenerates this golden (R7): a PUT that renames
-// and sets a budget stores the rename before the budget is refused; a logo
-// uploaded for a workspace that does not exist is written to disk before
-// the lookup fails (500), and stays (the uploads list); a workspace that
-// does not exist becomes a session's active one (204); the platform admin's
-// preview in a workspace it is no member of answers 200 with preview false,
-// since the write matches no membership and the handler's ErrNotMember 403
-// never fires; the restore answers the updated_at of the delete, not of the
-// restore it stamped; and the platform admin's move to business puts the
-// workspace on the stable channel with no stable release, so every gate is
-// off (the channel and the empty stable release show it, and the all-off map
-// is a pattern that a gate on would fail).
+// Pinned as it is, a bug whose fix is a release-noted bug-fix pull request
+// of its own that regenerates this golden (R7): the platform admin's move to
+// business puts the workspace on the stable channel with no stable release,
+// so every gate is off (the channel and the empty stable release show it,
+// and the all-off map is a pattern that a gate on would fail).
 //
 // Nondeterminism: ids, sessions and minted times (the generic tokens); a
 // slug's last 8 hex digits (the area's pattern); the feature map, which
@@ -210,11 +205,12 @@ func workspacesLogoTour(tr *tour) {
 	tr.step("clear the budget: null, and the key is gone from the answer", o, "PUT /api/v1/orgs/{id}", at("id", w),
 		jsonBody(`{"monthly_budget_usd":null}`))
 	tr.step("a negative budget", o, "PUT /api/v1/orgs/{id}", at("id", w), jsonBody(`{"monthly_budget_usd":-1}`))
-	tr.step("a rename with a budget that is a string: 400, after the rename was stored", o, "PUT /api/v1/orgs/{id}",
+	tr.step("a rename with a budget that is a string: 400, and nothing stored", o, "PUT /api/v1/orgs/{id}",
 		at("id", w), jsonBody(`{"name":"Tour Workspace Again","monthly_budget_usd":"lots"}`),
-		note("UpdateOrg writes the name before it reads the budget, so the refusal leaves the rename in place "+
-			"(the next step reads it), as it does for a refused channel or window"))
-	tr.step("the rename the refused update stored", o, "GET /api/v1/orgs/{id}", at("id", w))
+		note("UpdateOrg checks every part of the request before it writes any, so the refusal leaves the name as "+
+			"it was (the next step reads it), as it does for a refused channel or window"))
+	tr.step("W as the refused update left it: the name and updated_at of the last update that passed", o,
+		"GET /api/v1/orgs/{id}", at("id", w))
 	tr.step("choose the stable channel on the single plan: locked", o, "PUT /api/v1/orgs/{id}", at("id", w),
 		jsonBody(`{"release_channel":"stable"}`))
 	tr.step("choose an upgrade window on the single plan: locked", o, "PUT /api/v1/orgs/{id}", at("id", w),
@@ -282,10 +278,10 @@ func workspacesLogoTour(tr *tour) {
 	tr.step("a non-member previews in W", outsider, "PUT /api/v1/orgs/{id}/members/me/preview", at("id", w),
 		jsonBody(`{"enabled":true}`))
 	tr.step("the platform admin, a member of no shared workspace, previews in W: the guard lets it by, and the "+
-		"write finds no membership", admin, "PUT /api/v1/orgs/{id}/members/me/preview", at("id", w),
-		jsonBody(`{"enabled":true}`),
-		note("the repository's UPDATE of org_members matches no row and reports nothing, so the handler's "+
-			"ErrNotMember 403 never fires: 200, with preview false"))
+		"write finds no membership, so the not-member 403", admin, "PUT /api/v1/orgs/{id}/members/me/preview",
+		at("id", w), jsonBody(`{"enabled":true}`),
+		note("the preview is kept on the membership: the repository's UPDATE of org_members matches no row and "+
+			"answers orgs.ErrNotMember, which the handler answers with its text"))
 
 	// The logo (I8, I16).
 	logo := func(title string, a *tourActor, opts ...tourOpt) *tourResult {
@@ -304,9 +300,10 @@ func workspacesLogoTour(tr *tour) {
 	tr.step("the owner fetches the WebP, as image/webp", o, "GET /api/v1/orgs/{id}/logo", at("id", w))
 	logo("an SVG: refused by its declared type", o, workspacesLogoFile("logo.svg", "image/svg+xml", []byte(tourSVG)))
 	logo("a PDF declared as a PNG: its bytes are no image", o, workspacesLogoFile("logo.png", "image/png", []byte(tourPDF)))
-	logo("a GIF declared as a PNG: any image's bytes pass, and the declared type names the file", o,
+	logo("a GIF declared as a PNG: its bytes are an image, but not of the declared type", o,
 		workspacesLogoFile("logo.png", "image/png", []byte(tourGIF)))
-	tr.step("the logo is now that GIF, served as the PNG it was declared", o, "GET /api/v1/orgs/{id}/logo", at("id", w))
+	tr.step("the logo is still the WebP, as image/webp: the refused upload stored nothing", o,
+		"GET /api/v1/orgs/{id}/logo", at("id", w))
 	logo("a file of 2 MiB and a byte: over the logo's own cap", o,
 		workspacesLogoFile("big.png", "image/png", workspacesLogoPadded(workspacesLogoMaxBytes+1)))
 	logo("a request over the logo's cap and the form's allowance: refused while the form is read", o,
@@ -362,8 +359,8 @@ func workspacesLogoTour(tr *tour) {
 		at("id", w))
 	tr.step("a member restores W: admins only", m, "POST /api/v1/orgs/{id}/restore", at("id", w))
 	tr.step("restore W", o, "POST /api/v1/orgs/{id}/restore", at("id", w),
-		note("the answer is the workspace as read before the restore, deleted_at dropped: its updated_at is the "+
-			"delete's, while the row is stamped anew (the read of W below shows it)"))
+		note("the answer is the workspace as the restore stored it: deleted_at gone, and updated_at the restore's "+
+			"(the read of W below shows the same)"))
 	tr.step("restore it again: not deleted", o, "POST /api/v1/orgs/{id}/restore", at("id", w))
 	tr.step("restore a workspace that does not exist: the role lookup answers first", o, "POST /api/v1/orgs/{id}/restore",
 		at("id", "{{phantom}}"))
@@ -389,14 +386,13 @@ func workspacesLogoTour(tr *tour) {
 	tr.step(nowhere("reads the limits of")+": 404", admin, "GET /api/v1/orgs/{id}/limits", phantom)
 	tr.step(nowhere("fetches the logo of")+": 404, not the no-logo one", admin, "GET /api/v1/orgs/{id}/logo", phantom)
 	tr.step(nowhere("removes the logo of")+": 404", admin, "DELETE /api/v1/orgs/{id}/logo", phantom)
-	tr.step(nowhere("uploads a logo for")+": the file is written before the workspace is looked up, so a 500, and "+
-		"the file stays", admin, "POST /api/v1/orgs/{id}/logo", phantom,
-		workspacesLogoFile("logo.png", "image/png", []byte(tourPNG)),
-		note("the uploads directory at the end lists org-logos/<phantom>.png beside W's logo"))
-	tr.step("the platform admin makes a workspace that does not exist its session's active one: 204, stored with no "+
-		"workspace behind it", admin,
-		"POST /api/v1/orgs/{id}/activate", phantom,
-		note("sessions.active_org_id takes any UUID; ActivateOrg looks nothing up once the guard lets it by"))
-	tr.step("the platform admin's workspaces with no X-Org-ID, its session active in a workspace that does not exist: "+
-		"its personal one, the stored id falling through", admin, "GET /api/v1/orgs", noOrgHeader())
+	tr.step(nowhere("uploads a logo for")+": 404, the workspace looked up before anything is written", admin,
+		"POST /api/v1/orgs/{id}/logo", phantom, workspacesLogoFile("logo.png", "image/png", []byte(tourPNG)),
+		note("the uploads directory at the end lists W's logo alone"))
+	tr.step("the platform admin makes a workspace that does not exist its session's active one: 404, nothing stored",
+		admin, "POST /api/v1/orgs/{id}/activate", phantom,
+		note("sessions.active_org_id would take any UUID, so ActivateOrg looks the workspace up once the guard "+
+			"lets the platform admin by"))
+	tr.step("the platform admin's workspaces with no X-Org-ID, after the refused activation: its personal one", admin,
+		"GET /api/v1/orgs", noOrgHeader())
 }

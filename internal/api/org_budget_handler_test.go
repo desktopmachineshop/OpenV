@@ -125,3 +125,70 @@ func TestUpdateOrgBudgetBodyHandling(t *testing.T) {
 		}
 	})
 }
+
+// TestUpdateOrgRefusedRequestChangesNothing: a request refused for any one
+// part writes none of the others. UpdateOrg used to store the rename first
+// and then refuse the budget sent with it, so the refusal left the new name
+// in place, and a budget sent with a refused channel or window was stored
+// too. Each case sends a rename with the part that is refused, and a valid
+// budget where the budget is not the refused part.
+func TestUpdateOrgRefusedRequestChangesNothing(t *testing.T) {
+	const orgID = "org-1"
+	cases := []struct {
+		name     string
+		tiers    bool
+		body     string
+		wantCode int
+	}{
+		{"a budget that is not a number", false,
+			`{"name":"Renamed","monthly_budget_usd":"lots"}`, http.StatusBadRequest},
+		{"a negative budget", false,
+			`{"name":"Renamed","monthly_budget_usd":-1}`, http.StatusBadRequest},
+		{"a budget the plan does not include", true,
+			`{"name":"Renamed","monthly_budget_usd":100}`, http.StatusForbidden},
+		{"a channel the plan cannot choose", false,
+			`{"name":"Renamed","monthly_budget_usd":100,"release_channel":"stable"}`, http.StatusBadRequest},
+		{"an upgrade window the plan cannot choose", false,
+			`{"name":"Renamed","monthly_budget_usd":100,"upgrade_window":{"day":15,"hour":9,"timezone":"UTC"}}`,
+			http.StatusBadRequest},
+		{"an upgrade window that is not an object", false,
+			`{"name":"Renamed","monthly_budget_usd":100,"upgrade_window":"soon"}`, http.StatusBadRequest},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if tc.tiers {
+				enforceTiers(t)
+			}
+			h := budgetFixture()
+			fake := h.orgService.(*fakeOrgService)
+			fake.plan = orgs.PlanSingle
+			w := httptest.NewRecorder()
+			h.UpdateOrg(w, updateOrgReq("admin", orgID, tc.body))
+			if w.Code != tc.wantCode {
+				t.Fatalf("status = %d, want %d (body %q)", w.Code, tc.wantCode, w.Body.String())
+			}
+			if len(fake.updatedNames) != 0 || len(fake.budgetCalls) != 0 || len(fake.channelCalls) != 0 ||
+				len(fake.windowCalls) != 0 {
+				t.Fatalf("a refused request wrote: names %d, budgets %d, channels %v, windows %v",
+					len(fake.updatedNames), len(fake.budgetCalls), fake.channelCalls, fake.windowCalls)
+			}
+		})
+	}
+
+	// The same parts, each valid on a plan that may choose its channel, are
+	// all written, in one request.
+	h := budgetFixture()
+	fake := h.orgService.(*fakeOrgService)
+	fake.plan = orgs.PlanBusiness
+	w := httptest.NewRecorder()
+	h.UpdateOrg(w, updateOrgReq("admin", orgID,
+		`{"name":"Renamed","monthly_budget_usd":100,"release_channel":"nightly","upgrade_window":{"day":15,"hour":9,"timezone":"UTC"}}`))
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200 (body %q)", w.Code, w.Body.String())
+	}
+	if len(fake.updatedNames) != 1 || len(fake.budgetCalls) != 1 || len(fake.channelCalls) != 1 ||
+		len(fake.windowCalls) != 1 || fake.windowCalls[0] != "15/9/UTC" {
+		t.Fatalf("writes: names %d, budgets %d, channels %v, windows %v; want one of each",
+			len(fake.updatedNames), len(fake.budgetCalls), fake.channelCalls, fake.windowCalls)
+	}
+}
