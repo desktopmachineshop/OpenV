@@ -50,6 +50,14 @@ over unrun over uncovered over pass.
 - A requirement without a verification method stays *method-missing*: the
   method is still the parent's to state.
 
+The V&V dashboard, the gaps, the V&V report PDF and the V&V status of a
+downloaded PDF or Word document all count this same rollup, and a download
+that leaves out a refined requirement's own test cases still counts them.
+The dashboard also lists each refinement with its own rollup; the documents
+show only the rollup. A refined requirement is never listed as without a
+test case or unverified, whatever its method: a gap in its verification is
+its refinements'.
+
 ## Owners and reference parties
 
 Every artifact may carry an **owner**: the party or member responsible. It

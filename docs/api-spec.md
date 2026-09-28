@@ -659,7 +659,7 @@ hidden entry is out of every list and cannot be voted for either.
 | GET | `/api/v1/projects/{id}/vv/coverage` | Verification coverage summary. A requirement refined by requirements of child projects carries them as `refinements` (each with its own rollup in its project), `flow_down` (the worst of them) and, when it has no evidence of its own, takes the flow-down as its `rollup` with `via_refinements` set (REQ-146) | viewer |
 | GET | `/api/v1/projects/{id}/vv/matrix` | Traceability matrix | viewer |
 | GET | `/api/v1/projects/{id}/vv/gaps` | Coverage gaps | viewer |
-| GET | `/api/v1/projects/{id}/vv/report` | V&V report | viewer |
+| GET | `/api/v1/projects/{id}/vv/report` | V&V report PDF: the coverage and gaps `vv/coverage` and `vv/gaps` answer, flow-down included (REQ-146), and the test runs | viewer |
 
 ### Workspace limits
 

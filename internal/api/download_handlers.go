@@ -96,6 +96,7 @@ func (h *Handler) serveDownload(w http.ResponseWriter, r *http.Request, format d
 		BaselineID: r.URL.Query().Get("baseline_id"),
 		Format:     format,
 		Selection:  selectionFromQuery(r),
+		Coverage:   h.flowDownCoverage,
 	})
 	if err != nil {
 		if errors.Is(err, downloads.ErrUnsupportedFormat) || errors.Is(err, exports.ErrUnsupportedFormat) {

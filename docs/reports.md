@@ -63,7 +63,7 @@ The wizard's Content step, for the PDF and Word formats:
 | Table of contents | `toc=0\|1` | on |
 | Traceability rows under each artifact | `traceability=0\|1` | on |
 | Figures embedded with captions | `figures=0\|1` | on |
-| V&V status: rollup per requirement, coverage summary and gaps | `vv=0\|1` | off |
+| V&V status: rollup per requirement, coverage summary and gaps, with the flow-down from child projects (REQ-146) | `vv=0\|1` | off |
 | Test results: latest result per test case, test-run appendix | `results=0\|1` | off |
 | Fields (attributes) shown per artifact | `fields=all\|none\|key,key` | all |
 

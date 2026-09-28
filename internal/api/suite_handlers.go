@@ -547,40 +547,63 @@ func (h *Handler) GetCoverage(w http.ResponseWriter, r *http.Request) {
 // verification of the child-project requirements that refine its own
 // (REQ-146). Each child project's live coverage is computed the same way,
 // so a refinement that is itself refined further down rolls all the way
-// up; seen guards against a loop in stored parents. No rights on the child
-// project are needed: what comes back is a rollup per requirement the
-// parent already links to, never the child's content.
-func (h *Handler) coverageWithFlowDown(export *exports.ProjectExport, latest map[string]*vv.TestResult, seen map[string]bool) *vv.CoverageReport {
+// up. done holds each project's coverage once the request has computed it,
+// so a child project whose requirements refine those of two projects of the
+// flow-down is read once and counts for both; a project still being computed holds nil, which
+// guards against a loop in stored parents. No rights on the child project
+// are needed: what comes back is a rollup per requirement the parent
+// already links to, never the child's content.
+func (h *Handler) coverageWithFlowDown(export *exports.ProjectExport, latest map[string]*vv.TestResult, done map[string]*vv.CoverageReport) *vv.CoverageReport {
 	report := vv.ComputeCoverage(export, latest)
 	children := vv.ChildProjectIDs(export)
 	if len(children) == 0 {
 		return report
 	}
-	if seen == nil {
-		seen = map[string]bool{}
+	if done == nil {
+		done = map[string]*vv.CoverageReport{}
 	}
-	seen[export.ProjectID] = true
+	done[export.ProjectID] = nil
 	rollups := map[string]string{}
 	for _, childID := range children {
-		if seen[childID] {
+		child, known := done[childID]
+		if !known {
+			child = h.childCoverage(childID, done)
+			done[childID] = child
+		}
+		if child == nil {
 			continue
 		}
-		childExport, err := h.projectExport(childID, "")
-		if err != nil {
-			slog.Warn("vv: could not read a child project for the flow-up", "project_id", childID, "error", err)
-			continue
-		}
-		childLatest, err := h.vvService.LatestResults(childID)
-		if err != nil {
-			slog.Warn("vv: could not read a child project's results", "project_id", childID, "error", err)
-			childLatest = map[string]*vv.TestResult{}
-		}
-		for _, e := range h.coverageWithFlowDown(childExport, childLatest, seen).Entries {
+		for _, e := range child.Entries {
 			rollups[e.RequirementID] = e.Rollup
 		}
 	}
 	vv.ApplyFlowDown(report, export, rollups)
 	return report
+}
+
+// childCoverage is a child project's live coverage with its own flow-down,
+// or nil when its export cannot be read.
+func (h *Handler) childCoverage(childID string, done map[string]*vv.CoverageReport) *vv.CoverageReport {
+	childExport, err := h.projectExport(childID, "")
+	if err != nil {
+		slog.Warn("vv: could not read a child project for the flow-up", "project_id", childID, "error", err)
+		return nil
+	}
+	childLatest, err := h.vvService.LatestResults(childID)
+	if err != nil {
+		slog.Warn("vv: could not read a child project's results", "project_id", childID, "error", err)
+		childLatest = map[string]*vv.TestResult{}
+	}
+	return h.coverageWithFlowDown(childExport, childLatest, done)
+}
+
+// flowDownCoverage is the coverage GetCoverage answers, as the
+// reports.CoverageFunc of a document: the V&V report and a downloaded
+// document's V&V status roll up the child projects' verification as the JSON
+// does, so neither reports a requirement verified through its refinements as
+// a gap (REQ-146).
+func (h *Handler) flowDownCoverage(export *exports.ProjectExport, latest map[string]*vv.TestResult) *vv.CoverageReport {
+	return h.coverageWithFlowDown(export, latest, nil)
 }
 
 func (h *Handler) GetMatrix(w http.ResponseWriter, r *http.Request) {
@@ -658,7 +681,8 @@ func (h *Handler) GetVVReport(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	data, filename, err := h.reportService.GenerateVVReport(projectID, r.URL.Query().Get("baseline_id"), latest, runs)
+	data, filename, err := h.reportService.GenerateVVReport(projectID, r.URL.Query().Get("baseline_id"), latest, runs,
+		h.flowDownCoverage)
 	if err != nil {
 		if errors.Is(err, baselines.ErrNotFound) {
 			respondError(w, r, http.StatusNotFound, "baseline not found", err)

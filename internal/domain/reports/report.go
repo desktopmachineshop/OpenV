@@ -53,7 +53,7 @@ type Service interface {
 	// LoadReportExport is the snapshot a report reads: the live project, or a
 	// baseline's stored snapshot, with what the document should say about it.
 	LoadReportExport(projectID string, baselineID string) (*exports.ProjectExport, Snapshot, error)
-	GenerateVVReport(projectID string, baselineID string, latest map[string]*vv.TestResult, runs []*vv.TestRun) ([]byte, string, error)
+	GenerateVVReport(projectID string, baselineID string, latest map[string]*vv.TestResult, runs []*vv.TestRun, computeCoverage CoverageFunc) ([]byte, string, error)
 }
 
 // DefaultService generates reports from project snapshots.
@@ -354,7 +354,7 @@ func buildReportModel(data *exports.ProjectExport, opts RenderOptions) *reportMo
 
 	// Verification coverage and evidence.
 	if opts.Content.VVStatus {
-		m.coverage = vv.ComputeCoverage(data, opts.Latest)
+		m.coverage = opts.Coverage.compute(data, opts.Latest)
 		m.gaps = vv.GapAnalysis(data, m.coverage)
 		m.coverageByReq = map[string]*vv.CoverageEntry{}
 		for i := range m.coverage.Entries {

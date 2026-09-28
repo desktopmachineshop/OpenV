@@ -1,6 +1,7 @@
 package vv
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/openv/requirements-platform/internal/domain/artifacts"
@@ -92,5 +93,57 @@ func TestApplyFlowDown(t *testing.T) {
 		if id == "bare" {
 			t.Fatalf("a requirement verified through its refinements was reported as a gap")
 		}
+	}
+}
+
+// TestGapAnalysisOfRefinedRequirements: the gap lists treat a requirement
+// that child-project requirements refine alike whatever its verification
+// method (REQ-146). One with no test case or attestation of its own takes
+// the flow-down and is not a gap, even while the flow-down is uncovered:
+// the gap is its refinements', in their own projects. One with evidence of
+// its own that the flow-down drags down to uncovered is not a gap either:
+// a test-method requirement has its test case, and an attested one is not
+// "unverified". A requirement nothing refines is listed as before.
+func TestGapAnalysisOfRefinedRequirements(t *testing.T) {
+	req := func(id, method, status string) *artifacts.Artifact {
+		a := &artifacts.Artifact{ID: id, ProjectID: "plane", Type: "requirement", Title: id,
+			Attributes: map[string]interface{}{"verification_method": method}}
+		if status != "" {
+			a.Attributes["verification_status"] = status
+		}
+		return a
+	}
+	far := func(id string) *exports.LinkedArtifact {
+		return &exports.LinkedArtifact{ID: id, ProjectID: "gear", ProjectName: "Landing gear", Ref: id, Type: "requirement"}
+	}
+	export := &exports.ProjectExport{
+		ProjectID: "plane",
+		Artifacts: []*artifacts.Artifact{
+			req("test-refined", "test", ""), req("analysis-refined", "analysis", ""),
+			req("inspected-refined", "inspection", "verified"),
+			req("test-alone", "test", ""), req("analysis-alone", "analysis", ""),
+		},
+		Links: []*links.Link{
+			{FromID: "g-test", ToID: "test-refined", Type: "refines"},
+			{FromID: "g-analysis", ToID: "analysis-refined", Type: "refines"},
+			{FromID: "g-inspected", ToID: "inspected-refined", Type: "refines"},
+		},
+		LinkedArtifacts: []*exports.LinkedArtifact{far("g-test"), far("g-analysis"), far("g-inspected")},
+	}
+	report := ComputeCoverage(export, nil)
+	ApplyFlowDown(report, export, map[string]string{
+		"g-test": RollupUncovered, "g-analysis": RollupUncovered, "g-inspected": RollupUncovered})
+	for _, e := range report.Entries {
+		if e.Rollup != RollupUncovered {
+			t.Fatalf("%s = %s, want uncovered", e.RequirementID, e.Rollup)
+		}
+	}
+
+	gaps := GapAnalysis(export, report)
+	if got := strings.Join(gaps.RequirementsWithoutTestCase, ","); got != "test-alone" {
+		t.Errorf("without a test case = %q, want test-alone", got)
+	}
+	if got := strings.Join(gaps.RequirementsUnverified, ","); got != "analysis-alone" {
+		t.Errorf("unverified = %q, want analysis-alone", got)
 	}
 }

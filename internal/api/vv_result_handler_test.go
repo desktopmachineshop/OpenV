@@ -23,6 +23,9 @@ type fakeVVService struct {
 	run       *vv.TestRun
 	upsertErr error
 	upserts   int
+	// latest answers LatestResults per project, as the real service does:
+	// a project it does not name has no results.
+	latest map[string]map[string]*vv.TestResult
 }
 
 func (f *fakeVVService) GetRun(id string) (*vv.TestRun, error) {

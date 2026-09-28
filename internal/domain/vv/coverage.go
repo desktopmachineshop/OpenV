@@ -188,7 +188,9 @@ type GapReport struct {
 	// needs no test case — so without this bucket the gap report stayed silent
 	// about them while the coverage rollup already counted them as
 	// "uncovered". It is derived from that same rollup (see GapAnalysis),
-	// so the two views cannot disagree.
+	// so the two views cannot disagree, save for a requirement that
+	// child-project requirements refine, which neither bucket lists
+	// (REQ-146).
 	RequirementsUnverified  []string `json:"requirements_unverified"`
 	RequirementsFailing     []string `json:"requirements_failing"`
 	OrphanTestCases         []string `json:"orphan_test_cases"`
@@ -434,7 +436,12 @@ func GapAnalysis(export *exports.ProjectExport, coverage *CoverageReport) *GapRe
 		// method value the enumeration never anticipated. An uncovered
 		// rollup already implies a non-empty method: a missing one rolls up
 		// as method-missing and belongs to RequirementsWithoutMethod alone.
-		if entry.Rollup == RollupUncovered && entry.VerificationMethod != MethodTest {
+		// A requirement refined from child projects is left out here as it
+		// is from the bucket above, whatever its method (REQ-146): with no
+		// attestation of its own its evidence is theirs, and an uncovered
+		// flow-down is their gap, in their projects; with one, it is not
+		// unverified, although an uncovered refinement drags its rollup down.
+		if entry.Rollup == RollupUncovered && entry.VerificationMethod != MethodTest && len(entry.Refinements) == 0 {
 			report.RequirementsUnverified = append(report.RequirementsUnverified, entry.RequirementID)
 		}
 		if entry.Rollup == RollupFail {

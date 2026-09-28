@@ -20,6 +20,34 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   new name or description included, and so do the other projects its
   requirements are linked to.
 
+- **The V&V report now counts verification done in child projects, as the
+  V&V dashboard does.** A requirement with no test case of its own, verified
+  through the requirements of a child project that refine it, was counted as
+  uncovered in the PDF from *Download V&V report* and listed there under
+  *Requirements without a test case*, although the dashboard showed the
+  result its refinements earned. The report, and the V&V status in a
+  downloaded PDF or Word document, now give a requirement refined in a child
+  project the same result as the dashboard: the worst of its refinements'
+  results, or, for a requirement with evidence of its own (its own test
+  cases, or marked verified), the worse of its own result and theirs. A
+  requirement without a verification method is still listed as missing one.
+
+- **A demonstration, analysis or inspection requirement refined in a child
+  project is no longer listed as *Unverified*.** The V&V gaps, and the V&V
+  report, listed it there while its refinements were still uncovered, even
+  once it was marked verified itself, although a test requirement in the
+  same place was never listed under *Requirements without a test case*.
+  Neither is listed now: the gap is in its refinements, and the dashboard
+  shows each of them with its own result.
+
+- **Verification that reaches a project by two routes now counts on both.**
+  When one project's requirements refined requirements of two projects of a
+  programme, say both the aircraft's and the landing gear's, and were
+  refined in turn by a project below, the V&V dashboard, gaps and report
+  could count requirements verified through it as uncovered, and which ones
+  could change from one reload to the next. Each now gets the result its
+  refinements earned.
+
 - **Citing the same evidence twice from one test result through the API no
   longer answers with a citation that does not exist.** The repeat was
   accepted, but its answer carried a new citation id, time and note that were
