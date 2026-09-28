@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -74,13 +75,27 @@ type fakeOrgService struct {
 	// Stable release and per-member previews (REQ-137, REQ-138).
 	stableRelease string
 	previews      map[string]bool
+
+	// missing lists the ids Get answers orgs.ErrNotFound for: a workspace
+	// that does not exist, which only a platform admin's request reaches
+	// past the guard.
+	missing map[string]bool
+	// windowCalls records each SetUpgradeWindow as "day/hour/timezone".
+	windowCalls []string
+	// setLogoErr, when set, is SetLogo's answer, with nothing recorded.
+	setLogoErr error
 }
 
 func (f *fakeOrgService) MemberPreview(orgID, userID string) (bool, error) {
 	return f.previews[orgID+"/"+userID], nil
 }
 
+// SetMemberPreview refuses an account with no membership, as the
+// repository does: the choice is stored on the membership.
 func (f *fakeOrgService) SetMemberPreview(orgID, userID string, enabled bool) error {
+	if f.roles[orgID][userID] == "" {
+		return orgs.ErrNotMember
+	}
 	if f.previews == nil {
 		f.previews = map[string]bool{}
 	}
@@ -109,6 +124,9 @@ func (f *fakeOrgService) RoleInOrg(orgID, userID string) (string, error) {
 // Get answers the handlers that read a workspace's effective limits (e.g.
 // transient runner lease timings) with a plain free-plan workspace.
 func (f *fakeOrgService) Get(id string) (*orgs.Org, error) {
+	if f.missing[id] {
+		return nil, orgs.ErrNotFound
+	}
 	plan := f.plan
 	if plan == "" {
 		plan = orgs.PlanFree
@@ -119,6 +137,9 @@ func (f *fakeOrgService) Get(id string) (*orgs.Org, error) {
 }
 
 func (f *fakeOrgService) SetLogo(id, path, mime string) (*orgs.Org, error) {
+	if f.setLogoErr != nil {
+		return nil, f.setLogoErr
+	}
 	f.logoPath, f.logoMime = path, mime
 	return f.Get(id)
 }
@@ -137,6 +158,33 @@ func (f *fakeOrgService) UpdateOrg(id string, name *string) (*orgs.Org, error) {
 	}
 	f.updatedNames = append(f.updatedNames, name)
 	return o, nil
+}
+
+// SetUpgradeWindow records the window and refuses as the service does.
+func (f *fakeOrgService) SetUpgradeWindow(id string, day, hour int, timezone string) (*orgs.Org, error) {
+	o, err := f.Get(id)
+	if err != nil {
+		return nil, err
+	}
+	if !orgs.ChannelChoosable(o.BilledPlan) {
+		return nil, orgs.ErrChannelLocked
+	}
+	if err := orgs.ValidateUpgradeWindow(day, hour, timezone); err != nil {
+		return nil, err
+	}
+	f.windowCalls = append(f.windowCalls, fmt.Sprintf("%d/%d/%s", day, hour, timezone))
+	o.UpgradeDay, o.UpgradeHour, o.UpgradeTimezone = day, hour, timezone
+	return o, nil
+}
+
+// ListMembers answers the workspace's members from roles, for the seat
+// count a limit check makes under the tiers.
+func (f *fakeOrgService) ListMembers(orgID string) ([]*orgs.Member, error) {
+	var out []*orgs.Member
+	for userID, role := range f.roles[orgID] {
+		out = append(out, &orgs.Member{OrgID: orgID, UserID: userID, Role: role})
+	}
+	return out, nil
 }
 
 func (f *fakeOrgService) SetMonthlyBudget(id string, budget *float64) (*orgs.Org, error) {

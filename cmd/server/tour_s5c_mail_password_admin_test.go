@@ -54,11 +54,12 @@ import (
 // invitation mailed within the hour handed back without a second mail, and
 // an unverified account's address invited rather than added); the profile
 // picture (each raster type replacing the last, the file served as
-// stored to any signed-in account, the refusals, a type check that asks only
-// for some image, and removal); and last the authIPLimiter bucket that a
-// reset request spends only when the server has a mailer, drained through
-// reset requests and refused on sign-in, confirmation and verification, and
-// drained through sign-ins and refused on a reset request (Q18).
+// stored to any signed-in account, the refusals, an image of a type other
+// than the one declared among them, and removal); and last the
+// authIPLimiter bucket that a reset request spends only when the server has
+// a mailer, drained through reset requests and refused on sign-in,
+// confirmation and verification, and drained through sign-ins and refused
+// on a reset request (Q18).
 //
 // Nondeterminism: ids, sessions, tokens (the generic tokens, or names where
 // the area captures them) and minted times; a workspace slug's last 8 hex
@@ -110,7 +111,8 @@ const (
 
 // Image fixtures beside the shared tourPNG, tourSVG and tourPDF, written out
 // by hand so that no encoder decides their bytes; each sniffs as its type
-// (http.DetectContentType), which is all the avatar upload checks.
+// (http.DetectContentType), which the avatar upload checks against the
+// declared one.
 const (
 	// mailPasswordAdminJPEG is a JPEG's start of image, a JFIF APP0 segment
 	// and its end of image, 22 bytes.
@@ -460,9 +462,11 @@ func mailPasswordAdminTour(tr *tour) {
 	big := append([]byte(tourPNG), bytes.Repeat([]byte{0}, 2<<20+1-len(tourPNG))...)
 	upload("upload 2 MiB and one byte", o, rawBody(multipartForm(nil, tourFormFile{field: "file", name: "big.png",
 		contentType: "image/png", data: big})), note("the part is recorded by its size and digest"))
-	upload("upload a PNG declared as a GIF: accepted, since the check asks only that the bytes sniff as some image",
+	upload("upload a PNG declared as a GIF: refused, since the bytes must sniff as the declared type",
 		p, mailPasswordAdminPicture("me.gif", "image/gif", tourPNG))
-	avatar("the changer's picture: served as the declared type", p, "{{changer}}")
+	avatar("the changer's picture: none, the refused upload stored nothing", p, "{{changer}}")
+	tr.setup("the changer uploads its PNG as a PNG", p, "POST /api/v1/me/avatar",
+		mailPasswordAdminPicture("me.png", "image/png", tourPNG))
 	tr.step("remove the picture: the account without one, the file removed", p, "DELETE /api/v1/me/avatar")
 	avatar("the removed picture", p, "{{changer}}")
 	tr.step("remove it again: the same answer", p, "DELETE /api/v1/me/avatar")

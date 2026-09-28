@@ -129,6 +129,23 @@ export const OrgMembersTab: React.FC<OrgMembersTabProps> = ({ org, isAdmin, curr
     }
   };
 
+  // The list can be stale: another admin, or the member themselves, may
+  // have removed someone since it loaded, and the server then refuses a role
+  // change or removal for them in words addressed to the caller ("you are
+  // not a member of this organization"). After a refusal, re-read the list;
+  // when the member is gone from it, the row goes and the tab says who left.
+  const noLongerMember = async (member: OrgMember): Promise<string | null> => {
+    try {
+      const res = await orgsAPI.members.list(org.id);
+      const fresh = res.data || [];
+      setMembers(fresh);
+      if (fresh.some((m) => m.user_id === member.user_id)) return null;
+      return `${member.user_name || member.user_email || 'That person'} is no longer a member of this workspace.`;
+    } catch {
+      return null;
+    }
+  };
+
   const handleSetRole = async (member: OrgMember, role: string) => {
     try {
       await orgsAPI.members.setRole(org.id, member.user_id, role);
@@ -139,7 +156,8 @@ export const OrgMembersTab: React.FC<OrgMembersTabProps> = ({ org, isAdmin, curr
       );
       setError('');
     } catch (err: any) {
-      setError(`Failed to change role: ${apiErrorMessage(err)}`);
+      const gone = await noLongerMember(member);
+      setError(`Failed to change role: ${gone || apiErrorMessage(err)}`);
     }
   };
 
@@ -165,6 +183,13 @@ export const OrgMembersTab: React.FC<OrgMembersTabProps> = ({ org, isAdmin, curr
       setMembers(members.filter((m) => m.user_id !== member.user_id));
       setError('');
     } catch (err: any) {
+      // Someone leaving answers for themselves, so the refusal's words fit.
+      const gone = isSelf ? null : await noLongerMember(member);
+      if (gone) {
+        setError('');
+        flash(gone);
+        return;
+      }
       setError(`Failed to remove member: ${apiErrorMessage(err)}`);
     }
   };

@@ -70,6 +70,68 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   a citation a different note, remove it and cite the evidence again with the
   new note.
 
+- **A workspace update refused through the API no longer saves part of the
+  request.** A `PUT /api/v1/orgs/{id}` refused for one of its settings, such
+  as a monthly budget the workspace's plan does not include or a release
+  channel it cannot choose, could still save other settings sent with it, a
+  new name among them. A refused update now changes nothing. Workspace
+  settings in the app save one setting at a time and were not affected.
+
+- **Uploading a logo for a workspace that does not exist answers *workspace
+  not found*.** A platform admin's logo upload through the API for an
+  unknown workspace id answered with a server error and left the file on
+  the server. It now answers 404 and stores nothing.
+
+- **Switching to a workspace that does not exist is refused.** A platform
+  admin's `POST /api/v1/orgs/{id}/activate` for an unknown workspace id
+  answered as though the session had switched to it. It now answers 404
+  *workspace not found*, and the session stays in the workspace it was in.
+
+- **Previewing the next stable release is refused in a workspace you are
+  not a member of.** A platform admin who turned the preview on in a
+  workspace they do not belong to was answered as though it had worked,
+  with the preview still off. The preview belongs to a member's own place in
+  the workspace, so the request is now refused with *you are not a member of
+  this organization*.
+
+- **Restoring a deleted workspace answers with the workspace as restored.**
+  The answer gave the workspace's last-updated time as the time it was
+  deleted; it is now the time of the restore, as reading the workspace
+  afterwards shows.
+
+- **Profile pictures and workspace logos must be the image type they claim
+  to be.** A picture of one image type named as another, such as a GIF
+  saved as `.png`, or a BMP or icon file renamed to `.png`, was accepted and
+  then served as the type its name claimed. It is now refused with *File
+  content does not match an image of the declared type*: save the picture
+  as a real PNG, JPEG, GIF or WebP file and upload it again. Pictures and
+  logos uploaded before this release are left as they are.
+
+- **Demoting a workspace's last admin now says why it cannot be done.**
+  Changing the only admin's role to member failed with *failed to update
+  workspace member*, an error that looked like a fault on our side. It is
+  now refused with the reason, that the last admin of a workspace cannot be
+  demoted, as removing that admin already was: make another member an admin
+  first.
+
+- **Removing someone who is no longer a member of the workspace is
+  refused.** Removing a person who had already left, or whom another admin
+  had removed a moment before, answered as if it had worked, and the
+  workspace's admins were told of a removal that did not happen. The same
+  went for an account named through the API that was never a member. Such a
+  removal is now refused, as a role change for that person already was, and
+  only removals that happen are announced. In the Members tab, either
+  refusal now refreshes the list and says the person is no longer a member,
+  instead of saying that you are not one.
+
+- **A platform admin granting a plan to a workspace that pays by
+  subscription is told why it is refused.** Moving a workspace with a live
+  subscription onto the enterprise or open-source plan from the platform
+  admin page failed with *failed to set the workspace plan*. It is now
+  refused with the reason, that the workspace has a live subscription to
+  cancel before a plan can be granted, and an API client gets `409` with the
+  code `already_subscribed`, as a checkout for that workspace does.
+
 - **Membership notifications name your role in plain English.** The
   notification and email for joining a workspace said you had "the a member
   role", and those for project access said "a editor access" or that your
