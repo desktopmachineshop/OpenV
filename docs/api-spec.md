@@ -501,10 +501,14 @@ events, and are separate types because the reasons differ: one answers "what
 can I do now?", the other is workspace governance. Nobody is notified about
 their own action, and somebody who leaves voluntarily is not told they left
 — only the admins are. An invitation to an address with no account notifies
-the admins only; the invitation email is that person's notification. Project
-membership changes reach the affected member but **not** workspace admins:
-project roles change constantly and would drown the arrivals and departures
-that matter.
+the admins only; the invitation email is that person's notification. Taking
+an invitation up notifies the admins the same way whichever door it came
+through — a sign-up carrying the link (`POST /auth/register` with
+`invite_token`), the link taken up signed in (`POST /auth/invitations/accept`)
+or a single sign-on — and never the person who joined, whose action it was.
+Project membership changes reach the affected member but **not** workspace
+admins: project roles change constantly and would drown the arrivals and
+departures that matter.
 
 Both email by default (with everything else in `DefaultEmailTypes`, overridable
 with `OPENV_EMAIL_NOTIFICATION_TYPES`), because an access change is exactly the

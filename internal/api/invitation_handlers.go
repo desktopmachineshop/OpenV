@@ -517,14 +517,7 @@ func (h *Handler) AcceptInvitation(w http.ResponseWriter, r *http.Request) {
 		outcome = InviteOutcomeAlreadyMember
 	}
 	h.verifiedByInvitation(user, outcome)
-	// Taking up an invitation is the join, so this is what the admins see.
-	// Someone who was already a member joined nothing, so nothing is said.
-	if !acc.AlreadyMember {
-		h.publishOrgEvent(r, events.OrgInvitationAccepted, acc.Invitation.OrgID, user.ID, map[string]interface{}{
-			"user_id": user.ID,
-			"role":    acc.Role,
-		})
-	}
+	h.publishInvitationAccepted(user.ID, acc)
 	// role is what the account holds now, which is the invited role only
 	// when it was not already a member: an invitation never rewrites a role.
 	json.NewEncoder(w).Encode(map[string]any{
@@ -557,18 +550,30 @@ func (h *Handler) acceptInvitationsForProviderVerifiedEmail(userID, email string
 			"user_id", userID, "error", err)
 	}
 	for _, acc := range accepted {
-		if acc == nil || acc.AlreadyMember || acc.Invitation == nil {
-			continue
-		}
-		h.publishOrgEventAs("user:"+userID, events.OrgInvitationAccepted,
-			acc.Invitation.OrgID, userID, map[string]interface{}{
-				"user_id": userID,
-				"role":    acc.Role,
-			})
+		h.publishInvitationAccepted(userID, acc)
 	}
 	if len(accepted) > 0 {
 		slog.Info("invitation: provider-verified address joined invited workspaces", "user_id", userID, "count", len(accepted))
 	}
+}
+
+// publishInvitationAccepted publishes the join an invitation made. Taking up
+// an invitation is the join, so this is what the workspace's admins are told
+// of, and every door publishes it alike: a registration carrying the link, the
+// link taken up signed in, and a provider-verified sign-in. The joiner is the
+// actor on each, named here rather than read from the request: the auth
+// middleware leaves /api/v1/auth/ open, so Actor would say "system", and the
+// notifier, which skips the actor, would tell the joiner what they just did.
+// Someone who was already a member joined nothing, so nothing is said.
+func (h *Handler) publishInvitationAccepted(userID string, acc *invitations.Acceptance) {
+	if acc == nil || acc.AlreadyMember || acc.Invitation == nil {
+		return
+	}
+	h.publishOrgEventAs("user:"+userID, events.OrgInvitationAccepted, acc.Invitation.OrgID, userID,
+		map[string]interface{}{
+			"user_id": userID,
+			"role":    acc.Role,
+		})
 }
 
 // Invitation outcomes a registration reports back, so the sign-up page can
@@ -615,5 +620,6 @@ func (h *Handler) acceptResolvedInvitation(inv *invitations.Invitation, user *us
 		return InviteOutcomeAlreadyMember
 	}
 	slog.Info("invitation: new account joined its invited workspace", "user_id", user.ID, "org_id", acc.Invitation.OrgID)
+	h.publishInvitationAccepted(user.ID, acc)
 	return InviteOutcomeAccepted
 }

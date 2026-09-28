@@ -132,6 +132,27 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   cancel before a plan can be granted, and an API client gets `409` with the
   code `already_subscribed`, as a checkout for that workspace does.
 
+- **Membership notifications name your role in plain English.** The
+  notification and email for joining a workspace said you had "the a member
+  role", and those for project access said "a editor access" or that your
+  role was now "a editor" or "a owner". They now read "with a member role",
+  "with an admin role", "editor access", "an editor" and "an owner".
+
+- **A workspace's admins are told whenever someone joins by invitation.**
+  Signing up from an invitation link added the account to the workspace
+  without telling its admins, although joining through single sign-on did;
+  and taking a link up while signed in told the person who joined, in the
+  app and by email, what they had just done. Every way of taking up an
+  invitation now tells the workspace's admins who joined and with which
+  role, and does not notify the person who joined. For API clients, the
+  workspace's events now carry `org.invitation_accepted` for a sign-up with
+  an invitation link too, and name the person who joined as its actor where
+  a signed-in acceptance named `system`.
+
+- **The password reset email gives the link's full hour.** It said the link
+  was valid for 59 minutes; the link has always lasted an hour, and the
+  email now says 60 minutes.
+
 ## 0.15.0 — 2026-09-22
 
 ### New features

@@ -41,8 +41,9 @@ import (
 //   - the cross-site cookie re-run (I8): an invitation to W2, whose link is on
 //     PUBLIC_URL (Q12's first chain: FRONTEND_URL, else PUBLIC_URL); a
 //     registration without it, refused since registration is closed; the
-//     registration its link opens (which publishes no event for the
-//     invitation it accepts), and a sign-in, each setting openv_session
+//     registration its link opens (which publishes org.invitation_accepted
+//     for the invitation it accepts, the new account its actor, as the OIDC
+//     sign-in below does), and a sign-in, each setting openv_session
 //     with Secure, SameSite=None and Partitioned; a sign-out clearing it with
 //     the same attributes. HSTS, which cross-site cookies turn on, is in the
 //     standard security headers every answer carries (the golden's
@@ -177,8 +178,8 @@ func selfHostedCrossSiteSsoTour(tr *tour, idp *tourIdP, google *tourGoogle) {
 		"and Partitioned", anon, "POST /api/v1/auth/register",
 		jsonBody(`{"email":"tour-passworder@example.com","password":"tour password 1","name":"Tour Passworder",`+
 			`"invite_token":"{{passworder.invite}}"}`),
-		note("the owner reads W2's events, and the sign-up publishes none for the invitation it accepts, where the "+
-			"OIDC sign-in below publishes org.invitation_accepted (pinned as it is; the scouts' bug 4)"))
+		note("the owner reads W2's events: the sign-up publishes org.invitation_accepted for the invitation it "+
+			"accepts, with the new account as its actor, as the OIDC sign-in below does"))
 	pw := tr.adopt(reg, "passworder", fmt.Sprintf("an account a recorded registration made by invitation (step %d), "+
 		"with a password; the identity provider later asserts its address", reg.step.n))
 	login := tr.step("sign in: a new session, its cookie with the same attributes", anon, "POST /api/v1/auth/login",

@@ -1224,7 +1224,7 @@
     },
     {
       "n": 33,
-      "title": "register with the invitee's link and its address, in other capitals: the account is made, verified and joins W as an admin; no event",
+      "title": "register with the invitee's link and its address, in other capitals: the account is made, verified and joins W as an admin, and org.invitation_accepted",
       "actor": "anonymous",
       "route": "POST /api/v1/auth/register",
       "request": {
@@ -1237,7 +1237,7 @@
         "body": "{\"email\":\"TOUR-INVITEE@example.COM\",\"password\":\"tour password 1\",\"name\":\"Tour Invitee\",\"invite_token\":\"<invite.invitee>\"}"
       },
       "notes": [
-        "the address is compared folded; the registration publishes no event, where the signed-in acceptance publishes org.invitation_accepted"
+        "the address is compared folded; the registration publishes the event the signed-in acceptance publishes, with the new account as its actor"
       ],
       "status": 200,
       "content_type": "text/plain; charset=utf-8",
@@ -1269,7 +1269,17 @@
         "invitation": "accepted"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
-      "events": []
+      "events": [
+        {
+          "type": "org.invitation_accepted",
+          "actor": "user:<invitee>",
+          "entity": "<invitee>",
+          "payload": {
+            "role": "string \"admin\"",
+            "user_id": "string \"<invitee>\""
+          }
+        }
+      ]
     },
     {
       "n": 34,
@@ -1574,7 +1584,7 @@
         "body": "{\"token\":\"<invite.joiner>\"}"
       },
       "notes": [
-        "the event's actor is \"system\": the auth middleware does not run on /api/v1/auth/ paths, so the request carries no user for Actor to name"
+        "the event's actor is the joiner, whom the handler names itself: the auth middleware does not run on /api/v1/auth/ paths, so the request carries no user for Actor to name"
       ],
       "status": 200,
       "content_type": "text/plain; charset=utf-8",
@@ -1596,7 +1606,7 @@
       "events": [
         {
           "type": "org.invitation_accepted",
-          "actor": "system",
+          "actor": "user:<joiner>",
           "entity": "<joiner>",
           "payload": {
             "role": "string \"member\"",

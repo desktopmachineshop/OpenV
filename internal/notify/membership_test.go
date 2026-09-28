@@ -1,6 +1,7 @@
 package notify
 
 import (
+	"regexp"
 	"strings"
 	"testing"
 
@@ -225,6 +226,71 @@ func TestProjectChangesReachTheMemberButNotWorkspaceAdmins(t *testing.T) {
 	}
 	if got := forUser(store, "carol"); len(got) != 0 {
 		t.Errorf("a workspace admin was told about a project role change: %+v", got[0])
+	}
+}
+
+// Every sentence that names a role reads as English, whichever role it names
+// (REQ-122: the notification states the access the member now holds).
+// roleWord carries the article, so a template adds none of its own ("with a
+// member role", not "with the a member role"), the article agrees with the
+// role ("an editor", "an owner"), and an access level is named bare ("editor
+// access"). The workspace roles are admin and member; a project's are viewer,
+// reviewer, editor and owner.
+func TestMembershipCopyNamesEveryRoleGrammatically(t *testing.T) {
+	project := func(eventType string, payload map[string]interface{}) domainevents.Event {
+		return domainevents.New(eventType, "proj-1", "bob", "user:alice", payload).WithOrg("org-1")
+	}
+	org := func(eventType string, payload map[string]interface{}) domainevents.Event {
+		return membershipEvent(eventType, "user:alice", payload)
+	}
+	for _, tc := range []struct {
+		event domainevents.Event
+		want  string
+	}{
+		{org(domainevents.OrgMemberAdded, map[string]interface{}{"user_id": "bob", "role": orgs.RoleMember}),
+			"You are now a member of this workspace with a member role."},
+		{org(domainevents.OrgMemberAdded, map[string]interface{}{"user_id": "bob", "role": orgs.RoleAdmin}),
+			"You are now a member of this workspace with an admin role."},
+		{org(domainevents.OrgInvitationAccepted, map[string]interface{}{"user_id": "bob", "role": orgs.RoleAdmin}),
+			"You are now a member of this workspace with an admin role."},
+		{org(domainevents.OrgMemberRoleChanged, map[string]interface{}{"user_id": "bob", "from": orgs.RoleAdmin,
+			"to": orgs.RoleMember}), "Your role in this workspace is now a member."},
+		{project(domainevents.ProjectMemberAdded, map[string]interface{}{"user_id": "bob", "role": "editor"}),
+			"You now have editor access to this project."},
+		{project(domainevents.ProjectMemberAdded, map[string]interface{}{"user_id": "bob", "role": "owner"}),
+			"You now have owner access to this project."},
+		{project(domainevents.ProjectMemberAdded, map[string]interface{}{"user_id": "bob", "role": "viewer"}),
+			"You now have viewer access to this project."},
+		{project(domainevents.ProjectMemberRoleChanged, map[string]interface{}{"user_id": "bob", "from": "viewer",
+			"to": "editor"}), "Your role in this project is now an editor."},
+		{project(domainevents.ProjectMemberRoleChanged, map[string]interface{}{"user_id": "bob", "from": "editor",
+			"to": "owner"}), "Your role in this project is now an owner."},
+		{project(domainevents.ProjectMemberRoleChanged, map[string]interface{}{"user_id": "bob", "from": "owner",
+			"to": "reviewer"}), "Your role in this project is now a reviewer."},
+	} {
+		if _, body, ok := accessMessage(tc.event); !ok || body != tc.want {
+			t.Errorf("%s %v: the member reads %q, want %q", tc.event.EventType, tc.event.Payload, body, tc.want)
+		}
+	}
+
+	// Every template, for every role: no article stacked on another and none
+	// that disagrees with the word after it.
+	stacked := regexp.MustCompile(`\b(?:the|a|an) (?:a|an)\b`)
+	disagrees := regexp.MustCompile(`\ba [aeiou]|\ban [^aeiou ]`)
+	for _, eventType := range []string{domainevents.OrgMemberAdded, domainevents.OrgInvitationAccepted,
+		domainevents.OrgInvitationSent, domainevents.OrgMemberRoleChanged, domainevents.ProjectMemberAdded,
+		domainevents.ProjectMemberRoleChanged} {
+		for _, role := range []string{"", orgs.RoleAdmin, orgs.RoleMember, "viewer", "reviewer", "editor", "owner"} {
+			e := project(eventType, map[string]interface{}{"user_id": "bob", "email": "dave@example.com",
+				"role": role, "from": role, "to": role})
+			_, mine, _ := accessMessage(e)
+			_, theirs, _ := adminMessage(e, "Bob")
+			for _, body := range []string{mine, theirs} {
+				if stacked.MatchString(body) || disagrees.MatchString(body) {
+					t.Errorf("%s with role %q reads %q", eventType, role, body)
+				}
+			}
+		}
 	}
 }
 

@@ -3,6 +3,7 @@ package notify
 import (
 	"fmt"
 	"log/slog"
+	"strings"
 
 	domainevents "github.com/openv/requirements-platform/internal/domain/events"
 	"github.com/openv/requirements-platform/internal/domain/notifications"
@@ -128,7 +129,7 @@ func accessMessage(e domainevents.Event) (title, body string, ok bool) {
 	switch e.EventType {
 	case domainevents.OrgMemberAdded, domainevents.OrgInvitationAccepted:
 		return "You joined a workspace",
-			fmt.Sprintf("You are now a member of this workspace with the %s role.", roleWord(role)), true
+			fmt.Sprintf("You are now a member of this workspace with %s role.", roleWord(role)), true
 	case domainevents.OrgMemberRoleChanged:
 		return "Your workspace access changed",
 			fmt.Sprintf("Your role in this workspace is now %s.", roleWord(to)), true
@@ -142,8 +143,9 @@ func accessMessage(e domainevents.Event) (title, body string, ok bool) {
 		return "You were removed from a workspace",
 			"You no longer have access to this workspace.", true
 	case domainevents.ProjectMemberAdded:
+		// An access level takes no article: "editor access".
 		return "You were added to a project",
-			fmt.Sprintf("You now have %s access to this project.", roleWord(role)), true
+			fmt.Sprintf("You now have %s access to this project.", role), true
 	case domainevents.ProjectMemberRoleChanged:
 		return "Your project access changed",
 			fmt.Sprintf("Your role in this project is now %s.", roleWord(to)), true
@@ -184,17 +186,15 @@ func adminMessage(e domainevents.Event, name string) (title, body string, ok boo
 	return "", "", false
 }
 
-// roleWord renders a role for a sentence, without inventing one for an empty
-// value.
+// roleWord renders a role for a sentence with its article ("an admin", "a
+// member", "an editor"), without inventing one for an empty value. It
+// carries the article, so a template puts none of its own before it.
 func roleWord(role string) string {
 	if role == "" {
 		return "a member"
 	}
-	switch role {
-	case orgs.RoleAdmin:
-		return "an admin"
-	case orgs.RoleMember:
-		return "a member"
+	if strings.ContainsRune("aeiou", rune(role[0])) {
+		return "an " + role
 	}
 	return "a " + role
 }
