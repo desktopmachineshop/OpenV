@@ -181,10 +181,12 @@ GUARD_CODE = [
             "internal/persistence/postgres/migration_freeze_purge_test.go"]),
     ("S4a", ["cmd/server/harness_test.go", "cmd/server/boot_smoke_test.go", "cmd/server/boot_steps_test.go"]),
     ("S4b", ["cmd/server/boot_profiles_test.go", "cmd/server/boot_misconfigured_test.go"]),
-    # The tour's framework (S5a: tour_test.go, its normaliser, bodies and
-    # fixtures) and every area, cmd/server/tour_<slice>_<key>_test.go, so the
-    # areas S5b-S5e add are covered once they merge.
-    ("S5a-S5e", ["cmd/server/tour_test.go", "cmd/server/tour_*_test.go"]),
+    # The tour's framework, each file by name so that a rename shows (S5a:
+    # tour_test.go, its normaliser, bodies and fixtures; S5b: the event-stream
+    # reader), and every area, cmd/server/tour_<slice>_<key>_test.go, so the
+    # areas S5c-S5e add are covered once they merge.
+    ("S5a-S5e", ["cmd/server/tour_test.go", "cmd/server/tour_normalise_test.go", "cmd/server/tour_bodies_test.go",
+                 "cmd/server/tour_fixtures_test.go", "cmd/server/tour_stream_test.go", "cmd/server/tour_*_test.go"]),
     ("S6", ["internal/api/sse_contract_test.go", "internal/api/sse_scan_test.go",
             "internal/api/event_payload_types_test.go", "internal/api/event_payload_drives_test.go",
             "internal/domain/events/event_types_test.go", "frontend/src/components/agents/RunDetailPanel.test.tsx",

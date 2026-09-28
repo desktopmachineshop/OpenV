@@ -259,10 +259,15 @@ func colorModelName(img image.Image) string {
 // ----------------------------------------------------------------------------
 // Multipart byte ranges
 
+// tourPart is one part of a multipart body, a request's form or a
+// multipart/byteranges answer: its headers, and its bytes as text, as
+// base64, or, past tourSmallBinary, by their size and digest (an upload
+// made to reach a size limit).
 type tourPart struct {
-	Headers []string `json:"headers"`
-	Text    *string  `json:"body,omitempty"`
-	Base64  string   `json:"body_base64,omitempty"`
+	Headers []string    `json:"headers"`
+	Text    *string     `json:"body,omitempty"`
+	Base64  string      `json:"body_base64,omitempty"`
+	Digest  *tourDigest `json:"digest,omitempty"`
 }
 
 func summariseMultipart(n *tourNormaliser, raw []byte, boundary string) ([]tourPart, error) {
@@ -294,7 +299,10 @@ func summariseMultipart(n *tourNormaliser, raw []byte, boundary string) ([]tourP
 				part.Headers = append(part.Headers, k+": "+n.text(v))
 			}
 		}
-		if isPrintable(data) {
+		if len(data) > tourSmallBinary {
+			d := digest(data)
+			part.Digest = &d
+		} else if isPrintable(data) {
 			text := n.text(string(data))
 			part.Text = &text
 		} else {

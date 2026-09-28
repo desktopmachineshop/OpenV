@@ -239,6 +239,28 @@ rewrites `coverage.txt` alone with no database. An area is one file,
 `tour_s5a_*_test.go` are the worked examples, and
 `TestTourGoldensAreClaimed` fails on a golden no area writes.
 
+S5b, the second slice (`cmd/server/testdata/tour/s5b/`, areas
+`tour_s5b_*_test.go`, tests `TestTourS5b<Area>`), covers V&V and the suite:
+test runs and results, evidence bundles, files and citations (with the
+evidence download's Range requests), V&V coverage, matrix, gaps and the V&V
+report, impact analysis, requirement quality and the quality-rule sets, the
+product profile and parties, work items and the board's agent launches,
+guided sessions and their copilot chat, stakeholder interviews with their
+public participant routes and rate limits, and the shared-products pool;
+`tour_s5b_test_runs_results_test.go` is its worked example. It added to the
+framework, for the slices after it: `eventStream(n)`, which reads a
+`text/event-stream` answer frame by frame and then closes it
+(`tour_stream_test.go`, since a stream never ends); `tourArea.env`, an
+area's own server variables, listed in its golden; `unordered` on an object,
+for a Go map keyed by random ids; `tour.headerPattern`, a pattern for one
+response header only, such as a `Retry-After` that counts down; and a
+multipart part over 4 KiB recorded by its size and digest, so that an upload
+made to reach a size limit (the evidence area's 1 MB limits, set through
+`tourArea.env`) does not write its megabyte into the golden.
+Regenerate one area with
+`OPENV_TEST_DATABASE_URL=<server URL> UPDATE_GOLDEN=1 go test ./cmd/server -count=1 -run '^TestTourS5b<Area>$'`,
+or the slice with `-run '^TestTourS5b'`.
+
 ### The vulnerability gate
 
 The **Vulnerability scan** job (`vuln`) is a supply-chain gate on every pull

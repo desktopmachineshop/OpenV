@@ -243,6 +243,38 @@ class DataTest(unittest.TestCase):
                     with self.subTest(step=step, path=p):
                         self.assertTrue(os.path.isfile(os.path.join(REPO, p)), p)
 
+    def test_merged_tour_slices_are_guarded(self):
+        # Each merged slice of the API tour (plan S5a-S5e) keeps its area
+        # goldens and its coverage.txt under the S5 golden entry, and each
+        # golden has its area, cmd/server/tour_<slice>_<key>_test.go, which
+        # is guard code of the S5a-S5e row like the framework: a refactor may
+        # add an area, but edits one only in a class C or T commit. A slice
+        # joins this set in the class T commit of the step that merges it.
+        merged = {"S5a", "S5b"}
+        files = set(subprocess.run(["git", "ls-files"], cwd=REPO, capture_output=True, text=True,
+                                   check=True).stdout.split("\n"))
+        for f in ["cmd/server/tour_test.go", "cmd/server/tour_normalise_test.go", "cmd/server/tour_bodies_test.go",
+                  "cmd/server/tour_fixtures_test.go", "cmd/server/tour_stream_test.go"]:
+            with self.subTest(framework=f):
+                self.assertIn(f, files)
+                self.assertEqual(rg.guard_code_step(f), "S5a-S5e")
+        for step in sorted(merged):
+            tour_slice = step.lower()
+            prefix = "cmd/server/testdata/tour/%s/" % tour_slice
+            goldens = sorted(f for f in files if f.startswith(prefix) and f.endswith(".json"))
+            with self.subTest(slice=tour_slice):
+                self.assertTrue(goldens, "no golden under " + prefix)
+                self.assertIn(prefix + "coverage.txt", files)
+                for g in goldens + [prefix + "coverage.txt"]:
+                    self.assertEqual((rg.golden_entry(g) or ("none",))[0], "S5", g)
+                areas = sorted(f for f in files
+                               if re.fullmatch(r"cmd/server/tour_%s_[a-z0-9_]+_test\.go" % tour_slice, f))
+                want = ["cmd/server/tour_%s_%s_test.go" % (tour_slice, os.path.basename(g)[:-len(".json")])
+                        for g in goldens]
+                self.assertEqual(areas, want, "each area golden needs its area file, and each area file its golden")
+                for a in areas:
+                    self.assertEqual(rg.guard_code_step(a), "S5a-S5e", a)
+
     def test_classification(self):
         self.assertEqual(rg.guard_code_step("internal/archtest/graph_test.go"), "S1")
         self.assertIsNone(rg.guard_code_step("internal/archtest/ratchets.json"))

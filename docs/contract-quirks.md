@@ -32,9 +32,9 @@ the Phase 3 consolidations that give quirks their names.
   answers `text/plain`, and a gzipped body carries no type.
   `ContentTypeMiddleware` (`internal/api/handlers.go:1594`) sets no type
   despite its name.
-- **Pinned by, named as:** S5 (S5a for the requirements core; S5b–S5d
-  *(planned)* for the rest); `writeJSONBare` (X1) *(planned)*. Pain points
-  api-core-3, api-suite-org-8.
+- **Pinned by, named as:** S5 (S5a for the requirements core, S5b for V&V
+  and the suite; S5c–S5d *(planned)* for the rest); `writeJSONBare` (X1)
+  *(planned)*. Pain points api-core-3, api-suite-org-8.
 - **Pinned today:** S1 counts the raw encodes, so none is added. Every step
   of the S5a tour records whether its answer, and the gzip variant of each
   GET, carries a `Content-Type`, so a handler that starts or stops setting
@@ -42,8 +42,16 @@ the Phase 3 consolidations that give quirks their names.
   bare encodes: `GET /api/v1/meta/artifact-types` (1,060 bytes) answers
   `text/plain` with or without gzip, and `GET /api/v1/meta/link-types`
   (1,902 bytes) answers `text/plain` plain and no `Content-Type` gzipped
-  (steps 1 and 2 of `cmd/server/testdata/tour/s5a/artifacts_attributes.json`). The other
-  sites wait for S5b–S5d.
+  (steps 1 and 2 of `cmd/server/testdata/tour/s5a/artifacts_attributes.json`).
+  The S5b tour pins the V&V and suite routes the same way: 41 of its slice's
+  74 routes answer their 2xx with a bare encode (the JSON answers of the
+  test-run and result, work-item, guided-session and interview routes, the
+  product profile, and V&V coverage, matrix, gaps and impact), and nine of
+  them show no `Content-Type` once gzipped, among them a run's results and a
+  project's interviews (step 28 of `cmd/server/testdata/tour/s5b/test_runs_results.json`,
+  step 17 of `cmd/server/testdata/tour/s5b/interviews.json`); the evidence,
+  quality, quality-rule, parties and shared-products routes set
+  `application/json`. The other sites wait for S5c–S5d.
 
 ## Q2. A mid-request delete answers 500
 
@@ -61,7 +69,16 @@ the Phase 3 consolidations that give quirks their names.
   `POST /api/v1/artifacts/{id}/restore` on an id no artifact has answer 500,
   since they load the artifact before their guard, where the `GET`, the
   versions and the `DELETE` answer 404 (steps 37 and 47 of
-  `cmd/server/testdata/tour/s5a/artifacts_attributes.json`).
+  `cmd/server/testdata/tour/s5a/artifacts_attributes.json`). The S5b tour
+  pins more of them, where an error no check names falls to
+  `respondInternal`: a result recorded for a test case id no artifact has
+  answers 500 `failed to record test result` (step 20 of
+  `cmd/server/testdata/tour/s5b/test_runs_results.json`), and an id that is
+  not a UUID answers 500 on the evidence bundle, file and citation routes
+  (steps 17, 46, 54, 77 and 84 of `cmd/server/testdata/tour/s5b/evidence.json`)
+  and on a shared product's vote, report and delete (steps 32, 48 and 61 of
+  `cmd/server/testdata/tour/s5b/shared_products.json`), where a well-formed
+  id no row has answers 404 (204 on the uncite, which looks nothing up).
 
 ## Q3. Managed link edits in `PUT /artifacts/{id}` take their own path
 
@@ -150,8 +167,9 @@ the Phase 3 consolidations that give quirks their names.
   100 instead of clamping it
   (`internal/persistence/postgres/event_repository.go:39-41`,
   `agent_run_repository.go:147-149`).
-- **Pinned by, named as:** S5 (S5a for `ListArtifacts` and `GlobalSearch`;
-  the event and run resets and the other parsers S5b–S5d *(planned)*); named
+- **Pinned by, named as:** S5 (S5a for `ListArtifacts` and `GlobalSearch`,
+  S5b for `ListSharedProducts` and `ListProjectInterviewSessions`; the event
+  and run resets and `ListNotifications` S5c–S5d *(planned)*); named
   `limitPolicy` values (X3) *(planned)*. Pain point persistence-v3.
 - **Pinned today:** the S5a tour: `GET /api/v1/artifacts` answers limit 0
   and a limit over 1,000 with all 201 artifacts of a 201-artifact project,
@@ -161,7 +179,16 @@ the Phase 3 consolidations that give quirks their names.
   `cmd/server/testdata/tour/s5a/artifacts_attributes.json`; the exact 1,000
   would take 1,001 artifacts, and is X3a's table test's); `GET /api/v1/search` reads limit 0 as
   20 and caps 51 at 50 (steps 51 and 52 of
-  `cmd/server/testdata/tour/s5a/review_chatter_search.json`).
+  `cmd/server/testdata/tour/s5a/review_chatter_search.json`). The S5b tour:
+  `GET /api/v1/shared-products` reads limit 0, -3 and `abc` as its default
+  of 200 and caps 501 at 500, so a pool of 201 answers 200 rows with no
+  limit and all 201 with limit 501 (steps 3–7, 71 and 72 of
+  `cmd/server/testdata/tour/s5b/shared_products.json`); `GET
+  /api/v1/projects/{id}/interview-sessions` refuses `x` with a 400, reads no
+  limit, 0 and -1 as its default of 20, and caps 500 at 100, which answers
+  all 21 sessions of its project (steps 43–48 of
+  `cmd/server/testdata/tour/s5b/interviews.json`; the exact 100 would take
+  101 sessions, and is X3a's).
 
 ## Q9. `ErrBudgetExceeded` answers 402, 400 or 500 by route
 
@@ -243,8 +270,8 @@ the Phase 3 consolidations that give quirks their names.
   `internal/api/agent_handlers.go:163`) answers `null` for a workspace with no
   agents, while the project repository's lists start from an empty slice
   (`project_repository.go:62`) and answer `[]`.
-- **Pinned by, named as:** S5a (the requirements core; later slices pin
-  their own lists). Pain point api-suite-org-v6.
+- **Pinned by, named as:** S5a (the requirements core), S5b (V&V and the
+  suite); later slices pin their own lists. Pain point api-suite-org-v6.
 - **Pinned today:** the S5a tour records each empty list as the bytes the
   server sends. `null`: an artifact's figures (`GET
   /api/v1/artifacts/{artifactID}/attachments`), its chatter, a project's
@@ -255,6 +282,19 @@ the Phase 3 consolidations that give quirks their names.
   artifacts, a project's figures, share links, the open-source showcase and
   a download's selection. See the steps titled "null (Q14)" in
   `cmd/server/testdata/tour/s5a/{attachments,baselines_documents,exports_imports,links_managed_edits,review_chatter_search}.json`.
+  The S5b tour does the same for its routes. `null`: a project's test runs,
+  a run's results, a project's work items and a work item's activity, a
+  project's guided sessions, a project's interviews with an interview's
+  invites and sessions, and the transcript of an interview session with no
+  message yet (the repository's `nil`, also inside the participant's
+  intro). `[]` or `{}`: evidence bundles and a result's citations (the
+  handlers normalise nil), a run's citations (`{}`), a guided session's
+  drafts and transcript, the V&V entries and every gap list, a
+  project's interview sessions (normalised), and a top-voted shared-products
+  list. See the steps titled "null (Q14)" in
+  `cmd/server/testdata/tour/s5b/{guided_sessions,interviews,test_runs_results,work_items}.json`,
+  steps 1, 47 and 48 of `evidence.json` and step 20 of
+  `vv_coverage_report.json` beside them.
 
 ## Q15. An unknown protected path answers 401; OPTIONS answers 200 unlogged
 
@@ -320,15 +360,26 @@ the Phase 3 consolidations that give quirks their names.
   `internal/api` pass `err.Error()` through (the same count as at
   `d11dee8`); 58 sites map any error to 404 (the plan's count at `d11dee8`,
   not re-counted here).
-- **Pinned by, named as:** S5 (S5a for its routes; S5b–S5d *(planned)*);
-  `decodeJSONMsg` (X1) *(planned)*; the other call sites stay untouched.
+- **Pinned by, named as:** S5 (S5a and S5b for their routes; S5c–S5d
+  *(planned)*); `decodeJSONMsg` (X1) *(planned)*; the other call sites stay
+  untouched.
 - **Pinned today:** S1's `invalid_request_body_literals` ratchet counts the
   lowercase literal (106). The S5a tour pins every error message its routes
   answer, byte for byte: the capital `"Invalid request body"` of
   `RenameAttachment` (step 28 of `cmd/server/testdata/tour/s5a/attachments.json`) beside the
   lowercase one elsewhere, and `err.Error()` passed through, such as
   `encoding/xml`'s text for a truncated ReqIF import (step 46 of
-  `cmd/server/testdata/tour/s5a/exports_imports.json`).
+  `cmd/server/testdata/tour/s5a/exports_imports.json`). The S5b tour pins
+  the driver's text passed through as a 400,
+  `pq: invalid input syntax for type uuid: "not-a-uuid"`, for a run's
+  `baseline_id`, a work item's `assignee_id`, an interview's
+  `guided_session_id` and a guided draft's `parent_id` (step 6 of
+  `test_runs_results.json`, step 5 of `work_items.json`, step 8 of
+  `interviews.json` and step 29 of `guided_sessions.json`, under
+  `cmd/server/testdata/tour/s5b/`), and any lookup error mapped to 404: a
+  quality report's malformed `baseline_id`, a lint of a malformed artifact
+  id and a malformed run's citations (steps 17 and 27 of
+  `quality_profile_parties.json`, step 68 of `evidence.json`).
 
 ## Q20. Inline error chains render string bodies differently
 
