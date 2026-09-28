@@ -50,9 +50,7 @@ var (
 	// user-facing validation, like ErrInvalidRole.
 	ErrNotDeleted = errors.New("workspace is not deleted")
 
-	// ErrLastAdmin flags demoting a workspace's only admin, which would
-	// leave nobody able to manage it — user-facing validation (400), like
-	// ErrInvalidRole.
+	// ErrLastAdmin flags demoting a workspace's only admin (400).
 	ErrLastAdmin = errors.New("cannot demote the last admin of an organization")
 )
 
@@ -169,7 +167,8 @@ type Repository interface {
 	// MemberPreview reports whether a member turned the next stable release
 	// on early for their own account in this workspace (REQ-138).
 	MemberPreview(orgID, userID string) (bool, error)
-	// SetMemberPreview records that choice.
+	// SetMemberPreview records that choice, on the membership: ErrNotMember
+	// when the account holds none.
 	SetMemberPreview(orgID, userID string, enabled bool) error
 	// ClaimBudgetAlert atomically records that an alert for (month, threshold)
 	// is being sent, and reports whether THIS caller won the claim. It writes
@@ -236,9 +235,7 @@ type Repository interface {
 	PurgeOrg(id string) error
 
 	UpsertMember(orgID, userID, role string) error
-	// RemoveMember deletes a membership; ErrNotMember when there was none
-	// to delete, so that of two removals of one member only one succeeds.
-	RemoveMember(orgID, userID string) error
+	RemoveMember(orgID, userID string) error         // ErrNotMember when there was none
 	MemberRole(orgID, userID string) (string, error) // "" when not a member or org deleted
 	// MemberRoleAny is MemberRole without the deleted-org exclusion (restore path).
 	MemberRoleAny(orgID, userID string) (string, error)
@@ -282,7 +279,8 @@ type Service interface {
 	// ListMemberUserIDsByChannel lists accounts with a workspace on channel.
 	ListMemberUserIDsByChannel(channel string) ([]string, error)
 	// MemberPreview and SetMemberPreview read and write a member's own
-	// early switch to the next stable release in one workspace.
+	// early switch to the next stable release in one workspace
+	// (ErrNotMember for an account that is not a member).
 	MemberPreview(orgID, userID string) (bool, error)
 	SetMemberPreview(orgID, userID string, enabled bool) error
 	// SetMonthlyBudget sets (or clears, with nil) the workspace's monthly
@@ -317,7 +315,8 @@ type Service interface {
 	// for DeletionGraceDays, then hard-deleted by PurgeExpired. Personal
 	// workspaces are refused with ErrPersonalOrgDelete. Idempotent.
 	DeleteOrg(id string) (*Org, error)
-	// RestoreOrg brings a soft-deleted workspace back within the grace period.
+	// RestoreOrg brings a soft-deleted workspace back within the grace
+	// period and returns it as restored.
 	RestoreOrg(id string) (*Org, error)
 	// ListDeletedForUser returns the caller's soft-deleted workspaces.
 	ListDeletedForUser(userID string) ([]*Org, error)
@@ -454,11 +453,8 @@ func (s *DefaultService) SetReleaseChannel(id, channel string) (*Org, error) {
 	if err != nil {
 		return nil, err
 	}
-	if !ChannelChoosable(org.BilledPlan) {
-		return nil, ErrChannelLocked
-	}
-	if channel != "" && !ValidChannel(channel) {
-		return nil, ErrInvalidChannel
+	if err := CheckReleaseChannel(org.BilledPlan, channel); err != nil {
+		return nil, err
 	}
 	if err := s.repo.SetReleaseChannel(id, channel); err != nil {
 		return nil, err
@@ -500,10 +496,7 @@ func (s *DefaultService) SetUpgradeWindow(id string, day, hour int, timezone str
 	if err != nil {
 		return nil, err
 	}
-	if !ChannelChoosable(org.BilledPlan) {
-		return nil, ErrChannelLocked
-	}
-	if err := ValidateUpgradeWindow(day, hour, timezone); err != nil {
+	if err := CheckUpgradeWindow(org.BilledPlan, day, hour, timezone); err != nil {
 		return nil, err
 	}
 	if day == 0 {
@@ -586,12 +579,21 @@ func (s *DefaultService) SetMemberPreview(orgID, userID string, enabled bool) er
 	return s.repo.SetMemberPreview(orgID, userID, enabled)
 }
 
+// ValidateMonthlyBudget is SetMonthlyBudget's refusal without its write:
+// ErrInvalidBudget for a negative amount; nil clears the budget.
+func ValidateMonthlyBudget(budget *float64) error {
+	if budget != nil && *budget < 0 {
+		return ErrInvalidBudget
+	}
+	return nil
+}
+
 // SetMonthlyBudget sets or clears (nil) the workspace's monthly spend budget.
 // The write only touches monthly_budget_usd; the alert-dedupe columns are left
 // to the atomic ClaimBudgetAlert path. A negative amount is rejected.
 func (s *DefaultService) SetMonthlyBudget(id string, budget *float64) (*Org, error) {
-	if budget != nil && *budget < 0 {
-		return nil, ErrInvalidBudget
+	if err := ValidateMonthlyBudget(budget); err != nil {
+		return nil, err
 	}
 	org, err := s.Get(id)
 	if err != nil {
@@ -672,7 +674,13 @@ func (s *DefaultService) RestoreOrg(id string) (*Org, error) {
 	if err := s.repo.RestoreOrg(id); err != nil {
 		return nil, err
 	}
+	// Answer the row as restored (the write stamps updated_at); the restore
+	// is stored, so a failed read back still answers it.
+	if restored, err := s.Get(id); err == nil {
+		return restored, nil
+	}
 	org.DeletedAt = nil
+	org.UpdatedAt = time.Now()
 	return org, nil
 }
 
@@ -728,13 +736,9 @@ func (s *DefaultService) AddMember(orgID, userID, role string) error {
 	return s.repo.UpsertMember(orgID, userID, role)
 }
 
-// RemoveMember removes a member, refusing to remove the last admin and,
-// with ErrNotMember as SetMemberRole does, an account that is not a member:
-// nothing is removed, so nothing may be reported as removed. The role read
-// comes first for the last-admin refusal, so two removals of one member at
-// once (two admins, or a member leaving while an admin removes them) can
-// both pass it; the repository's delete then refuses the one that finds the
-// row gone with ErrNotMember too.
+// RemoveMember removes a member, refusing the last admin and an account that
+// is not a member (ErrNotMember, which the store also answers to the second
+// of two removals that both passed the role read).
 func (s *DefaultService) RemoveMember(orgID, userID string) error {
 	role, err := s.repo.MemberRole(orgID, userID)
 	if err != nil {

@@ -654,7 +654,7 @@
     },
     {
       "n": 15,
-      "title": "a rename with a budget that is a string: 400, after the rename was stored",
+      "title": "a rename with a budget that is a string: 400, and nothing stored",
       "actor": "owner",
       "acting_in": "<w>",
       "route": "PUT /api/v1/orgs/{id}",
@@ -667,7 +667,7 @@
         "body": "{\"name\":\"Tour Workspace Again\",\"monthly_budget_usd\":\"lots\"}"
       },
       "notes": [
-        "UpdateOrg writes the name before it reads the budget, so the refusal leaves the rename in place (the next step reads it), as it does for a refused channel or window"
+        "UpdateOrg checks every part of the request before it writes any, so the refusal leaves the name as it was (the next step reads it), as it does for a refused channel or window"
       ],
       "status": 400,
       "content_type": "application/json",
@@ -687,7 +687,7 @@
     },
     {
       "n": 16,
-      "title": "the rename the refused update stored",
+      "title": "W as the refused update left it: the name and updated_at of the last update that passed",
       "actor": "owner",
       "acting_in": "<w>",
       "route": "GET /api/v1/orgs/{id}",
@@ -702,12 +702,12 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<w>\",\"name\":\"Tour Workspace Again\",\"slug\":\"tour-workspace-<id8>\",\"type\":\"company\",\"plan\":\"single\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@step 1>\",\"updated_at\":\"<time@step 15>\",\"has_logo\":false,\"release_channel\":\"nightly\",\"release_channel_locked\":true,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\"}"
+        "{\"id\":\"<w>\",\"name\":\"Tour Workspace Renamed\",\"slug\":\"tour-workspace-<id8>\",\"type\":\"company\",\"plan\":\"single\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@step 1>\",\"updated_at\":\"<time@step 13>\",\"has_logo\":false,\"release_channel\":\"nightly\",\"release_channel_locked\":true,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\"}"
       ],
       "trailing_newline": true,
       "parsed": {
         "id": "<w>",
-        "name": "Tour Workspace Again",
+        "name": "Tour Workspace Renamed",
         "slug": "tour-workspace-<id8>",
         "type": "company",
         "plan": "single",
@@ -717,7 +717,7 @@
         },
         "created_by": "<owner>",
         "created_at": "<time@step 1>",
-        "updated_at": "<time@step 15>",
+        "updated_at": "<time@step 13>",
         "has_logo": false,
         "release_channel": "nightly",
         "release_channel_locked": true,
@@ -1579,12 +1579,12 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<w>\",\"name\":\"Tour Workspace Again\",\"slug\":\"tour-workspace-<id8>\",\"type\":\"company\",\"plan\":\"business\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@step 1>\",\"updated_at\":\"<time@step 32>\",\"has_logo\":false,\"release_channel\":\"stable\",\"release_channel_locked\":false,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\"}"
+        "{\"id\":\"<w>\",\"name\":\"Tour Workspace Renamed\",\"slug\":\"tour-workspace-<id8>\",\"type\":\"company\",\"plan\":\"business\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@step 1>\",\"updated_at\":\"<time@step 32>\",\"has_logo\":false,\"release_channel\":\"stable\",\"release_channel_locked\":false,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\"}"
       ],
       "trailing_newline": true,
       "parsed": {
         "id": "<w>",
-        "name": "Tour Workspace Again",
+        "name": "Tour Workspace Renamed",
         "slug": "tour-workspace-<id8>",
         "type": "company",
         "plan": "business",
@@ -1740,12 +1740,12 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<w>\",\"name\":\"Tour Workspace Again\",\"slug\":\"tour-workspace-<id8>\",\"type\":\"company\",\"plan\":\"business\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@step 1>\",\"updated_at\":\"<time@step 32>\",\"has_logo\":false,\"release_channel\":\"stable\",\"release_channel_locked\":false,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\"}"
+        "{\"id\":\"<w>\",\"name\":\"Tour Workspace Renamed\",\"slug\":\"tour-workspace-<id8>\",\"type\":\"company\",\"plan\":\"business\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@step 1>\",\"updated_at\":\"<time@step 32>\",\"has_logo\":false,\"release_channel\":\"stable\",\"release_channel_locked\":false,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\"}"
       ],
       "trailing_newline": true,
       "parsed": {
         "id": "<w>",
-        "name": "Tour Workspace Again",
+        "name": "Tour Workspace Renamed",
         "slug": "tour-workspace-<id8>",
         "type": "company",
         "plan": "business",
@@ -1948,12 +1948,12 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<w>\",\"name\":\"Tour Workspace Again\",\"slug\":\"tour-workspace-<id8>\",\"type\":\"company\",\"plan\":\"business\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@step 1>\",\"updated_at\":\"<time@step 39>\",\"has_logo\":false,\"release_channel\":\"stable\",\"release_channel_locked\":false,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\"}"
+        "{\"id\":\"<w>\",\"name\":\"Tour Workspace Renamed\",\"slug\":\"tour-workspace-<id8>\",\"type\":\"company\",\"plan\":\"business\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@step 1>\",\"updated_at\":\"<time@step 39>\",\"has_logo\":false,\"release_channel\":\"stable\",\"release_channel_locked\":false,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\"}"
       ],
       "trailing_newline": true,
       "parsed": {
         "id": "<w>",
-        "name": "Tour Workspace Again",
+        "name": "Tour Workspace Renamed",
         "slug": "tour-workspace-<id8>",
         "type": "company",
         "plan": "business",
@@ -2026,12 +2026,12 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<w>\",\"name\":\"Tour Workspace Again\",\"slug\":\"tour-workspace-<id8>\",\"type\":\"company\",\"plan\":\"business\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@step 1>\",\"updated_at\":\"<time@step 41>\",\"has_logo\":false,\"release_channel\":\"stable\",\"release_channel_locked\":false,\"stable_release\":\"\",\"upgrade_day\":15,\"upgrade_hour\":9,\"upgrade_timezone\":\"Europe/Berlin\"}"
+        "{\"id\":\"<w>\",\"name\":\"Tour Workspace Renamed\",\"slug\":\"tour-workspace-<id8>\",\"type\":\"company\",\"plan\":\"business\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@step 1>\",\"updated_at\":\"<time@step 41>\",\"has_logo\":false,\"release_channel\":\"stable\",\"release_channel_locked\":false,\"stable_release\":\"\",\"upgrade_day\":15,\"upgrade_hour\":9,\"upgrade_timezone\":\"Europe/Berlin\"}"
       ],
       "trailing_newline": true,
       "parsed": {
         "id": "<w>",
-        "name": "Tour Workspace Again",
+        "name": "Tour Workspace Renamed",
         "slug": "tour-workspace-<id8>",
         "type": "company",
         "plan": "business",
@@ -2134,12 +2134,12 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<w>\",\"name\":\"Tour Workspace Again\",\"slug\":\"tour-workspace-<id8>\",\"type\":\"company\",\"plan\":\"business\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@step 1>\",\"updated_at\":\"<time@step 44>\",\"has_logo\":false,\"release_channel\":\"stable\",\"release_channel_locked\":false,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\"}"
+        "{\"id\":\"<w>\",\"name\":\"Tour Workspace Renamed\",\"slug\":\"tour-workspace-<id8>\",\"type\":\"company\",\"plan\":\"business\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@step 1>\",\"updated_at\":\"<time@step 44>\",\"has_logo\":false,\"release_channel\":\"stable\",\"release_channel_locked\":false,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\"}"
       ],
       "trailing_newline": true,
       "parsed": {
         "id": "<w>",
-        "name": "Tour Workspace Again",
+        "name": "Tour Workspace Renamed",
         "slug": "tour-workspace-<id8>",
         "type": "company",
         "plan": "business",
@@ -2342,7 +2342,7 @@
     },
     {
       "n": 51,
-      "title": "the platform admin, a member of no shared workspace, previews in W: the guard lets it by, and the write finds no membership",
+      "title": "the platform admin, a member of no shared workspace, previews in W: the guard lets it by, and the write finds no membership, so the not-member 403",
       "actor": "admin",
       "route": "PUT /api/v1/orgs/{id}/members/me/preview",
       "request": {
@@ -2354,23 +2354,20 @@
         "body": "{\"enabled\":true}"
       },
       "notes": [
-        "the repository's UPDATE of org_members matches no row and reports nothing, so the handler's ErrNotMember 403 never fires: 200, with preview false"
+        "the preview is kept on the membership: the repository's UPDATE of org_members matches no row and answers orgs.ErrNotMember, which the handler answers with its text"
       ],
-      "status": 200,
-      "content_type": "text/plain; charset=utf-8",
+      "status": 403,
+      "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": "<varies>",
+      "content_length": 54,
       "kind": "json",
       "body": [
-        "{\"channel\":\"stable\",\"stable_release\":\"\",\"preview\":false,\"features\":\"<every feature off>\"}"
+        "{\"error\":\"you are not a member of this organization\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "channel": "stable",
-        "stable_release": "",
-        "preview": false,
-        "features": "<every feature off>"
+        "error": "you are not a member of this organization"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
@@ -2407,12 +2404,12 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<w>\",\"name\":\"Tour Workspace Again\",\"slug\":\"tour-workspace-<id8>\",\"type\":\"company\",\"plan\":\"business\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@step 1>\",\"updated_at\":\"<time@step 52>\",\"has_logo\":true,\"release_channel\":\"stable\",\"release_channel_locked\":false,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\"}"
+        "{\"id\":\"<w>\",\"name\":\"Tour Workspace Renamed\",\"slug\":\"tour-workspace-<id8>\",\"type\":\"company\",\"plan\":\"business\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@step 1>\",\"updated_at\":\"<time@step 52>\",\"has_logo\":true,\"release_channel\":\"stable\",\"release_channel_locked\":false,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\"}"
       ],
       "trailing_newline": true,
       "parsed": {
         "id": "<w>",
-        "name": "Tour Workspace Again",
+        "name": "Tour Workspace Renamed",
         "slug": "tour-workspace-<id8>",
         "type": "company",
         "plan": "business",
@@ -2549,12 +2546,12 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<w>\",\"name\":\"Tour Workspace Again\",\"slug\":\"tour-workspace-<id8>\",\"type\":\"company\",\"plan\":\"business\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@step 1>\",\"updated_at\":\"<time@step 56>\",\"has_logo\":true,\"release_channel\":\"stable\",\"release_channel_locked\":false,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\"}"
+        "{\"id\":\"<w>\",\"name\":\"Tour Workspace Renamed\",\"slug\":\"tour-workspace-<id8>\",\"type\":\"company\",\"plan\":\"business\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@step 1>\",\"updated_at\":\"<time@step 56>\",\"has_logo\":true,\"release_channel\":\"stable\",\"release_channel_locked\":false,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\"}"
       ],
       "trailing_newline": true,
       "parsed": {
         "id": "<w>",
-        "name": "Tour Workspace Again",
+        "name": "Tour Workspace Renamed",
         "slug": "tour-workspace-<id8>",
         "type": "company",
         "plan": "business",
@@ -2608,12 +2605,12 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<w>\",\"name\":\"Tour Workspace Again\",\"slug\":\"tour-workspace-<id8>\",\"type\":\"company\",\"plan\":\"business\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@step 1>\",\"updated_at\":\"<time@step 57>\",\"has_logo\":true,\"release_channel\":\"stable\",\"release_channel_locked\":false,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\"}"
+        "{\"id\":\"<w>\",\"name\":\"Tour Workspace Renamed\",\"slug\":\"tour-workspace-<id8>\",\"type\":\"company\",\"plan\":\"business\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@step 1>\",\"updated_at\":\"<time@step 57>\",\"has_logo\":true,\"release_channel\":\"stable\",\"release_channel_locked\":false,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\"}"
       ],
       "trailing_newline": true,
       "parsed": {
         "id": "<w>",
-        "name": "Tour Workspace Again",
+        "name": "Tour Workspace Renamed",
         "slug": "tour-workspace-<id8>",
         "type": "company",
         "plan": "business",
@@ -2667,12 +2664,12 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<w>\",\"name\":\"Tour Workspace Again\",\"slug\":\"tour-workspace-<id8>\",\"type\":\"company\",\"plan\":\"business\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@step 1>\",\"updated_at\":\"<time@step 58>\",\"has_logo\":true,\"release_channel\":\"stable\",\"release_channel_locked\":false,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\"}"
+        "{\"id\":\"<w>\",\"name\":\"Tour Workspace Renamed\",\"slug\":\"tour-workspace-<id8>\",\"type\":\"company\",\"plan\":\"business\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@step 1>\",\"updated_at\":\"<time@step 58>\",\"has_logo\":true,\"release_channel\":\"stable\",\"release_channel_locked\":false,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\"}"
       ],
       "trailing_newline": true,
       "parsed": {
         "id": "<w>",
-        "name": "Tour Workspace Again",
+        "name": "Tour Workspace Renamed",
         "slug": "tour-workspace-<id8>",
         "type": "company",
         "plan": "business",
@@ -2800,7 +2797,7 @@
     },
     {
       "n": 62,
-      "title": "a GIF declared as a PNG: any image's bytes pass, and the declared type names the file",
+      "title": "a GIF declared as a PNG: its bytes are an image, but not of the declared type",
       "actor": "owner",
       "acting_in": "<w>",
       "route": "POST /api/v1/orgs/{id}/logo",
@@ -2823,43 +2820,25 @@
           ]
         }
       },
-      "status": 200,
-      "content_type": "text/plain; charset=utf-8",
+      "status": 400,
+      "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": "<varies>",
+      "content_length": 70,
       "kind": "json",
       "body": [
-        "{\"id\":\"<w>\",\"name\":\"Tour Workspace Again\",\"slug\":\"tour-workspace-<id8>\",\"type\":\"company\",\"plan\":\"business\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@step 1>\",\"updated_at\":\"<time@step 62>\",\"has_logo\":true,\"release_channel\":\"stable\",\"release_channel_locked\":false,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\"}"
+        "{\"error\":\"File content does not match an image of the declared type\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "id": "<w>",
-        "name": "Tour Workspace Again",
-        "slug": "tour-workspace-<id8>",
-        "type": "company",
-        "plan": "business",
-        "limits": {},
-        "billing": {
-          "status": "none"
-        },
-        "created_by": "<owner>",
-        "created_at": "<time@step 1>",
-        "updated_at": "<time@step 62>",
-        "has_logo": true,
-        "release_channel": "stable",
-        "release_channel_locked": false,
-        "stable_release": "",
-        "upgrade_day": 0,
-        "upgrade_hour": 0,
-        "upgrade_timezone": ""
+        "error": "File content does not match an image of the declared type"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
       "n": 63,
-      "title": "the logo is now that GIF, served as the PNG it was declared",
+      "title": "the logo is still the WebP, as image/webp: the refused upload stored nothing",
       "actor": "owner",
       "acting_in": "<w>",
       "route": "GET /api/v1/orgs/{id}/logo",
@@ -2868,15 +2847,15 @@
         "path": "/api/v1/orgs/<w>/logo"
       },
       "status": 200,
-      "content_type": "image/png",
+      "content_type": "image/webp",
       "headers": [
         "Cache-Control: private, max-age=300",
         "Content-Disposition: inline"
       ],
       "security_headers": "standard",
-      "content_length": 35,
+      "content_length": 34,
       "kind": "bytes",
-      "body_base64": "R0lGODlhAQABAIAAAC5ttP///ywAAAAAAQABAAACAkQBADs=",
+      "body_base64": "UklGRhoAAABXRUJQVlA4TA0AAAAvAAAAEAcQERGIiP4HAA==",
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
@@ -3091,12 +3070,12 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<w>\",\"name\":\"Tour Workspace Again\",\"slug\":\"tour-workspace-<id8>\",\"type\":\"company\",\"plan\":\"business\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@step 1>\",\"updated_at\":\"<time@step 69>\",\"has_logo\":false,\"release_channel\":\"stable\",\"release_channel_locked\":false,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\"}"
+        "{\"id\":\"<w>\",\"name\":\"Tour Workspace Renamed\",\"slug\":\"tour-workspace-<id8>\",\"type\":\"company\",\"plan\":\"business\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@step 1>\",\"updated_at\":\"<time@step 69>\",\"has_logo\":false,\"release_channel\":\"stable\",\"release_channel_locked\":false,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\"}"
       ],
       "trailing_newline": true,
       "parsed": {
         "id": "<w>",
-        "name": "Tour Workspace Again",
+        "name": "Tour Workspace Renamed",
         "slug": "tour-workspace-<id8>",
         "type": "company",
         "plan": "business",
@@ -3160,12 +3139,12 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<w>\",\"name\":\"Tour Workspace Again\",\"slug\":\"tour-workspace-<id8>\",\"type\":\"company\",\"plan\":\"business\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@step 1>\",\"updated_at\":\"<time@step 71>\",\"has_logo\":false,\"release_channel\":\"stable\",\"release_channel_locked\":false,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\"}"
+        "{\"id\":\"<w>\",\"name\":\"Tour Workspace Renamed\",\"slug\":\"tour-workspace-<id8>\",\"type\":\"company\",\"plan\":\"business\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@step 1>\",\"updated_at\":\"<time@step 71>\",\"has_logo\":false,\"release_channel\":\"stable\",\"release_channel_locked\":false,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\"}"
       ],
       "trailing_newline": true,
       "parsed": {
         "id": "<w>",
-        "name": "Tour Workspace Again",
+        "name": "Tour Workspace Renamed",
         "slug": "tour-workspace-<id8>",
         "type": "company",
         "plan": "business",
@@ -3219,12 +3198,12 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<w>\",\"name\":\"Tour Workspace Again\",\"slug\":\"tour-workspace-<id8>\",\"type\":\"company\",\"plan\":\"business\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@step 1>\",\"updated_at\":\"<time@step 72>\",\"has_logo\":true,\"release_channel\":\"stable\",\"release_channel_locked\":false,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\"}"
+        "{\"id\":\"<w>\",\"name\":\"Tour Workspace Renamed\",\"slug\":\"tour-workspace-<id8>\",\"type\":\"company\",\"plan\":\"business\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@step 1>\",\"updated_at\":\"<time@step 72>\",\"has_logo\":true,\"release_channel\":\"stable\",\"release_channel_locked\":false,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\"}"
       ],
       "trailing_newline": true,
       "parsed": {
         "id": "<w>",
-        "name": "Tour Workspace Again",
+        "name": "Tour Workspace Renamed",
         "slug": "tour-workspace-<id8>",
         "type": "company",
         "plan": "business",
@@ -3282,7 +3261,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"active_org\":\"<w>\",\"orgs\":[{\"id\":\"<member.workspace>\",\"name\":\"Tour Member's Space\",\"slug\":\"tour-member-s-space-<id8>\",\"type\":\"personal\",\"plan\":\"single\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<member>\",\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\",\"has_logo\":false,\"release_channel\":\"nightly\",\"release_channel_locked\":true,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\",\"role\":\"admin\"},{\"id\":\"<w>\",\"name\":\"Tour Workspace Again\",\"slug\":\"tour-workspace-<id8>\",\"type\":\"company\",\"plan\":\"business\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@step 1>\",\"updated_at\":\"<time@step 72>\",\"has_logo\":true,\"release_channel\":\"stable\",\"release_channel_locked\":false,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\",\"role\":\"member\"}]}"
+        "{\"active_org\":\"<w>\",\"orgs\":[{\"id\":\"<member.workspace>\",\"name\":\"Tour Member's Space\",\"slug\":\"tour-member-s-space-<id8>\",\"type\":\"personal\",\"plan\":\"single\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<member>\",\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\",\"has_logo\":false,\"release_channel\":\"nightly\",\"release_channel_locked\":true,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\",\"role\":\"admin\"},{\"id\":\"<w>\",\"name\":\"Tour Workspace Renamed\",\"slug\":\"tour-workspace-<id8>\",\"type\":\"company\",\"plan\":\"business\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@step 1>\",\"updated_at\":\"<time@step 72>\",\"has_logo\":true,\"release_channel\":\"stable\",\"release_channel_locked\":false,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\",\"role\":\"member\"}]}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -3312,7 +3291,7 @@
           },
           {
             "id": "<w>",
-            "name": "Tour Workspace Again",
+            "name": "Tour Workspace Renamed",
             "slug": "tour-workspace-<id8>",
             "type": "company",
             "plan": "business",
@@ -3822,7 +3801,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"active_org\":\"<owner.workspace>\",\"orgs\":[{\"id\":\"<w>\",\"name\":\"Tour Workspace Again\",\"slug\":\"tour-workspace-<id8>\",\"type\":\"company\",\"plan\":\"business\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@step 1>\",\"updated_at\":\"<time@step 88>\",\"deleted_at\":\"<time@step 88>\",\"has_logo\":true,\"release_channel\":\"stable\",\"release_channel_locked\":false,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\",\"role\":\"admin\"}]}"
+        "{\"active_org\":\"<owner.workspace>\",\"orgs\":[{\"id\":\"<w>\",\"name\":\"Tour Workspace Renamed\",\"slug\":\"tour-workspace-<id8>\",\"type\":\"company\",\"plan\":\"business\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@step 1>\",\"updated_at\":\"<time@step 88>\",\"deleted_at\":\"<time@step 88>\",\"has_logo\":true,\"release_channel\":\"stable\",\"release_channel_locked\":false,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\",\"role\":\"admin\"}]}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -3830,7 +3809,7 @@
         "orgs": [
           {
             "id": "<w>",
-            "name": "Tour Workspace Again",
+            "name": "Tour Workspace Renamed",
             "slug": "tour-workspace-<id8>",
             "type": "company",
             "plan": "business",
@@ -3916,7 +3895,7 @@
         "path": "/api/v1/orgs/<w>/restore"
       },
       "notes": [
-        "the answer is the workspace as read before the restore, deleted_at dropped: its updated_at is the delete's, while the row is stamped anew (the read of W below shows it)"
+        "the answer is the workspace as the restore stored it: deleted_at gone, and updated_at the restore's (the read of W below shows the same)"
       ],
       "status": 200,
       "content_type": "text/plain; charset=utf-8",
@@ -3925,12 +3904,12 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<w>\",\"name\":\"Tour Workspace Again\",\"slug\":\"tour-workspace-<id8>\",\"type\":\"company\",\"plan\":\"business\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@step 1>\",\"updated_at\":\"<time@step 88>\",\"has_logo\":true,\"release_channel\":\"stable\",\"release_channel_locked\":false,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\"}"
+        "{\"id\":\"<w>\",\"name\":\"Tour Workspace Renamed\",\"slug\":\"tour-workspace-<id8>\",\"type\":\"company\",\"plan\":\"business\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@step 1>\",\"updated_at\":\"<time@step 94>\",\"has_logo\":true,\"release_channel\":\"stable\",\"release_channel_locked\":false,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\"}"
       ],
       "trailing_newline": true,
       "parsed": {
         "id": "<w>",
-        "name": "Tour Workspace Again",
+        "name": "Tour Workspace Renamed",
         "slug": "tour-workspace-<id8>",
         "type": "company",
         "plan": "business",
@@ -3940,7 +3919,7 @@
         },
         "created_by": "<owner>",
         "created_at": "<time@step 1>",
-        "updated_at": "<time@step 88>",
+        "updated_at": "<time@step 94>",
         "has_logo": true,
         "release_channel": "stable",
         "release_channel_locked": false,
@@ -4043,12 +4022,12 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<w>\",\"name\":\"Tour Workspace Again\",\"slug\":\"tour-workspace-<id8>\",\"type\":\"company\",\"plan\":\"business\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@step 1>\",\"updated_at\":\"<time@step 94>\",\"has_logo\":true,\"release_channel\":\"stable\",\"release_channel_locked\":false,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\"}"
+        "{\"id\":\"<w>\",\"name\":\"Tour Workspace Renamed\",\"slug\":\"tour-workspace-<id8>\",\"type\":\"company\",\"plan\":\"business\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@step 1>\",\"updated_at\":\"<time@step 94>\",\"has_logo\":true,\"release_channel\":\"stable\",\"release_channel_locked\":false,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\"}"
       ],
       "trailing_newline": true,
       "parsed": {
         "id": "<w>",
-        "name": "Tour Workspace Again",
+        "name": "Tour Workspace Renamed",
         "slug": "tour-workspace-<id8>",
         "type": "company",
         "plan": "business",
@@ -4085,7 +4064,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"active_org\":\"<owner.workspace>\",\"orgs\":[{\"id\":\"<owner.workspace>\",\"name\":\"Tour Owner's Space\",\"slug\":\"tour-owner-s-space-<id8>\",\"type\":\"personal\",\"plan\":\"single\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\",\"has_logo\":false,\"release_channel\":\"nightly\",\"release_channel_locked\":true,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\",\"role\":\"admin\"},{\"id\":\"<annex>\",\"name\":\"Tour Annex\",\"slug\":\"tour-annex-<id8>\",\"type\":\"company\",\"plan\":\"single\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@before step 5>\",\"updated_at\":\"<time@before step 5>\",\"has_logo\":false,\"release_channel\":\"nightly\",\"release_channel_locked\":true,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\",\"role\":\"admin\"},{\"id\":\"<w>\",\"name\":\"Tour Workspace Again\",\"slug\":\"tour-workspace-<id8>\",\"type\":\"company\",\"plan\":\"business\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@step 1>\",\"updated_at\":\"<time@step 94>\",\"has_logo\":true,\"release_channel\":\"stable\",\"release_channel_locked\":false,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\",\"role\":\"admin\"}]}"
+        "{\"active_org\":\"<owner.workspace>\",\"orgs\":[{\"id\":\"<owner.workspace>\",\"name\":\"Tour Owner's Space\",\"slug\":\"tour-owner-s-space-<id8>\",\"type\":\"personal\",\"plan\":\"single\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\",\"has_logo\":false,\"release_channel\":\"nightly\",\"release_channel_locked\":true,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\",\"role\":\"admin\"},{\"id\":\"<annex>\",\"name\":\"Tour Annex\",\"slug\":\"tour-annex-<id8>\",\"type\":\"company\",\"plan\":\"single\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@before step 5>\",\"updated_at\":\"<time@before step 5>\",\"has_logo\":false,\"release_channel\":\"nightly\",\"release_channel_locked\":true,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\",\"role\":\"admin\"},{\"id\":\"<w>\",\"name\":\"Tour Workspace Renamed\",\"slug\":\"tour-workspace-<id8>\",\"type\":\"company\",\"plan\":\"business\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@step 1>\",\"updated_at\":\"<time@step 94>\",\"has_logo\":true,\"release_channel\":\"stable\",\"release_channel_locked\":false,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\",\"role\":\"admin\"}]}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -4137,7 +4116,7 @@
           },
           {
             "id": "<w>",
-            "name": "Tour Workspace Again",
+            "name": "Tour Workspace Renamed",
             "slug": "tour-workspace-<id8>",
             "type": "company",
             "plan": "business",
@@ -4371,7 +4350,7 @@
     },
     {
       "n": 108,
-      "title": "the platform admin uploads a logo for a workspace that does not exist: the file is written before the workspace is looked up, so a 500, and the file stays",
+      "title": "the platform admin uploads a logo for a workspace that does not exist: 404, the workspace looked up before anything is written",
       "actor": "admin",
       "route": "POST /api/v1/orgs/{id}/logo",
       "request": {
@@ -4394,27 +4373,27 @@
         }
       },
       "notes": [
-        "the uploads directory at the end lists org-logos/<phantom>.png beside W's logo"
+        "the uploads directory at the end lists W's logo alone"
       ],
-      "status": 500,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
       "content_length": 32,
       "kind": "json",
       "body": [
-        "{\"error\":\"Failed to save logo\"}"
+        "{\"error\":\"workspace not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "Failed to save logo"
+        "error": "workspace not found"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
       "n": 109,
-      "title": "the platform admin makes a workspace that does not exist its session's active one: 204, stored with no workspace behind it",
+      "title": "the platform admin makes a workspace that does not exist its session's active one: 404, nothing stored",
       "actor": "admin",
       "route": "POST /api/v1/orgs/{id}/activate",
       "request": {
@@ -4422,20 +4401,27 @@
         "path": "/api/v1/orgs/<phantom>/activate"
       },
       "notes": [
-        "sessions.active_org_id takes any UUID; ActivateOrg looks nothing up once the guard lets it by"
+        "sessions.active_org_id would take any UUID, so ActivateOrg looks the workspace up once the guard lets the platform admin by"
       ],
-      "status": 204,
-      "content_type": null,
+      "status": 404,
+      "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": null,
-      "kind": "empty",
+      "content_length": 32,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"workspace not found\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "workspace not found"
+      },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
       "n": 110,
-      "title": "the platform admin's workspaces with no X-Org-ID, its session active in a workspace that does not exist: its personal one, the stored id falling through",
+      "title": "the platform admin's workspaces with no X-Org-ID, after the refused activation: its personal one",
       "actor": "admin",
       "acting_in": "(no X-Org-ID: the server resolves the workspace)",
       "route": "GET /api/v1/orgs",
@@ -4484,7 +4470,6 @@
     }
   ],
   "uploads": [
-    "org-logos/<phantom>.png (75 bytes)",
     "org-logos/<w>.png (75 bytes)"
   ],
   "outbound_requests": [

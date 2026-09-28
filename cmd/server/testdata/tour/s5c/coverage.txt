@@ -87,7 +87,7 @@ POST /api/v1/notifications/read: 200, 400, 401, 500; notifications_push
 POST /api/v1/notifications/read-all: 200, 401; notifications_push
 POST /api/v1/org-teams/{id}/members/{userId}: 201, 400, 403, 404; members_teams
 POST /api/v1/orgs: 201, 400, 403; self_hosted_cross_site_sso, tiers_secure_runner_sessions, workspaces_logo
-POST /api/v1/orgs/{id}/activate: 204, 401, 403; sessions_auth, workspaces_logo
+POST /api/v1/orgs/{id}/activate: 204, 401, 403, 404; sessions_auth, workspaces_logo
 POST /api/v1/orgs/{id}/billing/change: 200, 400, 404, 409, 429; billing, workspaces_logo
 POST /api/v1/orgs/{id}/billing/checkout: 200, 400, 403, 404, 409, 429, 503; billing, workspaces_logo
 POST /api/v1/orgs/{id}/billing/portal: 200, 404, 409, 503; billing, workspaces_logo
@@ -97,7 +97,7 @@ POST /api/v1/orgs/{id}/hosted-runner: 400, 403; runner_keys_connector, tiers_sec
 POST /api/v1/orgs/{id}/hosted-runner/start: 403, 404; runner_keys_connector (errors only)
 POST /api/v1/orgs/{id}/hosted-runner/stop: 404; runner_keys_connector (errors only)
 POST /api/v1/orgs/{id}/invitations: 201, 202, 400, 401, 403, 409, 429; invitations_closed, mail_password_admin, self_hosted_cross_site_sso, tiers_secure_runner_sessions
-POST /api/v1/orgs/{id}/logo: 200, 400, 403, 413, 500; workspaces_logo
+POST /api/v1/orgs/{id}/logo: 200, 400, 403, 404, 413; workspaces_logo
 POST /api/v1/orgs/{id}/members: 201, 202, 400, 403, 409, 429; invitations_closed, mail_password_admin, members_teams, self_hosted_cross_site_sso, tiers_secure_runner_sessions
 POST /api/v1/orgs/{id}/my-runner-key: 201, 403; runner_keys_connector
 POST /api/v1/orgs/{id}/restore: 200, 400, 403, 404; workspaces_logo

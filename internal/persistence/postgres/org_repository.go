@@ -198,12 +198,21 @@ func (r *OrgRepository) MemberPreview(orgID, userID string) (bool, error) {
 	return on, err
 }
 
-// SetMemberPreview writes a member's early switch.
+// SetMemberPreview writes a member's early switch. The switch lives on the
+// membership, so an account with none in the workspace (a platform admin,
+// whom the workspace guard lets by) is refused with orgs.ErrNotMember
+// rather than answered as though it were stored.
 func (r *OrgRepository) SetMemberPreview(orgID, userID string, enabled bool) error {
-	_, err := r.db.Exec(`
+	res, err := r.db.Exec(`
 		UPDATE org_members SET preview_next_stable = $3 WHERE org_id = $1 AND user_id = $2
 	`, orgID, userID, enabled)
-	return err
+	if err != nil {
+		return err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return orgs.ErrNotMember
+	}
+	return nil
 }
 
 // SetLogo writes only logo_path and logo_mime (empty strings clear them).
@@ -482,18 +491,13 @@ func (r *OrgRepository) UpsertMember(orgID, userID, role string) error {
 }
 
 // RemoveMember deletes a membership, answering orgs.ErrNotMember when there
-// was none to delete: of two removals that both read the role first, only
-// one removes the row.
+// was none to delete, so of two concurrent removals only one succeeds.
 func (r *OrgRepository) RemoveMember(orgID, userID string) error {
 	res, err := r.db.Exec(`DELETE FROM org_members WHERE org_id = $1 AND user_id = $2`, orgID, userID)
 	if err != nil {
 		return err
 	}
-	n, err := res.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if n == 0 {
+	if n, _ := res.RowsAffected(); n == 0 {
 		return orgs.ErrNotMember
 	}
 	return nil

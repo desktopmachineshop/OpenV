@@ -277,7 +277,9 @@ func (h *Handler) GetOrg(w http.ResponseWriter, r *http.Request) {
 // UpdateOrg renames a workspace and/or sets its monthly spend budget (admin).
 // monthly_budget_usd is honored only when present in the body: a JSON number
 // sets the budget, JSON null clears it, and an omitted key leaves it
-// unchanged (so a plain rename never disturbs the budget).
+// unchanged (so a plain rename never disturbs the budget). Every part of the
+// request is checked before any part is written (checkOrgUpdate), so a
+// request refused for one part changes nothing.
 func (h *Handler) UpdateOrg(w http.ResponseWriter, r *http.Request) {
 	orgID := mux.Vars(r)["id"]
 	if !h.requireOrgRole(w, r, orgID, orgs.RoleAdmin) {
@@ -297,6 +299,10 @@ func (h *Handler) UpdateOrg(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
+	update, ok := h.checkOrgUpdate(w, orgID, req.MonthlyBudgetUSD, req.ReleaseChannel, req.UpgradeWindow)
+	if !ok {
+		return
+	}
 
 	org, err := h.orgService.UpdateOrg(orgID, req.Name)
 	if err != nil {
@@ -307,16 +313,7 @@ func (h *Handler) UpdateOrg(w http.ResponseWriter, r *http.Request) {
 	// Budget is only touched when the key is present. json.RawMessage is nil
 	// for an absent key; "null" clears the budget, a number sets it.
 	if len(req.MonthlyBudgetUSD) > 0 {
-		var budget *float64
-		if err := json.Unmarshal(req.MonthlyBudgetUSD, &budget); err != nil {
-			writeJSONError(w, http.StatusBadRequest, "monthly_budget_usd must be a number or null")
-			return
-		}
-		if err := h.checkFlag(orgID, orgs.LimitWorkspaceBudget); err != nil {
-			h.writeLimitError(w, err)
-			return
-		}
-		org, err = h.orgService.SetMonthlyBudget(orgID, budget)
+		org, err = h.orgService.SetMonthlyBudget(orgID, update.budget)
 		if err != nil {
 			if errors.Is(err, orgs.ErrInvalidBudget) {
 				writeJSONError(w, http.StatusBadRequest, err.Error())
@@ -340,20 +337,7 @@ func (h *Handler) UpdateOrg(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(req.UpgradeWindow) > 0 {
-		var window *struct {
-			Day      int    `json:"day"`
-			Hour     int    `json:"hour"`
-			Timezone string `json:"timezone"`
-		}
-		if err := json.Unmarshal(req.UpgradeWindow, &window); err != nil {
-			writeJSONError(w, http.StatusBadRequest, "upgrade_window must be {day, hour, timezone} or null")
-			return
-		}
-		day, hour, tz := 0, 0, ""
-		if window != nil {
-			day, hour, tz = window.Day, window.Hour, window.Timezone
-		}
-		org, err = h.orgService.SetUpgradeWindow(orgID, day, hour, tz)
+		org, err = h.orgService.SetUpgradeWindow(orgID, update.day, update.hour, update.timezone)
 		if err != nil {
 			if errors.Is(err, orgs.ErrInvalidWindow) || errors.Is(err, orgs.ErrChannelLocked) {
 				writeJSONError(w, http.StatusBadRequest, err.Error())
@@ -365,6 +349,72 @@ func (h *Handler) UpdateOrg(w http.ResponseWriter, r *http.Request) {
 	}
 
 	json.NewEncoder(w).Encode(org)
+}
+
+// orgUpdate is what a workspace update sets beside the name, as
+// checkOrgUpdate parsed it: the budget (nil clears it) and the upgrade window
+// (day 0 clears it). Each is written only when its key was sent.
+type orgUpdate struct {
+	budget    *float64
+	day, hour int
+	timezone  string
+}
+
+// checkOrgUpdate parses and checks the parts of a workspace update that can
+// be refused, before UpdateOrg writes any of them: a rename sent with a
+// budget the plan does not include used to be stored before the budget was
+// refused, and a budget before a refused channel or window. The checks are
+// the writes' own (the service's validation, and the plan flag the budget
+// needs), in the order the writes run, so each refusal is the answer it was;
+// the workspace is read first, so an unknown one is still answered by the
+// rename's not-found (a 400, Q19). It answers a refusal itself, and reports
+// whether the update may go ahead.
+func (h *Handler) checkOrgUpdate(w http.ResponseWriter, orgID string, budget json.RawMessage, channel *string, window json.RawMessage) (orgUpdate, bool) {
+	var update orgUpdate
+	org, err := h.orgService.Get(orgID)
+	if err != nil {
+		writeJSONError(w, http.StatusBadRequest, err.Error())
+		return update, false
+	}
+	if len(budget) > 0 {
+		if err := json.Unmarshal(budget, &update.budget); err != nil {
+			writeJSONError(w, http.StatusBadRequest, "monthly_budget_usd must be a number or null")
+			return update, false
+		}
+		if err := h.checkFlag(orgID, orgs.LimitWorkspaceBudget); err != nil {
+			h.writeLimitError(w, err)
+			return update, false
+		}
+		if err := orgs.ValidateMonthlyBudget(update.budget); err != nil {
+			writeJSONError(w, http.StatusBadRequest, err.Error())
+			return update, false
+		}
+	}
+	if channel != nil {
+		if err := orgs.CheckReleaseChannel(org.BilledPlan, *channel); err != nil {
+			writeJSONError(w, http.StatusBadRequest, err.Error())
+			return update, false
+		}
+	}
+	if len(window) > 0 {
+		var parsed *struct {
+			Day      int    `json:"day"`
+			Hour     int    `json:"hour"`
+			Timezone string `json:"timezone"`
+		}
+		if err := json.Unmarshal(window, &parsed); err != nil {
+			writeJSONError(w, http.StatusBadRequest, "upgrade_window must be {day, hour, timezone} or null")
+			return update, false
+		}
+		if parsed != nil {
+			update.day, update.hour, update.timezone = parsed.Day, parsed.Hour, parsed.Timezone
+		}
+		if err := orgs.CheckUpgradeWindow(org.BilledPlan, update.day, update.hour, update.timezone); err != nil {
+			writeJSONError(w, http.StatusBadRequest, err.Error())
+			return update, false
+		}
+	}
+	return update, true
 }
 
 // --- Workspace logo ---
@@ -385,6 +435,19 @@ var rasterImageExtensions = map[string]string{
 	"image/webp": ".webp",
 }
 
+// uploadIsRasterImage reports whether data is an image of the declared type,
+// one of rasterImageExtensions: the bytes must sniff as that very type
+// (http.DetectContentType), not merely as some image, since a workspace logo
+// and a profile picture are served as the type they were stored under and
+// never sniffed. A GIF declared as a PNG is refused, and so is a BMP or an
+// icon declared as any of the four.
+func uploadIsRasterImage(declared string, data []byte) bool {
+	if _, ok := rasterImageExtensions[declared]; !ok || len(data) == 0 {
+		return false
+	}
+	return http.DetectContentType(data) == declared
+}
+
 // orgLogoPath is where a workspace's logo of the given type is stored:
 // one file per workspace under uploads/org-logos, named by org id so an
 // upload replaces the previous logo of the same type in place.
@@ -393,12 +456,20 @@ func (h *Handler) orgLogoPath(orgID, ext string) string {
 }
 
 // UploadOrgLogo stores a workspace logo (admin). The multipart field "file"
-// must be a PNG, JPEG, GIF or WebP whose bytes match the declared type, and
+// must be a PNG, JPEG, GIF or WebP whose bytes are the declared type, and
 // at most maxOrgLogoBytes (413 beyond that). A previous logo of another
 // type is removed so one workspace never leaves two files behind.
 func (h *Handler) UploadOrgLogo(w http.ResponseWriter, r *http.Request) {
 	orgID := mux.Vars(r)["id"]
 	if !h.requireOrgRole(w, r, orgID, orgs.RoleAdmin) {
+		return
+	}
+	// The workspace is looked up before anything is read or written: the
+	// guard lets a platform admin by for any id, and a file written for a
+	// workspace that does not exist would stay on disk with no record of it.
+	prev, err := h.orgService.Get(orgID)
+	if err != nil {
+		respondError(w, r, http.StatusNotFound, "workspace not found", err)
 		return
 	}
 	// The API-wide body cap skips a multipart request so that an upload
@@ -431,7 +502,7 @@ func (h *Handler) UploadOrgLogo(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusRequestEntityTooLarge, "Logo is larger than 2 MB")
 		return
 	}
-	if !uploadLooksLikeImage(mimeType, data) {
+	if !uploadIsRasterImage(mimeType, data) {
 		writeJSONError(w, http.StatusBadRequest, "File content does not match an image of the declared type")
 		return
 	}
@@ -445,15 +516,26 @@ func (h *Handler) UploadOrgLogo(w http.ResponseWriter, r *http.Request) {
 		respondInternal(w, r, "Failed to save logo", err)
 		return
 	}
-	// The previous logo, if it was stored under another extension, is now
-	// orphaned; drop it. The record is read before it is overwritten.
-	if prev, err := h.orgService.Get(orgID); err == nil && prev != nil && prev.LogoPath != "" && prev.LogoPath != dest {
-		_ = os.Remove(prev.LogoPath)
+	// The logo this one replaces is the one on record now, not when the
+	// request arrived: another upload may have recorded its own while this
+	// body was being received.
+	if cur, err := h.orgService.Get(orgID); err == nil {
+		prev = cur
 	}
 	org, err := h.orgService.SetLogo(orgID, dest, mimeType)
 	if err != nil {
+		// Unrecorded, the new file is an orphan unless it replaced the
+		// recorded logo in place.
+		if dest != prev.LogoPath {
+			_ = os.Remove(dest)
+		}
 		respondInternal(w, r, "Failed to save logo", err)
 		return
+	}
+	// The previous logo, if it was stored under another extension, is now
+	// orphaned; drop it. The record was read before it was overwritten.
+	if prev.LogoPath != "" && prev.LogoPath != dest {
+		_ = os.Remove(prev.LogoPath)
 	}
 	json.NewEncoder(w).Encode(org)
 }
@@ -520,10 +602,16 @@ func (h *Handler) DeleteOrgLogo(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(org)
 }
 
-// ActivateOrg persists the session's default workspace.
+// ActivateOrg persists the session's default workspace. The workspace is
+// looked up first: the guard lets a platform admin by for any id, and an id
+// with no workspace behind it is refused rather than stored.
 func (h *Handler) ActivateOrg(w http.ResponseWriter, r *http.Request) {
 	orgID := mux.Vars(r)["id"]
 	if !h.requireOrgRole(w, r, orgID, orgs.RoleMember) {
+		return
+	}
+	if _, err := h.orgService.Get(orgID); err != nil {
+		respondError(w, r, http.StatusNotFound, "workspace not found", err)
 		return
 	}
 	cookie, err := r.Cookie(SessionCookieName)
