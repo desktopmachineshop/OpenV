@@ -247,3 +247,37 @@ func TestDeleteAvatarRemovesFileAndRecord(t *testing.T) {
 		t.Fatalf("no session: status = %d, want 401", w.Code)
 	}
 }
+
+// TestUploadAvatarBytesMustBeTheDeclaredType: a picture is served as the
+// type it was declared, so its bytes must be that type, not merely some
+// image (the same images the logo upload refuses). Nothing is written or
+// recorded for a refused one.
+func TestUploadAvatarBytesMustBeTheDeclaredType(t *testing.T) {
+	for _, tc := range mislabelledImages(t) {
+		t.Run(tc.name, func(t *testing.T) {
+			h, svc := avatarFixture(t)
+			w := httptest.NewRecorder()
+			h.UploadAvatar(w, avatarUploadReq(t, "u2", tc.declared, tc.data))
+			if w.Code != http.StatusBadRequest ||
+				w.Body.String() != "{\"error\":\"File content does not match an image of the declared type\"}\n" {
+				t.Fatalf("status = %d (body %q), want the 400 for content that does not match", w.Code, w.Body.String())
+			}
+			if svc.byID["u2"].AvatarPath != "" {
+				t.Fatalf("picture recorded for a refused upload")
+			}
+			if entries, _ := os.ReadDir(filepath.Join(h.uploadsDir, "avatars")); len(entries) != 0 {
+				t.Fatalf("refused upload left %d file(s) on disk", len(entries))
+			}
+		})
+	}
+	for declared, data := range map[string][]byte{
+		"image/png": smallPNG(t), "image/jpeg": []byte(jpegBytes), "image/gif": []byte(gifBytes), "image/webp": []byte(webpBytes),
+	} {
+		h, _ := avatarFixture(t)
+		w := httptest.NewRecorder()
+		h.UploadAvatar(w, avatarUploadReq(t, "u2", declared, data))
+		if w.Code != http.StatusOK {
+			t.Fatalf("%s as itself: status = %d, want 200 (body %q)", declared, w.Code, w.Body.String())
+		}
+	}
+}

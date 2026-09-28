@@ -45,7 +45,7 @@ func avatarURL(userID string, at time.Time) string {
 }
 
 // UploadAvatar stores the caller's profile picture. The multipart field
-// "file" must be a PNG, JPEG, GIF or WebP whose bytes match the declared
+// "file" must be a PNG, JPEG, GIF or WebP whose bytes are the declared
 // type, and at most maxAvatarBytes (413 beyond that). A previous picture of
 // another type is removed so one account never leaves two files behind.
 // Answers the updated user, whose avatar_url now points at the picture.
@@ -85,7 +85,7 @@ func (h *Handler) UploadAvatar(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusRequestEntityTooLarge, "Picture is larger than 2 MB")
 		return
 	}
-	if !uploadLooksLikeImage(mimeType, data) {
+	if !uploadIsRasterImage(mimeType, data) {
 		writeJSONError(w, http.StatusBadRequest, "File content does not match an image of the declared type")
 		return
 	}

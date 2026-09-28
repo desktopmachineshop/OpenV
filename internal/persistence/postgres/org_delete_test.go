@@ -90,6 +90,46 @@ func TestOrgSoftDeleteLifecycle(t *testing.T) {
 	}
 }
 
+// TestOrgRestoreAnswersTheRestoredWorkspace: a restore answers the workspace
+// as the restore stored it. It used to answer the workspace as read before
+// the write, deleted_at dropped, so its updated_at was the delete's while the
+// row held the restore's.
+func TestOrgRestoreAnswersTheRestoredWorkspace(t *testing.T) {
+	db := testDB(t)
+	initTestSchema(t, db)
+	svc := orgs.NewDefaultService(NewOrgRepository(db))
+
+	userID := uuid.New().String()
+	if _, err := db.Exec(`INSERT INTO users (id, email, name) VALUES ($1, 'restore@example.com', 'Restore')`, userID); err != nil {
+		t.Fatal(err)
+	}
+	org, err := svc.CreateOrg("Restored Workspace", orgs.TypeCompany, userID)
+	if err != nil {
+		t.Fatalf("CreateOrg: %v", err)
+	}
+	deleted, err := svc.DeleteOrg(org.ID)
+	if err != nil {
+		t.Fatalf("DeleteOrg: %v", err)
+	}
+	restored, err := svc.RestoreOrg(org.ID)
+	if err != nil {
+		t.Fatalf("RestoreOrg: %v", err)
+	}
+	stored, err := svc.Get(org.ID)
+	if err != nil {
+		t.Fatalf("Get: %v", err)
+	}
+	if restored.DeletedAt != nil || stored.DeletedAt != nil {
+		t.Fatalf("deleted_at after restore: answered %v, stored %v; want neither", restored.DeletedAt, stored.DeletedAt)
+	}
+	if !restored.UpdatedAt.Equal(stored.UpdatedAt) {
+		t.Fatalf("restore answered updated_at %s, the row holds %s", restored.UpdatedAt, stored.UpdatedAt)
+	}
+	if !restored.UpdatedAt.After(*deleted.DeletedAt) {
+		t.Fatalf("restore answered updated_at %s, not after the delete at %s", restored.UpdatedAt, *deleted.DeletedAt)
+	}
+}
+
 // TestOrgPurge locks in the hard-delete sweep: purging removes the org row
 // and its non-cascading dependents (projects, artifacts, links, chatter,
 // test runs), while another workspace's data survives untouched.

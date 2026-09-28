@@ -185,12 +185,13 @@ func uploadReadRefused(w http.ResponseWriter, err error) bool {
 
 // uploadLooksLikeImage checks the file's leading bytes against the type the
 // uploader declared, so that a file named and labelled as an image but
-// carrying something else is refused. It stays image-only because the avatar
-// and workspace-logo uploads depend on it: those are rendered as pictures and
-// have no business accepting a CAD file. Go's sniffer recognises the raster
-// formats the catalog accepts except TIFF, which is matched by its magic
-// number; an SVG has no magic number and sniffs as XML or plain text, so it
-// is accepted when the text opens with an svg or xml element.
+// carrying something else is refused. It asks only that a raster type's
+// bytes be some image; the avatar and workspace-logo uploads, served as the
+// type they declared, hold the bytes to that very type (uploadIsRasterImage)
+// instead. Go's sniffer recognises the raster formats the catalog accepts
+// except TIFF, which is matched by its magic number; an SVG has no magic
+// number and sniffs as XML or plain text, so it is accepted when the text
+// opens with an svg or xml element.
 func uploadLooksLikeImage(declared string, data []byte) bool {
 	if len(data) == 0 {
 		return false

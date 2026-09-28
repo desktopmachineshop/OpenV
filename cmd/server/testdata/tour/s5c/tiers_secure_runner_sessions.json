@@ -881,7 +881,7 @@
     },
     {
       "n": 15,
-      "title": "rename W and set a budget in one request: the budget is refused, after the rename was stored",
+      "title": "rename W and set a budget in one request: the budget is refused, and the rename with it",
       "actor": "owner",
       "acting_in": "<w>",
       "route": "PUT /api/v1/orgs/{id}",
@@ -894,7 +894,7 @@
         "body": "{\"name\":\"Tour Tiers Budgeted\",\"monthly_budget_usd\":100}"
       },
       "notes": [
-        "pinned as it is: UpdateOrg stores the name before it checks the budget's flag"
+        "UpdateOrg checks the budget's flag, with every other part of the request, before it writes any"
       ],
       "status": 403,
       "content_type": "application/json",
@@ -920,7 +920,7 @@
     },
     {
       "n": 16,
-      "title": "W as it now is: the name the refused request sent",
+      "title": "W as it now is: the name of the plain rename, which the refused request left",
       "actor": "owner",
       "acting_in": "<w>",
       "route": "GET /api/v1/orgs/{id}",
@@ -935,12 +935,12 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<w>\",\"name\":\"Tour Tiers Budgeted\",\"slug\":\"tour-tiers-<id8>\",\"type\":\"company\",\"plan\":\"single\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@step 6>\",\"updated_at\":\"<time@step 15>\",\"has_logo\":false,\"release_channel\":\"nightly\",\"release_channel_locked\":true,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\"}"
+        "{\"id\":\"<w>\",\"name\":\"Tour Tiers Renamed\",\"slug\":\"tour-tiers-<id8>\",\"type\":\"company\",\"plan\":\"single\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@step 6>\",\"updated_at\":\"<time@step 14>\",\"has_logo\":false,\"release_channel\":\"nightly\",\"release_channel_locked\":true,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\"}"
       ],
       "trailing_newline": true,
       "parsed": {
         "id": "<w>",
-        "name": "Tour Tiers Budgeted",
+        "name": "Tour Tiers Renamed",
         "slug": "tour-tiers-<id8>",
         "type": "company",
         "plan": "single",
@@ -950,7 +950,7 @@
         },
         "created_by": "<owner>",
         "created_at": "<time@step 6>",
-        "updated_at": "<time@step 15>",
+        "updated_at": "<time@step 14>",
         "has_logo": false,
         "release_channel": "nightly",
         "release_channel_locked": true,
@@ -1042,12 +1042,12 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<w>\",\"name\":\"Tour Tiers Budgeted\",\"slug\":\"tour-tiers-<id8>\",\"type\":\"company\",\"plan\":\"business\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@step 6>\",\"updated_at\":\"<time@step 19>\",\"has_logo\":false,\"release_channel\":\"stable\",\"release_channel_locked\":false,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\"}"
+        "{\"id\":\"<w>\",\"name\":\"Tour Tiers Renamed\",\"slug\":\"tour-tiers-<id8>\",\"type\":\"company\",\"plan\":\"business\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@step 6>\",\"updated_at\":\"<time@step 19>\",\"has_logo\":false,\"release_channel\":\"stable\",\"release_channel_locked\":false,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\"}"
       ],
       "trailing_newline": true,
       "parsed": {
         "id": "<w>",
-        "name": "Tour Tiers Budgeted",
+        "name": "Tour Tiers Renamed",
         "slug": "tour-tiers-<id8>",
         "type": "company",
         "plan": "business",
@@ -1182,12 +1182,12 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<w>\",\"name\":\"Tour Tiers Budgeted\",\"slug\":\"tour-tiers-<id8>\",\"type\":\"company\",\"plan\":\"single\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@step 6>\",\"updated_at\":\"<time@step 23>\",\"has_logo\":false,\"release_channel\":\"nightly\",\"release_channel_locked\":true,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\"}"
+        "{\"id\":\"<w>\",\"name\":\"Tour Tiers Renamed\",\"slug\":\"tour-tiers-<id8>\",\"type\":\"company\",\"plan\":\"single\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@step 6>\",\"updated_at\":\"<time@step 23>\",\"has_logo\":false,\"release_channel\":\"nightly\",\"release_channel_locked\":true,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\"}"
       ],
       "trailing_newline": true,
       "parsed": {
         "id": "<w>",
-        "name": "Tour Tiers Budgeted",
+        "name": "Tour Tiers Renamed",
         "slug": "tour-tiers-<id8>",
         "type": "company",
         "plan": "single",
@@ -1342,7 +1342,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"invitation\":{\"id\":\"<invitation>\",\"org_id\":\"<w>\",\"email\":\"tour-invitee@example.com\",\"role\":\"member\",\"invited_by\":\"<owner>\",\"expires_at\":\"<time>\",\"created_at\":\"<time@step 27>\",\"org_name\":\"Tour Tiers Budgeted\",\"invited_by_name\":\"Tour Owner\"},\"link\":\"http://localhost:3000/login?invite=<hex64:1>\",\"emailed\":false}"
+        "{\"invitation\":{\"id\":\"<invitation>\",\"org_id\":\"<w>\",\"email\":\"tour-invitee@example.com\",\"role\":\"member\",\"invited_by\":\"<owner>\",\"expires_at\":\"<time>\",\"created_at\":\"<time@step 27>\",\"org_name\":\"Tour Tiers Renamed\",\"invited_by_name\":\"Tour Owner\"},\"link\":\"http://localhost:3000/login?invite=<hex64:1>\",\"emailed\":false}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1354,7 +1354,7 @@
           "invited_by": "<owner>",
           "expires_at": "<time>",
           "created_at": "<time@step 27>",
-          "org_name": "Tour Tiers Budgeted",
+          "org_name": "Tour Tiers Renamed",
           "invited_by_name": "Tour Owner"
         },
         "link": "http://localhost:3000/login?invite=<hex64:1>",
