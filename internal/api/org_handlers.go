@@ -145,7 +145,9 @@ func (h *Handler) DeleteOrg(w http.ResponseWriter, r *http.Request) {
 // workspace. Platform admins only: a plan is what the operator grants (the
 // open-source tier, a negotiated enterprise plan), never something a
 // workspace picks for itself, and a workspace admin who could raise their
-// own plan would be raising their own limits.
+// own plan would be raising their own limits. A grant (enterprise,
+// open_source) over a live subscription is 409 already_subscribed: the
+// subscription is cancelled first (REQ-168).
 func (h *Handler) SetOrgPlan(w http.ResponseWriter, r *http.Request) {
 	user := CurrentUser(r)
 	if user == nil {
@@ -170,6 +172,10 @@ func (h *Handler) SetOrgPlan(w http.ResponseWriter, r *http.Request) {
 			writeJSONError(w, http.StatusBadRequest, "unknown plan: one of single, business_lite, business, enterprise, self_host, open_source")
 		case errors.Is(err, orgs.ErrNotFound):
 			writeJSONError(w, http.StatusNotFound, err.Error())
+		case errors.Is(err, orgs.ErrBillingActive):
+			// The checkout's refusal for the same state: a live
+			// subscription decides the plan until it is cancelled.
+			writeJSONErrorCode(w, http.StatusConflict, err.Error(), ErrCodeAlreadySubscribed)
 		default:
 			respondInternal(w, r, "failed to set the workspace plan", err)
 		}
@@ -614,7 +620,7 @@ func (h *Handler) UpdateOrgMember(w http.ResponseWriter, r *http.Request) {
 	// needs, so both ends of the transition are carried on the event.
 	previous, _ := h.orgService.RoleInOrg(vars["id"], vars["userId"])
 	if err := h.orgService.SetMemberRole(vars["id"], vars["userId"], req.Role); err != nil {
-		if errors.Is(err, orgs.ErrInvalidRole) || errors.Is(err, orgs.ErrNotMember) {
+		if errors.Is(err, orgs.ErrInvalidRole) || errors.Is(err, orgs.ErrNotMember) || errors.Is(err, orgs.ErrLastAdmin) {
 			writeJSONError(w, http.StatusBadRequest, err.Error())
 		} else {
 			respondInternal(w, r, "failed to update workspace member", err)

@@ -49,6 +49,11 @@ var (
 	// ErrNotDeleted flags a restore of a workspace that is not deleted —
 	// user-facing validation, like ErrInvalidRole.
 	ErrNotDeleted = errors.New("workspace is not deleted")
+
+	// ErrLastAdmin flags demoting a workspace's only admin, which would
+	// leave nobody able to manage it — user-facing validation (400), like
+	// ErrInvalidRole.
+	ErrLastAdmin = errors.New("cannot demote the last admin of an organization")
 )
 
 // DeletionGraceDays is how long a soft-deleted workspace stays restorable
@@ -231,6 +236,8 @@ type Repository interface {
 	PurgeOrg(id string) error
 
 	UpsertMember(orgID, userID, role string) error
+	// RemoveMember deletes a membership; ErrNotMember when there was none
+	// to delete, so that of two removals of one member only one succeeds.
 	RemoveMember(orgID, userID string) error
 	MemberRole(orgID, userID string) (string, error) // "" when not a member or org deleted
 	// MemberRoleAny is MemberRole without the deleted-org exclusion (restore path).
@@ -260,6 +267,7 @@ type Service interface {
 	// default and, for the open-source plan, what is public. ErrInvalidPlan
 	// for a name PlanDefaults does not know. The channel override is kept;
 	// the resolved channel follows the new plan where the override is empty.
+	// ErrBillingActive for a granted plan while a subscription is live.
 	SetPlan(id, plan string) (*Org, error)
 	// SetUpgradeWindow records when stable releases turn on for a company
 	// workspace: day of month 1-28 and hour 0-23 in an IANA time zone; day
@@ -720,11 +728,20 @@ func (s *DefaultService) AddMember(orgID, userID, role string) error {
 	return s.repo.UpsertMember(orgID, userID, role)
 }
 
-// RemoveMember removes a member, refusing to remove the last admin.
+// RemoveMember removes a member, refusing to remove the last admin and,
+// with ErrNotMember as SetMemberRole does, an account that is not a member:
+// nothing is removed, so nothing may be reported as removed. The role read
+// comes first for the last-admin refusal, so two removals of one member at
+// once (two admins, or a member leaving while an admin removes them) can
+// both pass it; the repository's delete then refuses the one that finds the
+// row gone with ErrNotMember too.
 func (s *DefaultService) RemoveMember(orgID, userID string) error {
 	role, err := s.repo.MemberRole(orgID, userID)
 	if err != nil {
 		return err
+	}
+	if role == "" {
+		return ErrNotMember
 	}
 	if role == RoleAdmin {
 		admins, err := s.repo.CountAdmins(orgID)
@@ -756,7 +773,7 @@ func (s *DefaultService) SetMemberRole(orgID, userID, role string) error {
 			return err
 		}
 		if admins <= 1 {
-			return errors.New("cannot demote the last admin of an organization")
+			return ErrLastAdmin
 		}
 	}
 	return s.repo.UpsertMember(orgID, userID, role)

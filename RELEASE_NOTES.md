@@ -70,6 +70,31 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   a citation a different note, remove it and cite the evidence again with the
   new note.
 
+- **Demoting a workspace's last admin now says why it cannot be done.**
+  Changing the only admin's role to member failed with *failed to update
+  workspace member*, an error that looked like a fault on our side. It is
+  now refused with the reason, that the last admin of a workspace cannot be
+  demoted, as removing that admin already was: make another member an admin
+  first.
+
+- **Removing someone who is no longer a member of the workspace is
+  refused.** Removing a person who had already left, or whom another admin
+  had removed a moment before, answered as if it had worked, and the
+  workspace's admins were told of a removal that did not happen. The same
+  went for an account named through the API that was never a member. Such a
+  removal is now refused, as a role change for that person already was, and
+  only removals that happen are announced. In the Members tab, either
+  refusal now refreshes the list and says the person is no longer a member,
+  instead of saying that you are not one.
+
+- **A platform admin granting a plan to a workspace that pays by
+  subscription is told why it is refused.** Moving a workspace with a live
+  subscription onto the enterprise or open-source plan from the platform
+  admin page failed with *failed to set the workspace plan*. It is now
+  refused with the reason, that the workspace has a live subscription to
+  cancel before a plan can be granted, and an API client gets `409` with the
+  code `already_subscribed`, as a checkout for that workspace does.
+
 ## 0.15.0 — 2026-09-22
 
 ### New features

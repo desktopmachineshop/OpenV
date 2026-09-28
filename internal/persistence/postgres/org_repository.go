@@ -481,10 +481,22 @@ func (r *OrgRepository) UpsertMember(orgID, userID, role string) error {
 	return err
 }
 
-// RemoveMember deletes a membership.
+// RemoveMember deletes a membership, answering orgs.ErrNotMember when there
+// was none to delete: of two removals that both read the role first, only
+// one removes the row.
 func (r *OrgRepository) RemoveMember(orgID, userID string) error {
-	_, err := r.db.Exec(`DELETE FROM org_members WHERE org_id = $1 AND user_id = $2`, orgID, userID)
-	return err
+	res, err := r.db.Exec(`DELETE FROM org_members WHERE org_id = $1 AND user_id = $2`, orgID, userID)
+	if err != nil {
+		return err
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return orgs.ErrNotMember
+	}
+	return nil
 }
 
 // MemberRole returns the user's role in an org ("" when not a member). A

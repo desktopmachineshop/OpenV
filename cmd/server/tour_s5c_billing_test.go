@@ -59,11 +59,12 @@ import (
 // with W's seats as its quantity, and the nightly channel override the
 // billing path writes when a workspace moves onto a channel-choosing plan;
 // a second checkout of a subscribed workspace; a platform admin's grant over
-// a live subscription, refused as a 500); the owner's second checkout, with
-// no trial left, and a currency its customer is not locked to; the provider
-// failing writes on Y (a checkout, which carries an idempotency key, tried
-// three times with the same key after the customer it made was kept; a
-// portal session, which carries none, tried once); and last the two
+// a live subscription, refused as that checkout is, 409 already_subscribed,
+// with the domain's text); the owner's second checkout, with no trial left,
+// and a currency its customer is not locked to; the provider failing writes
+// on Y (a checkout, which carries an idempotency key, tried three times with
+// the same key after the customer it made was kept; a portal session, which
+// carries none, tried once); and last the two
 // per-workspace buckets, drained on D: the refresh's, and the one checkout,
 // plan change and portal share (Q18's family), which a refresh does not
 // touch and another workspace's writes do not share (G, on a granted plan,
@@ -418,7 +419,8 @@ func billingTour(tr *tour, stripe *billingStripe) {
 	tr.step("check out W again: it holds a live subscription", o, checkout, at("id", "{{w}}"),
 		billingPlan("business_lite", "month"),
 		note("W's fifth billing write: the Lite and Business checkouts, the portal and the plan change went before it"))
-	tr.step("a platform admin grants W open_source while its subscription is live: refused, as a 500", tr.admin,
+	tr.step("a platform admin grants W open_source while its subscription is live: 409 already_subscribed, as W's "+
+		"checkout was", tr.admin,
 		"PUT /api/v1/orgs/{id}/plan", at("id", "{{w}}"), jsonBody(`{"plan":"open_source"}`))
 
 	// The owner's trial went with W's bound subscription; the personal
