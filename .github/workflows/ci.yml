@@ -71,8 +71,14 @@ jobs:
       - name: go vet
         run: go vet . ./cmd/... ./internal/...
 
+      # OPENV_TEST_DATABASE_URL is set for the whole job, so a plain go test
+      # would also run the API tour and the three boot tests that the steps
+      # below run again (-count=1 -v, to fail on a skip and to tie every golden
+      # to a test that passed): skipped here, so that each runs once. The boot
+      # harness's own checks (TestBootSteps, TestBootStepsFollowStages,
+      # TestBootGoldensAreClaimed) still run here.
       - name: go test
-        run: go test . ./cmd/... ./internal/...
+        run: go test -skip '^(TestTour.*|TestBootSmoke|TestBootProfiles|TestBootMisconfigured)$' . ./cmd/... ./internal/...
 
       # The refactor tools outside Go: classify_commits (S14a) and the
       # Refactor guard's checker (S14b, which refactor-guard.yml also runs
@@ -121,18 +127,21 @@ jobs:
       # The API tour (refactor plan S5a-S5e) boots one server per area, each on
       # a database of its own on this server, and pins what every request of
       # the area answers; its goldens under cmd/server/testdata/tour/<slice>/
-      # (s5a, s5b, ...) hold for a server with or without the vector
+      # (s5a, s5b, s5c, ...) hold for a server with or without the vector
       # extension. Fail if a tour test only skipped, if one of the tests that
-      # tie the goldens together or read the event streams of S5b's areas
-      # (TestTourStream) did not pass, or if a golden there has no area test
-      # that passed: each golden names its test ("test"), which
-      # TestTourGoldensAreClaimed ties to the area file that writes it.
+      # tie the goldens together, read the event streams of S5b's areas
+      # (TestTourStream) or check what S5c's areas rely on with no server
+      # (the adopted accounts and server settings, the mail catcher, the
+      # stand-ins for Stripe, Google and an OIDC provider) did not pass, or if
+      # a golden there has no area test that passed: each golden names its
+      # test ("test"), which TestTourGoldensAreClaimed ties to the area file
+      # that writes it.
       - name: API tour ran
         shell: bash
         run: |
           go test ./cmd/server/ -count=1 -v -run '^TestTour' | tee api-tour.log
           ! grep -Eq -- "--- SKIP: TestTour" api-tour.log || { echo "::error::a tour test only skipped against postgres:15"; exit 1; }
-          for t in TestTourCoverage TestTourGoldensAreClaimed TestTourStream; do
+          for t in TestTourCoverage TestTourGoldensAreClaimed TestTourStream TestTourAccountOptions TestTourMailCatcher TestTourStandIns; do
             grep -q -- "^--- PASS: $t " api-tour.log || { echo "::error::$t did not pass against postgres:15"; exit 1; }
           done
           for g in cmd/server/testdata/tour/*/*.json; do
@@ -201,15 +210,15 @@ jobs:
 
       # The API tour (refactor plan S5a-S5e) on a server with the vector
       # extension, against the same goldens as on postgres:15, with the same
-      # checks: no tour test skipped, the tests that tie the goldens together
-      # and read event streams passed, and a passing area for every golden of
-      # every slice.
+      # checks: no tour test skipped, the tests that tie the goldens together,
+      # read event streams and check S5c's accounts, mail catcher and
+      # stand-ins passed, and a passing area for every golden of every slice.
       - name: API tour (vector extension present)
         shell: bash
         run: |
           go test ./cmd/server/ -count=1 -v -run '^TestTour' | tee api-tour.log
           ! grep -Eq -- "--- SKIP: TestTour" api-tour.log || { echo "::error::a tour test only skipped against pgvector"; exit 1; }
-          for t in TestTourCoverage TestTourGoldensAreClaimed TestTourStream; do
+          for t in TestTourCoverage TestTourGoldensAreClaimed TestTourStream TestTourAccountOptions TestTourMailCatcher TestTourStandIns; do
             grep -q -- "^--- PASS: $t " api-tour.log || { echo "::error::$t did not pass against pgvector"; exit 1; }
           done
           for g in cmd/server/testdata/tour/*/*.json; do

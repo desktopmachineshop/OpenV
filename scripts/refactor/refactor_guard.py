@@ -183,10 +183,13 @@ GUARD_CODE = [
     ("S4b", ["cmd/server/boot_profiles_test.go", "cmd/server/boot_misconfigured_test.go"]),
     # The tour's framework, each file by name so that a rename shows (S5a:
     # tour_test.go, its normaliser, bodies and fixtures; S5b: the event-stream
-    # reader), and every area, cmd/server/tour_<slice>_<key>_test.go, so the
-    # areas S5c-S5e add are covered once they merge.
+    # reader; S5c: the accounts and settings, the mail catcher and the
+    # stand-ins), and every area, cmd/server/tour_<slice>_<key>_test.go, so
+    # the areas S5d-S5e add are covered once they merge.
     ("S5a-S5e", ["cmd/server/tour_test.go", "cmd/server/tour_normalise_test.go", "cmd/server/tour_bodies_test.go",
-                 "cmd/server/tour_fixtures_test.go", "cmd/server/tour_stream_test.go", "cmd/server/tour_*_test.go"]),
+                 "cmd/server/tour_fixtures_test.go", "cmd/server/tour_stream_test.go",
+                 "cmd/server/tour_accounts_test.go", "cmd/server/tour_mail_test.go",
+                 "cmd/server/tour_standin_test.go", "cmd/server/tour_*_test.go"]),
     ("S6", ["internal/api/sse_contract_test.go", "internal/api/sse_scan_test.go",
             "internal/api/event_payload_types_test.go", "internal/api/event_payload_drives_test.go",
             "internal/domain/events/event_types_test.go", "frontend/src/components/agents/RunDetailPanel.test.tsx",

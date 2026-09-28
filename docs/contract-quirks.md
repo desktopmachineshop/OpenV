@@ -33,8 +33,9 @@ the Phase 3 consolidations that give quirks their names.
   `ContentTypeMiddleware` (`internal/api/handlers.go:1594`) sets no type
   despite its name.
 - **Pinned by, named as:** S5 (S5a for the requirements core, S5b for V&V
-  and the suite; S5c–S5d *(planned)* for the rest); `writeJSONBare` (X1)
-  *(planned)*. Pain points api-core-3, api-suite-org-8.
+  and the suite, S5c for identity and the workspace; S5d *(planned)* for the
+  rest); `writeJSONBare` (X1) *(planned)*. Pain points api-core-3,
+  api-suite-org-8.
 - **Pinned today:** S1 counts the raw encodes, so none is added. Every step
   of the S5a tour records whether its answer, and the gzip variant of each
   GET, carries a `Content-Type`, so a handler that starts or stops setting
@@ -51,7 +52,16 @@ the Phase 3 consolidations that give quirks their names.
   project's interviews (step 28 of `cmd/server/testdata/tour/s5b/test_runs_results.json`,
   step 17 of `cmd/server/testdata/tour/s5b/interviews.json`); the evidence,
   quality, quality-rule, parties and shared-products routes set
-  `application/json`. The other sites wait for S5c–S5d.
+  `application/json`. The S5c tour does the same for identity and the
+  workspace: 47 of its slice's 107 routes answer a 2xx with a bare encode,
+  among them `POST /api/v1/orgs` (step 1 of
+  `cmd/server/testdata/tour/s5c/workspaces_logo.json`), sign-in and
+  registration, `/auth/me`, the members, invitations, teams, worker and
+  runner keys, runner sessions and the avatar upload, and three show no
+  `Content-Type` once gzipped: the workspace list, a workspace's
+  invitations and its teams (steps 5 and 99 of `workspaces_logo.json`,
+  step 19 of `invitations_closed.json`, steps 36 and 54 of
+  `members_teams.json`). The other sites wait for S5d.
 
 ## Q2. A mid-request delete answers 500
 
@@ -125,8 +135,16 @@ the Phase 3 consolidations that give quirks their names.
   `scanOrg` sets `has_logo` and resolves the release channel
   (`internal/persistence/postgres/org_repository.go:68-72`), so the create
   response says `release_channel ""` and `locked false`.
-- **Pinned by, named as:** S5c *(planned)*. Pain point domain-platform-v2.
-- **Pinned today:** nothing beyond this entry.
+- **Pinned by, named as:** S5c. Pain point domain-platform-v2.
+- **Pinned today:** the S5c tour. `POST /api/v1/orgs` answers
+  `"release_channel":""`, `"release_channel_locked":false`,
+  `"billing":{"status":""}` and the creator's `"role":"admin"`, and `GET
+  /api/v1/orgs/{id}` of the same workspace answers `nightly`, `true`,
+  `"none"` and no role (steps 1 and 2 of
+  `cmd/server/testdata/tour/s5c/workspaces_logo.json`), on the
+  single plan under the tiers (step 6 of `tiers_secure_runner_sessions.json`)
+  and on a self-hosted deployment's self-host plan (steps 2 and 3 of
+  `self_hosted_cross_site_sso.json`, read back in step 33).
 
 ## Q6. Go and TypeScript vocabularies have drifted
 
@@ -168,8 +186,8 @@ the Phase 3 consolidations that give quirks their names.
   (`internal/persistence/postgres/event_repository.go:39-41`,
   `agent_run_repository.go:147-149`).
 - **Pinned by, named as:** S5 (S5a for `ListArtifacts` and `GlobalSearch`,
-  S5b for `ListSharedProducts` and `ListProjectInterviewSessions`; the event
-  and run resets and `ListNotifications` S5c–S5d *(planned)*); named
+  S5b for `ListSharedProducts` and `ListProjectInterviewSessions`, S5c for
+  `ListNotifications`; the event and run resets S5d *(planned)*); named
   `limitPolicy` values (X3) *(planned)*. Pain point persistence-v3.
 - **Pinned today:** the S5a tour: `GET /api/v1/artifacts` answers limit 0
   and a limit over 1,000 with all 201 artifacts of a 201-artifact project,
@@ -188,7 +206,12 @@ the Phase 3 consolidations that give quirks their names.
   limit, 0 and -1 as its default of 20, and caps 500 at 100, which answers
   all 21 sessions of its project (steps 43–48 of
   `cmd/server/testdata/tour/s5b/interviews.json`; the exact 100 would take
-  101 sessions, and is X3a's).
+  101 sessions, and is X3a's). The S5c tour: `GET /api/v1/notifications`
+  refuses limit 0 and `abc` with a 400, `limit must be a positive integer`,
+  where every other parser falls back to a default, and pages by a keyset
+  cursor, `before=<time>|<id>`, with a full page carrying `next_cursor`
+  (steps 9–15 of `cmd/server/testdata/tour/s5c/notifications_push.json`;
+  its cap needs more notifications than the area makes, and is X3a's).
 
 ## Q9. `ErrBudgetExceeded` answers 402, 400 or 500 by route
 
@@ -232,9 +255,21 @@ the Phase 3 consolidations that give quirks their names.
   enabled` logged between `release` and `starting server`, the reconcile
   `Start` runs at once (its three warnings among the lines from goroutines,
   awaited before the first probe), and the provider calls it made (three
-  operations, three attempts each, all refused by the test's proxy). The
-  rewiring itself leaves no trace in a log line or a response, so its order
-  against `Start` is `boot_steps.txt`'s alone.
+  operations, three attempts each, all refused by the test's proxy). Since
+  S5c the rewiring also shows in what the server sends the provider: the S5c
+  tour's billing area answers as Stripe (a stand-in the recording proxy
+  serves over TLS), and its checkouts carry `success_url` and `cancel_url`,
+  and its portal session `return_url`, built from `FRONTEND_URL` with its
+  trailing slash trimmed through `DefaultReturnURL`, and a Business
+  checkout and plan change bill the seats `SetSeatCounter` counts (members
+  plus pending invitations: quantity 3) (steps 22–24 and 30 of
+  `cmd/server/testdata/tour/s5c/billing.json`); and the seat sync, the
+  goroutine `Start` launches, pushes that count as the item's quantity after
+  a pending invitation is revoked and after a member is removed, then reads
+  the subscription again (steps 46 and 47 of `billing.json`, with the
+  requests before them in its `stand_in_requests_outside_steps`). Those are
+  the values the rewiring sets, not its order against `Start`, which stays
+  `boot_steps.txt`'s alone.
 
 ## Q12. `FRONTEND_URL` has two fallback chains; reports read raw `UPLOADS_DIR`
 
@@ -245,10 +280,17 @@ the Phase 3 consolidations that give quirks their names.
   (`:739`, `:761`). The report service reads `UPLOADS_DIR` with
   `os.Getenv` (`internal/domain/reports/report.go:733`), not the server's
   `./uploads` default (`cmd/server/main.go:139`).
-- **Pinned by, named as:** X10 keeps distinct fields *(planned)*. Pain point
-  boot-3.
+- **Pinned by, named as:** the S5c tour for the two chains; X10 keeps
+  distinct fields *(planned)*. Pain point boot-3.
 - **Pinned today:** S1's env-read ratchet counts the direct read in
-  `internal/domain/reports`.
+  `internal/domain/reports`. The S5c tour boots a server with `PUBLIC_URL`
+  set and `FRONTEND_URL` unset, and pins each site: an invitation's link
+  (`main.go`'s email link base) and a share link's `url` (the handler's
+  `FrontendURL`) are on `PUBLIC_URL` (the first chain), and Google's
+  `redirect_uri` is on it too, while an OIDC sign-in and a Google sign-in
+  land on `http://localhost:3000` (the second) (steps 4, 44, 42, 31 and 43
+  of `cmd/server/testdata/tour/s5c/self_hosted_cross_site_sso.json`). The raw
+  `UPLOADS_DIR` read is not pinned by a response.
 
 ## Q13. Only `POST /api/v1/projects` enforces the project maximum
 
@@ -294,7 +336,14 @@ the Phase 3 consolidations that give quirks their names.
   list. See the steps titled "null (Q14)" in
   `cmd/server/testdata/tour/s5b/{guided_sessions,interviews,test_runs_results,work_items}.json`,
   steps 1, 47 and 48 of `evidence.json` and step 20 of
-  `vv_coverage_report.json` beside them.
+  `vv_coverage_report.json` beside them. The S5c tour, for identity and the
+  workspace, `null`: an account's deleted workspaces (`GET
+  /api/v1/orgs?deleted=true`), a workspace's teams, a project's team
+  grants, a workspace's worker keys, and an empty inbox or page of
+  notifications (step 6 of `cmd/server/testdata/tour/s5c/workspaces_logo.json`,
+  step 59 of `sessions_auth.json`, steps 29 and 81 of `members_teams.json`,
+  step 1 of `runner_keys_connector.json`, steps 2, 6, 7 and 11 of
+  `notifications_push.json`).
 
 ## Q15. An unknown protected path answers 401; OPTIONS answers 200 unlogged
 
@@ -345,13 +394,39 @@ the Phase 3 consolidations that give quirks their names.
   and share accept (`allowPublicShare`, `internal/api/share_handlers.go:199`),
   which answer its 429 with no `Retry-After`.
 - **Pinned by, named as:** S5c's shared-bucket probe, which exercises the
-  real call sites *(planned)*; S5a for the share routes. Pain point
-  api-core-v2.
+  real call sites; S5a for the share routes. Pain point api-core-v2.
 - **Pinned today:** the S5a tour drains `invitePreviewLimiter` through
   invitation previews, then the share routes answer 429 with no
   `Retry-After` (steps 46–49 of
   `cmd/server/testdata/tour/s5a/share_links_public.json`), so a share
-  bucket of its own would change that golden. `authIPLimiter` waits for S5c.
+  bucket of its own would change that golden; the S5c tour drains it the
+  other way, through share-link lookups, and a preview from that address is
+  refused (step 57 of `cmd/server/testdata/tour/s5c/invitations_closed.json`).
+  The S5c tour drains each shared bucket through one route and reads the
+  429, with its `Retry-After`, on another, from its own client address
+  (`OPENV_CLIENT_IP_HEADER`): `authIPLimiter` spent by email verification
+  refuses sign-in and reset confirmation, spent by reset confirmation
+  refuses verification and sign-in, and spent by sign-in refuses
+  confirmation and verification (steps 71–81 of
+  `cmd/server/testdata/tour/s5c/sessions_auth.json`); on a server with a
+  mailer, reset requests spend it too and refuse sign-in, confirmation and
+  verification, and sign-ins refuse a reset request (steps 128–134 of
+  `mail_password_admin.json`); without one, a reset request is refused with
+  a 409 before it spends a token, from a drained address too (steps 91 and
+  92 of `sessions_auth.json`). Beyond the plan's entry, the tour pins the
+  other shared buckets the same way: `authAccountLimiter`, spent by failed
+  sign-ins, refuses `PUT /api/v1/me/password`, and the reverse (steps 82–86
+  of `sessions_auth.json`); `ssoIPLimiter`, spent by Google sign-on starts,
+  refuses Google's callback (steps 87 and 88), and spent by OIDC sign-on
+  starts refuses OIDC's callback (steps 45 and 46 of
+  `self_hosted_cross_site_sso.json`); `inviteLimiter`, spent by an admin's
+  invitations, refuses its add through `POST /api/v1/orgs/{id}/members`,
+  which invites through the same call site (step 59 of
+  `invitations_closed.json`); `verifyResendLimiter`, spent by
+  address changes, refuses a resend (steps 25, 35 and 36 of
+  `mail_password_admin.json`); and the billing write bucket, one per
+  workspace, is spent by checkout, plan change and portal alike, and not by
+  a refresh (steps 38–43 of `billing.json`).
 
 ## Q19. Three error-message conventions
 
@@ -360,7 +435,7 @@ the Phase 3 consolidations that give quirks their names.
   `internal/api` pass `err.Error()` through (the same count as at
   `d11dee8`); 58 sites map any error to 404 (the plan's count at `d11dee8`,
   not re-counted here).
-- **Pinned by, named as:** S5 (S5a and S5b for their routes; S5c–S5d
+- **Pinned by, named as:** S5 (S5a, S5b and S5c for their routes; S5d
   *(planned)*); `decodeJSONMsg` (X1) *(planned)*; the other call sites stay
   untouched.
 - **Pinned today:** S1's `invalid_request_body_literals` ratchet counts the
@@ -379,7 +454,19 @@ the Phase 3 consolidations that give quirks their names.
   `cmd/server/testdata/tour/s5b/`), and any lookup error mapped to 404: a
   quality report's malformed `baseline_id`, a lint of a malformed artifact
   id and a malformed run's citations (steps 17 and 27 of
-  `quality_profile_parties.json`, step 68 of `evidence.json`).
+  `quality_profile_parties.json`, step 68 of `evidence.json`). The S5c tour
+  pins the same conventions for identity and the workspace: the driver's
+  text passed through as a 400 for a worker key's name over 255 characters
+  and a revoke of a malformed key id (steps 6 and 16 of
+  `cmd/server/testdata/tour/s5c/runner_keys_connector.json`); the domain's
+  text as it is, a blank workspace name and the last admin leaving (step 4
+  of `workspaces_logo.json`, step 21 of `members_teams.json`); a
+  not-found passed through as a 400 (step 101 of `workspaces_logo.json`);
+  and a lookup's error answered as a 500 where the path or body names
+  something that is not an id: the default workspace, the platform admin's
+  reset link and admin standing, and a workspace's members (step 47 of
+  `sessions_auth.json`, steps 66 and 92 of `mail_password_admin.json`,
+  step 18 of `members_teams.json`).
 
 ## Q20. Inline error chains render string bodies differently
 

@@ -121,6 +121,53 @@ import (
 // a multipart body over tourSmallBinary (4 KiB), such as an upload made to
 // reach a size limit, is recorded by its size and digest, as a binary body
 // over it already was.
+//
+// ADDED FOR S5c (identity and workspace), each inert for an area that does
+// not ask for it, so that no S5a or S5b golden changed; tour_accounts_test.go,
+// tour_mail_test.go and tour_standin_test.go hold them:
+//   - accounts made by recorded steps: tour.adopt turns a recorded
+//     registration's, login's or sign-on's session cookie into an actor, and
+//     tour.session a second session of an account; withCookie sends a flow
+//     cookie (an OAuth state), and noOrgHeader a signed-in request with no
+//     X-Org-ID, which the step records as acting_in "(no X-Org-ID)";
+//   - captures from inside a value (tourResult.captureMatch, captureHeader,
+//     captureCookie), and waits for what the server does after it answers
+//     (tour.await, tour.awaitOutbound, tour.awaitMail);
+//   - a value whose length varies by design, kept out of the golden's bytes:
+//     elide (a JSON value, such as the release history GET /api/v1/release
+//     answers, which every promotion changes) and tour.patternVarying (an
+//     area pattern whose token stands for a varying length), both making
+//     content_length "<varies>"; the running release's tokens vary in length
+//     too, which no earlier golden held in a body;
+//   - a HEAD step (its Content-Length is the GET's, with no body), and a
+//     GET /health step (the harness's readiness polls count there too);
+//   - the server's port written URL-escaped (localhost%3A<port>);
+//   - server settings: tourArea.profiles takes an S4b profile's variables,
+//     background lines and sign-up (boot_profiles_test.go), tourArea.async
+//     awaits an area's own background lines at boot, tourArea.signUpWithout
+//     registers admin and owner on a second server without some variables
+//     (a closed registration, a mail server that walls unverified
+//     accounts), and tourArea.files writes files the environment names as
+//     {{files}};
+//   - what the server sends out beyond HTTP_PROXY's refusals: a mail catcher
+//     (tourArea.mail), which records every mail in outbound_mail, and stand-ins
+//     (tourArea.standIns: a payment provider, Google, an identity provider)
+//     that the recording proxy answers itself over TLS the server trusts
+//     (SSL_CERT_FILE), recording each request under the step it came in
+//     (stand_in_requests), with the requests they answer while the server
+//     boots awaited before the tour's first (tourArea.bootStandIns).
+//
+// Integrating S5c added, from what its areas asked for: headerPatternHere, a
+// header pattern for the one step given it, so that a fixed value the
+// pattern would also match on other steps stays pinned there
+// (billing_upstream's Retry-After of 30 beside a refresh bucket's countdown
+// from 30); tourResult.note, a note computed from an answer once it is read,
+// and tourResult.captureIf, a capture that does not stop the area when the
+// answer lacks the value; tour.register counting the area's own recorded and
+// probing registrations from the tour's address against the server's limit
+// of five (spendsRegistration); the identity provider's failure modes
+// (tourIdP.failDiscovery, issueWrong); and the JPEG, GIF and WebP fixtures,
+// checked with the others by TestTourFixtures.
 
 // tourArea is one area of a tour slice; see the top of this file.
 type tourArea struct {
@@ -133,6 +180,45 @@ type tourArea struct {
 	// reach, such as OPENV_MAX_EVIDENCE_MB); the golden lists it. A variable
 	// the harness or the tour sets is refused (tourServerEnv).
 	env map[string]string
+
+	// The fields below were added for S5c (tour_accounts_test.go,
+	// tour_mail_test.go, tour_standin_test.go); an area that leaves them
+	// zero boots and renders exactly as before.
+
+	// profiles names S4b profiles (s4bProfiles, boot_profiles_test.go) whose
+	// variables the server boots with, whose background lines startTour
+	// awaits, and whose sign-up it follows (registration_closed registers
+	// admin and owner on a second server); the golden lists them. An area's
+	// own env may not set a profile's variable, and the billing profile,
+	// which awaits the reconcile's refusals, does not go with a stand-in.
+	profiles []string
+	// async lists log lines the server writes from goroutines at boot, which
+	// startTour awaits before the first request (a profile's own come with
+	// it).
+	async []string
+	// signUpWithout registers admin and owner on a second server booted on
+	// the same database without these variables, then stopped: for a server
+	// that would refuse them (OPENV_REGISTRATION=closed) or wall them (a mail
+	// server makes verification required). The server under test boots first.
+	signUpWithout []string
+	// accounts are registered after admin and owner, by tour.register (or on
+	// the second server of signUpWithout); tour.actor finds them by name.
+	accounts []tourAccount
+	// files are written, before the server boots, under a directory of the
+	// test's own that an env value names as {{files}} (CONNECTOR_DIST_DIR);
+	// their bytes live in Go source, as the tour's .gitattributes asks.
+	files map[string][]byte
+	// mail starts a mail catcher the server sends through (OPENV_SMTP_*),
+	// which records every mail in the golden's outbound_mail.
+	mail *tourMailSpec
+	// standIns are hosts the recording proxy answers itself, over TLS the
+	// server trusts, instead of refusing them (tour_standin_test.go).
+	standIns []*tourStandIn
+	// bootStandIns are the requests the stand-ins answer while the server
+	// boots (host -> how many: billing's reconcile at start), which startTour
+	// awaits before the tour's first request, so that what they leave (a
+	// confirmed price catalogue) is in place, and stamped <time@boot>.
+	bootStandIns map[string]int
 }
 
 // tourBudget bounds one area: boot, requests and drain, the build excluded.
@@ -336,7 +422,11 @@ type tour struct {
 
 	admin, owner, anon *tourActor
 	actors             []*tourActor
-	registered         int
+	// ownRegistrations counts the registrations the tour's own address has
+	// spent the server's per-address registration limit on (registerIPLimiter):
+	// tour.register's and any recorded or probing POST /api/v1/auth/register
+	// from it (spendsRegistration, tour_accounts_test.go).
+	ownRegistrations int
 
 	steps    []*tourStep
 	sent     map[string]int  // "METHOD route status" -> requests sent
@@ -349,6 +439,14 @@ type tour struct {
 	whole map[string]string // wholeSeconds: route -> why its times are whole seconds
 	env   map[string]string // what the tour set in the server's environment beyond the harness's
 	hpat  []tourHeaderPattern
+
+	// Added for S5c (tour_accounts_test.go, tour_mail_test.go,
+	// tour_standin_test.go).
+	shown    map[string]string // env variable -> how the golden shows its value (a port, a path)
+	profiles []string          // the golden's profiles: "<name>: <about>"
+	signedUp string            // how admin and owner were registered, when not on the server under test
+	mail     *tourMailCatcher  // tourArea.mail
+	files    string            // tourArea.files' directory
 }
 
 // tourHeaderPattern is an area's pattern for the values of one response
@@ -385,7 +483,9 @@ const tourPassword = "tour password 1"
 const tourPhantom = "00000000-0000-4000-8000-000000000000"
 
 // tourRegisterBudget is how many accounts one server lets the tour register
-// (registerIPLimiter's burst, 5 per address).
+// from its own address (registerIPLimiter's burst, 5 per address), counting
+// the registrations the area records or probes from it (S5c) as well as
+// tour.register's.
 const tourRegisterBudget = 5
 
 // securityHeaderNames are the headers SecurityHeadersMiddleware sets on
@@ -402,30 +502,62 @@ func startTour(t *testing.T, bin string, a tourArea) *tour {
 	if err != nil {
 		t.Fatalf("the tour area %s/%s: %v", a.slice, a.key, err)
 	}
-	proxy := startRecordingProxy(t)
+	tr := &tour{t: t, area: a, norm: newTourNormaliser(), names: map[string]string{}, values: map[string]string{},
+		sent: map[string]int{}, seen: map[string]bool{}, clock: clock, whole: map[string]string{},
+		shown: map[string]string{}}
+	tr.norm.clock = clock
+	// What the server sends beyond HTTP (files it reads, mail, stand-ins),
+	// set up before it boots (tour_accounts_test.go, tour_mail_test.go,
+	// tour_standin_test.go).
+	env = tr.prepareFiles(env)
+	env = tr.prepareMail(env)
+	env, tunnels := tr.prepareStandIns(env)
+	proxy := startRecordingProxyWith(t, tunnels)
 	env = proxy.env(env)
 	s, db := bootServer(t, bin, env)
-	s.waitForAsyncLines(nil)
-	tr := &tour{t: t, area: a, s: s, db: db, proxy: proxy, norm: newTourNormaliser(), names: map[string]string{},
-		values: map[string]string{}, sent: map[string]int{}, seen: map[string]bool{}, clock: clock,
-		whole: map[string]string{}, env: env}
-	tr.norm.clock = clock
+	async, signUpWithout := tr.settings()
+	s.waitForAsyncLines(async)
+	tr.s, tr.db, tr.proxy, tr.env = s, db, proxy, env
+	tr.awaitBootStandIns()
 	tr.checkDatabaseZone()
 	tr.loadRoutes()
-	tr.norm.addLiteral(tourLiteral{value: s.tmp, token: "<tmp>", minLen: 8, maxLen: 160})
-	port := strconv.Itoa(s.port)
-	for _, host := range []string{"127.0.0.1:", "localhost:"} {
-		tr.norm.addLiteral(tourLiteral{value: host + port, token: host + "<port>", minLen: len(host) + 4, maxLen: len(host) + 5})
-	}
+	tr.addServerLiterals(s.tmp, s.port)
 	tr.keep("0001-01-01T00:00:00Z", "the zero time, which links_snapshot entries carry as valid_from")
 	tr.remember("phantom", tourPhantom)
 	tr.anon = &tourActor{name: "anonymous", about: "no session cookie"}
 	tr.readRelease()
-	tr.admin = tr.register("admin", "Tour Admin",
-		"the first account registered, so the platform admin; used only for admin setup")
-	tr.owner = tr.register("owner", "Tour Owner",
-		"an ordinary account that owns its personal workspace (nightly channel); reads the events after each step")
+	accounts := append([]tourAccount{
+		{name: "admin", display: "Tour Admin", about: "the first account registered, so the platform admin; used only for admin setup"},
+		{name: "owner", display: "Tour Owner", about: "an ordinary account that owns its personal workspace (nightly channel); reads the events after each step"},
+	}, a.accounts...)
+	if len(signUpWithout) > 0 {
+		tr.signUpElsewhere(bin, signUpWithout, accounts)
+	} else {
+		for _, acc := range accounts {
+			tr.register(acc.name, acc.display, acc.about)
+		}
+	}
+	tr.admin, tr.owner = tr.actors[0], tr.actors[1]
 	return tr
+}
+
+// addServerLiterals registers what differs from run to run about the
+// server itself: its temporary directory, its port after 127.0.0.1: and
+// localhost:, and the area's files' directory.
+func (tr *tour) addServerLiterals(tmp string, port int) {
+	tr.norm.addLiteral(tourLiteral{value: tmp, token: "<tmp>", minLen: 8, maxLen: 160})
+	p := strconv.Itoa(port)
+	for _, host := range []string{"127.0.0.1:", "localhost:"} {
+		tr.norm.addLiteral(tourLiteral{value: host + p, token: host + "<port>", minLen: len(host) + 4, maxLen: len(host) + 5})
+		// The same, URL-escaped (S5c): a link's query carrying the server's
+		// own address (a redirect_uri, a connector's deep link) writes the
+		// colon as %3A.
+		esc := url.QueryEscape(host)
+		tr.norm.addLiteral(tourLiteral{value: esc + p, token: esc + "<port>", minLen: len(esc) + 4, maxLen: len(esc) + 5})
+	}
+	if tr.files != "" {
+		tr.norm.addLiteral(tourLiteral{value: tr.files, token: "<area files>", minLen: 8, maxLen: 160})
+	}
 }
 
 // tourEnvName is an environment variable's name as an area may set it.
@@ -438,13 +570,36 @@ var tourEnvName = regexp.MustCompile(`^[A-Z][A-Z0-9_]*$`)
 // one that would let a request past the proxy (NO_PROXY, or the lower-case
 // spellings Go also reads), so that every area's server keeps the tour's
 // guarantees; the golden's env lists the result (tourEnvLines).
+//
+// Since S5c an area may also take an S4b profile's variables (profiles),
+// which its own env may not override, and a value may name the area's files
+// ({{files}}, only with tourArea.files). The variables the framework sets for
+// a mail catcher (OPENV_SMTP_*) or stand-ins (SSL_CERT_FILE, SSL_CERT_DIR)
+// are refused from env, since a mail server or a certificate authority of
+// the area's own would reach past the recording proxy or trust more than the
+// tour's stand-ins.
 func tourServerEnv(a tourArea) (map[string]string, error) {
-	taken := map[string]bool{"TZ": true, "HTTP_PROXY": true, "HTTPS_PROXY": true, "NO_PROXY": true}
+	taken := map[string]bool{"TZ": true, "HTTP_PROXY": true, "HTTPS_PROXY": true, "NO_PROXY": true,
+		"SSL_CERT_FILE": true, "SSL_CERT_DIR": true}
 	for _, kv := range harnessEnv(testDatabase{}, 0, "", nil) {
 		k, _, _ := strings.Cut(kv, "=")
 		taken[k] = true
 	}
 	env := map[string]string{"TZ": "UTC"}
+	profileOf := map[string]string{}
+	for _, name := range a.profiles {
+		p, ok := s4bProfile(name)
+		if !ok {
+			return nil, fmt.Errorf("profiles: %q is not an S4b profile (s4bProfiles, boot_profiles_test.go: %s)", name,
+				strings.Join(s4bProfileNames(), ", "))
+		}
+		for _, k := range sortedKeys(p.env) {
+			if prev := profileOf[k]; prev != "" && env[k] != p.env[k] {
+				return nil, fmt.Errorf("profiles %s and %s both set %s, to different values", prev, name, k)
+			}
+			env[k], profileOf[k] = p.env[k], name
+		}
+	}
 	for _, k := range sortedKeys(a.env) {
 		switch {
 		case !tourEnvName.MatchString(k):
@@ -452,6 +607,13 @@ func tourServerEnv(a tourArea) (map[string]string, error) {
 				"would let a request past the recording proxy)", k)
 		case taken[k]:
 			return nil, fmt.Errorf("env %s: the harness or the tour sets it, and an area may not change it", k)
+		case strings.HasPrefix(k, "OPENV_SMTP_"):
+			return nil, fmt.Errorf("env %s: mail goes to the tour's mail catcher (tourArea.mail), which sets the "+
+				"OPENV_SMTP_ variables; a mail server of the area's own would be dialled directly, past the proxy", k)
+		case profileOf[k] != "":
+			return nil, fmt.Errorf("env %s: profile %s sets it; an area may not change a profile's variable", k, profileOf[k])
+		case strings.Contains(a.env[k], "{{files}}") && len(a.files) == 0:
+			return nil, fmt.Errorf("env %s names {{files}}, but the area has no files", k)
 		}
 		env[k] = a.env[k]
 	}
@@ -461,12 +623,20 @@ func tourServerEnv(a tourArea) (map[string]string, error) {
 // tourEnvLines lists a server environment as the golden's env shows it:
 // "K=V", sorted, the recording proxy's address written as a placeholder
 // (its port differs from run to run).
-func tourEnvLines(env map[string]string) []string {
+func tourEnvLines(env map[string]string) []string { return tourEnvLinesShown(env, nil) }
+
+// tourEnvLinesShown is tourEnvLines with the values the tour wrote as
+// placeholders (shown: a mail catcher's port, the area's files, the test
+// certificate authority's path), since they differ from run to run.
+func tourEnvLinesShown(env, shown map[string]string) []string {
 	out := []string{"(beyond the harness's fixed environment, cmd/server/harness_test.go)"}
 	for _, k := range sortedKeys(env) {
 		v := env[k]
 		if k == "HTTP_PROXY" || k == "HTTPS_PROXY" {
 			v = proxyPlaceholder
+		}
+		if s, ok := shown[k]; ok {
+			v = s
 		}
 		out = append(out, k+"="+v)
 	}
@@ -530,7 +700,10 @@ func (tr *tour) readRelease() {
 		v, _ := jsonValue(r.body, f.pointer)
 		if s, _ := v.(string); s != "" && tr.values[s] == "" {
 			tr.values[s] = f.token
-			tr.norm.addPattern(tourPattern{class: f.token, flat: f.token,
+			// A promotion may lengthen the version (0.9.9 to 0.10.0), so an
+			// answer that holds it has a length that varies (no S5a or S5b
+			// answer holds it).
+			tr.norm.addPattern(tourPattern{class: f.token, flat: f.token, minLen: len("0.0.0"), maxLen: len("99.99.99"),
 				re: regexp.MustCompile(`(?:^|[^0-9.])(` + regexp.QuoteMeta(s) + `)(?:$|[^0-9.])`)})
 		}
 	}
@@ -544,28 +717,48 @@ func (tr *tour) readRelease() {
 // admin and owner among them.
 func (tr *tour) register(name, display, about string) *tourActor {
 	tr.t.Helper()
-	if tr.registered == tourRegisterBudget {
-		tr.t.Fatalf("a tour area registers at most %d accounts (the server's registration limit per address); "+
-			"admin and owner are two of them", tourRegisterBudget)
+	if tr.ownRegistrations >= tourRegisterBudget {
+		tr.t.Fatalf("a tour area registers at most %d accounts from the tour's own address (the server's registration "+
+			"limit per address); admin and owner are two of them, and the area's own POST /api/v1/auth/register "+
+			"requests from that address, recorded or probing, count too: %d so far", tourRegisterBudget,
+			tr.ownRegistrations)
 	}
-	tr.registered++
 	a := &tourActor{name: name, email: "tour-" + name + "@example.com", display: display, about: about}
-	body, _ := json.Marshal(map[string]string{"email": a.email, "password": tourPassword, "name": display})
-	r := tr.setup("register "+name, tr.anon, "POST /api/v1/auth/register", rawBody("application/json", body))
+	r := tr.setup("register "+name, tr.anon, "POST /api/v1/auth/register", rawBody("application/json", tourSignUpBody(a)))
+	return tr.enrol(a, r)
+}
+
+// tourSignUpBody is what tour.register sends for an account.
+func tourSignUpBody(a *tourActor) []byte {
+	body, _ := json.Marshal(map[string]string{"email": a.email, "password": tourPassword, "name": a.display})
+	return body
+}
+
+// enrol makes a registered account an actor: its session from the answer's
+// Set-Cookie, its id, and the workspace it is active in, its personal one.
+// On a server that requires a verified address (a mail catcher, with
+// verification on), it first follows the verification link the catcher
+// received (tour_mail_test.go), since every route but the auth ones walls an
+// unverified account.
+func (tr *tour) enrol(a *tourActor, r *tourResult) *tourActor {
+	tr.t.Helper()
 	for _, c := range readSetCookies(r.header) {
 		if c.Name == "openv_session" {
 			a.session = c.Value
 		}
 	}
 	if a.session == "" {
-		tr.t.Fatalf("registering %s set no session cookie\n%s", name, r.body)
+		tr.t.Fatalf("registering %s set no session cookie\n%s", a.name, r.body)
 	}
 	a.userID = r.value("/id")
-	tr.remember(name, a.userID)
-	tr.remember(name+".session", a.session)
-	a.org = tr.setup("the workspaces of "+name, a, "GET /api/v1/orgs").value("/active_org")
+	tr.remember(a.name, a.userID)
+	tr.remember(a.name+".session", a.session)
+	if v, _ := jsonValue(r.body, "/email_verified"); v == false {
+		tr.verifyByMail(a)
+	}
+	a.org = tr.setup("the workspaces of "+a.name, a, "GET /api/v1/orgs").value("/active_org")
 	a.home = a.org
-	tr.remember(name+".workspace", a.org)
+	tr.remember(a.name+".workspace", a.org)
 	tr.actors = append(tr.actors, a)
 	return a
 }
@@ -688,10 +881,32 @@ func (tr *tour) headerPattern(header, re, token, why string) {
 		re, http.CanonicalHeaderKey(header)))
 }
 
+// headerPatternHere is tour.headerPattern for the step it is given to only:
+// for a header whose value a pattern would also match, on other steps, where
+// the value is fixed and should stay pinned (billing_upstream's fixed
+// Retry-After of 30 beside a refresh bucket's countdown from 30). The step's
+// patterns apply before the area's. It adds a line to the golden's legend
+// once, however many steps name it.
+func headerPatternHere(header, re, token, why string) tourOpt {
+	return func(tr *tour, r *tourReq) {
+		name := http.CanonicalHeaderKey(header)
+		r.hpat = append(r.hpat, tourHeaderPattern{header: name, re: regexp.MustCompile(re), token: token})
+		line := fmt.Sprintf("%s: %s (the area's own pattern %s, in the %s header of the steps that name it only)",
+			token, why, re, name)
+		if !contains(tr.legend, line) {
+			tr.legend = append(tr.legend, line)
+		}
+	}
+}
+
 // headerValue applies the area's header patterns to a normalised value of
 // the response header name.
-func (tr *tour) headerValue(name, v string) string {
-	for _, p := range tr.hpat {
+func (tr *tour) headerValue(name, v string) string { return applyHeaderPatterns(tr.hpat, name, v) }
+
+// applyHeaderPatterns applies header patterns to a normalised value of the
+// response header name.
+func applyHeaderPatterns(patterns []tourHeaderPattern, name, v string) string {
+	for _, p := range patterns {
 		if p.header != name {
 			continue
 		}
@@ -764,6 +979,9 @@ type tourReq struct {
 	org                 *string     // actingIn: the workspace sent as X-Org-ID instead of the actor's
 	bodyFrom            int         // answerOf: the step whose answer the body is
 	stream              *tourStream // eventStream: an event stream, read frame by frame (tour_stream_test.go)
+	noOrg               bool        // noOrgHeader: a signed-in request sent with no X-Org-ID (tour_accounts_test.go)
+	elide               []tourElision
+	hpat                []tourHeaderPattern // headerPatternHere: header patterns of this step only
 }
 
 // tourOpt shapes a request.
@@ -940,8 +1158,16 @@ func (tr *tour) exchange(a *tourActor, r *tourReq, extra http.Header) *tourExcha
 	for k, vs := range extra {
 		req.Header[k] = vs
 	}
+	if r.noOrg && a.session == "" {
+		tr.t.Fatalf("%s %s: noOrgHeader is for an actor with a session; %s sends no X-Org-ID anyway", r.method, r.path, a.name)
+	}
 	if a.session != "" {
-		req.Header.Set("Cookie", "openv_session="+a.session)
+		// A flow cookie the step sends (withCookie) goes after the session's.
+		cookie := "openv_session=" + a.session
+		if extra := r.header.Get("Cookie"); extra != "" {
+			cookie += "; " + extra
+		}
+		req.Header.Set("Cookie", cookie)
 		if org := r.workspace(a); org != "" {
 			req.Header.Set("X-Org-ID", org)
 		}
@@ -954,6 +1180,9 @@ func (tr *tour) exchange(a *tourActor, r *tourReq, extra http.Header) *tourExcha
 		tr.t.Fatalf("%s %s: %v\n%s", r.method, r.path, err, tr.s.output())
 	}
 	defer func() { _ = resp.Body.Close() }()
+	if tr.spendsRegistration(r) {
+		tr.ownRegistrations++
+	}
 	var data []byte
 	if r.stream != nil && isEventStream(resp.Header) {
 		// An event stream never ends: read the frames the area expects, then
@@ -1206,6 +1435,7 @@ func (tr *tour) finish() []byte {
 	}
 	tr.checkMetrics()
 	uploads := tr.listUploads()
+	mailed := tr.mailSettled()
 	code, _, err := tr.s.terminate(30 * time.Second)
 	if err != nil {
 		tr.t.Fatalf("%v\n%s", err, tr.s.output())
@@ -1213,12 +1443,15 @@ func (tr *tour) finish() []byte {
 	if code != 0 {
 		tr.t.Errorf("the server exited with status %d\n%s", code, tr.s.output())
 	}
+	tr.checkNoLateMail(mailed)
 	if testing.Verbose() {
 		logCoverage(tr.t, tr.s)
 	}
 	g := tr.render()
 	g.Uploads = tr.renderUploads(uploads)
 	g.Outbound = tr.proxy.summary()
+	g.StandIns = tr.renderStandInsOutsideSteps()
+	g.Mail = tr.renderMail()
 	return tr.encode(g)
 }
 
@@ -1337,7 +1570,9 @@ func (tr *tour) metricsProblems(page []byte) []string {
 	}
 	var problems []string
 	for k, n := range tr.sent {
-		if counted[k] != n {
+		// The harness's readiness polls of /health are counted too (S5c
+		// records GET /health as a step).
+		if counted[k] != n && !(strings.HasPrefix(k, "GET /health ") && counted[k] > n) {
 			problems = append(problems, fmt.Sprintf("  %s: the tour sent %d, the server counted %d", k, n, counted[k]))
 		}
 	}
@@ -1386,11 +1621,16 @@ type tourGolden struct {
 	Regenerate      []string          `json:"regenerate"`
 	Normalised      []string          `json:"normalised"`
 	Env             []string          `json:"env"`
+	Profiles        []string          `json:"profiles,omitempty"`
+	SignUp          string            `json:"sign_up,omitempty"`
 	Actors          []tourActorRecord `json:"actors"`
 	SecurityHeaders []string          `json:"standard_security_headers"`
 	Steps           []tourStepRecord  `json:"steps"`
 	Uploads         []string          `json:"uploads"`
 	Outbound        []string          `json:"outbound_requests"`
+	// Added for S5c, empty (and so absent) for an area that asks for none.
+	StandIns []tourStandInRecord `json:"stand_in_requests_outside_steps,omitempty"`
+	Mail     []tourMailRecord    `json:"outbound_mail,omitempty"`
 }
 
 type tourActorRecord struct {
@@ -1424,8 +1664,12 @@ type tourStepRecord struct {
 	ContentLength any               `json:"content_length"`
 	tourBodyView
 	Unordered []string           `json:"unordered,omitempty"`
+	Elided    []string           `json:"elided,omitempty"`
 	Gzip      any                `json:"gzip"`
 	Events    *[]tourEventRecord `json:"events,omitempty"`
+	// StandIns are the requests the server sent to the area's stand-ins
+	// while it answered this step (S5c), in the order they came.
+	StandIns []tourStandInRecord `json:"stand_in_requests,omitempty"`
 }
 
 type tourEventRecord struct {
@@ -1466,7 +1710,9 @@ func (tr *tour) render() *tourGolden {
 		About:           tr.area.about,
 		Regenerate:      tr.regenerate(),
 		Normalised:      append(append([]string(nil), tourLegend...), tr.legend...),
-		Env:             tourEnvLines(tr.env),
+		Env:             tourEnvLinesShown(tr.env, tr.shown),
+		Profiles:        tr.profiles,
+		SignUp:          tr.signedUp,
 		SecurityHeaders: tr.security,
 		Steps:           []tourStepRecord{},
 		Uploads:         []string{},
@@ -1493,7 +1739,10 @@ func (tr *tour) renderStep(st *tourStep) tourStepRecord {
 	defer func() { n.whole = false }()
 	rec := tourStepRecord{N: st.n, Title: st.title, Actor: st.actor.name, Route: r.route, Notes: r.notes,
 		Status: st.plain.status}
-	if st.org != st.actor.home {
+	switch {
+	case r.noOrg:
+		rec.ActingIn = tourNoOrg
+	case st.org != st.actor.home:
 		rec.ActingIn = n.text(st.org)
 	}
 	rec.Request = tourRequestRecord{Method: r.method, Path: n.text(r.path), Query: n.text(r.query)}
@@ -1516,7 +1765,7 @@ func (tr *tour) renderStep(st *tourStep) tourStepRecord {
 	}
 	plain := st.plain
 	key := tr.sortKey(st, plain.body)
-	body := tr.reorder(st, key, plain.body)
+	body := tr.elideBody(st, tr.reorder(st, key, plain.body))
 	if ct := plain.header.Get("Content-Type"); ct != "" || len(plain.header.Values("Content-Type")) > 0 {
 		v := n.text(ct)
 		rec.ContentType = &v
@@ -1534,7 +1783,7 @@ func (tr *tour) renderStep(st *tourStep) tourStepRecord {
 			continue
 		}
 		for _, v := range plain.header[k] {
-			rec.Headers = append(rec.Headers, k+": "+tr.headerValue(k, n.text(v)))
+			rec.Headers = append(rec.Headers, k+": "+tr.headerValue(k, applyHeaderPatterns(r.hpat, k, n.text(v))))
 		}
 	}
 	if strings.Join(sec, "\n") == strings.Join(tr.security, "\n") {
@@ -1543,7 +1792,11 @@ func (tr *tour) renderStep(st *tourStep) tourStepRecord {
 		rec.Security = sec
 	}
 	lo, hi := bodyBand(n, plain.body)
-	if cl := plain.header.Get("Content-Length"); cl != "" && cl != strconv.Itoa(len(plain.body)) {
+	if len(r.elide) > 0 {
+		lo, hi = tr.elidedBand(n, st, plain.body)
+	}
+	// A HEAD answer carries the GET's Content-Length and no body.
+	if cl := plain.header.Get("Content-Length"); cl != "" && cl != strconv.Itoa(len(plain.body)) && r.method != http.MethodHead {
 		tr.t.Errorf("step %d (%s): Content-Length %s but the body has %d bytes", st.n, r.route, cl, len(plain.body))
 	}
 	switch cl := plain.header.Get("Content-Length"); {
@@ -1567,11 +1820,15 @@ func (tr *tour) renderStep(st *tourStep) tourStepRecord {
 	for _, u := range r.unordered {
 		rec.Unordered = append(rec.Unordered, fmt.Sprintf("%s: %s", u[0], u[1]))
 	}
+	for _, e := range r.elide {
+		rec.Elided = append(rec.Elided, fmt.Sprintf("%s: %s (%s)", e.pointer, e.token, e.why))
+	}
 	rec.Gzip = tr.renderGzip(st, key, body, lo, hi)
 	n.whole = false
 	if events := tr.renderEvents(st.events); len(events) > 0 || !isRead(r.method) {
 		rec.Events = &events
 	}
+	rec.StandIns = tr.renderStandInRequests(fmt.Sprintf("step %d", st.n))
 	return rec
 }
 
@@ -1689,7 +1946,7 @@ func (tr *tour) renderGzip(st *tourStep, key *tourNormaliser, plainBody []byte, 
 		gzView.header.Set("Content-Type", st.plain.header.Get("Content-Type"))
 	}
 	va, erra := tr.view(cmp, st.plain, plainBody)
-	vb, errb := tr.view(cmp, &gzView, tr.reorder(st, key, gz.body))
+	vb, errb := tr.view(cmp, &gzView, tr.elideBody(st, tr.reorder(st, key, gz.body)))
 	a, _ := json.MarshalIndent(va, "", "  ")
 	b, _ := json.MarshalIndent(vb, "", "  ")
 	if erra != nil || errb != nil || !bytes.Equal(a, b) {
