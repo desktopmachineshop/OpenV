@@ -1664,7 +1664,9 @@ export const GuidedWizard: React.FC = () => {
             {draftsLoading ? (
               <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Loading drafts…</div>
             ) : draftArtifacts.length === 0 ? (
-              <div style={{ color: 'var(--neutral)', fontSize: 13, marginBottom: 12 }}>No draft artifacts found.</div>
+              <div style={{ color: 'var(--neutral)', fontSize: 13, marginBottom: 12 }}>
+                No new drafts to approve. Commit to save this definition.
+              </div>
             ) : (
               Object.keys(grouped)
                 .sort()
@@ -1699,8 +1701,14 @@ export const GuidedWizard: React.FC = () => {
               <button className="button-secondary" onClick={handleBack} disabled={busy}>
                 ← Back
               </button>
-              <button className="button" onClick={handleCommit} disabled={busy || draftArtifacts.length === 0}>
-                {busy ? 'Committing…' : `Commit ${draftArtifacts.length} artifact${draftArtifacts.length === 1 ? '' : 's'}`}
+              {/* A reopened definition that adds nothing has no drafts, and
+                  still needs its commit to close the session. */}
+              <button className="button" onClick={handleCommit} disabled={busy}>
+                {busy
+                  ? 'Committing…'
+                  : draftArtifacts.length === 0
+                    ? 'Commit definition'
+                    : `Commit ${draftArtifacts.length} artifact${draftArtifacts.length === 1 ? '' : 's'}`}
               </button>
             </div>
           </div>

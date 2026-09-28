@@ -15,6 +15,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/agents"
 	"github.com/openv/requirements-platform/internal/domain/artifacts"
 	"github.com/openv/requirements-platform/internal/domain/baselines"
+	"github.com/openv/requirements-platform/internal/domain/guided"
 	"github.com/openv/requirements-platform/internal/domain/interviews"
 	"github.com/openv/requirements-platform/internal/domain/links"
 	"github.com/openv/requirements-platform/internal/domain/members"
@@ -132,6 +133,8 @@ func payloadDrives() []payloadDrive {
 		httpDrive("POST /api/v1/projects/{id}/baselines", "/api/v1/projects/proj-1/baselines", `{"name":"Release 1"}`),
 		httpDrive("POST /api/v1/chatter", "/api/v1/chatter", `{"artifact_id":"art-req","message":"Looks good @sam"}`),
 		httpDrive("POST /api/v1/projects/{id}/review-round", "/api/v1/projects/proj-1/review-round", `{"types":["requirement"]}`),
+		// A guided commit publishes each approval it made.
+		httpDrive("POST /api/v1/guided-sessions/{id}/commit", "/api/v1/guided-sessions/gs-1/commit", ""),
 		// A proposal-mode agent's write is diverted into the review queue.
 		httpDrive("POST /api/v1/artifacts (proposal-mode agent run)", "/api/v1/artifacts",
 			`{"project_id":"proj-1","type":"requirement","title":"Proposed"}`, asAgentRun(proposalRun())),
@@ -253,6 +256,7 @@ func newPayloadFixture(t *testing.T) *payloadFixture {
 		"agent-proposal": {ID: "agent-proposal", OrgID: payloadOrg, WriteMode: agents.WriteModeProposal},
 	}}
 	deps.ProposalService = &payloadProposals{}
+	deps.GuidedService = &payloadGuided{arts: arts}
 	project := payloadProject
 	deps.InterviewService = &payloadInterviews{fakeInterviewService: &fakeInterviewService{
 		interview: &interviews.Interview{ID: "iv-1", ProjectID: project},
@@ -306,6 +310,26 @@ func (f *payloadArtifacts) StartProjectReview(projectID string, req artifacts.Re
 	moved := *f.byID["art-req"]
 	moved.Status = artifacts.StatusInReview
 	return &artifacts.ReviewRoundResult{Moved: []*artifacts.Artifact{&moved}, AlreadyInReview: 1, Approved: 2, Types: req.Types}, nil
+}
+
+// payloadGuided serves one session of the project, whose commit approves
+// the fixture's requirement.
+type payloadGuided struct {
+	guided.Service
+	arts *payloadArtifacts
+}
+
+func (f *payloadGuided) GetSession(id string) (*guided.Session, error) {
+	return &guided.Session{ID: id, ProjectID: payloadProject, Status: guided.StatusInProgress}, nil
+}
+
+func (f *payloadGuided) Commit(sessionID string) (*guided.CommitResult, error) {
+	approved := *f.arts.byID["art-req"]
+	approved.Status = artifacts.StatusApproved
+	approved.Version++
+	session, _ := f.GetSession(sessionID)
+	session.Status = guided.StatusCommitted
+	return &guided.CommitResult{Session: session, Approved: []*artifacts.Artifact{&approved}}, nil
 }
 
 type payloadBaselines struct{ baselines.Service }

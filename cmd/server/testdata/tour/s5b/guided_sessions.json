@@ -2316,7 +2316,7 @@
         "path": "/api/v1/guided-sessions/<s>/commit"
       },
       "notes": [
-        "the drafts' new versions and notes publish no event"
+        "each draft's approval publishes artifact.status_changed, with the committing user as its actor and the session as guided_session; its step into review publishes nothing"
       ],
       "status": 200,
       "content_type": "text/plain; charset=utf-8",
@@ -2361,11 +2361,54 @@
         "updated_at": "<time@step 65>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
-      "events": []
+      "events": [
+        {
+          "type": "artifact.status_changed",
+          "actor": "user:<owner>",
+          "project": "<p>",
+          "entity": "<draft_req>",
+          "payload": {
+            "artifact_type": "string \"requirement\"",
+            "from": "string \"in_review\"",
+            "guided_session": "string \"<s>\"",
+            "title": "string \"Warn before the spindle starts\"",
+            "to": "string \"approved\"",
+            "version": "number 3"
+          }
+        },
+        {
+          "type": "artifact.status_changed",
+          "actor": "user:<owner>",
+          "project": "<p>",
+          "entity": "<draft_hazard>",
+          "payload": {
+            "artifact_type": "string \"hazard\"",
+            "from": "string \"in_review\"",
+            "guided_session": "string \"<s>\"",
+            "title": "string \"Spindle starts with the guard open\"",
+            "to": "string \"approved\"",
+            "version": "number 3"
+          }
+        },
+        {
+          "type": "artifact.status_changed",
+          "actor": "user:<owner>",
+          "project": "<p>",
+          "entity": "<draft_widget>",
+          "payload": {
+            "artifact_type": "string \"widget\"",
+            "from": "string \"in_review\"",
+            "guided_session": "string \"<s>\"",
+            "title": "string \"Not a type\"",
+            "to": "string \"approved\"",
+            "version": "number 3"
+          }
+        }
+      ]
     },
     {
       "n": 66,
-      "title": "P's requirements after the commit: the drafted one at version 2 but still a draft, the failed batch's untouched",
+      "title": "P's requirements after the commit: the drafted one approved at version 3, the failed batch's untouched",
       "actor": "owner",
       "route": "GET /api/v1/artifacts",
       "request": {
@@ -2374,7 +2417,7 @@
         "query": "project_id=<p>&type=requirement"
       },
       "notes": [
-        "an S5a route. The commit writes each draft's attributes with status approved, but UpdateArtifact rewrites that attribute from the status column, so the drafts stay drafts: a new version and the automatic note are all the commit leaves (a bug, pinned as it is)"
+        "an S5a route. The commit moves each draft with ChangeStatus, draft to in_review to approved, a version each, so the status column and its attribute mirror agree"
       ],
       "status": 200,
       "content_type": "application/json",
@@ -2385,7 +2428,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<req>\",\"project_id\":\"<p>\",\"parent_id\":\"<heading>\",\"type\":\"requirement\",\"ref\":\"REQ-1\",\"title\":\"Guard interlock\",\"body\":\"The system shall stop the spindle within 1 s of the guard opening.\",\"sort_order\":2,\"status\":\"draft\",\"attributes\":{\"status\":\"draft\",\"verification_method\":\"test\"},\"version\":1,\"valid_from\":\"<time@before step 1>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},{\"id\":\"<draft_req>\",\"project_id\":\"<p>\",\"parent_id\":\"<heading>\",\"type\":\"requirement\",\"ref\":\"REQ-2\",\"title\":\"Warn before the spindle starts\",\"body\":\"The system shall sound a warning 2 s before the spindle starts.\",\"sort_order\":3,\"status\":\"draft\",\"attributes\":{\"origin\":\"guided-flow\",\"status\":\"draft\",\"verification_method\":\"test\"},\"version\":2,\"valid_from\":\"<time@step 65>\",\"valid_to\":null,\"created_at\":\"<time@step 25>\",\"updated_at\":\"<time@step 65>\"},{\"id\":\"<orphan>\",\"project_id\":\"<p>\",\"parent_id\":\"<heading>\",\"type\":\"requirement\",\"ref\":\"REQ-3\",\"title\":\"Brake within 1 s\",\"body\":\"The system shall brake.\",\"sort_order\":6,\"status\":\"draft\",\"attributes\":{\"origin\":\"guided-flow\",\"status\":\"draft\"},\"version\":1,\"valid_from\":\"<time@step 29>\",\"valid_to\":null,\"created_at\":\"<time@step 29>\",\"updated_at\":\"<time@step 29>\"}]"
+        "[{\"id\":\"<req>\",\"project_id\":\"<p>\",\"parent_id\":\"<heading>\",\"type\":\"requirement\",\"ref\":\"REQ-1\",\"title\":\"Guard interlock\",\"body\":\"The system shall stop the spindle within 1 s of the guard opening.\",\"sort_order\":2,\"status\":\"draft\",\"attributes\":{\"status\":\"draft\",\"verification_method\":\"test\"},\"version\":1,\"valid_from\":\"<time@before step 1>\",\"valid_to\":null,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},{\"id\":\"<draft_req>\",\"project_id\":\"<p>\",\"parent_id\":\"<heading>\",\"type\":\"requirement\",\"ref\":\"REQ-2\",\"title\":\"Warn before the spindle starts\",\"body\":\"The system shall sound a warning 2 s before the spindle starts.\",\"sort_order\":3,\"status\":\"approved\",\"attributes\":{\"origin\":\"guided-flow\",\"status\":\"approved\",\"verification_method\":\"test\"},\"version\":3,\"valid_from\":\"<time@step 65>\",\"valid_to\":null,\"created_at\":\"<time@step 25>\",\"updated_at\":\"<time@step 65>\"},{\"id\":\"<orphan>\",\"project_id\":\"<p>\",\"parent_id\":\"<heading>\",\"type\":\"requirement\",\"ref\":\"REQ-3\",\"title\":\"Brake within 1 s\",\"body\":\"The system shall brake.\",\"sort_order\":6,\"status\":\"draft\",\"attributes\":{\"origin\":\"guided-flow\",\"status\":\"draft\"},\"version\":1,\"valid_from\":\"<time@step 29>\",\"valid_to\":null,\"created_at\":\"<time@step 29>\",\"updated_at\":\"<time@step 29>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -2418,13 +2461,13 @@
           "title": "Warn before the spindle starts",
           "body": "The system shall sound a warning 2 s before the spindle starts.",
           "sort_order": 3,
-          "status": "draft",
+          "status": "approved",
           "attributes": {
             "origin": "guided-flow",
-            "status": "draft",
+            "status": "approved",
             "verification_method": "test"
           },
-          "version": 2,
+          "version": 3,
           "valid_from": "<time@step 65>",
           "valid_to": null,
           "created_at": "<time@step 25>",
@@ -2459,7 +2502,7 @@
     },
     {
       "n": 67,
-      "title": "the drafted requirement's notes: the commit's automatic note",
+      "title": "the drafted requirement's notes: a status note per step and the commit's automatic note, newest first",
       "actor": "owner",
       "route": "GET /api/v1/chatter",
       "request": {
@@ -2477,7 +2520,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<uuid:5>\",\"artifact_id\":\"<draft_req>\",\"message\":\"Created via guided definition\",\"is_auto_entry\":true,\"entry_type\":\"guided-flow\",\"author_name\":\"\",\"created_at\":\"<time@step 65>\",\"updated_at\":\"<time@step 65>\"}]"
+        "[{\"id\":\"<uuid:5>\",\"artifact_id\":\"<draft_req>\",\"message\":\"Created via guided definition\",\"is_auto_entry\":true,\"entry_type\":\"guided-flow\",\"author_name\":\"\",\"created_at\":\"<time@step 65>\",\"updated_at\":\"<time@step 65>\"},{\"id\":\"<uuid:6>\",\"artifact_id\":\"<draft_req>\",\"message\":\"Status changed: in_review → approved (guided definition)\",\"is_auto_entry\":true,\"entry_type\":\"status-change\",\"author_name\":\"\",\"created_at\":\"<time@step 65>\",\"updated_at\":\"<time@step 65>\"},{\"id\":\"<uuid:7>\",\"artifact_id\":\"<draft_req>\",\"message\":\"Status changed: draft → in_review (guided definition)\",\"is_auto_entry\":true,\"entry_type\":\"status-change\",\"author_name\":\"\",\"created_at\":\"<time@step 65>\",\"updated_at\":\"<time@step 65>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -2487,6 +2530,26 @@
           "message": "Created via guided definition",
           "is_auto_entry": true,
           "entry_type": "guided-flow",
+          "author_name": "",
+          "created_at": "<time@step 65>",
+          "updated_at": "<time@step 65>"
+        },
+        {
+          "id": "<uuid:6>",
+          "artifact_id": "<draft_req>",
+          "message": "Status changed: in_review → approved (guided definition)",
+          "is_auto_entry": true,
+          "entry_type": "status-change",
+          "author_name": "",
+          "created_at": "<time@step 65>",
+          "updated_at": "<time@step 65>"
+        },
+        {
+          "id": "<uuid:7>",
+          "artifact_id": "<draft_req>",
+          "message": "Status changed: draft → in_review (guided definition)",
+          "is_auto_entry": true,
+          "entry_type": "status-change",
           "author_name": "",
           "created_at": "<time@step 65>",
           "updated_at": "<time@step 65>"
@@ -2597,12 +2660,12 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"message\":{\"id\":\"<uuid:6>\",\"session_id\":\"<s>\",\"role\":\"user\",\"content\":\"One more thing\",\"created_at\":\"<time@step 71>\"},\"runner_online\":false}"
+        "{\"message\":{\"id\":\"<uuid:8>\",\"session_id\":\"<s>\",\"role\":\"user\",\"content\":\"One more thing\",\"created_at\":\"<time@step 71>\"},\"runner_online\":false}"
       ],
       "trailing_newline": true,
       "parsed": {
         "message": {
-          "id": "<uuid:6>",
+          "id": "<uuid:8>",
           "session_id": "<s>",
           "role": "user",
           "content": "One more thing",
@@ -3085,12 +3148,12 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"message\":{\"id\":\"<uuid:7>\",\"session_id\":\"<t>\",\"role\":\"user\",\"content\":\"What about this one?\",\"created_at\":\"<time@step 83>\"},\"runner_online\":false}"
+        "{\"message\":{\"id\":\"<uuid:9>\",\"session_id\":\"<t>\",\"role\":\"user\",\"content\":\"What about this one?\",\"created_at\":\"<time@step 83>\"},\"runner_online\":false}"
       ],
       "trailing_newline": true,
       "parsed": {
         "message": {
-          "id": "<uuid:7>",
+          "id": "<uuid:9>",
           "session_id": "<t>",
           "role": "user",
           "content": "What about this one?",
@@ -3482,12 +3545,12 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"message\":{\"id\":\"<uuid:8>\",\"session_id\":\"<u>\",\"role\":\"user\",\"content\":\"Anyone there?\",\"created_at\":\"<time@step 94>\"},\"runner_online\":false}"
+        "{\"message\":{\"id\":\"<uuid:10>\",\"session_id\":\"<u>\",\"role\":\"user\",\"content\":\"Anyone there?\",\"created_at\":\"<time@step 94>\"},\"runner_online\":false}"
       ],
       "trailing_newline": true,
       "parsed": {
         "message": {
-          "id": "<uuid:8>",
+          "id": "<uuid:10>",
           "session_id": "<u>",
           "role": "user",
           "content": "Anyone there?",
@@ -3546,26 +3609,26 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<uuid:9>\",\"session_id\":\"<u>\",\"role\":\"system\",\"content\":\"The V\\u0026V Assistant is unavailable right now (requirements-copilot agent is not available in this workspace). You can keep filling in the wizard and try the chat again shortly.\",\"created_at\":\"<time@step 93>\"},{\"id\":\"<uuid:8>\",\"session_id\":\"<u>\",\"role\":\"user\",\"content\":\"Anyone there?\",\"created_at\":\"<time@step 94>\"},{\"id\":\"<uuid:10>\",\"session_id\":\"<u>\",\"role\":\"system\",\"content\":\"The V\\u0026V Assistant is unavailable right now (requirements-copilot agent is not available in this workspace). Your message was saved — please try again shortly.\",\"created_at\":\"<time@step 94>\"}]"
+        "[{\"id\":\"<uuid:11>\",\"session_id\":\"<u>\",\"role\":\"system\",\"content\":\"The V\\u0026V Assistant is unavailable right now (requirements-copilot agent is not available in this workspace). You can keep filling in the wizard and try the chat again shortly.\",\"created_at\":\"<time@step 93>\"},{\"id\":\"<uuid:10>\",\"session_id\":\"<u>\",\"role\":\"user\",\"content\":\"Anyone there?\",\"created_at\":\"<time@step 94>\"},{\"id\":\"<uuid:12>\",\"session_id\":\"<u>\",\"role\":\"system\",\"content\":\"The V\\u0026V Assistant is unavailable right now (requirements-copilot agent is not available in this workspace). Your message was saved — please try again shortly.\",\"created_at\":\"<time@step 94>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
         {
-          "id": "<uuid:9>",
+          "id": "<uuid:11>",
           "session_id": "<u>",
           "role": "system",
           "content": "The V\u0026V Assistant is unavailable right now (requirements-copilot agent is not available in this workspace). You can keep filling in the wizard and try the chat again shortly.",
           "created_at": "<time@step 93>"
         },
         {
-          "id": "<uuid:8>",
+          "id": "<uuid:10>",
           "session_id": "<u>",
           "role": "user",
           "content": "Anyone there?",
           "created_at": "<time@step 94>"
         },
         {
-          "id": "<uuid:10>",
+          "id": "<uuid:12>",
           "session_id": "<u>",
           "role": "system",
           "content": "The V\u0026V Assistant is unavailable right now (requirements-copilot agent is not available in this workspace). Your message was saved — please try again shortly.",
@@ -3599,13 +3662,13 @@
       "kind": "text",
       "body": [
         "event: message",
-        "data: {\"id\":\"<uuid:9>\",\"session_id\":\"<u>\",\"role\":\"system\",\"content\":\"The V\\u0026V Assistant is unavailable right now (requirements-copilot agent is not available in this workspace). You can keep filling in the wizard and try the chat again shortly.\",\"created_at\":\"<time@step 93>\"}",
+        "data: {\"id\":\"<uuid:11>\",\"session_id\":\"<u>\",\"role\":\"system\",\"content\":\"The V\\u0026V Assistant is unavailable right now (requirements-copilot agent is not available in this workspace). You can keep filling in the wizard and try the chat again shortly.\",\"created_at\":\"<time@step 93>\"}",
         "",
         "event: message",
-        "data: {\"id\":\"<uuid:8>\",\"session_id\":\"<u>\",\"role\":\"user\",\"content\":\"Anyone there?\",\"created_at\":\"<time@step 94>\"}",
+        "data: {\"id\":\"<uuid:10>\",\"session_id\":\"<u>\",\"role\":\"user\",\"content\":\"Anyone there?\",\"created_at\":\"<time@step 94>\"}",
         "",
         "event: message",
-        "data: {\"id\":\"<uuid:10>\",\"session_id\":\"<u>\",\"role\":\"system\",\"content\":\"The V\\u0026V Assistant is unavailable right now (requirements-copilot agent is not available in this workspace). Your message was saved — please try again shortly.\",\"created_at\":\"<time@step 94>\"}",
+        "data: {\"id\":\"<uuid:12>\",\"session_id\":\"<u>\",\"role\":\"system\",\"content\":\"The V\\u0026V Assistant is unavailable right now (requirements-copilot agent is not available in this workspace). Your message was saved — please try again shortly.\",\"created_at\":\"<time@step 94>\"}",
         ""
       ],
       "trailing_newline": true,

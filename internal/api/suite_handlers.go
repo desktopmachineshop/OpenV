@@ -13,6 +13,7 @@ import (
 	"github.com/gorilla/mux"
 
 	"github.com/openv/requirements-platform/internal/domain/agentruns"
+	"github.com/openv/requirements-platform/internal/domain/agents"
 	"github.com/openv/requirements-platform/internal/domain/artifacts"
 	"github.com/openv/requirements-platform/internal/domain/baselines"
 	"github.com/openv/requirements-platform/internal/domain/events"
@@ -1048,17 +1049,51 @@ func (h *Handler) MaterializeGuidedDrafts(w http.ResponseWriter, r *http.Request
 	json.NewEncoder(w).Encode(map[string]interface{}{"artifact_ids": ids})
 }
 
+// CommitGuidedSession approves the session's drafts and closes it. Approval
+// is a review-state change, so proposal-mode agent runs are refused, as
+// ChangeArtifactStatus refuses them: a review-gated agent must not sign off
+// artifacts.
 func (h *Handler) CommitGuidedSession(w http.ResponseWriter, r *http.Request) {
 	session := h.getGuidedSessionChecked(w, r, members.RoleEditor)
 	if session == nil {
 		return
 	}
-	committed, err := h.guidedService.Commit(session.ID)
+	if run := CurrentRun(r); run != nil && h.agentService != nil {
+		if agent, err := h.agentService.Get(run.AgentID); err == nil && agent != nil && agent.WriteMode == agents.WriteModeProposal {
+			writeJSONError(w, http.StatusForbidden, "proposal-mode agent runs cannot commit a guided session")
+			return
+		}
+	}
+	result, err := h.guidedService.Commit(session.ID)
+	if result != nil {
+		h.publishGuidedApprovals(r, session.ID, result.Approved)
+	}
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	json.NewEncoder(w).Encode(committed)
+	json.NewEncoder(w).Encode(result.Session)
+}
+
+// publishGuidedApprovals records each draft a guided commit approved in the
+// sign-off history, the event stream (issue #127), with the event an approval
+// by hand gets, so the committing user is its actor and it reaches the
+// activity log and triggered automations. Only the approval is published: the
+// draft's step into review just before it would ask every editor, through
+// the notifier, to review something the commit has already signed off. The
+// approvals a failed commit made before failing are published too, since a
+// retry leaves them as they are.
+func (h *Handler) publishGuidedApprovals(r *http.Request, sessionID string, approved []*artifacts.Artifact) {
+	for _, a := range approved {
+		h.publish(r, events.ArtifactStatusChanged, a.ProjectID, a.ID, map[string]interface{}{
+			"artifact_type":  a.Type,
+			"title":          a.Title,
+			"from":           artifacts.StatusInReview,
+			"to":             a.Status,
+			"version":        a.Version,
+			"guided_session": sessionID,
+		})
+	}
 }
 
 func (h *Handler) AbandonGuidedSession(w http.ResponseWriter, r *http.Request) {

@@ -74,6 +74,17 @@ type ChatMessage struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
+// CommitResult is what a commit did: the session, now committed, and every
+// draft the commit approved, as the approval left it. A draft that was
+// already approved, or superseded, is not listed: the commit left it alone.
+// The approvals are reported so the caller can record who signed them off,
+// as the status route does (the event stream is the sign-off history, issue
+// #127).
+type CommitResult struct {
+	Session  *Session
+	Approved []*artifacts.Artifact
+}
+
 // DraftLink describes a link to create from a draft artifact.
 type DraftLink struct {
 	Type string `json:"type"`
@@ -117,7 +128,9 @@ type Service interface {
 	ListSessions(projectID string) ([]*Session, error)
 	SaveStep(sessionID string, step int, answers map[string]interface{}) (*Session, error)
 	MaterializeDrafts(sessionID string, drafts []DraftSpec) ([]string, error)
-	Commit(sessionID string) (*Session, error)
+	// Commit approves the session's drafts and closes it. When it fails
+	// after approving some drafts, it still returns them with the error.
+	Commit(sessionID string) (*CommitResult, error)
 	Abandon(sessionID string) (*Session, error)
 
 	AppendChatMessage(sessionID, role, content string) (*ChatMessage, error)
@@ -291,7 +304,10 @@ func (s *DefaultService) MaterializeDrafts(sessionID string, drafts []DraftSpec)
 }
 
 // Commit approves all draft artifacts of a session and marks it committed.
-func (s *DefaultService) Commit(sessionID string) (*Session, error) {
+// If it fails part way, the result it returns with the error lists the drafts
+// approved before the failure (Session is then nil): those approvals stand,
+// and a retry leaves them alone, so they must be recorded now.
+func (s *DefaultService) Commit(sessionID string) (*CommitResult, error) {
 	session, err := s.repo.FindByID(sessionID)
 	if err != nil {
 		return nil, err
@@ -300,6 +316,7 @@ func (s *DefaultService) Commit(sessionID string) (*Session, error) {
 		return nil, ErrSessionNotEditable
 	}
 
+	approved := []*artifacts.Artifact{}
 	for _, artifactID := range session.DraftArtifactIDs {
 		artifact, err := s.artifactService.GetArtifact(artifactID)
 		if err != nil {
@@ -307,21 +324,12 @@ func (s *DefaultService) Commit(sessionID string) (*Session, error) {
 			continue
 		}
 
-		attrs := artifact.Attributes
-		if attrs == nil {
-			attrs = map[string]interface{}{}
-		}
-		attrs["status"] = "approved"
-
-		// Attribute-only write: nil content fields mean "no change"
-		// (issue-#170 contract), the current type/title/body carry forward;
-		// an omitted ParentID and nil SortOrder likewise leave the
-		// artifact's place in the tree untouched (issue-#172 contract).
-		_, err = s.artifactService.UpdateArtifact(artifactID, artifacts.UpdateArtifactRequest{
-			Attributes: attrs,
-		})
+		signedOff, err := s.approveDraft(artifact)
 		if err != nil {
-			return nil, err
+			return &CommitResult{Approved: approved}, err
+		}
+		if signedOff != nil {
+			approved = append(approved, signedOff)
 		}
 
 		entry := chatter.NewChatterEntry(artifactID, "Created via guided definition", true, "guided-flow")
@@ -334,11 +342,52 @@ func (s *DefaultService) Commit(sessionID string) (*Session, error) {
 	session.UpdatedAt = time.Now()
 
 	if err := s.repo.Update(session); err != nil {
-		return nil, err
+		return &CommitResult{Approved: approved}, err
 	}
 	s.clearPendingNudge(session)
 
-	return session, nil
+	return &CommitResult{Session: session, Approved: approved}, nil
+}
+
+// approveDraft signs off one of a session's drafts and returns it as approved,
+// or nil when it was left alone. The status column is the authority (issue
+// #127) and an attribute write never moves it, so the approval goes through
+// ChangeStatus one legal transition at a time, as a person would make it from
+// the artifact's header: a draft is submitted for review and then approved,
+// each step a new version with the note a status change leaves in the
+// artifact's history. An artifact already approved is left as it is, and so
+// is a superseded one, which no transition leaves.
+//
+// Nothing is published here: the caller records each approval it is handed
+// in the event stream, with the committing user as its actor. The step into
+// review has no event, as the notifier would read it as a request for a
+// review nobody is waiting for.
+func (s *DefaultService) approveDraft(artifact *artifacts.Artifact) (*artifacts.Artifact, error) {
+	from := artifacts.NormalizeStatus(artifact.Status)
+	var steps []string
+	switch from {
+	case artifacts.StatusDraft:
+		steps = []string{artifacts.StatusInReview, artifacts.StatusApproved}
+	case artifacts.StatusInReview:
+		steps = []string{artifacts.StatusApproved}
+	}
+
+	var updated *artifacts.Artifact
+	for _, to := range steps {
+		var err error
+		updated, err = s.artifactService.ChangeStatus(artifact.ID, to)
+		if err != nil {
+			return nil, err
+		}
+		note := fmt.Sprintf("Status changed: %s → %s (guided definition)", from, updated.Status)
+		entry := chatter.NewChatterEntry(artifact.ID, note, true, "status-change")
+		if err := s.chatterService.CreateEntry(entry); err != nil {
+			slog.Warn("guided: failed to create chatter entry for a committed draft's status change",
+				"artifact_id", artifact.ID, "error", err)
+		}
+		from = updated.Status
+	}
+	return updated, nil
 }
 
 // clearPendingNudge drops any wizard nudge still parked on a session that has
