@@ -24,8 +24,9 @@ import "testing"
 // when the store refuses it; a batch that fails part way leaves the drafts
 // before the failure in the project but not in the session); the copilot
 // chat (kickoff, messages, nudges and the stream's replay); the commit (each
-// draft gets a new version meant to approve it, which the status column
-// overrides, so it stays a draft, and an automatic note; any parked nudge is
+// draft goes through review to approved, a version and a note per step,
+// beside the commit's automatic note, and an artifact.status_changed event
+// for the approval alone, the committing user its actor; any parked nudge is
 // cleared); and the abandon. Neither a message, a nudge nor the abandon
 // checks that the session is still in progress. A second session shows a
 // nudge that launches a turn, a message naming as the artifact on screen a
@@ -248,20 +249,21 @@ func guidedSessionsTour(tr *tour) {
 	tr.step("the chat stream of a session that does not exist", o, "GET /api/v1/guided-sessions/{id}/chat/stream",
 		at("id", "{{phantom}}"), eventStream(0))
 
-	// Commit: the drafts are written again, with a note each, and the parked
+	// Commit: each draft is submitted for review and approved, and the parked
 	// nudge is cleared.
 	tr.step("the viewer commits S", viewer, "POST /api/v1/guided-sessions/{id}/commit", at("id", "{{s}}"))
 	tr.step("commit a session that does not exist", o, "POST /api/v1/guided-sessions/{id}/commit",
 		at("id", "{{phantom}}"))
 	tr.step("commit S: committed, the parked nudge cleared", o, "POST /api/v1/guided-sessions/{id}/commit",
-		at("id", "{{s}}"), note("the drafts' new versions and notes publish no event"))
-	tr.step("P's requirements after the commit: the drafted one at version 2 but still a draft, the failed "+
-		"batch's untouched", o, "GET /api/v1/artifacts", query("project_id={{p}}&type=requirement"),
-		note("an S5a route. The commit writes each draft's attributes with status approved, but UpdateArtifact "+
-			"rewrites that attribute from the status column, so the drafts stay drafts: a new version and the "+
-			"automatic note are all the commit leaves (a bug, pinned as it is)"))
-	tr.step("the drafted requirement's notes: the commit's automatic note", o, "GET /api/v1/chatter",
-		query("artifact_id={{draft_req}}"), note("an S5a route, read to show what the commit writes beside a draft"))
+		at("id", "{{s}}"), note("each draft's approval publishes artifact.status_changed, with the committing user as "+
+			"its actor and the session as guided_session; its step into review publishes nothing"))
+	tr.step("P's requirements after the commit: the drafted one approved at version 3, the failed batch's untouched",
+		o, "GET /api/v1/artifacts", query("project_id={{p}}&type=requirement"),
+		note("an S5a route. The commit moves each draft with ChangeStatus, draft to in_review to approved, a "+
+			"version each, so the status column and its attribute mirror agree"))
+	tr.step("the drafted requirement's notes: a status note per step and the commit's automatic note, newest first",
+		o, "GET /api/v1/chatter", query("artifact_id={{draft_req}}"),
+		note("an S5a route, read to show what the commit writes beside a draft"))
 	tr.step("commit S again", o, "POST /api/v1/guided-sessions/{id}/commit", at("id", "{{s}}"))
 	tr.step("save a step of the committed S", o, "PUT /api/v1/guided-sessions/{id}/step", at("id", "{{s}}"),
 		jsonBody(`{"step":8,"answers":{}}`))

@@ -61,8 +61,29 @@ type RenderOptions struct {
 	// test runs; both are nil unless Content asks for evidence.
 	Latest map[string]*vv.TestResult
 	Runs   []*vv.TestRun
+	// Coverage computes the V&V status when Content asks for it, from the
+	// narrowed snapshot and Latest; nil reads the snapshot alone.
+	Coverage CoverageFunc
 	// Author is written to the document's metadata.
 	Author string
+}
+
+// CoverageFunc computes the verification coverage a document reports from
+// the snapshot it renders and the latest result per test case.
+// vv.ComputeCoverage reads the snapshot alone; the API passes the coverage
+// GET /vv/coverage answers, which rolls up the verification of the other
+// projects' requirements that refine the snapshot's (REQ-146), so a document
+// reports such a requirement as the V&V dashboard does. A download computes
+// that flow-down on the snapshot before its selection narrows it
+// (downloads.coverageAsLoaded).
+type CoverageFunc func(data *exports.ProjectExport, latest map[string]*vv.TestResult) *vv.CoverageReport
+
+// compute is f's coverage, or vv.ComputeCoverage's when f is nil.
+func (f CoverageFunc) compute(data *exports.ProjectExport, latest map[string]*vv.TestResult) *vv.CoverageReport {
+	if f == nil {
+		return vv.ComputeCoverage(data, latest)
+	}
+	return f(data, latest)
 }
 
 // defaultRenderOptions is what the legacy report route and a caller with no

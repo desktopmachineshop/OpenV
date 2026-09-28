@@ -659,7 +659,7 @@ hidden entry is out of every list and cannot be voted for either.
 | GET | `/api/v1/projects/{id}/vv/coverage` | Verification coverage summary. A requirement refined by requirements of child projects carries them as `refinements` (each with its own rollup in its project), `flow_down` (the worst of them) and, when it has no evidence of its own, takes the flow-down as its `rollup` with `via_refinements` set (REQ-146) | viewer |
 | GET | `/api/v1/projects/{id}/vv/matrix` | Traceability matrix | viewer |
 | GET | `/api/v1/projects/{id}/vv/gaps` | Coverage gaps | viewer |
-| GET | `/api/v1/projects/{id}/vv/report` | V&V report | viewer |
+| GET | `/api/v1/projects/{id}/vv/report` | V&V report PDF: the coverage and gaps `vv/coverage` and `vv/gaps` answer, flow-down included (REQ-146), and the test runs | viewer |
 
 ### Workspace limits
 
@@ -846,7 +846,9 @@ that carry script, so every file is served `application/octet-stream` with
 (free 2048, team 20480), because uploads share one volume with the rest of
 the deployment. An upload that would exceed it is refused with `413` and a
 message naming the current usage. Citing a bundle twice from one result is
-accepted quietly rather than refused — it is the state the caller asked for.
+accepted quietly rather than refused — it is the state the caller asked for —
+and answers `201` with the citation already stored: its `id`, `created_at`
+and `note`, which the repeat leaves as they were.
 
 `vv/gaps` returns one list of artifact IDs per bucket:
 
@@ -906,7 +908,7 @@ to that turn's prompt as fenced, untrusted content. The wizard sends none.
 | GET | `/api/v1/guided-sessions/{id}` | Session state | viewer |
 | PUT | `/api/v1/guided-sessions/{id}/step` | Save a step's answers | editor |
 | POST | `/api/v1/guided-sessions/{id}/drafts` | Materialize draft artifacts | editor |
-| POST | `/api/v1/guided-sessions/{id}/commit` | Commit session (drafts become real) | editor |
+| POST | `/api/v1/guided-sessions/{id}/commit` | Commit session: each of its drafts is approved through the review states (`draft` → `in_review` → `approved`, a version and a `status-change` note per step), and the session closes. Each approval publishes the `artifact.status_changed` event a status change does, with the committing user as actor and the session id as `guided_session`; the step into review publishes none, so editors are not asked to review it. Refused `403` for a proposal-mode agent run, like a status change | editor |
 | POST | `/api/v1/guided-sessions/{id}/abandon` | Abandon session | editor |
 | GET | `/api/v1/guided-sessions/{id}/messages` | Assistant chat history | viewer |
 | POST | `/api/v1/guided-sessions/{id}/messages` | Send a chat message (launches an assistant turn; optional `artifact_id`) | editor |

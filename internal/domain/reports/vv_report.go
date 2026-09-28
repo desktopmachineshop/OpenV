@@ -22,7 +22,12 @@ import (
 // latest is the latest test result per test case and runs the project's test
 // runs; both are plain DTOs supplied by the caller so the report engine makes
 // no service calls beyond the export/baseline sourcing used by all reports.
-func (s *DefaultService) GenerateVVReport(projectID string, baselineID string, latest map[string]*vv.TestResult, runs []*vv.TestRun) ([]byte, string, error) {
+// computeCoverage turns the loaded snapshot and latest into the requirement
+// coverage the report shows (vv.ComputeCoverage when nil): the API passes the
+// coverage GET /vv/coverage answers, whose flow-down from child projects is
+// the caller's to compute, so the report and the V&V dashboard agree
+// (REQ-146).
+func (s *DefaultService) GenerateVVReport(projectID string, baselineID string, latest map[string]*vv.TestResult, runs []*vv.TestRun, computeCoverage CoverageFunc) ([]byte, string, error) {
 	if projectID == "" {
 		return nil, "", errors.New("project_id is required")
 	}
@@ -52,7 +57,7 @@ func (s *DefaultService) GenerateVVReport(projectID string, baselineID string, l
 		}
 	}
 
-	coverage := vv.ComputeCoverage(&data, latest)
+	coverage := computeCoverage.compute(&data, latest)
 	gaps := vv.GapAnalysis(&data, coverage)
 
 	pdf, err := buildVVReportPDF(&data, baselineName, coverage, gaps, runs)

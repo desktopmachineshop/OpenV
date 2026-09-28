@@ -344,6 +344,7 @@ func setTestServices(h *Handler, d HandlerDeps) {
 	h.workItemService = d.WorkItemService
 	h.vvService = d.VVService
 	h.runService = d.RunService
+	h.guidedService = d.GuidedService
 }
 
 func TestRegistrationOpenByDefault(t *testing.T) {

@@ -2101,7 +2101,7 @@
     },
     {
       "n": 58,
-      "title": "res1 cites B1 again: 201 with a fresh id and time that were never stored",
+      "title": "res1 cites B1 again: 201 with the citation already stored, its note unchanged",
       "actor": "owner",
       "route": "POST /api/v1/test-results/{id}/citations",
       "request": {
@@ -2113,7 +2113,7 @@
         "body": "{\"bundle_id\":\"<b1>\",\"note\":\"A second note, dropped\"}"
       },
       "notes": [
-        "the unique pair refuses the insert, and the service answers ErrAlreadyCited with the citation it built: an id and created_at no row holds, and the stored note is unchanged"
+        "the insert meets the unique pair and returns the stored row as it is: cite1's id, time and note"
       ],
       "status": 201,
       "content_type": "application/json",
@@ -2122,15 +2122,15 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<uuid:1>\",\"bundle_id\":\"<b1>\",\"test_result_id\":\"<res1>\",\"note\":\"A second note, dropped\",\"created_at\":\"<time@step 58>\"}"
+        "{\"id\":\"<cite1>\",\"bundle_id\":\"<b1>\",\"test_result_id\":\"<res1>\",\"note\":\"The quiet rows.\",\"created_at\":\"<time@step 57>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "id": "<uuid:1>",
+        "id": "<cite1>",
         "bundle_id": "<b1>",
         "test_result_id": "<res1>",
-        "note": "A second note, dropped",
-        "created_at": "<time@step 58>"
+        "note": "The quiet rows.",
+        "created_at": "<time@step 57>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
@@ -3426,7 +3426,7 @@
     }
   ],
   "uploads": [
-    "evidence-<uuid:2> (60 bytes)"
+    "evidence-<uuid:1> (60 bytes)"
   ],
   "outbound_requests": [
     "none: the server sent no request through HTTP_PROXY or HTTPS_PROXY"
