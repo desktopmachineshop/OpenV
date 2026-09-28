@@ -1,0 +1,3533 @@
+{
+  "golden": "cmd/server/testdata/tour/s5c/sessions_auth.json",
+  "test": "TestTourS5cSessionsAuth",
+  "about": "Sessions and sign-in: registration, login, logout and the account, the workspace a signed-in request with no X-Org-ID resolves to, the default workspace, Google sign-on against a stand-in for Google, the public meta routes, and the rate-limit buckets sign-in, verification, reset and sign-on share (Q18).",
+  "regenerate": [
+    "OPENV_TEST_DATABASE_URL=<server URL> UPDATE_GOLDEN=1 go test ./cmd/server -count=1 -run '^TestTourS5cSessionsAuth$' (which also rewrites the slice's coverage.txt)",
+    "UPDATE_GOLDEN=1 go test ./cmd/server -count=1 -run '^TestTourCoverage$' (coverage.txt alone, no database)"
+  ],
+  "normalised": [
+    "<name>: a value the tour registered under that name (an account's id, its .session token and .workspace; an id a step captured)",
+    "<uuid:N>, <hex64:N>: another random UUID (version 4) or 64-hex token, numbered by first appearance in this golden",
+    "<time@step N>: an RFC 3339 timestamp the server minted during step N (<time@before step N>: during a request the tour sent after step N-1 and records no step for; <time@boot>: before the tour's first request)",
+    "<time>: any other RFC 3339 timestamp (one the tour sent, one to come such as an expiry, or a whole second on a route the area declared to write whole seconds); <datetime>: a wall-clock YYYY-MM-DD hh:mm[:ss]; <date>: YYYY-MM-DD",
+    "<http-date>, <pdf-date>, _<stamp> (a filename's _YYYYMMDD_hhmmss), <boundary> (a multipart boundary)",
+    "<tmp>: the test's temporary directory; 127.0.0.1:<port>, localhost:<port>: the server's own port",
+    "<release-version>, <stable-version>: the release the server reports (GET /api/v1/public/release)",
+    "version-5 and nil UUIDs are not random and stay as they are",
+    "bodies are the server's bytes otherwise: key order, escapes, null against [] and the trailing newline are kept",
+    "a GET or HEAD is sent twice: plain, then with Accept-Encoding: gzip (the gzip field); a write is sent once",
+    "a signed-in actor's requests carry its session cookie and X-Org-ID: its workspace, or acting_in when the step names another; neither header is listed per request",
+    "events: those the step published, oldest first (ties on created_at in the order of their lines), each payload value as its JSON type, then its JSON text, normalised",
+    "0001-01-01T00:00:00Z kept as it is: the zero time, which links_snapshot entries carry as valid_from",
+    "<id8>: a workspace slug ends in the first 8 hex digits of its id (orgs.makeSlug), which the id's own token does not cover (the area's own pattern \"slug\":\"[a-z0-9-]*-([0-9a-f]{8})\")",
+    "<retry-after 360 s>: Retry-After on the sixth registration from one address: ceil(360 s less the seconds since the first of the six, registerIPLimiter's refill of 10 an hour), so 360 while they take under a second and no less than 340 within twenty (the six are recorded steps, two of them hashing a password, not a back-to-back drain) (the area's own pattern ^(3[45][0-9]|360)$, in the Retry-After header only)",
+    "<retry-after 30 s>: Retry-After on the 31st sign-in, verification or reset attempt from one address: authIPLimiter refills 120 an hour, as above (no less than 20 within ten) (the area's own pattern ^(2[0-9]|30)$, in the Retry-After header only)",
+    "<retry-after 180 s>: Retry-After once one account has failed five times: authAccountLimiter refills 20 an hour, as above (no less than 160 within twenty: each failure checks a password hash) (the area's own pattern ^(1[67][0-9]|180)$, in the Retry-After header only)",
+    "<retry-after 60 s>: Retry-After on the 21st single sign-on start or callback from one address: ssoIPLimiter refills 60 an hour, as above (no less than 50 within ten) (the area's own pattern ^(5[0-9]|60)$, in the Retry-After header only)"
+  ],
+  "env": [
+    "(beyond the harness's fixed environment, cmd/server/harness_test.go)",
+    "GOOGLE_CLIENT_ID=tour-google-client",
+    "GOOGLE_CLIENT_SECRET=tour-google-secret",
+    "HTTPS_PROXY=http://127.0.0.1:<recording proxy port>",
+    "HTTP_PROXY=http://127.0.0.1:<recording proxy port>",
+    "OPENV_CLIENT_IP_HEADER=CF-Connecting-IP",
+    "SSL_CERT_FILE=<the tour's test certificate authority>",
+    "TZ=UTC"
+  ],
+  "actors": [
+    {
+      "name": "admin",
+      "email": "tour-admin@example.com",
+      "account_name": "Tour Admin",
+      "workspace": "<admin.workspace>",
+      "about": "the first account registered, so the platform admin; used only for admin setup"
+    },
+    {
+      "name": "owner",
+      "email": "tour-owner@example.com",
+      "account_name": "Tour Owner",
+      "workspace": "<owner.workspace>",
+      "about": "an ordinary account that owns its personal workspace (nightly channel); reads the events after each step"
+    },
+    {
+      "name": "newcomer",
+      "email": "tour-newcomer@example.com",
+      "account_name": "Tour <Newcomer> & Co",
+      "workspace": "<newcomer.workspace>",
+      "about": "the account a recorded registration made (step 10)"
+    },
+    {
+      "name": "newcomer.second",
+      "email": "tour-newcomer@example.com",
+      "account_name": "Tour <Newcomer> & Co",
+      "workspace": "<newcomer.workspace>",
+      "about": "a second session of newcomer's, from a recorded sign-in (step 17), which the area signs out"
+    },
+    {
+      "name": "worker",
+      "about": "a worker key of the owner's personal workspace, as a bearer"
+    },
+    {
+      "name": "member",
+      "email": "tour-member@example.com",
+      "account_name": "Tour Member",
+      "workspace": "<member.workspace>",
+      "about": "a member of W; its sessions show the workspace a request with no X-Org-ID resolves to"
+    },
+    {
+      "name": "member.second",
+      "email": "tour-member@example.com",
+      "account_name": "Tour Member",
+      "workspace": "<member.workspace>",
+      "about": "a session of the member's from a recorded sign-in (step 31)"
+    },
+    {
+      "name": "member.third",
+      "email": "tour-member@example.com",
+      "account_name": "Tour Member",
+      "workspace": "<member.workspace>",
+      "about": "a session of the member's from a recorded sign-in (step 53)"
+    },
+    {
+      "name": "googler",
+      "email": "tour-googler@example.com",
+      "account_name": "Tour Googler",
+      "workspace": "<googler.workspace>",
+      "about": "the account Google's sign-on made (step 66)"
+    },
+    {
+      "name": "locked",
+      "email": "tour-locked@example.com",
+      "account_name": "Tour Locked",
+      "workspace": "<locked.workspace>",
+      "about": "an account whose own budget failed sign-ins spend"
+    },
+    {
+      "name": "reverse",
+      "email": "tour-reverse@example.com",
+      "account_name": "Tour Reverse",
+      "workspace": "<reverse.workspace>",
+      "about": "an account whose own budget wrong current passwords spend"
+    },
+    {
+      "name": "anonymous",
+      "about": "no session cookie"
+    }
+  ],
+  "standard_security_headers": [
+    "Content-Security-Policy: default-src 'none'; frame-ancestors 'none'",
+    "Referrer-Policy: strict-origin-when-cross-origin",
+    "X-Content-Type-Options: nosniff",
+    "X-Frame-Options: DENY"
+  ],
+  "steps": [
+    {
+      "n": 1,
+      "title": "the health check",
+      "actor": "anonymous",
+      "route": "GET /health",
+      "request": {
+        "method": "GET",
+        "path": "/health"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 16,
+      "kind": "json",
+      "body": [
+        "{\"status\":\"ok\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "status": "ok"
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 2,
+      "title": "the commit this binary names: none, since the harness sets no OPENV_BUILD_SHA",
+      "actor": "anonymous",
+      "route": "GET /api/v1/public/build",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/public/build"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [
+        "Cache-Control: no-store"
+      ],
+      "security_headers": "standard",
+      "content_length": 14,
+      "kind": "json",
+      "body": [
+        "{\"commit\":\"\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "commit": ""
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 3,
+      "title": "the release feed, which dedicated deployments poll, cached publicly for five minutes",
+      "actor": "anonymous",
+      "route": "GET /api/v1/public/release",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/public/release"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [
+        "Cache-Control: public, max-age=300"
+      ],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"stable\":\"<stable release>\",\"stable_since\":\"<stable since>\",\"version\":\"<release-version>\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "stable": "<stable release>",
+        "stable_since": "<stable since>",
+        "version": "<release-version>"
+      },
+      "elided": [
+        "/stable: <stable release> (the newest stable release, \"\" until the monthly cut designates one)",
+        "/stable_since: <stable since> (the day it was designated, \"\" until then)"
+      ],
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 4,
+      "title": "the release notes, with no session",
+      "actor": "anonymous",
+      "route": "GET /api/v1/release",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/release"
+      },
+      "status": 401,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 36,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"authentication required\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "authentication required"
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 5,
+      "title": "the release notes a member reads: the running release and every earlier one, never cached",
+      "actor": "owner",
+      "route": "GET /api/v1/release",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/release"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [
+        "Cache-Control: no-store"
+      ],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"version\":\"<release-version>\",\"date\":\"<date>\",\"notes\":\"<the release's notes>\",\"categories\":\"<the release's notes by group>\",\"markdown\":\"<the release's section>\",\"releases\":\"<every released version>\",\"stable\":\"<the stable release or null>\",\"deployment\":\"shared\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "version": "<release-version>",
+        "date": "<date>",
+        "notes": "<the release's notes>",
+        "categories": "<the release's notes by group>",
+        "markdown": "<the release's section>",
+        "releases": "<every released version>",
+        "stable": "<the stable release or null>",
+        "deployment": "shared"
+      },
+      "elided": [
+        "/notes: <the release's notes> (RELEASE_NOTES.md's current release, which every promotion replaces)",
+        "/categories: <the release's notes by group> (the same, grouped)",
+        "/markdown: <the release's section> (the same, as written)",
+        "/releases: <every released version> (the history, newest first, which every promotion adds to (far over 1,400 bytes: the answer is always compressed))",
+        "/stable: <the stable release or null> (null until the monthly cut designates one)"
+      ],
+      "gzip": {
+        "content_encoding": "gzip",
+        "content_type": "application/json",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "n": 6,
+      "title": "the sign-in methods: Google on, OIDC off, no mail server",
+      "actor": "anonymous",
+      "route": "GET /api/v1/auth/config",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/auth/config"
+      },
+      "status": 200,
+      "content_type": "text/plain; charset=utf-8",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 156,
+      "kind": "json",
+      "body": [
+        "{\"email_verification_required\":false,\"google_enabled\":true,\"oidc_enabled\":false,\"oidc_provider_name\":\"\",\"password_reset_email\":false,\"registration\":\"open\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "email_verification_required": false,
+        "google_enabled": true,
+        "oidc_enabled": false,
+        "oidc_provider_name": "",
+        "password_reset_email": false,
+        "registration": "open"
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 7,
+      "title": "the registration policy and the password rule",
+      "actor": "anonymous",
+      "route": "GET /api/v1/auth/policy",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/auth/policy"
+      },
+      "status": 200,
+      "content_type": "text/plain; charset=utf-8",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 48,
+      "kind": "json",
+      "body": [
+        "{\"min_password_length\":8,\"registration\":\"open\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "min_password_length": 8,
+        "registration": "open"
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 8,
+      "title": "OIDC sign-in, not configured here",
+      "actor": "anonymous",
+      "route": "GET /api/v1/auth/oidc/login",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/auth/oidc/login"
+      },
+      "status": 404,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 42,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"sso sign-in is not configured\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "sso sign-in is not configured"
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 9,
+      "title": "the OIDC callback, not configured here",
+      "actor": "anonymous",
+      "route": "GET /api/v1/auth/oidc/callback",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/auth/oidc/callback"
+      },
+      "status": 404,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 42,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"sso sign-in is not configured\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "sso sign-in is not configured"
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 10,
+      "title": "register an account: the account, and a session cookie",
+      "actor": "anonymous",
+      "route": "POST /api/v1/auth/register",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/auth/register",
+        "headers": [
+          "Cf-Connecting-Ip: 198.51.100.10",
+          "Content-Type: application/json"
+        ],
+        "body": "{\"email\":\"Tour-Newcomer@Example.com \",\"password\":\"tour password 1\",\"name\":\" Tour <Newcomer> & Co \"}"
+      },
+      "notes": [
+        "the address is stored trimmed and lower-cased, the name trimmed, and the answer writes its <, > and & as the JSON escapes of U+003C, U+003E and U+0026, as encoding/json does by default"
+      ],
+      "status": 200,
+      "content_type": "text/plain; charset=utf-8",
+      "headers": [
+        "Set-Cookie: openv_session=<newcomer.session>; Path=/; Expires=<http-date>; Max-Age=2592000; HttpOnly; SameSite=Lax"
+      ],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"id\":\"<newcomer>\",\"email\":\"tour-newcomer@example.com\",\"name\":\"Tour \\u003cNewcomer\\u003e \\u0026 Co\",\"avatar_url\":\"\",\"has_avatar\":false,\"auth_provider\":\"password\",\"is_admin\":false,\"email_notifications\":true,\"push_notifications\":false,\"default_org_id\":\"\",\"email_verified\":true,\"email_verified_at\":\"<time@step 10>\",\"created_at\":\"<time@step 10>\",\"updated_at\":\"<time@step 10>\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "id": "<newcomer>",
+        "email": "tour-newcomer@example.com",
+        "name": "Tour \u003cNewcomer\u003e \u0026 Co",
+        "avatar_url": "",
+        "has_avatar": false,
+        "auth_provider": "password",
+        "is_admin": false,
+        "email_notifications": true,
+        "push_notifications": false,
+        "default_org_id": "",
+        "email_verified": true,
+        "email_verified_at": "<time@step 10>",
+        "created_at": "<time@step 10>",
+        "updated_at": "<time@step 10>"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 11,
+      "title": "register the same address again",
+      "actor": "anonymous",
+      "route": "POST /api/v1/auth/register",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/auth/register",
+        "headers": [
+          "Cf-Connecting-Ip: 198.51.100.10",
+          "Content-Type: application/json"
+        ],
+        "body": "{\"email\":\"tour-newcomer@example.com\",\"password\":\"tour password 1\",\"name\":\"Again\"}"
+      },
+      "status": 400,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 54,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"an account with this email already exists\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "an account with this email already exists"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 12,
+      "title": "register with a password under 8 characters",
+      "actor": "anonymous",
+      "route": "POST /api/v1/auth/register",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/auth/register",
+        "headers": [
+          "Cf-Connecting-Ip: 198.51.100.10",
+          "Content-Type: application/json"
+        ],
+        "body": "{\"email\":\"tour-short@example.com\",\"password\":\"short\",\"name\":\"Short\"}"
+      },
+      "status": 400,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 51,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"password must be at least 8 characters\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "password must be at least 8 characters"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 13,
+      "title": "register with a malformed body: refused before the address's budget is spent",
+      "actor": "anonymous",
+      "route": "POST /api/v1/auth/register",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/auth/register",
+        "headers": [
+          "Cf-Connecting-Ip: 198.51.100.10",
+          "Content-Type: application/json"
+        ],
+        "body": "{"
+      },
+      "status": 400,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 33,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"invalid request body\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "invalid request body"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 14,
+      "title": "register with no address",
+      "actor": "anonymous",
+      "route": "POST /api/v1/auth/register",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/auth/register",
+        "headers": [
+          "Cf-Connecting-Ip: 198.51.100.10",
+          "Content-Type: application/json"
+        ],
+        "body": "{\"email\":\"not-an-address\",\"password\":\"tour password 1\"}"
+      },
+      "status": 400,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 38,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"a valid email is required\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "a valid email is required"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 15,
+      "title": "register with an invite token no invitation has: the account is made all the same, and the answer says the token was invalid",
+      "actor": "anonymous",
+      "route": "POST /api/v1/auth/register",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/auth/register",
+        "headers": [
+          "Cf-Connecting-Ip: 198.51.100.10",
+          "Content-Type: application/json"
+        ],
+        "body": "{\"email\":\"tour-uninvited@example.com\",\"password\":\"tour password 1\",\"name\":\"Tour Uninvited\",\"invite_token\":\"<unknown.token>\"}"
+      },
+      "status": 200,
+      "content_type": "text/plain; charset=utf-8",
+      "headers": [
+        "Set-Cookie: openv_session=<hex64:1>; Path=/; Expires=<http-date>; Max-Age=2592000; HttpOnly; SameSite=Lax"
+      ],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"id\":\"<uuid:1>\",\"email\":\"tour-uninvited@example.com\",\"name\":\"Tour Uninvited\",\"avatar_url\":\"\",\"has_avatar\":false,\"auth_provider\":\"password\",\"is_admin\":false,\"email_notifications\":true,\"push_notifications\":false,\"default_org_id\":\"\",\"email_verified\":true,\"email_verified_at\":\"<time@step 15>\",\"created_at\":\"<time@step 15>\",\"updated_at\":\"<time@step 15>\",\"invitation\":\"invalid\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "id": "<uuid:1>",
+        "email": "tour-uninvited@example.com",
+        "name": "Tour Uninvited",
+        "avatar_url": "",
+        "has_avatar": false,
+        "auth_provider": "password",
+        "is_admin": false,
+        "email_notifications": true,
+        "push_notifications": false,
+        "default_org_id": "",
+        "email_verified": true,
+        "email_verified_at": "<time@step 15>",
+        "created_at": "<time@step 15>",
+        "updated_at": "<time@step 15>",
+        "invitation": "invalid"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 16,
+      "title": "a sixth registration from the address: its budget of five is spent",
+      "actor": "anonymous",
+      "route": "POST /api/v1/auth/register",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/auth/register",
+        "headers": [
+          "Cf-Connecting-Ip: 198.51.100.10",
+          "Content-Type: application/json"
+        ],
+        "body": "{\"email\":\"tour-sixth@example.com\",\"password\":\"tour password 1\",\"name\":\"Sixth\"}"
+      },
+      "status": 429,
+      "content_type": "application/json",
+      "headers": [
+        "Retry-After: <retry-after 360 s>"
+      ],
+      "security_headers": "standard",
+      "content_length": 74,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"Too many accounts created from this address; try again later.\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "Too many accounts created from this address; try again later."
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 17,
+      "title": "sign in: the account, and a new session",
+      "actor": "anonymous",
+      "route": "POST /api/v1/auth/login",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/auth/login",
+        "headers": [
+          "Cf-Connecting-Ip: 198.51.100.20",
+          "Content-Type: application/json"
+        ],
+        "body": "{\"email\":\"tour-newcomer@example.com\",\"password\":\"tour password 1\"}"
+      },
+      "status": 200,
+      "content_type": "text/plain; charset=utf-8",
+      "headers": [
+        "Set-Cookie: openv_session=<newcomer.second.session>; Path=/; Expires=<http-date>; Max-Age=2592000; HttpOnly; SameSite=Lax"
+      ],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"id\":\"<newcomer>\",\"email\":\"tour-newcomer@example.com\",\"name\":\"Tour \\u003cNewcomer\\u003e \\u0026 Co\",\"avatar_url\":\"\",\"has_avatar\":false,\"auth_provider\":\"password\",\"is_admin\":false,\"email_notifications\":true,\"push_notifications\":false,\"default_org_id\":\"\",\"email_verified\":true,\"email_verified_at\":\"<time@step 10>\",\"created_at\":\"<time@step 10>\",\"updated_at\":\"<time@step 10>\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "id": "<newcomer>",
+        "email": "tour-newcomer@example.com",
+        "name": "Tour \u003cNewcomer\u003e \u0026 Co",
+        "avatar_url": "",
+        "has_avatar": false,
+        "auth_provider": "password",
+        "is_admin": false,
+        "email_notifications": true,
+        "push_notifications": false,
+        "default_org_id": "",
+        "email_verified": true,
+        "email_verified_at": "<time@step 10>",
+        "created_at": "<time@step 10>",
+        "updated_at": "<time@step 10>"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 18,
+      "title": "sign in with the address in capitals: the same account",
+      "actor": "anonymous",
+      "route": "POST /api/v1/auth/login",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/auth/login",
+        "headers": [
+          "Cf-Connecting-Ip: 198.51.100.20",
+          "Content-Type: application/json"
+        ],
+        "body": "{\"email\":\"TOUR-NEWCOMER@EXAMPLE.COM\",\"password\":\"tour password 1\"}"
+      },
+      "status": 200,
+      "content_type": "text/plain; charset=utf-8",
+      "headers": [
+        "Set-Cookie: openv_session=<hex64:2>; Path=/; Expires=<http-date>; Max-Age=2592000; HttpOnly; SameSite=Lax"
+      ],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"id\":\"<newcomer>\",\"email\":\"tour-newcomer@example.com\",\"name\":\"Tour \\u003cNewcomer\\u003e \\u0026 Co\",\"avatar_url\":\"\",\"has_avatar\":false,\"auth_provider\":\"password\",\"is_admin\":false,\"email_notifications\":true,\"push_notifications\":false,\"default_org_id\":\"\",\"email_verified\":true,\"email_verified_at\":\"<time@step 10>\",\"created_at\":\"<time@step 10>\",\"updated_at\":\"<time@step 10>\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "id": "<newcomer>",
+        "email": "tour-newcomer@example.com",
+        "name": "Tour \u003cNewcomer\u003e \u0026 Co",
+        "avatar_url": "",
+        "has_avatar": false,
+        "auth_provider": "password",
+        "is_admin": false,
+        "email_notifications": true,
+        "push_notifications": false,
+        "default_org_id": "",
+        "email_verified": true,
+        "email_verified_at": "<time@step 10>",
+        "created_at": "<time@step 10>",
+        "updated_at": "<time@step 10>"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 19,
+      "title": "sign in with a wrong password",
+      "actor": "anonymous",
+      "route": "POST /api/v1/auth/login",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/auth/login",
+        "headers": [
+          "Cf-Connecting-Ip: 198.51.100.20",
+          "Content-Type: application/json"
+        ],
+        "body": "{\"email\":\"tour-newcomer@example.com\",\"password\":\"not the password\"}"
+      },
+      "status": 401,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 38,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"invalid email or password\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "invalid email or password"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 20,
+      "title": "sign in with an address no account has",
+      "actor": "anonymous",
+      "route": "POST /api/v1/auth/login",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/auth/login",
+        "headers": [
+          "Cf-Connecting-Ip: 198.51.100.20",
+          "Content-Type: application/json"
+        ],
+        "body": "{\"email\":\"tour-nobody@example.com\",\"password\":\"tour password 1\"}"
+      },
+      "status": 401,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 38,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"invalid email or password\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "invalid email or password"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 21,
+      "title": "sign in with a malformed body",
+      "actor": "anonymous",
+      "route": "POST /api/v1/auth/login",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/auth/login",
+        "headers": [
+          "Cf-Connecting-Ip: 198.51.100.20",
+          "Content-Type: application/json"
+        ],
+        "body": "{"
+      },
+      "status": 400,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 33,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"invalid request body\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "invalid request body"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 22,
+      "title": "the signed-in account",
+      "actor": "newcomer",
+      "route": "GET /api/v1/auth/me",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/auth/me"
+      },
+      "status": 200,
+      "content_type": "text/plain; charset=utf-8",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"id\":\"<newcomer>\",\"email\":\"tour-newcomer@example.com\",\"name\":\"Tour \\u003cNewcomer\\u003e \\u0026 Co\",\"avatar_url\":\"\",\"has_avatar\":false,\"auth_provider\":\"password\",\"is_admin\":false,\"email_notifications\":true,\"push_notifications\":false,\"default_org_id\":\"\",\"email_verified\":true,\"email_verified_at\":\"<time@step 10>\",\"created_at\":\"<time@step 10>\",\"updated_at\":\"<time@step 10>\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "id": "<newcomer>",
+        "email": "tour-newcomer@example.com",
+        "name": "Tour \u003cNewcomer\u003e \u0026 Co",
+        "avatar_url": "",
+        "has_avatar": false,
+        "auth_provider": "password",
+        "is_admin": false,
+        "email_notifications": true,
+        "push_notifications": false,
+        "default_org_id": "",
+        "email_verified": true,
+        "email_verified_at": "<time@step 10>",
+        "created_at": "<time@step 10>",
+        "updated_at": "<time@step 10>"
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 23,
+      "title": "the account with no session",
+      "actor": "anonymous",
+      "route": "GET /api/v1/auth/me",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/auth/me"
+      },
+      "status": 401,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 30,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"not authenticated\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "not authenticated"
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 24,
+      "title": "the account with a worker key as the bearer: only the cookie is read",
+      "actor": "worker",
+      "route": "GET /api/v1/auth/me",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/auth/me"
+      },
+      "status": 401,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 30,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"not authenticated\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "not authenticated"
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 25,
+      "title": "sign the second session out: 204, and a cookie that clears it",
+      "actor": "newcomer.second",
+      "route": "POST /api/v1/auth/logout",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/auth/logout"
+      },
+      "status": 204,
+      "content_type": null,
+      "headers": [
+        "Set-Cookie: openv_session=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax"
+      ],
+      "security_headers": "standard",
+      "content_length": null,
+      "kind": "empty",
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 26,
+      "title": "the account, from the session signed out",
+      "actor": "newcomer.second",
+      "route": "GET /api/v1/auth/me",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/auth/me"
+      },
+      "status": 401,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 30,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"not authenticated\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "not authenticated"
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 27,
+      "title": "a protected route from the session signed out: the middleware's 401",
+      "actor": "newcomer.second",
+      "route": "GET /api/v1/orgs",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/orgs"
+      },
+      "status": 401,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 36,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"authentication required\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "authentication required"
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 28,
+      "title": "the first session is still signed in",
+      "actor": "newcomer",
+      "route": "GET /api/v1/auth/me",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/auth/me"
+      },
+      "status": 200,
+      "content_type": "text/plain; charset=utf-8",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"id\":\"<newcomer>\",\"email\":\"tour-newcomer@example.com\",\"name\":\"Tour \\u003cNewcomer\\u003e \\u0026 Co\",\"avatar_url\":\"\",\"has_avatar\":false,\"auth_provider\":\"password\",\"is_admin\":false,\"email_notifications\":true,\"push_notifications\":false,\"default_org_id\":\"\",\"email_verified\":true,\"email_verified_at\":\"<time@step 10>\",\"created_at\":\"<time@step 10>\",\"updated_at\":\"<time@step 10>\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "id": "<newcomer>",
+        "email": "tour-newcomer@example.com",
+        "name": "Tour \u003cNewcomer\u003e \u0026 Co",
+        "avatar_url": "",
+        "has_avatar": false,
+        "auth_provider": "password",
+        "is_admin": false,
+        "email_notifications": true,
+        "push_notifications": false,
+        "default_org_id": "",
+        "email_verified": true,
+        "email_verified_at": "<time@step 10>",
+        "created_at": "<time@step 10>",
+        "updated_at": "<time@step 10>"
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 29,
+      "title": "sign out with no session: 204 all the same",
+      "actor": "anonymous",
+      "route": "POST /api/v1/auth/logout",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/auth/logout"
+      },
+      "status": 204,
+      "content_type": null,
+      "headers": [
+        "Set-Cookie: openv_session=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax"
+      ],
+      "security_headers": "standard",
+      "content_length": null,
+      "kind": "empty",
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 30,
+      "title": "the owner's workspaces with no X-Org-ID: the server resolves one",
+      "actor": "owner",
+      "acting_in": "(no X-Org-ID: the server resolves the workspace)",
+      "route": "GET /api/v1/orgs",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/orgs"
+      },
+      "status": 200,
+      "content_type": "text/plain; charset=utf-8",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"active_org\":\"<owner.workspace>\",\"orgs\":[{\"id\":\"<owner.workspace>\",\"name\":\"Tour Owner's Space\",\"slug\":\"tour-owner-s-space-<id8>\",\"type\":\"personal\",\"plan\":\"single\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\",\"has_logo\":false,\"release_channel\":\"nightly\",\"release_channel_locked\":true,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\",\"role\":\"admin\"},{\"id\":\"<w>\",\"name\":\"Tour Shared\",\"slug\":\"tour-shared-<id8>\",\"type\":\"company\",\"plan\":\"single\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@before step 30>\",\"updated_at\":\"<time@before step 30>\",\"has_logo\":false,\"release_channel\":\"nightly\",\"release_channel_locked\":true,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\",\"role\":\"admin\"}]}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "active_org": "<owner.workspace>",
+        "orgs": [
+          {
+            "id": "<owner.workspace>",
+            "name": "Tour Owner's Space",
+            "slug": "tour-owner-s-space-<id8>",
+            "type": "personal",
+            "plan": "single",
+            "limits": {},
+            "billing": {
+              "status": "none"
+            },
+            "created_by": "<owner>",
+            "created_at": "<time@before step 1>",
+            "updated_at": "<time@before step 1>",
+            "has_logo": false,
+            "release_channel": "nightly",
+            "release_channel_locked": true,
+            "stable_release": "",
+            "upgrade_day": 0,
+            "upgrade_hour": 0,
+            "upgrade_timezone": "",
+            "role": "admin"
+          },
+          {
+            "id": "<w>",
+            "name": "Tour Shared",
+            "slug": "tour-shared-<id8>",
+            "type": "company",
+            "plan": "single",
+            "limits": {},
+            "billing": {
+              "status": "none"
+            },
+            "created_by": "<owner>",
+            "created_at": "<time@before step 30>",
+            "updated_at": "<time@before step 30>",
+            "has_logo": false,
+            "release_channel": "nightly",
+            "release_channel_locked": true,
+            "stable_release": "",
+            "upgrade_day": 0,
+            "upgrade_hour": 0,
+            "upgrade_timezone": "",
+            "role": "admin"
+          }
+        ]
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 31,
+      "title": "the member signs in again: a session of its own",
+      "actor": "anonymous",
+      "route": "POST /api/v1/auth/login",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/auth/login",
+        "headers": [
+          "Cf-Connecting-Ip: 198.51.100.20",
+          "Content-Type: application/json"
+        ],
+        "body": "{\"email\":\"tour-member@example.com\",\"password\":\"tour password 1\"}"
+      },
+      "status": 200,
+      "content_type": "text/plain; charset=utf-8",
+      "headers": [
+        "Set-Cookie: openv_session=<member.second.session>; Path=/; Expires=<http-date>; Max-Age=2592000; HttpOnly; SameSite=Lax"
+      ],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"id\":\"<member>\",\"email\":\"tour-member@example.com\",\"name\":\"Tour Member\",\"avatar_url\":\"\",\"has_avatar\":false,\"auth_provider\":\"password\",\"is_admin\":false,\"email_notifications\":true,\"push_notifications\":false,\"default_org_id\":\"\",\"email_verified\":true,\"email_verified_at\":\"<time@before step 30>\",\"created_at\":\"<time@before step 30>\",\"updated_at\":\"<time@before step 30>\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "id": "<member>",
+        "email": "tour-member@example.com",
+        "name": "Tour Member",
+        "avatar_url": "",
+        "has_avatar": false,
+        "auth_provider": "password",
+        "is_admin": false,
+        "email_notifications": true,
+        "push_notifications": false,
+        "default_org_id": "",
+        "email_verified": true,
+        "email_verified_at": "<time@before step 30>",
+        "created_at": "<time@before step 30>",
+        "updated_at": "<time@before step 30>"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 32,
+      "title": "with no X-Org-ID: the personal workspace, since the session has none active and the member chose no default",
+      "actor": "member.second",
+      "acting_in": "(no X-Org-ID: the server resolves the workspace)",
+      "route": "GET /api/v1/orgs",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/orgs"
+      },
+      "status": 200,
+      "content_type": "text/plain; charset=utf-8",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"active_org\":\"<member.workspace>\",\"orgs\":[{\"id\":\"<member.workspace>\",\"name\":\"Tour Member's Space\",\"slug\":\"tour-member-s-space-<id8>\",\"type\":\"personal\",\"plan\":\"single\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<member>\",\"created_at\":\"<time@before step 30>\",\"updated_at\":\"<time@before step 30>\",\"has_logo\":false,\"release_channel\":\"nightly\",\"release_channel_locked\":true,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\",\"role\":\"admin\"},{\"id\":\"<w>\",\"name\":\"Tour Shared\",\"slug\":\"tour-shared-<id8>\",\"type\":\"company\",\"plan\":\"single\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@before step 30>\",\"updated_at\":\"<time@before step 30>\",\"has_logo\":false,\"release_channel\":\"nightly\",\"release_channel_locked\":true,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\",\"role\":\"member\"}]}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "active_org": "<member.workspace>",
+        "orgs": [
+          {
+            "id": "<member.workspace>",
+            "name": "Tour Member's Space",
+            "slug": "tour-member-s-space-<id8>",
+            "type": "personal",
+            "plan": "single",
+            "limits": {},
+            "billing": {
+              "status": "none"
+            },
+            "created_by": "<member>",
+            "created_at": "<time@before step 30>",
+            "updated_at": "<time@before step 30>",
+            "has_logo": false,
+            "release_channel": "nightly",
+            "release_channel_locked": true,
+            "stable_release": "",
+            "upgrade_day": 0,
+            "upgrade_hour": 0,
+            "upgrade_timezone": "",
+            "role": "admin"
+          },
+          {
+            "id": "<w>",
+            "name": "Tour Shared",
+            "slug": "tour-shared-<id8>",
+            "type": "company",
+            "plan": "single",
+            "limits": {},
+            "billing": {
+              "status": "none"
+            },
+            "created_by": "<owner>",
+            "created_at": "<time@before step 30>",
+            "updated_at": "<time@before step 30>",
+            "has_logo": false,
+            "release_channel": "nightly",
+            "release_channel_locked": true,
+            "stable_release": "",
+            "upgrade_day": 0,
+            "upgrade_hour": 0,
+            "upgrade_timezone": "",
+            "role": "member"
+          }
+        ]
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 33,
+      "title": "make W the session's active workspace",
+      "actor": "member.second",
+      "route": "POST /api/v1/orgs/{id}/activate",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/orgs/<w>/activate"
+      },
+      "status": 204,
+      "content_type": null,
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": null,
+      "kind": "empty",
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 34,
+      "title": "with no X-Org-ID: W, the session's",
+      "actor": "member.second",
+      "acting_in": "(no X-Org-ID: the server resolves the workspace)",
+      "route": "GET /api/v1/orgs",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/orgs"
+      },
+      "status": 200,
+      "content_type": "text/plain; charset=utf-8",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"active_org\":\"<w>\",\"orgs\":[{\"id\":\"<member.workspace>\",\"name\":\"Tour Member's Space\",\"slug\":\"tour-member-s-space-<id8>\",\"type\":\"personal\",\"plan\":\"single\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<member>\",\"created_at\":\"<time@before step 30>\",\"updated_at\":\"<time@before step 30>\",\"has_logo\":false,\"release_channel\":\"nightly\",\"release_channel_locked\":true,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\",\"role\":\"admin\"},{\"id\":\"<w>\",\"name\":\"Tour Shared\",\"slug\":\"tour-shared-<id8>\",\"type\":\"company\",\"plan\":\"single\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@before step 30>\",\"updated_at\":\"<time@before step 30>\",\"has_logo\":false,\"release_channel\":\"nightly\",\"release_channel_locked\":true,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\",\"role\":\"member\"}]}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "active_org": "<w>",
+        "orgs": [
+          {
+            "id": "<member.workspace>",
+            "name": "Tour Member's Space",
+            "slug": "tour-member-s-space-<id8>",
+            "type": "personal",
+            "plan": "single",
+            "limits": {},
+            "billing": {
+              "status": "none"
+            },
+            "created_by": "<member>",
+            "created_at": "<time@before step 30>",
+            "updated_at": "<time@before step 30>",
+            "has_logo": false,
+            "release_channel": "nightly",
+            "release_channel_locked": true,
+            "stable_release": "",
+            "upgrade_day": 0,
+            "upgrade_hour": 0,
+            "upgrade_timezone": "",
+            "role": "admin"
+          },
+          {
+            "id": "<w>",
+            "name": "Tour Shared",
+            "slug": "tour-shared-<id8>",
+            "type": "company",
+            "plan": "single",
+            "limits": {},
+            "billing": {
+              "status": "none"
+            },
+            "created_by": "<owner>",
+            "created_at": "<time@before step 30>",
+            "updated_at": "<time@before step 30>",
+            "has_logo": false,
+            "release_channel": "nightly",
+            "release_channel_locked": true,
+            "stable_release": "",
+            "upgrade_day": 0,
+            "upgrade_hour": 0,
+            "upgrade_timezone": "",
+            "role": "member"
+          }
+        ]
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 35,
+      "title": "naming its personal workspace: the header wins",
+      "actor": "member.second",
+      "route": "GET /api/v1/orgs",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/orgs"
+      },
+      "status": 200,
+      "content_type": "text/plain; charset=utf-8",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"active_org\":\"<member.workspace>\",\"orgs\":[{\"id\":\"<member.workspace>\",\"name\":\"Tour Member's Space\",\"slug\":\"tour-member-s-space-<id8>\",\"type\":\"personal\",\"plan\":\"single\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<member>\",\"created_at\":\"<time@before step 30>\",\"updated_at\":\"<time@before step 30>\",\"has_logo\":false,\"release_channel\":\"nightly\",\"release_channel_locked\":true,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\",\"role\":\"admin\"},{\"id\":\"<w>\",\"name\":\"Tour Shared\",\"slug\":\"tour-shared-<id8>\",\"type\":\"company\",\"plan\":\"single\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@before step 30>\",\"updated_at\":\"<time@before step 30>\",\"has_logo\":false,\"release_channel\":\"nightly\",\"release_channel_locked\":true,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\",\"role\":\"member\"}]}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "active_org": "<member.workspace>",
+        "orgs": [
+          {
+            "id": "<member.workspace>",
+            "name": "Tour Member's Space",
+            "slug": "tour-member-s-space-<id8>",
+            "type": "personal",
+            "plan": "single",
+            "limits": {},
+            "billing": {
+              "status": "none"
+            },
+            "created_by": "<member>",
+            "created_at": "<time@before step 30>",
+            "updated_at": "<time@before step 30>",
+            "has_logo": false,
+            "release_channel": "nightly",
+            "release_channel_locked": true,
+            "stable_release": "",
+            "upgrade_day": 0,
+            "upgrade_hour": 0,
+            "upgrade_timezone": "",
+            "role": "admin"
+          },
+          {
+            "id": "<w>",
+            "name": "Tour Shared",
+            "slug": "tour-shared-<id8>",
+            "type": "company",
+            "plan": "single",
+            "limits": {},
+            "billing": {
+              "status": "none"
+            },
+            "created_by": "<owner>",
+            "created_at": "<time@before step 30>",
+            "updated_at": "<time@before step 30>",
+            "has_logo": false,
+            "release_channel": "nightly",
+            "release_channel_locked": true,
+            "stable_release": "",
+            "upgrade_day": 0,
+            "upgrade_hour": 0,
+            "upgrade_timezone": "",
+            "role": "member"
+          }
+        ]
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 36,
+      "title": "naming a workspace that does not exist: the session's, silently",
+      "actor": "member.second",
+      "acting_in": "<phantom>",
+      "route": "GET /api/v1/orgs",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/orgs"
+      },
+      "status": 200,
+      "content_type": "text/plain; charset=utf-8",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"active_org\":\"<w>\",\"orgs\":[{\"id\":\"<member.workspace>\",\"name\":\"Tour Member's Space\",\"slug\":\"tour-member-s-space-<id8>\",\"type\":\"personal\",\"plan\":\"single\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<member>\",\"created_at\":\"<time@before step 30>\",\"updated_at\":\"<time@before step 30>\",\"has_logo\":false,\"release_channel\":\"nightly\",\"release_channel_locked\":true,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\",\"role\":\"admin\"},{\"id\":\"<w>\",\"name\":\"Tour Shared\",\"slug\":\"tour-shared-<id8>\",\"type\":\"company\",\"plan\":\"single\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@before step 30>\",\"updated_at\":\"<time@before step 30>\",\"has_logo\":false,\"release_channel\":\"nightly\",\"release_channel_locked\":true,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\",\"role\":\"member\"}]}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "active_org": "<w>",
+        "orgs": [
+          {
+            "id": "<member.workspace>",
+            "name": "Tour Member's Space",
+            "slug": "tour-member-s-space-<id8>",
+            "type": "personal",
+            "plan": "single",
+            "limits": {},
+            "billing": {
+              "status": "none"
+            },
+            "created_by": "<member>",
+            "created_at": "<time@before step 30>",
+            "updated_at": "<time@before step 30>",
+            "has_logo": false,
+            "release_channel": "nightly",
+            "release_channel_locked": true,
+            "stable_release": "",
+            "upgrade_day": 0,
+            "upgrade_hour": 0,
+            "upgrade_timezone": "",
+            "role": "admin"
+          },
+          {
+            "id": "<w>",
+            "name": "Tour Shared",
+            "slug": "tour-shared-<id8>",
+            "type": "company",
+            "plan": "single",
+            "limits": {},
+            "billing": {
+              "status": "none"
+            },
+            "created_by": "<owner>",
+            "created_at": "<time@before step 30>",
+            "updated_at": "<time@before step 30>",
+            "has_logo": false,
+            "release_channel": "nightly",
+            "release_channel_locked": true,
+            "stable_release": "",
+            "upgrade_day": 0,
+            "upgrade_hour": 0,
+            "upgrade_timezone": "",
+            "role": "member"
+          }
+        ]
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 37,
+      "title": "naming a workspace it is not in: the same",
+      "actor": "member.second",
+      "acting_in": "<owner.workspace>",
+      "route": "GET /api/v1/orgs",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/orgs"
+      },
+      "status": 200,
+      "content_type": "text/plain; charset=utf-8",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"active_org\":\"<w>\",\"orgs\":[{\"id\":\"<member.workspace>\",\"name\":\"Tour Member's Space\",\"slug\":\"tour-member-s-space-<id8>\",\"type\":\"personal\",\"plan\":\"single\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<member>\",\"created_at\":\"<time@before step 30>\",\"updated_at\":\"<time@before step 30>\",\"has_logo\":false,\"release_channel\":\"nightly\",\"release_channel_locked\":true,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\",\"role\":\"admin\"},{\"id\":\"<w>\",\"name\":\"Tour Shared\",\"slug\":\"tour-shared-<id8>\",\"type\":\"company\",\"plan\":\"single\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@before step 30>\",\"updated_at\":\"<time@before step 30>\",\"has_logo\":false,\"release_channel\":\"nightly\",\"release_channel_locked\":true,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\",\"role\":\"member\"}]}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "active_org": "<w>",
+        "orgs": [
+          {
+            "id": "<member.workspace>",
+            "name": "Tour Member's Space",
+            "slug": "tour-member-s-space-<id8>",
+            "type": "personal",
+            "plan": "single",
+            "limits": {},
+            "billing": {
+              "status": "none"
+            },
+            "created_by": "<member>",
+            "created_at": "<time@before step 30>",
+            "updated_at": "<time@before step 30>",
+            "has_logo": false,
+            "release_channel": "nightly",
+            "release_channel_locked": true,
+            "stable_release": "",
+            "upgrade_day": 0,
+            "upgrade_hour": 0,
+            "upgrade_timezone": "",
+            "role": "admin"
+          },
+          {
+            "id": "<w>",
+            "name": "Tour Shared",
+            "slug": "tour-shared-<id8>",
+            "type": "company",
+            "plan": "single",
+            "limits": {},
+            "billing": {
+              "status": "none"
+            },
+            "created_by": "<owner>",
+            "created_at": "<time@before step 30>",
+            "updated_at": "<time@before step 30>",
+            "has_logo": false,
+            "release_channel": "nightly",
+            "release_channel_locked": true,
+            "stable_release": "",
+            "upgrade_day": 0,
+            "upgrade_hour": 0,
+            "upgrade_timezone": "",
+            "role": "member"
+          }
+        ]
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 38,
+      "title": "naming something that is not an id: the same",
+      "actor": "member.second",
+      "acting_in": "not-a-workspace",
+      "route": "GET /api/v1/orgs",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/orgs"
+      },
+      "status": 200,
+      "content_type": "text/plain; charset=utf-8",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"active_org\":\"<w>\",\"orgs\":[{\"id\":\"<member.workspace>\",\"name\":\"Tour Member's Space\",\"slug\":\"tour-member-s-space-<id8>\",\"type\":\"personal\",\"plan\":\"single\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<member>\",\"created_at\":\"<time@before step 30>\",\"updated_at\":\"<time@before step 30>\",\"has_logo\":false,\"release_channel\":\"nightly\",\"release_channel_locked\":true,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\",\"role\":\"admin\"},{\"id\":\"<w>\",\"name\":\"Tour Shared\",\"slug\":\"tour-shared-<id8>\",\"type\":\"company\",\"plan\":\"single\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@before step 30>\",\"updated_at\":\"<time@before step 30>\",\"has_logo\":false,\"release_channel\":\"nightly\",\"release_channel_locked\":true,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\",\"role\":\"member\"}]}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "active_org": "<w>",
+        "orgs": [
+          {
+            "id": "<member.workspace>",
+            "name": "Tour Member's Space",
+            "slug": "tour-member-s-space-<id8>",
+            "type": "personal",
+            "plan": "single",
+            "limits": {},
+            "billing": {
+              "status": "none"
+            },
+            "created_by": "<member>",
+            "created_at": "<time@before step 30>",
+            "updated_at": "<time@before step 30>",
+            "has_logo": false,
+            "release_channel": "nightly",
+            "release_channel_locked": true,
+            "stable_release": "",
+            "upgrade_day": 0,
+            "upgrade_hour": 0,
+            "upgrade_timezone": "",
+            "role": "admin"
+          },
+          {
+            "id": "<w>",
+            "name": "Tour Shared",
+            "slug": "tour-shared-<id8>",
+            "type": "company",
+            "plan": "single",
+            "limits": {},
+            "billing": {
+              "status": "none"
+            },
+            "created_by": "<owner>",
+            "created_at": "<time@before step 30>",
+            "updated_at": "<time@before step 30>",
+            "has_logo": false,
+            "release_channel": "nightly",
+            "release_channel_locked": true,
+            "stable_release": "",
+            "upgrade_day": 0,
+            "upgrade_hour": 0,
+            "upgrade_timezone": "",
+            "role": "member"
+          }
+        ]
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 39,
+      "title": "the workspace's members with no X-Org-ID: W's",
+      "actor": "member.second",
+      "acting_in": "(no X-Org-ID: the server resolves the workspace)",
+      "route": "GET /api/v1/users",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/users"
+      },
+      "status": 200,
+      "content_type": "text/plain; charset=utf-8",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 234,
+      "kind": "json",
+      "body": [
+        "[{\"avatar_url\":\"\",\"email\":\"tour-member@example.com\",\"id\":\"<member>\",\"name\":\"Tour Member\"},{\"avatar_url\":\"\",\"email\":\"tour-owner@example.com\",\"id\":\"<owner>\",\"name\":\"Tour Owner\"}]"
+      ],
+      "trailing_newline": true,
+      "parsed": [
+        {
+          "avatar_url": "",
+          "email": "tour-member@example.com",
+          "id": "<member>",
+          "name": "Tour Member"
+        },
+        {
+          "avatar_url": "",
+          "email": "tour-owner@example.com",
+          "id": "<owner>",
+          "name": "Tour Owner"
+        }
+      ],
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 40,
+      "title": "make a workspace it is not in active",
+      "actor": "member.second",
+      "route": "POST /api/v1/orgs/{id}/activate",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/orgs/<owner.workspace>/activate"
+      },
+      "status": 403,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 51,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"you are not a member of this workspace\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "you are not a member of this workspace"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 41,
+      "title": "make a workspace active with a worker key: no account, the guard's 401",
+      "actor": "worker",
+      "route": "POST /api/v1/orgs/{id}/activate",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/orgs/<owner.workspace>/activate"
+      },
+      "status": 401,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 36,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"authentication required\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "authentication required"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 42,
+      "title": "the member's default workspace: none chosen",
+      "actor": "member",
+      "acting_in": "<w>",
+      "route": "GET /api/v1/me/default-workspace",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/me/default-workspace"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 14,
+      "kind": "json",
+      "body": [
+        "{\"org_id\":\"\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "org_id": ""
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 43,
+      "title": "choose W",
+      "actor": "member",
+      "acting_in": "<w>",
+      "route": "PUT /api/v1/me/default-workspace",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/me/default-workspace",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"org_id\":\"<w>\"}"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 50,
+      "kind": "json",
+      "body": [
+        "{\"org_id\":\"<w>\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "org_id": "<w>"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 44,
+      "title": "choose the personal workspace: stored as none",
+      "actor": "member",
+      "acting_in": "<w>",
+      "route": "PUT /api/v1/me/default-workspace",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/me/default-workspace",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"org_id\":\"<member.workspace>\"}"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 14,
+      "kind": "json",
+      "body": [
+        "{\"org_id\":\"\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "org_id": ""
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 45,
+      "title": "choose a workspace that does not exist",
+      "actor": "member",
+      "acting_in": "<w>",
+      "route": "PUT /api/v1/me/default-workspace",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/me/default-workspace",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"org_id\":\"<phantom>\"}"
+      },
+      "status": 404,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 32,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"workspace not found\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "workspace not found"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 46,
+      "title": "choose a workspace the member is not in: the same answer",
+      "actor": "member",
+      "acting_in": "<w>",
+      "route": "PUT /api/v1/me/default-workspace",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/me/default-workspace",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"org_id\":\"<owner.workspace>\"}"
+      },
+      "status": 404,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 32,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"workspace not found\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "workspace not found"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 47,
+      "title": "choose something that is not an id: the lookup's error is a 500 (Q19)",
+      "actor": "member",
+      "acting_in": "<w>",
+      "route": "PUT /api/v1/me/default-workspace",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/me/default-workspace",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"org_id\":\"not-a-workspace\"}"
+      },
+      "status": 500,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 37,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"failed to load workspace\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "failed to load workspace"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 48,
+      "title": "choose with a malformed body",
+      "actor": "member",
+      "acting_in": "<w>",
+      "route": "PUT /api/v1/me/default-workspace",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/me/default-workspace",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{"
+      },
+      "status": 400,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 33,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"invalid request body\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "invalid request body"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 49,
+      "title": "choose W again",
+      "actor": "member",
+      "acting_in": "<w>",
+      "route": "PUT /api/v1/me/default-workspace",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/me/default-workspace",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"org_id\":\" <w> \"}"
+      },
+      "notes": [
+        "the id is trimmed"
+      ],
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 50,
+      "kind": "json",
+      "body": [
+        "{\"org_id\":\"<w>\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "org_id": "<w>"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 50,
+      "title": "the member's default workspace: W",
+      "actor": "member",
+      "acting_in": "<w>",
+      "route": "GET /api/v1/me/default-workspace",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/me/default-workspace"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 50,
+      "kind": "json",
+      "body": [
+        "{\"org_id\":\"<w>\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "org_id": "<w>"
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 51,
+      "title": "the default workspace with a worker key: the handler's 401",
+      "actor": "worker",
+      "route": "GET /api/v1/me/default-workspace",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/me/default-workspace"
+      },
+      "status": 401,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 36,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"authentication required\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "authentication required"
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 52,
+      "title": "choose with no session: the middleware's 401",
+      "actor": "anonymous",
+      "route": "PUT /api/v1/me/default-workspace",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/me/default-workspace",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"org_id\":\"<w>\"}"
+      },
+      "status": 401,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 36,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"authentication required\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "authentication required"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 53,
+      "title": "the member signs in once more",
+      "actor": "anonymous",
+      "route": "POST /api/v1/auth/login",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/auth/login",
+        "headers": [
+          "Cf-Connecting-Ip: 198.51.100.20",
+          "Content-Type: application/json"
+        ],
+        "body": "{\"email\":\"tour-member@example.com\",\"password\":\"tour password 1\"}"
+      },
+      "status": 200,
+      "content_type": "text/plain; charset=utf-8",
+      "headers": [
+        "Set-Cookie: openv_session=<member.third.session>; Path=/; Expires=<http-date>; Max-Age=2592000; HttpOnly; SameSite=Lax"
+      ],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"id\":\"<member>\",\"email\":\"tour-member@example.com\",\"name\":\"Tour Member\",\"avatar_url\":\"\",\"has_avatar\":false,\"auth_provider\":\"password\",\"is_admin\":false,\"email_notifications\":true,\"push_notifications\":false,\"default_org_id\":\"<w>\",\"email_verified\":true,\"email_verified_at\":\"<time@before step 30>\",\"created_at\":\"<time@before step 30>\",\"updated_at\":\"<time@step 49>\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "id": "<member>",
+        "email": "tour-member@example.com",
+        "name": "Tour Member",
+        "avatar_url": "",
+        "has_avatar": false,
+        "auth_provider": "password",
+        "is_admin": false,
+        "email_notifications": true,
+        "push_notifications": false,
+        "default_org_id": "<w>",
+        "email_verified": true,
+        "email_verified_at": "<time@before step 30>",
+        "created_at": "<time@before step 30>",
+        "updated_at": "<time@step 49>"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 54,
+      "title": "a fresh session with no X-Org-ID: W, the member's default (REQ-156)",
+      "actor": "member.third",
+      "acting_in": "(no X-Org-ID: the server resolves the workspace)",
+      "route": "GET /api/v1/orgs",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/orgs"
+      },
+      "status": 200,
+      "content_type": "text/plain; charset=utf-8",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"active_org\":\"<w>\",\"orgs\":[{\"id\":\"<member.workspace>\",\"name\":\"Tour Member's Space\",\"slug\":\"tour-member-s-space-<id8>\",\"type\":\"personal\",\"plan\":\"single\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<member>\",\"created_at\":\"<time@before step 30>\",\"updated_at\":\"<time@before step 30>\",\"has_logo\":false,\"release_channel\":\"nightly\",\"release_channel_locked\":true,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\",\"role\":\"admin\"},{\"id\":\"<w>\",\"name\":\"Tour Shared\",\"slug\":\"tour-shared-<id8>\",\"type\":\"company\",\"plan\":\"single\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@before step 30>\",\"updated_at\":\"<time@before step 30>\",\"has_logo\":false,\"release_channel\":\"nightly\",\"release_channel_locked\":true,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\",\"role\":\"member\"}]}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "active_org": "<w>",
+        "orgs": [
+          {
+            "id": "<member.workspace>",
+            "name": "Tour Member's Space",
+            "slug": "tour-member-s-space-<id8>",
+            "type": "personal",
+            "plan": "single",
+            "limits": {},
+            "billing": {
+              "status": "none"
+            },
+            "created_by": "<member>",
+            "created_at": "<time@before step 30>",
+            "updated_at": "<time@before step 30>",
+            "has_logo": false,
+            "release_channel": "nightly",
+            "release_channel_locked": true,
+            "stable_release": "",
+            "upgrade_day": 0,
+            "upgrade_hour": 0,
+            "upgrade_timezone": "",
+            "role": "admin"
+          },
+          {
+            "id": "<w>",
+            "name": "Tour Shared",
+            "slug": "tour-shared-<id8>",
+            "type": "company",
+            "plan": "single",
+            "limits": {},
+            "billing": {
+              "status": "none"
+            },
+            "created_by": "<owner>",
+            "created_at": "<time@before step 30>",
+            "updated_at": "<time@before step 30>",
+            "has_logo": false,
+            "release_channel": "nightly",
+            "release_channel_locked": true,
+            "stable_release": "",
+            "upgrade_day": 0,
+            "upgrade_hour": 0,
+            "upgrade_timezone": "",
+            "role": "member"
+          }
+        ]
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 55,
+      "title": "the member leaves W: org.member_removed, self true",
+      "actor": "member",
+      "acting_in": "<w>",
+      "route": "DELETE /api/v1/orgs/{id}/members/{userId}",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/orgs/<w>/members/<member>"
+      },
+      "status": 204,
+      "content_type": null,
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": null,
+      "kind": "empty",
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": [
+        {
+          "type": "org.member_removed",
+          "actor": "user:<member>",
+          "entity": "<member>",
+          "payload": {
+            "self": "boolean true",
+            "user_id": "string \"<member>\""
+          }
+        }
+      ]
+    },
+    {
+      "n": 56,
+      "title": "the default no longer holds: the personal workspace",
+      "actor": "member.third",
+      "acting_in": "(no X-Org-ID: the server resolves the workspace)",
+      "route": "GET /api/v1/orgs",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/orgs"
+      },
+      "status": 200,
+      "content_type": "text/plain; charset=utf-8",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"active_org\":\"<member.workspace>\",\"orgs\":[{\"id\":\"<member.workspace>\",\"name\":\"Tour Member's Space\",\"slug\":\"tour-member-s-space-<id8>\",\"type\":\"personal\",\"plan\":\"single\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<member>\",\"created_at\":\"<time@before step 30>\",\"updated_at\":\"<time@before step 30>\",\"has_logo\":false,\"release_channel\":\"nightly\",\"release_channel_locked\":true,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\",\"role\":\"admin\"}]}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "active_org": "<member.workspace>",
+        "orgs": [
+          {
+            "id": "<member.workspace>",
+            "name": "Tour Member's Space",
+            "slug": "tour-member-s-space-<id8>",
+            "type": "personal",
+            "plan": "single",
+            "limits": {},
+            "billing": {
+              "status": "none"
+            },
+            "created_by": "<member>",
+            "created_at": "<time@before step 30>",
+            "updated_at": "<time@before step 30>",
+            "has_logo": false,
+            "release_channel": "nightly",
+            "release_channel_locked": true,
+            "stable_release": "",
+            "upgrade_day": 0,
+            "upgrade_hour": 0,
+            "upgrade_timezone": "",
+            "role": "admin"
+          }
+        ]
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 57,
+      "title": "nor does the other session's active W",
+      "actor": "member.second",
+      "acting_in": "(no X-Org-ID: the server resolves the workspace)",
+      "route": "GET /api/v1/orgs",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/orgs"
+      },
+      "status": 200,
+      "content_type": "text/plain; charset=utf-8",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"active_org\":\"<member.workspace>\",\"orgs\":[{\"id\":\"<member.workspace>\",\"name\":\"Tour Member's Space\",\"slug\":\"tour-member-s-space-<id8>\",\"type\":\"personal\",\"plan\":\"single\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<member>\",\"created_at\":\"<time@before step 30>\",\"updated_at\":\"<time@before step 30>\",\"has_logo\":false,\"release_channel\":\"nightly\",\"release_channel_locked\":true,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\",\"role\":\"admin\"}]}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "active_org": "<member.workspace>",
+        "orgs": [
+          {
+            "id": "<member.workspace>",
+            "name": "Tour Member's Space",
+            "slug": "tour-member-s-space-<id8>",
+            "type": "personal",
+            "plan": "single",
+            "limits": {},
+            "billing": {
+              "status": "none"
+            },
+            "created_by": "<member>",
+            "created_at": "<time@before step 30>",
+            "updated_at": "<time@before step 30>",
+            "has_logo": false,
+            "release_channel": "nightly",
+            "release_channel_locked": true,
+            "stable_release": "",
+            "upgrade_day": 0,
+            "upgrade_hour": 0,
+            "upgrade_timezone": "",
+            "role": "admin"
+          }
+        ]
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 58,
+      "title": "the stored default is still W",
+      "actor": "member",
+      "acting_in": "<w>",
+      "route": "GET /api/v1/me/default-workspace",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/me/default-workspace"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 50,
+      "kind": "json",
+      "body": [
+        "{\"org_id\":\"<w>\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "org_id": "<w>"
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 59,
+      "title": "the member's deleted workspaces: none, written null (Q14)",
+      "actor": "member.third",
+      "acting_in": "(no X-Org-ID: the server resolves the workspace)",
+      "route": "GET /api/v1/orgs",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/orgs",
+        "query": "deleted=true"
+      },
+      "status": 200,
+      "content_type": "text/plain; charset=utf-8",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 66,
+      "kind": "json",
+      "body": [
+        "{\"active_org\":\"<member.workspace>\",\"orgs\":null}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "active_org": "<member.workspace>",
+        "orgs": null
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 60,
+      "title": "the workspace's members with no X-Org-ID: the personal workspace's",
+      "actor": "member.third",
+      "acting_in": "(no X-Org-ID: the server resolves the workspace)",
+      "route": "GET /api/v1/users",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/users"
+      },
+      "status": 200,
+      "content_type": "text/plain; charset=utf-8",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 119,
+      "kind": "json",
+      "body": [
+        "[{\"avatar_url\":\"\",\"email\":\"tour-member@example.com\",\"id\":\"<member>\",\"name\":\"Tour Member\"}]"
+      ],
+      "trailing_newline": true,
+      "parsed": [
+        {
+          "avatar_url": "",
+          "email": "tour-member@example.com",
+          "id": "<member>",
+          "name": "Tour Member"
+        }
+      ],
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 61,
+      "title": "start Google sign-on: a redirect to Google's consent screen, its state in a cookie",
+      "actor": "anonymous",
+      "route": "GET /api/v1/auth/google",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/auth/google",
+        "headers": [
+          "Cf-Connecting-Ip: 198.51.100.30"
+        ]
+      },
+      "status": 302,
+      "content_type": "text/html; charset=utf-8",
+      "headers": [
+        "Location: https://accounts.google.com/o/oauth2/auth?client_id=tour-google-client&redirect_uri=http%3A%2F%2Flocalhost%3A<port>%2Fapi%2Fv1%2Fauth%2Fgoogle%2Fcallback&response_type=code&scope=openid+email+profile&state=<google.state>",
+        "Set-Cookie: openv_oauth_state=<google.state>; Path=/; Max-Age=600; HttpOnly; SameSite=Lax"
+      ],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "text",
+      "body": [
+        "<a href=\"https://accounts.google.com/o/oauth2/auth?client_id=tour-google-client&amp;redirect_uri=http%3A%2F%2Flocalhost%3A<port>%2Fapi%2Fv1%2Fauth%2Fgoogle%2Fcallback&amp;response_type=code&amp;scope=openid+email+profile&amp;state=<google.state>\">Found</a>.",
+        ""
+      ],
+      "trailing_newline": true,
+      "gzip": "not sent: each single sign-on request spends a token of the address's budget"
+    },
+    {
+      "n": 62,
+      "title": "the callback with no state cookie",
+      "actor": "anonymous",
+      "route": "GET /api/v1/auth/google/callback",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/auth/google/callback",
+        "query": "state=<google.state>&code=tour-code-verified",
+        "headers": [
+          "Cf-Connecting-Ip: 198.51.100.30"
+        ]
+      },
+      "status": 400,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 32,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"invalid oauth state\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "invalid oauth state"
+      },
+      "gzip": "not sent: each single sign-on request spends a token of the address's budget"
+    },
+    {
+      "n": 63,
+      "title": "a state other than the cookie's",
+      "actor": "anonymous",
+      "route": "GET /api/v1/auth/google/callback",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/auth/google/callback",
+        "query": "state=another&code=tour-code-verified",
+        "headers": [
+          "Cf-Connecting-Ip: 198.51.100.30",
+          "Cookie: openv_oauth_state=<google.state>"
+        ]
+      },
+      "status": 400,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 32,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"invalid oauth state\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "invalid oauth state"
+      },
+      "gzip": "not sent: each single sign-on request spends a token of the address's budget"
+    },
+    {
+      "n": 64,
+      "title": "no code",
+      "actor": "anonymous",
+      "route": "GET /api/v1/auth/google/callback",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/auth/google/callback",
+        "query": "state=<google.state>",
+        "headers": [
+          "Cf-Connecting-Ip: 198.51.100.30",
+          "Cookie: openv_oauth_state=<google.state>"
+        ]
+      },
+      "status": 400,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 39,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"missing authorization code\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "missing authorization code"
+      },
+      "gzip": "not sent: each single sign-on request spends a token of the address's budget"
+    },
+    {
+      "n": 65,
+      "title": "a code Google refuses: the token exchange fails",
+      "actor": "anonymous",
+      "route": "GET /api/v1/auth/google/callback",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/auth/google/callback",
+        "query": "state=<google.state>&code=tour-code-refused",
+        "headers": [
+          "Cf-Connecting-Ip: 198.51.100.30",
+          "Cookie: openv_oauth_state=<google.state>"
+        ]
+      },
+      "status": 502,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 41,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"google token exchange failed\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "google token exchange failed"
+      },
+      "gzip": "not sent: each single sign-on request spends a token of the address's budget",
+      "stand_in_requests": [
+        {
+          "request": "POST https://oauth2.googleapis.com/token",
+          "headers": [
+            "Content-Type: application/x-www-form-urlencoded"
+          ],
+          "form": [
+            "client_id=tour-google-client",
+            "client_secret=tour-google-secret",
+            "code=tour-code-refused",
+            "grant_type=authorization_code",
+            "redirect_uri=http://localhost:<port>/api/v1/auth/google/callback"
+          ],
+          "answered": 400
+        }
+      ]
+    },
+    {
+      "n": 66,
+      "title": "a code Google accepts: the account is made and signed in, and sent to the frontend",
+      "actor": "anonymous",
+      "route": "GET /api/v1/auth/google/callback",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/auth/google/callback",
+        "query": "state=<google.state>&code=tour-code-verified",
+        "headers": [
+          "Cf-Connecting-Ip: 198.51.100.30",
+          "Cookie: openv_oauth_state=<google.state>"
+        ]
+      },
+      "status": 302,
+      "content_type": "text/html; charset=utf-8",
+      "headers": [
+        "Location: http://localhost:3000",
+        "Set-Cookie: openv_session=<googler.session>; Path=/; Expires=<http-date>; Max-Age=2592000; HttpOnly; SameSite=Lax"
+      ],
+      "security_headers": "standard",
+      "content_length": 44,
+      "kind": "text",
+      "body": [
+        "<a href=\"http://localhost:3000\">Found</a>.",
+        ""
+      ],
+      "trailing_newline": true,
+      "gzip": "not sent: each single sign-on request spends a token of the address's budget",
+      "stand_in_requests": [
+        {
+          "request": "POST https://oauth2.googleapis.com/token",
+          "headers": [
+            "Content-Type: application/x-www-form-urlencoded"
+          ],
+          "form": [
+            "client_id=tour-google-client",
+            "client_secret=tour-google-secret",
+            "code=tour-code-verified",
+            "grant_type=authorization_code",
+            "redirect_uri=http://localhost:<port>/api/v1/auth/google/callback"
+          ],
+          "answered": 200
+        },
+        {
+          "request": "GET https://www.googleapis.com/oauth2/v3/userinfo",
+          "headers": [
+            "Authorization: Bearer tour-google-access-tour-code-verified"
+          ],
+          "answered": 200
+        }
+      ]
+    },
+    {
+      "n": 67,
+      "title": "the account Google made",
+      "actor": "googler",
+      "route": "GET /api/v1/auth/me",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/auth/me"
+      },
+      "status": 200,
+      "content_type": "text/plain; charset=utf-8",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"id\":\"<googler>\",\"email\":\"tour-googler@example.com\",\"name\":\"Tour Googler\",\"avatar_url\":\"https://lh3.googleusercontent.com/a/tour-googler\",\"has_avatar\":false,\"auth_provider\":\"google\",\"is_admin\":false,\"email_notifications\":true,\"push_notifications\":false,\"default_org_id\":\"\",\"email_verified\":true,\"email_verified_at\":\"<time@step 66>\",\"created_at\":\"<time@step 66>\",\"updated_at\":\"<time@step 66>\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "id": "<googler>",
+        "email": "tour-googler@example.com",
+        "name": "Tour Googler",
+        "avatar_url": "https://lh3.googleusercontent.com/a/tour-googler",
+        "has_avatar": false,
+        "auth_provider": "google",
+        "is_admin": false,
+        "email_notifications": true,
+        "push_notifications": false,
+        "default_org_id": "",
+        "email_verified": true,
+        "email_verified_at": "<time@step 66>",
+        "created_at": "<time@step 66>",
+        "updated_at": "<time@step 66>"
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 68,
+      "title": "an address Google does not vouch for",
+      "actor": "anonymous",
+      "route": "GET /api/v1/auth/google/callback",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/auth/google/callback",
+        "query": "state=<google.state>&code=tour-code-unverified",
+        "headers": [
+          "Cf-Connecting-Ip: 198.51.100.30",
+          "Cookie: openv_oauth_state=<google.state>"
+        ]
+      },
+      "status": 403,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 58,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"google account email is missing or unverified\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "google account email is missing or unverified"
+      },
+      "gzip": "not sent: each single sign-on request spends a token of the address's budget",
+      "stand_in_requests": [
+        {
+          "request": "POST https://oauth2.googleapis.com/token",
+          "headers": [
+            "Content-Type: application/x-www-form-urlencoded"
+          ],
+          "form": [
+            "client_id=tour-google-client",
+            "client_secret=tour-google-secret",
+            "code=tour-code-unverified",
+            "grant_type=authorization_code",
+            "redirect_uri=http://localhost:<port>/api/v1/auth/google/callback"
+          ],
+          "answered": 200
+        },
+        {
+          "request": "GET https://www.googleapis.com/oauth2/v3/userinfo",
+          "headers": [
+            "Authorization: Bearer tour-google-access-tour-code-unverified"
+          ],
+          "answered": 200
+        }
+      ]
+    },
+    {
+      "n": 69,
+      "title": "an address a password account holds: never linked",
+      "actor": "anonymous",
+      "route": "GET /api/v1/auth/google/callback",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/auth/google/callback",
+        "query": "state=<google.state>&code=tour-code-password",
+        "headers": [
+          "Cf-Connecting-Ip: 198.51.100.30",
+          "Cookie: openv_oauth_state=<google.state>"
+        ]
+      },
+      "status": 409,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 86,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"an account with this email already exists with a different sign-in method\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "an account with this email already exists with a different sign-in method"
+      },
+      "gzip": "not sent: each single sign-on request spends a token of the address's budget",
+      "stand_in_requests": [
+        {
+          "request": "POST https://oauth2.googleapis.com/token",
+          "headers": [
+            "Content-Type: application/x-www-form-urlencoded"
+          ],
+          "form": [
+            "client_id=tour-google-client",
+            "client_secret=tour-google-secret",
+            "code=tour-code-password",
+            "grant_type=authorization_code",
+            "redirect_uri=http://localhost:<port>/api/v1/auth/google/callback"
+          ],
+          "answered": 200
+        },
+        {
+          "request": "GET https://www.googleapis.com/oauth2/v3/userinfo",
+          "headers": [
+            "Authorization: Bearer tour-google-access-tour-code-password"
+          ],
+          "answered": 200
+        }
+      ]
+    },
+    {
+      "n": 70,
+      "title": "sign in with a password to the account Google made: refused as any wrong password is, since it is bound to Google (OpenV REQ-18)",
+      "actor": "anonymous",
+      "route": "POST /api/v1/auth/login",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/auth/login",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"email\":\"tour-googler@example.com\",\"password\":\"tour password 1\"}"
+      },
+      "status": 401,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 38,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"invalid email or password\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "invalid email or password"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 71,
+      "title": "the 30th email verification from address A: the last its sign-in budget allows (Q18)",
+      "actor": "anonymous",
+      "route": "POST /api/v1/auth/verify-email",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/auth/verify-email",
+        "headers": [
+          "Cf-Connecting-Ip: 203.0.113.1",
+          "Content-Type: application/json"
+        ],
+        "body": "{\"token\":\"<unknown.token>\"}"
+      },
+      "notes": [
+        "29 verifications with the same unknown token went before it, as probes"
+      ],
+      "status": 400,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 56,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"verification link is invalid or has expired\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "verification link is invalid or has expired"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 72,
+      "title": "sign in from A, with the right password: refused, the bucket verification spent",
+      "actor": "anonymous",
+      "route": "POST /api/v1/auth/login",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/auth/login",
+        "headers": [
+          "Cf-Connecting-Ip: 203.0.113.1",
+          "Content-Type: application/json"
+        ],
+        "body": "{\"email\":\"tour-newcomer@example.com\",\"password\":\"tour password 1\"}"
+      },
+      "status": 429,
+      "content_type": "application/json",
+      "headers": [
+        "Retry-After: <retry-after 30 s>"
+      ],
+      "security_headers": "standard",
+      "content_length": 74,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"Too many sign-in attempts from this address; try again later.\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "Too many sign-in attempts from this address; try again later."
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 73,
+      "title": "confirm a password reset from A: refused by the same bucket",
+      "actor": "anonymous",
+      "route": "POST /api/v1/auth/password-reset/confirm",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/auth/password-reset/confirm",
+        "headers": [
+          "Cf-Connecting-Ip: 203.0.113.1",
+          "Content-Type: application/json"
+        ],
+        "body": "{\"token\":\"<unknown.token>\",\"new_password\":\"tour password 2\"}"
+      },
+      "status": 429,
+      "content_type": "application/json",
+      "headers": [
+        "Retry-After: <retry-after 30 s>"
+      ],
+      "security_headers": "standard",
+      "content_length": 66,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"Too many attempts from this address; try again later.\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "Too many attempts from this address; try again later."
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 74,
+      "title": "verify from A with a malformed body: decoded before the bucket, so 400",
+      "actor": "anonymous",
+      "route": "POST /api/v1/auth/verify-email",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/auth/verify-email",
+        "headers": [
+          "Cf-Connecting-Ip: 203.0.113.1",
+          "Content-Type: application/json"
+        ],
+        "body": "{"
+      },
+      "status": 400,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 33,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"invalid request body\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "invalid request body"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 75,
+      "title": "the 30th reset confirmation from address B: the last its budget allows",
+      "actor": "anonymous",
+      "route": "POST /api/v1/auth/password-reset/confirm",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/auth/password-reset/confirm",
+        "headers": [
+          "Cf-Connecting-Ip: 203.0.113.2",
+          "Content-Type: application/json"
+        ],
+        "body": "{\"token\":\"<unknown.token>\",\"new_password\":\"tour password 2\"}"
+      },
+      "notes": [
+        "29 confirmations with the same unknown token went before it, as probes"
+      ],
+      "status": 400,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 81,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"password reset link is invalid or has expired\",\"code\":\"reset_invalid\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "password reset link is invalid or has expired",
+        "code": "reset_invalid"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 76,
+      "title": "verify from B: refused, the bucket reset confirmation spent",
+      "actor": "anonymous",
+      "route": "POST /api/v1/auth/verify-email",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/auth/verify-email",
+        "headers": [
+          "Cf-Connecting-Ip: 203.0.113.2",
+          "Content-Type: application/json"
+        ],
+        "body": "{\"token\":\"<unknown.token>\"}"
+      },
+      "status": 429,
+      "content_type": "application/json",
+      "headers": [
+        "Retry-After: <retry-after 30 s>"
+      ],
+      "security_headers": "standard",
+      "content_length": 66,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"Too many attempts from this address; try again later.\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "Too many attempts from this address; try again later."
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 77,
+      "title": "sign in from B: refused too",
+      "actor": "anonymous",
+      "route": "POST /api/v1/auth/login",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/auth/login",
+        "headers": [
+          "Cf-Connecting-Ip: 203.0.113.2",
+          "Content-Type: application/json"
+        ],
+        "body": "{\"email\":\"tour-newcomer@example.com\",\"password\":\"tour password 1\"}"
+      },
+      "status": 429,
+      "content_type": "application/json",
+      "headers": [
+        "Retry-After: <retry-after 30 s>"
+      ],
+      "security_headers": "standard",
+      "content_length": 74,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"Too many sign-in attempts from this address; try again later.\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "Too many sign-in attempts from this address; try again later."
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 78,
+      "title": "the 30th sign-in from address C: the last its budget allows",
+      "actor": "anonymous",
+      "route": "POST /api/v1/auth/login",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/auth/login",
+        "headers": [
+          "Cf-Connecting-Ip: 203.0.113.3",
+          "Content-Type: application/json"
+        ],
+        "body": "{\"email\":\"tour-drain-30@example.com\",\"password\":\"tour password 1\"}"
+      },
+      "notes": [
+        "29 sign-ins, each to another unknown address (so that no account's own budget closes first), went before it, as probes"
+      ],
+      "status": 401,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 38,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"invalid email or password\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "invalid email or password"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 79,
+      "title": "confirm a reset from C: refused, the bucket sign-in spent",
+      "actor": "anonymous",
+      "route": "POST /api/v1/auth/password-reset/confirm",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/auth/password-reset/confirm",
+        "headers": [
+          "Cf-Connecting-Ip: 203.0.113.3",
+          "Content-Type: application/json"
+        ],
+        "body": "{\"token\":\"<unknown.token>\",\"new_password\":\"tour password 2\"}"
+      },
+      "status": 429,
+      "content_type": "application/json",
+      "headers": [
+        "Retry-After: <retry-after 30 s>"
+      ],
+      "security_headers": "standard",
+      "content_length": 66,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"Too many attempts from this address; try again later.\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "Too many attempts from this address; try again later."
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 80,
+      "title": "verify from C: refused too",
+      "actor": "anonymous",
+      "route": "POST /api/v1/auth/verify-email",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/auth/verify-email",
+        "headers": [
+          "Cf-Connecting-Ip: 203.0.113.3",
+          "Content-Type: application/json"
+        ],
+        "body": "{\"token\":\"<unknown.token>\"}"
+      },
+      "status": 429,
+      "content_type": "application/json",
+      "headers": [
+        "Retry-After: <retry-after 30 s>"
+      ],
+      "security_headers": "standard",
+      "content_length": 66,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"Too many attempts from this address; try again later.\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "Too many attempts from this address; try again later."
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 81,
+      "title": "verify from address D: its own bucket, untouched",
+      "actor": "anonymous",
+      "route": "POST /api/v1/auth/verify-email",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/auth/verify-email",
+        "headers": [
+          "Cf-Connecting-Ip: 203.0.113.4",
+          "Content-Type: application/json"
+        ],
+        "body": "{\"token\":\"<unknown.token>\"}"
+      },
+      "status": 400,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 56,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"verification link is invalid or has expired\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "verification link is invalid or has expired"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 82,
+      "title": "the fifth failed sign-in to one account",
+      "actor": "anonymous",
+      "route": "POST /api/v1/auth/login",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/auth/login",
+        "headers": [
+          "Cf-Connecting-Ip: 203.0.113.5",
+          "Content-Type: application/json"
+        ],
+        "body": "{\"email\":\"tour-locked@example.com\",\"password\":\"not the password\"}"
+      },
+      "notes": [
+        "four failed sign-ins went before it, as probes"
+      ],
+      "status": 401,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 38,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"invalid email or password\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "invalid email or password"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 83,
+      "title": "the account changes its password, with the right current one: refused, since failed sign-ins spent the account's budget (Q18)",
+      "actor": "locked",
+      "route": "PUT /api/v1/me/password",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/me/password",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"current_password\":\"tour password 1\",\"new_password\":\"tour password 2\"}"
+      },
+      "status": 429,
+      "content_type": "application/json",
+      "headers": [
+        "Retry-After: <retry-after 180 s>"
+      ],
+      "security_headers": "standard",
+      "content_length": 65,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"Too many attempts for this account; try again later.\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "Too many attempts for this account; try again later."
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 84,
+      "title": "the account signs in with the right password: refused as well",
+      "actor": "anonymous",
+      "route": "POST /api/v1/auth/login",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/auth/login",
+        "headers": [
+          "Cf-Connecting-Ip: 203.0.113.5",
+          "Content-Type: application/json"
+        ],
+        "body": "{\"email\":\"tour-locked@example.com\",\"password\":\"tour password 1\"}"
+      },
+      "status": 429,
+      "content_type": "application/json",
+      "headers": [
+        "Retry-After: <retry-after 180 s>"
+      ],
+      "security_headers": "standard",
+      "content_length": 80,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"Too many failed sign-in attempts for this account; try again later.\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "Too many failed sign-in attempts for this account; try again later."
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 85,
+      "title": "the fifth wrong current password",
+      "actor": "reverse",
+      "route": "PUT /api/v1/me/password",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/me/password",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"current_password\":\"not the password\",\"new_password\":\"tour password 2\"}"
+      },
+      "notes": [
+        "four went before it, as probes"
+      ],
+      "status": 403,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 70,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"current password is incorrect\",\"code\":\"password_incorrect\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "current password is incorrect",
+        "code": "password_incorrect"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 86,
+      "title": "the account signs in with the right password: refused, since the wrong current passwords spent its budget (Q18)",
+      "actor": "anonymous",
+      "route": "POST /api/v1/auth/login",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/auth/login",
+        "headers": [
+          "Cf-Connecting-Ip: 203.0.113.6",
+          "Content-Type: application/json"
+        ],
+        "body": "{\"email\":\"tour-reverse@example.com\",\"password\":\"tour password 1\"}"
+      },
+      "status": 429,
+      "content_type": "application/json",
+      "headers": [
+        "Retry-After: <retry-after 180 s>"
+      ],
+      "security_headers": "standard",
+      "content_length": 80,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"Too many failed sign-in attempts for this account; try again later.\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "Too many failed sign-in attempts for this account; try again later."
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 87,
+      "title": "the 20th Google sign-on start from address G: the last its budget allows",
+      "actor": "anonymous",
+      "route": "GET /api/v1/auth/google",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/auth/google",
+        "headers": [
+          "Cf-Connecting-Ip: 203.0.113.7"
+        ]
+      },
+      "notes": [
+        "19 starts went before it, as probes"
+      ],
+      "status": 302,
+      "content_type": "text/html; charset=utf-8",
+      "headers": [
+        "Location: https://accounts.google.com/o/oauth2/auth?client_id=tour-google-client&redirect_uri=http%3A%2F%2Flocalhost%3A<port>%2Fapi%2Fv1%2Fauth%2Fgoogle%2Fcallback&response_type=code&scope=openid+email+profile&state=<hex64:3>",
+        "Set-Cookie: openv_oauth_state=<hex64:3>; Path=/; Max-Age=600; HttpOnly; SameSite=Lax"
+      ],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "text",
+      "body": [
+        "<a href=\"https://accounts.google.com/o/oauth2/auth?client_id=tour-google-client&amp;redirect_uri=http%3A%2F%2Flocalhost%3A<port>%2Fapi%2Fv1%2Fauth%2Fgoogle%2Fcallback&amp;response_type=code&amp;scope=openid+email+profile&amp;state=<hex64:3>\">Found</a>.",
+        ""
+      ],
+      "trailing_newline": true,
+      "gzip": "not sent: each single sign-on request spends a token of the address's budget"
+    },
+    {
+      "n": 88,
+      "title": "the callback from G: refused, the bucket the starts spent (Q18)",
+      "actor": "anonymous",
+      "route": "GET /api/v1/auth/google/callback",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/auth/google/callback",
+        "query": "state=<google.state>&code=tour-code-verified",
+        "headers": [
+          "Cf-Connecting-Ip: 203.0.113.7",
+          "Cookie: openv_oauth_state=<google.state>"
+        ]
+      },
+      "status": 429,
+      "content_type": "application/json",
+      "headers": [
+        "Retry-After: <retry-after 60 s>"
+      ],
+      "security_headers": "standard",
+      "content_length": 74,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"Too many sign-in attempts from this address; try again later.\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "Too many sign-in attempts from this address; try again later."
+      },
+      "gzip": "not sent: each single sign-on request spends a token of the address's budget"
+    },
+    {
+      "n": 89,
+      "title": "Google's userinfo does not decode: the email is a number",
+      "actor": "anonymous",
+      "route": "GET /api/v1/auth/google/callback",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/auth/google/callback",
+        "query": "state=<google.state>&code=tour-code-undecodable",
+        "headers": [
+          "Cf-Connecting-Ip: 198.51.100.30",
+          "Cookie: openv_oauth_state=<google.state>"
+        ]
+      },
+      "status": 502,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 38,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"invalid userinfo response\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "invalid userinfo response"
+      },
+      "gzip": "not sent: each single sign-on request spends a token of the address's budget",
+      "stand_in_requests": [
+        {
+          "request": "POST https://oauth2.googleapis.com/token",
+          "headers": [
+            "Content-Type: application/x-www-form-urlencoded"
+          ],
+          "form": [
+            "client_id=tour-google-client",
+            "client_secret=tour-google-secret",
+            "code=tour-code-undecodable",
+            "grant_type=authorization_code",
+            "redirect_uri=http://localhost:<port>/api/v1/auth/google/callback"
+          ],
+          "answered": 200
+        },
+        {
+          "request": "GET https://www.googleapis.com/oauth2/v3/userinfo",
+          "headers": [
+            "Authorization: Bearer tour-google-access-tour-code-undecodable"
+          ],
+          "answered": 200
+        }
+      ]
+    },
+    {
+      "n": 90,
+      "title": "an access token Google answers already expired: the userinfo fetch fails before a request is sent",
+      "actor": "anonymous",
+      "route": "GET /api/v1/auth/google/callback",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/auth/google/callback",
+        "query": "state=<google.state>&code=tour-code-expired",
+        "headers": [
+          "Cf-Connecting-Ip: 198.51.100.30",
+          "Cookie: openv_oauth_state=<google.state>"
+        ]
+      },
+      "status": 502,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 41,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"google userinfo fetch failed\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "google userinfo fetch failed"
+      },
+      "gzip": "not sent: each single sign-on request spends a token of the address's budget",
+      "stand_in_requests": [
+        {
+          "request": "POST https://oauth2.googleapis.com/token",
+          "headers": [
+            "Content-Type: application/x-www-form-urlencoded"
+          ],
+          "form": [
+            "client_id=tour-google-client",
+            "client_secret=tour-google-secret",
+            "code=tour-code-expired",
+            "grant_type=authorization_code",
+            "redirect_uri=http://localhost:<port>/api/v1/auth/google/callback"
+          ],
+          "answered": 200
+        }
+      ]
+    },
+    {
+      "n": 91,
+      "title": "ask for a reset link on a server that cannot send mail: 409 reset_email_unavailable",
+      "actor": "anonymous",
+      "route": "POST /api/v1/auth/password-reset",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/auth/password-reset",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"email\":\"tour-newcomer@example.com\"}"
+      },
+      "status": 409,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 122,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"this server cannot send email; ask your OpenV administrator for a reset link\",\"code\":\"reset_email_unavailable\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "this server cannot send email; ask your OpenV administrator for a reset link",
+        "code": "reset_email_unavailable"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 92,
+      "title": "the same from address A, whose authIPLimiter is drained: still 409, since with no mailer a reset request is refused before it spends a token (Q18)",
+      "actor": "anonymous",
+      "route": "POST /api/v1/auth/password-reset",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/auth/password-reset",
+        "headers": [
+          "Cf-Connecting-Ip: 203.0.113.1",
+          "Content-Type: application/json"
+        ],
+        "body": "{\"email\":\"tour-newcomer@example.com\"}"
+      },
+      "status": 409,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 122,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"this server cannot send email; ask your OpenV administrator for a reset link\",\"code\":\"reset_email_unavailable\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "this server cannot send email; ask your OpenV administrator for a reset link",
+        "code": "reset_email_unavailable"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 93,
+      "title": "resend the verification mail on a server that requires no verification: 400",
+      "actor": "owner",
+      "acting_in": "<w>",
+      "route": "POST /api/v1/auth/verify-email/resend",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/auth/verify-email/resend",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{}"
+      },
+      "status": 400,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 62,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"email verification is not required on this server\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "email verification is not required on this server"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 94,
+      "title": "change the address to verify on that server: the same 400",
+      "actor": "owner",
+      "acting_in": "<w>",
+      "route": "POST /api/v1/auth/verify-email/change",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/auth/verify-email/change",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"email\":\"tour-elsewhere@example.com\"}"
+      },
+      "status": 400,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 62,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"email verification is not required on this server\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "email verification is not required on this server"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 95,
+      "title": "a platform admin's reset link for the account Google made: 409 no_password",
+      "actor": "admin",
+      "route": "POST /api/v1/admin/users/{id}/password-reset",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/admin/users/<googler>/password-reset"
+      },
+      "status": 409,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 113,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"this account signs in through an identity provider and has no password to reset\",\"code\":\"no_password\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "this account signs in through an identity provider and has no password to reset",
+        "code": "no_password"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 96,
+      "title": "the push configuration on a server with no VAPID key pair: off",
+      "actor": "owner",
+      "acting_in": "<w>",
+      "route": "GET /api/v1/me/push/config",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/me/push/config"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 34,
+      "kind": "json",
+      "body": [
+        "{\"enabled\":false,\"public_key\":\"\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "enabled": false,
+        "public_key": ""
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    }
+  ],
+  "uploads": [],
+  "outbound_requests": [
+    "CONNECT oauth2.googleapis.com:443: 6 tunnelled to the tour's stand-in for that host, which answered each one's requests (stand_in_requests) and closed it",
+    "CONNECT www.googleapis.com:443: 4 tunnelled to the tour's stand-in for that host, which answered each one's requests (stand_in_requests) and closed it"
+  ]
+}

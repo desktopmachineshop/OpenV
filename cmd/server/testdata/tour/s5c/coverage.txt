@@ -1,0 +1,124 @@
+# The routes the S5c slice of the API tour reached (refactor plan §6.4
+# S5a-S5e), derived by TestTourCoverage (cmd/server/tour_test.go) from the
+# area goldens beside this file, with no database. Regenerate with
+#   UPDATE_GOLDEN=1 go test ./cmd/server -count=1 -run '^TestTourCoverage$'
+# (regenerating an area rewrites it too). A line is a route of
+# internal/api/testdata/routes.txt, in that file's order, that a recorded
+# step sent: the statuses it answered, then the areas that recorded it. A
+# route that answered only 401 is marked "not counted": the auth middleware
+# answers that before routing, so its handler never ran. A route reached
+# that answered only errors is marked "errors only": its handler ran, but
+# only as far as a guard's, a decode's or a lookup's refusal, and the plan's
+# 90% floor counts only the routes with a 2xx or 3xx answer.
+
+DELETE /api/v1/me/avatar: 200, 401; mail_password_admin
+DELETE /api/v1/me/push-subscriptions: 204, 400, 401; notifications_push
+DELETE /api/v1/notifications/cleared: 200, 401; notifications_push
+DELETE /api/v1/org-teams/{id}: 204, 403, 404; members_teams
+DELETE /api/v1/org-teams/{id}/members/{userId}: 204, 403, 404; members_teams
+DELETE /api/v1/orgs/{id}: 200, 400, 403, 404; tiers_secure_runner_sessions, workspaces_logo
+DELETE /api/v1/orgs/{id}/hosted-runner: 404; runner_keys_connector (errors only)
+DELETE /api/v1/orgs/{id}/invitations/{invId}: 204, 403, 404; invitations_closed, tiers_secure_runner_sessions
+DELETE /api/v1/orgs/{id}/logo: 200, 403, 404; workspaces_logo
+DELETE /api/v1/orgs/{id}/members/{userId}: 204, 400, 403; members_teams, sessions_auth, tiers_secure_runner_sessions
+DELETE /api/v1/orgs/{id}/my-runner-key: 204; runner_keys_connector
+DELETE /api/v1/orgs/{id}/runner-session: 200, 400; runner_keys_connector, tiers_secure_runner_sessions
+DELETE /api/v1/orgs/{id}/worker-keys/{keyId}: 204, 400, 403; runner_keys_connector
+DELETE /api/v1/projects/{id}/members/{userId}: 204, 403; members_teams
+DELETE /api/v1/projects/{id}/team-access/{teamId}: 204, 403; members_teams
+GET /api/v1/admin/users: 200, 403; mail_password_admin
+GET /api/v1/admin/workspaces: 200, 401, 403; mail_password_admin
+GET /api/v1/auth/config: 200; invitations_closed, mail_password_admin, self_hosted_cross_site_sso, sessions_auth
+GET /api/v1/auth/google: 302, 404; self_hosted_cross_site_sso, sessions_auth, tiers_secure_runner_sessions, workspaces_logo
+GET /api/v1/auth/google/callback: 302, 400, 403, 404, 409, 429, 502; self_hosted_cross_site_sso, sessions_auth, workspaces_logo
+GET /api/v1/auth/me: 200, 401; mail_password_admin, self_hosted_cross_site_sso, sessions_auth, tiers_secure_runner_sessions
+GET /api/v1/auth/oidc/callback: 302, 400, 403, 404, 409, 429, 502; self_hosted_cross_site_sso, sessions_auth
+GET /api/v1/auth/oidc/login: 302, 404, 502; self_hosted_cross_site_sso, sessions_auth
+GET /api/v1/auth/policy: 200; invitations_closed, sessions_auth
+GET /api/v1/me/default-workspace: 200, 401; sessions_auth
+GET /api/v1/me/notification-prefs: 200, 401; notifications_push
+GET /api/v1/me/push-subscriptions: 200, 401; notifications_push
+GET /api/v1/me/push/config: 200, 401; notifications_push, sessions_auth
+GET /api/v1/notifications: 200, 400, 401; notifications_push
+GET /api/v1/notifications/stream: 200, 401; notifications_push
+GET /api/v1/orgs: 200, 401, 403; invitations_closed, mail_password_admin, self_hosted_cross_site_sso, sessions_auth, workspaces_logo
+GET /api/v1/orgs/{id}: 200, 403, 404, 500; billing, tiers_secure_runner_sessions, workspaces_logo
+GET /api/v1/orgs/{id}/billing: 200, 401, 403, 404; billing, self_hosted_cross_site_sso, workspaces_logo
+GET /api/v1/orgs/{id}/features: 200, 403, 404; workspaces_logo
+GET /api/v1/orgs/{id}/hosted-runner: 200, 403; runner_keys_connector
+GET /api/v1/orgs/{id}/invitations: 200, 403; invitations_closed, self_hosted_cross_site_sso
+GET /api/v1/orgs/{id}/limits: 200, 403, 404; self_hosted_cross_site_sso, tiers_secure_runner_sessions, workspaces_logo
+GET /api/v1/orgs/{id}/logo: 200, 403, 404; workspaces_logo
+GET /api/v1/orgs/{id}/members: 200, 401, 403, 500; members_teams, self_hosted_cross_site_sso
+GET /api/v1/orgs/{id}/my-runner-key: 200, 403; runner_keys_connector
+GET /api/v1/orgs/{id}/runner-pool: 200, 403; runner_keys_connector, tiers_secure_runner_sessions
+GET /api/v1/orgs/{id}/runner-session: 200, 401, 403; runner_keys_connector, tiers_secure_runner_sessions
+GET /api/v1/orgs/{id}/teams: 200; members_teams
+GET /api/v1/orgs/{id}/usage: 200, 400, 403; runner_keys_connector, tiers_secure_runner_sessions
+GET /api/v1/orgs/{id}/worker-keys: 200, 401, 403; runner_keys_connector
+GET /api/v1/orgs/{id}/worker-status: 200, 403; runner_keys_connector
+GET /api/v1/projects/{id}/members: 200, 403; members_teams
+GET /api/v1/projects/{id}/team-access: 200; members_teams, tiers_secure_runner_sessions
+GET /api/v1/public/build: 200; sessions_auth
+GET /api/v1/public/connector/download: 200, 206, 304, 400, 404, 416; runner_keys_connector
+GET /api/v1/public/plans: 200; billing, self_hosted_cross_site_sso, workspaces_logo
+GET /api/v1/public/release: 200; sessions_auth
+GET /api/v1/release: 200, 401; sessions_auth
+GET /api/v1/users: 200, 401; members_teams, sessions_auth
+GET /api/v1/users/{id}/avatar: 200, 401, 404; mail_password_admin
+GET /health: 200; sessions_auth
+HEAD /api/v1/public/connector/download: 200; runner_keys_connector
+POST /api/v1/admin/users/{id}/password-reset: 200, 401, 403, 404, 409, 500; mail_password_admin, sessions_auth
+POST /api/v1/agent-runs/claim: 204, 401; runner_keys_connector
+POST /api/v1/auth/invitations/accept: 200, 400, 401, 403, 404, 415; invitations_closed
+POST /api/v1/auth/invitations/preview: 200, 400, 404, 429; invitations_closed
+POST /api/v1/auth/login: 200, 400, 401, 429; mail_password_admin, self_hosted_cross_site_sso, sessions_auth, tiers_secure_runner_sessions
+POST /api/v1/auth/logout: 204; self_hosted_cross_site_sso, sessions_auth, tiers_secure_runner_sessions
+POST /api/v1/auth/password-reset: 202, 400, 409, 429; mail_password_admin, sessions_auth
+POST /api/v1/auth/password-reset/confirm: 204, 400, 429; mail_password_admin, sessions_auth
+POST /api/v1/auth/register: 200, 400, 403, 429; invitations_closed, mail_password_admin, self_hosted_cross_site_sso, sessions_auth, tiers_secure_runner_sessions
+POST /api/v1/auth/verify-email: 200, 400, 409, 429; mail_password_admin, sessions_auth
+POST /api/v1/auth/verify-email/change: 202, 400, 409, 415, 429; mail_password_admin, sessions_auth
+POST /api/v1/auth/verify-email/resend: 202, 400, 401, 409, 415, 429, 502; mail_password_admin, sessions_auth
+POST /api/v1/me/avatar: 200, 400, 403, 413; mail_password_admin
+POST /api/v1/me/push-subscriptions: 201, 400, 401; notifications_push
+POST /api/v1/notifications/clear: 200, 401; notifications_push
+POST /api/v1/notifications/read: 200, 400, 401, 500; notifications_push
+POST /api/v1/notifications/read-all: 200, 401; notifications_push
+POST /api/v1/org-teams/{id}/members/{userId}: 201, 400, 403, 404; members_teams
+POST /api/v1/orgs: 201, 400, 403; self_hosted_cross_site_sso, tiers_secure_runner_sessions, workspaces_logo
+POST /api/v1/orgs/{id}/activate: 204, 401, 403; sessions_auth, workspaces_logo
+POST /api/v1/orgs/{id}/billing/change: 200, 400, 404, 409, 429; billing, workspaces_logo
+POST /api/v1/orgs/{id}/billing/checkout: 200, 400, 403, 404, 409, 429, 503; billing, workspaces_logo
+POST /api/v1/orgs/{id}/billing/portal: 200, 404, 409, 503; billing, workspaces_logo
+POST /api/v1/orgs/{id}/billing/refresh: 200, 400, 403, 404, 429, 503; billing, workspaces_logo
+POST /api/v1/orgs/{id}/connector-pairing: 200, 403; runner_keys_connector
+POST /api/v1/orgs/{id}/hosted-runner: 400, 403; runner_keys_connector, tiers_secure_runner_sessions (errors only)
+POST /api/v1/orgs/{id}/hosted-runner/start: 403, 404; runner_keys_connector (errors only)
+POST /api/v1/orgs/{id}/hosted-runner/stop: 404; runner_keys_connector (errors only)
+POST /api/v1/orgs/{id}/invitations: 201, 202, 400, 401, 403, 409, 429; invitations_closed, mail_password_admin, self_hosted_cross_site_sso, tiers_secure_runner_sessions
+POST /api/v1/orgs/{id}/logo: 200, 400, 403, 413, 500; workspaces_logo
+POST /api/v1/orgs/{id}/members: 201, 202, 400, 403, 409, 429; invitations_closed, mail_password_admin, members_teams, self_hosted_cross_site_sso, tiers_secure_runner_sessions
+POST /api/v1/orgs/{id}/my-runner-key: 201, 403; runner_keys_connector
+POST /api/v1/orgs/{id}/restore: 200, 400, 403, 404; workspaces_logo
+POST /api/v1/orgs/{id}/runner-session: 201, 400, 403, 503; runner_keys_connector, tiers_secure_runner_sessions
+POST /api/v1/orgs/{id}/runner-session/extend: 200, 400, 404; runner_keys_connector, tiers_secure_runner_sessions
+POST /api/v1/orgs/{id}/teams: 201, 400, 403; members_teams, tiers_secure_runner_sessions
+POST /api/v1/orgs/{id}/worker-keys: 201, 400, 403; runner_keys_connector
+POST /api/v1/projects/{id}/members: 201, 400, 403, 404; members_teams
+POST /api/v1/projects/{id}/share-links: 201; self_hosted_cross_site_sso
+POST /api/v1/public/connector/pair: 200, 400, 403; runner_keys_connector
+PUT /api/v1/admin/users/{id}/admin: 200, 400, 403, 404, 500; mail_password_admin
+PUT /api/v1/me/default-workspace: 200, 400, 401, 404, 500; sessions_auth
+PUT /api/v1/me/notification-prefs: 200, 400, 401; notifications_push
+PUT /api/v1/me/password: 204, 400, 401, 403, 409, 429; mail_password_admin, self_hosted_cross_site_sso, sessions_auth
+PUT /api/v1/notifications/{id}/flag: 200, 400, 401, 404, 500; notifications_push
+PUT /api/v1/org-teams/{id}: 200, 400, 403, 404; members_teams
+PUT /api/v1/orgs/{id}: 200, 400, 403; tiers_secure_runner_sessions, workspaces_logo
+PUT /api/v1/orgs/{id}/members/me/preview: 200, 400, 403, 404; workspaces_logo
+PUT /api/v1/orgs/{id}/members/{userId}: 204, 400, 403, 500; members_teams
+PUT /api/v1/orgs/{id}/plan: 200, 400, 403, 404, 500; billing, tiers_secure_runner_sessions, workspaces_logo
+PUT /api/v1/projects/{id}/members/{userId}: 204, 400, 403, 500; members_teams
+PUT /api/v1/projects/{id}/team-access: 201, 400, 403, 404; members_teams, tiers_secure_runner_sessions
+
+s5c: 109 of 341 routes reached (32.0%), 105 with a 2xx or 3xx answer (30.8%)

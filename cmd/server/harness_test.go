@@ -684,6 +684,11 @@ type recordingProxy struct {
 	wg   sync.WaitGroup
 	mu   sync.Mutex
 	seen []string // "CONNECT host:port", or "METHOD scheme://host" for plain HTTP
+	// tunnels are the hosts ("host:port") whose CONNECT the proxy accepts
+	// rather than refuses, handing the tunnelled connection to the API
+	// tour's stand-in for that host (S5c, tour_standin_test.go). Every S4
+	// boot, and every tour area without stand-ins, has none.
+	tunnels map[string]func(net.Conn)
 }
 
 // proxyRefusal is the reason phrase of the proxy's 403, which Go's
@@ -695,8 +700,15 @@ const proxyPlaceholder = "http://127.0.0.1:<recording proxy port>"
 
 func startRecordingProxy(t *testing.T) *recordingProxy {
 	t.Helper()
+	return startRecordingProxyWith(t, nil)
+}
+
+// startRecordingProxyWith is startRecordingProxy with tunnels: the hosts
+// whose CONNECT is handed to a stand-in instead of refused.
+func startRecordingProxyWith(t *testing.T, tunnels map[string]func(net.Conn)) *recordingProxy {
+	t.Helper()
 	ln := listenUnhanded(t)
-	p := &recordingProxy{ln: ln}
+	p := &recordingProxy{ln: ln, tunnels: tunnels}
 	p.wg.Add(1)
 	go func() {
 		defer p.wg.Done()
@@ -738,8 +750,19 @@ func (p *recordingProxy) refuse(conn net.Conn) {
 	defer conn.Close()
 	_ = conn.SetDeadline(time.Now().Add(10 * time.Second))
 	what := "a request the proxy could not read"
-	if req, err := http.ReadRequest(bufio.NewReader(conn)); err == nil {
+	br := bufio.NewReader(conn)
+	if req, err := http.ReadRequest(br); err == nil {
 		switch {
+		case req.Method == http.MethodConnect && p.tunnels[req.Host] != nil:
+			// A stand-in's host: the tunnel is accepted and the stand-in
+			// answers what comes through it (tour_standin_test.go).
+			p.mu.Lock()
+			p.seen = append(p.seen, "CONNECT "+req.Host)
+			p.mu.Unlock()
+			if _, err := io.WriteString(conn, "HTTP/1.1 200 Connection established\r\n\r\n"); err == nil {
+				p.tunnels[req.Host](&bufferedConn{Conn: conn, r: br})
+			}
+			return
 		case req.Method == http.MethodConnect:
 			what = "CONNECT " + req.Host
 		case req.URL.IsAbs():
@@ -779,7 +802,21 @@ func (p *recordingProxy) summary() []string {
 	sort.Strings(keys)
 	out := make([]string, 0, len(keys))
 	for _, k := range keys {
+		if host, ok := strings.CutPrefix(k, "CONNECT "); ok && p.tunnels[host] != nil {
+			out = append(out, fmt.Sprintf("%s: %d tunnelled to the tour's stand-in for that host, which answered "+
+				"each one's requests (stand_in_requests) and closed it", k, counts[k]))
+			continue
+		}
 		out = append(out, fmt.Sprintf("%s: %d tried, each answered 403 %q and sent no further", k, counts[k], proxyRefusal))
 	}
 	return out
 }
+
+// bufferedConn is a connection whose first bytes a bufio.Reader already
+// holds: reads drain the reader first.
+type bufferedConn struct {
+	net.Conn
+	r *bufio.Reader
+}
+
+func (c *bufferedConn) Read(b []byte) (int, error) { return c.r.Read(b) }

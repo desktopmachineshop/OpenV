@@ -78,6 +78,11 @@ type tourPattern struct {
 	numbered bool   // <class:N> by first appearance
 	flat     string // the token when not numbered
 	fraction bool   // a timestamp: its fraction may have 0 to 9 digits
+	// minLen and maxLen, when maxLen is set, are the band of raw lengths
+	// each match stands for (S5c: a value whose length varies by design,
+	// tour.patternVarying, and the running release); otherwise a match's
+	// length is its own.
+	minLen, maxLen int
 }
 
 // tourNormaliser holds the registry's literals, the patterns and the
@@ -294,6 +299,10 @@ func (n *tourNormaliser) replace(p tourPattern, text string, slots *[]string, mi
 			start, end = m[2], m[3]
 		}
 		value := text[start:end]
+		if p.maxLen > 0 {
+			*minLen += p.minLen - len(value)
+			*maxLen += p.maxLen - len(value)
+		}
 		if p.fraction && strings.Count(value, ":") >= 2 {
 			// A time to the second may carry a fraction of 0 to 9 digits,
 			// with its dot (RFC3339Nano drops trailing zeros).

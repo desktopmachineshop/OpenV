@@ -19,6 +19,11 @@ func releaseReq(userID string) *http.Request {
 	return r
 }
 
+// releaseHandler is a handler serving notes as the release notes.
+func releaseHandler(notes *release.Notes) *Handler {
+	return &Handler{releaseService: staticRelease{notes: notes}}
+}
+
 // TestGetReleaseAnswersCurrentAndHistory: the current section's version,
 // bullets and markdown, plus the whole file, uncached; no session is 401.
 func TestGetReleaseAnswersCurrentAndHistory(t *testing.T) {
@@ -107,7 +112,7 @@ func TestGetReleaseCarriesTheStable(t *testing.T) {
 // answers empty fields and an empty notes list, never null.
 func TestGetReleaseWithoutARelease(t *testing.T) {
 	notes, _ := release.Parse("## Unreleased\n")
-	h := &Handler{releaseService: staticRelease{notes: notes}}
+	h := releaseHandler(notes)
 	w := httptest.NewRecorder()
 	h.GetRelease(w, releaseReq("u1"))
 	var resp releaseResponse
@@ -119,5 +124,31 @@ func TestGetReleaseWithoutARelease(t *testing.T) {
 	}
 	if resp.Releases == nil || len(resp.Releases) != 0 {
 		t.Fatalf("releases = %+v, want an empty list rather than null", resp.Releases)
+	}
+}
+
+// TestGetReleaseBytes pins GET /api/v1/release byte for byte over fixed
+// notes: the keys, their order and null vs [] of each release, category and
+// the stable, the omitempty stable_since, and a legacy dated section's
+// "Changes" group. The API tour elides those values whole, since every
+// promotion and the monthly cut change them (sessions_auth.json step 5), so
+// this is the guard of their shape (I4).
+func TestGetReleaseBytes(t *testing.T) {
+	notes, err := release.Parse(stableNotes + "\n## 2026-09-12\n\n- legacy\n")
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	h := releaseHandler(notes)
+	w := httptest.NewRecorder()
+	h.GetRelease(w, releaseReq("u1"))
+	const want = `{"version":"0.3.0","date":"","notes":["n"],"categories":[{"name":"New features","notes":["n"]}],"markdown":"### New features\n\n- n"` +
+		`,"releases":[{"version":"0.3.0","date":"","notes":["n"],"categories":[{"name":"New features","notes":["n"]}],"markdown":"### New features\n\n- n"},` +
+		`{"version":"0.2.0","date":"","notes":["s"],"categories":[{"name":"Bug fixes","notes":["s"]}],"markdown":"### Bug fixes\n\n- s","stable_since":"2026-10-01"},` +
+		`{"version":"0.1.0","date":"","notes":["o"],"categories":[{"name":"New features","notes":["o"]}],"markdown":"### New features\n\n- o"},` +
+		`{"version":"2026-09-12","date":"2026-09-12","notes":["legacy"],"categories":[{"name":"Changes","notes":["legacy"]}],"markdown":"- legacy"}]` +
+		`,"stable":{"version":"0.2.0","since":"2026-10-01","previous":"","notes":["o","s"],"categories":[{"name":"New features","notes":["o"]},{"name":"Bug fixes","notes":["s"]}]}` +
+		`,"deployment":"shared"}` + "\n"
+	if got := w.Body.String(); got != want {
+		t.Fatalf("GET /api/v1/release answered\n%s\nwant\n%s", got, want)
 	}
 }
