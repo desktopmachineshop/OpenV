@@ -533,9 +533,44 @@ func jsonFind(data []byte, pointer string) ([]jsonSpan, error) {
 	return spans, nil
 }
 
+// members returns the spans of an object's members, each from its name's
+// opening quote to the end of its value.
+func (s *jsonScanner) members(span jsonSpan) ([]jsonSpan, error) {
+	s.i = span.start + 1 // past '{'
+	s.ws()
+	if s.i < len(s.data) && s.data[s.i] == '}' {
+		return nil, nil
+	}
+	var out []jsonSpan
+	for {
+		s.ws()
+		start := s.i
+		if _, err := s.str(); err != nil {
+			return nil, err
+		}
+		s.ws()
+		if s.i >= len(s.data) || s.data[s.i] != ':' {
+			return nil, fmt.Errorf("expected ':' at byte %d", s.i)
+		}
+		s.i++
+		v, err := s.value()
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, jsonSpan{start, v.end})
+		s.ws()
+		if s.i < len(s.data) && s.data[s.i] == ',' {
+			s.i++
+			continue
+		}
+		return out, nil
+	}
+}
+
 // jsonReorder sorts the elements of every array a pointer names by key,
-// keeping each element's bytes and the separators between them. The sort is
-// stable, so elements with equal keys keep the server's order.
+// keeping each element's bytes and the separators between them; for an
+// object it sorts the members, each keyed by its whole "name":value text.
+// The sort is stable, so elements with equal keys keep the server's order.
 func jsonReorder(data []byte, pointer string, key func([]byte) string) ([]byte, error) {
 	spans, err := jsonFind(data, pointer)
 	if err != nil {
@@ -543,11 +578,16 @@ func jsonReorder(data []byte, pointer string, key func([]byte) string) ([]byte, 
 	}
 	out := append([]byte(nil), data...)
 	for _, sp := range spans {
-		if data[sp.start] != '[' {
-			return nil, fmt.Errorf("%s names a value that is not an array", pointer)
-		}
 		s := &jsonScanner{data: data}
-		_, kids, err := s.children(sp)
+		var kids []jsonSpan
+		switch data[sp.start] {
+		case '[':
+			_, kids, err = s.children(sp)
+		case '{':
+			kids, err = s.members(sp)
+		default:
+			return nil, fmt.Errorf("%s names a value that is neither an array nor an object", pointer)
+		}
 		if err != nil {
 			return nil, err
 		}
@@ -675,6 +715,19 @@ func TestTourNormaliser(t *testing.T) {
 	sorted, err = jsonReorder(indented, "/l", func(b []byte) string { return string(b) })
 	if err != nil || string(sorted) != "{\n  \"l\": [\n    1,\n    2\n  ]\n}" {
 		t.Errorf("jsonReorder (indented): %q %v", sorted, err)
+	}
+	// An object's members, each keyed by its "name":value text, the bytes
+	// and separators kept; an empty object and a scalar.
+	object := []byte(`{"m": {"b": [1, 2], "a" :"x\"}", "c":{}}, "e":{}}`)
+	sorted, err = jsonReorder(object, "/m", func(b []byte) string { return string(b) })
+	if err != nil || string(sorted) != `{"m": {"a" :"x\"}", "b": [1, 2], "c":{}}, "e":{}}` {
+		t.Errorf("jsonReorder (object): %s %v", sorted, err)
+	}
+	if sorted, err = jsonReorder(object, "/e", func(b []byte) string { return string(b) }); err != nil || !bytes.Equal(sorted, object) {
+		t.Errorf("jsonReorder (empty object): %s %v", sorted, err)
+	}
+	if _, err = jsonReorder(object, "/m/a", func(b []byte) string { return string(b) }); err == nil {
+		t.Error("jsonReorder sorts a string")
 	}
 	v, err := jsonValue([]byte(`{"a":[{"k":"x","id":7}]}`), "/a/0/id")
 	if err != nil || jsonType(v) != "number" || fmt.Sprint(v) != "7" {

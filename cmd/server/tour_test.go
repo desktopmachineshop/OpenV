@@ -106,6 +106,21 @@ import (
 // slice's coverage.txt, so it conflicts when their commits are combined:
 // resolve it by regenerating it (tourCoverageRegenerate, no database), never
 // by hand.
+//
+// ADDED FOR S5b, and used by later slices the same way: an event stream
+// (text/event-stream, which never ends) is read with the eventStream option,
+// frame by frame, and then closed by the tour (tour_stream_test.go); an area
+// may set variables of its own in its server's environment (tourArea.env,
+// listed in the golden's env); and unordered also sorts the members of an
+// object whose keys are random ids. Integrating S5b added two more: a
+// pattern scoped to one response header (tour.headerPattern), for a bare
+// number such as a Retry-After that a pattern of the whole golden would
+// also match in a body or an event payload; and an event stream read with
+// eventStream records content_length null when it has none, even when a
+// time in its frames makes its length vary. Reviewing S5b added one: a part of
+// a multipart body over tourSmallBinary (4 KiB), such as an upload made to
+// reach a size limit, is recorded by its size and digest, as a binary body
+// over it already was.
 
 // tourArea is one area of a tour slice; see the top of this file.
 type tourArea struct {
@@ -113,6 +128,11 @@ type tourArea struct {
 	key   string // projects_templates: the file, golden and test are named from it
 	about string // one line for the golden's header
 	run   func(tr *tour)
+	// env is what the area sets in its server's environment beyond the
+	// harness's and the tour's (a per-request limit made small enough to
+	// reach, such as OPENV_MAX_EVIDENCE_MB); the golden lists it. A variable
+	// the harness or the tour sets is refused (tourServerEnv).
+	env map[string]string
 }
 
 // tourBudget bounds one area: boot, requests and drain, the build excluded.
@@ -327,6 +347,16 @@ type tour struct {
 	clock *tourClock        // when each exchange's answer was read, for the times the server minted
 	phase string            // what the exchanges sent now are ("": the requests before the next step)
 	whole map[string]string // wholeSeconds: route -> why its times are whole seconds
+	env   map[string]string // what the tour set in the server's environment beyond the harness's
+	hpat  []tourHeaderPattern
+}
+
+// tourHeaderPattern is an area's pattern for the values of one response
+// header only (tour.headerPattern).
+type tourHeaderPattern struct {
+	header string // canonical
+	re     *regexp.Regexp
+	token  string
 }
 
 // tourActor is who sends a request. An actor acts in its personal
@@ -368,12 +398,17 @@ var securityHeaderNames = []string{"Content-Security-Policy", "Referrer-Policy",
 func startTour(t *testing.T, bin string, a tourArea) *tour {
 	t.Helper()
 	clock := &tourClock{start: time.Now()}
+	env, err := tourServerEnv(a)
+	if err != nil {
+		t.Fatalf("the tour area %s/%s: %v", a.slice, a.key, err)
+	}
 	proxy := startRecordingProxy(t)
-	s, db := bootServer(t, bin, proxy.env(map[string]string{"TZ": "UTC"}))
+	env = proxy.env(env)
+	s, db := bootServer(t, bin, env)
 	s.waitForAsyncLines(nil)
 	tr := &tour{t: t, area: a, s: s, db: db, proxy: proxy, norm: newTourNormaliser(), names: map[string]string{},
 		values: map[string]string{}, sent: map[string]int{}, seen: map[string]bool{}, clock: clock,
-		whole: map[string]string{}}
+		whole: map[string]string{}, env: env}
 	tr.norm.clock = clock
 	tr.checkDatabaseZone()
 	tr.loadRoutes()
@@ -391,6 +426,51 @@ func startTour(t *testing.T, bin string, a tourArea) *tour {
 	tr.owner = tr.register("owner", "Tour Owner",
 		"an ordinary account that owns its personal workspace (nightly channel); reads the events after each step")
 	return tr
+}
+
+// tourEnvName is an environment variable's name as an area may set it.
+var tourEnvName = regexp.MustCompile(`^[A-Z][A-Z0-9_]*$`)
+
+// tourServerEnv is what the tour sets in an area's server environment
+// beyond the harness's fixed one (harnessEnv) and the recording proxy's
+// HTTP_PROXY and HTTPS_PROXY: TZ=UTC, then the area's own variables. An
+// area may not set a variable the harness, the proxy or the tour sets, nor
+// one that would let a request past the proxy (NO_PROXY, or the lower-case
+// spellings Go also reads), so that every area's server keeps the tour's
+// guarantees; the golden's env lists the result (tourEnvLines).
+func tourServerEnv(a tourArea) (map[string]string, error) {
+	taken := map[string]bool{"TZ": true, "HTTP_PROXY": true, "HTTPS_PROXY": true, "NO_PROXY": true}
+	for _, kv := range harnessEnv(testDatabase{}, 0, "", nil) {
+		k, _, _ := strings.Cut(kv, "=")
+		taken[k] = true
+	}
+	env := map[string]string{"TZ": "UTC"}
+	for _, k := range sortedKeys(a.env) {
+		switch {
+		case !tourEnvName.MatchString(k):
+			return nil, fmt.Errorf("env %q: an area sets upper-case variables only (the lower-case proxy variables "+
+				"would let a request past the recording proxy)", k)
+		case taken[k]:
+			return nil, fmt.Errorf("env %s: the harness or the tour sets it, and an area may not change it", k)
+		}
+		env[k] = a.env[k]
+	}
+	return env, nil
+}
+
+// tourEnvLines lists a server environment as the golden's env shows it:
+// "K=V", sorted, the recording proxy's address written as a placeholder
+// (its port differs from run to run).
+func tourEnvLines(env map[string]string) []string {
+	out := []string{"(beyond the harness's fixed environment, cmd/server/harness_test.go)"}
+	for _, k := range sortedKeys(env) {
+		v := env[k]
+		if k == "HTTP_PROXY" || k == "HTTPS_PROXY" {
+			v = proxyPlaceholder
+		}
+		out = append(out, k+"="+v)
+	}
+	return out
 }
 
 // checkDatabaseZone fails unless the database server runs in UTC and on the
@@ -594,6 +674,44 @@ func (tr *tour) pattern(re, token, why string) {
 	tr.legend = append(tr.legend, fmt.Sprintf("%s: %s (the area's own pattern %s)", token, why, re))
 }
 
+// headerPattern is pattern for the values of one response header only: in
+// that header, every match of re (its first group, when it has one) in the
+// normalised value becomes token, and nothing else in the golden is
+// touched. It is for a value a pattern of the whole golden would also match
+// elsewhere, such as a Retry-After that counts down, a bare number that a
+// body or an event payload may hold too. It adds a line to the golden's
+// legend.
+func (tr *tour) headerPattern(header, re, token, why string) {
+	tr.hpat = append(tr.hpat, tourHeaderPattern{header: http.CanonicalHeaderKey(header), re: regexp.MustCompile(re),
+		token: token})
+	tr.legend = append(tr.legend, fmt.Sprintf("%s: %s (the area's own pattern %s, in the %s header only)", token, why,
+		re, http.CanonicalHeaderKey(header)))
+}
+
+// headerValue applies the area's header patterns to a normalised value of
+// the response header name.
+func (tr *tour) headerValue(name, v string) string {
+	for _, p := range tr.hpat {
+		if p.header != name {
+			continue
+		}
+		var b strings.Builder
+		last := 0
+		for _, m := range p.re.FindAllStringSubmatchIndex(v, -1) {
+			start, end := m[0], m[1]
+			if len(m) >= 4 && m[2] >= 0 {
+				start, end = m[2], m[3]
+			}
+			b.WriteString(v[last:start])
+			b.WriteString(p.token)
+			last = end
+		}
+		b.WriteString(v[last:])
+		v = b.String()
+	}
+	return v
+}
+
 // wholeSeconds declares that a route writes its times to the whole second
 // (an export's RFC 3339 without a fraction): on its steps, a time with no
 // fraction stays <time>, since a time cut to the second falls in an earlier
@@ -643,8 +761,9 @@ type tourReq struct {
 	unordered           [][2]string
 	notes               []string
 	rawPath             string
-	org                 *string // actingIn: the workspace sent as X-Org-ID instead of the actor's
-	bodyFrom            int     // answerOf: the step whose answer the body is
+	org                 *string     // actingIn: the workspace sent as X-Org-ID instead of the actor's
+	bodyFrom            int         // answerOf: the step whose answer the body is
+	stream              *tourStream // eventStream: an event stream, read frame by frame (tour_stream_test.go)
 }
 
 // tourOpt shapes a request.
@@ -736,7 +855,10 @@ func once(why string) tourOpt {
 // id the golden or the rest of the answer numbered keeps its number, one
 // first seen in the array has none): only for an order the server leaves to
 // chance (a random id or a timestamp tie), and the golden says why. Never
-// use it to hide an order the server fixes.
+// use it to hide an order the server fixes. A pointer that names an object
+// sorts its members the same way, each by its "name":value text: for a Go
+// map keyed by random ids, which encoding/json writes in the order of its
+// sorted keys, so in an order that changes from run to run.
 func unordered(pointer, why string) tourOpt {
 	return func(tr *tour, r *tourReq) { r.unordered = append(r.unordered, [2]string{pointer, why}) }
 }
@@ -832,8 +954,12 @@ func (tr *tour) exchange(a *tourActor, r *tourReq, extra http.Header) *tourExcha
 		tr.t.Fatalf("%s %s: %v\n%s", r.method, r.path, err, tr.s.output())
 	}
 	defer func() { _ = resp.Body.Close() }()
-	data, err := io.ReadAll(resp.Body)
-	if err != nil {
+	var data []byte
+	if r.stream != nil && isEventStream(resp.Header) {
+		// An event stream never ends: read the frames the area expects, then
+		// close the connection (tour_stream_test.go).
+		data = tr.readStreamAnswer(r, resp.Body, cancel)
+	} else if data, err = io.ReadAll(resp.Body); err != nil {
 		tr.t.Fatalf("read the answer to %s %s: %v\n%s", r.method, r.path, err, tr.s.output())
 	}
 	tr.mark()
@@ -1335,13 +1461,12 @@ var tourLegend = []string{
 // render normalises every step, in order, into the golden.
 func (tr *tour) render() *tourGolden {
 	g := &tourGolden{
-		Golden:     filepath.ToSlash(filepath.Join("cmd/server", tourGoldenPath(tr.area.slice, tr.area.key))),
-		Test:       tourTestName(tr.area.slice, tr.area.key),
-		About:      tr.area.about,
-		Regenerate: tr.regenerate(),
-		Normalised: append(append([]string(nil), tourLegend...), tr.legend...),
-		Env: []string{"(beyond the harness's fixed environment, cmd/server/harness_test.go)",
-			"HTTPS_PROXY=" + proxyPlaceholder, "HTTP_PROXY=" + proxyPlaceholder, "TZ=UTC"},
+		Golden:          filepath.ToSlash(filepath.Join("cmd/server", tourGoldenPath(tr.area.slice, tr.area.key))),
+		Test:            tourTestName(tr.area.slice, tr.area.key),
+		About:           tr.area.about,
+		Regenerate:      tr.regenerate(),
+		Normalised:      append(append([]string(nil), tourLegend...), tr.legend...),
+		Env:             tourEnvLines(tr.env),
 		SecurityHeaders: tr.security,
 		Steps:           []tourStepRecord{},
 		Uploads:         []string{},
@@ -1409,7 +1534,7 @@ func (tr *tour) renderStep(st *tourStep) tourStepRecord {
 			continue
 		}
 		for _, v := range plain.header[k] {
-			rec.Headers = append(rec.Headers, k+": "+n.text(v))
+			rec.Headers = append(rec.Headers, k+": "+tr.headerValue(k, n.text(v)))
 		}
 	}
 	if strings.Join(sec, "\n") == strings.Join(tr.security, "\n") {
@@ -1422,6 +1547,11 @@ func (tr *tour) renderStep(st *tourStep) tourStepRecord {
 		tr.t.Errorf("step %d (%s): Content-Length %s but the body has %d bytes", st.n, r.route, cl, len(plain.body))
 	}
 	switch cl := plain.header.Get("Content-Length"); {
+	case cl == "" && r.stream != nil && isEventStream(plain.header):
+		// An event stream is flushed before its handler returns, so it never
+		// has a Content-Length, whatever its frames hold: null is pinned even
+		// when a time in a frame makes their length vary.
+		rec.ContentLength = nil
 	case lo != hi:
 		rec.ContentLength = "<varies>"
 	case cl == "":
@@ -1476,9 +1606,11 @@ func (tr *tour) sortKey(st *tourStep, body []byte) *tourNormaliser {
 		}
 		spans = append(spans, found...)
 	}
-	// Blank each named array (the outermost, where one holds another) and
-	// number what is left; the arrays are disjoint then, so blanking from the
-	// end of the body back keeps the earlier spans where they are.
+	// Blank each named array or object (the outermost, where one holds
+	// another) and number what is left; the spans are disjoint then, so
+	// blanking from the end of the body back keeps the earlier spans where
+	// they are. The blanked text is only numbered, never parsed, so an object
+	// is blanked as [] too.
 	var outer []jsonSpan
 	for _, sp := range spans {
 		inside := false
@@ -1575,7 +1707,7 @@ func (tr *tour) renderGzip(st *tourStep, key *tourNormaliser, plainBody []byte, 
 	}
 	for k := range mergeKeys(headerKeys(st.plain.header), headerKeys(gz.header)) {
 		a, b := strings.Join(st.plain.header[k], "\n"), strings.Join(gz.header[k], "\n")
-		if !skip[k] && cmp.text(a) != cmp.text(b) {
+		if !skip[k] && tr.headerValue(k, cmp.text(a)) != tr.headerValue(k, cmp.text(b)) {
 			tr.t.Errorf("step %d (%s): the gzip variant's %s differs from the plain answer's (%q against %q)",
 				st.n, r.route, k, b, a)
 		}
@@ -2042,6 +2174,48 @@ func TestTourRequests(t *testing.T) {
 	tr.pattern(`run #(\d+)`, "<run>", "a run number")
 	check("an area's pattern", tr.norm.text("run #42 of "+p+" by tour-worker-credential"), "run #<run> of <p> by <worker.token>")
 
+	// A header's own pattern: that header's values only (any spelling of its
+	// name), its group replaced, and a legend line; a body, another header
+	// and the gzip comparison's other values are left as they are.
+	tr.headerPattern("retry-after", `^(59|60)$`, "<retry-after 60 s>", "a countdown")
+	tr.headerPattern("X-Tour-Id", `id=(\d+)`, "<n>", "a counter")
+	check("a header's pattern", tr.headerValue("Retry-After", "59"), "<retry-after 60 s>")
+	check("a header's pattern, a value it does not match", tr.headerValue("Retry-After", "61"), "61")
+	check("a header's pattern, in another header", tr.headerValue("X-Retry", "60"), "60")
+	check("a header's pattern, in a body", tr.norm.text("60"), "60")
+	check("a header's pattern, its group", tr.headerValue("X-Tour-Id", "id=12; id=3"), "id=<n>; id=<n>")
+	check("a header's pattern, its legend", tr.legend[len(tr.legend)-2], "<retry-after 60 s>: a countdown (the area's "+
+		"own pattern ^(59|60)$, in the Retry-After header only)")
+
+	// An area's own server environment: TZ=UTC and its variables, listed in
+	// the golden with the recording proxy's address as a placeholder; an
+	// area with none lists what every S5a golden lists. A variable the
+	// harness or the tour sets, NO_PROXY, and a lower-case name are refused.
+	withProxy := func(env map[string]string) map[string]string {
+		env["HTTP_PROXY"], env["HTTPS_PROXY"] = "http://127.0.0.1:1", "http://127.0.0.1:1"
+		return env
+	}
+	env, err := tourServerEnv(tourArea{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	check("the env of an area with none", strings.Join(tourEnvLines(withProxy(env)), "|"),
+		"(beyond the harness's fixed environment, cmd/server/harness_test.go)|HTTPS_PROXY="+proxyPlaceholder+
+			"|HTTP_PROXY="+proxyPlaceholder+"|TZ=UTC")
+	env, err = tourServerEnv(tourArea{env: map[string]string{"OPENV_MAX_EVIDENCE_MB": "1", "A_KNOB": "x y"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	check("the env of an area with its own", strings.Join(tourEnvLines(withProxy(env)), "|"),
+		"(beyond the harness's fixed environment, cmd/server/harness_test.go)|A_KNOB=x y|HTTPS_PROXY="+
+			proxyPlaceholder+"|HTTP_PROXY="+proxyPlaceholder+"|OPENV_MAX_EVIDENCE_MB=1|TZ=UTC")
+	for _, k := range []string{"PORT", "UPLOADS_DIR", "HOSTED_RUNNERS", "DATABASE_URL", "TZ", "HTTP_PROXY", "HTTPS_PROXY",
+		"NO_PROXY", "no_proxy", "http_proxy", "Tz"} {
+		if _, err := tourServerEnv(tourArea{env: map[string]string{k: "x"}}); err == nil {
+			t.Errorf("an area may set %s in its server's environment", k)
+		}
+	}
+
 	// The golden's encoding: an invisible rune becomes its JSON escape and
 	// reads back as itself.
 	raw := []byte("\"a\ufeffb\u00a0c\u200bd\U000e0001\"\n")
@@ -2051,6 +2225,22 @@ func TestTourRequests(t *testing.T) {
 	if json.Unmarshal(raw, &a) != nil || json.Unmarshal(enc, &b) != nil || a != b {
 		t.Errorf("the escaped text reads back as %q, not %q", b, a)
 	}
+
+	// A multipart body's parts: one within tourSmallBinary as its text, one
+	// past it by its size and digest, so that an upload made to reach a size
+	// limit does not write its megabyte into the golden.
+	big := bytes.Repeat([]byte("Z"), tourSmallBinary+1)
+	ct, form := multipartForm([][2]string{{"note", "short"}},
+		tourFormFile{field: "file", name: "big.txt", contentType: "text/plain", data: big})
+	v, err := viewBody(tr.norm, ct, form)
+	if err != nil {
+		t.Fatal(err)
+	}
+	parts, _ := json.Marshal(v.Summary)
+	check("a multipart body's parts", string(parts), `[{"headers":["Content-Disposition: form-data; name=\"note\""],`+
+		`"body":"short"},{"headers":["Content-Disposition: form-data; name=\"file\"; filename=\"big.txt\"",`+
+		`"Content-Type: text/plain"],"digest":{"size":4097,`+
+		`"sha256":"252a3370c1b76874608df4bddcec49b44df2367ea4b618aa7a5acb4b35709c97"}}]`)
 
 	// The upload list, whatever order the files were found in.
 	u := []string{"1f6a1e57-2c1b-4e0a-9d3c-7b8a6f5e4d3c", "2a7b2f68-3d2c-4f1b-8e4d-8c9b7a6f5e4d",
@@ -2122,6 +2312,29 @@ func TestTourOrder(t *testing.T) {
 	}
 	if got := render("", beside, "/links"); got[0] != got[1] {
 		t.Errorf("links to the artifacts of the same answer sort by the server's order:\n%s\n%s", got[0], got[1])
+	}
+
+	// An object keyed by random ids (a Go map, which encoding/json writes in
+	// the order of its keys): members first seen in it, told apart by their
+	// values, and members with equal values whose ids an earlier step
+	// numbered.
+	for _, c := range []struct{ prior, first, second, want string }{
+		{"", fmt.Sprintf(`%q:"pass"`, x), fmt.Sprintf(`%q:"fail"`, y),
+			`{"entries":[{"latest_results":{"<uuid:1>":"fail","<uuid:2>":"pass"}}]}`},
+		{b + " " + a, fmt.Sprintf(`%q:"pass"`, a), fmt.Sprintf(`%q:"pass"`, b),
+			`{"entries":[{"latest_results":{"<uuid:1>":"pass","<uuid:2>":"pass"}}]}`},
+	} {
+		var got []string
+		for _, order := range [][2]string{{c.first, c.second}, {c.second, c.first}} {
+			tr := &tour{t: t, norm: newTourNormaliser()}
+			tr.norm.text(c.prior)
+			raw := []byte(`{"entries":[{"latest_results":{` + order[0] + `,` + order[1] + `}}]}`)
+			st := &tourStep{n: 1, req: &tourReq{unordered: [][2]string{{"/entries/*/latest_results", "the test"}}}}
+			got = append(got, tr.norm.text(string(tr.reorder(st, tr.sortKey(st, raw), raw))))
+		}
+		if got[0] != got[1] || got[0] != c.want {
+			t.Errorf("an object keyed by random ids, sorted:\n%s\n%s\nwant %s", got[0], got[1], c.want)
+		}
 	}
 
 	// Events stamped with the same time, in either order.
