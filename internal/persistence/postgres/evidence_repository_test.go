@@ -200,7 +200,9 @@ func TestCitationsSurviveReRecordingTheResult(t *testing.T) {
 }
 
 // Citing twice is the state the caller already has, not a second fact and not
-// an error.
+// an error. The repeat answers with the citation that is stored — its id, time
+// and note — not a candidate no row holds, whose id would then be found
+// nowhere.
 func TestCitingTwiceIsNotAnError(t *testing.T) {
 	f := newEvidenceFixture(t)
 	svc := evidence.NewDefaultService(f.repo)
@@ -209,10 +211,12 @@ func TestCitingTwiceIsNotAnError(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := svc.Cite(f.resultIDs[0], bundle.ID, "first"); err != nil {
+	first, err := svc.Cite(f.resultIDs[0], bundle.ID, "first")
+	if err != nil {
 		t.Fatalf("first citation: %v", err)
 	}
-	if _, err := svc.Cite(f.resultIDs[0], bundle.ID, "again"); err != nil {
+	again, err := svc.Cite(f.resultIDs[0], bundle.ID, "again")
+	if err != nil {
 		t.Fatalf("repeat citation should be accepted quietly, got %v", err)
 	}
 	list, err := svc.CitationsForResult(f.resultIDs[0])
@@ -221,6 +225,18 @@ func TestCitingTwiceIsNotAnError(t *testing.T) {
 	}
 	if len(list) != 1 {
 		t.Fatalf("%d citations after citing the same bundle twice, want 1", len(list))
+	}
+	stored := list[0]
+	if first.ID != stored.ID {
+		t.Fatalf("the first citation answered id %s; the stored one is %s", first.ID, stored.ID)
+	}
+	if again.ID != stored.ID || !again.CreatedAt.Equal(stored.CreatedAt) || again.Note != stored.Note {
+		t.Fatalf("the repeat answered id %s, created_at %s, note %q; the stored citation is %s, %s, %q",
+			again.ID, again.CreatedAt, again.Note, stored.ID, stored.CreatedAt, stored.Note)
+	}
+	// A repeat keeps the citation intact: it is not a way to rewrite the note.
+	if stored.Note != "first" {
+		t.Fatalf("the stored note is %q after the repeat, want the first one", stored.Note)
 	}
 }
 

@@ -57,9 +57,6 @@ var (
 	ErrFileNotFound  = errors.New("evidence file not found")
 	ErrInvalid       = errors.New("invalid evidence bundle")
 	ErrQuotaExceeded = errors.New("the workspace's evidence storage limit is full")
-	// ErrAlreadyCited is not a failure: a result citing a bundle it already
-	// cites is the state the caller asked for. Handlers answer it as success.
-	ErrAlreadyCited = errors.New("this result already cites that evidence")
 )
 
 // Bundle is one capture session: what was done, when, by whom, under what
@@ -185,6 +182,10 @@ type Repository interface {
 	DeleteFile(id string) (*File, error)
 	ListFiles(bundleID string) ([]*File, error)
 
+	// AddCitation stores c. A result that already cites the bundle keeps its
+	// citation as it is, note included, and is not an error. Either way the
+	// stored row's ID, Note and CreatedAt are written back onto c, so after a
+	// repeat c describes the existing citation, not the candidate built.
 	AddCitation(c *Citation) error
 	RemoveCitation(bundleID, testResultID string) error
 	// ListCitationsForBundle returns the results citing a bundle.
@@ -455,7 +456,9 @@ func (s *DefaultService) ProjectForResult(testResultID string) (string, error) {
 }
 
 // Cite records that a result rests on a bundle. Citing twice is not an error:
-// the caller asked for a state that already holds.
+// the caller asked for a state that already holds, and is answered with the
+// citation already stored — its id, time and note — which the repeat leaves
+// intact.
 func (s *DefaultService) Cite(testResultID, bundleID, note string) (*Citation, error) {
 	b, err := s.repo.FindByID(bundleID)
 	if err != nil {
@@ -475,10 +478,9 @@ func (s *DefaultService) Cite(testResultID, bundleID, note string) (*Citation, e
 		Note:         note,
 		CreatedAt:    time.Now().UTC(),
 	}
+	// AddCitation writes the stored row's identity back onto c, so a repeat
+	// answers with the citation that exists rather than this candidate.
 	if err := s.repo.AddCitation(c); err != nil {
-		if errors.Is(err, ErrAlreadyCited) {
-			return c, nil
-		}
 		return nil, err
 	}
 	return c, nil

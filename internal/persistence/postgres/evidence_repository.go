@@ -6,8 +6,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/lib/pq"
-
 	"github.com/openv/requirements-platform/internal/domain/evidence"
 )
 
@@ -259,18 +257,21 @@ func (r *EvidenceRepository) DeleteFile(id string) (*evidence.File, error) {
 }
 
 // AddCitation records a result's claim on a bundle. A repeat of a citation
-// that already exists reports ErrAlreadyCited rather than failing: the caller
-// asked for a state that already holds.
+// that already exists is not a failure — the caller asked for a state that
+// already holds — and leaves the stored row as it is, note included.
+//
+// The stored row's id, note and created_at are scanned back onto c, so after
+// a repeat c describes the citation that exists, not the candidate the caller
+// built. DO UPDATE rather than DO NOTHING because only an update RETURNs the
+// conflicting row, in the same statement, so no uncite can slip in between;
+// it writes the note back as it was.
 func (r *EvidenceRepository) AddCitation(c *evidence.Citation) error {
-	_, err := r.db.Exec(`
+	return r.db.QueryRow(`
 		INSERT INTO evidence_citations (id, bundle_id, test_result_id, note, created_at)
 		VALUES ($1,$2,$3,$4,$5)
-	`, c.ID, c.BundleID, c.TestResultID, c.Note, c.CreatedAt)
-	var pqErr *pq.Error
-	if errors.As(err, &pqErr) && pqErr.Code == "23505" {
-		return evidence.ErrAlreadyCited
-	}
-	return err
+		ON CONFLICT (bundle_id, test_result_id) DO UPDATE SET note = evidence_citations.note
+		RETURNING id, note, created_at
+	`, c.ID, c.BundleID, c.TestResultID, c.Note, c.CreatedAt).Scan(&c.ID, &c.Note, &c.CreatedAt)
 }
 
 // RemoveCitation drops one claim. Removing a citation never touches the
