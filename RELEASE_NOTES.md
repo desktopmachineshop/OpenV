@@ -20,6 +20,14 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   new name or description included, and so do the other projects its
   requirements are linked to.
 
+- **Citing the same evidence twice from one test result through the API no
+  longer answers with a citation that does not exist.** The repeat was
+  accepted, but its answer carried a new citation id, time and note that were
+  never saved, so that id could not be found afterwards. It now answers with
+  the citation already on record, its original note and time intact; to give
+  a citation a different note, remove it and cite the evidence again with the
+  new note.
+
 ## 0.15.0 — 2026-09-22
 
 ### New features

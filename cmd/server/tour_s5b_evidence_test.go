@@ -32,7 +32,7 @@ import (
 // (whole, by one and two byte ranges, past the end, conditionally, and
 // compressed; by the viewer, the outsider and no session; a phantom and a
 // malformed id); results citing bundles (the refusals, a repeat that answers
-// a fresh id and time nothing stored, a bundle of another project) and the
+// with the citation already stored, a bundle of another project) and the
 // citation reads by result, by run and by bundle; the citations removed; and
 // the deletes, which unlink the stored bytes, and a run's delete, which takes
 // its citations with it. No evidence route publishes an event; every write
@@ -347,11 +347,10 @@ func evidenceTour(tr *tour) {
 	tr.step("res1 cites B1: 201, the note trimmed, no denormalised fields", o,
 		"POST /api/v1/test-results/{id}/citations", at("id", "{{res1}}"),
 		jsonBody(`{"bundle_id":"{{b1}}","note":"  The quiet rows.  "}`)).capture("cite1", "/id")
-	tr.step("res1 cites B1 again: 201 with a fresh id and time that were never stored", o,
+	tr.step("res1 cites B1 again: 201 with the citation already stored, its note unchanged", o,
 		"POST /api/v1/test-results/{id}/citations", at("id", "{{res1}}"),
 		jsonBody(`{"bundle_id":"{{b1}}","note":"A second note, dropped"}`),
-		note("the unique pair refuses the insert, and the service answers ErrAlreadyCited with the citation it "+
-			"built: an id and created_at no row holds, and the stored note is unchanged"))
+		note("the insert meets the unique pair and returns the stored row as it is: cite1's id, time and note"))
 	tr.step("res1 cites BQ, a bundle of project Q: the caller needs only to see Q", o,
 		"POST /api/v1/test-results/{id}/citations", at("id", "{{res1}}"), jsonBody(`{"bundle_id":"{{bq}}"}`)).
 		capture("cite_bq", "/id")

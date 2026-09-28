@@ -846,7 +846,9 @@ that carry script, so every file is served `application/octet-stream` with
 (free 2048, team 20480), because uploads share one volume with the rest of
 the deployment. An upload that would exceed it is refused with `413` and a
 message naming the current usage. Citing a bundle twice from one result is
-accepted quietly rather than refused — it is the state the caller asked for.
+accepted quietly rather than refused — it is the state the caller asked for —
+and answers `201` with the citation already stored: its `id`, `created_at`
+and `note`, which the repeat leaves as they were.
 
 `vv/gaps` returns one list of artifact IDs per bucket:
 
