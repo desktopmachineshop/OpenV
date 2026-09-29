@@ -269,7 +269,7 @@ POST /api/v1/orgs/{id}/runner-session/extend: 400, 401, 403; phantom_matrix (err
 POST /api/v1/orgs/{id}/teams: 400, 401, 403; phantom_matrix, real_id_reads (errors only)
 POST /api/v1/orgs/{id}/worker-keys: 400, 401, 403; phantom_matrix, real_id_reads (errors only)
 POST /api/v1/projects: 201, 400, 401, 403; over_plan_self_hosted, over_plan_tiers_on, phantom_matrix, real_id_reads
-POST /api/v1/projects/import: 201, 401, 500; over_plan_self_hosted, over_plan_tiers_on, phantom_matrix, real_id_reads
+POST /api/v1/projects/import: 201, 401, 403, 500; over_plan_self_hosted, over_plan_tiers_on, phantom_matrix, real_id_reads
 POST /api/v1/projects/{id}/baselines: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
 POST /api/v1/projects/{id}/draft-test-cases: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
 POST /api/v1/projects/{id}/evidence-bundles: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
@@ -305,7 +305,7 @@ POST /api/v1/teams/{id}/edges: 401, 404; phantom_matrix (errors only)
 POST /api/v1/teams/{id}/nodes: 401, 404; phantom_matrix (errors only)
 POST /api/v1/teams/{id}/runs: 401, 404; phantom_matrix (errors only)
 POST /api/v1/templates: 400, 401, 403, 404, 500; phantom_matrix (errors only)
-POST /api/v1/templates/{id}/projects: 201, 400, 401, 500; over_plan_self_hosted, over_plan_tiers_on, phantom_matrix, real_id_reads
+POST /api/v1/templates/{id}/projects: 201, 400, 401, 403, 500; over_plan_self_hosted, over_plan_tiers_on, phantom_matrix, real_id_reads
 POST /api/v1/test-results/{id}/citations: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
 POST /api/v1/test-runs/{id}/agent-run: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
 POST /api/v1/test-runs/{id}/results: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
