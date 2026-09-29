@@ -255,6 +255,11 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      # frontend/src/brand/*.css are generated from docs/brand; a hand edit
+      # there, or a tokens.json change without a regenerate, fails here.
+      - name: Brand tokens up to date
+        run: python3 ../scripts/brand/build_tokens.py --check
+
       - name: Unit tests
         run: npm test
 

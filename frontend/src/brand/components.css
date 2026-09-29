@@ -1,0 +1,239 @@
+/* GENERATED: copied from docs/brand/components.css by scripts/brand/build_tokens.py. Do not edit. */
+/*
+ * OpenV Brand components.
+ * One stylesheet for the app and the website. Every value comes from a
+ * token in tokens.css; nothing here hard-codes a colour.
+ * Class prefix: ov-
+ */
+
+/* Base ---------------------------------------------------------------- */
+.ov-root {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+.ov-root :focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+.ov-mono { font-family: var(--font-mono); }
+.ov-muted { color: var(--text-muted); }
+
+/* Button -------------------------------------------------------------- */
+.ov-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  height: var(--control-md);
+  padding: 0 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-control);
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 120ms ease, border-color 120ms ease, transform 80ms ease;
+}
+.ov-btn:hover { background: var(--surface-hover); }
+.ov-btn:active { transform: translateY(1px); }
+.ov-btn:disabled, .ov-btn[aria-disabled="true"] {
+  cursor: not-allowed;
+  color: var(--text-muted);
+  background: var(--surface-sunken);
+  border-color: var(--border);
+  transform: none;
+}
+.ov-btn--primary {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--text-on-primary);
+}
+.ov-btn--primary:hover { background: var(--primary-hover); border-color: var(--primary-hover); }
+.ov-btn--ghost { background: transparent; border-color: transparent; }
+.ov-btn--ghost:hover { background: var(--surface-hover); }
+.ov-btn--danger { color: var(--danger); }
+.ov-btn--danger:hover { background: var(--danger-bg); border-color: var(--danger-border); }
+.ov-btn--sm { height: var(--control-sm); padding: 0 10px; font-size: 13px; }
+.ov-btn--lg { height: 44px; padding: 0 20px; font-size: 15px; }
+.ov-btn--icon { width: var(--control-md); padding: 0; }
+.ov-btn--icon.ov-btn--sm { width: var(--control-sm); }
+
+/* Status chip --------------------------------------------------------- */
+.ov-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  height: 22px;
+  padding: 0 9px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border);
+  background: var(--neutral-chip);
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+}
+.ov-chip--success { background: var(--success-bg); border-color: var(--success-border); color: var(--success); }
+.ov-chip--warning { background: var(--warning-bg); border-color: var(--warning-border); color: var(--warning); }
+.ov-chip--danger  { background: var(--danger-bg);  border-color: var(--danger-border);  color: var(--danger); }
+.ov-chip--agent   { background: var(--agent-bg);   border-color: var(--agent-border);   color: var(--agent); }
+.ov-chip--info    { background: var(--info-bg);    border-color: var(--info-bg);        color: var(--link); }
+
+/* Ref badge ----------------------------------------------------------- */
+.ov-ref {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunken);
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  text-decoration: none;
+}
+a.ov-ref { color: var(--link); }
+a.ov-ref:hover { background: var(--info-bg); }
+
+/* Field --------------------------------------------------------------- */
+.ov-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.ov-label { font-size: 13px; line-height: 16px; font-weight: 500; color: var(--text); }
+.ov-input {
+  height: var(--control-md);
+  box-sizing: border-box;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border-control);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 14px;
+}
+textarea.ov-input { height: auto; min-height: 80px; padding: var(--space-2) var(--space-3); line-height: 20px; resize: vertical; }
+.ov-input::placeholder { color: var(--text-muted); }
+.ov-input:focus { outline: 2px solid var(--focus-ring); outline-offset: 0; border-color: var(--focus-ring); }
+.ov-input[aria-invalid="true"] { border-color: var(--danger); }
+.ov-help { font-size: 12px; line-height: 16px; color: var(--text-muted); }
+.ov-error { font-size: 12px; line-height: 16px; color: var(--danger); font-weight: 500; }
+
+/* Callout ------------------------------------------------------------- */
+.ov-callout {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 20px;
+}
+.ov-callout__title { font-weight: 600; }
+.ov-callout--info    { background: var(--info-bg);    border-color: var(--info-bg); }
+.ov-callout--success { background: var(--success-bg); border-color: var(--success-border); }
+.ov-callout--warning { background: var(--warning-bg); border-color: var(--warning-border); }
+.ov-callout--danger  { background: var(--danger-bg);  border-color: var(--danger-border); }
+.ov-callout--agent   { background: var(--agent-bg);   border-color: var(--agent-border); }
+.ov-callout--success .ov-callout__title { color: var(--success); }
+.ov-callout--warning .ov-callout__title { color: var(--warning); }
+.ov-callout--danger  .ov-callout__title { color: var(--danger); }
+.ov-callout--agent   .ov-callout__title { color: var(--agent); }
+
+/* Panel --------------------------------------------------------------- */
+.ov-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+/* Table --------------------------------------------------------------- */
+.ov-table { width: 100%; border-collapse: collapse; font-size: 13px; line-height: 18px; font-variant-numeric: tabular-nums; }
+.ov-table th {
+  height: var(--row-height);
+  padding: 0 var(--space-3);
+  text-align: left;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: var(--surface-sunken);
+  border-bottom: 1px solid var(--border);
+}
+.ov-table td {
+  height: 40px;
+  padding: 0 var(--space-3);
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+}
+.ov-table tr:last-child td { border-bottom: 0; }
+.ov-table tbody tr:hover td { background: var(--surface-hover); }
+.ov-table tr[aria-selected="true"] td { background: var(--surface-selected); color: var(--text-selected); }
+
+/* Tabs ---------------------------------------------------------------- */
+.ov-tabs { display: flex; gap: var(--space-5); border-bottom: 1px solid var(--border); }
+.ov-tab {
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.ov-tab:hover { color: var(--text); }
+.ov-tab[aria-selected="true"] { color: var(--text); border-bottom-color: var(--primary); }
+
+/* Segmented control ---------------------------------------------------- */
+.ov-segmented { display: inline-flex; padding: 2px; border-radius: var(--radius-md); background: var(--surface-sunken); }
+.ov-segmented button {
+  height: 28px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.ov-segmented button[aria-pressed="true"] { background: var(--surface); color: var(--text); box-shadow: var(--shadow-raised); }
+
+/* Nav item (app sidebar) ------------------------------------------------ */
+.ov-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-size: 13px;
+  text-decoration: none;
+}
+.ov-nav-item:hover { background: var(--surface-hover); color: var(--text); }
+.ov-nav-item[aria-current="page"] { background: var(--surface-selected); color: var(--text-selected); font-weight: 600; }
+.ov-nav-group { padding: 0 10px 4px; font-size: 12px; font-weight: 500; color: var(--text-muted); }
+
+@media (prefers-reduced-motion: reduce) {
+  .ov-btn { transition: none; }
+  .ov-btn:active { transform: none; }
+}

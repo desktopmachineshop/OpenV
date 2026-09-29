@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { useViewport } from '../hooks/useViewport';
 import { CUSTOMERS_INTRO, CUSTOMER_STORY_INVITE_URL, CUSTOMER_STORY_PLACEHOLDERS } from './content';
-import { Card, ExternalLink, Eyebrow, Grid, H1, H2, Lead, Section, SiteShell, primaryButton, secondaryButton } from './SiteShell';
+import { Card, ExternalLink, Eyebrow, Grid, H1, H2, Lead, Section, SiteShell, buttonClass } from './SiteShell';
 
 // Customer stories: the page exists before the stories do, and says so.
 // Nothing here is invented; the cards hold the room for real teams.
@@ -31,10 +31,10 @@ export const Customers: React.FC = () => {
         <H2 compact={compact}>Using OpenV? Tell us</H2>
         <Lead>A few lines about your team and what changed is all it takes. Stories are published with your approval, and only then.</Lead>
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-          <ExternalLink href={CUSTOMER_STORY_INVITE_URL} style={primaryButton}>
+          <ExternalLink href={CUSTOMER_STORY_INVITE_URL} className={buttonClass.primary}>
             Share your story
           </ExternalLink>
-          <Link to="/demos" style={secondaryButton}>
+          <Link to="/demos" className={buttonClass.secondary}>
             Watch the demos
           </Link>
         </div>

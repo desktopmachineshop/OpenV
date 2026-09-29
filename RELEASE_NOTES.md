@@ -9,6 +9,19 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Maintenance updates
+
+- **The public website has a new look.** The home page and the How it
+  works, Demos, Pricing, FAQ, Open source, Customers and White papers pages
+  now use OpenV's new brand: IBM Plex type, a calmer graphite palette with
+  one blue for actions, and status colours that stay distinguishable
+  without red-green colour vision. The home page leads with a shorter
+  headline, groups the demo videos behind one featured recording, shows the
+  features around a worked traceability example, and sets the export
+  formats and the hosted limits out as tables you can compare at a glance.
+  Light and dark themes both follow your setting. The app itself is
+  unchanged for now.
+
 ### Bug fixes
 
 - **Committing a guided definition approves its drafts.** The wizard's last

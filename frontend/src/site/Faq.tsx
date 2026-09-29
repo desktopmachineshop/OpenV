@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { useViewport } from '../hooks/useViewport';
 import { FAQ_GROUPS } from './content';
-import { Eyebrow, H1, H2, Lead, Section, SiteShell, secondaryButton } from './SiteShell';
+import { Eyebrow, H1, H2, Lead, Section, SiteShell, buttonClass } from './SiteShell';
 
 // Security and subscription FAQ. Plain <details> elements: they open
 // without JavaScript, are keyboard-accessible, and search finds the text.
@@ -20,7 +20,7 @@ export const Faq: React.FC = () => {
         </Lead>
         <nav aria-label="FAQ sections" style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 8 }}>
           {FAQ_GROUPS.map((g) => (
-            <a key={g.id} href={`#${g.id}`} style={{ ...secondaryButton, padding: '8px 14px', fontSize: 14 }}>
+            <a key={g.id} href={`#${g.id}`} className={buttonClass.small}>
               {g.title}
             </a>
           ))}
@@ -51,10 +51,10 @@ export const Faq: React.FC = () => {
         <H2 compact={compact}>Something else?</H2>
         <Lead>Ask on GitHub, or read how the pieces fit together.</Lead>
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-          <Link to="/how-it-works" style={secondaryButton}>
+          <Link to="/how-it-works" className={buttonClass.secondary}>
             How it works
           </Link>
-          <Link to="/pricing" style={secondaryButton}>
+          <Link to="/pricing" className={buttonClass.secondary}>
             Pricing
           </Link>
         </div>
