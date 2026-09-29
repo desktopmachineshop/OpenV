@@ -52,10 +52,9 @@ import (
 //     then address), as x (403), with W's worker key (401: the guard wants
 //     an account), and of a workspace no row has (403, not 404) or an id
 //     that is not a UUID (500, the role lookup's error, Q19);
-//   - roles: the owner, W's only admin, can neither be demoted (refused as a
-//     500: the handler maps only ErrInvalidRole and ErrNotMember to 400, and
-//     SetMemberRole's last-admin refusal is a bare error, Q19) nor leave
-//     (400 with RemoveMember's text, Q19); a2 is made an admin
+//   - roles: the owner, W's only admin, can neither be demoted (400 with
+//     SetMemberRole's ErrLastAdmin text, Q19) nor leave (400 with
+//     RemoveMember's text, Q19); a2 is made an admin
 //     (org.member_role_changed {from, to, user_id}); a role no workspace has,
 //     an account that is not in W and an id no account has (400, the latter
 //     two with ErrNotMember's "you are not a member of this organization",
@@ -108,12 +107,13 @@ import (
 //     alone), a worker key (401 "authentication required", the handler's)
 //     and no session (the middleware's 401);
 //   - leaving W last: m removing a2 (403), x leaving W, which it is not in
-//     (403), an id no account has (204, and org.member_removed all the
-//     same), m leaving (204, self true), the owner removing a2, then one of
-//     two admins (204, self false); W's members afterwards; t, which still
-//     lists m with an empty role (its members are read with a left join on
-//     W's members, and leaving W leaves the team); and m, gone from W, still
-//     reading P, whose direct membership leaving W does not end.
+//     (403), an id no account has (400 with ErrNotMember's words, as its
+//     role change, and no event), m leaving (204, self true), the owner
+//     removing a2, then one of two admins (204, self false); W's members
+//     afterwards; t, which still lists m with an empty role (its members are
+//     read with a left join on W's members, and leaving W leaves the team);
+//     and m, gone from W, still reading P, whose direct membership leaving W
+//     does not end.
 //
 // Every success answer here is a bare json.NewEncoder(w).Encode, so it has
 // the Content-Type Go sniffs (text/plain; charset=utf-8), the 201 and 202
@@ -217,8 +217,7 @@ func membersTeamsTour(tr *tour) {
 
 	// Roles. The owner is W's only admin until a2 is made one.
 	const role = "PUT /api/v1/orgs/{id}/members/{userId}"
-	tr.step("demote the owner, W's only admin: refused, but as a 500, since the handler maps only ErrInvalidRole and "+
-		"ErrNotMember to 400 and the last-admin refusal is neither (Q19)", o, role,
+	tr.step("demote the owner, W's only admin: 400 with the domain's text, as its leaving (Q19)", o, role,
 		at("id", "{{w}}", "userId", "{{owner}}"), membersTeamsRole("member"))
 	tr.step("the owner leaves W, its only admin: 400 with the domain's text (Q19)", o,
 		"DELETE /api/v1/orgs/{id}/members/{userId}", at("id", "{{w}}", "userId", "{{owner}}"))
@@ -352,7 +351,7 @@ func membersTeamsTour(tr *tour) {
 	const leave = "DELETE /api/v1/orgs/{id}/members/{userId}"
 	tr.step("m removes a2: 403", m, leave, at("id", "{{w}}", "userId", "{{a2}}"))
 	tr.step("x leaves W, which it is not in: 403", x, leave, at("id", "{{w}}", "userId", "{{x}}"))
-	tr.step("remove an id no account has: 204, and org.member_removed all the same", o, leave,
+	tr.step("remove an id no account has: 400 with ErrNotMember's words, as its role change, and no event", o, leave,
 		at("id", "{{w}}", "userId", "{{phantom}}"))
 	tr.step("m leaves W: 204; org.member_removed, self true", m, leave, at("id", "{{w}}", "userId", "{{m}}"))
 	tr.step("the owner removes a2, one of two admins: 204, self false", o, leave, at("id", "{{w}}", "userId", "{{a2}}"))

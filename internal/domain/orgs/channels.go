@@ -74,6 +74,30 @@ func ValidateUpgradeWindow(day, hour int, timezone string) error {
 	return nil
 }
 
+// CheckReleaseChannel is SetReleaseChannel's refusal without its write, so
+// that a caller can refuse a request before writing any part of it:
+// ErrChannelLocked for a plan that always runs nightly, ErrInvalidChannel
+// for a name that is no channel ("" is the plan's default).
+func CheckReleaseChannel(plan, channel string) error {
+	if !ChannelChoosable(plan) {
+		return ErrChannelLocked
+	}
+	if channel != "" && !ValidChannel(channel) {
+		return ErrInvalidChannel
+	}
+	return nil
+}
+
+// CheckUpgradeWindow is SetUpgradeWindow's refusal without its write:
+// ErrChannelLocked for a plan that cannot choose, ErrInvalidWindow for bad
+// values.
+func CheckUpgradeWindow(plan string, day, hour int, timezone string) error {
+	if !ChannelChoosable(plan) {
+		return ErrChannelLocked
+	}
+	return ValidateUpgradeWindow(day, hour, timezone)
+}
+
 // UpgradeWindowDays is how long after a stable cut a workspace may wait
 // before the release turns on for it, whatever window it chose.
 const UpgradeWindowDays = 14

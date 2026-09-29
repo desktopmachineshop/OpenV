@@ -95,7 +95,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"notifications\":[{\"id\":\"<note.review>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"review_requested\",\"title\":\"Artifact ready for review\",\"body\":\"\\\"Alarm latency\\\" is waiting in the review queue.\",\"entity_ref\":{\"artifact_id\":\"<req>\",\"kind\":\"artifact\",\"project_id\":\"<p>\"},\"read\":false,\"flagged\":false,\"created_at\":\"<time@before step 1>\"},{\"id\":\"<note.mention>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"mention\",\"title\":\"You were mentioned in a comment\",\"body\":\"@tourmember please check the new latency before the review\",\"entity_ref\":{\"artifact_id\":\"<req>\",\"chatter_id\":\"<uuid:1>\",\"kind\":\"artifact\",\"project_id\":\"<p>\"},\"read\":false,\"flagged\":false,\"created_at\":\"<time@before step 1>\"},{\"id\":\"<note.project>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"access_changed\",\"title\":\"You were added to a project\",\"body\":\"You now have a editor access to this project.\",\"entity_ref\":{\"kind\":\"project_membership\",\"org_id\":\"<w>\",\"project_id\":\"<p>\",\"user_id\":\"<member>\"},\"read\":false,\"flagged\":false,\"created_at\":\"<time@before step 1>\"},{\"id\":\"<note.admin>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"membership_changed\",\"title\":\"A workspace role changed\",\"body\":\"Tour Member is now an admin in this workspace (was a member).\",\"entity_ref\":{\"kind\":\"membership\",\"org_id\":\"<w>\",\"user_id\":\"<member>\"},\"read\":false,\"flagged\":false,\"created_at\":\"<time@before step 1>\"},{\"id\":\"<note.role>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"access_changed\",\"title\":\"Your workspace access changed\",\"body\":\"Your role in this workspace is now an admin.\",\"entity_ref\":{\"kind\":\"membership\",\"org_id\":\"<w>\",\"user_id\":\"<member>\"},\"read\":false,\"flagged\":false,\"created_at\":\"<time@before step 1>\"},{\"id\":\"<note.joined>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"access_changed\",\"title\":\"You joined a workspace\",\"body\":\"You are now a member of this workspace with the a member role.\",\"entity_ref\":{\"kind\":\"membership\",\"org_id\":\"<w>\",\"user_id\":\"<member>\"},\"read\":false,\"flagged\":false,\"created_at\":\"<time@before step 1>\"}],\"unread_count\":6}"
+        "{\"notifications\":[{\"id\":\"<note.review>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"review_requested\",\"title\":\"Artifact ready for review\",\"body\":\"\\\"Alarm latency\\\" is waiting in the review queue.\",\"entity_ref\":{\"artifact_id\":\"<req>\",\"kind\":\"artifact\",\"project_id\":\"<p>\"},\"read\":false,\"flagged\":false,\"created_at\":\"<time@before step 1>\"},{\"id\":\"<note.mention>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"mention\",\"title\":\"You were mentioned in a comment\",\"body\":\"@tourmember please check the new latency before the review\",\"entity_ref\":{\"artifact_id\":\"<req>\",\"chatter_id\":\"<uuid:1>\",\"kind\":\"artifact\",\"project_id\":\"<p>\"},\"read\":false,\"flagged\":false,\"created_at\":\"<time@before step 1>\"},{\"id\":\"<note.project>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"access_changed\",\"title\":\"You were added to a project\",\"body\":\"You now have editor access to this project.\",\"entity_ref\":{\"kind\":\"project_membership\",\"org_id\":\"<w>\",\"project_id\":\"<p>\",\"user_id\":\"<member>\"},\"read\":false,\"flagged\":false,\"created_at\":\"<time@before step 1>\"},{\"id\":\"<note.admin>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"membership_changed\",\"title\":\"A workspace role changed\",\"body\":\"Tour Member is now an admin in this workspace (was a member).\",\"entity_ref\":{\"kind\":\"membership\",\"org_id\":\"<w>\",\"user_id\":\"<member>\"},\"read\":false,\"flagged\":false,\"created_at\":\"<time@before step 1>\"},{\"id\":\"<note.role>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"access_changed\",\"title\":\"Your workspace access changed\",\"body\":\"Your role in this workspace is now an admin.\",\"entity_ref\":{\"kind\":\"membership\",\"org_id\":\"<w>\",\"user_id\":\"<member>\"},\"read\":false,\"flagged\":false,\"created_at\":\"<time@before step 1>\"},{\"id\":\"<note.joined>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"access_changed\",\"title\":\"You joined a workspace\",\"body\":\"You are now a member of this workspace with a member role.\",\"entity_ref\":{\"kind\":\"membership\",\"org_id\":\"<w>\",\"user_id\":\"<member>\"},\"read\":false,\"flagged\":false,\"created_at\":\"<time@before step 1>\"}],\"unread_count\":6}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -139,7 +139,7 @@
             "user_id": "<member>",
             "type": "access_changed",
             "title": "You were added to a project",
-            "body": "You now have a editor access to this project.",
+            "body": "You now have editor access to this project.",
             "entity_ref": {
               "kind": "project_membership",
               "org_id": "<w>",
@@ -188,7 +188,7 @@
             "user_id": "<member>",
             "type": "access_changed",
             "title": "You joined a workspace",
-            "body": "You are now a member of this workspace with the a member role.",
+            "body": "You are now a member of this workspace with a member role.",
             "entity_ref": {
               "kind": "membership",
               "org_id": "<w>",
@@ -275,7 +275,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"notifications\":[{\"id\":\"<note.review>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"review_requested\",\"title\":\"Artifact ready for review\",\"body\":\"\\\"Alarm latency\\\" is waiting in the review queue.\",\"entity_ref\":{\"artifact_id\":\"<req>\",\"kind\":\"artifact\",\"project_id\":\"<p>\"},\"read\":false,\"flagged\":false,\"created_at\":\"<time@before step 1>\"},{\"id\":\"<note.mention>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"mention\",\"title\":\"You were mentioned in a comment\",\"body\":\"@tourmember please check the new latency before the review\",\"entity_ref\":{\"artifact_id\":\"<req>\",\"chatter_id\":\"<uuid:1>\",\"kind\":\"artifact\",\"project_id\":\"<p>\"},\"read\":false,\"flagged\":false,\"created_at\":\"<time@before step 1>\"},{\"id\":\"<note.project>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"access_changed\",\"title\":\"You were added to a project\",\"body\":\"You now have a editor access to this project.\",\"entity_ref\":{\"kind\":\"project_membership\",\"org_id\":\"<w>\",\"project_id\":\"<p>\",\"user_id\":\"<member>\"},\"read\":false,\"flagged\":false,\"created_at\":\"<time@before step 1>\"},{\"id\":\"<note.admin>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"membership_changed\",\"title\":\"A workspace role changed\",\"body\":\"Tour Member is now an admin in this workspace (was a member).\",\"entity_ref\":{\"kind\":\"membership\",\"org_id\":\"<w>\",\"user_id\":\"<member>\"},\"read\":false,\"flagged\":false,\"created_at\":\"<time@before step 1>\"},{\"id\":\"<note.role>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"access_changed\",\"title\":\"Your workspace access changed\",\"body\":\"Your role in this workspace is now an admin.\",\"entity_ref\":{\"kind\":\"membership\",\"org_id\":\"<w>\",\"user_id\":\"<member>\"},\"read\":false,\"flagged\":false,\"created_at\":\"<time@before step 1>\"},{\"id\":\"<note.joined>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"access_changed\",\"title\":\"You joined a workspace\",\"body\":\"You are now a member of this workspace with the a member role.\",\"entity_ref\":{\"kind\":\"membership\",\"org_id\":\"<w>\",\"user_id\":\"<member>\"},\"read\":false,\"flagged\":false,\"created_at\":\"<time@before step 1>\"}],\"unread_count\":6}"
+        "{\"notifications\":[{\"id\":\"<note.review>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"review_requested\",\"title\":\"Artifact ready for review\",\"body\":\"\\\"Alarm latency\\\" is waiting in the review queue.\",\"entity_ref\":{\"artifact_id\":\"<req>\",\"kind\":\"artifact\",\"project_id\":\"<p>\"},\"read\":false,\"flagged\":false,\"created_at\":\"<time@before step 1>\"},{\"id\":\"<note.mention>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"mention\",\"title\":\"You were mentioned in a comment\",\"body\":\"@tourmember please check the new latency before the review\",\"entity_ref\":{\"artifact_id\":\"<req>\",\"chatter_id\":\"<uuid:1>\",\"kind\":\"artifact\",\"project_id\":\"<p>\"},\"read\":false,\"flagged\":false,\"created_at\":\"<time@before step 1>\"},{\"id\":\"<note.project>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"access_changed\",\"title\":\"You were added to a project\",\"body\":\"You now have editor access to this project.\",\"entity_ref\":{\"kind\":\"project_membership\",\"org_id\":\"<w>\",\"project_id\":\"<p>\",\"user_id\":\"<member>\"},\"read\":false,\"flagged\":false,\"created_at\":\"<time@before step 1>\"},{\"id\":\"<note.admin>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"membership_changed\",\"title\":\"A workspace role changed\",\"body\":\"Tour Member is now an admin in this workspace (was a member).\",\"entity_ref\":{\"kind\":\"membership\",\"org_id\":\"<w>\",\"user_id\":\"<member>\"},\"read\":false,\"flagged\":false,\"created_at\":\"<time@before step 1>\"},{\"id\":\"<note.role>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"access_changed\",\"title\":\"Your workspace access changed\",\"body\":\"Your role in this workspace is now an admin.\",\"entity_ref\":{\"kind\":\"membership\",\"org_id\":\"<w>\",\"user_id\":\"<member>\"},\"read\":false,\"flagged\":false,\"created_at\":\"<time@before step 1>\"},{\"id\":\"<note.joined>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"access_changed\",\"title\":\"You joined a workspace\",\"body\":\"You are now a member of this workspace with a member role.\",\"entity_ref\":{\"kind\":\"membership\",\"org_id\":\"<w>\",\"user_id\":\"<member>\"},\"read\":false,\"flagged\":false,\"created_at\":\"<time@before step 1>\"}],\"unread_count\":6}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -319,7 +319,7 @@
             "user_id": "<member>",
             "type": "access_changed",
             "title": "You were added to a project",
-            "body": "You now have a editor access to this project.",
+            "body": "You now have editor access to this project.",
             "entity_ref": {
               "kind": "project_membership",
               "org_id": "<w>",
@@ -368,7 +368,7 @@
             "user_id": "<member>",
             "type": "access_changed",
             "title": "You joined a workspace",
-            "body": "You are now a member of this workspace with the a member role.",
+            "body": "You are now a member of this workspace with a member role.",
             "entity_ref": {
               "kind": "membership",
               "org_id": "<w>",
@@ -405,7 +405,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"notifications\":[{\"id\":\"<note.review>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"review_requested\",\"title\":\"Artifact ready for review\",\"body\":\"\\\"Alarm latency\\\" is waiting in the review queue.\",\"entity_ref\":{\"artifact_id\":\"<req>\",\"kind\":\"artifact\",\"project_id\":\"<p>\"},\"read\":false,\"flagged\":false,\"created_at\":\"<time@before step 1>\"},{\"id\":\"<note.mention>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"mention\",\"title\":\"You were mentioned in a comment\",\"body\":\"@tourmember please check the new latency before the review\",\"entity_ref\":{\"artifact_id\":\"<req>\",\"chatter_id\":\"<uuid:1>\",\"kind\":\"artifact\",\"project_id\":\"<p>\"},\"read\":false,\"flagged\":false,\"created_at\":\"<time@before step 1>\"},{\"id\":\"<note.project>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"access_changed\",\"title\":\"You were added to a project\",\"body\":\"You now have a editor access to this project.\",\"entity_ref\":{\"kind\":\"project_membership\",\"org_id\":\"<w>\",\"project_id\":\"<p>\",\"user_id\":\"<member>\"},\"read\":false,\"flagged\":false,\"created_at\":\"<time@before step 1>\"},{\"id\":\"<note.admin>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"membership_changed\",\"title\":\"A workspace role changed\",\"body\":\"Tour Member is now an admin in this workspace (was a member).\",\"entity_ref\":{\"kind\":\"membership\",\"org_id\":\"<w>\",\"user_id\":\"<member>\"},\"read\":false,\"flagged\":false,\"created_at\":\"<time@before step 1>\"},{\"id\":\"<note.role>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"access_changed\",\"title\":\"Your workspace access changed\",\"body\":\"Your role in this workspace is now an admin.\",\"entity_ref\":{\"kind\":\"membership\",\"org_id\":\"<w>\",\"user_id\":\"<member>\"},\"read\":false,\"flagged\":false,\"created_at\":\"<time@before step 1>\"},{\"id\":\"<note.joined>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"access_changed\",\"title\":\"You joined a workspace\",\"body\":\"You are now a member of this workspace with the a member role.\",\"entity_ref\":{\"kind\":\"membership\",\"org_id\":\"<w>\",\"user_id\":\"<member>\"},\"read\":false,\"flagged\":false,\"created_at\":\"<time@before step 1>\"}],\"unread_count\":6}"
+        "{\"notifications\":[{\"id\":\"<note.review>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"review_requested\",\"title\":\"Artifact ready for review\",\"body\":\"\\\"Alarm latency\\\" is waiting in the review queue.\",\"entity_ref\":{\"artifact_id\":\"<req>\",\"kind\":\"artifact\",\"project_id\":\"<p>\"},\"read\":false,\"flagged\":false,\"created_at\":\"<time@before step 1>\"},{\"id\":\"<note.mention>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"mention\",\"title\":\"You were mentioned in a comment\",\"body\":\"@tourmember please check the new latency before the review\",\"entity_ref\":{\"artifact_id\":\"<req>\",\"chatter_id\":\"<uuid:1>\",\"kind\":\"artifact\",\"project_id\":\"<p>\"},\"read\":false,\"flagged\":false,\"created_at\":\"<time@before step 1>\"},{\"id\":\"<note.project>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"access_changed\",\"title\":\"You were added to a project\",\"body\":\"You now have editor access to this project.\",\"entity_ref\":{\"kind\":\"project_membership\",\"org_id\":\"<w>\",\"project_id\":\"<p>\",\"user_id\":\"<member>\"},\"read\":false,\"flagged\":false,\"created_at\":\"<time@before step 1>\"},{\"id\":\"<note.admin>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"membership_changed\",\"title\":\"A workspace role changed\",\"body\":\"Tour Member is now an admin in this workspace (was a member).\",\"entity_ref\":{\"kind\":\"membership\",\"org_id\":\"<w>\",\"user_id\":\"<member>\"},\"read\":false,\"flagged\":false,\"created_at\":\"<time@before step 1>\"},{\"id\":\"<note.role>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"access_changed\",\"title\":\"Your workspace access changed\",\"body\":\"Your role in this workspace is now an admin.\",\"entity_ref\":{\"kind\":\"membership\",\"org_id\":\"<w>\",\"user_id\":\"<member>\"},\"read\":false,\"flagged\":false,\"created_at\":\"<time@before step 1>\"},{\"id\":\"<note.joined>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"access_changed\",\"title\":\"You joined a workspace\",\"body\":\"You are now a member of this workspace with a member role.\",\"entity_ref\":{\"kind\":\"membership\",\"org_id\":\"<w>\",\"user_id\":\"<member>\"},\"read\":false,\"flagged\":false,\"created_at\":\"<time@before step 1>\"}],\"unread_count\":6}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -449,7 +449,7 @@
             "user_id": "<member>",
             "type": "access_changed",
             "title": "You were added to a project",
-            "body": "You now have a editor access to this project.",
+            "body": "You now have editor access to this project.",
             "entity_ref": {
               "kind": "project_membership",
               "org_id": "<w>",
@@ -498,7 +498,7 @@
             "user_id": "<member>",
             "type": "access_changed",
             "title": "You joined a workspace",
-            "body": "You are now a member of this workspace with the a member role.",
+            "body": "You are now a member of this workspace with a member role.",
             "entity_ref": {
               "kind": "membership",
               "org_id": "<w>",
@@ -589,7 +589,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"notifications\":[{\"id\":\"<note.review>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"review_requested\",\"title\":\"Artifact ready for review\",\"body\":\"\\\"Alarm latency\\\" is waiting in the review queue.\",\"entity_ref\":{\"artifact_id\":\"<req>\",\"kind\":\"artifact\",\"project_id\":\"<p>\"},\"read\":false,\"flagged\":false,\"created_at\":\"<time@before step 1>\"},{\"id\":\"<note.mention>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"mention\",\"title\":\"You were mentioned in a comment\",\"body\":\"@tourmember please check the new latency before the review\",\"entity_ref\":{\"artifact_id\":\"<req>\",\"chatter_id\":\"<uuid:1>\",\"kind\":\"artifact\",\"project_id\":\"<p>\"},\"read\":false,\"flagged\":false,\"created_at\":\"<time@before step 1>\"},{\"id\":\"<note.project>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"access_changed\",\"title\":\"You were added to a project\",\"body\":\"You now have a editor access to this project.\",\"entity_ref\":{\"kind\":\"project_membership\",\"org_id\":\"<w>\",\"project_id\":\"<p>\",\"user_id\":\"<member>\"},\"read\":false,\"flagged\":false,\"created_at\":\"<time@before step 1>\"},{\"id\":\"<note.admin>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"membership_changed\",\"title\":\"A workspace role changed\",\"body\":\"Tour Member is now an admin in this workspace (was a member).\",\"entity_ref\":{\"kind\":\"membership\",\"org_id\":\"<w>\",\"user_id\":\"<member>\"},\"read\":false,\"flagged\":false,\"created_at\":\"<time@before step 1>\"},{\"id\":\"<note.role>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"access_changed\",\"title\":\"Your workspace access changed\",\"body\":\"Your role in this workspace is now an admin.\",\"entity_ref\":{\"kind\":\"membership\",\"org_id\":\"<w>\",\"user_id\":\"<member>\"},\"read\":false,\"flagged\":false,\"created_at\":\"<time@before step 1>\"},{\"id\":\"<note.joined>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"access_changed\",\"title\":\"You joined a workspace\",\"body\":\"You are now a member of this workspace with the a member role.\",\"entity_ref\":{\"kind\":\"membership\",\"org_id\":\"<w>\",\"user_id\":\"<member>\"},\"read\":false,\"flagged\":false,\"created_at\":\"<time@before step 1>\"}],\"unread_count\":6}"
+        "{\"notifications\":[{\"id\":\"<note.review>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"review_requested\",\"title\":\"Artifact ready for review\",\"body\":\"\\\"Alarm latency\\\" is waiting in the review queue.\",\"entity_ref\":{\"artifact_id\":\"<req>\",\"kind\":\"artifact\",\"project_id\":\"<p>\"},\"read\":false,\"flagged\":false,\"created_at\":\"<time@before step 1>\"},{\"id\":\"<note.mention>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"mention\",\"title\":\"You were mentioned in a comment\",\"body\":\"@tourmember please check the new latency before the review\",\"entity_ref\":{\"artifact_id\":\"<req>\",\"chatter_id\":\"<uuid:1>\",\"kind\":\"artifact\",\"project_id\":\"<p>\"},\"read\":false,\"flagged\":false,\"created_at\":\"<time@before step 1>\"},{\"id\":\"<note.project>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"access_changed\",\"title\":\"You were added to a project\",\"body\":\"You now have editor access to this project.\",\"entity_ref\":{\"kind\":\"project_membership\",\"org_id\":\"<w>\",\"project_id\":\"<p>\",\"user_id\":\"<member>\"},\"read\":false,\"flagged\":false,\"created_at\":\"<time@before step 1>\"},{\"id\":\"<note.admin>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"membership_changed\",\"title\":\"A workspace role changed\",\"body\":\"Tour Member is now an admin in this workspace (was a member).\",\"entity_ref\":{\"kind\":\"membership\",\"org_id\":\"<w>\",\"user_id\":\"<member>\"},\"read\":false,\"flagged\":false,\"created_at\":\"<time@before step 1>\"},{\"id\":\"<note.role>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"access_changed\",\"title\":\"Your workspace access changed\",\"body\":\"Your role in this workspace is now an admin.\",\"entity_ref\":{\"kind\":\"membership\",\"org_id\":\"<w>\",\"user_id\":\"<member>\"},\"read\":false,\"flagged\":false,\"created_at\":\"<time@before step 1>\"},{\"id\":\"<note.joined>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"access_changed\",\"title\":\"You joined a workspace\",\"body\":\"You are now a member of this workspace with a member role.\",\"entity_ref\":{\"kind\":\"membership\",\"org_id\":\"<w>\",\"user_id\":\"<member>\"},\"read\":false,\"flagged\":false,\"created_at\":\"<time@before step 1>\"}],\"unread_count\":6}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -633,7 +633,7 @@
             "user_id": "<member>",
             "type": "access_changed",
             "title": "You were added to a project",
-            "body": "You now have a editor access to this project.",
+            "body": "You now have editor access to this project.",
             "entity_ref": {
               "kind": "project_membership",
               "org_id": "<w>",
@@ -682,7 +682,7 @@
             "user_id": "<member>",
             "type": "access_changed",
             "title": "You joined a workspace",
-            "body": "You are now a member of this workspace with the a member role.",
+            "body": "You are now a member of this workspace with a member role.",
             "entity_ref": {
               "kind": "membership",
               "org_id": "<w>",
@@ -767,7 +767,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"next_cursor\":\"<time@before step 1>|<note.joined>\",\"notifications\":[{\"id\":\"<note.mention>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"mention\",\"title\":\"You were mentioned in a comment\",\"body\":\"@tourmember please check the new latency before the review\",\"entity_ref\":{\"artifact_id\":\"<req>\",\"chatter_id\":\"<uuid:1>\",\"kind\":\"artifact\",\"project_id\":\"<p>\"},\"read\":false,\"flagged\":false,\"created_at\":\"<time@before step 1>\"},{\"id\":\"<note.project>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"access_changed\",\"title\":\"You were added to a project\",\"body\":\"You now have a editor access to this project.\",\"entity_ref\":{\"kind\":\"project_membership\",\"org_id\":\"<w>\",\"project_id\":\"<p>\",\"user_id\":\"<member>\"},\"read\":false,\"flagged\":false,\"created_at\":\"<time@before step 1>\"},{\"id\":\"<note.admin>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"membership_changed\",\"title\":\"A workspace role changed\",\"body\":\"Tour Member is now an admin in this workspace (was a member).\",\"entity_ref\":{\"kind\":\"membership\",\"org_id\":\"<w>\",\"user_id\":\"<member>\"},\"read\":false,\"flagged\":false,\"created_at\":\"<time@before step 1>\"},{\"id\":\"<note.role>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"access_changed\",\"title\":\"Your workspace access changed\",\"body\":\"Your role in this workspace is now an admin.\",\"entity_ref\":{\"kind\":\"membership\",\"org_id\":\"<w>\",\"user_id\":\"<member>\"},\"read\":false,\"flagged\":false,\"created_at\":\"<time@before step 1>\"},{\"id\":\"<note.joined>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"access_changed\",\"title\":\"You joined a workspace\",\"body\":\"You are now a member of this workspace with the a member role.\",\"entity_ref\":{\"kind\":\"membership\",\"org_id\":\"<w>\",\"user_id\":\"<member>\"},\"read\":false,\"flagged\":false,\"created_at\":\"<time@before step 1>\"}],\"unread_count\":6}"
+        "{\"next_cursor\":\"<time@before step 1>|<note.joined>\",\"notifications\":[{\"id\":\"<note.mention>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"mention\",\"title\":\"You were mentioned in a comment\",\"body\":\"@tourmember please check the new latency before the review\",\"entity_ref\":{\"artifact_id\":\"<req>\",\"chatter_id\":\"<uuid:1>\",\"kind\":\"artifact\",\"project_id\":\"<p>\"},\"read\":false,\"flagged\":false,\"created_at\":\"<time@before step 1>\"},{\"id\":\"<note.project>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"access_changed\",\"title\":\"You were added to a project\",\"body\":\"You now have editor access to this project.\",\"entity_ref\":{\"kind\":\"project_membership\",\"org_id\":\"<w>\",\"project_id\":\"<p>\",\"user_id\":\"<member>\"},\"read\":false,\"flagged\":false,\"created_at\":\"<time@before step 1>\"},{\"id\":\"<note.admin>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"membership_changed\",\"title\":\"A workspace role changed\",\"body\":\"Tour Member is now an admin in this workspace (was a member).\",\"entity_ref\":{\"kind\":\"membership\",\"org_id\":\"<w>\",\"user_id\":\"<member>\"},\"read\":false,\"flagged\":false,\"created_at\":\"<time@before step 1>\"},{\"id\":\"<note.role>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"access_changed\",\"title\":\"Your workspace access changed\",\"body\":\"Your role in this workspace is now an admin.\",\"entity_ref\":{\"kind\":\"membership\",\"org_id\":\"<w>\",\"user_id\":\"<member>\"},\"read\":false,\"flagged\":false,\"created_at\":\"<time@before step 1>\"},{\"id\":\"<note.joined>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"access_changed\",\"title\":\"You joined a workspace\",\"body\":\"You are now a member of this workspace with a member role.\",\"entity_ref\":{\"kind\":\"membership\",\"org_id\":\"<w>\",\"user_id\":\"<member>\"},\"read\":false,\"flagged\":false,\"created_at\":\"<time@before step 1>\"}],\"unread_count\":6}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -796,7 +796,7 @@
             "user_id": "<member>",
             "type": "access_changed",
             "title": "You were added to a project",
-            "body": "You now have a editor access to this project.",
+            "body": "You now have editor access to this project.",
             "entity_ref": {
               "kind": "project_membership",
               "org_id": "<w>",
@@ -845,7 +845,7 @@
             "user_id": "<member>",
             "type": "access_changed",
             "title": "You joined a workspace",
-            "body": "You are now a member of this workspace with the a member role.",
+            "body": "You are now a member of this workspace with a member role.",
             "entity_ref": {
               "kind": "membership",
               "org_id": "<w>",
@@ -1626,7 +1626,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"notifications\":[{\"id\":\"<note.project>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"access_changed\",\"title\":\"You were added to a project\",\"body\":\"You now have a editor access to this project.\",\"entity_ref\":{\"kind\":\"project_membership\",\"org_id\":\"<w>\",\"project_id\":\"<p>\",\"user_id\":\"<member>\"},\"read\":false,\"flagged\":false,\"created_at\":\"<time@before step 1>\"},{\"id\":\"<note.admin>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"membership_changed\",\"title\":\"A workspace role changed\",\"body\":\"Tour Member is now an admin in this workspace (was a member).\",\"entity_ref\":{\"kind\":\"membership\",\"org_id\":\"<w>\",\"user_id\":\"<member>\"},\"read\":false,\"flagged\":false,\"created_at\":\"<time@before step 1>\"},{\"id\":\"<note.role>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"access_changed\",\"title\":\"Your workspace access changed\",\"body\":\"Your role in this workspace is now an admin.\",\"entity_ref\":{\"kind\":\"membership\",\"org_id\":\"<w>\",\"user_id\":\"<member>\"},\"read\":false,\"flagged\":false,\"created_at\":\"<time@before step 1>\"},{\"id\":\"<note.joined>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"access_changed\",\"title\":\"You joined a workspace\",\"body\":\"You are now a member of this workspace with the a member role.\",\"entity_ref\":{\"kind\":\"membership\",\"org_id\":\"<w>\",\"user_id\":\"<member>\"},\"read\":false,\"flagged\":false,\"created_at\":\"<time@before step 1>\"}],\"unread_count\":4}"
+        "{\"notifications\":[{\"id\":\"<note.project>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"access_changed\",\"title\":\"You were added to a project\",\"body\":\"You now have editor access to this project.\",\"entity_ref\":{\"kind\":\"project_membership\",\"org_id\":\"<w>\",\"project_id\":\"<p>\",\"user_id\":\"<member>\"},\"read\":false,\"flagged\":false,\"created_at\":\"<time@before step 1>\"},{\"id\":\"<note.admin>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"membership_changed\",\"title\":\"A workspace role changed\",\"body\":\"Tour Member is now an admin in this workspace (was a member).\",\"entity_ref\":{\"kind\":\"membership\",\"org_id\":\"<w>\",\"user_id\":\"<member>\"},\"read\":false,\"flagged\":false,\"created_at\":\"<time@before step 1>\"},{\"id\":\"<note.role>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"access_changed\",\"title\":\"Your workspace access changed\",\"body\":\"Your role in this workspace is now an admin.\",\"entity_ref\":{\"kind\":\"membership\",\"org_id\":\"<w>\",\"user_id\":\"<member>\"},\"read\":false,\"flagged\":false,\"created_at\":\"<time@before step 1>\"},{\"id\":\"<note.joined>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"access_changed\",\"title\":\"You joined a workspace\",\"body\":\"You are now a member of this workspace with a member role.\",\"entity_ref\":{\"kind\":\"membership\",\"org_id\":\"<w>\",\"user_id\":\"<member>\"},\"read\":false,\"flagged\":false,\"created_at\":\"<time@before step 1>\"}],\"unread_count\":4}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1637,7 +1637,7 @@
             "user_id": "<member>",
             "type": "access_changed",
             "title": "You were added to a project",
-            "body": "You now have a editor access to this project.",
+            "body": "You now have editor access to this project.",
             "entity_ref": {
               "kind": "project_membership",
               "org_id": "<w>",
@@ -1686,7 +1686,7 @@
             "user_id": "<member>",
             "type": "access_changed",
             "title": "You joined a workspace",
-            "body": "You are now a member of this workspace with the a member role.",
+            "body": "You are now a member of this workspace with a member role.",
             "entity_ref": {
               "kind": "membership",
               "org_id": "<w>",
@@ -2055,7 +2055,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"notifications\":[{\"id\":\"<note.review>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"review_requested\",\"title\":\"Artifact ready for review\",\"body\":\"\\\"Alarm latency\\\" is waiting in the review queue.\",\"entity_ref\":{\"artifact_id\":\"<req>\",\"kind\":\"artifact\",\"project_id\":\"<p>\"},\"read\":true,\"flagged\":false,\"cleared_at\":\"<time@step 49>\",\"created_at\":\"<time@before step 1>\"},{\"id\":\"<note.mention>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"mention\",\"title\":\"You were mentioned in a comment\",\"body\":\"@tourmember please check the new latency before the review\",\"entity_ref\":{\"artifact_id\":\"<req>\",\"chatter_id\":\"<uuid:1>\",\"kind\":\"artifact\",\"project_id\":\"<p>\"},\"read\":true,\"flagged\":true,\"cleared_at\":\"<time@step 49>\",\"created_at\":\"<time@before step 1>\"},{\"id\":\"<note.project>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"access_changed\",\"title\":\"You were added to a project\",\"body\":\"You now have a editor access to this project.\",\"entity_ref\":{\"kind\":\"project_membership\",\"org_id\":\"<w>\",\"project_id\":\"<p>\",\"user_id\":\"<member>\"},\"read\":true,\"flagged\":false,\"cleared_at\":\"<time@step 49>\",\"created_at\":\"<time@before step 1>\"},{\"id\":\"<note.admin>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"membership_changed\",\"title\":\"A workspace role changed\",\"body\":\"Tour Member is now an admin in this workspace (was a member).\",\"entity_ref\":{\"kind\":\"membership\",\"org_id\":\"<w>\",\"user_id\":\"<member>\"},\"read\":true,\"flagged\":false,\"cleared_at\":\"<time@step 49>\",\"created_at\":\"<time@before step 1>\"},{\"id\":\"<note.role>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"access_changed\",\"title\":\"Your workspace access changed\",\"body\":\"Your role in this workspace is now an admin.\",\"entity_ref\":{\"kind\":\"membership\",\"org_id\":\"<w>\",\"user_id\":\"<member>\"},\"read\":true,\"flagged\":false,\"cleared_at\":\"<time@step 49>\",\"created_at\":\"<time@before step 1>\"},{\"id\":\"<note.joined>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"access_changed\",\"title\":\"You joined a workspace\",\"body\":\"You are now a member of this workspace with the a member role.\",\"entity_ref\":{\"kind\":\"membership\",\"org_id\":\"<w>\",\"user_id\":\"<member>\"},\"read\":true,\"flagged\":false,\"cleared_at\":\"<time@step 49>\",\"created_at\":\"<time@before step 1>\"}],\"unread_count\":0}"
+        "{\"notifications\":[{\"id\":\"<note.review>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"review_requested\",\"title\":\"Artifact ready for review\",\"body\":\"\\\"Alarm latency\\\" is waiting in the review queue.\",\"entity_ref\":{\"artifact_id\":\"<req>\",\"kind\":\"artifact\",\"project_id\":\"<p>\"},\"read\":true,\"flagged\":false,\"cleared_at\":\"<time@step 49>\",\"created_at\":\"<time@before step 1>\"},{\"id\":\"<note.mention>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"mention\",\"title\":\"You were mentioned in a comment\",\"body\":\"@tourmember please check the new latency before the review\",\"entity_ref\":{\"artifact_id\":\"<req>\",\"chatter_id\":\"<uuid:1>\",\"kind\":\"artifact\",\"project_id\":\"<p>\"},\"read\":true,\"flagged\":true,\"cleared_at\":\"<time@step 49>\",\"created_at\":\"<time@before step 1>\"},{\"id\":\"<note.project>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"access_changed\",\"title\":\"You were added to a project\",\"body\":\"You now have editor access to this project.\",\"entity_ref\":{\"kind\":\"project_membership\",\"org_id\":\"<w>\",\"project_id\":\"<p>\",\"user_id\":\"<member>\"},\"read\":true,\"flagged\":false,\"cleared_at\":\"<time@step 49>\",\"created_at\":\"<time@before step 1>\"},{\"id\":\"<note.admin>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"membership_changed\",\"title\":\"A workspace role changed\",\"body\":\"Tour Member is now an admin in this workspace (was a member).\",\"entity_ref\":{\"kind\":\"membership\",\"org_id\":\"<w>\",\"user_id\":\"<member>\"},\"read\":true,\"flagged\":false,\"cleared_at\":\"<time@step 49>\",\"created_at\":\"<time@before step 1>\"},{\"id\":\"<note.role>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"access_changed\",\"title\":\"Your workspace access changed\",\"body\":\"Your role in this workspace is now an admin.\",\"entity_ref\":{\"kind\":\"membership\",\"org_id\":\"<w>\",\"user_id\":\"<member>\"},\"read\":true,\"flagged\":false,\"cleared_at\":\"<time@step 49>\",\"created_at\":\"<time@before step 1>\"},{\"id\":\"<note.joined>\",\"org_id\":\"<w>\",\"user_id\":\"<member>\",\"type\":\"access_changed\",\"title\":\"You joined a workspace\",\"body\":\"You are now a member of this workspace with a member role.\",\"entity_ref\":{\"kind\":\"membership\",\"org_id\":\"<w>\",\"user_id\":\"<member>\"},\"read\":true,\"flagged\":false,\"cleared_at\":\"<time@step 49>\",\"created_at\":\"<time@before step 1>\"}],\"unread_count\":0}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -2101,7 +2101,7 @@
             "user_id": "<member>",
             "type": "access_changed",
             "title": "You were added to a project",
-            "body": "You now have a editor access to this project.",
+            "body": "You now have editor access to this project.",
             "entity_ref": {
               "kind": "project_membership",
               "org_id": "<w>",
@@ -2153,7 +2153,7 @@
             "user_id": "<member>",
             "type": "access_changed",
             "title": "You joined a workspace",
-            "body": "You are now a member of this workspace with the a member role.",
+            "body": "You are now a member of this workspace with a member role.",
             "entity_ref": {
               "kind": "membership",
               "org_id": "<w>",

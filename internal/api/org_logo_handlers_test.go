@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"image"
 	"image/color"
 	"image/png"
+	"io"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
@@ -289,4 +291,179 @@ func TestDeleteOrgLogoClears(t *testing.T) {
 	if w.Code != http.StatusOK {
 		t.Fatalf("repeat delete status = %d, want 200", w.Code)
 	}
+}
+
+// Raster images written out by hand, so that each sniffs as its own type
+// (http.DetectContentType), beside smallPNG; and two image formats outside
+// the four a logo or a picture may be.
+const (
+	jpegBytes = "\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x00\x00\x01\x00\x01\x00\x00\xff\xd9"
+	gifBytes  = "GIF89a\x01\x00\x01\x00\x00\x00\x00;"
+	webpBytes = "RIFF\x1a\x00\x00\x00WEBPVP8L\x0d\x00\x00\x00\x2f\x00\x00\x00\x10\x07\x10\x11\x11\x88\x88\xfe\x07\x00"
+	bmpBytes  = "BM\x3a\x00\x00\x00\x00\x00\x00\x00\x36\x00\x00\x00\x28\x00\x00\x00\x01\x00\x00\x00\x01\x00\x00\x00\x01\x00\x18\x00"
+	icoBytes  = "\x00\x00\x01\x00\x01\x00\x01\x01\x00\x00\x01\x00\x20\x00\x30\x00\x00\x00\x16\x00\x00\x00"
+)
+
+// mislabelledImages are image bytes declared as a type they are not: each
+// is refused by the logo and the picture upload alike (OpenV REQ-129,
+// REQ-133), since both serve the bytes as the declared type.
+func mislabelledImages(t *testing.T) []struct {
+	name, declared string
+	data           []byte
+} {
+	return []struct {
+		name, declared string
+		data           []byte
+	}{
+		{"a GIF declared as a PNG", "image/png", []byte(gifBytes)},
+		{"a PNG declared as a GIF", "image/gif", smallPNG(t)},
+		{"a JPEG declared as a WebP", "image/webp", []byte(jpegBytes)},
+		{"a WebP declared as a JPEG", "image/jpeg", []byte(webpBytes)},
+		{"a BMP declared as a PNG", "image/png", []byte(bmpBytes)},
+		{"an icon declared as a PNG", "image/png", []byte(icoBytes)},
+	}
+}
+
+// TestUploadOrgLogoBytesMustBeTheDeclaredType: a logo is served as the type
+// it was declared, so its bytes must be that type, not merely some image.
+// Each of the four types passes as itself.
+func TestUploadOrgLogoBytesMustBeTheDeclaredType(t *testing.T) {
+	for _, tc := range mislabelledImages(t) {
+		t.Run(tc.name, func(t *testing.T) {
+			h := logoFixture(t)
+			w := httptest.NewRecorder()
+			h.UploadOrgLogo(w, logoUploadReq(t, "admin", tc.declared, tc.data))
+			if w.Code != http.StatusBadRequest ||
+				w.Body.String() != "{\"error\":\"File content does not match an image of the declared type\"}\n" {
+				t.Fatalf("status = %d (body %q), want the 400 for content that does not match", w.Code, w.Body.String())
+			}
+			if h.orgService.(*fakeOrgService).logoPath != "" {
+				t.Fatalf("logo recorded for a refused upload")
+			}
+			if entries, _ := os.ReadDir(filepath.Join(h.uploadsDir, "org-logos")); len(entries) != 0 {
+				t.Fatalf("refused upload left %d file(s) on disk", len(entries))
+			}
+		})
+	}
+	for declared, data := range map[string][]byte{
+		"image/png": smallPNG(t), "image/jpeg": []byte(jpegBytes), "image/gif": []byte(gifBytes), "image/webp": []byte(webpBytes),
+	} {
+		h := logoFixture(t)
+		w := httptest.NewRecorder()
+		h.UploadOrgLogo(w, logoUploadReq(t, "admin", declared, data))
+		if w.Code != http.StatusOK {
+			t.Fatalf("%s as itself: status = %d, want 200 (body %q)", declared, w.Code, w.Body.String())
+		}
+	}
+}
+
+// TestUploadOrgLogoUnknownWorkspace: the guard lets a platform admin by for
+// any id, so the handler looks the workspace up before it writes anything.
+// It used to write the file first, answer 500 when the record could not be
+// saved, and leave the file behind.
+func TestUploadOrgLogoUnknownWorkspace(t *testing.T) {
+	h := logoFixture(t)
+	fake := h.orgService.(*fakeOrgService)
+	fake.missing = map[string]bool{logoOrgID: true}
+	r := logoUploadReq(t, "", "image/png", smallPNG(t))
+	r = r.WithContext(context.WithValue(r.Context(), ctxUser, &users.User{ID: "root", IsAdmin: true}))
+	w := httptest.NewRecorder()
+	h.UploadOrgLogo(w, r)
+	if w.Code != http.StatusNotFound || w.Body.String() != "{\"error\":\"workspace not found\"}\n" {
+		t.Fatalf("status = %d (body %q), want 404 workspace not found", w.Code, w.Body.String())
+	}
+	if entries, _ := os.ReadDir(filepath.Join(h.uploadsDir, "org-logos")); len(entries) != 0 {
+		t.Fatalf("an upload for a workspace that does not exist left %d file(s) on disk", len(entries))
+	}
+}
+
+// TestUploadOrgLogoUnrecordedLeavesNoOrphan: when the record cannot be
+// saved, the upload is a 500 and leaves the logo on record as it was: a
+// new file of another type is removed rather than orphaned, and the
+// recorded logo's file stays.
+func TestUploadOrgLogoUnrecordedLeavesNoOrphan(t *testing.T) {
+	h := logoFixture(t)
+	w := httptest.NewRecorder()
+	h.UploadOrgLogo(w, logoUploadReq(t, "admin", "image/png", smallPNG(t)))
+	if w.Code != http.StatusOK {
+		t.Fatalf("png upload status = %d (body %q)", w.Code, w.Body.String())
+	}
+	fake := h.orgService.(*fakeOrgService)
+	pngPath := fake.logoPath
+	fake.setLogoErr = errors.New("database unavailable")
+
+	w = httptest.NewRecorder()
+	h.UploadOrgLogo(w, logoUploadReq(t, "admin", "image/gif", []byte(gifBytes)))
+	if w.Code != http.StatusInternalServerError {
+		t.Fatalf("status = %d, want 500 (body %q)", w.Code, w.Body.String())
+	}
+	if names := logoFiles(h); len(names) != 1 || names[0] != filepath.Base(pngPath) || fake.logoPath != pngPath {
+		t.Fatalf("files %v and record %q after an unrecorded upload; want the recorded %s alone",
+			names, fake.logoPath, filepath.Base(pngPath))
+	}
+}
+
+// TestUploadOrgLogoConcurrentUploadLeavesNoOrphan: the logo an upload
+// replaces is the one on record when its own is recorded, not the one on
+// record when its request arrived. Upload A (a JPEG) is still sending its
+// body when upload B (a GIF) replaces the recorded PNG; A must then remove
+// B's GIF, not the PNG that B already removed, so that A's JPEG alone is
+// left, on record.
+func TestUploadOrgLogoConcurrentUploadLeavesNoOrphan(t *testing.T) {
+	h := logoFixture(t)
+	w := httptest.NewRecorder()
+	h.UploadOrgLogo(w, logoUploadReq(t, "admin", "image/png", smallPNG(t)))
+	if w.Code != http.StatusOK {
+		t.Fatalf("png upload status = %d (body %q)", w.Code, w.Body.String())
+	}
+
+	// A's body goes through a pipe: once its first bytes are read, the
+	// handler has looked the workspace up and waits for the rest.
+	ra := logoUploadReq(t, "admin", "image/jpeg", []byte(jpegBytes))
+	body, err := io.ReadAll(ra.Body)
+	if err != nil {
+		t.Fatalf("read upload A's body: %v", err)
+	}
+	pr, pw := io.Pipe()
+	ra.Body, ra.ContentLength = pr, -1
+	wa := httptest.NewRecorder()
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		defer pr.Close() // a handler that stops reading must not block the writes below
+		h.UploadOrgLogo(wa, ra)
+	}()
+	send := func(p []byte) {
+		if _, err := pw.Write(p); err != nil {
+			<-done
+			t.Fatalf("upload A stopped reading its body: %v (status %d, body %q)", err, wa.Code, wa.Body.String())
+		}
+	}
+	send(body[:10])
+
+	wb := httptest.NewRecorder()
+	h.UploadOrgLogo(wb, logoUploadReq(t, "admin", "image/gif", []byte(gifBytes)))
+
+	send(body[10:])
+	pw.Close()
+	<-done
+	if wa.Code != http.StatusOK || wb.Code != http.StatusOK {
+		t.Fatalf("statuses A=%d (body %q) B=%d (body %q), want 200 and 200",
+			wa.Code, wa.Body.String(), wb.Code, wb.Body.String())
+	}
+	want := logoOrgID + ".jpg"
+	recorded := filepath.Base(h.orgService.(*fakeOrgService).logoPath)
+	if names := logoFiles(h); len(names) != 1 || names[0] != want || recorded != want {
+		t.Fatalf("files %v and record %q after two uploads at once; want %s alone, on record", names, recorded, want)
+	}
+}
+
+// logoFiles lists the file names under uploads/org-logos.
+func logoFiles(h *Handler) []string {
+	entries, _ := os.ReadDir(filepath.Join(h.uploadsDir, "org-logos"))
+	names := make([]string, 0, len(entries))
+	for _, e := range entries {
+		names = append(names, e.Name())
+	}
+	return names
 }

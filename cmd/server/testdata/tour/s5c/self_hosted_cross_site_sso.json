@@ -335,7 +335,7 @@
         "body": "{\"email\":\"tour-passworder@example.com\",\"password\":\"tour password 1\",\"name\":\"Tour Passworder\",\"invite_token\":\"<passworder.invite>\"}"
       },
       "notes": [
-        "the owner reads W2's events, and the sign-up publishes none for the invitation it accepts, where the OIDC sign-in below publishes org.invitation_accepted (pinned as it is; the scouts' bug 4)"
+        "the owner reads W2's events: the sign-up publishes org.invitation_accepted for the invitation it accepts, with the new account as its actor, as the OIDC sign-in below does"
       ],
       "status": 200,
       "content_type": "text/plain; charset=utf-8",
@@ -367,7 +367,17 @@
         "invitation": "accepted"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
-      "events": []
+      "events": [
+        {
+          "type": "org.invitation_accepted",
+          "actor": "user:<passworder>",
+          "entity": "<passworder>",
+          "payload": {
+            "role": "string \"member\"",
+            "user_id": "string \"<passworder>\""
+          }
+        }
+      ]
     },
     {
       "n": 7,

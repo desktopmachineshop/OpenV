@@ -18,6 +18,7 @@ import (
 
 	"github.com/gorilla/mux"
 
+	"github.com/openv/requirements-platform/internal/domain/events"
 	"github.com/openv/requirements-platform/internal/domain/invitations"
 	"github.com/openv/requirements-platform/internal/domain/orgs"
 	"github.com/openv/requirements-platform/internal/domain/users"
@@ -489,6 +490,85 @@ func TestRegisteringWithTheInviteTokenJoinsTheWorkspace(t *testing.T) {
 			t.Errorf("policy %q: accepted = %v, want the token to be taken up", policy, invites.accepted)
 		}
 	}
+}
+
+// Every door into a workspace by invitation tells its admins of the join the
+// same way (REQ-122): one org.invitation_accepted in the invited workspace,
+// naming the joiner and the role taken up, with the joiner as its actor —
+// the notifier skips the actor, so the person who took the invitation up is
+// not told what they just did. A sign-up carrying the link published none,
+// and the link taken up signed in published as "system", since the auth
+// middleware leaves /api/v1/auth/ open and the request carries no user for
+// Actor to name. An account that was already a member joined nothing, and
+// nothing is published for it.
+func TestEveryInvitationAcceptancePublishesTheJoinAsTheJoiner(t *testing.T) {
+	joined := func(t *testing.T, bus *recordingBus, userID, role string) {
+		t.Helper()
+		if len(bus.published) != 1 {
+			t.Fatalf("published %v, want exactly one %s", bus.types(), events.OrgInvitationAccepted)
+		}
+		e := bus.published[0]
+		if e.EventType != events.OrgInvitationAccepted || e.OrgID != "org-1" || e.ProjectID != "" ||
+			e.Actor != "user:"+userID || e.EntityID != userID {
+			t.Errorf("event = %+v, want %s in org-1, by and about user:%s", e, events.OrgInvitationAccepted, userID)
+		}
+		if len(e.Payload) != 2 || e.Payload["user_id"] != userID || e.Payload["role"] != role {
+			t.Errorf("payload = %v, want {user_id: %q, role: %q}", e.Payload, userID, role)
+		}
+	}
+	handler := func() (*Handler, *fakeLoginService, *fakeInviteService, *recordingBus) {
+		h, svc, invites := newRegistrationHandler(RegistrationClosed)
+		bus := &recordingBus{}
+		h.bus = bus
+		return h, svc, invites, bus
+	}
+
+	t.Run("registering with the link", func(t *testing.T) {
+		h, _, invites, bus := handler()
+		invites.invite("org-1", "invited@example.com", orgs.RoleAdmin)
+		rec := httptest.NewRecorder()
+		h.Register(rec, registerWithTokenReq("Invited@Example.com", "tok-invited@example.com"))
+		if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"invitation":"accepted"`) {
+			t.Fatalf("status = %d, want 200 and the invitation accepted: %s", rec.Code, rec.Body.String())
+		}
+		joined(t, bus, "u2", orgs.RoleAdmin)
+	})
+
+	t.Run("taking the link up signed in", func(t *testing.T) {
+		h, svc, invites, bus := handler()
+		invites.invite("org-1", "member@example.com", orgs.RoleMember)
+		svc.sessions = map[string]*users.User{"cookie-1": {ID: "u-1", Email: "member@example.com"}}
+		rec := httptest.NewRecorder()
+		h.AcceptInvitation(rec, jsonReq(http.MethodPost, "/api/v1/auth/invitations/accept",
+			`{"token":"tok-member@example.com"}`, "cookie-1"))
+		if rec.Code != http.StatusOK {
+			t.Fatalf("status = %d, want 200: %s", rec.Code, rec.Body.String())
+		}
+		joined(t, bus, "u-1", orgs.RoleMember)
+	})
+
+	t.Run("a provider-verified sign-in", func(t *testing.T) {
+		h, _, invites, bus := handler()
+		invites.invite("org-1", "sso@example.com", orgs.RoleMember)
+		h.acceptInvitationsForProviderVerifiedEmail("u-7", "sso@example.com")
+		joined(t, bus, "u-7", orgs.RoleMember)
+	})
+
+	t.Run("already a member", func(t *testing.T) {
+		h, svc, invites, bus := handler()
+		invites.invite("org-1", "boss@example.com", orgs.RoleMember)
+		invites.memberRoles["org-1:u-3"] = orgs.RoleAdmin
+		svc.sessions = map[string]*users.User{"cookie-3": {ID: "u-3", Email: "boss@example.com"}}
+		rec := httptest.NewRecorder()
+		h.AcceptInvitation(rec, jsonReq(http.MethodPost, "/api/v1/auth/invitations/accept",
+			`{"token":"tok-boss@example.com"}`, "cookie-3"))
+		if rec.Code != http.StatusOK {
+			t.Fatalf("status = %d, want 200: %s", rec.Code, rec.Body.String())
+		}
+		if len(bus.published) != 0 {
+			t.Errorf("an account already in the workspace published %v", bus.types())
+		}
+	})
 }
 
 // Confirming a verification link grants NO membership. The address it

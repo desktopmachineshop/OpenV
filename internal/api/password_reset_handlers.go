@@ -92,7 +92,7 @@ func (h *Handler) sendPasswordResetFor(email string) {
 	if user == nil {
 		return
 	}
-	token, expires, err := h.userService.IssuePasswordReset(user.ID, users.ResetDeliveryEmail, nil)
+	token, _, err := h.userService.IssuePasswordReset(user.ID, users.ResetDeliveryEmail, nil)
 	if err != nil {
 		if !errors.Is(err, users.ErrNoPassword) {
 			slog.Error("password reset: could not issue a link", "user_id", user.ID, "error", err)
@@ -100,7 +100,10 @@ func (h *Handler) sendPasswordResetFor(email string) {
 		return
 	}
 	link := notify.PasswordResetLink(h.emailLinkBase, token)
-	subject, body := notify.RenderPasswordResetEmail(user.Name, link, time.Until(expires))
+	// The mail states the validity an emailed link is issued with, as the
+	// verification and invitation mails state theirs: the time left until
+	// the expiry just minted is a moment under it, and reads as 59 minutes.
+	subject, body := notify.RenderPasswordResetEmail(user.Name, link, users.PasswordResetTTL)
 	if err := h.mailer.Send(user.Email, subject, body); err != nil {
 		slog.Error("password reset: could not send the link", "user_id", user.ID, "error", err)
 	}

@@ -51,7 +51,8 @@ const (
 	// ErrCodeBillingUpstream marks a 503 where the billing provider did not
 	// answer; the workspace's plan was left exactly as it was.
 	ErrCodeBillingUpstream = "billing_upstream"
-	// The purchase refusals a client branches on.
+	// The purchase refusals a client branches on. already_subscribed also
+	// answers a platform admin's plan grant over a live subscription.
 	ErrCodeUnknownPlan       = "unknown_plan"
 	ErrCodeAlreadySubscribed = "already_subscribed"
 	ErrCodeNoSubscription    = "no_subscription"

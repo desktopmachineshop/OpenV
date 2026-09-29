@@ -129,7 +129,7 @@ their own project, workers pass within their org) · `org member`/`org admin`
 | POST | `/api/v1/auth/invitations/accept` | Join the signed-in account to the invitation's workspace `{token}` → `{org_id, org_name, role, already_member}`. Converts only when the **session's own email is the invited address**; otherwise `403 {"code":"invitation_email_mismatch"}`, whose body never names the invited address (the preview already shows it to whoever holds the link). `404` when the link is unusable. An account that is already a member keeps its role — `role` reports the role it holds, `already_member` is `true`, and the invitation is spent. A successful accept (`already_member` included) **marks the account's address verified**: the token was mailed to that address and nowhere else, and it is the session's own address, so this is the same proof `POST /auth/register` accepts from an `invite_token` | user (cookie only, JSON body) |
 | POST | `/api/v1/auth/share/accept` | Take up a **reviewer share link** `{token}` → `{project_id, project_name, role}` for the signed-in account: it becomes a `reviewer` of the project, or keeps the stronger role it already holds (`role` reports what it holds afterwards). `400` for a public link (it needs no account), `404` for an unusable one, `429` on the share-link bucket. See `docs/sharing.md` | user (cookie only, JSON body) |
 | PUT | `/api/v1/me/password` | Change password `{current_password, new_password}`; `204` on success and every OTHER session of the account is invalidated. `400 weak_password`, `403 password_incorrect`, `409 no_password` (SSO-only account) | user |
-| POST | `/api/v1/me/avatar` | Upload the account's profile picture: multipart field `file`, PNG/JPEG/GIF/WebP whose bytes match the declared type, at most 2 MiB (`413` beyond). Replaces any previous picture; returns the user with `has_avatar:true` and an `avatar_url` on the API (`/api/v1/users/{id}/avatar?v=<upload time>`, relative to the API origin) that from then on outranks the identity provider's picture at sign-in | user |
+| POST | `/api/v1/me/avatar` | Upload the account's profile picture: multipart field `file`, PNG/JPEG/GIF/WebP whose bytes are the declared type (an image of another type is `400`), at most 2 MiB (`413` beyond). Replaces any previous picture; returns the user with `has_avatar:true` and an `avatar_url` on the API (`/api/v1/users/{id}/avatar?v=<upload time>`, relative to the API origin) that from then on outranks the identity provider's picture at sign-in | user |
 | DELETE | `/api/v1/me/avatar` | Remove the uploaded picture; returns the user with `has_avatar:false` and an empty `avatar_url` (an identity provider's picture returns at the next sign-in) | user |
 | GET | `/api/v1/users/{id}/avatar` | An account's uploaded picture (served as its stored type, `Content-Disposition: inline`, cached a day — the URL changes on every upload); `404` when none is uploaded | user |
 | POST | `/api/v1/auth/verify-email` | Confirm an emailed link `{token}`; returns the user (`400` invalid/expired, `409` address taken). Grants **no** workspace membership: the address it confirms is one the account asked the mail to be sent to, so it is not evidence that the account is the person an admin invited | open |
@@ -152,20 +152,20 @@ their own project, workers pass within their org) · `org member`/`org admin`
 | GET | `/api/v1/orgs` | List the caller's orgs (`?deleted=true` lists their soft-deleted ones) | user |
 | POST | `/api/v1/orgs` | Create a company workspace | user |
 | GET | `/api/v1/orgs/{id}` | Workspace details | org member |
-| PUT | `/api/v1/orgs/{id}` | Update name/settings/limits/`monthly_budget_usd`/`release_channel` (`nightly`, `stable`, or `""` for the plan's default; `400` on a plan that always runs nightly)/`upgrade_window` (`{day 1-28, hour 0-23, timezone}` or `null` for "at the cut"; `400` for bad values or a plan that cannot choose). The workspace answers with its effective `release_channel`, `release_channel_locked`, `stable_release` and window | org admin |
+| PUT | `/api/v1/orgs/{id}` | Update name/settings/limits/`monthly_budget_usd`/`release_channel` (`nightly`, `stable`, or `""` for the plan's default; `400` on a plan that always runs nightly)/`upgrade_window` (`{day 1-28, hour 0-23, timezone}` or `null` for "at the cut"; `400` for bad values or a plan that cannot choose). Every part is checked before any is written, so a request refused for one part changes nothing. The workspace answers with its effective `release_channel`, `release_channel_locked`, `stable_release` and window | org admin |
 | GET | `/api/v1/orgs/{id}/features` | The caller's feature gates in the workspace: `{channel, stable_release, preview, features: {key: bool}, next_stable_release?, next_stable_at?}`. Keys today: `flow-down`, `artifact-owners`, `share-links`, `assistant-project-edits` (the V&V Assistant's new-artifact, edit and move cards), `default-workspace` (choosing the workspace a sign-in lands in), `figure-titles` (renaming a figure). Gates are resolved from the channel and the stable release the workspace has turned on, or the newest stable when the caller previews it (REQ-137, REQ-138) | org member |
-| PUT | `/api/v1/orgs/{id}/plan` | Move a workspace to another plan `{plan}` → the workspace (REQ-154). Plans: `single`, `business_lite`, `business`, `enterprise`, `self_host`, `open_source` (plus the legacy aliases `free`, `team`); `400` for any other name, `404` for an unknown workspace. The channel override is kept and the effective channel follows the new plan's default where none is set. This is how the open-source tier is granted: `python3 scripts/openv/sync.py api PUT /api/v1/orgs/<id>/plan '{"plan":"open_source"}'` signed in as a platform admin (`OPENV_EMAIL`/`OPENV_PASSWORD`) | platform admin |
-| PUT | `/api/v1/orgs/{id}/members/me/preview` | `{enabled}`: switch the caller's own account to the newest stable release early in this workspace; answers the caller's gates. `400` on a plan that always runs nightly | org member |
+| PUT | `/api/v1/orgs/{id}/plan` | Move a workspace to another plan `{plan}` → the workspace (REQ-154). Plans: `single`, `business_lite`, `business`, `enterprise`, `self_host`, `open_source` (plus the legacy aliases `free`, `team`); `400` for any other name, `404` for an unknown workspace, and `409` with `code: "already_subscribed"` for a granted plan (`enterprise`, `open_source`) while the workspace holds a live subscription, which is cancelled first (REQ-168). The channel override is kept and the effective channel follows the new plan's default where none is set. This is how the open-source tier is granted: `python3 scripts/openv/sync.py api PUT /api/v1/orgs/<id>/plan '{"plan":"open_source"}'` signed in as a platform admin (`OPENV_EMAIL`/`OPENV_PASSWORD`) | platform admin |
+| PUT | `/api/v1/orgs/{id}/members/me/preview` | `{enabled}`: switch the caller's own account to the newest stable release early in this workspace; answers the caller's gates. `400` on a plan that always runs nightly; `403` for an account with no membership of the workspace, since the preview is kept on the membership (a platform admin outside it is refused) | org member |
 | DELETE | `/api/v1/orgs/{id}` | Soft-delete a company workspace: hidden and locked immediately, restorable for 30 days, then hard-deleted with all its data by a daily purge. Personal workspaces are refused. | org admin |
-| POST | `/api/v1/orgs/{id}/restore` | Restore a soft-deleted workspace within the grace period | org admin (of the deleted org) |
-| POST | `/api/v1/orgs/{id}/activate` | Set the session's active workspace | org member |
+| POST | `/api/v1/orgs/{id}/restore` | Restore a soft-deleted workspace within the grace period; returns the workspace as restored | org admin (of the deleted org) |
+| POST | `/api/v1/orgs/{id}/activate` | Set the session's active workspace; `404` for a workspace that does not exist | org member |
 | GET | `/api/v1/orgs/{id}/members` | List workspace members | org member |
 | POST | `/api/v1/orgs/{id}/members` | Add member by email. `201` with the membership when the address has an account **whose owner has proved it** and joined; `409` when it is already a member (change a role with `PUT`); `202 {invitation, link, emailed, reason?}` when it has no account — or, where the deployment requires email verification, has one that has **not** verified that address — and was invited instead, so the membership waits for somebody to read the mailbox. `400` for a personal workspace. `POST /orgs/{id}/invitations` answers the same outcomes with the same statuses and bodies | org admin |
 | GET | `/api/v1/orgs/{id}/invitations` | Pending invitations to the workspace | org admin |
 | POST | `/api/v1/orgs/{id}/invitations` | Bring an address `{email, role}` into the workspace, taking the same branch **and the same statuses** as `POST /members`: `201` with the membership when the address already has an account that has verified it, `409` when it is already a member, `202 {invitation, link, emailed, reason?}` when it has no account (or an unverified one, where verification is required). `link` is the one-time `${FRONTEND_URL}/login?invite=<token>` and is never retrievable again. `emailed` is `true` when SMTP is configured and the send was **queued**: the mail goes out off the request path, so no admin waits on a relay, and a failure is logged rather than reported. Re-inviting an address replaces whatever unaccepted invitation it holds — keeping its `id`, so an id a client already holds stays valid — except, on a deployment that can send mail, within an hour of an **unchanged** one (same role, still valid) whose link was **actually delivered**, which is returned as-is with `emailed:false`, a `reason`, and no `link`, so a repeated click cannot mail the same person again. An invitation whose send failed, or never happened, has nothing in anybody's inbox and is minted and sent again (without SMTP the link in the response is the delivery, so a fresh one is always minted). Throttled per inviting account (`429`) | org admin |
 | DELETE | `/api/v1/orgs/{id}/invitations/{invId}` | Revoke a pending invitation (its link stops working) | org admin |
-| PUT | `/api/v1/orgs/{id}/members/{userId}` | Change org role | org admin |
-| DELETE | `/api/v1/orgs/{id}/members/{userId}` | Remove member (self-removal = leave, allowed for members) | org admin / self |
+| PUT | `/api/v1/orgs/{id}/members/{userId}` | Change org role `{role}` (`admin`, `member`). `400` for any other role, for an account that is not a member, and for demoting the workspace's last admin | org admin |
+| DELETE | `/api/v1/orgs/{id}/members/{userId}` | Remove member (self-removal = leave, allowed for members). `400` for the workspace's last admin and, as for a role change, for an account that is not a member, including the second of two removals of one member at once; nothing is removed and no event is published | org admin / self |
 | GET | `/api/v1/orgs/{id}/teams` | List people-teams | org member |
 | POST | `/api/v1/orgs/{id}/teams` | Create people-team | org admin |
 | PUT | `/api/v1/org-teams/{id}` | Rename/edit team | org admin |
@@ -178,7 +178,7 @@ their own project, workers pass within their org) · `org member`/`org admin`
 | GET | `/api/v1/orgs/{id}/quality-rules` | Workspace requirement quality rules (house style every project inherits) | org member |
 | PUT | `/api/v1/orgs/{id}/quality-rules` | Set the house style; an empty body clears it back to the platform defaults | org admin |
 | GET | `/api/v1/orgs/{id}/logo` | The workspace logo image (served as its stored type, `Content-Disposition: inline`); `404` when none is set | org member |
-| POST | `/api/v1/orgs/{id}/logo` | Upload the workspace logo: multipart field `file`, PNG/JPEG/GIF/WebP whose bytes match the declared type, at most 2 MiB (`413` beyond). Replaces any previous logo; returns the org with `has_logo` | org admin |
+| POST | `/api/v1/orgs/{id}/logo` | Upload the workspace logo: multipart field `file`, PNG/JPEG/GIF/WebP whose bytes are the declared type (an image of another type is `400`), at most 2 MiB (`413` beyond). Replaces any previous logo; returns the org with `has_logo`. `404` for a workspace that does not exist, before anything is stored | org admin |
 | DELETE | `/api/v1/orgs/{id}/logo` | Remove the workspace logo; returns the org with `has_logo:false` | org admin |
 
 ### Workers, runner keys, connector, hosted and transient runners
@@ -501,10 +501,14 @@ events, and are separate types because the reasons differ: one answers "what
 can I do now?", the other is workspace governance. Nobody is notified about
 their own action, and somebody who leaves voluntarily is not told they left
 — only the admins are. An invitation to an address with no account notifies
-the admins only; the invitation email is that person's notification. Project
-membership changes reach the affected member but **not** workspace admins:
-project roles change constantly and would drown the arrivals and departures
-that matter.
+the admins only; the invitation email is that person's notification. Taking
+an invitation up notifies the admins the same way whichever door it came
+through — a sign-up carrying the link (`POST /auth/register` with
+`invite_token`), the link taken up signed in (`POST /auth/invitations/accept`)
+or a single sign-on — and never the person who joined, whose action it was.
+Project membership changes reach the affected member but **not** workspace
+admins: project roles change constantly and would drown the arrivals and
+departures that matter.
 
 Both email by default (with everything else in `DefaultEmailTypes`, overridable
 with `OPENV_EMAIL_NOTIFICATION_TYPES`), because an access change is exactly the
@@ -795,7 +799,8 @@ to that workspace (`403 checkout_mismatch` otherwise), records the
 subscription, and marks the buyer's one trial used. `checkout` answers `400
 unknown_plan` for a plan, interval or currency not on sale, or a currency
 other than the one the workspace's first purchase fixed; `409
-already_subscribed` while a subscription is live, `409 granted_plan` where
+already_subscribed` while a subscription is live (as a platform admin's plan
+grant over it is), `409 granted_plan` where
 a platform admin set the plan, and `400` for `business` on a personal
 workspace. Where two admins complete two checkouts, the second is cancelled
 at bind and the tab says so. `change` keeps one subscription per workspace

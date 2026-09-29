@@ -703,7 +703,7 @@
     },
     {
       "n": 20,
-      "title": "demote the owner, W's only admin: refused, but as a 500, since the handler maps only ErrInvalidRole and ErrNotMember to 400 and the last-admin refusal is neither (Q19)",
+      "title": "demote the owner, W's only admin: 400 with the domain's text, as its leaving (Q19)",
       "actor": "owner",
       "acting_in": "<w>",
       "route": "PUT /api/v1/orgs/{id}/members/{userId}",
@@ -715,18 +715,18 @@
         ],
         "body": "{\"role\":\"member\"}"
       },
-      "status": 500,
+      "status": 400,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 46,
+      "content_length": 60,
       "kind": "json",
       "body": [
-        "{\"error\":\"failed to update workspace member\"}"
+        "{\"error\":\"cannot demote the last admin of an organization\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "failed to update workspace member"
+        "error": "cannot demote the last admin of an organization"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
@@ -3383,7 +3383,7 @@
     },
     {
       "n": 111,
-      "title": "remove an id no account has: 204, and org.member_removed all the same",
+      "title": "remove an id no account has: 400 with ErrNotMember's words, as its role change, and no event",
       "actor": "owner",
       "acting_in": "<w>",
       "route": "DELETE /api/v1/orgs/{id}/members/{userId}",
@@ -3391,24 +3391,21 @@
         "method": "DELETE",
         "path": "/api/v1/orgs/<w>/members/<phantom>"
       },
-      "status": 204,
-      "content_type": null,
+      "status": 400,
+      "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": null,
-      "kind": "empty",
+      "content_length": 54,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"you are not a member of this organization\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "you are not a member of this organization"
+      },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
-      "events": [
-        {
-          "type": "org.member_removed",
-          "actor": "user:<owner>",
-          "entity": "<phantom>",
-          "payload": {
-            "self": "boolean false",
-            "user_id": "string \"<phantom>\""
-          }
-        }
-      ]
+      "events": []
     },
     {
       "n": 112,

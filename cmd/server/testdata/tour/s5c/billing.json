@@ -1673,7 +1673,7 @@
     },
     {
       "n": 33,
-      "title": "a platform admin grants W open_source while its subscription is live: refused, as a 500",
+      "title": "a platform admin grants W open_source while its subscription is live: 409 already_subscribed, as W's checkout was",
       "actor": "admin",
       "route": "PUT /api/v1/orgs/{id}/plan",
       "request": {
@@ -1684,18 +1684,19 @@
         ],
         "body": "{\"plan\":\"open_source\"}"
       },
-      "status": 500,
+      "status": 409,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 45,
+      "content_length": 112,
       "kind": "json",
       "body": [
-        "{\"error\":\"failed to set the workspace plan\"}"
+        "{\"error\":\"the workspace has a live subscription; cancel it before granting a plan\",\"code\":\"already_subscribed\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "failed to set the workspace plan"
+        "error": "the workspace has a live subscription; cancel it before granting a plan",
+        "code": "already_subscribed"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []

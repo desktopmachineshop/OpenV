@@ -136,6 +136,25 @@ func TestRequestPasswordResetEmailsAKnownAddressAndSaysNothingAboutAnUnknownOne(
 	}
 }
 
+// The mail states how long its link lasts, and an emailed link lasts an hour
+// (REQ-158). The mail said 59 minutes: the handler gave the renderer the time
+// left until the expiry it had just minted, a moment under the hour, which
+// the renderer counts in whole minutes.
+func TestThePasswordResetMailStatesTheLinksWholeHour(t *testing.T) {
+	h, _, mailer := newResetHandler(true)
+	w := httptest.NewRecorder()
+	h.RequestPasswordReset(w, jsonReq(http.MethodPost, "/api/v1/auth/password-reset", `{"email":"owner@example.com"}`, ""))
+	if w.Code != http.StatusAccepted {
+		t.Fatalf("status = %d body=%s", w.Code, w.Body.String())
+	}
+	waitForSend(t, mailer)
+	mailer.mu.Lock()
+	defer mailer.mu.Unlock()
+	if want := "The link is valid for 60 minutes and works once."; !strings.Contains(mailer.body[0], want) {
+		t.Errorf("the mail does not say %q:\n%s", want, mailer.body[0])
+	}
+}
+
 func TestRequestPasswordResetWithoutAMailerSaysSo(t *testing.T) {
 	h, svc, _ := newResetHandler(false)
 	w := httptest.NewRecorder()

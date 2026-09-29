@@ -40,21 +40,22 @@ import (
 // workspace, the role and the expiry; the token is trimmed), and its one 404
 // for every link that does not work; then the door: a registration with a live
 // token and its address (in other capitals: the account is made, verified and
-// joins W with the invited role, and the answer says "accepted"), and the 403
-// for a live token of another address, a revoked, an unknown and a spent one;
-// then an account taking up an invitation signed in: 200 and
-// org.invitation_accepted, 200 already_member true with no event for an account
-// already in W, and each refusal (a spent link, another address's, an unknown
-// one, no session, a worker key in place of the session, no JSON Content-Type,
-// a malformed body); the revocation of an invitation already taken up (204: the
-// row goes, the membership stays); the list again, which holds only what no one
-// took up; and last the two rate-limit buckets: inviteLimiter, one per inviting
-// account (the invited admin spends its 20, and the owner still invites), and
-// invitePreviewLimiter (Q18), drained once through previews and once through
-// share-link lookups, each ending in a preview's 429; and, at the very end,
-// the invited admin's add through POST /orgs/{id}/members refused by the
-// inviteLimiter budget its invitations spent (Q18: both routes invite through
-// one call site).
+// joins W with the invited role, the answer says "accepted", and
+// org.invitation_accepted names the new account as its actor), and the 403 for
+// a live token of another address, a revoked, an unknown and a spent one; then
+// an account taking up an invitation signed in: 200 and
+// org.invitation_accepted, the account its actor again, 200 already_member true
+// with no event for an account already in W, and each refusal (a spent link,
+// another address's, an unknown one, no session, a worker key in place of the
+// session, no JSON Content-Type, a malformed body); the revocation of an
+// invitation already taken up (204: the row goes, the membership stays); the
+// list again, which holds only what no one took up; and last the two rate-limit
+// buckets: inviteLimiter, one per inviting account (the invited admin spends
+// its 20, and the owner still invites), and invitePreviewLimiter (Q18), drained
+// once through previews and once through share-link lookups, each ending in a
+// preview's 429; and, at the very end, the invited admin's add through POST
+// /orgs/{id}/members refused by the inviteLimiter budget its invitations spent
+// (Q18: both routes invite through one call site).
 //
 // The server trusts CF-Connecting-IP as the client's address (env), which
 // only the steps that name a network send, so the registrations spend their
@@ -69,16 +70,17 @@ import (
 // the answers carry) and minted times (the generic tokens); an invitation's
 // expiry, seven days ahead, is <time>; a workspace slug's last 8 hex digits,
 // which are its id's first eight (the area's own pattern); three Retry-After
-// countdowns. Pinned as they are: a registration that takes up an invitation
-// publishes no org.invitation_accepted, while the signed-in acceptance
-// publishes one whose actor is "system", since the middleware does not run
-// on /api/v1/auth/ paths (the scouts' bug 4, for a release-noted bug-fix pull
-// request of its own). Not pinned: the invitation mail and the hour-long
-// suppression of a re-send, which need a mailer (the mail area's, emailed
-// true); an invitation's expiry after seven days (time-bound); a single
-// sign-on account getting past the closed door (the SSO areas', on an open
-// server); the capped seats an invitation charges through checkOrgSeats (the
-// alpha terms cap none; the tiers-on area pins them).
+// countdowns. Both doors publish the same org.invitation_accepted as the SSO
+// area's OIDC sign-in, the joiner its actor: a registration that took up an
+// invitation published none, and the signed-in acceptance published one as
+// "system", since the middleware does not run on /api/v1/auth/ paths, until the
+// scouts' bug 4 was fixed by a release-noted bug-fix pull request of its own.
+// Not pinned: the invitation mail and the hour-long suppression of a re-send,
+// which need a mailer (the mail area's, emailed true); an invitation's expiry
+// after seven days (time-bound); a single sign-on account getting past the
+// closed door (the SSO areas', on an open server); the capped seats an
+// invitation charges through checkOrgSeats (the alpha terms cap none; the
+// tiers-on area pins them).
 func TestTourS5cInvitationsClosed(t *testing.T) {
 	runTourArea(t, tourArea{
 		slice: "s5c",
@@ -220,10 +222,10 @@ func invitationsClosedTour(tr *tour) {
 	// The door: a registration that carries a live link for its own
 	// address.
 	reg := tr.step("register with the invitee's link and its address, in other capitals: the account is made, "+
-		"verified and joins W as an admin; no event", anon, "POST /api/v1/auth/register", fromSignUp,
+		"verified and joins W as an admin, and org.invitation_accepted", anon, "POST /api/v1/auth/register", fromSignUp,
 		invitationsClosedSignUp("TOUR-INVITEE@example.COM", "Tour Invitee", "{{invite.invitee}}"),
-		note("the address is compared folded; the registration publishes no event, where the signed-in "+
-			"acceptance publishes org.invitation_accepted"))
+		note("the address is compared folded; the registration publishes the event the signed-in acceptance "+
+			"publishes, with the new account as its actor"))
 	invitee := tr.adopt(reg, "invitee", fmt.Sprintf("the account a registration with an invite link made (step %d), "+
 		"an admin of W", reg.step.n))
 	tr.step("the invitee's workspaces: its personal one and W, as an admin", invitee, "GET /api/v1/orgs")
@@ -253,8 +255,9 @@ func invitationsClosedTour(tr *tour) {
 		return tr.step(title, a, "POST /api/v1/auth/invitations/accept", opts...)
 	}
 	accept("the joiner takes up W's link: 200, and org.invitation_accepted", joiner,
-		jsonBody(`{"token":"{{invite.joiner}}"}`), note("the event's actor is \"system\": the auth middleware does "+
-			"not run on /api/v1/auth/ paths, so the request carries no user for Actor to name"))
+		jsonBody(`{"token":"{{invite.joiner}}"}`), note("the event's actor is the joiner, whom the handler names "+
+			"itself: the auth middleware does not run on /api/v1/auth/ paths, so the request carries no user for "+
+			"Actor to name"))
 	accept("the joiner presents the link again: spent", joiner, jsonBody(`{"token":"{{invite.joiner}}"}`))
 	accept("the stayer, already in W, takes up its link: 200, already_member true, the role it holds, no event",
 		stayer, jsonBody(`{"token":"{{invite.stayer}}"}`))
