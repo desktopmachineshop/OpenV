@@ -1687,16 +1687,23 @@ func (h *Handler) ListProjects(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if user := CurrentUser(r); user != nil && !user.IsAdmin && h.memberService != nil {
+	// A member sees the projects they have a role in, and so does their
+	// personal runner key, which is its holder acting (REQ-16); a platform
+	// admin's session and a workspace key (REQ-42) see them all.
+	person := WorkerUser(r)
+	if user := CurrentUser(r); user != nil && !user.IsAdmin {
+		person = user.ID
+	}
+	if person != "" && h.memberService != nil {
 		// Org admins of the active workspace see all of its projects.
 		isOrgAdmin := false
 		if h.orgService != nil {
-			if role, err := h.orgService.RoleInOrg(activeOrg, user.ID); err == nil && role == orgs.RoleAdmin {
+			if role, err := h.orgService.RoleInOrg(activeOrg, person); err == nil && role == orgs.RoleAdmin {
 				isOrgAdmin = true
 			}
 		}
 		if !isOrgAdmin {
-			ids, err := h.memberService.ProjectIDsForUser(user.ID)
+			ids, err := h.memberService.ProjectIDsForUser(person)
 			if err != nil {
 				respondInternal(w, r, "failed to list projects", err)
 				return

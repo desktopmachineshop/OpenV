@@ -52,7 +52,10 @@ the worker a freshly minted token, and the token stops authenticating (`401`)
 as soon as the run finishes, is finalised after review, or is released back to
 the queue; a released run's next claim issues a new one. A run token never
 reviews a proposal, its own run's or another's: approve and reject answer it
-`403` (REQ-21).
+`403` (REQ-21). The runner reads a claimed run's repository connections with
+the run's token (`GET /projects/{id}/repo-connections`, read only, its own
+project's), whose answer carries the local paths of the member whose personal
+runner key claimed the run, and none for a run a workspace key holds.
 
 ### 3. Workers — Bearer org-scoped worker key
 
@@ -62,7 +65,16 @@ Keys are org-scoped rows in `worker_keys` (stored hashed):
 - **Workspace keys** — minted by org admins (Settings → Worker Keys).
 - **Personal runner keys** — one per member (`worker_keys.user_id` set);
   minted via `/orgs/{id}/my-runner-key` or the Agent Connector pairing flow.
-  A personal key only claims runs its owner launched.
+  A personal key claims the runs its owner launched and the ownerless ones
+  (board, automation, delegation) its owner could see: any of the
+  workspace's for a workspace admin, otherwise those in a project the owner
+  holds a role in; an ownerless run with no project, which only workspace
+  admins see, is left to them and to workspace keys. A run a key launches
+  records no launcher, so it routes as ownerless too: one with no project
+  that a member's own personal key launched is not taken by that member's
+  runner unless the member is a workspace admin. The run lifecycle calls
+  (start, logs, finish, release) answer a personal key `404` on any other
+  run.
 - **Session keys** — a personal key bound to a transient runner lease
   (`worker_keys.session_id` set), minted when a member leases a pool node and
   revoked when the lease ends. It routes like any personal key; it is kept
@@ -73,10 +85,10 @@ A worker principal passes project checks only for projects belonging to its
 own org. There a workspace key passes every project check up to an editor's
 (REQ-42's workspace-wide editor rights) and gets the project's `403` on an
 owner's, as a project editor does, while a personal key (a session key among
-them) is its holder acting: it passes a viewer's read in any project of the
-org, and anything more only where its holder would, as an admin of the
-workspace or with a project role that meets the route's (REQ-16); otherwise
-it gets the project's `403`.
+them) is its holder acting, reads included: it passes only where its holder
+would, as an admin of the workspace or with a project role that meets the
+route's (REQ-16); otherwise it gets the project's `403`, and the project list
+(`GET /projects`) gives it the projects its holder's own session lists.
 
 ### 3a. Runner pool nodes — Bearer `RUNNER_POOL_KEY`
 
@@ -113,7 +125,7 @@ Enforced per-handler via `internal/api/authz.go`:
 - **Agent runs** count as editor within their own project, except that they
   never approve or reject a proposal, and create no project; **workers** pass
   for any project in their org, a workspace key as an editor, a personal key
-  above a viewer's read only where its holder would; **run access** (viewing logs/streams) is
+  only where its holder would, reads included; **run access** (viewing logs/streams) is
   granted to the launcher, then by the project ladder, then org admin for
   unscoped runs.
 - **Crew writes**: project-pinned crews need project editor; workspace-wide
@@ -130,7 +142,7 @@ Generated from the router registrations in `internal/api/*.go`
 Auth column: `open` (no credentials) · `user` (any session) ·
 `viewer`/`reviewer`/`editor`/`owner` (project role ladder; agent runs count as editor in
 their own project, workers pass within their org, a workspace key up to
-`editor`, a personal key above `viewer` only with its holder's role) · `org member`/`org admin`
+`editor`, a personal key only with its holder's role) · `org member`/`org admin`
 (workspace role) · `worker` (worker key) · `run` (run token) ·
 `token` (public one-time/invite token).
 
@@ -239,7 +251,7 @@ their own project, workers pass within their org, a workspace key up to
 | Method | Path | Purpose | Auth |
 |---|---|---|---|
 | POST | `/api/v1/projects` | Create project in active workspace (creator becomes owner). An agent run's token is refused (`403`) | user |
-| GET | `/api/v1/projects` | List projects the caller can access | user |
+| GET | `/api/v1/projects` | List projects the caller can access (a personal runner key: those its holder can) | user |
 | GET | `/api/v1/projects/{id}` | Project details | viewer |
 | PUT | `/api/v1/projects/{id}` | Update project: `name`, `description`, `agent_auth`, `parent_project_id` (the project this one refines, `docs/flow-down.md`; `""` detaches; `400` for a parent in another workspace, the project itself or one of its descendants) | editor |
 | DELETE | `/api/v1/projects/{id}` | Delete project | owner |
@@ -1033,7 +1045,7 @@ for OpenV's own tools regardless of what the vendor CLI can express.
 | Method | Path | Purpose | Auth |
 |---|---|---|---|
 | GET | `/api/v1/agent-runs` | List runs (project-scoped: viewer; workspace-wide: org admin, members see their own) | user |
-| POST | `/api/v1/agent-runs/claim` | Worker claims the next eligible queued run | worker |
+| POST | `/api/v1/agent-runs/claim` | Worker claims the next eligible queued run (a personal key: its owner's, and the ownerless ones its owner could see) | worker |
 | POST | `/api/v1/agent-runs/delegate` | Running crew agent delegates to a child agent; `404` when the run's crew node was removed after it launched | run |
 | GET | `/api/v1/agent-runs/delegate/{id}` | Delegation status | run |
 | GET | `/api/v1/agent-runs/{id}` | Run details | launcher / viewer |
@@ -1096,7 +1108,7 @@ own stream and as `assistant_partial` on any session the run belongs to.
 
 | Method | Path | Purpose | Auth |
 |---|---|---|---|
-| GET | `/api/v1/projects/{id}/repo-connections` | List connected repositories | viewer |
+| GET | `/api/v1/projects/{id}/repo-connections` | List connected repositories, each with the caller's local path (a run token: its claimant's) | viewer |
 | POST | `/api/v1/projects/{id}/repo-connections` | Connect a repository | owner |
 | PUT | `/api/v1/repo-connections/{id}` | Update connection | owner |
 | DELETE | `/api/v1/repo-connections/{id}` | Remove connection | owner |

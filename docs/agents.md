@@ -33,11 +33,16 @@ vendor CLIs with **your consumer subscription** (Claude Pro/Max, ChatGPT plan,
 etc.). Each member mints their own **personal runner key** in workspace
 settings (Settings → My Runner) and starts `agentd` with it.
 
-- Claims **only runs you launched** — your subscription never executes a
-  teammate's work.
-- The key acts as you: used against the API, it approves proposals and
-  writes only in projects where your own role allows it (editor, or admin
-  of the workspace).
+- Claims **the runs you launched**, never a teammate's, and ownerless work
+  (see *Routing* below) only where you could see it yourself.
+- The key acts as you: used against the API, it reads only the projects you
+  can open, and approves proposals and writes only where your own role
+  allows it (editor, or admin of the workspace). The runner reads a claimed
+  run's repositories with the run's own token, so it needs no more. That
+  token is the agent's, not yours: in the run's project it acts as an editor
+  (through proposals for a proposal-mode agent) whatever your own role, so
+  an ownerless run your runner takes in a project you only view still writes
+  there.
 - Full capability: repo-access runs (cloning connected repositories) are
   allowed, and the existing **Connect** sign-in flow works (the CLI's own
   login is relayed to your browser; credentials stay on your machine).
@@ -138,11 +143,18 @@ runner you hold a lease on counts as your runner here: runs you launch prefer
 whichever of your runners is online.
 
 **Ownerless runs** — launched by the system rather than a member: board
-triggers, automations, delegations between agents — are claimable by **any
-live runner** in the workspace (personal, workspace, or hosted) immediately,
-first come first served, so the load spreads across every runner that is
-online. Runs another member launched are never routed to your personal
-runner; they stay with that member's runner or the workspace/hosted pool.
+triggers, automations, delegations between agents — are claimable
+immediately, first come first served, by every workspace or hosted runner,
+and by the personal runner of every member who could see the run: one with
+a role in its project, or an admin of the workspace. A personal runner never
+takes a run its member could not see, so an ownerless run with no project,
+which only the workspace's admins can open, goes to an admin's personal
+runner or the workspace/hosted pool. A run launched through the API with a
+runner key, your own personal key included, records no launcher and is
+ownerless too: one with no project goes to an admin's runner or the pool, not
+to your own runner unless you are a workspace admin. Runs another member
+launched are never routed to your personal runner; they stay with that
+member's runner or the workspace/hosted pool.
 
 ### Where your subscription runs
 
@@ -360,7 +372,9 @@ Flow:
    double-clicking the exe) starts your runner. Closing the window stops it.
 
 Your CLI subscription sign-ins stay in the vendor CLIs on your machine — the
-platform never sees them, and your runner only claims runs you launched.
+platform never sees them, and your runner claims the runs you launched, never
+a teammate's, and ownerless work only where you could see it (see *Routing*
+above).
 
 ## Build and run a personal runner manually
 

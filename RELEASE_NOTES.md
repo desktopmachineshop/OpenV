@@ -9,6 +9,16 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Maintenance updates
+
+- **Runners open a run's repositories with the run's own access.** A runner
+  now looks up the repositories of the project an agent works in with the
+  access OpenV gives that run, not with the runner's own key, which reads
+  only the projects its owner can open. Your personal runner keeps working
+  from your own copy of each repository, the local path you set under
+  Project settings → Repositories, and a run taken by a workspace runner
+  clones the repository, as before.
+
 ### Bug fixes
 
 - **Committing a guided definition approves its drafts.** The wizard's last
@@ -352,6 +362,23 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   The refusal now speaks of the deployment's limits and names the setting
   to raise in `OPENV_LIMITS`, as a refusal at one of those limits already
   did. Hosted workspaces are pointed to the Billing tab as before.
+
+- **A personal runner key reads only the projects its owner can open.** A
+  member's personal runner key could read every project of its workspace
+  through the API, and list them all, even projects that member could not
+  open in the app. It now reads and lists only the projects its owner can
+  open, as a workspace admin or with a role in the project, and anything
+  else is refused (`403`), as it is for the member. Workspace runner keys are
+  unchanged.
+
+- **A personal runner takes only the work its owner could see.** A member's
+  personal runner picked up automation and board runs from every project of
+  the workspace, so its agent worked in projects that member cannot open. It
+  now takes such a run only in a project its owner has a role in, or, for a
+  workspace admin, anywhere in the workspace. A run that belongs to no
+  project, which only a workspace's admins can open, is left to an admin's
+  runner or to the workspace's shared runners. Runs you launch still go to
+  your own runner, and workspace and hosted runners take any run as before.
 
 ## 0.15.0 — 2026-09-22
 

@@ -671,7 +671,10 @@ func (h *Handler) ClaimAgentRun(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	// Hosted runners never execute repo-access agents.
+	// Hosted runners never execute repo-access agents. A personal key takes
+	// its member's runs and only the ownerless ones its member could see
+	// (the claim query asks it, as holderSeesRun does), and the claim
+	// records the member, whose local paths the run's token reads.
 	run, err := h.runService.Claim(req.WorkerID, WorkerOrg(r), WorkerUser(r), req.Providers, req.MinPriority, req.Hosted)
 	if err != nil {
 		respondInternal(w, r, "failed to claim a run", err)
@@ -748,18 +751,28 @@ func (h *Handler) resolveRunAuth(run *agentruns.Run, agent *agents.Agent) map[st
 // requireWorkerRun resolves the {id} run for a worker lifecycle call and
 // verifies the worker credential may act on it: the run must belong to the
 // worker's org, and a personal runner key may only touch runs its user could
-// have claimed (their own or ownerless — mirrors Claim). Cross-org and
-// unknown run IDs both answer 404 so a foreign worker cannot probe whether a
-// run exists. Returns nil after writing the response when access is denied.
+// have claimed (their own, or an ownerless one its user could see — mirrors
+// Claim). Cross-org and unknown run IDs, and runs the key could not claim,
+// all answer 404 so a worker cannot probe whether a run exists. Returns nil
+// after writing the response when access is denied.
 func (h *Handler) requireWorkerRun(w http.ResponseWriter, r *http.Request) *agentruns.Run {
 	run, err := h.runService.Get(mux.Vars(r)["id"])
 	if err != nil || run == nil || run.OrgID != WorkerOrg(r) {
 		writeJSONError(w, http.StatusNotFound, "agent run not found")
 		return nil
 	}
-	if workerUser := WorkerUser(r); workerUser != "" && run.LaunchedBy != nil && *run.LaunchedBy != workerUser {
-		writeJSONError(w, http.StatusNotFound, "agent run not found")
-		return nil
+	if holder := WorkerUser(r); holder != "" {
+		sees := run.LaunchedBy != nil && *run.LaunchedBy == holder
+		if run.LaunchedBy == nil {
+			if sees, err = h.holderSeesRun(holder, run); err != nil {
+				respondInternal(w, r, "failed to resolve run access", err)
+				return nil
+			}
+		}
+		if !sees {
+			writeJSONError(w, http.StatusNotFound, "agent run not found")
+			return nil
+		}
 	}
 	return run
 }
@@ -1353,9 +1366,16 @@ func (h *Handler) ListRepoConnections(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Personal runners get the claiming user's local paths: the checkout
-	// lives somewhere different on every member's machine.
-	if workerUser := WorkerUser(r); workerUser != "" {
-		list, err := h.repoConnService.ListByProjectForUser(projectID, workerUser)
+	// lives somewhere different on every member's machine. The runner reads
+	// a claimed run's connections with the run's token (the guard keeps it
+	// to the run's own project, read only), which carries the member whose
+	// personal runner key claimed it; a run a workspace key holds has none.
+	claimant := WorkerUser(r)
+	if run := CurrentRun(r); run != nil && run.ClaimedBy != nil {
+		claimant = *run.ClaimedBy
+	}
+	if claimant != "" {
+		list, err := h.repoConnService.ListByProjectForUser(projectID, claimant)
 		if err != nil {
 			respondInternal(w, r, "failed to list repo connections", err)
 			return

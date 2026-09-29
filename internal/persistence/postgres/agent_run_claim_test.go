@@ -46,12 +46,39 @@ func newClaimFixture(t *testing.T) *claimFixture {
 	if _, err := db.Exec(`INSERT INTO agents (id, org_id, slug, name, provider, repo_access) VALUES ($1, $2, 'coder', 'Coder', 'claude', TRUE)`, f.repoAgent, f.orgID); err != nil {
 		t.Fatal(err)
 	}
+	for _, u := range []string{f.userA, f.userB} {
+		if _, err := db.Exec(`INSERT INTO users (id, email, name) VALUES ($1, $2, 'Member')`, u, u+"@example.com"); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := db.Exec(`INSERT INTO org_members (org_id, user_id, role) VALUES ($1, $2, 'member')`, f.orgID, u); err != nil {
+			t.Fatal(err)
+		}
+	}
 	return f
+}
+
+// project adds a project to the fixture's org.
+func (f *claimFixture) project(t *testing.T, name string) string {
+	t.Helper()
+	id := uuid.New().String()
+	if _, err := f.db.Exec(`INSERT INTO projects (id, org_id, name) VALUES ($1, $2, $3)`, id, f.orgID, name); err != nil {
+		t.Fatal(err)
+	}
+	return id
+}
+
+// exec runs a fixture statement.
+func (f *claimFixture) exec(t *testing.T, query string, args ...interface{}) {
+	t.Helper()
+	if _, err := f.db.Exec(query, args...); err != nil {
+		t.Fatalf("%s: %v", query, err)
+	}
 }
 
 // runSpec describes one queued run to seed.
 type runSpec struct {
 	agentID     string // defaults to fixture.agentID
+	projectID   *string
 	launchedBy  *string
 	preferred   *string // sets preferred_user_id + hostedAfter
 	hostedAfter time.Time
@@ -69,6 +96,7 @@ func (f *claimFixture) queueRun(t *testing.T, spec runSpec) string {
 		ID:               uuid.New().String(),
 		OrgID:            f.orgID,
 		AgentID:          agentID,
+		ProjectID:        spec.projectID,
 		Status:           agentruns.StatusQueued,
 		Priority:         spec.priority,
 		Prompt:           "do work",
@@ -100,9 +128,11 @@ var claudeOnly = []string{"claude"}
 
 func TestClaimPersonalRunnerTakesOwnAndOwnerlessRuns(t *testing.T) {
 	f := newClaimFixture(t)
+	viewed := f.project(t, "Viewed")
+	f.exec(t, `INSERT INTO project_members (project_id, user_id, role) VALUES ($1, $2, 'viewer')`, viewed, f.userA)
 	mine := f.queueRun(t, runSpec{launchedBy: &f.userA, age: 3 * time.Hour})
 	theirs := f.queueRun(t, runSpec{launchedBy: &f.userB, age: 2 * time.Hour})
-	ownerless := f.queueRun(t, runSpec{age: time.Hour})
+	ownerless := f.queueRun(t, runSpec{projectID: &viewed, age: time.Hour})
 
 	// Personal runner for userA: oldest of {mine, ownerless} first.
 	first, err := f.repo.Claim("w-a", f.orgID, f.userA, claudeOnly, 0, false)
@@ -121,7 +151,8 @@ func TestClaimPersonalRunnerTakesOwnAndOwnerlessRuns(t *testing.T) {
 		t.Fatalf("claim 2: %v", err)
 	}
 	if second == nil || second.ID != ownerless {
-		t.Fatalf("second claim = %+v, want the ownerless run %s (board/automation work load-shares)", second, ownerless)
+		t.Fatalf("second claim = %+v, want the ownerless run %s in a project the user views (board/automation "+
+			"work load-shares)", second, ownerless)
 	}
 
 	third, err := f.repo.Claim("w-a", f.orgID, f.userA, claudeOnly, 0, false)
@@ -133,6 +164,100 @@ func TestClaimPersonalRunnerTakesOwnAndOwnerlessRuns(t *testing.T) {
 	}
 	if got := f.status(t, theirs); got != agentruns.StatusQueued {
 		t.Errorf("other member's run status = %s, want still queued", got)
+	}
+}
+
+// TestClaimPersonalRunnerTakesOnlyOwnerlessRunsItsUserCouldSee is the
+// regression test for personal runners that claimed ownerless (automation,
+// board) runs in every project of their workspace: the claim took any run no
+// one launched, so a member's runner took, and its agent then worked in, a
+// project the member cannot open (OpenV REQ-27, REQ-16, REQ-42). A personal runner
+// never takes a run its user could not see: an ownerless run in a project the
+// user holds a role in, directly or through a people team, and, for a
+// workspace admin, any ownerless run, one with no project too, which only
+// workspace admins may see. A workspace runner still takes them all.
+func TestClaimPersonalRunnerTakesOnlyOwnerlessRunsItsUserCouldSee(t *testing.T) {
+	f := newClaimFixture(t)
+	viewed, teamed, hidden := f.project(t, "Viewed"), f.project(t, "Teamed"), f.project(t, "Hidden")
+	f.exec(t, `INSERT INTO project_members (project_id, user_id, role) VALUES ($1, $2, 'viewer')`, viewed, f.userA)
+	team := uuid.New().String()
+	f.exec(t, `INSERT INTO org_teams (id, org_id, name) VALUES ($1, $2, 'Reviewers')`, team, f.orgID)
+	f.exec(t, `INSERT INTO org_team_members (org_team_id, user_id) VALUES ($1, $2)`, team, f.userA)
+	f.exec(t, `INSERT INTO project_team_access (project_id, org_team_id, role) VALUES ($1, $2, 'reviewer')`, teamed, team)
+	// Hidden has roles too, both held by someone else: a direct one and a
+	// people team's. The user's runner asks whether its user holds a role
+	// there, not whether anyone does.
+	f.exec(t, `INSERT INTO project_members (project_id, user_id, role) VALUES ($1, $2, 'editor')`, hidden, f.userB)
+	others := uuid.New().String()
+	f.exec(t, `INSERT INTO org_teams (id, org_id, name) VALUES ($1, $2, 'Others')`, others, f.orgID)
+	f.exec(t, `INSERT INTO org_team_members (org_team_id, user_id) VALUES ($1, $2)`, others, f.userB)
+	f.exec(t, `INSERT INTO project_team_access (project_id, org_team_id, role) VALUES ($1, $2, 'viewer')`, hidden, others)
+
+	inHidden := f.queueRun(t, runSpec{projectID: &hidden, age: 4 * time.Hour})
+	noProject := f.queueRun(t, runSpec{age: 3 * time.Hour})
+	inViewed := f.queueRun(t, runSpec{projectID: &viewed, age: 2 * time.Hour})
+	inTeamed := f.queueRun(t, runSpec{projectID: &teamed, age: time.Hour})
+
+	for _, want := range []string{inViewed, inTeamed, ""} {
+		got, err := f.repo.Claim("w-a", f.orgID, f.userA, claudeOnly, 0, false)
+		if err != nil {
+			t.Fatalf("claim: %v", err)
+		}
+		if want == "" {
+			if got != nil {
+				t.Fatalf("claim = %s (project %v), want nothing: the user has no role in the rest", got.ID, got.ProjectID)
+			}
+			break
+		}
+		if got == nil || got.ID != want {
+			t.Fatalf("claim = %+v, want %s, the oldest ownerless run in a project the user holds a role in", got, want)
+		}
+	}
+	for _, id := range []string{inHidden, noProject} {
+		if got := f.status(t, id); got != agentruns.StatusQueued {
+			t.Errorf("run %s is %s, want still queued for a runner whose user could see it", id, got)
+		}
+	}
+
+	// A workspace admin sees every run of the workspace, one with no project
+	// included, so the admin's personal runner takes what was left.
+	f.exec(t, `UPDATE org_members SET role = 'admin' WHERE org_id = $1 AND user_id = $2`, f.orgID, f.userB)
+	for _, want := range []string{inHidden, noProject} {
+		got, err := f.repo.Claim("w-b", f.orgID, f.userB, claudeOnly, 0, false)
+		if err != nil || got == nil || got.ID != want {
+			t.Fatalf("the admin's claim = %+v (%v), want %s", got, err, want)
+		}
+	}
+}
+
+// TestClaimRecordsThePersonalRunnersUser pins claimed_by: a personal runner's
+// claim records its user, whose local checkout paths the run's token reads
+// the project's repository connections with; a workspace runner's records
+// none; and a release clears it with the claim.
+func TestClaimRecordsThePersonalRunnersUser(t *testing.T) {
+	f := newClaimFixture(t)
+	run := f.queueRun(t, runSpec{launchedBy: &f.userA})
+
+	got, err := f.repo.Claim("w-a", f.orgID, f.userA, claudeOnly, 0, false)
+	if err != nil || got == nil || got.ID != run {
+		t.Fatalf("personal claim = %+v (%v), want %s", got, err, run)
+	}
+	if got.ClaimedBy == nil || *got.ClaimedBy != f.userA {
+		t.Fatalf("claimed_by = %v, want the personal runner's user %s", got.ClaimedBy, f.userA)
+	}
+	if released, err := f.repo.ReleaseClaim(run, "w-a"); err != nil || !released {
+		t.Fatalf("release: %v %v", released, err)
+	}
+	if back, err := f.repo.FindByID(run); err != nil || back.ClaimedBy != nil {
+		t.Fatalf("after the release claimed_by = %v (%v), want none", back.ClaimedBy, err)
+	}
+
+	got, err = f.repo.Claim("w-box", f.orgID, "", claudeOnly, 0, false)
+	if err != nil || got == nil || got.ID != run {
+		t.Fatalf("workspace claim = %+v (%v), want %s", got, err, run)
+	}
+	if got.ClaimedBy != nil {
+		t.Fatalf("claimed_by = %s after a workspace key's claim, want none", *got.ClaimedBy)
 	}
 }
 
