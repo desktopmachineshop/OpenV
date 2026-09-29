@@ -11,8 +11,14 @@ export const LICENSE_URL = `${REPO_URL}/blob/master/LICENSE`;
 
 export const TAGLINE = 'Requirements, traceability and V&V evidence, with AI agents that work inside the audit trail.';
 
-export const SUBLINE =
-  'DOORS-grade rigour without the DOORS-grade licence: typed artifacts, stable references, baselines, verification runs, documents, and AI agents that propose changes for your team to approve. Open source. Bring your own AI.';
+/** The home page's headline and the one sentence under it (docs/brand/website.md: two lines, under 20 words). */
+export const HERO_HEADLINE = 'Requirements, with the proof attached.';
+
+export const HERO_LEAD =
+  'Traceability, V&V evidence and AI agents that propose changes your team approves. Open source, bring your own AI.';
+
+/** Said once, beside the prices. */
+export const NO_CARD_NOTE = 'No card. No trial clock. Export your data whenever you like.';
 
 /** What the platform does, one card each. */
 export const FEATURES: { title: string; body: string }[] = [

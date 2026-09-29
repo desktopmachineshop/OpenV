@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { useViewport } from '../hooks/useViewport';
 import { WHITE_PAPERS, WHITE_PAPERS_INTRO, WHITE_PAPER_NOTIFY_URL } from './content';
-import { Card, ExternalLink, Eyebrow, Grid, H1, H2, Lead, Section, SiteShell, primaryButton, secondaryButton } from './SiteShell';
+import { Card, ExternalLink, Eyebrow, Grid, H1, H2, Lead, Section, SiteShell, buttonClass } from './SiteShell';
 
 // White papers: each is listed with its status, and linked once published.
 
@@ -35,7 +35,7 @@ export const WhitePapers: React.FC = () => {
               <h3 style={{ margin: 0, fontSize: 18, color: 'var(--text)' }}>{paper.title}</h3>
               <p style={{ margin: 0, fontSize: 14, lineHeight: 1.55, color: 'var(--text-body)' }}>{paper.summary}</p>
               {paper.href && (
-                <ExternalLink href={paper.href} style={{ ...secondaryButton, fontSize: 14, padding: '8px 14px', alignSelf: 'flex-start' }}>
+                <ExternalLink href={paper.href} className={buttonClass.small} style={{ alignSelf: 'flex-start' }}>
                   Read the paper
                 </ExternalLink>
               )}
@@ -47,10 +47,10 @@ export const WhitePapers: React.FC = () => {
         <H2 compact={compact}>Hear when they are out</H2>
         <Lead>Leave a note on GitHub and you will be told as each paper is published.</Lead>
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-          <ExternalLink href={WHITE_PAPER_NOTIFY_URL} style={primaryButton}>
+          <ExternalLink href={WHITE_PAPER_NOTIFY_URL} className={buttonClass.primary}>
             Tell me when they are out
           </ExternalLink>
-          <Link to="/how-it-works" style={secondaryButton}>
+          <Link to="/how-it-works" className={buttonClass.secondary}>
             How it works, meanwhile
           </Link>
         </div>

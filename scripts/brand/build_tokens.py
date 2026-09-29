@@ -7,7 +7,8 @@ property per token, the light values on the scope selector and the dark
 values under both the `prefers-color-scheme: dark` media query (unless the
 viewer chose light) and an explicit `[data-theme="dark"]`, the same three
 states theme.css handles. It also writes the IBM Plex @font-face rules and
-one class per type style (.ov-type-<name>).
+one class per type style (.ov-type-<name>). docs/brand/components.css is
+copied beside it as frontend/src/brand/components.css.
 
 The scope is `.ov-brand` while the app still runs on theme.css: only the
 public site wears the brand. With --legacy-aliases the old theme.css names
@@ -29,6 +30,8 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 SOURCE = ROOT / "docs" / "brand" / "tokens.json"
 TARGET = ROOT / "frontend" / "src" / "brand" / "tokens.css"
+COMPONENTS_SOURCE = ROOT / "docs" / "brand" / "components.css"
+COMPONENTS_TARGET = ROOT / "frontend" / "src" / "brand" / "components.css"
 SCOPE = ".ov-brand"
 FONT_URL = "/fonts/"
 
@@ -191,16 +194,20 @@ def main():
     args = ap.parse_args()
 
     tokens = json.loads(SOURCE.read_text(encoding="utf-8"))
-    css = build(tokens, args.scope, not args.no_legacy_aliases)
+    outputs = {
+        TARGET: build(tokens, args.scope, not args.no_legacy_aliases),
+        COMPONENTS_TARGET: "/* GENERATED: copied from docs/brand/components.css by scripts/brand/build_tokens.py. Do not edit. */\n"
+        + COMPONENTS_SOURCE.read_text(encoding="utf-8"),
+    }
     if args.check:
-        current = TARGET.read_text(encoding="utf-8") if TARGET.exists() else ""
-        if current != css:
-            print("%s is out of date: run scripts/brand/build_tokens.py" % TARGET.relative_to(ROOT), file=sys.stderr)
-            return 1
-        return 0
-    TARGET.parent.mkdir(parents=True, exist_ok=True)
-    TARGET.write_text(css, encoding="utf-8")
-    print("wrote %s" % TARGET.relative_to(ROOT))
+        stale = [p for p, text in outputs.items() if not p.exists() or p.read_text(encoding="utf-8") != text]
+        for p in stale:
+            print("%s is out of date: run scripts/brand/build_tokens.py" % p.relative_to(ROOT), file=sys.stderr)
+        return 1 if stale else 0
+    for p, text in outputs.items():
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(text, encoding="utf-8")
+        print("wrote %s" % p.relative_to(ROOT))
     return 0
 
 

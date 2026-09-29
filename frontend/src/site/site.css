@@ -1,0 +1,286 @@
+/*
+ * The public site's layout, on the brand tokens (docs/brand/website.md).
+ * Everything sits under .ov-brand, the SiteShell root, so none of it reaches
+ * the signed-in app. Colours come only from tokens.
+ */
+
+.ov-brand.site {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 24px;
+}
+.ov-brand.site main { flex-grow: 1; }
+/* Base link rules at zero specificity (:where), so component classes such
+   as .ov-btn--primary keep their own colours on an <a>. */
+:where(.ov-brand) a { color: var(--link); text-decoration: none; }
+:where(.ov-brand) a:hover { text-decoration: underline; }
+.ov-brand a.ov-btn { text-decoration: none; }
+.ov-brand :focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.ov-brand h1,
+.ov-brand h2,
+.ov-brand h3 { text-wrap: balance; }
+.ov-brand code,
+.ov-brand pre { font-family: var(--font-mono); }
+
+.site-wrap { max-width: var(--content-max); margin: 0 auto; }
+
+/* Header -------------------------------------------------------------- */
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+.site-header-row {
+  height: var(--topbar-height);
+  padding: 0 var(--space-6);
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+.site-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text);
+  font-weight: 600;
+  font-size: 18px;
+  letter-spacing: -0.01em;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+.ov-brand a.site-brand { color: var(--text); text-decoration: none; }
+.site-brand img { width: 28px; height: 28px; border-radius: var(--radius-md); }
+.site-nav { display: flex; gap: var(--space-5); align-items: center; min-width: 0; }
+.ov-brand a.site-nav-link {
+  color: var(--text-secondary);
+  font-size: 14px;
+  white-space: nowrap;
+  padding: 6px 0;
+  border-bottom: 2px solid transparent;
+}
+.ov-brand a.site-nav-link:hover { color: var(--text); }
+.ov-brand a.site-nav-link[aria-current="page"] { color: var(--text); font-weight: 500; border-bottom-color: var(--primary); }
+.site-header-actions { margin-left: auto; display: flex; gap: var(--space-2); align-items: center; flex-shrink: 0; }
+.site-nav--phone {
+  display: none;
+  gap: var(--space-4);
+  padding: 0 var(--space-4) var(--space-2);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Sections ------------------------------------------------------------ */
+.site-section { padding: var(--space-24) var(--space-6); }
+.site-section--alt { background: var(--surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.site-section--hero { padding-top: 72px; }
+.site-h1 {
+  margin: 0 0 var(--space-5);
+  font-size: 52px;
+  line-height: 56px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+.site-h2 {
+  margin: 0 0 var(--space-3);
+  font-size: 36px;
+  line-height: 42px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  color: var(--text);
+}
+.site-h3 { margin: 0 0 var(--space-2); font-size: 18px; line-height: 26px; font-weight: 600; color: var(--text); }
+.site-lead {
+  margin: 0 0 var(--space-8);
+  text-wrap: pretty;
+  font-size: 18px;
+  line-height: 28px;
+  color: var(--text-secondary);
+  max-width: var(--measure);
+}
+.site-eyebrow { margin: 0 0 var(--space-3); font-size: 14px; font-weight: 500; color: var(--link); }
+.site-body { margin: 0; font-size: 15px; line-height: 24px; color: var(--text-secondary); max-width: var(--measure); }
+.site-actions { display: flex; flex-wrap: wrap; gap: var(--space-3); }
+.site-split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-12); align-items: start; }
+
+/* Hero ---------------------------------------------------------------- */
+.site-hero { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: var(--space-12); align-items: center; }
+.site-hero .site-lead { max-width: 50ch; }
+.site-shot {
+  margin: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-modal);
+  overflow: hidden;
+  background: var(--surface);
+}
+.site-shot img { display: block; width: 100%; height: auto; }
+
+/* Demos --------------------------------------------------------------- */
+.site-demos { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: var(--space-8); align-items: start; }
+.site-thumb {
+  aspect-ratio: 16 / 9;
+  max-width: 100%;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--surface-sunken);
+  display: flex;
+  justify-content: center;
+}
+.site-thumb img { height: 100%; display: block; object-fit: cover; }
+.ov-brand a.site-card-link { color: var(--text); display: flex; flex-direction: column; gap: var(--space-3); }
+.ov-brand a.site-card-link:hover .site-card-title { color: var(--link); }
+.site-card-title { font-size: 16px; line-height: 24px; font-weight: 600; }
+.site-demo-list { display: flex; flex-direction: column; }
+.ov-brand a.site-demo-row {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: center;
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  text-decoration: none;
+}
+.site-demo-list a.site-demo-row:first-child { padding-top: 0; }
+.ov-brand a.site-demo-row:hover .site-card-title { color: var(--link); }
+.site-demo-row .site-card-title { font-size: 14px; line-height: 20px; }
+
+/* Feature bento ------------------------------------------------------- */
+.site-bento { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-4); }
+.site-tile {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+.site-tile--wide { grid-column: span 2; }
+.site-tile--full { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-8); align-items: center; }
+.site-tile--agent { background: var(--agent-bg); border-color: var(--agent-border); }
+.site-tile--info { background: var(--info-bg); border-color: var(--info-bg); }
+.site-tile .site-h3 { margin: 0; }
+.site-tile p { margin: 0; font-size: 15px; line-height: 24px; color: var(--text-secondary); }
+
+/* A real, static rendering of a traceability chain, built from ov- parts. */
+.site-chain { display: flex; flex-direction: column; gap: 0; margin-top: var(--space-2); }
+.site-chain-row {
+  display: grid;
+  grid-template-columns: 96px 64px minmax(0, 1fr) auto;
+  gap: var(--space-3);
+  align-items: center;
+  padding: 10px var(--space-3);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  font-size: 14px;
+}
+.site-chain-link { padding: 4px 0 4px 48px; font-size: 12px; color: var(--text-muted); }
+.site-chain-kind { font-size: 12px; color: var(--text-muted); }
+
+.site-flow { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); font-size: 14px; }
+.site-flow-node { padding: 6px 12px; border-radius: var(--radius-md); background: var(--surface); border: 1px solid var(--border); color: var(--text); white-space: nowrap; }
+.site-flow-arrow { color: var(--text-muted); }
+
+/* Definition list ------------------------------------------------------ */
+.site-dl { margin: 0; display: flex; flex-direction: column; }
+.site-dl > div { padding: var(--space-4) 0; border-top: 1px solid var(--border); display: grid; grid-template-columns: 160px minmax(0, 1fr); gap: var(--space-4); }
+.site-dl > div:last-child { border-bottom: 1px solid var(--border); }
+.site-dl dt { font-weight: 600; font-size: 15px; color: var(--text); }
+.site-dl dd { margin: 0; font-size: 15px; line-height: 24px; color: var(--text-secondary); }
+
+/* Pricing -------------------------------------------------------------- */
+.site-tiers { display: grid; gap: var(--space-4); align-items: stretch; }
+.site-tiers--4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.site-tiers--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.site-tier {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+.site-tier--featured { border: 2px solid var(--primary); padding: 23px; }
+.site-tier h3 { margin: 0; font-size: 18px; line-height: 26px; font-weight: 600; color: var(--text); }
+.site-price { font-size: 32px; line-height: 40px; font-weight: 600; color: var(--text); letter-spacing: -0.01em; }
+.site-tier p { margin: 0; font-size: 14px; line-height: 22px; color: var(--text-secondary); }
+.site-tier ul { margin: 0; padding-left: 18px; flex-grow: 1; font-size: 14px; line-height: 22px; color: var(--text-secondary); }
+.site-tier li + li { margin-top: 4px; }
+.site-tier .ov-btn { width: 100%; box-sizing: border-box; }
+.site-limits { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-6); }
+.site-limits h4 { margin: 0 0 var(--space-2); font-size: 14px; font-weight: 600; color: var(--text); }
+.site-limits ul { margin: 0; padding-left: 18px; font-size: 14px; line-height: 22px; color: var(--text-secondary); }
+.site-limits li + li { margin-top: 6px; }
+
+/* Community links ------------------------------------------------------ */
+.site-columns { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-8); }
+.site-columns > div { border-top: 2px solid var(--text); padding-top: var(--space-4); display: flex; flex-direction: column; gap: var(--space-2); }
+.site-columns p { margin: 0; flex-grow: 1; font-size: 15px; line-height: 24px; color: var(--text-secondary); }
+.site-columns a { font-weight: 500; }
+
+/* Code --------------------------------------------------------------- */
+.site-code {
+  margin: 0;
+  padding: var(--space-5) var(--space-6);
+  background: var(--surface-sunken);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 24px;
+  overflow-x: auto;
+}
+
+/* Footer -------------------------------------------------------------- */
+.site-footer { border-top: 1px solid var(--border); background: var(--surface); padding: var(--space-12) var(--space-6); }
+.site-footer-grid { display: grid; grid-template-columns: minmax(0, 2fr) repeat(3, minmax(0, 1fr)); gap: var(--space-8); font-size: 14px; line-height: 22px; color: var(--text-muted); }
+.site-footer h2 { margin: 0 0 var(--space-3); font-size: 14px; font-weight: 600; color: var(--text); }
+.site-footer ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }
+.ov-brand .site-footer a { color: var(--text-secondary); }
+.ov-brand .site-footer a:hover { color: var(--text); }
+
+/* Narrow screens ------------------------------------------------------- */
+@media (max-width: 1024px) {
+  .site-hero, .site-demos, .site-split { grid-template-columns: minmax(0, 1fr); gap: var(--space-8); }
+  .site-tiers--4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .site-footer-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 900px) {
+  .site-header-row .site-nav { display: none; }
+  .site-nav--phone { display: flex; }
+  .site-bento { grid-template-columns: minmax(0, 1fr); }
+  .site-tile--wide { grid-column: auto; }
+  .site-tile--full { grid-template-columns: minmax(0, 1fr); }
+  .site-limits, .site-columns { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 640px) {
+  .site-section { padding: var(--space-16) var(--space-4); }
+  .site-section--hero { padding-top: var(--space-8); }
+  .site-header-row { padding: 0 var(--space-4); gap: var(--space-4); }
+  .site-h1 { font-size: 36px; line-height: 42px; }
+  .site-h2 { font-size: 28px; line-height: 34px; }
+  .site-lead { font-size: 17px; line-height: 26px; }
+  .site-tiers--4, .site-tiers--2 { grid-template-columns: minmax(0, 1fr); }
+  .site-footer { padding: var(--space-8) var(--space-4); }
+  .site-footer-grid { grid-template-columns: minmax(0, 1fr); }
+  .site-dl > div { grid-template-columns: minmax(0, 1fr); gap: var(--space-1); }
+  .site-chain-row { grid-template-columns: 72px minmax(0, 1fr) auto; }
+  .site-chain-kind { display: none; }
+  .ov-brand .ov-btn { height: var(--touch-target); }
+  .ov-brand .ov-btn--sm { height: 36px; }
+}

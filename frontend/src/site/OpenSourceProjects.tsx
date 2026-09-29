@@ -5,7 +5,7 @@ import { apiErrorMessage } from '../api/errors';
 import { useViewport } from '../hooks/useViewport';
 import { LICENSE_GLOSS, LICENSE_INTENT, REPO_URL } from '../landing/content';
 import { OPENV_OWN_PROJECT_NOTE, OPEN_SOURCE_CLAIM_URL, OPEN_SOURCE_INTRO } from './content';
-import { Card, ExternalLink, Eyebrow, Grid, H1, H2, Lead, Section, SiteShell, primaryButton, secondaryButton } from './SiteShell';
+import { Card, ExternalLink, Eyebrow, Grid, H1, H2, Lead, Section, SiteShell, buttonClass } from './SiteShell';
 
 // The open-source page (REQ-151): every project of a workspace on the
 // open-source plan, as of its latest baseline. The list comes from a public
@@ -52,10 +52,10 @@ export const OpenSourceProjects: React.FC = () => {
         <H1 compact={compact}>Open-source projects on OpenV</H1>
         <Lead>{OPEN_SOURCE_INTRO}</Lead>
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-          <ExternalLink href={OPEN_SOURCE_CLAIM_URL} style={primaryButton}>
+          <ExternalLink href={OPEN_SOURCE_CLAIM_URL} className={buttonClass.primary}>
             Claim free hosting for your project
           </ExternalLink>
-          <Link to="/faq#tiers" style={secondaryButton}>
+          <Link to="/faq#tiers" className={buttonClass.secondary}>
             What the tier includes
           </Link>
         </div>
@@ -91,7 +91,7 @@ export const OpenSourceProjects: React.FC = () => {
                   {countsLine(p.counts)}
                   {countsLine(p.counts) ? ' · ' : ''}snapshot “{p.baseline}” · {new Date(p.snapshot_at).toLocaleDateString()}
                 </div>
-                <Link to={`/open-source/${p.project_id}`} style={{ ...secondaryButton, fontSize: 14, padding: '8px 14px', alignSelf: 'flex-start' }}>
+                <Link to={`/open-source/${p.project_id}`} className={buttonClass.small} style={{ alignSelf: 'flex-start' }}>
                   Read the project
                 </Link>
               </Card>
@@ -112,10 +112,10 @@ export const OpenSourceProjects: React.FC = () => {
           {OPENV_OWN_PROJECT_NOTE} Contributions are welcome under the Developer Certificate of Origin.
         </p>
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-          <ExternalLink href={REPO_URL} style={primaryButton}>
+          <ExternalLink href={REPO_URL} className={buttonClass.primary}>
             View on GitHub
           </ExternalLink>
-          <Link to="/how-it-works" style={secondaryButton}>
+          <Link to="/how-it-works" className={buttonClass.secondary}>
             How it works
           </Link>
         </div>

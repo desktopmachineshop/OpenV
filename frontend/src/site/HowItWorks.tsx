@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useViewport } from '../hooks/useViewport';
-import { Card, Eyebrow, Grid, H1, H2, Lead, Section, SiteShell, primaryButton, secondaryButton } from './SiteShell';
+import { Card, Eyebrow, Grid, H1, H2, Lead, Section, SiteShell, buttonClass } from './SiteShell';
 
 // How it works: the storefront page that explains OpenV with diagrams. The
 // diagrams are inline SVG on the theme tokens, so they follow light and dark
@@ -18,8 +18,7 @@ const Diagram: React.FC<{ title: string; children: React.ReactNode; viewBox: str
       role="img"
       aria-label={title}
       viewBox={viewBox}
-      style={{ width: '100%', height: 'auto', display: 'block', maxWidth: '100%' }}
-      fontFamily="system-ui, sans-serif"
+      style={{ width: '100%', height: 'auto', display: 'block', maxWidth: '100%', fontFamily: 'var(--font-sans)' }}
     >
       <title>{title}</title>
       {children}
@@ -45,7 +44,7 @@ const Box: React.FC<{
       y={y}
       width={w}
       height={h}
-      rx={8}
+      rx={6}
       fill={accent ? 'var(--accent)' : 'var(--surface)'}
       stroke={accent ? 'var(--accent)' : 'var(--border)'}
       strokeWidth={1.5}
@@ -248,10 +247,10 @@ export const HowItWorks: React.FC = () => {
         <H2 compact={compact}>See it working</H2>
         <Lead>Five narrated recordings on the platform’s own requirements project, three on a desktop and two on a phone.</Lead>
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-          <Link to="/demos" style={primaryButton}>
+          <Link to="/demos" className={buttonClass.primary}>
             Watch the demos
           </Link>
-          <Link to="/login?mode=register" style={secondaryButton}>
+          <Link to="/login?mode=register" className={buttonClass.secondary}>
             Create free account
           </Link>
         </div>
