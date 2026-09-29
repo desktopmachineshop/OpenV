@@ -1985,7 +1985,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<a.manual>\",\"org_id\":\"<w>\",\"name\":\"Tour Manual\",\"agent_id\":\"<auto.agent>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"Run {{automation.name}} now{{unknown}}\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_at\":\"<time@step 51>\",\"updated_at\":\"<time@step 51>\"}"
+        "{\"id\":\"<a.manual>\",\"org_id\":\"<w>\",\"name\":\"Tour Manual\",\"agent_id\":\"<auto.agent>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"Run {{automation.name}} now{{unknown}}\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 51>\",\"updated_at\":\"<time@step 51>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -2002,6 +2002,7 @@
         "event_filter": {},
         "cooldown_seconds": 60,
         "max_runs_per_hour": 10,
+        "created_by": "<owner>",
         "created_at": "<time@step 51>",
         "updated_at": "<time@step 51>"
       },
@@ -2010,7 +2011,7 @@
     },
     {
       "n": 52,
-      "title": "a scheduled automation on 0 0 1 1 *, created_by the member as the body says: next_run_at is to come, and created_by is the body's, never stamped by the server",
+      "title": "a scheduled automation on 0 0 1 1 *, whose body names the member as created_by: next_run_at is to come, and created_by is the owner, the caller, whatever the body says",
       "actor": "owner",
       "acting_in": "<w>",
       "route": "POST /api/v1/automations",
@@ -2032,7 +2033,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<a.yearly>\",\"org_id\":\"<w>\",\"name\":\"Tour Yearly\",\"agent_id\":\"<auto.agent>\",\"kind\":\"scheduled\",\"enabled\":true,\"prompt_template\":\"\",\"cron_expr\":\"0 0 1 1 *\",\"catch_up\":false,\"next_run_at\":\"<time>\",\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<member>\",\"created_at\":\"<time@step 52>\",\"updated_at\":\"<time@step 52>\"}"
+        "{\"id\":\"<a.yearly>\",\"org_id\":\"<w>\",\"name\":\"Tour Yearly\",\"agent_id\":\"<auto.agent>\",\"kind\":\"scheduled\",\"enabled\":true,\"prompt_template\":\"\",\"cron_expr\":\"0 0 1 1 *\",\"catch_up\":false,\"next_run_at\":\"<time>\",\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 52>\",\"updated_at\":\"<time@step 52>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -2050,7 +2051,7 @@
         "event_filter": {},
         "cooldown_seconds": 60,
         "max_runs_per_hour": 10,
-        "created_by": "<member>",
+        "created_by": "<owner>",
         "created_at": "<time@step 52>",
         "updated_at": "<time@step 52>"
       },
@@ -2171,7 +2172,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<a.dormant>\",\"org_id\":\"<w>\",\"name\":\"Tour Dormant\",\"agent_id\":\"<auto.agent>\",\"kind\":\"triggered\",\"enabled\":false,\"prompt_template\":\"\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"workitem.created\",\"event_filter\":{\"column\":\"todo\"},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_at\":\"<time@step 56>\",\"updated_at\":\"<time@step 56>\"}"
+        "{\"id\":\"<a.dormant>\",\"org_id\":\"<w>\",\"name\":\"Tour Dormant\",\"agent_id\":\"<auto.agent>\",\"kind\":\"triggered\",\"enabled\":false,\"prompt_template\":\"\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"workitem.created\",\"event_filter\":{\"column\":\"todo\"},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 56>\",\"updated_at\":\"<time@step 56>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -2190,6 +2191,7 @@
         },
         "cooldown_seconds": 60,
         "max_runs_per_hour": 10,
+        "created_by": "<owner>",
         "created_at": "<time@step 56>",
         "updated_at": "<time@step 56>"
       },
@@ -2367,7 +2369,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<a.ghost>\",\"org_id\":\"<w>\",\"name\":\"Tour Ghost Crew\",\"team_id\":\"<phantom>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_at\":\"<time@step 62>\",\"updated_at\":\"<time@step 62>\"}"
+        "{\"id\":\"<a.ghost>\",\"org_id\":\"<w>\",\"name\":\"Tour Ghost Crew\",\"team_id\":\"<phantom>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 62>\",\"updated_at\":\"<time@step 62>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -2384,6 +2386,7 @@
         "event_filter": {},
         "cooldown_seconds": 60,
         "max_runs_per_hour": 10,
+        "created_by": "<owner>",
         "created_at": "<time@step 62>",
         "updated_at": "<time@step 62>"
       },
@@ -2411,7 +2414,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<a.crew>\",\"org_id\":\"<w>\",\"name\":\"Tour Crew Run\",\"team_id\":\"<crew.e>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"Lead {{automation.name}}.\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_at\":\"<time@step 63>\",\"updated_at\":\"<time@step 63>\"}"
+        "{\"id\":\"<a.crew>\",\"org_id\":\"<w>\",\"name\":\"Tour Crew Run\",\"team_id\":\"<crew.e>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"Lead {{automation.name}}.\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 63>\",\"updated_at\":\"<time@step 63>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -2428,6 +2431,7 @@
         "event_filter": {},
         "cooldown_seconds": 60,
         "max_runs_per_hour": 10,
+        "created_by": "<owner>",
         "created_at": "<time@step 63>",
         "updated_at": "<time@step 63>"
       },
@@ -2455,7 +2459,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<a.headless>\",\"org_id\":\"<w>\",\"name\":\"Tour Headless Run\",\"team_id\":\"<crew.h>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_at\":\"<time@step 64>\",\"updated_at\":\"<time@step 64>\"}"
+        "{\"id\":\"<a.headless>\",\"org_id\":\"<w>\",\"name\":\"Tour Headless Run\",\"team_id\":\"<crew.h>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 64>\",\"updated_at\":\"<time@step 64>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -2472,6 +2476,7 @@
         "event_filter": {},
         "cooldown_seconds": 60,
         "max_runs_per_hour": 10,
+        "created_by": "<owner>",
         "created_at": "<time@step 64>",
         "updated_at": "<time@step 64>"
       },
@@ -2499,7 +2504,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<a.blank>\",\"org_id\":\"<w>\",\"name\":\"Tour Blank\",\"agent_id\":\"<auto.agent>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"{{unknown}}\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_at\":\"<time@step 65>\",\"updated_at\":\"<time@step 65>\"}"
+        "{\"id\":\"<a.blank>\",\"org_id\":\"<w>\",\"name\":\"Tour Blank\",\"agent_id\":\"<auto.agent>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"{{unknown}}\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 65>\",\"updated_at\":\"<time@step 65>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -2516,6 +2521,7 @@
         "event_filter": {},
         "cooldown_seconds": 60,
         "max_runs_per_hour": 10,
+        "created_by": "<owner>",
         "created_at": "<time@step 65>",
         "updated_at": "<time@step 65>"
       },
@@ -2543,7 +2549,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<a.space>\",\"org_id\":\"<w>\",\"name\":\"Tour Space\",\"agent_id\":\"<auto.agent>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"{{unknown}} {{ other }}\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_at\":\"<time@step 66>\",\"updated_at\":\"<time@step 66>\"}"
+        "{\"id\":\"<a.space>\",\"org_id\":\"<w>\",\"name\":\"Tour Space\",\"agent_id\":\"<auto.agent>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"{{unknown}} {{ other }}\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 66>\",\"updated_at\":\"<time@step 66>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -2560,6 +2566,7 @@
         "event_filter": {},
         "cooldown_seconds": 60,
         "max_runs_per_hour": 10,
+        "created_by": "<owner>",
         "created_at": "<time@step 66>",
         "updated_at": "<time@step 66>"
       },
@@ -2617,7 +2624,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<a.member>\",\"org_id\":\"<w>\",\"name\":\"Tour Member Pinned\",\"agent_id\":\"<auto.agent>\",\"project_id\":\"<p>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_at\":\"<time@step 68>\",\"updated_at\":\"<time@step 68>\"}"
+        "{\"id\":\"<a.member>\",\"org_id\":\"<w>\",\"name\":\"Tour Member Pinned\",\"agent_id\":\"<auto.agent>\",\"project_id\":\"<p>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<member>\",\"created_at\":\"<time@step 68>\",\"updated_at\":\"<time@step 68>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -2635,6 +2642,7 @@
         "event_filter": {},
         "cooldown_seconds": 60,
         "max_runs_per_hour": 10,
+        "created_by": "<member>",
         "created_at": "<time@step 68>",
         "updated_at": "<time@step 68>"
       },
@@ -2687,7 +2695,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<a.member>\",\"org_id\":\"<w>\",\"name\":\"Tour Member Pinned\",\"agent_id\":\"<auto.agent>\",\"project_id\":\"<p>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_at\":\"<time@step 68>\",\"updated_at\":\"<time@step 68>\"},{\"id\":\"<a.space>\",\"org_id\":\"<w>\",\"name\":\"Tour Space\",\"agent_id\":\"<auto.agent>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"{{unknown}} {{ other }}\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_at\":\"<time@step 66>\",\"updated_at\":\"<time@step 66>\"},{\"id\":\"<a.blank>\",\"org_id\":\"<w>\",\"name\":\"Tour Blank\",\"agent_id\":\"<auto.agent>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"{{unknown}}\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_at\":\"<time@step 65>\",\"updated_at\":\"<time@step 65>\"},{\"id\":\"<a.headless>\",\"org_id\":\"<w>\",\"name\":\"Tour Headless Run\",\"team_id\":\"<crew.h>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_at\":\"<time@step 64>\",\"updated_at\":\"<time@step 64>\"},{\"id\":\"<a.crew>\",\"org_id\":\"<w>\",\"name\":\"Tour Crew Run\",\"team_id\":\"<crew.e>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"Lead {{automation.name}}.\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_at\":\"<time@step 63>\",\"updated_at\":\"<time@step 63>\"},{\"id\":\"<a.ghost>\",\"org_id\":\"<w>\",\"name\":\"Tour Ghost Crew\",\"team_id\":\"<phantom>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_at\":\"<time@step 62>\",\"updated_at\":\"<time@step 62>\"},{\"id\":\"<a.dormant>\",\"org_id\":\"<w>\",\"name\":\"Tour Dormant\",\"agent_id\":\"<auto.agent>\",\"kind\":\"triggered\",\"enabled\":false,\"prompt_template\":\"\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"workitem.created\",\"event_filter\":{\"column\":\"todo\"},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_at\":\"<time@step 56>\",\"updated_at\":\"<time@step 56>\"},{\"id\":\"<a.yearly>\",\"org_id\":\"<w>\",\"name\":\"Tour Yearly\",\"agent_id\":\"<auto.agent>\",\"kind\":\"scheduled\",\"enabled\":true,\"prompt_template\":\"\",\"cron_expr\":\"0 0 1 1 *\",\"catch_up\":false,\"next_run_at\":\"<time>\",\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<member>\",\"created_at\":\"<time@step 52>\",\"updated_at\":\"<time@step 52>\"},{\"id\":\"<a.manual>\",\"org_id\":\"<w>\",\"name\":\"Tour Manual\",\"agent_id\":\"<auto.agent>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"Run {{automation.name}} now{{unknown}}\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_at\":\"<time@step 51>\",\"updated_at\":\"<time@step 51>\"},{\"id\":\"<crew.d.auto>\",\"org_id\":\"<w>\",\"name\":\"Tour Doomed Crew Run\",\"team_id\":\"<crew.d>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_at\":\"<time@before step 32>\",\"updated_at\":\"<time@before step 32>\"}]"
+        "[{\"id\":\"<a.member>\",\"org_id\":\"<w>\",\"name\":\"Tour Member Pinned\",\"agent_id\":\"<auto.agent>\",\"project_id\":\"<p>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<member>\",\"created_at\":\"<time@step 68>\",\"updated_at\":\"<time@step 68>\"},{\"id\":\"<a.space>\",\"org_id\":\"<w>\",\"name\":\"Tour Space\",\"agent_id\":\"<auto.agent>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"{{unknown}} {{ other }}\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 66>\",\"updated_at\":\"<time@step 66>\"},{\"id\":\"<a.blank>\",\"org_id\":\"<w>\",\"name\":\"Tour Blank\",\"agent_id\":\"<auto.agent>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"{{unknown}}\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 65>\",\"updated_at\":\"<time@step 65>\"},{\"id\":\"<a.headless>\",\"org_id\":\"<w>\",\"name\":\"Tour Headless Run\",\"team_id\":\"<crew.h>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 64>\",\"updated_at\":\"<time@step 64>\"},{\"id\":\"<a.crew>\",\"org_id\":\"<w>\",\"name\":\"Tour Crew Run\",\"team_id\":\"<crew.e>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"Lead {{automation.name}}.\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 63>\",\"updated_at\":\"<time@step 63>\"},{\"id\":\"<a.ghost>\",\"org_id\":\"<w>\",\"name\":\"Tour Ghost Crew\",\"team_id\":\"<phantom>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 62>\",\"updated_at\":\"<time@step 62>\"},{\"id\":\"<a.dormant>\",\"org_id\":\"<w>\",\"name\":\"Tour Dormant\",\"agent_id\":\"<auto.agent>\",\"kind\":\"triggered\",\"enabled\":false,\"prompt_template\":\"\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"workitem.created\",\"event_filter\":{\"column\":\"todo\"},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 56>\",\"updated_at\":\"<time@step 56>\"},{\"id\":\"<a.yearly>\",\"org_id\":\"<w>\",\"name\":\"Tour Yearly\",\"agent_id\":\"<auto.agent>\",\"kind\":\"scheduled\",\"enabled\":true,\"prompt_template\":\"\",\"cron_expr\":\"0 0 1 1 *\",\"catch_up\":false,\"next_run_at\":\"<time>\",\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 52>\",\"updated_at\":\"<time@step 52>\"},{\"id\":\"<a.manual>\",\"org_id\":\"<w>\",\"name\":\"Tour Manual\",\"agent_id\":\"<auto.agent>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"Run {{automation.name}} now{{unknown}}\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 51>\",\"updated_at\":\"<time@step 51>\"},{\"id\":\"<crew.d.auto>\",\"org_id\":\"<w>\",\"name\":\"Tour Doomed Crew Run\",\"team_id\":\"<crew.d>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@before step 32>\",\"updated_at\":\"<time@before step 32>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -2706,6 +2714,7 @@
           "event_filter": {},
           "cooldown_seconds": 60,
           "max_runs_per_hour": 10,
+          "created_by": "<member>",
           "created_at": "<time@step 68>",
           "updated_at": "<time@step 68>"
         },
@@ -2723,6 +2732,7 @@
           "event_filter": {},
           "cooldown_seconds": 60,
           "max_runs_per_hour": 10,
+          "created_by": "<owner>",
           "created_at": "<time@step 66>",
           "updated_at": "<time@step 66>"
         },
@@ -2740,6 +2750,7 @@
           "event_filter": {},
           "cooldown_seconds": 60,
           "max_runs_per_hour": 10,
+          "created_by": "<owner>",
           "created_at": "<time@step 65>",
           "updated_at": "<time@step 65>"
         },
@@ -2757,6 +2768,7 @@
           "event_filter": {},
           "cooldown_seconds": 60,
           "max_runs_per_hour": 10,
+          "created_by": "<owner>",
           "created_at": "<time@step 64>",
           "updated_at": "<time@step 64>"
         },
@@ -2774,6 +2786,7 @@
           "event_filter": {},
           "cooldown_seconds": 60,
           "max_runs_per_hour": 10,
+          "created_by": "<owner>",
           "created_at": "<time@step 63>",
           "updated_at": "<time@step 63>"
         },
@@ -2791,6 +2804,7 @@
           "event_filter": {},
           "cooldown_seconds": 60,
           "max_runs_per_hour": 10,
+          "created_by": "<owner>",
           "created_at": "<time@step 62>",
           "updated_at": "<time@step 62>"
         },
@@ -2810,6 +2824,7 @@
           },
           "cooldown_seconds": 60,
           "max_runs_per_hour": 10,
+          "created_by": "<owner>",
           "created_at": "<time@step 56>",
           "updated_at": "<time@step 56>"
         },
@@ -2828,7 +2843,7 @@
           "event_filter": {},
           "cooldown_seconds": 60,
           "max_runs_per_hour": 10,
-          "created_by": "<member>",
+          "created_by": "<owner>",
           "created_at": "<time@step 52>",
           "updated_at": "<time@step 52>"
         },
@@ -2846,6 +2861,7 @@
           "event_filter": {},
           "cooldown_seconds": 60,
           "max_runs_per_hour": 10,
+          "created_by": "<owner>",
           "created_at": "<time@step 51>",
           "updated_at": "<time@step 51>"
         },
@@ -2863,6 +2879,7 @@
           "event_filter": {},
           "cooldown_seconds": 60,
           "max_runs_per_hour": 10,
+          "created_by": "<owner>",
           "created_at": "<time@before step 32>",
           "updated_at": "<time@before step 32>"
         }
@@ -2890,7 +2907,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<a.member>\",\"org_id\":\"<w>\",\"name\":\"Tour Member Pinned\",\"agent_id\":\"<auto.agent>\",\"project_id\":\"<p>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_at\":\"<time@step 68>\",\"updated_at\":\"<time@step 68>\"},{\"id\":\"<a.space>\",\"org_id\":\"<w>\",\"name\":\"Tour Space\",\"agent_id\":\"<auto.agent>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"{{unknown}} {{ other }}\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_at\":\"<time@step 66>\",\"updated_at\":\"<time@step 66>\"},{\"id\":\"<a.blank>\",\"org_id\":\"<w>\",\"name\":\"Tour Blank\",\"agent_id\":\"<auto.agent>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"{{unknown}}\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_at\":\"<time@step 65>\",\"updated_at\":\"<time@step 65>\"},{\"id\":\"<a.headless>\",\"org_id\":\"<w>\",\"name\":\"Tour Headless Run\",\"team_id\":\"<crew.h>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_at\":\"<time@step 64>\",\"updated_at\":\"<time@step 64>\"},{\"id\":\"<a.crew>\",\"org_id\":\"<w>\",\"name\":\"Tour Crew Run\",\"team_id\":\"<crew.e>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"Lead {{automation.name}}.\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_at\":\"<time@step 63>\",\"updated_at\":\"<time@step 63>\"},{\"id\":\"<a.ghost>\",\"org_id\":\"<w>\",\"name\":\"Tour Ghost Crew\",\"team_id\":\"<phantom>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_at\":\"<time@step 62>\",\"updated_at\":\"<time@step 62>\"},{\"id\":\"<a.dormant>\",\"org_id\":\"<w>\",\"name\":\"Tour Dormant\",\"agent_id\":\"<auto.agent>\",\"kind\":\"triggered\",\"enabled\":false,\"prompt_template\":\"\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"workitem.created\",\"event_filter\":{\"column\":\"todo\"},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_at\":\"<time@step 56>\",\"updated_at\":\"<time@step 56>\"},{\"id\":\"<a.yearly>\",\"org_id\":\"<w>\",\"name\":\"Tour Yearly\",\"agent_id\":\"<auto.agent>\",\"kind\":\"scheduled\",\"enabled\":true,\"prompt_template\":\"\",\"cron_expr\":\"0 0 1 1 *\",\"catch_up\":false,\"next_run_at\":\"<time>\",\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<member>\",\"created_at\":\"<time@step 52>\",\"updated_at\":\"<time@step 52>\"},{\"id\":\"<a.manual>\",\"org_id\":\"<w>\",\"name\":\"Tour Manual\",\"agent_id\":\"<auto.agent>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"Run {{automation.name}} now{{unknown}}\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_at\":\"<time@step 51>\",\"updated_at\":\"<time@step 51>\"},{\"id\":\"<crew.d.auto>\",\"org_id\":\"<w>\",\"name\":\"Tour Doomed Crew Run\",\"team_id\":\"<crew.d>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_at\":\"<time@before step 32>\",\"updated_at\":\"<time@before step 32>\"}]"
+        "[{\"id\":\"<a.member>\",\"org_id\":\"<w>\",\"name\":\"Tour Member Pinned\",\"agent_id\":\"<auto.agent>\",\"project_id\":\"<p>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<member>\",\"created_at\":\"<time@step 68>\",\"updated_at\":\"<time@step 68>\"},{\"id\":\"<a.space>\",\"org_id\":\"<w>\",\"name\":\"Tour Space\",\"agent_id\":\"<auto.agent>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"{{unknown}} {{ other }}\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 66>\",\"updated_at\":\"<time@step 66>\"},{\"id\":\"<a.blank>\",\"org_id\":\"<w>\",\"name\":\"Tour Blank\",\"agent_id\":\"<auto.agent>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"{{unknown}}\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 65>\",\"updated_at\":\"<time@step 65>\"},{\"id\":\"<a.headless>\",\"org_id\":\"<w>\",\"name\":\"Tour Headless Run\",\"team_id\":\"<crew.h>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 64>\",\"updated_at\":\"<time@step 64>\"},{\"id\":\"<a.crew>\",\"org_id\":\"<w>\",\"name\":\"Tour Crew Run\",\"team_id\":\"<crew.e>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"Lead {{automation.name}}.\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 63>\",\"updated_at\":\"<time@step 63>\"},{\"id\":\"<a.ghost>\",\"org_id\":\"<w>\",\"name\":\"Tour Ghost Crew\",\"team_id\":\"<phantom>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 62>\",\"updated_at\":\"<time@step 62>\"},{\"id\":\"<a.dormant>\",\"org_id\":\"<w>\",\"name\":\"Tour Dormant\",\"agent_id\":\"<auto.agent>\",\"kind\":\"triggered\",\"enabled\":false,\"prompt_template\":\"\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"workitem.created\",\"event_filter\":{\"column\":\"todo\"},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 56>\",\"updated_at\":\"<time@step 56>\"},{\"id\":\"<a.yearly>\",\"org_id\":\"<w>\",\"name\":\"Tour Yearly\",\"agent_id\":\"<auto.agent>\",\"kind\":\"scheduled\",\"enabled\":true,\"prompt_template\":\"\",\"cron_expr\":\"0 0 1 1 *\",\"catch_up\":false,\"next_run_at\":\"<time>\",\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 52>\",\"updated_at\":\"<time@step 52>\"},{\"id\":\"<a.manual>\",\"org_id\":\"<w>\",\"name\":\"Tour Manual\",\"agent_id\":\"<auto.agent>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"Run {{automation.name}} now{{unknown}}\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 51>\",\"updated_at\":\"<time@step 51>\"},{\"id\":\"<crew.d.auto>\",\"org_id\":\"<w>\",\"name\":\"Tour Doomed Crew Run\",\"team_id\":\"<crew.d>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@before step 32>\",\"updated_at\":\"<time@before step 32>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -2909,6 +2926,7 @@
           "event_filter": {},
           "cooldown_seconds": 60,
           "max_runs_per_hour": 10,
+          "created_by": "<member>",
           "created_at": "<time@step 68>",
           "updated_at": "<time@step 68>"
         },
@@ -2926,6 +2944,7 @@
           "event_filter": {},
           "cooldown_seconds": 60,
           "max_runs_per_hour": 10,
+          "created_by": "<owner>",
           "created_at": "<time@step 66>",
           "updated_at": "<time@step 66>"
         },
@@ -2943,6 +2962,7 @@
           "event_filter": {},
           "cooldown_seconds": 60,
           "max_runs_per_hour": 10,
+          "created_by": "<owner>",
           "created_at": "<time@step 65>",
           "updated_at": "<time@step 65>"
         },
@@ -2960,6 +2980,7 @@
           "event_filter": {},
           "cooldown_seconds": 60,
           "max_runs_per_hour": 10,
+          "created_by": "<owner>",
           "created_at": "<time@step 64>",
           "updated_at": "<time@step 64>"
         },
@@ -2977,6 +2998,7 @@
           "event_filter": {},
           "cooldown_seconds": 60,
           "max_runs_per_hour": 10,
+          "created_by": "<owner>",
           "created_at": "<time@step 63>",
           "updated_at": "<time@step 63>"
         },
@@ -2994,6 +3016,7 @@
           "event_filter": {},
           "cooldown_seconds": 60,
           "max_runs_per_hour": 10,
+          "created_by": "<owner>",
           "created_at": "<time@step 62>",
           "updated_at": "<time@step 62>"
         },
@@ -3013,6 +3036,7 @@
           },
           "cooldown_seconds": 60,
           "max_runs_per_hour": 10,
+          "created_by": "<owner>",
           "created_at": "<time@step 56>",
           "updated_at": "<time@step 56>"
         },
@@ -3031,7 +3055,7 @@
           "event_filter": {},
           "cooldown_seconds": 60,
           "max_runs_per_hour": 10,
-          "created_by": "<member>",
+          "created_by": "<owner>",
           "created_at": "<time@step 52>",
           "updated_at": "<time@step 52>"
         },
@@ -3049,6 +3073,7 @@
           "event_filter": {},
           "cooldown_seconds": 60,
           "max_runs_per_hour": 10,
+          "created_by": "<owner>",
           "created_at": "<time@step 51>",
           "updated_at": "<time@step 51>"
         },
@@ -3066,6 +3091,7 @@
           "event_filter": {},
           "cooldown_seconds": 60,
           "max_runs_per_hour": 10,
+          "created_by": "<owner>",
           "created_at": "<time@before step 32>",
           "updated_at": "<time@before step 32>"
         }
@@ -3094,7 +3120,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<a.member>\",\"org_id\":\"<w>\",\"name\":\"Tour Member Pinned\",\"agent_id\":\"<auto.agent>\",\"project_id\":\"<p>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_at\":\"<time@step 68>\",\"updated_at\":\"<time@step 68>\"}]"
+        "[{\"id\":\"<a.member>\",\"org_id\":\"<w>\",\"name\":\"Tour Member Pinned\",\"agent_id\":\"<auto.agent>\",\"project_id\":\"<p>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<member>\",\"created_at\":\"<time@step 68>\",\"updated_at\":\"<time@step 68>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -3113,6 +3139,7 @@
           "event_filter": {},
           "cooldown_seconds": 60,
           "max_runs_per_hour": 10,
+          "created_by": "<member>",
           "created_at": "<time@step 68>",
           "updated_at": "<time@step 68>"
         }
@@ -3183,7 +3210,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<a.manual>\",\"org_id\":\"<w>\",\"name\":\"Tour Manual\",\"agent_id\":\"<auto.agent>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"Run {{automation.name}} now{{unknown}}\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_at\":\"<time@step 51>\",\"updated_at\":\"<time@step 51>\"}"
+        "{\"id\":\"<a.manual>\",\"org_id\":\"<w>\",\"name\":\"Tour Manual\",\"agent_id\":\"<auto.agent>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"Run {{automation.name}} now{{unknown}}\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 51>\",\"updated_at\":\"<time@step 51>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -3200,6 +3227,7 @@
         "event_filter": {},
         "cooldown_seconds": 60,
         "max_runs_per_hour": 10,
+        "created_by": "<owner>",
         "created_at": "<time@step 51>",
         "updated_at": "<time@step 51>"
       },
@@ -3390,7 +3418,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<a.yearly>\",\"org_id\":\"<w>\",\"name\":\"Tour Yearly\",\"agent_id\":\"<auto.agent>\",\"kind\":\"scheduled\",\"enabled\":false,\"prompt_template\":\"\",\"cron_expr\":\"0 0 1 1 *\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<member>\",\"created_at\":\"<time@step 52>\",\"updated_at\":\"<time@step 82>\"}"
+        "{\"id\":\"<a.yearly>\",\"org_id\":\"<w>\",\"name\":\"Tour Yearly\",\"agent_id\":\"<auto.agent>\",\"kind\":\"scheduled\",\"enabled\":false,\"prompt_template\":\"\",\"cron_expr\":\"0 0 1 1 *\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 52>\",\"updated_at\":\"<time@step 82>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -3407,7 +3435,7 @@
         "event_filter": {},
         "cooldown_seconds": 60,
         "max_runs_per_hour": 10,
-        "created_by": "<member>",
+        "created_by": "<owner>",
         "created_at": "<time@step 52>",
         "updated_at": "<time@step 82>"
       },
@@ -3438,7 +3466,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<a.yearly>\",\"org_id\":\"<w>\",\"name\":\"Tour Yearly\",\"agent_id\":\"<auto.agent>\",\"kind\":\"scheduled\",\"enabled\":true,\"prompt_template\":\"\",\"cron_expr\":\"0 0 1 1 *\",\"catch_up\":false,\"next_run_at\":\"<time>\",\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<member>\",\"created_at\":\"<time@step 52>\",\"updated_at\":\"<time@step 83>\"}"
+        "{\"id\":\"<a.yearly>\",\"org_id\":\"<w>\",\"name\":\"Tour Yearly\",\"agent_id\":\"<auto.agent>\",\"kind\":\"scheduled\",\"enabled\":true,\"prompt_template\":\"\",\"cron_expr\":\"0 0 1 1 *\",\"catch_up\":false,\"next_run_at\":\"<time>\",\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 52>\",\"updated_at\":\"<time@step 83>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -3456,7 +3484,7 @@
         "event_filter": {},
         "cooldown_seconds": 60,
         "max_runs_per_hour": 10,
-        "created_by": "<member>",
+        "created_by": "<owner>",
         "created_at": "<time@step 52>",
         "updated_at": "<time@step 83>"
       },
@@ -3487,7 +3515,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<a.yearly>\",\"org_id\":\"<w>\",\"name\":\"Tour Yearly\",\"agent_id\":\"<auto.agent>\",\"kind\":\"scheduled\",\"enabled\":true,\"prompt_template\":\"\",\"cron_expr\":\"0 0 1 7 *\",\"catch_up\":false,\"next_run_at\":\"<time>\",\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<member>\",\"created_at\":\"<time@step 52>\",\"updated_at\":\"<time@step 84>\"}"
+        "{\"id\":\"<a.yearly>\",\"org_id\":\"<w>\",\"name\":\"Tour Yearly\",\"agent_id\":\"<auto.agent>\",\"kind\":\"scheduled\",\"enabled\":true,\"prompt_template\":\"\",\"cron_expr\":\"0 0 1 7 *\",\"catch_up\":false,\"next_run_at\":\"<time>\",\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 52>\",\"updated_at\":\"<time@step 84>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -3505,7 +3533,7 @@
         "event_filter": {},
         "cooldown_seconds": 60,
         "max_runs_per_hour": 10,
-        "created_by": "<member>",
+        "created_by": "<owner>",
         "created_at": "<time@step 52>",
         "updated_at": "<time@step 84>"
       },
@@ -3623,7 +3651,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<a.member>\",\"org_id\":\"<w>\",\"name\":\"Tour Member Run\",\"agent_id\":\"<auto.agent>\",\"project_id\":\"<p>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_at\":\"<time@step 68>\",\"updated_at\":\"<time@step 88>\"}"
+        "{\"id\":\"<a.member>\",\"org_id\":\"<w>\",\"name\":\"Tour Member Run\",\"agent_id\":\"<auto.agent>\",\"project_id\":\"<p>\",\"kind\":\"manual\",\"enabled\":true,\"prompt_template\":\"\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<member>\",\"created_at\":\"<time@step 68>\",\"updated_at\":\"<time@step 88>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -3641,6 +3669,7 @@
         "event_filter": {},
         "cooldown_seconds": 60,
         "max_runs_per_hour": 10,
+        "created_by": "<member>",
         "created_at": "<time@step 68>",
         "updated_at": "<time@step 88>"
       },
@@ -3668,7 +3697,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<a.yearly>\",\"org_id\":\"<w>\",\"name\":\"Tour Yearly\",\"agent_id\":\"<auto.agent>\",\"kind\":\"scheduled\",\"enabled\":false,\"prompt_template\":\"\",\"cron_expr\":\"nope\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<member>\",\"created_at\":\"<time@step 52>\",\"updated_at\":\"<time@step 89>\"}"
+        "{\"id\":\"<a.yearly>\",\"org_id\":\"<w>\",\"name\":\"Tour Yearly\",\"agent_id\":\"<auto.agent>\",\"kind\":\"scheduled\",\"enabled\":false,\"prompt_template\":\"\",\"cron_expr\":\"nope\",\"catch_up\":false,\"event_type\":\"\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 52>\",\"updated_at\":\"<time@step 89>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -3685,7 +3714,7 @@
         "event_filter": {},
         "cooldown_seconds": 60,
         "max_runs_per_hour": 10,
-        "created_by": "<member>",
+        "created_by": "<owner>",
         "created_at": "<time@step 52>",
         "updated_at": "<time@step 89>"
       },
@@ -4261,7 +4290,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<a.watch>\",\"org_id\":\"<w>\",\"name\":\"Tour Watch\",\"agent_id\":\"<trigger.agent>\",\"kind\":\"triggered\",\"enabled\":true,\"prompt_template\":\"Look at {{event.title}} ({{event.artifact_type}}) in project {{project.id}}.\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"artifact.created\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_at\":\"<time@step 106>\",\"updated_at\":\"<time@step 106>\"}"
+        "{\"id\":\"<a.watch>\",\"org_id\":\"<w>\",\"name\":\"Tour Watch\",\"agent_id\":\"<trigger.agent>\",\"kind\":\"triggered\",\"enabled\":true,\"prompt_template\":\"Look at {{event.title}} ({{event.artifact_type}}) in project {{project.id}}.\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"artifact.created\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 106>\",\"updated_at\":\"<time@step 106>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -4278,6 +4307,7 @@
         "event_filter": {},
         "cooldown_seconds": 60,
         "max_runs_per_hour": 10,
+        "created_by": "<owner>",
         "created_at": "<time@step 106>",
         "updated_at": "<time@step 106>"
       },
@@ -4305,7 +4335,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<a.watch.p>\",\"org_id\":\"<w>\",\"name\":\"Tour Watch P\",\"agent_id\":\"<trigger.agent>\",\"project_id\":\"<p>\",\"kind\":\"triggered\",\"enabled\":true,\"prompt_template\":\"Review {{event.title}} in P.\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"artifact.created\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_at\":\"<time@step 107>\",\"updated_at\":\"<time@step 107>\"}"
+        "{\"id\":\"<a.watch.p>\",\"org_id\":\"<w>\",\"name\":\"Tour Watch P\",\"agent_id\":\"<trigger.agent>\",\"project_id\":\"<p>\",\"kind\":\"triggered\",\"enabled\":true,\"prompt_template\":\"Review {{event.title}} in P.\",\"cron_expr\":\"\",\"catch_up\":false,\"event_type\":\"artifact.created\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 107>\",\"updated_at\":\"<time@step 107>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -4323,6 +4353,7 @@
         "event_filter": {},
         "cooldown_seconds": 60,
         "max_runs_per_hour": 10,
+        "created_by": "<owner>",
         "created_at": "<time@step 107>",
         "updated_at": "<time@step 107>"
       },
@@ -4331,7 +4362,7 @@
     },
     {
       "n": 108,
-      "title": "the automation for all of W: last_run_at, from the outsider's requirement",
+      "title": "the automation for all of W: last_run_at, from the requirement in P; the outsider's requirement, in another workspace, did not fire it",
       "actor": "owner",
       "acting_in": "<w>",
       "route": "GET /api/v1/automations/{id}",
@@ -4349,7 +4380,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<a.watch>\",\"org_id\":\"<w>\",\"name\":\"Tour Watch\",\"agent_id\":\"<trigger.agent>\",\"kind\":\"triggered\",\"enabled\":true,\"prompt_template\":\"Look at {{event.title}} ({{event.artifact_type}}) in project {{project.id}}.\",\"cron_expr\":\"\",\"catch_up\":false,\"last_run_at\":\"<time@before step 108>\",\"event_type\":\"artifact.created\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_at\":\"<time@step 106>\",\"updated_at\":\"<time@before step 108>\"}"
+        "{\"id\":\"<a.watch>\",\"org_id\":\"<w>\",\"name\":\"Tour Watch\",\"agent_id\":\"<trigger.agent>\",\"kind\":\"triggered\",\"enabled\":true,\"prompt_template\":\"Look at {{event.title}} ({{event.artifact_type}}) in project {{project.id}}.\",\"cron_expr\":\"\",\"catch_up\":false,\"last_run_at\":\"<time@before step 108>\",\"event_type\":\"artifact.created\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 106>\",\"updated_at\":\"<time@before step 108>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -4367,6 +4398,7 @@
         "event_filter": {},
         "cooldown_seconds": 60,
         "max_runs_per_hour": 10,
+        "created_by": "<owner>",
         "created_at": "<time@step 106>",
         "updated_at": "<time@before step 108>"
       },
@@ -4389,7 +4421,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<a.watch.p>\",\"org_id\":\"<w>\",\"name\":\"Tour Watch P\",\"agent_id\":\"<trigger.agent>\",\"project_id\":\"<p>\",\"kind\":\"triggered\",\"enabled\":true,\"prompt_template\":\"Review {{event.title}} in P.\",\"cron_expr\":\"\",\"catch_up\":false,\"last_run_at\":\"<time@before step 108>\",\"event_type\":\"artifact.created\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_at\":\"<time@step 107>\",\"updated_at\":\"<time@before step 108>\"}"
+        "{\"id\":\"<a.watch.p>\",\"org_id\":\"<w>\",\"name\":\"Tour Watch P\",\"agent_id\":\"<trigger.agent>\",\"project_id\":\"<p>\",\"kind\":\"triggered\",\"enabled\":true,\"prompt_template\":\"Review {{event.title}} in P.\",\"cron_expr\":\"\",\"catch_up\":false,\"last_run_at\":\"<time@before step 108>\",\"event_type\":\"artifact.created\",\"event_filter\":{},\"cooldown_seconds\":60,\"max_runs_per_hour\":10,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 107>\",\"updated_at\":\"<time@before step 108>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -4408,6 +4440,7 @@
         "event_filter": {},
         "cooldown_seconds": 60,
         "max_runs_per_hour": 10,
+        "created_by": "<owner>",
         "created_at": "<time@step 107>",
         "updated_at": "<time@before step 108>"
       },
@@ -4415,7 +4448,7 @@
     },
     {
       "n": 110,
-      "title": "tour-trigger's runs, newest first: the run of the automation pinned to P, then W's run fired by the outsider's event, scoped to the outsider's project with its tracking card there and the outsider's title in its prompt; the requirement in P fired no second run of it (the cooldown)",
+      "title": "tour-trigger's runs, newest first: the run of the automation pinned to P, then the run of the one for all of W, both fired by the requirement in P, scoped to P with their tracking cards there and its title in their prompts; the outsider's requirement fired none",
       "actor": "owner",
       "acting_in": "<w>",
       "route": "GET /api/v1/agent-runs",
@@ -4425,7 +4458,7 @@
         "query": "agent_id=<trigger.agent>"
       },
       "notes": [
-        "pinned as it is: the matcher compares an event's project with the automation's only when the automation is pinned to one, and never its workspace, and a run with no project takes the event's"
+        "the matcher compares an event's workspace with the automation's, and its project with the automation's when the automation is pinned to one; a run of an automation for all of W takes the event's project, which is in W"
       ],
       "status": 200,
       "content_type": "text/plain; charset=utf-8",
@@ -4434,7 +4467,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<uuid:20>\",\"org_id\":\"<w>\",\"agent_id\":\"<trigger.agent>\",\"project_id\":\"<p>\",\"automation_id\":\"<a.watch.p>\",\"trigger_event_id\":\"<uuid:21>\",\"work_item_id\":\"<uuid:22>\",\"status\":\"queued\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Review Tour barrier in P.\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"created_at\":\"<time@before step 108>\",\"agent_content_hash\":\"<hex64:15>\",\"agent_name\":\"Tour Trigger\",\"agent_provider\":\"claude-code\"},{\"id\":\"<uuid:23>\",\"org_id\":\"<w>\",\"agent_id\":\"<trigger.agent>\",\"project_id\":\"<elsewhere.p>\",\"automation_id\":\"<a.watch>\",\"trigger_event_id\":\"<uuid:24>\",\"work_item_id\":\"<uuid:25>\",\"status\":\"queued\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Look at Outsider roadmap (requirement) in project <elsewhere.p>.\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"created_at\":\"<time@before step 108>\",\"agent_content_hash\":\"<hex64:15>\",\"agent_name\":\"Tour Trigger\",\"agent_provider\":\"claude-code\"}]"
+        "[{\"id\":\"<uuid:20>\",\"org_id\":\"<w>\",\"agent_id\":\"<trigger.agent>\",\"project_id\":\"<p>\",\"automation_id\":\"<a.watch.p>\",\"trigger_event_id\":\"<uuid:21>\",\"work_item_id\":\"<uuid:22>\",\"status\":\"queued\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Review Tour barrier in P.\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"created_at\":\"<time@before step 108>\",\"agent_content_hash\":\"<hex64:15>\",\"agent_name\":\"Tour Trigger\",\"agent_provider\":\"claude-code\"},{\"id\":\"<uuid:23>\",\"org_id\":\"<w>\",\"agent_id\":\"<trigger.agent>\",\"project_id\":\"<p>\",\"automation_id\":\"<a.watch>\",\"trigger_event_id\":\"<uuid:21>\",\"work_item_id\":\"<uuid:24>\",\"status\":\"queued\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Look at Tour barrier (requirement) in project <p>.\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"created_at\":\"<time@before step 108>\",\"agent_content_hash\":\"<hex64:15>\",\"agent_name\":\"Tour Trigger\",\"agent_provider\":\"claude-code\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -4466,14 +4499,14 @@
           "id": "<uuid:23>",
           "org_id": "<w>",
           "agent_id": "<trigger.agent>",
-          "project_id": "<elsewhere.p>",
+          "project_id": "<p>",
           "automation_id": "<a.watch>",
-          "trigger_event_id": "<uuid:24>",
-          "work_item_id": "<uuid:25>",
+          "trigger_event_id": "<uuid:21>",
+          "work_item_id": "<uuid:24>",
           "status": "queued",
           "cancel_requested": false,
           "priority": 0,
-          "prompt": "Look at Outsider roadmap (requirement) in project <elsewhere.p>.",
+          "prompt": "Look at Tour barrier (requirement) in project <p>.",
           "final_text": "",
           "error": "",
           "attempt_count": 1,

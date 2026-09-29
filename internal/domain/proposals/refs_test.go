@@ -25,7 +25,7 @@ func (f *fakeProposalRepo) CountByRun(runID string) (int, error) {
 
 // List lets the ref-resolution path (resolveLinkPayload) find a run's sibling
 // proposals. Only the filters that path uses are honoured.
-func (f *fakeProposalRepo) List(projectID, status, runID string) ([]*Proposal, error) {
+func (f *fakeProposalRepo) List(orgID, projectID, status, runID string) ([]*Proposal, error) {
 	var out []*Proposal
 	for _, p := range f.items {
 		if runID != "" && p.RunID != runID {
@@ -207,7 +207,7 @@ func TestProposeRejectsDuplicateRefInRun(t *testing.T) {
 		t.Fatalf("error = %v, want ErrDuplicateRef", err)
 	}
 	// Only the first proposal was stored.
-	all, _ := repo.List("", "", "r1")
+	all, _ := repo.List("", "", "", "r1")
 	if len(all) != 1 {
 		t.Fatalf("duplicate-ref proposal was still saved: run has %d proposals, want 1", len(all))
 	}

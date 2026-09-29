@@ -42,7 +42,8 @@ type Automation struct {
 }
 
 // CreateAutomationRequest is the payload for creating an automation.
-// OrgID is stamped server-side from the caller's active workspace.
+// OrgID is stamped server-side from the caller's active workspace, and
+// CreatedBy with the caller; a body cannot set either.
 type CreateAutomationRequest struct {
 	OrgID           string                 `json:"-"`
 	Name            string                 `json:"name"`
@@ -58,7 +59,7 @@ type CreateAutomationRequest struct {
 	EventFilter     map[string]interface{} `json:"event_filter,omitempty"`
 	CooldownSeconds *int                   `json:"cooldown_seconds,omitempty"`
 	MaxRunsPerHour  *int                   `json:"max_runs_per_hour,omitempty"`
-	CreatedBy       *string                `json:"created_by,omitempty"`
+	CreatedBy       *string                `json:"-"`
 }
 
 // UpdateAutomationRequest carries the editable fields; nil fields are left unchanged.
