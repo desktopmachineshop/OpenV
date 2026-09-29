@@ -831,6 +831,15 @@ func TestTourAccountOptions(t *testing.T) {
 	page := []byte(`http_requests_total{method="GET",route="/health",status="200"} 2` + "\n" +
 		`http_requests_total{method="GET",route="/api/v1/users",status="200"} 3` + "\n")
 	check("the /metrics check", strings.Join(tr.metricsProblems(page), "|"), "  GET /api/v1/users 200: the tour sent 2, the server counted 3")
+
+	// slugPattern's check: a workspace's slug ends in its id's first 8 hex
+	// digits; an agent's slug, which the pattern leaves alone, is not checked.
+	var answer any
+	_ = json.Unmarshal([]byte(`{"id":"`+shared+`","slug":"tour-w-5e0f6a7b","agent":{"id":"`+home+`","slug":"tour-over"},`+
+		`"orgs":[{"id":"`+home+`","slug":"tour-home-5e0f6a7b"}]}`), &answer)
+	n, bad := slugMismatches(answer)
+	check("the slugs checked and those that do not end in their id", fmt.Sprint(n, bad),
+		"2 [{"+home+" tour-home-5e0f6a7b -4d9e5f6a}]")
 }
 
 // ----------------------------------------------------------------------------
@@ -838,8 +847,10 @@ func TestTourAccountOptions(t *testing.T) {
 
 // slugPattern writes a workspace slug's last 8 hex digits as <id8>, which
 // the id's own token does not cover, and checks, once the area has run,
-// that every answer object holding an id and a slug has a slug ending in
-// the first 8 hex digits of that id (orgs.makeSlug), which the token hides.
+// that every answer object holding an id and a slug the pattern rewrites
+// (one ending in 8 hex digits, tourSlugRE) has a slug ending in the first 8
+// hex digits of that id (orgs.makeSlug), which the token hides. A slug the
+// pattern leaves alone, such as an agent's, is in the golden as it is.
 func (tr *tour) slugPattern() {
 	tr.pattern(`"slug":"[a-z0-9-]*-([0-9a-f]{8})"`, "<id8>", "a workspace slug ends in the first 8 hex digits of its "+
 		"id (orgs.makeSlug), which the id's own token does not cover")
@@ -856,38 +867,62 @@ func (tr *tour) slugPattern() {
 			if json.Unmarshal(st.plain.body, &v) != nil {
 				continue
 			}
-			var walk func(v any)
-			walk = func(v any) {
-				switch x := v.(type) {
-				case map[string]any:
-					id, _ := x["id"].(string)
-					slug, okSlug := x["slug"].(string)
-					if okSlug && len(strings.ReplaceAll(id, "-", "")) >= 8 {
-						checked++
-						if want := "-" + strings.ReplaceAll(id, "-", "")[:8]; !strings.HasSuffix(slug, want) && bad < 3 {
-							bad++
-							tr.t.Errorf("step %d, %s: the slug %q does not end in %q, the first 8 hex digits of the "+
-								"workspace's id %s (orgs.makeSlug), which the golden, writing them as <id8>, does not "+
-								"show; if the change is intended, change tour.slugPattern and regenerate with:\n  %s",
-								st.n, st.title, slug, want, id, strings.Join(tr.regenerate(), "\n  then "))
-						}
-					}
-					for _, c := range x {
-						walk(c)
-					}
-				case []any:
-					for _, c := range x {
-						walk(c)
-					}
+			n, mismatches := slugMismatches(v)
+			checked += n
+			for _, mm := range mismatches {
+				if bad == 3 {
+					break
 				}
+				bad++
+				tr.t.Errorf("step %d, %s: the slug %q does not end in %q, the first 8 hex digits of the "+
+					"workspace's id %s (orgs.makeSlug), which the golden, writing them as <id8>, does not "+
+					"show; if the change is intended, change tour.slugPattern and regenerate with:\n  %s",
+					st.n, st.title, mm.slug, mm.want, mm.id, strings.Join(tr.regenerate(), "\n  then "))
 			}
-			walk(v)
 		}
 		if checked == 0 {
 			tr.t.Errorf("tour.slugPattern: no recorded answer holds a workspace's id and slug, so the check checked " +
 				"nothing; drop the call")
 		}
 	})
+}
+
+// tourSlugRE is a slug tour.slugPattern's pattern rewrites: one that ends in
+// a hyphen and 8 hex digits, as orgs.makeSlug's do.
+var tourSlugRE = regexp.MustCompile(`^[a-z0-9-]*-[0-9a-f]{8}$`)
+
+// tourSlugMismatch is an object whose slug does not end in its id's digits.
+type tourSlugMismatch struct{ id, slug, want string }
+
+// slugMismatches walks a decoded answer for the objects holding an id and a
+// slug that tourSlugRE matches, and returns how many it checked and those
+// whose slug does not end in "-" and the first 8 hex digits of their id.
+func slugMismatches(v any) (int, []tourSlugMismatch) {
+	checked := 0
+	var bad []tourSlugMismatch
+	var walk func(v any)
+	walk = func(v any) {
+		switch x := v.(type) {
+		case map[string]any:
+			id, _ := x["id"].(string)
+			slug, okSlug := x["slug"].(string)
+			if hex := strings.ReplaceAll(id, "-", ""); okSlug && tourSlugRE.MatchString(slug) && len(hex) >= 8 {
+				checked++
+				if want := "-" + hex[:8]; !strings.HasSuffix(slug, want) {
+					bad = append(bad, tourSlugMismatch{id: id, slug: slug, want: want})
+				}
+			}
+			for _, k := range sortedKeys(x) {
+				walk(x[k])
+			}
+		case []any:
+			for _, c := range x {
+				walk(c)
+			}
+		}
+	}
+	walk(v)
+	return checked, bad
 }
 
 // noteExpiry notes on a recorded step how many whole minutes after the

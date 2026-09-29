@@ -168,6 +168,14 @@ import (
 // of five (spendsRegistration); the identity provider's failure modes
 // (tourIdP.failDiscovery, issueWrong); and the JPEG, GIF and WebP fixtures,
 // checked with the others by TestTourFixtures.
+//
+// ADDED FOR S5e, inert for an area that does not ask for it: the
+// authorization matrix (tour_matrix_test.go, tour_matrix_golden_test.go,
+// tour_matrix_cast_test.go), which an area writes as its golden's "matrix"
+// and which coverage.txt counts cell by cell; the union of the slices'
+// coverage, testdata/tour/coverage.txt, which holds the plan's 90% floor
+// (tour_coverage_union_test.go); and readEventsAs, the events of the
+// workspace another actor acts in.
 
 // tourArea is one area of a tour slice; see the top of this file.
 type tourArea struct {
@@ -270,6 +278,7 @@ func runTourArea(t *testing.T, a tourArea) {
 		checkGolden(t, tourGoldenPath(a.slice, a.key), got, strings.Join(tr.regenerate(), "\n  then "))
 		if updatingGoldens() {
 			writeTourCoverage(t, a.slice)
+			writeTourUnionCoverage(t) // S5e: the union across slices, testdata/tour/coverage.txt
 		}
 	}()
 	took := time.Since(start)
@@ -277,7 +286,8 @@ func runTourArea(t *testing.T, a tourArea) {
 		t.Errorf("the tour area %s/%s took %s to boot, run and drain; the budget is %s: split the area",
 			a.slice, a.key, took.Round(time.Millisecond), tourBudget)
 	}
-	t.Logf("tour area %s/%s: %d recorded steps in %s", a.slice, a.key, len(tr.steps), took.Round(time.Millisecond))
+	t.Logf("tour area %s/%s: %d recorded steps%s in %s", a.slice, a.key, len(tr.steps), tr.mx.cellsNote(),
+		took.Round(time.Millisecond))
 }
 
 // reportStop runs when an area stops before its end: a capture or a setup
@@ -333,7 +343,7 @@ func tourChanges(want, got []byte, partial bool) string {
 			out = append(out, "  added: "+label(b.Steps[i]))
 		case i >= len(b.Steps) && partial:
 			out = append(out, fmt.Sprintf("  (not run: the golden's steps %d to %d)", i+1, len(a.Steps)))
-			return strings.Join(out, "\n")
+			return strings.Join(append(out, matrixChanges(am["matrix"], bm["matrix"], partial)...), "\n")
 		case i >= len(b.Steps):
 			out = append(out, "  gone: "+label(a.Steps[i]))
 		default:
@@ -348,11 +358,13 @@ func tourChanges(want, got []byte, partial bool) string {
 			}
 		}
 	}
+	// An S5e matrix's changes, cell by cell (none for goldens without one).
+	out = append(out, matrixChanges(am["matrix"], bm["matrix"], partial)...)
 	if partial {
 		return strings.Join(out, "\n")
 	}
 	for _, k := range sortedKeys(mergeKeys(am, bm)) {
-		if k != "steps" && !bytes.Equal(am[k], bm[k]) {
+		if k != "steps" && k != "matrix" && !bytes.Equal(am[k], bm[k]) {
 			out = append(out, "  "+k)
 		}
 	}
@@ -447,6 +459,10 @@ type tour struct {
 	signedUp string            // how admin and owner were registered, when not on the server under test
 	mail     *tourMailCatcher  // tourArea.mail
 	files    string            // tourArea.files' directory
+
+	// Added for S5e (tour_matrix_test.go).
+	mx        *tourMatrix // tour.matrix: the area's authorization matrix, rendered after its steps
+	addresses int         // ownAddress: the client addresses handed out so far
 }
 
 // tourHeaderPattern is an area's pattern for the values of one response
@@ -1384,6 +1400,14 @@ func (tr *tour) readEvents() []json.RawMessage {
 	if tr.owner == nil {
 		return nil
 	}
+	return tr.readEventsAs(tr.owner)
+}
+
+// readEventsAs reads, as an actor, the events of the workspace it acts in
+// that were not read before, oldest first (S5e reads the workspaces a
+// matrix's columns act in; readEvents reads the owner's).
+func (tr *tour) readEventsAs(a *tourActor) []json.RawMessage {
+	tr.t.Helper()
 	const page = 500
 	var fresh []json.RawMessage // newest first
 	before := ""
@@ -1392,7 +1416,7 @@ func (tr *tour) readEvents() []json.RawMessage {
 		if before != "" {
 			q += "&before=" + before
 		}
-		ex := tr.exchange(tr.owner, &tourReq{method: http.MethodGet, route: "GET /api/v1/events", path: "/api/v1/events", query: q}, nil)
+		ex := tr.exchange(a, &tourReq{method: http.MethodGet, route: "GET /api/v1/events", path: "/api/v1/events", query: q}, nil)
 		if ex.status != http.StatusOK {
 			tr.t.Fatalf("read the events: %d %s", ex.status, ex.body)
 		}
@@ -1628,6 +1652,7 @@ type tourGolden struct {
 	Actors          []tourActorRecord `json:"actors"`
 	SecurityHeaders []string          `json:"standard_security_headers"`
 	Steps           []tourStepRecord  `json:"steps"`
+	Matrix          *tourMatrixRecord `json:"matrix,omitempty"` // S5e (tour_matrix_test.go); absent without one
 	Uploads         []string          `json:"uploads"`
 	Outbound        []string          `json:"outbound_requests"`
 	// Added for S5c, empty (and so absent) for an area that asks for none.
@@ -1728,6 +1753,9 @@ func (tr *tour) render() *tourGolden {
 	}
 	for _, st := range tr.steps {
 		g.Steps = append(g.Steps, tr.renderStep(st))
+	}
+	if tr.mx != nil {
+		g.Matrix = tr.mx.render()
 	}
 	return g
 }
@@ -2113,6 +2141,14 @@ type tourGoldenIndex struct {
 		Route  string `json:"route"`
 		Status int    `json:"status"`
 	} `json:"steps"`
+	// Matrix is an S5e matrix's rows (tour_matrix_test.go), nil for a golden
+	// without one.
+	Matrix *struct {
+		Sections []struct {
+			Name string   `json:"name"`
+			Rows []string `json:"rows"`
+		} `json:"sections"`
+	} `json:"matrix"`
 }
 
 // tourSlices lists the slice directories under testdata/tour.
@@ -2209,6 +2245,8 @@ func tourCoverage(t *testing.T, slice string, routes []string) ([]byte, map[stri
 			statuses[st.Route][st.Status] = true
 			areas[st.Route][key] = true
 		}
+		// An S5e matrix: each cell's status under its row's route.
+		countMatrixCells(t, slice, key, goldens[key], known, statuses, areas)
 	}
 	var b strings.Builder
 	fmt.Fprintf(&b, `# The routes the %s slice of the API tour reached (refactor plan §6.4
@@ -2289,6 +2327,9 @@ func TestTourCoverage(t *testing.T) {
 			succeeded[r] = true
 		}
 	}
+	// S5e: the union across slices, which holds the plan's 90% floor
+	// (tour_coverage_union_test.go).
+	writeTourUnionCoverage(t)
 	t.Logf("the API tour reaches %d of the %d routes (%.1f%%) across its slices, %d of them (%.1f%%) with a 2xx "+
 		"or 3xx answer", len(reached), len(routes), 100*float64(len(reached))/float64(len(routes)), len(succeeded),
 		100*float64(len(succeeded))/float64(len(routes)))
