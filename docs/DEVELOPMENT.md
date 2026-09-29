@@ -346,7 +346,9 @@ section that must leave them quiet fails if one published.
 S4b profiles: a workspace over its plan is read-only (`plan_read_only`) for
 a write of every guard kind that carries the gate, the nine always-writable
 routes answer as on a writable workspace, export and import work on it
-(REQ-113), only `POST /api/v1/projects` counts projects (Q13), and the
+(REQ-113), every project create counts toward the project maximum (quirk
+Q13, fixed; the self-hosted pass writes the two projects that take W over
+straight to the database, since no route creates one past it), and the
 hosted claim's plan flag. `tour_s5e_phantom_matrix_test.go` is the worked
 example of a matrix. It added to the framework: `tour.matrix` with its
 sections, `row`, `rowAs`, `rowCounting`, `countLists`, `expectRoutes` and

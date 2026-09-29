@@ -309,8 +309,32 @@ func (h *Handler) SyncAgents(w http.ResponseWriter, r *http.Request) {
 
 // --- Runs ---
 
+// launchParent is the parent of a run a request launches: the agent run
+// whose token sent it, recorded as a delegation records its parent
+// (ParentRunID), so the launching run's tree shows the run it set going; nil
+// for a person or a runner key.
+func launchParent(r *http.Request) *string {
+	if run := CurrentRun(r); run != nil {
+		id := run.ID
+		return &id
+	}
+	return nil
+}
+
+// launchRun enqueues a run a request asked for, with its launchParent.
+func (h *Handler) launchRun(r *http.Request, launch agentruns.LaunchRequest) (*agentruns.Run, error) {
+	if launch.ParentRunID == nil {
+		launch.ParentRunID = launchParent(r)
+	}
+	run, _, err := h.runService.Launch(launch)
+	return run, err
+}
+
 // LaunchAgentRun starts a manual run for an agent (by slug).
 func (h *Handler) LaunchAgentRun(w http.ResponseWriter, r *http.Request) {
+	if !h.requireNoProposalRunLaunch(w, r) {
+		return
+	}
 	agent, err := h.agentService.GetBySlug(ActiveOrg(r), mux.Vars(r)["slug"])
 	if err != nil || agent == nil {
 		writeJSONError(w, http.StatusNotFound, "agent not found")
@@ -325,7 +349,13 @@ func (h *Handler) LaunchAgentRun(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	if req.ProjectID != "" && !h.requireProjectRole(w, r, req.ProjectID, members.RoleEditor) {
+	// A launch in a project takes its editor; one with none runs in the
+	// active workspace, where the agent was found (requireUnscopedLaunch).
+	if req.ProjectID != "" {
+		if !h.requireProjectRole(w, r, req.ProjectID, members.RoleEditor) {
+			return
+		}
+	} else if !h.requireUnscopedLaunch(w, r, ActiveOrg(r)) {
 		return
 	}
 	// The run belongs to the project's org when project-scoped, else to the
@@ -348,7 +378,7 @@ func (h *Handler) LaunchAgentRun(w http.ResponseWriter, r *http.Request) {
 	if req.WorkItemID != "" {
 		launch.WorkItemID = &req.WorkItemID
 	}
-	run, _, err := h.runService.Launch(launch)
+	run, err := h.launchRun(r, launch)
 	if err != nil {
 		// Over-budget soft-block (enforcement on) is a distinct, expected
 		// refusal — surface it as 402 so the UI can message it clearly.
@@ -445,7 +475,7 @@ func (h *Handler) DraftTestCases(w http.ResponseWriter, r *http.Request) {
 		Prompt:     prompt,
 		LaunchedBy: CurrentUserID(r),
 	}
-	run, _, err := h.runService.Launch(launch)
+	run, err := h.launchRun(r, launch)
 	if err != nil {
 		// Mirror LaunchAgentRun: an over-budget soft-block is a distinct 402.
 		if errors.Is(err, agentruns.ErrBudgetExceeded) {
@@ -525,7 +555,8 @@ func (h *Handler) GetAgentRunTree(w http.ResponseWriter, r *http.Request) {
 		respondInternal(w, r, "failed to load run tree", err)
 		return
 	}
-	json.NewEncoder(w).Encode(tree)
+	// A child may sit outside the root's scope (readableRunTree).
+	json.NewEncoder(w).Encode(h.readableRunTree(r, tree))
 }
 
 func (h *Handler) GetAgentRunLogs(w http.ResponseWriter, r *http.Request) {
@@ -618,6 +649,9 @@ func (h *Handler) CancelAgentRun(w http.ResponseWriter, r *http.Request) {
 // failed, cancelled, and timed_out runs are retryable — a status conflict
 // answers 409 with the sentinel text, like the worker lifecycle endpoints.
 func (h *Handler) RetryAgentRun(w http.ResponseWriter, r *http.Request) {
+	if !h.requireNoProposalRunLaunch(w, r) {
+		return
+	}
 	if !requireUser(w, r) {
 		return
 	}
@@ -1100,6 +1134,9 @@ func (h *Handler) DeleteAutomation(w http.ResponseWriter, r *http.Request) {
 
 // RunAutomationNow launches an automation's run immediately.
 func (h *Handler) RunAutomationNow(w http.ResponseWriter, r *http.Request) {
+	if !h.requireNoProposalRunLaunch(w, r) {
+		return
+	}
 	if !requireUser(w, r) {
 		return
 	}
@@ -1123,7 +1160,7 @@ func (h *Handler) RunAutomationNow(w http.ResponseWriter, r *http.Request) {
 		prompt = "Manual run of automation: " + automation.Name
 	}
 	automationID := automation.ID
-	run, _, err := h.runService.Launch(agentruns.LaunchRequest{
+	run, err := h.launchRun(r, agentruns.LaunchRequest{
 		OrgID:        automation.OrgID,
 		AgentID:      agentID,
 		ProjectID:    automation.ProjectID,
@@ -2188,6 +2225,9 @@ func (h *Handler) RemoveTeamEdge(w http.ResponseWriter, r *http.Request) {
 
 // LaunchTeamRun starts a run at the team's entry node.
 func (h *Handler) LaunchTeamRun(w http.ResponseWriter, r *http.Request) {
+	if !h.requireNoProposalRunLaunch(w, r) {
+		return
+	}
 	graph, err := h.teamService.GetTeam(mux.Vars(r)["id"])
 	if err != nil {
 		respondError(w, r, http.StatusNotFound, "team not found", err)
@@ -2270,7 +2310,7 @@ func (h *Handler) LaunchTeamRun(w http.ResponseWriter, r *http.Request) {
 	if req.ProjectID != "" {
 		launch.ProjectID = &req.ProjectID
 	}
-	run, _, err := h.runService.Launch(launch)
+	run, err := h.launchRun(r, launch)
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return

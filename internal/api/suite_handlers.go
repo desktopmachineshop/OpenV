@@ -397,6 +397,9 @@ func (h *Handler) ListTestResults(w http.ResponseWriter, r *http.Request) {
 // manual or physical are never handed to the agent — they stay with people,
 // and are reported back as skipped so the UI can show what still needs doing.
 func (h *Handler) LaunchTestRunAgent(w http.ResponseWriter, r *http.Request) {
+	if !h.requireNoProposalRunLaunch(w, r) {
+		return
+	}
 	runID := mux.Vars(r)["id"]
 	testRun, err := h.vvService.GetRun(runID)
 	if err != nil {
@@ -448,7 +451,7 @@ func (h *Handler) LaunchTestRunAgent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	agentRun, _, err := h.runService.Launch(agentruns.LaunchRequest{
+	agentRun, err := h.launchRun(r, agentruns.LaunchRequest{
 		OrgID:      orgID,
 		AgentID:    agent.ID,
 		ProjectID:  &testRun.ProjectID,
@@ -1169,6 +1172,9 @@ func (h *Handler) ListGuidedChatMessages(w http.ResponseWriter, r *http.Request)
 }
 
 func (h *Handler) PostGuidedChatMessage(w http.ResponseWriter, r *http.Request) {
+	if !h.requireNoProposalRunLaunch(w, r) {
+		return
+	}
 	session := h.getGuidedSessionChecked(w, r, members.RoleEditor)
 	if session == nil {
 		return
@@ -1197,7 +1203,7 @@ func (h *Handler) PostGuidedChatMessage(w http.ResponseWriter, r *http.Request) 
 	}
 	h.sseHub.BroadcastSession("guided:"+session.ID, "message", message)
 
-	if err := h.launchGuidedTurn(CurrentUserID(r), session, req.Step, req.State, "", req.ArtifactID); err != nil {
+	if err := h.launchGuidedTurn(CurrentUserID(r), launchParent(r), session, req.Step, req.State, "", req.ArtifactID); err != nil {
 		note, _ := h.guidedService.AppendChatMessage(session.ID, guided.ChatRoleSystem,
 			"The V&V Assistant is unavailable right now ("+err.Error()+"). Your message was saved — please try again shortly.")
 		if note != nil {
@@ -1214,6 +1220,9 @@ func (h *Handler) PostGuidedChatMessage(w http.ResponseWriter, r *http.Request) 
 // is still empty, so the AI speaks first. No-op when messages exist or a turn
 // is already pending.
 func (h *Handler) KickoffGuidedChat(w http.ResponseWriter, r *http.Request) {
+	if !h.requireNoProposalRunLaunch(w, r) {
+		return
+	}
 	session := h.getGuidedSessionChecked(w, r, members.RoleEditor)
 	if session == nil {
 		return
@@ -1247,7 +1256,7 @@ func (h *Handler) KickoffGuidedChat(w http.ResponseWriter, r *http.Request) {
 		reply("pending")
 		return
 	}
-	if err := h.launchGuidedTurn(CurrentUserID(r), session, req.Step, req.State, "", req.ArtifactID); err != nil {
+	if err := h.launchGuidedTurn(CurrentUserID(r), launchParent(r), session, req.Step, req.State, "", req.ArtifactID); err != nil {
 		note, _ := h.guidedService.AppendChatMessage(session.ID, guided.ChatRoleSystem,
 			"The V&V Assistant is unavailable right now ("+err.Error()+"). You can keep filling in the wizard and try the chat again shortly.")
 		if note != nil {
@@ -1274,6 +1283,9 @@ func (h *Handler) KickoffGuidedChat(w http.ResponseWriter, r *http.Request) {
 // for one. After parking, this handler therefore re-checks and takes the
 // nudge back when the session turns out to be free, launching it itself.
 func (h *Handler) NudgeGuidedChat(w http.ResponseWriter, r *http.Request) {
+	if !h.requireNoProposalRunLaunch(w, r) {
+		return
+	}
 	session := h.getGuidedSessionChecked(w, r, members.RoleEditor)
 	if session == nil {
 		return
@@ -1334,7 +1346,7 @@ func (h *Handler) NudgeGuidedChat(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	// Nudges are best-effort commentary: no system note on failure.
-	if err := h.launchGuidedTurn(CurrentUserID(r), session, nudge.Step, nudge.State, nudge.Event, ""); err != nil {
+	if err := h.launchGuidedTurn(CurrentUserID(r), launchParent(r), session, nudge.Step, nudge.State, nudge.Event, ""); err != nil {
 		reply("unavailable")
 		return
 	}
@@ -1376,7 +1388,7 @@ func (h *Handler) LaunchGuidedNudge(sessionID string, nudge guided.PendingNudge,
 	if event == "" {
 		event = "updated the wizard"
 	}
-	return h.launchGuidedTurn(launchedBy, session, nudge.Step, nudge.State, event, "")
+	return h.launchGuidedTurn(launchedBy, nil, session, nudge.Step, nudge.State, event, "")
 }
 
 // StreamGuidedChat is the wizard's copilot SSE channel.
@@ -1399,8 +1411,9 @@ func (h *Handler) StreamGuidedChat(w http.ResponseWriter, r *http.Request) {
 
 // launchGuidedTurn enqueues one copilot response as a priority run. event,
 // when non-empty, describes a wizard action the user took without chatting
-// (e.g. saving a step) for the copilot to react to.
-func (h *Handler) launchGuidedTurn(launchedBy *string, session *guided.Session, step int, state map[string]interface{}, event, artifactID string) error {
+// (e.g. saving a step) for the copilot to react to; parentRunID is the
+// request's launchParent (nil for a parked nudge the run hooks launch).
+func (h *Handler) launchGuidedTurn(launchedBy, parentRunID *string, session *guided.Session, step int, state map[string]interface{}, event, artifactID string) error {
 	// The copilot agent lives in the project's workspace.
 	orgID := ""
 	if project, err := h.projectService.GetProject(session.ProjectID); err == nil && project != nil {
@@ -1459,6 +1472,7 @@ func (h *Handler) launchGuidedTurn(launchedBy *string, session *guided.Session, 
 		AgentID:         agent.ID,
 		ProjectID:       &projectID,
 		GuidedSessionID: &sessionID,
+		ParentRunID:     parentRunID,
 		Priority:        agentruns.PriorityInterview,
 		Prompt:          prompt,
 		LaunchedBy:      launchedBy,
@@ -1475,7 +1489,13 @@ func (h *Handler) launchGuidedTurn(launchedBy *string, session *guided.Session, 
 
 // --- Interviews (internal) ---
 
+// CreateInterview names the interviewer whose run each participant message
+// launches (launchInterviewTurn), so a proposal-mode run is refused it as a
+// launch, as it is the invite (requireNoProposalRunLaunch).
 func (h *Handler) CreateInterview(w http.ResponseWriter, r *http.Request) {
+	if !h.requireNoProposalRunLaunch(w, r) {
+		return
+	}
 	projectID := mux.Vars(r)["id"]
 	if !h.requireProjectRole(w, r, projectID, members.RoleEditor) {
 		return
@@ -1603,6 +1623,9 @@ func (h *Handler) CloseInterview(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) CreateInterviewInvite(w http.ResponseWriter, r *http.Request) {
+	if !h.requireNoProposalRunLaunch(w, r) {
+		return
+	}
 	interview := h.getInterviewChecked(w, r, members.RoleEditor)
 	if interview == nil {
 		return
