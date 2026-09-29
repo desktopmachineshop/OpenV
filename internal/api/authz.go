@@ -21,7 +21,8 @@ import (
 // act as owners; members pass when their effective role (direct grant or
 // people-team grant, whichever is highest) meets minRole; agent runs pass as
 // editor-equivalent inside their own project only; workers pass only for
-// projects belonging to their own org.
+// projects belonging to their own org, and a member's personal runner key
+// above a viewer's read only where its holder would (personalKeyAccess).
 func (h *Handler) requireProjectRole(w http.ResponseWriter, r *http.Request, projectID string, minRole string) bool {
 	if !h.projectAccess(w, r, projectID, minRole) {
 		return false
@@ -48,7 +49,7 @@ func (h *Handler) projectAccess(w http.ResponseWriter, r *http.Request, projectI
 			return false
 		}
 		if project.OrgID == workerOrg {
-			return true
+			return h.personalKeyAccess(w, r, project.OrgID, projectID, minRole)
 		}
 		writeJSONError(w, http.StatusForbidden, "worker key does not belong to this project's workspace")
 		return false
@@ -81,6 +82,36 @@ func (h *Handler) projectAccess(w http.ResponseWriter, r *http.Request, projectI
 	}
 
 	role, err := h.memberService.EffectiveRole(projectID, user.ID)
+	if err != nil {
+		respondInternal(w, r, "failed to resolve project access", err)
+		return false
+	}
+	if role == "" || !members.RoleAtLeast(role, minRole) {
+		writeJSONError(w, http.StatusForbidden, "you do not have access to this project")
+		return false
+	}
+	return true
+}
+
+// personalKeyAccess decides a worker key of the project's own workspace. A
+// workspace key (no holder) carries workspace-wide editor rights (OpenV
+// REQ-42) and passes. A member's personal runner key (a session key among
+// them) is its holder acting, so anything above a viewer's read needs what
+// the holder's own session would: admin of the workspace, or an effective
+// project role that meets minRole (REQ-16, REQ-79). A viewer's read still
+// passes for any project of the workspace, since the runner reads a claimed
+// ownerless run's repository connections with the key.
+func (h *Handler) personalKeyAccess(w http.ResponseWriter, r *http.Request, orgID, projectID, minRole string) bool {
+	holder := WorkerUser(r)
+	if holder == "" || members.RoleAtLeast(members.RoleViewer, minRole) {
+		return true
+	}
+	if h.orgService != nil {
+		if role, err := h.orgService.RoleInOrg(orgID, holder); err == nil && role == orgs.RoleAdmin {
+			return true
+		}
+	}
+	role, err := h.memberService.EffectiveRole(projectID, holder)
 	if err != nil {
 		respondInternal(w, r, "failed to resolve project access", err)
 		return false
@@ -275,7 +306,7 @@ func (h *Handler) pendingArtifactRef(runID, ref string) *proposals.Proposal {
 	if runID == "" || ref == "" {
 		return nil
 	}
-	list, err := h.proposalService.List("", "", runID)
+	list, err := h.proposalService.List("", "", "", runID)
 	if err != nil {
 		return nil
 	}

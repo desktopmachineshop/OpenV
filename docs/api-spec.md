@@ -42,7 +42,9 @@ worker passes it to the agent process, which calls back with
 `Authorization: Bearer <run-token>`. A run authenticates as an
 editor-equivalent principal **inside its own project only**; runs with
 `write_mode: proposal` have their writes diverted into the proposal queue
-(HTTP 202 with a proposal receipt) instead of being applied.
+(HTTP 202 with a proposal receipt) instead of being applied. A run token
+never reviews a proposal, its own run's or another's: approve and reject
+answer it `403` (REQ-21).
 
 ### 3. Workers — Bearer org-scoped worker key
 
@@ -60,7 +62,12 @@ Keys are org-scoped rows in `worker_keys` (stored hashed):
   key.
 
 A worker principal passes project checks only for projects belonging to its
-own org.
+own org. There a workspace key passes every project check (REQ-42's
+workspace-wide editor rights), while a personal key (a session key among
+them) is its holder acting: it passes a viewer's read in any project of the
+org, and anything more only where its holder would, as an admin of the
+workspace or with a project role that meets the route's (REQ-16); otherwise
+it gets the project's `403`.
 
 ### 3a. Runner pool nodes — Bearer `RUNNER_POOL_KEY`
 
@@ -92,8 +99,10 @@ Enforced per-handler via `internal/api/authz.go`:
   `reviewer` (REQ-150) reads everything a viewer reads and may comment
   (`POST /chatter`), and is refused every write an editor makes; it is the
   role a reviewer share link grants (`docs/sharing.md`).
-- **Agent runs** count as editor within their own project; **workers** pass
-  for any project in their org; **run access** (viewing logs/streams) is
+- **Agent runs** count as editor within their own project, except that they
+  never approve or reject a proposal; **workers** pass
+  for any project in their org, a personal key above a viewer's read only
+  where its holder would; **run access** (viewing logs/streams) is
   granted to the launcher, then by the project ladder, then org admin for
   unscoped runs.
 - **Crew writes**: project-pinned crews need project editor; workspace-wide
@@ -105,7 +114,8 @@ Generated from the router registrations in `internal/api/*.go`
 (`RegisterRoutes` and the `register*Routes` helpers) as of commit `2d6cd72`.
 Auth column: `open` (no credentials) · `user` (any session) ·
 `viewer`/`reviewer`/`editor`/`owner` (project role ladder; agent runs count as editor in
-their own project, workers pass within their org) · `org member`/`org admin`
+their own project, workers pass within their org, a personal key above
+`viewer` only with its holder's role) · `org member`/`org admin`
 (workspace role) · `worker` (worker key) · `run` (run token) ·
 `token` (public one-time/invite token).
 
@@ -1050,14 +1060,14 @@ own stream and as `assistant_partial` on any session the run belongs to.
 | Method | Path | Purpose | Auth |
 |---|---|---|---|
 | GET | `/api/v1/automations` | List automations | user |
-| POST | `/api/v1/automations` | Create (manual / cron / event-triggered) | editor (project-pinned) / org admin |
+| POST | `/api/v1/automations` | Create (manual / cron / event-triggered). `created_by` is the caller, whatever the body says. A triggered automation fires only on events of its own workspace, and of its own project when pinned to one; a workspace-wide one's run takes the event's project | editor (project-pinned) / org admin |
 | GET | `/api/v1/automations/{id}` | Details | org member |
 | PUT | `/api/v1/automations/{id}` | Update | editor / org admin |
 | DELETE | `/api/v1/automations/{id}` | Delete | editor / org admin |
 | POST | `/api/v1/automations/{id}/run-now` | Launch immediately | editor / org admin |
-| GET | `/api/v1/proposals` | List pending agent proposals | viewer (project) / org admin |
-| POST | `/api/v1/proposals/{id}/approve` | Apply a proposed write | editor |
-| POST | `/api/v1/proposals/{id}/reject` | Reject it | editor |
+| GET | `/api/v1/proposals` | List agent proposals, newest first, at most 500: `?project_id=` (viewer), or without it the active workspace's (org admin); `status`, `run_id` narrow either | viewer (project) / org admin |
+| POST | `/api/v1/proposals/{id}/approve` | Apply a proposed write; a run token is refused (`403`) | editor |
+| POST | `/api/v1/proposals/{id}/reject` | Reject it; a run token is refused (`403`) | editor |
 
 ### Repo connections & provider settings
 

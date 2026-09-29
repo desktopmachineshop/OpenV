@@ -70,7 +70,7 @@ func TestProposalRepositoryRefRoundTrip(t *testing.T) {
 		t.Fatalf("a proposal with no token should read back ref=\"\", got %q", gotNoRef.Ref)
 	}
 
-	list, err := repo.List("", "", runID)
+	list, err := repo.List("", "", "", runID)
 	if err != nil {
 		t.Fatalf("list: %v", err)
 	}

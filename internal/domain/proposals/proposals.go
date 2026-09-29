@@ -70,7 +70,10 @@ type Repository interface {
 	Save(p *Proposal) error
 	Update(p *Proposal) error
 	FindByID(id string) (*Proposal, error)
-	List(projectID, status, runID string) ([]*Proposal, error)
+	// List returns proposals newest first, filtered by any of workspace
+	// (the workspace of the proposal's project), project, status and run,
+	// all applied before the repository's row limit.
+	List(orgID, projectID, status, runID string) ([]*Proposal, error)
 	CountByRun(runID string) (int, error)
 }
 
@@ -91,7 +94,7 @@ type Service interface {
 	// Propose records a pending write from an agent run.
 	Propose(runID, projectID, op string, targetID *string, payload map[string]interface{}) (*Proposal, error)
 	Get(id string) (*Proposal, error)
-	List(projectID, status, runID string) ([]*Proposal, error)
+	List(orgID, projectID, status, runID string) ([]*Proposal, error)
 	// Approve applies the proposal via the wired appliers.
 	Approve(id string, reviewedBy *string, note string) (*Proposal, error)
 	Reject(id string, reviewedBy *string, note string) (*Proposal, error)
@@ -202,7 +205,7 @@ func (s *DefaultService) Propose(runID, projectID, op string, targetID *string, 
 // Refs are compared exactly; only proposals that actually minted a ref (i.e.
 // create_artifact proposals) participate, since empty refs are never indexed.
 func (s *DefaultService) assertRefAvailable(runID, ref string) error {
-	siblings, err := s.repo.List("", "", runID)
+	siblings, err := s.repo.List("", "", "", runID)
 	if err != nil {
 		return err
 	}
@@ -226,9 +229,9 @@ func (s *DefaultService) Get(id string) (*Proposal, error) {
 	return p, nil
 }
 
-// List returns proposals filtered by any of project, status, run.
-func (s *DefaultService) List(projectID, status, runID string) ([]*Proposal, error) {
-	return s.repo.List(projectID, status, runID)
+// List returns proposals filtered by any of workspace, project, status, run.
+func (s *DefaultService) List(orgID, projectID, status, runID string) ([]*Proposal, error) {
+	return s.repo.List(orgID, projectID, status, runID)
 }
 
 // Approve applies a pending proposal.
@@ -348,7 +351,7 @@ func (s *DefaultService) resolveLinkPayload(p *Proposal) (map[string]interface{}
 	toID, _ := p.Payload["to_id"].(string)
 
 	// Build the ref -> proposal index only from this run's siblings.
-	siblings, err := s.repo.List("", "", p.RunID)
+	siblings, err := s.repo.List("", "", "", p.RunID)
 	if err != nil {
 		return nil, err
 	}
