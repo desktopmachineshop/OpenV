@@ -31,15 +31,15 @@ Usage of agentd:
   -mcp-binary string
     	path to the openv-mcp binary (default "$BINDIR/openv-mcp")
   -node-name string
-    	stable name for this pool node (default: hostname) (default "node-a")
+    	stable name for this pool node (read from RUNNER_NODE_NAME when not given; the hostname when neither sets it)
   -pool string
-    	pool this node belongs to (default "default") (default "gpu")
+    	pool this node belongs to (read from RUNNER_POOL when not given; "default" when neither sets it)
   -pool-key string
-    	transient runner pool key: run as a pre-warmed pool node instead of a fixed runner (default "pk-example")
+    	transient runner pool key: run as a pre-warmed pool node instead of a fixed runner (read from RUNNER_POOL_KEY when not given)
   -session-root string
     	parent directory for per-lease HOME directories (pool mode) (default "/srv/openv/sessions")
   -worker-key string
-    	worker API key (required) (default "wk-example")
+    	worker API key (required; read from WORKER_API_KEY when not given)
   -workspace-retention duration
     	how long finished run workspaces are kept before cleanup (default 1h30m0s)
   -workspaces string
