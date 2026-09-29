@@ -215,14 +215,18 @@ prints:
   its test in `"test"`, and a failure prints its command; the V&V and suite
   slice's areas run as `TestTourS5b<Area>`, such as
   `-run '^TestTourS5bEvidence$'`, the identity and workspace slice's as
-  `TestTourS5c<Area>`, such as `-run '^TestTourS5cBilling$'`, and the agents
+  `TestTourS5c<Area>`, such as `-run '^TestTourS5cBilling$'`, the agents
   and worker wire slice's as `TestTourS5d<Area>`, such as
-  `-run '^TestTourS5dWorkerWire$'`), `-run '^TestTourS5d'` for one slice, or
+  `-run '^TestTourS5dWorkerWire$'`, and the authorization matrix slice's as
+  `TestTourS5e<Area>`, such as `-run '^TestTourS5ePhantomMatrix$'`),
+  `-run '^TestTourS5e'` for one slice, or
   `-run '^TestTour'` for every area (a server with or without pgvector); an
-  area's run also rewrites its slice's `coverage.txt`, and
+  area's run also rewrites its slice's `coverage.txt` and the union across
+  slices, `cmd/server/testdata/tour/coverage.txt`, and
   `UPDATE_GOLDEN=1 go test ./cmd/server -count=1 -run '^TestTourCoverage$'`
-  rewrites every slice's `coverage.txt` alone, with no database. Two area
-  commits combined conflict there: regenerate it, never merge it by hand
+  rewrites every slice's `coverage.txt` and the union alone, with no
+  database. Two area commits combined conflict there: regenerate them, never
+  merge them by hand
 - SSE and event payloads (S6): `UPDATE_GOLDEN=1 go test ./internal/api -count=1 -run '^TestSSEContract$'`
   and `-run '^TestEventPayloadTypes$'`
 - MCP and worker wire (S7): `UPDATE_GOLDEN=1 go test ./internal/mcp ./internal/runner -run <Test>`
