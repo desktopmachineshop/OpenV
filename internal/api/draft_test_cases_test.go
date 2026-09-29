@@ -172,3 +172,52 @@ func TestDraftTestCasesValidation(t *testing.T) {
 		}
 	})
 }
+
+// TestDraftTestCasesRefusesAProposalModeRun locks in REQ-21 and REQ-75 on the
+// draft: a draft launches a run and puts its card on the board, which no
+// proposal can carry, so a proposal-mode run's token is refused, as it is a
+// status change, and launches nothing. A direct-mode run of the project, whose
+// writes land anyway, may still draft (the S5d tour pins it as it is).
+func TestDraftTestCasesRefusesAProposalModeRun(t *testing.T) {
+	asRun := func(agentID string) *http.Request {
+		pid := "proj-1"
+		r := httptest.NewRequest(http.MethodPost, "/api/v1/projects/proj-1/draft-test-cases",
+			strings.NewReader(`{"requirement_ids":["`+draftReqUUID1+`"]}`))
+		ctx := context.WithValue(r.Context(), ctxRun, &agentruns.Run{ID: "run-1", OrgID: "org-1", AgentID: agentID, ProjectID: &pid})
+		return mux.SetURLVars(r.WithContext(ctx), map[string]string{"id": "proj-1"})
+	}
+	withAgents := func() (*Handler, *fakeRunService) {
+		h, runSvc := newDraftFixture()
+		catalog := h.agentService.(*fakeAgentService)
+		catalog.byID["agent-proposal"] = &agents.Agent{ID: "agent-proposal", OrgID: "org-1", Slug: "drafter", WriteMode: agents.WriteModeProposal}
+		catalog.byID["agent-direct"] = &agents.Agent{ID: "agent-direct", OrgID: "org-1", Slug: "helper", WriteMode: agents.WriteModeDirect}
+		return h, runSvc
+	}
+
+	t.Run("a proposal-mode run is refused", func(t *testing.T) {
+		h, runSvc := withAgents()
+		w := httptest.NewRecorder()
+		h.DraftTestCases(w, asRun("agent-proposal"))
+		if w.Code != http.StatusForbidden {
+			t.Fatalf("status = %d, want 403 (body %q)", w.Code, w.Body.String())
+		}
+		if !strings.Contains(w.Body.String(), "proposal-mode agent runs cannot draft test cases") {
+			t.Errorf("body = %q, want the proposal-mode refusal", w.Body.String())
+		}
+		if len(runSvc.launchReqs) != 0 {
+			t.Fatalf("a proposal-mode run launched %d runs through the draft", len(runSvc.launchReqs))
+		}
+	})
+
+	t.Run("a direct-mode run drafts", func(t *testing.T) {
+		h, runSvc := withAgents()
+		w := httptest.NewRecorder()
+		h.DraftTestCases(w, asRun("agent-direct"))
+		if w.Code != http.StatusCreated {
+			t.Fatalf("status = %d, want 201 (body %q)", w.Code, w.Body.String())
+		}
+		if len(runSvc.launchReqs) != 1 {
+			t.Fatalf("launch calls = %d, want 1", len(runSvc.launchReqs))
+		}
+	})
+}

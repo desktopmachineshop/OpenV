@@ -696,7 +696,7 @@
     },
     {
       "n": 18,
-      "title": "the run's token drafts in P: 201, a run of the test-case author with no launched_by and no parent; the draft is no write the proposal mode diverts",
+      "title": "the run's token drafts in P: 403, as a status change is; no proposal can carry a launch, so a proposal-mode run launches none",
       "actor": "author",
       "route": "POST /api/v1/projects/{id}/draft-test-cases",
       "request": {
@@ -707,52 +707,21 @@
         ],
         "body": "{\"requirement_ids\":[\"<r1>\"]}"
       },
-      "status": 201,
-      "content_type": "text/plain; charset=utf-8",
+      "status": 403,
+      "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": "<varies>",
+      "content_length": 61,
       "kind": "json",
       "body": [
-        "{\"id\":\"<author_t>\",\"org_id\":\"<w>\",\"agent_id\":\"<author.agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<author_t.card>\",\"status\":\"queued\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Draft verification test cases for the following requirement artifacts in project <p>: <r1>.\\n\\nFor each requirement: fetch it with get_artifact, draft one or more test-case artifacts (preconditions, numbered steps, expected result tied to its fit criterion) via create_artifact, then create a verifies link from each new test case to the requirement via create_link. Everything you create is a proposal for human review.\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"created_at\":\"<time@step 18>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_effort\":\"medium\",\"agent_name\":\"Test Case Author\",\"agent_provider\":\"claude-code\"}"
+        "{\"error\":\"proposal-mode agent runs cannot draft test cases\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "id": "<author_t>",
-        "org_id": "<w>",
-        "agent_id": "<author.agent>",
-        "project_id": "<p>",
-        "work_item_id": "<author_t.card>",
-        "status": "queued",
-        "cancel_requested": false,
-        "priority": 0,
-        "prompt": "Draft verification test cases for the following requirement artifacts in project <p>: <r1>.\n\nFor each requirement: fetch it with get_artifact, draft one or more test-case artifacts (preconditions, numbered steps, expected result tied to its fit criterion) via create_artifact, then create a verifies link from each new test case to the requirement via create_link. Everything you create is a proposal for human review.",
-        "final_text": "",
-        "error": "",
-        "attempt_count": 1,
-        "max_attempts": 3,
-        "tokens_in": 0,
-        "tokens_out": 0,
-        "artifacts_touched": [],
-        "created_at": "<time@step 18>",
-        "agent_content_hash": "<hex64:1>",
-        "agent_effort": "medium",
-        "agent_name": "Test Case Author",
-        "agent_provider": "claude-code"
+        "error": "proposal-mode agent runs cannot draft test cases"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
-      "events": [
-        {
-          "type": "workitem.created",
-          "actor": "agent:<author_t>",
-          "project": "<p>",
-          "entity": "<author_t.card>",
-          "payload": {
-            "column": "string \"todo\"",
-            "title": "string \"Agent run: Test Case Author\""
-          }
-        }
-      ]
+      "events": []
     },
     {
       "n": 19,
@@ -1574,7 +1543,7 @@
     },
     {
       "n": 36,
-      "title": "the second run: failed; the finalisation's error is not stored",
+      "title": "the second run: failed, with the finalisation's error stored",
       "actor": "owner",
       "acting_in": "<w>",
       "route": "GET /api/v1/agent-runs/{id}",
@@ -1589,7 +1558,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<author2>\",\"org_id\":\"<w>\",\"agent_id\":\"<author.agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<author2.card>\",\"status\":\"failed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Draft verification test cases for the following requirement artifacts in project <p>: <r2>, <phantom>.\\n\\nFor each requirement: fetch it with get_artifact, draft one or more test-case artifacts (preconditions, numbered steps, expected result tied to its fit criterion) via create_artifact, then create a verifies link from each new test case to the requirement via create_link. Everything you create is a proposal for human review.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@before step 33>\",\"finished_at\":\"<time@step 35>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"created_at\":\"<time@step 7>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_effort\":\"medium\",\"agent_name\":\"Test Case Author\",\"agent_provider\":\"claude-code\"}"
+        "{\"id\":\"<author2>\",\"org_id\":\"<w>\",\"agent_id\":\"<author.agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<author2.card>\",\"status\":\"failed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Draft verification test cases for the following requirement artifacts in project <p>: <r2>, <phantom>.\\n\\nFor each requirement: fetch it with get_artifact, draft one or more test-case artifacts (preconditions, numbered steps, expected result tied to its fit criterion) via create_artifact, then create a verifies link from each new test case to the requirement via create_link. Everything you create is a proposal for human review.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@before step 33>\",\"finished_at\":\"<time@step 35>\",\"final_text\":\"\",\"error\":\"one or more approved proposals failed to apply\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"created_at\":\"<time@step 7>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_effort\":\"medium\",\"agent_name\":\"Test Case Author\",\"agent_provider\":\"claude-code\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1606,7 +1575,7 @@
         "heartbeat_at": "<time@before step 33>",
         "finished_at": "<time@step 35>",
         "final_text": "",
-        "error": "",
+        "error": "one or more approved proposals failed to apply",
         "attempt_count": 1,
         "max_attempts": 3,
         "tokens_in": 0,

@@ -31,9 +31,10 @@ import (
 //     keeps the first row's); the refusals (a body that does not decode, an
 //     unknown provider, an auth mode, an api_key_env outside the catalogue,
 //     whose message lists the whole catalogue, a member, a key); the
-//     worker's detection report, one provider per request (the handler
-//     ranges over a Go map, so a report naming a valid and an unknown
-//     provider may or may not record the valid one), merged into
+//     worker's detection report, one provider per request (a report naming
+//     a known and an unknown provider records the known one and answers 400
+//     for the other, which internal/api's
+//     TestProviderDetectionRecordsEveryKnownProvider pins), merged into
 //     last_detected with checked_at (whole seconds), a detected model list
 //     ahead of the catalog, a detection of a provider with no stored row
 //     storing one, and the refusals (a user, the pool key, an unknown
@@ -72,7 +73,7 @@ import (
 //     runner), which stamps the lease's last_activity_at; the lease ended
 //     (setup), the beat that sees no assignment, the lease's key refused; a
 //     release naming another lease (a no-op), the release, and the
-//     refusals (a phantom node, a 500 since ErrNodeNotFound is not mapped;
+//     refusals (a phantom node, 404 as its beat answers, not registered;
 //     a phantom node's beat, 404; ids that are not UUIDs; bodies; a key, a
 //     user).
 //
@@ -486,8 +487,8 @@ func providersReposPoolNodes(tr *tour, o, m, box, pool *tourActor) {
 	tr.step("the node releases with {}: 204, idle either way", pool, release, node, jsonBody(`{}`))
 
 	// Nodes no one has, and credentials that are not the pool's.
-	tr.step("release a node no one has: 500, ErrNodeNotFound is not told apart", pool, release, at("id", "{{phantom}}"),
-		jsonBody(`{}`))
+	tr.step("release a node no one has: 404, not registered, as its beat answers", pool, release,
+		at("id", "{{phantom}}"), jsonBody(`{}`))
 	tr.step("a node no one has beats: 404, register again", pool, heartbeat, at("id", "{{phantom}}"))
 	tr.step("a node id that is not a UUID beats", pool, heartbeat, at("id", "not-a-node"))
 	tr.step("release a node id that is not a UUID", pool, release, at("id", "not-a-node"), jsonBody(`{}`))

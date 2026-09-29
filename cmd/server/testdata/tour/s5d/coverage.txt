@@ -11,7 +11,7 @@
 # only as far as a guard's, a decode's or a lookup's refusal, and the plan's
 # 90% floor counts only the routes with a 2xx or 3xx answer.
 
-DELETE /api/v1/agents/{slug}: 204, 403, 500; agents_automations
+DELETE /api/v1/agents/{slug}: 204, 403, 404; agents_automations
 DELETE /api/v1/artifacts/{id}: 202; proposals_events
 DELETE /api/v1/automations/{id}: 204, 403, 404; agents_automations
 DELETE /api/v1/crew-edges/{id}: 204, 403, 404; crews_teams
@@ -53,7 +53,7 @@ GET /api/v1/teams/{id}: 200, 404; crews_teams
 GET /api/v1/teams/{id}/export: 200, 404; crews_teams
 GET /api/v1/work-items/{id}: 200, 403; agents_automations, orchestration_budget
 POST /api/v1/agent-runs/claim: 200, 204, 400, 401, 403; orchestration_budget, providers_repos_pool, worker_wire
-POST /api/v1/agent-runs/delegate: 201, 400, 401, 403, 500; orchestration_budget
+POST /api/v1/agent-runs/delegate: 201, 400, 401, 403, 404, 500; orchestration_budget
 POST /api/v1/agent-runs/{id}/cancel: 200, 403; worker_wire
 POST /api/v1/agent-runs/{id}/finish: 200, 400, 409; orchestration_budget, proposals_events, worker_wire
 POST /api/v1/agent-runs/{id}/logs: 200, 400; worker_wire
@@ -86,7 +86,7 @@ POST /api/v1/provider-logins/{id}/progress: 200, 400, 404; providers_repos_pool
 POST /api/v1/provider-settings/detect: 204, 400, 403; providers_repos_pool
 POST /api/v1/runner-pool/nodes: 201, 400, 403; providers_repos_pool
 POST /api/v1/runner-pool/nodes/{id}/heartbeat: 200, 403, 404, 500; providers_repos_pool
-POST /api/v1/runner-pool/nodes/{id}/release: 204, 400, 403, 500; providers_repos_pool
+POST /api/v1/runner-pool/nodes/{id}/release: 204, 400, 403, 404, 500; providers_repos_pool
 POST /api/v1/teams: 201, 403; crews_teams
 POST /api/v1/teams/import: 201, 403; crews_teams
 POST /api/v1/teams/{id}/clone: 201; crews_teams

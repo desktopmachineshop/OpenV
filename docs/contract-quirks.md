@@ -104,19 +104,17 @@ the Phase 3 consolidations that give quirks their names.
   and on a shared product's vote, report and delete (steps 32, 48 and 61 of
   `cmd/server/testdata/tour/s5b/shared_products.json`), where a well-formed
   id no row has answers 404 (204 on the uncite, which looks nothing up).
-  The S5d tour pins the same family on agents and the worker wire: deleting
-  an agent that is gone, or a slug that is no slug, answers 500 `failed to
-  delete agent`, since `agents.ErrNotFound` is not mapped (steps 40 and 41
-  of `cmd/server/testdata/tour/s5d/agents_automations.json`); releasing a
-  pool node no one has answers 500, since `ErrNodeNotFound` is not told
-  apart, where its heartbeat answers 404 (steps 122 and 123 of
-  `providers_repos_pool.json`); a delegation from a run whose crew node was
-  removed answers 500, the run still naming the node (step 9 of
-  `orchestration_budget.json`); and an id that is not a UUID answers 500 on
-  a node's heartbeat and release and in the `agent_id` and `run_id` filters
-  of the run and proposal lists (steps 124 and 125 of
-  `providers_repos_pool.json`, step 100 of `worker_wire.json`, step 24 of
-  `proposals_events.json`).
+  The S5d tour pins the same family on agents and the worker wire: an id
+  that is not a UUID answers 500 on a node's heartbeat and release and in
+  the `agent_id` and `run_id` filters of the run and proposal lists (steps
+  124 and 125 of `cmd/server/testdata/tour/s5d/providers_repos_pool.json`,
+  step 100 of `worker_wire.json`, step 24 of `proposals_events.json`). Its
+  well-formed neighbours answer 404, the not-found of their sibling routes:
+  deleting an agent that is gone, or a slug no agent has (steps 40 and 41 of
+  `agents_automations.json`), releasing a pool node no one has, as its
+  heartbeat does (steps 122 and 123 of `providers_repos_pool.json`), and a
+  delegation from a run whose crew node was removed, the run still naming
+  the node (step 9 of `orchestration_budget.json`).
 
 ## Q3. Managed link edits in `PUT /artifacts/{id}` take their own path
 

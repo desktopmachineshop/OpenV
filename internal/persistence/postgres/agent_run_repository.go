@@ -250,10 +250,12 @@ func (rep *AgentRunRepository) Claim(workerID string, orgID string, workerUserID
 //
 // partial_text is cleared with the release: the answer the departing worker
 // had begun is not the answer whichever worker picks the run up next will
-// write, and a queued run must not show text as if it were being typed.
+// write, and a queued run must not show text as if it were being typed. The
+// run token is revoked with it: the departing worker, and the agent it
+// started, no longer act for the run, and the next claim issues a new token.
 func (rep *AgentRunRepository) ReleaseClaim(runID, workerID string) (bool, error) {
 	res, err := rep.db.Exec(`
-		UPDATE agent_runs SET status = 'queued', worker_id = '', heartbeat_at = NULL, started_at = NULL, partial_text = ''
+		UPDATE agent_runs SET status = 'queued', worker_id = '', heartbeat_at = NULL, started_at = NULL, partial_text = '', run_token_hash = ''
 		WHERE id = $1 AND status IN ('claimed', 'running') AND worker_id = $2
 	`, runID, workerID)
 	if err != nil {
@@ -292,8 +294,9 @@ func (rep *AgentRunRepository) SetCancelRequested(id string) (bool, error) {
 }
 
 // UpdateTerminal writes a run's terminal result fields and revokes its run
-// token, but only while the stored status is still non-terminal; reports
-// whether the transition was applied.
+// token, but only while a worker still holds the run (claimed or running), so
+// neither a run already finished nor one back in the queue takes a result;
+// reports whether the transition was applied.
 func (rep *AgentRunRepository) UpdateTerminal(r *agentruns.Run) (bool, error) {
 	touched, err := json.Marshal(r.ArtifactsTouched)
 	if err != nil {
@@ -303,7 +306,7 @@ func (rep *AgentRunRepository) UpdateTerminal(r *agentruns.Run) (bool, error) {
 		UPDATE agent_runs SET status = $2, cancel_requested = $3, worker_id = $4, heartbeat_at = $5, started_at = $6, finished_at = $7,
 			exit_code = $8, final_text = $9, error = $10, tokens_in = $11, tokens_out = $12, cost_usd = $13, artifacts_touched = $14,
 			error_class = $15, run_token_hash = '', partial_text = ''
-		WHERE id = $1 AND status NOT IN ('succeeded', 'failed', 'cancelled', 'timed_out', 'awaiting_approval')
+		WHERE id = $1 AND status IN ('claimed', 'running')
 	`, r.ID, r.Status, r.CancelRequested, r.WorkerID, r.HeartbeatAt, r.StartedAt, r.FinishedAt,
 		r.ExitCode, r.FinalText, r.Error, r.TokensIn, r.TokensOut, r.CostUSD, touched, r.ErrorClass)
 	if err != nil {
@@ -593,14 +596,15 @@ func (rep *AgentRunRepository) CountApplyFailedProposals(runID string) (int, err
 }
 
 // FinalizeApproval transitions an awaiting_approval run to a terminal status
-// once its proposals are resolved, revoking its run token. The write is
-// conditional on the run still being awaiting_approval so a concurrent
-// resolver can never double-finalize; reports whether it was applied.
-func (rep *AgentRunRepository) FinalizeApproval(runID, status string, at time.Time) (bool, error) {
+// once its proposals are resolved, storing errMsg as its error and revoking
+// its run token. The write is conditional on the run still being
+// awaiting_approval so a concurrent resolver can never double-finalize;
+// reports whether it was applied.
+func (rep *AgentRunRepository) FinalizeApproval(runID, status, errMsg string, at time.Time) (bool, error) {
 	res, err := rep.db.Exec(`
-		UPDATE agent_runs SET status = $2, finished_at = $3, run_token_hash = ''
+		UPDATE agent_runs SET status = $2, error = $3, finished_at = $4, run_token_hash = ''
 		WHERE id = $1 AND status = 'awaiting_approval'
-	`, runID, status, at)
+	`, runID, status, errMsg, at)
 	if err != nil {
 		return false, err
 	}

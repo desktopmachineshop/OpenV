@@ -18,6 +18,10 @@ const (
 // MaxDelegationDepth caps how deep a delegates-to chain may run from a root.
 const MaxDelegationDepth = 3
 
+// ErrNodeNotFound is returned for a node id no crew node has, such as a run's
+// node that was removed after the run launched (the run keeps the id).
+var ErrNodeNotFound = errors.New("node not found")
+
 // Node types: a crew node is either an AI agent or a human member.
 const (
 	NodeAgent = "agent"
@@ -424,7 +428,7 @@ func (s *DefaultService) UpdateNode(nodeID string, label, agentID, userID, depar
 		return nil, err
 	}
 	if n == nil {
-		return nil, errors.New("node not found")
+		return nil, ErrNodeNotFound
 	}
 	if label != nil {
 		if *label == "" {
@@ -577,7 +581,7 @@ func (s *DefaultService) ResolveDelegates(nodeID string) ([]*Node, error) {
 		return nil, err
 	}
 	if n == nil {
-		return nil, errors.New("node not found")
+		return nil, ErrNodeNotFound
 	}
 	edges, err := s.repo.ListEdgesByTeam(n.TeamID)
 	if err != nil {
@@ -611,7 +615,7 @@ func (s *DefaultService) SuccessorEdges(nodeID string, edgeType string) ([]*Edge
 		return nil, err
 	}
 	if n == nil {
-		return nil, errors.New("node not found")
+		return nil, ErrNodeNotFound
 	}
 	edges, err := s.repo.ListEdgesByTeam(n.TeamID)
 	if err != nil {

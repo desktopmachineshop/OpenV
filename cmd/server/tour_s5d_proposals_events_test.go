@@ -28,10 +28,11 @@ import (
 //     up: an id no artifact has launches too), by the owner and by a worker
 //     key (no launched_by: requireProjectRole lets a worker of the project's
 //     workspace through, and refuses it another workspace's project with 403
-//     and a project no one has with 404, where a person gets 403); by the
-//     proposal-mode run's own token, since a draft is no write the proposal
-//     mode diverts; in a second workspace L whose author was deleted, 404,
-//     and still 404 after a sync, since the delete moved the file to .trash;
+//     and a project no one has with 404, where a person gets 403); refused
+//     (403) to the proposal-mode run's own token, as a status change is,
+//     since no proposal can carry a launch; in a second workspace L whose
+//     author was deleted, 404, and still 404 after a sync, since the delete
+//     moved the file to .trash;
 //   - the run's writes (S5a's routes under the run's token): a test case with
 //     a ref, 202 with its own application/json (unlike Q1's bare encodes) and
 //     proposal.created as the run; the same ref twice; a verifies link that
@@ -52,8 +53,9 @@ import (
 //   - the reverse through the single routes: a link approved before its
 //     test case fails to apply (a sanitised 500, the real error joined to the
 //     reviewer's note in the review note), the test case's rejection
-//     finalises the run failed (its error is not stored), and the refusals
-//     (reviewed, phantom, id x, a viewer after the lookup);
+//     finalises the run failed (its error stored with it), and the refusals
+//     (reviewed, phantom, id x, a viewer after the lookup); a review body
+//     that does not decode is ignored;
 //   - bulk refusals, a key's 401, a viewer's per-id error, a rejection in
 //     the client's order, the 100 a request may carry, and the run's cap of
 //     100 proposals; a run's token refused the review of its own proposal
@@ -93,11 +95,7 @@ import (
 // requirement in P). Left to the maintainer, and not pinned as a bug: whether
 // a personal key reads, and claims ownerless runs in, a project its member
 // cannot view (the runner reads a claimed run's repository connections with
-// it). Pinned as they are, bugs for release-noted bug-fix pull requests that
-// regenerate the golden: a run finalised failed carries "one or more approved
-// proposals failed to apply" only in the status it broadcasts, since
-// FinalizeApproval stores no error; and a proposal-mode run launches another
-// author run through the draft, with no parent and no launcher.
+// it).
 //
 // Not pinned: the budget's 402 on the draft (Q9, orchestration_budget), a
 // record_test_result proposal, which no route proposes (no handler diverts a
@@ -259,13 +257,8 @@ func proposalsEventsTour(tr *tour) {
 	tr.step("a write into Q: 403, the run is scoped to P", author, artifact,
 		jsonBody(`{"project_id":"{{q}}","type":"test-case","title":"Elsewhere"}`))
 	tr.step("the run changes R1's status: 403", author, status, on("r1"), jsonBody(`{"status":"approved"}`))
-	drafted := tr.step("the run's token drafts in P: 201, a run of the test-case author with no launched_by and no "+
-		"parent; the draft is no write the proposal mode diverts", author, draft, on("p"),
-		jsonBody(`{"requirement_ids":["{{r1}}"]}`))
-	drafted.capture("author_t", "/id")
-	drafted.capture("author_t.card", "/work_item_id")
-	tr.setup("cancel the run the token drafted, so that no later claim takes it", o,
-		"POST /api/v1/agent-runs/{id}/cancel", on("author_t"))
+	tr.step("the run's token drafts in P: 403, as a status change is; no proposal can carry a launch, so a "+
+		"proposal-mode run launches none", author, draft, on("p"), jsonBody(`{"requirement_ids":["{{r1}}"]}`))
 
 	// (c) The finish.
 	tr.step("the box key finishes the run as succeeded: awaiting_approval, since two proposals are pending; "+
@@ -314,7 +307,7 @@ func proposalsEventsTour(tr *tour) {
 	tr.step("reject the test case: 200; the run's last pending proposal resolved, it is finalised failed, since "+
 		"one apply failed: agentrun.finished #2 and the card back to todo (Q10)", o, reject, on("a2"),
 		jsonBody(`{"note":"Not this one."}`))
-	tr.step("the second run: failed; the finalisation's error is not stored", o, getRun, on("author2"))
+	tr.step("the second run: failed, with the finalisation's error stored", o, getRun, on("author2"))
 	tr.step("approve the link again: 400", o, approve, on("l2"))
 	tr.step("approve a proposal no one has: 404", o, approve, on("phantom"))
 	tr.step("reject a proposal no one has: 404", o, reject, on("phantom"))

@@ -123,6 +123,13 @@ func (h *Handler) ReleasePoolNode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.runnerSessionService.ReleaseNode(mux.Vars(r)["id"], req.SessionID); err != nil {
+		// A node the pool has no row for: the heartbeat's answer. The
+		// runner does not retry a 404 as it does a 5xx; it registers
+		// again when its heartbeat gets the same answer.
+		if errors.Is(err, runnersessions.ErrNodeNotFound) {
+			writeJSONError(w, http.StatusNotFound, "pool node is not registered")
+			return
+		}
 		respondInternal(w, r, "failed to release pool node", err)
 		return
 	}

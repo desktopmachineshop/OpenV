@@ -4445,7 +4445,7 @@
     },
     {
       "n": 122,
-      "title": "release a node no one has: 500, ErrNodeNotFound is not told apart",
+      "title": "release a node no one has: 404, not registered, as its beat answers",
       "actor": "pool",
       "route": "POST /api/v1/runner-pool/nodes/{id}/release",
       "request": {
@@ -4456,18 +4456,18 @@
         ],
         "body": "{}"
       },
-      "status": 500,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
       "content_length": 40,
       "kind": "json",
       "body": [
-        "{\"error\":\"failed to release pool node\"}"
+        "{\"error\":\"pool node is not registered\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "failed to release pool node"
+        "error": "pool node is not registered"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
