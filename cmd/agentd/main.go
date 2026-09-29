@@ -91,6 +91,10 @@ func runPool(apiURL, poolKey, pool, nodeName, sessionRoot, workspaces, mcpBinary
 }
 
 func main() {
+	// First, before agentd holds anything worth reading: see forbidInspection.
+	if err := forbidInspection(); err != nil {
+		log.Printf("agentd: could not stop same-user processes reading its environment: %v", err)
+	}
 	apiURL := flag.String("api", envOr("OPENV_API_URL", "http://localhost:8080"), "OpenV API base URL")
 	workerKey := flag.String("worker-key", os.Getenv("WORKER_API_KEY"), "worker API key (required)")
 	concurrency := flag.Int("concurrency", envIntOr("AGENT_CONCURRENCY", 1), "concurrent normal runs")

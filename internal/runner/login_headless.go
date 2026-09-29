@@ -8,7 +8,6 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"os"
 	"os/exec"
 	"regexp"
 	"strings"
@@ -110,7 +109,7 @@ func (w *Worker) handlePTYLogin(ctx context.Context, login *providers.LoginReque
 		return
 	}
 	cmd := exec.CommandContext(ctx, flow.command[0], flow.command[1:]...)
-	cmd.Env = append(os.Environ(), flow.env...)
+	cmd.Env = childEnv(flow.env...)
 	// A TUI that believes it is on a dumb terminal prints nothing useful.
 	cmd.Env = append(cmd.Env, "TERM=xterm-256color")
 
@@ -301,7 +300,7 @@ const loopbackDetail = "Open the sign-in link and authorize. Your browser will t
 // replays it against its own loopback listener, which completes the flow.
 func (w *Worker) handleLoopbackLogin(ctx context.Context, login *providers.LoginRequest, flow loginFlow) {
 	cmd := exec.CommandContext(ctx, flow.command[0], flow.command[1:]...)
-	cmd.Env = append(os.Environ(), flow.env...)
+	cmd.Env = childEnv(flow.env...)
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {

@@ -11,6 +11,29 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ### Bug fixes
 
+- **A runner no longer hands its own keys to the agents it runs.** Every
+  program a runner started for a run (the agent's CLI, its sign-in and
+  version checks, and git in the run's workspace) inherited
+  `WORKER_API_KEY` and `RUNNER_POOL_KEY` from the runner, and on Linux any
+  of them could also read both from the runner process itself. So an agent,
+  or a command or git hook it ran, could read the key its runner signs in
+  with, and on a pool node the deployment's shared pool key, whichever
+  member's run it was. The runner now keeps both keys from everything it
+  starts, and on Linux, hosted runners and the runner image included, it
+  stops programs running as its own user from reading its environment or
+  memory. On Windows and macOS a program running as the same user can still
+  read a runner's environment through the operating system, so run agents
+  you do not trust on Linux or as another user. Agents still reach OpenV
+  with their run's own token, and every other setting, a provider's API key
+  included, reaches them as before. If agents you do not fully trust have
+  run on a runner, replace the key it used. *Rotate* a personal runner key
+  under *My personal runner* in your settings. For a workspace key, use
+  *Create key* on the workspace's *Runners* tab, move the runner to the new
+  key, then *Revoke* the old one. If you run your own OpenV, also set a new
+  `RUNNER_POOL_KEY` on the server and its pool nodes, and a new
+  `WORKER_API_KEY` on the server if a runner used the server's own key,
+  since revoking that one on the *Runners* tab does not stop it.
+
 - **Committing a guided definition approves its drafts.** The wizard's last
   step said every draft was now live, but the personas, needs, requirements,
   hazards and test stubs it had created stayed drafts: Requirements showed
