@@ -1,0 +1,112 @@
+# The routes the S5d slice of the API tour reached (refactor plan §6.4
+# S5a-S5e), derived by TestTourCoverage (cmd/server/tour_test.go) from the
+# area goldens beside this file, with no database. Regenerate with
+#   UPDATE_GOLDEN=1 go test ./cmd/server -count=1 -run '^TestTourCoverage$'
+# (regenerating an area rewrites it too). A line is a route of
+# internal/api/testdata/routes.txt, in that file's order, that a recorded
+# step sent: the statuses it answered, then the areas that recorded it. A
+# route that answered only 401 is marked "not counted": the auth middleware
+# answers that before routing, so its handler never ran. A route reached
+# that answered only errors is marked "errors only": its handler ran, but
+# only as far as a guard's, a decode's or a lookup's refusal, and the plan's
+# 90% floor counts only the routes with a 2xx or 3xx answer.
+
+DELETE /api/v1/agents/{slug}: 204, 403, 500; agents_automations
+DELETE /api/v1/artifacts/{id}: 202; proposals_events
+DELETE /api/v1/automations/{id}: 204, 403, 404; agents_automations
+DELETE /api/v1/crew-edges/{id}: 204, 403, 404; crews_teams
+DELETE /api/v1/crew-nodes/{id}: 204, 403, 404; crews_teams
+DELETE /api/v1/crews/{id}: 204, 403, 404; crews_teams
+DELETE /api/v1/links/{id}: 202; proposals_events
+DELETE /api/v1/repo-connections/{id}: 204, 403, 404; providers_repos_pool
+DELETE /api/v1/team-edges/{id}: 204, 404; crews_teams
+DELETE /api/v1/team-nodes/{id}: 204, 404; crews_teams
+DELETE /api/v1/teams/{id}: 204, 404; crews_teams
+GET /api/v1/agent-runs: 200, 403, 500; agents_automations, orchestration_budget, proposals_events, worker_wire
+GET /api/v1/agent-runs/delegate/{id}: 200, 403, 404; orchestration_budget
+GET /api/v1/agent-runs/{id}: 200, 401, 403, 404; agents_automations, proposals_events, worker_wire
+GET /api/v1/agent-runs/{id}/logs: 200, 401, 403; worker_wire
+GET /api/v1/agent-runs/{id}/stream: 200, 401, 404; worker_wire
+GET /api/v1/agent-runs/{id}/tree: 200, 401, 403, 404; orchestration_budget
+GET /api/v1/agents: 200; agents_automations
+GET /api/v1/agents/{slug}: 200, 404; agents_automations
+GET /api/v1/agents/{slug}/raw: 200, 404; agents_automations
+GET /api/v1/artifacts/{id}: 200; proposals_events
+GET /api/v1/automations: 200; agents_automations
+GET /api/v1/automations/{id}: 200, 403, 404; agents_automations
+GET /api/v1/crew-templates: 200; crews_teams
+GET /api/v1/crews: 200, 401; crews_teams
+GET /api/v1/crews/{id}: 200, 403, 404; agents_automations, crews_teams
+GET /api/v1/crews/{id}/export: 200, 403, 404; crews_teams
+GET /api/v1/events: 200, 400, 401, 403; proposals_events
+GET /api/v1/guided-sessions/{id}/messages: 200; orchestration_budget
+GET /api/v1/interview-sessions/{id}/transcript: 200; orchestration_budget
+GET /api/v1/orgs/{id}/runner-session: 200; providers_repos_pool
+GET /api/v1/orgs/{id}/worker-keys: 200; worker_wire
+GET /api/v1/projects/{id}/repo-connections: 200, 403; providers_repos_pool
+GET /api/v1/proposals: 200, 401, 403, 500; proposals_events
+GET /api/v1/provider-logins/{id}: 200, 404; providers_repos_pool
+GET /api/v1/provider-logins/{id}/full: 200, 403, 404; providers_repos_pool
+GET /api/v1/provider-settings: 200; providers_repos_pool
+GET /api/v1/teams: 200; crews_teams
+GET /api/v1/teams/{id}: 200, 404; crews_teams
+GET /api/v1/teams/{id}/export: 200, 404; crews_teams
+GET /api/v1/work-items/{id}: 200, 403; agents_automations, orchestration_budget
+POST /api/v1/agent-runs/claim: 200, 204, 400, 401, 403; orchestration_budget, providers_repos_pool, worker_wire
+POST /api/v1/agent-runs/delegate: 201, 400, 401, 403, 500; orchestration_budget
+POST /api/v1/agent-runs/{id}/cancel: 200, 403; worker_wire
+POST /api/v1/agent-runs/{id}/finish: 200, 400, 409; orchestration_budget, proposals_events, worker_wire
+POST /api/v1/agent-runs/{id}/logs: 200, 400; worker_wire
+POST /api/v1/agent-runs/{id}/release: 204, 400; worker_wire
+POST /api/v1/agent-runs/{id}/retry: 201, 403, 404, 409, 500; orchestration_budget, worker_wire
+POST /api/v1/agent-runs/{id}/start: 204, 403, 404, 409; worker_wire
+POST /api/v1/agents: 201, 400, 403, 409; agents_automations
+POST /api/v1/agents/sync: 200, 400, 403; agents_automations
+POST /api/v1/agents/{slug}/runs: 201, 400, 402, 403, 404; orchestration_budget, worker_wire
+POST /api/v1/artifacts: 201, 202, 400, 403; proposals_events
+POST /api/v1/automations: 201, 400, 403; agents_automations
+POST /api/v1/automations/{id}/run-now: 201, 400, 403, 404; agents_automations, orchestration_budget
+POST /api/v1/crews: 201, 400, 403; crews_teams
+POST /api/v1/crews/import: 201, 400, 403; crews_teams
+POST /api/v1/crews/{id}/clone: 201, 400, 403, 404; crews_teams
+POST /api/v1/crews/{id}/edges: 201, 400, 403, 404; crews_teams
+POST /api/v1/crews/{id}/nodes: 201, 400, 403, 404; crews_teams
+POST /api/v1/crews/{id}/runs: 201, 400, 401, 403, 404; crews_teams, orchestration_budget
+POST /api/v1/links: 202, 400; proposals_events
+POST /api/v1/projects/{id}/draft-test-cases: 201, 400, 402, 403, 404; orchestration_budget, proposals_events
+POST /api/v1/projects/{id}/repo-connections: 201, 400, 403; providers_repos_pool
+POST /api/v1/proposals/bulk: 200, 400, 401; proposals_events
+POST /api/v1/proposals/{id}/approve: 200, 400, 403, 404, 500; proposals_events
+POST /api/v1/proposals/{id}/reject: 200, 404; proposals_events
+POST /api/v1/provider-logins: 201, 400, 401, 403; providers_repos_pool
+POST /api/v1/provider-logins/claim: 200, 204, 403; providers_repos_pool
+POST /api/v1/provider-logins/{id}/cancel: 200, 404; providers_repos_pool
+POST /api/v1/provider-logins/{id}/code: 200, 400, 404; providers_repos_pool
+POST /api/v1/provider-logins/{id}/progress: 200, 400, 404; providers_repos_pool
+POST /api/v1/provider-settings/detect: 204, 400, 403; providers_repos_pool
+POST /api/v1/runner-pool/nodes: 201, 400, 403; providers_repos_pool
+POST /api/v1/runner-pool/nodes/{id}/heartbeat: 200, 403, 404, 500; providers_repos_pool
+POST /api/v1/runner-pool/nodes/{id}/release: 204, 400, 403, 500; providers_repos_pool
+POST /api/v1/teams: 201, 403; crews_teams
+POST /api/v1/teams/import: 201, 403; crews_teams
+POST /api/v1/teams/{id}/clone: 201; crews_teams
+POST /api/v1/teams/{id}/edges: 201, 400; crews_teams
+POST /api/v1/teams/{id}/nodes: 201, 400; crews_teams
+POST /api/v1/teams/{id}/runs: 201, 403; crews_teams
+POST /api/v1/test-runs/{id}/agent-run: 400; orchestration_budget (errors only)
+PUT /api/v1/agents/{slug}: 200, 400, 403; agents_automations
+PUT /api/v1/agents/{slug}/raw: 200, 400, 403; agents_automations
+PUT /api/v1/artifacts/{id}: 202; proposals_events
+PUT /api/v1/artifacts/{id}/status: 403; proposals_events (errors only)
+PUT /api/v1/automations/{id}: 200, 400, 403, 404; agents_automations
+PUT /api/v1/crew-edges/{id}: 200, 400, 403, 404; crews_teams
+PUT /api/v1/crew-nodes/{id}: 200, 400, 403, 404; crews_teams
+PUT /api/v1/crews/{id}: 200, 400, 403, 404; crews_teams
+PUT /api/v1/provider-settings: 200, 400, 401, 403; providers_repos_pool
+PUT /api/v1/repo-connections/{id}: 200, 400, 403, 404; providers_repos_pool
+PUT /api/v1/repo-connections/{id}/my-path: 200, 400, 401, 403, 404; providers_repos_pool
+PUT /api/v1/team-edges/{id}: 200, 404; crews_teams
+PUT /api/v1/team-nodes/{id}: 200, 404; crews_teams
+PUT /api/v1/teams/{id}: 200; crews_teams
+
+s5d: 97 of 341 routes reached (28.4%), 95 with a 2xx or 3xx answer (27.9%)

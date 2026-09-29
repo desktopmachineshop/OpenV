@@ -214,9 +214,10 @@ prints:
   for one area (each golden under `cmd/server/testdata/tour/<slice>/` names
   its test in `"test"`, and a failure prints its command; the V&V and suite
   slice's areas run as `TestTourS5b<Area>`, such as
-  `-run '^TestTourS5bEvidence$'`, and the identity and workspace slice's as
-  `TestTourS5c<Area>`, such as `-run '^TestTourS5cBilling$'`),
-  `-run '^TestTourS5b'` for one slice, or
+  `-run '^TestTourS5bEvidence$'`, the identity and workspace slice's as
+  `TestTourS5c<Area>`, such as `-run '^TestTourS5cBilling$'`, and the agents
+  and worker wire slice's as `TestTourS5d<Area>`, such as
+  `-run '^TestTourS5dWorkerWire$'`), `-run '^TestTourS5d'` for one slice, or
   `-run '^TestTour'` for every area (a server with or without pgvector); an
   area's run also rewrites its slice's `coverage.txt`, and
   `UPDATE_GOLDEN=1 go test ./cmd/server -count=1 -run '^TestTourCoverage$'`

@@ -225,15 +225,25 @@ func harnessEnv(db testDatabase, port int, tmp string, extra map[string]string) 
 // port it has released again before a server listens on it, and then the
 // losing boot's /health probes would reach the winning server, or a proxy,
 // which would record them as outbound requests. listen is how it asks the
-// kernel for a port; tests script it.
+// kernel for a port; tests script it. lock, when set, also claims the port
+// against the other harness processes on the host (two go test processes, one
+// per database, say), whose servers would answer the losing boot's /health
+// probes as well; a port another process holds is passed over like one this
+// process handed out, and the claim lasts until the test that took the port
+// ends.
 type portRegistry struct {
 	sync.Mutex
 	ports  map[int]bool
 	listen func() (net.Listener, error)
+	lock   func(port int) (release func(), ok bool)
 }
 
-// handedOut is the registry of the whole test process.
-var handedOut = &portRegistry{listen: func() (net.Listener, error) { return net.Listen("tcp", "127.0.0.1:0") }}
+// handedOut is the registry of the whole test process. lockPort is
+// harness_portlock_test.go's (a lock file per port under os.TempDir()).
+var handedOut = &portRegistry{
+	listen: func() (net.Listener, error) { return net.Listen("tcp", "127.0.0.1:0") },
+	lock:   lockPort,
+}
 
 // freePort asks the kernel for a free port that no server or proxy has had
 // in this process, and releases it for the server.
@@ -255,9 +265,9 @@ func (r *portRegistry) hold(t *testing.T) net.Listener {
 	return r.take(t, "listen on a free port")
 }
 
-// take listens on a port the registry has not seen and records it. Refused
-// listeners stay open until a good one is found, so the kernel cannot offer
-// the same port again meanwhile.
+// take listens on a port the registry has not seen, and no other harness
+// process holds, and records it. Refused listeners stay open until a good one
+// is found, so the kernel cannot offer the same port again meanwhile.
 func (r *portRegistry) take(t *testing.T, what string) net.Listener {
 	t.Helper()
 	r.Lock()
@@ -278,12 +288,19 @@ func (r *portRegistry) take(t *testing.T, what string) net.Listener {
 		}
 		port := l.Addr().(*net.TCPAddr).Port
 		if !r.ports[port] {
-			r.ports[port] = true
-			return l
+			release, ok := func() {}, true
+			if r.lock != nil {
+				release, ok = r.lock(port)
+			}
+			if ok {
+				r.ports[port] = true
+				t.Cleanup(release)
+				return l
+			}
 		}
 		refused = append(refused, l)
 	}
-	t.Fatalf("%s: the kernel offered only ports already handed out", what)
+	t.Fatalf("%s: the kernel offered only ports already handed out here or held by another harness process", what)
 	return nil
 }
 
@@ -317,6 +334,44 @@ func TestPortsAreNeverShared(t *testing.T) {
 	}
 	if got := r.free(t); got != 40003 {
 		t.Fatalf("second server port = %d; want 40003, since 40002 is the proxy's and 40001 a server's", got)
+	}
+}
+
+// TestPortsHeldElsewhereAreSkipped scripts another harness process holding a
+// port the kernel offers: it is passed over, its listener kept open meanwhile,
+// and the lock of the port taken is released when the test that took it ends.
+func TestPortsHeldElsewhereAreSkipped(t *testing.T) {
+	offers := []int{40001, 40002}
+	var released []int
+	r := &portRegistry{
+		listen: func() (net.Listener, error) {
+			if len(offers) == 0 {
+				return nil, errors.New("the script offers no more ports")
+			}
+			p := offers[0]
+			offers = offers[1:]
+			return scriptedListener{port: p}, nil
+		},
+		lock: func(port int) (func(), bool) {
+			if port == 40001 {
+				return nil, false
+			}
+			return func() { released = append(released, port) }, true
+		},
+	}
+	t.Run("take", func(t *testing.T) {
+		if got := r.free(t); got != 40002 {
+			t.Fatalf("server port = %d; want 40002, since another process holds 40001", got)
+		}
+		if len(released) != 0 {
+			t.Fatalf("the lock of port 40002 was released before the test that took it ended: %v", released)
+		}
+	})
+	if len(released) != 1 || released[0] != 40002 {
+		t.Fatalf("locks released when the test ended: %v, want [40002]", released)
+	}
+	if r.ports[40001] {
+		t.Fatal("port 40001, held by another process, was recorded as handed out here")
 	}
 }
 
@@ -369,9 +424,13 @@ func TestRecordingProxyIgnoresMisdirectedRequests(t *testing.T) {
 // bootServer boots the binary on a fresh database and waits until /health
 // answers. A port is free when the harness picks it but may be taken before
 // the server listens on it by another process (boots in this process never
-// share one; see freePort); then the server exits after its migrations, and
-// the harness boots again on another fresh database and port, since a second
-// boot on the same database would log differently.
+// share one, nor do boots of two harness processes on the host; see
+// portRegistry); then the server exits after its migrations, and the harness
+// boots again on another fresh database and port, since a second boot on the
+// same database would log differently. That holds only while the port's
+// taker does not answer /health with 200 before the server's bind fails,
+// which is why another harness's servers are kept off it by the lock rather
+// than caught here.
 func bootServer(t *testing.T, bin string, extra map[string]string) (*serverProcess, testDatabase) {
 	t.Helper()
 	for attempt := 1; ; attempt++ {

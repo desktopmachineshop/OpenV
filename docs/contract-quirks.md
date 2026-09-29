@@ -33,8 +33,8 @@ the Phase 3 consolidations that give quirks their names.
   `ContentTypeMiddleware` (`internal/api/handlers.go:1594`) sets no type
   despite its name.
 - **Pinned by, named as:** S5 (S5a for the requirements core, S5b for V&V
-  and the suite, S5c for identity and the workspace; S5d *(planned)* for the
-  rest); `writeJSONBare` (X1) *(planned)*. Pain points api-core-3,
+  and the suite, S5c for identity and the workspace, S5d for agents and the
+  worker wire); `writeJSONBare` (X1) *(planned)*. Pain points api-core-3,
   api-suite-org-8.
 - **Pinned today:** S1 counts the raw encodes, so none is added. Every step
   of the S5a tour records whether its answer, and the gzip variant of each
@@ -61,7 +61,22 @@ the Phase 3 consolidations that give quirks their names.
   `Content-Type` once gzipped: the workspace list, a workspace's
   invitations and its teams (steps 5 and 99 of `workspaces_logo.json`,
   step 19 of `invitations_closed.json`, steps 36 and 54 of
-  `members_teams.json`). The other sites wait for S5d.
+  `members_teams.json`). The S5d tour pins the rest, agents and the worker
+  wire: 68 of its slice's 84 routes answer a 2xx with a bare encode, among
+  them the worker's claim with its `auth` object (step 15 of
+  `cmd/server/testdata/tour/s5d/worker_wire.json`), every launch and run
+  read, the agents, automations, crews and their `/teams` aliases,
+  proposals, the events route, provider settings and sign-ins, repository
+  connections and the runner pool's nodes; the crew export alone sets
+  `application/json` (step 80 of `crews_teams.json`), and a proposal-mode
+  run's write through S5a's routes answers its 202 receipt with
+  `application/json` too (step 12 of `proposals_events.json`). Eleven show no
+  `Content-Type` once gzipped: the agent, run, automation, crew and `/teams`
+  lists, a crew's graph, the crew templates, a run and its tree, the events
+  and the provider settings (step 1 of `agents_automations.json`, step 101
+  of `worker_wire.json`, steps 1 and 3 of `crews_teams.json`, step 28 of
+  `orchestration_budget.json`, steps 32 and 54 of `proposals_events.json`,
+  step 1 of `providers_repos_pool.json`).
 
 ## Q2. A mid-request delete answers 500
 
@@ -89,6 +104,19 @@ the Phase 3 consolidations that give quirks their names.
   and on a shared product's vote, report and delete (steps 32, 48 and 61 of
   `cmd/server/testdata/tour/s5b/shared_products.json`), where a well-formed
   id no row has answers 404 (204 on the uncite, which looks nothing up).
+  The S5d tour pins the same family on agents and the worker wire: deleting
+  an agent that is gone, or a slug that is no slug, answers 500 `failed to
+  delete agent`, since `agents.ErrNotFound` is not mapped (steps 40 and 41
+  of `cmd/server/testdata/tour/s5d/agents_automations.json`); releasing a
+  pool node no one has answers 500, since `ErrNodeNotFound` is not told
+  apart, where its heartbeat answers 404 (steps 122 and 123 of
+  `providers_repos_pool.json`); a delegation from a run whose crew node was
+  removed answers 500, the run still naming the node (step 9 of
+  `orchestration_budget.json`); and an id that is not a UUID answers 500 on
+  a node's heartbeat and release and in the `agent_id` and `run_id` filters
+  of the run and proposal lists (steps 124 and 125 of
+  `providers_repos_pool.json`, step 100 of `worker_wire.json`, step 24 of
+  `proposals_events.json`).
 
 ## Q3. Managed link edits in `PUT /artifacts/{id}` take their own path
 
@@ -187,7 +215,7 @@ the Phase 3 consolidations that give quirks their names.
   `agent_run_repository.go:147-149`).
 - **Pinned by, named as:** S5 (S5a for `ListArtifacts` and `GlobalSearch`,
   S5b for `ListSharedProducts` and `ListProjectInterviewSessions`, S5c for
-  `ListNotifications`; the event and run resets S5d *(planned)*); named
+  `ListNotifications`, S5d for the event and run resets); named
   `limitPolicy` values (X3) *(planned)*. Pain point persistence-v3.
 - **Pinned today:** the S5a tour: `GET /api/v1/artifacts` answers limit 0
   and a limit over 1,000 with all 201 artifacts of a 201-artifact project,
@@ -211,7 +239,17 @@ the Phase 3 consolidations that give quirks their names.
   where every other parser falls back to a default, and pages by a keyset
   cursor, `before=<time>|<id>`, with a full page carrying `next_cursor`
   (steps 9–15 of `cmd/server/testdata/tour/s5c/notifications_push.json`;
-  its cap needs more notifications than the area makes, and is X3a's).
+  its cap needs more notifications than the area makes, and is X3a's). The
+  S5d tour, over 101 runs and their events in a workspace of their own: `GET
+  /api/v1/events` and `GET /api/v1/agent-runs` answer limit 0, -1, `abc` and
+  501 with 100 rows, reset rather than clamped (the events page with its
+  `X-Next-Cursor`), and limit 500 with all 101 (steps 66–75 of
+  `cmd/server/testdata/tour/s5d/proposals_events.json`). For the events the
+  handler resets the limit the same way before the repository sees it
+  (`internal/api/agent_handlers.go:2215`), so the event repository's own
+  reset is not reached from outside: a change to it alone changes no golden,
+  where a change to the handler's, or to the run repository's, changes
+  steps 69 and 74.
 
 ## Q9. `ErrBudgetExceeded` answers 402, 400 or 500 by route
 
@@ -221,10 +259,21 @@ the Phase 3 consolidations that give quirks their names.
   `LaunchTestRunAgent` (`internal/api/suite_handlers.go:458`), which pass
   `err.Error()` through; 500 on delegation, `DelegateRun`
   (`internal/api/agent_handlers.go:950`).
-- **Pinned by, named as:** S5d *(planned)*; `launchErrs402`,
-  `launchErrs400` and `launchErrsDelegate` (X3) *(planned)*. Pain point
-  api-suite-org-7.
-- **Pinned today:** nothing beyond this entry.
+- **Pinned by, named as:** S5d; `launchErrs402`, `launchErrs400` and
+  `launchErrsDelegate` (X3) *(planned)*. Pain point api-suite-org-7.
+- **Pinned today:** the S5d tour, booted with `OPENV_BUDGET_ENFORCE=true`,
+  puts a workspace over its monthly budget and sends every launch path:
+  the launch and the test-case draft answer 402, run-now, a crew launch and
+  a test run's agent run 400, each with the guard's text, and delegation
+  500 `failed to launch delegated run` (steps 43–48 of
+  `cmd/server/testdata/tour/s5d/orchestration_budget.json`). Beyond this
+  entry's six, a retry answers 500 `failed to retry run`
+  (`RetryAgentRun`, `internal/api/agent_handlers.go:625`; step 49), and a
+  crew run that finishes over budget launches none of its agent successors,
+  the refusal only logged, while its hand-off to a person is still made
+  (steps 50 and 51). With the budget cleared the launch, run-now, the crew
+  launch and the retry pass (steps 52–55), so each refusal was the
+  guard's.
 
 ## Q10. `RunFinished` is published twice, or never
 
@@ -233,9 +282,18 @@ the Phase 3 consolidations that give quirks their names.
   and again when its proposals are resolved (`FinalizeIfResolved`,
   `:1178`); a cancel of a queued run (`RequestCancel`, `:1069-1080`)
   notifies the status change but never publishes it.
-- **Pinned by, named as:** S5d events *(planned)*.
-- **Pinned today:** nothing beyond this entry. The plan's non-goals keep the
-  double publish (services-3).
+- **Pinned by, named as:** S5d events.
+- **Pinned today:** the S5d tour records each step's events. A
+  proposal-mode run publishes `agentrun.finished` when its finish leaves it
+  awaiting approval (step 19 of
+  `cmd/server/testdata/tour/s5d/proposals_events.json`) and again when its
+  last proposal is resolved, by a bulk approval, a rejection that finalises
+  it failed, a bulk rejection that finalises it succeeded and a bulk
+  approval with an apply failure that finalises it failed (steps 30, 35, 50
+  and 80); a queued run's cancel publishes `workitem.moved` and no
+  `agentrun.finished`, where a running run's cooperative cancel publishes it
+  on the worker's finish (steps 54 and 42 of `worker_wire.json`). The plan's
+  non-goals keep the double publish (services-3).
 
 ## Q11. `NewHandler` rewires billing after `billing.Start`
 
@@ -343,7 +401,18 @@ the Phase 3 consolidations that give quirks their names.
   notifications (step 6 of `cmd/server/testdata/tour/s5c/workspaces_logo.json`,
   step 59 of `sessions_auth.json`, steps 29 and 81 of `members_teams.json`,
   step 1 of `runner_keys_connector.json`, steps 2, 6, 7 and 11 of
-  `notifications_push.json`).
+  `notifications_push.json`). The S5d tour, for agents and the worker wire,
+  `null`: a workspace's agents and its sync once none is left, automations,
+  a new crew's nodes and edges and a workspace's crews, proposals, runs, a
+  project's repository connections, a workspace's worker keys, and a pool
+  node's providers read back after its registration answered `[]` (steps
+  42, 43, 73 and 74 of `cmd/server/testdata/tour/s5d/agents_automations.json`,
+  steps 11 and 116 of `crews_teams.json`, step 23 of
+  `proposals_events.json`, steps 90 and 96 of `worker_wire.json`, steps 68,
+  100, 102 and 107 of `providers_repos_pool.json`). `[]`: a run's log, the
+  events before a cursor no event has, and a proposal list the repository
+  filled before the handler filtered it empty (step 53 of
+  `worker_wire.json`, steps 61 and 29 of `proposals_events.json`).
 
 ## Q15. An unknown protected path answers 401; OPTIONS answers 200 unlogged
 
@@ -435,9 +504,8 @@ the Phase 3 consolidations that give quirks their names.
   `internal/api` pass `err.Error()` through (the same count as at
   `d11dee8`); 58 sites map any error to 404 (the plan's count at `d11dee8`,
   not re-counted here).
-- **Pinned by, named as:** S5 (S5a, S5b and S5c for their routes; S5d
-  *(planned)*); `decodeJSONMsg` (X1) *(planned)*; the other call sites stay
-  untouched.
+- **Pinned by, named as:** S5 (S5a, S5b, S5c and S5d for their routes);
+  `decodeJSONMsg` (X1) *(planned)*; the other call sites stay untouched.
 - **Pinned today:** S1's `invalid_request_body_literals` ratchet counts the
   lowercase literal (106). The S5a tour pins every error message its routes
   answer, byte for byte: the capital `"Invalid request body"` of
@@ -469,7 +537,21 @@ the Phase 3 consolidations that give quirks their names.
   something that is not an id: the default workspace, the platform admin's
   reset link and admin standing, and a workspace's members (step 47 of
   `sessions_auth.json`, steps 66 and 92 of `mail_password_admin.json`,
-  step 18 of `members_teams.json`).
+  step 18 of `members_teams.json`). The S5d tour, for agents and the worker
+  wire: the driver's text passed through as a 400 for a launch on a card id
+  that is not a UUID, an automation of an agent no row has (the foreign
+  key's refusal) and a repeated `reviews` edge of a crew (the unique key's),
+  and robfig's text for a cron that does not parse (step 9 of
+  `cmd/server/testdata/tour/s5d/worker_wire.json`, steps 61, 53 and 85 of
+  `agents_automations.json`, step 40 of `crews_teams.json`); the YAML
+  parser's text for an agent file that does not parse (step 23 of
+  `agents_automations.json`); and any lookup error answered as a 404: an
+  automation, a CLI sign-in and a repository connection named by an id that
+  is not a UUID (step 78 of `agents_automations.json`, steps 67 and 95 of
+  `providers_repos_pool.json`), and a proposal's (step 40 of
+  `proposals_events.json`). "crew not found" answers the export, where
+  every other crew route answers "team not found" (step 84 of
+  `crews_teams.json`).
 
 ## Q20. Inline error chains render string bodies differently
 

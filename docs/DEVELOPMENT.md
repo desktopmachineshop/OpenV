@@ -293,6 +293,36 @@ platform where Go reads `SSL_CERT_FILE` (Linux, the BSDs) and skips on macOS,
 where `make check` accepts exactly those skips (`TestTourStandIns` and the
 three stand-in areas) and names them; CI runs them on Linux.
 
+S5d, the fourth slice (`cmd/server/testdata/tour/s5d/`, areas
+`tour_s5d_*_test.go`, tests `TestTourS5d<Area>`), covers agents and the
+worker wire: agent definitions, their files and the sync, automations and
+run-now, runs and their reads, the worker's claim, start, logs, stream,
+cancel, finish, release and retry, delegation and a crew run's hand-offs,
+the workspace budget's refusals, proposals and their apply order, the events
+route, crews and every `/teams` alias, provider settings and the CLI
+sign-in broker, repository connections and the runner pool's nodes. No run
+reaches a model: the areas play the runner themselves, sending what
+`internal/runner/client.go` sends, and each golden's empty
+`outbound_requests` shows the server called no provider.
+`tour_s5d_worker_wire_test.go` is its worked example. It added to the
+framework, in `tour_worker_test.go`: worker and personal runner keys and a
+claimed run's token as actors (`tour.workerKey`, `tour.runnerKey`,
+`tourResult.runToken`), the claim bodies a runner sends (`claimBody`,
+`claimAbove`, `hostedClaimBody`) and a check that a claim took the run the
+area meant (`tourResult.claimed`), setup shortcuts that queue and take a run
+(`tour.queueRun`, `tour.takeRun`), the seconds between two times of one
+answer (`tourResult.noteSeconds`), the server's agents directory
+(`tour.agentsDir`), and `literalBody`, a body encoded from a Go value with
+nothing filled, for one that carries a template of the server's own
+(`{{handoff.output}}`); and, in `tour_test.go`, a step's unordered pointers
+now sort one after another, the ids each sorted array holds numbered before
+the next is keyed, so that a cloned crew's edges, which differ only in the
+cloned nodes they join, sort the same on every run. Regenerate one area with
+`OPENV_TEST_DATABASE_URL=<server URL> UPDATE_GOLDEN=1 go test ./cmd/server -count=1 -run '^TestTourS5d<Area>$'`,
+or the slice with `-run '^TestTourS5d'`. With it the tour reaches all 341
+routes, 337 of them with a 2xx or 3xx answer; the four that answer only
+errors are the hosted runner's, whose success needs Docker.
+
 ### The vulnerability gate
 
 The **Vulnerability scan** job (`vuln`) is a supply-chain gate on every pull

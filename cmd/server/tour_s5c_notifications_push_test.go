@@ -208,22 +208,29 @@ func notificationsPushTour(tr *tour) {
 		at("id", w), jsonBody(`{"name":"tour worker"}`)).value("/key"), "a worker key of W, as a bearer")
 	// The notifier reads who is an admin, a member or an editor when it
 	// handles an event, after the answer: each cause is awaited before the
-	// next setup changes that (the role change after the join would otherwise
-	// make the member an admin in time to hear of its own arrival).
+	// next setup changes that. The member's join is awaited to its end, the
+	// admins' alert, since the notifier tells the member first and reads W's
+	// admins after; the role change after the join would otherwise make the
+	// member an admin in time to hear of its own arrival. The owner, who
+	// sends the join, is the one admin the alert skips, so the quiet account
+	// joins as an admin to be the alert's witness: the request that publishes
+	// its own join makes it an admin, so the alert of that join reaches it
+	// too, and the count it is awaited at does not race.
 	// The opt-out: an account with push off (the default) and a device on
-	// file joins W, and its notice of that is never pushed (the golden's
+	// file joins W, and its notices are never pushed (the golden's
 	// outbound_requests would show a CONNECT to web.push.apple.com). It never
 	// turns push on, so the answer does not depend on when the push worker
-	// reads the preference.
+	// reads the preference. No step reads its inbox or its role.
 	quiet := tr.register("quiet", "Tour Quiet", "a member of W with push off and a device on file, to whom nothing "+
 		"is pushed")
 	tr.setup("the quiet account subscribes a device, with push off", quiet, "POST /api/v1/me/push-subscriptions",
 		notificationsPushSubscription("https://web.push.apple.com/tour-quiet", notificationsPushP256dh,
 			notificationsPushAuth, "Tour Quiet/1.0"), expect(201))
-	tr.join(quiet, w, "member")
-	notificationsPushInbox(tr, quiet, 1, "the quiet account's notice that it joined W")
+	tr.join(quiet, w, "admin")
+	notificationsPushInbox(tr, quiet, 2, "the quiet account's notice that it joined W, and the admins' alert of it")
 	tr.join(m, w, "member")
 	notificationsPushInbox(tr, m, 1, "the member's notice that it joined W")
+	notificationsPushInbox(tr, quiet, 3, "the admins' alert of the member's join, read before the member is an admin")
 	tr.setup("make the member an admin of W", o, "PUT /api/v1/orgs/{id}/members/{userId}",
 		at("id", w, "userId", "{{member}}"), jsonBody(`{"role":"admin"}`), expect(204))
 	notificationsPushInbox(tr, m, 3, "the member's notice of its role, and the admins' alert")
