@@ -1026,6 +1026,7 @@ func (h *Handler) CreateAutomation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	req.OrgID = ActiveOrg(r)
+	req.CreatedBy = CurrentUserID(r)
 	if !h.requireAutomationWrite(w, r, req.ProjectID, req.OrgID) {
 		return
 	}
@@ -1148,44 +1149,37 @@ func (h *Handler) ListProposals(w http.ResponseWriter, r *http.Request) {
 	}
 	q := r.URL.Query()
 	projectID := q.Get("project_id")
-	activeOrg := ActiveOrg(r)
+	// A workspace admin with no project filter sees the proposals of the
+	// active workspace's projects: the query filters by workspace before its
+	// limit, so other workspaces' proposals never crowd them out. Without an
+	// active workspace there is nothing to filter by, so even a platform
+	// admin must name a project.
+	orgID := ""
 	if projectID != "" {
 		if !h.requireProjectRole(w, r, projectID, members.RoleViewer) {
 			return
 		}
-	} else if !h.isOrgAdmin(r, activeOrg) {
+	} else if orgID = ActiveOrg(r); orgID == "" || !h.isOrgAdmin(r, orgID) {
 		// Non-admin members must scope the listing to a project they can view.
 		writeJSONError(w, http.StatusForbidden, "project_id is required")
 		return
 	}
-	list, err := h.proposalService.List(projectID, q.Get("status"), q.Get("run_id"))
+	list, err := h.proposalService.List(orgID, projectID, q.Get("status"), q.Get("run_id"))
 	if err != nil {
 		respondInternal(w, r, "failed to list proposals", err)
 		return
-	}
-	if projectID == "" {
-		// Workspace admins without a project filter see only proposals whose
-		// projects belong to the active workspace.
-		orgOf := map[string]string{}
-		filtered := list[:0]
-		for _, p := range list {
-			org, ok := orgOf[p.ProjectID]
-			if !ok {
-				if project, err := h.projectService.GetProject(p.ProjectID); err == nil && project != nil {
-					org = project.OrgID
-				}
-				orgOf[p.ProjectID] = org
-			}
-			if org != "" && org == activeOrg {
-				filtered = append(filtered, p)
-			}
-		}
-		list = filtered
 	}
 	json.NewEncoder(w).Encode(list)
 }
 
 func (h *Handler) reviewProposal(w http.ResponseWriter, r *http.Request, approve bool) {
+	// A run token is the agent itself, not a person: it reviews no proposal,
+	// its own run's least of all (REQ-21). The project guard below would let
+	// it through as an editor of its project.
+	if CurrentRun(r) != nil {
+		writeJSONError(w, http.StatusForbidden, "agent runs cannot review proposals")
+		return
+	}
 	id := mux.Vars(r)["id"]
 	proposal, err := h.proposalService.Get(id)
 	if err != nil {

@@ -153,6 +153,44 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   was valid for 59 minutes; the link has always lasted an hour, and the
   email now says 60 minutes.
 
+- **A workspace's automations fire only on events in that workspace.** An
+  automation set to run when something happens anywhere in its workspace,
+  such as a new artifact, also ran when that happened in another workspace
+  on the same server: the run was placed in the other workspace's project,
+  with that workspace's artifact title in the agent's instructions and the
+  run's card on that project's board. An automation now runs only for
+  events in its own workspace, and, when it is pinned to a project, only
+  for that project's.
+
+- **An automation records the person who created it.** An automation
+  created through the API was recorded as created by whichever account the
+  request named, and one created in the app recorded no creator at all. It
+  is now always recorded as created by the person who created it; an
+  account named in the request is ignored.
+
+- **An agent can no longer approve or reject its own proposals.** An agent
+  that proposes its changes for review could approve those proposals itself
+  through the API, with the credentials its run is given, so its changes
+  reached the project without anyone reviewing them. A run's credentials
+  are now refused whenever they are used to approve or reject a proposal,
+  and every change an agent proposes waits for a person to review it.
+
+- **A personal runner key can no longer approve proposals or change
+  artifacts beyond its owner's role.** A member's personal runner key could
+  approve or reject an agent's proposals, and create or change artifacts, in
+  every project of the workspace, even one where that member could only
+  view. Used through the API, it now needs the
+  same access its owner needs in the app: an editor's role in the project,
+  or admin of the workspace. Workspace runner keys are unchanged.
+
+- **A workspace admin's list of proposals through the API holds all of the
+  workspace's proposals.** Asking for the proposals of a whole workspace,
+  with no project named, could leave out some or all of that workspace's
+  proposals once other workspaces on the same server had hundreds of newer
+  ones. The list now holds the workspace's own proposals, the newest 500 of
+  them; when there are none it is `null`, as a project's empty list already
+  was.
+
 - **A run that fails once its changes are reviewed keeps the reason.** When
   an approved change an agent proposed could not be applied, the run was
   marked failed, but the reason, *one or more approved proposals failed to

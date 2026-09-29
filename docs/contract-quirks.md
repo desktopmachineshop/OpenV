@@ -401,16 +401,16 @@ the Phase 3 consolidations that give quirks their names.
   step 1 of `runner_keys_connector.json`, steps 2, 6, 7 and 11 of
   `notifications_push.json`). The S5d tour, for agents and the worker wire,
   `null`: a workspace's agents and its sync once none is left, automations,
-  a new crew's nodes and edges and a workspace's crews, proposals, runs, a
+  a new crew's nodes and edges and a workspace's crews, proposals (a
+  project's, and a workspace admin's with none in the workspace), runs, a
   project's repository connections, a workspace's worker keys, and a pool
   node's providers read back after its registration answered `[]` (steps
   42, 43, 73 and 74 of `cmd/server/testdata/tour/s5d/agents_automations.json`,
-  steps 11 and 116 of `crews_teams.json`, step 23 of
+  steps 11 and 116 of `crews_teams.json`, steps 23 and 29 of
   `proposals_events.json`, steps 90 and 96 of `worker_wire.json`, steps 68,
-  100, 102 and 107 of `providers_repos_pool.json`). `[]`: a run's log, the
-  events before a cursor no event has, and a proposal list the repository
-  filled before the handler filtered it empty (step 53 of
-  `worker_wire.json`, steps 61 and 29 of `proposals_events.json`).
+  100, 102 and 107 of `providers_repos_pool.json`). `[]`: a run's log and
+  the events before a cursor no event has (step 53 of `worker_wire.json`,
+  step 61 of `proposals_events.json`).
 
 ## Q15. An unknown protected path answers 401; OPTIONS answers 200 unlogged
 

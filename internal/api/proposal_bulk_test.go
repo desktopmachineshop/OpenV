@@ -182,7 +182,7 @@ func TestBulkReviewProposalsAppliesArtifactsBeforeLinks(t *testing.T) {
 			"p-art":  {ID: "p-art", ProjectID: "proj-1", Op: proposals.OpCreateArtifact, Status: proposals.StatusPending},
 		},
 	}
-	h := &Handler{proposalService: svc}
+	h := proposalTestHandler(svc, nil, nil)
 
 	w := httptest.NewRecorder()
 	// Client lists the link before the artifact on purpose.
@@ -209,18 +209,16 @@ func TestBulkReviewProposalsAuthz(t *testing.T) {
 			"p-viewer": {ID: "p-viewer", ProjectID: "proj-viewed", Status: proposals.StatusPending},
 		},
 	}
-	h := &Handler{
-		proposalService: svc,
-		projectService: &fakeProjectService{byID: map[string]*projects.Project{
+	h := proposalTestHandler(svc,
+		map[string]*projects.Project{
 			"proj-mine":   {ID: "proj-mine", OrgID: "org-1"},
 			"proj-theirs": {ID: "proj-theirs", OrgID: "org-1"},
 			"proj-viewed": {ID: "proj-viewed", OrgID: "org-1"},
-		}},
-		memberService: &fakeMemberService{roles: map[string]map[string]string{
+		},
+		map[string]map[string]string{
 			"proj-mine":   {"eve": members.RoleEditor},
 			"proj-viewed": {"eve": members.RoleViewer},
-		}},
-	}
+		})
 
 	w := httptest.NewRecorder()
 	body := `{"ids":["p-mine","p-theirs","p-viewer"],"action":"reject"}`

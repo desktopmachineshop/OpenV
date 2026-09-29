@@ -322,7 +322,7 @@
   ],
   "file_lines": {
     "cmd/server/main.go": 1081,
-    "internal/api/agent_handlers.go": 2420,
+    "internal/api/agent_handlers.go": 2414,
     "internal/api/handlers.go": 3519,
     "internal/api/org_handlers.go": 1552,
     "internal/api/suite_handlers.go": 2245,

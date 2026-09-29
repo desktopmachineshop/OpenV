@@ -55,7 +55,11 @@
     },
     {
       "name": "runner",
-      "about": "the member's personal runner key in W, though the member only views P"
+      "about": "the member's personal runner key in W, which acts with the member's role, a viewer's in P: it neither reviews nor writes there"
+    },
+    {
+      "name": "own",
+      "about": "the owner's personal runner key in W, as W's admin: creates the requirement the member's key may not, and is revoked at once, so that no run the owner launches later is reserved for it"
     },
     {
       "name": "home",
@@ -1152,7 +1156,7 @@
     },
     {
       "n": 29,
-      "title": "every proposal, as L's admin with no project: the list the repository filled, filtered to L, is [] and not null (Q14)",
+      "title": "every proposal, as L's admin with no project: none in L, null (Q14), however many other workspaces hold",
       "actor": "owner",
       "acting_in": "<l>",
       "route": "GET /api/v1/proposals",
@@ -1164,13 +1168,13 @@
       "content_type": "text/plain; charset=utf-8",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 3,
+      "content_length": 5,
       "kind": "json",
       "body": [
-        "[]"
+        "null"
       ],
       "trailing_newline": true,
-      "parsed": [],
+      "parsed": null,
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
@@ -1717,59 +1721,32 @@
     },
     {
       "n": 42,
-      "title": "the run approves its own proposal: 200, applied with no reviewer; the project guard lets a run through as an editor of its project (pinned as it is)",
+      "title": "the run approves its own proposal: 403, a run token is the agent and reviews no proposal, refused before the lookup; the proposal stays pending",
       "actor": "author3",
       "route": "POST /api/v1/proposals/{id}/approve",
       "request": {
         "method": "POST",
         "path": "/api/v1/proposals/<s3>/approve"
       },
-      "status": 200,
-      "content_type": "text/plain; charset=utf-8",
+      "status": 403,
+      "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": "<varies>",
+      "content_length": 47,
       "kind": "json",
       "body": [
-        "{\"id\":\"<s3>\",\"run_id\":\"<author3>\",\"project_id\":\"<p>\",\"op\":\"create_artifact\",\"payload\":{\"attributes\":null,\"body\":\"Ask, then expect the answer within 2 s.\",\"project_id\":\"<p>\",\"title\":\"Self-reviewed\",\"type\":\"test-case\"},\"status\":\"applied\",\"review_note\":\"\",\"applied_entity_id\":\"<s3.artifact>\",\"created_at\":\"<time@before step 42>\",\"reviewed_at\":\"<time@step 42>\"}"
+        "{\"error\":\"agent runs cannot review proposals\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "id": "<s3>",
-        "run_id": "<author3>",
-        "project_id": "<p>",
-        "op": "create_artifact",
-        "payload": {
-          "attributes": null,
-          "body": "Ask, then expect the answer within 2 s.",
-          "project_id": "<p>",
-          "title": "Self-reviewed",
-          "type": "test-case"
-        },
-        "status": "applied",
-        "review_note": "",
-        "applied_entity_id": "<s3.artifact>",
-        "created_at": "<time@before step 42>",
-        "reviewed_at": "<time@step 42>"
+        "error": "agent runs cannot review proposals"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
-      "events": [
-        {
-          "type": "artifact.created",
-          "actor": "system",
-          "project": "<p>",
-          "entity": "<s3.artifact>",
-          "payload": {
-            "artifact_type": "string \"test-case\"",
-            "title": "string \"Self-reviewed\"",
-            "version": "number 1"
-          }
-        }
-      ]
+      "events": []
     },
     {
       "n": 43,
-      "title": "the member's runner key approves a proposal of P, where the member is only a viewer: 200, applied with no reviewer; the guard lets any key of the workspace through (pinned as it is); a body that does not decode is ignored",
+      "title": "the member's runner key approves a proposal of P, where the member is only a viewer: 403, a personal key acts with its member's role (fixed under R7, it applied the proposal with no reviewer); the proposal stays pending",
       "actor": "runner",
       "route": "POST /api/v1/proposals/{id}/approve",
       "request": {
@@ -1780,48 +1757,21 @@
         ],
         "body": "{"
       },
-      "status": 200,
-      "content_type": "text/plain; charset=utf-8",
+      "status": 403,
+      "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": "<varies>",
+      "content_length": 51,
       "kind": "json",
       "body": [
-        "{\"id\":\"<k3>\",\"run_id\":\"<author3>\",\"project_id\":\"<p>\",\"op\":\"create_artifact\",\"payload\":{\"attributes\":null,\"body\":\"Ask, then expect the answer within 2 s.\",\"project_id\":\"<p>\",\"title\":\"Key-reviewed\",\"type\":\"test-case\"},\"status\":\"applied\",\"review_note\":\"\",\"applied_entity_id\":\"<k3.artifact>\",\"created_at\":\"<time@before step 42>\",\"reviewed_at\":\"<time@step 43>\"}"
+        "{\"error\":\"you do not have access to this project\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "id": "<k3>",
-        "run_id": "<author3>",
-        "project_id": "<p>",
-        "op": "create_artifact",
-        "payload": {
-          "attributes": null,
-          "body": "Ask, then expect the answer within 2 s.",
-          "project_id": "<p>",
-          "title": "Key-reviewed",
-          "type": "test-case"
-        },
-        "status": "applied",
-        "review_note": "",
-        "applied_entity_id": "<k3.artifact>",
-        "created_at": "<time@before step 42>",
-        "reviewed_at": "<time@step 43>"
+        "error": "you do not have access to this project"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
-      "events": [
-        {
-          "type": "artifact.created",
-          "actor": "system",
-          "project": "<p>",
-          "entity": "<k3.artifact>",
-          "payload": {
-            "artifact_type": "string \"test-case\"",
-            "title": "string \"Key-reviewed\"",
-            "version": "number 1"
-          }
-        }
-      ]
+      "events": []
     },
     {
       "n": 44,
@@ -2188,7 +2138,7 @@
     },
     {
       "n": 53,
-      "title": "the member's runner key creates a requirement in P, which the member only views: 201, artifact.created as worker:<w>:user:<member> (pinned as it is)",
+      "title": "the member's runner key creates a requirement in P, which the member only views: 403, a personal key acts with its member's role (fixed under R7, it created the requirement)",
       "actor": "runner",
       "route": "POST /api/v1/artifacts",
       "request": {
@@ -2199,47 +2149,21 @@
         ],
         "body": "{\"project_id\":\"<p>\",\"type\":\"requirement\",\"title\":\"Answer briefly\",\"body\":\"The system shall be brief.\"}"
       },
-      "status": 201,
+      "status": 403,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": "<varies>",
+      "content_length": 51,
       "kind": "json",
       "body": [
-        "{\"id\":\"<r4>\",\"project_id\":\"<p>\",\"type\":\"requirement\",\"ref\":\"REQ-4\",\"title\":\"Answer briefly\",\"body\":\"The system shall be brief.\",\"sort_order\":7,\"status\":\"draft\",\"attributes\":{\"status\":\"draft\"},\"version\":1,\"valid_from\":\"<time@step 53>\",\"valid_to\":null,\"created_at\":\"<time@step 53>\",\"updated_at\":\"<time@step 53>\"}"
+        "{\"error\":\"you do not have access to this project\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "id": "<r4>",
-        "project_id": "<p>",
-        "type": "requirement",
-        "ref": "REQ-4",
-        "title": "Answer briefly",
-        "body": "The system shall be brief.",
-        "sort_order": 7,
-        "status": "draft",
-        "attributes": {
-          "status": "draft"
-        },
-        "version": 1,
-        "valid_from": "<time@step 53>",
-        "valid_to": null,
-        "created_at": "<time@step 53>",
-        "updated_at": "<time@step 53>"
+        "error": "you do not have access to this project"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
-      "events": [
-        {
-          "type": "artifact.created",
-          "actor": "worker:<w>:user:<member>",
-          "project": "<p>",
-          "entity": "<r4>",
-          "payload": {
-            "artifact_type": "string \"requirement\"",
-            "title": "string \"Answer briefly\""
-          }
-        }
-      ]
+      "events": []
     },
     {
       "n": 54,
@@ -2261,7 +2185,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<uuid:1>\",\"org_id\":\"<w>\",\"event_type\":\"artifact.created\",\"project_id\":\"<p>\",\"entity_id\":\"<r4>\",\"actor\":\"worker:<w>:user:<member>\",\"payload\":{\"artifact_type\":\"requirement\",\"title\":\"Answer briefly\"},\"created_at\":\"<time@step 53>\",\"actor_kind\":\"worker\",\"actor_id\":\"<member>\",\"actor_name\":\"Tour Member\",\"entity_kind\":\"requirement\",\"entity_name\":\"Answer briefly\"},{\"id\":\"<uuid:2>\",\"org_id\":\"<w>\",\"event_type\":\"artifact.created\",\"project_id\":\"<p>\",\"entity_id\":\"<r3>\",\"actor\":\"worker:<w>\",\"payload\":{\"artifact_type\":\"requirement\",\"title\":\"Answer politely\"},\"created_at\":\"<time@step 52>\",\"actor_kind\":\"worker\",\"actor_id\":\"<w>\",\"actor_name\":\"Workspace runner\",\"entity_kind\":\"requirement\",\"entity_name\":\"Answer politely\"},{\"id\":\"<uuid:3>\",\"org_id\":\"<w>\",\"event_type\":\"artifact.created\",\"project_id\":\"<q>\",\"entity_id\":\"<rq>\",\"actor\":\"user:<owner>\",\"payload\":{\"artifact_type\":\"requirement\",\"title\":\"Keep a log\"},\"created_at\":\"<time@step 51>\",\"actor_kind\":\"user\",\"actor_id\":\"<owner>\",\"actor_name\":\"Tour Owner\",\"entity_kind\":\"requirement\",\"entity_name\":\"Keep a log\"},{\"id\":\"<events.cursor>\",\"org_id\":\"<w>\",\"event_type\":\"agentrun.finished\",\"project_id\":\"<p>\",\"entity_id\":\"<author3>\",\"actor\":\"agent:<author3>\",\"payload\":{\"agent_id\":\"<author.agent>\",\"launched_by\":\"<owner>\",\"status\":\"succeeded\"},\"created_at\":\"<time@step 50>\",\"actor_kind\":\"agent\",\"actor_id\":\"<author3>\",\"actor_name\":\"Test Case Author\",\"entity_kind\":\"agent run\",\"entity_name\":\"Test Case Author\"}]"
+        "[{\"id\":\"<uuid:1>\",\"org_id\":\"<w>\",\"event_type\":\"artifact.created\",\"project_id\":\"<p>\",\"entity_id\":\"<r4>\",\"actor\":\"worker:<w>:user:<owner>\",\"payload\":{\"artifact_type\":\"requirement\",\"title\":\"Answer briefly\"},\"created_at\":\"<time@before step 54>\",\"actor_kind\":\"worker\",\"actor_id\":\"<owner>\",\"actor_name\":\"Tour Owner\",\"entity_kind\":\"requirement\",\"entity_name\":\"Answer briefly\"},{\"id\":\"<uuid:2>\",\"org_id\":\"<w>\",\"event_type\":\"artifact.created\",\"project_id\":\"<p>\",\"entity_id\":\"<r3>\",\"actor\":\"worker:<w>\",\"payload\":{\"artifact_type\":\"requirement\",\"title\":\"Answer politely\"},\"created_at\":\"<time@step 52>\",\"actor_kind\":\"worker\",\"actor_id\":\"<w>\",\"actor_name\":\"Workspace runner\",\"entity_kind\":\"requirement\",\"entity_name\":\"Answer politely\"},{\"id\":\"<uuid:3>\",\"org_id\":\"<w>\",\"event_type\":\"artifact.created\",\"project_id\":\"<q>\",\"entity_id\":\"<rq>\",\"actor\":\"user:<owner>\",\"payload\":{\"artifact_type\":\"requirement\",\"title\":\"Keep a log\"},\"created_at\":\"<time@step 51>\",\"actor_kind\":\"user\",\"actor_id\":\"<owner>\",\"actor_name\":\"Tour Owner\",\"entity_kind\":\"requirement\",\"entity_name\":\"Keep a log\"},{\"id\":\"<events.cursor>\",\"org_id\":\"<w>\",\"event_type\":\"agentrun.finished\",\"project_id\":\"<p>\",\"entity_id\":\"<author3>\",\"actor\":\"agent:<author3>\",\"payload\":{\"agent_id\":\"<author.agent>\",\"launched_by\":\"<owner>\",\"status\":\"succeeded\"},\"created_at\":\"<time@step 50>\",\"actor_kind\":\"agent\",\"actor_id\":\"<author3>\",\"actor_name\":\"Test Case Author\",\"entity_kind\":\"agent run\",\"entity_name\":\"Test Case Author\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -2271,15 +2195,15 @@
           "event_type": "artifact.created",
           "project_id": "<p>",
           "entity_id": "<r4>",
-          "actor": "worker:<w>:user:<member>",
+          "actor": "worker:<w>:user:<owner>",
           "payload": {
             "artifact_type": "requirement",
             "title": "Answer briefly"
           },
-          "created_at": "<time@step 53>",
+          "created_at": "<time@before step 54>",
           "actor_kind": "worker",
-          "actor_id": "<member>",
-          "actor_name": "Tour Member",
+          "actor_id": "<owner>",
+          "actor_name": "Tour Owner",
           "entity_kind": "requirement",
           "entity_name": "Answer briefly"
         },
@@ -2365,7 +2289,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<uuid:1>\",\"org_id\":\"<w>\",\"event_type\":\"artifact.created\",\"project_id\":\"<p>\",\"entity_id\":\"<r4>\",\"actor\":\"worker:<w>:user:<member>\",\"payload\":{\"artifact_type\":\"requirement\",\"title\":\"Answer briefly\"},\"created_at\":\"<time@step 53>\",\"actor_kind\":\"worker\",\"actor_id\":\"<member>\",\"actor_name\":\"Tour Member\",\"entity_kind\":\"requirement\",\"entity_name\":\"Answer briefly\"},{\"id\":\"<uuid:2>\",\"org_id\":\"<w>\",\"event_type\":\"artifact.created\",\"project_id\":\"<p>\",\"entity_id\":\"<r3>\",\"actor\":\"worker:<w>\",\"payload\":{\"artifact_type\":\"requirement\",\"title\":\"Answer politely\"},\"created_at\":\"<time@step 52>\",\"actor_kind\":\"worker\",\"actor_id\":\"<w>\",\"actor_name\":\"Workspace runner\",\"entity_kind\":\"requirement\",\"entity_name\":\"Answer politely\"},{\"id\":\"<events.cursor>\",\"org_id\":\"<w>\",\"event_type\":\"agentrun.finished\",\"project_id\":\"<p>\",\"entity_id\":\"<author3>\",\"actor\":\"agent:<author3>\",\"payload\":{\"agent_id\":\"<author.agent>\",\"launched_by\":\"<owner>\",\"status\":\"succeeded\"},\"created_at\":\"<time@step 50>\",\"actor_kind\":\"agent\",\"actor_id\":\"<author3>\",\"actor_name\":\"Test Case Author\",\"entity_kind\":\"agent run\",\"entity_name\":\"Test Case Author\"}]"
+        "[{\"id\":\"<uuid:1>\",\"org_id\":\"<w>\",\"event_type\":\"artifact.created\",\"project_id\":\"<p>\",\"entity_id\":\"<r4>\",\"actor\":\"worker:<w>:user:<owner>\",\"payload\":{\"artifact_type\":\"requirement\",\"title\":\"Answer briefly\"},\"created_at\":\"<time@before step 54>\",\"actor_kind\":\"worker\",\"actor_id\":\"<owner>\",\"actor_name\":\"Tour Owner\",\"entity_kind\":\"requirement\",\"entity_name\":\"Answer briefly\"},{\"id\":\"<uuid:2>\",\"org_id\":\"<w>\",\"event_type\":\"artifact.created\",\"project_id\":\"<p>\",\"entity_id\":\"<r3>\",\"actor\":\"worker:<w>\",\"payload\":{\"artifact_type\":\"requirement\",\"title\":\"Answer politely\"},\"created_at\":\"<time@step 52>\",\"actor_kind\":\"worker\",\"actor_id\":\"<w>\",\"actor_name\":\"Workspace runner\",\"entity_kind\":\"requirement\",\"entity_name\":\"Answer politely\"},{\"id\":\"<events.cursor>\",\"org_id\":\"<w>\",\"event_type\":\"agentrun.finished\",\"project_id\":\"<p>\",\"entity_id\":\"<author3>\",\"actor\":\"agent:<author3>\",\"payload\":{\"agent_id\":\"<author.agent>\",\"launched_by\":\"<owner>\",\"status\":\"succeeded\"},\"created_at\":\"<time@step 50>\",\"actor_kind\":\"agent\",\"actor_id\":\"<author3>\",\"actor_name\":\"Test Case Author\",\"entity_kind\":\"agent run\",\"entity_name\":\"Test Case Author\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -2375,15 +2299,15 @@
           "event_type": "artifact.created",
           "project_id": "<p>",
           "entity_id": "<r4>",
-          "actor": "worker:<w>:user:<member>",
+          "actor": "worker:<w>:user:<owner>",
           "payload": {
             "artifact_type": "requirement",
             "title": "Answer briefly"
           },
-          "created_at": "<time@step 53>",
+          "created_at": "<time@before step 54>",
           "actor_kind": "worker",
-          "actor_id": "<member>",
-          "actor_name": "Tour Member",
+          "actor_id": "<owner>",
+          "actor_name": "Tour Owner",
           "entity_kind": "requirement",
           "entity_name": "Answer briefly"
         },
@@ -2449,7 +2373,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<uuid:1>\",\"org_id\":\"<w>\",\"event_type\":\"artifact.created\",\"project_id\":\"<p>\",\"entity_id\":\"<r4>\",\"actor\":\"worker:<w>:user:<member>\",\"payload\":{\"artifact_type\":\"requirement\",\"title\":\"Answer briefly\"},\"created_at\":\"<time@step 53>\",\"actor_kind\":\"worker\",\"actor_id\":\"<member>\",\"actor_name\":\"Tour Member\",\"entity_kind\":\"requirement\",\"entity_name\":\"Answer briefly\"},{\"id\":\"<uuid:2>\",\"org_id\":\"<w>\",\"event_type\":\"artifact.created\",\"project_id\":\"<p>\",\"entity_id\":\"<r3>\",\"actor\":\"worker:<w>\",\"payload\":{\"artifact_type\":\"requirement\",\"title\":\"Answer politely\"},\"created_at\":\"<time@step 52>\",\"actor_kind\":\"worker\",\"actor_id\":\"<w>\",\"actor_name\":\"Workspace runner\",\"entity_kind\":\"requirement\",\"entity_name\":\"Answer politely\"},{\"id\":\"<uuid:3>\",\"org_id\":\"<w>\",\"event_type\":\"artifact.created\",\"project_id\":\"<q>\",\"entity_id\":\"<rq>\",\"actor\":\"user:<owner>\",\"payload\":{\"artifact_type\":\"requirement\",\"title\":\"Keep a log\"},\"created_at\":\"<time@step 51>\",\"actor_kind\":\"user\",\"actor_id\":\"<owner>\",\"actor_name\":\"Tour Owner\",\"entity_kind\":\"requirement\",\"entity_name\":\"Keep a log\"},{\"id\":\"<uuid:4>\",\"org_id\":\"<w>\",\"event_type\":\"artifact.created\",\"project_id\":\"<p>\",\"entity_id\":\"<k3.artifact>\",\"actor\":\"system\",\"payload\":{\"artifact_type\":\"test-case\",\"title\":\"Key-reviewed\",\"version\":1},\"created_at\":\"<time@step 43>\",\"actor_kind\":\"system\",\"actor_name\":\"System\",\"entity_kind\":\"test-case\",\"entity_name\":\"Key-reviewed\"},{\"id\":\"<uuid:5>\",\"org_id\":\"<w>\",\"event_type\":\"artifact.created\",\"project_id\":\"<p>\",\"entity_id\":\"<s3.artifact>\",\"actor\":\"system\",\"payload\":{\"artifact_type\":\"test-case\",\"title\":\"Self-reviewed\",\"version\":1},\"created_at\":\"<time@step 42>\",\"actor_kind\":\"system\",\"actor_name\":\"System\",\"entity_kind\":\"test-case\",\"entity_name\":\"Self-reviewed\"},{\"id\":\"<uuid:6>\",\"org_id\":\"<w>\",\"event_type\":\"artifact.created\",\"project_id\":\"<p>\",\"entity_id\":\"<tc1.artifact>\",\"actor\":\"system\",\"payload\":{\"artifact_type\":\"test-case\",\"title\":\"Answer within 2 s\",\"version\":1},\"created_at\":\"<time@step 30>\",\"actor_kind\":\"system\",\"actor_name\":\"System\",\"entity_kind\":\"test-case\",\"entity_name\":\"Answer within 2 s\"},{\"id\":\"<uuid:7>\",\"org_id\":\"<w>\",\"event_type\":\"artifact.created\",\"project_id\":\"<p>\",\"entity_id\":\"<r2>\",\"actor\":\"user:<owner>\",\"payload\":{\"artifact_type\":\"requirement\",\"title\":\"Log each answer\"},\"created_at\":\"<time@before step 1>\",\"actor_kind\":\"user\",\"actor_id\":\"<owner>\",\"actor_name\":\"Tour Owner\",\"entity_kind\":\"requirement\",\"entity_name\":\"Log each answer\"},{\"id\":\"<uuid:8>\",\"org_id\":\"<w>\",\"event_type\":\"artifact.created\",\"project_id\":\"<p>\",\"entity_id\":\"<r1>\",\"actor\":\"user:<owner>\",\"payload\":{\"artifact_type\":\"requirement\",\"title\":\"Answer in time\"},\"created_at\":\"<time@before step 1>\",\"actor_kind\":\"user\",\"actor_id\":\"<owner>\",\"actor_name\":\"Tour Owner\",\"entity_kind\":\"requirement\",\"entity_name\":\"Answer in time\"}]"
+        "[{\"id\":\"<uuid:1>\",\"org_id\":\"<w>\",\"event_type\":\"artifact.created\",\"project_id\":\"<p>\",\"entity_id\":\"<r4>\",\"actor\":\"worker:<w>:user:<owner>\",\"payload\":{\"artifact_type\":\"requirement\",\"title\":\"Answer briefly\"},\"created_at\":\"<time@before step 54>\",\"actor_kind\":\"worker\",\"actor_id\":\"<owner>\",\"actor_name\":\"Tour Owner\",\"entity_kind\":\"requirement\",\"entity_name\":\"Answer briefly\"},{\"id\":\"<uuid:2>\",\"org_id\":\"<w>\",\"event_type\":\"artifact.created\",\"project_id\":\"<p>\",\"entity_id\":\"<r3>\",\"actor\":\"worker:<w>\",\"payload\":{\"artifact_type\":\"requirement\",\"title\":\"Answer politely\"},\"created_at\":\"<time@step 52>\",\"actor_kind\":\"worker\",\"actor_id\":\"<w>\",\"actor_name\":\"Workspace runner\",\"entity_kind\":\"requirement\",\"entity_name\":\"Answer politely\"},{\"id\":\"<uuid:3>\",\"org_id\":\"<w>\",\"event_type\":\"artifact.created\",\"project_id\":\"<q>\",\"entity_id\":\"<rq>\",\"actor\":\"user:<owner>\",\"payload\":{\"artifact_type\":\"requirement\",\"title\":\"Keep a log\"},\"created_at\":\"<time@step 51>\",\"actor_kind\":\"user\",\"actor_id\":\"<owner>\",\"actor_name\":\"Tour Owner\",\"entity_kind\":\"requirement\",\"entity_name\":\"Keep a log\"},{\"id\":\"<uuid:4>\",\"org_id\":\"<w>\",\"event_type\":\"artifact.created\",\"project_id\":\"<p>\",\"entity_id\":\"<k3.artifact>\",\"actor\":\"system\",\"payload\":{\"artifact_type\":\"test-case\",\"title\":\"Key-reviewed\",\"version\":1},\"created_at\":\"<time@before step 44>\",\"actor_kind\":\"system\",\"actor_name\":\"System\",\"entity_kind\":\"test-case\",\"entity_name\":\"Key-reviewed\"},{\"id\":\"<uuid:5>\",\"org_id\":\"<w>\",\"event_type\":\"artifact.created\",\"project_id\":\"<p>\",\"entity_id\":\"<s3.artifact>\",\"actor\":\"system\",\"payload\":{\"artifact_type\":\"test-case\",\"title\":\"Self-reviewed\",\"version\":1},\"created_at\":\"<time@before step 43>\",\"actor_kind\":\"system\",\"actor_name\":\"System\",\"entity_kind\":\"test-case\",\"entity_name\":\"Self-reviewed\"},{\"id\":\"<uuid:6>\",\"org_id\":\"<w>\",\"event_type\":\"artifact.created\",\"project_id\":\"<p>\",\"entity_id\":\"<tc1.artifact>\",\"actor\":\"system\",\"payload\":{\"artifact_type\":\"test-case\",\"title\":\"Answer within 2 s\",\"version\":1},\"created_at\":\"<time@step 30>\",\"actor_kind\":\"system\",\"actor_name\":\"System\",\"entity_kind\":\"test-case\",\"entity_name\":\"Answer within 2 s\"},{\"id\":\"<uuid:7>\",\"org_id\":\"<w>\",\"event_type\":\"artifact.created\",\"project_id\":\"<p>\",\"entity_id\":\"<r2>\",\"actor\":\"user:<owner>\",\"payload\":{\"artifact_type\":\"requirement\",\"title\":\"Log each answer\"},\"created_at\":\"<time@before step 1>\",\"actor_kind\":\"user\",\"actor_id\":\"<owner>\",\"actor_name\":\"Tour Owner\",\"entity_kind\":\"requirement\",\"entity_name\":\"Log each answer\"},{\"id\":\"<uuid:8>\",\"org_id\":\"<w>\",\"event_type\":\"artifact.created\",\"project_id\":\"<p>\",\"entity_id\":\"<r1>\",\"actor\":\"user:<owner>\",\"payload\":{\"artifact_type\":\"requirement\",\"title\":\"Answer in time\"},\"created_at\":\"<time@before step 1>\",\"actor_kind\":\"user\",\"actor_id\":\"<owner>\",\"actor_name\":\"Tour Owner\",\"entity_kind\":\"requirement\",\"entity_name\":\"Answer in time\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -2459,15 +2383,15 @@
           "event_type": "artifact.created",
           "project_id": "<p>",
           "entity_id": "<r4>",
-          "actor": "worker:<w>:user:<member>",
+          "actor": "worker:<w>:user:<owner>",
           "payload": {
             "artifact_type": "requirement",
             "title": "Answer briefly"
           },
-          "created_at": "<time@step 53>",
+          "created_at": "<time@before step 54>",
           "actor_kind": "worker",
-          "actor_id": "<member>",
-          "actor_name": "Tour Member",
+          "actor_id": "<owner>",
+          "actor_name": "Tour Owner",
           "entity_kind": "requirement",
           "entity_name": "Answer briefly"
         },
@@ -2519,7 +2443,7 @@
             "title": "Key-reviewed",
             "version": 1
           },
-          "created_at": "<time@step 43>",
+          "created_at": "<time@before step 44>",
           "actor_kind": "system",
           "actor_name": "System",
           "entity_kind": "test-case",
@@ -2537,7 +2461,7 @@
             "title": "Self-reviewed",
             "version": 1
           },
-          "created_at": "<time@step 42>",
+          "created_at": "<time@before step 43>",
           "actor_kind": "system",
           "actor_name": "System",
           "entity_kind": "test-case",
@@ -2797,7 +2721,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<uuid:1>\",\"org_id\":\"<w>\",\"event_type\":\"artifact.created\",\"project_id\":\"<p>\",\"entity_id\":\"<r4>\",\"actor\":\"worker:<w>:user:<member>\",\"payload\":{\"artifact_type\":\"requirement\",\"title\":\"Answer briefly\"},\"created_at\":\"<time@step 53>\",\"actor_kind\":\"worker\",\"actor_id\":\"<member>\",\"actor_name\":\"Tour Member\",\"entity_kind\":\"requirement\",\"entity_name\":\"Answer briefly\"},{\"id\":\"<uuid:2>\",\"org_id\":\"<w>\",\"event_type\":\"artifact.created\",\"project_id\":\"<p>\",\"entity_id\":\"<r3>\",\"actor\":\"worker:<w>\",\"payload\":{\"artifact_type\":\"requirement\",\"title\":\"Answer politely\"},\"created_at\":\"<time@step 52>\",\"actor_kind\":\"worker\",\"actor_id\":\"<w>\",\"actor_name\":\"Workspace runner\",\"entity_kind\":\"requirement\",\"entity_name\":\"Answer politely\"},{\"id\":\"<events.cursor>\",\"org_id\":\"<w>\",\"event_type\":\"agentrun.finished\",\"project_id\":\"<p>\",\"entity_id\":\"<author3>\",\"actor\":\"agent:<author3>\",\"payload\":{\"agent_id\":\"<author.agent>\",\"launched_by\":\"<owner>\",\"status\":\"succeeded\"},\"created_at\":\"<time@step 50>\",\"actor_kind\":\"agent\",\"actor_id\":\"<author3>\",\"actor_name\":\"Test Case Author\",\"entity_kind\":\"agent run\",\"entity_name\":\"Test Case Author\"}]"
+        "[{\"id\":\"<uuid:1>\",\"org_id\":\"<w>\",\"event_type\":\"artifact.created\",\"project_id\":\"<p>\",\"entity_id\":\"<r4>\",\"actor\":\"worker:<w>:user:<owner>\",\"payload\":{\"artifact_type\":\"requirement\",\"title\":\"Answer briefly\"},\"created_at\":\"<time@before step 54>\",\"actor_kind\":\"worker\",\"actor_id\":\"<owner>\",\"actor_name\":\"Tour Owner\",\"entity_kind\":\"requirement\",\"entity_name\":\"Answer briefly\"},{\"id\":\"<uuid:2>\",\"org_id\":\"<w>\",\"event_type\":\"artifact.created\",\"project_id\":\"<p>\",\"entity_id\":\"<r3>\",\"actor\":\"worker:<w>\",\"payload\":{\"artifact_type\":\"requirement\",\"title\":\"Answer politely\"},\"created_at\":\"<time@step 52>\",\"actor_kind\":\"worker\",\"actor_id\":\"<w>\",\"actor_name\":\"Workspace runner\",\"entity_kind\":\"requirement\",\"entity_name\":\"Answer politely\"},{\"id\":\"<events.cursor>\",\"org_id\":\"<w>\",\"event_type\":\"agentrun.finished\",\"project_id\":\"<p>\",\"entity_id\":\"<author3>\",\"actor\":\"agent:<author3>\",\"payload\":{\"agent_id\":\"<author.agent>\",\"launched_by\":\"<owner>\",\"status\":\"succeeded\"},\"created_at\":\"<time@step 50>\",\"actor_kind\":\"agent\",\"actor_id\":\"<author3>\",\"actor_name\":\"Test Case Author\",\"entity_kind\":\"agent run\",\"entity_name\":\"Test Case Author\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -2807,15 +2731,15 @@
           "event_type": "artifact.created",
           "project_id": "<p>",
           "entity_id": "<r4>",
-          "actor": "worker:<w>:user:<member>",
+          "actor": "worker:<w>:user:<owner>",
           "payload": {
             "artifact_type": "requirement",
             "title": "Answer briefly"
           },
-          "created_at": "<time@step 53>",
+          "created_at": "<time@before step 54>",
           "actor_kind": "worker",
-          "actor_id": "<member>",
-          "actor_name": "Tour Member",
+          "actor_id": "<owner>",
+          "actor_name": "Tour Owner",
           "entity_kind": "requirement",
           "entity_name": "Answer briefly"
         },
@@ -24804,6 +24728,63 @@
         "updated_at": "<time@step 80>"
       },
       "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 84,
+      "title": "the owner approves H's proposal, in its personal workspace: 200, applied, the owner its reviewer; a body that does not decode is ignored",
+      "actor": "owner",
+      "route": "POST /api/v1/proposals/{id}/approve",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/proposals/<h.proposal>/approve",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{"
+      },
+      "status": 200,
+      "content_type": "text/plain; charset=utf-8",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"id\":\"<h.proposal>\",\"run_id\":\"<author_h>\",\"project_id\":\"<h>\",\"op\":\"create_artifact\",\"payload\":{\"attributes\":null,\"body\":\"\",\"project_id\":\"<h>\",\"title\":\"Start within 5 s\",\"type\":\"test-case\"},\"status\":\"applied\",\"review_note\":\"\",\"applied_entity_id\":\"<h.artifact>\",\"reviewed_by\":\"<owner>\",\"created_at\":\"<time@before step 1>\",\"reviewed_at\":\"<time@step 84>\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "id": "<h.proposal>",
+        "run_id": "<author_h>",
+        "project_id": "<h>",
+        "op": "create_artifact",
+        "payload": {
+          "attributes": null,
+          "body": "",
+          "project_id": "<h>",
+          "title": "Start within 5 s",
+          "type": "test-case"
+        },
+        "status": "applied",
+        "review_note": "",
+        "applied_entity_id": "<h.artifact>",
+        "reviewed_by": "<owner>",
+        "created_at": "<time@before step 1>",
+        "reviewed_at": "<time@step 84>"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": [
+        {
+          "type": "artifact.created",
+          "actor": "system",
+          "project": "<h>",
+          "entity": "<h.artifact>",
+          "payload": {
+            "artifact_type": "string \"test-case\"",
+            "title": "string \"Start within 5 s\"",
+            "version": "number 1"
+          }
+        }
+      ]
     }
   ],
   "uploads": [],

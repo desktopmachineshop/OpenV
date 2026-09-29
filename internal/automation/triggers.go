@@ -47,6 +47,13 @@ func (m *TriggerMatcher) handle(e domainevents.Event) {
 }
 
 func (m *TriggerMatcher) matches(a *automations.Automation, e domainevents.Event) bool {
+	// Workspace scope: an automation sees only its own workspace's events
+	// (the bus stamps OrgID from the event's project where the publisher did
+	// not), so a workspace-wide automation's run, which takes the event's
+	// project, stays in its workspace. An event with no workspace fires none.
+	if a.OrgID == "" || e.OrgID != a.OrgID {
+		return false
+	}
 	// Project scope.
 	if a.ProjectID != nil && *a.ProjectID != "" && *a.ProjectID != e.ProjectID {
 		return false
