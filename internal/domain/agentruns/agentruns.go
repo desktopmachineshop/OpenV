@@ -367,7 +367,9 @@ type Repository interface {
 	// excludeRepoAccess skips runs whose agent needs repo access.
 	Claim(workerID string, orgID string, workerUserID string, providers []string, minPriority int, excludeRepoAccess bool) (*Run, error)
 	// ReleaseClaim conditionally returns a claimed run to the queue, but only
-	// while it is still claimed by workerID (claim handshake failed); reports
+	// while it is still claimed by workerID (claim handshake failed), and
+	// revokes its run token, so the departing worker's token stops
+	// authenticating at once (the next claim issues a fresh one); reports
 	// whether the release was applied.
 	ReleaseClaim(runID, workerID string) (bool, error)
 	// CancelQueued conditionally cancels a run only while it is still queued
@@ -378,8 +380,8 @@ type Repository interface {
 	// cancellation; reports whether the flag was applied.
 	SetCancelRequested(id string) (bool, error)
 	// UpdateTerminal writes a run's terminal result fields and revokes its run
-	// token, but only while the stored status is still non-terminal; reports
-	// whether the transition was applied.
+	// token, but only while a worker still holds the run (claimed or
+	// running); reports whether the transition was applied.
 	UpdateTerminal(r *Run) (bool, error)
 	// MarkRunning conditionally transitions a run from claimed to running,
 	// stamping started_at/heartbeat_at, so a run another actor moved on
@@ -413,10 +415,11 @@ type Repository interface {
 	// any of its writes did not land.
 	CountApplyFailedProposals(runID string) (int, error)
 	// FinalizeApproval transitions an awaiting_approval run to a terminal
-	// status (succeeded/failed) once its proposals are resolved, but only
-	// while it is still awaiting approval so a concurrent resolver can never
-	// double-finalize; reports whether the transition was applied.
-	FinalizeApproval(runID, status string, at time.Time) (bool, error)
+	// status (succeeded/failed) once its proposals are resolved, storing
+	// errMsg as the run's error, but only while it is still awaiting approval
+	// so a concurrent resolver can never double-finalize; reports whether the
+	// transition was applied.
+	FinalizeApproval(runID, status, errMsg string, at time.Time) (bool, error)
 	// QueueStats summarizes the org's queued runs.
 	QueueStats(orgID string) (QueueStats, error)
 	// Usage aggregates an org's runs created at/after since, grouped by
@@ -770,7 +773,9 @@ func (s *DefaultService) Claim(workerID string, orgID string, workerUserID strin
 // ReleaseClaim returns a just-claimed run to the queue when the claim
 // handshake fails, so the run isn't stranded until the stale reaper. The
 // release is conditional (still claimed, same worker) so it can never undo a
-// state another actor moved the run into meanwhile.
+// state another actor moved the run into meanwhile. It revokes the run's
+// token: the worker handing the run back, and the agent it started, no
+// longer act for it, and the next claim issues a fresh token.
 func (s *DefaultService) ReleaseClaim(runID, workerID string) error {
 	released, err := s.repo.ReleaseClaim(runID, workerID)
 	if err != nil {
@@ -890,6 +895,10 @@ func (s *DefaultService) Logs(runID string, afterSeq int) ([]LogEntry, error) {
 	return s.repo.ListLogs(runID, afterSeq)
 }
 
+// applyFailedError is the error a run awaiting approval is finalised failed
+// with when one of its approved proposals failed to apply.
+const applyFailedError = "one or more approved proposals failed to apply"
+
 var terminalStatuses = map[string]bool{
 	StatusSucceeded: true,
 	StatusFailed:    true,
@@ -897,7 +906,8 @@ var terminalStatuses = map[string]bool{
 	StatusTimedOut:  true,
 }
 
-// Finish records a run's terminal state.
+// Finish records a run's terminal state. Only a run a worker holds (claimed
+// or running) finishes: a queued run has no worker whose result it could be.
 func (s *DefaultService) Finish(id string, req FinishRequest) (*Run, error) {
 	if !terminalStatuses[req.Status] {
 		return nil, fmt.Errorf("%w: finish status %q", ErrInvalidTransition, req.Status)
@@ -906,8 +916,8 @@ func (s *DefaultService) Finish(id string, req FinishRequest) (*Run, error) {
 	if err != nil {
 		return nil, err
 	}
-	if terminalStatuses[run.Status] || run.Status == StatusAwaitingApproval {
-		return nil, fmt.Errorf("%w: run already %s", ErrInvalidTransition, run.Status)
+	if run.Status != StatusClaimed && run.Status != StatusRunning {
+		return nil, finishRefusal(run.Status, req.Status)
 	}
 
 	now := time.Now()
@@ -946,13 +956,23 @@ func (s *DefaultService) Finish(id string, req FinishRequest) (*Run, error) {
 		if err != nil {
 			return nil, fmt.Errorf("%w: run already finished", ErrInvalidTransition)
 		}
-		return nil, fmt.Errorf("%w: run already %s", ErrInvalidTransition, current.Status)
+		return nil, finishRefusal(current.Status, req.Status)
 	}
 	run.RunTokenHash = ""
 	s.notifyStatus(run)
 	s.publishRunFinished(run)
 	s.maybeAutoRetry(run)
 	return run, nil
+}
+
+// finishRefusal is the transition error for a finish that a run in status
+// from cannot take: one already finished says so, and one no worker holds
+// (queued) names the transition, as MarkRunning's refusal does.
+func finishRefusal(from, to string) error {
+	if terminalStatuses[from] || from == StatusAwaitingApproval {
+		return fmt.Errorf("%w: run already %s", ErrInvalidTransition, from)
+	}
+	return fmt.Errorf("%w: %s -> %s", ErrInvalidTransition, from, to)
 }
 
 // retryBackoffBase is the first retry's delay; each further attempt doubles it
@@ -1158,8 +1178,13 @@ func (s *DefaultService) FinalizeIfResolved(runID string) (*Run, error) {
 		status = StatusFailed
 	}
 
+	// A failed run keeps the reason it failed, stored as a worker's failure
+	// is, so that it reads back as its status broadcast told it.
+	if status == StatusFailed && run.Error == "" {
+		run.Error = applyFailedError
+	}
 	now := time.Now()
-	applied, err := s.repo.FinalizeApproval(runID, status, now)
+	applied, err := s.repo.FinalizeApproval(runID, status, run.Error, now)
 	if err != nil {
 		return nil, err
 	}
@@ -1171,9 +1196,6 @@ func (s *DefaultService) FinalizeIfResolved(runID string) (*Run, error) {
 	run.Status = status
 	run.FinishedAt = &now
 	run.RunTokenHash = ""
-	if status == StatusFailed && run.Error == "" {
-		run.Error = "one or more approved proposals failed to apply"
-	}
 	s.notifyStatus(run)
 	s.publishRunFinished(run)
 	return run, nil

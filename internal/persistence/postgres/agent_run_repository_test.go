@@ -450,6 +450,134 @@ func TestReleaseClaimRequiresOwningWorker(t *testing.T) {
 	}
 }
 
+// TestReleaseClaimRevokesTheRunToken: a released run's token stops
+// authenticating with the release, not only when the run is claimed again.
+// Whoever the departing worker handed the token to (the agent it started)
+// no longer acts for the run; the next claim issues a fresh token.
+func TestReleaseClaimRevokesTheRunToken(t *testing.T) {
+	f := newClaimFixture(t)
+	for _, status := range []string{agentruns.StatusClaimed, agentruns.StatusRunning} {
+		id := f.queueRun(t, runSpec{})
+		hash := "held-" + status
+		f.setRunState(t, id, status, hash)
+		if _, err := f.db.Exec(`UPDATE agent_runs SET worker_id = 'w-1' WHERE id = $1`, id); err != nil {
+			t.Fatal(err)
+		}
+		if got, err := f.repo.FindByTokenHash(hash); err != nil || got == nil {
+			t.Fatalf("%s: the held run's token = %v, %v, want it to authenticate", status, got, err)
+		}
+
+		ok, err := f.repo.ReleaseClaim(id, "w-1")
+		if err != nil || !ok {
+			t.Fatalf("%s: ReleaseClaim = %v, %v, want applied", status, ok, err)
+		}
+		got, err := f.repo.FindByTokenHash(hash)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got != nil {
+			t.Errorf("%s: the released run's old token still authenticates as run %s, want it refused", status, got.ID)
+		}
+		if got := f.tokenHash(t, id); got != "" {
+			t.Errorf("%s: released run's token hash = %q, want revoked", status, got)
+		}
+	}
+
+	// A refused release (another worker's) keeps the holder's token.
+	id := f.queueRun(t, runSpec{})
+	f.setRunState(t, id, agentruns.StatusRunning, "kept")
+	if _, err := f.db.Exec(`UPDATE agent_runs SET worker_id = 'w-1' WHERE id = $1`, id); err != nil {
+		t.Fatal(err)
+	}
+	if ok, err := f.repo.ReleaseClaim(id, "w-2"); err != nil || ok {
+		t.Fatalf("ReleaseClaim(wrong worker) = %v, %v, want false", ok, err)
+	}
+	if got := f.tokenHash(t, id); got != "kept" {
+		t.Errorf("a refused release changed the token hash to %q", got)
+	}
+}
+
+// TestUpdateTerminalTakesOnlyAHeldRun: a finish writes only into a run a
+// worker holds. A queued run, never claimed or released back, takes no
+// result and keeps its token.
+func TestUpdateTerminalTakesOnlyAHeldRun(t *testing.T) {
+	f := newClaimFixture(t)
+	id := f.queueRun(t, runSpec{})
+	f.setRunState(t, id, agentruns.StatusQueued, "tok")
+
+	run := f.mustFind(t, id)
+	finished := time.Now().UTC()
+	run.Status = agentruns.StatusSucceeded
+	run.FinishedAt = &finished
+	run.FinalText = "Nothing to do."
+	ok, err := f.repo.UpdateTerminal(run)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ok {
+		t.Fatal("UpdateTerminal applied to a queued run")
+	}
+	got := f.mustFind(t, id)
+	if got.Status != agentruns.StatusQueued || got.FinalText != "" || got.FinishedAt != nil {
+		t.Errorf("queued run after a refused finish = %s %q %v, want unchanged", got.Status, got.FinalText, got.FinishedAt)
+	}
+	if hash := f.tokenHash(t, id); hash != "tok" {
+		t.Errorf("token hash = %q, want kept", hash)
+	}
+
+	// A claimed run, which a worker holds before it starts, finishes.
+	f.setRunState(t, id, agentruns.StatusClaimed, "tok")
+	run.Status = agentruns.StatusFailed
+	run.Error = "no adapter for provider claude"
+	if ok, err := f.repo.UpdateTerminal(run); err != nil || !ok {
+		t.Fatalf("UpdateTerminal(claimed) = %v, %v, want applied", ok, err)
+	}
+	if got := f.mustFind(t, id); got.Status != agentruns.StatusFailed || got.Error != run.Error {
+		t.Errorf("claimed run after finish = %s %q, want failed with its error", got.Status, got.Error)
+	}
+}
+
+// TestFinalizeIfResolvedStoresTheApplyFailure runs the run service over the
+// repository: a run awaiting approval whose approved proposal failed to
+// apply is finalised failed with the reason stored, so that the run read back
+// says why, as the status it broadcast did.
+func TestFinalizeIfResolvedStoresTheApplyFailure(t *testing.T) {
+	f := newClaimFixture(t)
+	failed := f.queueRun(t, runSpec{})
+	f.setRunState(t, failed, agentruns.StatusAwaitingApproval, "")
+	clean := f.queueRun(t, runSpec{})
+	f.setRunState(t, clean, agentruns.StatusAwaitingApproval, "")
+	project := uuid.New().String()
+	for _, p := range []struct{ run, status string }{{failed, "apply_failed"}, {failed, "rejected"}, {clean, "applied"}} {
+		if _, err := f.db.Exec(`INSERT INTO agent_proposals (id, run_id, project_id, op, status) VALUES ($1, $2, $3, 'create_link', $4)`,
+			uuid.New().String(), p.run, project, p.status); err != nil {
+			t.Fatal(err)
+		}
+	}
+	svc := agentruns.NewDefaultService(f.repo, nil, nil)
+
+	run, err := svc.FinalizeIfResolved(failed)
+	if err != nil {
+		t.Fatalf("FinalizeIfResolved: %v", err)
+	}
+	const reason = "one or more approved proposals failed to apply"
+	if run.Status != agentruns.StatusFailed || run.Error != reason {
+		t.Fatalf("finalised run = %s %q, want failed with %q", run.Status, run.Error, reason)
+	}
+	stored := f.mustFind(t, failed)
+	if stored.Status != agentruns.StatusFailed || stored.Error != reason || stored.FinishedAt == nil {
+		t.Errorf("stored run = %s %q finished %v, want failed with %q", stored.Status, stored.Error, stored.FinishedAt, reason)
+	}
+
+	// A run whose proposals all landed succeeds with no error.
+	if _, err := svc.FinalizeIfResolved(clean); err != nil {
+		t.Fatalf("FinalizeIfResolved(clean): %v", err)
+	}
+	if stored := f.mustFind(t, clean); stored.Status != agentruns.StatusSucceeded || stored.Error != "" {
+		t.Errorf("stored clean run = %s %q, want succeeded with no error", stored.Status, stored.Error)
+	}
+}
+
 func TestHeartbeatRefreshesLiveness(t *testing.T) {
 	f := newClaimFixture(t)
 	id := f.queueRun(t, runSpec{})

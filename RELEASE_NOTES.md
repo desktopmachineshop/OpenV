@@ -153,6 +153,51 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   was valid for 59 minutes; the link has always lasted an hour, and the
   email now says 60 minutes.
 
+- **A run that fails once its changes are reviewed keeps the reason.** When
+  an approved change an agent proposed could not be applied, the run was
+  marked failed, but the reason, *one or more approved proposals failed to
+  apply*, showed only to someone watching the run at that moment: opened
+  later, or read through the API, the failed run gave no reason at all. The
+  run now keeps it.
+
+- **A run handed back to the queue no longer lets its agent go on working.**
+  When a runner shutting down handed an unfinished run back, the agent it had
+  started could still read and write the project with the run's access until
+  another runner picked the run up. That access now ends the moment the run is
+  handed back (its token answers `401`), and the runner that picks the run up
+  gets access of its own.
+
+- **A run still waiting in the queue can no longer be reported finished.** A
+  runner's key could mark such a run, one no runner had picked up, as
+  finished, with a result no agent had produced. Such a report is now refused
+  with `409`, as a second report for a finished run already was, and the run
+  stays in the queue for a runner to take.
+
+- **An agent whose changes need review can no longer use the
+  *Draft test cases* request.** An agent in proposal mode could call it
+  through the API, which started another agent run and put its card on the
+  board with no person asking for it and no record of who had. That request
+  is now refused for such an agent, as a status change by such an agent
+  already was. People, and agents that write directly, draft test cases as
+  before.
+
+- **Deleting an agent that is already gone, and two runner requests about
+  something that no longer exists, answer *not found*.** Through the API,
+  deleting an agent a moment after someone else did (or one that never
+  existed), a runner pool node releasing itself after the pool lost its
+  record, and a crew agent delegating after its place in the crew was
+  removed all failed with a server error. They now answer `404`: *agent not
+  found*; *pool node is not registered*, as the node's heartbeat already did,
+  so the node no longer retries the report (its heartbeat, answered the same
+  way, is what has it register again); and *team node not found*.
+
+- **A runner's report of its AI tools is recorded in full.** A runner reports
+  every AI tool it has in one go, and when that report named one this server
+  does not know, as a newer runner's can, the tools the server does know were
+  recorded or not at random, so the workspace's *AI providers* settings could
+  show a tool the runner has as never detected. Every tool the server knows
+  is now recorded, and the report is still refused for the one it does not.
+
 ## 0.15.0 — 2026-09-22
 
 ### New features

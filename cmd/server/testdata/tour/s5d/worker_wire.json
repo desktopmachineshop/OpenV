@@ -2147,7 +2147,7 @@
     },
     {
       "n": 60,
-      "title": "run2's first token still authenticates, since the release keeps its hash: the handler's 403",
+      "title": "run2's first token, revoked by the release: the middleware's 401",
       "actor": "run2",
       "route": "POST /api/v1/agent-runs/claim",
       "request": {
@@ -2158,18 +2158,18 @@
         ],
         "body": "{\"hosted\":false,\"min_priority\":0,\"providers\":[\"claude-code\"],\"worker_id\":\"tour-run2\"}"
       },
-      "status": 403,
+      "status": 401,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 40,
+      "content_length": 26,
       "kind": "json",
       "body": [
-        "{\"error\":\"worker credentials required\"}"
+        "{\"error\":\"invalid token\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "worker credentials required"
+        "error": "invalid token"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
@@ -2270,7 +2270,7 @@
     },
     {
       "n": 62,
-      "title": "run2's first token, replaced by the claim: the middleware's 401",
+      "title": "run2's first token after the new claim: still the middleware's 401",
       "actor": "run2",
       "route": "POST /api/v1/agent-runs/claim",
       "request": {
@@ -2453,7 +2453,7 @@
     },
     {
       "n": 66,
-      "title": "finish run3, which no worker claimed: 200 all the same",
+      "title": "finish run3, which no worker claimed: 409, only a run a worker holds finishes",
       "actor": "box",
       "route": "POST /api/v1/agent-runs/{id}/finish",
       "request": {
@@ -2464,54 +2464,21 @@
         ],
         "body": "{\"status\":\"succeeded\",\"final_text\":\"Nothing to do.\"}"
       },
-      "status": 200,
-      "content_type": "text/plain; charset=utf-8",
+      "status": 409,
+      "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": "<varies>",
+      "content_length": 68,
       "kind": "json",
       "body": [
-        "{\"id\":\"<run3>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<phantom>\",\"status\":\"succeeded\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise P for card zero.\",\"finished_at\":\"<time@step 66>\",\"final_text\":\"Nothing to do.\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 65>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"}"
+        "{\"error\":\"invalid run status transition: queued -\\u003e succeeded\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "id": "<run3>",
-        "org_id": "<w>",
-        "agent_id": "<agent>",
-        "project_id": "<p>",
-        "work_item_id": "<phantom>",
-        "status": "succeeded",
-        "cancel_requested": false,
-        "priority": 0,
-        "prompt": "Summarise P for card zero.",
-        "finished_at": "<time@step 66>",
-        "final_text": "Nothing to do.",
-        "error": "",
-        "attempt_count": 1,
-        "max_attempts": 3,
-        "tokens_in": 0,
-        "tokens_out": 0,
-        "artifacts_touched": [],
-        "launched_by": "<owner>",
-        "created_at": "<time@step 65>",
-        "agent_content_hash": "<hex64:1>",
-        "agent_name": "Tour Worker",
-        "agent_provider": "claude-code"
+        "error": "invalid run status transition: queued -\u003e succeeded"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
-      "events": [
-        {
-          "type": "agentrun.finished",
-          "actor": "agent:<run3>",
-          "project": "<p>",
-          "entity": "<run3>",
-          "payload": {
-            "agent_id": "string \"<agent>\"",
-            "launched_by": "string \"<owner>\"",
-            "status": "string \"succeeded\""
-          }
-        }
-      ]
+      "events": []
     },
     {
       "n": 67,
@@ -4197,7 +4164,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<run_h>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<uuid:3>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise P, hosted.\",\"worker_id\":\"tour-hosted\",\"heartbeat_at\":\"<time@step 85>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 85>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},{\"id\":\"<run_r>\",\"org_id\":\"<w>\",\"agent_id\":\"<repo.agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<uuid:4>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Fix the build.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@step 86>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 85>\",\"agent_content_hash\":\"<hex64:6>\",\"agent_name\":\"Tour Repo\",\"agent_provider\":\"claude-code\"},{\"id\":\"<run_k2>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<k>\",\"work_item_id\":\"<uuid:2>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise K again.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@step 84>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 84>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},{\"id\":\"<run_k1>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<k>\",\"work_item_id\":\"<uuid:1>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise K.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@step 83>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 83>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},{\"id\":\"<run5>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"status\":\"succeeded\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise my week.\",\"worker_id\":\"tour-runner\",\"heartbeat_at\":\"<time@step 80>\",\"finished_at\":\"<time@step 82>\",\"final_text\":\"Quiet week.\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<member>\",\"preferred_user_id\":\"<member>\",\"hosted_after\":\"<time>\",\"created_at\":\"<time@step 78>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},{\"id\":\"<retry4m>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<retry4m.card>\",\"retried_from_run_id\":\"<run4>\",\"status\":\"failed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise P, flakily.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@before step 75>\",\"finished_at\":\"<time@step 75>\",\"final_text\":\"\",\"error\":\"the agent gave up\",\"error_class\":\"agent_error\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 74>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},{\"id\":\"<retry4>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<retry4.card>\",\"retried_from_run_id\":\"<run4>\",\"status\":\"cancelled\",\"cancel_requested\":true,\"priority\":0,\"prompt\":\"Summarise P, flakily.\",\"finished_at\":\"<time@before step 77>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":2,\"max_attempts\":3,\"next_attempt_at\":\"<retry4.next_attempt_at>\",\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 71>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},{\"id\":\"<run4>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<run4.card>\",\"status\":\"failed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise P, flakily.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@before step 71>\",\"finished_at\":\"<time@step 71>\",\"final_text\":\"\",\"error\":\"the provider hung up\",\"error_class\":\"worker_error\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 71>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},{\"id\":\"<run_t>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"status\":\"cancelled\",\"cancel_requested\":true,\"priority\":0,\"prompt\":\"Help with W.\",\"finished_at\":\"<time@before step 71>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"created_at\":\"<time@step 70>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},{\"id\":\"<run_b>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Tidy W.\",\"worker_id\":\"tour-runner\",\"heartbeat_at\":\"<time@before step 68>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"created_at\":\"<time@step 67>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},{\"id\":\"<run3>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<phantom>\",\"status\":\"succeeded\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise P for card zero.\",\"finished_at\":\"<time@step 66>\",\"final_text\":\"Nothing to do.\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 65>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},{\"id\":\"<run2>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<run2.card>\",\"status\":\"succeeded\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise P again.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@before step 63>\",\"started_at\":\"<time@before step 63>\",\"finished_at\":\"<time@step 63>\",\"exit_code\":0,\"final_text\":\"P holds two requirements.\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":1200,\"tokens_out\":340,\"cost_usd\":0.0125,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 55>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},{\"id\":\"<retry1>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<retry1.card>\",\"retried_from_run_id\":\"<run1>\",\"status\":\"cancelled\",\"cancel_requested\":true,\"priority\":0,\"prompt\":\"Summarise P.\",\"finished_at\":\"<time@step 54>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 50>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},{\"id\":\"<run1>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<run1.card>\",\"status\":\"cancelled\",\"cancel_requested\":true,\"priority\":0,\"prompt\":\"Summarise P.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@step 41>\",\"started_at\":\"<time@step 20>\",\"finished_at\":\"<time@step 42>\",\"final_text\":\"\",\"error\":\"cancelled on request\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 10>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"}]"
+        "[{\"id\":\"<run_h>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<uuid:3>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise P, hosted.\",\"worker_id\":\"tour-hosted\",\"heartbeat_at\":\"<time@step 85>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 85>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},{\"id\":\"<run_r>\",\"org_id\":\"<w>\",\"agent_id\":\"<repo.agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<uuid:4>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Fix the build.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@step 86>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 85>\",\"agent_content_hash\":\"<hex64:6>\",\"agent_name\":\"Tour Repo\",\"agent_provider\":\"claude-code\"},{\"id\":\"<run_k2>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<k>\",\"work_item_id\":\"<uuid:2>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise K again.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@step 84>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 84>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},{\"id\":\"<run_k1>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<k>\",\"work_item_id\":\"<uuid:1>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise K.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@step 83>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 83>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},{\"id\":\"<run5>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"status\":\"succeeded\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise my week.\",\"worker_id\":\"tour-runner\",\"heartbeat_at\":\"<time@step 80>\",\"finished_at\":\"<time@step 82>\",\"final_text\":\"Quiet week.\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<member>\",\"preferred_user_id\":\"<member>\",\"hosted_after\":\"<time>\",\"created_at\":\"<time@step 78>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},{\"id\":\"<retry4m>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<retry4m.card>\",\"retried_from_run_id\":\"<run4>\",\"status\":\"failed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise P, flakily.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@before step 75>\",\"finished_at\":\"<time@step 75>\",\"final_text\":\"\",\"error\":\"the agent gave up\",\"error_class\":\"agent_error\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 74>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},{\"id\":\"<retry4>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<retry4.card>\",\"retried_from_run_id\":\"<run4>\",\"status\":\"cancelled\",\"cancel_requested\":true,\"priority\":0,\"prompt\":\"Summarise P, flakily.\",\"finished_at\":\"<time@before step 77>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":2,\"max_attempts\":3,\"next_attempt_at\":\"<retry4.next_attempt_at>\",\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 71>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},{\"id\":\"<run4>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<run4.card>\",\"status\":\"failed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise P, flakily.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@before step 71>\",\"finished_at\":\"<time@step 71>\",\"final_text\":\"\",\"error\":\"the provider hung up\",\"error_class\":\"worker_error\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 71>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},{\"id\":\"<run_t>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"status\":\"cancelled\",\"cancel_requested\":true,\"priority\":0,\"prompt\":\"Help with W.\",\"finished_at\":\"<time@before step 71>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"created_at\":\"<time@step 70>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},{\"id\":\"<run_b>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Tidy W.\",\"worker_id\":\"tour-runner\",\"heartbeat_at\":\"<time@before step 68>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"created_at\":\"<time@step 67>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},{\"id\":\"<run3>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<phantom>\",\"status\":\"cancelled\",\"cancel_requested\":true,\"priority\":0,\"prompt\":\"Summarise P for card zero.\",\"finished_at\":\"<time@before step 67>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 65>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},{\"id\":\"<run2>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<run2.card>\",\"status\":\"succeeded\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise P again.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@before step 63>\",\"started_at\":\"<time@before step 63>\",\"finished_at\":\"<time@step 63>\",\"exit_code\":0,\"final_text\":\"P holds two requirements.\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":1200,\"tokens_out\":340,\"cost_usd\":0.0125,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 55>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},{\"id\":\"<retry1>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<retry1.card>\",\"retried_from_run_id\":\"<run1>\",\"status\":\"cancelled\",\"cancel_requested\":true,\"priority\":0,\"prompt\":\"Summarise P.\",\"finished_at\":\"<time@step 54>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 50>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},{\"id\":\"<run1>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<run1.card>\",\"status\":\"cancelled\",\"cancel_requested\":true,\"priority\":0,\"prompt\":\"Summarise P.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@step 41>\",\"started_at\":\"<time@step 20>\",\"finished_at\":\"<time@step 42>\",\"final_text\":\"\",\"error\":\"cancelled on request\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 10>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -4457,12 +4424,12 @@
           "agent_id": "<agent>",
           "project_id": "<p>",
           "work_item_id": "<phantom>",
-          "status": "succeeded",
-          "cancel_requested": false,
+          "status": "cancelled",
+          "cancel_requested": true,
           "priority": 0,
           "prompt": "Summarise P for card zero.",
-          "finished_at": "<time@step 66>",
-          "final_text": "Nothing to do.",
+          "finished_at": "<time@before step 67>",
+          "final_text": "",
           "error": "",
           "attempt_count": 1,
           "max_attempts": 3,

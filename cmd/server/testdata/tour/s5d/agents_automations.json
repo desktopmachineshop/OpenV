@@ -1604,7 +1604,7 @@
     },
     {
       "n": 40,
-      "title": "delete tour-doomed again: 500, agents.ErrNotFound is unmapped (Q2)",
+      "title": "delete tour-doomed again: 404, the read's agent not found",
       "actor": "owner",
       "acting_in": "<w>",
       "route": "DELETE /api/v1/agents/{slug}",
@@ -1612,25 +1612,25 @@
         "method": "DELETE",
         "path": "/api/v1/agents/tour-doomed"
       },
-      "status": 500,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 35,
+      "content_length": 28,
       "kind": "json",
       "body": [
-        "{\"error\":\"failed to delete agent\"}"
+        "{\"error\":\"agent not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "failed to delete agent"
+        "error": "agent not found"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
       "n": 41,
-      "title": "delete a slug that is no slug: 500 too",
+      "title": "delete a slug that is no slug: 404 too",
       "actor": "owner",
       "acting_in": "<w>",
       "route": "DELETE /api/v1/agents/{slug}",
@@ -1638,18 +1638,18 @@
         "method": "DELETE",
         "path": "/api/v1/agents/Not_A_Slug"
       },
-      "status": 500,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 35,
+      "content_length": 28,
       "kind": "json",
       "body": [
-        "{\"error\":\"failed to delete agent\"}"
+        "{\"error\":\"agent not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "failed to delete agent"
+        "error": "agent not found"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []

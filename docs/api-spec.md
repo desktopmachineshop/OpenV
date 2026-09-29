@@ -42,7 +42,10 @@ worker passes it to the agent process, which calls back with
 `Authorization: Bearer <run-token>`. A run authenticates as an
 editor-equivalent principal **inside its own project only**; runs with
 `write_mode: proposal` have their writes diverted into the proposal queue
-(HTTP 202 with a proposal receipt) instead of being applied.
+(HTTP 202 with a proposal receipt) instead of being applied. Each claim hands
+the worker a freshly minted token, and the token stops authenticating (`401`)
+as soon as the run finishes, is finalised after review, or is released back to
+the queue; a released run's next claim issues a new one.
 
 ### 3. Workers — Bearer org-scoped worker key
 
@@ -207,7 +210,7 @@ their own project, workers pass within their org) · `org member`/`org admin`
 | GET | `/api/v1/orgs/{id}/runner-pool` | Pool occupancy and the workspace's live leases | org admin |
 | POST | `/api/v1/runner-pool/nodes` | Register a pool node | pool key |
 | POST | `/api/v1/runner-pool/nodes/{id}/heartbeat` | Heartbeat; returns the node's lease (credential once) | pool key |
-| POST | `/api/v1/runner-pool/nodes/{id}/release` | Report a lease wiped; return to the idle pool | pool key |
+| POST | `/api/v1/runner-pool/nodes/{id}/release` | Report a lease wiped; return to the idle pool. `404` `pool node is not registered` for a node the pool has no record of, as the heartbeat answers; the runner does not retry it, and registers again when its heartbeat gets that `404` | pool key |
 
 ### Projects, baselines, templates
 
@@ -966,10 +969,11 @@ when the next `message` arrives.
 | POST | `/api/v1/agents/sync` | Re-sync agent files → registry | org admin |
 | GET | `/api/v1/agents/{slug}` | Agent details | user |
 | PUT | `/api/v1/agents/{slug}` | Update agent | org admin |
-| DELETE | `/api/v1/agents/{slug}` | Delete agent | org admin |
+| DELETE | `/api/v1/agents/{slug}` | Delete agent; `404` for a slug no agent of the workspace has, a deleted one's among them | org admin |
 | GET | `/api/v1/agents/{slug}/raw` | Raw markdown (frontmatter + prompt) | user |
 | PUT | `/api/v1/agents/{slug}/raw` | Save raw markdown | org admin |
 | POST | `/api/v1/agents/{slug}/runs` | Launch a run of this agent | editor (project-scoped) / user |
+| POST | `/api/v1/projects/{id}/draft-test-cases` | `{requirement_ids}`: launch the seeded test-case author on them, in proposal mode. Refused `403` for a proposal-mode agent run, like a status change: a launch is no write a proposal can carry | editor |
 
 **`allowed_tools` is required.** `POST /api/v1/agents` and
 `PUT /api/v1/agents/{slug}` answer **400** when the definition carries no tool
@@ -1002,7 +1006,7 @@ for OpenV's own tools regardless of what the vendor CLI can express.
 |---|---|---|---|
 | GET | `/api/v1/agent-runs` | List runs (project-scoped: viewer; workspace-wide: org admin, members see their own) | user |
 | POST | `/api/v1/agent-runs/claim` | Worker claims the next eligible queued run | worker |
-| POST | `/api/v1/agent-runs/delegate` | Running crew agent delegates to a child agent | run |
+| POST | `/api/v1/agent-runs/delegate` | Running crew agent delegates to a child agent; `404` when the run's crew node was removed after it launched | run |
 | GET | `/api/v1/agent-runs/delegate/{id}` | Delegation status | run |
 | GET | `/api/v1/agent-runs/{id}` | Run details | launcher / viewer |
 | GET | `/api/v1/agent-runs/{id}/tree` | Run + child-run tree | launcher / viewer |
@@ -1020,7 +1024,8 @@ worker releases it back to the queue — and broadcast as `partial` on the run's
 own stream and as `assistant_partial` on any session the run belongs to.
 | POST | `/api/v1/agent-runs/{id}/cancel` | Request cancellation | launcher / editor |
 | POST | `/api/v1/agent-runs/{id}/start` | Worker marks run running | worker |
-| POST | `/api/v1/agent-runs/{id}/finish` | Worker reports completion | worker |
+| POST | `/api/v1/agent-runs/{id}/finish` | Worker reports completion of a claimed or running run; `409` for a run no worker holds (queued: never claimed, or released back) or one already finished | worker |
+| POST | `/api/v1/agent-runs/{id}/release` | `{worker_id}`: the worker holding a claimed or running run hands it back to the queue (a worker shutting down); the run's token is revoked with it. `204` also when nothing was released | worker |
 
 ### Crews (agent org charts) — canonical
 
@@ -1070,7 +1075,7 @@ own stream and as `assistant_partial` on any session the run belongs to.
 | PUT | `/api/v1/repo-connections/{id}/my-path` | Set my machine's checkout path | viewer |
 | GET | `/api/v1/provider-settings` | Provider status + model catalog per provider | user |
 | PUT | `/api/v1/provider-settings` | Update provider config (auth mode, default model) | org admin |
-| POST | `/api/v1/provider-settings/detect` | Worker reports detected CLIs/logins/models | worker |
+| POST | `/api/v1/provider-settings/detect` | Worker reports detected CLIs/logins/models, `{provider: {...}}` for each of its adapters. Every provider the server knows is recorded, whatever else the report names; one it does not know answers `400` naming it (the first by name), the known ones recorded all the same | worker |
 | POST | `/api/v1/provider-logins` | Start a CLI sign-in relay (workspace: org admin; user-targeted: org member) | user |
 | POST | `/api/v1/provider-logins/claim` | Worker claims a pending sign-in | worker |
 | GET | `/api/v1/provider-logins/{id}` | Sign-in status (redacted) | user |

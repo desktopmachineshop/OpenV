@@ -42,8 +42,8 @@ import (
 //     automation are gone (404), its crew node is gone from the crew's
 //     graph, whose entry_node_id still names it (no foreign key), so an
 //     automation of that crew answers "team has no entry node"; the run's
-//     tracking card stays on P's board; a slug no agent has answers 500
-//     (agents.ErrNotFound is unmapped, a Q2-style answer);
+//     tracking card stays on P's board; a slug no agent has answers 404,
+//     the read's "agent not found";
 //   - the sync, in X once the area deleted X's seeds: X's agents are null
 //     (Q14), the seeds stay deleted since their files went to X's .trash, a
 //     file written on disk with no allowed_tools is backfilled
@@ -330,9 +330,9 @@ func agentsAutomationsDelete(tr *tour) {
 	tr.step("the run's tracking card: it stays on P's board, assigned to the agent that is gone", o,
 		"GET /api/v1/work-items/{id}", at("id", "{{doomed.card}}"),
 		note("an S5b route, read to pin what the cascade leaves"))
-	tr.step("delete tour-doomed again: 500, agents.ErrNotFound is unmapped (Q2)", o, agentsAutomationsDel,
+	tr.step("delete tour-doomed again: 404, the read's agent not found", o, agentsAutomationsDel,
 		slug("tour-doomed"))
-	tr.step("delete a slug that is no slug: 500 too", o, agentsAutomationsDel, slug("Not_A_Slug"))
+	tr.step("delete a slug that is no slug: 404 too", o, agentsAutomationsDel, slug("Not_A_Slug"))
 }
 
 // agentsAutomationsSync deletes X's seeds, then syncs X from files the area
