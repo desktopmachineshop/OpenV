@@ -75,7 +75,7 @@ func (r *ProviderSettingRepository) FindByProvider(orgID, provider string) (*pro
 	`, orgID, provider)
 
 	p, err := scanProviderSetting(row.Scan)
-	if err == sql.ErrNoRows {
+	if noRow(err) {
 		return nil, nil
 	}
 	if err != nil {

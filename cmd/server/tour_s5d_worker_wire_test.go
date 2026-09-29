@@ -87,7 +87,8 @@ import (
 //   - the reads: the run guard (the launcher, the project's roles, a
 //     workspace admin for an unscoped run), a key's 401, the id "claim" (GET
 //     matches {id}), the member's own runs and null when none match (Q14), the
-//     filters, an agent_id that is not a UUID (500, the cast fails in SQL),
+//     filters, an agent_id that is not a UUID (null, as for an agent no row
+//     has),
 //     and every run of W, newest first, compressed with no Content-Type (Q1).
 //
 // Every 2xx JSON answer of the wire is a bare encode (text/plain by sniffing,
@@ -327,7 +328,7 @@ func workerWireTour(tr *tour) {
 	runB := tr.takeRun(runner, "tour-runner", "run_b", "run_b's token, a run with no project that the member's "+
 		"runner key claimed, since no one launched it")
 	tr.step("the member reads run_b, unscoped and not its own: the workspace admin guard", m, get, run("run_b"))
-	tr.step("run_b's token launches in P: 403, the run is not scoped to P", runB, launch, agent,
+	tr.step("run_b's token launches in P: 404, the run is not scoped to P", runB, launch, agent,
 		jsonBody(`{"project_id":"{{p}}","prompt":"Help."}`))
 	tr.step("run_b's token launches with no project: 201, in the run's workspace, with no launched_by", runB, launch,
 		agent, jsonBody(`{"prompt":"Help with W."}`)).capture("run_t", "/id")
@@ -412,6 +413,6 @@ func workerWireTour(tr *tour) {
 	tr.step("the member lists P's runs: P's guard", m, list, query("project_id={{p}}"))
 	tr.step("K's runs, newest first", o, list, query("project_id={{k}}"))
 	tr.step("tour-repo's runs", o, list, query("agent_id={{repo.agent}}"))
-	tr.step("agent_id x: 500, the cast to a UUID fails in SQL", o, list, query("agent_id=x"))
+	tr.step("agent_id x: none, as for an agent no row has", o, list, query("agent_id=x"))
 	tr.step("every run of W, as its admin: newest first, compressed and then sent with no Content-Type (Q1)", o, list)
 }

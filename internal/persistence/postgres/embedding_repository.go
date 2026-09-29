@@ -101,7 +101,7 @@ func (r *EmbeddingRepository) GetByArtifact(artifactID string) (*embeddings.Embe
 		FROM artifact_embeddings
 		WHERE artifact_id = $1
 	`, artifactID).Scan(&e.ArtifactID, &e.ArtifactVersion, &e.Model, &e.ContentHash)
-	if errors.Is(err, sql.ErrNoRows) {
+	if noRow(err) {
 		return nil, nil
 	}
 	if err != nil {

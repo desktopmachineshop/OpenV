@@ -674,7 +674,7 @@ func (h *Handler) GetArtifact(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !h.requireProjectRole(w, r, artifact.ProjectID, members.RoleViewer) {
+	if !h.requireProjectRoleFor(w, r, artifact.ProjectID, members.RoleViewer, missing("artifact not found")) {
 		return
 	}
 
@@ -759,14 +759,16 @@ func (h *Handler) UpdateArtifact(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Fetch the old artifact BEFORE updating to track changes
+	// Fetch the old artifact BEFORE updating to track changes. An id no
+	// artifact has, a malformed one among them, and one the caller cannot
+	// reach at all answer alike, as GetArtifact answers them (I3).
 	oldArtifact, err := h.artifactService.GetArtifact(id)
 	if err != nil {
-		respondInternal(w, r, "failed to load artifact", err)
+		respondArtifactLookup(w, r, err)
 		return
 	}
 
-	if !h.requireProjectRole(w, r, oldArtifact.ProjectID, members.RoleEditor) {
+	if !h.requireProjectRoleFor(w, r, oldArtifact.ProjectID, members.RoleEditor, missing("artifact not found")) {
 		return
 	}
 
@@ -931,7 +933,7 @@ func (h *Handler) ChangeArtifactStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !h.requireProjectRole(w, r, artifact.ProjectID, members.RoleEditor) {
+	if !h.requireProjectRoleFor(w, r, artifact.ProjectID, members.RoleEditor, missing("artifact not found")) {
 		return
 	}
 	if run := CurrentRun(r); run != nil && h.agentService != nil {
@@ -973,6 +975,18 @@ func (h *Handler) ChangeArtifactStatus(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(updated)
+}
+
+// respondArtifactLookup answers a failed artifact lookup of a write that
+// loads the artifact before its guard: 404 for an id no artifact has, a
+// malformed one among them (artifacts.ErrNotFound), and 500 for anything
+// else, which a client may retry.
+func respondArtifactLookup(w http.ResponseWriter, r *http.Request, err error) {
+	if errors.Is(err, artifacts.ErrNotFound) {
+		respondError(w, r, http.StatusNotFound, "artifact not found", err)
+		return
+	}
+	respondInternal(w, r, "failed to load artifact", err)
 }
 
 // DeleteArtifact deletes an artifact
@@ -1028,14 +1042,15 @@ func (h *Handler) RestoreArtifactVersion(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Fetch the current artifact BEFORE restoring (to track changes)
+	// Fetch the current artifact BEFORE restoring (to track changes), and
+	// answer an id no artifact has as UpdateArtifact does.
 	oldArtifact, err := h.artifactService.GetArtifact(id)
 	if err != nil {
-		respondInternal(w, r, "failed to load artifact", err)
+		respondArtifactLookup(w, r, err)
 		return
 	}
 
-	if !h.requireProjectRole(w, r, oldArtifact.ProjectID, members.RoleEditor) {
+	if !h.requireProjectRoleFor(w, r, oldArtifact.ProjectID, members.RoleEditor, missing("artifact not found")) {
 		return
 	}
 
@@ -1294,6 +1309,13 @@ func (h *Handler) GetArtifactVersionLinks(w http.ResponseWriter, r *http.Request
 	json.NewEncoder(w).Encode(linksSnapshot)
 }
 
+// sourceArtifactNotFound and targetArtifactNotFound answer a link's endpoint
+// that no row has, or that lies in a project the caller cannot reach at all.
+var (
+	sourceArtifactNotFound = notFound{http.StatusBadRequest, "source artifact not found"}
+	targetArtifactNotFound = notFound{http.StatusBadRequest, "target artifact not found"}
+)
+
 // CreateLink creates a new link
 func (h *Handler) CreateLink(w http.ResponseWriter, r *http.Request) {
 	var req links.CreateLinkRequest
@@ -1311,10 +1333,15 @@ func (h *Handler) CreateLink(w http.ResponseWriter, r *http.Request) {
 	// is unchanged.
 	proposalRunID, isProposalRun := h.proposalRunID(r)
 
+	// An endpoint in a project the caller cannot reach at all answers as one
+	// no row has, where the lookup would, before anything of it shows (I3).
 	fromArtifact, fromErr := h.artifactService.GetArtifact(req.FromID)
 	fromIsRef := fromErr != nil && isProposalRun && h.pendingArtifactRef(proposalRunID, req.FromID) != nil
 	if fromErr != nil && !fromIsRef {
 		respondError(w, r, http.StatusBadRequest, "source artifact not found", fromErr)
+		return
+	}
+	if fromArtifact != nil && !h.requireProjectVisible(w, r, fromArtifact.ProjectID, sourceArtifactNotFound) {
 		return
 	}
 
@@ -1322,6 +1349,9 @@ func (h *Handler) CreateLink(w http.ResponseWriter, r *http.Request) {
 	toIsRef := toErr != nil && isProposalRun && h.pendingArtifactRef(proposalRunID, req.ToID) != nil
 	if toErr != nil && !toIsRef {
 		respondError(w, r, http.StatusBadRequest, "target artifact not found", toErr)
+		return
+	}
+	if toArtifact != nil && !h.requireProjectVisible(w, r, toArtifact.ProjectID, targetArtifactNotFound) {
 		return
 	}
 
@@ -1410,7 +1440,7 @@ func (h *Handler) GetLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !h.requireProjectRole(w, r, h.projectIDForArtifact(link.FromID), members.RoleViewer) {
+	if !h.requireProjectRoleFor(w, r, h.projectIDForArtifact(link.FromID), members.RoleViewer, missing("link not found")) {
 		return
 	}
 
@@ -1496,7 +1526,7 @@ func (h *Handler) UpdateLink(w http.ResponseWriter, r *http.Request) {
 		respondError(w, r, http.StatusNotFound, "link not found", err)
 		return
 	}
-	if !h.requireProjectRole(w, r, h.projectIDForArtifact(existing.FromID), members.RoleEditor) {
+	if !h.requireProjectRoleFor(w, r, h.projectIDForArtifact(existing.FromID), members.RoleEditor, missing("link not found")) {
 		return
 	}
 
@@ -1534,7 +1564,7 @@ func (h *Handler) ConfirmLink(w http.ResponseWriter, r *http.Request) {
 		respondError(w, r, http.StatusNotFound, "link not found", err)
 		return
 	}
-	if !h.requireProjectRole(w, r, h.projectIDForArtifact(existing.FromID), members.RoleEditor) {
+	if !h.requireProjectRoleFor(w, r, h.projectIDForArtifact(existing.FromID), members.RoleEditor, missing("link not found")) {
 		return
 	}
 	if run := CurrentRun(r); run != nil && h.agentService != nil {
@@ -1649,16 +1679,16 @@ func (h *Handler) CreateProject(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(project)
 }
 
-// GetProject retrieves a project by ID
+// GetProject retrieves a project by ID. The guard comes first, so that a
+// project the caller cannot reach answers as one no row has (I3).
 func (h *Handler) GetProject(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
+	if !h.requireProjectRole(w, r, id, members.RoleViewer) {
+		return
+	}
 	project, err := h.projectService.GetProject(id)
 	if err != nil {
 		respondError(w, r, http.StatusNotFound, "project not found", err)
-		return
-	}
-
-	if !h.requireProjectRole(w, r, id, members.RoleViewer) {
 		return
 	}
 
@@ -1736,6 +1766,10 @@ func (h *Handler) UpdateProject(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusForbidden, featureGateMessage)
 		return
 	}
+	// A parent the caller cannot reach at all is one no row has (I3).
+	if p := req.ParentProjectID; p != nil && *p != "" && !h.requireProjectVisible(w, r, *p, parentNotFound) {
+		return
+	}
 
 	project, err := h.projectService.UpdateProject(id, req)
 	if err != nil {
@@ -1752,6 +1786,11 @@ func (h *Handler) UpdateProject(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(project)
 }
+
+// parentNotFound answers a flow-down parent no row has, or one the caller
+// cannot reach at all, in projects.ErrParentNotFound's words; one it reaches
+// in another workspace is still refused as such.
+var parentNotFound = notFound{http.StatusBadRequest, "parent project not found"}
 
 // ListChildProjects answers the projects filed under this one (REQ-144),
 // for a settings page and for the flow-down picker. Viewer rights on the
@@ -2294,7 +2333,7 @@ func (h *Handler) GetBaseline(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !h.requireProjectRole(w, r, baseline.ProjectID, members.RoleViewer) {
+	if !h.requireProjectRoleFor(w, r, baseline.ProjectID, members.RoleViewer, missing("baseline not found")) {
 		return
 	}
 
@@ -2312,7 +2351,7 @@ func (h *Handler) DeleteBaseline(w http.ResponseWriter, r *http.Request) {
 		respondError(w, r, http.StatusNotFound, "baseline not found", err)
 		return
 	}
-	if !h.requireProjectRole(w, r, baseline.ProjectID, members.RoleOwner) {
+	if !h.requireProjectRoleFor(w, r, baseline.ProjectID, members.RoleOwner, missing("baseline not found")) {
 		return
 	}
 
@@ -2437,7 +2476,7 @@ func (h *Handler) GetAttachmentMeta(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !h.requireProjectRole(w, r, h.projectIDForArtifact(attachment.ArtifactID), members.RoleViewer) {
+	if !h.requireProjectRoleFor(w, r, h.projectIDForArtifact(attachment.ArtifactID), members.RoleViewer, missing("Attachment not found")) {
 		return
 	}
 
@@ -2484,7 +2523,7 @@ func (h *Handler) UploadAttachmentVersion(w http.ResponseWriter, r *http.Request
 		writeJSONError(w, http.StatusNotFound, "Attachment not found")
 		return
 	}
-	if !h.requireProjectRole(w, r, h.projectIDForArtifact(existing.ArtifactID), members.RoleEditor) {
+	if !h.requireProjectRoleFor(w, r, h.projectIDForArtifact(existing.ArtifactID), members.RoleEditor, missing("Attachment not found")) {
 		return
 	}
 
@@ -2592,7 +2631,7 @@ func (h *Handler) RenameAttachment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	projectID := h.projectIDForArtifact(existing.ArtifactID)
-	if !h.requireProjectRole(w, r, projectID, members.RoleEditor) {
+	if !h.requireProjectRoleFor(w, r, projectID, members.RoleEditor, missing("Attachment not found")) {
 		return
 	}
 	if !h.projectFeatureEnabled(r, projectID, release.FeatureFigureTitles) {
@@ -2666,7 +2705,7 @@ func (h *Handler) ListAttachmentVersions(w http.ResponseWriter, r *http.Request)
 		writeJSONError(w, http.StatusNotFound, "Attachment not found")
 		return
 	}
-	if !h.requireProjectRole(w, r, h.projectIDForArtifact(attachment.ArtifactID), members.RoleViewer) {
+	if !h.requireProjectRoleFor(w, r, h.projectIDForArtifact(attachment.ArtifactID), members.RoleViewer, missing("Attachment not found")) {
 		return
 	}
 
@@ -2699,7 +2738,7 @@ func (h *Handler) RestoreAttachmentVersion(w http.ResponseWriter, r *http.Reques
 		writeJSONError(w, http.StatusNotFound, "Attachment not found")
 		return
 	}
-	if !h.requireProjectRole(w, r, h.projectIDForArtifact(attachment.ArtifactID), members.RoleEditor) {
+	if !h.requireProjectRoleFor(w, r, h.projectIDForArtifact(attachment.ArtifactID), members.RoleEditor, missing("Attachment not found")) {
 		return
 	}
 
@@ -2735,7 +2774,7 @@ func (h *Handler) DownloadAttachment(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Session-cookie auth works here too, so <img> tags keep rendering.
-	if !h.requireProjectRole(w, r, h.projectIDForArtifact(attachment.ArtifactID), members.RoleViewer) {
+	if !h.requireProjectRoleFor(w, r, h.projectIDForArtifact(attachment.ArtifactID), members.RoleViewer, missing("Attachment not found")) {
 		return
 	}
 
@@ -2782,7 +2821,7 @@ func (h *Handler) DeleteAttachment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !h.requireProjectRole(w, r, h.projectIDForArtifact(attachment.ArtifactID), members.RoleEditor) {
+	if !h.requireProjectRoleFor(w, r, h.projectIDForArtifact(attachment.ArtifactID), members.RoleEditor, missing("Attachment not found")) {
 		return
 	}
 

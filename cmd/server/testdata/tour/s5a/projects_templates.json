@@ -720,7 +720,7 @@
     },
     {
       "n": 22,
-      "title": "file a project under one in another workspace",
+      "title": "file a project under one in a workspace the owner is not in: as one that does not exist",
       "actor": "owner",
       "route": "PUT /api/v1/projects/{id}",
       "request": {
@@ -731,18 +731,21 @@
         ],
         "body": "{\"parent_project_id\":\"<admin_project>\"}"
       },
+      "notes": [
+        "a parent the caller cannot reach answers as one no row has (I3); one it reaches in another workspace is refused as such"
+      ],
       "status": 400,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 59,
+      "content_length": 37,
       "kind": "json",
       "body": [
-        "{\"error\":\"a parent project must be in the same workspace\"}"
+        "{\"error\":\"parent project not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "a parent project must be in the same workspace"
+        "error": "parent project not found"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
@@ -812,20 +815,20 @@
         "path": "/api/v1/projects/<phantom>/children"
       },
       "notes": [
-        "the project guard runs before any lookup here, so an id no project has answers 403, where GET /api/v1/projects/{id} looks the project up first and answers 404"
+        "the project guard runs before any lookup here, as it does for GET /api/v1/projects/{id}, and answers an id no project has as one the caller cannot reach: 404 (I3)"
       ],
-      "status": 403,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 51,
+      "content_length": 30,
       "kind": "json",
       "body": [
-        "{\"error\":\"you do not have access to this project\"}"
+        "{\"error\":\"project not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "you do not have access to this project"
+        "error": "project not found"
       },
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
@@ -1384,20 +1387,20 @@
         "body": "{\"name\":\"By key\"}"
       },
       "notes": [
-        "a key resolves only among the example files; a database template is looked up by id"
+        "a key resolves only among the example files; a database template is looked up by id, and one that is not an id answers as an id no template has"
       ],
-      "status": 500,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 51,
+      "content_length": 31,
       "kind": "json",
       "body": [
-        "{\"error\":\"failed to create project from template\"}"
+        "{\"error\":\"template not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "failed to create project from template"
+        "error": "template not found"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
@@ -1574,20 +1577,20 @@
         "path": "/api/v1/projects/<phantom>"
       },
       "notes": [
-        "as for its children, the owner guard runs first: 403, not 404"
+        "as for its children, the owner guard runs first: 404, as for a project the caller cannot reach"
       ],
-      "status": 403,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 51,
+      "content_length": 30,
       "kind": "json",
       "body": [
-        "{\"error\":\"you do not have access to this project\"}"
+        "{\"error\":\"project not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "you do not have access to this project"
+        "error": "project not found"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []

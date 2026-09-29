@@ -192,7 +192,7 @@ func (r *OrgRepository) MemberPreview(orgID, userID string) (bool, error) {
 	err := r.db.QueryRow(`
 		SELECT COALESCE(preview_next_stable, FALSE) FROM org_members WHERE org_id = $1 AND user_id = $2
 	`, orgID, userID).Scan(&on)
-	if err == sql.ErrNoRows {
+	if noRow(err) {
 		return false, nil
 	}
 	return on, err
@@ -383,7 +383,7 @@ func (r *OrgRepository) FindOrgByBillingRef(kind, ref string) (*orgs.Org, error)
 		column = "billing_customer_ref"
 	}
 	o, err := scanOrg(r.db.QueryRow(`SELECT `+orgColumns+` FROM organizations WHERE `+column+` = $1`, ref))
-	if err == sql.ErrNoRows {
+	if noRow(err) {
 		return nil, nil
 	}
 	return o, err
@@ -416,7 +416,7 @@ func (r *OrgRepository) ListBillingOrgs(limit int) ([]*orgs.Org, error) {
 // FindOrgByID returns an org, or nil.
 func (r *OrgRepository) FindOrgByID(id string) (*orgs.Org, error) {
 	o, err := scanOrg(r.db.QueryRow(`SELECT `+orgColumns+` FROM organizations WHERE id = $1`, id))
-	if err == sql.ErrNoRows {
+	if noRow(err) {
 		return nil, nil
 	}
 	return o, err
@@ -456,7 +456,7 @@ func (r *OrgRepository) FindPersonalOrgForUser(userID string) (*orgs.Org, error)
 		WHERE m.user_id = $1 AND o.org_type = 'personal' AND o.deleted_at IS NULL
 		ORDER BY o.created_at LIMIT 1
 	`, userID))
-	if err == sql.ErrNoRows {
+	if noRow(err) {
 		return nil, nil
 	}
 	return o, err
@@ -513,7 +513,7 @@ func (r *OrgRepository) MemberRole(orgID, userID string) (string, error) {
 		JOIN organizations o ON o.id = m.org_id
 		WHERE m.org_id = $1 AND m.user_id = $2 AND o.deleted_at IS NULL
 	`, orgID, userID).Scan(&role)
-	if err == sql.ErrNoRows {
+	if noRow(err) {
 		return "", nil
 	}
 	return role, err
@@ -524,7 +524,7 @@ func (r *OrgRepository) MemberRole(orgID, userID string) (string, error) {
 func (r *OrgRepository) MemberRoleAny(orgID, userID string) (string, error) {
 	var role string
 	err := r.db.QueryRow(`SELECT role FROM org_members WHERE org_id = $1 AND user_id = $2`, orgID, userID).Scan(&role)
-	if err == sql.ErrNoRows {
+	if noRow(err) {
 		return "", nil
 	}
 	return role, err
@@ -707,7 +707,7 @@ func (r *OrgRepository) FindTeamByID(id string) (*orgs.OrgTeam, error) {
 		SELECT id, org_id, name, description, created_by, created_at, updated_at
 		FROM org_teams WHERE id = $1
 	`, id).Scan(&t.ID, &t.OrgID, &t.Name, &t.Description, &createdBy, &t.CreatedAt, &t.UpdatedAt)
-	if err == sql.ErrNoRows {
+	if noRow(err) {
 		return nil, nil
 	}
 	if err != nil {
@@ -765,7 +765,7 @@ func (r *OrgRepository) AddTeamMember(teamID, userID string) error {
 // RemoveTeamMember removes a user from a people-team.
 func (r *OrgRepository) RemoveTeamMember(teamID, userID string) error {
 	_, err := r.db.Exec(`DELETE FROM org_team_members WHERE org_team_id = $1 AND user_id = $2`, teamID, userID)
-	return err
+	return matchedNone(err)
 }
 
 // ListTeamMembers returns a people-team's members with display info.

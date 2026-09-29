@@ -1117,18 +1117,18 @@
         "method": "GET",
         "path": "/api/v1/work-items/<handoff>"
       },
-      "status": 403,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 51,
+      "content_length": 32,
       "kind": "json",
       "body": [
-        "{\"error\":\"you do not have access to this project\"}"
+        "{\"error\":\"work item not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "you do not have access to this project"
+        "error": "work item not found"
       },
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
@@ -1570,18 +1570,18 @@
         "method": "GET",
         "path": "/api/v1/agent-runs/<lead>/tree"
       },
-      "status": 403,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 51,
+      "content_length": 32,
       "kind": "json",
       "body": [
-        "{\"error\":\"you do not have access to this project\"}"
+        "{\"error\":\"agent run not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "you do not have access to this project"
+        "error": "agent run not found"
       },
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },

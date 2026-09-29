@@ -55,7 +55,7 @@ func (r *RunnerSessionRepository) SaveNode(n *runnersessions.Node) error {
 // FindNodeByID returns a node, or nil.
 func (r *RunnerSessionRepository) FindNodeByID(id string) (*runnersessions.Node, error) {
 	n, err := scanNode(r.db.QueryRow(`SELECT `+nodeColumns+` FROM runner_pool_nodes WHERE id = $1`, id))
-	if err == sql.ErrNoRows {
+	if noRow(err) {
 		return nil, nil
 	}
 	return n, err
@@ -64,7 +64,7 @@ func (r *RunnerSessionRepository) FindNodeByID(id string) (*runnersessions.Node,
 // FindNodeByName returns the pool's node with that name, or nil.
 func (r *RunnerSessionRepository) FindNodeByName(pool, name string) (*runnersessions.Node, error) {
 	n, err := scanNode(r.db.QueryRow(`SELECT `+nodeColumns+` FROM runner_pool_nodes WHERE pool = $1 AND name = $2`, pool, name))
-	if err == sql.ErrNoRows {
+	if noRow(err) {
 		return nil, nil
 	}
 	return n, err
@@ -81,7 +81,7 @@ func (r *RunnerSessionRepository) TouchNode(id string, at time.Time) (*runnerses
 		    status = CASE WHEN status = 'offline' AND session_id IS NULL THEN 'idle' ELSE status END
 		WHERE id = $1
 		RETURNING `+nodeColumns, id, at))
-	if err == sql.ErrNoRows {
+	if noRow(err) {
 		return nil, nil
 	}
 	return n, err
@@ -149,7 +149,7 @@ func (r *RunnerSessionRepository) LeaseIdleNode(pool, sessionID string, seenSinc
 			FOR UPDATE SKIP LOCKED
 		)
 		RETURNING `+nodeColumns, pool, sessionID, seenSince))
-	if err == sql.ErrNoRows {
+	if noRow(err) {
 		return nil, nil
 	}
 	return n, err
@@ -210,7 +210,7 @@ func (r *RunnerSessionRepository) FindSessionByID(id string) (*runnersessions.Se
 		SELECT `+sessionColumns+`, COALESCE(n.name, '') FROM runner_sessions s `+nodeNameJoin+`
 		WHERE s.id = $1
 	`, id), &nodeName)
-	if err == sql.ErrNoRows {
+	if noRow(err) {
 		return nil, nil
 	}
 	if err != nil {
@@ -228,7 +228,7 @@ func (r *RunnerSessionRepository) FindLiveSessionForUser(orgID, userID string) (
 		WHERE s.org_id = $1 AND s.user_id = $2 AND s.status IN ('starting', 'active')
 		ORDER BY s.started_at DESC LIMIT 1
 	`, orgID, userID), &nodeName)
-	if err == sql.ErrNoRows {
+	if noRow(err) {
 		return nil, nil
 	}
 	if err != nil {

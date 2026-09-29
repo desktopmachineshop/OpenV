@@ -111,13 +111,16 @@ func (h *Handler) ListAttributeDefinitions(w http.ResponseWriter, r *http.Reques
 }
 
 // requireAttributeDefinitionWrite enforces the write gate for a definition's
-// scope: project-scoped needs project editor, org-wide needs org admin.
-func (h *Handler) requireAttributeDefinitionWrite(w http.ResponseWriter, r *http.Request, orgID, projectID *string) bool {
+// scope: project-scoped needs project editor, org-wide needs org admin. A
+// caller with no access at all to the scope gets absent: a stored
+// definition's own 404, or, for a create, the guards' own (the zero
+// notFound).
+func (h *Handler) requireAttributeDefinitionWrite(w http.ResponseWriter, r *http.Request, orgID, projectID *string, absent notFound) bool {
 	if projectID != nil && *projectID != "" {
-		return h.requireProjectRole(w, r, *projectID, members.RoleEditor)
+		return h.requireProjectRoleFor(w, r, *projectID, members.RoleEditor, absent)
 	}
 	if orgID != nil && *orgID != "" {
-		return h.requireOrgRole(w, r, *orgID, orgs.RoleAdmin)
+		return h.requireOrgRoleFor(w, r, *orgID, orgs.RoleAdmin, absent)
 	}
 	writeJSONError(w, http.StatusBadRequest, "a definition must be either org-wide (org_id) or project-scoped (project_id)")
 	return false
@@ -136,7 +139,7 @@ func (h *Handler) CreateAttributeDefinition(w http.ResponseWriter, r *http.Reque
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	if !h.requireAttributeDefinitionWrite(w, r, req.OrgID, req.ProjectID) {
+	if !h.requireAttributeDefinitionWrite(w, r, req.OrgID, req.ProjectID, notFound{}) {
 		return
 	}
 	def, err := h.attributeService.CreateDefinition(req)
@@ -166,7 +169,7 @@ func (h *Handler) UpdateAttributeDefinition(w http.ResponseWriter, r *http.Reque
 		respondInternal(w, r, "failed to load attribute definition", err)
 		return
 	}
-	if !h.requireAttributeDefinitionWrite(w, r, existing.OrgID, existing.ProjectID) {
+	if !h.requireAttributeDefinitionWrite(w, r, existing.OrgID, existing.ProjectID, missing("attribute definition not found")) {
 		return
 	}
 	var req attributes.UpdateDefinitionRequest
@@ -200,7 +203,7 @@ func (h *Handler) DeleteAttributeDefinition(w http.ResponseWriter, r *http.Reque
 		respondInternal(w, r, "failed to load attribute definition", err)
 		return
 	}
-	if !h.requireAttributeDefinitionWrite(w, r, existing.OrgID, existing.ProjectID) {
+	if !h.requireAttributeDefinitionWrite(w, r, existing.OrgID, existing.ProjectID, missing("attribute definition not found")) {
 		return
 	}
 	if err := h.attributeService.DeleteDefinition(id); err != nil {

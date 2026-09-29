@@ -118,7 +118,7 @@ func shareLinksPublicTour(tr *tour) {
 	tr.step("the links, newest first: no token, no url", owner, "GET /api/v1/projects/{id}/share-links",
 		at("id", "{{shared_project}}"))
 	tr.step("the links of a project that does not exist", owner, "GET /api/v1/projects/{id}/share-links",
-		at("id", "{{phantom}}"), note("the owner guard runs before any lookup: 403, not 404"))
+		at("id", "{{phantom}}"), note("the owner guard answers a project no row has as one the caller cannot reach: 404 (I3)"))
 	tr.step("mint a link for a project that does not exist", owner, "POST /api/v1/projects/{id}/share-links",
 		at("id", "{{phantom}}"), jsonBody(`{"role":"public"}`))
 	tr.step("the links, as an account with no role on the project", reviewer, "GET /api/v1/projects/{id}/share-links",

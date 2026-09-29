@@ -456,18 +456,18 @@
           ]
         }
       },
-      "status": 403,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 51,
+      "content_length": 30,
       "kind": "json",
       "body": [
-        "{\"error\":\"you do not have access to this project\"}"
+        "{\"error\":\"project not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "you do not have access to this project"
+        "error": "project not found"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
@@ -2366,18 +2366,18 @@
         "method": "GET",
         "path": "/api/v1/attachments/<fig>"
       },
-      "status": 403,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 51,
+      "content_length": 33,
       "kind": "json",
       "body": [
-        "{\"error\":\"you do not have access to this project\"}"
+        "{\"error\":\"Attachment not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "you do not have access to this project"
+        "error": "Attachment not found"
       },
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
@@ -2390,18 +2390,18 @@
         "method": "GET",
         "path": "/api/v1/attachments/<fig>/download"
       },
-      "status": 403,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 51,
+      "content_length": 33,
       "kind": "json",
       "body": [
-        "{\"error\":\"you do not have access to this project\"}"
+        "{\"error\":\"Attachment not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "you do not have access to this project"
+        "error": "Attachment not found"
       },
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
@@ -2414,18 +2414,18 @@
         "method": "GET",
         "path": "/api/v1/projects/<project>/attachments"
       },
-      "status": 403,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 51,
+      "content_length": 30,
       "kind": "json",
       "body": [
-        "{\"error\":\"you do not have access to this project\"}"
+        "{\"error\":\"project not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "you do not have access to this project"
+        "error": "project not found"
       },
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
@@ -2680,18 +2680,18 @@
         "method": "GET",
         "path": "/api/v1/projects/<phantom>/attachments"
       },
-      "status": 403,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 51,
+      "content_length": 30,
       "kind": "json",
       "body": [
-        "{\"error\":\"you do not have access to this project\"}"
+        "{\"error\":\"project not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "you do not have access to this project"
+        "error": "project not found"
       },
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },

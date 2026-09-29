@@ -357,10 +357,10 @@ func crewsTeamsTour(tr *tour) {
 	tr.step("export the default crew: founders-dev-team.crew.json, the apostrophe dropped", o, export,
 		id("default"), randomNodes)
 	tr.step("the member exports: any member of W may", m, export, id("crew"))
-	tr.step("the outsider exports W's crew: 403", x, export, id("crew"))
+	tr.step("the outsider exports W's crew: 404, as a crew no row has", x, export, id("crew"))
 	tr.step("export a crew no one has: 404, \"crew not found\" (GET says \"team not found\")", o, export,
 		id("phantom"))
-	tr.step("the outsider reads W's crew: 403", x, get, id("crew"))
+	tr.step("the outsider reads W's crew: 404, as a crew no row has", x, get, id("crew"))
 	tr.step("read a crew no one has: 404", o, get, id("phantom"))
 
 	// (10) Import.

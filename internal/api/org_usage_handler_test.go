@@ -47,7 +47,7 @@ func TestGetOrgUsageAccess(t *testing.T) {
 	}{
 		{"plain member gets the org-wide rollup", "member", http.StatusOK},
 		{"admin passes too", "admin", http.StatusOK},
-		{"non-member gets 403", "stranger", http.StatusForbidden},
+		{"non-member gets 404", "stranger", http.StatusNotFound},
 		{"unauthenticated gets 401", "", http.StatusUnauthorized},
 	}
 

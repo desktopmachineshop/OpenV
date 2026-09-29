@@ -683,20 +683,20 @@
         "path": "/api/v1/projects/<phantom>/interviews"
       },
       "notes": [
-        "the project guard runs before any lookup, so an id no project has answers 403, not 404"
+        "the project guard answers a project no row has as one the caller cannot reach: 404 (I3)"
       ],
-      "status": 403,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 51,
+      "content_length": 30,
       "kind": "json",
       "body": [
-        "{\"error\":\"you do not have access to this project\"}"
+        "{\"error\":\"project not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "you do not have access to this project"
+        "error": "project not found"
       },
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
@@ -3740,18 +3740,18 @@
         "method": "GET",
         "path": "/api/v1/interviews/<i1>/invites"
       },
-      "status": 403,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 51,
+      "content_length": 32,
       "kind": "json",
       "body": [
-        "{\"error\":\"you do not have access to this project\"}"
+        "{\"error\":\"interview not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "you do not have access to this project"
+        "error": "interview not found"
       },
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
@@ -3764,18 +3764,18 @@
         "method": "GET",
         "path": "/api/v1/interviews/<i1>/sessions"
       },
-      "status": 403,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 51,
+      "content_length": 32,
       "kind": "json",
       "body": [
-        "{\"error\":\"you do not have access to this project\"}"
+        "{\"error\":\"interview not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "you do not have access to this project"
+        "error": "interview not found"
       },
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
@@ -3788,18 +3788,18 @@
         "method": "GET",
         "path": "/api/v1/projects/<p>/interview-sessions"
       },
-      "status": 403,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 51,
+      "content_length": 30,
       "kind": "json",
       "body": [
-        "{\"error\":\"you do not have access to this project\"}"
+        "{\"error\":\"project not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "you do not have access to this project"
+        "error": "project not found"
       },
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
@@ -3812,18 +3812,18 @@
         "method": "GET",
         "path": "/api/v1/interview-sessions/<s1>/transcript"
       },
-      "status": 403,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 51,
+      "content_length": 40,
       "kind": "json",
       "body": [
-        "{\"error\":\"you do not have access to this project\"}"
+        "{\"error\":\"interview session not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "you do not have access to this project"
+        "error": "interview session not found"
       },
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     }

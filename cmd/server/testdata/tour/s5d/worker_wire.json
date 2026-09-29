@@ -291,18 +291,18 @@
         ],
         "body": "{\"project_id\":\"<p>\",\"prompt\":\"Summarise P.\"}"
       },
-      "status": 403,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 51,
+      "content_length": 30,
       "kind": "json",
       "body": [
-        "{\"error\":\"you do not have access to this project\"}"
+        "{\"error\":\"project not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "you do not have access to this project"
+        "error": "project not found"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
@@ -1210,18 +1210,18 @@
         "method": "GET",
         "path": "/api/v1/agent-runs/<run1>/logs"
       },
-      "status": 403,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 51,
+      "content_length": 32,
       "kind": "json",
       "body": [
-        "{\"error\":\"you do not have access to this project\"}"
+        "{\"error\":\"agent run not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "you do not have access to this project"
+        "error": "agent run not found"
       },
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
@@ -1368,18 +1368,18 @@
         "method": "POST",
         "path": "/api/v1/agent-runs/<run1>/cancel"
       },
-      "status": 403,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 51,
+      "content_length": 32,
       "kind": "json",
       "body": [
-        "{\"error\":\"you do not have access to this project\"}"
+        "{\"error\":\"agent run not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "you do not have access to this project"
+        "error": "agent run not found"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
@@ -1728,18 +1728,18 @@
         "method": "POST",
         "path": "/api/v1/agent-runs/<run1>/retry"
       },
-      "status": 403,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 51,
+      "content_length": 32,
       "kind": "json",
       "body": [
-        "{\"error\":\"you do not have access to this project\"}"
+        "{\"error\":\"agent run not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "you do not have access to this project"
+        "error": "agent run not found"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
@@ -2553,7 +2553,7 @@
     },
     {
       "n": 69,
-      "title": "run_b's token launches in P: 403, the run is not scoped to P",
+      "title": "run_b's token launches in P: 404, the run is not scoped to P",
       "actor": "run_b",
       "route": "POST /api/v1/agents/{slug}/runs",
       "request": {
@@ -2564,18 +2564,18 @@
         ],
         "body": "{\"project_id\":\"<p>\",\"prompt\":\"Help.\"}"
       },
-      "status": 403,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 52,
+      "content_length": 30,
       "kind": "json",
       "body": [
-        "{\"error\":\"agent run is not scoped to this project\"}"
+        "{\"error\":\"project not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "agent run is not scoped to this project"
+        "error": "project not found"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
@@ -3803,18 +3803,18 @@
         "method": "GET",
         "path": "/api/v1/agent-runs/<run1>"
       },
-      "status": 403,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 51,
+      "content_length": 32,
       "kind": "json",
       "body": [
-        "{\"error\":\"you do not have access to this project\"}"
+        "{\"error\":\"agent run not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "you do not have access to this project"
+        "error": "agent run not found"
       },
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
@@ -3977,18 +3977,18 @@
         "path": "/api/v1/agent-runs",
         "query": "project_id=<p>"
       },
-      "status": 403,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 51,
+      "content_length": 30,
       "kind": "json",
       "body": [
-        "{\"error\":\"you do not have access to this project\"}"
+        "{\"error\":\"project not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "you do not have access to this project"
+        "error": "project not found"
       },
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
@@ -4123,7 +4123,7 @@
     },
     {
       "n": 100,
-      "title": "agent_id x: 500, the cast to a UUID fails in SQL",
+      "title": "agent_id x: none, as for an agent no row has",
       "actor": "owner",
       "acting_in": "<w>",
       "route": "GET /api/v1/agent-runs",
@@ -4132,19 +4132,17 @@
         "path": "/api/v1/agent-runs",
         "query": "agent_id=x"
       },
-      "status": 500,
-      "content_type": "application/json",
+      "status": 200,
+      "content_type": "text/plain; charset=utf-8",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 38,
+      "content_length": 5,
       "kind": "json",
       "body": [
-        "{\"error\":\"failed to list agent runs\"}"
+        "null"
       ],
       "trailing_newline": true,
-      "parsed": {
-        "error": "failed to list agent runs"
-      },
+      "parsed": null,
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {

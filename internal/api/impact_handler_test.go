@@ -127,10 +127,12 @@ func TestGetImpact_UnknownArtifact(t *testing.T) {
 	}
 }
 
-func TestGetImpact_ForbiddenForNonMember(t *testing.T) {
+// A non-member is told the project is not there, as for a project no row
+// has (I3).
+func TestGetImpact_NotFoundForNonMember(t *testing.T) {
 	w := httptest.NewRecorder()
 	newImpactHandler().GetImpact(w, impactRequest("stranger", "&artifact=R1"))
-	if w.Code != http.StatusForbidden {
-		t.Fatalf("status = %d, want 403 (body %q)", w.Code, w.Body.String())
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, want 404 (body %q)", w.Code, w.Body.String())
 	}
 }

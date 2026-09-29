@@ -43,7 +43,7 @@ func TestUpdateOrgBudgetAuthz(t *testing.T) {
 	}{
 		{"admin sets a budget", "admin", http.StatusOK, true},
 		{"member is refused", "member", http.StatusForbidden, false},
-		{"non-member is refused", "stranger", http.StatusForbidden, false},
+		{"non-member is told the workspace is not there", "stranger", http.StatusNotFound, false},
 		{"unauthenticated is refused", "", http.StatusUnauthorized, false},
 	}
 	for _, tc := range cases {

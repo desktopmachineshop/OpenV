@@ -14,6 +14,39 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/teams"
 )
 
+// notFound is the answer to an id no row has: its status and message. The
+// guards give exactly this answer to a caller with no access at all, so that
+// a refusal tells nothing of whether the id exists (I3, OpenV REQ-17): a
+// project no row has and one the caller cannot reach both answer the project
+// guard's 404 "project not found", and a workspace likewise "workspace not
+// found". A guard that stands for a resource the handler looked up by its
+// own id answers that resource's own not-found (missing), the answer the
+// lookup gives an id no row has. A caller who reaches the project or
+// workspace but lacks the role a write needs still gets 403: the resource
+// exists for it. The zero notFound stands for the guard's own answer.
+type notFound struct {
+	status  int
+	message string
+}
+
+var (
+	unknownProject   = notFound{http.StatusNotFound, "project not found"}
+	unknownWorkspace = notFound{http.StatusNotFound, "workspace not found"}
+)
+
+// missing is a resource's not-found answer: 404 with its message.
+func missing(message string) notFound { return notFound{http.StatusNotFound, message} }
+
+// or is n, or def when n is the zero notFound.
+func (n notFound) or(def notFound) notFound {
+	if n == (notFound{}) {
+		return def
+	}
+	return n
+}
+
+func (n notFound) write(w http.ResponseWriter) { writeJSONError(w, n.status, n.message) }
+
 // requireProjectRole enforces project access. Returns true when the request
 // may proceed; otherwise it has already written a 401/403/404 response.
 //
@@ -23,9 +56,18 @@ import (
 // meets minRole; agent runs pass as editor-equivalent inside their own
 // project only; workers pass only for projects belonging to their own org, a
 // workspace key as an editor there and a member's personal runner key above a
-// viewer's read only where its holder would (personalKeyAccess).
+// viewer's read only where its holder would (personalKeyAccess). A caller
+// with no access at all to the project gets 404 "project not found", as for
+// a project no row has (notFound).
 func (h *Handler) requireProjectRole(w http.ResponseWriter, r *http.Request, projectID string, minRole string) bool {
-	if !h.projectAccess(w, r, projectID, minRole) {
+	return h.requireProjectRoleFor(w, r, projectID, minRole, notFound{})
+}
+
+// requireProjectRoleFor is requireProjectRole for a resource the handler
+// looked up by its own id: a caller with no access at all to the resource's
+// project gets absent, the answer the handler gives an id no row has.
+func (h *Handler) requireProjectRoleFor(w http.ResponseWriter, r *http.Request, projectID string, minRole string, absent notFound) bool {
+	if !h.projectAccess(w, r, projectID, minRole, absent) {
 		return false
 	}
 	// Access decided, one more question for a write: is the workspace
@@ -37,28 +79,27 @@ func (h *Handler) requireProjectRole(w http.ResponseWriter, r *http.Request, pro
 	return true
 }
 
-func (h *Handler) projectAccess(w http.ResponseWriter, r *http.Request, projectID string, minRole string) bool {
+func (h *Handler) projectAccess(w http.ResponseWriter, r *http.Request, projectID string, minRole string, absent notFound) bool {
+	absent = absent.or(unknownProject)
 	if projectID == "" {
-		writeJSONError(w, http.StatusNotFound, "project not found")
+		absent.write(w)
 		return false
 	}
 
 	if workerOrg := WorkerOrg(r); workerOrg != "" {
+		// Another workspace's project is, to a worker key, one no row has.
 		project, err := h.projectService.GetProject(projectID)
-		if err != nil || project == nil {
-			writeJSONError(w, http.StatusNotFound, "project not found")
+		if err != nil || project == nil || project.OrgID != workerOrg {
+			absent.write(w)
 			return false
 		}
-		if project.OrgID == workerOrg {
-			return h.personalKeyAccess(w, r, project.OrgID, projectID, minRole)
-		}
-		writeJSONError(w, http.StatusForbidden, "worker key does not belong to this project's workspace")
-		return false
+		return h.personalKeyAccess(w, r, project.OrgID, projectID, minRole)
 	}
 
 	if run := CurrentRun(r); run != nil {
+		// A run reaches its own project only; any other is one no row has.
 		if run.ProjectID == nil || *run.ProjectID != projectID {
-			writeJSONError(w, http.StatusForbidden, "agent run is not scoped to this project")
+			absent.write(w)
 			return false
 		}
 		// In its own project a run is an editor, never an owner.
@@ -81,7 +122,7 @@ func (h *Handler) projectAccess(w http.ResponseWriter, r *http.Request, projectI
 		// for nothing, or 201 with rows no project owns.
 		if h.projectService != nil {
 			if project, err := h.projectService.GetProject(projectID); err != nil || project == nil {
-				writeJSONError(w, http.StatusNotFound, "project not found")
+				absent.write(w)
 				return false
 			}
 		}
@@ -102,11 +143,71 @@ func (h *Handler) projectAccess(w http.ResponseWriter, r *http.Request, projectI
 		respondInternal(w, r, "failed to resolve project access", err)
 		return false
 	}
-	if role == "" || !members.RoleAtLeast(role, minRole) {
+	if role == "" {
+		// No role at all: the project, if it exists, is not the caller's
+		// to know of.
+		absent.write(w)
+		return false
+	}
+	if !members.RoleAtLeast(role, minRole) {
 		writeJSONError(w, http.StatusForbidden, "you do not have access to this project")
 		return false
 	}
 	return true
+}
+
+// requireProjectVisible is the first question of a guard on a project a
+// request names in its body or query and looks up there: does the caller
+// reach the project at all, a reader's access at least? If not, it answers
+// absent, as for a project no row has (I3), or the 401 or 500 the guard
+// would, and reports false. It asks no role beyond that and takes no plan
+// gate: the route's own guard does.
+func (h *Handler) requireProjectVisible(w http.ResponseWriter, r *http.Request, projectID string, absent notFound) bool {
+	return h.projectAccess(w, r, projectID, members.RoleViewer, absent)
+}
+
+// requireOrgVisible is requireProjectVisible for a workspace: is the caller
+// a member of it, or a platform admin? If not, it answers absent, as for
+// what the request names there when no row has it (I3).
+func (h *Handler) requireOrgVisible(w http.ResponseWriter, r *http.Request, orgID string, absent notFound) bool {
+	return h.orgAccess(w, r, orgID, orgs.RoleMember, absent)
+}
+
+// requireTeamVisible reports whether the request may know of the crew: a
+// member of its workspace, its workspace's worker keys, its workspace's runs
+// (of a pinned crew only a run of the pinned project, the one project a run
+// reaches), or a caller who reaches its pinned project. Otherwise it answers
+// absent, as for a crew no row has (I3), and reports false. A crew with no
+// workspace is anyone's to know of.
+func (h *Handler) requireTeamVisible(w http.ResponseWriter, r *http.Request, team *teams.Team, absent notFound) bool {
+	switch run := CurrentRun(r); {
+	case team.OrgID == "":
+		return true
+	case WorkerOrg(r) != "":
+		if WorkerOrg(r) == team.OrgID {
+			return true
+		}
+	case run != nil:
+		if pin := h.teamPin(team); run.OrgID == team.OrgID && (pin == "" || sameProject(run.ProjectID, &pin)) {
+			return true
+		}
+	default:
+		if pin := h.teamPin(team); pin != "" && h.reachesProject(r, pin) {
+			return true
+		}
+		if h.orgAccess(discardResponse{}, r, team.OrgID, orgs.RoleMember, notFound{}) {
+			return true
+		}
+	}
+	absent.write(w)
+	return false
+}
+
+// reachesProject reports whether the request has any access to the project,
+// a reader's at least, without writing a response: false where a guard would
+// answer the caller as for a project no row has.
+func (h *Handler) reachesProject(r *http.Request, projectID string) bool {
+	return h.requireProjectVisible(discardResponse{}, r, projectID, notFound{})
 }
 
 // personalKeyAccess decides a worker key of the project's own workspace. A
@@ -149,21 +250,40 @@ func (h *Handler) personalKeyAccess(w http.ResponseWriter, r *http.Request, orgI
 
 // requireOrgRole enforces workspace access: platform admins pass for a
 // workspace that exists; org admins satisfy any minRole; members satisfy
-// "member". Writes 401/403/404 on failure.
+// "member". Writes 401/403/404 on failure: a caller who is no member gets
+// 404 "workspace not found", as for a workspace no row has (notFound).
 func (h *Handler) requireOrgRole(w http.ResponseWriter, r *http.Request, orgID string, minRole string) bool {
-	if !h.orgAccess(w, r, orgID, minRole) {
+	return h.requireOrgRoleFor(w, r, orgID, minRole, notFound{})
+}
+
+// requireOrgRoleFor is requireOrgRole for a resource the handler looked up by
+// its own id: a caller who is no member of the resource's workspace gets
+// absent, the answer the handler gives an id no row has.
+func (h *Handler) requireOrgRoleFor(w http.ResponseWriter, r *http.Request, orgID string, minRole string, absent notFound) bool {
+	if !h.orgAccess(w, r, orgID, minRole, absent) {
 		return false
 	}
 	return h.requireWritable(w, r, orgID)
 }
 
-func (h *Handler) orgAccess(w http.ResponseWriter, r *http.Request, orgID string, minRole string) bool {
+func (h *Handler) orgAccess(w http.ResponseWriter, r *http.Request, orgID string, minRole string, absent notFound) bool {
+	lookedUp := absent != (notFound{})
+	absent = absent.or(unknownWorkspace)
 	if orgID == "" {
-		writeJSONError(w, http.StatusNotFound, "workspace not found")
+		absent.write(w)
 		return false
 	}
 	user := CurrentUser(r)
 	if user == nil {
+		// A caller with no session (a worker key, a run token) gets the
+		// guard's 401; but where the handler looked the resource up first,
+		// one that is not of the resource's workspace gets the lookup's
+		// answer to an id no row has, or the 401 would tell it the resource
+		// exists (I3).
+		if lookedUp && sessionlessOrg(r) != orgID {
+			absent.write(w)
+			return false
+		}
 		writeJSONError(w, http.StatusUnauthorized, "authentication required")
 		return false
 	}
@@ -174,7 +294,7 @@ func (h *Handler) orgAccess(w http.ResponseWriter, r *http.Request, orgID string
 		// answer 500, 204 for nothing, or a foreign key's refusal.
 		if h.orgService != nil {
 			if _, err := h.orgService.Get(orgID); err != nil {
-				respondError(w, r, http.StatusNotFound, "workspace not found", err)
+				absent.write(w)
 				return false
 			}
 		}
@@ -186,7 +306,9 @@ func (h *Handler) orgAccess(w http.ResponseWriter, r *http.Request, orgID string
 		return false
 	}
 	if role == "" {
-		writeJSONError(w, http.StatusForbidden, "you are not a member of this workspace")
+		// No member: the workspace, if it exists, is not the caller's to
+		// know of.
+		absent.write(w)
 		return false
 	}
 	if minRole == orgs.RoleAdmin && role != orgs.RoleAdmin {
@@ -194,6 +316,27 @@ func (h *Handler) orgAccess(w http.ResponseWriter, r *http.Request, orgID string
 		return false
 	}
 	return true
+}
+
+// sessionlessOrg is the workspace of a caller with no session: a worker
+// key's, or a run token's ("" for neither).
+func sessionlessOrg(r *http.Request) string {
+	if org := WorkerOrg(r); org != "" {
+		return org
+	}
+	if run := CurrentRun(r); run != nil {
+		return run.OrgID
+	}
+	return ""
+}
+
+// sameProject reports whether two runs' projects are one, or both runs have
+// none.
+func sameProject(a, b *string) bool {
+	if a == nil || b == nil {
+		return a == nil && b == nil
+	}
+	return *a == *b
 }
 
 // discardResponse swallows the error responses the require* helpers write,
@@ -229,25 +372,29 @@ func (h *Handler) isOrgAdmin(r *http.Request, orgID string) bool {
 
 // requireRunAccess enforces access to an agent run: the user who launched it
 // always passes; project-scoped runs fall back to the project role ladder;
-// unscoped runs require workspace-admin rights on the run's org. Writes the
-// error response itself on failure.
+// unscoped runs require workspace-admin rights on the run's org. A caller
+// with no access at all gets the 404 of a run no row has. Writes the error
+// response itself on failure.
 func (h *Handler) requireRunAccess(w http.ResponseWriter, r *http.Request, run *agentruns.Run, minRole string) bool {
 	if user := CurrentUser(r); user != nil && run.LaunchedBy != nil && *run.LaunchedBy == user.ID {
 		return true
 	}
+	absent := missing("agent run not found")
 	if run.ProjectID != nil && *run.ProjectID != "" {
-		return h.requireProjectRole(w, r, *run.ProjectID, minRole)
+		return h.requireProjectRoleFor(w, r, *run.ProjectID, minRole, absent)
 	}
-	return h.requireOrgRole(w, r, run.OrgID, orgs.RoleAdmin)
+	return h.requireOrgRoleFor(w, r, run.OrgID, orgs.RoleAdmin, absent)
 }
 
 // requireTeamWrite enforces crew mutations: project-pinned crews need project
-// editor rights, workspace-wide crews need workspace admin rights.
-func (h *Handler) requireTeamWrite(w http.ResponseWriter, r *http.Request, team *teams.Team) bool {
+// editor rights, workspace-wide crews need workspace admin rights. A caller
+// with no access at all gets absent, the answer to an id no row has of the
+// crew, node or edge the handler looked up.
+func (h *Handler) requireTeamWrite(w http.ResponseWriter, r *http.Request, team *teams.Team, absent notFound) bool {
 	if pin := h.teamPin(team); pin != "" {
-		return h.requireProjectRole(w, r, pin, members.RoleEditor)
+		return h.requireProjectRoleFor(w, r, pin, members.RoleEditor, absent)
 	}
-	return h.requireOrgRole(w, r, team.OrgID, orgs.RoleAdmin)
+	return h.requireOrgRoleFor(w, r, team.OrgID, orgs.RoleAdmin, absent)
 }
 
 // teamPin is the crew's pinned project while the pin still names a project of
@@ -266,12 +413,14 @@ func (h *Handler) teamPin(team *teams.Team) string {
 
 // requireAutomationWrite enforces automation mutations: project-pinned
 // automations need project editor rights, workspace-wide ones need workspace
-// admin rights on the given org.
-func (h *Handler) requireAutomationWrite(w http.ResponseWriter, r *http.Request, projectID *string, orgID string) bool {
+// admin rights on the given org. A caller with no access at all gets absent:
+// a stored automation's own 404, or, for a create, the guards' own (the zero
+// notFound).
+func (h *Handler) requireAutomationWrite(w http.ResponseWriter, r *http.Request, projectID *string, orgID string, absent notFound) bool {
 	if projectID != nil && *projectID != "" {
-		return h.requireProjectRole(w, r, *projectID, members.RoleEditor)
+		return h.requireProjectRoleFor(w, r, *projectID, members.RoleEditor, absent)
 	}
-	return h.requireOrgRole(w, r, orgID, orgs.RoleAdmin)
+	return h.requireOrgRoleFor(w, r, orgID, orgs.RoleAdmin, absent)
 }
 
 // projectIDForArtifact resolves an artifact id to its project id ("" on failure).

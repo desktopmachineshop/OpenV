@@ -273,7 +273,7 @@ func (h *Handler) GetTestRun(w http.ResponseWriter, r *http.Request) {
 		respondError(w, r, http.StatusNotFound, "test run not found", err)
 		return
 	}
-	if !h.requireProjectRole(w, r, run.ProjectID, members.RoleViewer) {
+	if !h.requireProjectRoleFor(w, r, run.ProjectID, members.RoleViewer, missing("test run not found")) {
 		return
 	}
 	json.NewEncoder(w).Encode(run)
@@ -286,7 +286,7 @@ func (h *Handler) UpdateTestRun(w http.ResponseWriter, r *http.Request) {
 		respondError(w, r, http.StatusNotFound, "test run not found", err)
 		return
 	}
-	if !h.requireProjectRole(w, r, run.ProjectID, members.RoleEditor) {
+	if !h.requireProjectRoleFor(w, r, run.ProjectID, members.RoleEditor, missing("test run not found")) {
 		return
 	}
 	var req struct {
@@ -320,7 +320,7 @@ func (h *Handler) DeleteTestRun(w http.ResponseWriter, r *http.Request) {
 		respondError(w, r, http.StatusNotFound, "test run not found", err)
 		return
 	}
-	if !h.requireProjectRole(w, r, run.ProjectID, members.RoleEditor) {
+	if !h.requireProjectRoleFor(w, r, run.ProjectID, members.RoleEditor, missing("test run not found")) {
 		return
 	}
 	if err := h.vvService.DeleteRun(id); err != nil {
@@ -337,7 +337,7 @@ func (h *Handler) UpsertTestResult(w http.ResponseWriter, r *http.Request) {
 		respondError(w, r, http.StatusNotFound, "test run not found", err)
 		return
 	}
-	if !h.requireProjectRole(w, r, run.ProjectID, members.RoleEditor) {
+	if !h.requireProjectRoleFor(w, r, run.ProjectID, members.RoleEditor, missing("test run not found")) {
 		return
 	}
 	var req vv.UpsertResultRequest
@@ -381,7 +381,7 @@ func (h *Handler) ListTestResults(w http.ResponseWriter, r *http.Request) {
 		respondError(w, r, http.StatusNotFound, "test run not found", err)
 		return
 	}
-	if !h.requireProjectRole(w, r, run.ProjectID, members.RoleViewer) {
+	if !h.requireProjectRoleFor(w, r, run.ProjectID, members.RoleViewer, missing("test run not found")) {
 		return
 	}
 	results, err := h.vvService.ListResults(runID)
@@ -403,7 +403,7 @@ func (h *Handler) LaunchTestRunAgent(w http.ResponseWriter, r *http.Request) {
 		respondError(w, r, http.StatusNotFound, "test run not found", err)
 		return
 	}
-	if !h.requireProjectRole(w, r, testRun.ProjectID, members.RoleEditor) {
+	if !h.requireProjectRoleFor(w, r, testRun.ProjectID, members.RoleEditor, missing("test run not found")) {
 		return
 	}
 	if testRun.Status != vv.RunStatusInProgress {
@@ -731,7 +731,7 @@ func (h *Handler) GetArtifactQuality(w http.ResponseWriter, r *http.Request) {
 		respondError(w, r, http.StatusNotFound, "artifact not found", err)
 		return
 	}
-	if !h.requireProjectRole(w, r, artifact.ProjectID, members.RoleViewer) {
+	if !h.requireProjectRoleFor(w, r, artifact.ProjectID, members.RoleViewer, missing("artifact not found")) {
 		return
 	}
 	if !quality.IsRequirementType(artifact.Type) {
@@ -855,7 +855,7 @@ func (h *Handler) GetWorkItem(w http.ResponseWriter, r *http.Request) {
 		respondError(w, r, http.StatusNotFound, "work item not found", err)
 		return
 	}
-	if !h.requireProjectRole(w, r, item.ProjectID, members.RoleViewer) {
+	if !h.requireProjectRoleFor(w, r, item.ProjectID, members.RoleViewer, missing("work item not found")) {
 		return
 	}
 	json.NewEncoder(w).Encode(map[string]interface{}{
@@ -871,7 +871,7 @@ func (h *Handler) UpdateWorkItem(w http.ResponseWriter, r *http.Request) {
 		respondError(w, r, http.StatusNotFound, "work item not found", err)
 		return
 	}
-	if !h.requireProjectRole(w, r, item.ProjectID, members.RoleEditor) {
+	if !h.requireProjectRoleFor(w, r, item.ProjectID, members.RoleEditor, missing("work item not found")) {
 		return
 	}
 	var req workitems.UpdateWorkItemRequest
@@ -894,7 +894,7 @@ func (h *Handler) DeleteWorkItem(w http.ResponseWriter, r *http.Request) {
 		respondError(w, r, http.StatusNotFound, "work item not found", err)
 		return
 	}
-	if !h.requireProjectRole(w, r, item.ProjectID, members.RoleEditor) {
+	if !h.requireProjectRoleFor(w, r, item.ProjectID, members.RoleEditor, missing("work item not found")) {
 		return
 	}
 	if err := h.workItemService.Delete(id); err != nil {
@@ -911,7 +911,7 @@ func (h *Handler) MoveWorkItem(w http.ResponseWriter, r *http.Request) {
 		respondError(w, r, http.StatusNotFound, "work item not found", err)
 		return
 	}
-	if !h.requireProjectRole(w, r, item.ProjectID, members.RoleEditor) {
+	if !h.requireProjectRoleFor(w, r, item.ProjectID, members.RoleEditor, missing("work item not found")) {
 		return
 	}
 	var req workitems.MoveRequest
@@ -934,7 +934,7 @@ func (h *Handler) CommentWorkItem(w http.ResponseWriter, r *http.Request) {
 		respondError(w, r, http.StatusNotFound, "work item not found", err)
 		return
 	}
-	if !h.requireProjectRole(w, r, item.ProjectID, members.RoleViewer) {
+	if !h.requireProjectRoleFor(w, r, item.ProjectID, members.RoleViewer, missing("work item not found")) {
 		return
 	}
 	var req struct {
@@ -994,7 +994,7 @@ func (h *Handler) getGuidedSessionChecked(w http.ResponseWriter, r *http.Request
 		respondError(w, r, http.StatusNotFound, "guided session not found", err)
 		return nil
 	}
-	if !h.requireProjectRole(w, r, session.ProjectID, minRole) {
+	if !h.requireProjectRoleFor(w, r, session.ProjectID, minRole, missing("guided session not found")) {
 		return nil
 	}
 	return session
@@ -1491,7 +1491,7 @@ func (h *Handler) CreateInterview(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	if !h.validPersonaForProject(w, req.PersonaArtifactID, projectID) {
+	if !h.validPersonaForProject(w, r, req.PersonaArtifactID, projectID) {
 		return
 	}
 	var agentID *string
@@ -1535,7 +1535,7 @@ func (h *Handler) getInterviewChecked(w http.ResponseWriter, r *http.Request, mi
 		respondError(w, r, http.StatusNotFound, "interview not found", err)
 		return nil
 	}
-	if !h.requireProjectRole(w, r, interview.ProjectID, minRole) {
+	if !h.requireProjectRoleFor(w, r, interview.ProjectID, minRole, missing("interview not found")) {
 		return nil
 	}
 	return interview
@@ -1543,14 +1543,18 @@ func (h *Handler) getInterviewChecked(w http.ResponseWriter, r *http.Request, mi
 
 // validPersonaForProject checks that a persona artifact reference points at a
 // persona-type artifact in the given project. A nil reference is valid (the
-// link is optional). Writes an HTTP error and returns false when invalid.
-func (h *Handler) validPersonaForProject(w http.ResponseWriter, personaArtifactID *string, projectID string) bool {
+// link is optional). Writes an HTTP error and returns false when invalid; an
+// artifact in a project the caller cannot reach at all is one no row has (I3).
+func (h *Handler) validPersonaForProject(w http.ResponseWriter, r *http.Request, personaArtifactID *string, projectID string) bool {
 	if personaArtifactID == nil {
 		return true
 	}
 	artifact, err := h.artifactService.GetArtifact(*personaArtifactID)
 	if err != nil || artifact == nil {
-		writeJSONError(w, http.StatusBadRequest, "persona artifact not found")
+		personaNotFound.write(w)
+		return false
+	}
+	if artifact.ProjectID != projectID && !h.requireProjectVisible(w, r, artifact.ProjectID, personaNotFound) {
 		return false
 	}
 	if artifact.ProjectID != projectID {
@@ -1563,6 +1567,10 @@ func (h *Handler) validPersonaForProject(w http.ResponseWriter, personaArtifactI
 	}
 	return true
 }
+
+// personaNotFound answers a persona reference no artifact has, or one in a
+// project the caller cannot reach at all.
+var personaNotFound = notFound{http.StatusBadRequest, "persona artifact not found"}
 
 // SetInterviewPersona links an interview to a persona artifact (or clears the
 // link when persona_artifact_id is null).
@@ -1578,7 +1586,7 @@ func (h *Handler) SetInterviewPersona(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	if !h.validPersonaForProject(w, req.PersonaArtifactID, interview.ProjectID) {
+	if !h.validPersonaForProject(w, r, req.PersonaArtifactID, interview.ProjectID) {
 		return
 	}
 	updated, err := h.interviewService.SetInterviewPersona(interview.ID, req.PersonaArtifactID)
@@ -1655,7 +1663,7 @@ func (h *Handler) RevokeInterviewInvite(w http.ResponseWriter, r *http.Request) 
 		respondError(w, r, http.StatusNotFound, "interview not found", err)
 		return
 	}
-	if !h.requireProjectRole(w, r, interview.ProjectID, members.RoleEditor) {
+	if !h.requireProjectRoleFor(w, r, interview.ProjectID, members.RoleEditor, missing("invite not found")) {
 		return
 	}
 	if err := h.interviewService.RevokeInvite(invite.ID); err != nil {
@@ -1721,7 +1729,7 @@ func (h *Handler) GetInterviewTranscript(w http.ResponseWriter, r *http.Request)
 		respondError(w, r, http.StatusNotFound, "interview not found", err)
 		return
 	}
-	if !h.requireProjectRole(w, r, interview.ProjectID, members.RoleViewer) {
+	if !h.requireProjectRoleFor(w, r, interview.ProjectID, members.RoleViewer, missing("interview session not found")) {
 		return
 	}
 	transcript, err := h.interviewService.GetTranscript(session.ID)

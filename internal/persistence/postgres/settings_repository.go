@@ -45,7 +45,7 @@ func (r *SettingsRepository) SetProjectSettings(projectID string, s map[string]i
 func (r *SettingsRepository) get(query, id, level string) (map[string]interface{}, error) {
 	var raw []byte
 	switch err := r.db.QueryRow(query, id).Scan(&raw); {
-	case err == sql.ErrNoRows:
+	case noRow(err):
 		return map[string]interface{}{}, nil
 	case err != nil:
 		return nil, fmt.Errorf("failed to read %s settings: %w", level, err)

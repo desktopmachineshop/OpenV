@@ -91,7 +91,7 @@ func (r *WorkerKeyRepository) FindPersonal(orgID, userID string) (*workerkeys.Ke
 		WHERE k.org_id = $1 AND k.user_id = $2 AND NOT k.revoked AND k.session_id IS NULL
 		ORDER BY k.created_at DESC LIMIT 1
 	`, orgID, userID))
-	if err == sql.ErrNoRows {
+	if noRow(err) {
 		return nil, nil
 	}
 	return k, err
@@ -113,7 +113,7 @@ func (r *WorkerKeyRepository) HasOnlinePersonalKey(orgID, userID string, since t
 // FindByID returns a key, or nil.
 func (r *WorkerKeyRepository) FindByID(id string) (*workerkeys.Key, error) {
 	k, err := scanWorkerKey(r.db.QueryRow(`SELECT `+workerKeyColumns+` FROM worker_keys k WHERE k.id = $1`, id))
-	if err == sql.ErrNoRows {
+	if noRow(err) {
 		return nil, nil
 	}
 	return k, err
@@ -122,7 +122,7 @@ func (r *WorkerKeyRepository) FindByID(id string) (*workerkeys.Key, error) {
 // FindByHash returns the key with the given hash, or nil.
 func (r *WorkerKeyRepository) FindByHash(hash string) (*workerkeys.Key, error) {
 	k, err := scanWorkerKey(r.db.QueryRow(`SELECT `+workerKeyColumns+` FROM worker_keys k WHERE k.key_hash = $1`, hash))
-	if err == sql.ErrNoRows {
+	if noRow(err) {
 		return nil, nil
 	}
 	return k, err
@@ -145,7 +145,7 @@ func (r *WorkerKeyRepository) ConsumePairing(codeHash string, now time.Time) (st
 		WHERE code_hash = $1 AND NOT used AND expires_at > $2
 		RETURNING org_id, user_id
 	`, codeHash, now).Scan(&orgID, &userID)
-	if err == sql.ErrNoRows {
+	if noRow(err) {
 		return "", "", nil
 	}
 	if err != nil {

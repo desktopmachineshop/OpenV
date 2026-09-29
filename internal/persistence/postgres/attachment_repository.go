@@ -83,7 +83,7 @@ func (r *AttachmentRepository) Save(attachment *attachments.Attachment) error {
 func (r *AttachmentRepository) FindByID(id string) (*attachments.Attachment, error) {
 	query := `SELECT ` + figureColumns + ` FROM attachments WHERE id = $1`
 	attachment, err := scanAttachment(r.db.QueryRow(query, id).Scan)
-	if err == sql.ErrNoRows {
+	if noRow(err) {
 		return nil, nil
 	}
 	if err != nil {
@@ -291,7 +291,7 @@ func (r *AttachmentRepository) AddVersion(attachmentID string, v *attachments.Ve
 		WHERE id = $1
 		RETURNING version, figure_ref, title
 	`, attachmentID, v.OriginalFilename, v.MimeType, v.FilePath, v.FileSize).Scan(&next, &figureRef, &v.Title); err != nil {
-		if err == sql.ErrNoRows {
+		if noRow(err) {
 			return 0, nil
 		}
 		return 0, fmt.Errorf("failed to advance figure version: %w", err)
@@ -343,7 +343,7 @@ func (r *AttachmentRepository) Rename(attachmentID, title string, by *string) (i
 		WHERE id = $1
 		RETURNING version, filename, original_filename, mime_type, file_path, file_size
 	`, attachmentID, title).Scan(&v.Version, &v.Filename, &v.OriginalFilename, &v.MimeType, &v.FilePath, &v.FileSize); err != nil {
-		if err == sql.ErrNoRows {
+		if noRow(err) {
 			return 0, nil
 		}
 		return 0, fmt.Errorf("failed to rename figure: %w", err)
@@ -430,7 +430,7 @@ func (r *AttachmentRepository) FindVersion(attachmentID string, version int) (*a
 		FROM attachment_versions
 		WHERE attachment_id = $1 AND version = $2
 	`, attachmentID, version).Scan)
-	if err == sql.ErrNoRows {
+	if noRow(err) {
 		return nil, nil
 	}
 	if err != nil {
@@ -465,7 +465,7 @@ func (r *AttachmentRepository) Restore(attachmentID string, version int, by *str
 	if err := tx.QueryRow(`
 		SELECT version, figure_ref FROM attachments WHERE id = $1 FOR UPDATE
 	`, attachmentID).Scan(&current, &figureRef); err != nil {
-		if err == sql.ErrNoRows {
+		if noRow(err) {
 			return nil, attachments.ErrNoSuchVersion
 		}
 		return nil, fmt.Errorf("failed to read figure for restore: %w", err)
@@ -479,7 +479,7 @@ func (r *AttachmentRepository) Restore(attachmentID string, version int, by *str
 		FROM attachment_versions
 		WHERE attachment_id = $1 AND version = $2
 	`, attachmentID, version).Scan)
-	if err == sql.ErrNoRows {
+	if noRow(err) {
 		return nil, attachments.ErrNoSuchVersion
 	}
 	if err != nil {

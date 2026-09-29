@@ -528,7 +528,7 @@
     },
     {
       "n": 14,
-      "title": "x, not in W, adds itself: 403",
+      "title": "x, not in W, adds itself: 404, as for a workspace no row has",
       "actor": "x",
       "route": "POST /api/v1/orgs/{id}/members",
       "request": {
@@ -539,18 +539,18 @@
         ],
         "body": "{\"email\":\"tour-x@example.com\",\"role\":\"member\"}"
       },
-      "status": 403,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 51,
+      "content_length": 32,
       "kind": "json",
       "body": [
-        "{\"error\":\"you are not a member of this workspace\"}"
+        "{\"error\":\"workspace not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "you are not a member of this workspace"
+        "error": "workspace not found"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
@@ -605,31 +605,31 @@
     },
     {
       "n": 16,
-      "title": "W's members as x, not in W: 403",
+      "title": "W's members as x, not in W: 404",
       "actor": "x",
       "route": "GET /api/v1/orgs/{id}/members",
       "request": {
         "method": "GET",
         "path": "/api/v1/orgs/<w>/members"
       },
-      "status": 403,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 51,
+      "content_length": 32,
       "kind": "json",
       "body": [
-        "{\"error\":\"you are not a member of this workspace\"}"
+        "{\"error\":\"workspace not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "you are not a member of this workspace"
+        "error": "workspace not found"
       },
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
       "n": 17,
-      "title": "the members of a workspace no row has: 403, the same words, not 404",
+      "title": "the members of a workspace no row has: 404, the answer x gets for W",
       "actor": "owner",
       "acting_in": "<w>",
       "route": "GET /api/v1/orgs/{id}/members",
@@ -637,24 +637,24 @@
         "method": "GET",
         "path": "/api/v1/orgs/<phantom>/members"
       },
-      "status": 403,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 51,
+      "content_length": 32,
       "kind": "json",
       "body": [
-        "{\"error\":\"you are not a member of this workspace\"}"
+        "{\"error\":\"workspace not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "you are not a member of this workspace"
+        "error": "workspace not found"
       },
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
       "n": 18,
-      "title": "the members of a workspace id that is not a UUID: the role lookup's error is a 500 (Q19)",
+      "title": "the members of a workspace id that is not a UUID: the same 404",
       "actor": "owner",
       "acting_in": "<w>",
       "route": "GET /api/v1/orgs/{id}/members",
@@ -662,18 +662,18 @@
         "method": "GET",
         "path": "/api/v1/orgs/not-a-workspace/members"
       },
-      "status": 500,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 47,
+      "content_length": 32,
       "kind": "json",
       "body": [
-        "{\"error\":\"failed to resolve workspace access\"}"
+        "{\"error\":\"workspace not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "failed to resolve workspace access"
+        "error": "workspace not found"
       },
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
@@ -1162,7 +1162,7 @@
     },
     {
       "n": 35,
-      "title": "x, not in W, makes one: 403",
+      "title": "x, not in W, makes one: 404",
       "actor": "x",
       "route": "POST /api/v1/orgs/{id}/teams",
       "request": {
@@ -1173,18 +1173,18 @@
         ],
         "body": "{\"name\":\"Tour Outsiders\"}"
       },
-      "status": 403,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 51,
+      "content_length": 32,
       "kind": "json",
       "body": [
-        "{\"error\":\"you are not a member of this workspace\"}"
+        "{\"error\":\"workspace not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "you are not a member of this workspace"
+        "error": "workspace not found"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
@@ -1459,7 +1459,7 @@
     },
     {
       "n": 44,
-      "title": "x, not in W, renames W's team: 403",
+      "title": "x, not in W, renames W's team: 404, as a team no row has",
       "actor": "x",
       "route": "PUT /api/v1/org-teams/{id}",
       "request": {
@@ -1470,25 +1470,25 @@
         ],
         "body": "{\"name\":\"Mine\"}"
       },
-      "status": 403,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 51,
+      "content_length": 27,
       "kind": "json",
       "body": [
-        "{\"error\":\"you are not a member of this workspace\"}"
+        "{\"error\":\"team not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "you are not a member of this workspace"
+        "error": "team not found"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
       "n": 45,
-      "title": "m renames V's team: 403, not a member of V",
+      "title": "m renames V's team: 404, not a member of V",
       "actor": "m",
       "acting_in": "<w>",
       "route": "PUT /api/v1/org-teams/{id}",
@@ -1500,18 +1500,18 @@
         ],
         "body": "{\"name\":\"Mine\"}"
       },
-      "status": 403,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 51,
+      "content_length": 27,
       "kind": "json",
       "body": [
-        "{\"error\":\"you are not a member of this workspace\"}"
+        "{\"error\":\"team not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "you are not a member of this workspace"
+        "error": "team not found"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
@@ -2373,7 +2373,7 @@
     },
     {
       "n": 74,
-      "title": "give an id no account has a role: the store refuses it, a 500 (Q19)",
+      "title": "give an id no account has a role: 404, user not found",
       "actor": "owner",
       "acting_in": "<w>",
       "route": "PUT /api/v1/projects/{id}/members/{userId}",
@@ -2385,18 +2385,18 @@
         ],
         "body": "{\"role\":\"viewer\"}"
       },
-      "status": 500,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 41,
+      "content_length": 27,
       "kind": "json",
       "body": [
-        "{\"error\":\"failed to update member role\"}"
+        "{\"error\":\"user not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "failed to update member role"
+        "error": "user not found"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
@@ -2519,25 +2519,25 @@
     },
     {
       "n": 79,
-      "title": "P's members as x, gone from P: 403",
+      "title": "P's members as x, gone from P: 404",
       "actor": "x",
       "route": "GET /api/v1/projects/{id}/members",
       "request": {
         "method": "GET",
         "path": "/api/v1/projects/<p>/members"
       },
-      "status": 403,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 51,
+      "content_length": 30,
       "kind": "json",
       "body": [
-        "{\"error\":\"you do not have access to this project\"}"
+        "{\"error\":\"project not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "you do not have access to this project"
+        "error": "project not found"
       },
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
@@ -3358,25 +3358,25 @@
     },
     {
       "n": 110,
-      "title": "x leaves W, which it is not in: 403",
+      "title": "x leaves W, which it is not in: 404",
       "actor": "x",
       "route": "DELETE /api/v1/orgs/{id}/members/{userId}",
       "request": {
         "method": "DELETE",
         "path": "/api/v1/orgs/<w>/members/<x>"
       },
-      "status": 403,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 51,
+      "content_length": 32,
       "kind": "json",
       "body": [
-        "{\"error\":\"you are not a member of this workspace\"}"
+        "{\"error\":\"workspace not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "you are not a member of this workspace"
+        "error": "workspace not found"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []

@@ -134,11 +134,11 @@ func TestReviewQueue(t *testing.T) {
 	t.Run("non-member is refused and no data is read", func(t *testing.T) {
 		h, linkSvc, artSvc := newFixture()
 		w := do(t, h, "stranger", projectID)
-		if w.Code != http.StatusForbidden {
-			t.Fatalf("status = %d, want 403", w.Code)
+		if w.Code != http.StatusNotFound {
+			t.Fatalf("status = %d, want 404", w.Code)
 		}
 		if len(linkSvc.asked) != 0 || len(artSvc.askedProj) != 0 {
-			t.Errorf("data was read despite 403: links=%v artifacts=%v", linkSvc.asked, artSvc.askedProj)
+			t.Errorf("data was read despite the refusal: links=%v artifacts=%v", linkSvc.asked, artSvc.askedProj)
 		}
 	})
 

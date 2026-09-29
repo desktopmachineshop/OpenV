@@ -5,11 +5,13 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/gorilla/mux"
 
+	"github.com/openv/requirements-platform/internal/domain/agentruns"
 	"github.com/openv/requirements-platform/internal/domain/members"
 	"github.com/openv/requirements-platform/internal/domain/orgs"
 	"github.com/openv/requirements-platform/internal/domain/projects"
@@ -201,7 +203,7 @@ func TestAStalePinDoesNotHandACrewAway(t *testing.T) {
 		t.Run("write: "+tc.name, func(t *testing.T) {
 			h, crews, _ := crewPinFixture()
 			w := httptest.NewRecorder()
-			got := h.requireTeamWrite(w, crewReq(tc.user, tc.crew, "", ""), crews.graphs[tc.crew].Team)
+			got := h.requireTeamWrite(w, crewReq(tc.user, tc.crew, "", ""), crews.graphs[tc.crew].Team, missing("team not found"))
 			if got != tc.want {
 				t.Fatalf("requireTeamWrite = %v, want %v (status %d, body %q)", got, tc.want, w.Code, w.Body.String())
 			}
@@ -212,8 +214,10 @@ func TestAStalePinDoesNotHandACrewAway(t *testing.T) {
 		want                   int
 		wantProject            string
 	}{
+		// The editor of the stale pin's project cannot reach the crew at
+		// all, so it answers as a crew no row has (I3).
 		{"a crew pinned elsewhere, by that project's editor", "qeditor", "crew-other", `{"prompt":"Plan."}`,
-			http.StatusForbidden, ""},
+			http.StatusNotFound, ""},
 		{"a crew pinned elsewhere, by its workspace admin", "admin", "crew-other", `{"prompt":"Plan."}`,
 			http.StatusCreated, ""},
 		{"a deleted project's crew, by its workspace admin", "admin", "crew-gone", `{"prompt":"Plan."}`,
@@ -240,6 +244,51 @@ func TestAStalePinDoesNotHandACrewAway(t *testing.T) {
 			}
 			if org := runs.launchReqs[0].OrgID; org != "org-w" {
 				t.Fatalf("the run's workspace = %q, want org-w", org)
+			}
+		})
+	}
+}
+
+// TestACrewLaunchAnswersWhoMayNotKnowOfItAsForACrewNoRowHas pins who may
+// launch a crew at all (issue #379's decision 10): a member, a worker key or
+// a run of the crew's workspace, a run only in a pinned crew's own project,
+// or a caller who reaches the pinned project. Anyone else gets the 404 of a
+// crew no row has: an editor of a project of the workspace who is no member
+// of the workspace, launching a workspace-wide crew into that project, where
+// that launch used to be taken, and a run of another project launching a
+// crew pinned elsewhere, which used to hear the pinned project's 404.
+func TestACrewLaunchAnswersWhoMayNotKnowOfItAsForACrewNoRowHas(t *testing.T) {
+	asRun := func(projectID, crewID, body string) *http.Request {
+		r := httptest.NewRequest(http.MethodPost, "/api/v1/crews/"+crewID+"/runs", strings.NewReader(body))
+		run := &agentruns.Run{ID: "run-in-" + projectID, OrgID: "org-w", ProjectID: &projectID}
+		return mux.SetURLVars(r.WithContext(context.WithValue(r.Context(), ctxRun, run)), map[string]string{"id": crewID})
+	}
+	for _, tc := range []struct {
+		name string
+		req  *http.Request
+		want string
+	}{
+		{"P's editor outside W, a crew no row has", crewReq("outsider", "crew-none", "/runs", `{"project_id":"proj-p"}`),
+			`404 {"error":"team not found"}`},
+		{"P's editor outside W, W's workspace-wide crew into P", crewReq("outsider", "crew-w", "/runs", `{"project_id":"proj-p"}`),
+			`404 {"error":"team not found"}`},
+		{"P's editor outside W, the crew pinned to P", crewReq("outsider", "crew-p", "/runs", `{}`), "201"},
+		{"a run of R, a crew no row has", asRun("proj-r", "crew-none", `{}`), `404 {"error":"team not found"}`},
+		{"a run of R, the crew pinned to P", asRun("proj-r", "crew-p", `{}`), `404 {"error":"team not found"}`},
+		{"a run of P, the crew pinned to P", asRun("proj-p", "crew-p", `{}`), "201"},
+		{"a run of R, W's workspace-wide crew into R", asRun("proj-r", "crew-w", `{"project_id":"proj-r"}`), "201"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			h, _, _ := crewPinFixture()
+			h.memberService.(*fakeMemberService).roles["proj-p"]["outsider"] = members.RoleEditor
+			w := httptest.NewRecorder()
+			h.LaunchTeamRun(w, tc.req)
+			got := strconv.Itoa(w.Code)
+			if w.Code != http.StatusCreated {
+				got += " " + strings.TrimSpace(w.Body.String())
+			}
+			if got != tc.want {
+				t.Fatalf("%s, want %s", got, tc.want)
 			}
 		})
 	}

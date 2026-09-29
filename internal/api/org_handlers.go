@@ -188,7 +188,8 @@ func (h *Handler) SetOrgPlan(w http.ResponseWriter, r *http.Request) {
 // RestoreOrg brings a soft-deleted workspace back within the grace period.
 // Deleted workspaces fail the normal role check by design, so authorization
 // uses the any-state role lookup: platform admins and the workspace's own
-// admins may restore.
+// admins may restore. To a caller who is no member, the workspace answers as
+// one no row has, as the workspace guard answers (I3).
 func (h *Handler) RestoreOrg(w http.ResponseWriter, r *http.Request) {
 	orgID := mux.Vars(r)["id"]
 	user := CurrentUser(r)
@@ -200,6 +201,10 @@ func (h *Handler) RestoreOrg(w http.ResponseWriter, r *http.Request) {
 		role, err := h.orgService.RoleInOrgAny(orgID, user.ID)
 		if err != nil {
 			respondInternal(w, r, "failed to resolve workspace access", err)
+			return
+		}
+		if role == "" {
+			unknownWorkspace.write(w)
 			return
 		}
 		if role != orgs.RoleAdmin {
@@ -801,7 +806,7 @@ func (h *Handler) orgTeamChecked(w http.ResponseWriter, r *http.Request, minRole
 		respondError(w, r, http.StatusNotFound, "team not found", err)
 		return nil
 	}
-	if !h.requireOrgRole(w, r, team.OrgID, minRole) {
+	if !h.requireOrgRoleFor(w, r, team.OrgID, minRole, missing("team not found")) {
 		return nil
 	}
 	return team
@@ -1474,6 +1479,11 @@ func (h *Handler) GrantProjectTeamAccess(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	if project.OrgID != "" && team.OrgID != project.OrgID {
+		// Another workspace's team the caller is no member of is one no
+		// row has (I3).
+		if !h.requireOrgVisible(w, r, team.OrgID, missing("team not found")) {
+			return
+		}
 		writeJSONError(w, http.StatusBadRequest, "team belongs to a different workspace")
 		return
 	}

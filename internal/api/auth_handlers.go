@@ -596,9 +596,14 @@ func (h *Handler) UpdateProjectMember(w http.ResponseWriter, r *http.Request) {
 	}
 	previous, _ := h.memberService.RoleFor(projectID, vars["userId"])
 	if err := h.memberService.SetRole(projectID, vars["userId"], req.Role); err != nil {
-		if errors.Is(err, members.ErrInvalidRole) {
+		switch {
+		case errors.Is(err, members.ErrInvalidRole):
 			writeJSONError(w, http.StatusBadRequest, err.Error())
-		} else {
+		case errors.Is(err, members.ErrUnknownUser):
+			// An account no row has, or an id that is not one: the 404 of any
+			// lookup of an account (bug 15).
+			writeJSONError(w, http.StatusNotFound, err.Error())
+		default:
 			respondInternal(w, r, "failed to update member role", err)
 		}
 		return

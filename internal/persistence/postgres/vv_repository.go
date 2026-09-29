@@ -88,7 +88,7 @@ func (r *VVRepository) FindRunByID(id string) (*vv.TestRun, error) {
 	)
 
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if noRow(err) {
 			return nil, vv.ErrRunNotFound
 		}
 		return nil, err

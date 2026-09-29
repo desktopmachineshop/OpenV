@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/gorilla/mux"
@@ -121,14 +122,14 @@ func TestConfirmLink(t *testing.T) {
 		}
 	})
 
-	t.Run("non-member is refused", func(t *testing.T) {
+	t.Run("non-member is told the link is not there", func(t *testing.T) {
 		h, linkSvc := newFixture()
 		w := do(t, h, "stranger", linkID)
-		if w.Code != http.StatusForbidden {
-			t.Fatalf("status = %d, want 403", w.Code)
+		if w.Code != http.StatusNotFound || strings.TrimSpace(w.Body.String()) != `{"error":"link not found"}` {
+			t.Fatalf("answer = %d %q, want 404 link not found, as for a link no row has", w.Code, w.Body.String())
 		}
 		if len(linkSvc.confirms) != 0 {
-			t.Errorf("ConfirmLink was called despite 403: %v", linkSvc.confirms)
+			t.Errorf("ConfirmLink was called despite the refusal: %v", linkSvc.confirms)
 		}
 	})
 

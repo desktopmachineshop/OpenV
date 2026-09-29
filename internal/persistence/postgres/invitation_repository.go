@@ -141,7 +141,7 @@ func (r *InvitationRepository) FindPending(orgID, email string, now time.Time) (
 	inv, err := scanInvitation(r.db.QueryRow(invitationSelect+`
 		WHERE i.org_id = $1 AND i.email = $2 AND i.accepted_at IS NULL AND i.expires_at > $3
 	`, orgID, invitationEmail(email), now))
-	if err == sql.ErrNoRows {
+	if noRow(err) {
 		return nil, nil
 	}
 	return inv, err
@@ -158,7 +158,7 @@ func (r *InvitationRepository) MarkEmailed(id string, at time.Time) error {
 // FindByID returns one invitation, or nil.
 func (r *InvitationRepository) FindByID(id string) (*invitations.Invitation, error) {
 	inv, err := scanInvitation(r.db.QueryRow(invitationSelect+` WHERE i.id = $1`, id))
-	if err == sql.ErrNoRows {
+	if noRow(err) {
 		return nil, nil
 	}
 	return inv, err
@@ -167,7 +167,7 @@ func (r *InvitationRepository) FindByID(id string) (*invitations.Invitation, err
 // FindByTokenHash returns the invitation with the given token hash, or nil.
 func (r *InvitationRepository) FindByTokenHash(hash string) (*invitations.Invitation, error) {
 	inv, err := scanInvitation(r.db.QueryRow(invitationSelect+` WHERE i.token_hash = $1`, hash))
-	if err == sql.ErrNoRows {
+	if noRow(err) {
 		return nil, nil
 	}
 	return inv, err

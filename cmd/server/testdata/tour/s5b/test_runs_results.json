@@ -206,20 +206,20 @@
         "body": "{\"name\":\"Nowhere\"}"
       },
       "notes": [
-        "the project guard runs before any lookup, so an id no project has answers 403, not 404"
+        "the project guard answers a project no row has as one the caller cannot reach: 404 (I3)"
       ],
-      "status": 403,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 51,
+      "content_length": 30,
       "kind": "json",
       "body": [
-        "{\"error\":\"you do not have access to this project\"}"
+        "{\"error\":\"project not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "you do not have access to this project"
+        "error": "project not found"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
@@ -401,18 +401,18 @@
         "method": "GET",
         "path": "/api/v1/test-runs/<r1>"
       },
-      "status": 403,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 51,
+      "content_length": 31,
       "kind": "json",
       "body": [
-        "{\"error\":\"you do not have access to this project\"}"
+        "{\"error\":\"test run not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "you do not have access to this project"
+        "error": "test run not found"
       },
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
@@ -522,18 +522,18 @@
         "method": "GET",
         "path": "/api/v1/projects/<p>/test-runs"
       },
-      "status": 403,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 51,
+      "content_length": 30,
       "kind": "json",
       "body": [
-        "{\"error\":\"you do not have access to this project\"}"
+        "{\"error\":\"project not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "you do not have access to this project"
+        "error": "project not found"
       },
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
@@ -648,7 +648,7 @@
     },
     {
       "n": 20,
-      "title": "record a result for a test case id no artifact has: 500, not 404",
+      "title": "record a result for a test case id no artifact has: 404",
       "actor": "owner",
       "route": "POST /api/v1/test-runs/{id}/results",
       "request": {
@@ -660,20 +660,20 @@
         "body": "{\"test_case_id\":\"<phantom>\",\"status\":\"pass\"}"
       },
       "notes": [
-        "the artifact repository answers a missing row with an error of its own, not artifacts.ErrNotFound, so the handler's 404 branch never matches (the deterministic neighbour of quirk Q2)"
+        "the artifact repository answers a missing row with artifacts.ErrNotFound, which the handler answers 404 (fixed under R7: it answered an error of its own, so the 404 branch never matched and this was 500, the deterministic neighbour of quirk Q2)"
       ],
-      "status": 500,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 41,
+      "content_length": 31,
       "kind": "json",
       "body": [
-        "{\"error\":\"failed to record test result\"}"
+        "{\"error\":\"artifact not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "failed to record test result"
+        "error": "artifact not found"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
@@ -1707,18 +1707,18 @@
         ],
         "body": "{\"test_case_id\":\"<tc_q>\",\"status\":\"pass\"}"
       },
-      "status": 403,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 52,
+      "content_length": 31,
       "kind": "json",
       "body": [
-        "{\"error\":\"agent run is not scoped to this project\"}"
+        "{\"error\":\"test run not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "agent run is not scoped to this project"
+        "error": "test run not found"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
@@ -2357,18 +2357,18 @@
         "method": "GET",
         "path": "/api/v1/test-runs/<r_worker>/results"
       },
-      "status": 403,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 51,
+      "content_length": 31,
       "kind": "json",
       "body": [
-        "{\"error\":\"you do not have access to this project\"}"
+        "{\"error\":\"test run not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "you do not have access to this project"
+        "error": "test run not found"
       },
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },

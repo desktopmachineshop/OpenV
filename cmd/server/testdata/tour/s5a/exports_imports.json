@@ -2449,20 +2449,20 @@
         "path": "/api/v1/projects/<phantom>/export"
       },
       "notes": [
-        "the project guard runs before any lookup, so an id no project has answers 403"
+        "the project guard answers a project no row has as one the caller cannot reach: 404 (I3)"
       ],
-      "status": 403,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 51,
+      "content_length": 30,
       "kind": "json",
       "body": [
-        "{\"error\":\"you do not have access to this project\"}"
+        "{\"error\":\"project not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "you do not have access to this project"
+        "error": "project not found"
       },
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
@@ -2861,18 +2861,18 @@
         "path": "/api/v1/projects/<p>/download/options",
         "query": "baseline_id=<phantom>"
       },
-      "status": 500,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 44,
+      "content_length": 31,
       "kind": "json",
       "body": [
-        "{\"error\":\"failed to read download options\"}"
+        "{\"error\":\"baseline not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "failed to read download options"
+        "error": "baseline not found"
       },
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
@@ -3488,7 +3488,7 @@
     },
     {
       "n": 18,
-      "title": "download from a baseline that does not exist: 500",
+      "title": "download from a baseline that does not exist: 404",
       "actor": "owner",
       "route": "GET /api/v1/projects/{id}/download/json",
       "request": {
@@ -3497,20 +3497,20 @@
         "query": "baseline_id=<phantom>"
       },
       "notes": [
-        "the report route answers the same baseline 404 (the next step): the download maps every load error to 500"
+        "as the report route answers the same baseline (the next step); fixed under R7, the download mapped every load error to 500"
       ],
-      "status": 500,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 37,
+      "content_length": 31,
       "kind": "json",
       "body": [
-        "{\"error\":\"failed to build download\"}"
+        "{\"error\":\"baseline not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "failed to build download"
+        "error": "baseline not found"
       },
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
@@ -6684,18 +6684,18 @@
         "method": "GET",
         "path": "/api/v1/projects/<phantom>/download/json"
       },
-      "status": 403,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 51,
+      "content_length": 30,
       "kind": "json",
       "body": [
-        "{\"error\":\"you do not have access to this project\"}"
+        "{\"error\":\"project not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "you do not have access to this project"
+        "error": "project not found"
       },
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },

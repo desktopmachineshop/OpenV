@@ -1615,18 +1615,18 @@
         "method": "POST",
         "path": "/api/v1/orgs/<owner.workspace>/activate"
       },
-      "status": 403,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 51,
+      "content_length": 32,
       "kind": "json",
       "body": [
-        "{\"error\":\"you are not a member of this workspace\"}"
+        "{\"error\":\"workspace not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "you are not a member of this workspace"
+        "error": "workspace not found"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
@@ -1803,7 +1803,7 @@
     },
     {
       "n": 47,
-      "title": "choose something that is not an id: the lookup's error is a 500 (Q19)",
+      "title": "choose something that is not an id: 404, as a workspace no row has",
       "actor": "member",
       "acting_in": "<w>",
       "route": "PUT /api/v1/me/default-workspace",
@@ -1815,18 +1815,18 @@
         ],
         "body": "{\"org_id\":\"not-a-workspace\"}"
       },
-      "status": 500,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 37,
+      "content_length": 32,
       "kind": "json",
       "body": [
-        "{\"error\":\"failed to load workspace\"}"
+        "{\"error\":\"workspace not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "failed to load workspace"
+        "error": "workspace not found"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []

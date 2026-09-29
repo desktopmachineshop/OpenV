@@ -100,7 +100,7 @@ func (r *NotificationRepository) List(userID string, q notifications.ListQuery) 
 // MarkRead marks the given ids read for that user only; ids belonging to
 // other users are silently skipped. Returns rows updated.
 func (r *NotificationRepository) MarkRead(userID string, ids []string) (int64, error) {
-	if len(ids) == 0 {
+	if ids = uuidsOnly(ids); len(ids) == 0 {
 		return 0, nil
 	}
 	res, err := r.db.Exec(`
@@ -154,6 +154,9 @@ func (r *NotificationRepository) SetFlagged(userID, id string, flagged bool) (bo
 		UPDATE notifications SET flagged = $3
 		WHERE user_id = $1 AND id = $2
 	`, userID, id, flagged)
+	if malformedID(err) {
+		return false, nil
+	}
 	if err != nil {
 		return false, err
 	}

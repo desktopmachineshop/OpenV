@@ -128,18 +128,18 @@
         "path": "/api/v1/guided-sessions",
         "query": "project_id=<phantom>"
       },
-      "status": 403,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 51,
+      "content_length": 30,
       "kind": "json",
       "body": [
-        "{\"error\":\"you do not have access to this project\"}"
+        "{\"error\":\"project not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "you do not have access to this project"
+        "error": "project not found"
       },
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
@@ -218,20 +218,20 @@
         "body": "{\"project_id\":\"<phantom>\"}"
       },
       "notes": [
-        "the project guard runs before any lookup: 403, not 404"
+        "the project guard answers a project no row has as one the caller cannot reach: 404 (I3)"
       ],
-      "status": 403,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 51,
+      "content_length": 30,
       "kind": "json",
       "body": [
-        "{\"error\":\"you do not have access to this project\"}"
+        "{\"error\":\"project not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "you do not have access to this project"
+        "error": "project not found"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
@@ -3389,18 +3389,18 @@
         "method": "GET",
         "path": "/api/v1/guided-sessions/<s>"
       },
-      "status": 403,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 51,
+      "content_length": 37,
       "kind": "json",
       "body": [
-        "{\"error\":\"you do not have access to this project\"}"
+        "{\"error\":\"guided session not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "you do not have access to this project"
+        "error": "guided session not found"
       },
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
@@ -3413,18 +3413,18 @@
         "method": "GET",
         "path": "/api/v1/guided-sessions/<s>/messages"
       },
-      "status": 403,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 51,
+      "content_length": 37,
       "kind": "json",
       "body": [
-        "{\"error\":\"you do not have access to this project\"}"
+        "{\"error\":\"guided session not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "you do not have access to this project"
+        "error": "guided session not found"
       },
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
@@ -3440,18 +3440,18 @@
       "notes": [
         "read as an event stream: the tour reads 0 frames, then on until 300ms pass with no further byte, and closes the connection (an answer that is not an event stream is read to its end)"
       ],
-      "status": 403,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 51,
+      "content_length": 37,
       "kind": "json",
       "body": [
-        "{\"error\":\"you do not have access to this project\"}"
+        "{\"error\":\"guided session not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "you do not have access to this project"
+        "error": "guided session not found"
       },
       "gzip": "not sent: an event stream, read once and then closed by the tour"
     },

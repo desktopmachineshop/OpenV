@@ -17,15 +17,18 @@ import (
 // With ?baseline_id= the map is rendered from that baseline's snapshot
 // instead of live state, so a release can ship a versioned map (e.g. saved
 // into a code repo as .openv/requirements.md).
+//
+// The guard comes first, so that a project the caller cannot reach answers
+// as one no row has (I3).
 func (h *Handler) ProjectAIMap(w http.ResponseWriter, r *http.Request) {
 	projectID := mux.Vars(r)["id"]
 
+	if !h.requireProjectRole(w, r, projectID, members.RoleViewer) {
+		return
+	}
 	project, err := h.projectService.GetProject(projectID)
 	if err != nil {
 		respondError(w, r, http.StatusNotFound, "project not found", err)
-		return
-	}
-	if !h.requireProjectRole(w, r, projectID, members.RoleViewer) {
 		return
 	}
 

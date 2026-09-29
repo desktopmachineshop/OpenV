@@ -3494,25 +3494,25 @@
     },
     {
       "n": 83,
-      "title": "the outsider exports W's crew: 403",
+      "title": "the outsider exports W's crew: 404, as a crew no row has",
       "actor": "outsider",
       "route": "GET /api/v1/crews/{id}/export",
       "request": {
         "method": "GET",
         "path": "/api/v1/crews/<crew>/export"
       },
-      "status": 403,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 51,
+      "content_length": 27,
       "kind": "json",
       "body": [
-        "{\"error\":\"you are not a member of this workspace\"}"
+        "{\"error\":\"crew not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "you are not a member of this workspace"
+        "error": "crew not found"
       },
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
@@ -3543,25 +3543,25 @@
     },
     {
       "n": 85,
-      "title": "the outsider reads W's crew: 403",
+      "title": "the outsider reads W's crew: 404, as a crew no row has",
       "actor": "outsider",
       "route": "GET /api/v1/crews/{id}",
       "request": {
         "method": "GET",
         "path": "/api/v1/crews/<crew>"
       },
-      "status": 403,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 51,
+      "content_length": 27,
       "kind": "json",
       "body": [
-        "{\"error\":\"you are not a member of this workspace\"}"
+        "{\"error\":\"team not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "you are not a member of this workspace"
+        "error": "team not found"
       },
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },

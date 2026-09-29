@@ -9,8 +9,9 @@ import (
 )
 
 // TestTourS5aArtifactsAttributes is the S5a tour's artifacts and typed
-// attributes area (refactor plan §6.4 S5a; quirks Q1, Q2's deterministic
-// neighbours, Q8 and Q14; OpenV REQ-4, REQ-143). Its golden is
+// attributes area (refactor plan §6.4 S5a; quirks Q1, Q8 and Q14, and two of
+// Q2's deterministic neighbours, fixed under R7; OpenV REQ-4, REQ-143). Its
+// golden is
 // testdata/tour/s5a/artifacts_attributes.json.
 //
 // The owner, an ordinary account, first works in its personal workspace:
@@ -173,8 +174,8 @@ func artifactsAttributesArtifacts(tr *tour) {
 	// Update.
 	tr.step("update with a malformed body", owner, "PUT /api/v1/artifacts/{id}", at("id", "{{requirement}}"), jsonBody(`{`))
 	tr.step("update an artifact that does not exist", owner, "PUT /api/v1/artifacts/{id}", at("id", "{{phantom}}"),
-		jsonBody(`{"title":"Nothing"}`), note("Q2's neighbour: the handler loads the artifact before its guard and "+
-			"answers any failure with 500, where GET answers 404"))
+		jsonBody(`{"title":"Nothing"}`), note("the handler loads the artifact before its guard and answers an id no "+
+			"artifact has 404, as GET does (fixed under R7: Q2's neighbour, it answered 500)"))
 	tr.step("retitle the requirement: omitted attributes carry forward, version 2", owner, "PUT /api/v1/artifacts/{id}",
 		at("id", "{{requirement}}"), jsonBody(`{"title":"Answer in good time"}`))
 	tr.step("replace its attributes with {}: only the status mirror is left, version 3", owner,
@@ -198,7 +199,8 @@ func artifactsAttributesArtifacts(tr *tour) {
 		at("id", "{{requirement}}"), jsonBody(`{"version":99}`))
 	tr.step("restore an artifact that does not exist", owner, "POST /api/v1/artifacts/{id}/restore",
 		at("id", "{{phantom}}"), jsonBody(`{"version":1}`),
-		note("Q2's neighbour: the handler loads the artifact before its guard and answers any failure with 500"))
+		note("the handler loads the artifact before its guard and answers an id no artifact has 404, as the "+
+			"update does (fixed under R7: Q2's neighbour, it answered 500)"))
 	tr.step("restore version 1: version 5, a new ref, and no event", owner, "POST /api/v1/artifacts/{id}/restore",
 		at("id", "{{requirement}}"), jsonBody(`{"version":1}`),
 		note("the restored version is built without the current ref, so the repository mints the next one; "+

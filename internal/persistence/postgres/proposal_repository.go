@@ -75,7 +75,7 @@ func (r *ProposalRepository) Update(p *proposals.Proposal) error {
 // FindByID returns a proposal, or nil.
 func (r *ProposalRepository) FindByID(id string) (*proposals.Proposal, error) {
 	p, err := scanProposal(r.db.QueryRow(`SELECT `+proposalColumns+` FROM agent_proposals WHERE id = $1`, id))
-	if err == sql.ErrNoRows {
+	if noRow(err) {
 		return nil, nil
 	}
 	return p, err
@@ -94,6 +94,9 @@ func (r *ProposalRepository) List(orgID, projectID, status, runID string) ([]*pr
 		ORDER BY created_at DESC
 		LIMIT 500
 	`, orgID, projectID, status, runID)
+	if malformedID(err) {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}

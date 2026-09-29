@@ -9,8 +9,9 @@ import (
 
 // TestTourS5bTestRunsResults is the S5b tour's test runs and results area
 // (refactor plan §6.4 S5b, before M8 splits suite_handlers.go; invariants
-// I3 (guard, lookup and decode order), I4, I5 and I10; quirks Q1, Q2's
-// deterministic neighbour, Q14 and Q19; OpenV REQ-13, REQ-23, REQ-143), and
+// I3 (guard, lookup and decode order), I4, I5 and I10; quirks Q1, Q14 and
+// Q19, and Q2's deterministic neighbour, fixed under R7; OpenV REQ-13,
+// REQ-23, REQ-143), and
 // the worked example the other S5b areas follow: one test function calling
 // runTourArea, the area's steps in a function named after its key, and
 // helpers prefixed the same way. Its golden is
@@ -125,7 +126,7 @@ func testRunsResultsTour(tr *tour) {
 		jsonBody(`{"name":"Viewer run"}`))
 	tr.step("create a run in a project that does not exist", o, "POST /api/v1/projects/{id}/test-runs",
 		at("id", "{{phantom}}"), jsonBody(`{"name":"Nowhere"}`),
-		note("the project guard runs before any lookup, so an id no project has answers 403, not 404"))
+		note("the project guard answers a project no row has as one the caller cannot reach: 404 (I3)"))
 	tr.step("create a run whose baseline_id is not a UUID: the driver's text (Q19)", o,
 		"POST /api/v1/projects/{id}/test-runs", at("id", "{{p}}"), jsonBody(`{"name":"Bad baseline","baseline_id":"not-a-uuid"}`))
 	tr.step("create a run whose baseline_id no baseline has: accepted, test_runs.baseline_id has no foreign key", o,
@@ -153,10 +154,11 @@ func testRunsResultsTour(tr *tour) {
 		jsonBody(`{"test_case_id":"{{tc_auto}}","status":"maybe"}`))
 	tr.step("record a result for the heading, which is not a test case", o, "POST /api/v1/test-runs/{id}/results",
 		at("id", "{{r1}}"), jsonBody(`{"test_case_id":"{{heading}}","status":"pass"}`))
-	tr.step("record a result for a test case id no artifact has: 500, not 404", o,
+	tr.step("record a result for a test case id no artifact has: 404", o,
 		"POST /api/v1/test-runs/{id}/results", at("id", "{{r1}}"), jsonBody(`{"test_case_id":"{{phantom}}","status":"pass"}`),
-		note("the artifact repository answers a missing row with an error of its own, not artifacts.ErrNotFound, so the "+
-			"handler's 404 branch never matches (the deterministic neighbour of quirk Q2)"))
+		note("the artifact repository answers a missing row with artifacts.ErrNotFound, which the handler answers "+
+			"404 (fixed under R7: it answered an error of its own, so the 404 branch never matched and this was 500, "+
+			"the deterministic neighbour of quirk Q2)"))
 	tr.step("the viewer records a result", viewer, "POST /api/v1/test-runs/{id}/results", at("id", "{{r1}}"),
 		jsonBody(`{"test_case_id":"{{tc_auto}}","status":"pass"}`))
 	tr.step("record a result in a run that does not exist", o, "POST /api/v1/test-runs/{id}/results",

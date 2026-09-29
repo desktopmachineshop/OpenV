@@ -2045,7 +2045,7 @@
     },
     {
       "n": 32,
-      "title": "vote for an id that is not a UUID: the database's syntax error answers 500",
+      "title": "vote for an id that is not a UUID: 404, as an id no entry has",
       "actor": "owner",
       "route": "PUT /api/v1/shared-products/{id}/vote",
       "request": {
@@ -2053,20 +2053,20 @@
         "path": "/api/v1/shared-products/not-a-uuid/vote"
       },
       "notes": [
-        "an id no entry has answers 404; a malformed one reaches the database and falls to the error writer's default"
+        "the store reads an id that is not a UUID as one no row has"
       ],
-      "status": 500,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 45,
+      "content_length": 37,
       "kind": "json",
       "body": [
-        "{\"error\":\"failed to update shared products\"}"
+        "{\"error\":\"shared product not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "failed to update shared products"
+        "error": "shared product not found"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
@@ -2616,25 +2616,25 @@
     },
     {
       "n": 48,
-      "title": "report an id that is not a UUID: 500",
+      "title": "report an id that is not a UUID: 404, as an id no entry has",
       "actor": "owner",
       "route": "POST /api/v1/shared-products/{id}/report",
       "request": {
         "method": "POST",
         "path": "/api/v1/shared-products/not-a-uuid/report"
       },
-      "status": 500,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 45,
+      "content_length": 37,
       "kind": "json",
       "body": [
-        "{\"error\":\"failed to update shared products\"}"
+        "{\"error\":\"shared product not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "failed to update shared products"
+        "error": "shared product not found"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
@@ -2984,25 +2984,25 @@
     },
     {
       "n": 61,
-      "title": "the moderator deletes an id that is not a UUID: 500",
+      "title": "the moderator deletes an id that is not a UUID: 404, as an id no entry has",
       "actor": "moderator",
       "route": "DELETE /api/v1/shared-products/{id}",
       "request": {
         "method": "DELETE",
         "path": "/api/v1/shared-products/not-a-uuid"
       },
-      "status": 500,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 45,
+      "content_length": 37,
       "kind": "json",
       "body": [
-        "{\"error\":\"failed to update shared products\"}"
+        "{\"error\":\"shared product not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "failed to update shared products"
+        "error": "shared product not found"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []

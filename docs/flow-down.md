@@ -9,8 +9,8 @@ An aircraft has a set of requirements. The landing gear has its own, and
 each of those refines one or more of the aircraft's. A brake assembly under
 the landing gear has its own again. Each level is a **project**; a project
 names the one above it as its **parent project** (Project settings →
-General). A parent must be in the same workspace and may not be a
-descendant, so the hierarchy is a tree.
+General). A parent must be in the same workspace and one you can open,
+and may not be a descendant, so the hierarchy is a tree.
 
 A supplier building the landing gear works **in the landing-gear project**
 with editor rights there and viewer rights on the aircraft project. Per-

@@ -90,7 +90,7 @@ func TestOrgFeaturesByChannel(t *testing.T) {
 
 	w = httptest.NewRecorder()
 	h.GetOrgFeatures(w, featuresReq(t, http.MethodGet, "stranger", ""))
-	if w.Code != http.StatusForbidden {
+	if w.Code != http.StatusNotFound {
 		t.Fatalf("non-member: status = %d", w.Code)
 	}
 }

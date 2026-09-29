@@ -373,18 +373,18 @@
         "path": "/api/v1/artifacts",
         "query": "project_id=<phantom>"
       },
-      "status": 403,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 51,
+      "content_length": 30,
       "kind": "json",
       "body": [
-        "{\"error\":\"you do not have access to this project\"}"
+        "{\"error\":\"project not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "you do not have access to this project"
+        "error": "project not found"
       },
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
@@ -459,18 +459,18 @@
         ],
         "body": "{\"project_id\":\"<phantom>\",\"type\":\"requirement\",\"title\":\"Nowhere\"}"
       },
-      "status": 403,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 51,
+      "content_length": 30,
       "kind": "json",
       "body": [
-        "{\"error\":\"you do not have access to this project\"}"
+        "{\"error\":\"project not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "you do not have access to this project"
+        "error": "project not found"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
@@ -9232,20 +9232,20 @@
         "body": "{\"title\":\"Nothing\"}"
       },
       "notes": [
-        "Q2's neighbour: the handler loads the artifact before its guard and answers any failure with 500, where GET answers 404"
+        "the handler loads the artifact before its guard and answers an id no artifact has 404, as GET does (fixed under R7: Q2's neighbour, it answered 500)"
       ],
-      "status": 500,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 36,
+      "content_length": 31,
       "kind": "json",
       "body": [
-        "{\"error\":\"failed to load artifact\"}"
+        "{\"error\":\"artifact not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "failed to load artifact"
+        "error": "artifact not found"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
@@ -9742,20 +9742,20 @@
         "body": "{\"version\":1}"
       },
       "notes": [
-        "Q2's neighbour: the handler loads the artifact before its guard and answers any failure with 500"
+        "the handler loads the artifact before its guard and answers an id no artifact has 404, as the update does (fixed under R7: Q2's neighbour, it answered 500)"
       ],
-      "status": 500,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 36,
+      "content_length": 31,
       "kind": "json",
       "body": [
-        "{\"error\":\"failed to load artifact\"}"
+        "{\"error\":\"artifact not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "failed to load artifact"
+        "error": "artifact not found"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
@@ -10476,18 +10476,18 @@
         "path": "/api/v1/attribute-definitions",
         "query": "org_id=<admin.workspace>"
       },
-      "status": 403,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 51,
+      "content_length": 32,
       "kind": "json",
       "body": [
-        "{\"error\":\"you are not a member of this workspace\"}"
+        "{\"error\":\"workspace not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "you are not a member of this workspace"
+        "error": "workspace not found"
       },
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
@@ -10739,18 +10739,18 @@
         ],
         "body": "{\"org_id\":\"<admin.workspace>\",\"key\":\"risk\",\"data_type\":\"text\"}"
       },
-      "status": 403,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 51,
+      "content_length": 32,
       "kind": "json",
       "body": [
-        "{\"error\":\"you are not a member of this workspace\"}"
+        "{\"error\":\"workspace not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "you are not a member of this workspace"
+        "error": "workspace not found"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
@@ -11164,18 +11164,18 @@
         "path": "/api/v1/meta/attribute-definitions",
         "query": "project_id=<phantom>"
       },
-      "status": 403,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 51,
+      "content_length": 30,
       "kind": "json",
       "body": [
-        "{\"error\":\"you do not have access to this project\"}"
+        "{\"error\":\"project not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "you do not have access to this project"
+        "error": "project not found"
       },
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },

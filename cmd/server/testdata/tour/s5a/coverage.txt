@@ -16,44 +16,44 @@ DELETE /api/v1/attachments/{id}: 204, 404; attachments
 DELETE /api/v1/attribute-definitions/{id}: 204, 403, 404; artifacts_attributes
 DELETE /api/v1/baselines/{id}: 204, 403, 404; baselines_documents
 DELETE /api/v1/links/{id}: 204, 404; links_managed_edits
-DELETE /api/v1/projects/{id}: 204, 403; projects_templates
+DELETE /api/v1/projects/{id}: 204, 404; projects_templates
 DELETE /api/v1/share-links/{id}: 204, 403, 404; share_links_public
-GET /api/v1/artifacts: 200, 400, 401, 403; artifacts_attributes
+GET /api/v1/artifacts: 200, 400, 401, 404; artifacts_attributes
 GET /api/v1/artifacts/{artifactID}/attachments: 200, 404; attachments
 GET /api/v1/artifacts/{id}: 200, 404; artifacts_attributes, attachments, links_managed_edits
 GET /api/v1/artifacts/{id}/links: 200, 400, 404; links_managed_edits
 GET /api/v1/artifacts/{id}/versions: 200, 404; artifacts_attributes
-GET /api/v1/attachments/{id}: 200, 403, 404; attachments
-GET /api/v1/attachments/{id}/download: 200, 206, 304, 400, 401, 403, 404, 416; attachments
+GET /api/v1/attachments/{id}: 200, 404; attachments
+GET /api/v1/attachments/{id}/download: 200, 206, 304, 400, 401, 404, 416; attachments
 GET /api/v1/attachments/{id}/versions: 200, 404; attachments
-GET /api/v1/attribute-definitions: 200, 400, 403; artifacts_attributes
+GET /api/v1/attribute-definitions: 200, 400, 404; artifacts_attributes
 GET /api/v1/baselines/{id}: 200, 404; baselines_documents
 GET /api/v1/baselines/{id}/diff: 200, 400, 404; baselines_documents
 GET /api/v1/chatter: 200, 400, 404; artifacts_attributes, attachments, links_managed_edits, review_chatter_search
-GET /api/v1/links: 200, 400, 403; links_managed_edits
+GET /api/v1/links: 200, 400, 404; links_managed_edits
 GET /api/v1/links/{id}: 200, 404; links_managed_edits
 GET /api/v1/meta/artifact-types: 200, 401; artifacts_attributes
-GET /api/v1/meta/attribute-definitions: 200, 403; artifacts_attributes
+GET /api/v1/meta/attribute-definitions: 200, 404; artifacts_attributes
 GET /api/v1/meta/link-types: 200; artifacts_attributes
 GET /api/v1/projects: 200; projects_templates
-GET /api/v1/projects/{id}: 200, 403, 404; projects_templates, share_links_public
+GET /api/v1/projects/{id}: 200, 404; projects_templates, share_links_public
 GET /api/v1/projects/{id}/ai-map: 200, 404; baselines_documents
-GET /api/v1/projects/{id}/baselines: 200, 403; baselines_documents
-GET /api/v1/projects/{id}/children: 200, 403; projects_templates
+GET /api/v1/projects/{id}/baselines: 200, 404; baselines_documents
+GET /api/v1/projects/{id}/children: 200, 404; projects_templates
 GET /api/v1/projects/{id}/download/csv: 200; exports_imports
-GET /api/v1/projects/{id}/download/docx: 200, 403; baselines_documents
+GET /api/v1/projects/{id}/download/docx: 200, 404; baselines_documents
 GET /api/v1/projects/{id}/download/excel: 200; exports_imports
-GET /api/v1/projects/{id}/download/json: 200, 403, 500; exports_imports
-GET /api/v1/projects/{id}/download/options: 200, 500; exports_imports
-GET /api/v1/projects/{id}/download/pdf: 200, 500; baselines_documents
+GET /api/v1/projects/{id}/download/json: 200, 404; exports_imports
+GET /api/v1/projects/{id}/download/options: 200, 404; exports_imports
+GET /api/v1/projects/{id}/download/pdf: 200, 404; baselines_documents
 GET /api/v1/projects/{id}/download/reqif: 200; exports_imports
-GET /api/v1/projects/{id}/duplicates: 200, 403; review_chatter_search
-GET /api/v1/projects/{id}/export: 200, 400, 401, 403; exports_imports
-GET /api/v1/projects/{id}/linked-artifacts: 200, 403; links_managed_edits
-GET /api/v1/projects/{id}/report: 200, 400, 403, 404; baselines_documents, exports_imports
-GET /api/v1/projects/{id}/review-queue: 200, 403; review_chatter_search
-GET /api/v1/projects/{id}/share-links: 200, 401, 403; share_links_public
-GET /api/v1/projects/{projectID}/attachments: 200, 403; attachments
+GET /api/v1/projects/{id}/duplicates: 200, 404; review_chatter_search
+GET /api/v1/projects/{id}/export: 200, 400, 401, 404; exports_imports
+GET /api/v1/projects/{id}/linked-artifacts: 200, 404; links_managed_edits
+GET /api/v1/projects/{id}/report: 200, 400, 404; baselines_documents, exports_imports
+GET /api/v1/projects/{id}/review-queue: 200, 404; review_chatter_search
+GET /api/v1/projects/{id}/share-links: 200, 401, 403, 404; share_links_public
+GET /api/v1/projects/{projectID}/attachments: 200, 404; attachments
 GET /api/v1/public/open-source/projects: 200; share_links_public
 GET /api/v1/public/open-source/projects/{id}: 200, 404; share_links_public
 GET /api/v1/public/open-source/projects/{id}/page: 200; share_links_public
@@ -64,23 +64,23 @@ GET /api/v1/public/share/{token}/preview.png: 200, 404, 429; share_links_public
 GET /api/v1/search: 200, 401; review_chatter_search
 GET /api/v1/templates: 200; projects_templates
 POST /api/v1/artifacts: 201, 400, 403, 404; artifacts_attributes, projects_templates
-POST /api/v1/artifacts/{id}/restore: 200, 400, 403, 500; artifacts_attributes, attachments
-POST /api/v1/attachments/upload: 201, 400, 403, 404; attachments
+POST /api/v1/artifacts/{id}/restore: 200, 400, 403, 404, 500; artifacts_attributes, attachments
+POST /api/v1/attachments/upload: 201, 400, 404; attachments
 POST /api/v1/attachments/{id}/versions: 201, 400, 404; attachments
 POST /api/v1/attachments/{id}/versions/{version}/restore: 201, 400, 404, 409; attachments
-POST /api/v1/attribute-definitions: 201, 400, 403; artifacts_attributes
+POST /api/v1/attribute-definitions: 201, 400, 403, 404; artifacts_attributes
 POST /api/v1/auth/share/accept: 200, 400, 401, 404, 429; share_links_public
 POST /api/v1/chatter: 200, 400, 403, 404; review_chatter_search
 POST /api/v1/links: 201, 400, 403; links_managed_edits, projects_templates
 POST /api/v1/projects: 201, 400, 500; projects_templates
 POST /api/v1/projects/import: 201, 400, 401; exports_imports
-POST /api/v1/projects/{id}/baselines: 201, 400, 403; baselines_documents
-POST /api/v1/projects/{id}/reindex-embeddings: 200, 403; review_chatter_search
-POST /api/v1/projects/{id}/review-round: 200, 400, 403; review_chatter_search
-POST /api/v1/projects/{id}/share-links: 201, 400, 403; share_links_public
+POST /api/v1/projects/{id}/baselines: 201, 400, 404; baselines_documents
+POST /api/v1/projects/{id}/reindex-embeddings: 200, 403, 404; review_chatter_search
+POST /api/v1/projects/{id}/review-round: 200, 400, 403, 404; review_chatter_search
+POST /api/v1/projects/{id}/share-links: 201, 400, 404; share_links_public
 POST /api/v1/templates: 201, 400, 500; projects_templates
-POST /api/v1/templates/{id}/projects: 201, 400, 401, 404, 500; projects_templates
-PUT /api/v1/artifacts/{id}: 200, 400, 403, 500; artifacts_attributes, links_managed_edits
+POST /api/v1/templates/{id}/projects: 201, 400, 401, 404; projects_templates
+PUT /api/v1/artifacts/{id}: 200, 400, 403, 404; artifacts_attributes, links_managed_edits
 PUT /api/v1/artifacts/{id}/status: 200, 400, 403, 404, 409; review_chatter_search
 PUT /api/v1/attachments/{id}: 200, 400, 404; attachments
 PUT /api/v1/attribute-definitions/{id}: 200, 400, 403, 404; artifacts_attributes

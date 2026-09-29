@@ -129,7 +129,7 @@ func (r *AttributeDefinitionRepository) Get(id string) (*attributes.Definition, 
 		`SELECT `+attributeDefinitionColumns+` FROM attribute_definitions WHERE id = $1`, id,
 	).Scan)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if noRow(err) {
 			return nil, attributes.ErrNotFound
 		}
 		return nil, err

@@ -139,15 +139,17 @@ jobs:
       # run-token actors, a literal body) or what S5e's do (TestTourMatrix:
       # the phantom paths, the cell classifier, a row's key and text, a
       # stream read to its head, the matrix read back for coverage and
-      # tourChanges) did not pass, or if a golden there has no area test that
-      # passed: each golden names its test ("test"), which
-      # TestTourGoldensAreClaimed ties to the area file that writes it.
+      # tourChanges; TestTourExistenceHiding: invariant I3, the outsider's
+      # cell for each real id the phantom's) did not pass, or if a golden
+      # there has no area test that passed: each golden names its test
+      # ("test"), which TestTourGoldensAreClaimed ties to the area file that
+      # writes it.
       - name: API tour ran
         shell: bash
         run: |
           go test ./cmd/server/ -count=1 -v -run '^TestTour' | tee api-tour.log
           ! grep -Eq -- "--- SKIP: TestTour" api-tour.log || { echo "::error::a tour test only skipped against postgres:15"; exit 1; }
-          for t in TestTourCoverage TestTourGoldensAreClaimed TestTourStream TestTourAccountOptions TestTourMailCatcher TestTourStandIns TestTourWorker TestTourMatrix; do
+          for t in TestTourCoverage TestTourGoldensAreClaimed TestTourStream TestTourAccountOptions TestTourMailCatcher TestTourStandIns TestTourWorker TestTourMatrix TestTourExistenceHiding; do
             grep -q -- "^--- PASS: $t " api-tour.log || { echo "::error::$t did not pass against postgres:15"; exit 1; }
           done
           for g in cmd/server/testdata/tour/*/*.json; do
@@ -218,14 +220,14 @@ jobs:
       # extension, against the same goldens as on postgres:15, with the same
       # checks: no tour test skipped, the tests that tie the goldens together,
       # read event streams, check S5c's accounts, mail catcher and stand-ins,
-      # S5d's runner requests and S5e's authorization matrix passed, and a
-      # passing area for every golden of every slice.
+      # S5d's runner requests and S5e's authorization matrix and existence
+      # hiding passed, and a passing area for every golden of every slice.
       - name: API tour (vector extension present)
         shell: bash
         run: |
           go test ./cmd/server/ -count=1 -v -run '^TestTour' | tee api-tour.log
           ! grep -Eq -- "--- SKIP: TestTour" api-tour.log || { echo "::error::a tour test only skipped against pgvector"; exit 1; }
-          for t in TestTourCoverage TestTourGoldensAreClaimed TestTourStream TestTourAccountOptions TestTourMailCatcher TestTourStandIns TestTourWorker TestTourMatrix; do
+          for t in TestTourCoverage TestTourGoldensAreClaimed TestTourStream TestTourAccountOptions TestTourMailCatcher TestTourStandIns TestTourWorker TestTourMatrix TestTourExistenceHiding; do
             grep -q -- "^--- PASS: $t " api-tour.log || { echo "::error::$t did not pass against pgvector"; exit 1; }
           done
           for g in cmd/server/testdata/tour/*/*.json; do

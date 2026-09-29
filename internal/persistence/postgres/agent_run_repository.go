@@ -115,7 +115,7 @@ func (rep *AgentRunRepository) Save(r *agentruns.Run) error {
 // FindByID returns a run, or nil.
 func (rep *AgentRunRepository) FindByID(id string) (*agentruns.Run, error) {
 	r, err := scanRun(rep.db.QueryRow(`SELECT `+runColumns+` FROM agent_runs r JOIN agents a ON a.id = r.agent_id WHERE r.id = $1`, id))
-	if err == sql.ErrNoRows {
+	if noRow(err) {
 		return nil, nil
 	}
 	return r, err
@@ -131,7 +131,7 @@ func (rep *AgentRunRepository) FindByTokenHash(hash string) (*agentruns.Run, err
 		WHERE r.run_token_hash = $1 AND r.run_token_hash <> ''
 		  AND r.status NOT IN ('succeeded', 'failed', 'cancelled', 'timed_out', 'awaiting_approval')
 	`, hash))
-	if err == sql.ErrNoRows {
+	if noRow(err) {
 		return nil, nil
 	}
 	return r, err
@@ -159,6 +159,9 @@ func (rep *AgentRunRepository) List(filter agentruns.ListFilter) ([]*agentruns.R
 		ORDER BY r.created_at DESC
 		LIMIT $8
 	`, filter.AgentID, filter.ProjectID, filter.Status, filter.ParentID, filter.WorkItemID, filter.OrgID, filter.LaunchedBy, limit)
+	if malformedID(err) {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -235,7 +238,7 @@ func (rep *AgentRunRepository) Claim(workerID string, orgID string, workerUserID
 
 	var id string
 	if err := row.Scan(&id); err != nil {
-		if err == sql.ErrNoRows {
+		if noRow(err) {
 			return nil, nil
 		}
 		return nil, err

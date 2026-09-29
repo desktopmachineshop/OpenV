@@ -95,7 +95,7 @@ func reviewChatterSearchTour(tr *tour) {
 		"GET /api/v1/projects/{id}/duplicates", at("id", "{{p}}"))
 	tr.step("the duplicate candidates of a project that does not exist", owner,
 		"GET /api/v1/projects/{id}/duplicates", at("id", "{{phantom}}"),
-		note("the project guard runs before any lookup: 403, not 404"))
+		note("the project guard answers a project no row has as one the caller cannot reach: 404 (I3)"))
 	tr.step("reindex P's embeddings with no embedding key: 200, nothing queued, no event", owner,
 		"POST /api/v1/projects/{id}/reindex-embeddings", at("id", "{{p}}"))
 	tr.step("reindex the embeddings of a project that does not exist", owner,

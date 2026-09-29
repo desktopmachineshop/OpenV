@@ -9,6 +9,7 @@ import (
 	"mime"
 	"mime/multipart"
 	"net/http"
+	"reflect"
 	"slices"
 	"strconv"
 	"strings"
@@ -316,14 +317,8 @@ func (m *tourMatrix) send(route string, stand map[string]*tourActor, pointer str
 		tr.t.Fatalf("the matrix section %q already has the row %s", s.name, row.key)
 	}
 	s.keys[row.key] = true
-	method, tmpl, _ := strings.Cut(route, " ")
-	extra := []tourOpt{}
-	if strings.HasPrefix(tmpl, "/api/v1/auth/") || strings.HasPrefix(tmpl, "/api/v1/public/") {
-		extra = append(extra, ownAddress())
-	}
-	if isRead(method) {
-		extra = append(extra, streamHead())
-	}
+	method, _, _ := strings.Cut(route, " ")
+	extra := matrixCellOpts(route)
 	for _, col := range m.columns {
 		a := col
 		if st := stand[col.name]; st != nil {
@@ -337,6 +332,47 @@ func (m *tourMatrix) send(route string, stand map[string]*tourActor, pointer str
 		row.cells = append(row.cells, cell)
 	}
 	s.rows = append(s.rows, row)
+}
+
+// matrixCellOpts are the options every cell of a route adds to its row's: an
+// address of its own on /auth/ and /public/, and a read's stream read to its
+// head.
+func matrixCellOpts(route string) []tourOpt {
+	method, tmpl, _ := strings.Cut(route, " ")
+	extra := []tourOpt{}
+	if strings.HasPrefix(tmpl, "/api/v1/auth/") || strings.HasPrefix(tmpl, "/api/v1/public/") {
+		extra = append(extra, ownAddress())
+	}
+	if isRead(method) {
+		extra = append(extra, streamHead())
+	}
+	return extra
+}
+
+// lastRow is the row the current section recorded last.
+func (m *tourMatrix) lastRow() *tourMatrixRow {
+	s := m.sections[len(m.sections)-1]
+	return s.rows[len(s.rows)-1]
+}
+
+// expectSame sends route to every column, as row does, and fails the area
+// unless each column's answer is the cell it recorded in like: for a request
+// that must be answered exactly as another, a malformed id as a well-formed
+// one no row has. It records nothing in the golden.
+func (m *tourMatrix) expectSame(like *tourMatrixRow, route string, opts ...tourOpt) {
+	tr := m.tr
+	tr.t.Helper()
+	counts := m.sections[len(m.sections)-1].counts
+	method, _, _ := strings.Cut(route, " ")
+	extra := matrixCellOpts(route)
+	for i, col := range m.columns {
+		res := tr.probe(col, route, append(append([]tourOpt(nil), opts...), extra...)...)
+		cell := matrixCell(method, res.status, res.header, res.body, counts)
+		if !reflect.DeepEqual(cell, like.cells[i]) {
+			tr.t.Errorf("%s as %s answered %q, where %s answered %q", matrixRowKey(tr.build(route, opts)),
+				col.name, cell.render(tr.norm), like.key, like.cells[i].render(tr.norm))
+		}
+	}
 }
 
 // expectRoutes fails the area unless the current section's rows name exactly

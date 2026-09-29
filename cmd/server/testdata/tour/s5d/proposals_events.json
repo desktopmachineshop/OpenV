@@ -378,7 +378,7 @@
     },
     {
       "n": 8,
-      "title": "the box key drafts in H, a project of the owner's personal workspace: 403",
+      "title": "the box key drafts in H, a project of the owner's personal workspace: 404, as a project no row has",
       "actor": "box",
       "route": "POST /api/v1/projects/{id}/draft-test-cases",
       "request": {
@@ -389,25 +389,25 @@
         ],
         "body": "{\"requirement_ids\":[\"<rh>\"]}"
       },
-      "status": 403,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 67,
+      "content_length": 30,
       "kind": "json",
       "body": [
-        "{\"error\":\"worker key does not belong to this project's workspace\"}"
+        "{\"error\":\"project not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "worker key does not belong to this project's workspace"
+        "error": "project not found"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
       "n": 9,
-      "title": "the box key drafts in a project no one has: 404, where a person's answer is 403",
+      "title": "the box key drafts in a project no one has: 404, as a person's is",
       "actor": "box",
       "route": "POST /api/v1/projects/{id}/draft-test-cases",
       "request": {
@@ -638,7 +638,7 @@
     },
     {
       "n": 16,
-      "title": "a write into Q: 403, the run is scoped to P",
+      "title": "a write into Q: 404, the run is scoped to P",
       "actor": "author",
       "route": "POST /api/v1/artifacts",
       "request": {
@@ -649,18 +649,18 @@
         ],
         "body": "{\"project_id\":\"<q>\",\"type\":\"test-case\",\"title\":\"Elsewhere\"}"
       },
-      "status": 403,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 52,
+      "content_length": 30,
       "kind": "json",
       "body": [
-        "{\"error\":\"agent run is not scoped to this project\"}"
+        "{\"error\":\"project not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "agent run is not scoped to this project"
+        "error": "project not found"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
@@ -997,7 +997,7 @@
     },
     {
       "n": 24,
-      "title": "run_id x: 500, the cast to a UUID fails in SQL",
+      "title": "run_id x: none, as for a run no row has",
       "actor": "owner",
       "acting_in": "<w>",
       "route": "GET /api/v1/proposals",
@@ -1006,19 +1006,17 @@
         "path": "/api/v1/proposals",
         "query": "run_id=x"
       },
-      "status": 500,
-      "content_type": "application/json",
+      "status": 200,
+      "content_type": "text/plain; charset=utf-8",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 37,
+      "content_length": 5,
       "kind": "json",
       "body": [
-        "{\"error\":\"failed to list proposals\"}"
+        "null"
       ],
       "trailing_newline": true,
-      "parsed": {
-        "error": "failed to list proposals"
-      },
+      "parsed": null,
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
@@ -1080,7 +1078,7 @@
     },
     {
       "n": 26,
-      "title": "the member lists with no project: 403",
+      "title": "the member lists with no project: 400, project_id is required",
       "actor": "member",
       "acting_in": "<w>",
       "route": "GET /api/v1/proposals",
@@ -1088,7 +1086,7 @@
         "method": "GET",
         "path": "/api/v1/proposals"
       },
-      "status": 403,
+      "status": 400,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
@@ -1114,18 +1112,18 @@
         "path": "/api/v1/proposals",
         "query": "project_id=<q>"
       },
-      "status": 403,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 51,
+      "content_length": 30,
       "kind": "json",
       "body": [
-        "{\"error\":\"you do not have access to this project\"}"
+        "{\"error\":\"project not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "you do not have access to this project"
+        "error": "project not found"
       },
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
@@ -2936,18 +2934,18 @@
         "path": "/api/v1/events",
         "query": "project_id=<q>"
       },
-      "status": 403,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 51,
+      "content_length": 30,
       "kind": "json",
       "body": [
-        "{\"error\":\"you do not have access to this project\"}"
+        "{\"error\":\"project not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "you do not have access to this project"
+        "error": "project not found"
       },
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },

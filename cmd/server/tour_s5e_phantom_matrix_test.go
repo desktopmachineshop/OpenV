@@ -3,16 +3,19 @@
 package main
 
 import (
+	"encoding/json"
+	"fmt"
+	"net/url"
 	"strings"
 	"testing"
 )
 
 // TestTourS5ePhantomMatrix is part (1) of S5e, the phantom-id authorization
-// matrix (refactor plan §6.4 S5e; invariant I3; quirks Q1, Q2, Q19; OpenV
-// REQ-143 and REQ-18), on the framework of tour_matrix_test.go with the
-// columns of tour_matrix_cast_test.go. Its golden is
-// testdata/tour/s5e/phantom_matrix.json; parts (2), the real-id reads, and
-// (3), the over-plan pass, are areas of their own.
+// matrix (refactor plan §6.4 S5e; invariant I3; quirks Q1 and Q19, and Q2's
+// neighbours, fixed under R7; OpenV REQ-143 and REQ-18), on the framework of
+// tour_matrix_test.go with the columns of tour_matrix_cast_test.go. Its
+// golden is testdata/tour/s5e/phantom_matrix.json; parts (2), the real-id
+// reads, and (3), the over-plan pass, are areas of their own.
 //
 // Section "phantom ids, body {" sends every route of routes.txt, in its
 // order and nothing else (expectRoutes), so a route added later fails the
@@ -23,18 +26,25 @@ import (
 // owner), the outsider (acting in its own workspace), W's worker key, the
 // token of a running run in P, and the platform admin. What the golden pins,
 // per route and identity (I3), among others:
-//   - existence hiding: a phantom project is 403 "you do not have access to
-//     this project" to every signed-in user, the owner included, as a real
-//     foreign project is; the worker key and the platform admin get 404
-//     "project not found" (their guards look the project up first) and the
-//     run token 403 "agent run is not scoped to this project" (no lookup). A
-//     phantom workspace is 403 "you are not a member of this workspace", and
-//     404 "workspace not found" to the platform admin; the key and the token
-//     get 401 "authentication required" on every workspace route, which takes
-//     a session.
-//     A child resource (artifact, attachment, crew, test run, work item,
-//     guided session...) answers its own 404 to every column, before any
-//     guard;
+//   - existence hiding: a phantom project is 404 "project not found" to
+//     every column past the middleware, the owner included, as a real
+//     project the caller cannot reach is (part (2)'s outsider; fixed under
+//     R7, a user got 403 "you do not have access to this project" and the
+//     run token 403 "agent run is not scoped to this project"). A phantom
+//     workspace is 404 "workspace not found" to every signed-in column; the
+//     key and the token get 401 "authentication required" on every workspace
+//     route, which takes a session. A child resource (artifact, attachment,
+//     crew, test run, work item, guided session...) answers its own 404 to
+//     every column, before any guard, and its guard answers a real one the
+//     caller cannot reach with that same 404;
+//   - a malformed id: every route with an id in its path, and every row of
+//     the second section naming one, is sent again with not-a-uuid, then
+//     with a byte that is not UTF-8 and with a NUL, in its place, and must
+//     answer every column exactly as the phantom did (the area fails
+//     otherwise, and records nothing more; fixed under R7, the project and
+//     workspace guards and a dozen lookups answered it 500, and PUT
+//     /artifacts/{id} and its restore, with a well-formed body, answered a
+//     phantom, and so a malformed id, 500);
 //   - the order of guard, lookup and decode: a 400 "invalid request body"
 //     where a column should have been refused is a decode before the guard
 //     (POST /artifacts, /links, /chatter, /projects, /templates... to every
@@ -78,18 +88,10 @@ import (
 //
 // Pinned as they behave (plan R7), for release-noted bug-fix pull requests
 // that regenerate the golden, with the golden's rows:
-//   - PUT /artifacts/{phantom} and POST /artifacts/{phantom}/restore answer
-//     500 "failed to load artifact" to every column (the Q2 family: the lookup's
-//     not-found is no sentinel);
-//   - existence: GET /projects/{id} and /ai-map look the project up before the
-//     guard, so a phantom project is 404 there, where a real foreign one is
-//     403; every child resource's 404 comes before its guard; the worker key's
-//     phantom project is 404, another workspace's 403; POST /links, /crews,
-//     /teams and the crew imports answer 400 "not found" before any guard; a
-//     phantom artifact or link reads "project not found" (projectIDForArtifact
-//     answers "" and the guard 404s it);
-//   - GET /proposals with no project_id answers a plain member 403
-//     "project_id is required", a 403 for a missing parameter;
+//   - a phantom artifact on its versions, links and attachments, and a
+//     phantom link's delete, read "project not found" (projectIDForArtifact
+//     answers "" and the guard 404s it), as a real one the caller cannot
+//     reach does;
 //   - W's worker key reaches the proposal review routes' lookup (404), where a
 //     run token is refused first: nothing but the project guard, which passes a
 //     workspace key as an editor, stands between the key and an approval with
@@ -122,9 +124,17 @@ var phantomMatrixSends = []string{
 		"so the check the handler makes first answers, and nothing is written)",
 	"section \"phantom ids, body {\": POST /api/v1/auth/logout is sent by each signed-in column from a second " +
 		"session of its account (<name>.logout.session), so that the column's own session lives on",
+	"section \"phantom ids, body {\": then every route with an id in its path is sent again with each id " +
+		phantomMatrixMalformedKinds + " (a token, a slug and a version as above), and each column must answer it " +
+		"exactly as its row records, or the area fails: an id that is not a UUID answers as a well-formed id no row " +
+		"has; those requests record nothing more",
 	"section \"phantom ids in a well-formed body\": the routes whose scope is in the query or the body, with a " +
 		"query or a body naming the phantom (the row shows it); the reads first, so that no write of the section " +
 		"shows in them",
+	"section \"phantom ids in a well-formed body\": then every row whose query, body or path names the phantom " +
+		"is sent again with " + phantomMatrixMalformedKinds + " in its place (in a JSON body, the NUL as \\u0000 " +
+		"and the byte as the U+FFFD a JSON decoder reads it as), and must answer each column exactly as its row " +
+		"records, or the area fails; those requests record nothing more",
 	"after each section, the events of each workspace a signed-in column acts in are read and listed with the " +
 		"section (W, <outsider.workspace>, <admin.workspace>); W's must be none, or the area fails",
 }
@@ -141,6 +151,11 @@ func phantomMatrixTour(tr *tour) {
 	m.section("phantom ids, body {", "Every route of internal/api/testdata/routes.txt, in its order: its path ids "+
 		"phantom, a write's body {.")
 	routes := readRouteList(tr.t)
+	type sent struct {
+		route string
+		row   *tourMatrixRow
+	}
+	var withIDs []sent
 	for _, route := range routes {
 		opts := phantomPath(route)
 		if method, _, _ := strings.Cut(route, " "); !isRead(method) {
@@ -151,8 +166,20 @@ func phantomMatrixTour(tr *tour) {
 			continue
 		}
 		m.row(route, opts...)
+		if malformedPath(route, phantomMatrixMalformed[0]) != nil {
+			withIDs = append(withIDs, sent{route, m.lastRow()})
+		}
 	}
 	m.expectRoutes(routes)
+	for _, id := range phantomMatrixMalformed {
+		for _, w := range withIDs {
+			opts := malformedPath(w.route, id)
+			if method, _, _ := strings.Cut(w.route, " "); !isRead(method) {
+				opts = append(opts, truncatedBody())
+			}
+			m.expectSame(w.row, w.route, opts...)
+		}
+	}
 	m.readSectionEvents(cast.owner)
 
 	m.section("phantom ids in a well-formed body", "The routes that take their project, artifact or workspace from "+
@@ -162,51 +189,118 @@ func phantomMatrixTour(tr *tour) {
 	m.readSectionEvents(cast.owner)
 }
 
-// phantomMatrixScoped sends the routes scoped by their query or body.
-func phantomMatrixScoped(m *tourMatrix) {
-	for _, r := range []struct{ route, query string }{
-		{"GET /api/v1/artifacts", "project_id={{phantom}}"},
-		{"GET /api/v1/links", "project_id={{phantom}}"},
-		{"GET /api/v1/chatter", "artifact_id={{phantom}}"},
-		{"GET /api/v1/guided-sessions", "project_id={{phantom}}"},
-		{"GET /api/v1/attribute-definitions", "project_id={{phantom}}"},
-		{"GET /api/v1/meta/attribute-definitions", "project_id={{phantom}}"},
-		{"GET /api/v1/events", "project_id={{phantom}}"},
-		{"GET /api/v1/proposals", "project_id={{phantom}}"},
-		{"GET /api/v1/agent-runs", "project_id={{phantom}}"},
-		{"GET /api/v1/automations", "project_id={{phantom}}"},
-		{"GET /api/v1/crews", "project_id={{phantom}}"},
-	} {
-		m.row(r.route, query(r.query))
+// phantomMatrixMalformed are ids that are not UUIDs, which every route must
+// answer exactly as it answers the phantom (bug 15): text Postgres reads and
+// refuses as a uuid, and a byte that is not UTF-8 and a NUL, which it refuses
+// before it reads any type. The matrix sends each row that names an id again
+// with each and records nothing more.
+var phantomMatrixMalformed = []string{"not-a-uuid", "\xff", "a\x00b"}
+
+// phantomMatrixMalformedKinds names phantomMatrixMalformed in the area's
+// conventions, as a path or a query sends them.
+const phantomMatrixMalformedKinds = "not-a-uuid, then %FF (a byte that is not UTF-8), then a%00b (a NUL)"
+
+// malformedPath is phantomPath with every id the malformed id (a token, a
+// slug and a version as phantomPath fills them), or nil for a route with no
+// id in its path.
+func malformedPath(route, malformed string) []tourOpt {
+	var pairs []string
+	ids := 0
+	for _, v := range routeVarRE.FindAllString(route, -1) {
+		name, value := v[1:len(v)-1], malformed
+		if filled := phantomValue(name); filled != "{{phantom}}" {
+			value = filled
+		} else {
+			ids++
+		}
+		pairs = append(pairs, name, value)
 	}
-	ct, upload := multipartForm([][2]string{{"artifact_id", tourPhantom}},
+	if ids == 0 {
+		return nil
+	}
+	return []tourOpt{at(pairs...)}
+}
+
+// phantomMatrixScoped sends the routes scoped by their query or body, then
+// each whose query, body or path names an id again with the id malformed,
+// of each kind (expectSame).
+func phantomMatrixScoped(m *tourMatrix) {
+	var rows []*tourMatrixRow
+	for _, r := range phantomMatrixScopedRows(scopedID{"{{phantom}}", "{{phantom}}", tourPhantom}, phantomPath) {
+		m.row(r.route, r.opts...)
+		rows = append(rows, m.lastRow())
+	}
+	for _, id := range phantomMatrixMalformed {
+		quoted, _ := json.Marshal(id)
+		named := scopedID{url.QueryEscape(id), string(quoted[1 : len(quoted)-1]), id}
+		path := func(route string) []tourOpt { return malformedPath(route, id) }
+		for i, r := range phantomMatrixScopedRows(named, path) {
+			if r.namesID {
+				m.expectSame(rows[i], r.route, r.opts...)
+			}
+		}
+	}
+}
+
+// scopedID is an id as phantomMatrixScopedRows names it: in a query, inside
+// a JSON string, and as a multipart part carries it.
+type scopedID struct{ query, json, literal string }
+
+type phantomMatrixScopedRow struct {
+	route   string
+	opts    []tourOpt
+	namesID bool // an id in the query, the body or the path
+}
+
+// phantomMatrixScopedRows are the rows phantomMatrixScoped sends, naming the
+// id (a template the tour fills, or its text) in the query or body and
+// path's ids in the path.
+func phantomMatrixScopedRows(named scopedID, path func(string) []tourOpt) []phantomMatrixScopedRow {
+	id, literal := named.json, named.literal
+	var out []phantomMatrixScopedRow
+	for _, r := range []struct{ route, query string }{
+		{"GET /api/v1/artifacts", "project_id=%s"},
+		{"GET /api/v1/links", "project_id=%s"},
+		{"GET /api/v1/chatter", "artifact_id=%s"},
+		{"GET /api/v1/guided-sessions", "project_id=%s"},
+		{"GET /api/v1/attribute-definitions", "project_id=%s"},
+		{"GET /api/v1/meta/attribute-definitions", "project_id=%s"},
+		{"GET /api/v1/events", "project_id=%s"},
+		{"GET /api/v1/proposals", "project_id=%s"},
+		{"GET /api/v1/agent-runs", "project_id=%s"},
+		{"GET /api/v1/automations", "project_id=%s"},
+		{"GET /api/v1/crews", "project_id=%s"},
+	} {
+		out = append(out, phantomMatrixScopedRow{r.route, []tourOpt{query(fmt.Sprintf(r.query, named.query))}, true})
+	}
+	ct, upload := multipartForm([][2]string{{"artifact_id", literal}},
 		tourFormFile{field: "file", name: "tour.png", contentType: "image/png", data: []byte(tourPNG)})
 	for _, w := range []struct {
 		route string
 		opts  []tourOpt
 	}{
-		{"POST /api/v1/artifacts", []tourOpt{jsonBody(`{"project_id":"{{phantom}}","type":"requirement",` +
+		{"POST /api/v1/artifacts", []tourOpt{jsonBody(`{"project_id":"` + id + `","type":"requirement",` +
 			`"title":"Tour phantom","body":"The system shall do nothing."}`)}},
 		{"POST /api/v1/artifacts/{id}/restore", []tourOpt{jsonBody(`{"version":1}`)}},
 		{"PUT /api/v1/artifacts/{id}", []tourOpt{jsonBody(`{"title":"Tour phantom"}`)}},
 		{"PUT /api/v1/artifacts/{id}/status", []tourOpt{jsonBody(`{"status":"approved"}`)}},
-		{"POST /api/v1/links", []tourOpt{jsonBody(`{"from_id":"{{phantom}}","to_id":"{{phantom}}","type":"derives-from"}`)}},
+		{"POST /api/v1/links", []tourOpt{jsonBody(`{"from_id":"` + id + `","to_id":"` + id + `","type":"derives-from"}`)}},
 		{"PUT /api/v1/links/{id}", []tourOpt{jsonBody(`{"type":"derives-from"}`)}},
 		{"POST /api/v1/attachments/upload", []tourOpt{rawBody(ct, upload)}},
-		{"POST /api/v1/attribute-definitions", []tourOpt{jsonBody(`{"project_id":"{{phantom}}","key":"tour",` +
+		{"POST /api/v1/attribute-definitions", []tourOpt{jsonBody(`{"project_id":"` + id + `","key":"tour",` +
 			`"label":"Tour","data_type":"text"}`)}},
-		{"POST /api/v1/automations", []tourOpt{jsonBody(`{"project_id":"{{phantom}}","agent_id":"{{phantom}}",` +
+		{"POST /api/v1/automations", []tourOpt{jsonBody(`{"project_id":"` + id + `","agent_id":"` + id + `",` +
 			`"kind":"manual","name":"Tour"}`)}},
-		{"POST /api/v1/chatter", []tourOpt{jsonBody(`{"artifact_id":"{{phantom}}","body":"Tour"}`)}},
-		{"POST /api/v1/crews", []tourOpt{jsonBody(`{"project_id":"{{phantom}}","name":"Tour"}`)}},
-		{"POST /api/v1/teams", []tourOpt{jsonBody(`{"project_id":"{{phantom}}","name":"Tour"}`)}},
-		{"POST /api/v1/crews/import", []tourOpt{query("project_id={{phantom}}"), jsonBody(`{}`)}},
-		{"POST /api/v1/teams/import", []tourOpt{query("project_id={{phantom}}"), jsonBody(`{}`)}},
-		{"POST /api/v1/guided-sessions", []tourOpt{jsonBody(`{"project_id":"{{phantom}}"}`)}},
-		{"POST /api/v1/proposals/bulk", []tourOpt{jsonBody(`{"action":"approve","ids":["{{phantom}}"]}`)}},
-		{"POST /api/v1/templates", []tourOpt{jsonBody(`{"project_id":"{{phantom}}","name":"Tour"}`)}},
+		{"POST /api/v1/chatter", []tourOpt{jsonBody(`{"artifact_id":"` + id + `","body":"Tour"}`)}},
+		{"POST /api/v1/crews", []tourOpt{jsonBody(`{"project_id":"` + id + `","name":"Tour"}`)}},
+		{"POST /api/v1/teams", []tourOpt{jsonBody(`{"project_id":"` + id + `","name":"Tour"}`)}},
+		{"POST /api/v1/crews/import", []tourOpt{query("project_id=" + named.query), jsonBody(`{}`)}},
+		{"POST /api/v1/teams/import", []tourOpt{query("project_id=" + named.query), jsonBody(`{}`)}},
+		{"POST /api/v1/guided-sessions", []tourOpt{jsonBody(`{"project_id":"` + id + `"}`)}},
+		{"POST /api/v1/proposals/bulk", []tourOpt{jsonBody(`{"action":"approve","ids":["` + id + `"]}`)}},
+		{"POST /api/v1/templates", []tourOpt{jsonBody(`{"project_id":"` + id + `","name":"Tour"}`)}},
 		{"POST /api/v1/templates/{id}/projects", []tourOpt{jsonBody(`{"name":"Tour phantom"}`)}},
-		{"PUT /api/v1/me/default-workspace", []tourOpt{jsonBody(`{"org_id":"{{phantom}}"}`)}},
+		{"PUT /api/v1/me/default-workspace", []tourOpt{jsonBody(`{"org_id":"` + id + `"}`)}},
 		{"POST /api/v1/auth/share/accept", []tourOpt{jsonBody(`{"token":"{{phantom.token}}"}`)}},
 		{"POST /api/v1/auth/invitations/accept", []tourOpt{jsonBody(`{"token":"{{phantom.token}}"}`)}},
 		{"POST /api/v1/auth/invitations/preview", []tourOpt{jsonBody(`{"token":"{{phantom.token}}"}`)}},
@@ -217,6 +311,8 @@ func phantomMatrixScoped(m *tourMatrix) {
 			`"new_password":"tour password 2"}`)}},
 		{"POST /api/v1/public/connector/pair", []tourOpt{jsonBody(`{"code":"TOURPHNT"}`)}},
 	} {
-		m.row(w.route, append(phantomPath(w.route), w.opts...)...)
+		names := !strings.HasPrefix(w.route, "POST /api/v1/auth/") && !strings.HasPrefix(w.route, "POST /api/v1/public/")
+		out = append(out, phantomMatrixScopedRow{w.route, append(path(w.route), w.opts...), names})
 	}
+	return out
 }

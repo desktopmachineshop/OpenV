@@ -140,7 +140,7 @@ func (r *WorkItemRepository) FindByID(id string) (*workitems.WorkItem, error) {
 	row := r.db.QueryRow(query, id)
 	item, err := scanWorkItem(row.Scan)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if noRow(err) {
 			return nil, workitems.ErrNotFound
 		}
 		return nil, err

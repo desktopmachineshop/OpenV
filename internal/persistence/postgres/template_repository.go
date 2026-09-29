@@ -91,7 +91,7 @@ func (r *TemplateRepository) GetByID(id string) (*templates.Template, error) {
 		&item.IsDefault,
 		&item.CreatedAt,
 	); err != nil {
-		if err == sql.ErrNoRows {
+		if noRow(err) {
 			return nil, templates.ErrNotFound
 		}
 		return nil, err
@@ -119,7 +119,7 @@ func (r *TemplateRepository) GetByKey(key string) (*templates.Template, error) {
 		&item.IsDefault,
 		&item.CreatedAt,
 	); err != nil {
-		if err == sql.ErrNoRows {
+		if noRow(err) {
 			return nil, templates.ErrNotFound
 		}
 		return nil, err

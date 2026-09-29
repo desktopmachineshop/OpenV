@@ -145,7 +145,7 @@ func baselinesDocumentsBaselines(tr *tour, editor *tourActor) {
 		at("id", "{{e}}"))
 	tr.step("P's baselines before any", owner, "GET /api/v1/projects/{id}/baselines", at("id", "{{p}}"))
 	tr.step("the baselines of a project that does not exist", owner, "GET /api/v1/projects/{id}/baselines",
-		at("id", "{{phantom}}"), note("the project guard runs before any lookup, so an id no project has answers 403"))
+		at("id", "{{phantom}}"), note("the project guard answers a project no row has as one the caller cannot reach: 404 (I3)"))
 
 	// Capture.
 	tr.step("capture with a malformed body", owner, "POST /api/v1/projects/{id}/baselines", at("id", "{{p}}"),
@@ -213,7 +213,8 @@ func baselinesDocumentsAIMap(tr *tour) {
 	tr.step("the AI map from a baseline that does not exist", owner, "GET /api/v1/projects/{id}/ai-map",
 		at("id", "{{p}}"), query("baseline_id={{phantom}}"))
 	tr.step("the AI map of a project that does not exist", owner, "GET /api/v1/projects/{id}/ai-map",
-		at("id", "{{phantom}}"), note("unlike the other routes here, it looks the project up before the guard: 404"))
+		at("id", "{{phantom}}"), note("the guard answers a project no row has 404 before any lookup, as on every "+
+			"route here (I3)"))
 }
 
 // baselinesDocumentsReports pins the legacy report route, which renders with
@@ -264,7 +265,8 @@ func baselinesDocumentsDownloads(tr *tour) {
 		"GET /api/v1/projects/{id}/download/pdf", at("id", "{{p}}"), query("attachments=figures"))
 	tr.step("download the PDF of a baseline that does not exist", owner, "GET /api/v1/projects/{id}/download/pdf",
 		at("id", "{{p}}"), query("baseline_id={{phantom}}"),
-		note("the download answers any load error with 500, where the report answers 404"))
+		note("a baseline no row has answers 404, as the report answers it (fixed under R7: the download answered "+
+			"any load error 500)"))
 	tr.step("download the Word file of a project that does not exist", owner,
 		"GET /api/v1/projects/{id}/download/docx", at("id", "{{phantom}}"))
 }

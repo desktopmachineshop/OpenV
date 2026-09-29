@@ -2,7 +2,6 @@ package postgres
 
 import (
 	"database/sql"
-	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -149,7 +148,8 @@ func (r *SharedProductRepository) AddReport(id, userID string) (int, error) {
 	defer tx.Rollback()
 
 	var exists bool
-	if err := tx.QueryRow(`SELECT EXISTS (SELECT 1 FROM shared_products WHERE id = $1)`, id).Scan(&exists); err != nil {
+	err = tx.QueryRow(`SELECT EXISTS (SELECT 1 FROM shared_products WHERE id = $1)`, id).Scan(&exists)
+	if err != nil && !malformedID(err) {
 		return 0, err
 	}
 	if !exists {
@@ -228,7 +228,7 @@ func (r *SharedProductRepository) changeVote(id string, change func(*sql.Tx) err
 	switch err := tx.QueryRow(
 		`SELECT hidden FROM shared_products WHERE id = $1 FOR UPDATE`, id,
 	).Scan(&hidden); {
-	case errors.Is(err, sql.ErrNoRows):
+	case noRow(err):
 		return 0, sharedproducts.ErrNotFound
 	case err != nil:
 		return 0, err
@@ -267,6 +267,9 @@ func (r *SharedProductRepository) CountVotesWeek(id string) (int, error) {
 // SetHidden hides or unhides an entry.
 func (r *SharedProductRepository) SetHidden(id string, hidden bool) error {
 	res, err := r.db.Exec(`UPDATE shared_products SET hidden = $2 WHERE id = $1`, id, hidden)
+	if malformedID(err) {
+		return sharedproducts.ErrNotFound
+	}
 	if err != nil {
 		return err
 	}
@@ -276,6 +279,9 @@ func (r *SharedProductRepository) SetHidden(id string, hidden bool) error {
 // Delete removes an entry outright.
 func (r *SharedProductRepository) Delete(id string) error {
 	res, err := r.db.Exec(`DELETE FROM shared_products WHERE id = $1`, id)
+	if malformedID(err) {
+		return sharedproducts.ErrNotFound
+	}
 	if err != nil {
 		return err
 	}

@@ -84,50 +84,64 @@ the Phase 3 consolidations that give quirks their names.
   `cmd/server/testdata/tour/s5e/phantom_matrix.json`, 233 of
   `real_id_reads.json`); no refusal of either matrix is a bare encode.
 
-## Q2. A mid-request delete answers 500
+## Q2. A mid-request delete answers 500 (resolved)
 
-- **Where:** `internal/persistence/postgres/artifact_repository.go:165`
-  returns an ad hoc `errors.New("artifact not found")` instead of
-  `artifacts.ErrNotFound` (`internal/domain/artifacts/artifact.go:15`), so
-  `case errors.Is(err, artifacts.ErrNotFound)` in `ChangeArtifactStatus`
-  (`internal/api/handlers.go:952`) never matches and the request falls to
-  `respondInternal`.
+- **Resolved:** fixed under R7 by the release-noted bug-fix pull request
+  for #379's decisions 10 and 15 (OpenV REQ-17), so it is no longer a quirk
+  to preserve. `internal/persistence/postgres/artifact_repository.go` now
+  answers an artifact no row has, a malformed id among them,
+  `artifacts.ErrNotFound`, so the `errors.Is(err, artifacts.ErrNotFound)`
+  branches of `ChangeArtifactStatus` (a delete landing mid-request) and of
+  `RecordTestResult` (a `test_case_id` no artifact has) answer 404, and
+  `PUT /api/v1/artifacts/{id}` and `POST /api/v1/artifacts/{id}/restore`,
+  which load the artifact before their guard, answer it 404 `artifact not
+  found` and guard with that answer (`requireProjectRoleFor`), so a real
+  artifact the caller cannot reach answers alike (I3).
+- **Where it was:** `artifact_repository.go` returned an ad hoc
+  `errors.New("artifact not found")` instead of `artifacts.ErrNotFound`
+  (`internal/domain/artifacts/artifact.go:15`), so the 404 branch of
+  `ChangeArtifactStatus` (`internal/api/handlers.go`) never matched and the
+  request fell to `respondInternal`; the update and the restore sent any
+  lookup error to `respondInternal`.
 - **Pinned by, named as:** documented here, S5a–S5e for its neighbours;
-  X13 keeps each repository's not-found convention *(planned)*. Pain point
+  X13 keeps the artifact repository's sentinel *(planned)*. Pain point
   domain-requirements-11.
 - **Pinned today:** the delete landing mid-request cannot be timed from
-  outside, so no test reaches the 500 itself. The S5a tour pins its
-  deterministic neighbours: `PUT /api/v1/artifacts/{id}` and
-  `POST /api/v1/artifacts/{id}/restore` on an id no artifact has answer 500,
-  since they load the artifact before their guard, where the `GET`, the
-  versions and the `DELETE` answer 404 (steps 37 and 47 of
-  `cmd/server/testdata/tour/s5a/artifacts_attributes.json`). The S5b tour
-  pins more of them, where an error no check names falls to
-  `respondInternal`: a result recorded for a test case id no artifact has
-  answers 500 `failed to record test result` (step 20 of
-  `cmd/server/testdata/tour/s5b/test_runs_results.json`), and an id that is
-  not a UUID answers 500 on the evidence bundle, file and citation routes
-  (steps 17, 46, 54, 77 and 84 of `cmd/server/testdata/tour/s5b/evidence.json`)
-  and on a shared product's vote, report and delete (steps 32, 48 and 61 of
-  `cmd/server/testdata/tour/s5b/shared_products.json`), where a well-formed
-  id no row has answers 404 (204 on the uncite, which looks nothing up).
-  The S5d tour pins the same family on agents and the worker wire: an id
-  that is not a UUID answers 500 on a node's heartbeat and release and in
-  the `agent_id` and `run_id` filters of the run and proposal lists (steps
-  124 and 125 of `cmd/server/testdata/tour/s5d/providers_repos_pool.json`,
-  step 100 of `worker_wire.json`, step 24 of `proposals_events.json`). Its
+  outside, so no test reaches it; `internal/persistence/postgres`'s
+  `TestAnArtifactNoRowHasIsErrNotFound` holds the repository to the
+  sentinel for a well-formed id no artifact has and for malformed ones. The
+  deterministic neighbours read 404: `PUT /api/v1/artifacts/{id}` and
+  `POST /api/v1/artifacts/{id}/restore` on an id no artifact has, 404
+  `artifact not found`, where the `GET`, the versions and the `DELETE`
+  answer 404 too (steps 37 and 47 of
+  `cmd/server/testdata/tour/s5a/artifacts_attributes.json`), and a result
+  recorded for a test case id no artifact has, 404 `artifact not found`
+  (step 20 of `cmd/server/testdata/tour/s5b/test_runs_results.json`), each
+  of which answered 500 until that pull request. The S5e matrix pins the
+  first two for every identity: with a well-formed body they answer 404
+  `artifact not found` to every column the auth middleware lets through,
+  the worker key and the run token among them, where `DELETE
+  /api/v1/artifacts/{id}` answers 404 in the words `project not found`
+  (the sections of `cmd/server/testdata/tour/s5e/phantom_matrix.json`), and
+  its malformed-id pass holds `not-a-uuid`, `%FF` and `a%00b` there to the
+  same 404. An id that is not a UUID answered 500 on the evidence bundle,
+  file and citation routes, on a shared product's vote, report and delete,
+  on a node's heartbeat and release and in the `agent_id` and `run_id`
+  filters of the run and proposal lists, until the same pull request had
+  the repositories read such an id as one no row has
+  (`internal/persistence/postgres/ids.go`): those steps now answer as a
+  well-formed id no row has, 404, 204 on the uncite, which looks nothing
+  up, and an empty list for the filters (steps 17, 46, 54, 77 and 84 of
+  `cmd/server/testdata/tour/s5b/evidence.json`, 32, 48 and 61 of
+  `shared_products.json`, 124 and 125 of
+  `cmd/server/testdata/tour/s5d/providers_repos_pool.json`, 100 of
+  `worker_wire.json`, 24 of `proposals_events.json`). The S5d tour's
   well-formed neighbours answer 404, the not-found of their sibling routes:
   deleting an agent that is gone, or a slug no agent has (steps 40 and 41 of
   `agents_automations.json`), releasing a pool node no one has, as its
   heartbeat does (steps 122 and 123 of `providers_repos_pool.json`), and a
   delegation from a run whose crew node was removed, the run still naming
-  the node (step 9 of `orchestration_budget.json`). The S5e matrix pins the
-  first two neighbours for every identity: with a well-formed body, `PUT
-  /api/v1/artifacts/{id}` and `POST /api/v1/artifacts/{id}/restore` on an id
-  no artifact has answer 500 `failed to load artifact` to every column the
-  auth middleware lets through, the worker key and the run token among them,
-  where `DELETE /api/v1/artifacts/{id}` answers 404, in the words `project
-  not found` (the sections of `cmd/server/testdata/tour/s5e/phantom_matrix.json`).
+  the node (step 9 of `orchestration_budget.json`).
 
 ## Q3. Managed link edits in `PUT /artifacts/{id}` take their own path
 
@@ -555,17 +569,23 @@ the Phase 3 consolidations that give quirks their names.
   `quality_profile_parties.json`, step 68 of `evidence.json`). The S5c tour
   pins the same conventions for identity and the workspace: the driver's
   text passed through as a 400 for a worker key's name over 255 characters
-  and a revoke of a malformed key id (steps 6 and 16 of
-  `cmd/server/testdata/tour/s5c/runner_keys_connector.json`); the domain's
+  (step 6 of `cmd/server/testdata/tour/s5c/runner_keys_connector.json`;
+  its step 16, a revoke of a malformed key id, passed the driver's text
+  through too until the fix for #379's decision 15, and now answers as a key
+  no workspace has, `worker key not found`); the domain's
   text as it is, a blank workspace name, the last admin leaving or demoted,
   and a role change for or removal of an account that is not a member, in
   `ErrNotMember`'s words, which address the caller, not the account the path
   names (step 4 of `workspaces_logo.json`, steps 20, 21, 24, 25 and 111 of
-  `members_teams.json`); and a lookup's error answered as a 500 where the
-  path or body names something that is not an id: the default workspace,
+  `members_teams.json`). A lookup's error was answered as a 500 where the
+  path or body names something that is not an id (the default workspace,
   the platform admin's reset link and admin standing, and a workspace's
-  members (step 47 of `sessions_auth.json`, steps 66 and 92 of
-  `mail_password_admin.json`, step 18 of `members_teams.json`). `UpdateOrg`
+  members), until the release-noted bug-fix pull request for #379's
+  decision 15 answered such an id as one no row has: `404` (step 47 of
+  `sessions_auth.json`, steps 66 and 92 of `mail_password_admin.json`,
+  step 18 of `members_teams.json`); the ids a body stores as references
+  without a lookup keep the driver's 400 above, since text that is not a
+  UUID cannot be stored as a phantom id is. `UpdateOrg`
   still passes the service's not-found through as a 400
   (`internal/api/org_handlers.go:309`), but no step reaches it: the
   workspace guard answers a workspace no row has with its 404 first, the

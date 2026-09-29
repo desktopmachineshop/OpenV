@@ -26,6 +26,11 @@ var roleRank = map[string]int{
 // ErrForbidden is returned when a user lacks the required project role.
 var ErrForbidden = errors.New("you do not have access to this project")
 
+// ErrUnknownUser flags a membership write for an account no row has, or for
+// an id that is not one: the account's not-found, which API handlers answer
+// 404, as any lookup of an account no row has.
+var ErrUnknownUser = errors.New("user not found")
+
 // ErrInvalidRole flags an unknown role name in a membership write. API
 // handlers use it to tell user-facing validation failures (400) apart from
 // repository failures (500), so wrap it with %w when adding new validations.

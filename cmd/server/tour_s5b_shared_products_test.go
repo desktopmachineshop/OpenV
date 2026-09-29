@@ -45,8 +45,9 @@ import (
 // which the area's environment sets to 201 (OPENV_SHARED_PRODUCT_POOL_LIMIT;
 // the default 5,000 is out of reach). Every answer but a 204 carries
 // Content-Type: application/json, which these handlers set themselves (no
-// Q1). A malformed id reaches the database as a uuid syntax error and answers
-// 500, where an id no entry has answers 404. No route publishes an event.
+// Q1). A malformed id answers 404, as an id no entry has (fixed under R7: it
+// reached the database as a uuid syntax error and answered 500). No route
+// publishes an event.
 // The person gates come before the decode and the lookup, which the runner
 // key's steps show with a malformed body and an id no entry has. Not shown:
 // the publish route's workspace-member gate (org:member in route_guards.txt)
@@ -203,10 +204,9 @@ func sharedProductsTour(tr *tour) {
 	tr.step("the runner key withdraws a vote for an entry that does not exist: refused", worker,
 		"DELETE /api/v1/shared-products/{id}/vote", at("id", "{{phantom}}"))
 	tr.step("vote for an entry that does not exist", o, "PUT /api/v1/shared-products/{id}/vote", at("id", "{{phantom}}"))
-	tr.step("vote for an id that is not a UUID: the database's syntax error answers 500", o,
+	tr.step("vote for an id that is not a UUID: 404, as an id no entry has", o,
 		"PUT /api/v1/shared-products/{id}/vote", at("id", "not-a-uuid"),
-		note("an id no entry has answers 404; a malformed one reaches the database and falls to the error "+
-			"writer's default"))
+		note("the store reads an id that is not a UUID as one no row has"))
 	tr.step("the owner votes for P1", o, "PUT /api/v1/shared-products/{id}/vote", at("id", "{{p1}}"))
 	tr.step("the owner votes for P1 again: the same counts, one vote per person", o,
 		"PUT /api/v1/shared-products/{id}/vote", at("id", "{{p1}}"))
@@ -234,7 +234,7 @@ func sharedProductsTour(tr *tour) {
 		"POST /api/v1/shared-products/{id}/report", at("id", "{{phantom}}"))
 	tr.step("report an entry that does not exist", o, "POST /api/v1/shared-products/{id}/report",
 		at("id", "{{phantom}}"))
-	tr.step("report an id that is not a UUID: 500", o, "POST /api/v1/shared-products/{id}/report",
+	tr.step("report an id that is not a UUID: 404, as an id no entry has", o, "POST /api/v1/shared-products/{id}/report",
 		at("id", "not-a-uuid"))
 	tr.step("the owner reports P2", o, "POST /api/v1/shared-products/{id}/report", at("id", "{{p2}}"))
 	tr.step("the owner reports P2 again: counted once", o, "POST /api/v1/shared-products/{id}/report",
@@ -258,7 +258,7 @@ func sharedProductsTour(tr *tour) {
 	tr.step("the runner key deletes an entry that does not exist: refused before the lookup", worker,
 		"DELETE /api/v1/shared-products/{id}", at("id", "{{phantom}}"))
 	tr.step("the owner deletes P3: not a platform admin", o, "DELETE /api/v1/shared-products/{id}", at("id", "{{p3}}"))
-	tr.step("the moderator deletes an id that is not a UUID: 500", moderator, "DELETE /api/v1/shared-products/{id}",
+	tr.step("the moderator deletes an id that is not a UUID: 404, as an id no entry has", moderator, "DELETE /api/v1/shared-products/{id}",
 		at("id", "not-a-uuid"))
 	tr.step("the moderator deletes P3", moderator, "DELETE /api/v1/shared-products/{id}", at("id", "{{p3}}"))
 	tr.step("the moderator deletes P3 again", moderator, "DELETE /api/v1/shared-products/{id}", at("id", "{{p3}}"))
