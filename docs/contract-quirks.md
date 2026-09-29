@@ -349,8 +349,9 @@ the Phase 3 consolidations that give quirks their names.
   (`:739`, `:761`). The report service reads `UPLOADS_DIR` with
   `os.Getenv` (`internal/domain/reports/report.go:733`), not the server's
   `./uploads` default (`cmd/server/main.go:139`).
-- **Pinned by, named as:** the S5c tour for the two chains; X10 keeps
-  distinct fields *(planned)*. Pain point boot-3.
+- **Pinned by, named as:** the S5c tour for the two chains; S8's env
+  inventory for both reads of each variable; X10 keeps distinct fields
+  *(planned)*. Pain point boot-3.
 - **Pinned today:** S1's env-read ratchet counts the direct read in
   `internal/domain/reports`. The S5c tour boots a server with `PUBLIC_URL`
   set and `FRONTEND_URL` unset, and pins each site: an invitation's link
@@ -359,7 +360,11 @@ the Phase 3 consolidations that give quirks their names.
   `redirect_uri` is on it too, while an OIDC sign-in and a Google sign-in
   land on `http://localhost:3000` (the second) (steps 4, 44, 42, 31 and 43
   of `cmd/server/testdata/tour/s5c/self_hosted_cross_site_sso.json`). The raw
-  `UPLOADS_DIR` read is not pinned by a response.
+  `UPLOADS_DIR` read is not pinned by a response, but
+  `internal/archtest/testdata/env_vars.txt` (S8) lists it beside the
+  server's `envOr` with `"./uploads"`, and `FRONTEND_URL` and `PUBLIC_URL`
+  each with their constant and their computed fallback; S8's `per-request`
+  exemption keeps the report's read where it is.
 
 ## Q13. Only `POST /api/v1/projects` enforces the project maximum
 
