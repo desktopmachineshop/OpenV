@@ -179,17 +179,23 @@ GUARD_CODE = [
     ("S3", ["internal/persistence/postgres/migration_freeze_test.go",
             "internal/persistence/postgres/migration_freeze_schema_test.go",
             "internal/persistence/postgres/migration_freeze_purge_test.go"]),
-    ("S4a", ["cmd/server/harness_test.go", "cmd/server/boot_smoke_test.go", "cmd/server/boot_steps_test.go"]),
+    ("S4a", ["cmd/server/harness_test.go", "cmd/server/harness_portlock_test.go",
+             "cmd/server/harness_portlock_other_test.go", "cmd/server/boot_smoke_test.go",
+             "cmd/server/boot_steps_test.go"]),
     ("S4b", ["cmd/server/boot_profiles_test.go", "cmd/server/boot_misconfigured_test.go"]),
     # The tour's framework, each file by name so that a rename shows (S5a:
     # tour_test.go, its normaliser, bodies and fixtures; S5b: the event-stream
     # reader; S5c: the accounts and settings, the mail catcher and the
-    # stand-ins), and every area, cmd/server/tour_<slice>_<key>_test.go, so
-    # the areas S5d-S5e add are covered once they merge.
+    # stand-ins; S5d: the runner's requests), every area,
+    # cmd/server/tour_<slice>_<key>_test.go, so the areas S5e adds are
+    # covered once they merge, and the tests a slice pins below the API
+    # because no request reaches the case (S5d: the stream's replay draining
+    # every page of a run's log).
     ("S5a-S5e", ["cmd/server/tour_test.go", "cmd/server/tour_normalise_test.go", "cmd/server/tour_bodies_test.go",
                  "cmd/server/tour_fixtures_test.go", "cmd/server/tour_stream_test.go",
                  "cmd/server/tour_accounts_test.go", "cmd/server/tour_mail_test.go",
-                 "cmd/server/tour_standin_test.go", "cmd/server/tour_*_test.go"]),
+                 "cmd/server/tour_standin_test.go", "cmd/server/tour_worker_test.go",
+                 "cmd/server/tour_*_test.go", "internal/api/run_stream_replay_test.go"]),
     ("S6", ["internal/api/sse_contract_test.go", "internal/api/sse_scan_test.go",
             "internal/api/event_payload_types_test.go", "internal/api/event_payload_drives_test.go",
             "internal/domain/events/event_types_test.go", "frontend/src/components/agents/RunDetailPanel.test.tsx",

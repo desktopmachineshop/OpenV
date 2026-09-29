@@ -179,14 +179,15 @@ test:
 ## skipped, if TestTourCoverage, TestTourGoldensAreClaimed, TestTourStream
 ## (the event-stream reader S5b's areas use), TestTourAccountOptions,
 ## TestTourMailCatcher or TestTourStandIns (what S5c's areas rely on: adopted
-## accounts and server settings, the mail catcher, the stand-ins) did not
-## pass, or if a golden under cmd/server/testdata/tour/<slice>/ has no area
-## test (the one its "test" field names) that passed. On macOS, where Go
-## ignores SSL_CERT_FILE, TestTourStandIns and the areas with stand-ins (their
-## goldens carry the tour's test certificate authority) skip, and check
-## accepts exactly those skips and names them. With the variable set, the
-## plain go test skips the tour and the three boot tests, so that each runs
-## once, in its own block.
+## accounts and server settings, the mail catcher, the stand-ins) or
+## TestTourWorker (the runner's requests S5d's areas send: claim bodies, key
+## and run-token actors, a literal body) did not pass, or if a golden under
+## cmd/server/testdata/tour/<slice>/ has no area test (the one its "test"
+## field names) that passed. On macOS, where Go ignores SSL_CERT_FILE,
+## TestTourStandIns and the areas with stand-ins (their goldens carry the
+## tour's test certificate authority) skip, and check accepts exactly those
+## skips and names them. With the variable set, the plain go test skips the
+## tour and the three boot tests, so that each runs once, in its own block.
 ## The release-notes job requires a new bullet relative to the merge base
 ## with BASE_REF, which is what CI's comparison of the merge commit with its
 ## first parent amounts to; set NO_RELEASE_NOTES=1 for a pull request that
@@ -255,7 +256,7 @@ check:
 		toured() { for s in $$(sed -n 's/^ *--- SKIP: \(TestTour[A-Za-z0-9]*\).*/\1/p' "$$log"); do \
 				case "$$linux" in *" $$s "*) ;; *) return 1;; esac; done; \
 			for t in TestTourCoverage TestTourGoldensAreClaimed TestTourStream TestTourAccountOptions TestTourMailCatcher \
-				TestTourStandIns; do case "$$linux" in *" $$t "*) continue;; esac; \
+				TestTourStandIns TestTourWorker; do case "$$linux" in *" $$t "*) continue;; esac; \
 				grep -q -- "^--- PASS: $$t " "$$log" || return 1; done; \
 			for g in cmd/server/testdata/tour/*/*.json; do \
 				t="$$(sed -n 's/^  "test": "\(TestTour[A-Za-z0-9]*\)",$$/\1/p' "$$g")"; \

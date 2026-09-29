@@ -250,14 +250,17 @@ class DataTest(unittest.TestCase):
         # is guard code of the S5a-S5e row like the framework: a refactor may
         # add an area, but edits one only in a class C or T commit. A slice
         # joins this set in the class T commit of the step that merges it,
-        # and the framework files it adds join the list below.
-        merged = {"S5a", "S5b", "S5c"}
+        # and the framework files it adds join the list below, as do the
+        # tests it pins below the API (S5d: the stream's replay draining
+        # every page of a run's log, which no request reaches).
+        merged = {"S5a", "S5b", "S5c", "S5d"}
         files = set(subprocess.run(["git", "ls-files"], cwd=REPO, capture_output=True, text=True,
                                    check=True).stdout.split("\n"))
         for f in ["cmd/server/tour_test.go", "cmd/server/tour_normalise_test.go", "cmd/server/tour_bodies_test.go",
                   "cmd/server/tour_fixtures_test.go", "cmd/server/tour_stream_test.go",
                   "cmd/server/tour_accounts_test.go", "cmd/server/tour_mail_test.go",
-                  "cmd/server/tour_standin_test.go"]:
+                  "cmd/server/tour_standin_test.go", "cmd/server/tour_worker_test.go",
+                  "internal/api/run_stream_replay_test.go"]:
             with self.subTest(framework=f):
                 self.assertIn(f, files)
                 self.assertEqual(rg.guard_code_step(f), "S5a-S5e")
