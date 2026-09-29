@@ -120,7 +120,8 @@ type LoginService interface {
 	Claim(orgID, workerUserID string) (*LoginRequest, error)
 	// Progress records worker-side state updates. pasteKind is "code" or
 	// "url" when the worker is asking for a paste, and "" otherwise (which
-	// leaves any kind already recorded in place).
+	// leaves any kind already recorded in place). A cancelled or completed
+	// request is returned as it is: a late update changes neither.
 	Progress(id, status, authURL, detail, pasteKind string) (*LoginRequest, error)
 }
 
@@ -255,8 +256,10 @@ func (s *DefaultLoginService) Progress(id, status, authURL, detail, pasteKind st
 	if err != nil {
 		return nil, err
 	}
-	// A user cancellation wins over late worker updates.
-	if login.Status == LoginCancelled {
+	// A user cancellation wins over late worker updates, and a completed
+	// sign-in stays completed: the CLI is signed in, whatever is reported
+	// after that.
+	if login.Status == LoginCancelled || login.Status == LoginCompleted {
 		return login, nil
 	}
 	switch status {

@@ -1582,6 +1582,22 @@ func (h *Handler) userLoginChecked(w http.ResponseWriter, r *http.Request) *prov
 	return login
 }
 
+// userLoginWriteChecked is userLoginChecked for a change to the request (a
+// pasted code, a cancel): a workspace-targeted sign-in, which signs the
+// shared workers in, takes the workspace admin rights that start one
+// (StartProviderLogin), while a user-targeted one stays its requester's.
+// Writes the error response on failure.
+func (h *Handler) userLoginWriteChecked(w http.ResponseWriter, r *http.Request) *providers.LoginRequest {
+	login := h.userLoginChecked(w, r)
+	if login == nil {
+		return nil
+	}
+	if login.Target != providers.LoginTargetUser && !h.requireOrgRole(w, r, login.OrgID, orgs.RoleAdmin) {
+		return nil
+	}
+	return login
+}
+
 // GetProviderLogin returns login progress for the UI (code never echoed).
 func (h *Handler) GetProviderLogin(w http.ResponseWriter, r *http.Request) {
 	if CurrentUser(r) == nil {
@@ -1601,7 +1617,7 @@ func (h *Handler) SubmitProviderLoginCode(w http.ResponseWriter, r *http.Request
 		writeJSONError(w, http.StatusUnauthorized, "authentication required")
 		return
 	}
-	if h.userLoginChecked(w, r) == nil {
+	if h.userLoginWriteChecked(w, r) == nil {
 		return
 	}
 	var req struct {
@@ -1625,7 +1641,7 @@ func (h *Handler) CancelProviderLogin(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusUnauthorized, "authentication required")
 		return
 	}
-	if h.userLoginChecked(w, r) == nil {
+	if h.userLoginWriteChecked(w, r) == nil {
 		return
 	}
 	login, err := h.loginService.Cancel(mux.Vars(r)["id"])
@@ -1838,7 +1854,8 @@ func (h *Handler) CloneTeam(w http.ResponseWriter, r *http.Request) {
 	if !requireUser(w, r) {
 		return
 	}
-	if h.teamWriteChecked(w, r, mux.Vars(r)["id"]) == nil {
+	source := h.teamWriteChecked(w, r, mux.Vars(r)["id"])
+	if source == nil {
 		return
 	}
 	var req struct {
@@ -1847,6 +1864,25 @@ func (h *Handler) CloneTeam(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	// The copy stays in the source's workspace and is checked where it lands
+	// as CreateTeam checks a new crew: a pin must name a project of that
+	// workspace, which the caller edits; no pin needs workspace admin rights.
+	if req.ProjectID != nil && *req.ProjectID != "" {
+		project, err := h.projectService.GetProject(*req.ProjectID)
+		if err != nil || project == nil {
+			writeJSONError(w, http.StatusBadRequest, "project not found")
+			return
+		}
+		if project.OrgID != source.OrgID {
+			writeJSONError(w, http.StatusBadRequest, "project does not belong to this workspace")
+			return
+		}
+		if !h.requireProjectRole(w, r, *req.ProjectID, members.RoleEditor) {
+			return
+		}
+	} else if !h.requireOrgRole(w, r, source.OrgID, orgs.RoleAdmin) {
 		return
 	}
 	team, err := h.teamService.CloneTeam(mux.Vars(r)["id"], req.Name, req.ProjectID)
@@ -2152,8 +2188,9 @@ func (h *Handler) LaunchTeamRun(w http.ResponseWriter, r *http.Request) {
 	// Project-pinned crews launch with project editor rights on the pin;
 	// otherwise the request's project scope needs editor rights; a launch
 	// with no project scope at all needs workspace admin rights.
-	if graph.Team.ProjectID != nil && *graph.Team.ProjectID != "" {
-		if !h.requireProjectRole(w, r, *graph.Team.ProjectID, members.RoleEditor) {
+	pin := h.teamPin(graph.Team)
+	if pin != "" {
+		if !h.requireProjectRole(w, r, pin, members.RoleEditor) {
 			return
 		}
 	} else if req.ProjectID == "" {
@@ -2167,6 +2204,18 @@ func (h *Handler) LaunchTeamRun(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.ProjectID != "" && !h.requireProjectRole(w, r, req.ProjectID, members.RoleEditor) {
 		return
+	}
+	// A launch that names no project runs in the pinned crew's own, so the
+	// run is scoped to it and gets the board's tracking card there.
+	if req.ProjectID == "" {
+		req.ProjectID = pin
+	}
+	// A crew's run stays in the crew's workspace, whoever edits the project.
+	if req.ProjectID != "" && graph.Team.OrgID != "" {
+		if project, err := h.projectService.GetProject(req.ProjectID); err != nil || project == nil || project.OrgID != graph.Team.OrgID {
+			writeJSONError(w, http.StatusBadRequest, "project does not belong to this workspace")
+			return
+		}
 	}
 	// Crew runs belong to the crew's org, falling back to the project's org
 	// then the caller's active workspace.

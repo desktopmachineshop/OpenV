@@ -80,7 +80,7 @@ POST /api/v1/proposals/{id}/approve: 200, 400, 403, 404, 500; proposals_events
 POST /api/v1/proposals/{id}/reject: 200, 404; proposals_events
 POST /api/v1/provider-logins: 201, 400, 401, 403; providers_repos_pool
 POST /api/v1/provider-logins/claim: 200, 204, 403; providers_repos_pool
-POST /api/v1/provider-logins/{id}/cancel: 200, 404; providers_repos_pool
+POST /api/v1/provider-logins/{id}/cancel: 200, 403, 404; providers_repos_pool
 POST /api/v1/provider-logins/{id}/code: 200, 400, 404; providers_repos_pool
 POST /api/v1/provider-logins/{id}/progress: 200, 400, 404; providers_repos_pool
 POST /api/v1/provider-settings/detect: 204, 400, 403; providers_repos_pool

@@ -153,6 +153,46 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   was valid for 59 minutes; the link has always lasted an hour, and the
   email now says 60 minutes.
 
+- **Copying a crew checks the project it is copied into.** A crew copied
+  through the API with a `project_id` that named no project, or a project of
+  another workspace, was accepted, and the copy then could not be renamed,
+  changed or deleted, even by the workspace's admins. A copy now goes where
+  a new crew may: into a project of the crew's own workspace that you can
+  edit, or, for a workspace admin, the whole workspace; anything else is
+  refused with the reason. *Start from default crew* in the crew builder
+  always named the project you were in and was not affected. A crew whose
+  project has since been deleted, or that was pinned to another workspace's
+  project, is now looked after by its own workspace's admins, and a crew's
+  run always stays in the crew's workspace.
+
+- **A project's crew runs in that project when launched without naming
+  one.** Launching a crew made for a project through the API, with no
+  project in the request, started a run that belonged to no project: it got
+  no card on the board, and only the person who launched it and the
+  workspace's admins could follow it. It now runs in the crew's project,
+  with its card on that project's board. Launching from the crew builder
+  always named the project and was not affected.
+
+- **Saving an AI provider's settings again answers with their saved id.**
+  `PUT /api/v1/provider-settings` for a provider whose settings were already
+  saved answered with a new id that was never stored, so it did not match
+  the id the provider settings list shows. It now answers with the saved
+  id. The settings themselves were always saved correctly.
+
+- **A completed CLI sign-in stays completed.** When a runner reported a
+  vendor CLI sign-in as failed after it had already reported it complete,
+  the sign-in showed as failed although the CLI was signed in. A completed
+  sign-in now keeps its status, as a cancelled one already did.
+
+- **Only a workspace admin can cancel a sign-in on the workspace's shared
+  runners, or paste its code.** Any member of a workspace could cancel a
+  vendor CLI sign-in an admin had started on the workspace's shared
+  runners, or paste an authorization code into it, which could sign those
+  runners in to the member's own account, although only an admin can start
+  one. Both now take a workspace admin, as starting one does. A sign-in on
+  your own runner is unchanged: you, and the workspace's admins, can still
+  cancel it or paste its code.
+
 ## 0.15.0 — 2026-09-22
 
 ### New features

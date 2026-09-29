@@ -97,7 +97,11 @@ Enforced per-handler via `internal/api/authz.go`:
   granted to the launcher, then by the project ladder, then org admin for
   unscoped runs.
 - **Crew writes**: project-pinned crews need project editor; workspace-wide
-  crews need org admin. Automations follow the same split.
+  crews need org admin. Automations follow the same split. A crew's pin
+  (`project_id` on create, import and clone) must name a project of the
+  crew's workspace (`400` otherwise), and a clone is checked where the copy
+  lands as a new crew is. A pinned crew launched with no `project_id` runs
+  in its pinned project.
 
 ## Route inventory
 
@@ -1031,9 +1035,9 @@ own stream and as `assistant_partial` on any session the run belongs to.
 | GET | `/api/v1/crews/{id}` | Crew graph (nodes + edges) | org member |
 | PUT | `/api/v1/crews/{id}` | Update crew | editor / org admin |
 | DELETE | `/api/v1/crews/{id}` | Delete crew | editor / org admin |
-| POST | `/api/v1/crews/{id}/clone` | Clone crew | editor / org admin |
+| POST | `/api/v1/crews/{id}/clone` | Clone crew (the source's write guard, then the copy's: `project_id` a project of the crew's workspace the caller edits, or none for an org admin) | editor / org admin |
 | POST | `/api/v1/crews/{id}/nodes` | Add node (agent or human) | editor / org admin |
-| POST | `/api/v1/crews/{id}/runs` | Launch a run at the crew's entry node | editor / org admin |
+| POST | `/api/v1/crews/{id}/runs` | Launch a run at the crew's entry node (in the body's `project_id`, else in a pinned crew's project); `400` for a project outside the crew's workspace. A pin that no longer names a project of the crew's workspace counts as none, for launches and for every crew write | editor / org admin |
 | PUT | `/api/v1/crew-nodes/{id}` | Update node | editor / org admin |
 | DELETE | `/api/v1/crew-nodes/{id}` | Remove node | editor / org admin |
 | POST | `/api/v1/crews/{id}/edges` | Add edge (delegates-to, hands-off-to, reviews) | editor / org admin |
@@ -1069,14 +1073,14 @@ own stream and as `assistant_partial` on any session the run belongs to.
 | DELETE | `/api/v1/repo-connections/{id}` | Remove connection | owner |
 | PUT | `/api/v1/repo-connections/{id}/my-path` | Set my machine's checkout path | viewer |
 | GET | `/api/v1/provider-settings` | Provider status + model catalog per provider | user |
-| PUT | `/api/v1/provider-settings` | Update provider config (auth mode, default model) | org admin |
+| PUT | `/api/v1/provider-settings` | Update provider config (auth mode, default model); answers the stored row, whose `id` an update keeps | org admin |
 | POST | `/api/v1/provider-settings/detect` | Worker reports detected CLIs/logins/models | worker |
 | POST | `/api/v1/provider-logins` | Start a CLI sign-in relay (workspace: org admin; user-targeted: org member) | user |
 | POST | `/api/v1/provider-logins/claim` | Worker claims a pending sign-in | worker |
 | GET | `/api/v1/provider-logins/{id}` | Sign-in status (redacted) | user |
-| POST | `/api/v1/provider-logins/{id}/code` | Submit the pasted authorization code | user |
-| POST | `/api/v1/provider-logins/{id}/cancel` | Cancel sign-in | user |
-| POST | `/api/v1/provider-logins/{id}/progress` | Worker reports flow progress | worker |
+| POST | `/api/v1/provider-logins/{id}/code` | Submit the pasted authorization code (workspace: org admin; user-targeted: its requester or an org admin) | user |
+| POST | `/api/v1/provider-logins/{id}/cancel` | Cancel sign-in (workspace: org admin; user-targeted: its requester or an org admin) | user |
+| POST | `/api/v1/provider-logins/{id}/progress` | Worker reports flow progress; a completed or cancelled sign-in is answered as it is, unchanged | worker |
 | GET | `/api/v1/provider-logins/{id}/full` | Full login record (incl. code) for the executing worker | worker |
 
 ### Events
