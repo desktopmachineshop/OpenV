@@ -1070,10 +1070,12 @@ func once(why string) tourOpt {
 // unordered sorts the elements of the array a JSON pointer names ("*"
 // stands for every member or element) before normalising, keeping their
 // bytes, by their text normalised with the step's sort key (tour.sortKey: an
-// id the golden or the rest of the answer numbered keeps its number, one
-// first seen in the array has none): only for an order the server leaves to
-// chance (a random id or a timestamp tie), and the golden says why. Never
-// use it to hide an order the server fixes. A pointer that names an object
+// id the golden or the rest of the answer numbered keeps its number, and so
+// does one an earlier unordered pointer of the step sorted, numbered in that
+// sorted order; one first seen in the array has none): only for an order the
+// server leaves to chance (a random id or a timestamp tie), and the golden
+// says why. Never use it to hide an order the server fixes. Pointers sort in
+// the order the step gives them. A pointer that names an object
 // sorts its members the same way, each by its "name":value text: for a Go
 // map keyed by random ids, which encoding/json writes in the order of its
 // sorted keys, so in an order that changes from run to run.
@@ -1892,7 +1894,15 @@ func (tr *tour) sortKey(st *tourStep, body []byte) *tourNormaliser {
 
 // reorder applies a step's unordered pointers to a body, sorting by the
 // elements' text normalised with the step's sort key (sortKey), so the order
-// does not depend on which random id came first.
+// does not depend on which random id came first. The pointers sort one after
+// another, in the order the step gave them, and what an array holds is
+// numbered, in its sorted order, before the next pointer's elements are keyed
+// (S5d): so elements that differ only in ids first seen in an earlier sorted
+// array (a cloned crew's edges, which differ only in the cloned nodes they
+// join) are told apart by those ids' numbers. The numbering is the key's
+// alone, on a copy made for each body, so the plain answer and its gzip
+// variant sort the same way and nothing is numbered in the golden; a step
+// with one pointer sorts as it did before.
 func (tr *tour) reorder(st *tourStep, key *tourNormaliser, body []byte) []byte {
 	if len(st.req.unordered) == 0 {
 		return body
@@ -1901,15 +1911,35 @@ func (tr *tour) reorder(st *tourStep, key *tourNormaliser, body []byte) []byte {
 		tr.t.Errorf("step %d: unordered applies to JSON answers only", st.n)
 		return body
 	}
-	for _, u := range st.req.unordered {
+	key = key.sortKey()
+	for i, u := range st.req.unordered {
 		out, err := jsonReorder(body, u[0], func(b []byte) string { return key.text(string(b)) })
 		if err != nil {
 			tr.t.Errorf("step %d: unordered %s: %v", st.n, u[0], err)
 			return body
 		}
 		body = out
+		if i+1 < len(st.req.unordered) {
+			key.numberSorted(body, u[0])
+		}
 	}
 	return body
+}
+
+// numberSorted numbers, in this sort key only, what the arrays or objects a
+// pointer names hold, in the order they now have: a sort key writes a value it
+// has not numbered without a number (flatNew), so it numbers here and then
+// goes back to that. A pointer jsonReorder accepted names only such values.
+func (n *tourNormaliser) numberSorted(body []byte, pointer string) {
+	spans, err := jsonFind(body, pointer)
+	if err != nil {
+		return
+	}
+	n.flatNew = false
+	for _, sp := range spans {
+		n.text(string(body[sp.start:sp.end]))
+	}
+	n.flatNew = true
 }
 
 // renderGzip records the gzip variant of a GET, after checking that it
@@ -2569,6 +2599,36 @@ func TestTourOrder(t *testing.T) {
 	}
 	if got := render("", beside, "/links"); got[0] != got[1] {
 		t.Errorf("links to the artifacts of the same answer sort by the server's order:\n%s\n%s", got[0], got[1])
+	}
+
+	// Two unordered arrays of one answer, the second naming ids first seen in
+	// the first (S5d: a cloned crew's graph, whose nodes and edges tie on one
+	// created_at and whose edges differ only in the nodes they join): the
+	// first array's ids are numbered in its sorted order before the second is
+	// keyed, so the answer comes out the same whatever order the server sent
+	// either array in.
+	const lead, n1, n2 = "5a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d", "6b2c3d4e-5f6a-4b7c-9d8e-0f1a2b3c4d5e",
+		"7c3d4e5f-6a7b-4c8d-ae9f-1a2b3c4d5e6f"
+	const e1, e2 = "8d4e5f6a-7b8c-4d9e-bf0a-2b3c4d5e6f7a", "9e5f6a7b-8c9d-4e0f-8a1b-3c4d5e6f7a8b"
+	node := map[string]string{n1: `{"id":"` + n1 + `","label":"Analyst"}`, n2: `{"id":"` + n2 + `","label":"Developer"}`}
+	edge := map[string]string{e1: `{"id":"` + e1 + `","from":"` + lead + `","to":"` + n1 + `"}`,
+		e2: `{"id":"` + e2 + `","from":"` + lead + `","to":"` + n2 + `"}`}
+	seen := map[string]bool{}
+	for _, nodes := range [][2]string{{n1, n2}, {n2, n1}} {
+		for _, edges := range [][2]string{{e1, e2}, {e2, e1}} {
+			tr := &tour{t: t, norm: newTourNormaliser()}
+			raw := []byte(`{"team":{"entry":"` + lead + `"},"nodes":[` + node[nodes[0]] + `,` + node[nodes[1]] +
+				`],"edges":[` + edge[edges[0]] + `,` + edge[edges[1]] + `]}`)
+			st := &tourStep{n: 1, req: &tourReq{unordered: [][2]string{{"/nodes", "the test"}, {"/edges", "the test"}}}}
+			seen[tr.norm.text(string(tr.reorder(st, tr.sortKey(st, raw), raw)))] = true
+		}
+	}
+	wantGraph := `{"team":{"entry":"<uuid:1>"},"nodes":[{"id":"<uuid:2>","label":"Analyst"},{"id":"<uuid:3>","label":` +
+		`"Developer"}],"edges":[{"id":"<uuid:4>","from":"<uuid:1>","to":"<uuid:2>"},{"id":"<uuid:5>","from":` +
+		`"<uuid:1>","to":"<uuid:3>"}]}`
+	if len(seen) != 1 || !seen[wantGraph] {
+		t.Errorf("edges that differ only in the sorted nodes they join sort by the server's order: %q\nwant %s",
+			sortedKeys(seen), wantGraph)
 	}
 
 	// An object keyed by random ids (a Go map, which encoding/json writes in
