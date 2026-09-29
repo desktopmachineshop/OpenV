@@ -393,6 +393,6 @@
     "internal/hosting": 4,
     "internal/mcp": 1,
     "internal/notify": 10,
-    "internal/runner": 14
+    "internal/runner": 10
   }
 }

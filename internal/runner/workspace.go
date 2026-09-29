@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -21,9 +22,16 @@ func runGit(dir string, args ...string) (string, error) {
 
 func runGitCtx(ctx context.Context, dir string, args ...string) (string, error) {
 	cmd := exec.CommandContext(ctx, "git", args...)
+	var pwd []string
 	if dir != "" {
 		cmd.Dir = dir
+		// os/exec sets PWD from Dir only when Env is nil; keep git and its
+		// hooks seeing the directory they run in, as they did.
+		if abs, err := filepath.Abs(dir); err == nil && runtime.GOOS != "windows" {
+			pwd = append(pwd, "PWD="+abs)
+		}
 	}
+	cmd.Env = childEnv(pwd...)
 	out, err := cmd.CombinedOutput()
 	text := strings.TrimSpace(string(out))
 	if err != nil {
