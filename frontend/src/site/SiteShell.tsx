@@ -152,7 +152,7 @@ export const SiteShell: React.FC<SiteShellProps> = ({ title, children }) => {
             </Link>
           </div>
         </div>
-        <nav aria-label="Site pages" className="site-nav--phone">
+        <nav aria-label="Pages" className="site-nav--phone">
           {navLinks}
         </nav>
       </header>

@@ -7,7 +7,7 @@ import { test, expect } from '@playwright/test';
 test('a visitor at / sees the landing page, not the sign-in card', async ({ page }) => {
   await page.goto('/');
   await expect(page).toHaveURL(/\/$/);
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('Requirements, traceability and V&V evidence');
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Requirements, with the proof attached.');
   await expect(page.getByRole('link', { name: 'Sign in' }).first()).toBeVisible();
 });
 
