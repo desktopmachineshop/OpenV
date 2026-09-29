@@ -97,9 +97,11 @@ to the bootstrap org).
 
 Enforced per-handler via `internal/api/authz.go`:
 
-- **Platform admin** (`users.is_admin`) passes every check. The first
-  registered user has it; a platform admin grants it to others from the
-  Platform admin page (`PUT /api/v1/admin/users/{id}/admin`, REQ-155).
+- **Platform admin** (`users.is_admin`) passes every check, in a project
+  or workspace that exists: one no row has answers `404` `project not
+  found` or `workspace not found`, as a project does to a worker key. The
+  first registered user has it; a platform admin grants it to others from
+  the Platform admin page (`PUT /api/v1/admin/users/{id}/admin`, REQ-155).
 - **Org roles**: `admin` and `member` (`org_members.role`). Org admins of a
   project's org act as project owners.
 - **Project roles**: `owner` > `editor` > `reviewer` > `viewer`. A member's
@@ -246,7 +248,7 @@ their own project, workers pass within their org, a workspace key up to
 | GET | `/api/v1/projects/{id}/parties` | The reference parties the project recognises as owners: `{parties: [{name, note, default}]}`, the workspace's own company first and marked `default` | viewer |
 | PUT | `/api/v1/projects/{id}/parties` | Replace the project's own parties `{parties: [{name, note}]}`; the default is never stored; `400` for an empty or repeated name | editor |
 | GET | `/api/v1/projects/{id}/export` | Export project JSON | viewer |
-| POST | `/api/v1/projects/import` | Import a project export (JSON or ReqIF). An agent run's token is refused (`403`) | user |
+| POST | `/api/v1/projects/import` | Import a project export (JSON or ReqIF); `400` for a document that does not parse. An agent run's token is refused (`403`) | user |
 | GET | `/api/v1/projects/{id}/report` | Legacy: PDF (`?format=pdf`) or Word (`?format=docx`) with the default content | viewer |
 | GET | `/api/v1/projects/{id}/download/options` | What a download can be narrowed to: sections, types, owners (`{owner, count}`, most artifacts first), attachment categories, fields, template presets, defaults | viewer |
 | GET | `/api/v1/projects/{id}/download/{json,csv,excel,reqif,pdf,docx}` | One download in the chosen format; see the download parameters below | viewer |
@@ -259,7 +261,7 @@ their own project, workers pass within their org, a workspace key up to
 | DELETE | `/api/v1/share-links/{id}` | Revoke a link: it opens nothing from then on (idempotent) | owner of its project |
 | GET | `/api/v1/templates` | List templates (global + workspace) | user |
 | POST | `/api/v1/templates` | Save a project as a template | editor |
-| POST | `/api/v1/templates/{id}/projects` | Create project from template. An agent run's token is refused (`403`) | user |
+| POST | `/api/v1/templates/{id}/projects` | Create project from a built-in template or one of the caller's workspace; `404` `template not found` for a UUID no template has and for another workspace's template. An agent run's token is refused (`403`) | user |
 
 **Baselines** carry `created_by` (the capturing account) and
 `created_by_name` (its display name, resolved server-side so a client never
@@ -298,9 +300,11 @@ project.
   selected by `?format=reqif`, an XML/ReqIF `Content-Type`, or sniffed from a
   `<REQ-IF` root; anything else is treated as JSON. A malformed ReqIF (or an
   enum attribute whose value is not among its datatype's declared values) is a
-  **400**. Imported artifacts are remapped to fresh ids at version 1, with
-  parent hierarchy, links, status, and attributes reconstructed. Bodies are
-  carried as XHTML-typed values so hard line breaks survive the round trip.
+  **400**, and so is JSON that does not parse into an export (a syntax
+  error, a file cut short, a value of the wrong type). Imported artifacts
+  are remapped to fresh ids at version 1, with parent hierarchy, links,
+  status, and attributes reconstructed. Bodies are carried as XHTML-typed
+  values so hard line breaks survive the round trip.
 - **Downloads** (`internal/domain/downloads`, `docs/reports.md`): every
   `/download/{format}` reads the same query. `baseline_id` picks a snapshot;
   `sections`, `types`, `owners` (a comma-separated list of owner names: only
@@ -805,15 +809,19 @@ subscription, say. Every mutating request scoped to that workspace or its
 projects then answers `403` with `code: "plan_read_only"`, `over` and
 `remedy`, except the writes that bring it back under plan or out: removing
 a member or leaving, revoking an invitation, deleting a project or the
-workspace, the billing endpoints, and import. Reads, and export in every
-format, are never refused in any state. A flag the plan does not include
-is refused with `403 limit_reached` naming the flag, at: creating a hosted
-runner and a hosted worker's run claim (`hosted_automation`; a claim by the
-member's own Agent Connector is never gated), creating a people-team and
-granting a team on a project (`teams`), and the workspace usage rollup and
-budget (`workspace_budget`). A cloud-runner lease is cut to the month's
-remaining `hosted_runner_minutes_month` and refused with `limit_reached`
-once none is left.
+workspace, the billing endpoints, and import. The remedy, like a
+`limit_reached` one, suits the deployment: the Billing tab where billing
+exists, and on a self-hosted deployment the `OPENV_LIMITS` settings to
+raise, the `error` there naming the deployment's limit, not the plan's.
+Reads, and export in every format, are never refused in any state. A flag
+the plan does not include is refused with `403 limit_reached` naming the
+flag, at: creating a hosted runner and a hosted worker's run claim
+(`hosted_automation`; a claim by the member's own Agent Connector is never
+gated), creating a people-team and granting a team on a project
+(`teams`), and the workspace usage rollup and budget (`workspace_budget`).
+A cloud-runner lease is cut to the month's remaining
+`hosted_runner_minutes_month` and refused with `limit_reached` once none
+is left.
 
 A purchase is a redirect: `checkout` answers with a page of the provider's
 and the browser returns to the Billing tab with `?checkout=done&session_id=`,

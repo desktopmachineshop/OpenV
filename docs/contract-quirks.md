@@ -80,7 +80,7 @@ the Phase 3 consolidations that give quirks their names.
   per route and identity, without the gzip variant: each cell of a 2xx
   names its kind, `json` for a typed answer and `text` for a bare encode
   that net/http sniffed, so a route that gains or loses its type for one
-  identity changes a cell (133 `text` cells of
+  identity changes a cell (111 `text` cells of
   `cmd/server/testdata/tour/s5e/phantom_matrix.json`, 233 of
   `real_id_reads.json`); no refusal of either matrix is a bare encode.
 
@@ -561,13 +561,16 @@ the Phase 3 consolidations that give quirks their names.
   and a role change for or removal of an account that is not a member, in
   `ErrNotMember`'s words, which address the caller, not the account the path
   names (step 4 of `workspaces_logo.json`, steps 20, 21, 24, 25 and 111 of
-  `members_teams.json`); a
-  not-found passed through as a 400 (step 101 of `workspaces_logo.json`);
-  and a lookup's error answered as a 500 where the path or body names
-  something that is not an id: the default workspace, the platform admin's
-  reset link and admin standing, and a workspace's members (step 47 of
-  `sessions_auth.json`, steps 66 and 92 of `mail_password_admin.json`,
-  step 18 of `members_teams.json`). The S5d tour, for agents and the worker
+  `members_teams.json`); and a lookup's error answered as a 500 where the
+  path or body names something that is not an id: the default workspace,
+  the platform admin's reset link and admin standing, and a workspace's
+  members (step 47 of `sessions_auth.json`, steps 66 and 92 of
+  `mail_password_admin.json`, step 18 of `members_teams.json`). `UpdateOrg`
+  still passes the service's not-found through as a 400
+  (`internal/api/org_handlers.go:309`), but no step reaches it: the
+  workspace guard answers a workspace no row has with its 404 first, the
+  platform admin's rename of one among them (step 101 of
+  `workspaces_logo.json`). The S5d tour, for agents and the worker
   wire: the driver's text passed through as a 400 for a launch on a card id
   that is not a UUID, an automation of an agent no row has (the foreign
   key's refusal) and a repeated `reviews` edge of a crew (the unique key's),
@@ -582,13 +585,10 @@ the Phase 3 consolidations that give quirks their names.
   `proposals_events.json`). "crew not found" answers the export, where
   every other crew route answers "team not found" (step 84 of
   `crews_teams.json`). The S5e matrix pins every refusal's message per route
-  and identity, and among them the driver's text passed through as a 400
-  for the platform admin, whom the guards pass for a workspace or agent no
-  row has: the foreign key's refusal of a runner key minted for a phantom
-  workspace (`worker_keys_org_id_fkey`) and of an automation naming a
-  phantom agent (`automations_agent_id_fkey`) (the rows
-  `POST /api/v1/orgs/{id}/my-runner-key` and `POST /api/v1/automations` of
-  `cmd/server/testdata/tour/s5e/phantom_matrix.json`).
+  and identity (`cmd/server/testdata/tour/s5e/phantom_matrix.json`); the
+  platform admin, whom the guards pass only into a project or workspace
+  that exists, gets their `404` for a phantom before any handler's text,
+  so that no refusal of the matrix passes the driver's text through.
 
 ## Q20. Inline error chains render string bodies differently
 

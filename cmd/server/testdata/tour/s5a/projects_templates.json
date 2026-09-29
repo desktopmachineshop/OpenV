@@ -1487,18 +1487,18 @@
         ],
         "body": "{\"name\":\"Nothing\"}"
       },
-      "status": 500,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 51,
+      "content_length": 31,
       "kind": "json",
       "body": [
-        "{\"error\":\"failed to create project from template\"}"
+        "{\"error\":\"template not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "failed to create project from template"
+        "error": "template not found"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []

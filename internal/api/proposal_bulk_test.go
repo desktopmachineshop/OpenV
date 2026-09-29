@@ -182,7 +182,9 @@ func TestBulkReviewProposalsAppliesArtifactsBeforeLinks(t *testing.T) {
 			"p-art":  {ID: "p-art", ProjectID: "proj-1", Op: proposals.OpCreateArtifact, Status: proposals.StatusPending},
 		},
 	}
-	h := proposalTestHandler(svc, nil, nil)
+	// The project exists: a platform admin passes the guard of none that
+	// does not.
+	h := proposalTestHandler(svc, map[string]*projects.Project{"proj-1": {ID: "proj-1", OrgID: "org-1"}}, nil)
 
 	w := httptest.NewRecorder()
 	// Client lists the link before the artifact on purpose.

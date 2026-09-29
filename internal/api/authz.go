@@ -17,13 +17,13 @@ import (
 // requireProjectRole enforces project access. Returns true when the request
 // may proceed; otherwise it has already written a 401/403/404 response.
 //
-// Ladder: platform admins pass everything; org admins of the project's org
-// act as owners; members pass when their effective role (direct grant or
-// people-team grant, whichever is highest) meets minRole; agent runs pass as
-// editor-equivalent inside their own project only; workers pass only for
-// projects belonging to their own org, a workspace key as an editor there and
-// a member's personal runner key above a viewer's read only where its holder
-// would (personalKeyAccess).
+// Ladder: platform admins pass everything in a project that exists; org
+// admins of the project's org act as owners; members pass when their
+// effective role (direct grant or people-team grant, whichever is highest)
+// meets minRole; agent runs pass as editor-equivalent inside their own
+// project only; workers pass only for projects belonging to their own org, a
+// workspace key as an editor there and a member's personal runner key above a
+// viewer's read only where its holder would (personalKeyAccess).
 func (h *Handler) requireProjectRole(w http.ResponseWriter, r *http.Request, projectID string, minRole string) bool {
 	if !h.projectAccess(w, r, projectID, minRole) {
 		return false
@@ -75,6 +75,16 @@ func (h *Handler) projectAccess(w http.ResponseWriter, r *http.Request, projectI
 		return false
 	}
 	if user.IsAdmin {
+		// A platform admin needs no role, but the project must exist, as it
+		// must for a worker key above: past the guard a handler reads,
+		// writes or deletes it, and one no row has would answer 500, 204
+		// for nothing, or 201 with rows no project owns.
+		if h.projectService != nil {
+			if project, err := h.projectService.GetProject(projectID); err != nil || project == nil {
+				writeJSONError(w, http.StatusNotFound, "project not found")
+				return false
+			}
+		}
 		return true
 	}
 
@@ -137,8 +147,9 @@ func (h *Handler) personalKeyAccess(w http.ResponseWriter, r *http.Request, orgI
 	return true
 }
 
-// requireOrgRole enforces workspace access: platform admins pass; org admins
-// satisfy any minRole; members satisfy "member". Writes 401/403 on failure.
+// requireOrgRole enforces workspace access: platform admins pass for a
+// workspace that exists; org admins satisfy any minRole; members satisfy
+// "member". Writes 401/403/404 on failure.
 func (h *Handler) requireOrgRole(w http.ResponseWriter, r *http.Request, orgID string, minRole string) bool {
 	if !h.orgAccess(w, r, orgID, minRole) {
 		return false
@@ -157,6 +168,16 @@ func (h *Handler) orgAccess(w http.ResponseWriter, r *http.Request, orgID string
 		return false
 	}
 	if user.IsAdmin {
+		// A platform admin needs no membership, but the workspace must
+		// exist (a deleted one still does, until it is purged): past the
+		// guard a handler reads or writes it, and one no row has would
+		// answer 500, 204 for nothing, or a foreign key's refusal.
+		if h.orgService != nil {
+			if _, err := h.orgService.Get(orgID); err != nil {
+				respondError(w, r, http.StatusNotFound, "workspace not found", err)
+				return false
+			}
+		}
 		return true
 	}
 	role, err := h.orgService.RoleInOrg(orgID, user.ID)

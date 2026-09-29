@@ -19,11 +19,10 @@ import (
 // self_host, whatever its row says, so seats, projects and shared
 // workspaces are unlimited and every flag is on (the hosted claim passes);
 // only OPENV_LIMITS or a workspace's own limits cap anything; the limits say
-// self_hosted true; a limit_reached remedy names OPENV_LIMITS, not the
-// Billing tab; and billing answers 404 billing_unavailable everywhere. The
-// self_hosted profile alone never makes a workspace read-only, so the limits
-// profile's seven projects do here. What it does not change: plan_read_only
-// and its remedy, which still names the Billing tab.
+// self_hosted true; a limit_reached remedy, and a plan_read_only one, name
+// OPENV_LIMITS, not the Billing tab; and billing answers 404
+// billing_unavailable everywhere. The self_hosted profile alone never makes
+// a workspace read-only, so the limits profile's seven projects do here.
 //
 // The area walks, on W (the owner's shared workspace, where m1 is a member
 // and P's editor, m2 a member, and an address invited):
@@ -34,10 +33,10 @@ import (
 //   - Q13 at the deployment's 7: a new project refused limit_reached with
 //     the OPENV_LIMITS remedy, a template's project and an import passing and
 //     pushing W over, read-only;
-//   - refusals, 403 plan_read_only, their remedy the Billing tab's: the
-//     owner's rename of P and of W, the worker key's artifact in P, and the
-//     worker key's revocation; POST /projects still limit_reached, and a
-//     template's project still 201;
+//   - refusals, 403 plan_read_only, their remedy OPENV_LIMITS: the owner's
+//     rename of P and of W, the worker key's artifact in P, and the worker
+//     key's revocation; POST /projects still limit_reached, and a template's
+//     project still 201;
 //   - REQ-113: the export, the JSON and ReqIF downloads, and the JSON and
 //     ReqIF imports of the exports, on the read-only workspace;
 //   - the always-writable routes: the four billing writes (404
@@ -45,19 +44,14 @@ import (
 //     the invitation's revocation and m2's removal (W stays read-only: its
 //     projects are what it is over), the deletes of the five projects the pass
 //     made past the seven (W writable again at seven), and W's delete.
-//
-// Pinned as it behaves (plan R7), and listed for the maintainer: the
-// plan_read_only remedy (orgs.ReadOnlyRemedy) names the Billing tab on a
-// deployment where billing is unavailable, where the limit_reached remedy
-// of the same workspace names OPENV_LIMITS.
 func TestTourS5eOverPlanSelfHosted(t *testing.T) {
 	runTourArea(t, tourArea{
 		slice: "s5e",
 		key:   "over_plan_self_hosted",
 		about: "The over-plan pass on a self-hosted deployment with OPENV_LIMITS={\"max_projects\":7}: seats " +
 			"unlimited and every flag on (the hosted claim passes), billing unavailable, Q13 at the deployment's " +
-			"seven projects with the OPENV_LIMITS remedy, the read-only workspace's refusals (their remedy still " +
-			"the Billing tab's), export and import (REQ-113), and the always-writable routes.",
+			"seven projects with the OPENV_LIMITS remedy, the read-only workspace's refusals (their remedy " +
+			"OPENV_LIMITS too), export and import (REQ-113), and the always-writable routes.",
 		run:      overPlanSelfHostedTour,
 		profiles: []string{"self_hosted", "limits"},
 		accounts: []tourAccount{
@@ -116,7 +110,7 @@ func overPlanSelfHostedTour(tr *tour) {
 	tr.step("W's limits: nine projects of seven, read-only, over max_projects", o, limits, inW)
 
 	// Refusals on the read-only workspace.
-	const gate = "403 plan_read_only, its remedy the Billing tab's: "
+	const gate = "403 plan_read_only, its remedy OPENV_LIMITS: "
 	tr.step(gate+"rename P", o, "PUT /api/v1/projects/{id}", at("id", "{{p}}"), jsonBody(`{"name":"Tour Over P renamed"}`))
 	tr.step(gate+"rename W", o, "PUT /api/v1/orgs/{id}", inW, jsonBody(`{"name":"Tour Over renamed"}`))
 	tr.step(gate+"W's worker key creates an artifact in P", k, "POST /api/v1/artifacts",

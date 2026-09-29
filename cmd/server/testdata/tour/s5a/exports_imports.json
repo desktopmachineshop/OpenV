@@ -6949,18 +6949,18 @@
         ],
         "body": "{\"project_name\":"
       },
-      "status": 500,
+      "status": 400,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 37,
+      "content_length": 80,
       "kind": "json",
       "body": [
-        "{\"error\":\"failed to import project\"}"
+        "{\"error\":\"failed to import JSON: malformed JSON: unexpected end of JSON input\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "failed to import project"
+        "error": "failed to import JSON: malformed JSON: unexpected end of JSON input"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []

@@ -1,7 +1,7 @@
 {
   "golden": "cmd/server/testdata/tour/s5e/over_plan_self_hosted.json",
   "test": "TestTourS5eOverPlanSelfHosted",
-  "about": "The over-plan pass on a self-hosted deployment with OPENV_LIMITS={\"max_projects\":7}: seats unlimited and every flag on (the hosted claim passes), billing unavailable, Q13 at the deployment's seven projects with the OPENV_LIMITS remedy, the read-only workspace's refusals (their remedy still the Billing tab's), export and import (REQ-113), and the always-writable routes.",
+  "about": "The over-plan pass on a self-hosted deployment with OPENV_LIMITS={\"max_projects\":7}: seats unlimited and every flag on (the hosted claim passes), billing unavailable, Q13 at the deployment's seven projects with the OPENV_LIMITS remedy, the read-only workspace's refusals (their remedy OPENV_LIMITS too), export and import (REQ-113), and the always-writable routes.",
   "regenerate": [
     "OPENV_TEST_DATABASE_URL=<server URL> UPDATE_GOLDEN=1 go test ./cmd/server -count=1 -run '^TestTourS5eOverPlanSelfHosted$' (which also rewrites the slice's coverage.txt)",
     "UPDATE_GOLDEN=1 go test ./cmd/server -count=1 -run '^TestTourCoverage$' (coverage.txt alone, no database)"
@@ -566,7 +566,7 @@
     },
     {
       "n": 8,
-      "title": "403 plan_read_only, its remedy the Billing tab's: rename P",
+      "title": "403 plan_read_only, its remedy OPENV_LIMITS: rename P",
       "actor": "owner",
       "acting_in": "<w>",
       "route": "PUT /api/v1/projects/{id}",
@@ -582,26 +582,26 @@
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 737,
+      "content_length": 930,
       "kind": "json",
       "body": [
-        "{\"code\":\"plan_read_only\",\"error\":\"This workspace is read-only: it is over its plan's limit on Projects. This workspace has more than its plan allows, so it is read-only until it is brought under the plan's limits or moved to a plan that fits. Everything in it stays readable and exportable. A workspace admin can subscribe from the Billing tab in workspace settings, remove members or delete projects.\",\"over\":[\"max_projects\"],\"remedy\":\"This workspace has more than its plan allows, so it is read-only until it is brought under the plan's limits or moved to a plan that fits. Everything in it stays readable and exportable. A workspace admin can subscribe from the Billing tab in workspace settings, remove members or delete projects.\"}"
+        "{\"code\":\"plan_read_only\",\"error\":\"This workspace is read-only: it is over this deployment's limit on Projects. This workspace has more than this deployment's limits allow, so it is read-only until it is brought under them or they are raised. Everything in it stays readable and exportable. This deployment sets its own limits: raise max_projects in OPENV_LIMITS to change it everywhere, or set it on this workspace alone to change it here. A workspace admin can also remove members or delete projects.\",\"over\":[\"max_projects\"],\"remedy\":\"This workspace has more than this deployment's limits allow, so it is read-only until it is brought under them or they are raised. Everything in it stays readable and exportable. This deployment sets its own limits: raise max_projects in OPENV_LIMITS to change it everywhere, or set it on this workspace alone to change it here. A workspace admin can also remove members or delete projects.\"}"
       ],
       "trailing_newline": true,
       "parsed": {
         "code": "plan_read_only",
-        "error": "This workspace is read-only: it is over its plan's limit on Projects. This workspace has more than its plan allows, so it is read-only until it is brought under the plan's limits or moved to a plan that fits. Everything in it stays readable and exportable. A workspace admin can subscribe from the Billing tab in workspace settings, remove members or delete projects.",
+        "error": "This workspace is read-only: it is over this deployment's limit on Projects. This workspace has more than this deployment's limits allow, so it is read-only until it is brought under them or they are raised. Everything in it stays readable and exportable. This deployment sets its own limits: raise max_projects in OPENV_LIMITS to change it everywhere, or set it on this workspace alone to change it here. A workspace admin can also remove members or delete projects.",
         "over": [
           "max_projects"
         ],
-        "remedy": "This workspace has more than its plan allows, so it is read-only until it is brought under the plan's limits or moved to a plan that fits. Everything in it stays readable and exportable. A workspace admin can subscribe from the Billing tab in workspace settings, remove members or delete projects."
+        "remedy": "This workspace has more than this deployment's limits allow, so it is read-only until it is brought under them or they are raised. Everything in it stays readable and exportable. This deployment sets its own limits: raise max_projects in OPENV_LIMITS to change it everywhere, or set it on this workspace alone to change it here. A workspace admin can also remove members or delete projects."
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
       "n": 9,
-      "title": "403 plan_read_only, its remedy the Billing tab's: rename W",
+      "title": "403 plan_read_only, its remedy OPENV_LIMITS: rename W",
       "actor": "owner",
       "acting_in": "<w>",
       "route": "PUT /api/v1/orgs/{id}",
@@ -617,26 +617,26 @@
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 737,
+      "content_length": 930,
       "kind": "json",
       "body": [
-        "{\"code\":\"plan_read_only\",\"error\":\"This workspace is read-only: it is over its plan's limit on Projects. This workspace has more than its plan allows, so it is read-only until it is brought under the plan's limits or moved to a plan that fits. Everything in it stays readable and exportable. A workspace admin can subscribe from the Billing tab in workspace settings, remove members or delete projects.\",\"over\":[\"max_projects\"],\"remedy\":\"This workspace has more than its plan allows, so it is read-only until it is brought under the plan's limits or moved to a plan that fits. Everything in it stays readable and exportable. A workspace admin can subscribe from the Billing tab in workspace settings, remove members or delete projects.\"}"
+        "{\"code\":\"plan_read_only\",\"error\":\"This workspace is read-only: it is over this deployment's limit on Projects. This workspace has more than this deployment's limits allow, so it is read-only until it is brought under them or they are raised. Everything in it stays readable and exportable. This deployment sets its own limits: raise max_projects in OPENV_LIMITS to change it everywhere, or set it on this workspace alone to change it here. A workspace admin can also remove members or delete projects.\",\"over\":[\"max_projects\"],\"remedy\":\"This workspace has more than this deployment's limits allow, so it is read-only until it is brought under them or they are raised. Everything in it stays readable and exportable. This deployment sets its own limits: raise max_projects in OPENV_LIMITS to change it everywhere, or set it on this workspace alone to change it here. A workspace admin can also remove members or delete projects.\"}"
       ],
       "trailing_newline": true,
       "parsed": {
         "code": "plan_read_only",
-        "error": "This workspace is read-only: it is over its plan's limit on Projects. This workspace has more than its plan allows, so it is read-only until it is brought under the plan's limits or moved to a plan that fits. Everything in it stays readable and exportable. A workspace admin can subscribe from the Billing tab in workspace settings, remove members or delete projects.",
+        "error": "This workspace is read-only: it is over this deployment's limit on Projects. This workspace has more than this deployment's limits allow, so it is read-only until it is brought under them or they are raised. Everything in it stays readable and exportable. This deployment sets its own limits: raise max_projects in OPENV_LIMITS to change it everywhere, or set it on this workspace alone to change it here. A workspace admin can also remove members or delete projects.",
         "over": [
           "max_projects"
         ],
-        "remedy": "This workspace has more than its plan allows, so it is read-only until it is brought under the plan's limits or moved to a plan that fits. Everything in it stays readable and exportable. A workspace admin can subscribe from the Billing tab in workspace settings, remove members or delete projects."
+        "remedy": "This workspace has more than this deployment's limits allow, so it is read-only until it is brought under them or they are raised. Everything in it stays readable and exportable. This deployment sets its own limits: raise max_projects in OPENV_LIMITS to change it everywhere, or set it on this workspace alone to change it here. A workspace admin can also remove members or delete projects."
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
       "n": 10,
-      "title": "403 plan_read_only, its remedy the Billing tab's: W's worker key creates an artifact in P",
+      "title": "403 plan_read_only, its remedy OPENV_LIMITS: W's worker key creates an artifact in P",
       "actor": "k",
       "route": "POST /api/v1/artifacts",
       "request": {
@@ -651,26 +651,26 @@
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 737,
+      "content_length": 930,
       "kind": "json",
       "body": [
-        "{\"code\":\"plan_read_only\",\"error\":\"This workspace is read-only: it is over its plan's limit on Projects. This workspace has more than its plan allows, so it is read-only until it is brought under the plan's limits or moved to a plan that fits. Everything in it stays readable and exportable. A workspace admin can subscribe from the Billing tab in workspace settings, remove members or delete projects.\",\"over\":[\"max_projects\"],\"remedy\":\"This workspace has more than its plan allows, so it is read-only until it is brought under the plan's limits or moved to a plan that fits. Everything in it stays readable and exportable. A workspace admin can subscribe from the Billing tab in workspace settings, remove members or delete projects.\"}"
+        "{\"code\":\"plan_read_only\",\"error\":\"This workspace is read-only: it is over this deployment's limit on Projects. This workspace has more than this deployment's limits allow, so it is read-only until it is brought under them or they are raised. Everything in it stays readable and exportable. This deployment sets its own limits: raise max_projects in OPENV_LIMITS to change it everywhere, or set it on this workspace alone to change it here. A workspace admin can also remove members or delete projects.\",\"over\":[\"max_projects\"],\"remedy\":\"This workspace has more than this deployment's limits allow, so it is read-only until it is brought under them or they are raised. Everything in it stays readable and exportable. This deployment sets its own limits: raise max_projects in OPENV_LIMITS to change it everywhere, or set it on this workspace alone to change it here. A workspace admin can also remove members or delete projects.\"}"
       ],
       "trailing_newline": true,
       "parsed": {
         "code": "plan_read_only",
-        "error": "This workspace is read-only: it is over its plan's limit on Projects. This workspace has more than its plan allows, so it is read-only until it is brought under the plan's limits or moved to a plan that fits. Everything in it stays readable and exportable. A workspace admin can subscribe from the Billing tab in workspace settings, remove members or delete projects.",
+        "error": "This workspace is read-only: it is over this deployment's limit on Projects. This workspace has more than this deployment's limits allow, so it is read-only until it is brought under them or they are raised. Everything in it stays readable and exportable. This deployment sets its own limits: raise max_projects in OPENV_LIMITS to change it everywhere, or set it on this workspace alone to change it here. A workspace admin can also remove members or delete projects.",
         "over": [
           "max_projects"
         ],
-        "remedy": "This workspace has more than its plan allows, so it is read-only until it is brought under the plan's limits or moved to a plan that fits. Everything in it stays readable and exportable. A workspace admin can subscribe from the Billing tab in workspace settings, remove members or delete projects."
+        "remedy": "This workspace has more than this deployment's limits allow, so it is read-only until it is brought under them or they are raised. Everything in it stays readable and exportable. This deployment sets its own limits: raise max_projects in OPENV_LIMITS to change it everywhere, or set it on this workspace alone to change it here. A workspace admin can also remove members or delete projects."
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
       "n": 11,
-      "title": "403 plan_read_only, its remedy the Billing tab's: revoke W's worker key",
+      "title": "403 plan_read_only, its remedy OPENV_LIMITS: revoke W's worker key",
       "actor": "owner",
       "acting_in": "<w>",
       "route": "DELETE /api/v1/orgs/{id}/worker-keys/{keyId}",
@@ -682,19 +682,19 @@
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 737,
+      "content_length": 930,
       "kind": "json",
       "body": [
-        "{\"code\":\"plan_read_only\",\"error\":\"This workspace is read-only: it is over its plan's limit on Projects. This workspace has more than its plan allows, so it is read-only until it is brought under the plan's limits or moved to a plan that fits. Everything in it stays readable and exportable. A workspace admin can subscribe from the Billing tab in workspace settings, remove members or delete projects.\",\"over\":[\"max_projects\"],\"remedy\":\"This workspace has more than its plan allows, so it is read-only until it is brought under the plan's limits or moved to a plan that fits. Everything in it stays readable and exportable. A workspace admin can subscribe from the Billing tab in workspace settings, remove members or delete projects.\"}"
+        "{\"code\":\"plan_read_only\",\"error\":\"This workspace is read-only: it is over this deployment's limit on Projects. This workspace has more than this deployment's limits allow, so it is read-only until it is brought under them or they are raised. Everything in it stays readable and exportable. This deployment sets its own limits: raise max_projects in OPENV_LIMITS to change it everywhere, or set it on this workspace alone to change it here. A workspace admin can also remove members or delete projects.\",\"over\":[\"max_projects\"],\"remedy\":\"This workspace has more than this deployment's limits allow, so it is read-only until it is brought under them or they are raised. Everything in it stays readable and exportable. This deployment sets its own limits: raise max_projects in OPENV_LIMITS to change it everywhere, or set it on this workspace alone to change it here. A workspace admin can also remove members or delete projects.\"}"
       ],
       "trailing_newline": true,
       "parsed": {
         "code": "plan_read_only",
-        "error": "This workspace is read-only: it is over its plan's limit on Projects. This workspace has more than its plan allows, so it is read-only until it is brought under the plan's limits or moved to a plan that fits. Everything in it stays readable and exportable. A workspace admin can subscribe from the Billing tab in workspace settings, remove members or delete projects.",
+        "error": "This workspace is read-only: it is over this deployment's limit on Projects. This workspace has more than this deployment's limits allow, so it is read-only until it is brought under them or they are raised. Everything in it stays readable and exportable. This deployment sets its own limits: raise max_projects in OPENV_LIMITS to change it everywhere, or set it on this workspace alone to change it here. A workspace admin can also remove members or delete projects.",
         "over": [
           "max_projects"
         ],
-        "remedy": "This workspace has more than its plan allows, so it is read-only until it is brought under the plan's limits or moved to a plan that fits. Everything in it stays readable and exportable. A workspace admin can subscribe from the Billing tab in workspace settings, remove members or delete projects."
+        "remedy": "This workspace has more than this deployment's limits allow, so it is read-only until it is brought under them or they are raised. Everything in it stays readable and exportable. This deployment sets its own limits: raise max_projects in OPENV_LIMITS to change it everywhere, or set it on this workspace alone to change it here. A workspace admin can also remove members or delete projects."
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []

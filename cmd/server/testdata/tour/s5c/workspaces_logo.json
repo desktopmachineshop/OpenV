@@ -4146,7 +4146,7 @@
     },
     {
       "n": 100,
-      "title": "the platform admin reads a workspace that does not exist: the handler's own 404",
+      "title": "the platform admin reads a workspace that does not exist: the guard's 404",
       "actor": "admin",
       "route": "GET /api/v1/orgs/{id}",
       "request": {
@@ -4170,7 +4170,7 @@
     },
     {
       "n": 101,
-      "title": "the platform admin renames a workspace that does not exist: the service's not-found, as a 400 (Q19)",
+      "title": "the platform admin renames a workspace that does not exist: the guard's 404",
       "actor": "admin",
       "route": "PUT /api/v1/orgs/{id}",
       "request": {
@@ -4181,25 +4181,25 @@
         ],
         "body": "{\"name\":\"Nowhere\"}"
       },
-      "status": 400,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 35,
+      "content_length": 32,
       "kind": "json",
       "body": [
-        "{\"error\":\"organization not found\"}"
+        "{\"error\":\"workspace not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "organization not found"
+        "error": "workspace not found"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
       "n": 102,
-      "title": "the platform admin deletes a workspace that does not exist: the service's not-found, as a 404",
+      "title": "the platform admin deletes a workspace that does not exist: the guard's 404",
       "actor": "admin",
       "route": "DELETE /api/v1/orgs/{id}",
       "request": {
@@ -4210,14 +4210,14 @@
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 35,
+      "content_length": 32,
       "kind": "json",
       "body": [
-        "{\"error\":\"organization not found\"}"
+        "{\"error\":\"workspace not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "organization not found"
+        "error": "workspace not found"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
@@ -4248,7 +4248,7 @@
     },
     {
       "n": 104,
-      "title": "the platform admin previews in a workspace that does not exist: 404, once the body is read",
+      "title": "the platform admin previews in a workspace that does not exist: 404",
       "actor": "admin",
       "route": "PUT /api/v1/orgs/{id}/members/me/preview",
       "request": {
@@ -4401,7 +4401,7 @@
         "path": "/api/v1/orgs/<phantom>/activate"
       },
       "notes": [
-        "sessions.active_org_id would take any UUID, so ActivateOrg looks the workspace up once the guard lets the platform admin by"
+        "sessions.active_org_id would take any UUID; the guard looks the workspace up before ActivateOrg stores anything"
       ],
       "status": 404,
       "content_type": "application/json",

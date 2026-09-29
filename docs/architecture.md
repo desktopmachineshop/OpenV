@@ -471,7 +471,8 @@ Every API request authenticates as one of four principals; only `/health`,
   workspace key at startup and still accepted directly.
 
 ### Authorization (`authz.go`)
-- **Platform admin** (`users.is_admin`, the first user) passes every check.
+- **Platform admin** (`users.is_admin`, the first user) passes every check,
+  in a project or workspace that exists (one no row has is `404`).
 - **Org roles** — `admin` and `member` (`org_members`). Org admins act as
   owners of every project in their org.
 - **Project roles** — `owner` > `editor` > `viewer`. A member's effective role

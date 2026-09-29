@@ -212,6 +212,51 @@ func TestAnOverPlanWorkspaceIsReadOnlyButTrimsAndExports(t *testing.T) {
 	}
 }
 
+// A self-hosted deployment has no billing: its Billing tab answers 404
+// billing_unavailable. So the read-only refusal there names the setting to
+// raise, as a limit refusal there already did (OPENV_LIMITS), where it told
+// an admin to subscribe from the Billing tab (REQ-123, REQ-169, REQ-177),
+// and says the workspace is over the deployment's limit, not a plan's.
+func TestASelfHostedReadOnlyRefusalNamesTheSettingNotTheBillingTab(t *testing.T) {
+	orgs.SetSelfHosted(true)
+	orgs.SetDeploymentLimits(map[string]interface{}{orgs.LimitMaxProjects: 1})
+	t.Cleanup(func() { orgs.SetSelfHosted(false); orgs.SetDeploymentLimits(nil) })
+	h := NewHandler(HandlerDeps{})
+	h.orgService = &seatedOrgService{
+		org:     &orgs.Org{ID: "org-1", OrgType: orgs.TypeCompany, BilledPlan: orgs.PlanSingle},
+		members: seats(1),
+	}
+	h.projectService = &fakeProjectService{byID: map[string]*projects.Project{
+		"p1": {ID: "p1", OrgID: "org-1"},
+		"p2": {ID: "p2", OrgID: "org-1"},
+	}}
+
+	w := httptest.NewRecorder()
+	if h.requireProjectRole(w, platformAdmin(http.MethodPut, "/api/v1/projects/p1", "p1"), "p1", members.RoleEditor) {
+		t.Fatal("a write on a workspace over the deployment's limits was allowed")
+	}
+	var body struct {
+		errorBody
+		Over   []string `json:"over"`
+		Remedy string   `json:"remedy"`
+	}
+	_ = json.Unmarshal(w.Body.Bytes(), &body)
+	if w.Code != http.StatusForbidden || body.Code != ErrCodePlanReadOnly || len(body.Over) != 1 || body.Over[0] != orgs.LimitMaxProjects {
+		t.Fatalf("read-only refusal: %d %s", w.Code, w.Body.String())
+	}
+	for _, text := range []string{body.Error, body.Remedy} {
+		if strings.Contains(text, "Billing tab") || strings.Contains(text, "subscribe") {
+			t.Errorf("a self-hosted refusal sends the admin to billing: %q", text)
+		}
+		if strings.Contains(text, "plan") {
+			t.Errorf("a self-hosted refusal speaks of a plan the deployment does not have: %q", text)
+		}
+		if !strings.Contains(text, "raise max_projects in OPENV_LIMITS") || !strings.Contains(text, "exportable") {
+			t.Errorf("a self-hosted refusal does not name the setting to raise: %q", text)
+		}
+	}
+}
+
 // The month's cloud-runner allowance is hard: a lease is cut to what is left
 // and refused once nothing is. Nothing changes for a plan with no ceiling.
 func TestALeaseIsCutToTheMonthsAllowanceAndRefusedAtIt(t *testing.T) {
