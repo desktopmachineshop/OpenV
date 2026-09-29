@@ -34,8 +34,10 @@ import (
 //     the OPENV_LIMITS remedy, a template's project and an import passing and
 //     pushing W over, read-only;
 //   - refusals, 403 plan_read_only, their remedy OPENV_LIMITS: the owner's
-//     rename of P and of W, the worker key's artifact in P, and the worker
-//     key's revocation; POST /projects still limit_reached, and a template's
+//     rename of P and of W, and the worker key's artifact in P; beside them
+//     the worker key's revocation, always writable (a revocation only takes
+//     access away: issue #379's question 6), where it was refused like any
+//     other write; POST /projects still limit_reached, and a template's
 //     project still 201;
 //   - REQ-113: the export, the JSON and ReqIF downloads, and the JSON and
 //     ReqIF imports of the exports, on the read-only workspace;
@@ -116,8 +118,8 @@ func overPlanSelfHostedTour(tr *tour) {
 	tr.step(gate+"W's worker key creates an artifact in P", k, "POST /api/v1/artifacts",
 		jsonBody(`{"project_id":"{{p}}","type":"requirement","title":"Log each answer",`+
 			`"body":"The system shall log each answer."}`))
-	tr.step(gate+"revoke W's worker key", o, "DELETE /api/v1/orgs/{id}/worker-keys/{keyId}",
-		at("id", "{{w}}", "keyId", "{{k.key}}"))
+	tr.step("always writable, beside the gate's refusals: revoke W's worker key, which sends nothing after", o,
+		"DELETE /api/v1/orgs/{id}/worker-keys/{keyId}", at("id", "{{w}}", "keyId", "{{k.key}}"))
 	tr.step("Q13: a new project on the read-only workspace: limit_reached, the count's refusal", o,
 		"POST /api/v1/projects", jsonBody(`{"name":"Tour Over one too many"}`))
 	tr.step("a project from the default template on the read-only workspace: 201, no guard, no gate, no count", o,

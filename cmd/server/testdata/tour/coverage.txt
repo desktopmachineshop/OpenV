@@ -32,14 +32,14 @@ DELETE /api/v1/orgs/{id}/hosted-runner: s5c, s5e (errors only)
 DELETE /api/v1/orgs/{id}/invitations/{invId}: s5c, s5e; 2xx or 3xx in s5c, s5e
 DELETE /api/v1/orgs/{id}/logo: s5c, s5e; 2xx or 3xx in s5c
 DELETE /api/v1/orgs/{id}/members/{userId}: s5c, s5e; 2xx or 3xx in s5c, s5e
-DELETE /api/v1/orgs/{id}/my-runner-key: s5c, s5e; 2xx or 3xx in s5c
+DELETE /api/v1/orgs/{id}/my-runner-key: s5c, s5e; 2xx or 3xx in s5c, s5e
 DELETE /api/v1/orgs/{id}/runner-session: s5c, s5e; 2xx or 3xx in s5c
-DELETE /api/v1/orgs/{id}/worker-keys/{keyId}: s5c, s5e; 2xx or 3xx in s5c
+DELETE /api/v1/orgs/{id}/worker-keys/{keyId}: s5c, s5e; 2xx or 3xx in s5c, s5e
 DELETE /api/v1/projects/{id}: s5a, s5e; 2xx or 3xx in s5a, s5e
 DELETE /api/v1/projects/{id}/members/{userId}: s5c, s5e; 2xx or 3xx in s5c
 DELETE /api/v1/projects/{id}/team-access/{teamId}: s5c, s5e; 2xx or 3xx in s5c
 DELETE /api/v1/repo-connections/{id}: s5d, s5e; 2xx or 3xx in s5d
-DELETE /api/v1/share-links/{id}: s5a, s5e; 2xx or 3xx in s5a
+DELETE /api/v1/share-links/{id}: s5a, s5e; 2xx or 3xx in s5a, s5e
 DELETE /api/v1/shared-products/{id}: s5b, s5e; 2xx or 3xx in s5b
 DELETE /api/v1/shared-products/{id}/vote: s5b, s5e; 2xx or 3xx in s5b
 DELETE /api/v1/team-edges/{id}: s5d, s5e; 2xx or 3xx in s5d
@@ -249,7 +249,7 @@ POST /api/v1/notifications/read: s5c, s5e; 2xx or 3xx in s5c
 POST /api/v1/notifications/read-all: s5c, s5e; 2xx or 3xx in s5c, s5e
 POST /api/v1/org-teams/{id}/members/{userId}: s5c, s5e; 2xx or 3xx in s5c
 POST /api/v1/orgs: s5c, s5e; 2xx or 3xx in s5c, s5e
-POST /api/v1/orgs/{id}/activate: s5c, s5e; 2xx or 3xx in s5c
+POST /api/v1/orgs/{id}/activate: s5c, s5e; 2xx or 3xx in s5c, s5e
 POST /api/v1/orgs/{id}/billing/change: s5c, s5e; 2xx or 3xx in s5c
 POST /api/v1/orgs/{id}/billing/checkout: s5c, s5e; 2xx or 3xx in s5c
 POST /api/v1/orgs/{id}/billing/portal: s5c, s5e; 2xx or 3xx in s5c

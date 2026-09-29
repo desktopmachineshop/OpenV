@@ -30,7 +30,7 @@ func (h *Handler) requireProjectRole(w http.ResponseWriter, r *http.Request, pro
 	}
 	// Access decided, one more question for a write: is the workspace
 	// over its plan? A read-only workspace refuses every write but the
-	// ones that bring it back under plan (limits.go, requireWritable).
+	// few that alwaysWritable marks (limits.go, requireWritable).
 	if mutating(r.Method) {
 		return h.requireWritable(w, r, h.orgIDForProject(projectID))
 	}

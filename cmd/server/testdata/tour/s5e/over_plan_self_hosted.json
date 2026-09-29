@@ -670,7 +670,7 @@
     },
     {
       "n": 11,
-      "title": "403 plan_read_only, its remedy OPENV_LIMITS: revoke W's worker key",
+      "title": "always writable, beside the gate's refusals: revoke W's worker key, which sends nothing after",
       "actor": "owner",
       "acting_in": "<w>",
       "route": "DELETE /api/v1/orgs/{id}/worker-keys/{keyId}",
@@ -678,24 +678,12 @@
         "method": "DELETE",
         "path": "/api/v1/orgs/<w>/worker-keys/<k.key>"
       },
-      "status": 403,
-      "content_type": "application/json",
+      "status": 204,
+      "content_type": null,
       "headers": [],
       "security_headers": "standard",
-      "content_length": 930,
-      "kind": "json",
-      "body": [
-        "{\"code\":\"plan_read_only\",\"error\":\"This workspace is read-only: it is over this deployment's limit on Projects. This workspace has more than this deployment's limits allow, so it is read-only until it is brought under them or they are raised. Everything in it stays readable and exportable. This deployment sets its own limits: raise max_projects in OPENV_LIMITS to change it everywhere, or set it on this workspace alone to change it here. A workspace admin can also remove members or delete projects.\",\"over\":[\"max_projects\"],\"remedy\":\"This workspace has more than this deployment's limits allow, so it is read-only until it is brought under them or they are raised. Everything in it stays readable and exportable. This deployment sets its own limits: raise max_projects in OPENV_LIMITS to change it everywhere, or set it on this workspace alone to change it here. A workspace admin can also remove members or delete projects.\"}"
-      ],
-      "trailing_newline": true,
-      "parsed": {
-        "code": "plan_read_only",
-        "error": "This workspace is read-only: it is over this deployment's limit on Projects. This workspace has more than this deployment's limits allow, so it is read-only until it is brought under them or they are raised. Everything in it stays readable and exportable. This deployment sets its own limits: raise max_projects in OPENV_LIMITS to change it everywhere, or set it on this workspace alone to change it here. A workspace admin can also remove members or delete projects.",
-        "over": [
-          "max_projects"
-        ],
-        "remedy": "This workspace has more than this deployment's limits allow, so it is read-only until it is brought under them or they are raised. Everything in it stays readable and exportable. This deployment sets its own limits: raise max_projects in OPENV_LIMITS to change it everywhere, or set it on this workspace alone to change it here. A workspace admin can also remove members or delete projects."
-      },
+      "content_length": null,
+      "kind": "empty",
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },

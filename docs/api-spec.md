@@ -807,9 +807,18 @@ limits, while a workspace holds more than its plan allows (more members
 than `max_members`, more projects than `max_projects`) — after a lapsed
 subscription, say. Every mutating request scoped to that workspace or its
 projects then answers `403` with `code: "plan_read_only"`, `over` and
-`remedy`, except the writes that bring it back under plan or out: removing
-a member or leaving, revoking an invitation, deleting a project or the
-workspace, the billing endpoints, and import. The remedy, like a
+`remedy`, except the sixteen writes registered `alwaysWritable`, which
+answer as on a writable workspace: the writes that bring it back under
+plan or out (removing a member or leaving, revoking an invitation,
+deleting a project or the workspace), the billing endpoints, and import;
+three revocations, which only take access away
+(`DELETE /orgs/{id}/worker-keys/{keyId}`,
+`DELETE /orgs/{id}/my-runner-key`, `DELETE /share-links/{id}`); three
+writes that touch only the caller's own session or lease
+(`POST /orgs/{id}/activate`, `PUT /orgs/{id}/members/me/preview`,
+`DELETE /orgs/{id}/runner-session`); and `POST /agent-runs/{id}/cancel`,
+for its launcher, the project's editors and, for a run in no project, the
+workspace's admins alike. The remedy, like a
 `limit_reached` one, suits the deployment: the Billing tab where billing
 exists, and on a self-hosted deployment the `OPENV_LIMITS` settings to
 raise, the `error` there naming the deployment's limit, not the plan's.

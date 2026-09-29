@@ -353,6 +353,32 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   to raise in `OPENV_LIMITS`, as a refusal at one of those limits already
   did. Hosted workspaces are pointed to the Billing tab as before.
 
+- **Runner keys and share links can be revoked in a read-only workspace.**
+  In a workspace that holds more than its plan allows, and so is read-only,
+  revoking a workspace runner key, your own personal runner key or a
+  project's share link was refused like any change to the workspace
+  (`403 plan_read_only` for an API client), so the key or link went on
+  working until the workspace was back under its plan. Revoking them is now
+  always allowed there, as removing someone from the workspace or revoking
+  a workspace invitation already was.
+
+- **You can switch to a read-only workspace, set your own stable-release
+  preview and end your cloud runner there.** In a workspace that holds more
+  than its plan allows, turning the next stable release's preview on or off
+  for yourself and ending your leased cloud runner were refused, although
+  neither changes the workspace, and so was making it your session's active
+  workspace (`POST /api/v1/orgs/{id}/activate`, which the app sends when you
+  switch to it). These three now work there as in any other workspace;
+  starting or extending a cloud runner lease, like changes to the
+  workspace's own content, stays refused until it is back under its plan.
+
+- **A run can be cancelled in a read-only workspace.** In a workspace that
+  holds more than its plan allows, a project's editor could not cancel a
+  run someone else had launched in the project, nor a workspace admin a
+  run launched outside any project: the cancel was refused as a change to
+  the workspace, although the person who launched the run could cancel it.
+  Everyone who may cancel a run can now cancel it there.
+
 ## 0.15.0 — 2026-09-22
 
 ### New features

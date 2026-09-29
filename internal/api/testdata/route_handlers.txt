@@ -21,7 +21,7 @@ GET /api/v1/projects/{id}/ai-map -> ProjectAIMap
 GET /api/v1/projects/{id}/children -> ListChildProjects
 GET /api/v1/projects/{id}/share-links -> ListShareLinks
 POST /api/v1/projects/{id}/share-links -> CreateShareLink
-DELETE /api/v1/share-links/{id} -> RevokeShareLink
+DELETE /api/v1/share-links/{id} -> RevokeShareLink [alwaysWritable]
 GET /api/v1/public/share/{token} -> OpenShareLink
 GET /api/v1/public/share/{token}/page -> ShareLinkPage
 GET /api/v1/public/share/{token}/preview.png -> ShareLinkPreview
@@ -188,7 +188,7 @@ GET /api/v1/agent-runs/{id}/tree -> GetAgentRunTree
 GET /api/v1/agent-runs/{id}/logs -> GetAgentRunLogs
 POST /api/v1/agent-runs/{id}/logs -> AppendAgentRunLogs
 GET /api/v1/agent-runs/{id}/stream -> StreamAgentRun
-POST /api/v1/agent-runs/{id}/cancel -> CancelAgentRun
+POST /api/v1/agent-runs/{id}/cancel -> CancelAgentRun [alwaysWritable]
 POST /api/v1/agent-runs/{id}/retry -> RetryAgentRun
 POST /api/v1/agent-runs/{id}/start -> StartAgentRun
 POST /api/v1/agent-runs/{id}/release -> ReleaseAgentRun
@@ -257,7 +257,7 @@ PUT /api/v1/orgs/{id} -> UpdateOrg
 DELETE /api/v1/orgs/{id} -> DeleteOrg [alwaysWritable]
 PUT /api/v1/orgs/{id}/plan -> SetOrgPlan
 POST /api/v1/orgs/{id}/restore -> RestoreOrg
-POST /api/v1/orgs/{id}/activate -> ActivateOrg
+POST /api/v1/orgs/{id}/activate -> ActivateOrg [alwaysWritable]
 GET /api/v1/orgs/{id}/logo -> GetOrgLogo
 POST /api/v1/orgs/{id}/logo -> UploadOrgLogo
 DELETE /api/v1/orgs/{id}/logo -> DeleteOrgLogo
@@ -274,10 +274,10 @@ POST /api/v1/org-teams/{id}/members/{userId} -> AddOrgTeamMember
 DELETE /api/v1/org-teams/{id}/members/{userId} -> RemoveOrgTeamMember
 GET /api/v1/orgs/{id}/worker-keys -> ListWorkerKeys
 POST /api/v1/orgs/{id}/worker-keys -> CreateWorkerKey
-DELETE /api/v1/orgs/{id}/worker-keys/{keyId} -> RevokeWorkerKey
+DELETE /api/v1/orgs/{id}/worker-keys/{keyId} -> RevokeWorkerKey [alwaysWritable]
 GET /api/v1/orgs/{id}/my-runner-key -> GetMyRunnerKey
 POST /api/v1/orgs/{id}/my-runner-key -> CreateMyRunnerKey
-DELETE /api/v1/orgs/{id}/my-runner-key -> RevokeMyRunnerKey
+DELETE /api/v1/orgs/{id}/my-runner-key -> RevokeMyRunnerKey [alwaysWritable]
 GET /api/v1/orgs/{id}/quality-rules -> GetWorkspaceQualityRules
 PUT /api/v1/orgs/{id}/quality-rules -> UpdateWorkspaceQualityRules
 POST /api/v1/orgs/{id}/connector-pairing -> CreateConnectorPairing
@@ -307,7 +307,7 @@ GET /api/v1/release -> GetRelease
 GET /api/v1/public/release -> GetPublicRelease
 GET /api/v1/public/build -> GetPublicBuild
 GET /api/v1/orgs/{id}/features -> GetOrgFeatures
-PUT /api/v1/orgs/{id}/members/me/preview -> SetMyStablePreview
+PUT /api/v1/orgs/{id}/members/me/preview -> SetMyStablePreview [alwaysWritable]
 GET /api/v1/me/default-workspace -> GetDefaultWorkspace
 PUT /api/v1/me/default-workspace -> SetDefaultWorkspace
 POST /api/v1/runner-pool/nodes -> RegisterPoolNode
@@ -316,7 +316,7 @@ POST /api/v1/runner-pool/nodes/{id}/release -> ReleasePoolNode
 GET /api/v1/orgs/{id}/runner-session -> GetRunnerSession
 POST /api/v1/orgs/{id}/runner-session -> StartRunnerSession
 POST /api/v1/orgs/{id}/runner-session/extend -> ExtendRunnerSession
-DELETE /api/v1/orgs/{id}/runner-session -> EndRunnerSession
+DELETE /api/v1/orgs/{id}/runner-session -> EndRunnerSession [alwaysWritable]
 GET /api/v1/orgs/{id}/runner-pool -> GetRunnerPool
 GET /api/v1/meta/attribute-definitions -> MetaAttributeDefinitions
 GET /api/v1/attribute-definitions -> ListAttributeDefinitions

@@ -344,10 +344,13 @@ section the events every column's workspace published are listed, and a
 section that must leave them quiet fails if one published.
 `over_plan_tiers_on` and `over_plan_self_hosted` are step areas under the
 S4b profiles: a workspace over its plan is read-only (`plan_read_only`) for
-a write of every guard kind that carries the gate, the nine always-writable
-routes answer as on a writable workspace, export and import work on it
-(REQ-113), only `POST /api/v1/projects` counts projects (Q13), and the
-hosted claim's plan flag. `tour_s5e_phantom_matrix_test.go` is the worked
+a write of each project role's guard, the workspace admin's and member's
+and a scoped write's (`internal/api`'s `plan_read_only_exemptions_test.go`
+refuses the gated writes left to runner sessions and a run's editor, and a
+DELETE), the sixteen always-writable routes answer as on a writable
+workspace, export and import work on it (REQ-113), only
+`POST /api/v1/projects` counts projects (Q13), and the hosted claim's plan
+flag. `tour_s5e_phantom_matrix_test.go` is the worked
 example of a matrix. It added to the framework: `tour.matrix` with its
 sections, `row`, `rowAs`, `rowCounting`, `countLists`, `expectRoutes` and
 `readSectionEvents` (`tour_matrix_test.go`); the golden's `matrix`,

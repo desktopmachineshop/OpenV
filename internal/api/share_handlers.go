@@ -38,7 +38,7 @@ import (
 func (h *Handler) registerShareRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/projects/{id}/share-links", h.ListShareLinks).Methods("GET")
 	router.HandleFunc("/api/v1/projects/{id}/share-links", h.CreateShareLink).Methods("POST")
-	router.HandleFunc("/api/v1/share-links/{id}", h.RevokeShareLink).Methods("DELETE")
+	router.HandleFunc("/api/v1/share-links/{id}", h.alwaysWritable(h.RevokeShareLink)).Methods("DELETE")
 	router.HandleFunc("/api/v1/public/share/{token}", h.OpenShareLink).Methods("GET")
 	router.HandleFunc("/api/v1/public/share/{token}/page", h.ShareLinkPage).Methods("GET")
 	router.HandleFunc("/api/v1/public/share/{token}/preview.png", h.ShareLinkPreview).Methods("GET")

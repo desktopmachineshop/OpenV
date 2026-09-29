@@ -63,8 +63,9 @@ type limitsResponse struct {
 	SelfHosted bool         `json:"self_hosted"`
 	Limits     []LimitUsage `json:"limits"`
 	// ReadOnly is true while the workspace holds more than its plan allows;
-	// OverPlan names the limits it is past. Every write is refused with
-	// plan_read_only until it upgrades or trims; reads and export never are.
+	// OverPlan names the limits it is past. Every write but the few that
+	// alwaysWritable marks is refused with plan_read_only until it upgrades
+	// or trims; reads and export never are.
 	ReadOnly bool     `json:"read_only"`
 	OverPlan []string `json:"over_plan,omitempty"`
 }
@@ -104,7 +105,12 @@ func (h *Handler) overPlan(org *orgs.Org) []string {
 // ctxAlwaysWritable marks a request for one of the few writes a read-only
 // workspace may still make: the ones that bring it back under its plan or
 // out of the platform (remove a member, revoke an invitation, delete a
-// project or the workspace), the billing endpoints, and import.
+// project or the workspace), the billing endpoints, and import; three
+// revocations, which only take access away (a worker key, one's own runner
+// key, a share link); three writes that touch only the caller's own session
+// or lease (make the workspace the session's active one, turn one's own
+// stable preview on or off, end one's cloud runner lease); and a run's
+// cancel, for whoever may cancel it.
 const ctxAlwaysWritable contextKey = "openv-always-writable"
 
 // alwaysWritable wraps a handler whose write is never refused for being

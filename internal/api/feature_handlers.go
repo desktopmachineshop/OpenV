@@ -20,7 +20,7 @@ import (
 
 func (h *Handler) registerFeatureRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/orgs/{id}/features", h.GetOrgFeatures).Methods("GET")
-	router.HandleFunc("/api/v1/orgs/{id}/members/me/preview", h.SetMyStablePreview).Methods("PUT")
+	router.HandleFunc("/api/v1/orgs/{id}/members/me/preview", h.alwaysWritable(h.SetMyStablePreview)).Methods("PUT")
 }
 
 // featuresResponse is what a client needs to gate its own UI.

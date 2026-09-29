@@ -363,7 +363,7 @@ the Phase 3 consolidations that give quirks their names.
 
 ## Q13. Only `POST /api/v1/projects` enforces the project maximum
 
-- **Where:** `checkProjectCount` (`internal/api/limits.go:326`) has one
+- **Where:** `checkProjectCount` (`internal/api/limits.go:339`) has one
   caller, `CreateProject` (`internal/api/handlers.go:1618`); the other
   project-creation paths do not count.
 - **Pinned by, named as:** S5e's over-plan pass under the S4 tiers-on
