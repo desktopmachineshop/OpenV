@@ -49,10 +49,10 @@ import (
 //   - clone: 201 with the team, not the graph; the default crew's clone has
 //     its entry node remapped and is_default false, and its graph each node
 //     and edge copied, each edge joining the copies; a clone's project_id is
-//     not checked (agent_teams.project_id has no foreign key), so a clone
-//     pinned to a project no one has is stored, readable by any member of W,
-//     and then refused to W's own admin, since the crew-write guard asks for a
-//     role in that project; the clone's graph, whose nodes and edges share
+//     checked as create checks a new crew's, so a project no one has is
+//     refused (400) and a clone pinned to P, made as setup, stays W's
+//     admin's to rename, since the crew-write guard asks for a role in P,
+//     which W's admins hold; the clone's graph, whose nodes and edges share
 //     one created_at;
 //   - export: application/json with Content-Disposition attachment and a
 //     filename made from the crew's name (founders-dev-team.crew.json for
@@ -75,8 +75,8 @@ import (
 //     handler has no user check, and the project guard lets a worker of the
 //     project's workspace through) and without a project (the admin guard's
 //     401), and the P-pinned crew, which the member, P's editor, gives a node
-//     and an entry and launches with no project: the pin guards the launch
-//     but does not scope the run (a run with no project and no card);
+//     and an entry and launches with no project: the run is scoped to the
+//     pin, P, with its tracking card there;
 //   - delete: 204, then 404; the member's 403; and Q14's null list, in the
 //     owner's personal workspace once its default crew is deleted.
 //
@@ -334,16 +334,18 @@ func crewsTeamsTour(tr *tour) {
 		unordered("/nodes", "CloneTeam stamps every node with one created_at, so ORDER BY created_at ties"),
 		unordered("/edges", "CloneTeam stamps every edge with one created_at, so ORDER BY created_at ties; the "+
 			"chief's three delegations differ only in the node each joins, numbered in the sorted /nodes"))
-	orphan := tr.step("clone the tour's crew pinned to a project no one has: 201, the project_id stored as sent "+
-		"(agent_teams.project_id has no foreign key)", o, clone, id("crew"),
-		jsonBody(`{"name":"Tour Crew Copy","project_id":"{{phantom}}"}`))
-	orphan.capture("orphan", "/id")
-	orphan.capture("orphan.lead", "/entry_node_id")
-	tr.step("the clone's graph: every node and edge copied under new ids with one created_at", o, get, id("orphan"),
+	tr.step("clone the tour's crew pinned to a project no one has: 400, the project checked as create checks it",
+		o, clone, id("crew"), jsonBody(`{"name":"Tour Crew Copy","project_id":"{{phantom}}"}`))
+	pinned := tr.setup("clone the tour's crew pinned to P", o, clone, id("crew"),
+		jsonBody(`{"name":"Tour Crew Copy","project_id":"{{p}}"}`), expect(201))
+	pinned.capture("pcopy", "/id")
+	pinned.capture("pcopy.lead", "/entry_node_id")
+	tr.step("the clone pinned to P: its graph, every node and edge copied under new ids with one created_at", o, get,
+		id("pcopy"),
 		unordered("/nodes", "CloneTeam stamps every node with one created_at, so ORDER BY created_at ties"),
 		unordered("/edges", "CloneTeam stamps every edge with one created_at, so ORDER BY created_at ties"))
-	tr.step("W's admin renames the clone pinned to no project: 403, the crew-write guard asks for a role in "+
-		"that project", o, update, id("orphan"), jsonBody(`{"name":"Tour Orphan"}`))
+	tr.step("W's admin renames the clone pinned to P: 200, the crew-write guard's role in P, which W's admins hold",
+		o, update, id("pcopy"), jsonBody(`{"name":"Tour P Copy"}`))
 	tr.step("clone with no name: 400", o, clone, id("crew"), jsonBody(`{}`))
 	tr.step("the member clones the workspace-wide crew: 403", m, clone, id("crew"), jsonBody(`{"name":"Mine"}`))
 	tr.step("clone a crew no one has: 404", o, clone, id("phantom"), jsonBody(`{"name":"Ghost"}`))
@@ -416,8 +418,10 @@ func crewsTeamsTour(tr *tour) {
 		id("pcrew"), jsonBody(`{"agent_id":"{{lead}}","label":"Lead"}`)).capture("pcrew.lead", "/id")
 	tr.step("the member makes it the entry: 200", m, update, id("pcrew"),
 		jsonBody(`{"entry_node_id":"{{pcrew.lead}}"}`))
-	tr.step("the member launches the P crew with no project: 201, the pin guards the launch but does not scope "+
-		"the run", m, launch, id("pcrew"), jsonBody(`{"prompt":"Plan my week."}`)).capture("crun.pinned", "/id")
+	pinnedRun := tr.step("the member launches the P crew with no project: 201, the run scoped to the pin, P, and "+
+		"the board's tracking card there", m, launch, id("pcrew"), jsonBody(`{"prompt":"Plan my week."}`))
+	pinnedRun.capture("crun.pinned", "/id")
+	pinnedRun.capture("crun.pinned.card", "/work_item_id")
 
 	// (12) Delete.
 	tr.step("the member deletes the workspace-wide crew: 403", m, remove, id("crew"))

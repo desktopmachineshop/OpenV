@@ -220,7 +220,7 @@ POST /api/v1/automations/{id}/run-now: session, scoped-write
 POST /api/v1/chatter: project:reviewer
 POST /api/v1/crews: session, project:editor, org:admin
 POST /api/v1/crews/import: session, project:editor, org:admin
-POST /api/v1/crews/{id}/clone: session, scoped-write
+POST /api/v1/crews/{id}/clone: session, scoped-write, project:editor, org:admin
 POST /api/v1/crews/{id}/edges: session, scoped-write
 POST /api/v1/crews/{id}/nodes: session, scoped-write
 POST /api/v1/crews/{id}/runs: project:editor, org:admin, project:editor
@@ -279,8 +279,8 @@ POST /api/v1/proposals/{id}/approve: project:editor
 POST /api/v1/proposals/{id}/reject: project:editor
 POST /api/v1/provider-logins: org:admin|org:member
 POST /api/v1/provider-logins/claim: worker
-POST /api/v1/provider-logins/{id}/cancel: -
-POST /api/v1/provider-logins/{id}/code: -
+POST /api/v1/provider-logins/{id}/cancel: org:admin
+POST /api/v1/provider-logins/{id}/code: org:admin
 POST /api/v1/provider-logins/{id}/progress: worker
 POST /api/v1/provider-settings/detect: worker
 POST /api/v1/public/connector/pair: -
@@ -293,7 +293,7 @@ POST /api/v1/shared-products: org:member
 POST /api/v1/shared-products/{id}/report: -
 POST /api/v1/teams: session, project:editor, org:admin
 POST /api/v1/teams/import: session, project:editor, org:admin
-POST /api/v1/teams/{id}/clone: session, scoped-write
+POST /api/v1/teams/{id}/clone: session, scoped-write, project:editor, org:admin
 POST /api/v1/teams/{id}/edges: session, scoped-write
 POST /api/v1/teams/{id}/nodes: session, scoped-write
 POST /api/v1/teams/{id}/runs: project:editor, org:admin, project:editor

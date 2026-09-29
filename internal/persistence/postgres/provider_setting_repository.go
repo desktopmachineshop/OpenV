@@ -17,7 +17,8 @@ func NewProviderSettingRepository(db *sql.DB) *ProviderSettingRepository {
 	return &ProviderSettingRepository{db: db}
 }
 
-// Upsert inserts or updates the setting row for a provider.
+// Upsert inserts or updates the setting row for a provider, and sets p.ID to
+// the stored row's id: an update keeps the id the row was inserted with.
 func (r *ProviderSettingRepository) Upsert(p *providers.ProviderSetting) error {
 	lastDetected := p.LastDetected
 	if lastDetected == nil {
@@ -27,7 +28,7 @@ func (r *ProviderSettingRepository) Upsert(p *providers.ProviderSetting) error {
 	if err != nil {
 		return err
 	}
-	_, err = r.db.Exec(`
+	return r.db.QueryRow(`
 		INSERT INTO provider_settings (
 			id, org_id, provider, auth_mode, api_key_env, default_model, enabled, last_detected, updated_at
 		)
@@ -39,10 +40,10 @@ func (r *ProviderSettingRepository) Upsert(p *providers.ProviderSetting) error {
 			enabled = EXCLUDED.enabled,
 			last_detected = EXCLUDED.last_detected,
 			updated_at = EXCLUDED.updated_at
+		RETURNING id
 	`,
 		p.ID, p.OrgID, p.Provider, p.AuthMode, p.APIKeyEnv, p.DefaultModel, p.Enabled, payload, p.UpdatedAt,
-	)
-	return err
+	).Scan(&p.ID)
 }
 
 func scanProviderSetting(scan func(dest ...interface{}) error) (*providers.ProviderSetting, error) {

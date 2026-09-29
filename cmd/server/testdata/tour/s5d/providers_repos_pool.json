@@ -423,7 +423,7 @@
     },
     {
       "n": 3,
-      "title": "store claude-code again, back on its subscription: the echo carries a fresh id, while the stored row keeps the first (the upsert updates on org and provider)",
+      "title": "store claude-code again, back on its subscription: the echo carries the stored row's first id (the upsert updates on org and provider, and returns the row's id)",
       "actor": "owner",
       "acting_in": "<w>",
       "route": "PUT /api/v1/provider-settings",
@@ -442,11 +442,11 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<uuid:1>\",\"org_id\":\"<w>\",\"provider\":\"claude-code\",\"auth_mode\":\"subscription-cli\",\"api_key_env\":\"\",\"default_model\":\"\",\"enabled\":false,\"last_detected\":{},\"updated_at\":\"<time@step 3>\",\"available_models\":[{\"id\":\"opus\",\"label\":\"opus (latest Opus)\"},{\"id\":\"sonnet\",\"label\":\"sonnet (latest Sonnet)\"},{\"id\":\"haiku\",\"label\":\"haiku (latest Haiku)\"},{\"id\":\"claude-opus-5\",\"label\":\"Claude Opus 5\"},{\"id\":\"claude-opus-4-8\",\"label\":\"Claude Opus 4.8\"},{\"id\":\"claude-sonnet-5\",\"label\":\"Claude Sonnet 5\"},{\"id\":\"claude-sonnet-4-6\",\"label\":\"Claude Sonnet 4.6\"},{\"id\":\"claude-haiku-4-5\",\"label\":\"Claude Haiku 4.5\"}]}"
+        "{\"id\":\"<setting1>\",\"org_id\":\"<w>\",\"provider\":\"claude-code\",\"auth_mode\":\"subscription-cli\",\"api_key_env\":\"\",\"default_model\":\"\",\"enabled\":false,\"last_detected\":{},\"updated_at\":\"<time@step 3>\",\"available_models\":[{\"id\":\"opus\",\"label\":\"opus (latest Opus)\"},{\"id\":\"sonnet\",\"label\":\"sonnet (latest Sonnet)\"},{\"id\":\"haiku\",\"label\":\"haiku (latest Haiku)\"},{\"id\":\"claude-opus-5\",\"label\":\"Claude Opus 5\"},{\"id\":\"claude-opus-4-8\",\"label\":\"Claude Opus 4.8\"},{\"id\":\"claude-sonnet-5\",\"label\":\"Claude Sonnet 5\"},{\"id\":\"claude-sonnet-4-6\",\"label\":\"Claude Sonnet 4.6\"},{\"id\":\"claude-haiku-4-5\",\"label\":\"Claude Haiku 4.5\"}]}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "id": "<uuid:1>",
+        "id": "<setting1>",
         "org_id": "<w>",
         "provider": "claude-code",
         "auth_mode": "subscription-cli",
@@ -907,7 +907,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<setting1>\",\"org_id\":\"<w>\",\"provider\":\"claude-code\",\"auth_mode\":\"subscription-cli\",\"api_key_env\":\"\",\"default_model\":\"\",\"enabled\":false,\"last_detected\":{\"checked_at\":\"<time>\",\"version\":\"x\"},\"updated_at\":\"<time@step 10>\",\"available_models\":[{\"id\":\"opus\",\"label\":\"opus (latest Opus)\"},{\"id\":\"sonnet\",\"label\":\"sonnet (latest Sonnet)\"},{\"id\":\"haiku\",\"label\":\"haiku (latest Haiku)\"},{\"id\":\"claude-opus-5\",\"label\":\"Claude Opus 5\"},{\"id\":\"claude-opus-4-8\",\"label\":\"Claude Opus 4.8\"},{\"id\":\"claude-sonnet-5\",\"label\":\"Claude Sonnet 5\"},{\"id\":\"claude-sonnet-4-6\",\"label\":\"Claude Sonnet 4.6\"},{\"id\":\"claude-haiku-4-5\",\"label\":\"Claude Haiku 4.5\"}]},{\"id\":\"<an id minted on the read>\",\"org_id\":\"<w>\",\"provider\":\"codex-cli\",\"auth_mode\":\"subscription-cli\",\"api_key_env\":\"\",\"default_model\":\"\",\"enabled\":true,\"last_detected\":{},\"updated_at\":\"<time@step 18>\",\"available_models\":[{\"id\":\"gpt-5.1-codex\",\"label\":\"GPT-5.1 Codex\"},{\"id\":\"gpt-5-codex\",\"label\":\"GPT-5 Codex\"},{\"id\":\"gpt-5.1\",\"label\":\"GPT-5.1\"},{\"id\":\"gpt-5\",\"label\":\"GPT-5\"},{\"id\":\"o3\",\"label\":\"o3\"}]},{\"id\":\"<uuid:2>\",\"org_id\":\"<w>\",\"provider\":\"gemini-cli\",\"auth_mode\":\"subscription-cli\",\"api_key_env\":\"\",\"default_model\":\"\",\"enabled\":true,\"last_detected\":{\"checked_at\":\"<time>\",\"models\":[\"gemini-tour\",{\"id\":\"gemini-2.5-pro\",\"label\":\"Gemini 2.5 Pro (detected)\"}],\"version\":\"0.9\"},\"updated_at\":\"<time@step 11>\",\"available_models\":[{\"id\":\"gemini-tour\",\"label\":\"gemini-tour\"},{\"id\":\"gemini-2.5-pro\",\"label\":\"Gemini 2.5 Pro (detected)\"},{\"id\":\"gemini-2.5-flash\",\"label\":\"Gemini 2.5 Flash\"},{\"id\":\"gemini-2.0-flash\",\"label\":\"Gemini 2.0 Flash\"}]},{\"id\":\"<an id minted on the read>\",\"org_id\":\"<w>\",\"provider\":\"antigravity-cli\",\"auth_mode\":\"api-key\",\"api_key_env\":\"\",\"default_model\":\"\",\"enabled\":true,\"last_detected\":{},\"updated_at\":\"<time@step 18>\",\"available_models\":[{\"id\":\"gemini-3.5-flash-medium\",\"label\":\"Gemini 3.5 Flash (medium)\"}]},{\"id\":\"<an id minted on the read>\",\"org_id\":\"<w>\",\"provider\":\"anthropic-api\",\"auth_mode\":\"api-key\",\"api_key_env\":\"\",\"default_model\":\"\",\"enabled\":true,\"last_detected\":{},\"updated_at\":\"<time@step 18>\",\"available_models\":[{\"id\":\"claude-opus-5\",\"label\":\"Claude Opus 5\"},{\"id\":\"claude-opus-4-8\",\"label\":\"Claude Opus 4.8\"},{\"id\":\"claude-opus-4-7\",\"label\":\"Claude Opus 4.7\"},{\"id\":\"claude-sonnet-5\",\"label\":\"Claude Sonnet 5\"},{\"id\":\"claude-sonnet-4-6\",\"label\":\"Claude Sonnet 4.6\"},{\"id\":\"claude-haiku-4-5\",\"label\":\"Claude Haiku 4.5\"},{\"id\":\"claude-fable-5\",\"label\":\"Claude Fable 5\"}]},{\"id\":\"<an id minted on the read>\",\"org_id\":\"<w>\",\"provider\":\"openai-api\",\"auth_mode\":\"api-key\",\"api_key_env\":\"\",\"default_model\":\"\",\"enabled\":true,\"last_detected\":{},\"updated_at\":\"<time@step 18>\",\"available_models\":[{\"id\":\"gpt-5.1\",\"label\":\"GPT-5.1\"},{\"id\":\"gpt-5\",\"label\":\"GPT-5\"},{\"id\":\"gpt-5-mini\",\"label\":\"GPT-5 mini\"},{\"id\":\"gpt-4.1\",\"label\":\"GPT-4.1\"},{\"id\":\"o3\",\"label\":\"o3\"}]},{\"id\":\"<an id minted on the read>\",\"org_id\":\"<w>\",\"provider\":\"google-api\",\"auth_mode\":\"api-key\",\"api_key_env\":\"\",\"default_model\":\"\",\"enabled\":true,\"last_detected\":{},\"updated_at\":\"<time@step 18>\",\"available_models\":[{\"id\":\"gemini-2.5-pro\",\"label\":\"Gemini 2.5 Pro\"},{\"id\":\"gemini-2.5-flash\",\"label\":\"Gemini 2.5 Flash\"},{\"id\":\"gemini-2.5-flash-lite\",\"label\":\"Gemini 2.5 Flash Lite\"},{\"id\":\"gemini-2.0-flash\",\"label\":\"Gemini 2.0 Flash\"}]}]"
+        "[{\"id\":\"<setting1>\",\"org_id\":\"<w>\",\"provider\":\"claude-code\",\"auth_mode\":\"subscription-cli\",\"api_key_env\":\"\",\"default_model\":\"\",\"enabled\":false,\"last_detected\":{\"checked_at\":\"<time>\",\"version\":\"x\"},\"updated_at\":\"<time@step 10>\",\"available_models\":[{\"id\":\"opus\",\"label\":\"opus (latest Opus)\"},{\"id\":\"sonnet\",\"label\":\"sonnet (latest Sonnet)\"},{\"id\":\"haiku\",\"label\":\"haiku (latest Haiku)\"},{\"id\":\"claude-opus-5\",\"label\":\"Claude Opus 5\"},{\"id\":\"claude-opus-4-8\",\"label\":\"Claude Opus 4.8\"},{\"id\":\"claude-sonnet-5\",\"label\":\"Claude Sonnet 5\"},{\"id\":\"claude-sonnet-4-6\",\"label\":\"Claude Sonnet 4.6\"},{\"id\":\"claude-haiku-4-5\",\"label\":\"Claude Haiku 4.5\"}]},{\"id\":\"<an id minted on the read>\",\"org_id\":\"<w>\",\"provider\":\"codex-cli\",\"auth_mode\":\"subscription-cli\",\"api_key_env\":\"\",\"default_model\":\"\",\"enabled\":true,\"last_detected\":{},\"updated_at\":\"<time@step 18>\",\"available_models\":[{\"id\":\"gpt-5.1-codex\",\"label\":\"GPT-5.1 Codex\"},{\"id\":\"gpt-5-codex\",\"label\":\"GPT-5 Codex\"},{\"id\":\"gpt-5.1\",\"label\":\"GPT-5.1\"},{\"id\":\"gpt-5\",\"label\":\"GPT-5\"},{\"id\":\"o3\",\"label\":\"o3\"}]},{\"id\":\"<uuid:1>\",\"org_id\":\"<w>\",\"provider\":\"gemini-cli\",\"auth_mode\":\"subscription-cli\",\"api_key_env\":\"\",\"default_model\":\"\",\"enabled\":true,\"last_detected\":{\"checked_at\":\"<time>\",\"models\":[\"gemini-tour\",{\"id\":\"gemini-2.5-pro\",\"label\":\"Gemini 2.5 Pro (detected)\"}],\"version\":\"0.9\"},\"updated_at\":\"<time@step 11>\",\"available_models\":[{\"id\":\"gemini-tour\",\"label\":\"gemini-tour\"},{\"id\":\"gemini-2.5-pro\",\"label\":\"Gemini 2.5 Pro (detected)\"},{\"id\":\"gemini-2.5-flash\",\"label\":\"Gemini 2.5 Flash\"},{\"id\":\"gemini-2.0-flash\",\"label\":\"Gemini 2.0 Flash\"}]},{\"id\":\"<an id minted on the read>\",\"org_id\":\"<w>\",\"provider\":\"antigravity-cli\",\"auth_mode\":\"api-key\",\"api_key_env\":\"\",\"default_model\":\"\",\"enabled\":true,\"last_detected\":{},\"updated_at\":\"<time@step 18>\",\"available_models\":[{\"id\":\"gemini-3.5-flash-medium\",\"label\":\"Gemini 3.5 Flash (medium)\"}]},{\"id\":\"<an id minted on the read>\",\"org_id\":\"<w>\",\"provider\":\"anthropic-api\",\"auth_mode\":\"api-key\",\"api_key_env\":\"\",\"default_model\":\"\",\"enabled\":true,\"last_detected\":{},\"updated_at\":\"<time@step 18>\",\"available_models\":[{\"id\":\"claude-opus-5\",\"label\":\"Claude Opus 5\"},{\"id\":\"claude-opus-4-8\",\"label\":\"Claude Opus 4.8\"},{\"id\":\"claude-opus-4-7\",\"label\":\"Claude Opus 4.7\"},{\"id\":\"claude-sonnet-5\",\"label\":\"Claude Sonnet 5\"},{\"id\":\"claude-sonnet-4-6\",\"label\":\"Claude Sonnet 4.6\"},{\"id\":\"claude-haiku-4-5\",\"label\":\"Claude Haiku 4.5\"},{\"id\":\"claude-fable-5\",\"label\":\"Claude Fable 5\"}]},{\"id\":\"<an id minted on the read>\",\"org_id\":\"<w>\",\"provider\":\"openai-api\",\"auth_mode\":\"api-key\",\"api_key_env\":\"\",\"default_model\":\"\",\"enabled\":true,\"last_detected\":{},\"updated_at\":\"<time@step 18>\",\"available_models\":[{\"id\":\"gpt-5.1\",\"label\":\"GPT-5.1\"},{\"id\":\"gpt-5\",\"label\":\"GPT-5\"},{\"id\":\"gpt-5-mini\",\"label\":\"GPT-5 mini\"},{\"id\":\"gpt-4.1\",\"label\":\"GPT-4.1\"},{\"id\":\"o3\",\"label\":\"o3\"}]},{\"id\":\"<an id minted on the read>\",\"org_id\":\"<w>\",\"provider\":\"google-api\",\"auth_mode\":\"api-key\",\"api_key_env\":\"\",\"default_model\":\"\",\"enabled\":true,\"last_detected\":{},\"updated_at\":\"<time@step 18>\",\"available_models\":[{\"id\":\"gemini-2.5-pro\",\"label\":\"Gemini 2.5 Pro\"},{\"id\":\"gemini-2.5-flash\",\"label\":\"Gemini 2.5 Flash\"},{\"id\":\"gemini-2.5-flash-lite\",\"label\":\"Gemini 2.5 Flash Lite\"},{\"id\":\"gemini-2.0-flash\",\"label\":\"Gemini 2.0 Flash\"}]}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -993,7 +993,7 @@
           ]
         },
         {
-          "id": "<uuid:2>",
+          "id": "<uuid:1>",
           "org_id": "<w>",
           "provider": "gemini-cli",
           "auth_mode": "subscription-cli",
@@ -1976,7 +1976,7 @@
     },
     {
       "n": 44,
-      "title": "the box key reports a failure after completion: accepted, 200",
+      "title": "the box key reports a failure after completion: 200, the request as it is, still completed",
       "actor": "box",
       "route": "POST /api/v1/provider-logins/{id}/progress",
       "request": {
@@ -1994,7 +1994,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<login1>\",\"org_id\":\"<w>\",\"provider\":\"claude-code\",\"target\":\"workspace\",\"status\":\"failed\",\"auth_url\":\"https://claude.example/oauth?client=tour\\u0026state=1\",\"code\":\"tour-code-123\",\"detail\":\"The CLI exited.\",\"paste_kind\":\"code\",\"requested_by\":\"<owner>\",\"created_at\":\"<time@step 19>\",\"updated_at\":\"<time@step 44>\"}"
+        "{\"id\":\"<login1>\",\"org_id\":\"<w>\",\"provider\":\"claude-code\",\"target\":\"workspace\",\"status\":\"completed\",\"auth_url\":\"https://claude.example/oauth?client=tour\\u0026state=1\",\"code\":\"tour-code-123\",\"detail\":\"Signed in.\",\"paste_kind\":\"code\",\"requested_by\":\"<owner>\",\"created_at\":\"<time@step 19>\",\"updated_at\":\"<time@step 41>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -2002,14 +2002,14 @@
         "org_id": "<w>",
         "provider": "claude-code",
         "target": "workspace",
-        "status": "failed",
+        "status": "completed",
         "auth_url": "https://claude.example/oauth?client=tour\u0026state=1",
         "code": "tour-code-123",
-        "detail": "The CLI exited.",
+        "detail": "Signed in.",
         "paste_kind": "code",
         "requested_by": "<owner>",
         "created_at": "<time@step 19>",
-        "updated_at": "<time@step 44>"
+        "updated_at": "<time@step 41>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
@@ -2373,7 +2373,7 @@
     },
     {
       "n": 56,
-      "title": "the member cancels it: 200, cancelled, though it could not have started it",
+      "title": "the member cancels it: 403, the workspace admin guard, as its start's",
       "actor": "member",
       "acting_in": "<w>",
       "route": "POST /api/v1/provider-logins/{id}/cancel",
@@ -2381,27 +2381,18 @@
         "method": "POST",
         "path": "/api/v1/provider-logins/<login3>/cancel"
       },
-      "status": 200,
-      "content_type": "text/plain; charset=utf-8",
+      "status": 403,
+      "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": "<varies>",
+      "content_length": 44,
       "kind": "json",
       "body": [
-        "{\"id\":\"<login3>\",\"org_id\":\"<w>\",\"provider\":\"gemini-cli\",\"target\":\"workspace\",\"status\":\"cancelled\",\"auth_url\":\"\",\"detail\":\"Cancelled by user.\",\"requested_by\":\"<owner>\",\"created_at\":\"<time@step 54>\",\"updated_at\":\"<time@step 56>\"}"
+        "{\"error\":\"workspace admin access required\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "id": "<login3>",
-        "org_id": "<w>",
-        "provider": "gemini-cli",
-        "target": "workspace",
-        "status": "cancelled",
-        "auth_url": "",
-        "detail": "Cancelled by user.",
-        "requested_by": "<owner>",
-        "created_at": "<time@step 54>",
-        "updated_at": "<time@step 56>"
+        "error": "workspace admin access required"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []

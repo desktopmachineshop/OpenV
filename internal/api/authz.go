@@ -209,10 +209,24 @@ func (h *Handler) requireRunAccess(w http.ResponseWriter, r *http.Request, run *
 // requireTeamWrite enforces crew mutations: project-pinned crews need project
 // editor rights, workspace-wide crews need workspace admin rights.
 func (h *Handler) requireTeamWrite(w http.ResponseWriter, r *http.Request, team *teams.Team) bool {
-	if team.ProjectID != nil && *team.ProjectID != "" {
-		return h.requireProjectRole(w, r, *team.ProjectID, members.RoleEditor)
+	if pin := h.teamPin(team); pin != "" {
+		return h.requireProjectRole(w, r, pin, members.RoleEditor)
 	}
 	return h.requireOrgRole(w, r, team.OrgID, orgs.RoleAdmin)
+}
+
+// teamPin is the crew's pinned project while the pin still names a project of
+// the crew's own workspace. A pin to a deleted project, or to another
+// workspace's, counts as no pin, so the crew stays its workspace admins'.
+func (h *Handler) teamPin(team *teams.Team) string {
+	if team.ProjectID == nil || *team.ProjectID == "" {
+		return ""
+	}
+	project, err := h.projectService.GetProject(*team.ProjectID)
+	if err != nil || project == nil || (team.OrgID != "" && project.OrgID != team.OrgID) {
+		return ""
+	}
+	return *team.ProjectID
 }
 
 // requireAutomationWrite enforces automation mutations: project-pinned

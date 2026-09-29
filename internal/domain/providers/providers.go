@@ -103,7 +103,9 @@ type ProviderSetting struct {
 }
 
 // Repository defines persistence operations for provider settings.
-// FindByProvider returns (nil, nil) when no row exists.
+// Upsert stores one row per org and provider and sets the setting's ID to
+// that row's, which an update keeps. FindByProvider returns (nil, nil) when
+// no row exists.
 type Repository interface {
 	Upsert(p *ProviderSetting) error
 	FindByProvider(orgID, provider string) (*ProviderSetting, error)

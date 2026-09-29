@@ -27,11 +27,11 @@ import (
 //     defaults built in memory on each read (a fresh id and updated_at each
 //     time) with available_models from the built-in catalog; a PUT echoed,
 //     its default_model appended to the models; a second PUT for the same
-//     provider, whose echo carries an id the store never kept (the upsert
-//     keeps the first row's); the refusals (a body that does not decode, an
-//     unknown provider, an auth mode, an api_key_env outside the catalogue,
-//     whose message lists the whole catalogue, a member, a key); the
-//     worker's detection report, one provider per request (a report naming
+//     provider, whose echo carries the stored row's id (the upsert updates
+//     the first row and returns its id); the refusals (a body that does not
+//     decode, an unknown provider, an auth mode, an api_key_env outside the
+//     catalogue, whose message lists the whole catalogue, a member, a key);
+//     the worker's detection report, one provider per request (a report naming
 //     a known and an unknown provider records the known one and answers 400
 //     for the other, which internal/api's
 //     TestProviderDetectionRecordsEveryKnownProvider pins), merged into
@@ -49,12 +49,12 @@ import (
 //     a worker may not report), the user's reads and code (sanitised: no
 //     code), the worker's /full read (the code), completion, a code after
 //     it, a cancel of a completed request (unchanged), a failure after
-//     completion (accepted), a member's personal sign-in private to it and
-//     the workspace's admins, a cancel (Cancelled by user.) that a late
-//     worker update cannot undo, a plain member's cancel of a workspace
-//     sign-in it could not have started, another workspace's sign-in (404
-//     for the user and for the worker), a phantom id and one that is not a
-//     UUID;
+//     completion (answered with the request as it is, still completed), a
+//     member's personal sign-in private to it and the workspace's admins, a
+//     cancel (Cancelled by user.) that a late worker update cannot undo, a
+//     plain member's cancel of a workspace sign-in, refused as its start is
+//     (the admin cancels it as setup), another workspace's sign-in (404 for
+//     the user and for the worker), a phantom id and one that is not a UUID;
 //   - repository connections: none (null, Q14), two made by P's owner (the
 //     default branch main, credential_strategy host), the refusals, one made
 //     and deleted by W's worker key (a worker of the project's workspace
@@ -166,8 +166,8 @@ func providersReposPoolSettings(tr *tour, o, m, box, pool *tourActor) {
 	tr.step("store claude-code on the API key GOOGLE_API_KEY names, with a model of its own: 200, the row echoed, "+
 		"its model after the catalog's", o, put, jsonBody(`{"provider":"claude-code","auth_mode":"api-key",`+
 		`"api_key_env":"GOOGLE_API_KEY","default_model":"tour-model","enabled":true}`)).capture("setting1", "/id")
-	tr.step("store claude-code again, back on its subscription: the echo carries a fresh id, while the stored row "+
-		"keeps the first (the upsert updates on org and provider)", o, put,
+	tr.step("store claude-code again, back on its subscription: the echo carries the stored row's first id (the "+
+		"upsert updates on org and provider, and returns the row's id)", o, put,
 		jsonBody(`{"provider":"claude-code","auth_mode":"subscription-cli","enabled":false}`))
 	tr.step("store with a body that does not decode", o, put, jsonBody(`{`))
 	tr.step("store a provider no one knows", o, put, jsonBody(`{"provider":"tour-cli","auth_mode":"api-key"}`))
@@ -313,7 +313,8 @@ func providersReposPoolLogins(tr *tour, o, m, m2, box, runner, pool *tourActor) 
 		jsonBody(`{"status":"completed","detail":"Signed in."}`))
 	tr.step("paste a code after completion", o, code, login("login1"), jsonBody(`{"code":"too-late"}`))
 	tr.step("cancel the completed request: 200, as it is", o, cancel, login("login1"))
-	tr.step("the box key reports a failure after completion: accepted, 200", box, progress, login("login1"),
+	tr.step("the box key reports a failure after completion: 200, the request as it is, still completed", box,
+		progress, login("login1"),
 		jsonBody(`{"status":"failed","detail":"The CLI exited."}`))
 
 	// The member's personal sign-in: private to it and W's admins.
@@ -330,12 +331,13 @@ func providersReposPoolLogins(tr *tour, o, m, m2, box, runner, pool *tourActor) 
 	tr.step("the member's runner key starts one: the handler's 401", runner, start,
 		jsonBody(`{"provider":"claude-code","target":"user"}`))
 
-	// A workspace sign-in a plain member could not start, but reads and
-	// cancels.
+	// A workspace sign-in a plain member could not start: it reads it, and
+	// cannot cancel it.
 	tr.step("the admin starts a sign-in of gemini-cli on W's shared workers", o, start,
 		jsonBody(`{"provider":"gemini-cli"}`)).capture("login3", "/id")
 	tr.step("the member reads it: a workspace sign-in is any member's to read", m, get, login("login3"))
-	tr.step("the member cancels it: 200, cancelled, though it could not have started it", m, cancel, login("login3"))
+	tr.step("the member cancels it: 403, the workspace admin guard, as its start's", m, cancel, login("login3"))
+	tr.setup("the admin cancels it", o, cancel, login("login3"))
 	tr.step("the box key claims: 204, nothing pending is left", box, claim)
 
 	// Another workspace's sign-in, and ids no request has.

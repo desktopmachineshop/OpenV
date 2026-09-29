@@ -2874,7 +2874,7 @@
     },
     {
       "n": 73,
-      "title": "clone the tour's crew pinned to a project no one has: 201, the project_id stored as sent (agent_teams.project_id has no foreign key)",
+      "title": "clone the tour's crew pinned to a project no one has: 400, the project checked as create checks it",
       "actor": "owner",
       "acting_in": "<w>",
       "route": "POST /api/v1/crews/{id}/clone",
@@ -2886,39 +2886,31 @@
         ],
         "body": "{\"name\":\"Tour Crew Copy\",\"project_id\":\"<phantom>\"}"
       },
-      "status": 201,
-      "content_type": "text/plain; charset=utf-8",
+      "status": 400,
+      "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": "<varies>",
+      "content_length": 30,
       "kind": "json",
       "body": [
-        "{\"id\":\"<orphan>\",\"org_id\":\"<w>\",\"name\":\"Tour Crew Copy\",\"description\":\"Led by the tour.\",\"project_id\":\"<phantom>\",\"entry_node_id\":\"<orphan.lead>\",\"is_default\":false,\"created_at\":\"<time@step 73>\",\"updated_at\":\"<time@step 73>\"}"
+        "{\"error\":\"project not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "id": "<orphan>",
-        "org_id": "<w>",
-        "name": "Tour Crew Copy",
-        "description": "Led by the tour.",
-        "project_id": "<phantom>",
-        "entry_node_id": "<orphan.lead>",
-        "is_default": false,
-        "created_at": "<time@step 73>",
-        "updated_at": "<time@step 73>"
+        "error": "project not found"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
       "n": 74,
-      "title": "the clone's graph: every node and edge copied under new ids with one created_at",
+      "title": "the clone pinned to P: its graph, every node and edge copied under new ids with one created_at",
       "actor": "owner",
       "acting_in": "<w>",
       "route": "GET /api/v1/crews/{id}",
       "request": {
         "method": "GET",
-        "path": "/api/v1/crews/<orphan>"
+        "path": "/api/v1/crews/<pcopy>"
       },
       "status": 200,
       "content_type": "text/plain; charset=utf-8",
@@ -2927,25 +2919,25 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"team\":{\"id\":\"<orphan>\",\"org_id\":\"<w>\",\"name\":\"Tour Crew Copy\",\"description\":\"Led by the tour.\",\"project_id\":\"<phantom>\",\"entry_node_id\":\"<orphan.lead>\",\"is_default\":false,\"created_at\":\"<time@step 73>\",\"updated_at\":\"<time@step 73>\"},\"nodes\":[{\"id\":\"<orphan.lead>\",\"team_id\":\"<orphan>\",\"node_type\":\"agent\",\"agent_id\":\"<lead>\",\"user_id\":null,\"label\":\"Lead\",\"department\":\"Leadership\",\"position\":{\"network\":{\"x\":20,\"y\":10},\"org\":{\"x\":240,\"y\":0}},\"created_at\":\"<time@step 73>\"},{\"id\":\"<uuid:17>\",\"team_id\":\"<orphan>\",\"node_type\":\"agent\",\"agent_id\":\"<analyst>\",\"user_id\":null,\"label\":\"Senior Analyst\",\"department\":\"Requirements\",\"position\":{\"org\":{\"x\":0,\"y\":120}},\"created_at\":\"<time@step 73>\"},{\"id\":\"<uuid:18>\",\"team_id\":\"<orphan>\",\"node_type\":\"agent\",\"agent_id\":\"<developer>\",\"user_id\":null,\"label\":\"Developer\",\"department\":\"Engineering\",\"position\":{},\"created_at\":\"<time@step 73>\"},{\"id\":\"<uuid:19>\",\"team_id\":\"<orphan>\",\"node_type\":\"agent\",\"agent_id\":\"<reviewer>\",\"user_id\":null,\"label\":\"Reviewer\",\"department\":\"Engineering\",\"position\":{},\"created_at\":\"<time@step 73>\"},{\"id\":\"<uuid:20>\",\"team_id\":\"<orphan>\",\"node_type\":\"human\",\"agent_id\":\"\",\"user_id\":\"<member>\",\"user_name\":\"Tour Member\",\"label\":\"Product owner\",\"department\":\"Product\",\"position\":{},\"created_at\":\"<time@step 73>\"}],\"edges\":[{\"id\":\"<uuid:21>\",\"team_id\":\"<orphan>\",\"from_node_id\":\"<orphan.lead>\",\"to_node_id\":\"<uuid:17>\",\"edge_type\":\"delegates-to\",\"config\":{},\"created_at\":\"<time@step 73>\"},{\"id\":\"<uuid:22>\",\"team_id\":\"<orphan>\",\"from_node_id\":\"<uuid:17>\",\"to_node_id\":\"<uuid:18>\",\"edge_type\":\"delegates-to\",\"config\":{\"note\":\"Build what the analyst specified.\"},\"created_at\":\"<time@step 73>\"},{\"id\":\"<uuid:23>\",\"team_id\":\"<orphan>\",\"from_node_id\":\"<uuid:17>\",\"to_node_id\":\"<uuid:20>\",\"edge_type\":\"hands-off-to\",\"config\":{},\"created_at\":\"<time@step 73>\"},{\"id\":\"<uuid:24>\",\"team_id\":\"<orphan>\",\"from_node_id\":\"<uuid:18>\",\"to_node_id\":\"<uuid:19>\",\"edge_type\":\"reviews\",\"config\":{},\"created_at\":\"<time@step 73>\"}]}"
+        "{\"team\":{\"id\":\"<pcopy>\",\"org_id\":\"<w>\",\"name\":\"Tour Crew Copy\",\"description\":\"Led by the tour.\",\"project_id\":\"<p>\",\"entry_node_id\":\"<pcopy.lead>\",\"is_default\":false,\"created_at\":\"<time@before step 74>\",\"updated_at\":\"<time@before step 74>\"},\"nodes\":[{\"id\":\"<pcopy.lead>\",\"team_id\":\"<pcopy>\",\"node_type\":\"agent\",\"agent_id\":\"<lead>\",\"user_id\":null,\"label\":\"Lead\",\"department\":\"Leadership\",\"position\":{\"network\":{\"x\":20,\"y\":10},\"org\":{\"x\":240,\"y\":0}},\"created_at\":\"<time@before step 74>\"},{\"id\":\"<uuid:17>\",\"team_id\":\"<pcopy>\",\"node_type\":\"agent\",\"agent_id\":\"<analyst>\",\"user_id\":null,\"label\":\"Senior Analyst\",\"department\":\"Requirements\",\"position\":{\"org\":{\"x\":0,\"y\":120}},\"created_at\":\"<time@before step 74>\"},{\"id\":\"<uuid:18>\",\"team_id\":\"<pcopy>\",\"node_type\":\"agent\",\"agent_id\":\"<developer>\",\"user_id\":null,\"label\":\"Developer\",\"department\":\"Engineering\",\"position\":{},\"created_at\":\"<time@before step 74>\"},{\"id\":\"<uuid:19>\",\"team_id\":\"<pcopy>\",\"node_type\":\"agent\",\"agent_id\":\"<reviewer>\",\"user_id\":null,\"label\":\"Reviewer\",\"department\":\"Engineering\",\"position\":{},\"created_at\":\"<time@before step 74>\"},{\"id\":\"<uuid:20>\",\"team_id\":\"<pcopy>\",\"node_type\":\"human\",\"agent_id\":\"\",\"user_id\":\"<member>\",\"user_name\":\"Tour Member\",\"label\":\"Product owner\",\"department\":\"Product\",\"position\":{},\"created_at\":\"<time@before step 74>\"}],\"edges\":[{\"id\":\"<uuid:21>\",\"team_id\":\"<pcopy>\",\"from_node_id\":\"<pcopy.lead>\",\"to_node_id\":\"<uuid:17>\",\"edge_type\":\"delegates-to\",\"config\":{},\"created_at\":\"<time@before step 74>\"},{\"id\":\"<uuid:22>\",\"team_id\":\"<pcopy>\",\"from_node_id\":\"<uuid:17>\",\"to_node_id\":\"<uuid:18>\",\"edge_type\":\"delegates-to\",\"config\":{\"note\":\"Build what the analyst specified.\"},\"created_at\":\"<time@before step 74>\"},{\"id\":\"<uuid:23>\",\"team_id\":\"<pcopy>\",\"from_node_id\":\"<uuid:17>\",\"to_node_id\":\"<uuid:20>\",\"edge_type\":\"hands-off-to\",\"config\":{},\"created_at\":\"<time@before step 74>\"},{\"id\":\"<uuid:24>\",\"team_id\":\"<pcopy>\",\"from_node_id\":\"<uuid:18>\",\"to_node_id\":\"<uuid:19>\",\"edge_type\":\"reviews\",\"config\":{},\"created_at\":\"<time@before step 74>\"}]}"
       ],
       "trailing_newline": true,
       "parsed": {
         "team": {
-          "id": "<orphan>",
+          "id": "<pcopy>",
           "org_id": "<w>",
           "name": "Tour Crew Copy",
           "description": "Led by the tour.",
-          "project_id": "<phantom>",
-          "entry_node_id": "<orphan.lead>",
+          "project_id": "<p>",
+          "entry_node_id": "<pcopy.lead>",
           "is_default": false,
-          "created_at": "<time@step 73>",
-          "updated_at": "<time@step 73>"
+          "created_at": "<time@before step 74>",
+          "updated_at": "<time@before step 74>"
         },
         "nodes": [
           {
-            "id": "<orphan.lead>",
-            "team_id": "<orphan>",
+            "id": "<pcopy.lead>",
+            "team_id": "<pcopy>",
             "node_type": "agent",
             "agent_id": "<lead>",
             "user_id": null,
@@ -2961,11 +2953,11 @@
                 "y": 0
               }
             },
-            "created_at": "<time@step 73>"
+            "created_at": "<time@before step 74>"
           },
           {
             "id": "<uuid:17>",
-            "team_id": "<orphan>",
+            "team_id": "<pcopy>",
             "node_type": "agent",
             "agent_id": "<analyst>",
             "user_id": null,
@@ -2977,33 +2969,33 @@
                 "y": 120
               }
             },
-            "created_at": "<time@step 73>"
+            "created_at": "<time@before step 74>"
           },
           {
             "id": "<uuid:18>",
-            "team_id": "<orphan>",
+            "team_id": "<pcopy>",
             "node_type": "agent",
             "agent_id": "<developer>",
             "user_id": null,
             "label": "Developer",
             "department": "Engineering",
             "position": {},
-            "created_at": "<time@step 73>"
+            "created_at": "<time@before step 74>"
           },
           {
             "id": "<uuid:19>",
-            "team_id": "<orphan>",
+            "team_id": "<pcopy>",
             "node_type": "agent",
             "agent_id": "<reviewer>",
             "user_id": null,
             "label": "Reviewer",
             "department": "Engineering",
             "position": {},
-            "created_at": "<time@step 73>"
+            "created_at": "<time@before step 74>"
           },
           {
             "id": "<uuid:20>",
-            "team_id": "<orphan>",
+            "team_id": "<pcopy>",
             "node_type": "human",
             "agent_id": "",
             "user_id": "<member>",
@@ -3011,47 +3003,47 @@
             "label": "Product owner",
             "department": "Product",
             "position": {},
-            "created_at": "<time@step 73>"
+            "created_at": "<time@before step 74>"
           }
         ],
         "edges": [
           {
             "id": "<uuid:21>",
-            "team_id": "<orphan>",
-            "from_node_id": "<orphan.lead>",
+            "team_id": "<pcopy>",
+            "from_node_id": "<pcopy.lead>",
             "to_node_id": "<uuid:17>",
             "edge_type": "delegates-to",
             "config": {},
-            "created_at": "<time@step 73>"
+            "created_at": "<time@before step 74>"
           },
           {
             "id": "<uuid:22>",
-            "team_id": "<orphan>",
+            "team_id": "<pcopy>",
             "from_node_id": "<uuid:17>",
             "to_node_id": "<uuid:18>",
             "edge_type": "delegates-to",
             "config": {
               "note": "Build what the analyst specified."
             },
-            "created_at": "<time@step 73>"
+            "created_at": "<time@before step 74>"
           },
           {
             "id": "<uuid:23>",
-            "team_id": "<orphan>",
+            "team_id": "<pcopy>",
             "from_node_id": "<uuid:17>",
             "to_node_id": "<uuid:20>",
             "edge_type": "hands-off-to",
             "config": {},
-            "created_at": "<time@step 73>"
+            "created_at": "<time@before step 74>"
           },
           {
             "id": "<uuid:24>",
-            "team_id": "<orphan>",
+            "team_id": "<pcopy>",
             "from_node_id": "<uuid:18>",
             "to_node_id": "<uuid:19>",
             "edge_type": "reviews",
             "config": {},
-            "created_at": "<time@step 73>"
+            "created_at": "<time@before step 74>"
           }
         ]
       },
@@ -3067,30 +3059,38 @@
     },
     {
       "n": 75,
-      "title": "W's admin renames the clone pinned to no project: 403, the crew-write guard asks for a role in that project",
+      "title": "W's admin renames the clone pinned to P: 200, the crew-write guard's role in P, which W's admins hold",
       "actor": "owner",
       "acting_in": "<w>",
       "route": "PUT /api/v1/crews/{id}",
       "request": {
         "method": "PUT",
-        "path": "/api/v1/crews/<orphan>",
+        "path": "/api/v1/crews/<pcopy>",
         "headers": [
           "Content-Type: application/json"
         ],
-        "body": "{\"name\":\"Tour Orphan\"}"
+        "body": "{\"name\":\"Tour P Copy\"}"
       },
-      "status": 403,
-      "content_type": "application/json",
+      "status": 200,
+      "content_type": "text/plain; charset=utf-8",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 51,
+      "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"error\":\"you do not have access to this project\"}"
+        "{\"id\":\"<pcopy>\",\"org_id\":\"<w>\",\"name\":\"Tour P Copy\",\"description\":\"Led by the tour.\",\"project_id\":\"<p>\",\"entry_node_id\":\"<pcopy.lead>\",\"is_default\":false,\"created_at\":\"<time@before step 74>\",\"updated_at\":\"<time@step 75>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "you do not have access to this project"
+        "id": "<pcopy>",
+        "org_id": "<w>",
+        "name": "Tour P Copy",
+        "description": "Led by the tour.",
+        "project_id": "<p>",
+        "entry_node_id": "<pcopy.lead>",
+        "is_default": false,
+        "created_at": "<time@before step 74>",
+        "updated_at": "<time@step 75>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
@@ -4572,7 +4572,7 @@
     },
     {
       "n": 109,
-      "title": "the member launches the P crew with no project: 201, the pin guards the launch but does not scope the run",
+      "title": "the member launches the P crew with no project: 201, the run scoped to the pin, P, and the board's tracking card there",
       "actor": "member",
       "acting_in": "<w>",
       "route": "POST /api/v1/crews/{id}/runs",
@@ -4591,15 +4591,17 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<crun.pinned>\",\"org_id\":\"<w>\",\"agent_id\":\"<lead>\",\"team_id\":\"<pcrew>\",\"team_node_id\":\"<pcrew.lead>\",\"status\":\"queued\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Plan my week.\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<member>\",\"created_at\":\"<time@step 109>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Lead\",\"agent_provider\":\"claude-code\"}"
+        "{\"id\":\"<crun.pinned>\",\"org_id\":\"<w>\",\"agent_id\":\"<lead>\",\"project_id\":\"<p>\",\"team_id\":\"<pcrew>\",\"team_node_id\":\"<pcrew.lead>\",\"work_item_id\":\"<crun.pinned.card>\",\"status\":\"queued\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Plan my week.\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<member>\",\"created_at\":\"<time@step 109>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Lead\",\"agent_provider\":\"claude-code\"}"
       ],
       "trailing_newline": true,
       "parsed": {
         "id": "<crun.pinned>",
         "org_id": "<w>",
         "agent_id": "<lead>",
+        "project_id": "<p>",
         "team_id": "<pcrew>",
         "team_node_id": "<pcrew.lead>",
+        "work_item_id": "<crun.pinned.card>",
         "status": "queued",
         "cancel_requested": false,
         "priority": 0,
@@ -4618,7 +4620,18 @@
         "agent_provider": "claude-code"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
-      "events": []
+      "events": [
+        {
+          "type": "workitem.created",
+          "actor": "agent:<crun.pinned>",
+          "project": "<p>",
+          "entity": "<crun.pinned.card>",
+          "payload": {
+            "column": "string \"todo\"",
+            "title": "string \"Agent run: Tour Lead\""
+          }
+        }
+      ]
     },
     {
       "n": 110,
@@ -4733,7 +4746,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<default>\",\"org_id\":\"<w>\",\"name\":\"Founder's Dev Team\",\"description\":\"Default multi-agent team: an orchestrator delegating to specialists, with a reviewer watching the developer.\",\"entry_node_id\":\"<default.chief>\",\"is_default\":true,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},{\"id\":\"<crew>\",\"org_id\":\"<w>\",\"name\":\"Tour Crew Renamed\",\"description\":\"Led by the tour.\",\"entry_node_id\":\"<crew.lead>\",\"is_default\":false,\"created_at\":\"<time@step 4>\",\"updated_at\":\"<time@step 45>\"},{\"id\":\"<pcrew>\",\"org_id\":\"<w>\",\"name\":\"Tour P Crew\",\"description\":\"\",\"project_id\":\"<p>\",\"entry_node_id\":\"<pcrew.lead>\",\"is_default\":false,\"created_at\":\"<time@step 5>\",\"updated_at\":\"<time@step 108>\"},{\"id\":\"<orphan>\",\"org_id\":\"<w>\",\"name\":\"Tour Crew Copy\",\"description\":\"Led by the tour.\",\"project_id\":\"<phantom>\",\"entry_node_id\":\"<orphan.lead>\",\"is_default\":false,\"created_at\":\"<time@step 73>\",\"updated_at\":\"<time@step 73>\"},{\"id\":\"<imported>\",\"org_id\":\"<w>\",\"name\":\"Tour Crew Renamed\",\"description\":\"Led by the tour.\",\"entry_node_id\":\"<imported.lead>\",\"is_default\":false,\"created_at\":\"<time@step 88>\",\"updated_at\":\"<time@step 88>\"},{\"id\":\"<partial>\",\"org_id\":\"<w>\",\"name\":\"Tour Partial\",\"description\":\"\",\"entry_node_id\":\"<uuid:34>\",\"is_default\":false,\"created_at\":\"<time@step 90>\",\"updated_at\":\"<time@step 90>\"},{\"id\":\"<pair>\",\"org_id\":\"<w>\",\"name\":\"Tour Pair\",\"description\":\"\",\"project_id\":\"<p>\",\"entry_node_id\":\"<uuid:31>\",\"is_default\":false,\"created_at\":\"<time@step 95>\",\"updated_at\":\"<time@step 95>\"}]"
+        "[{\"id\":\"<default>\",\"org_id\":\"<w>\",\"name\":\"Founder's Dev Team\",\"description\":\"Default multi-agent team: an orchestrator delegating to specialists, with a reviewer watching the developer.\",\"entry_node_id\":\"<default.chief>\",\"is_default\":true,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},{\"id\":\"<crew>\",\"org_id\":\"<w>\",\"name\":\"Tour Crew Renamed\",\"description\":\"Led by the tour.\",\"entry_node_id\":\"<crew.lead>\",\"is_default\":false,\"created_at\":\"<time@step 4>\",\"updated_at\":\"<time@step 45>\"},{\"id\":\"<pcrew>\",\"org_id\":\"<w>\",\"name\":\"Tour P Crew\",\"description\":\"\",\"project_id\":\"<p>\",\"entry_node_id\":\"<pcrew.lead>\",\"is_default\":false,\"created_at\":\"<time@step 5>\",\"updated_at\":\"<time@step 108>\"},{\"id\":\"<pcopy>\",\"org_id\":\"<w>\",\"name\":\"Tour P Copy\",\"description\":\"Led by the tour.\",\"project_id\":\"<p>\",\"entry_node_id\":\"<pcopy.lead>\",\"is_default\":false,\"created_at\":\"<time@before step 74>\",\"updated_at\":\"<time@step 75>\"},{\"id\":\"<imported>\",\"org_id\":\"<w>\",\"name\":\"Tour Crew Renamed\",\"description\":\"Led by the tour.\",\"entry_node_id\":\"<imported.lead>\",\"is_default\":false,\"created_at\":\"<time@step 88>\",\"updated_at\":\"<time@step 88>\"},{\"id\":\"<partial>\",\"org_id\":\"<w>\",\"name\":\"Tour Partial\",\"description\":\"\",\"entry_node_id\":\"<uuid:34>\",\"is_default\":false,\"created_at\":\"<time@step 90>\",\"updated_at\":\"<time@step 90>\"},{\"id\":\"<pair>\",\"org_id\":\"<w>\",\"name\":\"Tour Pair\",\"description\":\"\",\"project_id\":\"<p>\",\"entry_node_id\":\"<uuid:31>\",\"is_default\":false,\"created_at\":\"<time@step 95>\",\"updated_at\":\"<time@step 95>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -4769,15 +4782,15 @@
           "updated_at": "<time@step 108>"
         },
         {
-          "id": "<orphan>",
+          "id": "<pcopy>",
           "org_id": "<w>",
-          "name": "Tour Crew Copy",
+          "name": "Tour P Copy",
           "description": "Led by the tour.",
-          "project_id": "<phantom>",
-          "entry_node_id": "<orphan.lead>",
+          "project_id": "<p>",
+          "entry_node_id": "<pcopy.lead>",
           "is_default": false,
-          "created_at": "<time@step 73>",
-          "updated_at": "<time@step 73>"
+          "created_at": "<time@before step 74>",
+          "updated_at": "<time@step 75>"
         },
         {
           "id": "<imported>",
@@ -4874,7 +4887,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<default>\",\"org_id\":\"<w>\",\"name\":\"Founder's Dev Team\",\"description\":\"Default multi-agent team: an orchestrator delegating to specialists, with a reviewer watching the developer.\",\"entry_node_id\":\"<default.chief>\",\"is_default\":true,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},{\"id\":\"<crew>\",\"org_id\":\"<w>\",\"name\":\"Tour Crew Renamed\",\"description\":\"Led by the tour.\",\"entry_node_id\":\"<crew.lead>\",\"is_default\":false,\"created_at\":\"<time@step 4>\",\"updated_at\":\"<time@step 45>\"},{\"id\":\"<pcrew>\",\"org_id\":\"<w>\",\"name\":\"Tour P Crew\",\"description\":\"\",\"project_id\":\"<p>\",\"entry_node_id\":\"<pcrew.lead>\",\"is_default\":false,\"created_at\":\"<time@step 5>\",\"updated_at\":\"<time@step 108>\"},{\"id\":\"<orphan>\",\"org_id\":\"<w>\",\"name\":\"Tour Crew Copy\",\"description\":\"Led by the tour.\",\"project_id\":\"<phantom>\",\"entry_node_id\":\"<orphan.lead>\",\"is_default\":false,\"created_at\":\"<time@step 73>\",\"updated_at\":\"<time@step 73>\"},{\"id\":\"<imported>\",\"org_id\":\"<w>\",\"name\":\"Tour Crew Renamed\",\"description\":\"Led by the tour.\",\"entry_node_id\":\"<imported.lead>\",\"is_default\":false,\"created_at\":\"<time@step 88>\",\"updated_at\":\"<time@step 88>\"},{\"id\":\"<partial>\",\"org_id\":\"<w>\",\"name\":\"Tour Partial\",\"description\":\"\",\"entry_node_id\":\"<uuid:34>\",\"is_default\":false,\"created_at\":\"<time@step 90>\",\"updated_at\":\"<time@step 90>\"},{\"id\":\"<pair>\",\"org_id\":\"<w>\",\"name\":\"Tour Pair\",\"description\":\"\",\"project_id\":\"<p>\",\"entry_node_id\":\"<uuid:31>\",\"is_default\":false,\"created_at\":\"<time@step 95>\",\"updated_at\":\"<time@step 95>\"}]"
+        "[{\"id\":\"<default>\",\"org_id\":\"<w>\",\"name\":\"Founder's Dev Team\",\"description\":\"Default multi-agent team: an orchestrator delegating to specialists, with a reviewer watching the developer.\",\"entry_node_id\":\"<default.chief>\",\"is_default\":true,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},{\"id\":\"<crew>\",\"org_id\":\"<w>\",\"name\":\"Tour Crew Renamed\",\"description\":\"Led by the tour.\",\"entry_node_id\":\"<crew.lead>\",\"is_default\":false,\"created_at\":\"<time@step 4>\",\"updated_at\":\"<time@step 45>\"},{\"id\":\"<pcrew>\",\"org_id\":\"<w>\",\"name\":\"Tour P Crew\",\"description\":\"\",\"project_id\":\"<p>\",\"entry_node_id\":\"<pcrew.lead>\",\"is_default\":false,\"created_at\":\"<time@step 5>\",\"updated_at\":\"<time@step 108>\"},{\"id\":\"<pcopy>\",\"org_id\":\"<w>\",\"name\":\"Tour P Copy\",\"description\":\"Led by the tour.\",\"project_id\":\"<p>\",\"entry_node_id\":\"<pcopy.lead>\",\"is_default\":false,\"created_at\":\"<time@before step 74>\",\"updated_at\":\"<time@step 75>\"},{\"id\":\"<imported>\",\"org_id\":\"<w>\",\"name\":\"Tour Crew Renamed\",\"description\":\"Led by the tour.\",\"entry_node_id\":\"<imported.lead>\",\"is_default\":false,\"created_at\":\"<time@step 88>\",\"updated_at\":\"<time@step 88>\"},{\"id\":\"<partial>\",\"org_id\":\"<w>\",\"name\":\"Tour Partial\",\"description\":\"\",\"entry_node_id\":\"<uuid:34>\",\"is_default\":false,\"created_at\":\"<time@step 90>\",\"updated_at\":\"<time@step 90>\"},{\"id\":\"<pair>\",\"org_id\":\"<w>\",\"name\":\"Tour Pair\",\"description\":\"\",\"project_id\":\"<p>\",\"entry_node_id\":\"<uuid:31>\",\"is_default\":false,\"created_at\":\"<time@step 95>\",\"updated_at\":\"<time@step 95>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -4910,15 +4923,15 @@
           "updated_at": "<time@step 108>"
         },
         {
-          "id": "<orphan>",
+          "id": "<pcopy>",
           "org_id": "<w>",
-          "name": "Tour Crew Copy",
+          "name": "Tour P Copy",
           "description": "Led by the tour.",
-          "project_id": "<phantom>",
-          "entry_node_id": "<orphan.lead>",
+          "project_id": "<p>",
+          "entry_node_id": "<pcopy.lead>",
           "is_default": false,
-          "created_at": "<time@step 73>",
-          "updated_at": "<time@step 73>"
+          "created_at": "<time@before step 74>",
+          "updated_at": "<time@step 75>"
         },
         {
           "id": "<imported>",
@@ -4978,7 +4991,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<default>\",\"org_id\":\"<w>\",\"name\":\"Founder's Dev Team\",\"description\":\"Default multi-agent team: an orchestrator delegating to specialists, with a reviewer watching the developer.\",\"entry_node_id\":\"<default.chief>\",\"is_default\":true,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},{\"id\":\"<crew>\",\"org_id\":\"<w>\",\"name\":\"Tour Crew Renamed\",\"description\":\"Led by the tour.\",\"entry_node_id\":\"<crew.lead>\",\"is_default\":false,\"created_at\":\"<time@step 4>\",\"updated_at\":\"<time@step 45>\"},{\"id\":\"<pcrew>\",\"org_id\":\"<w>\",\"name\":\"Tour P Crew\",\"description\":\"\",\"project_id\":\"<p>\",\"entry_node_id\":\"<pcrew.lead>\",\"is_default\":false,\"created_at\":\"<time@step 5>\",\"updated_at\":\"<time@step 108>\"},{\"id\":\"<orphan>\",\"org_id\":\"<w>\",\"name\":\"Tour Crew Copy\",\"description\":\"Led by the tour.\",\"project_id\":\"<phantom>\",\"entry_node_id\":\"<orphan.lead>\",\"is_default\":false,\"created_at\":\"<time@step 73>\",\"updated_at\":\"<time@step 73>\"},{\"id\":\"<imported>\",\"org_id\":\"<w>\",\"name\":\"Tour Crew Renamed\",\"description\":\"Led by the tour.\",\"entry_node_id\":\"<imported.lead>\",\"is_default\":false,\"created_at\":\"<time@step 88>\",\"updated_at\":\"<time@step 88>\"},{\"id\":\"<partial>\",\"org_id\":\"<w>\",\"name\":\"Tour Partial\",\"description\":\"\",\"entry_node_id\":\"<uuid:34>\",\"is_default\":false,\"created_at\":\"<time@step 90>\",\"updated_at\":\"<time@step 90>\"},{\"id\":\"<pair>\",\"org_id\":\"<w>\",\"name\":\"Tour Pair\",\"description\":\"\",\"project_id\":\"<p>\",\"entry_node_id\":\"<uuid:31>\",\"is_default\":false,\"created_at\":\"<time@step 95>\",\"updated_at\":\"<time@step 95>\"}]"
+        "[{\"id\":\"<default>\",\"org_id\":\"<w>\",\"name\":\"Founder's Dev Team\",\"description\":\"Default multi-agent team: an orchestrator delegating to specialists, with a reviewer watching the developer.\",\"entry_node_id\":\"<default.chief>\",\"is_default\":true,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},{\"id\":\"<crew>\",\"org_id\":\"<w>\",\"name\":\"Tour Crew Renamed\",\"description\":\"Led by the tour.\",\"entry_node_id\":\"<crew.lead>\",\"is_default\":false,\"created_at\":\"<time@step 4>\",\"updated_at\":\"<time@step 45>\"},{\"id\":\"<pcrew>\",\"org_id\":\"<w>\",\"name\":\"Tour P Crew\",\"description\":\"\",\"project_id\":\"<p>\",\"entry_node_id\":\"<pcrew.lead>\",\"is_default\":false,\"created_at\":\"<time@step 5>\",\"updated_at\":\"<time@step 108>\"},{\"id\":\"<pcopy>\",\"org_id\":\"<w>\",\"name\":\"Tour P Copy\",\"description\":\"Led by the tour.\",\"project_id\":\"<p>\",\"entry_node_id\":\"<pcopy.lead>\",\"is_default\":false,\"created_at\":\"<time@before step 74>\",\"updated_at\":\"<time@step 75>\"},{\"id\":\"<imported>\",\"org_id\":\"<w>\",\"name\":\"Tour Crew Renamed\",\"description\":\"Led by the tour.\",\"entry_node_id\":\"<imported.lead>\",\"is_default\":false,\"created_at\":\"<time@step 88>\",\"updated_at\":\"<time@step 88>\"},{\"id\":\"<partial>\",\"org_id\":\"<w>\",\"name\":\"Tour Partial\",\"description\":\"\",\"entry_node_id\":\"<uuid:34>\",\"is_default\":false,\"created_at\":\"<time@step 90>\",\"updated_at\":\"<time@step 90>\"},{\"id\":\"<pair>\",\"org_id\":\"<w>\",\"name\":\"Tour Pair\",\"description\":\"\",\"project_id\":\"<p>\",\"entry_node_id\":\"<uuid:31>\",\"is_default\":false,\"created_at\":\"<time@step 95>\",\"updated_at\":\"<time@step 95>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -5014,15 +5027,15 @@
           "updated_at": "<time@step 108>"
         },
         {
-          "id": "<orphan>",
+          "id": "<pcopy>",
           "org_id": "<w>",
-          "name": "Tour Crew Copy",
+          "name": "Tour P Copy",
           "description": "Led by the tour.",
-          "project_id": "<phantom>",
-          "entry_node_id": "<orphan.lead>",
+          "project_id": "<p>",
+          "entry_node_id": "<pcopy.lead>",
           "is_default": false,
-          "created_at": "<time@step 73>",
-          "updated_at": "<time@step 73>"
+          "created_at": "<time@before step 74>",
+          "updated_at": "<time@step 75>"
         },
         {
           "id": "<imported>",
@@ -6212,7 +6225,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<default>\",\"org_id\":\"<w>\",\"name\":\"Founder's Dev Team\",\"description\":\"Default multi-agent team: an orchestrator delegating to specialists, with a reviewer watching the developer.\",\"entry_node_id\":\"<default.chief>\",\"is_default\":true,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},{\"id\":\"<crew>\",\"org_id\":\"<w>\",\"name\":\"Tour Crew Renamed\",\"description\":\"Led by the tour.\",\"entry_node_id\":\"<crew.lead>\",\"is_default\":false,\"created_at\":\"<time@step 4>\",\"updated_at\":\"<time@step 45>\"},{\"id\":\"<pcrew>\",\"org_id\":\"<w>\",\"name\":\"Tour P Crew\",\"description\":\"\",\"project_id\":\"<p>\",\"entry_node_id\":\"<pcrew.lead>\",\"is_default\":false,\"created_at\":\"<time@step 5>\",\"updated_at\":\"<time@step 108>\"},{\"id\":\"<orphan>\",\"org_id\":\"<w>\",\"name\":\"Tour Crew Copy\",\"description\":\"Led by the tour.\",\"project_id\":\"<phantom>\",\"entry_node_id\":\"<orphan.lead>\",\"is_default\":false,\"created_at\":\"<time@step 73>\",\"updated_at\":\"<time@step 73>\"},{\"id\":\"<imported>\",\"org_id\":\"<w>\",\"name\":\"Tour Crew Renamed\",\"description\":\"Led by the tour.\",\"entry_node_id\":\"<imported.lead>\",\"is_default\":false,\"created_at\":\"<time@step 88>\",\"updated_at\":\"<time@step 88>\"},{\"id\":\"<partial>\",\"org_id\":\"<w>\",\"name\":\"Tour Partial\",\"description\":\"\",\"entry_node_id\":\"<uuid:34>\",\"is_default\":false,\"created_at\":\"<time@step 90>\",\"updated_at\":\"<time@step 90>\"},{\"id\":\"<pair>\",\"org_id\":\"<w>\",\"name\":\"Tour Pair\",\"description\":\"\",\"project_id\":\"<p>\",\"entry_node_id\":\"<uuid:31>\",\"is_default\":false,\"created_at\":\"<time@step 95>\",\"updated_at\":\"<time@step 95>\"},{\"id\":\"<team.copy>\",\"org_id\":\"<w>\",\"name\":\"Tour Team Copy\",\"description\":\"Made through the alias.\",\"entry_node_id\":\"<uuid:35>\",\"is_default\":false,\"created_at\":\"<time@step 135>\",\"updated_at\":\"<time@step 135>\"},{\"id\":\"<team.imported>\",\"org_id\":\"<w>\",\"name\":\"Tour Team Renamed\",\"description\":\"Made through the alias.\",\"entry_node_id\":\"<uuid:36>\",\"is_default\":false,\"created_at\":\"<time@step 138>\",\"updated_at\":\"<time@step 138>\"}]"
+        "[{\"id\":\"<default>\",\"org_id\":\"<w>\",\"name\":\"Founder's Dev Team\",\"description\":\"Default multi-agent team: an orchestrator delegating to specialists, with a reviewer watching the developer.\",\"entry_node_id\":\"<default.chief>\",\"is_default\":true,\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},{\"id\":\"<crew>\",\"org_id\":\"<w>\",\"name\":\"Tour Crew Renamed\",\"description\":\"Led by the tour.\",\"entry_node_id\":\"<crew.lead>\",\"is_default\":false,\"created_at\":\"<time@step 4>\",\"updated_at\":\"<time@step 45>\"},{\"id\":\"<pcrew>\",\"org_id\":\"<w>\",\"name\":\"Tour P Crew\",\"description\":\"\",\"project_id\":\"<p>\",\"entry_node_id\":\"<pcrew.lead>\",\"is_default\":false,\"created_at\":\"<time@step 5>\",\"updated_at\":\"<time@step 108>\"},{\"id\":\"<pcopy>\",\"org_id\":\"<w>\",\"name\":\"Tour P Copy\",\"description\":\"Led by the tour.\",\"project_id\":\"<p>\",\"entry_node_id\":\"<pcopy.lead>\",\"is_default\":false,\"created_at\":\"<time@before step 74>\",\"updated_at\":\"<time@step 75>\"},{\"id\":\"<imported>\",\"org_id\":\"<w>\",\"name\":\"Tour Crew Renamed\",\"description\":\"Led by the tour.\",\"entry_node_id\":\"<imported.lead>\",\"is_default\":false,\"created_at\":\"<time@step 88>\",\"updated_at\":\"<time@step 88>\"},{\"id\":\"<partial>\",\"org_id\":\"<w>\",\"name\":\"Tour Partial\",\"description\":\"\",\"entry_node_id\":\"<uuid:34>\",\"is_default\":false,\"created_at\":\"<time@step 90>\",\"updated_at\":\"<time@step 90>\"},{\"id\":\"<pair>\",\"org_id\":\"<w>\",\"name\":\"Tour Pair\",\"description\":\"\",\"project_id\":\"<p>\",\"entry_node_id\":\"<uuid:31>\",\"is_default\":false,\"created_at\":\"<time@step 95>\",\"updated_at\":\"<time@step 95>\"},{\"id\":\"<team.copy>\",\"org_id\":\"<w>\",\"name\":\"Tour Team Copy\",\"description\":\"Made through the alias.\",\"entry_node_id\":\"<uuid:35>\",\"is_default\":false,\"created_at\":\"<time@step 135>\",\"updated_at\":\"<time@step 135>\"},{\"id\":\"<team.imported>\",\"org_id\":\"<w>\",\"name\":\"Tour Team Renamed\",\"description\":\"Made through the alias.\",\"entry_node_id\":\"<uuid:36>\",\"is_default\":false,\"created_at\":\"<time@step 138>\",\"updated_at\":\"<time@step 138>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -6248,15 +6261,15 @@
           "updated_at": "<time@step 108>"
         },
         {
-          "id": "<orphan>",
+          "id": "<pcopy>",
           "org_id": "<w>",
-          "name": "Tour Crew Copy",
+          "name": "Tour P Copy",
           "description": "Led by the tour.",
-          "project_id": "<phantom>",
-          "entry_node_id": "<orphan.lead>",
+          "project_id": "<p>",
+          "entry_node_id": "<pcopy.lead>",
           "is_default": false,
-          "created_at": "<time@step 73>",
-          "updated_at": "<time@step 73>"
+          "created_at": "<time@before step 74>",
+          "updated_at": "<time@step 75>"
         },
         {
           "id": "<imported>",
