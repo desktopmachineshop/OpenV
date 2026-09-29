@@ -2,7 +2,6 @@ package postgres
 
 import (
 	"database/sql"
-	"errors"
 
 	"github.com/openv/requirements-platform/internal/domain/templates"
 )
@@ -93,7 +92,7 @@ func (r *TemplateRepository) GetByID(id string) (*templates.Template, error) {
 		&item.CreatedAt,
 	); err != nil {
 		if err == sql.ErrNoRows {
-			return nil, errors.New("template not found")
+			return nil, templates.ErrNotFound
 		}
 		return nil, err
 	}
@@ -121,7 +120,7 @@ func (r *TemplateRepository) GetByKey(key string) (*templates.Template, error) {
 		&item.CreatedAt,
 	); err != nil {
 		if err == sql.ErrNoRows {
-			return nil, errors.New("template not found")
+			return nil, templates.ErrNotFound
 		}
 		return nil, err
 	}

@@ -23,12 +23,19 @@ type Template struct {
 	CreatedAt   time.Time       `json:"created_at"`
 }
 
+// ErrNotFound is returned for a template no row has, and by
+// CreateProjectFromTemplate for another workspace's template, which is as
+// missing to the caller: a workspace template is visible only inside its
+// workspace (REQ-72).
+var ErrNotFound = errors.New("template not found")
+
 // Repository defines template persistence operations.
 type Repository interface {
 	Create(template *Template) error
 	// List returns an org's templates plus the global built-ins
 	// (org_id NULL rows).
 	List(orgID string) ([]*Template, error)
+	// GetByID and GetByKey answer ErrNotFound when no row matches.
 	GetByID(id string) (*Template, error)
 	GetByKey(key string) (*Template, error)
 }
@@ -118,7 +125,8 @@ func (s *DefaultService) GetTemplate(id string) (*Template, error) {
 }
 
 // CreateProjectFromTemplate creates a new project from a template in the
-// caller's org.
+// caller's org: a global built-in or one of that org's own. Another org's
+// template answers ErrNotFound, as one that does not exist does.
 func (s *DefaultService) CreateProjectFromTemplate(templateID string, name string, description string, orgID string) (string, error) {
 	if templateID == "" {
 		return "", errors.New("template_id is required")
@@ -127,6 +135,9 @@ func (s *DefaultService) CreateProjectFromTemplate(templateID string, name strin
 	tpl, err := s.repo.GetByID(templateID)
 	if err != nil {
 		return "", err
+	}
+	if tpl.OrgID != "" && tpl.OrgID != orgID {
+		return "", ErrNotFound
 	}
 
 	return s.exportService.ImportProjectWithOverrides([]byte(tpl.Snapshot), name, description, orgID)

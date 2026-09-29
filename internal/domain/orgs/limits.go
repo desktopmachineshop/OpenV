@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
+	"strings"
 )
 
 // Workspace limits.
@@ -465,10 +466,27 @@ func OverPlan(limits map[string]interface{}, usage map[string]int) []string {
 }
 
 // ReadOnlyRemedy is what a workspace over its plan is told on every write it
-// is refused. Reading and export are never refused, in any state.
-const ReadOnlyRemedy = "This workspace has more than its plan allows, so it is read-only until it is " +
-	"brought under the plan's limits or moved to a plan that fits. Everything in it stays readable and exportable. " +
-	"A workspace admin can subscribe from the Billing tab in workspace settings, remove members or delete projects."
+// is refused, over naming the limits it is past (OverPlan). Reading and
+// export are never refused, in any state. Like LimitError.Remedy, it is
+// written for whoever can act on this deployment: a hosted workspace's admin
+// subscribes from the Billing tab, while a self-hosted deployment has no
+// billing (REQ-169) and is told which setting to raise (REQ-123).
+func ReadOnlyRemedy(over []string) string {
+	if !selfHosted {
+		return "This workspace has more than its plan allows, so it is read-only until it is " +
+			"brought under the plan's limits or moved to a plan that fits. Everything in it stays readable and exportable. " +
+			"A workspace admin can subscribe from the Billing tab in workspace settings, remove members or delete projects."
+	}
+	keys, it := strings.Join(over, ""), "it"
+	if n := len(over); n > 1 {
+		keys, it = strings.Join(over[:n-1], ", ")+" and "+over[n-1], "them"
+	}
+	return "This workspace has more than this deployment's limits allow, so it is read-only until it is " +
+		"brought under them or they are raised. Everything in it stays readable and exportable. " +
+		"This deployment sets its own limits: raise " + keys + " in OPENV_LIMITS to change " + it + " everywhere, " +
+		"or set " + it + " on this workspace alone to change " + it + " here. " +
+		"A workspace admin can also remove members or delete projects."
+}
 
 // allPlans is every plan a workspace can be on, for the derived readings
 // below. It is the same list ValidPlan accepts.

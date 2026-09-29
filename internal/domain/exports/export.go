@@ -25,6 +25,11 @@ import (
 // format the service cannot produce. Handlers should map it to a 400.
 var ErrUnsupportedFormat = errors.New("unsupported export format")
 
+// ErrMalformedImport is returned when a JSON import does not parse, before
+// anything is written. Handlers should map it to a 400, as they map a
+// malformed ReqIF (REQ-71).
+var ErrMalformedImport = errors.New("malformed JSON")
+
 // ExportFormat represents the export file format
 type ExportFormat string
 
@@ -118,6 +123,8 @@ type Service interface {
 	// the project, the same list PrepareExport embeds.
 	LinkedArtifacts(projectID string) ([]*LinkedArtifact, error)
 	RenderExport(data *ProjectExport, format ExportFormat) ([]byte, string, error)
+	// ImportProject imports an OpenV JSON export into a new project owned by
+	// the given org. JSON that does not parse yields ErrMalformedImport.
 	ImportProject(data []byte, orgID string) (string, error)
 	ImportProjectWithOverrides(data []byte, nameOverride string, descOverride string, orgID string) (string, error)
 	// ImportProjectReqIF imports a ReqIF 1.x document into a new project owned by
@@ -492,7 +499,7 @@ func (s *DefaultService) ImportProjectWithOverrides(data []byte, nameOverride st
 	// Parse the JSON
 	var importData ProjectExport
 	if err := json.Unmarshal(data, &importData); err != nil {
-		return "", fmt.Errorf("failed to parse import data: %w", err)
+		return "", fmt.Errorf("%w: %w", ErrMalformedImport, err)
 	}
 	slog.Debug("import: starting", slog.Int("artifacts", len(importData.Artifacts)))
 

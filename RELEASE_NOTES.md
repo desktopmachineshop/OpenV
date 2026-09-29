@@ -276,6 +276,57 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   your own runner is unchanged: you, and the workspace's admins, can still
   cancel it or paste its code.
 
+- **A platform admin asking for a project or workspace that does not exist
+  is told it is not found.** Through the API, a platform admin who named a
+  project that does not exist in a download, the export, a V&V view or
+  report, the product profile, the quality report or a delete got a server
+  error, and so did a connector pairing for a workspace that does not
+  exist; many other such requests answered with an empty list or as if
+  they had worked. Wherever a platform admin's access to a project or
+  workspace is checked, OpenV now first checks that it exists, and one
+  that does not answers `404` *project not found* or *workspace not
+  found*.
+
+- **Removing someone from a project that does not exist is refused, and
+  nobody is told of it.** A platform admin's removal of a member or of a
+  team's access from a project that does not exist, the revocation of their
+  own runner key in a workspace that does not exist, and a search reindex of
+  such a project answered through the API as if they had worked, and the
+  member's removal told the admin's own workspace that someone had left a
+  project that was never there. They now answer `404`, and nothing is
+  announced.
+
+- **Nothing can be added to a project that does not exist.** A platform
+  admin creating an artifact, an attribute definition or a guided session
+  through the API for a project that does not exist had it saved where no
+  project could show it, and the new artifact was announced in the admin's
+  own workspace; saving such a project as a template failed with a server
+  error. Each is now refused with `404` *project not found*, and nothing is
+  saved or announced.
+
+- **Creating a project from a template that is not there answers *template
+  not found*.** Through the API, a well-formed template id that no template
+  has failed with a server error; it now answers `404` *template not
+  found*. So does a template saved in another workspace, which yours cannot
+  see, where a project used to be created from it, copying that template's
+  content into your workspace. Built-in templates and your own workspace's
+  templates work as before.
+
+- **Importing a JSON file that cannot be read says why.** Importing a JSON
+  file that is not valid JSON, such as one cut short, failed with *failed
+  to import project*, an error that looked like a fault on our side. It is
+  now refused with the reason the file could not be read, as a malformed
+  ReqIF file already was (`400` for an API client).
+
+- **A read-only workspace on a self-hosted deployment is told which setting
+  to change.** On a deployment the operator runs themselves, a workspace
+  over the deployment's limits is read-only, and every change refused there
+  told a workspace admin to subscribe from the Billing tab, which such a
+  deployment does not have, and called those limits the workspace's plan.
+  The refusal now speaks of the deployment's limits and names the setting
+  to raise in `OPENV_LIMITS`, as a refusal at one of those limits already
+  did. Hosted workspaces are pointed to the Billing tab as before.
+
 ## 0.15.0 — 2026-09-22
 
 ### New features

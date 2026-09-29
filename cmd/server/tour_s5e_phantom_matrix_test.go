@@ -25,12 +25,13 @@ import (
 // per route and identity (I3), among others:
 //   - existence hiding: a phantom project is 403 "you do not have access to
 //     this project" to every signed-in user, the owner included, as a real
-//     foreign project is; the worker key gets 404 "project not found"
-//     (its guard looks the project up first) and the run token 403 "agent run
-//     is not scoped to this project" (no lookup). A phantom workspace is 403
-//     "you are not a member of this workspace"; the key and the token get 401
-//     "authentication required" on every workspace route, which takes a
-//     session.
+//     foreign project is; the worker key and the platform admin get 404
+//     "project not found" (their guards look the project up first) and the
+//     run token 403 "agent run is not scoped to this project" (no lookup). A
+//     phantom workspace is 403 "you are not a member of this workspace", and
+//     404 "workspace not found" to the platform admin; the key and the token
+//     get 401 "authentication required" on every workspace route, which takes
+//     a session.
 //     A child resource (artifact, attachment, crew, test run, work item,
 //     guided session...) answers its own 404 to every column, before any
 //     guard;
@@ -45,8 +46,9 @@ import (
 //     but the run token, which gets the lookup's 404, or its own 400 before
 //     the decode;
 //   - the admin column: a platform admin passes the project and workspace
-//     guards for ids no row has, so it alone shows what a handler does past
-//     its guard with a phantom (the 500s, 204s and 400s listed below);
+//     guards with no role, but only for a project or workspace that exists,
+//     so it shows the guards' shortcuts: a phantom project or workspace is
+//     its 404, and every other phantom its handler's own answer;
 //   - the /auth and /public rows, each cell from an address of its own: the
 //     same answer for every column, but where the handler reads a session
 //     (share acceptance, verification resend, /auth/me);
@@ -59,8 +61,7 @@ import (
 //
 // After each section the events of every workspace a signed-in column acts
 // in are read and listed with it: W's must be none (the area fails
-// otherwise); the admin's own workspace receives the project.member_removed
-// of a phantom removal and the artifact.created of an orphan (below).
+// otherwise), and no section publishes any.
 //
 // The viewer and editor columns coincide throughout: a phantom project
 // refuses both before any role is compared, and no workspace is over its
@@ -74,24 +75,9 @@ import (
 //
 // Pinned as they behave (plan R7), for release-noted bug-fix pull requests
 // that regenerate the golden, with the golden's rows:
-//   - a platform admin passes requireProjectRole and orgAccess for ids no row
-//     has (authz.go's IsAdmin shortcut), then gets 500 from the downloads,
-//     export, profile, quality, report and V&V routes of a phantom project,
-//     DELETE /projects/{phantom} and POST /orgs/{phantom}/connector-pairing;
-//     400 with pq's foreign-key text from POST /orgs/{phantom}/my-runner-key
-//     and POST /automations (Q19); 204 from deletes of nothing (DELETE
-//     /orgs/{phantom}/my-runner-key, /projects/{phantom}/members/{phantom},
-//     /projects/{phantom}/team-access/{phantom}), the member removal
-//     publishing project.member_removed for a phantom project and user into
-//     the admin's workspace; 200 from reindex-embeddings; and 201 orphan rows
-//     from POST /artifacts (with its artifact.created), /attribute-definitions
-//     and /guided-sessions naming a phantom project, and 500 from POST
-//     /templates;
 //   - PUT /artifacts/{phantom} and POST /artifacts/{phantom}/restore answer
 //     500 "failed to load artifact" to every column (the Q2 family: the lookup's
-//     not-found is no sentinel); POST /templates/{phantom}/projects 500 to
-//     every signed-in column; POST /projects/import with a body that does not
-//     parse, 500 to every signed-in column (a malformed ReqIF is a 400);
+//     not-found is no sentinel);
 //   - existence: GET /projects/{id} and /ai-map look the project up before the
 //     guard, so a phantom project is 404 there, where a real foreign one is
 //     403; every child resource's 404 comes before its guard; the worker key's

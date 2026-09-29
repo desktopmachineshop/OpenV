@@ -464,8 +464,8 @@ func (h *Handler) UploadOrgLogo(w http.ResponseWriter, r *http.Request) {
 	if !h.requireOrgRole(w, r, orgID, orgs.RoleAdmin) {
 		return
 	}
-	// The workspace is looked up before anything is read or written: the
-	// guard lets a platform admin by for any id, and a file written for a
+	// The workspace is looked up before anything is read or written: it
+	// names the logo this upload replaces, and a file written for a
 	// workspace that does not exist would stay on disk with no record of it.
 	prev, err := h.orgService.Get(orgID)
 	if err != nil {
@@ -603,8 +603,8 @@ func (h *Handler) DeleteOrgLogo(w http.ResponseWriter, r *http.Request) {
 }
 
 // ActivateOrg persists the session's default workspace. The workspace is
-// looked up first: the guard lets a platform admin by for any id, and an id
-// with no workspace behind it is refused rather than stored.
+// looked up first: sessions.active_org_id would take any id, and one with no
+// workspace behind it is refused rather than stored.
 func (h *Handler) ActivateOrg(w http.ResponseWriter, r *http.Request) {
 	orgID := mux.Vars(r)["id"]
 	if !h.requireOrgRole(w, r, orgID, orgs.RoleMember) {

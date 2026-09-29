@@ -357,10 +357,13 @@ func TestUploadOrgLogoBytesMustBeTheDeclaredType(t *testing.T) {
 	}
 }
 
-// TestUploadOrgLogoUnknownWorkspace: the guard lets a platform admin by for
-// any id, so the handler looks the workspace up before it writes anything.
-// It used to write the file first, answer 500 when the record could not be
-// saved, and leave the file behind.
+// TestUploadOrgLogoUnknownWorkspace: a platform admin's upload for a
+// workspace that does not exist is refused 404 before anything is written.
+// The workspace guard refuses it, since it lets a platform admin by only
+// into a workspace that exists; the handler's own lookup, which names the
+// logo an upload replaces, refused it while the guard let the admin by for
+// any id. Before either, the upload wrote the file first, answered 500 when
+// the record could not be saved, and left the file behind.
 func TestUploadOrgLogoUnknownWorkspace(t *testing.T) {
 	h := logoFixture(t)
 	fake := h.orgService.(*fakeOrgService)

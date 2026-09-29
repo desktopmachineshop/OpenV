@@ -43,9 +43,9 @@ import (
 // makes: billing off (the public plans and every workspace billing route:
 // 404 billing_unavailable) and Google sign-on not configured; deleting the
 // workspace, its answer and what it hides, and restoring it; and last a
-// workspace that does not exist, named by the platform admin, whom no
-// workspace guard stops, so that each handler's own lookup answers (the
-// logo upload's and the activation's before they write anything).
+// workspace that does not exist, named by the platform admin, whom the
+// workspace guard passes with no role but not with no workspace: the
+// guard's 404 answers before any handler reads a body or writes anything.
 //
 // Actors: admin (the platform admin) sets plans, and reaches what only a
 // caller the guards let by reaches (a platform admin passes every workspace
@@ -369,19 +369,19 @@ func workspacesLogoTour(tr *tour) {
 	tr.step("W restored, read back", o, "GET /api/v1/orgs/{id}", at("id", w))
 	tr.step("the owner's workspaces: W is back", o, "GET /api/v1/orgs")
 
-	// A workspace that does not exist, named by the platform admin, whom no
-	// workspace guard stops (orgAccess lets a platform admin by): each
-	// handler's own lookup answers, which nobody else reaches.
+	// A workspace that does not exist, named by the platform admin, whom the
+	// workspace guard (orgAccess) passes with no role, but only into a
+	// workspace that exists: its 404 answers, which nobody else reaches.
 	phantom := at("id", "{{phantom}}")
 	nowhere := func(what string) string {
 		return "the platform admin " + what + " a workspace that does not exist"
 	}
-	tr.step(nowhere("reads")+": the handler's own 404", admin, "GET /api/v1/orgs/{id}", phantom)
-	tr.step(nowhere("renames")+": the service's not-found, as a 400 (Q19)", admin, "PUT /api/v1/orgs/{id}", phantom,
+	tr.step(nowhere("reads")+": the guard's 404", admin, "GET /api/v1/orgs/{id}", phantom)
+	tr.step(nowhere("renames")+": the guard's 404", admin, "PUT /api/v1/orgs/{id}", phantom,
 		jsonBody(`{"name":"Nowhere"}`))
-	tr.step(nowhere("deletes")+": the service's not-found, as a 404", admin, "DELETE /api/v1/orgs/{id}", phantom)
+	tr.step(nowhere("deletes")+": the guard's 404", admin, "DELETE /api/v1/orgs/{id}", phantom)
 	tr.step(nowhere("reads the gates of")+": 404", admin, "GET /api/v1/orgs/{id}/features", phantom)
-	tr.step(nowhere("previews in")+": 404, once the body is read", admin, "PUT /api/v1/orgs/{id}/members/me/preview",
+	tr.step(nowhere("previews in")+": 404", admin, "PUT /api/v1/orgs/{id}/members/me/preview",
 		phantom, jsonBody(`{"enabled":true}`))
 	tr.step(nowhere("reads the limits of")+": 404", admin, "GET /api/v1/orgs/{id}/limits", phantom)
 	tr.step(nowhere("fetches the logo of")+": 404, not the no-logo one", admin, "GET /api/v1/orgs/{id}/logo", phantom)
@@ -391,8 +391,8 @@ func workspacesLogoTour(tr *tour) {
 		note("the uploads directory at the end lists W's logo alone"))
 	tr.step("the platform admin makes a workspace that does not exist its session's active one: 404, nothing stored",
 		admin, "POST /api/v1/orgs/{id}/activate", phantom,
-		note("sessions.active_org_id would take any UUID, so ActivateOrg looks the workspace up once the guard "+
-			"lets the platform admin by"))
+		note("sessions.active_org_id would take any UUID; the guard looks the workspace up before ActivateOrg "+
+			"stores anything"))
 	tr.step("the platform admin's workspaces with no X-Org-ID, after the refused activation: its personal one", admin,
 		"GET /api/v1/orgs", noOrgHeader())
 }

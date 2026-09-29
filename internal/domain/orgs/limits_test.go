@@ -565,3 +565,28 @@ func TestAFlagRefusalNamesTheThingAndTheBillingTab(t *testing.T) {
 		t.Errorf("a self-hosted flag refusal sells a plan: %s", msg)
 	}
 }
+
+// The read-only remedy suits whoever can act on it, as a limit refusal's
+// does: a hosted admin subscribes from the Billing tab; a self-hosted
+// deployment has no billing, so it is told which settings to raise.
+func TestTheReadOnlyRemedyNamesTheSettingOnASelfHostedDeployment(t *testing.T) {
+	t.Cleanup(func() { SetSelfHosted(false) })
+	SetSelfHosted(false)
+	if msg := ReadOnlyRemedy([]string{LimitMaxMembers}); !strings.Contains(msg, "Billing tab") || strings.Contains(msg, "OPENV_LIMITS") {
+		t.Errorf("a hosted read-only remedy does not point at the Billing tab: %s", msg)
+	}
+	SetSelfHosted(true)
+	for over, want := range map[string][]string{
+		"one":  {LimitMaxProjects},
+		"both": {LimitMaxMembers, LimitMaxProjects},
+	} {
+		msg := ReadOnlyRemedy(want)
+		if strings.Contains(msg, "Billing tab") || strings.Contains(msg, "subscribe") {
+			t.Errorf("%s: a self-hosted read-only remedy sells a plan: %s", over, msg)
+		}
+		setting := "raise " + strings.Join(want, " and ") + " in OPENV_LIMITS"
+		if !strings.Contains(msg, setting) || !strings.Contains(msg, "exportable") {
+			t.Errorf("%s: a self-hosted read-only remedy does not say %q: %s", over, setting, msg)
+		}
+	}
+}

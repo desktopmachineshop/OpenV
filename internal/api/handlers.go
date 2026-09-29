@@ -1880,7 +1880,7 @@ func (h *Handler) ImportProject(w http.ResponseWriter, r *http.Request) {
 
 	// Import and create new project. The default format is JSON; ReqIF is
 	// selected by ?format=reqif or sniffed from an XML/ReqIF payload (issue
-	// #238). A malformed ReqIF is a client error (400), not a 500.
+	// #238). A malformed ReqIF or JSON is a client error (400), not a 500.
 	var projectID string
 	if isReqIFImport(r, data) {
 		projectID, err = h.exportService.ImportProjectReqIF(data, orgID)
@@ -1890,6 +1890,10 @@ func (h *Handler) ImportProject(w http.ResponseWriter, r *http.Request) {
 		}
 	} else {
 		projectID, err = h.exportService.ImportProject(data, orgID)
+		if errors.Is(err, exports.ErrMalformedImport) {
+			writeJSONError(w, http.StatusBadRequest, fmt.Sprintf("failed to import JSON: %v", err))
+			return
+		}
 		if err != nil {
 			respondInternal(w, r, "failed to import project", err)
 			return
@@ -2145,6 +2149,10 @@ func (h *Handler) CreateProjectFromTemplate(w http.ResponseWriter, r *http.Reque
 	if snapshot == nil || err != nil {
 		// Fall back to database template
 		projectID, dbErr := h.templateService.CreateProjectFromTemplate(templateID, req.Name, req.Description, orgID)
+		if errors.Is(dbErr, templates.ErrNotFound) {
+			writeJSONError(w, http.StatusNotFound, "template not found")
+			return
+		}
 		if dbErr != nil {
 			respondInternal(w, r, "failed to create project from template", dbErr)
 			return

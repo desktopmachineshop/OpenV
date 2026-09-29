@@ -114,7 +114,7 @@ PUT /api/v1/me/notification-prefs: 200, 400, 401; notifications_push
 PUT /api/v1/me/password: 204, 400, 401, 403, 409, 429; mail_password_admin, self_hosted_cross_site_sso, sessions_auth
 PUT /api/v1/notifications/{id}/flag: 200, 400, 401, 404, 500; notifications_push
 PUT /api/v1/org-teams/{id}: 200, 400, 403, 404; members_teams
-PUT /api/v1/orgs/{id}: 200, 400, 403; tiers_secure_runner_sessions, workspaces_logo
+PUT /api/v1/orgs/{id}: 200, 400, 403, 404; tiers_secure_runner_sessions, workspaces_logo
 PUT /api/v1/orgs/{id}/members/me/preview: 200, 400, 403, 404; workspaces_logo
 PUT /api/v1/orgs/{id}/members/{userId}: 204, 400, 403; members_teams
 PUT /api/v1/orgs/{id}/plan: 200, 400, 403, 404, 409; billing, tiers_secure_runner_sessions, workspaces_logo

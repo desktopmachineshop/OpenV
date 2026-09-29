@@ -73,13 +73,13 @@ POST /api/v1/auth/share/accept: 200, 400, 401, 404, 429; share_links_public
 POST /api/v1/chatter: 200, 400, 403, 404; review_chatter_search
 POST /api/v1/links: 201, 400, 403; links_managed_edits, projects_templates
 POST /api/v1/projects: 201, 400, 500; projects_templates
-POST /api/v1/projects/import: 201, 400, 401, 500; exports_imports
+POST /api/v1/projects/import: 201, 400, 401; exports_imports
 POST /api/v1/projects/{id}/baselines: 201, 400, 403; baselines_documents
 POST /api/v1/projects/{id}/reindex-embeddings: 200, 403; review_chatter_search
 POST /api/v1/projects/{id}/review-round: 200, 400, 403; review_chatter_search
 POST /api/v1/projects/{id}/share-links: 201, 400, 403; share_links_public
 POST /api/v1/templates: 201, 400, 500; projects_templates
-POST /api/v1/templates/{id}/projects: 201, 400, 401, 500; projects_templates
+POST /api/v1/templates/{id}/projects: 201, 400, 401, 404, 500; projects_templates
 PUT /api/v1/artifacts/{id}: 200, 400, 403, 500; artifacts_attributes, links_managed_edits
 PUT /api/v1/artifacts/{id}/status: 200, 400, 403, 404, 409; review_chatter_search
 PUT /api/v1/attachments/{id}: 200, 400, 404; attachments

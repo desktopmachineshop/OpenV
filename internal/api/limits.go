@@ -147,12 +147,19 @@ func (h *Handler) requireWritable(w http.ResponseWriter, r *http.Request, orgID 
 			labels = append(labels, key)
 		}
 	}
-	msg := "This workspace is read-only: it is over its plan's limit on " + joinAnd(labels) + ". " + orgs.ReadOnlyRemedy
+	// A self-hosted deployment has no plan to be over: its limits are the
+	// operator's (OPENV_LIMITS), as the remedy says.
+	whose := "its plan's"
+	if orgs.SelfHosted() {
+		whose = "this deployment's"
+	}
+	remedy := orgs.ReadOnlyRemedy(over)
+	msg := "This workspace is read-only: it is over " + whose + " limit on " + joinAnd(labels) + ". " + remedy
 	respondJSON(w, http.StatusForbidden, map[string]interface{}{
 		"error":  msg,
 		"code":   ErrCodePlanReadOnly,
 		"over":   over,
-		"remedy": orgs.ReadOnlyRemedy,
+		"remedy": remedy,
 	})
 	return false
 }

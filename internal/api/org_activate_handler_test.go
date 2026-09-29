@@ -32,10 +32,12 @@ func activateReq(user *users.User, orgID string) *http.Request {
 	return mux.SetURLVars(r, map[string]string{"id": orgID})
 }
 
-// TestActivateOrgUnknownWorkspace: the guard lets a platform admin by for
-// any id, so ActivateOrg looks the workspace up before it stores it as the
-// session's active one. It used to store an id with no workspace behind it
-// and answer 204.
+// TestActivateOrgUnknownWorkspace: a platform admin cannot make a workspace
+// that does not exist the session's active one. The workspace guard refuses
+// it with 404, since it lets a platform admin by only into a workspace that
+// exists; ActivateOrg's own lookup, which refused it while the guard let the
+// admin by for any id, stays behind the guard. Before either, it stored an
+// id with no workspace behind it and answered 204.
 func TestActivateOrgUnknownWorkspace(t *testing.T) {
 	sessions := &fakeActiveOrgUsers{}
 	h := NewHandler(HandlerDeps{
