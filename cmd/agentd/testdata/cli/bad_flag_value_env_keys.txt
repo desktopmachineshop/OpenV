@@ -5,11 +5,13 @@
 # One run with an empty environment but for the env lines below and fresh
 # $HOME and $XDG_CONFIG_HOME directories; $BINDIR is the binary's
 # directory and $TMP the working directory.
-$ agentd --bogus
+$ agentd -concurrency=x
+env WORKER_API_KEY="wk-example"
+env RUNNER_POOL_KEY="pk-example"
 exit 2
 --- stdout
 --- stderr
-flag provided but not defined: -bogus
+invalid value "x" for flag -concurrency: parse error
 Usage of agentd:
   -api string
     	OpenV API base URL (default "http://localhost:8080")

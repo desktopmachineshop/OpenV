@@ -92,18 +92,38 @@ func runPool(apiURL, poolKey, pool, nodeName, sessionRoot, workspaces, mcpBinary
 
 func main() {
 	apiURL := flag.String("api", envOr("OPENV_API_URL", "http://localhost:8080"), "OpenV API base URL")
-	workerKey := flag.String("worker-key", os.Getenv("WORKER_API_KEY"), "worker API key (required)")
+	workerKey := flag.String("worker-key", "", "worker API key (required; read from WORKER_API_KEY when not given)")
 	concurrency := flag.Int("concurrency", envIntOr("AGENT_CONCURRENCY", 1), "concurrent normal runs")
 	childConcurrency := flag.Int("child-concurrency", envIntOr("AGENT_CHILD_CONCURRENCY", 2), "extra slots reserved for child/interview runs")
 	workspaces := flag.String("workspaces", defaultWorkspaces(), "base directory for run workspaces")
 	mcpBinary := flag.String("mcp-binary", defaultMCPBinary(), "path to the openv-mcp binary")
 	hosted := flag.Bool("hosted", envOr("OPENV_HOSTED", "") == "true", "token-mode hosted runner: no CLI sign-in, no repo-access runs")
 	workspaceRetention := flag.Duration("workspace-retention", envDurationOr("AGENT_WORKSPACE_RETENTION", 24*time.Hour), "how long finished run workspaces are kept before cleanup")
-	poolKey := flag.String("pool-key", os.Getenv("RUNNER_POOL_KEY"), "transient runner pool key: run as a pre-warmed pool node instead of a fixed runner")
-	pool := flag.String("pool", envOr("RUNNER_POOL", ""), "pool this node belongs to (default \"default\")")
-	nodeName := flag.String("node-name", envOr("RUNNER_NODE_NAME", ""), "stable name for this pool node (default: hostname)")
+	poolKey := flag.String("pool-key", "", "transient runner pool key: run as a pre-warmed pool node instead of a fixed runner (read from RUNNER_POOL_KEY when not given)")
+	pool := flag.String("pool", "", "pool this node belongs to (read from RUNNER_POOL when not given; \"default\" when neither sets it)")
+	nodeName := flag.String("node-name", "", "stable name for this pool node (read from RUNNER_NODE_NAME when not given; the hostname when neither sets it)")
 	sessionRoot := flag.String("session-root", envOr("RUNNER_SESSION_ROOT", ""), "parent directory for per-lease HOME directories (pool mode)")
 	flag.Parse()
+
+	// The keys, the pool and the node name fall back to the environment after
+	// parsing rather than as flag defaults: the usage text -h and every flag
+	// error print shows a flag's default, which would show both keys, and the
+	// pool and node name name their own defaults in their usage text. A flag
+	// given on the command line, even empty, still wins.
+	given := map[string]bool{}
+	flag.Visit(func(f *flag.Flag) { given[f.Name] = true })
+	if !given["worker-key"] {
+		*workerKey = os.Getenv("WORKER_API_KEY")
+	}
+	if !given["pool-key"] {
+		*poolKey = os.Getenv("RUNNER_POOL_KEY")
+	}
+	if !given["pool"] {
+		*pool = envOr("RUNNER_POOL", "")
+	}
+	if !given["node-name"] {
+		*nodeName = envOr("RUNNER_NODE_NAME", "")
+	}
 
 	// Pool mode: this process holds no workspace credential of its own. It
 	// waits to be leased by a member, becomes their runner for the length of
