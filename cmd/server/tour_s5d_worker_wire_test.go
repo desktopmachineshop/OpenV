@@ -60,12 +60,12 @@ import (
 //   - release (I12): {} answers 204 and releases nothing (no worker id
 //     matches the claimer's), no body answers 400, the claimer's worker id
 //     puts the run back in the queue and clears its answer so far (a setup
-//     log push gave it one); the released run's token still
-//     authenticates until the run is claimed again, when a new one replaces it;
+//     log push gave it one) and revokes its token, which the middleware then
+//     refuses, and the next claim issues a new one;
 //   - finish with tokens, cost and exit code; retry refused for a succeeded
-//     run; finish accepted for a run no worker ever claimed; a launch on a card
-//     id no card has (stored as sent: agent_runs.work_item_id has no foreign
-//     key; the board's move of that card only logs);
+//     run; finish refused (409) for a run no worker ever claimed; a launch on
+//     a card id no card has (stored as sent: agent_runs.work_item_id has no
+//     foreign key; the board's move of that card only logs);
 //   - launches by a worker key and by a run's token (201 with no launched_by:
 //     the handler has no user check, and the project guard lets a worker of
 //     the project's workspace and a run scoped to the project through);
@@ -303,11 +303,10 @@ func workerWireTour(tr *tour) {
 	tr.step("release run2 as tour-box, as a runner shutting down sends it: 204, queued again", box, release,
 		run("run2"), jsonBody(`{"worker_id":"tour-box"}`))
 	tr.step("run2: queued, with no worker, heartbeat, start or answer so far", o, get, run("run2"))
-	tr.step("run2's first token still authenticates, since the release keeps its hash: the handler's 403", run2,
-		claim, as("tour-run2"))
+	tr.step("run2's first token, revoked by the release: the middleware's 401", run2, claim, as("tour-run2"))
 	reclaim := tr.step("the box key claims run2 again: the same run, a new token", box, claim, as("tour-box"))
 	reclaim.claimed("run2").runToken("run2.again", "run2's token from its second claim")
-	tr.step("run2's first token, replaced by the claim: the middleware's 401", run2, claim, as("tour-run2"))
+	tr.step("run2's first token after the new claim: still the middleware's 401", run2, claim, as("tour-run2"))
 
 	// (j) Finish, and a retry of a success.
 	tr.setup("start run2 again", box, start, run("run2"))
@@ -318,8 +317,9 @@ func workerWireTour(tr *tour) {
 	tr.step("launch on a card id no card has: 201, stored as sent (no foreign key), and no card is created or moved",
 		o, launch, agent, jsonBody(`{"project_id":"{{p}}","prompt":"Summarise P for card zero.",`+
 			`"work_item_id":"{{phantom}}"}`)).capture("run3", "/id")
-	tr.step("finish run3, which no worker claimed: 200 all the same", box, finish, run("run3"),
+	tr.step("finish run3, which no worker claimed: 409, only a run a worker holds finishes", box, finish, run("run3"),
 		jsonBody(`{"status":"succeeded","final_text":"Nothing to do."}`))
+	tr.setup("cancel run3, still queued, so that no later claim takes it", o, cancel, run("run3"))
 
 	// Launches by a key and by a run's token: the handler has no user check.
 	tr.step("the box key launches with no project: 201, in the key's workspace, with no launched_by", box, launch,

@@ -408,7 +408,7 @@
     },
     {
       "n": 9,
-      "title": "solo's token once its crew node is gone: 500, the run still names the node (no foreign key)",
+      "title": "solo's token once its crew node is gone: 404, the run still names the node (no foreign key)",
       "actor": "solo",
       "route": "POST /api/v1/agent-runs/delegate",
       "request": {
@@ -419,18 +419,18 @@
         ],
         "body": "{\"role_label\":\"Analyst\",\"prompt\":\"Analyse P.\"}"
       },
-      "status": 500,
+      "status": 404,
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 40,
+      "content_length": 32,
       "kind": "json",
       "body": [
-        "{\"error\":\"failed to resolve delegates\"}"
+        "{\"error\":\"team node not found\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "failed to resolve delegates"
+        "error": "team node not found"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []

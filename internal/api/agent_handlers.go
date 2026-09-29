@@ -250,6 +250,10 @@ func (h *Handler) DeleteAgent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.agentService.Delete(ActiveOrg(r), mux.Vars(r)["slug"]); err != nil {
+		if errors.Is(err, agents.ErrNotFound) {
+			writeJSONError(w, http.StatusNotFound, "agent not found")
+			return
+		}
 		respondInternal(w, r, "failed to delete agent", err)
 		return
 	}
@@ -367,9 +371,18 @@ func (h *Handler) LaunchAgentRun(w http.ResponseWriter, r *http.Request) {
 // prompt the handler builds. The agent runs in proposal mode, so its drafted
 // test-case artifacts and verifies links flow through the normal proposal
 // review path before they land.
+//
+// A proposal-mode run is refused, as a status change is: the draft launches a
+// run and puts its card on the board, which no proposal can carry, so a
+// review-gated agent could otherwise set work going that no person asked for
+// (REQ-21, REQ-75).
 func (h *Handler) DraftTestCases(w http.ResponseWriter, r *http.Request) {
 	projectID := mux.Vars(r)["id"]
 	if !h.requireProjectRole(w, r, projectID, members.RoleEditor) {
+		return
+	}
+	if _, proposalRun := h.proposalRunID(r); proposalRun {
+		writeJSONError(w, http.StatusForbidden, "proposal-mode agent runs cannot draft test cases")
 		return
 	}
 	var req struct {
@@ -911,6 +924,12 @@ func (h *Handler) DelegateRun(w http.ResponseWriter, r *http.Request) {
 
 	children, err := h.teamService.ResolveDelegates(*run.TeamNodeID)
 	if err != nil {
+		// The run's crew node was removed after the run launched (the run
+		// keeps its id, with no foreign key): the node routes' answer.
+		if errors.Is(err, teams.ErrNodeNotFound) {
+			writeJSONError(w, http.StatusNotFound, "team node not found")
+			return
+		}
 		respondInternal(w, r, "failed to resolve delegates", err)
 		return
 	}
@@ -1007,6 +1026,7 @@ func (h *Handler) CreateAutomation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	req.OrgID = ActiveOrg(r)
+	req.CreatedBy = CurrentUserID(r)
 	if !h.requireAutomationWrite(w, r, req.ProjectID, req.OrgID) {
 		return
 	}
@@ -1129,44 +1149,37 @@ func (h *Handler) ListProposals(w http.ResponseWriter, r *http.Request) {
 	}
 	q := r.URL.Query()
 	projectID := q.Get("project_id")
-	activeOrg := ActiveOrg(r)
+	// A workspace admin with no project filter sees the proposals of the
+	// active workspace's projects: the query filters by workspace before its
+	// limit, so other workspaces' proposals never crowd them out. Without an
+	// active workspace there is nothing to filter by, so even a platform
+	// admin must name a project.
+	orgID := ""
 	if projectID != "" {
 		if !h.requireProjectRole(w, r, projectID, members.RoleViewer) {
 			return
 		}
-	} else if !h.isOrgAdmin(r, activeOrg) {
+	} else if orgID = ActiveOrg(r); orgID == "" || !h.isOrgAdmin(r, orgID) {
 		// Non-admin members must scope the listing to a project they can view.
 		writeJSONError(w, http.StatusForbidden, "project_id is required")
 		return
 	}
-	list, err := h.proposalService.List(projectID, q.Get("status"), q.Get("run_id"))
+	list, err := h.proposalService.List(orgID, projectID, q.Get("status"), q.Get("run_id"))
 	if err != nil {
 		respondInternal(w, r, "failed to list proposals", err)
 		return
-	}
-	if projectID == "" {
-		// Workspace admins without a project filter see only proposals whose
-		// projects belong to the active workspace.
-		orgOf := map[string]string{}
-		filtered := list[:0]
-		for _, p := range list {
-			org, ok := orgOf[p.ProjectID]
-			if !ok {
-				if project, err := h.projectService.GetProject(p.ProjectID); err == nil && project != nil {
-					org = project.OrgID
-				}
-				orgOf[p.ProjectID] = org
-			}
-			if org != "" && org == activeOrg {
-				filtered = append(filtered, p)
-			}
-		}
-		list = filtered
 	}
 	json.NewEncoder(w).Encode(list)
 }
 
 func (h *Handler) reviewProposal(w http.ResponseWriter, r *http.Request, approve bool) {
+	// A run token is the agent itself, not a person: it reviews no proposal,
+	// its own run's least of all (REQ-21). The project guard below would let
+	// it through as an editor of its project.
+	if CurrentRun(r) != nil {
+		writeJSONError(w, http.StatusForbidden, "agent runs cannot review proposals")
+		return
+	}
 	id := mux.Vars(r)["id"]
 	proposal, err := h.proposalService.Get(id)
 	if err != nil {
@@ -1498,6 +1511,10 @@ func (h *Handler) UpsertProviderSetting(w http.ResponseWriter, r *http.Request) 
 }
 
 // RecordProviderDetection stores the worker's provider availability report.
+// Every provider the report names that the server knows is recorded, in name
+// order, before one it refuses (a provider it does not know) answers 400: a
+// runner reports all of its adapters at once, and which of them were stored
+// must not depend on the order a Go map is ranged in.
 func (h *Handler) RecordProviderDetection(w http.ResponseWriter, r *http.Request) {
 	if !requireWorker(w, r) {
 		return
@@ -1507,15 +1524,28 @@ func (h *Handler) RecordProviderDetection(w http.ResponseWriter, r *http.Request
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	for provider, detected := range req {
-		if err := h.providerService.RecordDetection(WorkerOrg(r), provider, detected); err != nil {
-			if errors.Is(err, providers.ErrInvalidSetting) {
-				writeJSONError(w, http.StatusBadRequest, err.Error())
-			} else {
-				respondInternal(w, r, "failed to record provider detection", err)
+	names := make([]string, 0, len(req))
+	for provider := range req {
+		names = append(names, provider)
+	}
+	sort.Strings(names)
+	var refused error
+	for _, provider := range names {
+		err := h.providerService.RecordDetection(WorkerOrg(r), provider, req[provider])
+		switch {
+		case err == nil:
+		case errors.Is(err, providers.ErrInvalidSetting):
+			if refused == nil {
+				refused = err
 			}
+		default:
+			respondInternal(w, r, "failed to record provider detection", err)
 			return
 		}
+	}
+	if refused != nil {
+		writeJSONError(w, http.StatusBadRequest, refused.Error())
+		return
 	}
 	w.WriteHeader(http.StatusNoContent)
 }

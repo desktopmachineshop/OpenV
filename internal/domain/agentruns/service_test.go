@@ -79,7 +79,7 @@ func (f *fakeRunRepo) UpdateTerminal(run *Run) (bool, error) {
 		f.onUpdateTerminal()
 	}
 	stored, ok := f.runs[run.ID]
-	if !ok || terminalStatuses[stored.Status] || stored.Status == StatusAwaitingApproval {
+	if !ok || (stored.Status != StatusClaimed && stored.Status != StatusRunning) {
 		return false, nil
 	}
 	cp := *run
@@ -96,6 +96,7 @@ func (f *fakeRunRepo) ReleaseClaim(runID, workerID string) (bool, error) {
 	r.Status = StatusQueued
 	r.WorkerID = ""
 	r.HeartbeatAt = nil
+	r.RunTokenHash = ""
 	return true, nil
 }
 
@@ -154,12 +155,13 @@ func (f *fakeRunRepo) CountApplyFailedProposals(string) (int, error) {
 // FinalizeApproval mirrors the SQL: it transitions the STORED run only while
 // it is still awaiting_approval, so a concurrent resolver can never
 // double-finalize; reports whether it was applied.
-func (f *fakeRunRepo) FinalizeApproval(runID, status string, at time.Time) (bool, error) {
+func (f *fakeRunRepo) FinalizeApproval(runID, status, errMsg string, at time.Time) (bool, error) {
 	r, ok := f.runs[runID]
 	if !ok || r.Status != StatusAwaitingApproval {
 		return false, nil
 	}
 	r.Status = status
+	r.Error = errMsg
 	r.FinishedAt = &at
 	r.RunTokenHash = ""
 	return true, nil
@@ -446,7 +448,10 @@ func TestFinishAutoRetriesRetryableFailureUntilExhausted(t *testing.T) {
 		t.Error("retry must preserve the launcher for personal-runner routing")
 	}
 
-	// Attempt 2 fails the same way -> attempt 3 (the last) is enqueued.
+	// Attempt 2 fails the same way -> attempt 3 (the last) is enqueued. A
+	// worker holds each attempt before it reports: only a claimed or running
+	// run finishes.
+	repo.runs[retry2.ID].Status = StatusRunning
 	if _, err := svc.Finish(retry2.ID, FinishRequest{Status: StatusTimedOut, ErrorClass: ErrorClassTimeout}); err != nil {
 		t.Fatalf("Finish attempt 2: %v", err)
 	}
@@ -456,6 +461,7 @@ func TestFinishAutoRetriesRetryableFailureUntilExhausted(t *testing.T) {
 	}
 
 	// Attempt 3 exhausts the budget -> no further retry.
+	repo.runs[retry3.ID].Status = StatusRunning
 	if _, err := svc.Finish(retry3.ID, FinishRequest{Status: StatusFailed, ErrorClass: ErrorClassProviderUnavailable}); err != nil {
 		t.Fatalf("Finish attempt 3: %v", err)
 	}
@@ -674,6 +680,49 @@ func TestFinishRefusesSecondTerminalReport(t *testing.T) {
 	}
 }
 
+// TestFinishRefusesARunNoWorkerHolds: a queued run, which no worker has
+// claimed (or one a worker released), takes no result. The refusal is the
+// transition error every other refused transition gives, and the run stays
+// queued with its token, claimable as it was.
+func TestFinishRefusesARunNoWorkerHolds(t *testing.T) {
+	bus := &fakeBus{}
+	svc, repo := newFakeServiceWithBus(bus, &Run{ID: "r1", Status: StatusQueued, RunTokenHash: "hash"})
+
+	_, err := svc.Finish("r1", FinishRequest{Status: StatusSucceeded, FinalText: "Nothing to do."})
+	if !errors.Is(err, ErrInvalidTransition) {
+		t.Fatalf("Finish(queued) err = %v, want ErrInvalidTransition", err)
+	}
+	if want := "invalid run status transition: queued -> succeeded"; err.Error() != want {
+		t.Errorf("Finish(queued) err = %q, want %q", err, want)
+	}
+	stored := repo.runs["r1"]
+	if stored.Status != StatusQueued || stored.FinishedAt != nil || stored.FinalText != "" || stored.RunTokenHash != "hash" {
+		t.Errorf("stored run = %+v, want queued and untouched", stored)
+	}
+	if len(bus.finished()) != 0 {
+		t.Errorf("a refused finish published %+v", bus.finished())
+	}
+}
+
+// TestFinishLosesRaceToRelease: a worker's release lands between Finish's
+// read and its conditional write, so the run is back in the queue; the
+// write takes no result and the refusal names the transition.
+func TestFinishLosesRaceToRelease(t *testing.T) {
+	svc, repo := newFakeService(&Run{ID: "r1", Status: StatusRunning, WorkerID: "w-1"})
+	repo.onUpdateTerminal = func() {
+		repo.runs["r1"].Status = StatusQueued
+		repo.runs["r1"].WorkerID = ""
+	}
+
+	_, err := svc.Finish("r1", FinishRequest{Status: StatusFailed, Error: "late"})
+	if !errors.Is(err, ErrInvalidTransition) || err.Error() != "invalid run status transition: queued -> failed" {
+		t.Fatalf("Finish err = %v, want the queued -> failed transition error", err)
+	}
+	if stored := repo.runs["r1"]; stored.Status != StatusQueued || stored.Error != "" {
+		t.Errorf("stored run = %+v, want still queued with no error", stored)
+	}
+}
+
 func TestFinishLosesRaceToReaper(t *testing.T) {
 	svc, repo := newFakeService(&Run{ID: "r1", Status: StatusRunning})
 	// The stale reaper fails the run between the service's read and its
@@ -711,7 +760,7 @@ func TestFinishWithPendingProposalsAwaitsApproval(t *testing.T) {
 
 func TestReleaseClaimReturnsRunToQueue(t *testing.T) {
 	now := time.Now()
-	svc, repo := newFakeService(&Run{ID: "r1", Status: StatusClaimed, WorkerID: "w-1", HeartbeatAt: &now})
+	svc, repo := newFakeService(&Run{ID: "r1", Status: StatusClaimed, WorkerID: "w-1", HeartbeatAt: &now, RunTokenHash: "hash"})
 
 	if err := svc.ReleaseClaim("r1", "w-1"); err != nil {
 		t.Fatalf("ReleaseClaim: %v", err)
@@ -719,6 +768,9 @@ func TestReleaseClaimReturnsRunToQueue(t *testing.T) {
 	stored := repo.runs["r1"]
 	if stored.Status != StatusQueued || stored.WorkerID != "" || stored.HeartbeatAt != nil {
 		t.Errorf("stored run = %+v, want back in queue with no worker", stored)
+	}
+	if stored.RunTokenHash != "" {
+		t.Error("a released run's token must be revoked with the release")
 	}
 }
 
@@ -952,8 +1004,13 @@ func TestFinalizeIfResolvedFailsWhenApplyFailed(t *testing.T) {
 	if run.Status != StatusFailed {
 		t.Errorf("returned status = %q, want failed", run.Status)
 	}
-	if run.Error == "" {
-		t.Error("failed finalize should carry an error explaining the apply failure")
+	if run.Error != "one or more approved proposals failed to apply" {
+		t.Errorf("returned error = %q, want the apply failure explained", run.Error)
+	}
+	// The stored run reads back as the returned one: the error is stored with
+	// the status, not only broadcast.
+	if stored := repo.runs["r1"]; stored.Status != StatusFailed || stored.Error != run.Error {
+		t.Errorf("stored run = %s %q, want failed with %q", stored.Status, stored.Error, run.Error)
 	}
 	finished := bus.finished()
 	if len(finished) != 1 || finished[0].Payload["status"] != StatusFailed {

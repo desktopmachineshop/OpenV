@@ -104,19 +104,17 @@ the Phase 3 consolidations that give quirks their names.
   and on a shared product's vote, report and delete (steps 32, 48 and 61 of
   `cmd/server/testdata/tour/s5b/shared_products.json`), where a well-formed
   id no row has answers 404 (204 on the uncite, which looks nothing up).
-  The S5d tour pins the same family on agents and the worker wire: deleting
-  an agent that is gone, or a slug that is no slug, answers 500 `failed to
-  delete agent`, since `agents.ErrNotFound` is not mapped (steps 40 and 41
-  of `cmd/server/testdata/tour/s5d/agents_automations.json`); releasing a
-  pool node no one has answers 500, since `ErrNodeNotFound` is not told
-  apart, where its heartbeat answers 404 (steps 122 and 123 of
-  `providers_repos_pool.json`); a delegation from a run whose crew node was
-  removed answers 500, the run still naming the node (step 9 of
-  `orchestration_budget.json`); and an id that is not a UUID answers 500 on
-  a node's heartbeat and release and in the `agent_id` and `run_id` filters
-  of the run and proposal lists (steps 124 and 125 of
-  `providers_repos_pool.json`, step 100 of `worker_wire.json`, step 24 of
-  `proposals_events.json`).
+  The S5d tour pins the same family on agents and the worker wire: an id
+  that is not a UUID answers 500 on a node's heartbeat and release and in
+  the `agent_id` and `run_id` filters of the run and proposal lists (steps
+  124 and 125 of `cmd/server/testdata/tour/s5d/providers_repos_pool.json`,
+  step 100 of `worker_wire.json`, step 24 of `proposals_events.json`). Its
+  well-formed neighbours answer 404, the not-found of their sibling routes:
+  deleting an agent that is gone, or a slug no agent has (steps 40 and 41 of
+  `agents_automations.json`), releasing a pool node no one has, as its
+  heartbeat does (steps 122 and 123 of `providers_repos_pool.json`), and a
+  delegation from a run whose crew node was removed, the run still naming
+  the node (step 9 of `orchestration_budget.json`).
 
 ## Q3. Managed link edits in `PUT /artifacts/{id}` take their own path
 
@@ -403,16 +401,16 @@ the Phase 3 consolidations that give quirks their names.
   step 1 of `runner_keys_connector.json`, steps 2, 6, 7 and 11 of
   `notifications_push.json`). The S5d tour, for agents and the worker wire,
   `null`: a workspace's agents and its sync once none is left, automations,
-  a new crew's nodes and edges and a workspace's crews, proposals, runs, a
+  a new crew's nodes and edges and a workspace's crews, proposals (a
+  project's, and a workspace admin's with none in the workspace), runs, a
   project's repository connections, a workspace's worker keys, and a pool
   node's providers read back after its registration answered `[]` (steps
   42, 43, 73 and 74 of `cmd/server/testdata/tour/s5d/agents_automations.json`,
-  steps 11 and 116 of `crews_teams.json`, step 23 of
+  steps 11 and 116 of `crews_teams.json`, steps 23 and 29 of
   `proposals_events.json`, steps 90 and 96 of `worker_wire.json`, steps 68,
-  100, 102 and 107 of `providers_repos_pool.json`). `[]`: a run's log, the
-  events before a cursor no event has, and a proposal list the repository
-  filled before the handler filtered it empty (step 53 of
-  `worker_wire.json`, steps 61 and 29 of `proposals_events.json`).
+  100, 102 and 107 of `providers_repos_pool.json`). `[]`: a run's log and
+  the events before a cursor no event has (step 53 of `worker_wire.json`,
+  step 61 of `proposals_events.json`).
 
 ## Q15. An unknown protected path answers 401; OPTIONS answers 200 unlogged
 

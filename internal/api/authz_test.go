@@ -419,6 +419,12 @@ func reqWithWorker(orgID string) *http.Request {
 	return r.WithContext(context.WithValue(r.Context(), ctxWorkerOrg, orgID))
 }
 
+// reqWithPersonalKey is reqWithWorker for a member's personal runner key.
+func reqWithPersonalKey(orgID, userID string) *http.Request {
+	r := reqWithWorker(orgID)
+	return r.WithContext(context.WithValue(r.Context(), ctxWorkerUser, userID))
+}
+
 func TestRequireProjectRole(t *testing.T) {
 	const (
 		projectID = "proj-1"
@@ -514,6 +520,59 @@ func TestRequireProjectRole(t *testing.T) {
 		{
 			name:     "worker foreign org gets 403",
 			request:  reqWithWorker("org-other"),
+			minRole:  members.RoleViewer,
+			wantPass: false,
+			wantCode: http.StatusForbidden,
+		},
+		{
+			name:     "editor's personal key meets editor",
+			request:  reqWithPersonalKey(orgID, "direct-editor"),
+			minRole:  members.RoleEditor,
+			wantPass: true,
+		},
+		{
+			name:     "editor's personal key fails owner",
+			request:  reqWithPersonalKey(orgID, "direct-editor"),
+			minRole:  members.RoleOwner,
+			wantPass: false,
+			wantCode: http.StatusForbidden,
+		},
+		{
+			name:     "viewer's personal key fails editor",
+			request:  reqWithPersonalKey(orgID, "team-viewer"),
+			minRole:  members.RoleEditor,
+			wantPass: false,
+			wantCode: http.StatusForbidden,
+		},
+		{
+			name:     "viewer's personal key fails reviewer",
+			request:  reqWithPersonalKey(orgID, "team-viewer"),
+			minRole:  members.RoleReviewer,
+			wantPass: false,
+			wantCode: http.StatusForbidden,
+		},
+		{
+			name:     "org admin's personal key passes owner",
+			request:  reqWithPersonalKey(orgID, "org-admin"),
+			minRole:  members.RoleOwner,
+			wantPass: true,
+		},
+		{
+			name:     "roleless member's personal key fails editor",
+			request:  reqWithPersonalKey(orgID, "org-member"),
+			minRole:  members.RoleEditor,
+			wantPass: false,
+			wantCode: http.StatusForbidden,
+		},
+		{
+			name:     "roleless member's personal key still reads as a viewer",
+			request:  reqWithPersonalKey(orgID, "org-member"),
+			minRole:  members.RoleViewer,
+			wantPass: true,
+		},
+		{
+			name:     "personal key foreign org gets 403",
+			request:  reqWithPersonalKey("org-other", "org-admin"),
 			minRole:  members.RoleViewer,
 			wantPass: false,
 			wantCode: http.StatusForbidden,

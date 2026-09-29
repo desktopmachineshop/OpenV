@@ -28,10 +28,11 @@ import (
 //     up: an id no artifact has launches too), by the owner and by a worker
 //     key (no launched_by: requireProjectRole lets a worker of the project's
 //     workspace through, and refuses it another workspace's project with 403
-//     and a project no one has with 404, where a person gets 403); by the
-//     proposal-mode run's own token, since a draft is no write the proposal
-//     mode diverts; in a second workspace L whose author was deleted, 404,
-//     and still 404 after a sync, since the delete moved the file to .trash;
+//     and a project no one has with 404, where a person gets 403); refused
+//     (403) to the proposal-mode run's own token, as a status change is,
+//     since no proposal can carry a launch; in a second workspace L whose
+//     author was deleted, 404, and still 404 after a sync, since the delete
+//     moved the file to .trash;
 //   - the run's writes (S5a's routes under the run's token): a test case with
 //     a ref, 202 with its own application/json (unlike Q1's bare encodes) and
 //     proposal.created as the run; the same ref twice; a verifies link that
@@ -42,8 +43,8 @@ import (
 //   - the list: stored payloads (I16: the ref lifted into its own field,
 //     attributes null), newest first, the filters, a viewer, a member with no
 //     project, an admin's list filtered to the workspace (a proposal of the
-//     owner's personal workspace is left out), null when nothing matches and
-//     [] when the filter empties a list the repository filled (Q14);
+//     owner's personal workspace is left out, by the query, before its
+//     limit) and null when nothing matches, in the workspace too (Q14);
 //   - the apply order: a bulk approval applies create_artifact first and
 //     create_link last, ids that do not load keep the middle, the applied
 //     writes' events are the system's (the artifact's with a version the
@@ -52,17 +53,24 @@ import (
 //   - the reverse through the single routes: a link approved before its
 //     test case fails to apply (a sanitised 500, the real error joined to the
 //     reviewer's note in the review note), the test case's rejection
-//     finalises the run failed (its error is not stored), and the refusals
+//     finalises the run failed (its error stored with it), and the refusals
 //     (reviewed, phantom, id x, a viewer after the lookup); a review body
 //     that does not decode is ignored;
 //   - bulk refusals, a key's 401, a viewer's per-id error, a rejection in
 //     the client's order, the 100 a request may carry, and the run's cap of
-//     100 proposals; and, pinned as they are, a proposal approved by its own
-//     run's token and by the viewer's personal runner key;
-//   - the events route: a page and the member's view of it (the cursor from
-//     the raw page, I8), the actor kinds decorated (user, agent, system,
-//     worker, worker:user), the filters, the before cursor, its 400 and a
-//     cursor no event has ([]), another project's guard and a key's 401;
+//     100 proposals; a run's token refused the review of its own proposal
+//     (403, before the lookup: a run token is the agent, never a person; fixed
+//     under R7, it approved it), which the owner then approves; and the
+//     viewer's personal runner key refused the approval of a proposal of P
+//     (403: a personal key acts with its member's role; fixed under R7, it
+//     applied the proposal with no reviewer), which the owner then approves;
+//   - the events route, after the viewer's key is refused a requirement in P
+//     (403, fixed under R7 as its approval is) that the owner's own personal
+//     key, as W's admin, then creates: a page and the member's view of it
+//     (the cursor from the raw page, I8), the actor kinds decorated (user,
+//     agent, system, worker, worker:user), the filters, the before cursor,
+//     its 400 and a cursor no event has ([]), another project's guard and a
+//     key's 401;
 //   - Q8 in L: GET /events and GET /agent-runs reset a limit of 0, -1, abc or
 //     501 to 100 rather than clamp it, and 500 answers all of more than 100;
 //   - the other proposal ops, each with an applier of its own, under a fifth
@@ -72,23 +80,22 @@ import (
 //     bulk request that lists the delete_link first, so that their order (the
 //     middle bucket's, the client's) and delete_link's place in it are pinned;
 //     the applied writes' events (the system's) and the auto-versions of the
-//     deleted link's ends.
+//     deleted link's ends;
+//   - last, the single approve route's 2xx, which the viewer's key gave
+//     before its fix: the owner approves H's proposal in its personal
+//     workspace, and a review body that does not decode is ignored.
 //
 // Every JSON 2xx here is a bare encode (text/plain by sniffing, Q1), but for
 // the proposal receipt's 202; errors are application/json. Proposals are
 // ordered created_at DESC, events created_at DESC and id DESC, runs
 // created_at DESC. The draft's prompt is the handler's text and the claim is
 // setup, so no seed prompt is in the golden; the test-case author's name is.
-// Pinned as they are, bugs for release-noted bug-fix pull requests that
-// regenerate the golden: a proposal-mode run's token approves its own
-// proposal, since requireProjectRole passes a run as an editor of its project
-// and the review routes have no user check, so the agent's write lands with
-// no human review; any worker key of the workspace approves too, the personal
-// runner key of a member who only views P among them, and that key also
-// writes artifacts into P directly; a run finalised failed carries "one or
-// more approved proposals failed to apply" only in the status it broadcasts,
-// since FinalizeApproval stores no error; and a proposal-mode run launches
-// another author run through the draft, with no parent and no launcher.
+// A workspace runner key has no member, and still writes in any project of
+// its workspace (REQ-42's workspace-wide editor rights; the box key's
+// requirement in P). Left to the maintainer, and not pinned as a bug: whether
+// a personal key reads, and claims ownerless runs in, a project its member
+// cannot view (the runner reads a claimed run's repository connections with
+// it).
 //
 // Not pinned: the budget's 402 on the draft (Q9, orchestration_budget), a
 // record_test_result proposal, which no route proposes (no handler diverts a
@@ -96,8 +103,10 @@ import (
 // directly), a pendingLinkRemoves proposal, refused by the same check as
 // pendingLinkAdds, a concurrent resolver's lost race in FinalizeApproval, and
 // a workspace admin's unfiltered list once the other workspaces hold 500
-// newer proposals (the repository reads 500 across every workspace before the
-// handler filters, so the admin's list would come back short or empty).
+// newer proposals, which the repository's own test pins
+// (TestProposalListFiltersByWorkspaceBeforeItsLimit: the workspace filter
+// precedes the limit; fixed under R7, the handler filtered 500 rows read
+// across every workspace, so the list came back short or empty).
 func TestTourS5dProposalsEvents(t *testing.T) {
 	runTourArea(t, tourArea{
 		slice: "s5d",
@@ -170,8 +179,11 @@ func proposalsEventsTour(tr *tour) {
 		jsonBody(`{"email":"tour-member@example.com","role":"viewer"}`), expect(http.StatusCreated))
 	box := tr.workerKey("box", "{{w}}", "a worker key of W (worker id tour-box): claims and finishes the "+
 		"drafts' runs, and drafts itself")
-	runner := tr.runnerKey("runner", m, "{{w}}", "the member's personal runner key in W, though the member only "+
-		"views P")
+	runner := tr.runnerKey("runner", m, "{{w}}", "the member's personal runner key in W, which acts with the "+
+		"member's role, a viewer's in P: it neither reviews nor writes there")
+	own := tr.runnerKey("own", o, "{{w}}", "the owner's personal runner key in W, as W's admin: creates the "+
+		"requirement the member's key may not, and is revoked at once, so that no run the owner launches later is "+
+		"reserved for it")
 
 	// A proposal outside W: a draft in project H of the owner's personal
 	// workspace, whose run proposes one test case, so that W's admin list
@@ -245,13 +257,8 @@ func proposalsEventsTour(tr *tour) {
 	tr.step("a write into Q: 403, the run is scoped to P", author, artifact,
 		jsonBody(`{"project_id":"{{q}}","type":"test-case","title":"Elsewhere"}`))
 	tr.step("the run changes R1's status: 403", author, status, on("r1"), jsonBody(`{"status":"approved"}`))
-	drafted := tr.step("the run's token drafts in P: 201, a run of the test-case author with no launched_by and no "+
-		"parent; the draft is no write the proposal mode diverts", author, draft, on("p"),
-		jsonBody(`{"requirement_ids":["{{r1}}"]}`))
-	drafted.capture("author_t", "/id")
-	drafted.capture("author_t.card", "/work_item_id")
-	tr.setup("cancel the run the token drafted, so that no later claim takes it", o,
-		"POST /api/v1/agent-runs/{id}/cancel", on("author_t"))
+	tr.step("the run's token drafts in P: 403, as a status change is; no proposal can carry a launch, so a "+
+		"proposal-mode run launches none", author, draft, on("p"), jsonBody(`{"requirement_ids":["{{r1}}"]}`))
 
 	// (c) The finish.
 	tr.step("the box key finishes the run as succeeded: awaiting_approval, since two proposals are pending; "+
@@ -271,8 +278,8 @@ func proposalsEventsTour(tr *tour) {
 	tr.step("the member lists with no project: 403", m, list)
 	tr.step("the member lists Q's proposals: Q's guard", m, list, query("project_id={{q}}"))
 	tr.step("the box key lists: the handler's 401, a key is no user", box, list, query("project_id={{p}}"))
-	tr.step("every proposal, as L's admin with no project: the list the repository filled, filtered to L, is [] "+
-		"and not null (Q14)", o, list, inL)
+	tr.step("every proposal, as L's admin with no project: none in L, null (Q14), however many other workspaces "+
+		"hold", o, list, inL)
 
 	// (e) The apply order.
 	tr.step("bulk-approve the link, an id no proposal has and the test case, in that order: 200; the test case "+
@@ -300,7 +307,7 @@ func proposalsEventsTour(tr *tour) {
 	tr.step("reject the test case: 200; the run's last pending proposal resolved, it is finalised failed, since "+
 		"one apply failed: agentrun.finished #2 and the card back to todo (Q10)", o, reject, on("a2"),
 		jsonBody(`{"note":"Not this one."}`))
-	tr.step("the second run: failed; the finalisation's error is not stored", o, getRun, on("author2"))
+	tr.step("the second run: failed, with the finalisation's error stored", o, getRun, on("author2"))
 	tr.step("approve the link again: 400", o, approve, on("l2"))
 	tr.step("approve a proposal no one has: 404", o, approve, on("phantom"))
 	tr.step("reject a proposal no one has: 404", o, reject, on("phantom"))
@@ -308,7 +315,7 @@ func proposalsEventsTour(tr *tour) {
 	tr.step("the member approves the reviewed link: 403, the guard runs after the lookup and before the review "+
 		"check", m, approve, on("l2"))
 
-	// (g) Bulk refusals, and approvals no person made.
+	// (g) Bulk refusals, a run's own review refused, and a viewer's key's.
 	third := tr.setup("a third draft, for R1", o, draft, on("p"), jsonBody(`{"requirement_ids":["{{r1}}"]}`),
 		expect(http.StatusCreated))
 	third.capture("author3", "/id")
@@ -323,12 +330,16 @@ func proposalsEventsTour(tr *tour) {
 		jsonBody(proposalsEventsTestCase("Self-reviewed", "")), expect(http.StatusAccepted)).capture("s3", "/proposal_id")
 	tr.setup("the third run proposes a test case the member's key will approve", author3, artifact,
 		jsonBody(proposalsEventsTestCase("Key-reviewed", "")), expect(http.StatusAccepted)).capture("k3", "/proposal_id")
-	tr.step("the run approves its own proposal: 200, applied with no reviewer; the project guard lets a run "+
-		"through as an editor of its project (pinned as it is)", author3, approve, on("s3")).
+	tr.step("the run approves its own proposal: 403, a run token is the agent and reviews no proposal, refused "+
+		"before the lookup; the proposal stays pending", author3, approve, on("s3"))
+	tr.setup("the owner approves the proposal its run could not", o, approve, on("s3")).
 		capture("s3.artifact", "/applied_entity_id")
-	tr.step("the member's runner key approves a proposal of P, where the member is only a viewer: 200, applied "+
-		"with no reviewer; the guard lets any key of the workspace through (pinned as it is); a body that does not "+
-		"decode is ignored", runner, approve, on("k3"), jsonBody(`{`)).capture("k3.artifact", "/applied_entity_id")
+	tr.step("the member's runner key approves a proposal of P, where the member is only a viewer: 403, a personal "+
+		"key acts with its member's role (fixed under R7, it applied the proposal with no reviewer); the proposal "+
+		"stays pending", runner, approve, on("k3"), jsonBody(`{`))
+	tr.setup("the owner approves the proposal the member's key could not, with a body that does not decode, which "+
+		"is ignored", o, approve, on("k3"), jsonBody(`{`), expect(http.StatusOK)).
+		capture("k3.artifact", "/applied_entity_id")
 	tr.setup("finish the third run: awaiting_approval", box, finish, on("author3"), jsonBody(`{"status":"succeeded"}`))
 	tr.step("bulk with a body that does not decode", o, bulk, jsonBody(`{`))
 	tr.step("bulk with action x", o, bulk, jsonBody(`{"action":"x","ids":["{{a3}}"]}`))
@@ -349,10 +360,14 @@ func proposalsEventsTour(tr *tour) {
 	tr.step("the box key creates a requirement in P: 201, artifact.created as worker:<w>", box, artifact,
 		jsonBody(`{"project_id":"{{p}}","type":"requirement","title":"Answer politely",`+
 			`"body":"The system shall be polite."}`)).capture("r3", "/id")
-	tr.step("the member's runner key creates a requirement in P, which the member only views: 201, "+
-		"artifact.created as worker:<w>:user:<member> (pinned as it is)", runner, artifact,
-		jsonBody(`{"project_id":"{{p}}","type":"requirement","title":"Answer briefly",`+
-			`"body":"The system shall be brief."}`)).capture("r4", "/id")
+	brief := jsonBody(`{"project_id":"{{p}}","type":"requirement","title":"Answer briefly",` +
+		`"body":"The system shall be brief."}`)
+	tr.step("the member's runner key creates a requirement in P, which the member only views: 403, a personal key "+
+		"acts with its member's role (fixed under R7, it created the requirement)", runner, artifact, brief)
+	tr.setup("the owner's runner key creates that requirement in P, as W's admin: artifact.created as "+
+		"worker:<w>:user:<owner>", own, artifact, brief, expect(http.StatusCreated)).capture("r4", "/id")
+	tr.setup("the owner revokes its runner key", o, "DELETE /api/v1/orgs/{id}/my-runner-key", at("id", "{{w}}"),
+		expect(http.StatusNoContent))
 	tr.step("W's newest four events, as its admin: X-Next-Cursor, the last one's id, on a full page (I8)", o, events,
 		query("limit=4"))
 	tr.step("the member's view of the same page: Q's event dropped, the cursor still the raw page's last id", m,
@@ -436,4 +451,12 @@ func proposalsEventsTour(tr *tour) {
 		on("tc"))
 	tr.step("R1 after the approval: two versions on, one for the link's delete and one for its rename", o,
 		"GET /api/v1/artifacts/{id}", on("r1"))
+
+	// (k) The single approve route's 2xx, which step 43 gave until the
+	// member's key was refused there: the proposal H's run left outside W,
+	// approved where it belongs. Last, so that no step number cited
+	// elsewhere moves.
+	tr.step("the owner approves H's proposal, in its personal workspace: 200, applied, the owner its reviewer; a "+
+		"body that does not decode is ignored", o, approve, on("h.proposal"), actingIn("{{owner.workspace}}"),
+		jsonBody(`{`)).capture("h.artifact", "/applied_entity_id")
 }

@@ -29,9 +29,10 @@ import (
 //     refused (403: only a run token delegates), a run with no crew node
 //     (400), a body that does not decode, a blank prompt, a label no delegate
 //     has (the available labels listed, none for C2's run), a run whose crew
-//     node was removed (500), and the delegation itself, whose label is
-//     matched without regard to case: 201 {run_id, status}, and the child
-//     inherits the parent's card, which its launch moves back to To Do;
+//     node was removed (404, the node routes' answer), and the delegation
+//     itself, whose label is matched without regard to case: 201 {run_id,
+//     status}, and the child inherits the parent's card, which its launch
+//     moves back to To Do;
 //   - the parent's poll (GET /agent-runs/delegate/{id}): {error, final_text,
 //     run_id, status} in a Go map's order, refused to another run's token, a
 //     run no one has, and a user;
@@ -252,7 +253,7 @@ func orchestrationBudgetTour(tr *tour) {
 		jsonBody(`{"role_label":"Analyst","prompt":"Analyse P."}`))
 	tr.setup("remove C2's node Solo while solo runs", o, "DELETE /api/v1/crew-nodes/{id}", at("id", "{{node.solo}}"),
 		expect(204))
-	tr.step("solo's token once its crew node is gone: 500, the run still names the node (no foreign key)", soloTok,
+	tr.step("solo's token once its crew node is gone: 404, the run still names the node (no foreign key)", soloTok,
 		delegate, jsonBody(`{"role_label":"Analyst","prompt":"Analyse P."}`))
 	tr.step("lead's token delegates to analyst, matched without regard to case: 201, the child queued", leadTok,
 		delegate, jsonBody(`{"role_label":"analyst","prompt":"Analyse P's test gaps."}`),

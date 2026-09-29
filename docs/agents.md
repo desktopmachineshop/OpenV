@@ -35,6 +35,9 @@ settings (Settings → My Runner) and starts `agentd` with it.
 
 - Claims **only runs you launched** — your subscription never executes a
   teammate's work.
+- The key acts as you: used against the API, it approves proposals and
+  writes only in projects where your own role allows it (editor, or admin
+  of the workspace).
 - Full capability: repo-access runs (cloning connected repositories) are
   allowed, and the existing **Connect** sign-in flow works (the CLI's own
   login is relayed to your browser; credentials stay on your machine).
@@ -872,7 +875,8 @@ Automations launch runs without a human clicking a button. Three trigger kinds:
   nightly gap-analysis review).
 - **triggered** — the trigger matcher listens to the event bus (artifact
   created, test result recorded, work item moved, ...) and launches matching
-  automations.
+  automations. An automation sees only the events of its own workspace, and
+  of its own project when it is pinned to one.
 
 ## Kanban-driven runs
 

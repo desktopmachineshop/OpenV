@@ -81,16 +81,19 @@ func (r *ProposalRepository) FindByID(id string) (*proposals.Proposal, error) {
 	return p, err
 }
 
-// List returns proposals filtered by project/status/run, newest first.
-func (r *ProposalRepository) List(projectID, status, runID string) ([]*proposals.Proposal, error) {
+// List returns proposals filtered by workspace/project/status/run, newest
+// first. A proposal's workspace is its project's; every filter is applied
+// before the limit, so one workspace's list is never cut short by others'.
+func (r *ProposalRepository) List(orgID, projectID, status, runID string) ([]*proposals.Proposal, error) {
 	rows, err := r.db.Query(`
 		SELECT `+proposalColumns+` FROM agent_proposals
-		WHERE ($1 = '' OR project_id = $1::uuid)
-		  AND ($2 = '' OR status = $2)
-		  AND ($3 = '' OR run_id = $3::uuid)
+		WHERE ($1 = '' OR project_id IN (SELECT id FROM projects WHERE org_id = NULLIF($1, '')::uuid))
+		  AND ($2 = '' OR project_id = $2::uuid)
+		  AND ($3 = '' OR status = $3)
+		  AND ($4 = '' OR run_id = $4::uuid)
 		ORDER BY created_at DESC
 		LIMIT 500
-	`, projectID, status, runID)
+	`, orgID, projectID, status, runID)
 	if err != nil {
 		return nil, err
 	}

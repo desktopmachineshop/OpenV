@@ -42,8 +42,8 @@ import (
 //     automation are gone (404), its crew node is gone from the crew's
 //     graph, whose entry_node_id still names it (no foreign key), so an
 //     automation of that crew answers "team has no entry node"; the run's
-//     tracking card stays on P's board; a slug no agent has answers 500
-//     (agents.ErrNotFound is unmapped, a Q2-style answer);
+//     tracking card stays on P's board; a slug no agent has answers 404,
+//     the read's "agent not found";
 //   - the sync, in X once the area deleted X's seeds: X's agents are null
 //     (Q14), the seeds stay deleted since their files went to X's .trash, a
 //     file written on disk with no allowed_tools is backfilled
@@ -53,8 +53,8 @@ import (
 //   - the automations: create (a manual one's defaults: enabled, 60 s
 //     cooldown, 10 runs an hour, event_filter {}; a scheduled one's
 //     next_run_at, a cron that never falls due while the area runs, since the
-//     scheduler ticks every 30 s; created_by as the body names it, since the
-//     server never stamps it; a triggered one only disabled, since the
+//     scheduler ticks every 30 s; created_by the caller, whatever the body
+//     says (fixed under R7); a triggered one only disabled, since the
 //     matcher launches runs from the bus's goroutine) and its refusals in
 //     order (a body that does not decode, the guard: the member only pinned to
 //     P, the outsider nowhere; then the service: no name, a kind no
@@ -73,17 +73,18 @@ import (
 //     runs all the same) and the tracking card a run in P gets
 //     (workitem.created, actor agent:<run>, the launches' only events); and
 //     delete (the run it launched keeps its automation_id);
-//   - the triggered firings, one of them pinned as it is: an enabled
-//     automation of W for all of W on artifact.created fires on an artifact
-//     the outsider creates in its own workspace, since the matcher compares no
-//     workspace, and W's run is scoped to the outsider's project with the
-//     outsider's title in its prompt; an automation pinned to P fires on an
-//     artifact in P, which the first one's cooldown holds back from firing
-//     again. The firings are asynchronous (the bus dispatches from a
-//     goroutine, one event at a time), so the area creates both artifacts as
-//     setup and awaits the last_run_at of the automation pinned to P, which
-//     the matcher stamps after the launch and its tracking card
-//     (agentsAutomationsTrigger).
+//   - the triggered firings: an enabled automation of W for all of W on
+//     artifact.created does not fire on an artifact the outsider creates in
+//     its own workspace, since the matcher compares the event's workspace
+//     with the automation's (fixed under R7: it compared none, and W's run
+//     was scoped to the outsider's project with the outsider's title in its
+//     prompt); it fires on an artifact in P, and so does an automation pinned
+//     to P, each run scoped to P with its tracking card there. The firings
+//     are asynchronous (the bus dispatches from a goroutine, one event at a
+//     time), so the area creates both artifacts as setup and awaits the
+//     last_run_at of the automation pinned to P, which the matcher stamps
+//     after the launch and its tracking card, and after the automation for
+//     all of W, which it takes first (agentsAutomationsTrigger).
 //
 // Every 2xx JSON answer here is a bare encode (text/plain by sniffing, no
 // Content-Type once gzipped, Q1); errors are application/json.
@@ -330,9 +331,9 @@ func agentsAutomationsDelete(tr *tour) {
 	tr.step("the run's tracking card: it stays on P's board, assigned to the agent that is gone", o,
 		"GET /api/v1/work-items/{id}", at("id", "{{doomed.card}}"),
 		note("an S5b route, read to pin what the cascade leaves"))
-	tr.step("delete tour-doomed again: 500, agents.ErrNotFound is unmapped (Q2)", o, agentsAutomationsDel,
+	tr.step("delete tour-doomed again: 404, the read's agent not found", o, agentsAutomationsDel,
 		slug("tour-doomed"))
-	tr.step("delete a slug that is no slug: 500 too", o, agentsAutomationsDel, slug("Not_A_Slug"))
+	tr.step("delete a slug that is no slug: 404 too", o, agentsAutomationsDel, slug("Not_A_Slug"))
 }
 
 // agentsAutomationsSync deletes X's seeds, then syncs X from files the area
@@ -405,8 +406,8 @@ func agentsAutomationsAutomations(tr *tour) {
 		"event_filter {}", o, agentsAutomationsAutoCreate, body(map[string]any{"name": "Tour Manual", "kind": "manual",
 		"agent_id": "{{auto.agent}}", "prompt_template": "Run {{automation.name}} now{{unknown}}"})).
 		capture("a.manual", "/id")
-	yearly := tr.step("a scheduled automation on 0 0 1 1 *, created_by the member as the body says: next_run_at is "+
-		"to come, and created_by is the body's, never stamped by the server", o, agentsAutomationsAutoCreate,
+	yearly := tr.step("a scheduled automation on 0 0 1 1 *, whose body names the member as created_by: next_run_at "+
+		"is to come, and created_by is the owner, the caller, whatever the body says", o, agentsAutomationsAutoCreate,
 		body(map[string]any{"name": "Tour Yearly", "kind": "scheduled", "agent_id": "{{auto.agent}}",
 			"cron_expr": "0 0 1 1 *", "created_by": "{{member}}"}))
 	yearly.capture("a.yearly", "/id")
@@ -536,15 +537,16 @@ func agentsAutomationsAutomations(tr *tour) {
 }
 
 // agentsAutomationsTrigger pins the triggered firings: an automation of W
-// for all of W, fired by an artifact the outsider creates in its own
-// workspace, and one pinned to P, fired by an artifact in P. The matcher runs
-// on the bus's goroutine, one event at a time, so the area creates both
-// artifacts as setup, the outsider's first, and awaits the last_run_at of the
-// one pinned to P: by then the first event, and whatever it fired, is done.
-// The artifact in P also matches the automation for all of W, which its
-// cooldown (60 s since the outsider's firing) holds back; were the
-// outsider's event not to fire it, the artifact in P would, and the golden
-// would change rather than the await time out.
+// for all of W, which an artifact the outsider creates in its own workspace
+// does not fire, and both it and one pinned to P, fired by an artifact in P.
+// The matcher runs on the bus's goroutine, one event at a time, and takes the
+// automations of an event oldest first, so the area creates both artifacts
+// as setup, the outsider's first, and awaits the last_run_at of the one
+// pinned to P: by then the outsider's event, and whatever it fired, is done,
+// and so is the firing of the automation for all of W on the artifact in P.
+// Were the outsider's event to fire that automation again, its cooldown (60
+// s) would hold back its firing on the artifact in P, and the golden would
+// change rather than the await time out.
 func agentsAutomationsTrigger(tr *tour) {
 	o, out := tr.owner, tr.actor("outsider")
 	body := func(fields map[string]any) tourOpt { return agentsAutomationsBody(tr, fields) }
@@ -574,14 +576,15 @@ func agentsAutomationsTrigger(tr *tour) {
 		}, at("id", "{{a.watch.p}}"))
 	const setupNote = "the area created the outsider's requirement, then one in P, as setup, and awaited " +
 		"last_run_at of the automation pinned to P, which the matcher stamps after the launch and its tracking card"
-	tr.step("the automation for all of W: last_run_at, from the outsider's requirement", o, agentsAutomationsAutoGet,
-		at("id", "{{a.watch}}"), note(setupNote))
+	tr.step("the automation for all of W: last_run_at, from the requirement in P; the outsider's requirement, in "+
+		"another workspace, did not fire it", o, agentsAutomationsAutoGet, at("id", "{{a.watch}}"), note(setupNote))
 	tr.step("the automation pinned to P: last_run_at, from the requirement in P", o, agentsAutomationsAutoGet,
 		at("id", "{{a.watch.p}}"))
-	tr.step("tour-trigger's runs, newest first: the run of the automation pinned to P, then W's run fired by the "+
-		"outsider's event, scoped to the outsider's project with its tracking card there and the outsider's title "+
-		"in its prompt; the requirement in P fired no second run of it (the cooldown)", o, "GET /api/v1/agent-runs",
+	tr.step("tour-trigger's runs, newest first: the run of the automation pinned to P, then the run of the one for "+
+		"all of W, both fired by the requirement in P, scoped to P with their tracking cards there and its title in "+
+		"their prompts; the outsider's requirement fired none", o, "GET /api/v1/agent-runs",
 		query("agent_id={{trigger.agent}}"),
-		note("pinned as it is: the matcher compares an event's project with the automation's only when the "+
-			"automation is pinned to one, and never its workspace, and a run with no project takes the event's"))
+		note("the matcher compares an event's workspace with the automation's, and its project with the "+
+			"automation's when the automation is pinned to one; a run of an automation for all of W takes the "+
+			"event's project, which is in W"))
 }
