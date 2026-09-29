@@ -58,12 +58,15 @@ import (
 //     decode first (PUT /artifacts/{id}, /links/{id}, the status and the
 //     restore), as for a phantom;
 //   - the worker key: every read of P and its children, as a workspace-wide
-//     editor (REQ-42); 401 on the workspace, automation, crew, agent, run and
+//     editor (REQ-42), and, as the editor is, 403 "you do not have access to
+//     this project" on P's owner routes (its share links, and in "body {" its
+//     owner writes); 401 on the workspace, automation, crew, agent, run and
 //     transcript routes, which take a session; alone 200 on
 //     /provider-logins/{id}/full;
-//   - the run token: P's reads as an editor of P, and 403 "agent run is not
-//     scoped to this project" on P's owner routes; 403 "not your delegated run"
-//     on delegate/{id} with its own id, where every other column needs a run
+//   - the run token: P's reads as an editor of P, and 403 "agent runs act at
+//     most as a project editor" on P's owner routes, where a run outside P is
+//     told it is not scoped to the project; 403 "not your delegated run" on
+//     delegate/{id} with its own id, where every other column needs a run
 //     token;
 //   - viewer, editor, owner: the workspace-admin reads (billing, hosted runner,
 //     invitations, runner pool, worker keys) 403 to the plain members, and to
@@ -88,26 +91,20 @@ import (
 //   - the proposal-mode run: refused the draft of test cases ("proposal-mode
 //     agent runs cannot draft test cases"), where a direct run reaches the
 //     decode; the test run's agent run passes its guard to the decode (400);
-//     the templated project is 401 to it as to every bearer;
+//     a project and the templated project are refused it as a direct run's
+//     token is;
 //   - the creates: every signed-in column creates a project, a project from
 //     the seeded template, an import and a workspace (201; the workspace's
-//     answer has no Content-Type, Q1), in the workspace it acts in.
+//     answer has no Content-Type, Q1), in the workspace it acts in; the run
+//     token creates none, 403 "agent runs cannot create projects" on the
+//     three project creates (a run acts only inside its own project, REQ-42)
+//     and 401 on the workspace's, which takes a session.
 //
 // Pinned as they behave (plan R7), for release-noted bug-fix pull requests
 // that regenerate the golden, with the golden's rows:
-//   - W's workspace worker key passes P's owner guard: GET
-//     /projects/{id}/share-links answers it 200, and POST /projects/{id}/members,
-//     /share-links and /repo-connections, PUT /projects/{id}/team-access and
-//     /members/{userId} reach their decode (400) where the editor gets 403:
-//     personalKeyAccess (authz.go) passes a key with no holder whatever the
-//     role asked, though its comment gives it workspace-wide editor rights
-//     (REQ-42), so the key can mint public share links and add project
-//     members;
-//   - POST /projects checks nothing but an active workspace: W's worker key and
-//     the run token create projects in W (201), with no owner, since only a
-//     user is made the creator-owner (CreateProject, handlers.go), and so does
-//     a proposal-mode run's token (the last section), whose writes are meant
-//     to wait for a person's review (REQ-21);
+//   - POST /projects checks nothing but an active workspace and a run's token:
+//     W's worker key creates a project in W (201), with no owner, since only a
+//     user is made the creator-owner (CreateProject, handlers.go);
 //   - a proposal-mode run's token launches runs in its own project: a
 //     direct-mode agent's (POST /agents/{slug}/runs, 201) and a crew's whose
 //     entry is one (POST /crews/{id}/runs, 201), each with a card on P's board
@@ -121,8 +118,6 @@ import (
 //     whose own routes refuse the run as not scoped to it: ListProjects filters
 //     by the user, and a run has none (a run acts in its own project only,
 //     authz.go);
-//   - the run token's refusal on P's owner routes reads "agent run is not
-//     scoped to this project" though the run is P's (authz.go);
 //   - GET /users/{id}/avatar serves an account's picture to any signed-in
 //     account, the outsider included, which shares no workspace with it
 //     (GetUserAvatar, avatar_handlers.go: by its comment, "any signed-in
@@ -325,7 +320,8 @@ func realIdReadsReviewAgent() string {
 // of the crew in P, a test run's agent run, a project and a project from the
 // seeded template. The draft and the test run's agent run carry the body {,
 // since each checks its guard before it decodes; the others a well-formed
-// body, since each decodes first. Last, since the launches and creates write.
+// body, since each decodes first for the columns it lets through (the creates
+// refuse a run's token before). Last, since the launches and creates write.
 func realIdReadsReviewRunLaunches(tr *tour, m *tourMatrix, c *tourMatrixCast) {
 	tr.t.Helper()
 	o := tr.owner
@@ -347,7 +343,7 @@ func realIdReadsReviewRunLaunches(tr *tour, m *tourMatrix, c *tourMatrixCast) {
 
 	m.section("a proposal-mode run's token", "The writes that set work going or create a project, with the token "+
 		"of a running proposal-mode run in P in the run column: the draft of test cases, which refuses it, then "+
-		"launches in P and creates, which a direct-mode run may send.")
+		"launches in P, which a direct-mode run may send, and creates, which refuse every run's token.")
 	stand := map[string]*tourActor{c.run.name: review}
 	m.rowAs("POST /api/v1/projects/{id}/draft-test-cases", stand, at("id", "{{p}}"), truncatedBody())
 	m.rowAs("POST /api/v1/agents/{slug}/runs", stand, at("slug", "tour-matrix"),

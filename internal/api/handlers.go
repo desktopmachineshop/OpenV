@@ -1603,6 +1603,13 @@ func ContentTypeMiddleware(next http.Handler) http.Handler {
 
 // CreateProject creates a new project
 func (h *Handler) CreateProject(w http.ResponseWriter, r *http.Request) {
+	// A run acts only inside its own project (OpenV REQ-42): it creates none,
+	// as it could otherwise set up a project that no one owns and that no
+	// proposal review reaches.
+	if CurrentRun(r) != nil {
+		writeJSONError(w, http.StatusForbidden, "agent runs cannot create projects")
+		return
+	}
 	var req projects.CreateProjectRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
@@ -1860,6 +1867,11 @@ func (h *Handler) ExportProject(w http.ResponseWriter, r *http.Request) {
 
 // ImportProject imports project data from uploaded JSON file and creates a new project
 func (h *Handler) ImportProject(w http.ResponseWriter, r *http.Request) {
+	// A run creates no project (CreateProject).
+	if CurrentRun(r) != nil {
+		writeJSONError(w, http.StatusForbidden, "agent runs cannot create projects")
+		return
+	}
 	if CurrentUser(r) == nil {
 		writeJSONError(w, http.StatusUnauthorized, "authentication required")
 		return
@@ -2105,6 +2117,11 @@ type createProjectFromTemplateRequest struct {
 func (h *Handler) CreateProjectFromTemplate(w http.ResponseWriter, r *http.Request) {
 	templateID := mux.Vars(r)["id"]
 
+	// A run creates no project (CreateProject).
+	if CurrentRun(r) != nil {
+		writeJSONError(w, http.StatusForbidden, "agent runs cannot create projects")
+		return
+	}
 	if CurrentUser(r) == nil {
 		writeJSONError(w, http.StatusUnauthorized, "authentication required")
 		return

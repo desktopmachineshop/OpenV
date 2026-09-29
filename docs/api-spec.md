@@ -40,7 +40,12 @@ of failing the request.
 Each queued agent run is issued a single-run token (stored hashed). The
 worker passes it to the agent process, which calls back with
 `Authorization: Bearer <run-token>`. A run authenticates as an
-editor-equivalent principal **inside its own project only**; runs with
+editor-equivalent principal **inside its own project only**: another
+project's routes answer it `403` `agent run is not scoped to this project`,
+its own project's owner routes `403` `agent runs act at most as a project
+editor`, and it creates no project (`POST /projects`, `/projects/import` and
+`/templates/{id}/projects` answer it `403` `agent runs cannot create
+projects`, REQ-42). Runs with
 `write_mode: proposal` have their writes diverted into the proposal queue
 (HTTP 202 with a proposal receipt) instead of being applied. Each claim hands
 the worker a freshly minted token, and the token stops authenticating (`401`)
@@ -65,8 +70,9 @@ Keys are org-scoped rows in `worker_keys` (stored hashed):
   key.
 
 A worker principal passes project checks only for projects belonging to its
-own org. There a workspace key passes every project check (REQ-42's
-workspace-wide editor rights), while a personal key (a session key among
+own org. There a workspace key passes every project check up to an editor's
+(REQ-42's workspace-wide editor rights) and gets the project's `403` on an
+owner's, as a project editor does, while a personal key (a session key among
 them) is its holder acting: it passes a viewer's read in any project of the
 org, and anything more only where its holder would, as an admin of the
 workspace or with a project role that meets the route's (REQ-16); otherwise
@@ -105,9 +111,9 @@ Enforced per-handler via `internal/api/authz.go`:
   (`POST /chatter`), and is refused every write an editor makes; it is the
   role a reviewer share link grants (`docs/sharing.md`).
 - **Agent runs** count as editor within their own project, except that they
-  never approve or reject a proposal; **workers** pass
-  for any project in their org, a personal key above a viewer's read only
-  where its holder would; **run access** (viewing logs/streams) is
+  never approve or reject a proposal, and create no project; **workers** pass
+  for any project in their org, a workspace key as an editor, a personal key
+  above a viewer's read only where its holder would; **run access** (viewing logs/streams) is
   granted to the launcher, then by the project ladder, then org admin for
   unscoped runs.
 - **Crew writes**: project-pinned crews need project editor; workspace-wide
@@ -123,8 +129,8 @@ Generated from the router registrations in `internal/api/*.go`
 (`RegisterRoutes` and the `register*Routes` helpers) as of commit `2d6cd72`.
 Auth column: `open` (no credentials) · `user` (any session) ·
 `viewer`/`reviewer`/`editor`/`owner` (project role ladder; agent runs count as editor in
-their own project, workers pass within their org, a personal key above
-`viewer` only with its holder's role) · `org member`/`org admin`
+their own project, workers pass within their org, a workspace key up to
+`editor`, a personal key above `viewer` only with its holder's role) · `org member`/`org admin`
 (workspace role) · `worker` (worker key) · `run` (run token) ·
 `token` (public one-time/invite token).
 
@@ -232,7 +238,7 @@ their own project, workers pass within their org, a personal key above
 
 | Method | Path | Purpose | Auth |
 |---|---|---|---|
-| POST | `/api/v1/projects` | Create project in active workspace (creator becomes owner) | user |
+| POST | `/api/v1/projects` | Create project in active workspace (creator becomes owner). An agent run's token is refused (`403`) | user |
 | GET | `/api/v1/projects` | List projects the caller can access | user |
 | GET | `/api/v1/projects/{id}` | Project details | viewer |
 | PUT | `/api/v1/projects/{id}` | Update project: `name`, `description`, `agent_auth`, `parent_project_id` (the project this one refines, `docs/flow-down.md`; `""` detaches; `400` for a parent in another workspace, the project itself or one of its descendants) | editor |
@@ -242,7 +248,7 @@ their own project, workers pass within their org, a personal key above
 | GET | `/api/v1/projects/{id}/parties` | The reference parties the project recognises as owners: `{parties: [{name, note, default}]}`, the workspace's own company first and marked `default` | viewer |
 | PUT | `/api/v1/projects/{id}/parties` | Replace the project's own parties `{parties: [{name, note}]}`; the default is never stored; `400` for an empty or repeated name | editor |
 | GET | `/api/v1/projects/{id}/export` | Export project JSON | viewer |
-| POST | `/api/v1/projects/import` | Import a project export (JSON or ReqIF); `400` for a document that does not parse | user |
+| POST | `/api/v1/projects/import` | Import a project export (JSON or ReqIF); `400` for a document that does not parse. An agent run's token is refused (`403`) | user |
 | GET | `/api/v1/projects/{id}/report` | Legacy: PDF (`?format=pdf`) or Word (`?format=docx`) with the default content | viewer |
 | GET | `/api/v1/projects/{id}/download/options` | What a download can be narrowed to: sections, types, owners (`{owner, count}`, most artifacts first), attachment categories, fields, template presets, defaults | viewer |
 | GET | `/api/v1/projects/{id}/download/{json,csv,excel,reqif,pdf,docx}` | One download in the chosen format; see the download parameters below | viewer |
@@ -255,7 +261,7 @@ their own project, workers pass within their org, a personal key above
 | DELETE | `/api/v1/share-links/{id}` | Revoke a link: it opens nothing from then on (idempotent) | owner of its project |
 | GET | `/api/v1/templates` | List templates (global + workspace) | user |
 | POST | `/api/v1/templates` | Save a project as a template | editor |
-| POST | `/api/v1/templates/{id}/projects` | Create project from a built-in template or one of the caller's workspace; `404` `template not found` for a UUID no template has and for another workspace's template | user |
+| POST | `/api/v1/templates/{id}/projects` | Create project from a built-in template or one of the caller's workspace; `404` `template not found` for a UUID no template has and for another workspace's template. An agent run's token is refused (`403`) | user |
 
 **Baselines** carry `created_by` (the capturing account) and
 `created_by_name` (its display name, resolved server-side so a client never

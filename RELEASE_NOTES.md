@@ -276,6 +276,32 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   your own runner is unchanged: you, and the workspace's admins, can still
   cancel it or paste its code.
 
+- **A workspace runner key can no longer do what only a project's owner
+  can.** A workspace runner key carries an editor's rights in every project
+  of its workspace, but used through the API it could also do what only a
+  project's owner or a workspace admin can: see, create and revoke the
+  project's share links, add, change and remove its members and team
+  access, connect, change and remove its repositories, delete baselines,
+  rebuild the project's search index, and delete the project itself. It is
+  now refused these, as a project editor is. Everything an editor can do it
+  still does, and its changes still land without review. Personal runner
+  keys are unchanged.
+
+- **An agent can no longer create projects.** With the credentials its run
+  is given, an agent could create a new project in its workspace through
+  the API, a project with no owner, and an agent whose changes need review
+  did so without anyone reviewing it. An agent works only in its run's
+  project, so its credentials are now refused (`403`) when they are used to
+  create a project, and creating one from a template or by import, which was
+  already refused, now gives the same reason.
+
+- **An agent refused an owner's action in its own project is told why.**
+  When an agent asked for something only the project's owner may do, such
+  as creating a share link or adding a member, the refusal said the agent's
+  run was not scoped to the project, although the run belonged to it. It
+  now says that an agent run acts at most as a project editor. A request
+  for another project is still refused as not scoped to it.
+
 - **A platform admin asking for a project or workspace that does not exist
   is told it is not found.** Through the API, a platform admin who named a
   project that does not exist in a download, the export, a V&V view or

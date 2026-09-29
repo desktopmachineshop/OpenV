@@ -31,6 +31,18 @@ import (
 type fakeProjectService struct {
 	projects.Service
 	byID map[string]*projects.Project
+	// created records every CreateProject, in order.
+	created []*projects.Project
+}
+
+// CreateProject stores the project under the id NewProject gave it.
+func (f *fakeProjectService) CreateProject(p *projects.Project) error {
+	if f.byID == nil {
+		f.byID = map[string]*projects.Project{}
+	}
+	f.byID[p.ID] = p
+	f.created = append(f.created, p)
+	return nil
 }
 
 func (f *fakeProjectService) GetProject(id string) (*projects.Project, error) {
@@ -203,6 +215,18 @@ type fakeMemberService struct {
 
 func (f *fakeMemberService) EffectiveRole(projectID, userID string) (string, error) {
 	return f.roles[projectID][userID], nil
+}
+
+// AddMember grants the role, as a project's creator is made its owner.
+func (f *fakeMemberService) AddMember(projectID, userID, role string) error {
+	if f.roles == nil {
+		f.roles = map[string]map[string]string{}
+	}
+	if f.roles[projectID] == nil {
+		f.roles[projectID] = map[string]string{}
+	}
+	f.roles[projectID][userID] = role
+	return nil
 }
 
 func (f *fakeMemberService) ProjectIDsForUser(userID string) ([]string, error) {
@@ -457,7 +481,8 @@ func TestRequireProjectRole(t *testing.T) {
 		request  *http.Request
 		minRole  string
 		wantPass bool
-		wantCode int // checked only when !wantPass
+		wantCode int    // checked only when !wantPass
+		wantErr  string // the refusal's error text, checked when set
 	}{
 		{
 			name:     "platform admin passes owner",
@@ -483,6 +508,7 @@ func TestRequireProjectRole(t *testing.T) {
 			minRole:  members.RoleOwner,
 			wantPass: false,
 			wantCode: http.StatusForbidden,
+			wantErr:  "you do not have access to this project",
 		},
 		{
 			name:     "team-grant viewer meets viewer",
@@ -516,6 +542,22 @@ func TestRequireProjectRole(t *testing.T) {
 			request:  reqWithWorker(orgID),
 			minRole:  members.RoleEditor,
 			wantPass: true,
+		},
+		{
+			name:     "workspace key reads as a viewer",
+			request:  reqWithWorker(orgID),
+			minRole:  members.RoleViewer,
+			wantPass: true,
+		},
+		{
+			// A workspace key carries a workspace-wide editor's rights (REQ-42),
+			// not an owner's: it is refused as a project editor is.
+			name:     "workspace key fails owner",
+			request:  reqWithWorker(orgID),
+			minRole:  members.RoleOwner,
+			wantPass: false,
+			wantCode: http.StatusForbidden,
+			wantErr:  "you do not have access to this project",
 		},
 		{
 			name:     "worker foreign org gets 403",
@@ -589,13 +631,25 @@ func TestRequireProjectRole(t *testing.T) {
 			minRole:  members.RoleEditor,
 			wantPass: false,
 			wantCode: http.StatusForbidden,
+			wantErr:  "agent run is not scoped to this project",
 		},
 		{
+			name:     "run token with no project gets 403",
+			request:  reqWithRun(&agentruns.Run{ID: "run-4", OrgID: orgID}),
+			minRole:  members.RoleViewer,
+			wantPass: false,
+			wantCode: http.StatusForbidden,
+			wantErr:  "agent run is not scoped to this project",
+		},
+		{
+			// In its own project the run is refused for its role, not its
+			// scope, which the refusal names.
 			name:     "run token cannot act as owner",
 			request:  reqWithRun(&agentruns.Run{ID: "run-3", OrgID: orgID, ProjectID: &ownProject}),
 			minRole:  members.RoleOwner,
 			wantPass: false,
 			wantCode: http.StatusForbidden,
+			wantErr:  "agent runs act at most as a project editor",
 		},
 		{
 			name:     "empty project id gets 404",
@@ -620,6 +674,9 @@ func TestRequireProjectRole(t *testing.T) {
 			}
 			if !tc.wantPass && w.Code != tc.wantCode {
 				t.Fatalf("status = %d, want %d (body %q)", w.Code, tc.wantCode, w.Body.String())
+			}
+			if want := `{"error":"` + tc.wantErr + `"}`; tc.wantErr != "" && strings.TrimSpace(w.Body.String()) != want {
+				t.Fatalf("body = %q, want %s", w.Body.String(), want)
 			}
 		})
 	}
